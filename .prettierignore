@@ -1,0 +1,43 @@
+# Dependencies
+node_modules/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Build outputs
+dist/
+build/
+lib/
+coverage/
+htmlcov/
+storybook-static/
+.next/
+*.min.js
+*.min.css
+
+# Documentation
+docs/
+
+# IDE
+.vscode/
+.idea/
+
+# Temporary files
+*.log
+*.tmp
+*.temp
+.DS_Store
+
+# TypeScript
+tsconfig.tsbuildinfo
+*.tsbuildinfo
+
+# Test coverage
+*.lcov
+
+# Jupyter notebooks (raw JSON)
+*.ipynb
+
+# Generated files
+*.generated.*
+*.auto.*

@@ -1,0 +1,63 @@
+name: Deploy docs
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+    
+jobs:
+  deploy-docs:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: conda-incubator/setup-miniconda@v3
+        with:
+          installer-url: https://github.com/conda-forge/miniforge/releases/download/25.3.0-3/Miniforge3-25.3.0-3-Linux-x86_64.sh
+          auto-update-conda: true
+          activate-environment: datalayer
+
+      - name: Install dependencies
+        shell: bash -el {0}
+        run: |
+          conda install boto3 python=3.13 make nodejs
+          python -m pip install --upgrade pip
+          python -m pip install .[docs]
+          python -m pip list | grep -E "(pydoc|click)"
+          npm install
+
+      - name: Generate API docs
+        shell: bash -el {0}
+        run: |
+          make typedoc
+          make pydoc
+
+      - name: Generate docs
+        shell: bash -el {0}
+        run: |
+          cd docs
+          npm install
+          make build
+
+      - name: Publish docs
+        if: (github.ref == 'refs/heads/main' && github.event_name == 'push')
+        shell: bash -el {0}
+        env:
+          AWS_PROFILE: ${{ secrets.AWS_PROFILE }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: |
+          cd docs
+          make deploy

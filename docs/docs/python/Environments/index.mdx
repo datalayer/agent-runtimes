@@ -1,0 +1,95 @@
+---
+title: Environments
+---
+
+import DocCardList from '@theme/DocCardList';
+
+The Environments module manages computing environments in the Datalayer platform. Environments define the runtime context for code execution, including available packages, computational resources (CPU/GPU), programming languages, and system configurations.
+
+## Overview
+
+Environments in Datalayer provide pre-configured compute contexts that define what software packages, libraries, and resources are available when running code. Each environment is optimized for specific use cases and includes different combinations of Python packages, system libraries, and hardware configurations.
+
+### Key Features
+
+- **Pre-configured Software Stacks**: Curated combinations of packages and libraries for specific domains
+- **Resource Allocation**: Different CPU/GPU configurations and memory allocations
+- **Language Support**: Environments optimized for different programming languages
+- **Cost Management**: Transparent pricing based on resource usage and burning rates
+- **Version Control**: Consistent, reproducible environments with locked package versions
+- **Scalability**: Environments that can scale from development to production workloads
+
+### Environment Types
+
+Datalayer provides several types of pre-built environments:
+
+- **Python CPU Environment**: Basic Python environments for general computation
+- **AI Environment**: High-performance Python GPU environments for AI
+
+## Environment Class
+
+The `Environment` class represents a computing environment with the following attributes:
+
+- **name**: Unique identifier for the environment (e.g., "python-cpu-env")
+- **title**: Human-readable display name
+- **burning_rate**: Cost per hour for using the environment
+- **language**: Primary programming language (e.g., "python", "r", "julia")
+- **owner**: Environment owner/maintainer
+- **visibility**: Access level (public/private)
+- **metadata**: Additional configuration and package information
+
+## Listing Available Environments
+
+### Basic Environment Listing
+
+View all environments accessible to your account:
+
+```python
+from agent_runtimes import DatalayerClient
+
+client = DatalayerClient()
+environments = client.list_environments()
+
+print(f"Found {len(environments)} available environments:")
+for env in environments:
+    print(f"  - {env.name}: {env.title}")
+    print(f"    Language: {env.language}")
+    print(f"    Cost: ${env.burning_rate}/hour")
+    print(f"    Owner: {env.owner}")
+    print("---")
+```
+
+### Detailed Environment Information
+
+Get comprehensive details about each environment:
+
+```python
+from agent_runtimes import DatalayerClient
+
+client = DatalayerClient()
+environments = client.list_environments()
+
+for env in environments:
+    print(f"Environment: {env.title}")
+    print(f"  Name: {env.name}")
+    print(f"  Language: {env.language}")
+    print(f"  Burning Rate: ${env.burning_rate:.4f}/hour")
+    print(f"  Owner: {env.owner}")
+    print(f"  Visibility: {env.visibility}")
+    
+    # Display metadata if available
+    if env.metadata:
+        print("  Metadata:")
+        for key, value in env.metadata.items():
+            print(f"    {key}: {value}")
+    print("=" * 50)
+```
+
+## Notes
+
+- **Environment Availability**: Available environments may vary based on your account tier and region
+- **Cost Billing**: Environment costs are billed based on actual runtime usage, not reservation time
+- **Package Updates**: Environment package versions are periodically updated; check compatibility for production workloads
+- **Custom Environments**: Contact support for custom environment requirements not met by standard offerings
+- **Resource Limits**: Each environment has specific CPU, memory, and GPU limitations
+- **Persistence**: Environments are stateless; use snapshots or external storage for persistent data

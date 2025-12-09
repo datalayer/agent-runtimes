@@ -1,0 +1,183 @@
+# Copyright (c) 2025-2026 Datalayer, Inc.
+# Distributed under the terms of the Modified BSD License.
+
+[build-system]
+requires = ["hatchling==1.21.1"]
+build-backend = "hatchling.build"
+
+[project]
+name = "agent_runtimes"
+description="Agent Runtimes"
+keywords = []
+readme = "README.md"
+license = { text = "BSD-3-Clause" }
+requires-python = ">=3.10"
+classifiers = [
+    "Framework :: Jupyter",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+dependencies = [
+    "datalayer_core",
+    "jupyter_server>=2.10,<3",
+    "mcp",
+    "mcp-codemode",
+    "pydantic-ai-slim>=1.9.1,<2.0",
+    "anthropic>=0.40.0",
+    "openai>=1.0.0",
+    "pydantic-settings",
+    "pydantic[email]",
+    "typer",
+]
+dynamic = ["version"]
+
+[project.urls]
+Homepage = "https://github.com/datalayer/agent-runtimes"
+Documentation = "https://agent-runtimes.datalayer.tech"
+Repository = "https://github.com/datalayer/agent-runtimes"
+Issues = "https://github.com/datalayer/agent-runtimes/issues"
+Changelog = "https://github.com/datalayer/agent-runtimes/blob/main/CHANGELOG.md"
+
+[project.optional-dependencies]
+test = [
+    "coverage",
+    "mypy",
+    "pytest",
+    "pytest-asyncio",
+    "pytest-cov",
+    "pytest_jupyter",
+    "pytest-tornasync",
+    "python-dotenv",
+    "types-requests",
+    "typing-extensions",
+]
+docs = [
+    "click>=8.3.1",  # Use latest version, 8.2.2 issue has been fixed
+    "npdoc_to_md",
+    "pydoc-markdown>=4.0",  # Use modern version with proper module structure
+]
+examples = [
+    "fastapi",
+    "pydantic",
+    "scikit-learn",
+    "streamlit",
+    "torch",
+    "uvicorn",
+]
+
+[project.scripts]
+d = "agent_runtimes.cli.__main__:main"
+dla = "agent_runtimes.cli.__main__:main"
+datalayer = "agent_runtimes.cli.__main__:main"
+datalayer-config = "agent_runtimes.config:main"
+datalayer-migrate = "agent_runtimes.migrate:main"
+datalayer-server = "agent_runtimes.serverapplication:main"
+datalayer-troubleshoot = "agent_runtimes.troubleshoot:main"
+
+[tool.hatch.version]
+path = "agent_runtimes/__version__.py"
+
+[tool.hatch.build.targets.sdist]
+artifacts = [
+    "agent_runtimes/assets/about.md",
+]
+exclude = [".github", "binder"]
+
+[tool.hatch.build.targets.wheel]
+artifacts = [
+    "agent_runtimes/assets/about.md",
+]
+
+[tool.hatch.build.targets.wheel.shared-data]
+"jupyter-config/server-config" = "etc/jupyter/jupyter_server_config.d"
+"jupyter-config/nb-config" = "etc/jupyter/jupyter_notebook_config.d"
+
+[tool.hatch.build.hooks.version]
+path = "agent_runtimes/_version.py"
+
+[tool.jupyter-releaser.options]
+version_cmd = "hatch version"
+
+[tool.mypy]
+follow_imports = "skip"
+ignore_missing_imports = true
+disallow_untyped_defs = true
+disallow_any_generics = true
+warn_unused_ignores = true
+
+[[tool.mypy.overrides]]
+module = "tornado.*"
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = "agent_runtimes.handlers.chat.*"
+disable_error_code = ["attr-defined"]
+
+[tool.ruff.lint]
+extend-select = ["I"]
+
+[tool.poetry]
+version = "0.1.0"
+
+[tool.numpydoc_validation]
+checks = [
+    "all",   # report on all checks, except the below
+    "EX01",  # No examples section found
+    "SA01",  # See Also section found
+    "ES01",  # No extended summary found
+    "GL08",  # The object does not have a docstring
+    "PR01",  # Parameters not documented
+    "PR02",  # Unknown parameters
+    "RT01",  # No Returns section found
+]
+
+exclude = [  # don't report on objects that match any of these regex
+    '\.undocumented_method$',
+    '\.__repr__$',
+    '\.test_.*$',
+    '\.__init__$',  # Skip __init__ methods
+    '\.Config$',  # Skip Pydantic Config classes
+]
+
+exclude_files = [ # don't process filepaths that match these regex
+    '^test_.*.py$',
+]
+
+[tool.pydoc-markdown]
+loaders = [
+    { type = "python", search_path = ["agent_runtimes"] }
+]
+
+processors = [
+    { type = "filter", skip_empty_modules = false },
+    { type = "smart" },
+    { type = "crossref" },
+    { type = "agent_runtimes._pydoc.ReplaceProcessor" }
+]
+
+[tool.pydoc-markdown.renderer]
+type = "agent_runtimes._pydoc.MyDocusaurusRenderer"
+docs_base_path = "docs/docs"
+relative_output_path = "python_api"
+relative_sidebar_path = "sidebar.json"
+sidebar_top_level_label = ""
+
+[tool.bandit]
+exclude_dirs = ["tests"]
+skips = [
+    "B101",  # Assert statements are acceptable in this codebase
+    "B105",  # Hardcoded password strings - these are configuration keys, not actual passwords
+    "B106",  # Hardcoded password funcarg - false positive for empty default values
+    "B110",  # Try/except pass is acceptable for error handling
+    "B404",  # Subprocess import is needed for legitimate process management
+    "B603",  # Subprocess calls are controlled and necessary for CLI operations
+    "B606",  # Process execution without shell is safer and intentional
+    "B607",  # Partial path execution is acceptable for known binaries
+]

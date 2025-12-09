@@ -1,0 +1,281 @@
+---
+title: TypeScript SDK
+---
+
+import DocCardList from '@theme/DocCardList';
+
+# TypeScript SDK
+
+The Datalayer TypeScript SDK (`@datalayer/agent-runtimes`) provides a comprehensive client library for building modern web applications and integrations with the Datalayer AI Platform. This SDK offers TypeScript-first APIs, React components, utilities, and hooks for seamless development.
+
+## Overview
+
+The TypeScript SDK is designed for frontend developers, full-stack engineers, and teams building interactive applications that need to integrate with Datalayer's AI platform capabilities. It provides type-safe APIs, reusable components, and powerful hooks for state management.
+
+## Key Features
+
+- **🎯 Type Safety**: Full TypeScript support with comprehensive type definitions
+- **⚛️ React Integration**: Ready-to-use React components and hooks
+- **🎨 UI Components**: Pre-built components for common platform interactions
+- **🔄 State Management**: Built-in stores and hooks for managing application state
+- **🔐 Authentication**: Seamless authentication flows and user management
+- **📊 Runtime Management**: Components and APIs for managing compute runtimes
+- **📝 Notebook Integration**: Rich Jupyter notebook components and utilities
+- **🛠️ Utilities**: Helper functions for common development tasks
+
+## Installation
+
+Install the TypeScript SDK using npm or yarn:
+
+```bash
+npm install @datalayer/agent-runtimes
+```
+
+```bash
+yarn add @datalayer/agent-runtimes
+```
+
+## Quick Start
+
+### Basic Usage
+
+```typescript
+import { useCoreStore, useUser } from '@datalayer/agent-runtimes';
+import { PlatformRoles } from '@datalayer/agent-runtimes/lib/models';
+
+function MyComponent() {
+  const { configuration } = useCoreStore();
+  const user = useUser(PlatformRoles.Member);
+  
+  return (
+    <div>
+      <h1>Welcome, {user.name}!</h1>
+      <p>Platform: {configuration.platformName}</p>
+    </div>
+  );
+}
+```
+
+### Authentication
+
+```typescript
+import { useIAMStore } from '@datalayer/agent-runtimes';
+
+function AuthComponent() {
+  const { token, isAuthenticated } = useIAMStore();
+  
+  if (!isAuthenticated) {
+    return <div>Please log in</div>;
+  }
+  
+  return <div>Authenticated successfully!</div>;
+}
+```
+
+### Runtime Management
+
+```typescript
+import { useRuntimesStore } from '@datalayer/agent-runtimes';
+import { RuntimeSimplePicker } from '@datalayer/agent-runtimes/lib/components/runtimes';
+
+function RuntimeSelector() {
+  const { runtimeModels } = useRuntimesStore();
+  
+  return (
+    <RuntimeSimplePicker
+      runtimes={runtimeModels}
+      onRuntimeSelect={(runtime) => {
+        console.log('Selected runtime:', runtime);
+      }}
+    />
+  );
+}
+```
+
+## Core Modules
+
+### Hooks
+
+The SDK provides a comprehensive set of React hooks for common operations:
+
+- **`useCoreStore()`** - Access core platform configuration and state
+- **`useUser(role)`** - Manage user authentication and profile data
+- **`useRuntimesStore()`** - Manage compute runtimes and kernels
+- **`useToast()`** - Display notifications and alerts
+- **`useNavigate()`** - Handle client-side navigation
+- **`useWindowSize()`** - Responsive design utilities
+- **`useAuthorization()`** - Check user permissions and roles
+
+### Components
+
+Pre-built React components for common UI patterns:
+
+- **Runtime Components**: Runtime pickers, status indicators, and management interfaces
+- **Notebook Components**: Jupyter notebook integration and editing interfaces
+- **Authentication Components**: Login forms, user profiles, and access controls
+- **Navigation Components**: Breadcrumbs, menus, and routing helpers
+- **Progress Components**: Loading indicators, progress bars, and status displays
+
+### Models and Types
+
+Comprehensive TypeScript definitions for platform entities:
+
+```typescript
+import type { 
+  IUser, 
+  INotebook, 
+  IRuntimeModel, 
+  IEnvironment 
+} from '@datalayer/agent-runtimes/lib/models';
+```
+
+### Utilities
+
+Helper functions for common development tasks:
+
+- **File Operations**: Upload, download, and file management utilities
+- **Date/Time**: Formatting and manipulation functions
+- **Validation**: Input validation and form helpers
+- **Browser**: Cross-browser compatibility utilities
+- **Notebook**: Jupyter-specific operations and transformations
+
+## State Management
+
+The SDK uses Zustand for state management with pre-configured stores:
+
+```typescript
+import { 
+  useCoreStore,
+  useIAMStore, 
+  useRuntimesStore,
+  useLayoutStore 
+} from '@datalayer/agent-runtimes/lib/state';
+
+function MyApp() {
+  const { configuration } = useCoreStore();
+  const { user, isAuthenticated } = useIAMStore();
+  const { runtimeModels } = useRuntimesStore();
+  
+  // Your application logic here
+}
+```
+
+## API Integration
+
+Access platform APIs with built-in error handling and type safety:
+
+```typescript
+import { DatalayerApi } from '@datalayer/agent-runtimes/lib/api';
+
+// Initialize API client
+const api = new DatalayerApi({
+  baseUrl: 'https://api.datalayer.io',
+  token: 'your-auth-token'
+});
+
+// Use API methods
+const runtimes = await api.getRuntimes();
+const notebooks = await api.getNotebooks();
+```
+
+## Testing
+
+The SDK includes testing utilities and configurations:
+
+```typescript
+import { describe, it, expect } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import { MyComponent } from './MyComponent';
+
+describe('MyComponent', () => {
+  it('should render correctly', () => {
+    render(<MyComponent />);
+    expect(screen.getByText('Welcome')).toBeInTheDocument();
+  });
+});
+```
+
+## TypeScript Configuration
+
+For optimal TypeScript support, ensure your `tsconfig.json` includes:
+
+```json
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "strict": true,
+    "skipLibCheck": true
+  }
+}
+```
+
+## Examples
+
+### Complete Application Setup
+
+```typescript
+import React from 'react';
+import { BrowserRouter } from 'react-router-dom';
+import { ThemeProvider } from '@primer/react';
+import { ToastContainer } from '@datalayer/agent-runtimes/lib/components';
+import { CoreProvider } from '@datalayer/agent-runtimes/lib/context';
+
+function App() {
+  return (
+    <BrowserRouter>
+      <ThemeProvider>
+        <CoreProvider>
+          <YourAppRoutes />
+          <ToastContainer />
+        </CoreProvider>
+      </ThemeProvider>
+    </BrowserRouter>
+  );
+}
+```
+
+### Custom Hook Example
+
+```typescript
+import { useState, useEffect } from 'react';
+import { useRuntimesStore } from '@datalayer/agent-runtimes';
+
+function useRuntimeHealth(runtimeId: string) {
+  const [health, setHealth] = useState<'healthy' | 'unhealthy' | 'unknown'>('unknown');
+  const { getRuntimeStatus } = useRuntimesStore();
+  
+  useEffect(() => {
+    const checkHealth = async () => {
+      try {
+        const status = await getRuntimeStatus(runtimeId);
+        setHealth(status.isHealthy ? 'healthy' : 'unhealthy');
+      } catch {
+        setHealth('unhealthy');
+      }
+    };
+    
+    checkHealth();
+    const interval = setInterval(checkHealth, 30000);
+    return () => clearInterval(interval);
+  }, [runtimeId]);
+  
+  return health;
+}
+```
+
+## Next Steps
+
+- Explore the [TypeScript API](../typescript_api) for detailed type definitions and function references
+- Check out the examples in the repository for complete implementation patterns
+- Review the source code for best practices and development guidelines
+
+<DocCardList />
+

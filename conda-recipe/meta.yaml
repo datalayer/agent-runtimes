@@ -1,0 +1,29 @@
+# Copyright (c) 2025-2026 Datalayer, Inc.
+# Distributed under the terms of the Modified BSD License.
+
+package:
+  name: agent-runtimes
+  version: "{{ VERSION }}"
+
+source:
+  path: ../
+
+channels:
+  - datalayer
+
+build:
+  noarch: python
+  script: "{{ PYTHON }} -m pip install . -vv"
+
+requirements:
+  build:
+    - python
+    - hatchling
+  run:
+    - python
+    - traitlets
+    - jupyter_server
+
+test:
+  imports:
+    - agent_runtimes

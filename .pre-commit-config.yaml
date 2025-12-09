@@ -1,0 +1,57 @@
+exclude: '^conda.recipe|dev|docs|style|src|jupyter-config|.github|.storybook$'
+repos:
+  # Basic file checks and formatting
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-toml
+      - id: check-yaml
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+
+  # Python linting and formatting
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.12.8
+    hooks:
+      # Run the linter
+      - id: ruff-check
+        args: ['check', '--select', 'I', '--fix']
+        types_or: [python, pyi]
+      # Run the formatter
+      - id: ruff-format
+        types_or: [python, pyi]
+
+  # Python docstring validation (NumPy style)
+  - repo: https://github.com/numpy/numpydoc
+    rev: v1.9.0
+    hooks:
+      - id: numpydoc-validation
+
+  # Security checks
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.8.6
+    hooks:
+      - id: bandit
+        args: ['-c', 'pyproject.toml']
+        additional_dependencies: ['bandit[toml]']
+
+  # Check for common Python security issues (using pip-audit instead of safety)
+  - repo: https://github.com/pypa/pip-audit
+    rev: v2.9.0
+    hooks:
+      - id: pip-audit
+        args: ['--ignore-vuln', 'GHSA-4xh5-x5gv-qwph']
+
+  # Check for large files that shouldn't be committed
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-added-large-files
+        args: ['--maxkb=1000']
+
+  # Python docstring coverage
+  - repo: https://github.com/econchick/interrogate
+    rev: 1.7.0
+    hooks:
+      - id: interrogate
+        args: [--config=pyproject.toml]

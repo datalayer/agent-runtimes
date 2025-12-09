@@ -1,0 +1,56 @@
+name: Py Type Checking
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'agent_runtimes/**/*.py'
+      - 'tests/**/*.py'
+      - 'pyproject.toml'
+      - 'setup.py'
+      - 'mypy.ini'
+      - '.mypy.ini'
+      - '.github/workflows/py-typing.yml'
+  pull_request:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'agent_runtimes/**/*.py'
+      - 'tests/**/*.py'
+      - 'pyproject.toml'
+      - 'setup.py'
+      - 'mypy.ini'
+      - '.mypy.ini'
+      - '.github/workflows/py-typing.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check-code-style:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "latest"
+          python-version: 3.12
+          activate-environment: true
+
+      - name: Install dependencies
+        run: |
+          uv pip install mypy
+          uv pip install types-requests
+      - name: Run mypy
+        run: |
+          mypy agent_runtimes
