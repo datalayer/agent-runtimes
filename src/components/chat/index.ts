@@ -134,7 +134,7 @@ export {
 // Components
 export {
   ChatMessages,
-  ChatInput,
+  ChatInputPrompt,
   ChatSidebar,
   ChatStandalone,
   ChatPanel,
@@ -152,7 +152,7 @@ export {
   Chat,
   ChatFloating,
   type ChatMessagesProps,
-  type ChatInputProps,
+  type ChatInputPromptProps,
   type ChatSidebarProps,
   type ChatStandaloneProps,
   type MessageHandler,

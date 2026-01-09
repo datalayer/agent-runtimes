@@ -10,7 +10,7 @@
  */
 
 export { ChatMessages, type ChatMessagesProps } from './elements/ChatMessages';
-export { ChatInput, type ChatInputProps } from './elements/ChatInput';
+export { ChatInputPrompt, type ChatInputPromptProps } from './elements/ChatInputPrompt';
 export { ChatSidebar, type ChatSidebarProps } from './ChatSidebar';
 export {
   ChatStandalone,

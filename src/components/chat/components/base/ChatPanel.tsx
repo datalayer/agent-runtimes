@@ -1914,18 +1914,67 @@ export function ChatPanel({
 
     return (
       <Box>
-        {/* Model and Tools Footer */}
+        {/* Input Area */}
+        <Box
+          sx={{
+            p: padding,
+            borderTop: '1px solid',
+            borderColor: 'border.default',
+            bg: 'canvas.subtle',
+          }}
+        >
+          <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-end' }}>
+            <Textarea
+              ref={inputRef}
+              value={input}
+              onChange={e => {
+                setInput(e.target.value);
+                // Height adjustment happens via useEffect watching input
+              }}
+              onKeyDown={handleKeyDown}
+              placeholder={placeholder || 'Type a message...'}
+              disabled={isLoading}
+              sx={{
+                flex: 1,
+                resize: 'none',
+                minHeight: '40px',
+                maxHeight: '120px',
+                overflow: 'hidden',
+                transition: 'height 0.1s ease-out',
+              }}
+              rows={1}
+            />
+            {isLoading ? (
+              <IconButton
+                icon={SquareCircleIcon}
+                aria-label="Stop"
+                onClick={handleStop}
+                sx={{ alignSelf: 'flex-end' }}
+              />
+            ) : (
+              <IconButton
+                icon={PaperAirplaneIcon}
+                aria-label="Send"
+                onClick={handleSend}
+                disabled={!input.trim()}
+                sx={{ alignSelf: 'flex-end' }}
+              />
+            )}
+          </Box>
+        </Box>
+
+        {/* Model and Tools Footer - Below Input */}
         {(showModelSelector || showToolsMenu) && configQuery.data && (
           <Box
             sx={{
               display: 'flex',
               gap: 2,
               px: padding,
-              pt: 2,
-              pb: 1,
+              py: 1,
               borderTop: '1px solid',
               borderColor: 'border.default',
               alignItems: 'center',
+              bg: 'canvas.subtle',
             }}
           >
             {/* Tools Menu */}
@@ -1996,58 +2045,6 @@ export function ChatPanel({
             )}
           </Box>
         )}
-
-        {/* Input Area */}
-        <Box
-          sx={{
-            p: padding,
-            borderTop:
-              (showModelSelector || showToolsMenu) && configQuery.data
-                ? 'none'
-                : '1px solid',
-            borderColor: 'border.default',
-            bg: 'canvas.subtle',
-          }}
-        >
-          <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-end' }}>
-            <Textarea
-              ref={inputRef}
-              value={input}
-              onChange={e => {
-                setInput(e.target.value);
-                // Height adjustment happens via useEffect watching input
-              }}
-              onKeyDown={handleKeyDown}
-              placeholder={placeholder || 'Type a message...'}
-              disabled={isLoading}
-              sx={{
-                flex: 1,
-                resize: 'none',
-                minHeight: '40px',
-                maxHeight: '120px',
-                overflow: 'hidden',
-                transition: 'height 0.1s ease-out',
-              }}
-              rows={1}
-            />
-            {isLoading ? (
-              <IconButton
-                icon={SquareCircleIcon}
-                aria-label="Stop"
-                onClick={handleStop}
-                sx={{ alignSelf: 'flex-end' }}
-              />
-            ) : (
-              <IconButton
-                icon={PaperAirplaneIcon}
-                aria-label="Send"
-                onClick={handleSend}
-                disabled={!input.trim()}
-                sx={{ alignSelf: 'flex-end' }}
-              />
-            )}
-          </Box>
-        </Box>
       </Box>
     );
   };

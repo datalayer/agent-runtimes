@@ -7,7 +7,7 @@
  * Chat input component.
  * Provides the message input area with send button and optional tool suggestions.
  *
- * @module components/chat/components/elements/ChatInput
+ * @module components/chat/components/elements/ChatInputPrompt
  */
 
 import React, {
@@ -29,9 +29,9 @@ import { useChat } from '../../../../hooks/useChat';
 import { useChatStreaming, useChatTools } from '../../store/chatStore';
 
 /**
- * ChatInput props
+ * ChatInputPrompt props
  */
-export interface ChatInputProps {
+export interface ChatInputPromptProps {
   /** Placeholder text */
   placeholder?: string;
 
@@ -58,9 +58,9 @@ export interface ChatInputProps {
 }
 
 /**
- * Chat Input component
+ * Chat Input Prompt component
  */
-export function ChatInput({
+export function ChatInputPrompt({
   placeholder = 'Type a message...',
   disabled = false,
   showToolSuggestions = true,
@@ -69,7 +69,7 @@ export function ChatInput({
   className,
   onBeforeSend,
   onAfterSend,
-}: ChatInputProps) {
+}: ChatInputPromptProps) {
   const [input, setInput] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -122,7 +122,7 @@ export function ChatInput({
       setInput('');
       onAfterSend?.(trimmedInput);
     } catch (error) {
-      console.error('[ChatInput] Send error:', error);
+      console.error('[ChatInputPrompt] Send error:', error);
     }
   }, [input, disabled, isStreaming, sendMessage, onBeforeSend, onAfterSend]);
 
@@ -309,4 +309,4 @@ export function ChatInput({
   );
 }
 
-export default ChatInput;
+export default ChatInputPrompt;
