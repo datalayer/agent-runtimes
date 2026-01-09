@@ -1,0 +1,450 @@
+/*
+ * Copyright (c) 2025-2026 Datalayer, Inc.
+ * Distributed under the terms of the Modified BSD License.
+ */
+
+/**
+ * Chat - A transport-agnostic chat component.
+ *
+ * This component provides a unified interface for multiple agent transports,
+ * automatically configuring the appropriate inference provider and transport adapter.
+ *
+ * Supported transports:
+ * - ACP (Agent Client Protocol) - WebSocket-based with JSON-RPC 2.0
+ * - AG-UI - Pydantic AI's POST-based transport
+ * - A2A (Agent-to-Agent) - JSON-RPC for inter-agent communication
+ * - Vercel AI - HTTP/SSE streaming (via SelfHostedInferenceProvider)
+ * - Vercel AI Jupyter - Same as Vercel AI but served by Jupyter server
+ *
+ * @module components/chat/components/Chat
+ */
+
+import { useEffect, useMemo, useState } from 'react';
+import { Text, Button, Spinner, Label } from '@primer/react';
+import { AlertIcon, SyncIcon } from '@primer/octicons-react';
+import { Box } from '@datalayer/primer-addons';
+import { ChatPanel, type Suggestion } from './base/ChatPanel';
+import type { ProtocolConfig } from './base/ChatPanel';
+
+// Try to get Jupyter settings if available
+let getJupyterSettings: (() => { baseUrl: string; token: string }) | undefined;
+try {
+  // Dynamic import to avoid hard dependency on JupyterLab
+  const ServerConnection = require('@jupyterlab/services').ServerConnection;
+  getJupyterSettings = () => {
+    const settings = ServerConnection.makeSettings();
+    return {
+      baseUrl: settings.baseUrl,
+      token: settings.token || '',
+    };
+  };
+} catch {
+  // JupyterLab not available, try to read from page config
+  try {
+    const configEl = document.getElementById('jupyter-config-data');
+    if (configEl) {
+      const config = JSON.parse(configEl.textContent || '{}');
+      if (config.baseUrl) {
+        getJupyterSettings = () => ({
+          baseUrl: config.baseUrl,
+          token: config.token || '',
+        });
+      }
+    }
+  } catch {
+    // No Jupyter config available
+  }
+}
+
+/**
+ * Supported transports (communication transports)
+ */
+export type Transport =
+  | 'ag-ui'
+  | 'a2a'
+  | 'acp'
+  | 'vercel-ai'
+  | 'vercel-ai-jupyter';
+
+/**
+ * Extension type for chat features
+ */
+export type Extension = 'mcp-ui' | 'a2ui';
+
+/**
+ * Get transport endpoint path
+ */
+function getEndpointPath(transport: Transport, agentId?: string): string {
+  switch (transport) {
+    case 'vercel-ai':
+      return `/api/v1/vercel-ai/${agentId}`;
+    case 'vercel-ai-jupyter':
+      // Jupyter server endpoint - same protocol as vercel-ai
+      // Note: no leading slash - will be joined with baseUrl that may have trailing slash
+      return 'agent_runtimes/chat';
+    case 'ag-ui':
+      return `/api/v1/ag-ui/${agentId}/`;
+    case 'a2a':
+      // A2A requires trailing slash
+      return `/api/v1/a2a/agents/${agentId}/`;
+    case 'acp':
+      return `/api/v1/acp/ws/${agentId}`;
+    default:
+      return `/api/v1/agents/${agentId}/chat`;
+  }
+}
+
+/**
+ * Map transport type to protocol type
+ */
+function getProtocolType(
+  transport: Transport,
+): 'ag-ui' | 'a2a' | 'acp' | 'vercel-ai' {
+  switch (transport) {
+    case 'vercel-ai-jupyter':
+      return 'vercel-ai';
+    default:
+      return transport;
+  }
+}
+
+/**
+ * Chat props
+ */
+export interface ChatProps {
+  /** Transport to use */
+  transport: Transport;
+
+  /** Extensions for chat features */
+  extensions?: Extension[];
+
+  /** Base URL of the server (for HTTP-based protocols) */
+  baseUrl?: string;
+
+  /** WebSocket URL (for WebSocket-based protocols like ACP) */
+  wsUrl?: string;
+
+  /** Agent ID */
+  agentId?: string;
+
+  /** Custom placeholder text */
+  placeholder?: string;
+
+  /** Custom title */
+  title?: string;
+
+  /** Whether to auto-connect on mount */
+  autoConnect?: boolean;
+
+  /** Whether to use streaming (for protocols that support it) */
+  streaming?: boolean;
+
+  /** Callback when a message is sent */
+  onMessageSent?: (content: string) => void;
+
+  /** Callback when a response is received */
+  onMessageReceived?: (message: unknown) => void;
+
+  /** Callback when disconnect is clicked */
+  onDisconnect?: () => void;
+
+  /** Callback when logout is clicked */
+  onLogout?: () => void;
+
+  /** Callback when collapse panel is clicked */
+  onCollapsePanel?: () => void;
+
+  /** Custom styles */
+  className?: string;
+
+  /** Height of the chat container */
+  height?: string | number;
+
+  /** Show header with connection status */
+  showHeader?: boolean;
+
+  /** Show model selector (for vercel-ai-jupyter transport) */
+  showModelSelector?: boolean;
+
+  /** Show tools menu (for vercel-ai-jupyter transport) */
+  showToolsMenu?: boolean;
+
+  /** Clear messages when component mounts or agentId changes */
+  clearOnMount?: boolean;
+
+  /** Suggestions to show in empty state */
+  suggestions?: Suggestion[];
+
+  /** Whether to automatically submit the message when a suggestion is clicked */
+  submitOnSuggestionClick?: boolean;
+
+  /** Description shown in empty state */
+  description?: string;
+
+  /** Auto-focus the input on mount */
+  autoFocus?: boolean;
+}
+
+/**
+ * Chat Component
+ *
+ * A unified chat interface that supports multiple transports.
+ * Uses ChatPanel internally for consistent UI and behavior.
+ *
+ * Note: Different transports connect to different servers:
+ * - vercel-ai, vercel-ai-jupyter: Connect to Jupyter server (default: localhost:8888)
+ * - ag-ui, acp, a2a: Connect to agent-runtimes server (default: localhost:8765)
+ *
+ * @example
+ * ```tsx
+ * // AG-UI Transport (connects to agent-runtimes server)
+ * <Chat
+ *   transport="ag-ui"
+ *   baseUrl="http://localhost:8765"
+ *   agentId="demo-agent"
+ * />
+ *
+ * // ACP Transport (WebSocket to agent-runtimes server)
+ * <Chat
+ *   transport="acp"
+ *   wsUrl="ws://localhost:8765/api/v1/acp/ws"
+ *   agentId="demo-agent"
+ * />
+ *
+ * // Vercel AI Transport (connects to Jupyter server)
+ * <Chat
+ *   transport="vercel-ai"
+ *   baseUrl="http://localhost:8888"
+ *   agentId="demo-agent"
+ * />
+ *
+ * // Vercel AI (Jupyter) Transport with model/tools selection
+ * <Chat
+ *   transport="vercel-ai-jupyter"
+ *   showModelSelector={true}
+ *   showToolsMenu={true}
+ * />
+ * ```
+ */
+export function Chat({
+  transport,
+  extensions: _extensions,
+  baseUrl = 'http://localhost:8765',
+  wsUrl,
+  agentId,
+  placeholder = 'Type your message...',
+  title,
+  autoConnect: _autoConnect = true,
+  streaming: _streaming = true,
+  onMessageSent: _onMessageSent,
+  onMessageReceived: _onMessageReceived,
+  onDisconnect,
+  onLogout: _onLogout,
+  onCollapsePanel: _onCollapsePanel,
+  className,
+  height = '600px',
+  showHeader = true,
+  showModelSelector = true,
+  showToolsMenu = true,
+  clearOnMount: _clearOnMount = true,
+  suggestions,
+  submitOnSuggestionClick = true,
+  description,
+  autoFocus = false,
+}: ChatProps) {
+  const [error, setError] = useState<string | null>(null);
+  const [isInitializing, setIsInitializing] = useState(true);
+
+  // Build protocol config based on transport
+  const protocolConfig = useMemo((): ProtocolConfig | undefined => {
+    try {
+      let endpoint: string;
+      let authToken: string | undefined;
+      let options: Record<string, unknown> | undefined;
+
+      switch (transport) {
+        case 'vercel-ai-jupyter': {
+          // For vercel-ai-jupyter, try to get Jupyter settings
+          let jupyterBaseUrl = baseUrl;
+
+          if (getJupyterSettings) {
+            try {
+              const jupyterSettings = getJupyterSettings();
+              jupyterBaseUrl = jupyterSettings.baseUrl;
+              if (jupyterSettings.token) {
+                authToken = jupyterSettings.token;
+                options = {
+                  headers: {
+                    Authorization: `token ${jupyterSettings.token}`,
+                    'X-XSRFToken': jupyterSettings.token,
+                  },
+                  fetchOptions: {
+                    mode: 'cors',
+                    credentials: 'include',
+                  },
+                };
+              }
+            } catch (err) {
+              console.warn('[Chat] Could not get Jupyter settings:', err);
+            }
+          }
+
+          // Properly join baseUrl and endpoint path
+          const endpointPath = getEndpointPath(transport);
+          endpoint = jupyterBaseUrl.endsWith('/')
+            ? `${jupyterBaseUrl}${endpointPath}`
+            : `${jupyterBaseUrl}/${endpointPath}`;
+          break;
+        }
+
+        case 'acp': {
+          endpoint = `${baseUrl}${getEndpointPath(transport, agentId)}`;
+          const acpWsUrl =
+            wsUrl ||
+            `${baseUrl.replace('http', 'ws')}/api/v1/acp/ws/${agentId}`;
+          options = { wsUrl: acpWsUrl };
+          break;
+        }
+
+        default: {
+          endpoint = `${baseUrl}${getEndpointPath(transport, agentId)}`;
+          break;
+        }
+      }
+
+      return {
+        type: getProtocolType(transport),
+        endpoint,
+        agentId,
+        authToken,
+        options,
+      };
+    } catch (err) {
+      console.error('[Chat] Error building protocol config:', err);
+      setError(err instanceof Error ? err.message : 'Failed to configure');
+      return undefined;
+    }
+  }, [transport, baseUrl, wsUrl, agentId]);
+
+  // Set initialized once protocol config is built
+  useEffect(() => {
+    if (protocolConfig) {
+      setIsInitializing(false);
+      setError(null);
+    }
+  }, [protocolConfig]);
+
+  // Handle reconnect
+  const handleReconnect = () => {
+    setError(null);
+    setIsInitializing(true);
+    // Force re-render by toggling initialization
+    setTimeout(() => setIsInitializing(false), 100);
+  };
+
+  // Handle new chat
+  const handleNewChat = () => {
+    onDisconnect?.();
+  };
+
+  // Render error state
+  if (error) {
+    return (
+      <Box
+        className={className}
+        sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height,
+          p: 4,
+          bg: 'canvas.default',
+        }}
+      >
+        <AlertIcon size={48} />
+        <Text sx={{ mt: 3, color: 'danger.fg', fontSize: 2 }}>
+          Connection Error
+        </Text>
+        <Text sx={{ mt: 1, color: 'fg.muted', fontSize: 1 }}>{error}</Text>
+        <Button
+          variant="primary"
+          sx={{ mt: 3 }}
+          leadingVisual={SyncIcon}
+          onClick={handleReconnect}
+        >
+          Retry
+        </Button>
+      </Box>
+    );
+  }
+
+  // Render loading state
+  if (isInitializing || !protocolConfig) {
+    return (
+      <Box
+        className={className}
+        sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height,
+          p: 4,
+          bg: 'canvas.default',
+        }}
+      >
+        <Spinner size="large" />
+        <Text sx={{ mt: 3, color: 'fg.muted' }}>
+          Connecting to {transport.toUpperCase().replace('-', ' ')} agent...
+        </Text>
+      </Box>
+    );
+  }
+
+  return (
+    <Box
+      className={className}
+      sx={{
+        position: 'relative',
+        height,
+        bg: 'canvas.default',
+        display: 'flex',
+        flexDirection: 'column',
+      }}
+    >
+      <ChatPanel
+        title={title}
+        showHeader={showHeader}
+        useStore={false}
+        protocol={protocolConfig}
+        placeholder={placeholder}
+        description={description}
+        suggestions={suggestions}
+        submitOnSuggestionClick={submitOnSuggestionClick}
+        autoFocus={autoFocus}
+        headerContent={
+          <Label variant="accent" size="small">
+            {transport.toUpperCase().replace(/-/g, ' ')}
+          </Label>
+        }
+        showModelSelector={
+          showModelSelector && transport === 'vercel-ai-jupyter'
+        }
+        showToolsMenu={showToolsMenu && transport === 'vercel-ai-jupyter'}
+        onNewChat={handleNewChat}
+        headerButtons={{
+          showNewChat: true,
+          showClear: true,
+          onNewChat: handleNewChat,
+        }}
+        avatarConfig={{
+          showAvatars: true,
+        }}
+        backgroundColor="canvas.default"
+      />
+    </Box>
+  );
+}
+
+export default Chat;

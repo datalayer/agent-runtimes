@@ -1,0 +1,169 @@
+---
+title: Tokens
+---
+
+import DocCardList from '@theme/DocCardList';
+
+The Tokens module provides authentication token management for the Datalayer platform. Tokens are used for API authentication, service-to-service communication, and secure access to Datalayer resources with configurable expiration and access control.
+
+## Overview
+
+Tokens in Datalayer provide secure, time-limited access to platform resources. They serve as authentication credentials for API calls, runtime access, and service integrations. All tokens are cryptographically secure and can be configured with expiration dates for enhanced security.
+
+### Key Features
+
+- **Secure Authentication**: Cryptographically secure tokens for API access
+- **Configurable Expiration**: Set custom expiration dates for token lifecycle management
+- **Access Control**: Role-based access control integrated with token permissions
+- **API Integration**: Seamless integration with Datalayer APIs and services
+- **Audit Trail**: Complete audit logging of token creation, usage, and deletion
+
+## Token Class
+
+The `Token` class represents an authentication token with the following attributes:
+
+- **uid**: Unique identifier for the token
+- **name**: Human-readable name of the token
+- **description**: Description of the token's purpose
+- **token_type**: Type of token (e.g. `user_token`)
+
+
+## Creating Tokens
+
+### Basic Token Creation
+
+Create a simple user token for API authentication:
+
+```python
+from agent_runtimes import DatalayerClient
+
+client = DatalayerClient()
+token_response = client.create_token(
+    name="API_ACCESS_TOKEN",
+    description="Token for automated API access"
+)
+
+print(f"Token created: {token_response['name']}")
+print(f"Token value: {token_response['token']}")  # Store securely!
+print(f"Token UID: {token_response['uid']}")
+```
+
+### Token with Expiration
+
+Create tokens with custom expiration dates:
+
+```python
+from agent_runtimes import DatalayerClient
+import time
+
+client = DatalayerClient()
+
+# Create token that expires in 30 days
+expiration_timestamp = int(time.time()) + (30 * 24 * 60 * 60)  # 30 days from now
+
+token_response = client.create_token(
+    name="TEMPORARY_ACCESS_TOKEN",
+    description="30-day temporary access token",
+    expiration_date=expiration_timestamp
+)
+
+print(f"Token created with expiration: {token_response['name']}")
+print(f"Expires at: {time.ctime(expiration_timestamp)}")
+```
+
+### Typed Token Creation
+
+Create tokens with specific types:
+
+```python
+from agent_runtimes import DatalayerClient
+from agent_runtimes.tokens import TokenType
+
+client = DatalayerClient()
+
+# Create user token (default type)
+user_token = client.create_token(
+    name="USER_API_TOKEN",
+    description="User API access token",
+    token_type=TokenType.USER
+)
+
+print(f"Created {user_token['type']} token: {user_token['name']}")
+```
+
+## Listing and Managing Tokens
+
+### List All Tokens
+
+View all tokens associated with your account:
+
+```python
+from agent_runtimes import DatalayerClient
+import time
+
+client = DatalayerClient()
+tokens = client.list_tokens()
+
+print(f"Found {len(tokens)} tokens:")
+for token in tokens:
+    print(f"  - {token.name}")
+    print(f"    UID: {token.uid}")
+    print(f"    Type: {token.token_type}")
+    print(f"    Description: {token.description}")
+    print("---")
+```
+
+### Search Tokens
+
+Find tokens by name or description:
+
+```python
+from agent_runtimes import DatalayerClient
+
+def find_tokens(client, search_term):
+    """Find tokens by name or description."""
+    all_tokens = client.list_tokens()
+    matching_tokens = []
+    
+    for token in all_tokens:
+        if (search_term.lower() in token.name.lower() or 
+            search_term.lower() in token.description.lower()):
+            matching_tokens.append(token)
+    
+    return matching_tokens
+```
+
+## Deleting Tokens
+
+### Delete Single Token
+
+Remove a token by UID or Token object:
+
+```python
+from agent_runtimes import DatalayerClient
+
+client = DatalayerClient()
+
+# Delete by UID
+success = client.delete_token("token-uid-12345")
+print(f"Token deletion successful: {success}")
+
+# Delete by Token object
+tokens = client.list_tokens()
+if tokens:
+    old_token = tokens[0]  # Delete the first token
+    success = client.delete_token(old_token)
+    print(f"Deleted token '{old_token.name}': {success}")
+```
+
+## Notes
+
+- **Security**: All tokens are cryptographically secure and should be treated as sensitive credentials
+- **Storage**: Never hardcode tokens in source code; use secure storage mechanisms
+- **Expiration**: Always set appropriate expiration dates for enhanced security
+- **Rotation**: Implement regular token rotation as part of security best practices
+- **Monitoring**: Regularly audit and monitor token usage for security compliance
+- **Access Control**: Tokens inherit the permissions of the user who created them
+- **API Usage**: Tokens can be used for both SDK authentication and direct API calls
+- **Cleanup**: Regularly clean up expired and unused tokens to maintain security hygiene
+

@@ -1,0 +1,13 @@
+{
+  "id": "earthquake-detector",
+  "title": "Earthquake Detector",
+  "description": "Real-time seismic activity monitoring and earthquake alert system.",
+  "image": "https://images.unsplash.com/photo-1589519160732-57fc498494f8?w=300&h=150&fit=crop",
+  "author": "Eric Charles",
+  "editTimestamp": "53 minutes ago",
+  "status": "paused",
+  "transport": "ag-ui",
+  "avatarUrl": "https://avatars.githubusercontent.com/atom",
+  "stars": 4,
+  "notifications": 0
+}

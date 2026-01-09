@@ -1,0 +1,13 @@
+{
+  "id": "stocks-watcher",
+  "title": "Stocks Watcher",
+  "description": "Intelligent stock market analysis and portfolio tracking agent.",
+  "image": "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=300&h=150&fit=crop",
+  "author": "Gonzalo Peña-Castellanos",
+  "editTimestamp": "3 days ago",
+  "status": "paused",
+  "transport": "acp",
+  "avatarUrl": "https://avatars.githubusercontent.com/desktop",
+  "stars": 1,
+  "notifications": 0
+}

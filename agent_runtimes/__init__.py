@@ -1,0 +1,76 @@
+# Copyright (c) 2025-2026 Datalayer, Inc.
+# Distributed under the terms of the Modified BSD License.
+
+"""
+Agent Runtimes - Datalayer's AI Agent Infrastructure.
+
+This package provides:
+- Base agent interface for protocol adapters
+- Protocol adapters (ACP, etc.)
+- FastAPI server for agent communication
+- Observability with OpenTelemetry
+- Jupyter server extension integration
+
+The ACP (Agent Client Protocol) support uses the official SDK from:
+- Python: https://github.com/agentclientprotocol/python-sdk
+- TypeScript: https://github.com/agentclientprotocol/typescript-sdk
+"""
+
+from typing import Any, Dict, List
+
+from agent_runtimes.__version__ import __version__
+from agent_runtimes.jupyter.serverapplication import AgentRuntimesExtensionApp
+
+# Agent interfaces
+from agent_runtimes.runtimes.base import (
+    AgentContext,
+    AgentResponse,
+    BaseAgent,
+    StreamEvent,
+    ToolCall,
+    ToolDefinition,
+    ToolResult,
+)
+from agent_runtimes.runtimes.pydantic_ai_agent import PydanticAIAgent
+
+# Protocol adapters
+from agent_runtimes.adapters.base import AdapterEvent, BaseAdapter
+from agent_runtimes.adapters.acp import ACPAdapter, ACPSession
+
+
+def _jupyter_server_extension_points() -> List[Dict[str, Any]]:
+    """
+    Get Jupyter server extension points for Datalayer.
+
+    Returns
+    -------
+    List[Dict[str, Any]]
+        List of extension point configurations for Jupyter server.
+    """
+    return [
+        {
+            "module": "agent_runtimes",
+            "app": AgentRuntimesExtensionApp,
+        }
+    ]
+
+
+__all__ = [
+    # Version
+    "__version__",
+    # Base agent interface
+    "BaseAgent",
+    "AgentContext",
+    "AgentResponse",
+    "StreamEvent",
+    "ToolCall",
+    "ToolResult",
+    "ToolDefinition",
+    # Agent implementations
+    "PydanticAIAgent",
+    # Protocol adapters
+    "BaseAdapter",
+    "AdapterEvent",
+    "ACPAdapter",
+    "ACPSession",
+]

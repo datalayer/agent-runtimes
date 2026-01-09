@@ -1,0 +1,52 @@
+header:
+  license:
+    spdx-id: Datalayer
+    copyright-owner: Datalayer, Inc.
+    copyright-year: 2025-2026
+    content: |
+      Copyright (c) [year] [owner]
+      Distributed under the terms of the Modified BSD License.
+
+  paths-ignore:
+    - '**/*.toml'
+    - '**/*.apt'
+    - '**/*.cedar'
+    - '**/*.dash'
+    - '**/*.fga'
+    - '**/*.ipynb'
+    - '**/*.j2'
+    - '**/*.json'
+    - '**/*.mamba'
+    - '**/*.md'
+    - '**/*.mdx'
+    - '**/*.mod'
+    - '**/*.nblink'
+    - '**/*.rego'
+    - '**/*.sum'
+    - '**/*.svg'
+    - '**/*.template'
+    - '**/*.tsbuildinfo'
+    - '**/*.txt'
+    - '**/*.yaml'
+    - '**/*.yml'
+    - '**/*_key'
+    - '**/*_key.pub'
+    - '**/.*'
+    - '**/LICENSE.txt'
+    - '**/MANIFEST.in'
+    - '**/build'
+    - '**/lib'
+    - '**/node_modules'
+    - '**/schemas'
+    - '**/ssh/*'
+    - '**/static'
+    - '**/themes'
+    - '**/typings'
+    - '**/*.patch'
+    - '**/*.bundle.js'
+    - '**/*.map.js'
+    - 'LICENSE'
+    - 'src/stories'
+    - '.husky/pre-commit'
+
+  comment: on-failure

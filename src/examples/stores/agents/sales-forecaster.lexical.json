@@ -1,0 +1,2988 @@
+{
+  "root": {
+    "children": [
+      {
+        "children": [
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "Earthquake Detector",
+            "type": "text",
+            "version": 1
+          }
+        ],
+        "direction": "ltr",
+        "format": "",
+        "indent": 0,
+        "type": "heading",
+        "version": 1,
+        "tag": "h1"
+      },
+      {
+        "children": [
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "Imports",
+            "type": "text",
+            "version": 1
+          }
+        ],
+        "direction": null,
+        "format": "",
+        "indent": 0,
+        "type": "heading",
+        "version": 1,
+        "tag": "h2"
+      },
+      {
+        "children": [
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "from",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "keyword"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": " fastai",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": ".",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "vision",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": ".",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "all",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "builtin"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": " ",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "import",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "keyword"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": " ",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "*",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "operator"
+          },
+          {
+            "type": "linebreak",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "import",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "keyword"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": " geopandas ",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "as",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "keyword"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": " gpd",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "type": "linebreak",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "from",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "keyword"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": " tqdm ",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "import",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "keyword"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": " tqdm",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "type": "linebreak",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "import",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "keyword"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": " matplotlib",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": ".",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "pyplot ",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "as",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "keyword"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": " plt",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "type": "linebreak",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "from",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "keyword"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": " collections ",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "import",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "keyword"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": " Counter",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          }
+        ],
+        "direction": null,
+        "format": "",
+        "indent": 0,
+        "type": "jupyter-input",
+        "version": 1,
+        "language": "python",
+        "jupyterInputNodeUuid": "2f462cfe-5836-41b6-a61b-2bc4d45c701f"
+      },
+      {
+        "type": "jupyter-output",
+        "source": "",
+        "outputs": [],
+        "jupyterInputNodeUuid": "2f462cfe-5836-41b6-a61b-2bc4d45c701f",
+        "jupyterOutputNodeUuid": "e1859f34-507b-4555-9663-fc89696b85bc",
+        "version": 1
+      },
+      {
+        "children": [
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "Training",
+            "type": "text",
+            "version": 1
+          }
+        ],
+        "direction": null,
+        "format": "",
+        "indent": 0,
+        "type": "heading",
+        "version": 1,
+        "tag": "h2"
+      },
+      {
+        "children": [
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "dls ",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "=",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "operator"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": " ImageDataLoaders",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": ".",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "from_name_func",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "(",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "type": "linebreak",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "    path",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "=",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "operator"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "\"/home/jovyan/home/training7\"",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "string"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": ",",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "type": "linebreak",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "    fnames",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "=",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "operator"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "files",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": ",",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "    ",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "type": "linebreak",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "    label_func",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "=",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "operator"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "label_func",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": ",",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "    ",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "type": "linebreak",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "    item_tfms",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "=",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "operator"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "Resize",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "(",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "224",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "number"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": ")",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": ",",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "    ",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "type": "linebreak",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "    batch_tfms",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "=",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "operator"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "[",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "*",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "operator"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "aug_transforms",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "(",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "xtra_tfms",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "=",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "operator"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "None",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "boolean"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": ")",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "]",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": ",",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "    ",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "type": "linebreak",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "    splitter",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "=",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "operator"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "my_splitter",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": ")",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          }
+        ],
+        "direction": null,
+        "format": "",
+        "indent": 0,
+        "type": "jupyter-input",
+        "version": 1,
+        "language": "python",
+        "jupyterInputNodeUuid": "bb2dc32b-0b0c-4a37-b1bf-85de7649fbbe"
+      },
+      {
+        "type": "jupyter-output",
+        "source": "",
+        "outputs": [],
+        "jupyterInputNodeUuid": "bb2dc32b-0b0c-4a37-b1bf-85de7649fbbe",
+        "jupyterOutputNodeUuid": "efd918a4-0ec4-4ad3-b55f-3a29d34a4eb4",
+        "version": 1
+      },
+      {
+        "children": [
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "# Get labels for training and validation",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "comment"
+          },
+          {
+            "type": "linebreak",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "train_labels ",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "=",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "operator"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": " ",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "[",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "dls",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": ".",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "vocab",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "[",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "o",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "[",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "1",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "number"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "]",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "]",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": " ",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "for",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "keyword"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": " o ",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "in",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "keyword"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": " dls",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": ".",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "train_ds",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "]",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "type": "linebreak",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "valid_labels ",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "=",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "operator"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": " ",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "[",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "dls",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": ".",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "vocab",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "[",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "o",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "[",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "1",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "number"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "]",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "]",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": " ",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "for",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "keyword"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": " o ",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "in",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "keyword"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": " dls",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": ".",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "valid_ds",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "]",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "type": "linebreak",
+            "version": 1
+          },
+          {
+            "type": "linebreak",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "# Count occurrences",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "comment"
+          },
+          {
+            "type": "linebreak",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "train_counts ",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "=",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "operator"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": " Counter",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "(",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "train_labels",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": ")",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "type": "linebreak",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "valid_counts ",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "=",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "operator"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": " Counter",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "(",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "valid_labels",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": ")",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "type": "linebreak",
+            "version": 1
+          },
+          {
+            "type": "linebreak",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "# Prepare data for plotting",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "comment"
+          },
+          {
+            "type": "linebreak",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "labels ",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "=",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "operator"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": " dls",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": ".",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "vocabtrain_vals ",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "=",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "operator"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": " ",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "[",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "train_counts",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": ".",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "get",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "(",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "lbl",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": ",",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": " ",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "0",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "number"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": ")",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": " ",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "for",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "keyword"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": " lbl ",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "in",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "keyword"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": " labels",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "]",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "type": "linebreak",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "valid_vals ",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "=",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "operator"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": " ",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "[",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "valid_counts",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": ".",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "get",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "(",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "lbl",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": ",",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": " ",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "0",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "number"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": ")",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": " ",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "for",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "keyword"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": " lbl ",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "in",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "keyword"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": " labels",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "]",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "type": "linebreak",
+            "version": 1
+          },
+          {
+            "type": "linebreak",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "# Plot",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "comment"
+          },
+          {
+            "type": "linebreak",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "x ",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "=",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "operator"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": " ",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "range",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "builtin"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "(",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "len",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "builtin"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "(",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "labels",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": ")",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": ")",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "type": "linebreak",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "plt",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": ".",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "figure",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "(",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "figsize",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "=",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "operator"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "(",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "10",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "number"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": ",",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "5",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "number"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": ")",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": ")",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "type": "linebreak",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "plt",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": ".",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "bar",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "(",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "x",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": ",",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": " train_vals",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": ",",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": " width",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "=",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "operator"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "0.4",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "number"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": ",",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": " label",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "=",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "operator"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "\"Train\"",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "string"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": ")",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "type": "linebreak",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "plt",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": ".",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "bar",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "(",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "[",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "i",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "+",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "operator"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "0.4",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "number"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": " ",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "for",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "keyword"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": " i ",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "in",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "keyword"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": " x",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "]",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": ",",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": " valid_vals",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": ",",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": " width",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "=",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "operator"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "0.4",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "number"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": ",",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": " label",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "=",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "operator"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "\"Valid\"",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "string"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": ")",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "type": "linebreak",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "plt",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": ".",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "xticks",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "(",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "[",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "i",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "+",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "operator"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "0.2",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "number"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": " ",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "for",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "keyword"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": " i ",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "in",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "keyword"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": " x",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "]",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": ",",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": " labels",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": ",",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": " rotation",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "=",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "operator"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "45",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "number"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": ")",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "type": "linebreak",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "plt",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": ".",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "xlabel",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "(",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "\"Labels\"",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "string"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": ")",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "type": "linebreak",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "plt",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": ".",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "ylabel",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "(",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "\"Count\"",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "string"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": ")",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "type": "linebreak",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "plt",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": ".",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "title",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "(",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "\"Label repartition in Train vs Validation\"",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "string"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": ")",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "type": "linebreak",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "plt",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": ".",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "legend",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "(",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": ")",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "type": "linebreak",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "plt",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": ".",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "show",
+            "type": "jupyter-input-highlight",
+            "version": 1
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "(",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": ")",
+            "type": "jupyter-input-highlight",
+            "version": 1,
+            "highlightType": "punctuation"
+          }
+        ],
+        "direction": null,
+        "format": "",
+        "indent": 0,
+        "type": "jupyter-input",
+        "version": 1,
+        "language": "python",
+        "jupyterInputNodeUuid": "517924ed-cb8b-496a-ba9a-3acbcff2d03a"
+      },
+      {
+        "type": "jupyter-output",
+        "source": "",
+        "outputs": [],
+        "jupyterInputNodeUuid": "517924ed-cb8b-496a-ba9a-3acbcff2d03a",
+        "jupyterOutputNodeUuid": "9bdc5ae0-9340-4a0b-91c4-3e84fa613548",
+        "version": 1
+      }
+    ],
+    "direction": "ltr",
+    "format": "",
+    "indent": 0,
+    "type": "root",
+    "version": 1
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "id": "social-post-generator",
+  "title": "Social Post Generator",
+  "description": "A powerful agent template for automated social media post generation.",
+  "image": "https://images.unsplash.com/photo-1611926653458-09294b3142bf?w=300&h=150&fit=crop",
+  "author": "Eric Charles",
+  "editTimestamp": "2 hours ago",
+  "status": "paused",
+  "transport": "ag-ui",
+  "avatarUrl": "https://avatars.githubusercontent.com/primer",
+  "stars": 3,
+  "notifications": 1
+}

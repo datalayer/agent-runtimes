@@ -1,0 +1,128 @@
+/*
+ * Copyright (c) 2025-2026 Datalayer, Inc.
+ * Distributed under the terms of the Modified BSD License.
+ *
+ * Showcase-specific styles for Vercel AI Elements
+ */
+
+/* Additional showcase-specific styles */
+:root {
+  --showcase-max-width: 1400px;
+}
+
+.showcase-container {
+  max-width: var(--showcase-max-width);
+  margin: 0 auto;
+}
+
+/* Ensure proper spacing in showcase examples */
+.space-y-8 > * + * {
+  margin-top: 2rem;
+}
+
+.space-y-4 > * + * {
+  margin-top: 1rem;
+}
+
+.space-y-3 > * + * {
+  margin-top: 0.75rem;
+}
+
+.space-y-2 > * + * {
+  margin-top: 0.5rem;
+}
+
+/* Prose styles for documentation content */
+.prose {
+  color: var(--color-fg-default);
+  max-width: 65ch;
+}
+
+.prose h1 {
+  font-size: 2em;
+  margin-top: 0;
+  margin-bottom: 0.8em;
+  line-height: 1.1;
+  font-weight: 700;
+}
+
+.prose h2 {
+  font-size: 1.5em;
+  margin-top: 2em;
+  margin-bottom: 1em;
+  line-height: 1.3;
+  font-weight: 600;
+}
+
+.prose h3 {
+  font-size: 1.25em;
+  margin-top: 1.6em;
+  margin-bottom: 0.6em;
+  line-height: 1.4;
+  font-weight: 600;
+}
+
+.prose p {
+  margin-top: 1.25em;
+  margin-bottom: 1.25em;
+  line-height: 1.7;
+}
+
+.prose pre {
+  background-color: var(--color-canvas-subtle);
+  border-radius: 0.375rem;
+  padding: 1em;
+  overflow-x: auto;
+  margin-top: 1.7em;
+  margin-bottom: 1.7em;
+}
+
+.prose code {
+  background-color: var(--color-canvas-subtle);
+  border-radius: 0.25rem;
+  padding: 0.2em 0.4em;
+  font-size: 0.875em;
+  font-family: 'Fira Code', 'Consolas', 'Monaco', monospace;
+}
+
+.prose pre code {
+  background-color: transparent;
+  padding: 0;
+  font-size: inherit;
+}
+
+.prose ul {
+  margin-top: 1.25em;
+  margin-bottom: 1.25em;
+  padding-left: 1.625em;
+  list-style-type: disc;
+}
+
+.prose li {
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+}
+
+.prose strong {
+  font-weight: 600;
+}
+
+/* Ensure code blocks in examples are visible */
+.border {
+  border-width: 1px;
+}
+
+/* Dark mode adjustments */
+@media (prefers-color-scheme: dark) {
+  .prose {
+    color: var(--color-fg-default);
+  }
+
+  .prose code {
+    background-color: rgba(110, 118, 129, 0.4);
+  }
+
+  .prose pre {
+    background-color: rgba(110, 118, 129, 0.2);
+  }
+}

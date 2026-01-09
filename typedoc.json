@@ -1,0 +1,6 @@
+{
+  "$schema": "https://typedoc-plugin-markdown.org/schema.json",
+  "entryPoints": ["./src/index.ts"],
+  "name": "Agent Runtimes",
+  "plugin": ["typedoc-plugin-markdown"]
+}
