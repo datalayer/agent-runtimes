@@ -65,7 +65,7 @@ const DEFAULT_AGENT_ID = 'demo-agent';
  * 4. Enter the WebSocket URL and Agent ID (or use defaults)
  * 5. Click Connect and start chatting!
  */
-const AgentRuntimeFormExample: React.FC = () => {
+const AgentSpaceFormExample: React.FC = () => {
   const [wsUrl, setWsUrl] = useState(DEFAULT_WS_URL);
   const [baseUrl, setBaseUrl] = useState(DEFAULT_BASE_URL);
   const [agentName, setAgentName] = useState(DEFAULT_AGENT_ID);
@@ -518,4 +518,4 @@ const AgentRuntimeFormExample: React.FC = () => {
   );
 };
 
-export default AgentRuntimeFormExample;
+export default AgentSpaceFormExample;
