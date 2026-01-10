@@ -169,7 +169,7 @@ async def chat(
 
     if not adapter:
         # Try to create a default adapter if we have a demo agent
-        from ..demo.demo_agent import create_demo_agent
+        from ..demo.demo_adapter import create_demo_agent
 
         try:
             agent, _ = create_demo_agent()
