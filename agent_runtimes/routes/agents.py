@@ -21,7 +21,7 @@ from starlette.routing import Mount
 from pydantic_ai import Agent as PydanticAgent
 
 from ..adapters.pydantic_ai_adapter import PydanticAIAdapter
-from ..protocols import AGUIAdapter, VercelAIAdapter, MCPUIAdapter
+from ..protocols import AGUIProtocol, VercelAIProtocol, MCPUIProtocol
 from .acp import AgentCapabilities, AgentInfo, register_agent, unregister_agent, _agents
 from .agui import register_agui_agent, unregister_agui_agent, get_agui_app
 from .vercel_ai import register_vercel_agent, unregister_vercel_agent
@@ -154,7 +154,7 @@ async def create_agent(request: CreateAgentRequest, http_request: Request) -> Cr
         # Register with the specified transport
         if request.transport == "ag-ui":
             try:
-                agui_adapter = AGUIAdapter(agent)
+                agui_adapter = AGUIProtocol(agent)
                 register_agui_agent(agent_id, agui_adapter)
                 logger.info(f"Registered agent with AG-UI: {agent_id}")
                 
@@ -170,7 +170,7 @@ async def create_agent(request: CreateAgentRequest, http_request: Request) -> Cr
         
         elif request.transport == "vercel-ai":
             try:
-                vercel_adapter = VercelAIAdapter(agent)
+                vercel_adapter = VercelAIProtocol(agent)
                 register_vercel_agent(agent_id, vercel_adapter)
                 logger.info(f"Registered agent with Vercel AI: {agent_id}")
             except Exception as e:
@@ -196,7 +196,7 @@ async def create_agent(request: CreateAgentRequest, http_request: Request) -> Cr
         
         # Also register with MCP-UI for tools
         try:
-            mcp_ui_adapter = MCPUIAdapter(agent)
+            mcp_ui_adapter = MCPUIProtocol(agent)
             register_mcp_ui_agent(agent_id, mcp_ui_adapter)
             logger.info(f"Registered agent with MCP-UI: {agent_id}")
         except Exception as e:

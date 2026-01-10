@@ -9,10 +9,10 @@ Implements the A2A protocol for agent-to-agent communication.
 import uuid
 from typing import Any, AsyncIterator
 
-from .base import BaseAdapter
+from .base import BaseProtocol
 
 
-class A2AAdapter(BaseAdapter):
+class A2AProtocol(BaseProtocol):
     """A2A (Agent-to-Agent) protocol adapter.
 
     Implements the A2A protocol for inter-agent communication.
@@ -26,10 +26,10 @@ class A2AAdapter(BaseAdapter):
 
     Example:
         from agent_runtimes.agents import PydanticAIAgent
-        from agent_runtimes.protocols import A2AAdapter
+        from agent_runtimes.protocols import A2AProtocol
 
         agent = PydanticAIAgent(...)
-        adapter = A2AAdapter(agent)
+        adapter = A2AProtocol(agent)
 
         # Handle a request from another agent
         response = await adapter.handle_request({

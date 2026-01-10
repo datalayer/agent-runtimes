@@ -9,7 +9,7 @@ from typing import Any
 
 from jupyter_server.base.handlers import APIHandler
 from pydantic_ai import UsageLimits
-from pydantic_ai.ui.vercel_ai import VercelAIAdapter
+from pydantic_ai.ui.vercel_ai import VercelAIProtocol
 from starlette.requests import Request
 
 from agent_runtimes.jupyter.handlers.chat.tools import create_mcp_server
@@ -122,8 +122,8 @@ class VercelAIChatHandler(APIHandler):
                     total_tokens_limit=100000,
                 )
 
-                # Use VercelAIAdapter.dispatch_request (new API)
-                response = await VercelAIAdapter.dispatch_request(
+                # Use VercelAIProtocol.dispatch_request (new API)
+                response = await VercelAIProtocol.dispatch_request(
                     tornado_request,
                     agent=agent,
                     model=model,

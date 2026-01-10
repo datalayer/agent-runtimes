@@ -3,11 +3,11 @@
 
 """Protocol adapters for agent-runtimes."""
 
-from .a2a import A2AAdapter
-from .acp import ACPAdapter
-from .agui import AGUIAdapter
-from .base import BaseAdapter
-from .mcp_ui import MCPUIAdapter
-from .vercel_ai import VercelAIAdapter
+from .a2a import A2AProtocol
+from .acp import ACPProtocol
+from .agui import AGUIProtocol
+from .base import BaseProtocol
+from .mcp_ui import MCPUIProtocol
+from .vercel_ai import VercelAIProtocol
 
-__all__ = ["BaseAdapter", "ACPAdapter", "AGUIAdapter", "A2AAdapter", "VercelAIAdapter", "MCPUIAdapter"]
+__all__ = ["BaseProtocol", "ACPProtocol", "AGUIProtocol", "A2AProtocol", "VercelAIProtocol", "MCPUIProtocol"]

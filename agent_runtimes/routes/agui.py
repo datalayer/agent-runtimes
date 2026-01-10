@@ -12,7 +12,7 @@ from pydantic import BaseModel
 from starlette.applications import Starlette
 from starlette.routing import Mount
 
-from ..protocols import AGUIAdapter
+from ..protocols import AGUIProtocol
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +23,7 @@ router = APIRouter(
 )
 
 # Global registry of AG-UI adapters by agent ID
-_agui_adapters: dict[str, AGUIAdapter] = {}
+_agui_adapters: dict[str, AGUIProtocol] = {}
 _agui_apps: dict[str, Starlette] = {}
 
 # Track running requests per thread ID for termination
@@ -101,13 +101,13 @@ def cancel_all_threads() -> int:
 
 def register_agui_agent(
     agent_id: str,
-    adapter: AGUIAdapter,
+    adapter: AGUIProtocol,
 ) -> None:
     """Register an AG-UI adapter.
 
     Args:
         agent_id: Unique identifier for the agent.
-        adapter: The AGUIAdapter instance.
+        adapter: The AGUIProtocol instance.
     """
     _agui_adapters[agent_id] = adapter
     _agui_apps[agent_id] = adapter.get_app()

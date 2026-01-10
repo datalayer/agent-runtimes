@@ -10,7 +10,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from starlette.responses import StreamingResponse
 
-from ..protocols import MCPUIAdapter
+from ..protocols import MCPUIProtocol
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +21,7 @@ router = APIRouter(
 )
 
 # Global registry of MCP-UI adapters by agent ID
-_mcp_ui_adapters: dict[str, MCPUIAdapter] = {}
+_mcp_ui_adapters: dict[str, MCPUIProtocol] = {}
 
 
 class MCPUIRequest(BaseModel):
@@ -40,26 +40,26 @@ class MCPUIResponse(BaseModel):
 
 def register_mcp_ui_agent(
     agent_id: str,
-    adapter: MCPUIAdapter,
+    adapter: MCPUIProtocol,
 ) -> None:
     """Register an MCP-UI adapter.
 
     Args:
         agent_id: Unique identifier for the agent.
-        adapter: The MCPUIAdapter instance.
+        adapter: The MCPUIProtocol instance.
     """
     _mcp_ui_adapters[agent_id] = adapter
     logger.info(f"Registered MCP-UI agent: {agent_id}")
 
 
-def get_mcp_ui_adapter(agent_id: str) -> MCPUIAdapter | None:
+def get_mcp_ui_adapter(agent_id: str) -> MCPUIProtocol | None:
     """Get an MCP-UI adapter by ID.
 
     Args:
         agent_id: The agent identifier.
 
     Returns:
-        The MCPUIAdapter if found, None otherwise.
+        The MCPUIProtocol if found, None otherwise.
     """
     return _mcp_ui_adapters.get(agent_id)
 
@@ -182,7 +182,7 @@ async def chat(
         try:
             agent, _ = create_demo_agent()
             # Create MCP-UI adapter
-            adapter = MCPUIAdapter(agent)
+            adapter = MCPUIProtocol(agent)
             register_mcp_ui_agent(agent_id, adapter)
             logger.info(f"Auto-registered demo agent for MCP-UI: {agent_id}")
         except Exception as e:
@@ -251,7 +251,7 @@ async def stream(
 
         try:
             agent, _ = create_demo_agent()
-            adapter = MCPUIAdapter(agent)
+            adapter = MCPUIProtocol(agent)
             register_mcp_ui_agent(agent_id, adapter)
             logger.info(f"Auto-registered demo agent for MCP-UI: {agent_id}")
         except Exception as e:

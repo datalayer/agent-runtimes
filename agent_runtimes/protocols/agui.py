@@ -20,13 +20,13 @@ from typing import TYPE_CHECKING, Any, AsyncIterator
 from pydantic_ai.ui.ag_ui.app import AGUIApp
 
 from ..adapters.base import BaseAgent
-from .base import BaseAdapter
+from .base import BaseProtocol
 
 if TYPE_CHECKING:
     from starlette.applications import Starlette
 
 
-class AGUIAdapter(BaseAdapter):
+class AGUIProtocol(BaseProtocol):
     """AG-UI (Agent UI) protocol adapter.
 
     Wraps Pydantic AI's built-in AG-UI support to expose agents through
@@ -38,7 +38,7 @@ class AGUIAdapter(BaseAdapter):
     Example:
         from pydantic_ai import Agent
         from agent_runtimes.agents import PydanticAIAgent
-        from agent_runtimes.protocols import AGUIAdapter
+        from agent_runtimes.protocols import AGUIProtocol
 
         # Create Pydantic AI agent
         pydantic_agent = Agent("openai:gpt-4o")
@@ -47,7 +47,7 @@ class AGUIAdapter(BaseAdapter):
         agent = PydanticAIAgent(pydantic_agent)
         
         # Create AG-UI adapter
-        agui_adapter = AGUIAdapter(agent)
+        agui_adapter = AGUIProtocol(agent)
         
         # Get the Starlette app
         app = agui_adapter.get_app()
@@ -61,7 +61,7 @@ class AGUIAdapter(BaseAdapter):
     """
 
     def __init__(self, agent: BaseAgent, **kwargs: Any):
-        """Initialize the AG-UI adapter.
+        """Initialize the AG-UI adapACPProtocolter.
 
         Args:
             agent: The agent to adapt.
@@ -92,7 +92,7 @@ class AGUIAdapter(BaseAdapter):
                 pydantic_agent = self.agent._agent
             else:
                 raise ValueError(
-                    "AGUIAdapter requires a PydanticAIAgent that wraps a pydantic_ai.Agent"
+                    "AGUIProtocol requires a PydanticAIAgent that wraps a pydantic_ai.Agent"
                 )
 
             # Create the AG-UI app using Pydantic AI's built-in support
