@@ -10,13 +10,13 @@ FastAPI server with uvicorn.
 
 Usage:
     # Run directly
-    python -m agent_runtimes.server
+    python -m agent_runtimes
     
     # Or with uvicorn for development
     uvicorn agent_runtimes.app:app --reload --port 8000
     
     # With custom host/port
-    python -m agent_runtimes.server --host 0.0.0.0 --port 8080
+    python -m agent_runtimes --host 0.0.0.0 --port 8080
 """
 
 import argparse
@@ -38,19 +38,19 @@ def main() -> None:
         epilog="""
 Examples:
     # Start with defaults (localhost:8000)
-    python -m agent_runtimes.server
+    python -m agent_runtimes
     
     # Start on all interfaces
-    python -m agent_runtimes.server --host 0.0.0.0
+    python -m agent_runtimes --host 0.0.0.0
     
     # Start on custom port
-    python -m agent_runtimes.server --port 8080
+    python -m agent_runtimes --port 8080
     
     # Start with auto-reload for development
-    python -m agent_runtimes.server --reload
+    python -m agent_runtimes --reload
     
     # Start with debug logging
-    python -m agent_runtimes.server --debug
+    python -m agent_runtimes --debug
         """,
     )
     

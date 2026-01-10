@@ -10,7 +10,7 @@ the WebSocket communication and chat functionality.
 
 Usage:
     # First, start the server in one terminal:
-    python -m agent_runtimes.server --reload
+    python -m agent_runtimes --reload
     
     # Then, in another terminal, register the demo agent:
     python -m agent_runtimes.demo.demo_agent

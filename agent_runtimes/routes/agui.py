@@ -12,7 +12,7 @@ from pydantic import BaseModel
 from starlette.applications import Starlette
 from starlette.routing import Mount
 
-from ...adapters import AGUIAdapter
+from ..adapters import AGUIAdapter
 
 logger = logging.getLogger(__name__)
 

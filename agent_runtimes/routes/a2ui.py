@@ -6,7 +6,7 @@
 import logging
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)

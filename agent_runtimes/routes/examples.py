@@ -40,7 +40,7 @@ def _init_example_apps() -> None:
         return
     
     try:
-        from ...agents.examples import (
+        from ..agents.examples import (
             agentic_chat_app,
             agentic_generative_ui_app,
             backend_tool_rendering_app,

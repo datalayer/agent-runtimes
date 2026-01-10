@@ -27,7 +27,7 @@ except ImportError:
     FastA2A = None
     Skill = None
 
-from ...runtimes.base import BaseAgent
+from ..runtimes.base import BaseAgent
 
 
 logger = logging.getLogger(__name__)
