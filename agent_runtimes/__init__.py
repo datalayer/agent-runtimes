@@ -11,6 +11,12 @@ This package provides:
 - Observability with OpenTelemetry
 - Jupyter server extension integration
 
+FastAPI server for agent-runtimes provides:
+- ACP (Agent Communication Protocol) endpoints
+- WebSocket support for real-time agent communication
+- Health check endpoints
+- OpenAPI documentation
+
 The ACP (Agent Client Protocol) support uses the official SDK from:
 - Python: https://github.com/agentclientprotocol/python-sdk
 - TypeScript: https://github.com/agentclientprotocol/typescript-sdk
@@ -19,8 +25,10 @@ The ACP (Agent Client Protocol) support uses the official SDK from:
 from typing import Any, Dict, List
 
 from agent_runtimes.__version__ import __version__
+from agent_runtimes.app import create_app
+from agent_runtimes.routes.acp import router as acp_router
+from agent_runtimes.routes.health import router as health_router
 from agent_runtimes.jupyter.serverapplication import AgentRuntimesExtensionApp
-
 # Agent interfaces
 from agent_runtimes.runtimes.base import (
     AgentContext,
@@ -32,7 +40,6 @@ from agent_runtimes.runtimes.base import (
     ToolResult,
 )
 from agent_runtimes.runtimes.pydantic_ai_agent import PydanticAIAgent
-
 # Protocol adapters
 from agent_runtimes.adapters.base import AdapterEvent, BaseAdapter
 from agent_runtimes.adapters.acp import ACPAdapter, ACPSession
@@ -58,6 +65,9 @@ def _jupyter_server_extension_points() -> List[Dict[str, Any]]:
 __all__ = [
     # Version
     "__version__",
+    "create_app",
+    "acp_router",
+    "health_router",
     # Base agent interface
     "BaseAgent",
     "AgentContext",

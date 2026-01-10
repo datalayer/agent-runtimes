@@ -76,7 +76,7 @@ examples = [
 ]
 
 [project.scripts]
-agent-runtimes = "agent_runtimes.cli.__main__:main"
+agent-runtimes = "agent_runtimes.main:main"
 
 [tool.hatch.metadata]
 allow-direct-references = true

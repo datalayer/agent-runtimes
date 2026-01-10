@@ -13,7 +13,7 @@ Usage:
     python -m agent_runtimes.server --reload
     
     # Then, in another terminal, register the demo agent:
-    python -m agent_runtimes.server.demo_agent
+    python -m agent_runtimes.demo.demo_agent
 """
 
 import asyncio
@@ -27,7 +27,7 @@ from agent_runtimes.runtimes.base import (
     StreamEvent,
     ToolDefinition,
 )
-from agent_runtimes.server.routes.acp import (
+from agent_runtimes.routes.acp import (
     AgentCapabilities,
     AgentInfo,
     register_agent,
