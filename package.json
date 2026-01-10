@@ -120,7 +120,7 @@
     "@agentclientprotocol/sdk": "^0.8.0",
     "@ai-sdk/react": "^3.0.5",
     "@anthropic-ai/sdk": "^0.52.0",
-    "@datalayer/core": "^0.0.20",
+    "@datalayer/core": "^0.0.21",
     "@datalayer/icons-react": "^1.0.6",
     "@datalayer/jupyter-lexical": "^1.0.6",
     "@datalayer/jupyter-react": "^2.0.0",

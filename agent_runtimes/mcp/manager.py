@@ -7,10 +7,9 @@ MCP (Model Context Protocol) manager for agent-runtimes.
 This module provides MCP server management that can be used by both
 Jupyter and FastAPI servers.
 
-earthdata-mcp-server
-markitdown-mcp
-logfire-mcp
-
+- earthdata-mcp-server
+- markitdown-mcp
+- logfire-mcp
 """
 
 import logging
