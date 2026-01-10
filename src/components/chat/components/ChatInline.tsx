@@ -291,6 +291,14 @@ ${selectedText || ''}
 """
 `;
 
+      // Create system message with context
+      const systemMessage: ChatMessage = {
+        id: generateMessageId(),
+        role: 'system',
+        content: systemContext,
+        createdAt: new Date(),
+      };
+
       // Create user message
       const userMessage: ChatMessage = {
         id: generateMessageId(),
@@ -301,14 +309,7 @@ ${selectedText || ''}
 
       try {
         await adapterRef.current.sendMessage(userMessage, {
-          messages: [
-            {
-              id: generateMessageId(),
-              role: 'system',
-              content: systemContext,
-              createdAt: new Date(),
-            },
-          ],
+          messages: [systemMessage, userMessage],
         });
         setAiState('complete');
       } catch (err) {
