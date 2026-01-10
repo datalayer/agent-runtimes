@@ -225,9 +225,7 @@ function useSelectionText() {
  * Hook to detect if mouse is pressed outside a specific element (for drag selection detection)
  * Returns true only when mouse is down AND the click started outside the provided element
  */
-function useIsMouseDownOutside(
-  getElement: () => HTMLElement | null,
-): boolean {
+function useIsMouseDownOutside(getElement: () => HTMLElement | null): boolean {
   const [isMouseDownOutside, setIsMouseDownOutside] = useState(false);
   // Force update counter to trigger re-render on mouseup
   const [, forceUpdate] = useState(0);
