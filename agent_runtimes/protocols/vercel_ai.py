@@ -18,7 +18,7 @@ The Vercel AI SDK protocol provides:
 from typing import TYPE_CHECKING, Any, AsyncIterator
 
 from pydantic_ai import UsageLimits
-from pydantic_ai.ui.vercel_ai import VercelAIProtocol as PydanticVercelAIProtocol
+from pydantic_ai.ui.vercel_ai import VercelAIAdapter
 from starlette.requests import Request
 from starlette.responses import Response
 
@@ -127,7 +127,7 @@ class VercelAIProtocol(BaseProtocol):
         pydantic_agent = self._get_pydantic_agent()
 
         # Use Pydantic AI's built-in Vercel AI adapter
-        response = await PydanticVercelAIProtocol.dispatch_request(
+        response = await VercelAIAdapter.dispatch_request(
             request,
             agent=pydantic_agent,
             model=model,
