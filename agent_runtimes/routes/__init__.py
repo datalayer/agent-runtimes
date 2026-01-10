@@ -28,8 +28,10 @@ from .agui import (
     unregister_thread as unregister_agui_thread,
 )
 from .a2ui import router as a2ui_router
+from .configure import router as configure_router
 from .examples import get_example_mounts, router as examples_router
 from .health import router as health_router
+from .mcp import router as mcp_router
 from .mcp_ui import register_mcp_ui_agent, router as mcp_ui_router, unregister_mcp_ui_agent
 from .vercel_ai import register_vercel_agent, router as vercel_ai_router, unregister_vercel_agent
 
@@ -42,6 +44,7 @@ __all__ = [
     "agui_router",
     "cancel_agui_thread",
     "cancel_agui_threads",
+    "configure_router",
     "examples_router",
     "get_a2a_agents",
     "get_a2a_mounts",
@@ -49,6 +52,7 @@ __all__ = [
     "get_agui_mounts",
     "get_example_mounts",
     "health_router",
+    "mcp_router",
     "mcp_ui_router",
     "register_a2a_agent",
     "register_agui_agent",
