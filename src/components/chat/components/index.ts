@@ -21,10 +21,10 @@ export {
   type MessageHandler,
 } from './ChatStandalone';
 export {
-  ChatPanel,
-  type ChatPanelProps,
+  ChatBase,
+  type ChatBaseProps,
   type ProtocolConfig,
-} from './base/ChatPanel';
+} from './base/ChatBase';
 export {
   ToolApprovalDialog,
   useToolApprovalDialog,

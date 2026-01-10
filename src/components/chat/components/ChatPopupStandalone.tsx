@@ -8,7 +8,7 @@
  * A floating chat window that uses props-based message handling.
  * Perfect for custom integrations where you want full control over inference.
  *
- * This component uses ChatPanel for all chat functionality and provides
+ * This component uses ChatBase for all chat functionality and provides
  * a floating popup wrapper with animation, positioning, and FAB button.
  *
  * @module components/chat/components/ChatPopupStandalone
@@ -32,12 +32,12 @@ import {
 import { AiAgentIcon } from '@datalayer/icons-react';
 
 import {
-  ChatPanel,
-  type ChatPanelProps,
+  ChatBase,
+  type ChatBaseProps,
   type RenderToolResult,
   type ToolCallRenderContext,
   type ToolCallStatus,
-} from './base/ChatPanel';
+} from './base/ChatBase';
 import { PoweredByTag, type PoweredByTagProps } from './elements/PoweredByTag';
 import {
   useChatOpen,
@@ -184,8 +184,8 @@ export interface ChatPopupStandaloneProps {
    */
   renderToolResult?: RenderToolResult;
 
-  /** Additional ChatPanel props */
-  panelProps?: Partial<ChatPanelProps>;
+  /** Additional ChatBase props */
+  panelProps?: Partial<ChatBaseProps>;
 }
 
 /**
@@ -209,7 +209,7 @@ function useIsMobile(breakpoint = 640): boolean {
 
 /**
  * ChatPopupStandalone component
- * A floating popup chat that uses ChatPanel with custom onSendMessage handler
+ * A floating popup chat that uses ChatBase with custom onSendMessage handler
  */
 export function ChatPopupStandalone({
   onSendMessage,
@@ -702,7 +702,7 @@ export function ChatPopupStandalone({
             ...mobileStyles,
           }}
         >
-          <ChatPanel
+          <ChatBase
             title={title}
             showHeader={showHeader}
             showInput={false}
@@ -730,7 +730,7 @@ export function ChatPopupStandalone({
             {...panelProps}
           >
             {children}
-          </ChatPanel>
+          </ChatBase>
 
           {/* Custom input area with streaming support */}
           <Box

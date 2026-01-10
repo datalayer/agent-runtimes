@@ -7,7 +7,7 @@
  * Chat sidebar component.
  * Provides a collapsible sidebar with chat interface.
  * Features: keyboard shortcuts, mobile responsive, powered by tag.
- * Built on top of ChatPanel for core chat functionality.
+ * Built on top of ChatBase for core chat functionality.
  *
  * @module components/chat/components/ChatSidebar
  */
@@ -22,10 +22,10 @@ import {
 } from '@primer/octicons-react';
 import { AiAgentIcon } from '@datalayer/icons-react';
 import {
-  ChatPanel,
-  type ChatPanelProps,
+  ChatBase,
+  type ChatBaseProps,
   type MessageHandler,
-} from './base/ChatPanel';
+} from './base/ChatBase';
 import type { PoweredByTagProps } from './elements/PoweredByTag';
 
 // Re-export MessageHandler for consumers
@@ -119,8 +119,8 @@ export interface ChatSidebarProps {
   /** Description shown in empty state */
   description?: string;
 
-  /** Additional ChatPanel props */
-  panelProps?: Partial<ChatPanelProps>;
+  /** Additional ChatBase props */
+  panelProps?: Partial<ChatBaseProps>;
 }
 
 /**
@@ -381,7 +381,7 @@ export function ChatSidebar({
       }
     : {};
 
-  // Expanded state using ChatPanel
+  // Expanded state using ChatBase
   return (
     <>
       {/* Mobile overlay backdrop */}
@@ -421,7 +421,7 @@ export function ChatSidebar({
           ...mobileStyles,
         }}
       >
-        <ChatPanel
+        <ChatBase
           title={title}
           showHeader={showHeader}
           brandIcon={brandIcon}
@@ -450,7 +450,7 @@ export function ChatSidebar({
           {...panelProps}
         >
           {children}
-        </ChatPanel>
+        </ChatBase>
       </Box>
     </>
   );

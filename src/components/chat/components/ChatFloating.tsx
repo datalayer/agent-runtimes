@@ -6,13 +6,13 @@
 /**
  * ChatFloating - A floating chat component.
  *
- * This component provides a floating chat popup that uses ChatPanel
+ * This component provides a floating chat popup that uses ChatBase
  * for all chat functionality (messages, input, protocol support).
  *
  * Supports:
  * 1. AG-UI mode: When `endpoint` is provided
  * 2. Store mode: When `useStore` is true
- * 3. Any protocol supported by ChatPanel (AG-UI, A2A, ACP, Vercel AI)
+ * 3. Any protocol supported by ChatBase (AG-UI, A2A, ACP, Vercel AI)
  *
  * @module components/chat/components/ChatFloating
  */
@@ -35,15 +35,15 @@ import {
 import { AiAgentIcon } from '@datalayer/icons-react';
 
 import {
-  ChatPanel,
-  type ChatPanelProps,
+  ChatBase,
+  type ChatBaseProps,
   type RenderToolResult,
   type ToolCallRenderContext,
   type ToolCallStatus,
   type ProtocolConfig,
   type RespondCallback,
   type Suggestion,
-} from './base/ChatPanel';
+} from './base/ChatBase';
 import type { PoweredByTagProps } from './elements/PoweredByTag';
 import { useChatOpen, useChatMessages, useChatStore } from '../store/chatStore';
 import {
@@ -222,8 +222,8 @@ export interface ChatFloatingProps {
    */
   showPanelBackdrop?: boolean;
 
-  /** Additional ChatPanel props */
-  panelProps?: Partial<ChatPanelProps>;
+  /** Additional ChatBase props */
+  panelProps?: Partial<ChatBaseProps>;
 }
 
 /**
@@ -247,7 +247,7 @@ function useIsMobile(breakpoint = 640): boolean {
 
 /**
  * ChatFloating component
- * A floating chat window built on ChatPanel
+ * A floating chat window built on ChatBase
  */
 export function ChatFloating({
   endpoint,
@@ -749,7 +749,7 @@ export function ChatFloating({
           ...mobileStyles,
         }}
       >
-        <ChatPanel
+        <ChatBase
           title={title}
           showHeader={showHeader}
           useStore={useStoreMode}
@@ -793,7 +793,7 @@ export function ChatFloating({
           {...panelProps}
         >
           {children}
-        </ChatPanel>
+        </ChatBase>
       </Box>
     </>
   );

@@ -4,7 +4,7 @@
  */
 
 /**
- * Main ChatPanel component.
+ * Main ChatBase component.
  * Provides a full chat interface with messages and input.
  * This is the base component used by all other chat container components.
  *
@@ -13,7 +13,7 @@
  * 2. Protocol mode: Connects to backend via AG-UI, A2A, ACP, or Vercel AI protocols
  * 3. Custom mode: Uses onSendMessage prop for custom message handling
  *
- * @module components/chat/components/ChatPanel
+ * @module components/chat/components/ChatBase
  */
 
 import { useContext } from 'react';
@@ -272,7 +272,7 @@ export interface RemoteConfig {
 }
 
 /**
- * Protocol configuration for ChatPanel
+ * Protocol configuration for ChatBase
  */
 export interface ProtocolConfig {
   /** Protocol/transport type */
@@ -290,9 +290,9 @@ export interface ProtocolConfig {
 }
 
 /**
- * ChatPanel props
+ * ChatBase props
  */
-export interface ChatPanelProps {
+export interface ChatBaseProps {
   /** Chat title */
   title?: string;
 
@@ -474,7 +474,7 @@ function createProtocolAdapter(
     case 'acp':
       return new ACPAdapter(adapterConfig);
     default:
-      console.warn(`[ChatPanel] Unknown protocol type: ${config.type}`);
+      console.warn(`[ChatBase] Unknown protocol type: ${config.type}`);
       return null;
   }
 }
@@ -505,9 +505,9 @@ function useConfigQuery(enabled: boolean) {
 }
 
 /**
- * ChatPanel component - Universal chat panel supporting store, protocol, and custom modes
+ * ChatBase component - Universal chat panel supporting store, protocol, and custom modes
  */
-export function ChatPanel({
+export function ChatBase({
   title,
   showHeader = false,
   showLoadingIndicator = true,
@@ -550,7 +550,7 @@ export function ChatPanel({
   hideMessagesAfterToolUI = false,
   focusTrigger,
   frontendTools,
-}: ChatPanelProps) {
+}: ChatBaseProps) {
   // Store (optional for message persistence)
   const clearStoreMessages = useChatStore(state => state.clearMessages);
 
@@ -815,7 +815,7 @@ export function ChatPanel({
                       );
                     } catch (err) {
                       console.error(
-                        '[ChatPanel] Frontend tool execution error:',
+                        '[ChatBase] Frontend tool execution error:',
                         err,
                       );
                       const errorToolCall: ToolCallMessage = {
@@ -887,7 +887,7 @@ export function ChatPanel({
                     );
                   } catch (err) {
                     console.error(
-                      '[ChatPanel] Frontend tool execution error:',
+                      '[ChatBase] Frontend tool execution error:',
                       err,
                     );
                     const errorToolCall: ToolCallMessage = {
@@ -999,7 +999,7 @@ export function ChatPanel({
           break;
 
         case 'error':
-          console.error('[ChatPanel] Protocol error:', event.error);
+          console.error('[ChatBase] Protocol error:', event.error);
           setError(event.error || new Error('Unknown error'));
           setIsLoading(false);
           setIsStreaming(false);
@@ -1143,7 +1143,7 @@ export function ChatPanel({
 
         if (toolsForRequest.length > 0) {
           console.log(
-            '[ChatPanel] Sending tools to AG-UI:',
+            '[ChatBase] Sending tools to AG-UI:',
             toolsForRequest.map(t => t.name),
           );
         }
@@ -1157,7 +1157,7 @@ export function ChatPanel({
       }
     } catch (err) {
       if ((err as Error).name !== 'AbortError') {
-        console.error('[ChatPanel] Send error:', err);
+        console.error('[ChatBase] Send error:', err);
         const errorMessage = createAssistantMessage(
           `Error: ${(err as Error).message}`,
         );
@@ -1364,7 +1364,7 @@ export function ChatPanel({
             tools: toolsForSuggestion,
           } as Parameters<typeof adapterRef.current.sendMessage>[1])
           .catch(err => {
-            console.error('[ChatPanel] Suggestion send error:', err);
+            console.error('[ChatBase] Suggestion send error:', err);
             setError(err instanceof Error ? err : new Error(String(err)));
           })
           .finally(() => {
@@ -1504,7 +1504,7 @@ export function ChatPanel({
                 messages: [...allMessages, userMessage],
               } as Parameters<typeof adapterRef.current.sendMessage>[1]);
             } catch (err) {
-              console.error('[ChatPanel] HITL respond error:', err);
+              console.error('[ChatBase] HITL respond error:', err);
             } finally {
               setIsLoading(false);
               setIsStreaming(false);
@@ -2117,4 +2117,4 @@ export function ChatPanel({
 // Export types
 export type { PoweredByTagProps };
 
-export default ChatPanel;
+export default ChatBase;

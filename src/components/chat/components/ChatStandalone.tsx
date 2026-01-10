@@ -8,7 +8,7 @@
  * A floating chat window that uses props-based message handling.
  * Perfect for custom integrations where you want full control over inference.
  *
- * This component uses ChatPanel for all chat functionality and provides
+ * This component uses ChatBase for all chat functionality and provides
  * a floating popup wrapper with animation, positioning, and FAB button.
  *
  * @module components/chat/components/ChatStandalone
@@ -21,14 +21,14 @@ import { XIcon, CommentDiscussionIcon } from '@primer/octicons-react';
 import { AiAgentIcon } from '@datalayer/icons-react';
 
 import {
-  ChatPanel,
-  type ChatPanelProps,
+  ChatBase,
+  type ChatBaseProps,
   type RenderToolResult,
   type ToolCallRenderContext,
   type ToolCallStatus,
   type StreamingMessageOptions,
   type MessageHandler,
-} from './base/ChatPanel';
+} from './base/ChatBase';
 import { PoweredByTag, type PoweredByTagProps } from './elements/PoweredByTag';
 import { useChatOpen, useChatMessages, useChatStore } from '../store/chatStore';
 import {
@@ -161,8 +161,8 @@ export interface ChatStandaloneProps {
    */
   renderToolResult?: RenderToolResult;
 
-  /** Additional ChatPanel props */
-  panelProps?: Partial<ChatPanelProps>;
+  /** Additional ChatBase props */
+  panelProps?: Partial<ChatBaseProps>;
 }
 
 /**
@@ -186,7 +186,7 @@ function useIsMobile(breakpoint = 640): boolean {
 
 /**
  * ChatStandalone component
- * A floating popup chat that uses ChatPanel with custom onSendMessage handler
+ * A floating popup chat that uses ChatBase with custom onSendMessage handler
  */
 export function ChatStandalone({
   onSendMessage,
@@ -581,7 +581,7 @@ export function ChatStandalone({
             ...mobileStyles,
           }}
         >
-          <ChatPanel
+          <ChatBase
             title={title}
             showHeader={showHeader}
             showInput={true}
@@ -613,7 +613,7 @@ export function ChatStandalone({
             {...panelProps}
           >
             {children}
-          </ChatPanel>
+          </ChatBase>
 
           {/* Powered by tag */}
           {showPoweredBy && (

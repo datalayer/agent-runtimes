@@ -23,8 +23,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { Text, Button, Spinner, Label } from '@primer/react';
 import { AlertIcon, SyncIcon } from '@primer/octicons-react';
 import { Box } from '@datalayer/primer-addons';
-import { ChatPanel, type Suggestion } from './base/ChatPanel';
-import type { ProtocolConfig } from './base/ChatPanel';
+import { ChatBase, type Suggestion } from './base/ChatBase';
+import type { ProtocolConfig } from './base/ChatBase';
 
 // Try to get Jupyter settings if available
 let getJupyterSettings: (() => { baseUrl: string; token: string }) | undefined;
@@ -189,7 +189,7 @@ export interface ChatProps {
  * Chat Component
  *
  * A unified chat interface that supports multiple transports.
- * Uses ChatPanel internally for consistent UI and behavior.
+ * Uses ChatBase internally for consistent UI and behavior.
  *
  * Note: Different transports connect to different servers:
  * - vercel-ai, vercel-ai-jupyter: Connect to Jupyter server (default: localhost:8888)
@@ -415,7 +415,7 @@ export function Chat({
         flexDirection: 'column',
       }}
     >
-      <ChatPanel
+      <ChatBase
         title={title}
         showHeader={showHeader}
         useStore={false}

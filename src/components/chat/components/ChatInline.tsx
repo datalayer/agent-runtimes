@@ -29,13 +29,13 @@ import {
   Fragment,
 } from 'react';
 import {
-  Box,
   Text,
   TextInput,
   IconButton,
   ActionList,
   Spinner,
 } from '@primer/react';
+import { Box } from '@datalayer/primer-addons';
 import {
   CopyIcon,
   ArrowLeftIcon,
