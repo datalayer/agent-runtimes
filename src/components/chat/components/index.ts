@@ -10,7 +10,10 @@
  */
 
 export { ChatMessages, type ChatMessagesProps } from './elements/ChatMessages';
-export { ChatInputPrompt, type ChatInputPromptProps } from './elements/ChatInputPrompt';
+export {
+  ChatInputPrompt,
+  type ChatInputPromptProps,
+} from './elements/ChatInputPrompt';
 export { ChatSidebar, type ChatSidebarProps } from './ChatSidebar';
 export {
   ChatStandalone,
@@ -72,3 +75,10 @@ export {
   type RespondCallback,
   type Suggestion,
 } from './ChatFloating';
+
+// Inline chat component for text selection AI assistance
+export {
+  ChatInline,
+  type ChatInlineProps,
+  type ChatInlineProtocolConfig,
+} from './ChatInline';
