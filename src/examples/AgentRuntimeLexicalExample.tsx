@@ -61,13 +61,13 @@ import {
   AutoEmbedPlugin,
   LexicalConfigProvider,
   LexicalStatePlugin,
-  FloatingTextFormatToolbarPlugin,
   CodeActionMenuPlugin,
   ListMaxIndentLevelPlugin,
 } from '@datalayer/jupyter-lexical';
 
 // Agent-runtimes imports
 import { ChatFloating } from '../components/chat';
+import { ChatInlinePlugin } from '../lexical/ChatInlinePlugin';
 import { useLexicalTools } from '../tools/adapters/agent-runtimes/lexicalHooks';
 import { editorConfig } from './lexical/editorConfig';
 
@@ -359,12 +359,16 @@ const LexicalUI = React.memo(function LexicalUI({
               {floatingAnchorElem && (
                 <>
                   <DraggableBlockPlugin anchorElem={floatingAnchorElem} />
-                  <FloatingTextFormatToolbarPlugin
-                    anchorElem={floatingAnchorElem}
-                  />
                   <CodeActionMenuPlugin anchorElem={floatingAnchorElem} />
                 </>
               )}
+              {/* AI Inline Chat Plugin - shows on text selection with formatting toolbar */}
+              <ChatInlinePlugin
+                protocol={{
+                  type: 'ag-ui',
+                  endpoint: AG_UI_ENDPOINT,
+                }}
+              />
             </div>
           </LexicalComposer>
         </LexicalConfigProvider>

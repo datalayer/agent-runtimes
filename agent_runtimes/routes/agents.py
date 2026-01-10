@@ -20,8 +20,8 @@ from starlette.routing import Mount
 
 from pydantic_ai import Agent as PydanticAgent
 
-from ...runtimes.pydantic_ai_agent import PydanticAIAgent
-from ...adapters import AGUIAdapter, VercelAIAdapter, MCPUIAdapter
+from ..runtimes.pydantic_ai_agent import PydanticAIAgent
+from ..adapters import AGUIAdapter, VercelAIAdapter, MCPUIAdapter
 from .acp import AgentCapabilities, AgentInfo, register_agent, unregister_agent, _agents
 from .agui import register_agui_agent, unregister_agui_agent, get_agui_app
 from .vercel_ai import register_vercel_agent, unregister_vercel_agent

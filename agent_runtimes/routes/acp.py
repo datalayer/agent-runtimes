@@ -61,8 +61,8 @@ from acp.schema import (
     SessionNotification as ACPSessionNotification,
 )
 
-from ...runtimes.base import BaseAgent
-from ...adapters.acp import ACPAdapter, ACPSession
+from ..runtimes.base import BaseAgent
+from ..adapters.acp import ACPAdapter, ACPSession
 
 logger = logging.getLogger(__name__)
 

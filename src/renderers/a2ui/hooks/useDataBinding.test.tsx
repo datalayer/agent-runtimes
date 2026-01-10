@@ -1,4 +1,9 @@
 /*
+ * Copyright (c) 2025-2026 Datalayer, Inc.
+ * Distributed under the terms of the Modified BSD License.
+ */
+
+/*
  Copyright 2025 Google LLC
 
  Licensed under the Apache License, Version 2.0 (the "License");

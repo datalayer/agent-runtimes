@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2025-2026 Datalayer, Inc.
+ * Distributed under the terms of the Modified BSD License.
+ */
+
 import { cn } from '@/lib/utils';
 
 function Kbd({ className, ...props }: React.ComponentProps<'kbd'>) {

@@ -318,6 +318,8 @@ export function Chat({
         agentId,
         authToken,
         options,
+        // Enable config query for vercel-ai-jupyter to fetch models and tools from server API
+        enableConfigQuery: transport === 'vercel-ai-jupyter',
       };
     } catch (err) {
       console.error('[Chat] Error building protocol config:', err);

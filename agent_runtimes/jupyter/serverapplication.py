@@ -14,7 +14,7 @@ from agent_runtimes.__version__ import __version__
 from agent_runtimes.runtimes.chat.agent import create_chat_agent
 from agent_runtimes.runtimes.chat.config import ChatConfig
 from agent_runtimes.runtimes.mcp import MCPToolManager
-from agent_runtimes.jupyter.handlers.chat.chat import ChatHandler
+from agent_runtimes.jupyter.handlers.chat.chat import VercelAIChatHandler
 from agent_runtimes.jupyter.handlers.chat.configure import ConfigureHandler
 from agent_runtimes.jupyter.handlers.chat.mcp import (
     MCPServerHandler,
@@ -319,7 +319,7 @@ class AgentRuntimesExtensionApp(ExtensionAppJinjaMixin, ExtensionApp):
                 ServiceWorkerHandler,
             ),
             (url_path_join(self.name, "configure"), ConfigureHandler),
-            (url_path_join(self.name, "chat"), ChatHandler),
+            (url_path_join(self.name, "chat"), VercelAIChatHandler),
             (url_path_join(self.name, "mcp", "servers"), MCPServersHandler),
             (url_path_join(self.name, "mcp", "servers", r"([^/]+)"), MCPServerHandler),
         ]

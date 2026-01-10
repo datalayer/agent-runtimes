@@ -95,7 +95,7 @@ const AgentTile: React.FC<AgentTileProps> = ({
             fontWeight: 600,
           }}
         >
-          Create new agent
+          Create new agent space
         </Box>
       </Box>
     );
@@ -268,7 +268,7 @@ const AgentTile: React.FC<AgentTileProps> = ({
  *
  * Displays a page with agent tiles using Primer PageHeader component.
  */
-const AgentRuntimeHomeExample: React.FC = () => {
+const AgentSpaceHomeExample: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [lastEditedFilter, setLastEditedFilter] = useState('Last edited');
   const [visibilityFilter, setVisibilityFilter] = useState('Any visibility');
@@ -300,11 +300,11 @@ const AgentRuntimeHomeExample: React.FC = () => {
         {/* PageHeader */}
         <PageHeader
           role="banner"
-          aria-label="Agents Page"
+          aria-label="Agent Spaces"
           sx={{ borderBottom: 'none' }}
         >
           <PageHeader.TitleArea>
-            <PageHeader.Title>Agents Page</PageHeader.Title>
+            <PageHeader.Title>Agent Spaces</PageHeader.Title>
           </PageHeader.TitleArea>
           <PageHeader.Actions>
             <ActionMenu>
@@ -356,7 +356,7 @@ const AgentRuntimeHomeExample: React.FC = () => {
               <Box style={{ flex: '1 1 300px', minWidth: '200px' }}>
                 <TextInput
                   leadingVisual={SearchIcon}
-                  placeholder="Search agents..."
+                  placeholder="Search agent spaces..."
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                   sx={{ width: '100%' }}
@@ -542,4 +542,4 @@ const AgentRuntimeHomeExample: React.FC = () => {
   );
 };
 
-export default AgentRuntimeHomeExample;
+export default AgentSpaceHomeExample;
