@@ -163,10 +163,10 @@ export interface ChatProps {
   /** Show header with connection status */
   showHeader?: boolean;
 
-  /** Show model selector (for vercel-ai-jupyter transport) */
+  /** Show model selector (fetched from /configure endpoint) */
   showModelSelector?: boolean;
 
-  /** Show tools menu (for vercel-ai-jupyter transport) */
+  /** Show tools menu (fetched from /configure endpoint) */
   showToolsMenu?: boolean;
 
   /** Clear messages when component mounts or agentId changes */
@@ -436,10 +436,8 @@ export function Chat({
             {transport.toUpperCase().replace(/-/g, ' ')}
           </Label>
         }
-        showModelSelector={
-          showModelSelector && transport === 'vercel-ai-jupyter'
-        }
-        showToolsMenu={showToolsMenu && transport === 'vercel-ai-jupyter'}
+        showModelSelector={showModelSelector}
+        showToolsMenu={showToolsMenu}
         onNewChat={handleNewChat}
         headerButtons={{
           showNewChat: true,

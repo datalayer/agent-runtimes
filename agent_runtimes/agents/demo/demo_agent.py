@@ -13,7 +13,7 @@ Usage:
     python -m agent_runtimes --reload
     
     # Then, in another terminal, register the demo agent:
-    python -m agent_runtimes.demo.demo_agent
+    python -m agent_runtimes.examples.demo.demo_agent
 """
 
 import asyncio

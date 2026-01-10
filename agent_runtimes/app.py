@@ -94,7 +94,7 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
         set_a2a_app(app, config.api_prefix)
         
         # Demo agent auto-registration disabled - use the UI to create agents dynamically
-        # To manually register the demo agent, run: python -m agent_runtimes.demo.demo_agent
+        # To manually register the demo agent, run: python -m agent_runtimes.examples.demo.demo_agent
         
         # Add AG-UI mounts after agents are registered
         for mount in get_agui_mounts():

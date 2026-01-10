@@ -12,7 +12,7 @@ from pydantic_ai import UsageLimits
 from pydantic_ai.ui.vercel_ai import VercelAIAdapter
 from starlette.requests import Request
 
-from agent_runtimes.jupyter.handlers.chat.tools import create_mcp_server
+from agent_runtimes.mcp import create_mcp_server
 
 logger = logging.getLogger(__name__)
 

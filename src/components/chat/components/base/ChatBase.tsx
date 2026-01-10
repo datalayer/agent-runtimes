@@ -2005,7 +2005,7 @@ export function ChatBase({
             }}
           >
             {/* Tools Menu */}
-            {showToolsMenu && availableTools.length > 0 && (
+            {showToolsMenu && (
               <ActionMenu>
                 <ActionMenu.Anchor>
                   <IconButton
@@ -2015,24 +2015,32 @@ export function ChatBase({
                     size="small"
                   />
                 </ActionMenu.Anchor>
-                <ActionMenu.Overlay>
+                <ActionMenu.Overlay side="outside-top" align="start">
                   <ActionList>
                     <ActionList.Group title="Available Tools">
-                      {availableTools.map(tool => (
-                        <ActionList.Item key={tool.id} disabled>
-                          <ActionList.LeadingVisual>
-                            <Box
-                              sx={{
-                                width: 8,
-                                height: 8,
-                                borderRadius: '50%',
-                                backgroundColor: 'success.emphasis',
-                              }}
-                            />
-                          </ActionList.LeadingVisual>
-                          {tool.name}
+                      {availableTools.length > 0 ? (
+                        availableTools.map(tool => (
+                          <ActionList.Item key={tool.id} disabled>
+                            <ActionList.LeadingVisual>
+                              <Box
+                                sx={{
+                                  width: 8,
+                                  height: 8,
+                                  borderRadius: '50%',
+                                  backgroundColor: 'success.emphasis',
+                                }}
+                              />
+                            </ActionList.LeadingVisual>
+                            {tool.name}
+                          </ActionList.Item>
+                        ))
+                      ) : (
+                        <ActionList.Item disabled>
+                          <Text sx={{ color: 'fg.muted', fontStyle: 'italic' }}>
+                            No tools available
+                          </Text>
                         </ActionList.Item>
-                      ))}
+                      )}
                     </ActionList.Group>
                   </ActionList>
                 </ActionMenu.Overlay>
@@ -2055,7 +2063,7 @@ export function ChatBase({
                     </Text>
                   </Button>
                 </ActionMenu.Anchor>
-                <ActionMenu.Overlay>
+                <ActionMenu.Overlay side="outside-top" align="end">
                   <ActionList selectionVariant="single">
                     {models.map(modelItem => (
                       <ActionList.Item
