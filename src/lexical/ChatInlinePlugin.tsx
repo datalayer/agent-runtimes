@@ -147,40 +147,61 @@ function usePreserveSelection(editor: LexicalEditor) {
 
 /**
  * Hook to get current text selection range
+ * Uses native DOM selection for immediate response during drag operations
  */
 function useRange() {
   const [editor] = useLexicalComposerContext();
   const [range, setRange] = useState<Range | null>(null);
-  const rangeRef = useRef<Range | null>(null);
 
   useEffect(() => {
-    return editor.registerUpdateListener(({ tags }) => {
-      editor.getEditorState().read(() => {
-        // Ignore collaboration updates
-        if (tags.has('collaboration')) return;
+    // Function to update range from DOM selection
+    const updateRange = () => {
+      const domSelection = window.getSelection();
 
-        const selection = $getSelection();
-        if (!$isRangeSelection(selection) || selection.isCollapsed()) {
-          setRange(null);
-          rangeRef.current = null;
-          return;
-        }
+      // Check if selection exists and is within the editor
+      if (
+        !domSelection ||
+        domSelection.rangeCount === 0 ||
+        !editor._rootElement
+      ) {
+        setRange(null);
+        return;
+      }
 
-        const { anchor, focus } = selection;
-        const domRange = createDOMRange(
-          editor,
-          anchor.getNode(),
-          anchor.offset,
-          focus.getNode(),
-          focus.offset,
-        );
-        setRange(domRange);
-        rangeRef.current = domRange;
-      });
+      const domRange = domSelection.getRangeAt(0);
+
+      // Check if selection is within the editor
+      if (!editor._rootElement.contains(domRange.commonAncestorContainer)) {
+        setRange(null);
+        return;
+      }
+
+      // Check if selection is collapsed (just a cursor, no text selected)
+      if (domRange.collapsed) {
+        setRange(null);
+        return;
+      }
+
+      setRange(domRange.cloneRange());
+    };
+
+    // Listen for Lexical editor updates
+    const unregister = editor.registerUpdateListener(({ tags }) => {
+      // Ignore collaboration updates
+      if (tags.has('collaboration')) return;
+      updateRange();
     });
+
+    // Listen for DOM selection changes to catch drag selections
+    document.addEventListener('selectionchange', updateRange);
+
+    return () => {
+      unregister();
+      document.removeEventListener('selectionchange', updateRange);
+    };
   }, [editor]);
 
-  return { range, rangeRef };
+  return { range };
 }
 
 /**
@@ -210,6 +231,8 @@ function useIsMouseDownOutside(
   getElement: () => HTMLElement | null,
 ): boolean {
   const [isMouseDownOutside, setIsMouseDownOutside] = useState(false);
+  // Force update counter to trigger re-render on mouseup
+  const [, forceUpdate] = useState(0);
 
   useEffect(() => {
     const handleMouseDown = (e: MouseEvent) => {
@@ -223,7 +246,11 @@ function useIsMouseDownOutside(
         setIsMouseDownOutside(true);
       }
     };
-    const handleMouseUp = () => setIsMouseDownOutside(false);
+    const handleMouseUp = () => {
+      setIsMouseDownOutside(false);
+      // Force a re-render to show toolbar after selection completes
+      forceUpdate(n => n + 1);
+    };
 
     document.addEventListener('mousedown', handleMouseDown);
     document.addEventListener('mouseup', handleMouseUp);
@@ -440,15 +467,16 @@ export function ChatInlinePlugin({
     });
   }, [setReference, range]);
 
-  // Reset width when selection is removed
+  // Reset width when selection is removed, show button when selection appears
   useEffect(() => {
     if (range === null) {
       setFullWidth(false);
       setToolbarState('closed');
-    } else if (toolbarState === 'closed') {
-      setToolbarState('button');
+    } else {
+      // Only transition from closed to button, not from ai to button
+      setToolbarState(prev => (prev === 'closed' ? 'button' : prev));
     }
-  }, [range, toolbarState]);
+  }, [range]);
 
   // Handle replace selection
   const handleReplaceSelection = useCallback(

@@ -66,7 +66,7 @@ class TornadoRequestAdapter(Request):
         return self._body_cache if self._body_cache is not None else b""
 
 
-class ChatHandler(APIHandler):
+class VercelAIChatHandler(APIHandler):
     """
     Handler for /api/chat endpoint.
 
