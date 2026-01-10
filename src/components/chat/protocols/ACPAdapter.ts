@@ -337,7 +337,7 @@ export class ACPAdapter extends BaseProtocolAdapter {
     this.streamingContent = '';
     this.streamingMessageId = generateMessageId();
 
-    // Note: User message is already added to displayItems by ChatPanel before calling sendMessage
+    // Note: User message is already added to displayItems by ChatBase before calling sendMessage
     // Do NOT emit user message event here to avoid duplication
 
     try {

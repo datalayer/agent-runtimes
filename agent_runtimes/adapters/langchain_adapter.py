@@ -20,7 +20,7 @@ from .base import (
 )
 
 
-class LangChainAgent(BaseAgent):
+class LangChainAdapter(BaseAgent):
     """Adapter for LangChain agents.
 
     Wraps a LangChain agent or chain to provide a consistent interface

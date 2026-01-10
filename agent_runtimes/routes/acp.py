@@ -61,8 +61,8 @@ from acp.schema import (
     SessionNotification as ACPSessionNotification,
 )
 
-from ..runtimes.base import BaseAgent
-from ..adapters.acp import ACPAdapter, ACPSession
+from ..adapters.base import BaseAgent
+from ..protocols.acp import ACPProtocol, ACPSession
 
 logger = logging.getLogger(__name__)
 
@@ -136,7 +136,7 @@ class ACPErrorCode:
 # In-memory stores (should be replaced with proper persistence in production)
 _agents: dict[str, tuple[BaseAgent, AgentInfo]] = {}
 _sessions: dict[str, ACPSession] = {}
-_adapters: dict[str, ACPAdapter] = {}
+_adapters: dict[str, ACPProtocol] = {}
 
 # Track running prompts per session ID for termination
 # Maps session_id to a cancellation event
@@ -351,7 +351,7 @@ async def websocket_endpoint(websocket: WebSocket, agent_id: str):
     
     agent, agent_info = _agents[agent_id]
     session_id: str | None = None
-    adapter: ACPAdapter | None = None
+    adapter: ACPProtocol | None = None
     
     try:
         while True:
@@ -367,7 +367,7 @@ async def websocket_endpoint(websocket: WebSocket, agent_id: str):
                 )
                 session_id = response.get("session_id")
                 if session_id:
-                    adapter = ACPAdapter(agent)
+                    adapter = ACPProtocol(agent)
                     _adapters[session_id] = adapter
             
             # ACP spec method: session/new
@@ -377,7 +377,7 @@ async def websocket_endpoint(websocket: WebSocket, agent_id: str):
                 )
                 session_id = response.get("session_id")
                 if session_id:
-                    adapter = ACPAdapter(agent)
+                    adapter = ACPProtocol(agent)
                     _adapters[session_id] = adapter
                 
             # Legacy method name: acp.session.new
@@ -388,7 +388,7 @@ async def websocket_endpoint(websocket: WebSocket, agent_id: str):
                 )
                 session_id = response.get("session_id")
                 if session_id:
-                    adapter = ACPAdapter(agent)
+                    adapter = ACPProtocol(agent)
                     _adapters[session_id] = adapter
             
             # ACP spec method: session/prompt
@@ -533,7 +533,7 @@ async def _handle_initialize(
     session_id = str(uuid.uuid4())
     
     # Create session with context
-    from ...runtimes.base import AgentContext
+    from ..adapters.base import AgentContext
     context = AgentContext(
         session_id=session_id,
         user_id="default",
@@ -598,7 +598,7 @@ async def _handle_new_session(
     session_id = str(uuid.uuid4())
     
     # Create session with context
-    from ...runtimes.base import AgentContext
+    from ..adapters.base import AgentContext
     context = AgentContext(
         session_id=session_id,
         user_id=params.get("userId", "default"),
@@ -631,7 +631,7 @@ async def _handle_prompt(
     message: ACPMessage,
     session_id: str,
     agent: BaseAgent,
-    adapter: ACPAdapter | None,
+    adapter: ACPProtocol | None,
 ) -> None:
     """Handle session/prompt method.
     
@@ -651,7 +651,7 @@ async def _handle_prompt(
                 prompt = block.get("text", "")
     
     # Convert to context
-    from ...runtimes.base import AgentContext
+    from ..adapters.base import AgentContext
     
     context = AgentContext(
         session_id=session_id,
@@ -792,7 +792,7 @@ async def _handle_run(
     message: ACPMessage,
     session_id: str,
     agent: BaseAgent,
-    adapter: ACPAdapter | None,
+    adapter: ACPProtocol | None,
 ) -> None:
     """Handle legacy acp.session.run method."""
     params = message.params or {}
@@ -800,7 +800,7 @@ async def _handle_run(
     stream = params.get("stream", True)
     
     # Convert input to context
-    from ...runtimes.base import AgentContext
+    from ..adapters.base import AgentContext
     
     messages = []
     for item in input_data:
@@ -875,7 +875,7 @@ async def _handle_run(
 async def _handle_permission_response(
     websocket: WebSocket,
     message: ACPMessage,
-    adapter: ACPAdapter,
+    adapter: ACPProtocol,
 ) -> None:
     """Handle acp.permission.respond method."""
     params = message.params or {}

@@ -27,7 +27,7 @@ except ImportError:
     FastA2A = None
     Skill = None
 
-from ..runtimes.base import BaseAgent
+from ..adapters.base import BaseAgent
 
 
 logger = logging.getLogger(__name__)
@@ -169,9 +169,9 @@ def register_a2a_agent(
     agent_id = card.id
     
     # Check if agent is a PydanticAIAgent with to_a2a method
-    from ...runtimes.pydantic_ai_agent import PydanticAIAgent
+    from ..adapters.pydantic_ai_adapter import PydanticAIAdapter
     
-    if isinstance(agent, PydanticAIAgent) and hasattr(agent._agent, 'to_a2a'):
+    if isinstance(agent, PydanticAIAdapter) and hasattr(agent._agent, 'to_a2a'):
         # Use pydantic-ai's native to_a2a() method
         try:
             # Convert skills to fasta2a Skill format if provided

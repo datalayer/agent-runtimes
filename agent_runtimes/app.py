@@ -28,11 +28,13 @@ from .routes import (
     acp_router,
     agents_router,
     agui_router,
+    configure_router,
     examples_router,
     get_a2a_mounts,
     get_agui_mounts,
     get_example_mounts,
     health_router,
+    mcp_router,
     mcp_ui_router,
     set_a2a_app,
     start_a2a_task_managers,
@@ -92,7 +94,7 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
         set_a2a_app(app, config.api_prefix)
         
         # Demo agent auto-registration disabled - use the UI to create agents dynamically
-        # To manually register the demo agent, run: python -m agent_runtimes.demo.demo_agent
+        # To manually register the demo agent, run: python -m agent_runtimes.examples.demo.demo_agent
         
         # Add AG-UI mounts after agents are registered
         for mount in get_agui_mounts():
@@ -146,6 +148,8 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
     app.include_router(health_router)
     app.include_router(agents_router, prefix=config.api_prefix)
     app.include_router(acp_router, prefix=config.api_prefix)
+    app.include_router(configure_router, prefix=config.api_prefix)
+    app.include_router(mcp_router, prefix=config.api_prefix)
     app.include_router(vercel_ai_router, prefix=config.api_prefix)
     app.include_router(agui_router, prefix=config.api_prefix)
     app.include_router(mcp_ui_router, prefix=config.api_prefix)
@@ -167,6 +171,8 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
                 "health": "/health",
                 "agents": f"{config.api_prefix}/agents",
                 "acp": f"{config.api_prefix}/acp",
+                "configure": f"{config.api_prefix}/configure",
+                "mcp_servers": f"{config.api_prefix}/mcp/servers",
                 "vercel_ai": f"{config.api_prefix}/vercel-ai/chat",
                 "ag_ui": f"{config.api_prefix}/ag-ui/",
                 "mcp_ui": f"{config.api_prefix}/mcp-ui/",

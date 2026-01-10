@@ -6,6 +6,8 @@
 import logging
 from typing import Any
 
+from agent_runtimes.types import AIModel
+
 logger = logging.getLogger(__name__)
 
 
@@ -152,3 +154,121 @@ def create_model_with_provider(
         # For other providers, use the standard string format
         # Note: String format doesn't allow custom timeout configuration
         return get_model_string(model_provider, model_name)
+
+
+def create_default_models(tool_ids: list[str]) -> list[AIModel]:
+    """
+    Create default AI model configurations.
+
+    Args:
+        tool_ids: List of tool IDs to associate with models
+
+    Returns:
+        List of AIModel configurations
+    """
+    return [
+        # Anthropic models
+        AIModel(
+            id="anthropic:claude-sonnet-4-5",
+            name="Claude Sonnet 4.5",
+            builtin_tools=tool_ids,
+        ),
+        AIModel(
+            id="anthropic:claude-opus-4",
+            name="Claude Opus 4",
+            builtin_tools=tool_ids,
+        ),
+        AIModel(
+            id="anthropic:claude-sonnet-4-20250514",
+            name="Claude Sonnet 4 (May 2025)",
+            builtin_tools=tool_ids,
+        ),
+        AIModel(
+            id="anthropic:claude-3-5-haiku-20241022",
+            name="Claude 3.5 Haiku",
+            builtin_tools=tool_ids,
+        ),
+        # OpenAI models
+        AIModel(
+            id="openai:gpt-4o",
+            name="GPT-4o",
+            builtin_tools=tool_ids,
+        ),
+        AIModel(
+            id="openai:gpt-4o-mini",
+            name="GPT-4o Mini",
+            builtin_tools=tool_ids,
+        ),
+        AIModel(
+            id="openai:gpt-4-turbo",
+            name="GPT-4 Turbo",
+            builtin_tools=tool_ids,
+        ),
+        AIModel(
+            id="openai:o1",
+            name="o1",
+            builtin_tools=tool_ids,
+        ),
+        AIModel(
+            id="openai:o1-mini",
+            name="o1 Mini",
+            builtin_tools=tool_ids,
+        ),
+        AIModel(
+            id="openai:o3-mini",
+            name="o3 Mini",
+            builtin_tools=tool_ids,
+        ),
+        # AWS Bedrock models
+        AIModel(
+            id="bedrock:anthropic.claude-sonnet-4-5-20250514-v1:0",
+            name="Claude Sonnet 4.5 (Bedrock)",
+            builtin_tools=tool_ids,
+        ),
+        AIModel(
+            id="bedrock:anthropic.claude-3-5-haiku-20241022-v1:0",
+            name="Claude 3.5 Haiku (Bedrock)",
+            builtin_tools=tool_ids,
+        ),
+        AIModel(
+            id="bedrock:amazon.nova-pro-v1:0",
+            name="Amazon Nova Pro",
+            builtin_tools=tool_ids,
+        ),
+        AIModel(
+            id="bedrock:amazon.nova-lite-v1:0",
+            name="Amazon Nova Lite",
+            builtin_tools=tool_ids,
+        ),
+        AIModel(
+            id="bedrock:meta.llama3-3-70b-instruct-v1:0",
+            name="Llama 3.3 70B (Bedrock)",
+            builtin_tools=tool_ids,
+        ),
+        # Azure OpenAI models
+        AIModel(
+            id="azure:gpt-4o",
+            name="GPT-4o (Azure)",
+            builtin_tools=tool_ids,
+        ),
+        AIModel(
+            id="azure:gpt-4o-mini",
+            name="GPT-4o Mini (Azure)",
+            builtin_tools=tool_ids,
+        ),
+        AIModel(
+            id="azure:gpt-4-turbo",
+            name="GPT-4 Turbo (Azure)",
+            builtin_tools=tool_ids,
+        ),
+        AIModel(
+            id="azure:o1",
+            name="o1 (Azure)",
+            builtin_tools=tool_ids,
+        ),
+        AIModel(
+            id="azure:o1-mini",
+            name="o1 Mini (Azure)",
+            builtin_tools=tool_ids,
+        ),
+    ]

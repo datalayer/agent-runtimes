@@ -607,7 +607,7 @@ export class AGUIAdapter extends BaseProtocolAdapter {
 
       case 'STATE_DELTA': {
         // State delta contains JSON Patch operations (RFC 6902)
-        // Emit as state-update with the delta for the ChatPanel to handle
+        // Emit as state-update with the delta for the ChatBase to handle
         const delta = event.delta;
         this.emit({
           type: 'state-update',

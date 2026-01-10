@@ -31,12 +31,10 @@ import { createPortal } from 'react-dom';
 import {
   $getSelection,
   $isRangeSelection,
-  $isTextNode,
   $createParagraphNode,
   $createTextNode,
   TextNode,
   LexicalEditor,
-  LexicalNode,
   COMMAND_PRIORITY_LOW,
   createCommand,
   FORMAT_TEXT_COMMAND,
@@ -227,9 +225,7 @@ function useSelectionText() {
  * Hook to detect if mouse is pressed outside a specific element (for drag selection detection)
  * Returns true only when mouse is down AND the click started outside the provided element
  */
-function useIsMouseDownOutside(
-  getElement: () => HTMLElement | null,
-): boolean {
+function useIsMouseDownOutside(getElement: () => HTMLElement | null): boolean {
   const [isMouseDownOutside, setIsMouseDownOutside] = useState(false);
   // Force update counter to trigger re-render on mouseup
   const [, forceUpdate] = useState(0);
@@ -262,100 +258,6 @@ function useIsMouseDownOutside(
   }, [getElement]);
 
   return isMouseDownOutside;
-}
-
-/**
- * Get DOM text node from element
- */
-function getDOMTextNode(element: Node | null): Text | null {
-  let node = element;
-  while (node !== null) {
-    if (node.nodeType === Node.TEXT_NODE) {
-      return node as Text;
-    }
-    node = node.firstChild;
-  }
-  return null;
-}
-
-/**
- * Get index of node within parent
- */
-function getDOMIndexWithinParent(node: ChildNode): [ParentNode, number] {
-  const parent = node.parentNode;
-  if (parent === null) {
-    throw new Error('Node has no parent');
-  }
-  return [parent, Array.from(parent.childNodes).indexOf(node)];
-}
-
-/**
- * Create DOM range from Lexical selection
- */
-function createDOMRange(
-  editor: LexicalEditor,
-  anchorNode: LexicalNode,
-  _anchorOffset: number,
-  focusNode: LexicalNode,
-  _focusOffset: number,
-): Range | null {
-  const anchorKey = anchorNode.getKey();
-  const focusKey = focusNode.getKey();
-  const range = document.createRange();
-  let anchorDOM: Node | Text | null = editor.getElementByKey(anchorKey);
-  let focusDOM: Node | Text | null = editor.getElementByKey(focusKey);
-  let anchorOffset = _anchorOffset;
-  let focusOffset = _focusOffset;
-
-  if ($isTextNode(anchorNode)) {
-    anchorDOM = getDOMTextNode(anchorDOM);
-  }
-  if ($isTextNode(focusNode)) {
-    focusDOM = getDOMTextNode(focusDOM);
-  }
-
-  if (
-    anchorNode === undefined ||
-    focusNode === undefined ||
-    anchorDOM === null ||
-    focusDOM === null
-  ) {
-    return null;
-  }
-
-  if (anchorDOM.nodeName === 'BR') {
-    [anchorDOM, anchorOffset] = getDOMIndexWithinParent(anchorDOM as ChildNode);
-  }
-  if (focusDOM.nodeName === 'BR') {
-    [focusDOM, focusOffset] = getDOMIndexWithinParent(focusDOM as ChildNode);
-  }
-
-  const firstChild = anchorDOM.firstChild;
-  if (
-    anchorDOM === focusDOM &&
-    firstChild !== null &&
-    firstChild.nodeName === 'BR' &&
-    anchorOffset === 0 &&
-    focusOffset === 0
-  ) {
-    focusOffset = 1;
-  }
-
-  try {
-    range.setStart(anchorDOM, anchorOffset);
-    range.setEnd(focusDOM, focusOffset);
-  } catch {
-    return null;
-  }
-
-  if (
-    range.startContainer === range.endContainer &&
-    range.startOffset === range.endOffset
-  ) {
-    return null;
-  }
-
-  return range;
 }
 
 /**

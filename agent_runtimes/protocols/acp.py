@@ -62,12 +62,12 @@ from acp.schema import (
     EmbeddedResourceContentBlock,
 )
 
-from ..runtimes.base import (
+from ..adapters.base import (
     AgentContext,
     BaseAgent,
     StreamEvent,
 )
-from .base import BaseAdapter
+from .base import BaseProtocol
 
 
 @dataclass
@@ -93,7 +93,7 @@ class ACPSession:
     cancelled: bool = False
 
 
-class ACPAdapter(BaseAdapter):
+class ACPProtocol(BaseProtocol):
     """Agent Client Protocol (ACP) adapter.
 
     Implements the ACP protocol for agent-runtimes using official
@@ -110,7 +110,7 @@ class ACPAdapter(BaseAdapter):
 
     Example:
         agent = PydanticAIAgent(pydantic_agent)
-        adapter = ACPAdapter(agent)
+        adapter = ACPProtocol(agent)
 
         # Handle ACP initialize request
         response = await adapter.handle_initialize(InitializeRequest(...))
@@ -493,7 +493,7 @@ class ACPAdapter(BaseAdapter):
 # Re-export SDK types and helpers for convenience
 __all__ = [
     # Adapter
-    "ACPAdapter",
+    "ACPProtocol",
     "ACPSession",
     # SDK Constants
     "PROTOCOL_VERSION",

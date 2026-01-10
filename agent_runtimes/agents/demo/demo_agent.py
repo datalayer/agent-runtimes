@@ -13,14 +13,14 @@ Usage:
     python -m agent_runtimes --reload
     
     # Then, in another terminal, register the demo agent:
-    python -m agent_runtimes.demo.demo_agent
+    python -m agent_runtimes.examples.demo.demo_agent
 """
 
 import asyncio
 import logging
 from typing import Any, AsyncGenerator
 
-from agent_runtimes.runtimes.base import (
+from agent_runtimes.adapters.base import (
     AgentContext,
     AgentResponse,
     BaseAgent,

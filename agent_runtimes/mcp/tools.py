@@ -1,13 +1,20 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Tools integration for Datalayer AI Agents using MCP (Model Context Protocol)."""
+"""
+Tools integration for agent-runtimes using MCP (Model Context Protocol).
+
+This module provides MCP tools integration that can be used by both
+Jupyter and FastAPI servers.
+"""
 
 import logging
 from typing import Any
 from urllib.parse import urljoin
 
 from pydantic_ai.mcp import MCPServerStreamableHTTP
+
+from agent_runtimes.types import BuiltinTool
 
 logger = logging.getLogger(__name__)
 
@@ -37,25 +44,48 @@ def generate_name_from_id(tool_id: str) -> str:
     return name
 
 
+def tools_to_builtin_list(tools: list[dict[str, Any]]) -> list[BuiltinTool]:
+    """
+    Convert tool dictionaries to BuiltinTool objects.
+
+    Args:
+        tools: List of tool dictionaries with 'name' and optional 'description'
+
+    Returns:
+        List of BuiltinTool objects
+    """
+    builtin_tools = []
+    for tool in tools:
+        tool_id = tool.get("name", "")
+        tool_name = tool.get("description", "")
+
+        # If name is empty, generate from ID
+        if not tool_name or not tool_name.strip():
+            tool_name = generate_name_from_id(tool_id)
+
+        builtin_tools.append(BuiltinTool(id=tool_id, name=tool_name))
+
+    return builtin_tools
+
+
 def create_mcp_server(
     base_url: str,
     token: str | None = None,
 ) -> MCPServerStreamableHTTP:
     """
-    Create an MCP server connection to jupyter-mcp-server.
+    Create an MCP server connection.
 
-    The jupyter-mcp-server runs on the same Jupyter server and exposes
-    tools via the MCP protocol over HTTP.
+    The MCP server runs on the same server and exposes tools via
+    the MCP protocol over HTTP.
 
     Args:
-        base_url: Jupyter server base URL (e.g., "http://localhost:8888")
-        token: Authentication token for Jupyter server
+        base_url: Server base URL (e.g., "http://localhost:8888")
+        token: Authentication token
 
     Returns:
-        MCPServerStreamableHTTP instance connected to jupyter-mcp-server
+        MCPServerStreamableHTTP instance connected to the MCP server
     """
     # Construct the MCP endpoint URL
-    # jupyter-mcp-server typically runs at /mcp endpoint
     mcp_url = urljoin(base_url.rstrip("/") + "/", "mcp")
 
     logger.info(f"Creating MCP server connection to {mcp_url}")
@@ -72,20 +102,19 @@ def create_mcp_server(
     return server
 
 
-async def get_available_tools_from_mcp(
+async def get_tools_from_mcp(
     base_url: str,
     token: str | None = None,
 ) -> list[dict[str, Any]]:
     """
-    Get available tools from jupyter-mcp-server via MCP protocol.
+    Get available tools from an MCP server.
 
-    This replaces the previous jupyter-mcp-tools direct query approach.
-    Now we connect to the MCP server using pydantic-ai's MCP client
-    and query tools through the standard MCP protocol.
+    Connects to the MCP server using pydantic-ai's MCP client
+    and queries tools through the standard MCP protocol.
 
     Args:
-        base_url: Jupyter server base URL
-        token: Authentication token for Jupyter server
+        base_url: Server base URL
+        token: Authentication token
 
     Returns:
         List of tool dictionaries with name, description, and inputSchema
@@ -104,7 +133,7 @@ async def get_available_tools_from_mcp(
             # Convert MCP tool definitions to our internal format
             converted_tools = []
             for tool in tools:
-                tool_dict = {
+                tool_dict: dict[str, Any] = {
                     "name": tool.name,
                     "description": tool.description or "",
                 }
@@ -134,7 +163,6 @@ async def get_available_tools_from_mcp(
         return []
 
 
-# Alias for backward compatibility
 async def get_available_tools(
     base_url: str,
     token: str | None = None,
@@ -144,18 +172,18 @@ async def get_available_tools(
     Get available tools (backward compatible wrapper).
 
     Args:
-        base_url: Jupyter server base URL
-        token: Authentication token for Jupyter server
+        base_url: Server base URL
+        token: Authentication token
         enabled_only: Ignored (kept for backward compatibility)
 
     Returns:
         List of tool dictionaries
     """
     # Note: enabled_only is ignored as MCP server manages this internally
-    return await get_available_tools_from_mcp(base_url, token)
+    return await get_tools_from_mcp(base_url, token)
 
 
-def tools_to_builtin_list(tools: list[dict[str, Any]]) -> list[str]:
+def extract_tool_names(tools: list[dict[str, Any]]) -> list[str]:
     """
     Extract tool names from tools list.
 

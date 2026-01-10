@@ -20,11 +20,11 @@ from typing import Any, AsyncIterator
 
 from mcp_ui_server import UIResource, create_ui_resource, UIMetadataKey
 
-from ..runtimes.base import BaseAgent, AgentContext
-from .base import BaseAdapter
+from ..adapters.base import BaseAgent, AgentContext
+from .base import BaseProtocol
 
 
-class MCPUIAdapter(BaseAdapter):
+class MCPUIProtocol(BaseProtocol):
     """MCP-UI protocol adapter.
 
     Wraps agent responses to include interactive UI resources using the
@@ -36,10 +36,10 @@ class MCPUIAdapter(BaseAdapter):
 
     Example:
         from agent_runtimes.agents import PydanticAIAgent
-        from agent_runtimes.adapters import MCPUIAdapter
+        from agent_runtimes.protocols import MCPUIProtocol
 
         agent = PydanticAIAgent(...)
-        adapter = MCPUIAdapter(agent)
+        adapter = MCPUIProtocol(agent)
 
         # Agent can return UI resources in responses
         response = await adapter.handle_request({

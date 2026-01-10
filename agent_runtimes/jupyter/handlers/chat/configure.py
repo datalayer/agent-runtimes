@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Tornado handlers for chat API compatible with Vercel AI SDK."""
+"""Tornado handlers for chat configuration API."""
 
 import json
 import logging
@@ -9,15 +9,7 @@ import logging
 from jupyter_server.base.handlers import APIHandler
 from tornado import web as tornado_web
 
-from agent_runtimes.runtimes.types import (
-    AIModel,
-    BuiltinTool,
-    FrontendConfig,
-)
-from agent_runtimes.jupyter.handlers.chat.tools import (
-    generate_name_from_id,
-    get_available_tools,
-)
+from agent_runtimes.mcp import get_available_tools, get_frontend_config
 
 logger = logging.getLogger(__name__)
 
@@ -51,54 +43,28 @@ class ConfigureHandler(APIHandler):
                 token = None
                 logger.warning("ServerApp not found in settings, using localhost")
 
-            # Fetch available tools from jupyter-mcp-tools
-            # Try with enabled_only=False first to see all available tools
-            logger.info("Fetching tools from jupyter-mcp-tools...")
+            # Fetch available tools from MCP server
+            logger.info("Fetching tools from MCP server...")
             available_tools = await get_available_tools(
                 base_url=base_url,
                 token=token,
-                enabled_only=False,  # Get all tools, not just enabled ones
+                enabled_only=False,
             )
             logger.info(
-                f"Fetched {len(available_tools)} tools from jupyter-mcp-tools: {[t.get('name') for t in available_tools]}"
+                f"Fetched {len(available_tools)} tools: {[t.get('name') for t in available_tools]}"
             )
 
-            # Convert tools to BuiltinTool format
-            builtin_tools = []
-            for tool in available_tools:
-                tool_id = tool.get("name", "")
-                tool_name = tool.get("description", "")
-
-                # If name is empty, generate from ID
-                if not tool_name or not tool_name.strip():
-                    tool_name = generate_name_from_id(tool_id)
-
-                builtin_tools.append(BuiltinTool(id=tool_id, name=tool_name))
-
-            logger.info(f"Converted to {len(builtin_tools)} BuiltinTool objects")
-
-            # Define available models with tool associations
-            tool_ids = [tool.id for tool in builtin_tools]
-            models = [
-                AIModel(
-                    id="anthropic:claude-sonnet-4-5",
-                    name="Claude Sonnet 4.5",
-                    builtin_tools=tool_ids,  # Associate all available tools
-                )
-            ]
-            logger.info(f"Created model with {len(tool_ids)} associated tools")
-
-            # Get MCP servers.
+            # Get MCP servers
             mcp_servers = []
             if mcp_manager:
                 mcp_servers = mcp_manager.get_servers()
 
-            # Create response.
-            config = FrontendConfig(
-                models=models, builtin_tools=builtin_tools, mcp_servers=mcp_servers
+            # Build frontend config using shared module
+            config = await get_frontend_config(
+                tools=available_tools,
+                mcp_servers=mcp_servers,
             )
 
-            logger.info(f"Returning config with {len(builtin_tools)} builtin_tools")
             self.finish(config.model_dump_json(by_alias=True))
 
         except Exception as e:

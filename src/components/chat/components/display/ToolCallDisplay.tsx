@@ -21,7 +21,7 @@ import {
   XCircleIcon,
   ClockIcon,
 } from '@primer/octicons-react';
-import type { ToolCallStatus } from '../base/ChatPanel';
+import type { ToolCallStatus } from '../base/ChatBase';
 
 export interface ToolCallDisplayProps {
   /** Tool call ID */

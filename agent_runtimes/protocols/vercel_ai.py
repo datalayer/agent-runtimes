@@ -18,18 +18,18 @@ The Vercel AI SDK protocol provides:
 from typing import TYPE_CHECKING, Any, AsyncIterator
 
 from pydantic_ai import UsageLimits
-from pydantic_ai.ui.vercel_ai import VercelAIAdapter as PydanticVercelAIAdapter
+from pydantic_ai.ui.vercel_ai import VercelAIAdapter
 from starlette.requests import Request
 from starlette.responses import Response
 
-from ..runtimes.base import BaseAgent
-from .base import BaseAdapter
+from ..adapters.base import BaseAgent
+from .base import BaseProtocol
 
 if TYPE_CHECKING:
     from pydantic_ai import Agent
 
 
-class VercelAIAdapter(BaseAdapter):
+class VercelAIProtocol(BaseProtocol):
     """Vercel AI SDK protocol adapter.
 
     Wraps Pydantic AI's built-in Vercel AI support to expose agents through
@@ -41,7 +41,7 @@ class VercelAIAdapter(BaseAdapter):
     Example:
         from pydantic_ai import Agent
         from agent_runtimes.agents import PydanticAIAgent
-        from agent_runtimes.adapters import VercelAIAdapter
+        from agent_runtimes.protocols import VercelAIProtocol
         from fastapi import FastAPI, Request
 
         # Create Pydantic AI agent
@@ -51,7 +51,7 @@ class VercelAIAdapter(BaseAdapter):
         agent = PydanticAIAgent(pydantic_agent)
         
         # Create Vercel AI adapter
-        vercel_adapter = VercelAIAdapter(agent)
+        vercel_adapter = VercelAIProtocol(agent)
         
         # Add to FastAPI app
         app = FastAPI()
@@ -104,7 +104,7 @@ class VercelAIAdapter(BaseAdapter):
             return self.agent._agent
         else:
             raise ValueError(
-                "VercelAIAdapter requires a PydanticAIAgent that wraps a pydantic_ai.Agent"
+                "VercelAIProtocol requires a PydanticAIAgent that wraps a pydantic_ai.Agent"
             )
 
     async def handle_vercel_request(
@@ -127,7 +127,7 @@ class VercelAIAdapter(BaseAdapter):
         pydantic_agent = self._get_pydantic_agent()
 
         # Use Pydantic AI's built-in Vercel AI adapter
-        response = await PydanticVercelAIAdapter.dispatch_request(
+        response = await VercelAIAdapter.dispatch_request(
             request,
             agent=pydantic_agent,
             model=model,

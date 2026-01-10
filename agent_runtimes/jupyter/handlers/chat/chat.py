@@ -12,7 +12,7 @@ from pydantic_ai import UsageLimits
 from pydantic_ai.ui.vercel_ai import VercelAIAdapter
 from starlette.requests import Request
 
-from agent_runtimes.jupyter.handlers.chat.tools import create_mcp_server
+from agent_runtimes.mcp import create_mcp_server
 
 logger = logging.getLogger(__name__)
 
@@ -122,7 +122,7 @@ class VercelAIChatHandler(APIHandler):
                     total_tokens_limit=100000,
                 )
 
-                # Use VercelAIAdapter.dispatch_request (new API)
+                # Use VercelAIProtocol.dispatch_request (new API)
                 response = await VercelAIAdapter.dispatch_request(
                     tornado_request,
                     agent=agent,

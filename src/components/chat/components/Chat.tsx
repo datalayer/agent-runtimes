@@ -20,11 +20,12 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
-import { Text, Button, Spinner, Label } from '@primer/react';
-import { AlertIcon, SyncIcon } from '@primer/octicons-react';
+import { Text, Button, Spinner, IconButton } from '@primer/react';
+import { AlertIcon, SyncIcon, InfoIcon } from '@primer/octicons-react';
 import { Box } from '@datalayer/primer-addons';
-import { ChatPanel, type Suggestion } from './base/ChatPanel';
-import type { ProtocolConfig } from './base/ChatPanel';
+import { ChatBase, type Suggestion } from './base/ChatBase';
+import { AgentDetails } from './AgentDetails';
+import type { ProtocolConfig } from './base/ChatBase';
 
 // Try to get Jupyter settings if available
 let getJupyterSettings: (() => { baseUrl: string; token: string }) | undefined;
@@ -163,10 +164,10 @@ export interface ChatProps {
   /** Show header with connection status */
   showHeader?: boolean;
 
-  /** Show model selector (for vercel-ai-jupyter transport) */
+  /** Show model selector (fetched from /configure endpoint) */
   showModelSelector?: boolean;
 
-  /** Show tools menu (for vercel-ai-jupyter transport) */
+  /** Show tools menu (fetched from /configure endpoint) */
   showToolsMenu?: boolean;
 
   /** Clear messages when component mounts or agentId changes */
@@ -189,7 +190,7 @@ export interface ChatProps {
  * Chat Component
  *
  * A unified chat interface that supports multiple transports.
- * Uses ChatPanel internally for consistent UI and behavior.
+ * Uses ChatBase internally for consistent UI and behavior.
  *
  * Note: Different transports connect to different servers:
  * - vercel-ai, vercel-ai-jupyter: Connect to Jupyter server (default: localhost:8888)
@@ -254,6 +255,8 @@ export function Chat({
 }: ChatProps) {
   const [error, setError] = useState<string | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
+  const [showDetails, setShowDetails] = useState(false);
+  const [messageCount, setMessageCount] = useState(0);
 
   // Build protocol config based on transport
   const protocolConfig = useMemo((): ProtocolConfig | undefined => {
@@ -318,8 +321,14 @@ export function Chat({
         agentId,
         authToken,
         options,
-        // Enable config query for vercel-ai-jupyter to fetch models and tools from server API
-        enableConfigQuery: transport === 'vercel-ai-jupyter',
+        // Enable config query for all protocols to fetch models and tools
+        enableConfigQuery: true,
+        // For Jupyter-based transports, use Jupyter requestAPI (configEndpoint undefined)
+        // For FastAPI-based transports, use direct fetch to the configure endpoint
+        configEndpoint:
+          transport === 'vercel-ai-jupyter'
+            ? undefined // Use Jupyter requestAPI
+            : `${baseUrl}/api/v1/configure`,
       };
     } catch (err) {
       console.error('[Chat] Error building protocol config:', err);
@@ -404,6 +413,31 @@ export function Chat({
     );
   }
 
+  // Show agent details view
+  if (showDetails) {
+    return (
+      <Box
+        className={className}
+        sx={{
+          position: 'relative',
+          height,
+          bg: 'canvas.default',
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
+        <AgentDetails
+          name={title || 'AI Agent'}
+          protocol={transport}
+          url={protocolConfig?.endpoint || baseUrl}
+          messageCount={messageCount}
+          agentId={agentId}
+          onBack={() => setShowDetails(false)}
+        />
+      </Box>
+    );
+  }
+
   return (
     <Box
       className={className}
@@ -415,7 +449,7 @@ export function Chat({
         flexDirection: 'column',
       }}
     >
-      <ChatPanel
+      <ChatBase
         title={title}
         showHeader={showHeader}
         useStore={false}
@@ -426,15 +460,18 @@ export function Chat({
         submitOnSuggestionClick={submitOnSuggestionClick}
         autoFocus={autoFocus}
         headerContent={
-          <Label variant="accent" size="small">
-            {transport.toUpperCase().replace(/-/g, ' ')}
-          </Label>
+          <IconButton
+            icon={InfoIcon}
+            aria-label="Agent details"
+            variant="invisible"
+            size="small"
+            onClick={() => setShowDetails(true)}
+          />
         }
-        showModelSelector={
-          showModelSelector && transport === 'vercel-ai-jupyter'
-        }
-        showToolsMenu={showToolsMenu && transport === 'vercel-ai-jupyter'}
+        showModelSelector={showModelSelector}
+        showToolsMenu={showToolsMenu}
         onNewChat={handleNewChat}
+        onMessagesChange={messages => setMessageCount(messages.length)}
         headerButtons={{
           showNewChat: true,
           showClear: true,

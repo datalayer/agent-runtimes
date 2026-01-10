@@ -1,12 +1,14 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Tornado handlers for chat API compatible with Vercel AI SDK."""
+"""Tornado handlers for MCP server management API."""
 
 import json
 
 from jupyter_server.base.handlers import APIHandler
 from tornado import web as tornado_web
+
+from agent_runtimes.types import MCPServer
 
 
 class MCPServersHandler(APIHandler):
@@ -33,8 +35,6 @@ class MCPServersHandler(APIHandler):
     async def post(self) -> None:
         """Add a new MCP server."""
         try:
-            from ...agents.models import MCPServer
-
             data = json.loads(self.request.body.decode("utf-8"))
             server = MCPServer(**data)
 
@@ -63,8 +63,6 @@ class MCPServerHandler(APIHandler):
     async def put(self, server_id: str) -> None:
         """Update MCP server."""
         try:
-            from ...runtimes.models import MCPServer
-
             data = json.loads(self.request.body.decode("utf-8"))
             server = MCPServer(**data)
 

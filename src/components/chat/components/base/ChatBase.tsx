@@ -4,7 +4,7 @@
  */
 
 /**
- * Main ChatPanel component.
+ * Main ChatBase component.
  * Provides a full chat interface with messages and input.
  * This is the base component used by all other chat container components.
  *
@@ -13,9 +13,10 @@
  * 2. Protocol mode: Connects to backend via AG-UI, A2A, ACP, or Vercel AI protocols
  * 3. Custom mode: Uses onSendMessage prop for custom message handling
  *
- * @module components/chat/components/ChatPanel
+ * @module components/chat/components/ChatBase
  */
 
+import { useContext } from 'react';
 import React, {
   type ReactNode,
   useCallback,
@@ -50,7 +51,7 @@ import {
 } from '@primer/octicons-react';
 import { AiAgentIcon } from '@datalayer/icons-react';
 import { useQuery, QueryClientContext } from '@tanstack/react-query';
-import { useContext } from 'react';
+import { Streamdown } from 'streamdown';
 import { PoweredByTag, type PoweredByTagProps } from '../elements/PoweredByTag';
 import { requestAPI } from '../../handler';
 import { useChatStore } from '../../store/chatStore';
@@ -74,7 +75,6 @@ import {
 } from '../../protocols';
 import type { FrontendToolDefinition } from '../../types/tool';
 import { ToolCallDisplay } from '../display/ToolCallDisplay';
-import { Streamdown } from 'streamdown';
 
 /**
  * Tool call status for tool rendering
@@ -272,7 +272,7 @@ export interface RemoteConfig {
 }
 
 /**
- * Protocol configuration for ChatPanel
+ * Protocol configuration for ChatBase
  */
 export interface ProtocolConfig {
   /** Protocol/transport type */
@@ -285,14 +285,16 @@ export interface ProtocolConfig {
   agentId?: string;
   /** Enable config query for models and tools */
   enableConfigQuery?: boolean;
+  /** Config endpoint URL for non-Jupyter protocols (if not set, uses Jupyter requestAPI) */
+  configEndpoint?: string;
   /** Additional protocol options */
   options?: Record<string, unknown>;
 }
 
 /**
- * ChatPanel props
+ * ChatBase props
  */
-export interface ChatPanelProps {
+export interface ChatBaseProps {
   /** Chat title */
   title?: string;
 
@@ -414,6 +416,9 @@ export interface ChatPanelProps {
   /** Callback when messages are cleared */
   onClear?: () => void;
 
+  /** Callback when messages change (for tracking message count) */
+  onMessagesChange?: (messages: ChatMessage[]) => void;
+
   /** Auto-focus the input on mount */
   autoFocus?: boolean;
 
@@ -474,7 +479,7 @@ function createProtocolAdapter(
     case 'acp':
       return new ACPAdapter(adapterConfig);
     default:
-      console.warn(`[ChatPanel] Unknown protocol type: ${config.type}`);
+      console.warn(`[ChatBase] Unknown protocol type: ${config.type}`);
       return null;
   }
 }
@@ -483,7 +488,11 @@ function createProtocolAdapter(
  * Hook to safely use query when QueryClient is available
  * Returns null if no QueryClientProvider is present
  */
-function useConfigQuery(enabled: boolean) {
+function useConfigQuery(
+  enabled: boolean,
+  configEndpoint?: string,
+  authToken?: string,
+) {
   const queryClient = useContext(QueryClientContext);
 
   // If no QueryClient is available, return a mock result
@@ -498,16 +507,33 @@ function useConfigQuery(enabled: boolean) {
 
   // eslint-disable-next-line react-hooks/rules-of-hooks
   return useQuery({
-    queryFn: async () => await requestAPI<RemoteConfig>('configure'),
-    queryKey: ['models'],
+    queryFn: async () => {
+      // If configEndpoint is provided, use direct fetch (for FastAPI)
+      if (configEndpoint) {
+        const headers: HeadersInit = {
+          'Content-Type': 'application/json',
+        };
+        if (authToken) {
+          headers['Authorization'] = `Bearer ${authToken}`;
+        }
+        const response = await fetch(configEndpoint, { headers });
+        if (!response.ok) {
+          throw new Error(`Config fetch failed: ${response.statusText}`);
+        }
+        return response.json() as Promise<RemoteConfig>;
+      }
+      // Otherwise use Jupyter requestAPI
+      return requestAPI<RemoteConfig>('configure');
+    },
+    queryKey: ['models', configEndpoint || 'jupyter'],
     enabled,
   });
 }
 
 /**
- * ChatPanel component - Universal chat panel supporting store, protocol, and custom modes
+ * ChatBase component - Universal chat panel supporting store, protocol, and custom modes
  */
-export function ChatPanel({
+export function ChatBase({
   title,
   showHeader = false,
   showLoadingIndicator = true,
@@ -544,13 +570,14 @@ export function ChatPanel({
   onStateUpdate,
   onNewChat,
   onClear,
+  onMessagesChange,
   autoFocus = false,
   suggestions,
   submitOnSuggestionClick = true,
   hideMessagesAfterToolUI = false,
   focusTrigger,
   frontendTools,
-}: ChatPanelProps) {
+}: ChatBaseProps) {
   // Store (optional for message persistence)
   const clearStoreMessages = useChatStore(state => state.clearMessages);
 
@@ -570,7 +597,11 @@ export function ChatPanel({
 
   // Config query (for protocols that support it)
   // Safely handles missing QueryClientProvider
-  const configQuery = useConfigQuery(Boolean(protocol?.enableConfigQuery));
+  const configQuery = useConfigQuery(
+    Boolean(protocol?.enableConfigQuery),
+    protocol?.configEndpoint,
+    protocol?.authToken,
+  );
 
   // Refs
   const adapterRef = useRef<BaseProtocolAdapter | null>(null);
@@ -653,11 +684,26 @@ export function ChatPanel({
     }
   }, [configQuery.data, selectedModel]);
 
+  // Load messages from store on mount when useStoreMode is enabled
+  useEffect(() => {
+    if (useStoreMode) {
+      const storeMessages = useChatStore.getState().messages;
+      if (storeMessages.length > 0) {
+        setDisplayItems(storeMessages);
+      }
+    }
+  }, [useStoreMode]);
+
   // Derived state
   const messages = displayItems.filter(
     (item): item is ChatMessage => !isToolCallMessage(item),
   );
   const ready = true;
+
+  // Notify parent when messages change
+  useEffect(() => {
+    onMessagesChange?.(messages);
+  }, [messages, onMessagesChange]);
 
   // Padding based on compact mode
   const padding = compact ? 2 : 3;
@@ -710,6 +756,14 @@ export function ChatPanel({
                 }
                 return newItems;
               });
+              // Update message in store
+              if (useStoreMode && currentAssistantMessageRef.current) {
+                useChatStore
+                  .getState()
+                  .updateMessage(currentAssistantMessageRef.current.id, {
+                    content: event.message?.content ?? '',
+                  });
+              }
             } else {
               // Create new assistant message (new ID or first message)
               const content = event.message.content;
@@ -721,6 +775,10 @@ export function ChatPanel({
               newMessage.id = event.message.id || newMessage.id;
               currentAssistantMessageRef.current = newMessage;
               setDisplayItems(prev => [...prev, newMessage]);
+              // Add message to store
+              if (useStoreMode) {
+                useChatStore.getState().addMessage(newMessage);
+              }
             }
           }
           break;
@@ -793,7 +851,7 @@ export function ChatPanel({
                       );
                     } catch (err) {
                       console.error(
-                        '[ChatPanel] Frontend tool execution error:',
+                        '[ChatBase] Frontend tool execution error:',
                         err,
                       );
                       const errorToolCall: ToolCallMessage = {
@@ -865,7 +923,7 @@ export function ChatPanel({
                     );
                   } catch (err) {
                     console.error(
-                      '[ChatPanel] Frontend tool execution error:',
+                      '[ChatBase] Frontend tool execution error:',
                       err,
                     );
                     const errorToolCall: ToolCallMessage = {
@@ -929,44 +987,55 @@ export function ChatPanel({
 
         case 'state-update':
           onStateUpdate?.(event.data);
-          // Handle tool results embedded in state updates
-          if (renderToolResult && event.data) {
-            const stateData = event.data as Record<string, unknown>;
-            if (stateData.weather || stateData.result || stateData.toolResult) {
-              const result =
-                stateData.weather ?? stateData.result ?? stateData.toolResult;
-              const lastToolCallId = Array.from(
-                toolCallsRef.current.keys(),
-              ).pop();
-              if (lastToolCallId) {
-                const existingToolCall =
-                  toolCallsRef.current.get(lastToolCallId);
-                if (
-                  existingToolCall &&
-                  existingToolCall.status === 'executing'
-                ) {
-                  const updatedToolCall: ToolCallMessage = {
-                    ...existingToolCall,
-                    result,
-                    status: 'complete',
-                  };
-                  toolCallsRef.current.set(lastToolCallId, updatedToolCall);
-                  setDisplayItems(prev =>
-                    prev.map(item =>
-                      isToolCallMessage(item) &&
-                      item.toolCallId === lastToolCallId
-                        ? updatedToolCall
-                        : item,
-                    ),
-                  );
-                }
+          // When we receive a state update, mark the last executing tool as complete
+          // This handles tools that return state events (STATE_SNAPSHOT/STATE_DELTA) instead of TOOL_CALL_RESULT
+          if (event.data) {
+            // Find any tool calls that are still in 'executing' status
+            const executingToolCalls = Array.from(
+              toolCallsRef.current.entries(),
+            ).filter(([_, tc]) => tc.status === 'executing');
+
+            // Mark the most recent executing tool as complete
+            if (executingToolCalls.length > 0) {
+              const [lastToolCallId, existingToolCall] =
+                executingToolCalls[executingToolCalls.length - 1];
+
+              // Check if this is NOT a human-in-the-loop tool
+              const isHumanInTheLoop =
+                existingToolCall.args &&
+                'steps' in existingToolCall.args &&
+                Array.isArray(existingToolCall.args.steps);
+
+              if (!isHumanInTheLoop) {
+                // Extract result from state data if available
+                const stateData = event.data as Record<string, unknown>;
+                const result =
+                  stateData.weather ??
+                  stateData.result ??
+                  stateData.toolResult ??
+                  stateData;
+
+                const updatedToolCall: ToolCallMessage = {
+                  ...existingToolCall,
+                  result,
+                  status: 'complete',
+                };
+                toolCallsRef.current.set(lastToolCallId, updatedToolCall);
+                setDisplayItems(prev =>
+                  prev.map(item =>
+                    isToolCallMessage(item) &&
+                    item.toolCallId === lastToolCallId
+                      ? updatedToolCall
+                      : item,
+                  ),
+                );
               }
             }
           }
           break;
 
         case 'error':
-          console.error('[ChatPanel] Protocol error:', event.error);
+          console.error('[ChatBase] Protocol error:', event.error);
           setError(event.error || new Error('Unknown error'));
           setIsLoading(false);
           setIsStreaming(false);
@@ -1110,7 +1179,7 @@ export function ChatPanel({
 
         if (toolsForRequest.length > 0) {
           console.log(
-            '[ChatPanel] Sending tools to AG-UI:',
+            '[ChatBase] Sending tools to AG-UI:',
             toolsForRequest.map(t => t.name),
           );
         }
@@ -1124,7 +1193,7 @@ export function ChatPanel({
       }
     } catch (err) {
       if ((err as Error).name !== 'AbortError') {
-        console.error('[ChatPanel] Send error:', err);
+        console.error('[ChatBase] Send error:', err);
         const errorMessage = createAssistantMessage(
           `Error: ${(err as Error).message}`,
         );
@@ -1331,7 +1400,7 @@ export function ChatPanel({
             tools: toolsForSuggestion,
           } as Parameters<typeof adapterRef.current.sendMessage>[1])
           .catch(err => {
-            console.error('[ChatPanel] Suggestion send error:', err);
+            console.error('[ChatBase] Suggestion send error:', err);
             setError(err instanceof Error ? err : new Error(String(err)));
           })
           .finally(() => {
@@ -1471,7 +1540,7 @@ export function ChatPanel({
                 messages: [...allMessages, userMessage],
               } as Parameters<typeof adapterRef.current.sendMessage>[1]);
             } catch (err) {
-              console.error('[ChatPanel] HITL respond error:', err);
+              console.error('[ChatBase] HITL respond error:', err);
             } finally {
               setIsLoading(false);
               setIsStreaming(false);
@@ -1881,97 +1950,11 @@ export function ChatPanel({
 
     return (
       <Box>
-        {/* Model and Tools Footer */}
-        {(showModelSelector || showToolsMenu) && configQuery.data && (
-          <Box
-            sx={{
-              display: 'flex',
-              gap: 2,
-              px: padding,
-              pt: 2,
-              pb: 1,
-              borderTop: '1px solid',
-              borderColor: 'border.default',
-              alignItems: 'center',
-            }}
-          >
-            {/* Tools Menu */}
-            {showToolsMenu && availableTools.length > 0 && (
-              <ActionMenu>
-                <ActionMenu.Anchor>
-                  <IconButton
-                    icon={ToolsIcon}
-                    aria-label="Tools"
-                    variant="invisible"
-                    size="small"
-                  />
-                </ActionMenu.Anchor>
-                <ActionMenu.Overlay>
-                  <ActionList>
-                    <ActionList.Group title="Available Tools">
-                      {availableTools.map(tool => (
-                        <ActionList.Item key={tool.id} disabled>
-                          <ActionList.LeadingVisual>
-                            <Box
-                              sx={{
-                                width: 8,
-                                height: 8,
-                                borderRadius: '50%',
-                                backgroundColor: 'success.emphasis',
-                              }}
-                            />
-                          </ActionList.LeadingVisual>
-                          {tool.name}
-                        </ActionList.Item>
-                      ))}
-                    </ActionList.Group>
-                  </ActionList>
-                </ActionMenu.Overlay>
-              </ActionMenu>
-            )}
-
-            {/* Model Selector */}
-            {showModelSelector && models.length > 0 && selectedModel && (
-              <ActionMenu>
-                <ActionMenu.Anchor>
-                  <Button
-                    type="button"
-                    variant="invisible"
-                    size="small"
-                    leadingVisual={AiModelIcon}
-                  >
-                    <Text sx={{ fontSize: 0 }}>
-                      {models.find(m => m.id === selectedModel)?.name ||
-                        'Select Model'}
-                    </Text>
-                  </Button>
-                </ActionMenu.Anchor>
-                <ActionMenu.Overlay>
-                  <ActionList selectionVariant="single">
-                    {models.map(modelItem => (
-                      <ActionList.Item
-                        key={modelItem.id}
-                        selected={selectedModel === modelItem.id}
-                        onSelect={() => setSelectedModel(modelItem.id)}
-                      >
-                        {modelItem.name}
-                      </ActionList.Item>
-                    ))}
-                  </ActionList>
-                </ActionMenu.Overlay>
-              </ActionMenu>
-            )}
-          </Box>
-        )}
-
         {/* Input Area */}
         <Box
           sx={{
             p: padding,
-            borderTop:
-              (showModelSelector || showToolsMenu) && configQuery.data
-                ? 'none'
-                : '1px solid',
+            borderTop: '1px solid',
             borderColor: 'border.default',
             bg: 'canvas.subtle',
           }}
@@ -2015,6 +1998,97 @@ export function ChatPanel({
             )}
           </Box>
         </Box>
+
+        {/* Model and Tools Footer - Below Input */}
+        {(showModelSelector || showToolsMenu) && configQuery.data && (
+          <Box
+            sx={{
+              display: 'flex',
+              gap: 2,
+              px: padding,
+              py: 1,
+              borderTop: '1px solid',
+              borderColor: 'border.default',
+              alignItems: 'center',
+              bg: 'canvas.subtle',
+            }}
+          >
+            {/* Tools Menu */}
+            {showToolsMenu && (
+              <ActionMenu>
+                <ActionMenu.Anchor>
+                  <IconButton
+                    icon={ToolsIcon}
+                    aria-label="Tools"
+                    variant="invisible"
+                    size="small"
+                  />
+                </ActionMenu.Anchor>
+                <ActionMenu.Overlay side="outside-top" align="start">
+                  <ActionList>
+                    <ActionList.Group title="Available Tools">
+                      {availableTools.length > 0 ? (
+                        availableTools.map(tool => (
+                          <ActionList.Item key={tool.id} disabled>
+                            <ActionList.LeadingVisual>
+                              <Box
+                                sx={{
+                                  width: 8,
+                                  height: 8,
+                                  borderRadius: '50%',
+                                  backgroundColor: 'success.emphasis',
+                                }}
+                              />
+                            </ActionList.LeadingVisual>
+                            {tool.name}
+                          </ActionList.Item>
+                        ))
+                      ) : (
+                        <ActionList.Item disabled>
+                          <Text sx={{ color: 'fg.muted', fontStyle: 'italic' }}>
+                            No tools available
+                          </Text>
+                        </ActionList.Item>
+                      )}
+                    </ActionList.Group>
+                  </ActionList>
+                </ActionMenu.Overlay>
+              </ActionMenu>
+            )}
+
+            {/* Model Selector */}
+            {showModelSelector && models.length > 0 && selectedModel && (
+              <ActionMenu>
+                <ActionMenu.Anchor>
+                  <Button
+                    type="button"
+                    variant="invisible"
+                    size="small"
+                    leadingVisual={AiModelIcon}
+                  >
+                    <Text sx={{ fontSize: 0 }}>
+                      {models.find(m => m.id === selectedModel)?.name ||
+                        'Select Model'}
+                    </Text>
+                  </Button>
+                </ActionMenu.Anchor>
+                <ActionMenu.Overlay side="outside-top" align="end">
+                  <ActionList selectionVariant="single">
+                    {models.map(modelItem => (
+                      <ActionList.Item
+                        key={modelItem.id}
+                        selected={selectedModel === modelItem.id}
+                        onSelect={() => setSelectedModel(modelItem.id)}
+                      >
+                        {modelItem.name}
+                      </ActionList.Item>
+                    ))}
+                  </ActionList>
+                </ActionMenu.Overlay>
+              </ActionMenu>
+            )}
+          </Box>
+        )}
       </Box>
     );
   };
@@ -2087,4 +2161,4 @@ export function ChatPanel({
 // Export types
 export type { PoweredByTagProps };
 
-export default ChatPanel;
+export default ChatBase;
