@@ -20,10 +20,11 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
-import { Text, Button, Spinner, Label } from '@primer/react';
-import { AlertIcon, SyncIcon } from '@primer/octicons-react';
+import { Text, Button, Spinner, IconButton } from '@primer/react';
+import { AlertIcon, SyncIcon, InfoIcon } from '@primer/octicons-react';
 import { Box } from '@datalayer/primer-addons';
 import { ChatBase, type Suggestion } from './base/ChatBase';
+import { AgentDetails } from './AgentDetails';
 import type { ProtocolConfig } from './base/ChatBase';
 
 // Try to get Jupyter settings if available
@@ -254,6 +255,8 @@ export function Chat({
 }: ChatProps) {
   const [error, setError] = useState<string | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
+  const [showDetails, setShowDetails] = useState(false);
+  const [messageCount, setMessageCount] = useState(0);
 
   // Build protocol config based on transport
   const protocolConfig = useMemo((): ProtocolConfig | undefined => {
@@ -410,6 +413,31 @@ export function Chat({
     );
   }
 
+  // Show agent details view
+  if (showDetails) {
+    return (
+      <Box
+        className={className}
+        sx={{
+          position: 'relative',
+          height,
+          bg: 'canvas.default',
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
+        <AgentDetails
+          name={title || 'AI Agent'}
+          protocol={transport}
+          url={protocolConfig?.endpoint || baseUrl}
+          messageCount={messageCount}
+          agentId={agentId}
+          onBack={() => setShowDetails(false)}
+        />
+      </Box>
+    );
+  }
+
   return (
     <Box
       className={className}
@@ -432,13 +460,18 @@ export function Chat({
         submitOnSuggestionClick={submitOnSuggestionClick}
         autoFocus={autoFocus}
         headerContent={
-          <Label variant="accent" size="small">
-            {transport.toUpperCase().replace(/-/g, ' ')}
-          </Label>
+          <IconButton
+            icon={InfoIcon}
+            aria-label="Agent details"
+            variant="invisible"
+            size="small"
+            onClick={() => setShowDetails(true)}
+          />
         }
         showModelSelector={showModelSelector}
         showToolsMenu={showToolsMenu}
         onNewChat={handleNewChat}
+        onMessagesChange={messages => setMessageCount(messages.length)}
         headerButtons={{
           showNewChat: true,
           showClear: true,

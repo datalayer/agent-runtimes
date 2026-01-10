@@ -416,6 +416,9 @@ export interface ChatBaseProps {
   /** Callback when messages are cleared */
   onClear?: () => void;
 
+  /** Callback when messages change (for tracking message count) */
+  onMessagesChange?: (messages: ChatMessage[]) => void;
+
   /** Auto-focus the input on mount */
   autoFocus?: boolean;
 
@@ -567,6 +570,7 @@ export function ChatBase({
   onStateUpdate,
   onNewChat,
   onClear,
+  onMessagesChange,
   autoFocus = false,
   suggestions,
   submitOnSuggestionClick = true,
@@ -695,6 +699,11 @@ export function ChatBase({
     (item): item is ChatMessage => !isToolCallMessage(item),
   );
   const ready = true;
+
+  // Notify parent when messages change
+  useEffect(() => {
+    onMessagesChange?.(messages);
+  }, [messages, onMessagesChange]);
 
   // Padding based on compact mode
   const padding = compact ? 2 : 3;
