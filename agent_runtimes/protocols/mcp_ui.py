@@ -20,7 +20,7 @@ from typing import Any, AsyncIterator
 
 from mcp_ui_server import UIResource, create_ui_resource, UIMetadataKey
 
-from ..runtimes.base import BaseAgent, AgentContext
+from ..adapters.base import BaseAgent, AgentContext
 from .base import BaseAdapter
 
 
@@ -36,7 +36,7 @@ class MCPUIAdapter(BaseAdapter):
 
     Example:
         from agent_runtimes.agents import PydanticAIAgent
-        from agent_runtimes.adapters import MCPUIAdapter
+        from agent_runtimes.protocols import MCPUIAdapter
 
         agent = PydanticAIAgent(...)
         adapter = MCPUIAdapter(agent)

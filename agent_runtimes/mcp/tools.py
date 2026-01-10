@@ -14,7 +14,58 @@ from urllib.parse import urljoin
 
 from pydantic_ai.mcp import MCPServerStreamableHTTP
 
+from agent_runtimes.types import BuiltinTool
+
 logger = logging.getLogger(__name__)
+
+
+def generate_name_from_id(tool_id: str) -> str:
+    """
+    Generate a display name from a tool ID.
+
+    Replaces underscores with spaces and capitalizes the first letter.
+
+    Args:
+        tool_id: Tool identifier (e.g., "notebook_run-all-cells")
+
+    Returns:
+        Formatted name (e.g., "Notebook run-all-cells")
+    """
+    if not tool_id:
+        return ""
+
+    # Replace underscores with spaces
+    name = tool_id.replace("_", " ")
+
+    # Capitalize first letter
+    if name:
+        name = name[0].upper() + name[1:]
+
+    return name
+
+
+def tools_to_builtin_list(tools: list[dict[str, Any]]) -> list[BuiltinTool]:
+    """
+    Convert tool dictionaries to BuiltinTool objects.
+
+    Args:
+        tools: List of tool dictionaries with 'name' and optional 'description'
+
+    Returns:
+        List of BuiltinTool objects
+    """
+    builtin_tools = []
+    for tool in tools:
+        tool_id = tool.get("name", "")
+        tool_name = tool.get("description", "")
+
+        # If name is empty, generate from ID
+        if not tool_name or not tool_name.strip():
+            tool_name = generate_name_from_id(tool_id)
+
+        builtin_tools.append(BuiltinTool(id=tool_id, name=tool_name))
+
+    return builtin_tools
 
 
 def create_mcp_server(

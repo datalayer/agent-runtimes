@@ -62,7 +62,7 @@ from acp.schema import (
     EmbeddedResourceContentBlock,
 )
 
-from ..runtimes.base import (
+from ..adapters.base import (
     AgentContext,
     BaseAgent,
     StreamEvent,

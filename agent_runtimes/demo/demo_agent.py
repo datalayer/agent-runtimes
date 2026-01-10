@@ -20,7 +20,7 @@ import asyncio
 import logging
 from typing import Any, AsyncGenerator
 
-from agent_runtimes.runtimes.base import (
+from agent_runtimes.adapters.base import (
     AgentContext,
     AgentResponse,
     BaseAgent,

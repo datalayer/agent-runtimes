@@ -285,6 +285,8 @@ export interface ProtocolConfig {
   agentId?: string;
   /** Enable config query for models and tools */
   enableConfigQuery?: boolean;
+  /** Config endpoint URL for non-Jupyter protocols (if not set, uses Jupyter requestAPI) */
+  configEndpoint?: string;
   /** Additional protocol options */
   options?: Record<string, unknown>;
 }
@@ -483,7 +485,11 @@ function createProtocolAdapter(
  * Hook to safely use query when QueryClient is available
  * Returns null if no QueryClientProvider is present
  */
-function useConfigQuery(enabled: boolean) {
+function useConfigQuery(
+  enabled: boolean,
+  configEndpoint?: string,
+  authToken?: string,
+) {
   const queryClient = useContext(QueryClientContext);
 
   // If no QueryClient is available, return a mock result
@@ -498,8 +504,25 @@ function useConfigQuery(enabled: boolean) {
 
   // eslint-disable-next-line react-hooks/rules-of-hooks
   return useQuery({
-    queryFn: async () => await requestAPI<RemoteConfig>('configure'),
-    queryKey: ['models'],
+    queryFn: async () => {
+      // If configEndpoint is provided, use direct fetch (for FastAPI)
+      if (configEndpoint) {
+        const headers: HeadersInit = {
+          'Content-Type': 'application/json',
+        };
+        if (authToken) {
+          headers['Authorization'] = `Bearer ${authToken}`;
+        }
+        const response = await fetch(configEndpoint, { headers });
+        if (!response.ok) {
+          throw new Error(`Config fetch failed: ${response.statusText}`);
+        }
+        return response.json() as Promise<RemoteConfig>;
+      }
+      // Otherwise use Jupyter requestAPI
+      return requestAPI<RemoteConfig>('configure');
+    },
+    queryKey: ['models', configEndpoint || 'jupyter'],
     enabled,
   });
 }
@@ -570,7 +593,11 @@ export function ChatBase({
 
   // Config query (for protocols that support it)
   // Safely handles missing QueryClientProvider
-  const configQuery = useConfigQuery(Boolean(protocol?.enableConfigQuery));
+  const configQuery = useConfigQuery(
+    Boolean(protocol?.enableConfigQuery),
+    protocol?.configEndpoint,
+    protocol?.authToken,
+  );
 
   // Refs
   const adapterRef = useRef<BaseProtocolAdapter | null>(null);

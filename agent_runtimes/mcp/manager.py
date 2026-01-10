@@ -11,7 +11,7 @@ Jupyter and FastAPI servers.
 import logging
 from typing import Any
 
-from agent_runtimes.runtimes.types import MCPServer
+from agent_runtimes.types import MCPServer
 
 logger = logging.getLogger(__name__)
 

@@ -22,7 +22,7 @@ from pydantic_ai.ui.vercel_ai import VercelAIAdapter as PydanticVercelAIAdapter
 from starlette.requests import Request
 from starlette.responses import Response
 
-from ..runtimes.base import BaseAgent
+from ..adapters.base import BaseAgent
 from .base import BaseAdapter
 
 if TYPE_CHECKING:
@@ -41,7 +41,7 @@ class VercelAIAdapter(BaseAdapter):
     Example:
         from pydantic_ai import Agent
         from agent_runtimes.agents import PydanticAIAgent
-        from agent_runtimes.adapters import VercelAIAdapter
+        from agent_runtimes.protocols import VercelAIAdapter
         from fastapi import FastAPI, Request
 
         # Create Pydantic AI agent

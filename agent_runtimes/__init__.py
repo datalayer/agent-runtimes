@@ -30,7 +30,7 @@ from agent_runtimes.routes.acp import router as acp_router
 from agent_runtimes.routes.health import router as health_router
 from agent_runtimes.jupyter.serverapplication import AgentRuntimesExtensionApp
 # Agent interfaces
-from agent_runtimes.runtimes.base import (
+from agent_runtimes.adapters.base import (
     AgentContext,
     AgentResponse,
     BaseAgent,
@@ -39,10 +39,10 @@ from agent_runtimes.runtimes.base import (
     ToolDefinition,
     ToolResult,
 )
-from agent_runtimes.runtimes.pydantic_ai_agent import PydanticAIAgent
+from agent_runtimes.adapters.pydantic_ai_adapter import PydanticAIAdapter
 # Protocol adapters
-from agent_runtimes.adapters.base import AdapterEvent, BaseAdapter
-from agent_runtimes.adapters.acp import ACPAdapter, ACPSession
+from agent_runtimes.protocols.base import AdapterEvent, BaseAdapter
+from agent_runtimes.protocols.acp import ACPAdapter, ACPSession
 
 
 def _jupyter_server_extension_points() -> List[Dict[str, Any]]:
@@ -77,7 +77,7 @@ __all__ = [
     "ToolResult",
     "ToolDefinition",
     # Agent implementations
-    "PydanticAIAgent",
+    "PydanticAIAdapter",
     # Protocol adapters
     "BaseAdapter",
     "AdapterEvent",

@@ -26,7 +26,7 @@ class A2AAdapter(BaseAdapter):
 
     Example:
         from agent_runtimes.agents import PydanticAIAgent
-        from agent_runtimes.adapters import A2AAdapter
+        from agent_runtimes.protocols import A2AAdapter
 
         agent = PydanticAIAgent(...)
         adapter = A2AAdapter(agent)
@@ -72,7 +72,7 @@ class A2AAdapter(BaseAdapter):
         capabilities_required = request.get("capabilities_required", [])
 
         # Create agent context
-        from ..runtimes.base import AgentContext
+        from ..adapters.base import AgentContext
 
         context = AgentContext(
             session_id=conversation_id,
@@ -143,7 +143,7 @@ class A2AAdapter(BaseAdapter):
         conversation_id = request.get("conversation_id", str(uuid.uuid4()))
 
         # Create agent context
-        from ..runtimes.base import AgentContext
+        from ..adapters.base import AgentContext
 
         context = AgentContext(
             session_id=conversation_id,

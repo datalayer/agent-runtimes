@@ -8,16 +8,8 @@ Provides frontend configuration services that can be used by both
 Jupyter and FastAPI servers.
 """
 
-from .frontend import (
-    create_default_models,
-    generate_name_from_id,
-    get_frontend_config,
-    tools_to_builtin_list,
-)
+from .frontend import get_frontend_config
 
 __all__ = [
-    "create_default_models",
-    "generate_name_from_id",
     "get_frontend_config",
-    "tools_to_builtin_list",
 ]

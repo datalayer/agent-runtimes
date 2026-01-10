@@ -9,7 +9,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException
 
 from agent_runtimes.mcp import get_mcp_manager
-from agent_runtimes.runtimes.types import MCPServer
+from agent_runtimes.types import MCPServer
 
 logger = logging.getLogger(__name__)
 

@@ -1,19 +1,27 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""MCP (Model Context Protocol) tools integration."""
+"""
+MCP (Model Context Protocol) client and tool manager.
 
-from typing import Any, Dict, List
+This module provides an HTTP client for communicating with MCP servers
+and a tool manager for managing multiple MCP servers and their tools.
+"""
+
+import logging
+from typing import Any
 
 import httpx
 
-from agent_runtimes.runtimes.types import MCPServer
+from agent_runtimes.types import MCPServer
+
+logger = logging.getLogger(__name__)
 
 
 class MCPClient:
-    """Client for communicating with MCP servers."""
+    """Client for communicating with MCP servers via HTTP."""
 
-    def __init__(self, server_url: str):
+    def __init__(self, server_url: str) -> None:
         """
         Initialize MCP client.
 
@@ -22,7 +30,6 @@ class MCPClient:
         """
         self.server_url = server_url.rstrip("/")
         # Create a long-lived HTTP client with appropriate settings
-        # matching the settings used in tools.py for consistency
         self.client = httpx.AsyncClient(
             timeout=httpx.Timeout(
                 connect=10.0,
@@ -33,13 +40,13 @@ class MCPClient:
             http2=False,  # Disable HTTP/2 for better compatibility
             follow_redirects=True,
             limits=httpx.Limits(
-                max_keepalive_connections=5,  # Reduced to avoid exhaustion
-                max_connections=10,  # Reduced to avoid exhaustion
-                keepalive_expiry=60.0,  # Longer keepalive
+                max_keepalive_connections=5,
+                max_connections=10,
+                keepalive_expiry=60.0,
             ),
         )
 
-    async def list_tools(self) -> List[Dict[str, Any]]:
+    async def list_tools(self) -> list[dict[str, Any]]:
         """
         List available tools from MCP server.
 
@@ -51,10 +58,10 @@ class MCPClient:
             response.raise_for_status()
             return response.json()
         except Exception as e:
-            print(f"Error listing tools from {self.server_url}: {e}")
+            logger.error(f"Error listing tools from {self.server_url}: {e}")
             return []
 
-    async def call_tool(self, tool_name: str, arguments: Dict[str, Any]) -> Any:
+    async def call_tool(self, tool_name: str, arguments: dict[str, Any]) -> Any:
         """
         Call a tool on the MCP server.
 
@@ -67,12 +74,13 @@ class MCPClient:
         """
         try:
             response = await self.client.post(
-                f"{self.server_url}/tools/{tool_name}", json={"arguments": arguments}
+                f"{self.server_url}/tools/{tool_name}",
+                json={"arguments": arguments},
             )
             response.raise_for_status()
             return response.json()
         except Exception as e:
-            print(f"Error calling tool {tool_name}: {e}")
+            logger.error(f"Error calling tool {tool_name}: {e}")
             return {"error": str(e)}
 
     async def close(self) -> None:
@@ -81,12 +89,18 @@ class MCPClient:
 
 
 class MCPToolManager:
-    """Manage MCP tools and servers."""
+    """
+    Manage MCP tools and servers.
+
+    This manager maintains connections to multiple MCP servers and provides
+    unified access to their tools.
+    """
 
     def __init__(self) -> None:
         """Initialize MCP tool manager."""
-        self.servers: Dict[str, MCPServer] = {}
-        self.clients: Dict[str, MCPClient] = {}
+        self.servers: dict[str, MCPServer] = {}
+        self.clients: dict[str, MCPClient] = {}
+        logger.info("MCPToolManager initialized")
 
     def add_server(self, server: MCPServer) -> None:
         """
@@ -98,6 +112,7 @@ class MCPToolManager:
         self.servers[server.id] = server
         if server.enabled:
             self.clients[server.id] = MCPClient(server.url)
+        logger.info(f"Added MCP server: {server.id} ({server.name})")
 
     def remove_server(self, server_id: str) -> None:
         """
@@ -110,6 +125,7 @@ class MCPToolManager:
             del self.servers[server_id]
         if server_id in self.clients:
             del self.clients[server_id]
+        logger.info(f"Removed MCP server: {server_id}")
 
     def update_server(self, server_id: str, server: MCPServer) -> None:
         """
@@ -124,8 +140,9 @@ class MCPToolManager:
             self.clients[server_id] = MCPClient(server.url)
         elif not server.enabled and server_id in self.clients:
             del self.clients[server_id]
+        logger.info(f"Updated MCP server: {server_id}")
 
-    def get_servers(self) -> List[MCPServer]:
+    def get_servers(self) -> list[MCPServer]:
         """
         Get all MCP servers.
 
@@ -134,14 +151,26 @@ class MCPToolManager:
         """
         return list(self.servers.values())
 
-    async def get_available_tools(self) -> List[Dict[str, Any]]:
+    def get_server(self, server_id: str) -> MCPServer | None:
+        """
+        Get a specific MCP server by ID.
+
+        Args:
+            server_id: The server identifier
+
+        Returns:
+            MCPServer if found, None otherwise
+        """
+        return self.servers.get(server_id)
+
+    async def get_available_tools(self) -> list[dict[str, Any]]:
         """
         Get all available tools from enabled MCP servers.
 
         Returns:
             List of tool definitions with server information
         """
-        all_tools = []
+        all_tools: list[dict[str, Any]] = []
         for server_id, client in self.clients.items():
             server = self.servers[server_id]
             if server.enabled:
@@ -154,7 +183,7 @@ class MCPToolManager:
 
     def register_with_agent(self, agent: Any) -> None:
         """
-        Register MCP tools with Pydantic AI agent.
+        Register MCP tools with a Pydantic AI agent.
 
         Args:
             agent: The Pydantic AI agent
@@ -167,3 +196,4 @@ class MCPToolManager:
         """Close all MCP clients."""
         for client in self.clients.values():
             await client.close()
+        logger.info("Closed all MCP clients")

@@ -18,7 +18,7 @@ from .base import (
 )
 
 
-class JupyterAIAgent(BaseAgent):
+class JupyterAIAdapter(BaseAgent):
     """Adapter for Jupyter AI agents.
 
     Wraps a Jupyter AI agent to provide a consistent interface

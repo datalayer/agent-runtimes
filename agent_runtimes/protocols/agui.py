@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING, Any, AsyncIterator
 
 from pydantic_ai.ui.ag_ui.app import AGUIApp
 
-from ..runtimes.base import BaseAgent
+from ..adapters.base import BaseAgent
 from .base import BaseAdapter
 
 if TYPE_CHECKING:
@@ -38,7 +38,7 @@ class AGUIAdapter(BaseAdapter):
     Example:
         from pydantic_ai import Agent
         from agent_runtimes.agents import PydanticAIAgent
-        from agent_runtimes.adapters import AGUIAdapter
+        from agent_runtimes.protocols import AGUIAdapter
 
         # Create Pydantic AI agent
         pydantic_agent = Agent("openai:gpt-4o")

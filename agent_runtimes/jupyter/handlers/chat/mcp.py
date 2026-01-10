@@ -8,7 +8,7 @@ import json
 from jupyter_server.base.handlers import APIHandler
 from tornado import web as tornado_web
 
-from agent_runtimes.runtimes.types import MCPServer
+from agent_runtimes.types import MCPServer
 
 
 class MCPServersHandler(APIHandler):

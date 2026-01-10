@@ -8,9 +8,8 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query
 
-from agent_runtimes.config import get_frontend_config
-from agent_runtimes.mcp import get_available_tools, get_mcp_manager
-from agent_runtimes.runtimes.types import FrontendConfig
+from agent_runtimes.mcp import get_available_tools, get_frontend_config, get_mcp_manager
+from agent_runtimes.types import FrontendConfig
 
 logger = logging.getLogger(__name__)
 

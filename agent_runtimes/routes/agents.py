@@ -20,8 +20,8 @@ from starlette.routing import Mount
 
 from pydantic_ai import Agent as PydanticAgent
 
-from ..runtimes.pydantic_ai_agent import PydanticAIAgent
-from ..adapters import AGUIAdapter, VercelAIAdapter, MCPUIAdapter
+from ..adapters.pydantic_ai_adapter import PydanticAIAdapter
+from ..protocols import AGUIAdapter, VercelAIAdapter, MCPUIAdapter
 from .acp import AgentCapabilities, AgentInfo, register_agent, unregister_agent, _agents
 from .agui import register_agui_agent, unregister_agui_agent, get_agui_app
 from .vercel_ai import register_vercel_agent, unregister_vercel_agent
@@ -113,7 +113,7 @@ async def create_agent(request: CreateAgentRequest, http_request: Request) -> Cr
                 system_prompt=request.system_prompt,
             )
             # Then wrap it with our adapter
-            agent = PydanticAIAgent(
+            agent = PydanticAIAdapter(
                 agent=pydantic_agent,
                 name=request.name,
                 description=request.description,

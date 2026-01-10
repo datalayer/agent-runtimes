@@ -8,8 +8,8 @@ This module re-exports the shared MCP tools functionality for backward compatibi
 """
 
 # Re-export from shared module for backward compatibility
-from agent_runtimes.config import generate_name_from_id
 from agent_runtimes.mcp import (
+    generate_name_from_id,
     create_mcp_server,
     extract_tool_names,
     get_available_tools,

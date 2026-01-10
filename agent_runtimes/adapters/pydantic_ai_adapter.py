@@ -22,7 +22,7 @@ from .base import (
 )
 
 
-class PydanticAIAgent(BaseAgent):
+class PydanticAIAdapter(BaseAgent):
     """Adapter for Pydantic AI agents.
 
     Wraps a pydantic_ai.Agent to provide a consistent interface

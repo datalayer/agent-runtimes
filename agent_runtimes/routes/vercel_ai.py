@@ -11,7 +11,7 @@ from fastapi import APIRouter, Request
 from pydantic import BaseModel
 from starlette.responses import Response
 
-from ..adapters import VercelAIAdapter
+from ..protocols import VercelAIAdapter
 
 logger = logging.getLogger(__name__)
 

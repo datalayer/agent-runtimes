@@ -61,8 +61,8 @@ from acp.schema import (
     SessionNotification as ACPSessionNotification,
 )
 
-from ..runtimes.base import BaseAgent
-from ..adapters.acp import ACPAdapter, ACPSession
+from ..adapters.base import BaseAgent
+from ..protocols.acp import ACPAdapter, ACPSession
 
 logger = logging.getLogger(__name__)
 
@@ -533,7 +533,7 @@ async def _handle_initialize(
     session_id = str(uuid.uuid4())
     
     # Create session with context
-    from ...runtimes.base import AgentContext
+    from ..adapters.base import AgentContext
     context = AgentContext(
         session_id=session_id,
         user_id="default",
@@ -598,7 +598,7 @@ async def _handle_new_session(
     session_id = str(uuid.uuid4())
     
     # Create session with context
-    from ...runtimes.base import AgentContext
+    from ..adapters.base import AgentContext
     context = AgentContext(
         session_id=session_id,
         user_id=params.get("userId", "default"),
@@ -651,7 +651,7 @@ async def _handle_prompt(
                 prompt = block.get("text", "")
     
     # Convert to context
-    from ...runtimes.base import AgentContext
+    from ..adapters.base import AgentContext
     
     context = AgentContext(
         session_id=session_id,
@@ -800,7 +800,7 @@ async def _handle_run(
     stream = params.get("stream", True)
     
     # Convert input to context
-    from ...runtimes.base import AgentContext
+    from ..adapters.base import AgentContext
     
     messages = []
     for item in input_data:

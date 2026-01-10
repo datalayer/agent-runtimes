@@ -10,7 +10,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from starlette.responses import StreamingResponse
 
-from ..adapters import MCPUIAdapter
+from ..protocols import MCPUIAdapter
 
 logger = logging.getLogger(__name__)
 

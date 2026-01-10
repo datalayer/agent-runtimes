@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from agent_runtimes.runtimes.types import MCPServer
+from agent_runtimes.types import MCPServer
 
 
 class ChatConfig:
