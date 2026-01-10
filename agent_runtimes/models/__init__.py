@@ -3,7 +3,7 @@
 
 """Model functions and configuration types."""
 
-from .model import create_default_models, create_model_with_provider, get_model_string
+from .models import create_default_models, create_model_with_provider, get_model_string
 
 __all__ = [
     "create_default_models",

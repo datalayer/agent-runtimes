@@ -6,7 +6,7 @@
 from pydantic_ai import Agent
 from pydantic_ai.mcp import MCPServerStreamableHTTP
 
-from agent_runtimes.models.model import create_model_with_provider
+from agent_runtimes.models.models import create_model_with_provider
 
 
 def create_chat_agent(

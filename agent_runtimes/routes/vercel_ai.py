@@ -11,7 +11,7 @@ from fastapi import APIRouter, Request
 from pydantic import BaseModel
 from starlette.responses import Response
 
-from ..protocols import VercelAIProtocol
+from ..transports import VercelAITransport
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +22,7 @@ router = APIRouter(
 )
 
 # Global registry of Vercel AI adapters by agent ID
-_vercel_adapters: dict[str, VercelAIProtocol] = {}
+_vercel_adapters: dict[str, VercelAITransport] = {}
 
 # Track running requests per request ID for termination
 # Maps request_id to a cancellation event
@@ -99,13 +99,13 @@ def cancel_all_requests() -> int:
 
 def register_vercel_agent(
     agent_id: str,
-    adapter: VercelAIProtocol,
+    adapter: VercelAITransport,
 ) -> None:
     """Register a Vercel AI adapter.
 
     Args:
         agent_id: Unique identifier for the agent.
-        adapter: The VercelAIProtocol instance.
+        adapter: The VercelAITransport instance.
     """
     _vercel_adapters[agent_id] = adapter
     logger.info(f"Registered Vercel AI agent: {agent_id}")
@@ -122,14 +122,14 @@ def unregister_vercel_agent(agent_id: str) -> None:
     logger.info(f"Unregistered Vercel AI agent: {agent_id}")
 
 
-def get_vercel_adapter(agent_id: str) -> VercelAIProtocol | None:
+def get_vercel_adapter(agent_id: str) -> VercelAITransport | None:
     """Get a Vercel AI adapter by ID.
 
     Args:
         agent_id: The agent identifier.
 
     Returns:
-        The VercelAIProtocol if found, None otherwise.
+        The VercelAITransport if found, None otherwise.
     """
     return _vercel_adapters.get(agent_id)
 
@@ -174,7 +174,7 @@ async def chat(
         try:
             agent, _ = create_demo_agent()
             # Create Vercel AI adapter
-            adapter = VercelAIProtocol(agent)
+            adapter = VercelAITransport(agent)
             register_vercel_agent(agent_id, adapter)
             logger.info(f"Auto-registered demo agent for Vercel AI: {agent_id}")
         except Exception as e:

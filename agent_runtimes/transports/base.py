@@ -36,7 +36,7 @@ class AdapterEvent:
     metadata: dict[str, Any] = field(default_factory=dict)
 
 
-class BaseProtocol(ABC):
+class BaseTransport(ABC):
     """Abstract base class for protocol adapters.
 
     Protocol adapters translate between agent-runtimes' internal

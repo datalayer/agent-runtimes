@@ -253,6 +253,7 @@ export interface ModelConfig {
   id: string;
   name: string;
   builtinTools?: string[];
+  isAvailable?: boolean;
 }
 
 /**
@@ -674,7 +675,11 @@ export function ChatBase({
   // Initialize model and tools when config is available
   useEffect(() => {
     if (configQuery.data && !selectedModel) {
-      const firstModel = configQuery.data.models[0];
+      // Select first available model, or fallback to first model if none available
+      const firstAvailableModel = configQuery.data.models.find(
+        m => m.isAvailable !== false,
+      );
+      const firstModel = firstAvailableModel || configQuery.data.models[0];
       if (firstModel) {
         setSelectedModel(firstModel.id);
         const allToolIds =
@@ -2079,8 +2084,19 @@ export function ChatBase({
                         key={modelItem.id}
                         selected={selectedModel === modelItem.id}
                         onSelect={() => setSelectedModel(modelItem.id)}
+                        disabled={modelItem.isAvailable === false}
+                        sx={
+                          modelItem.isAvailable === false
+                            ? { color: 'fg.muted' }
+                            : undefined
+                        }
                       >
                         {modelItem.name}
+                        {modelItem.isAvailable === false && (
+                          <ActionList.Description variant="block">
+                            Missing API key
+                          </ActionList.Description>
+                        )}
                       </ActionList.Item>
                     ))}
                   </ActionList>

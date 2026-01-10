@@ -56,7 +56,7 @@ async def get_configuration(
             mcp_servers=mcp_servers,
         )
 
-        return config.model_dump(by_alias=True)
+        return config
 
     except Exception as e:
         logger.error(f"Error getting configuration: {e}", exc_info=True)

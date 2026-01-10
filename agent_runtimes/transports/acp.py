@@ -67,7 +67,7 @@ from ..adapters.base import (
     BaseAgent,
     StreamEvent,
 )
-from .base import BaseProtocol
+from .base import BaseTransport
 
 
 @dataclass
@@ -93,7 +93,7 @@ class ACPSession:
     cancelled: bool = False
 
 
-class ACPProtocol(BaseProtocol):
+class ACPTransport(BaseTransport):
     """Agent Client Protocol (ACP) adapter.
 
     Implements the ACP protocol for agent-runtimes using official
@@ -110,7 +110,7 @@ class ACPProtocol(BaseProtocol):
 
     Example:
         agent = PydanticAIAgent(pydantic_agent)
-        adapter = ACPProtocol(agent)
+        adapter = ACPTransport(agent)
 
         # Handle ACP initialize request
         response = await adapter.handle_initialize(InitializeRequest(...))
@@ -493,7 +493,7 @@ class ACPProtocol(BaseProtocol):
 # Re-export SDK types and helpers for convenience
 __all__ = [
     # Adapter
-    "ACPProtocol",
+    "ACPTransport",
     "ACPSession",
     # SDK Constants
     "PROTOCOL_VERSION",

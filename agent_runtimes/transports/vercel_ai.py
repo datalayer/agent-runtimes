@@ -23,13 +23,13 @@ from starlette.requests import Request
 from starlette.responses import Response
 
 from ..adapters.base import BaseAgent
-from .base import BaseProtocol
+from .base import BaseTransport
 
 if TYPE_CHECKING:
     from pydantic_ai import Agent
 
 
-class VercelAIProtocol(BaseProtocol):
+class VercelAITransport(BaseTransport):
     """Vercel AI SDK protocol adapter.
 
     Wraps Pydantic AI's built-in Vercel AI support to expose agents through
@@ -41,7 +41,7 @@ class VercelAIProtocol(BaseProtocol):
     Example:
         from pydantic_ai import Agent
         from agent_runtimes.agents import PydanticAIAgent
-        from agent_runtimes.protocols import VercelAIProtocol
+        from agent_runtimes.transports import VercelAITransport
         from fastapi import FastAPI, Request
 
         # Create Pydantic AI agent
@@ -51,7 +51,7 @@ class VercelAIProtocol(BaseProtocol):
         agent = PydanticAIAgent(pydantic_agent)
         
         # Create Vercel AI adapter
-        vercel_adapter = VercelAIProtocol(agent)
+        vercel_adapter = VercelAITransport(agent)
         
         # Add to FastAPI app
         app = FastAPI()
@@ -104,7 +104,7 @@ class VercelAIProtocol(BaseProtocol):
             return self.agent._agent
         else:
             raise ValueError(
-                "VercelAIProtocol requires a PydanticAIAgent that wraps a pydantic_ai.Agent"
+                "VercelAITransport requires a PydanticAIAgent that wraps a pydantic_ai.Agent"
             )
 
     async def handle_vercel_request(
