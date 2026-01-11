@@ -147,6 +147,8 @@ async def chat(
     - Token usage tracking
     - Standard message format
 
+    The model can be specified in the request body to override the agent's default.
+
     Args:
         request: The FastAPI/Starlette request.
         agent_id: The agent to use (defaults to "demo-agent").
@@ -190,6 +192,7 @@ async def chat(
             )
 
     # Handle the request using the Vercel AI adapter
+    # The model override is extracted from the request body inside handle_vercel_request
     return await adapter.handle_vercel_request(request)
 
 

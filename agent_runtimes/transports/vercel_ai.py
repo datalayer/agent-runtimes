@@ -119,12 +119,38 @@ class VercelAITransport(BaseTransport):
 
         Args:
             request: The Starlette/FastAPI request object.
-            model: Optional model override. If None, uses the agent's default model.
+            model: Optional model override. If None, extracts from request body
+                   or uses the agent's default model.
 
         Returns:
             Starlette Response with streaming content.
         """
+        import json
+        import logging
+
+        logger = logging.getLogger(__name__)
         pydantic_agent = self._get_pydantic_agent()
+
+        # Extract model from request body if not provided
+        if model is None:
+            try:
+                # Read the body once and cache it
+                body_bytes = await request.body()
+                body = json.loads(body_bytes)
+                model = body.get("model")
+                if model:
+                    logger.info(f"Using model from request body: {model}")
+
+                # Create a new request with the cached body for pydantic-ai to consume
+                # We need to wrap the request with cached body
+                from starlette.requests import Request as StarletteRequest
+
+                async def receive():
+                    return {"type": "http.request", "body": body_bytes}
+
+                request = StarletteRequest(request.scope, receive)
+            except (json.JSONDecodeError, Exception) as e:
+                logger.debug(f"Could not extract model from request body: {e}")
 
         # Use Pydantic AI's built-in Vercel AI adapter
         response = await VercelAIAdapter.dispatch_request(

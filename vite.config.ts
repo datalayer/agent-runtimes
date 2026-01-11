@@ -107,7 +107,7 @@ export default defineConfig(({ mode }) => {
 
   const build: any = {
     rollupOptions: {
-      external: ['keytar'],
+      external: ['keytar', '@vscode/keytar'],
       output: {
         assetFileNames: (assetInfo: any) => {
           if (/pypi\//.test(assetInfo.names?.[0])) {
@@ -142,7 +142,7 @@ export default defineConfig(({ mode }) => {
       '@jupyterlab/translation',
       '@jupyterlab/ui-components',
     ],
-    exclude: ['keytar'],
+    exclude: ['keytar', '@vscode/keytar', '@datalayer/core'],
     esbuildOptions: {
       loader: {
         '.whl': 'text',
@@ -182,6 +182,9 @@ export default defineConfig(({ mode }) => {
       alias: [
         { find: '@', replacement: path.resolve(__dirname, './src') },
         { find: /^~(.*)$/, replacement: '$1' },
+        // Stub out keytar for browser builds - it's a native Node.js module
+        { find: 'keytar', replacement: path.resolve(__dirname, './src/stubs/keytar.ts') },
+        { find: '@vscode/keytar', replacement: path.resolve(__dirname, './src/stubs/keytar.ts') },
       ],
     },
     optimizeDeps,
