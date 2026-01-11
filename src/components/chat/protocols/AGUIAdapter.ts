@@ -129,6 +129,8 @@ export class AGUIAdapter extends BaseProtocolAdapter {
       metadata?: Record<string, unknown>;
       /** Full conversation history to send with the message */
       messages?: ChatMessage[];
+      /** Model to use for this request (overrides agent default) */
+      model?: string;
     },
   ): Promise<void> {
     this.abortController = new AbortController();
@@ -207,6 +209,8 @@ export class AGUIAdapter extends BaseProtocolAdapter {
       tools: options?.tools || [],
       context: [],
       forwardedProps: null,
+      // Include model for per-request model override
+      ...(options?.model && { model: options.model }),
     };
 
     try {

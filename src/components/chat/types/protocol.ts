@@ -163,6 +163,8 @@ export interface ProtocolAdapter {
       metadata?: Record<string, unknown>;
       /** Full conversation history to send with the message */
       messages?: ChatMessage[];
+      /** Model to use for this request (overrides agent default) */
+      model?: string;
     },
   ): Promise<void>;
 
@@ -220,6 +222,8 @@ export namespace AGUI {
     tools: ToolDefinition[];
     context: Array<{ type: string; content: string }>;
     forwardedProps: Record<string, unknown> | null;
+    /** Optional model override for per-request model selection */
+    model?: string;
   }
 
   export interface Event {

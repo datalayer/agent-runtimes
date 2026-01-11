@@ -327,6 +327,8 @@ export class ACPAdapter extends BaseProtocolAdapter {
       tools?: ToolDefinition[];
       threadId?: string;
       metadata?: Record<string, unknown>;
+      /** Model to use for this request (overrides agent default) */
+      model?: string;
     },
   ): Promise<void> {
     if (!this.session) {

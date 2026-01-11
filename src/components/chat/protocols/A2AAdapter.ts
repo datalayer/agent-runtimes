@@ -147,6 +147,8 @@ export class A2AAdapter extends BaseProtocolAdapter {
       tools?: ToolDefinition[];
       threadId?: string;
       metadata?: Record<string, unknown>;
+      /** Model to use for this request (overrides agent default) */
+      model?: string;
     },
   ): Promise<void> {
     this.abortController = new AbortController();
@@ -186,6 +188,8 @@ export class A2AAdapter extends BaseProtocolAdapter {
         configuration: {
           acceptedOutputModes: ['text', 'text/plain'],
           requestedExtensions: this.a2aConfig.enableA2UI ? ['a2ui'] : [],
+          // Model override for per-request model selection
+          ...(options?.model && { model: options.model }),
         },
       },
       id: taskId,
