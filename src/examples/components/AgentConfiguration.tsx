@@ -14,6 +14,7 @@ import {
   Spinner,
   Flash,
   Label,
+  ActionList,
 } from '@primer/react';
 import { CheckIcon, XIcon, ToolsIcon } from '@primer/octicons-react';
 import { useQuery } from '@tanstack/react-query';
@@ -39,10 +40,8 @@ export interface MCPServerConfig {
   url?: string;
   enabled: boolean;
   tools: MCPServerTool[];
-  packageName?: string;
   command?: string;
   args?: string[];
-  requiredEnvVars?: string[];
   isAvailable?: boolean;
   transport?: string;
 }
@@ -394,95 +393,40 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
           )}
 
         {mcpServers.length > 0 && (
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {mcpServers.map(server => (
-              <Box
-                key={server.id}
-                sx={{
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: 2,
-                  padding: 2,
-                  border: '1px solid',
-                  borderColor: server.isAvailable
-                    ? 'success.muted'
-                    : 'border.muted',
-                  borderRadius: 2,
-                  backgroundColor: server.isAvailable
-                    ? 'success.subtle'
-                    : 'canvas.subtle',
-                }}
-              >
-                <Box sx={{ flex: 1 }}>
+          <ActionList>
+            {mcpServers.map((server, index) => (
+              <React.Fragment key={server.id}>
+                {index > 0 && <ActionList.Divider />}
+                <ActionList.Item disabled>
+                  <ActionList.LeadingVisual>
+                    {server.isAvailable ? (
+                      <CheckIcon size={16} />
+                    ) : (
+                      <XIcon size={16} />
+                    )}
+                  </ActionList.LeadingVisual>
                   <Box
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 2,
-                      marginBottom: 1,
-                    }}
+                    sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}
                   >
-                    <Text sx={{ fontSize: 1, fontWeight: 'semibold' }}>
-                      {server.name}
-                    </Text>
-                    <Label
-                      variant={server.isAvailable ? 'success' : 'secondary'}
-                      size="small"
-                    >
-                      {server.isAvailable ? (
-                        <Box
-                          sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
-                        >
-                          <CheckIcon size={12} />
-                          Available
-                        </Box>
-                      ) : (
-                        <Box
-                          sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
-                        >
-                          <XIcon size={12} />
-                          Not Available
-                        </Box>
-                      )}
-                    </Label>
-                  </Box>
-                  {server.packageName && (
-                    <Text
-                      sx={{ fontSize: 0, color: 'fg.muted', display: 'block' }}
-                    >
-                      Package: <code>{server.packageName}</code>
-                    </Text>
-                  )}
-                  {server.tools.length > 0 && (
-                    <Text
-                      sx={{
-                        fontSize: 0,
-                        color: 'fg.muted',
-                        display: 'block',
-                        marginTop: 1,
-                      }}
-                    >
-                      Tools: {server.tools.map(t => t.name).join(', ')}
-                    </Text>
-                  )}
-                  {!server.isAvailable &&
-                    server.requiredEnvVars &&
-                    server.requiredEnvVars.length > 0 && (
-                      <Text
-                        sx={{
-                          fontSize: 0,
-                          color: 'attention.fg',
-                          display: 'block',
-                          marginTop: 1,
-                        }}
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <Text sx={{ fontWeight: 'semibold' }}>{server.name}</Text>
+                      <Label
+                        variant={server.isAvailable ? 'success' : 'secondary'}
+                        size="small"
                       >
-                        Required env vars: {server.requiredEnvVars.join(', ')}
+                        {server.isAvailable ? 'Available' : 'Not Available'}
+                      </Label>
+                    </Box>
+                    {server.tools.length > 0 && (
+                      <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
+                        Tools: {server.tools.map(t => t.name).join(', ')}
                       </Text>
                     )}
-                </Box>
-              </Box>
+                  </Box>
+                </ActionList.Item>
+              </React.Fragment>
             ))}
-          </Box>
+          </ActionList>
         )}
       </Box>
 

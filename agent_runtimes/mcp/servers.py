@@ -2,15 +2,18 @@
 # Distributed under the terms of the Modified BSD License.
 
 """
-MCP Server definitions and availability checking.
+MCP Server definitions and tool discovery.
 
-This module defines predefined MCP servers and utilities for checking
-their availability based on package installation and environment variables.
+This module reads MCP server configurations from a mcp.json file
+located at $HOME/.datalayer/mcp.json and discovers tools from them.
 """
 
 import asyncio
+import json
 import logging
 import os
+import re
+from pathlib import Path
 from typing import Any
 
 from mcp import ClientSession, StdioServerParameters
@@ -21,131 +24,115 @@ from agent_runtimes.types import MCPServer, MCPServerTool
 logger = logging.getLogger(__name__)
 
 
-def check_env_vars_available(required_vars: list[str]) -> bool:
+def get_mcp_config_path() -> Path:
     """
-    Check if all required environment variables are set.
-
-    Args:
-        required_vars: List of environment variable names
+    Get the path to the MCP configuration file.
 
     Returns:
-        True if all variables are set, False otherwise
+        Path to mcp.json file
     """
-    return all(os.getenv(var) for var in required_vars)
+    return Path.home() / ".datalayer" / "mcp.json"
 
 
-def check_package_available(package_name: str) -> bool:
+def expand_env_vars(value: str) -> str:
     """
-    Check if a Python package is available by trying to import it.
+    Expand environment variables in a string.
+
+    Supports ${VAR_NAME} syntax.
 
     Args:
-        package_name: Name of the Python package
+        value: String potentially containing env var references
 
     Returns:
-        True if package can be imported, False otherwise
+        String with env vars expanded
     """
+    # Match ${VAR_NAME} pattern
+    pattern = r'\$\{([^}]+)\}'
+
+    def replace(match: re.Match) -> str:
+        var_name = match.group(1)
+        return os.environ.get(var_name, "")
+
+    return re.sub(pattern, replace, value)
+
+
+def expand_config_env_vars(config: dict[str, Any]) -> dict[str, Any]:
+    """
+    Recursively expand environment variables in a config dictionary.
+
+    Args:
+        config: Configuration dictionary
+
+    Returns:
+        Config with env vars expanded
+    """
+    result = {}
+    for key, value in config.items():
+        if isinstance(value, str):
+            result[key] = expand_env_vars(value)
+        elif isinstance(value, list):
+            result[key] = [
+                expand_env_vars(v) if isinstance(v, str) else v
+                for v in value
+            ]
+        elif isinstance(value, dict):
+            result[key] = expand_config_env_vars(value)
+        else:
+            result[key] = value
+    return result
+
+
+def load_mcp_config() -> dict[str, Any]:
+    """
+    Load MCP configuration from the mcp.json file.
+
+    Returns:
+        Dictionary containing mcpServers configuration
+    """
+    config_path = get_mcp_config_path()
+
+    if not config_path.exists():
+        logger.info(f"MCP config file not found at {config_path}")
+        return {"mcpServers": {}}
+
     try:
-        # Handle packages with dashes in name (convert to underscores for import)
-        import_name = package_name.replace("-", "_")
-        __import__(import_name)
-        return True
-    except ImportError:
-        return False
+        with open(config_path, "r") as f:
+            config = json.load(f)
+            logger.info(f"Loaded MCP config from {config_path}")
+            return config
+    except json.JSONDecodeError as e:
+        logger.error(f"Invalid JSON in MCP config file: {e}")
+        return {"mcpServers": {}}
+    except Exception as e:
+        logger.error(f"Error reading MCP config file: {e}")
+        return {"mcpServers": {}}
 
 
-def get_predefined_mcp_servers() -> list[dict[str, Any]]:
+def get_mcp_servers_from_config() -> list[dict[str, Any]]:
     """
-    Get the list of predefined MCP server configurations.
+    Get MCP server configurations from the config file.
 
     Returns:
-        List of MCP server configuration dictionaries
+        List of server configuration dictionaries
     """
-    return [
-        {
-            "id": "earthdata-mcp-server",
-            "name": "NASA Earthdata MCP Server",
-            "package_name": "earthdata_mcp_server",
-            "command": "uvx",
-            "args": ["earthdata-mcp-server"],
-            "required_env_vars": ["EARTHDATA_USERNAME", "EARTHDATA_PASSWORD"],
-            "transport": "stdio",
-        },
-        {
-            "id": "markitdown-mcp",
-            "name": "MarkItDown MCP Server",
-            "package_name": "markitdown_mcp",
-            "command": "uvx",
-            "args": ["markitdown-mcp"],
-            "required_env_vars": [],
-            "transport": "stdio",
-        },
-        {
-            "id": "logfire-mcp",
-            "name": "Logfire MCP Server",
-            "package_name": "logfire_mcp",
-            "command": "uvx",
-            "args": ["logfire-mcp"],
-            "required_env_vars": ["LOGFIRE_TOKEN"],
-            "transport": "stdio",
-        },
-        {
-            "id": "linkedin-mcp-server",
-            "name": "LinkedIn MCP Server",
-            "package_name": "linkedin_mcp_server",
-            "command": "uvx",
-            "args": ["linkedin-mcp-server"],
-            "required_env_vars": [
-                "LINKEDIN_ACCESS_TOKEN",
-            ],
-            "transport": "stdio",
-        },
-        {
-            "id": "jupyter-mcp-server",
-            "name": "Jupyter MCP Server",
-            "package_name": "jupyter_mcp_server",
-            "command": "uvx",
-            "args": ["jupyter-mcp-server"],
-            "required_env_vars": [],  # Optional: JUPYTER_BASE_URL, JUPYTER_TOKEN
-            "transport": "stdio",
-        },
-        {
-            "id": "tavily-mcp",
-            "name": "Tavily MCP Server",
-            "package_name": "tavily_mcp",
-            "command": "uvx",
-            "args": ["tavily-mcp"],
-            "required_env_vars": ["TAVILY_API_KEY"],
-            "transport": "stdio",
-        },
-    ]
+    config = load_mcp_config()
+    servers = []
 
+    mcp_servers = config.get("mcpServers", {})
+    for server_id, server_config in mcp_servers.items():
+        # Expand env vars in the config
+        expanded_config = expand_config_env_vars(server_config)
 
-def check_mcp_server_available(server_config: dict[str, Any]) -> bool:
-    """
-    Check if an MCP server is available based on package import and env vars.
+        servers.append({
+            "id": server_id,
+            "name": server_id.replace("-", " ").replace("_", " ").title(),
+            "command": expanded_config.get("command"),
+            "args": expanded_config.get("args", []),
+            "env": expanded_config.get("env", {}),
+            "transport": "stdio",  # Default to stdio
+        })
 
-    Args:
-        server_config: MCP server configuration dictionary
-
-    Returns:
-        True if server is available (package can be imported and env vars set)
-    """
-    # Check if the package can be imported
-    package_name = server_config.get("package_name", "")
-    if package_name and not check_package_available(package_name):
-        logger.debug(f"Package '{package_name}' not available for {server_config['id']}")
-        return False
-
-    # Check required environment variables
-    required_vars = server_config.get("required_env_vars", [])
-    if required_vars and not check_env_vars_available(required_vars):
-        missing = [v for v in required_vars if not os.getenv(v)]
-        logger.debug(
-            f"Missing env vars for {server_config['id']}: {', '.join(missing)}"
-        )
-        return False
-
-    return True
+    return servers
 
 
 async def discover_mcp_server_tools(
@@ -163,23 +150,29 @@ async def discover_mcp_server_tools(
         List of MCPServerTool objects
     """
     tools: list[MCPServerTool] = []
+    server_id = server_config.get("id", "unknown")
 
     command = server_config.get("command")
     args = server_config.get("args", [])
+    env = server_config.get("env", {})
 
     if not command:
-        logger.warning(f"No command specified for {server_config['id']}")
+        logger.warning(f"No command specified for {server_id}")
         return tools
 
     try:
+        # Merge provided env with current environment
+        full_env = {**os.environ, **env}
+
         # Create stdio server parameters
         server_params = StdioServerParameters(
             command=command,
             args=args,
-            env={**os.environ},  # Pass current environment
+            env=full_env,
         )
 
-        logger.info(f"Starting MCP server {server_config['id']} for tool discovery...")
+        logger.info(f"Starting MCP server {server_id} for tool discovery...")
+        logger.debug(f"Command: {command} {' '.join(args)}")
 
         async with asyncio.timeout(timeout):
             async with stdio_client(server_params) as (read, write):
@@ -201,73 +194,66 @@ async def discover_mcp_server_tools(
                         )
                         tools.append(mcp_tool)
 
-                    logger.info(
-                        f"Discovered {len(tools)} tools from {server_config['id']}"
-                    )
+                    logger.info(f"Discovered {len(tools)} tools from {server_id}")
 
     except asyncio.TimeoutError:
-        logger.warning(
-            f"Timeout discovering tools from {server_config['id']} after {timeout}s"
-        )
+        logger.warning(f"Timeout discovering tools from {server_id} after {timeout}s")
+    except FileNotFoundError as e:
+        logger.warning(f"Command not found for {server_id}: {e}")
     except Exception as e:
-        logger.error(f"Error discovering tools from {server_config['id']}: {e}")
+        logger.error(f"Error discovering tools from {server_id}: {e}")
 
     return tools
 
 
-async def create_mcp_servers_with_availability(
+async def create_mcp_servers_with_tools(
     discover_tools: bool = True,
     tool_discovery_timeout: float = 30.0,
 ) -> list[MCPServer]:
     """
-    Create MCP server configurations with availability checking.
+    Create MCP server configurations with tool discovery.
 
     Args:
-        discover_tools: Whether to discover tools from available servers
+        discover_tools: Whether to discover tools from servers
         tool_discovery_timeout: Timeout for tool discovery per server
 
     Returns:
-        List of MCPServer objects with availability and tools populated
+        List of MCPServer objects with tools populated
     """
     servers: list[MCPServer] = []
-    predefined = get_predefined_mcp_servers()
+    configs = get_mcp_servers_from_config()
 
-    for config in predefined:
-        is_available = check_mcp_server_available(config)
-
+    for config in configs:
         server = MCPServer(
             id=config["id"],
             name=config["name"],
-            package_name=config.get("package_name"),
             command=config.get("command"),
             args=config.get("args", []),
-            required_env_vars=config.get("required_env_vars", []),
-            is_available=is_available,
-            enabled=is_available,  # Only enable if available
             transport=config.get("transport", "stdio"),
+            is_available=True,  # Assume available, tool discovery will confirm
+            enabled=True,
             tools=[],
         )
 
-        # Discover tools if available and requested
-        if is_available and discover_tools:
+        # Discover tools if requested
+        if discover_tools:
             try:
                 tools = await discover_mcp_server_tools(
                     config, timeout=tool_discovery_timeout
                 )
                 server.tools = tools
+                server.is_available = len(tools) > 0
             except Exception as e:
                 logger.error(f"Failed to discover tools for {config['id']}: {e}")
+                server.is_available = False
 
         servers.append(server)
 
-        # Log availability status
-        if is_available:
-            logger.info(f"MCP server {config['name']} is available with {len(server.tools)} tools")
+        # Log status
+        if server.is_available:
+            logger.info(f"MCP server {config['name']} loaded with {len(server.tools)} tools")
         else:
-            logger.debug(
-                f"MCP server {config['name']} is unavailable "
-                f"(required env vars: {', '.join(config.get('required_env_vars', []))})"
-            )
+            logger.warning(f"MCP server {config['name']} has no tools or is unavailable")
 
     # Log summary
     available_count = sum(1 for s in servers if s.is_available)
@@ -294,7 +280,7 @@ async def get_mcp_servers(
 
     Args:
         force_refresh: Force re-initialization
-        discover_tools: Whether to discover tools from available servers
+        discover_tools: Whether to discover tools from servers
 
     Returns:
         List of MCPServer objects
@@ -303,7 +289,7 @@ async def get_mcp_servers(
 
     async with _initialization_lock:
         if _mcp_servers is None or force_refresh:
-            _mcp_servers = await create_mcp_servers_with_availability(
+            _mcp_servers = await create_mcp_servers_with_tools(
                 discover_tools=discover_tools
             )
 
@@ -331,7 +317,7 @@ async def initialize_mcp_servers(discover_tools: bool = True) -> list[MCPServer]
     This should be called during FastAPI/Jupyter server startup.
 
     Args:
-        discover_tools: Whether to discover tools from available servers
+        discover_tools: Whether to discover tools from servers
 
     Returns:
         List of initialized MCPServer objects

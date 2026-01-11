@@ -83,27 +83,17 @@ class MCPServer(BaseModel):
         default_factory=list, description="List of available tools"
     )
     # Fields for stdio-based MCP servers
-    package_name: Optional[str] = Field(
-        default=None,
-        description="Python package name for stdio-based MCP servers",
-        serialization_alias="packageName",
-    )
     command: Optional[str] = Field(
         default=None,
-        description="Command to run the MCP server (e.g., 'uvx mcp-server-name')",
+        description="Command to run the MCP server (e.g., 'npx', 'uvx')",
     )
     args: List[str] = Field(
         default_factory=list,
         description="Command arguments for the MCP server",
     )
-    required_env_vars: List[str] = Field(
-        default_factory=list,
-        description="Required environment variables for this server",
-        serialization_alias="requiredEnvVars",
-    )
     is_available: bool = Field(
         default=False,
-        description="Whether the server is available (based on package/env vars)",
+        description="Whether the server is available (based on tool discovery)",
         serialization_alias="isAvailable",
     )
     transport: str = Field(
