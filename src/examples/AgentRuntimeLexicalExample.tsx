@@ -446,6 +446,8 @@ function LexicalWithChat({
           brandColor="#7c3aed"
           tools={tools}
           useStore={false}
+          showModelSelector={true}
+          showToolsMenu={true}
           suggestions={[
             {
               title: 'Insert heading',

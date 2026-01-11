@@ -222,6 +222,18 @@ export interface ChatFloatingProps {
    */
   showPanelBackdrop?: boolean;
 
+  /**
+   * Show model selector in footer.
+   * @default false
+   */
+  showModelSelector?: boolean;
+
+  /**
+   * Show tools menu in footer.
+   * @default false
+   */
+  showToolsMenu?: boolean;
+
   /** Additional ChatBase props */
   panelProps?: Partial<ChatBaseProps>;
 }
@@ -291,6 +303,8 @@ export function ChatFloating({
   hideMessagesAfterToolUI = false,
   defaultViewMode = 'floating',
   showPanelBackdrop = false,
+  showModelSelector = false,
+  showToolsMenu = false,
   panelProps,
 }: ChatFloatingProps) {
   // Store-based state
@@ -318,17 +332,26 @@ export function ChatFloating({
 
   // Build protocol config from endpoint if not provided directly
   // Memoize to avoid creating new object on every render (which would trigger useEffect re-runs)
-  const protocol: ProtocolConfig | undefined = useMemo(
-    () =>
-      protocolProp ||
-      (endpoint
-        ? {
-            type: 'ag-ui' as const,
-            endpoint,
-          }
-        : undefined),
-    [protocolProp, endpoint],
-  );
+  const protocol: ProtocolConfig | undefined = useMemo(() => {
+    if (protocolProp) return protocolProp;
+
+    if (!endpoint) return undefined;
+
+    // Extract base URL from endpoint (e.g., http://localhost:8765/api/v1/ag-ui/agent/ -> http://localhost:8765)
+    const baseUrl = endpoint.match(/^(https?:\/\/[^/]+)/)?.[1] || '';
+
+    return {
+      type: 'ag-ui' as const,
+      endpoint,
+      // Enable config query for model/tools selector when showModelSelector or showToolsMenu is true
+      enableConfigQuery: showModelSelector || showToolsMenu,
+      // Config endpoint is at /api/v1/configure (global, not per-agent)
+      configEndpoint:
+        showModelSelector || showToolsMenu
+          ? `${baseUrl}/api/v1/configure`
+          : undefined,
+    };
+  }, [protocolProp, endpoint, showModelSelector, showToolsMenu]);
 
   // Clear messages when endpoint/protocol changes (e.g., switching examples)
   useEffect(() => {
@@ -790,6 +813,8 @@ export function ChatFloating({
           placeholder="Type a message..."
           backgroundColor="canvas.subtle"
           frontendTools={_tools as FrontendToolDefinition[] | undefined}
+          showModelSelector={showModelSelector}
+          showToolsMenu={showToolsMenu}
           {...panelProps}
         >
           {children}

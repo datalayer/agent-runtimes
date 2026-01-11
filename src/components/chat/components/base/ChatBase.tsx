@@ -50,7 +50,12 @@ import {
   AiModelIcon,
 } from '@primer/octicons-react';
 import { AiAgentIcon } from '@datalayer/icons-react';
-import { useQuery, QueryClientContext } from '@tanstack/react-query';
+import {
+  useQuery,
+  QueryClient,
+  QueryClientProvider,
+  QueryClientContext,
+} from '@tanstack/react-query';
 import { Streamdown } from 'streamdown';
 import { PoweredByTag, type PoweredByTagProps } from '../elements/PoweredByTag';
 import { requestAPI } from '../../handler';
@@ -75,6 +80,58 @@ import {
 } from '../../protocols';
 import type { FrontendToolDefinition } from '../../types/tool';
 import { ToolCallDisplay } from '../display/ToolCallDisplay';
+
+// Singleton QueryClient for ChatBase instances without external QueryClientProvider
+const internalQueryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      refetchOnWindowFocus: false,
+    },
+  },
+});
+
+// Primer's default portal root ID
+const PRIMER_PORTAL_ROOT_ID = '__primerPortalRoot__';
+
+/**
+ * Hook to ensure Primer's default portal root has a high z-index.
+ * This ensures dropdown menus appear above floating chat panels.
+ */
+function useHighZIndexPortal() {
+  useEffect(() => {
+    // Set up a MutationObserver to watch for the portal root being added
+    const setPortalZIndex = () => {
+      const portalRoot = document.getElementById(PRIMER_PORTAL_ROOT_ID);
+      if (portalRoot) {
+        portalRoot.style.zIndex = '9999';
+        return true;
+      }
+      return false;
+    };
+
+    // Try immediately
+    if (setPortalZIndex()) {
+      return;
+    }
+
+    // If not found yet, observe for it
+    const observer = new MutationObserver(() => {
+      if (setPortalZIndex()) {
+        observer.disconnect();
+      }
+    });
+
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+    });
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+}
 
 /**
  * Tool call status for tool rendering
@@ -579,6 +636,159 @@ export function ChatBase({
   focusTrigger,
   frontendTools,
 }: ChatBaseProps) {
+  // Check if QueryClientProvider is already available
+  const existingQueryClient = useContext(QueryClientContext);
+
+  // If no QueryClient is available, wrap with our internal provider
+  if (!existingQueryClient) {
+    return (
+      <QueryClientProvider client={internalQueryClient}>
+        <ChatBaseInner
+          title={title}
+          showHeader={showHeader}
+          showLoadingIndicator={showLoadingIndicator}
+          showErrors={showErrors}
+          showInput={showInput}
+          showModelSelector={showModelSelector}
+          showToolsMenu={showToolsMenu}
+          className={className}
+          loadingState={loadingState}
+          headerActions={headerActions}
+          useStore={useStoreMode}
+          protocol={protocol}
+          onSendMessage={onSendMessage}
+          enableStreaming={enableStreaming}
+          brandIcon={brandIcon}
+          avatarConfig={avatarConfig}
+          headerButtons={headerButtons}
+          showPoweredBy={showPoweredBy}
+          poweredByProps={poweredByProps}
+          emptyState={emptyState}
+          renderToolResult={renderToolResult}
+          footerContent={footerContent}
+          headerContent={headerContent}
+          children={children}
+          borderRadius={borderRadius}
+          backgroundColor={backgroundColor}
+          border={border}
+          boxShadow={boxShadow}
+          compact={compact}
+          placeholder={placeholder}
+          description={description}
+          onStateUpdate={onStateUpdate}
+          onNewChat={onNewChat}
+          onClear={onClear}
+          onMessagesChange={onMessagesChange}
+          autoFocus={autoFocus}
+          suggestions={suggestions}
+          submitOnSuggestionClick={submitOnSuggestionClick}
+          hideMessagesAfterToolUI={hideMessagesAfterToolUI}
+          focusTrigger={focusTrigger}
+          frontendTools={frontendTools}
+        />
+      </QueryClientProvider>
+    );
+  }
+
+  // QueryClient already available, render inner component directly
+  return (
+    <ChatBaseInner
+      title={title}
+      showHeader={showHeader}
+      showLoadingIndicator={showLoadingIndicator}
+      showErrors={showErrors}
+      showInput={showInput}
+      showModelSelector={showModelSelector}
+      showToolsMenu={showToolsMenu}
+      className={className}
+      loadingState={loadingState}
+      headerActions={headerActions}
+      useStore={useStoreMode}
+      protocol={protocol}
+      onSendMessage={onSendMessage}
+      enableStreaming={enableStreaming}
+      brandIcon={brandIcon}
+      avatarConfig={avatarConfig}
+      headerButtons={headerButtons}
+      showPoweredBy={showPoweredBy}
+      poweredByProps={poweredByProps}
+      emptyState={emptyState}
+      renderToolResult={renderToolResult}
+      footerContent={footerContent}
+      headerContent={headerContent}
+      children={children}
+      borderRadius={borderRadius}
+      backgroundColor={backgroundColor}
+      border={border}
+      boxShadow={boxShadow}
+      compact={compact}
+      placeholder={placeholder}
+      description={description}
+      onStateUpdate={onStateUpdate}
+      onNewChat={onNewChat}
+      onClear={onClear}
+      onMessagesChange={onMessagesChange}
+      autoFocus={autoFocus}
+      suggestions={suggestions}
+      submitOnSuggestionClick={submitOnSuggestionClick}
+      hideMessagesAfterToolUI={hideMessagesAfterToolUI}
+      focusTrigger={focusTrigger}
+      frontendTools={frontendTools}
+    />
+  );
+}
+
+/**
+ * Inner ChatBase component - contains all the actual logic
+ */
+function ChatBaseInner({
+  title,
+  showHeader = false,
+  showLoadingIndicator = true,
+  showErrors = true,
+  showInput = true,
+  showModelSelector = false,
+  showToolsMenu = false,
+  className,
+  loadingState,
+  headerActions,
+  // Mode selection
+  useStore: useStoreMode = true,
+  protocol,
+  onSendMessage,
+  enableStreaming = false,
+  // Extended props
+  brandIcon,
+  avatarConfig,
+  headerButtons,
+  showPoweredBy = false,
+  poweredByProps,
+  emptyState,
+  renderToolResult,
+  footerContent,
+  headerContent,
+  children,
+  borderRadius,
+  backgroundColor,
+  border,
+  boxShadow,
+  compact = false,
+  placeholder,
+  description = 'Start a conversation with the AI agent.',
+  onStateUpdate,
+  onNewChat,
+  onClear,
+  onMessagesChange,
+  autoFocus = false,
+  suggestions,
+  submitOnSuggestionClick = true,
+  hideMessagesAfterToolUI = false,
+  focusTrigger,
+  frontendTools,
+}: ChatBaseProps) {
+  // Ensure Primer's default portal has high z-index for ActionMenu overlays
+  useHighZIndexPortal();
+
   // Store (optional for message persistence)
   const clearStoreMessages = useChatStore(state => state.clearMessages);
 

@@ -2,6 +2,7 @@
  * Copyright (c) 2025-2026 Datalayer, Inc.
  * Distributed under the terms of the Modified BSD License.
  */
+
 /*
  ---break---
  */
@@ -62,49 +63,6 @@ body {
   margin: 0 !important;
   padding: 0 !important;
 /*  --jp-ui-font-size1: 12px; */
-}
-
-.Primer_Brand__Hero-module__Hero___EM3jf {
-  padding-top: 88px;
-}
-
-#dla-hero .Primer_Brand__Heading-module__Heading--1___Ufc7G {
-  font-size: 62px;
-}
-
-#dla-hero .Primer_Brand__Grid-module__Grid___q48mT {
-  grid-column-gap: 12px !important;
-}
-
-#dla-hero .Primer_Brand__Text-module__Text___pecHN {
-  max-width: 1000px;
-  padding-right: 15px;
-}
-
-#dla-hero .Primer_Brand__Text-module__Text___pecHN {
-  line-height: 16px;
-}
-
-/* TODO Check the specificity of this rule */
-.jp-ThemedContainer a {
-  color: var(--jp-brand-color1, #1976d2) !important;
-  text-decoration: none !important
-}
-
-.jp-Shout-button {
-  height: 30px;
-  width: 150px;
-  margin: 8px;
-  padding-top: 9px;
-  text-align: center;
-  vertical-align: middle;
-  border-radius: 2px;
-  background-color: #2296f3;
-  color: #212121;
-}
-
-.jp-Shout-summary {
-  margin: 4px;
 }
 
 /*
