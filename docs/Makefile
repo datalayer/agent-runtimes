@@ -53,13 +53,13 @@ build: ## build
 deploy: build ## deploy
 	($(CONDA_ACTIVATE) ${ENV_NAME}; \
 	  aws s3 rm \
-		s3://agent-runtimes/ \
+		s3://datalayer-agent-runtimes/ \
 		--recursive && \
 	  aws s3 cp \
 		./build \
-		s3://agent-runtimes/ \
+		s3://datalayer-agent-runtimes/ \
 		--recursive && \
 	  aws cloudfront create-invalidation \
-		--distribution-id E8559WINZGBIN \
+		--distribution-id E1QMGQ241PAS26 \
 		--paths "/*" )
 	echo open ✨  https://agent-runtimes.datalayer.tech

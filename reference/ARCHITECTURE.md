@@ -204,6 +204,7 @@ async def chat(request: Request):
 - **Transport**: HTTP or direct function calls
 - **Format**: JSON
 - **Features**: Task delegation, capability negotiation, result aggregation
+- **Limitations**: Does not support per-request model selection (see [A2A Protocol Limitations](#a2a-protocol-limitations))
 
 **Example Request:**
 ```json
@@ -374,6 +375,76 @@ request = {
 }
 
 response = await a2a_adapter2.handle_request(request)
+```
+
+## Protocol Feature Comparison
+
+The following table compares features supported by each protocol:
+
+| Feature | AG-UI | Vercel AI | ACP | A2A |
+|---------|-------|-----------|-----|-----|
+| Streaming | ✅ | ✅ | ✅ | ✅ |
+| Tool Calling | ✅ | ✅ | ✅ | ✅ |
+| Per-Request Model Selection | ✅ | ✅ | ✅ | ❌ |
+| Bidirectional Communication | ❌ | ❌ | ✅ | ❌ |
+| Human-in-the-Loop | ✅ | ❌ | ✅ | ❌ |
+| Inter-Agent Communication | ❌ | ❌ | ❌ | ✅ |
+
+### A2A Protocol Limitations
+
+#### Per-Request Model Selection Not Supported
+
+The **A2A (Agent-to-Agent) protocol does not support per-request model selection**. This is a fundamental architectural limitation:
+
+**Why A2A Cannot Support Per-Request Model Override:**
+
+1. **fasta2a Library Design**: A2A is implemented using pydantic-ai's `to_a2a()` method and the `fasta2a` library. The model is configured at agent creation time when calling `agent.to_a2a()`.
+
+2. **Model Binding at Creation**: When an agent is converted to A2A format, the underlying pydantic-ai agent's model is fixed. The A2A protocol's `TaskSendParams` includes a `metadata` field, but `fasta2a`'s `AgentWorker` does not extract or forward model configuration to the agent's `run()` method.
+
+3. **Protocol Architecture**: The A2A protocol is designed for agent-to-agent communication where agents are treated as independent services with fixed capabilities. The model is part of the agent's identity, not a per-request parameter.
+
+**Frontend Behavior:**
+
+When using the A2A protocol in the UI:
+- The model selector is **disabled** (grayed out)
+- A warning message is displayed: "A2A: Model set by agent config"
+- The model shown is informational only - changing it has no effect
+
+**Workarounds:**
+
+1. **Deploy Multiple Agents**: Create separate A2A agents for each model you need, each configured with a different model at creation time.
+
+2. **Use a Different Protocol**: If per-request model selection is required, use AG-UI, Vercel AI, or ACP protocols instead.
+
+3. **Agent-Level Model Selection**: Configure the model in the agent's creation configuration rather than at request time.
+
+**Example - Creating A2A Agents with Different Models:**
+
+```python
+from pydantic_ai import Agent
+from agent_runtimes import PydanticAIAdapter
+from agent_runtimes.routes.a2a import register_a2a_agent, A2AAgentCard
+
+# Agent 1: GPT-4
+gpt4_pydantic_agent = Agent("openai:gpt-4o", system_prompt="You are helpful.")
+gpt4_agent = PydanticAIAdapter(gpt4_pydantic_agent, name="gpt4-agent")
+register_a2a_agent(gpt4_agent, A2AAgentCard(
+    id="gpt4-agent",
+    name="GPT-4 Agent",
+    description="Agent using GPT-4",
+    url="/api/v1/a2a/agents/gpt4-agent"
+))
+
+# Agent 2: Claude
+claude_pydantic_agent = Agent("anthropic:claude-3-5-sonnet-latest", system_prompt="You are helpful.")
+claude_agent = PydanticAIAdapter(claude_pydantic_agent, name="claude-agent")
+register_a2a_agent(claude_agent, A2AAgentCard(
+    id="claude-agent",
+    name="Claude Agent",
+    description="Agent using Claude",
+    url="/api/v1/a2a/agents/claude-agent"
+))
 ```
 
 ## Extension Points
