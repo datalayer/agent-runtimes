@@ -3,3 +3,146 @@ title: Models
 ---
 
 # Models
+
+Agent Runtimes supports multiple AI model providers through [pydantic-ai](https://ai.pydantic.dev/). Models are configured via environment variables and can be selected per-request (except for A2A protocol).
+
+## Supported Providers
+
+### Anthropic
+
+| Model ID | Display Name | Required Env Vars |
+|----------|--------------|-------------------|
+| `anthropic:claude-sonnet-4-5` | Claude Sonnet 4.5 | `ANTHROPIC_API_KEY` |
+| `anthropic:claude-opus-4` | Claude Opus 4 | `ANTHROPIC_API_KEY` |
+| `anthropic:claude-sonnet-4-20250514` | Claude Sonnet 4 (May 2025) | `ANTHROPIC_API_KEY` |
+| `anthropic:claude-3-5-haiku-20241022` | Claude 3.5 Haiku | `ANTHROPIC_API_KEY` |
+
+### OpenAI
+
+| Model ID | Display Name | Required Env Vars |
+|----------|--------------|-------------------|
+| `openai:gpt-4o` | GPT-4o | `OPENAI_API_KEY` |
+| `openai:gpt-4o-mini` | GPT-4o Mini | `OPENAI_API_KEY` |
+| `openai:gpt-4-turbo` | GPT-4 Turbo | `OPENAI_API_KEY` |
+| `openai:o1` | o1 | `OPENAI_API_KEY` |
+| `openai:o1-mini` | o1 Mini | `OPENAI_API_KEY` |
+| `openai:o3-mini` | o3 Mini | `OPENAI_API_KEY` |
+
+### Azure OpenAI
+
+| Model ID | Display Name | Required Env Vars |
+|----------|--------------|-------------------|
+| `azure:gpt-4o` | GPT-4o (Azure) | `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_ENDPOINT` |
+| `azure:gpt-4o-mini` | GPT-4o Mini (Azure) | `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_ENDPOINT` |
+| `azure:gpt-4-turbo` | GPT-4 Turbo (Azure) | `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_ENDPOINT` |
+| `azure:o1` | o1 (Azure) | `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_ENDPOINT` |
+| `azure:o1-mini` | o1 Mini (Azure) | `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_ENDPOINT` |
+
+### AWS Bedrock
+
+| Model ID | Display Name | Required Env Vars |
+|----------|--------------|-------------------|
+| `bedrock:anthropic.claude-sonnet-4-5-20250514-v1:0` | Claude Sonnet 4.5 (Bedrock) | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` |
+| `bedrock:anthropic.claude-3-5-haiku-20241022-v1:0` | Claude 3.5 Haiku (Bedrock) | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` |
+| `bedrock:amazon.nova-pro-v1:0` | Amazon Nova Pro | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` |
+| `bedrock:amazon.nova-lite-v1:0` | Amazon Nova Lite | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` |
+| `bedrock:meta.llama3-3-70b-instruct-v1:0` | Llama 3.3 70B (Bedrock) | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` |
+
+## Configuration
+
+### Environment Variables
+
+Set the required environment variables for your chosen provider:
+
+```bash
+# Anthropic
+export ANTHROPIC_API_KEY="sk-ant-..."
+
+# OpenAI
+export OPENAI_API_KEY="sk-..."
+
+# Azure OpenAI
+export AZURE_OPENAI_API_KEY="..."
+export AZURE_OPENAI_ENDPOINT="https://your-resource.openai.azure.com"
+export AZURE_OPENAI_API_VERSION="2024-02-01"  # Optional
+
+# AWS Bedrock
+export AWS_ACCESS_KEY_ID="..."
+export AWS_SECRET_ACCESS_KEY="..."
+export AWS_DEFAULT_REGION="us-east-1"  # Optional
+```
+
+### Model Availability
+
+Models are automatically marked as available or unavailable based on environment variables. The frontend displays:
+
+- **Available models**: Selectable in the model dropdown
+- **Unavailable models**: Grayed out with "Missing API key" message
+
+## Per-Request Model Selection
+
+Most transports support changing the model on each request:
+
+| Transport | Per-Request Model Selection |
+|-----------|----------------------------|
+| AG-UI | ✅ Supported |
+| Vercel AI | ✅ Supported |
+| ACP | ✅ Supported |
+| A2A | ❌ Not supported |
+
+### How It Works
+
+1. **Frontend**: User selects a model from the dropdown
+2. **Request**: Model ID is sent with each message
+3. **Backend**: Agent uses the specified model for that request
+
+```typescript
+// Model is sent with each message
+adapter.sendMessage(message, { model: 'anthropic:claude-sonnet-4-5' });
+```
+
+### A2A Exception
+
+The A2A protocol does not support per-request model selection. The model is fixed when the agent is created. See [Transports > A2A Limitations](/transports#a2a-limitations) for details.
+
+## Adding Custom Models
+
+You can add custom model configurations by modifying the model list:
+
+```python
+from agent_runtimes.types import AIModel
+
+custom_model = AIModel(
+    id="openai:gpt-4-custom",
+    name="Custom GPT-4",
+    builtin_tools=["search", "code_interpreter"],
+    required_env_vars=["OPENAI_API_KEY"],
+    is_available=True,
+)
+```
+
+## Model String Format
+
+Models use the pydantic-ai format: `provider:model_name`
+
+- `anthropic:claude-sonnet-4-5` - Anthropic Claude
+- `openai:gpt-4o` - OpenAI GPT-4o
+- `azure:gpt-4o` - Azure OpenAI (deployment name)
+- `bedrock:anthropic.claude-sonnet-4-5-20250514-v1:0` - AWS Bedrock
+
+## Timeout Configuration
+
+Models are created with configurable timeouts:
+
+- **Read/Write timeout**: 60 seconds (default)
+- **Connect timeout**: 30 seconds (Azure/OpenAI), 60 seconds (Anthropic)
+
+```python
+from agent_runtimes.models import create_model_with_provider
+
+model = create_model_with_provider(
+    model_provider="azure-openai",
+    model_name="gpt-4o",
+    timeout=120.0,  # Custom timeout
+)
+```
