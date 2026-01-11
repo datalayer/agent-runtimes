@@ -10,7 +10,6 @@ import {
   Button,
   FormControl,
   Select,
-  CheckboxGroup,
   Checkbox,
   Spinner,
   Flash,
@@ -298,25 +297,6 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
           The name of the agent to connect to
         </FormControl.Caption>
       </FormControl>
-
-      <CheckboxGroup sx={{ marginBottom: 3 }} disabled>
-        <CheckboxGroup.Label>MCP Servers (Coming Soon)</CheckboxGroup.Label>
-        <CheckboxGroup.Caption>
-          Select MCP servers to connect to
-        </CheckboxGroup.Caption>
-        <FormControl disabled>
-          <Checkbox value="github" defaultChecked disabled />
-          <FormControl.Label>GitHub</FormControl.Label>
-        </FormControl>
-        <FormControl disabled>
-          <Checkbox value="anaconda" disabled />
-          <FormControl.Label>Anaconda</FormControl.Label>
-        </FormControl>
-        <FormControl disabled>
-          <Checkbox value="tavily" disabled />
-          <FormControl.Label>Tavily</FormControl.Label>
-        </FormControl>
-      </CheckboxGroup>
 
       {createError && (
         <Flash variant="danger" sx={{ marginBottom: 3 }}>
