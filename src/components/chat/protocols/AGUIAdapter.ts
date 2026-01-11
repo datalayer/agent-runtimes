@@ -213,6 +213,10 @@ export class AGUIAdapter extends BaseProtocolAdapter {
       ...(options?.model && { model: options.model }),
     };
 
+    if (options?.model) {
+      console.log('[AGUIAdapter] Sending with model:', options.model);
+    }
+
     try {
       const response = await fetch(this.aguiConfig.baseUrl, {
         method: 'POST',

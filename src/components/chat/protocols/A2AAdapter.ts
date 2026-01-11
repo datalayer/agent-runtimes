@@ -189,11 +189,23 @@ export class A2AAdapter extends BaseProtocolAdapter {
           acceptedOutputModes: ['text', 'text/plain'],
           requestedExtensions: this.a2aConfig.enableA2UI ? ['a2ui'] : [],
           // Model override for per-request model selection
+          // Note: fasta2a/pydantic-ai A2A doesn't currently support per-request model override
+          // The model is configured at agent creation time
           ...(options?.model && { model: options.model }),
         },
+        // Also send model in metadata for potential future support
+        ...(options?.model && { metadata: { model: options.model } }),
       },
       id: taskId,
     };
+
+    if (options?.model) {
+      console.log(
+        '[A2AAdapter] Sending with model:',
+        options.model,
+        '(Note: A2A uses agent-level model, not per-request)',
+      );
+    }
 
     try {
       const response = await fetch(this.a2aConfig.baseUrl, {

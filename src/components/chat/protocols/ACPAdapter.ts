@@ -353,9 +353,15 @@ export class ACPAdapter extends BaseProtocolAdapter {
               .map(c => c.text || '')
               .join('');
 
+      if (_options?.model) {
+        console.log('[ACPAdapter] Sending with model:', _options.model);
+      }
+
       await this.sendRequest(AGENT_METHODS.session_prompt, {
         sessionId: this.session.sessionId,
         content: [{ type: 'text', text: content }],
+        // Include model for per-request model override
+        ...(_options?.model && { metadata: { model: _options.model } }),
       });
     } catch (error) {
       this.emit({
@@ -634,6 +640,15 @@ export class ACPAdapter extends BaseProtocolAdapter {
           type: 'thought',
           data: params.chunk,
         },
+        timestamp: new Date(),
+      });
+    }
+
+    // Handle error events - emit as error, not as message
+    if (updateType === 'error' && params.error) {
+      this.emit({
+        type: 'error',
+        error: new Error(params.error as string),
         timestamp: new Date(),
       });
     }

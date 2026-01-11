@@ -7,6 +7,7 @@ Wraps a Pydantic AI Agent to implement the BaseAgent interface,
 enabling use with protocol adapters.
 """
 
+import logging
 import uuid
 from typing import Any, AsyncIterator
 
@@ -20,6 +21,9 @@ from .base import (
     ToolCall,
     ToolDefinition,
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 class PydanticAIAdapter(BaseAgent):
@@ -142,12 +146,20 @@ class PydanticAIAdapter(BaseAgent):
         for msg in context.conversation_history:
             message_history.append(msg)
 
+        # Extract model from context metadata for per-request model override
+        model_override = context.metadata.get("model") if context.metadata else None
+
         try:
             # Run the Pydantic AI agent
-            result = await self._agent.run(
-                prompt,
-                message_history=message_history if message_history else None,
-            )
+            # Pass model override if provided in context metadata
+            run_kwargs = {
+                "message_history": message_history if message_history else None,
+            }
+            if model_override:
+                run_kwargs["model"] = model_override
+                logger.info(f"PydanticAIAdapter: Using model override: {model_override}")
+            
+            result = await self._agent.run(prompt, **run_kwargs)
 
             # Extract response content
             content = str(result.output) if result.output else ""
@@ -213,12 +225,20 @@ class PydanticAIAdapter(BaseAgent):
         for msg in context.conversation_history:
             message_history.append(msg)
 
+        # Extract model from context metadata for per-request model override
+        model_override = context.metadata.get("model") if context.metadata else None
+
         try:
             # Use Pydantic AI's run_stream for proper streaming
-            async with self._agent.run_stream(
-                prompt,
-                message_history=message_history if message_history else None,
-            ) as result:
+            # Pass model override if provided in context metadata
+            stream_kwargs = {
+                "message_history": message_history if message_history else None,
+            }
+            if model_override:
+                stream_kwargs["model"] = model_override
+                logger.info(f"PydanticAIAdapter: Using model override for stream: {model_override}")
+            
+            async with self._agent.run_stream(prompt, **stream_kwargs) as result:
                 # stream_text() yields cumulative text, we need deltas
                 last_text = ""
                 async for text in result.stream_text():

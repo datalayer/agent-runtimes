@@ -582,6 +582,9 @@ export function ChatBase({
   // Store (optional for message persistence)
   const clearStoreMessages = useChatStore(state => state.clearMessages);
 
+  // Check if protocol is A2A (doesn't support per-request model override)
+  const isA2AProtocol = protocol?.type === 'a2a';
+
   // Component state
   const [displayItems, setDisplayItems] = useState<DisplayItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -2063,45 +2066,66 @@ export function ChatBase({
 
             {/* Model Selector */}
             {showModelSelector && models.length > 0 && selectedModel && (
-              <ActionMenu>
-                <ActionMenu.Anchor>
-                  <Button
-                    type="button"
-                    variant="invisible"
-                    size="small"
-                    leadingVisual={AiModelIcon}
-                  >
-                    <Text sx={{ fontSize: 0 }}>
-                      {models.find(m => m.id === selectedModel)?.name ||
-                        'Select Model'}
-                    </Text>
-                  </Button>
-                </ActionMenu.Anchor>
-                <ActionMenu.Overlay side="outside-top" align="end">
-                  <ActionList selectionVariant="single">
-                    {models.map(modelItem => (
-                      <ActionList.Item
-                        key={modelItem.id}
-                        selected={selectedModel === modelItem.id}
-                        onSelect={() => setSelectedModel(modelItem.id)}
-                        disabled={modelItem.isAvailable === false}
-                        sx={
-                          modelItem.isAvailable === false
-                            ? { color: 'fg.muted' }
-                            : undefined
-                        }
-                      >
-                        {modelItem.name}
-                        {modelItem.isAvailable === false && (
-                          <ActionList.Description variant="block">
-                            Missing API key
-                          </ActionList.Description>
-                        )}
-                      </ActionList.Item>
-                    ))}
-                  </ActionList>
-                </ActionMenu.Overlay>
-              </ActionMenu>
+              <Box
+                sx={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'flex-end',
+                }}
+              >
+                <ActionMenu>
+                  <ActionMenu.Anchor>
+                    <Button
+                      type="button"
+                      variant="invisible"
+                      size="small"
+                      leadingVisual={AiModelIcon}
+                      disabled={isA2AProtocol}
+                      sx={
+                        isA2AProtocol
+                          ? { opacity: 0.5, cursor: 'not-allowed' }
+                          : undefined
+                      }
+                    >
+                      <Text sx={{ fontSize: 0 }}>
+                        {models.find(m => m.id === selectedModel)?.name ||
+                          'Select Model'}
+                      </Text>
+                    </Button>
+                  </ActionMenu.Anchor>
+                  <ActionMenu.Overlay side="outside-top" align="end">
+                    <ActionList selectionVariant="single">
+                      {models.map(modelItem => (
+                        <ActionList.Item
+                          key={modelItem.id}
+                          selected={selectedModel === modelItem.id}
+                          onSelect={() => setSelectedModel(modelItem.id)}
+                          disabled={
+                            modelItem.isAvailable === false || isA2AProtocol
+                          }
+                          sx={
+                            modelItem.isAvailable === false
+                              ? { color: 'fg.muted' }
+                              : undefined
+                          }
+                        >
+                          {modelItem.name}
+                          {modelItem.isAvailable === false && (
+                            <ActionList.Description variant="block">
+                              Missing API key
+                            </ActionList.Description>
+                          )}
+                        </ActionList.Item>
+                      ))}
+                    </ActionList>
+                  </ActionMenu.Overlay>
+                </ActionMenu>
+                {isA2AProtocol && (
+                  <Text sx={{ fontSize: 0, color: 'attention.fg', mt: 1 }}>
+                    A2A: Model set by agent config
+                  </Text>
+                )}
+              </Box>
             )}
           </Box>
         )}

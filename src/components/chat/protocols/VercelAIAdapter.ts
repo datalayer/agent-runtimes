@@ -125,6 +125,8 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
       metadata?: Record<string, unknown>;
       /** Model to use for this request (overrides agent default) */
       model?: string;
+      /** Full conversation history to send with the message */
+      messages?: ChatMessage[];
     },
   ): Promise<void> {
     if (this.abortController) {
@@ -166,6 +168,10 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
         // Model override for per-request model selection
         ...(options?.model && { model: options.model }),
       };
+
+      if (options?.model) {
+        console.log('[VercelAIAdapter] Sending with model:', options.model);
+      }
 
       // Merge custom headers with defaults
       const headers: Record<string, string> = {

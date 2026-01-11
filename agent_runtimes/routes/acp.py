@@ -640,6 +640,12 @@ async def _handle_prompt(
     """
     params = message.params or {}
     content = params.get("content", [])
+    metadata = params.get("metadata", {})
+    
+    # Extract model from metadata for per-request model override
+    model = metadata.get("model") if isinstance(metadata, dict) else None
+    if model:
+        logger.info(f"ACP: Using model from request metadata: {model}")
     
     # Extract text from content blocks per ACP spec
     prompt = ""
@@ -650,13 +656,17 @@ async def _handle_prompt(
             if block.get("type") == "text":
                 prompt = block.get("text", "")
     
-    # Convert to context
+    # Convert to context - include model in metadata for agents that support it
     from ..adapters.base import AgentContext
+    
+    context_metadata = params.get("metadata", {}) or {}
+    if model:
+        context_metadata["model"] = model
     
     context = AgentContext(
         session_id=session_id,
         conversation_history=[{"role": "user", "content": prompt}],
-        metadata=params.get("metadata", {}),
+        metadata=context_metadata,
     )
     
     stop_reason = "end_turn"
@@ -778,6 +788,13 @@ def _convert_event_to_session_update(session_id: str, event: Any) -> dict[str, A
             "sessionId": session_id,
             "sessionUpdate": "agent_thought_chunk",
             "chunk": event_data,
+        }
+    elif event_type == "error":
+        # Error events should be sent with a special sessionUpdate type
+        return {
+            "sessionId": session_id,
+            "sessionUpdate": "error",
+            "error": str(event_data) if event_data else "Unknown error",
         }
     else:
         return {

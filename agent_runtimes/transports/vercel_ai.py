@@ -139,7 +139,9 @@ class VercelAITransport(BaseTransport):
                 body = json.loads(body_bytes)
                 model = body.get("model")
                 if model:
-                    logger.info(f"Using model from request body: {model}")
+                    logger.info(f"Vercel AI: Using model from request body: {model}")
+                else:
+                    logger.debug(f"Vercel AI: No model in request body, keys: {list(body.keys())}")
 
                 # Create a new request with the cached body for pydantic-ai to consume
                 # We need to wrap the request with cached body
