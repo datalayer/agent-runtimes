@@ -9,7 +9,7 @@ from pydantic_ai.mcp import MCPServerStreamableHTTP
 from agent_runtimes.models.models import create_model_with_provider
 
 
-def create_chat_agent(
+def create_jupyter_chat_agent(
     model: str | None = None,
     model_provider: str = "anthropic",
     model_name: str = "claude-sonnet-4-5",

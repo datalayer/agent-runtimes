@@ -10,6 +10,7 @@ Jupyter and FastAPI servers.
 - earthdata-mcp-server
 - markitdown-mcp
 - logfire-mcp
+- linkedin-mcp-server
 """
 
 import logging
