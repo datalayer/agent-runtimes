@@ -118,9 +118,9 @@
     "@ag-ui/encoder": "^0.0.42",
     "@ag-ui/proto": "^0.0.42",
     "@agentclientprotocol/sdk": "^0.8.0",
-    "@ai-sdk/react": "^3.0.5",
+    "@ai-sdk/react": "3.0.0-beta.172",
     "@anthropic-ai/sdk": "^0.52.0",
-    "@datalayer/core": "^0.0.20",
+    "@datalayer/core": "^0.0.24",
     "@datalayer/icons-react": "^1.0.6",
     "@datalayer/jupyter-lexical": "^1.0.6",
     "@datalayer/jupyter-react": "^2.0.0",
@@ -281,6 +281,7 @@
     "vitest": "^3.2.4"
   },
   "resolutions": {
+    "@ai-sdk/react": "3.0.0-beta.172",
     "@microsoft/fast-colors": "5.3.1",
     "@microsoft/fast-components": "2.30.6",
     "@microsoft/fast-element": "1.13.0",
@@ -297,6 +298,7 @@
     "typescript": "^5.8.3"
   },
   "overrides": {
+    "@ai-sdk/react": "3.0.0-beta.172",
     "@microsoft/fast-colors": "5.3.1",
     "@microsoft/fast-components": "2.30.6",
     "@microsoft/fast-element": "1.13.0",

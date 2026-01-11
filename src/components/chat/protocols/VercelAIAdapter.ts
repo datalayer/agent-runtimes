@@ -123,6 +123,10 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
       tools?: ToolDefinition[];
       threadId?: string;
       metadata?: Record<string, unknown>;
+      /** Model to use for this request (overrides agent default) */
+      model?: string;
+      /** Full conversation history to send with the message */
+      messages?: ChatMessage[];
     },
   ): Promise<void> {
     if (this.abortController) {
@@ -161,7 +165,13 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
         trigger: 'submit-message',
         // Optional fields based on Pydantic AI's Vercel adapter
         ...(options?.tools && { tools: options.tools }),
+        // Model override for per-request model selection
+        ...(options?.model && { model: options.model }),
       };
+
+      if (options?.model) {
+        console.log('[VercelAIAdapter] Sending with model:', options.model);
+      }
 
       // Merge custom headers with defaults
       const headers: Record<string, string> = {

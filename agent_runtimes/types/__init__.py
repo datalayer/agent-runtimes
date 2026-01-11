@@ -3,11 +3,12 @@
 
 """Model functions and configuration types."""
 
-from .types import AIModel, BuiltinTool, FrontendConfig, MCPServer
+from .types import AIModel, BuiltinTool, ChatRequest, FrontendConfig, MCPServer
 
 __all__ = [
-    "MCPServer",
     "AIModel",
     "BuiltinTool",
+    "ChatRequest",
     "FrontendConfig",
+    "MCPServer",
 ]

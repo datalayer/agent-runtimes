@@ -10,7 +10,7 @@ from typing import Any, Dict, List, Optional
 from agent_runtimes.types import MCPServer
 
 
-class ChatConfig:
+class JupyterChatConfig:
     """Manage chat configuration."""
 
     def __init__(self, config_dir: Optional[Path] = None):

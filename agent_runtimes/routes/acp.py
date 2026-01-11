@@ -62,7 +62,7 @@ from acp.schema import (
 )
 
 from ..adapters.base import BaseAgent
-from ..protocols.acp import ACPProtocol, ACPSession
+from ..transports.acp import ACPTransport, ACPSession
 
 logger = logging.getLogger(__name__)
 
@@ -136,7 +136,7 @@ class ACPErrorCode:
 # In-memory stores (should be replaced with proper persistence in production)
 _agents: dict[str, tuple[BaseAgent, AgentInfo]] = {}
 _sessions: dict[str, ACPSession] = {}
-_adapters: dict[str, ACPProtocol] = {}
+_adapters: dict[str, ACPTransport] = {}
 
 # Track running prompts per session ID for termination
 # Maps session_id to a cancellation event
@@ -351,7 +351,7 @@ async def websocket_endpoint(websocket: WebSocket, agent_id: str):
     
     agent, agent_info = _agents[agent_id]
     session_id: str | None = None
-    adapter: ACPProtocol | None = None
+    adapter: ACPTransport | None = None
     
     try:
         while True:
@@ -367,7 +367,7 @@ async def websocket_endpoint(websocket: WebSocket, agent_id: str):
                 )
                 session_id = response.get("session_id")
                 if session_id:
-                    adapter = ACPProtocol(agent)
+                    adapter = ACPTransport(agent)
                     _adapters[session_id] = adapter
             
             # ACP spec method: session/new
@@ -377,7 +377,7 @@ async def websocket_endpoint(websocket: WebSocket, agent_id: str):
                 )
                 session_id = response.get("session_id")
                 if session_id:
-                    adapter = ACPProtocol(agent)
+                    adapter = ACPTransport(agent)
                     _adapters[session_id] = adapter
                 
             # Legacy method name: acp.session.new
@@ -388,7 +388,7 @@ async def websocket_endpoint(websocket: WebSocket, agent_id: str):
                 )
                 session_id = response.get("session_id")
                 if session_id:
-                    adapter = ACPProtocol(agent)
+                    adapter = ACPTransport(agent)
                     _adapters[session_id] = adapter
             
             # ACP spec method: session/prompt
@@ -631,7 +631,7 @@ async def _handle_prompt(
     message: ACPMessage,
     session_id: str,
     agent: BaseAgent,
-    adapter: ACPProtocol | None,
+    adapter: ACPTransport | None,
 ) -> None:
     """Handle session/prompt method.
     
@@ -640,6 +640,12 @@ async def _handle_prompt(
     """
     params = message.params or {}
     content = params.get("content", [])
+    metadata = params.get("metadata", {})
+    
+    # Extract model from metadata for per-request model override
+    model = metadata.get("model") if isinstance(metadata, dict) else None
+    if model:
+        logger.info(f"ACP: Using model from request metadata: {model}")
     
     # Extract text from content blocks per ACP spec
     prompt = ""
@@ -650,13 +656,17 @@ async def _handle_prompt(
             if block.get("type") == "text":
                 prompt = block.get("text", "")
     
-    # Convert to context
+    # Convert to context - include model in metadata for agents that support it
     from ..adapters.base import AgentContext
+    
+    context_metadata = params.get("metadata", {}) or {}
+    if model:
+        context_metadata["model"] = model
     
     context = AgentContext(
         session_id=session_id,
         conversation_history=[{"role": "user", "content": prompt}],
-        metadata=params.get("metadata", {}),
+        metadata=context_metadata,
     )
     
     stop_reason = "end_turn"
@@ -779,6 +789,13 @@ def _convert_event_to_session_update(session_id: str, event: Any) -> dict[str, A
             "sessionUpdate": "agent_thought_chunk",
             "chunk": event_data,
         }
+    elif event_type == "error":
+        # Error events should be sent with a special sessionUpdate type
+        return {
+            "sessionId": session_id,
+            "sessionUpdate": "error",
+            "error": str(event_data) if event_data else "Unknown error",
+        }
     else:
         return {
             "sessionId": session_id,
@@ -792,7 +809,7 @@ async def _handle_run(
     message: ACPMessage,
     session_id: str,
     agent: BaseAgent,
-    adapter: ACPProtocol | None,
+    adapter: ACPTransport | None,
 ) -> None:
     """Handle legacy acp.session.run method."""
     params = message.params or {}
@@ -875,7 +892,7 @@ async def _handle_run(
 async def _handle_permission_response(
     websocket: WebSocket,
     message: ACPMessage,
-    adapter: ACPProtocol,
+    adapter: ACPTransport,
 ) -> None:
     """Handle acp.permission.respond method."""
     params = message.params or {}

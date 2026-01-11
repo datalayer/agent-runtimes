@@ -69,6 +69,8 @@ export abstract class BaseProtocolAdapter implements ProtocolAdapter {
       metadata?: Record<string, unknown>;
       /** Full conversation history to send with the message */
       messages?: ChatMessage[];
+      /** Model to use for this request (overrides agent default) */
+      model?: string;
     },
   ): Promise<void>;
 

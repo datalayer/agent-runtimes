@@ -41,8 +41,8 @@ from agent_runtimes.adapters.base import (
 )
 from agent_runtimes.adapters.pydantic_ai_adapter import PydanticAIAdapter
 # Protocol adapters
-from agent_runtimes.protocols.base import AdapterEvent, BaseProtocol
-from agent_runtimes.protocols.acp import ACPProtocol, ACPSession
+from agent_runtimes.transports.base import AdapterEvent, BaseTransport
+from agent_runtimes.transports.acp import ACPTransport, ACPSession
 
 
 def _jupyter_server_extension_points() -> List[Dict[str, Any]]:
@@ -79,8 +79,8 @@ __all__ = [
     # Agent implementations
     "PydanticAIAdapter",
     # Protocol adapters
-    "BaseProtocol",
+    "BaseTransport",
     "AdapterEvent",
-    "ACPProtocol",
+    "ACPTransport",
     "ACPSession",
 ]

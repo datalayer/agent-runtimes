@@ -4,18 +4,84 @@ title: Agent Runtimes
 slug: /
 ---
 
-import HomepageRow1 from '@site/src/components/HomepageRow1';
-import HomepageRow2 from '@site/src/components/HomepageRow2';
-import HomepageRow3 from '@site/src/components/HomepageRow3';
 import DocCardList from '@theme/DocCardList';
 import { useDocsSidebar } from '@docusaurus/plugin-content-docs/client';
 
 # Agent Runtimes
 
-Agent Runtimes is a solution to scale AI without losing the user's local productivity.
+**Agent Runtimes** is a flexible framework for building and deploying AI agents with multiple transport protocols and model providers.
+
+## Overview
+
+Agent Runtimes provides:
+
+- 🔌 **Multiple Transport Protocols** — Connect via AG-UI, Vercel AI, ACP (WebSocket), or A2A for agent-to-agent communication
+- 🤖 **Multi-Provider Model Support** — Use models from Anthropic, OpenAI, Azure OpenAI, or AWS Bedrock
+- 🛠️ **Tool Calling** — Extend agents with custom tools and MCP (Model Context Protocol) servers
+- 📡 **Streaming Responses** — Real-time streaming for responsive chat experiences
+- 🔄 **Per-Request Model Selection** — Switch models dynamically without restarting agents
+- 🎨 **Ready-to-Use UI Components** — React components for building chat interfaces
+
+## Quick Start
+
+```bash
+# Install
+pip install agent-runtimes
+
+# Start the server
+python -m agent_runtimes
+```
+
+Configure your model provider:
+
+```bash
+# Choose one (or more) providers
+export ANTHROPIC_API_KEY="sk-ant-..."
+export OPENAI_API_KEY="sk-..."
+export AZURE_OPENAI_API_KEY="..."
+export AZURE_OPENAI_ENDPOINT="https://your-resource.openai.azure.com"
+```
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     Frontend (React)                         │
+│        ChatBase, Protocol Adapters, UI Components           │
+└─────────────────────────────────────────────────────────────┘
+                              │
+        ┌─────────────────────┼─────────────────────┐
+        ↓                     ↓                     ↓
+┌───────────────┐   ┌───────────────┐   ┌───────────────┐
+│    AG-UI      │   │   Vercel AI   │   │     ACP       │
+│   Transport   │   │   Transport   │   │   Transport   │
+└───────────────┘   └───────────────┘   └───────────────┘
+        │                     │                     │
+        └─────────────────────┼─────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────┐
+│                    Agent Adapters                            │
+│              PydanticAI, LangChain, Jupyter AI              │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ↓
+┌─────────────────────────────────────────────────────────────┐
+│                     Model Providers                          │
+│         Anthropic, OpenAI, Azure, Bedrock, Google           │
+└─────────────────────────────────────────────────────────────┘
+```
+
+## Features at a Glance
+
+| Feature | Description |
+|---------|-------------|
+| **Transports** | AG-UI, Vercel AI, ACP (WebSocket), A2A |
+| **Model Providers** | Anthropic, OpenAI, Azure OpenAI, AWS Bedrock |
+| **Agent Libraries** | pydantic-ai, LangChain, Jupyter AI |
+| **Streaming** | Real-time SSE and WebSocket streaming |
+| **Tools** | Custom tools, MCP servers, code execution |
+| **UI** | React components with Primer design system |
+
+## Documentation
 
 <DocCardList items={useDocsSidebar().items.filter(i => (i.label !== 'Agent Runtimes'))} />
-
-<HomepageRow1 />
-<HomepageRow2 />
-<HomepageRow3 />

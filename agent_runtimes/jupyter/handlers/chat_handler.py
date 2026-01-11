@@ -122,7 +122,7 @@ class VercelAIChatHandler(APIHandler):
                     total_tokens_limit=100000,
                 )
 
-                # Use VercelAIProtocol.dispatch_request (new API)
+                # Use VercelAITransport.dispatch_request (new API)
                 response = await VercelAIAdapter.dispatch_request(
                     tornado_request,
                     agent=agent,

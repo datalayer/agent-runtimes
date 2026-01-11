@@ -10,7 +10,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from starlette.responses import StreamingResponse
 
-from ..protocols import MCPUIProtocol
+from ..transports import MCPUITransport
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +21,7 @@ router = APIRouter(
 )
 
 # Global registry of MCP-UI adapters by agent ID
-_mcp_ui_adapters: dict[str, MCPUIProtocol] = {}
+_mcp_ui_adapters: dict[str, MCPUITransport] = {}
 
 
 class MCPUIRequest(BaseModel):
@@ -40,26 +40,26 @@ class MCPUIResponse(BaseModel):
 
 def register_mcp_ui_agent(
     agent_id: str,
-    adapter: MCPUIProtocol,
+    adapter: MCPUITransport,
 ) -> None:
     """Register an MCP-UI adapter.
 
     Args:
         agent_id: Unique identifier for the agent.
-        adapter: The MCPUIProtocol instance.
+        adapter: The MCPUITransport instance.
     """
     _mcp_ui_adapters[agent_id] = adapter
     logger.info(f"Registered MCP-UI agent: {agent_id}")
 
 
-def get_mcp_ui_adapter(agent_id: str) -> MCPUIProtocol | None:
+def get_mcp_ui_adapter(agent_id: str) -> MCPUITransport | None:
     """Get an MCP-UI adapter by ID.
 
     Args:
         agent_id: The agent identifier.
 
     Returns:
-        The MCPUIProtocol if found, None otherwise.
+        The MCPUITransport if found, None otherwise.
     """
     return _mcp_ui_adapters.get(agent_id)
 
@@ -182,7 +182,7 @@ async def chat(
         try:
             agent, _ = create_demo_agent()
             # Create MCP-UI adapter
-            adapter = MCPUIProtocol(agent)
+            adapter = MCPUITransport(agent)
             register_mcp_ui_agent(agent_id, adapter)
             logger.info(f"Auto-registered demo agent for MCP-UI: {agent_id}")
         except Exception as e:
@@ -251,7 +251,7 @@ async def stream(
 
         try:
             agent, _ = create_demo_agent()
-            adapter = MCPUIProtocol(agent)
+            adapter = MCPUITransport(agent)
             register_mcp_ui_agent(agent_id, adapter)
             logger.info(f"Auto-registered demo agent for MCP-UI: {agent_id}")
         except Exception as e:

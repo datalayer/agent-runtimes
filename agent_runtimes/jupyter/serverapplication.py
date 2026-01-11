@@ -11,19 +11,19 @@ from traitlets import Bool, CInt, Instance, Unicode, default
 from traitlets.config import Configurable
 
 from agent_runtimes.__version__ import __version__
-from agent_runtimes.chat.agent import create_chat_agent
-from agent_runtimes.chat.config import ChatConfig
+from agent_runtimes.jupyter.agent import create_jupyter_chat_agent
+from agent_runtimes.jupyter.config import JupyterChatConfig
 from agent_runtimes.mcp import MCPToolManager
-from agent_runtimes.jupyter.handlers.chat.chat import VercelAIChatHandler
-from agent_runtimes.jupyter.handlers.chat.configure import ConfigureHandler
-from agent_runtimes.jupyter.handlers.chat.mcp import (
+from agent_runtimes.jupyter.handlers.chat_handler import VercelAIChatHandler
+from agent_runtimes.jupyter.handlers.configure_handler import ConfigureHandler
+from agent_runtimes.jupyter.handlers.mcp_handler import (
     MCPServerHandler,
     MCPServersHandler,
 )
-from agent_runtimes.jupyter.handlers.config.handler import ConfigHandler
-from agent_runtimes.jupyter.handlers.index.handler import IndexHandler
-from agent_runtimes.jupyter.handlers.login.handler import LoginHandler
-from agent_runtimes.jupyter.handlers.service_worker.handler import ServiceWorkerHandler
+from agent_runtimes.jupyter.handlers.config_handler import ConfigHandler
+from agent_runtimes.jupyter.handlers.index_handler import IndexHandler
+from agent_runtimes.jupyter.handlers.login_handler import LoginHandler
+from agent_runtimes.jupyter.handlers.service_worker_handler import ServiceWorkerHandler
 from agent_runtimes.services.authn.state import get_server_port
 
 DEFAULT_STATIC_FILES_PATH = os.path.join(os.path.dirname(__file__), "./static")
@@ -185,7 +185,7 @@ class AgentRuntimesExtensionApp(ExtensionAppJinjaMixin, ExtensionApp):
 
         try:
             # Create configuration manager
-            config = ChatConfig()
+            config = JupyterChatConfig()
 
             # Get Jupyter server connection details
             connection_url = self.serverapp.connection_url
@@ -199,7 +199,7 @@ class AgentRuntimesExtensionApp(ExtensionAppJinjaMixin, ExtensionApp):
 
             agent = None
             try:
-                agent = create_chat_agent(model=default_model, mcp_server=None)
+                agent = create_jupyter_chat_agent(model=default_model, mcp_server=None)
                 if agent is None:
                     self.log.warning(
                         "Chat agent could not be created (missing API keys or configuration). "
@@ -257,7 +257,7 @@ class AgentRuntimesExtensionApp(ExtensionAppJinjaMixin, ExtensionApp):
             # Store None values in settings so handlers can detect unavailability
             self.settings["chat_agent"] = None
             self.settings["mcp_manager"] = MCPToolManager()
-            self.settings["chat_config"] = ChatConfig()
+            self.settings["chat_config"] = JupyterChatConfig()
             self.settings["chat_base_url"] = None
             self.settings["chat_token"] = None
 

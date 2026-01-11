@@ -1,0 +1,165 @@
+---
+title: Transports
+---
+
+# Transports
+
+Agent Runtimes supports multiple transport protocols for communicating with AI agents. Each transport has different characteristics suited for various use cases.
+
+## Protocol Comparison
+
+| Feature | AG-UI | Vercel AI | ACP | A2A |
+|---------|-------|-----------|-----|-----|
+| Transport | HTTP/SSE | HTTP/SSE | WebSocket | HTTP/SSE |
+| Streaming | ✅ | ✅ | ✅ | ✅ |
+| Tool Calling | ✅ | ✅ | ✅ | ✅ |
+| Per-Request Model Selection | ✅ | ✅ | ✅ | ❌ |
+| Bidirectional Communication | ❌ | ❌ | ✅ | ❌ |
+| Human-in-the-Loop | ✅ | ❌ | ✅ | ❌ |
+| Inter-Agent Communication | ❌ | ❌ | ❌ | ✅ |
+
+## AG-UI (Agent UI Protocol)
+
+AG-UI is a lightweight protocol optimized for building interactive AI chat interfaces.
+
+**Features:**
+- Simple HTTP/SSE-based communication
+- Built-in support for streaming responses
+- Tool calling with human-in-the-loop approval
+- Native support for frontend components
+
+**Use Cases:**
+- Web chat applications
+- Interactive AI assistants
+- Applications requiring tool approval workflows
+
+**Endpoint:** `POST /api/v1/ag-ui/agents/{agent_id}/runs`
+
+```typescript
+// Frontend usage
+const adapter = new AGUIAdapter({
+  type: 'ag-ui',
+  baseUrl: 'http://localhost:8888/api/v1/ag-ui/agents/demo',
+});
+```
+
+## Vercel AI Protocol
+
+Compatible with Vercel's AI SDK, enabling seamless integration with Next.js and React applications.
+
+**Features:**
+- Vercel AI SDK compatibility
+- Server-Sent Events (SSE) streaming
+- Tool calling support
+- Easy integration with existing Vercel projects
+
+**Use Cases:**
+- Next.js applications
+- Projects already using Vercel AI SDK
+- Quick prototyping with familiar APIs
+
+**Endpoint:** `POST /api/v1/vercel-ai/agents/{agent_id}/chat`
+
+```typescript
+// Frontend usage
+const adapter = new VercelAIAdapter({
+  type: 'vercel-ai',
+  baseUrl: 'http://localhost:8888/api/v1/vercel-ai/agents/demo',
+});
+```
+
+## ACP (Agent Client Protocol)
+
+ACP is a WebSocket-based protocol providing rich bidirectional communication.
+
+**Features:**
+- Full-duplex WebSocket communication
+- Session management
+- Permission request/grant workflow
+- Real-time streaming updates
+- Cancellation support
+
+**Use Cases:**
+- Long-running agent tasks
+- Applications requiring bidirectional updates
+- Complex workflows with permission handling
+- Real-time collaborative experiences
+
+**Endpoint:** `WS /api/v1/acp/ws/{agent_id}`
+
+```typescript
+// Frontend usage
+const adapter = new ACPAdapter({
+  type: 'acp',
+  baseUrl: 'ws://localhost:8888/api/v1/acp/ws/demo',
+});
+```
+
+## A2A (Agent-to-Agent Protocol)
+
+A2A enables communication between AI agents using the Google A2A standard via [fasta2a](https://pypi.org/project/fasta2a/).
+
+**Features:**
+- Inter-agent communication
+- Task delegation and result aggregation
+- Agent discovery via agent cards
+- Compatible with pydantic-ai agents
+
+**Use Cases:**
+- Multi-agent systems
+- Orchestrating multiple specialized agents
+- Agent collaboration workflows
+
+**Endpoint:** `POST /api/v1/a2a/agents/{agent_id}/`
+
+```typescript
+// Frontend usage
+const adapter = new A2AAdapter({
+  type: 'a2a',
+  baseUrl: 'http://localhost:8888/api/v1/a2a/agents/demo/',
+});
+```
+
+:::warning A2A Limitations
+**Per-request model selection is not supported with A2A.**
+
+The A2A protocol uses pydantic-ai's `to_a2a()` method which binds the model at agent creation time. The model cannot be changed per-request. If you need per-request model selection, use AG-UI, Vercel AI, or ACP protocols instead.
+
+See the [A2A Limitations](#a2a-limitations) section for more details.
+:::
+
+## A2A Limitations
+
+### Per-Request Model Selection
+
+The A2A protocol does not support changing the model on a per-request basis. This is due to:
+
+1. **Architecture**: A2A uses fasta2a which converts pydantic-ai agents via `to_a2a()`. The model is fixed at agent creation.
+
+2. **Design Philosophy**: A2A treats agents as services with fixed capabilities. The model is part of the agent's identity.
+
+**Workarounds:**
+
+1. **Multiple Agents**: Deploy separate A2A agents for each model:
+   ```python
+   # Create agent with GPT-4
+   gpt4_agent = Agent("openai:gpt-4o")
+   register_a2a_agent(PydanticAIAdapter(gpt4_agent), card_gpt4)
+   
+   # Create agent with Claude
+   claude_agent = Agent("anthropic:claude-sonnet-4-5")
+   register_a2a_agent(PydanticAIAdapter(claude_agent), card_claude)
+   ```
+
+2. **Use Different Protocol**: Switch to AG-UI, Vercel AI, or ACP for per-request model selection.
+
+## Choosing a Transport
+
+| Requirement | Recommended Transport |
+|-------------|----------------------|
+| Simple web chat | AG-UI or Vercel AI |
+| Next.js / Vercel project | Vercel AI |
+| Real-time bidirectional updates | ACP |
+| Human-in-the-loop workflows | ACP or AG-UI |
+| Multi-agent orchestration | A2A |
+| Per-request model switching | AG-UI, Vercel AI, or ACP |

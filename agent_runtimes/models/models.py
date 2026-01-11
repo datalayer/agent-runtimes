@@ -4,11 +4,25 @@
 """Model creation utilities for AI Agents."""
 
 import logging
+import os
 from typing import Any
 
 from agent_runtimes.types import AIModel
 
 logger = logging.getLogger(__name__)
+
+
+def check_env_vars_available(required_vars: list[str]) -> bool:
+    """
+    Check if all required environment variables are set.
+
+    Args:
+        required_vars: List of environment variable names
+
+    Returns:
+        True if all variables are set, False otherwise
+    """
+    return all(os.getenv(var) for var in required_vars)
 
 
 def get_model_string(model_provider: str, model_name: str) -> str:
@@ -164,111 +178,158 @@ def create_default_models(tool_ids: list[str]) -> list[AIModel]:
         tool_ids: List of tool IDs to associate with models
 
     Returns:
-        List of AIModel configurations
+        List of AIModel configurations with availability based on environment variables
     """
-    return [
+    # Define model configurations with their required environment variables
+    model_configs = [
         # Anthropic models
-        AIModel(
-            id="anthropic:claude-sonnet-4-5",
-            name="Claude Sonnet 4.5",
-            builtin_tools=tool_ids,
-        ),
-        AIModel(
-            id="anthropic:claude-opus-4",
-            name="Claude Opus 4",
-            builtin_tools=tool_ids,
-        ),
-        AIModel(
-            id="anthropic:claude-sonnet-4-20250514",
-            name="Claude Sonnet 4 (May 2025)",
-            builtin_tools=tool_ids,
-        ),
-        AIModel(
-            id="anthropic:claude-3-5-haiku-20241022",
-            name="Claude 3.5 Haiku",
-            builtin_tools=tool_ids,
-        ),
+        {
+            "id": "anthropic:claude-sonnet-4-5",
+            "name": "Claude Sonnet 4.5",
+            "required_env_vars": ["ANTHROPIC_API_KEY"],
+        },
+        {
+            "id": "anthropic:claude-opus-4",
+            "name": "Claude Opus 4",
+            "required_env_vars": ["ANTHROPIC_API_KEY"],
+        },
+        {
+            "id": "anthropic:claude-sonnet-4-20250514",
+            "name": "Claude Sonnet 4 (May 2025)",
+            "required_env_vars": ["ANTHROPIC_API_KEY"],
+        },
+        {
+            "id": "anthropic:claude-3-5-haiku-20241022",
+            "name": "Claude 3.5 Haiku",
+            "required_env_vars": ["ANTHROPIC_API_KEY"],
+        },
         # OpenAI models
-        AIModel(
-            id="openai:gpt-4o",
-            name="GPT-4o",
-            builtin_tools=tool_ids,
-        ),
-        AIModel(
-            id="openai:gpt-4o-mini",
-            name="GPT-4o Mini",
-            builtin_tools=tool_ids,
-        ),
-        AIModel(
-            id="openai:gpt-4-turbo",
-            name="GPT-4 Turbo",
-            builtin_tools=tool_ids,
-        ),
-        AIModel(
-            id="openai:o1",
-            name="o1",
-            builtin_tools=tool_ids,
-        ),
-        AIModel(
-            id="openai:o1-mini",
-            name="o1 Mini",
-            builtin_tools=tool_ids,
-        ),
-        AIModel(
-            id="openai:o3-mini",
-            name="o3 Mini",
-            builtin_tools=tool_ids,
-        ),
+        {
+            "id": "openai:gpt-4o",
+            "name": "GPT-4o",
+            "required_env_vars": ["OPENAI_API_KEY"],
+        },
+        {
+            "id": "openai:gpt-4o-mini",
+            "name": "GPT-4o Mini",
+            "required_env_vars": ["OPENAI_API_KEY"],
+        },
+        {
+            "id": "openai:gpt-4-turbo",
+            "name": "GPT-4 Turbo",
+            "required_env_vars": ["OPENAI_API_KEY"],
+        },
+        {
+            "id": "openai:o1",
+            "name": "o1",
+            "required_env_vars": ["OPENAI_API_KEY"],
+        },
+        {
+            "id": "openai:o1-mini",
+            "name": "o1 Mini",
+            "required_env_vars": ["OPENAI_API_KEY"],
+        },
+        {
+            "id": "openai:o3-mini",
+            "name": "o3 Mini",
+            "required_env_vars": ["OPENAI_API_KEY"],
+        },
         # AWS Bedrock models
-        AIModel(
-            id="bedrock:anthropic.claude-sonnet-4-5-20250514-v1:0",
-            name="Claude Sonnet 4.5 (Bedrock)",
-            builtin_tools=tool_ids,
-        ),
-        AIModel(
-            id="bedrock:anthropic.claude-3-5-haiku-20241022-v1:0",
-            name="Claude 3.5 Haiku (Bedrock)",
-            builtin_tools=tool_ids,
-        ),
-        AIModel(
-            id="bedrock:amazon.nova-pro-v1:0",
-            name="Amazon Nova Pro",
-            builtin_tools=tool_ids,
-        ),
-        AIModel(
-            id="bedrock:amazon.nova-lite-v1:0",
-            name="Amazon Nova Lite",
-            builtin_tools=tool_ids,
-        ),
-        AIModel(
-            id="bedrock:meta.llama3-3-70b-instruct-v1:0",
-            name="Llama 3.3 70B (Bedrock)",
-            builtin_tools=tool_ids,
-        ),
+        {
+            "id": "bedrock:anthropic.claude-sonnet-4-5-20250514-v1:0",
+            "name": "Claude Sonnet 4.5 (Bedrock)",
+            "required_env_vars": ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"],
+        },
+        {
+            "id": "bedrock:anthropic.claude-3-5-haiku-20241022-v1:0",
+            "name": "Claude 3.5 Haiku (Bedrock)",
+            "required_env_vars": ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"],
+        },
+        {
+            "id": "bedrock:amazon.nova-pro-v1:0",
+            "name": "Amazon Nova Pro",
+            "required_env_vars": ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"],
+        },
+        {
+            "id": "bedrock:amazon.nova-lite-v1:0",
+            "name": "Amazon Nova Lite",
+            "required_env_vars": ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"],
+        },
+        {
+            "id": "bedrock:meta.llama3-3-70b-instruct-v1:0",
+            "name": "Llama 3.3 70B (Bedrock)",
+            "required_env_vars": ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"],
+        },
         # Azure OpenAI models
-        AIModel(
-            id="azure:gpt-4o",
-            name="GPT-4o (Azure)",
-            builtin_tools=tool_ids,
-        ),
-        AIModel(
-            id="azure:gpt-4o-mini",
-            name="GPT-4o Mini (Azure)",
-            builtin_tools=tool_ids,
-        ),
-        AIModel(
-            id="azure:gpt-4-turbo",
-            name="GPT-4 Turbo (Azure)",
-            builtin_tools=tool_ids,
-        ),
-        AIModel(
-            id="azure:o1",
-            name="o1 (Azure)",
-            builtin_tools=tool_ids,
-        ),
-        AIModel(
-            id="azure:o1-mini",
-            name="o1 Mini (Azure)",
-            builtin_tools=tool_ids,
-        ),
+        {
+            "id": "azure:gpt-4o",
+            "name": "GPT-4o (Azure)",
+            "required_env_vars": [
+                "AZURE_OPENAI_API_KEY",
+                "AZURE_OPENAI_ENDPOINT",
+            ],
+        },
+        {
+            "id": "azure:gpt-4o-mini",
+            "name": "GPT-4o Mini (Azure)",
+            "required_env_vars": [
+                "AZURE_OPENAI_API_KEY",
+                "AZURE_OPENAI_ENDPOINT",
+            ],
+        },
+        {
+            "id": "azure:gpt-4-turbo",
+            "name": "GPT-4 Turbo (Azure)",
+            "required_env_vars": [
+                "AZURE_OPENAI_API_KEY",
+                "AZURE_OPENAI_ENDPOINT",
+            ],
+        },
+        {
+            "id": "azure:o1",
+            "name": "o1 (Azure)",
+            "required_env_vars": [
+                "AZURE_OPENAI_API_KEY",
+                "AZURE_OPENAI_ENDPOINT",
+            ],
+        },
+        {
+            "id": "azure:o1-mini",
+            "name": "o1 Mini (Azure)",
+            "required_env_vars": [
+                "AZURE_OPENAI_API_KEY",
+                "AZURE_OPENAI_ENDPOINT",
+            ],
+        },
     ]
+
+    # Create AIModel instances with availability checking
+    models = []
+    for config in model_configs:
+        required_vars = config["required_env_vars"]
+        is_available = check_env_vars_available(required_vars)
+
+        model = AIModel(
+            id=config["id"],
+            name=config["name"],
+            builtin_tools=tool_ids,
+            required_env_vars=required_vars,
+            is_available=is_available,
+        )
+        models.append(model)
+
+        # Log availability status
+        if is_available:
+            logger.info(f"Model {config['name']} is available")
+        else:
+            logger.debug(
+                f"Model {config['name']} is unavailable (missing: {', '.join(required_vars)})"
+            )
+
+    # Log summary
+    available_count = sum(1 for m in models if m.is_available)
+    logger.info(
+        f"Loaded {available_count}/{len(models)} available models based on environment variables"
+    )
+
+    return models

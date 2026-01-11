@@ -38,27 +38,15 @@ module.exports = {
       items: [
         {
           type: 'doc',
-          docId: 'python/index',
+          docId: 'transports/index',
           position: 'left',
-          label: 'Python SDK',
+          label: 'Transports',
         },
         {
           type: 'doc',
-          docId: 'typescript/index',
+          docId: 'models/index',
           position: 'left',
-          label: 'TypeScript SDK',
-        },
-        {
-          type: 'doc',
-          docId: 'python_api/client/client',
-          position: 'left',
-          label: 'Python API',
-        },
-        {
-          type: 'doc',
-          docId: 'typescript_api/globals',
-          position: 'left',
-          label: 'TypeScript API',
+          label: 'Models',
         },
         {
           href: 'https://discord.gg/YQFwvmSSuR',
