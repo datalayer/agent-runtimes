@@ -55,17 +55,60 @@ class BuiltinTool(BaseModel):
     name: str = Field(..., description="Display name for the tool")
 
 
+class MCPServerTool(BaseModel):
+    """A tool provided by an MCP server."""
+
+    model_config = ConfigDict(populate_by_name=True, by_alias=True)
+
+    name: str = Field(..., description="Tool name/identifier")
+    description: str = Field(default="", description="Tool description")
+    enabled: bool = Field(default=True, description="Whether the tool is enabled")
+    input_schema: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="JSON schema for tool input parameters",
+        serialization_alias="inputSchema",
+    )
+
+
 class MCPServer(BaseModel):
     """Configuration for an MCP server."""
 
-    model_config = ConfigDict(populate_by_name=True)
+    model_config = ConfigDict(populate_by_name=True, by_alias=True)
 
     id: str = Field(..., description="Unique server identifier")
     name: str = Field(..., description="Display name for the server")
-    url: str = Field(..., description="Server URL")
+    url: str = Field(default="", description="Server URL (for HTTP-based servers)")
     enabled: bool = Field(default=True, description="Whether the server is enabled")
-    tools: List[str] = Field(
-        default_factory=list, description="List of available tool names"
+    tools: List[MCPServerTool] = Field(
+        default_factory=list, description="List of available tools"
+    )
+    # Fields for stdio-based MCP servers
+    package_name: Optional[str] = Field(
+        default=None,
+        description="Python package name for stdio-based MCP servers",
+        serialization_alias="packageName",
+    )
+    command: Optional[str] = Field(
+        default=None,
+        description="Command to run the MCP server (e.g., 'uvx mcp-server-name')",
+    )
+    args: List[str] = Field(
+        default_factory=list,
+        description="Command arguments for the MCP server",
+    )
+    required_env_vars: List[str] = Field(
+        default_factory=list,
+        description="Required environment variables for this server",
+        serialization_alias="requiredEnvVars",
+    )
+    is_available: bool = Field(
+        default=False,
+        description="Whether the server is available (based on package/env vars)",
+        serialization_alias="isAvailable",
+    )
+    transport: str = Field(
+        default="stdio",
+        description="Transport type: 'stdio' or 'http'",
     )
 
 

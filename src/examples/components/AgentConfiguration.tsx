@@ -13,10 +13,39 @@ import {
   Checkbox,
   Spinner,
   Flash,
+  Label,
 } from '@primer/react';
+import { CheckIcon, XIcon, ToolsIcon } from '@primer/octicons-react';
+import { useQuery } from '@tanstack/react-query';
 import { Box } from '@datalayer/primer-addons';
 import type { Agent } from '../stores/examplesStore';
 import type { Transport, Extension } from '../../components/chat';
+
+/**
+ * MCP Server Tool type
+ */
+export interface MCPServerTool {
+  name: string;
+  description?: string;
+  enabled: boolean;
+}
+
+/**
+ * MCP Server configuration from backend
+ */
+export interface MCPServerConfig {
+  id: string;
+  name: string;
+  url?: string;
+  enabled: boolean;
+  tools: MCPServerTool[];
+  packageName?: string;
+  command?: string;
+  args?: string[];
+  requiredEnvVars?: string[];
+  isAvailable?: boolean;
+  transport?: string;
+}
 
 type AgentLibrary = 'pydantic-ai' | 'langchain' | 'jupyter-ai';
 
@@ -91,6 +120,15 @@ const EXTENSIONS: { value: Extension; label: string; description: string }[] = [
   },
 ];
 
+/**
+ * Response from the /api/v1/configure endpoint
+ */
+interface ConfigResponse {
+  models: unknown[];
+  builtinTools: unknown[];
+  mcpServers?: MCPServerConfig[];
+}
+
 interface AgentConfigurationProps {
   agentLibrary: AgentLibrary;
   transport: Transport;
@@ -137,6 +175,23 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
   onAgentSelect,
   onConnect,
 }) => {
+  // Fetch MCP servers configuration from the backend
+  const configQuery = useQuery<ConfigResponse>({
+    queryKey: ['agent-config', baseUrl],
+    queryFn: async () => {
+      const response = await fetch(`${baseUrl}/api/v1/configure`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch configuration');
+      }
+      return response.json();
+    },
+    enabled: !!baseUrl,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    retry: 1,
+  });
+
+  const mcpServers = configQuery.data?.mcpServers || [];
+
   // Determine which extensions are enabled based on transport
   const isExtensionEnabled = (ext: Extension): boolean => {
     if (selectedAgentId !== 'new-agent') return false;
@@ -297,6 +352,139 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
           The name of the agent to connect to
         </FormControl.Caption>
       </FormControl>
+
+      {/* MCP Servers Section */}
+      <Box
+        sx={{
+          marginBottom: 3,
+          padding: 3,
+          border: '1px solid',
+          borderColor: 'border.default',
+          borderRadius: 2,
+          backgroundColor: 'canvas.default',
+        }}
+      >
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 2,
+            marginBottom: 2,
+          }}
+        >
+          <ToolsIcon size={16} />
+          <Text sx={{ fontSize: 1, fontWeight: 'bold' }}>MCP Servers</Text>
+          {configQuery.isLoading && <Spinner size="small" />}
+        </Box>
+
+        {configQuery.isError && (
+          <Flash variant="warning" sx={{ marginBottom: 2 }}>
+            <Text sx={{ fontSize: 0 }}>
+              Unable to fetch MCP servers. Check that the server is running.
+            </Text>
+          </Flash>
+        )}
+
+        {mcpServers.length === 0 &&
+          !configQuery.isLoading &&
+          !configQuery.isError && (
+            <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
+              No MCP servers configured.
+            </Text>
+          )}
+
+        {mcpServers.length > 0 && (
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {mcpServers.map(server => (
+              <Box
+                key={server.id}
+                sx={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: 2,
+                  padding: 2,
+                  border: '1px solid',
+                  borderColor: server.isAvailable
+                    ? 'success.muted'
+                    : 'border.muted',
+                  borderRadius: 2,
+                  backgroundColor: server.isAvailable
+                    ? 'success.subtle'
+                    : 'canvas.subtle',
+                }}
+              >
+                <Box sx={{ flex: 1 }}>
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 2,
+                      marginBottom: 1,
+                    }}
+                  >
+                    <Text sx={{ fontSize: 1, fontWeight: 'semibold' }}>
+                      {server.name}
+                    </Text>
+                    <Label
+                      variant={server.isAvailable ? 'success' : 'secondary'}
+                      size="small"
+                    >
+                      {server.isAvailable ? (
+                        <Box
+                          sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+                        >
+                          <CheckIcon size={12} />
+                          Available
+                        </Box>
+                      ) : (
+                        <Box
+                          sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+                        >
+                          <XIcon size={12} />
+                          Not Available
+                        </Box>
+                      )}
+                    </Label>
+                  </Box>
+                  {server.packageName && (
+                    <Text
+                      sx={{ fontSize: 0, color: 'fg.muted', display: 'block' }}
+                    >
+                      Package: <code>{server.packageName}</code>
+                    </Text>
+                  )}
+                  {server.tools.length > 0 && (
+                    <Text
+                      sx={{
+                        fontSize: 0,
+                        color: 'fg.muted',
+                        display: 'block',
+                        marginTop: 1,
+                      }}
+                    >
+                      Tools: {server.tools.map(t => t.name).join(', ')}
+                    </Text>
+                  )}
+                  {!server.isAvailable &&
+                    server.requiredEnvVars &&
+                    server.requiredEnvVars.length > 0 && (
+                      <Text
+                        sx={{
+                          fontSize: 0,
+                          color: 'attention.fg',
+                          display: 'block',
+                          marginTop: 1,
+                        }}
+                      >
+                        Required env vars: {server.requiredEnvVars.join(', ')}
+                      </Text>
+                    )}
+                </Box>
+              </Box>
+            ))}
+          </Box>
+        )}
+      </Box>
 
       {createError && (
         <Flash variant="danger" sx={{ marginBottom: 3 }}>

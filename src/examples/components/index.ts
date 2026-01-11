@@ -18,4 +18,10 @@ export {
   TRANSPORTS,
   EXTENSIONS,
 } from './AgentConfiguration';
-export type { AgentLibrary, Transport, Extension } from './AgentConfiguration';
+export type {
+  AgentLibrary,
+  Transport,
+  Extension,
+  MCPServerConfig,
+  MCPServerTool,
+} from './AgentConfiguration';

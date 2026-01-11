@@ -75,6 +75,11 @@ export {
   type RenderToolResult,
   type RespondCallback,
   type Suggestion,
+  type RemoteConfig,
+  type ModelConfig,
+  type BuiltinTool,
+  type MCPServerConfig,
+  type MCPServerTool,
 } from './ChatFloating';
 
 // Inline chat component for text selection AI assistance

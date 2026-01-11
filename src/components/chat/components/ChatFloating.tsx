@@ -43,6 +43,11 @@ import {
   type ProtocolConfig,
   type RespondCallback,
   type Suggestion,
+  type RemoteConfig,
+  type ModelConfig,
+  type BuiltinTool,
+  type MCPServerConfig,
+  type MCPServerTool,
 } from './base/ChatBase';
 import type { PoweredByTagProps } from './elements/PoweredByTag';
 import { useChatOpen, useChatMessages, useChatStore } from '../store/chatStore';
@@ -59,6 +64,11 @@ export type {
   RenderToolResult,
   RespondCallback,
   Suggestion,
+  RemoteConfig,
+  ModelConfig,
+  BuiltinTool,
+  MCPServerConfig,
+  MCPServerTool,
 };
 
 /**

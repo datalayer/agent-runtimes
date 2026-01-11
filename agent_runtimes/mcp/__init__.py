@@ -17,6 +17,17 @@ from .manager import (
     get_mcp_manager,
     set_mcp_manager,
 )
+from .servers import (
+    check_env_vars_available,
+    check_mcp_server_available,
+    check_package_available,
+    create_mcp_servers_with_availability,
+    discover_mcp_server_tools,
+    get_mcp_servers,
+    get_mcp_servers_sync,
+    get_predefined_mcp_servers,
+    initialize_mcp_servers,
+)
 from .tools import (
     create_mcp_server,
     extract_tool_names,
@@ -33,13 +44,23 @@ __all__ = [
     "MCPClient",
     "MCPManager",
     "MCPToolManager",
+    # servers.py exports
+    "check_env_vars_available",
+    "check_mcp_server_available",
+    "check_package_available",
     "create_mcp_server",
+    "create_mcp_servers_with_availability",
+    "discover_mcp_server_tools",
     "extract_tool_names",
     "generate_name_from_id",
     "get_available_tools",
     "get_frontend_config",
     "get_mcp_manager",
+    "get_mcp_servers",
+    "get_mcp_servers_sync",
+    "get_predefined_mcp_servers",
     "get_tools_from_mcp",
+    "initialize_mcp_servers",
     "set_mcp_manager",
     "tools_to_builtin_list",
 ]

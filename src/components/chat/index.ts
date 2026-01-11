@@ -167,6 +167,11 @@ export {
   type RenderToolResult,
   type RespondCallback,
   type Suggestion,
+  type RemoteConfig,
+  type ModelConfig,
+  type BuiltinTool,
+  type MCPServerConfig,
+  type MCPServerTool,
   // Merged from chat
   type ChatHeaderProps,
   type ConnectionState,

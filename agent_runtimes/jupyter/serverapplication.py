@@ -3,6 +3,7 @@
 
 """The Agent Runtimes Server application."""
 
+import asyncio
 import os
 
 from jupyter_server.extension.application import ExtensionApp, ExtensionAppJinjaMixin
@@ -13,7 +14,7 @@ from traitlets.config import Configurable
 from agent_runtimes.__version__ import __version__
 from agent_runtimes.jupyter.agent import create_jupyter_chat_agent
 from agent_runtimes.jupyter.config import JupyterChatConfig
-from agent_runtimes.mcp import MCPToolManager
+from agent_runtimes.mcp import MCPToolManager, get_mcp_manager, initialize_mcp_servers
 from agent_runtimes.jupyter.handlers.chat_handler import VercelAIChatHandler
 from agent_runtimes.jupyter.handlers.configure_handler import ConfigureHandler
 from agent_runtimes.jupyter.handlers.mcp_handler import (
@@ -191,6 +192,28 @@ class AgentRuntimesExtensionApp(ExtensionAppJinjaMixin, ExtensionApp):
             connection_url = self.serverapp.connection_url
             token = self.serverapp.token
             self.log.info(f"Jupyter server URL: {connection_url}")
+
+            # Initialize MCP servers (check availability and discover tools)
+            self.log.info("Initializing MCP servers...")
+            try:
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    # We're in an async context, create a task
+                    import nest_asyncio
+                    nest_asyncio.apply()
+                mcp_servers = loop.run_until_complete(
+                    initialize_mcp_servers(discover_tools=True)
+                )
+                self.log.info(f"Initialized {len(mcp_servers)} MCP servers")
+                
+                # Load initialized MCP servers into the global MCP manager
+                mcp_manager_global = get_mcp_manager()
+                mcp_manager_global.load_servers(mcp_servers)
+            except Exception as mcp_error:
+                self.log.warning(
+                    f"Failed to initialize MCP servers: {mcp_error}. "
+                    "MCP functionality may be limited."
+                )
 
             # Create chat agent without eagerly attaching MCP server tools
             # We'll create the MCP connection per request to avoid async context issues

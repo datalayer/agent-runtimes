@@ -21,6 +21,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from starlette.routing import Mount
 
+from .mcp import initialize_mcp_servers, get_mcp_manager
 from .routes import (
     a2a_protocol_router,
     A2AAgentCard,
@@ -89,6 +90,15 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
     async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         """Application lifespan handler."""
         logger.info("Starting agent-runtimes server...")
+        
+        # Initialize MCP servers (check availability and discover tools)
+        logger.info("Initializing MCP servers...")
+        mcp_servers = await initialize_mcp_servers(discover_tools=True)
+        
+        # Load initialized MCP servers into the MCP manager
+        mcp_manager = get_mcp_manager()
+        mcp_manager.load_servers(mcp_servers)
+        logger.info(f"Loaded {len(mcp_servers)} MCP servers into manager")
         
         # Set app reference for dynamic A2A route mounting
         set_a2a_app(app, config.api_prefix)
