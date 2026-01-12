@@ -21,9 +21,15 @@ which automatically detects the transport type from the config:
 
 import asyncio
 import logging
+import traceback
 from contextlib import AsyncExitStack
 from pathlib import Path
 from typing import Any
+
+try:  # Python 3.11+
+    BaseExceptionGroup  # type: ignore[name-defined]
+except NameError:  # pragma: no cover - earlier Python versions
+    BaseExceptionGroup = ExceptionGroup  # type: ignore
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +44,7 @@ _failed_servers: dict[str, str] = {}  # server_id -> error message
 
 # Separate exit stack per server (required for parallel startup with different tasks)
 _exit_stacks: list[AsyncExitStack] = []
+_initialization_event: asyncio.Event | None = None
 
 
 def get_mcp_config_path() -> Path:
@@ -48,6 +55,31 @@ def get_mcp_config_path() -> Path:
         Path to mcp.json file
     """
     return Path.home() / ".datalayer" / "mcp.json"
+
+
+def _format_exception(exc: BaseException) -> str:
+    """Format exception with traceback details."""
+    formatted = ''.join(traceback.format_exception(type(exc), exc, exc.__traceback__)).strip()
+    return formatted or f"{type(exc).__name__}: (no message)"
+
+
+def _format_exception_group(exc_group: BaseException) -> list[str]:
+    """Recursively format an ExceptionGroup into readable lines."""
+    if not hasattr(exc_group, "exceptions"):
+        return [_format_exception(exc_group)]
+    details: list[str] = []
+    for idx, exc in enumerate(getattr(exc_group, "exceptions", [])):
+        if isinstance(exc, ExceptionGroup):
+            nested_lines = _format_exception_group(exc)
+            for nested_line in nested_lines:
+                details.append(f"[{idx}] {nested_line}")
+        elif isinstance(exc, BaseExceptionGroup):  # type: ignore[name-defined]
+            nested_lines = _format_exception_group(exc)
+            for nested_line in nested_lines:
+                details.append(f"[{idx}] {nested_line}")
+        else:
+            details.append(f"[{idx}] {_format_exception(exc)}")
+    return details
 
 
 async def _start_single_server(server: Any, exit_stack: AsyncExitStack) -> bool:
@@ -96,41 +128,26 @@ async def _start_single_server(server: Any, exit_stack: AsyncExitStack) -> bool:
         _failed_servers[server_id] = f"Timeout after {MCP_SERVER_STARTUP_TIMEOUT}s"
         return False
     
-    except ExceptionGroup as eg:
+    except ExceptionGroup as eg:  # Standard ExceptionGroup (Exception)
         # Handle TaskGroup exceptions (Python 3.11+)
-        error_messages = []
-        for exc in eg.exceptions:
-            exc_str = str(exc).strip()
-            if exc_str:
-                error_messages.append(f"{type(exc).__name__}: {exc_str}")
-            else:
-                if isinstance(exc, ExceptionGroup):
-                    for nested in exc.exceptions:
-                        nested_str = str(nested).strip()
-                        error_messages.append(f"{type(nested).__name__}: {nested_str}" if nested_str else type(nested).__name__)
-                else:
-                    error_messages.append(type(exc).__name__)
-        error_detail = '; '.join(error_messages) if error_messages else "Unknown error in TaskGroup"
+        error_lines = _format_exception_group(eg)
+        for line in error_lines:
+            logger.error(f"✗ MCP server '{server_id}' exception: {line}")
+        error_detail = error_lines[0] if error_lines else "Unknown error in TaskGroup"
+        logger.error(f"✗ MCP server '{server_id}' failed: {error_detail}")
+        _failed_servers[server_id] = error_detail
+        return False
+    except BaseExceptionGroup as beg:  # type: ignore[name-defined]
+        error_lines = _format_exception_group(beg)
+        for line in error_lines:
+            logger.error(f"✗ MCP server '{server_id}' exception: {line}")
+        error_detail = error_lines[0] if error_lines else "Unknown error in TaskGroup"
         logger.error(f"✗ MCP server '{server_id}' failed: {error_detail}")
         _failed_servers[server_id] = error_detail
         return False
         
     except Exception as e:
-        error_type = type(e).__name__
-        error_msg = str(e).strip()
-        
-        if hasattr(e, '__cause__') and e.__cause__:
-            cause_type = type(e.__cause__).__name__
-            cause_msg = str(e.__cause__).strip()
-            error_detail = f"{error_type}: {error_msg} (caused by {cause_type}: {cause_msg})"
-        elif hasattr(e, 'exceptions'):
-            nested_msgs = [f"{type(exc).__name__}: {str(exc).strip()}" for exc in e.exceptions]
-            error_detail = f"{error_type}: {'; '.join(nested_msgs)}"
-        elif error_msg:
-            error_detail = f"{error_type}: {error_msg}"
-        else:
-            error_detail = error_type
-            
+        error_detail = _format_exception(e)
         logger.error(f"✗ MCP server '{server_id}' startup failed: {error_detail}")
         _failed_servers[server_id] = error_detail
         return False
@@ -147,7 +164,7 @@ async def initialize_mcp_toolsets() -> None:
     
     Note: Servers are started in parallel for faster startup.
     """
-    global _initialization_started, _exit_stacks, _mcp_toolsets, _failed_servers
+    global _initialization_started, _exit_stacks, _mcp_toolsets, _failed_servers, _initialization_event
     
     if _initialization_started:
         logger.warning("MCP toolsets initialization already started")
@@ -159,9 +176,14 @@ async def initialize_mcp_toolsets() -> None:
     
     if not mcp_config_path.exists():
         logger.info(f"MCP config file not found at {mcp_config_path}")
+        if _initialization_event is not None:
+            _initialization_event.set()
         return
     
     try:
+        if _initialization_event is None:
+            _initialization_event = asyncio.Event()
+
         from pydantic_ai.mcp import load_mcp_servers
         
         # Load MCP servers from config (automatically detects transport type)
@@ -170,54 +192,80 @@ async def initialize_mcp_toolsets() -> None:
         
         if not servers:
             logger.info("No MCP servers configured")
+            if _initialization_event is not None:
+                _initialization_event.set()
             return
         
-        # Start all servers in parallel, each with its own exit stack
-        async def start_one(server):
-            server_id = getattr(server, 'id', str(server))
+        # Start servers sequentially to avoid anyio cancel-scope conflicts
+        success_count = 0
+        for server in servers:
+            server_id = getattr(server, "id", str(server))
             stack = AsyncExitStack()
             await stack.__aenter__()
             try:
-                logger.info(f"⏳ Starting MCP server '{server_id}'...")
+                logger.info(
+                    f"⏳ Starting MCP server '{server_id}'... (timeout: {MCP_SERVER_STARTUP_TIMEOUT}s)"
+                )
                 await asyncio.wait_for(
                     stack.enter_async_context(server),
-                    timeout=MCP_SERVER_STARTUP_TIMEOUT
+                    timeout=MCP_SERVER_STARTUP_TIMEOUT,
                 )
                 tools = await server.list_tools()
                 tool_names = [t.name for t in tools]
-                logger.info(f"✓ MCP server '{server_id}' started with tools: {tool_names}")
-                return (server_id, True, server, stack)
+                logger.info(
+                    f"✓ MCP server '{server_id}' started with tools: {tool_names}"
+                )
+                _mcp_toolsets.append(server)
+                _exit_stacks.append(stack)
+                success_count += 1
             except asyncio.TimeoutError:
-                logger.error(f"✗ MCP server '{server_id}' startup timed out")
-                try:
-                    await stack.__aexit__(None, None, None)
-                except:
-                    pass
-                return (server_id, False, f"Timeout after {MCP_SERVER_STARTUP_TIMEOUT}s", None)
+                logger.error(
+                    f"✗ MCP server '{server_id}' startup timed out after {MCP_SERVER_STARTUP_TIMEOUT}s"
+                )
+                _failed_servers[server_id] = (
+                    f"Timeout after {MCP_SERVER_STARTUP_TIMEOUT}s"
+                )
+                await stack.__aexit__(None, None, None)
+            except ExceptionGroup as eg:
+                error_lines = _format_exception_group(eg)
+                for line in error_lines:
+                    logger.error(f"✗ MCP server '{server_id}' exception: {line}")
+                error_detail = (
+                    error_lines[0] if error_lines else "Unknown error in TaskGroup"
+                )
+                logger.error(f"✗ MCP server '{server_id}' failed: {error_detail}")
+                _failed_servers[server_id] = error_detail
+                await stack.__aexit__(None, None, None)
+            except BaseExceptionGroup as beg:  # type: ignore[name-defined]
+                error_lines = _format_exception_group(beg)
+                for line in error_lines:
+                    logger.error(f"✗ MCP server '{server_id}' exception: {line}")
+                error_detail = (
+                    error_lines[0] if error_lines else "Unknown error in TaskGroup"
+                )
+                logger.error(f"✗ MCP server '{server_id}' failed: {error_detail}")
+                _failed_servers[server_id] = error_detail
+                await stack.__aexit__(None, None, None)
             except Exception as e:
-                error_msg = f"{type(e).__name__}: {str(e)[:100]}"
-                logger.error(f"✗ MCP server '{server_id}' failed: {error_msg}")
-                try:
-                    await stack.__aexit__(None, None, None)
-                except:
-                    pass
-                return (server_id, False, error_msg, None)
+                error_detail = _format_exception(e)
+                logger.error(
+                    f"✗ MCP server '{server_id}' startup failed: {error_detail}"
+                )
+                _failed_servers[server_id] = error_detail
+                await stack.__aexit__(None, None, None)
+            else:
+                continue
         
-        results = await asyncio.gather(*[start_one(s) for s in servers], return_exceptions=True)
-        
-        for result in results:
-            if isinstance(result, Exception):
-                logger.error(f"Unexpected error during MCP startup: {result}")
-            elif result[1]:  # Success
-                _mcp_toolsets.append(result[2])
-                _exit_stacks.append(result[3])
-            else:  # Failure
-                _failed_servers[result[0]] = result[2]
-        
-        logger.info(f"🎉 MCP toolsets initialization complete: {len(_mcp_toolsets)}/{len(servers)} servers started")
+        logger.info(
+            f"🎉 MCP toolsets initialization complete: {success_count}/{len(servers)} servers started"
+        )
+        if _initialization_event is not None:
+            _initialization_event.set()
         
     except Exception as e:
         logger.error(f"Failed to load MCP servers: {e}")
+        if _initialization_event is not None:
+            _initialization_event.set()
 
 
 async def shutdown_mcp_toolsets() -> None:
@@ -251,6 +299,7 @@ async def shutdown_mcp_toolsets() -> None:
     _mcp_toolsets = []
     _failed_servers.clear()
     _initialization_started = False
+    _initialization_event = None
     logger.info("MCP toolsets shutdown complete")
 
 
@@ -295,6 +344,23 @@ def get_mcp_toolsets_status() -> dict[str, Any]:
     }
 
 
+async def wait_for_mcp_toolsets(timeout: float | None = None) -> bool:
+    """Wait until MCP toolsets initialization completes."""
+    global _initialization_event
+
+    if _initialization_event is None:
+        return False
+
+    try:
+        if timeout is None:
+            await _initialization_event.wait()
+        else:
+            await asyncio.wait_for(_initialization_event.wait(), timeout=timeout)
+        return True
+    except asyncio.TimeoutError:
+        return False
+
+
 def get_mcp_toolsets_info() -> list[dict[str, Any]]:
     """
     Get information about the loaded MCP toolsets.
@@ -326,3 +392,23 @@ def get_mcp_toolsets_info() -> list[dict[str, Any]]:
             server_info["url"] = server.url
         info.append(server_info)
     return info
+
+
+def is_mcp_toolsets_initialized() -> bool:
+    """Return True when MCP toolsets initialization has completed."""
+    return _initialization_event is not None and _initialization_event.is_set()
+
+
+async def wait_for_mcp_toolsets(timeout: float | None = None) -> bool:
+    """Wait for MCP toolsets initialization to finish."""
+    if _initialization_event is None:
+        return False
+
+    try:
+        if timeout is None:
+            await _initialization_event.wait()
+        else:
+            await asyncio.wait_for(_initialization_event.wait(), timeout=timeout)
+        return True
+    except asyncio.TimeoutError:
+        return False

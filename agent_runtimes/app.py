@@ -12,6 +12,7 @@ Provides a configurable FastAPI application with:
 - Demo agent for testing
 """
 
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 from typing import Any, AsyncGenerator
@@ -91,25 +92,33 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
     # Set the API prefix for dynamic agent creation
     set_api_prefix(config.api_prefix)
     
+    # Store reference to background task to prevent garbage collection
+    _mcp_toolsets_task: asyncio.Task | None = None
+    _mcp_servers_task: asyncio.Task | None = None
+    
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         """Application lifespan handler."""
+        nonlocal _mcp_toolsets_task, _mcp_servers_task
         logger.info("Starting agent-runtimes server...")
         
-        # Initialize Pydantic AI MCP toolsets in background tasks
-        # Servers will be started asynchronously and become available as they start
+        # Initialize Pydantic AI MCP toolsets in a background task
+        # This allows FastAPI to start immediately while MCP servers start async
         logger.info("Initializing Pydantic AI MCP toolsets (background startup)...")
-        await initialize_mcp_toolsets()
+        _mcp_toolsets_task = asyncio.create_task(initialize_mcp_toolsets())
         logger.info("MCP toolset initialization started (servers starting in background)")
         
         # Initialize MCP servers (check availability and discover tools) - for the frontend/config API
+        # This also runs async but we need to wait for it before loading into manager
         logger.info("Initializing MCP servers for configuration API...")
-        mcp_servers = await initialize_mcp_servers(discover_tools=True)
-        
-        # Load initialized MCP servers into the MCP manager
-        mcp_manager = get_mcp_manager()
-        mcp_manager.load_servers(mcp_servers)
-        logger.info(f"Loaded {len(mcp_servers)} MCP servers into manager")
+
+        async def load_mcp_servers_background() -> None:
+            mcp_servers = await initialize_mcp_servers(discover_tools=True)
+            mcp_manager = get_mcp_manager()
+            mcp_manager.load_servers(mcp_servers)
+            logger.info(f"Loaded {len(mcp_servers)} MCP servers into manager")
+
+        _mcp_servers_task = asyncio.create_task(load_mcp_servers_background())
         
         # Set app reference for dynamic A2A route mounting
         set_a2a_app(app, config.api_prefix)
@@ -144,6 +153,32 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
         # Stop A2A TaskManagers on shutdown
         await stop_a2a_task_managers()
         
+        # Wait for MCP toolsets task to complete (or cancel if still running)
+        if _mcp_toolsets_task is not None and not _mcp_toolsets_task.done():
+            logger.info("Waiting for MCP toolsets initialization to complete...")
+            try:
+                await asyncio.wait_for(_mcp_toolsets_task, timeout=5.0)
+            except asyncio.TimeoutError:
+                logger.warning("MCP toolsets initialization timed out, cancelling...")
+                _mcp_toolsets_task.cancel()
+                try:
+                    await _mcp_toolsets_task
+                except asyncio.CancelledError:
+                    pass
+        
+        # Wait for MCP server loading to complete (if still running)
+        if _mcp_servers_task is not None and not _mcp_servers_task.done():
+            logger.info("Waiting for MCP server manager load to complete...")
+            try:
+                await asyncio.wait_for(_mcp_servers_task, timeout=5.0)
+            except asyncio.TimeoutError:
+                logger.warning("MCP server manager load timed out, cancelling...")
+                _mcp_servers_task.cancel()
+                try:
+                    await _mcp_servers_task
+                except asyncio.CancelledError:
+                    pass
+
         # Shutdown MCP toolsets (stop all MCP server subprocesses)
         await shutdown_mcp_toolsets()
         

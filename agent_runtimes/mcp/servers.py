@@ -20,6 +20,7 @@ from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
 from agent_runtimes.types import MCPServer, MCPServerTool
+from agent_runtimes.mcp.toolsets import get_mcp_toolsets, wait_for_mcp_toolsets
 
 logger = logging.getLogger(__name__)
 
@@ -222,6 +223,7 @@ async def create_mcp_servers_with_tools(
     """
     servers: list[MCPServer] = []
     configs = get_mcp_servers_from_config()
+    await wait_for_mcp_toolsets(timeout=5.0)
 
     for config in configs:
         server = MCPServer(
@@ -237,15 +239,50 @@ async def create_mcp_servers_with_tools(
 
         # Discover tools if requested
         if discover_tools:
-            try:
-                tools = await discover_mcp_server_tools(
-                    config, timeout=tool_discovery_timeout
-                )
-                server.tools = tools
-                server.is_available = len(tools) > 0
-            except Exception as e:
-                logger.error(f"Failed to discover tools for {config['id']}: {e}")
-                server.is_available = False
+            tools: list[MCPServerTool] = []
+
+            # Try to reuse running MCP toolset if available
+            running_toolsets = get_mcp_toolsets()
+            running_server = next(
+                (toolset for toolset in running_toolsets if getattr(toolset, "id", None) == config["id"]),
+                None,
+            )
+
+            if running_server is not None:
+                try:
+                    logger.info(
+                        f"Reusing running MCP server '{config['id']}' to list tools"
+                    )
+                    running_tools = await running_server.list_tools()
+                    for tool in running_tools:
+                        input_schema = getattr(tool, "input_schema", None)
+                        if input_schema is None and hasattr(tool, "inputSchema"):
+                            input_schema = getattr(tool, "inputSchema")
+                        tools.append(
+                            MCPServerTool(
+                                name=tool.name,
+                                description=getattr(tool, "description", "") or "",
+                                enabled=True,
+                                input_schema=input_schema,
+                            )
+                        )
+                except Exception as e:
+                    logger.warning(
+                        f"Failed to reuse running MCP server '{config['id']}' for tool discovery: {e}"
+                    )
+
+            # Fallback to spawning a fresh subprocess if needed
+            if not tools:
+                try:
+                    tools = await discover_mcp_server_tools(
+                        config, timeout=tool_discovery_timeout
+                    )
+                except Exception as e:
+                    logger.error(f"Failed to discover tools for {config['id']}: {e}")
+                    tools = []
+
+            server.tools = tools
+            server.is_available = len(tools) > 0
 
         servers.append(server)
 

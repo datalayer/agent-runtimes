@@ -41,8 +41,10 @@ from .toolsets import (
     get_mcp_toolsets,
     get_mcp_toolsets_info,
     get_mcp_toolsets_status,
+    is_mcp_toolsets_initialized,
     initialize_mcp_toolsets,
     shutdown_mcp_toolsets,
+    wait_for_mcp_toolsets,
 )
 
 # Re-export from config for backward compatibility
@@ -70,11 +72,13 @@ __all__ = [
     "get_mcp_toolsets",
     "get_mcp_toolsets_info",
     "get_mcp_toolsets_status",
+    "is_mcp_toolsets_initialized",
     "get_tools_from_mcp",
     "initialize_mcp_servers",
     "initialize_mcp_toolsets",
     "load_mcp_config",
     "set_mcp_manager",
     "shutdown_mcp_toolsets",
+    "wait_for_mcp_toolsets",
     "tools_to_builtin_list",
 ]

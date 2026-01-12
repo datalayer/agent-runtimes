@@ -65,7 +65,7 @@
     "clean:dist": "rimraf dist",
     "clean:lib": "rimraf lib tsconfig.tsbuildinfo",
     "create:patches": "bash scripts/create-patches.sh",
-    "examples": "run-p jupyter:start server:start examples:vite",
+    "examples": "run-p server:start examples:vite",
     "examples:fresh": "npm run clean:cache && npm run examples",
     "examples:nextjs": "npm run dev --workspace=nextjs-notebook-example",
     "examples:vite": "VITE_APP_TARGET=examples VITE_DATALAYER_RUN_URL=http://localhost:8888 vite",
