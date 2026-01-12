@@ -36,6 +36,7 @@ logger = logging.getLogger(__name__)
 # Startup timeout for each MCP server (in seconds)
 # This is long to allow for first-time package downloads (e.g., uvx, npx)
 MCP_SERVER_STARTUP_TIMEOUT = 300  # 5 minutes
+MCP_SERVER_MAX_ATTEMPTS = 3
 
 # Global storage for Pydantic AI MCP toolsets
 _mcp_toolsets: list[Any] = []
@@ -200,61 +201,105 @@ async def initialize_mcp_toolsets() -> None:
         success_count = 0
         for server in servers:
             server_id = getattr(server, "id", str(server))
-            stack = AsyncExitStack()
-            await stack.__aenter__()
-            try:
-                logger.info(
-                    f"⏳ Starting MCP server '{server_id}'... (timeout: {MCP_SERVER_STARTUP_TIMEOUT}s)"
-                )
-                await asyncio.wait_for(
-                    stack.enter_async_context(server),
-                    timeout=MCP_SERVER_STARTUP_TIMEOUT,
-                )
-                tools = await server.list_tools()
-                tool_names = [t.name for t in tools]
-                logger.info(
-                    f"✓ MCP server '{server_id}' started with tools: {tool_names}"
-                )
-                _mcp_toolsets.append(server)
-                _exit_stacks.append(stack)
-                success_count += 1
-            except asyncio.TimeoutError:
-                logger.error(
-                    f"✗ MCP server '{server_id}' startup timed out after {MCP_SERVER_STARTUP_TIMEOUT}s"
-                )
-                _failed_servers[server_id] = (
-                    f"Timeout after {MCP_SERVER_STARTUP_TIMEOUT}s"
-                )
-                await stack.__aexit__(None, None, None)
-            except ExceptionGroup as eg:
-                error_lines = _format_exception_group(eg)
-                for line in error_lines:
-                    logger.error(f"✗ MCP server '{server_id}' exception: {line}")
-                error_detail = (
-                    error_lines[0] if error_lines else "Unknown error in TaskGroup"
-                )
-                logger.error(f"✗ MCP server '{server_id}' failed: {error_detail}")
-                _failed_servers[server_id] = error_detail
-                await stack.__aexit__(None, None, None)
-            except BaseExceptionGroup as beg:  # type: ignore[name-defined]
-                error_lines = _format_exception_group(beg)
-                for line in error_lines:
-                    logger.error(f"✗ MCP server '{server_id}' exception: {line}")
-                error_detail = (
-                    error_lines[0] if error_lines else "Unknown error in TaskGroup"
-                )
-                logger.error(f"✗ MCP server '{server_id}' failed: {error_detail}")
-                _failed_servers[server_id] = error_detail
-                await stack.__aexit__(None, None, None)
-            except Exception as e:
-                error_detail = _format_exception(e)
-                logger.error(
-                    f"✗ MCP server '{server_id}' startup failed: {error_detail}"
-                )
-                _failed_servers[server_id] = error_detail
-                await stack.__aexit__(None, None, None)
-            else:
-                continue
+            attempt = 1
+
+            while attempt <= MCP_SERVER_MAX_ATTEMPTS:
+                stack = AsyncExitStack()
+                await stack.__aenter__()
+
+                try:
+                    logger.info(
+                        f"⏳ Starting MCP server '{server_id}' (attempt {attempt}/{MCP_SERVER_MAX_ATTEMPTS})..."
+                    )
+                    await asyncio.wait_for(
+                        stack.enter_async_context(server),
+                        timeout=MCP_SERVER_STARTUP_TIMEOUT,
+                    )
+                    tools = await server.list_tools()
+                    tool_names = [t.name for t in tools]
+                    logger.info(
+                        f"✓ MCP server '{server_id}' started with tools: {tool_names}"
+                    )
+                    _mcp_toolsets.append(server)
+                    _exit_stacks.append(stack)
+                    _failed_servers.pop(server_id, None)
+                    success_count += 1
+                    break
+
+                except asyncio.TimeoutError:
+                    error_detail = f"Timeout after {MCP_SERVER_STARTUP_TIMEOUT}s"
+                    logger.error(
+                        f"✗ MCP server '{server_id}' startup timed out on attempt {attempt}: {error_detail}"
+                    )
+                    await stack.__aexit__(None, None, None)
+                    if attempt >= MCP_SERVER_MAX_ATTEMPTS:
+                        _failed_servers[server_id] = error_detail
+                        break
+                    logger.info(
+                        f"Retrying MCP server '{server_id}' after timeout (attempt {attempt + 1})"
+                    )
+                    await asyncio.sleep(min(2 * attempt, 5))
+                    attempt += 1
+                    continue
+
+                except ExceptionGroup as eg:
+                    error_lines = _format_exception_group(eg)
+                    for line in error_lines:
+                        logger.error(f"✗ MCP server '{server_id}' exception: {line}")
+                    error_detail = (
+                        error_lines[0] if error_lines else "Unknown error in TaskGroup"
+                    )
+                    await stack.__aexit__(None, None, None)
+                    if "BrokenResourceError" in error_detail and attempt < MCP_SERVER_MAX_ATTEMPTS:
+                        logger.warning(
+                            f"MCP server '{server_id}' hit BrokenResourceError; retrying (attempt {attempt + 1})"
+                        )
+                        await asyncio.sleep(min(2 * attempt, 5))
+                        attempt += 1
+                        continue
+                    logger.error(f"✗ MCP server '{server_id}' failed: {error_detail}")
+                    _failed_servers[server_id] = error_detail
+                    break
+
+                except BaseExceptionGroup as beg:  # type: ignore[name-defined]
+                    error_lines = _format_exception_group(beg)
+                    for line in error_lines:
+                        logger.error(f"✗ MCP server '{server_id}' exception: {line}")
+                    error_detail = (
+                        error_lines[0] if error_lines else "Unknown error in TaskGroup"
+                    )
+                    await stack.__aexit__(None, None, None)
+                    if "BrokenResourceError" in error_detail and attempt < MCP_SERVER_MAX_ATTEMPTS:
+                        logger.warning(
+                            f"MCP server '{server_id}' hit BrokenResourceError; retrying (attempt {attempt + 1})"
+                        )
+                        await asyncio.sleep(min(2 * attempt, 5))
+                        attempt += 1
+                        continue
+                    logger.error(f"✗ MCP server '{server_id}' failed: {error_detail}")
+                    _failed_servers[server_id] = error_detail
+                    break
+
+                except Exception as e:
+                    error_detail = _format_exception(e)
+                    await stack.__aexit__(None, None, None)
+                    if "BrokenResourceError" in error_detail and attempt < MCP_SERVER_MAX_ATTEMPTS:
+                        logger.warning(
+                            f"MCP server '{server_id}' hit BrokenResourceError; retrying (attempt {attempt + 1})"
+                        )
+                        await asyncio.sleep(min(2 * attempt, 5))
+                        attempt += 1
+                        continue
+                    logger.error(
+                        f"✗ MCP server '{server_id}' startup failed: {error_detail}"
+                    )
+                    _failed_servers[server_id] = error_detail
+                    break
+
+                else:
+                    # Should never reach here because of break above
+                    await stack.__aexit__(None, None, None)
+                    break
         
         logger.info(
             f"🎉 MCP toolsets initialization complete: {success_count}/{len(servers)} servers started"
