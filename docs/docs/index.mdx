@@ -106,8 +106,8 @@ See the [Extensions](/extensions) documentation for integration guides.
         └─────────────────────┼─────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────┐
-│                    Agent Adapters                            │
-│              PydanticAI, LangChain, Jupyter AI              │
+│                    Agent Framework                           │
+│           Pydantic AI (+ more based on feedback)            │
 └─────────────────────────────────────────────────────────────┘
                               │
           ┌───────────────────┼───────────────────┐
@@ -118,13 +118,26 @@ See the [Extensions](/extensions) documentation for integration guides.
 └─────────────────────────┘         └─────────────────────────┘
 ```
 
+## Built on Pydantic AI
+
+Agent Runtimes is currently built on top of [Pydantic AI](https://ai.pydantic.dev), a powerful Python agent framework that provides:
+
+- **Type-safe agents** — Full type checking with Pydantic models
+- **Structured outputs** — Reliable JSON responses from LLMs
+- **Tool calling** — First-class support for function tools and MCP
+- **Multi-model support** — Anthropic, OpenAI, Google, and more
+
+:::note Community-Driven Expansion
+We've chosen Pydantic AI as our initial foundation, but we're open to expanding support for other agent frameworks based on community feedback. If you'd like to see support for **Google ADK**, **LangChain**, **CrewAI**, or other frameworks, please [open a discussion](https://github.com/datalayer/agent-runtimes/discussions) or contribute!
+:::
+
 ## Features at a Glance
 
 | Feature | Description |
 |---------|-------------|
 | **Transports** | AG-UI, Vercel AI, ACP (WebSocket), A2A |
 | **Model Providers** | Anthropic, OpenAI, Azure OpenAI, AWS Bedrock |
-| **Agent Libraries** | pydantic-ai, LangChain, Jupyter AI |
+| **Agent Framework** | Pydantic AI (more frameworks based on community feedback) |
 | **MCP Servers** | Tavily, Fetch, custom servers |
 | **Extensions** | A2UI, MCP-UI, MCP Apps |
 | **Streaming** | Real-time SSE and WebSocket streaming |

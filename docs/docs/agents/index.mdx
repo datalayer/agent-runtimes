@@ -1,0 +1,72 @@
+---
+title: Agents
+sidebar_position: 5
+---
+
+# Agents
+
+Agent Runtimes provides a flexible agent architecture built on top of [Pydantic AI](https://ai.pydantic.dev).
+
+## Why Pydantic AI?
+
+We chose Pydantic AI as our foundation because it provides:
+
+- **Type Safety** — Full type checking with Pydantic models for inputs and outputs
+- **Structured Outputs** — Reliable JSON responses from LLMs with validation
+- **Tool Calling** — First-class support for function tools and MCP toolsets
+- **Multi-Model Support** — Works with Anthropic, OpenAI, Google, Azure, and more
+- **Production Ready** — Well-tested and actively maintained
+
+## Creating an Agent
+
+```python
+from pydantic_ai import Agent
+from agent_runtimes.mcp import get_mcp_toolsets
+
+# Get pre-loaded MCP toolsets
+mcp_toolsets = get_mcp_toolsets()
+
+# Create an agent with MCP tools
+agent = Agent(
+    "anthropic:claude-sonnet-4-20250514",
+    system_prompt="You are a helpful assistant with access to web search.",
+    mcp_servers=mcp_toolsets,
+)
+```
+
+## Model Providers
+
+Agents can use models from multiple providers:
+
+| Provider | Model Format |
+|----------|-------------|
+| Anthropic | `anthropic:claude-sonnet-4-20250514` |
+| OpenAI | `openai:gpt-4o` |
+| Azure OpenAI | `azure:gpt-4o` |
+| AWS Bedrock | `bedrock:anthropic.claude-3-sonnet` |
+| Google | `google:gemini-1.5-pro` |
+
+## Per-Request Model Selection
+
+Switch models dynamically without restarting:
+
+```python
+# Use Claude for complex reasoning
+result = await agent.run("Analyze this data...", model="anthropic:claude-sonnet-4-20250514")
+
+# Use GPT-4 for creative tasks
+result = await agent.run("Write a poem...", model="openai:gpt-4o")
+```
+
+## Future Framework Support
+
+:::note Community-Driven
+We're open to expanding support for other agent frameworks based on community feedback:
+
+- **Google ADK** — Google's Agent Development Kit
+- **LangChain** — Popular Python agent framework
+- **CrewAI** — Multi-agent orchestration
+- **AutoGen** — Microsoft's agent framework
+
+[Share your feedback](https://github.com/datalayer/agent-runtimes/discussions) on which frameworks you'd like to see supported!
+:::
