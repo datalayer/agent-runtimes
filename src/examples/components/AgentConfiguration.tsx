@@ -226,7 +226,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
           marginBottom: 3,
         }}
       >
-        Connection Settings
+        Create a new Agent
       </Text>
 
       <FormControl sx={{ marginBottom: 3 }}>

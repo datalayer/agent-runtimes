@@ -37,6 +37,13 @@ from .tools import (
     get_tools_from_mcp,
     tools_to_builtin_list,
 )
+from .toolsets import (
+    get_mcp_toolsets,
+    get_mcp_toolsets_info,
+    get_mcp_toolsets_status,
+    initialize_mcp_toolsets,
+    shutdown_mcp_toolsets,
+)
 
 # Re-export from config for backward compatibility
 from agent_runtimes.config import get_frontend_config
@@ -60,9 +67,14 @@ __all__ = [
     "get_mcp_servers",
     "get_mcp_servers_from_config",
     "get_mcp_servers_sync",
+    "get_mcp_toolsets",
+    "get_mcp_toolsets_info",
+    "get_mcp_toolsets_status",
     "get_tools_from_mcp",
     "initialize_mcp_servers",
+    "initialize_mcp_toolsets",
     "load_mcp_config",
     "set_mcp_manager",
+    "shutdown_mcp_toolsets",
     "tools_to_builtin_list",
 ]

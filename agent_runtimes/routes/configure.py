@@ -8,7 +8,7 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query
 
-from agent_runtimes.mcp import get_available_tools, get_frontend_config, get_mcp_manager
+from agent_runtimes.mcp import get_available_tools, get_frontend_config, get_mcp_manager, get_mcp_toolsets_status, get_mcp_toolsets_info
 from agent_runtimes.types import FrontendConfig
 
 logger = logging.getLogger(__name__)
@@ -61,3 +61,25 @@ async def get_configuration(
     except Exception as e:
         logger.error(f"Error getting configuration: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/mcp-toolsets-status")
+async def get_toolsets_status() -> dict[str, Any]:
+    """
+    Get the status of MCP toolsets for Pydantic AI agents.
+    
+    Returns:
+        Status information including ready, pending, and failed servers.
+    """
+    return get_mcp_toolsets_status()
+
+
+@router.get("/mcp-toolsets-info")
+async def get_toolsets_info() -> list[dict[str, Any]]:
+    """
+    Get information about running MCP toolsets.
+    
+    Returns:
+        List of running MCP server information (sensitive data redacted).
+    """
+    return get_mcp_toolsets_info()

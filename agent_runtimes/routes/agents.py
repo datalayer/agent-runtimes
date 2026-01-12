@@ -12,7 +12,6 @@ Provides REST API endpoints for:
 """
 
 import logging
-from pathlib import Path
 from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException, Request
@@ -20,9 +19,9 @@ from pydantic import BaseModel, Field
 from starlette.routing import Mount
 
 from pydantic_ai import Agent as PydanticAgent
-from pydantic_ai.mcp import load_mcp_servers
 
 from ..adapters.pydantic_ai_adapter import PydanticAIAdapter
+from ..mcp import get_mcp_toolsets
 from ..transports import AGUITransport, VercelAITransport, MCPUITransport
 from .acp import AgentCapabilities, AgentInfo, register_agent, unregister_agent, _agents
 from .agui import register_agui_agent, unregister_agui_agent, get_agui_app
@@ -36,9 +35,6 @@ router = APIRouter(prefix="/agents", tags=["agents"])
 
 # Store the API prefix for dynamic mount paths
 _api_prefix = "/api/v1"
-
-# Store MCP servers that have been started (for cleanup on agent deletion)
-_agent_mcp_servers: dict[str, list[Any]] = {}
 
 
 def set_api_prefix(prefix: str) -> None:
@@ -110,32 +106,14 @@ async def create_agent(request: CreateAgentRequest, http_request: Request) -> Cr
         )
     
     try:
-        # Load MCP servers from config file if it exists
-        mcp_config_path = Path.home() / ".datalayer" / "mcp.json"
-        mcp_toolsets = []
-        if mcp_config_path.exists():
-            try:
-                mcp_toolsets = load_mcp_servers(str(mcp_config_path))
-                logger.info(f"Loaded {len(mcp_toolsets)} MCP servers from {mcp_config_path}")
-                
-                # Start each MCP server by entering its async context
-                # This keeps the stdio servers running for the lifetime of the agent
-                for server in mcp_toolsets:
-                    try:
-                        await server.__aenter__()
-                        logger.info(f"Started MCP server: {server}")
-                    except Exception as e:
-                        logger.warning(f"Failed to start MCP server {server}: {e}")
-                        
-                # Store servers for cleanup later
-                _agent_mcp_servers[agent_id] = mcp_toolsets
-                
-            except Exception as e:
-                logger.warning(f"Failed to load MCP servers from {mcp_config_path}: {e}")
+        # Get pre-loaded MCP toolsets (started at server startup)
+        mcp_toolsets = get_mcp_toolsets()
+        if mcp_toolsets:
+            logger.info(f"Using {len(mcp_toolsets)} pre-loaded MCP toolsets for agent {agent_id}")
         
         # Create the agent based on the library
         if request.agent_library == "pydantic-ai":
-            # First create the underlying Pydantic AI Agent
+            # First create the underlying Pydantic AI Agent with MCP toolsets
             pydantic_agent = PydanticAgent(
                 request.model,
                 system_prompt=request.system_prompt,
@@ -316,15 +294,8 @@ async def delete_agent(agent_id: str) -> dict[str, str]:
     if agent_id not in _agents:
         raise HTTPException(status_code=404, detail=f"Agent not found: {agent_id}")
     
-    # Stop MCP servers if any
-    if agent_id in _agent_mcp_servers:
-        for server in _agent_mcp_servers[agent_id]:
-            try:
-                await server.__aexit__(None, None, None)
-                logger.info(f"Stopped MCP server: {server}")
-            except Exception as e:
-                logger.warning(f"Failed to stop MCP server {server}: {e}")
-        del _agent_mcp_servers[agent_id]
+    # Note: MCP servers are managed at server level (started on server startup,
+    # stopped on server shutdown), so no cleanup needed per-agent.
     
     # Unregister from all protocols
     try:

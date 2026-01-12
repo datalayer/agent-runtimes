@@ -21,7 +21,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from starlette.routing import Mount
 
-from .mcp import initialize_mcp_servers, get_mcp_manager
+from .mcp import (
+    initialize_mcp_servers,
+    get_mcp_manager,
+    initialize_mcp_toolsets,
+    shutdown_mcp_toolsets,
+)
 from .routes import (
     a2a_protocol_router,
     A2AAgentCard,
@@ -91,8 +96,14 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
         """Application lifespan handler."""
         logger.info("Starting agent-runtimes server...")
         
-        # Initialize MCP servers (check availability and discover tools)
-        logger.info("Initializing MCP servers...")
+        # Initialize Pydantic AI MCP toolsets in background tasks
+        # Servers will be started asynchronously and become available as they start
+        logger.info("Initializing Pydantic AI MCP toolsets (background startup)...")
+        await initialize_mcp_toolsets()
+        logger.info("MCP toolset initialization started (servers starting in background)")
+        
+        # Initialize MCP servers (check availability and discover tools) - for the frontend/config API
+        logger.info("Initializing MCP servers for configuration API...")
         mcp_servers = await initialize_mcp_servers(discover_tools=True)
         
         # Load initialized MCP servers into the MCP manager
@@ -132,6 +143,10 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
         
         # Stop A2A TaskManagers on shutdown
         await stop_a2a_task_managers()
+        
+        # Shutdown MCP toolsets (stop all MCP server subprocesses)
+        await shutdown_mcp_toolsets()
+        
         logger.info("Shutting down agent-runtimes server...")
     
     app = FastAPI(
