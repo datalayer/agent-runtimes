@@ -36,6 +36,7 @@ logger = logging.getLogger(__name__)
 # Startup timeout for each MCP server (in seconds)
 # This is long to allow for first-time package downloads (e.g., uvx, npx)
 MCP_SERVER_STARTUP_TIMEOUT = 300  # 5 minutes
+MCP_SERVER_HANDSHAKE_TIMEOUT = 180
 MCP_SERVER_MAX_ATTEMPTS = 3
 
 # Global storage for Pydantic AI MCP toolsets
@@ -56,6 +57,14 @@ def get_mcp_config_path() -> Path:
         Path to mcp.json file
     """
     return Path.home() / ".datalayer" / "mcp.json"
+
+
+def ensure_mcp_toolsets_event() -> None:
+    """Ensure the initialization event exists for external waiters."""
+    global _initialization_event
+
+    if _initialization_event is None:
+        _initialization_event = asyncio.Event()
 
 
 def _format_exception(exc: BaseException) -> str:
@@ -203,6 +212,20 @@ async def initialize_mcp_toolsets() -> None:
             server_id = getattr(server, "id", str(server))
             attempt = 1
 
+            # Increase per-server handshake timeout when supported (default is 60s)
+            if hasattr(server, "timeout"):
+                try:
+                    current_timeout = getattr(server, "timeout")
+                    if current_timeout is None or current_timeout < MCP_SERVER_HANDSHAKE_TIMEOUT:
+                        setattr(server, "timeout", MCP_SERVER_HANDSHAKE_TIMEOUT)
+                        logger.debug(
+                            f"Adjusted MCP server '{server_id}' handshake timeout to {MCP_SERVER_HANDSHAKE_TIMEOUT}s"
+                        )
+                except Exception as timeout_error:  # pragma: no cover - non-critical
+                    logger.debug(
+                        f"Unable to adjust handshake timeout for MCP server '{server_id}': {timeout_error}"
+                    )
+
             while attempt <= MCP_SERVER_MAX_ATTEMPTS:
                 stack = AsyncExitStack()
                 await stack.__aenter__()
@@ -215,6 +238,7 @@ async def initialize_mcp_toolsets() -> None:
                         stack.enter_async_context(server),
                         timeout=MCP_SERVER_STARTUP_TIMEOUT,
                     )
+                    await asyncio.sleep(0)
                     tools = await server.list_tools()
                     tool_names = [t.name for t in tools]
                     logger.info(
@@ -442,18 +466,3 @@ def get_mcp_toolsets_info() -> list[dict[str, Any]]:
 def is_mcp_toolsets_initialized() -> bool:
     """Return True when MCP toolsets initialization has completed."""
     return _initialization_event is not None and _initialization_event.is_set()
-
-
-async def wait_for_mcp_toolsets(timeout: float | None = None) -> bool:
-    """Wait for MCP toolsets initialization to finish."""
-    if _initialization_event is None:
-        return False
-
-    try:
-        if timeout is None:
-            await _initialization_event.wait()
-        else:
-            await asyncio.wait_for(_initialization_event.wait(), timeout=timeout)
-        return True
-    except asyncio.TimeoutError:
-        return False

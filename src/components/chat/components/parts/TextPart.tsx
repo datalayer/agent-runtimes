@@ -110,7 +110,11 @@ export function TextPart({
           '& ul, & ol': {
             marginTop: '0.5em',
             marginBottom: '0.5em',
-            paddingLeft: '1.5em',
+            paddingLeft: '1.2em',
+            marginLeft: '0.3em',
+          },
+          '& li': {
+            listStylePosition: 'inside',
           },
           '& code': {
             backgroundColor: 'neutral.muted',

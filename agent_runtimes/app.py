@@ -14,6 +14,8 @@ Provides a configurable FastAPI application with:
 
 import asyncio
 import logging
+import multiprocessing as mp
+import sys
 from contextlib import asynccontextmanager
 from typing import Any, AsyncGenerator
 
@@ -23,6 +25,7 @@ from pydantic import BaseModel, Field
 from starlette.routing import Mount
 
 from .mcp import (
+    ensure_mcp_toolsets_event,
     initialize_mcp_servers,
     get_mcp_manager,
     initialize_mcp_toolsets,
@@ -51,6 +54,11 @@ from .routes import (
 from .routes.agents import set_api_prefix
 
 logger = logging.getLogger(__name__)
+
+
+def _is_reload_parent_process() -> bool:
+    """Return True when running inside the reload supervisor parent."""
+    return "--reload" in sys.argv and mp.current_process().name == "MainProcess"
 
 
 class ServerConfig(BaseModel):
@@ -102,23 +110,27 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
         nonlocal _mcp_toolsets_task, _mcp_servers_task
         logger.info("Starting agent-runtimes server...")
         
-        # Initialize Pydantic AI MCP toolsets in a background task
-        # This allows FastAPI to start immediately while MCP servers start async
-        logger.info("Initializing Pydantic AI MCP toolsets (background startup)...")
-        _mcp_toolsets_task = asyncio.create_task(initialize_mcp_toolsets())
-        logger.info("MCP toolset initialization started (servers starting in background)")
-        
-        # Initialize MCP servers (check availability and discover tools) - for the frontend/config API
-        # This also runs async but we need to wait for it before loading into manager
-        logger.info("Initializing MCP servers for configuration API...")
+        if _is_reload_parent_process():
+            logger.info("Reload parent detected; deferring MCP startup to worker process")
+        else:
+            # Initialize Pydantic AI MCP toolsets in a background task
+            # This allows FastAPI to start immediately while MCP servers start async
+            logger.info("Initializing Pydantic AI MCP toolsets (background startup)...")
+            ensure_mcp_toolsets_event()
+            _mcp_toolsets_task = asyncio.create_task(initialize_mcp_toolsets())
+            logger.info("MCP toolset initialization started (servers starting in background)")
 
-        async def load_mcp_servers_background() -> None:
-            mcp_servers = await initialize_mcp_servers(discover_tools=True)
-            mcp_manager = get_mcp_manager()
-            mcp_manager.load_servers(mcp_servers)
-            logger.info(f"Loaded {len(mcp_servers)} MCP servers into manager")
+            # Initialize MCP servers (check availability and discover tools) - for the frontend/config API
+            # This also runs async but we need to wait for it before loading into manager
+            logger.info("Initializing MCP servers for configuration API...")
 
-        _mcp_servers_task = asyncio.create_task(load_mcp_servers_background())
+            async def load_mcp_servers_background() -> None:
+                mcp_servers = await initialize_mcp_servers(discover_tools=True)
+                mcp_manager = get_mcp_manager()
+                mcp_manager.load_servers(mcp_servers)
+                logger.info(f"Loaded {len(mcp_servers)} MCP servers into manager")
+
+            _mcp_servers_task = asyncio.create_task(load_mcp_servers_background())
         
         # Set app reference for dynamic A2A route mounting
         set_a2a_app(app, config.api_prefix)
@@ -180,7 +192,8 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
                     pass
 
         # Shutdown MCP toolsets (stop all MCP server subprocesses)
-        await shutdown_mcp_toolsets()
+        if not _is_reload_parent_process():
+            await shutdown_mcp_toolsets()
         
         logger.info("Shutting down agent-runtimes server...")
     

@@ -2121,7 +2121,21 @@ function ChatBaseInner({
                       {getMessageText(message)}
                     </Text>
                   ) : (
-                    <Box sx={{ fontSize: 1, lineHeight: 1.5 }}>
+                    <Box
+                      sx={{
+                        fontSize: 1,
+                        lineHeight: 1.5,
+                        '& ul, & ol': {
+                          marginTop: '0.5em',
+                          marginBottom: '0.5em',
+                          paddingInlineStart: '1.25em',
+                          listStylePosition: 'inside',
+                        },
+                        '& li': {
+                          paddingInlineStart: '0.25em',
+                        },
+                      }}
+                    >
                       <Streamdown>
                         {getMessageText(message) || (isStreaming ? '...' : '')}
                       </Streamdown>

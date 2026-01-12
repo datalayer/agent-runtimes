@@ -14,6 +14,8 @@ import {
   FileIcon,
   ToolsIcon,
   ClockIcon,
+  CheckCircleIcon,
+  XCircleIcon,
 } from '@primer/octicons-react';
 import {
   Box,
@@ -23,8 +25,10 @@ import {
   Text,
   Label,
   ProgressBar,
+  Spinner,
 } from '@primer/react';
 import { AiAgentIcon } from '@datalayer/icons-react';
+import { useQuery } from '@tanstack/react-query';
 
 // Mock context data for display
 const MOCK_CONTEXT_DATA = {
@@ -86,6 +90,27 @@ export interface AgentDetailsProps {
 }
 
 /**
+ * MCP toolsets status response
+ */
+interface MCPToolsetsStatus {
+  initialized: boolean;
+  ready_count: number;
+  failed_count: number;
+  ready_servers: string[];
+  failed_servers: Record<string, string>;
+}
+
+function getLocalApiBase(): string {
+  if (typeof window === 'undefined') {
+    return '';
+  }
+  const host = window.location.hostname;
+  return host === 'localhost' || host === '127.0.0.1'
+    ? 'http://127.0.0.1:8765'
+    : '';
+}
+
+/**
  * Format token count for display
  */
 function formatTokens(tokens: number): string {
@@ -129,6 +154,23 @@ export function AgentDetails({
 }: AgentDetailsProps) {
   const contextUsagePercent =
     (MOCK_CONTEXT_DATA.usedTokens / MOCK_CONTEXT_DATA.totalTokens) * 100;
+
+  // Fetch MCP toolsets status
+  const { data: mcpStatus, isLoading: mcpLoading } =
+    useQuery<MCPToolsetsStatus>({
+      queryKey: ['mcp-toolsets-status'],
+      queryFn: async () => {
+        const apiBase = getLocalApiBase();
+        const response = await fetch(
+          `${apiBase}/api/v1/configure/mcp-toolsets-status`,
+        );
+        if (!response.ok) {
+          throw new Error('Failed to fetch MCP status');
+        }
+        return response.json();
+      },
+      refetchInterval: 5000, // Refresh every 5 seconds
+    });
 
   return (
     <Box
@@ -275,6 +317,138 @@ export function AgentDetails({
               </Text>{' '}
               {messageCount === 1 ? 'message' : 'messages'}
             </Text>
+          </Box>
+        </Box>
+
+        {/* MCP Toolsets Status */}
+        <Box>
+          <Heading
+            as="h4"
+            sx={{
+              fontSize: 1,
+              fontWeight: 'semibold',
+              mb: 2,
+              color: 'fg.muted',
+            }}
+          >
+            MCP Toolsets
+          </Heading>
+          <Box
+            sx={{
+              p: 3,
+              bg: 'canvas.subtle',
+              borderRadius: 2,
+              border: '1px solid',
+              borderColor: 'border.default',
+            }}
+          >
+            {mcpLoading ? (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Spinner size="small" />
+                <Text sx={{ fontSize: 1, color: 'fg.muted' }}>
+                  Loading MCP status...
+                </Text>
+              </Box>
+            ) : mcpStatus ? (
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Text sx={{ fontSize: 1 }}>
+                    <Text as="span" sx={{ fontWeight: 'semibold' }}>
+                      {mcpStatus.ready_count}
+                    </Text>{' '}
+                    ready,{' '}
+                    <Text as="span" sx={{ fontWeight: 'semibold' }}>
+                      {mcpStatus.failed_count}
+                    </Text>{' '}
+                    failed
+                  </Text>
+                </Box>
+                {mcpStatus.ready_servers.length > 0 && (
+                  <Box
+                    sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}
+                  >
+                    <Text
+                      sx={{
+                        fontSize: 0,
+                        fontWeight: 'semibold',
+                        color: 'fg.muted',
+                      }}
+                    >
+                      Ready:
+                    </Text>
+                    {mcpStatus.ready_servers.map(server => (
+                      <Box
+                        key={server}
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 2,
+                          pl: 2,
+                        }}
+                      >
+                        <CheckCircleIcon size={16} fill="success.fg" />
+                        <Text sx={{ fontSize: 1 }}>{server}</Text>
+                      </Box>
+                    ))}
+                  </Box>
+                )}
+                {Object.keys(mcpStatus.failed_servers).length > 0 && (
+                  <Box
+                    sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}
+                  >
+                    <Text
+                      sx={{
+                        fontSize: 0,
+                        fontWeight: 'semibold',
+                        color: 'fg.muted',
+                      }}
+                    >
+                      Failed:
+                    </Text>
+                    {Object.entries(mcpStatus.failed_servers).map(
+                      ([server, error]) => (
+                        <Box
+                          key={server}
+                          sx={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: 1,
+                            pl: 2,
+                          }}
+                        >
+                          <Box
+                            sx={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 2,
+                            }}
+                          >
+                            <XCircleIcon size={16} fill="danger.fg" />
+                            <Text sx={{ fontSize: 1 }}>{server}</Text>
+                          </Box>
+                          <Text
+                            sx={{
+                              fontSize: 0,
+                              color: 'danger.fg',
+                              fontFamily: 'mono',
+                              pl: 4,
+                              whiteSpace: 'pre-wrap',
+                              wordBreak: 'break-word',
+                            }}
+                          >
+                            {error.split('\n')[0]}
+                          </Text>
+                        </Box>
+                      ),
+                    )}
+                  </Box>
+                )}
+              </Box>
+            ) : (
+              <Text sx={{ fontSize: 1, color: 'fg.muted' }}>
+                Failed to load MCP status
+              </Text>
+            )}
           </Box>
         </Box>
 

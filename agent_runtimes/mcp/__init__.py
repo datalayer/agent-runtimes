@@ -38,6 +38,7 @@ from .tools import (
     tools_to_builtin_list,
 )
 from .toolsets import (
+    ensure_mcp_toolsets_event,
     get_mcp_toolsets,
     get_mcp_toolsets_info,
     get_mcp_toolsets_status,
@@ -74,6 +75,7 @@ __all__ = [
     "get_mcp_toolsets_status",
     "is_mcp_toolsets_initialized",
     "get_tools_from_mcp",
+    "ensure_mcp_toolsets_event",
     "initialize_mcp_servers",
     "initialize_mcp_toolsets",
     "load_mcp_config",
