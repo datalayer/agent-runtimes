@@ -1,5 +1,172 @@
 ---
 title: Extensions
+sidebar_position: 5
 ---
 
 # Extensions
+
+Agent Runtimes supports several extension protocols that enable rich user interfaces and inter-agent communication.
+
+## A2UI (Agent-to-UI)
+
+A2UI enables agents to communicate with user interfaces through a standardized protocol, allowing for rich interactive experiences.
+
+### Features
+
+- **Bidirectional Communication** — Agents can send UI updates and receive user inputs
+- **Component Rendering** — Agents can request specific UI components to be rendered
+- **State Synchronization** — Keep UI state in sync with agent state
+- **Event Handling** — Process user interactions and form submissions
+
+### Endpoints
+
+| Endpoint | Description |
+|----------|-------------|
+| `/api/v1/a2ui/` | A2UI protocol endpoint |
+| `/api/v1/a2ui/agents` | List A2UI-enabled agents |
+
+### Usage
+
+```typescript
+import { A2UIAdapter } from '@datalayer/agent-runtimes';
+
+const adapter = new A2UIAdapter({
+  agentId: 'my-agent',
+  baseUrl: 'http://localhost:8765',
+});
+
+// Connect and receive UI events
+adapter.connect((event) => {
+  console.log('UI event:', event);
+});
+```
+
+## MCP-UI
+
+MCP-UI provides a user interface layer for interacting with MCP (Model Context Protocol) servers and their tools.
+
+### Features
+
+- **Tool Browser** — Browse available tools from connected MCP servers
+- **Tool Execution** — Execute MCP tools with parameter input
+- **Result Display** — View tool execution results in formatted output
+- **Server Status** — Monitor MCP server connection status
+
+### Endpoints
+
+| Endpoint | Description |
+|----------|-------------|
+| `/api/v1/mcp-ui/` | MCP-UI protocol endpoint |
+| `/api/v1/mcp-ui/agents` | List MCP-UI enabled agents |
+
+### Integration
+
+MCP-UI is automatically registered for agents that have MCP toolsets enabled:
+
+```python
+from agent_runtimes.transports import MCPUITransport
+
+# Register an agent with MCP-UI
+mcp_ui_adapter = MCPUITransport(agent)
+register_mcp_ui_agent(agent_id, mcp_ui_adapter)
+```
+
+## MCP Apps
+
+[MCP Apps](https://blog.modelcontextprotocol.io/posts/2025-11-21-mcp-apps) is an extension to the Model Context Protocol that enables MCP servers to provide full application experiences, not just tools.
+
+### What are MCP Apps?
+
+MCP Apps extend the traditional MCP model by allowing servers to:
+
+- **Serve Full Applications** — Complete UI experiences, not just API endpoints
+- **Maintain State** — Persistent application state across interactions
+- **Handle Navigation** — Multi-page application flows
+- **Render Rich Content** — HTML, forms, charts, and interactive elements
+
+### Integration with Agent Runtimes
+
+Agent Runtimes includes the `@mcp-ui/client` and `@modelcontextprotocol/ext-apps` packages for MCP Apps support:
+
+```typescript
+import { MCPAppsClient } from '@modelcontextprotocol/ext-apps';
+
+const client = new MCPAppsClient({
+  serverUrl: 'http://localhost:3000/mcp-app',
+});
+
+// Render app content
+const content = await client.getContent('/dashboard');
+```
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                   Agent Runtimes UI                          │
+│                  (React Components)                          │
+└─────────────────────────────────────────────────────────────┘
+                              │
+        ┌─────────────────────┼─────────────────────┐
+        ↓                     ↓                     ↓
+┌───────────────┐   ┌───────────────┐   ┌───────────────┐
+│     A2UI      │   │    MCP-UI     │   │   MCP Apps    │
+│   Protocol    │   │   Protocol    │   │   Protocol    │
+└───────────────┘   └───────────────┘   └───────────────┘
+        │                     │                     │
+        └─────────────────────┼─────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────┐
+│                    MCP Servers                               │
+│              (Tools, Resources, Apps)                        │
+└─────────────────────────────────────────────────────────────┘
+```
+
+## Comparison
+
+| Feature | A2UI | MCP-UI | MCP Apps |
+|---------|------|--------|----------|
+| **Purpose** | Agent-to-UI communication | MCP tool interface | Full applications |
+| **Interaction** | Bidirectional events | Tool execution | App navigation |
+| **State** | Session-based | Stateless | Persistent |
+| **Content** | Structured events | Tool results | Rich HTML/UI |
+| **Best For** | Chat UIs | Tool browsers | Dashboards |
+
+## Getting Started
+
+### Enable A2UI
+
+```python
+from agent_runtimes.routes import a2ui_router
+
+app.include_router(a2ui_router, prefix="/api/v1")
+```
+
+### Enable MCP-UI
+
+```python
+from agent_runtimes.routes import mcp_ui_router
+
+app.include_router(mcp_ui_router, prefix="/api/v1")
+```
+
+### Enable MCP Apps
+
+```typescript
+// In your React application
+import { MCPAppsProvider } from '@mcp-ui/client';
+
+function App() {
+  return (
+    <MCPAppsProvider>
+      <YourComponent />
+    </MCPAppsProvider>
+  );
+}
+```
+
+## Related Resources
+
+- [MCP Apps Blog Post](https://blog.modelcontextprotocol.io/posts/2025-11-21-mcp-apps)
+- [MCP Specification](https://spec.modelcontextprotocol.io)
+- [A2A Protocol](/a2a) — Agent-to-Agent communication

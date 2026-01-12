@@ -1,5 +1,347 @@
 ---
-title: Endpoints
+title: API Endpoints
+sidebar_position: 4
 ---
 
-# Endpoints
+# API Endpoints
+
+Agent Runtimes exposes a comprehensive REST API for managing agents, executing prompts, and monitoring system status.
+
+## Base URL
+
+```
+http://localhost:8765/api/v1
+```
+
+## Agents
+
+Manage AI agents and their configurations.
+
+### List Agents
+
+```http
+GET /api/v1/agents
+```
+
+Returns a list of all registered agents.
+
+**Response:**
+
+```json
+{
+  "agents": [
+    {
+      "id": "pydantic-ai",
+      "name": "Pydantic AI Agent",
+      "transport": "streaming",
+      "model": "gpt-4o"
+    }
+  ]
+}
+```
+
+### Get Agent
+
+```http
+GET /api/v1/agents/{agent_id}
+```
+
+Get details for a specific agent.
+
+**Response:**
+
+```json
+{
+  "id": "pydantic-ai",
+  "name": "Pydantic AI Agent",
+  "transport": "streaming",
+  "model": "gpt-4o",
+  "mcp_toolsets": ["tavily", "fetch"]
+}
+```
+
+### Create Agent
+
+```http
+POST /api/v1/agents
+Content-Type: application/json
+```
+
+Create a new agent.
+
+**Request Body:**
+
+```json
+{
+  "id": "my-agent",
+  "name": "My Custom Agent",
+  "model": "gpt-4o",
+  "system_prompt": "You are a helpful assistant."
+}
+```
+
+### Update Agent
+
+```http
+PUT /api/v1/agents/{agent_id}
+Content-Type: application/json
+```
+
+Update an existing agent configuration.
+
+### Delete Agent
+
+```http
+DELETE /api/v1/agents/{agent_id}
+```
+
+Remove an agent from the system.
+
+## Prompts
+
+Execute prompts against agents and manage conversations.
+
+### Send Prompt (Streaming)
+
+```http
+POST /api/v1/agents/{agent_id}/prompt
+Content-Type: application/json
+```
+
+Send a prompt to an agent and receive a streaming response.
+
+**Request Body:**
+
+```json
+{
+  "message": "What is the weather in Paris?",
+  "conversation_id": "optional-conversation-id"
+}
+```
+
+**Response:** Server-Sent Events (SSE) stream
+
+```
+data: {"type": "text", "content": "Based on "}
+data: {"type": "text", "content": "the current weather..."}
+data: {"type": "tool_call", "name": "get_weather", "args": {...}}
+data: {"type": "tool_result", "result": {...}}
+data: {"type": "done"}
+```
+
+### Send Prompt (Non-Streaming)
+
+```http
+POST /api/v1/agents/{agent_id}/prompt/sync
+Content-Type: application/json
+```
+
+Send a prompt and wait for the complete response.
+
+**Response:**
+
+```json
+{
+  "response": "Based on the current weather data...",
+  "tool_calls": [...],
+  "usage": {
+    "prompt_tokens": 150,
+    "completion_tokens": 200
+  }
+}
+```
+
+## Configuration
+
+System configuration and status endpoints.
+
+### Get Configuration
+
+```http
+GET /api/v1/configure/config
+```
+
+Get the current system configuration.
+
+**Response:**
+
+```json
+{
+  "agents": [...],
+  "mcp_servers": [...],
+  "models": [...]
+}
+```
+
+### MCP Toolsets Status
+
+```http
+GET /api/v1/configure/mcp-toolsets-status
+```
+
+Get the status of MCP toolsets initialization.
+
+**Response:**
+
+```json
+{
+  "initialized": true,
+  "ready_count": 2,
+  "total_count": 2,
+  "servers": {
+    "tavily": {
+      "ready": true,
+      "tools": ["tavily_search", "tavily_extract"]
+    },
+    "fetch": {
+      "ready": true,
+      "tools": ["fetch"]
+    }
+  }
+}
+```
+
+### MCP Toolsets Info
+
+```http
+GET /api/v1/configure/mcp-toolsets-info
+```
+
+Get detailed information about all MCP toolsets including available tools.
+
+**Response:**
+
+```json
+{
+  "toolsets": [
+    {
+      "name": "tavily",
+      "tools": [
+        {
+          "name": "tavily_search",
+          "description": "Search the web using Tavily",
+          "parameters": {...}
+        }
+      ]
+    }
+  ]
+}
+```
+
+## Extensions
+
+### A2UI Endpoints
+
+```http
+GET  /api/v1/a2ui/           # A2UI protocol
+GET  /api/v1/a2ui/agents     # List A2UI agents
+```
+
+### MCP-UI Endpoints
+
+```http
+GET  /api/v1/mcp-ui/         # MCP-UI protocol
+GET  /api/v1/mcp-ui/agents   # List MCP-UI agents
+```
+
+## Conversations
+
+Manage conversation history and context.
+
+### Get Conversation
+
+```http
+GET /api/v1/conversations/{conversation_id}
+```
+
+Retrieve a conversation by ID.
+
+### List Conversations
+
+```http
+GET /api/v1/conversations
+```
+
+List all conversations, optionally filtered by agent.
+
+### Delete Conversation
+
+```http
+DELETE /api/v1/conversations/{conversation_id}
+```
+
+Delete a conversation and its history.
+
+## Health & Status
+
+### Health Check
+
+```http
+GET /api/v1/health
+```
+
+**Response:**
+
+```json
+{
+  "status": "healthy",
+  "version": "0.4.5"
+}
+```
+
+### Readiness Check
+
+```http
+GET /api/v1/ready
+```
+
+Returns 200 when the service is ready to accept requests.
+
+## Error Responses
+
+All endpoints return standard error responses:
+
+```json
+{
+  "detail": "Agent not found",
+  "status_code": 404
+}
+```
+
+### Common Status Codes
+
+| Code | Description |
+|------|-------------|
+| `200` | Success |
+| `201` | Created |
+| `400` | Bad Request |
+| `404` | Not Found |
+| `422` | Validation Error |
+| `500` | Internal Server Error |
+
+## Authentication
+
+:::info
+Authentication is optional and configurable. When enabled, include the API key in the request header:
+
+```http
+Authorization: Bearer your-api-key
+```
+:::
+
+## Rate Limiting
+
+Rate limiting can be configured per endpoint. When rate limited, you'll receive:
+
+```http
+HTTP/1.1 429 Too Many Requests
+Retry-After: 60
+```
+
+## OpenAPI Documentation
+
+Interactive API documentation is available at:
+
+- **Swagger UI:** `http://localhost:8765/docs`
+- **ReDoc:** `http://localhost:8765/redoc`
+- **OpenAPI JSON:** `http://localhost:8765/openapi.json`
