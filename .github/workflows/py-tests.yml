@@ -1,0 +1,67 @@
+name: Py Tests
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'agent_runtimes/**'
+      - 'pyproject.toml'
+      - 'setup.py'
+      - 'requirements*.txt'
+      - '**/*.py'
+      - '.github/workflows/tests.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'agent_runtimes/**'
+      - 'pyproject.toml'
+      - 'setup.py'
+      - 'requirements*.txt'
+      - '**/*.py'
+      - '.github/workflows/tests.yml'
+
+  workflow_dispatch:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    strategy:
+      max-parallel: 1
+      matrix:
+        python-version: ['3.10', '3.11', '3.12', '3.13']
+    steps:
+
+      - name: Install deps
+        run: |
+          sudo apt install libdbus-1-3 libdbus-1-dev libglib2.0-dev
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure git to use https
+        run: git config --global hub.protocol https
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "latest"
+          python-version: ${{ matrix.python-version }}
+          activate-environment: true
+
+      - name: Install dev tools
+        run: |
+          uv pip install .
+          uv pip install .[test]
+          uv pip install dbus-python keyring secretstorage
+
+      - name: Unlock keyring
+        uses: t1m0thyj/unlock-keyring@v1
+
+      - name: Run basic tests
+        env:
+          TEST_DATALAYER_API_KEY: ${{ secrets.TEST_DATALAYER_API_KEY }}
+          DATALAYER_API_KEY: ${{ secrets.TEST_DATALAYER_API_KEY }}
+        run: |
+          pytest agent_runtimes/tests/ --cov=agent_runtimes --cov-report term-missing

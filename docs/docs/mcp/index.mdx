@@ -1,0 +1,244 @@
+---
+title: Model Context Protocol
+sidebar_position: 4
+---
+
+# MCP (Model Context Protocol)
+
+Agent Runtimes provides comprehensive support for the **Model Context Protocol (MCP)**, enabling agents to access external tools and data sources through a standardized interface.
+
+## Overview
+
+MCP servers are external processes that provide tools, resources, and prompts to AI agents. Agent Runtimes manages these servers automatically:
+
+- **Automatic Server Lifecycle** — MCP servers start with the application and stop on shutdown
+- **Retry with Backoff** — Transient failures trigger automatic retries with exponential backoff
+- **Sequential Startup** — Multiple MCP servers start sequentially to avoid resource conflicts
+- **Status Monitoring** — Real-time status of all MCP toolsets via API endpoint
+
+## Configuration
+
+MCP servers are configured in `~/.datalayer/mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "tavily": {
+      "command": "npx",
+      "args": ["-y", "tavily-mcp@0.1.3"],
+      "env": {
+        "TAVILY_API_KEY": "${TAVILY_API_KEY}"
+      }
+    },
+    "linkedin": {
+      "command": "uvx",
+      "args": [
+        "--from",
+        "git+https://github.com/stickerdaniel/linkedin-mcp-server",
+        "linkedin-mcp-server"
+      ]
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/allowed/dir"]
+    }
+  }
+}
+```
+
+### LinkedIn MCP Setup
+
+The LinkedIn MCP server requires browser automation via Playwright and session authentication.
+
+**Step 1: Install Playwright Chromium**
+
+```bash
+uvx --from playwright playwright install chromium
+```
+
+**Step 2: Create a Session File**
+
+```bash
+uvx --from git+https://github.com/stickerdaniel/linkedin-mcp-server linkedin-mcp-server --get-session
+```
+
+This opens a browser window where you log in to LinkedIn manually. You have 5 minutes to complete authentication (handles 2FA, captcha, etc.). The session is saved to `~/.linkedin-mcp/session.json`.
+
+:::warning Session Expiration
+Sessions may expire over time. If you encounter authentication errors, run the `--get-session` command again to create a fresh session.
+:::
+
+:::tip Alternative: Cookie Authentication
+You can also authenticate using your `li_at` cookie by adding an env section:
+```json
+"env": {
+  "LINKEDIN_COOKIE": "${LINKEDIN_COOKIE}"
+}
+```
+To get the cookie: DevTools (F12) → Application → Cookies → linkedin.com → copy `li_at` value.
+However, session file authentication is more reliable.
+:::
+
+### Environment Variable Expansion
+
+Environment variables in the config are automatically expanded using `${VAR_NAME}` syntax.
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                   FastAPI Application                        │
+│                    (agent_runtimes)                         │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ↓ Lifespan startup
+┌─────────────────────────────────────────────────────────────┐
+│               MCP Toolsets Manager                           │
+│        (agent_runtimes/mcp/toolsets.py)                     │
+└─────────────────────────────────────────────────────────────┘
+          │                   │                   │
+          ↓                   ↓                   ↓
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│   Tavily    │     │  LinkedIn   │     │ Filesystem  │
+│ MCP Server  │     │ MCP Server  │     │ MCP Server  │
+│  (npx)      │     │  (uvx)      │     │   (npx)     │
+└─────────────┘     └─────────────┘     └─────────────┘
+```
+
+## How It Works
+
+### Server Startup
+
+1. **Load Configuration** — Read `~/.datalayer/mcp.json` and expand environment variables
+2. **Sequential Start** — Start each MCP server one at a time to avoid resource conflicts
+3. **Retry Logic** — If a server fails with `BrokenResourceError`, retry up to 3 times with backoff
+4. **Tool Discovery** — Once connected, list available tools from each server
+5. **Status Tracking** — Track ready/failed servers for monitoring
+
+### Using MCP Tools in Agents
+
+When you create an agent, it automatically receives access to all running MCP toolsets:
+
+```python
+from pydantic_ai import Agent
+from agent_runtimes.mcp import get_mcp_toolsets
+
+# Get pre-loaded MCP toolsets
+mcp_toolsets = get_mcp_toolsets()
+
+# Create agent with MCP tools
+agent = Agent(
+    "anthropic:claude-sonnet-4-20250514",
+    system_prompt="You are a helpful assistant.",
+    toolsets=mcp_toolsets,
+)
+```
+
+## API Endpoints
+
+### Get MCP Toolsets Status
+
+```bash
+GET /api/v1/configure/mcp-toolsets-status
+```
+
+Returns the current status of all MCP toolsets:
+
+```json
+{
+  "initialized": true,
+  "ready_count": 2,
+  "failed_count": 0,
+  "ready_servers": ["tavily", "linkedin"],
+  "failed_servers": {}
+}
+```
+
+### Get MCP Toolsets Info
+
+```bash
+GET /api/v1/configure/mcp-toolsets-info
+```
+
+Returns detailed information about running MCP servers (sensitive data redacted):
+
+```json
+[
+  {
+    "type": "MCPServerStdio",
+    "id": "tavily",
+    "command": "npx",
+    "args": ["-y", "tavily-mcp@0.1.3"]
+  },
+  {
+    "type": "MCPServerStdio", 
+    "id": "linkedin",
+    "command": "uvx",
+    "args": ["--from", "git+https://github.com/stickerdaniel/linkedin-mcp-server", "linkedin-mcp-server"]
+  }
+]
+```
+
+### MCP Server Management
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/v1/mcp/servers` | GET | List all configured MCP servers |
+| `/api/v1/mcp/servers/{id}` | GET | Get specific MCP server details |
+| `/api/v1/mcp/servers` | POST | Add a new MCP server |
+| `/api/v1/mcp/servers/{id}` | PUT | Update an MCP server |
+| `/api/v1/mcp/servers/{id}` | DELETE | Remove an MCP server |
+
+## UI Integration
+
+The Agent Details panel in the chat UI displays real-time MCP toolsets status:
+
+- ✓ Ready servers with green checkmarks
+- ✗ Failed servers with error details
+- Auto-refresh every 5 seconds
+
+## Troubleshooting
+
+### Common Issues
+
+**Timeout during startup**
+- First-time package downloads (npx, uvx) can take several minutes
+- Default timeout is 5 minutes per server
+- Check network connectivity
+
+**BrokenResourceError**
+- Usually indicates the MCP server process crashed
+- Automatic retry will attempt up to 3 times
+- Check the MCP server logs for errors
+
+**Server not starting**
+- Verify the command exists (`npx`, `uvx`, etc.)
+- Check environment variables are set
+- Ensure the MCP server package is available
+
+**LinkedIn MCP: Browser automation error**
+- The LinkedIn MCP server uses Playwright for browser automation
+- Install Chromium: `uvx --from playwright playwright install chromium`
+- Ensure `LINKEDIN_COOKIE` environment variable is set with your `li_at` cookie
+
+### Debug Logging
+
+Enable debug logging to see detailed MCP startup information:
+
+```bash
+python -m agent_runtimes --debug
+```
+
+## Supported MCP Servers
+
+Agent Runtimes works with any MCP-compatible server. Popular options include:
+
+| Server | Package | Description |
+|--------|---------|-------------|
+| Tavily | `tavily-mcp` | Web search and content extraction |
+| Filesystem | `@modelcontextprotocol/server-filesystem` | File system access |
+| GitHub | `@modelcontextprotocol/server-github` | GitHub repository access |
+| Brave Search | `@modelcontextprotocol/server-brave-search` | Web search |
+| LinkedIn | [stickerdaniel/linkedin-mcp-server](https://github.com/stickerdaniel/linkedin-mcp-server) | LinkedIn profile, company, and job data |
+
+See the [MCP Servers Directory](https://github.com/modelcontextprotocol/servers) for more options.

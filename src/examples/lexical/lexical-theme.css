@@ -1,0 +1,436 @@
+/*
+ * Copyright (c) 2025-2026 Datalayer, Inc.
+ * Distributed under the terms of the Modified BSD License.
+ */
+
+/**
+ * Lexical Editor Theme - Integrated with JupyterReactTheme
+ *
+ * This theme uses CSS variables from:
+ * - SimpleLab theme (--jp-* variables)
+ * - Primer design system (--bgColor-*, --fgColor-*, --borderColor-*, etc.)
+ * - Automatically adapts to light/dark mode via JupyterReactTheme
+ *
+ * Based on Lexical's theming guide: https://lexical.dev/docs/getting-started/theming
+ */
+
+/* ============================================
+   Text Formatting
+   ============================================ */
+
+.lexical-theme-bold {
+  font-weight: bold;
+}
+
+.lexical-theme-italic {
+  font-style: italic;
+}
+
+.lexical-theme-underline {
+  text-decoration: underline;
+}
+
+.lexical-theme-strikethrough {
+  text-decoration: line-through;
+}
+
+.lexical-theme-code {
+  background-color: var(--jp-layout-color2, var(--bgColor-neutral-muted));
+  border-radius: 3px;
+  padding: 2px 4px;
+  font-family: var(
+    --jp-code-font-family,
+    'Monaco',
+    'Menlo',
+    'Ubuntu Mono',
+    'Consolas',
+    monospace
+  );
+  font-size: var(--jp-code-font-size, 0.9em);
+  color: var(--jp-mirror-editor-keyword-color, var(--fgColor-accent));
+}
+
+.lexical-theme-subscript {
+  font-size: 0.8em;
+  vertical-align: sub;
+}
+
+.lexical-theme-superscript {
+  font-size: 0.8em;
+  vertical-align: super;
+}
+
+/* ============================================
+   Block Elements
+   ============================================ */
+
+.lexical-theme-paragraph {
+  margin: 0;
+  padding: 8px 0;
+  line-height: var(--jp-content-line-height, 1.6);
+  color: var(--jp-ui-font-color1, var(--fgColor-default));
+}
+
+.lexical-theme-heading-h1 {
+  font-size: var(--jp-content-heading-font-size1, 2em);
+  font-weight: 600;
+  margin: 0.67em 0;
+  line-height: var(--jp-content-heading-line-height, 1.3);
+  color: var(--jp-ui-font-color0, var(--fgColor-default));
+}
+
+.lexical-theme-heading-h2 {
+  font-size: var(--jp-content-heading-font-size2, 1.5em);
+  font-weight: 600;
+  margin: 0.75em 0;
+  line-height: var(--jp-content-heading-line-height, 1.3);
+  color: var(--jp-ui-font-color0, var(--fgColor-default));
+}
+
+.lexical-theme-heading-h3 {
+  font-size: var(--jp-content-heading-font-size3, 1.25em);
+  font-weight: 600;
+  margin: 0.83em 0;
+  line-height: var(--jp-content-heading-line-height, 1.3);
+  color: var(--jp-ui-font-color0, var(--fgColor-default));
+}
+
+.lexical-theme-heading-h4 {
+  font-size: var(--jp-content-heading-font-size4, 1.1em);
+  font-weight: 600;
+  margin: 1em 0;
+  line-height: var(--jp-content-heading-line-height, 1.3);
+  color: var(--jp-ui-font-color0, var(--fgColor-default));
+}
+
+.lexical-theme-heading-h5 {
+  font-size: var(--jp-content-heading-font-size5, 1em);
+  font-weight: 600;
+  margin: 1.33em 0;
+  line-height: var(--jp-content-heading-line-height, 1.3);
+  color: var(--jp-ui-font-color0, var(--fgColor-default));
+}
+
+.lexical-theme-heading-h6 {
+  font-size: 0.875em;
+  font-weight: 600;
+  margin: 1.67em 0;
+  line-height: var(--jp-content-heading-line-height, 1.3);
+  color: var(--jp-ui-font-color1, var(--fgColor-muted));
+}
+
+.lexical-theme-quote {
+  margin: 16px 0;
+  padding: 8px 16px;
+  border-left: 4px solid
+    var(--jp-border-color2, var(--borderColor-accent-emphasis));
+  background-color: var(--jp-layout-color2, var(--bgColor-neutral-muted));
+  font-style: italic;
+  color: var(--jp-ui-font-color2, var(--fgColor-muted));
+}
+
+/* ============================================
+   Lists
+   ============================================ */
+
+.lexical-theme-list-ul {
+  margin: 8px 0;
+  padding-left: 24px;
+  list-style-type: disc;
+  color: var(--jp-ui-font-color1, var(--fgColor-default));
+}
+
+.lexical-theme-list-ol {
+  margin: 8px 0;
+  padding-left: 24px;
+  list-style-type: decimal;
+  color: var(--jp-ui-font-color1, var(--fgColor-default));
+}
+
+.lexical-theme-list-listitem {
+  margin: 4px 0;
+  line-height: var(--jp-content-line-height, 1.6);
+}
+
+.lexical-theme-list-nested-listitem {
+  list-style-type: none;
+}
+
+.lexical-theme-list-checklist {
+  padding-left: 4px;
+  list-style-type: none;
+}
+
+.lexical-theme-list-listitemChecked {
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+
+.lexical-theme-list-listitemUnchecked {
+  text-decoration: none;
+}
+
+/* ============================================
+   Code Blocks
+   ============================================ */
+
+/* Code blocks styled like Simple cells */
+code.lexical-theme-code-block,
+code.lexical-theme-code-block[spellcheck],
+code.lexical-theme-code-block[data-highlight-language] {
+  background-color: #f7f7f7 !important;
+  background: #f7f7f7 !important;
+  border: 1px solid #d3d3d3 !important;
+  border-radius: 6px !important;
+  border-left: 3px solid #0366d6 !important;
+  padding: 8px 16px 8px 70px !important;
+  margin: 16px 0 0 0 !important;
+  overflow-x: auto !important;
+  font-family: var(
+    --jp-code-font-family,
+    'Monaco',
+    'Menlo',
+    'Ubuntu Mono',
+    monospace
+  ) !important;
+  font-size: 13px !important;
+  line-height: 1.6 !important;
+  color: #24292e !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+  display: block !important;
+  min-height: 50px !important;
+  position: relative !important;
+}
+
+/* Display line numbers from data-gutter attribute */
+code.lexical-theme-code-block::before {
+  content: attr(data-gutter);
+  position: absolute !important;
+  left: 0 !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  width: 50px !important;
+  padding: 8px 8px 8px 0 !important;
+  color: #999 !important;
+  text-align: right !important;
+  white-space: pre !important;
+  font-family: monospace !important;
+  font-size: 13px !important;
+  line-height: 1.6 !important;
+  background-color: #f7f7f7 !important;
+  border-right: 1px solid #e1e4e8 !important;
+}
+
+/* Force transparent background on all child elements */
+code.lexical-theme-code-block *,
+code.lexical-theme-code-block span,
+code.lexical-theme-code-block span[class*='lexical-theme-code-token'],
+code.lexical-theme-code-block span[data-lexical-text],
+code.lexical-theme-code-block br {
+  background-color: transparent !important;
+  background: transparent !important;
+}
+
+code.lexical-theme-code-block:hover {
+  border-color: #66afe9 !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Code syntax highlighting tokens using SimpleLab CodeMirror colors */
+.lexical-theme-code-tokenComment {
+  color: var(--jp-mirror-editor-comment-color, var(--fgColor-muted));
+}
+
+.lexical-theme-code-tokenPunctuation {
+  color: var(--jp-content-font-color1, var(--fgColor-default));
+}
+
+.lexical-theme-code-tokenProperty {
+  color: var(--jp-mirror-editor-attribute-color, var(--fgColor-accent));
+}
+
+.lexical-theme-code-tokenSelector {
+  color: var(--jp-mirror-editor-builtin-color, var(--fgColor-done));
+}
+
+.lexical-theme-code-tokenOperator {
+  color: var(--jp-mirror-editor-operator-color, var(--fgColor-danger));
+}
+
+.lexical-theme-code-tokenAttr {
+  color: var(--jp-mirror-editor-attribute-color, var(--fgColor-accent));
+}
+
+.lexical-theme-code-tokenVariable {
+  color: var(--jp-mirror-editor-variable-color, var(--fgColor-attention));
+}
+
+.lexical-theme-code-tokenFunction {
+  color: var(--jp-mirror-editor-def-color, var(--fgColor-done));
+}
+
+.lexical-theme-code-tokenKeyword {
+  color: var(--jp-mirror-editor-keyword-color, var(--fgColor-danger));
+}
+
+.lexical-theme-code-tokenString {
+  color: var(--jp-mirror-editor-string-color, var(--fgColor-success));
+}
+
+.lexical-theme-code-tokenNumber {
+  color: var(--jp-mirror-editor-number-color, var(--fgColor-accent));
+}
+
+.lexical-theme-code-tokenBoolean {
+  color: var(--jp-mirror-editor-number-color, var(--fgColor-accent));
+}
+
+.lexical-theme-code-tokenRegex {
+  color: var(--jp-mirror-editor-string-color, var(--fgColor-success));
+}
+
+/* ============================================
+   Links
+   ============================================ */
+
+.lexical-theme-link {
+  color: var(--jp-content-link-color, var(--fgColor-accent));
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.lexical-theme-link:hover {
+  text-decoration: underline;
+  color: var(--jp-content-link-color, var(--fgColor-accent));
+}
+
+.lexical-theme-autolink {
+  color: var(--jp-content-link-color, var(--fgColor-accent));
+  text-decoration: none;
+}
+
+.lexical-theme-autolink:hover {
+  text-decoration: underline;
+}
+
+/* ============================================
+   Tables
+   ============================================ */
+
+.lexical-theme-table {
+  border-collapse: collapse;
+  border: 1px solid var(--jp-border-color2, var(--borderColor-default));
+  margin: 16px 0;
+  width: 100%;
+}
+
+.lexical-theme-tableCell {
+  border: 1px solid var(--jp-border-color2, var(--borderColor-default));
+  padding: 8px 12px;
+  min-width: 75px;
+  vertical-align: top;
+  color: var(--jp-ui-font-color1, var(--fgColor-default));
+}
+
+.lexical-theme-tableCellHeader {
+  background-color: var(--jp-layout-color2, var(--bgColor-neutral-muted));
+  border: 1px solid var(--jp-border-color2, var(--borderColor-default));
+  padding: 8px 12px;
+  font-weight: 600;
+  text-align: left;
+  color: var(--jp-ui-font-color0, var(--fgColor-default));
+}
+
+/* ============================================
+   Special Nodes
+   ============================================ */
+
+.lexical-theme-hashtag {
+  color: var(--jp-brand-color1, var(--fgColor-accent));
+  background-color: var(--jp-layout-color2, var(--bgColor-accent-muted));
+  border-radius: 3px;
+  padding: 2px 4px;
+  cursor: pointer;
+}
+
+.lexical-theme-image {
+  max-width: 100%;
+  height: auto;
+  margin: 16px 0;
+  border-radius: var(--jp-border-radius, 6px);
+}
+
+.lexical-theme-hr {
+  border: none;
+  border-top: 2px solid var(--jp-border-color2, var(--borderColor-default));
+  margin: 24px 0;
+}
+
+.lexical-theme-mark {
+  background-color: var(--jp-warn-color3, rgba(255, 212, 0, 0.4));
+  padding: 2px 0;
+}
+
+/* ============================================
+   Simple-specific Nodes
+   ============================================ */
+
+/* Simple cells are styled by the jupyter-lexical components themselves.
+   Do not add theme CSS here as it conflicts with the component's internal styling.
+   The JupyterCellNode, JupyterInputNode, and SimpleOutputNode components
+   handle their own styling and theming. */
+
+/* ============================================
+   Editor Container Styles
+   ============================================ */
+
+.lexical-editor-content {
+  min-height: 450px;
+  outline: none;
+  padding: 16px;
+  font-family: var(
+    --jp-ui-font-family,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    Helvetica,
+    Arial,
+    sans-serif
+  );
+  font-size: var(--jp-ui-font-size1, 16px);
+  line-height: var(--jp-content-line-height, 1.6);
+  color: var(--jp-ui-font-color1, var(--fgColor-default));
+  background-color: var(--jp-layout-color1, var(--bgColor-default));
+}
+
+.lexical-editor-content:focus {
+  outline: none;
+}
+
+.lexical-editor-inner {
+  position: relative;
+  background-color: var(--jp-layout-color1, var(--bgColor-default));
+}
+
+/* ============================================
+   Placeholder
+   ============================================ */
+
+.lexical-theme-placeholder {
+  color: var(--jp-ui-font-color3, var(--fgColor-muted));
+  overflow: hidden;
+  position: absolute;
+  text-overflow: ellipsis;
+  top: 16px;
+  left: 16px;
+  font-size: var(--jp-ui-font-size1, 16px);
+  user-select: none;
+  pointer-events: none;
+}
+
+/* ============================================
+   Dark Mode Adjustments
+   ============================================ */
+
+/* Dark mode is handled automatically via CSS variables from JupyterReactTheme */
+/* The --jp-* and Primer variables change based on colormode */

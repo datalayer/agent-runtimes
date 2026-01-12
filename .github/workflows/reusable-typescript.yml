@@ -1,0 +1,122 @@
+name: Reusable TypeScript Workflow
+
+on:
+  workflow_call:
+    inputs:
+      node-version:
+        description: 'Node.js version to use'
+        required: false
+        type: string
+        default: '20.x'
+      install-command:
+        description: 'Command to install dependencies'
+        required: false
+        type: string
+        default: 'npm install'
+      build-command:
+        description: 'Command to build the project'
+        required: false
+        type: string
+        default: 'npm run build'
+      run-format-check:
+        description: 'Whether to run format checks'
+        required: false
+        type: boolean
+        default: false
+      run-lint:
+        description: 'Whether to run linting'
+        required: false
+        type: boolean
+        default: false
+      run-type-check:
+        description: 'Whether to run type checking'
+        required: false
+        type: boolean
+        default: false
+      run-tests:
+        description: 'Whether to run tests'
+        required: false
+        type: boolean
+        default: false
+      test-command:
+        description: 'Command to run tests'
+        required: false
+        type: string
+        default: 'npm test'
+      working-directory:
+        description: 'Working directory for commands'
+        required: false
+        type: string
+        default: '.'
+    secrets:
+      TEST_DATALAYER_API_KEY:
+        description: 'Datalayer API token for running expensive tests'
+        required: false
+
+jobs:
+  typescript-checks:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Use Node.js ${{ inputs.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+
+    - name: Install dependencies
+      run: ${{ inputs.install-command }}
+      working-directory: ${{ inputs.working-directory }}
+
+    # - name: Install Playwright browsers
+    #   run: npx playwright install --with-deps
+    #   working-directory: ${{ inputs.working-directory }}
+
+    - name: Build project
+      if: inputs.build-command != ''
+      run: ${{ inputs.build-command }}
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        TEST_DATALAYER_API_KEY: ${{ secrets.TEST_DATALAYER_API_KEY }}
+        DATALAYER_TEST_RUN_EXPENSIVE: ${{ secrets.TEST_DATALAYER_API_KEY != '' && 'true' || 'false' }}
+
+    - name: Check code formatting
+      if: inputs.run-format-check
+      run: npm run format:check
+      working-directory: ${{ inputs.working-directory }}
+      continue-on-error: true
+
+    - name: Check code formatting (all workspaces)
+      if: inputs.run-format-check
+      run: npm run format:check:all
+      working-directory: ${{ inputs.working-directory }}
+      continue-on-error: true
+
+    - name: Run ESLint
+      if: inputs.run-lint
+      run: npm run lint
+      working-directory: ${{ inputs.working-directory }}
+
+    - name: Run ESLint (all workspaces)
+      if: inputs.run-lint
+      run: npm run lint:all
+      working-directory: ${{ inputs.working-directory }}
+
+    - name: Run TypeScript type checking
+      if: inputs.run-type-check
+      run: npm run type-check
+      working-directory: ${{ inputs.working-directory }}
+
+    - name: Run TypeScript type checking (all workspaces)
+      if: inputs.run-type-check
+      run: npm run type-check:all
+      working-directory: ${{ inputs.working-directory }}
+
+    - name: Run tests
+      if: inputs.run-tests
+      run: ${{ inputs.test-command }}
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        TEST_DATALAYER_API_KEY: ${{ secrets.TEST_DATALAYER_API_KEY }}
+        DATALAYER_TEST_RUN_EXPENSIVE: ${{ secrets.TEST_DATALAYER_API_KEY != '' && 'true' || 'false' }}

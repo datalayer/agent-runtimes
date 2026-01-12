@@ -1,0 +1,70 @@
+name: TS Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'src/**'
+      - 'examples/**'
+      - '*.json'
+      - '*.js'
+      - '*.ts'
+      - '*.tsx'
+      - '.github/workflows/ts-tests.yml'
+      - '.github/workflows/reusable-typescript.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'src/**'
+      - 'examples/**'
+      - '*.json'
+      - '*.js'
+      - '*.ts'
+      - '*.tsx'
+      - '.github/workflows/ts-tests.yml'
+      - '.github/workflows/reusable-typescript.yml'
+
+jobs:
+  test-20x:
+    uses: ./.github/workflows/reusable-typescript.yml
+    with:
+      node-version: '20.x'
+      install-command: 'npm install --workspaces'
+      build-command: 'npm run build'
+      run-format-check: false
+      run-lint: false
+      run-type-check: false
+      run-tests: true
+      test-command: 'npm run test:all && npm run test:coverage && npm run build:lib'
+    secrets:
+      TEST_DATALAYER_API_KEY: ${{ secrets.TEST_DATALAYER_API_KEY }}
+
+  test-22x:
+    needs: test-20x  # Run sequentially
+    uses: ./.github/workflows/reusable-typescript.yml
+    with:
+      node-version: '22.x'
+      install-command: 'npm install --workspaces'
+      build-command: 'npm run build'
+      run-format-check: false
+      run-lint: false
+      run-type-check: false
+      run-tests: true
+      test-command: 'npm run test:all && npm run test:coverage && npm run build:lib'
+    secrets:
+      TEST_DATALAYER_API_KEY: ${{ secrets.TEST_DATALAYER_API_KEY }}
+
+  test-24x:
+    needs: test-22x  # Run sequentially
+    uses: ./.github/workflows/reusable-typescript.yml
+    with:
+      node-version: '24.x'
+      install-command: 'npm install --workspaces'
+      build-command: 'npm run build'
+      run-format-check: false
+      run-lint: false
+      run-type-check: false
+      run-tests: true
+      test-command: 'npm run test:all && npm run test:coverage && npm run build:lib'
+    secrets:
+      TEST_DATALAYER_API_KEY: ${{ secrets.TEST_DATALAYER_API_KEY }}

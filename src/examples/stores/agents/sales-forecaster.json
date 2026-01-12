@@ -1,0 +1,13 @@
+{
+  "id": "sales-forecaster",
+  "title": "Sales Forecaster",
+  "description": "AI-powered sales prediction and revenue forecasting tool.",
+  "image": "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=300&h=150&fit=crop",
+  "author": "Eric Charles",
+  "editTimestamp": "1 hour ago",
+  "status": "running",
+  "transport": "vercel-ai",
+  "avatarUrl": "https://avatars.githubusercontent.com/github",
+  "stars": 5,
+  "notifications": 2
+}

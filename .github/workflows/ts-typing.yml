@@ -1,0 +1,64 @@
+name: TS Type Checking
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'src/**/*.ts'
+      - 'src/**/*.tsx'
+      - 'tsconfig*.json'
+      - 'package.json'
+      - '.github/workflows/ts-typing.yml'
+      - '.github/workflows/reusable-typescript.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'src/**/*.ts'
+      - 'src/**/*.tsx'
+      - 'tsconfig*.json'
+      - 'package.json'
+      - '.github/workflows/ts-typing.yml'
+      - '.github/workflows/reusable-typescript.yml'
+
+jobs:
+  type-check:
+    uses: ./.github/workflows/reusable-typescript.yml
+    with:
+      node-version: '20.x'
+      install-command: 'npm install --workspaces'
+      build-command: 'npm run build'
+      run-format-check: false
+      run-lint: false
+      run-type-check: true
+      run-tests: false
+    secrets:
+      TEST_DATALAYER_API_KEY: ${{ secrets.TEST_DATALAYER_API_KEY }}
+
+  strict-mode-check:
+    runs-on: ubuntu-latest
+    needs: type-check
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Use Node.js 20.x
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+
+    - name: Install dependencies
+      run: npm install --workspaces
+
+    - name: Build project
+      run: npm run build
+      env:
+        TEST_DATALAYER_API_KEY: ${{ secrets.TEST_DATALAYER_API_KEY }}
+        DATALAYER_TEST_RUN_EXPENSIVE: ${{ secrets.TEST_DATALAYER_API_KEY != '' && 'true' || 'false' }}
+
+    - name: Check TypeScript strict mode compliance
+      run: npx tsc --noEmit --strict
+      continue-on-error: true
+
+    - name: Generate type coverage report
+      run: npx type-coverage --detail
+      continue-on-error: true

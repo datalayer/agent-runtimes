@@ -1,0 +1,82 @@
+name: TS Code Style
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'src/**/*.ts'
+      - 'src/**/*.tsx'
+      - 'src/**/*.js'
+      - 'src/**/*.jsx'
+      - 'examples/**/*.ts'
+      - 'examples/**/*.tsx'
+      - 'examples/**/*.js'
+      - 'examples/**/*.jsx'
+      - '.eslintrc*'
+      - '.prettierrc*'
+      - 'package.json'
+      - '.github/workflows/ts-code-style.yml'
+      - '.github/workflows/reusable-typescript.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'src/**/*.ts'
+      - 'src/**/*.tsx'
+      - 'src/**/*.js'
+      - 'src/**/*.jsx'
+      - 'examples/**/*.ts'
+      - 'examples/**/*.tsx'
+      - 'examples/**/*.js'
+      - 'examples/**/*.jsx'
+      - '.eslintrc*'
+      - '.prettierrc*'
+      - 'package.json'
+      - '.github/workflows/ts-code-style.yml'
+      - '.github/workflows/reusable-typescript.yml'
+
+jobs:
+  code-style:
+    uses: ./.github/workflows/reusable-typescript.yml
+    with:
+      node-version: '20.x'
+      install-command: 'npm install'
+      build-command: ''  # Skip build for code style checks
+      run-format-check: true
+      run-lint: true
+      run-type-check: false
+      run-tests: false
+
+  auto-fix:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    needs: code-style
+    continue-on-error: true
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Use Node.js 20.x
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+
+    - name: Install dependencies
+      run: npm install
+
+    - name: Auto-fix formatting issues
+      run: |
+        npm run format:fix
+        npm run format:fix:all
+
+    - name: Auto-fix linting issues
+      run: |
+        npm run lint:fix
+        npm run lint:fix:all
+
+    - name: Check for uncommitted changes
+      run: |
+        if [[ -n $(git status --porcelain) ]]; then
+          echo "::warning::Code style issues found that can be auto-fixed"
+          echo "Run 'npm run check:fix' locally to fix these issues"
+          git diff --name-only
+        fi

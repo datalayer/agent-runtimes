@@ -1,0 +1,59 @@
+name: Py Code Style
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'agent_runtimes/**/*.py'
+      - 'tests/**/*.py'
+      - 'pyproject.toml'
+      - 'setup.py'
+      - '.pre-commit-config.yaml'
+      - 'ruff.toml'
+      - '.ruff.toml'
+      - '.github/workflows/py-code-style.yml'
+  pull_request:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'agent_runtimes/**/*.py'
+      - 'tests/**/*.py'
+      - 'pyproject.toml'
+      - 'setup.py'
+      - '.pre-commit-config.yaml'
+      - 'ruff.toml'
+      - '.ruff.toml'
+      - '.github/workflows/py-code-style.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+    
+jobs:
+  check-code-style:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "latest"
+          python-version: 3.11
+          activate-environment: true
+
+      - name: Install dependencies
+        run: |
+          uv pip install .
+          uv pip install pre-commit
+
+      - name: Run pre-commit
+        run: |
+          pre-commit run --all-files    
