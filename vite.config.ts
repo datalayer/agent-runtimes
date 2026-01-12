@@ -74,7 +74,7 @@ export default defineConfig(({ mode }) => {
   const server = isShowcaseVercelAiElements
     ? {
         port: 3100,
-        open: '/index-showcase-vercel-ai.html',
+        open: '/index-showcase-vercel-ai-elements.html',
         fs: { strict: false, allow: ['..', '../..', '../../..'] },
       }
     : isExamples
@@ -122,7 +122,7 @@ export default defineConfig(({ mode }) => {
   if (isShowcaseVercelAiElements) {
     build.outDir = 'dist/showcase';
     build.emptyOutDir = true;
-    build.rollupOptions.input = path.resolve(__dirname, 'index-showcase-vercel-ai.html');
+    build.rollupOptions.input = path.resolve(__dirname, 'index-showcase-vercel-ai-elements.html');
   } else if (isExamples) {
     build.rollupOptions.input = path.resolve(__dirname, 'index-examples.html');
   } else {
