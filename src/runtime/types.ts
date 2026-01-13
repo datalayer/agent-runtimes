@@ -7,51 +7,28 @@
  * Type definitions for runtime management.
  *
  * Re-exports relevant types from @datalayer/core and defines
- * agent-runtimes specific types.
+ * agent-runtimes specific types for AI agent management.
  *
  * @module runtime/types
  */
 
 import type { ServiceManager } from '@jupyterlab/services';
 
-// Re-export core types from @datalayer/core
+// Re-export core runtime types from @datalayer/core
 export type {
   IRuntimeLocation,
   IRuntimeType,
   IRuntimeCapabilities,
   IRuntimePod,
+  IRuntimeDesc,
 } from '@datalayer/core/lib/models';
+
 export type { IRuntimeOptions } from '@datalayer/core/lib/stateful/runtimes/apis';
 
 /**
- * Runtime location types (alias for convenience).
- * Re-exported from @datalayer/core.
+ * Runtime connection status for the agent-runtimes store.
  */
-export type RuntimeLocation = 'browser' | 'local' | 'remote';
-
-/**
- * Configuration for launching a cloud runtime.
- * Maps to IRuntimeOptions from @datalayer/core.
- */
-export interface RuntimeConfig {
-  /** Environment name (e.g., 'python-simple') */
-  environmentName: string;
-  /** Credits limit for the runtime */
-  creditsLimit: number;
-  /** Runtime type (notebook or cell) */
-  type?: 'notebook' | 'cell';
-  /** Optional given name for the runtime */
-  givenName?: string;
-  /** Optional capabilities */
-  capabilities?: 'user_storage'[];
-  /** Optional snapshot ID to restore from */
-  snapshot?: string;
-}
-
-/**
- * Runtime connection status.
- */
-export type RuntimeStatus =
+export type AgentRuntimeStatus =
   | 'idle'
   | 'launching'
   | 'connecting'
@@ -60,7 +37,8 @@ export type RuntimeStatus =
   | 'disconnected';
 
 /**
- * Information about a connected runtime.
+ * Information about a connected runtime with agent-runtimes server.
+ * Extends the basic runtime info with URLs for both Jupyter and agent services.
  */
 export interface RuntimeConnection {
   /** Runtime pod name (unique identifier) */
@@ -74,7 +52,7 @@ export interface RuntimeConnection {
   /** JupyterLab ServiceManager for the runtime */
   serviceManager: ServiceManager.IManager;
   /** Runtime status */
-  status: RuntimeStatus;
+  status: AgentRuntimeStatus;
   /** Kernel ID if connected */
   kernelId?: string;
 }
@@ -110,21 +88,7 @@ export interface AgentConnection {
 }
 
 /**
- * Combined configuration for launching a runtime with an agent.
- */
-export interface AgentRuntimeConfig {
-  /** Runtime configuration */
-  runtime: RuntimeConfig;
-  /** Agent configuration */
-  agent?: AgentConfig;
-  /** Document ID for tool registration */
-  documentId: string;
-  /** Document type for selecting appropriate tools */
-  documentType: 'notebook' | 'lexical';
-}
-
-/**
- * Complete state for an agent runtime.
+ * Complete state for an agent runtime in the Zustand store.
  */
 export interface AgentRuntimeState {
   /** Runtime connection (null if not connected) */
@@ -132,7 +96,7 @@ export interface AgentRuntimeState {
   /** Agent connection (null if not created) */
   agent: AgentConnection | null;
   /** Current status */
-  status: RuntimeStatus;
+  status: AgentRuntimeStatus;
   /** Error message if any */
   error: string | null;
   /** Whether the runtime is launching */
@@ -151,12 +115,4 @@ export const DEFAULT_AGENT_CONFIG: Required<AgentConfig> = {
   systemPrompt: 'You are a helpful AI assistant.',
   agentLibrary: 'pydantic-ai',
   transport: 'ag-ui',
-};
-
-/**
- * Default runtime configuration values.
- */
-export const DEFAULT_RUNTIME_CONFIG: Partial<RuntimeConfig> = {
-  creditsLimit: 100,
-  type: 'notebook',
 };

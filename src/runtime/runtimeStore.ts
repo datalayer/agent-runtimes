@@ -14,9 +14,9 @@
 import { create } from 'zustand';
 import type { ServiceManager } from '@jupyterlab/services';
 import type {
-  RuntimeConfig,
+  IRuntimeOptions,
   RuntimeConnection,
-  RuntimeStatus,
+  AgentRuntimeStatus,
   AgentConfig,
   AgentConnection,
 } from './types';
@@ -30,7 +30,7 @@ interface RuntimeStoreState {
   /** Current agent connection */
   agent: AgentConnection | null;
   /** Current status */
-  status: RuntimeStatus;
+  status: AgentRuntimeStatus;
   /** Error message if any */
   error: string | null;
   /** Whether a launch is in progress */
@@ -42,7 +42,7 @@ interface RuntimeStoreState {
  */
 interface RuntimeStoreActions {
   /** Launch a new runtime */
-  launchRuntime: (config: RuntimeConfig) => Promise<RuntimeConnection>;
+  launchRuntime: (options: IRuntimeOptions) => Promise<RuntimeConnection>;
   /** Connect to an existing runtime */
   connectToRuntime: (connection: {
     podName: string;

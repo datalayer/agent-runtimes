@@ -23,11 +23,11 @@ import {
   useIsLaunching,
 } from './runtimeStore';
 import type {
-  RuntimeConfig,
+  IRuntimeOptions,
   AgentConfig,
   RuntimeConnection,
   AgentConnection,
-  RuntimeStatus,
+  AgentRuntimeStatus,
 } from './types';
 
 interface UseAgentRuntimeOptions {
@@ -43,7 +43,7 @@ interface UseAgentRuntimeReturn {
   /** Current agent connection */
   agent: AgentConnection | null;
   /** Runtime status */
-  status: RuntimeStatus;
+  status: AgentRuntimeStatus;
   /** Error message if any */
   error: string | null;
   /** Whether the runtime is launching */
@@ -55,7 +55,7 @@ interface UseAgentRuntimeReturn {
   /** ServiceManager for the runtime */
   serviceManager: ServiceManager.IManager | null;
   /** Launch a new runtime */
-  launchRuntime: (config: RuntimeConfig) => Promise<RuntimeConnection>;
+  launchRuntime: (options: IRuntimeOptions) => Promise<RuntimeConnection>;
   /** Connect to an existing runtime */
   connectToRuntime: (options: {
     podName: string;

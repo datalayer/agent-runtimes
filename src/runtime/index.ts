@@ -56,19 +56,17 @@ export type {
   IRuntimeCapabilities,
   IRuntimePod,
   IRuntimeOptions,
+  IRuntimeDesc,
 } from './types';
 
 // Types - agent-runtimes specific
 export type {
-  RuntimeConfig,
   RuntimeConnection,
-  RuntimeStatus,
-  RuntimeLocation,
+  AgentRuntimeStatus as RuntimeStatus,
   AgentConfig,
   AgentConnection,
-  AgentRuntimeConfig,
   AgentRuntimeState,
 } from './types';
 
 // Constants
-export { DEFAULT_AGENT_CONFIG, DEFAULT_RUNTIME_CONFIG } from './types';
+export { DEFAULT_AGENT_CONFIG } from './types';
