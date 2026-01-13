@@ -65,6 +65,13 @@ def _init_example_apps() -> None:
     except ImportError as e:
         logger.warning(f"Could not initialize AG-UI examples: {e}")
         logger.warning("Make sure pydantic-ai and ag-ui are installed")
+        _initialized = True
+    except Exception as e:
+        # Handle OpenAI API key errors and other initialization failures
+        logger.warning(f"Could not initialize AG-UI examples: {e}")
+        logger.warning("Examples require OPENAI_API_KEY environment variable to be set")
+        logger.warning("Set OPENAI_API_KEY to enable example agents")
+        _initialized = True
 
 
 def get_example_mounts(api_prefix: str = "/api/v1") -> list[Mount]:
