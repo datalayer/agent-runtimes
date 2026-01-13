@@ -208,13 +208,15 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
         lifespan=lifespan,
     )
     
-    # Add CORS middleware
+    # Add CORS middleware - must be added before other middleware
+    # Allow all origins for development and cross-origin agent runtimes
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=config.cors_origins,
-        allow_credentials=config.cors_allow_credentials,
-        allow_methods=config.cors_allow_methods,
-        allow_headers=config.cors_allow_headers,
+        allow_origins=["*"],  # Allow all origins
+        allow_credentials=True,
+        allow_methods=["*"],  # Allow all methods
+        allow_headers=["*"],  # Allow all headers
+        expose_headers=["*"],  # Expose all headers to the client
     )
     
     # Include routers
