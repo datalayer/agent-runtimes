@@ -15,7 +15,7 @@
 
 **Agent Runtimes** is a flexible server framework for exposing AI agents through multiple protocols.
 
-![Agent Runtimes](https://images.datalayer.io/product/agent-runtimes/agent-runtimes-example-1.webm)
+<video src="https://images.datalayer.io/product/agent-runtimes/agent-runtimes-example-1.webm" controls width="100%"></video>
 
 ## 🌟 Features
 
