@@ -249,22 +249,22 @@ def create_default_models(tool_ids: list[str]) -> list[AIModel]:
         },
         # AWS Bedrock models
         {
-            "id": "bedrock:anthropic.claude-sonnet-4-5-20250929-v1:0",
+            "id": "bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0",
             "name": "Claude Sonnet 4.5 (Bedrock)",
             "required_env_vars": ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"],
         },
         {
-            "id": "bedrock:anthropic.claude-haiku-4-5-20251001-v1:0",
+            "id": "bedrock:us.anthropic.claude-haiku-4-5-20251001-v1:0",
             "name": "Claude 4.5 Haiku (Bedrock)",
             "required_env_vars": ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"],
         },
         {
-            "id": "bedrock:amazon.nova-pro-v1:0",
+            "id": "bedrock:us.amazon.nova-pro-v1:0",
             "name": "Amazon Nova Pro",
             "required_env_vars": ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"],
         },
         {
-            "id": "bedrock:amazon.nova-lite-v1:0",
+            "id": "bedrock:us.amazon.nova-lite-v1:0",
             "name": "Amazon Nova Lite",
             "required_env_vars": ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"],
         },

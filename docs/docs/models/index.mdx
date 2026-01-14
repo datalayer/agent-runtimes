@@ -42,11 +42,11 @@ Agent Runtimes supports multiple AI model providers through [pydantic-ai](https:
 
 | Model ID | Display Name | Required Env Vars |
 |----------|--------------|-------------------|
-| `bedrock:anthropic.claude-sonnet-4-5-20250514-v1:0` | Claude Sonnet 4.5 (Bedrock) | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` |
-| `bedrock:anthropic.claude-3-5-haiku-20241022-v1:0` | Claude 3.5 Haiku (Bedrock) | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` |
-| `bedrock:amazon.nova-pro-v1:0` | Amazon Nova Pro | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` |
-| `bedrock:amazon.nova-lite-v1:0` | Amazon Nova Lite | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` |
-| `bedrock:meta.llama3-3-70b-instruct-v1:0` | Llama 3.3 70B (Bedrock) | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` |
+| `bedrock:us.anthropic.claude-sonnet-4-5-20250514-v1:0` | Claude Sonnet 4.5 (Bedrock) | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` |
+| `bedrock:us.anthropic.claude-3-5-haiku-20241022-v1:0` | Claude 3.5 Haiku (Bedrock) | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` |
+| `bedrock:us.amazon.nova-pro-v1:0` | Amazon Nova Pro | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` |
+| `bedrock:us.amazon.nova-lite-v1:0` | Amazon Nova Lite | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` |
+| `bedrock:us.meta.llama3-3-70b-instruct-v1:0` | Llama 3.3 70B (Bedrock) | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` |
 
 ## Configuration
 
@@ -128,7 +128,7 @@ Models use the pydantic-ai format: `provider:model_name`
 - `anthropic:claude-sonnet-4-5` - Anthropic Claude
 - `openai:gpt-4o` - OpenAI GPT-4o
 - `azure:gpt-4o` - Azure OpenAI (deployment name)
-- `bedrock:anthropic.claude-sonnet-4-5-20250514-v1:0` - AWS Bedrock
+- `bedrock:us.anthropic.claude-sonnet-4-5-20250514-v1:0` - AWS Bedrock
 
 ## Timeout Configuration
 
