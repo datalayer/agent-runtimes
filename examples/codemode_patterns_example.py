@@ -173,7 +173,78 @@ await process_files()
 
 
 # =============================================================================
-# Example 3: Skills as Code Files (Primary Pattern)
+# Example 3: Code Mode + Agent Skills (combined)
+# =============================================================================
+
+async def example_codemode_with_skills():
+    """Show how to combine mcp-codemode with agent-skills.
+
+    Pattern (mirrors the TypeScript POC):
+    1. Skills live as code files in a skills/ directory
+    2. Agent writes Python code that imports skills AND generated tool bindings
+    3. Code runs through CodeModeExecutor (execute_code meta-tool)
+    """
+    from agent_skills import SkillDirectory, setup_skills_directory
+    from mcp_codemode.composition.executor import CodeModeExecutor
+    from mcp_codemode import ToolRegistry
+
+    print("\n" + "=" * 70)
+    print("Example 3: Code Mode + Agent Skills")
+    print("=" * 70)
+
+    # 1) Set up skills directory (primary pattern: skills are code files)
+    skills_dir = setup_skills_directory("./example_skills")
+
+    # 2) Create a simple skill that uses only Python (no external tools needed
+    #    for this demo so it runs even without MCP servers).
+    skill = skills_dir.create(
+        name="greet_user",
+        description="Return a greeting for the provided name.",
+        code='''
+async def greet_user(name: str) -> dict:
+    return {"message": f"Hello, {name}!"}
+
+
+if __name__ == "__main__":
+    import asyncio, sys, json
+    result = asyncio.run(greet_user(sys.argv[1]))
+    print(json.dumps(result, indent=2))
+''',
+    )
+
+    # 3) Show the code the agent would run via the execute_code meta-tool.
+    #    This mirrors the TypeScript POC: the agent writes code, then the
+    #    meta-tool executes it in a sandbox (CodeModeExecutor).
+    execution_snippet = f'''
+# Auto-generated tool bindings would be imported like:
+# from generated.servers.filesystem import read_file
+
+# Import a saved skill from the skills directory
+from skills.{skill.name} import {skill.name}
+
+result = await {skill.name}("Claude")
+print(result)
+'''
+
+    print("\nCode the agent would send to execute_code:")
+    print("-" * 60)
+    print(execution_snippet)
+    print("-" * 60)
+
+    # 4) Optionally run the snippet using CodeModeExecutor. This will work
+    #    without external MCP servers because the skill is pure Python.
+    registry = ToolRegistry()
+    try:
+        async with CodeModeExecutor(registry) as executor:
+            result = await executor.execute(execution_snippet)
+            print("Execution output:")
+            print(result.output or result.logs)
+    except Exception as exc:  # Guard so the example doesn't crash in minimal envs
+        print(f"(Skipped execution: {exc})")
+
+
+# =============================================================================
+# Example 4: Skills as Code Files (Primary Pattern)
 # =============================================================================
 
 async def example_skills_as_code():
@@ -309,7 +380,7 @@ if __name__ == "__main__":
 
 
 # =============================================================================
-# Example 4: Skills with Code Generation Templates
+# Example 5: Skills with Code Generation Templates
 # =============================================================================
 
 async def example_skill_templates():
@@ -381,7 +452,7 @@ else:
 
 
 # =============================================================================
-# Example 5: Helper Utilities (Control Flow Patterns)
+# Example 6: Helper Utilities (Control Flow Patterns)
 # =============================================================================
 
 async def example_helpers():
@@ -486,7 +557,7 @@ async def example_helpers():
 
 
 # =============================================================================
-# Example 5: System Prompt for Code Mode Agent
+# Example 7: System Prompt for Code Mode Agent
 # =============================================================================
 
 def example_system_prompt():
