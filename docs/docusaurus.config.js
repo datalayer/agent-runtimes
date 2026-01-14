@@ -6,7 +6,7 @@
 /** @type {import('@docusaurus/types').DocusaurusConfig} */
 module.exports = {
   title: 'Ξ Agent Runtimes',
-  tagline: 'Core package used by many other Datalayer packages',
+  tagline: '🤖 Agent Runtimes - Expose AI Agents through multiple protocols.',
   url: 'https://agent-runtimes.datalayer.tech',
   baseUrl: '/',
   onBrokenLinks: 'throw',
@@ -47,6 +47,30 @@ module.exports = {
           docId: 'models/index',
           position: 'left',
           label: 'Models',
+        },
+        {
+          type: 'doc',
+          docId: 'mcp/index',
+          position: 'left',
+          label: 'MCP',
+        },
+        {
+          type: 'doc',
+          docId: 'extensions/index',
+          position: 'left',
+          label: 'Extensions',
+        },
+        {
+          type: 'doc',
+          docId: 'agents/index',
+          position: 'left',
+          label: 'Agents',
+        },
+        {
+          type: 'doc',
+          docId: 'endpoints/index',
+          position: 'left',
+          label: 'Endpoints',
         },
         {
           href: 'https://discord.gg/YQFwvmSSuR',
