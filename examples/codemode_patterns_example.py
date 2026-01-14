@@ -173,71 +173,164 @@ await process_files()
 
 
 # =============================================================================
-# Example 3: Skills as Callable Code Files
+# Example 3: Skills as Code Files (Primary Pattern)
 # =============================================================================
 
-async def example_skill_generation():
-    """Demonstrate generating callable skill files.
+async def example_skills_as_code():
+    """Demonstrate the skills-as-code-files pattern.
     
-    Skills are standalone Python files that can be:
-    1. Run directly: python skills/analyze_file.py data.csv
-    2. Imported: from skills.analyze_file import analyze_file
+    Skills are Python files in a skills/ directory that can be:
+    1. Discovered by listing the directory
+    2. Created by writing Python files
+    3. Executed by importing and calling them
+    4. Composed by importing multiple skills together
     
-    This enables the "State Persistence" pattern where agents
-    save useful code compositions for reuse.
+    This is the primary pattern for skill building.
     """
-    from agent_skills import generate_skill_file, generate_skill_from_template
+    from agent_skills import SkillDirectory, setup_skills_directory
     
     print("\n" + "=" * 70)
-    print("Example 3: Skills as Callable Code Files")
+    print("Example 3: Skills as Code Files (Primary Pattern)")
     print("=" * 70)
     
     # Create skills directory
     skills_dir = Path("./example_skills")
-    skills_dir.mkdir(exist_ok=True)
+    skills = SkillDirectory(str(skills_dir))
     
-    # Generate a custom skill
-    print("\n1. Generating custom skill: analyze_csv")
+    # Create a skill by writing a Python file
+    print("\n1. Creating a skill: analyze_csv")
     
-    skill_path = generate_skill_file(
+    skill = skills.create(
         name="analyze_csv",
-        description="Analyze a CSV file and return statistics",
+        description="Analyze a CSV file and return statistics.",
         code='''
-# Import generated tool bindings
-try:
-    from generated.servers.filesystem import read_file
-except ImportError:
-    # Fallback for demo
-    async def read_file(args):
-        with open(args["path"]) as f:
-            return f.read()
+async def analyze_csv(file_path: str) -> dict:
+    """Analyze a CSV file.
+    
+    Args:
+        file_path: Path to the CSV file.
+    
+    Returns:
+        Statistics about the file.
+    """
+    # In real usage, import from generated tool bindings:
+    # from generated.servers.filesystem import read_file
+    
+    # For demo, read file directly
+    with open(file_path) as f:
+        content = f.read()
+    
+    lines = content.split("\\n")
+    headers = lines[0].split(",") if lines else []
+    
+    return {
+        "file": file_path,
+        "rows": len(lines) - 1,
+        "columns": len(headers),
+        "headers": headers,
+    }
 
-# Read the file
-content = await read_file({"path": file_path})
 
-# Analyze it
-lines = content.split("\\n")
-headers = lines[0].split(",") if lines else []
-
-return {
-    "file": file_path,
-    "rows": len(lines) - 1,  # Exclude header
-    "columns": len(headers),
-    "headers": headers,
-}
+if __name__ == "__main__":
+    import asyncio, sys, json
+    result = asyncio.run(analyze_csv(sys.argv[1]))
+    print(json.dumps(result, indent=2))
 ''',
-        parameters=[
-            {"name": "file_path", "type": "str", "description": "Path to CSV file", "required": True},
-        ],
-        output_dir=skills_dir,
     )
     
-    print(f"   Generated: {skill_path}")
-    print(f"   Run with: python {skill_path} data.csv")
-    print(f"   Or import: from example_skills.analyze_csv import analyze_csv")
+    print(f"   Created: {skill.path}")
+    print(f"   Functions: {skill.functions}")
+    print(f"   Run with: python {skill.path} data.csv")
+    
+    # Create another skill that composes the first
+    print("\n2. Creating a composing skill: batch_analyze")
+    
+    skill = skills.create(
+        name="batch_analyze",
+        description="Analyze all CSV files in a directory.",
+        code='''
+async def batch_analyze(directory: str) -> list:
+    """Analyze all CSV files in a directory.
+    
+    Args:
+        directory: Directory containing CSV files.
+    
+    Returns:
+        List of analysis results.
+    """
+    import os
+    from example_skills.analyze_csv import analyze_csv
+    
+    results = []
+    for entry in os.listdir(directory):
+        if entry.endswith(".csv"):
+            result = await analyze_csv(f"{directory}/{entry}")
+            results.append(result)
+    
+    return results
+
+
+if __name__ == "__main__":
+    import asyncio, sys, json
+    result = asyncio.run(batch_analyze(sys.argv[1]))
+    print(json.dumps(result, indent=2))
+''',
+    )
+    
+    print(f"   Created: {skill.path}")
+    print(f"   Composes: analyze_csv")
+    
+    # Discover skills
+    print("\n3. Discovering skills:")
+    for skill in skills.list():
+        print(f"   - {skill.name}: {skill.description}")
+        print(f"     Functions: {', '.join(skill.functions)}")
+    
+    # Search for skills
+    print("\n4. Searching for 'CSV' skills:")
+    matches = skills.search("CSV")
+    for skill in matches:
+        print(f"   - {skill.name}")
+    
+    # Execute a skill
+    print("\n5. Executing a skill programmatically:")
+    skill = skills.get("analyze_csv")
+    if skill:
+        func = skill.get_function()
+        # Create a test file
+        test_file = skills_dir / "test.csv"
+        test_file.write_text("name,age,city\\nAlice,30,NYC\\nBob,25,LA\\n")
+        
+        result = await func(str(test_file))
+        print(f"   Result: {result}")
+        
+        # Cleanup
+        test_file.unlink()
+
+
+# =============================================================================
+# Example 4: Skills with Code Generation Templates
+# =============================================================================
+
+async def example_skill_templates():
+    """Demonstrate generating skills from templates.
+    
+    Templates provide common patterns for skills like:
+    - file_processor: Process files with a transform
+    - api_fetcher: Fetch data from an API
+    - wait_for_condition: Poll until condition is met
+    """
+    from agent_skills import generate_skill_file, generate_skill_from_template
+    
+    print("\n" + "=" * 70)
+    print("Example 4: Skills with Code Generation Templates")
+    print("=" * 70)
+    
+    skills_dir = Path("./example_skills")
+    skills_dir.mkdir(exist_ok=True)
     
     # Generate from template
-    print("\n2. Generating skill from template: wait_for_file")
+    print("\n1. Generating skill from template: wait_for_file")
     
     skill_path = generate_skill_from_template(
         name="wait_for_file",
@@ -247,19 +340,48 @@ return {
     
     print(f"   Generated: {skill_path}")
     
-    # Show the generated file
-    print("\n3. Generated skill file contents:")
-    print("-" * 60)
-    content = skill_path.read_text()
-    # Show first 30 lines
-    lines = content.split("\n")[:30]
-    print("\n".join(lines))
-    print("...")
-    print("-" * 60)
+    # Generate custom skill with codegen
+    print("\n2. Generating custom skill with code generation:")
+    
+    skill_path = generate_skill_file(
+        name="process_json",
+        description="Process a JSON file and extract data",
+        code='''
+import json
+
+# Read and parse the file
+with open(file_path) as f:
+    data = json.load(f)
+
+# Process it
+if isinstance(data, list):
+    return {"count": len(data), "type": "array"}
+elif isinstance(data, dict):
+    return {"keys": list(data.keys()), "type": "object"}
+else:
+    return {"type": type(data).__name__}
+''',
+        parameters=[
+            {"name": "file_path", "type": "str", "description": "Path to JSON file", "required": True},
+        ],
+        output_dir=skills_dir,
+    )
+    
+    print(f"   Generated: {skill_path}")
+    
+    # Show template file content
+    if skill_path.exists():
+        print("\n3. Generated skill file preview:")
+        print("-" * 60)
+        content = skill_path.read_text()
+        lines = content.split("\n")[:25]
+        print("\n".join(lines))
+        print("...")
+        print("-" * 60)
 
 
 # =============================================================================
-# Example 4: Helper Utilities (Control Flow Patterns)
+# Example 5: Helper Utilities (Control Flow Patterns)
 # =============================================================================
 
 async def example_helpers():
@@ -271,7 +393,7 @@ async def example_helpers():
     from mcp_codemode.skills import wait_for, retry, parallel, RateLimiter
     
     print("\n" + "=" * 70)
-    print("Example 4: Helper Utilities")
+    print("Example 5: Helper Utilities")
     print("=" * 70)
     
     # Example: wait_for - Wait for a condition
@@ -435,12 +557,13 @@ Or imported and composed:
 async def main():
     """Run all examples."""
     print("\n" + "=" * 70)
-    print("MCP Code Mode Patterns - Examples from TypeScript POC")
+    print("MCP Code Mode Patterns - Skills as Code Files")
     print("=" * 70)
     
     await example_meta_tools()
     await example_code_execution()
-    await example_skill_generation()
+    await example_skills_as_code()
+    await example_skill_templates()
     await example_helpers()
     example_system_prompt()
     
