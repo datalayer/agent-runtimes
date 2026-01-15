@@ -83,3 +83,64 @@ async def get_toolsets_info() -> list[dict[str, Any]]:
         List of running MCP server information (sensitive data redacted).
     """
     return get_mcp_toolsets_info()
+
+
+@router.get("/context-details")
+async def get_context_details(
+    agent_id: str | None = Query(
+        None,
+        description="Optional agent ID to get context details for",
+    ),
+) -> dict[str, Any]:
+    """
+    Get context usage details for the agent.
+    
+    Returns context information including:
+    - Total tokens available
+    - Used tokens
+    - Breakdown by category (files, messages, tools, memory)
+    """
+    # TODO: Implement actual context tracking
+    # For now, return mock data
+    return {
+        "name": "Context",
+        "totalTokens": 2520000,
+        "usedTokens": 1523552,
+        "children": [
+            {
+                "name": "Files",
+                "value": 450000,
+                "children": [
+                    {"name": "app.py", "value": 125000},
+                    {"name": "models.py", "value": 98000},
+                    {"name": "routes.py", "value": 112000},
+                    {"name": "utils.py", "value": 115000},
+                ],
+            },
+            {
+                "name": "Messages",
+                "value": 380000,
+                "children": [
+                    {"name": "User messages", "value": 180000},
+                    {"name": "Assistant responses", "value": 200000},
+                ],
+            },
+            {
+                "name": "Tools",
+                "value": 220000,
+                "children": [
+                    {"name": "Code execution", "value": 95000},
+                    {"name": "File operations", "value": 75000},
+                    {"name": "Search", "value": 50000},
+                ],
+            },
+            {
+                "name": "Memory",
+                "value": 473552,
+                "children": [
+                    {"name": "Short term", "value": 150000},
+                    {"name": "Long term", "value": 323552},
+                ],
+            },
+        ],
+    }
