@@ -73,7 +73,22 @@ const AgentSpaceFormExample: React.FC = () => {
   const [agentLibrary, setAgentLibrary] = useState<AgentLibrary>('pydantic-ai');
   const [transport, setTransport] = useState<Transport>('ag-ui');
   const [extensions, setExtensions] = useState<Extension[]>([]);
+  const [model, setModel] = useState('openai:gpt-4o-mini');
   const [isConfigured, setIsConfigured] = useState(false);
+
+  // Agent capabilities state (moved from Header toggles)
+  const [enableSkills, setEnableSkills] = useState(false);
+  const [enableCodemode, setEnableCodemode] = useState(false);
+  const [selectedMcpServers, setSelectedMcpServers] = useState<string[]>([]);
+
+  // Handle codemode change - clear MCP servers when enabled
+  const handleEnableCodemodeChange = (enabled: boolean) => {
+    setEnableCodemode(enabled);
+    if (enabled) {
+      // Clear selected MCP servers when codemode is enabled
+      setSelectedMcpServers([]);
+    }
+  };
 
   // UI state
   const [activeSession, setActiveSession] = useState('session-1');
@@ -137,8 +152,11 @@ const AgentSpaceFormExample: React.FC = () => {
           description: `Agent created via UI (${agentLibrary})`,
           agent_library: agentLibrary,
           transport: transport,
-          model: 'openai:gpt-4o-mini',
+          model: model,
           system_prompt: 'You are a helpful AI assistant.',
+          enable_skills: enableSkills,
+          enable_codemode: enableCodemode,
+          selected_mcp_servers: enableCodemode ? [] : selectedMcpServers,
         }),
       });
 
@@ -166,7 +184,16 @@ const AgentSpaceFormExample: React.FC = () => {
     } finally {
       setIsCreatingAgent(false);
     }
-  }, [baseUrl, agentName, agentLibrary, transport]);
+  }, [
+    baseUrl,
+    agentName,
+    agentLibrary,
+    transport,
+    model,
+    enableSkills,
+    enableCodemode,
+    selectedMcpServers,
+  ]);
 
   /**
    * Delete an agent via the API
@@ -262,14 +289,12 @@ const AgentSpaceFormExample: React.FC = () => {
             agentStatus={currentAgent?.status}
             richEditor={richEditor}
             durable={durable}
-            codemode={codemode}
             showContextTree={showContextTree}
             isNewAgent={selectedAgentId === 'new-agent'}
             isConfigured={isConfigured}
             onSessionChange={setActiveSession}
             onRichEditorChange={setRichEditor}
             onDurableChange={setDurable}
-            onCodemodeChange={setCodemode}
             onToggleContextTree={() => setShowContextTree(!showContextTree)}
             onToggleStatus={
               currentAgent
@@ -409,18 +434,26 @@ const AgentSpaceFormExample: React.FC = () => {
                       wsUrl={wsUrl}
                       baseUrl={baseUrl}
                       agentName={agentName}
+                      model={model}
                       agents={agents}
                       selectedAgentId={selectedAgentId}
                       isCreatingAgent={isCreatingAgent}
                       createError={createError}
+                      enableSkills={enableSkills}
+                      enableCodemode={enableCodemode}
+                      selectedMcpServers={selectedMcpServers}
                       onAgentLibraryChange={setAgentLibrary}
                       onTransportChange={setTransport}
                       onExtensionsChange={setExtensions}
                       onWsUrlChange={setWsUrl}
                       onBaseUrlChange={setBaseUrl}
                       onAgentNameChange={setAgentName}
+                      onModelChange={setModel}
                       onAgentSelect={handleAgentSelect}
                       onConnect={handleConnect}
+                      onEnableSkillsChange={setEnableSkills}
+                      onEnableCodemodeChange={handleEnableCodemodeChange}
+                      onSelectedMcpServersChange={setSelectedMcpServers}
                     />
                   ) : (
                     /* Chat Interface */
@@ -438,6 +471,10 @@ const AgentSpaceFormExample: React.FC = () => {
                         autoFocus={true}
                         placeholder="Type your message to the agent..."
                         height="calc(100vh - 250px)"
+                        showModelSelector={true}
+                        showToolsMenu={true}
+                        initialModel={model}
+                        initialMcpServers={selectedMcpServers}
                         suggestions={[
                           {
                             title: '👋 Say hello',

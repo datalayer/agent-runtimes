@@ -401,6 +401,12 @@ export interface ChatBaseProps {
   /** Show tools menu (for protocols that support it) */
   showToolsMenu?: boolean;
 
+  /** Initial model ID to select (e.g., 'openai:gpt-4o-mini') */
+  initialModel?: string;
+
+  /** Initial MCP server IDs to enable (others will be disabled) */
+  initialMcpServers?: string[];
+
   /** Custom class name */
   className?: string;
 
@@ -626,6 +632,8 @@ export function ChatBase({
   showInput = true,
   showModelSelector = false,
   showToolsMenu = false,
+  initialModel,
+  initialMcpServers,
   className,
   loadingState,
   headerActions,
@@ -678,6 +686,8 @@ export function ChatBase({
           showInput={showInput}
           showModelSelector={showModelSelector}
           showToolsMenu={showToolsMenu}
+          initialModel={initialModel}
+          initialMcpServers={initialMcpServers}
           className={className}
           loadingState={loadingState}
           headerActions={headerActions}
@@ -727,6 +737,8 @@ export function ChatBase({
       showInput={showInput}
       showModelSelector={showModelSelector}
       showToolsMenu={showToolsMenu}
+      initialModel={initialModel}
+      initialMcpServers={initialMcpServers}
       className={className}
       loadingState={loadingState}
       headerActions={headerActions}
@@ -776,6 +788,8 @@ function ChatBaseInner({
   showInput = true,
   showModelSelector = false,
   showToolsMenu = false,
+  initialModel,
+  initialMcpServers,
   className,
   loadingState,
   headerActions,
@@ -919,33 +933,62 @@ function ChatBaseInner({
   // Initialize model and tools when config is available
   useEffect(() => {
     if (configQuery.data && !selectedModel) {
-      // Select first available model, or fallback to first model if none available
-      const firstAvailableModel = configQuery.data.models.find(
-        m => m.isAvailable !== false,
-      );
-      const firstModel = firstAvailableModel || configQuery.data.models[0];
-      if (firstModel) {
-        setSelectedModel(firstModel.id);
-        const allToolIds =
-          configQuery.data.builtinTools?.map(tool => tool.id) || [];
-        setEnabledTools(allToolIds);
+      // Use initialModel if provided, otherwise select first available model
+      if (initialModel) {
+        // Check if the initial model exists in the config
+        const modelExists = configQuery.data.models.some(
+          m => m.id === initialModel,
+        );
+        if (modelExists) {
+          setSelectedModel(initialModel);
+        } else {
+          // Fallback to first available model if initialModel not found
+          const firstAvailableModel = configQuery.data.models.find(
+            m => m.isAvailable !== false,
+          );
+          const firstModel = firstAvailableModel || configQuery.data.models[0];
+          if (firstModel) {
+            setSelectedModel(firstModel.id);
+          }
+        }
+      } else {
+        // No initialModel provided, select first available model
+        const firstAvailableModel = configQuery.data.models.find(
+          m => m.isAvailable !== false,
+        );
+        const firstModel = firstAvailableModel || configQuery.data.models[0];
+        if (firstModel) {
+          setSelectedModel(firstModel.id);
+        }
       }
 
-      // Initialize MCP server tools - all enabled by default
+      const allToolIds =
+        configQuery.data.builtinTools?.map(tool => tool.id) || [];
+      setEnabledTools(allToolIds);
+
+      // Initialize MCP server tools
       if (configQuery.data.mcpServers) {
         const newEnabledMcpTools = new Map<string, Set<string>>();
         for (const server of configQuery.data.mcpServers) {
           if (server.isAvailable && server.enabled) {
-            const enabledToolNames = new Set(
-              server.tools.filter(t => t.enabled).map(t => t.name),
-            );
-            newEnabledMcpTools.set(server.id, enabledToolNames);
+            // If initialMcpServers is provided, only enable those servers
+            // If not provided, enable all available servers
+            const shouldEnableServer = initialMcpServers
+              ? initialMcpServers.includes(server.id)
+              : true;
+
+            if (shouldEnableServer) {
+              const enabledToolNames = new Set(
+                server.tools.filter(t => t.enabled).map(t => t.name),
+              );
+              newEnabledMcpTools.set(server.id, enabledToolNames);
+            }
           }
         }
         setEnabledMcpTools(newEnabledMcpTools);
       }
     }
-  }, [configQuery.data, selectedModel]);
+  }, [configQuery.data, selectedModel, initialModel, initialMcpServers]);
 
   // Helper to toggle MCP tool enabled state
   const toggleMcpTool = useCallback((serverId: string, toolName: string) => {

@@ -135,14 +135,12 @@ interface HeaderProps {
   agentStatus?: 'running' | 'paused';
   richEditor: boolean;
   durable: boolean;
-  codemode: boolean;
   showContextTree: boolean;
   isNewAgent?: boolean;
   isConfigured?: boolean;
   onSessionChange: (sessionId: string) => void;
   onRichEditorChange: (value: boolean) => void;
   onDurableChange: (value: boolean) => void;
-  onCodemodeChange: (value: boolean) => void;
   onToggleContextTree: () => void;
   onToggleStatus?: () => void;
 }
@@ -160,14 +158,12 @@ export const Header: React.FC<HeaderProps> = ({
   agentStatus,
   richEditor,
   durable,
-  codemode,
   showContextTree,
   isNewAgent = false,
   isConfigured = false,
   onSessionChange,
   onRichEditorChange,
   onDurableChange,
-  onCodemodeChange,
   onToggleContextTree,
   onToggleStatus,
 }) => {
@@ -177,12 +173,11 @@ export const Header: React.FC<HeaderProps> = ({
   const [showDetails, setShowDetails] = useState(false);
   const [showAvatarView, setShowAvatarView] = useState(false);
   const [openOverlay, setOpenOverlay] = useState<
-    'richEditor' | 'durable' | 'codemode' | null
+    'richEditor' | 'durable' | null
   >(null);
 
   const richEditorRef = useRef<HTMLButtonElement>(null);
   const durableRef = useRef<HTMLButtonElement>(null);
-  const codemodeRef = useRef<HTMLButtonElement>(null);
 
   const handleOptimize = () => {
     setIsOptimizing(true);
@@ -226,62 +221,6 @@ export const Header: React.FC<HeaderProps> = ({
             marginLeft: 'auto',
           }}
         >
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <ToggleSwitch
-              size="small"
-              checked={codemode}
-              onClick={() => onCodemodeChange(!codemode)}
-              aria-labelledby="codemode-label"
-              disabled={isNewAgent || !isConfigured}
-            />
-            <Text id="codemode-label" sx={{ fontSize: 0 }}>
-              Codemode
-            </Text>
-            <IconButton
-              ref={codemodeRef}
-              icon={InfoIcon}
-              size="small"
-              variant="invisible"
-              aria-label="Codemode info"
-              onClick={() =>
-                setOpenOverlay(openOverlay === 'codemode' ? null : 'codemode')
-              }
-            />
-            <AnchoredOverlay
-              open={openOverlay === 'codemode'}
-              onOpen={() => setOpenOverlay('codemode')}
-              onClose={() => setOpenOverlay(null)}
-              renderAnchor={() => <span />}
-              anchorRef={codemodeRef}
-            >
-              <Box
-                sx={{
-                  p: 3,
-                  maxWidth: '300px',
-                  bg: 'canvas.overlay',
-                  border: '1px solid',
-                  borderColor: 'border.default',
-                  borderRadius: 2,
-                  boxShadow: 'shadow.large',
-                }}
-              >
-                <Text
-                  sx={{
-                    fontSize: 0,
-                    display: 'block',
-                    mb: 1,
-                    fontWeight: 'bold',
-                  }}
-                >
-                  Codemode
-                </Text>
-                <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
-                  Optimize the agent for code-focused tasks including code
-                  generation, debugging, and technical problem-solving.
-                </Text>
-              </Box>
-            </AnchoredOverlay>
-          </Box>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <ToggleSwitch
               size="small"

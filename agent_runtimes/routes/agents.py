@@ -59,6 +59,18 @@ class CreateAgentRequest(BaseModel):
         default="You are a helpful AI assistant.",
         description="System prompt for the agent"
     )
+    enable_skills: bool = Field(
+        default=False,
+        description="Enable agent-skills toolset for reusable skill compositions"
+    )
+    enable_codemode: bool = Field(
+        default=False,
+        description="Enable mcp-codemode toolset for code-based tool composition"
+    )
+    selected_mcp_servers: list[str] = Field(
+        default_factory=list,
+        description="List of MCP server IDs to include. Empty list means include all available."
+    )
 
 
 class CreateAgentResponse(BaseModel):
@@ -106,18 +118,67 @@ async def create_agent(request: CreateAgentRequest, http_request: Request) -> Cr
         )
     
     try:
-        # Get pre-loaded MCP toolsets (started at server startup)
-        mcp_toolsets = get_mcp_toolsets()
-        if mcp_toolsets:
-            logger.info(f"Using {len(mcp_toolsets)} pre-loaded MCP toolsets for agent {agent_id}")
+        # Build list of toolsets
+        toolsets = []
+        
+        # Only add MCP toolsets if codemode is NOT enabled
+        # When codemode is enabled, it provides its own tool discovery
+        if not request.enable_codemode:
+            # Get pre-loaded MCP toolsets (started at server startup)
+            mcp_toolsets = get_mcp_toolsets()
+            if mcp_toolsets:
+                # Filter by selected_mcp_servers if specified
+                if request.selected_mcp_servers:
+                    # Filter toolsets to only include selected servers
+                    filtered_toolsets = [
+                        ts for ts in mcp_toolsets 
+                        if hasattr(ts, 'id') and ts.id in request.selected_mcp_servers
+                    ]
+                    if filtered_toolsets:
+                        logger.info(f"Using {len(filtered_toolsets)} selected MCP toolsets for agent {agent_id}: {request.selected_mcp_servers}")
+                        toolsets.extend(filtered_toolsets)
+                    else:
+                        logger.warning(f"No matching MCP toolsets found for: {request.selected_mcp_servers}")
+                else:
+                    # No filter specified, use all available
+                    logger.info(f"Using {len(mcp_toolsets)} pre-loaded MCP toolsets for agent {agent_id}")
+                    toolsets.extend(mcp_toolsets)
+        
+        # Add skills toolset if enabled
+        if request.enable_skills:
+            try:
+                from agent_skills import DatalayerSkillsToolset, PYDANTIC_AI_AVAILABLE
+                if PYDANTIC_AI_AVAILABLE:
+                    skills_toolset = DatalayerSkillsToolset(
+                        directories=["./skills"],  # TODO: Make configurable
+                    )
+                    toolsets.append(skills_toolset)
+                    logger.info(f"Added DatalayerSkillsToolset for agent {agent_id}")
+                else:
+                    logger.warning("agent-skills pydantic-ai integration not available")
+            except ImportError:
+                logger.warning("agent-skills package not installed, skills disabled")
+        
+        # Add codemode toolset if enabled
+        if request.enable_codemode:
+            try:
+                from mcp_codemode import CodemodeToolset, PYDANTIC_AI_AVAILABLE as CODEMODE_AVAILABLE
+                if CODEMODE_AVAILABLE:
+                    codemode_toolset = CodemodeToolset()
+                    toolsets.append(codemode_toolset)
+                    logger.info(f"Added CodemodeToolset for agent {agent_id}")
+                else:
+                    logger.warning("mcp-codemode pydantic-ai integration not available")
+            except ImportError:
+                logger.warning("mcp-codemode package not installed, codemode disabled")
         
         # Create the agent based on the library
         if request.agent_library == "pydantic-ai":
-            # First create the underlying Pydantic AI Agent with MCP toolsets
+            # First create the underlying Pydantic AI Agent with toolsets
             pydantic_agent = PydanticAgent(
                 request.model,
                 system_prompt=request.system_prompt,
-                toolsets=mcp_toolsets if mcp_toolsets else None,
+                toolsets=toolsets if toolsets else None,
             )
             # Then wrap it with our adapter (pass agent_id for usage tracking)
             agent = PydanticAIAdapter(

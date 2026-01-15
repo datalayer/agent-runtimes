@@ -170,6 +170,12 @@ export interface ChatProps {
   /** Show tools menu (fetched from /configure endpoint) */
   showToolsMenu?: boolean;
 
+  /** Initial model ID to select (e.g., 'openai:gpt-4o-mini') */
+  initialModel?: string;
+
+  /** Initial MCP server IDs to enable (others will be disabled) */
+  initialMcpServers?: string[];
+
   /** Clear messages when component mounts or agentId changes */
   clearOnMount?: boolean;
 
@@ -247,6 +253,8 @@ export function Chat({
   showHeader = true,
   showModelSelector = true,
   showToolsMenu = true,
+  initialModel,
+  initialMcpServers,
   clearOnMount: _clearOnMount = true,
   suggestions,
   submitOnSuggestionClick = true,
@@ -481,6 +489,8 @@ export function Chat({
           }
           showModelSelector={showModelSelector}
           showToolsMenu={showToolsMenu}
+          initialModel={initialModel}
+          initialMcpServers={initialMcpServers}
           onNewChat={handleNewChat}
           onMessagesChange={messages => setMessageCount(messages.length)}
           headerButtons={{
