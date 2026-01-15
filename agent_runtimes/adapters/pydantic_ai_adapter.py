@@ -21,6 +21,7 @@ from .base import (
     ToolCall,
     ToolDefinition,
 )
+from ..context.usage import get_usage_tracker
 
 
 logger = logging.getLogger(__name__)
@@ -52,6 +53,7 @@ class PydanticAIAdapter(BaseAgent):
         name: str = "pydantic_ai_agent",
         description: str = "A Pydantic AI powered agent",
         version: str = "1.0.0",
+        agent_id: str | None = None,
     ):
         """Initialize the Pydantic AI agent adapter.
 
@@ -60,13 +62,22 @@ class PydanticAIAdapter(BaseAgent):
             name: Agent name.
             description: Agent description.
             version: Agent version.
+            agent_id: Unique identifier for usage tracking (defaults to name).
         """
         self._agent = agent
         self._name = name
         self._description = description
         self._version = version
+        self._agent_id = agent_id or name.lower().replace(" ", "-")
         self._tools: list[ToolDefinition] = []
         self._extract_tools()
+        
+        # Register with usage tracker
+        tracker = get_usage_tracker()
+        # Try to extract model from agent
+        model = getattr(agent, "model", None)
+        model_str = str(model) if model else None
+        tracker.register_agent(self._agent_id, model=model_str)
 
     def _extract_tools(self) -> None:
         """Extract tool definitions from the Pydantic AI agent."""
@@ -117,6 +128,11 @@ class PydanticAIAdapter(BaseAgent):
     def version(self) -> str:
         """Get the agent's version."""
         return self._version
+
+    @property
+    def agent_id(self) -> str:
+        """Get the agent's unique identifier for usage tracking."""
+        return self._agent_id
 
     @property
     def pydantic_agent(self) -> Agent:
@@ -182,16 +198,38 @@ class PydanticAIAdapter(BaseAgent):
                                 )
                             )
 
-            # Extract usage information
+            # Extract usage information and track it
             usage = {}
+            tracker = get_usage_tracker()
+            
+            # Pydantic AI uses result.usage() method which returns RunUsage
             if hasattr(result, "usage"):
+                run_usage = result.usage()
                 usage = {
-                    "prompt_tokens": getattr(result.usage, "prompt_tokens", 0),
-                    "completion_tokens": getattr(
-                        result.usage, "completion_tokens", 0
-                    ),
-                    "total_tokens": getattr(result.usage, "total_tokens", 0),
+                    "prompt_tokens": getattr(run_usage, "input_tokens", 0),
+                    "completion_tokens": getattr(run_usage, "output_tokens", 0),
+                    "total_tokens": getattr(run_usage, "total_tokens", 0),
                 }
+                
+                # Update the usage tracker with real data
+                tracker.update_usage(
+                    agent_id=self._agent_id,
+                    input_tokens=getattr(run_usage, "input_tokens", 0),
+                    output_tokens=getattr(run_usage, "output_tokens", 0),
+                    cache_read_tokens=getattr(run_usage, "cache_read_tokens", 0),
+                    cache_write_tokens=getattr(run_usage, "cache_write_tokens", 0),
+                    requests=getattr(run_usage, "requests", 1),
+                    tool_calls=getattr(run_usage, "tool_calls", len(tool_calls)),
+                )
+                
+                # Update message token tracking
+                stats = tracker.get_agent_stats(self._agent_id)
+                if stats:
+                    # Estimate: user tokens ~= input tokens, assistant tokens ~= output tokens
+                    stats.update_message_tokens(
+                        user_tokens=getattr(run_usage, "input_tokens", 0),
+                        assistant_tokens=getattr(run_usage, "output_tokens", 0),
+                    )
 
             return AgentResponse(
                 content=content,
@@ -247,6 +285,28 @@ class PydanticAIAdapter(BaseAgent):
                         delta = text[len(last_text):]
                         last_text = text
                         yield StreamEvent(type="text", data=delta)
+                
+                # Track usage after streaming completes
+                tracker = get_usage_tracker()
+                if hasattr(result, "usage"):
+                    run_usage = result.usage()
+                    tracker.update_usage(
+                        agent_id=self._agent_id,
+                        input_tokens=getattr(run_usage, "input_tokens", 0),
+                        output_tokens=getattr(run_usage, "output_tokens", 0),
+                        cache_read_tokens=getattr(run_usage, "cache_read_tokens", 0),
+                        cache_write_tokens=getattr(run_usage, "cache_write_tokens", 0),
+                        requests=getattr(run_usage, "requests", 1),
+                        tool_calls=getattr(run_usage, "tool_calls", 0),
+                    )
+                    
+                    # Update message token tracking
+                    stats = tracker.get_agent_stats(self._agent_id)
+                    if stats:
+                        stats.update_message_tokens(
+                            user_tokens=getattr(run_usage, "input_tokens", 0),
+                            assistant_tokens=getattr(run_usage, "output_tokens", 0),
+                        )
 
             yield StreamEvent(type="done", data=None)
 

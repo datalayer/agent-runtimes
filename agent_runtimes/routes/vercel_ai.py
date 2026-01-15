@@ -175,8 +175,8 @@ async def chat(
 
         try:
             agent, _ = create_demo_agent()
-            # Create Vercel AI adapter
-            adapter = VercelAITransport(agent)
+            # Create Vercel AI adapter with agent_id for usage tracking
+            adapter = VercelAITransport(agent, agent_id=agent_id)
             register_vercel_agent(agent_id, adapter)
             logger.info(f"Auto-registered demo agent for Vercel AI: {agent_id}")
         except Exception as e:

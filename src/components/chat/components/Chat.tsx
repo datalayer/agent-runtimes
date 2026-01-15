@@ -257,6 +257,18 @@ export function Chat({
   const [isInitializing, setIsInitializing] = useState(true);
   const [showDetails, setShowDetails] = useState(false);
   const [messageCount, setMessageCount] = useState(0);
+  const [focusTrigger, setFocusTrigger] = useState(0);
+
+  // Focus the input when returning from details view
+  useEffect(() => {
+    if (!showDetails) {
+      // Small delay to ensure the chat view is visible before focusing
+      const timer = setTimeout(() => {
+        setFocusTrigger(prev => prev + 1);
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [showDetails]);
 
   // Build protocol config based on transport
   const protocolConfig = useMemo((): ProtocolConfig | undefined => {
@@ -413,31 +425,6 @@ export function Chat({
     );
   }
 
-  // Show agent details view
-  if (showDetails) {
-    return (
-      <Box
-        className={className}
-        sx={{
-          position: 'relative',
-          height,
-          bg: 'canvas.default',
-          display: 'flex',
-          flexDirection: 'column',
-        }}
-      >
-        <AgentDetails
-          name={title || 'AI Agent'}
-          protocol={transport}
-          url={protocolConfig?.endpoint || baseUrl}
-          messageCount={messageCount}
-          agentId={agentId}
-          onBack={() => setShowDetails(false)}
-        />
-      </Box>
-    );
-  }
-
   return (
     <Box
       className={className}
@@ -449,39 +436,65 @@ export function Chat({
         flexDirection: 'column',
       }}
     >
-      <ChatBase
-        title={title}
-        showHeader={showHeader}
-        useStore={false}
-        protocol={protocolConfig}
-        placeholder={placeholder}
-        description={description}
-        suggestions={suggestions}
-        submitOnSuggestionClick={submitOnSuggestionClick}
-        autoFocus={autoFocus}
-        headerContent={
-          <IconButton
-            icon={InfoIcon}
-            aria-label="Agent details"
-            variant="invisible"
-            size="small"
-            onClick={() => setShowDetails(true)}
-          />
-        }
-        showModelSelector={showModelSelector}
-        showToolsMenu={showToolsMenu}
-        onNewChat={handleNewChat}
-        onMessagesChange={messages => setMessageCount(messages.length)}
-        headerButtons={{
-          showNewChat: true,
-          showClear: true,
-          onNewChat: handleNewChat,
+      {/* Agent details view - shown/hidden via CSS to preserve chat state */}
+      <Box
+        sx={{
+          display: showDetails ? 'flex' : 'none',
+          flexDirection: 'column',
+          height: '100%',
         }}
-        avatarConfig={{
-          showAvatars: true,
+      >
+        <AgentDetails
+          name={title || 'AI Agent'}
+          protocol={transport}
+          url={protocolConfig?.endpoint || baseUrl}
+          messageCount={messageCount}
+          agentId={agentId}
+          onBack={() => setShowDetails(false)}
+        />
+      </Box>
+      {/* Chat view - shown/hidden via CSS to preserve message state */}
+      <Box
+        sx={{
+          display: showDetails ? 'none' : 'flex',
+          flexDirection: 'column',
+          height: '100%',
         }}
-        backgroundColor="canvas.default"
-      />
+      >
+        <ChatBase
+          title={title}
+          showHeader={showHeader}
+          protocol={protocolConfig}
+          placeholder={placeholder}
+          description={description}
+          suggestions={suggestions}
+          submitOnSuggestionClick={submitOnSuggestionClick}
+          autoFocus={autoFocus}
+          headerContent={
+            <IconButton
+              icon={InfoIcon}
+              aria-label="Agent details"
+              variant="invisible"
+              size="small"
+              onClick={() => setShowDetails(true)}
+            />
+          }
+          showModelSelector={showModelSelector}
+          showToolsMenu={showToolsMenu}
+          onNewChat={handleNewChat}
+          onMessagesChange={messages => setMessageCount(messages.length)}
+          headerButtons={{
+            showNewChat: true,
+            showClear: true,
+            onNewChat: handleNewChat,
+          }}
+          avatarConfig={{
+            showAvatars: true,
+          }}
+          backgroundColor="canvas.default"
+          focusTrigger={focusTrigger}
+        />
+      </Box>
     </Box>
   );
 }

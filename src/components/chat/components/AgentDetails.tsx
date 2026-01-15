@@ -35,7 +35,7 @@ export interface AgentDetailsProps {
   url: string;
   /** Number of messages in conversation */
   messageCount: number;
-  /** Agent ID */
+  /** Agent ID for context usage tracking */
   agentId?: string;
   /** Callback to go back to chat view */
   onBack: () => void;
@@ -370,8 +370,8 @@ export function AgentDetails({
           </Box>
         </Box>
 
-        {/* Context Usage */}
-        <ContextUsage agentId={agentId} />
+        {/* Context Usage - only shown when agentId is available */}
+        {agentId && <ContextUsage agentId={agentId} />}
 
         {/* Back button */}
         <Box sx={{ mt: 2 }}>

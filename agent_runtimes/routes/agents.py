@@ -119,11 +119,12 @@ async def create_agent(request: CreateAgentRequest, http_request: Request) -> Cr
                 system_prompt=request.system_prompt,
                 toolsets=mcp_toolsets if mcp_toolsets else None,
             )
-            # Then wrap it with our adapter
+            # Then wrap it with our adapter (pass agent_id for usage tracking)
             agent = PydanticAIAdapter(
                 agent=pydantic_agent,
                 name=request.name,
                 description=request.description,
+                agent_id=agent_id,
             )
         elif request.agent_library == "langchain":
             # TODO: Implement LangChain agent creation
@@ -161,7 +162,7 @@ async def create_agent(request: CreateAgentRequest, http_request: Request) -> Cr
         # Register with the specified transport
         if request.transport == "ag-ui":
             try:
-                agui_adapter = AGUITransport(agent)
+                agui_adapter = AGUITransport(agent, agent_id=agent_id)
                 register_agui_agent(agent_id, agui_adapter)
                 logger.info(f"Registered agent with AG-UI: {agent_id}")
                 
@@ -177,7 +178,7 @@ async def create_agent(request: CreateAgentRequest, http_request: Request) -> Cr
         
         elif request.transport == "vercel-ai":
             try:
-                vercel_adapter = VercelAITransport(agent)
+                vercel_adapter = VercelAITransport(agent, agent_id=agent_id)
                 register_vercel_agent(agent_id, vercel_adapter)
                 logger.info(f"Registered agent with Vercel AI: {agent_id}")
             except Exception as e:

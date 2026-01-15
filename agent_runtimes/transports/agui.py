@@ -22,6 +22,7 @@ from typing import TYPE_CHECKING, Any, AsyncIterator
 from pydantic_ai.ui.ag_ui._adapter import AGUIAdapter
 
 from ..adapters.base import BaseAgent
+from ..context.usage import get_usage_tracker
 from .base import BaseTransport
 
 if TYPE_CHECKING:
@@ -67,16 +68,26 @@ class AGUITransport(BaseTransport):
         main_app.mount("/agentic_chat", app)
     """
 
-    def __init__(self, agent: BaseAgent, **kwargs: Any):
+    def __init__(self, agent: BaseAgent, agent_id: str | None = None, **kwargs: Any):
         """Initialize the AG-UI adapter.
 
         Args:
             agent: The agent to adapt.
+            agent_id: Agent ID for usage tracking.
             **kwargs: Additional arguments passed to AGUIAdapter.dispatch_request.
         """
         super().__init__(agent)
         self._agui_kwargs = kwargs
         self._app: "Starlette | None" = None
+        # Get agent_id from adapter if available
+        if agent_id:
+            self._agent_id = agent_id
+        elif hasattr(agent, 'agent_id'):
+            self._agent_id = agent.agent_id
+        elif hasattr(agent, '_agent_id'):
+            self._agent_id = agent._agent_id
+        else:
+            self._agent_id = getattr(agent, 'name', 'unknown').lower().replace(' ', '-')
 
     @property
     def protocol_name(self) -> str:
@@ -110,13 +121,21 @@ class AGUITransport(BaseTransport):
             Starlette application implementing the AG-UI protocol.
         """
         if self._app is None:
+            from collections.abc import AsyncIterator as AsyncIteratorType
+            from typing import TYPE_CHECKING
+
             from starlette.applications import Starlette
             from starlette.requests import Request
             from starlette.responses import Response
             from starlette.routing import Route
 
+            if TYPE_CHECKING:
+                from pydantic_ai.agent import AgentRunResult
+
             pydantic_agent = self._get_pydantic_agent()
             agui_kwargs = self._agui_kwargs
+            agent_id = self._agent_id
+            tracker = get_usage_tracker()
 
             async def run_agent(request: Request) -> Response:
                 """Endpoint to run the agent with per-request model override support."""
@@ -138,10 +157,41 @@ class AGUITransport(BaseTransport):
                 except (json.JSONDecodeError, Exception) as e:
                     logger.debug(f"Could not extract model from AG-UI request body: {e}")
 
+                # Create on_complete callback to track usage
+                async def on_complete(result: "AgentRunResult") -> AsyncIteratorType:
+                    """Callback to track usage after agent run completes."""
+                    usage = result.usage()
+                    if usage:
+                        tracker.update_usage(
+                            agent_id=agent_id,
+                            input_tokens=usage.input_tokens,
+                            output_tokens=usage.output_tokens,
+                            requests=usage.requests,
+                            tool_calls=usage.tool_calls,
+                        )
+                        
+                        # Also update message token tracking
+                        stats = tracker.get_agent_stats(agent_id)
+                        if stats:
+                            stats.update_message_tokens(
+                                user_tokens=usage.input_tokens,
+                                assistant_tokens=usage.output_tokens,
+                            )
+                        
+                        logger.debug(
+                            f"AG-UI tracked usage for agent {agent_id}: "
+                            f"input={usage.input_tokens}, output={usage.output_tokens}, "
+                            f"requests={usage.requests}, tools={usage.tool_calls}"
+                        )
+                    # Must be an async generator, even if it yields nothing
+                    return
+                    yield  # type: ignore[misc]
+
                 return await AGUIAdapter.dispatch_request(
                     request,
                     agent=pydantic_agent,
                     model=model,
+                    on_complete=on_complete,
                     **agui_kwargs,
                 )
 

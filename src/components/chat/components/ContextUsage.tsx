@@ -78,14 +78,18 @@ function getCategoryIcon(name: string) {
       return ToolsIcon;
     case 'memory':
       return DatabaseIcon;
+    case 'system':
+      return FileIcon;
+    case 'cache':
+      return DatabaseIcon;
     default:
       return ClockIcon;
   }
 }
 
 export interface ContextUsageProps {
-  /** Agent ID for fetching context details */
-  agentId?: string;
+  /** Agent ID for fetching context details (required) */
+  agentId: string;
 }
 
 /**
@@ -100,9 +104,8 @@ export function ContextUsage({ agentId }: ContextUsageProps) {
     queryKey: ['context-details', agentId],
     queryFn: async () => {
       const apiBase = getLocalApiBase();
-      const params = agentId ? `?agent_id=${encodeURIComponent(agentId)}` : '';
       const response = await fetch(
-        `${apiBase}/api/v1/configure/context-details${params}`,
+        `${apiBase}/api/v1/configure/agents/${encodeURIComponent(agentId)}/context-details`,
       );
       if (!response.ok) {
         throw new Error('Failed to fetch context details');
@@ -110,6 +113,8 @@ export function ContextUsage({ agentId }: ContextUsageProps) {
       return response.json();
     },
     refetchInterval: 10000, // Refresh every 10 seconds
+    refetchOnMount: 'always', // Always refetch when component mounts
+    staleTime: 0, // Data is always considered stale
   });
 
   if (isLoading) {

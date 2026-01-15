@@ -15,6 +15,7 @@ The Vercel AI SDK protocol provides:
 - Standard message format compatible with Vercel AI SDK
 """
 
+import logging
 from typing import TYPE_CHECKING, Any, AsyncIterator
 
 from pydantic_ai import UsageLimits
@@ -23,10 +24,13 @@ from starlette.requests import Request
 from starlette.responses import Response
 
 from ..adapters.base import BaseAgent
+from ..context.usage import get_usage_tracker
 from .base import BaseTransport
 
 if TYPE_CHECKING:
     from pydantic_ai import Agent
+
+logger = logging.getLogger(__name__)
 
 
 class VercelAITransport(BaseTransport):
@@ -67,6 +71,7 @@ class VercelAITransport(BaseTransport):
         usage_limits: UsageLimits | None = None,
         toolsets: list[Any] | None = None,
         builtin_tools: list[str] | None = None,
+        agent_id: str | None = None,
     ):
         """Initialize the Vercel AI adapter.
 
@@ -75,6 +80,7 @@ class VercelAITransport(BaseTransport):
             usage_limits: Usage limits for the agent (tokens, tool calls).
             toolsets: Additional toolsets (e.g., MCP servers).
             builtin_tools: List of built-in tool names to expose.
+            agent_id: Agent ID for usage tracking.
         """
         super().__init__(agent)
         self._usage_limits = usage_limits or UsageLimits(
@@ -84,6 +90,15 @@ class VercelAITransport(BaseTransport):
         )
         self._toolsets = toolsets or []
         self._builtin_tools = builtin_tools or []
+        # Get agent_id from adapter if available
+        if agent_id:
+            self._agent_id = agent_id
+        elif hasattr(agent, 'agent_id'):
+            self._agent_id = agent.agent_id
+        elif hasattr(agent, '_agent_id'):
+            self._agent_id = agent._agent_id
+        else:
+            self._agent_id = getattr(agent, 'name', 'unknown').lower().replace(' ', '-')
 
     @property
     def protocol_name(self) -> str:
@@ -127,6 +142,11 @@ class VercelAITransport(BaseTransport):
         """
         import json
         import logging
+        from collections.abc import AsyncIterator
+        from typing import TYPE_CHECKING
+
+        if TYPE_CHECKING:
+            from pydantic_ai.agent import AgentRunResult
 
         logger = logging.getLogger(__name__)
         pydantic_agent = self._get_pydantic_agent()
@@ -154,7 +174,40 @@ class VercelAITransport(BaseTransport):
             except (json.JSONDecodeError, Exception) as e:
                 logger.debug(f"Could not extract model from request body: {e}")
 
-        # Use Pydantic AI's built-in Vercel AI adapter
+        # Create on_complete callback to track usage
+        agent_id = self._agent_id
+        tracker = get_usage_tracker()
+
+        async def on_complete(result: "AgentRunResult") -> AsyncIterator:
+            """Callback to track usage after agent run completes."""
+            usage = result.usage()
+            if usage:
+                tracker.update_usage(
+                    agent_id=agent_id,
+                    input_tokens=usage.input_tokens,
+                    output_tokens=usage.output_tokens,
+                    requests=usage.requests,  # Number of requests made
+                    tool_calls=usage.tool_calls,
+                )
+                
+                # Also update message token tracking
+                stats = tracker.get_agent_stats(agent_id)
+                if stats:
+                    stats.update_message_tokens(
+                        user_tokens=usage.input_tokens,
+                        assistant_tokens=usage.output_tokens,
+                    )
+                
+                logger.debug(
+                    f"Tracked usage for agent {agent_id} via on_complete: "
+                    f"input={usage.input_tokens}, output={usage.output_tokens}, "
+                    f"requests={usage.requests}, tools={usage.tool_calls}"
+                )
+            # Must be an async generator, even if it yields nothing
+            return
+            yield  # type: ignore[misc]
+
+        # Use Pydantic AI's built-in Vercel AI adapter with on_complete callback
         response = await VercelAIAdapter.dispatch_request(
             request,
             agent=pydantic_agent,
@@ -162,6 +215,7 @@ class VercelAITransport(BaseTransport):
             usage_limits=self._usage_limits,
             toolsets=self._toolsets,
             builtin_tools=self._builtin_tools,
+            on_complete=on_complete,
         )
 
         return response

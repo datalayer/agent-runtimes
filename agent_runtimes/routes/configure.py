@@ -6,10 +6,11 @@
 import logging
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Path
 
 from agent_runtimes.mcp import get_available_tools, get_frontend_config, get_mcp_manager, get_mcp_toolsets_status, get_mcp_toolsets_info
 from agent_runtimes.types import FrontendConfig
+from agent_runtimes.context.usage import get_usage_tracker
 
 logger = logging.getLogger(__name__)
 
@@ -85,62 +86,47 @@ async def get_toolsets_info() -> list[dict[str, Any]]:
     return get_mcp_toolsets_info()
 
 
-@router.get("/context-details")
-async def get_context_details(
-    agent_id: str | None = Query(
-        None,
-        description="Optional agent ID to get context details for",
+@router.get("/agents/{agent_id}/context-details")
+async def get_agent_context_details(
+    agent_id: str = Path(
+        ...,
+        description="Agent ID to get context details for",
     ),
 ) -> dict[str, Any]:
     """
-    Get context usage details for the agent.
+    Get context usage details for a specific agent.
     
     Returns context information including:
-    - Total tokens available
+    - Total tokens available (context window)
     - Used tokens
-    - Breakdown by category (files, messages, tools, memory)
+    - Breakdown by category (messages, tools, system, cache)
+    
+    Args:
+        agent_id: The unique identifier of the agent.
+        
+    Returns:
+        Context usage details for the agent.
     """
-    # TODO: Implement actual context tracking
-    # For now, return mock data
-    return {
-        "name": "Context",
-        "totalTokens": 2520000,
-        "usedTokens": 1523552,
-        "children": [
-            {
-                "name": "Files",
-                "value": 450000,
-                "children": [
-                    {"name": "app.py", "value": 125000},
-                    {"name": "models.py", "value": 98000},
-                    {"name": "routes.py", "value": 112000},
-                    {"name": "utils.py", "value": 115000},
-                ],
-            },
-            {
-                "name": "Messages",
-                "value": 380000,
-                "children": [
-                    {"name": "User messages", "value": 180000},
-                    {"name": "Assistant responses", "value": 200000},
-                ],
-            },
-            {
-                "name": "Tools",
-                "value": 220000,
-                "children": [
-                    {"name": "Code execution", "value": 95000},
-                    {"name": "File operations", "value": 75000},
-                    {"name": "Search", "value": 50000},
-                ],
-            },
-            {
-                "name": "Memory",
-                "value": 473552,
-                "children": [
-                    {"name": "Short term", "value": 150000},
-                    {"name": "Long term", "value": 323552},
-                ],
-            },
-        ],
-    }
+    tracker = get_usage_tracker()
+    return tracker.get_context_details(agent_id)
+
+
+@router.post("/agents/{agent_id}/context-details/reset")
+async def reset_agent_context(
+    agent_id: str = Path(
+        ...,
+        description="Agent ID to reset context for",
+    ),
+) -> dict[str, str]:
+    """
+    Reset context usage statistics for an agent.
+    
+    Args:
+        agent_id: The unique identifier of the agent.
+        
+    Returns:
+        Confirmation message.
+    """
+    tracker = get_usage_tracker()
+    tracker.reset_agent(agent_id)
+    return {"status": "ok", "message": f"Context reset for agent '{agent_id}'"}
