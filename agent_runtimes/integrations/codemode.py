@@ -82,7 +82,7 @@ class CodemodeIntegration:
                 CodeModeConfig,
                 MCPServerConfig,
             )
-            from agent_skills import SkillManager
+            from agent_skills import SkillsManager
             
             # Set up the tool registry
             self._registry = ToolRegistry()
@@ -105,7 +105,7 @@ class CodemodeIntegration:
             await self._executor.setup()
             
             # Set up the skill manager
-            self._skill_manager = SkillManager(
+            self._skill_manager = SkillsManager(
                 skills_path=self.skills_path,
                 sandbox_variant=self.sandbox_variant,
             )

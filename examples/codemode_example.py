@@ -133,7 +133,7 @@ async def example_skills():
     discovered, and executed.
     """
     from mcp_codemode import ToolRegistry, CodeModeExecutor, CodeModeConfig
-    from mcp_codemode.skills.manager import SkillManager
+    from mcp_codemode.skills.manager import SkillsManager
     from mcp_codemode.models import Skill
     
     print("\n" + "=" * 60)
@@ -145,7 +145,7 @@ async def example_skills():
     skills_path.mkdir(exist_ok=True)
     
     # Initialize the skill manager
-    manager = SkillManager(str(skills_path))
+    manager = SkillsManager(str(skills_path))
     
     # Create a sample skill
     skill = Skill(

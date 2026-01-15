@@ -29,7 +29,7 @@ import shutil
 
 async def example_skill_creation():
     """Example 1: Creating Skills Programmatically."""
-    from agent_skills import SkillManager, SkillContext
+    from agent_skills import SkillsManager, SkillContext
     
     print("=" * 60)
     print("Example 1: Creating Skills Programmatically")
@@ -40,7 +40,7 @@ async def example_skill_creation():
     skills_path.mkdir(exist_ok=True)
     
     # Initialize the skill manager
-    manager = SkillManager(str(skills_path))
+    manager = SkillsManager(str(skills_path))
     
     # Create a skill using the API
     skill = manager.create(
