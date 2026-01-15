@@ -11,6 +11,37 @@ import { useDocsSidebar } from '@docusaurus/plugin-content-docs/client';
 
 **Agent Runtimes** is a flexible framework for building and deploying AI agents with multiple transport protocols, model providers, and MCP integrations.
 
+## Package Scope
+
+Agent Runtimes is the **top-level orchestration layer** in the Datalayer AI stack:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     agent-runtimes                          │  ◀── You are here
+│            (Agent hosting, protocols, UI)                   │
+├──────────────────────────┬──────────────────────────────────┤
+│      mcp-codemode        │         agent-skills             │
+│  (Tool discovery, codegen)│    (Skill management)           │
+├──────────────────────────┴──────────────────────────────────┤
+│                    code-sandboxes                           │
+│          (Safe code execution environment)                  │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Responsibilities:**
+- ✅ Agent hosting and lifecycle management
+- ✅ Multiple transport protocols (AG-UI, Vercel AI, ACP, A2A)
+- ✅ Model provider integration (Anthropic, OpenAI, Azure, Bedrock)
+- ✅ MCP server management and tool routing
+- ✅ React UI components (ChatBase, ChatSidebar, ChatFloating)
+- ✅ Extensions (A2UI, MCP-UI, MCP Apps)
+- ✅ Integration layer for mcp-codemode and agent-skills
+
+**Not Responsible For:**
+- ❌ MCP tool binding generation (→ mcp-codemode)
+- ❌ Skill CRUD and lifecycle (→ agent-skills)
+- ❌ Raw code execution (→ code-sandboxes)
+
 ## Overview
 
 Agent Runtimes provides:
@@ -22,6 +53,29 @@ Agent Runtimes provides:
 - 🔄 **Per-Request Model Selection** — Switch models dynamically without restarting agents
 - 🎨 **Ready-to-Use UI Components** — React components for building chat interfaces
 - 🧩 **Extensions** — A2UI, MCP-UI, and MCP Apps support for rich UI experiences
+
+## Integration with Other Packages
+
+Agent Runtimes provides an integration layer for the other packages:
+
+```python
+from agent_runtimes.integrations.codemode import CodemodeIntegration
+
+# Initialize with agent-runtimes MCP infrastructure
+integration = CodemodeIntegration()
+await integration.setup()
+
+# Access mcp-codemode features
+result = await integration.execute_code('''
+    from generated.servers.filesystem import read_file
+    content = await read_file({"path": "/data.txt"})
+    print(content)
+''')
+
+# Access agent-skills features
+skills = integration.list_skills()
+result = await integration.execute_skill("data-analyzer", {"path": "/data.csv"})
+```
 
 ## Quick Start
 
