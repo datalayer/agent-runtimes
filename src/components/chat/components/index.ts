@@ -32,6 +32,11 @@ export {
   type ContextDetailsResponse,
 } from './ContextUsage';
 export {
+  ContextDistribution,
+  type ContextDistributionProps,
+  type ContextSnapshotResponse,
+} from './ContextDistribution';
+export {
   ToolApprovalDialog,
   useToolApprovalDialog,
   type ToolApprovalDialogProps,

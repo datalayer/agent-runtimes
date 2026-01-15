@@ -25,6 +25,7 @@ import {
 import { AiAgentIcon } from '@datalayer/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { ContextUsage } from './ContextUsage';
+import { ContextDistribution } from './ContextDistribution';
 
 export interface AgentDetailsProps {
   /** Agent name/title */
@@ -372,6 +373,34 @@ export function AgentDetails({
 
         {/* Context Usage - only shown when agentId is available */}
         {agentId && <ContextUsage agentId={agentId} />}
+
+        {/* Context Distribution - treemap visualization */}
+        {agentId && (
+          <Box sx={{ mt: 3 }}>
+            <Heading
+              as="h4"
+              sx={{
+                fontSize: 1,
+                fontWeight: 'semibold',
+                mb: 2,
+                color: 'fg.muted',
+              }}
+            >
+              Current Context Distribution
+            </Heading>
+            <Box
+              sx={{
+                p: 3,
+                bg: 'canvas.subtle',
+                borderRadius: 2,
+                border: '1px solid',
+                borderColor: 'border.default',
+              }}
+            >
+              <ContextDistribution agentId={agentId} height="250px" />
+            </Box>
+          </Box>
+        )}
 
         {/* Back button */}
         <Box sx={{ mt: 2 }}>

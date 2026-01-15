@@ -111,6 +111,52 @@ async def get_agent_context_details(
     return tracker.get_context_details(agent_id)
 
 
+@router.get("/agents/{agent_id}/context-snapshot")
+async def get_agent_context_snapshot_endpoint(
+    agent_id: str = Path(
+        ...,
+        description="Agent ID to get context snapshot for",
+    ),
+) -> dict[str, Any]:
+    """
+    Get current context snapshot for a specific agent.
+    
+    Returns the current context state including:
+    - System prompts and their token counts
+    - Message distribution (user/assistant)
+    - Total context usage vs context window
+    - Distribution data for visualization
+    
+    Args:
+        agent_id: The unique identifier of the agent.
+        
+    Returns:
+        Context snapshot with distribution data.
+    """
+    from ..context.snapshot import get_agent_context_snapshot
+    
+    snapshot = get_agent_context_snapshot(agent_id)
+    if snapshot is None:
+        return {
+            "error": f"Agent '{agent_id}' not found",
+            "agentId": agent_id,
+            "systemPrompts": [],
+            "systemPromptTokens": 0,
+            "messages": [],
+            "userMessageTokens": 0,
+            "assistantMessageTokens": 0,
+            "totalTokens": 0,
+            "contextWindow": 128000,
+            "distribution": {
+                "name": "Context",
+                "value": 0,
+                "children": [],
+            },
+        }
+    
+    return snapshot.to_dict()
+
+
 @router.post("/agents/{agent_id}/context-details/reset")
 async def reset_agent_context(
     agent_id: str = Path(

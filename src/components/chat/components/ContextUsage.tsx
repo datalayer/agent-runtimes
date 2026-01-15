@@ -129,7 +129,7 @@ export function ContextUsage({ agentId }: ContextUsageProps) {
             color: 'fg.muted',
           }}
         >
-          Context Usage
+          Cumulative Context Usage
         </Heading>
         <Box
           sx={{
@@ -164,7 +164,7 @@ export function ContextUsage({ agentId }: ContextUsageProps) {
             color: 'fg.muted',
           }}
         >
-          Context Usage
+          Cumulative Context Usage
         </Heading>
         <Box
           sx={{
@@ -197,7 +197,7 @@ export function ContextUsage({ agentId }: ContextUsageProps) {
           color: 'fg.muted',
         }}
       >
-        Context Usage
+        Cumulative Context Usage
       </Heading>
       <Box
         sx={{
