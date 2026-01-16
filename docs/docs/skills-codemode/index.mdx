@@ -1,0 +1,86 @@
+---
+title: Skills & Codemode
+---
+
+# Skills & Codemode
+
+## What this page covers
+- Why we offer two capabilities: reusable Skills and programmatic Codemode
+- How the toggles behave in the UI/backend
+- When to use each mode, and when to combine them
+- Configuration levers (`allow_direct_tool_calls`, reranker hook) and their tradeoffs
+
+## Goals
+- **Skills:** package reusable workflows (instructions, resources, scripts) so an agent can load, read resources, and run scripts without writing new code each time.
+- **Codemode:** let the agent write Python to compose tools directly, reducing LLM tool-call overhead and enabling control flow, parallelism, and error handling.
+- **Coexistence:** you can enable Skills, Codemode, or both. Codemode provides its own tool discovery/execution; Skills surface curated capabilities.
+
+## Toggles and behavior
+- **Enable Skills**: adds `DatalayerSkillsToolset` (skills discovery, load, resource read, script run). Uses the configured `skills/` directory.
+- **Enable Codemode**: adds `CodemodeToolset` (list/search tools, execute Python code). When Codemode is on, MCP server selection in the UI is disabled because Codemode handles discovery itself.
+- **Both on**: Skills remain available for loading/running scripts; Codemode is used for tool discovery and code execution.
+
+## Codemode toolset capabilities
+- `list_tool_names` (fast names-only, supports `server`, `keywords`, `limit`)
+- `search_tools` (returns tool definitions; can be reranked)
+- `get_tool_details` (full schema for one tool)
+- `list_servers` (connected MCP servers)
+- `execute_code` (Python in sandbox; import bindings from `generated.servers.<server>`)
+- `call_tool` (single tool call) — **optional**, see below
+
+## Direct tool calls: `allow_direct_tool_calls`
+- When **false** (default in agent-runtimes codemode setup):
+	- `call_tool` is hidden; all execution goes through `execute_code`.
+	- Instructions emphasize code-first composition, mirroring the “write code to use tools” pattern.
+- When **true** (opt-in):
+	- `call_tool` is exposed as a convenience for single calls.
+	- Useful for simple queries where code would be overkill.
+- Choose **false** for stricter discipline and clearer audit of composed workflows; choose **true** for convenience at the cost of less enforced structure.
+
+## Search quality: reranker hook
+- `search_tools` accepts an optional async reranker: `tool_reranker(tools, query, server) -> list[ToolDefinition]`.
+- Use it to reorder results (e.g., LLM-based relevance, business priority). Failures fall back to registry order.
+- This keeps discovery flexible without tying Codemode to any specific model provider.
+
+## Execution model
+- Codemode runs **Python** in an isolated sandbox (code-sandboxes). Agents import tool bindings from `generated.servers.<server_name>`.
+- Use `async/await`, loops, conditionals, and `asyncio.gather` for parallelism.
+- Errors are caught and surfaced in the `execute_code` result payload.
+
+## Skills model
+- Skills live in a `skills/` directory with `SKILL.md`, resources, and scripts.
+- Tooling provided by `DatalayerSkillsToolset`: `list_skills`, `load_skill`, `read_skill_resource`, `run_skill_script`.
+- Skills can be authored as files or programmatic callables; they complement Codemode when you want curated, reusable behaviors.
+
+## UI & backend flow
+- UI checkboxes toggle Skills/Codemode. If Codemode is enabled, MCP server selection is disabled (Codemode handles discovery).
+- Backend route `/api/v1/agents` builds toolsets accordingly:
+	- Skills enabled → add `DatalayerSkillsToolset`.
+	- Codemode enabled → add `CodemodeToolset` with `allow_direct_tool_calls=False` by default.
+
+## Choosing a pattern
+- **Use Skills** when you want repeatable, reviewed workflows and clearer governance.
+- **Use Codemode** when you need ad-hoc composition, control flow, and efficiency.
+- **Use both** when you want curated capabilities (Skills) plus the ability to glue them together with code (Codemode).
+
+## Configuration summary
+- `allow_direct_tool_calls`: hide or expose `call_tool` (defaults to false in agent-runtimes wiring).
+- `tool_reranker`: optional async hook to reorder `search_tools` results.
+- `keywords`/`limit` on `list_tool_names`: faster, filtered discovery.
+
+## `allow_direct_tool_calls`
+- **What it does:** Controls whether the `call_tool` shortcut is exposed. When off, all tool usage flows through `execute_code`, which keeps execution auditable and code-first.
+- **Default:** `false` in agent-runtimes wiring (CodemodeToolset is instantiated with direct calls disabled).
+- **When to set true:** Simple, single-step calls where the overhead of writing code is unnecessary, or for rapid prototyping.
+- **When to keep false:** Shared/production agents, where you want consistent logging, fewer accidental direct calls, and clearer control over how tools are composed.
+
+## `tool_reranker`
+- **What it does:** Optional async hook `tool_reranker(tools, query, server) -> list[ToolDefinition]` that reorders `search_tools` results.
+- **Why use it:** Apply model-based relevance, business rules, or safety filters to discovery without changing the registry itself.
+- **Behavior on error:** If the hook raises or fails, Codemode falls back to registry order; search still returns results.
+- **Usage tip:** Log applied ordering when the hook is enabled to keep discovery transparent.
+
+## Safety and clarity tips
+- Prefer `allow_direct_tool_calls=False` in shared/production agents to keep a single, auditable execution path via `execute_code`.
+- When enabling reranking, log or trace the applied order for transparency.
+- Keep Skills concise and documented; use Codemode for bespoke multi-step tasks.

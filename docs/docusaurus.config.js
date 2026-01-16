@@ -73,6 +73,12 @@ module.exports = {
           label: 'Endpoints',
         },
         {
+          type: 'doc',
+          docId: 'skills-codemode/index',
+          position: 'left',
+          label: 'Skills & Codemode',
+        },
+        {
           href: 'https://discord.gg/YQFwvmSSuR',
           position: 'right',
           className: 'header-discord-link',

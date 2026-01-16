@@ -162,9 +162,15 @@ async def create_agent(request: CreateAgentRequest, http_request: Request) -> Cr
         # Add codemode toolset if enabled
         if request.enable_codemode:
             try:
-                from mcp_codemode import CodemodeToolset, PYDANTIC_AI_AVAILABLE as CODEMODE_AVAILABLE
+                from mcp_codemode import (
+                    CodemodeToolset,
+                    CodeModeConfig,
+                    PYDANTIC_AI_AVAILABLE as CODEMODE_AVAILABLE,
+                )
                 if CODEMODE_AVAILABLE:
-                    codemode_toolset = CodemodeToolset()
+                    codemode_toolset = CodemodeToolset(
+                        config=CodeModeConfig(allow_direct_tool_calls=False)
+                    )
                     toolsets.append(codemode_toolset)
                     logger.info(f"Added CodemodeToolset for agent {agent_id}")
                 else:

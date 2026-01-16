@@ -249,7 +249,7 @@ To start the server:
 
 Or from the command line:
 
-    python -m mcp_codemode.server
+    python -m codemode.server
 """)
 
 
