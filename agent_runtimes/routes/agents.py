@@ -43,6 +43,47 @@ def set_api_prefix(prefix: str) -> None:
     _api_prefix = prefix
 
 
+def _build_codemode_toolset(
+    request: "CreateAgentRequest",
+    http_request: Request,
+):
+    """Create a CodemodeToolset based on request flags and app configuration."""
+    if not request.enable_codemode:
+        return None
+
+    try:
+        from mcp_codemode import (
+            CodemodeToolset,
+            CodeModeConfig,
+            PYDANTIC_AI_AVAILABLE as CODEMODE_AVAILABLE,
+        )
+    except ImportError:
+        logger.warning("mcp-codemode package not installed, codemode disabled")
+        return None
+
+    if not CODEMODE_AVAILABLE:
+        logger.warning("mcp-codemode pydantic-ai integration not available")
+        return None
+
+    allow_direct = (
+        request.allow_direct_tool_calls
+        if request.allow_direct_tool_calls is not None
+        else False
+    )
+
+    reranker = None
+    if request.enable_tool_reranker:
+        reranker = getattr(http_request.app.state, "codemode_tool_reranker", None)
+        if reranker is None:
+            logger.warning("Tool reranker requested but not configured on app.state")
+
+    return CodemodeToolset(
+        config=CodeModeConfig(allow_direct_tool_calls=allow_direct),
+        allow_direct_tool_calls=allow_direct,
+        tool_reranker=reranker,
+    )
+
+
 class CreateAgentRequest(BaseModel):
     """Request body for creating a new agent."""
     
@@ -66,6 +107,14 @@ class CreateAgentRequest(BaseModel):
     enable_codemode: bool = Field(
         default=False,
         description="Enable mcp-codemode toolset for code-based tool composition"
+    )
+    allow_direct_tool_calls: bool | None = Field(
+        default=None,
+        description="Override direct tool call policy for codemode (None uses defaults)"
+    )
+    enable_tool_reranker: bool = Field(
+        default=False,
+        description="Enable optional tool reranker hook for codemode discovery"
     )
     selected_mcp_servers: list[str] = Field(
         default_factory=list,
@@ -161,22 +210,10 @@ async def create_agent(request: CreateAgentRequest, http_request: Request) -> Cr
         
         # Add codemode toolset if enabled
         if request.enable_codemode:
-            try:
-                from mcp_codemode import (
-                    CodemodeToolset,
-                    CodeModeConfig,
-                    PYDANTIC_AI_AVAILABLE as CODEMODE_AVAILABLE,
-                )
-                if CODEMODE_AVAILABLE:
-                    codemode_toolset = CodemodeToolset(
-                        config=CodeModeConfig(allow_direct_tool_calls=False)
-                    )
-                    toolsets.append(codemode_toolset)
-                    logger.info(f"Added CodemodeToolset for agent {agent_id}")
-                else:
-                    logger.warning("mcp-codemode pydantic-ai integration not available")
-            except ImportError:
-                logger.warning("mcp-codemode package not installed, codemode disabled")
+            codemode_toolset = _build_codemode_toolset(request, http_request)
+            if codemode_toolset is not None:
+                toolsets.append(codemode_toolset)
+                logger.info(f"Added CodemodeToolset for agent {agent_id}")
         
         # Create the agent based on the library
         if request.agent_library == "pydantic-ai":

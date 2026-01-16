@@ -152,6 +152,8 @@ interface AgentConfigurationProps {
   createError?: string | null;
   enableSkills?: boolean;
   enableCodemode?: boolean;
+  allowDirectToolCalls?: boolean;
+  enableToolReranker?: boolean;
   selectedMcpServers?: string[];
   onAgentLibraryChange: (library: AgentLibrary) => void;
   onTransportChange: (transport: Transport) => void;
@@ -164,6 +166,8 @@ interface AgentConfigurationProps {
   onConnect: () => void;
   onEnableSkillsChange?: (enabled: boolean) => void;
   onEnableCodemodeChange?: (enabled: boolean) => void;
+  onAllowDirectToolCallsChange?: (enabled: boolean) => void;
+  onEnableToolRerankerChange?: (enabled: boolean) => void;
   onSelectedMcpServersChange?: (servers: string[]) => void;
 }
 
@@ -186,6 +190,8 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
   createError = null,
   enableSkills = false,
   enableCodemode = false,
+  allowDirectToolCalls = false,
+  enableToolReranker = false,
   selectedMcpServers = [],
   onAgentLibraryChange,
   onTransportChange,
@@ -198,6 +204,8 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
   onConnect,
   onEnableSkillsChange,
   onEnableCodemodeChange,
+  onAllowDirectToolCallsChange,
+  onEnableToolRerankerChange,
   onSelectedMcpServersChange,
 }) => {
   // Fetch MCP servers configuration from the backend
@@ -420,6 +428,44 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
             </Box>
           </Box>
         </Box>
+        {enableSkills && enableCodemode && (
+          <Flash variant="info" sx={{ mt: 3 }}>
+            <Text sx={{ fontSize: 0 }}>
+              Skills provide curated capabilities; Codemode composes tools with
+              Python for multi-step execution.
+            </Text>
+          </Flash>
+        )}
+        {enableCodemode && (
+          <Box sx={{ mt: 3, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Checkbox
+                checked={allowDirectToolCalls}
+                disabled={selectedAgentId !== 'new-agent'}
+                onChange={e => onAllowDirectToolCallsChange?.(e.target.checked)}
+              />
+              <Box>
+                <Text sx={{ fontSize: 1 }}>Allow direct tool calls</Text>
+                <Text sx={{ fontSize: 0, color: 'fg.muted', display: 'block' }}>
+                  Expose call_tool for simple, single-tool operations
+                </Text>
+              </Box>
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Checkbox
+                checked={enableToolReranker}
+                disabled={selectedAgentId !== 'new-agent'}
+                onChange={e => onEnableToolRerankerChange?.(e.target.checked)}
+              />
+              <Box>
+                <Text sx={{ fontSize: 1 }}>Enable tool reranker</Text>
+                <Text sx={{ fontSize: 0, color: 'fg.muted', display: 'block' }}>
+                  Reorder search results using the configured reranker
+                </Text>
+              </Box>
+            </Box>
+          </Box>
+        )}
       </Box>
 
       <FormControl sx={{ marginBottom: 3 }}>

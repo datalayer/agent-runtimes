@@ -58,6 +58,24 @@ title: Skills & Codemode
 	- Skills enabled → add `DatalayerSkillsToolset`.
 	- Codemode enabled → add `CodemodeToolset` with `allow_direct_tool_calls=False` by default.
 
+## Skills-first, Codemode glue (example)
+Use Skills for curated, reusable steps and Codemode for orchestration:
+
+```python
+# 1) Load skill instructions
+load_skill("pdf-extractor")
+
+# 2) Compose multi-step flow in code
+execute_code(code='''
+from generated.servers.filesystem import read_file
+from skills.pdf_extractor import extract
+
+doc = await read_file({"path": "/data/report.pdf"})
+result = await extract(doc)
+print(result)
+''')
+```
+
 ## Choosing a pattern
 - **Use Skills** when you want repeatable, reviewed workflows and clearer governance.
 - **Use Codemode** when you need ad-hoc composition, control flow, and efficiency.
@@ -67,6 +85,7 @@ title: Skills & Codemode
 - `allow_direct_tool_calls`: hide or expose `call_tool` (defaults to false in agent-runtimes wiring).
 - `tool_reranker`: optional async hook to reorder `search_tools` results.
 - `keywords`/`limit` on `list_tool_names`: faster, filtered discovery.
+- `max_tool_calls`: optional per-run safety cap on tool invocations inside `execute_code`.
 
 ## `allow_direct_tool_calls`
 - **What it does:** Controls whether the `call_tool` shortcut is exposed. When off, all tool usage flows through `execute_code`, which keeps execution auditable and code-first.
@@ -84,3 +103,18 @@ title: Skills & Codemode
 - Prefer `allow_direct_tool_calls=False` in shared/production agents to keep a single, auditable execution path via `execute_code`.
 - When enabling reranking, log or trace the applied order for transparency.
 - Keep Skills concise and documented; use Codemode for bespoke multi-step tasks.
+
+## Recommended defaults (cookbook)
+**Production**
+- `enable_skills`: true
+- `enable_codemode`: true
+- `allow_direct_tool_calls`: false
+- `enable_tool_reranker`: true (if you have a safe reranker configured)
+- `max_tool_calls`: set a conservative limit (e.g., 50–200) to prevent runaway loops
+
+**Prototyping**
+- `enable_skills`: optional
+- `enable_codemode`: true
+- `allow_direct_tool_calls`: true
+- `enable_tool_reranker`: optional
+- `max_tool_calls`: unset or higher limit for exploration

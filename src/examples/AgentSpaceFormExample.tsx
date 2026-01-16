@@ -79,6 +79,8 @@ const AgentSpaceFormExample: React.FC = () => {
   // Agent capabilities state (moved from Header toggles)
   const [enableSkills, setEnableSkills] = useState(false);
   const [enableCodemode, setEnableCodemode] = useState(false);
+  const [allowDirectToolCalls, setAllowDirectToolCalls] = useState(false);
+  const [enableToolReranker, setEnableToolReranker] = useState(false);
   const [selectedMcpServers, setSelectedMcpServers] = useState<string[]>([]);
 
   // Handle codemode change - clear MCP servers when enabled
@@ -87,6 +89,10 @@ const AgentSpaceFormExample: React.FC = () => {
     if (enabled) {
       // Clear selected MCP servers when codemode is enabled
       setSelectedMcpServers([]);
+    }
+    if (!enabled) {
+      setAllowDirectToolCalls(false);
+      setEnableToolReranker(false);
     }
   };
 
@@ -156,6 +162,8 @@ const AgentSpaceFormExample: React.FC = () => {
           system_prompt: 'You are a helpful AI assistant.',
           enable_skills: enableSkills,
           enable_codemode: enableCodemode,
+          allow_direct_tool_calls: allowDirectToolCalls,
+          enable_tool_reranker: enableToolReranker,
           selected_mcp_servers: enableCodemode ? [] : selectedMcpServers,
         }),
       });
@@ -192,6 +200,8 @@ const AgentSpaceFormExample: React.FC = () => {
     model,
     enableSkills,
     enableCodemode,
+    allowDirectToolCalls,
+    enableToolReranker,
     selectedMcpServers,
   ]);
 
@@ -441,6 +451,8 @@ const AgentSpaceFormExample: React.FC = () => {
                       createError={createError}
                       enableSkills={enableSkills}
                       enableCodemode={enableCodemode}
+                      allowDirectToolCalls={allowDirectToolCalls}
+                      enableToolReranker={enableToolReranker}
                       selectedMcpServers={selectedMcpServers}
                       onAgentLibraryChange={setAgentLibrary}
                       onTransportChange={setTransport}
@@ -453,6 +465,8 @@ const AgentSpaceFormExample: React.FC = () => {
                       onConnect={handleConnect}
                       onEnableSkillsChange={setEnableSkills}
                       onEnableCodemodeChange={handleEnableCodemodeChange}
+                      onAllowDirectToolCallsChange={setAllowDirectToolCalls}
+                      onEnableToolRerankerChange={setEnableToolReranker}
                       onSelectedMcpServersChange={setSelectedMcpServers}
                     />
                   ) : (
