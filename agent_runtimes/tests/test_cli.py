@@ -11,7 +11,17 @@ from typing import Any, List
 import pytest
 from dotenv import load_dotenv
 
-from agent_runtimes import DatalayerClient
+try:
+    from agent_runtimes import DatalayerClient
+    DATALAYER_CLIENT_AVAILABLE = True
+except ImportError:
+    DatalayerClient = None  # type: ignore
+    DATALAYER_CLIENT_AVAILABLE = False
+
+pytestmark = pytest.mark.skipif(
+    not DATALAYER_CLIENT_AVAILABLE,
+    reason="DatalayerClient not available in current agent_runtimes version"
+)
 
 load_dotenv()
 

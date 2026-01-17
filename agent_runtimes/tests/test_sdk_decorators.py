@@ -9,6 +9,9 @@ import time
 import pytest
 from dotenv import load_dotenv
 
+# Skip this entire module if decorators are not available
+pytest.importorskip("agent_runtimes.decorators.datalayer")
+
 from agent_runtimes.decorators.datalayer import datalayer
 
 load_dotenv()

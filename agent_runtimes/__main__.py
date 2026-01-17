@@ -110,11 +110,15 @@ Examples:
     logger.info(f"API docs available at http://{args.host}:{args.port}/docs")
     logger.info(f"ACP WebSocket endpoint: ws://{args.host}:{args.port}/api/v1/acp/ws/{{agent_id}}")
     
+    # Exclude generated/ directory from reload watching (codemode generates bindings there)
+    reload_excludes = ["generated/*", "generated/**/*", "*.pyc", "__pycache__"]
+    
     uvicorn.run(
         "agent_runtimes.app:app",
         host=args.host,
         port=args.port,
         reload=args.reload,
+        reload_excludes=reload_excludes if args.reload else None,
         workers=args.workers if not args.reload else 1,
         log_level=args.log_level,
     )

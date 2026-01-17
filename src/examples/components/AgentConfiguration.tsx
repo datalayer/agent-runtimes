@@ -408,7 +408,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
               onChange={e => onEnableSkillsChange?.(e.target.checked)}
             />
             <Box>
-              <Text sx={{ fontSize: 1 }}>Agent Skills</Text>
+              <Text sx={{ fontSize: 1 }}>Skills</Text>
               <Text sx={{ fontSize: 0, color: 'fg.muted', display: 'block' }}>
                 Enable reusable skill compositions
               </Text>
@@ -429,7 +429,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
           </Box>
         </Box>
         {enableSkills && enableCodemode && (
-          <Flash variant="info" sx={{ mt: 3 }}>
+          <Flash variant="default" sx={{ mt: 3 }}>
             <Text sx={{ fontSize: 0 }}>
               Skills provide curated capabilities; Codemode composes tools with
               Python for multi-step execution.
