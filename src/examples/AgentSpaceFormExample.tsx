@@ -100,7 +100,7 @@ const AgentSpaceFormExample: React.FC = () => {
   const [activeSession, setActiveSession] = useState('session-1');
   const [richEditor, setRichEditor] = useState(false);
   const [durable, setDurable] = useState(true);
-  const [codemode, setCodemode] = useState(false);
+  const [codemode, _] = useState(false);
   const [showContextTree, setShowContextTree] = useState(false);
   const [showNotebook] = useState(true);
   const [leftPaneVisible, setLeftPaneVisible] = useState(true);
