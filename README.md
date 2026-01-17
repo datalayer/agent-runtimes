@@ -10,8 +10,8 @@
 
 # 🤖 Agent Runtimes
 
-[![Github Actions Status](https://github.com/datalayer/code-sandboxes/workflows/Build/badge.svg)](https://github.com/datalayer/agent-runtimes/actions/workflows/build.yml)
-[![PyPI - Version](https://img.shields.io/pypi/v/code-sandboxes)](https://pypi.org/project/code-sandboxes)
+[![Github Actions Status](https://github.com/datalayer/agent-runtimes/actions/workflows/build.yml/badge.svg)](https://github.com/datalayer/agent-runtimes/actions/workflows/build.yml)
+[![PyPI - Version](https://img.shields.io/pypi/v/agent-runtimes)](https://pypi.org/project/agent-runtimes)
 
 **Agent Runtimes** is a unified platform for deploying, managing, and interacting with AI agents across multiple protocols and frameworks. It provides both a Python server for hosting agents and React components for seamless integration into web and desktop applications.
 
@@ -150,6 +150,7 @@ Tools extend agent capabilities by allowing them to perform actions:
 - **MCP Tools**: Tools from Model Context Protocol servers
 - **Custom Tools**: Your own Python functions decorated with tool metadata
 - **Built-in Tools**: File operations, web search, code execution
+- **Code Mode**: Tool discovery includes `output_schema` and `input_examples` for reliable calls; code execution returns `stdout`/`stderr` and a summarized `result`.
 
 ### Runtime Management
 Cloud runtimes provide compute resources for agents:

@@ -249,7 +249,7 @@ def register_a2a_agent(
             logger.error(f"Failed to create A2A app for {agent_id}: {e}")
             raise
     else:
-        # For non-PydanticAI agents, create a wrapper FastA2A app
+        # For non-Pydantic AI agents, create a wrapper FastA2A app
         logger.warning(
             f"Agent {agent_id} is not a PydanticAIAgent, "
             "A2A support requires pydantic-ai agent with to_a2a() method"

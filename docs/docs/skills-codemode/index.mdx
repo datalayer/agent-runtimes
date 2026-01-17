@@ -22,8 +22,8 @@ title: Skills & Codemode
 
 ## Codemode toolset capabilities
 - `list_tool_names` (fast names-only, supports `server`, `keywords`, `limit`)
-- `search_tools` (returns tool definitions; can be reranked)
-- `get_tool_details` (full schema for one tool)
+- `search_tools` (returns tool definitions; can be reranked, includes deferred tools by default)
+- `get_tool_details` (full schema, output shape, and examples for one tool)
 - `list_servers` (connected MCP servers)
 - `execute_code` (Python in sandbox; import bindings from `generated.servers.<server>`)
 - `call_tool` (single tool call) — **optional**, see below
@@ -45,7 +45,7 @@ title: Skills & Codemode
 ## Execution model
 - Codemode runs **Python** in an isolated sandbox (code-sandboxes). Agents import tool bindings from `generated.servers.<server_name>`.
 - Use `async/await`, loops, conditionals, and `asyncio.gather` for parallelism.
-- Errors are caught and surfaced in the `execute_code` result payload.
+- Errors are caught and surfaced in the `execute_code` result payload, alongside `stdout`/`stderr`.
 
 ## Skills model
 - Skills live in a `skills/` directory with `SKILL.md`, resources, and scripts.
@@ -85,6 +85,7 @@ print(result)
 - `allow_direct_tool_calls`: hide or expose `call_tool` (defaults to false in agent-runtimes wiring).
 - `tool_reranker`: optional async hook to reorder `search_tools` results.
 - `keywords`/`limit` on `list_tool_names`: faster, filtered discovery.
+- `include_deferred` on `search_tools`/`list_tool_names`: control discovery of tools marked `defer_loading`.
 - `max_tool_calls`: optional per-run safety cap on tool invocations inside `execute_code`.
 
 ## `allow_direct_tool_calls`
