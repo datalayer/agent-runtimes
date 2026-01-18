@@ -741,6 +741,7 @@ export function ChatBase({
       showInput={showInput}
       showModelSelector={showModelSelector}
       showToolsMenu={showToolsMenu}
+      codemodeEnabled={codemodeEnabled}
       initialModel={initialModel}
       initialMcpServers={initialMcpServers}
       className={className}
