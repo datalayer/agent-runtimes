@@ -400,6 +400,8 @@ export interface ChatBaseProps {
 
   /** Show tools menu (for protocols that support it) */
   showToolsMenu?: boolean;
+  /** Indicate tools are accessed via Codemode meta-tools */
+  codemodeEnabled?: boolean;
 
   /** Initial model ID to select (e.g., 'openai:gpt-4o-mini') */
   initialModel?: string;
@@ -632,6 +634,7 @@ export function ChatBase({
   showInput = true,
   showModelSelector = false,
   showToolsMenu = false,
+  codemodeEnabled = false,
   initialModel,
   initialMcpServers,
   className,
@@ -686,6 +689,7 @@ export function ChatBase({
           showInput={showInput}
           showModelSelector={showModelSelector}
           showToolsMenu={showToolsMenu}
+          codemodeEnabled={codemodeEnabled}
           initialModel={initialModel}
           initialMcpServers={initialMcpServers}
           className={className}
@@ -788,6 +792,7 @@ function ChatBaseInner({
   showInput = true,
   showModelSelector = false,
   showToolsMenu = false,
+  codemodeEnabled = false,
   initialModel,
   initialMcpServers,
   className,
@@ -2397,6 +2402,16 @@ function ChatBaseInner({
                     }}
                   >
                     <ActionList>
+                      {codemodeEnabled && (
+                        <ActionList.Group title="Codemode">
+                          <ActionList.Item disabled>
+                            <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
+                              MCP tools are accessible via Codemode meta-tools
+                              (search_tools, list_tool_names, execute_code).
+                            </Text>
+                          </ActionList.Item>
+                        </ActionList.Group>
+                      )}
                       {/* MCP Server Tools */}
                       {configQuery.data?.mcpServers &&
                       configQuery.data.mcpServers.length > 0 ? (

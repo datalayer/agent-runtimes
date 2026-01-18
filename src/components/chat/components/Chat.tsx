@@ -170,6 +170,9 @@ export interface ChatProps {
   /** Show tools menu (fetched from /configure endpoint) */
   showToolsMenu?: boolean;
 
+  /** Indicate tools are accessed via Codemode meta-tools */
+  codemodeEnabled?: boolean;
+
   /** Initial model ID to select (e.g., 'openai:gpt-4o-mini') */
   initialModel?: string;
 
@@ -253,6 +256,7 @@ export function Chat({
   showHeader = true,
   showModelSelector = true,
   showToolsMenu = true,
+  codemodeEnabled = false,
   initialModel,
   initialMcpServers,
   clearOnMount: _clearOnMount = true,
@@ -489,6 +493,7 @@ export function Chat({
           }
           showModelSelector={showModelSelector}
           showToolsMenu={showToolsMenu}
+          codemodeEnabled={codemodeEnabled}
           initialModel={initialModel}
           initialMcpServers={initialMcpServers}
           onNewChat={handleNewChat}
