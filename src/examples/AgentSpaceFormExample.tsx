@@ -5,7 +5,7 @@
 
 /// <reference types="vite/client" />
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { PageLayout, IconButton } from '@primer/react';
 import { SidebarCollapseIcon, SidebarExpandIcon } from '@primer/octicons-react';
 import { AiAgentIcon } from '@datalayer/icons-react';
@@ -65,31 +65,63 @@ const DEFAULT_AGENT_ID = 'demo-agent';
  * 4. Enter the WebSocket URL and Agent ID (or use defaults)
  * 5. Click Connect and start chatting!
  */
-const AgentSpaceFormExample: React.FC = () => {
-  const [wsUrl, setWsUrl] = useState(DEFAULT_WS_URL);
-  const [baseUrl, setBaseUrl] = useState(DEFAULT_BASE_URL);
-  const [agentName, setAgentName] = useState(DEFAULT_AGENT_ID);
+type AgentSpaceFormExampleProps = {
+  initialWsUrl?: string;
+  initialBaseUrl?: string;
+  initialAgentName?: string;
+  initialAgentLibrary?: AgentLibrary;
+  initialTransport?: Transport;
+  initialModel?: string;
+  initialEnableSkills?: boolean;
+  initialEnableCodemode?: boolean;
+  initialAllowDirectToolCalls?: boolean;
+  initialEnableToolReranker?: boolean;
+  initialSelectedMcpServers?: string[];
+  autoSelectMcpServers?: boolean;
+};
+
+const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
+  initialWsUrl = DEFAULT_WS_URL,
+  initialBaseUrl = DEFAULT_BASE_URL,
+  initialAgentName = DEFAULT_AGENT_ID,
+  initialAgentLibrary = 'pydantic-ai',
+  initialTransport = 'ag-ui',
+  initialModel = 'openai:gpt-4o-mini',
+  initialEnableSkills = false,
+  initialEnableCodemode = false,
+  initialAllowDirectToolCalls = false,
+  initialEnableToolReranker = false,
+  initialSelectedMcpServers = [],
+  autoSelectMcpServers = false,
+}) => {
+  const [wsUrl, setWsUrl] = useState(initialWsUrl);
+  const [baseUrl, setBaseUrl] = useState(initialBaseUrl);
+  const [agentName, setAgentName] = useState(initialAgentName);
   const [selectedAgentId, setSelectedAgentId] = useState('new-agent');
-  const [agentLibrary, setAgentLibrary] = useState<AgentLibrary>('pydantic-ai');
-  const [transport, setTransport] = useState<Transport>('ag-ui');
+  const [agentLibrary, setAgentLibrary] =
+    useState<AgentLibrary>(initialAgentLibrary);
+  const [transport, setTransport] = useState<Transport>(initialTransport);
   const [extensions, setExtensions] = useState<Extension[]>([]);
-  const [model, setModel] = useState('openai:gpt-4o-mini');
+  const [model, setModel] = useState(initialModel);
   const [isConfigured, setIsConfigured] = useState(false);
 
   // Agent capabilities state (moved from Header toggles)
-  const [enableSkills, setEnableSkills] = useState(false);
-  const [enableCodemode, setEnableCodemode] = useState(false);
-  const [allowDirectToolCalls, setAllowDirectToolCalls] = useState(false);
-  const [enableToolReranker, setEnableToolReranker] = useState(false);
-  const [selectedMcpServers, setSelectedMcpServers] = useState<string[]>([]);
+  const [enableSkills, setEnableSkills] = useState(initialEnableSkills);
+  const [enableCodemode, setEnableCodemode] = useState(initialEnableCodemode);
+  const [allowDirectToolCalls, setAllowDirectToolCalls] = useState(
+    initialAllowDirectToolCalls,
+  );
+  const [enableToolReranker, setEnableToolReranker] = useState(
+    initialEnableToolReranker,
+  );
+  const [selectedMcpServers, setSelectedMcpServers] = useState<string[]>(
+    initialSelectedMcpServers,
+  );
+  const autoSelectRef = useRef(false);
 
-  // Handle codemode change - clear MCP servers when enabled
+  // Handle codemode change - keep MCP server selections to scope codemode tools
   const handleEnableCodemodeChange = (enabled: boolean) => {
     setEnableCodemode(enabled);
-    if (enabled) {
-      // Clear selected MCP servers when codemode is enabled
-      setSelectedMcpServers([]);
-    }
     if (!enabled) {
       setAllowDirectToolCalls(false);
       setEnableToolReranker(false);
@@ -123,6 +155,32 @@ const AgentSpaceFormExample: React.FC = () => {
       setAgentName(currentAgent.id);
     }
   }, [currentAgent]);
+
+  // Auto-select MCP servers for codemode when requested
+  useEffect(() => {
+    if (!autoSelectMcpServers || autoSelectRef.current) return;
+    if (!enableCodemode) return;
+    if (selectedMcpServers.length > 0) return;
+    if (!baseUrl) return;
+
+    const loadServers = async () => {
+      try {
+        const response = await fetch(`${baseUrl}/api/v1/configure`);
+        if (!response.ok) return;
+        const data = await response.json();
+        const servers = data?.mcpServers || [];
+        const available = servers.filter((s: any) => s.isAvailable);
+        if (available.length > 0) {
+          setSelectedMcpServers([available[0].id]);
+          autoSelectRef.current = true;
+        }
+      } catch {
+        // no-op
+      }
+    };
+
+    void loadServers();
+  }, [autoSelectMcpServers, enableCodemode, selectedMcpServers, baseUrl]);
 
   const handleAgentSelect = (agentId: string) => {
     setSelectedAgentId(agentId);
@@ -164,7 +222,7 @@ const AgentSpaceFormExample: React.FC = () => {
           enable_codemode: enableCodemode,
           allow_direct_tool_calls: allowDirectToolCalls,
           enable_tool_reranker: enableToolReranker,
-          selected_mcp_servers: enableCodemode ? [] : selectedMcpServers,
+          selected_mcp_servers: selectedMcpServers,
         }),
       });
 

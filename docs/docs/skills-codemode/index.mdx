@@ -17,7 +17,7 @@ title: Skills & Codemode
 
 ## Toggles and behavior
 - **Enable Skills**: adds `DatalayerSkillsToolset` (skills discovery, load, resource read, script run). Uses the configured `skills/` directory.
-- **Enable Codemode**: adds `CodemodeToolset` (list/search tools, execute Python code). When Codemode is on, MCP server selection in the UI is disabled because Codemode handles discovery itself.
+- **Enable Codemode**: adds `CodemodeToolset` (list/search tools, execute Python code). When Codemode is on, selected MCP servers are used to build Codemode’s registry (tools are exposed via Codemode meta-tools rather than direct MCP tools).
 - **Both on**: Skills remain available for loading/running scripts; Codemode is used for tool discovery and code execution.
 
 ## Codemode toolset capabilities
@@ -53,7 +53,7 @@ title: Skills & Codemode
 - Skills can be authored as files or programmatic callables; they complement Codemode when you want curated, reusable behaviors.
 
 ## UI & backend flow
-- UI checkboxes toggle Skills/Codemode. If Codemode is enabled, MCP server selection is disabled (Codemode handles discovery).
+- UI checkboxes toggle Skills/Codemode. If Codemode is enabled, MCP server selection is still available and is used to scope Codemode discovery.
 - Backend route `/api/v1/agents` builds toolsets accordingly:
 	- Skills enabled → add `DatalayerSkillsToolset`.
 	- Codemode enabled → add `CodemodeToolset` with `allow_direct_tool_calls=False` by default.

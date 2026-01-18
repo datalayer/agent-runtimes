@@ -21,7 +21,7 @@ from starlette.routing import Mount
 from pydantic_ai import Agent as PydanticAgent
 
 from ..adapters.pydantic_ai_adapter import PydanticAIAdapter
-from ..mcp import get_mcp_toolsets
+from ..mcp import get_mcp_toolsets, get_mcp_manager
 from ..transports import AGUITransport, VercelAITransport, MCPUITransport
 from .acp import AgentCapabilities, AgentInfo, register_agent, unregister_agent, _agents
 from .agui import register_agui_agent, unregister_agui_agent, get_agui_app
@@ -55,6 +55,8 @@ def _build_codemode_toolset(
         from mcp_codemode import (
             CodemodeToolset,
             CodeModeConfig,
+            ToolRegistry,
+            MCPServerConfig,
             PYDANTIC_AI_AVAILABLE as CODEMODE_AVAILABLE,
         )
     except ImportError:
@@ -77,7 +79,34 @@ def _build_codemode_toolset(
         if reranker is None:
             logger.warning("Tool reranker requested but not configured on app.state")
 
+    registry = ToolRegistry()
+    mcp_manager = get_mcp_manager()
+    servers = mcp_manager.get_servers()
+    if request.selected_mcp_servers:
+        servers = [
+            server for server in servers if server.id in request.selected_mcp_servers
+        ]
+
+    for server in servers:
+        if not server.enabled:
+            continue
+        if not server.is_available:
+            logger.warning(
+                f"Skipping unavailable MCP server for codemode: {server.id}"
+            )
+            continue
+        registry.add_server(
+            MCPServerConfig(
+                name=server.id,
+                url=server.url if server.transport == "http" else "",
+                command=server.command or "",
+                args=server.args or [],
+                enabled=server.enabled,
+            )
+        )
+
     return CodemodeToolset(
+        registry=registry,
         config=CodeModeConfig(allow_direct_tool_calls=allow_direct),
         allow_direct_tool_calls=allow_direct,
         tool_reranker=reranker,

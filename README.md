@@ -132,6 +132,15 @@ app.add_agent(agent, name='my-agent', transport='ag-ui')
 app.run(port=8000)
 ```
 
+## 🧪 Run the examples
+
+Run the Codemode + MCP example UI:
+
+```bash
+cd src/ai/agent-runtimes
+EXAMPLE=AgentCodemodeMcpExample npm run dev
+```
+
 ## 🔧 Key Concepts
 
 ### Protocols

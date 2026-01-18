@@ -225,6 +225,9 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
 
   const mcpServers = configQuery.data?.mcpServers || [];
   const models = configQuery.data?.models || [];
+  const previewServers = selectedMcpServers.length
+    ? mcpServers.filter(server => selectedMcpServers.includes(server.id))
+    : [];
 
   // Handle MCP server checkbox change
   const handleMcpServerChange = (serverId: string, checked: boolean) => {
@@ -237,8 +240,8 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
     }
   };
 
-  // MCP servers are disabled when codemode is enabled
-  const mcpServersDisabled = enableCodemode || selectedAgentId !== 'new-agent';
+  // MCP servers are disabled for existing agents (new-agent only)
+  const mcpServersDisabled = selectedAgentId !== 'new-agent';
 
   // Determine which extensions are enabled based on transport
   const isExtensionEnabled = (ext: Extension): boolean => {
@@ -549,12 +552,54 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
           )}
 
         {enableCodemode && (
-          <Flash variant="warning" sx={{ marginBottom: 2 }}>
+          <Flash variant="default" sx={{ marginBottom: 2 }}>
             <Text sx={{ fontSize: 0 }}>
-              MCP servers are disabled when Codemode is enabled. Codemode
-              provides its own tool discovery and execution.
+              When Codemode is enabled, selected MCP servers are used to build
+              the Codemode tool registry (tools are exposed via Codemode meta
+              tools like search and execute_code).
             </Text>
           </Flash>
+        )}
+
+        {enableCodemode && (
+          <Box
+            sx={{
+              marginBottom: 2,
+              padding: 2,
+              borderRadius: 1,
+              border: '1px solid',
+              borderColor: 'border.default',
+              backgroundColor: 'canvas.subtle',
+            }}
+          >
+            <Text
+              sx={{ fontSize: 0, fontWeight: 'semibold', display: 'block' }}
+            >
+              Codemode registry preview
+            </Text>
+            <Text sx={{ fontSize: 0, color: 'fg.muted', mb: 1 }}>
+              {selectedMcpServers.length > 0
+                ? 'Using selected MCP servers'
+                : 'No servers selected — select servers to scope Codemode tools.'}
+            </Text>
+            {previewServers.length > 0 ? (
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                {previewServers.map(server => (
+                  <Text key={server.id} sx={{ fontSize: 0 }}>
+                    {server.name} — {server.tools.length} tools
+                  </Text>
+                ))}
+              </Box>
+            ) : (
+              <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
+                No servers selected.
+              </Text>
+            )}
+            <Text sx={{ fontSize: 0, color: 'fg.muted', mt: 2 }}>
+              Exposed meta-tools: list_tool_names, search_tools,
+              get_tool_details, list_servers, execute_code, call_tool (optional)
+            </Text>
+          </Box>
         )}
 
         {mcpServers.length > 0 && (
@@ -573,9 +618,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
                 }}
               >
                 <Checkbox
-                  checked={
-                    !enableCodemode && selectedMcpServers.includes(server.id)
-                  }
+                  checked={selectedMcpServers.includes(server.id)}
                   disabled={mcpServersDisabled || !server.isAvailable}
                   onChange={e =>
                     handleMcpServerChange(server.id, e.target.checked)

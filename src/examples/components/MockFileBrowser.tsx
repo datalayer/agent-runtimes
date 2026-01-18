@@ -233,8 +233,12 @@ export const MockFileBrowser: React.FC<MockFileBrowserProps> = ({
                 data={
                   codemode
                     ? [
-                        { id: 1, tool: 'execute_code' },
-                        { id: 2, tool: 'search_tool' },
+                        { id: 1, tool: 'list_tool_names' },
+                        { id: 2, tool: 'search_tools' },
+                        { id: 3, tool: 'get_tool_details' },
+                        { id: 4, tool: 'list_servers' },
+                        { id: 5, tool: 'execute_code' },
+                        { id: 6, tool: 'call_tool (optional)' },
                       ]
                     : [
                         { id: 1, tool: 'search_dataset' },

@@ -69,6 +69,7 @@
     "create:patches": "bash scripts/create-patches.sh",
     "examples": "run-p server:start examples:vite",
     "examples:fresh": "npm run clean:cache && npm run examples",
+    "examples:codemode-mcp": "EXAMPLE=AgentCodemodeMcpExample VITE_APP_TARGET=examples VITE_DATALAYER_RUN_URL=http://localhost:8888 vite",
     "examples:nextjs": "npm run dev --workspace=nextjs-notebook-example",
     "examples:vite": "VITE_APP_TARGET=examples VITE_DATALAYER_RUN_URL=http://localhost:8888 vite",
     "format": "prettier --write \"src/**/*.{js,jsx,ts,tsx,css,json,md}\" \"examples/**/*.{js,jsx,ts,tsx,css,json,md,mjs}\"",
