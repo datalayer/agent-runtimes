@@ -6,44 +6,14 @@
 
 This directory contains practical examples demonstrating how to use the Agent Runtimes functionality in various scenarios and frameworks.
 
-## MCP Codemode and Agent Skills Examples
+## Integration Example
 
-### Codemode Example (`codemode_example.py`)
-
-Demonstrates the use of `mcp-codemode` for Code Mode - a pattern where agents write code to compose tools instead of calling them one by one.
-
-```bash
-python examples/codemode_example.py
-```
-
-Features demonstrated:
-- Progressive tool discovery (Tool Search Tool pattern)
-- Code-based tool composition in isolated sandboxes
-- Creating and executing skills (reusable code compositions)
-- Running the Codemode MCP server
-
-### Skills Example (`skills_example.py`)
-
-Demonstrates the use of `agent-skills` for managing reusable agent skills.
-
-```bash
-python examples/skills_example.py
-```
-
-Features demonstrated:
-- Creating skills programmatically
-- SKILL.md format (Claude Code compatible)
-- Skill discovery and search
-- Skill execution in sandboxes
-- Skill versioning
-- Running the Agent Skills MCP server
-
-### Integration Example (`integration_example.py`)
+### Integration Example (`skill_codemode_example.py`)
 
 Demonstrates how to integrate `mcp-codemode` and `agent-skills` with `agent-runtimes`.
 
 ```bash
-python examples/integration_example.py
+python examples/skill_codemode_example.py
 ```
 
 Features demonstrated:
@@ -52,6 +22,11 @@ Features demonstrated:
 - Tool and skill search
 - Complete agent workflows
 - MCP server integration
+
+## Related Examples
+
+- MCP Codemode examples: [ai/mcp-codemode/examples/codemode_example.py](ai/mcp-codemode/examples/codemode_example.py), [ai/mcp-codemode/examples/codemode_patterns_example.py](ai/mcp-codemode/examples/codemode_patterns_example.py)
+- Agent Skills examples: [ai/agent-skills/examples/skills_example.py](ai/agent-skills/examples/skills_example.py), [ai/agent-skills/examples/skills/SKILL.md](ai/agent-skills/examples/skills/SKILL.md)
 
 ## Key Concepts
 
