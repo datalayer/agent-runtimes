@@ -2694,7 +2694,9 @@ function ChatBaseInner({
       )}
 
       {/* Messages area */}
-      <Box sx={{ flex: 1, overflow: 'auto', bg: 'canvas.default' }}>
+      <Box
+        sx={{ flex: 1, flexGrow: 1, overflow: 'auto', bg: 'canvas.default' }}
+      >
         {children ? (
           children
         ) : (
