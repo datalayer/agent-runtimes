@@ -923,7 +923,11 @@ function ChatBaseInner({
       textarea.style.height = 'auto';
       // Set height to scrollHeight, capped at maxHeight (120px)
       const maxHeight = 120;
-      const newHeight = Math.min(textarea.scrollHeight, maxHeight);
+      const minHeight = 40;
+      const newHeight = Math.min(
+        Math.max(textarea.scrollHeight, minHeight),
+        maxHeight,
+      );
       textarea.style.height = `${newHeight}px`;
       // Add overflow if content exceeds maxHeight
       textarea.style.overflowY =
@@ -935,6 +939,12 @@ function ChatBaseInner({
   useEffect(() => {
     adjustTextareaHeight();
   }, [input, adjustTextareaHeight]);
+
+  // Ensure textarea has a minimum height on mount
+  useEffect(() => {
+    const timer = setTimeout(adjustTextareaHeight, 0);
+    return () => clearTimeout(timer);
+  }, [adjustTextareaHeight]);
 
   // Initialize model and tools when config is available
   useEffect(() => {
