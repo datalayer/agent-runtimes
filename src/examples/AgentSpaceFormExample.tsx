@@ -72,13 +72,30 @@ type AgentSpaceFormExampleProps = {
   initialAgentLibrary?: AgentLibrary;
   initialTransport?: Transport;
   initialModel?: string;
-  initialEnableSkills?: boolean;
   initialEnableCodemode?: boolean;
   initialAllowDirectToolCalls?: boolean;
   initialEnableToolReranker?: boolean;
   initialSelectedMcpServers?: string[];
   autoSelectMcpServers?: boolean;
 };
+
+const MOCK_SKILLS = [
+  {
+    id: 'batch-process',
+    name: 'Batch Process Files',
+    description: 'Process files in a directory with a reusable workflow.',
+  },
+  {
+    id: 'analyze-csv',
+    name: 'Analyze CSV',
+    description: 'Summarize rows, columns, and headers from a CSV file.',
+  },
+  {
+    id: 'pdf-extract',
+    name: 'PDF Extract',
+    description: 'Extract text and tables from PDF documents.',
+  },
+];
 
 const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
   initialWsUrl = DEFAULT_WS_URL,
@@ -87,7 +104,6 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
   initialAgentLibrary = 'pydantic-ai',
   initialTransport = 'ag-ui',
   initialModel = 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-  initialEnableSkills = false,
   initialEnableCodemode = false,
   initialAllowDirectToolCalls = false,
   initialEnableToolReranker = false,
@@ -106,7 +122,7 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
   const [isConfigured, setIsConfigured] = useState(false);
 
   // Agent capabilities state (moved from Header toggles)
-  const [enableSkills, setEnableSkills] = useState(initialEnableSkills);
+  const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [enableCodemode, setEnableCodemode] = useState(initialEnableCodemode);
   const [allowDirectToolCalls, setAllowDirectToolCalls] = useState(
     initialAllowDirectToolCalls,
@@ -118,6 +134,7 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
     initialSelectedMcpServers,
   );
   const autoSelectRef = useRef(false);
+  const enableSkills = selectedSkills.length > 0;
 
   // Handle codemode change - keep MCP server selections to scope codemode tools
   const handleEnableCodemodeChange = (enabled: boolean) => {
@@ -223,6 +240,7 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
           allow_direct_tool_calls: allowDirectToolCalls,
           enable_tool_reranker: enableToolReranker,
           selected_mcp_servers: selectedMcpServers,
+          skills: selectedSkills,
         }),
       });
 
@@ -261,6 +279,7 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
     allowDirectToolCalls,
     enableToolReranker,
     selectedMcpServers,
+    selectedSkills,
   ]);
 
   /**
@@ -507,10 +526,11 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
                       selectedAgentId={selectedAgentId}
                       isCreatingAgent={isCreatingAgent}
                       createError={createError}
-                      enableSkills={enableSkills}
                       enableCodemode={enableCodemode}
                       allowDirectToolCalls={allowDirectToolCalls}
                       enableToolReranker={enableToolReranker}
+                      availableSkills={MOCK_SKILLS}
+                      selectedSkills={selectedSkills}
                       selectedMcpServers={selectedMcpServers}
                       onAgentLibraryChange={setAgentLibrary}
                       onTransportChange={setTransport}
@@ -521,10 +541,10 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
                       onModelChange={setModel}
                       onAgentSelect={handleAgentSelect}
                       onConnect={handleConnect}
-                      onEnableSkillsChange={setEnableSkills}
                       onEnableCodemodeChange={handleEnableCodemodeChange}
                       onAllowDirectToolCallsChange={setAllowDirectToolCalls}
                       onEnableToolRerankerChange={setEnableToolReranker}
+                      onSelectedSkillsChange={setSelectedSkills}
                       onSelectedMcpServersChange={setSelectedMcpServers}
                     />
                   ) : (

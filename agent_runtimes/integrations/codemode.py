@@ -82,7 +82,7 @@ class CodemodeIntegration:
                 CodeModeConfig,
                 MCPServerConfig,
             )
-            from agent_skills import SkillsManager
+            from agent_skills.simple import SimpleSkillsManager
             
             # Set up the tool registry
             self._registry = ToolRegistry()
@@ -104,12 +104,8 @@ class CodemodeIntegration:
             self._executor = CodeModeExecutor(self._registry, config)
             await self._executor.setup()
             
-            # Set up the skill manager
-            self._skill_manager = SkillsManager(
-                skills_path=self.skills_path,
-                sandbox_variant=self.sandbox_variant,
-            )
-            self._skill_manager.discover()
+            # Set up the skill manager (simple, file-based)
+            self._skill_manager = SimpleSkillsManager(self.skills_path)
             
             self._setup_done = True
             logger.info("Codemode integration set up successfully")
@@ -125,7 +121,6 @@ class CodemodeIntegration:
             
             return MCPServerConfig(
                 name=server.id,
-                transport=server.transport or "http",
                 url=server.url,
                 command=server.command,
                 args=server.args or [],
@@ -238,19 +233,12 @@ class CodemodeIntegration:
         if not self._setup_done:
             await self.setup()
         
-        skill = self._skill_manager.get(skill_name)
-        if not skill:
-            return {
-                "success": False,
-                "error": f"Skill not found: {skill_name}",
-            }
-        
-        execution = await self._skill_manager.execute(skill, arguments)
-        
+        execution = await self._executor.execute_skill(skill_name, arguments)
+
         return {
-            "success": execution.success,
-            "result": execution.result,
-            "error": execution.error,
+            "success": not execution.error,
+            "result": execution.results,
+            "error": str(execution.error) if execution.error else None,
         }
     
     async def search_skills(
@@ -270,15 +258,13 @@ class CodemodeIntegration:
         if not self._setup_done:
             await self.setup()
         
-        result = self._skill_manager.search(query, limit=limit)
-        
         return [
             {
                 "name": s.name,
                 "description": s.description,
-                "tags": s.metadata.tags,
+                "tags": s.tags,
             }
-            for s in result.skills
+            for s in self._skill_manager.search_skills(query, limit=limit)
         ]
     
     # =========================================================================

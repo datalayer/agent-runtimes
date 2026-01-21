@@ -187,6 +187,10 @@ class CreateAgentRequest(BaseModel):
         default=False,
         description="Enable agent-skills toolset for reusable skill compositions"
     )
+    skills: list[str] = Field(
+        default_factory=list,
+        description="Selected skill names to enable for this agent"
+    )
     enable_codemode: bool = Field(
         default=False,
         description="Enable agent-codemode toolset for code-based tool composition"
@@ -277,13 +281,52 @@ async def create_agent(request: CreateAgentRequest, http_request: Request) -> Cr
                     toolsets.extend(mcp_toolsets)
         
         # Add skills toolset if enabled
-        if request.enable_skills:
+        skills_enabled = request.enable_skills or len(request.skills) > 0
+        if skills_enabled:
             try:
-                from agent_skills import DatalayerSkillsToolset, PYDANTIC_AI_AVAILABLE
+                from agent_skills import (
+                    DatalayerSkill,
+                    DatalayerSkillsToolset,
+                    PYDANTIC_AI_AVAILABLE,
+                )
                 if PYDANTIC_AI_AVAILABLE:
-                    skills_toolset = DatalayerSkillsToolset(
-                        directories=["./skills"],  # TODO: Make configurable
+                    repo_root = Path(__file__).resolve().parents[2]
+                    skills_path = getattr(
+                        http_request.app.state,
+                        "codemode_skills_path",
+                        str((repo_root / "skills").resolve()),
                     )
+
+                    selected = [s for s in request.skills if s]
+                    if selected:
+                        selected_set = set(selected)
+                        selected_skills: list[DatalayerSkill] = []
+                        for skill_md in Path(skills_path).rglob("SKILL.md"):
+                            try:
+                                skill = DatalayerSkill.from_skill_md(skill_md)
+                            except Exception as exc:
+                                logger.warning(
+                                    "Failed to load skill from %s: %s",
+                                    skill_md,
+                                    exc,
+                                )
+                                continue
+                            if skill.name in selected_set:
+                                selected_skills.append(skill)
+
+                        missing = selected_set - {s.name for s in selected_skills}
+                        if missing:
+                            logger.warning(
+                                "Requested skills not found in %s: %s",
+                                skills_path,
+                                sorted(missing),
+                            )
+
+                        skills_toolset = DatalayerSkillsToolset(skills=selected_skills)
+                    else:
+                        skills_toolset = DatalayerSkillsToolset(
+                            directories=[skills_path],  # TODO: Make configurable
+                        )
                     toolsets.append(skills_toolset)
                     logger.info(f"Added DatalayerSkillsToolset for agent {agent_id}")
                 else:

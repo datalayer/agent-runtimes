@@ -30,6 +30,12 @@ export interface MCPServerTool {
   enabled: boolean;
 }
 
+export interface SkillOption {
+  id: string;
+  name: string;
+  description?: string;
+}
+
 /**
  * MCP Server configuration from backend
  */
@@ -150,10 +156,11 @@ interface AgentConfigurationProps {
   selectedAgentId: string;
   isCreatingAgent?: boolean;
   createError?: string | null;
-  enableSkills?: boolean;
   enableCodemode?: boolean;
   allowDirectToolCalls?: boolean;
   enableToolReranker?: boolean;
+  availableSkills?: SkillOption[];
+  selectedSkills?: string[];
   selectedMcpServers?: string[];
   onAgentLibraryChange: (library: AgentLibrary) => void;
   onTransportChange: (transport: Transport) => void;
@@ -164,10 +171,10 @@ interface AgentConfigurationProps {
   onModelChange: (model: string) => void;
   onAgentSelect: (agentId: string) => void;
   onConnect: () => void;
-  onEnableSkillsChange?: (enabled: boolean) => void;
   onEnableCodemodeChange?: (enabled: boolean) => void;
   onAllowDirectToolCallsChange?: (enabled: boolean) => void;
   onEnableToolRerankerChange?: (enabled: boolean) => void;
+  onSelectedSkillsChange?: (skills: string[]) => void;
   onSelectedMcpServersChange?: (servers: string[]) => void;
 }
 
@@ -188,10 +195,11 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
   selectedAgentId,
   isCreatingAgent = false,
   createError = null,
-  enableSkills = false,
   enableCodemode = false,
   allowDirectToolCalls = false,
   enableToolReranker = false,
+  availableSkills = [],
+  selectedSkills = [],
   selectedMcpServers = [],
   onAgentLibraryChange,
   onTransportChange,
@@ -202,10 +210,10 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
   onModelChange,
   onAgentSelect,
   onConnect,
-  onEnableSkillsChange,
   onEnableCodemodeChange,
   onAllowDirectToolCallsChange,
   onEnableToolRerankerChange,
+  onSelectedSkillsChange,
   onSelectedMcpServersChange,
 }) => {
   // Fetch MCP servers configuration from the backend
@@ -228,6 +236,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
   const previewServers = selectedMcpServers.length
     ? mcpServers.filter(server => selectedMcpServers.includes(server.id))
     : [];
+  const skillsEnabled = selectedSkills.length > 0;
 
   // Handle MCP server checkbox change
   const handleMcpServerChange = (serverId: string, checked: boolean) => {
@@ -237,6 +246,14 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
       onSelectedMcpServersChange?.(
         selectedMcpServers.filter(id => id !== serverId),
       );
+    }
+  };
+
+  const handleSkillChange = (skillId: string, checked: boolean) => {
+    if (checked) {
+      onSelectedSkillsChange?.([...selectedSkills, skillId]);
+    } else {
+      onSelectedSkillsChange?.(selectedSkills.filter(id => id !== skillId));
     }
   };
 
@@ -406,19 +423,6 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
         <Box sx={{ display: 'flex', gap: 4 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <Checkbox
-              checked={enableSkills}
-              disabled={selectedAgentId !== 'new-agent'}
-              onChange={e => onEnableSkillsChange?.(e.target.checked)}
-            />
-            <Box>
-              <Text sx={{ fontSize: 1 }}>Skills</Text>
-              <Text sx={{ fontSize: 0, color: 'fg.muted', display: 'block' }}>
-                Enable reusable skill compositions
-              </Text>
-            </Box>
-          </Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Checkbox
               checked={enableCodemode}
               disabled={selectedAgentId !== 'new-agent'}
               onChange={e => onEnableCodemodeChange?.(e.target.checked)}
@@ -431,7 +435,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
             </Box>
           </Box>
         </Box>
-        {enableSkills && enableCodemode && (
+        {skillsEnabled && enableCodemode && (
           <Flash variant="default" sx={{ mt: 3 }}>
             <Text sx={{ fontSize: 0 }}>
               Skills provide curated capabilities; Codemode composes tools with
@@ -467,6 +471,57 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
                 </Text>
               </Box>
             </Box>
+          </Box>
+        )}
+      </Box>
+
+      <Box
+        sx={{
+          marginBottom: 3,
+          padding: 3,
+          border: '1px solid',
+          borderColor: 'border.default',
+          borderRadius: 2,
+          backgroundColor: 'canvas.default',
+        }}
+      >
+        <Text sx={{ fontSize: 1, fontWeight: 'bold', display: 'block', mb: 2 }}>
+          Skills
+        </Text>
+        {availableSkills.length === 0 ? (
+          <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
+            No skills available.
+          </Text>
+        ) : (
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {availableSkills.map(skill => (
+              <Box
+                key={skill.id}
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 2,
+                  padding: 2,
+                  borderRadius: 1,
+                  backgroundColor: 'canvas.subtle',
+                  opacity: selectedAgentId !== 'new-agent' ? 0.6 : 1,
+                }}
+              >
+                <Checkbox
+                  checked={selectedSkills.includes(skill.id)}
+                  disabled={selectedAgentId !== 'new-agent'}
+                  onChange={e => handleSkillChange(skill.id, e.target.checked)}
+                />
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  <Text sx={{ fontWeight: 'semibold' }}>{skill.name}</Text>
+                  {skill.description && (
+                    <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
+                      {skill.description}
+                    </Text>
+                  )}
+                </Box>
+              </Box>
+            ))}
           </Box>
         )}
       </Box>
