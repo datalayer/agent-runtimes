@@ -33,7 +33,7 @@ dependencies = [
     "datalayer-core",
     "fasta2a @ git+https://github.com/datalayer-externals/fasta2a.git@feature/sse-streaming-2#egg=fasta2a",
     "jupyter-server>=2.10,<3",
-    "mcp-codemode",
+    "agent-codemode",
     "code-sandboxes",
     "mcp-ui-server",
     "pydantic-graph @ git+https://github.com/DougTrajano/pydantic-ai.git@DEV-1099#subdirectory=pydantic_graph",

@@ -10,7 +10,7 @@ This directory contains practical examples demonstrating how to use the Agent Ru
 
 ### Integration Example (`skill_codemode_example.py`)
 
-Demonstrates how to integrate `mcp-codemode` and `agent-skills` with `agent-runtimes`.
+Demonstrates how to integrate `agent-codemode` and `agent-skills` with `agent-runtimes`.
 
 ```bash
 python examples/skill_codemode_example.py
@@ -25,7 +25,7 @@ Features demonstrated:
 
 ## Related Examples
 
-- MCP Codemode examples: [ai/mcp-codemode/examples/codemode_example.py](ai/mcp-codemode/examples/codemode_example.py), [ai/mcp-codemode/examples/codemode_patterns_example.py](ai/mcp-codemode/examples/codemode_patterns_example.py)
+- MCP Codemode examples: [ai/agent-codemode/examples/codemode_example.py](ai/agent-codemode/examples/codemode_example.py), [ai/agent-codemode/examples/codemode_patterns_example.py](ai/agent-codemode/examples/codemode_patterns_example.py)
 - Agent Skills examples: [ai/agent-skills/examples/skills_example.py](ai/agent-skills/examples/skills_example.py), [ai/agent-skills/examples/skills/SKILL.md](ai/agent-skills/examples/skills/SKILL.md)
 
 ## Key Concepts
@@ -66,6 +66,6 @@ Based on [Anthropic's Programmatic Tool Calling](https://www.anthropic.com/engin
 # Install agent-runtimes with optional dependencies
 pip install agent-runtimes
 
-# Install mcp-codemode and agent-skills
-pip install mcp-codemode agent-skills
+# Install agent-codemode and agent-skills
+pip install agent-codemode agent-skills
 ```

@@ -1,11 +1,11 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Integration module for mcp-codemode and agent-skills.
+"""Integration module for agent-codemode and agent-skills.
 
 This module provides integration between:
 - agent-runtimes: The main agent infrastructure
-- mcp-codemode: Code-first MCP tool composition
+- agent-codemode: Code-first MCP tool composition
 - agent-skills: Reusable agent skill management
 
 It allows agents running on agent-runtimes to:
@@ -24,10 +24,10 @@ logger = logging.getLogger(__name__)
 
 
 class CodemodeIntegration:
-    """Integration between agent-runtimes and mcp-codemode.
+    """Integration between agent-runtimes and agent-codemode.
     
     Connects the agent-runtimes MCP infrastructure with
-    mcp-codemode's code execution capabilities.
+    agent-codemode's code execution capabilities.
     
     Example:
         from agent_runtimes.integrations.codemode import CodemodeIntegration
@@ -69,14 +69,14 @@ class CodemodeIntegration:
     async def setup(self) -> None:
         """Set up the integration.
         
-        Imports mcp-codemode and agent-skills, configures the
+        Imports agent-codemode and agent-skills, configures the
         tool registry with servers from agent-runtimes.
         """
         if self._setup_done:
             return
         
         try:
-            from mcp_codemode import (
+            from agent_codemode import (
                 ToolRegistry,
                 CodeModeExecutor,
                 CodeModeConfig,
@@ -115,13 +115,13 @@ class CodemodeIntegration:
             logger.info("Codemode integration set up successfully")
             
         except ImportError as e:
-            logger.warning(f"mcp-codemode or agent-skills not available: {e}")
+            logger.warning(f"agent-codemode or agent-skills not available: {e}")
             raise
     
     def _convert_server_config(self, server: MCPServer):
-        """Convert agent-runtimes MCPServer to mcp-codemode config."""
+        """Convert agent-runtimes MCPServer to agent-codemode config."""
         try:
-            from mcp_codemode import MCPServerConfig
+            from agent_codemode import MCPServerConfig
             
             return MCPServerConfig(
                 name=server.id,

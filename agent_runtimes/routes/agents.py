@@ -51,7 +51,7 @@ def _build_codemode_toolset(
 ):
     """Create a CodemodeToolset based on request flags and app configuration.
     
-    Follows the pattern from mcp-codemode/examples/agent/agent_cli.py:
+    Follows the pattern from agent-codemode/examples/agent/agent_cli.py:
     - Configures workspace, generated, and skills paths
     - Disables discovery tools by default to reduce LLM calls
     - Sets up proper CodeModeConfig with all required paths
@@ -60,7 +60,7 @@ def _build_codemode_toolset(
         return None
 
     try:
-        from mcp_codemode import (
+        from agent_codemode import (
             CodemodeToolset,
             CodeModeConfig,
             ToolRegistry,
@@ -69,11 +69,11 @@ def _build_codemode_toolset(
         )
         from pathlib import Path
     except ImportError:
-        logger.warning("mcp-codemode package not installed, codemode disabled")
+        logger.warning("agent-codemode package not installed, codemode disabled")
         return None
 
     if not CODEMODE_AVAILABLE:
-        logger.warning("mcp-codemode pydantic-ai integration not available")
+        logger.warning("agent-codemode pydantic-ai integration not available")
         return None
 
     allow_direct = (
@@ -189,7 +189,7 @@ class CreateAgentRequest(BaseModel):
     )
     enable_codemode: bool = Field(
         default=False,
-        description="Enable mcp-codemode toolset for code-based tool composition"
+        description="Enable agent-codemode toolset for code-based tool composition"
     )
     allow_direct_tool_calls: bool | None = Field(
         default=None,

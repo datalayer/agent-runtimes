@@ -4,7 +4,7 @@
 """Integrations for agent-runtimes.
 
 This module provides integration with:
-- mcp-codemode: Code-first MCP tool composition
+- agent-codemode: Code-first MCP tool composition
 - agent-skills: Reusable agent skill management
 """
 

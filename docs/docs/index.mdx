@@ -20,7 +20,7 @@ Agent Runtimes is the **top-level orchestration layer** in the Datalayer AI stac
 │                     agent-runtimes                          │  ◀── You are here
 │            (Agent hosting, protocols, UI)                   │
 ├──────────────────────────┬──────────────────────────────────┤
-│      mcp-codemode        │         agent-skills             │
+│      agent-codemode      │         agent-skills             │
 │  (discovery, codegen)    │     (skills management)          │
 ├──────────────────────────┴──────────────────────────────────┤
 │                    code-sandboxes                           │
@@ -35,10 +35,10 @@ Agent Runtimes is the **top-level orchestration layer** in the Datalayer AI stac
 - ✅ MCP server management and tool routing
 - ✅ React UI components (ChatBase, ChatSidebar, ChatFloating)
 - ✅ Extensions (A2UI, MCP-UI, MCP Apps)
-- ✅ Integration layer for mcp-codemode and agent-skills
+- ✅ Integration layer for agent-codemode and agent-skills
 
 **Not Responsible For:**
-- ❌ MCP tool binding generation (→ mcp-codemode)
+- ❌ MCP tool binding generation (→ agent-codemode)
 - ❌ Skill CRUD and lifecycle (→ agent-skills)
 - ❌ Raw code execution (→ code-sandboxes)
 
@@ -65,7 +65,7 @@ from agent_runtimes.integrations.codemode import CodemodeIntegration
 integration = CodemodeIntegration()
 await integration.setup()
 
-# Access mcp-codemode features
+# Access agent-codemode features
 result = await integration.execute_code('''
     from generated.servers.filesystem import read_file
     content = await read_file({"path": "/data.txt"})

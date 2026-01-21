@@ -321,7 +321,7 @@ class PydanticAIAdapter(BaseAgent):
     ) -> AgentResponse:
         """Run the agent with CodeMode for programmatic tool composition.
 
-        This variant allows the agent to use mcp-codemode for executing
+        This variant allows the agent to use agent-codemode for executing
         code that composes multiple tools efficiently.
 
         Args:

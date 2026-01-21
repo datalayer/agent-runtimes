@@ -33,7 +33,7 @@ async def test_codemode_reranker_wiring():
     toolset = _build_codemode_toolset(request, _DummyRequest(reranker=reranker))
 
     if toolset is None:
-        pytest.skip("mcp-codemode not available")
+        pytest.skip("agent-codemode not available")
 
     assert toolset.tool_reranker is reranker
 
@@ -48,6 +48,6 @@ async def test_codemode_direct_call_override():
     toolset = _build_codemode_toolset(request, _DummyRequest())
 
     if toolset is None:
-        pytest.skip("mcp-codemode not available")
+        pytest.skip("agent-codemode not available")
 
     assert toolset.allow_direct_tool_calls is True

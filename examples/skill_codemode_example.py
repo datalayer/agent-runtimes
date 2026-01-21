@@ -2,10 +2,10 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Example: Integrating mcp-codemode and agent-skills with agent-runtimes.
+"""Example: Integrating agent-codemode and agent-skills with agent-runtimes.
 
 This example demonstrates how to use the integration module to:
-1. Connect agent-runtimes with mcp-codemode and agent-skills
+1. Connect agent-runtimes with agent-codemode and agent-skills
 2. Use Code Mode for efficient tool composition
 3. Discover and execute skills through the integration layer
 
@@ -29,7 +29,7 @@ async def example_integration_setup():
     
     print("""
 The CodemodeIntegration class connects agent-runtimes with:
-- mcp-codemode: For code-based tool composition
+- agent-codemode: For code-based tool composition
 - agent-skills: For skill management and execution
 
 Setup code:
@@ -67,7 +67,7 @@ async def example_code_execution():
     )
     
     try:
-        # Note: This will fail gracefully if mcp-codemode is not installed
+        # Note: This will fail gracefully if agent-codemode is not installed
         await integration.setup()
         
         # Execute code
@@ -97,8 +97,8 @@ print(json.dumps(env_info, indent=2))
         await integration.cleanup()
         
     except ImportError:
-        print("\nNote: mcp-codemode not installed. Install with:")
-        print("  pip install mcp-codemode")
+        print("\nNote: agent-codemode not installed. Install with:")
+        print("  pip install agent-codemode")
 
 
 async def example_tool_search():
@@ -251,7 +251,7 @@ async def main():
     print("\n" + "=" * 60)
     print("Integration Examples")
     print("=" * 60)
-    print("Demonstrating mcp-codemode and agent-skills integration")
+    print("Demonstrating agent-codemode and agent-skills integration")
     print("with agent-runtimes")
     
     # Run examples
