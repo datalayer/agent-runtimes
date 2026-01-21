@@ -50,6 +50,12 @@ export interface ChatInputPromptProps {
   /** Custom class name */
   className?: string;
 
+  /** Leading icon to display on the left of the input */
+  leadingIcon?: React.ReactNode;
+
+  /** Custom send button text */
+  sendButtonText?: string;
+
   /** Callback before sending */
   onBeforeSend?: (content: string) => boolean | void;
 
@@ -67,6 +73,8 @@ export function ChatInputPrompt({
   showFileUpload = false,
   maxRows = 6,
   className,
+  leadingIcon,
+  sendButtonText = 'Send',
   onBeforeSend,
   onAfterSend,
 }: ChatInputPromptProps) {
@@ -245,6 +253,20 @@ export function ChatInputPrompt({
 
       {/* Input area */}
       <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-end' }}>
+        {/* Leading icon */}
+        {leadingIcon && (
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              color: 'fg.muted',
+              pb: 2,
+            }}
+          >
+            {leadingIcon}
+          </Box>
+        )}
+
         {/* File upload button */}
         {showFileUpload && (
           <IconButton
@@ -295,7 +317,7 @@ export function ChatInputPrompt({
             leadingVisual={PaperAirplaneIcon}
             aria-label="Send message"
           >
-            Send
+            {sendButtonText}
           </Button>
         )}
       </Box>

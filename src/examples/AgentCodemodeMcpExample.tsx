@@ -10,7 +10,6 @@ const AgentCodemodeMcpExample: React.FC = () => {
   return (
     <AgentSpaceFormExample
       initialEnableCodemode
-      initialEnableSkills={false}
       initialAllowDirectToolCalls={false}
       initialEnableToolReranker={false}
       autoSelectMcpServers
