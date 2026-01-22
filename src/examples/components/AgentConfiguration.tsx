@@ -320,6 +320,46 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
         </FormControl.Caption>
       </FormControl>
 
+      <FormControl sx={{ marginBottom: 3 }}>
+        <FormControl.Label>Agent Name</FormControl.Label>
+        <TextInput
+          value={agentName}
+          onChange={e => onAgentNameChange(e.target.value)}
+          disabled={selectedAgentId !== 'new-agent'}
+          placeholder="demo-agent"
+          sx={{ width: '100%' }}
+        />
+        <FormControl.Caption>
+          The name of the agent to connect to
+        </FormControl.Caption>
+      </FormControl>
+
+      <FormControl sx={{ marginBottom: 3 }}>
+        <FormControl.Label>
+          {transport === 'acp' ? 'WebSocket URL' : 'Base URL'}
+        </FormControl.Label>
+        <TextInput
+          value={transport === 'acp' ? wsUrl : baseUrl}
+          onChange={e =>
+            transport === 'acp'
+              ? onWsUrlChange(e.target.value)
+              : onBaseUrlChange(e.target.value)
+          }
+          disabled={selectedAgentId !== 'new-agent'}
+          placeholder={
+            transport === 'acp'
+              ? 'ws://localhost:8000/api/v1/acp/ws'
+              : 'http://localhost:8000'
+          }
+          sx={{ width: '100%' }}
+        />
+        <FormControl.Caption>
+          {transport === 'acp'
+            ? 'The WebSocket endpoint of your agent-runtimes server'
+            : 'The base URL of your agent-runtimes server'}
+        </FormControl.Caption>
+      </FormControl>
+
       <Box sx={{ display: 'flex', gap: 3, marginBottom: 3 }}>
         <FormControl sx={{ flex: 1 }}>
           <FormControl.Label>Agent Library</FormControl.Label>
@@ -525,46 +565,6 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
           </Box>
         )}
       </Box>
-
-      <FormControl sx={{ marginBottom: 3 }}>
-        <FormControl.Label>
-          {transport === 'acp' ? 'WebSocket URL' : 'Base URL'}
-        </FormControl.Label>
-        <TextInput
-          value={transport === 'acp' ? wsUrl : baseUrl}
-          onChange={e =>
-            transport === 'acp'
-              ? onWsUrlChange(e.target.value)
-              : onBaseUrlChange(e.target.value)
-          }
-          disabled={selectedAgentId !== 'new-agent'}
-          placeholder={
-            transport === 'acp'
-              ? 'ws://localhost:8000/api/v1/acp/ws'
-              : 'http://localhost:8000'
-          }
-          sx={{ width: '100%' }}
-        />
-        <FormControl.Caption>
-          {transport === 'acp'
-            ? 'The WebSocket endpoint of your agent-runtimes server'
-            : 'The base URL of your agent-runtimes server'}
-        </FormControl.Caption>
-      </FormControl>
-
-      <FormControl sx={{ marginBottom: 3 }}>
-        <FormControl.Label>Agent Name</FormControl.Label>
-        <TextInput
-          value={agentName}
-          onChange={e => onAgentNameChange(e.target.value)}
-          disabled={selectedAgentId !== 'new-agent'}
-          placeholder="demo-agent"
-          sx={{ width: '100%' }}
-        />
-        <FormControl.Caption>
-          The name of the agent to connect to
-        </FormControl.Caption>
-      </FormControl>
 
       {/* MCP Servers Section */}
       <Box
