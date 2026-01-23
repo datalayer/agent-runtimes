@@ -40,6 +40,7 @@ dependencies = [
     "pydantic-ai-slim[openai,anthropic,google,mcp,dbos,bedrock] @ git+https://github.com/DougTrajano/pydantic-ai.git@DEV-1099#subdirectory=pydantic_ai_slim",
     "pydantic-settings",
     "pydantic[email]",
+    "tiktoken>=0.5.0",
     "typer",
 ]
 dynamic = ["version"]

@@ -14,9 +14,18 @@ from .usage import (
 from .snapshot import (
     ContextSnapshot,
     MessageSnapshot,
+    MODEL_CONTEXT_WINDOWS,
+    RequestUsageSnapshot,
+    SessionUsage,
+    ToolSnapshot,
+    TurnUsage,
     extract_context_snapshot,
     get_agent_context_snapshot,
-    estimate_tokens,
+    get_model_context_window,
+    count_tokens,
+    count_tokens_json,
+    estimate_tokens,  # backward compat alias
+    estimate_tokens_json,  # backward compat alias
 )
 
 __all__ = [
@@ -26,7 +35,16 @@ __all__ = [
     "get_usage_tracker",
     "ContextSnapshot",
     "MessageSnapshot",
+    "MODEL_CONTEXT_WINDOWS",
+    "RequestUsageSnapshot",
+    "SessionUsage",
+    "ToolSnapshot",
+    "TurnUsage",
     "extract_context_snapshot",
     "get_agent_context_snapshot",
+    "get_model_context_window",
+    "count_tokens",
+    "count_tokens_json",
     "estimate_tokens",
+    "estimate_tokens_json",
 ]
