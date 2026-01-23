@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright (c) 2025-2026 Datalayer, Inc.
+# Distributed under the terms of the Modified BSD License.
+
 """MCP Server - File Tokens Demo (STDIO).
 
 Provides tools that read/write files and generate random text so the
