@@ -15,11 +15,13 @@ import {
   Flash,
   Label,
 } from '@primer/react';
-import { ToolsIcon } from '@primer/octicons-react';
+import { ToolsIcon, KeyIcon } from '@primer/octicons-react';
 import { useQuery } from '@tanstack/react-query';
 import { Box } from '@datalayer/primer-addons';
 import type { Agent } from '../stores/examplesStore';
 import type { Transport, Extension } from '../../components/chat';
+import { IdentityConnect } from '../../identity';
+import type { OAuthProvider, Identity } from '../../identity';
 
 /**
  * MCP Server Tool type
@@ -162,6 +164,15 @@ interface AgentConfigurationProps {
   availableSkills?: SkillOption[];
   selectedSkills?: string[];
   selectedMcpServers?: string[];
+  // Identity configuration
+  identityProviders?: {
+    [K in OAuthProvider]?: {
+      clientId: string;
+      scopes?: string[];
+    };
+  };
+  onIdentityConnect?: (identity: Identity) => void;
+  onIdentityDisconnect?: (provider: OAuthProvider) => void;
   onAgentLibraryChange: (library: AgentLibrary) => void;
   onTransportChange: (transport: Transport) => void;
   onExtensionsChange: (extensions: Extension[]) => void;
@@ -201,6 +212,9 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
   availableSkills = [],
   selectedSkills = [],
   selectedMcpServers = [],
+  identityProviders,
+  onIdentityConnect,
+  onIdentityDisconnect,
   onAgentLibraryChange,
   onTransportChange,
   onExtensionsChange,
@@ -514,6 +528,50 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
           </Box>
         )}
       </Box>
+
+      {/* Identity Providers Section */}
+      {identityProviders && Object.keys(identityProviders).length > 0 && (
+        <Box
+          sx={{
+            marginBottom: 3,
+            padding: 3,
+            border: '1px solid',
+            borderColor: 'border.default',
+            borderRadius: 2,
+            backgroundColor: 'canvas.default',
+          }}
+        >
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 2,
+              marginBottom: 2,
+            }}
+          >
+            <KeyIcon size={16} />
+            <Text sx={{ fontSize: 1, fontWeight: 'bold' }}>
+              Connected Accounts
+            </Text>
+          </Box>
+          <Text
+            sx={{ fontSize: 0, color: 'fg.muted', display: 'block', mb: 3 }}
+          >
+            Connect your accounts to give the agent access to external services
+            like GitHub repositories, Google services, or Kaggle datasets.
+          </Text>
+          <IdentityConnect
+            providers={identityProviders}
+            layout="list"
+            showHeader={false}
+            size="medium"
+            showDescriptions={true}
+            disabled={selectedAgentId !== 'new-agent'}
+            onConnect={onIdentityConnect}
+            onDisconnect={onIdentityDisconnect}
+          />
+        </Box>
+      )}
 
       <Box
         sx={{

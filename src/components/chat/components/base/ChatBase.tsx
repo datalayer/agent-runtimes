@@ -546,6 +546,51 @@ export interface ChatBaseProps {
    * These tools execute in the browser and their results are sent back to the agent.
    */
   frontendTools?: FrontendToolDefinition[];
+
+  // ============ Identity/Authorization Support ============
+
+  /**
+   * Callback when the agent requests authorization for an external service.
+   * This is called when a tool needs OAuth access to a service like GitHub.
+   *
+   * @param provider - The OAuth provider name (e.g., 'github', 'google')
+   * @param scopes - The requested OAuth scopes
+   * @param context - Additional context about why authorization is needed
+   * @returns Promise resolving to the access token, or null if user cancels
+   *
+   * @example
+   * ```tsx
+   * <ChatBase
+   *   onAuthorizationRequired={async (provider, scopes, context) => {
+   *     // Show UI to user to authorize
+   *     const token = await showAuthDialog(provider, scopes);
+   *     return token;
+   *   }}
+   * />
+   * ```
+   */
+  onAuthorizationRequired?: (
+    provider: string,
+    scopes: string[],
+    context?: { toolName?: string; reason?: string },
+  ) => Promise<string | null>;
+
+  /**
+   * Connected identities to pass to agent tools.
+   * When provided, access tokens for these identities are automatically
+   * included in tool calls that need them.
+   *
+   * @example
+   * ```tsx
+   * const { identities, getAccessToken } = useIdentity();
+   * <ChatBase connectedIdentities={identities} />
+   * ```
+   */
+  connectedIdentities?: Array<{
+    provider: string;
+    userId?: string;
+    accessToken?: string;
+  }>;
 }
 
 /**
@@ -673,6 +718,9 @@ export function ChatBase({
   hideMessagesAfterToolUI = false,
   focusTrigger,
   frontendTools,
+  // Identity/Authorization props
+  onAuthorizationRequired,
+  connectedIdentities,
 }: ChatBaseProps) {
   // Check if QueryClientProvider is already available
   const existingQueryClient = useContext(QueryClientContext);
@@ -726,6 +774,8 @@ export function ChatBase({
           hideMessagesAfterToolUI={hideMessagesAfterToolUI}
           focusTrigger={focusTrigger}
           frontendTools={frontendTools}
+          onAuthorizationRequired={onAuthorizationRequired}
+          connectedIdentities={connectedIdentities}
         />
       </QueryClientProvider>
     );
@@ -778,6 +828,8 @@ export function ChatBase({
       hideMessagesAfterToolUI={hideMessagesAfterToolUI}
       focusTrigger={focusTrigger}
       frontendTools={frontendTools}
+      onAuthorizationRequired={onAuthorizationRequired}
+      connectedIdentities={connectedIdentities}
     />
   );
 }
@@ -832,6 +884,9 @@ function ChatBaseInner({
   hideMessagesAfterToolUI = false,
   focusTrigger,
   frontendTools,
+  // Identity/Authorization props
+  onAuthorizationRequired,
+  connectedIdentities,
 }: ChatBaseProps) {
   // Ensure Primer's default portal has high z-index for ActionMenu overlays
   useHighZIndexPortal();

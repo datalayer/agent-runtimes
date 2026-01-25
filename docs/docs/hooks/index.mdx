@@ -1,0 +1,588 @@
+---
+title: Hooks
+---
+
+# Hooks
+
+Agent Runtimes provides a comprehensive set of React hooks for building AI agent interfaces. These hooks are organized into three categories based on their purpose.
+
+## Overview
+
+| Category | Hooks | Purpose |
+|----------|-------|---------|
+| **Chat Component System** | `useChat`, `useFrontendTool`, `useBackendTool`, `useKeyboardShortcuts` | Work with the Zustand-based chat components |
+| **Transport-Specific** | `useAGUI`, `useA2A`, `useAcp`, `useVercelChat` | Direct protocol access without chat components |
+| **Datalayer Platform** | `useAIAgents`, `useNotebookAIAgent` | Datalayer platform integration |
+| **Identity** | `useIdentity` | OAuth identity management |
+
+---
+
+## Chat Component System Hooks
+
+These hooks integrate with the Zustand-based chat components (`<Chat />`, `<ChatSidebar />`, `<ChatFloating />`).
+
+### `useChat`
+
+The main chat hook for messages, streaming, and state management.
+
+```typescript
+import { useChat } from '@datalayer/agent-runtimes';
+
+function ChatUI() {
+  const {
+    messages,           // All messages in conversation
+    isLoading,          // Request in progress
+    isStreaming,        // Currently streaming response
+    error,              // Current error, if any
+    sendMessage,        // Send a user message
+    appendMessage,      // Add message directly (useful for tool results)
+    updateMessage,      // Update existing message
+    deleteMessage,      // Remove a message
+    clearMessages,      // Clear all messages
+    stopGeneration,     // Stop current generation
+    reloadMessages,     // Regenerate from a specific message
+    isAvailable,        // Provider configured
+    suggestions,        // Current suggestions
+    setSuggestions,     // Update suggestions
+  } = useChat();
+
+  const handleSubmit = async (text: string) => {
+    await sendMessage(text);
+  };
+
+  return (
+    <div>
+      {messages.map(msg => <Message key={msg.id} message={msg} />)}
+      <Input onSubmit={handleSubmit} disabled={isLoading} />
+    </div>
+  );
+}
+```
+
+### `useFrontendTool`
+
+Register frontend tools that execute in the browser. Compatible with CopilotKit's interface.
+
+```typescript
+import { useFrontendTool } from '@datalayer/agent-runtimes';
+
+function DocumentEditor() {
+  useFrontendTool({
+    name: 'insert_heading',
+    description: 'Insert a heading into the document',
+    parameters: [
+      { name: 'text', type: 'string', description: 'Heading text', required: true },
+      { name: 'level', type: 'number', description: 'Heading level 1-6' }
+    ],
+    handler: async ({ text, level }) => {
+      // Execute the tool in the browser
+      insertHeading(text, level);
+      return `Inserted heading: ${text}`;
+    },
+    // Optional: Custom render for tool UI
+    render: ({ args, result, status }) => (
+      <div className="tool-result">
+        {status === 'executing' && <Spinner />}
+        {status === 'complete' && <span>✓ {result}</span>}
+      </div>
+    ),
+  }, [/* dependencies */]);
+
+  return <Editor />;
+}
+```
+
+### `useBackendTool`
+
+Register backend tools that will be sent to the agent.
+
+```typescript
+import { useBackendTool } from '@datalayer/agent-runtimes';
+
+function DataViewer() {
+  useBackendTool({
+    name: 'query_database',
+    description: 'Execute a SQL query on the database',
+    parameters: [
+      { name: 'query', type: 'string', description: 'SQL query', required: true },
+    ],
+  }, []);
+
+  return <QueryResults />;
+}
+```
+
+### `useRegisteredTools`
+
+Access all registered tools (both frontend and backend).
+
+```typescript
+import { useRegisteredTools } from '@datalayer/agent-runtimes';
+
+function ToolsPanel() {
+  const tools = useRegisteredTools();
+  
+  return (
+    <div>
+      <h3>Available Tools ({tools.length})</h3>
+      {tools.map(tool => (
+        <div key={tool.name}>
+          <strong>{tool.name}</strong>: {tool.description}
+        </div>
+      ))}
+    </div>
+  );
+}
+```
+
+### `usePendingToolCalls`
+
+Track tool calls waiting for execution or user input.
+
+```typescript
+import { usePendingToolCalls } from '@datalayer/agent-runtimes';
+
+function ToolApprovalPanel() {
+  const pendingCalls = usePendingToolCalls();
+  
+  return (
+    <div>
+      {pendingCalls.map(call => (
+        <ToolApprovalCard
+          key={call.id}
+          toolName={call.name}
+          args={call.args}
+          onApprove={() => call.execute()}
+          onReject={() => call.reject()}
+        />
+      ))}
+    </div>
+  );
+}
+```
+
+### `useKeyboardShortcuts`
+
+Handle keyboard shortcuts for chat UI.
+
+```typescript
+import { useKeyboardShortcuts } from '@datalayer/agent-runtimes';
+
+function ChatWithShortcuts() {
+  useKeyboardShortcuts({
+    enabled: true,
+    shortcuts: [
+      {
+        key: 'k',
+        ctrlOrCmd: true,
+        handler: () => openCommandPalette(),
+        description: 'Open command palette',
+      },
+      {
+        key: 'Escape',
+        handler: () => closeChat(),
+        description: 'Close chat',
+        allowInInput: true,  // Works even in text fields
+      },
+      {
+        key: 'n',
+        ctrlOrCmd: true,
+        shift: true,
+        handler: () => newConversation(),
+        description: 'New conversation',
+      },
+    ],
+  });
+
+  return <Chat />;
+}
+```
+
+### `useChatKeyboardShortcuts`
+
+Pre-configured keyboard shortcuts for common chat actions.
+
+```typescript
+import { useChatKeyboardShortcuts } from '@datalayer/agent-runtimes';
+
+function ChatUI() {
+  useChatKeyboardShortcuts({
+    onNewChat: () => clearMessages(),
+    onFocusInput: () => inputRef.current?.focus(),
+    onToggleSidebar: () => setSidebarOpen(prev => !prev),
+  });
+
+  return <Chat />;
+}
+```
+
+---
+
+## Transport-Specific Hooks
+
+These hooks provide direct protocol access without the chat component system. Use them for custom implementations or fine-grained control.
+
+### `useAGUI`
+
+AG-UI protocol hook - Pydantic AI's native UI protocol.
+
+```typescript
+import { useAGUI } from '@datalayer/agent-runtimes';
+
+function AGUIChat() {
+  const {
+    messages,       // Message history
+    isConnected,    // Connection status
+    isSending,      // Currently sending
+    error,          // Current error
+    sendMessage,    // Send a message
+    connect,        // Connect to agent
+    disconnect,     // Disconnect from agent
+    clearMessages,  // Clear history
+  } = useAGUI({
+    baseUrl: 'http://localhost:8765',
+    agentId: 'demo-agent',
+    autoConnect: true,
+    onMessageSent: (content) => console.log('Sent:', content),
+    onMessageReceived: (msg) => console.log('Received:', msg),
+    onError: (err) => console.error('Error:', err),
+  });
+
+  return (
+    <div>
+      {messages.map((msg, i) => (
+        <div key={i} className={msg.role}>
+          {msg.content}
+        </div>
+      ))}
+      <button onClick={() => sendMessage('Hello!')}>Send</button>
+    </div>
+  );
+}
+```
+
+### `useA2A`
+
+A2A protocol hook - Agent-to-Agent with JSON-RPC 2.0.
+
+```typescript
+import { useA2A } from '@datalayer/agent-runtimes';
+
+function A2AChat() {
+  const {
+    // Connection
+    isConnected,
+    agentCard,           // Agent metadata from discovery
+    
+    // Messaging
+    messages,
+    sendMessage,
+    clearMessages,
+    
+    // Task state (A2A uses task-based model)
+    currentTask,
+    isLoading,
+    isStreaming,
+    streamingContent,    // Partial response during streaming
+    
+    // Utilities
+    connect,
+    disconnect,
+    error,
+  } = useA2A({
+    baseUrl: 'http://localhost:8765',
+    agentId: 'demo-agent',
+    streaming: true,      // Use SSE streaming
+    autoConnect: true,
+    onTaskStatusChange: (task) => console.log('Task:', task.status),
+  });
+
+  return (
+    <div>
+      {agentCard && (
+        <div className="agent-info">
+          <h3>{agentCard.name}</h3>
+          <p>{agentCard.description}</p>
+        </div>
+      )}
+      {isStreaming && <div className="streaming">{streamingContent}</div>}
+    </div>
+  );
+}
+```
+
+### `useAcp`
+
+ACP protocol hook - Agent Client Protocol via WebSocket.
+
+```typescript
+import { useAcp } from '@datalayer/agent-runtimes';
+
+function ACPChat() {
+  const {
+    isConnected,
+    messages,
+    sendMessage,
+    connect,
+    disconnect,
+    // WebSocket-specific
+    reconnect,
+    connectionState,  // 'connecting' | 'connected' | 'disconnected' | 'error'
+  } = useAcp({
+    wsUrl: 'ws://localhost:8765/api/v1/acp/ws',
+    agentId: 'demo-agent',
+    autoConnect: true,
+    reconnectOnDisconnect: true,
+    reconnectDelay: 1000,
+  });
+
+  return <Chat />;
+}
+```
+
+### `useVercelChat`
+
+Vercel AI SDK chat hook - HTTP/SSE streaming.
+
+```typescript
+import { useVercelChat } from '@datalayer/agent-runtimes';
+
+function VercelChat() {
+  const {
+    messages,
+    isLoading,
+    error,
+    sendMessage,
+    stop,            // Stop generation
+    reload,          // Regenerate last response
+    setMessages,     // Directly set messages
+  } = useVercelChat({
+    api: '/api/chat',
+    initialMessages: [],
+    onFinish: (message) => console.log('Complete:', message),
+    onError: (err) => console.error('Error:', err),
+  });
+
+  return <Chat />;
+}
+```
+
+---
+
+## Datalayer Platform Hooks
+
+Hooks for Datalayer platform integration.
+
+### `useAIAgents`
+
+REST API hook for managing AI agents on the Datalayer platform.
+
+```typescript
+import { useAIAgents } from '@datalayer/agent-runtimes';
+
+function AgentManager() {
+  const {
+    // CRUD operations
+    createAIAgent,
+    getAIAgent,
+    updateAIAgent,
+    deleteAIAgent,
+    listAIAgents,
+    
+    // State
+    isLoading,
+    error,
+  } = useAIAgents();
+
+  const handleCreate = async () => {
+    const result = await createAIAgent({
+      name: 'My Agent',
+      model: 'anthropic:claude-sonnet-4-5',
+      systemPrompt: 'You are a helpful assistant.',
+    });
+    
+    if (result.success) {
+      console.log('Created agent:', result.agent.id);
+    }
+  };
+
+  return <button onClick={handleCreate}>Create Agent</button>;
+}
+```
+
+### `useNotebookAIAgent`
+
+Hook for notebook-specific agent management. Handles agent lifecycle tied to a notebook document.
+
+```typescript
+import { useNotebookAIAgent } from '@datalayer/agent-runtimes';
+
+function NotebookChat({ notebookId }: { notebookId: string }) {
+  // Automatically manages agent lifecycle for this notebook
+  // - Checks agent health every 60 seconds
+  // - Updates agent state when runtime changes
+  // - Cleans up when notebook is closed
+  const agent = useNotebookAIAgent(notebookId);
+
+  if (!agent) {
+    return <div>No AI agent for this notebook</div>;
+  }
+
+  return (
+    <Chat
+      transport={agent.transport}
+      baseUrl={agent.baseUrl}
+      agentId={agent.id}
+    />
+  );
+}
+```
+
+---
+
+## Identity Hooks
+
+Hooks for OAuth identity management. See the [Identity](/identity) documentation for full details.
+
+### `useIdentity`
+
+Manage OAuth identities for accessing external services.
+
+```typescript
+import { useIdentity } from '@datalayer/agent-runtimes';
+
+function IdentityManager() {
+  const {
+    // State
+    identities,           // All configured identities
+    connectedProviders,   // Providers with valid tokens
+    isAuthorizing,        // OAuth flow in progress
+    error,                // Current error
+    
+    // Configuration
+    configureProvider,    // Set up OAuth provider config
+    
+    // Connection
+    connect,              // Start OAuth flow (redirect)
+    connectWithPopup,     // Start OAuth flow (popup)
+    disconnect,           // Revoke and remove token
+    
+    // Token access
+    getAccessToken,       // Get token for API calls
+    isConnected,          // Check if provider is connected
+  } = useIdentity({
+    // Optional: Pre-configure providers
+    providers: {
+      github: { clientId: 'your-client-id' },
+    },
+    // Handle OAuth callback automatically
+    handleCallback: true,
+  });
+
+  return (
+    <div>
+      <button 
+        onClick={() => connect('github', ['repo', 'read:user'])}
+        disabled={isConnected('github')}
+      >
+        {isConnected('github') ? '✓ GitHub Connected' : 'Connect GitHub'}
+      </button>
+      
+      {isConnected('github') && (
+        <button onClick={() => disconnect('github')}>
+          Disconnect
+        </button>
+      )}
+    </div>
+  );
+}
+```
+
+---
+
+## Hook Patterns
+
+### Combining Multiple Hooks
+
+```typescript
+import { 
+  useChat, 
+  useFrontendTool, 
+  useIdentity,
+  useKeyboardShortcuts 
+} from '@datalayer/agent-runtimes';
+
+function FullFeaturedChat() {
+  const chat = useChat();
+  const identity = useIdentity();
+
+  // Register a tool that needs GitHub access
+  useFrontendTool({
+    name: 'list_repos',
+    description: 'List user GitHub repositories',
+    parameters: [],
+    handler: async () => {
+      const token = await identity.getAccessToken('github');
+      if (!token) {
+        throw new Error('GitHub not connected');
+      }
+      const response = await fetch('https://api.github.com/user/repos', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return response.json();
+    },
+  }, [identity]);
+
+  // Keyboard shortcuts
+  useKeyboardShortcuts({
+    shortcuts: [
+      { key: 'Enter', ctrlOrCmd: true, handler: () => submitForm() },
+      { key: 'Escape', handler: () => chat.stopGeneration() },
+    ],
+  });
+
+  return <ChatUI />;
+}
+```
+
+### Creating Custom Hooks
+
+Build on top of existing hooks for your specific use case:
+
+```typescript
+import { useChat, useIdentity } from '@datalayer/agent-runtimes';
+
+function useGitHubAgent() {
+  const chat = useChat();
+  const identity = useIdentity();
+
+  const isReady = chat.isAvailable && identity.isConnected('github');
+
+  const sendWithGitHubContext = async (message: string) => {
+    const token = await identity.getAccessToken('github');
+    // Include GitHub context in the message
+    await chat.sendMessage(message, {
+      context: { githubToken: token },
+    });
+  };
+
+  return {
+    ...chat,
+    isReady,
+    sendMessage: sendWithGitHubContext,
+    connectGitHub: () => identity.connect('github'),
+    isGitHubConnected: identity.isConnected('github'),
+  };
+}
+```
+
+---
+
+## API Reference
+
+For detailed API documentation, see:
+
+- [useChat API](/api/hooks/useChat)
+- [useTools API](/api/hooks/useTools)
+- [useIdentity API](/api/hooks/useIdentity)
+- [Transport Hooks API](/api/hooks/transports)

@@ -6,3 +6,4 @@
 export * from './components';
 export * from './state';
 export * from './runtime';
+export * from './identity';

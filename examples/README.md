@@ -17,6 +17,7 @@ python examples/skill_codemode_example.py
 ```
 
 Features demonstrated:
+
 - Setting up the CodemodeIntegration
 - Code execution via integration
 - Tool and skill search
@@ -55,6 +56,7 @@ Compatible with [Claude Code SKILL.md format](https://docs.anthropic.com/en/docs
 ### Programmatic Tool Calling
 
 Tools can be marked for programmatic calling with:
+
 - `defer_loading: true` - Load tool definition on-demand
 - `allowed_callers: ["code_execution"]` - Allow code-based invocation
 

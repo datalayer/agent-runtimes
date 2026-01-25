@@ -1,0 +1,243 @@
+/*
+ * Copyright (c) 2025-2026 Datalayer, Inc.
+ * Distributed under the terms of the Modified BSD License.
+ */
+
+/**
+ * Identity types for OAuth 2.1 user-delegated access.
+ *
+ * @module identity/types
+ */
+
+/**
+ * Supported OAuth providers
+ */
+export type OAuthProvider =
+  | 'github'
+  | 'google'
+  | 'kaggle'
+  | 'linkedin'
+  | 'slack'
+  | 'notion'
+  | 'custom';
+
+/**
+ * OAuth token with metadata
+ */
+export interface OAuthToken {
+  /** Access token */
+  accessToken: string;
+  /** Token type (usually 'Bearer') */
+  tokenType: string;
+  /** Expiration timestamp (ms since epoch) */
+  expiresAt?: number;
+  /** Refresh token for token renewal */
+  refreshToken?: string;
+  /** Granted scopes */
+  scopes: string[];
+  /** Token metadata */
+  metadata?: Record<string, unknown>;
+}
+
+/**
+ * Identity represents a connected OAuth provider
+ */
+export interface Identity {
+  /** Provider identifier */
+  provider: OAuthProvider | string;
+  /** Display name for UI */
+  displayName: string;
+  /** Icon URL for UI */
+  iconUrl?: string;
+  /** Required OAuth scopes */
+  scopes: string[];
+  /** Whether this identity is currently connected */
+  isConnected: boolean;
+  /** Connection timestamp */
+  connectedAt?: number;
+  /** User info from provider (e.g., username, email) */
+  userInfo?: ProviderUserInfo;
+  /** Token (only available when connected) */
+  token?: OAuthToken;
+}
+
+/**
+ * User info from OAuth provider
+ */
+export interface ProviderUserInfo {
+  /** Provider-specific user ID */
+  id: string;
+  /** Username or handle */
+  username?: string;
+  /** Display name */
+  name?: string;
+  /** Email address */
+  email?: string;
+  /** Avatar URL */
+  avatarUrl?: string;
+  /** Profile URL */
+  profileUrl?: string;
+  /** Additional provider-specific data */
+  raw?: Record<string, unknown>;
+}
+
+/**
+ * OAuth provider configuration
+ */
+export interface OAuthProviderConfig {
+  /** Provider identifier */
+  provider: OAuthProvider | string;
+  /** Display name */
+  displayName: string;
+  /** Icon URL */
+  iconUrl?: string;
+  /** OAuth client ID */
+  clientId: string;
+  /** Authorization endpoint */
+  authorizationUrl: string;
+  /** Token endpoint */
+  tokenUrl: string;
+  /** User info endpoint */
+  userInfoUrl?: string;
+  /** Revocation endpoint */
+  revocationUrl?: string;
+  /** Default scopes */
+  defaultScopes: string[];
+  /** Redirect URI */
+  redirectUri: string;
+  /** Additional OAuth parameters */
+  additionalParams?: Record<string, string>;
+}
+
+/**
+ * Pending authorization request
+ */
+export interface AuthorizationRequest {
+  /** Request ID (for tracking) */
+  requestId: string;
+  /** Provider requiring authorization */
+  provider: OAuthProvider | string;
+  /** OAuth authorization URL (full URL with params) */
+  authUrl: string;
+  /** State parameter for CSRF protection */
+  state: string;
+  /** PKCE code verifier */
+  codeVerifier: string;
+  /** Requested scopes */
+  scopes: string[];
+  /** Request timestamp */
+  requestedAt: number;
+  /** Optional callback after authorization */
+  onComplete?: (identity: Identity) => void;
+  /** Optional callback on error */
+  onError?: (error: Error) => void;
+}
+
+/**
+ * Authorization callback parameters
+ */
+export interface AuthorizationCallback {
+  /** Authorization code */
+  code: string;
+  /** State parameter (for CSRF verification) */
+  state: string;
+  /** Error code (if authorization failed) */
+  error?: string;
+  /** Error description */
+  errorDescription?: string;
+}
+
+/**
+ * Identity store state
+ */
+export interface IdentityState {
+  /** Connected identities by provider */
+  identities: Map<string, Identity>;
+  /** Pending authorization request */
+  pendingAuthorization: AuthorizationRequest | null;
+  /** Provider configurations */
+  providerConfigs: Map<string, OAuthProviderConfig>;
+  /** Loading state */
+  isLoading: boolean;
+  /** Error state */
+  error: Error | null;
+}
+
+/**
+ * Identity store actions
+ */
+export interface IdentityActions {
+  /** Configure an OAuth provider */
+  configureProvider: (config: OAuthProviderConfig) => void;
+  /** Start OAuth flow for a provider */
+  startAuthorization: (
+    provider: string,
+    scopes?: string[],
+    options?: {
+      onComplete?: (identity: Identity) => void;
+      onError?: (error: Error) => void;
+    },
+  ) => Promise<string>;
+  /** Complete OAuth flow with callback params */
+  completeAuthorization: (callback: AuthorizationCallback) => Promise<Identity>;
+  /** Cancel pending authorization */
+  cancelAuthorization: () => void;
+  /** Disconnect a provider (revoke tokens) */
+  disconnect: (provider: string) => Promise<void>;
+  /** Refresh token for a provider */
+  refreshToken: (provider: string) => Promise<OAuthToken>;
+  /** Get identity for a provider */
+  getIdentity: (provider: string) => Identity | undefined;
+  /** Check if provider is connected */
+  isConnected: (provider: string) => boolean;
+  /** Get token for a provider (refreshes if needed) */
+  getToken: (provider: string) => Promise<OAuthToken | null>;
+  /** Clear all identities */
+  clearAll: () => void;
+  /** Set error */
+  setError: (error: Error | null) => void;
+}
+
+/**
+ * Complete identity store type
+ */
+export type IdentityStore = IdentityState & IdentityActions;
+
+/**
+ * Built-in provider configurations
+ */
+export const GITHUB_PROVIDER: Partial<OAuthProviderConfig> = {
+  provider: 'github',
+  displayName: 'GitHub',
+  iconUrl: 'https://github.githubassets.com/favicons/favicon.svg',
+  authorizationUrl: 'https://github.com/login/oauth/authorize',
+  tokenUrl: 'https://github.com/login/oauth/access_token',
+  userInfoUrl: 'https://api.github.com/user',
+  revocationUrl: 'https://api.github.com/applications/{client_id}/token',
+  defaultScopes: ['read:user', 'user:email'],
+};
+
+export const GOOGLE_PROVIDER: Partial<OAuthProviderConfig> = {
+  provider: 'google',
+  displayName: 'Google',
+  iconUrl: 'https://www.google.com/favicon.ico',
+  authorizationUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
+  tokenUrl: 'https://oauth2.googleapis.com/token',
+  userInfoUrl: 'https://www.googleapis.com/oauth2/v2/userinfo',
+  revocationUrl: 'https://oauth2.googleapis.com/revoke',
+  defaultScopes: ['openid', 'email', 'profile'],
+  additionalParams: {
+    access_type: 'offline',
+    prompt: 'consent',
+  },
+};
+
+export const KAGGLE_PROVIDER: Partial<OAuthProviderConfig> = {
+  provider: 'kaggle',
+  displayName: 'Kaggle',
+  iconUrl: 'https://www.kaggle.com/static/images/favicon.ico',
+  authorizationUrl: 'https://www.kaggle.com/oauth/authorize',
+  tokenUrl: 'https://www.kaggle.com/oauth/token',
+  userInfoUrl: 'https://www.kaggle.com/api/v1/me',
+  defaultScopes: ['datasets:read', 'notebooks:read'],
+};

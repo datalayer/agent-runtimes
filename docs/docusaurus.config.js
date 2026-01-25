@@ -74,7 +74,13 @@ module.exports = {
         },
         {
           type: 'doc',
-          docId: 'endpoints/index',
+          docId: 'hooks/index',
+          position: 'left',
+          label: 'Hooks',
+        },
+        {
+          type: 'doc',
+          docId: 'api-endpoints/index',
           position: 'left',
           label: 'API Endpoints',
         },

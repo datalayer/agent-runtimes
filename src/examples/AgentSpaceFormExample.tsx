@@ -5,7 +5,7 @@
 
 /// <reference types="vite/client" />
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { PageLayout, IconButton } from '@primer/react';
 import { SidebarCollapseIcon, SidebarExpandIcon } from '@primer/octicons-react';
 import { AiAgentIcon } from '@datalayer/icons-react';
@@ -16,6 +16,8 @@ import { datalayerTheme, DatalayerThemeProvider } from '@datalayer/core';
 import { Chat } from '../components/chat';
 import type { Transport, Extension } from '../components/chat';
 import { useAgentsStore } from './stores/examplesStore';
+import { useIdentity } from '../identity';
+import type { OAuthProvider, Identity } from '../identity';
 import {
   MockFileBrowser,
   MainContent,
@@ -45,6 +47,11 @@ const DEFAULT_BASE_URL =
   import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
 const DEFAULT_AGENT_ID = 'demo-agent';
 
+// GitHub OAuth client ID - set via environment variable for security
+// For development, you can create a GitHub OAuth App at:
+// https://github.com/settings/developers
+const GITHUB_CLIENT_ID = import.meta.env.VITE_GITHUB_CLIENT_ID || '';
+
 /**
  * Agent Runtime Example Component
  *
@@ -57,13 +64,15 @@ const DEFAULT_AGENT_ID = 'demo-agent';
  * - Real-time streaming responses
  * - Permission request handling
  * - Connection state management
+ * - **OAuth Identity** - Connect GitHub accounts to give agents access to repositories
  *
  * Usage:
  * 1. Start the agent-runtimes server: `npm run start:acp`
  * 2. The UI will automatically connect to the ACP server
  * 3. Select your agent library and transport
  * 4. Enter the WebSocket URL and Agent ID (or use defaults)
- * 5. Click Connect and start chatting!
+ * 5. Connect your GitHub account for repository access
+ * 6. Click Connect and start chatting!
  */
 type AgentSpaceFormExampleProps = {
   initialWsUrl?: string;
@@ -77,6 +86,8 @@ type AgentSpaceFormExampleProps = {
   initialEnableToolReranker?: boolean;
   initialSelectedMcpServers?: string[];
   autoSelectMcpServers?: boolean;
+  /** GitHub OAuth client ID for identity features */
+  githubClientId?: string;
 };
 
 const MOCK_SKILLS = [
@@ -109,6 +120,7 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
   initialEnableToolReranker = false,
   initialSelectedMcpServers = [],
   autoSelectMcpServers = false,
+  githubClientId = GITHUB_CLIENT_ID,
 }) => {
   const [wsUrl, setWsUrl] = useState(initialWsUrl);
   const [baseUrl, setBaseUrl] = useState(initialBaseUrl);
@@ -135,6 +147,36 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
   );
   const autoSelectRef = useRef(false);
   const enableSkills = selectedSkills.length > 0;
+
+  // Identity state - use the identity hook to get connected identities
+  const { identities, getAccessToken } = useIdentity();
+
+  // Build identity providers config based on available client IDs
+  const identityProviders = React.useMemo(() => {
+    const providers: {
+      [K in OAuthProvider]?: { clientId: string; scopes?: string[] };
+    } = {};
+    if (githubClientId) {
+      providers.github = {
+        clientId: githubClientId,
+        scopes: ['read:user', 'user:email', 'repo'],
+      };
+    }
+    return providers;
+  }, [githubClientId]);
+
+  // Handle identity connect/disconnect
+  const handleIdentityConnect = useCallback((identity: Identity) => {
+    console.log(
+      '[AgentSpaceFormExample] Identity connected:',
+      identity.provider,
+      identity.userInfo?.login,
+    );
+  }, []);
+
+  const handleIdentityDisconnect = useCallback((provider: OAuthProvider) => {
+    console.log('[AgentSpaceFormExample] Identity disconnected:', provider);
+  }, []);
 
   // Handle codemode change - keep MCP server selections to scope codemode tools
   const handleEnableCodemodeChange = (enabled: boolean) => {
@@ -532,6 +574,9 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
                       availableSkills={MOCK_SKILLS}
                       selectedSkills={selectedSkills}
                       selectedMcpServers={selectedMcpServers}
+                      identityProviders={identityProviders}
+                      onIdentityConnect={handleIdentityConnect}
+                      onIdentityDisconnect={handleIdentityDisconnect}
                       onAgentLibraryChange={setAgentLibrary}
                       onTransportChange={setTransport}
                       onExtensionsChange={setExtensions}

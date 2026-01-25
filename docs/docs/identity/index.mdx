@@ -1,6 +1,5 @@
 ---
 title: Identity
-sidebar_position: 4
 ---
 
 # Identity
@@ -141,6 +140,226 @@ service = ServiceCredentials(
 async def get_metrics(ctx: RunContext) -> dict:
     token = await service.get_token()
     # Use token for API calls
+```
+
+## Provider Setup Guides
+
+This section provides step-by-step instructions for setting up OAuth with common providers.
+
+### GitHub OAuth App Setup
+
+For GitHub identity, you need to create a **GitHub OAuth App** (not a GitHub App). OAuth Apps are simpler and suitable for user authentication flows.
+
+:::info GitHub OAuth App vs GitHub App
+- **OAuth App**: Simple user authentication, suitable for Agent Runtimes identity
+- **GitHub App**: More complex, designed for installations on repos/orgs, has webhooks and granular permissions
+
+For Agent Runtimes identity features, use an **OAuth App**.
+:::
+
+#### Step 1: Create the OAuth App
+
+1. Go to [GitHub Developer Settings](https://github.com/settings/developers)
+2. Click **OAuth Apps** in the left sidebar
+3. Click **New OAuth App** (or **Register a new application**)
+
+#### Step 2: Configure the Application
+
+Fill in the registration form:
+
+| Field | Value | Notes |
+|-------|-------|-------|
+| **Application name** | `My Agent App` | User-visible name shown during authorization |
+| **Homepage URL** | `http://localhost:3000` | Your application's homepage (can be localhost for dev) |
+| **Application description** | Optional | Helps users understand what your app does |
+| **Authorization callback URL** | `http://localhost:3000/oauth/callback` | **Critical**: Must match your app's callback route |
+
+:::warning Callback URL
+The callback URL must exactly match what your application uses. For development:
+- `http://localhost:3000/oauth/callback` (Vite default port)
+- `http://localhost:3063/oauth/callback` (Agent Runtimes example)
+
+For production, use your actual domain with HTTPS:
+- `https://myapp.example.com/oauth/callback`
+:::
+
+#### Step 3: Get Your Credentials
+
+After creating the app:
+
+1. Copy the **Client ID** - this is public and safe to include in frontend code
+2. Click **Generate a new client secret**
+3. Copy the **Client Secret** immediately - it's only shown once!
+
+:::danger Client Secret Security
+- **Never** commit the client secret to version control
+- **Never** include it in frontend/browser code
+- Store it in environment variables or a secrets manager
+- The client secret is only needed for the backend token exchange
+:::
+
+#### Step 4: Configure Agent Runtimes
+
+**Frontend (React)**:
+
+```tsx
+// Set via environment variable (safe for frontend - public value)
+// In .env or .env.local:
+// VITE_GITHUB_CLIENT_ID=your_client_id_here
+
+import { IdentityConnect } from '@datalayer/agent-runtimes';
+
+function App() {
+  return (
+    <IdentityConnect
+      providers={{
+        github: {
+          clientId: import.meta.env.VITE_GITHUB_CLIENT_ID,
+          scopes: ['read:user', 'user:email', 'repo'],
+        },
+      }}
+    />
+  );
+}
+```
+
+**Backend (Python)**:
+
+```bash
+# In your .env file (never commit this!)
+GITHUB_CLIENT_ID=your_client_id
+GITHUB_CLIENT_SECRET=your_client_secret
+```
+
+```python
+# In your agent server configuration
+import os
+
+OAUTH_PROVIDERS = {
+    "github": {
+        "client_id": os.getenv("GITHUB_CLIENT_ID"),
+        "client_secret": os.getenv("GITHUB_CLIENT_SECRET"),
+        "authorization_endpoint": "https://github.com/login/oauth/authorize",
+        "token_endpoint": "https://github.com/login/oauth/access_token",
+        "userinfo_endpoint": "https://api.github.com/user",
+    }
+}
+```
+
+#### Step 5: Set Up the Callback Route
+
+Mount the `OAuthCallback` component at your callback URL:
+
+```tsx
+// Using React Router
+import { OAuthCallback } from '@datalayer/agent-runtimes';
+import { Routes, Route } from 'react-router-dom';
+
+function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<MainApp />} />
+      <Route 
+        path="/oauth/callback" 
+        element={<OAuthCallback redirectUrl="/" />} 
+      />
+    </Routes>
+  );
+}
+```
+
+#### GitHub OAuth Scopes Reference
+
+| Scope | Access | Use Case |
+|-------|--------|----------|
+| `read:user` | Read user profile | Basic identity verification |
+| `user:email` | Read user email | Contact information |
+| `repo` | Full repository access | Read/write code, issues, PRs |
+| `public_repo` | Public repositories only | Read/write public repos |
+| `repo:status` | Commit status | CI/CD integrations |
+| `read:org` | Read org membership | Organization-aware features |
+| `gist` | Create/read gists | Code snippet sharing |
+
+**Recommended minimum scopes**: `read:user`, `user:email`
+
+**For repository access**: Add `repo` (private) or `public_repo` (public only)
+
+#### Testing Your Setup
+
+1. Start your development server:
+   ```bash
+   npm run dev
+   ```
+
+2. Click "Connect GitHub" in your app
+
+3. You should be redirected to GitHub's authorization page
+
+4. After authorizing, you'll be redirected back to your callback URL
+
+5. The `OAuthCallback` component handles the token exchange automatically
+
+#### Troubleshooting
+
+**"The redirect_uri is not valid"**
+- Ensure your callback URL in GitHub settings exactly matches your app's URL
+- Check for trailing slashes - `http://localhost:3000/oauth/callback` ≠ `http://localhost:3000/oauth/callback/`
+- Verify the protocol matches (http vs https)
+
+**"Bad credentials" on API calls**
+- Token may have expired - implement token refresh
+- Scopes may be insufficient - request additional scopes
+
+**CORS errors**
+- GitHub's token endpoint doesn't support CORS
+- Token exchange must happen on your backend server
+- Agent Runtimes provides `/api/v1/identity/oauth/token` endpoint for this
+
+### Google OAuth Setup
+
+For Google/Gmail identity, use Google Cloud Console:
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Create a project or select an existing one
+3. Navigate to **APIs & Services** → **Credentials**
+4. Click **Create Credentials** → **OAuth client ID**
+5. Select **Web application**
+6. Add authorized redirect URIs (same pattern as GitHub)
+7. Copy the Client ID and Client Secret
+
+```tsx
+<IdentityConnect
+  providers={{
+    google: {
+      clientId: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+      scopes: ['openid', 'profile', 'email', 'https://www.googleapis.com/auth/gmail.readonly'],
+    },
+  }}
+/>
+```
+
+### Kaggle OAuth Setup
+
+Kaggle uses OAuth 2.1 for MCP server authentication:
+
+1. Go to [Kaggle Account Settings](https://www.kaggle.com/settings)
+2. Scroll to **API** section
+3. Create API credentials
+4. Configure your MCP server connection:
+
+```json
+{
+  "mcpServers": {
+    "kaggle": {
+      "url": "https://www.kaggle.com/mcp",
+      "auth": {
+        "type": "oauth2",
+        "clientId": "your-kaggle-client-id",
+        "scopes": ["datasets:read", "notebooks:read"]
+      }
+    }
+  }
+}
 ```
 
 ## Implementation Strategy
@@ -358,451 +577,6 @@ Instead use:
 - ✅ Encrypted database columns
 - ✅ Hardware security modules (HSM) for production
 - ✅ Secret managers (Vault, AWS Secrets Manager, GCP Secret Manager)
-
-## React Hook API: `useAgent`
-
-The `useAgent` hook provides a unified, high-level API for configuring and using AI agents in React applications. It consolidates identities, transport, MCP servers, skills, and code mode into a single ergonomic interface.
-
-### Hook Signature
-
-```typescript
-import { useAgent } from '@datalayer/agent-runtimes';
-
-const agent = useAgent({
-  // Identity configuration
-  identities?: Identity[];
-  
-  // Transport configuration
-  transport?: Transport;
-  baseUrl?: string;
-  
-  // MCP server configuration
-  mcpServers?: string[];
-  
-  // Skills configuration
-  skills?: string[];
-  
-  // Code mode configuration
-  isCodemode?: boolean;
-  codemodeConfig?: CodemodeConfig;
-});
-```
-
-### Type Definitions
-
-```typescript
-/**
- * OAuth identity for accessing external services
- */
-interface Identity {
-  /** Provider identifier (e.g., 'github', 'google', 'kaggle') */
-  provider: string;
-  /** OAuth scopes required */
-  scopes: string[];
-  /** Whether this identity is currently connected */
-  isConnected: boolean;
-  /** Display name for UI */
-  displayName?: string;
-  /** Icon URL for UI */
-  iconUrl?: string;
-}
-
-/**
- * Transport protocol for agent communication
- */
-type Transport = 'ag-ui' | 'vercel-ai' | 'acp' | 'a2a';
-
-/**
- * Code mode configuration for code generation capabilities
- */
-interface CodemodeConfig {
-  /** Allow agent to call tools directly without human approval */
-  allowDirectToolCalls?: boolean;
-  /** Enable tool reranking for better tool selection */
-  enableToolReranker?: boolean;
-}
-
-/**
- * Configuration options for useAgent hook
- */
-interface UseAgentOptions {
-  /** Pre-configured identities (OAuth connections) */
-  identities?: Identity[];
-  /** Transport protocol (default: 'ag-ui') */
-  transport?: Transport;
-  /** Base URL for agent server */
-  baseUrl?: string;
-  /** MCP server IDs to enable */
-  mcpServers?: string[];
-  /** Skill IDs to enable */
-  skills?: string[];
-  /** Enable code mode for code generation */
-  isCodemode?: boolean;
-  /** Code mode specific configuration */
-  codemodeConfig?: CodemodeConfig;
-  /** Model to use (e.g., 'anthropic:claude-sonnet-4-5') */
-  model?: string;
-  /** System prompt for the agent */
-  systemPrompt?: string;
-  /** Auto-connect on mount */
-  autoConnect?: boolean;
-}
-
-/**
- * Return type for useAgent hook
- */
-interface UseAgentReturn {
-  // === State ===
-  /** Whether the agent is ready to use */
-  isReady: boolean;
-  /** Whether the agent is currently loading/connecting */
-  isLoading: boolean;
-  /** Current error, if any */
-  error: Error | null;
-  /** Agent endpoint URL */
-  endpoint: string | null;
-  /** Current transport protocol */
-  transport: Transport;
-  
-  // === Identity Management ===
-  /** All configured identities */
-  identities: Identity[];
-  /** Connected identity providers */
-  connectedProviders: string[];
-  /** Add a new identity (triggers OAuth flow) */
-  addIdentity: (provider: string, scopes?: string[]) => Promise<void>;
-  /** Remove an identity (revokes tokens) */
-  removeIdentity: (provider: string) => Promise<void>;
-  /** Check if a provider is connected */
-  isProviderConnected: (provider: string) => boolean;
-  /** Pending authorization request (for UI display) */
-  pendingAuthorization: AuthorizationRequest | null;
-  /** Complete a pending authorization (after OAuth callback) */
-  completeAuthorization: (code: string, state: string) => Promise<void>;
-  
-  // === MCP Servers ===
-  /** Enabled MCP servers */
-  mcpServers: string[];
-  /** Available MCP servers (from config) */
-  availableMcpServers: MCPServerInfo[];
-  /** Enable an MCP server */
-  enableMcpServer: (serverId: string) => void;
-  /** Disable an MCP server */
-  disableMcpServer: (serverId: string) => void;
-  
-  // === Skills ===
-  /** Enabled skills */
-  skills: string[];
-  /** Available skills */
-  availableSkills: SkillInfo[];
-  /** Enable a skill */
-  enableSkill: (skillId: string) => void;
-  /** Disable a skill */
-  disableSkill: (skillId: string) => void;
-  
-  // === Actions ===
-  /** Connect to the agent */
-  connect: () => Promise<void>;
-  /** Disconnect from the agent */
-  disconnect: () => void;
-  /** Reconfigure the agent (applies changes) */
-  reconfigure: (options: Partial<UseAgentOptions>) => Promise<void>;
-}
-
-/**
- * Pending authorization request
- */
-interface AuthorizationRequest {
-  /** Provider requiring authorization */
-  provider: string;
-  /** OAuth authorization URL */
-  authUrl: string;
-  /** State parameter for CSRF protection */
-  state: string;
-  /** Requested scopes */
-  scopes: string[];
-}
-
-/**
- * MCP server information
- */
-interface MCPServerInfo {
-  id: string;
-  name: string;
-  description?: string;
-  isAvailable: boolean;
-  requiresAuth: boolean;
-  authProvider?: string;
-  tools: string[];
-}
-
-/**
- * Skill information
- */
-interface SkillInfo {
-  id: string;
-  name: string;
-  description: string;
-}
-```
-
-### Basic Usage
-
-```tsx
-import { useAgent, Chat } from '@datalayer/agent-runtimes';
-
-function MyAgentApp() {
-  const agent = useAgent({
-    transport: 'ag-ui',
-    baseUrl: 'http://localhost:8765',
-    mcpServers: ['filesystem', 'tavily'],
-    isCodemode: true,
-    model: 'anthropic:claude-sonnet-4-5',
-  });
-
-  if (agent.error) {
-    return <div>Error: {agent.error.message}</div>;
-  }
-
-  return (
-    <div>
-      <Chat endpoint={agent.endpoint} />
-    </div>
-  );
-}
-```
-
-### With Identity Management
-
-```tsx
-import { useAgent, Chat, IdentityPanel } from '@datalayer/agent-runtimes';
-
-function AgentWithIdentities() {
-  const agent = useAgent({
-    transport: 'ag-ui',
-    baseUrl: 'http://localhost:8765',
-    identities: [
-      { provider: 'github', scopes: ['repo', 'read:user'], isConnected: false },
-      { provider: 'kaggle', scopes: ['datasets:read'], isConnected: false },
-    ],
-    mcpServers: ['github', 'kaggle'],
-  });
-
-  // Handle OAuth callback
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const code = params.get('code');
-    const state = params.get('state');
-    
-    if (code && state && agent.pendingAuthorization) {
-      agent.completeAuthorization(code, state);
-      // Clean up URL
-      window.history.replaceState({}, '', window.location.pathname);
-    }
-  }, [agent.pendingAuthorization]);
-
-  return (
-    <div className="agent-app">
-      {/* Identity connection panel */}
-      <IdentityPanel
-        identities={agent.identities}
-        onConnect={(provider) => agent.addIdentity(provider)}
-        onDisconnect={(provider) => agent.removeIdentity(provider)}
-      />
-      
-      {/* Authorization popup handling */}
-      {agent.pendingAuthorization && (
-        <OAuthPopup
-          authUrl={agent.pendingAuthorization.authUrl}
-          onComplete={(code, state) => agent.completeAuthorization(code, state)}
-          onCancel={() => agent.cancelAuthorization()}
-        />
-      )}
-      
-      {/* Chat interface */}
-      {agent.isReady && <Chat endpoint={agent.endpoint} />}
-    </div>
-  );
-}
-```
-
-### Runtime Identity Addition
-
-When a tool requires an identity that isn't connected, the agent can request authorization at runtime:
-
-```tsx
-function AgentWithDynamicIdentities() {
-  const agent = useAgent({
-    transport: 'ag-ui',
-    baseUrl: 'http://localhost:8765',
-  });
-
-  return (
-    <div>
-      <Chat
-        endpoint={agent.endpoint}
-        onAuthorizationRequired={async ({ provider, scopes, authUrl }) => {
-          // Show authorization prompt to user
-          const confirmed = await showConfirmDialog({
-            title: `Connect to ${provider}?`,
-            message: `The agent needs access to ${provider} to complete this task.`,
-            scopes: scopes,
-          });
-          
-          if (confirmed) {
-            // Add identity triggers OAuth flow
-            await agent.addIdentity(provider, scopes);
-          }
-        }}
-      />
-      
-      {/* Display connected providers */}
-      <div className="connected-providers">
-        {agent.connectedProviders.map(provider => (
-          <ProviderBadge
-            key={provider}
-            provider={provider}
-            onDisconnect={() => agent.removeIdentity(provider)}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-```
-
-### Full Example with All Features
-
-```tsx
-import { useAgent, Chat, ConfigPanel } from '@datalayer/agent-runtimes';
-
-function FullFeaturedAgent() {
-  const agent = useAgent({
-    // Identity
-    identities: [
-      { provider: 'github', scopes: ['repo'], isConnected: false },
-      { provider: 'google', scopes: ['gmail.readonly'], isConnected: false },
-    ],
-    
-    // Transport
-    transport: 'ag-ui',
-    baseUrl: import.meta.env.VITE_AGENT_URL || 'http://localhost:8765',
-    
-    // MCP Servers
-    mcpServers: ['filesystem', 'tavily'],
-    
-    // Skills
-    skills: ['code-review', 'data-analysis'],
-    
-    // Code Mode
-    isCodemode: true,
-    codemodeConfig: {
-      allowDirectToolCalls: false,  // Require human approval
-      enableToolReranker: true,
-    },
-    
-    // Model
-    model: 'anthropic:claude-sonnet-4-5',
-    systemPrompt: 'You are a helpful coding assistant.',
-    
-    // Auto-connect
-    autoConnect: true,
-  });
-
-  return (
-    <div className="agent-workspace">
-      {/* Configuration sidebar */}
-      <aside>
-        <ConfigPanel
-          // Identities
-          identities={agent.identities}
-          onConnectIdentity={agent.addIdentity}
-          onDisconnectIdentity={agent.removeIdentity}
-          
-          // MCP Servers
-          mcpServers={agent.mcpServers}
-          availableMcpServers={agent.availableMcpServers}
-          onToggleMcpServer={(id, enabled) => 
-            enabled ? agent.enableMcpServer(id) : agent.disableMcpServer(id)
-          }
-          
-          // Skills
-          skills={agent.skills}
-          availableSkills={agent.availableSkills}
-          onToggleSkill={(id, enabled) =>
-            enabled ? agent.enableSkill(id) : agent.disableSkill(id)
-          }
-        />
-      </aside>
-      
-      {/* Main chat area */}
-      <main>
-        {agent.isLoading ? (
-          <LoadingSpinner />
-        ) : agent.error ? (
-          <ErrorMessage error={agent.error} onRetry={agent.connect} />
-        ) : (
-          <Chat
-            endpoint={agent.endpoint}
-            onAuthorizationRequired={({ provider, scopes }) => 
-              agent.addIdentity(provider, scopes)
-            }
-          />
-        )}
-      </main>
-    </div>
-  );
-}
-```
-
-### Integration with examplesStore
-
-The `useAgent` hook integrates with the existing agent store for managing agent configurations:
-
-```tsx
-import { useAgent } from '@datalayer/agent-runtimes';
-import { useAgentsStore } from './stores/examplesStore';
-
-function AgentFromStore({ agentId }: { agentId: string }) {
-  // Get agent config from store
-  const agentConfig = useAgentsStore(state => state.getAgentById(agentId));
-  
-  // Initialize useAgent with store config
-  const agent = useAgent({
-    transport: agentConfig?.transport || 'ag-ui',
-    // ... other config from store
-  });
-  
-  return <Chat endpoint={agent.endpoint} />;
-}
-```
-
-### Zustand Store Integration
-
-The `useAgent` hook uses a Zustand store internally for state management, following the existing patterns in agent-runtimes:
-
-```typescript
-// Internal store structure (for reference)
-interface AgentStore {
-  // State
-  identities: Map<string, Identity>;
-  mcpServers: Set<string>;
-  skills: Set<string>;
-  transport: Transport;
-  isCodemode: boolean;
-  codemodeConfig: CodemodeConfig;
-  
-  // Derived
-  connectedProviders: string[];
-  pendingAuthorization: AuthorizationRequest | null;
-  
-  // Actions
-  addIdentity: (provider: string, scopes: string[]) => Promise<void>;
-  removeIdentity: (provider: string) => Promise<void>;
-  setTransport: (transport: Transport) => void;
-  // ... etc
-}
-```
 
 ## UI Integration
 
