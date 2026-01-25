@@ -68,6 +68,12 @@ module.exports = {
         },
         {
           type: 'doc',
+          docId: 'identity/index',
+          position: 'left',
+          label: 'Identity',
+        },
+        {
+          type: 'doc',
           docId: 'endpoints/index',
           position: 'left',
           label: 'Endpoints',
