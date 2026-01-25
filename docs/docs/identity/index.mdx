@@ -14,6 +14,7 @@ Agent identity is more complex than traditional application identity because:
 2. **Multi-service access**: A single agent may need tokens for GitHub, Gmail, Slack, and more
 3. **Dynamic tool discovery**: Agents discover MCP servers at runtime, requiring dynamic credential management
 4. **Autonomy vs. control**: Balancing agent autonomy with user oversight and consent
+5. **Skill execution**: OAuth tokens must flow securely from the frontend to skill script execution
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
@@ -25,15 +26,15 @@ Agent identity is more complex than traditional application identity because:
 ┌─────────────────────────────────────────────────────────────────────┐
 │                        Agent Runtimes Server                        │
 │  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────────┐  │
-│  │  Token Manager  │  │  Agent Context  │  │  MCP Client         │  │
-│  │  (OAuth flows)  │  │  (User identity)│  │  (Tool invocation)  │  │
+│  │  Token Manager  │  │  Agent Context  │  │  Skill Executor     │  │
+│  │  (OAuth flows)  │  │  (User identity)│  │  (Token injection)  │  │
 │  └────────┬────────┘  └────────┬────────┘  └──────────┬──────────┘  │
 └───────────┼────────────────────┼───────────────────────┼────────────┘
             │                    │                       │
             ▼                    ▼                       ▼
      ┌──────────────┐     ┌──────────────┐       ┌──────────────┐
-     │   GitHub     │     │   Gmail      │       │  Kaggle MCP  │
-     │   API        │     │   API        │       │  Server      │
+     │   GitHub     │     │   Gmail      │       │  Skill Script│
+     │   API        │     │   API        │       │  (env vars)  │
      └──────────────┘     └──────────────┘       └──────────────┘
 ```
 
@@ -57,6 +58,7 @@ Based on the agent identity landscape, there are different approaches depending 
 The implementation provides:
 - **PKCE** for secure authorization code flows with public clients
 - **DCR** (Dynamic Client Registration) for agents that discover OAuth providers at runtime
+- **Identity Context** for automatic token injection into skill script execution
 :::
 
 ```python
@@ -978,6 +980,227 @@ function AgentChat() {
     </div>
   );
 }
+```
+
+## Identity in Skill Execution
+
+When agents execute skills that require access to external services (like GitHub repositories), the OAuth tokens obtained via the identity system are automatically made available to skill scripts.
+
+### How It Works
+
+The identity-to-skill flow works as follows:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         Identity → Skill Execution Flow                      │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+Frontend (React):
+  1. User clicks "Connect GitHub" → OAuth flow completes
+  2. Token stored in Zustand identity store
+  3. useConnectedIdentities() retrieves connected identities
+  4. Chat component passes identities to VercelAIAdapter.sendMessage()
+  5. Adapter includes identities in request body
+
+Backend (Python):
+  6. vercel_ai.py extracts identities from request body
+  7. IdentityContextManager sets context variable for request scope
+  8. During skill execution, executor calls get_identity_env()
+  9. Returns {"GITHUB_TOKEN": "..."} merged into subprocess environment
+  10. Skill script accesses via os.environ["GITHUB_TOKEN"]
+```
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              Frontend                                        │
+│  ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────────┐   │
+│  │ Identity Store  │────▶│ Chat Component  │────▶│ VercelAIAdapter     │   │
+│  │ (Zustand)       │     │ (connectedIds)  │     │ (identities body)   │   │
+│  └─────────────────┘     └─────────────────┘     └──────────┬──────────┘   │
+└──────────────────────────────────────────────────────────────┼──────────────┘
+                                                               │
+                                                    HTTP POST (with identities)
+                                                               │
+┌──────────────────────────────────────────────────────────────▼──────────────┐
+│                              Backend                                         │
+│  ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────────┐   │
+│  │ vercel_ai.py    │────▶│ Identity Context│────▶│ LocalPythonExecutor │   │
+│  │ (extract ids)   │     │ (contextvars)   │     │ (env vars)          │   │
+│  └─────────────────┘     └─────────────────┘     └──────────┬──────────┘   │
+└──────────────────────────────────────────────────────────────┼──────────────┘
+                                                               │
+                                                    subprocess with env
+                                                               │
+                                                    ┌──────────▼──────────┐
+                                                    │ Skill Script        │
+                                                    │ (GITHUB_TOKEN env)  │
+                                                    └─────────────────────┘
+```
+
+### Identity Context Module
+
+The backend uses Python's `contextvars` to store identities in a request-scoped context, allowing any code in the request chain to access the tokens without explicit parameter passing:
+
+```python
+# agent_runtimes/context/identities.py
+
+from contextvars import ContextVar
+
+# Set identities at the start of request handling
+set_request_identities(identities_from_request)
+
+# Later, in skill executor, retrieve them
+identity_env = get_identity_env()
+# Returns: {"GITHUB_TOKEN": "gho_...", "GITLAB_TOKEN": "glpat-..."}
+```
+
+### Provider-to-Environment Variable Mapping
+
+| Provider | Environment Variable |
+|----------|---------------------|
+| `github` | `GITHUB_TOKEN` |
+| `gitlab` | `GITLAB_TOKEN` |
+| `google` | `GOOGLE_ACCESS_TOKEN` |
+| `microsoft` | `AZURE_ACCESS_TOKEN` |
+| `bitbucket` | `BITBUCKET_TOKEN` |
+| `linkedin` | `LINKEDIN_ACCESS_TOKEN` |
+| *other* | `{PROVIDER}_TOKEN` |
+
+### Skill Script Example
+
+A skill script can access the OAuth token from the environment:
+
+```python
+#!/usr/bin/env python3
+"""List user's GitHub repositories."""
+
+import os
+import httpx
+
+def main():
+    token = os.environ.get("GITHUB_TOKEN")
+    if not token:
+        print("Error: GITHUB_TOKEN not set. Please connect your GitHub account.")
+        return
+    
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
+    
+    response = httpx.get("https://api.github.com/user/repos", headers=headers)
+    repos = response.json()
+    
+    for repo in repos[:10]:
+        print(f"- {repo['full_name']}: {repo.get('description', 'No description')}")
+
+if __name__ == "__main__":
+    main()
+```
+
+### Frontend Integration
+
+The Chat component automatically passes connected identities to the backend:
+
+```tsx
+import { Chat, useConnectedIdentities } from '@datalayer/agent-runtimes';
+
+function AgentChat() {
+  // Identities are automatically retrieved and passed by the Chat component
+  // No additional code needed!
+  
+  return (
+    <Chat
+      transport="vercel-ai"
+      baseUrl="http://localhost:8765"
+      agentId="my-agent"
+      showSkillsMenu={true}  // Enable skills
+    />
+  );
+}
+```
+
+If you're using `ChatBase` directly, pass the identities explicitly:
+
+```tsx
+import { ChatBase, useConnectedIdentities } from '@datalayer/agent-runtimes';
+
+function CustomChat() {
+  const connectedIdentities = useConnectedIdentities();
+  
+  // Map to the format expected by ChatBase
+  const identitiesForChat = connectedIdentities.map(identity => ({
+    provider: identity.provider,
+    accessToken: identity.accessToken,
+  }));
+  
+  return (
+    <ChatBase
+      protocol={protocolConfig}
+      connectedIdentities={identitiesForChat}
+      // ... other props
+    />
+  );
+}
+```
+
+### Executor Configuration
+
+Both `LocalPythonExecutor` and `SandboxExecutor` automatically check the identity context:
+
+```python
+from agent_skills import LocalPythonExecutor, SandboxExecutor
+
+# LocalPythonExecutor - identity context enabled by default
+executor = LocalPythonExecutor()
+
+# To disable identity context (e.g., for untrusted scripts)
+executor = LocalPythonExecutor(use_identity_context=False)
+
+# SandboxExecutor - also supports identity context
+from code_sandboxes import LocalEvalSandbox
+sandbox = LocalEvalSandbox()
+executor = SandboxExecutor(sandbox)  # Uses run_code with envs parameter
+```
+
+### Security Considerations
+
+:::warning Token Security
+- **Tokens are passed via environment variables** in the subprocess, not command-line arguments
+- **Context variables are request-scoped** - they're cleared after the request completes
+- **Subprocess isolation** - each skill execution gets a fresh subprocess with only the needed tokens
+- **No persistent storage** - tokens are not written to disk during skill execution
+:::
+
+:::tip Principle of Least Privilege
+Only tokens for connected providers are passed. If a user hasn't connected GitHub, `GITHUB_TOKEN` won't be set. Skills should gracefully handle missing tokens:
+
+```python
+token = os.environ.get("GITHUB_TOKEN")
+if not token:
+    print("Please connect your GitHub account to use this skill.")
+    sys.exit(1)
+```
+:::
+
+### Debugging
+
+Enable debug logging to see identity flow:
+
+```python
+import logging
+logging.getLogger("agent_runtimes.context.identities").setLevel(logging.DEBUG)
+logging.getLogger("agent_skills.toolset").setLevel(logging.DEBUG)
+```
+
+Example log output:
+```
+DEBUG:agent_runtimes.context.identities:Set request identities for providers: ['github']
+DEBUG:agent_skills.toolset:Added identity env vars: ['GITHUB_TOKEN']
+DEBUG:agent_skills.toolset:Executing: python /skills/github/scripts/list_repos.py
 ```
 
 ## Emerging Standards

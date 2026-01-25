@@ -1736,6 +1736,8 @@ function ChatBaseInner({
           builtinTools: enabledMcpToolNames,
           // Include enabled skills for backend
           skills: enabledSkillIds,
+          // Include connected identities with access tokens
+          identities: connectedIdentities,
         } as Parameters<typeof adapterRef.current.sendMessage>[1]);
       }
     } catch (err) {
@@ -1764,6 +1766,7 @@ function ChatBaseInner({
     enableStreaming,
     getEnabledMcpToolNames,
     getEnabledSkillIds,
+    connectedIdentities,
   ]);
 
   // Handle stop

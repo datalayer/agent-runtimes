@@ -27,6 +27,13 @@ from .snapshot import (
     estimate_tokens,  # backward compat alias
     estimate_tokens_json,  # backward compat alias
 )
+from .identities import (
+    IdentityContextManager,
+    clear_request_identities,
+    get_identity_env,
+    get_request_identities,
+    set_request_identities,
+)
 
 __all__ = [
     "AgentUsageStats",
@@ -47,4 +54,10 @@ __all__ = [
     "count_tokens_json",
     "estimate_tokens",
     "estimate_tokens_json",
+    # Identity context
+    "IdentityContextManager",
+    "clear_request_identities",
+    "get_identity_env",
+    "get_request_identities",
+    "set_request_identities",
 ]

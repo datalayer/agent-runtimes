@@ -26,6 +26,7 @@ import { Box } from '@datalayer/primer-addons';
 import { ChatBase, type Suggestion } from './base/ChatBase';
 import { AgentDetails } from './AgentDetails';
 import type { ProtocolConfig } from './base/ChatBase';
+import { useConnectedIdentities } from '../../../identity';
 
 // Try to get Jupyter settings if available
 let getJupyterSettings: (() => { baseUrl: string; token: string }) | undefined;
@@ -279,6 +280,17 @@ export function Chat({
   const [messageCount, setMessageCount] = useState(0);
   const [focusTrigger, setFocusTrigger] = useState(0);
 
+  // Get connected identities to pass to backend for skill execution
+  const connectedIdentities = useConnectedIdentities();
+
+  // Map identities to the format expected by ChatBase
+  const identitiesForChat = useMemo(() => {
+    return connectedIdentities.map(identity => ({
+      provider: identity.provider,
+      accessToken: identity.accessToken,
+    }));
+  }, [connectedIdentities]);
+
   // Focus the input when returning from details view
   useEffect(() => {
     if (!showDetails) {
@@ -506,6 +518,7 @@ export function Chat({
           initialModel={initialModel}
           initialMcpServers={initialMcpServers}
           initialSkills={initialSkills}
+          connectedIdentities={identitiesForChat}
           onNewChat={handleNewChat}
           onMessagesChange={messages => setMessageCount(messages.length)}
           headerButtons={{

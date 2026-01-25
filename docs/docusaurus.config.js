@@ -44,6 +44,12 @@ module.exports = {
         },
         {
           type: 'doc',
+          docId: 'identity/index',
+          position: 'left',
+          label: 'Identity',
+        },
+        {
+          type: 'doc',
           docId: 'models/index',
           position: 'left',
           label: 'Models',
@@ -56,21 +62,15 @@ module.exports = {
         },
         {
           type: 'doc',
+          docId: 'programmatic-tools/index',
+          position: 'left',
+          label: 'Programmatic Tools',
+        },
+        {
+          type: 'doc',
           docId: 'extensions/index',
           position: 'left',
           label: 'Extensions',
-        },
-        {
-          type: 'doc',
-          docId: 'integrations/index',
-          position: 'left',
-          label: 'Integrations',
-        },
-        {
-          type: 'doc',
-          docId: 'identity/index',
-          position: 'left',
-          label: 'Identity',
         },
         {
           type: 'doc',
@@ -80,15 +80,15 @@ module.exports = {
         },
         {
           type: 'doc',
-          docId: 'api-endpoints/index',
+          docId: 'integrations/index',
           position: 'left',
-          label: 'API Endpoints',
+          label: 'Integrations',
         },
         {
           type: 'doc',
-          docId: 'programmatic-tools/index',
+          docId: 'api-endpoints/index',
           position: 'left',
-          label: 'Programmatic Tools',
+          label: 'API Endpoints',
         },
         {
           href: 'https://discord.gg/YQFwvmSSuR',
