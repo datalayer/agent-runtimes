@@ -19,6 +19,10 @@ import sys
 from contextlib import asynccontextmanager
 from typing import Any, AsyncGenerator
 
+# Load environment variables from .env file
+from dotenv import load_dotenv
+load_dotenv()
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field

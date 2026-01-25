@@ -166,8 +166,7 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
   }, [githubClientId]);
 
   // Identity state - pass providers to configure them before callback is processed
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { identities, getAccessToken } = useIdentity({
+  useIdentity({
     providers:
       Object.keys(identityProviders).length > 0 ? identityProviders : undefined,
     autoHandleCallback: true,

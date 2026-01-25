@@ -314,8 +314,8 @@ After creating the app:
 1. Copy the **Client ID** - this is public and safe to include in frontend code
 2. *(Optional)* Click **Generate a new client secret** - only needed for server-side flows
 
-:::tip Client Secret for PKCE
-For browser-based OAuth with PKCE, the client secret is **optional**. However, if you have one, the backend token exchange endpoint will use it.
+:::warning Client Secret Required for GitHub
+GitHub OAuth Apps **require a client secret** for the token exchange, even when using PKCE. You must generate and configure the client secret (see Step 4 below).
 :::
 
 #### Step 4: Configure Agent Runtimes
@@ -332,7 +332,7 @@ VITE_GITHUB_CLIENT_ID=your_github_client_id_here
 
 # Backend (Python) - used by token exchange endpoint
 GITHUB_CLIENT_ID=your_github_client_id_here
-# GITHUB_CLIENT_SECRET=your_secret_here  # Optional for PKCE
+GITHUB_CLIENT_SECRET=your_github_client_secret_here  # Required for GitHub!
 ```
 
 :::warning Both Frontend AND Backend Need the Client ID
@@ -343,17 +343,18 @@ The OAuth flow requires the client ID in two places:
 GitHub doesn't support CORS on their token endpoint, so the backend proxies the token exchange.
 :::
 
-:::info Client Secret NOT Required
-**You do NOT need to set a client secret** for browser-based OAuth flows.
+:::warning Client Secret IS Required for GitHub
+**GitHub OAuth Apps require a client secret** for the token exchange, even when using PKCE.
 
-Agent Runtimes uses **OAuth 2.1 with PKCE** (Proof Key for Code Exchange), which is designed for public clients (browsers, mobile apps) where secrets cannot be stored securely.
+While OAuth 2.1 with PKCE is designed for public clients, GitHub's token endpoint requires the client secret. The secret is stored securely on the backend (never in the browser).
 
-| Flow Type | Client Secret | Security Mechanism |
-|-----------|---------------|-------------------|
-| **Browser/SPA (PKCE)** | ❌ Not needed | Dynamic `code_verifier` + `code_challenge` |
-| **Server-side** | ✅ Required | Static secret stored securely on server |
+| Provider | Client Secret | Notes |
+|----------|---------------|-------|
+| **GitHub** | ✅ Required | Token exchange requires secret |
+| **Google** | ✅ Required | Same as GitHub |
+| **Okta/Auth0** | ❌ Optional | Pure PKCE flows supported |
 
-For the examples and browser-based identity flows, **only set the Client ID variables**.
+**You must set both `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET`** in your `.env` file for the backend.
 :::
 
 :::tip Demo Mode
@@ -411,27 +412,31 @@ function App() {
 
 **Backend (Python)** - Only needed for server-side token exchange:
 
-:::caution When is a Client Secret Needed?
-The client secret is **only required** if your backend server performs the OAuth token exchange (confidential client flow). 
+:::caution GitHub Requires Client Secret
+GitHub's token endpoint requires a client secret even with PKCE. The Agent Runtimes backend performs the token exchange (to avoid CORS issues), so you **must configure the client secret**.
 
-For browser-only flows using PKCE, the token exchange happens in the browser and **no secret is needed**.
+```bash
+# Required in .env
+GITHUB_CLIENT_ID=your_client_id
+GITHUB_CLIENT_SECRET=your_client_secret
+```
 :::
 
 ```bash
 # In your .env file (never commit this!)
-# Only needed for server-side OAuth flows
+# Required for GitHub OAuth token exchange
 GITHUB_CLIENT_ID=your_client_id
-GITHUB_CLIENT_SECRET=your_client_secret  # Only for server-side flows
+GITHUB_CLIENT_SECRET=your_client_secret  # Required for GitHub!
 ```
 
 ```python
-# In your agent server configuration (if doing server-side token exchange)
+# In your agent server configuration
 import os
 
 OAUTH_PROVIDERS = {
     "github": {
         "client_id": os.getenv("GITHUB_CLIENT_ID"),
-        "client_secret": os.getenv("GITHUB_CLIENT_SECRET"),  # Optional for PKCE
+        "client_secret": os.getenv("GITHUB_CLIENT_SECRET"),  # Required for GitHub
         "authorization_endpoint": "https://github.com/login/oauth/authorize",
         "token_endpoint": "https://github.com/login/oauth/access_token",
         "userinfo_endpoint": "https://api.github.com/user",
@@ -727,11 +732,11 @@ DCR is primarily useful for:
 - **Scope validation**: Servers may grant fewer scopes than requested; always check the response.
 :::
 
-## Implementation Strategy
+## Implementation Details
 
-### Phase 1: OAuth 2.1 Foundation
+### Type 1: OAuth 2.1 Foundation
 
-Implement OAuth 2.1 with the following components:
+The OAuth 2.1 implementation consists of the following components:
 
 ```
 agent_runtimes/
@@ -809,9 +814,9 @@ async def connect_to_new_provider(issuer_url: str) -> DynamicClient:
     )
 ```
 
-### Phase 2: MCP Authorization Integration
+### Type 2: MCP Authorization Integration
 
-Extend the MCP client to handle OAuth authentication automatically:
+The MCP client handles OAuth authentication automatically:
 
 ```python
 class AuthenticatedMCPClient:
@@ -850,9 +855,9 @@ class AuthenticatedMCPClient:
         return await self._execute_tool(tool_name, arguments, headers)
 ```
 
-### Phase 3: Token Broker Architecture (Advanced)
+### Type 3: Token Broker Architecture (Advanced)
 
-For production deployments with many connectors, consider a centralized token broker:
+For production deployments with many connectors, a centralized token broker is recommended:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
