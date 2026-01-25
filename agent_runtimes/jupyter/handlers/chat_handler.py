@@ -104,16 +104,21 @@ class VercelAIChatHandler(APIHandler):
                 # Create request adapter (Starlette-compatible)
                 tornado_request = TornadoRequestAdapter(self)
 
-                # Parse request body to extract model if specified
+                # Parse request body to extract model and builtinTools if specified
+                model = None
+                builtin_tools: list[str] = []
                 try:
                     body = await tornado_request.json()
-                    model = body.get("model") if isinstance(body, dict) else None
+                    if isinstance(body, dict):
+                        model = body.get("model")
+                        # Extract builtinTools from request - these are the MCP tools
+                        # the frontend wants to enable for this request
+                        request_builtin_tools = body.get("builtinTools")
+                        if request_builtin_tools and isinstance(request_builtin_tools, list):
+                            builtin_tools = request_builtin_tools
+                            self.log.info(f"Using builtinTools from request: {builtin_tools}")
                 except Exception:
-                    model = None
-
-                # Get builtin tools (empty list - tools metadata is only for UI display)
-                # The actual pydantic-ai tools are registered in the agent itself
-                builtin_tools: list[str] = []
+                    pass
 
                 # Create usage limits for the agent
                 usage_limits = UsageLimits(

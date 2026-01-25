@@ -607,6 +607,7 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
                         codemodeEnabled={enableCodemode}
                         initialModel={model}
                         initialMcpServers={selectedMcpServers}
+                        initialSkills={selectedSkills}
                         suggestions={[
                           {
                             title: '👋 Say hello',

@@ -92,13 +92,18 @@ def _build_codemode_toolset(
     registry = ToolRegistry()
     mcp_manager = get_mcp_manager()
     servers = mcp_manager.get_servers()
+    logger.info(f"Building codemode registry from {len(servers)} available servers")
+    
     if request.selected_mcp_servers:
         servers = [
             server for server in servers if server.id in request.selected_mcp_servers
         ]
+        logger.info(f"Filtered to {len(servers)} selected servers: {request.selected_mcp_servers}")
 
+    servers_added = []
     for server in servers:
         if not server.enabled:
+            logger.debug(f"Skipping disabled MCP server: {server.id}")
             continue
         if not server.is_available:
             logger.warning(
@@ -112,10 +117,12 @@ def _build_codemode_toolset(
             c if c.isalnum() or c == "_" else "_" for c in server.id
         )
         
+        # Pass through relevant environment variables for MCP servers
         server_env: dict[str, str] = {}
-        tavily_key = os.getenv("TAVILY_API_KEY")
-        if tavily_key:
-            server_env["TAVILY_API_KEY"] = tavily_key
+        for env_key in ["TAVILY_API_KEY", "LINKEDIN_API_KEY", "LINKEDIN_ACCESS_TOKEN"]:
+            env_val = os.getenv(env_key)
+            if env_val:
+                server_env[env_key] = env_val
 
         registry.add_server(
             MCPServerConfig(
@@ -127,6 +134,10 @@ def _build_codemode_toolset(
                 enabled=server.enabled,
             )
         )
+        servers_added.append(normalized_name)
+        logger.info(f"Added MCP server to codemode registry: {normalized_name} (command={server.command}, args={server.args})")
+    
+    logger.info(f"Codemode registry built with {len(servers_added)} servers: {servers_added}")
 
     # Configure paths for codemode environment (following agent_cli.py pattern)
     # Use app state for custom paths if configured, otherwise use repo-relative defaults
@@ -157,12 +168,12 @@ def _build_codemode_toolset(
 
     # Create toolset following the working agent_cli.py pattern:
     # - Use the config object
-    # - Disable discovery tools to reduce LLM calls (user can enable if needed)
+    # - Enable discovery tools so LLM can find available MCP tools
     # - Pass tool_reranker if configured
     return CodemodeToolset(
         registry=registry,
         config=config,
-        allow_discovery_tools=False,  # Disable discovery tools to reduce LLM calls (as in agent_cli.py)
+        allow_discovery_tools=True,  # Enable discovery tools (search_tools, get_tool_details, etc.)
         tool_reranker=reranker,
     )
 
@@ -287,6 +298,7 @@ async def create_agent(request: CreateAgentRequest, http_request: Request) -> Cr
                 from agent_skills import (
                     DatalayerSkill,
                     DatalayerSkillsToolset,
+                    LocalPythonExecutor,
                     PYDANTIC_AI_AVAILABLE,
                 )
                 if PYDANTIC_AI_AVAILABLE:
@@ -322,10 +334,18 @@ async def create_agent(request: CreateAgentRequest, http_request: Request) -> Cr
                                 sorted(missing),
                             )
 
-                        skills_toolset = DatalayerSkillsToolset(skills=selected_skills)
+                        # Create executor for running skill scripts
+                        executor = LocalPythonExecutor()
+                        skills_toolset = DatalayerSkillsToolset(
+                            skills=selected_skills,
+                            executor=executor,
+                        )
                     else:
+                        # Create executor for running skill scripts
+                        executor = LocalPythonExecutor()
                         skills_toolset = DatalayerSkillsToolset(
                             directories=[skills_path],  # TODO: Make configurable
+                            executor=executor,
                         )
                     toolsets.append(skills_toolset)
                     logger.info(f"Added DatalayerSkillsToolset for agent {agent_id}")
@@ -348,7 +368,15 @@ async def create_agent(request: CreateAgentRequest, http_request: Request) -> Cr
             if codemode_toolset is not None:
                 # Initialize the toolset to discover tools and generate bindings
                 # This must happen before the agent can use execute_code
+                logger.info(f"Starting codemode toolset for agent {agent_id}...")
                 await codemode_toolset.start()
+                
+                # Log discovered tools from the registry
+                if codemode_toolset.registry:
+                    discovered_tools = codemode_toolset.registry.list_tools(include_deferred=True)
+                    tool_names = [t.name for t in discovered_tools]
+                    logger.info(f"Codemode discovered {len(tool_names)} tools: {tool_names}")
+                
                 try:
                     generated_root = Path(codemode_toolset.config.generated_path)
                     servers_dir = generated_root / "servers"

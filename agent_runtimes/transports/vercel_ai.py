@@ -151,28 +151,43 @@ class VercelAITransport(BaseTransport):
         logger = logging.getLogger(__name__)
         pydantic_agent = self._get_pydantic_agent()
 
-        # Extract model from request body if not provided
-        if model is None:
-            try:
-                # Read the body once and cache it
-                body_bytes = await request.body()
-                body = json.loads(body_bytes)
+        # Extract model and builtinTools from request body if not provided
+        builtin_tools_from_request: list[str] | None = None
+        body: dict | None = None
+        
+        try:
+            # Read the body once and cache it
+            body_bytes = await request.body()
+            body = json.loads(body_bytes)
+            
+            # Extract model
+            if model is None:
                 model = body.get("model")
                 if model:
                     logger.info(f"Vercel AI: Using model from request body: {model}")
                 else:
                     logger.debug(f"Vercel AI: No model in request body, keys: {list(body.keys())}")
+            
+            # Extract builtinTools from request
+            builtin_tools_from_request = body.get("builtinTools")
+            if builtin_tools_from_request:
+                logger.info(f"Vercel AI: Using builtinTools from request: {builtin_tools_from_request}")
 
-                # Create a new request with the cached body for pydantic-ai to consume
-                # We need to wrap the request with cached body
-                from starlette.requests import Request as StarletteRequest
+            # Create a new request with the cached body for pydantic-ai to consume
+            # We need to wrap the request with cached body
+            from starlette.requests import Request as StarletteRequest
 
-                async def receive():
-                    return {"type": "http.request", "body": body_bytes}
+            async def receive():
+                return {"type": "http.request", "body": body_bytes}
 
-                request = StarletteRequest(request.scope, receive)
-            except (json.JSONDecodeError, Exception) as e:
-                logger.debug(f"Could not extract model from request body: {e}")
+            request = StarletteRequest(request.scope, receive)
+        except (json.JSONDecodeError, Exception) as e:
+            logger.debug(f"Could not extract model/builtinTools from request body: {e}")
+
+        # Determine which builtin_tools to use:
+        # 1. If request specifies builtinTools, use those (allows per-request tool selection)
+        # 2. Otherwise fall back to self._builtin_tools (initialized at adapter creation)
+        effective_builtin_tools = builtin_tools_from_request if builtin_tools_from_request is not None else self._builtin_tools
 
         # Create on_complete callback to track usage
         agent_id = self._agent_id
@@ -214,7 +229,7 @@ class VercelAITransport(BaseTransport):
             model=model,
             usage_limits=self._usage_limits,
             toolsets=self._toolsets,
-            builtin_tools=self._builtin_tools,
+            builtin_tools=effective_builtin_tools,
             on_complete=on_complete,
         )
 

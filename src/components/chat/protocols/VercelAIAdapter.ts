@@ -129,6 +129,8 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
       messages?: ChatMessage[];
       /** Builtin tools / MCP tools to enable for this request */
       builtinTools?: string[];
+      /** Skills to enable for this request */
+      skills?: string[];
     },
   ): Promise<void> {
     if (this.abortController) {
@@ -174,10 +176,26 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
           options.builtinTools.length > 0 && {
             builtinTools: options.builtinTools,
           }),
+        // Skills to enable
+        ...(options?.skills &&
+          options.skills.length > 0 && {
+            skills: options.skills,
+          }),
       };
 
       if (options?.model) {
         console.log('[VercelAIAdapter] Sending with model:', options.model);
+      }
+
+      if (options?.builtinTools && options.builtinTools.length > 0) {
+        console.log(
+          '[VercelAIAdapter] Sending with builtinTools:',
+          options.builtinTools,
+        );
+      }
+
+      if (options?.skills && options.skills.length > 0) {
+        console.log('[VercelAIAdapter] Sending with skills:', options.skills);
       }
 
       // Merge custom headers with defaults

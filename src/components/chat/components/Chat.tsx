@@ -182,6 +182,9 @@ export interface ChatProps {
   /** Initial MCP server IDs to enable (others will be disabled) */
   initialMcpServers?: string[];
 
+  /** Initial skill IDs to enable */
+  initialSkills?: string[];
+
   /** Clear messages when component mounts or agentId changes */
   clearOnMount?: boolean;
 
@@ -263,6 +266,7 @@ export function Chat({
   codemodeEnabled = false,
   initialModel,
   initialMcpServers,
+  initialSkills,
   clearOnMount: _clearOnMount = true,
   suggestions,
   submitOnSuggestionClick = true,
@@ -501,6 +505,7 @@ export function Chat({
           codemodeEnabled={codemodeEnabled}
           initialModel={initialModel}
           initialMcpServers={initialMcpServers}
+          initialSkills={initialSkills}
           onNewChat={handleNewChat}
           onMessagesChange={messages => setMessageCount(messages.length)}
           headerButtons={{

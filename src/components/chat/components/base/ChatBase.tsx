@@ -414,6 +414,9 @@ export interface ChatBaseProps {
   /** Initial MCP server IDs to enable (others will be disabled) */
   initialMcpServers?: string[];
 
+  /** Initial skill IDs to enable */
+  initialSkills?: string[];
+
   /** Custom class name */
   className?: string;
 
@@ -757,6 +760,7 @@ export function ChatBase({
   codemodeEnabled = false,
   initialModel,
   initialMcpServers,
+  initialSkills,
   className,
   loadingState,
   headerActions,
@@ -816,6 +820,7 @@ export function ChatBase({
           codemodeEnabled={codemodeEnabled}
           initialModel={initialModel}
           initialMcpServers={initialMcpServers}
+          initialSkills={initialSkills}
           className={className}
           loadingState={loadingState}
           headerActions={headerActions}
@@ -871,6 +876,7 @@ export function ChatBase({
       codemodeEnabled={codemodeEnabled}
       initialModel={initialModel}
       initialMcpServers={initialMcpServers}
+      initialSkills={initialSkills}
       className={className}
       loadingState={loadingState}
       headerActions={headerActions}
@@ -926,6 +932,7 @@ function ChatBaseInner({
   codemodeEnabled = false,
   initialModel,
   initialMcpServers,
+  initialSkills,
   className,
   loadingState,
   headerActions,
@@ -1148,6 +1155,13 @@ function ChatBaseInner({
     }
   }, [configQuery.data, selectedModel, initialModel, initialMcpServers]);
 
+  // Initialize enabled skills from initialSkills prop
+  useEffect(() => {
+    if (initialSkills && initialSkills.length > 0) {
+      setEnabledSkills(new Set(initialSkills));
+    }
+  }, [initialSkills]);
+
   // Helper to toggle MCP tool enabled state
   const toggleMcpTool = useCallback((serverId: string, toolName: string) => {
     setEnabledMcpTools(prev => {
@@ -1208,6 +1222,11 @@ function ChatBaseInner({
     });
     return toolNames;
   }, [enabledMcpTools]);
+
+  // Get all enabled skill IDs (for sending with requests)
+  const getEnabledSkillIds = useCallback((): string[] => {
+    return Array.from(enabledSkills);
+  }, [enabledSkills]);
 
   // Load messages from store on mount when useStoreMode is enabled
   useEffect(() => {
@@ -1704,8 +1723,9 @@ function ChatBaseInner({
           parameters: tool.parameters || { type: 'object', properties: {} },
         }));
 
-        // Get enabled MCP tool names
+        // Get enabled MCP tool names and skill IDs
         const enabledMcpToolNames = getEnabledMcpToolNames();
+        const enabledSkillIds = getEnabledSkillIds();
 
         await adapterRef.current.sendMessage(userMessage, {
           threadId: threadIdRef.current,
@@ -1714,6 +1734,8 @@ function ChatBaseInner({
           tools: toolsForRequest,
           // Include enabled MCP tools as builtin_tools for backend
           builtinTools: enabledMcpToolNames,
+          // Include enabled skills for backend
+          skills: enabledSkillIds,
         } as Parameters<typeof adapterRef.current.sendMessage>[1]);
       }
     } catch (err) {
@@ -1741,6 +1763,7 @@ function ChatBaseInner({
     onSendMessage,
     enableStreaming,
     getEnabledMcpToolNames,
+    getEnabledSkillIds,
   ]);
 
   // Handle stop
