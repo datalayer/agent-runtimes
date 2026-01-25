@@ -62,9 +62,9 @@ module.exports = {
         },
         {
           type: 'doc',
-          docId: 'agents/index',
+          docId: 'integrations/index',
           position: 'left',
-          label: 'Agents',
+          label: 'Integrations',
         },
         {
           type: 'doc',
@@ -76,7 +76,7 @@ module.exports = {
           type: 'doc',
           docId: 'endpoints/index',
           position: 'left',
-          label: 'Endpoints',
+          label: 'API Endpoints',
         },
         {
           type: 'doc',

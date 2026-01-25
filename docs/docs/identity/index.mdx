@@ -4,3 +4,915 @@ sidebar_position: 4
 ---
 
 # Identity
+
+AI agents that act on behalf of users need secure identity and authorization mechanisms to access external services like GitHub, Gmail, Kaggle, or enterprise APIs. This section describes the identity strategy for Agent Runtimes.
+
+## Overview
+
+Agent identity is more complex than traditional application identity because:
+
+1. **Delegation**: Agents act *on behalf of* users, requiring clear authorization chains
+2. **Multi-service access**: A single agent may need tokens for GitHub, Gmail, Slack, and more
+3. **Dynamic tool discovery**: Agents discover MCP servers at runtime, requiring dynamic credential management
+4. **Autonomy vs. control**: Balancing agent autonomy with user oversight and consent
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                         User (Resource Owner)                        │
+└─────────────────────────────────────────────────────────────────────┘
+                                    │
+                         OAuth 2.1 Authorization
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                        Agent Runtimes Server                         │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────────┐  │
+│  │  Token Manager  │  │  Agent Context  │  │  MCP Client         │  │
+│  │  (OAuth flows)  │  │  (User identity)│  │  (Tool invocation)  │  │
+│  └────────┬────────┘  └────────┬────────┘  └──────────┬──────────┘  │
+└───────────┼────────────────────┼───────────────────────┼────────────┘
+            │                    │                       │
+            ▼                    ▼                       ▼
+     ┌──────────────┐     ┌──────────────┐       ┌──────────────┐
+     │   GitHub     │     │   Gmail      │       │  Kaggle MCP  │
+     │   API        │     │   API        │       │  Server      │
+     └──────────────┘     └──────────────┘       └──────────────┘
+```
+
+## Identity Types
+
+### Type 1: User-Delegated Access (OAuth 2.1)
+
+**Use case**: Agent accesses user's GitHub repositories, Gmail, or other personal services.
+
+The agent acts as an OAuth client, obtaining tokens that represent the user's delegated authorization. This follows the standard [OAuth 2.1](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-12) authorization code flow with PKCE.
+
+```python
+# User initiates OAuth flow through the UI
+# Agent receives delegated access token
+agent_context = AgentContext(
+    user_id="user-123",
+    oauth_tokens={
+        "github": GitHubToken(access_token="gho_...", scopes=["repo", "read:user"]),
+        "gmail": GmailToken(access_token="ya29...", scopes=["gmail.readonly"]),
+    }
+)
+
+# Agent tools use these tokens
+@agent.tool
+async def list_repos(ctx: RunContext[AgentContext]) -> list[dict]:
+    token = ctx.deps.oauth_tokens["github"]
+    async with httpx.AsyncClient() as client:
+        response = await client.get(
+            "https://api.github.com/user/repos",
+            headers={"Authorization": f"Bearer {token.access_token}"}
+        )
+        return response.json()
+```
+
+### Type 2: MCP Server Authentication
+
+**Use case**: Agent connects to an MCP server that requires OAuth authentication (e.g., [Kaggle MCP](https://www.kaggle.com/docs/mcp)).
+
+MCP servers follow the [MCP Authorization Specification](https://modelcontextprotocol.io/specification/2025-03-26/basic/authorization) based on OAuth 2.1.
+
+```json
+{
+  "mcpServers": {
+    "kaggle": {
+      "url": "https://www.kaggle.com/mcp",
+      "auth": {
+        "type": "oauth2",
+        "clientId": "your-client-id",
+        "scopes": ["datasets:read", "notebooks:execute"]
+      }
+    }
+  }
+}
+```
+
+When the agent invokes a Kaggle MCP tool, the runtime:
+1. Checks if a valid token exists for this user + MCP server
+2. If not, initiates OAuth flow (user sees consent screen)
+3. Stores the token securely
+4. Attaches token to MCP requests
+
+### Type 3: Agent-to-Agent Communication (SPIFFE/SPIRE)
+
+**Use case**: Internal agents communicating within your organization's infrastructure.
+
+For workload-to-workload identity within a trust domain, use [SPIFFE](https://spiffe.io) (Secure Production Identity Framework for Everyone):
+
+```python
+from agent_runtimes.identity import SPIFFEIdentity
+
+# Agent obtains its SVID (SPIFFE Verifiable Identity Document)
+identity = SPIFFEIdentity()
+svid = await identity.get_x509_svid()
+
+# Use SVID for mutual TLS with other agents
+async with identity.create_secure_channel("spiffe://acme.com/agents/data-processor") as channel:
+    response = await channel.request({"action": "process_data", "payload": data})
+```
+
+SPIFFE provides:
+- **Automatic identity**: No static credentials—workloads receive short-lived certificates
+- **Zero-trust**: Every request is authenticated via mutual TLS
+- **Cross-platform**: Works with Kubernetes, VMs, bare metal
+
+### Type 4: Service Account Access
+
+**Use case**: Agent accesses backend services using application-level credentials.
+
+For server-to-server communication where no user is involved, use the OAuth 2.1 Client Credentials flow:
+
+```python
+from agent_runtimes.identity import ServiceCredentials
+
+# Configure service account
+service = ServiceCredentials(
+    client_id=os.getenv("ANALYTICS_CLIENT_ID"),
+    client_secret=os.getenv("ANALYTICS_CLIENT_SECRET"),
+    token_endpoint="https://auth.example.com/oauth/token",
+    scopes=["analytics:read"]
+)
+
+# Agent uses service token (auto-refreshed)
+@agent.tool
+async def get_metrics(ctx: RunContext) -> dict:
+    token = await service.get_token()
+    # Use token for API calls
+```
+
+## Implementation Strategy
+
+### Phase 1: OAuth 2.1 Foundation
+
+Implement OAuth 2.1 with the following components:
+
+```
+agent_runtimes/
+  identity/
+    __init__.py
+    oauth/
+      client.py          # OAuth client implementation
+      tokens.py          # Token storage and refresh
+      pkce.py            # PKCE utilities
+      discovery.py       # Authorization server metadata (RFC 8414)
+      dcr.py             # Dynamic Client Registration (RFC 7591)
+    providers/
+      github.py          # GitHub OAuth configuration
+      google.py          # Google/Gmail OAuth configuration
+      kaggle.py          # Kaggle OAuth configuration
+      generic.py         # Generic OAuth provider
+```
+
+#### Token Storage
+
+Tokens must be stored securely with:
+- **Encryption at rest**: AES-256 encryption for stored tokens
+- **User scoping**: Tokens are always associated with a specific user
+- **Automatic refresh**: Background refresh before expiration
+- **Revocation support**: Clear tokens on user logout or revocation
+
+```python
+class TokenStore:
+    """Secure token storage with automatic refresh."""
+    
+    async def store_token(
+        self,
+        user_id: str,
+        provider: str,
+        token: OAuthToken,
+    ) -> None:
+        """Store encrypted token for user."""
+        
+    async def get_token(
+        self,
+        user_id: str,
+        provider: str,
+    ) -> OAuthToken | None:
+        """Get token, refreshing if needed."""
+        
+    async def revoke_token(
+        self,
+        user_id: str,
+        provider: str,
+    ) -> None:
+        """Revoke and delete token."""
+```
+
+#### Dynamic Client Registration
+
+For MCP servers the agent hasn't seen before, use [RFC 7591](https://datatracker.ietf.org/doc/html/rfc7591) Dynamic Client Registration:
+
+```python
+async def register_client(
+    registration_endpoint: str,
+    client_name: str,
+    redirect_uris: list[str],
+) -> ClientCredentials:
+    """Dynamically register OAuth client with MCP server."""
+    async with httpx.AsyncClient() as client:
+        response = await client.post(
+            registration_endpoint,
+            json={
+                "client_name": client_name,
+                "redirect_uris": redirect_uris,
+                "grant_types": ["authorization_code", "refresh_token"],
+                "response_types": ["code"],
+                "token_endpoint_auth_method": "none",  # Public client
+            }
+        )
+        data = response.json()
+        return ClientCredentials(
+            client_id=data["client_id"],
+            client_secret=data.get("client_secret"),
+        )
+```
+
+### Phase 2: MCP Authorization Integration
+
+Extend the MCP client to handle OAuth authentication automatically:
+
+```python
+class AuthenticatedMCPClient:
+    """MCP client with automatic OAuth handling."""
+    
+    def __init__(
+        self,
+        server_url: str,
+        token_store: TokenStore,
+        user_id: str,
+    ):
+        self.server_url = server_url
+        self.token_store = token_store
+        self.user_id = user_id
+        
+    async def call_tool(
+        self,
+        tool_name: str,
+        arguments: dict,
+    ) -> Any:
+        # Get or refresh token
+        token = await self.token_store.get_token(
+            self.user_id,
+            provider=self._get_provider_key()
+        )
+        
+        if token is None:
+            # Trigger OAuth flow
+            raise AuthorizationRequired(
+                provider=self._get_provider_key(),
+                auth_url=await self._get_auth_url(),
+            )
+        
+        # Call MCP tool with authorization header
+        headers = {"Authorization": f"Bearer {token.access_token}"}
+        return await self._execute_tool(tool_name, arguments, headers)
+```
+
+### Phase 3: Token Broker Architecture (Advanced)
+
+For production deployments with many connectors, consider a centralized token broker:
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                         Token Broker                                 │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────────┐  │
+│  │  Token Vault    │  │  Policy Engine  │  │  Audit Logger       │  │
+│  │  (encrypted)    │  │  (scopes/limits)│  │  (compliance)       │  │
+│  └────────┬────────┘  └────────┬────────┘  └──────────┬──────────┘  │
+└───────────┼────────────────────┼───────────────────────┼────────────┘
+            │                    │                       │
+     ┌──────┴──────┐      ┌──────┴──────┐        ┌──────┴──────┐
+     │   Agent 1   │      │   Agent 2   │        │   Agent N   │
+     └─────────────┘      └─────────────┘        └─────────────┘
+```
+
+Benefits:
+- **Centralized governance**: Admins control all token policies
+- **Automatic rotation**: Tokens are refreshed before expiry
+- **Audit trail**: Every token use is logged
+- **Scoped access**: Agents only see tokens they're authorized for
+
+## Security Best Practices
+
+### 1. Use PKCE for All OAuth Flows
+
+All authorization code flows MUST use [PKCE](https://oauth.net/2/pkce/) (Proof Key for Code Exchange):
+
+```python
+import secrets
+import hashlib
+import base64
+
+def generate_pkce_pair() -> tuple[str, str]:
+    """Generate PKCE code verifier and challenge."""
+    code_verifier = secrets.token_urlsafe(64)
+    code_challenge = base64.urlsafe_b64encode(
+        hashlib.sha256(code_verifier.encode()).digest()
+    ).decode().rstrip("=")
+    return code_verifier, code_challenge
+```
+
+### 2. Minimize Token Lifetimes
+
+- **Access tokens**: 1 hour maximum
+- **Refresh tokens**: 7 days maximum, with rotation on use
+- **MCP session tokens**: Scope to single session when possible
+
+### 3. Request Minimum Scopes
+
+```python
+# ❌ Don't request broad scopes
+scopes = ["repo", "user", "admin:org"]
+
+# ✅ Request only what's needed
+scopes = ["repo:read", "user:email"]
+```
+
+### 4. Implement Token Revocation
+
+When a user disconnects a service or logs out:
+
+```python
+async def disconnect_provider(user_id: str, provider: str) -> None:
+    """Revoke tokens and clean up."""
+    token = await token_store.get_token(user_id, provider)
+    if token:
+        # Revoke at provider
+        await provider_client.revoke_token(token)
+        # Delete locally
+        await token_store.delete_token(user_id, provider)
+```
+
+### 5. Secure Token Storage
+
+Never store tokens in:
+- ❌ Environment variables (except for local development)
+- ❌ Browser localStorage/sessionStorage
+- ❌ Unencrypted databases
+- ❌ Log files
+
+Instead use:
+- ✅ Encrypted database columns
+- ✅ Hardware security modules (HSM) for production
+- ✅ Secret managers (Vault, AWS Secrets Manager, GCP Secret Manager)
+
+## React Hook API: `useAgent`
+
+The `useAgent` hook provides a unified, high-level API for configuring and using AI agents in React applications. It consolidates identities, transport, MCP servers, skills, and code mode into a single ergonomic interface.
+
+### Hook Signature
+
+```typescript
+import { useAgent } from '@datalayer/agent-runtimes';
+
+const agent = useAgent({
+  // Identity configuration
+  identities?: Identity[];
+  
+  // Transport configuration
+  transport?: Transport;
+  baseUrl?: string;
+  
+  // MCP server configuration
+  mcpServers?: string[];
+  
+  // Skills configuration
+  skills?: string[];
+  
+  // Code mode configuration
+  isCodemode?: boolean;
+  codemodeConfig?: CodemodeConfig;
+});
+```
+
+### Type Definitions
+
+```typescript
+/**
+ * OAuth identity for accessing external services
+ */
+interface Identity {
+  /** Provider identifier (e.g., 'github', 'google', 'kaggle') */
+  provider: string;
+  /** OAuth scopes required */
+  scopes: string[];
+  /** Whether this identity is currently connected */
+  isConnected: boolean;
+  /** Display name for UI */
+  displayName?: string;
+  /** Icon URL for UI */
+  iconUrl?: string;
+}
+
+/**
+ * Transport protocol for agent communication
+ */
+type Transport = 'ag-ui' | 'vercel-ai' | 'acp' | 'a2a';
+
+/**
+ * Code mode configuration for code generation capabilities
+ */
+interface CodemodeConfig {
+  /** Allow agent to call tools directly without human approval */
+  allowDirectToolCalls?: boolean;
+  /** Enable tool reranking for better tool selection */
+  enableToolReranker?: boolean;
+}
+
+/**
+ * Configuration options for useAgent hook
+ */
+interface UseAgentOptions {
+  /** Pre-configured identities (OAuth connections) */
+  identities?: Identity[];
+  /** Transport protocol (default: 'ag-ui') */
+  transport?: Transport;
+  /** Base URL for agent server */
+  baseUrl?: string;
+  /** MCP server IDs to enable */
+  mcpServers?: string[];
+  /** Skill IDs to enable */
+  skills?: string[];
+  /** Enable code mode for code generation */
+  isCodemode?: boolean;
+  /** Code mode specific configuration */
+  codemodeConfig?: CodemodeConfig;
+  /** Model to use (e.g., 'anthropic:claude-sonnet-4-5') */
+  model?: string;
+  /** System prompt for the agent */
+  systemPrompt?: string;
+  /** Auto-connect on mount */
+  autoConnect?: boolean;
+}
+
+/**
+ * Return type for useAgent hook
+ */
+interface UseAgentReturn {
+  // === State ===
+  /** Whether the agent is ready to use */
+  isReady: boolean;
+  /** Whether the agent is currently loading/connecting */
+  isLoading: boolean;
+  /** Current error, if any */
+  error: Error | null;
+  /** Agent endpoint URL */
+  endpoint: string | null;
+  /** Current transport protocol */
+  transport: Transport;
+  
+  // === Identity Management ===
+  /** All configured identities */
+  identities: Identity[];
+  /** Connected identity providers */
+  connectedProviders: string[];
+  /** Add a new identity (triggers OAuth flow) */
+  addIdentity: (provider: string, scopes?: string[]) => Promise<void>;
+  /** Remove an identity (revokes tokens) */
+  removeIdentity: (provider: string) => Promise<void>;
+  /** Check if a provider is connected */
+  isProviderConnected: (provider: string) => boolean;
+  /** Pending authorization request (for UI display) */
+  pendingAuthorization: AuthorizationRequest | null;
+  /** Complete a pending authorization (after OAuth callback) */
+  completeAuthorization: (code: string, state: string) => Promise<void>;
+  
+  // === MCP Servers ===
+  /** Enabled MCP servers */
+  mcpServers: string[];
+  /** Available MCP servers (from config) */
+  availableMcpServers: MCPServerInfo[];
+  /** Enable an MCP server */
+  enableMcpServer: (serverId: string) => void;
+  /** Disable an MCP server */
+  disableMcpServer: (serverId: string) => void;
+  
+  // === Skills ===
+  /** Enabled skills */
+  skills: string[];
+  /** Available skills */
+  availableSkills: SkillInfo[];
+  /** Enable a skill */
+  enableSkill: (skillId: string) => void;
+  /** Disable a skill */
+  disableSkill: (skillId: string) => void;
+  
+  // === Actions ===
+  /** Connect to the agent */
+  connect: () => Promise<void>;
+  /** Disconnect from the agent */
+  disconnect: () => void;
+  /** Reconfigure the agent (applies changes) */
+  reconfigure: (options: Partial<UseAgentOptions>) => Promise<void>;
+}
+
+/**
+ * Pending authorization request
+ */
+interface AuthorizationRequest {
+  /** Provider requiring authorization */
+  provider: string;
+  /** OAuth authorization URL */
+  authUrl: string;
+  /** State parameter for CSRF protection */
+  state: string;
+  /** Requested scopes */
+  scopes: string[];
+}
+
+/**
+ * MCP server information
+ */
+interface MCPServerInfo {
+  id: string;
+  name: string;
+  description?: string;
+  isAvailable: boolean;
+  requiresAuth: boolean;
+  authProvider?: string;
+  tools: string[];
+}
+
+/**
+ * Skill information
+ */
+interface SkillInfo {
+  id: string;
+  name: string;
+  description: string;
+}
+```
+
+### Basic Usage
+
+```tsx
+import { useAgent, Chat } from '@datalayer/agent-runtimes';
+
+function MyAgentApp() {
+  const agent = useAgent({
+    transport: 'ag-ui',
+    baseUrl: 'http://localhost:8765',
+    mcpServers: ['filesystem', 'tavily'],
+    isCodemode: true,
+    model: 'anthropic:claude-sonnet-4-5',
+  });
+
+  if (agent.error) {
+    return <div>Error: {agent.error.message}</div>;
+  }
+
+  return (
+    <div>
+      <Chat endpoint={agent.endpoint} />
+    </div>
+  );
+}
+```
+
+### With Identity Management
+
+```tsx
+import { useAgent, Chat, IdentityPanel } from '@datalayer/agent-runtimes';
+
+function AgentWithIdentities() {
+  const agent = useAgent({
+    transport: 'ag-ui',
+    baseUrl: 'http://localhost:8765',
+    identities: [
+      { provider: 'github', scopes: ['repo', 'read:user'], isConnected: false },
+      { provider: 'kaggle', scopes: ['datasets:read'], isConnected: false },
+    ],
+    mcpServers: ['github', 'kaggle'],
+  });
+
+  // Handle OAuth callback
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('code');
+    const state = params.get('state');
+    
+    if (code && state && agent.pendingAuthorization) {
+      agent.completeAuthorization(code, state);
+      // Clean up URL
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, [agent.pendingAuthorization]);
+
+  return (
+    <div className="agent-app">
+      {/* Identity connection panel */}
+      <IdentityPanel
+        identities={agent.identities}
+        onConnect={(provider) => agent.addIdentity(provider)}
+        onDisconnect={(provider) => agent.removeIdentity(provider)}
+      />
+      
+      {/* Authorization popup handling */}
+      {agent.pendingAuthorization && (
+        <OAuthPopup
+          authUrl={agent.pendingAuthorization.authUrl}
+          onComplete={(code, state) => agent.completeAuthorization(code, state)}
+          onCancel={() => agent.cancelAuthorization()}
+        />
+      )}
+      
+      {/* Chat interface */}
+      {agent.isReady && <Chat endpoint={agent.endpoint} />}
+    </div>
+  );
+}
+```
+
+### Runtime Identity Addition
+
+When a tool requires an identity that isn't connected, the agent can request authorization at runtime:
+
+```tsx
+function AgentWithDynamicIdentities() {
+  const agent = useAgent({
+    transport: 'ag-ui',
+    baseUrl: 'http://localhost:8765',
+  });
+
+  return (
+    <div>
+      <Chat
+        endpoint={agent.endpoint}
+        onAuthorizationRequired={async ({ provider, scopes, authUrl }) => {
+          // Show authorization prompt to user
+          const confirmed = await showConfirmDialog({
+            title: `Connect to ${provider}?`,
+            message: `The agent needs access to ${provider} to complete this task.`,
+            scopes: scopes,
+          });
+          
+          if (confirmed) {
+            // Add identity triggers OAuth flow
+            await agent.addIdentity(provider, scopes);
+          }
+        }}
+      />
+      
+      {/* Display connected providers */}
+      <div className="connected-providers">
+        {agent.connectedProviders.map(provider => (
+          <ProviderBadge
+            key={provider}
+            provider={provider}
+            onDisconnect={() => agent.removeIdentity(provider)}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+```
+
+### Full Example with All Features
+
+```tsx
+import { useAgent, Chat, ConfigPanel } from '@datalayer/agent-runtimes';
+
+function FullFeaturedAgent() {
+  const agent = useAgent({
+    // Identity
+    identities: [
+      { provider: 'github', scopes: ['repo'], isConnected: false },
+      { provider: 'google', scopes: ['gmail.readonly'], isConnected: false },
+    ],
+    
+    // Transport
+    transport: 'ag-ui',
+    baseUrl: import.meta.env.VITE_AGENT_URL || 'http://localhost:8765',
+    
+    // MCP Servers
+    mcpServers: ['filesystem', 'tavily'],
+    
+    // Skills
+    skills: ['code-review', 'data-analysis'],
+    
+    // Code Mode
+    isCodemode: true,
+    codemodeConfig: {
+      allowDirectToolCalls: false,  // Require human approval
+      enableToolReranker: true,
+    },
+    
+    // Model
+    model: 'anthropic:claude-sonnet-4-5',
+    systemPrompt: 'You are a helpful coding assistant.',
+    
+    // Auto-connect
+    autoConnect: true,
+  });
+
+  return (
+    <div className="agent-workspace">
+      {/* Configuration sidebar */}
+      <aside>
+        <ConfigPanel
+          // Identities
+          identities={agent.identities}
+          onConnectIdentity={agent.addIdentity}
+          onDisconnectIdentity={agent.removeIdentity}
+          
+          // MCP Servers
+          mcpServers={agent.mcpServers}
+          availableMcpServers={agent.availableMcpServers}
+          onToggleMcpServer={(id, enabled) => 
+            enabled ? agent.enableMcpServer(id) : agent.disableMcpServer(id)
+          }
+          
+          // Skills
+          skills={agent.skills}
+          availableSkills={agent.availableSkills}
+          onToggleSkill={(id, enabled) =>
+            enabled ? agent.enableSkill(id) : agent.disableSkill(id)
+          }
+        />
+      </aside>
+      
+      {/* Main chat area */}
+      <main>
+        {agent.isLoading ? (
+          <LoadingSpinner />
+        ) : agent.error ? (
+          <ErrorMessage error={agent.error} onRetry={agent.connect} />
+        ) : (
+          <Chat
+            endpoint={agent.endpoint}
+            onAuthorizationRequired={({ provider, scopes }) => 
+              agent.addIdentity(provider, scopes)
+            }
+          />
+        )}
+      </main>
+    </div>
+  );
+}
+```
+
+### Integration with examplesStore
+
+The `useAgent` hook integrates with the existing agent store for managing agent configurations:
+
+```tsx
+import { useAgent } from '@datalayer/agent-runtimes';
+import { useAgentsStore } from './stores/examplesStore';
+
+function AgentFromStore({ agentId }: { agentId: string }) {
+  // Get agent config from store
+  const agentConfig = useAgentsStore(state => state.getAgentById(agentId));
+  
+  // Initialize useAgent with store config
+  const agent = useAgent({
+    transport: agentConfig?.transport || 'ag-ui',
+    // ... other config from store
+  });
+  
+  return <Chat endpoint={agent.endpoint} />;
+}
+```
+
+### Zustand Store Integration
+
+The `useAgent` hook uses a Zustand store internally for state management, following the existing patterns in agent-runtimes:
+
+```typescript
+// Internal store structure (for reference)
+interface AgentStore {
+  // State
+  identities: Map<string, Identity>;
+  mcpServers: Set<string>;
+  skills: Set<string>;
+  transport: Transport;
+  isCodemode: boolean;
+  codemodeConfig: CodemodeConfig;
+  
+  // Derived
+  connectedProviders: string[];
+  pendingAuthorization: AuthorizationRequest | null;
+  
+  // Actions
+  addIdentity: (provider: string, scopes: string[]) => Promise<void>;
+  removeIdentity: (provider: string) => Promise<void>;
+  setTransport: (transport: Transport) => void;
+  // ... etc
+}
+```
+
+## UI Integration
+
+The Agent Runtimes React components support OAuth flows out of the box:
+
+```tsx
+import { ChatBase, useOAuthConnect } from '@datalayer/agent-runtimes';
+
+function AgentChat() {
+  const { connect, isConnecting, connectedProviders } = useOAuthConnect();
+  
+  return (
+    <div>
+      {/* Show connection status */}
+      <div className="providers">
+        <button 
+          onClick={() => connect('github')}
+          disabled={connectedProviders.includes('github')}
+        >
+          {connectedProviders.includes('github') ? '✓ GitHub Connected' : 'Connect GitHub'}
+        </button>
+        <button onClick={() => connect('kaggle')}>
+          Connect Kaggle
+        </button>
+      </div>
+      
+      {/* Chat component handles authorization-required responses */}
+      <ChatBase
+        onAuthorizationRequired={({ provider, authUrl }) => {
+          // Open OAuth popup
+          window.open(authUrl, 'oauth', 'width=600,height=800');
+        }}
+      />
+    </div>
+  );
+}
+```
+
+## Emerging Standards
+
+### OpenID Connect for Agents (OIDC-A)
+
+[OIDC-A 1.0](https://arxiv.org/abs/2509.25974) is an emerging extension to OpenID Connect specifically designed for LLM-based agents. Key features:
+
+- **Agent identity claims**: Standard claims for agent type, capabilities, and attestation
+- **Delegation chains**: Cryptographic proof of authorization delegation from user to agent
+- **Capability tokens**: Fine-grained authorization based on agent capabilities
+
+While OIDC-A is still emerging, Agent Runtimes will track its development and adopt relevant patterns as the specification matures.
+
+### A2A Identity
+
+The [A2A (Agent-to-Agent) protocol](https://google.github.io/a2a/) includes identity provisions for inter-agent communication, complementing the transports layer documented in [Transports](/transports).
+
+## Configuration Reference
+
+### Environment Variables
+
+```bash
+# OAuth provider credentials (for built-in providers)
+GITHUB_CLIENT_ID=your-github-client-id
+GITHUB_CLIENT_SECRET=your-github-client-secret
+
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+
+# Token encryption key (required for production)
+TOKEN_ENCRYPTION_KEY=your-256-bit-key-base64
+
+# Token storage backend
+TOKEN_STORE_TYPE=database  # or "memory", "redis", "vault"
+TOKEN_STORE_URL=postgresql://user:pass@localhost/tokens
+```
+
+### MCP Server Authentication Config
+
+```json
+{
+  "mcpServers": {
+    "kaggle": {
+      "url": "https://www.kaggle.com/mcp",
+      "auth": {
+        "type": "oauth2",
+        "discoveryUrl": "https://www.kaggle.com/.well-known/oauth-authorization-server",
+        "scopes": ["datasets:read", "notebooks:read"],
+        "clientId": "your-kaggle-client-id"
+      }
+    },
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_TOKEN": "${GITHUB_USER_TOKEN}"
+      }
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/allowed/path"],
+      "auth": null
+    }
+  }
+}
+```
+
+## Further Reading
+
+- [OAuth 2.1 Draft Specification](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-12)
+- [MCP Authorization Specification](https://modelcontextprotocol.io/specification/2025-03-26/basic/authorization)
+- [SPIFFE Concepts](https://spiffe.io/docs/latest/spiffe-about/spiffe-concepts/)
+- [RFC 7591 - OAuth 2.0 Dynamic Client Registration](https://datatracker.ietf.org/doc/html/rfc7591)
+- [RFC 8414 - OAuth 2.0 Authorization Server Metadata](https://datatracker.ietf.org/doc/html/rfc8414)
+- [PKCE (RFC 7636)](https://oauth.net/2/pkce/)
+- [Secure Token Management for AI Agents](https://www.scalekit.com/blog/secure-token-management-ai-agents)
