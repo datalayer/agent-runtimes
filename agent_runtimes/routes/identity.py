@@ -4,8 +4,14 @@
 """
 Identity OAuth routes for token exchange.
 
-GitHub (and most OAuth providers) don't support CORS on their token endpoints,
-so we need a backend proxy to exchange the authorization code for an access token.
+Most OAuth providers (including GitHub, Google, Kaggle) don't support CORS on their
+token endpoints, so we need a backend proxy to exchange the authorization code for
+an access token.
+
+Provider-specific notes:
+- GitHub: Requires client_secret even with PKCE, returns errors as 200 with error body
+- Google: Standard OAuth 2.1 with PKCE support
+- Kaggle: Standard OAuth 2.1 with PKCE support
 """
 
 import os
@@ -34,11 +40,16 @@ class TokenExchangeResponse(BaseModel):
     scope: Optional[str] = None
 
 
-# Provider configurations
+# Provider token endpoint configurations
+# Each provider has specific OAuth endpoint URLs
+GITHUB_TOKEN_URL = "https://github.com/login/oauth/access_token"
+GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
+KAGGLE_TOKEN_URL = "https://www.kaggle.com/oauth/token"
+
 PROVIDER_TOKEN_URLS = {
-    "github": "https://github.com/login/oauth/access_token",
-    "google": "https://oauth2.googleapis.com/token",
-    "kaggle": "https://www.kaggle.com/oauth/token",
+    "github": GITHUB_TOKEN_URL,
+    "google": GOOGLE_TOKEN_URL,
+    "kaggle": KAGGLE_TOKEN_URL,
 }
 
 
@@ -95,11 +106,9 @@ async def exchange_token(request: TokenExchangeRequest):
         payload["client_secret"] = client_secret
     
     # Set appropriate headers based on provider
+    # Note: GitHub requires Accept: application/json header explicitly,
+    # otherwise it returns form-encoded response
     headers = {"Accept": "application/json"}
-    
-    if request.provider == "github":
-        # GitHub requires Accept header for JSON response
-        headers["Accept"] = "application/json"
     
     try:
         async with httpx.AsyncClient() as client:
@@ -120,7 +129,8 @@ async def exchange_token(request: TokenExchangeRequest):
             
             token_data = response.json()
             
-            # Handle GitHub's error format (returns 200 with error in body)
+            # Handle GitHub-specific error format
+            # GitHub returns HTTP 200 with error in body instead of HTTP error codes
             if "error" in token_data:
                 raise HTTPException(
                     status_code=400,

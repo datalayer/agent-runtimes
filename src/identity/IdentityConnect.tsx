@@ -27,7 +27,8 @@ import type { OAuthProvider, OAuthProviderConfig, Identity } from './types';
 import { GITHUB_PROVIDER, GOOGLE_PROVIDER, KAGGLE_PROVIDER } from './types';
 
 /**
- * Provider display configuration
+ * Provider display configuration.
+ * Maps provider types to their UI representation (name, icon, color, description).
  */
 interface ProviderDisplay {
   name: string;
@@ -36,11 +37,17 @@ interface ProviderDisplay {
   description: string;
 }
 
+/**
+ * Provider-specific display configurations.
+ * - GitHub: Uses official GitHub icon and dark theme color
+ * - Google: Uses key icon placeholder and Google blue
+ * - Kaggle: Uses key icon placeholder and Kaggle cyan
+ */
 const PROVIDER_DISPLAY: Record<OAuthProvider, ProviderDisplay> = {
   github: {
     name: 'GitHub',
-    icon: MarkGithubIcon,
-    color: '#24292f',
+    icon: MarkGithubIcon, // Official GitHub Octicon
+    color: '#24292f', // GitHub dark theme color
     description: 'Access GitHub repositories and APIs',
   },
   google: {
@@ -82,11 +89,14 @@ const PROVIDER_DISPLAY: Record<OAuthProvider, ProviderDisplay> = {
 };
 
 /**
- * Default scopes for common providers
+ * Default OAuth scopes for common providers.
+ * - GitHub: read:user and user:email for basic profile access
+ * - Google: OpenID Connect scopes for profile and email
+ * - Kaggle: read access for datasets
  */
 const DEFAULT_SCOPES: Record<OAuthProvider, string[]> = {
-  github: ['read:user', 'user:email'],
-  google: ['openid', 'profile', 'email'],
+  github: ['read:user', 'user:email'], // GitHub scopes for user profile
+  google: ['openid', 'profile', 'email'], // OpenID Connect scopes
   kaggle: ['read'],
   linkedin: ['r_liteprofile', 'r_emailaddress'],
   slack: ['users:read', 'channels:read'],

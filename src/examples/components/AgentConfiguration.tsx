@@ -478,6 +478,50 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
         </FormControl>
       </Box>
 
+      {/* Identity Providers Section */}
+      {identityProviders && Object.keys(identityProviders).length > 0 && (
+        <Box
+          sx={{
+            marginBottom: 3,
+            padding: 3,
+            border: '1px solid',
+            borderColor: 'border.default',
+            borderRadius: 2,
+            backgroundColor: 'canvas.default',
+          }}
+        >
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 2,
+              marginBottom: 2,
+            }}
+          >
+            <KeyIcon size={16} />
+            <Text sx={{ fontSize: 1, fontWeight: 'bold' }}>
+              Connected Accounts
+            </Text>
+          </Box>
+          <Text
+            sx={{ fontSize: 0, color: 'fg.muted', display: 'block', mb: 3 }}
+          >
+            Connect your accounts to give the agent access to external services
+            like GitHub repositories, Google services, or Kaggle datasets.
+          </Text>
+          <IdentityConnect
+            providers={identityProviders}
+            layout="list"
+            showHeader={false}
+            size="medium"
+            showDescriptions={true}
+            disabled={selectedAgentId !== 'new-agent'}
+            onConnect={onIdentityConnect}
+            onDisconnect={onIdentityDisconnect}
+          />
+        </Box>
+      )}
+
       {/* Agent Capabilities Section */}
       <Box
         sx={{
@@ -546,50 +590,6 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
           </Box>
         )}
       </Box>
-
-      {/* Identity Providers Section */}
-      {identityProviders && Object.keys(identityProviders).length > 0 && (
-        <Box
-          sx={{
-            marginBottom: 3,
-            padding: 3,
-            border: '1px solid',
-            borderColor: 'border.default',
-            borderRadius: 2,
-            backgroundColor: 'canvas.default',
-          }}
-        >
-          <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 2,
-              marginBottom: 2,
-            }}
-          >
-            <KeyIcon size={16} />
-            <Text sx={{ fontSize: 1, fontWeight: 'bold' }}>
-              Connected Accounts
-            </Text>
-          </Box>
-          <Text
-            sx={{ fontSize: 0, color: 'fg.muted', display: 'block', mb: 3 }}
-          >
-            Connect your accounts to give the agent access to external services
-            like GitHub repositories, Google services, or Kaggle datasets.
-          </Text>
-          <IdentityConnect
-            providers={identityProviders}
-            layout="list"
-            showHeader={false}
-            size="medium"
-            showDescriptions={true}
-            disabled={selectedAgentId !== 'new-agent'}
-            onConnect={onIdentityConnect}
-            onDisconnect={onIdentityDisconnect}
-          />
-        </Box>
-      )}
 
       <Box
         sx={{

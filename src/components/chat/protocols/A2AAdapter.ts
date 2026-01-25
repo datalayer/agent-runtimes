@@ -149,6 +149,15 @@ export class A2AAdapter extends BaseProtocolAdapter {
       metadata?: Record<string, unknown>;
       /** Model to use for this request (overrides agent default) */
       model?: string;
+      /** Built-in MCP tool names to enable */
+      builtinTools?: string[];
+      /** Skill IDs to enable */
+      skills?: string[];
+      /** Connected identity tokens to pass to backend for tool execution */
+      identities?: Array<{
+        provider: string;
+        accessToken: string;
+      }>;
     },
   ): Promise<void> {
     this.abortController = new AbortController();
@@ -172,6 +181,15 @@ export class A2AAdapter extends BaseProtocolAdapter {
       }
     }
 
+    // Build metadata with model and identities
+    const metadata: Record<string, unknown> = {};
+    if (options?.model) {
+      metadata.model = options.model;
+    }
+    if (options?.identities && options.identities.length > 0) {
+      metadata.identities = options.identities;
+    }
+
     // Build JSON-RPC request with A2A message format
     // Use message/stream for SSE streaming responses
     const messageId = generateMessageId();
@@ -193,8 +211,8 @@ export class A2AAdapter extends BaseProtocolAdapter {
           // The model is configured at agent creation time
           ...(options?.model && { model: options.model }),
         },
-        // Also send model in metadata for potential future support
-        ...(options?.model && { metadata: { model: options.model } }),
+        // Also send metadata with model and identities
+        ...(Object.keys(metadata).length > 0 && { metadata }),
       },
       id: taskId,
     };
@@ -204,6 +222,13 @@ export class A2AAdapter extends BaseProtocolAdapter {
         '[A2AAdapter] Sending with model:',
         options.model,
         '(Note: A2A uses agent-level model, not per-request)',
+      );
+    }
+
+    if (options?.identities && options.identities.length > 0) {
+      console.log(
+        '[A2AAdapter] Sending with identities:',
+        options.identities.map(i => i.provider),
       );
     }
 

@@ -131,6 +131,15 @@ export class AGUIAdapter extends BaseProtocolAdapter {
       messages?: ChatMessage[];
       /** Model to use for this request (overrides agent default) */
       model?: string;
+      /** Built-in MCP tool names to enable */
+      builtinTools?: string[];
+      /** Skill IDs to enable */
+      skills?: string[];
+      /** Connected identity tokens to pass to backend for tool execution */
+      identities?: Array<{
+        provider: string;
+        accessToken: string;
+      }>;
     },
   ): Promise<void> {
     this.abortController = new AbortController();
@@ -211,10 +220,19 @@ export class AGUIAdapter extends BaseProtocolAdapter {
       forwardedProps: null,
       // Include model for per-request model override
       ...(options?.model && { model: options.model }),
+      // Include identities for tool execution with OAuth tokens
+      ...(options?.identities &&
+        options.identities.length > 0 && { identities: options.identities }),
     };
 
     if (options?.model) {
       console.log('[AGUIAdapter] Sending with model:', options.model);
+    }
+    if (options?.identities && options.identities.length > 0) {
+      console.log(
+        '[AGUIAdapter] Sending with identities:',
+        options.identities.map(i => i.provider),
+      );
     }
 
     try {

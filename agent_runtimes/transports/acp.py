@@ -13,8 +13,10 @@ Key Protocol Features:
 - Protocol version: 1 (integer for MAJOR version)
 - Methods: initialize, session/new, session/prompt, session/load, session/cancel
 - Session updates: session/update notifications with various update types
+- Identity context support for OAuth token propagation
 """
 
+import logging
 import time
 import uuid
 from dataclasses import dataclass, field
@@ -67,7 +69,10 @@ from ..adapters.base import (
     BaseAgent,
     StreamEvent,
 )
+from ..context.identities import IdentityContextManager
 from .base import BaseTransport
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -82,6 +87,7 @@ class ACPSession:
         mcp_servers: Connected MCP servers.
         current_mode: Current session mode.
         cancelled: Whether the session has been cancelled.
+        identities: OAuth identities for this session (provider → token).
     """
 
     id: str
@@ -91,6 +97,7 @@ class ACPSession:
     mcp_servers: list[dict[str, Any]] = field(default_factory=list)
     current_mode: Optional[str] = None
     cancelled: bool = False
+    identities: Optional[list[dict[str, Any]]] = None
 
 
 class ACPTransport(BaseTransport):
@@ -199,7 +206,7 @@ class ACPTransport(BaseTransport):
         )
 
     async def handle_new_session(
-        self, request: NewSessionRequest
+        self, request: NewSessionRequest, identities: Optional[list[dict[str, Any]]] = None
     ) -> NewSessionResponse:
         """Handle ACP session/new request.
 
@@ -207,6 +214,7 @@ class ACPTransport(BaseTransport):
 
         Args:
             request: New session request from client.
+            identities: Optional OAuth identities (provider → token) for this session.
 
         Returns:
             New session response with session ID.
@@ -218,11 +226,18 @@ class ACPTransport(BaseTransport):
             user_id="default",
         )
 
+        # Extract identities from request metadata if provided
+        session_identities = identities
+        if session_identities:
+            providers = [i.get("provider") for i in session_identities]
+            logger.info(f"ACP: New session with identities for providers: {providers}")
+
         session = ACPSession(
             id=session_id,
             cwd=request.cwd or ".",
             context=context,
             mcp_servers=request.mcp_servers or [],
+            identities=session_identities,
         )
 
         self._sessions[session_id] = session
@@ -254,7 +269,7 @@ class ACPTransport(BaseTransport):
         return LoadSessionResponse()
 
     async def handle_prompt(
-        self, request: PromptRequest
+        self, request: PromptRequest, identities: Optional[list[dict[str, Any]]] = None
     ) -> AsyncIterator[SessionNotification | PromptResponse]:
         """Handle ACP session/prompt request.
 
@@ -263,6 +278,7 @@ class ACPTransport(BaseTransport):
 
         Args:
             request: Prompt request from client.
+            identities: Optional OAuth identities to override session identities.
 
         Yields:
             Session notifications during processing, then PromptResponse.
@@ -281,32 +297,42 @@ class ACPTransport(BaseTransport):
         if context is None:
             context = AgentContext(session_id=session_id)
 
-        # Stream agent response
-        try:
-            if hasattr(self.agent, "stream"):
-                async for event in self.agent.stream(prompt, context):
-                    notification = self._convert_to_session_notification(
-                        session_id, event
+        # Use per-request identities if provided, otherwise use session identities
+        effective_identities = identities if identities is not None else session.identities
+        if effective_identities:
+            providers = [i.get("provider") for i in effective_identities]
+            logger.debug(f"ACP: Prompt using identities for providers: {providers}")
+
+        # Set the identity context for this request so that skill executors
+        # and codemode tools can access OAuth tokens during tool execution
+        async with IdentityContextManager(effective_identities):
+            # Stream agent response
+            try:
+                if hasattr(self.agent, "stream"):
+                    async for event in self.agent.stream(prompt, context):
+                        notification = self._convert_to_session_notification(
+                            session_id, event
+                        )
+                        if notification:
+                            yield notification
+
+                    yield PromptResponse(stop_reason="end_turn")
+                else:
+                    # Non-streaming fallback
+                    response = await self.agent.run(prompt, context)
+
+                    yield session_notification(
+                        session_id=session_id,
+                        update=update_agent_message_text(
+                            response.content if response else ""
+                        ),
                     )
-                    if notification:
-                        yield notification
 
-                yield PromptResponse(stop_reason="end_turn")
-            else:
-                # Non-streaming fallback
-                response = await self.agent.run(prompt, context)
+                    yield PromptResponse(stop_reason="end_turn")
 
-                yield session_notification(
-                    session_id=session_id,
-                    update=update_agent_message_text(
-                        response.content if response else ""
-                    ),
-                )
-
-                yield PromptResponse(stop_reason="end_turn")
-
-        except Exception as e:
-            yield PromptResponse(stop_reason="refusal")
+            except Exception as e:
+                logger.error(f"ACP prompt error: {e}")
+                yield PromptResponse(stop_reason="refusal")
 
     async def handle_cancel(self, notification: CancelNotification) -> None:
         """Handle ACP session/cancel notification.

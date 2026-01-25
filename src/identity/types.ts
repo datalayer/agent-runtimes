@@ -205,6 +205,18 @@ export type IdentityStore = IdentityState & IdentityActions;
 
 /**
  * Built-in provider configurations
+ *
+ * These constants provide OAuth endpoint URLs and default scopes for common providers.
+ * Each provider has specific OAuth behavior:
+ * - GitHub: Requires client_secret for token exchange, returns user info from /user endpoint
+ * - Google: Supports pure PKCE, has offline access mode
+ * - Kaggle: Follows standard OAuth 2.1
+ */
+
+/**
+ * GitHub OAuth provider configuration.
+ * Note: GitHub requires client_secret for token exchange even with PKCE.
+ * User info endpoint returns login, name, email, avatar_url fields.
  */
 export const GITHUB_PROVIDER: Partial<OAuthProviderConfig> = {
   provider: 'github',
@@ -217,6 +229,10 @@ export const GITHUB_PROVIDER: Partial<OAuthProviderConfig> = {
   defaultScopes: ['read:user', 'user:email'],
 };
 
+/**
+ * Google OAuth provider configuration.
+ * Supports offline access for refresh tokens with access_type=offline.
+ */
 export const GOOGLE_PROVIDER: Partial<OAuthProviderConfig> = {
   provider: 'google',
   displayName: 'Google',
@@ -232,6 +248,10 @@ export const GOOGLE_PROVIDER: Partial<OAuthProviderConfig> = {
   },
 };
 
+/**
+ * Kaggle OAuth provider configuration.
+ * Standard OAuth 2.1 implementation for Kaggle MCP access.
+ */
 export const KAGGLE_PROVIDER: Partial<OAuthProviderConfig> = {
   provider: 'kaggle',
   displayName: 'Kaggle',

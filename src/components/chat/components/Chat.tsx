@@ -284,11 +284,14 @@ export function Chat({
   const connectedIdentities = useConnectedIdentities();
 
   // Map identities to the format expected by ChatBase
+  // Filter out identities without tokens (not fully connected)
   const identitiesForChat = useMemo(() => {
-    return connectedIdentities.map(identity => ({
-      provider: identity.provider,
-      accessToken: identity.accessToken,
-    }));
+    return connectedIdentities
+      .filter(identity => identity.token?.accessToken)
+      .map(identity => ({
+        provider: identity.provider,
+        accessToken: identity.token!.accessToken,
+      }));
   }, [connectedIdentities]);
 
   // Focus the input when returning from details view

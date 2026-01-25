@@ -31,11 +31,21 @@ import type {
  * Options for useIdentity hook
  */
 export interface UseIdentityOptions {
-  /** Provider configurations to initialize */
+  /**
+   * Provider configurations to initialize.
+   * Each provider has specific requirements:
+   * - GitHub: clientId required, client_secret handled server-side
+   * - Google: clientId required, supports pure PKCE
+   * - Kaggle: clientId required, standard OAuth 2.1
+   */
   providers?: {
+    /** GitHub OAuth configuration. Note: client_secret must be configured server-side. */
     github?: { clientId: string; redirectUri?: string; scopes?: string[] };
+    /** Google OAuth configuration. Supports offline access mode. */
     google?: { clientId: string; redirectUri?: string; scopes?: string[] };
+    /** Kaggle OAuth configuration. */
     kaggle?: { clientId: string; redirectUri?: string; scopes?: string[] };
+    /** Custom provider configurations. */
     custom?: OAuthProviderConfig[];
   };
   /** Base URL for redirect URIs (defaults to window.location.origin) */

@@ -14,7 +14,7 @@ Agent identity is more complex than traditional application identity because:
 2. **Multi-service access**: A single agent may need tokens for GitHub, Gmail, Slack, and more
 3. **Dynamic tool discovery**: Agents discover MCP servers at runtime, requiring dynamic credential management
 4. **Autonomy vs. control**: Balancing agent autonomy with user oversight and consent
-5. **Skill execution**: OAuth tokens must flow securely from the frontend to skill script execution
+5. **Programmatic execution**: OAuth tokens must flow securely to skill scripts and codemode execution
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
@@ -26,15 +26,15 @@ Agent identity is more complex than traditional application identity because:
 ┌─────────────────────────────────────────────────────────────────────┐
 │                        Agent Runtimes Server                        │
 │  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────────┐  │
-│  │  Token Manager  │  │  Agent Context  │  │  Skill Executor     │  │
+│  │  Token Manager  │  │  Agent Context  │  │  Tool Executors     │  │
 │  │  (OAuth flows)  │  │  (User identity)│  │  (Token injection)  │  │
 │  └────────┬────────┘  └────────┬────────┘  └──────────┬──────────┘  │
 └───────────┼────────────────────┼───────────────────────┼────────────┘
             │                    │                       │
             ▼                    ▼                       ▼
      ┌──────────────┐     ┌──────────────┐       ┌──────────────┐
-     │   GitHub     │     │   Gmail      │       │  Skill Script│
-     │   API        │     │   API        │       │  (env vars)  │
+     │   GitHub     │     │   Gmail      │       │  Skills &    │
+     │   API        │     │   API        │       │  Code Mode   │
      └──────────────┘     └──────────────┘       └──────────────┘
 ```
 
@@ -982,17 +982,28 @@ function AgentChat() {
 }
 ```
 
-## Identity in Skill Execution
+## Identity in Programmatic Tool Execution
 
-When agents execute skills that require access to external services (like GitHub repositories), the OAuth tokens obtained via the identity system are automatically made available to skill scripts.
+When agents execute programmatic tools (skills and codemode's `execute_code`) that require access to external services (like GitHub repositories), the OAuth tokens obtained via the identity system are automatically made available to the execution environment.
+
+### Overview
+
+Agent Runtimes supports two types of programmatic tool execution:
+
+| Execution Type | Description | Use Case |
+|----------------|-------------|----------|
+| **Skills** | Standalone Python scripts executed via `LocalPythonExecutor` or `SandboxExecutor` | Predefined, reusable automation scripts |
+| **Code Mode** | Dynamic Python code executed via `CodeModeExecutor` | Ad-hoc code that composes MCP tools |
+
+Both execution environments automatically receive OAuth tokens as environment variables when identities are connected.
 
 ### How It Works
 
-The identity-to-skill flow works as follows:
+The identity-to-tool flow works as follows:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                         Identity → Skill Execution Flow                      │
+│                     Identity → Programmatic Tool Execution Flow             │
 └─────────────────────────────────────────────────────────────────────────────┘
 
 Frontend (React):
@@ -1005,9 +1016,9 @@ Frontend (React):
 Backend (Python):
   6. vercel_ai.py extracts identities from request body
   7. IdentityContextManager sets context variable for request scope
-  8. During skill execution, executor calls get_identity_env()
-  9. Returns {"GITHUB_TOKEN": "..."} merged into subprocess environment
-  10. Skill script accesses via os.environ["GITHUB_TOKEN"]
+  8. During tool execution, executor calls get_identity_env()
+  9. Returns {"GITHUB_TOKEN": "..."} merged into execution environment
+  10. Code accesses via os.environ["GITHUB_TOKEN"]
 ```
 
 ### Architecture
@@ -1025,18 +1036,24 @@ Backend (Python):
                                                                │
 ┌──────────────────────────────────────────────────────────────▼──────────────┐
 │                              Backend                                         │
-│  ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────────┐   │
-│  │ vercel_ai.py    │────▶│ Identity Context│────▶│ LocalPythonExecutor │   │
-│  │ (extract ids)   │     │ (contextvars)   │     │ (env vars)          │   │
-│  └─────────────────┘     └─────────────────┘     └──────────┬──────────┘   │
-└──────────────────────────────────────────────────────────────┼──────────────┘
-                                                               │
-                                                    subprocess with env
-                                                               │
-                                                    ┌──────────▼──────────┐
-                                                    │ Skill Script        │
-                                                    │ (GITHUB_TOKEN env)  │
-                                                    └─────────────────────┘
+│  ┌─────────────────┐     ┌─────────────────┐                               │
+│  │ vercel_ai.py    │────▶│ Identity Context│──┬─────────────────┐          │
+│  │ (extract ids)   │     │ (contextvars)   │  │                 │          │
+│  └─────────────────┘     └─────────────────┘  │                 │          │
+│                                               ▼                 ▼          │
+│                               ┌─────────────────────┐ ┌─────────────────┐  │
+│                               │ Skill Executors     │ │ CodeModeExecutor│  │
+│                               │ (LocalPython/       │ │ (execute_code)  │  │
+│                               │  Sandbox)           │ │                 │  │
+│                               └──────────┬──────────┘ └────────┬────────┘  │
+└──────────────────────────────────────────┼─────────────────────┼───────────┘
+                                           │                     │
+                              subprocess with env    sandbox with env
+                                           │                     │
+                              ┌────────────▼────────┐ ┌──────────▼──────────┐
+                              │ Skill Script        │ │ Code Mode Script    │
+                              │ (GITHUB_TOKEN env)  │ │ (GITHUB_TOKEN env)  │
+                              └─────────────────────┘ └─────────────────────┘
 ```
 
 ### Identity Context Module
@@ -1101,6 +1118,37 @@ if __name__ == "__main__":
     main()
 ```
 
+### Code Mode Example
+
+Code executed via the `execute_code` tool also receives identity tokens:
+
+```python
+# This code runs in CodeModeExecutor's sandbox
+import os
+import httpx
+
+# Identity tokens are automatically injected
+token = os.environ.get("GITHUB_TOKEN")
+if token:
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/vnd.github+json",
+    }
+    
+    # Fetch user info
+    user = httpx.get("https://api.github.com/user", headers=headers).json()
+    print(f"Logged in as: {user['login']}")
+    
+    # Combine with MCP tools
+    from generated.servers.filesystem import read_file
+    readme = await read_file({"path": "./README.md"})
+    print(f"README has {len(readme['content'])} characters")
+else:
+    print("Connect GitHub to access authenticated APIs")
+```
+
+The `CodeModeExecutor` injects identity environment variables at the start of each execution, so they're available alongside the generated MCP tool bindings.
+
 ### Frontend Integration
 
 The Chat component automatically passes connected identities to the backend:
@@ -1149,7 +1197,9 @@ function CustomChat() {
 
 ### Executor Configuration
 
-Both `LocalPythonExecutor` and `SandboxExecutor` automatically check the identity context:
+All executors automatically check the identity context and inject tokens:
+
+#### Skill Executors
 
 ```python
 from agent_skills import LocalPythonExecutor, SandboxExecutor
@@ -1166,23 +1216,49 @@ sandbox = LocalEvalSandbox()
 executor = SandboxExecutor(sandbox)  # Uses run_code with envs parameter
 ```
 
+#### Code Mode Executor
+
+```python
+from agent_codemode.composition.executor import CodeModeExecutor
+from agent_codemode.discovery.registry import ToolRegistry
+
+registry = ToolRegistry()
+await registry.discover_all()
+
+# CodeModeExecutor automatically injects identity tokens at execution time
+executor = CodeModeExecutor(registry=registry)
+await executor.setup()
+
+# When execute() is called, identity tokens from the request context
+# are injected as environment variables in the sandbox
+result = await executor.execute('''
+import os
+print(f"GitHub token present: {bool(os.environ.get('GITHUB_TOKEN'))}")
+''')
+```
+
+The `CodeModeExecutor` calls `get_identity_env()` at the start of each `execute()` call, injecting tokens via `os.environ.update()` in the sandbox's Python environment.
+
 ### Security Considerations
 
 :::warning Token Security
-- **Tokens are passed via environment variables** in the subprocess, not command-line arguments
+- **Tokens are passed via environment variables**, not command-line arguments
 - **Context variables are request-scoped** - they're cleared after the request completes
-- **Subprocess isolation** - each skill execution gets a fresh subprocess with only the needed tokens
-- **No persistent storage** - tokens are not written to disk during skill execution
+- **Execution isolation**:
+  - Skills: Each execution gets a fresh subprocess with only the needed tokens
+  - Code Mode: Tokens are injected into the sandbox's environment for each `execute()` call
+- **No persistent storage** - tokens are not written to disk during execution
 :::
 
 :::tip Principle of Least Privilege
-Only tokens for connected providers are passed. If a user hasn't connected GitHub, `GITHUB_TOKEN` won't be set. Skills should gracefully handle missing tokens:
+Only tokens for connected providers are passed. If a user hasn't connected GitHub, `GITHUB_TOKEN` won't be set. Code should gracefully handle missing tokens:
 
 ```python
 token = os.environ.get("GITHUB_TOKEN")
 if not token:
-    print("Please connect your GitHub account to use this skill.")
-    sys.exit(1)
+    print("Please connect your GitHub account to use this feature.")
+    sys.exit(1)  # For skills
+    # Or for codemode: raise ValueError("GitHub not connected")
 ```
 :::
 
@@ -1192,15 +1268,27 @@ Enable debug logging to see identity flow:
 
 ```python
 import logging
+
+# For skills
 logging.getLogger("agent_runtimes.context.identities").setLevel(logging.DEBUG)
 logging.getLogger("agent_skills.toolset").setLevel(logging.DEBUG)
+
+# For codemode
+logging.getLogger("agent_codemode.composition.executor").setLevel(logging.DEBUG)
 ```
 
-Example log output:
+Example log output (skills):
 ```
 DEBUG:agent_runtimes.context.identities:Set request identities for providers: ['github']
 DEBUG:agent_skills.toolset:Added identity env vars: ['GITHUB_TOKEN']
 DEBUG:agent_skills.toolset:Executing: python /skills/github/scripts/list_repos.py
+```
+
+Example log output (codemode):
+```
+DEBUG:agent_runtimes.context.identities:Set request identities for providers: ['github', 'google']
+DEBUG:agent_codemode.composition.executor:Injecting identity env vars: ['GITHUB_TOKEN', 'GOOGLE_ACCESS_TOKEN']
+DEBUG:agent_codemode.composition.executor:execute() called with code length=256
 ```
 
 ## Emerging Standards

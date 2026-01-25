@@ -14,14 +14,19 @@ MCP-UI provides:
 - Secure sandboxed iframe execution
 - Two-way communication between UI and host
 - Flexible metadata for UI customization
+- Identity context support for OAuth token propagation
 """
 
+import logging
 from typing import Any, AsyncIterator
 
 from mcp_ui_server import UIResource, create_ui_resource, UIMetadataKey
 
 from ..adapters.base import BaseAgent, AgentContext
+from ..context.identities import IdentityContextManager
 from .base import BaseTransport
+
+logger = logging.getLogger(__name__)
 
 
 class MCPUITransport(BaseTransport):
@@ -194,6 +199,7 @@ class MCPUITransport(BaseTransport):
                 - message: User message
                 - session_id: Optional session identifier
                 - ui_options: Optional UI configuration
+                - identities: Optional OAuth identities (list of {provider, accessToken})
 
         Returns:
             Response with potential UI resources in the content array.
@@ -202,46 +208,55 @@ class MCPUITransport(BaseTransport):
         message = request.get("message", "")
         session_id = request.get("session_id", f"session-{id(request)}")
         ui_options = request.get("ui_options", {})
+        identities = request.get("identities")
+
+        # Log identities if provided
+        if identities:
+            providers = [i.get("provider") for i in identities]
+            logger.info(f"MCP-UI: Received identities from request for providers: {providers}")
 
         # Create agent context
         context = AgentContext(session_id=session_id)
 
-        # Run the agent
-        result = await self.agent.run(message, context)
+        # Set the identity context for this request so that skill executors
+        # and codemode tools can access OAuth tokens during tool execution
+        async with IdentityContextManager(identities):
+            # Run the agent
+            result = await self.agent.run(message, context)
 
-        # Build response
-        response: dict[str, Any] = {
-            "role": "assistant",
-            "content": [],
-        }
+            # Build response
+            response: dict[str, Any] = {
+                "role": "assistant",
+                "content": [],
+            }
 
-        # Add text content if present
-        if hasattr(result, "content") and result.content:
-            response["content"].append({
-                "type": "text",
-                "text": result.content,
-            })
+            # Add text content if present
+            if hasattr(result, "content") and result.content:
+                response["content"].append({
+                    "type": "text",
+                    "text": result.content,
+                })
 
-        # Add tool results if present and they contain UI resources
-        if hasattr(result, "tool_results") and result.tool_results:
-            for tool_result in result.tool_results:
-                # Check if tool result contains UI resources
-                if isinstance(tool_result, UIResource):
-                    response["content"].append(tool_result)
-                elif isinstance(tool_result, dict) and tool_result.get("type") == "resource":
-                    response["content"].append(tool_result)
-                else:
-                    # Regular tool result
-                    response["content"].append({
-                        "type": "tool_result",
-                        "result": tool_result,
-                    })
+            # Add tool results if present and they contain UI resources
+            if hasattr(result, "tool_results") and result.tool_results:
+                for tool_result in result.tool_results:
+                    # Check if tool result contains UI resources
+                    if isinstance(tool_result, UIResource):
+                        response["content"].append(tool_result)
+                    elif isinstance(tool_result, dict) and tool_result.get("type") == "resource":
+                        response["content"].append(tool_result)
+                    else:
+                        # Regular tool result
+                        response["content"].append({
+                            "type": "tool_result",
+                            "result": tool_result,
+                        })
 
-        # Add session info if available
-        if session_id:
-            response["session_id"] = session_id
+            # Add session info if available
+            if session_id:
+                response["session_id"] = session_id
 
-        return response
+            return response
 
     async def handle_stream(
         self, request: dict[str, Any]
@@ -251,7 +266,7 @@ class MCPUITransport(BaseTransport):
         Streams agent responses and UI resources as they become available.
 
         Args:
-            request: Request data.
+            request: Request data with optional identities key for OAuth tokens.
 
         Yields:
             Stream events with text deltas and UI resources.
@@ -259,6 +274,12 @@ class MCPUITransport(BaseTransport):
         # Extract request parameters
         message = request.get("message", "")
         session_id = request.get("session_id", f"session-{id(request)}")
+        identities = request.get("identities")
+
+        # Log identities if provided
+        if identities:
+            providers = [i.get("provider") for i in identities]
+            logger.debug(f"MCP-UI stream: Using identities for providers: {providers}")
 
         # Create agent context
         context = AgentContext(session_id=session_id)
@@ -269,43 +290,47 @@ class MCPUITransport(BaseTransport):
             "session_id": session_id,
         }
 
-        try:
-            # Stream from agent
-            async for event in self.agent.stream(message, context):
-                # Forward text deltas
-                if hasattr(event, "delta") and event.delta:
-                    yield {
-                        "type": "delta",
-                        "delta": event.delta,
-                    }
+        # Set the identity context for this request so that skill executors
+        # and codemode tools can access OAuth tokens during tool execution
+        async with IdentityContextManager(identities):
+            try:
+                # Stream from agent
+                async for event in self.agent.stream(message, context):
+                    # Forward text deltas
+                    if hasattr(event, "delta") and event.delta:
+                        yield {
+                            "type": "delta",
+                            "delta": event.delta,
+                        }
 
-                # Forward tool calls
-                if hasattr(event, "tool_call"):
-                    yield {
-                        "type": "tool_call",
-                        "tool_call": event.tool_call,
-                    }
+                    # Forward tool calls
+                    if hasattr(event, "tool_call"):
+                        yield {
+                            "type": "tool_call",
+                            "tool_call": event.tool_call,
+                        }
 
-                # Forward UI resources if present
-                if hasattr(event, "ui_resource"):
-                    yield {
-                        "type": "resource",
-                        "resource": event.ui_resource,
-                    }
+                    # Forward UI resources if present
+                    if hasattr(event, "ui_resource"):
+                        yield {
+                            "type": "resource",
+                            "resource": event.ui_resource,
+                        }
 
-            # Yield completion event
-            yield {
-                "type": "complete",
-                "session_id": session_id,
-            }
+                # Yield completion event
+                yield {
+                    "type": "complete",
+                    "session_id": session_id,
+                }
 
-        except Exception as e:
-            # Yield error event
-            yield {
-                "type": "error",
-                "error": str(e),
-                "session_id": session_id,
-            }
+            except Exception as e:
+                logger.error(f"MCP-UI stream error: {e}")
+                # Yield error event
+                yield {
+                    "type": "error",
+                    "error": str(e),
+                    "session_id": session_id,
+                }
 
     async def initialize(self) -> None:
         """Initialize the adapter."""

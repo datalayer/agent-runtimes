@@ -329,6 +329,15 @@ export class ACPAdapter extends BaseProtocolAdapter {
       metadata?: Record<string, unknown>;
       /** Model to use for this request (overrides agent default) */
       model?: string;
+      /** Built-in MCP tool names to enable */
+      builtinTools?: string[];
+      /** Skill IDs to enable */
+      skills?: string[];
+      /** Connected identity tokens to pass to backend for tool execution */
+      identities?: Array<{
+        provider: string;
+        accessToken: string;
+      }>;
     },
   ): Promise<void> {
     if (!this.session) {
@@ -357,11 +366,27 @@ export class ACPAdapter extends BaseProtocolAdapter {
         console.log('[ACPAdapter] Sending with model:', _options.model);
       }
 
+      if (_options?.identities && _options.identities.length > 0) {
+        console.log(
+          '[ACPAdapter] Sending with identities:',
+          _options.identities.map(i => i.provider),
+        );
+      }
+
+      // Build metadata including model override and identities
+      const metadata: Record<string, unknown> = {};
+      if (_options?.model) {
+        metadata.model = _options.model;
+      }
+      if (_options?.identities && _options.identities.length > 0) {
+        metadata.identities = _options.identities;
+      }
+
       await this.sendRequest(AGENT_METHODS.session_prompt, {
         sessionId: this.session.sessionId,
         content: [{ type: 'text', text: content }],
-        // Include model for per-request model override
-        ...(_options?.model && { metadata: { model: _options.model } }),
+        // Include metadata with model and identities
+        ...(Object.keys(metadata).length > 0 && { metadata }),
       });
     } catch (error) {
       this.emit({

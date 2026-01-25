@@ -13,6 +13,7 @@ AG-UI is a lightweight protocol focused on UI integration with:
 - UI-focused events (text, thinking, tool_use)
 - Real-time streaming support
 - Lightweight for browser clients
+- Identity context support for OAuth token propagation
 """
 
 import json
@@ -23,6 +24,7 @@ from pydantic_ai.ui.ag_ui._adapter import AGUIAdapter
 
 from ..adapters.base import BaseAgent
 from ..context.usage import get_usage_tracker
+from ..context.identities import set_request_identities
 from .base import BaseTransport
 
 if TYPE_CHECKING:
@@ -139,8 +141,9 @@ class AGUITransport(BaseTransport):
 
             async def run_agent(request: Request) -> Response:
                 """Endpoint to run the agent with per-request model override support."""
-                # Extract model from request body if provided
+                # Extract model and identities from request body if provided
                 model: str | None = None
+                identities_from_request: list[dict[str, Any]] | None = None
                 try:
                     # Read the body once and cache it
                     body_bytes = await request.body()
@@ -149,13 +152,21 @@ class AGUITransport(BaseTransport):
                     if model:
                         logger.info(f"AG-UI using model from request body: {model}")
 
+                    # Extract identities from request (OAuth tokens from frontend)
+                    identities_from_request = body.get("identities")
+                    if identities_from_request:
+                        providers = [i.get("provider") for i in identities_from_request]
+                        logger.debug(f"[AG-UI] Received identities for providers: {providers}")
+                    else:
+                        logger.debug("[AG-UI] No identities in request body")
+
                     # Create a new request with the cached body for pydantic-ai to consume
                     async def receive():
                         return {"type": "http.request", "body": body_bytes}
 
                     request = Request(request.scope, receive)
                 except (json.JSONDecodeError, Exception) as e:
-                    logger.debug(f"Could not extract model from AG-UI request body: {e}")
+                    logger.debug(f"Could not extract model/identities from AG-UI request body: {e}")
 
                 # Create on_complete callback to track usage
                 async def on_complete(result: "AgentRunResult") -> AsyncIteratorType:
@@ -187,6 +198,18 @@ class AGUITransport(BaseTransport):
                     return
                     yield  # type: ignore[misc]
 
+                # Set the identity context for this request so that skill executors
+                # and codemode tools can access OAuth tokens during tool execution.
+                # 
+                # IMPORTANT: We don't use a context manager here because dispatch_request
+                # returns a streaming Response immediately, but tool execution happens
+                # during the streaming phase (when the response is being sent to client).
+                # A context manager would exit too early and clear the identities before
+                # tools run. Instead, we set the identities and let them persist for the
+                # entire request duration via contextvars.
+                set_request_identities(identities_from_request)
+                logger.debug("[AG-UI] Set request identities for streaming")
+                
                 return await AGUIAdapter.dispatch_request(
                     request,
                     agent=pydantic_agent,

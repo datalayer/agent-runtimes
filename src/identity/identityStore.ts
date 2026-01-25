@@ -232,14 +232,18 @@ export const useIdentityStore = create<IdentityStore>()(
 
                   if (userInfoResponse.ok) {
                     const userInfoData = await userInfoResponse.json();
+                    // Map provider-specific user info fields to common format
+                    // - GitHub: login, avatar_url, html_url
+                    // - Google: sub (id), picture, profile
+                    // - Others: username, id, etc.
                     userInfo = {
                       id: userInfoData.id?.toString() || userInfoData.sub,
-                      username: userInfoData.login || userInfoData.username,
+                      username: userInfoData.login || userInfoData.username, // GitHub uses 'login'
                       name: userInfoData.name,
                       email: userInfoData.email,
                       avatarUrl:
-                        userInfoData.avatar_url || userInfoData.picture,
-                      profileUrl: userInfoData.html_url || userInfoData.profile,
+                        userInfoData.avatar_url || userInfoData.picture, // GitHub: avatar_url, Google: picture
+                      profileUrl: userInfoData.html_url || userInfoData.profile, // GitHub: html_url, Google: profile
                       raw: userInfoData,
                     };
                   }

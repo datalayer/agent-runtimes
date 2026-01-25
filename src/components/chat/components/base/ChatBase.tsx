@@ -1026,6 +1026,10 @@ function ChatBaseInner({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  // Use a ref for connectedIdentities to avoid infinite loops in useCallback
+  // (the array reference changes on every render even if contents are the same)
+  const connectedIdentitiesRef = useRef(connectedIdentities);
+  connectedIdentitiesRef.current = connectedIdentities;
 
   // Auto-focus input on mount
   useEffect(() => {
@@ -1244,10 +1248,17 @@ function ChatBaseInner({
   );
   const ready = true;
 
-  // Notify parent when messages change
+  // Track previous message count to avoid unnecessary callbacks
+  const prevMessageCountRef = useRef(0);
+
+  // Notify parent when messages change (only when count actually changes)
   useEffect(() => {
-    onMessagesChange?.(messages);
-  }, [messages, onMessagesChange]);
+    const currentCount = messages.length;
+    if (currentCount !== prevMessageCountRef.current) {
+      prevMessageCountRef.current = currentCount;
+      onMessagesChange?.(messages);
+    }
+  }, [displayItems, onMessagesChange]); // Use displayItems instead of messages to avoid infinite loop
 
   // Padding based on compact mode
   const padding = compact ? 2 : 3;
@@ -1736,8 +1747,8 @@ function ChatBaseInner({
           builtinTools: enabledMcpToolNames,
           // Include enabled skills for backend
           skills: enabledSkillIds,
-          // Include connected identities with access tokens
-          identities: connectedIdentities,
+          // Include connected identities with access tokens (use ref to avoid infinite loops)
+          identities: connectedIdentitiesRef.current,
         } as Parameters<typeof adapterRef.current.sendMessage>[1]);
       }
     } catch (err) {
@@ -1766,7 +1777,6 @@ function ChatBaseInner({
     enableStreaming,
     getEnabledMcpToolNames,
     getEnabledSkillIds,
-    connectedIdentities,
   ]);
 
   // Handle stop

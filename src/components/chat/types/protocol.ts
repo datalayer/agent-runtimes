@@ -165,6 +165,15 @@ export interface ProtocolAdapter {
       messages?: ChatMessage[];
       /** Model to use for this request (overrides agent default) */
       model?: string;
+      /** Built-in MCP tool names to enable */
+      builtinTools?: string[];
+      /** Skill IDs to enable */
+      skills?: string[];
+      /** Connected identity tokens to pass to backend for tool execution */
+      identities?: Array<{
+        provider: string;
+        accessToken: string;
+      }>;
     },
   ): Promise<void>;
 

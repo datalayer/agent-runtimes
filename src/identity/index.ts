@@ -9,6 +9,17 @@
  * Provides secure identity management for AI agents to access
  * external services like GitHub, Google, Kaggle, etc.
  *
+ * Built-in provider support:
+ * - **GitHub**: OAuth 2.1 with PKCE (requires client_secret server-side)
+ * - **Google**: OAuth 2.1 with PKCE and offline access
+ * - **Kaggle**: Standard OAuth 2.1 for MCP server access
+ *
+ * Provider-specific notes:
+ * - GitHub requires `client_secret` for token exchange even with PKCE
+ * - GitHub returns user info from `https://api.github.com/user` with `login`, `avatar_url` fields
+ * - Google supports pure PKCE without client_secret
+ * - All providers need backend proxy for token exchange due to CORS restrictions
+ *
  * @module identity
  *
  * @example
@@ -18,7 +29,7 @@
  * function MyComponent() {
  *   const { connect, disconnect, isConnected, identities } = useIdentity({
  *     providers: {
- *       github: { clientId: 'your-client-id' },
+ *       github: { clientId: 'your-github-client-id' },
  *     },
  *   });
  *
