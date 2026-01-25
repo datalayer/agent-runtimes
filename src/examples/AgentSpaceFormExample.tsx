@@ -603,6 +603,7 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
                         height="calc(100vh - 250px)"
                         showModelSelector={true}
                         showToolsMenu={true}
+                        showSkillsMenu={true}
                         codemodeEnabled={enableCodemode}
                         initialModel={model}
                         initialMcpServers={selectedMcpServers}

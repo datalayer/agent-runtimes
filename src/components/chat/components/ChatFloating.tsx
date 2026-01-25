@@ -244,6 +244,12 @@ export interface ChatFloatingProps {
    */
   showToolsMenu?: boolean;
 
+  /**
+   * Show skills menu in footer.
+   * @default false
+   */
+  showSkillsMenu?: boolean;
+
   /** Additional ChatBase props */
   panelProps?: Partial<ChatBaseProps>;
 }
@@ -315,6 +321,7 @@ export function ChatFloating({
   showPanelBackdrop = false,
   showModelSelector = false,
   showToolsMenu = false,
+  showSkillsMenu = false,
   panelProps,
 }: ChatFloatingProps) {
   // Store-based state
@@ -353,15 +360,21 @@ export function ChatFloating({
     return {
       type: 'ag-ui' as const,
       endpoint,
-      // Enable config query for model/tools selector when showModelSelector or showToolsMenu is true
-      enableConfigQuery: showModelSelector || showToolsMenu,
+      // Enable config query for model/tools/skills selector
+      enableConfigQuery: showModelSelector || showToolsMenu || showSkillsMenu,
       // Config endpoint is at /api/v1/configure (global, not per-agent)
       configEndpoint:
-        showModelSelector || showToolsMenu
+        showModelSelector || showToolsMenu || showSkillsMenu
           ? `${baseUrl}/api/v1/configure`
           : undefined,
     };
-  }, [protocolProp, endpoint, showModelSelector, showToolsMenu]);
+  }, [
+    protocolProp,
+    endpoint,
+    showModelSelector,
+    showToolsMenu,
+    showSkillsMenu,
+  ]);
 
   // Clear messages when endpoint/protocol changes (e.g., switching examples)
   useEffect(() => {
@@ -825,6 +838,7 @@ export function ChatFloating({
           frontendTools={_tools as FrontendToolDefinition[] | undefined}
           showModelSelector={showModelSelector}
           showToolsMenu={showToolsMenu}
+          showSkillsMenu={showSkillsMenu}
           {...panelProps}
         >
           {children}

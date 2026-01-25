@@ -1,23 +1,24 @@
 ---
-title: Skills & Codemode
+title: Programmatic Tools
 ---
 
-# Skills & Codemode
+# Programmatic Tools
 
 ## What this page covers
-- Why we offer two capabilities: reusable [Skills](https://agent-skills.datalayer.tech/) and programmatic [Codemode](https://agent-codemode.datalayer.tech/)
+
+- Why we offer two capabilities: programmatic [Codemode](https://agent-codemode.datalayer.tech) and reusable [Skills](https://agent-skills.datalayer.tech/)
 - How the toggles behave in the UI/backend
 - When to use each mode, and when to combine them
 - Configuration levers (`allow_direct_tool_calls`, reranker hook) and their tradeoffs
 
 ## Goals
-- **Skills:** package reusable workflows (instructions, resources, scripts) so an agent can load, read resources, and run scripts without writing new code each time.
 - **Codemode:** let the agent write Python to compose tools directly, reducing LLM tool-call overhead and enabling control flow, parallelism, and error handling.
+- **Skills:** package reusable workflows (instructions, resources, scripts) so an agent can load, read resources, and run scripts without writing new code each time.
 - **Coexistence:** you can enable Skills, Codemode, or both. Codemode provides its own tool discovery/execution; Skills surface curated capabilities.
 
 ## Toggles and behavior
-- **Enable Skills**: adds `DatalayerSkillsToolset` (skills discovery, load, resource read, script run). Uses the configured `skills/` directory.
 - **Enable Codemode**: adds `CodemodeToolset` (list/search tools, execute Python code). When Codemode is on, selected MCP servers are used to build Codemode’s registry (tools are exposed via Codemode meta-tools rather than direct MCP tools).
+- **Enable Skills**: adds `DatalayerSkillsToolset` (skills discovery, load, resource read, script run). Uses the configured `skills/` directory.
 - **Both on**: Skills remain available for loading/running scripts; Codemode is used for tool discovery and code execution.
 
 ## Codemode toolset capabilities

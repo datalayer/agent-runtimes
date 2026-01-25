@@ -49,6 +49,7 @@ import {
   SquareCircleIcon,
   ToolsIcon,
   AiModelIcon,
+  BriefcaseIcon,
 } from '@primer/octicons-react';
 import { AiAgentIcon } from '@datalayer/icons-react';
 import {
@@ -400,6 +401,10 @@ export interface ChatBaseProps {
 
   /** Show tools menu (for protocols that support it) */
   showToolsMenu?: boolean;
+
+  /** Show skills menu (for protocols that support it) */
+  showSkillsMenu?: boolean;
+
   /** Indicate tools are accessed via Codemode meta-tools */
   codemodeEnabled?: boolean;
 
@@ -623,6 +628,28 @@ function createProtocolAdapter(
 }
 
 /**
+ * Skill information from backend
+ */
+interface SkillInfo {
+  id: string;
+  name: string;
+  description?: string;
+  version?: string;
+  tags?: string[];
+  has_scripts?: boolean;
+  has_resources?: boolean;
+}
+
+/**
+ * Skills response from backend
+ */
+interface SkillsResponse {
+  skills: SkillInfo[];
+  total: number;
+  skills_path?: string;
+}
+
+/**
  * Hook to safely use query when QueryClient is available
  * Returns null if no QueryClientProvider is present
  */
@@ -669,6 +696,53 @@ function useConfigQuery(
 }
 
 /**
+ * Hook to fetch available skills from backend
+ */
+function useSkillsQuery(
+  enabled: boolean,
+  baseEndpoint?: string,
+  authToken?: string,
+) {
+  const queryClient = useContext(QueryClientContext);
+
+  // If no QueryClient is available, return a mock result
+  if (!queryClient) {
+    return {
+      data: undefined,
+      isLoading: false,
+      isError: false,
+      error: null,
+      refetch: () => Promise.resolve({ data: undefined }),
+    };
+  }
+
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  return useQuery({
+    queryFn: async () => {
+      if (!baseEndpoint) {
+        return { skills: [], total: 0 };
+      }
+      // Derive skills endpoint from config endpoint
+      const skillsEndpoint = baseEndpoint.replace('/configure', '/skills');
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+      if (authToken) {
+        headers['Authorization'] = `Bearer ${authToken}`;
+      }
+      const response = await fetch(skillsEndpoint, { headers });
+      if (!response.ok) {
+        throw new Error(`Skills fetch failed: ${response.statusText}`);
+      }
+      return response.json() as Promise<SkillsResponse>;
+    },
+    queryKey: ['skills', baseEndpoint || 'jupyter'],
+    enabled,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+}
+
+/**
  * ChatBase component - Universal chat panel supporting store, protocol, and custom modes
  */
 export function ChatBase({
@@ -679,6 +753,7 @@ export function ChatBase({
   showInput = true,
   showModelSelector = false,
   showToolsMenu = false,
+  showSkillsMenu = false,
   codemodeEnabled = false,
   initialModel,
   initialMcpServers,
@@ -737,6 +812,7 @@ export function ChatBase({
           showInput={showInput}
           showModelSelector={showModelSelector}
           showToolsMenu={showToolsMenu}
+          showSkillsMenu={showSkillsMenu}
           codemodeEnabled={codemodeEnabled}
           initialModel={initialModel}
           initialMcpServers={initialMcpServers}
@@ -791,6 +867,7 @@ export function ChatBase({
       showInput={showInput}
       showModelSelector={showModelSelector}
       showToolsMenu={showToolsMenu}
+      showSkillsMenu={showSkillsMenu}
       codemodeEnabled={codemodeEnabled}
       initialModel={initialModel}
       initialMcpServers={initialMcpServers}
@@ -845,6 +922,7 @@ function ChatBaseInner({
   showInput = true,
   showModelSelector = false,
   showToolsMenu = false,
+  showSkillsMenu = false,
   codemodeEnabled = false,
   initialModel,
   initialMcpServers,
@@ -914,11 +992,20 @@ function ChatBaseInner({
   // Note: legacy _enabledTools for backend-defined tools from config query
   // Frontend tools are passed via frontendTools prop
   const [_enabledTools, setEnabledTools] = useState<string[]>([]);
+  // Skills state - tracks which skills are enabled
+  const [enabledSkills, setEnabledSkills] = useState<Set<string>>(new Set());
 
   // Config query (for protocols that support it)
   // Safely handles missing QueryClientProvider
   const configQuery = useConfigQuery(
     Boolean(protocol?.enableConfigQuery),
+    protocol?.configEndpoint,
+    protocol?.authToken,
+  );
+
+  // Skills query (for protocols that support it)
+  const skillsQuery = useSkillsQuery(
+    Boolean(protocol?.enableConfigQuery) && showSkillsMenu,
     protocol?.configEndpoint,
     protocol?.authToken,
   );
@@ -1088,6 +1175,27 @@ function ChatBaseInner({
         }
         return newMap;
       });
+    },
+    [],
+  );
+
+  // Helper to toggle skill enabled state
+  const toggleSkill = useCallback((skillId: string) => {
+    setEnabledSkills(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(skillId)) {
+        newSet.delete(skillId);
+      } else {
+        newSet.add(skillId);
+      }
+      return newSet;
+    });
+  }, []);
+
+  // Helper to toggle all skills
+  const toggleAllSkills = useCallback(
+    (allSkillIds: string[], enable: boolean) => {
+      setEnabledSkills(enable ? new Set(allSkillIds) : new Set());
     },
     [],
   );
@@ -2431,284 +2539,431 @@ function ChatBaseInner({
           </Box>
         </Box>
 
-        {/* Model and Tools Footer - Below Input */}
-        {(showModelSelector || showToolsMenu) && configQuery.data && (
-          <Box
-            sx={{
-              display: 'flex',
-              gap: 2,
-              px: padding,
-              py: 1,
-              borderTop: '1px solid',
-              borderColor: 'border.default',
-              alignItems: 'center',
-              bg: 'canvas.subtle',
-            }}
-          >
-            {/* Tools Menu */}
-            {showToolsMenu && (
-              <ActionMenu>
-                <ActionMenu.Anchor>
-                  <IconButton
-                    icon={ToolsIcon}
-                    aria-label="Tools"
-                    variant="invisible"
-                    size="small"
-                  />
-                </ActionMenu.Anchor>
-                <ActionMenu.Overlay
-                  side="outside-top"
-                  align="start"
-                  width="large"
-                >
-                  <Box
-                    sx={{
-                      maxHeight: '60vh',
-                      overflowY: 'auto',
-                    }}
-                  >
-                    <ActionList>
-                      {codemodeEnabled && (
-                        <ActionList.Group title="Codemode">
-                          <ActionList.Item disabled>
-                            <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
-                              MCP tools are accessible via Codemode meta-tools
-                              (search_tools, list_tool_names, execute_code).
-                            </Text>
-                          </ActionList.Item>
-                        </ActionList.Group>
-                      )}
-                      {/* MCP Server Tools */}
-                      {configQuery.data?.mcpServers &&
-                      configQuery.data.mcpServers.length > 0 ? (
-                        configQuery.data.mcpServers.map(server => {
-                          const serverTools = enabledMcpTools.get(server.id);
-                          const allToolNames = server.tools.map(t => t.name);
-                          const enabledCount = serverTools?.size ?? 0;
-                          const allEnabled =
-                            enabledCount === allToolNames.length &&
-                            allToolNames.length > 0;
-                          return (
-                            <ActionList.Group
-                              key={server.id}
-                              title={`${server.name}${server.isAvailable ? '' : ' (unavailable)'}`}
-                            >
-                              {/* Server-level toggle */}
-                              {server.isAvailable &&
-                                server.tools.length > 0 && (
-                                  <Box
-                                    sx={{
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      justifyContent: 'space-between',
-                                      px: 3,
-                                      py: 2,
-                                      borderBottom: '1px solid',
-                                      borderColor: 'border.muted',
-                                    }}
-                                  >
-                                    <Text
-                                      id={`toggle-all-${server.id}`}
-                                      sx={{
-                                        fontSize: 0,
-                                        fontWeight: 'semibold',
-                                        color: 'fg.muted',
-                                      }}
-                                    >
-                                      Enable all ({enabledCount}/
-                                      {allToolNames.length})
-                                    </Text>
-                                    <ToggleSwitch
-                                      size="small"
-                                      checked={allEnabled}
-                                      onClick={() =>
-                                        toggleAllMcpServerTools(
-                                          server.id,
-                                          allToolNames,
-                                          !allEnabled,
-                                        )
-                                      }
-                                      aria-labelledby={`toggle-all-${server.id}`}
-                                    />
-                                  </Box>
-                                )}
-                              {server.isAvailable && server.tools.length > 0 ? (
-                                server.tools.map(tool => {
-                                  const isEnabled =
-                                    serverTools?.has(tool.name) ?? false;
-                                  return (
-                                    <Box
-                                      key={`${server.id}-${tool.name}`}
-                                      sx={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'space-between',
-                                        px: 3,
-                                        py: 2,
-                                        '&:hover': {
-                                          backgroundColor: 'canvas.subtle',
-                                        },
-                                      }}
-                                    >
-                                      <Box sx={{ flex: 1, minWidth: 0 }}>
-                                        <Text
-                                          id={`toggle-tool-${server.id}-${tool.name}`}
-                                          sx={{ fontWeight: 'semibold' }}
-                                        >
-                                          {tool.name}
-                                        </Text>
-                                        {tool.description && (
-                                          <Text
-                                            sx={{
-                                              display: 'block',
-                                              fontSize: 0,
-                                              color: 'fg.muted',
-                                              overflow: 'hidden',
-                                              textOverflow: 'ellipsis',
-                                              whiteSpace: 'nowrap',
-                                            }}
-                                          >
-                                            {tool.description}
-                                          </Text>
-                                        )}
-                                      </Box>
-                                      <ToggleSwitch
-                                        size="small"
-                                        checked={isEnabled}
-                                        onClick={() =>
-                                          toggleMcpTool(server.id, tool.name)
-                                        }
-                                        aria-labelledby={`toggle-tool-${server.id}-${tool.name}`}
-                                      />
-                                    </Box>
-                                  );
-                                })
-                              ) : server.isAvailable ? (
-                                <ActionList.Item disabled>
-                                  <Text
-                                    sx={{
-                                      color: 'fg.muted',
-                                      fontStyle: 'italic',
-                                    }}
-                                  >
-                                    No tools discovered
-                                  </Text>
-                                </ActionList.Item>
-                              ) : (
-                                <ActionList.Item disabled>
-                                  <Text
-                                    sx={{
-                                      color: 'fg.muted',
-                                      fontStyle: 'italic',
-                                    }}
-                                  >
-                                    Server unavailable
-                                  </Text>
-                                </ActionList.Item>
-                              )}
-                            </ActionList.Group>
-                          );
-                        })
-                      ) : (
-                        <ActionList.Group title="Available Tools">
-                          {availableTools.length > 0 ? (
-                            availableTools.map(tool => (
-                              <ActionList.Item key={tool.id} disabled>
-                                <ActionList.LeadingVisual>
-                                  <Box
-                                    sx={{
-                                      width: 8,
-                                      height: 8,
-                                      borderRadius: '50%',
-                                      backgroundColor: 'success.emphasis',
-                                    }}
-                                  />
-                                </ActionList.LeadingVisual>
-                                {tool.name}
-                              </ActionList.Item>
-                            ))
-                          ) : (
-                            <ActionList.Item disabled>
-                              <Text
-                                sx={{ color: 'fg.muted', fontStyle: 'italic' }}
-                              >
-                                No tools available
-                              </Text>
-                            </ActionList.Item>
-                          )}
-                        </ActionList.Group>
-                      )}
-                    </ActionList>
-                  </Box>
-                </ActionMenu.Overlay>
-              </ActionMenu>
-            )}
-
-            {/* Model Selector */}
-            {showModelSelector && models.length > 0 && selectedModel && (
-              <Box
-                sx={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'flex-end',
-                }}
-              >
+        {/* Model, Skills, and Tools Footer - Below Input */}
+        {(showModelSelector || showToolsMenu || showSkillsMenu) &&
+          (configQuery.data || skillsQuery.data) && (
+            <Box
+              sx={{
+                display: 'flex',
+                gap: 2,
+                px: padding,
+                py: 1,
+                borderTop: '1px solid',
+                borderColor: 'border.default',
+                alignItems: 'center',
+                bg: 'canvas.subtle',
+              }}
+            >
+              {/* Tools Menu */}
+              {showToolsMenu && (
                 <ActionMenu>
                   <ActionMenu.Anchor>
                     <Button
                       type="button"
                       variant="invisible"
                       size="small"
-                      leadingVisual={AiModelIcon}
-                      disabled={isA2AProtocol}
-                      sx={
-                        isA2AProtocol
-                          ? { opacity: 0.5, cursor: 'not-allowed' }
-                          : undefined
-                      }
+                      leadingVisual={ToolsIcon}
                     >
                       <Text sx={{ fontSize: 0 }}>
-                        {models.find(m => m.id === selectedModel)?.name ||
-                          'Select Model'}
+                        Tools
+                        {getEnabledMcpToolNames().length > 0 &&
+                          ` (${getEnabledMcpToolNames().length})`}
                       </Text>
                     </Button>
                   </ActionMenu.Anchor>
-                  <ActionMenu.Overlay side="outside-top" align="end">
-                    <ActionList selectionVariant="single">
-                      {models.map(modelItem => (
-                        <ActionList.Item
-                          key={modelItem.id}
-                          selected={selectedModel === modelItem.id}
-                          onSelect={() => setSelectedModel(modelItem.id)}
-                          disabled={
-                            modelItem.isAvailable === false || isA2AProtocol
-                          }
-                          sx={
-                            modelItem.isAvailable === false
-                              ? { color: 'fg.muted' }
-                              : undefined
-                          }
-                        >
-                          {modelItem.name}
-                          {modelItem.isAvailable === false && (
-                            <ActionList.Description variant="block">
-                              Missing API key
-                            </ActionList.Description>
-                          )}
-                        </ActionList.Item>
-                      ))}
-                    </ActionList>
+                  <ActionMenu.Overlay
+                    side="outside-top"
+                    align="start"
+                    width="large"
+                  >
+                    <Box
+                      sx={{
+                        maxHeight: '60vh',
+                        overflowY: 'auto',
+                      }}
+                    >
+                      <ActionList>
+                        {codemodeEnabled && (
+                          <ActionList.Group title="Codemode">
+                            <ActionList.Item disabled>
+                              <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
+                                MCP tools are accessible via Codemode meta-tools
+                                (search_tools, list_tool_names, execute_code).
+                              </Text>
+                            </ActionList.Item>
+                          </ActionList.Group>
+                        )}
+                        {/* MCP Server Tools */}
+                        {configQuery.data?.mcpServers &&
+                        configQuery.data.mcpServers.length > 0 ? (
+                          configQuery.data.mcpServers.map(server => {
+                            const serverTools = enabledMcpTools.get(server.id);
+                            const allToolNames = server.tools.map(t => t.name);
+                            const enabledCount = serverTools?.size ?? 0;
+                            const allEnabled =
+                              enabledCount === allToolNames.length &&
+                              allToolNames.length > 0;
+                            return (
+                              <ActionList.Group
+                                key={server.id}
+                                title={`${server.name}${server.isAvailable ? '' : ' (unavailable)'}`}
+                              >
+                                {/* Server-level toggle */}
+                                {server.isAvailable &&
+                                  server.tools.length > 0 && (
+                                    <Box
+                                      sx={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between',
+                                        px: 3,
+                                        py: 2,
+                                        borderBottom: '1px solid',
+                                        borderColor: 'border.muted',
+                                      }}
+                                    >
+                                      <Text
+                                        id={`toggle-all-${server.id}`}
+                                        sx={{
+                                          fontSize: 0,
+                                          fontWeight: 'semibold',
+                                          color: 'fg.muted',
+                                        }}
+                                      >
+                                        Enable all ({enabledCount}/
+                                        {allToolNames.length})
+                                      </Text>
+                                      <ToggleSwitch
+                                        size="small"
+                                        checked={allEnabled}
+                                        onClick={() =>
+                                          toggleAllMcpServerTools(
+                                            server.id,
+                                            allToolNames,
+                                            !allEnabled,
+                                          )
+                                        }
+                                        aria-labelledby={`toggle-all-${server.id}`}
+                                      />
+                                    </Box>
+                                  )}
+                                {server.isAvailable &&
+                                server.tools.length > 0 ? (
+                                  server.tools.map(tool => {
+                                    const isEnabled =
+                                      serverTools?.has(tool.name) ?? false;
+                                    return (
+                                      <Box
+                                        key={`${server.id}-${tool.name}`}
+                                        sx={{
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          justifyContent: 'space-between',
+                                          px: 3,
+                                          py: 2,
+                                          '&:hover': {
+                                            backgroundColor: 'canvas.subtle',
+                                          },
+                                        }}
+                                      >
+                                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                                          <Text
+                                            id={`toggle-tool-${server.id}-${tool.name}`}
+                                            sx={{ fontWeight: 'semibold' }}
+                                          >
+                                            {tool.name}
+                                          </Text>
+                                          {tool.description && (
+                                            <Text
+                                              sx={{
+                                                display: 'block',
+                                                fontSize: 0,
+                                                color: 'fg.muted',
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis',
+                                                whiteSpace: 'nowrap',
+                                              }}
+                                            >
+                                              {tool.description}
+                                            </Text>
+                                          )}
+                                        </Box>
+                                        <ToggleSwitch
+                                          size="small"
+                                          checked={isEnabled}
+                                          onClick={() =>
+                                            toggleMcpTool(server.id, tool.name)
+                                          }
+                                          aria-labelledby={`toggle-tool-${server.id}-${tool.name}`}
+                                        />
+                                      </Box>
+                                    );
+                                  })
+                                ) : server.isAvailable ? (
+                                  <ActionList.Item disabled>
+                                    <Text
+                                      sx={{
+                                        color: 'fg.muted',
+                                        fontStyle: 'italic',
+                                      }}
+                                    >
+                                      No tools discovered
+                                    </Text>
+                                  </ActionList.Item>
+                                ) : (
+                                  <ActionList.Item disabled>
+                                    <Text
+                                      sx={{
+                                        color: 'fg.muted',
+                                        fontStyle: 'italic',
+                                      }}
+                                    >
+                                      Server unavailable
+                                    </Text>
+                                  </ActionList.Item>
+                                )}
+                              </ActionList.Group>
+                            );
+                          })
+                        ) : (
+                          <ActionList.Group title="Available Tools">
+                            {availableTools.length > 0 ? (
+                              availableTools.map(tool => (
+                                <ActionList.Item key={tool.id} disabled>
+                                  <ActionList.LeadingVisual>
+                                    <Box
+                                      sx={{
+                                        width: 8,
+                                        height: 8,
+                                        borderRadius: '50%',
+                                        backgroundColor: 'success.emphasis',
+                                      }}
+                                    />
+                                  </ActionList.LeadingVisual>
+                                  {tool.name}
+                                </ActionList.Item>
+                              ))
+                            ) : (
+                              <ActionList.Item disabled>
+                                <Text
+                                  sx={{
+                                    color: 'fg.muted',
+                                    fontStyle: 'italic',
+                                  }}
+                                >
+                                  No tools available
+                                </Text>
+                              </ActionList.Item>
+                            )}
+                          </ActionList.Group>
+                        )}
+                      </ActionList>
+                    </Box>
                   </ActionMenu.Overlay>
                 </ActionMenu>
-                {isA2AProtocol && (
-                  <Text sx={{ fontSize: 0, color: 'attention.fg', mt: 1 }}>
-                    A2A: Model set by agent config
-                  </Text>
-                )}
-              </Box>
-            )}
-          </Box>
-        )}
+              )}
+
+              {/* Skills Menu */}
+              {showSkillsMenu && (
+                <ActionMenu>
+                  <ActionMenu.Anchor>
+                    <Button
+                      type="button"
+                      variant="invisible"
+                      size="small"
+                      leadingVisual={BriefcaseIcon}
+                    >
+                      <Text sx={{ fontSize: 0 }}>
+                        Skills
+                        {enabledSkills.size > 0 && ` (${enabledSkills.size})`}
+                      </Text>
+                    </Button>
+                  </ActionMenu.Anchor>
+                  <ActionMenu.Overlay
+                    side="outside-top"
+                    align="start"
+                    width="large"
+                  >
+                    <Box
+                      sx={{
+                        maxHeight: '60vh',
+                        overflowY: 'auto',
+                      }}
+                    >
+                      <ActionList>
+                        {skillsQuery.isLoading ? (
+                          <ActionList.Item disabled>
+                            <Text sx={{ color: 'fg.muted' }}>
+                              Loading skills...
+                            </Text>
+                          </ActionList.Item>
+                        ) : skillsQuery.data?.skills &&
+                          skillsQuery.data.skills.length > 0 ? (
+                          <>
+                            {/* Enable all toggle */}
+                            <Box
+                              sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                px: 3,
+                                py: 2,
+                                borderBottom: '1px solid',
+                                borderColor: 'border.muted',
+                              }}
+                            >
+                              <Text
+                                id="toggle-all-skills"
+                                sx={{
+                                  fontSize: 0,
+                                  fontWeight: 'semibold',
+                                  color: 'fg.muted',
+                                }}
+                              >
+                                Enable all ({enabledSkills.size}/
+                                {skillsQuery.data.skills.length})
+                              </Text>
+                              <ToggleSwitch
+                                size="small"
+                                checked={
+                                  enabledSkills.size ===
+                                  skillsQuery.data.skills.length
+                                }
+                                onClick={() =>
+                                  toggleAllSkills(
+                                    skillsQuery.data!.skills.map(s => s.id),
+                                    enabledSkills.size !==
+                                      skillsQuery.data!.skills.length,
+                                  )
+                                }
+                                aria-labelledby="toggle-all-skills"
+                              />
+                            </Box>
+                            {skillsQuery.data.skills.map(skill => (
+                              <Box
+                                key={skill.id}
+                                sx={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'space-between',
+                                  px: 3,
+                                  py: 2,
+                                  '&:hover': {
+                                    backgroundColor: 'canvas.subtle',
+                                  },
+                                }}
+                              >
+                                <Box sx={{ flex: 1, minWidth: 0 }}>
+                                  <Text
+                                    id={`toggle-skill-${skill.id}`}
+                                    sx={{ fontWeight: 'semibold' }}
+                                  >
+                                    {skill.name}
+                                  </Text>
+                                  {skill.description && (
+                                    <Text
+                                      sx={{
+                                        display: 'block',
+                                        fontSize: 0,
+                                        color: 'fg.muted',
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                        whiteSpace: 'nowrap',
+                                      }}
+                                    >
+                                      {skill.description}
+                                    </Text>
+                                  )}
+                                </Box>
+                                <ToggleSwitch
+                                  size="small"
+                                  checked={enabledSkills.has(skill.id)}
+                                  onClick={() => toggleSkill(skill.id)}
+                                  aria-labelledby={`toggle-skill-${skill.id}`}
+                                />
+                              </Box>
+                            ))}
+                          </>
+                        ) : (
+                          <ActionList.Item disabled>
+                            <Text
+                              sx={{ color: 'fg.muted', fontStyle: 'italic' }}
+                            >
+                              No skills available
+                            </Text>
+                          </ActionList.Item>
+                        )}
+                      </ActionList>
+                    </Box>
+                  </ActionMenu.Overlay>
+                </ActionMenu>
+              )}
+
+              {/* Model Selector */}
+              {showModelSelector && models.length > 0 && selectedModel && (
+                <Box
+                  sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'flex-end',
+                  }}
+                >
+                  <ActionMenu>
+                    <ActionMenu.Anchor>
+                      <Button
+                        type="button"
+                        variant="invisible"
+                        size="small"
+                        leadingVisual={AiModelIcon}
+                        disabled={isA2AProtocol}
+                        sx={
+                          isA2AProtocol
+                            ? { opacity: 0.5, cursor: 'not-allowed' }
+                            : undefined
+                        }
+                      >
+                        <Text sx={{ fontSize: 0 }}>
+                          {models.find(m => m.id === selectedModel)?.name ||
+                            'Select Model'}
+                        </Text>
+                      </Button>
+                    </ActionMenu.Anchor>
+                    <ActionMenu.Overlay side="outside-top" align="end">
+                      <ActionList selectionVariant="single">
+                        {models.map(modelItem => (
+                          <ActionList.Item
+                            key={modelItem.id}
+                            selected={selectedModel === modelItem.id}
+                            onSelect={() => setSelectedModel(modelItem.id)}
+                            disabled={
+                              modelItem.isAvailable === false || isA2AProtocol
+                            }
+                            sx={
+                              modelItem.isAvailable === false
+                                ? { color: 'fg.muted' }
+                                : undefined
+                            }
+                          >
+                            {modelItem.name}
+                            {modelItem.isAvailable === false && (
+                              <ActionList.Description variant="block">
+                                Missing API key
+                              </ActionList.Description>
+                            )}
+                          </ActionList.Item>
+                        ))}
+                      </ActionList>
+                    </ActionMenu.Overlay>
+                  </ActionMenu>
+                  {isA2AProtocol && (
+                    <Text sx={{ fontSize: 0, color: 'attention.fg', mt: 1 }}>
+                      A2A: Model set by agent config
+                    </Text>
+                  )}
+                </Box>
+              )}
+            </Box>
+          )}
       </Box>
     );
   };

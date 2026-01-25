@@ -170,6 +170,9 @@ export interface ChatProps {
   /** Show tools menu (fetched from /configure endpoint) */
   showToolsMenu?: boolean;
 
+  /** Show skills menu (fetched from /skills endpoint) */
+  showSkillsMenu?: boolean;
+
   /** Indicate tools are accessed via Codemode meta-tools */
   codemodeEnabled?: boolean;
 
@@ -256,6 +259,7 @@ export function Chat({
   showHeader = true,
   showModelSelector = true,
   showToolsMenu = true,
+  showSkillsMenu = false,
   codemodeEnabled = false,
   initialModel,
   initialMcpServers,
@@ -493,6 +497,7 @@ export function Chat({
           }
           showModelSelector={showModelSelector}
           showToolsMenu={showToolsMenu}
+          showSkillsMenu={showSkillsMenu}
           codemodeEnabled={codemodeEnabled}
           initialModel={initialModel}
           initialMcpServers={initialMcpServers}

@@ -86,9 +86,9 @@ module.exports = {
         },
         {
           type: 'doc',
-          docId: 'skills-codemode/index',
+          docId: 'programmatic-tools/index',
           position: 'left',
-          label: 'Skills & Codemode',
+          label: 'Programmatic Tools',
         },
         {
           href: 'https://discord.gg/YQFwvmSSuR',

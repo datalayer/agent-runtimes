@@ -448,6 +448,7 @@ function LexicalWithChat({
           useStore={false}
           showModelSelector={true}
           showToolsMenu={true}
+          showSkillsMenu={true}
           suggestions={[
             {
               title: 'Insert heading',
