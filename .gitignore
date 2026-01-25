@@ -195,8 +195,9 @@ dmypy.json
 # Playwright files
 .playwright-mcp/
 
-# Include
-!**/.*ignore
-
 generated
 skills
+
+# Include
+!**/.*ignore
+!skills

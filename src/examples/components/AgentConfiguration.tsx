@@ -15,7 +15,7 @@ import {
   Flash,
   Label,
 } from '@primer/react';
-import { ToolsIcon, KeyIcon } from '@primer/octicons-react';
+import { ToolsIcon, KeyIcon, SyncIcon } from '@primer/octicons-react';
 import { useQuery } from '@tanstack/react-query';
 import { Box } from '@datalayer/primer-addons';
 import type { Agent } from '../stores/examplesStore';
@@ -245,8 +245,26 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
     retry: 1,
   });
 
+  // Fetch skills from the backend (only when codemode is enabled)
+  const skillsQuery = useQuery<{ skills: SkillOption[]; total: number }>({
+    queryKey: ['agent-skills', baseUrl],
+    queryFn: async () => {
+      const response = await fetch(`${baseUrl}/api/v1/skills`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch skills');
+      }
+      return response.json();
+    },
+    enabled: !!baseUrl && enableCodemode,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    retry: 1,
+  });
+
   const mcpServers = configQuery.data?.mcpServers || [];
   const models = configQuery.data?.models || [];
+  // Use fetched skills when codemode is enabled, otherwise use passed availableSkills (which may be empty)
+  const fetchedSkills = skillsQuery.data?.skills || [];
+  const displaySkills = enableCodemode ? fetchedSkills : availableSkills;
   const previewServers = selectedMcpServers.length
     ? mcpServers.filter(server => selectedMcpServers.includes(server.id))
     : [];
@@ -581,18 +599,49 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
           borderColor: 'border.default',
           borderRadius: 2,
           backgroundColor: 'canvas.default',
+          opacity: enableCodemode ? 1 : 0.5,
         }}
       >
-        <Text sx={{ fontSize: 1, fontWeight: 'bold', display: 'block', mb: 2 }}>
-          Skills
-        </Text>
-        {availableSkills.length === 0 ? (
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 2,
+            marginBottom: 2,
+          }}
+        >
+          <Text sx={{ fontSize: 1, fontWeight: 'bold' }}>Skills</Text>
+          {skillsQuery.isLoading && <Spinner size="small" />}
+          {enableCodemode && !skillsQuery.isLoading && (
+            <Button
+              variant="invisible"
+              size="small"
+              onClick={() => skillsQuery.refetch()}
+              sx={{ padding: 1 }}
+              aria-label="Refresh skills"
+            >
+              <SyncIcon size={14} />
+            </Button>
+          )}
+        </Box>
+
+        {!enableCodemode ? (
+          <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
+            Enable Codemode to use skills.
+          </Text>
+        ) : skillsQuery.isError ? (
+          <Flash variant="warning" sx={{ marginBottom: 2 }}>
+            <Text sx={{ fontSize: 0 }}>
+              Unable to fetch skills. Check that the server is running.
+            </Text>
+          </Flash>
+        ) : displaySkills.length === 0 && !skillsQuery.isLoading ? (
           <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
             No skills available.
           </Text>
         ) : (
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {availableSkills.map(skill => (
+            {displaySkills.map(skill => (
               <Box
                 key={skill.id}
                 sx={{
@@ -646,6 +695,17 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
           <ToolsIcon size={16} />
           <Text sx={{ fontSize: 1, fontWeight: 'bold' }}>MCP Servers</Text>
           {configQuery.isLoading && <Spinner size="small" />}
+          {!configQuery.isLoading && (
+            <Button
+              variant="invisible"
+              size="small"
+              onClick={() => configQuery.refetch()}
+              sx={{ padding: 1 }}
+              aria-label="Refresh MCP servers"
+            >
+              <SyncIcon size={14} />
+            </Button>
+          )}
         </Box>
 
         {configQuery.isError && (

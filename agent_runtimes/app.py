@@ -52,6 +52,7 @@ from .routes import (
     mcp_router,
     mcp_ui_router,
     set_a2a_app,
+    skills_router,
     start_a2a_task_managers,
     stop_a2a_task_managers,
     vercel_ai_router,
@@ -231,6 +232,7 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
     app.include_router(acp_router, prefix=config.api_prefix)
     app.include_router(configure_router, prefix=config.api_prefix)
     app.include_router(mcp_router, prefix=config.api_prefix)
+    app.include_router(skills_router, prefix=config.api_prefix)
     app.include_router(vercel_ai_router, prefix=config.api_prefix)
     app.include_router(agui_router, prefix=config.api_prefix)
     app.include_router(mcp_ui_router, prefix=config.api_prefix)

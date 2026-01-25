@@ -91,23 +91,9 @@ type AgentSpaceFormExampleProps = {
   githubClientId?: string;
 };
 
-const MOCK_SKILLS = [
-  {
-    id: 'batch-process',
-    name: 'Batch Process Files',
-    description: 'Process files in a directory with a reusable workflow.',
-  },
-  {
-    id: 'analyze-csv',
-    name: 'Analyze CSV',
-    description: 'Summarize rows, columns, and headers from a CSV file.',
-  },
-  {
-    id: 'pdf-extract',
-    name: 'PDF Extract',
-    description: 'Extract text and tables from PDF documents.',
-  },
-];
+const MOCK_SKILLS: { id: string; name: string; description: string }[] = [];
+// Skills are now fetched dynamically from the backend API (/api/v1/skills)
+// when Codemode is enabled. The AgentConfiguration component handles this.
 
 const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
   initialWsUrl = DEFAULT_WS_URL,
