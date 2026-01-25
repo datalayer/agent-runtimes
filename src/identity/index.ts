@@ -55,6 +55,27 @@ export {
   generatePKCEPair,
 } from './pkce';
 
+// Dynamic Client Registration (DCR)
+export {
+  discoverAuthorizationServer,
+  supportsDCR,
+  registerClient,
+  updateClientRegistration,
+  deleteClientRegistration,
+  getOrCreateDynamicClient,
+  loadDynamicClient,
+  saveDynamicClient,
+  removeDynamicClient,
+  getAllDynamicClients,
+  clearAllDynamicClients,
+  dynamicClientToProviderConfig,
+  type AuthorizationServerMetadata,
+  type ClientRegistrationRequest,
+  type ClientRegistrationResponse,
+  type ClientRegistrationError,
+  type DynamicClient,
+} from './dcr';
+
 // Store
 export {
   useIdentityStore,

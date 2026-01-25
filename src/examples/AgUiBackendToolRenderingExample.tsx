@@ -19,7 +19,7 @@
 import React, { useCallback } from 'react';
 import { Text } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
-import { datalayerTheme, DatalayerThemeProvider } from '@datalayer/core';
+import { DatalayerThemeProvider } from '@datalayer/core';
 import { ChatFloating, type ToolCallRenderContext } from '../components/chat';
 import { InlineWeatherCard, type WeatherResult } from './ag-ui/weather';
 
@@ -75,7 +75,7 @@ const AgUiBackendToolRenderingExample: React.FC = () => {
   }, []);
 
   return (
-    <DatalayerThemeProvider theme={datalayerTheme}>
+    <DatalayerThemeProvider>
       <Box
         sx={{
           minHeight: '100vh',

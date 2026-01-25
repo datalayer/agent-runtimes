@@ -12,7 +12,7 @@ import { AiAgentIcon } from '@datalayer/icons-react';
 import { Blankslate } from '@primer/react/experimental';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Box } from '@datalayer/primer-addons';
-import { datalayerTheme, DatalayerThemeProvider } from '@datalayer/core';
+import { DatalayerThemeProvider } from '@datalayer/core';
 import { Chat } from '../components/chat';
 import type { Transport, Extension } from '../components/chat';
 import { useAgentsStore } from './stores/examplesStore';
@@ -50,7 +50,8 @@ const DEFAULT_AGENT_ID = 'demo-agent';
 // GitHub OAuth client ID - set via environment variable for security
 // For development, you can create a GitHub OAuth App at:
 // https://github.com/settings/developers
-const GITHUB_CLIENT_ID = import.meta.env.VITE_GITHUB_CLIENT_ID || '';
+const GITHUB_CLIENT_ID =
+  import.meta.env.VITE_GITHUB_CLIENT_ID || 'demo-client-id';
 
 /**
  * Agent Runtime Example Component
@@ -148,15 +149,14 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
   const autoSelectRef = useRef(false);
   const enableSkills = selectedSkills.length > 0;
 
-  // Identity state - use the identity hook to get connected identities
-  const { identities, getAccessToken } = useIdentity();
-
   // Build identity providers config based on available client IDs
   const identityProviders = React.useMemo(() => {
     const providers: {
-      [K in OAuthProvider]?: { clientId: string; scopes?: string[] };
+      github?: { clientId: string; scopes?: string[] };
+      google?: { clientId: string; scopes?: string[] };
+      kaggle?: { clientId: string; scopes?: string[] };
     } = {};
-    if (githubClientId) {
+    if (githubClientId && githubClientId !== 'demo-client-id') {
       providers.github = {
         clientId: githubClientId,
         scopes: ['read:user', 'user:email', 'repo'],
@@ -165,12 +165,20 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
     return providers;
   }, [githubClientId]);
 
+  // Identity state - pass providers to configure them before callback is processed
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { identities, getAccessToken } = useIdentity({
+    providers:
+      Object.keys(identityProviders).length > 0 ? identityProviders : undefined,
+    autoHandleCallback: true,
+  });
+
   // Handle identity connect/disconnect
   const handleIdentityConnect = useCallback((identity: Identity) => {
     console.log(
       '[AgentSpaceFormExample] Identity connected:',
       identity.provider,
-      identity.userInfo?.login,
+      identity.userInfo?.name || identity.userInfo?.email,
     );
   }, []);
 
@@ -402,7 +410,7 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
 
   return (
     <QueryClientProvider client={queryClient}>
-      <DatalayerThemeProvider theme={datalayerTheme}>
+      <DatalayerThemeProvider>
         <PageLayout containerWidth="full">
           {/* Header - empty content for new agent */}
           <Header

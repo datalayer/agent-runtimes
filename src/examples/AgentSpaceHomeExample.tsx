@@ -22,7 +22,7 @@ import {
   CircleIcon,
   PauseIcon,
 } from '@primer/octicons-react';
-import { datalayerTheme, DatalayerThemeProvider } from '@datalayer/core';
+import { DatalayerThemeProvider } from '@datalayer/core';
 import { useAgentsStore } from './stores/examplesStore';
 import { AgentsDataTable } from './components/AgentsDataTable';
 import { Rating } from './components/Rating';
@@ -289,7 +289,7 @@ const AgentSpaceHomeExample: React.FC = () => {
   };
 
   return (
-    <DatalayerThemeProvider theme={datalayerTheme}>
+    <DatalayerThemeProvider>
       <Box
         style={{
           minHeight: '100vh',

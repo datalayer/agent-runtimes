@@ -10,7 +10,6 @@ import {
   Button,
   Label,
   Flash,
-  Octicon,
   ActionList,
   ActionMenu,
   Avatar,
@@ -56,6 +55,24 @@ const PROVIDER_DISPLAY: Record<OAuthProvider, ProviderDisplay> = {
     color: '#20beff',
     description: 'Access Kaggle datasets and notebooks',
   },
+  linkedin: {
+    name: 'LinkedIn',
+    icon: KeyIcon,
+    color: '#0077b5',
+    description: 'Access LinkedIn profile and connections',
+  },
+  slack: {
+    name: 'Slack',
+    icon: KeyIcon,
+    color: '#4a154b',
+    description: 'Access Slack workspaces and channels',
+  },
+  notion: {
+    name: 'Notion',
+    icon: KeyIcon,
+    color: '#000000',
+    description: 'Access Notion pages and databases',
+  },
   custom: {
     name: 'Custom',
     icon: LinkIcon,
@@ -71,6 +88,9 @@ const DEFAULT_SCOPES: Record<OAuthProvider, string[]> = {
   github: ['read:user', 'user:email'],
   google: ['openid', 'profile', 'email'],
   kaggle: ['read'],
+  linkedin: ['r_liteprofile', 'r_emailaddress'],
+  slack: ['users:read', 'channels:read'],
+  notion: ['read_content'],
   custom: [],
 };
 
@@ -142,11 +162,21 @@ export const IdentityButton: React.FC<IdentityButtonProps> = ({
               : undefined;
 
       if (baseConfig) {
+        // Build redirect URI from current page URL (without query params) if not provided
+        // This allows OAuth callback to return to the same page that initiated the flow
+        const redirectUri =
+          providerConfig?.redirectUri ||
+          (typeof window !== 'undefined'
+            ? `${window.location.origin}${window.location.pathname}`
+            : '');
+
         configureProvider({
           ...baseConfig,
           ...providerConfig,
+          provider,
           clientId,
-        });
+          redirectUri,
+        } as OAuthProviderConfig);
       }
     }
   }, [clientId, provider, providerConfig, configureProvider]);
@@ -157,13 +187,9 @@ export const IdentityButton: React.FC<IdentityButtonProps> = ({
         await disconnect(provider);
         onDisconnect?.(provider);
       } else {
-        const result = await connect(
-          provider,
-          scopes || DEFAULT_SCOPES[provider],
-        );
-        if (result) {
-          onConnect?.(result);
-        }
+        await connect(provider, scopes || DEFAULT_SCOPES[provider]);
+        // If we get here without error, connection succeeded
+        // The identity will be updated in the store
       }
     } catch (err) {
       onError?.(err instanceof Error ? err : new Error(String(err)));
@@ -182,7 +208,7 @@ export const IdentityButton: React.FC<IdentityButtonProps> = ({
   // Handle error display
   React.useEffect(() => {
     if (error) {
-      onError?.(new Error(error));
+      onError?.(error instanceof Error ? error : new Error(String(error)));
     }
   }, [error, onError]);
 
@@ -215,7 +241,7 @@ export const IdentityButton: React.FC<IdentityButtonProps> = ({
             ⏳
           </Box>
         ) : (
-          <Octicon icon={display.icon} size={size === 'small' ? 14 : 18} />
+          <display.icon size={size === 'small' ? 14 : 18} />
         )}
       </Button>
     );
@@ -260,7 +286,7 @@ export const IdentityButton: React.FC<IdentityButtonProps> = ({
           color: 'white',
         }}
       >
-        <Octicon icon={display.icon} size={20} />
+        <display.icon size={20} />
       </Box>
       <Box sx={{ flex: 1 }}>
         <Text sx={{ fontWeight: 'bold', display: 'block' }}>
@@ -268,7 +294,7 @@ export const IdentityButton: React.FC<IdentityButtonProps> = ({
         </Text>
         <Text sx={{ fontSize: 0, color: 'fg.muted', display: 'block' }}>
           {isConnected && identity?.userInfo
-            ? `Connected as ${identity.userInfo.name || identity.userInfo.login}`
+            ? `Connected as ${identity.userInfo.name || identity.userInfo.email}`
             : display.description}
         </Text>
       </Box>
@@ -381,7 +407,16 @@ export const IdentityConnect: React.FC<IdentityConnectProps> = ({
         })}
         {connectedCount > 0 && (
           <Label variant="success">
-            <Octicon icon={CheckCircleFillIcon} sx={{ mr: 1 }} />
+            <Box
+              as="span"
+              sx={{
+                mr: 1,
+                display: 'inline-flex',
+                verticalAlign: 'text-bottom',
+              }}
+            >
+              <CheckCircleFillIcon size={12} />
+            </Box>
             {connectedCount} connected
           </Label>
         )}
@@ -415,7 +450,16 @@ export const IdentityConnect: React.FC<IdentityConnectProps> = ({
           <Text sx={{ fontWeight: 'bold' }}>{title}</Text>
           {connectedCount > 0 && (
             <Label variant="success">
-              <Octicon icon={CheckCircleFillIcon} sx={{ mr: 1 }} />
+              <Box
+                as="span"
+                sx={{
+                  mr: 1,
+                  display: 'inline-flex',
+                  verticalAlign: 'text-bottom',
+                }}
+              >
+                <CheckCircleFillIcon size={12} />
+              </Box>
               {connectedCount} connected
             </Label>
           )}
@@ -424,8 +468,13 @@ export const IdentityConnect: React.FC<IdentityConnectProps> = ({
 
       {error && (
         <Flash variant="danger" sx={{ m: 2, borderRadius: 1 }}>
-          <Octicon icon={AlertIcon} sx={{ mr: 2 }} />
-          {error}
+          <Box
+            as="span"
+            sx={{ mr: 2, display: 'inline-flex', verticalAlign: 'text-bottom' }}
+          >
+            <AlertIcon size={16} />
+          </Box>
+          {error instanceof Error ? error.message : String(error)}
         </Flash>
       )}
 
@@ -512,11 +561,19 @@ export const IdentityMenu: React.FC<IdentityMenuProps> = ({
               : undefined;
 
       if (baseConfig) {
+        // Build redirect URI from current page URL
+        const redirectUri =
+          typeof window !== 'undefined'
+            ? `${window.location.origin}${window.location.pathname}`
+            : '';
+
         configureProvider({
           ...baseConfig,
           ...config.config,
+          provider,
           clientId: config.clientId,
-        });
+          redirectUri,
+        } as OAuthProviderConfig);
       }
     });
   }, [providerKeys, providers, configureProvider]);
@@ -530,13 +587,8 @@ export const IdentityMenu: React.FC<IdentityMenuProps> = ({
         await disconnect(provider);
         onDisconnect?.(provider);
       } else if (config) {
-        const result = await connect(
-          provider,
-          config.scopes || DEFAULT_SCOPES[provider],
-        );
-        if (result) {
-          onConnect?.(result);
-        }
+        await connect(provider, config.scopes || DEFAULT_SCOPES[provider]);
+        // Connection initiated, identity will be updated in store after callback
       }
     },
     [identities, providers, connect, disconnect, onConnect, onDisconnect],
@@ -572,7 +624,7 @@ export const IdentityMenu: React.FC<IdentityMenuProps> = ({
                   disabled={isAuthorizing}
                 >
                   <ActionList.LeadingVisual>
-                    <Octicon icon={display.icon} />
+                    <display.icon size={16} />
                   </ActionList.LeadingVisual>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                     <Text>{display.name}</Text>
@@ -588,7 +640,11 @@ export const IdentityMenu: React.FC<IdentityMenuProps> = ({
                     )}
                   </Box>
                   <ActionList.TrailingVisual>
-                    <Octicon icon={isConnected ? UnlinkIcon : LinkIcon} />
+                    {isConnected ? (
+                      <UnlinkIcon size={16} />
+                    ) : (
+                      <LinkIcon size={16} />
+                    )}
                   </ActionList.TrailingVisual>
                 </ActionList.Item>
               );

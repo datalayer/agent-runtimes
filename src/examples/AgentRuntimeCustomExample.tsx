@@ -7,7 +7,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Spinner, Text } from '@primer/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Box } from '@datalayer/primer-addons';
-import { datalayerTheme, DatalayerThemeProvider } from '@datalayer/core';
+import { DatalayerThemeProvider } from '@datalayer/core';
 import { Chat } from '../components/chat';
 
 // Create a query client for React Query
@@ -140,7 +140,7 @@ const AgentRuntimeCustomExample: React.FC = () => {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <DatalayerThemeProvider theme={datalayerTheme}>
+      <DatalayerThemeProvider>
         <Box
           sx={{
             display: 'flex',

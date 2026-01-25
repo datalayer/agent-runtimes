@@ -21,7 +21,7 @@
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Box } from '@datalayer/primer-addons';
-import { datalayerTheme, DatalayerThemeProvider } from '@datalayer/core';
+import { DatalayerThemeProvider } from '@datalayer/core';
 import { Text, Spinner, TextInput, Button } from '@primer/react';
 import { A2UIProvider, A2UIRenderer, useA2UI, Types } from '../renderers/a2ui';
 
@@ -449,7 +449,7 @@ const A2UiRestaurantExample: React.FC = () => {
   );
 
   return (
-    <DatalayerThemeProvider theme={datalayerTheme} colorMode="day">
+    <DatalayerThemeProvider colorMode="day">
       <A2UIProvider onAction={handleAction}>
         <Box
           sx={{

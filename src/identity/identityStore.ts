@@ -453,7 +453,7 @@ export const useIdentityStore = create<IdentityStore>()(
                   ...data.state,
                   identities: new Map(data.state.identities || []),
                   providerConfigs: new Map(data.state.providerConfigs || []),
-                  pendingAuthorization: null, // Don't persist pending auth
+                  pendingAuthorization: data.state.pendingAuthorization || null, // Persist pending auth for callback
                   isLoading: false,
                   error: null,
                 },
@@ -467,7 +467,15 @@ export const useIdentityStore = create<IdentityStore>()(
                   providerConfigs: Array.from(
                     value.state.providerConfigs.entries(),
                   ),
-                  pendingAuthorization: null,
+                  // Persist pending auth so callback can complete after redirect
+                  pendingAuthorization: value.state.pendingAuthorization
+                    ? {
+                        ...value.state.pendingAuthorization,
+                        // Don't persist callbacks (functions can't be serialized)
+                        onComplete: undefined,
+                        onError: undefined,
+                      }
+                    : null,
                   isLoading: false,
                   error: null,
                 },
@@ -479,6 +487,7 @@ export const useIdentityStore = create<IdentityStore>()(
           partialize: state => ({
             identities: state.identities,
             providerConfigs: state.providerConfigs,
+            pendingAuthorization: state.pendingAuthorization,
           }),
         },
       ),

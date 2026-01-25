@@ -17,13 +17,13 @@ Agent identity is more complex than traditional application identity because:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                         User (Resource Owner)                        │
+│                         User (Resource Owner)                       │
 └─────────────────────────────────────────────────────────────────────┘
                                     │
                          OAuth 2.1 Authorization
                                     ▼
 ┌─────────────────────────────────────────────────────────────────────┐
-│                        Agent Runtimes Server                         │
+│                        Agent Runtimes Server                        │
 │  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────────┐  │
 │  │  Token Manager  │  │  Agent Context  │  │  MCP Client         │  │
 │  │  (OAuth flows)  │  │  (User identity)│  │  (Tool invocation)  │  │
@@ -43,7 +43,21 @@ Agent identity is more complex than traditional application identity because:
 
 **Use case**: Agent accesses user's GitHub repositories, Gmail, or other personal services.
 
-The agent acts as an OAuth client, obtaining tokens that represent the user's delegated authorization. This follows the standard [OAuth 2.1](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-12) authorization code flow with PKCE.
+The agent acts as an OAuth client, obtaining tokens that represent the user's delegated authorization. This follows the standard [OAuth 2.1](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-12) authorization code flow with [PKCE](https://oauth.net/2/pkce/) (Proof Key for Code Exchange).
+
+:::info Security Architecture
+Based on the agent identity landscape, there are different approaches depending on your trust model:
+
+| Scenario | Recommended Approach | Agent Runtimes Support |
+|----------|---------------------|----------------------|
+| **Public agents** (internet-facing) | PKCE + DCR | ✅ Both implemented |
+| **Internal agents** (within org) | SPIFFE/SPIRE | 🔜 Planned |
+| **Service-to-service** | Client Credentials | ✅ Conceptual support |
+
+The implementation provides:
+- **PKCE** for secure authorization code flows with public clients
+- **DCR** (Dynamic Client Registration) for agents that discover OAuth providers at runtime
+:::
 
 ```python
 # User initiates OAuth flow through the UI
@@ -148,14 +162,111 @@ This section provides step-by-step instructions for setting up OAuth with common
 
 ### GitHub OAuth App Setup
 
-For GitHub identity, you need to create a **GitHub OAuth App** (not a GitHub App). OAuth Apps are simpler and suitable for user authentication flows.
+For GitHub identity, you can use either a **GitHub OAuth App** or a **GitHub App**. The choice depends on your use case.
 
-:::info GitHub OAuth App vs GitHub App
-- **OAuth App**: Simple user authentication, suitable for Agent Runtimes identity
-- **GitHub App**: More complex, designed for installations on repos/orgs, has webhooks and granular permissions
+:::warning GitHub Does NOT Support DCR
+GitHub does not support OAuth 2.0 Dynamic Client Registration (RFC 7591). You must:
+1. **Pre-register** your app manually in GitHub Developer Settings
+2. Use the **same client_id** for all users
+3. Obtain **per-user access tokens** via the standard OAuth flow
+4. Store tokens mapped to your internal user identity
 
-For Agent Runtimes identity features, use an **OAuth App**.
+This is the standard GitHub model and applies to most consumer OAuth providers (Google, etc.).
 :::
+
+:::info GitHub OAuth App vs GitHub App - Which to Choose?
+
+| Feature | OAuth App | GitHub App |
+|---------|-----------|------------|
+| **Setup complexity** | Simple | More complex |
+| **Permissions** | Broad scopes | Fine-grained per-resource |
+| **Installation model** | Per-user OAuth | Per-user/org installation |
+| **Token lifetime** | Long-lived | Short-lived (1 hour) |
+| **Best for** | Simple auth, read-only | Agents acting on repos |
+
+**For AI agents that will**:
+- Create repos, open PRs, read/write issues
+- Act repeatedly on a user's behalf
+- Need fine-grained permissions
+
+👉 **Use a GitHub App** (recommended for agent-style use cases)
+
+**For simple authentication**:
+- Just need to identify the user
+- Read-only access to public data
+- Simple integration
+
+👉 **Use an OAuth App**
+
+Agent Runtimes currently supports OAuth Apps. GitHub App support is planned.
+:::
+
+#### Security Model: PKCE + DCR (Where Supported)
+
+Agent Runtimes implements **OAuth 2.1 Authorization Code flow with PKCE** and **Dynamic Client Registration (DCR)**:
+
+| Feature | Implemented? | Notes |
+|---------|--------------|-------|
+| **PKCE** | ✅ Yes | Protects against authorization code interception attacks |
+| **DCR** | ✅ Yes | For providers that support it (Okta, Auth0, Keycloak) |
+| **Device Flow** | ❌ No | Not needed—we use browser-based redirect/popup flow |
+
+:::caution DCR Provider Support
+**Most consumer OAuth providers do NOT support DCR:**
+- ❌ GitHub - manual registration required
+- ❌ Google - manual registration required  
+- ⚠️ Azure AD - tenant-admin only
+
+**Enterprise identity providers typically DO support DCR:**
+- ✅ Okta
+- ✅ Auth0
+- ✅ Keycloak
+
+For GitHub, Google, and similar providers, you must pre-register your OAuth app manually.
+:::
+| **Dynamic Client Registration (DCR)** | ✅ Yes | Register clients dynamically with OAuth providers |
+| **Device Flow** | ❌ No | Not needed—we use browser-based redirect/popup flow |
+
+:::tip Why PKCE?
+PKCE adds security for public clients (like browser apps) that can't securely store a client secret. The flow works as follows:
+
+1. **Client generates** a random `code_verifier` (kept secret)
+2. **Client sends** a SHA-256 hash of the verifier (`code_challenge`) in the authorization request
+3. **Authorization server stores** the challenge
+4. **During token exchange**, client sends the original `code_verifier`
+5. **Server verifies** that `SHA256(code_verifier) == code_challenge`
+
+This prevents attackers who intercept the authorization code from exchanging it for tokens, since they don't have the original `code_verifier`.
+:::
+
+:::tip Dynamic Client Registration (DCR)
+DCR ([RFC 7591](https://oauth.net/2/dynamic-client-registration/)) allows clients to register themselves dynamically without manual setup. Agent Runtimes implements DCR for:
+- Agents that connect to arbitrary OAuth providers discovered at runtime
+- MCP servers that require OAuth authentication
+- Multi-tenant SaaS where each tenant brings their own OAuth provider
+
+**When to use DCR**:
+- Agent discovers an MCP server with an unknown OAuth provider
+- You want zero-configuration OAuth setup
+- The OAuth provider supports DCR (check for `registration_endpoint` in server metadata)
+
+**When NOT to use DCR**:
+- OAuth provider doesn't support DCR (e.g., GitHub, Google)
+- You need specific branding/settings only available via manual registration
+- Enterprise OAuth with restricted registration
+
+See [Dynamic Client Registration](#dynamic-client-registration-dcr) section below for usage examples.
+:::
+
+#### GitHub OAuth Settings FAQ
+
+**Do I need to enable "Enable Device Flow"?**
+
+No. Device Flow is for devices that can't easily display a web browser (smart TVs, CLI tools, IoT devices). Agent Runtimes uses the standard **Authorization Code flow** with browser redirects or popups, so Device Flow is not needed.
+
+**What about "Require PKCE for OAuth Apps"?**
+
+If GitHub offers this option, you can enable it for extra security. Agent Runtimes always uses PKCE regardless of whether GitHub requires it.
 
 #### Step 1: Create the OAuth App
 
@@ -172,15 +283,28 @@ Fill in the registration form:
 | **Application name** | `My Agent App` | User-visible name shown during authorization |
 | **Homepage URL** | `http://localhost:3000` | Your application's homepage (can be localhost for dev) |
 | **Application description** | Optional | Helps users understand what your app does |
-| **Authorization callback URL** | `http://localhost:3000/oauth/callback` | **Critical**: Must match your app's callback route |
+| **Authorization callback URL** | `http://localhost:3000/index-examples.html` | **Critical**: Must match the exact page URL |
+| **Enable Device Flow** | ❌ Unchecked | Not needed for browser-based flows |
 
-:::warning Callback URL
-The callback URL must exactly match what your application uses. For development:
-- `http://localhost:3000/oauth/callback` (Vite default port)
-- `http://localhost:3063/oauth/callback` (Agent Runtimes example)
+:::warning Callback URL Must Match Your Page URL
+The callback URL redirects back to **the same page** that initiated the OAuth flow. This means:
 
-For production, use your actual domain with HTTPS:
-- `https://myapp.example.com/oauth/callback`
+**For the Agent Runtimes examples:**
+```
+http://localhost:3000/index-examples.html
+```
+
+**For a custom app at the root:**
+```
+http://localhost:3000/
+```
+
+**For production:**
+```
+https://myapp.example.com/your-app-page.html
+```
+
+The identity module automatically uses `window.location.pathname` as the callback URL, so OAuth returns to the same page. The code then extracts the `code` and `state` params from the URL and completes the flow.
 :::
 
 #### Step 3: Get Your Credentials
@@ -188,19 +312,81 @@ For production, use your actual domain with HTTPS:
 After creating the app:
 
 1. Copy the **Client ID** - this is public and safe to include in frontend code
-2. Click **Generate a new client secret**
-3. Copy the **Client Secret** immediately - it's only shown once!
+2. *(Optional)* Click **Generate a new client secret** - only needed for server-side flows
 
-:::danger Client Secret Security
-- **Never** commit the client secret to version control
-- **Never** include it in frontend/browser code
-- Store it in environment variables or a secrets manager
-- The client secret is only needed for the backend token exchange
+:::tip Client Secret for PKCE
+For browser-based OAuth with PKCE, the client secret is **optional**. However, if you have one, the backend token exchange endpoint will use it.
 :::
 
 #### Step 4: Configure Agent Runtimes
 
-**Frontend (React)**:
+**Environment Variables**:
+
+Create a `.env` file in your project root:
+
+```bash
+# .env (for Vite-based projects)
+
+# Frontend (Vite) - used by React components
+VITE_GITHUB_CLIENT_ID=your_github_client_id_here
+
+# Backend (Python) - used by token exchange endpoint
+GITHUB_CLIENT_ID=your_github_client_id_here
+# GITHUB_CLIENT_SECRET=your_secret_here  # Optional for PKCE
+```
+
+:::warning Both Frontend AND Backend Need the Client ID
+The OAuth flow requires the client ID in two places:
+1. **Frontend** (`VITE_GITHUB_CLIENT_ID`) - to build the authorization URL
+2. **Backend** (`GITHUB_CLIENT_ID`) - to exchange the code for a token
+
+GitHub doesn't support CORS on their token endpoint, so the backend proxies the token exchange.
+:::
+
+:::info Client Secret NOT Required
+**You do NOT need to set a client secret** for browser-based OAuth flows.
+
+Agent Runtimes uses **OAuth 2.1 with PKCE** (Proof Key for Code Exchange), which is designed for public clients (browsers, mobile apps) where secrets cannot be stored securely.
+
+| Flow Type | Client Secret | Security Mechanism |
+|-----------|---------------|-------------------|
+| **Browser/SPA (PKCE)** | ❌ Not needed | Dynamic `code_verifier` + `code_challenge` |
+| **Server-side** | ✅ Required | Static secret stored securely on server |
+
+For the examples and browser-based identity flows, **only set the Client ID variables**.
+:::
+
+:::tip Demo Mode
+The Agent Runtimes examples use a fallback `demo-client-id` when no environment variable is set. This allows the UI to render, but the OAuth flow won't work until you provide a real GitHub OAuth App client ID.
+
+To see the identity UI in action:
+1. The "Connected Accounts" section will appear in the agent configuration form
+2. Clicking "Connect GitHub" will attempt the OAuth flow
+3. Without a real client ID, GitHub will show an error
+:::
+
+**Using with AgentSpaceFormExample**:
+
+The example component reads the client ID from environment:
+
+```tsx
+// In AgentSpaceFormExample.tsx
+const GITHUB_CLIENT_ID = import.meta.env.VITE_GITHUB_CLIENT_ID || 'demo-client-id';
+
+// Later in the component:
+const identityProviders = React.useMemo(() => {
+  const providers = {};
+  if (githubClientId) {
+    providers.github = {
+      clientId: githubClientId,
+      scopes: ['read:user', 'user:email', 'repo'],
+    };
+  }
+  return providers;
+}, [githubClientId]);
+```
+
+**Frontend (React) - Custom Implementation**:
 
 ```tsx
 // Set via environment variable (safe for frontend - public value)
@@ -223,22 +409,29 @@ function App() {
 }
 ```
 
-**Backend (Python)**:
+**Backend (Python)** - Only needed for server-side token exchange:
+
+:::caution When is a Client Secret Needed?
+The client secret is **only required** if your backend server performs the OAuth token exchange (confidential client flow). 
+
+For browser-only flows using PKCE, the token exchange happens in the browser and **no secret is needed**.
+:::
 
 ```bash
 # In your .env file (never commit this!)
+# Only needed for server-side OAuth flows
 GITHUB_CLIENT_ID=your_client_id
-GITHUB_CLIENT_SECRET=your_client_secret
+GITHUB_CLIENT_SECRET=your_client_secret  # Only for server-side flows
 ```
 
 ```python
-# In your agent server configuration
+# In your agent server configuration (if doing server-side token exchange)
 import os
 
 OAUTH_PROVIDERS = {
     "github": {
         "client_id": os.getenv("GITHUB_CLIENT_ID"),
-        "client_secret": os.getenv("GITHUB_CLIENT_SECRET"),
+        "client_secret": os.getenv("GITHUB_CLIENT_SECRET"),  # Optional for PKCE
         "authorization_endpoint": "https://github.com/login/oauth/authorize",
         "token_endpoint": "https://github.com/login/oauth/access_token",
         "userinfo_endpoint": "https://api.github.com/user",
@@ -362,6 +555,178 @@ Kaggle uses OAuth 2.1 for MCP server authentication:
 }
 ```
 
+## Dynamic Client Registration (DCR)
+
+Dynamic Client Registration allows OAuth clients to register themselves automatically with authorization servers, without manual app creation. This is essential for AI agents that discover OAuth-protected services at runtime.
+
+### When to Use DCR
+
+| Scenario | Use DCR? | Notes |
+|----------|----------|-------|
+| **Known providers** (GitHub, Google) | ❌ No | These don't support DCR; use manual registration |
+| **MCP servers** with OAuth | ✅ Yes | Agent discovers MCP servers dynamically |
+| **Enterprise IdPs** (Okta, Auth0) | ✅ Maybe | Check if DCR is enabled |
+| **OpenID Connect providers** | ✅ Yes | Most OIDC providers support DCR |
+
+### How DCR Works
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         Dynamic Client Registration Flow                     │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+1. Agent discovers OAuth provider
+   ┌─────────┐                    ┌─────────────────────┐
+   │  Agent  │ ───────────────▶   │ /.well-known/oauth- │
+   └─────────┘   GET metadata     │ authorization-server│
+                                  └─────────────────────┘
+
+2. Agent registers itself dynamically
+   ┌─────────┐                    ┌─────────────────────┐
+   │  Agent  │ ───────────────▶   │ /register           │
+   └─────────┘   POST client      │ (DCR endpoint)      │
+                 metadata         └─────────────────────┘
+                                           │
+                 ◀─────────────────────────┘
+                 Returns: client_id, client_secret (optional)
+
+3. Agent uses registered credentials for OAuth
+   ┌─────────┐                    ┌─────────────────────┐
+   │  Agent  │ ───────────────▶   │ /authorize          │
+   └─────────┘   Standard OAuth   │ (with new client_id)│
+                 + PKCE           └─────────────────────┘
+```
+
+### Using DCR in Agent Runtimes
+
+#### Discovering and Registering
+
+```typescript
+import { 
+  discoverAuthorizationServer, 
+  supportsDCR,
+  getOrCreateDynamicClient,
+  dynamicClientToProviderConfig,
+} from '@datalayer/agent-runtimes';
+
+// Example: Agent discovers a new MCP server that requires OAuth
+async function connectToMcpServer(mcpServerUrl: string) {
+  // 1. Discover the authorization server metadata
+  const issuerUrl = 'https://auth.example.com';
+  const metadata = await discoverAuthorizationServer(issuerUrl);
+  
+  if (!metadata) {
+    throw new Error('Could not discover OAuth server');
+  }
+  
+  // 2. Check if DCR is supported
+  if (!supportsDCR(metadata)) {
+    throw new Error('Server does not support Dynamic Client Registration');
+  }
+  
+  // 3. Register dynamically (or retrieve existing registration)
+  const client = await getOrCreateDynamicClient(issuerUrl, {
+    clientName: 'My AI Agent',
+    redirectUris: ['http://localhost:3000/oauth/callback'],
+    scopes: ['openid', 'profile', 'mcp:tools'],
+  });
+  
+  console.log('Registered client:', client.clientId);
+  
+  // 4. Convert to provider config for use with identity system
+  const providerConfig = dynamicClientToProviderConfig(client, 'Example Service');
+  
+  // 5. Now use standard OAuth flow with the dynamic client
+  // The identity system will use client.clientId for authorization
+}
+```
+
+#### Managing Dynamic Clients
+
+```typescript
+import {
+  loadDynamicClient,
+  getAllDynamicClients,
+  removeDynamicClient,
+  clearAllDynamicClients,
+} from '@datalayer/agent-runtimes';
+
+// Load a specific client
+const client = loadDynamicClient('https://auth.example.com');
+
+// List all registered clients
+const allClients = getAllDynamicClients();
+console.log(`Registered with ${allClients.length} OAuth providers`);
+
+// Remove a client (useful when revoking access)
+removeDynamicClient('https://auth.example.com');
+
+// Clear all (useful for testing or user logout)
+clearAllDynamicClients();
+```
+
+### DCR Request Format
+
+When Agent Runtimes registers a client, it sends a request like this:
+
+```json
+{
+  "redirect_uris": ["http://localhost:3000/oauth/callback"],
+  "client_name": "Agent Runtimes Client",
+  "grant_types": ["authorization_code", "refresh_token"],
+  "response_types": ["code"],
+  "token_endpoint_auth_method": "none"
+}
+```
+
+The `token_endpoint_auth_method: "none"` indicates a **public client** that uses PKCE instead of a client secret.
+
+### DCR Response
+
+The authorization server responds with:
+
+```json
+{
+  "client_id": "dynamically-generated-id",
+  "client_secret": "optional-secret",
+  "client_secret_expires_at": 0,
+  "registration_access_token": "token-for-updates",
+  "registration_client_uri": "https://auth.example.com/clients/dynamically-generated-id"
+}
+```
+
+Agent Runtimes stores this information locally for future use, so re-registration isn't needed on every request.
+
+### Providers That Support DCR
+
+| Provider | DCR Support | Notes |
+|----------|-------------|-------|
+| **Okta** | ✅ Yes | `/.well-known/openid-configuration` |
+| **Auth0** | ✅ Yes | `/.well-known/openid-configuration` |
+| **Keycloak** | ✅ Yes | `/.well-known/openid-configuration` |
+| **Azure AD** | ⚠️ Limited | Tenant-admin only, requires special configuration |
+| **GitHub** | ❌ No | Manual OAuth App or GitHub App registration |
+| **Google** | ❌ No | Manual registration via Google Cloud Console |
+| **Kaggle** | 🔜 TBD | Check MCP server documentation |
+
+:::note Most Consumer Providers Don't Support DCR
+GitHub is not unusual here. Most consumer-facing OAuth providers (GitHub, Google, Facebook, etc.) require manual app registration for security and abuse prevention reasons.
+
+DCR is primarily useful for:
+- Enterprise identity providers (Okta, Auth0)
+- MCP servers that implement their own OAuth
+- Multi-tenant SaaS with customer-provided IdPs
+:::
+
+### Security Considerations
+
+:::warning DCR Security
+- **Protected endpoints**: Some servers require an initial access token to register clients. Use the `initialAccessToken` option.
+- **Client secrets**: Dynamic clients may receive secrets that should be stored securely.
+- **Expiration**: Client secrets may expire; check `client_secret_expires_at` and re-register when needed.
+- **Scope validation**: Servers may grant fewer scopes than requested; always check the response.
+:::
+
 ## Implementation Strategy
 
 ### Phase 1: OAuth 2.1 Foundation
@@ -422,31 +787,26 @@ class TokenStore:
 
 #### Dynamic Client Registration
 
-For MCP servers the agent hasn't seen before, use [RFC 7591](https://datatracker.ietf.org/doc/html/rfc7591) Dynamic Client Registration:
+For MCP servers the agent hasn't seen before, the frontend implements [RFC 7591](https://datatracker.ietf.org/doc/html/rfc7591) Dynamic Client Registration. See the [DCR section](#dynamic-client-registration-dcr) above for full documentation.
+
+The backend Python equivalent:
 
 ```python
-async def register_client(
-    registration_endpoint: str,
-    client_name: str,
-    redirect_uris: list[str],
-) -> ClientCredentials:
-    """Dynamically register OAuth client with MCP server."""
-    async with httpx.AsyncClient() as client:
-        response = await client.post(
-            registration_endpoint,
-            json={
-                "client_name": client_name,
-                "redirect_uris": redirect_uris,
-                "grant_types": ["authorization_code", "refresh_token"],
-                "response_types": ["code"],
-                "token_endpoint_auth_method": "none",  # Public client
-            }
-        )
-        data = response.json()
-        return ClientCredentials(
-            client_id=data["client_id"],
-            client_secret=data.get("client_secret"),
-        )
+from agent_runtimes.identity.dcr import (
+    discover_authorization_server,
+    register_client,
+    get_or_create_dynamic_client,
+)
+
+# Discover and register with a new OAuth provider
+async def connect_to_new_provider(issuer_url: str) -> DynamicClient:
+    """Register with an OAuth provider discovered at runtime."""
+    return await get_or_create_dynamic_client(
+        issuer_url=issuer_url,
+        client_name="My AI Agent",
+        redirect_uris=["http://localhost:3000/oauth/callback"],
+        scopes=["openid", "profile"],
+    )
 ```
 
 ### Phase 2: MCP Authorization Integration

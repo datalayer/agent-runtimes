@@ -83,6 +83,12 @@ export default defineConfig(({ mode }) => {
           open: '/index-examples.html',
           fs: { strict: false, allow: ['..', '../..', '../../..'] },
           proxy: {
+            // Identity OAuth token exchange must go to local backend
+            '/api/v1/identity': {
+              target: 'http://localhost:8765',
+              changeOrigin: true,
+              secure: false,
+            },
             '/api': {
               target: 'https://prod1.datalayer.run',
               changeOrigin: true,

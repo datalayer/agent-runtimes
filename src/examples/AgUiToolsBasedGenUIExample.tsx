@@ -16,7 +16,7 @@
 import React, { useState, useCallback } from 'react';
 import { Text, ProgressBar, Button } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
-import { datalayerTheme, DatalayerThemeProvider } from '@datalayer/core';
+import { DatalayerThemeProvider } from '@datalayer/core';
 import { ChatFloating } from '../components/chat';
 import {
   CheckCircleIcon,
@@ -391,7 +391,7 @@ const AgUiToolsBasedGenUIExample: React.FC = () => {
   }, []);
 
   return (
-    <DatalayerThemeProvider theme={datalayerTheme}>
+    <DatalayerThemeProvider>
       <Box
         sx={{
           minHeight: '100vh',

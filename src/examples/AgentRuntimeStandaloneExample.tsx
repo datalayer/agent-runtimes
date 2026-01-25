@@ -19,7 +19,7 @@
 import React, { useCallback } from 'react';
 import { Text } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
-import { datalayerTheme, DatalayerThemeProvider } from '@datalayer/core';
+import { DatalayerThemeProvider } from '@datalayer/core';
 import { ChatStandalone, type MessageHandler } from '../components/chat';
 
 /**
@@ -109,7 +109,7 @@ const AgentRuntimePopupStandaloneExample: React.FC = () => {
   );
 
   return (
-    <DatalayerThemeProvider theme={datalayerTheme}>
+    <DatalayerThemeProvider>
       <Box
         sx={{
           minHeight: '100vh',

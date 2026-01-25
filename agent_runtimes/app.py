@@ -44,6 +44,7 @@ from .routes import (
     get_agui_mounts,
     get_example_mounts,
     health_router,
+    identity_router,
     mcp_router,
     mcp_ui_router,
     set_a2a_app,
@@ -221,6 +222,7 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
     
     # Include routers
     app.include_router(health_router)
+    app.include_router(identity_router)  # No prefix - uses /api/v1/identity internally
     app.include_router(agents_router, prefix=config.api_prefix)
     app.include_router(acp_router, prefix=config.api_prefix)
     app.include_router(configure_router, prefix=config.api_prefix)

@@ -31,6 +31,7 @@ from .a2ui import router as a2ui_router
 from .configure import router as configure_router
 from .examples import get_example_mounts, router as examples_router
 from .health import router as health_router
+from .identity import router as identity_router
 from .mcp import router as mcp_router
 from .mcp_ui import register_mcp_ui_agent, router as mcp_ui_router, unregister_mcp_ui_agent
 from .vercel_ai import register_vercel_agent, router as vercel_ai_router, unregister_vercel_agent
@@ -52,6 +53,7 @@ __all__ = [
     "get_agui_mounts",
     "get_example_mounts",
     "health_router",
+    "identity_router",
     "mcp_router",
     "mcp_ui_router",
     "register_a2a_agent",

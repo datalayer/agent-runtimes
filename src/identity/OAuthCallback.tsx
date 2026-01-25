@@ -4,7 +4,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { Box, Text, Spinner, Flash, Octicon, Button } from '@primer/react';
+import { Box, Text, Spinner, Flash, Button } from '@primer/react';
 import {
   CheckCircleFillIcon,
   AlertIcon,
@@ -144,7 +144,10 @@ export const OAuthCallback: React.FC<OAuthCallbackProps> = ({
 
       try {
         // Complete the authorization
-        await completeAuthorization(code, state);
+        await completeAuthorization({
+          code,
+          state,
+        });
         setStatus('success');
         onSuccess?.(pendingAuth.provider);
 
@@ -271,11 +274,9 @@ export const OAuthCallback: React.FC<OAuthCallbackProps> = ({
                 margin: '0 auto',
               }}
             >
-              <Octicon
-                icon={CheckCircleFillIcon}
-                size={32}
-                sx={{ color: 'success.fg' }}
-              />
+              <Box sx={{ color: 'success.fg' }}>
+                <CheckCircleFillIcon size={32} />
+              </Box>
             </Box>
             <Text
               sx={{
@@ -333,11 +334,9 @@ export const OAuthCallback: React.FC<OAuthCallbackProps> = ({
                 margin: '0 auto',
               }}
             >
-              <Octicon
-                icon={XCircleIcon}
-                size={32}
-                sx={{ color: 'danger.fg' }}
-              />
+              <Box sx={{ color: 'danger.fg' }}>
+                <XCircleIcon size={32} />
+              </Box>
             </Box>
             <Text
               sx={{
@@ -351,7 +350,16 @@ export const OAuthCallback: React.FC<OAuthCallbackProps> = ({
               Connection Failed
             </Text>
             <Flash variant="danger" sx={{ marginTop: 3, textAlign: 'left' }}>
-              <Octicon icon={AlertIcon} sx={{ mr: 2 }} />
+              <Box
+                as="span"
+                sx={{
+                  mr: 2,
+                  display: 'inline-flex',
+                  verticalAlign: 'text-bottom',
+                }}
+              >
+                <AlertIcon size={16} />
+              </Box>
               {errorMessagePrefix}: {error}
             </Flash>
             {showCloseButton && (

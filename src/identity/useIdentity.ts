@@ -33,9 +33,9 @@ import type {
 export interface UseIdentityOptions {
   /** Provider configurations to initialize */
   providers?: {
-    github?: { clientId: string; redirectUri?: string };
-    google?: { clientId: string; redirectUri?: string };
-    kaggle?: { clientId: string; redirectUri?: string };
+    github?: { clientId: string; redirectUri?: string; scopes?: string[] };
+    google?: { clientId: string; redirectUri?: string; scopes?: string[] };
+    kaggle?: { clientId: string; redirectUri?: string; scopes?: string[] };
     custom?: OAuthProviderConfig[];
   };
   /** Base URL for redirect URIs (defaults to window.location.origin) */
@@ -116,7 +116,9 @@ export function useIdentity(
   const {
     providers,
     baseUrl = typeof window !== 'undefined' ? window.location.origin : '',
-    callbackPath = '/oauth/callback',
+    callbackPath = typeof window !== 'undefined'
+      ? window.location.pathname
+      : '/oauth/callback',
     autoHandleCallback = true,
   } = options;
 

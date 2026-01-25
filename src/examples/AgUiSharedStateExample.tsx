@@ -16,7 +16,7 @@
 import React, { useState, useCallback } from 'react';
 import { Text, Button, TextInput, Label } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
-import { datalayerTheme, DatalayerThemeProvider } from '@datalayer/core';
+import { DatalayerThemeProvider } from '@datalayer/core';
 import { ChatFloating } from '../components/chat';
 import {
   PlusIcon,
@@ -342,7 +342,7 @@ const AgUiSharedStateExample: React.FC = () => {
   }, []);
 
   return (
-    <DatalayerThemeProvider theme={datalayerTheme}>
+    <DatalayerThemeProvider>
       <Box
         sx={{
           minHeight: '100vh',
