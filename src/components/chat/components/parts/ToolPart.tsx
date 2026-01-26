@@ -15,7 +15,7 @@ import type { ToolUIPart } from 'ai';
 import { Text, Button } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { ChevronDownIcon, AlertIcon } from '@primer/octicons-react';
-import type { CodeError, ExecutionResult } from '../../types/execution';
+import type { ExecutionResult } from '../../types/execution';
 
 export interface ToolPartProps {
   /** Tool UI part data */
@@ -32,9 +32,10 @@ function extractExecutionResult(output: unknown): ExecutionResult | null {
   if (
     'execution_ok' in obj ||
     'code_error' in obj ||
-    'execution_error' in obj
+    'execution_error' in obj ||
+    'exit_code' in obj
   ) {
-    return obj as ExecutionResult;
+    return obj as unknown as ExecutionResult;
   }
   return null;
 }
@@ -57,6 +58,14 @@ function getStatusInfo(
     }
     if (executionResult.code_error) {
       return { label: 'Code Error', color: 'severe.fg', icon: '✕' };
+    }
+    // Check for non-zero exit code
+    if (executionResult.exit_code != null && executionResult.exit_code !== 0) {
+      return {
+        label: `Exit ${executionResult.exit_code}`,
+        color: 'attention.fg',
+        icon: '⚠',
+      };
     }
   }
 
@@ -369,6 +378,53 @@ export function ToolPart({ part }: ToolPartProps) {
                       </pre>
                     </Box>
                   )}
+                </Box>
+              </Box>
+            )}
+
+          {/* Exit Code (non-zero exit from sys.exit()) */}
+          {executionResult &&
+            executionResult.execution_ok &&
+            !executionResult.code_error &&
+            executionResult.exit_code != null &&
+            executionResult.exit_code !== 0 && (
+              <Box sx={{ padding: 3 }}>
+                <Text
+                  sx={{
+                    display: 'block',
+                    fontSize: 0,
+                    fontWeight: 'semibold',
+                    color: 'attention.fg',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                    marginBottom: 2,
+                  }}
+                >
+                  Process Exited
+                </Text>
+                <Box
+                  sx={{
+                    backgroundColor: 'attention.subtle',
+                    borderRadius: 2,
+                    overflow: 'hidden',
+                    border: '1px solid',
+                    borderColor: 'attention.muted',
+                    padding: 2,
+                  }}
+                >
+                  <Text sx={{ fontSize: 0, color: 'attention.fg' }}>
+                    Process exited with code {executionResult.exit_code}
+                  </Text>
+                  <Text
+                    sx={{
+                      display: 'block',
+                      fontSize: 0,
+                      color: 'fg.muted',
+                      marginTop: 1,
+                    }}
+                  >
+                    The code called sys.exit() with a non-zero exit code.
+                  </Text>
                 </Box>
               </Box>
             )}

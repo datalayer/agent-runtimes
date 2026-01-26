@@ -206,6 +206,8 @@ interface ToolCallMessage {
     value: string;
     traceback?: string;
   };
+  /** Exit code when code called sys.exit() */
+  exitCode?: number | null;
 }
 
 /**
@@ -1530,6 +1532,7 @@ function ChatBaseInner({
                   | undefined;
                 let executionError: string | undefined;
                 let codeError: ToolCallMessage['codeError'] | undefined;
+                let exitCode: number | null | undefined;
                 let hasError = !!event.toolResult.error;
 
                 if (resultData && typeof resultData === 'object') {
@@ -1554,6 +1557,15 @@ function ChatBaseInner({
                     };
                     hasError = true;
                   }
+                  // Check for exit_code (non-zero exit from sys.exit())
+                  if ('exit_code' in resultData) {
+                    const ec = resultData.exit_code;
+                    exitCode = typeof ec === 'number' ? ec : null;
+                    // Non-zero exit code counts as an error condition
+                    if (exitCode != null && exitCode !== 0) {
+                      hasError = true;
+                    }
+                  }
                   // Check for execution_ok flag
                   if (
                     'execution_ok' in resultData &&
@@ -1575,6 +1587,7 @@ function ChatBaseInner({
                   error: event.toolResult.error,
                   executionError,
                   codeError,
+                  exitCode,
                 };
                 toolCallsRef.current.set(toolCallId, updatedToolCall);
                 setDisplayItems(prev =>
@@ -2221,6 +2234,7 @@ function ChatBaseInner({
                 error={item.error}
                 executionError={item.executionError}
                 codeError={item.codeError}
+                exitCode={item.exitCode}
               />
             );
 

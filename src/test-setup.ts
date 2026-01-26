@@ -6,6 +6,8 @@
 // Test setup for unit tests
 // Add any global test configuration here
 
+import '@testing-library/jest-dom/vitest';
+
 // Define webpack globals that are expected by some dependencies
 (global as any).__webpack_public_path__ = '';
 

@@ -28,7 +28,7 @@ import type { CodeError, ExecutionResult } from '../../types/execution';
 /**
  * Error type classification for display purposes
  */
-export type ErrorType = 'execution' | 'code' | 'unknown';
+export type ErrorType = 'execution' | 'code' | 'exit' | 'unknown';
 
 export interface ToolCallDisplayProps {
   /** Tool call ID */
@@ -47,6 +47,8 @@ export interface ToolCallDisplayProps {
   executionResult?: ExecutionResult;
   /** Code error details (Python exception) */
   codeError?: CodeError;
+  /** Exit code when code called sys.exit() */
+  exitCode?: number | null;
   /** Execution/infrastructure error message */
   executionError?: string;
 }
@@ -86,7 +88,7 @@ function getStatusDisplay(
         bgColor: 'success.subtle',
       };
     case 'error':
-      // Distinguish between execution errors and code errors
+      // Distinguish between execution errors, code errors, and exit codes
       if (errorType === 'execution') {
         return {
           icon: <AlertIcon size={14} />,
@@ -100,6 +102,13 @@ function getStatusDisplay(
           color: 'severe.fg',
           label: 'Code Error',
           bgColor: 'severe.subtle',
+        };
+      } else if (errorType === 'exit') {
+        return {
+          icon: <AlertIcon size={14} />,
+          color: 'attention.fg',
+          label: 'Exited',
+          bgColor: 'attention.subtle',
         };
       }
       return {
@@ -175,18 +184,26 @@ export function ToolCallDisplay({
   error,
   executionResult,
   codeError,
+  exitCode,
   executionError,
 }: ToolCallDisplayProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
+  // Determine effective exit code from props or execution result
+  const effectiveExitCode = exitCode ?? executionResult?.exit_code;
+  const hasNonZeroExit = effectiveExitCode != null && effectiveExitCode !== 0;
+
   // Determine error type for status display
+  // Priority: execution error > code error > non-zero exit code
   const errorType: ErrorType | undefined =
     status === 'error'
       ? executionError || executionResult?.execution_error
         ? 'execution'
         : codeError || executionResult?.code_error
           ? 'code'
-          : 'unknown'
+          : hasNonZeroExit
+            ? 'exit'
+            : 'unknown'
       : undefined;
 
   const statusDisplay = getStatusDisplay(status, errorType);
@@ -503,7 +520,8 @@ export function ToolCallDisplay({
           {status === 'error' &&
             effectiveError &&
             !effectiveExecutionError &&
-            !effectiveCodeError && (
+            !effectiveCodeError &&
+            !hasNonZeroExit && (
               <Box>
                 <Text
                   sx={{
@@ -529,6 +547,50 @@ export function ToolCallDisplay({
                 >
                   <Text sx={{ fontSize: 1, color: 'danger.fg' }}>
                     {effectiveError}
+                  </Text>
+                </Box>
+              </Box>
+            )}
+
+          {/* Exit Code section (non-zero exit code from sys.exit()) */}
+          {hasNonZeroExit &&
+            !effectiveExecutionError &&
+            !effectiveCodeError && (
+              <Box>
+                <Text
+                  sx={{
+                    display: 'block',
+                    fontSize: 0,
+                    fontWeight: 'semibold',
+                    color: 'attention.fg',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                    mb: 2,
+                  }}
+                >
+                  <AlertIcon size={12} /> Process Exited
+                </Text>
+                <Box
+                  sx={{
+                    backgroundColor: 'attention.subtle',
+                    borderRadius: 2,
+                    border: '1px solid',
+                    borderColor: 'attention.muted',
+                    p: 2,
+                  }}
+                >
+                  <Text sx={{ fontSize: 1, color: 'attention.fg' }}>
+                    Process exited with code {effectiveExitCode}
+                  </Text>
+                  <Text
+                    sx={{
+                      display: 'block',
+                      fontSize: 0,
+                      color: 'fg.muted',
+                      mt: 1,
+                    }}
+                  >
+                    The code called sys.exit() with a non-zero exit code.
                   </Text>
                 </Box>
               </Box>

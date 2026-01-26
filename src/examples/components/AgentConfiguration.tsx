@@ -3,7 +3,7 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   Text,
   TextInput,
@@ -20,8 +20,108 @@ import { useQuery } from '@tanstack/react-query';
 import { Box } from '@datalayer/primer-addons';
 import type { Agent } from '../stores/examplesStore';
 import type { Transport, Extension } from '../../components/chat';
-import { IdentityConnect } from '../../identity';
-import type { OAuthProvider, Identity } from '../../identity';
+import { IdentityConnect, useIdentity } from '../../identity';
+import type {
+  OAuthProvider,
+  OAuthProviderConfig,
+  Identity,
+} from '../../identity';
+import { IdentityCard } from '../../components/chat';
+
+/**
+ * Props for IdentityConnectWithStatus component
+ */
+interface IdentityConnectWithStatusProps {
+  identityProviders: {
+    [K in OAuthProvider]?: {
+      clientId: string;
+      scopes?: string[];
+      config?: Partial<OAuthProviderConfig>;
+    };
+  };
+  disabled?: boolean;
+  onConnect?: (identity: Identity) => void;
+  onDisconnect?: (provider: OAuthProvider) => void;
+}
+
+/**
+ * Combined component that shows:
+ * - Connected identities with token status (from AgentIdentity)
+ * - Connect buttons only for providers NOT yet connected (from IdentityConnect)
+ */
+function IdentityConnectWithStatus({
+  identityProviders,
+  disabled = false,
+  onConnect,
+  onDisconnect,
+}: IdentityConnectWithStatusProps) {
+  const { identities } = useIdentity();
+
+  // Get list of connected provider names
+  const connectedProviders = useMemo(
+    () => new Set(identities.map(id => id.provider)),
+    [identities],
+  );
+
+  // Get providers that have config and are already connected
+  const connectedWithConfig = useMemo(() => {
+    const providerKeys = Object.keys(identityProviders) as OAuthProvider[];
+    return identities.filter(id =>
+      providerKeys.includes(id.provider as OAuthProvider),
+    );
+  }, [identities, identityProviders]);
+
+  // Get providers that are NOT yet connected
+  const unconnectedProviders = useMemo(() => {
+    const providerKeys = Object.keys(identityProviders) as OAuthProvider[];
+    const unconnected: typeof identityProviders = {};
+    for (const provider of providerKeys) {
+      if (!connectedProviders.has(provider)) {
+        unconnected[provider] = identityProviders[provider];
+      }
+    }
+    return unconnected;
+  }, [identityProviders, connectedProviders]);
+
+  const hasUnconnected = Object.keys(unconnectedProviders).length > 0;
+
+  return (
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+      {/* Show connected identities with token status */}
+      {connectedWithConfig.length > 0 && (
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          {connectedWithConfig.map(identity => (
+            <IdentityCard
+              key={identity.provider}
+              identity={identity}
+              providerConfig={
+                identityProviders[identity.provider as OAuthProvider]
+              }
+              showExpirationDetails={true}
+              allowReconnect={!disabled}
+              onConnect={onConnect}
+              onDisconnect={onDisconnect}
+            />
+          ))}
+        </Box>
+      )}
+
+      {/* Show connect buttons for providers NOT yet connected */}
+      {hasUnconnected && (
+        <IdentityConnect
+          providers={unconnectedProviders}
+          layout="list"
+          showHeader={false}
+          size="medium"
+          showDescriptions={true}
+          disabled={disabled}
+          onConnect={onConnect}
+          onDisconnect={onDisconnect}
+        />
+      )}
+    </Box>
+  );
+}
 
 /**
  * MCP Server Tool type
@@ -509,12 +609,10 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
             Connect your accounts to give the agent access to external services
             like GitHub repositories, Google services, or Kaggle datasets.
           </Text>
-          <IdentityConnect
-            providers={identityProviders}
-            layout="list"
-            showHeader={false}
-            size="medium"
-            showDescriptions={true}
+
+          {/* Show connected identities with token status and connect buttons for unconnected providers */}
+          <IdentityConnectWithStatus
+            identityProviders={identityProviders}
             disabled={selectedAgentId !== 'new-agent'}
             onConnect={onIdentityConnect}
             onDisconnect={onIdentityDisconnect}

@@ -241,6 +241,8 @@
     "@storybook/builder-vite": "^9.1.1",
     "@storybook/react-vite": "^9.1.1",
     "@tailwindcss/postcss": "^4.1.16",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/jest-dom": "^6.4.8",
     "@types/node": "^20.11.0",
     "@types/react": "18.3.20",
     "@types/react-dom": "18.3.6",

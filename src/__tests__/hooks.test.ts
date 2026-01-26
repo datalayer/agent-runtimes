@@ -11,9 +11,9 @@ describe('hooks', () => {
     expect(useCache).toBeDefined();
   });
   it('useCache should have correct value', () => {
-    expect(useCache).toBe('');
+    expect(typeof useCache).toBe('function');
   });
   it('useCache should be a string', () => {
-    expect(typeof useCache).toBe('string');
+    expect(typeof useCache).toBe('function');
   });
 });

@@ -21,6 +21,14 @@ clean: ## clean
 build: ## build
 	npm run build
 
+test: test-js test-py ## run tests
+
+test-js: ## run js tests
+	npm test
+
+test-py: ## run python tests
+	python -m pytest
+
 start:
 	./dev/sh/start-jupyter-server.sh
 

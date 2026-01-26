@@ -27,6 +27,16 @@ export {
 } from './base/ChatBase';
 export { AgentDetails, type AgentDetailsProps } from './AgentDetails';
 export {
+  AgentIdentity,
+  IdentityCard,
+  getTokenStatus,
+  formatDuration,
+  formatExpirationStatus,
+  type AgentIdentityProps,
+  type IdentityCardProps,
+  type TokenStatus,
+} from './AgentIdentity';
+export {
   ContextUsage,
   type ContextUsageProps,
   type ContextDetailsResponse,

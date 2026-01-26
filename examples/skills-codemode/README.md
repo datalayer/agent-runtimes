@@ -90,7 +90,7 @@ Access skills through the integration layer:
 async with CodemodeIntegration(skills_path="./skills") as integration:
     # Search for skills
     skills = await integration.search_skills("data analysis")
-    
+
     # Run a skill
     result = await integration.run_skill(
         "analyze_csv",

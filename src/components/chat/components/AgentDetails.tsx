@@ -26,6 +26,12 @@ import { AiAgentIcon } from '@datalayer/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { ContextUsage } from './ContextUsage';
 import { ContextDistribution } from './ContextDistribution';
+import { AgentIdentity } from './AgentIdentity';
+import type {
+  OAuthProvider,
+  OAuthProviderConfig,
+  Identity,
+} from '../../../identity';
 
 export interface AgentDetailsProps {
   /** Agent name/title */
@@ -38,6 +44,18 @@ export interface AgentDetailsProps {
   messageCount: number;
   /** Agent ID for context usage tracking */
   agentId?: string;
+  /** Identity provider configurations */
+  identityProviders?: {
+    [K in OAuthProvider]?: {
+      clientId: string;
+      scopes?: string[];
+      config?: Partial<OAuthProviderConfig>;
+    };
+  };
+  /** Callback when identity connects */
+  onIdentityConnect?: (identity: Identity) => void;
+  /** Callback when identity disconnects */
+  onIdentityDisconnect?: (provider: OAuthProvider) => void;
   /** Callback to go back to chat view */
   onBack: () => void;
 }
@@ -72,6 +90,9 @@ export function AgentDetails({
   url,
   messageCount,
   agentId,
+  identityProviders,
+  onIdentityConnect,
+  onIdentityDisconnect,
   onBack,
 }: AgentDetailsProps) {
   // Fetch MCP toolsets status
@@ -401,6 +422,19 @@ export function AgentDetails({
             </Box>
           </Box>
         )}
+
+        {/* Connected Identities - always show to display any connected identities from store */}
+        <AgentIdentity
+          providers={identityProviders}
+          title="Connected Accounts"
+          showHeader={true}
+          showDescription={true}
+          description="OAuth identities connected to this agent. Agents can use these to access external services like GitHub repositories on your behalf."
+          showExpirationDetails={true}
+          allowReconnect={Boolean(identityProviders)}
+          onConnect={onIdentityConnect}
+          onDisconnect={onIdentityDisconnect}
+        />
 
         {/* Back button */}
         <Box sx={{ mt: 2 }}>
