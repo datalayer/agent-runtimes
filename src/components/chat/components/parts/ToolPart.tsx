@@ -115,6 +115,16 @@ export function ToolPart({ part }: ToolPartProps) {
   const executionResult = extractExecutionResult(part.output);
   const statusInfo = getStatusInfo(part.state, executionResult);
   const toolName = part.type.split('-').slice(1).join('-') || part.type;
+  const effectiveExitOutput =
+    executionResult?.output ??
+    (typeof part.output === 'string'
+      ? part.output
+      : part.output != null && typeof part.output === 'object'
+        ? (((part.output as Record<string, unknown>).output as string) ??
+          ((part.output as Record<string, unknown>).stdout as string) ??
+          ((part.output as Record<string, unknown>).stderr as string) ??
+          undefined)
+        : undefined);
 
   return (
     <Box
@@ -425,6 +435,33 @@ export function ToolPart({ part }: ToolPartProps) {
                   >
                     The code called sys.exit() with a non-zero exit code.
                   </Text>
+                  {effectiveExitOutput && (
+                    <Box
+                      sx={{
+                        mt: 2,
+                        backgroundColor: 'canvas.inset',
+                        borderRadius: 2,
+                        border: '1px solid',
+                        borderColor: 'attention.muted',
+                        overflow: 'auto',
+                      }}
+                    >
+                      <pre
+                        style={{
+                          margin: 0,
+                          padding: '10px 12px',
+                          fontSize: '12px',
+                          fontFamily: 'monospace',
+                          lineHeight: 1.4,
+                          whiteSpace: 'pre-wrap',
+                          wordBreak: 'break-word',
+                          maxHeight: '200px',
+                        }}
+                      >
+                        {effectiveExitOutput}
+                      </pre>
+                    </Box>
+                  )}
                 </Box>
               </Box>
             )}

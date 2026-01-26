@@ -142,7 +142,9 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
       google?: { clientId: string; scopes?: string[] };
       kaggle?: { clientId: string; scopes?: string[] };
     } = {};
-    if (githubClientId && githubClientId !== 'demo-client-id') {
+    // Always include GitHub provider so the Connected Accounts section shows
+    // If no real client ID is configured, OAuth will fail gracefully
+    if (githubClientId) {
       providers.github = {
         clientId: githubClientId,
         scopes: ['read:user', 'user:email', 'repo'],
@@ -608,6 +610,9 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
                         initialModel={model}
                         initialMcpServers={selectedMcpServers}
                         initialSkills={selectedSkills}
+                        identityProviders={identityProviders}
+                        onIdentityConnect={handleIdentityConnect}
+                        onIdentityDisconnect={handleIdentityDisconnect}
                         suggestions={[
                           {
                             title: '👋 Say hello',

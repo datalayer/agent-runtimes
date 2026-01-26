@@ -27,6 +27,11 @@ import { ChatBase, type Suggestion } from './base/ChatBase';
 import { AgentDetails } from './AgentDetails';
 import type { ProtocolConfig } from './base/ChatBase';
 import { useConnectedIdentities } from '../../../identity';
+import type {
+  OAuthProvider,
+  OAuthProviderConfig,
+  Identity,
+} from '../../../identity';
 
 // Try to get Jupyter settings if available
 let getJupyterSettings: (() => { baseUrl: string; token: string }) | undefined;
@@ -200,6 +205,21 @@ export interface ChatProps {
 
   /** Auto-focus the input on mount */
   autoFocus?: boolean;
+
+  /** Identity providers configuration for OAuth */
+  identityProviders?: {
+    [K in OAuthProvider]?: {
+      clientId: string;
+      scopes?: string[];
+      config?: Partial<OAuthProviderConfig>;
+    };
+  };
+
+  /** Callback when identity connects */
+  onIdentityConnect?: (identity: Identity) => void;
+
+  /** Callback when identity disconnects */
+  onIdentityDisconnect?: (provider: OAuthProvider) => void;
 }
 
 /**
@@ -273,6 +293,9 @@ export function Chat({
   submitOnSuggestionClick = true,
   description,
   autoFocus = false,
+  identityProviders,
+  onIdentityConnect,
+  onIdentityDisconnect,
 }: ChatProps) {
   const [error, setError] = useState<string | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
@@ -485,6 +508,9 @@ export function Chat({
           url={protocolConfig?.endpoint || baseUrl}
           messageCount={messageCount}
           agentId={agentId}
+          identityProviders={identityProviders}
+          onIdentityConnect={onIdentityConnect}
+          onIdentityDisconnect={onIdentityDisconnect}
           onBack={() => setShowDetails(false)}
         />
       </Box>
