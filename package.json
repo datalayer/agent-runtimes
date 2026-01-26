@@ -35,6 +35,41 @@
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "style": "style/index.css",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "import": "./lib/index.js"
+    },
+    "./lib/*": {
+      "types": "./lib/*.d.ts",
+      "import": "./lib/*.js"
+    },
+    "./lib/hooks": {
+      "types": "./lib/hooks/index.d.ts",
+      "import": "./lib/hooks/index.js"
+    },
+    "./lib/state": {
+      "types": "./lib/state/index.d.ts",
+      "import": "./lib/state/index.js"
+    },
+    "./lib/runtime": {
+      "types": "./lib/runtime/index.d.ts",
+      "import": "./lib/runtime/index.js"
+    },
+    "./lib/identity": {
+      "types": "./lib/identity/index.d.ts",
+      "import": "./lib/identity/index.js"
+    },
+    "./lib/components/chat": {
+      "types": "./lib/components/chat/index.d.ts",
+      "import": "./lib/components/chat/index.js"
+    },
+    "./lib/tools/adapters/agent-runtimes": {
+      "types": "./lib/tools/adapters/agent-runtimes/index.d.ts",
+      "import": "./lib/tools/adapters/agent-runtimes/index.js"
+    },
+    "./style/*": "./style/*"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/datalayer/agent-runtimes.git"
