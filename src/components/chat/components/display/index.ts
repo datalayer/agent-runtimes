@@ -9,4 +9,8 @@
  * @module components/chat/components/display
  */
 
-export { ToolCallDisplay, type ToolCallDisplayProps } from './ToolCallDisplay';
+export {
+  ToolCallDisplay,
+  type ToolCallDisplayProps,
+  type ErrorType,
+} from './ToolCallDisplay';

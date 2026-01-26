@@ -14,7 +14,8 @@ import React from 'react';
 import type { ToolUIPart } from 'ai';
 import { Text, Button } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
-import { ChevronDownIcon } from '@primer/octicons-react';
+import { ChevronDownIcon, AlertIcon } from '@primer/octicons-react';
+import type { CodeError, ExecutionResult } from '../../types/execution';
 
 export interface ToolPartProps {
   /** Tool UI part data */
@@ -22,13 +23,43 @@ export interface ToolPartProps {
 }
 
 /**
+ * Check if output contains execution result with errors
+ */
+function extractExecutionResult(output: unknown): ExecutionResult | null {
+  if (!output || typeof output !== 'object') return null;
+  const obj = output as Record<string, unknown>;
+  // Check if it looks like an ExecutionResult
+  if (
+    'execution_ok' in obj ||
+    'code_error' in obj ||
+    'execution_error' in obj
+  ) {
+    return obj as ExecutionResult;
+  }
+  return null;
+}
+
+/**
  * Get status info (label, color, icon) for tool state
  */
-function getStatusInfo(state: string): {
+function getStatusInfo(
+  state: string,
+  executionResult?: ExecutionResult | null,
+): {
   label: string;
   color: string;
   icon: string;
 } {
+  // Check for execution errors in the result
+  if (executionResult) {
+    if (!executionResult.execution_ok) {
+      return { label: 'Execution Failed', color: 'danger.fg', icon: '⚠' };
+    }
+    if (executionResult.code_error) {
+      return { label: 'Code Error', color: 'severe.fg', icon: '✕' };
+    }
+  }
+
   const statusMap: Record<
     string,
     { label: string; color: string; icon: string }
@@ -66,12 +97,14 @@ function getStatusInfo(state: string): {
  * - Status indicator (pending, running, completed, error)
  * - JSON display for input parameters
  * - JSON display for output/result
- * - Error highlighting
+ * - Rich error display with execution vs code error distinction
  */
 export function ToolPart({ part }: ToolPartProps) {
   const [isExpanded, setIsExpanded] = React.useState(true);
 
-  const statusInfo = getStatusInfo(part.state);
+  // Extract execution result if present in output
+  const executionResult = extractExecutionResult(part.output);
+  const statusInfo = getStatusInfo(part.state, executionResult);
   const toolName = part.type.split('-').slice(1).join('-') || part.type;
 
   return (
@@ -235,10 +268,116 @@ export function ToolPart({ part }: ToolPartProps) {
             </Box>
           )}
 
-          {/* Tool Error */}
+          {/* Execution Error (infrastructure failure) */}
+          {executionResult && !executionResult.execution_ok && (
+            <Box sx={{ padding: 3 }}>
+              <Text
+                sx={{
+                  display: 'block',
+                  fontSize: 0,
+                  fontWeight: 'semibold',
+                  color: 'danger.fg',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                  marginBottom: 2,
+                }}
+              >
+                <AlertIcon size={12} /> Execution Error
+              </Text>
+              <Box
+                sx={{
+                  backgroundColor: 'danger.subtle',
+                  borderRadius: 2,
+                  overflow: 'auto',
+                  border: '1px solid',
+                  borderColor: 'danger.muted',
+                  padding: 2,
+                }}
+              >
+                <Text sx={{ fontSize: 0, color: 'danger.fg' }}>
+                  {executionResult.execution_error ||
+                    'Sandbox execution failed'}
+                </Text>
+                <Text
+                  sx={{
+                    display: 'block',
+                    fontSize: 0,
+                    color: 'fg.muted',
+                    marginTop: 1,
+                  }}
+                >
+                  The sandbox or execution environment failed to run the code.
+                </Text>
+              </Box>
+            </Box>
+          )}
+
+          {/* Code Error (Python exception) */}
+          {executionResult &&
+            executionResult.execution_ok &&
+            executionResult.code_error && (
+              <Box sx={{ padding: 3 }}>
+                <Text
+                  sx={{
+                    display: 'block',
+                    fontSize: 0,
+                    fontWeight: 'semibold',
+                    color: 'severe.fg',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                    marginBottom: 2,
+                  }}
+                >
+                  Code Error: {executionResult.code_error.name}
+                </Text>
+                <Box
+                  sx={{
+                    backgroundColor: 'severe.subtle',
+                    borderRadius: 2,
+                    overflow: 'hidden',
+                    border: '1px solid',
+                    borderColor: 'severe.muted',
+                  }}
+                >
+                  <Box sx={{ padding: 2 }}>
+                    <Text sx={{ fontSize: 0, color: 'severe.fg' }}>
+                      {executionResult.code_error.value}
+                    </Text>
+                  </Box>
+                  {executionResult.code_error.traceback && (
+                    <Box
+                      sx={{
+                        borderTop: '1px solid',
+                        borderColor: 'severe.muted',
+                        backgroundColor: 'canvas.inset',
+                      }}
+                    >
+                      <pre
+                        style={{
+                          margin: 0,
+                          padding: '8px 12px',
+                          fontSize: '11px',
+                          fontFamily: 'monospace',
+                          lineHeight: 1.4,
+                          whiteSpace: 'pre-wrap',
+                          wordBreak: 'break-word',
+                          maxHeight: '200px',
+                          overflow: 'auto',
+                        }}
+                      >
+                        {executionResult.code_error.traceback}
+                      </pre>
+                    </Box>
+                  )}
+                </Box>
+              </Box>
+            )}
+
+          {/* Tool Error (fallback for errorText from SDK) */}
           {part.state === 'output-error' &&
             'errorText' in part &&
-            part.errorText && (
+            part.errorText &&
+            !executionResult && (
               <Box sx={{ padding: 3 }}>
                 <Text
                   sx={{

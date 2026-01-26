@@ -604,13 +604,28 @@ export class AGUIAdapter extends BaseProtocolAdapter {
         }
 
         if (toolCallId) {
+          // Check for execution errors in the result
+          // ExecutionResult format: { execution_ok, execution_error, code_error, ... }
+          const contentObj = content as Record<string, unknown> | undefined;
+          const isError =
+            contentObj?.execution_ok === false ||
+            contentObj?.code_error != null ||
+            (contentObj?.error != null && !contentObj?.success);
+          const errorMessage =
+            (contentObj?.execution_error as string) ||
+            (contentObj?.error as string) ||
+            (contentObj?.code_error
+              ? `${(contentObj.code_error as { name?: string })?.name || 'Error'}: ${(contentObj.code_error as { value?: string })?.value || ''}`
+              : undefined);
+
           // Emit tool result event with the actual content
           this.emit({
             type: 'tool-result',
             toolResult: {
               toolCallId,
-              success: true,
+              success: !isError,
               result: content,
+              error: isError ? errorMessage : undefined,
             },
             timestamp: new Date(),
           });

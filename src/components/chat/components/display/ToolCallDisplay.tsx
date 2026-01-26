@@ -20,8 +20,15 @@ import {
   CheckCircleIcon,
   XCircleIcon,
   ClockIcon,
+  AlertIcon,
 } from '@primer/octicons-react';
 import type { ToolCallStatus } from '../base/ChatBase';
+import type { CodeError, ExecutionResult } from '../../types/execution';
+
+/**
+ * Error type classification for display purposes
+ */
+export type ErrorType = 'execution' | 'code' | 'unknown';
 
 export interface ToolCallDisplayProps {
   /** Tool call ID */
@@ -34,14 +41,23 @@ export interface ToolCallDisplayProps {
   result?: unknown;
   /** Current status */
   status: ToolCallStatus;
-  /** Error message if failed */
+  /** Error message if failed (backwards compatible) */
   error?: string;
+  /** Rich execution result with detailed error information */
+  executionResult?: ExecutionResult;
+  /** Code error details (Python exception) */
+  codeError?: CodeError;
+  /** Execution/infrastructure error message */
+  executionError?: string;
 }
 
 /**
  * Get status icon and color based on tool call status
  */
-function getStatusDisplay(status: ToolCallStatus): {
+function getStatusDisplay(
+  status: ToolCallStatus,
+  errorType?: ErrorType,
+): {
   icon: React.ReactNode;
   color: string;
   label: string;
@@ -70,6 +86,22 @@ function getStatusDisplay(status: ToolCallStatus): {
         bgColor: 'success.subtle',
       };
     case 'error':
+      // Distinguish between execution errors and code errors
+      if (errorType === 'execution') {
+        return {
+          icon: <AlertIcon size={14} />,
+          color: 'danger.fg',
+          label: 'Execution Failed',
+          bgColor: 'danger.subtle',
+        };
+      } else if (errorType === 'code') {
+        return {
+          icon: <XCircleIcon size={14} />,
+          color: 'severe.fg',
+          label: 'Code Error',
+          bgColor: 'severe.subtle',
+        };
+      }
       return {
         icon: <XCircleIcon size={14} />,
         color: 'danger.fg',
@@ -132,6 +164,7 @@ function getArgsSummary(args: Record<string, unknown>): string {
  * - Shows tool name, status icon, and brief summary when collapsed
  * - Expands to show full parameters and results
  * - Color-coded status indicators
+ * - Rich error display distinguishing execution errors from code errors
  */
 export function ToolCallDisplay({
   toolCallId,
@@ -140,11 +173,33 @@ export function ToolCallDisplay({
   result,
   status,
   error,
+  executionResult,
+  codeError,
+  executionError,
 }: ToolCallDisplayProps) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const statusDisplay = getStatusDisplay(status);
+
+  // Determine error type for status display
+  const errorType: ErrorType | undefined =
+    status === 'error'
+      ? executionError || executionResult?.execution_error
+        ? 'execution'
+        : codeError || executionResult?.code_error
+          ? 'code'
+          : 'unknown'
+      : undefined;
+
+  const statusDisplay = getStatusDisplay(status, errorType);
   const displayName = formatToolName(toolName);
   const argsSummary = getArgsSummary(args);
+
+  // Get error details from various sources (prefer rich error info)
+  const effectiveCodeError =
+    codeError || executionResult?.code_error || undefined;
+  const effectiveExecutionError =
+    executionError || executionResult?.execution_error || undefined;
+  const effectiveError =
+    error || executionResult?.error || effectiveExecutionError || undefined;
 
   return (
     <Box
@@ -342,8 +397,8 @@ export function ToolCallDisplay({
             </Box>
           )}
 
-          {/* Error section */}
-          {status === 'error' && error && (
+          {/* Execution Error section (infrastructure failure) */}
+          {status === 'error' && effectiveExecutionError && (
             <Box>
               <Text
                 sx={{
@@ -356,7 +411,7 @@ export function ToolCallDisplay({
                   mb: 2,
                 }}
               >
-                Error
+                <AlertIcon size={12} /> Execution Error
               </Text>
               <Box
                 sx={{
@@ -367,10 +422,117 @@ export function ToolCallDisplay({
                   p: 2,
                 }}
               >
-                <Text sx={{ fontSize: 1, color: 'danger.fg' }}>{error}</Text>
+                <Text sx={{ fontSize: 1, color: 'danger.fg' }}>
+                  {effectiveExecutionError}
+                </Text>
+                <Text
+                  sx={{
+                    display: 'block',
+                    fontSize: 0,
+                    color: 'fg.muted',
+                    mt: 1,
+                  }}
+                >
+                  The sandbox or execution environment failed to run the code.
+                </Text>
               </Box>
             </Box>
           )}
+
+          {/* Code Error section (Python exception) */}
+          {status === 'error' && effectiveCodeError && (
+            <Box>
+              <Text
+                sx={{
+                  display: 'block',
+                  fontSize: 0,
+                  fontWeight: 'semibold',
+                  color: 'severe.fg',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                  mb: 2,
+                }}
+              >
+                Code Error: {effectiveCodeError.name}
+              </Text>
+              <Box
+                sx={{
+                  backgroundColor: 'severe.subtle',
+                  borderRadius: 2,
+                  border: '1px solid',
+                  borderColor: 'severe.muted',
+                  overflow: 'hidden',
+                }}
+              >
+                <Box sx={{ p: 2 }}>
+                  <Text sx={{ fontSize: 1, color: 'severe.fg' }}>
+                    {effectiveCodeError.value}
+                  </Text>
+                </Box>
+                {effectiveCodeError.traceback && (
+                  <Box
+                    sx={{
+                      borderTop: '1px solid',
+                      borderColor: 'severe.muted',
+                      backgroundColor: 'canvas.inset',
+                    }}
+                  >
+                    <pre
+                      style={{
+                        margin: 0,
+                        padding: '8px 12px',
+                        fontSize: '11px',
+                        fontFamily:
+                          'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
+                        lineHeight: 1.4,
+                        whiteSpace: 'pre-wrap',
+                        wordBreak: 'break-word',
+                        maxHeight: '200px',
+                        overflow: 'auto',
+                      }}
+                    >
+                      {effectiveCodeError.traceback}
+                    </pre>
+                  </Box>
+                )}
+              </Box>
+            </Box>
+          )}
+
+          {/* Generic Error section (fallback for backwards compatibility) */}
+          {status === 'error' &&
+            effectiveError &&
+            !effectiveExecutionError &&
+            !effectiveCodeError && (
+              <Box>
+                <Text
+                  sx={{
+                    display: 'block',
+                    fontSize: 0,
+                    fontWeight: 'semibold',
+                    color: 'danger.fg',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                    mb: 2,
+                  }}
+                >
+                  Error
+                </Text>
+                <Box
+                  sx={{
+                    backgroundColor: 'danger.subtle',
+                    borderRadius: 2,
+                    border: '1px solid',
+                    borderColor: 'danger.muted',
+                    p: 2,
+                  }}
+                >
+                  <Text sx={{ fontSize: 1, color: 'danger.fg' }}>
+                    {effectiveError}
+                  </Text>
+                </Box>
+              </Box>
+            )}
 
           {/* Tool call ID (for debugging) */}
           <Box

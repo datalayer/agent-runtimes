@@ -158,11 +158,27 @@ class CodemodeIntegration:
         
         execution = await self._executor.execute(code, timeout=timeout)
         
+        # Build error message from ExecutionResult's richer error fields
+        error_message = None
+        if not execution.execution_ok:
+            # Infrastructure-level failure (sandbox failed to execute code)
+            error_message = execution.execution_error or "Sandbox execution failed"
+        elif execution.code_error:
+            # Code-level error (Python exception in user code)
+            error_message = f"{execution.code_error.name}: {execution.code_error.value}"
+        
         return {
-            "success": not execution.error,
+            "success": execution.success,
+            "execution_ok": execution.execution_ok,
+            "execution_error": execution.execution_error,
+            "code_error": {
+                "name": execution.code_error.name,
+                "value": execution.code_error.value,
+                "traceback": execution.code_error.traceback,
+            } if execution.code_error else None,
             "result": execution.results,
-            "output": execution.logs.stdout if execution.logs else "",
-            "error": str(execution.error) if execution.error else None,
+            "output": execution.logs.stdout_text if execution.logs else "",
+            "error": error_message,  # Keep for backwards compatibility
         }
     
     async def call_tool(
@@ -235,10 +251,26 @@ class CodemodeIntegration:
         
         execution = await self._executor.execute_skill(skill_name, arguments)
 
+        # Build error message from ExecutionResult's richer error fields
+        error_message = None
+        if not execution.execution_ok:
+            # Infrastructure-level failure (sandbox failed to execute code)
+            error_message = execution.execution_error or "Sandbox execution failed"
+        elif execution.code_error:
+            # Code-level error (Python exception in user code)
+            error_message = f"{execution.code_error.name}: {execution.code_error.value}"
+
         return {
-            "success": not execution.error,
+            "success": execution.success,
+            "execution_ok": execution.execution_ok,
+            "execution_error": execution.execution_error,
+            "code_error": {
+                "name": execution.code_error.name,
+                "value": execution.code_error.value,
+                "traceback": execution.code_error.traceback,
+            } if execution.code_error else None,
             "result": execution.results,
-            "error": str(execution.error) if execution.error else None,
+            "error": error_message,  # Keep for backwards compatibility
         }
     
     async def search_skills(

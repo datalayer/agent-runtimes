@@ -198,6 +198,14 @@ interface ToolCallMessage {
   result?: unknown;
   status: ToolCallStatus;
   error?: string;
+  /** Infrastructure/execution error message */
+  executionError?: string;
+  /** Code error details (Python exception) */
+  codeError?: {
+    name: string;
+    value: string;
+    traceback?: string;
+  };
 }
 
 /**
@@ -1516,16 +1524,57 @@ function ChatBaseInner({
                   'steps' in existingToolCall.args &&
                   Array.isArray(existingToolCall.args.steps);
 
+                // Extract rich error information from result if available
+                const resultData = event.toolResult.result as
+                  | Record<string, unknown>
+                  | undefined;
+                let executionError: string | undefined;
+                let codeError: ToolCallMessage['codeError'] | undefined;
+                let hasError = !!event.toolResult.error;
+
+                if (resultData && typeof resultData === 'object') {
+                  // Check for execution_error (infrastructure/sandbox errors)
+                  if (
+                    resultData.execution_error &&
+                    typeof resultData.execution_error === 'string'
+                  ) {
+                    executionError = resultData.execution_error;
+                    hasError = true;
+                  }
+                  // Check for code_error (Python exceptions)
+                  if (
+                    resultData.code_error &&
+                    typeof resultData.code_error === 'object'
+                  ) {
+                    const ce = resultData.code_error as Record<string, unknown>;
+                    codeError = {
+                      name: (ce.name as string) || 'Error',
+                      value: (ce.value as string) || 'Unknown error',
+                      traceback: ce.traceback as string | undefined,
+                    };
+                    hasError = true;
+                  }
+                  // Check for execution_ok flag
+                  if (
+                    'execution_ok' in resultData &&
+                    resultData.execution_ok === false
+                  ) {
+                    hasError = true;
+                  }
+                }
+
                 const updatedToolCall: ToolCallMessage = {
                   ...existingToolCall,
                   result: event.toolResult.result,
                   // Keep executing for HITL, otherwise mark complete/error
-                  status: event.toolResult.error
+                  status: hasError
                     ? 'error'
                     : isHumanInTheLoop
                       ? 'executing'
                       : 'complete',
                   error: event.toolResult.error,
+                  executionError,
+                  codeError,
                 };
                 toolCallsRef.current.set(toolCallId, updatedToolCall);
                 setDisplayItems(prev =>
@@ -2170,6 +2219,8 @@ function ChatBaseInner({
                 result={item.result}
                 status={item.status}
                 error={item.error}
+                executionError={item.executionError}
+                codeError={item.codeError}
               />
             );
 
