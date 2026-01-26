@@ -452,12 +452,23 @@ export const useIdentityStore = create<IdentityStore>()(
               const str = localStorage.getItem(name);
               if (!str) return null;
               const data = JSON.parse(str);
+
+              // Check if we're in an OAuth callback (code and state in URL)
+              // If not, clear any stale pendingAuthorization from previous sessions
+              const urlParams = new URLSearchParams(window.location.search);
+              const isOAuthCallback =
+                urlParams.has('code') && urlParams.has('state');
+
               return {
                 state: {
                   ...data.state,
                   identities: new Map(data.state.identities || []),
                   providerConfigs: new Map(data.state.providerConfigs || []),
-                  pendingAuthorization: data.state.pendingAuthorization || null, // Persist pending auth for callback
+                  // Only restore pendingAuthorization if we're in an OAuth callback
+                  // Otherwise, clear it to prevent stale "Working..." state
+                  pendingAuthorization: isOAuthCallback
+                    ? data.state.pendingAuthorization || null
+                    : null,
                   isLoading: false,
                   error: null,
                 },

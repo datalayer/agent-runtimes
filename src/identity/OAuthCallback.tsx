@@ -93,6 +93,7 @@ export const OAuthCallback: React.FC<OAuthCallbackProps> = ({
   const [status, setStatus] = useState<CallbackStatus>('processing');
   const [error, setError] = useState<string | null>(null);
   const [provider, setProvider] = useState<string | null>(null);
+  const [storeHydrated, setStoreHydrated] = useState(false);
 
   const completeAuthorization = useIdentityStore(
     state => state.completeAuthorization,
@@ -105,7 +106,27 @@ export const OAuthCallback: React.FC<OAuthCallbackProps> = ({
   // Determine auto-close behavior
   const shouldAutoClose = autoClose ?? isPopup;
 
+  // Wait for Zustand store to hydrate from localStorage
   useEffect(() => {
+    // Check if store has rehydrated by checking for any data or with a small delay
+    const checkHydration = () => {
+      // Give zustand-persist time to hydrate from localStorage
+      const stored = localStorage.getItem('agent-runtimes-identity');
+      if (stored) {
+        // Store exists - give it a moment to hydrate
+        setTimeout(() => setStoreHydrated(true), 50);
+      } else {
+        // No stored data, proceed immediately
+        setStoreHydrated(true);
+      }
+    };
+    checkHydration();
+  }, []);
+
+  useEffect(() => {
+    // Wait for store to hydrate before processing callback
+    if (!storeHydrated) return;
+
     const handleCallback = async () => {
       const urlParams = new URLSearchParams(window.location.search);
       const code = urlParams.get('code');
@@ -143,8 +164,8 @@ export const OAuthCallback: React.FC<OAuthCallbackProps> = ({
       setProvider(pendingAuth.provider);
 
       try {
-        // Complete the authorization
-        await completeAuthorization({
+        // Complete the authorization - this returns the identity
+        const identity = await completeAuthorization({
           code,
           state,
         });
@@ -153,20 +174,28 @@ export const OAuthCallback: React.FC<OAuthCallbackProps> = ({
 
         // Handle popup flow - notify parent and close
         if (isPopup && window.opener) {
-          // Post message to parent window
-          window.opener.postMessage(
-            {
-              type: 'oauth-callback-success',
-              provider: pendingAuth.provider,
-            },
-            window.location.origin,
-          );
+          // Small delay to ensure localStorage is fully written by Zustand persist
+          // before notifying the parent window
+          setTimeout(() => {
+            console.log(
+              '[OAuthCallback] Posting success message to parent with identity',
+            );
+            // Post message to parent window - include identity so parent doesn't need to read from localStorage
+            window.opener.postMessage(
+              {
+                type: 'oauth-callback-success',
+                provider: pendingAuth.provider,
+                identity: identity,
+              },
+              window.location.origin,
+            );
 
-          if (shouldAutoClose) {
-            setTimeout(() => {
-              window.close();
-            }, autoCloseDelay);
-          }
+            if (shouldAutoClose) {
+              setTimeout(() => {
+                window.close();
+              }, autoCloseDelay);
+            }
+          }, 50);
         }
         // Handle redirect flow
         else if (redirectUrl) {
@@ -199,6 +228,7 @@ export const OAuthCallback: React.FC<OAuthCallbackProps> = ({
 
     handleCallback();
   }, [
+    storeHydrated,
     completeAuthorization,
     pendingAuth,
     onSuccess,

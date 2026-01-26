@@ -162,6 +162,113 @@ async def get_metrics(ctx: RunContext) -> dict:
 
 This section provides step-by-step instructions for setting up OAuth with common providers.
 
+### Kaggle OAuth Setup
+
+Kaggle MCP server supports OAuth 2.0 authentication, allowing agents to access Kaggle resources on behalf of users.
+
+:::info Kaggle MCP Authorization
+The [Kaggle MCP Server](https://www.kaggle.com/docs/mcp) follows the [MCP Authorization Specification](https://modelcontextprotocol.io/specification/2025-03-26/basic/authorization) based on OAuth 2.1. Authentication is handled automatically by the MCP client—no manual OAuth app registration required.
+:::
+
+#### Authentication Options
+
+| Method | Setup Required | Best For |
+|--------|----------------|----------|
+| **OAuth 2.0** | None (automatic) | Interactive use, full access |
+| **API Token** | Generate token in Kaggle settings | Automated/headless use |
+
+#### Option 1: OAuth Authentication (Recommended)
+
+When using OAuth, the MCP client handles authentication automatically:
+
+1. First tool call triggers OAuth flow
+2. Browser opens to Kaggle login/consent page
+3. User authorizes the application
+4. Tokens are stored and refreshed automatically
+
+No client ID or client secret configuration is needed—Kaggle MCP handles this internally.
+
+**Configuration in Agent Runtimes:**
+
+```json
+{
+  "mcpServers": {
+    "kaggle": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "https://www.kaggle.com/mcp"]
+    }
+  }
+}
+```
+
+#### Option 2: Token Authentication
+
+For non-interactive or automated use, generate a Kaggle API token:
+
+**Step 1: Generate Token**
+
+1. Go to [Kaggle Settings](https://www.kaggle.com/settings)
+2. Scroll to **API** section
+3. Click **Create New Token** or **Generate New Token**
+4. Copy the token (starts with `KGAT`)
+
+**Step 2: Configure Environment**
+
+```bash
+# Add to your .env file or shell profile
+export KAGGLE_TOKEN=KGAT...
+```
+
+**Step 3: Configure MCP Server**
+
+```json
+{
+  "mcpServers": {
+    "kaggle": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "https://www.kaggle.com/mcp",
+        "--header",
+        "Authorization: Bearer ${KAGGLE_TOKEN}"
+      ]
+    }
+  }
+}
+```
+
+#### Kaggle Identity in Agent Runtimes UI
+
+To enable Kaggle identity management in the Agent Runtimes chat UI:
+
+```tsx
+import { IdentityConnect } from '@datalayer/agent-runtimes';
+
+function App() {
+  return (
+    <IdentityConnect
+      providers={{
+        kaggle: {
+          clientId: import.meta.env.VITE_KAGGLE_CLIENT_ID,
+          scopes: ['datasets', 'notebooks', 'competitions'],
+        },
+      }}
+    />
+  );
+}
+```
+
+:::tip Scopes
+Kaggle OAuth scopes control access to different resources:
+- `datasets` — Access to datasets
+- `notebooks` — Create and manage notebooks
+- `competitions` — Submit to competitions
+- `models` — Access Kaggle models
+:::
+
+---
+
 ### GitHub OAuth App Setup
 
 For GitHub identity, you can use either a **GitHub OAuth App** or a **GitHub App**. The choice depends on your use case.

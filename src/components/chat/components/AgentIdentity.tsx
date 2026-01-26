@@ -279,8 +279,8 @@ export function IdentityCard({
     <Box
       sx={{
         display: 'flex',
-        alignItems: 'flex-start',
-        gap: 3,
+        flexDirection: 'column',
+        gap: 2,
         p: 3,
         border: '1px solid',
         borderColor: tokenStatus.isExpired
@@ -296,139 +296,161 @@ export function IdentityCard({
             : 'success.subtle',
       }}
     >
-      {/* Provider Icon / Avatar */}
-      <Box
-        sx={{
-          flexShrink: 0,
-        }}
-      >
-        {identity.userInfo?.avatarUrl ? (
-          <Avatar
-            src={identity.userInfo.avatarUrl}
-            size={40}
-            alt={
-              identity.userInfo.name ||
-              identity.userInfo.username ||
-              display.name
-            }
-          />
+      {/* Header row with provider info */}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        {/* Provider Icon */}
+        <Box
+          sx={{
+            width: 32,
+            height: 32,
+            borderRadius: 2,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: display.color,
+            color: 'white',
+            flexShrink: 0,
+          }}
+        >
+          <display.icon size={16} />
+        </Box>
+        <Box sx={{ flex: 1 }}>
+          <Text sx={{ fontWeight: 'semibold', fontSize: 1 }}>
+            {display.name}
+          </Text>
+        </Box>
+        {tokenStatus.isExpired ? (
+          <Label variant="danger" size="small">
+            <AlertIcon size={12} /> Expired
+          </Label>
+        ) : tokenStatus.isExpiringSoon ? (
+          <Label variant="attention" size="small">
+            <ClockIcon size={12} /> Expiring Soon
+          </Label>
         ) : (
-          <Box
-            sx={{
-              width: 40,
-              height: 40,
-              borderRadius: 2,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              backgroundColor: display.color,
-              color: 'white',
-            }}
-          >
-            <display.icon size={20} />
-          </Box>
+          <Label variant="success" size="small">
+            <CheckCircleFillIcon size={12} /> Connected
+          </Label>
         )}
       </Box>
 
-      {/* Identity Info */}
-      <Box sx={{ flex: 1, minWidth: 0 }}>
-        {/* Name and Status */}
+      {/* User info row with avatar */}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        {/* Avatar */}
+        {identity.userInfo?.avatarUrl && (
+          <a
+            href={
+              identity.userInfo.profileUrl ||
+              (provider === 'github'
+                ? `https://github.com/${identity.userInfo.username}`
+                : undefined)
+            }
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ display: 'block', lineHeight: 0, flexShrink: 0 }}
+          >
+            <Avatar
+              src={identity.userInfo.avatarUrl}
+              size={32}
+              alt={
+                identity.userInfo.name ||
+                identity.userInfo.username ||
+                display.name
+              }
+              sx={{ cursor: 'pointer' }}
+            />
+          </a>
+        )}
+
+        {/* Identity Info */}
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          {/* Name */}
+          {identity.userInfo?.name && (
+            <Text
+              sx={{ fontWeight: 'semibold', fontSize: 1, display: 'block' }}
+            >
+              {identity.userInfo.name}
+            </Text>
+          )}
+
+          {/* Username / Email */}
+          {(identity.userInfo?.username || identity.userInfo?.email) && (
+            <a
+              href={
+                identity.userInfo.profileUrl ||
+                (provider === 'github'
+                  ? `https://github.com/${identity.userInfo.username}`
+                  : undefined)
+              }
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ textDecoration: 'none' }}
+            >
+              <Text
+                sx={{
+                  fontSize: 0,
+                  color: 'fg.muted',
+                  display: 'block',
+                  ':hover': { textDecoration: 'underline' },
+                }}
+              >
+                {identity.userInfo.username
+                  ? `@${identity.userInfo.username}`
+                  : identity.userInfo.email}
+              </Text>
+            </a>
+          )}
+        </Box>
+      </Box>
+
+      {/* Expiration Details */}
+      {showExpirationDetails && (
         <Box
           sx={{
             display: 'flex',
             alignItems: 'center',
-            gap: 2,
-            mb: 1,
+            gap: 1,
           }}
         >
-          <Text sx={{ fontWeight: 'semibold', fontSize: 1 }}>
-            {identity.userInfo?.name ||
-              identity.userInfo?.username ||
-              display.name}
-          </Text>
-          {tokenStatus.isExpired ? (
-            <Label variant="danger" size="small">
-              <AlertIcon size={12} /> Expired
-            </Label>
-          ) : tokenStatus.isExpiringSoon ? (
-            <Label variant="attention" size="small">
-              <ClockIcon size={12} /> Expiring Soon
-            </Label>
-          ) : (
-            <Label variant="success" size="small">
-              <CheckCircleFillIcon size={12} /> Connected
-            </Label>
-          )}
-        </Box>
-
-        {/* Username / Email */}
-        {(identity.userInfo?.username || identity.userInfo?.email) && (
+          <ClockIcon size={12} />
           <Text
             sx={{
               fontSize: 0,
-              color: 'fg.muted',
-              display: 'block',
-              mb: 1,
+              color: tokenStatus.isExpired
+                ? 'danger.fg'
+                : tokenStatus.isExpiringSoon
+                  ? 'attention.fg'
+                  : 'fg.muted',
             }}
           >
-            {identity.userInfo.username
-              ? `@${identity.userInfo.username}`
-              : identity.userInfo.email}
+            {formatExpirationStatus(tokenStatus)}
           </Text>
-        )}
+        </Box>
+      )}
 
-        {/* Expiration Details */}
-        {showExpirationDetails && (
-          <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1,
-              mt: 1,
-            }}
-          >
-            <ClockIcon size={12} />
-            <Text
-              sx={{
-                fontSize: 0,
-                color: tokenStatus.isExpired
-                  ? 'danger.fg'
-                  : tokenStatus.isExpiringSoon
-                    ? 'attention.fg'
-                    : 'fg.muted',
-              }}
-            >
-              {formatExpirationStatus(tokenStatus)}
-            </Text>
-          </Box>
-        )}
-
-        {/* Scopes */}
-        {identity.scopes && identity.scopes.length > 0 && (
-          <Box
-            sx={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              gap: 1,
-              mt: 2,
-            }}
-          >
-            {identity.scopes.map(scope => (
-              <Label key={scope} size="small" variant="secondary">
-                {scope}
-              </Label>
-            ))}
-          </Box>
-        )}
-      </Box>
+      {/* Scopes */}
+      {identity.scopes && identity.scopes.length > 0 && (
+        <Box
+          sx={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: 1,
+          }}
+        >
+          {identity.scopes.map(scope => (
+            <Label key={scope} size="small" variant="secondary">
+              {scope}
+            </Label>
+          ))}
+        </Box>
+      )}
 
       {/* Actions */}
       <Box
         sx={{
           display: 'flex',
-          flexDirection: 'column',
-          gap: 1,
-          flexShrink: 0,
+          gap: 2,
+          mt: 1,
         }}
       >
         {tokenStatus.isExpired &&
@@ -453,7 +475,7 @@ export function IdentityCard({
           onClick={handleDisconnect}
           disabled={isAuthorizing}
         >
-          Disconnect
+          Disconnect from {display.name}
         </Button>
       </Box>
     </Box>

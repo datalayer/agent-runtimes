@@ -150,3 +150,116 @@ async def exchange_token(request: TokenExchangeRequest):
             status_code=502,
             detail=f"Failed to connect to {request.provider}: {str(e)}"
         )
+
+
+# Provider userinfo endpoint configurations
+PROVIDER_USERINFO_URLS = {
+    "github": "https://api.github.com/user",
+    "google": "https://www.googleapis.com/oauth2/v3/userinfo",
+    "kaggle": "https://www.kaggle.com/api/v1/user/me",
+}
+
+
+class UserInfoRequest(BaseModel):
+    """Request body for fetching user info."""
+    provider: str
+    access_token: str
+
+
+class UserInfoResponse(BaseModel):
+    """Response from userinfo endpoint."""
+    id: Optional[str] = None
+    name: Optional[str] = None
+    email: Optional[str] = None
+    avatar_url: Optional[str] = None
+    login: Optional[str] = None  # Username (GitHub calls it login)
+    raw: dict  # Full response from provider
+
+
+@router.post("/oauth/userinfo", response_model=UserInfoResponse)
+async def get_userinfo(request: UserInfoRequest):
+    """
+    Fetch user information from the OAuth provider.
+    
+    This endpoint proxies the userinfo request to the OAuth provider,
+    normalizing the response into a common format.
+    """
+    if request.provider not in PROVIDER_USERINFO_URLS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unknown provider: {request.provider}"
+        )
+    
+    userinfo_url = PROVIDER_USERINFO_URLS[request.provider]
+    
+    headers = {
+        "Authorization": f"Bearer {request.access_token}",
+        "Accept": "application/json",
+    }
+    
+    # GitHub requires User-Agent header
+    if request.provider == "github":
+        headers["User-Agent"] = "Datalayer-Agent-Runtimes"
+    
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                userinfo_url,
+                headers=headers,
+                timeout=30.0,
+            )
+            
+            if response.status_code != 200:
+                error_data = response.json() if response.headers.get("content-type", "").startswith("application/json") else {}
+                error_msg = error_data.get("message") or error_data.get("error") or response.text
+                raise HTTPException(
+                    status_code=response.status_code,
+                    detail=f"Failed to fetch user info: {error_msg}"
+                )
+            
+            user_data = response.json()
+            
+            # Normalize user info based on provider
+            if request.provider == "github":
+                return UserInfoResponse(
+                    id=str(user_data.get("id")),
+                    name=user_data.get("name"),
+                    email=user_data.get("email"),
+                    avatar_url=user_data.get("avatar_url"),
+                    login=user_data.get("login"),
+                    raw=user_data,
+                )
+            elif request.provider == "google":
+                return UserInfoResponse(
+                    id=user_data.get("sub"),
+                    name=user_data.get("name"),
+                    email=user_data.get("email"),
+                    avatar_url=user_data.get("picture"),
+                    login=user_data.get("email"),
+                    raw=user_data,
+                )
+            elif request.provider == "kaggle":
+                return UserInfoResponse(
+                    id=str(user_data.get("id")),
+                    name=user_data.get("displayName"),
+                    email=user_data.get("email"),
+                    avatar_url=user_data.get("thumbnailUrl"),
+                    login=user_data.get("userName"),
+                    raw=user_data,
+                )
+            else:
+                # Generic fallback
+                return UserInfoResponse(
+                    id=str(user_data.get("id") or user_data.get("sub")),
+                    name=user_data.get("name"),
+                    email=user_data.get("email"),
+                    avatar_url=user_data.get("avatar_url") or user_data.get("picture"),
+                    login=user_data.get("login") or user_data.get("username"),
+                    raw=user_data,
+                )
+            
+    except httpx.RequestError as e:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Failed to connect to {request.provider}: {str(e)}"
+        )

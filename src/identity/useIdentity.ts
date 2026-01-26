@@ -269,12 +269,102 @@ export function useIdentity(
           return;
         }
 
-        // Listen for callback via postMessage
+        // Listen for callback via postMessage from OAuthCallback component
         const handleMessage = (event: MessageEvent) => {
           if (event.origin !== window.location.origin) return;
 
-          if (event.data?.type === 'oauth_callback') {
+          // Handle success message from OAuthCallback
+          if (event.data?.type === 'oauth-callback-success') {
             window.removeEventListener('message', handleMessage);
+            clearInterval(pollTimer);
+            popup.close();
+
+            const providerName = event.data.provider;
+            const identityFromPopup = event.data.identity as
+              | Identity
+              | undefined;
+
+            console.debug(
+              '[Identity] Received oauth-callback-success for provider:',
+              providerName,
+            );
+            console.debug('[Identity] Identity from popup:', identityFromPopup);
+
+            if (identityFromPopup) {
+              // Use the identity directly from the popup message
+              // Create a new Map to ensure React detects the change
+              const currentIdentities = useIdentityStore.getState().identities;
+              const newIdentities = new Map(currentIdentities);
+              newIdentities.set(providerName, identityFromPopup);
+
+              // Update the store
+              useIdentityStore.setState({
+                identities: newIdentities,
+                pendingAuthorization: null,
+              });
+              console.debug(
+                '[Identity] Store updated with identity from popup, identities count:',
+                newIdentities.size,
+              );
+              resolve(identityFromPopup);
+              return;
+            }
+
+            // Fallback: read from localStorage if identity not in message
+            setTimeout(() => {
+              const STORAGE_KEY = 'agent-runtimes-identity';
+              const stored = localStorage.getItem(STORAGE_KEY);
+              console.debug('[Identity] Fallback: reading from localStorage');
+
+              if (stored) {
+                try {
+                  const data = JSON.parse(stored);
+                  const identitiesArray = data.state?.identities || [];
+                  const identitiesMap = new Map(identitiesArray);
+                  const identity = identitiesMap.get(providerName) as
+                    | Identity
+                    | undefined;
+
+                  if (identity) {
+                    const currentIdentities =
+                      useIdentityStore.getState().identities;
+                    const newIdentities = new Map(currentIdentities);
+                    newIdentities.set(providerName, identity);
+
+                    useIdentityStore.setState({
+                      identities: newIdentities,
+                      pendingAuthorization: null,
+                    });
+                    resolve(identity);
+                    return;
+                  }
+                } catch (e) {
+                  console.error(
+                    '[Identity] Failed to parse identity from localStorage:',
+                    e,
+                  );
+                }
+              }
+
+              // Final fallback
+              useIdentityStore.setState({ pendingAuthorization: null });
+              reject(new Error('Identity not found after OAuth success'));
+            }, 100);
+          }
+          // Handle error message from OAuthCallback
+          else if (event.data?.type === 'oauth-callback-error') {
+            window.removeEventListener('message', handleMessage);
+            clearInterval(pollTimer);
+            popup.close();
+            useIdentityStore.setState({ pendingAuthorization: null });
+            reject(
+              new Error(event.data.error || 'OAuth authentication failed'),
+            );
+          }
+          // Legacy: handle 'oauth_callback' message type
+          else if (event.data?.type === 'oauth_callback') {
+            window.removeEventListener('message', handleMessage);
+            clearInterval(pollTimer);
             popup.close();
 
             completeAuthorizationAction(event.data.payload)

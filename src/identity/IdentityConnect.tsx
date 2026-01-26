@@ -149,7 +149,7 @@ export const IdentityButton: React.FC<IdentityButtonProps> = ({
     identities,
     isAuthorizing,
     error,
-    connect,
+    connectWithPopup,
     disconnect,
     configureProvider,
   } = useIdentity();
@@ -197,18 +197,25 @@ export const IdentityButton: React.FC<IdentityButtonProps> = ({
         await disconnect(provider);
         onDisconnect?.(provider);
       } else {
-        await connect(provider, scopes || DEFAULT_SCOPES[provider]);
-        // If we get here without error, connection succeeded
-        // The identity will be updated in the store
+        // Use popup flow to avoid losing application state
+        const identity = await connectWithPopup(
+          provider,
+          scopes || DEFAULT_SCOPES[provider],
+        );
+        onConnect?.(identity);
       }
     } catch (err) {
-      onError?.(err instanceof Error ? err : new Error(String(err)));
+      // Don't treat 'popup closed by user' as an error to display
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      if (errorMessage !== 'Popup closed by user') {
+        onError?.(err instanceof Error ? err : new Error(errorMessage));
+      }
     }
   }, [
     isConnected,
     provider,
     scopes,
-    connect,
+    connectWithPopup,
     disconnect,
     onConnect,
     onDisconnect,
@@ -275,7 +282,7 @@ export const IdentityButton: React.FC<IdentityButtonProps> = ({
     <Box
       sx={{
         display: 'flex',
-        alignItems: 'center',
+        flexDirection: 'column',
         gap: 2,
         p: 2,
         border: '1px solid',
@@ -284,37 +291,119 @@ export const IdentityButton: React.FC<IdentityButtonProps> = ({
         backgroundColor: isConnected ? 'success.subtle' : 'canvas.subtle',
       }}
     >
-      <Box
-        sx={{
-          width: 40,
-          height: 40,
-          borderRadius: 2,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: display.color,
-          color: 'white',
-        }}
-      >
-        <display.icon size={20} />
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        <Box
+          sx={{
+            width: 40,
+            height: 40,
+            borderRadius: 2,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: display.color,
+            color: 'white',
+          }}
+        >
+          <display.icon size={20} />
+        </Box>
+        <Box sx={{ flex: 1 }}>
+          <Text sx={{ fontWeight: 'bold', display: 'block' }}>
+            {display.name}
+          </Text>
+          <Text sx={{ fontSize: 0, color: 'fg.muted', display: 'block' }}>
+            {isConnected && identity?.userInfo
+              ? `Connected as ${identity.userInfo.name || identity.userInfo.email}`
+              : display.description}
+          </Text>
+        </Box>
+        {!isConnected && (
+          <Button {...buttonProps} variant="primary" leadingVisual={LinkIcon}>
+            {isPending ? 'Working...' : 'Connect'}
+          </Button>
+        )}
       </Box>
-      <Box sx={{ flex: 1 }}>
-        <Text sx={{ fontWeight: 'bold', display: 'block' }}>
-          {display.name}
-        </Text>
-        <Text sx={{ fontSize: 0, color: 'fg.muted', display: 'block' }}>
-          {isConnected && identity?.userInfo
-            ? `Connected as ${identity.userInfo.name || identity.userInfo.email}`
-            : display.description}
-        </Text>
-      </Box>
-      <Button
-        {...buttonProps}
-        variant={isConnected ? 'danger' : 'primary'}
-        leadingVisual={isConnected ? UnlinkIcon : LinkIcon}
-      >
-        {isPending ? 'Working...' : isConnected ? 'Disconnect' : 'Connect'}
-      </Button>
+      {isConnected && identity && (
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          {/* User info section */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, pl: 1 }}>
+            {identity.userInfo?.avatarUrl && (
+              <a
+                href={
+                  identity.userInfo.profileUrl ||
+                  `https://github.com/${identity.userInfo.username}`
+                }
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ display: 'block', lineHeight: 0 }}
+              >
+                <img
+                  src={identity.userInfo.avatarUrl}
+                  alt={identity.userInfo.name || 'User avatar'}
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: '50%',
+                    cursor: 'pointer',
+                  }}
+                />
+              </a>
+            )}
+            <Box sx={{ flex: 1 }}>
+              {identity.userInfo?.username && (
+                <a
+                  href={
+                    identity.userInfo.profileUrl ||
+                    `https://github.com/${identity.userInfo.username}`
+                  }
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ textDecoration: 'none' }}
+                >
+                  <Text
+                    sx={{
+                      fontSize: 1,
+                      color: 'fg.muted',
+                      display: 'block',
+                      ':hover': { textDecoration: 'underline' },
+                    }}
+                  >
+                    @{identity.userInfo.username}
+                  </Text>
+                </a>
+              )}
+              <Text sx={{ fontSize: 0, color: 'fg.muted', display: 'block' }}>
+                {identity.token?.expiresAt
+                  ? `Expires ${new Date(identity.token.expiresAt).toLocaleDateString()}`
+                  : 'Token does not expire'}
+              </Text>
+            </Box>
+          </Box>
+          {/* Scopes section */}
+          {identity.scopes && identity.scopes.length > 0 && (
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, pl: 1 }}>
+              {identity.scopes.map(scope => (
+                <Text
+                  key={scope}
+                  sx={{
+                    fontSize: 0,
+                    px: 2,
+                    py: 1,
+                    bg: 'neutral.muted',
+                    borderRadius: 2,
+                    color: 'fg.muted',
+                  }}
+                >
+                  {scope}
+                </Text>
+              ))}
+            </Box>
+          )}
+          {/* Disconnect button */}
+          <Button {...buttonProps} variant="danger" leadingVisual={UnlinkIcon}>
+            Disconnect from {display.name}
+          </Button>
+        </Box>
+      )}
     </Box>
   );
 };

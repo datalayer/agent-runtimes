@@ -40,6 +40,14 @@ MCP servers are configured in `~/.datalayer/mcp.json`:
     "filesystem": {
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/allowed/dir"]
+    },
+    "kaggle": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "https://www.kaggle.com/mcp"
+      ]
     }
   }
 }
@@ -230,14 +238,101 @@ python -m agent_runtimes --debug
 
 ## Supported MCP Servers
 
-Agent Runtimes works with any MCP-compatible server. Popular options include:
+Agent Runtimes works with any MCP-compatible server. The examples below are just a few popular options—you can use any MCP server that follows the protocol specification.
 
-| Server | Package | Description |
-|--------|---------|-------------|
+| Server | Package/URL | Description |
+|--------|-------------|-------------|
 | Tavily | `tavily-mcp` | Web search and content extraction |
 | Filesystem | `@modelcontextprotocol/server-filesystem` | File system access |
 | GitHub | `@modelcontextprotocol/server-github` | GitHub repository access |
 | Brave Search | `@modelcontextprotocol/server-brave-search` | Web search |
 | LinkedIn | [stickerdaniel/linkedin-mcp-server](https://github.com/stickerdaniel/linkedin-mcp-server) | LinkedIn profile, company, and job data |
+| **Kaggle** | `https://www.kaggle.com/mcp` | Kaggle datasets, models, competitions, notebooks, and benchmarks |
 
 See the [MCP Servers Directory](https://github.com/modelcontextprotocol/servers) for more options.
+
+### Kaggle MCP Server
+
+The [Kaggle MCP Server](https://www.kaggle.com/docs/mcp) is a **remote HTTP MCP server** that provides access to Kaggle resources including datasets, models, competitions, notebooks, and benchmarks.
+
+:::info Remote vs Local MCP Servers
+Unlike local MCP servers (like Tavily or Filesystem) that run as child processes, Kaggle MCP is a **remote HTTP server** hosted at `https://www.kaggle.com/mcp`. This means:
+- No local installation required
+- Uses HTTP transport instead of stdio
+- Requires OAuth or token authentication
+:::
+
+#### Configuration
+
+Add Kaggle to your `~/.datalayer/mcp.json`:
+
+**Option 1: Using mcp-remote (recommended for OAuth)**
+
+```json
+{
+  "mcpServers": {
+    "kaggle": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "https://www.kaggle.com/mcp"
+      ]
+    }
+  }
+}
+```
+
+**Option 2: Using token authentication**
+
+If your client doesn't support OAuth, use a Kaggle API token:
+
+```json
+{
+  "mcpServers": {
+    "kaggle": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "https://www.kaggle.com/mcp",
+        "--header",
+        "Authorization: Bearer ${KAGGLE_TOKEN}"
+      ]
+    }
+  }
+}
+```
+
+To get your Kaggle token:
+1. Go to [Kaggle Settings](https://www.kaggle.com/settings)
+2. Click **Generate New Token** > **Copy**
+3. The token starts with `KGAT`
+4. Set the environment variable: `export KAGGLE_TOKEN=KGAT...`
+
+#### Authentication
+
+Kaggle MCP supports two authentication methods:
+
+| Method | When to Use |
+|--------|-------------|
+| **OAuth 2.0** | Recommended for interactive use. Initiates browser-based login. |
+| **Token** | For non-interactive/automated use. Requires pre-generated API token. |
+
+For OAuth setup with Agent Runtimes, see the [Kaggle OAuth Setup](/docs/identity#kaggle-oauth-setup) section in the Identity documentation.
+
+#### Available Tools
+
+Kaggle MCP provides tools across several categories:
+
+| Category | Description |
+|----------|-------------|
+| **Notebooks** | Create, run, and manage Kaggle notebooks |
+| **Datasets** | Search, download, and explore datasets |
+| **Models** | Access and use Kaggle models |
+| **Competitions** | Browse competitions, download data, submit predictions |
+| **Benchmarks** | Access Kaggle benchmark tools |
+
+:::tip Authorization Required
+Some Kaggle resources require authorization. If you encounter permission errors, ensure you've authenticated either via OAuth or with a valid API token.
+:::

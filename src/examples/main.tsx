@@ -24,6 +24,7 @@ import {
   createDatalayerServiceManager,
 } from '@datalayer/core';
 import { useChatStore } from '../components/chat/store';
+import { OAuthCallback } from '../identity';
 import { EXAMPLES } from './example-selector';
 
 import nbformatExample from './stores/notebooks/NotebookExample1.ipynb.json';
@@ -121,6 +122,15 @@ const isNotebookOnlyRoute = () => {
   const isNotebookRoute = path === '/datalayer/notebook';
   console.log('Is notebook-only route:', isNotebookRoute);
   return isNotebookRoute;
+};
+
+// Check if we're handling an OAuth callback (code and state in URL params)
+const isOAuthCallback = () => {
+  const params = new URLSearchParams(window.location.search);
+  const hasCode = params.has('code');
+  const hasState = params.has('state');
+  const hasError = params.has('error');
+  return (hasCode && hasState) || hasError;
 };
 
 // Get the default example name from localStorage
@@ -504,7 +514,15 @@ export const ExampleApp: React.FC = () => {
 // Mount the app - check route to determine which app to render
 const root = document.getElementById('root');
 if (root) {
-  if (isNotebookOnlyRoute()) {
+  if (isOAuthCallback()) {
+    // Handle OAuth callback - render OAuthCallback component
+    console.log('Rendering OAuthCallback (popup flow)');
+    createRoot(root).render(
+      <JupyterReactTheme>
+        <OAuthCallback autoClose={true} autoCloseDelay={1000} />
+      </JupyterReactTheme>,
+    );
+  } else if (isNotebookOnlyRoute()) {
     console.log('Rendering NotebookOnlyApp');
     createRoot(root).render(<NotebookOnlyApp />);
   } else {
