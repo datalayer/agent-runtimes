@@ -160,66 +160,77 @@ async def get_metrics(ctx: RunContext) -> dict:
 
 ## Provider Setup Guides
 
-This section provides step-by-step instructions for setting up OAuth with common providers.
+This section provides step-by-step instructions for setting up identity with common providers.
 
-### Kaggle OAuth Setup
+### Kaggle
 
-Kaggle MCP server supports OAuth 2.0 authentication, allowing agents to access Kaggle resources on behalf of users.
+Kaggle provides access to datasets, models, competitions, and notebooks. Unlike GitHub, **Kaggle does not offer public OAuth app registration**, so Agent Runtimes uses **token-based authentication**.
 
-:::info Kaggle MCP Authorization
-The [Kaggle MCP Server](https://www.kaggle.com/docs/mcp) follows the [MCP Authorization Specification](https://modelcontextprotocol.io/specification/2025-03-26/basic/authorization) based on OAuth 2.1. Authentication is handled automatically by the MCP client—no manual OAuth app registration required.
+:::info Authentication Model
+Kaggle uses two authentication methods:
+- **MCP OAuth** — Handled automatically by `mcp-remote` (browser-based login on first tool call)
+- **API Token** — Manual token for Agent Runtimes identity integration
+
+For the Agent Runtimes UI identity features, use the **API Token** method described below.
 :::
 
-#### Authentication Options
+#### Step 1: Generate Your Kaggle API Token
 
-| Method | Setup Required | Best For |
-|--------|----------------|----------|
-| **OAuth 2.0** | None (automatic) | Interactive use, full access |
-| **API Token** | Generate token in Kaggle settings | Automated/headless use |
+1. Go to **[kaggle.com/settings/account](https://www.kaggle.com/settings/account)**
+2. Scroll down to the **API** section
+3. Click **Create New Token**
+4. A file `kaggle.json` will download containing your credentials:
+   ```json
+   {"username":"your-username","key":"your-api-key"}
+   ```
+5. The `key` value is your `KAGGLE_TOKEN`
 
-#### Option 1: OAuth Authentication (Recommended)
+:::warning Token Security
+- Never commit your token to version control
+- The token provides full access to your Kaggle account
+- You can revoke and regenerate tokens anytime from the settings page
+:::
 
-When using OAuth, the MCP client handles authentication automatically:
+#### Step 2: Configure Environment
 
-1. First tool call triggers OAuth flow
-2. Browser opens to Kaggle login/consent page
-3. User authorizes the application
-4. Tokens are stored and refreshed automatically
+Add the token to your environment:
 
-No client ID or client secret configuration is needed—Kaggle MCP handles this internally.
+```bash
+# .env file
+KAGGLE_TOKEN=your-api-key-from-kaggle-json
+```
 
-**Configuration in Agent Runtimes:**
+For the backend (Python):
 
-```json
-{
-  "mcpServers": {
-    "kaggle": {
-      "command": "npx",
-      "args": ["-y", "mcp-remote", "https://www.kaggle.com/mcp"]
-    }
-  }
+```bash
+# Backend .env
+KAGGLE_TOKEN=your-api-key-from-kaggle-json
+```
+
+#### Step 3: Use Kaggle Identity in Agent Runtimes
+
+**Token-based configuration:**
+
+```tsx
+import { IdentityConnect } from '@datalayer/agent-runtimes';
+
+function App() {
+  return (
+    <IdentityConnect
+      providers={{
+        kaggle: {
+          type: 'token',  // Token-based, not OAuth
+          tokenEnvVar: 'KAGGLE_TOKEN',
+        },
+      }}
+    />
+  );
 }
 ```
 
-#### Option 2: Token Authentication
+#### Kaggle MCP Server Configuration
 
-For non-interactive or automated use, generate a Kaggle API token:
-
-**Step 1: Generate Token**
-
-1. Go to [Kaggle Settings](https://www.kaggle.com/settings)
-2. Scroll to **API** section
-3. Click **Create New Token** or **Generate New Token**
-4. Copy the token (starts with `KGAT`)
-
-**Step 2: Configure Environment**
-
-```bash
-# Add to your .env file or shell profile
-export KAGGLE_TOKEN=KGAT...
-```
-
-**Step 3: Configure MCP Server**
+For MCP tools, configure with token authentication:
 
 ```json
 {
@@ -238,40 +249,33 @@ export KAGGLE_TOKEN=KGAT...
 }
 ```
 
-#### Kaggle Identity in Agent Runtimes UI
+Alternatively, let `mcp-remote` handle OAuth automatically (triggers browser login):
 
-To enable Kaggle identity management in the Agent Runtimes chat UI:
-
-```tsx
-import { IdentityConnect } from '@datalayer/agent-runtimes';
-
-function App() {
-  return (
-    <IdentityConnect
-      providers={{
-        kaggle: {
-          clientId: import.meta.env.VITE_KAGGLE_CLIENT_ID,
-          scopes: ['datasets', 'notebooks', 'competitions'],
-        },
-      }}
-    />
-  );
+```json
+{
+  "mcpServers": {
+    "kaggle": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "https://www.kaggle.com/mcp"]
+    }
+  }
 }
 ```
 
-:::tip Scopes
-Kaggle OAuth scopes control access to different resources:
-- `datasets` — Access to datasets
-- `notebooks` — Create and manage notebooks
-- `competitions` — Submit to competitions
-- `models` — Access Kaggle models
-:::
+#### Available Kaggle Resources
+
+| Resource | Description |
+|----------|-------------|
+| **Datasets** | Search, download, and explore datasets |
+| **Notebooks** | Create, run, and manage Kaggle notebooks |
+| **Models** | Access and use Kaggle models |
+| **Competitions** | Browse competitions, download data, submit predictions |
 
 ---
 
-### GitHub OAuth App Setup
+### GitHub
 
-For GitHub identity, you can use either a **GitHub OAuth App** or a **GitHub App**. The choice depends on your use case.
+For GitHub identity, you can use either a **GitHub OAuth App** or a **GitHub App**. See [GitHub OAuth App Creation](#github-oauth-app) below for detailed setup instructions.
 
 :::warning GitHub Does NOT Support DCR
 GitHub does not support OAuth 2.0 Dynamic Client Registration (RFC 7591). You must:
@@ -279,8 +283,6 @@ GitHub does not support OAuth 2.0 Dynamic Client Registration (RFC 7591). You mu
 2. Use the **same client_id** for all users
 3. Obtain **per-user access tokens** via the standard OAuth flow
 4. Store tokens mapped to your internal user identity
-
-This is the standard GitHub model and applies to most consumer OAuth providers (Google, etc.).
 :::
 
 :::info GitHub OAuth App vs GitHub App - Which to Choose?
@@ -293,145 +295,16 @@ This is the standard GitHub model and applies to most consumer OAuth providers (
 | **Token lifetime** | Long-lived | Short-lived (1 hour) |
 | **Best for** | Simple auth, read-only | Agents acting on repos |
 
-**For AI agents that will**:
-- Create repos, open PRs, read/write issues
-- Act repeatedly on a user's behalf
-- Need fine-grained permissions
+**For AI agents**: Use a **GitHub App** (recommended) for creating repos, opening PRs, or acting repeatedly on user's behalf with fine-grained permissions.
 
-👉 **Use a GitHub App** (recommended for agent-style use cases)
-
-**For simple authentication**:
-- Just need to identify the user
-- Read-only access to public data
-- Simple integration
-
-👉 **Use an OAuth App**
+**For simple authentication**: Use an **OAuth App** for basic identity verification or read-only access.
 
 Agent Runtimes currently supports OAuth Apps. GitHub App support is planned.
 :::
 
-#### Security Model: PKCE + DCR (Where Supported)
+#### Configuration
 
-Agent Runtimes implements **OAuth 2.1 Authorization Code flow with PKCE** and **Dynamic Client Registration (DCR)**:
-
-| Feature | Implemented? | Notes |
-|---------|--------------|-------|
-| **PKCE** | ✅ Yes | Protects against authorization code interception attacks |
-| **DCR** | ✅ Yes | For providers that support it (Okta, Auth0, Keycloak) |
-| **Device Flow** | ❌ No | Not needed—we use browser-based redirect/popup flow |
-
-:::caution DCR Provider Support
-**Most consumer OAuth providers do NOT support DCR:**
-- ❌ GitHub - manual registration required
-- ❌ Google - manual registration required  
-- ⚠️ Azure AD - tenant-admin only
-
-**Enterprise identity providers typically DO support DCR:**
-- ✅ Okta
-- ✅ Auth0
-- ✅ Keycloak
-
-For GitHub, Google, and similar providers, you must pre-register your OAuth app manually.
-:::
-| **Dynamic Client Registration (DCR)** | ✅ Yes | Register clients dynamically with OAuth providers |
-| **Device Flow** | ❌ No | Not needed—we use browser-based redirect/popup flow |
-
-:::tip Why PKCE?
-PKCE adds security for public clients (like browser apps) that can't securely store a client secret. The flow works as follows:
-
-1. **Client generates** a random `code_verifier` (kept secret)
-2. **Client sends** a SHA-256 hash of the verifier (`code_challenge`) in the authorization request
-3. **Authorization server stores** the challenge
-4. **During token exchange**, client sends the original `code_verifier`
-5. **Server verifies** that `SHA256(code_verifier) == code_challenge`
-
-This prevents attackers who intercept the authorization code from exchanging it for tokens, since they don't have the original `code_verifier`.
-:::
-
-:::tip Dynamic Client Registration (DCR)
-DCR ([RFC 7591](https://oauth.net/2/dynamic-client-registration/)) allows clients to register themselves dynamically without manual setup. Agent Runtimes implements DCR for:
-- Agents that connect to arbitrary OAuth providers discovered at runtime
-- MCP servers that require OAuth authentication
-- Multi-tenant SaaS where each tenant brings their own OAuth provider
-
-**When to use DCR**:
-- Agent discovers an MCP server with an unknown OAuth provider
-- You want zero-configuration OAuth setup
-- The OAuth provider supports DCR (check for `registration_endpoint` in server metadata)
-
-**When NOT to use DCR**:
-- OAuth provider doesn't support DCR (e.g., GitHub, Google)
-- You need specific branding/settings only available via manual registration
-- Enterprise OAuth with restricted registration
-
-See [Dynamic Client Registration](#dynamic-client-registration-dcr) section below for usage examples.
-:::
-
-#### GitHub OAuth Settings FAQ
-
-**Do I need to enable "Enable Device Flow"?**
-
-No. Device Flow is for devices that can't easily display a web browser (smart TVs, CLI tools, IoT devices). Agent Runtimes uses the standard **Authorization Code flow** with browser redirects or popups, so Device Flow is not needed.
-
-**What about "Require PKCE for OAuth Apps"?**
-
-If GitHub offers this option, you can enable it for extra security. Agent Runtimes always uses PKCE regardless of whether GitHub requires it.
-
-#### Step 1: Create the OAuth App
-
-1. Go to [GitHub Developer Settings](https://github.com/settings/developers)
-2. Click **OAuth Apps** in the left sidebar
-3. Click **New OAuth App** (or **Register a new application**)
-
-#### Step 2: Configure the Application
-
-Fill in the registration form:
-
-| Field | Value | Notes |
-|-------|-------|-------|
-| **Application name** | `My Agent App` | User-visible name shown during authorization |
-| **Homepage URL** | `http://localhost:3000` | Your application's homepage (can be localhost for dev) |
-| **Application description** | Optional | Helps users understand what your app does |
-| **Authorization callback URL** | `http://localhost:3000/index-examples.html` | **Critical**: Must match the exact page URL |
-| **Enable Device Flow** | ❌ Unchecked | Not needed for browser-based flows |
-
-:::warning Callback URL Must Match Your Page URL
-The callback URL redirects back to **the same page** that initiated the OAuth flow. This means:
-
-**For the Agent Runtimes examples:**
-```
-http://localhost:3000/index-examples.html
-```
-
-**For a custom app at the root:**
-```
-http://localhost:3000/
-```
-
-**For production:**
-```
-https://myapp.example.com/your-app-page.html
-```
-
-The identity module automatically uses `window.location.pathname` as the callback URL, so OAuth returns to the same page. The code then extracts the `code` and `state` params from the URL and completes the flow.
-:::
-
-#### Step 3: Get Your Credentials
-
-After creating the app:
-
-1. Copy the **Client ID** - this is public and safe to include in frontend code
-2. *(Optional)* Click **Generate a new client secret** - only needed for server-side flows
-
-:::warning Client Secret Required for GitHub
-GitHub OAuth Apps **require a client secret** for the token exchange, even when using PKCE. You must generate and configure the client secret (see Step 4 below).
-:::
-
-#### Step 4: Configure Agent Runtimes
-
-**Environment Variables**:
-
-Create a `.env` file in your project root:
+**Environment Variables:**
 
 ```bash
 # .env (for Vite-based projects)
@@ -452,57 +325,9 @@ The OAuth flow requires the client ID in two places:
 GitHub doesn't support CORS on their token endpoint, so the backend proxies the token exchange.
 :::
 
-:::warning Client Secret IS Required for GitHub
-**GitHub OAuth Apps require a client secret** for the token exchange, even when using PKCE.
-
-While OAuth 2.1 with PKCE is designed for public clients, GitHub's token endpoint requires the client secret. The secret is stored securely on the backend (never in the browser).
-
-| Provider | Client Secret | Notes |
-|----------|---------------|-------|
-| **GitHub** | ✅ Required | Token exchange requires secret |
-| **Google** | ✅ Required | Same as GitHub |
-| **Okta/Auth0** | ❌ Optional | Pure PKCE flows supported |
-
-**You must set both `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET`** in your `.env` file for the backend.
-:::
-
-:::tip Demo Mode
-The Agent Runtimes examples use a fallback `demo-client-id` when no environment variable is set. This allows the UI to render, but the OAuth flow won't work until you provide a real GitHub OAuth App client ID.
-
-To see the identity UI in action:
-1. The "Connected Accounts" section will appear in the agent configuration form
-2. Clicking "Connect GitHub" will attempt the OAuth flow
-3. Without a real client ID, GitHub will show an error
-:::
-
-**Using with AgentSpaceFormExample**:
-
-The example component reads the client ID from environment:
+**Frontend (React):**
 
 ```tsx
-// In AgentSpaceFormExample.tsx
-const GITHUB_CLIENT_ID = import.meta.env.VITE_GITHUB_CLIENT_ID || 'demo-client-id';
-
-// Later in the component:
-const identityProviders = React.useMemo(() => {
-  const providers = {};
-  if (githubClientId) {
-    providers.github = {
-      clientId: githubClientId,
-      scopes: ['read:user', 'user:email', 'repo'],
-    };
-  }
-  return providers;
-}, [githubClientId]);
-```
-
-**Frontend (React) - Custom Implementation**:
-
-```tsx
-// Set via environment variable (safe for frontend - public value)
-// In .env or .env.local:
-// VITE_GITHUB_CLIENT_ID=your_client_id_here
-
 import { IdentityConnect } from '@datalayer/agent-runtimes';
 
 function App() {
@@ -519,59 +344,19 @@ function App() {
 }
 ```
 
-**Backend (Python)** - Only needed for server-side token exchange:
-
-:::caution GitHub Requires Client Secret
-GitHub's token endpoint requires a client secret even with PKCE. The Agent Runtimes backend performs the token exchange (to avoid CORS issues), so you **must configure the client secret**.
-
-```bash
-# Required in .env
-GITHUB_CLIENT_ID=your_client_id
-GITHUB_CLIENT_SECRET=your_client_secret
-```
-:::
-
-```bash
-# In your .env file (never commit this!)
-# Required for GitHub OAuth token exchange
-GITHUB_CLIENT_ID=your_client_id
-GITHUB_CLIENT_SECRET=your_client_secret  # Required for GitHub!
-```
+**Backend (Python):**
 
 ```python
-# In your agent server configuration
 import os
 
 OAUTH_PROVIDERS = {
     "github": {
         "client_id": os.getenv("GITHUB_CLIENT_ID"),
-        "client_secret": os.getenv("GITHUB_CLIENT_SECRET"),  # Required for GitHub
+        "client_secret": os.getenv("GITHUB_CLIENT_SECRET"),
         "authorization_endpoint": "https://github.com/login/oauth/authorize",
         "token_endpoint": "https://github.com/login/oauth/access_token",
         "userinfo_endpoint": "https://api.github.com/user",
     }
-}
-```
-
-#### Step 5: Set Up the Callback Route
-
-Mount the `OAuthCallback` component at your callback URL:
-
-```tsx
-// Using React Router
-import { OAuthCallback } from '@datalayer/agent-runtimes';
-import { Routes, Route } from 'react-router-dom';
-
-function App() {
-  return (
-    <Routes>
-      <Route path="/" element={<MainApp />} />
-      <Route 
-        path="/oauth/callback" 
-        element={<OAuthCallback redirectUrl="/" />} 
-      />
-    </Routes>
-  );
 }
 ```
 
@@ -591,40 +376,19 @@ function App() {
 
 **For repository access**: Add `repo` (private) or `public_repo` (public only)
 
-#### Testing Your Setup
-
-1. Start your development server:
-   ```bash
-   npm run dev
-   ```
-
-2. Click "Connect GitHub" in your app
-
-3. You should be redirected to GitHub's authorization page
-
-4. After authorizing, you'll be redirected back to your callback URL
-
-5. The `OAuthCallback` component handles the token exchange automatically
-
 #### Troubleshooting
 
-**"The redirect_uri is not valid"**
-- Ensure your callback URL in GitHub settings exactly matches your app's URL
-- Check for trailing slashes - `http://localhost:3000/oauth/callback` ≠ `http://localhost:3000/oauth/callback/`
-- Verify the protocol matches (http vs https)
+| Error | Solution |
+|-------|----------|
+| "The redirect_uri is not valid" | Ensure callback URL in GitHub settings exactly matches your app's URL (check trailing slashes, protocol) |
+| "Bad credentials" on API calls | Token may have expired—implement token refresh; or scopes may be insufficient |
+| CORS errors | GitHub's token endpoint doesn't support CORS—use the backend `/api/v1/identity/oauth/token` endpoint |
 
-**"Bad credentials" on API calls**
-- Token may have expired - implement token refresh
-- Scopes may be insufficient - request additional scopes
+---
 
-**CORS errors**
-- GitHub's token endpoint doesn't support CORS
-- Token exchange must happen on your backend server
-- Agent Runtimes provides `/api/v1/identity/oauth/token` endpoint for this
+### Google
 
-### Google OAuth Setup
-
-For Google/Gmail identity, use Google Cloud Console:
+For Google/Gmail identity:
 
 1. Go to [Google Cloud Console](https://console.cloud.google.com/)
 2. Create a project or select an existing one
@@ -645,29 +409,77 @@ For Google/Gmail identity, use Google Cloud Console:
 />
 ```
 
-### Kaggle OAuth Setup
+---
 
-Kaggle uses OAuth 2.1 for MCP server authentication:
+## OAuth App Creation
 
-1. Go to [Kaggle Account Settings](https://www.kaggle.com/settings)
-2. Scroll to **API** section
-3. Create API credentials
-4. Configure your MCP server connection:
+This section provides detailed instructions for creating OAuth applications with providers that require manual registration.
 
-```json
-{
-  "mcpServers": {
-    "kaggle": {
-      "url": "https://www.kaggle.com/mcp",
-      "auth": {
-        "type": "oauth2",
-        "clientId": "your-kaggle-client-id",
-        "scopes": ["datasets:read", "notebooks:read"]
-      }
-    }
-  }
-}
+### GitHub OAuth App
+
+#### Step 1: Create the OAuth App
+
+1. Go to [GitHub Developer Settings](https://github.com/settings/developers)
+2. Click **OAuth Apps** in the left sidebar
+3. Click **New OAuth App** (or **Register a new application**)
+
+#### Step 2: Configure the Application
+
+Fill in the registration form:
+
+| Field | Value | Notes |
+|-------|-------|-------|
+| **Application name** | `My Agent App` | User-visible name shown during authorization |
+| **Homepage URL** | `http://localhost:3000` | Your application's homepage (can be localhost for dev) |
+| **Application description** | Optional | Helps users understand what your app does |
+| **Authorization callback URL** | `http://localhost:3000/index-examples.html` | **Critical**: Must match the exact page URL |
+| **Enable Device Flow** | ❌ Unchecked | Not needed for browser-based flows |
+
+:::warning Callback URL Must Match Your Page URL
+The callback URL redirects back to **the same page** that initiated the OAuth flow:
+
+| Environment | Callback URL |
+|-------------|--------------|
+| Agent Runtimes examples | `http://localhost:3000/index-examples.html` |
+| Custom app at root | `http://localhost:3000/` |
+| Production | `https://myapp.example.com/your-app-page.html` |
+
+The identity module automatically uses `window.location.pathname` as the callback URL.
+:::
+
+#### Step 3: Get Your Credentials
+
+After creating the app:
+
+1. Copy the **Client ID** - this is public and safe to include in frontend code
+2. Click **Generate a new client secret** - **required** for GitHub (even with PKCE)
+
+:::warning Client Secret Required for GitHub
+GitHub OAuth Apps **require a client secret** for the token exchange, even when using PKCE. Store it securely on the backend.
+:::
+
+#### Step 4: Configure Environment
+
+Create a `.env` file:
+
+```bash
+# Frontend (Vite)
+VITE_GITHUB_CLIENT_ID=your_github_client_id_here
+
+# Backend (Python)
+GITHUB_CLIENT_ID=your_github_client_id_here
+GITHUB_CLIENT_SECRET=your_github_client_secret_here
 ```
+
+#### GitHub Settings FAQ
+
+**Do I need to enable "Enable Device Flow"?**
+
+No. Device Flow is for devices that can't easily display a web browser (smart TVs, CLI tools, IoT devices). Agent Runtimes uses the standard **Authorization Code flow** with browser redirects or popups.
+
+**What about "Require PKCE for OAuth Apps"?**
+
+If GitHub offers this option, you can enable it for extra security. Agent Runtimes always uses PKCE regardless of whether GitHub requires it.
 
 ## Dynamic Client Registration (DCR)
 

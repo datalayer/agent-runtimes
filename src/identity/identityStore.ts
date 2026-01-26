@@ -297,6 +297,66 @@ export const useIdentityStore = create<IdentityStore>()(
             set({ pendingAuthorization: null });
           },
 
+          connectWithToken: async (
+            provider: string,
+            token: string,
+            options?: {
+              displayName?: string;
+              iconUrl?: string;
+              userInfo?: ProviderUserInfo;
+            },
+          ): Promise<Identity> => {
+            set({ isLoading: true, error: null });
+
+            try {
+              // Create token object (token-based auth doesn't expire)
+              const oauthToken: OAuthToken = {
+                accessToken: token,
+                tokenType: 'Bearer',
+                scopes: [], // Token-based auth doesn't have scopes
+              };
+
+              // Provider display config
+              const displayConfig = {
+                kaggle: {
+                  displayName: 'Kaggle',
+                  iconUrl: 'https://www.kaggle.com/static/images/favicon.ico',
+                },
+              }[provider] || { displayName: provider, iconUrl: undefined };
+
+              // Create identity
+              const identity: Identity = {
+                provider,
+                authType: 'token',
+                displayName: options?.displayName || displayConfig.displayName,
+                iconUrl: options?.iconUrl || displayConfig.iconUrl,
+                scopes: [],
+                isConnected: true,
+                connectedAt: Date.now(),
+                userInfo: options?.userInfo,
+                token: oauthToken,
+              };
+
+              // Update store
+              set(state => {
+                const newIdentities = new Map(state.identities);
+                newIdentities.set(provider, identity);
+                return {
+                  identities: newIdentities,
+                  isLoading: false,
+                  error: null,
+                };
+              });
+
+              return identity;
+            } catch (error) {
+              const err =
+                error instanceof Error ? error : new Error(String(error));
+              set({ isLoading: false, error: err });
+              throw err;
+            }
+          },
+
           disconnect: async (provider: string) => {
             const state = get();
             const identity = state.identities.get(provider);
@@ -312,7 +372,17 @@ export const useIdentityStore = create<IdentityStore>()(
               return;
             }
 
-            // Try to revoke token
+            // For token-based auth, just remove from store (no revocation)
+            if (identity.authType === 'token') {
+              set(state => {
+                const newIdentities = new Map(state.identities);
+                newIdentities.delete(provider);
+                return { identities: newIdentities };
+              });
+              return;
+            }
+
+            // Try to revoke token (OAuth only)
             if (config?.revocationUrl) {
               try {
                 const baseUrl = config.redirectUri

@@ -1,10 +1,10 @@
 ---
-title: Model Context Protocol
+title: MCP Servers
 ---
 
-# Model Context Protocol
+# MCP Servers
 
-Agent Runtimes provides comprehensive support for the **Model Context Protocol (MCP)**, enabling agents to access external tools and data sources through a standardized interface.
+Agent Runtimes provides comprehensive support for **MCP Servers**, enabling agents to access external tools and data sources through a standardized interface.
 
 ## Overview
 
@@ -122,24 +122,7 @@ The [Kaggle MCP Server](https://www.kaggle.com/docs/mcp) is a **remote HTTP serv
 
 #### Configuration Options
 
-**Option 1: OAuth Authentication (recommended)**
-
-```json
-{
-  "mcpServers": {
-    "kaggle": {
-      "command": "npx",
-      "args": ["-y", "mcp-remote", "https://www.kaggle.com/mcp"]
-    }
-  }
-}
-```
-
-OAuth triggers a browser-based login on first use. For full OAuth setup with Agent Runtimes, see the [Kaggle OAuth Setup](/docs/identity#kaggle-oauth-setup) in the Identity documentation.
-
-**Option 2: Token Authentication**
-
-For non-interactive or automated use:
+**Option 1: Token Authentication (recommended for Agent Runtimes)**
 
 ```json
 {
@@ -159,9 +142,27 @@ For non-interactive or automated use:
 ```
 
 To get your token:
-1. Go to [Kaggle Settings](https://www.kaggle.com/settings)
-2. Click **Generate New Token** > **Copy** (token starts with `KGAT`)
-3. Set the environment variable: `export KAGGLE_TOKEN=KGAT...`
+1. Go to **[kaggle.com/settings/account](https://www.kaggle.com/settings/account)**
+2. Scroll to **API** section → Click **Create New Token**
+3. Open the downloaded `kaggle.json` and copy the `key` value
+4. Set the environment variable: `export KAGGLE_TOKEN=your-key-here`
+
+For Agent Runtimes identity integration, see the [Kaggle section](../identity#kaggle) in the Identity documentation.
+
+**Option 2: Browser OAuth (auto-login)**
+
+```json
+{
+  "mcpServers": {
+    "kaggle": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "https://www.kaggle.com/mcp"]
+    }
+  }
+}
+```
+
+This triggers a browser-based login on first tool call. Tokens are cached automatically.
 
 #### Available Tools
 

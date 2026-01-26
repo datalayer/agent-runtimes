@@ -314,10 +314,14 @@ export function IdentityCard({
         >
           <display.icon size={16} />
         </Box>
-        <Box sx={{ flex: 1 }}>
+        <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', gap: 2 }}>
           <Text sx={{ fontWeight: 'semibold', fontSize: 1 }}>
             {display.name}
           </Text>
+          {/* Show auth type badge */}
+          <Label size="small" variant="secondary">
+            {identity.authType === 'token' ? 'API Key' : 'OAuth'}
+          </Label>
         </Box>
         {tokenStatus.isExpired ? (
           <Label variant="danger" size="small">
@@ -528,7 +532,7 @@ export function AgentIdentity({
   title = 'Connected Accounts',
   showHeader = true,
   showDescription = true,
-  description = 'OAuth identities connected to this agent. Agents can use these to access external services on your behalf.',
+  description = 'Connected identities for this agent. Agents can use these to access external services on your behalf.',
   showExpirationDetails = true,
   allowReconnect = true,
   onConnect,
@@ -537,12 +541,16 @@ export function AgentIdentity({
 }: AgentIdentityProps) {
   const { identities, error } = useIdentity();
 
-  // Filter to only show configured providers or connected identities
+  // Filter to show configured providers AND any token-based connected identities
+  // Token-based identities (like Kaggle) should always be shown if connected
   const displayIdentities = useMemo(() => {
     if (providers) {
       const providerKeys = Object.keys(providers) as OAuthProvider[];
-      return identities.filter(id =>
-        providerKeys.includes(id.provider as OAuthProvider),
+      // Include configured providers AND any token-based connected identities
+      return identities.filter(
+        id =>
+          providerKeys.includes(id.provider as OAuthProvider) ||
+          (id.authType === 'token' && id.isConnected),
       );
     }
     return identities;

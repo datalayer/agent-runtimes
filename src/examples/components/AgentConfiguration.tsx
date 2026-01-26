@@ -3,7 +3,7 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import {
   Text,
   TextInput,
@@ -14,8 +14,16 @@ import {
   Spinner,
   Flash,
   Label,
+  IconButton,
 } from '@primer/react';
-import { ToolsIcon, KeyIcon, SyncIcon } from '@primer/octicons-react';
+import {
+  ToolsIcon,
+  KeyIcon,
+  SyncIcon,
+  PlusIcon,
+  XIcon,
+  LinkExternalIcon,
+} from '@primer/octicons-react';
 import { useQuery } from '@tanstack/react-query';
 import { Box } from '@datalayer/primer-addons';
 import type { Agent } from '../stores/examplesStore';
@@ -32,7 +40,7 @@ import { IdentityCard } from '../../components/chat';
  * Props for IdentityConnectWithStatus component
  */
 interface IdentityConnectWithStatusProps {
-  identityProviders: {
+  identityProviders?: {
     [K in OAuthProvider]?: {
       clientId: string;
       scopes?: string[];
@@ -45,17 +53,39 @@ interface IdentityConnectWithStatusProps {
 }
 
 /**
+ * Token-based identity providers that can be connected via API key
+ */
+const TOKEN_PROVIDERS = [
+  {
+    provider: 'kaggle' as const,
+    name: 'Kaggle',
+    description: 'Access Kaggle datasets and notebooks',
+    iconUrl: 'https://www.kaggle.com/static/images/favicon.ico',
+    color: '#20beff',
+    helpUrl: 'https://www.kaggle.com/settings/account',
+    helpText: 'Get your API key from the Account page',
+    placeholder: 'Enter your Kaggle API key',
+  },
+];
+
+/**
  * Combined component that shows:
  * - Connected identities with token status (from AgentIdentity)
  * - Connect buttons only for providers NOT yet connected (from IdentityConnect)
+ * - Token input for token-based providers (Kaggle, etc.)
  */
 function IdentityConnectWithStatus({
-  identityProviders,
+  identityProviders = {},
   disabled = false,
   onConnect,
   onDisconnect,
 }: IdentityConnectWithStatusProps) {
-  const { identities } = useIdentity();
+  const { identities, connectWithToken, disconnect } = useIdentity();
+  const [expandedTokenProvider, setExpandedTokenProvider] = useState<
+    string | null
+  >(null);
+  const [tokenInput, setTokenInput] = useState('');
+  const [isConnecting, setIsConnecting] = useState(false);
 
   // Get list of connected provider names
   const connectedProviders = useMemo(
@@ -63,15 +93,18 @@ function IdentityConnectWithStatus({
     [identities],
   );
 
-  // Get providers that have config and are already connected
-  const connectedWithConfig = useMemo(() => {
+  // Get providers that have config and are already connected (OAuth providers)
+  // Plus any token-based providers that are connected (no config needed)
+  const connectedIdentities = useMemo(() => {
     const providerKeys = Object.keys(identityProviders) as OAuthProvider[];
-    return identities.filter(id =>
-      providerKeys.includes(id.provider as OAuthProvider),
+    return identities.filter(
+      id =>
+        providerKeys.includes(id.provider as OAuthProvider) ||
+        (id.authType === 'token' && id.isConnected),
     );
   }, [identities, identityProviders]);
 
-  // Get providers that are NOT yet connected
+  // Get OAuth providers that are NOT yet connected
   const unconnectedProviders = useMemo(() => {
     const providerKeys = Object.keys(identityProviders) as OAuthProvider[];
     const unconnected: typeof identityProviders = {};
@@ -83,30 +116,84 @@ function IdentityConnectWithStatus({
     return unconnected;
   }, [identityProviders, connectedProviders]);
 
+  // Get token providers that are NOT yet connected
+  const unconnectedTokenProviders = useMemo(() => {
+    return TOKEN_PROVIDERS.filter(tp => !connectedProviders.has(tp.provider));
+  }, [connectedProviders]);
+
   const hasUnconnected = Object.keys(unconnectedProviders).length > 0;
+  const hasUnconnectedToken = unconnectedTokenProviders.length > 0;
+
+  // Check if there's anything to show
+  const hasContent =
+    connectedIdentities.length > 0 || hasUnconnected || hasUnconnectedToken;
+
+  // Handle token connection
+  const handleTokenConnect = useCallback(
+    async (provider: string, displayName: string, iconUrl?: string) => {
+      if (!tokenInput.trim()) return;
+
+      setIsConnecting(true);
+      try {
+        const identity = await connectWithToken(provider, tokenInput.trim(), {
+          displayName,
+          iconUrl,
+        });
+        onConnect?.(identity);
+        setTokenInput('');
+        setExpandedTokenProvider(null);
+      } catch (err) {
+        console.error(`Failed to connect ${provider}:`, err);
+      } finally {
+        setIsConnecting(false);
+      }
+    },
+    [tokenInput, connectWithToken, onConnect],
+  );
+
+  // Handle token disconnect
+  const handleTokenDisconnect = useCallback(
+    async (provider: string) => {
+      try {
+        await disconnect(provider);
+        onDisconnect?.(provider as OAuthProvider);
+      } catch (err) {
+        console.error(`Failed to disconnect ${provider}:`, err);
+      }
+    },
+    [disconnect, onDisconnect],
+  );
+
+  if (!hasContent) {
+    return null;
+  }
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-      {/* Show connected identities with token status */}
-      {connectedWithConfig.length > 0 && (
+      {/* Show connected identities (both OAuth and token-based) */}
+      {connectedIdentities.length > 0 && (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {connectedWithConfig.map(identity => (
+          {connectedIdentities.map(identity => (
             <IdentityCard
               key={identity.provider}
               identity={identity}
               providerConfig={
-                identityProviders[identity.provider as OAuthProvider]
+                identityProviders?.[identity.provider as OAuthProvider]
               }
               showExpirationDetails={true}
-              allowReconnect={!disabled}
+              allowReconnect={!disabled && identity.authType !== 'token'}
               onConnect={onConnect}
-              onDisconnect={onDisconnect}
+              onDisconnect={
+                identity.authType === 'token'
+                  ? () => handleTokenDisconnect(identity.provider)
+                  : onDisconnect
+              }
             />
           ))}
         </Box>
       )}
 
-      {/* Show connect buttons for providers NOT yet connected */}
+      {/* Show connect buttons for OAuth providers NOT yet connected */}
       {hasUnconnected && (
         <IdentityConnect
           providers={unconnectedProviders}
@@ -118,6 +205,133 @@ function IdentityConnectWithStatus({
           onConnect={onConnect}
           onDisconnect={onDisconnect}
         />
+      )}
+
+      {/* Show token-based provider connect options */}
+      {hasUnconnectedToken && !disabled && (
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          {unconnectedTokenProviders.map(tp => (
+            <Box
+              key={tp.provider}
+              sx={{
+                border: '1px solid',
+                borderColor:
+                  expandedTokenProvider === tp.provider
+                    ? tp.color
+                    : 'border.default',
+                borderRadius: 2,
+                overflow: 'hidden',
+              }}
+            >
+              {/* Provider header - clickable to expand */}
+              <Box
+                as="button"
+                onClick={() => {
+                  setExpandedTokenProvider(
+                    expandedTokenProvider === tp.provider ? null : tp.provider,
+                  );
+                  setTokenInput('');
+                }}
+                sx={{
+                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 2,
+                  padding: 2,
+                  backgroundColor: 'canvas.subtle',
+                  border: 'none',
+                  cursor: 'pointer',
+                  '&:hover': {
+                    backgroundColor: 'canvas.inset',
+                  },
+                }}
+              >
+                {tp.iconUrl ? (
+                  <img
+                    src={tp.iconUrl}
+                    alt={tp.name}
+                    style={{ width: 20, height: 20 }}
+                  />
+                ) : (
+                  <KeyIcon size={20} />
+                )}
+                <Box sx={{ flex: 1, textAlign: 'left' }}>
+                  <Text sx={{ fontWeight: 'semibold', display: 'block' }}>
+                    Connect {tp.name}
+                  </Text>
+                  <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
+                    {tp.description}
+                  </Text>
+                </Box>
+                <PlusIcon size={16} />
+              </Box>
+
+              {/* Expanded token input */}
+              {expandedTokenProvider === tp.provider && (
+                <Box sx={{ padding: 3, backgroundColor: 'canvas.default' }}>
+                  <Box
+                    sx={{
+                      mb: 2,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1,
+                    }}
+                  >
+                    <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
+                      {tp.helpText}
+                    </Text>
+                    <Button
+                      as="a"
+                      href={tp.helpUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      variant="invisible"
+                      size="small"
+                      leadingVisual={LinkExternalIcon}
+                      sx={{ fontSize: 0 }}
+                    >
+                      Get API Key
+                    </Button>
+                  </Box>
+                  <Box sx={{ display: 'flex', gap: 2 }}>
+                    <TextInput
+                      type="password"
+                      placeholder={tp.placeholder}
+                      value={tokenInput}
+                      onChange={e => setTokenInput(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter' && tokenInput.trim()) {
+                          handleTokenConnect(tp.provider, tp.name, tp.iconUrl);
+                        }
+                      }}
+                      sx={{ flex: 1 }}
+                      disabled={isConnecting}
+                      autoFocus
+                    />
+                    <Button
+                      onClick={() =>
+                        handleTokenConnect(tp.provider, tp.name, tp.iconUrl)
+                      }
+                      disabled={!tokenInput.trim() || isConnecting}
+                      variant="primary"
+                    >
+                      {isConnecting ? <Spinner size="small" /> : 'Connect'}
+                    </Button>
+                    <IconButton
+                      icon={XIcon}
+                      aria-label="Cancel"
+                      onClick={() => {
+                        setExpandedTokenProvider(null);
+                        setTokenInput('');
+                      }}
+                      variant="invisible"
+                    />
+                  </Box>
+                </Box>
+              )}
+            </Box>
+          ))}
+        </Box>
       )}
     </Box>
   );
@@ -578,47 +792,43 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
         </FormControl>
       </Box>
 
-      {/* Identity Providers Section */}
-      {identityProviders && Object.keys(identityProviders).length > 0 && (
+      {/* Identity Providers Section - Always show since token-based providers (Kaggle) are always available */}
+      <Box
+        sx={{
+          marginBottom: 3,
+          padding: 3,
+          border: '1px solid',
+          borderColor: 'border.default',
+          borderRadius: 2,
+          backgroundColor: 'canvas.default',
+        }}
+      >
         <Box
           sx={{
-            marginBottom: 3,
-            padding: 3,
-            border: '1px solid',
-            borderColor: 'border.default',
-            borderRadius: 2,
-            backgroundColor: 'canvas.default',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 2,
+            marginBottom: 2,
           }}
         >
-          <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 2,
-              marginBottom: 2,
-            }}
-          >
-            <KeyIcon size={16} />
-            <Text sx={{ fontSize: 1, fontWeight: 'bold' }}>
-              Connected Accounts
-            </Text>
-          </Box>
-          <Text
-            sx={{ fontSize: 0, color: 'fg.muted', display: 'block', mb: 3 }}
-          >
-            Connect your accounts to give the agent access to external services
-            like GitHub repositories, Google services, or Kaggle datasets.
+          <KeyIcon size={16} />
+          <Text sx={{ fontSize: 1, fontWeight: 'bold' }}>
+            Connected Accounts
           </Text>
-
-          {/* Show connected identities with token status and connect buttons for unconnected providers */}
-          <IdentityConnectWithStatus
-            identityProviders={identityProviders}
-            disabled={selectedAgentId !== 'new-agent'}
-            onConnect={onIdentityConnect}
-            onDisconnect={onIdentityDisconnect}
-          />
         </Box>
-      )}
+        <Text sx={{ fontSize: 0, color: 'fg.muted', display: 'block', mb: 3 }}>
+          Connect your accounts to give the agent access to external services
+          like GitHub repositories, Google services, or Kaggle datasets.
+        </Text>
+
+        {/* Show connected identities with token status and connect buttons for unconnected providers */}
+        <IdentityConnectWithStatus
+          identityProviders={identityProviders}
+          disabled={selectedAgentId !== 'new-agent'}
+          onConnect={onIdentityConnect}
+          onDisconnect={onIdentityDisconnect}
+        />
+      </Box>
 
       {/* Agent Capabilities Section */}
       <Box

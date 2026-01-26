@@ -54,9 +54,20 @@ export type {
   IdentityState,
   IdentityActions,
   IdentityStore,
+  AuthType,
+  TokenProviderConfig,
+  OAuthIdentityProviderConfig,
+  TokenIdentityProviderConfig,
+  IdentityProviderConfig,
+  IdentityProvidersConfig,
 } from './types';
 
-export { GITHUB_PROVIDER, GOOGLE_PROVIDER, KAGGLE_PROVIDER } from './types';
+export {
+  GITHUB_PROVIDER,
+  GOOGLE_PROVIDER,
+  KAGGLE_PROVIDER,
+  KAGGLE_TOKEN_PROVIDER,
+} from './types';
 
 // PKCE utilities
 export {

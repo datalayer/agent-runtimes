@@ -4,7 +4,7 @@
  */
 
 /**
- * Identity types for OAuth 2.1 user-delegated access.
+ * Identity types for OAuth 2.1 user-delegated access and token-based authentication.
  *
  * @module identity/types
  */
@@ -20,6 +20,11 @@ export type OAuthProvider =
   | 'slack'
   | 'notion'
   | 'custom';
+
+/**
+ * Authentication type for a provider
+ */
+export type AuthType = 'oauth' | 'token';
 
 /**
  * OAuth token with metadata
@@ -40,11 +45,13 @@ export interface OAuthToken {
 }
 
 /**
- * Identity represents a connected OAuth provider
+ * Identity represents a connected OAuth or token-based provider
  */
 export interface Identity {
   /** Provider identifier */
   provider: OAuthProvider | string;
+  /** Authentication type */
+  authType?: AuthType;
   /** Display name for UI */
   displayName: string;
   /** Icon URL for UI */
@@ -182,6 +189,16 @@ export interface IdentityActions {
   completeAuthorization: (callback: AuthorizationCallback) => Promise<Identity>;
   /** Cancel pending authorization */
   cancelAuthorization: () => void;
+  /** Connect with a token directly (for token-based providers like Kaggle) */
+  connectWithToken: (
+    provider: string,
+    token: string,
+    options?: {
+      displayName?: string;
+      iconUrl?: string;
+      userInfo?: ProviderUserInfo;
+    },
+  ) => Promise<Identity>;
   /** Disconnect a provider (revoke tokens) */
   disconnect: (provider: string) => Promise<void>;
   /** Refresh token for a provider */
@@ -250,7 +267,9 @@ export const GOOGLE_PROVIDER: Partial<OAuthProviderConfig> = {
 
 /**
  * Kaggle OAuth provider configuration.
- * Standard OAuth 2.1 implementation for Kaggle MCP access.
+ * Note: Kaggle doesn't offer public OAuth app registration,
+ * so this is only used when Kaggle provides OAuth internally (e.g., via MCP).
+ * For Agent Runtimes identity, use token-based authentication instead.
  */
 export const KAGGLE_PROVIDER: Partial<OAuthProviderConfig> = {
   provider: 'kaggle',
@@ -260,4 +279,103 @@ export const KAGGLE_PROVIDER: Partial<OAuthProviderConfig> = {
   tokenUrl: 'https://www.kaggle.com/oauth/token',
   userInfoUrl: 'https://www.kaggle.com/api/v1/me',
   defaultScopes: ['datasets:read', 'notebooks:read'],
+};
+
+// ============================================================================
+// Token-based Provider Configuration
+// ============================================================================
+
+/**
+ * Token-based provider configuration.
+ * For providers that don't support public OAuth app registration (like Kaggle).
+ */
+export interface TokenProviderConfig {
+  /** Provider identifier */
+  provider: OAuthProvider | string;
+  /** Display name */
+  displayName: string;
+  /** Icon URL */
+  iconUrl?: string;
+  /** Profile URL template (use {username} placeholder) */
+  profileUrlTemplate?: string;
+  /** User info endpoint (called with Bearer token) */
+  userInfoUrl?: string;
+  /** Description for UI */
+  description?: string;
+}
+
+/**
+ * Kaggle token-based provider configuration.
+ * Generate token at: https://www.kaggle.com/settings/account (API section)
+ */
+export const KAGGLE_TOKEN_PROVIDER: TokenProviderConfig = {
+  provider: 'kaggle',
+  displayName: 'Kaggle',
+  iconUrl: 'https://www.kaggle.com/static/images/favicon.ico',
+  profileUrlTemplate: 'https://www.kaggle.com/{username}',
+  userInfoUrl: 'https://www.kaggle.com/api/v1/me',
+  description: 'Access Kaggle datasets, notebooks, and competitions',
+};
+
+// ============================================================================
+// Unified Identity Providers Configuration
+// ============================================================================
+
+/**
+ * OAuth provider configuration for identity providers.
+ */
+export interface OAuthIdentityProviderConfig {
+  /** Authentication type */
+  type: 'oauth';
+  /** OAuth client ID */
+  clientId: string;
+  /** OAuth scopes to request */
+  scopes?: string[];
+  /** Additional OAuth config */
+  config?: Partial<OAuthProviderConfig>;
+}
+
+/**
+ * Token-based provider configuration for identity providers.
+ */
+export interface TokenIdentityProviderConfig {
+  /** Authentication type */
+  type: 'token';
+  /** API token or key */
+  token: string;
+  /** Display name override */
+  displayName?: string;
+  /** Icon URL override */
+  iconUrl?: string;
+}
+
+/**
+ * Unified identity provider configuration.
+ * Supports both OAuth and token-based authentication.
+ */
+export type IdentityProviderConfig =
+  | OAuthIdentityProviderConfig
+  | TokenIdentityProviderConfig;
+
+/**
+ * Configuration for multiple identity providers.
+ * Keys are provider names (e.g., 'github', 'kaggle').
+ *
+ * @example
+ * ```typescript
+ * const providers: IdentityProvidersConfig = {
+ *   github: {
+ *     type: 'oauth',
+ *     clientId: 'your-github-client-id',
+ *     scopes: ['read:user', 'repo'],
+ *   },
+ *   kaggle: {
+ *     type: 'token',
+ *     token: 'your-kaggle-api-key',
+ *   },
+ * };
+ * ```
+ */
+export type IdentityProvidersConfig = {
+  [provider: string]: IdentityProviderConfig;
 };

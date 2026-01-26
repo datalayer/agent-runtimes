@@ -79,6 +79,12 @@ export interface UseIdentityReturn {
   connect: (provider: string, scopes?: string[]) => Promise<void>;
   /** Open OAuth popup for a provider */
   connectWithPopup: (provider: string, scopes?: string[]) => Promise<Identity>;
+  /** Connect with a token directly (for token-based providers like Kaggle) */
+  connectWithToken: (
+    provider: string,
+    token: string,
+    options?: { displayName?: string; iconUrl?: string },
+  ) => Promise<Identity>;
   /** Disconnect a provider */
   disconnect: (provider: string) => Promise<void>;
   /** Complete authorization with callback params */
@@ -396,6 +402,19 @@ export function useIdentity(
     ],
   );
 
+  // Connect with token (for token-based providers like Kaggle)
+  const connectWithTokenAction = useIdentityStore(s => s.connectWithToken);
+  const connectWithToken = useCallback(
+    async (
+      provider: string,
+      token: string,
+      options?: { displayName?: string; iconUrl?: string },
+    ): Promise<Identity> => {
+      return connectWithTokenAction(provider, token, options);
+    },
+    [connectWithTokenAction],
+  );
+
   // Disconnect
   const disconnect = useCallback(
     async (provider: string) => {
@@ -466,6 +485,7 @@ export function useIdentity(
       // Actions
       connect,
       connectWithPopup,
+      connectWithToken,
       disconnect,
       completeAuthorization,
       cancelAuthorization,
@@ -483,6 +503,7 @@ export function useIdentity(
       pendingAuthorization,
       connect,
       connectWithPopup,
+      connectWithToken,
       disconnect,
       completeAuthorization,
       cancelAuthorization,
