@@ -30,7 +30,7 @@ import {
   SyncIcon,
   KeyIcon,
 } from '@primer/octicons-react';
-import { useIdentity } from '../../../identity';
+import { useIdentity, IdentityButton } from '../../../identity';
 import type {
   OAuthProvider,
   OAuthProviderConfig,
@@ -526,6 +526,27 @@ export function AgentIdentity({
     return identities;
   }, [identities, providers]);
 
+  // Get list of connected provider names
+  const connectedProviderNames = useMemo(
+    () => new Set(identities.map(id => id.provider)),
+    [identities],
+  );
+
+  // Get providers that are NOT yet connected (to show connect buttons)
+  const unconnectedProviders = useMemo(() => {
+    if (!providers) return {};
+    const providerKeys = Object.keys(providers) as OAuthProvider[];
+    const unconnected: typeof providers = {};
+    for (const provider of providerKeys) {
+      if (!connectedProviderNames.has(provider)) {
+        unconnected[provider] = providers[provider];
+      }
+    }
+    return unconnected;
+  }, [providers, connectedProviderNames]);
+
+  const hasUnconnected = Object.keys(unconnectedProviders).length > 0;
+
   const handleError = useCallback(
     (provider: OAuthProvider) => (err: Error) => {
       onError?.(provider, err);
@@ -599,7 +620,7 @@ export function AgentIdentity({
               />
             ))}
           </Box>
-        ) : (
+        ) : !hasUnconnected ? (
           <Box
             sx={{
               display: 'flex',
@@ -610,6 +631,45 @@ export function AgentIdentity({
           >
             <LinkIcon size={16} />
             <Text sx={{ fontSize: 1 }}>No connected accounts</Text>
+          </Box>
+        ) : null}
+
+        {/* Show connect buttons for unconnected providers */}
+        {hasUnconnected && (
+          <Box sx={{ mt: displayIdentities.length > 0 ? 3 : 0 }}>
+            {displayIdentities.length > 0 && (
+              <Text
+                sx={{
+                  fontSize: 0,
+                  color: 'fg.muted',
+                  display: 'block',
+                  mb: 2,
+                }}
+              >
+                Connect additional accounts:
+              </Text>
+            )}
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {(Object.keys(unconnectedProviders) as OAuthProvider[]).map(
+                provider => {
+                  const config = unconnectedProviders[provider]!;
+                  return (
+                    <IdentityButton
+                      key={provider}
+                      provider={provider}
+                      clientId={config.clientId}
+                      scopes={config.scopes}
+                      providerConfig={config.config}
+                      size="medium"
+                      variant="full"
+                      onConnect={onConnect}
+                      onDisconnect={onDisconnect}
+                      onError={handleError(provider)}
+                    />
+                  );
+                },
+              )}
+            </Box>
           </Box>
         )}
       </Box>
