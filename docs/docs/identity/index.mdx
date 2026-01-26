@@ -191,13 +191,80 @@ For the Agent Runtimes UI identity features, use the **API Token** method descri
 - You can revoke and regenerate tokens anytime from the settings page
 :::
 
-#### Step 2: Configure Environment
+#### Step 2: Connect via the UI
 
-Add the token to your environment:
+The Agent Runtimes UI provides a built-in flow for connecting Kaggle:
+
+1. **Open the Agent Configuration** panel
+2. **Find the "Connected Accounts" section** — This section always appears and shows available identity providers
+3. **Click "Connect Kaggle"** — The card expands to show a token input form
+4. **Click "Get API Key"** — Opens [kaggle.com/settings/account](https://www.kaggle.com/settings/account) in a new tab
+5. **Paste your API key** from `kaggle.json` into the input field
+6. **Press Enter or click "Connect"** — The token is securely stored in your browser's localStorage
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  Connected Accounts                                     │
+├─────────────────────────────────────────────────────────┤
+│  ┌───────────────────────────────────────────────────┐  │
+│  │ 🔑 Connect Kaggle                              [+] │  │
+│  │    Access Kaggle datasets and notebooks           │  │
+│  └───────────────────────────────────────────────────┘  │
+│                          ↓ Click to expand              │
+│  ┌───────────────────────────────────────────────────┐  │
+│  │ Get API Key: Get your API key from Account page   │  │
+│  │ ┌─────────────────────────┐ ┌─────────┐ ┌───┐    │  │
+│  │ │ Enter your Kaggle API…  │ │ Connect │ │ ✕ │    │  │
+│  │ └─────────────────────────┘ └─────────┘ └───┘    │  │
+│  └───────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────┘
+```
+
+After connecting, the card shows:
+- ✅ **Connected** status badge
+- **API Key** label (to distinguish from OAuth connections)
+- **Disconnect** option to remove the token
+
+**Token Persistence:** The token is stored in `localStorage` under the key `datalayer-agent-identities` and persists across page reloads. When you reload the page, your Kaggle connection is automatically restored.
+
+#### Step 3: Token Flow to Backend
+
+When you send a message to the agent:
+
+1. **Frontend collects tokens** — All connected identities (OAuth and token-based) are gathered
+2. **Tokens sent in request body** — Included as `identities` array in the AG-UI/Vercel AI request
+3. **Backend extracts identities** — The transport layer reads `body.identities`
+4. **Context variable set** — `set_request_identities()` stores tokens in a `contextvars.ContextVar`
+5. **Tools access tokens** — `get_identity_env()` returns `{"KAGGLE_TOKEN": "your-key"}`
+
+```python
+# Inside your skill or codemode execution:
+import os
+kaggle_token = os.environ.get("KAGGLE_TOKEN")  # Available during execution
+```
+
+#### Step 4: Programmatic Configuration (Optional)
+
+For build-time configuration, set the token as an environment variable:
 
 ```bash
-# .env file
-KAGGLE_TOKEN=your-api-key-from-kaggle-json
+# Frontend .env
+VITE_KAGGLE_TOKEN=your-api-key-from-kaggle-json
+```
+
+```tsx
+import { AgentSpaceFormExample } from '@datalayer/agent-runtimes';
+
+// Token auto-connects on component mount
+<AgentSpaceFormExample
+  identityProviders={{
+    kaggle: {
+      type: 'token',
+      token: import.meta.env.VITE_KAGGLE_TOKEN,
+      displayName: 'Kaggle',
+    },
+  }}
+/>
 ```
 
 For the backend (Python):
@@ -205,27 +272,6 @@ For the backend (Python):
 ```bash
 # Backend .env
 KAGGLE_TOKEN=your-api-key-from-kaggle-json
-```
-
-#### Step 3: Use Kaggle Identity in Agent Runtimes
-
-**Token-based configuration:**
-
-```tsx
-import { IdentityConnect } from '@datalayer/agent-runtimes';
-
-function App() {
-  return (
-    <IdentityConnect
-      providers={{
-        kaggle: {
-          type: 'token',  // Token-based, not OAuth
-          tokenEnvVar: 'KAGGLE_TOKEN',
-        },
-      }}
-    />
-  );
-}
 ```
 
 #### Kaggle MCP Server Configuration

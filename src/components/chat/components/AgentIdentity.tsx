@@ -325,15 +325,21 @@ export function IdentityCard({
         </Box>
         {tokenStatus.isExpired ? (
           <Label variant="danger" size="small">
-            <AlertIcon size={12} /> Expired
+            <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1 }}>
+              <AlertIcon size={12} /> Expired
+            </Box>
           </Label>
         ) : tokenStatus.isExpiringSoon ? (
           <Label variant="attention" size="small">
-            <ClockIcon size={12} /> Expiring Soon
+            <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1 }}>
+              <ClockIcon size={12} /> Expiring Soon
+            </Box>
           </Label>
         ) : (
           <Label variant="success" size="small">
-            <CheckCircleFillIcon size={12} /> Connected
+            <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1 }}>
+              <CheckCircleFillIcon size={12} /> Connected
+            </Box>
           </Label>
         )}
       </Box>
