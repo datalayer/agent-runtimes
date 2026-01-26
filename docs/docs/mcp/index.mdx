@@ -15,9 +15,72 @@ MCP servers are external processes that provide tools, resources, and prompts to
 - **Sequential Startup** — Multiple MCP servers start sequentially to avoid resource conflicts
 - **Status Monitoring** — Real-time status of all MCP toolsets via API endpoint
 
-## Configuration
+## MCP Server Examples
 
-MCP servers are configured in `~/.datalayer/mcp.json`:
+Agent Runtimes supports **any MCP-compatible server**—if it follows the [MCP specification](https://modelcontextprotocol.io/), it will work. The table below shows a few popular examples to get you started:
+
+| Server | Package/URL | Type | Description |
+|--------|-------------|------|-------------|
+| Tavily | `tavily-mcp` | Local | Web search and content extraction |
+| Filesystem | `@modelcontextprotocol/server-filesystem` | Local | File system access |
+| GitHub | `@modelcontextprotocol/server-github` | Local | GitHub repository access |
+| Brave Search | `@modelcontextprotocol/server-brave-search` | Local | Web search |
+| LinkedIn | [stickerdaniel/linkedin-mcp-server](https://github.com/stickerdaniel/linkedin-mcp-server) | Local | LinkedIn profile, company, and job data |
+| Kaggle | `https://www.kaggle.com/mcp` | Remote | Kaggle datasets, models, competitions, notebooks |
+
+:::info Local vs Remote MCP Servers
+- **Local servers** run as child processes on your machine (started via `npx` or `uvx`)
+- **Remote servers** are hosted externally and accessed over HTTP (e.g., Kaggle MCP)
+
+Both types are configured in the same `mcp.json` file, but remote servers use `mcp-remote` as a bridge.
+:::
+
+See the [MCP Servers Directory](https://github.com/modelcontextprotocol/servers) for more options.
+
+## Quick Start
+
+### Basic Configuration
+
+MCP servers are configured in `~/.datalayer/mcp.json`. Here's a minimal example:
+
+```json
+{
+  "mcpServers": {
+    "tavily": {
+      "command": "npx",
+      "args": ["-y", "tavily-mcp@0.1.3"],
+      "env": {
+        "TAVILY_API_KEY": "${TAVILY_API_KEY}"
+      }
+    }
+  }
+}
+```
+
+Environment variables are automatically expanded using `${VAR_NAME}` syntax.
+
+### Using MCP Tools in Agents
+
+Once configured, agents automatically receive access to all running MCP toolsets:
+
+```python
+from pydantic_ai import Agent
+from agent_runtimes.mcp import get_mcp_toolsets
+
+# Get pre-loaded MCP toolsets
+mcp_toolsets = get_mcp_toolsets()
+
+# Create agent with MCP tools
+agent = Agent(
+    "anthropic:claude-sonnet-4-20250514",
+    system_prompt="You are a helpful assistant.",
+    toolsets=mcp_toolsets,
+)
+```
+
+### Full Configuration Example
+
+Here's a complete configuration with multiple servers:
 
 ```json
 {
@@ -29,6 +92,10 @@ MCP servers are configured in `~/.datalayer/mcp.json`:
         "TAVILY_API_KEY": "${TAVILY_API_KEY}"
       }
     },
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/allowed/dir"]
+    },
     "linkedin": {
       "command": "uvx",
       "args": [
@@ -37,25 +104,80 @@ MCP servers are configured in `~/.datalayer/mcp.json`:
         "linkedin-mcp-server"
       ]
     },
-    "filesystem": {
+    "kaggle": {
       "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/allowed/dir"]
-    },
+      "args": ["-y", "mcp-remote", "https://www.kaggle.com/mcp"]
+    }
+  }
+}
+```
+
+## Server-Specific Setup
+
+Some MCP servers require additional setup beyond basic configuration.
+
+### Kaggle MCP Server
+
+The [Kaggle MCP Server](https://www.kaggle.com/docs/mcp) is a **remote HTTP server** that provides access to Kaggle datasets, models, competitions, notebooks, and benchmarks.
+
+#### Configuration Options
+
+**Option 1: OAuth Authentication (recommended)**
+
+```json
+{
+  "mcpServers": {
+    "kaggle": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "https://www.kaggle.com/mcp"]
+    }
+  }
+}
+```
+
+OAuth triggers a browser-based login on first use. For full OAuth setup with Agent Runtimes, see the [Kaggle OAuth Setup](/docs/identity#kaggle-oauth-setup) in the Identity documentation.
+
+**Option 2: Token Authentication**
+
+For non-interactive or automated use:
+
+```json
+{
+  "mcpServers": {
     "kaggle": {
       "command": "npx",
       "args": [
         "-y",
         "mcp-remote",
-        "https://www.kaggle.com/mcp"
+        "https://www.kaggle.com/mcp",
+        "--header",
+        "Authorization: Bearer ${KAGGLE_TOKEN}"
       ]
     }
   }
 }
 ```
 
-### LinkedIn MCP Setup
+To get your token:
+1. Go to [Kaggle Settings](https://www.kaggle.com/settings)
+2. Click **Generate New Token** > **Copy** (token starts with `KGAT`)
+3. Set the environment variable: `export KAGGLE_TOKEN=KGAT...`
 
-The LinkedIn MCP server requires browser automation via Playwright and session authentication.
+#### Available Tools
+
+| Category | Description |
+|----------|-------------|
+| **Notebooks** | Create, run, and manage Kaggle notebooks |
+| **Datasets** | Search, download, and explore datasets |
+| **Models** | Access and use Kaggle models |
+| **Competitions** | Browse competitions, download data, submit predictions |
+| **Benchmarks** | Access Kaggle benchmark tools |
+
+### LinkedIn MCP Server
+
+The LinkedIn MCP server requires browser automation via Playwright.
+
+#### Setup Steps
 
 **Step 1: Install Playwright Chromium**
 
@@ -69,14 +191,31 @@ uvx --from playwright playwright install chromium
 uvx --from git+https://github.com/stickerdaniel/linkedin-mcp-server linkedin-mcp-server --get-session
 ```
 
-This opens a browser window where you log in to LinkedIn manually. You have 5 minutes to complete authentication (handles 2FA, captcha, etc.). The session is saved to `~/.linkedin-mcp/session.json`.
+This opens a browser window for manual LinkedIn login (handles 2FA, captcha, etc.). You have 5 minutes to complete authentication. The session is saved to `~/.linkedin-mcp/session.json`.
+
+**Step 3: Add to Configuration**
+
+```json
+{
+  "mcpServers": {
+    "linkedin": {
+      "command": "uvx",
+      "args": [
+        "--from",
+        "git+https://github.com/stickerdaniel/linkedin-mcp-server",
+        "linkedin-mcp-server"
+      ]
+    }
+  }
+}
+```
 
 :::warning Session Expiration
-Sessions may expire over time. If you encounter authentication errors, run the `--get-session` command again to create a fresh session.
+Sessions may expire over time. If you encounter authentication errors, run `--get-session` again.
 :::
 
 :::tip Alternative: Cookie Authentication
-You can also authenticate using your `li_at` cookie by adding an env section:
+You can also authenticate using your `li_at` cookie:
 ```json
 "env": {
   "LINKEDIN_COOKIE": "${LINKEDIN_COOKIE}"
@@ -85,10 +224,6 @@ You can also authenticate using your `li_at` cookie by adding an env section:
 To get the cookie: DevTools (F12) → Application → Cookies → linkedin.com → copy `li_at` value.
 However, session file authentication is more reliable.
 :::
-
-### Environment Variable Expansion
-
-Environment variables in the config are automatically expanded using `${VAR_NAME}` syntax.
 
 ## Architecture
 
@@ -106,15 +241,13 @@ Environment variables in the config are automatically expanded using `${VAR_NAME
           │                   │                   │
           ↓                   ↓                   ↓
 ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│   Tavily    │     │  LinkedIn   │     │ Filesystem  │
+│   Tavily    │     │  LinkedIn   │     │   Kaggle    │
 │ MCP Server  │     │ MCP Server  │     │ MCP Server  │
-│  (npx)      │     │  (uvx)      │     │   (npx)     │
+│  (local)    │     │  (local)    │     │  (remote)   │
 └─────────────┘     └─────────────┘     └─────────────┘
 ```
 
-## How It Works
-
-### Server Startup
+### Server Startup Sequence
 
 1. **Load Configuration** — Read `~/.datalayer/mcp.json` and expand environment variables
 2. **Sequential Start** — Start each MCP server one at a time to avoid resource conflicts
@@ -122,52 +255,31 @@ Environment variables in the config are automatically expanded using `${VAR_NAME
 4. **Tool Discovery** — Once connected, list available tools from each server
 5. **Status Tracking** — Track ready/failed servers for monitoring
 
-### Using MCP Tools in Agents
-
-When you create an agent, it automatically receives access to all running MCP toolsets:
-
-```python
-from pydantic_ai import Agent
-from agent_runtimes.mcp import get_mcp_toolsets
-
-# Get pre-loaded MCP toolsets
-mcp_toolsets = get_mcp_toolsets()
-
-# Create agent with MCP tools
-agent = Agent(
-    "anthropic:claude-sonnet-4-20250514",
-    system_prompt="You are a helpful assistant.",
-    toolsets=mcp_toolsets,
-)
-```
-
 ## API Endpoints
 
-### Get MCP Toolsets Status
+### Status and Info
+
+**Get MCP Toolsets Status**
 
 ```bash
 GET /api/v1/configure/mcp-toolsets-status
 ```
-
-Returns the current status of all MCP toolsets:
 
 ```json
 {
   "initialized": true,
   "ready_count": 2,
   "failed_count": 0,
-  "ready_servers": ["tavily", "linkedin"],
+  "ready_servers": ["tavily", "kaggle"],
   "failed_servers": {}
 }
 ```
 
-### Get MCP Toolsets Info
+**Get MCP Toolsets Info**
 
 ```bash
 GET /api/v1/configure/mcp-toolsets-info
 ```
-
-Returns detailed information about running MCP servers (sensitive data redacted):
 
 ```json
 [
@@ -176,17 +288,11 @@ Returns detailed information about running MCP servers (sensitive data redacted)
     "id": "tavily",
     "command": "npx",
     "args": ["-y", "tavily-mcp@0.1.3"]
-  },
-  {
-    "type": "MCPServerStdio", 
-    "id": "linkedin",
-    "command": "uvx",
-    "args": ["--from", "git+https://github.com/stickerdaniel/linkedin-mcp-server", "linkedin-mcp-server"]
   }
 ]
 ```
 
-### MCP Server Management
+### Server Management
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
@@ -206,28 +312,6 @@ The Agent Details panel in the chat UI displays real-time MCP toolsets status:
 
 ## Troubleshooting
 
-### Common Issues
-
-**Timeout during startup**
-- First-time package downloads (npx, uvx) can take several minutes
-- Default timeout is 5 minutes per server
-- Check network connectivity
-
-**BrokenResourceError**
-- Usually indicates the MCP server process crashed
-- Automatic retry will attempt up to 3 times
-- Check the MCP server logs for errors
-
-**Server not starting**
-- Verify the command exists (`npx`, `uvx`, etc.)
-- Check environment variables are set
-- Ensure the MCP server package is available
-
-**LinkedIn MCP: Browser automation error**
-- The LinkedIn MCP server uses Playwright for browser automation
-- Install Chromium: `uvx --from playwright playwright install chromium`
-- Ensure `LINKEDIN_COOKIE` environment variable is set with your `li_at` cookie
-
 ### Debug Logging
 
 Enable debug logging to see detailed MCP startup information:
@@ -236,103 +320,12 @@ Enable debug logging to see detailed MCP startup information:
 python -m agent_runtimes --debug
 ```
 
-## Supported MCP Servers
+### Common Issues
 
-Agent Runtimes works with any MCP-compatible server. The examples below are just a few popular options—you can use any MCP server that follows the protocol specification.
-
-| Server | Package/URL | Description |
-|--------|-------------|-------------|
-| Tavily | `tavily-mcp` | Web search and content extraction |
-| Filesystem | `@modelcontextprotocol/server-filesystem` | File system access |
-| GitHub | `@modelcontextprotocol/server-github` | GitHub repository access |
-| Brave Search | `@modelcontextprotocol/server-brave-search` | Web search |
-| LinkedIn | [stickerdaniel/linkedin-mcp-server](https://github.com/stickerdaniel/linkedin-mcp-server) | LinkedIn profile, company, and job data |
-| **Kaggle** | `https://www.kaggle.com/mcp` | Kaggle datasets, models, competitions, notebooks, and benchmarks |
-
-See the [MCP Servers Directory](https://github.com/modelcontextprotocol/servers) for more options.
-
-### Kaggle MCP Server
-
-The [Kaggle MCP Server](https://www.kaggle.com/docs/mcp) is a **remote HTTP MCP server** that provides access to Kaggle resources including datasets, models, competitions, notebooks, and benchmarks.
-
-:::info Remote vs Local MCP Servers
-Unlike local MCP servers (like Tavily or Filesystem) that run as child processes, Kaggle MCP is a **remote HTTP server** hosted at `https://www.kaggle.com/mcp`. This means:
-- No local installation required
-- Uses HTTP transport instead of stdio
-- Requires OAuth or token authentication
-:::
-
-#### Configuration
-
-Add Kaggle to your `~/.datalayer/mcp.json`:
-
-**Option 1: Using mcp-remote (recommended for OAuth)**
-
-```json
-{
-  "mcpServers": {
-    "kaggle": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "mcp-remote",
-        "https://www.kaggle.com/mcp"
-      ]
-    }
-  }
-}
-```
-
-**Option 2: Using token authentication**
-
-If your client doesn't support OAuth, use a Kaggle API token:
-
-```json
-{
-  "mcpServers": {
-    "kaggle": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "mcp-remote",
-        "https://www.kaggle.com/mcp",
-        "--header",
-        "Authorization: Bearer ${KAGGLE_TOKEN}"
-      ]
-    }
-  }
-}
-```
-
-To get your Kaggle token:
-1. Go to [Kaggle Settings](https://www.kaggle.com/settings)
-2. Click **Generate New Token** > **Copy**
-3. The token starts with `KGAT`
-4. Set the environment variable: `export KAGGLE_TOKEN=KGAT...`
-
-#### Authentication
-
-Kaggle MCP supports two authentication methods:
-
-| Method | When to Use |
-|--------|-------------|
-| **OAuth 2.0** | Recommended for interactive use. Initiates browser-based login. |
-| **Token** | For non-interactive/automated use. Requires pre-generated API token. |
-
-For OAuth setup with Agent Runtimes, see the [Kaggle OAuth Setup](/docs/identity#kaggle-oauth-setup) section in the Identity documentation.
-
-#### Available Tools
-
-Kaggle MCP provides tools across several categories:
-
-| Category | Description |
-|----------|-------------|
-| **Notebooks** | Create, run, and manage Kaggle notebooks |
-| **Datasets** | Search, download, and explore datasets |
-| **Models** | Access and use Kaggle models |
-| **Competitions** | Browse competitions, download data, submit predictions |
-| **Benchmarks** | Access Kaggle benchmark tools |
-
-:::tip Authorization Required
-Some Kaggle resources require authorization. If you encounter permission errors, ensure you've authenticated either via OAuth or with a valid API token.
-:::
+| Issue | Cause | Solution |
+|-------|-------|----------|
+| **Timeout during startup** | First-time package downloads can take minutes | Wait for download to complete; default timeout is 5 minutes |
+| **BrokenResourceError** | MCP server process crashed | Automatic retry (up to 3 times); check server logs |
+| **Server not starting** | Missing command or env vars | Verify `npx`/`uvx` exists; check environment variables |
+| **LinkedIn browser error** | Playwright not installed | Run `uvx --from playwright playwright install chromium` |
+| **Kaggle permission error** | Not authenticated | Complete OAuth flow or set `KAGGLE_TOKEN` |
