@@ -16,6 +16,10 @@ import {
   EquationNode,
   ImageNode,
   YouTubeNode,
+  ExcalidrawNode,
+  CollapsibleContainerNode,
+  CollapsibleTitleNode,
+  CollapsibleContentNode,
   JupyterCellNode,
   JupyterInputNode,
   JupyterInputHighlightNode,
@@ -24,6 +28,7 @@ import {
 } from '@datalayer/jupyter-lexical';
 
 import { lexicalTheme } from './theme';
+import initialContent from './initial-content.json';
 
 /**
  * Lexical editor configuration
@@ -32,6 +37,7 @@ export const editorConfig = {
   namespace: 'AgUiLexicalEditor',
   editable: true,
   theme: lexicalTheme,
+  editorState: JSON.stringify(initialContent),
   nodes: [
     // Basic rich text nodes
     HeadingNode,
@@ -55,6 +61,10 @@ export const editorConfig = {
     EquationNode,
     ImageNode,
     YouTubeNode,
+    ExcalidrawNode,
+    CollapsibleContainerNode,
+    CollapsibleTitleNode,
+    CollapsibleContentNode,
     JupyterCellNode,
     JupyterInputNode,
     JupyterInputHighlightNode,

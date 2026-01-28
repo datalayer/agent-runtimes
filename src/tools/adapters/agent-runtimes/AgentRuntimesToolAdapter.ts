@@ -80,6 +80,40 @@ function isRecentDuplicate(toolName: string, params: unknown): boolean {
 }
 
 /**
+ * Process parameters to handle JSON strings that should be objects
+ * LLMs sometimes generate JSON strings instead of objects for nested parameters
+ */
+function processParameters(params: unknown): unknown {
+  if (!params || typeof params !== 'object' || Array.isArray(params)) {
+    return params;
+  }
+
+  const processed: Record<string, unknown> = {};
+
+  for (const [key, value] of Object.entries(params)) {
+    // If value is a string that looks like JSON, try to parse it
+    if (
+      typeof value === 'string' &&
+      (value.startsWith('{') || value.startsWith('['))
+    ) {
+      try {
+        processed[key] = JSON.parse(value);
+        console.log(
+          `[agent-runtimes] 📝 Parsed JSON string for parameter '${key}'`,
+        );
+      } catch {
+        // If parsing fails, keep the original string
+        processed[key] = value;
+      }
+    } else {
+      processed[key] = value;
+    }
+  }
+
+  return processed;
+}
+
+/**
  * Converts unified tool definition to agent-runtimes tool format
  *
  * @param definition - Tool definition
@@ -116,8 +150,12 @@ export function createAgentRuntimesTool(
       }
 
       try {
+        // Process parameters to handle JSON strings
+        const processedParams = processParameters(params);
+        console.log(`[agent-runtimes] Processed params:`, processedParams);
+
         // Use OperationRunner to execute operation with TOON format
-        const result = await runner.execute(operation, params, {
+        const result = await runner.execute(operation, processedParams, {
           ...context,
           format: 'toon', // Return human/LLM-readable string
         });

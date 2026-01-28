@@ -187,6 +187,7 @@ function LexicalEditor({
 }: LexicalEditorProps) {
   const [floatingAnchorElem, setFloatingAnchorElem] =
     useState<HTMLDivElement | null>(null);
+  const [_isLinkEditMode, setIsLinkEditMode] = useState(false);
 
   const onRef = (_floatingAnchorElem: HTMLDivElement) => {
     if (_floatingAnchorElem !== null) {
@@ -269,7 +270,10 @@ function LexicalEditor({
           <>
             <ComponentPickerMenuPlugin />
             <DraggableBlockPlugin anchorElem={floatingAnchorElem} />
-            <FloatingTextFormatToolbarPlugin anchorElem={floatingAnchorElem} />
+            <FloatingTextFormatToolbarPlugin
+              anchorElem={floatingAnchorElem}
+              setIsLinkEditMode={setIsLinkEditMode}
+            />
             <CodeActionMenuPlugin anchorElem={floatingAnchorElem} />
           </>
         )}

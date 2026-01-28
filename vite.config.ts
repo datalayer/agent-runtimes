@@ -139,6 +139,11 @@ export default defineConfig(({ mode }) => {
     include: [
       'crypto-browserify',
       'buffer',
+      'jwt-decode',
+      'url-parse',
+      'prop-types',
+      'shallowequal',
+      'react-is',
       '@jupyterlab/coreutils',
       '@jupyterlab/services',
       '@jupyterlab/apputils',
@@ -148,7 +153,7 @@ export default defineConfig(({ mode }) => {
       '@jupyterlab/translation',
       '@jupyterlab/ui-components',
     ],
-    exclude: ['keytar', '@vscode/keytar', '@datalayer/core'],
+    exclude: ['keytar', '@vscode/keytar'],
     esbuildOptions: {
       loader: {
         '.whl': 'text',
@@ -159,7 +164,7 @@ export default defineConfig(({ mode }) => {
 
   if (isShowcaseVercelAiElements) {
     // For showcase, move jupyterlab packages from include to exclude
-    optimizeDeps.include = ['crypto-browserify', 'buffer'];
+    optimizeDeps.include = ['crypto-browserify', 'buffer', 'jwt-decode', 'url-parse', 'prop-types', 'shallowequal', 'react-is'];
     optimizeDeps.exclude.push(
       '@jupyterlab/apputils',
       '@jupyterlab/apputils-extension',
