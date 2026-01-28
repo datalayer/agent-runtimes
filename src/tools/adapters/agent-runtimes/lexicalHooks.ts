@@ -10,7 +10,7 @@
  * @module tools/adapters/agent-runtimes/lexicalHooks
  */
 
-import { useMemo } from 'react';
+// import { useMemo } from 'react'; // Removed - not using memoization to ensure fresh tools after patches
 import type { ToolExecutionContext } from '@datalayer/jupyter-react';
 import {
   useLexicalStore,
@@ -49,38 +49,42 @@ export function useLexicalTools(
     Omit<ToolExecutionContext, 'executor' | 'documentId'>
   >,
 ): AgentRuntimesTool[] {
-  // Call useLexicalStore() with no selector to get state object
+  console.log('[useLexicalTools] 🎣 Hook called with documentId:', documentId);
+
+  // Get fresh store state every render - NO MEMOIZATION
+  // This ensures we always use the latest patched methods after hot reload
   const lexicalStoreState = useLexicalStore();
-
-  // Create LexicalDefaultExecutor (stable reference)
-  // Only recreate when documentId changes, not on every state update
-  const executor = useMemo(
-    () => new LexicalDefaultExecutor(documentId, lexicalStoreState),
-    [documentId],
+  console.log(
+    '[useLexicalTools] 📦 Store state obtained:',
+    !!lexicalStoreState,
   );
 
-  // Create stable context object with useMemo
-  // Defaults: format='toon' for conversational AI responses
-  const context = useMemo<ToolExecutionContext>(
-    () => ({
-      documentId,
-      executor,
-      format: 'toon',
-      ...contextOverrides,
-    }),
-    [documentId, executor, contextOverrides],
+  // Create new executor every render - NO MEMOIZATION
+  console.log(
+    '[useLexicalTools] 🔧 Creating new executor for documentId:',
+    documentId,
   );
+  const executor = new LexicalDefaultExecutor(documentId, lexicalStoreState);
 
-  // Create and return tools (stable reference)
-  return useMemo(
-    () =>
-      createAllAgentRuntimesTools(
-        lexicalToolDefinitions,
-        lexicalToolOperations,
-        context,
-      ),
-    [context],
+  // Create new context every render - NO MEMOIZATION
+  console.log('[useLexicalTools] 📝 Creating context');
+  const context: ToolExecutionContext = {
+    documentId,
+    executor,
+    format: 'toon',
+    ...contextOverrides,
+  };
+
+  // Create new tools array every render - NO MEMOIZATION
+  console.log('[useLexicalTools] 🛠️ Creating tools array');
+  const tools = createAllAgentRuntimesTools(
+    lexicalToolDefinitions,
+    lexicalToolOperations,
+    context,
   );
+  console.log('[useLexicalTools] ✅ Created', tools.length, 'tools');
+
+  return tools;
 }
 
 export type { AgentRuntimesTool };

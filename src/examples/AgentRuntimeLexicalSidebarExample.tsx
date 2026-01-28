@@ -47,6 +47,7 @@ import { registerCodeHighlighting } from '@lexical/code';
 import { ListPlugin } from '@lexical/react/LexicalListPlugin';
 import { CheckListPlugin } from '@lexical/react/LexicalCheckListPlugin';
 import { LinkPlugin } from '@lexical/react/LexicalLinkPlugin';
+import { TablePlugin } from '@lexical/react/LexicalTablePlugin';
 import type { ServiceManager } from '@jupyterlab/services';
 import { Box } from '@datalayer/primer-addons';
 import { JupyterReactTheme, useJupyter } from '@datalayer/jupyter-react';
@@ -59,6 +60,8 @@ import {
   HorizontalRulePlugin,
   EquationsPlugin,
   YouTubePlugin,
+  ExcalidrawPlugin,
+  CollapsiblePlugin,
   AutoLinkPlugin,
   AutoEmbedPlugin,
   FloatingTextFormatToolbarPlugin,
@@ -111,6 +114,7 @@ interface LexicalEditorProps {
 function LexicalEditor({ serviceManager }: LexicalEditorProps) {
   const [floatingAnchorElem, setFloatingAnchorElem] =
     useState<HTMLDivElement | null>(null);
+  const [_isLinkEditMode, setIsLinkEditMode] = useState(false);
 
   const onRef = (_floatingAnchorElem: HTMLDivElement) => {
     if (_floatingAnchorElem !== null) {
@@ -182,6 +186,7 @@ function LexicalEditor({ serviceManager }: LexicalEditorProps) {
           <ListPlugin />
           <CheckListPlugin />
           <LinkPlugin />
+          <TablePlugin />
 
           {/* Simple Lexical plugins */}
           <JupyterCellPlugin />
@@ -190,6 +195,8 @@ function LexicalEditor({ serviceManager }: LexicalEditorProps) {
           <HorizontalRulePlugin />
           <EquationsPlugin />
           <YouTubePlugin />
+          <ExcalidrawPlugin />
+          <CollapsiblePlugin />
           <AutoLinkPlugin />
           <AutoEmbedPlugin />
           <ListMaxIndentLevelPlugin maxDepth={7} />
@@ -201,6 +208,7 @@ function LexicalEditor({ serviceManager }: LexicalEditorProps) {
               <DraggableBlockPlugin anchorElem={floatingAnchorElem} />
               <FloatingTextFormatToolbarPlugin
                 anchorElem={floatingAnchorElem}
+                setIsLinkEditMode={setIsLinkEditMode}
               />
               <CodeActionMenuPlugin anchorElem={floatingAnchorElem} />
             </>
