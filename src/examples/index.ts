@@ -17,7 +17,6 @@ export { default as AgentRuntimeLexicalSidebarExample } from './AgentRuntimeLexi
 export { default as AgentRuntimeNotebookExample } from './AgentRuntimeNotebookExample';
 export { default as AgentRuntimeNotebookSidebarExample } from './AgentRuntimeNotebookSidebarExample';
 export { default as AgentRuntimeStandaloneExample } from './AgentRuntimeStandaloneExample';
-export { default as AgentCodemodeMcpExample } from './AgentCodemodeMcpExample';
 export { default as AgentSpaceFormExample } from './AgentSpaceFormExample';
 export { default as CopilotKitLexicalExample } from './CopilotKitLexicalExample';
 export { default as CopilotKitNotebookExample } from './CopilotKitNotebookExample';

@@ -8,7 +8,7 @@ SHELL=/bin/bash
 
 .DEFAULT_GOAL := default
 
-.PHONY: docs
+.PHONY: docs examples
 
 help: ## display this help
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
@@ -68,3 +68,9 @@ typedoc:
 
 docs: pydoc typedoc ## build the api docs and serve the docs
 	cd docs && npm run start
+
+examples:
+	AWS_ACCESS_KEY_ID=${DATALAYER_BEDROCK_AWS_ACCESS_KEY_ID} \
+	AWS_SECRET_ACCESS_KEY=${DATALAYER_BEDROCK_AWS_SECRET_ACCESS_KEY} \
+	AWS_DEFAULT_REGION=${DATALAYER_BEDROCK_AWS_DEFAULT_REGION} \
+	  npm run examples
