@@ -19,15 +19,18 @@ MCP servers are external processes that provide tools, resources, and prompts to
 
 Agent Runtimes supports **any MCP-compatible server**—if it follows the [MCP specification](https://modelcontextprotocol.io/), it will work. The table below shows a few popular examples to get you started:
 
-| Server | Package/URL | Type | Description |
+| Server | URL | Type | Description |
 |--------|-------------|------|-------------|
-| Tavily | `tavily-mcp` | Local | Web search and content extraction |
-| Filesystem | `@modelcontextprotocol/server-filesystem` | Local | File system access |
-| GitHub | `@modelcontextprotocol/server-github` | Local | GitHub repository access |
-| Brave Search | `@modelcontextprotocol/server-brave-search` | Local | Web search |
+| Tavily | [docs](https://docs.tavily.com/documentation/mcp) | Remote | Web search and content extraction |
+| Filesystem | [modelcontextprotocol/servers](https://github.com/modelcontextprotocol/servers/tree/main/src/filesystem) | Local | File system access |
+| GitHub | [github/github-mcp-server](https://github.com/github/github-mcp-server) | Local | GitHub repository access |
+| Google Workspace | [taylorwilsdon/google_workspace_mcp](https://github.com/taylorwilsdon/google_workspace_mcp) | Local | Google Workspace (Gmail, Gdrive, etc.) access |
+| Slack | [zencoderai/slack-mcp-server](https://github.com/zencoderai/slack-mcp-server) | Local | Slack workspace access |
+| Kaggle | [docs](https://www.kaggle.com/mcp) | Remote | Kaggle datasets, models, competitions, notebooks |
+| AlphaVantage | [docs](https://mcp.alphavantage.co/) | Local | Financial market data |
+| Chart | [antvis/mcp-server-chart](https://github.com/antvis/mcp-server-chart) | Local | Charting and visualization |
+| Brave Search | [modelcontextprotocol/servers](https://github.com/modelcontextprotocol/servers/tree/main/src/brave-search) | Local | Web search |
 | LinkedIn | [stickerdaniel/linkedin-mcp-server](https://github.com/stickerdaniel/linkedin-mcp-server) | Local | LinkedIn profile, company, and job data |
-| Kaggle | `https://www.kaggle.com/mcp` | Remote | Kaggle datasets, models, competitions, notebooks |
-
 :::info Local vs Remote MCP Servers
 - **Local servers** run as child processes on your machine (started via `npx` or `uvx`)
 - **Remote servers** are hosted externally and accessed over HTTP (e.g., Kaggle MCP)
@@ -46,12 +49,13 @@ MCP servers are configured in `~/.datalayer/mcp.json`. Here's a minimal example:
 ```json
 {
   "mcpServers": {
-    "tavily": {
+    "tavily-remote": {
       "command": "npx",
-      "args": ["-y", "tavily-mcp@0.1.3"],
-      "env": {
-        "TAVILY_API_KEY": "${TAVILY_API_KEY}"
-      }
+      "args": [
+        "-y",
+        "mcp-remote",
+        "https://mcp.tavily.com/mcp/?tavilyApiKey=<your-api-key>"
+      ]
     }
   }
 }
@@ -85,12 +89,13 @@ Here's a complete configuration with multiple servers:
 ```json
 {
   "mcpServers": {
-    "tavily": {
+    "tavily-remote": {
       "command": "npx",
-      "args": ["-y", "tavily-mcp@0.1.3"],
-      "env": {
-        "TAVILY_API_KEY": "${TAVILY_API_KEY}"
-      }
+      "args": [
+        "-y",
+        "mcp-remote",
+        "https://mcp.tavily.com/mcp/?tavilyApiKey=<your-api-key>"
+      ]
     },
     "filesystem": {
       "command": "npx",
@@ -106,15 +111,151 @@ Here's a complete configuration with multiple servers:
     },
     "kaggle": {
       "command": "npx",
-      "args": ["-y", "mcp-remote", "https://www.kaggle.com/mcp"]
-    }
+      "args": [
+          "mcp-remote",
+          "https://www.kaggle.com/mcp",
+          "--header",
+          "Authorization: Bearer <KAGGLE_TOKEN>"
+      ]
   }
 }
 ```
 
 ## Server-Specific Setup
 
-Some MCP servers require additional setup beyond basic configuration.
+### Tavily MCP Server
+
+The [Tavily MCP Server](https://docs.tavily.com/documentation/mcp) provides web search and content extraction tools.
+
+#### Configuration
+
+```json
+{
+  "mcpServers": {
+    "tavily-remote": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "https://mcp.tavily.com/mcp/?tavilyApiKey=<your-api-key>"
+      ]
+    }
+  }
+}
+```
+
+Replace `<your-api-key>` with your Tavily API key from your Tavily account. You can get it from https://app.tavily.com/.
+
+### Filesystem MCP Server
+
+The [Filesystem MCP Server](https://github.com/modelcontextprotocol/servers/tree/main/src/filesystem) provides tools for interacting with the local filesystem.
+
+#### Configuration
+
+```json
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/allowed/dir"]
+    }
+  }
+}
+```
+
+### GitHub MCP Server
+
+The [GitHub MCP Server](https://github.com/github/github-mcp-server) provides tools for interacting with GitHub repositories.
+#### Configuration
+
+```json
+{
+  "mcpServers": {
+    "github": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "-e",
+        "GITHUB_PERSONAL_ACCESS_TOKEN",
+        "ghcr.io/github/github-mcp-server"
+      ],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "<GITHUB_TOKEN>"
+      }
+    }
+  }
+}
+``` 
+Replace `<GITHUB_TOKEN>` with a GitHub personal access token with appropriate permissions. You can create it on https://github.com/settings/personal-access-tokens/new. Note that some tools might be disabled if your access token has limited permissions (e.g Read-only, etc.).
+
+### Google Workspace MCP Server
+
+The [Google Workspace MCP Server](https://github.com/taylorwilsdon/google_workspace_mcp) provides tools for interacting with Google Workspace services like Gmail and Google Drive.
+
+#### Configuration
+
+```json
+{
+  "mcpServers": {
+    "google-workspace": {
+      "command": "uvx",
+      "args": ["workspace-mcp"],
+      "env": {
+        "GOOGLE_OAUTH_CLIENT_ID": "<your-client-id>",
+        "GOOGLE_OAUTH_CLIENT_SECRET": "<your-client-secret>",
+      }
+}
+```
+
+Replace `<your-client-id>` and `<your-client-secret>` with your Google OAuth credentials To set up OAuth credentials:
+
+
+**1. Create OAuth 2.0 Credentials**
+
+Visit the [Google Cloud Console](https://console.cloud.google.com/):
+
+1. Create a new project (or use an existing one)
+2. Navigate to **APIs & Services** → **Credentials**
+3. Click **Create Credentials** → **OAuth Client ID**
+4. Choose **Desktop Application** as the application type (no redirect URIs needed!)
+5. Download the credentials and note the **Client ID** and **Client Secret**
+
+**2. Enable Required APIs**
+
+In **APIs & Services** → **Library**, search for and enable the Google Workspace APIs you plan to use (Gmail, Drive, etc.).
+
+**3. Configure Environment**
+
+Set your OAuth credentials as environment variables:
+
+```bash
+export GOOGLE_OAUTH_CLIENT_ID="your-client-id"
+export GOOGLE_OAUTH_CLIENT_SECRET="your-client-secret"
+```
+### Slack MCP Server
+
+The [Slack MCP Server](https://github.com/zencoderai/slack-mcp-server) provides tools for interacting with Slack workspaces.
+
+#### Configuration
+
+```json
+{
+  "mcpServers": {
+    "slack": {
+      "command": "npx",
+      "args": ["-y", "@datalayer/slack-mcp-server"],
+      "env": {
+        "SLACK_BOT_TOKEN": "<your-slack-bot-token>",
+        "SLACK_TEAM_ID": "<your-slack-team-id>",
+        "SLACK_CHANNEL_IDS": "<your-slack-channel-ids>"
+      }
+    }
+  }
+}
+```
+To get the credentials follow the instructions explained in: https://github.com/zencoderai/slack-mcp-server?tab=readme-ov-file#slack-bot-setup.
 
 ### Kaggle MCP Server
 
@@ -134,7 +275,7 @@ The [Kaggle MCP Server](https://www.kaggle.com/docs/mcp) is a **remote HTTP serv
         "mcp-remote",
         "https://www.kaggle.com/mcp",
         "--header",
-        "Authorization: Bearer ${KAGGLE_TOKEN}"
+        "Authorization: Bearer <KAGGLE_TOKEN>"
       ]
     }
   }
@@ -144,8 +285,7 @@ The [Kaggle MCP Server](https://www.kaggle.com/docs/mcp) is a **remote HTTP serv
 To get your token:
 1. Go to **[kaggle.com/settings/account](https://www.kaggle.com/settings/account)**
 2. Scroll to **API** section → Click **Create New Token**
-3. Open the downloaded `kaggle.json` and copy the `key` value
-4. Set the environment variable: `export KAGGLE_TOKEN=your-key-here`
+3. Replace `<KAGGLE_TOKEN>` with the generated token value
 
 For Agent Runtimes identity integration, see the [Kaggle section](../identity#kaggle) in the Identity documentation.
 
@@ -173,6 +313,42 @@ This triggers a browser-based login on first tool call. Tokens are cached automa
 | **Models** | Access and use Kaggle models |
 | **Competitions** | Browse competitions, download data, submit predictions |
 | **Benchmarks** | Access Kaggle benchmark tools |
+
+### AlphaVantage MCP Server
+
+The [AlphaVantage MCP Server](https://mcp.alphavantage.co/) provides financial market data tools.
+
+#### Configuration
+
+```json
+{
+  "mcpServers": {
+    "alphavantage": {
+      "command": "uvx",
+      "args": ["av-mcp==0.2.1", "<YOUR_API_KEY>"],
+      "env": {"MAX_RESPONSE_TOKENS": "100000"}
+  }
+}
+```
+
+Replace `<YOUR_API_KEY>` with your AlphaVantage API key from your AlphaVantage account. You can get it from https://www.alphavantage.co/support/#api-key.
+
+### Chart MCP Server
+
+The [Chart MCP Server](https://github.com/antvis/mcp-server-chart) provides charting and visualization tools.
+
+#### Configuration
+
+```json
+{
+  "mcpServers": {
+    "chart": {
+      "command": "npx",
+      "args": ["-y", "@antv/mcp-server-chart"]
+    }
+  }
+}
+```
 
 ### LinkedIn MCP Server
 
