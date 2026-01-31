@@ -198,9 +198,9 @@ def check_env_vars_available(env_vars: list[str]) -> bool:
     return all(os.environ.get(var) for var in env_vars)
 
 
-def get_mcp_server(server_id: str) -> MCPServer | None:
+def get_catalog_server(server_id: str) -> MCPServer | None:
     """
-    Get an MCP server by ID.
+    Get a catalog MCP server by ID.
 
     Args:
         server_id: The unique identifier of the MCP server.
@@ -211,15 +211,15 @@ def get_mcp_server(server_id: str) -> MCPServer | None:
     return MCP_SERVER_CATALOG.get(server_id)
 
 
-def list_mcp_servers() -> list[MCPServer]:
+def list_catalog_servers() -> list[MCPServer]:
     """
-    List all available MCP servers with availability status.
+    List all catalog MCP servers with availability status.
 
     For each server, checks if the required environment variables are set
     and updates the `is_available` field accordingly.
 
     Returns:
-        List of all MCPServer configurations with updated availability.
+        List of all catalog MCPServer configurations with updated availability.
     """
     servers = []
     for server in MCP_SERVER_CATALOG.values():

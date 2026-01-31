@@ -14,6 +14,7 @@ from agent_runtimes.types import MCPServer
 from agent_runtimes.config.mcp_servers import (
     MCP_SERVER_CATALOG,
     check_env_vars_available,
+    list_mcp_servers,
 )
 
 logger = logging.getLogger(__name__)
@@ -97,7 +98,7 @@ async def get_available_servers() -> list[dict[str, Any]]:
     """
     try:
         # Get all catalog servers
-        catalog_servers = list_catalog_servers()
+        catalog_servers = list_mcp_servers()
         logger.debug(f"Catalog servers: {[s.id for s in catalog_servers]}")
         
         # Get running servers from lifecycle manager
