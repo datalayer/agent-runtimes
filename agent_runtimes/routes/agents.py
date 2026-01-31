@@ -157,10 +157,15 @@ def _build_codemode_toolset(
     logger.info(f"Building codemode registry from {len(servers)} available servers")
     
     if request.selected_mcp_servers:
+        # Extract server names from McpServerSelection objects
+        selected_names = {
+            s.name if hasattr(s, 'name') else s
+            for s in request.selected_mcp_servers
+        }
         servers = [
-            server for server in servers if server.id in request.selected_mcp_servers
+            server for server in servers if server.id in selected_names
         ]
-        logger.info(f"Filtered to {len(servers)} selected servers: {request.selected_mcp_servers}")
+        logger.info(f"Filtered to {len(servers)} selected servers: {selected_names}")
 
     servers_added = []
     for server in servers:
@@ -344,9 +349,11 @@ async def create_agent(request: CreateAgentRequest, http_request: Request) -> Cr
         
         # Determine which MCP servers to use and ensure they are running
         # These will be dynamically fetched at run time, not stored at creation time
-        selected_mcp_servers = []
-        if not request.enable_codemode and request.selected_mcp_servers:
-            selected_mcp_servers = request.selected_mcp_servers
+        selected_mcp_servers = request.selected_mcp_servers or []
+        
+        # When codemode is NOT enabled, we start the servers explicitly here
+        # When codemode IS enabled, the servers are started via _build_codemode_toolset
+        if not request.enable_codemode and selected_mcp_servers:
             logger.info(f"Agent {agent_id} will use MCP servers: {selected_mcp_servers}")
             
             # Start any MCP servers that aren't already running
