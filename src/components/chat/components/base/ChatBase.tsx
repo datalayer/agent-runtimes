@@ -2792,23 +2792,6 @@ function ChatBaseInner({
                           </ActionList.Group>
                         )}
                         {/* MCP Server Tools */}
-                        {(() => {
-                          console.log('[ChatBase] Tools menu debug:', {
-                            hasMcpServers: !!configQuery.data?.mcpServers,
-                            mcpServersCount:
-                              configQuery.data?.mcpServers?.length,
-                            mcpServerIds: configQuery.data?.mcpServers?.map(
-                              s => s.id,
-                            ),
-                            mcpServers,
-                            isServerSelectedResults:
-                              configQuery.data?.mcpServers?.map(s => ({
-                                id: s.id,
-                                selected: isServerSelected(s),
-                              })),
-                          });
-                          return null;
-                        })()}
                         {configQuery.data?.mcpServers &&
                         configQuery.data.mcpServers.length > 0 ? (
                           // Filter to only show selected servers (if mcpServers was provided)

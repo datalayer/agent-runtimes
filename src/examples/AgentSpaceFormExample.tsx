@@ -523,58 +523,11 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
     [baseUrl],
   );
 
-  // Recreate agent when MCP servers change while configured
-  // This ensures the agent has the correct toolsets
+  // Track MCP servers for reference (no longer triggers recreation)
+  // MCP server updates are now handled via PATCH endpoint by McpServerManager
   useEffect(() => {
-    const prevServers = prevMcpServersRef.current;
-    const serversChanged =
-      prevServers.length !== selectedMcpServers.length ||
-      prevServers.some((s, i) => {
-        const cur = selectedMcpServers[i];
-        if (typeof s === 'string' && typeof cur === 'string') return s !== cur;
-        if (typeof s === 'object' && typeof cur === 'object') {
-          return s.name !== cur.name || s.origin !== cur.origin;
-        }
-        return true; // Type mismatch means changed
-      });
-
-    if (
-      serversChanged &&
-      isConfigured &&
-      selectedAgentId === 'new-agent' &&
-      agentName
-    ) {
-      console.log(
-        '[AgentSpaceFormExample] MCP servers changed while configured, recreating agent...',
-      );
-
-      const recreateAgent = async () => {
-        // Delete old agent
-        await deleteAgentOnServer(agentName);
-        // Create new agent with updated MCP servers
-        const newAgentId = await createAgentOnServer();
-        if (newAgentId) {
-          setAgentName(newAgentId);
-          console.log(
-            '[AgentSpaceFormExample] Agent recreated with new MCP servers:',
-            selectedMcpServers,
-          );
-        }
-      };
-
-      void recreateAgent();
-    }
-
-    // Update ref for next comparison
     prevMcpServersRef.current = selectedMcpServers;
-  }, [
-    selectedMcpServers,
-    isConfigured,
-    selectedAgentId,
-    agentName,
-    deleteAgentOnServer,
-    createAgentOnServer,
-  ]);
+  }, [selectedMcpServers]);
 
   const handleConnect = async () => {
     // For existing agents (not new-agent), ensure transport and agentName are set
