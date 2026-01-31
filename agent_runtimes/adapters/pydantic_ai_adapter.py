@@ -22,6 +22,7 @@ from .base import (
     ToolDefinition,
 )
 from ..context.usage import get_usage_tracker
+from ..mcp.lifecycle import get_mcp_lifecycle_manager
 
 
 logger = logging.getLogger(__name__)
@@ -54,6 +55,8 @@ class PydanticAIAdapter(BaseAgent):
         description: str = "A Pydantic AI powered agent",
         version: str = "1.0.0",
         agent_id: str | None = None,
+        selected_mcp_server_ids: list[str] | None = None,
+        non_mcp_toolsets: list[Any] | None = None,
     ):
         """Initialize the Pydantic AI agent adapter.
 
@@ -63,6 +66,8 @@ class PydanticAIAdapter(BaseAgent):
             description: Agent description.
             version: Agent version.
             agent_id: Unique identifier for usage tracking (defaults to name).
+            selected_mcp_server_ids: List of MCP server IDs to dynamically fetch at run time.
+            non_mcp_toolsets: List of non-MCP toolsets (e.g., codemode, skills) to always include.
         """
         self._agent = agent
         self._name = name
@@ -70,6 +75,8 @@ class PydanticAIAdapter(BaseAgent):
         self._version = version
         self._agent_id = agent_id or name.lower().replace(" ", "-")
         self._tools: list[ToolDefinition] = []
+        self._selected_mcp_server_ids = selected_mcp_server_ids or []
+        self._non_mcp_toolsets = non_mcp_toolsets or []
         self._extract_tools()
         
         # Register with usage tracker
@@ -139,6 +146,33 @@ class PydanticAIAdapter(BaseAgent):
         """Get the underlying Pydantic AI agent."""
         return self._agent
 
+    def _get_runtime_toolsets(self) -> list[Any]:
+        """Get the list of toolsets to use at run time.
+        
+        This dynamically fetches MCP toolsets based on selected_mcp_server_ids,
+        ensuring only currently running servers are included.
+        
+        Returns:
+            List of toolsets including MCP servers and non-MCP toolsets.
+        """
+        toolsets = []
+        
+        # Dynamically fetch MCP toolsets for selected servers
+        if self._selected_mcp_server_ids:
+            lifecycle_manager = get_mcp_lifecycle_manager()
+            for server_id in self._selected_mcp_server_ids:
+                instance = lifecycle_manager.get_running_server(server_id)
+                if instance and instance.is_running:
+                    toolsets.append(instance.pydantic_server)
+                    logger.debug(f"Including running MCP server '{server_id}' in toolsets")
+                else:
+                    logger.debug(f"MCP server '{server_id}' not running, skipping")
+        
+        # Always include non-MCP toolsets (codemode, skills, etc.)
+        toolsets.extend(self._non_mcp_toolsets)
+        
+        return toolsets
+
     def get_tools(self) -> list[ToolDefinition]:
         """Get the list of tools available to this agent."""
         return self._tools.copy()
@@ -174,6 +208,12 @@ class PydanticAIAdapter(BaseAgent):
             if model_override:
                 run_kwargs["model"] = model_override
                 logger.info(f"PydanticAIAdapter: Using model override: {model_override}")
+            
+            # Dynamically get toolsets at run time to reflect current MCP server state
+            runtime_toolsets = self._get_runtime_toolsets()
+            if runtime_toolsets:
+                run_kwargs["toolsets"] = runtime_toolsets
+                logger.debug(f"PydanticAIAdapter: Using {len(runtime_toolsets)} runtime toolsets")
             
             result = await self._agent.run(prompt, **run_kwargs)
 
@@ -275,6 +315,12 @@ class PydanticAIAdapter(BaseAgent):
             if model_override:
                 stream_kwargs["model"] = model_override
                 logger.info(f"PydanticAIAdapter: Using model override for stream: {model_override}")
+            
+            # Dynamically get toolsets at run time to reflect current MCP server state
+            runtime_toolsets = self._get_runtime_toolsets()
+            if runtime_toolsets:
+                stream_kwargs["toolsets"] = runtime_toolsets
+                logger.debug(f"PydanticAIAdapter: Using {len(runtime_toolsets)} runtime toolsets for stream")
             
             async with self._agent.run_stream(prompt, **stream_kwargs) as result:
                 # stream_text() yields cumulative text, we need deltas

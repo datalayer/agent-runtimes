@@ -528,11 +528,41 @@ function ServerCard({
           </Text>
         )}
 
-        {/* Missing env vars warning */}
+        {/* Missing env vars warning - show required env vars so user can fix */}
         {missingEnvVars && (
-          <Text sx={{ fontSize: 0, color: 'danger.fg', mb: 1 }}>
-            Required: {server.requiredEnvVars!.join(', ')}
-          </Text>
+          <Box
+            sx={{
+              fontSize: 0,
+              color: 'danger.fg',
+              mb: 1,
+              p: 1,
+              bg: 'danger.subtle',
+              borderRadius: 1,
+            }}
+          >
+            <Text sx={{ fontWeight: 'semibold', display: 'block', mb: 1 }}>
+              Missing environment variables:
+            </Text>
+            {server.requiredEnvVars!.map(envVar => (
+              <Text
+                key={envVar}
+                as="code"
+                sx={{
+                  display: 'inline-block',
+                  mr: 1,
+                  mb: 1,
+                  px: 1,
+                  py: '2px',
+                  bg: 'canvas.default',
+                  borderRadius: 1,
+                  fontFamily: 'mono',
+                  fontSize: 0,
+                }}
+              >
+                {envVar}
+              </Text>
+            ))}
+          </Box>
         )}
 
         {/* Tools list */}

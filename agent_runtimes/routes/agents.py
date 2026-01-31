@@ -23,7 +23,9 @@ from starlette.routing import Mount
 from pydantic_ai import Agent as PydanticAgent
 
 from ..adapters.pydantic_ai_adapter import PydanticAIAdapter
-from ..mcp import get_mcp_toolsets, get_mcp_manager, initialize_mcp_servers
+from ..mcp import get_mcp_manager, initialize_mcp_servers
+from ..mcp.lifecycle import get_mcp_lifecycle_manager
+from ..config.mcp_servers import MCP_SERVER_CATALOG
 from ..transports import AGUITransport, VercelAITransport, MCPUITransport
 from .acp import AgentCapabilities, AgentInfo, register_agent, unregister_agent, _agents
 from .agui import register_agui_agent, unregister_agui_agent, get_agui_app
@@ -327,31 +329,36 @@ async def create_agent(request: CreateAgentRequest, http_request: Request) -> Cr
         )
     
     try:
-        # Build list of toolsets
-        toolsets = []
+        # Build list of non-MCP toolsets (skills, codemode, etc.)
+        # MCP toolsets will be dynamically fetched at run time by the adapter
+        non_mcp_toolsets = []
         
-        # Only add MCP toolsets if codemode is NOT enabled
-        # When codemode is enabled, it provides its own tool discovery
-        if not request.enable_codemode:
-            # Get pre-loaded MCP toolsets (started at server startup)
-            mcp_toolsets = get_mcp_toolsets()
-            if mcp_toolsets:
-                # Filter by selected_mcp_servers if specified
-                if request.selected_mcp_servers:
-                    # Filter toolsets to only include selected servers
-                    filtered_toolsets = [
-                        ts for ts in mcp_toolsets 
-                        if hasattr(ts, 'id') and ts.id in request.selected_mcp_servers
-                    ]
-                    if filtered_toolsets:
-                        logger.info(f"Using {len(filtered_toolsets)} selected MCP toolsets for agent {agent_id}: {request.selected_mcp_servers}")
-                        toolsets.extend(filtered_toolsets)
+        # Determine which MCP servers to use and ensure they are running
+        # These will be dynamically fetched at run time, not stored at creation time
+        selected_mcp_server_ids: list[str] = []
+        if not request.enable_codemode and request.selected_mcp_servers:
+            selected_mcp_server_ids = request.selected_mcp_servers
+            logger.info(f"Agent {agent_id} will use MCP servers: {selected_mcp_server_ids}")
+            
+            # Start any MCP servers that aren't already running
+            lifecycle_manager = get_mcp_lifecycle_manager()
+            for server_id in selected_mcp_server_ids:
+                if not lifecycle_manager.is_server_running(server_id):
+                    # Look up server in catalog and start it
+                    catalog_server = MCP_SERVER_CATALOG.get(server_id)
+                    if catalog_server:
+                        logger.info(f"Starting MCP server '{server_id}' for agent {agent_id}")
+                        instance = await lifecycle_manager.start_server(server_id, catalog_server)
+                        if instance:
+                            logger.info(f"Started MCP server '{server_id}' with {len(instance.tools)} tools")
+                        else:
+                            failed = lifecycle_manager.get_failed_servers()
+                            error = failed.get(server_id, "Unknown error")
+                            logger.warning(f"Failed to start MCP server '{server_id}': {error}")
                     else:
-                        logger.warning(f"No matching MCP toolsets found for: {request.selected_mcp_servers}")
+                        logger.warning(f"MCP server '{server_id}' not found in catalog")
                 else:
-                    # No filter specified, use all available
-                    logger.info(f"Using {len(mcp_toolsets)} pre-loaded MCP toolsets for agent {agent_id}")
-                    toolsets.extend(mcp_toolsets)
+                    logger.info(f"MCP server '{server_id}' already running")
         
         # Create shared sandbox for both codemode and skills toolsets
         # This ensures state persistence between execute_code and skill script executions
@@ -438,7 +445,7 @@ async def create_agent(request: CreateAgentRequest, http_request: Request) -> Cr
                             directories=[skills_path],  # TODO: Make configurable
                             executor=executor,
                         )
-                    toolsets.append(skills_toolset)
+                    non_mcp_toolsets.append(skills_toolset)
                     logger.info(f"Added AgentSkillsToolset for agent {agent_id}")
                 else:
                     logger.warning("agent-skills pydantic-ai integration not available")
@@ -491,23 +498,29 @@ async def create_agent(request: CreateAgentRequest, http_request: Request) -> Cr
                         "Failed to list generated codemode bindings: %s",
                         exc,
                     )
-                toolsets.append(codemode_toolset)
+                non_mcp_toolsets.append(codemode_toolset)
                 logger.info(f"Added and initialized CodemodeToolset for agent {agent_id}")
         
         # Create the agent based on the library
         if request.agent_library == "pydantic-ai":
-            # First create the underlying Pydantic AI Agent with toolsets
+            # First create the underlying Pydantic AI Agent
+            # NOTE: We don't pass MCP toolsets here. They will be dynamically
+            # fetched at run time by the adapter to reflect current server state.
+            # Only non-MCP toolsets (codemode, skills) are passed at construction.
             pydantic_agent = PydanticAgent(
                 request.model,
                 system_prompt=request.system_prompt,
-                toolsets=toolsets if toolsets else None,
+                # Don't pass toolsets here - they'll be dynamically provided at run time
             )
             # Then wrap it with our adapter (pass agent_id for usage tracking)
+            # The adapter will dynamically fetch MCP toolsets at run time
             agent = PydanticAIAdapter(
                 agent=pydantic_agent,
                 name=request.name,
                 description=request.description,
                 agent_id=agent_id,
+                selected_mcp_server_ids=selected_mcp_server_ids,
+                non_mcp_toolsets=non_mcp_toolsets,
             )
         elif request.agent_library == "langchain":
             # TODO: Implement LangChain agent creation
