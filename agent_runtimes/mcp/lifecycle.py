@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Any
 
 from agent_runtimes.types import MCPServer, MCPServerTool
-from agent_runtimes.config.mcp_servers import MCP_SERVER_CATALOG
+from agent_runtimes.mcp.catalog_mcp_servers import MCP_SERVER_CATALOG
 
 logger = logging.getLogger(__name__)
 
@@ -260,10 +260,15 @@ class MCPLifecycleManager:
                 if config.env:
                     env.update(config.env)
 
+                # Use tool_prefix to avoid name conflicts if the same server type
+                # is selected multiple times (e.g., from both config and catalog)
+                tool_prefix = f"{server_id}_"
+
                 pydantic_server = MCPServerStdio(
                     config.command,
                     args=config.args or [],
                     env=env,
+                    tool_prefix=tool_prefix,
                 )
                 # Set the id attribute so we can identify it later
                 pydantic_server.id = server_id

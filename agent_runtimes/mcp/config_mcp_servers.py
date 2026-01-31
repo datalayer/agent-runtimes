@@ -317,12 +317,12 @@ _mcp_servers: list[MCPServer] | None = None
 _initialization_lock = asyncio.Lock()
 
 
-async def get_mcp_servers(
+async def get_config_servers(
     force_refresh: bool = False,
     discover_tools: bool = True,
 ) -> list[MCPServer]:
     """
-    Get the cached MCP servers, initializing if needed.
+    Get the cached config MCP servers (from ~/.datalayer/mcp.json), initializing if needed.
 
     Args:
         force_refresh: Force re-initialization
@@ -342,12 +342,12 @@ async def get_mcp_servers(
     return _mcp_servers
 
 
-def get_mcp_servers_sync() -> list[MCPServer]:
+def get_config_servers_sync() -> list[MCPServer]:
     """
-    Synchronous version to get cached MCP servers.
+    Synchronous version to get cached config MCP servers.
 
     Note: Returns empty list if not yet initialized.
-    Use get_mcp_servers() in async context for proper initialization.
+    Use get_config_servers() in async context for proper initialization.
 
     Returns:
         List of MCPServer objects or empty list if not initialized
@@ -356,9 +356,9 @@ def get_mcp_servers_sync() -> list[MCPServer]:
     return _mcp_servers or []
 
 
-async def initialize_mcp_servers(discover_tools: bool = True) -> list[MCPServer]:
+async def initialize_config_servers(discover_tools: bool = True) -> list[MCPServer]:
     """
-    Initialize MCP servers during application startup.
+    Initialize config MCP servers (from ~/.datalayer/mcp.json) during application startup.
 
     This should be called during FastAPI/Jupyter server startup.
 
@@ -368,4 +368,4 @@ async def initialize_mcp_servers(discover_tools: bool = True) -> list[MCPServer]
     Returns:
         List of initialized MCPServer objects
     """
-    return await get_mcp_servers(force_refresh=True, discover_tools=discover_tools)
+    return await get_config_servers(force_refresh=True, discover_tools=discover_tools)

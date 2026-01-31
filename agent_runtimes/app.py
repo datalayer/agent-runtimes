@@ -32,7 +32,7 @@ from starlette.routing import Mount
 from .config.agents import get_agent as get_library_agent
 from .mcp import (
     ensure_mcp_toolsets_event,
-    initialize_mcp_servers,
+    initialize_config_servers,
     get_mcp_manager,
     initialize_mcp_toolsets,
     shutdown_mcp_toolsets,
@@ -153,7 +153,7 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
             logger.info("Initializing MCP servers for configuration API...")
 
             async def load_mcp_servers_background() -> None:
-                mcp_servers = await initialize_mcp_servers(discover_tools=True)
+                mcp_servers = await initialize_config_servers(discover_tools=True)
                 mcp_manager = get_mcp_manager()
                 mcp_manager.load_servers(mcp_servers)
                 logger.info(f"Loaded {len(mcp_servers)} MCP servers into manager")

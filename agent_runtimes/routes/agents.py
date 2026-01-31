@@ -23,9 +23,9 @@ from starlette.routing import Mount
 from pydantic_ai import Agent as PydanticAgent
 
 from ..adapters.pydantic_ai_adapter import PydanticAIAdapter
-from ..mcp import get_mcp_manager, initialize_mcp_servers
+from ..mcp import get_mcp_manager, initialize_config_servers
 from ..mcp.lifecycle import get_mcp_lifecycle_manager
-from ..config.mcp_servers import MCP_SERVER_CATALOG
+from ..mcp.catalog_mcp_servers import MCP_SERVER_CATALOG
 from ..transports import AGUITransport, VercelAITransport, MCPUITransport
 from .acp import AgentCapabilities, AgentInfo, register_agent, unregister_agent, _agents
 from .agui import register_agui_agent, unregister_agui_agent, get_agui_app
@@ -457,7 +457,7 @@ async def create_agent(request: CreateAgentRequest, http_request: Request) -> Cr
             # Ensure MCP servers are loaded before building codemode toolset
             mcp_manager = get_mcp_manager()
             if not mcp_manager.get_servers():
-                mcp_servers = await initialize_mcp_servers(discover_tools=True)
+                mcp_servers = await initialize_config_servers(discover_tools=True)
                 mcp_manager.load_servers(mcp_servers)
                 logger.info(
                     f"Loaded {len(mcp_servers)} MCP servers for codemode agent {agent_id}"

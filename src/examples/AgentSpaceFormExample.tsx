@@ -746,7 +746,11 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
               isConfigured={isConfigured}
               baseUrl={baseUrl}
               enableCodemode={enableCodemode}
-              selectedMcpServers={selectedMcpServers}
+              selectedMcpServers={[
+                ...selectedConfigServers,
+                ...selectedCatalogServers,
+                ...selectedMcpServers,
+              ]}
               onSelectedMcpServersChange={setSelectedMcpServers}
               onMcpServersChange={() => {
                 // Trigger codemode tool regeneration when MCP servers change at runtime

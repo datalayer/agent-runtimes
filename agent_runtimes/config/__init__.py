@@ -9,10 +9,10 @@ Jupyter and FastAPI servers.
 """
 
 from .frontend_config import get_frontend_config
-from .mcp_servers import (
+from agent_runtimes.mcp.catalog_mcp_servers import (
     MCP_SERVER_CATALOG,
-    get_mcp_server,
-    list_mcp_servers,
+    get_catalog_server,
+    list_catalog_servers,
     TAVILY_MCP_SERVER,
     FILESYSTEM_MCP_SERVER,
     GITHUB_MCP_SERVER,
@@ -39,10 +39,10 @@ from .agents import (
 __all__ = [
     # Frontend config
     "get_frontend_config",
-    # MCP Servers
+    # MCP Catalog Servers
     "MCP_SERVER_CATALOG",
-    "get_mcp_server",
-    "list_mcp_servers",
+    "get_catalog_server",
+    "list_catalog_servers",
     "TAVILY_MCP_SERVER",
     "FILESYSTEM_MCP_SERVER",
     "GITHUB_MCP_SERVER",

@@ -10,7 +10,7 @@ Predefined agent specifications that can be instantiated as AgentSpaces.
 from typing import Dict
 
 from agent_runtimes.types import AgentSpec
-from agent_runtimes.config.mcp_servers import (
+from agent_runtimes.mcp.catalog_mcp_servers import (
     TAVILY_MCP_SERVER,
     FILESYSTEM_MCP_SERVER,
     GITHUB_MCP_SERVER,

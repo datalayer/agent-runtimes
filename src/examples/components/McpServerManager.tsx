@@ -163,25 +163,45 @@ export function McpServerManager({
 
   // Separate servers into categories based on running status and config flag
   // The /available endpoint returns all servers with isRunning and isConfig flags
-  const { runningCatalogServers, configServers } = useMemo(() => {
+  const {
+    runningCatalogServers,
+    configServers,
+    assignedConfigServers,
+    assignedCatalogServers,
+  } = useMemo(() => {
     const all = catalogQuery.data || [];
     const running: MCPServer[] = [];
     const config: MCPServer[] = [];
+    const assignedConfig: MCPServer[] = [];
+    const assignedCatalog: MCPServer[] = [];
 
     all.forEach(server => {
+      const isSelected = selectedServers.includes(server.id);
+
       if (server.isRunning) {
         if (server.isConfig) {
           // mcp.json config servers that are running
           config.push(server);
+          if (isSelected) {
+            assignedConfig.push(server);
+          }
         } else {
           // Catalog servers that are running
           running.push(server);
+          if (isSelected) {
+            assignedCatalog.push(server);
+          }
         }
       }
     });
 
-    return { runningCatalogServers: running, configServers: config };
-  }, [catalogQuery.data]);
+    return {
+      runningCatalogServers: running,
+      configServers: config,
+      assignedConfigServers: assignedConfig,
+      assignedCatalogServers: assignedCatalog,
+    };
+  }, [catalogQuery.data, selectedServers]);
 
   // Get servers that are not yet running (available to enable)
   // This includes both catalog servers and shows which are already running
@@ -296,28 +316,27 @@ export function McpServerManager({
         </Box>
       )}
 
-      {/* Running Catalog Servers Section */}
-      {!isLoading && runningCatalogServers.length > 0 && (
+      {/* Assigned Configured Servers Section (selected servers from mcp.json) */}
+      {!isLoading && assignedConfigServers.length > 0 && (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           <Text sx={{ fontWeight: 'semibold', fontSize: 1 }}>
-            Running Catalog Servers ({runningCatalogServers.length})
+            Assigned Configured Servers ({assignedConfigServers.length})
+          </Text>
+          <Text sx={{ color: 'fg.muted', fontSize: 0 }}>
+            These servers are from ~/.datalayer/mcp.json and assigned to this
+            agent.
           </Text>
 
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {runningCatalogServers.map(server => (
+            {assignedConfigServers.map(server => (
               <ServerCard
                 key={server.id}
                 server={server}
-                variant="active"
-                disabled={disabled || isMutating}
-                isSelected={selectedServers.includes(server.id)}
+                variant="config"
+                disabled={disabled}
+                isSelected={true}
                 onSelect={
                   onSelectedServersChange ? handleServerSelect : undefined
-                }
-                onRemove={() => handleDisableServer(server.id)}
-                isRemoving={
-                  disableMutation.isPending &&
-                  disableMutation.variables === server.id
                 }
               />
             ))}
@@ -325,27 +344,28 @@ export function McpServerManager({
         </Box>
       )}
 
-      {/* MCP Config Servers Section (from mcp.json) */}
-      {!isLoading && configServers.length > 0 && (
+      {/* Assigned Catalog Servers Section (selected servers from catalog) */}
+      {!isLoading && assignedCatalogServers.length > 0 && (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           <Text sx={{ fontWeight: 'semibold', fontSize: 1 }}>
-            MCP Config Servers ({configServers.length})
-          </Text>
-          <Text sx={{ color: 'fg.muted', fontSize: 0 }}>
-            These servers are defined in ~/.datalayer/mcp.json and started
-            automatically.
+            Assigned Catalog Servers ({assignedCatalogServers.length})
           </Text>
 
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {configServers.map(server => (
+            {assignedCatalogServers.map(server => (
               <ServerCard
                 key={server.id}
                 server={server}
-                variant="config"
-                disabled={disabled}
-                isSelected={selectedServers.includes(server.id)}
+                variant="active"
+                disabled={disabled || isMutating}
+                isSelected={true}
                 onSelect={
                   onSelectedServersChange ? handleServerSelect : undefined
+                }
+                onRemove={() => handleDisableServer(server.id)}
+                isRemoving={
+                  disableMutation.isPending &&
+                  disableMutation.variables === server.id
                 }
               />
             ))}
