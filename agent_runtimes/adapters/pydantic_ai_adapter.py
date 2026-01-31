@@ -159,18 +159,22 @@ class PydanticAIAdapter(BaseAgent):
         
         # Dynamically fetch MCP toolsets for selected servers
         if self._selected_mcp_server_ids:
+            logger.info(f"PydanticAIAdapter: Fetching toolsets for servers: {self._selected_mcp_server_ids}")
             lifecycle_manager = get_mcp_lifecycle_manager()
             for server_id in self._selected_mcp_server_ids:
                 instance = lifecycle_manager.get_running_server(server_id)
                 if instance and instance.is_running:
                     toolsets.append(instance.pydantic_server)
-                    logger.debug(f"Including running MCP server '{server_id}' in toolsets")
+                    logger.info(f"PydanticAIAdapter: Added MCP server '{server_id}' toolset (type: {type(instance.pydantic_server).__name__})")
                 else:
-                    logger.debug(f"MCP server '{server_id}' not running, skipping")
+                    logger.warning(f"PydanticAIAdapter: MCP server '{server_id}' not running, skipping")
+        else:
+            logger.debug("PydanticAIAdapter: No MCP servers selected")
         
         # Always include non-MCP toolsets (codemode, skills, etc.)
         toolsets.extend(self._non_mcp_toolsets)
         
+        logger.info(f"PydanticAIAdapter: Total toolsets for run: {len(toolsets)}")
         return toolsets
 
     def get_tools(self) -> list[ToolDefinition]:

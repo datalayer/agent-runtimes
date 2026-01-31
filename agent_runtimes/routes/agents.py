@@ -501,6 +501,8 @@ async def create_agent(request: CreateAgentRequest, http_request: Request) -> Cr
                 non_mcp_toolsets.append(codemode_toolset)
                 logger.info(f"Added and initialized CodemodeToolset for agent {agent_id}")
         
+        logger.info(f"Creating agent '{agent_id}' with selected_mcp_server_ids={selected_mcp_server_ids}")
+        
         # Create the agent based on the library
         if request.agent_library == "pydantic-ai":
             # First create the underlying Pydantic AI Agent
@@ -514,6 +516,7 @@ async def create_agent(request: CreateAgentRequest, http_request: Request) -> Cr
             )
             # Then wrap it with our adapter (pass agent_id for usage tracking)
             # The adapter will dynamically fetch MCP toolsets at run time
+            logger.info(f"Creating PydanticAIAdapter for '{agent_id}' with MCP servers: {selected_mcp_server_ids}")
             agent = PydanticAIAdapter(
                 agent=pydantic_agent,
                 name=request.name,

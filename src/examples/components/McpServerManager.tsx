@@ -48,8 +48,10 @@ interface MCPServer {
   requiredEnvVars?: string[];
   isAvailable?: boolean;
   transport?: string;
-  /** True if this server was started at runtime (not from config) */
+  /** True if this server was started from mcp.json (not in catalog) */
   isRuntime?: boolean;
+  /** True if this server is currently running */
+  isRunning?: boolean;
 }
 
 interface McpServerManagerProps {
@@ -89,33 +91,18 @@ export function McpServerManager({
   const [searchQuery, setSearchQuery] = useState('');
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch catalog servers (available to enable)
+  // Fetch all available servers (catalog + mcp.json running servers)
   const catalogQuery = useQuery<MCPServer[]>({
-    queryKey: ['mcp-catalog', baseUrl],
+    queryKey: ['mcp-available', baseUrl],
     queryFn: async () => {
-      const response = await fetch(`${baseUrl}/api/v1/mcp/servers/catalog`);
+      const response = await fetch(`${baseUrl}/api/v1/mcp/servers/available`);
       if (!response.ok) {
-        throw new Error('Failed to fetch MCP server catalog');
+        throw new Error('Failed to fetch available MCP servers');
       }
       return response.json();
     },
     enabled: !!baseUrl,
     staleTime: 1000 * 60 * 5, // 5 minutes
-    retry: 1,
-  });
-
-  // Fetch active/enabled servers
-  const activeQuery = useQuery<MCPServer[]>({
-    queryKey: ['mcp-servers', baseUrl],
-    queryFn: async () => {
-      const response = await fetch(`${baseUrl}/api/v1/mcp/servers`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch active MCP servers');
-      }
-      return response.json();
-    },
-    enabled: !!baseUrl,
-    staleTime: 1000 * 30, // 30 seconds
     retry: 1,
   });
 
@@ -138,7 +125,7 @@ export function McpServerManager({
       setError(null);
       // Invalidate queries to refresh the list
       queryClient.invalidateQueries({ queryKey: ['mcp-servers', baseUrl] });
-      queryClient.invalidateQueries({ queryKey: ['mcp-catalog', baseUrl] });
+      queryClient.invalidateQueries({ queryKey: ['mcp-available', baseUrl] });
       // Notify parent about server changes (for codemode tool regeneration or other updates)
       onServersChange?.();
     },
@@ -165,7 +152,7 @@ export function McpServerManager({
       setError(null);
       // Invalidate queries to refresh the list
       queryClient.invalidateQueries({ queryKey: ['mcp-servers', baseUrl] });
-      queryClient.invalidateQueries({ queryKey: ['mcp-catalog', baseUrl] });
+      queryClient.invalidateQueries({ queryKey: ['mcp-available', baseUrl] });
       // Notify parent about server changes (for codemode tool regeneration or other updates)
       onServersChange?.();
     },
@@ -174,40 +161,35 @@ export function McpServerManager({
     },
   });
 
-  // Separate active servers into supported (from catalog) and runtime servers
-  // Then filter to only show selected servers
-  const { supportedServers, runtimeServers } = useMemo(() => {
-    const active = activeQuery.data || [];
-    const supported: MCPServer[] = [];
+  // Separate servers into categories based on running status and runtime flag
+  // The /available endpoint returns all servers with isRunning and isRuntime flags
+  const { runningServers, runtimeServers } = useMemo(() => {
+    const all = catalogQuery.data || [];
+    const running: MCPServer[] = [];
     const runtime: MCPServer[] = [];
 
-    active.forEach(server => {
-      // Only include servers that are in the selectedServers list
-      // If selectedServers is empty, show no servers (user has none selected)
-      const isSelected = selectedServers.includes(server.id);
-
-      if (server.isRuntime) {
-        // For runtime servers, only show if selected
-        if (isSelected) {
+    all.forEach(server => {
+      if (server.isRunning) {
+        if (server.isRuntime) {
+          // mcp.json servers that are running
           runtime.push(server);
-        }
-      } else {
-        // For supported servers, only show if selected
-        if (isSelected) {
-          supported.push(server);
+        } else {
+          // Catalog servers that are running
+          running.push(server);
         }
       }
     });
 
-    return { supportedServers: supported, runtimeServers: runtime };
-  }, [activeQuery.data, selectedServers]);
+    return { runningServers: running, runtimeServers: runtime };
+  }, [catalogQuery.data]);
 
-  // Get catalog servers that are not yet enabled
+  // Get servers that are not yet running (available to enable)
+  // This includes both catalog servers and shows which are already running
   const availableCatalogServers = useMemo(() => {
-    const catalog = catalogQuery.data || [];
-    const activeIds = new Set((activeQuery.data || []).map(s => s.id));
-    return catalog.filter(server => !activeIds.has(server.id));
-  }, [catalogQuery.data, activeQuery.data]);
+    const all = catalogQuery.data || [];
+    // Filter to servers that are NOT currently running
+    return all.filter(server => !server.isRunning);
+  }, [catalogQuery.data]);
 
   // Filter catalog servers by search query
   const filteredCatalogServers = useMemo(() => {
@@ -246,7 +228,7 @@ export function McpServerManager({
   // Handle refreshing the server lists
   const handleRefresh = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['mcp-servers', baseUrl] });
-    queryClient.invalidateQueries({ queryKey: ['mcp-catalog', baseUrl] });
+    queryClient.invalidateQueries({ queryKey: ['mcp-available', baseUrl] });
   }, [queryClient, baseUrl]);
 
   // Handle server selection (for agent configuration)
@@ -263,7 +245,7 @@ export function McpServerManager({
     [selectedServers, onSelectedServersChange],
   );
 
-  const isLoading = catalogQuery.isLoading || activeQuery.isLoading;
+  const isLoading = catalogQuery.isLoading;
   const isMutating = enableMutation.isPending || disableMutation.isPending;
 
   return (
@@ -314,49 +296,44 @@ export function McpServerManager({
         </Box>
       )}
 
-      {/* Active/Enabled Servers Section */}
-      {!isLoading && (
+      {/* Running Catalog Servers Section */}
+      {!isLoading && runningServers.length > 0 && (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           <Text sx={{ fontWeight: 'semibold', fontSize: 1 }}>
-            Active Servers ({supportedServers.length})
+            Running Catalog Servers ({runningServers.length})
           </Text>
 
-          {supportedServers.length === 0 ? (
-            <Text sx={{ color: 'fg.muted', fontSize: 1 }}>
-              No active MCP servers. Enable servers from the catalog below.
-            </Text>
-          ) : (
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              {supportedServers.map(server => (
-                <ServerCard
-                  key={server.id}
-                  server={server}
-                  variant="active"
-                  disabled={disabled || isMutating}
-                  isSelected={selectedServers.includes(server.id)}
-                  onSelect={
-                    onSelectedServersChange ? handleServerSelect : undefined
-                  }
-                  onRemove={() => handleDisableServer(server.id)}
-                  isRemoving={
-                    disableMutation.isPending &&
-                    disableMutation.variables === server.id
-                  }
-                />
-              ))}
-            </Box>
-          )}
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {runningServers.map(server => (
+              <ServerCard
+                key={server.id}
+                server={server}
+                variant="active"
+                disabled={disabled || isMutating}
+                isSelected={selectedServers.includes(server.id)}
+                onSelect={
+                  onSelectedServersChange ? handleServerSelect : undefined
+                }
+                onRemove={() => handleDisableServer(server.id)}
+                isRemoving={
+                  disableMutation.isPending &&
+                  disableMutation.variables === server.id
+                }
+              />
+            ))}
+          </Box>
         </Box>
       )}
 
-      {/* Runtime Servers Section */}
+      {/* Runtime Servers Section (from mcp.json) */}
       {!isLoading && runtimeServers.length > 0 && (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           <Text sx={{ fontWeight: 'semibold', fontSize: 1 }}>
-            Runtime Servers ({runtimeServers.length})
+            Servers from mcp.json ({runtimeServers.length})
           </Text>
           <Text sx={{ color: 'fg.muted', fontSize: 0 }}>
-            These servers were started at runtime and cannot be removed here.
+            These servers are defined in ~/.datalayer/mcp.json and started
+            automatically.
           </Text>
 
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -365,7 +342,7 @@ export function McpServerManager({
                 key={server.id}
                 server={server}
                 variant="runtime"
-                disabled={true}
+                disabled={disabled}
                 isSelected={selectedServers.includes(server.id)}
                 onSelect={
                   onSelectedServersChange ? handleServerSelect : undefined

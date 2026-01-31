@@ -123,6 +123,17 @@ class VercelAITransport(BaseTransport):
                 "VercelAITransport requires a PydanticAIAgent that wraps a pydantic_ai.Agent"
             )
 
+    def _get_runtime_toolsets(self) -> list[Any]:
+        """Get runtime toolsets from the adapter.
+
+        Returns:
+            List of toolsets from the PydanticAIAdapter, combined with any static toolsets.
+        """
+        toolsets = list(self._toolsets)  # Start with static toolsets
+        if hasattr(self.agent, "_get_runtime_toolsets"):
+            toolsets.extend(self.agent._get_runtime_toolsets())
+        return toolsets
+
     async def handle_vercel_request(
         self,
         request: Request,
@@ -233,13 +244,16 @@ class VercelAITransport(BaseTransport):
         # Set the identity context for this request so that skill executors
         # can access OAuth tokens during tool execution
         async with IdentityContextManager(identities_from_request):
+            # Get runtime toolsets from the adapter (includes MCP servers)
+            runtime_toolsets = self._get_runtime_toolsets()
+            
             # Use Pydantic AI's built-in Vercel AI adapter with on_complete callback
             response = await VercelAIAdapter.dispatch_request(
                 request,
                 agent=pydantic_agent,
                 model=model,
                 usage_limits=self._usage_limits,
-                toolsets=self._toolsets,
+                toolsets=runtime_toolsets if runtime_toolsets else None,
                 builtin_tools=effective_builtin_tools,
                 on_complete=on_complete,
             )

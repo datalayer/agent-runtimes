@@ -113,6 +113,16 @@ class AGUITransport(BaseTransport):
                 "AGUITransport requires a PydanticAIAgent that wraps a pydantic_ai.Agent"
             )
 
+    def _get_runtime_toolsets(self) -> list[Any]:
+        """Get runtime toolsets from the adapter.
+
+        Returns:
+            List of toolsets from the PydanticAIAdapter.
+        """
+        if hasattr(self.agent, "_get_runtime_toolsets"):
+            return self.agent._get_runtime_toolsets()
+        return []
+
     def get_app(self) -> "Starlette":
         """Get the Starlette/ASGI application for AG-UI.
 
@@ -138,6 +148,8 @@ class AGUITransport(BaseTransport):
             agui_kwargs = self._agui_kwargs
             agent_id = self._agent_id
             tracker = get_usage_tracker()
+            # Store reference to self for accessing runtime toolsets in the closure
+            transport_self = self
 
             async def run_agent(request: Request) -> Response:
                 """Endpoint to run the agent with per-request model override support."""
@@ -210,10 +222,16 @@ class AGUITransport(BaseTransport):
                 set_request_identities(identities_from_request)
                 logger.debug("[AG-UI] Set request identities for streaming")
                 
+                # Get runtime toolsets from the adapter (includes MCP servers)
+                runtime_toolsets = transport_self._get_runtime_toolsets()
+                if runtime_toolsets:
+                    logger.info(f"[AG-UI] Using {len(runtime_toolsets)} runtime toolsets")
+                
                 return await AGUIAdapter.dispatch_request(
                     request,
                     agent=pydantic_agent,
                     model=model,
+                    toolsets=runtime_toolsets if runtime_toolsets else None,
                     on_complete=on_complete,
                     **agui_kwargs,
                 )

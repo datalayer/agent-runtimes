@@ -30,6 +30,62 @@ async def get_catalog_servers() -> list[dict[str, Any]]:
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/available", response_model=list[MCPServer])
+async def get_available_servers() -> list[dict[str, Any]]:
+    """
+    Get all available MCP servers - combines catalog servers with running mcp.json servers.
+    
+    Returns catalog servers with their running status, plus any additional servers
+    that are running from mcp.json but not in the catalog.
+    """
+    try:
+        # Get all catalog servers
+        catalog_servers = list_catalog_servers()
+        logger.debug(f"Catalog servers: {[s.id for s in catalog_servers]}")
+        
+        # Get running servers from lifecycle manager
+        lifecycle_manager = get_mcp_lifecycle_manager()
+        running_instances = lifecycle_manager.get_all_running_servers()
+        running_ids = {instance.server_id for instance in running_instances}
+        logger.info(f"Running server IDs: {running_ids}")
+        
+        result = []
+        
+        # Add catalog servers with their running status
+        for server in catalog_servers:
+            server_dict = server.model_dump(by_alias=True)
+            is_running = server.id in running_ids
+            server_dict["isRunning"] = is_running
+            server_dict["isRuntime"] = False  # Catalog servers are not runtime-only
+            logger.debug(f"Catalog server {server.id}: isRunning={is_running}")
+            
+            # If server is running, get tools from the running instance
+            if is_running:
+                for instance in running_instances:
+                    if instance.server_id == server.id:
+                        server_dict["tools"] = [t.model_dump(by_alias=True) for t in instance.config.tools]
+                        break
+            
+            result.append(server_dict)
+        
+        # Add running servers that are not in catalog (from mcp.json)
+        catalog_ids = {s.id for s in catalog_servers}
+        for instance in running_instances:
+            if instance.server_id not in catalog_ids:
+                server_dict = instance.config.model_dump(by_alias=True)
+                server_dict["isRunning"] = True
+                server_dict["isRuntime"] = True  # These are mcp.json servers
+                server_dict["isAvailable"] = True  # Running means available
+                logger.info(f"Adding runtime-only server: {instance.server_id}")
+                result.append(server_dict)
+        
+        return result
+
+    except Exception as e:
+        logger.error(f"Error getting available MCP servers: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.post("/catalog/{server_name}/enable", response_model=MCPServer, status_code=201)
 async def enable_catalog_server(server_name: str) -> dict[str, Any]:
     """
