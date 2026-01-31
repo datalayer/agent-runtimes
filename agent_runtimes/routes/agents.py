@@ -557,7 +557,7 @@ async def create_agent(request: CreateAgentRequest, http_request: Request) -> Cr
                     # Use app.mount() for proper dynamic route registration
                     # This is more reliable than manually manipulating app.routes
                     http_request.app.mount(mount_path, agui_app, name=f"agui-{agent_id}")
-                    logger.info(f"Dynamically mounted AG-UI route: {mount_path}/ (routes count: {len(http_request.app.routes)})")
+                    logger.info(f"Dynamically mounted AG-UI route: {mount_path}/")
             except Exception as e:
                 logger.warning(f"Could not register with AG-UI: {e}")
         

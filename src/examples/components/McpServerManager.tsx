@@ -173,21 +173,32 @@ export function McpServerManager({
   });
 
   // Separate active servers into supported (from library) and runtime servers
+  // Then filter to only show selected servers
   const { supportedServers, runtimeServers } = useMemo(() => {
     const active = activeQuery.data || [];
     const supported: MCPServer[] = [];
     const runtime: MCPServer[] = [];
 
     active.forEach(server => {
+      // Only include servers that are in the selectedServers list (if provided)
+      const isSelected =
+        selectedServers.length === 0 || selectedServers.includes(server.id);
+
       if (server.isRuntime) {
-        runtime.push(server);
+        // For runtime servers, only show if selected
+        if (isSelected) {
+          runtime.push(server);
+        }
       } else {
-        supported.push(server);
+        // For supported servers, only show if selected
+        if (isSelected) {
+          supported.push(server);
+        }
       }
     });
 
     return { supportedServers: supported, runtimeServers: runtime };
-  }, [activeQuery.data]);
+  }, [activeQuery.data, selectedServers]);
 
   // Get library servers that are not yet enabled
   const availableLibraryServers = useMemo(() => {
