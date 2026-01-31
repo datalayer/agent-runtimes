@@ -233,9 +233,10 @@ class PydanticAIAdapter(BaseAgent):
             
             # Dynamically get toolsets at run time to reflect current MCP server state
             runtime_toolsets = self._get_runtime_toolsets()
-            if runtime_toolsets:
-                run_kwargs["toolsets"] = runtime_toolsets
-                logger.debug(f"PydanticAIAdapter: Using {len(runtime_toolsets)} runtime toolsets")
+            # Always pass toolsets to override any default toolsets on the agent
+            # Even an empty list should be passed to ensure no tools are available
+            run_kwargs["toolsets"] = runtime_toolsets
+            logger.debug(f"PydanticAIAdapter: Using {len(runtime_toolsets)} runtime toolsets")
             
             result = await self._agent.run(prompt, **run_kwargs)
 
@@ -340,9 +341,10 @@ class PydanticAIAdapter(BaseAgent):
             
             # Dynamically get toolsets at run time to reflect current MCP server state
             runtime_toolsets = self._get_runtime_toolsets()
-            if runtime_toolsets:
-                stream_kwargs["toolsets"] = runtime_toolsets
-                logger.debug(f"PydanticAIAdapter: Using {len(runtime_toolsets)} runtime toolsets for stream")
+            # Always pass toolsets to override any default toolsets on the agent
+            # Even an empty list should be passed to ensure no tools are available
+            stream_kwargs["toolsets"] = runtime_toolsets
+            logger.debug(f"PydanticAIAdapter: Using {len(runtime_toolsets)} runtime toolsets for stream")
             
             async with self._agent.run_stream(prompt, **stream_kwargs) as result:
                 # stream_text() yields cumulative text, we need deltas

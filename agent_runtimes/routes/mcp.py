@@ -98,7 +98,7 @@ async def get_available_servers() -> list[dict[str, Any]]:
     Config and catalog servers are managed separately, so the same ID can exist in both.
     
     Returns:
-    - All catalog servers (with isRunning status based on catalog server storage)
+    - All catalog servers (with isRunning status based on catalog server storage only)
     - All running config servers (from mcp.json, always with isRunning=True)
     """
     try:
@@ -116,15 +116,16 @@ async def get_available_servers() -> list[dict[str, Any]]:
         
         result = []
         
-        # Add ALL catalog servers with their running status
+        # Add ALL catalog servers with their running status (based on catalog storage only)
         for server in catalog_servers:
             server_dict = server.model_dump(by_alias=True)
+            # Only check catalog storage for running status - config servers are separate
             is_running = server.id in running_catalog_ids
             server_dict["isRunning"] = is_running
             server_dict["isConfig"] = False  # Catalog servers are never config servers
             logger.debug(f"Catalog server {server.id}: isRunning={is_running}")
             
-            # If server is running, get tools from the running instance
+            # If server is running in catalog, get tools from the running instance
             if is_running:
                 instance = lifecycle_manager.get_running_server(server.id, is_config=False)
                 if instance:
@@ -155,6 +156,9 @@ async def enable_catalog_server(server_name: str) -> dict[str, Any]:
 
     This starts the MCP server process and adds it to the active session.
     The server will not persist across restarts.
+    
+    Config and catalog servers are separate - enabling a catalog server works
+    even if a config server with the same ID exists.
 
     Args:
         server_name: The name/ID of the MCP server from the catalog
@@ -172,14 +176,20 @@ async def enable_catalog_server(server_name: str) -> dict[str, Any]:
 
         lifecycle_manager = get_mcp_lifecycle_manager()
         
-        # Check if already running
-        if lifecycle_manager.is_server_running(server_name):
-            instance = lifecycle_manager.get_running_server(server_name)
+        # Check if already running in catalog storage specifically
+        # (a server with same ID in config storage is separate and doesn't affect this)
+        if lifecycle_manager.is_catalog_server_running(server_name):
+            instance = lifecycle_manager.get_running_server(server_name, is_config=False)
             if instance:
+                logger.info(f"Catalog server '{server_name}' already running")
                 return instance.config.model_dump(by_alias=True)
 
+        # Ensure the config has is_config=False for catalog servers
+        catalog_config = catalog_server.model_copy(deep=True)
+        catalog_config.is_config = False  # Explicitly mark as catalog server
+        
         # Start the MCP server process
-        instance = await lifecycle_manager.start_server(server_name, catalog_server)
+        instance = await lifecycle_manager.start_server(server_name, catalog_config)
         if not instance:
             failed = lifecycle_manager.get_failed_servers()
             error = failed.get(server_name, "Unknown error")

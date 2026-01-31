@@ -129,6 +129,10 @@ export function McpServerManager({
       // Invalidate queries to refresh the list
       queryClient.invalidateQueries({ queryKey: ['mcp-servers', baseUrl] });
       queryClient.invalidateQueries({ queryKey: ['mcp-available', baseUrl] });
+      // Also invalidate the config query to refresh tools menu in Chat
+      queryClient.invalidateQueries({
+        queryKey: ['models', `${baseUrl}/api/v1/configure`],
+      });
       // Notify parent about server changes (for codemode tool regeneration or other updates)
       onServersChange?.();
     },
@@ -156,6 +160,10 @@ export function McpServerManager({
       // Invalidate queries to refresh the list
       queryClient.invalidateQueries({ queryKey: ['mcp-servers', baseUrl] });
       queryClient.invalidateQueries({ queryKey: ['mcp-available', baseUrl] });
+      // Also invalidate the config query to refresh tools menu in Chat
+      queryClient.invalidateQueries({
+        queryKey: ['models', `${baseUrl}/api/v1/configure`],
+      });
       // Notify parent about server changes (for codemode tool regeneration or other updates)
       onServersChange?.();
     },
@@ -186,6 +194,10 @@ export function McpServerManager({
     },
     onSuccess: () => {
       setError(null);
+      // Also invalidate the config query to refresh tools menu in Chat
+      queryClient.invalidateQueries({
+        queryKey: ['models', `${baseUrl}/api/v1/configure`],
+      });
       // Notify parent about server changes
       onServersChange?.();
     },
@@ -261,9 +273,27 @@ export function McpServerManager({
   // Handle enabling a server
   const handleEnableServer = useCallback(
     (serverName: string) => {
-      enableMutation.mutate(serverName);
+      enableMutation.mutate(serverName, {
+        onSuccess: () => {
+          // After enabling, automatically add to selected servers
+          if (!selectedServers.includes(serverName)) {
+            const newServers = [...selectedServers, serverName];
+            onSelectedServersChange?.(newServers);
+            // Update the running agent's MCP servers
+            if (agentId) {
+              updateAgentMcpServersMutation.mutate(newServers);
+            }
+          }
+        },
+      });
     },
-    [enableMutation],
+    [
+      enableMutation,
+      selectedServers,
+      onSelectedServersChange,
+      agentId,
+      updateAgentMcpServersMutation,
+    ],
   );
 
   // Handle disabling a server
