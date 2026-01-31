@@ -57,6 +57,8 @@ interface MCPServer {
 interface McpServerManagerProps {
   /** Base URL for the API */
   baseUrl: string;
+  /** Agent ID for updating the running agent's MCP servers */
+  agentId?: string;
   /** Whether codemode is enabled - affects tool regeneration on add/remove */
   enableCodemode?: boolean;
   /** Currently selected MCP servers (for selection mode) */
@@ -81,6 +83,7 @@ interface McpServerManagerProps {
  */
 export function McpServerManager({
   baseUrl,
+  agentId,
   enableCodemode = false,
   selectedServers = [],
   onSelectedServersChange,
@@ -154,6 +157,36 @@ export function McpServerManager({
       queryClient.invalidateQueries({ queryKey: ['mcp-servers', baseUrl] });
       queryClient.invalidateQueries({ queryKey: ['mcp-available', baseUrl] });
       // Notify parent about server changes (for codemode tool regeneration or other updates)
+      onServersChange?.();
+    },
+    onError: (error: Error) => {
+      setError(error.message);
+    },
+  });
+
+  // Update agent's MCP servers mutation
+  const updateAgentMcpServersMutation = useMutation({
+    mutationFn: async (newServers: string[]) => {
+      if (!agentId) return;
+      const response = await fetch(
+        `${baseUrl}/api/v1/agents/${agentId}/mcp-servers`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ selected_mcp_servers: newServers }),
+        },
+      );
+      if (!response.ok) {
+        const error = await response
+          .json()
+          .catch(() => ({ detail: 'Unknown error' }));
+        throw new Error(error.detail || 'Failed to update agent MCP servers');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      setError(null);
+      // Notify parent about server changes
       onServersChange?.();
     },
     onError: (error: Error) => {
@@ -237,12 +270,41 @@ export function McpServerManager({
       disableMutation.mutate(serverName);
       // Also remove from selected servers so the Chat tools menu updates
       if (selectedServers.includes(serverName)) {
-        onSelectedServersChange?.(
-          selectedServers.filter(id => id !== serverName),
-        );
+        const newServers = selectedServers.filter(id => id !== serverName);
+        onSelectedServersChange?.(newServers);
+        // Update the running agent's MCP servers
+        if (agentId) {
+          updateAgentMcpServersMutation.mutate(newServers);
+        }
       }
     },
-    [disableMutation, selectedServers, onSelectedServersChange],
+    [
+      disableMutation,
+      selectedServers,
+      onSelectedServersChange,
+      agentId,
+      updateAgentMcpServersMutation,
+    ],
+  );
+
+  // Handle removing a server from selection (without disabling it globally)
+  const handleRemoveServer = useCallback(
+    (serverName: string) => {
+      if (selectedServers.includes(serverName)) {
+        const newServers = selectedServers.filter(id => id !== serverName);
+        onSelectedServersChange?.(newServers);
+        // Update the running agent's MCP servers
+        if (agentId) {
+          updateAgentMcpServersMutation.mutate(newServers);
+        }
+      }
+    },
+    [
+      selectedServers,
+      onSelectedServersChange,
+      agentId,
+      updateAgentMcpServersMutation,
+    ],
   );
 
   // Handle refreshing the server lists

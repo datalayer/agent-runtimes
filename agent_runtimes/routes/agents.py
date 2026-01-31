@@ -728,3 +728,66 @@ async def delete_agent(agent_id: str) -> dict[str, str]:
     logger.info(f"Deleted agent: {agent_id}")
     
     return {"message": f"Agent {agent_id} deleted successfully"}
+
+
+class UpdateAgentMcpServersRequest(BaseModel):
+    """Request to update an agent's MCP servers."""
+    selected_mcp_servers: list[str] = Field(
+        default_factory=list,
+        description="New list of MCP server IDs to use",
+    )
+
+
+@router.patch("/{agent_id}/mcp-servers")
+async def update_agent_mcp_servers(
+    agent_id: str,
+    request: UpdateAgentMcpServersRequest,
+) -> dict[str, Any]:
+    """
+    Update an agent's selected MCP servers at runtime.
+    
+    This allows dynamically adding or removing MCP servers from a running agent
+    without recreating the agent.
+    
+    Args:
+        agent_id: The agent identifier.
+        request: The new list of MCP server IDs.
+        
+    Returns:
+        Updated agent info.
+        
+    Raises:
+        HTTPException: If agent not found or update fails.
+    """
+    if agent_id not in _agents:
+        raise HTTPException(status_code=404, detail=f"Agent not found: {agent_id}")
+    
+    info = _agents[agent_id]
+    adapter = info.adapter
+    
+    # Check if adapter supports updating MCP servers
+    if not hasattr(adapter, "update_selected_mcp_servers"):
+        raise HTTPException(
+            status_code=400,
+            detail="Agent adapter does not support updating MCP servers",
+        )
+    
+    try:
+        # Update the adapter's selected MCP servers
+        adapter.update_selected_mcp_servers(request.selected_mcp_servers)
+        
+        logger.info(
+            f"Updated agent '{agent_id}' MCP servers to: {request.selected_mcp_servers}"
+        )
+        
+        return {
+            "agent_id": agent_id,
+            "selected_mcp_servers": request.selected_mcp_servers,
+            "message": "MCP servers updated successfully",
+        }
+    except Exception as e:
+        logger.error(f"Failed to update MCP servers for agent '{agent_id}': {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to update MCP servers: {str(e)}",
+        )

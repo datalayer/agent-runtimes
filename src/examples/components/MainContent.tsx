@@ -25,6 +25,8 @@ interface MainContentProps {
   serviceManager?: ServiceManager.IManager;
   /** Base URL for MCP API */
   baseUrl?: string;
+  /** Agent ID for updating the running agent */
+  agentId?: string;
   /** Whether codemode is enabled */
   enableCodemode?: boolean;
   /** Currently selected MCP servers */
@@ -53,6 +55,7 @@ export const MainContent: React.FC<MainContentProps> = ({
   isNewAgent,
   serviceManager,
   baseUrl,
+  agentId,
   enableCodemode,
   selectedMcpServers,
   onSelectedMcpServersChange,
@@ -121,6 +124,7 @@ export const MainContent: React.FC<MainContentProps> = ({
         >
           <McpServerManager
             baseUrl={baseUrl}
+            agentId={agentId}
             enableCodemode={enableCodemode}
             selectedServers={selectedMcpServers}
             onSelectedServersChange={onSelectedMcpServersChange}

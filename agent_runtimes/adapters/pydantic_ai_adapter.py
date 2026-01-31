@@ -142,6 +142,21 @@ class PydanticAIAdapter(BaseAgent):
         return self._agent_id
 
     @property
+    def selected_mcp_server_ids(self) -> list[str]:
+        """Get the list of selected MCP server IDs."""
+        return self._selected_mcp_server_ids.copy()
+
+    def update_selected_mcp_servers(self, server_ids: list[str]) -> None:
+        """Update the list of selected MCP servers.
+        
+        Args:
+            server_ids: New list of MCP server IDs to use.
+        """
+        old_ids = self._selected_mcp_server_ids
+        self._selected_mcp_server_ids = server_ids
+        logger.info(f"PydanticAIAdapter: Updated MCP servers from {old_ids} to {server_ids}")
+
+    @property
     def pydantic_agent(self) -> Agent:
         """Get the underlying Pydantic AI agent."""
         return self._agent

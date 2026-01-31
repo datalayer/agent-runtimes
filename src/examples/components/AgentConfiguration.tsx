@@ -516,6 +516,14 @@ interface AgentConfigurationProps {
   onSelectedCatalogServersChange?: (servers: string[]) => void;
   /** @deprecated Use onSelectedConfigServersChange and onSelectedCatalogServersChange instead */
   onSelectedMcpServersChange?: (servers: string[]) => void;
+  /** Rich editor mode */
+  richEditor?: boolean;
+  /** Callback when rich editor changes */
+  onRichEditorChange?: (enabled: boolean) => void;
+  /** Durable mode */
+  durable?: boolean;
+  /** Callback when durable changes */
+  onDurableChange?: (enabled: boolean) => void;
 }
 
 /**
@@ -1422,6 +1430,40 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
           {createError}
         </Flash>
       )}
+
+      {/* Rich Editor and Durable toggles - disabled for now */}
+      <Box
+        sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 2,
+          marginBottom: 3,
+          padding: 3,
+          bg: 'canvas.subtle',
+          borderRadius: 2,
+          border: '1px solid',
+          borderColor: 'border.default',
+          opacity: 0.6,
+        }}
+      >
+        <Text sx={{ fontSize: 1, fontWeight: 'semibold', color: 'fg.muted' }}>
+          Coming Soon
+        </Text>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Checkbox checked={false} disabled={true} onChange={() => {}} />
+          <Text sx={{ fontSize: 1, color: 'fg.muted' }}>Rich Editor</Text>
+          <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
+            — Enable rich text editing with formatting options
+          </Text>
+        </Box>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Checkbox checked={false} disabled={true} onChange={() => {}} />
+          <Text sx={{ fontSize: 1, color: 'fg.muted' }}>Durable</Text>
+          <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
+            — Persist agent state across sessions
+          </Text>
+        </Box>
+      </Box>
 
       <Button
         variant="primary"

@@ -795,6 +795,7 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
               isNewAgent={selectedAgentId === 'new-agent'}
               isConfigured={isConfigured}
               baseUrl={baseUrl}
+              agentId={agentName}
               enableCodemode={enableCodemode}
               selectedMcpServers={[
                 ...selectedConfigServers,
@@ -910,6 +911,7 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
                         initialMcpServers={[
                           ...selectedConfigServers,
                           ...selectedCatalogServers,
+                          ...selectedMcpServers,
                         ]}
                         initialSkills={selectedSkills}
                         identityProviders={oauthProvidersConfig}

@@ -1218,6 +1218,36 @@ function ChatBaseInner({
     }
   }, [configQuery.data, selectedModel, initialModel, initialMcpServers]);
 
+  // Update enabled MCP servers when initialMcpServers prop changes (e.g., server removed)
+  useEffect(() => {
+    if (!configQuery.data?.mcpServers || !initialMcpServers) return;
+
+    setEnabledMcpTools(prev => {
+      const newMap = new Map<string, Set<string>>();
+
+      // Only keep servers that are in initialMcpServers
+      for (const server of configQuery.data.mcpServers) {
+        if (initialMcpServers.includes(server.id) && prev.has(server.id)) {
+          // Keep existing tool selection for this server
+          newMap.set(server.id, prev.get(server.id)!);
+        } else if (
+          initialMcpServers.includes(server.id) &&
+          server.isAvailable &&
+          server.enabled
+        ) {
+          // Newly added server - enable all tools
+          const enabledToolNames = new Set(
+            server.tools.filter(t => t.enabled).map(t => t.name),
+          );
+          newMap.set(server.id, enabledToolNames);
+        }
+        // Servers not in initialMcpServers are excluded
+      }
+
+      return newMap;
+    });
+  }, [initialMcpServers, configQuery.data?.mcpServers]);
+
   // Initialize enabled skills from initialSkills prop
   useEffect(() => {
     if (initialSkills && initialSkills.length > 0) {

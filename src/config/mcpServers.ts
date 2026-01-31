@@ -21,7 +21,7 @@ export const TAVILY_MCP_SERVER: MCPServer = {
   name: 'Tavily Search',
   url: '',
   command: 'npx',
-  args: ['-y', '@tavily/mcp-server'],
+  args: ['-y', 'tavily-mcp'],
   transport: 'stdio',
   enabled: true,
   isAvailable: false,
