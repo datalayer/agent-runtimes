@@ -88,6 +88,33 @@ Content-Type: application/json
 
 Update an existing agent configuration.
 
+### Update Agent MCP Servers (Runtime)
+
+```http
+PATCH /api/v1/agents/{agent_id}/mcp-servers
+Content-Type: application/json
+```
+
+Dynamically update an agent's selected MCP servers without recreating the agent. This allows adding or removing MCP tools from a running agent.
+
+**Request Body:**
+
+```json
+{
+  "selected_mcp_servers": ["tavily", "filesystem"]
+}
+```
+
+**Response:**
+
+```json
+{
+  "agent_id": "my-agent",
+  "selected_mcp_servers": ["tavily", "filesystem"],
+  "message": "MCP servers updated successfully"
+}
+```
+
 ### Delete Agent
 
 ```http
@@ -220,6 +247,10 @@ Manage MCP (Model Context Protocol) servers for tool integration. There are two 
 - **MCP Config**: User-defined servers from `~/.datalayer/mcp.json` that start automatically
 - **MCP Catalog**: Predefined servers that can be enabled on-demand
 
+:::info Separate Storage
+Config and catalog servers are stored separately, allowing the same server ID to exist in both without conflict. For example, you can have a custom `tavily` server in your `mcp.json` while also having access to the predefined `tavily` in the catalog.
+:::
+
 ### List MCP Config Servers
 
 ```http
@@ -280,17 +311,13 @@ Get all predefined MCP servers from the catalog. These are NOT started automatic
 ]
 ```
 
-### List All Available Servers (Deprecated)
+### List All Available Servers
 
 ```http
 GET /api/v1/mcp/servers/available
 ```
 
-:::warning Deprecated
-Use `/config` for config servers or `/catalog` for catalog servers.
-:::
-
-Get all available MCP servers - combines catalog servers with running servers from `~/.datalayer/mcp.json`.
+Get all available MCP servers - combines catalog servers with running config servers. Since config and catalog servers are stored separately, the same ID can appear in both (as separate entries).
 
 **Response:**
 
@@ -303,9 +330,20 @@ Get all available MCP servers - combines catalog servers with running servers fr
     "isRunning": true,
     "isConfig": true,
     "transport": "stdio"
+  },
+  {
+    "id": "tavily",
+    "name": "Tavily Search",
+    "description": "Web search via Tavily API",
+    "isAvailable": false,
+    "isRunning": false,
+    "isConfig": false,
+    "transport": "stdio"
   }
 ]
 ```
+
+Note: The same ID (`tavily`) can appear twice - once from config (user's mcp.json) and once from catalog (predefined).
 
 ### List Running Servers
 

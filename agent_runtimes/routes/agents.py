@@ -762,8 +762,7 @@ async def update_agent_mcp_servers(
     if agent_id not in _agents:
         raise HTTPException(status_code=404, detail=f"Agent not found: {agent_id}")
     
-    _, info = _agents[agent_id]
-    adapter = info.adapter
+    adapter, info = _agents[agent_id]
     
     logger.info(f"PATCH /agents/{agent_id}/mcp-servers: Adapter type={type(adapter).__name__}, request={request.selected_mcp_servers}")
     

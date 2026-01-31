@@ -59,19 +59,24 @@ class MCPLifecycleManager:
 
     Handles:
     - Starting/stopping MCP servers
-    - Tracking running state
+    - Tracking running state (separately for config and catalog servers)
     - Merging mcp.json config with catalog commands
     - Tool discovery from running servers
+    
+    Config servers (from mcp.json) and catalog servers (predefined) are managed
+    in separate data structures so the same server ID can exist in both.
     """
 
     def __init__(self) -> None:
         """Initialize the lifecycle manager."""
-        self._running_servers: dict[str, MCPServerInstance] = {}
+        # Separate storage for config (mcp.json) vs catalog servers
+        self._config_servers: dict[str, MCPServerInstance] = {}  # From mcp.json
+        self._catalog_servers: dict[str, MCPServerInstance] = {}  # From catalog
         self._failed_servers: dict[str, str] = {}  # server_id -> error message
         self._initialization_event: asyncio.Event | None = None
         self._initialization_started: bool = False
         self._lock = asyncio.Lock()
-        logger.info("MCPLifecycleManager initialized")
+        logger.info("MCPLifecycleManager initialized (separate config/catalog storage)")
 
     def get_mcp_config_path(self) -> Path:
         """Get the path to the MCP configuration file."""
@@ -225,13 +230,9 @@ class MCPLifecycleManager:
         async with self._lock:
             logger.debug(f"Acquired lock for '{server_id}'")
             
-            # Check if already running
-            if server_id in self._running_servers:
-                instance = self._running_servers[server_id]
-                if instance.is_running:
-                    logger.info(f"MCP server '{server_id}' is already running")
-                    return instance
-
+            # Determine which storage to use based on config.is_config
+            # (we need config first to know this)
+            
             # Get config
             if config is None:
                 config = self.get_merged_server_config(server_id)
@@ -241,8 +242,19 @@ class MCPLifecycleManager:
                 logger.error(error)
                 self._failed_servers[server_id] = error
                 return None
+            
+            # Select the appropriate storage based on whether it's a config or catalog server
+            storage = self._config_servers if config.is_config else self._catalog_servers
+            storage_name = "config" if config.is_config else "catalog"
+            
+            # Check if already running in the appropriate storage
+            if server_id in storage:
+                instance = storage[server_id]
+                if instance.is_running:
+                    logger.info(f"MCP server '{server_id}' is already running (in {storage_name})")
+                    return instance
 
-            logger.info(f"🔧 Creating MCP server '{server_id}' with command: {config.command} {config.args}")
+            logger.info(f"🔧 Creating MCP server '{server_id}' ({storage_name}) with command: {config.command} {config.args}")
 
             # Import pydantic_ai MCP support
             try:
@@ -339,8 +351,11 @@ class MCPLifecycleManager:
                         exit_stack=exit_stack,
                         tools=tools,
                     )
-                    self._running_servers[server_id] = instance
+                    # Store in appropriate dict based on is_config
+                    storage = self._config_servers if config.is_config else self._catalog_servers
+                    storage[server_id] = instance
                     self._failed_servers.pop(server_id, None)
+                    logger.info(f"✓ MCP server '{server_id}' stored in {'config' if config.is_config else 'catalog'} servers")
                     return instance
 
                 except asyncio.TimeoutError:
@@ -387,27 +402,32 @@ class MCPLifecycleManager:
 
             return None
 
-    async def stop_server(self, server_id: str) -> bool:
+    async def stop_server(self, server_id: str, is_config: bool = False) -> bool:
         """
         Stop a running MCP server.
 
         Args:
             server_id: The server identifier
+            is_config: Whether this is a config server (from mcp.json) or catalog server
 
         Returns:
             True if stopped successfully, False otherwise
         """
         async with self._lock:
-            instance = self._running_servers.pop(server_id, None)
+            # Select the appropriate storage
+            storage = self._config_servers if is_config else self._catalog_servers
+            storage_name = "config" if is_config else "catalog"
+            
+            instance = storage.pop(server_id, None)
             if instance is None:
-                logger.warning(f"MCP server '{server_id}' is not running")
+                logger.warning(f"MCP server '{server_id}' is not running in {storage_name}")
                 return False
 
             try:
                 await instance.exit_stack.__aexit__(None, None, None)
                 instance.is_running = False
                 instance.config.is_running = False
-                logger.info(f"✓ Stopped MCP server '{server_id}'")
+                logger.info(f"✓ Stopped MCP server '{server_id}' ({storage_name})")
                 return True
             except RuntimeError as e:
                 if "cancel scope" in str(e).lower():
@@ -419,36 +439,79 @@ class MCPLifecycleManager:
                 logger.warning(f"Error stopping MCP server '{server_id}': {e}")
                 return True
 
-    def get_running_server(self, server_id: str) -> MCPServerInstance | None:
-        """Get a running server instance by ID."""
-        return self._running_servers.get(server_id)
+    def get_running_server(self, server_id: str, is_config: bool | None = None) -> MCPServerInstance | None:
+        """Get a running server instance by ID.
+        
+        Args:
+            server_id: The server identifier
+            is_config: If True, only check config servers. If False, only check catalog.
+                      If None, check both (catalog first, then config).
+        """
+        if is_config is True:
+            return self._config_servers.get(server_id)
+        elif is_config is False:
+            return self._catalog_servers.get(server_id)
+        else:
+            # Check catalog first, then config
+            return self._catalog_servers.get(server_id) or self._config_servers.get(server_id)
+
+    def get_config_servers(self) -> list[MCPServerInstance]:
+        """Get all running config server instances (from mcp.json)."""
+        return list(self._config_servers.values())
+
+    def get_catalog_servers(self) -> list[MCPServerInstance]:
+        """Get all running catalog server instances."""
+        return list(self._catalog_servers.values())
 
     def get_all_running_servers(self) -> list[MCPServerInstance]:
-        """Get all running server instances."""
-        return list(self._running_servers.values())
+        """Get all running server instances (both config and catalog)."""
+        return list(self._config_servers.values()) + list(self._catalog_servers.values())
 
     def get_running_server_ids(self) -> list[str]:
-        """Get IDs of all running servers."""
-        return list(self._running_servers.keys())
+        """Get IDs of all running servers (combined, may have duplicates)."""
+        return list(self._config_servers.keys()) + list(self._catalog_servers.keys())
 
-    def is_server_running(self, server_id: str) -> bool:
-        """Check if a server is running."""
-        instance = self._running_servers.get(server_id)
+    def get_config_server_ids(self) -> list[str]:
+        """Get IDs of running config servers."""
+        return list(self._config_servers.keys())
+
+    def get_catalog_server_ids(self) -> list[str]:
+        """Get IDs of running catalog servers."""
+        return list(self._catalog_servers.keys())
+
+    def is_server_running(self, server_id: str, is_config: bool | None = None) -> bool:
+        """Check if a server is running.
+        
+        Args:
+            server_id: The server identifier
+            is_config: If True, only check config servers. If False, only check catalog.
+                      If None, check both.
+        """
+        instance = self.get_running_server(server_id, is_config)
         return instance is not None and instance.is_running
+
+    def is_config_server_running(self, server_id: str) -> bool:
+        """Check if a config server (from mcp.json) is running."""
+        return self.is_server_running(server_id, is_config=True)
+
+    def is_catalog_server_running(self, server_id: str) -> bool:
+        """Check if a catalog server is running."""
+        return self.is_server_running(server_id, is_config=False)
 
     def get_failed_servers(self) -> dict[str, str]:
         """Get dict of failed server IDs to error messages."""
         return self._failed_servers.copy()
 
-    def get_server_status(self, server_id: str) -> dict[str, Any]:
+    def get_server_status(self, server_id: str, is_config: bool | None = None) -> dict[str, Any]:
         """Get status of a specific server."""
-        if server_id in self._running_servers:
-            instance = self._running_servers[server_id]
+        instance = self.get_running_server(server_id, is_config)
+        if instance:
             return {
                 "id": server_id,
                 "status": "running" if instance.is_running else "stopped",
                 "tools_count": len(instance.tools),
                 "error": instance.error,
+                "is_config": instance.config.is_config,
             }
         elif server_id in self._failed_servers:
             return {
@@ -462,18 +525,31 @@ class MCPLifecycleManager:
                 "status": "stopped",
             }
 
-    def get_pydantic_toolsets(self) -> list[Any]:
+    def get_pydantic_toolsets(self, include_config: bool = True, include_catalog: bool = True) -> list[Any]:
         """
-        Get all running MCP servers as pydantic_ai toolsets.
+        Get running MCP servers as pydantic_ai toolsets.
+        
+        Args:
+            include_config: Whether to include config servers (from mcp.json)
+            include_catalog: Whether to include catalog servers
 
         Returns:
             List of pydantic MCP server instances for use with Agent(toolsets=...)
         """
-        return [
-            instance.pydantic_server
-            for instance in self._running_servers.values()
-            if instance.is_running
-        ]
+        toolsets = []
+        if include_config:
+            toolsets.extend([
+                instance.pydantic_server
+                for instance in self._config_servers.values()
+                if instance.is_running
+            ])
+        if include_catalog:
+            toolsets.extend([
+                instance.pydantic_server
+                for instance in self._catalog_servers.values()
+                if instance.is_running
+            ])
+        return toolsets
 
     async def initialize_from_config(self) -> None:
         """
@@ -529,9 +605,15 @@ class MCPLifecycleManager:
 
     async def shutdown(self) -> None:
         """Shutdown all running MCP servers."""
-        server_ids = list(self._running_servers.keys())
-        for server_id in server_ids:
-            await self.stop_server(server_id)
+        # Stop config servers
+        config_ids = list(self._config_servers.keys())
+        for server_id in config_ids:
+            await self.stop_server(server_id, is_config=True)
+        
+        # Stop catalog servers
+        catalog_ids = list(self._catalog_servers.keys())
+        for server_id in catalog_ids:
+            await self.stop_server(server_id, is_config=False)
 
         self._failed_servers.clear()
         self._initialization_started = False

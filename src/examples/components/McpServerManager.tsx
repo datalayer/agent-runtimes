@@ -211,15 +211,17 @@ export function McpServerManager({
     all.forEach(server => {
       const isSelected = selectedServers.includes(server.id);
 
-      if (server.isRunning) {
-        if (server.isConfig) {
-          // mcp.json config servers that are running
+      if (server.isConfig) {
+        // mcp.json config servers (only shown if running)
+        if (server.isRunning) {
           config.push(server);
           if (isSelected) {
             assignedConfig.push(server);
           }
-        } else {
-          // Catalog servers that are running
+        }
+      } else {
+        // Catalog servers - show in running section if running
+        if (server.isRunning) {
           running.push(server);
           if (isSelected) {
             assignedCatalog.push(server);
@@ -237,11 +239,11 @@ export function McpServerManager({
   }, [catalogQuery.data, selectedServers]);
 
   // Get servers that are not yet running (available to enable)
-  // This includes both catalog servers and shows which are already running
+  // This includes catalog servers that are NOT running and NOT config servers
   const availableCatalogServers = useMemo(() => {
     const all = catalogQuery.data || [];
-    // Filter to servers that are NOT currently running
-    return all.filter(server => !server.isRunning);
+    // Filter to catalog servers (isConfig=false) that are NOT currently running
+    return all.filter(server => !server.isRunning && !server.isConfig);
   }, [catalogQuery.data]);
 
   // Filter catalog servers by search query
@@ -400,6 +402,7 @@ export function McpServerManager({
                 onSelect={
                   onSelectedServersChange ? handleServerSelect : undefined
                 }
+                onRemove={() => handleRemoveServer(server.id)}
               />
             ))}
           </Box>
@@ -681,7 +684,22 @@ function ServerCard({
           </Button>
         )}
 
-        {variant === 'config' && (
+        {variant === 'config' && onRemove && (
+          <Button
+            variant="danger"
+            size="small"
+            leadingVisual={isRemoving ? Spinner : TrashIcon}
+            onClick={e => {
+              e.stopPropagation();
+              onRemove();
+            }}
+            disabled={disabled || isRemoving}
+          >
+            Remove
+          </Button>
+        )}
+
+        {variant === 'config' && !onRemove && (
           <Text sx={{ fontSize: 0, color: 'fg.muted', fontStyle: 'italic' }}>
             Auto-started from mcp.json
           </Text>

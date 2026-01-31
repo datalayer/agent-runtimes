@@ -781,7 +781,7 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
               isNewAgent={selectedAgentId === 'new-agent'}
               isConfigured={isConfigured}
               baseUrl={baseUrl}
-              agentId={agentName}
+              agentId={currentAgent?.id || agentName}
               enableCodemode={enableCodemode}
               selectedMcpServers={[
                 ...selectedConfigServers,

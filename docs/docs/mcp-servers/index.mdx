@@ -18,6 +18,7 @@ MCP servers are external processes that provide tools, resources, and prompts to
 - **Are fully customizable** with your own commands, arguments, and environment variables
 - **Appear in the agent form** where users can select which servers to include as toolsets
 - **Support any MCP-compatible server** - if it follows the [MCP specification](https://modelcontextprotocol.io/), it will work
+- **Are stored separately** from catalog servers, allowing the same ID in both without conflict
 
 ### MCP Catalog (predefined servers)
 
@@ -26,9 +27,12 @@ MCP servers are external processes that provide tools, resources, and prompts to
 - **Are NOT started automatically** - users must explicitly enable them via API
 - **Can be enabled on-demand** using the `/api/v1/mcp/servers/catalog/{server_name}/enable` endpoint
 - **Provide common tools** like web search, file system access, etc.
+- **Have their own storage** separate from config servers
 
 :::tip Which to use?
 For most users, **MCP Config** is recommended. Add your servers to `~/.datalayer/mcp.json` and they'll be available automatically when the agent runtime starts.
+
+The same server ID can exist in both config and catalog - they are tracked independently.
 :::
 
 ## Key Features
@@ -37,6 +41,8 @@ For most users, **MCP Config** is recommended. Add your servers to `~/.datalayer
 - **Retry with Backoff** — Transient failures trigger automatic retries with exponential backoff
 - **Sequential Startup** — Multiple MCP servers start sequentially to avoid resource conflicts
 - **Status Monitoring** — Real-time status of all MCP toolsets via API endpoint
+- **Separate Storage** — Config and catalog servers are stored independently, allowing same IDs in both
+- **Runtime Updates** — Dynamically add/remove MCP servers from running agents via PATCH API
 
 ## MCP Server Examples
 
@@ -437,15 +443,20 @@ However, session file authentication is more reliable.
                               │
                               ↓ Lifespan startup
 ┌─────────────────────────────────────────────────────────────┐
-│               MCP Toolsets Manager                           │
-│        (agent_runtimes/mcp/toolsets.py)                     │
+│               MCP Lifecycle Manager                          │
+│        (agent_runtimes/mcp/lifecycle.py)                    │
+│  ┌────────────────────┐  ┌────────────────────┐             │
+│  │   Config Servers   │  │  Catalog Servers   │             │
+│  │   (from mcp.json)  │  │   (predefined)     │             │
+│  │   _config_servers  │  │  _catalog_servers  │             │
+│  └────────────────────┘  └────────────────────┘             │
 └─────────────────────────────────────────────────────────────┘
           │                   │                   │
           ↓                   ↓                   ↓
 ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
 │   Tavily    │     │  LinkedIn   │     │   Kaggle    │
 │ MCP Server  │     │ MCP Server  │     │ MCP Server  │
-│  (local)    │     │  (local)    │     │  (remote)   │
+│  (config)   │     │  (catalog)  │     │  (remote)   │
 └─────────────┘     └─────────────┘     └─────────────┘
 ```
 
@@ -453,9 +464,10 @@ However, session file authentication is more reliable.
 
 1. **Load Configuration** — Read `~/.datalayer/mcp.json` and expand environment variables
 2. **Sequential Start** — Start each MCP server one at a time to avoid resource conflicts
-3. **Retry Logic** — If a server fails with `BrokenResourceError`, retry up to 3 times with backoff
-4. **Tool Discovery** — Once connected, list available tools from each server
-5. **Status Tracking** — Track ready/failed servers for monitoring
+3. **Separate Storage** — Config servers go to `_config_servers`, catalog servers to `_catalog_servers`
+4. **Retry Logic** — If a server fails with `BrokenResourceError`, retry up to 3 times with backoff
+5. **Tool Discovery** — Once connected, list available tools from each server (prefixed with server ID)
+6. **Status Tracking** — Track ready/failed servers for monitoring
 
 ## API Endpoints
 
@@ -570,6 +582,25 @@ GET /api/v1/configure/mcp-toolsets-info
 | `/api/v1/mcp/servers` | POST | Add a new MCP server |
 | `/api/v1/mcp/servers/{id}` | PUT | Update an MCP server |
 | `/api/v1/mcp/servers/{id}` | DELETE | Remove an MCP server |
+| `/api/v1/agents/{id}/mcp-servers` | PATCH | Update agent's MCP servers at runtime |
+
+### Runtime MCP Server Updates
+
+You can dynamically update which MCP servers an agent uses without recreating the agent:
+
+```bash
+PATCH /api/v1/agents/{agent_id}/mcp-servers
+Content-Type: application/json
+
+{
+  "selected_mcp_servers": ["tavily", "filesystem"]
+}
+```
+
+This is useful for:
+- Adding tools to a running agent based on user needs
+- Removing unused tools to reduce context size
+- Switching between different MCP server configurations
 
 ## UI Integration
 
