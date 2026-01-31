@@ -680,6 +680,18 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
               notebookFile={currentAgent?.notebookFile}
               lexicalFile={currentAgent?.lexicalFile}
               isNewAgent={selectedAgentId === 'new-agent'}
+              isConfigured={isConfigured}
+              baseUrl={baseUrl}
+              enableCodemode={enableCodemode}
+              selectedMcpServers={selectedMcpServers}
+              onSelectedMcpServersChange={setSelectedMcpServers}
+              onMcpServersChange={() => {
+                // Trigger codemode tool regeneration when MCP servers change at runtime
+                console.log(
+                  '[AgentSpaceFormExample] MCP servers changed, regenerating codemode tools...',
+                );
+                // The Chat component will pick up the new selectedMcpServers via props
+              }}
             />
           </PageLayout.Content>
 

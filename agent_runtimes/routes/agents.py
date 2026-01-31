@@ -552,13 +552,12 @@ async def create_agent(request: CreateAgentRequest, http_request: Request) -> Cr
                 # Dynamically add the AG-UI mount to the FastAPI app
                 agui_app = get_agui_app(agent_id)
                 if agui_app and http_request.app:
+                    # Mount path should NOT have trailing slash - Starlette Mount handles that
                     mount_path = f"{_api_prefix}/ag-ui/{agent_id}"
-                    full_mount = Mount(mount_path, app=agui_app)
-                    # Insert at the beginning of routes to ensure it's matched before catch-all routes
-                    http_request.app.routes.insert(0, full_mount)
-                    # Force Starlette to rebuild the routing table
-                    http_request.app.router.routes = list(http_request.app.routes)
-                    logger.info(f"Dynamically mounted AG-UI route: {mount_path}/")
+                    # Use app.mount() for proper dynamic route registration
+                    # This is more reliable than manually manipulating app.routes
+                    http_request.app.mount(mount_path, agui_app, name=f"agui-{agent_id}")
+                    logger.info(f"Dynamically mounted AG-UI route: {mount_path}/ (routes count: {len(http_request.app.routes)})")
             except Exception as e:
                 logger.warning(f"Could not register with AG-UI: {e}")
         

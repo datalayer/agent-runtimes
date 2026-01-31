@@ -1320,7 +1320,40 @@ def extract_context_snapshot(
     return snapshot
 
 
+# Agent registry for context snapshot lookups
+_agents: dict[str, tuple[Any, dict[str, Any]]] = {}
 
+
+def register_agent(agent_id: str, agent: Any, info: dict[str, Any] | None = None) -> None:
+    """Register an agent for context snapshot lookups.
+    
+    Args:
+        agent_id: The unique identifier for the agent.
+        agent: The agent instance (BaseAgent wrapper or pydantic_ai.Agent).
+        info: Optional additional info about the agent.
+    """
+    _agents[agent_id] = (agent, info or {})
+
+
+def unregister_agent(agent_id: str) -> None:
+    """Unregister an agent from the registry.
+    
+    Args:
+        agent_id: The unique identifier for the agent.
+    """
+    if agent_id in _agents:
+        del _agents[agent_id]
+
+
+def get_agent_context_snapshot(agent_id: str) -> ContextSnapshot | None:
+    """Get context snapshot for a registered agent.
+    
+    Args:
+        agent_id: The unique identifier for the agent.
+        
+    Returns:
+        ContextSnapshot if agent is found, None otherwise.
+    """
     from .usage import get_usage_tracker
     
     if agent_id not in _agents:
