@@ -11,7 +11,10 @@ from fastapi import APIRouter, HTTPException
 from agent_runtimes.mcp import get_mcp_manager
 from agent_runtimes.mcp.lifecycle import get_mcp_lifecycle_manager
 from agent_runtimes.types import MCPServer
-from agent_runtimes.config.mcp_servers import MCP_SERVER_CATALOG, list_mcp_servers as list_catalog_servers
+from agent_runtimes.config.mcp_servers import (
+    MCP_SERVER_CATALOG,
+    check_env_vars_available,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +30,19 @@ async def get_catalog_servers() -> list[dict[str, Any]]:
     They are NOT started automatically - users must explicitly enable them.
     """
     try:
-        servers = list_catalog_servers()
+        lifecycle_manager = get_mcp_lifecycle_manager()
+        servers = []
+        for server in MCP_SERVER_CATALOG.values():
+            # Use a deep copy and normalize required env vars to avoid loss on serialization
+            server_copy = server.model_copy(deep=True)
+            server_copy.required_env_vars = list(server.required_env_vars or [])
+            server_copy.is_available = check_env_vars_available(
+                server_copy.required_env_vars
+            )
+            server_copy.is_running = lifecycle_manager.is_server_running(
+                server_copy.id
+            )
+            servers.append(server_copy)
         return [s.model_dump(by_alias=True) for s in servers]
 
     except Exception as e:

@@ -212,6 +212,14 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
   const [enableToolReranker, setEnableToolReranker] = useState(
     initialEnableToolReranker,
   );
+  // Separate state for config servers (from mcp.json) and catalog servers (predefined)
+  const [selectedConfigServers, setSelectedConfigServers] = useState<string[]>(
+    [],
+  );
+  const [selectedCatalogServers, setSelectedCatalogServers] = useState<
+    string[]
+  >([]);
+  // Deprecated - kept for backwards compatibility
   const [selectedMcpServers, setSelectedMcpServers] = useState<string[]>(
     initialSelectedMcpServers,
   );
@@ -447,7 +455,11 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
           enable_codemode: enableCodemode,
           allow_direct_tool_calls: allowDirectToolCalls,
           enable_tool_reranker: enableToolReranker,
-          selected_mcp_servers: selectedMcpServers,
+          selected_mcp_servers: [
+            ...selectedConfigServers,
+            ...selectedCatalogServers,
+            ...selectedMcpServers,
+          ],
           skills: selectedSkills,
         }),
       });
@@ -486,6 +498,8 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
     enableCodemode,
     allowDirectToolCalls,
     enableToolReranker,
+    selectedConfigServers,
+    selectedCatalogServers,
     selectedMcpServers,
     selectedSkills,
   ]);
@@ -797,7 +811,8 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
                       enableToolReranker={enableToolReranker}
                       availableSkills={MOCK_SKILLS}
                       selectedSkills={selectedSkills}
-                      selectedMcpServers={selectedMcpServers}
+                      selectedConfigServers={selectedConfigServers}
+                      selectedCatalogServers={selectedCatalogServers}
                       identityProviders={oauthProvidersConfig}
                       onIdentityConnect={handleIdentityConnect}
                       onIdentityDisconnect={handleIdentityDisconnect}
@@ -814,7 +829,8 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
                       onAllowDirectToolCallsChange={setAllowDirectToolCalls}
                       onEnableToolRerankerChange={setEnableToolReranker}
                       onSelectedSkillsChange={setSelectedSkills}
-                      onSelectedMcpServersChange={setSelectedMcpServers}
+                      onSelectedConfigServersChange={setSelectedConfigServers}
+                      onSelectedCatalogServersChange={setSelectedCatalogServers}
                     />
                   ) : (
                     /* Chat Interface */
@@ -837,7 +853,10 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
                         showSkillsMenu={true}
                         codemodeEnabled={enableCodemode}
                         initialModel={model}
-                        initialMcpServers={selectedMcpServers}
+                        initialMcpServers={[
+                          ...selectedConfigServers,
+                          ...selectedCatalogServers,
+                        ]}
                         initialSkills={selectedSkills}
                         identityProviders={oauthProvidersConfig}
                         onIdentityConnect={handleIdentityConnect}

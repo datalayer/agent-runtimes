@@ -60,17 +60,17 @@ class AIModel(BaseModel):
     builtin_tools: List[str] = Field(
         default_factory=list,
         description="List of builtin tool IDs",
-        serialization_alias="builtinTools",
+        alias="builtinTools",
     )
     required_env_vars: List[str] = Field(
         default_factory=list,
         description="Required environment variables for this model",
-        serialization_alias="requiredEnvVars",
+        alias="requiredEnvVars",
     )
     is_available: bool = Field(
         default=True,
         description="Whether the model is available (based on env vars)",
-        serialization_alias="isAvailable",
+        alias="isAvailable",
     )
 
 
@@ -94,7 +94,7 @@ class MCPServerTool(BaseModel):
     input_schema: Optional[Dict[str, Any]] = Field(
         default=None,
         description="JSON schema for tool input parameters",
-        serialization_alias="inputSchema",
+        alias="inputSchema",
     )
 
 
@@ -127,12 +127,12 @@ class MCPServer(BaseModel):
     required_env_vars: List[str] = Field(
         default_factory=list,
         description="Environment variables required for this server to work",
-        serialization_alias="requiredEnvVars",
+        alias="requiredEnvVars",
     )
     is_available: bool = Field(
         default=False,
         description="Whether the server is available (based on env var presence)",
-        serialization_alias="isAvailable",
+        alias="isAvailable",
     )
     transport: str = Field(
         default="stdio",
@@ -141,12 +141,12 @@ class MCPServer(BaseModel):
     is_config: bool = Field(
         default=False,
         description="Whether this server is from mcp.json config (vs catalog)",
-        serialization_alias="isConfig",
+        alias="isConfig",
     )
     is_running: bool = Field(
         default=False,
         description="Whether this server is currently running",
-        serialization_alias="isRunning",
+        alias="isRunning",
     )
 
 
@@ -161,12 +161,12 @@ class FrontendConfig(BaseModel):
     builtin_tools: List[BuiltinTool] = Field(
         default_factory=list,
         description="Available builtin tools",
-        serialization_alias="builtinTools",
+        alias="builtinTools",
     )
     mcp_servers: List[MCPServer] = Field(
         default_factory=list,
         description="Configured MCP servers",
-        serialization_alias="mcpServers",
+        alias="mcpServers",
     )
 
 
@@ -187,7 +187,7 @@ class AgentSpec(BaseModel):
     mcp_servers: List[MCPServer] = Field(
         default_factory=list,
         description="MCP servers used by this agent",
-        serialization_alias="mcpServers",
+        alias="mcpServers",
     )
     skills: List[AgentSkillSpec] = Field(
         default_factory=list,
@@ -196,7 +196,7 @@ class AgentSpec(BaseModel):
     environment_name: str = Field(
         default="ai-agents",
         description="Runtime environment name for this agent",
-        serialization_alias="environmentName",
+        alias="environmentName",
     )
     icon: Optional[str] = Field(
         default=None,

@@ -368,6 +368,8 @@ export interface MCPServerConfig {
   /** True if this server is from mcp.json config (vs catalog) */
   isConfig?: boolean;
   transport?: string;
+  /** Required environment variables for this server */
+  requiredEnvVars?: string[];
 }
 
 type AgentLibrary = 'pydantic-ai' | 'langchain' | 'jupyter-ai';
@@ -480,6 +482,11 @@ interface AgentConfigurationProps {
   enableToolReranker?: boolean;
   availableSkills?: SkillOption[];
   selectedSkills?: string[];
+  /** Selected MCP Config servers (from mcp.json) */
+  selectedConfigServers?: string[];
+  /** Selected MCP Catalog servers (predefined) */
+  selectedCatalogServers?: string[];
+  /** @deprecated Use selectedConfigServers and selectedCatalogServers instead */
   selectedMcpServers?: string[];
   // Identity configuration
   identityProviders?: {
@@ -503,6 +510,11 @@ interface AgentConfigurationProps {
   onAllowDirectToolCallsChange?: (enabled: boolean) => void;
   onEnableToolRerankerChange?: (enabled: boolean) => void;
   onSelectedSkillsChange?: (skills: string[]) => void;
+  /** Callback when config server selection changes */
+  onSelectedConfigServersChange?: (servers: string[]) => void;
+  /** Callback when catalog server selection changes */
+  onSelectedCatalogServersChange?: (servers: string[]) => void;
+  /** @deprecated Use onSelectedConfigServersChange and onSelectedCatalogServersChange instead */
   onSelectedMcpServersChange?: (servers: string[]) => void;
 }
 
@@ -528,7 +540,9 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
   enableToolReranker = false,
   availableSkills = [],
   selectedSkills = [],
-  selectedMcpServers = [],
+  selectedConfigServers = [],
+  selectedCatalogServers = [],
+  selectedMcpServers = [], // deprecated
   identityProviders,
   onIdentityConnect,
   onIdentityDisconnect,
@@ -545,7 +559,9 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
   onAllowDirectToolCallsChange,
   onEnableToolRerankerChange,
   onSelectedSkillsChange,
-  onSelectedMcpServersChange,
+  onSelectedConfigServersChange,
+  onSelectedCatalogServersChange,
+  onSelectedMcpServersChange, // deprecated
 }) => {
   // Fetch general configuration from the backend (models, etc.)
   const configQuery = useQuery<ConfigResponse>({
@@ -633,25 +649,55 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
   });
 
   // Use MCP servers from dedicated query, fallback to configQuery for backwards compatibility
-  const mcpServers = mcpServersQuery.data || configQuery.data?.mcpServers || [];
+  const configServers =
+    mcpServersQuery.data || configQuery.data?.mcpServers || [];
   const catalogServers = catalogServersQuery.data || [];
   const models = configQuery.data?.models || [];
   // Use fetched skills when codemode is enabled, otherwise use passed availableSkills (which may be empty)
   const fetchedSkills = skillsQuery.data?.skills || [];
   const displaySkills = enableCodemode ? fetchedSkills : availableSkills;
-  const previewServers = selectedMcpServers.length
-    ? mcpServers.filter(server => selectedMcpServers.includes(server.id))
-    : [];
   const skillsEnabled = selectedSkills.length > 0;
 
+  // Compute effective selected servers - use new props if provided, else derive from deprecated prop
+  const effectiveSelectedConfigServers = onSelectedConfigServersChange
+    ? selectedConfigServers
+    : selectedMcpServers.filter(id => configServers.some(s => s.id === id));
+  const effectiveSelectedCatalogServers = onSelectedCatalogServersChange
+    ? selectedCatalogServers
+    : selectedMcpServers.filter(id => catalogServers.some(s => s.id === id));
+
+  // Preview servers combines both config and catalog selections
+  const previewConfigServers = effectiveSelectedConfigServers.length
+    ? configServers.filter(server =>
+        effectiveSelectedConfigServers.includes(server.id),
+      )
+    : [];
+  const previewCatalogServers = effectiveSelectedCatalogServers.length
+    ? catalogServers.filter(server =>
+        effectiveSelectedCatalogServers.includes(server.id),
+      )
+    : [];
+
   // Handle MCP Config server checkbox change
-  const handleMcpServerChange = (serverId: string, checked: boolean) => {
-    if (checked) {
-      onSelectedMcpServersChange?.([...selectedMcpServers, serverId]);
-    } else {
-      onSelectedMcpServersChange?.(
-        selectedMcpServers.filter(id => id !== serverId),
-      );
+  const handleConfigServerChange = (serverId: string, checked: boolean) => {
+    if (onSelectedConfigServersChange) {
+      // Use new callback - completely separate from catalog
+      if (checked) {
+        onSelectedConfigServersChange([...selectedConfigServers, serverId]);
+      } else {
+        onSelectedConfigServersChange(
+          selectedConfigServers.filter(id => id !== serverId),
+        );
+      }
+    } else if (onSelectedMcpServersChange) {
+      // Fallback to deprecated callback only if new callback not provided
+      if (checked) {
+        onSelectedMcpServersChange([...selectedMcpServers, serverId]);
+      } else {
+        onSelectedMcpServersChange(
+          selectedMcpServers.filter(id => id !== serverId),
+        );
+      }
     }
   };
 
@@ -672,11 +718,23 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
           return; // Don't add to selection if enable failed
         }
       }
-      onSelectedMcpServersChange?.([...selectedMcpServers, serverId]);
+      if (onSelectedCatalogServersChange) {
+        // Use new callback - completely separate from config
+        onSelectedCatalogServersChange([...selectedCatalogServers, serverId]);
+      } else if (onSelectedMcpServersChange) {
+        // Fallback to deprecated callback only if new callback not provided
+        onSelectedMcpServersChange([...selectedMcpServers, serverId]);
+      }
     } else {
-      onSelectedMcpServersChange?.(
-        selectedMcpServers.filter(id => id !== serverId),
-      );
+      if (onSelectedCatalogServersChange) {
+        onSelectedCatalogServersChange(
+          selectedCatalogServers.filter(id => id !== serverId),
+        );
+      } else if (onSelectedMcpServersChange) {
+        onSelectedMcpServersChange(
+          selectedMcpServers.filter(id => id !== serverId),
+        );
+      }
     }
   };
 
@@ -1112,7 +1170,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
           </Flash>
         )}
 
-        {mcpServers.length === 0 &&
+        {configServers.length === 0 &&
           !mcpServersQuery.isLoading &&
           !mcpServersQuery.isError && (
             <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
@@ -1147,15 +1205,22 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
               Codemode registry preview
             </Text>
             <Text sx={{ fontSize: 0, color: 'fg.muted', mb: 1 }}>
-              {selectedMcpServers.length > 0
+              {effectiveSelectedConfigServers.length > 0 ||
+              effectiveSelectedCatalogServers.length > 0
                 ? 'Using selected MCP servers'
                 : 'No servers selected — select servers to scope Codemode tools.'}
             </Text>
-            {previewServers.length > 0 ? (
+            {previewConfigServers.length > 0 ||
+            previewCatalogServers.length > 0 ? (
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                {previewServers.map(server => (
+                {previewConfigServers.map(server => (
                   <Text key={server.id} sx={{ fontSize: 0 }}>
-                    {server.name} — {server.tools.length} tools
+                    {server.name} — {server.tools.length} tools (config)
+                  </Text>
+                ))}
+                {previewCatalogServers.map(server => (
+                  <Text key={server.id} sx={{ fontSize: 0 }}>
+                    {server.name} — {server.tools?.length || 0} tools (catalog)
                   </Text>
                 ))}
               </Box>
@@ -1171,18 +1236,18 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
           </Box>
         )}
 
-        {/* MCP Servers Section */}
-        {mcpServers.length > 0 && (
+        {/* MCP Config Servers Section */}
+        {configServers.length > 0 && (
           <>
             <Text sx={{ fontWeight: 'semibold', marginTop: 3 }}>
-              MCP Servers
+              MCP Config Servers
             </Text>
             <Text sx={{ fontSize: 0, color: 'fg.muted', marginLeft: 1 }}>
               Servers from your mcp.json configuration file. Started
               automatically.
             </Text>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              {mcpServers.map(server => (
+              {configServers.map(server => (
                 <Box
                   key={server.id}
                   sx={{
@@ -1192,19 +1257,14 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
                     padding: 2,
                     borderRadius: 1,
                     backgroundColor: 'canvas.subtle',
-                    opacity:
-                      mcpServersDisabled || server.isAvailable === false
-                        ? 0.6
-                        : 1,
+                    opacity: mcpServersDisabled ? 0.6 : 1,
                   }}
                 >
                   <Checkbox
-                    checked={selectedMcpServers.includes(server.id)}
-                    disabled={
-                      mcpServersDisabled || server.isAvailable === false
-                    }
+                    checked={effectiveSelectedConfigServers.includes(server.id)}
+                    disabled={mcpServersDisabled}
                     onChange={e =>
-                      handleMcpServerChange(server.id, e.target.checked)
+                      handleConfigServerChange(server.id, e.target.checked)
                     }
                   />
                   <Box
@@ -1217,19 +1277,9 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
                   >
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                       <Text sx={{ fontWeight: 'semibold' }}>{server.name}</Text>
-                      {server.isRunning ? (
-                        <Label variant="success" size="small">
-                          Running
-                        </Label>
-                      ) : server.isAvailable === false ? (
-                        <Label variant="secondary" size="small">
-                          Not Available
-                        </Label>
-                      ) : (
-                        <Label variant="attention" size="small">
-                          Available
-                        </Label>
-                      )}
+                      <Label variant="success" size="small">
+                        Running
+                      </Label>
                     </Box>
                     {server.tools.length > 0 && (
                       <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
@@ -1245,82 +1295,125 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
 
         {/* MCP Catalog Servers Section */}
         {catalogServers.length > 0 && (
-          <>
+          <Box sx={{ marginTop: 3 }}>
             <Text sx={{ fontWeight: 'semibold', marginTop: 3 }}>
               MCP Catalog Servers
             </Text>
-            <Text sx={{ fontSize: 0, color: 'fg.muted', marginLeft: 1 }}>
+            <Text
+              sx={{
+                fontSize: 0,
+                color: 'fg.muted',
+                marginLeft: 1,
+              }}
+            >
               Predefined servers that can be enabled on-demand. Select to start
               and add to your agent.
             </Text>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              {catalogServers.map(server => (
-                <Box
-                  key={server.id}
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    gap: 2,
-                    padding: 2,
-                    borderRadius: 1,
-                    backgroundColor: 'canvas.subtle',
-                    opacity: mcpServersDisabled ? 0.6 : 1,
-                  }}
-                >
-                  <Checkbox
-                    checked={selectedMcpServers.includes(server.id)}
-                    disabled={
-                      mcpServersDisabled ||
-                      enableCatalogServerMutation.isPending
-                    }
-                    onChange={e =>
-                      handleCatalogServerChange(
-                        server.id,
-                        e.target.checked,
-                        server.isRunning ?? false,
-                      )
-                    }
-                  />
+              {catalogServers.map(server => {
+                // If required env vars are not provided, treat as available
+                const hasRequiredEnvVars =
+                  (server.requiredEnvVars?.length || 0) > 0;
+                const envVarsAvailable = hasRequiredEnvVars
+                  ? server.isAvailable === true
+                  : true;
+                const isRunning = server.isRunning === true;
+                const canSelect = envVarsAvailable || isRunning;
+                return (
                   <Box
+                    key={server.id}
                     sx={{
                       display: 'flex',
-                      flexDirection: 'column',
-                      gap: 1,
-                      flex: 1,
+                      alignItems: 'flex-start',
+                      gap: 2,
+                      padding: 2,
+                      borderRadius: 1,
+                      backgroundColor: 'canvas.subtle',
+                      opacity: mcpServersDisabled || !canSelect ? 0.6 : 1,
                     }}
                   >
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <Text sx={{ fontWeight: 'semibold' }}>{server.name}</Text>
-                      {enableCatalogServerMutation.isPending &&
-                      enableCatalogServerMutation.variables === server.id ? (
-                        <Label variant="accent" size="small">
-                          Starting...
-                        </Label>
-                      ) : server.isRunning ? (
-                        <Label variant="success" size="small">
-                          Running
-                        </Label>
-                      ) : (
-                        <Label variant="secondary" size="small">
-                          Not Started
-                        </Label>
+                    <Checkbox
+                      checked={effectiveSelectedCatalogServers.includes(
+                        server.id,
                       )}
-                      {server.isConfig && (
-                        <Label variant="secondary" size="small">
-                          From Config
-                        </Label>
+                      disabled={
+                        mcpServersDisabled ||
+                        enableCatalogServerMutation.isPending ||
+                        !canSelect
+                      }
+                      onChange={e =>
+                        handleCatalogServerChange(
+                          server.id,
+                          e.target.checked,
+                          isRunning,
+                        )
+                      }
+                    />
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 1,
+                        flex: 1,
+                      }}
+                    >
+                      <Box
+                        sx={{ display: 'flex', alignItems: 'center', gap: 2 }}
+                      >
+                        <Text sx={{ fontWeight: 'semibold' }}>
+                          {server.name}
+                        </Text>
+                        {enableCatalogServerMutation.isPending &&
+                        enableCatalogServerMutation.variables === server.id ? (
+                          <Label variant="accent" size="small">
+                            Starting...
+                          </Label>
+                        ) : server.isRunning ? (
+                          <Label variant="success" size="small">
+                            Running
+                          </Label>
+                        ) : (
+                          <Label variant="secondary" size="small">
+                            Not Started
+                          </Label>
+                        )}
+                        {server.isConfig && (
+                          <Label variant="secondary" size="small">
+                            From Config
+                          </Label>
+                        )}
+                      </Box>
+                      {/* Required environment variables */}
+                      {hasRequiredEnvVars ? (
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                          {server.requiredEnvVars?.map(envVar => (
+                            <Label
+                              key={envVar}
+                              variant={envVarsAvailable ? 'success' : 'danger'}
+                              size="small"
+                            >
+                              {envVar}
+                            </Label>
+                          ))}
+                        </Box>
+                      ) : (
+                        <Box sx={{ display: 'flex' }}>
+                          <Label variant="success" size="small">
+                            No env vars required
+                          </Label>
+                        </Box>
+                      )}
+                      {server.tools && server.tools.length > 0 && (
+                        <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
+                          Tools: {server.tools.map(t => t.name).join(', ')}
+                        </Text>
                       )}
                     </Box>
-                    {server.tools && server.tools.length > 0 && (
-                      <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
-                        Tools: {server.tools.map(t => t.name).join(', ')}
-                      </Text>
-                    )}
                   </Box>
-                </Box>
-              ))}
+                );
+              })}
             </Box>
-          </>
+          </Box>
         )}
       </Box>
 
