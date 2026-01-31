@@ -48,9 +48,23 @@ async def get_configuration(
             )
             logger.info(f"Fetched {len(available_tools)} tools from MCP server")
 
-        # Get MCP servers from manager
-        mcp_manager = get_mcp_manager()
-        mcp_servers = mcp_manager.get_servers()
+        # Get MCP servers - try lifecycle manager first, then fallback to mcp_manager
+        mcp_servers = []
+        try:
+            from agent_runtimes.mcp.lifecycle import get_mcp_lifecycle_manager
+            lifecycle_manager = get_mcp_lifecycle_manager()
+            running_instances = lifecycle_manager.get_all_running_servers()
+            if running_instances:
+                mcp_servers = [instance.config for instance in running_instances]
+                logger.debug(f"Got {len(mcp_servers)} servers from lifecycle manager")
+        except Exception as e:
+            logger.debug(f"Lifecycle manager not available: {e}")
+
+        # Fallback to mcp_manager if lifecycle manager has no servers
+        if not mcp_servers:
+            mcp_manager = get_mcp_manager()
+            mcp_servers = mcp_manager.get_servers()
+            logger.debug(f"Got {len(mcp_servers)} servers from mcp_manager (fallback)")
 
         # Build frontend config
         config = await get_frontend_config(

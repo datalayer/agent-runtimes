@@ -118,14 +118,26 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
         nonlocal _mcp_toolsets_task, _mcp_servers_task
         logger.info("Starting agent-runtimes server...")
         
-        if _is_reload_parent_process():
+        is_reload_parent = _is_reload_parent_process()
+        logger.info(f"Reload parent check: {is_reload_parent}")
+        
+        if is_reload_parent:
             logger.info("Reload parent detected; deferring MCP startup to worker process")
         else:
             # Initialize Pydantic AI MCP toolsets in a background task
             # This allows FastAPI to start immediately while MCP servers start async
             logger.info("Initializing Pydantic AI MCP toolsets (background startup)...")
             ensure_mcp_toolsets_event()
-            _mcp_toolsets_task = asyncio.create_task(initialize_mcp_toolsets())
+            
+            async def initialize_toolsets_with_logging() -> None:
+                """Wrapper to catch and log any exceptions from toolset initialization."""
+                try:
+                    await initialize_mcp_toolsets()
+                    logger.info("✓ MCP toolset background initialization completed successfully")
+                except Exception as e:
+                    logger.error(f"✗ MCP toolset background initialization failed: {e}", exc_info=True)
+            
+            _mcp_toolsets_task = asyncio.create_task(initialize_toolsets_with_logging())
             logger.info("MCP toolset initialization started (servers starting in background)")
 
             # Initialize MCP servers (check availability and discover tools) - for the frontend/config API

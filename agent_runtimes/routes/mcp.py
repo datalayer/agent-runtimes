@@ -9,6 +9,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException
 
 from agent_runtimes.mcp import get_mcp_manager
+from agent_runtimes.mcp.lifecycle import get_mcp_lifecycle_manager
 from agent_runtimes.types import MCPServer
 from agent_runtimes.config.mcp_servers import MCP_SERVER_LIBRARY, list_mcp_servers as list_library_servers
 
@@ -34,7 +35,7 @@ async def enable_library_server(server_name: str) -> dict[str, Any]:
     """
     Enable an MCP server from the library for the current session.
 
-    This adds a predefined MCP server to the active session.
+    This starts the MCP server process and adds it to the active session.
     The server will not persist across restarts.
 
     Args:
@@ -51,17 +52,30 @@ async def enable_library_server(server_name: str) -> dict[str, Any]:
                 detail=f"Server '{server_name}' not found in library. Available: {available}"
             )
 
+        lifecycle_manager = get_mcp_lifecycle_manager()
+        
+        # Check if already running
+        if lifecycle_manager.is_server_running(server_name):
+            instance = lifecycle_manager.get_running_server(server_name)
+            if instance:
+                return instance.config.model_dump(by_alias=True)
+
+        # Start the MCP server process
+        instance = await lifecycle_manager.start_server(server_name, library_server)
+        if not instance:
+            failed = lifecycle_manager.get_failed_servers()
+            error = failed.get(server_name, "Unknown error")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to start MCP server '{server_name}': {error}"
+            )
+
+        # Also add to manager for backward compatibility
         mcp_manager = get_mcp_manager()
+        mcp_manager.add_server(instance.config)
 
-        # Check if already enabled
-        existing = mcp_manager.get_server(server_name)
-        if existing:
-            return existing.model_dump(by_alias=True)
-
-        # Add to session
-        added_server = mcp_manager.add_server(library_server)
-        logger.info(f"Enabled library MCP server for session: {server_name}")
-        return added_server.model_dump(by_alias=True)
+        logger.info(f"Enabled and started library MCP server: {server_name}")
+        return instance.config.model_dump(by_alias=True)
 
     except HTTPException:
         raise
@@ -75,23 +89,33 @@ async def disable_library_server(server_name: str) -> None:
     """
     Disable an MCP server from the current session.
 
-    This removes the server from the active session but does not
-    remove it from the library.
+    This stops the MCP server process and removes it from the active session.
 
     Args:
         server_name: The name/ID of the MCP server to disable
     """
     try:
+        lifecycle_manager = get_mcp_lifecycle_manager()
         mcp_manager = get_mcp_manager()
 
-        removed = mcp_manager.remove_server(server_name)
-        if not removed:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Server '{server_name}' is not currently enabled"
-            )
+        # Check if server is running
+        if not lifecycle_manager.is_server_running(server_name):
+            # Also check manager for backward compatibility
+            if not mcp_manager.get_server(server_name):
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Server '{server_name}' is not currently enabled"
+                )
 
-        logger.info(f"Disabled library MCP server for session: {server_name}")
+        # Stop the MCP server process
+        stopped = await lifecycle_manager.stop_server(server_name)
+        if not stopped:
+            logger.warning(f"Server '{server_name}' was not running in lifecycle manager")
+
+        # Also remove from manager for backward compatibility
+        mcp_manager.remove_server(server_name)
+
+        logger.info(f"Disabled and stopped library MCP server: {server_name}")
 
     except HTTPException:
         raise
@@ -102,8 +126,17 @@ async def disable_library_server(server_name: str) -> None:
 
 @router.get("", response_model=list[MCPServer])
 async def get_servers() -> list[dict[str, Any]]:
-    """Get all configured MCP servers."""
+    """Get all active/running MCP servers."""
     try:
+        # Try lifecycle manager first (has actual running state)
+        lifecycle_manager = get_mcp_lifecycle_manager()
+        running_instances = lifecycle_manager.get_all_running_servers()
+        
+        if running_instances:
+            servers = [instance.config.model_dump() for instance in running_instances]
+            return servers
+        
+        # Fallback to mcp_manager (old path, for backward compatibility)
         mcp_manager = get_mcp_manager()
         servers = mcp_manager.get_servers()
         return [s.model_dump() for s in servers]

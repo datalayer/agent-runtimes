@@ -180,9 +180,9 @@ export function McpServerManager({
     const runtime: MCPServer[] = [];
 
     active.forEach(server => {
-      // Only include servers that are in the selectedServers list (if provided)
-      const isSelected =
-        selectedServers.length === 0 || selectedServers.includes(server.id);
+      // Only include servers that are in the selectedServers list
+      // If selectedServers is empty, show no servers (user has none selected)
+      const isSelected = selectedServers.includes(server.id);
 
       if (server.isRuntime) {
         // For runtime servers, only show if selected
@@ -231,8 +231,14 @@ export function McpServerManager({
   const handleDisableServer = useCallback(
     (serverName: string) => {
       disableMutation.mutate(serverName);
+      // Also remove from selected servers so the Chat tools menu updates
+      if (selectedServers.includes(serverName)) {
+        onSelectedServersChange?.(
+          selectedServers.filter(id => id !== serverName),
+        );
+      }
     },
-    [disableMutation],
+    [disableMutation, selectedServers, onSelectedServersChange],
   );
 
   // Handle refreshing the server lists
@@ -441,7 +447,9 @@ function ServerCard({
   isAdding = false,
   isRemoving = false,
 }: ServerCardProps) {
-  const isAvailable = server.isAvailable !== false;
+  // For library servers, assume available (they're in the library to be added)
+  // For active/runtime servers, check the actual isAvailable status
+  const isAvailable = variant === 'library' || server.isAvailable !== false;
 
   return (
     <Box

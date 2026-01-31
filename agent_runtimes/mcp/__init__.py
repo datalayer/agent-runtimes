@@ -12,6 +12,12 @@ from .client import (
     MCPClient,
     MCPToolManager,
 )
+from .lifecycle import (
+    MCPLifecycleManager,
+    MCPServerInstance,
+    get_mcp_lifecycle_manager,
+    set_mcp_lifecycle_manager,
+)
 from .manager import (
     MCPManager,
     get_mcp_manager,
@@ -53,7 +59,9 @@ from .toolsets import (
 
 __all__ = [
     "MCPClient",
+    "MCPLifecycleManager",
     "MCPManager",
+    "MCPServerInstance",
     "MCPToolManager",
     # servers.py exports
     "create_mcp_servers_with_tools",
@@ -65,6 +73,7 @@ __all__ = [
     "generate_name_from_id",
     "get_available_tools",
     "get_mcp_config_path",
+    "get_mcp_lifecycle_manager",
     "get_mcp_manager",
     "get_mcp_servers",
     "get_mcp_servers_from_config",
@@ -78,6 +87,7 @@ __all__ = [
     "initialize_mcp_servers",
     "initialize_mcp_toolsets",
     "load_mcp_config",
+    "set_mcp_lifecycle_manager",
     "set_mcp_manager",
     "shutdown_mcp_toolsets",
     "wait_for_mcp_toolsets",

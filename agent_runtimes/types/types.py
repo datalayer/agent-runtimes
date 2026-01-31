@@ -105,6 +105,7 @@ class MCPServer(BaseModel):
 
     id: str = Field(..., description="Unique server identifier")
     name: str = Field(..., description="Display name for the server")
+    description: str = Field(default="", description="Description of the server capabilities")
     url: str = Field(default="", description="Server URL (for HTTP-based servers)")
     enabled: bool = Field(default=True, description="Whether the server is enabled")
     tools: List[MCPServerTool] = Field(
@@ -118,6 +119,10 @@ class MCPServer(BaseModel):
     args: List[str] = Field(
         default_factory=list,
         description="Command arguments for the MCP server",
+    )
+    env: Optional[Dict[str, str]] = Field(
+        default=None,
+        description="Environment variables for the MCP server process",
     )
     is_available: bool = Field(
         default=False,
