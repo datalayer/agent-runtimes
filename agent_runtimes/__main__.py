@@ -17,10 +17,14 @@ Usage:
 
     # With custom host/port
     python -m agent_runtimes --host 0.0.0.0 --port 8080
+
+    # With a specific agent from the library
+    python -m agent_runtimes --agent data-acquisition
 """
 
 import argparse
 import logging
+import os
 import sys
 
 logging.basicConfig(
@@ -51,6 +55,12 @@ Examples:
     
     # Start with debug logging
     python -m agent_runtimes --debug
+
+    # Start with a specific agent from the library
+    python -m agent_runtimes --agent data-acquisition
+    
+    # List available agents
+    python -m agent_runtimes --list-agents
         """,
     )
     
@@ -89,8 +99,45 @@ Examples:
         choices=["debug", "info", "warning", "error", "critical"],
         help="Log level (default: info)",
     )
+    parser.add_argument(
+        "--agent",
+        type=str,
+        default=None,
+        help="Agent spec ID from the library to start (e.g., 'data-acquisition', 'crawler'). "
+             "When specified, the agent will be registered under the name 'default'.",
+    )
+    parser.add_argument(
+        "--list-agents",
+        action="store_true",
+        help="List available agent specs from the library and exit",
+    )
     
     args = parser.parse_args()
+
+    # Handle --list-agents
+    if args.list_agents:
+        from agent_runtimes.config.agents import AGENT_LIBRARY
+        print("\nAvailable Agent Specs:")
+        print("-" * 60)
+        for agent_id, agent in AGENT_LIBRARY.items():
+            mcp_names = [s.name for s in agent.mcp_servers]
+            print(f"  {agent_id:<25} - {agent.name}")
+            print(f"    {agent.description[:55]}...")
+            print(f"    MCP Servers: {', '.join(mcp_names)}")
+            print()
+        sys.exit(0)
+
+    # Validate agent if specified
+    if args.agent:
+        from agent_runtimes.config.agents import AGENT_LIBRARY, get_agent
+        agent_spec = get_agent(args.agent)
+        if not agent_spec:
+            available = list(AGENT_LIBRARY.keys())
+            logger.error(f"Agent '{args.agent}' not found. Available: {available}")
+            sys.exit(1)
+        # Set environment variable for the app to pick up
+        os.environ["AGENT_RUNTIMES_DEFAULT_AGENT"] = args.agent
+        logger.info(f"Will start with agent: {agent_spec.name} (registered as 'default')")
     
     # Set log level
     log_level = args.log_level.upper()

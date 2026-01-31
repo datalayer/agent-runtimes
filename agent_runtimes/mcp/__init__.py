@@ -48,8 +48,8 @@ from .toolsets import (
     wait_for_mcp_toolsets,
 )
 
-# Re-export from config for backward compatibility
-from agent_runtimes.config import get_frontend_config
+# Note: get_frontend_config is available from agent_runtimes.config
+# Not re-exported here to avoid circular imports
 
 __all__ = [
     "MCPClient",
@@ -64,7 +64,6 @@ __all__ = [
     "extract_tool_names",
     "generate_name_from_id",
     "get_available_tools",
-    "get_frontend_config",
     "get_mcp_config_path",
     "get_mcp_manager",
     "get_mcp_servers",

@@ -24,6 +24,7 @@ export {
   ChatBase,
   type ChatBaseProps,
   type ProtocolConfig,
+  type AgentRuntimeConfig,
 } from './base/ChatBase';
 export { AgentDetails, type AgentDetailsProps } from './AgentDetails';
 export {

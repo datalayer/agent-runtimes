@@ -31,6 +31,9 @@ from .vercel_ai import register_vercel_agent, unregister_vercel_agent
 from .a2a import register_a2a_agent, unregister_a2a_agent, A2AAgentCard
 from .mcp_ui import register_mcp_ui_agent, unregister_mcp_ui_agent
 
+from ..types import AgentSpec
+from ..config.agents import AGENT_LIBRARY, list_agents as list_library_agents, get_agent as get_library_agent
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/agents", tags=["agents"])
@@ -43,6 +46,57 @@ def set_api_prefix(prefix: str) -> None:
     """Set the API prefix for dynamic mount paths."""
     global _api_prefix
     _api_prefix = prefix
+
+
+# ============================================================================
+# Agent Spec Library Routes
+# ============================================================================
+
+
+@router.get("/library", response_model=list[AgentSpec])
+async def get_agent_spec_library() -> list[dict[str, Any]]:
+    """
+    Get all available agent specifications from the library.
+
+    Returns predefined agent templates that can be used to create new agents.
+    """
+    try:
+        agents = list_library_agents()
+        return [agent.model_dump(by_alias=True) for agent in agents]
+
+    except Exception as e:
+        logger.error(f"Error getting agent library: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/library/{agent_id}", response_model=AgentSpec)
+async def get_agent_spec(agent_id: str) -> dict[str, Any]:
+    """
+    Get a specific agent specification from the library.
+
+    Args:
+        agent_id: The ID of the agent spec (e.g., 'data-acquisition', 'crawler')
+    """
+    try:
+        agent = get_library_agent(agent_id)
+        if not agent:
+            available = list(AGENT_LIBRARY.keys())
+            raise HTTPException(
+                status_code=404,
+                detail=f"Agent '{agent_id}' not found in library. Available: {available}"
+            )
+        return agent.model_dump(by_alias=True)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting agent spec: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================================
+# Agent Creation and Management
+# ============================================================================
 
 
 def _build_codemode_toolset(
@@ -197,7 +251,7 @@ class CreateAgentRequest(BaseModel):
     transport: Literal["ag-ui", "vercel-ai", "acp", "a2a"] = Field(
         default="ag-ui", description="Transport protocol to use"
     )
-    model: str = Field(default="openai:gpt-4o-mini", description="Model to use")
+    model: str = Field(default="bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0", description="Model to use")
     system_prompt: str = Field(
         default="You are a helpful AI assistant.",
         description="System prompt for the agent"

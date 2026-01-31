@@ -15,6 +15,7 @@ Provides a configurable FastAPI application with:
 import asyncio
 import logging
 import multiprocessing as mp
+import os
 import sys
 from contextlib import asynccontextmanager
 from typing import Any, AsyncGenerator
@@ -28,6 +29,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from starlette.routing import Mount
 
+from .config.agents import get_agent as get_library_agent
 from .mcp import (
     ensure_mcp_toolsets_event,
     initialize_mcp_servers,
@@ -140,6 +142,20 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
         
         # Set app reference for dynamic A2A route mounting
         set_a2a_app(app, config.api_prefix)
+        
+        # Register default agent if specified via CLI (--agent flag)
+        default_agent_id = os.environ.get("AGENT_RUNTIMES_DEFAULT_AGENT")
+        if default_agent_id:
+            agent_spec = get_library_agent(default_agent_id)
+            if agent_spec:
+                logger.info(f"Registering default agent from library: {agent_spec.name}")
+                # Load the agent's MCP servers into the manager
+                mcp_manager = get_mcp_manager()
+                for mcp_server in agent_spec.mcp_servers:
+                    mcp_manager.add_server(mcp_server)
+                logger.info(f"Loaded {len(agent_spec.mcp_servers)} MCP servers for default agent")
+            else:
+                logger.warning(f"Default agent '{default_agent_id}' not found in library")
         
         # Demo agent auto-registration disabled - use the UI to create agents dynamically
         # To manually register the demo agent, run: python -m agent_runtimes.examples.demo.demo_agent

@@ -388,6 +388,21 @@ export interface ProtocolConfig {
 }
 
 /**
+ * Simplified configuration for connecting to an agent runtime server.
+ * This is a convenience wrapper over the more detailed ProtocolConfig.
+ */
+export interface AgentRuntimeConfig {
+  /** URL of the agent runtime server (e.g., 'http://localhost:8765') */
+  url: string;
+  /** Optional agent ID to connect to */
+  agentId?: string;
+  /** Optional authentication token */
+  authToken?: string;
+  /** Protocol type to use (defaults to 'ag-ui') */
+  protocol?: TransportType;
+}
+
+/**
  * ChatBase props
  */
 export interface ChatBaseProps {
@@ -450,6 +465,24 @@ export interface ChatBaseProps {
    * When provided and useStore is false, enables protocol mode.
    */
   protocol?: ProtocolConfig;
+
+  /**
+   * Simplified agent runtime configuration.
+   * A convenience wrapper that creates a ProtocolConfig internally.
+   * When provided, will automatically set useStore=false and configure protocol mode.
+   *
+   * @example
+   * ```tsx
+   * <ChatBase
+   *   agentRuntimeConfig={{
+   *     url: 'http://localhost:8765',
+   *     agentId: 'my-agent',
+   *     authToken: 'my-token',
+   *   }}
+   * />
+   * ```
+   */
+  agentRuntimeConfig?: AgentRuntimeConfig;
 
   /**
    * Custom message handler (for props-based mode).
@@ -776,7 +809,8 @@ export function ChatBase({
   headerActions,
   // Mode selection
   useStore: useStoreMode = true,
-  protocol,
+  protocol: protocolProp,
+  agentRuntimeConfig,
   onSendMessage,
   enableStreaming = false,
   // Extended props
@@ -811,6 +845,21 @@ export function ChatBase({
   onAuthorizationRequired,
   connectedIdentities,
 }: ChatBaseProps) {
+  // Convert agentRuntimeConfig to protocol if provided
+  const protocol: ProtocolConfig | undefined = agentRuntimeConfig
+    ? {
+        type: agentRuntimeConfig.protocol || 'ag-ui',
+        endpoint: agentRuntimeConfig.url,
+        authToken: agentRuntimeConfig.authToken,
+        agentId: agentRuntimeConfig.agentId,
+        enableConfigQuery: true,
+        configEndpoint: `${agentRuntimeConfig.url}/api/v1/config`,
+      }
+    : protocolProp;
+
+  // If agentRuntimeConfig is provided, force protocol mode
+  const effectiveUseStoreMode = agentRuntimeConfig ? false : useStoreMode;
+
   // Check if QueryClientProvider is already available
   const existingQueryClient = useContext(QueryClientContext);
 
@@ -834,7 +883,7 @@ export function ChatBase({
           className={className}
           loadingState={loadingState}
           headerActions={headerActions}
-          useStore={useStoreMode}
+          useStore={effectiveUseStoreMode}
           protocol={protocol}
           onSendMessage={onSendMessage}
           enableStreaming={enableStreaming}
@@ -890,7 +939,7 @@ export function ChatBase({
       className={className}
       loadingState={loadingState}
       headerActions={headerActions}
-      useStore={useStoreMode}
+      useStore={effectiveUseStoreMode}
       protocol={protocol}
       onSendMessage={onSendMessage}
       enableStreaming={enableStreaming}

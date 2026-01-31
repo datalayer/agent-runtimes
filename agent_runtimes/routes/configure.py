@@ -8,7 +8,8 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query, Path
 
-from agent_runtimes.mcp import get_available_tools, get_frontend_config, get_mcp_manager, get_mcp_toolsets_status, get_mcp_toolsets_info
+from agent_runtimes.config import get_frontend_config
+from agent_runtimes.mcp import get_available_tools, get_mcp_manager, get_mcp_toolsets_status, get_mcp_toolsets_info
 from agent_runtimes.types import FrontendConfig
 from agent_runtimes.context.usage import get_usage_tracker
 
