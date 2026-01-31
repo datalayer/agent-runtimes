@@ -138,10 +138,10 @@ class MCPServer(BaseModel):
         default="stdio",
         description="Transport type: 'stdio' or 'http'",
     )
-    is_runtime: bool = Field(
+    is_config: bool = Field(
         default=False,
-        description="Whether this server was started from mcp.json (vs catalog)",
-        serialization_alias="isRuntime",
+        description="Whether this server is from mcp.json config (vs catalog)",
+        serialization_alias="isConfig",
     )
     is_running: bool = Field(
         default=False,

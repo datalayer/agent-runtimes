@@ -20,7 +20,12 @@ router = APIRouter(prefix="/mcp/servers", tags=["mcp"])
 
 @router.get("/catalog", response_model=list[MCPServer])
 async def get_catalog_servers() -> list[dict[str, Any]]:
-    """Get all available MCP servers from the catalog (predefined servers)."""
+    """
+    Get all MCP servers from the catalog (predefined servers).
+    
+    These are servers that can be enabled on-demand via the /catalog/{server_name}/enable endpoint.
+    They are NOT started automatically - users must explicitly enable them.
+    """
     try:
         servers = list_catalog_servers()
         return [s.model_dump(by_alias=True) for s in servers]
@@ -30,10 +35,47 @@ async def get_catalog_servers() -> list[dict[str, Any]]:
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/config", response_model=list[MCPServer])
+async def get_config_servers() -> list[dict[str, Any]]:
+    """
+    Get all MCP Config servers from ~/.datalayer/mcp.json.
+    
+    MCP Config servers are user-defined servers that are started automatically
+    when the agent runtime starts. Users can select which config servers to
+    include as toolsets for their agents.
+    
+    This is separate from the MCP Catalog which contains predefined servers
+    that must be explicitly enabled.
+    
+    Returns only running config servers (not catalog servers).
+    """
+    try:
+        lifecycle_manager = get_mcp_lifecycle_manager()
+        running_instances = lifecycle_manager.get_all_running_servers()
+        
+        # Filter to only config servers (is_config=True means from mcp.json)
+        config_servers = []
+        for instance in running_instances:
+            if instance.config.is_config:
+                server_dict = instance.config.model_dump(by_alias=True)
+                server_dict["isRunning"] = True
+                server_dict["isAvailable"] = True
+                config_servers.append(server_dict)
+        
+        logger.info(f"Returning {len(config_servers)} MCP config servers")
+        return config_servers
+
+    except Exception as e:
+        logger.error(f"Error getting MCP config servers: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/available", response_model=list[MCPServer])
 async def get_available_servers() -> list[dict[str, Any]]:
     """
-    Get all available MCP servers - combines catalog servers with running mcp.json servers.
+    Get all available MCP servers - combines catalog servers with running config servers.
+    
+    DEPRECATED: Use /config for config servers or /catalog for catalog servers.
     
     Returns catalog servers with their running status, plus any additional servers
     that are running from mcp.json but not in the catalog.
@@ -56,7 +98,7 @@ async def get_available_servers() -> list[dict[str, Any]]:
             server_dict = server.model_dump(by_alias=True)
             is_running = server.id in running_ids
             server_dict["isRunning"] = is_running
-            server_dict["isRuntime"] = False  # Catalog servers are not runtime-only
+            server_dict["isConfig"] = False  # Catalog servers are not config servers
             logger.debug(f"Catalog server {server.id}: isRunning={is_running}")
             
             # If server is running, get tools from the running instance
@@ -74,9 +116,9 @@ async def get_available_servers() -> list[dict[str, Any]]:
             if instance.server_id not in catalog_ids:
                 server_dict = instance.config.model_dump(by_alias=True)
                 server_dict["isRunning"] = True
-                server_dict["isRuntime"] = True  # These are mcp.json servers
+                server_dict["isConfig"] = True  # These are mcp.json config servers
                 server_dict["isAvailable"] = True  # Running means available
-                logger.info(f"Adding runtime-only server: {instance.server_id}")
+                logger.info(f"Adding config server: {instance.server_id}")
                 result.append(server_dict)
         
         return result

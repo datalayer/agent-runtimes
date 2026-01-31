@@ -215,15 +215,18 @@ Get detailed information about running MCP toolsets.
 
 ## MCP Servers
 
-Manage MCP (Model Context Protocol) servers for tool integration.
+Manage MCP (Model Context Protocol) servers for tool integration. There are two types of MCP servers:
 
-### List Available Servers
+- **MCP Config**: User-defined servers from `~/.datalayer/mcp.json` that start automatically
+- **MCP Catalog**: Predefined servers that can be enabled on-demand
+
+### List MCP Config Servers
 
 ```http
-GET /api/v1/mcp/servers/available
+GET /api/v1/mcp/servers/config
 ```
 
-Get all available MCP servers - combines catalog servers with running servers from `~/.datalayer/mcp.json`.
+Get all running MCP Config servers from `~/.datalayer/mcp.json`. These servers start automatically when the agent runtime starts.
 
 **Response:**
 
@@ -232,7 +235,7 @@ Get all available MCP servers - combines catalog servers with running servers fr
   {
     "id": "tavily",
     "name": "Tavily Search",
-    "description": "Web search and research capabilities via Tavily API",
+    "description": "Web search and research capabilities",
     "enabled": true,
     "tools": [
       {
@@ -241,12 +244,9 @@ Get all available MCP servers - combines catalog servers with running servers fr
         "enabled": true
       }
     ],
-    "command": "npx",
-    "args": ["-y", "@tavily/mcp-server"],
-    "requiredEnvVars": ["TAVILY_API_KEY"],
     "isAvailable": true,
     "isRunning": true,
-    "isRuntime": false,
+    "isConfig": true,
     "transport": "stdio"
   }
 ]
@@ -258,7 +258,7 @@ Get all available MCP servers - combines catalog servers with running servers fr
 GET /api/v1/mcp/servers/catalog
 ```
 
-Get all predefined MCP servers from the catalog.
+Get all predefined MCP servers from the catalog. These are NOT started automatically.
 
 **Response:**
 
@@ -274,6 +274,34 @@ Get all predefined MCP servers from the catalog.
     "args": ["-y", "@tavily/mcp-server"],
     "requiredEnvVars": ["TAVILY_API_KEY"],
     "isAvailable": false,
+    "isConfig": false,
+    "transport": "stdio"
+  }
+]
+```
+
+### List All Available Servers (Deprecated)
+
+```http
+GET /api/v1/mcp/servers/available
+```
+
+:::warning Deprecated
+Use `/config` for config servers or `/catalog` for catalog servers.
+:::
+
+Get all available MCP servers - combines catalog servers with running servers from `~/.datalayer/mcp.json`.
+
+**Response:**
+
+```json
+[
+  {
+    "id": "tavily",
+    "name": "Tavily Search",
+    "isAvailable": true,
+    "isRunning": true,
+    "isConfig": true,
     "transport": "stdio"
   }
 ]
@@ -285,7 +313,7 @@ Get all predefined MCP servers from the catalog.
 GET /api/v1/mcp/servers
 ```
 
-Get all currently running MCP servers.
+Get all currently running MCP servers (both config and catalog).
 
 **Response:**
 
@@ -322,7 +350,7 @@ Get details for a specific MCP server.
 POST /api/v1/mcp/servers/catalog/{server_name}/enable
 ```
 
-Start an MCP server from the catalog for the current session.
+Start an MCP server from the catalog for the current session. Only works for catalog servers (not config servers which start automatically).
 
 **Response:** `201 Created`
 

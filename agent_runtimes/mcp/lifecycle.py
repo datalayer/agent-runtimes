@@ -125,7 +125,9 @@ class MCPLifecycleManager:
             logger.error(f"Error reading MCP config file: {e}")
             return {"mcpServers": {}}
 
-    def get_merged_server_config(self, server_id: str, user_config: dict[str, Any] | None = None) -> MCPServer | None:
+    def get_merged_server_config(
+        self, server_id: str, user_config: dict[str, Any] | None = None, from_config_file: bool = False
+    ) -> MCPServer | None:
         """
         Get server config, merging mcp.json with catalog if available.
 
@@ -137,6 +139,7 @@ class MCPLifecycleManager:
         Args:
             server_id: The server identifier
             user_config: Optional user-provided config overrides
+            from_config_file: True if this server is from mcp.json (marks as config server)
 
         Returns:
             MCPServer config or None if not found
@@ -160,6 +163,7 @@ class MCPLifecycleManager:
                     transport=expanded.get("transport", "stdio"),
                     enabled=True,
                     tools=[],
+                    is_config=from_config_file,  # Mark as config server if from mcp.json
                 )
 
         # No user command - check if server is in catalog
@@ -168,6 +172,9 @@ class MCPLifecycleManager:
         if catalog_server:
             # Start with catalog config
             config = catalog_server.model_copy(deep=True)
+            
+            # Mark as config server if loaded from mcp.json
+            config.is_config = from_config_file
 
             # Apply user env overrides if provided
             if user_config:
@@ -317,6 +324,7 @@ class MCPLifecycleManager:
                     # Update config with discovered tools
                     config.tools = tools
                     config.is_available = True
+                    config.is_running = True
 
                     # Create instance
                     instance = MCPServerInstance(
@@ -393,6 +401,7 @@ class MCPLifecycleManager:
             try:
                 await instance.exit_stack.__aexit__(None, None, None)
                 instance.is_running = False
+                instance.config.is_running = False
                 logger.info(f"✓ Stopped MCP server '{server_id}'")
                 return True
             except RuntimeError as e:
@@ -491,10 +500,11 @@ class MCPLifecycleManager:
             logger.info(f"Processing MCP server '{server_id}'...")
             try:
                 # Get merged config (library + user overrides)
-                merged_config = self.get_merged_server_config(server_id, server_config)
+                # Mark as from_config_file=True since these are from mcp.json
+                merged_config = self.get_merged_server_config(server_id, server_config, from_config_file=True)
 
                 if merged_config:
-                    logger.info(f"Starting MCP server '{server_id}'...")
+                    logger.info(f"Starting MCP server '{server_id}' (is_config={merged_config.is_config})...")
                     instance = await self.start_server(server_id, merged_config)
                     if instance:
                         success_count += 1

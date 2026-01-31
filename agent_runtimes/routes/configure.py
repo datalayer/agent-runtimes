@@ -54,11 +54,12 @@ async def get_configuration(
             from agent_runtimes.mcp.lifecycle import get_mcp_lifecycle_manager
             lifecycle_manager = get_mcp_lifecycle_manager()
             running_instances = lifecycle_manager.get_all_running_servers()
+            logger.info(f"Lifecycle manager has {len(running_instances)} running instances")
             if running_instances:
                 mcp_servers = [instance.config for instance in running_instances]
-                logger.debug(f"Got {len(mcp_servers)} servers from lifecycle manager")
+                logger.info(f"Got {len(mcp_servers)} servers from lifecycle manager")
         except Exception as e:
-            logger.debug(f"Lifecycle manager not available: {e}")
+            logger.warning(f"Lifecycle manager error: {e}", exc_info=True)
 
         # Fallback to mcp_manager if lifecycle manager has no servers
         if not mcp_servers:

@@ -48,8 +48,8 @@ interface MCPServer {
   requiredEnvVars?: string[];
   isAvailable?: boolean;
   transport?: string;
-  /** True if this server was started from mcp.json (not in catalog) */
-  isRuntime?: boolean;
+  /** True if this server is from mcp.json config (not in catalog) */
+  isConfig?: boolean;
   /** True if this server is currently running */
   isRunning?: boolean;
 }
@@ -73,10 +73,10 @@ interface McpServerManagerProps {
  * McpServerManager - Manage MCP servers for agent spaces
  *
  * Features:
- * - View available MCP servers from the catalog
+ * - View MCP Catalog servers (predefined, can be enabled on-demand)
  * - Add/Enable servers from the catalog
- * - Remove/Disable active servers
- * - View runtime-started servers (read-only)
+ * - Remove/Disable active catalog servers
+ * - View MCP Config servers from mcp.json (read-only, auto-started)
  * - Trigger codemode tool regeneration on changes
  */
 export function McpServerManager({
@@ -161,18 +161,18 @@ export function McpServerManager({
     },
   });
 
-  // Separate servers into categories based on running status and runtime flag
-  // The /available endpoint returns all servers with isRunning and isRuntime flags
-  const { runningServers, runtimeServers } = useMemo(() => {
+  // Separate servers into categories based on running status and config flag
+  // The /available endpoint returns all servers with isRunning and isConfig flags
+  const { runningCatalogServers, configServers } = useMemo(() => {
     const all = catalogQuery.data || [];
     const running: MCPServer[] = [];
-    const runtime: MCPServer[] = [];
+    const config: MCPServer[] = [];
 
     all.forEach(server => {
       if (server.isRunning) {
-        if (server.isRuntime) {
-          // mcp.json servers that are running
-          runtime.push(server);
+        if (server.isConfig) {
+          // mcp.json config servers that are running
+          config.push(server);
         } else {
           // Catalog servers that are running
           running.push(server);
@@ -180,7 +180,7 @@ export function McpServerManager({
       }
     });
 
-    return { runningServers: running, runtimeServers: runtime };
+    return { runningCatalogServers: running, configServers: config };
   }, [catalogQuery.data]);
 
   // Get servers that are not yet running (available to enable)
@@ -297,14 +297,14 @@ export function McpServerManager({
       )}
 
       {/* Running Catalog Servers Section */}
-      {!isLoading && runningServers.length > 0 && (
+      {!isLoading && runningCatalogServers.length > 0 && (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           <Text sx={{ fontWeight: 'semibold', fontSize: 1 }}>
-            Running Catalog Servers ({runningServers.length})
+            Running Catalog Servers ({runningCatalogServers.length})
           </Text>
 
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {runningServers.map(server => (
+            {runningCatalogServers.map(server => (
               <ServerCard
                 key={server.id}
                 server={server}
@@ -325,11 +325,11 @@ export function McpServerManager({
         </Box>
       )}
 
-      {/* Runtime Servers Section (from mcp.json) */}
-      {!isLoading && runtimeServers.length > 0 && (
+      {/* MCP Config Servers Section (from mcp.json) */}
+      {!isLoading && configServers.length > 0 && (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           <Text sx={{ fontWeight: 'semibold', fontSize: 1 }}>
-            Servers from mcp.json ({runtimeServers.length})
+            MCP Config Servers ({configServers.length})
           </Text>
           <Text sx={{ color: 'fg.muted', fontSize: 0 }}>
             These servers are defined in ~/.datalayer/mcp.json and started
@@ -337,11 +337,11 @@ export function McpServerManager({
           </Text>
 
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {runtimeServers.map(server => (
+            {configServers.map(server => (
               <ServerCard
                 key={server.id}
                 server={server}
-                variant="runtime"
+                variant="config"
                 disabled={disabled}
                 isSelected={selectedServers.includes(server.id)}
                 onSelect={
@@ -405,7 +405,7 @@ export function McpServerManager({
  */
 interface ServerCardProps {
   server: MCPServer;
-  variant: 'active' | 'catalog' | 'runtime';
+  variant: 'active' | 'catalog' | 'config';
   disabled?: boolean;
   isSelected?: boolean;
   onSelect?: (serverId: string, selected: boolean) => void;
@@ -461,7 +461,7 @@ function ServerCard({
           height: 32,
           borderRadius: 2,
           backgroundColor:
-            variant === 'runtime' ? 'attention.subtle' : 'accent.subtle',
+            variant === 'config' ? 'attention.subtle' : 'accent.subtle',
           flexShrink: 0,
         }}
       >
@@ -481,9 +481,9 @@ function ServerCard({
               Active
             </Label>
           )}
-          {variant === 'runtime' && (
+          {variant === 'config' && (
             <Label variant="attention" size="small">
-              Runtime
+              Config
             </Label>
           )}
           {!isAvailable && (
@@ -599,9 +599,9 @@ function ServerCard({
           </Button>
         )}
 
-        {variant === 'runtime' && (
+        {variant === 'config' && (
           <Text sx={{ fontSize: 0, color: 'fg.muted', fontStyle: 'italic' }}>
-            Read-only
+            Auto-started from mcp.json
           </Text>
         )}
       </Box>

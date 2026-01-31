@@ -7,6 +7,7 @@ Interactive CLI agent that connects to MCP servers with configurable tools.
 Before running the agent, create a configuration file to specify which MCP servers to use:
 
 1. Copy the example config:
+
    ```bash
    cp examples/agent-codemode/agent_cli_config.example.json examples/agent-codemode/agent_cli_config.json
    ```
@@ -26,6 +27,7 @@ Before running the agent, create a configuration file to specify which MCP serve
    ```
 
 Each server can have:
+
 - `name` - Friendly name for the server
 - `command` - Executable to run (e.g., `"python"`, `"node"`, `"npx"`)
 - `args` - Array of arguments (relative paths are resolved from the config file's directory)
@@ -74,14 +76,18 @@ You can configure any MCP server in `agent_cli_config.json`. For example:
     {
       "name": "filesystem",
       "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/directory"],
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "/path/to/directory"
+      ],
       "timeout": 60
     },
     {
       "name": "my_custom_server",
       "command": "python",
       "args": ["/path/to/my_server.py"],
-      "env": {"API_KEY": "your-key"}
+      "env": { "API_KEY": "your-key" }
     }
   ]
 }
