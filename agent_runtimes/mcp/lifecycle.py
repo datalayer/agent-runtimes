@@ -130,6 +130,28 @@ class MCPLifecycleManager:
             logger.error(f"Error reading MCP config file: {e}")
             return {"mcpServers": {}}
 
+    def get_server_config_from_file(self, server_id: str) -> MCPServer | None:
+        """
+        Get config specifically from mcp.json for a server.
+        
+        Args:
+            server_id: The server identifier to look up in mcp.json
+            
+        Returns:
+            MCPServer config if found in mcp.json, None otherwise.
+            The returned config will have is_config=True.
+        """
+        config_data = self._load_mcp_config()
+        mcp_servers = config_data.get("mcpServers", {})
+        
+        if server_id in mcp_servers:
+            return self.get_merged_server_config(
+                server_id, 
+                user_config=mcp_servers[server_id],
+                from_config_file=True
+            )
+        return None
+
     def get_merged_server_config(
         self, server_id: str, user_config: dict[str, Any] | None = None, from_config_file: bool = False
     ) -> MCPServer | None:

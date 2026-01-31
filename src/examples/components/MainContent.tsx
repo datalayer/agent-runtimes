@@ -12,7 +12,7 @@ import matplotlib from '../stores/notebooks/Matplotlib.ipynb.json';
 import emptyNotebook from '../stores/notebooks/Empty.ipynb.json';
 import { TimeTravel } from './TimeTravel';
 import { LexicalEditor } from './LexicalEditor';
-import { McpServerManager } from './McpServerManager';
+import { McpServerManager, type McpServerSelection } from './McpServerManager';
 
 interface MainContentProps {
   showNotebook: boolean;
@@ -30,9 +30,11 @@ interface MainContentProps {
   /** Whether codemode is enabled */
   enableCodemode?: boolean;
   /** Currently selected MCP servers */
-  selectedMcpServers?: string[];
+  selectedMcpServers?: (string | McpServerSelection)[];
   /** Callback when MCP server selection changes */
-  onSelectedMcpServersChange?: (servers: string[]) => void;
+  onSelectedMcpServersChange?: (
+    servers: (string | McpServerSelection)[],
+  ) => void;
   /** Callback when MCP servers are added/removed (for codemode regeneration) */
   onMcpServersChange?: () => void;
   /** Whether the agent is configured and running */

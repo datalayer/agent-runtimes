@@ -25,6 +25,7 @@ import {
   FooterMetrics,
   AgentConfiguration,
   type AgentLibrary,
+  type McpServerSelection,
 } from './components';
 
 // Create a query client for React Query
@@ -220,52 +221,37 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
     string[]
   >([]);
   // Deprecated - kept for backwards compatibility
-  const [selectedMcpServers, setSelectedMcpServers] = useState<string[]>(
-    initialSelectedMcpServers,
-  );
+  const [selectedMcpServers, setSelectedMcpServers] = useState<
+    (string | McpServerSelection)[]
+  >(initialSelectedMcpServers);
   const autoSelectRef = useRef(false);
   const enableSkills = selectedSkills.length > 0;
 
   // Handler to update selected servers from McpServerManager
   // This replaces the entire selection, so we need to update all arrays
   const handleSelectedServersChange = React.useCallback(
-    (newServers: string[]) => {
-      // Get all currently selected servers
-      const allCurrentServers = [
-        ...selectedConfigServers,
-        ...selectedCatalogServers,
-        ...selectedMcpServers,
-      ];
+    (newServers: (string | McpServerSelection)[]) => {
+      setSelectedMcpServers(newServers);
 
-      // Find which servers were removed
-      const removedServers = allCurrentServers.filter(
-        id => !newServers.includes(id),
-      );
+      // Update derived legacy states if needed (simplified)
+      // These are mostly for display in other components if they exist
+      const config: string[] = [];
+      const catalog: string[] = [];
 
-      // Remove the removed servers from all arrays
-      if (removedServers.length > 0) {
-        setSelectedConfigServers(prev =>
-          prev.filter(id => !removedServers.includes(id)),
-        );
-        setSelectedCatalogServers(prev =>
-          prev.filter(id => !removedServers.includes(id)),
-        );
-        setSelectedMcpServers(prev =>
-          prev.filter(id => !removedServers.includes(id)),
-        );
-      }
+      newServers.forEach(s => {
+        if (typeof s === 'string') {
+          // If we don't know, we assume general pool?
+          // Using a heuristic or just not updating legacy specific pools
+        } else {
+          if (s.origin === 'config') config.push(s.name);
+          else catalog.push(s.name);
+        }
+      });
 
-      // Find which servers were added (new servers not in any existing array)
-      const addedServers = newServers.filter(
-        id => !allCurrentServers.includes(id),
-      );
-
-      // Add new servers to the legacy selectedMcpServers for now
-      if (addedServers.length > 0) {
-        setSelectedMcpServers(prev => [...prev, ...addedServers]);
-      }
+      setSelectedConfigServers(config);
+      setSelectedCatalogServers(catalog);
     },
-    [selectedConfigServers, selectedCatalogServers, selectedMcpServers],
+    [],
   );
 
   // Merge deprecated props into identityProviders for backward compatibility
@@ -453,7 +439,8 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
   }, [autoSelectMcpServers, enableCodemode, selectedMcpServers, baseUrl]);
 
   // Track previous MCP servers to detect changes
-  const prevMcpServersRef = useRef<string[]>(selectedMcpServers);
+  const prevMcpServersRef =
+    useRef<(string | McpServerSelection)[]>(selectedMcpServers);
 
   const handleAgentSelect = (agentId: string) => {
     setSelectedAgentId(agentId);
@@ -577,7 +564,14 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
     const prevServers = prevMcpServersRef.current;
     const serversChanged =
       prevServers.length !== selectedMcpServers.length ||
-      prevServers.some((s, i) => s !== selectedMcpServers[i]);
+      prevServers.some((s, i) => {
+        const cur = selectedMcpServers[i];
+        if (typeof s === 'string' && typeof cur === 'string') return s !== cur;
+        if (typeof s === 'object' && typeof cur === 'object') {
+          return s.name !== cur.name || s.origin !== cur.origin;
+        }
+        return true; // Type mismatch means changed
+      });
 
     if (
       serversChanged &&

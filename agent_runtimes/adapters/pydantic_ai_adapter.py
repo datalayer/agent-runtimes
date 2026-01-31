@@ -55,8 +55,9 @@ class PydanticAIAdapter(BaseAgent):
         description: str = "A Pydantic AI powered agent",
         version: str = "1.0.0",
         agent_id: str | None = None,
-        selected_mcp_server_ids: list[str] | None = None,
+        selected_mcp_servers: list[str | dict[str, str]] | None = None,
         non_mcp_toolsets: list[Any] | None = None,
+        codemode_builder: Any = None,
     ):
         """Initialize the Pydantic AI agent adapter.
 
@@ -66,8 +67,9 @@ class PydanticAIAdapter(BaseAgent):
             description: Agent description.
             version: Agent version.
             agent_id: Unique identifier for usage tracking (defaults to name).
-            selected_mcp_server_ids: List of MCP server IDs to dynamically fetch at run time.
+            selected_mcp_servers: List of MCP servers to use (IDs or dicts with origin).
             non_mcp_toolsets: List of non-MCP toolsets (e.g., codemode, skills) to always include.
+            codemode_builder: Optional callable to rebuild codemode toolset when MCP servers change.
         """
         self._agent = agent
         self._name = name
@@ -75,8 +77,16 @@ class PydanticAIAdapter(BaseAgent):
         self._version = version
         self._agent_id = agent_id or name.lower().replace(" ", "-")
         self._tools: list[ToolDefinition] = []
-        self._selected_mcp_server_ids = selected_mcp_server_ids or []
+        self._selected_mcp_servers = selected_mcp_servers or []
         self._non_mcp_toolsets = non_mcp_toolsets or []
+        self._codemode_builder = codemode_builder
+        self._codemode_toolset_index = None
+        # Find codemode toolset in non_mcp_toolsets if it exists
+        for i, toolset in enumerate(self._non_mcp_toolsets):
+            if hasattr(toolset, '__class__') and 'CodemodeToolset' in toolset.__class__.__name__:
+                self._codemode_toolset_index = i
+                logger.info(f"PydanticAIAdapter [{self._name}]: Found CodemodeToolset at index {i}")
+                break
         self._extract_tools()
         
         # Register with usage tracker
@@ -146,15 +156,34 @@ class PydanticAIAdapter(BaseAgent):
         """Get the list of selected MCP server IDs."""
         return self._selected_mcp_server_ids.copy()
 
-    def update_selected_mcp_servers(self, server_ids: list[str]) -> None:
+    def update_mcp_servers(self, servers: list[str | dict[str, str]]) -> None:
         """Update the list of selected MCP servers.
         
+        Also rebuilds Codemode toolset if a builder was provided, to ensure
+        tool bindings reflect the current MCP server selection.
+        
         Args:
-            server_ids: New list of MCP server IDs to use.
+            servers: New list of MCP server IDs or selections to use.
         """
-        old_ids = self._selected_mcp_server_ids
-        self._selected_mcp_server_ids = server_ids.copy()  # Make a copy to avoid reference issues
-        logger.info(f"PydanticAIAdapter [{self._name}]: Updated MCP servers from {old_ids} to {self._selected_mcp_server_ids}")
+        old_servers = self._selected_mcp_servers
+        self._selected_mcp_servers = servers.copy()  # Make a copy to avoid reference issues
+        logger.info(f"PydanticAIAdapter [{self._name}]: Updated MCP servers from {old_servers} to {self._selected_mcp_servers}")
+        
+        # Rebuild Codemode toolset if builder is available and we have a codemode toolset
+        if self._codemode_builder and self._codemode_toolset_index is not None:
+            try:
+                logger.info(f"PydanticAIAdapter [{self._name}]: Rebuilding CodemodeToolset with new MCP servers")
+                new_codemode = self._codemode_builder(servers)
+                if new_codemode:
+                    self._non_mcp_toolsets[self._codemode_toolset_index] = new_codemode
+                    logger.info(f"PydanticAIAdapter [{self._name}]: Successfully rebuilt CodemodeToolset")
+                else:
+                    # If no servers, remove codemode toolset
+                    logger.info(f"PydanticAIAdapter [{self._name}]: No MCP servers, removing CodemodeToolset")
+                    self._non_mcp_toolsets.pop(self._codemode_toolset_index)
+                    self._codemode_toolset_index = None
+            except Exception as e:
+                logger.error(f"PydanticAIAdapter [{self._name}]: Failed to rebuild CodemodeToolset: {e}", exc_info=True)
 
     @property
     def pydantic_agent(self) -> Agent:
@@ -164,7 +193,7 @@ class PydanticAIAdapter(BaseAgent):
     def _get_runtime_toolsets(self) -> list[Any]:
         """Get the list of toolsets to use at run time.
         
-        This dynamically fetches MCP toolsets based on selected_mcp_server_ids,
+        This dynamically fetches MCP toolsets based on selected_mcp_servers,
         ensuring only currently running servers are included.
         
         Returns:
@@ -173,19 +202,75 @@ class PydanticAIAdapter(BaseAgent):
         toolsets = []
         
         # Log current state
-        logger.info(f"PydanticAIAdapter [{self._name}]: _get_runtime_toolsets called, selected_mcp_server_ids={self._selected_mcp_server_ids}")
+        logger.info(f"PydanticAIAdapter [{self._name}]: _get_runtime_toolsets called, selected_mcp_servers={self._selected_mcp_servers}")
         
         # Dynamically fetch MCP toolsets for selected servers
-        if self._selected_mcp_server_ids:
-            logger.info(f"PydanticAIAdapter [{self._name}]: Fetching toolsets for servers: {self._selected_mcp_server_ids}")
+        if self._selected_mcp_servers:
+            logger.info(f"PydanticAIAdapter [{self._name}]: Fetching toolsets for servers: {self._selected_mcp_servers}")
             lifecycle_manager = get_mcp_lifecycle_manager()
-            for server_id in self._selected_mcp_server_ids:
-                instance = lifecycle_manager.get_running_server(server_id)
-                if instance and instance.is_running:
-                    toolsets.append(instance.pydantic_server)
-                    logger.info(f"PydanticAIAdapter [{self._name}]: Added MCP server '{server_id}' toolset (type: {type(instance.pydantic_server).__name__})")
+            
+            for selection in self._selected_mcp_servers:
+                server_id = None
+                is_config = None
+                
+                if isinstance(selection, str):
+                    # Legacy string format handling (backward compatibility)
+                    server_id = selection
+                    if server_id.startswith("config:"):
+                        server_id = server_id[7:]
+                        is_config = True
+                    elif server_id.startswith("catalog:"):
+                        server_id = server_id[8:]
+                        is_config = False
+                    # Else is_config=None means try both (or follow default logic)
+                elif isinstance(selection, dict):
+                    server_id = selection.get("name")
+                    origin = selection.get("origin")
+                    if origin == "config":
+                        is_config = True
+                    elif origin == "catalog":
+                        is_config = False
+                elif hasattr(selection, "name"): # Pydantic model
+                    server_id = selection.name
+                    origin = getattr(selection, "origin", None)
+                    if origin == "config":
+                        is_config = True
+                    elif origin == "catalog":
+                        is_config = False
+
+                if not server_id:
+                    continue
+
+                # If is_config is specified, look specifically in that storage
+                if is_config is not None:
+                    instance = lifecycle_manager.get_running_server(server_id, is_config=is_config)
+                    if instance and instance.is_running:
+                        toolsets.append(instance.pydantic_server)
+                        logger.info(f"PydanticAIAdapter [{self._name}]: Added {'config' if is_config else 'catalog'} MCP server '{server_id}' toolset")
+                    else:
+                        logger.warning(f"PydanticAIAdapter [{self._name}]: {'config' if is_config else 'catalog'} MCP server '{server_id}' not running, skipping")
                 else:
-                    logger.warning(f"PydanticAIAdapter [{self._name}]: MCP server '{server_id}' not running, skipping")
+                    # Fallback: try config then catalog (or both? user said 'double listing' is OK if intentional)
+                    # But without explicit origin, we might get ambiguity.
+                    # Try config first
+                    instance_config = lifecycle_manager.get_running_server(server_id, is_config=True)
+                    if instance_config and instance_config.is_running:
+                        toolsets.append(instance_config.pydantic_server)
+                        logger.info(f"PydanticAIAdapter [{self._name}]: Added config MCP server '{server_id}' toolset (fallback)")
+                    
+                    # Try catalog
+                    instance_catalog = lifecycle_manager.get_running_server(server_id, is_config=False)
+                    if instance_catalog and instance_catalog.is_running:
+                        # Only add catalog if not same as config (or if we want duplication?)
+                        # User said "The only pitfall ist the double listing". This implies unexpected duplication is bad.
+                        # If I selected "tavily" string, and both run, adding both causes duplication.
+                        # So if we found config, maybe we skip catalog?
+                        if not instance_config:
+                            toolsets.append(instance_catalog.pydantic_server)
+                            logger.info(f"PydanticAIAdapter [{self._name}]: Added catalog MCP server '{server_id}' toolset (fallback)")
+                        else:
+                            logger.info(f"PydanticAIAdapter [{self._name}]: Skipping catalog server '{server_id}' as config version already added (fallback)")
+
         else:
             logger.info(f"PydanticAIAdapter [{self._name}]: No MCP servers selected (list is empty)")
         

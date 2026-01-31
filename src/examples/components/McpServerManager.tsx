@@ -24,9 +24,12 @@ import {
 } from '@primer/octicons-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Box } from '@datalayer/primer-addons';
+import type { McpServerSelection } from '../../components/chat/types';
+
+export type { McpServerSelection };
 
 /**
- * MCP Server tool definition
+ * MCP Server Tool configuration
  */
 interface MCPServerTool {
   name: string;
@@ -62,9 +65,9 @@ interface McpServerManagerProps {
   /** Whether codemode is enabled - affects tool regeneration on add/remove */
   enableCodemode?: boolean;
   /** Currently selected MCP servers (for selection mode) */
-  selectedServers?: string[];
+  selectedServers?: (string | McpServerSelection)[];
   /** Callback when server selection changes */
-  onSelectedServersChange?: (servers: string[]) => void;
+  onSelectedServersChange?: (servers: (string | McpServerSelection)[]) => void;
   /** Callback when MCP servers are added/removed (for codemode tool regeneration) */
   onServersChange?: () => void;
   /** Whether the manager is disabled (e.g., for existing agents) */
@@ -174,7 +177,7 @@ export function McpServerManager({
 
   // Update agent's MCP servers mutation
   const updateAgentMcpServersMutation = useMutation({
-    mutationFn: async (newServers: string[]) => {
+    mutationFn: async (newServers: (string | McpServerSelection)[]) => {
       if (!agentId) return;
       const response = await fetch(
         `${baseUrl}/api/v1/agents/${agentId}/mcp-servers`,
@@ -208,43 +211,42 @@ export function McpServerManager({
 
   // Separate servers into categories based on running status and config flag
   // The /available endpoint returns all servers with isRunning and isConfig flags
-  const {
-    runningCatalogServers,
-    configServers,
-    assignedConfigServers,
-    assignedCatalogServers,
-  } = useMemo(() => {
+  const { assignedConfigServers, assignedCatalogServers } = useMemo(() => {
     const all = catalogQuery.data || [];
-    const running: MCPServer[] = [];
-    const config: MCPServer[] = [];
     const assignedConfig: MCPServer[] = [];
     const assignedCatalog: MCPServer[] = [];
 
     all.forEach(server => {
-      const isSelected = selectedServers.includes(server.id);
+      // Check for namespaced ID or fallback to legacy ID
+      const configId = `config:${server.id}`;
+      const catalogId = `catalog:${server.id}`;
+
+      const isConfigSelected = selectedServers.some(s => {
+        if (typeof s === 'string')
+          return s === configId || (server.isConfig && s === server.id);
+        return s.name === server.id && s.origin === 'config';
+      });
+
+      const isCatalogSelected = selectedServers.some(s => {
+        if (typeof s === 'string')
+          return s === catalogId || (!server.isConfig && s === server.id);
+        return s.name === server.id && s.origin === 'catalog';
+      });
 
       if (server.isConfig) {
         // mcp.json config servers (only shown if running)
-        if (server.isRunning) {
-          config.push(server);
-          if (isSelected) {
-            assignedConfig.push(server);
-          }
+        if (server.isRunning && isConfigSelected) {
+          assignedConfig.push(server);
         }
       } else {
         // Catalog servers - show in running section if running
-        if (server.isRunning) {
-          running.push(server);
-          if (isSelected) {
-            assignedCatalog.push(server);
-          }
+        if (server.isRunning && isCatalogSelected) {
+          assignedCatalog.push(server);
         }
       }
     });
 
     return {
-      runningCatalogServers: running,
-      configServers: config,
       assignedConfigServers: assignedConfig,
       assignedCatalogServers: assignedCatalog,
     };
@@ -276,12 +278,26 @@ export function McpServerManager({
       enableMutation.mutate(serverName, {
         onSuccess: () => {
           // After enabling, automatically add to selected servers
-          if (!selectedServers.includes(serverName)) {
-            const newServers = [...selectedServers, serverName];
+          // Since we are enabling from catalog, origin is catalog
+          const selection: McpServerSelection = {
+            name: serverName,
+            origin: 'catalog',
+          };
+
+          const exists = selectedServers?.some(
+            s =>
+              (typeof s === 'string' && s === serverName) ||
+              (typeof s !== 'string' &&
+                s.name === serverName &&
+                s.origin === 'catalog'),
+          );
+
+          if (!exists) {
+            const newServers = [...(selectedServers || []), selection];
             onSelectedServersChange?.(newServers);
             // Update the running agent's MCP servers
             if (agentId) {
-              updateAgentMcpServersMutation.mutate(newServers);
+              updateAgentMcpServersMutation.mutate(newServers as any);
             }
           }
         },
@@ -301,12 +317,19 @@ export function McpServerManager({
     (serverName: string) => {
       disableMutation.mutate(serverName);
       // Also remove from selected servers so the Chat tools menu updates
-      if (selectedServers.includes(serverName)) {
-        const newServers = selectedServers.filter(id => id !== serverName);
-        onSelectedServersChange?.(newServers);
-        // Update the running agent's MCP servers
-        if (agentId) {
-          updateAgentMcpServersMutation.mutate(newServers);
+      if (selectedServers) {
+        const newServers = selectedServers.filter(s => {
+          if (typeof s === 'string') return s !== serverName;
+          return !(s.name === serverName && s.origin === 'catalog');
+        });
+
+        // Only update if changed
+        if (newServers.length !== selectedServers.length) {
+          onSelectedServersChange?.(newServers);
+          // Update the running agent's MCP servers
+          if (agentId) {
+            updateAgentMcpServersMutation.mutate(newServers as any);
+          }
         }
       }
     },
@@ -321,13 +344,21 @@ export function McpServerManager({
 
   // Handle removing a server from selection (without disabling it globally)
   const handleRemoveServer = useCallback(
-    (serverName: string) => {
-      if (selectedServers.includes(serverName)) {
-        const newServers = selectedServers.filter(id => id !== serverName);
-        onSelectedServersChange?.(newServers);
-        // Update the running agent's MCP servers
-        if (agentId) {
-          updateAgentMcpServersMutation.mutate(newServers);
+    (serverName: string, isConfig: boolean) => {
+      if (selectedServers) {
+        const origin = isConfig ? 'config' : 'catalog';
+        const newServers = selectedServers.filter(s => {
+          if (typeof s === 'string') return s !== serverName;
+          return !(s.name === serverName && s.origin === origin);
+        });
+
+        // Only update if changed
+        if (newServers.length !== selectedServers.length) {
+          onSelectedServersChange?.(newServers);
+          // Update the running agent's MCP servers
+          if (agentId) {
+            updateAgentMcpServersMutation.mutate(newServers as any);
+          }
         }
       }
     },
@@ -347,14 +378,22 @@ export function McpServerManager({
 
   // Handle server selection (for agent configuration)
   const handleServerSelect = useCallback(
-    (serverId: string, selected: boolean) => {
+    (server: MCPServer, selected: boolean) => {
+      // Determine origin
+      const origin = server.isConfig ? 'config' : 'catalog';
+      const selectionItem: McpServerSelection = { name: server.id, origin };
+
+      let newSelection: (string | McpServerSelection)[];
+
       if (selected) {
-        onSelectedServersChange?.([...selectedServers, serverId]);
+        newSelection = [...(selectedServers || []), selectionItem];
       } else {
-        onSelectedServersChange?.(
-          selectedServers.filter(id => id !== serverId),
-        );
+        newSelection = (selectedServers || []).filter(s => {
+          if (typeof s === 'string') return s !== server.id;
+          return !(s.name === server.id && s.origin === origin);
+        });
       }
+      onSelectedServersChange?.(newSelection);
     },
     [selectedServers, onSelectedServersChange],
   );
@@ -432,7 +471,7 @@ export function McpServerManager({
                 onSelect={
                   onSelectedServersChange ? handleServerSelect : undefined
                 }
-                onRemove={() => handleRemoveServer(server.id)}
+                onRemove={() => handleRemoveServer(server.id, true)}
               />
             ))}
           </Box>
@@ -523,7 +562,7 @@ interface ServerCardProps {
   variant: 'active' | 'catalog' | 'config';
   disabled?: boolean;
   isSelected?: boolean;
-  onSelect?: (serverId: string, selected: boolean) => void;
+  onSelect?: (server: MCPServer, selected: boolean) => void;
   onAdd?: () => void;
   onRemove?: () => void;
   isAdding?: boolean;
@@ -562,7 +601,7 @@ function ServerCard({
       }}
       onClick={() => {
         if (onSelect && !disabled && isAvailable) {
-          onSelect(server.id, !isSelected);
+          onSelect(server, !isSelected);
         }
       }}
     >

@@ -25,3 +25,4 @@ export type {
   MCPServerTool,
 } from './AgentConfiguration';
 export { McpServerManager } from './McpServerManager';
+export type { McpServerSelection } from './McpServerManager';

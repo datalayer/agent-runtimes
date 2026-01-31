@@ -26,6 +26,7 @@ import { Box } from '@datalayer/primer-addons';
 import { ChatBase, type Suggestion } from './base/ChatBase';
 import { AgentDetails } from './AgentDetails';
 import type { ProtocolConfig } from './base/ChatBase';
+import type { McpServerSelection } from '../types';
 import { useConnectedIdentities } from '../../../identity';
 import type {
   OAuthProvider,
@@ -186,7 +187,7 @@ export interface ChatProps {
   initialModel?: string;
 
   /** Initial MCP server IDs to enable (others will be disabled) */
-  initialMcpServers?: string[];
+  initialMcpServers?: (string | McpServerSelection)[];
 
   /** Initial skill IDs to enable */
   initialSkills?: string[];

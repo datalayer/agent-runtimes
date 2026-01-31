@@ -18,6 +18,16 @@ import type {
 } from './tool';
 
 /**
+ * MCP Server selection
+ */
+export interface McpServerSelection {
+  /** Name of the server */
+  name: string;
+  /** Origin of the server (config or catalog) */
+  origin: 'config' | 'catalog';
+}
+
+/**
  * Inference provider configuration
  */
 export interface InferenceProviderConfig {

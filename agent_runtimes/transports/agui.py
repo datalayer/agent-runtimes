@@ -231,7 +231,7 @@ class AGUITransport(BaseTransport):
                     request,
                     agent=pydantic_agent,
                     model=model,
-                    toolsets=runtime_toolsets if runtime_toolsets else None,
+                    toolsets=runtime_toolsets,
                     on_complete=on_complete,
                     **agui_kwargs,
                 )

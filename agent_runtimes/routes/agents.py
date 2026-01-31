@@ -242,6 +242,15 @@ def _build_codemode_toolset(
     )
 
 
+class McpServerSelection(BaseModel):
+    """Selection of an MCP server with its origin."""
+    name: str = Field(..., description="The server name/ID")
+    origin: Literal["config", "catalog"] = Field(
+        default="config", 
+        description="Origin of the server (config from mcp.json, catalog from built-in)"
+    )
+
+
 class CreateAgentRequest(BaseModel):
     """Request body for creating a new agent."""
     
@@ -278,9 +287,9 @@ class CreateAgentRequest(BaseModel):
         default=False,
         description="Enable optional tool reranker hook for codemode discovery"
     )
-    selected_mcp_servers: list[str] = Field(
+    selected_mcp_servers: list[str | McpServerSelection] = Field(
         default_factory=list,
-        description="List of MCP server IDs to include. Empty list means include all available."
+        description="List of MCP server IDs or selections to include. Empty list means include all available."
     )
 
 
@@ -335,28 +344,56 @@ async def create_agent(request: CreateAgentRequest, http_request: Request) -> Cr
         
         # Determine which MCP servers to use and ensure they are running
         # These will be dynamically fetched at run time, not stored at creation time
-        selected_mcp_server_ids: list[str] = []
+        selected_mcp_servers = []
         if not request.enable_codemode and request.selected_mcp_servers:
-            selected_mcp_server_ids = request.selected_mcp_servers
-            logger.info(f"Agent {agent_id} will use MCP servers: {selected_mcp_server_ids}")
+            selected_mcp_servers = request.selected_mcp_servers
+            logger.info(f"Agent {agent_id} will use MCP servers: {selected_mcp_servers}")
             
             # Start any MCP servers that aren't already running
             lifecycle_manager = get_mcp_lifecycle_manager()
-            for server_id in selected_mcp_server_ids:
-                if not lifecycle_manager.is_server_running(server_id):
-                    # Look up server in catalog and start it
-                    catalog_server = MCP_SERVER_CATALOG.get(server_id)
-                    if catalog_server:
-                        logger.info(f"Starting MCP server '{server_id}' for agent {agent_id}")
-                        instance = await lifecycle_manager.start_server(server_id, catalog_server)
-                        if instance:
-                            logger.info(f"Started MCP server '{server_id}' with {len(instance.tools)} tools")
-                        else:
-                            failed = lifecycle_manager.get_failed_servers()
-                            error = failed.get(server_id, "Unknown error")
-                            logger.warning(f"Failed to start MCP server '{server_id}': {error}")
-                    else:
-                        logger.warning(f"MCP server '{server_id}' not found in catalog")
+            
+            # Helper to extract ID and origin from selection
+            def parse_selection(item):
+                if isinstance(item, str):
+                    if item.startswith("config:"): return item[7:], True
+                    if item.startswith("catalog:"): return item[8:], False
+                    return item, None
+                elif hasattr(item, "origin"):
+                    return item.name, (item.origin == "config")
+                return None, None
+
+            for item in selected_mcp_servers:
+                server_id, is_config = parse_selection(item)
+                if not server_id: continue
+                    
+                if not lifecycle_manager.is_server_running(server_id, is_config=is_config):
+                    # Start matching server type
+                    started = False
+                    
+                    # 1. Try Config Server (mcp.json)
+                    if (is_config is None or is_config is True) and not started:
+                        config_server = lifecycle_manager.get_server_config_from_file(server_id)
+                        if config_server:
+                             logger.info(f"Starting Config MCP server '{server_id}' for agent {agent_id}")
+                             instance = await lifecycle_manager.start_server(server_id, config_server)
+                             if instance:
+                                 started = True
+                                 logger.info(f"Started Config MCP server '{server_id}'")
+                    
+                    # 2. Try Catalog Server
+                    if (is_config is None or is_config is False) and not started:
+                        catalog_server = MCP_SERVER_CATALOG.get(server_id)
+                        if catalog_server:
+                            logger.info(f"Starting Catalog MCP server '{server_id}' for agent {agent_id}")
+                            instance = await lifecycle_manager.start_server(server_id, catalog_server)
+                            if instance:
+                                started = True
+                                logger.info(f"Started Catalog MCP server '{server_id}'")
+                    
+                    if not started:
+                         failed = lifecycle_manager.get_failed_servers()
+                         error = failed.get(server_id, "Unknown error")
+                         logger.warning(f"Failed to start MCP server '{item}': {error}")
                 else:
                     logger.info(f"MCP server '{server_id}' already running")
         
@@ -501,7 +538,7 @@ async def create_agent(request: CreateAgentRequest, http_request: Request) -> Cr
                 non_mcp_toolsets.append(codemode_toolset)
                 logger.info(f"Added and initialized CodemodeToolset for agent {agent_id}")
         
-        logger.info(f"Creating agent '{agent_id}' with selected_mcp_server_ids={selected_mcp_server_ids}")
+        logger.info(f"Creating agent '{agent_id}' with selected_mcp_servers={selected_mcp_servers}")
         
         # Create the agent based on the library
         if request.agent_library == "pydantic-ai":
@@ -516,14 +553,29 @@ async def create_agent(request: CreateAgentRequest, http_request: Request) -> Cr
             )
             # Then wrap it with our adapter (pass agent_id for usage tracking)
             # The adapter will dynamically fetch MCP toolsets at run time
-            logger.info(f"Creating PydanticAIAdapter for '{agent_id}' with MCP servers: {selected_mcp_server_ids}")
+            logger.info(f"Creating PydanticAIAdapter for '{agent_id}' with MCP servers: {selected_mcp_servers}")
+            
+            # Create a codemode builder function if codemode is enabled
+            # This allows rebuilding the codemode toolset when MCP servers change
+            codemode_builder = None
+            if request.enable_codemode:
+                def rebuild_codemode(new_servers: list[str | dict[str, str]]) -> Any:
+                    """Rebuild codemode toolset with new MCP server selection."""
+                    # Create a temporary request object with new servers
+                    import copy
+                    temp_request = copy.copy(request)
+                    temp_request.selected_mcp_servers = new_servers
+                    return _build_codemode_toolset(temp_request, http_request, sandbox=shared_sandbox)
+                codemode_builder = rebuild_codemode
+            
             agent = PydanticAIAdapter(
                 agent=pydantic_agent,
                 name=request.name,
                 description=request.description,
                 agent_id=agent_id,
-                selected_mcp_server_ids=selected_mcp_server_ids,
+                selected_mcp_servers=selected_mcp_servers,
                 non_mcp_toolsets=non_mcp_toolsets,
+                codemode_builder=codemode_builder,
             )
         elif request.agent_library == "langchain":
             # TODO: Implement LangChain agent creation
@@ -732,9 +784,9 @@ async def delete_agent(agent_id: str) -> dict[str, str]:
 
 class UpdateAgentMcpServersRequest(BaseModel):
     """Request to update an agent's MCP servers."""
-    selected_mcp_servers: list[str] = Field(
+    selected_mcp_servers: list[str | McpServerSelection] = Field(
         default_factory=list,
-        description="New list of MCP server IDs to use",
+        description="New list of MCP server IDs or selections to use",
     )
 
 
@@ -762,29 +814,66 @@ async def update_agent_mcp_servers(
     if agent_id not in _agents:
         raise HTTPException(status_code=404, detail=f"Agent not found: {agent_id}")
     
-    adapter, info = _agents[agent_id]
-    
-    logger.info(f"PATCH /agents/{agent_id}/mcp-servers: Adapter type={type(adapter).__name__}, request={request.selected_mcp_servers}")
-    
-    # Check if adapter supports updating MCP servers
-    if not hasattr(adapter, "update_selected_mcp_servers"):
-        raise HTTPException(
-            status_code=400,
-            detail="Agent adapter does not support updating MCP servers",
-        )
-    
-    # Log current state before update
-    if hasattr(adapter, "selected_mcp_server_ids"):
-        logger.info(f"PATCH /agents/{agent_id}/mcp-servers: Current servers before update: {adapter.selected_mcp_server_ids}")
-    
     try:
-        # Update the adapter's selected MCP servers
-        adapter.update_selected_mcp_servers(request.selected_mcp_servers)
+        adapter, info = _agents[agent_id]
         
-        # Log state after update
-        if hasattr(adapter, "selected_mcp_server_ids"):
-            logger.info(f"PATCH /agents/{agent_id}/mcp-servers: Servers after update: {adapter.selected_mcp_server_ids}")
+        logger.info(f"PATCH /agents/{agent_id}/mcp-servers: Adapter type={type(adapter).__name__}, request={request.selected_mcp_servers}")
         
+        # Check if adapter supports updating MCP servers
+        # Renamed method consistent with new interface
+        if hasattr(adapter, "update_mcp_servers"):
+            # Log current state
+            if hasattr(adapter, "_selected_mcp_servers"):
+                 logger.info(f"PATCH /agents/{agent_id}/mcp-servers: Current servers before update: {adapter._selected_mcp_servers}")
+            
+            # Ensure new servers are running (similar logic to create_agent)
+            lifecycle_manager = get_mcp_lifecycle_manager()
+
+            # Helper to extract ID and origin from selection
+            def parse_selection(item):
+                if isinstance(item, str):
+                    if item.startswith("config:"): return item[7:], True
+                    if item.startswith("catalog:"): return item[8:], False
+                    return item, None
+                elif hasattr(item, "origin"):
+                    return item.name, (item.origin == "config")
+                return None, None
+
+            for item in request.selected_mcp_servers:
+                server_id, is_config = parse_selection(item)
+                if not server_id: continue
+                
+                # Start logical check/start...
+                started = False
+                # Check if running first
+                if not lifecycle_manager.is_server_running(server_id, is_config=is_config):
+                    # 1. Try Config
+                    if (is_config is None or is_config is True) and not started:
+                        config_server = lifecycle_manager.get_server_config_from_file(server_id)
+                        if config_server:
+                                await lifecycle_manager.start_server(server_id, config_server)
+                                started = True
+                    
+                    # 2. Try Catalog
+                    if (is_config is None or is_config is False) and not started:
+                        catalog_server = MCP_SERVER_CATALOG.get(server_id)
+                        if catalog_server:
+                            await lifecycle_manager.start_server(server_id, catalog_server)
+                            started = True
+
+            # Update the adapter
+            adapter.update_mcp_servers(request.selected_mcp_servers)
+
+        elif hasattr(adapter, "update_selected_mcp_servers"):
+             # Legacy fallback if needed (but we changed the adapter)
+             logger.warning("Using legacy update_selected_mcp_servers method")
+             adapter.update_selected_mcp_servers(request.selected_mcp_servers)
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail="Agent adapter does not support updating MCP servers",
+            )
+            
         logger.info(
             f"Updated agent '{agent_id}' MCP servers to: {request.selected_mcp_servers}"
         )
@@ -794,6 +883,9 @@ async def update_agent_mcp_servers(
             "selected_mcp_servers": request.selected_mcp_servers,
             "message": "MCP servers updated successfully",
         }
+
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Failed to update MCP servers for agent '{agent_id}': {e}")
         raise HTTPException(

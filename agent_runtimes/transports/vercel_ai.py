@@ -253,7 +253,7 @@ class VercelAITransport(BaseTransport):
                 agent=pydantic_agent,
                 model=model,
                 usage_limits=self._usage_limits,
-                toolsets=runtime_toolsets if runtime_toolsets else None,
+                toolsets=runtime_toolsets,
                 builtin_tools=effective_builtin_tools,
                 on_complete=on_complete,
             )
