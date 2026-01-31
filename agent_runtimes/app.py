@@ -63,6 +63,14 @@ from .routes.agents import set_api_prefix
 
 logger = logging.getLogger(__name__)
 
+# Reduce noise from verbose libraries
+logging.getLogger("botocore").setLevel(logging.WARNING)
+logging.getLogger("botocore.parsers").setLevel(logging.WARNING)
+logging.getLogger("botocore.hooks").setLevel(logging.WARNING)
+logging.getLogger("urllib3").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
+logging.getLogger("httpx").setLevel(logging.WARNING)
+
 
 def _is_reload_parent_process() -> bool:
     """Return True when running inside the reload supervisor parent."""

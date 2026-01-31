@@ -11,45 +11,45 @@ from fastapi import APIRouter, HTTPException
 from agent_runtimes.mcp import get_mcp_manager
 from agent_runtimes.mcp.lifecycle import get_mcp_lifecycle_manager
 from agent_runtimes.types import MCPServer
-from agent_runtimes.config.mcp_servers import MCP_SERVER_LIBRARY, list_mcp_servers as list_library_servers
+from agent_runtimes.config.mcp_servers import MCP_SERVER_CATALOG, list_mcp_servers as list_catalog_servers
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/mcp/servers", tags=["mcp"])
 
 
-@router.get("/library", response_model=list[MCPServer])
-async def get_library_servers() -> list[dict[str, Any]]:
-    """Get all available MCP servers from the library (predefined servers)."""
+@router.get("/catalog", response_model=list[MCPServer])
+async def get_catalog_servers() -> list[dict[str, Any]]:
+    """Get all available MCP servers from the catalog (predefined servers)."""
     try:
-        servers = list_library_servers()
+        servers = list_catalog_servers()
         return [s.model_dump(by_alias=True) for s in servers]
 
     except Exception as e:
-        logger.error(f"Error getting MCP library servers: {e}", exc_info=True)
+        logger.error(f"Error getting MCP catalog servers: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/library/{server_name}/enable", response_model=MCPServer, status_code=201)
-async def enable_library_server(server_name: str) -> dict[str, Any]:
+@router.post("/catalog/{server_name}/enable", response_model=MCPServer, status_code=201)
+async def enable_catalog_server(server_name: str) -> dict[str, Any]:
     """
-    Enable an MCP server from the library for the current session.
+    Enable an MCP server from the catalog for the current session.
 
     This starts the MCP server process and adds it to the active session.
     The server will not persist across restarts.
 
     Args:
-        server_name: The name/ID of the MCP server from the library
+        server_name: The name/ID of the MCP server from the catalog
                     (e.g., 'tavily', 'github', 'filesystem')
     """
     try:
-        # Look up server in library
-        library_server = MCP_SERVER_LIBRARY.get(server_name)
-        if not library_server:
-            available = list(MCP_SERVER_LIBRARY.keys())
+        # Look up server in catalog
+        catalog_server = MCP_SERVER_CATALOG.get(server_name)
+        if not catalog_server:
+            available = list(MCP_SERVER_CATALOG.keys())
             raise HTTPException(
                 status_code=404,
-                detail=f"Server '{server_name}' not found in library. Available: {available}"
+                detail=f"Server '{server_name}' not found in catalog. Available: {available}"
             )
 
         lifecycle_manager = get_mcp_lifecycle_manager()
@@ -61,7 +61,7 @@ async def enable_library_server(server_name: str) -> dict[str, Any]:
                 return instance.config.model_dump(by_alias=True)
 
         # Start the MCP server process
-        instance = await lifecycle_manager.start_server(server_name, library_server)
+        instance = await lifecycle_manager.start_server(server_name, catalog_server)
         if not instance:
             failed = lifecycle_manager.get_failed_servers()
             error = failed.get(server_name, "Unknown error")
@@ -74,18 +74,18 @@ async def enable_library_server(server_name: str) -> dict[str, Any]:
         mcp_manager = get_mcp_manager()
         mcp_manager.add_server(instance.config)
 
-        logger.info(f"Enabled and started library MCP server: {server_name}")
+        logger.info(f"Enabled and started catalog MCP server: {server_name}")
         return instance.config.model_dump(by_alias=True)
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error enabling library MCP server: {e}", exc_info=True)
+        logger.error(f"Error enabling catalog MCP server: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.delete("/library/{server_name}/disable", status_code=204)
-async def disable_library_server(server_name: str) -> None:
+@router.delete("/catalog/{server_name}/disable", status_code=204)
+async def disable_catalog_server(server_name: str) -> None:
     """
     Disable an MCP server from the current session.
 
@@ -115,12 +115,12 @@ async def disable_library_server(server_name: str) -> None:
         # Also remove from manager for backward compatibility
         mcp_manager.remove_server(server_name)
 
-        logger.info(f"Disabled and stopped library MCP server: {server_name}")
+        logger.info(f"Disabled and stopped catalog MCP server: {server_name}")
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error disabling library MCP server: {e}", exc_info=True)
+        logger.error(f"Error disabling catalog MCP server: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 

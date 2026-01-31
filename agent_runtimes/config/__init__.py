@@ -10,7 +10,7 @@ Jupyter and FastAPI servers.
 
 from .frontend_config import get_frontend_config
 from .mcp_servers import (
-    MCP_SERVER_LIBRARY,
+    MCP_SERVER_CATALOG,
     get_mcp_server,
     list_mcp_servers,
     TAVILY_MCP_SERVER,
@@ -40,7 +40,7 @@ __all__ = [
     # Frontend config
     "get_frontend_config",
     # MCP Servers
-    "MCP_SERVER_LIBRARY",
+    "MCP_SERVER_CATALOG",
     "get_mcp_server",
     "list_mcp_servers",
     "TAVILY_MCP_SERVER",

@@ -39,11 +39,13 @@ interface MCPServerTool {
 interface MCPServer {
   id: string;
   name: string;
+  description?: string;
   url?: string;
   enabled: boolean;
   tools: MCPServerTool[];
   command?: string;
   args?: string[];
+  requiredEnvVars?: string[];
   isAvailable?: boolean;
   transport?: string;
   /** True if this server was started at runtime (not from config) */
@@ -69,8 +71,8 @@ interface McpServerManagerProps {
  * McpServerManager - Manage MCP servers for agent spaces
  *
  * Features:
- * - View available MCP servers from the library
- * - Add/Enable servers from the library
+ * - View available MCP servers from the catalog
+ * - Add/Enable servers from the catalog
  * - Remove/Disable active servers
  * - View runtime-started servers (read-only)
  * - Trigger codemode tool regeneration on changes
@@ -87,13 +89,13 @@ export function McpServerManager({
   const [searchQuery, setSearchQuery] = useState('');
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch library servers (available to enable)
-  const libraryQuery = useQuery<MCPServer[]>({
-    queryKey: ['mcp-library', baseUrl],
+  // Fetch catalog servers (available to enable)
+  const catalogQuery = useQuery<MCPServer[]>({
+    queryKey: ['mcp-catalog', baseUrl],
     queryFn: async () => {
-      const response = await fetch(`${baseUrl}/api/v1/mcp/servers/library`);
+      const response = await fetch(`${baseUrl}/api/v1/mcp/servers/catalog`);
       if (!response.ok) {
-        throw new Error('Failed to fetch MCP server library');
+        throw new Error('Failed to fetch MCP server catalog');
       }
       return response.json();
     },
@@ -121,7 +123,7 @@ export function McpServerManager({
   const enableMutation = useMutation({
     mutationFn: async (serverName: string) => {
       const response = await fetch(
-        `${baseUrl}/api/v1/mcp/servers/library/${serverName}/enable`,
+        `${baseUrl}/api/v1/mcp/servers/catalog/${serverName}/enable`,
         { method: 'POST' },
       );
       if (!response.ok) {
@@ -136,7 +138,7 @@ export function McpServerManager({
       setError(null);
       // Invalidate queries to refresh the list
       queryClient.invalidateQueries({ queryKey: ['mcp-servers', baseUrl] });
-      queryClient.invalidateQueries({ queryKey: ['mcp-library', baseUrl] });
+      queryClient.invalidateQueries({ queryKey: ['mcp-catalog', baseUrl] });
       // Notify parent about server changes (for codemode tool regeneration or other updates)
       onServersChange?.();
     },
@@ -149,7 +151,7 @@ export function McpServerManager({
   const disableMutation = useMutation({
     mutationFn: async (serverName: string) => {
       const response = await fetch(
-        `${baseUrl}/api/v1/mcp/servers/library/${serverName}/disable`,
+        `${baseUrl}/api/v1/mcp/servers/catalog/${serverName}/disable`,
         { method: 'DELETE' },
       );
       if (!response.ok) {
@@ -163,7 +165,7 @@ export function McpServerManager({
       setError(null);
       // Invalidate queries to refresh the list
       queryClient.invalidateQueries({ queryKey: ['mcp-servers', baseUrl] });
-      queryClient.invalidateQueries({ queryKey: ['mcp-library', baseUrl] });
+      queryClient.invalidateQueries({ queryKey: ['mcp-catalog', baseUrl] });
       // Notify parent about server changes (for codemode tool regeneration or other updates)
       onServersChange?.();
     },
@@ -172,7 +174,7 @@ export function McpServerManager({
     },
   });
 
-  // Separate active servers into supported (from library) and runtime servers
+  // Separate active servers into supported (from catalog) and runtime servers
   // Then filter to only show selected servers
   const { supportedServers, runtimeServers } = useMemo(() => {
     const active = activeQuery.data || [];
@@ -200,24 +202,24 @@ export function McpServerManager({
     return { supportedServers: supported, runtimeServers: runtime };
   }, [activeQuery.data, selectedServers]);
 
-  // Get library servers that are not yet enabled
-  const availableLibraryServers = useMemo(() => {
-    const library = libraryQuery.data || [];
+  // Get catalog servers that are not yet enabled
+  const availableCatalogServers = useMemo(() => {
+    const catalog = catalogQuery.data || [];
     const activeIds = new Set((activeQuery.data || []).map(s => s.id));
-    return library.filter(server => !activeIds.has(server.id));
-  }, [libraryQuery.data, activeQuery.data]);
+    return catalog.filter(server => !activeIds.has(server.id));
+  }, [catalogQuery.data, activeQuery.data]);
 
-  // Filter library servers by search query
-  const filteredLibraryServers = useMemo(() => {
-    if (!searchQuery.trim()) return availableLibraryServers;
+  // Filter catalog servers by search query
+  const filteredCatalogServers = useMemo(() => {
+    if (!searchQuery.trim()) return availableCatalogServers;
     const query = searchQuery.toLowerCase();
-    return availableLibraryServers.filter(
+    return availableCatalogServers.filter(
       server =>
         server.name.toLowerCase().includes(query) ||
         server.id.toLowerCase().includes(query) ||
         server.tools.some(t => t.name.toLowerCase().includes(query)),
     );
-  }, [availableLibraryServers, searchQuery]);
+  }, [availableCatalogServers, searchQuery]);
 
   // Handle enabling a server
   const handleEnableServer = useCallback(
@@ -244,7 +246,7 @@ export function McpServerManager({
   // Handle refreshing the server lists
   const handleRefresh = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['mcp-servers', baseUrl] });
-    queryClient.invalidateQueries({ queryKey: ['mcp-library', baseUrl] });
+    queryClient.invalidateQueries({ queryKey: ['mcp-catalog', baseUrl] });
   }, [queryClient, baseUrl]);
 
   // Handle server selection (for agent configuration)
@@ -261,7 +263,7 @@ export function McpServerManager({
     [selectedServers, onSelectedServersChange],
   );
 
-  const isLoading = libraryQuery.isLoading || activeQuery.isLoading;
+  const isLoading = catalogQuery.isLoading || activeQuery.isLoading;
   const isMutating = enableMutation.isPending || disableMutation.isPending;
 
   return (
@@ -321,7 +323,7 @@ export function McpServerManager({
 
           {supportedServers.length === 0 ? (
             <Text sx={{ color: 'fg.muted', fontSize: 1 }}>
-              No active MCP servers. Enable servers from the library below.
+              No active MCP servers. Enable servers from the catalog below.
             </Text>
           ) : (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -374,15 +376,15 @@ export function McpServerManager({
         </Box>
       )}
 
-      {/* Library Servers Section */}
+      {/* Catalog Servers Section */}
       {!isLoading && (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           <Text sx={{ fontWeight: 'semibold', fontSize: 1 }}>
-            Available from Library ({availableLibraryServers.length})
+            Available from Catalog ({availableCatalogServers.length})
           </Text>
 
           {/* Search input */}
-          {availableLibraryServers.length > 3 && (
+          {availableCatalogServers.length > 3 && (
             <TextInput
               leadingVisual={SearchIcon}
               placeholder="Search servers..."
@@ -392,19 +394,19 @@ export function McpServerManager({
             />
           )}
 
-          {filteredLibraryServers.length === 0 ? (
+          {filteredCatalogServers.length === 0 ? (
             <Text sx={{ color: 'fg.muted', fontSize: 1 }}>
               {searchQuery
                 ? 'No servers match your search.'
-                : 'All library servers are already enabled.'}
+                : 'All catalog servers are already enabled.'}
             </Text>
           ) : (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              {filteredLibraryServers.map(server => (
+              {filteredCatalogServers.map(server => (
                 <ServerCard
                   key={server.id}
                   server={server}
-                  variant="library"
+                  variant="catalog"
                   disabled={disabled || isMutating}
                   onAdd={() => handleEnableServer(server.id)}
                   isAdding={
@@ -426,7 +428,7 @@ export function McpServerManager({
  */
 interface ServerCardProps {
   server: MCPServer;
-  variant: 'active' | 'library' | 'runtime';
+  variant: 'active' | 'catalog' | 'runtime';
   disabled?: boolean;
   isSelected?: boolean;
   onSelect?: (serverId: string, selected: boolean) => void;
@@ -447,9 +449,10 @@ function ServerCard({
   isAdding = false,
   isRemoving = false,
 }: ServerCardProps) {
-  // For library servers, assume available (they're in the library to be added)
-  // For active/runtime servers, check the actual isAvailable status
-  const isAvailable = variant === 'library' || server.isAvailable !== false;
+  // Check availability based on isAvailable field from the server
+  const isAvailable = server.isAvailable !== false;
+  const missingEnvVars =
+    !isAvailable && server.requiredEnvVars && server.requiredEnvVars.length > 0;
 
   return (
     <Box
@@ -462,11 +465,11 @@ function ServerCard({
         backgroundColor: 'canvas.subtle',
         border: '1px solid',
         borderColor: isSelected ? 'accent.emphasis' : 'border.default',
-        opacity: disabled ? 0.6 : 1,
-        cursor: onSelect && !disabled ? 'pointer' : 'default',
+        opacity: disabled || !isAvailable ? 0.6 : 1,
+        cursor: onSelect && !disabled && isAvailable ? 'pointer' : 'default',
       }}
       onClick={() => {
-        if (onSelect && !disabled) {
+        if (onSelect && !disabled && isAvailable) {
           onSelect(server.id, !isSelected);
         }
       }}
@@ -508,7 +511,7 @@ function ServerCard({
           )}
           {!isAvailable && (
             <Label variant="danger" size="small">
-              Unavailable
+              Missing env vars
             </Label>
           )}
           {isSelected && (
@@ -517,6 +520,20 @@ function ServerCard({
             </Label>
           )}
         </Box>
+
+        {/* Description */}
+        {server.description && (
+          <Text sx={{ fontSize: 0, color: 'fg.muted', mb: 1 }}>
+            {server.description}
+          </Text>
+        )}
+
+        {/* Missing env vars warning */}
+        {missingEnvVars && (
+          <Text sx={{ fontSize: 0, color: 'danger.fg', mb: 1 }}>
+            Required: {server.requiredEnvVars!.join(', ')}
+          </Text>
+        )}
 
         {/* Tools list */}
         {server.tools.length > 0 && (
@@ -545,24 +562,18 @@ function ServerCard({
       <Box
         sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}
       >
-        {variant === 'library' && onAdd && (
+        {variant === 'catalog' && onAdd && (
           <Button
             variant="primary"
             size="small"
+            leadingVisual={isAdding ? Spinner : PlusIcon}
             onClick={e => {
               e.stopPropagation();
               onAdd();
             }}
             disabled={disabled || !isAvailable || isAdding}
           >
-            {isAdding ? (
-              <Spinner size="small" />
-            ) : (
-              <>
-                <PlusIcon size={14} />
-                <span style={{ marginLeft: 4 }}>Add</span>
-              </>
-            )}
+            Add
           </Button>
         )}
 
@@ -570,20 +581,14 @@ function ServerCard({
           <Button
             variant="danger"
             size="small"
+            leadingVisual={isRemoving ? Spinner : TrashIcon}
             onClick={e => {
               e.stopPropagation();
               onRemove();
             }}
             disabled={disabled || isRemoving}
           >
-            {isRemoving ? (
-              <Spinner size="small" />
-            ) : (
-              <>
-                <TrashIcon size={14} />
-                <span style={{ marginLeft: 4 }}>Remove</span>
-              </>
-            )}
+            Remove
           </Button>
         )}
 

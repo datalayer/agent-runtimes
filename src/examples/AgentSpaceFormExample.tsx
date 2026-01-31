@@ -404,6 +404,9 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
     void loadServers();
   }, [autoSelectMcpServers, enableCodemode, selectedMcpServers, baseUrl]);
 
+  // Track previous MCP servers to detect changes
+  const prevMcpServersRef = useRef<string[]>(selectedMcpServers);
+
   const handleAgentSelect = (agentId: string) => {
     setSelectedAgentId(agentId);
     setCreateError(null);
@@ -513,6 +516,52 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
     },
     [baseUrl],
   );
+
+  // Recreate agent when MCP servers change while configured
+  // This ensures the agent has the correct toolsets
+  useEffect(() => {
+    const prevServers = prevMcpServersRef.current;
+    const serversChanged =
+      prevServers.length !== selectedMcpServers.length ||
+      prevServers.some((s, i) => s !== selectedMcpServers[i]);
+
+    if (
+      serversChanged &&
+      isConfigured &&
+      selectedAgentId === 'new-agent' &&
+      agentName
+    ) {
+      console.log(
+        '[AgentSpaceFormExample] MCP servers changed while configured, recreating agent...',
+      );
+
+      const recreateAgent = async () => {
+        // Delete old agent
+        await deleteAgentOnServer(agentName);
+        // Create new agent with updated MCP servers
+        const newAgentId = await createAgentOnServer();
+        if (newAgentId) {
+          setAgentName(newAgentId);
+          console.log(
+            '[AgentSpaceFormExample] Agent recreated with new MCP servers:',
+            selectedMcpServers,
+          );
+        }
+      };
+
+      void recreateAgent();
+    }
+
+    // Update ref for next comparison
+    prevMcpServersRef.current = selectedMcpServers;
+  }, [
+    selectedMcpServers,
+    isConfigured,
+    selectedAgentId,
+    agentName,
+    deleteAgentOnServer,
+    createAgentOnServer,
+  ]);
 
   const handleConnect = async () => {
     // For existing agents (not new-agent), ensure transport and agentName are set

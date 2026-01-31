@@ -5,7 +5,7 @@
 MCP Server Lifecycle Manager.
 
 Centralized manager for MCP server lifecycle (start/stop/state tracking).
-Integrates with the MCP library to use predefined commands when available.
+Integrates with the MCP catalog to use predefined commands when available.
 """
 
 import asyncio
@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Any
 
 from agent_runtimes.types import MCPServer, MCPServerTool
-from agent_runtimes.config.mcp_servers import MCP_SERVER_LIBRARY
+from agent_runtimes.config.mcp_servers import MCP_SERVER_CATALOG
 
 logger = logging.getLogger(__name__)
 
@@ -60,7 +60,7 @@ class MCPLifecycleManager:
     Handles:
     - Starting/stopping MCP servers
     - Tracking running state
-    - Merging mcp.json config with library commands
+    - Merging mcp.json config with catalog commands
     - Tool discovery from running servers
     """
 
@@ -127,11 +127,11 @@ class MCPLifecycleManager:
 
     def get_merged_server_config(self, server_id: str, user_config: dict[str, Any] | None = None) -> MCPServer | None:
         """
-        Get server config, merging mcp.json with library if available.
+        Get server config, merging mcp.json with catalog if available.
 
         Priority:
         1. If user_config has a 'command', use user config entirely (they know what they want)
-        2. If server_id matches a library server and no user command, use library command
+        2. If server_id matches a catalog server and no user command, use catalog command
         3. Env vars from user_config are always merged in
 
         Args:
@@ -147,13 +147,13 @@ class MCPLifecycleManager:
             if "command" in expanded:
                 logger.info(f"Using user-provided command for MCP server '{server_id}'")
                 
-                # Get any additional info from library (like name) if available
-                library_server = MCP_SERVER_LIBRARY.get(server_id)
+                # Get any additional info from catalog (like name) if available
+                catalog_server = MCP_SERVER_CATALOG.get(server_id)
                 
                 return MCPServer(
                     id=server_id,
-                    name=expanded.get("name", library_server.name if library_server else server_id.replace("-", " ").replace("_", " ").title()),
-                    description=expanded.get("description", library_server.description if library_server else ""),
+                    name=expanded.get("name", catalog_server.name if catalog_server else server_id.replace("-", " ").replace("_", " ").title()),
+                    description=expanded.get("description", catalog_server.description if catalog_server else ""),
                     command=expanded["command"],
                     args=expanded.get("args", []),
                     env=expanded.get("env", {}),
@@ -162,12 +162,12 @@ class MCPLifecycleManager:
                     tools=[],
                 )
 
-        # No user command - check if server is in library
-        library_server = MCP_SERVER_LIBRARY.get(server_id)
+        # No user command - check if server is in catalog
+        catalog_server = MCP_SERVER_CATALOG.get(server_id)
 
-        if library_server:
-            # Start with library config
-            config = library_server.model_copy(deep=True)
+        if catalog_server:
+            # Start with catalog config
+            config = catalog_server.model_copy(deep=True)
 
             # Apply user env overrides if provided
             if user_config:
@@ -176,7 +176,7 @@ class MCPLifecycleManager:
                     # Merge env vars
                     config.env = {**(config.env or {}), **expanded["env"]}
 
-            logger.info(f"Using library config for MCP server '{server_id}'")
+            logger.info(f"Using catalog config for MCP server '{server_id}'")
             return config
 
         logger.warning(f"No config found for MCP server '{server_id}'")
@@ -208,7 +208,7 @@ class MCPLifecycleManager:
         Args:
             server_id: The server identifier
             config: Optional MCPServer config. If not provided, will try to
-                   get from library or mcp.json.
+                   get from catalog or mcp.json.
 
         Returns:
             MCPServerInstance if started successfully, None otherwise

@@ -124,9 +124,14 @@ class MCPServer(BaseModel):
         default=None,
         description="Environment variables for the MCP server process",
     )
+    required_env_vars: List[str] = Field(
+        default_factory=list,
+        description="Environment variables required for this server to work",
+        serialization_alias="requiredEnvVars",
+    )
     is_available: bool = Field(
         default=False,
-        description="Whether the server is available (based on tool discovery)",
+        description="Whether the server is available (based on env var presence)",
         serialization_alias="isAvailable",
     )
     transport: str = Field(

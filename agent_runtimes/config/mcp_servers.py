@@ -2,12 +2,13 @@
 # Distributed under the terms of the Modified BSD License.
 
 """
-MCP Server Library.
+MCP Server Catalog.
 
 Predefined MCP server configurations that can be used by agents.
 Credentials are configured via environment variables.
 """
 
+import os
 from typing import Dict
 
 from agent_runtimes.types import MCPServer
@@ -26,7 +27,7 @@ TAVILY_MCP_SERVER = MCPServer(
     transport="stdio",
     enabled=True,
     tools=[],
-    # Requires: TAVILY_API_KEY
+    required_env_vars=["TAVILY_API_KEY"],
 )
 
 FILESYSTEM_MCP_SERVER = MCPServer(
@@ -38,6 +39,7 @@ FILESYSTEM_MCP_SERVER = MCPServer(
     transport="stdio",
     enabled=True,
     tools=[],
+    required_env_vars=[],  # No env vars required
 )
 
 GITHUB_MCP_SERVER = MCPServer(
@@ -49,7 +51,7 @@ GITHUB_MCP_SERVER = MCPServer(
     transport="stdio",
     enabled=True,
     tools=[],
-    # Requires: GITHUB_TOKEN
+    required_env_vars=["GITHUB_TOKEN"],
 )
 
 GOOGLE_WORKSPACE_MCP_SERVER = MCPServer(
@@ -61,7 +63,7 @@ GOOGLE_WORKSPACE_MCP_SERVER = MCPServer(
     transport="stdio",
     enabled=True,
     tools=[],
-    # Requires: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET
+    required_env_vars=["GOOGLE_OAUTH_CLIENT_ID", "GOOGLE_OAUTH_CLIENT_SECRET"],
 )
 
 SLACK_MCP_SERVER = MCPServer(
@@ -73,19 +75,19 @@ SLACK_MCP_SERVER = MCPServer(
     transport="stdio",
     enabled=True,
     tools=[],
-    # Requires: SLACK_BOT_TOKEN
+    required_env_vars=["SLACK_BOT_TOKEN", "SLACK_TEAM_ID"],
 )
 
 KAGGLE_MCP_SERVER = MCPServer(
     id="kaggle",
     name="Kaggle",
-    description="Kaggle datasets and competitions access",
-    command="uvx",
-    args=["kaggle-mcp-server"],
+    description="Kaggle datasets, models, competitions, and notebooks access",
+    command="npx",
+    args=["-y", "mcp-remote", "https://www.kaggle.com/mcp"],
     transport="stdio",
     enabled=True,
     tools=[],
-    # Requires: KAGGLE_USERNAME, KAGGLE_KEY
+    required_env_vars=[],  # Uses browser OAuth or token auth
 )
 
 ALPHAVANTAGE_MCP_SERVER = MCPServer(
@@ -97,7 +99,7 @@ ALPHAVANTAGE_MCP_SERVER = MCPServer(
     transport="stdio",
     enabled=True,
     tools=[],
-    # Requires: ALPHAVANTAGE_API_KEY
+    required_env_vars=["ALPHAVANTAGE_API_KEY"],
 )
 
 CHART_MCP_SERVER = MCPServer(
@@ -109,6 +111,7 @@ CHART_MCP_SERVER = MCPServer(
     transport="stdio",
     enabled=True,
     tools=[],
+    required_env_vars=[],  # No env vars required
 )
 
 LINKEDIN_MCP_SERVER = MCPServer(
@@ -116,11 +119,11 @@ LINKEDIN_MCP_SERVER = MCPServer(
     name="LinkedIn",
     description="LinkedIn profile and job search operations",
     command="uvx",
-    args=["linkedin-mcp-server"],
+    args=["--from", "git+https://github.com/stickerdaniel/linkedin-mcp-server", "linkedin-mcp-server"],
     transport="stdio",
     enabled=True,
     tools=[],
-    # Requires: LINKEDIN_ACCESS_TOKEN
+    required_env_vars=[],  # Uses session file or LI_AT cookie (checked separately)
 )
 
 GMAIL_MCP_SERVER = MCPServer(
@@ -132,7 +135,7 @@ GMAIL_MCP_SERVER = MCPServer(
     transport="stdio",
     enabled=True,
     tools=[],
-    # Requires: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET
+    required_env_vars=["GOOGLE_OAUTH_CLIENT_ID", "GOOGLE_OAUTH_CLIENT_SECRET"],
 )
 
 GDRIVE_MCP_SERVER = MCPServer(
@@ -144,15 +147,27 @@ GDRIVE_MCP_SERVER = MCPServer(
     transport="stdio",
     enabled=True,
     tools=[],
-    # Requires: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET
+    required_env_vars=["GOOGLE_OAUTH_CLIENT_ID", "GOOGLE_OAUTH_CLIENT_SECRET"],
+)
+
+BRAVE_SEARCH_MCP_SERVER = MCPServer(
+    id="brave-search",
+    name="Brave Search",
+    description="Web search using Brave Search API",
+    command="npx",
+    args=["-y", "@modelcontextprotocol/server-brave-search"],
+    transport="stdio",
+    enabled=True,
+    tools=[],
+    required_env_vars=["BRAVE_API_KEY"],
 )
 
 
 # ============================================================================
-# MCP Server Library
+# MCP Server Catalog
 # ============================================================================
 
-MCP_SERVER_LIBRARY: Dict[str, MCPServer] = {
+MCP_SERVER_CATALOG: Dict[str, MCPServer] = {
     "tavily": TAVILY_MCP_SERVER,
     "filesystem": FILESYSTEM_MCP_SERVER,
     "github": GITHUB_MCP_SERVER,
@@ -164,7 +179,23 @@ MCP_SERVER_LIBRARY: Dict[str, MCPServer] = {
     "linkedin": LINKEDIN_MCP_SERVER,
     "gmail": GMAIL_MCP_SERVER,
     "gdrive": GDRIVE_MCP_SERVER,
+    "brave-search": BRAVE_SEARCH_MCP_SERVER,
 }
+
+
+def check_env_vars_available(env_vars: list[str]) -> bool:
+    """
+    Check if all required environment variables are set.
+
+    Args:
+        env_vars: List of environment variable names to check.
+
+    Returns:
+        True if all env vars are set (non-empty), False otherwise.
+    """
+    if not env_vars:
+        return True  # No env vars required
+    return all(os.environ.get(var) for var in env_vars)
 
 
 def get_mcp_server(server_id: str) -> MCPServer | None:
@@ -177,14 +208,23 @@ def get_mcp_server(server_id: str) -> MCPServer | None:
     Returns:
         The MCPServer configuration, or None if not found.
     """
-    return MCP_SERVER_LIBRARY.get(server_id)
+    return MCP_SERVER_CATALOG.get(server_id)
 
 
 def list_mcp_servers() -> list[MCPServer]:
     """
-    List all available MCP servers.
+    List all available MCP servers with availability status.
+
+    For each server, checks if the required environment variables are set
+    and updates the `is_available` field accordingly.
 
     Returns:
-        List of all MCPServer configurations.
+        List of all MCPServer configurations with updated availability.
     """
-    return list(MCP_SERVER_LIBRARY.values())
+    servers = []
+    for server in MCP_SERVER_CATALOG.values():
+        # Create a copy with updated availability
+        server_copy = server.model_copy()
+        server_copy.is_available = check_env_vars_available(server.required_env_vars)
+        servers.append(server_copy)
+    return servers

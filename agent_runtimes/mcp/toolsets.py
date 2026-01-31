@@ -10,7 +10,7 @@ MCP servers once at server startup and makes them available to all agents.
 MCP servers are managed using the MCPLifecycleManager which handles:
 - Starting/stopping MCP servers dynamically
 - Tracking running state and tool discovery
-- Merging mcp.json config with library commands
+- Merging mcp.json config with catalog commands
 
 Uses Pydantic AI's built-in MCP client support (MCPServerStdio, MCPServerStreamableHTTP)
 which automatically detects the transport type from the config:
@@ -55,7 +55,7 @@ async def initialize_mcp_toolsets() -> None:
     
     This loads MCP servers from the config file and starts them.
     For each server in mcp.json:
-    - If it matches a library server, use the library command
+    - If it matches a catalog server, use the catalog command
     - Otherwise use the command from mcp.json
     """
     logger.info("initialize_mcp_toolsets() called - delegating to lifecycle manager")
