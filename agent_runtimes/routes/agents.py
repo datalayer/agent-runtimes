@@ -762,8 +762,10 @@ async def update_agent_mcp_servers(
     if agent_id not in _agents:
         raise HTTPException(status_code=404, detail=f"Agent not found: {agent_id}")
     
-    info = _agents[agent_id]
+    _, info = _agents[agent_id]
     adapter = info.adapter
+    
+    logger.info(f"PATCH /agents/{agent_id}/mcp-servers: Adapter type={type(adapter).__name__}, request={request.selected_mcp_servers}")
     
     # Check if adapter supports updating MCP servers
     if not hasattr(adapter, "update_selected_mcp_servers"):
@@ -772,9 +774,17 @@ async def update_agent_mcp_servers(
             detail="Agent adapter does not support updating MCP servers",
         )
     
+    # Log current state before update
+    if hasattr(adapter, "selected_mcp_server_ids"):
+        logger.info(f"PATCH /agents/{agent_id}/mcp-servers: Current servers before update: {adapter.selected_mcp_server_ids}")
+    
     try:
         # Update the adapter's selected MCP servers
         adapter.update_selected_mcp_servers(request.selected_mcp_servers)
+        
+        # Log state after update
+        if hasattr(adapter, "selected_mcp_server_ids"):
+            logger.info(f"PATCH /agents/{agent_id}/mcp-servers: Servers after update: {adapter.selected_mcp_server_ids}")
         
         logger.info(
             f"Updated agent '{agent_id}' MCP servers to: {request.selected_mcp_servers}"

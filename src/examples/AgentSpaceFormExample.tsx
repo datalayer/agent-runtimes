@@ -226,14 +226,6 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
   const autoSelectRef = useRef(false);
   const enableSkills = selectedSkills.length > 0;
 
-  // Handler to remove a server from the appropriate state array
-  const handleRemoveServer = React.useCallback((serverId: string) => {
-    // Remove from all arrays - the server could be in any of them
-    setSelectedConfigServers(prev => prev.filter(id => id !== serverId));
-    setSelectedCatalogServers(prev => prev.filter(id => id !== serverId));
-    setSelectedMcpServers(prev => prev.filter(id => id !== serverId));
-  }, []);
-
   // Handler to update selected servers from McpServerManager
   // This replaces the entire selection, so we need to update all arrays
   const handleSelectedServersChange = React.useCallback(
@@ -410,8 +402,6 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
 
   // UI state
   const [activeSession, setActiveSession] = useState('session-1');
-  const [richEditor, setRichEditor] = useState(false);
-  const [durable, setDurable] = useState(true);
   const [codemode, _] = useState(false);
   const [showContextTree, setShowContextTree] = useState(false);
   const [showNotebook] = useState(true);
@@ -692,14 +682,10 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
                 : currentAgent?.description
             }
             agentStatus={currentAgent?.status}
-            richEditor={richEditor}
-            durable={durable}
             showContextTree={showContextTree}
             isNewAgent={selectedAgentId === 'new-agent'}
             isConfigured={isConfigured}
             onSessionChange={setActiveSession}
-            onRichEditorChange={setRichEditor}
-            onDurableChange={setDurable}
             onToggleContextTree={() => setShowContextTree(!showContextTree)}
             onToggleStatus={
               currentAgent
@@ -789,7 +775,7 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
               showNotebook={showNotebook}
               timeTravel={timeTravel}
               onTimeTravelChange={setTimeTravel}
-              richEditor={richEditor}
+              richEditor={false}
               notebookFile={currentAgent?.notebookFile}
               lexicalFile={currentAgent?.lexicalFile}
               isNewAgent={selectedAgentId === 'new-agent'}

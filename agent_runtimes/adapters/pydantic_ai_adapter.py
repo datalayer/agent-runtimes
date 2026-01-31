@@ -153,8 +153,8 @@ class PydanticAIAdapter(BaseAgent):
             server_ids: New list of MCP server IDs to use.
         """
         old_ids = self._selected_mcp_server_ids
-        self._selected_mcp_server_ids = server_ids
-        logger.info(f"PydanticAIAdapter: Updated MCP servers from {old_ids} to {server_ids}")
+        self._selected_mcp_server_ids = server_ids.copy()  # Make a copy to avoid reference issues
+        logger.info(f"PydanticAIAdapter [{self._name}]: Updated MCP servers from {old_ids} to {self._selected_mcp_server_ids}")
 
     @property
     def pydantic_agent(self) -> Agent:
@@ -172,24 +172,27 @@ class PydanticAIAdapter(BaseAgent):
         """
         toolsets = []
         
+        # Log current state
+        logger.info(f"PydanticAIAdapter [{self._name}]: _get_runtime_toolsets called, selected_mcp_server_ids={self._selected_mcp_server_ids}")
+        
         # Dynamically fetch MCP toolsets for selected servers
         if self._selected_mcp_server_ids:
-            logger.info(f"PydanticAIAdapter: Fetching toolsets for servers: {self._selected_mcp_server_ids}")
+            logger.info(f"PydanticAIAdapter [{self._name}]: Fetching toolsets for servers: {self._selected_mcp_server_ids}")
             lifecycle_manager = get_mcp_lifecycle_manager()
             for server_id in self._selected_mcp_server_ids:
                 instance = lifecycle_manager.get_running_server(server_id)
                 if instance and instance.is_running:
                     toolsets.append(instance.pydantic_server)
-                    logger.info(f"PydanticAIAdapter: Added MCP server '{server_id}' toolset (type: {type(instance.pydantic_server).__name__})")
+                    logger.info(f"PydanticAIAdapter [{self._name}]: Added MCP server '{server_id}' toolset (type: {type(instance.pydantic_server).__name__})")
                 else:
-                    logger.warning(f"PydanticAIAdapter: MCP server '{server_id}' not running, skipping")
+                    logger.warning(f"PydanticAIAdapter [{self._name}]: MCP server '{server_id}' not running, skipping")
         else:
-            logger.debug("PydanticAIAdapter: No MCP servers selected")
+            logger.info(f"PydanticAIAdapter [{self._name}]: No MCP servers selected (list is empty)")
         
         # Always include non-MCP toolsets (codemode, skills, etc.)
         toolsets.extend(self._non_mcp_toolsets)
         
-        logger.info(f"PydanticAIAdapter: Total toolsets for run: {len(toolsets)}")
+        logger.info(f"PydanticAIAdapter [{self._name}]: Total toolsets for run: {len(toolsets)} (MCP: {len(toolsets) - len(self._non_mcp_toolsets)}, non-MCP: {len(self._non_mcp_toolsets)})")
         return toolsets
 
     def get_tools(self) -> list[ToolDefinition]:

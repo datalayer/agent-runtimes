@@ -3,24 +3,21 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import {
   Text,
   Button,
   PageLayout,
-  ToggleSwitch,
   AvatarStack,
   Avatar,
   Spinner,
   TextInput,
   FormControl,
-  AnchoredOverlay,
   IconButton,
 } from '@primer/react';
 import {
   ZapIcon,
   ListUnorderedIcon,
-  InfoIcon,
   PlayIcon,
   PauseIcon,
 } from '@primer/octicons-react';
@@ -133,14 +130,10 @@ interface HeaderProps {
   agentName?: string;
   agentDescription?: string;
   agentStatus?: 'running' | 'paused';
-  richEditor: boolean;
-  durable: boolean;
   showContextTree: boolean;
   isNewAgent?: boolean;
   isConfigured?: boolean;
   onSessionChange: (sessionId: string) => void;
-  onRichEditorChange: (value: boolean) => void;
-  onDurableChange: (value: boolean) => void;
   onToggleContextTree: () => void;
   onToggleStatus?: () => void;
 }
@@ -156,14 +149,10 @@ export const Header: React.FC<HeaderProps> = ({
   agentName,
   agentDescription,
   agentStatus,
-  richEditor,
-  durable,
   showContextTree,
   isNewAgent = false,
   isConfigured = false,
   onSessionChange,
-  onRichEditorChange,
-  onDurableChange,
   onToggleContextTree,
   onToggleStatus,
 }) => {
@@ -172,12 +161,6 @@ export const Header: React.FC<HeaderProps> = ({
   const [totalTokens, setTotalTokens] = useState('1.52M');
   const [showDetails, setShowDetails] = useState(false);
   const [showAvatarView, setShowAvatarView] = useState(false);
-  const [openOverlay, setOpenOverlay] = useState<
-    'richEditor' | 'durable' | null
-  >(null);
-
-  const richEditorRef = useRef<HTMLButtonElement>(null);
-  const durableRef = useRef<HTMLButtonElement>(null);
 
   const handleOptimize = () => {
     setIsOptimizing(true);
