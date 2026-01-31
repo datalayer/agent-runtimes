@@ -226,6 +226,56 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
   const autoSelectRef = useRef(false);
   const enableSkills = selectedSkills.length > 0;
 
+  // Handler to remove a server from the appropriate state array
+  const handleRemoveServer = React.useCallback((serverId: string) => {
+    // Remove from all arrays - the server could be in any of them
+    setSelectedConfigServers(prev => prev.filter(id => id !== serverId));
+    setSelectedCatalogServers(prev => prev.filter(id => id !== serverId));
+    setSelectedMcpServers(prev => prev.filter(id => id !== serverId));
+  }, []);
+
+  // Handler to update selected servers from McpServerManager
+  // This replaces the entire selection, so we need to update all arrays
+  const handleSelectedServersChange = React.useCallback(
+    (newServers: string[]) => {
+      // Get all currently selected servers
+      const allCurrentServers = [
+        ...selectedConfigServers,
+        ...selectedCatalogServers,
+        ...selectedMcpServers,
+      ];
+
+      // Find which servers were removed
+      const removedServers = allCurrentServers.filter(
+        id => !newServers.includes(id),
+      );
+
+      // Remove the removed servers from all arrays
+      if (removedServers.length > 0) {
+        setSelectedConfigServers(prev =>
+          prev.filter(id => !removedServers.includes(id)),
+        );
+        setSelectedCatalogServers(prev =>
+          prev.filter(id => !removedServers.includes(id)),
+        );
+        setSelectedMcpServers(prev =>
+          prev.filter(id => !removedServers.includes(id)),
+        );
+      }
+
+      // Find which servers were added (new servers not in any existing array)
+      const addedServers = newServers.filter(
+        id => !allCurrentServers.includes(id),
+      );
+
+      // Add new servers to the legacy selectedMcpServers for now
+      if (addedServers.length > 0) {
+        setSelectedMcpServers(prev => [...prev, ...addedServers]);
+      }
+    },
+    [selectedConfigServers, selectedCatalogServers, selectedMcpServers],
+  );
+
   // Merge deprecated props into identityProviders for backward compatibility
   const mergedIdentityProviders = React.useMemo((): IdentityProvidersInput => {
     const merged = { ...identityProviders };
@@ -695,10 +745,10 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
                     <Blankslate.Visual>
                       <AiAgentIcon colored size={48} />
                     </Blankslate.Visual>
-                    <Blankslate.Heading>New Agent</Blankslate.Heading>
+                    <Blankslate.Heading>Agent Runtimes</Blankslate.Heading>
                     <Box sx={{ textAlign: 'center' }}>
                       <Blankslate.Description>
-                        Configure your new agent using the settings on the right
+                        Expose AI Agents through multiple protocols.
                       </Blankslate.Description>
                     </Box>
                   </Blankslate>
@@ -751,7 +801,7 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
                 ...selectedCatalogServers,
                 ...selectedMcpServers,
               ]}
-              onSelectedMcpServersChange={setSelectedMcpServers}
+              onSelectedMcpServersChange={handleSelectedServersChange}
               onMcpServersChange={() => {
                 // Trigger codemode tool regeneration when MCP servers change at runtime
                 console.log(
