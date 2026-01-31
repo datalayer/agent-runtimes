@@ -73,6 +73,7 @@ import type {
   ProtocolAdapterConfig,
   ProtocolEvent,
 } from '../../types/protocol';
+import type { McpServerSelection } from '../../types/inference';
 import {
   AGUIAdapter,
   A2AAdapter,
@@ -436,8 +437,8 @@ export interface ChatBaseProps {
   /** Initial model ID to select (e.g., 'openai:gpt-4o-mini') */
   initialModel?: string;
 
-  /** Initial MCP server IDs to enable (others will be disabled) */
-  initialMcpServers?: string[];
+  /** MCP servers to enable (others will be disabled) */
+  mcpServers?: McpServerSelection[];
 
   /** Initial skill IDs to enable */
   initialSkills?: string[];
@@ -802,7 +803,7 @@ export function ChatBase({
   showSkillsMenu = false,
   codemodeEnabled = false,
   initialModel,
-  initialMcpServers,
+  mcpServers,
   initialSkills,
   className,
   loadingState,
@@ -878,7 +879,7 @@ export function ChatBase({
           showSkillsMenu={showSkillsMenu}
           codemodeEnabled={codemodeEnabled}
           initialModel={initialModel}
-          initialMcpServers={initialMcpServers}
+          mcpServers={mcpServers}
           initialSkills={initialSkills}
           className={className}
           loadingState={loadingState}
@@ -934,7 +935,7 @@ export function ChatBase({
       showSkillsMenu={showSkillsMenu}
       codemodeEnabled={codemodeEnabled}
       initialModel={initialModel}
-      initialMcpServers={initialMcpServers}
+      mcpServers={mcpServers}
       initialSkills={initialSkills}
       className={className}
       loadingState={loadingState}
@@ -990,7 +991,7 @@ function ChatBaseInner({
   showSkillsMenu = false,
   codemodeEnabled = false,
   initialModel,
-  initialMcpServers,
+  mcpServers,
   initialSkills,
   className,
   loadingState,
@@ -1089,6 +1090,15 @@ function ChatBaseInner({
   // (the array reference changes on every render even if contents are the same)
   const connectedIdentitiesRef = useRef(connectedIdentities);
   connectedIdentitiesRef.current = connectedIdentities;
+
+  const isServerSelected = useCallback(
+    (server: { id: string; isConfig?: boolean }) => {
+      if (!mcpServers) return true;
+      const origin = server.isConfig === false ? 'catalog' : 'config';
+      return mcpServers.some(s => s.name === server.id && s.origin === origin);
+    },
+    [mcpServers],
+  );
 
   // Auto-focus input on mount
   useEffect(() => {
@@ -1199,11 +1209,9 @@ function ChatBaseInner({
         const newEnabledMcpTools = new Map<string, Set<string>>();
         for (const server of configQuery.data.mcpServers) {
           if (server.isAvailable && server.enabled) {
-            // If initialMcpServers is provided, only enable those servers
+            // If mcpServers is provided, only enable those servers
             // If not provided, enable all available servers
-            const shouldEnableServer = initialMcpServers
-              ? initialMcpServers.includes(server.id)
-              : true;
+            const shouldEnableServer = isServerSelected(server);
 
             if (shouldEnableServer) {
               const enabledToolNames = new Set(
@@ -1216,22 +1224,28 @@ function ChatBaseInner({
         setEnabledMcpTools(newEnabledMcpTools);
       }
     }
-  }, [configQuery.data, selectedModel, initialModel, initialMcpServers]);
+  }, [
+    configQuery.data,
+    selectedModel,
+    initialModel,
+    mcpServers,
+    isServerSelected,
+  ]);
 
-  // Update enabled MCP servers when initialMcpServers prop changes (e.g., server removed)
+  // Update enabled MCP servers when mcpServers prop changes (e.g., server removed)
   useEffect(() => {
-    if (!configQuery.data?.mcpServers || !initialMcpServers) return;
+    if (!configQuery.data?.mcpServers || !mcpServers) return;
 
     setEnabledMcpTools(prev => {
       const newMap = new Map<string, Set<string>>();
 
-      // Only keep servers that are in initialMcpServers
-      for (const server of configQuery.data.mcpServers) {
-        if (initialMcpServers.includes(server.id) && prev.has(server.id)) {
+      // Only keep servers that are in mcpServers
+      for (const server of configQuery.data?.mcpServers ?? []) {
+        if (isServerSelected(server) && prev.has(server.id)) {
           // Keep existing tool selection for this server
           newMap.set(server.id, prev.get(server.id)!);
         } else if (
-          initialMcpServers.includes(server.id) &&
+          isServerSelected(server) &&
           server.isAvailable &&
           server.enabled
         ) {
@@ -1241,12 +1255,12 @@ function ChatBaseInner({
           );
           newMap.set(server.id, enabledToolNames);
         }
-        // Servers not in initialMcpServers are excluded
+        // Servers not in mcpServers are excluded
       }
 
       return newMap;
     });
-  }, [initialMcpServers, configQuery.data?.mcpServers]);
+  }, [mcpServers, configQuery.data?.mcpServers, isServerSelected]);
 
   // Initialize enabled skills from initialSkills prop
   useEffect(() => {
@@ -1308,17 +1322,17 @@ function ChatBaseInner({
   );
 
   // Get all enabled MCP tool names (for sending with requests)
-  // Only counts tools from servers that are in initialMcpServers (if provided)
+  // Only counts tools from servers that are in mcpServers (if provided)
   const getEnabledMcpToolNames = useCallback((): string[] => {
     const toolNames: string[] = [];
     enabledMcpTools.forEach((tools, serverId) => {
-      // Filter by initialMcpServers if provided
-      if (!initialMcpServers || initialMcpServers.includes(serverId)) {
+      // Filter by mcpServers if provided
+      if (!mcpServers || mcpServers.some(s => s.name === serverId)) {
         tools.forEach(toolName => toolNames.push(toolName));
       }
     });
     return toolNames;
-  }, [enabledMcpTools, initialMcpServers]);
+  }, [enabledMcpTools, mcpServers]);
 
   // Get all enabled skill IDs (for sending with requests)
   const getEnabledSkillIds = useCallback((): string[] => {
@@ -2778,20 +2792,34 @@ function ChatBaseInner({
                           </ActionList.Group>
                         )}
                         {/* MCP Server Tools */}
+                        {(() => {
+                          console.log('[ChatBase] Tools menu debug:', {
+                            hasMcpServers: !!configQuery.data?.mcpServers,
+                            mcpServersCount:
+                              configQuery.data?.mcpServers?.length,
+                            mcpServerIds: configQuery.data?.mcpServers?.map(
+                              s => s.id,
+                            ),
+                            mcpServers,
+                            isServerSelectedResults:
+                              configQuery.data?.mcpServers?.map(s => ({
+                                id: s.id,
+                                selected: isServerSelected(s),
+                              })),
+                          });
+                          return null;
+                        })()}
                         {configQuery.data?.mcpServers &&
                         configQuery.data.mcpServers.length > 0 ? (
-                          // Filter to only show selected servers (if initialMcpServers was provided)
-                          // If initialMcpServers is empty array, show no servers
+                          // Filter to only show selected servers (if mcpServers was provided)
+                          // If mcpServers is empty array, show no servers
                           configQuery.data.mcpServers.filter(
-                            server =>
-                              !initialMcpServers ||
-                              initialMcpServers.includes(server.id),
+                            server => !mcpServers || isServerSelected(server),
                           ).length > 0 ? (
                             configQuery.data.mcpServers
                               .filter(
                                 server =>
-                                  !initialMcpServers ||
-                                  initialMcpServers.includes(server.id),
+                                  !mcpServers || isServerSelected(server),
                               )
                               .map(server => {
                                 const serverTools = enabledMcpTools.get(

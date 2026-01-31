@@ -126,7 +126,7 @@ type AgentSpaceFormExampleProps = {
   initialEnableCodemode?: boolean;
   initialAllowDirectToolCalls?: boolean;
   initialEnableToolReranker?: boolean;
-  initialSelectedMcpServers?: string[];
+  initialSelectedMcpServers?: McpServerSelection[];
   autoSelectMcpServers?: boolean;
   /**
    * Identity providers configuration.
@@ -213,43 +213,15 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
   const [enableToolReranker, setEnableToolReranker] = useState(
     initialEnableToolReranker,
   );
-  // Separate state for config servers (from mcp.json) and catalog servers (predefined)
-  const [selectedConfigServers, setSelectedConfigServers] = useState<string[]>(
-    [],
-  );
-  const [selectedCatalogServers, setSelectedCatalogServers] = useState<
-    string[]
-  >([]);
-  // Deprecated - kept for backwards compatibility
   const [selectedMcpServers, setSelectedMcpServers] = useState<
-    (string | McpServerSelection)[]
+    McpServerSelection[]
   >(initialSelectedMcpServers);
   const autoSelectRef = useRef(false);
   const enableSkills = selectedSkills.length > 0;
 
-  // Handler to update selected servers from McpServerManager
-  // This replaces the entire selection, so we need to update all arrays
   const handleSelectedServersChange = React.useCallback(
-    (newServers: (string | McpServerSelection)[]) => {
+    (newServers: McpServerSelection[]) => {
       setSelectedMcpServers(newServers);
-
-      // Update derived legacy states if needed (simplified)
-      // These are mostly for display in other components if they exist
-      const config: string[] = [];
-      const catalog: string[] = [];
-
-      newServers.forEach(s => {
-        if (typeof s === 'string') {
-          // If we don't know, we assume general pool?
-          // Using a heuristic or just not updating legacy specific pools
-        } else {
-          if (s.origin === 'config') config.push(s.name);
-          else catalog.push(s.name);
-        }
-      });
-
-      setSelectedConfigServers(config);
-      setSelectedCatalogServers(catalog);
     },
     [],
   );
@@ -427,7 +399,7 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
         const servers = data?.mcpServers || [];
         const available = servers.filter((s: any) => s.isAvailable);
         if (available.length > 0) {
-          setSelectedMcpServers([available[0].id]);
+          setSelectedMcpServers([{ name: available[0].id, origin: 'config' }]);
           autoSelectRef.current = true;
         }
       } catch {
@@ -439,8 +411,7 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
   }, [autoSelectMcpServers, enableCodemode, selectedMcpServers, baseUrl]);
 
   // Track previous MCP servers to detect changes
-  const prevMcpServersRef =
-    useRef<(string | McpServerSelection)[]>(selectedMcpServers);
+  const prevMcpServersRef = useRef<McpServerSelection[]>(selectedMcpServers);
 
   const handleAgentSelect = (agentId: string) => {
     setSelectedAgentId(agentId);
@@ -482,11 +453,7 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
           enable_codemode: enableCodemode,
           allow_direct_tool_calls: allowDirectToolCalls,
           enable_tool_reranker: enableToolReranker,
-          selected_mcp_servers: [
-            ...selectedConfigServers,
-            ...selectedCatalogServers,
-            ...selectedMcpServers,
-          ],
+          selected_mcp_servers: selectedMcpServers,
           skills: selectedSkills,
         }),
       });
@@ -525,8 +492,6 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
     enableCodemode,
     allowDirectToolCalls,
     enableToolReranker,
-    selectedConfigServers,
-    selectedCatalogServers,
     selectedMcpServers,
     selectedSkills,
   ]);
@@ -777,11 +742,7 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
               baseUrl={baseUrl}
               agentId={currentAgent?.id || agentName}
               enableCodemode={enableCodemode}
-              selectedMcpServers={[
-                ...selectedConfigServers,
-                ...selectedCatalogServers,
-                ...selectedMcpServers,
-              ]}
+              selectedMcpServers={selectedMcpServers}
               onSelectedMcpServersChange={handleSelectedServersChange}
               onMcpServersChange={() => {
                 // Trigger codemode tool regeneration when MCP servers change at runtime
@@ -846,8 +807,7 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
                       enableToolReranker={enableToolReranker}
                       availableSkills={MOCK_SKILLS}
                       selectedSkills={selectedSkills}
-                      selectedConfigServers={selectedConfigServers}
-                      selectedCatalogServers={selectedCatalogServers}
+                      selectedMcpServers={selectedMcpServers}
                       identityProviders={oauthProvidersConfig}
                       onIdentityConnect={handleIdentityConnect}
                       onIdentityDisconnect={handleIdentityDisconnect}
@@ -864,8 +824,7 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
                       onAllowDirectToolCallsChange={setAllowDirectToolCalls}
                       onEnableToolRerankerChange={setEnableToolReranker}
                       onSelectedSkillsChange={setSelectedSkills}
-                      onSelectedConfigServersChange={setSelectedConfigServers}
-                      onSelectedCatalogServersChange={setSelectedCatalogServers}
+                      onSelectedMcpServersChange={setSelectedMcpServers}
                     />
                   ) : (
                     /* Chat Interface */
@@ -888,11 +847,7 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
                         showSkillsMenu={true}
                         codemodeEnabled={enableCodemode}
                         initialModel={model}
-                        initialMcpServers={[
-                          ...selectedConfigServers,
-                          ...selectedCatalogServers,
-                          ...selectedMcpServers,
-                        ]}
+                        mcpServers={selectedMcpServers}
                         initialSkills={selectedSkills}
                         identityProviders={oauthProvidersConfig}
                         onIdentityConnect={handleIdentityConnect}

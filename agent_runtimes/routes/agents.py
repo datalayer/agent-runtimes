@@ -287,9 +287,9 @@ class CreateAgentRequest(BaseModel):
         default=False,
         description="Enable optional tool reranker hook for codemode discovery"
     )
-    selected_mcp_servers: list[str | McpServerSelection] = Field(
+    selected_mcp_servers: list[McpServerSelection] = Field(
         default_factory=list,
-        description="List of MCP server IDs or selections to include. Empty list means include all available."
+        description="List of MCP server selections to include."
     )
 
 
@@ -352,18 +352,9 @@ async def create_agent(request: CreateAgentRequest, http_request: Request) -> Cr
             # Start any MCP servers that aren't already running
             lifecycle_manager = get_mcp_lifecycle_manager()
             
-            # Helper to extract ID and origin from selection
-            def parse_selection(item):
-                if isinstance(item, str):
-                    if item.startswith("config:"): return item[7:], True
-                    if item.startswith("catalog:"): return item[8:], False
-                    return item, None
-                elif hasattr(item, "origin"):
-                    return item.name, (item.origin == "config")
-                return None, None
-
             for item in selected_mcp_servers:
-                server_id, is_config = parse_selection(item)
+                server_id = item.name
+                is_config = item.origin == "config"
                 if not server_id: continue
                     
                 if not lifecycle_manager.is_server_running(server_id, is_config=is_config):
@@ -609,6 +600,7 @@ async def create_agent(request: CreateAgentRequest, http_request: Request) -> Cr
         
         # Register with ACP (base registration)
         register_agent(agent, info)
+        logger.info(f"POST /agents: Registered agent '{agent_id}' in _agents. All registered: {list(_agents.keys())}")
         
         # Register with the specified transport
         if request.transport == "ag-ui":
@@ -784,9 +776,9 @@ async def delete_agent(agent_id: str) -> dict[str, str]:
 
 class UpdateAgentMcpServersRequest(BaseModel):
     """Request to update an agent's MCP servers."""
-    selected_mcp_servers: list[str | McpServerSelection] = Field(
+    selected_mcp_servers: list[McpServerSelection] = Field(
         default_factory=list,
-        description="New list of MCP server IDs or selections to use",
+        description="New list of MCP server selections to use",
     )
 
 
@@ -812,6 +804,7 @@ async def update_agent_mcp_servers(
         HTTPException: If agent not found or update fails.
     """
     if agent_id not in _agents:
+        logger.error(f"PATCH /agents/{agent_id}/mcp-servers: Agent not found. Registered agents: {list(_agents.keys())}")
         raise HTTPException(status_code=404, detail=f"Agent not found: {agent_id}")
     
     try:
@@ -829,18 +822,9 @@ async def update_agent_mcp_servers(
             # Ensure new servers are running (similar logic to create_agent)
             lifecycle_manager = get_mcp_lifecycle_manager()
 
-            # Helper to extract ID and origin from selection
-            def parse_selection(item):
-                if isinstance(item, str):
-                    if item.startswith("config:"): return item[7:], True
-                    if item.startswith("catalog:"): return item[8:], False
-                    return item, None
-                elif hasattr(item, "origin"):
-                    return item.name, (item.origin == "config")
-                return None, None
-
             for item in request.selected_mcp_servers:
-                server_id, is_config = parse_selection(item)
+                server_id = item.name
+                is_config = item.origin == "config"
                 if not server_id: continue
                 
                 # Start logical check/start...

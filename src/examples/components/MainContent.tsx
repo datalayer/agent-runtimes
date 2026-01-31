@@ -30,11 +30,9 @@ interface MainContentProps {
   /** Whether codemode is enabled */
   enableCodemode?: boolean;
   /** Currently selected MCP servers */
-  selectedMcpServers?: (string | McpServerSelection)[];
+  selectedMcpServers?: McpServerSelection[];
   /** Callback when MCP server selection changes */
-  onSelectedMcpServersChange?: (
-    servers: (string | McpServerSelection)[],
-  ) => void;
+  onSelectedMcpServersChange?: (servers: McpServerSelection[]) => void;
   /** Callback when MCP servers are added/removed (for codemode regeneration) */
   onMcpServersChange?: () => void;
   /** Whether the agent is configured and running */

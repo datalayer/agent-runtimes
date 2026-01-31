@@ -186,8 +186,8 @@ export interface ChatProps {
   /** Initial model ID to select (e.g., 'openai:gpt-4o-mini') */
   initialModel?: string;
 
-  /** Initial MCP server IDs to enable (others will be disabled) */
-  initialMcpServers?: (string | McpServerSelection)[];
+  /** MCP server selections to enable (others will be disabled) */
+  mcpServers?: McpServerSelection[];
 
   /** Initial skill IDs to enable */
   initialSkills?: string[];
@@ -287,7 +287,7 @@ export function Chat({
   showSkillsMenu = false,
   codemodeEnabled = false,
   initialModel,
-  initialMcpServers,
+  mcpServers,
   initialSkills,
   clearOnMount: _clearOnMount = true,
   suggestions,
@@ -546,7 +546,7 @@ export function Chat({
           showSkillsMenu={showSkillsMenu}
           codemodeEnabled={codemodeEnabled}
           initialModel={initialModel}
-          initialMcpServers={initialMcpServers}
+          mcpServers={mcpServers}
           initialSkills={initialSkills}
           connectedIdentities={identitiesForChat}
           onNewChat={handleNewChat}

@@ -28,6 +28,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Box } from '@datalayer/primer-addons';
 import type { Agent } from '../stores/examplesStore';
 import type { Transport, Extension } from '../../components/chat';
+import type { McpServerSelection } from './McpServerManager';
 import { IdentityConnect, useIdentity } from '../../identity';
 import type {
   OAuthProvider,
@@ -482,12 +483,8 @@ interface AgentConfigurationProps {
   enableToolReranker?: boolean;
   availableSkills?: SkillOption[];
   selectedSkills?: string[];
-  /** Selected MCP Config servers (from mcp.json) */
-  selectedConfigServers?: string[];
-  /** Selected MCP Catalog servers (predefined) */
-  selectedCatalogServers?: string[];
-  /** @deprecated Use selectedConfigServers and selectedCatalogServers instead */
-  selectedMcpServers?: string[];
+  /** Selected MCP servers */
+  selectedMcpServers?: McpServerSelection[];
   // Identity configuration
   identityProviders?: {
     [K in OAuthProvider]?: {
@@ -510,12 +507,8 @@ interface AgentConfigurationProps {
   onAllowDirectToolCallsChange?: (enabled: boolean) => void;
   onEnableToolRerankerChange?: (enabled: boolean) => void;
   onSelectedSkillsChange?: (skills: string[]) => void;
-  /** Callback when config server selection changes */
-  onSelectedConfigServersChange?: (servers: string[]) => void;
-  /** Callback when catalog server selection changes */
-  onSelectedCatalogServersChange?: (servers: string[]) => void;
-  /** @deprecated Use onSelectedConfigServersChange and onSelectedCatalogServersChange instead */
-  onSelectedMcpServersChange?: (servers: string[]) => void;
+  /** Callback when MCP server selection changes */
+  onSelectedMcpServersChange?: (servers: McpServerSelection[]) => void;
   /** Rich editor mode */
   richEditor?: boolean;
   /** Callback when rich editor changes */
@@ -548,9 +541,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
   enableToolReranker = false,
   availableSkills = [],
   selectedSkills = [],
-  selectedConfigServers = [],
-  selectedCatalogServers = [],
-  selectedMcpServers = [], // deprecated
+  selectedMcpServers = [],
   identityProviders,
   onIdentityConnect,
   onIdentityDisconnect,
@@ -567,9 +558,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
   onAllowDirectToolCallsChange,
   onEnableToolRerankerChange,
   onSelectedSkillsChange,
-  onSelectedConfigServersChange,
-  onSelectedCatalogServersChange,
-  onSelectedMcpServersChange, // deprecated
+  onSelectedMcpServersChange,
 }) => {
   // Fetch general configuration from the backend (models, etc.)
   const configQuery = useQuery<ConfigResponse>({
@@ -666,46 +655,43 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
   const displaySkills = enableCodemode ? fetchedSkills : availableSkills;
   const skillsEnabled = selectedSkills.length > 0;
 
-  // Compute effective selected servers - use new props if provided, else derive from deprecated prop
-  const effectiveSelectedConfigServers = onSelectedConfigServersChange
-    ? selectedConfigServers
-    : selectedMcpServers.filter(id => configServers.some(s => s.id === id));
-  const effectiveSelectedCatalogServers = onSelectedCatalogServersChange
-    ? selectedCatalogServers
-    : selectedMcpServers.filter(id => catalogServers.some(s => s.id === id));
+  const selectedConfigServers = selectedMcpServers
+    .filter(s => s.origin === 'config')
+    .map(s => s.name);
+  const selectedCatalogServers = selectedMcpServers
+    .filter(s => s.origin === 'catalog')
+    .map(s => s.name);
 
   // Preview servers combines both config and catalog selections
-  const previewConfigServers = effectiveSelectedConfigServers.length
-    ? configServers.filter(server =>
-        effectiveSelectedConfigServers.includes(server.id),
-      )
+  const previewConfigServers = selectedConfigServers.length
+    ? configServers.filter(server => selectedConfigServers.includes(server.id))
     : [];
-  const previewCatalogServers = effectiveSelectedCatalogServers.length
+  const previewCatalogServers = selectedCatalogServers.length
     ? catalogServers.filter(server =>
-        effectiveSelectedCatalogServers.includes(server.id),
+        selectedCatalogServers.includes(server.id),
       )
     : [];
 
   // Handle MCP Config server checkbox change
   const handleConfigServerChange = (serverId: string, checked: boolean) => {
-    if (onSelectedConfigServersChange) {
-      // Use new callback - completely separate from catalog
-      if (checked) {
-        onSelectedConfigServersChange([...selectedConfigServers, serverId]);
-      } else {
-        onSelectedConfigServersChange(
-          selectedConfigServers.filter(id => id !== serverId),
-        );
+    if (!onSelectedMcpServersChange) return;
+    if (checked) {
+      if (
+        !selectedMcpServers.some(
+          s => s.name === serverId && s.origin === 'config',
+        )
+      ) {
+        onSelectedMcpServersChange([
+          ...selectedMcpServers,
+          { name: serverId, origin: 'config' },
+        ]);
       }
-    } else if (onSelectedMcpServersChange) {
-      // Fallback to deprecated callback only if new callback not provided
-      if (checked) {
-        onSelectedMcpServersChange([...selectedMcpServers, serverId]);
-      } else {
-        onSelectedMcpServersChange(
-          selectedMcpServers.filter(id => id !== serverId),
-        );
-      }
+    } else {
+      onSelectedMcpServersChange(
+        selectedMcpServers.filter(
+          s => !(s.name === serverId && s.origin === 'config'),
+        ),
+      );
     }
   };
 
@@ -716,6 +702,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
     checked: boolean,
     isRunning: boolean,
   ) => {
+    if (!onSelectedMcpServersChange) return;
     if (checked) {
       // If not running, start the server first
       if (!isRunning) {
@@ -726,23 +713,22 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
           return; // Don't add to selection if enable failed
         }
       }
-      if (onSelectedCatalogServersChange) {
-        // Use new callback - completely separate from config
-        onSelectedCatalogServersChange([...selectedCatalogServers, serverId]);
-      } else if (onSelectedMcpServersChange) {
-        // Fallback to deprecated callback only if new callback not provided
-        onSelectedMcpServersChange([...selectedMcpServers, serverId]);
+      if (
+        !selectedMcpServers.some(
+          s => s.name === serverId && s.origin === 'catalog',
+        )
+      ) {
+        onSelectedMcpServersChange([
+          ...selectedMcpServers,
+          { name: serverId, origin: 'catalog' },
+        ]);
       }
     } else {
-      if (onSelectedCatalogServersChange) {
-        onSelectedCatalogServersChange(
-          selectedCatalogServers.filter(id => id !== serverId),
-        );
-      } else if (onSelectedMcpServersChange) {
-        onSelectedMcpServersChange(
-          selectedMcpServers.filter(id => id !== serverId),
-        );
-      }
+      onSelectedMcpServersChange(
+        selectedMcpServers.filter(
+          s => !(s.name === serverId && s.origin === 'catalog'),
+        ),
+      );
     }
   };
 
@@ -1213,8 +1199,8 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
               Codemode registry preview
             </Text>
             <Text sx={{ fontSize: 0, color: 'fg.muted', mb: 1 }}>
-              {effectiveSelectedConfigServers.length > 0 ||
-              effectiveSelectedCatalogServers.length > 0
+              {selectedConfigServers.length > 0 ||
+              selectedCatalogServers.length > 0
                 ? 'Using selected MCP servers'
                 : 'No servers selected — select servers to scope Codemode tools.'}
             </Text>
@@ -1269,7 +1255,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
                   }}
                 >
                   <Checkbox
-                    checked={effectiveSelectedConfigServers.includes(server.id)}
+                    checked={selectedConfigServers.includes(server.id)}
                     disabled={mcpServersDisabled}
                     onChange={e =>
                       handleConfigServerChange(server.id, e.target.checked)
@@ -1341,9 +1327,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
                     }}
                   >
                     <Checkbox
-                      checked={effectiveSelectedCatalogServers.includes(
-                        server.id,
-                      )}
+                      checked={selectedCatalogServers.includes(server.id)}
                       disabled={
                         mcpServersDisabled ||
                         enableCatalogServerMutation.isPending ||
