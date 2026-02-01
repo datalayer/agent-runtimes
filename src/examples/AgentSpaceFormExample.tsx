@@ -13,8 +13,8 @@ import { Blankslate } from '@primer/react/experimental';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Box } from '@datalayer/primer-addons';
 import { DatalayerThemeProvider } from '@datalayer/core';
-import { Chat } from '../components/chat';
-import type { Transport, Extension } from '../components/chat';
+import { Chat, useChatStore } from '../components/chat';
+import type { Transport, Extension, ChatMessage } from '../components/chat';
 import { useAgentsStore } from './stores/examplesStore';
 import { useIdentity } from '../identity';
 import type { OAuthProvider, Identity } from '../identity';
@@ -221,9 +221,47 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
 
   const handleSelectedServersChange = React.useCallback(
     (newServers: McpServerSelection[]) => {
+      const oldServers = selectedMcpServers;
+
+      // Find added and removed servers
+      const oldIds = new Set(oldServers.map(s => `${s.id}:${s.origin}`));
+      const newIds = new Set(newServers.map(s => `${s.id}:${s.origin}`));
+
+      const added = newServers.filter(s => !oldIds.has(`${s.id}:${s.origin}`));
+      const removed = oldServers.filter(
+        s => !newIds.has(`${s.id}:${s.origin}`),
+      );
+
+      // Add system message about tool changes if there are any
+      if ((added.length > 0 || removed.length > 0) && isConfigured) {
+        let messageContent = '';
+
+        if (added.length > 0) {
+          const addedNames = added.map(s => `${s.id} (${s.origin})`).join(', ');
+          messageContent += `🔧 Tools added: ${addedNames}. `;
+        }
+
+        if (removed.length > 0) {
+          const removedNames = removed
+            .map(s => `${s.id} (${s.origin})`)
+            .join(', ');
+          messageContent += `🔧 Tools removed: ${removedNames}. You no longer have access to these tools.`;
+        }
+
+        if (messageContent) {
+          const systemMessage: ChatMessage = {
+            id: `system-mcp-${Date.now()}`,
+            role: 'system',
+            content: messageContent.trim(),
+            createdAt: new Date(),
+          };
+          useChatStore.getState().addMessage(systemMessage);
+        }
+      }
+
       setSelectedMcpServers(newServers);
     },
-    [],
+    [selectedMcpServers, isConfigured],
   );
 
   // Merge deprecated props into identityProviders for backward compatibility

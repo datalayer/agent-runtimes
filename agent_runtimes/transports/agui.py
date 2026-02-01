@@ -224,8 +224,16 @@ class AGUITransport(BaseTransport):
                 
                 # Get runtime toolsets from the adapter (includes MCP servers)
                 runtime_toolsets = transport_self._get_runtime_toolsets()
+                
+                # Log detailed toolset information
                 if runtime_toolsets:
-                    logger.info(f"[AG-UI] Using {len(runtime_toolsets)} runtime toolsets")
+                    toolset_names = []
+                    for ts in runtime_toolsets:
+                        name = getattr(ts, 'name', None) or getattr(ts, '__class__', type(ts)).__name__
+                        toolset_names.append(name)
+                    logger.info(f"[AG-UI] Passing {len(runtime_toolsets)} toolsets to agent run: {toolset_names}")
+                else:
+                    logger.info("[AG-UI] Passing 0 toolsets to agent run (empty list)")
                 
                 return await AGUIAdapter.dispatch_request(
                     request,
