@@ -23,10 +23,10 @@ import {
 } from './mcpServers';
 
 // ============================================================================
-// Agent Definitions
+// Agent Specs
 // ============================================================================
 
-export const DATA_ACQUISITION_AGENT: AgentSpec = {
+export const DATA_ACQUISITION_AGENT_SPEC: AgentSpec = {
   id: 'data-acquisition',
   name: 'Data Acquisition Agent',
   description:
@@ -40,13 +40,13 @@ export const DATA_ACQUISITION_AGENT: AgentSpec = {
   color: '#3B82F6', // Blue
 };
 
-export const CRAWLER_AGENT: AgentSpec = {
+export const CRAWLER_AGENT_SPEC: AgentSpec = {
   id: 'crawler',
   name: 'Crawler Agent',
   description:
     'Web crawling and research agent that searches the web and GitHub repositories for information.',
   tags: ['web', 'search', 'research', 'crawler', 'github'],
-  enabled: true,
+  enabled: false,
   mcpServers: [TAVILY_MCP_SERVER, GITHUB_MCP_SERVER],
   skills: [],
   environmentName: 'ai-agents',
@@ -54,13 +54,13 @@ export const CRAWLER_AGENT: AgentSpec = {
   color: '#10B981', // Green
 };
 
-export const GITHUB_AGENT: AgentSpec = {
+export const GITHUB_AGENT_SPEC: AgentSpec = {
   id: 'github-agent',
   name: 'GitHub Agent',
   description:
     'Manages GitHub repositories, issues, and pull requests with email notification capabilities.',
   tags: ['github', 'git', 'code', 'email'],
-  enabled: true,
+  enabled: false,
   mcpServers: [GITHUB_MCP_SERVER, GMAIL_MCP_SERVER],
   skills: [],
   environmentName: 'ai-agents',
@@ -68,13 +68,13 @@ export const GITHUB_AGENT: AgentSpec = {
   color: '#6366F1', // Indigo
 };
 
-export const FINANCIAL_VIZ_AGENT: AgentSpec = {
+export const FINANCIAL_VIZ_AGENT_SPEC: AgentSpec = {
   id: 'financial-viz',
   name: 'Financial Visualization Agent',
   description:
     'Analyzes financial market data and creates visualizations and charts.',
   tags: ['finance', 'stocks', 'visualization', 'charts'],
-  enabled: true,
+  enabled: false,
   mcpServers: [ALPHAVANTAGE_MCP_SERVER, CHART_MCP_SERVER],
   skills: [],
   environmentName: 'ai-agents',
@@ -82,13 +82,13 @@ export const FINANCIAL_VIZ_AGENT: AgentSpec = {
   color: '#F59E0B', // Amber
 };
 
-export const INFORMATION_ROUTING_AGENT: AgentSpec = {
+export const INFORMATION_ROUTING_AGENT_SPEC: AgentSpec = {
   id: 'information-routing',
   name: 'Information Routing Agent',
   description:
     'Routes information between Google Drive and Slack, managing document workflows and team communication.',
   tags: ['workflow', 'communication', 'gdrive', 'slack'],
-  enabled: true,
+  enabled: false,
   mcpServers: [GDRIVE_MCP_SERVER, SLACK_MCP_SERVER],
   skills: [],
   environmentName: 'ai-agents',
@@ -97,27 +97,27 @@ export const INFORMATION_ROUTING_AGENT: AgentSpec = {
 };
 
 // ============================================================================
-// Agent Library
+// Agent Specs Registry
 // ============================================================================
 
-export const AGENT_LIBRARY: Record<string, AgentSpec> = {
-  'data-acquisition': DATA_ACQUISITION_AGENT,
-  crawler: CRAWLER_AGENT,
-  'github-agent': GITHUB_AGENT,
-  'financial-viz': FINANCIAL_VIZ_AGENT,
-  'information-routing': INFORMATION_ROUTING_AGENT,
+export const AGENT_SPECS: Record<string, AgentSpec> = {
+  'data-acquisition': DATA_ACQUISITION_AGENT_SPEC,
+  crawler: CRAWLER_AGENT_SPEC,
+  'github-agent': GITHUB_AGENT_SPEC,
+  'financial-viz': FINANCIAL_VIZ_AGENT_SPEC,
+  'information-routing': INFORMATION_ROUTING_AGENT_SPEC,
 };
 
 /**
  * Get an agent specification by ID.
  */
-export function getAgent(agentId: string): AgentSpec | undefined {
-  return AGENT_LIBRARY[agentId];
+export function getAgentSpecs(agentId: string): AgentSpec | undefined {
+  return AGENT_SPECS[agentId];
 }
 
 /**
  * List all available agent specifications.
  */
-export function listAgents(): AgentSpec[] {
-  return Object.values(AGENT_LIBRARY);
+export function listAgentSpecs(): AgentSpec[] {
+  return Object.values(AGENT_SPECS);
 }
