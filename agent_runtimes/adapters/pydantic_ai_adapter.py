@@ -196,6 +196,11 @@ class PydanticAIAdapter(BaseAgent):
         This dynamically fetches MCP toolsets based on selected_mcp_servers,
         ensuring only currently running servers are included.
         
+        Note: When codemode is enabled (CodemodeToolset present), MCP servers
+        are NOT added directly as toolsets. Instead, the CodemodeToolset has
+        its own registry containing the MCP servers, and tools are accessed
+        via discovery tools (search_tools, get_tool_details, call_tool).
+        
         Returns:
             List of toolsets including MCP servers and non-MCP toolsets.
         """
@@ -204,8 +209,12 @@ class PydanticAIAdapter(BaseAgent):
         # Log current state
         logger.info(f"PydanticAIAdapter [{self._name}]: _get_runtime_toolsets called, selected_mcp_servers={self._selected_mcp_servers}")
         
+        # Check if codemode is enabled (CodemodeToolset present in non_mcp_toolsets)
+        codemode_enabled = self._codemode_toolset_index is not None
+        
         # Dynamically fetch MCP toolsets for selected servers
-        if self._selected_mcp_servers:
+        # But ONLY if codemode is NOT enabled (codemode has its own MCP registry)
+        if self._selected_mcp_servers and not codemode_enabled:
             logger.info(f"PydanticAIAdapter [{self._name}]: Fetching toolsets for servers: {self._selected_mcp_servers}")
             lifecycle_manager = get_mcp_lifecycle_manager()
             
@@ -223,13 +232,16 @@ class PydanticAIAdapter(BaseAgent):
                 else:
                     logger.warning(f"PydanticAIAdapter [{self._name}]: {origin} MCP server '{server_id}' not running, skipping")
 
+        elif codemode_enabled:
+            logger.info(f"PydanticAIAdapter [{self._name}]: Codemode enabled - MCP servers accessed via CodemodeToolset registry, not as direct toolsets")
         else:
             logger.info(f"PydanticAIAdapter [{self._name}]: No MCP servers selected (list is empty)")
         
         # Always include non-MCP toolsets (codemode, skills, etc.)
         toolsets.extend(self._non_mcp_toolsets)
         
-        logger.info(f"PydanticAIAdapter [{self._name}]: Total toolsets for run: {len(toolsets)} (MCP: {len(toolsets) - len(self._non_mcp_toolsets)}, non-MCP: {len(self._non_mcp_toolsets)})")
+        mcp_count = len(toolsets) - len(self._non_mcp_toolsets)
+        logger.info(f"PydanticAIAdapter [{self._name}]: Total toolsets for run: {len(toolsets)} (MCP: {mcp_count}, non-MCP: {len(self._non_mcp_toolsets)})")
         return toolsets
 
     def get_tools(self) -> list[ToolDefinition]:
