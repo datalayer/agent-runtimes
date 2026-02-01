@@ -43,13 +43,13 @@ def get_mcp_config_path() -> Path:
     return Path.home() / ".datalayer" / "mcp.json"
 
 
-def ensure_mcp_toolsets_event() -> None:
+def ensure_config_mcp_toolsets_event() -> None:
     """Ensure the initialization event exists for external waiters."""
     # Lifecycle manager handles this internally
     pass
 
 
-async def initialize_mcp_toolsets() -> None:
+async def initialize_config_mcp_toolsets() -> None:
     """
     Initialize MCP toolsets at server startup.
     
@@ -58,29 +58,29 @@ async def initialize_mcp_toolsets() -> None:
     - If it matches a catalog server, use the catalog command
     - Otherwise use the command from mcp.json
     """
-    logger.info("initialize_mcp_toolsets() called - delegating to lifecycle manager")
+    logger.info("initialize_config_mcp_toolsets() called - delegating to lifecycle manager")
     manager = get_mcp_lifecycle_manager()
     try:
         await manager.initialize_from_config()
-        logger.info("initialize_mcp_toolsets() completed")
+        logger.info("initialize_config_mcp_toolsets() completed")
     except Exception as e:
-        logger.error(f"initialize_mcp_toolsets() failed: {e}", exc_info=True)
+        logger.error(f"initialize_config_mcp_toolsets() failed: {e}", exc_info=True)
 
 
-async def shutdown_mcp_toolsets() -> None:
+async def shutdown_config_mcp_toolsets() -> None:
     """
-    Shutdown MCP toolsets at server shutdown.
+    Shutdown config MCP toolsets at server shutdown.
     
     This stops all running MCP server connections/subprocesses.
     """
     manager = get_mcp_lifecycle_manager()
     await manager.shutdown()
-    logger.info("MCP toolsets shutdown complete")
+    logger.info("Config MCP toolsets shutdown complete")
 
 
-def get_mcp_toolsets() -> list[Any]:
+def get_config_mcp_toolsets() -> list[Any]:
     """
-    Get the list of successfully started MCP toolsets.
+    Get the list of successfully started config MCP toolsets.
     
     These can be passed directly to Pydantic AI Agent(toolsets=...).
     
@@ -91,9 +91,9 @@ def get_mcp_toolsets() -> list[Any]:
     return manager.get_pydantic_toolsets()
 
 
-def get_mcp_toolsets_status() -> dict[str, Any]:
+def get_config_mcp_toolsets_status() -> dict[str, Any]:
     """
-    Get the status of MCP toolsets initialization.
+    Get the status of config MCP toolsets initialization.
     
     Returns:
         Dict with status information including:
@@ -116,15 +116,15 @@ def get_mcp_toolsets_status() -> dict[str, Any]:
     }
 
 
-async def wait_for_mcp_toolsets(timeout: float | None = None) -> bool:
-    """Wait until MCP toolsets initialization completes."""
+async def wait_for_config_mcp_toolsets(timeout: float | None = None) -> bool:
+    """Wait until config MCP toolsets initialization completes."""
     manager = get_mcp_lifecycle_manager()
     return await manager.wait_for_initialization(timeout=timeout)
 
 
-def get_mcp_toolsets_info() -> list[dict[str, Any]]:
+def get_config_mcp_toolsets_info() -> list[dict[str, Any]]:
     """
-    Get information about the loaded MCP toolsets.
+    Get information about the loaded config MCP toolsets.
     
     Returns:
         List of dicts with toolset info (type, id, command/url)
@@ -158,7 +158,7 @@ def get_mcp_toolsets_info() -> list[dict[str, Any]]:
     return info
 
 
-def is_mcp_toolsets_initialized() -> bool:
-    """Return True when MCP toolsets initialization has completed."""
+def is_config_mcp_toolsets_initialized() -> bool:
+    """Return True when config MCP toolsets initialization has completed."""
     manager = get_mcp_lifecycle_manager()
     return manager.is_initialized()

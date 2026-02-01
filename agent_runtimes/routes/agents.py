@@ -34,7 +34,7 @@ from .a2a import register_a2a_agent, unregister_a2a_agent, A2AAgentCard
 from .mcp_ui import register_mcp_ui_agent, unregister_mcp_ui_agent
 
 from ..types import AgentSpec
-from ..config.agents import AGENT_LIBRARY, list_agents as list_library_agents, get_agent as get_library_agent
+from ..config.agents import AGENT_SPECS, list_agent_specs as list_library_agents, get_agent_spec as get_agent_spec
 
 logger = logging.getLogger(__name__)
 
@@ -80,9 +80,9 @@ async def get_agent_spec(agent_id: str) -> dict[str, Any]:
         agent_id: The ID of the agent spec (e.g., 'data-acquisition', 'crawler')
     """
     try:
-        agent = get_library_agent(agent_id)
+        agent = get_agent_spec(agent_id)
         if not agent:
-            available = list(AGENT_LIBRARY.keys())
+            available = list(AGENT_SPECS.keys())
             raise HTTPException(
                 status_code=404,
                 detail=f"Agent '{agent_id}' not found in library. Available: {available}"

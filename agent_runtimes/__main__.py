@@ -9,23 +9,35 @@ This module provides the main entry point for running the agent-runtimes
 FastAPI server with uvicorn.
 
 Usage:
-    # Run directly
+    # Run using the installed CLI command
+    agent-runtimes
+
+    # Or run as a Python module
     python -m agent_runtimes
 
     # Or with uvicorn for development
     uvicorn agent_runtimes.app:app --reload --port 8000
 
     # With custom host/port
-    python -m agent_runtimes --host 0.0.0.0 --port 8080
+    agent-runtimes --host 0.0.0.0 --port 8080
 
     # With a specific agent from the library
-    python -m agent_runtimes --agent data-acquisition
+    agent-runtimes --agent-id data-acquisition
+
+    # With a custom agent name
+    agent-runtimes --agent-id data-acquisition --agent-name my-custom-agent
+
+    # Start without MCP servers
+    agent-runtimes --agent-id data-acquisition --no-mcp-servers
 """
 
-import argparse
 import logging
 import os
 import sys
+from enum import Enum
+from typing import Annotated, Optional
+
+import typer
 
 logging.basicConfig(
     level=logging.INFO,
@@ -33,143 +45,194 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+app = typer.Typer(
+    name="agent-runtimes",
+    help="Run the agent-runtimes server",
+    add_completion=False,
+    no_args_is_help=False,
+)
 
-def main() -> None:
-    """Main entry point for the agent-runtimes server."""
-    parser = argparse.ArgumentParser(
-        description="Run the agent-runtimes server",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Examples:
-    # Start with defaults (localhost:8000)
-    python -m agent_runtimes
-    
-    # Start on all interfaces
-    python -m agent_runtimes --host 0.0.0.0
-    
-    # Start on custom port
-    python -m agent_runtimes --port 8080
-    
-    # Start with auto-reload for development
-    python -m agent_runtimes --reload
-    
-    # Start with debug logging
-    python -m agent_runtimes --debug
 
-    # Start with a specific agent from the library
-    python -m agent_runtimes --agent data-acquisition
-    
-    # List available agents
-    python -m agent_runtimes --list-agents
-        """,
-    )
-    
-    parser.add_argument(
-        "--host",
-        type=str,
-        default="127.0.0.1",
-        help="Host to bind to (default: 127.0.0.1)",
-    )
-    parser.add_argument(
-        "--port",
-        type=int,
-        default=8000,
-        help="Port to bind to (default: 8000)",
-    )
-    parser.add_argument(
-        "--reload",
-        action="store_true",
-        help="Enable auto-reload for development",
-    )
-    parser.add_argument(
-        "--debug",
-        action="store_true",
-        help="Enable debug mode with verbose logging",
-    )
-    parser.add_argument(
-        "--workers",
-        type=int,
-        default=1,
-        help="Number of worker processes (default: 1)",
-    )
-    parser.add_argument(
-        "--log-level",
-        type=str,
-        default="info",
-        choices=["debug", "info", "warning", "error", "critical"],
-        help="Log level (default: info)",
-    )
-    parser.add_argument(
-        "--agent",
-        type=str,
-        default=None,
-        help="Agent spec ID from the library to start (e.g., 'data-acquisition', 'crawler'). "
-             "When specified, the agent will be registered under the name 'default'.",
-    )
-    parser.add_argument(
-        "--list-agents",
-        action="store_true",
-        help="List available agent specs from the library and exit",
-    )
-    
-    args = parser.parse_args()
+class LogLevel(str, Enum):
+    """Log level options."""
 
-    # Handle --list-agents
-    if args.list_agents:
-        from agent_runtimes.config.agents import AGENT_LIBRARY
-        print("\nAvailable Agent Specs:")
-        print("-" * 60)
-        for agent_id, agent in AGENT_LIBRARY.items():
+    debug = "debug"
+    info = "info"
+    warning = "warning"
+    error = "error"
+    critical = "critical"
+
+
+def list_agents_callback(value: bool) -> None:
+    """List available agents and exit."""
+    if value:
+        from agent_runtimes.config.agents import AGENT_SPECS
+
+        typer.echo("\nAvailable Agent Specs:")
+        typer.echo("-" * 60)
+        for agent_id, agent in AGENT_SPECS.items():
             mcp_ids = [s.id for s in agent.mcp_servers]
-            print(f"  {agent_id:<25} - {agent.name}")
-            print(f"    {agent.description[:55]}...")
-            print(f"    MCP Servers: {', '.join(mcp_ids)}")
-            print()
-        sys.exit(0)
+            typer.echo(f"  {agent_id:<25} - {agent.name}")
+            typer.echo(f"    {agent.description[:55]}...")
+            typer.echo(f"    MCP Servers: {', '.join(mcp_ids)}")
+            typer.echo()
+        raise typer.Exit(0)
+
+
+@app.command()
+def main(
+    host: Annotated[
+        str,
+        typer.Option("--host", "-h", help="Host to bind to"),
+    ] = "127.0.0.1",
+    port: Annotated[
+        int,
+        typer.Option("--port", "-p", help="Port to bind to"),
+    ] = 8000,
+    reload: Annotated[
+        bool,
+        typer.Option("--reload", "-r", help="Enable auto-reload for development"),
+    ] = False,
+    debug: Annotated[
+        bool,
+        typer.Option("--debug", "-d", help="Enable debug mode with verbose logging"),
+    ] = False,
+    workers: Annotated[
+        int,
+        typer.Option("--workers", "-w", help="Number of worker processes"),
+    ] = 1,
+    log_level: Annotated[
+        LogLevel,
+        typer.Option("--log-level", "-l", help="Log level"),
+    ] = LogLevel.info,
+    agent_id: Annotated[
+        Optional[str],
+        typer.Option(
+            "--agent-id",
+            "-a",
+            help="Agent spec ID from the library to start (e.g., 'data-acquisition', 'crawler')",
+        ),
+    ] = None,
+    agent_name: Annotated[
+        Optional[str],
+        typer.Option(
+            "--agent-name",
+            "-n",
+            help="Custom name for the agent (defaults to 'default' if --agent-id is specified)",
+        ),
+    ] = None,
+    no_mcp_servers: Annotated[
+        bool,
+        typer.Option(
+            "--no-mcp-servers",
+            help="Skip starting all MCP servers (config and agent spec)",
+        ),
+    ] = False,
+    list_agents: Annotated[
+        Optional[bool],
+        typer.Option(
+            "--list-agents",
+            callback=list_agents_callback,
+            is_eager=True,
+            help="List available agent specs from the library and exit",
+        ),
+    ] = None,
+) -> None:
+    """Run the agent-runtimes server.
+
+    Examples:
+
+        # Start with defaults (localhost:8000)
+        agent-runtimes
+
+        # Start on all interfaces
+        agent-runtimes --host 0.0.0.0
+
+        # Start on custom port
+        agent-runtimes --port 8080
+
+        # Start with auto-reload for development
+        agent-runtimes --reload
+
+        # Start with debug logging
+        agent-runtimes --debug
+
+        # Start with a specific agent from the library
+        agent-runtimes --agent-id data-acquisition
+
+        # Start with a custom agent name
+        agent-runtimes --agent-id crawler --agent-name my-crawler
+
+        # Start without MCP servers
+        agent-runtimes --agent-id data-acquisition --no-mcp-servers
+
+        # List available agents
+        agent-runtimes --list-agents
+    """
+    # Validate agent_name requires agent_id
+    if agent_name and not agent_id:
+        logger.error("--agent-name requires --agent-id to be specified")
+        raise typer.Exit(1)
 
     # Validate agent if specified
-    if args.agent:
-        from agent_runtimes.config.agents import AGENT_LIBRARY, get_agent
-        agent_spec = get_agent(args.agent)
+    if agent_id:
+        from agent_runtimes.config.agents import AGENT_SPECS, get_agent_spec
+
+        agent_spec = get_agent_spec(agent_id)
         if not agent_spec:
-            available = list(AGENT_LIBRARY.keys())
-            logger.error(f"Agent '{args.agent}' not found. Available: {available}")
-            sys.exit(1)
-        # Set environment variable for the app to pick up
-        os.environ["AGENT_RUNTIMES_DEFAULT_AGENT"] = args.agent
-        logger.info(f"Will start with agent: {agent_spec.name} (registered as 'default')")
-    
+            available = list(AGENT_SPECS.keys())
+            logger.error(f"Agent '{agent_id}' not found. Available: {available}")
+            raise typer.Exit(1)
+
+        # Set environment variables for the app to pick up
+        os.environ["AGENT_RUNTIMES_DEFAULT_AGENT"] = agent_id
+
+        # Set custom agent name if provided
+        effective_name = agent_name or "default"
+        os.environ["AGENT_RUNTIMES_AGENT_NAME"] = effective_name
+
+        # Set MCP servers flag
+        if no_mcp_servers:
+            os.environ["AGENT_RUNTIMES_NO_MCP_SERVERS"] = "true"
+        else:
+            # Clear the env var if not set (in case it was set previously)
+            os.environ.pop("AGENT_RUNTIMES_NO_MCP_SERVERS", None)
+
+        mcp_status = "disabled" if no_mcp_servers else "enabled"
+        logger.info(
+            f"Will start with agent: {agent_spec.name} "
+            f"(registered as '{effective_name}', MCP servers: {mcp_status})"
+        )
+
     # Set log level
-    log_level = args.log_level.upper()
-    if args.debug:
-        log_level = "DEBUG"
-    logging.getLogger().setLevel(log_level)
-    
+    effective_log_level = log_level.value.upper()
+    if debug:
+        effective_log_level = "DEBUG"
+    logging.getLogger().setLevel(effective_log_level)
+
     try:
         import uvicorn
     except ImportError:
-        logger.error(
-            "uvicorn is not installed. Install it with: pip install uvicorn"
-        )
-        sys.exit(1)
-    
-    logger.info(f"Starting agent-runtimes server on {args.host}:{args.port}")
-    logger.info(f"API docs available at http://{args.host}:{args.port}/docs")
-    logger.info(f"ACP WebSocket endpoint: ws://{args.host}:{args.port}/api/v1/acp/ws/{{agent_id}}")
-    
+        logger.error("uvicorn is not installed. Install it with: pip install uvicorn")
+        raise typer.Exit(1)
+
+    logger.info(f"Starting agent-runtimes server on {host}:{port}")
+    logger.info(f"API docs available at http://{host}:{port}/docs")
+    logger.info(f"ACP WebSocket endpoint: ws://{host}:{port}/api/v1/acp/ws/{{agent_id}}")
+
     # Exclude generated/ directory from reload watching (codemode generates bindings there)
     reload_excludes = ["generated/*", "generated/**/*", "*.pyc", "__pycache__"]
-    
+
     uvicorn.run(
         "agent_runtimes.app:app",
-        host=args.host,
-        port=args.port,
-        reload=args.reload,
-        reload_excludes=reload_excludes if args.reload else None,
-        workers=args.workers if not args.reload else 1,
-        log_level=args.log_level,
+        host=host,
+        port=port,
+        reload=reload,
+        reload_excludes=reload_excludes if reload else None,
+        workers=workers if not reload else 1,
+        log_level=log_level.value,
     )
 
 
 if __name__ == "__main__":
-    main()
+    app()

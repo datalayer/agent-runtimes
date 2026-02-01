@@ -29,13 +29,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from starlette.routing import Mount
 
-from .config.agents import get_agent as get_library_agent
+from .config.agents import get_agent_spec
 from .mcp import (
-    ensure_mcp_toolsets_event,
+    ensure_config_mcp_toolsets_event,
+    get_mcp_lifecycle_manager,
     initialize_config_servers,
     get_mcp_manager,
-    initialize_mcp_toolsets,
-    shutdown_mcp_toolsets,
+    initialize_config_mcp_toolsets,
+    shutdown_config_mcp_toolsets,
 )
 from .routes import (
     a2a_protocol_router,
@@ -129,18 +130,23 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
         is_reload_parent = _is_reload_parent_process()
         logger.info(f"Reload parent check: {is_reload_parent}")
         
+        # Check if MCP servers should be skipped (--no-mcp-servers CLI flag)
+        no_mcp_servers = os.environ.get("AGENT_RUNTIMES_NO_MCP_SERVERS", "").lower() == "true"
+        
         if is_reload_parent:
             logger.info("Reload parent detected; deferring MCP startup to worker process")
+        elif no_mcp_servers:
+            logger.info("Skipping MCP server startup (--no-mcp-servers flag)")
         else:
             # Initialize Pydantic AI MCP toolsets in a background task
             # This allows FastAPI to start immediately while MCP servers start async
             logger.info("Initializing Pydantic AI MCP toolsets (background startup)...")
-            ensure_mcp_toolsets_event()
+            ensure_config_mcp_toolsets_event()
             
             async def initialize_toolsets_with_logging() -> None:
                 """Wrapper to catch and log any exceptions from toolset initialization."""
                 try:
-                    await initialize_mcp_toolsets()
+                    await initialize_config_mcp_toolsets()
                     logger.info("✓ MCP toolset background initialization completed successfully")
                 except Exception as e:
                     logger.error(f"✗ MCP toolset background initialization failed: {e}", exc_info=True)
@@ -163,17 +169,43 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
         # Set app reference for dynamic A2A route mounting
         set_a2a_app(app, config.api_prefix)
         
-        # Register default agent if specified via CLI (--agent flag)
+        # Register default agent if specified via CLI (--agent-id flag)
         default_agent_id = os.environ.get("AGENT_RUNTIMES_DEFAULT_AGENT")
         if default_agent_id:
-            agent_spec = get_library_agent(default_agent_id)
+            agent_spec = get_agent_spec(default_agent_id)
             if agent_spec:
-                logger.info(f"Registering default agent from library: {agent_spec.name}")
+                agent_name = os.environ.get("AGENT_RUNTIMES_AGENT_NAME", "default")
+                no_mcp_servers = os.environ.get("AGENT_RUNTIMES_NO_MCP_SERVERS", "").lower() == "true"
+                
+                logger.info(f"Registering default agent from catalog: {agent_spec.name} (as '{agent_name}')")
+                
                 # Load the agent's MCP servers into the manager
                 mcp_manager = get_mcp_manager()
                 for mcp_server in agent_spec.mcp_servers:
                     mcp_manager.add_server(mcp_server)
                 logger.info(f"Loaded {len(agent_spec.mcp_servers)} MCP servers for default agent")
+                
+                # Start MCP servers unless --no-mcp-servers flag was passed
+                if not no_mcp_servers and agent_spec.mcp_servers:
+                    logger.info(f"Starting {len(agent_spec.mcp_servers)} MCP servers for agent '{agent_name}'...")
+                    lifecycle_manager = get_mcp_lifecycle_manager()
+                    
+                    async def start_agent_mcp_servers() -> None:
+                        """Start MCP servers for the default agent."""
+                        for mcp_server in agent_spec.mcp_servers:
+                            try:
+                                instance = await lifecycle_manager.start_server(mcp_server.id, mcp_server)
+                                if instance:
+                                    logger.info(f"✓ Started MCP server: {mcp_server.id}")
+                                else:
+                                    logger.warning(f"✗ Failed to start MCP server: {mcp_server.id}")
+                            except Exception as e:
+                                logger.error(f"✗ Error starting MCP server '{mcp_server.id}': {e}")
+                    
+                    # Create task to start MCP servers in background
+                    asyncio.create_task(start_agent_mcp_servers())
+                elif no_mcp_servers:
+                    logger.info("Skipping MCP server startup (--no-mcp-servers flag)")
             else:
                 logger.warning(f"Default agent '{default_agent_id}' not found in library")
         
@@ -235,7 +267,7 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
 
         # Shutdown MCP toolsets (stop all MCP server subprocesses)
         if not _is_reload_parent_process():
-            await shutdown_mcp_toolsets()
+            await shutdown_config_mcp_toolsets()
         
         logger.info("Shutting down agent-runtimes server...")
     

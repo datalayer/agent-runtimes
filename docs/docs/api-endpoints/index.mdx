@@ -251,6 +251,21 @@ Manage MCP (Model Context Protocol) servers for tool integration. There are two 
 Config and catalog servers are stored separately, allowing the same server ID to exist in both without conflict. For example, you can have a custom `tavily` server in your `mcp.json` while also having access to the predefined `tavily` in the catalog.
 :::
 
+:::tip Starting Without MCP Servers
+When you start the server with the [`--no-mcp-servers` CLI flag](/docs/cli#mcp-server-control), no MCP servers are started automatically. You can then use the endpoints below to dynamically enable MCP servers from the catalog at runtime:
+
+```bash
+# Start server without MCP servers
+python -m agent_runtimes --agent-id crawler --no-mcp-servers
+
+# Then enable MCP servers via API
+curl -X POST http://localhost:8000/api/v1/mcp/servers/catalog/tavily/enable
+curl -X POST http://localhost:8000/api/v1/mcp/servers/catalog/github/enable
+```
+
+This is useful for scenarios where you want fine-grained control over which MCP servers are running, or when you need to manage resources carefully.
+:::
+
 ### List MCP Config Servers
 
 ```http
@@ -390,6 +405,23 @@ POST /api/v1/mcp/servers/catalog/{server_name}/enable
 
 Start an MCP server from the catalog for the current session. Only works for catalog servers (not config servers which start automatically).
 
+This is particularly useful when:
+- You started the server with [`--no-mcp-servers`](/docs/cli#mcp-server-control)
+- You want to dynamically add tools to an agent at runtime
+- You need fine-grained control over which MCP servers are running
+
+**Path Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `server_name` | string | The name/ID of the MCP server from the catalog (e.g., `tavily`, `github`, `filesystem`) |
+
+**Example Request:**
+
+```bash
+curl -X POST http://localhost:8000/api/v1/mcp/servers/catalog/tavily/enable
+```
+
 **Response:** `201 Created`
 
 ```json
@@ -402,9 +434,18 @@ Start an MCP server from the catalog for the current session. Only works for cat
       "name": "tavily-search",
       "description": "Search the web using Tavily"
     }
-  ]
+  ],
+  "isRunning": true,
+  "isConfig": false
 }
 ```
+
+**Error Responses:**
+
+| Code | Description |
+|------|-------------|
+| `404` | Server not found in catalog |
+| `500` | Failed to start the MCP server |
 
 ### Disable Catalog Server
 
@@ -412,9 +453,28 @@ Start an MCP server from the catalog for the current session. Only works for cat
 DELETE /api/v1/mcp/servers/catalog/{server_name}/disable
 ```
 
-Stop an MCP server and remove it from the current session.
+Stop an MCP server and remove it from the current session. This stops the MCP server process and frees up resources.
+
+**Path Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `server_name` | string | The name/ID of the MCP server to disable |
+
+**Example Request:**
+
+```bash
+curl -X DELETE http://localhost:8000/api/v1/mcp/servers/catalog/tavily/disable
+```
 
 **Response:** `204 No Content`
+
+**Error Responses:**
+
+| Code | Description |
+|------|-------------|
+| `404` | Server is not currently enabled |
+| `500` | Failed to stop the MCP server |
 
 ### Create Server
 

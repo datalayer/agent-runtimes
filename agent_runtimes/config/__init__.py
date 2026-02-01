@@ -26,14 +26,14 @@ from agent_runtimes.mcp.catalog_mcp_servers import (
     GDRIVE_MCP_SERVER,
 )
 from .agents import (
-    AGENT_LIBRARY,
-    get_agent,
-    list_agents,
-    DATA_ACQUISITION_AGENT,
-    CRAWLER_AGENT,
-    GITHUB_AGENT,
-    FINANCIAL_VIZ_AGENT,
-    INFORMATION_ROUTING_AGENT,
+    AGENT_SPECS,
+    get_agent_spec,
+    list_agent_specs,
+    DATA_ACQUISITION_AGENT_SPEC,
+    CRAWLER_AGENT_SPEC,
+    GITHUB_AGENT_SPEC,
+    FINANCIAL_VIZ_AGENT_SPEC,
+    INFORMATION_ROUTING_AGENT_SPEC,
 )
 
 __all__ = [
@@ -55,12 +55,12 @@ __all__ = [
     "GMAIL_MCP_SERVER",
     "GDRIVE_MCP_SERVER",
     # Agents
-    "AGENT_LIBRARY",
-    "get_agent",
-    "list_agents",
-    "DATA_ACQUISITION_AGENT",
-    "CRAWLER_AGENT",
-    "GITHUB_AGENT",
-    "FINANCIAL_VIZ_AGENT",
-    "INFORMATION_ROUTING_AGENT",
+    "AGENT_SPECS",
+    "get_agent_spec",
+    "list_agent_specs",
+    "DATA_ACQUISITION_AGENT_SPEC",
+    "CRAWLER_AGENT_SPEC",
+    "GITHUB_AGENT_SPEC",
+    "FINANCIAL_VIZ_AGENT_SPEC",
+    "INFORMATION_ROUTING_AGENT_SPEC",
 ]

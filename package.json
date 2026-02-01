@@ -92,6 +92,7 @@
     "server": "python -m agent_runtimes",
     "server:start": "PYTHONIOENCODING=utf-8 python -m agent_runtimes --port 8765 --debug",
     "start": "vite",
+    "start:agent": "agent-runtimes --agent-id=data-acquisition --agent-name=da1 --no-mcp-servers --port=8765 --debug",
     "start:acp": "run-p server:start start:acp:vite",
     "start:acp:prod": "run-p server start:acp:vite",
     "start:acp:vite": "VITE_ACP_WS_URL=ws://localhost:8765/api/v1/acp/ws vite",

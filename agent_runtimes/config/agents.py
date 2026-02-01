@@ -24,23 +24,23 @@ from agent_runtimes.mcp.catalog_mcp_servers import (
 
 
 # ============================================================================
-# Agent Definitions
+# Agent Specs
 # ============================================================================
 
-DATA_ACQUISITION_AGENT = AgentSpec(
+DATA_ACQUISITION_AGENT_SPEC = AgentSpec(
     id="data-acquisition",
     name="Data Acquisition Agent",
     description="Acquires and manages data from various sources including Kaggle datasets and local filesystem operations.",
     tags=["data", "acquisition", "kaggle", "filesystem"],
     enabled=True,
-    mcp_servers=[KAGGLE_MCP_SERVER, FILESYSTEM_MCP_SERVER],
+    mcp_servers=[KAGGLE_MCP_SERVER, GITHUB_MCP_SERVER, FILESYSTEM_MCP_SERVER],
     skills=[],
     environment_name="ai-agents",
     icon="database",
     color="#3B82F6",  # Blue
 )
 
-CRAWLER_AGENT = AgentSpec(
+CRAWLER_AGENT_SPEC = AgentSpec(
     id="crawler",
     name="Crawler Agent",
     description="Web crawling and research agent that searches the web and GitHub repositories for information.",
@@ -53,7 +53,7 @@ CRAWLER_AGENT = AgentSpec(
     color="#10B981",  # Green
 )
 
-GITHUB_AGENT = AgentSpec(
+GITHUB_AGENT_SPEC = AgentSpec(
     id="github-agent",
     name="GitHub Agent",
     description="Manages GitHub repositories, issues, and pull requests with email notification capabilities.",
@@ -66,7 +66,7 @@ GITHUB_AGENT = AgentSpec(
     color="#6366F1",  # Indigo
 )
 
-FINANCIAL_VIZ_AGENT = AgentSpec(
+FINANCIAL_VIZ_AGENT_SPEC = AgentSpec(
     id="financial-viz",
     name="Financial Visualization Agent",
     description="Analyzes financial market data and creates visualizations and charts.",
@@ -79,7 +79,7 @@ FINANCIAL_VIZ_AGENT = AgentSpec(
     color="#F59E0B",  # Amber
 )
 
-INFORMATION_ROUTING_AGENT = AgentSpec(
+INFORMATION_ROUTING_AGENT_SPEC = AgentSpec(
     id="information-routing",
     name="Information Routing Agent",
     description="Routes information between Google Drive and Slack, managing document workflows and team communication.",
@@ -94,19 +94,19 @@ INFORMATION_ROUTING_AGENT = AgentSpec(
 
 
 # ============================================================================
-# Agent Library
+# Agent Specs
 # ============================================================================
 
-AGENT_LIBRARY: Dict[str, AgentSpec] = {
-    "data-acquisition": DATA_ACQUISITION_AGENT,
-    "crawler": CRAWLER_AGENT,
-    "github-agent": GITHUB_AGENT,
-    "financial-viz": FINANCIAL_VIZ_AGENT,
-    "information-routing": INFORMATION_ROUTING_AGENT,
+AGENT_SPECS: Dict[str, AgentSpec] = {
+    "data-acquisition": DATA_ACQUISITION_AGENT_SPEC,
+    "crawler": CRAWLER_AGENT_SPEC,
+    "github-agent": GITHUB_AGENT_SPEC,
+    "financial-viz": FINANCIAL_VIZ_AGENT_SPEC,
+    "information-routing": INFORMATION_ROUTING_AGENT_SPEC,
 }
 
 
-def get_agent(agent_id: str) -> AgentSpec | None:
+def get_agent_spec(agent_id: str) -> AgentSpec | None:
     """
     Get an agent specification by ID.
 
@@ -116,14 +116,14 @@ def get_agent(agent_id: str) -> AgentSpec | None:
     Returns:
         The AgentSpec configuration, or None if not found.
     """
-    return AGENT_LIBRARY.get(agent_id)
+    return AGENT_SPECS.get(agent_id)
 
 
-def list_agents() -> list[AgentSpec]:
+def list_agent_specs() -> list[AgentSpec]:
     """
     List all available agent specifications.
 
     Returns:
         List of all AgentSpec configurations.
     """
-    return list(AGENT_LIBRARY.values())
+    return list(AGENT_SPECS.values())

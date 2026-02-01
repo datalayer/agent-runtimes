@@ -22,8 +22,8 @@ from mcp.client.stdio import stdio_client
 from agent_runtimes.types import MCPServer, MCPServerTool
 from agent_runtimes.mcp.toolsets import (
     MCP_SERVER_STARTUP_TIMEOUT,
-    get_mcp_toolsets,
-    wait_for_mcp_toolsets,
+    get_config_mcp_toolsets,
+    wait_for_config_mcp_toolsets,
 )
 
 logger = logging.getLogger(__name__)
@@ -227,7 +227,7 @@ async def create_mcp_servers_with_tools(
     """
     servers: list[MCPServer] = []
     configs = get_mcp_servers_from_config()
-    ready = await wait_for_mcp_toolsets()
+    ready = await wait_for_config_mcp_toolsets()
     if not ready:
         logger.warning(
             "MCP toolsets not ready after initialization; tool discovery may be incomplete"
@@ -250,7 +250,7 @@ async def create_mcp_servers_with_tools(
             tools: list[MCPServerTool] = []
 
             # Try to reuse running MCP toolset if available
-            running_toolsets = get_mcp_toolsets()
+            running_toolsets = get_config_mcp_toolsets()
             running_server = next(
                 (toolset for toolset in running_toolsets if getattr(toolset, "id", None) == config["id"]),
                 None,

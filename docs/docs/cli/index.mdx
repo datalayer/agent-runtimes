@@ -1,0 +1,179 @@
+---
+title: CLI
+---
+
+# CLI
+
+The `agent-runtimes` package provides a command-line interface for starting and managing the Agent Runtimes server.
+
+## Installation
+
+The CLI is automatically available when you install the package:
+
+```bash
+pip install agent-runtimes
+```
+
+## Basic Usage
+
+```bash
+# Start the server with default settings (localhost:8000)
+agent-runtimes
+
+# Or using the Python module directly
+python -m agent_runtimes
+```
+
+## Options
+
+| Option | Short | Default | Description |
+|--------|-------|---------|-------------|
+| `--host` | `-h` | `127.0.0.1` | Host to bind to |
+| `--port` | `-p` | `8000` | Port to bind to |
+| `--reload` | `-r` | `false` | Enable auto-reload for development |
+| `--debug` | `-d` | `false` | Enable debug mode with verbose logging |
+| `--workers` | `-w` | `1` | Number of worker processes |
+| `--log-level` | `-l` | `info` | Log level (`debug`, `info`, `warning`, `error`, `critical`) |
+| `--agent-id` | `-a` | - | Agent spec ID from the library to start |
+| `--agent-name` | `-n` | `default` | Custom name for the agent (requires `--agent-id`) |
+| `--no-mcp-servers` | - | `false` | Skip starting all MCP servers (config and agent spec) |
+| `--list-agents` | - | - | List available agent specs and exit |
+| `--help` | - | - | Show help message and exit |
+
+## Examples
+
+### Start with Custom Host and Port
+
+```bash
+# Start on all interfaces
+agent-runtimes --host 0.0.0.0
+
+# Start on a custom port
+agent-runtimes --port 8080
+
+# Combine both
+agent-runtimes -h 0.0.0.0 -p 8080
+```
+
+### Development Mode
+
+```bash
+# Enable auto-reload for development
+agent-runtimes --reload
+
+# Enable debug logging
+agent-runtimes --debug
+
+# Both with short options
+agent-runtimes -r -d
+```
+
+### Start with an Agent Spec
+
+Agent specs are predefined agent configurations that include MCP servers and other settings:
+
+```bash
+# List available agent specs
+agent-runtimes --list-agents
+
+# Start with a specific agent
+agent-runtimes --agent-id data-acquisition
+
+# Start with a custom agent name
+agent-runtimes --agent-id crawler --agent-name my-crawler
+
+# Using short options
+agent-runtimes -a crawler -n my-crawler
+```
+
+### MCP Server Control
+
+By default, the server automatically starts:
+- **Config MCP servers** from `~/.datalayer/mcp.json`
+- **Agent spec MCP servers** when using `--agent-id`
+
+```bash
+# Start with agent and its MCP servers
+agent-runtimes --agent-id crawler
+# This starts config servers + 'tavily' and 'github' from the agent spec
+
+# Start WITHOUT any MCP servers (you can add them later via API)
+agent-runtimes --no-mcp-servers
+
+# Start with agent but without any MCP servers
+agent-runtimes --agent-id crawler --no-mcp-servers
+```
+
+:::tip Managing MCP Servers at Runtime
+When starting with `--no-mcp-servers`, you can dynamically add MCP servers via the [REST API](/docs/api-endpoints#enable-catalog-server):
+
+```bash
+# Enable an MCP server from the catalog
+curl -X POST http://localhost:8000/api/v1/mcp/servers/catalog/tavily/enable
+
+# Disable an MCP server
+curl -X DELETE http://localhost:8000/api/v1/mcp/servers/catalog/tavily/disable
+```
+
+See the [MCP Servers API documentation](/docs/api-endpoints#mcp-servers) for more details.
+:::
+
+### Production Settings
+
+```bash
+# Multiple workers (not compatible with --reload)
+agent-runtimes --workers 4
+
+# Custom log level
+agent-runtimes --log-level warning
+
+# Production setup
+agent-runtimes -h 0.0.0.0 -p 8000 -w 4 -l warning
+```
+
+## Available Agent Specs
+
+Use `--list-agents` to see all available agent specifications:
+
+```bash
+$ agent-runtimes --list-agents
+
+Available Agent Specs:
+------------------------------------------------------------
+  data-acquisition          - Data Acquisition Agent
+    Acquires and manages data from various sources includin...
+    MCP Servers: kaggle, filesystem
+
+  crawler                   - Crawler Agent
+    Web crawling and research agent that searches the web a...
+    MCP Servers: tavily, github
+
+  github-agent              - GitHub Agent
+    Manages GitHub repositories, issues, and pull requests ...
+    MCP Servers: github, gmail
+
+  financial-viz             - Financial Visualization Agent
+    Analyzes financial market data and creates visualizatio...
+    MCP Servers: alphavantage, chart
+
+  information-routing       - Information Routing Agent
+    Routes information between Google Drive and Slack, mana...
+    MCP Servers: gdrive, slack
+```
+
+## Environment Variables
+
+The CLI sets the following environment variables for the server to use:
+
+| Variable | Description |
+|----------|-------------|
+| `AGENT_RUNTIMES_DEFAULT_AGENT` | The agent spec ID when using `--agent-id` |
+| `AGENT_RUNTIMES_AGENT_NAME` | The custom agent name when using `--agent-name` |
+| `AGENT_RUNTIMES_NO_MCP_SERVERS` | Set to `true` when `--no-mcp-servers` is used |
+
+## API Documentation
+
+Once the server is running, interactive API documentation is available at:
+
+- **Swagger UI:** `http://localhost:8000/docs`
+- **ReDoc:** `http://localhost:8000/redoc`
