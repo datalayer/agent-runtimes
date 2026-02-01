@@ -16,12 +16,13 @@ The Vercel AI SDK protocol provides:
 """
 
 import logging
+import traceback
 from typing import TYPE_CHECKING, Any, AsyncIterator
 
 from pydantic_ai import UsageLimits
 from pydantic_ai.ui.vercel_ai import VercelAIAdapter
 from starlette.requests import Request
-from starlette.responses import Response
+from starlette.responses import Response, StreamingResponse
 
 from ..adapters.base import BaseAgent
 from ..context.usage import get_usage_tracker
@@ -32,6 +33,18 @@ if TYPE_CHECKING:
     from pydantic_ai import Agent
 
 logger = logging.getLogger(__name__)
+
+
+async def _wrap_streaming_body(body_iterator: AsyncIterator[str]) -> AsyncIterator[str]:
+    """Wrap a streaming body to catch and log exceptions during iteration."""
+    try:
+        async for chunk in body_iterator:
+            yield chunk
+    except Exception as e:
+        logger.error(f"[Vercel AI] STREAMING ERROR: {e}")
+        logger.error(f"[Vercel AI] STREAMING ERROR traceback:\n{traceback.format_exc()}")
+        # Re-raise so the error propagates
+        raise
 
 
 class VercelAITransport(BaseTransport):
@@ -206,7 +219,32 @@ class VercelAITransport(BaseTransport):
         # Determine which builtin_tools to use:
         # 1. If request specifies builtinTools, use those (allows per-request tool selection)
         # 2. Otherwise fall back to self._builtin_tools (initialized at adapter creation)
-        effective_builtin_tools = builtin_tools_from_request if builtin_tools_from_request is not None else self._builtin_tools
+        builtin_tools_input = builtin_tools_from_request if builtin_tools_from_request is not None else self._builtin_tools
+        
+        # Convert string tool IDs to actual AbstractBuiltinTool instances
+        # pydantic-ai expects Sequence[AbstractBuiltinTool], not list[str]
+        effective_builtin_tools = None
+        if builtin_tools_input:
+            try:
+                from pydantic_ai.builtin_tools import BUILTIN_TOOL_TYPES, AbstractBuiltinTool
+                tool_instances: list[AbstractBuiltinTool] = []
+                for tool_id in builtin_tools_input:
+                    if isinstance(tool_id, str):
+                        tool_cls = BUILTIN_TOOL_TYPES.get(tool_id)
+                        if tool_cls is not None:
+                            tool_instances.append(tool_cls())
+                            logger.debug(f"Vercel AI: Converted builtin tool '{tool_id}' to {tool_cls.__name__}")
+                        else:
+                            logger.warning(f"Vercel AI: Unknown builtin tool '{tool_id}', skipping")
+                    elif isinstance(tool_id, AbstractBuiltinTool):
+                        # Already an instance
+                        tool_instances.append(tool_id)
+                    else:
+                        logger.warning(f"Vercel AI: Invalid builtin tool type: {type(tool_id)}, skipping")
+                effective_builtin_tools = tool_instances if tool_instances else None
+                logger.info(f"Vercel AI: Converted {len(builtin_tools_input)} builtin tool names to {len(tool_instances)} instances")
+            except ImportError as e:
+                logger.error(f"Vercel AI: Could not import builtin_tools: {e}")
 
         # Create on_complete callback to track usage
         agent_id = self._agent_id
@@ -243,20 +281,57 @@ class VercelAITransport(BaseTransport):
 
         # Set the identity context for this request so that skill executors
         # can access OAuth tokens during tool execution
-        async with IdentityContextManager(identities_from_request):
-            # Get runtime toolsets from the adapter (includes MCP servers)
-            runtime_toolsets = self._get_runtime_toolsets()
-            
-            # Use Pydantic AI's built-in Vercel AI adapter with on_complete callback
-            response = await VercelAIAdapter.dispatch_request(
-                request,
-                agent=pydantic_agent,
-                model=model,
-                usage_limits=self._usage_limits,
-                toolsets=runtime_toolsets,
-                builtin_tools=effective_builtin_tools,
-                on_complete=on_complete,
-            )
+        try:
+            async with IdentityContextManager(identities_from_request):
+                # Get runtime toolsets from the adapter (includes MCP servers)
+                runtime_toolsets = self._get_runtime_toolsets()
+                
+                # Log toolsets being used with detailed inspection
+                if runtime_toolsets:
+                    toolset_info = []
+                    for i, ts in enumerate(runtime_toolsets):
+                        try:
+                            ts_class = type(ts).__name__
+                            ts_id = ts.id if hasattr(ts, 'id') else 'no-id-attr'
+                            ts_label = ts.label if hasattr(ts, 'label') else 'no-label-attr'
+                            toolset_info.append(f"{ts_class}(id={ts_id})")
+                            logger.debug(f"[Vercel AI] Toolset {i}: class={ts_class}, id={ts_id}, label={ts_label}")
+                            
+                            # Check if any attribute might be callable when it shouldn't be
+                            for attr_name in ['id', 'label', 'name']:
+                                if hasattr(ts, attr_name):
+                                    attr_val = getattr(ts, attr_name)
+                                    if callable(attr_val):
+                                        logger.warning(f"[Vercel AI] SUSPICIOUS: {ts_class}.{attr_name} is callable! type={type(attr_val)}")
+                        except Exception as inspect_err:
+                            logger.error(f"[Vercel AI] Error inspecting toolset {i}: {inspect_err}", exc_info=True)
+                            toolset_info.append(f"ERROR({inspect_err})")
+                    logger.info(f"[Vercel AI] Passing {len(runtime_toolsets)} toolsets to agent run: {toolset_info}")
+                else:
+                    logger.info("[Vercel AI] Passing 0 toolsets to agent run (empty list)")
+                
+                # Use Pydantic AI's built-in Vercel AI adapter with on_complete callback
+                logger.debug(f"[Vercel AI] Calling VercelAIAdapter.dispatch_request with model={model}")
+                response = await VercelAIAdapter.dispatch_request(
+                    request,
+                    agent=pydantic_agent,
+                    model=model,
+                    usage_limits=self._usage_limits,
+                    toolsets=runtime_toolsets,
+                    builtin_tools=effective_builtin_tools,
+                    on_complete=on_complete,
+                )
+                logger.debug(f"[Vercel AI] dispatch_request returned response type: {type(response)}")
+                
+                # Wrap the streaming response body to catch errors during streaming
+                if isinstance(response, StreamingResponse):
+                    original_body = response.body_iterator
+                    response.body_iterator = _wrap_streaming_body(original_body)
+                    logger.debug("[Vercel AI] Wrapped StreamingResponse body_iterator for error logging")
+                    
+        except Exception as e:
+            logger.error(f"[Vercel AI] Error during dispatch_request: {e}", exc_info=True)
+            raise
 
         return response
 

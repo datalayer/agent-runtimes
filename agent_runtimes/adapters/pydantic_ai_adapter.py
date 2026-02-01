@@ -227,7 +227,21 @@ class PydanticAIAdapter(BaseAgent):
                 is_config = origin == "config"
                 instance = lifecycle_manager.get_running_server(server_id, is_config=is_config)
                 if instance and instance.is_running:
-                    toolsets.append(instance.pydantic_server)
+                    pydantic_server = instance.pydantic_server
+                    # Debug: log toolset details to help trace errors
+                    try:
+                        toolset_id = pydantic_server.id if hasattr(pydantic_server, 'id') else 'no-id'
+                        toolset_label = pydantic_server.label if hasattr(pydantic_server, 'label') else 'no-label'
+                        toolset_class = type(pydantic_server).__name__
+                        logger.info(f"PydanticAIAdapter [{self._name}]: Toolset details - class={toolset_class}, id={toolset_id}, label={toolset_label}")
+                        
+                        # Verify id is a property not a method
+                        id_attr = getattr(type(pydantic_server), 'id', None)
+                        logger.debug(f"PydanticAIAdapter [{self._name}]: id attr type: {type(id_attr)}, is property: {isinstance(id_attr, property)}")
+                    except Exception as debug_err:
+                        logger.error(f"PydanticAIAdapter [{self._name}]: Error inspecting toolset: {debug_err}", exc_info=True)
+                    
+                    toolsets.append(pydantic_server)
                     logger.info(f"PydanticAIAdapter [{self._name}]: Added {origin} MCP server '{server_id}' toolset")
                 else:
                     logger.warning(f"PydanticAIAdapter [{self._name}]: {origin} MCP server '{server_id}' not running, skipping")
@@ -238,6 +252,13 @@ class PydanticAIAdapter(BaseAgent):
             logger.info(f"PydanticAIAdapter [{self._name}]: No MCP servers selected (list is empty)")
         
         # Always include non-MCP toolsets (codemode, skills, etc.)
+        for i, ts in enumerate(self._non_mcp_toolsets):
+            try:
+                ts_class = type(ts).__name__
+                ts_id = ts.id if hasattr(ts, 'id') else 'no-id'
+                logger.debug(f"PydanticAIAdapter [{self._name}]: Non-MCP toolset {i}: class={ts_class}, id={ts_id}")
+            except Exception as debug_err:
+                logger.error(f"PydanticAIAdapter [{self._name}]: Error inspecting non-MCP toolset {i}: {debug_err}", exc_info=True)
         toolsets.extend(self._non_mcp_toolsets)
         
         mcp_count = len(toolsets) - len(self._non_mcp_toolsets)

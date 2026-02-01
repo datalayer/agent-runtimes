@@ -303,9 +303,8 @@ class MCPLifecycleManager:
                     args=config.args or [],
                     env=env,
                     tool_prefix=tool_prefix,
+                    id=server_id,  # Pass id in constructor
                 )
-                # Set the id attribute so we can identify it later
-                pydantic_server.id = server_id
 
                 # Adjust timeout if supported
                 if hasattr(pydantic_server, "timeout"):
