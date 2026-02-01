@@ -154,7 +154,7 @@ class PydanticAIAdapter(BaseAgent):
     @property
     def selected_mcp_server_ids(self) -> list[str]:
         """Get the list of selected MCP server IDs."""
-        return [getattr(s, "name", str(s)) for s in self._selected_mcp_servers]
+        return [getattr(s, "id", str(s)) for s in self._selected_mcp_servers]
 
     def update_mcp_servers(self, servers: list[Any]) -> None:
         """Update the list of selected MCP servers.
@@ -210,7 +210,7 @@ class PydanticAIAdapter(BaseAgent):
             lifecycle_manager = get_mcp_lifecycle_manager()
             
             for selection in self._selected_mcp_servers:
-                server_id = getattr(selection, "name", None)
+                server_id = getattr(selection, "id", None)
                 origin = getattr(selection, "origin", None)
                 if not server_id or origin not in {"config", "catalog"}:
                     continue

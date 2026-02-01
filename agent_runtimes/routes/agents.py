@@ -157,15 +157,15 @@ def _build_codemode_toolset(
     logger.info(f"Building codemode registry from {len(servers)} available servers")
     
     if request.selected_mcp_servers:
-        # Extract server names from McpServerSelection objects
-        selected_names = {
-            s.name if hasattr(s, 'name') else s
+        # Extract server IDs from McpServerSelection objects
+        selected_ids = {
+            s.id if hasattr(s, 'id') else s
             for s in request.selected_mcp_servers
         }
         servers = [
-            server for server in servers if server.id in selected_names
+            server for server in servers if server.id in selected_ids
         ]
-        logger.info(f"Filtered to {len(servers)} selected servers: {selected_names}")
+        logger.info(f"Filtered to {len(servers)} selected servers: {selected_ids}")
 
     servers_added = []
     for server in servers:
@@ -247,13 +247,27 @@ def _build_codemode_toolset(
     )
 
 
+# Type alias for MCP server identifier
+McpId = str
+
+# Type alias for MCP server origin
+McpOrigin = Literal["config", "catalog"]
+
+
 class McpServerSelection(BaseModel):
-    """Selection of an MCP server with its origin."""
-    name: str = Field(..., description="The server name/ID")
-    origin: Literal["config", "catalog"] = Field(
+    """Selection of an MCP server with its origin.
+    
+    Attributes:
+        id: Unique identifier of the MCP server (McpId)
+        origin: Origin of the server - 'config' (from mcp.json) or 'catalog' (built-in)
+    """
+    id: McpId = Field(..., description="The server identifier", alias="id")
+    origin: McpOrigin = Field(
         default="config", 
         description="Origin of the server (config from mcp.json, catalog from built-in)"
     )
+    
+    model_config = {"populate_by_name": True}
 
 
 class CreateAgentRequest(BaseModel):
@@ -360,7 +374,7 @@ async def create_agent(request: CreateAgentRequest, http_request: Request) -> Cr
             lifecycle_manager = get_mcp_lifecycle_manager()
             
             for item in selected_mcp_servers:
-                server_id = item.name
+                server_id = item.id
                 is_config = item.origin == "config"
                 if not server_id: continue
                     
@@ -830,7 +844,7 @@ async def update_agent_mcp_servers(
             lifecycle_manager = get_mcp_lifecycle_manager()
 
             for item in request.selected_mcp_servers:
-                server_id = item.name
+                server_id = item.id
                 is_config = item.origin == "config"
                 if not server_id: continue
                 

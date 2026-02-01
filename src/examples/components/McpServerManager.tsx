@@ -218,11 +218,11 @@ export function McpServerManager({
 
     all.forEach(server => {
       const isConfigSelected = selectedServers.some(
-        s => s.name === server.id && s.origin === 'config',
+        s => s.id === server.id && s.origin === 'config',
       );
 
       const isCatalogSelected = selectedServers.some(
-        s => s.name === server.id && s.origin === 'catalog',
+        s => s.id === server.id && s.origin === 'catalog',
       );
 
       if (server.isConfig) {
@@ -272,12 +272,12 @@ export function McpServerManager({
           // After enabling, automatically add to selected servers
           // Since we are enabling from catalog, origin is catalog
           const selection: McpServerSelection = {
-            name: serverName,
+            id: serverName,
             origin: 'catalog',
           };
 
           const exists = selectedServers?.some(
-            s => s.name === serverName && s.origin === 'catalog',
+            s => s.id === serverName && s.origin === 'catalog',
           );
 
           if (!exists) {
@@ -307,7 +307,7 @@ export function McpServerManager({
       // Also remove from selected servers so the Chat tools menu updates
       if (selectedServers) {
         const newServers = selectedServers.filter(
-          s => !(s.name === serverName && s.origin === 'catalog'),
+          s => !(s.id === serverName && s.origin === 'catalog'),
         );
 
         // Only update if changed
@@ -335,7 +335,7 @@ export function McpServerManager({
       if (selectedServers) {
         const origin = isConfig ? 'config' : 'catalog';
         const newServers = selectedServers.filter(
-          s => !(s.name === serverName && s.origin === origin),
+          s => !(s.id === serverName && s.origin === origin),
         );
 
         // Only update if changed
@@ -367,7 +367,7 @@ export function McpServerManager({
     (server: MCPServer, selected: boolean) => {
       // Determine origin
       const origin = server.isConfig ? 'config' : 'catalog';
-      const selectionItem: McpServerSelection = { name: server.id, origin };
+      const selectionItem: McpServerSelection = { id: server.id, origin };
 
       let newSelection: McpServerSelection[];
 
@@ -375,7 +375,7 @@ export function McpServerManager({
         newSelection = [...(selectedServers || []), selectionItem];
       } else {
         newSelection = (selectedServers || []).filter(
-          s => !(s.name === server.id && s.origin === origin),
+          s => !(s.id === server.id && s.origin === origin),
         );
       }
       onSelectedServersChange?.(newSelection);

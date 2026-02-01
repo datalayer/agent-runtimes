@@ -18,13 +18,23 @@ import type {
 } from './tool';
 
 /**
- * MCP Server selection
+ * Type alias for MCP server identifier
+ */
+export type McpId = string;
+
+/**
+ * Type alias for MCP server origin
+ */
+export type McpOrigin = 'config' | 'catalog';
+
+/**
+ * MCP Server selection - identifies a specific MCP server by ID and origin
  */
 export interface McpServerSelection {
-  /** Name of the server */
-  name: string;
-  /** Origin of the server (config or catalog) */
-  origin: 'config' | 'catalog';
+  /** Unique identifier of the MCP server */
+  id: McpId;
+  /** Origin of the server (config from mcp.json, catalog from built-in) */
+  origin: McpOrigin;
 }
 
 /**

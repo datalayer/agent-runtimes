@@ -657,10 +657,10 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
 
   const selectedConfigServers = selectedMcpServers
     .filter(s => s.origin === 'config')
-    .map(s => s.name);
+    .map(s => s.id);
   const selectedCatalogServers = selectedMcpServers
     .filter(s => s.origin === 'catalog')
-    .map(s => s.name);
+    .map(s => s.id);
 
   // Preview servers combines both config and catalog selections
   const previewConfigServers = selectedConfigServers.length
@@ -678,18 +678,18 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
     if (checked) {
       if (
         !selectedMcpServers.some(
-          s => s.name === serverId && s.origin === 'config',
+          s => s.id === serverId && s.origin === 'config',
         )
       ) {
         onSelectedMcpServersChange([
           ...selectedMcpServers,
-          { name: serverId, origin: 'config' },
+          { id: serverId, origin: 'config' },
         ]);
       }
     } else {
       onSelectedMcpServersChange(
         selectedMcpServers.filter(
-          s => !(s.name === serverId && s.origin === 'config'),
+          s => !(s.id === serverId && s.origin === 'config'),
         ),
       );
     }
@@ -715,18 +715,18 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
       }
       if (
         !selectedMcpServers.some(
-          s => s.name === serverId && s.origin === 'catalog',
+          s => s.id === serverId && s.origin === 'catalog',
         )
       ) {
         onSelectedMcpServersChange([
           ...selectedMcpServers,
-          { name: serverId, origin: 'catalog' },
+          { id: serverId, origin: 'catalog' },
         ]);
       }
     } else {
       onSelectedMcpServersChange(
         selectedMcpServers.filter(
-          s => !(s.name === serverId && s.origin === 'catalog'),
+          s => !(s.id === serverId && s.origin === 'catalog'),
         ),
       );
     }

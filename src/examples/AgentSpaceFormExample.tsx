@@ -399,7 +399,7 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
         const servers = data?.mcpServers || [];
         const available = servers.filter((s: any) => s.isAvailable);
         if (available.length > 0) {
-          setSelectedMcpServers([{ name: available[0].id, origin: 'config' }]);
+          setSelectedMcpServers([{ id: available[0].id, origin: 'config' }]);
           autoSelectRef.current = true;
         }
       } catch {

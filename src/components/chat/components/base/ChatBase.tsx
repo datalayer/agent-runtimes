@@ -1095,7 +1095,7 @@ function ChatBaseInner({
     (server: { id: string; isConfig?: boolean }) => {
       if (!mcpServers) return true;
       const origin = server.isConfig === false ? 'catalog' : 'config';
-      return mcpServers.some(s => s.name === server.id && s.origin === origin);
+      return mcpServers.some(s => s.id === server.id && s.origin === origin);
     },
     [mcpServers],
   );
@@ -1327,7 +1327,7 @@ function ChatBaseInner({
     const toolNames: string[] = [];
     enabledMcpTools.forEach((tools, serverId) => {
       // Filter by mcpServers if provided
-      if (!mcpServers || mcpServers.some(s => s.name === serverId)) {
+      if (!mcpServers || mcpServers.some(s => s.id === serverId)) {
         tools.forEach(toolName => toolNames.push(toolName));
       }
     });

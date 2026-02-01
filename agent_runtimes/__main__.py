@@ -120,10 +120,10 @@ Examples:
         print("\nAvailable Agent Specs:")
         print("-" * 60)
         for agent_id, agent in AGENT_LIBRARY.items():
-            mcp_names = [s.name for s in agent.mcp_servers]
+            mcp_ids = [s.id for s in agent.mcp_servers]
             print(f"  {agent_id:<25} - {agent.name}")
             print(f"    {agent.description[:55]}...")
-            print(f"    MCP Servers: {', '.join(mcp_names)}")
+            print(f"    MCP Servers: {', '.join(mcp_ids)}")
             print()
         sys.exit(0)
 
