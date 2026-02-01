@@ -10,7 +10,9 @@ from unittest.mock import MagicMock, patch
 import pytest
 from typer.testing import CliRunner
 
-from agent_runtimes.__main__ import app, LogLevel, OutputFormat, parse_skills, parse_mcp_servers
+from agent_runtimes.__main__ import app
+from agent_runtimes.commands.serve import LogLevel, parse_skills, parse_mcp_servers
+from agent_runtimes.commands.list_agents import OutputFormat
 
 
 runner = CliRunner()

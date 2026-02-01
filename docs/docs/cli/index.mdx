@@ -14,17 +14,68 @@ The CLI is automatically available when you install the package:
 pip install agent-runtimes
 ```
 
-## Basic Usage
+## Commands Overview
+
+The CLI provides three main commands:
+
+| Command | Description |
+|---------|-------------|
+| `serve` | Start the agent-runtimes server |
+| `list-agents` | Query running agents from a server |
+| `list-specs` | List available agent specs from the library |
 
 ```bash
-# Start the server with default settings (localhost:8000)
-agent-runtimes
+# Show available commands
+agent-runtimes --help
 
 # Or using the Python module directly
-python -m agent_runtimes
+python -m agent_runtimes --help
 ```
 
-## Options
+## Programmatic Usage
+
+The CLI commands can also be used as a library by other Python packages:
+
+```python
+from agent_runtimes.commands import (
+    # Serve command
+    serve_server,
+    ServeError,
+    LogLevel,
+    
+    # List agents command
+    list_agents_from_server,
+    ListAgentsError,
+    
+    # List specs command
+    list_agent_specs,
+    get_agent_specs,
+    
+    # Common
+    OutputFormat,
+)
+
+# Start server programmatically
+serve_server(host="0.0.0.0", port=8080)
+
+# Query running agents
+result = list_agents_from_server(host="localhost", port=8000)
+
+# Get available agent specs
+specs = get_agent_specs()
+```
+
+---
+
+## `serve` Command
+
+Start the agent-runtimes server.
+
+```bash
+agent-runtimes serve [OPTIONS]
+```
+
+### Options
 
 | Option | Short | Default | Environment Variable | Description |
 |--------|-------|---------|---------------------|-------------|
@@ -40,35 +91,34 @@ python -m agent_runtimes
 | `--mcp-servers` | `-m` | - | `AGENT_RUNTIMES_MCP_SERVERS` | Comma-separated list of MCP server IDs from the catalog to start |
 | `--codemode` | `-c` | `false` | `AGENT_RUNTIMES_CODEMODE` | Enable Code Mode: MCP servers become programmatic tools via CodemodeToolset |
 | `--skills` | `-s` | - | `AGENT_RUNTIMES_SKILLS` | Comma-separated list of skills to enable (requires `--codemode`) |
-| `--list-agents` | - | - | - | List available agent specs and exit |
-| `--help` | - | - | - | Show help message and exit |
 
-## Examples
-
-### Start with Custom Host and Port
+### Basic Examples
 
 ```bash
+# Start with defaults (localhost:8000)
+agent-runtimes serve
+
 # Start on all interfaces
-agent-runtimes --host 0.0.0.0
+agent-runtimes serve --host 0.0.0.0
 
 # Start on a custom port
-agent-runtimes --port 8080
+agent-runtimes serve --port 8080
 
 # Combine both
-agent-runtimes -h 0.0.0.0 -p 8080
+agent-runtimes serve -h 0.0.0.0 -p 8080
 ```
 
 ### Development Mode
 
 ```bash
 # Enable auto-reload for development
-agent-runtimes --reload
+agent-runtimes serve --reload
 
 # Enable debug logging
-agent-runtimes --debug
+agent-runtimes serve --debug
 
 # Both with short options
-agent-runtimes -r -d
+agent-runtimes serve -r -d
 ```
 
 ### Start with an Agent Spec
@@ -76,17 +126,14 @@ agent-runtimes -r -d
 Agent specs are predefined agent configurations that include MCP servers and other settings:
 
 ```bash
-# List available agent specs
-agent-runtimes --list-agents
-
 # Start with a specific agent
-agent-runtimes --agent-id data-acquisition
+agent-runtimes serve --agent-id data-acquisition
 
 # Start with a custom agent name
-agent-runtimes --agent-id crawler --agent-name my-crawler
+agent-runtimes serve --agent-id crawler --agent-name my-crawler
 
 # Using short options
-agent-runtimes -a crawler -n my-crawler
+agent-runtimes serve -a crawler -n my-crawler
 ```
 
 ### MCP Server Control
@@ -95,29 +142,20 @@ By default, the server automatically starts:
 - **Config MCP servers** from `~/.datalayer/mcp.json`
 - **Agent spec MCP servers** when using `--agent-id`
 
-You can also specify MCP servers explicitly from the catalog:
+You can control which MCP servers are started:
 
 ```bash
 # Start with specific MCP servers from the catalog
-agent-runtimes --mcp-servers tavily,github
+agent-runtimes serve --mcp-servers tavily,github
 
 # Combine with an agent spec (agent spec servers + additional servers)
-agent-runtimes --agent-id crawler --mcp-servers filesystem
+agent-runtimes serve --agent-id crawler --mcp-servers filesystem
 
-# Using short option
-agent-runtimes -m tavily,github,filesystem
-```
-
-```bash
-# Start with agent and its MCP servers
-agent-runtimes --agent-id crawler
-# This starts config servers + 'tavily' and 'github' from the agent spec
-
-# Start WITHOUT config MCP servers (agent spec servers still start)
-agent-runtimes --no-config-mcp-servers
+# Start WITHOUT config MCP servers (from ~/.datalayer/mcp.json)
+agent-runtimes serve --no-config-mcp-servers
 
 # Start with agent but without config MCP servers
-agent-runtimes --agent-id crawler --no-config-mcp-servers
+agent-runtimes serve --agent-id crawler --no-config-mcp-servers
 ```
 
 :::tip Managing MCP Servers at Runtime
@@ -140,19 +178,19 @@ Code Mode transforms MCP servers into programmatic tools that can be composed th
 
 ```bash
 # Start with Code Mode enabled (uses config MCP servers)
-agent-runtimes --codemode
+agent-runtimes serve --codemode
 
 # Start with Code Mode and specific MCP servers
-agent-runtimes --codemode --mcp-servers tavily,github
+agent-runtimes serve --codemode --mcp-servers tavily,github
 
 # Start with Code Mode and an agent spec
-agent-runtimes --agent-id crawler --codemode
+agent-runtimes serve --agent-id crawler --codemode
 
 # Start with Code Mode and skills
-agent-runtimes --agent-id crawler --codemode --skills web_search,github_lookup
+agent-runtimes serve --agent-id crawler --codemode --skills web_search,github_lookup
 
 # Using short options
-agent-runtimes -a crawler -c -s web_search,github_lookup
+agent-runtimes serve -a crawler -c -s web_search,github_lookup
 ```
 
 :::info How Code Mode Works
@@ -175,92 +213,156 @@ This allows the agent to compose multiple tool calls within a single code execut
 | Tool discovery | Via MCP protocol | Via generated Python bindings |
 | Execution context | Isolated per tool | Shared sandbox context |
 
-#### When to Use Code Mode
-
-**Use Code Mode when:**
-- You need to compose multiple tool calls efficiently
-- Your workflow benefits from shared state between tool invocations
-- You want to use skills for reusable agent capabilities
-- You need fine-grained control over tool execution order
-
-**Use Standard Mode when:**
-- Simple, single-tool interactions are sufficient
-- You want direct MCP protocol compatibility
-- Minimal latency per tool call is critical
-
 ### Skills
 
 Skills are reusable agent capabilities that extend Code Mode functionality. They provide pre-built workflows that combine multiple tools.
 
 ```bash
 # Start with a single skill
-agent-runtimes --codemode --skills web_search
+agent-runtimes serve --codemode --skills web_search
 
 # Start with multiple skills (comma-separated)
-agent-runtimes --codemode --skills web_search,github_lookup,file_operations
+agent-runtimes serve --codemode --skills web_search,github_lookup,file_operations
 
 # Combine with an agent spec
-agent-runtimes --agent-id crawler --codemode --skills web_search,data_analysis
-
-# Using short options
-agent-runtimes -c -s web_search,github_lookup
+agent-runtimes serve --agent-id crawler --codemode --skills web_search,data_analysis
 ```
 
 :::note Skills Require Code Mode
 The `--skills` option requires `--codemode` to be enabled. Skills are implemented as code-based workflows that run within the Code Mode sandbox.
 :::
 
-#### Example: Web Research Workflow
-
-```bash
-# Start the crawler agent with Code Mode and research skills
-agent-runtimes --agent-id crawler --codemode --skills web_search,summarization
-
-# The agent can now:
-# 1. Search the web using the tavily MCP server
-# 2. Fetch content from URLs
-# 3. Summarize findings using the summarization skill
-# All composed within a single code execution
-```
-
-#### Example: Data Pipeline
-
-```bash
-# Start the data acquisition agent with Code Mode and data skills
-agent-runtimes --agent-id data-acquisition --codemode --skills data_download,data_transform
-
-# The agent can now:
-# 1. Download datasets from Kaggle
-# 2. Transform data using pandas-based skills
-# 3. Save results to the filesystem
-# All with shared context and state
-```
-
 ### Production Settings
 
 ```bash
 # Multiple workers (not compatible with --reload)
-agent-runtimes --workers 4
+agent-runtimes serve --workers 4
 
 # Custom log level
-agent-runtimes --log-level warning
+agent-runtimes serve --log-level warning
 
 # Production setup
-agent-runtimes -h 0.0.0.0 -p 8000 -w 4 -l warning
+agent-runtimes serve -h 0.0.0.0 -p 8000 -w 4 -l warning
 ```
 
-## Available Agent Specs
+---
 
-Use `--list-agents` to see all available agent specifications:
+## `list-agents` Command
+
+Query running agents from an agent-runtimes server.
 
 ```bash
-$ agent-runtimes --list-agents
+agent-runtimes list-agents [OPTIONS]
+```
 
+### Options
+
+| Option | Short | Default | Environment Variable | Description |
+|--------|-------|---------|---------------------|-------------|
+| `--host` | `-h` | `127.0.0.1` | `AGENT_RUNTIMES_HOST` | Server host to query |
+| `--port` | `-p` | `8000` | `AGENT_RUNTIMES_PORT` | Server port to query |
+| `--output` | `-o` | `table` | - | Output format (`table` or `json`) |
+
+### Examples
+
+```bash
+# List agents on default server (localhost:8000)
+agent-runtimes list-agents
+
+# List agents on a specific server
+agent-runtimes list-agents --host 0.0.0.0 --port 8080
+
+# Output as JSON
+agent-runtimes list-agents --output json
+
+# Using short options
+agent-runtimes list-agents -h 0.0.0.0 -p 8080 -o json
+
+# Using environment variables
+AGENT_RUNTIMES_HOST=0.0.0.0 AGENT_RUNTIMES_PORT=8080 agent-runtimes list-agents
+```
+
+### Output Formats
+
+**Table format (default):**
+```
+Running Agents on localhost:8000
+--------------------------------------------------------------------------------
+ID                        Name                      Status    
+--------------------------------------------------------------------------------
+crawler                   my-crawler                running   
+data-acquisition          default                   running   
+--------------------------------------------------------------------------------
+Total: 2 agent(s)
+```
+
+**JSON format:**
+```json
+{
+  "agents": [
+    {
+      "id": "crawler",
+      "name": "my-crawler",
+      "status": "running",
+      "description": "Web crawling and research agent",
+      "capabilities": ["web_search", "content_extraction"]
+    }
+  ]
+}
+```
+
+### Programmatic Usage
+
+```python
+from agent_runtimes.commands import list_agents_from_server, ListAgentsError
+
+try:
+    # Get agents as dictionary (no output printed)
+    result = list_agents_from_server(host="localhost", port=8000)
+    for agent in result["agents"]:
+        print(f"Agent: {agent['id']} - {agent['status']}")
+except ListAgentsError as e:
+    print(f"Error: {e}")
+```
+
+---
+
+## `list-specs` Command
+
+List available agent specs from the library. Agent specs are predefined agent configurations that can be used with `--agent-id` when starting the server.
+
+```bash
+agent-runtimes list-specs [OPTIONS]
+```
+
+### Options
+
+| Option | Short | Default | Description |
+|--------|-------|---------|-------------|
+| `--output` | `-o` | `table` | Output format (`table` or `json`) |
+
+### Examples
+
+```bash
+# List available agent specs
+agent-runtimes list-specs
+
+# Output as JSON
+agent-runtimes list-specs --output json
+
+# Using short option
+agent-runtimes list-specs -o json
+```
+
+### Output Formats
+
+**Table format (default):**
+```
 Available Agent Specs:
-------------------------------------------------------------
+--------------------------------------------------------------------------------
   data-acquisition          - Data Acquisition Agent
     Acquires and manages data from various sources includin...
-    MCP Servers: kaggle, filesystem
+    MCP Servers: kaggle, github, filesystem
 
   crawler                   - Crawler Agent
     Web crawling and research agent that searches the web a...
@@ -277,7 +379,45 @@ Available Agent Specs:
   information-routing       - Information Routing Agent
     Routes information between Google Drive and Slack, mana...
     MCP Servers: gdrive, slack
+
+Total: 5 agent spec(s)
 ```
+
+**JSON format:**
+```json
+[
+  {
+    "id": "data-acquisition",
+    "name": "Data Acquisition Agent",
+    "description": "Acquires and manages data from various sources including Kaggle datasets and GitHub repositories.",
+    "mcp_servers": ["kaggle", "github", "filesystem"]
+  },
+  {
+    "id": "crawler",
+    "name": "Crawler Agent",
+    "description": "Web crawling and research agent that searches the web and analyzes content.",
+    "mcp_servers": ["tavily", "github"]
+  }
+]
+```
+
+### Programmatic Usage
+
+```python
+from agent_runtimes.commands import get_agent_specs, list_agent_specs
+
+# Get specs as list of dictionaries (no output printed)
+specs = get_agent_specs()
+for spec in specs:
+    print(f"{spec['id']}: {spec['name']}")
+    print(f"  MCP Servers: {', '.join(spec['mcp_servers'])}")
+
+# Or print formatted output
+from agent_runtimes.commands import OutputFormat
+list_agent_specs(output=OutputFormat.table)
+```
+
+---
 
 ## Environment Variables
 
@@ -289,29 +429,29 @@ All CLI options can be configured via environment variables. These variables ser
 # Configure host and port via environment variables
 export AGENT_RUNTIMES_HOST=0.0.0.0
 export AGENT_RUNTIMES_PORT=8080
-agent-runtimes  # Uses 0.0.0.0:8080
+agent-runtimes serve  # Uses 0.0.0.0:8080
 
 # CLI arguments override env vars
-agent-runtimes --port 9000  # Uses 0.0.0.0:9000
+agent-runtimes serve --port 9000  # Uses 0.0.0.0:9000
 
 # Configure agent via environment variable
 export AGENT_RUNTIMES_DEFAULT_AGENT=crawler
-agent-runtimes  # Starts with crawler agent
+agent-runtimes serve  # Starts with crawler agent
 
 # Configure multiple settings at once
 export AGENT_RUNTIMES_HOST=0.0.0.0
 export AGENT_RUNTIMES_PORT=8080
 export AGENT_RUNTIMES_WORKERS=4
 export AGENT_RUNTIMES_LOG_LEVEL=warning
-agent-runtimes  # Production-ready configuration
+agent-runtimes serve  # Production-ready configuration
 ```
 
 ### Environment Variable Reference
 
 | Variable | CLI Option | Description |
 |----------|------------|-------------|
-| `AGENT_RUNTIMES_HOST` | `--host` | Host to bind to |
-| `AGENT_RUNTIMES_PORT` | `--port` | Port to bind to |
+| `AGENT_RUNTIMES_HOST` | `--host` | Host to bind to / query |
+| `AGENT_RUNTIMES_PORT` | `--port` | Port to bind to / query |
 | `AGENT_RUNTIMES_RELOAD` | `--reload` | Enable auto-reload (`true`/`false`) |
 | `AGENT_RUNTIMES_DEBUG` | `--debug` | Enable debug mode (`true`/`false`) |
 | `AGENT_RUNTIMES_WORKERS` | `--workers` | Number of worker processes |
@@ -330,7 +470,7 @@ Environment variables are particularly useful for containerized deployments wher
 ENV AGENT_RUNTIMES_HOST=0.0.0.0
 ENV AGENT_RUNTIMES_PORT=8000
 ENV AGENT_RUNTIMES_WORKERS=4
-CMD ["agent-runtimes"]
+CMD ["agent-runtimes", "serve"]
 ```
 
 ```yaml
@@ -345,6 +485,8 @@ data:
   AGENT_RUNTIMES_DEFAULT_AGENT: "crawler"
 ```
 :::
+
+---
 
 ## API Documentation
 

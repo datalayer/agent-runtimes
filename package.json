@@ -52,8 +52,6 @@
     "access": "public"
   },
   "scripts": {
-    "agent:list": "agent-runtimes list-agents --host 0.0.0.0 --port 8765",
-    "agent:serve": "agent-runtimes serve --agent-id=data-acquisition --agent-name=dla-1 --mcp-servers tavily --codemode --skills github,pdf --no-config-mcp-servers --host 0.0.0.0 --port 8765 --debug",
     "apply:patches": "bash scripts/apply-patches.sh",
     "build": "npm run clean && gulp resources-to-lib && tsc -b && vite build",
     "build-storybook": "storybook build",

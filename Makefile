@@ -79,7 +79,21 @@ agent-serve:
 	AWS_ACCESS_KEY_ID=${DATALAYER_BEDROCK_AWS_ACCESS_KEY_ID} \
 	AWS_SECRET_ACCESS_KEY=${DATALAYER_BEDROCK_AWS_SECRET_ACCESS_KEY} \
 	AWS_DEFAULT_REGION=${DATALAYER_BEDROCK_AWS_DEFAULT_REGION} \
-	  npm run agent:serve
+	agent-runtimes serve \
+	  --agent-id data-acquisition \
+	  --agent-name dla-1 \
+	  --mcp-servers tavily \
+	  --codemode \
+	  --skills github,pdf \
+	  --no-config-mcp-servers \
+	  --host 0.0.0.0 \
+	  --port 8765 \
+	  --debug
 
-agent-list:
-	npm run agent:list
+list-agents:
+	agent-runtimes list-agents \
+	  --host 0.0.0.0 \
+	  --port 8765
+
+list-specs:
+	agent-runtimes list-specs
