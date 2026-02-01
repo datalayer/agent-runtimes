@@ -82,6 +82,7 @@ agent-serve:
 	agent-runtimes serve \
 	  --agent-id data-acquisition \
 	  --agent-name dla-1 \
+	  --protocol ag-ui \
 	  --mcp-servers tavily \
 	  --codemode \
 	  --skills github,pdf \

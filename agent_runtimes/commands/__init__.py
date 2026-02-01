@@ -43,6 +43,7 @@ Usage as library:
 
 from agent_runtimes.commands.serve import (
     LogLevel,
+    Protocol,
     ServeError,
     parse_mcp_servers,
     parse_skills,
@@ -63,6 +64,7 @@ __all__ = [
     "serve_server",
     "ServeError",
     "LogLevel",
+    "Protocol",
     "parse_mcp_servers",
     "parse_skills",
     # List agents command

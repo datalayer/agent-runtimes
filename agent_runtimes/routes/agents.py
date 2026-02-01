@@ -711,6 +711,7 @@ async def list_agents() -> AgentListResponse:
             "name": info.name,
             "description": info.description,
             "status": "running",
+            "protocol": getattr(info, "protocol", "ag-ui"),
             "capabilities": info.capabilities.model_dump() if info.capabilities else {},
         })
     

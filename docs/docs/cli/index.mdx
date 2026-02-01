@@ -87,6 +87,7 @@ agent-runtimes serve [OPTIONS]
 | `--log-level` | `-l` | `info` | `AGENT_RUNTIMES_LOG_LEVEL` | Log level (`debug`, `info`, `warning`, `error`, `critical`) |
 | `--agent-id` | `-a` | - | `AGENT_RUNTIMES_DEFAULT_AGENT` | Agent spec ID from the library to start |
 | `--agent-name` | `-n` | `default` | `AGENT_RUNTIMES_AGENT_NAME` | Custom name for the agent (requires `--agent-id`) |
+| `--protocol` | `-t` | `ag-ui` | `AGENT_RUNTIMES_PROTOCOL` | Transport protocol (`ag-ui`, `vercel-ai`, `vercel-ai-jupyter`, `a2a`) |
 | `--no-config-mcp-servers` | - | `false` | `AGENT_RUNTIMES_NO_CONFIG_MCP_SERVERS` | Skip starting config MCP servers from `~/.datalayer/mcp.json` |
 | `--mcp-servers` | `-m` | - | `AGENT_RUNTIMES_MCP_SERVERS` | Comma-separated list of MCP server IDs from the catalog to start |
 | `--codemode` | `-c` | `false` | `AGENT_RUNTIMES_CODEMODE` | Enable Code Mode: MCP servers become programmatic tools via CodemodeToolset |
@@ -232,6 +233,33 @@ agent-runtimes serve --agent-id crawler --codemode --skills web_search,data_anal
 The `--skills` option requires `--codemode` to be enabled. Skills are implemented as code-based workflows that run within the Code Mode sandbox.
 :::
 
+### Transport Protocols
+
+Choose the transport protocol used for agent communication with `--protocol`:
+
+```bash
+# Default: AG-UI protocol (CopilotKit compatible)
+agent-runtimes serve --agent-id crawler --protocol ag-ui
+
+# Vercel AI SDK protocol
+agent-runtimes serve --agent-id crawler --protocol vercel-ai
+
+# Vercel AI Jupyter protocol (for notebook integration)
+agent-runtimes serve --agent-id data-acquisition --protocol vercel-ai-jupyter
+
+# A2A (Agent-to-Agent) protocol
+agent-runtimes serve --agent-id crawler --protocol a2a
+```
+
+#### Available Protocols
+
+| Protocol | Description |
+|----------|-------------|
+| `ag-ui` | CopilotKit-compatible AG-UI protocol (default) |
+| `vercel-ai` | Vercel AI SDK protocol for streaming responses |
+| `vercel-ai-jupyter` | Vercel AI with Jupyter notebook execution support |
+| `a2a` | Agent-to-Agent protocol for multi-agent communication |
+
 ### Production Settings
 
 ```bash
@@ -285,16 +313,24 @@ AGENT_RUNTIMES_HOST=0.0.0.0 AGENT_RUNTIMES_PORT=8080 agent-runtimes list-agents
 ### Output Formats
 
 **Table format (default):**
+
+The table output uses rich formatting with color-coded status indicators:
+
 ```
-Running Agents on localhost:8000
---------------------------------------------------------------------------------
-ID                        Name                      Status    
---------------------------------------------------------------------------------
-crawler                   my-crawler                running   
-data-acquisition          default                   running   
---------------------------------------------------------------------------------
+🚀 Running Agents on localhost:8000
+╭──────────────────┬────────────────────────┬──────────┬───────────┬─────────────────────────────────╮
+│ ID               │ Name                   │ Protocol │  Status   │ Description                     │
+├──────────────────┼────────────────────────┼──────────┼───────────┼─────────────────────────────────┤
+│ crawler          │ my-crawler             │ ag-ui    │ ● running │ Web crawling and research ag... │
+│ data-acquisition │ default                │ vercel-ai│ ● running │ Acquires and manages data fr... │
+╰──────────────────┴────────────────────────┴──────────┴───────────┴─────────────────────────────────╯
 Total: 2 agent(s)
 ```
+
+- **Status indicators**: `● running` (green) or `○ stopped` (red)
+- **ID column**: Green text for easy identification
+- **Protocol column**: Magenta text showing the transport protocol
+- **Description**: Truncated with ellipsis if too long
 
 **JSON format:**
 ```json
@@ -357,31 +393,27 @@ agent-runtimes list-specs -o json
 ### Output Formats
 
 **Table format (default):**
+
+The table output uses rich formatting with styled columns:
+
 ```
-Available Agent Specs:
---------------------------------------------------------------------------------
-  data-acquisition          - Data Acquisition Agent
-    Acquires and manages data from various sources includin...
-    MCP Servers: kaggle, github, filesystem
-
-  crawler                   - Crawler Agent
-    Web crawling and research agent that searches the web a...
-    MCP Servers: tavily, github
-
-  github-agent              - GitHub Agent
-    Manages GitHub repositories, issues, and pull requests ...
-    MCP Servers: github, gmail
-
-  financial-viz             - Financial Visualization Agent
-    Analyzes financial market data and creates visualizatio...
-    MCP Servers: alphavantage, chart
-
-  information-routing       - Information Routing Agent
-    Routes information between Google Drive and Slack, mana...
-    MCP Servers: gdrive, slack
-
+🤖 Available Agent Specs
+╭───────────────────────┬────────────────────────────────┬─────────────────────────────────┬──────────────────────────────╮
+│ ID                    │ Name                           │ Description                     │ MCP Servers                  │
+├───────────────────────┼────────────────────────────────┼─────────────────────────────────┼──────────────────────────────┤
+│ data-acquisition      │ Data Acquisition Agent         │ Acquires and manages data fr... │ kaggle, github, filesystem   │
+│ crawler               │ Crawler Agent                  │ Web crawling and research ag... │ tavily, github               │
+│ github-agent          │ GitHub Agent                   │ Manages GitHub repositories,... │ github, gmail                │
+│ financial-viz         │ Financial Visualization Agent  │ Analyzes financial market da... │ alphavantage, chart          │
+│ information-routing   │ Information Routing Agent      │ Routes information between G... │ gdrive, slack                │
+╰───────────────────────┴────────────────────────────────┴─────────────────────────────────┴──────────────────────────────╯
 Total: 5 agent spec(s)
 ```
+
+- **ID column**: Green text for easy identification
+- **Name column**: Bold white text
+- **Description column**: Dim text, truncated with ellipsis if too long
+- **MCP Servers column**: Yellow text showing comma-separated server IDs
 
 **JSON format:**
 ```json

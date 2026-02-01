@@ -35,6 +35,15 @@ class LogLevel(str, Enum):
     critical = "critical"
 
 
+class Protocol(str, Enum):
+    """Transport protocol options."""
+
+    ag_ui = "ag-ui"
+    vercel_ai = "vercel-ai"
+    vercel_ai_jupyter = "vercel-ai-jupyter"
+    a2a = "a2a"
+
+
 def parse_skills(value: Optional[str]) -> list[str]:
     """Parse comma-separated skills string into a list."""
     if not value:
@@ -67,6 +76,7 @@ def serve_server(
     mcp_servers: Optional[str] = None,
     codemode: bool = False,
     skills: Optional[str] = None,
+    protocol: Protocol = Protocol.ag_ui,
 ) -> None:
     """
     Start the agent-runtimes server.
@@ -86,6 +96,7 @@ def serve_server(
         mcp_servers: Comma-separated list of MCP server IDs from the catalog to start
         codemode: Enable Code Mode (MCP servers become programmatic tools)
         skills: Comma-separated list of skills to enable (requires codemode)
+        protocol: Transport protocol to use (ag-ui, vercel-ai, vercel-ai-jupyter, a2a)
         
     Raises:
         ServeError: If validation fails or server cannot start
@@ -140,6 +151,10 @@ def serve_server(
             skills_list = parse_skills(skills)
             os.environ["AGENT_RUNTIMES_SKILLS"] = ",".join(skills_list)
             logger.info(f"Skills enabled: {skills_list}")
+
+    # Set protocol
+    os.environ["AGENT_RUNTIMES_PROTOCOL"] = protocol.value
+    logger.info(f"Protocol: {protocol.value}")
 
     # Set log level
     effective_log_level = log_level.value.upper()

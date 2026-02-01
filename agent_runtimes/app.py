@@ -87,6 +87,7 @@ async def _create_and_register_cli_agent(
     skills: list[str],
     all_mcp_servers: list[Any],
     api_prefix: str,
+    protocol: str = "ag-ui",
 ) -> None:
     """
     Create and register an agent from CLI options.
@@ -102,6 +103,7 @@ async def _create_and_register_cli_agent(
         skills: List of skill names to enable (--skills flag)
         all_mcp_servers: All MCP servers (agent spec + CLI servers)
         api_prefix: API prefix for routes
+        protocol: Transport protocol (ag-ui, vercel-ai, vercel-ai-jupyter, a2a)
     """
     from pathlib import Path
     from pydantic_ai import Agent as PydanticAgent
@@ -299,7 +301,7 @@ async def _create_and_register_cli_agent(
         codemode_builder=codemode_builder,
     )
     
-    # Create agent info
+    # Create agent info with protocol
     info = AgentInfo(
         id=agent_id,
         name=agent_spec.name,
@@ -309,28 +311,65 @@ async def _create_and_register_cli_agent(
             tool_calling=True,
             code_execution=enable_codemode,
         ),
+        protocol=protocol,
     )
     
     # Register with ACP (base registration)
     register_agent(agent, info)
-    logger.info(f"Registered CLI agent '{agent_id}' with ACP")
+    logger.info(f"Registered CLI agent '{agent_id}' with ACP (protocol: {protocol})")
     
-    # Register with AG-UI
-    try:
-        agui_adapter = AGUITransport(agent, agent_id=agent_id)
-        register_agui_agent(agent_id, agui_adapter)
-        logger.info(f"Registered agent with AG-UI: {agent_id}")
-        
-        # Dynamically mount AG-UI route
-        agui_app = get_agui_app(agent_id)
-        if agui_app and app:
-            mount_path = f"{api_prefix}/ag-ui/{agent_id}"
-            app.mount(mount_path, agui_app, name=f"agui-{agent_id}")
-            logger.info(f"Dynamically mounted AG-UI route: {mount_path}/")
-    except Exception as e:
-        logger.warning(f"Could not register with AG-UI: {e}")
+    # Register with the selected protocol transport
+    if protocol == "ag-ui":
+        # Register with AG-UI
+        try:
+            agui_adapter = AGUITransport(agent, agent_id=agent_id)
+            register_agui_agent(agent_id, agui_adapter)
+            logger.info(f"Registered agent with AG-UI: {agent_id}")
+            
+            # Dynamically mount AG-UI route
+            agui_app = get_agui_app(agent_id)
+            if agui_app and app:
+                mount_path = f"{api_prefix}/ag-ui/{agent_id}"
+                app.mount(mount_path, agui_app, name=f"agui-{agent_id}")
+                logger.info(f"Dynamically mounted AG-UI route: {mount_path}/")
+        except Exception as e:
+            logger.warning(f"Could not register with AG-UI: {e}")
+    elif protocol == "vercel-ai":
+        # Register with Vercel AI
+        try:
+            from .transports import VercelAITransport
+            from .routes.vercel_ai import register_vercel_agent
+            vercel_adapter = VercelAITransport(agent, agent_id=agent_id)
+            register_vercel_agent(agent_id, vercel_adapter)
+            logger.info(f"Registered agent with Vercel AI: {agent_id}")
+        except Exception as e:
+            logger.warning(f"Could not register with Vercel AI: {e}")
+    elif protocol == "vercel-ai-jupyter":
+        # Register with Vercel AI Jupyter (same as vercel-ai but with jupyter execution context)
+        try:
+            from .transports import VercelAITransport
+            from .routes.vercel_ai import register_vercel_agent
+            vercel_adapter = VercelAITransport(agent, agent_id=agent_id)
+            register_vercel_agent(agent_id, vercel_adapter)
+            logger.info(f"Registered agent with Vercel AI Jupyter: {agent_id}")
+        except Exception as e:
+            logger.warning(f"Could not register with Vercel AI Jupyter: {e}")
+    elif protocol == "a2a":
+        # Register with A2A
+        try:
+            from .routes.a2a import register_a2a_agent, A2AAgentCard, get_a2a_mounts
+            # Create A2A agent card from agent info
+            a2a_card = A2AAgentCard(
+                id=agent_id,
+                name=info.name,
+                description=info.description,
+            )
+            register_a2a_agent(agent, a2a_card)
+            logger.info(f"Registered agent with A2A: {agent_id}")
+        except Exception as e:
+            logger.warning(f"Could not register with A2A: {e}")
     
-    # Register with MCP-UI for tools
+    # Register with MCP-UI for tools (always, regardless of protocol)
     try:
         mcp_ui_adapter = MCPUITransport(agent)
         register_mcp_ui_agent(agent_id, mcp_ui_adapter)
@@ -338,7 +377,7 @@ async def _create_and_register_cli_agent(
     except Exception as e:
         logger.warning(f"Could not register with MCP-UI: {e}")
     
-    logger.info(f"✓ Successfully created and registered CLI agent: {agent_id}")
+    logger.info(f"✓ Successfully created and registered CLI agent: {agent_id} (protocol: {protocol})")
 
 
 class ServerConfig(BaseModel):
@@ -445,8 +484,10 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
                 skills_list = [s.strip() for s in skills_str.split(",") if s.strip()] if skills_str else []
                 cli_mcp_servers_str = os.environ.get("AGENT_RUNTIMES_MCP_SERVERS", "")
                 cli_mcp_servers = [s.strip() for s in cli_mcp_servers_str.split(",") if s.strip()] if cli_mcp_servers_str else []
+                protocol = os.environ.get("AGENT_RUNTIMES_PROTOCOL", "ag-ui")
                 
                 logger.info(f"Registering default agent from catalog: {agent_spec.name} (as '{agent_name}')")
+                logger.info(f"  Protocol: {protocol}")
                 logger.info(f"  Codemode: {enable_codemode}")
                 logger.info(f"  Skills: {skills_list}")
                 logger.info(f"  CLI MCP servers: {cli_mcp_servers}")
@@ -504,6 +545,7 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
                     skills=skills_list,
                     all_mcp_servers=all_mcp_servers,
                     api_prefix=config.api_prefix,
+                    protocol=protocol,
                 )
             else:
                 logger.warning(f"Default agent '{default_agent_id}' not found in library")

@@ -35,6 +35,7 @@ import typer
 
 from agent_runtimes.commands.serve import (
     LogLevel,
+    Protocol,
     ServeError,
     parse_mcp_servers,
     parse_skills,
@@ -145,6 +146,15 @@ def serve(
             help="Comma-separated list of skills to enable (requires --codemode)",
         ),
     ] = None,
+    protocol: Annotated[
+        Protocol,
+        typer.Option(
+            "--protocol",
+            "-t",
+            envvar="AGENT_RUNTIMES_PROTOCOL",
+            help="Transport protocol to use (ag-ui, vercel-ai, vercel-ai-jupyter, a2a)",
+        ),
+    ] = Protocol.ag_ui,
 ) -> None:
     """Start the agent-runtimes server.
 
@@ -183,6 +193,12 @@ def serve(
         # Start with Code Mode and skills
         agent-runtimes serve --codemode --mcp-servers tavily --skills web_search,github_lookup
 
+        # Start with a specific protocol
+        agent-runtimes serve --agent-id crawler --protocol vercel-ai
+
+        # Start with Vercel AI Jupyter protocol for notebook integration
+        agent-runtimes serve --agent-id data-acquisition --protocol vercel-ai-jupyter
+
         # Using environment variables instead of CLI options
         AGENT_RUNTIMES_PORT=8080 agent-runtimes serve
         AGENT_RUNTIMES_DEFAULT_AGENT=data-acquisition agent-runtimes serve
@@ -201,6 +217,7 @@ def serve(
             mcp_servers=mcp_servers,
             codemode=codemode,
             skills=skills,
+            protocol=protocol,
         )
     except ServeError as e:
         logger.error(str(e))

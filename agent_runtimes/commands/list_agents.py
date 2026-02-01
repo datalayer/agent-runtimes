@@ -132,12 +132,14 @@ def _print_agents(
         
         table.add_column("ID", style="green", no_wrap=True)
         table.add_column("Name", style="bold white")
+        table.add_column("Protocol", style="magenta", justify="center")
         table.add_column("Status", style="yellow", justify="center")
         table.add_column("Description", style="dim")
         
         for agent in agents:
             agent_id = agent.get("id", "unknown")
             name = agent.get("name", "unknown")
+            protocol = agent.get("protocol", "ag-ui")
             status = agent.get("status", "unknown")
             description = agent.get("description", "")
             
@@ -154,7 +156,7 @@ def _print_agents(
             # Truncate description
             desc = description[:50] + "..." if len(description) > 50 else description
             
-            table.add_row(agent_id, name, status_display, desc)
+            table.add_row(agent_id, name, protocol, status_display, desc)
         
         console.print()
         console.print(table)
