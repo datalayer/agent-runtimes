@@ -33,7 +33,6 @@ Usage:
 
 import logging
 import os
-import sys
 from enum import Enum
 from typing import Annotated, Optional
 
@@ -63,6 +62,20 @@ class LogLevel(str, Enum):
     critical = "critical"
 
 
+def parse_skills(value: Optional[str]) -> list[str]:
+    """Parse comma-separated skills string into a list."""
+    if not value:
+        return []
+    return [s.strip() for s in value.split(",") if s.strip()]
+
+
+def parse_mcp_servers(value: Optional[str]) -> list[str]:
+    """Parse comma-separated MCP server IDs string into a list."""
+    if not value:
+        return []
+    return [s.strip() for s in value.split(",") if s.strip()]
+
+
 def list_agents_callback(value: bool) -> None:
     """List available agents and exit."""
     if value:
@@ -83,33 +96,34 @@ def list_agents_callback(value: bool) -> None:
 def main(
     host: Annotated[
         str,
-        typer.Option("--host", "-h", help="Host to bind to"),
+        typer.Option("--host", "-h", envvar="AGENT_RUNTIMES_HOST", help="Host to bind to"),
     ] = "127.0.0.1",
     port: Annotated[
         int,
-        typer.Option("--port", "-p", help="Port to bind to"),
+        typer.Option("--port", "-p", envvar="AGENT_RUNTIMES_PORT", help="Port to bind to"),
     ] = 8000,
     reload: Annotated[
         bool,
-        typer.Option("--reload", "-r", help="Enable auto-reload for development"),
+        typer.Option("--reload", "-r", envvar="AGENT_RUNTIMES_RELOAD", help="Enable auto-reload for development"),
     ] = False,
     debug: Annotated[
         bool,
-        typer.Option("--debug", "-d", help="Enable debug mode with verbose logging"),
+        typer.Option("--debug", "-d", envvar="AGENT_RUNTIMES_DEBUG", help="Enable debug mode with verbose logging"),
     ] = False,
     workers: Annotated[
         int,
-        typer.Option("--workers", "-w", help="Number of worker processes"),
+        typer.Option("--workers", "-w", envvar="AGENT_RUNTIMES_WORKERS", help="Number of worker processes"),
     ] = 1,
     log_level: Annotated[
         LogLevel,
-        typer.Option("--log-level", "-l", help="Log level"),
+        typer.Option("--log-level", "-l", envvar="AGENT_RUNTIMES_LOG_LEVEL", help="Log level"),
     ] = LogLevel.info,
     agent_id: Annotated[
         Optional[str],
         typer.Option(
             "--agent-id",
             "-a",
+            envvar="AGENT_RUNTIMES_DEFAULT_AGENT",
             help="Agent spec ID from the library to start (e.g., 'data-acquisition', 'crawler')",
         ),
     ] = None,
@@ -118,16 +132,27 @@ def main(
         typer.Option(
             "--agent-name",
             "-n",
+            envvar="AGENT_RUNTIMES_AGENT_NAME",
             help="Custom name for the agent (defaults to 'default' if --agent-id is specified)",
         ),
     ] = None,
-    no_mcp_servers: Annotated[
+    no_config_mcp_servers: Annotated[
         bool,
         typer.Option(
-            "--no-mcp-servers",
-            help="Skip starting all MCP servers (config and agent spec)",
+            "--no-config-mcp-servers",
+            envvar="AGENT_RUNTIMES_NO_CONFIG_MCP_SERVERS",
+            help="Skip starting config MCP servers from ~/.datalayer/mcp.json",
         ),
     ] = False,
+    mcp_servers: Annotated[
+        Optional[str],
+        typer.Option(
+            "--mcp-servers",
+            "-m",
+            envvar="AGENT_RUNTIMES_MCP_SERVERS",
+            help="Comma-separated list of MCP server IDs from the catalog to start",
+        ),
+    ] = None,
     list_agents: Annotated[
         Optional[bool],
         typer.Option(
@@ -135,6 +160,24 @@ def main(
             callback=list_agents_callback,
             is_eager=True,
             help="List available agent specs from the library and exit",
+        ),
+    ] = None,
+    codemode: Annotated[
+        bool,
+        typer.Option(
+            "--codemode",
+            "-c",
+            envvar="AGENT_RUNTIMES_CODEMODE",
+            help="Enable Code Mode: MCP servers become programmatic tools via CodemodeToolset",
+        ),
+    ] = False,
+    skills: Annotated[
+        Optional[str],
+        typer.Option(
+            "--skills",
+            "-s",
+            envvar="AGENT_RUNTIMES_SKILLS",
+            help="Comma-separated list of skills to enable (requires --codemode)",
         ),
     ] = None,
 ) -> None:
@@ -163,15 +206,33 @@ def main(
         # Start with a custom agent name
         agent-runtimes --agent-id crawler --agent-name my-crawler
 
-        # Start without MCP servers
-        agent-runtimes --agent-id data-acquisition --no-mcp-servers
+        # Start without config MCP servers (from ~/.datalayer/mcp.json)
+        agent-runtimes --no-config-mcp-servers
+
+        # Start with specific MCP servers from the catalog
+        agent-runtimes --mcp-servers tavily,github
+
+        # Start with Code Mode (MCP servers become programmatic tools)
+        agent-runtimes --codemode --mcp-servers tavily,github
+
+        # Start with Code Mode and skills
+        agent-runtimes --codemode --mcp-servers tavily --skills web_search,github_lookup
 
         # List available agents
         agent-runtimes --list-agents
+
+        # Using environment variables instead of CLI options
+        AGENT_RUNTIMES_PORT=8080 agent-runtimes
+        AGENT_RUNTIMES_DEFAULT_AGENT=data-acquisition agent-runtimes
     """
     # Validate agent_name requires agent_id
     if agent_name and not agent_id:
         logger.error("--agent-name requires --agent-id to be specified")
+        raise typer.Exit(1)
+
+    # Validate skills requires codemode
+    if skills and not codemode:
+        logger.error("--skills requires --codemode to be specified")
         raise typer.Exit(1)
 
     # Validate agent if specified
@@ -184,25 +245,39 @@ def main(
             logger.error(f"Agent '{agent_id}' not found. Available: {available}")
             raise typer.Exit(1)
 
-        # Set environment variables for the app to pick up
+        # Ensure env vars are set for uvicorn (which loads app.py in separate context)
         os.environ["AGENT_RUNTIMES_DEFAULT_AGENT"] = agent_id
 
         # Set custom agent name if provided
         effective_name = agent_name or "default"
         os.environ["AGENT_RUNTIMES_AGENT_NAME"] = effective_name
 
-        # Set MCP servers flag
-        if no_mcp_servers:
-            os.environ["AGENT_RUNTIMES_NO_MCP_SERVERS"] = "true"
-        else:
-            # Clear the env var if not set (in case it was set previously)
-            os.environ.pop("AGENT_RUNTIMES_NO_MCP_SERVERS", None)
-
-        mcp_status = "disabled" if no_mcp_servers else "enabled"
         logger.info(
             f"Will start with agent: {agent_spec.name} "
-            f"(registered as '{effective_name}', MCP servers: {mcp_status})"
+            f"(registered as '{effective_name}')"
         )
+
+    # Ensure env vars are set for uvicorn (which loads app.py in separate context)
+    if no_config_mcp_servers:
+        os.environ["AGENT_RUNTIMES_NO_CONFIG_MCP_SERVERS"] = "true"
+        logger.info("Config MCP servers disabled (--no-config-mcp-servers)")
+
+    if mcp_servers:
+        mcp_servers_list = parse_mcp_servers(mcp_servers)
+        os.environ["AGENT_RUNTIMES_MCP_SERVERS"] = ",".join(mcp_servers_list)
+        if codemode:
+            logger.info(f"MCP servers (Code Mode): {mcp_servers_list} - will be converted to programmatic tools")
+        else:
+            logger.info(f"MCP servers: {mcp_servers_list} - will be started as toolsets")
+
+    if codemode:
+        os.environ["AGENT_RUNTIMES_CODEMODE"] = "true"
+        logger.info("Code Mode enabled: MCP servers will become programmatic tools via CodemodeToolset")
+        
+        if skills:
+            skills_list = parse_skills(skills)
+            os.environ["AGENT_RUNTIMES_SKILLS"] = ",".join(skills_list)
+            logger.info(f"Skills enabled: {skills_list}")
 
     # Set log level
     effective_log_level = log_level.value.upper()

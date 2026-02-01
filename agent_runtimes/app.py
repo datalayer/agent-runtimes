@@ -130,13 +130,13 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
         is_reload_parent = _is_reload_parent_process()
         logger.info(f"Reload parent check: {is_reload_parent}")
         
-        # Check if MCP servers should be skipped (--no-mcp-servers CLI flag)
-        no_mcp_servers = os.environ.get("AGENT_RUNTIMES_NO_MCP_SERVERS", "").lower() == "true"
+        # Check if config MCP servers should be skipped (--no-config-mcp-servers CLI flag)
+        no_config_mcp_servers = os.environ.get("AGENT_RUNTIMES_NO_CONFIG_MCP_SERVERS", "").lower() == "true"
         
         if is_reload_parent:
             logger.info("Reload parent detected; deferring MCP startup to worker process")
-        elif no_mcp_servers:
-            logger.info("Skipping MCP server startup (--no-mcp-servers flag)")
+        elif no_config_mcp_servers:
+            logger.info("Skipping config MCP server startup (--no-config-mcp-servers flag)")
         else:
             # Initialize Pydantic AI MCP toolsets in a background task
             # This allows FastAPI to start immediately while MCP servers start async
@@ -175,7 +175,6 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
             agent_spec = get_agent_spec(default_agent_id)
             if agent_spec:
                 agent_name = os.environ.get("AGENT_RUNTIMES_AGENT_NAME", "default")
-                no_mcp_servers = os.environ.get("AGENT_RUNTIMES_NO_MCP_SERVERS", "").lower() == "true"
                 
                 logger.info(f"Registering default agent from catalog: {agent_spec.name} (as '{agent_name}')")
                 
@@ -185,8 +184,8 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
                     mcp_manager.add_server(mcp_server)
                 logger.info(f"Loaded {len(agent_spec.mcp_servers)} MCP servers for default agent")
                 
-                # Start MCP servers unless --no-mcp-servers flag was passed
-                if not no_mcp_servers and agent_spec.mcp_servers:
+                # Start MCP servers for the agent spec (always starts, --no-config-mcp-servers only affects config servers)
+                if agent_spec.mcp_servers:
                     logger.info(f"Starting {len(agent_spec.mcp_servers)} MCP servers for agent '{agent_name}'...")
                     lifecycle_manager = get_mcp_lifecycle_manager()
                     
@@ -204,8 +203,6 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
                     
                     # Create task to start MCP servers in background
                     asyncio.create_task(start_agent_mcp_servers())
-                elif no_mcp_servers:
-                    logger.info("Skipping MCP server startup (--no-mcp-servers flag)")
             else:
                 logger.warning(f"Default agent '{default_agent_id}' not found in library")
         

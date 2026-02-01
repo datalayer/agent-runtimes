@@ -26,19 +26,22 @@ python -m agent_runtimes
 
 ## Options
 
-| Option | Short | Default | Description |
-|--------|-------|---------|-------------|
-| `--host` | `-h` | `127.0.0.1` | Host to bind to |
-| `--port` | `-p` | `8000` | Port to bind to |
-| `--reload` | `-r` | `false` | Enable auto-reload for development |
-| `--debug` | `-d` | `false` | Enable debug mode with verbose logging |
-| `--workers` | `-w` | `1` | Number of worker processes |
-| `--log-level` | `-l` | `info` | Log level (`debug`, `info`, `warning`, `error`, `critical`) |
-| `--agent-id` | `-a` | - | Agent spec ID from the library to start |
-| `--agent-name` | `-n` | `default` | Custom name for the agent (requires `--agent-id`) |
-| `--no-mcp-servers` | - | `false` | Skip starting all MCP servers (config and agent spec) |
-| `--list-agents` | - | - | List available agent specs and exit |
-| `--help` | - | - | Show help message and exit |
+| Option | Short | Default | Environment Variable | Description |
+|--------|-------|---------|---------------------|-------------|
+| `--host` | `-h` | `127.0.0.1` | `AGENT_RUNTIMES_HOST` | Host to bind to |
+| `--port` | `-p` | `8000` | `AGENT_RUNTIMES_PORT` | Port to bind to |
+| `--reload` | `-r` | `false` | `AGENT_RUNTIMES_RELOAD` | Enable auto-reload for development |
+| `--debug` | `-d` | `false` | `AGENT_RUNTIMES_DEBUG` | Enable debug mode with verbose logging |
+| `--workers` | `-w` | `1` | `AGENT_RUNTIMES_WORKERS` | Number of worker processes |
+| `--log-level` | `-l` | `info` | `AGENT_RUNTIMES_LOG_LEVEL` | Log level (`debug`, `info`, `warning`, `error`, `critical`) |
+| `--agent-id` | `-a` | - | `AGENT_RUNTIMES_DEFAULT_AGENT` | Agent spec ID from the library to start |
+| `--agent-name` | `-n` | `default` | `AGENT_RUNTIMES_AGENT_NAME` | Custom name for the agent (requires `--agent-id`) |
+| `--no-config-mcp-servers` | - | `false` | `AGENT_RUNTIMES_NO_CONFIG_MCP_SERVERS` | Skip starting config MCP servers from `~/.datalayer/mcp.json` |
+| `--mcp-servers` | `-m` | - | `AGENT_RUNTIMES_MCP_SERVERS` | Comma-separated list of MCP server IDs from the catalog to start |
+| `--codemode` | `-c` | `false` | `AGENT_RUNTIMES_CODEMODE` | Enable Code Mode: MCP servers become programmatic tools via CodemodeToolset |
+| `--skills` | `-s` | - | `AGENT_RUNTIMES_SKILLS` | Comma-separated list of skills to enable (requires `--codemode`) |
+| `--list-agents` | - | - | - | List available agent specs and exit |
+| `--help` | - | - | - | Show help message and exit |
 
 ## Examples
 
@@ -92,20 +95,33 @@ By default, the server automatically starts:
 - **Config MCP servers** from `~/.datalayer/mcp.json`
 - **Agent spec MCP servers** when using `--agent-id`
 
+You can also specify MCP servers explicitly from the catalog:
+
+```bash
+# Start with specific MCP servers from the catalog
+agent-runtimes --mcp-servers tavily,github
+
+# Combine with an agent spec (agent spec servers + additional servers)
+agent-runtimes --agent-id crawler --mcp-servers filesystem
+
+# Using short option
+agent-runtimes -m tavily,github,filesystem
+```
+
 ```bash
 # Start with agent and its MCP servers
 agent-runtimes --agent-id crawler
 # This starts config servers + 'tavily' and 'github' from the agent spec
 
-# Start WITHOUT any MCP servers (you can add them later via API)
-agent-runtimes --no-mcp-servers
+# Start WITHOUT config MCP servers (agent spec servers still start)
+agent-runtimes --no-config-mcp-servers
 
-# Start with agent but without any MCP servers
-agent-runtimes --agent-id crawler --no-mcp-servers
+# Start with agent but without config MCP servers
+agent-runtimes --agent-id crawler --no-config-mcp-servers
 ```
 
 :::tip Managing MCP Servers at Runtime
-When starting with `--no-mcp-servers`, you can dynamically add MCP servers via the [REST API](/api-endpoints#enable-catalog-server):
+You can dynamically add MCP servers via the [REST API](/api-endpoints#enable-catalog-server):
 
 ```bash
 # Enable an MCP server from the catalog
@@ -117,6 +133,108 @@ curl -X DELETE http://localhost:8000/api/v1/mcp/servers/catalog/tavily/disable
 
 See the [MCP Servers API documentation](/api-endpoints#mcp-servers) for more details.
 :::
+
+### Code Mode
+
+Code Mode transforms MCP servers into programmatic tools that can be composed through code execution. When enabled, the agent uses `CodemodeToolset` instead of directly adding MCP toolsets.
+
+```bash
+# Start with Code Mode enabled (uses config MCP servers)
+agent-runtimes --codemode
+
+# Start with Code Mode and specific MCP servers
+agent-runtimes --codemode --mcp-servers tavily,github
+
+# Start with Code Mode and an agent spec
+agent-runtimes --agent-id crawler --codemode
+
+# Start with Code Mode and skills
+agent-runtimes --agent-id crawler --codemode --skills web_search,github_lookup
+
+# Using short options
+agent-runtimes -a crawler -c -s web_search,github_lookup
+```
+
+:::info How Code Mode Works
+When `--codemode` is enabled:
+1. MCP servers from the agent spec are converted to programmatic tools
+2. The `CodemodeToolset` is used to expose tools via code execution
+3. MCP toolsets are NOT added directly to the agent
+4. Skills can be enabled for additional capabilities
+
+This allows the agent to compose multiple tool calls within a single code execution, improving efficiency and enabling more complex workflows.
+:::
+
+#### Code Mode vs Standard Mode
+
+| Feature | Standard Mode | Code Mode |
+|---------|--------------|-----------|
+| MCP tool invocation | Direct tool calls | Via code execution |
+| Tool composition | One tool per LLM call | Multiple tools in single code block |
+| Skill support | Not available | Full skill support |
+| Tool discovery | Via MCP protocol | Via generated Python bindings |
+| Execution context | Isolated per tool | Shared sandbox context |
+
+#### When to Use Code Mode
+
+**Use Code Mode when:**
+- You need to compose multiple tool calls efficiently
+- Your workflow benefits from shared state between tool invocations
+- You want to use skills for reusable agent capabilities
+- You need fine-grained control over tool execution order
+
+**Use Standard Mode when:**
+- Simple, single-tool interactions are sufficient
+- You want direct MCP protocol compatibility
+- Minimal latency per tool call is critical
+
+### Skills
+
+Skills are reusable agent capabilities that extend Code Mode functionality. They provide pre-built workflows that combine multiple tools.
+
+```bash
+# Start with a single skill
+agent-runtimes --codemode --skills web_search
+
+# Start with multiple skills (comma-separated)
+agent-runtimes --codemode --skills web_search,github_lookup,file_operations
+
+# Combine with an agent spec
+agent-runtimes --agent-id crawler --codemode --skills web_search,data_analysis
+
+# Using short options
+agent-runtimes -c -s web_search,github_lookup
+```
+
+:::note Skills Require Code Mode
+The `--skills` option requires `--codemode` to be enabled. Skills are implemented as code-based workflows that run within the Code Mode sandbox.
+:::
+
+#### Example: Web Research Workflow
+
+```bash
+# Start the crawler agent with Code Mode and research skills
+agent-runtimes --agent-id crawler --codemode --skills web_search,summarization
+
+# The agent can now:
+# 1. Search the web using the tavily MCP server
+# 2. Fetch content from URLs
+# 3. Summarize findings using the summarization skill
+# All composed within a single code execution
+```
+
+#### Example: Data Pipeline
+
+```bash
+# Start the data acquisition agent with Code Mode and data skills
+agent-runtimes --agent-id data-acquisition --codemode --skills data_download,data_transform
+
+# The agent can now:
+# 1. Download datasets from Kaggle
+# 2. Transform data using pandas-based skills
+# 3. Save results to the filesystem
+# All with shared context and state
+```
 
 ### Production Settings
 
@@ -163,13 +281,70 @@ Available Agent Specs:
 
 ## Environment Variables
 
-The CLI sets the following environment variables for the server to use:
+All CLI options can be configured via environment variables. These variables serve as defaults - CLI arguments will override them when provided.
 
-| Variable | Description |
-|----------|-------------|
-| `AGENT_RUNTIMES_DEFAULT_AGENT` | The agent spec ID when using `--agent-id` |
-| `AGENT_RUNTIMES_AGENT_NAME` | The custom agent name when using `--agent-name` |
-| `AGENT_RUNTIMES_NO_MCP_SERVERS` | Set to `true` when `--no-mcp-servers` is used |
+### Configuration via Environment Variables
+
+```bash
+# Configure host and port via environment variables
+export AGENT_RUNTIMES_HOST=0.0.0.0
+export AGENT_RUNTIMES_PORT=8080
+agent-runtimes  # Uses 0.0.0.0:8080
+
+# CLI arguments override env vars
+agent-runtimes --port 9000  # Uses 0.0.0.0:9000
+
+# Configure agent via environment variable
+export AGENT_RUNTIMES_DEFAULT_AGENT=crawler
+agent-runtimes  # Starts with crawler agent
+
+# Configure multiple settings at once
+export AGENT_RUNTIMES_HOST=0.0.0.0
+export AGENT_RUNTIMES_PORT=8080
+export AGENT_RUNTIMES_WORKERS=4
+export AGENT_RUNTIMES_LOG_LEVEL=warning
+agent-runtimes  # Production-ready configuration
+```
+
+### Environment Variable Reference
+
+| Variable | CLI Option | Description |
+|----------|------------|-------------|
+| `AGENT_RUNTIMES_HOST` | `--host` | Host to bind to |
+| `AGENT_RUNTIMES_PORT` | `--port` | Port to bind to |
+| `AGENT_RUNTIMES_RELOAD` | `--reload` | Enable auto-reload (`true`/`false`) |
+| `AGENT_RUNTIMES_DEBUG` | `--debug` | Enable debug mode (`true`/`false`) |
+| `AGENT_RUNTIMES_WORKERS` | `--workers` | Number of worker processes |
+| `AGENT_RUNTIMES_LOG_LEVEL` | `--log-level` | Log level |
+| `AGENT_RUNTIMES_DEFAULT_AGENT` | `--agent-id` | Agent spec ID to start |
+| `AGENT_RUNTIMES_AGENT_NAME` | `--agent-name` | Custom name for the agent |
+| `AGENT_RUNTIMES_NO_CONFIG_MCP_SERVERS` | `--no-config-mcp-servers` | Skip config MCP servers (`true`/`false`) |
+| `AGENT_RUNTIMES_MCP_SERVERS` | `--mcp-servers` | Comma-separated list of MCP server IDs |
+| `AGENT_RUNTIMES_CODEMODE` | `--codemode` | Enable Code Mode (`true`/`false`) |
+| `AGENT_RUNTIMES_SKILLS` | `--skills` | Comma-separated list of skills |
+
+:::tip Docker and Kubernetes
+Environment variables are particularly useful for containerized deployments where you want to configure the server without modifying the command:
+
+```dockerfile
+ENV AGENT_RUNTIMES_HOST=0.0.0.0
+ENV AGENT_RUNTIMES_PORT=8000
+ENV AGENT_RUNTIMES_WORKERS=4
+CMD ["agent-runtimes"]
+```
+
+```yaml
+# Kubernetes ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: agent-runtimes-config
+data:
+  AGENT_RUNTIMES_HOST: "0.0.0.0"
+  AGENT_RUNTIMES_PORT: "8000"
+  AGENT_RUNTIMES_DEFAULT_AGENT: "crawler"
+```
+:::
 
 ## API Documentation
 

@@ -251,12 +251,12 @@ Manage MCP (Model Context Protocol) servers for tool integration. There are two 
 Config and catalog servers are stored separately, allowing the same server ID to exist in both without conflict. For example, you can have a custom `tavily` server in your `mcp.json` while also having access to the predefined `tavily` in the catalog.
 :::
 
-:::tip Starting Without MCP Servers
-When you start the server with the [`--no-mcp-servers` CLI flag](/cli#mcp-server-control), no MCP servers are started automatically. You can then use the endpoints below to dynamically enable MCP servers from the catalog at runtime:
+:::tip Starting Without Config MCP Servers
+When you start the server with the [`--no-config-mcp-servers` CLI flag](/cli#mcp-server-control), config MCP servers from `~/.datalayer/mcp.json` are not started automatically. You can then use the endpoints below to dynamically enable MCP servers from the catalog at runtime:
 
 ```bash
-# Start server without MCP servers
-python -m agent_runtimes --agent-id crawler --no-mcp-servers
+# Start server without config MCP servers
+python -m agent_runtimes --no-config-mcp-servers
 
 # Then enable MCP servers via API
 curl -X POST http://localhost:8000/api/v1/mcp/servers/catalog/tavily/enable
@@ -406,7 +406,7 @@ POST /api/v1/mcp/servers/catalog/{server_name}/enable
 Start an MCP server from the catalog for the current session. Only works for catalog servers (not config servers which start automatically).
 
 This is particularly useful when:
-- You started the server with [`--no-mcp-servers`](/cli#mcp-server-control)
+- You started the server with [`--no-config-mcp-servers`](/cli#mcp-server-control)
 - You want to dynamically add tools to an agent at runtime
 - You need fine-grained control over which MCP servers are running
 
