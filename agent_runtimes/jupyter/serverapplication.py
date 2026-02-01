@@ -14,7 +14,7 @@ from traitlets.config import Configurable
 from agent_runtimes.__version__ import __version__
 from agent_runtimes.jupyter.agent import create_jupyter_chat_agent
 from agent_runtimes.jupyter.config import JupyterChatConfig
-from agent_runtimes.mcp import MCPToolManager, get_mcp_manager, initialize_config_servers
+from agent_runtimes.mcp import MCPToolManager, get_mcp_manager, initialize_config_mcp_servers
 from agent_runtimes.jupyter.handlers.chat_handler import VercelAIChatHandler
 from agent_runtimes.jupyter.handlers.configure_handler import ConfigureHandler
 from agent_runtimes.jupyter.handlers.mcp_handler import (
@@ -201,7 +201,7 @@ class AgentRuntimesExtensionApp(ExtensionAppJinjaMixin, ExtensionApp):
                     import nest_asyncio
                     nest_asyncio.apply()
                 mcp_servers = loop.run_until_complete(
-                    initialize_config_servers(discover_tools=True)
+                    initialize_config_mcp_servers(discover_tools=True)
                 )
                 self.log.info(f"Initialized {len(mcp_servers)} MCP servers")
                 

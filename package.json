@@ -52,6 +52,8 @@
     "access": "public"
   },
   "scripts": {
+    "agent:list": "agent-runtimes list-agents --host 0.0.0.0 --port 8765",
+    "agent:serve": "agent-runtimes serve --agent-id=data-acquisition --agent-name=dla-1 --mcp-servers tavily --codemode --skills github,pdf --no-config-mcp-servers --host 0.0.0.0 --port 8765 --debug",
     "apply:patches": "bash scripts/apply-patches.sh",
     "build": "npm run clean && gulp resources-to-lib && tsc -b && vite build",
     "build-storybook": "storybook build",
@@ -70,7 +72,6 @@
     "examples": "run-p server:start examples:vite",
     "examples:fresh": "npm run clean:cache && npm run examples",
     "examples:jupyter": "run-p jupyter:start server:start examples:vite",
-    "examples:codemode-mcp": "EXAMPLE=AgentCodemodeMcpExample VITE_APP_TARGET=examples VITE_DATALAYER_RUN_URL=http://localhost:8888 vite",
     "examples:nextjs": "npm run dev --workspace=nextjs-notebook-example",
     "examples:vite": "VITE_APP_TARGET=examples VITE_DATALAYER_RUN_URL=http://localhost:8888 vite",
     "format": "prettier --write \"src/**/*.{js,jsx,ts,tsx,css,json,md}\" \"examples/**/*.{js,jsx,ts,tsx,css,json,md,mjs}\"",
@@ -92,7 +93,6 @@
     "server": "python -m agent_runtimes",
     "server:start": "PYTHONIOENCODING=utf-8 python -m agent_runtimes --port 8765 --debug",
     "start": "vite",
-    "start:agent": "agent-runtimes --agent-id=data-acquisition --agent-name=dla-1 --mcp-servers tavily,github --codemode --skills pdf --no-config-mcp-servers --host 0.0.0.0 --port 8765 --debug",
     "start:acp": "run-p server:start start:acp:vite",
     "start:acp:prod": "run-p server start:acp:vite",
     "start:acp:vite": "VITE_ACP_WS_URL=ws://localhost:8765/api/v1/acp/ws vite",

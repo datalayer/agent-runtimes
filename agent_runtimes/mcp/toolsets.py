@@ -20,6 +20,7 @@ which automatically detects the transport type from the config:
 """
 
 import logging
+import os
 from pathlib import Path
 from typing import Any
 
@@ -57,7 +58,16 @@ async def initialize_config_mcp_toolsets() -> None:
     For each server in mcp.json:
     - If it matches a catalog server, use the catalog command
     - Otherwise use the command from mcp.json
+    
+    Respects the AGENT_RUNTIMES_NO_CONFIG_MCP_SERVERS environment variable:
+    if set to "true", skips initialization entirely.
     """
+    # Check if config MCP servers should be skipped (--no-config-mcp-servers CLI flag)
+    no_config_mcp_servers = os.environ.get("AGENT_RUNTIMES_NO_CONFIG_MCP_SERVERS", "").lower() == "true"
+    if no_config_mcp_servers:
+        logger.info("Config MCP toolsets initialization skipped via AGENT_RUNTIMES_NO_CONFIG_MCP_SERVERS")
+        return
+    
     logger.info("initialize_config_mcp_toolsets() called - delegating to lifecycle manager")
     manager = get_mcp_lifecycle_manager()
     try:

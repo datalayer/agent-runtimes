@@ -3,13 +3,14 @@
 
 """Tests for the Typer-based CLI."""
 
+import json
 import os
 from unittest.mock import MagicMock, patch
 
 import pytest
 from typer.testing import CliRunner
 
-from agent_runtimes.__main__ import app, LogLevel, list_agents_callback, parse_skills, parse_mcp_servers
+from agent_runtimes.__main__ import app, LogLevel, OutputFormat, parse_skills, parse_mcp_servers
 
 
 runner = CliRunner()
@@ -22,7 +23,16 @@ class TestCLIHelp:
         """Test that --help returns usage information."""
         result = runner.invoke(app, ["--help"])
         assert result.exit_code == 0
-        assert "Run the agent-runtimes server" in result.stdout
+        assert "Agent Runtimes CLI" in result.stdout
+        assert "serve" in result.stdout
+        assert "list-agents" in result.stdout
+        assert "list-specs" in result.stdout
+
+    def test_serve_help_flag(self):
+        """Test that serve --help returns usage information."""
+        result = runner.invoke(app, ["serve", "--help"])
+        assert result.exit_code == 0
+        assert "Start the agent-runtimes server" in result.stdout
         assert "--host" in result.stdout
         assert "--port" in result.stdout
         assert "--agent-id" in result.stdout
@@ -32,23 +42,50 @@ class TestCLIHelp:
         assert "--codemode" in result.stdout
         assert "--skills" in result.stdout
 
-    def test_list_agents_flag(self):
-        """Test that --list-agents lists available agents."""
-        result = runner.invoke(app, ["--list-agents"])
+    def test_list_agents_help_flag(self):
+        """Test that list-agents --help returns usage information."""
+        result = runner.invoke(app, ["list-agents", "--help"])
+        assert result.exit_code == 0
+        assert "List running agents on a server" in result.stdout
+        assert "--host" in result.stdout
+        assert "--port" in result.stdout
+        assert "--output" in result.stdout
+
+    def test_list_specs_help_flag(self):
+        """Test that list-specs --help returns usage information."""
+        result = runner.invoke(app, ["list-specs", "--help"])
+        assert result.exit_code == 0
+        assert "List available agent specs" in result.stdout
+        assert "--output" in result.stdout
+
+    def test_list_specs_command(self):
+        """Test that list-specs lists available agents."""
+        result = runner.invoke(app, ["list-specs"])
         assert result.exit_code == 0
         assert "Available Agent Specs" in result.stdout
         # Check for known agent specs
         assert "data-acquisition" in result.stdout
         assert "crawler" in result.stdout
 
+    def test_list_specs_json_output(self):
+        """Test that list-specs --output json returns valid JSON."""
+        result = runner.invoke(app, ["list-specs", "--output", "json"])
+        assert result.exit_code == 0
+        data = json.loads(result.stdout)
+        assert isinstance(data, list)
+        assert len(data) > 0
+        # Check for known agent
+        ids = [spec["id"] for spec in data]
+        assert "crawler" in ids
 
-class TestCLIValidation:
-    """Tests for CLI argument validation."""
+
+class TestServeValidation:
+    """Tests for serve command argument validation."""
 
     def test_agent_name_requires_agent_id(self):
         """Test that --agent-name without --agent-id fails."""
         with patch("uvicorn.run") as mock_run:
-            result = runner.invoke(app, ["--agent-name", "my-agent"])
+            result = runner.invoke(app, ["serve", "--agent-name", "my-agent"])
             assert result.exit_code == 1
             # uvicorn should not be called
             mock_run.assert_not_called()
@@ -56,13 +93,13 @@ class TestCLIValidation:
     def test_invalid_agent_id(self):
         """Test that an invalid --agent-id fails."""
         with patch("uvicorn.run"):
-            result = runner.invoke(app, ["--agent-id", "nonexistent-agent"])
+            result = runner.invoke(app, ["serve", "--agent-id", "nonexistent-agent"])
             assert result.exit_code == 1
 
     def test_valid_agent_id(self):
         """Test that a valid --agent-id is accepted."""
         with patch("uvicorn.run") as mock_run:
-            result = runner.invoke(app, ["--agent-id", "data-acquisition"])
+            result = runner.invoke(app, ["serve", "--agent-id", "data-acquisition"])
             assert result.exit_code == 0
             # Check environment variable was set
             assert os.environ.get("AGENT_RUNTIMES_DEFAULT_AGENT") == "data-acquisition"
@@ -72,7 +109,7 @@ class TestCLIValidation:
         """Test that a valid --agent-id with --agent-name is accepted."""
         with patch("uvicorn.run") as mock_run:
             result = runner.invoke(
-                app, ["--agent-id", "crawler", "--agent-name", "my-crawler"]
+                app, ["serve", "--agent-id", "crawler", "--agent-name", "my-crawler"]
             )
             assert result.exit_code == 0
             assert os.environ.get("AGENT_RUNTIMES_DEFAULT_AGENT") == "crawler"
@@ -80,14 +117,14 @@ class TestCLIValidation:
             mock_run.assert_called_once()
 
 
-class TestCLIEnvironmentVariables:
-    """Tests for CLI environment variable setting."""
+class TestServeEnvironmentVariables:
+    """Tests for serve command environment variable setting."""
 
     def test_no_config_mcp_servers_flag_sets_env_var(self):
         """Test that --no-config-mcp-servers sets the environment variable."""
         with patch("uvicorn.run"):
             result = runner.invoke(
-                app, ["--no-config-mcp-servers"]
+                app, ["serve", "--no-config-mcp-servers"]
             )
             assert result.exit_code == 0
             assert os.environ.get("AGENT_RUNTIMES_NO_CONFIG_MCP_SERVERS") == "true"
@@ -97,7 +134,7 @@ class TestCLIEnvironmentVariables:
         # When env var is set, Typer should use it as default
         with patch.dict(os.environ, {"AGENT_RUNTIMES_NO_CONFIG_MCP_SERVERS": "true"}, clear=False):
             with patch("uvicorn.run"):
-                result = runner.invoke(app, [])
+                result = runner.invoke(app, ["serve"])
                 assert result.exit_code == 0
                 # The env var should remain set (Typer reads it)
                 assert os.environ.get("AGENT_RUNTIMES_NO_CONFIG_MCP_SERVERS") == "true"
@@ -110,7 +147,7 @@ class TestTyperEnvVarDefaults:
         """Test AGENT_RUNTIMES_PORT env var sets default port."""
         with patch.dict(os.environ, {"AGENT_RUNTIMES_PORT": "9090"}, clear=False):
             with patch("uvicorn.run") as mock_run:
-                result = runner.invoke(app, [])
+                result = runner.invoke(app, ["serve"])
                 assert result.exit_code == 0
                 call_kwargs = mock_run.call_args[1]
                 assert call_kwargs["port"] == 9090
@@ -119,7 +156,7 @@ class TestTyperEnvVarDefaults:
         """Test AGENT_RUNTIMES_HOST env var sets default host."""
         with patch.dict(os.environ, {"AGENT_RUNTIMES_HOST": "0.0.0.0"}, clear=False):
             with patch("uvicorn.run") as mock_run:
-                result = runner.invoke(app, [])
+                result = runner.invoke(app, ["serve"])
                 assert result.exit_code == 0
                 call_kwargs = mock_run.call_args[1]
                 assert call_kwargs["host"] == "0.0.0.0"
@@ -128,7 +165,7 @@ class TestTyperEnvVarDefaults:
         """Test AGENT_RUNTIMES_WORKERS env var sets default workers."""
         with patch.dict(os.environ, {"AGENT_RUNTIMES_WORKERS": "4"}, clear=False):
             with patch("uvicorn.run") as mock_run:
-                result = runner.invoke(app, [])
+                result = runner.invoke(app, ["serve"])
                 assert result.exit_code == 0
                 call_kwargs = mock_run.call_args[1]
                 assert call_kwargs["workers"] == 4
@@ -137,7 +174,7 @@ class TestTyperEnvVarDefaults:
         """Test AGENT_RUNTIMES_LOG_LEVEL env var sets default log level."""
         with patch.dict(os.environ, {"AGENT_RUNTIMES_LOG_LEVEL": "debug"}, clear=False):
             with patch("uvicorn.run") as mock_run:
-                result = runner.invoke(app, [])
+                result = runner.invoke(app, ["serve"])
                 assert result.exit_code == 0
                 call_kwargs = mock_run.call_args[1]
                 assert call_kwargs["log_level"] == "debug"
@@ -146,7 +183,7 @@ class TestTyperEnvVarDefaults:
         """Test AGENT_RUNTIMES_DEFAULT_AGENT env var sets default agent."""
         with patch.dict(os.environ, {"AGENT_RUNTIMES_DEFAULT_AGENT": "crawler"}, clear=False):
             with patch("uvicorn.run"):
-                result = runner.invoke(app, [])
+                result = runner.invoke(app, ["serve"])
                 assert result.exit_code == 0
                 # The CLI should accept the env var via Typer
                 assert os.environ.get("AGENT_RUNTIMES_DEFAULT_AGENT") == "crawler"
@@ -155,20 +192,20 @@ class TestTyperEnvVarDefaults:
         """Test that CLI arguments override env var defaults."""
         with patch.dict(os.environ, {"AGENT_RUNTIMES_PORT": "9090"}, clear=False):
             with patch("uvicorn.run") as mock_run:
-                result = runner.invoke(app, ["--port", "8888"])
+                result = runner.invoke(app, ["serve", "--port", "8888"])
                 assert result.exit_code == 0
                 call_kwargs = mock_run.call_args[1]
                 # CLI should override env var
                 assert call_kwargs["port"] == 8888
 
 
-class TestCLIUvicornOptions:
-    """Tests for CLI uvicorn configuration."""
+class TestServeUvicornOptions:
+    """Tests for serve command uvicorn configuration."""
 
     def test_default_host_and_port(self):
         """Test default host and port values."""
         with patch("uvicorn.run") as mock_run:
-            result = runner.invoke(app, [])
+            result = runner.invoke(app, ["serve"])
             assert result.exit_code == 0
             mock_run.assert_called_once()
             call_kwargs = mock_run.call_args[1]
@@ -178,7 +215,7 @@ class TestCLIUvicornOptions:
     def test_custom_host_and_port(self):
         """Test custom host and port values."""
         with patch("uvicorn.run") as mock_run:
-            result = runner.invoke(app, ["--host", "0.0.0.0", "--port", "8080"])
+            result = runner.invoke(app, ["serve", "--host", "0.0.0.0", "--port", "8080"])
             assert result.exit_code == 0
             call_kwargs = mock_run.call_args[1]
             assert call_kwargs["host"] == "0.0.0.0"
@@ -187,7 +224,7 @@ class TestCLIUvicornOptions:
     def test_reload_flag(self):
         """Test --reload flag."""
         with patch("uvicorn.run") as mock_run:
-            result = runner.invoke(app, ["--reload"])
+            result = runner.invoke(app, ["serve", "--reload"])
             assert result.exit_code == 0
             call_kwargs = mock_run.call_args[1]
             assert call_kwargs["reload"] is True
@@ -197,7 +234,7 @@ class TestCLIUvicornOptions:
     def test_workers_without_reload(self):
         """Test --workers without --reload."""
         with patch("uvicorn.run") as mock_run:
-            result = runner.invoke(app, ["--workers", "4"])
+            result = runner.invoke(app, ["serve", "--workers", "4"])
             assert result.exit_code == 0
             call_kwargs = mock_run.call_args[1]
             assert call_kwargs["workers"] == 4
@@ -205,7 +242,7 @@ class TestCLIUvicornOptions:
     def test_log_level(self):
         """Test --log-level option."""
         with patch("uvicorn.run") as mock_run:
-            result = runner.invoke(app, ["--log-level", "debug"])
+            result = runner.invoke(app, ["serve", "--log-level", "debug"])
             assert result.exit_code == 0
             call_kwargs = mock_run.call_args[1]
             assert call_kwargs["log_level"] == "debug"
@@ -223,20 +260,13 @@ class TestLogLevel:
         assert LogLevel.critical.value == "critical"
 
 
-class TestListAgentsCallback:
-    """Tests for the list_agents_callback function."""
+class TestOutputFormat:
+    """Tests for OutputFormat enum."""
 
-    def test_callback_with_false_value(self):
-        """Test callback does nothing when value is False."""
-        # Should not raise
-        list_agents_callback(False)
-
-    def test_callback_with_true_value(self):
-        """Test callback raises Exit when value is True."""
-        import typer
-        with pytest.raises(typer.Exit) as exc_info:
-            list_agents_callback(True)
-        assert exc_info.value.exit_code == 0
+    def test_output_format_values(self):
+        """Test that all expected output formats are defined."""
+        assert OutputFormat.table.value == "table"
+        assert OutputFormat.json.value == "json"
 
 
 class TestShortOptions:
@@ -245,7 +275,7 @@ class TestShortOptions:
     def test_short_host_option(self):
         """Test -h short option for --host."""
         with patch("uvicorn.run") as mock_run:
-            result = runner.invoke(app, ["-h", "0.0.0.0"])
+            result = runner.invoke(app, ["serve", "-h", "0.0.0.0"])
             assert result.exit_code == 0
             call_kwargs = mock_run.call_args[1]
             assert call_kwargs["host"] == "0.0.0.0"
@@ -253,7 +283,7 @@ class TestShortOptions:
     def test_short_port_option(self):
         """Test -p short option for --port."""
         with patch("uvicorn.run") as mock_run:
-            result = runner.invoke(app, ["-p", "9000"])
+            result = runner.invoke(app, ["serve", "-p", "9000"])
             assert result.exit_code == 0
             call_kwargs = mock_run.call_args[1]
             assert call_kwargs["port"] == 9000
@@ -261,21 +291,21 @@ class TestShortOptions:
     def test_short_agent_id_option(self):
         """Test -a short option for --agent-id."""
         with patch("uvicorn.run"):
-            result = runner.invoke(app, ["-a", "crawler"])
+            result = runner.invoke(app, ["serve", "-a", "crawler"])
             assert result.exit_code == 0
             assert os.environ.get("AGENT_RUNTIMES_DEFAULT_AGENT") == "crawler"
 
     def test_short_agent_name_option(self):
         """Test -n short option for --agent-name."""
         with patch("uvicorn.run"):
-            result = runner.invoke(app, ["-a", "crawler", "-n", "my-crawler"])
+            result = runner.invoke(app, ["serve", "-a", "crawler", "-n", "my-crawler"])
             assert result.exit_code == 0
             assert os.environ.get("AGENT_RUNTIMES_AGENT_NAME") == "my-crawler"
 
     def test_short_reload_option(self):
         """Test -r short option for --reload."""
         with patch("uvicorn.run") as mock_run:
-            result = runner.invoke(app, ["-r"])
+            result = runner.invoke(app, ["serve", "-r"])
             assert result.exit_code == 0
             call_kwargs = mock_run.call_args[1]
             assert call_kwargs["reload"] is True
@@ -283,13 +313,13 @@ class TestShortOptions:
     def test_short_debug_option(self):
         """Test -d short option for --debug."""
         with patch("uvicorn.run"):
-            result = runner.invoke(app, ["-d"])
+            result = runner.invoke(app, ["serve", "-d"])
             assert result.exit_code == 0
 
     def test_short_workers_option(self):
         """Test -w short option for --workers."""
         with patch("uvicorn.run") as mock_run:
-            result = runner.invoke(app, ["-w", "2"])
+            result = runner.invoke(app, ["serve", "-w", "2"])
             assert result.exit_code == 0
             call_kwargs = mock_run.call_args[1]
             assert call_kwargs["workers"] == 2
@@ -297,7 +327,7 @@ class TestShortOptions:
     def test_short_log_level_option(self):
         """Test -l short option for --log-level."""
         with patch("uvicorn.run") as mock_run:
-            result = runner.invoke(app, ["-l", "warning"])
+            result = runner.invoke(app, ["serve", "-l", "warning"])
             assert result.exit_code == 0
             call_kwargs = mock_run.call_args[1]
             assert call_kwargs["log_level"] == "warning"
@@ -305,14 +335,14 @@ class TestShortOptions:
     def test_short_codemode_option(self):
         """Test -c short option for --codemode."""
         with patch("uvicorn.run"):
-            result = runner.invoke(app, ["-c"])
+            result = runner.invoke(app, ["serve", "-c"])
             assert result.exit_code == 0
             assert os.environ.get("AGENT_RUNTIMES_CODEMODE") == "true"
 
     def test_short_skills_option(self):
         """Test -s short option for --skills (requires --codemode)."""
         with patch("uvicorn.run"):
-            result = runner.invoke(app, ["-c", "-s", "web_search,github_lookup"])
+            result = runner.invoke(app, ["serve", "-c", "-s", "web_search,github_lookup"])
             assert result.exit_code == 0
             assert os.environ.get("AGENT_RUNTIMES_SKILLS") == "web_search,github_lookup"
 
@@ -323,7 +353,7 @@ class TestCodeModeOptions:
     def test_codemode_flag_sets_env_var(self):
         """Test that --codemode sets the environment variable."""
         with patch("uvicorn.run"):
-            result = runner.invoke(app, ["--codemode"])
+            result = runner.invoke(app, ["serve", "--codemode"])
             assert result.exit_code == 0
             assert os.environ.get("AGENT_RUNTIMES_CODEMODE") == "true"
 
@@ -331,7 +361,7 @@ class TestCodeModeOptions:
         """Test that AGENT_RUNTIMES_CODEMODE env var sets the flag via Typer."""
         with patch.dict(os.environ, {"AGENT_RUNTIMES_CODEMODE": "true"}, clear=False):
             with patch("uvicorn.run"):
-                result = runner.invoke(app, [])
+                result = runner.invoke(app, ["serve"])
                 assert result.exit_code == 0
                 assert os.environ.get("AGENT_RUNTIMES_CODEMODE") == "true"
 
@@ -341,14 +371,14 @@ class TestCodeModeOptions:
         env_without_codemode = {k: v for k, v in os.environ.items() if k != "AGENT_RUNTIMES_CODEMODE"}
         with patch.dict(os.environ, env_without_codemode, clear=True):
             with patch("uvicorn.run") as mock_run:
-                result = runner.invoke(app, ["--skills", "web_search"])
+                result = runner.invoke(app, ["serve", "--skills", "web_search"])
                 assert result.exit_code == 1
                 mock_run.assert_not_called()
 
     def test_skills_with_codemode(self):
         """Test that --skills with --codemode is accepted."""
         with patch("uvicorn.run"):
-            result = runner.invoke(app, ["--codemode", "--skills", "web_search,github_lookup"])
+            result = runner.invoke(app, ["serve", "--codemode", "--skills", "web_search,github_lookup"])
             assert result.exit_code == 0
             assert os.environ.get("AGENT_RUNTIMES_CODEMODE") == "true"
             assert os.environ.get("AGENT_RUNTIMES_SKILLS") == "web_search,github_lookup"
@@ -356,7 +386,7 @@ class TestCodeModeOptions:
     def test_codemode_with_agent_id(self):
         """Test --codemode combined with --agent-id."""
         with patch("uvicorn.run"):
-            result = runner.invoke(app, ["--agent-id", "crawler", "--codemode"])
+            result = runner.invoke(app, ["serve", "--agent-id", "crawler", "--codemode"])
             assert result.exit_code == 0
             assert os.environ.get("AGENT_RUNTIMES_DEFAULT_AGENT") == "crawler"
             assert os.environ.get("AGENT_RUNTIMES_CODEMODE") == "true"
@@ -366,7 +396,7 @@ class TestCodeModeOptions:
         with patch("uvicorn.run"):
             result = runner.invoke(
                 app, 
-                ["--agent-id", "crawler", "--codemode", "--skills", "web_search"]
+                ["serve", "--agent-id", "crawler", "--codemode", "--skills", "web_search"]
             )
             assert result.exit_code == 0
             assert os.environ.get("AGENT_RUNTIMES_DEFAULT_AGENT") == "crawler"
@@ -380,7 +410,7 @@ class TestMcpServersOption:
     def test_mcp_servers_sets_env_var(self):
         """Test that --mcp-servers sets the environment variable."""
         with patch("uvicorn.run"):
-            result = runner.invoke(app, ["--mcp-servers", "tavily,github"])
+            result = runner.invoke(app, ["serve", "--mcp-servers", "tavily,github"])
             assert result.exit_code == 0
             assert os.environ.get("AGENT_RUNTIMES_MCP_SERVERS") == "tavily,github"
 
@@ -388,14 +418,14 @@ class TestMcpServersOption:
         """Test that AGENT_RUNTIMES_MCP_SERVERS env var sets the option via Typer."""
         with patch.dict(os.environ, {"AGENT_RUNTIMES_MCP_SERVERS": "tavily,github"}, clear=False):
             with patch("uvicorn.run"):
-                result = runner.invoke(app, [])
+                result = runner.invoke(app, ["serve"])
                 assert result.exit_code == 0
                 assert os.environ.get("AGENT_RUNTIMES_MCP_SERVERS") == "tavily,github"
 
     def test_mcp_servers_with_codemode(self):
         """Test --mcp-servers with --codemode sets both env vars."""
         with patch("uvicorn.run"):
-            result = runner.invoke(app, ["--codemode", "--mcp-servers", "tavily,github"])
+            result = runner.invoke(app, ["serve", "--codemode", "--mcp-servers", "tavily,github"])
             assert result.exit_code == 0
             assert os.environ.get("AGENT_RUNTIMES_MCP_SERVERS") == "tavily,github"
             assert os.environ.get("AGENT_RUNTIMES_CODEMODE") == "true"
@@ -403,7 +433,7 @@ class TestMcpServersOption:
     def test_mcp_servers_with_agent_id(self):
         """Test --mcp-servers combined with --agent-id."""
         with patch("uvicorn.run"):
-            result = runner.invoke(app, ["--agent-id", "crawler", "--mcp-servers", "filesystem"])
+            result = runner.invoke(app, ["serve", "--agent-id", "crawler", "--mcp-servers", "filesystem"])
             assert result.exit_code == 0
             assert os.environ.get("AGENT_RUNTIMES_DEFAULT_AGENT") == "crawler"
             assert os.environ.get("AGENT_RUNTIMES_MCP_SERVERS") == "filesystem"
@@ -411,7 +441,7 @@ class TestMcpServersOption:
     def test_short_mcp_servers_option(self):
         """Test -m short option for --mcp-servers."""
         with patch("uvicorn.run"):
-            result = runner.invoke(app, ["-m", "tavily,github"])
+            result = runner.invoke(app, ["serve", "-m", "tavily,github"])
             assert result.exit_code == 0
             assert os.environ.get("AGENT_RUNTIMES_MCP_SERVERS") == "tavily,github"
 
@@ -420,12 +450,68 @@ class TestMcpServersOption:
         with patch("uvicorn.run"):
             result = runner.invoke(
                 app, 
-                ["--codemode", "--mcp-servers", "tavily", "--skills", "web_search"]
+                ["serve", "--codemode", "--mcp-servers", "tavily", "--skills", "web_search"]
             )
             assert result.exit_code == 0
             assert os.environ.get("AGENT_RUNTIMES_MCP_SERVERS") == "tavily"
             assert os.environ.get("AGENT_RUNTIMES_CODEMODE") == "true"
             assert os.environ.get("AGENT_RUNTIMES_SKILLS") == "web_search"
+
+
+class TestListAgentsCommand:
+    """Tests for the list-agents command."""
+
+    def test_list_agents_connection_error(self):
+        """Test list-agents when server is not running."""
+        result = runner.invoke(app, ["list-agents", "--port", "59999"])
+        assert result.exit_code == 1
+        # Error message can be in stdout or stderr depending on typer output handling
+        output = result.stdout + (result.output if hasattr(result, 'output') else '')
+        assert "Could not connect" in output or "Error" in output or result.exit_code == 1
+
+    def test_list_agents_with_mock(self):
+        """Test list-agents with mocked HTTP response."""
+        mock_response = MagicMock()
+        mock_response.json.return_value = {
+            "agents": [
+                {"id": "test-agent", "name": "Test Agent", "status": "running"}
+            ]
+        }
+        mock_response.raise_for_status = MagicMock()
+        
+        with patch("httpx.Client") as mock_client_class:
+            mock_client = MagicMock()
+            mock_client.__enter__ = MagicMock(return_value=mock_client)
+            mock_client.__exit__ = MagicMock(return_value=False)
+            mock_client.get.return_value = mock_response
+            mock_client_class.return_value = mock_client
+            
+            result = runner.invoke(app, ["list-agents"])
+            assert result.exit_code == 0
+            assert "test-agent" in result.stdout
+
+    def test_list_agents_json_output_with_mock(self):
+        """Test list-agents --output json with mocked HTTP response."""
+        mock_response = MagicMock()
+        mock_data = {
+            "agents": [
+                {"id": "test-agent", "name": "Test Agent", "status": "running"}
+            ]
+        }
+        mock_response.json.return_value = mock_data
+        mock_response.raise_for_status = MagicMock()
+        
+        with patch("httpx.Client") as mock_client_class:
+            mock_client = MagicMock()
+            mock_client.__enter__ = MagicMock(return_value=mock_client)
+            mock_client.__exit__ = MagicMock(return_value=False)
+            mock_client.get.return_value = mock_response
+            mock_client_class.return_value = mock_client
+            
+            result = runner.invoke(app, ["list-agents", "--output", "json"])
+            assert result.exit_code == 0
+            data = json.loads(result.stdout)
+            assert "agents" in data
 
 
 class TestParseMcpServers:

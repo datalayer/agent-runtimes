@@ -3,36 +3,32 @@
 # Distributed under the terms of the Modified BSD License.
 
 """
-Agent Runtimes Server Entry Point.
+Agent Runtimes CLI.
 
-This module provides the main entry point for running the agent-runtimes
-FastAPI server with uvicorn.
+This module provides the command-line interface for managing the agent-runtimes
+server and querying running agents.
 
 Usage:
-    # Run using the installed CLI command
-    agent-runtimes
+    # Start the server
+    agent-runtimes serve
 
-    # Or run as a Python module
-    python -m agent_runtimes
+    # Start with custom host/port
+    agent-runtimes serve --host 0.0.0.0 --port 8080
 
-    # Or with uvicorn for development
-    uvicorn agent_runtimes.app:app --reload --port 8000
+    # List running agents on a server
+    agent-runtimes list-agents
 
-    # With custom host/port
-    agent-runtimes --host 0.0.0.0 --port 8080
+    # List agents on a specific server
+    agent-runtimes list-agents --host 0.0.0.0 --port 8080
 
-    # With a specific agent from the library
-    agent-runtimes --agent-id data-acquisition
-
-    # With a custom agent name
-    agent-runtimes --agent-id data-acquisition --agent-name my-custom-agent
-
-    # Start without MCP servers
-    agent-runtimes --agent-id data-acquisition --no-mcp-servers
+    # List available agent specs from the library
+    agent-runtimes list-specs
 """
 
+import json
 import logging
 import os
+import sys
 from enum import Enum
 from typing import Annotated, Optional
 
@@ -46,9 +42,9 @@ logger = logging.getLogger(__name__)
 
 app = typer.Typer(
     name="agent-runtimes",
-    help="Run the agent-runtimes server",
+    help="Agent Runtimes CLI - manage servers and query agents",
     add_completion=False,
-    no_args_is_help=False,
+    no_args_is_help=True,
 )
 
 
@@ -60,6 +56,13 @@ class LogLevel(str, Enum):
     warning = "warning"
     error = "error"
     critical = "critical"
+
+
+class OutputFormat(str, Enum):
+    """Output format options."""
+
+    table = "table"
+    json = "json"
 
 
 def parse_skills(value: Optional[str]) -> list[str]:
@@ -76,24 +79,13 @@ def parse_mcp_servers(value: Optional[str]) -> list[str]:
     return [s.strip() for s in value.split(",") if s.strip()]
 
 
-def list_agents_callback(value: bool) -> None:
-    """List available agents and exit."""
-    if value:
-        from agent_runtimes.config.agents import AGENT_SPECS
-
-        typer.echo("\nAvailable Agent Specs:")
-        typer.echo("-" * 60)
-        for agent_id, agent in AGENT_SPECS.items():
-            mcp_ids = [s.id for s in agent.mcp_servers]
-            typer.echo(f"  {agent_id:<25} - {agent.name}")
-            typer.echo(f"    {agent.description[:55]}...")
-            typer.echo(f"    MCP Servers: {', '.join(mcp_ids)}")
-            typer.echo()
-        raise typer.Exit(0)
+# ============================================================================
+# serve command
+# ============================================================================
 
 
 @app.command()
-def main(
+def serve(
     host: Annotated[
         str,
         typer.Option("--host", "-h", envvar="AGENT_RUNTIMES_HOST", help="Host to bind to"),
@@ -153,15 +145,6 @@ def main(
             help="Comma-separated list of MCP server IDs from the catalog to start",
         ),
     ] = None,
-    list_agents: Annotated[
-        Optional[bool],
-        typer.Option(
-            "--list-agents",
-            callback=list_agents_callback,
-            is_eager=True,
-            help="List available agent specs from the library and exit",
-        ),
-    ] = None,
     codemode: Annotated[
         bool,
         typer.Option(
@@ -181,49 +164,46 @@ def main(
         ),
     ] = None,
 ) -> None:
-    """Run the agent-runtimes server.
+    """Start the agent-runtimes server.
 
     Examples:
 
         # Start with defaults (localhost:8000)
-        agent-runtimes
+        agent-runtimes serve
 
         # Start on all interfaces
-        agent-runtimes --host 0.0.0.0
+        agent-runtimes serve --host 0.0.0.0
 
         # Start on custom port
-        agent-runtimes --port 8080
+        agent-runtimes serve --port 8080
 
         # Start with auto-reload for development
-        agent-runtimes --reload
+        agent-runtimes serve --reload
 
         # Start with debug logging
-        agent-runtimes --debug
+        agent-runtimes serve --debug
 
         # Start with a specific agent from the library
-        agent-runtimes --agent-id data-acquisition
+        agent-runtimes serve --agent-id data-acquisition
 
         # Start with a custom agent name
-        agent-runtimes --agent-id crawler --agent-name my-crawler
+        agent-runtimes serve --agent-id crawler --agent-name my-crawler
 
         # Start without config MCP servers (from ~/.datalayer/mcp.json)
-        agent-runtimes --no-config-mcp-servers
+        agent-runtimes serve --no-config-mcp-servers
 
         # Start with specific MCP servers from the catalog
-        agent-runtimes --mcp-servers tavily,github
+        agent-runtimes serve --mcp-servers tavily,github
 
         # Start with Code Mode (MCP servers become programmatic tools)
-        agent-runtimes --codemode --mcp-servers tavily,github
+        agent-runtimes serve --codemode --mcp-servers tavily,github
 
         # Start with Code Mode and skills
-        agent-runtimes --codemode --mcp-servers tavily --skills web_search,github_lookup
-
-        # List available agents
-        agent-runtimes --list-agents
+        agent-runtimes serve --codemode --mcp-servers tavily --skills web_search,github_lookup
 
         # Using environment variables instead of CLI options
-        AGENT_RUNTIMES_PORT=8080 agent-runtimes
-        AGENT_RUNTIMES_DEFAULT_AGENT=data-acquisition agent-runtimes
+        AGENT_RUNTIMES_PORT=8080 agent-runtimes serve
+        AGENT_RUNTIMES_DEFAULT_AGENT=data-acquisition agent-runtimes serve
     """
     # Validate agent_name requires agent_id
     if agent_name and not agent_id:
@@ -307,6 +287,148 @@ def main(
         workers=workers if not reload else 1,
         log_level=log_level.value,
     )
+
+
+# ============================================================================
+# list-agents command
+# ============================================================================
+
+
+@app.command("list-agents")
+def list_agents(
+    host: Annotated[
+        str,
+        typer.Option("--host", "-h", envvar="AGENT_RUNTIMES_HOST", help="Server host to query"),
+    ] = "127.0.0.1",
+    port: Annotated[
+        int,
+        typer.Option("--port", "-p", envvar="AGENT_RUNTIMES_PORT", help="Server port to query"),
+    ] = 8000,
+    output: Annotated[
+        OutputFormat,
+        typer.Option("--output", "-o", help="Output format"),
+    ] = OutputFormat.table,
+) -> None:
+    """List running agents on a server.
+
+    Queries the agent-runtimes server API to get information about
+    currently running agents.
+
+    Examples:
+
+        # List agents on default server (localhost:8000)
+        agent-runtimes list-agents
+
+        # List agents on a specific server
+        agent-runtimes list-agents --host 0.0.0.0 --port 8080
+
+        # Output as JSON
+        agent-runtimes list-agents --output json
+
+        # Using environment variables
+        AGENT_RUNTIMES_HOST=0.0.0.0 AGENT_RUNTIMES_PORT=8080 agent-runtimes list-agents
+    """
+    try:
+        import httpx
+    except ImportError:
+        typer.echo("Error: httpx is not installed. Install it with: pip install httpx", err=True)
+        raise typer.Exit(1)
+
+    url = f"http://{host}:{port}/api/v1/agents"
+    
+    try:
+        with httpx.Client(timeout=10.0) as client:
+            response = client.get(url)
+            response.raise_for_status()
+            data = response.json()
+    except httpx.ConnectError:
+        typer.echo(f"Error: Could not connect to server at {host}:{port}", err=True)
+        typer.echo("Make sure the agent-runtimes server is running.", err=True)
+        raise typer.Exit(1)
+    except httpx.HTTPStatusError as e:
+        typer.echo(f"Error: Server returned {e.response.status_code}", err=True)
+        raise typer.Exit(1)
+    except Exception as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(1)
+
+    agents = data.get("agents", [])
+
+    if output == OutputFormat.json:
+        typer.echo(json.dumps(data, indent=2))
+    else:
+        # Table format
+        if not agents:
+            typer.echo(f"\nNo running agents on {host}:{port}")
+            return
+
+        typer.echo(f"\nRunning Agents on {host}:{port}")
+        typer.echo("-" * 80)
+        typer.echo(f"{'ID':<25} {'Name':<25} {'Status':<10}")
+        typer.echo("-" * 80)
+        
+        for agent in agents:
+            agent_id = agent.get("id", "unknown")
+            name = agent.get("name", "unknown")
+            status = agent.get("status", "unknown")
+            typer.echo(f"{agent_id:<25} {name:<25} {status:<10}")
+        
+        typer.echo("-" * 80)
+        typer.echo(f"Total: {len(agents)} agent(s)")
+
+
+# ============================================================================
+# list-specs command
+# ============================================================================
+
+
+@app.command("list-specs")
+def list_specs(
+    output: Annotated[
+        OutputFormat,
+        typer.Option("--output", "-o", help="Output format"),
+    ] = OutputFormat.table,
+) -> None:
+    """List available agent specs from the library.
+
+    Shows predefined agent templates that can be used when starting the server
+    with --agent-id.
+
+    Examples:
+
+        # List available agent specs
+        agent-runtimes list-specs
+
+        # Output as JSON
+        agent-runtimes list-specs --output json
+    """
+    from agent_runtimes.config.agents import AGENT_SPECS
+
+    if output == OutputFormat.json:
+        specs = []
+        for agent_id, agent in AGENT_SPECS.items():
+            specs.append({
+                "id": agent_id,
+                "name": agent.name,
+                "description": agent.description,
+                "mcp_servers": [s.id for s in agent.mcp_servers],
+            })
+        typer.echo(json.dumps(specs, indent=2))
+    else:
+        # Table format
+        typer.echo("\nAvailable Agent Specs:")
+        typer.echo("-" * 80)
+        
+        for agent_id, agent in AGENT_SPECS.items():
+            mcp_ids = [s.id for s in agent.mcp_servers]
+            typer.echo(f"  {agent_id:<25} - {agent.name}")
+            # Truncate description to fit
+            desc = agent.description[:55] + "..." if len(agent.description) > 55 else agent.description
+            typer.echo(f"    {desc}")
+            typer.echo(f"    MCP Servers: {', '.join(mcp_ids) if mcp_ids else 'none'}")
+            typer.echo()
+        
+        typer.echo(f"Total: {len(AGENT_SPECS)} agent spec(s)")
 
 
 if __name__ == "__main__":
