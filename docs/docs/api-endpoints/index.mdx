@@ -252,7 +252,7 @@ Config and catalog servers are stored separately, allowing the same server ID to
 :::
 
 :::tip Starting Without MCP Servers
-When you start the server with the [`--no-mcp-servers` CLI flag](/docs/cli#mcp-server-control), no MCP servers are started automatically. You can then use the endpoints below to dynamically enable MCP servers from the catalog at runtime:
+When you start the server with the [`--no-mcp-servers` CLI flag](/cli#mcp-server-control), no MCP servers are started automatically. You can then use the endpoints below to dynamically enable MCP servers from the catalog at runtime:
 
 ```bash
 # Start server without MCP servers
@@ -406,7 +406,7 @@ POST /api/v1/mcp/servers/catalog/{server_name}/enable
 Start an MCP server from the catalog for the current session. Only works for catalog servers (not config servers which start automatically).
 
 This is particularly useful when:
-- You started the server with [`--no-mcp-servers`](/docs/cli#mcp-server-control)
+- You started the server with [`--no-mcp-servers`](/cli#mcp-server-control)
 - You want to dynamically add tools to an agent at runtime
 - You need fine-grained control over which MCP servers are running
 

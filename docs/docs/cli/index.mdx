@@ -105,7 +105,7 @@ agent-runtimes --agent-id crawler --no-mcp-servers
 ```
 
 :::tip Managing MCP Servers at Runtime
-When starting with `--no-mcp-servers`, you can dynamically add MCP servers via the [REST API](/docs/api-endpoints#enable-catalog-server):
+When starting with `--no-mcp-servers`, you can dynamically add MCP servers via the [REST API](/api-endpoints#enable-catalog-server):
 
 ```bash
 # Enable an MCP server from the catalog
@@ -115,7 +115,7 @@ curl -X POST http://localhost:8000/api/v1/mcp/servers/catalog/tavily/enable
 curl -X DELETE http://localhost:8000/api/v1/mcp/servers/catalog/tavily/disable
 ```
 
-See the [MCP Servers API documentation](/docs/api-endpoints#mcp-servers) for more details.
+See the [MCP Servers API documentation](/api-endpoints#mcp-servers) for more details.
 :::
 
 ### Production Settings
