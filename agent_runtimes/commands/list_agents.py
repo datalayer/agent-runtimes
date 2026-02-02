@@ -120,6 +120,7 @@ def _print_agents(
             ))
             return
 
+        # Summary table
         table = Table(
             title=f"🚀 Running Agents on [cyan]{host}:{port}[/cyan]",
             box=box.ROUNDED,
@@ -132,18 +133,16 @@ def _print_agents(
         
         table.add_column("ID", style="green", no_wrap=True)
         table.add_column("Name", style="bold white")
+        table.add_column("Model", style="cyan")
         table.add_column("Protocol", style="magenta", justify="center")
         table.add_column("Status", style="yellow", justify="center")
-        table.add_column("Toolsets", style="cyan")
-        table.add_column("Description", style="dim")
         
         for agent in agents:
             agent_id = agent.get("id", "unknown")
             name = agent.get("name", "unknown")
             protocol = agent.get("protocol", "ag-ui")
             status = agent.get("status", "unknown")
-            description = agent.get("description", "")
-            toolsets = agent.get("toolsets", {})
+            model = agent.get("model", "unknown")
             
             # Status badge styling
             if status == "running":
@@ -155,40 +154,92 @@ def _print_agents(
             else:
                 status_display = f"[dim]{status}[/dim]"
             
-            # Format toolsets info
-            toolsets_parts = []
-            
-            # MCP servers
-            mcp_servers = toolsets.get("mcp_servers", [])
-            if mcp_servers:
-                mcp_text = ", ".join(mcp_servers[:3])
-                if len(mcp_servers) > 3:
-                    mcp_text += f" +{len(mcp_servers) - 3}"
-                toolsets_parts.append(f"[yellow]mcp:[/yellow] {mcp_text}")
-            
-            # Codemode
-            if toolsets.get("codemode"):
-                toolsets_parts.append("[magenta]codemode[/magenta]")
-            
-            # Skills
-            skills = toolsets.get("skills", [])
-            if skills:
-                skills_text = ", ".join(skills[:2])
-                if len(skills) > 2:
-                    skills_text += f" +{len(skills) - 2}"
-                toolsets_parts.append(f"[cyan]skills:[/cyan] {skills_text}")
-            
-            if toolsets_parts:
-                toolsets_display = " | ".join(toolsets_parts)
-            else:
-                toolsets_display = "[dim]none[/dim]"
-            
-            # Truncate description
-            desc = description[:40] + "..." if len(description) > 40 else description
-            
-            table.add_row(agent_id, name, protocol, status_display, toolsets_display, desc)
+            table.add_row(agent_id, name, model, protocol, status_display)
         
         console.print()
         console.print(table)
         console.print()
+        
+        # Print detailed info for each agent
+        for agent in agents:
+            agent_id = agent.get("id", "unknown")
+            name = agent.get("name", "unknown")
+            description = agent.get("description", "")
+            model = agent.get("model", "unknown")
+            toolsets = agent.get("toolsets", {})
+            
+            # Create detail panel
+            detail_lines = []
+            
+            # Description
+            if description:
+                detail_lines.append(f"[bold]Description:[/bold] {description}")
+                detail_lines.append("")
+            
+            # Model
+            detail_lines.append(f"[bold]Model:[/bold] [cyan]{model}[/cyan]")
+            
+            # Codemode status
+            codemode = toolsets.get("codemode", False)
+            codemode_display = "[green]● enabled[/green]" if codemode else "[dim]○ disabled[/dim]"
+            detail_lines.append(f"[bold]Codemode:[/bold] {codemode_display}")
+            
+            # MCP Servers
+            mcp_servers = toolsets.get("mcp_servers", [])
+            if mcp_servers:
+                detail_lines.append(f"[bold]MCP Servers ({len(mcp_servers)}):[/bold]")
+                for server in mcp_servers:
+                    detail_lines.append(f"  [yellow]•[/yellow] {server}")
+            else:
+                detail_lines.append("[bold]MCP Servers:[/bold] [dim]none[/dim]")
+            
+            # Tools
+            tools = toolsets.get("tools", [])
+            tools_count = toolsets.get("tools_count", len(tools))
+            if tools:
+                detail_lines.append(f"[bold]Tools ({tools_count}):[/bold]")
+                for tool in tools[:10]:  # Show first 10 tools
+                    tool_name = tool.get("name", "unknown")
+                    tool_desc = tool.get("description", "")
+                    if tool_desc and len(tool_desc) > 50:
+                        tool_desc = tool_desc[:47] + "..."
+                    if tool_desc:
+                        detail_lines.append(f"  [cyan]•[/cyan] {tool_name}: [dim]{tool_desc}[/dim]")
+                    else:
+                        detail_lines.append(f"  [cyan]•[/cyan] {tool_name}")
+                if len(tools) > 10:
+                    detail_lines.append(f"  [dim]... and {len(tools) - 10} more tools[/dim]")
+            else:
+                detail_lines.append(f"[bold]Tools:[/bold] [dim]none[/dim]")
+            
+            # Skills (if codemode enabled)
+            skills = toolsets.get("skills", [])
+            if skills:
+                detail_lines.append(f"[bold]Skills ({len(skills)}):[/bold]")
+                for skill in skills[:5]:
+                    if isinstance(skill, dict):
+                        skill_name = skill.get("name", "unknown")
+                        skill_desc = skill.get("description", "")
+                    else:
+                        skill_name = str(skill)
+                        skill_desc = ""
+                    if skill_desc and len(skill_desc) > 40:
+                        skill_desc = skill_desc[:37] + "..."
+                    if skill_desc:
+                        detail_lines.append(f"  [magenta]•[/magenta] {skill_name}: [dim]{skill_desc}[/dim]")
+                    else:
+                        detail_lines.append(f"  [magenta]•[/magenta] {skill_name}")
+                if len(skills) > 5:
+                    detail_lines.append(f"  [dim]... and {len(skills) - 5} more skills[/dim]")
+            elif codemode:
+                detail_lines.append("[bold]Skills:[/bold] [dim]none loaded[/dim]")
+            
+            console.print(Panel(
+                "\n".join(detail_lines),
+                title=f"[bold green]{agent_id}[/bold green] - {name}",
+                border_style="green",
+                expand=False,
+            ))
+            console.print()
+        
         console.print(f"[bold]Total:[/bold] [cyan]{len(agents)}[/cyan] agent(s)")

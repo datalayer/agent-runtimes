@@ -713,12 +713,16 @@ def _get_agent_toolsets_info(agent: Any) -> dict[str, Any]:
         - codemode: Whether codemode is enabled
         - skills: List of skill names if available
         - toolset_count: Total number of toolsets
+        - tools: List of tool definitions
+        - tools_count: Number of tools available
     """
     toolsets_info: dict[str, Any] = {
         "mcp_servers": [],
         "codemode": False,
         "skills": [],
         "toolset_count": 0,
+        "tools": [],
+        "tools_count": 0,
     }
     
     try:
@@ -745,8 +749,22 @@ def _get_agent_toolsets_info(agent: Any) -> dict[str, Any]:
                 skills = getattr(toolset, "skills", [])
                 if skills:
                     toolsets_info["skills"] = [
-                        getattr(s, "name", str(s)) for s in skills
+                        {"name": getattr(s, "name", str(s)), "description": getattr(s, "description", "")}
+                        for s in skills
                     ]
+        
+        # Get tools from the agent
+        if hasattr(agent, "agent") and hasattr(agent.agent, "_function_tools"):
+            tools = agent.agent._function_tools
+            tool_list = []
+            for tool_name, tool_def in tools.items():
+                tool_info = {
+                    "name": tool_name,
+                    "description": getattr(tool_def, "description", ""),
+                }
+                tool_list.append(tool_info)
+            toolsets_info["tools"] = tool_list
+            toolsets_info["tools_count"] = len(tool_list)
         
         # Calculate total toolset count
         mcp_count = len(toolsets_info["mcp_servers"])
@@ -759,6 +777,57 @@ def _get_agent_toolsets_info(agent: Any) -> dict[str, Any]:
     return toolsets_info
 
 
+def _get_agent_details(agent: Any, agent_id: str, info: Any) -> dict[str, Any]:
+    """Get detailed agent information for display.
+    
+    Args:
+        agent: The agent adapter
+        agent_id: The agent ID
+        info: The AgentInfo object
+        
+    Returns:
+        Dictionary with comprehensive agent details
+    """
+    toolsets_info = _get_agent_toolsets_info(agent)
+    
+    # Get model name
+    model_name = "unknown"
+    if hasattr(agent, "agent") and hasattr(agent.agent, "model"):
+        model = agent.agent.model
+        if hasattr(model, "model_name"):
+            model_name = model.model_name
+        elif hasattr(model, "name"):
+            model_name = model.name
+        elif hasattr(model, "__str__"):
+            model_str = str(model)
+            # Extract model name from string representation
+            if ":" in model_str:
+                model_name = model_str.split(":")[-1]
+            else:
+                model_name = model_str
+    
+    # Get system prompt (truncated)
+    system_prompt = ""
+    if hasattr(agent, "agent") and hasattr(agent.agent, "_system_prompts"):
+        prompts = agent.agent._system_prompts
+        if prompts:
+            system_prompt = str(prompts[0])
+            if len(system_prompt) > 100:
+                system_prompt = system_prompt[:97] + "..."
+    
+    return {
+        "id": agent_id,
+        "name": info.name,
+        "description": info.description,
+        "status": "running",
+        "protocol": getattr(info, "protocol", "ag-ui"),
+        "model": model_name,
+        "system_prompt": system_prompt,
+        "capabilities": info.capabilities.model_dump() if info.capabilities else {},
+        "toolsets": toolsets_info,
+    }
+
+
 @router.get("", response_model=AgentListResponse)
 async def list_agents() -> AgentListResponse:
     """
@@ -769,18 +838,9 @@ async def list_agents() -> AgentListResponse:
     """
     agents = []
     for agent_id, (agent, info) in _agents.items():
-        # Get toolset information from the agent
-        toolsets_info = _get_agent_toolsets_info(agent)
-        
-        agents.append({
-            "id": agent_id,
-            "name": info.name,
-            "description": info.description,
-            "status": "running",
-            "protocol": getattr(info, "protocol", "ag-ui"),
-            "capabilities": info.capabilities.model_dump() if info.capabilities else {},
-            "toolsets": toolsets_info,
-        })
+        # Get detailed agent information
+        agent_details = _get_agent_details(agent, agent_id, info)
+        agents.append(agent_details)
     
     return AgentListResponse(agents=agents)
 
@@ -794,7 +854,7 @@ async def get_agent(agent_id: str) -> dict[str, Any]:
         agent_id: The agent identifier.
         
     Returns:
-        Agent information.
+        Agent information with full details.
         
     Raises:
         HTTPException: If agent not found.
@@ -802,14 +862,8 @@ async def get_agent(agent_id: str) -> dict[str, Any]:
     if agent_id not in _agents:
         raise HTTPException(status_code=404, detail=f"Agent not found: {agent_id}")
     
-    _, info = _agents[agent_id]
-    return {
-        "id": agent_id,
-        "name": info.name,
-        "description": info.description,
-        "status": "running",
-        "capabilities": info.capabilities.model_dump() if info.capabilities else {},
-    }
+    agent, info = _agents[agent_id]
+    return _get_agent_details(agent, agent_id, info)
 
 
 @router.delete("/{agent_id}")
