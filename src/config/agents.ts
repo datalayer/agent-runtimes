@@ -35,7 +35,7 @@ export const DATA_ACQUISITION_AGENT_SPEC: AgentSpec = {
   enabled: true,
   mcpServers: [KAGGLE_MCP_SERVER, FILESYSTEM_MCP_SERVER],
   skills: [],
-  environmentName: 'ai-agents',
+  environmentName: 'ai-agents-env',
   icon: 'database',
   color: '#3B82F6', // Blue
 };
@@ -49,7 +49,7 @@ export const CRAWLER_AGENT_SPEC: AgentSpec = {
   enabled: false,
   mcpServers: [TAVILY_MCP_SERVER, GITHUB_MCP_SERVER],
   skills: [],
-  environmentName: 'ai-agents',
+  environmentName: 'ai-agents-env',
   icon: 'globe',
   color: '#10B981', // Green
 };
@@ -63,7 +63,7 @@ export const GITHUB_AGENT_SPEC: AgentSpec = {
   enabled: false,
   mcpServers: [GITHUB_MCP_SERVER, GMAIL_MCP_SERVER],
   skills: [],
-  environmentName: 'ai-agents',
+  environmentName: 'ai-agents-env',
   icon: 'git-branch',
   color: '#6366F1', // Indigo
 };
@@ -77,7 +77,7 @@ export const FINANCIAL_VIZ_AGENT_SPEC: AgentSpec = {
   enabled: false,
   mcpServers: [ALPHAVANTAGE_MCP_SERVER, CHART_MCP_SERVER],
   skills: [],
-  environmentName: 'ai-agents',
+  environmentName: 'ai-agents-env',
   icon: 'trending-up',
   color: '#F59E0B', // Amber
 };
@@ -91,7 +91,7 @@ export const INFORMATION_ROUTING_AGENT_SPEC: AgentSpec = {
   enabled: false,
   mcpServers: [GDRIVE_MCP_SERVER, SLACK_MCP_SERVER],
   skills: [],
-  environmentName: 'ai-agents',
+  environmentName: 'ai-agents-env',
   icon: 'share-2',
   color: '#EC4899', // Pink
 };
