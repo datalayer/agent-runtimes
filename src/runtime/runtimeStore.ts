@@ -95,7 +95,7 @@ async function createAgentOnRuntime(
 
   if (response.ok || response.status === 400) {
     // 400 means agent already exists, which is fine
-    const endpoint = `${agentBaseUrl}/api/v1/ag-ui/${agentId}/`;
+    const endpoint = `${agentBaseUrl}/api/v1/ag-ui/${agentId}`;
     return {
       agentId,
       endpoint,

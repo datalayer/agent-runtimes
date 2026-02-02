@@ -341,7 +341,7 @@ async def _create_and_register_cli_agent(
             if agui_app and app:
                 mount_path = f"{api_prefix}/ag-ui/{agent_id}"
                 app.mount(mount_path, agui_app, name=f"agui-{agent_id}")
-                logger.info(f"Dynamically mounted AG-UI route: {mount_path}/")
+                logger.info(f"Dynamically mounted AG-UI route: {mount_path}")
         except Exception as e:
             logger.warning(f"Could not register with AG-UI: {e}")
     elif protocol == "vercel-ai":
@@ -565,17 +565,17 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
         
         # Add AG-UI mounts after agents are registered
         for mount in get_agui_mounts():
-            # Mount under /api/v1/ag-ui/{agent_id}/
+            # Mount under /api/v1/ag-ui/{agent_id}
             full_mount = Mount(f"{config.api_prefix}/ag-ui{mount.path}", app=mount.app)
             app.routes.append(full_mount)
-            logger.info(f"Mounted AG-UI route: {config.api_prefix}/ag-ui{mount.path}/")
+            logger.info(f"Mounted AG-UI route: {config.api_prefix}/ag-ui{mount.path}")
         
         # Add A2A mounts (FastA2A apps) after agents are registered
         for mount in get_a2a_mounts():
-            # Mount under /api/v1/a2a/agents/{agent_id}/
+            # Mount under /api/v1/a2a/agents/{agent_id}
             full_mount = Mount(f"{config.api_prefix}/a2a/agents{mount.path}", app=mount.app)
             app.routes.append(full_mount)
-            logger.info(f"Mounted A2A route: {config.api_prefix}/a2a/agents{mount.path}/")
+            logger.info(f"Mounted A2A route: {config.api_prefix}/a2a/agents{mount.path}")
         
         # Add AG-UI example mounts
         for mount in get_example_mounts(config.api_prefix):

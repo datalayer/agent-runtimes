@@ -13,6 +13,7 @@ import {
   XCircleIcon,
   CodeIcon,
   ZapIcon,
+  DownloadIcon,
 } from '@primer/octicons-react';
 import {
   Button,
@@ -27,7 +28,7 @@ import { Box } from '@datalayer/primer-addons';
 import { AiAgentIcon } from '@datalayer/icons-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ContextPanel } from './ContextPanel';
-import { ContextInspector } from './ContextInspector';
+import { ContextInspector, type FullContextResponse } from './ContextInspector';
 import { AgentIdentity } from './AgentIdentity';
 import type {
   OAuthProvider,
@@ -98,6 +99,161 @@ function getLocalApiBase(): string {
   return host === 'localhost' || host === '127.0.0.1'
     ? 'http://127.0.0.1:8765'
     : '';
+}
+
+/**
+ * Convert context snapshot data to CSV format and trigger download
+ */
+async function downloadContextSnapshotAsCSV(agentId: string): Promise<void> {
+  const apiBase = getLocalApiBase();
+  const response = await fetch(
+    `${apiBase}/api/v1/configure/agents/${encodeURIComponent(agentId)}/full-context`,
+  );
+  if (!response.ok) {
+    throw new Error('Failed to fetch context snapshot');
+  }
+  const data: FullContextResponse = await response.json();
+
+  const rows: string[][] = [];
+
+  // Header section
+  rows.push(['Context Snapshot for Agent', data.agentId]);
+  rows.push(['Generated At', new Date().toISOString()]);
+  rows.push([]);
+
+  // Model Configuration
+  rows.push(['=== Model Configuration ===']);
+  rows.push([
+    'Model Name',
+    data.modelConfiguration?.modelName || 'Not specified',
+  ]);
+  rows.push([
+    'Context Window',
+    String(data.modelConfiguration?.contextWindow || 0),
+  ]);
+  rows.push([]);
+
+  // Token Summary
+  rows.push(['=== Token Summary ===']);
+  rows.push(['Category', 'Tokens']);
+  rows.push(['System Prompts', String(data.tokenSummary?.systemPrompts || 0)]);
+  rows.push(['Tools', String(data.tokenSummary?.tools || 0)]);
+  rows.push(['Memory', String(data.tokenSummary?.memory || 0)]);
+  rows.push(['History', String(data.tokenSummary?.history || 0)]);
+  rows.push(['Current', String(data.tokenSummary?.current || 0)]);
+  rows.push(['Total', String(data.tokenSummary?.total || 0)]);
+  rows.push(['Context Window', String(data.tokenSummary?.contextWindow || 0)]);
+  rows.push([
+    'Usage Percent',
+    `${(data.tokenSummary?.usagePercent || 0).toFixed(2)}%`,
+  ]);
+  rows.push([]);
+
+  // System Prompts
+  if (data.systemPrompts?.length > 0) {
+    rows.push(['=== System Prompts ===']);
+    rows.push(['Index', 'Tokens', 'Content']);
+    data.systemPrompts.forEach((prompt, idx) => {
+      rows.push([
+        String(idx + 1),
+        String(prompt.tokens),
+        prompt.content.replace(/"/g, '""'),
+      ]);
+    });
+    rows.push([]);
+  }
+
+  // Tools
+  if (data.tools?.length > 0) {
+    rows.push(['=== Tools ===']);
+    rows.push([
+      'Name',
+      'Description',
+      'Source Type',
+      'Is Async',
+      'Requires Approval',
+      'Total Tokens',
+    ]);
+    data.tools.forEach(tool => {
+      rows.push([
+        tool.name,
+        (tool.description || '').replace(/"/g, '""'),
+        tool.sourceType,
+        String(tool.isAsync),
+        String(tool.requiresApproval),
+        String(tool.totalTokens),
+      ]);
+    });
+    rows.push([]);
+  }
+
+  // Messages
+  if (data.messages?.length > 0) {
+    rows.push(['=== Messages ===']);
+    rows.push([
+      'Role',
+      'In Context',
+      'Estimated Tokens',
+      'Tool Name',
+      'Is Tool Call',
+      'Is Tool Result',
+      'Timestamp',
+      'Content',
+    ]);
+    data.messages.forEach(msg => {
+      rows.push([
+        msg.role,
+        String(msg.inContext),
+        String(msg.estimatedTokens),
+        msg.toolName || '',
+        String(msg.isToolCall),
+        String(msg.isToolResult),
+        msg.timestamp || '',
+        msg.content.replace(/"/g, '""'),
+      ]);
+    });
+    rows.push([]);
+  }
+
+  // Memory Blocks
+  if (data.memoryBlocks?.length > 0) {
+    rows.push(['=== Memory Blocks ===']);
+    rows.push(['Index', 'Content (JSON)']);
+    data.memoryBlocks.forEach((block, idx) => {
+      rows.push([String(idx + 1), JSON.stringify(block).replace(/"/g, '""')]);
+    });
+    rows.push([]);
+  }
+
+  // Tool Environment
+  if (data.toolEnvironment && Object.keys(data.toolEnvironment).length > 0) {
+    rows.push(['=== Tool Environment ===']);
+    rows.push(['Key', 'Value']);
+    Object.entries(data.toolEnvironment).forEach(([key, value]) => {
+      rows.push([key, value]);
+    });
+    rows.push([]);
+  }
+
+  // Convert to CSV string
+  const csvContent = rows
+    .map(row => row.map(cell => `"${cell}"`).join(','))
+    .join('\n');
+
+  // Create and trigger download
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+  link.setAttribute('href', url);
+  link.setAttribute(
+    'download',
+    `context-snapshot-${agentId}-${new Date().toISOString().slice(0, 10)}.csv`,
+  );
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
 }
 
 /**
@@ -602,17 +758,33 @@ export function AgentDetails({
         {/* Context Snapshot - detailed inspection of agent context */}
         {agentId && (
           <Box sx={{ mt: 3 }}>
-            <Heading
-              as="h4"
+            <Box
               sx={{
-                fontSize: 1,
-                fontWeight: 'semibold',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
                 mb: 2,
-                color: 'fg.muted',
               }}
             >
-              Context Snapshot
-            </Heading>
+              <Heading
+                as="h4"
+                sx={{
+                  fontSize: 1,
+                  fontWeight: 'semibold',
+                  color: 'fg.muted',
+                }}
+              >
+                Context Snapshot
+              </Heading>
+              <Button
+                size="small"
+                variant="invisible"
+                leadingVisual={DownloadIcon}
+                onClick={() => downloadContextSnapshotAsCSV(agentId)}
+              >
+                Download
+              </Button>
+            </Box>
             <Box
               sx={{
                 p: 3,

@@ -91,9 +91,9 @@ function getEndpointPath(transport: Transport, agentId?: string): string {
       // Note: no leading slash - will be joined with baseUrl that may have trailing slash
       return 'agent_runtimes/chat';
     case 'ag-ui':
-      return `/api/v1/ag-ui/${agentId}/`;
+      return `/api/v1/ag-ui/${agentId}`;
     case 'a2a':
-      // A2A requires trailing slash
+      // A2A requires trailing slash for FastA2A compatibility
       return `/api/v1/a2a/agents/${agentId}/`;
     case 'acp':
       return `/api/v1/acp/ws/${agentId}`;

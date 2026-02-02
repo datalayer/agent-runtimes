@@ -12,6 +12,14 @@ Agent Runtimes exposes a comprehensive REST API for managing agents, executing p
 http://localhost:8765/api/v1
 ```
 
+:::note URL Convention
+All API endpoints should be called **without trailing slashes**. For example:
+- ✅ `/api/v1/agents`
+- ❌ `/api/v1/agents/`
+
+The only exception is A2A protocol endpoints which require trailing slashes for FastA2A compatibility.
+:::
+
 ## Agents
 
 Manage AI agents and their configurations.

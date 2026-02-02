@@ -76,7 +76,7 @@ export type {
  */
 export interface ChatFloatingProps {
   /**
-   * AG-UI endpoint URL (e.g., http://localhost:8000/api/v1/examples/agentic_chat/).
+   * AG-UI endpoint URL (e.g., http://localhost:8000/api/v1/examples/agentic_chat).
    * When provided with useStore=false, enables AG-UI protocol mode.
    */
   endpoint?: string;
@@ -354,7 +354,7 @@ export function ChatFloating({
 
     if (!endpoint) return undefined;
 
-    // Extract base URL from endpoint (e.g., http://localhost:8765/api/v1/ag-ui/agent/ -> http://localhost:8765)
+    // Extract base URL from endpoint (e.g., http://localhost:8765/api/v1/ag-ui/agent -> http://localhost:8765)
     const baseUrl = endpoint.match(/^(https?:\/\/[^/]+)/)?.[1] || '';
 
     return {

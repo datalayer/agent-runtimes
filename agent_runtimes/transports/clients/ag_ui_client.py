@@ -193,7 +193,7 @@ class AGUIClient:
                 "Install it with: pip install httpx"
             )
         
-        self.url = url.rstrip("/")
+        self.url = url.rstrip("/")  # Normalize URL without trailing slash
         self.headers = headers or {}
         self.timeout = timeout
         self.model = model

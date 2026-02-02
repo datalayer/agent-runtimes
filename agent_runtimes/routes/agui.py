@@ -147,7 +147,7 @@ def get_agui_mounts() -> list[Mount]:
     """
     mounts = []
     for agent_id, app in _agui_apps.items():
-        # Mount each AG-UI app at /api/v1/ag-ui/{agent_id}/
+        # Mount each AG-UI app at /api/v1/ag-ui/{agent_id}
         mount = Mount(f"/{agent_id}", app=app)
         mounts.append(mount)
     return mounts
@@ -164,7 +164,7 @@ async def list_agents() -> dict[str, list[str]]:
         "agents": [
             {
                 "id": agent_id,
-                "endpoint": f"/api/v1/ag-ui/{agent_id}/",
+                "endpoint": f"/api/v1/ag-ui/{agent_id}",
             }
             for agent_id in _agui_adapters.keys()
         ],
@@ -185,7 +185,7 @@ async def agui_info() -> dict[str, str]:
         "documentation": "https://ai.pydantic.dev/ui/ag-ui/",
         "agents_endpoint": "/api/v1/ag-ui/agents",
         "terminate_endpoint": "/api/v1/ag-ui/terminate",
-        "note": "Each agent is mounted at /api/v1/ag-ui/{agent_id}/",
+        "note": "Each agent is mounted at /api/v1/ag-ui/{agent_id}",
     }
 
 
