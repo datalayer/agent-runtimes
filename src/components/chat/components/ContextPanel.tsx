@@ -195,6 +195,8 @@ type ViewMode = 'overview' | 'distribution' | 'history';
 export interface ContextPanelProps {
   /** Agent ID for fetching context details (required) */
   agentId: string;
+  /** Number of messages in conversation (from chat store) */
+  messageCount?: number;
   /** Default view mode */
   defaultView?: ViewMode;
   /** Height for charts */
@@ -206,6 +208,7 @@ export interface ContextPanelProps {
  */
 export function ContextPanel({
   agentId,
+  messageCount = 0,
   defaultView = 'overview',
   chartHeight = '200px',
 }: ContextPanelProps) {
@@ -462,17 +465,30 @@ export function ContextPanel({
 
   return (
     <Box>
-      <Heading
-        as="h4"
+      <Box
         sx={{
-          fontSize: 1,
-          fontWeight: 'semibold',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
           mb: 2,
-          color: 'fg.muted',
         }}
       >
-        Context Usage
-      </Heading>
+        <Heading
+          as="h4"
+          sx={{
+            fontSize: 1,
+            fontWeight: 'semibold',
+            color: 'fg.muted',
+          }}
+        >
+          Context Usage
+        </Heading>
+        {messageCount > 0 && (
+          <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
+            {messageCount} {messageCount === 1 ? 'message' : 'messages'}
+          </Text>
+        )}
+      </Box>
 
       <Box
         sx={{

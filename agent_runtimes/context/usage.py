@@ -70,6 +70,9 @@ class AgentUsageStats:
     # Per-request usage history
     request_usage_history: list[RequestUsage] = field(default_factory=list)
     
+    # Message history from agent runs (stored as JSON-serializable dicts)
+    message_history: list[dict[str, Any]] = field(default_factory=list)
+    
     # Timestamps
     created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     last_updated: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
@@ -129,6 +132,72 @@ class AgentUsageStats:
         self.system_prompt_tokens = tokens
         self.last_updated = datetime.now(timezone.utc)
     
+    def store_messages(self, messages: list[Any]) -> None:
+        """Store message history from an agent run.
+        
+        Converts pydantic-ai ModelMessage objects to JSON-serializable dicts.
+        Replaces the current message history (messages accumulate in the agent).
+        
+        Args:
+            messages: List of pydantic-ai ModelMessage objects.
+        """
+        serialized: list[dict[str, Any]] = []
+        for msg in messages:
+            try:
+                # Handle pydantic-ai ModelMessage objects
+                msg_dict: dict[str, Any] = {}
+                
+                # Get the message kind (request or response)
+                msg_kind = getattr(msg, "kind", None)
+                msg_dict["kind"] = msg_kind
+                
+                # Get timestamp if available
+                timestamp = getattr(msg, "timestamp", None)
+                if timestamp:
+                    msg_dict["timestamp"] = str(timestamp)
+                
+                # Process parts
+                parts = getattr(msg, "parts", [])
+                serialized_parts: list[dict[str, Any]] = []
+                for part in parts:
+                    part_dict: dict[str, Any] = {}
+                    part_kind = getattr(part, "part_kind", None)
+                    part_dict["part_kind"] = part_kind
+                    
+                    # Extract content based on part type
+                    if hasattr(part, "content"):
+                        content = part.content
+                        if isinstance(content, str):
+                            part_dict["content"] = content
+                        else:
+                            part_dict["content"] = str(content)
+                    elif hasattr(part, "text"):
+                        part_dict["content"] = part.text or ""
+                    
+                    # Tool-specific fields
+                    if hasattr(part, "tool_name"):
+                        part_dict["tool_name"] = part.tool_name
+                    if hasattr(part, "tool_call_id"):
+                        part_dict["tool_call_id"] = part.tool_call_id
+                    if hasattr(part, "args"):
+                        try:
+                            import json
+                            part_dict["args"] = json.dumps(part.args, default=str) if part.args else "{}"
+                        except Exception:
+                            part_dict["args"] = str(part.args)
+                    
+                    serialized_parts.append(part_dict)
+                
+                msg_dict["parts"] = serialized_parts
+                serialized.append(msg_dict)
+            except Exception as e:
+                logger.debug(f"Could not serialize message: {e}")
+                continue
+        
+        self.message_history = serialized
+        self.last_updated = datetime.now(timezone.utc)
+        logger.debug(f"Stored {len(serialized)} messages for agent {self.agent_id}")
+    
     def reset(self) -> None:
         """Reset all usage statistics."""
         self.input_tokens = 0
@@ -139,6 +208,8 @@ class AgentUsageStats:
         self.tool_calls = 0
         self.user_message_tokens = 0
         self.assistant_message_tokens = 0
+        self.request_usage_history = []
+        self.message_history = []
         self.last_updated = datetime.now(timezone.utc)
 
 

@@ -1546,11 +1546,24 @@ def extract_full_context_snapshot(
     
     # Extract tool definitions with full details
     try:
+        # First check the underlying pydantic-ai agent's toolsets
         if hasattr(pydantic_agent, "toolsets"):
-            for toolset in pydantic_agent.toolsets:
+            agent_toolsets = pydantic_agent.toolsets
+            logger.debug("extract_full_context_snapshot: pydantic_agent has %d toolsets", len(agent_toolsets))
+            for toolset in agent_toolsets:
                 _extract_tools_from_toolset(toolset, snapshot)
+        
+        # Also check the adapter's non_mcp_toolsets (for PydanticAIAdapter)
+        if hasattr(agent, "_non_mcp_toolsets") and agent._non_mcp_toolsets:
+            non_mcp_toolsets = agent._non_mcp_toolsets
+            logger.debug("extract_full_context_snapshot: adapter has %d non_mcp_toolsets", len(non_mcp_toolsets))
+            for toolset in non_mcp_toolsets:
+                _extract_tools_from_toolset(toolset, snapshot)
+                
+        logger.debug("extract_full_context_snapshot: Total tools extracted: %d, tool_tokens: %d", 
+                     len(snapshot.tools), snapshot.tool_tokens)
     except Exception as e:
-        logger.debug("Could not extract tools: %s", e)
+        logger.warning("Could not extract tools: %s", e)
     
     # Extract message history with in_context tracking
     if message_history:
@@ -1563,13 +1576,29 @@ def extract_full_context_snapshot(
             messages_processed = []
             
             for message in reversed(list(message_history)):
-                message_kind = getattr(message, "kind", None)
+                # Handle both dict (from storage) and object (from pydantic-ai) formats
+                if isinstance(message, dict):
+                    message_kind = message.get("kind")
+                    message_timestamp = message.get("timestamp")
+                    parts = message.get("parts", [])
+                else:
+                    message_kind = getattr(message, "kind", None)
+                    message_timestamp = str(getattr(message, "timestamp", None))
+                    parts = getattr(message, "parts", [])
                 
                 if message_kind == "request":
-                    parts = getattr(message, "parts", [])
                     for part in parts:
-                        part_kind = getattr(part, "part_kind", None)
-                        content = _extract_message_content(part)
+                        if isinstance(part, dict):
+                            part_kind = part.get("part_kind")
+                            content = part.get("content", "")
+                            tool_name = part.get("tool_name")
+                            tool_call_id = part.get("tool_call_id")
+                        else:
+                            part_kind = getattr(part, "part_kind", None)
+                            content = _extract_message_content(part)
+                            tool_name = getattr(part, "tool_name", None)
+                            tool_call_id = getattr(part, "tool_call_id", None)
+                        
                         tokens = count_tokens(content)
                         
                         in_context = (running_tokens + tokens) <= context_budget
@@ -1581,7 +1610,7 @@ def extract_full_context_snapshot(
                                 role="user",
                                 content=content,
                                 estimated_tokens=tokens,
-                                timestamp=str(getattr(message, "timestamp", None)),
+                                timestamp=message_timestamp,
                                 in_context=in_context,
                             ))
                         elif part_kind == "system-prompt":
@@ -1589,17 +1618,15 @@ def extract_full_context_snapshot(
                                 role="system",
                                 content=content,
                                 estimated_tokens=tokens,
-                                timestamp=str(getattr(message, "timestamp", None)),
+                                timestamp=message_timestamp,
                                 in_context=in_context,
                             ))
                         elif part_kind == "tool-return":
-                            tool_name = getattr(part, "tool_name", None)
-                            tool_call_id = getattr(part, "tool_call_id", None)
                             messages_processed.append(MessageDetailSnapshot(
                                 role="tool",
                                 content=content,
                                 estimated_tokens=tokens,
-                                timestamp=str(getattr(message, "timestamp", None)),
+                                timestamp=message_timestamp,
                                 in_context=in_context,
                                 tool_name=tool_name,
                                 tool_call_id=tool_call_id,
@@ -1607,10 +1634,20 @@ def extract_full_context_snapshot(
                             ))
                 
                 elif message_kind == "response":
-                    parts = getattr(message, "parts", [])
                     for part in parts:
-                        part_kind = getattr(part, "part_kind", None)
-                        content = _extract_message_content(part)
+                        if isinstance(part, dict):
+                            part_kind = part.get("part_kind")
+                            content = part.get("content", "")
+                            tool_name = part.get("tool_name")
+                            tool_call_id = part.get("tool_call_id")
+                            args = part.get("args", "{}")
+                        else:
+                            part_kind = getattr(part, "part_kind", None)
+                            content = _extract_message_content(part)
+                            tool_name = getattr(part, "tool_name", None)
+                            tool_call_id = getattr(part, "tool_call_id", None)
+                            args = getattr(part, "args", {})
+                        
                         tokens = count_tokens(content)
                         
                         in_context = (running_tokens + tokens) <= context_budget
@@ -1622,19 +1659,20 @@ def extract_full_context_snapshot(
                                 role="assistant",
                                 content=content,
                                 estimated_tokens=tokens,
-                                timestamp=str(getattr(message, "timestamp", None)),
+                                timestamp=message_timestamp,
                                 in_context=in_context,
                             ))
                         elif part_kind in ("tool-call", "tool_call"):
-                            tool_name = getattr(part, "tool_name", None)
-                            tool_call_id = getattr(part, "tool_call_id", None)
-                            args = getattr(part, "args", {})
-                            content = json.dumps(args, default=str) if args else ""
+                            # For dict format, args is already a string
+                            if isinstance(args, str):
+                                content = args
+                            else:
+                                content = json.dumps(args, default=str) if args else ""
                             messages_processed.append(MessageDetailSnapshot(
                                 role="assistant",
                                 content=content,
                                 estimated_tokens=tokens,
-                                timestamp=str(getattr(message, "timestamp", None)),
+                                timestamp=message_timestamp,
                                 in_context=in_context,
                                 tool_name=tool_name,
                                 tool_call_id=tool_call_id,
@@ -1684,12 +1722,16 @@ def _extract_tools_from_toolset(toolset: Any, snapshot: FullContextSnapshot) -> 
     import inspect
     
     toolset_class_name = toolset.__class__.__name__
+    logger.debug("_extract_tools_from_toolset: Processing toolset %s", toolset_class_name)
     
     # Handle CodemodeToolset
     if toolset_class_name == "CodemodeToolset":
         registry = getattr(toolset, "registry", None)
+        logger.debug("_extract_tools_from_toolset: CodemodeToolset registry=%s", registry)
         if registry is not None:
-            for tool in registry.list_tools(include_deferred=True):
+            tools_list = registry.list_tools(include_deferred=True)
+            logger.debug("_extract_tools_from_toolset: registry has %d tools", len(tools_list))
+            for tool in tools_list:
                 schema = getattr(tool, "input_schema", {}) or getattr(tool, "parameters", {}) or {}
                 tool_def = {
                     "name": tool.name,
@@ -1708,11 +1750,13 @@ def _extract_tools_from_toolset(toolset: Any, snapshot: FullContextSnapshot) -> 
                     source_type="codemode",
                 ))
                 snapshot.tool_tokens += total_tokens
-            return
+            if tools_list:
+                return
         
-        # Fallback to TOOL_SCHEMAS
+        # Fallback to TOOL_SCHEMAS if registry is empty
         try:
             from agent_codemode.tool_definitions import TOOL_SCHEMAS
+            logger.debug("_extract_tools_from_toolset: Using TOOL_SCHEMAS fallback with %d tools", len(TOOL_SCHEMAS))
             for name, schema in TOOL_SCHEMAS.items():
                 tool_def = {
                     "name": name,
@@ -1731,8 +1775,8 @@ def _extract_tools_from_toolset(toolset: Any, snapshot: FullContextSnapshot) -> 
                     source_type="codemode",
                 ))
                 snapshot.tool_tokens += total_tokens
-        except ImportError:
-            pass
+        except ImportError as e:
+            logger.debug("_extract_tools_from_toolset: Could not import TOOL_SCHEMAS: %s", e)
         return
     
     # Handle FunctionToolset
@@ -1920,11 +1964,18 @@ def get_agent_full_context_snapshot(agent_id: str) -> FullContextSnapshot | None
     
     agent, info = _agents[agent_id]
     
-    # Get context window from usage tracker
+    # Get context window and stored messages from usage tracker
     tracker = get_usage_tracker()
     context_window = tracker.get_context_window(agent_id)
     
-    # Extract full snapshot from agent
-    snapshot = extract_full_context_snapshot(agent, agent_id, context_window)
+    # Get stored message history from usage stats
+    stats = tracker.get_agent_stats(agent_id)
+    stored_messages = stats.message_history if stats else []
+    
+    # Extract full snapshot from agent, passing stored messages
+    snapshot = extract_full_context_snapshot(
+        agent, agent_id, context_window, 
+        message_history=stored_messages
+    )
     
     return snapshot

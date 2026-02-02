@@ -9,7 +9,6 @@
 import {
   ArrowLeftIcon,
   GlobeIcon,
-  CommentDiscussionIcon,
   CheckCircleIcon,
   XCircleIcon,
   CodeIcon,
@@ -267,13 +266,10 @@ export function AgentDetails({
               borderColor: 'border.default',
             }}
           >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
               <Label variant="accent" size="small">
                 {protocol.toUpperCase().replace(/-/g, ' ')}
               </Label>
-            </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <GlobeIcon size={16} />
               <Text
                 sx={{
                   fontSize: 1,
@@ -594,43 +590,14 @@ export function AgentDetails({
           </Box>
         </Box>
 
-        {/* Conversation Stats */}
-        <Box>
-          <Heading
-            as="h4"
-            sx={{
-              fontSize: 1,
-              fontWeight: 'semibold',
-              mb: 2,
-              color: 'fg.muted',
-            }}
-          >
-            Conversation
-          </Heading>
-          <Box
-            sx={{
-              p: 3,
-              bg: 'canvas.subtle',
-              borderRadius: 2,
-              border: '1px solid',
-              borderColor: 'border.default',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 2,
-            }}
-          >
-            <CommentDiscussionIcon size={16} />
-            <Text sx={{ fontSize: 1 }}>
-              <Text as="span" sx={{ fontWeight: 'semibold' }}>
-                {messageCount}
-              </Text>{' '}
-              {messageCount === 1 ? 'message' : 'messages'}
-            </Text>
-          </Box>
-        </Box>
-
         {/* Unified Context Panel - usage, distribution, and history */}
-        {agentId && <ContextPanel agentId={agentId} chartHeight="200px" />}
+        {agentId && (
+          <ContextPanel
+            agentId={agentId}
+            messageCount={messageCount}
+            chartHeight="200px"
+          />
+        )}
 
         {/* Context Snapshot - detailed inspection of agent context */}
         {agentId && (

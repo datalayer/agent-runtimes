@@ -8,11 +8,12 @@ import { Text } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { JupyterReactTheme, Viewer } from '@datalayer/jupyter-react';
 import type { ServiceManager } from '@jupyterlab/services';
-import matplotlib from '../stores/notebooks/Matplotlib.ipynb.json';
-import emptyNotebook from '../stores/notebooks/Empty.ipynb.json';
 import { TimeTravel } from './TimeTravel';
 import { LexicalEditor } from './LexicalEditor';
 import { McpServerManager, type McpServerSelection } from './McpServerManager';
+
+import matplotlib from '../examples/stores/notebooks/NotebookExample2.ipynb.json';
+import emptyNotebook from '../examples/stores/notebooks/Empty.ipynb.json';
 
 interface MainContentProps {
   showNotebook: boolean;

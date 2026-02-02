@@ -24,7 +24,7 @@ import {
 } from '@primer/octicons-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Box } from '@datalayer/primer-addons';
-import type { McpServerSelection } from '../../components/chat/types';
+import type { McpServerSelection } from './chat/types';
 
 export type { McpServerSelection };
 

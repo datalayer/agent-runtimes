@@ -26,16 +26,12 @@ import {
 } from '@primer/octicons-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Box } from '@datalayer/primer-addons';
-import type { Agent } from '../stores/examplesStore';
-import type { Transport, Extension } from '../../components/chat';
+import type { Agent } from '../examples/stores/examplesStore';
+import type { Transport, Extension } from './chat';
 import type { McpServerSelection } from './McpServerManager';
-import { IdentityConnect, useIdentity } from '../../identity';
-import type {
-  OAuthProvider,
-  OAuthProviderConfig,
-  Identity,
-} from '../../identity';
-import { IdentityCard } from '../../components/chat';
+import { IdentityConnect, useIdentity } from '../identity';
+import type { OAuthProvider, OAuthProviderConfig, Identity } from '../identity';
+import { IdentityCard } from './chat';
 
 /**
  * Props for IdentityConnectWithStatus component

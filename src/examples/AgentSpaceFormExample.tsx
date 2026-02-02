@@ -26,7 +26,7 @@ import {
   AgentConfiguration,
   type AgentLibrary,
   type McpServerSelection,
-} from './components';
+} from '../components';
 
 // Create a query client for React Query
 const queryClient = new QueryClient({

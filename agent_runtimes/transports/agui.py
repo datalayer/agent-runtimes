@@ -210,6 +210,16 @@ class AGUITransport(BaseTransport):
                         )
                     else:
                         logger.warning(f"[AG-UI on_complete] No usage data available for agent {agent_id}")
+                    
+                    # Capture message history from the agent run
+                    try:
+                        messages = result.all_messages()
+                        stats = tracker.get_agent_stats(agent_id)
+                        if stats and messages:
+                            stats.store_messages(messages)
+                            logger.info(f"[AG-UI on_complete] Stored {len(messages)} messages for agent {agent_id}")
+                    except Exception as e:
+                        logger.warning(f"[AG-UI on_complete] Could not capture message history: {e}")
 
                 # Set the identity context for this request so that skill executors
                 # and codemode tools can access OAuth tokens during tool execution.

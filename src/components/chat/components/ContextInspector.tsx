@@ -6,9 +6,10 @@
  * message history with in_context flags, and model configuration.
  */
 
-import { Box, Text, Spinner, Button, Label, ProgressBar } from '@primer/react';
+import { Text, Spinner, Button, Label, ProgressBar } from '@primer/react';
+import { Box } from '@datalayer/primer-addons';
 import {
-  CpuIcon,
+  AiModelIcon,
   TerminalIcon,
   CommentDiscussionIcon,
   DatabaseIcon,
@@ -319,7 +320,7 @@ function MessageDetailView({ message }: { message: MessageDetail }) {
 
   const roleIcons: Record<string, React.ElementType> = {
     user: CommentDiscussionIcon,
-    assistant: CpuIcon,
+    assistant: AiModelIcon,
     system: InfoIcon,
     tool: TerminalIcon,
   };
@@ -527,7 +528,7 @@ export function ContextInspector({ agentId }: ContextInspectorProps) {
       {/* Model Configuration */}
       <CollapsibleSection
         title="Model Configuration"
-        icon={CpuIcon}
+        icon={AiModelIcon}
         defaultExpanded={true}
       >
         <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 2 }}>
