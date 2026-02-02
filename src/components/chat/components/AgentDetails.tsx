@@ -8,7 +8,6 @@
 
 import {
   ArrowLeftIcon,
-  GlobeIcon,
   CheckCircleIcon,
   XCircleIcon,
   CodeIcon,
