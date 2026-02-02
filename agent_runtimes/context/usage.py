@@ -67,6 +67,10 @@ class AgentUsageStats:
     assistant_message_tokens: int = 0
     system_prompt_tokens: int = 0
     
+    # Tool tracking (definitions from last run)
+    tool_definitions: list[tuple[str, str | None, dict]] = field(default_factory=list)
+    tool_tokens: int = 0
+    
     # Per-request usage history
     request_usage_history: list[RequestUsage] = field(default_factory=list)
     
@@ -198,6 +202,28 @@ class AgentUsageStats:
         self.last_updated = datetime.now(timezone.utc)
         logger.debug(f"Stored {len(serialized)} messages for agent {self.agent_id}")
     
+    def store_tools(self, tool_definitions: list[tuple[str, str | None, dict]]) -> None:
+        """Store tool definitions from an agent run.
+        
+        Args:
+            tool_definitions: List of (name, description, params_schema) tuples.
+        """
+        from .session import count_tokens_json
+        
+        self.tool_definitions = tool_definitions
+        # Calculate tool tokens
+        total_tokens = 0
+        for name, description, params_schema in tool_definitions:
+            tool_def = {
+                "name": name,
+                "description": description or "",
+                "input_schema": params_schema,
+            }
+            total_tokens += count_tokens_json(tool_def)
+        self.tool_tokens = total_tokens
+        self.last_updated = datetime.now(timezone.utc)
+        logger.debug(f"Stored {len(tool_definitions)} tools ({total_tokens} tokens) for agent {self.agent_id}")
+    
     def reset(self) -> None:
         """Reset all usage statistics."""
         self.input_tokens = 0
@@ -210,6 +236,8 @@ class AgentUsageStats:
         self.assistant_message_tokens = 0
         self.request_usage_history = []
         self.message_history = []
+        self.tool_definitions = []
+        self.tool_tokens = 0
         self.last_updated = datetime.now(timezone.utc)
 
 

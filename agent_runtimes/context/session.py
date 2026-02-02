@@ -774,44 +774,33 @@ class ContextSnapshot:
                 "value": self.tool_tokens,
             })
         
-        # History section
-        if self.history_user_tokens > 0:
+        # User messages - prefer granular fields, fall back to aggregate
+        user_tokens = self.history_user_tokens + self.current_user_tokens
+        if user_tokens == 0 and self.user_message_tokens > 0:
+            user_tokens = self.user_message_tokens
+        if user_tokens > 0:
             children.append({
-                "name": "History: User",
-                "value": self.history_user_tokens,
+                "name": "User Messages",
+                "value": user_tokens,
             })
         
-        if self.history_assistant_tokens > 0:
+        # Assistant messages - prefer granular fields, fall back to aggregate
+        assistant_tokens = self.history_assistant_tokens + self.current_assistant_tokens
+        if assistant_tokens == 0 and self.assistant_message_tokens > 0:
+            assistant_tokens = self.assistant_message_tokens
+        if assistant_tokens > 0:
             children.append({
-                "name": "History: Assistant",
-                "value": self.history_assistant_tokens,
+                "name": "Assistant Messages",
+                "value": assistant_tokens,
             })
         
-        history_tool_usage = self.history_tool_call_tokens + self.history_tool_return_tokens
-        if history_tool_usage > 0:
+        # Tool usage (calls and returns)
+        tool_usage = (self.history_tool_call_tokens + self.history_tool_return_tokens + 
+                      self.current_tool_call_tokens + self.current_tool_return_tokens)
+        if tool_usage > 0:
             children.append({
-                "name": "History: Tool Usage",
-                "value": history_tool_usage,
-            })
-        
-        # Current section
-        if self.current_user_tokens > 0:
-            children.append({
-                "name": "Current: User",
-                "value": self.current_user_tokens,
-            })
-        
-        if self.current_assistant_tokens > 0:
-            children.append({
-                "name": "Current: Assistant",
-                "value": self.current_assistant_tokens,
-            })
-        
-        current_tool_usage = self.current_tool_call_tokens + self.current_tool_return_tokens
-        if current_tool_usage > 0:
-            children.append({
-                "name": "Current: Tool Usage",
-                "value": current_tool_usage,
+                "name": "Tool Usage",
+                "value": tool_usage,
             })
         
         return {
@@ -1897,9 +1886,11 @@ def get_agent_context_snapshot(agent_id: str) -> ContextSnapshot | None:
     from .usage import get_usage_tracker
     
     if agent_id not in _agents:
+        logger.debug(f"get_agent_context_snapshot: agent_id={agent_id} not in _agents")
         return None
     
     agent, info = _agents[agent_id]
+    logger.debug(f"get_agent_context_snapshot: Found agent type={type(agent).__name__}")
     
     # Get context window from usage tracker
     tracker = get_usage_tracker()
@@ -1907,13 +1898,37 @@ def get_agent_context_snapshot(agent_id: str) -> ContextSnapshot | None:
     
     # Extract snapshot from agent
     snapshot = extract_context_snapshot(agent, agent_id, context_window)
+    logger.debug(f"get_agent_context_snapshot: After extract - tool_tokens={snapshot.tool_tokens}, tools={len(snapshot.tools)}, system_prompt_tokens={snapshot.system_prompt_tokens}")
     
-    # Merge with usage tracker data for message tokens
+    # Merge with usage tracker data for message tokens and tools
     # (since message history is per-run, we use accumulated stats)
     stats = tracker.get_agent_stats(agent_id)
     if stats:
         snapshot.user_message_tokens = stats.user_message_tokens
         snapshot.assistant_message_tokens = stats.assistant_message_tokens
+        logger.debug(f"get_agent_context_snapshot: After merge - user_tokens={snapshot.user_message_tokens}, assistant_tokens={snapshot.assistant_message_tokens}")
+        
+        # Merge tool definitions from tracker if snapshot has none
+        # (runtime toolsets aren't stored on agent, but captured in tracker)
+        if not snapshot.tools and stats.tool_definitions:
+            logger.debug(f"get_agent_context_snapshot: Using {len(stats.tool_definitions)} tool definitions from tracker")
+            for name, description, params_schema in stats.tool_definitions:
+                tool_def = {
+                    "name": name,
+                    "description": description or "",
+                    "input_schema": params_schema,
+                }
+                total_tokens = count_tokens_json(tool_def)
+                params_tokens = count_tokens_json(params_schema)
+                
+                snapshot.tools.append(ToolSnapshot(
+                    name=name,
+                    description=description,
+                    parameters_tokens=params_tokens,
+                    total_tokens=total_tokens,
+                ))
+                snapshot.tool_tokens += total_tokens
+            logger.debug(f"get_agent_context_snapshot: After tool merge - tool_tokens={snapshot.tool_tokens}, tools={len(snapshot.tools)}")
         
         # Merge per-request usage from tracker if snapshot has none
         # (AG-UI doesn't populate _agent_messages, so snapshot extraction finds nothing)
@@ -1964,18 +1979,49 @@ def get_agent_full_context_snapshot(agent_id: str) -> FullContextSnapshot | None
     
     agent, info = _agents[agent_id]
     
-    # Get context window and stored messages from usage tracker
+    # Get context window and stored data from usage tracker
     tracker = get_usage_tracker()
     context_window = tracker.get_context_window(agent_id)
     
-    # Get stored message history from usage stats
+    # Get stored message history and tools from usage stats
     stats = tracker.get_agent_stats(agent_id)
     stored_messages = stats.message_history if stats else []
+    stored_tools = stats.tool_definitions if stats else []
     
     # Extract full snapshot from agent, passing stored messages
     snapshot = extract_full_context_snapshot(
         agent, agent_id, context_window, 
         message_history=stored_messages
+    )
+    
+    # Merge tool definitions from tracker if snapshot has none
+    if not snapshot.tools and stored_tools:
+        logger.debug(f"get_agent_full_context_snapshot: Using {len(stored_tools)} tool definitions from tracker")
+        for name, description, params_schema in stored_tools:
+            tool_def = {
+                "name": name,
+                "description": description or "",
+                "input_schema": params_schema,
+            }
+            total_tokens = count_tokens_json(tool_def)
+            params_tokens = count_tokens_json(params_schema)
+            
+            snapshot.tools.append(ToolDetailSnapshot(
+                name=name,
+                description=description,
+                parameters_schema=params_schema,
+                parameters_tokens=params_tokens,
+                total_tokens=total_tokens,
+                source_type="runtime",
+            ))
+            snapshot.tool_tokens += total_tokens
+    
+    # Recalculate total tokens
+    snapshot.total_tokens = (
+        snapshot.system_prompt_tokens +
+        snapshot.tool_tokens +
+        snapshot.memory_tokens +
+        snapshot.current_tokens
     )
     
     return snapshot

@@ -243,6 +243,18 @@ class AGUITransport(BaseTransport):
                         name = getattr(ts, 'name', None) or getattr(ts, '__class__', type(ts)).__name__
                         toolset_names.append(name)
                     logger.info(f"[AG-UI] Passing {len(runtime_toolsets)} toolsets to agent run: {toolset_names}")
+                    
+                    # Extract and store tool definitions for context tracking
+                    try:
+                        from ..context.session import _extract_tool_definitions_from_toolsets
+                        tool_defs = _extract_tool_definitions_from_toolsets(runtime_toolsets)
+                        if tool_defs:
+                            stats = tracker.get_agent_stats(agent_id)
+                            if stats:
+                                stats.store_tools(tool_defs)
+                                logger.info(f"[AG-UI] Stored {len(tool_defs)} tool definitions for agent {agent_id}")
+                    except Exception as e:
+                        logger.warning(f"[AG-UI] Could not extract tool definitions: {e}")
                 else:
                     logger.info("[AG-UI] Passing 0 toolsets to agent run (empty list)")
                 

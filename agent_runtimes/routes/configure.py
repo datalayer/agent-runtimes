@@ -213,7 +213,7 @@ async def get_agent_context_snapshot_endpoint(
         }
     
     result = snapshot.to_dict()
-    logger.debug(f"[context-snapshot] Returning snapshot with totalTokens={result.get('totalTokens', 0)}, distribution children={len(result.get('distribution', {}).get('children', []))}")
+    logger.debug(f"[context-snapshot] Returning snapshot: totalTokens={result.get('totalTokens', 0)}, toolTokens={result.get('toolTokens', 0)}, systemPromptTokens={result.get('systemPromptTokens', 0)}, distribution children={len(result.get('distribution', {}).get('children', []))}")
     return result
 
 
