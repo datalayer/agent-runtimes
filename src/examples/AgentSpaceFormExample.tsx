@@ -819,7 +819,7 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
                     />
                   ) : (
                     /* Chat Interface */
-                    <Box sx={{ flex: 1 }}>
+                    <Box sx={{ flex: 1, minHeight: 0 }}>
                       <Chat
                         transport={currentAgent?.transport || transport}
                         extensions={extensions}
@@ -832,7 +832,7 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
                         autoConnect={true}
                         autoFocus={true}
                         placeholder="Type your message to the agent..."
-                        height="calc(100vh - 250px)"
+                        height="calc(100vh - 150px)"
                         showModelSelector={true}
                         showToolsMenu={true}
                         showSkillsMenu={true}

@@ -47,6 +47,7 @@ export {
   type ContextDistributionProps,
   type ContextSnapshotResponse,
 } from './ContextDistribution';
+export { ContextPanel, type ContextPanelProps } from './ContextPanel';
 export {
   ContextInspector,
   type ContextInspectorProps,

@@ -181,9 +181,11 @@ class AGUITransport(BaseTransport):
                     logger.debug(f"Could not extract model/identities from AG-UI request body: {e}")
 
                 # Create on_complete callback to track usage
-                async def on_complete(result: "AgentRunResult") -> AsyncIteratorType:
+                async def on_complete(result: "AgentRunResult") -> None:
                     """Callback to track usage after agent run completes."""
+                    logger.info(f"[AG-UI on_complete] Callback invoked for agent {agent_id}")
                     usage = result.usage()
+                    logger.info(f"[AG-UI on_complete] Usage object: {usage}")
                     if usage:
                         tracker.update_usage(
                             agent_id=agent_id,
@@ -201,14 +203,13 @@ class AGUITransport(BaseTransport):
                                 assistant_tokens=usage.output_tokens,
                             )
                         
-                        logger.debug(
+                        logger.info(
                             f"AG-UI tracked usage for agent {agent_id}: "
                             f"input={usage.input_tokens}, output={usage.output_tokens}, "
                             f"requests={usage.requests}, tools={usage.tool_calls}"
                         )
-                    # Must be an async generator, even if it yields nothing
-                    return
-                    yield  # type: ignore[misc]
+                    else:
+                        logger.warning(f"[AG-UI on_complete] No usage data available for agent {agent_id}")
 
                 # Set the identity context for this request so that skill executors
                 # and codemode tools can access OAuth tokens during tool execution.

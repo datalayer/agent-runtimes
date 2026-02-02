@@ -623,6 +623,11 @@ async def create_agent(request: CreateAgentRequest, http_request: Request) -> Cr
         register_agent(agent, info)
         logger.info(f"POST /agents: Registered agent '{agent_id}' in _agents. All registered: {list(_agents.keys())}")
         
+        # Register with context session for snapshot lookups (enables usage tracking)
+        from ..context.session import register_agent as register_agent_for_context
+        register_agent_for_context(agent_id, agent, {"name": request.name, "description": request.description})
+        logger.info(f"Registered agent '{agent_id}' for context snapshots")
+        
         # Register with the specified transport
         if request.transport == "ag-ui":
             try:
@@ -852,6 +857,13 @@ async def delete_agent(agent_id: str) -> dict[str, str]:
         unregister_mcp_ui_agent(agent_id)
     except Exception as e:
         logger.warning(f"Could not unregister from MCP-UI: {e}")
+    
+    # Unregister from context session
+    try:
+        from ..context.session import unregister_agent as unregister_agent_for_context
+        unregister_agent_for_context(agent_id)
+    except Exception as e:
+        logger.warning(f"Could not unregister from context session: {e}")
     
     logger.info(f"Deleted agent: {agent_id}")
     

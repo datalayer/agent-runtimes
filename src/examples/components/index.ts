@@ -3,26 +3,27 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
-export { MockFileBrowser } from './MockFileBrowser';
-export { MainContent } from './MainContent';
-export { SessionTabs } from './SessionTabs';
-export { Header } from './Header';
-export { HeaderControls } from './HeaderControls';
-export { FooterMetrics } from './FooterMetrics';
-export { TimeTravel } from './TimeTravel';
-export { LexicalEditor } from './LexicalEditor';
+// Re-export from new location for backward compatibility
 export {
+  MockFileBrowser,
+  MainContent,
+  SessionTabs,
+  Header,
+  HeaderControls,
+  FooterMetrics,
+  TimeTravel,
+  LexicalEditor,
   AgentConfiguration,
   AGENT_LIBRARIES,
   TRANSPORTS,
   EXTENSIONS,
-} from './AgentConfiguration';
+  McpServerManager,
+} from '../../components';
 export type {
   AgentLibrary,
   Transport,
   Extension,
   MCPServerConfig,
   MCPServerTool,
-} from './AgentConfiguration';
-export { McpServerManager } from './McpServerManager';
-export type { McpServerSelection } from './McpServerManager';
+  McpServerSelection,
+} from '../../components';

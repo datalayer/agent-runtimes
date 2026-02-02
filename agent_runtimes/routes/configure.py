@@ -179,10 +179,22 @@ async def get_agent_context_snapshot_endpoint(
     Returns:
         Context snapshot with distribution data.
     """
-    from ..context.session import get_agent_context_snapshot
+    from ..context.session import get_agent_context_snapshot, _agents
+    from ..context.usage import get_usage_tracker
+    
+    # Debug logging
+    logger.debug(f"[context-snapshot] Fetching snapshot for agent_id={agent_id}")
+    logger.debug(f"[context-snapshot] Registered agents: {list(_agents.keys())}")
+    tracker = get_usage_tracker()
+    stats = tracker.get_agent_stats(agent_id)
+    if stats:
+        logger.debug(f"[context-snapshot] Usage stats: input={stats.input_tokens}, output={stats.output_tokens}, user={stats.user_message_tokens}, assistant={stats.assistant_message_tokens}")
+    else:
+        logger.debug(f"[context-snapshot] No usage stats found for {agent_id}")
     
     snapshot = get_agent_context_snapshot(agent_id)
     if snapshot is None:
+        logger.debug(f"[context-snapshot] Agent '{agent_id}' not found in session registry")
         return {
             "error": f"Agent '{agent_id}' not found",
             "agentId": agent_id,
@@ -200,7 +212,9 @@ async def get_agent_context_snapshot_endpoint(
             },
         }
     
-    return snapshot.to_dict()
+    result = snapshot.to_dict()
+    logger.debug(f"[context-snapshot] Returning snapshot with totalTokens={result.get('totalTokens', 0)}, distribution children={len(result.get('distribution', {}).get('children', []))}")
+    return result
 
 
 @router.get("/agents/{agent_id}/full-context")

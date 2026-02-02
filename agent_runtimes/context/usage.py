@@ -35,6 +35,18 @@ class UsageCategory:
 
 
 @dataclass
+class RequestUsage:
+    """Usage for a single request/response cycle."""
+    request_num: int
+    input_tokens: int = 0
+    output_tokens: int = 0
+    tool_calls: int = 0
+    tool_names: list[str] = field(default_factory=list)
+    timestamp: str | None = None
+    duration_ms: float = 0.0
+
+
+@dataclass
 class AgentUsageStats:
     """Usage statistics for a single agent."""
     
@@ -54,6 +66,9 @@ class AgentUsageStats:
     user_message_tokens: int = 0
     assistant_message_tokens: int = 0
     system_prompt_tokens: int = 0
+    
+    # Per-request usage history
+    request_usage_history: list[RequestUsage] = field(default_factory=list)
     
     # Timestamps
     created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
@@ -77,6 +92,7 @@ class AgentUsageStats:
         cache_write_tokens: int = 0,
         requests: int = 0,
         tool_calls: int = 0,
+        tool_names: list[str] | None = None,
     ) -> None:
         """Update usage stats from a run result."""
         self.input_tokens += input_tokens
@@ -86,6 +102,17 @@ class AgentUsageStats:
         self.requests += requests
         self.tool_calls += tool_calls
         self.last_updated = datetime.now(timezone.utc)
+        
+        # Add per-request usage entry
+        request_num = len(self.request_usage_history) + 1
+        self.request_usage_history.append(RequestUsage(
+            request_num=request_num,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            tool_calls=tool_calls,
+            tool_names=tool_names or [],
+            timestamp=datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+        ))
     
     def update_message_tokens(
         self,
@@ -207,6 +234,7 @@ class AgentUsageTracker:
         cache_write_tokens: int = 0,
         requests: int = 0,
         tool_calls: int = 0,
+        tool_names: list[str] | None = None,
     ) -> None:
         """
         Update usage statistics for an agent.
@@ -219,6 +247,7 @@ class AgentUsageTracker:
             cache_write_tokens: Number of tokens written to cache.
             requests: Number of API requests made.
             tool_calls: Number of tool calls executed.
+            tool_names: List of tool names used in this request.
         """
         stats = self.get_or_create_stats(agent_id)
         stats.update_from_run_usage(
@@ -228,6 +257,7 @@ class AgentUsageTracker:
             cache_write_tokens=cache_write_tokens,
             requests=requests,
             tool_calls=tool_calls,
+            tool_names=tool_names,
         )
     
     def get_context_details(self, agent_id: str) -> dict[str, Any]:

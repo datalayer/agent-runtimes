@@ -16,7 +16,6 @@ import {
   ZapIcon,
 } from '@primer/octicons-react';
 import {
-  Box,
   Button,
   Heading,
   IconButton,
@@ -25,10 +24,10 @@ import {
   Spinner,
   ToggleSwitch,
 } from '@primer/react';
+import { Box } from '@datalayer/primer-addons';
 import { AiAgentIcon } from '@datalayer/icons-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ContextUsage } from './ContextUsage';
-import { ContextDistribution } from './ContextDistribution';
+import { ContextPanel } from './ContextPanel';
 import { ContextInspector } from './ContextInspector';
 import { AgentIdentity } from './AgentIdentity';
 import type {
@@ -240,16 +239,9 @@ export function AgentDetails({
             >
               {name}
             </Heading>
-            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-              <Label variant="accent" size="small">
-                {protocol.toUpperCase().replace(/-/g, ' ')}
-              </Label>
-              {agentId && (
-                <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
-                  ID: {agentId}
-                </Text>
-              )}
-            </Box>
+            {agentId && (
+              <Text sx={{ fontSize: 0, color: 'fg.muted' }}>ID: {agentId}</Text>
+            )}
           </Box>
         </Box>
 
@@ -275,6 +267,11 @@ export function AgentDetails({
               borderColor: 'border.default',
             }}
           >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+              <Label variant="accent" size="small">
+                {protocol.toUpperCase().replace(/-/g, ' ')}
+              </Label>
+            </Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
               <GlobeIcon size={16} />
               <Text
@@ -290,7 +287,7 @@ export function AgentDetails({
           </Box>
         </Box>
 
-        {/* Conversation Stats */}
+        {/* Config MCP Servers Status */}
         <Box>
           <Heading
             as="h4"
@@ -301,42 +298,7 @@ export function AgentDetails({
               color: 'fg.muted',
             }}
           >
-            Conversation
-          </Heading>
-          <Box
-            sx={{
-              p: 3,
-              bg: 'canvas.subtle',
-              borderRadius: 2,
-              border: '1px solid',
-              borderColor: 'border.default',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 2,
-            }}
-          >
-            <CommentDiscussionIcon size={16} />
-            <Text sx={{ fontSize: 1 }}>
-              <Text as="span" sx={{ fontWeight: 'semibold' }}>
-                {messageCount}
-              </Text>{' '}
-              {messageCount === 1 ? 'message' : 'messages'}
-            </Text>
-          </Box>
-        </Box>
-
-        {/* MCP Toolsets Status */}
-        <Box>
-          <Heading
-            as="h4"
-            sx={{
-              fontSize: 1,
-              fontWeight: 'semibold',
-              mb: 2,
-              color: 'fg.muted',
-            }}
-          >
-            MCP Toolsets
+            Config MCP Servers
           </Heading>
           <Box
             sx={{
@@ -505,7 +467,9 @@ export function AgentDetails({
                       >
                         Code Mode
                       </Text>
-                      <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
+                      <Text
+                        sx={{ fontSize: 0, color: 'fg.muted', marginLeft: 1 }}
+                      >
                         MCP servers become programmatic tools
                       </Text>
                     </Box>
@@ -630,36 +594,43 @@ export function AgentDetails({
           </Box>
         </Box>
 
-        {/* Context Usage - only shown when agentId is available */}
-        {agentId && <ContextUsage agentId={agentId} />}
-
-        {/* Context Distribution - treemap visualization */}
-        {agentId && (
-          <Box sx={{ mt: 3 }}>
-            <Heading
-              as="h4"
-              sx={{
-                fontSize: 1,
-                fontWeight: 'semibold',
-                mb: 2,
-                color: 'fg.muted',
-              }}
-            >
-              Current Context Distribution
-            </Heading>
-            <Box
-              sx={{
-                p: 3,
-                bg: 'canvas.subtle',
-                borderRadius: 2,
-                border: '1px solid',
-                borderColor: 'border.default',
-              }}
-            >
-              <ContextDistribution agentId={agentId} height="250px" />
-            </Box>
+        {/* Conversation Stats */}
+        <Box>
+          <Heading
+            as="h4"
+            sx={{
+              fontSize: 1,
+              fontWeight: 'semibold',
+              mb: 2,
+              color: 'fg.muted',
+            }}
+          >
+            Conversation
+          </Heading>
+          <Box
+            sx={{
+              p: 3,
+              bg: 'canvas.subtle',
+              borderRadius: 2,
+              border: '1px solid',
+              borderColor: 'border.default',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 2,
+            }}
+          >
+            <CommentDiscussionIcon size={16} />
+            <Text sx={{ fontSize: 1 }}>
+              <Text as="span" sx={{ fontWeight: 'semibold' }}>
+                {messageCount}
+              </Text>{' '}
+              {messageCount === 1 ? 'message' : 'messages'}
+            </Text>
           </Box>
-        )}
+        </Box>
+
+        {/* Unified Context Panel - usage, distribution, and history */}
+        {agentId && <ContextPanel agentId={agentId} chartHeight="200px" />}
 
         {/* Context Snapshot - detailed inspection of agent context */}
         {agentId && (

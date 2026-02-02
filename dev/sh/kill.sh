@@ -45,6 +45,7 @@ kill_port 8080
 kill_port 8098
 kill_port 8200
 kill_port 8686
+kill_port 8765
 kill_port 8983
 kill_port 9092
 kill_port 9300

@@ -112,8 +112,14 @@ async def _create_and_register_cli_agent(
     from .routes.acp import AgentCapabilities, AgentInfo, register_agent
     from .routes.agui import register_agui_agent, get_agui_app
     from .routes.mcp_ui import register_mcp_ui_agent
+    from .context.session import register_agent as register_agent_for_context
+    from .routes.configure import _codemode_state
     
     logger.info(f"Creating agent '{agent_id}' with codemode={enable_codemode}, skills={skills}")
+    
+    # Update the global codemode state so AgentDetails shows correct status
+    _codemode_state["enabled"] = enable_codemode
+    _codemode_state["skills"] = list(skills) if skills else []
     
     # Build list of non-MCP toolsets (codemode, skills)
     non_mcp_toolsets = []
@@ -317,6 +323,10 @@ async def _create_and_register_cli_agent(
     # Register with ACP (base registration)
     register_agent(agent, info)
     logger.info(f"Registered CLI agent '{agent_id}' with ACP (protocol: {protocol})")
+    
+    # Register with context session for snapshot lookups
+    register_agent_for_context(agent_id, agent, {"name": agent_spec.name, "description": agent_spec.description})
+    logger.info(f"Registered agent '{agent_id}' for context snapshots")
     
     # Register with the selected protocol transport
     if protocol == "ag-ui":

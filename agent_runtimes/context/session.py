@@ -1198,6 +1198,7 @@ def extract_context_snapshot(
         logger.debug("Using %d passed tool definitions", len(tool_defs))
     else:
         try:
+            # First try pydantic-ai agent's toolsets
             if hasattr(pydantic_agent, "toolsets"):
                 toolsets = pydantic_agent.toolsets
                 logger.debug("Agent has %d toolsets", len(toolsets))
@@ -1205,6 +1206,14 @@ def extract_context_snapshot(
                 logger.debug("Extracted %d tool definitions from toolsets", len(tool_defs))
             else:
                 logger.debug("Agent has no toolsets attribute")
+            
+            # Also check for adapter's non_mcp_toolsets (used by PydanticAIAdapter)
+            if hasattr(agent, "_non_mcp_toolsets") and agent._non_mcp_toolsets:
+                adapter_toolsets = agent._non_mcp_toolsets
+                logger.debug("Adapter has %d non_mcp_toolsets", len(adapter_toolsets))
+                adapter_defs = _extract_tool_definitions_from_toolsets(adapter_toolsets)
+                logger.debug("Extracted %d tool definitions from adapter toolsets", len(adapter_defs))
+                tool_defs.extend(adapter_defs)
         except Exception as e:
             logger.debug("Could not extract tools from toolsets: %s", e)
     
@@ -1861,6 +1870,22 @@ def get_agent_context_snapshot(agent_id: str) -> ContextSnapshot | None:
     if stats:
         snapshot.user_message_tokens = stats.user_message_tokens
         snapshot.assistant_message_tokens = stats.assistant_message_tokens
+        
+        # Merge per-request usage from tracker if snapshot has none
+        # (AG-UI doesn't populate _agent_messages, so snapshot extraction finds nothing)
+        if not snapshot.per_request_usage and stats.request_usage_history:
+            for req in stats.request_usage_history:
+                snapshot.per_request_usage.append(RequestUsageSnapshot(
+                    request_num=req.request_num,
+                    input_tokens=req.input_tokens,
+                    output_tokens=req.output_tokens,
+                    tool_names=req.tool_names,
+                    timestamp=req.timestamp,
+                    duration_ms=req.duration_ms,
+                ))
+            # Update sum fields from tracker data
+            snapshot.sum_response_input_tokens = stats.input_tokens
+            snapshot.sum_response_output_tokens = stats.output_tokens
         
         # Recalculate total (include tool_tokens)
         snapshot.total_tokens = (
