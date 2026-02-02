@@ -12,12 +12,19 @@ Agent Runtimes exposes a comprehensive REST API for managing agents, executing p
 http://localhost:8765/api/v1
 ```
 
-:::note URL Convention
-All API endpoints should be called **without trailing slashes**. For example:
-- ✅ `/api/v1/agents`
-- ❌ `/api/v1/agents/`
+:::note URL Convention - Trailing Slashes
+Most API endpoints should be called **without trailing slashes**. However, **mounted protocol endpoints require trailing slashes**:
 
-The only exception is A2A protocol endpoints which require trailing slashes for FastA2A compatibility.
+**Standard endpoints (no trailing slash):**
+- ✅ `/api/v1/agents`
+- ✅ `/api/v1/mcp/servers`
+
+**Protocol endpoints (trailing slash required):**
+- ✅ `/api/v1/ag-ui/{agent_id}/` - AG-UI protocol (mounted Starlette apps)
+- ✅ `/api/v1/a2a/{agent_id}/` - A2A protocol (FastA2A compatibility)
+- ✅ `/api/v1/examples/{example_name}/` - AG-UI example agents
+
+Without the trailing slash, mounted apps return a 307 redirect which may break streaming clients.
 :::
 
 ## Agents
@@ -523,6 +530,177 @@ DELETE /api/v1/mcp/servers/{server_id}
 Remove an MCP server configuration.
 
 **Response:** `204 No Content`
+
+## AG-UI Protocol
+
+The AG-UI (Agent-User Interface) protocol provides streaming agent communication using Server-Sent Events (SSE). Each agent is mounted as a Starlette application.
+
+:::warning Trailing Slash Required
+AG-UI endpoints are mounted Starlette apps and **require a trailing slash**. Without it, you'll get a 307 redirect that breaks streaming.
+:::
+
+### List AG-UI Agents
+
+```http
+GET /api/v1/ag-ui/agents
+```
+
+List all agents available via AG-UI protocol.
+
+**Response:**
+
+```json
+{
+  "protocol": "ag-ui",
+  "version": "0.1.0",
+  "agents": [
+    {
+      "agent_id": "pydantic-ai",
+      "endpoint": "/api/v1/ag-ui/pydantic-ai/"
+    }
+  ],
+  "agents_endpoint": "/api/v1/ag-ui/agents",
+  "terminate_endpoint": "/api/v1/ag-ui/terminate",
+  "note": "Each agent is mounted at /api/v1/ag-ui/{agent_id}/ (trailing slash required)"
+}
+```
+
+### AG-UI Protocol Info
+
+```http
+GET /api/v1/ag-ui/
+```
+
+Get AG-UI protocol information and list of available agents.
+
+### Send Message (Streaming)
+
+```http
+POST /api/v1/ag-ui/{agent_id}/
+Content-Type: application/json
+```
+
+Send a message to an AG-UI agent and receive streaming SSE response.
+
+**Request Body:**
+
+```json
+{
+  "thread_id": "thread-123",
+  "run_id": "run-456",
+  "messages": [
+    {
+      "id": "msg-1",
+      "role": "user",
+      "content": "Hello, how are you?"
+    }
+  ],
+  "state": {},
+  "tools": [],
+  "context": [],
+  "forwardedProps": {}
+}
+```
+
+**Response:** Server-Sent Events (SSE) stream with AG-UI events:
+
+```
+event: RUN_STARTED
+data: {"type": "RUN_STARTED", "thread_id": "thread-123", "run_id": "run-456"}
+
+event: TEXT_MESSAGE_START
+data: {"type": "TEXT_MESSAGE_START", "message_id": "msg-2", "role": "assistant"}
+
+event: TEXT_MESSAGE_CONTENT
+data: {"type": "TEXT_MESSAGE_CONTENT", "message_id": "msg-2", "delta": "Hello! "}
+
+event: TEXT_MESSAGE_CONTENT
+data: {"type": "TEXT_MESSAGE_CONTENT", "message_id": "msg-2", "delta": "I'm doing well."}
+
+event: TEXT_MESSAGE_END
+data: {"type": "TEXT_MESSAGE_END", "message_id": "msg-2"}
+
+event: RUN_FINISHED
+data: {"type": "RUN_FINISHED", "thread_id": "thread-123", "run_id": "run-456"}
+```
+
+### Terminate Run
+
+```http
+POST /api/v1/ag-ui/terminate
+Content-Type: application/json
+```
+
+Terminate an active AG-UI run.
+
+**Request Body:**
+
+```json
+{
+  "thread_id": "thread-123",
+  "run_id": "run-456"
+}
+```
+
+### AG-UI Event Types
+
+| Event | Description |
+|-------|-------------|
+| `RUN_STARTED` | Run has started processing |
+| `RUN_FINISHED` | Run completed successfully |
+| `RUN_ERROR` | Run encountered an error |
+| `TEXT_MESSAGE_START` | Beginning of a text message |
+| `TEXT_MESSAGE_CONTENT` | Incremental text content (streaming) |
+| `TEXT_MESSAGE_END` | End of a text message |
+| `TOOL_CALL_START` | Tool invocation started |
+| `TOOL_CALL_ARGS` | Tool call arguments (streaming) |
+| `TOOL_CALL_END` | Tool invocation completed |
+| `TOOL_CALL_RESULT` | Result from tool execution |
+| `STATE_SNAPSHOT` | Current state snapshot |
+| `STATE_DELTA` | Incremental state update |
+| `CUSTOM` | Custom event type |
+
+### Example: Using curl
+
+```bash
+curl -X POST "http://localhost:8765/api/v1/ag-ui/pydantic-ai/" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "thread_id": "test-thread",
+    "run_id": "test-run",
+    "messages": [{"id": "1", "role": "user", "content": "Hello!"}],
+    "state": {},
+    "tools": [],
+    "context": [],
+    "forwardedProps": {}
+  }'
+```
+
+### Example: Using TypeScript
+
+```typescript
+import { AGUIAdapter } from '@datalayer/agent-runtimes';
+
+const adapter = new AGUIAdapter({
+  baseUrl: 'http://localhost:8765/api/v1/ag-ui/pydantic-ai/',
+  // Note: The adapter automatically ensures trailing slash
+});
+
+await adapter.sendMessage('Hello!', {
+  onToken: (token) => console.log(token),
+  onComplete: (message) => console.log('Done:', message),
+});
+```
+
+### Example: Using Python
+
+```python
+from agent_runtimes.transports.clients import AGUIClient
+
+async with AGUIClient("http://localhost:8765/api/v1/ag-ui/pydantic-ai/") as client:
+    async for event in client.run("Hello!"):
+        print(event)
+```
 
 ## Extensions
 
