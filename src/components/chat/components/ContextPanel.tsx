@@ -18,7 +18,6 @@ import {
   ListUnorderedIcon,
 } from '@primer/octicons-react';
 import {
-  Box,
   Heading,
   Text,
   ProgressBar,
@@ -26,6 +25,7 @@ import {
   Button,
   SegmentedControl,
 } from '@primer/react';
+import { Box } from '@datalayer/primer-addons';
 import { useQuery } from '@tanstack/react-query';
 import ReactECharts from 'echarts-for-react';
 import { useState, useMemo } from 'react';
