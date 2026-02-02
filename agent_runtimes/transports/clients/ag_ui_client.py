@@ -87,13 +87,13 @@ class AGUIEvent:
     @property
     def tool_call_id(self) -> str | None:
         """Get tool call ID from event."""
-        return self.data.get("tool_call_id")
+        return self.data.get("tool_call_id") or self.data.get("toolCallId")
     
     @property
     def tool_name(self) -> str | None:
         """Get tool name from TOOL_CALL_START events."""
         if self.type == EventType.TOOL_CALL_START:
-            return self.data.get("tool_call_name")
+            return self.data.get("tool_call_name") or self.data.get("toolCallName")
         return None
     
     @property

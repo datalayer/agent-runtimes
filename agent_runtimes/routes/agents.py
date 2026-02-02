@@ -790,25 +790,48 @@ def _get_agent_details(agent: Any, agent_id: str, info: Any) -> dict[str, Any]:
     """
     toolsets_info = _get_agent_toolsets_info(agent)
     
-    # Get model name
+    # Get model name - try multiple access patterns
     model_name = "unknown"
-    if hasattr(agent, "agent") and hasattr(agent.agent, "model"):
+    
+    # Try _agent (PydanticAIAdapter pattern)
+    if hasattr(agent, "_agent") and hasattr(agent._agent, "model"):
+        model = agent._agent.model
+        if hasattr(model, "model_name"):
+            model_name = model.model_name
+        elif hasattr(model, "name"):
+            model_name = model.name
+        elif model:
+            model_str = str(model)
+            # Handle Pydantic AI model strings like "openai:gpt-4o"
+            if ":" in model_str:
+                model_name = model_str
+            else:
+                model_name = model_str
+    # Fallback: try agent (other adapter patterns)
+    elif hasattr(agent, "agent") and hasattr(agent.agent, "model"):
         model = agent.agent.model
         if hasattr(model, "model_name"):
             model_name = model.model_name
         elif hasattr(model, "name"):
             model_name = model.name
-        elif hasattr(model, "__str__"):
+        elif model:
             model_str = str(model)
-            # Extract model name from string representation
             if ":" in model_str:
-                model_name = model_str.split(":")[-1]
+                model_name = model_str
             else:
                 model_name = model_str
     
-    # Get system prompt (truncated)
+    # Get system prompt (truncated) - try multiple access patterns
     system_prompt = ""
-    if hasattr(agent, "agent") and hasattr(agent.agent, "_system_prompts"):
+    # Try _agent (PydanticAIAdapter pattern)
+    if hasattr(agent, "_agent") and hasattr(agent._agent, "_system_prompts"):
+        prompts = agent._agent._system_prompts
+        if prompts:
+            system_prompt = str(prompts[0])
+            if len(system_prompt) > 100:
+                system_prompt = system_prompt[:97] + "..."
+    # Fallback: try agent (other adapter patterns)
+    elif hasattr(agent, "agent") and hasattr(agent.agent, "_system_prompts"):
         prompts = agent.agent._system_prompts
         if prompts:
             system_prompt = str(prompts[0])
