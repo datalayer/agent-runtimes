@@ -38,8 +38,8 @@ const NOTEBOOK_CONTENT = MatplotlibNotebook;
 const BASE_URL = 'http://localhost:8765';
 const AGENT_ID = 'notebook-agent-runtime-example';
 
-// AG-UI endpoint for notebook operations
-const AG_UI_ENDPOINT = `${BASE_URL}/api/v1/ag-ui/${AGENT_ID}`;
+// AG-UI endpoint for notebook operations (trailing slash required for mounted Starlette apps)
+const AG_UI_ENDPOINT = `${BASE_URL}/api/v1/ag-ui/${AGENT_ID}/`;
 
 /**
  * Hook to ensure the demo-agent exists on the server.

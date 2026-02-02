@@ -16,8 +16,8 @@ Example:
         async for event in client.run("Hello!"):
             print(event)
     
-    # AG-UI client (HTTP/SSE)
-    async with AGUIClient("http://localhost:8000/api/v1/ag-ui/agent-1") as client:
+    # AG-UI client (HTTP/SSE) - trailing slash required for mounted apps
+    async with AGUIClient("http://localhost:8000/api/v1/ag-ui/agent-1/") as client:
         async for event in client.run("Hello!"):
             print(event.delta, end="")
 """

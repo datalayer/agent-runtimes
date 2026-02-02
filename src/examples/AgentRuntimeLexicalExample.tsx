@@ -82,8 +82,8 @@ const LEXICAL_ID = 'agui-lexical-example';
 const BASE_URL = 'http://localhost:8765';
 const AGENT_ID = 'lexical-agent-runtime-example';
 
-// AG-UI endpoint for lexical operations
-const AG_UI_ENDPOINT = `${BASE_URL}/api/v1/ag-ui/${AGENT_ID}`;
+// AG-UI endpoint for lexical operations (trailing slash required for mounted Starlette apps)
+const AG_UI_ENDPOINT = `${BASE_URL}/api/v1/ag-ui/${AGENT_ID}/`;
 
 /**
  * Hook to ensure the demo-agent exists on the server.

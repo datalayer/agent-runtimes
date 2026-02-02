@@ -13,7 +13,7 @@ Provides:
 AG-UI Protocol Reference: https://docs.ag-ui.com/
 
 Example:
-    async with AGUIClient("http://localhost:8000/api/v1/ag-ui/agent-1") as client:
+    async with AGUIClient("http://localhost:8000/api/v1/ag-ui/agent-1/") as client:
         async for event in client.run("Hello, agent!"):
             if event.type == "TEXT_MESSAGE_CONTENT":
                 print(event.delta, end="", flush=True)
@@ -165,7 +165,7 @@ class AGUIClient:
     Connects to AG-UI compatible agent servers via HTTP with SSE streaming.
     
     Example:
-        async with AGUIClient("http://localhost:8000/api/v1/ag-ui/agent-1") as client:
+        async with AGUIClient("http://localhost:8000/api/v1/ag-ui/agent-1/") as client:
             async for event in client.run("Hello, agent!"):
                 if event.type == EventType.TEXT_MESSAGE_CONTENT:
                     print(event.delta, end="", flush=True)
@@ -182,7 +182,7 @@ class AGUIClient:
         Initialize the AG-UI client.
         
         Args:
-            url: HTTP URL of the AG-UI endpoint (e.g., http://localhost:8000/api/v1/ag-ui/agent-1).
+            url: HTTP URL of the AG-UI endpoint (e.g., http://localhost:8000/api/v1/ag-ui/agent-1/).
             headers: Optional headers for HTTP requests.
             timeout: Request timeout in seconds.
             model: Optional model to use (overrides server default).
@@ -193,7 +193,8 @@ class AGUIClient:
                 "Install it with: pip install httpx"
             )
         
-        self.url = url.rstrip("/")  # Normalize URL without trailing slash
+        # Ensure URL ends with trailing slash - mounted Starlette apps require it
+        self.url = url.rstrip("/") + "/"
         self.headers = headers or {}
         self.timeout = timeout
         self.model = model
@@ -253,17 +254,17 @@ class AGUIClient:
         # Add user message to conversation
         self._conversation.add_user_message(input_text)
         
-        # Build request payload
+        # Build request payload with all required AG-UI fields
         payload: dict[str, Any] = {
             "thread_id": self._conversation.thread_id,
             "run_id": str(uuid.uuid4()),
             "messages": [self._message_to_dict(m) for m in self._conversation.messages],
+            "state": {},  # Required by AG-UI protocol
+            "tools": tools or [],  # Required by AG-UI protocol
+            "context": context or [],  # Required by AG-UI protocol
+            "forwardedProps": {},  # Required by AG-UI protocol
         }
         
-        if context:
-            payload["context"] = context
-        if tools:
-            payload["tools"] = tools
         if identities:
             payload["identities"] = identities
         if self.model:
@@ -280,7 +281,10 @@ class AGUIClient:
                 json=payload,
                 headers={"Accept": "text/event-stream", **self.headers},
             ) as response:
-                response.raise_for_status()
+                # Check for HTTP errors - must read body first for streaming responses
+                if response.status_code >= 400:
+                    await response.aread()
+                    raise AGUIClientError(f"HTTP error: {response.status_code} - {response.text}")
                 
                 async for line in response.aiter_lines():
                     if not line:
@@ -318,10 +322,13 @@ class AGUIClient:
                             logger.warning(f"Failed to parse SSE data: {e}")
                             continue
                             
-        except httpx.HTTPStatusError as e:
-            raise AGUIClientError(f"HTTP error: {e.response.status_code} - {e.response.text}")
+        except AGUIClientError:
+            # Re-raise our own errors
+            raise
         except httpx.RequestError as e:
             raise AGUIClientError(f"Request error: {e}")
+        except Exception as e:
+            raise AGUIClientError(f"Unexpected error: {e}")
     
     async def send_message(
         self,
@@ -482,7 +489,7 @@ async def connect_agui(
         Connected AG-UI client.
         
     Example:
-        client = await connect_agui("http://localhost:8000/api/v1/ag-ui/my-agent")
+        client = await connect_agui("http://localhost:8000/api/v1/ag-ui/my-agent/")
         async for event in client.run("Hello!"):
             print(event)
         await client.disconnect()

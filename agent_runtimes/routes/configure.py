@@ -366,11 +366,31 @@ async def get_codemode_status() -> CodemodeStatus:
     """
     Get the current codemode status.
     
+    This checks the actual agent adapters for codemode state, falling back
+    to the global state if no adapters are registered.
+    
     Returns:
         Current codemode enabled state, active skills, and available skills.
     """
+    from agent_runtimes.routes.agui import get_all_agui_adapters
+    
     available_skills = _get_available_skills()
     active_skill_names = _codemode_state["skills"]
+    
+    # Check actual adapter state - if any adapter has codemode enabled, report enabled
+    adapters = get_all_agui_adapters()
+    codemode_enabled = _codemode_state["enabled"]  # Default to global state
+    
+    if adapters:
+        # Check if any adapter actually has codemode enabled
+        for agent_id, agui_transport in adapters.items():
+            try:
+                agent_adapter = agui_transport.agent
+                if hasattr(agent_adapter, 'codemode_enabled'):
+                    codemode_enabled = agent_adapter.codemode_enabled
+                    break  # Use first adapter's state as the canonical state
+            except Exception as e:
+                logger.debug(f"Could not check codemode status for agent {agent_id}: {e}")
     
     # Build active skills list with full info
     active_skills = []
@@ -379,7 +399,7 @@ async def get_codemode_status() -> CodemodeStatus:
             active_skills.append(skill)
     
     return CodemodeStatus(
-        enabled=_codemode_state["enabled"],
+        enabled=codemode_enabled,
         skills=active_skills,
         available_skills=available_skills,
     )
@@ -390,8 +410,8 @@ async def toggle_codemode(request: CodemodeToggleRequest) -> dict[str, Any]:
     """
     Toggle codemode on/off and optionally update skills.
     
-    Note: This updates the runtime state. For changes to take full effect
-    with toolset registration, the server may need to be restarted.
+    This updates the runtime state AND updates the agent adapters' toolsets
+    so codemode is enabled/disabled immediately without requiring a restart.
     
     Args:
         request: Toggle request with enabled state and optional skills list.
@@ -399,6 +419,8 @@ async def toggle_codemode(request: CodemodeToggleRequest) -> dict[str, Any]:
     Returns:
         Updated codemode status.
     """
+    from agent_runtimes.routes.agui import get_all_agui_adapters
+    
     _codemode_state["enabled"] = request.enabled
     
     if request.skills is not None:
@@ -409,11 +431,34 @@ async def toggle_codemode(request: CodemodeToggleRequest) -> dict[str, Any]:
     if request.skills is not None:
         os.environ["AGENT_RUNTIMES_SKILLS"] = ",".join(request.skills)
     
-    logger.info(f"Codemode toggled: enabled={request.enabled}, skills={_codemode_state['skills']}")
+    # Update all registered AG-UI adapters
+    adapters_updated = 0
+    adapters_failed = 0
+    for agent_id, agui_transport in get_all_agui_adapters().items():
+        try:
+            # Get the underlying agent adapter (PydanticAIAdapter)
+            agent_adapter = agui_transport.agent
+            if hasattr(agent_adapter, 'set_codemode_enabled'):
+                success = agent_adapter.set_codemode_enabled(request.enabled)
+                if success:
+                    adapters_updated += 1
+                    logger.info(f"Codemode {'enabled' if request.enabled else 'disabled'} for agent: {agent_id}")
+                else:
+                    adapters_failed += 1
+                    logger.warning(f"Failed to toggle codemode for agent: {agent_id}")
+            else:
+                logger.debug(f"Agent {agent_id} does not support codemode toggling")
+        except Exception as e:
+            adapters_failed += 1
+            logger.error(f"Error toggling codemode for agent {agent_id}: {e}", exc_info=True)
+    
+    logger.info(f"Codemode toggled: enabled={request.enabled}, skills={_codemode_state['skills']}, adapters_updated={adapters_updated}, adapters_failed={adapters_failed}")
     
     return {
         "status": "ok",
         "enabled": _codemode_state["enabled"],
         "skills": _codemode_state["skills"],
-        "message": f"Codemode {'enabled' if request.enabled else 'disabled'}. Note: Full toolset changes may require server restart.",
+        "adapters_updated": adapters_updated,
+        "adapters_failed": adapters_failed,
+        "message": f"Codemode {'enabled' if request.enabled else 'disabled'} for {adapters_updated} agent(s).",
     }

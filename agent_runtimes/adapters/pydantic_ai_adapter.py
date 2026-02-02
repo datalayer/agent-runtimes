@@ -156,6 +156,63 @@ class PydanticAIAdapter(BaseAgent):
         """Get the list of selected MCP server IDs."""
         return [getattr(s, "id", str(s)) for s in self._selected_mcp_servers]
 
+    @property
+    def codemode_enabled(self) -> bool:
+        """Check if codemode is currently enabled."""
+        return self._codemode_toolset_index is not None
+
+    def set_codemode_enabled(self, enabled: bool) -> bool:
+        """Enable or disable codemode at runtime.
+        
+        When enabling, builds a new CodemodeToolset using the codemode_builder.
+        When disabling, removes the existing CodemodeToolset.
+        
+        Args:
+            enabled: Whether to enable (True) or disable (False) codemode.
+            
+        Returns:
+            True if the operation succeeded, False otherwise.
+        """
+        current_enabled = self._codemode_toolset_index is not None
+        
+        if enabled == current_enabled:
+            logger.info(f"PydanticAIAdapter [{self._name}]: Codemode already {'enabled' if enabled else 'disabled'}")
+            return True
+        
+        if enabled:
+            # Enable codemode
+            if not self._codemode_builder:
+                logger.error(f"PydanticAIAdapter [{self._name}]: Cannot enable codemode - no codemode_builder provided")
+                return False
+            
+            try:
+                logger.info(f"PydanticAIAdapter [{self._name}]: Enabling codemode")
+                new_codemode = self._codemode_builder(self._selected_mcp_servers)
+                if new_codemode:
+                    self._non_mcp_toolsets.append(new_codemode)
+                    self._codemode_toolset_index = len(self._non_mcp_toolsets) - 1
+                    logger.info(f"PydanticAIAdapter [{self._name}]: Codemode enabled at index {self._codemode_toolset_index}")
+                    return True
+                else:
+                    logger.warning(f"PydanticAIAdapter [{self._name}]: codemode_builder returned None")
+                    return False
+            except Exception as e:
+                logger.error(f"PydanticAIAdapter [{self._name}]: Failed to enable codemode: {e}", exc_info=True)
+                return False
+        else:
+            # Disable codemode
+            if self._codemode_toolset_index is not None:
+                try:
+                    logger.info(f"PydanticAIAdapter [{self._name}]: Disabling codemode")
+                    self._non_mcp_toolsets.pop(self._codemode_toolset_index)
+                    self._codemode_toolset_index = None
+                    logger.info(f"PydanticAIAdapter [{self._name}]: Codemode disabled")
+                    return True
+                except Exception as e:
+                    logger.error(f"PydanticAIAdapter [{self._name}]: Failed to disable codemode: {e}", exc_info=True)
+                    return False
+            return True
+
     def update_mcp_servers(self, servers: list[Any]) -> None:
         """Update the list of selected MCP servers.
         

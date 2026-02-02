@@ -52,7 +52,13 @@ export class AGUIAdapter extends BaseProtocolAdapter {
 
   constructor(config: AGUIAdapterConfig) {
     super(config);
-    this.aguiConfig = config;
+    // Ensure baseUrl ends with trailing slash (required for mounted Starlette apps)
+    this.aguiConfig = {
+      ...config,
+      baseUrl: config.baseUrl.endsWith('/')
+        ? config.baseUrl
+        : `${config.baseUrl}/`,
+    };
   }
 
   /**

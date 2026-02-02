@@ -41,7 +41,7 @@ const useNotebookStore = () => notebookStore.getState();
  *
  * // Use with ChatFloating
  * <ChatFloating
- *   endpoint="http://localhost:8765/api/v1/ag-ui/agent"
+ *   endpoint="http://localhost:8765/api/v1/ag-ui/agent/"
  *   tools={tools}
  * />
  * ```

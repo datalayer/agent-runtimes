@@ -267,8 +267,11 @@ class AGUITransport(BaseTransport):
                     **agui_kwargs,
                 )
 
+            # Create Starlette app for AG-UI endpoint
             self._app = Starlette(
-                routes=[Route("/", run_agent, methods=["POST"])],
+                routes=[
+                    Route("/", run_agent, methods=["POST"]),
+                ],
             )
 
         return self._app
