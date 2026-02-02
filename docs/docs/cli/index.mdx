@@ -16,13 +16,15 @@ pip install agent-runtimes
 
 ## Commands Overview
 
-The CLI provides three main commands:
+The CLI provides five main commands:
 
 | Command | Description |
 |---------|-------------|
 | `serve` | Start the agent-runtimes server |
 | `list-agents` | Query running agents from a server |
 | `list-specs` | List available agent specs from the library |
+| `mcp-servers-catalog` | Display MCP servers from the catalog |
+| `mcp-servers-config` | Display MCP servers from the user's config |
 
 ```bash
 # Show available commands
@@ -51,6 +53,14 @@ from agent_runtimes.commands import (
     list_agent_specs,
     get_agent_specs,
     
+    # MCP servers catalog command
+    list_mcp_servers_catalog,
+    get_mcp_servers_catalog,
+    
+    # MCP servers config command
+    list_mcp_servers_config,
+    get_mcp_servers_config,
+    
     # Common
     OutputFormat,
 )
@@ -63,6 +73,12 @@ result = list_agents_from_server(host="localhost", port=8000)
 
 # Get available agent specs
 specs = get_agent_specs()
+
+# Get catalog MCP servers
+catalog = get_mcp_servers_catalog()
+
+# Get config MCP servers
+config = get_mcp_servers_config()
 ```
 
 ---
@@ -92,6 +108,7 @@ agent-runtimes serve [OPTIONS]
 | `--mcp-servers` | `-m` | - | `AGENT_RUNTIMES_MCP_SERVERS` | Comma-separated list of MCP server IDs from the catalog to start |
 | `--codemode` | `-c` | `false` | `AGENT_RUNTIMES_CODEMODE` | Enable Code Mode: MCP servers become programmatic tools via CodemodeToolset |
 | `--skills` | `-s` | - | `AGENT_RUNTIMES_SKILLS` | Comma-separated list of skills to enable (requires `--codemode`) |
+| `--find-free-port` | `-f` | `false` | `AGENT_RUNTIMES_FIND_FREE_PORT` | If the port is in use, find the next available port |
 
 ### Basic Examples
 
@@ -318,18 +335,22 @@ The table output uses rich formatting with color-coded status indicators:
 
 ```
 🚀 Running Agents on localhost:8000
-╭──────────────────┬────────────────────────┬──────────┬───────────┬─────────────────────────────────╮
-│ ID               │ Name                   │ Protocol │  Status   │ Description                     │
-├──────────────────┼────────────────────────┼──────────┼───────────┼─────────────────────────────────┤
-│ crawler          │ my-crawler             │ ag-ui    │ ● running │ Web crawling and research ag... │
-│ data-acquisition │ default                │ vercel-ai│ ● running │ Acquires and manages data fr... │
-╰──────────────────┴────────────────────────┴──────────┴───────────┴─────────────────────────────────╯
+╭──────────────────┬────────────────────────┬──────────┬───────────┬──────────────────────────────────────────┬─────────────────────────────────╮
+│ ID               │ Name                   │ Protocol │  Status   │ Toolsets                                 │ Description                     │
+├──────────────────┼────────────────────────┼──────────┼───────────┼──────────────────────────────────────────┼─────────────────────────────────┤
+│ crawler          │ my-crawler             │ ag-ui    │ ● running │ mcp: tavily, github | codemode           │ Web crawling and research ag... │
+│ data-acquisition │ default                │ vercel-ai│ ● running │ mcp: kaggle, filesystem | skills: web... │ Acquires and manages data fr... │
+╰──────────────────┴────────────────────────┴──────────┴───────────┴──────────────────────────────────────────┴─────────────────────────────────╯
 Total: 2 agent(s)
 ```
 
 - **Status indicators**: `● running` (green) or `○ stopped` (red)
 - **ID column**: Green text for easy identification
 - **Protocol column**: Magenta text showing the transport protocol
+- **Toolsets column**: Shows MCP servers, codemode status, and skills
+  - **mcp**: Yellow label with comma-separated server IDs
+  - **codemode**: Magenta badge when enabled
+  - **skills**: Cyan label with skill names
 - **Description**: Truncated with ellipsis if too long
 
 **JSON format:**
@@ -340,8 +361,19 @@ Total: 2 agent(s)
       "id": "crawler",
       "name": "my-crawler",
       "status": "running",
+      "protocol": "ag-ui",
       "description": "Web crawling and research agent",
-      "capabilities": ["web_search", "content_extraction"]
+      "capabilities": {
+        "streaming": true,
+        "tool_calling": true,
+        "code_execution": true
+      },
+      "toolsets": {
+        "mcp_servers": ["tavily", "github"],
+        "codemode": true,
+        "skills": [],
+        "toolset_count": 3
+      }
     }
   ]
 }
@@ -451,6 +483,215 @@ list_agent_specs(output=OutputFormat.table)
 
 ---
 
+## `mcp-servers-catalog` Command
+
+List MCP servers from the catalog. These are predefined MCP server configurations that can be used with `--mcp-servers` when starting the server.
+
+```bash
+agent-runtimes mcp-servers-catalog [OPTIONS]
+```
+
+### Options
+
+| Option | Short | Default | Description |
+|--------|-------|---------|-------------|
+| `--output` | `-o` | `table` | Output format (`table` or `json`) |
+
+### Examples
+
+```bash
+# List catalog MCP servers
+agent-runtimes mcp-servers-catalog
+
+# Output as JSON
+agent-runtimes mcp-servers-catalog --output json
+
+# Using short option
+agent-runtimes mcp-servers-catalog -o json
+```
+
+### Output Formats
+
+**Table format (default):**
+
+The table output shows availability status based on environment variables:
+
+```
+📦 MCP Servers Catalog
+╭──────────────────┬────────────────────────┬───────────────┬───────────┬─────────────────────────────────┬─────────────────────────────────╮
+│ ID               │ Name                   │ Status        │ Transport │ Env Vars                        │ Description                     │
+├──────────────────┼────────────────────────┼───────────────┼───────────┼─────────────────────────────────┼─────────────────────────────────┤
+│ tavily           │ Tavily Search          │ ● ready       │ stdio     │ TAVILY_API_KEY                  │ Web search and research capa... │
+│ filesystem       │ Filesystem             │ ● ready       │ stdio     │ none                            │ Local filesystem read/write ... │
+│ github           │ GitHub                 │ ○ missing env │ stdio     │ GITHUB_TOKEN                    │ GitHub repository operations... │
+│ slack            │ Slack                  │ ○ missing env │ stdio     │ SLACK_BOT_TOKEN, SLACK_TEAM_ID  │ Slack messaging and channel ... │
+│ kaggle           │ Kaggle                 │ ● ready       │ stdio     │ none                            │ Kaggle datasets, models, com... │
+╰──────────────────┴────────────────────────┴───────────────┴───────────┴─────────────────────────────────┴─────────────────────────────────╯
+Total: 12 server(s) • ● 5 ready • ○ 7 missing env
+
+Tip: Set the required environment variables to make servers available.
+```
+
+- **Status indicators**: `● ready` (green) or `○ missing env` (red)
+- **Env Vars column**: Shows required environment variables
+  - Green if the variable is set
+  - Red if the variable is missing
+
+**JSON format:**
+```json
+[
+  {
+    "id": "tavily",
+    "name": "Tavily Search",
+    "description": "Web search and research capabilities via Tavily API",
+    "command": "npx",
+    "args": ["-y", "tavily-mcp"],
+    "transport": "stdio",
+    "required_env_vars": ["TAVILY_API_KEY"],
+    "is_available": true
+  },
+  {
+    "id": "github",
+    "name": "GitHub",
+    "description": "GitHub repository operations (issues, PRs, code search)",
+    "command": "npx",
+    "args": ["-y", "@anthropic/mcp-server-github"],
+    "transport": "stdio",
+    "required_env_vars": ["GITHUB_TOKEN"],
+    "is_available": false
+  }
+]
+```
+
+### Programmatic Usage
+
+```python
+from agent_runtimes.commands import get_mcp_servers_catalog, list_mcp_servers_catalog
+
+# Get catalog as list of dictionaries (no output printed)
+catalog = get_mcp_servers_catalog()
+for server in catalog:
+    status = "✓" if server["is_available"] else "✗"
+    print(f"{status} {server['id']}: {server['name']}")
+
+# Or print formatted output
+from agent_runtimes.commands import OutputFormat
+list_mcp_servers_catalog(output=OutputFormat.table)
+```
+
+---
+
+## `mcp-servers-config` Command
+
+List MCP servers from the user's config file. These are custom MCP server configurations defined in `~/.datalayer/mcp.json`.
+
+```bash
+agent-runtimes mcp-servers-config [OPTIONS]
+```
+
+### Options
+
+| Option | Short | Default | Description |
+|--------|-------|---------|-------------|
+| `--output` | `-o` | `table` | Output format (`table` or `json`) |
+
+### Examples
+
+```bash
+# List config MCP servers
+agent-runtimes mcp-servers-config
+
+# Output as JSON
+agent-runtimes mcp-servers-config --output json
+
+# Using short option
+agent-runtimes mcp-servers-config -o json
+```
+
+### Config File Format
+
+The config file is located at `~/.datalayer/mcp.json` and uses the following format:
+
+```json
+{
+  "mcpServers": {
+    "my-custom-server": {
+      "command": "npx",
+      "args": ["-y", "@some/mcp-server"],
+      "env": {
+        "API_KEY": "${API_KEY}"
+      }
+    },
+    "local-python-server": {
+      "command": "python",
+      "args": ["-m", "my_mcp_server"],
+      "env": {}
+    }
+  }
+}
+```
+
+:::tip Environment Variable Expansion
+Environment variables in the config file are automatically expanded. Use `${VAR_NAME}` syntax to reference environment variables.
+:::
+
+### Output Formats
+
+**Table format (default):**
+
+```
+📋 MCP Config Servers
+╭─────────────────────┬─────────┬──────────────────────────────────────────┬────────────────────╮
+│ ID                  │ Command │ Args                                     │ Env Vars           │
+├─────────────────────┼─────────┼──────────────────────────────────────────┼────────────────────┤
+│ my-custom-server    │ npx     │ -y @some/mcp-server                      │ API_KEY            │
+│ local-python-server │ python  │ -m my_mcp_server                         │ none               │
+╰─────────────────────┴─────────┴──────────────────────────────────────────┴────────────────────╯
+Config: /home/user/.datalayer/mcp.json
+Total: 2 server(s)
+```
+
+**JSON format:**
+```json
+{
+  "config_path": "/home/user/.datalayer/mcp.json",
+  "exists": true,
+  "servers": [
+    {
+      "id": "my-custom-server",
+      "command": "npx",
+      "args": ["-y", "@some/mcp-server"],
+      "env": {"API_KEY": "${API_KEY}"}
+    },
+    {
+      "id": "local-python-server",
+      "command": "python",
+      "args": ["-m", "my_mcp_server"],
+      "env": {}
+    }
+  ]
+}
+```
+
+### Programmatic Usage
+
+```python
+from agent_runtimes.commands import get_mcp_servers_config, list_mcp_servers_config
+
+# Get config as dictionary (no output printed)
+config = get_mcp_servers_config()
+print(f"Config path: {config['config_path']}")
+print(f"File exists: {config['exists']}")
+for server in config["servers"]:
+    print(f"  {server['id']}: {server['command']}")
+
+# Or print formatted output
+from agent_runtimes.commands import OutputFormat
+list_mcp_servers_config(output=OutputFormat.table)
+```
+
+---
+
 ## Environment Variables
 
 All CLI options can be configured via environment variables. These variables serve as defaults - CLI arguments will override them when provided.
@@ -494,6 +735,7 @@ agent-runtimes serve  # Production-ready configuration
 | `AGENT_RUNTIMES_MCP_SERVERS` | `--mcp-servers` | Comma-separated list of MCP server IDs |
 | `AGENT_RUNTIMES_CODEMODE` | `--codemode` | Enable Code Mode (`true`/`false`) |
 | `AGENT_RUNTIMES_SKILLS` | `--skills` | Comma-separated list of skills |
+| `AGENT_RUNTIMES_FIND_FREE_PORT` | `--find-free-port` | Find free port if taken (`true`/`false`) |
 
 :::tip Docker and Kubernetes
 Environment variables are particularly useful for containerized deployments where you want to configure the server without modifying the command:

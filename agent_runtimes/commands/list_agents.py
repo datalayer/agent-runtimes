@@ -134,6 +134,7 @@ def _print_agents(
         table.add_column("Name", style="bold white")
         table.add_column("Protocol", style="magenta", justify="center")
         table.add_column("Status", style="yellow", justify="center")
+        table.add_column("Toolsets", style="cyan")
         table.add_column("Description", style="dim")
         
         for agent in agents:
@@ -142,6 +143,7 @@ def _print_agents(
             protocol = agent.get("protocol", "ag-ui")
             status = agent.get("status", "unknown")
             description = agent.get("description", "")
+            toolsets = agent.get("toolsets", {})
             
             # Status badge styling
             if status == "running":
@@ -153,10 +155,38 @@ def _print_agents(
             else:
                 status_display = f"[dim]{status}[/dim]"
             
-            # Truncate description
-            desc = description[:50] + "..." if len(description) > 50 else description
+            # Format toolsets info
+            toolsets_parts = []
             
-            table.add_row(agent_id, name, protocol, status_display, desc)
+            # MCP servers
+            mcp_servers = toolsets.get("mcp_servers", [])
+            if mcp_servers:
+                mcp_text = ", ".join(mcp_servers[:3])
+                if len(mcp_servers) > 3:
+                    mcp_text += f" +{len(mcp_servers) - 3}"
+                toolsets_parts.append(f"[yellow]mcp:[/yellow] {mcp_text}")
+            
+            # Codemode
+            if toolsets.get("codemode"):
+                toolsets_parts.append("[magenta]codemode[/magenta]")
+            
+            # Skills
+            skills = toolsets.get("skills", [])
+            if skills:
+                skills_text = ", ".join(skills[:2])
+                if len(skills) > 2:
+                    skills_text += f" +{len(skills) - 2}"
+                toolsets_parts.append(f"[cyan]skills:[/cyan] {skills_text}")
+            
+            if toolsets_parts:
+                toolsets_display = " | ".join(toolsets_parts)
+            else:
+                toolsets_display = "[dim]none[/dim]"
+            
+            # Truncate description
+            desc = description[:40] + "..." if len(description) > 40 else description
+            
+            table.add_row(agent_id, name, protocol, status_display, toolsets_display, desc)
         
         console.print()
         console.print(table)

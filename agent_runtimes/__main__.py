@@ -47,6 +47,8 @@ from agent_runtimes.commands.list_agents import (
     list_agents_from_server,
 )
 from agent_runtimes.commands.list_specs import list_agent_specs
+from agent_runtimes.commands.mcp_servers_catalog import list_mcp_servers_catalog
+from agent_runtimes.commands.mcp_servers_config import list_mcp_servers_config
 
 logging.basicConfig(
     level=logging.INFO,
@@ -155,6 +157,15 @@ def serve(
             help="Transport protocol to use (ag-ui, vercel-ai, vercel-ai-jupyter, a2a)",
         ),
     ] = Protocol.ag_ui,
+    find_free_port: Annotated[
+        bool,
+        typer.Option(
+            "--find-free-port",
+            "-f",
+            envvar="AGENT_RUNTIMES_FIND_FREE_PORT",
+            help="If the port is in use, find the next available port",
+        ),
+    ] = False,
 ) -> None:
     """Start the agent-runtimes server.
 
@@ -199,6 +210,9 @@ def serve(
         # Start with Vercel AI Jupyter protocol for notebook integration
         agent-runtimes serve --agent-id data-acquisition --protocol vercel-ai-jupyter
 
+        # Start with automatic port finding (if 8000 is taken, tries 8001, 8002, etc.)
+        agent-runtimes serve --find-free-port
+
         # Using environment variables instead of CLI options
         AGENT_RUNTIMES_PORT=8080 agent-runtimes serve
         AGENT_RUNTIMES_DEFAULT_AGENT=data-acquisition agent-runtimes serve
@@ -218,6 +232,7 @@ def serve(
             codemode=codemode,
             skills=skills,
             protocol=protocol,
+            find_free_port_flag=find_free_port,
         )
     except ServeError as e:
         logger.error(str(e))
@@ -296,6 +311,61 @@ def list_specs(
         agent-runtimes list-specs --output json
     """
     list_agent_specs(output=output)
+
+
+# ============================================================================
+# mcp-servers-catalog command
+# ============================================================================
+
+
+@app.command("mcp-servers-catalog")
+def mcp_servers_catalog(
+    output: Annotated[
+        OutputFormat,
+        typer.Option("--output", "-o", help="Output format"),
+    ] = OutputFormat.table,
+) -> None:
+    """List MCP servers from the catalog.
+
+    Shows predefined MCP server configurations with their availability status.
+    Availability depends on whether required environment variables are set.
+
+    Examples:
+
+        # List catalog MCP servers
+        agent-runtimes mcp-servers-catalog
+
+        # Output as JSON
+        agent-runtimes mcp-servers-catalog --output json
+    """
+    list_mcp_servers_catalog(output=output)
+
+
+# ============================================================================
+# mcp-servers-config command
+# ============================================================================
+
+
+@app.command("mcp-servers-config")
+def mcp_servers_config(
+    output: Annotated[
+        OutputFormat,
+        typer.Option("--output", "-o", help="Output format"),
+    ] = OutputFormat.table,
+) -> None:
+    """List MCP servers from the user's config file.
+
+    Shows MCP servers configured in ~/.datalayer/mcp.json.
+
+    Examples:
+
+        # List config MCP servers
+        agent-runtimes mcp-servers-config
+
+        # Output as JSON
+        agent-runtimes mcp-servers-config --output json
+    """
+    list_mcp_servers_config(output=output)
 
 
 if __name__ == "__main__":

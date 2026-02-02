@@ -4,9 +4,12 @@
 """FastAPI routes for frontend configuration."""
 
 import logging
+import os
+from pathlib import Path as FilePath
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query, Path
+from pydantic import BaseModel
 
 from agent_runtimes.config import get_frontend_config
 from agent_runtimes.mcp import get_available_tools, get_mcp_manager, get_config_mcp_toolsets_status, get_config_mcp_toolsets_info
@@ -16,6 +19,33 @@ from agent_runtimes.context.usage import get_usage_tracker
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/configure", tags=["configure"])
+
+
+# =========================================================================
+# Codemode Configuration Models
+# =========================================================================
+
+class CodemodeStatus(BaseModel):
+    """Codemode status response."""
+    enabled: bool
+    skills: list[dict[str, Any]]
+    available_skills: list[dict[str, Any]]
+
+
+class CodemodeToggleRequest(BaseModel):
+    """Request to toggle codemode."""
+    enabled: bool
+    skills: list[str] | None = None
+
+
+# =========================================================================
+# Codemode State (runtime state, not persistent)
+# =========================================================================
+
+_codemode_state = {
+    "enabled": os.environ.get("AGENT_RUNTIMES_CODEMODE", "").lower() == "true",
+    "skills": [s.strip() for s in os.environ.get("AGENT_RUNTIMES_SKILLS", "").split(",") if s.strip()],
+}
 
 
 @router.get("", response_model=FrontendConfig)
@@ -173,6 +203,67 @@ async def get_agent_context_snapshot_endpoint(
     return snapshot.to_dict()
 
 
+@router.get("/agents/{agent_id}/full-context")
+async def get_agent_full_context_endpoint(
+    agent_id: str = Path(
+        ...,
+        description="Agent ID to get full context details for",
+    ),
+) -> dict[str, Any]:
+    """
+    Get full detailed context snapshot for a specific agent.
+    
+    This provides complete introspection of the agent's context including:
+    - Model configuration (name, context window, settings)
+    - System prompts (complete text)
+    - Tool definitions with full JSON schemas and source code (if available)
+    - Complete message history with in_context field indicating if in window
+    - Memory blocks (if available)
+    - Tool environment variables (masked)
+    - Tool rules and constraints
+    
+    Args:
+        agent_id: The unique identifier of the agent.
+        
+    Returns:
+        Full context snapshot with all detailed information.
+    """
+    from ..context.session import get_agent_full_context_snapshot
+    
+    snapshot = get_agent_full_context_snapshot(agent_id)
+    if snapshot is None:
+        return {
+            "error": f"Agent '{agent_id}' not found",
+            "agentId": agent_id,
+            "modelConfiguration": {
+                "modelName": None,
+                "contextWindow": 128000,
+                "settings": {},
+            },
+            "systemPrompts": [],
+            "systemPromptTokens": 0,
+            "tools": [],
+            "toolTokens": 0,
+            "messages": [],
+            "memoryBlocks": [],
+            "memoryTokens": 0,
+            "toolEnvironment": {},
+            "toolRules": [],
+            "tokenSummary": {
+                "systemPrompts": 0,
+                "tools": 0,
+                "memory": 0,
+                "history": 0,
+                "current": 0,
+                "total": 0,
+                "contextWindow": 128000,
+                "usagePercent": 0,
+            },
+        }
+    
+    return snapshot.to_dict()
+
+
 @router.post("/agents/{agent_id}/context-details/reset")
 async def reset_agent_context(
     agent_id: str = Path(
@@ -192,3 +283,123 @@ async def reset_agent_context(
     tracker = get_usage_tracker()
     tracker.reset_agent(agent_id)
     return {"status": "ok", "message": f"Context reset for agent '{agent_id}'"}
+
+
+# =========================================================================
+# Codemode Configuration Endpoints
+# =========================================================================
+
+def _get_available_skills() -> list[dict[str, Any]]:
+    """Get all available skills from the skills directory."""
+    skills = []
+    try:
+        # Skills are stored in the skills directory at the repo root
+        repo_root = FilePath(__file__).resolve().parents[2]
+        skills_path = repo_root / "skills"
+        
+        if not skills_path.exists():
+            logger.debug(f"Skills directory not found: {skills_path}")
+            return skills
+        
+        # Try to use agent_skills if available
+        try:
+            from agent_skills import AgentSkill
+            
+            for skill_md in skills_path.rglob("SKILL.md"):
+                try:
+                    skill = AgentSkill.from_skill_md(skill_md)
+                    skills.append({
+                        "name": skill.name,
+                        "description": skill.description,
+                        "tags": skill.tags if hasattr(skill, 'tags') else [],
+                    })
+                except Exception as exc:
+                    logger.warning(f"Failed to load skill from {skill_md}: {exc}")
+                    continue
+        except ImportError:
+            # Fallback: scan skill directories manually
+            for skill_dir in skills_path.iterdir():
+                if skill_dir.is_dir() and (skill_dir / "SKILL.md").exists():
+                    skill_md_path = skill_dir / "SKILL.md"
+                    try:
+                        content = skill_md_path.read_text()
+                        # Parse basic info from SKILL.md
+                        name = skill_dir.name
+                        description = ""
+                        for line in content.split("\n"):
+                            if line.startswith("# "):
+                                name = line[2:].strip()
+                            elif line.strip() and not line.startswith("#") and not description:
+                                description = line.strip()
+                                break
+                        skills.append({
+                            "name": name,
+                            "description": description,
+                            "tags": [],
+                        })
+                    except Exception as exc:
+                        logger.warning(f"Failed to parse {skill_md_path}: {exc}")
+                        continue
+                        
+    except Exception as e:
+        logger.error(f"Error scanning skills directory: {e}")
+    
+    return skills
+
+
+@router.get("/codemode-status", response_model=CodemodeStatus)
+async def get_codemode_status() -> CodemodeStatus:
+    """
+    Get the current codemode status.
+    
+    Returns:
+        Current codemode enabled state, active skills, and available skills.
+    """
+    available_skills = _get_available_skills()
+    active_skill_names = _codemode_state["skills"]
+    
+    # Build active skills list with full info
+    active_skills = []
+    for skill in available_skills:
+        if skill["name"] in active_skill_names:
+            active_skills.append(skill)
+    
+    return CodemodeStatus(
+        enabled=_codemode_state["enabled"],
+        skills=active_skills,
+        available_skills=available_skills,
+    )
+
+
+@router.post("/codemode/toggle")
+async def toggle_codemode(request: CodemodeToggleRequest) -> dict[str, Any]:
+    """
+    Toggle codemode on/off and optionally update skills.
+    
+    Note: This updates the runtime state. For changes to take full effect
+    with toolset registration, the server may need to be restarted.
+    
+    Args:
+        request: Toggle request with enabled state and optional skills list.
+        
+    Returns:
+        Updated codemode status.
+    """
+    _codemode_state["enabled"] = request.enabled
+    
+    if request.skills is not None:
+        _codemode_state["skills"] = request.skills
+    
+    # Update environment variables for consistency
+    os.environ["AGENT_RUNTIMES_CODEMODE"] = "true" if request.enabled else "false"
+    if request.skills is not None:
+        os.environ["AGENT_RUNTIMES_SKILLS"] = ",".join(request.skills)
+    
+    logger.info(f"Codemode toggled: enabled={request.enabled}, skills={_codemode_state['skills']}")
+    
+    return {
+        "status": "ok",
+        "enabled": _codemode_state["enabled"],
+        "skills": _codemode_state["skills"],
+        "message": f"Codemode {'enabled' if request.enabled else 'disabled'}. Note: Full toolset changes may require server restart.",
+    }

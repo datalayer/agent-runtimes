@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Protocol adapters for agent-runtimes."""
+"""Protocol adapters and clients for agent-runtimes."""
 
 from .a2a import A2ATransport
 from .acp import ACPTransport
@@ -10,4 +10,33 @@ from .base import BaseTransport
 from .mcp_ui import MCPUITransport
 from .vercel_ai import VercelAITransport
 
-__all__ = ["BaseTransport", "ACPTransport", "AGUITransport", "A2ATransport", "VercelAITransport", "MCPUITransport"]
+# Protocol clients
+from .clients import (
+    ACPClient,
+    ACPClientError,
+    connect_acp,
+    AGUIClient,
+    AGUIClientError,
+    AGUIEvent,
+    AGUIConversation,
+    connect_agui,
+)
+
+__all__ = [
+    # Server-side transports/adapters
+    "BaseTransport",
+    "ACPTransport",
+    "AGUITransport",
+    "A2ATransport",
+    "VercelAITransport",
+    "MCPUITransport",
+    # Client-side protocol clients
+    "ACPClient",
+    "ACPClientError",
+    "connect_acp",
+    "AGUIClient",
+    "AGUIClientError",
+    "AGUIEvent",
+    "AGUIConversation",
+    "connect_agui",
+]

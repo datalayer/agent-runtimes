@@ -12,6 +12,8 @@ import {
   CommentDiscussionIcon,
   CheckCircleIcon,
   XCircleIcon,
+  CodeIcon,
+  ZapIcon,
 } from '@primer/octicons-react';
 import {
   Box,
@@ -21,11 +23,13 @@ import {
   Text,
   Label,
   Spinner,
+  ToggleSwitch,
 } from '@primer/react';
 import { AiAgentIcon } from '@datalayer/icons-react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ContextUsage } from './ContextUsage';
 import { ContextDistribution } from './ContextDistribution';
+import { ContextInspector } from './ContextInspector';
 import { AgentIdentity } from './AgentIdentity';
 import type {
   OAuthProvider,
@@ -71,6 +75,23 @@ interface MCPToolsetsStatus {
   failed_servers: Record<string, string>;
 }
 
+/**
+ * Codemode status response
+ */
+interface CodemodeStatus {
+  enabled: boolean;
+  skills: Array<{
+    name: string;
+    description: string;
+    tags: string[];
+  }>;
+  available_skills: Array<{
+    name: string;
+    description: string;
+    tags: string[];
+  }>;
+}
+
 function getLocalApiBase(): string {
   if (typeof window === 'undefined') {
     return '';
@@ -95,6 +116,8 @@ export function AgentDetails({
   onIdentityDisconnect,
   onBack,
 }: AgentDetailsProps) {
+  const queryClient = useQueryClient();
+
   // Fetch MCP toolsets status
   const { data: mcpStatus, isLoading: mcpLoading } =
     useQuery<MCPToolsetsStatus>({
@@ -111,6 +134,48 @@ export function AgentDetails({
       },
       refetchInterval: 5000, // Refresh every 5 seconds
     });
+
+  // Fetch Codemode status
+  const { data: codemodeStatus, isLoading: codemodeLoading } =
+    useQuery<CodemodeStatus>({
+      queryKey: ['codemode-status'],
+      queryFn: async () => {
+        const apiBase = getLocalApiBase();
+        const response = await fetch(
+          `${apiBase}/api/v1/configure/codemode-status`,
+        );
+        if (!response.ok) {
+          throw new Error('Failed to fetch Codemode status');
+        }
+        return response.json();
+      },
+      refetchInterval: 5000, // Refresh every 5 seconds
+    });
+
+  // Mutation to toggle codemode
+  const toggleCodemodeMutation = useMutation({
+    mutationFn: async (enabled: boolean) => {
+      const apiBase = getLocalApiBase();
+      const response = await fetch(
+        `${apiBase}/api/v1/configure/codemode/toggle`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ enabled }),
+        },
+      );
+      if (!response.ok) {
+        throw new Error('Failed to toggle codemode');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      // Invalidate the codemode status query to refetch
+      queryClient.invalidateQueries({ queryKey: ['codemode-status'] });
+    },
+  });
 
   return (
     <Box
@@ -392,6 +457,179 @@ export function AgentDetails({
           </Box>
         </Box>
 
+        {/* Codemode Section */}
+        <Box>
+          <Heading
+            as="h4"
+            sx={{
+              fontSize: 1,
+              fontWeight: 'semibold',
+              mb: 2,
+              color: 'fg.muted',
+            }}
+          >
+            Code Mode
+          </Heading>
+          <Box
+            sx={{
+              p: 3,
+              bg: 'canvas.subtle',
+              borderRadius: 2,
+              border: '1px solid',
+              borderColor: 'border.default',
+            }}
+          >
+            {codemodeLoading ? (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Spinner size="small" />
+                <Text sx={{ fontSize: 1, color: 'fg.muted' }}>
+                  Loading Codemode status...
+                </Text>
+              </Box>
+            ) : codemodeStatus ? (
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                {/* Codemode Toggle */}
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <CodeIcon size={16} />
+                    <Box>
+                      <Text
+                        id="codemode-toggle-label"
+                        sx={{ fontSize: 1, fontWeight: 'semibold' }}
+                      >
+                        Code Mode
+                      </Text>
+                      <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
+                        MCP servers become programmatic tools
+                      </Text>
+                    </Box>
+                  </Box>
+                  <ToggleSwitch
+                    aria-labelledby="codemode-toggle-label"
+                    checked={codemodeStatus.enabled}
+                    onClick={() =>
+                      toggleCodemodeMutation.mutate(!codemodeStatus.enabled)
+                    }
+                    disabled={toggleCodemodeMutation.isPending}
+                    size="small"
+                  />
+                </Box>
+
+                {/* Active Skills */}
+                {codemodeStatus.skills.length > 0 && (
+                  <Box
+                    sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <ZapIcon size={16} />
+                      <Text
+                        sx={{
+                          fontSize: 0,
+                          fontWeight: 'semibold',
+                          color: 'fg.muted',
+                        }}
+                      >
+                        Active Skills ({codemodeStatus.skills.length})
+                      </Text>
+                    </Box>
+                    {codemodeStatus.skills.map(skill => (
+                      <Box
+                        key={skill.name}
+                        sx={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: 1,
+                          pl: 4,
+                          py: 1,
+                          borderLeft: '2px solid',
+                          borderColor: 'accent.emphasis',
+                        }}
+                      >
+                        <Text sx={{ fontSize: 1, fontWeight: 'semibold' }}>
+                          {skill.name}
+                        </Text>
+                        {skill.description && (
+                          <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
+                            {skill.description}
+                          </Text>
+                        )}
+                        {skill.tags && skill.tags.length > 0 && (
+                          <Box
+                            sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}
+                          >
+                            {skill.tags.map(tag => (
+                              <Label key={tag} variant="secondary" size="small">
+                                {tag}
+                              </Label>
+                            ))}
+                          </Box>
+                        )}
+                      </Box>
+                    ))}
+                  </Box>
+                )}
+
+                {/* Available Skills (when codemode disabled or no active skills) */}
+                {codemodeStatus.available_skills.length > 0 &&
+                  codemodeStatus.skills.length === 0 && (
+                    <Box
+                      sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}
+                    >
+                      <Text
+                        sx={{
+                          fontSize: 0,
+                          fontWeight: 'semibold',
+                          color: 'fg.muted',
+                        }}
+                      >
+                        Available Skills (
+                        {codemodeStatus.available_skills.length})
+                      </Text>
+                      <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
+                        Enable skills via CLI with --skills flag
+                      </Text>
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          gap: 1,
+                          flexWrap: 'wrap',
+                          mt: 1,
+                        }}
+                      >
+                        {codemodeStatus.available_skills.map(skill => (
+                          <Label
+                            key={skill.name}
+                            variant="secondary"
+                            size="small"
+                          >
+                            {skill.name}
+                          </Label>
+                        ))}
+                      </Box>
+                    </Box>
+                  )}
+
+                {/* No skills available message */}
+                {codemodeStatus.available_skills.length === 0 && (
+                  <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
+                    No skills available. Add skills to the skills/ directory.
+                  </Text>
+                )}
+              </Box>
+            ) : (
+              <Text sx={{ fontSize: 1, color: 'fg.muted' }}>
+                Failed to load Codemode status
+              </Text>
+            )}
+          </Box>
+        </Box>
+
         {/* Context Usage - only shown when agentId is available */}
         {agentId && <ContextUsage agentId={agentId} />}
 
@@ -419,6 +657,34 @@ export function AgentDetails({
               }}
             >
               <ContextDistribution agentId={agentId} height="250px" />
+            </Box>
+          </Box>
+        )}
+
+        {/* Context Snapshot - detailed inspection of agent context */}
+        {agentId && (
+          <Box sx={{ mt: 3 }}>
+            <Heading
+              as="h4"
+              sx={{
+                fontSize: 1,
+                fontWeight: 'semibold',
+                mb: 2,
+                color: 'fg.muted',
+              }}
+            >
+              Context Snapshot
+            </Heading>
+            <Box
+              sx={{
+                p: 3,
+                bg: 'canvas.subtle',
+                borderRadius: 2,
+                border: '1px solid',
+                borderColor: 'border.default',
+              }}
+            >
+              <ContextInspector agentId={agentId} />
             </Box>
           </Box>
         )}

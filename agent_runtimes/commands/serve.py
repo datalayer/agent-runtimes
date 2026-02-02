@@ -15,14 +15,79 @@ Usage as library:
     
     # With agent from the library
     serve_server(agent_id="crawler", agent_name="my-crawler")
+    
+    # With automatic port finding
+    serve_server(port=8000, find_free_port=True)
 """
 
 import logging
 import os
+import socket
 from enum import Enum
 from typing import Optional
 
 logger = logging.getLogger(__name__)
+
+
+class LogLevel(str, Enum):
+    """Log level options."""
+
+    debug = "debug"
+    info = "info"
+    warning = "warning"
+    error = "error"
+    critical = "critical"
+
+
+class Protocol(str, Enum):
+    """Transport protocol options."""
+
+    ag_ui = "ag-ui"
+    vercel_ai = "vercel-ai"
+    vercel_ai_jupyter = "vercel-ai-jupyter"
+    a2a = "a2a"
+
+
+def is_port_free(host: str, port: int) -> bool:
+    """Check if a port is available for binding.
+    
+    Args:
+        host: Host address to check
+        port: Port number to check
+        
+    Returns:
+        True if port is free, False otherwise
+    """
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            sock.bind((host, port))
+            return True
+    except OSError:
+        return False
+
+
+def find_free_port(host: str, start_port: int, max_attempts: int = 100) -> int:
+    """Find a free port starting from the given port.
+    
+    Args:
+        host: Host address to check
+        start_port: Starting port number
+        max_attempts: Maximum number of ports to try
+        
+    Returns:
+        First available port found
+        
+    Raises:
+        ServeError: If no free port found within max_attempts
+    """
+    for offset in range(max_attempts):
+        port = start_port + offset
+        if is_port_free(host, port):
+            return port
+    raise ServeError(
+        f"Could not find a free port between {start_port} and {start_port + max_attempts - 1}"
+    )
 
 
 class LogLevel(str, Enum):
@@ -77,7 +142,8 @@ def serve_server(
     codemode: bool = False,
     skills: Optional[str] = None,
     protocol: Protocol = Protocol.ag_ui,
-) -> None:
+    find_free_port_flag: bool = False,
+) -> int:
     """
     Start the agent-runtimes server.
     
@@ -97,10 +163,22 @@ def serve_server(
         codemode: Enable Code Mode (MCP servers become programmatic tools)
         skills: Comma-separated list of skills to enable (requires codemode)
         protocol: Transport protocol to use (ag-ui, vercel-ai, vercel-ai-jupyter, a2a)
+        find_free_port_flag: If True, find a free port starting from the given port
+        
+    Returns:
+        The actual port the server is running on
         
     Raises:
         ServeError: If validation fails or server cannot start
     """
+    # Find a free port if requested
+    actual_port = port
+    if find_free_port_flag:
+        if not is_port_free(host, port):
+            actual_port = find_free_port(host, port)
+            logger.info(f"Port {port} is in use, using port {actual_port} instead")
+        else:
+            logger.info(f"Port {port} is available")
     # Validate agent_name requires agent_id
     if agent_name and not agent_id:
         raise ServeError("--agent-name requires --agent-id to be specified")
@@ -167,9 +245,9 @@ def serve_server(
     except ImportError:
         raise ServeError("uvicorn is not installed. Install it with: pip install uvicorn")
 
-    logger.info(f"Starting agent-runtimes server on {host}:{port}")
-    logger.info(f"API docs available at http://{host}:{port}/docs")
-    logger.info(f"ACP WebSocket endpoint: ws://{host}:{port}/api/v1/acp/ws/{{agent_id}}")
+    logger.info(f"Starting agent-runtimes server on {host}:{actual_port}")
+    logger.info(f"API docs available at http://{host}:{actual_port}/docs")
+    logger.info(f"ACP WebSocket endpoint: ws://{host}:{actual_port}/api/v1/acp/ws/{{agent_id}}")
 
     # Exclude generated/ directory from reload watching (codemode generates bindings there)
     reload_excludes = ["generated/*", "generated/**/*", "*.pyc", "__pycache__"]
@@ -177,9 +255,11 @@ def serve_server(
     uvicorn.run(
         "agent_runtimes.app:app",
         host=host,
-        port=port,
+        port=actual_port,
         reload=reload,
         reload_excludes=reload_excludes if reload else None,
         workers=workers if not reload else 1,
         log_level=log_level.value,
     )
+    
+    return actual_port

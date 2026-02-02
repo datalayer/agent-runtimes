@@ -48,6 +48,11 @@ export {
   type ContextSnapshotResponse,
 } from './ContextDistribution';
 export {
+  ContextInspector,
+  type ContextInspectorProps,
+  type FullContextResponse,
+} from './ContextInspector';
+export {
   ToolApprovalDialog,
   useToolApprovalDialog,
   type ToolApprovalDialogProps,

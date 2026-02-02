@@ -91,10 +91,12 @@ agent-serve:
 	  --port 8765 \
 	  --debug
 
-list-agents:
+agents:
 	agent-runtimes list-agents \
 	  --host 0.0.0.0 \
 	  --port 8765
 
-list-specs:
+specs:
 	agent-runtimes list-specs
+	agent-runtimes mcp-servers-catalog
+	agent-runtimes mcp-servers-config

@@ -696,16 +696,77 @@ async def create_agent(request: CreateAgentRequest, http_request: Request) -> Cr
         )
 
 
+def _get_agent_toolsets_info(agent: Any) -> dict[str, Any]:
+    """Extract toolset information from an agent adapter.
+    
+    Args:
+        agent: The agent adapter (e.g., PydanticAIAdapter)
+        
+    Returns:
+        Dictionary with toolset details including:
+        - mcp_servers: List of selected MCP server IDs
+        - codemode: Whether codemode is enabled
+        - skills: List of skill names if available
+        - toolset_count: Total number of toolsets
+    """
+    toolsets_info: dict[str, Any] = {
+        "mcp_servers": [],
+        "codemode": False,
+        "skills": [],
+        "toolset_count": 0,
+    }
+    
+    try:
+        # Get selected MCP servers
+        if hasattr(agent, "selected_mcp_server_ids"):
+            toolsets_info["mcp_servers"] = agent.selected_mcp_server_ids
+        elif hasattr(agent, "_selected_mcp_servers"):
+            toolsets_info["mcp_servers"] = [
+                getattr(s, "id", str(s)) for s in agent._selected_mcp_servers
+            ]
+        
+        # Check for non-MCP toolsets
+        non_mcp_toolsets = getattr(agent, "_non_mcp_toolsets", [])
+        for toolset in non_mcp_toolsets:
+            toolset_class = type(toolset).__name__
+            
+            # Check for CodemodeToolset
+            if "Codemode" in toolset_class:
+                toolsets_info["codemode"] = True
+            
+            # Check for AgentSkillsToolset
+            if "Skills" in toolset_class:
+                # Try to get skill names
+                skills = getattr(toolset, "skills", [])
+                if skills:
+                    toolsets_info["skills"] = [
+                        getattr(s, "name", str(s)) for s in skills
+                    ]
+        
+        # Calculate total toolset count
+        mcp_count = len(toolsets_info["mcp_servers"])
+        non_mcp_count = len(non_mcp_toolsets)
+        toolsets_info["toolset_count"] = mcp_count + non_mcp_count
+        
+    except Exception as e:
+        logger.warning(f"Error extracting toolset info: {e}")
+    
+    return toolsets_info
+
+
 @router.get("", response_model=AgentListResponse)
 async def list_agents() -> AgentListResponse:
     """
     List all registered agents.
     
     Returns:
-        List of agent information.
+        List of agent information including toolset details.
     """
     agents = []
-    for agent_id, (_, info) in _agents.items():
+    for agent_id, (agent, info) in _agents.items():
+        # Get toolset information from the agent
+        toolsets_info = _get_agent_toolsets_info(agent)
+        
         agents.append({
             "id": agent_id,
             "name": info.name,
@@ -713,6 +774,7 @@ async def list_agents() -> AgentListResponse:
             "status": "running",
             "protocol": getattr(info, "protocol", "ag-ui"),
             "capabilities": info.capabilities.model_dump() if info.capabilities else {},
+            "toolsets": toolsets_info,
         })
     
     return AgentListResponse(agents=agents)
