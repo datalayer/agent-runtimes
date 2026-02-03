@@ -9,7 +9,8 @@ import logging
 from jupyter_server.base.handlers import APIHandler
 from tornado import web as tornado_web
 
-from agent_runtimes.mcp import get_available_tools, get_frontend_config
+from agent_runtimes.config import get_frontend_config
+from agent_runtimes.mcp import get_available_tools
 
 logger = logging.getLogger(__name__)
 

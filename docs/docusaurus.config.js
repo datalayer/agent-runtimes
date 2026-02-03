@@ -86,6 +86,12 @@ module.exports = {
         },
         {
           type: 'doc',
+          docId: 'cli/index',
+          position: 'left',
+          label: 'CLI',
+        },
+        {
+          type: 'doc',
           docId: 'api-endpoints/index',
           position: 'left',
           label: 'API Endpoints',

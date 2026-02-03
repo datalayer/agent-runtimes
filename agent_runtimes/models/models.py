@@ -7,7 +7,7 @@ import logging
 import os
 from typing import Any
 
-from pydantic_ai import ModelSettings
+from pydantic_ai.settings import ModelSettings
 from agent_runtimes.types import AIModel
 
 logger = logging.getLogger(__name__)

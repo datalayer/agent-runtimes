@@ -24,6 +24,7 @@ export {
   ChatBase,
   type ChatBaseProps,
   type ProtocolConfig,
+  type AgentRuntimeConfig,
 } from './base/ChatBase';
 export { AgentDetails, type AgentDetailsProps } from './AgentDetails';
 export {
@@ -46,6 +47,12 @@ export {
   type ContextDistributionProps,
   type ContextSnapshotResponse,
 } from './ContextDistribution';
+export { ContextPanel, type ContextPanelProps } from './ContextPanel';
+export {
+  ContextInspector,
+  type ContextInspectorProps,
+  type FullContextResponse,
+} from './ContextInspector';
 export {
   ToolApprovalDialog,
   useToolApprovalDialog,

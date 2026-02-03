@@ -26,6 +26,7 @@ import { Box } from '@datalayer/primer-addons';
 import { ChatBase, type Suggestion } from './base/ChatBase';
 import { AgentDetails } from './AgentDetails';
 import type { ProtocolConfig } from './base/ChatBase';
+import type { McpServerSelection } from '../types';
 import { useConnectedIdentities } from '../../../identity';
 import type {
   OAuthProvider,
@@ -92,7 +93,7 @@ function getEndpointPath(transport: Transport, agentId?: string): string {
     case 'ag-ui':
       return `/api/v1/ag-ui/${agentId}/`;
     case 'a2a':
-      // A2A requires trailing slash
+      // A2A requires trailing slash for FastA2A compatibility
       return `/api/v1/a2a/agents/${agentId}/`;
     case 'acp':
       return `/api/v1/acp/ws/${agentId}`;
@@ -185,8 +186,8 @@ export interface ChatProps {
   /** Initial model ID to select (e.g., 'openai:gpt-4o-mini') */
   initialModel?: string;
 
-  /** Initial MCP server IDs to enable (others will be disabled) */
-  initialMcpServers?: string[];
+  /** MCP server selections to enable (others will be disabled) */
+  mcpServers?: McpServerSelection[];
 
   /** Initial skill IDs to enable */
   initialSkills?: string[];
@@ -286,7 +287,7 @@ export function Chat({
   showSkillsMenu = false,
   codemodeEnabled = false,
   initialModel,
-  initialMcpServers,
+  mcpServers,
   initialSkills,
   clearOnMount: _clearOnMount = true,
   suggestions,
@@ -545,7 +546,7 @@ export function Chat({
           showSkillsMenu={showSkillsMenu}
           codemodeEnabled={codemodeEnabled}
           initialModel={initialModel}
-          initialMcpServers={initialMcpServers}
+          mcpServers={mcpServers}
           initialSkills={initialSkills}
           connectedIdentities={identitiesForChat}
           onNewChat={handleNewChat}

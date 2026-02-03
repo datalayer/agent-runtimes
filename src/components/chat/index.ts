@@ -164,6 +164,7 @@ export {
   type MessageHandler,
   type ChatBaseProps,
   type ProtocolConfig,
+  type AgentRuntimeConfig,
   type ToolApprovalDialogProps,
   type PoweredByTagProps,
   type FloatingBrandButtonProps,

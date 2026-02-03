@@ -35,6 +35,18 @@ class UsageCategory:
 
 
 @dataclass
+class RequestUsage:
+    """Usage for a single request/response cycle."""
+    request_num: int
+    input_tokens: int = 0
+    output_tokens: int = 0
+    tool_calls: int = 0
+    tool_names: list[str] = field(default_factory=list)
+    timestamp: str | None = None
+    duration_ms: float = 0.0
+
+
+@dataclass
 class AgentUsageStats:
     """Usage statistics for a single agent."""
     
@@ -54,6 +66,16 @@ class AgentUsageStats:
     user_message_tokens: int = 0
     assistant_message_tokens: int = 0
     system_prompt_tokens: int = 0
+    
+    # Tool tracking (definitions from last run)
+    tool_definitions: list[tuple[str, str | None, dict]] = field(default_factory=list)
+    tool_tokens: int = 0
+    
+    # Per-request usage history
+    request_usage_history: list[RequestUsage] = field(default_factory=list)
+    
+    # Message history from agent runs (stored as JSON-serializable dicts)
+    message_history: list[dict[str, Any]] = field(default_factory=list)
     
     # Timestamps
     created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
@@ -77,6 +99,7 @@ class AgentUsageStats:
         cache_write_tokens: int = 0,
         requests: int = 0,
         tool_calls: int = 0,
+        tool_names: list[str] | None = None,
     ) -> None:
         """Update usage stats from a run result."""
         self.input_tokens += input_tokens
@@ -86,6 +109,17 @@ class AgentUsageStats:
         self.requests += requests
         self.tool_calls += tool_calls
         self.last_updated = datetime.now(timezone.utc)
+        
+        # Add per-request usage entry
+        request_num = len(self.request_usage_history) + 1
+        self.request_usage_history.append(RequestUsage(
+            request_num=request_num,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            tool_calls=tool_calls,
+            tool_names=tool_names or [],
+            timestamp=datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+        ))
     
     def update_message_tokens(
         self,
@@ -102,6 +136,94 @@ class AgentUsageStats:
         self.system_prompt_tokens = tokens
         self.last_updated = datetime.now(timezone.utc)
     
+    def store_messages(self, messages: list[Any]) -> None:
+        """Store message history from an agent run.
+        
+        Converts pydantic-ai ModelMessage objects to JSON-serializable dicts.
+        Replaces the current message history (messages accumulate in the agent).
+        
+        Args:
+            messages: List of pydantic-ai ModelMessage objects.
+        """
+        serialized: list[dict[str, Any]] = []
+        for msg in messages:
+            try:
+                # Handle pydantic-ai ModelMessage objects
+                msg_dict: dict[str, Any] = {}
+                
+                # Get the message kind (request or response)
+                msg_kind = getattr(msg, "kind", None)
+                msg_dict["kind"] = msg_kind
+                
+                # Get timestamp if available
+                timestamp = getattr(msg, "timestamp", None)
+                if timestamp:
+                    msg_dict["timestamp"] = str(timestamp)
+                
+                # Process parts
+                parts = getattr(msg, "parts", [])
+                serialized_parts: list[dict[str, Any]] = []
+                for part in parts:
+                    part_dict: dict[str, Any] = {}
+                    part_kind = getattr(part, "part_kind", None)
+                    part_dict["part_kind"] = part_kind
+                    
+                    # Extract content based on part type
+                    if hasattr(part, "content"):
+                        content = part.content
+                        if isinstance(content, str):
+                            part_dict["content"] = content
+                        else:
+                            part_dict["content"] = str(content)
+                    elif hasattr(part, "text"):
+                        part_dict["content"] = part.text or ""
+                    
+                    # Tool-specific fields
+                    if hasattr(part, "tool_name"):
+                        part_dict["tool_name"] = part.tool_name
+                    if hasattr(part, "tool_call_id"):
+                        part_dict["tool_call_id"] = part.tool_call_id
+                    if hasattr(part, "args"):
+                        try:
+                            import json
+                            part_dict["args"] = json.dumps(part.args, default=str) if part.args else "{}"
+                        except Exception:
+                            part_dict["args"] = str(part.args)
+                    
+                    serialized_parts.append(part_dict)
+                
+                msg_dict["parts"] = serialized_parts
+                serialized.append(msg_dict)
+            except Exception as e:
+                logger.debug(f"Could not serialize message: {e}")
+                continue
+        
+        self.message_history = serialized
+        self.last_updated = datetime.now(timezone.utc)
+        logger.debug(f"Stored {len(serialized)} messages for agent {self.agent_id}")
+    
+    def store_tools(self, tool_definitions: list[tuple[str, str | None, dict]]) -> None:
+        """Store tool definitions from an agent run.
+        
+        Args:
+            tool_definitions: List of (name, description, params_schema) tuples.
+        """
+        from .session import count_tokens_json
+        
+        self.tool_definitions = tool_definitions
+        # Calculate tool tokens
+        total_tokens = 0
+        for name, description, params_schema in tool_definitions:
+            tool_def = {
+                "name": name,
+                "description": description or "",
+                "input_schema": params_schema,
+            }
+            total_tokens += count_tokens_json(tool_def)
+        self.tool_tokens = total_tokens
+        self.last_updated = datetime.now(timezone.utc)
+        logger.debug(f"Stored {len(tool_definitions)} tools ({total_tokens} tokens) for agent {self.agent_id}")
+    
     def reset(self) -> None:
         """Reset all usage statistics."""
         self.input_tokens = 0
@@ -112,6 +234,10 @@ class AgentUsageStats:
         self.tool_calls = 0
         self.user_message_tokens = 0
         self.assistant_message_tokens = 0
+        self.request_usage_history = []
+        self.message_history = []
+        self.tool_definitions = []
+        self.tool_tokens = 0
         self.last_updated = datetime.now(timezone.utc)
 
 
@@ -207,6 +333,7 @@ class AgentUsageTracker:
         cache_write_tokens: int = 0,
         requests: int = 0,
         tool_calls: int = 0,
+        tool_names: list[str] | None = None,
     ) -> None:
         """
         Update usage statistics for an agent.
@@ -219,6 +346,7 @@ class AgentUsageTracker:
             cache_write_tokens: Number of tokens written to cache.
             requests: Number of API requests made.
             tool_calls: Number of tool calls executed.
+            tool_names: List of tool names used in this request.
         """
         stats = self.get_or_create_stats(agent_id)
         stats.update_from_run_usage(
@@ -228,6 +356,7 @@ class AgentUsageTracker:
             cache_write_tokens=cache_write_tokens,
             requests=requests,
             tool_calls=tool_calls,
+            tool_names=tool_names,
         )
     
     def get_context_details(self, agent_id: str) -> dict[str, Any]:

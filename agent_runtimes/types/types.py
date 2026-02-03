@@ -1,11 +1,39 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Pydantic models for chat functionality."""
+"""Pydantic models for chat functionality and agent specifications."""
 
+from enum import Enum
 from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
+
+
+class AgentSkillSpec(BaseModel):
+    """Specification for an agent skill.
+
+    Simplified version of the full Skill type from agent-skills,
+    containing only the fields needed for agent specification.
+    """
+
+    model_config = ConfigDict(populate_by_name=True, by_alias=True)
+
+    id: str = Field(..., description="Unique skill identifier")
+    name: str = Field(..., description="Display name for the skill")
+    description: str = Field(default="", description="Skill description")
+    version: str = Field(default="1.0.0", description="Skill version")
+    tags: List[str] = Field(default_factory=list, description="Tags for categorization")
+    enabled: bool = Field(default=True, description="Whether the skill is enabled")
+
+
+class AgentStatus(str, Enum):
+    """Status of an agent space."""
+
+    STARTING = "starting"
+    RUNNING = "running"
+    PAUSED = "paused"
+    TERMINATED = "terminated"
+    ARCHIVED = "archived"
 
 
 class ChatRequest(BaseModel):
@@ -32,17 +60,17 @@ class AIModel(BaseModel):
     builtin_tools: List[str] = Field(
         default_factory=list,
         description="List of builtin tool IDs",
-        serialization_alias="builtinTools",
+        alias="builtinTools",
     )
     required_env_vars: List[str] = Field(
         default_factory=list,
         description="Required environment variables for this model",
-        serialization_alias="requiredEnvVars",
+        alias="requiredEnvVars",
     )
     is_available: bool = Field(
         default=True,
         description="Whether the model is available (based on env vars)",
-        serialization_alias="isAvailable",
+        alias="isAvailable",
     )
 
 
@@ -66,7 +94,7 @@ class MCPServerTool(BaseModel):
     input_schema: Optional[Dict[str, Any]] = Field(
         default=None,
         description="JSON schema for tool input parameters",
-        serialization_alias="inputSchema",
+        alias="inputSchema",
     )
 
 
@@ -77,6 +105,7 @@ class MCPServer(BaseModel):
 
     id: str = Field(..., description="Unique server identifier")
     name: str = Field(..., description="Display name for the server")
+    description: str = Field(default="", description="Description of the server capabilities")
     url: str = Field(default="", description="Server URL (for HTTP-based servers)")
     enabled: bool = Field(default=True, description="Whether the server is enabled")
     tools: List[MCPServerTool] = Field(
@@ -91,14 +120,33 @@ class MCPServer(BaseModel):
         default_factory=list,
         description="Command arguments for the MCP server",
     )
+    env: Optional[Dict[str, str]] = Field(
+        default=None,
+        description="Environment variables for the MCP server process",
+    )
+    required_env_vars: List[str] = Field(
+        default_factory=list,
+        description="Environment variables required for this server to work",
+        alias="requiredEnvVars",
+    )
     is_available: bool = Field(
         default=False,
-        description="Whether the server is available (based on tool discovery)",
-        serialization_alias="isAvailable",
+        description="Whether the server is available (based on env var presence)",
+        alias="isAvailable",
     )
     transport: str = Field(
         default="stdio",
         description="Transport type: 'stdio' or 'http'",
+    )
+    is_config: bool = Field(
+        default=False,
+        description="Whether this server is from mcp.json config (vs catalog)",
+        alias="isConfig",
+    )
+    is_running: bool = Field(
+        default=False,
+        description="Whether this server is currently running",
+        alias="isRunning",
     )
 
 
@@ -113,10 +161,48 @@ class FrontendConfig(BaseModel):
     builtin_tools: List[BuiltinTool] = Field(
         default_factory=list,
         description="Available builtin tools",
-        serialization_alias="builtinTools",
+        alias="builtinTools",
     )
     mcp_servers: List[MCPServer] = Field(
         default_factory=list,
         description="Configured MCP servers",
-        serialization_alias="mcpServers",
+        alias="mcpServers",
+    )
+
+
+class AgentSpec(BaseModel):
+    """Specification for an AI agent.
+
+    Defines the configuration for a reusable agent template that can be
+    instantiated as an AgentSpace.
+    """
+
+    model_config = ConfigDict(populate_by_name=True, by_alias=True)
+
+    id: str = Field(..., description="Unique agent identifier")
+    name: str = Field(..., description="Display name for the agent")
+    description: str = Field(default="", description="Agent description")
+    tags: List[str] = Field(default_factory=list, description="Tags for categorization")
+    enabled: bool = Field(default=True, description="Whether the agent is enabled")
+    mcp_servers: List[MCPServer] = Field(
+        default_factory=list,
+        description="MCP servers used by this agent",
+        alias="mcpServers",
+    )
+    skills: List[AgentSkillSpec] = Field(
+        default_factory=list,
+        description="Skills available to this agent",
+    )
+    environment_name: str = Field(
+        default="ai-agents",
+        description="Runtime environment name for this agent",
+        alias="environmentName",
+    )
+    icon: Optional[str] = Field(
+        default=None,
+        description="Icon identifier or URL for the agent",
+    )
+    color: Optional[str] = Field(
+        default=None,
+        description="Theme color for the agent (hex code)",
     )

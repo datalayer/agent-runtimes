@@ -12,6 +12,21 @@ Agent Runtimes exposes a comprehensive REST API for managing agents, executing p
 http://localhost:8765/api/v1
 ```
 
+:::note URL Convention - Trailing Slashes
+Most API endpoints should be called **without trailing slashes**. However, **mounted protocol endpoints require trailing slashes**:
+
+**Standard endpoints (no trailing slash):**
+- ✅ `/api/v1/agents`
+- ✅ `/api/v1/mcp/servers`
+
+**Protocol endpoints (trailing slash required):**
+- ✅ `/api/v1/ag-ui/{agent_id}/` - AG-UI protocol (mounted Starlette apps)
+- ✅ `/api/v1/a2a/{agent_id}/` - A2A protocol (FastA2A compatibility)
+- ✅ `/api/v1/examples/{example_name}/` - AG-UI example agents
+
+Without the trailing slash, mounted apps return a 307 redirect which may break streaming clients.
+:::
+
 ## Agents
 
 Manage AI agents and their configurations.
@@ -88,6 +103,248 @@ Content-Type: application/json
 
 Update an existing agent configuration.
 
+### Update Agent MCP Servers (Runtime)
+
+```http
+PATCH /api/v1/agents/{agent_id}/mcp-servers
+Content-Type: application/json
+```
+
+Dynamically update an agent's selected MCP servers without recreating the agent. This allows adding or removing MCP tools from a running agent.
+
+**Request Body:**
+
+```json
+{
+  "selected_mcp_servers": ["tavily", "filesystem"]
+}
+```
+
+**Response:**
+
+```json
+{
+  "agent_id": "my-agent",
+  "selected_mcp_servers": ["tavily", "filesystem"],
+  "message": "MCP servers updated successfully"
+}
+```
+
+### Start Agent MCP Servers
+
+Start catalog MCP servers defined for running agents. Environment variables can be provided to configure the servers (e.g., API keys). If the agent has Codemode enabled, the Codemode toolset will be rebuilt to include the newly started servers as programmatic tools.
+
+#### Start MCP Servers for All Agents
+
+```http
+POST /api/v1/agents/mcp-servers/start
+Content-Type: application/json
+```
+
+Start catalog MCP servers for **all** running agents.
+
+**Request Body:**
+
+```json
+{
+  "env_vars": [
+    {"name": "TAVILY_API_KEY", "value": "tvly-xxx"},
+    {"name": "GITHUB_TOKEN", "value": "ghp_xxx"}
+  ]
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `env_vars` | array | No | List of environment variables to set before starting servers |
+| `env_vars[].name` | string | Yes | Environment variable name |
+| `env_vars[].value` | string | Yes | Environment variable value |
+
+**Example Request:**
+
+```bash
+curl -X POST http://localhost:8000/api/v1/agents/mcp-servers/start \
+  -H "Content-Type: application/json" \
+  -d '{"env_vars": [{"name": "TAVILY_API_KEY", "value": "tvly-xxx"}]}'
+```
+
+**Response:** `200 OK`
+
+```json
+{
+  "agents_processed": ["agent-1", "agent-2"],
+  "started_servers": ["tavily", "github"],
+  "stopped_servers": [],
+  "already_running": [],
+  "already_stopped": [],
+  "failed_servers": [],
+  "codemode_rebuilt": true,
+  "message": "Started 2 server(s) across 2 agent(s)"
+}
+```
+
+#### Start MCP Servers for a Specific Agent
+
+```http
+POST /api/v1/agents/{agent_id}/mcp-servers/start
+Content-Type: application/json
+```
+
+Start catalog MCP servers for a **specific** running agent.
+
+**Path Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `agent_id` | string | The agent identifier |
+
+**Request Body:**
+
+```json
+{
+  "env_vars": [
+    {"name": "TAVILY_API_KEY", "value": "tvly-xxx"},
+    {"name": "GITHUB_TOKEN", "value": "ghp_xxx"}
+  ]
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `env_vars` | array | No | List of environment variables to set before starting servers |
+| `env_vars[].name` | string | Yes | Environment variable name |
+| `env_vars[].value` | string | Yes | Environment variable value |
+
+**Example Request:**
+
+```bash
+curl -X POST http://localhost:8000/api/v1/agents/my-agent/mcp-servers/start \
+  -H "Content-Type: application/json" \
+  -d '{"env_vars": [{"name": "TAVILY_API_KEY", "value": "tvly-xxx"}]}'
+```
+
+**Response:** `200 OK`
+
+```json
+{
+  "agent_id": "my-agent",
+  "started_servers": ["tavily"],
+  "stopped_servers": [],
+  "already_running": ["github"],
+  "already_stopped": [],
+  "failed_servers": [
+    {"server_id": "filesystem", "error": "Server config not found"}
+  ],
+  "codemode_rebuilt": true,
+  "message": "Started 1 server(s), 1 already running, 1 failed"
+}
+```
+
+#### Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `agent_id` | string | The agent identifier (only for single-agent endpoint) |
+| `agents_processed` | array | List of agent IDs that were processed (only for all-agents endpoint) |
+| `started_servers` | array | List of server IDs that were successfully started |
+| `already_running` | array | List of server IDs that were already running |
+| `failed_servers` | array | List of servers that failed to start with error details |
+| `codemode_rebuilt` | boolean | Whether the Codemode toolset was rebuilt |
+| `message` | string | Summary message |
+
+**Error Responses:**
+
+| Code | Description |
+|------|-------------|
+| `404` | Agent not found (single-agent endpoint only) |
+| `500` | Failed to start MCP servers |
+
+### Stop Agent MCP Servers
+
+Stop catalog MCP servers for running agents.
+
+#### Stop MCP Servers for All Agents
+
+```http
+POST /api/v1/agents/mcp-servers/stop
+```
+
+Stop catalog MCP servers for **all** running agents.
+
+**Example Request:**
+
+```bash
+curl -X POST http://localhost:8000/api/v1/agents/mcp-servers/stop
+```
+
+**Response:** `200 OK`
+
+```json
+{
+  "agents_processed": ["agent-1", "agent-2"],
+  "started_servers": [],
+  "stopped_servers": ["tavily", "github"],
+  "already_running": [],
+  "already_stopped": [],
+  "failed_servers": [],
+  "codemode_rebuilt": false,
+  "message": "Stopped 2 server(s) across 2 agent(s)"
+}
+```
+
+#### Stop MCP Servers for a Specific Agent
+
+```http
+POST /api/v1/agents/{agent_id}/mcp-servers/stop
+```
+
+Stop catalog MCP servers for a **specific** running agent.
+
+**Path Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `agent_id` | string | The agent identifier |
+
+**Example Request:**
+
+```bash
+curl -X POST http://localhost:8000/api/v1/agents/my-agent/mcp-servers/stop
+```
+
+**Response:** `200 OK`
+
+```json
+{
+  "agent_id": "my-agent",
+  "started_servers": [],
+  "stopped_servers": ["tavily", "github"],
+  "already_running": [],
+  "already_stopped": ["filesystem"],
+  "failed_servers": [],
+  "codemode_rebuilt": false,
+  "message": "Stopped 2 server(s), 1 already stopped"
+}
+```
+
+#### Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `agent_id` | string | The agent identifier (only for single-agent endpoint) |
+| `agents_processed` | array | List of agent IDs that were processed (only for all-agents endpoint) |
+| `stopped_servers` | array | List of server IDs that were successfully stopped |
+| `already_stopped` | array | List of server IDs that were already stopped |
+| `failed_servers` | array | List of servers that failed to stop with error details |
+| `message` | string | Summary message |
+
+**Error Responses:**
+
+| Code | Description |
+|------|-------------|
+| `404` | Agent not found (single-agent endpoint only) |
+| `500` | Failed to stop MCP servers |
+
 ### Delete Agent
 
 ```http
@@ -157,18 +414,18 @@ System configuration and status endpoints.
 ### Get Configuration
 
 ```http
-GET /api/v1/configure/config
+GET /api/v1/configure
 ```
 
-Get the current system configuration.
+Get the current system configuration including available models and MCP servers.
 
 **Response:**
 
 ```json
 {
-  "agents": [...],
+  "models": [...],
   "mcp_servers": [...],
-  "models": [...]
+  "tools": [...]
 }
 ```
 
@@ -185,18 +442,10 @@ Get the status of MCP toolsets initialization.
 ```json
 {
   "initialized": true,
-  "ready_count": 2,
-  "total_count": 2,
-  "servers": {
-    "tavily": {
-      "ready": true,
-      "tools": ["tavily_search", "tavily_extract"]
-    },
-    "fetch": {
-      "ready": true,
-      "tools": ["fetch"]
-    }
-  }
+  "ready_count": 3,
+  "failed_count": 0,
+  "ready_servers": ["tavily", "linkedin", "kaggle"],
+  "failed_servers": {}
 }
 ```
 
@@ -206,25 +455,466 @@ Get the status of MCP toolsets initialization.
 GET /api/v1/configure/mcp-toolsets-info
 ```
 
-Get detailed information about all MCP toolsets including available tools.
+Get detailed information about running MCP toolsets.
+
+**Response:**
+
+```json
+[
+  {
+    "type": "MCPServerStdio",
+    "id": "tavily",
+    "command": "npx",
+    "args": ["-y", "tavily-mcp@0.1.3"]
+  }
+]
+```
+
+## MCP Servers
+
+Manage MCP (Model Context Protocol) servers for tool integration. There are two types of MCP servers:
+
+- **MCP Config**: User-defined servers from `~/.datalayer/mcp.json` that start automatically
+- **MCP Catalog**: Predefined servers that can be enabled on-demand
+
+:::info Separate Storage
+Config and catalog servers are stored separately, allowing the same server ID to exist in both without conflict. For example, you can have a custom `tavily` server in your `mcp.json` while also having access to the predefined `tavily` in the catalog.
+:::
+
+:::tip Starting Without Config MCP Servers
+When you start the server with the [`--no-config-mcp-servers` CLI flag](/cli#mcp-server-control), config MCP servers from `~/.datalayer/mcp.json` are not started automatically. You can then use the endpoints below to dynamically enable MCP servers from the catalog at runtime:
+
+```bash
+# Start server without config MCP servers
+python -m agent_runtimes --no-config-mcp-servers
+
+# Then enable MCP servers via API
+curl -X POST http://localhost:8000/api/v1/mcp/servers/catalog/tavily/enable
+curl -X POST http://localhost:8000/api/v1/mcp/servers/catalog/github/enable
+```
+
+This is useful for scenarios where you want fine-grained control over which MCP servers are running, or when you need to manage resources carefully.
+:::
+
+### List MCP Config Servers
+
+```http
+GET /api/v1/mcp/servers/config
+```
+
+Get all running MCP Config servers from `~/.datalayer/mcp.json`. These servers start automatically when the agent runtime starts.
+
+**Response:**
+
+```json
+[
+  {
+    "id": "tavily",
+    "name": "Tavily Search",
+    "description": "Web search and research capabilities",
+    "enabled": true,
+    "tools": [
+      {
+        "name": "tavily-search",
+        "description": "Search the web using Tavily",
+        "enabled": true
+      }
+    ],
+    "isAvailable": true,
+    "isRunning": true,
+    "isConfig": true,
+    "transport": "stdio"
+  }
+]
+```
+
+### List Catalog Servers
+
+```http
+GET /api/v1/mcp/servers/catalog
+```
+
+Get all predefined MCP servers from the catalog. These are NOT started automatically.
+
+**Response:**
+
+```json
+[
+  {
+    "id": "tavily",
+    "name": "Tavily Search",
+    "description": "Web search and research capabilities via Tavily API",
+    "enabled": true,
+    "tools": [],
+    "command": "npx",
+    "args": ["-y", "tavily-mcp"],
+    "requiredEnvVars": ["TAVILY_API_KEY"],
+    "isAvailable": false,
+    "isConfig": false,
+    "transport": "stdio"
+  }
+]
+```
+
+### List All Available Servers
+
+```http
+GET /api/v1/mcp/servers/available
+```
+
+Get all available MCP servers - combines catalog servers with running config servers. Since config and catalog servers are stored separately, the same ID can appear in both (as separate entries).
+
+**Response:**
+
+```json
+[
+  {
+    "id": "tavily",
+    "name": "Tavily Search",
+    "isAvailable": true,
+    "isRunning": true,
+    "isConfig": true,
+    "transport": "stdio"
+  },
+  {
+    "id": "tavily",
+    "name": "Tavily Search",
+    "description": "Web search via Tavily API",
+    "isAvailable": false,
+    "isRunning": false,
+    "isConfig": false,
+    "transport": "stdio"
+  }
+]
+```
+
+Note: The same ID (`tavily`) can appear twice - once from config (user's mcp.json) and once from catalog (predefined).
+
+### List Running Servers
+
+```http
+GET /api/v1/mcp/servers
+```
+
+Get all currently running MCP servers (both config and catalog).
+
+**Response:**
+
+```json
+[
+  {
+    "id": "tavily",
+    "name": "Tavily Search",
+    "enabled": true,
+    "tools": [
+      {
+        "name": "tavily-search",
+        "description": "A powerful web search tool...",
+        "enabled": true,
+        "inputSchema": {...}
+      }
+    ],
+    "isAvailable": true
+  }
+]
+```
+
+### Get Server
+
+```http
+GET /api/v1/mcp/servers/{server_id}
+```
+
+Get details for a specific MCP server.
+
+### Enable Catalog Server
+
+```http
+POST /api/v1/mcp/servers/catalog/{server_name}/enable
+```
+
+Start an MCP server from the catalog for the current session. Only works for catalog servers (not config servers which start automatically).
+
+This is particularly useful when:
+- You started the server with [`--no-config-mcp-servers`](/cli#mcp-server-control)
+- You want to dynamically add tools to an agent at runtime
+- You need fine-grained control over which MCP servers are running
+
+**Path Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `server_name` | string | The name/ID of the MCP server from the catalog (e.g., `tavily`, `github`, `filesystem`) |
+
+**Example Request:**
+
+```bash
+curl -X POST http://localhost:8000/api/v1/mcp/servers/catalog/tavily/enable
+```
+
+**Response:** `201 Created`
+
+```json
+{
+  "id": "tavily",
+  "name": "Tavily Search",
+  "enabled": true,
+  "tools": [
+    {
+      "name": "tavily-search",
+      "description": "Search the web using Tavily"
+    }
+  ],
+  "isRunning": true,
+  "isConfig": false
+}
+```
+
+**Error Responses:**
+
+| Code | Description |
+|------|-------------|
+| `404` | Server not found in catalog |
+| `500` | Failed to start the MCP server |
+
+### Disable Catalog Server
+
+```http
+DELETE /api/v1/mcp/servers/catalog/{server_name}/disable
+```
+
+Stop an MCP server and remove it from the current session. This stops the MCP server process and frees up resources.
+
+**Path Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `server_name` | string | The name/ID of the MCP server to disable |
+
+**Example Request:**
+
+```bash
+curl -X DELETE http://localhost:8000/api/v1/mcp/servers/catalog/tavily/disable
+```
+
+**Response:** `204 No Content`
+
+**Error Responses:**
+
+| Code | Description |
+|------|-------------|
+| `404` | Server is not currently enabled |
+| `500` | Failed to stop the MCP server |
+
+### Create Server
+
+```http
+POST /api/v1/mcp/servers
+Content-Type: application/json
+```
+
+Add a new MCP server configuration.
+
+**Request Body:**
+
+```json
+{
+  "id": "my-server",
+  "name": "My Custom Server",
+  "command": "npx",
+  "args": ["-y", "my-mcp-server"],
+  "enabled": true
+}
+```
+
+### Update Server
+
+```http
+PUT /api/v1/mcp/servers/{server_id}
+Content-Type: application/json
+```
+
+Update an existing MCP server configuration.
+
+### Delete Server
+
+```http
+DELETE /api/v1/mcp/servers/{server_id}
+```
+
+Remove an MCP server configuration.
+
+**Response:** `204 No Content`
+
+## AG-UI Protocol
+
+The AG-UI (Agent-User Interface) protocol provides streaming agent communication using Server-Sent Events (SSE). Each agent is mounted as a Starlette application.
+
+:::warning Trailing Slash Required
+AG-UI endpoints are mounted Starlette apps and **require a trailing slash**. Without it, you'll get a 307 redirect that breaks streaming.
+:::
+
+### List AG-UI Agents
+
+```http
+GET /api/v1/ag-ui/agents
+```
+
+List all agents available via AG-UI protocol.
 
 **Response:**
 
 ```json
 {
-  "toolsets": [
+  "protocol": "ag-ui",
+  "version": "0.1.0",
+  "agents": [
     {
-      "name": "tavily",
-      "tools": [
-        {
-          "name": "tavily_search",
-          "description": "Search the web using Tavily",
-          "parameters": {...}
-        }
-      ]
+      "agent_id": "pydantic-ai",
+      "endpoint": "/api/v1/ag-ui/pydantic-ai/"
     }
-  ]
+  ],
+  "agents_endpoint": "/api/v1/ag-ui/agents",
+  "terminate_endpoint": "/api/v1/ag-ui/terminate",
+  "note": "Each agent is mounted at /api/v1/ag-ui/{agent_id}/ (trailing slash required)"
 }
+```
+
+### AG-UI Protocol Info
+
+```http
+GET /api/v1/ag-ui/
+```
+
+Get AG-UI protocol information and list of available agents.
+
+### Send Message (Streaming)
+
+```http
+POST /api/v1/ag-ui/{agent_id}/
+Content-Type: application/json
+```
+
+Send a message to an AG-UI agent and receive streaming SSE response.
+
+**Request Body:**
+
+```json
+{
+  "thread_id": "thread-123",
+  "run_id": "run-456",
+  "messages": [
+    {
+      "id": "msg-1",
+      "role": "user",
+      "content": "Hello, how are you?"
+    }
+  ],
+  "state": {},
+  "tools": [],
+  "context": [],
+  "forwardedProps": {}
+}
+```
+
+**Response:** Server-Sent Events (SSE) stream with AG-UI events:
+
+```
+event: RUN_STARTED
+data: {"type": "RUN_STARTED", "thread_id": "thread-123", "run_id": "run-456"}
+
+event: TEXT_MESSAGE_START
+data: {"type": "TEXT_MESSAGE_START", "message_id": "msg-2", "role": "assistant"}
+
+event: TEXT_MESSAGE_CONTENT
+data: {"type": "TEXT_MESSAGE_CONTENT", "message_id": "msg-2", "delta": "Hello! "}
+
+event: TEXT_MESSAGE_CONTENT
+data: {"type": "TEXT_MESSAGE_CONTENT", "message_id": "msg-2", "delta": "I'm doing well."}
+
+event: TEXT_MESSAGE_END
+data: {"type": "TEXT_MESSAGE_END", "message_id": "msg-2"}
+
+event: RUN_FINISHED
+data: {"type": "RUN_FINISHED", "thread_id": "thread-123", "run_id": "run-456"}
+```
+
+### Terminate Run
+
+```http
+POST /api/v1/ag-ui/terminate
+Content-Type: application/json
+```
+
+Terminate an active AG-UI run.
+
+**Request Body:**
+
+```json
+{
+  "thread_id": "thread-123",
+  "run_id": "run-456"
+}
+```
+
+### AG-UI Event Types
+
+| Event | Description |
+|-------|-------------|
+| `RUN_STARTED` | Run has started processing |
+| `RUN_FINISHED` | Run completed successfully |
+| `RUN_ERROR` | Run encountered an error |
+| `TEXT_MESSAGE_START` | Beginning of a text message |
+| `TEXT_MESSAGE_CONTENT` | Incremental text content (streaming) |
+| `TEXT_MESSAGE_END` | End of a text message |
+| `TOOL_CALL_START` | Tool invocation started |
+| `TOOL_CALL_ARGS` | Tool call arguments (streaming) |
+| `TOOL_CALL_END` | Tool invocation completed |
+| `TOOL_CALL_RESULT` | Result from tool execution |
+| `STATE_SNAPSHOT` | Current state snapshot |
+| `STATE_DELTA` | Incremental state update |
+| `CUSTOM` | Custom event type |
+
+### Example: Using curl
+
+```bash
+curl -X POST "http://localhost:8765/api/v1/ag-ui/pydantic-ai/" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "thread_id": "test-thread",
+    "run_id": "test-run",
+    "messages": [{"id": "1", "role": "user", "content": "Hello!"}],
+    "state": {},
+    "tools": [],
+    "context": [],
+    "forwardedProps": {}
+  }'
+```
+
+### Example: Using TypeScript
+
+```typescript
+import { AGUIAdapter } from '@datalayer/agent-runtimes';
+
+const adapter = new AGUIAdapter({
+  baseUrl: 'http://localhost:8765/api/v1/ag-ui/pydantic-ai/',
+  // Note: The adapter automatically ensures trailing slash
+});
+
+await adapter.sendMessage('Hello!', {
+  onToken: (token) => console.log(token),
+  onComplete: (message) => console.log('Done:', message),
+});
+```
+
+### Example: Using Python
+
+```python
+from agent_runtimes.transports.clients import AGUIClient
+
+async with AGUIClient("http://localhost:8765/api/v1/ag-ui/pydantic-ai/") as client:
+    async for event in client.run("Hello!"):
+        print(event)
 ```
 
 ## Extensions

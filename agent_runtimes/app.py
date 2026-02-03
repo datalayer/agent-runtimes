@@ -15,6 +15,7 @@ Provides a configurable FastAPI application with:
 import asyncio
 import logging
 import multiprocessing as mp
+import os
 import sys
 from contextlib import asynccontextmanager
 from typing import Any, AsyncGenerator
@@ -28,13 +29,16 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from starlette.routing import Mount
 
+from .config.agents import get_agent_spec
 from .mcp import (
-    ensure_mcp_toolsets_event,
-    initialize_mcp_servers,
+    ensure_config_mcp_toolsets_event,
+    get_mcp_lifecycle_manager,
+    initialize_config_mcp_servers,
     get_mcp_manager,
-    initialize_mcp_toolsets,
-    shutdown_mcp_toolsets,
+    initialize_config_mcp_toolsets,
+    shutdown_config_mcp_toolsets,
 )
+from .mcp.catalog_mcp_servers import MCP_SERVER_CATALOG, get_catalog_server
 from .routes import (
     a2a_protocol_router,
     A2AAgentCard,
@@ -61,10 +65,329 @@ from .routes.agents import set_api_prefix
 
 logger = logging.getLogger(__name__)
 
+# Reduce noise from verbose libraries
+logging.getLogger("botocore").setLevel(logging.WARNING)
+logging.getLogger("botocore.parsers").setLevel(logging.WARNING)
+logging.getLogger("botocore.hooks").setLevel(logging.WARNING)
+logging.getLogger("urllib3").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
+logging.getLogger("httpx").setLevel(logging.WARNING)
+
 
 def _is_reload_parent_process() -> bool:
     """Return True when running inside the reload supervisor parent."""
     return "--reload" in sys.argv and mp.current_process().name == "MainProcess"
+
+
+async def _create_and_register_cli_agent(
+    app: FastAPI,
+    agent_id: str,
+    agent_spec: Any,
+    enable_codemode: bool,
+    skills: list[str],
+    all_mcp_servers: list[Any],
+    api_prefix: str,
+    protocol: str = "ag-ui",
+) -> None:
+    """
+    Create and register an agent from CLI options.
+    
+    This is called when --agent-id is provided to actually create an agent
+    with the specified codemode and skills settings.
+    
+    Args:
+        app: The FastAPI app instance
+        agent_id: The agent ID/name to register
+        agent_spec: The AgentSpec from the library
+        enable_codemode: Whether codemode is enabled (--codemode flag)
+        skills: List of skill names to enable (--skills flag)
+        all_mcp_servers: All MCP servers (agent spec + CLI servers)
+        api_prefix: API prefix for routes
+        protocol: Transport protocol (ag-ui, vercel-ai, vercel-ai-jupyter, a2a)
+    """
+    from pathlib import Path
+    from pydantic_ai import Agent as PydanticAgent
+    from .adapters.pydantic_ai_adapter import PydanticAIAdapter
+    from .transports import AGUITransport, MCPUITransport
+    from .routes.acp import AgentCapabilities, AgentInfo, register_agent
+    from .routes.agui import register_agui_agent, get_agui_app
+    from .routes.mcp_ui import register_mcp_ui_agent
+    from .context.session import register_agent as register_agent_for_context
+    from .routes.configure import _codemode_state
+    
+    logger.info(f"Creating agent '{agent_id}' with codemode={enable_codemode}, skills={skills}")
+    
+    # Update the global codemode state so AgentDetails shows correct status
+    _codemode_state["enabled"] = enable_codemode
+    _codemode_state["skills"] = list(skills) if skills else []
+    
+    # Build list of non-MCP toolsets (codemode, skills)
+    non_mcp_toolsets = []
+    shared_sandbox = None
+    
+    # Create shared sandbox if both codemode and skills are enabled
+    skills_enabled = len(skills) > 0
+    if enable_codemode and skills_enabled:
+        try:
+            from code_sandboxes import LocalEvalSandbox
+            shared_sandbox = LocalEvalSandbox()
+            shared_sandbox.start()
+            logger.info(f"Created shared LocalEvalSandbox for agent {agent_id}")
+        except ImportError:
+            logger.warning("code_sandboxes not installed, cannot create shared sandbox")
+    
+    # Add skills toolset if enabled
+    if skills_enabled:
+        try:
+            from agent_skills import (
+                AgentSkill,
+                AgentSkillsToolset,
+                SandboxExecutor,
+                PYDANTIC_AI_AVAILABLE,
+            )
+            from code_sandboxes import LocalEvalSandbox
+            
+            if PYDANTIC_AI_AVAILABLE:
+                repo_root = Path(__file__).resolve().parents[1]
+                skills_path = str((repo_root / "skills").resolve())
+                
+                selected_set = set(skills)
+                selected_skills: list[AgentSkill] = []
+                
+                for skill_md in Path(skills_path).rglob("SKILL.md"):
+                    try:
+                        skill = AgentSkill.from_skill_md(skill_md)
+                    except Exception as exc:
+                        logger.warning(f"Failed to load skill from {skill_md}: {exc}")
+                        continue
+                    if skill.name in selected_set:
+                        selected_skills.append(skill)
+                        logger.info(f"Loaded skill: {skill.name}")
+                
+                missing = selected_set - {s.name for s in selected_skills}
+                if missing:
+                    logger.warning(f"Requested skills not found in {skills_path}: {sorted(missing)}")
+                
+                # Create executor for running skill scripts
+                if shared_sandbox is not None:
+                    executor = SandboxExecutor(shared_sandbox)
+                    logger.info(f"Using shared sandbox for skills executor")
+                else:
+                    skills_sandbox = LocalEvalSandbox()
+                    skills_sandbox.start()
+                    executor = SandboxExecutor(skills_sandbox)
+                
+                skills_toolset = AgentSkillsToolset(
+                    skills=selected_skills,
+                    executor=executor,
+                )
+                non_mcp_toolsets.append(skills_toolset)
+                logger.info(f"Added AgentSkillsToolset with {len(selected_skills)} skills for agent {agent_id}")
+            else:
+                logger.warning("agent-skills pydantic-ai integration not available")
+        except ImportError as e:
+            logger.warning(f"agent-skills package not installed, skills disabled: {e}")
+    
+    # Add codemode toolset if enabled
+    codemode_toolset = None
+    if enable_codemode:
+        try:
+            from agent_codemode import (
+                CodemodeToolset,
+                CodeModeConfig,
+                ToolRegistry,
+                MCPServerConfig,
+                PYDANTIC_AI_AVAILABLE as CODEMODE_AVAILABLE,
+            )
+            
+            if CODEMODE_AVAILABLE:
+                # Build registry with all MCP servers
+                registry = ToolRegistry()
+                
+                for mcp_server in all_mcp_servers:
+                    if not mcp_server.enabled:
+                        continue
+                    
+                    # Normalize server name to valid Python identifier
+                    normalized_name = "".join(
+                        c if c.isalnum() or c == "_" else "_" for c in mcp_server.id
+                    )
+                    
+                    # Pass through relevant environment variables
+                    server_env: dict[str, str] = {}
+                    for env_key in ["TAVILY_API_KEY", "GITHUB_TOKEN", "LINKEDIN_API_KEY"]:
+                        env_val = os.getenv(env_key)
+                        if env_val:
+                            server_env[env_key] = env_val
+                    
+                    registry.add_server(
+                        MCPServerConfig(
+                            name=normalized_name,
+                            url=mcp_server.url if mcp_server.transport == "http" else "",
+                            command=mcp_server.command or "",
+                            args=mcp_server.args or [],
+                            env=server_env,
+                            enabled=mcp_server.enabled,
+                        )
+                    )
+                    logger.info(f"Added MCP server to codemode registry: {normalized_name}")
+                
+                # Configure paths for codemode
+                repo_root = Path(__file__).resolve().parents[1]
+                codemode_config = CodeModeConfig(
+                    workspace_path=str((repo_root / "workspace").resolve()),
+                    generated_path=str((repo_root / "generated").resolve()),
+                    skills_path=str((repo_root / "skills").resolve()),
+                    allow_direct_tool_calls=False,
+                )
+                
+                codemode_toolset = CodemodeToolset(
+                    registry=registry,
+                    config=codemode_config,
+                    sandbox=shared_sandbox,
+                    allow_discovery_tools=True,
+                )
+                
+                # Initialize the toolset
+                logger.info(f"Starting codemode toolset for agent {agent_id}...")
+                await codemode_toolset.start()
+                
+                # Log discovered tools
+                if codemode_toolset.registry:
+                    discovered_tools = codemode_toolset.registry.list_tools(include_deferred=True)
+                    tool_names = [t.name for t in discovered_tools]
+                    logger.info(f"Codemode discovered {len(tool_names)} tools: {tool_names}")
+                
+                non_mcp_toolsets.append(codemode_toolset)
+                logger.info(f"Added and initialized CodemodeToolset for agent {agent_id}")
+            else:
+                logger.warning("agent-codemode pydantic-ai integration not available")
+        except ImportError as e:
+            logger.warning(f"agent-codemode package not installed, codemode disabled: {e}")
+    
+    # Build selected MCP servers list for the adapter
+    # When codemode is enabled, MCP servers are accessed via CodemodeToolset registry
+    from .routes.agents import McpServerSelection
+    selected_mcp_servers = [
+        McpServerSelection(id=s.id, origin="catalog")
+        for s in all_mcp_servers
+    ]
+    
+    # Create the underlying Pydantic AI Agent
+    # Use default model - can be configured via environment
+    model = os.environ.get(
+        "AGENT_RUNTIMES_MODEL",
+        "bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0"
+    )
+    system_prompt = agent_spec.description or "You are a helpful AI assistant."
+    
+    pydantic_agent = PydanticAgent(
+        model,
+        system_prompt=system_prompt,
+    )
+    
+    # Create codemode builder for dynamic rebuilding
+    codemode_builder = None
+    if enable_codemode:
+        def rebuild_codemode(new_servers: list[str | dict[str, str]]) -> Any:
+            """Rebuild codemode toolset with new MCP server selection."""
+            # This is a simplified rebuild - full implementation in routes/agents.py
+            logger.info(f"Rebuild codemode requested with servers: {new_servers}")
+            return codemode_toolset
+        codemode_builder = rebuild_codemode
+    
+    # Wrap with our adapter
+    agent = PydanticAIAdapter(
+        agent=pydantic_agent,
+        name=agent_spec.name,
+        description=agent_spec.description,
+        agent_id=agent_id,
+        selected_mcp_servers=selected_mcp_servers,
+        non_mcp_toolsets=non_mcp_toolsets,
+        codemode_builder=codemode_builder,
+    )
+    
+    # Create agent info with protocol
+    info = AgentInfo(
+        id=agent_id,
+        name=agent_spec.name,
+        description=agent_spec.description,
+        capabilities=AgentCapabilities(
+            streaming=True,
+            tool_calling=True,
+            code_execution=enable_codemode,
+        ),
+        protocol=protocol,
+    )
+    
+    # Register with ACP (base registration)
+    register_agent(agent, info)
+    logger.info(f"Registered CLI agent '{agent_id}' with ACP (protocol: {protocol})")
+    
+    # Register with context session for snapshot lookups
+    register_agent_for_context(agent_id, agent, {"name": agent_spec.name, "description": agent_spec.description})
+    logger.info(f"Registered agent '{agent_id}' for context snapshots")
+    
+    # Register with the selected protocol transport
+    if protocol == "ag-ui":
+        # Register with AG-UI
+        try:
+            agui_adapter = AGUITransport(agent, agent_id=agent_id)
+            register_agui_agent(agent_id, agui_adapter)
+            logger.info(f"Registered agent with AG-UI: {agent_id}")
+            
+            # Dynamically mount AG-UI route
+            agui_app = get_agui_app(agent_id)
+            if agui_app and app:
+                mount_path = f"{api_prefix}/ag-ui/{agent_id}"
+                app.mount(mount_path, agui_app, name=f"agui-{agent_id}")
+                logger.info(f"Dynamically mounted AG-UI route: {mount_path}")
+        except Exception as e:
+            logger.warning(f"Could not register with AG-UI: {e}")
+    elif protocol == "vercel-ai":
+        # Register with Vercel AI
+        try:
+            from .transports import VercelAITransport
+            from .routes.vercel_ai import register_vercel_agent
+            vercel_adapter = VercelAITransport(agent, agent_id=agent_id)
+            register_vercel_agent(agent_id, vercel_adapter)
+            logger.info(f"Registered agent with Vercel AI: {agent_id}")
+        except Exception as e:
+            logger.warning(f"Could not register with Vercel AI: {e}")
+    elif protocol == "vercel-ai-jupyter":
+        # Register with Vercel AI Jupyter (same as vercel-ai but with jupyter execution context)
+        try:
+            from .transports import VercelAITransport
+            from .routes.vercel_ai import register_vercel_agent
+            vercel_adapter = VercelAITransport(agent, agent_id=agent_id)
+            register_vercel_agent(agent_id, vercel_adapter)
+            logger.info(f"Registered agent with Vercel AI Jupyter: {agent_id}")
+        except Exception as e:
+            logger.warning(f"Could not register with Vercel AI Jupyter: {e}")
+    elif protocol == "a2a":
+        # Register with A2A
+        try:
+            from .routes.a2a import register_a2a_agent, A2AAgentCard, get_a2a_mounts
+            # Create A2A agent card from agent info
+            a2a_card = A2AAgentCard(
+                id=agent_id,
+                name=info.name,
+                description=info.description,
+            )
+            register_a2a_agent(agent, a2a_card)
+            logger.info(f"Registered agent with A2A: {agent_id}")
+        except Exception as e:
+            logger.warning(f"Could not register with A2A: {e}")
+    
+    # Register with MCP-UI for tools (always, regardless of protocol)
+    try:
+        mcp_ui_adapter = MCPUITransport(agent)
+        register_mcp_ui_agent(agent_id, mcp_ui_adapter)
+        logger.info(f"Registered agent with MCP-UI: {agent_id}")
+    except Exception as e:
+        logger.warning(f"Could not register with MCP-UI: {e}")
+    
+    logger.info(f"✓ Successfully created and registered CLI agent: {agent_id} (protocol: {protocol})")
 
 
 class ServerConfig(BaseModel):
@@ -116,14 +439,31 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
         nonlocal _mcp_toolsets_task, _mcp_servers_task
         logger.info("Starting agent-runtimes server...")
         
-        if _is_reload_parent_process():
+        is_reload_parent = _is_reload_parent_process()
+        logger.info(f"Reload parent check: {is_reload_parent}")
+        
+        # Check if config MCP servers should be skipped (--no-config-mcp-servers CLI flag)
+        no_config_mcp_servers = os.environ.get("AGENT_RUNTIMES_NO_CONFIG_MCP_SERVERS", "").lower() == "true"
+        
+        if is_reload_parent:
             logger.info("Reload parent detected; deferring MCP startup to worker process")
+        elif no_config_mcp_servers:
+            logger.info("Skipping config MCP server startup (--no-config-mcp-servers flag)")
         else:
             # Initialize Pydantic AI MCP toolsets in a background task
             # This allows FastAPI to start immediately while MCP servers start async
             logger.info("Initializing Pydantic AI MCP toolsets (background startup)...")
-            ensure_mcp_toolsets_event()
-            _mcp_toolsets_task = asyncio.create_task(initialize_mcp_toolsets())
+            ensure_config_mcp_toolsets_event()
+            
+            async def initialize_toolsets_with_logging() -> None:
+                """Wrapper to catch and log any exceptions from toolset initialization."""
+                try:
+                    await initialize_config_mcp_toolsets()
+                    logger.info("✓ MCP toolset background initialization completed successfully")
+                except Exception as e:
+                    logger.error(f"✗ MCP toolset background initialization failed: {e}", exc_info=True)
+            
+            _mcp_toolsets_task = asyncio.create_task(initialize_toolsets_with_logging())
             logger.info("MCP toolset initialization started (servers starting in background)")
 
             # Initialize MCP servers (check availability and discover tools) - for the frontend/config API
@@ -131,7 +471,7 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
             logger.info("Initializing MCP servers for configuration API...")
 
             async def load_mcp_servers_background() -> None:
-                mcp_servers = await initialize_mcp_servers(discover_tools=True)
+                mcp_servers = await initialize_config_mcp_servers(discover_tools=True)
                 mcp_manager = get_mcp_manager()
                 mcp_manager.load_servers(mcp_servers)
                 logger.info(f"Loaded {len(mcp_servers)} MCP servers into manager")
@@ -141,22 +481,108 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
         # Set app reference for dynamic A2A route mounting
         set_a2a_app(app, config.api_prefix)
         
+        # Register default agent if specified via CLI (--agent-id flag)
+        default_agent_id = os.environ.get("AGENT_RUNTIMES_DEFAULT_AGENT")
+        if default_agent_id:
+            agent_spec = get_agent_spec(default_agent_id)
+            if agent_spec:
+                agent_name = os.environ.get("AGENT_RUNTIMES_AGENT_NAME", "default")
+                
+                # Read CLI flags for codemode, skills, and additional MCP servers
+                enable_codemode = os.environ.get("AGENT_RUNTIMES_CODEMODE", "").lower() == "true"
+                skills_str = os.environ.get("AGENT_RUNTIMES_SKILLS", "")
+                skills_list = [s.strip() for s in skills_str.split(",") if s.strip()] if skills_str else []
+                cli_mcp_servers_str = os.environ.get("AGENT_RUNTIMES_MCP_SERVERS", "")
+                cli_mcp_servers = [s.strip() for s in cli_mcp_servers_str.split(",") if s.strip()] if cli_mcp_servers_str else []
+                protocol = os.environ.get("AGENT_RUNTIMES_PROTOCOL", "ag-ui")
+                no_catalog_mcp_servers = os.environ.get("AGENT_RUNTIMES_NO_CATALOG_MCP_SERVERS", "").lower() == "true"
+                
+                logger.info(f"Registering default agent from catalog: {agent_spec.name} (as '{agent_name}')")
+                logger.info(f"  Protocol: {protocol}")
+                logger.info(f"  Codemode: {enable_codemode}")
+                logger.info(f"  Skills: {skills_list}")
+                logger.info(f"  CLI MCP servers: {cli_mcp_servers}")
+                logger.info(f"  Agent spec MCP servers: {[s.id for s in agent_spec.mcp_servers]}")
+                logger.info(f"  No catalog MCP servers: {no_catalog_mcp_servers}")
+                
+                # Determine which MCP servers to use:
+                # - If --no-catalog-mcp-servers is specified, skip agent spec MCP servers entirely
+                # - If --mcp-servers is specified, use ONLY those (overrides agent spec servers)
+                # - Otherwise, use the agent spec servers
+                mcp_manager = get_mcp_manager()
+                lifecycle_manager = get_mcp_lifecycle_manager()
+                
+                if no_catalog_mcp_servers:
+                    # Skip all catalog MCP servers (both from agent spec and CLI --mcp-servers)
+                    logger.info("Catalog MCP servers disabled (--no-catalog-mcp-servers flag)")
+                    all_mcp_servers = []
+                elif cli_mcp_servers:
+                    # CLI MCP servers OVERRIDE agent spec servers
+                    logger.info(f"CLI --mcp-servers specified: using ONLY {cli_mcp_servers} (overriding agent spec servers)")
+                    all_mcp_servers = []
+                    for server_id in cli_mcp_servers:
+                        catalog_server = get_catalog_server(server_id)
+                        if catalog_server:
+                            mcp_manager.add_server(catalog_server)
+                            all_mcp_servers.append(catalog_server)
+                            logger.info(f"Loaded CLI MCP server from catalog: {server_id}")
+                        else:
+                            logger.warning(f"CLI MCP server '{server_id}' not found in catalog")
+                else:
+                    # No CLI MCP servers, use agent spec servers
+                    logger.info(f"No CLI --mcp-servers specified: using agent spec servers")
+                    for mcp_server in agent_spec.mcp_servers:
+                        mcp_manager.add_server(mcp_server)
+                    all_mcp_servers = list(agent_spec.mcp_servers)
+                    logger.info(f"Loaded {len(agent_spec.mcp_servers)} MCP servers from agent spec")
+                
+                async def start_all_mcp_servers() -> None:
+                    """Start all MCP servers for the default agent."""
+                    for mcp_server in all_mcp_servers:
+                        try:
+                            instance = await lifecycle_manager.start_server(mcp_server.id, mcp_server)
+                            if instance:
+                                logger.info(f"✓ Started MCP server: {mcp_server.id}")
+                            else:
+                                logger.warning(f"✗ Failed to start MCP server: {mcp_server.id}")
+                        except Exception as e:
+                            logger.error(f"✗ Error starting MCP server '{mcp_server.id}': {e}")
+                
+                # Start MCP servers in background
+                if all_mcp_servers:
+                    logger.info(f"Starting {len(all_mcp_servers)} MCP servers for agent '{agent_name}'...")
+                    asyncio.create_task(start_all_mcp_servers())
+                
+                # Create and register the agent with codemode and skills if enabled
+                await _create_and_register_cli_agent(
+                    app=app,
+                    agent_id=agent_name,
+                    agent_spec=agent_spec,
+                    enable_codemode=enable_codemode,
+                    skills=skills_list,
+                    all_mcp_servers=all_mcp_servers,
+                    api_prefix=config.api_prefix,
+                    protocol=protocol,
+                )
+            else:
+                logger.warning(f"Default agent '{default_agent_id}' not found in library")
+        
         # Demo agent auto-registration disabled - use the UI to create agents dynamically
         # To manually register the demo agent, run: python -m agent_runtimes.examples.demo.demo_agent
         
         # Add AG-UI mounts after agents are registered
         for mount in get_agui_mounts():
-            # Mount under /api/v1/ag-ui/{agent_id}/
+            # Mount under /api/v1/ag-ui/{agent_id}
             full_mount = Mount(f"{config.api_prefix}/ag-ui{mount.path}", app=mount.app)
             app.routes.append(full_mount)
-            logger.info(f"Mounted AG-UI route: {config.api_prefix}/ag-ui{mount.path}/")
+            logger.info(f"Mounted AG-UI route: {config.api_prefix}/ag-ui{mount.path}")
         
         # Add A2A mounts (FastA2A apps) after agents are registered
         for mount in get_a2a_mounts():
-            # Mount under /api/v1/a2a/agents/{agent_id}/
+            # Mount under /api/v1/a2a/agents/{agent_id}
             full_mount = Mount(f"{config.api_prefix}/a2a/agents{mount.path}", app=mount.app)
             app.routes.append(full_mount)
-            logger.info(f"Mounted A2A route: {config.api_prefix}/a2a/agents{mount.path}/")
+            logger.info(f"Mounted A2A route: {config.api_prefix}/a2a/agents{mount.path}")
         
         # Add AG-UI example mounts
         for mount in get_example_mounts(config.api_prefix):
@@ -199,7 +625,7 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
 
         # Shutdown MCP toolsets (stop all MCP server subprocesses)
         if not _is_reload_parent_process():
-            await shutdown_mcp_toolsets()
+            await shutdown_config_mcp_toolsets()
         
         logger.info("Shutting down agent-runtimes server...")
     

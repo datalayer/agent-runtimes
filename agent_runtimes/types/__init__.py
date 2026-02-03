@@ -3,9 +3,22 @@
 
 """Model functions and configuration types."""
 
-from .types import AIModel, BuiltinTool, ChatRequest, FrontendConfig, MCPServer, MCPServerTool
+from .types import (
+    AgentSkillSpec,
+    AgentSpec,
+    AgentStatus,
+    AIModel,
+    BuiltinTool,
+    ChatRequest,
+    FrontendConfig,
+    MCPServer,
+    MCPServerTool,
+)
 
 __all__ = [
+    "AgentSkillSpec",
+    "AgentSpec",
+    "AgentStatus",
     "AIModel",
     "BuiltinTool",
     "ChatRequest",

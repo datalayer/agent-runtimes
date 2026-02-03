@@ -273,6 +273,16 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
         const { done, value } = await reader.read();
 
         if (done) {
+          // Stream ended - emit final message if we have accumulated text
+          if (accumulatedText) {
+            const message = createAssistantMessage(accumulatedText);
+            message.id = currentMessageId;
+            this.emit({
+              type: 'message',
+              message,
+              timestamp: new Date(),
+            });
+          }
           break;
         }
 
@@ -284,6 +294,9 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
           if (!line.trim() || line.startsWith(':')) {
             continue;
           }
+
+          // Log raw line for debugging
+          console.debug('[VercelAIAdapter] SSE line:', line);
 
           if (line.startsWith('data: ')) {
             const data = line.slice(6);
@@ -304,6 +317,7 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
 
             try {
               const event = JSON.parse(data);
+              console.debug('[VercelAIAdapter] Parsed event:', event);
 
               // Handle Vercel AI event types
               // Server sends: {"type":"text-delta","delta":"Hello","id":"..."}
@@ -332,9 +346,16 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
                   });
                 }
               } else if (event.type === 'error') {
+                const errorMessage =
+                  event.error ||
+                  event.errorText ||
+                  event.message ||
+                  event.detail ||
+                  'Unknown server error';
+                console.error('[VercelAIAdapter] Server error event:', event);
                 this.emit({
                   type: 'error',
-                  error: new Error(event.error || 'Unknown error'),
+                  error: new Error(errorMessage),
                   timestamp: new Date(),
                 });
               }

@@ -74,3 +74,29 @@ examples:
 	AWS_SECRET_ACCESS_KEY=${DATALAYER_BEDROCK_AWS_SECRET_ACCESS_KEY} \
 	AWS_DEFAULT_REGION=${DATALAYER_BEDROCK_AWS_DEFAULT_REGION} \
 	  npm run examples
+
+agent-serve:
+	@AWS_ACCESS_KEY_ID=${DATALAYER_BEDROCK_AWS_ACCESS_KEY_ID} \
+	AWS_SECRET_ACCESS_KEY=${DATALAYER_BEDROCK_AWS_SECRET_ACCESS_KEY} \
+	AWS_DEFAULT_REGION=${DATALAYER_BEDROCK_AWS_DEFAULT_REGION} \
+	agent-runtimes serve \
+	  --agent-id data-acquisition \
+	  --agent-name dla-1 \
+	  --protocol ag-ui \
+	  --mcp-servers tavily \
+	  --codemode \
+	  --skills github,pdf \
+	  --no-config-mcp-servers \
+	  --host 0.0.0.0 \
+	  --port 8765 \
+	  --debug
+
+agents:
+	agent-runtimes list-agents \
+	  --host 0.0.0.0 \
+	  --port 8765
+
+specs:
+	agent-runtimes list-specs
+	agent-runtimes mcp-servers-catalog
+	agent-runtimes mcp-servers-config

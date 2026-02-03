@@ -58,7 +58,7 @@ def _format_a2a_response(
     return parts
 
 
-@router.post("/restaurant/")
+@router.post("/restaurant")
 async def restaurant_query(request: A2UIQueryRequest) -> list[dict[str, Any]]:
     """
     Handle restaurant search and booking queries via A2UI protocol.

@@ -18,6 +18,26 @@ import type {
 } from './tool';
 
 /**
+ * Type alias for MCP server identifier
+ */
+export type McpId = string;
+
+/**
+ * Type alias for MCP server origin
+ */
+export type McpOrigin = 'config' | 'catalog';
+
+/**
+ * MCP Server selection - identifies a specific MCP server by ID and origin
+ */
+export interface McpServerSelection {
+  /** Unique identifier of the MCP server */
+  id: McpId;
+  /** Origin of the server (config from mcp.json, catalog from built-in) */
+  origin: McpOrigin;
+}
+
+/**
  * Inference provider configuration
  */
 export interface InferenceProviderConfig {

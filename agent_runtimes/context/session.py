@@ -196,6 +196,37 @@ class ToolSnapshot:
 
 
 @dataclass
+class ToolDetailSnapshot:
+    """Detailed snapshot of a tool including full schema."""
+    name: str
+    description: str | None
+    parameters_schema: dict[str, Any]
+    parameters_tokens: int
+    total_tokens: int
+    # Tool metadata
+    source_type: str = "unknown"  # "function", "mcp", "codemode", etc.
+    is_async: bool = False
+    requires_approval: bool = False
+    # Optional source code (if available from function tools)
+    source_code: str | None = None
+
+
+@dataclass
+class MessageDetailSnapshot:
+    """Detailed snapshot of a message with in_context tracking."""
+    role: str  # "user", "assistant", "system", "tool"
+    content: str
+    estimated_tokens: int
+    timestamp: str | None = None
+    in_context: bool = True  # Whether this message is in the current context window
+    # Additional metadata
+    tool_name: str | None = None  # For tool calls/results
+    tool_call_id: str | None = None
+    is_tool_call: bool = False
+    is_tool_result: bool = False
+
+
+@dataclass
 class MessageSnapshot:
     """Snapshot of a single message."""
     role: str  # "user", "assistant", "system"
@@ -743,50 +774,146 @@ class ContextSnapshot:
                 "value": self.tool_tokens,
             })
         
-        # History section
-        if self.history_user_tokens > 0:
+        # User messages - prefer granular fields, fall back to aggregate
+        user_tokens = self.history_user_tokens + self.current_user_tokens
+        if user_tokens == 0 and self.user_message_tokens > 0:
+            user_tokens = self.user_message_tokens
+        if user_tokens > 0:
             children.append({
-                "name": "History: User",
-                "value": self.history_user_tokens,
+                "name": "User Messages",
+                "value": user_tokens,
             })
         
-        if self.history_assistant_tokens > 0:
+        # Assistant messages - prefer granular fields, fall back to aggregate
+        assistant_tokens = self.history_assistant_tokens + self.current_assistant_tokens
+        if assistant_tokens == 0 and self.assistant_message_tokens > 0:
+            assistant_tokens = self.assistant_message_tokens
+        if assistant_tokens > 0:
             children.append({
-                "name": "History: Assistant",
-                "value": self.history_assistant_tokens,
+                "name": "Assistant Messages",
+                "value": assistant_tokens,
             })
         
-        history_tool_usage = self.history_tool_call_tokens + self.history_tool_return_tokens
-        if history_tool_usage > 0:
+        # Tool usage (calls and returns)
+        tool_usage = (self.history_tool_call_tokens + self.history_tool_return_tokens + 
+                      self.current_tool_call_tokens + self.current_tool_return_tokens)
+        if tool_usage > 0:
             children.append({
-                "name": "History: Tool Usage",
-                "value": history_tool_usage,
-            })
-        
-        # Current section
-        if self.current_user_tokens > 0:
-            children.append({
-                "name": "Current: User",
-                "value": self.current_user_tokens,
-            })
-        
-        if self.current_assistant_tokens > 0:
-            children.append({
-                "name": "Current: Assistant",
-                "value": self.current_assistant_tokens,
-            })
-        
-        current_tool_usage = self.current_tool_call_tokens + self.current_tool_return_tokens
-        if current_tool_usage > 0:
-            children.append({
-                "name": "Current: Tool Usage",
-                "value": current_tool_usage,
+                "name": "Tool Usage",
+                "value": tool_usage,
             })
         
         return {
             "name": "Context",
             "value": self.total_tokens,
             "children": children,
+        }
+
+
+@dataclass
+class FullContextSnapshot:
+    """Complete detailed snapshot of agent context with all configuration.
+    
+    This includes everything needed to understand what's in the context window:
+    - Model configuration (name, context window, settings)
+    - System prompts (full text)
+    - Tool definitions (full schemas, source code if available)
+    - Message history (complete with in_context flags)
+    - Memory blocks (if available)
+    """
+    agent_id: str
+    
+    # Model configuration
+    model_name: str | None = None
+    context_window: int = 128000
+    model_settings: dict[str, Any] = field(default_factory=dict)
+    
+    # System prompts (full text)
+    system_prompts: list[str] = field(default_factory=list)
+    system_prompt_tokens: int = 0
+    
+    # Tool definitions with full details
+    tools: list[ToolDetailSnapshot] = field(default_factory=list)
+    tool_tokens: int = 0
+    
+    # Complete message history with in_context flags
+    messages: list[MessageDetailSnapshot] = field(default_factory=list)
+    
+    # Memory blocks (for agents with memory)
+    memory_blocks: list[dict[str, Any]] = field(default_factory=list)
+    memory_tokens: int = 0
+    
+    # Environment variables visible to tools
+    tool_environment: dict[str, str] = field(default_factory=dict)
+    
+    # Tool rules / constraints
+    tool_rules: list[dict[str, Any]] = field(default_factory=list)
+    
+    # Token counts
+    history_tokens: int = 0
+    current_tokens: int = 0
+    total_tokens: int = 0
+    
+    def to_dict(self) -> dict[str, Any]:
+        """Convert to dictionary for API response."""
+        return {
+            "agentId": self.agent_id,
+            "modelConfiguration": {
+                "modelName": self.model_name,
+                "contextWindow": self.context_window,
+                "settings": self.model_settings,
+            },
+            "systemPrompts": [
+                {
+                    "content": prompt,
+                    "tokens": count_tokens(prompt),
+                }
+                for prompt in self.system_prompts
+            ],
+            "systemPromptTokens": self.system_prompt_tokens,
+            "tools": [
+                {
+                    "name": t.name,
+                    "description": t.description,
+                    "parametersSchema": t.parameters_schema,
+                    "parametersTokens": t.parameters_tokens,
+                    "totalTokens": t.total_tokens,
+                    "sourceType": t.source_type,
+                    "isAsync": t.is_async,
+                    "requiresApproval": t.requires_approval,
+                    "sourceCode": t.source_code,
+                }
+                for t in self.tools
+            ],
+            "toolTokens": self.tool_tokens,
+            "messages": [
+                {
+                    "role": m.role,
+                    "content": m.content,
+                    "estimatedTokens": m.estimated_tokens,
+                    "timestamp": m.timestamp,
+                    "inContext": m.in_context,
+                    "toolName": m.tool_name,
+                    "toolCallId": m.tool_call_id,
+                    "isToolCall": m.is_tool_call,
+                    "isToolResult": m.is_tool_result,
+                }
+                for m in self.messages
+            ],
+            "memoryBlocks": self.memory_blocks,
+            "memoryTokens": self.memory_tokens,
+            "toolEnvironment": self.tool_environment,
+            "toolRules": self.tool_rules,
+            "tokenSummary": {
+                "systemPrompts": self.system_prompt_tokens,
+                "tools": self.tool_tokens,
+                "memory": self.memory_tokens,
+                "history": self.history_tokens,
+                "current": self.current_tokens,
+                "total": self.total_tokens,
+                "contextWindow": self.context_window,
+                "usagePercent": round((self.total_tokens / self.context_window) * 100, 1) if self.context_window > 0 else 0,
+            },
         }
 
 
@@ -1060,6 +1187,7 @@ def extract_context_snapshot(
         logger.debug("Using %d passed tool definitions", len(tool_defs))
     else:
         try:
+            # First try pydantic-ai agent's toolsets
             if hasattr(pydantic_agent, "toolsets"):
                 toolsets = pydantic_agent.toolsets
                 logger.debug("Agent has %d toolsets", len(toolsets))
@@ -1067,6 +1195,14 @@ def extract_context_snapshot(
                 logger.debug("Extracted %d tool definitions from toolsets", len(tool_defs))
             else:
                 logger.debug("Agent has no toolsets attribute")
+            
+            # Also check for adapter's non_mcp_toolsets (used by PydanticAIAdapter)
+            if hasattr(agent, "_non_mcp_toolsets") and agent._non_mcp_toolsets:
+                adapter_toolsets = agent._non_mcp_toolsets
+                logger.debug("Adapter has %d non_mcp_toolsets", len(adapter_toolsets))
+                adapter_defs = _extract_tool_definitions_from_toolsets(adapter_toolsets)
+                logger.debug("Extracted %d tool definitions from adapter toolsets", len(adapter_defs))
+                tool_defs.extend(adapter_defs)
         except Exception as e:
             logger.debug("Could not extract tools from toolsets: %s", e)
     
@@ -1320,13 +1456,441 @@ def extract_context_snapshot(
     return snapshot
 
 
+def extract_full_context_snapshot(
+    agent: Any,
+    agent_id: str,
+    context_window: int = 128000,
+    message_history: Sequence[Any] | None = None,
+) -> FullContextSnapshot:
+    """Extract detailed context snapshot from a pydantic-ai agent.
+    
+    This provides complete introspection including:
+    - Model configuration
+    - Full system prompts
+    - Tool definitions with schemas and source code
+    - Complete message history with in_context flags
+    
+    Args:
+        agent: The BaseAgent wrapper or pydantic_ai.Agent instance.
+        agent_id: The agent identifier.
+        context_window: The context window size for the model.
+        message_history: Optional message history from the agent run.
+        
+    Returns:
+        FullContextSnapshot with all extracted information.
+    """
+    snapshot = FullContextSnapshot(
+        agent_id=agent_id,
+        context_window=context_window,
+    )
+    
+    # Get the underlying pydantic-ai Agent
+    pydantic_agent = None
+    if hasattr(agent, "_agent"):
+        pydantic_agent = agent._agent
+    elif hasattr(agent, "__class__") and agent.__class__.__name__ == "Agent":
+        pydantic_agent = agent
+    elif hasattr(agent, "toolsets") and hasattr(agent, "_system_prompts"):
+        pydantic_agent = agent
+    elif hasattr(agent, "toolsets"):
+        pydantic_agent = agent
+    
+    if pydantic_agent is None:
+        logger.warning("Could not extract pydantic-ai agent from %s", type(agent))
+        return snapshot
+    
+    # Extract model configuration
+    try:
+        # Model name
+        model = getattr(pydantic_agent, "model", None) or getattr(pydantic_agent, "_model", None)
+        if model:
+            if isinstance(model, str):
+                snapshot.model_name = model
+            elif hasattr(model, "name"):
+                snapshot.model_name = model.name
+            elif hasattr(model, "model_name"):
+                snapshot.model_name = model.model_name
+            else:
+                snapshot.model_name = str(model)
+        
+        # Model settings
+        model_settings = getattr(pydantic_agent, "model_settings", None)
+        if model_settings:
+            if hasattr(model_settings, "model_dump"):
+                snapshot.model_settings = model_settings.model_dump()
+            elif isinstance(model_settings, dict):
+                snapshot.model_settings = model_settings
+    except Exception as e:
+        logger.debug("Could not extract model configuration: %s", e)
+    
+    # Extract system prompts
+    try:
+        if hasattr(pydantic_agent, "_system_prompts"):
+            for prompt in pydantic_agent._system_prompts:
+                if isinstance(prompt, str):
+                    snapshot.system_prompts.append(prompt)
+                    snapshot.system_prompt_tokens += count_tokens(prompt)
+    except Exception as e:
+        logger.debug("Could not extract system prompts: %s", e)
+    
+    # Extract tool definitions with full details
+    try:
+        # First check the underlying pydantic-ai agent's toolsets
+        if hasattr(pydantic_agent, "toolsets"):
+            agent_toolsets = pydantic_agent.toolsets
+            logger.debug("extract_full_context_snapshot: pydantic_agent has %d toolsets", len(agent_toolsets))
+            for toolset in agent_toolsets:
+                _extract_tools_from_toolset(toolset, snapshot)
+        
+        # Also check the adapter's non_mcp_toolsets (for PydanticAIAdapter)
+        if hasattr(agent, "_non_mcp_toolsets") and agent._non_mcp_toolsets:
+            non_mcp_toolsets = agent._non_mcp_toolsets
+            logger.debug("extract_full_context_snapshot: adapter has %d non_mcp_toolsets", len(non_mcp_toolsets))
+            for toolset in non_mcp_toolsets:
+                _extract_tools_from_toolset(toolset, snapshot)
+                
+        logger.debug("extract_full_context_snapshot: Total tools extracted: %d, tool_tokens: %d", 
+                     len(snapshot.tools), snapshot.tool_tokens)
+    except Exception as e:
+        logger.warning("Could not extract tools: %s", e)
+    
+    # Extract message history with in_context tracking
+    if message_history:
+        try:
+            # Calculate context budget for in_context determination
+            context_budget = context_window - snapshot.system_prompt_tokens - snapshot.tool_tokens
+            running_tokens = 0
+            
+            # Process messages from newest to oldest to determine which are in context
+            messages_processed = []
+            
+            for message in reversed(list(message_history)):
+                # Handle both dict (from storage) and object (from pydantic-ai) formats
+                if isinstance(message, dict):
+                    message_kind = message.get("kind")
+                    message_timestamp = message.get("timestamp")
+                    parts = message.get("parts", [])
+                else:
+                    message_kind = getattr(message, "kind", None)
+                    message_timestamp = str(getattr(message, "timestamp", None))
+                    parts = getattr(message, "parts", [])
+                
+                if message_kind == "request":
+                    for part in parts:
+                        if isinstance(part, dict):
+                            part_kind = part.get("part_kind")
+                            content = part.get("content", "")
+                            tool_name = part.get("tool_name")
+                            tool_call_id = part.get("tool_call_id")
+                        else:
+                            part_kind = getattr(part, "part_kind", None)
+                            content = _extract_message_content(part)
+                            tool_name = getattr(part, "tool_name", None)
+                            tool_call_id = getattr(part, "tool_call_id", None)
+                        
+                        tokens = count_tokens(content)
+                        
+                        in_context = (running_tokens + tokens) <= context_budget
+                        if in_context:
+                            running_tokens += tokens
+                        
+                        if part_kind == "user-prompt":
+                            messages_processed.append(MessageDetailSnapshot(
+                                role="user",
+                                content=content,
+                                estimated_tokens=tokens,
+                                timestamp=message_timestamp,
+                                in_context=in_context,
+                            ))
+                        elif part_kind == "system-prompt":
+                            messages_processed.append(MessageDetailSnapshot(
+                                role="system",
+                                content=content,
+                                estimated_tokens=tokens,
+                                timestamp=message_timestamp,
+                                in_context=in_context,
+                            ))
+                        elif part_kind == "tool-return":
+                            messages_processed.append(MessageDetailSnapshot(
+                                role="tool",
+                                content=content,
+                                estimated_tokens=tokens,
+                                timestamp=message_timestamp,
+                                in_context=in_context,
+                                tool_name=tool_name,
+                                tool_call_id=tool_call_id,
+                                is_tool_result=True,
+                            ))
+                
+                elif message_kind == "response":
+                    for part in parts:
+                        if isinstance(part, dict):
+                            part_kind = part.get("part_kind")
+                            content = part.get("content", "")
+                            tool_name = part.get("tool_name")
+                            tool_call_id = part.get("tool_call_id")
+                            args = part.get("args", "{}")
+                        else:
+                            part_kind = getattr(part, "part_kind", None)
+                            content = _extract_message_content(part)
+                            tool_name = getattr(part, "tool_name", None)
+                            tool_call_id = getattr(part, "tool_call_id", None)
+                            args = getattr(part, "args", {})
+                        
+                        tokens = count_tokens(content)
+                        
+                        in_context = (running_tokens + tokens) <= context_budget
+                        if in_context:
+                            running_tokens += tokens
+                        
+                        if part_kind == "text":
+                            messages_processed.append(MessageDetailSnapshot(
+                                role="assistant",
+                                content=content,
+                                estimated_tokens=tokens,
+                                timestamp=message_timestamp,
+                                in_context=in_context,
+                            ))
+                        elif part_kind in ("tool-call", "tool_call"):
+                            # For dict format, args is already a string
+                            if isinstance(args, str):
+                                content = args
+                            else:
+                                content = json.dumps(args, default=str) if args else ""
+                            messages_processed.append(MessageDetailSnapshot(
+                                role="assistant",
+                                content=content,
+                                estimated_tokens=tokens,
+                                timestamp=message_timestamp,
+                                in_context=in_context,
+                                tool_name=tool_name,
+                                tool_call_id=tool_call_id,
+                                is_tool_call=True,
+                            ))
+            
+            # Reverse to get chronological order
+            snapshot.messages = list(reversed(messages_processed))
+            
+            # Calculate token totals
+            for msg in snapshot.messages:
+                if msg.in_context:
+                    snapshot.current_tokens += msg.estimated_tokens
+                else:
+                    snapshot.history_tokens += msg.estimated_tokens
+                    
+        except Exception as e:
+            logger.debug("Could not extract message history: %s", e)
+    
+    # Extract tool environment variables (common patterns)
+    try:
+        for key in ("TAVILY_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GITHUB_TOKEN"):
+            if key in os.environ:
+                # Mask the value for security
+                value = os.environ[key]
+                if len(value) > 8:
+                    masked = value[:4] + "..." + value[-4:]
+                else:
+                    masked = "***"
+                snapshot.tool_environment[key] = masked
+    except Exception as e:
+        logger.debug("Could not extract tool environment: %s", e)
+    
+    # Calculate totals
+    snapshot.total_tokens = (
+        snapshot.system_prompt_tokens +
+        snapshot.tool_tokens +
+        snapshot.memory_tokens +
+        snapshot.current_tokens
+    )
+    
+    return snapshot
 
+
+def _extract_tools_from_toolset(toolset: Any, snapshot: FullContextSnapshot) -> None:
+    """Extract tool details from a toolset into snapshot."""
+    import inspect
+    
+    toolset_class_name = toolset.__class__.__name__
+    logger.debug("_extract_tools_from_toolset: Processing toolset %s", toolset_class_name)
+    
+    # Handle CodemodeToolset
+    if toolset_class_name == "CodemodeToolset":
+        registry = getattr(toolset, "registry", None)
+        logger.debug("_extract_tools_from_toolset: CodemodeToolset registry=%s", registry)
+        if registry is not None:
+            tools_list = registry.list_tools(include_deferred=True)
+            logger.debug("_extract_tools_from_toolset: registry has %d tools", len(tools_list))
+            for tool in tools_list:
+                schema = getattr(tool, "input_schema", {}) or getattr(tool, "parameters", {}) or {}
+                tool_def = {
+                    "name": tool.name,
+                    "description": tool.description or "",
+                    "input_schema": schema,
+                }
+                total_tokens = count_tokens_json(tool_def)
+                params_tokens = count_tokens_json(schema)
+                
+                snapshot.tools.append(ToolDetailSnapshot(
+                    name=tool.name,
+                    description=tool.description,
+                    parameters_schema=schema,
+                    parameters_tokens=params_tokens,
+                    total_tokens=total_tokens,
+                    source_type="codemode",
+                ))
+                snapshot.tool_tokens += total_tokens
+            if tools_list:
+                return
+        
+        # Fallback to TOOL_SCHEMAS if registry is empty
+        try:
+            from agent_codemode.tool_definitions import TOOL_SCHEMAS
+            logger.debug("_extract_tools_from_toolset: Using TOOL_SCHEMAS fallback with %d tools", len(TOOL_SCHEMAS))
+            for name, schema in TOOL_SCHEMAS.items():
+                tool_def = {
+                    "name": name,
+                    "description": schema.get("description", ""),
+                    "input_schema": schema.get("parameters", {}),
+                }
+                total_tokens = count_tokens_json(tool_def)
+                params_tokens = count_tokens_json(schema.get("parameters", {}))
+                
+                snapshot.tools.append(ToolDetailSnapshot(
+                    name=name,
+                    description=schema.get("description"),
+                    parameters_schema=schema.get("parameters", {}),
+                    parameters_tokens=params_tokens,
+                    total_tokens=total_tokens,
+                    source_type="codemode",
+                ))
+                snapshot.tool_tokens += total_tokens
+        except ImportError as e:
+            logger.debug("_extract_tools_from_toolset: Could not import TOOL_SCHEMAS: %s", e)
+        return
+    
+    # Handle FunctionToolset
+    if hasattr(toolset, "_tools"):
+        for tool in toolset._tools.values():
+            source_code = None
+            is_async = False
+            requires_approval = False
+            
+            # Try to get the function and its source code
+            func = getattr(tool, "function", None) or getattr(tool, "_function", None)
+            if func:
+                try:
+                    source_code = inspect.getsource(func)
+                    is_async = inspect.iscoroutinefunction(func)
+                except Exception:
+                    pass
+            
+            # Check for approval requirement
+            requires_approval = getattr(tool, "requires_confirmation", False) or getattr(tool, "human_in_the_loop", False)
+            
+            if hasattr(tool, "definition"):
+                tool_def = tool.definition
+                name = getattr(tool_def, "name", str(tool))
+                description = getattr(tool_def, "description", None)
+                params_schema = getattr(tool_def, "parameters_json_schema", {})
+            elif hasattr(tool, "name"):
+                name = tool.name
+                description = getattr(tool, "description", None)
+                params_schema = getattr(tool, "parameters_json_schema", {})
+            else:
+                continue
+            
+            tool_dict = {
+                "name": name,
+                "description": description or "",
+                "input_schema": params_schema,
+            }
+            total_tokens = count_tokens_json(tool_dict)
+            params_tokens = count_tokens_json(params_schema)
+            
+            snapshot.tools.append(ToolDetailSnapshot(
+                name=name,
+                description=description,
+                parameters_schema=params_schema,
+                parameters_tokens=params_tokens,
+                total_tokens=total_tokens,
+                source_type="function",
+                is_async=is_async,
+                requires_approval=requires_approval,
+                source_code=source_code,
+            ))
+            snapshot.tool_tokens += total_tokens
+    
+    # Handle MCP servers
+    if hasattr(toolset, "_cached_tools") and toolset._cached_tools is not None:
+        cached = toolset._cached_tools
+        if isinstance(cached, list):
+            for tool in cached:
+                name = getattr(tool, "name", None)
+                if name:
+                    description = getattr(tool, "description", None)
+                    params_schema = getattr(tool, "inputSchema", {}) or {}
+                    
+                    tool_dict = {
+                        "name": name,
+                        "description": description or "",
+                        "input_schema": params_schema,
+                    }
+                    total_tokens = count_tokens_json(tool_dict)
+                    params_tokens = count_tokens_json(params_schema)
+                    
+                    snapshot.tools.append(ToolDetailSnapshot(
+                        name=name,
+                        description=description,
+                        parameters_schema=params_schema,
+                        parameters_tokens=params_tokens,
+                        total_tokens=total_tokens,
+                        source_type="mcp",
+                    ))
+                    snapshot.tool_tokens += total_tokens
+
+
+# Agent registry for context snapshot lookups
+_agents: dict[str, tuple[Any, dict[str, Any]]] = {}
+
+
+def register_agent(agent_id: str, agent: Any, info: dict[str, Any] | None = None) -> None:
+    """Register an agent for context snapshot lookups.
+    
+    Args:
+        agent_id: The unique identifier for the agent.
+        agent: The agent instance (BaseAgent wrapper or pydantic_ai.Agent).
+        info: Optional additional info about the agent.
+    """
+    _agents[agent_id] = (agent, info or {})
+
+
+def unregister_agent(agent_id: str) -> None:
+    """Unregister an agent from the registry.
+    
+    Args:
+        agent_id: The unique identifier for the agent.
+    """
+    if agent_id in _agents:
+        del _agents[agent_id]
+
+
+def get_agent_context_snapshot(agent_id: str) -> ContextSnapshot | None:
+    """Get context snapshot for a registered agent.
+    
+    Args:
+        agent_id: The unique identifier for the agent.
+        
+    Returns:
+        ContextSnapshot if agent is found, None otherwise.
+    """
     from .usage import get_usage_tracker
     
     if agent_id not in _agents:
+        logger.debug(f"get_agent_context_snapshot: agent_id={agent_id} not in _agents")
         return None
     
     agent, info = _agents[agent_id]
+    logger.debug(f"get_agent_context_snapshot: Found agent type={type(agent).__name__}")
     
     # Get context window from usage tracker
     tracker = get_usage_tracker()
@@ -1334,13 +1898,53 @@ def extract_context_snapshot(
     
     # Extract snapshot from agent
     snapshot = extract_context_snapshot(agent, agent_id, context_window)
+    logger.debug(f"get_agent_context_snapshot: After extract - tool_tokens={snapshot.tool_tokens}, tools={len(snapshot.tools)}, system_prompt_tokens={snapshot.system_prompt_tokens}")
     
-    # Merge with usage tracker data for message tokens
+    # Merge with usage tracker data for message tokens and tools
     # (since message history is per-run, we use accumulated stats)
     stats = tracker.get_agent_stats(agent_id)
     if stats:
         snapshot.user_message_tokens = stats.user_message_tokens
         snapshot.assistant_message_tokens = stats.assistant_message_tokens
+        logger.debug(f"get_agent_context_snapshot: After merge - user_tokens={snapshot.user_message_tokens}, assistant_tokens={snapshot.assistant_message_tokens}")
+        
+        # Merge tool definitions from tracker if snapshot has none
+        # (runtime toolsets aren't stored on agent, but captured in tracker)
+        if not snapshot.tools and stats.tool_definitions:
+            logger.debug(f"get_agent_context_snapshot: Using {len(stats.tool_definitions)} tool definitions from tracker")
+            for name, description, params_schema in stats.tool_definitions:
+                tool_def = {
+                    "name": name,
+                    "description": description or "",
+                    "input_schema": params_schema,
+                }
+                total_tokens = count_tokens_json(tool_def)
+                params_tokens = count_tokens_json(params_schema)
+                
+                snapshot.tools.append(ToolSnapshot(
+                    name=name,
+                    description=description,
+                    parameters_tokens=params_tokens,
+                    total_tokens=total_tokens,
+                ))
+                snapshot.tool_tokens += total_tokens
+            logger.debug(f"get_agent_context_snapshot: After tool merge - tool_tokens={snapshot.tool_tokens}, tools={len(snapshot.tools)}")
+        
+        # Merge per-request usage from tracker if snapshot has none
+        # (AG-UI doesn't populate _agent_messages, so snapshot extraction finds nothing)
+        if not snapshot.per_request_usage and stats.request_usage_history:
+            for req in stats.request_usage_history:
+                snapshot.per_request_usage.append(RequestUsageSnapshot(
+                    request_num=req.request_num,
+                    input_tokens=req.input_tokens,
+                    output_tokens=req.output_tokens,
+                    tool_names=req.tool_names,
+                    timestamp=req.timestamp,
+                    duration_ms=req.duration_ms,
+                ))
+            # Update sum fields from tracker data
+            snapshot.sum_response_input_tokens = stats.input_tokens
+            snapshot.sum_response_output_tokens = stats.output_tokens
         
         # Recalculate total (include tool_tokens)
         snapshot.total_tokens = (
@@ -1349,5 +1953,75 @@ def extract_context_snapshot(
             snapshot.user_message_tokens +
             snapshot.assistant_message_tokens
         )
+    
+    return snapshot
+
+
+def get_agent_full_context_snapshot(agent_id: str) -> FullContextSnapshot | None:
+    """Get full detailed context snapshot for a registered agent.
+    
+    This provides complete introspection including:
+    - Model configuration
+    - Full system prompts
+    - Tool definitions with schemas and source code
+    - Complete message history with in_context flags
+    
+    Args:
+        agent_id: The unique identifier for the agent.
+        
+    Returns:
+        FullContextSnapshot if agent is found, None otherwise.
+    """
+    from .usage import get_usage_tracker
+    
+    if agent_id not in _agents:
+        return None
+    
+    agent, info = _agents[agent_id]
+    
+    # Get context window and stored data from usage tracker
+    tracker = get_usage_tracker()
+    context_window = tracker.get_context_window(agent_id)
+    
+    # Get stored message history and tools from usage stats
+    stats = tracker.get_agent_stats(agent_id)
+    stored_messages = stats.message_history if stats else []
+    stored_tools = stats.tool_definitions if stats else []
+    
+    # Extract full snapshot from agent, passing stored messages
+    snapshot = extract_full_context_snapshot(
+        agent, agent_id, context_window, 
+        message_history=stored_messages
+    )
+    
+    # Merge tool definitions from tracker if snapshot has none
+    if not snapshot.tools and stored_tools:
+        logger.debug(f"get_agent_full_context_snapshot: Using {len(stored_tools)} tool definitions from tracker")
+        for name, description, params_schema in stored_tools:
+            tool_def = {
+                "name": name,
+                "description": description or "",
+                "input_schema": params_schema,
+            }
+            total_tokens = count_tokens_json(tool_def)
+            params_tokens = count_tokens_json(params_schema)
+            
+            snapshot.tools.append(ToolDetailSnapshot(
+                name=name,
+                description=description,
+                parameters_schema=params_schema,
+                parameters_tokens=params_tokens,
+                total_tokens=total_tokens,
+                source_type="runtime",
+            ))
+            snapshot.tool_tokens += total_tokens
+    
+    # Recalculate total tokens
+    snapshot.total_tokens = (
+        snapshot.system_prompt_tokens +
+        snapshot.tool_tokens +
+        snapshot.memory_tokens +
+        snapshot.current_tokens
+    )
     
     return snapshot

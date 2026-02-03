@@ -13,8 +13,8 @@ import { Blankslate } from '@primer/react/experimental';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Box } from '@datalayer/primer-addons';
 import { DatalayerThemeProvider } from '@datalayer/core';
-import { Chat } from '../components/chat';
-import type { Transport, Extension } from '../components/chat';
+import { Chat, useChatStore } from '../components/chat';
+import type { Transport, Extension, ChatMessage } from '../components/chat';
 import { useAgentsStore } from './stores/examplesStore';
 import { useIdentity } from '../identity';
 import type { OAuthProvider, Identity } from '../identity';
@@ -25,7 +25,8 @@ import {
   FooterMetrics,
   AgentConfiguration,
   type AgentLibrary,
-} from './components';
+  type McpServerSelection,
+} from '../components';
 
 // Create a query client for React Query
 const queryClient = new QueryClient({
@@ -125,7 +126,7 @@ type AgentSpaceFormExampleProps = {
   initialEnableCodemode?: boolean;
   initialAllowDirectToolCalls?: boolean;
   initialEnableToolReranker?: boolean;
-  initialSelectedMcpServers?: string[];
+  initialSelectedMcpServers?: McpServerSelection[];
   autoSelectMcpServers?: boolean;
   /**
    * Identity providers configuration.
@@ -212,11 +213,56 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
   const [enableToolReranker, setEnableToolReranker] = useState(
     initialEnableToolReranker,
   );
-  const [selectedMcpServers, setSelectedMcpServers] = useState<string[]>(
-    initialSelectedMcpServers,
-  );
+  const [selectedMcpServers, setSelectedMcpServers] = useState<
+    McpServerSelection[]
+  >(initialSelectedMcpServers);
   const autoSelectRef = useRef(false);
   const enableSkills = selectedSkills.length > 0;
+
+  const handleSelectedServersChange = React.useCallback(
+    (newServers: McpServerSelection[]) => {
+      const oldServers = selectedMcpServers;
+
+      // Find added and removed servers
+      const oldIds = new Set(oldServers.map(s => `${s.id}:${s.origin}`));
+      const newIds = new Set(newServers.map(s => `${s.id}:${s.origin}`));
+
+      const added = newServers.filter(s => !oldIds.has(`${s.id}:${s.origin}`));
+      const removed = oldServers.filter(
+        s => !newIds.has(`${s.id}:${s.origin}`),
+      );
+
+      // Add system message about tool changes if there are any
+      if ((added.length > 0 || removed.length > 0) && isConfigured) {
+        let messageContent = '';
+
+        if (added.length > 0) {
+          const addedNames = added.map(s => `${s.id} (${s.origin})`).join(', ');
+          messageContent += `🔧 Tools added: ${addedNames}. `;
+        }
+
+        if (removed.length > 0) {
+          const removedNames = removed
+            .map(s => `${s.id} (${s.origin})`)
+            .join(', ');
+          messageContent += `🔧 Tools removed: ${removedNames}. You no longer have access to these tools.`;
+        }
+
+        if (messageContent) {
+          const systemMessage: ChatMessage = {
+            id: `system-mcp-${Date.now()}`,
+            role: 'system',
+            content: messageContent.trim(),
+            createdAt: new Date(),
+          };
+          useChatStore.getState().addMessage(systemMessage);
+        }
+      }
+
+      setSelectedMcpServers(newServers);
+    },
+    [selectedMcpServers, isConfigured],
+  );
 
   // Merge deprecated props into identityProviders for backward compatibility
   const mergedIdentityProviders = React.useMemo((): IdentityProvidersInput => {
@@ -352,8 +398,6 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
 
   // UI state
   const [activeSession, setActiveSession] = useState('session-1');
-  const [richEditor, setRichEditor] = useState(false);
-  const [durable, setDurable] = useState(true);
   const [codemode, _] = useState(false);
   const [showContextTree, setShowContextTree] = useState(false);
   const [showNotebook] = useState(true);
@@ -393,7 +437,7 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
         const servers = data?.mcpServers || [];
         const available = servers.filter((s: any) => s.isAvailable);
         if (available.length > 0) {
-          setSelectedMcpServers([available[0].id]);
+          setSelectedMcpServers([{ id: available[0].id, origin: 'config' }]);
           autoSelectRef.current = true;
         }
       } catch {
@@ -403,6 +447,9 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
 
     void loadServers();
   }, [autoSelectMcpServers, enableCodemode, selectedMcpServers, baseUrl]);
+
+  // Track previous MCP servers to detect changes
+  const prevMcpServersRef = useRef<McpServerSelection[]>(selectedMcpServers);
 
   const handleAgentSelect = (agentId: string) => {
     setSelectedAgentId(agentId);
@@ -514,6 +561,12 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
     [baseUrl],
   );
 
+  // Track MCP servers for reference (no longer triggers recreation)
+  // MCP server updates are now handled via PATCH endpoint by McpServerManager
+  useEffect(() => {
+    prevMcpServersRef.current = selectedMcpServers;
+  }, [selectedMcpServers]);
+
   const handleConnect = async () => {
     // For existing agents (not new-agent), ensure transport and agentName are set
     if (selectedAgentId !== 'new-agent') {
@@ -579,14 +632,10 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
                 : currentAgent?.description
             }
             agentStatus={currentAgent?.status}
-            richEditor={richEditor}
-            durable={durable}
             showContextTree={showContextTree}
             isNewAgent={selectedAgentId === 'new-agent'}
             isConfigured={isConfigured}
             onSessionChange={setActiveSession}
-            onRichEditorChange={setRichEditor}
-            onDurableChange={setDurable}
             onToggleContextTree={() => setShowContextTree(!showContextTree)}
             onToggleStatus={
               currentAgent
@@ -632,10 +681,10 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
                     <Blankslate.Visual>
                       <AiAgentIcon colored size={48} />
                     </Blankslate.Visual>
-                    <Blankslate.Heading>New Agent</Blankslate.Heading>
+                    <Blankslate.Heading>Agent Runtimes</Blankslate.Heading>
                     <Box sx={{ textAlign: 'center' }}>
                       <Blankslate.Description>
-                        Configure your new agent using the settings on the right
+                        Expose AI Agents through multiple protocols.
                       </Blankslate.Description>
                     </Box>
                   </Blankslate>
@@ -676,10 +725,23 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
               showNotebook={showNotebook}
               timeTravel={timeTravel}
               onTimeTravelChange={setTimeTravel}
-              richEditor={richEditor}
+              richEditor={false}
               notebookFile={currentAgent?.notebookFile}
               lexicalFile={currentAgent?.lexicalFile}
               isNewAgent={selectedAgentId === 'new-agent'}
+              isConfigured={isConfigured}
+              baseUrl={baseUrl}
+              agentId={currentAgent?.id || agentName}
+              enableCodemode={enableCodemode}
+              selectedMcpServers={selectedMcpServers}
+              onSelectedMcpServersChange={handleSelectedServersChange}
+              onMcpServersChange={() => {
+                // Trigger codemode tool regeneration when MCP servers change at runtime
+                console.log(
+                  '[AgentSpaceFormExample] MCP servers changed, regenerating codemode tools...',
+                );
+                // The Chat component will pick up the new selectedMcpServers via props
+              }}
             />
           </PageLayout.Content>
 
@@ -757,7 +819,7 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
                     />
                   ) : (
                     /* Chat Interface */
-                    <Box sx={{ flex: 1 }}>
+                    <Box sx={{ flex: 1, minHeight: 0 }}>
                       <Chat
                         transport={currentAgent?.transport || transport}
                         extensions={extensions}
@@ -770,13 +832,13 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
                         autoConnect={true}
                         autoFocus={true}
                         placeholder="Type your message to the agent..."
-                        height="calc(100vh - 250px)"
+                        height="calc(100vh - 150px)"
                         showModelSelector={true}
                         showToolsMenu={true}
                         showSkillsMenu={true}
                         codemodeEnabled={enableCodemode}
                         initialModel={model}
-                        initialMcpServers={selectedMcpServers}
+                        mcpServers={selectedMcpServers}
                         initialSkills={selectedSkills}
                         identityProviders={oauthProvidersConfig}
                         onIdentityConnect={handleIdentityConnect}

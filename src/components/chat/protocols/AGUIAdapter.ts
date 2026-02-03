@@ -52,7 +52,13 @@ export class AGUIAdapter extends BaseProtocolAdapter {
 
   constructor(config: AGUIAdapterConfig) {
     super(config);
-    this.aguiConfig = config;
+    // Ensure baseUrl ends with trailing slash (required for mounted Starlette apps)
+    this.aguiConfig = {
+      ...config,
+      baseUrl: config.baseUrl.endsWith('/')
+        ? config.baseUrl
+        : `${config.baseUrl}/`,
+    };
   }
 
   /**
@@ -91,7 +97,7 @@ export class AGUIAdapter extends BaseProtocolAdapter {
   async terminateAgent(threadId?: string): Promise<void> {
     try {
       // Derive the terminate endpoint from the base URL
-      // e.g., http://localhost:8765/api/v1/examples/agentic_chat/ -> http://localhost:8765/api/v1/ag-ui/terminate
+      // e.g., http://localhost:8765/api/v1/examples/agentic_chat -> http://localhost:8765/api/v1/ag-ui/terminate
       const baseUrl = new URL(this.aguiConfig.baseUrl);
       const terminateUrl = `${baseUrl.origin}/api/v1/ag-ui/terminate`;
 

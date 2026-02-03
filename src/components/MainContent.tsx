@@ -8,10 +8,12 @@ import { Text } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { JupyterReactTheme, Viewer } from '@datalayer/jupyter-react';
 import type { ServiceManager } from '@jupyterlab/services';
-import matplotlib from '../stores/notebooks/Matplotlib.ipynb.json';
-import emptyNotebook from '../stores/notebooks/Empty.ipynb.json';
 import { TimeTravel } from './TimeTravel';
 import { LexicalEditor } from './LexicalEditor';
+import { McpServerManager, type McpServerSelection } from './McpServerManager';
+
+import matplotlib from '../examples/stores/notebooks/NotebookExample2.ipynb.json';
+import emptyNotebook from '../examples/stores/notebooks/Empty.ipynb.json';
 
 interface MainContentProps {
   showNotebook: boolean;
@@ -22,12 +24,27 @@ interface MainContentProps {
   lexicalFile?: string;
   isNewAgent?: boolean;
   serviceManager?: ServiceManager.IManager;
+  /** Base URL for MCP API */
+  baseUrl?: string;
+  /** Agent ID for updating the running agent */
+  agentId?: string;
+  /** Whether codemode is enabled */
+  enableCodemode?: boolean;
+  /** Currently selected MCP servers */
+  selectedMcpServers?: McpServerSelection[];
+  /** Callback when MCP server selection changes */
+  onSelectedMcpServersChange?: (servers: McpServerSelection[]) => void;
+  /** Callback when MCP servers are added/removed (for codemode regeneration) */
+  onMcpServersChange?: () => void;
+  /** Whether the agent is configured and running */
+  isConfigured?: boolean;
 }
 
 /**
  * Main Content Component
  *
  * Displays the main content area with Simple notebook viewer or Lexical editor and time travel.
+ * When an agent is running (isConfigured=true), also shows the MCP Server Manager for runtime management.
  */
 export const MainContent: React.FC<MainContentProps> = ({
   showNotebook,
@@ -38,6 +55,13 @@ export const MainContent: React.FC<MainContentProps> = ({
   lexicalFile,
   isNewAgent,
   serviceManager,
+  baseUrl,
+  agentId,
+  enableCodemode,
+  selectedMcpServers,
+  onSelectedMcpServersChange,
+  onMcpServersChange,
+  isConfigured,
 }) => {
   // Use the provided notebook or fall back to matplotlib demo
   const [notebookData, setNotebookData] = React.useState<any>(matplotlib);
@@ -87,6 +111,30 @@ export const MainContent: React.FC<MainContentProps> = ({
 
   return (
     <Box sx={{ height: '100%', overflow: 'auto', padding: 3 }}>
+      {/* MCP Server Manager - shown when agent is running */}
+      {isConfigured && baseUrl && (
+        <Box
+          sx={{
+            mb: 4,
+            p: 3,
+            bg: 'canvas.subtle',
+            borderRadius: 2,
+            border: '1px solid',
+            borderColor: 'border.default',
+          }}
+        >
+          <McpServerManager
+            baseUrl={baseUrl}
+            agentId={agentId}
+            enableCodemode={enableCodemode}
+            selectedServers={selectedMcpServers}
+            onSelectedServersChange={onSelectedMcpServersChange}
+            onServersChange={onMcpServersChange}
+            disabled={false}
+          />
+        </Box>
+      )}
+
       {showNotebook ? (
         <>
           {richEditor ? (

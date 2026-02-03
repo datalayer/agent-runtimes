@@ -90,6 +90,7 @@ class AgentInfo(BaseModel):
     capabilities: AgentCapabilities = Field(default_factory=AgentCapabilities)
     version: str = "1.0.0"
     protocol_version: int = ACP_PROTOCOL_VERSION
+    protocol: str = "ag-ui"  # Transport protocol: ag-ui, vercel-ai, vercel-ai-jupyter, a2a
 
 
 class SessionInfo(BaseModel):

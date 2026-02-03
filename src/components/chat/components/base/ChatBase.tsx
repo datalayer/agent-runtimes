@@ -73,6 +73,7 @@ import type {
   ProtocolAdapterConfig,
   ProtocolEvent,
 } from '../../types/protocol';
+import type { McpServerSelection } from '../../types/inference';
 import {
   AGUIAdapter,
   A2AAdapter,
@@ -388,6 +389,21 @@ export interface ProtocolConfig {
 }
 
 /**
+ * Simplified configuration for connecting to an agent runtime server.
+ * This is a convenience wrapper over the more detailed ProtocolConfig.
+ */
+export interface AgentRuntimeConfig {
+  /** URL of the agent runtime server (e.g., 'http://localhost:8765') */
+  url: string;
+  /** Optional agent ID to connect to */
+  agentId?: string;
+  /** Optional authentication token */
+  authToken?: string;
+  /** Protocol type to use (defaults to 'ag-ui') */
+  protocol?: TransportType;
+}
+
+/**
  * ChatBase props
  */
 export interface ChatBaseProps {
@@ -421,8 +437,8 @@ export interface ChatBaseProps {
   /** Initial model ID to select (e.g., 'openai:gpt-4o-mini') */
   initialModel?: string;
 
-  /** Initial MCP server IDs to enable (others will be disabled) */
-  initialMcpServers?: string[];
+  /** MCP servers to enable (others will be disabled) */
+  mcpServers?: McpServerSelection[];
 
   /** Initial skill IDs to enable */
   initialSkills?: string[];
@@ -450,6 +466,24 @@ export interface ChatBaseProps {
    * When provided and useStore is false, enables protocol mode.
    */
   protocol?: ProtocolConfig;
+
+  /**
+   * Simplified agent runtime configuration.
+   * A convenience wrapper that creates a ProtocolConfig internally.
+   * When provided, will automatically set useStore=false and configure protocol mode.
+   *
+   * @example
+   * ```tsx
+   * <ChatBase
+   *   agentRuntimeConfig={{
+   *     url: 'http://localhost:8765',
+   *     agentId: 'my-agent',
+   *     authToken: 'my-token',
+   *   }}
+   * />
+   * ```
+   */
+  agentRuntimeConfig?: AgentRuntimeConfig;
 
   /**
    * Custom message handler (for props-based mode).
@@ -769,14 +803,15 @@ export function ChatBase({
   showSkillsMenu = false,
   codemodeEnabled = false,
   initialModel,
-  initialMcpServers,
+  mcpServers,
   initialSkills,
   className,
   loadingState,
   headerActions,
   // Mode selection
   useStore: useStoreMode = true,
-  protocol,
+  protocol: protocolProp,
+  agentRuntimeConfig,
   onSendMessage,
   enableStreaming = false,
   // Extended props
@@ -811,6 +846,21 @@ export function ChatBase({
   onAuthorizationRequired,
   connectedIdentities,
 }: ChatBaseProps) {
+  // Convert agentRuntimeConfig to protocol if provided
+  const protocol: ProtocolConfig | undefined = agentRuntimeConfig
+    ? {
+        type: agentRuntimeConfig.protocol || 'ag-ui',
+        endpoint: agentRuntimeConfig.url,
+        authToken: agentRuntimeConfig.authToken,
+        agentId: agentRuntimeConfig.agentId,
+        enableConfigQuery: true,
+        configEndpoint: `${agentRuntimeConfig.url}/api/v1/config`,
+      }
+    : protocolProp;
+
+  // If agentRuntimeConfig is provided, force protocol mode
+  const effectiveUseStoreMode = agentRuntimeConfig ? false : useStoreMode;
+
   // Check if QueryClientProvider is already available
   const existingQueryClient = useContext(QueryClientContext);
 
@@ -829,12 +879,12 @@ export function ChatBase({
           showSkillsMenu={showSkillsMenu}
           codemodeEnabled={codemodeEnabled}
           initialModel={initialModel}
-          initialMcpServers={initialMcpServers}
+          mcpServers={mcpServers}
           initialSkills={initialSkills}
           className={className}
           loadingState={loadingState}
           headerActions={headerActions}
-          useStore={useStoreMode}
+          useStore={effectiveUseStoreMode}
           protocol={protocol}
           onSendMessage={onSendMessage}
           enableStreaming={enableStreaming}
@@ -885,12 +935,12 @@ export function ChatBase({
       showSkillsMenu={showSkillsMenu}
       codemodeEnabled={codemodeEnabled}
       initialModel={initialModel}
-      initialMcpServers={initialMcpServers}
+      mcpServers={mcpServers}
       initialSkills={initialSkills}
       className={className}
       loadingState={loadingState}
       headerActions={headerActions}
-      useStore={useStoreMode}
+      useStore={effectiveUseStoreMode}
       protocol={protocol}
       onSendMessage={onSendMessage}
       enableStreaming={enableStreaming}
@@ -941,7 +991,7 @@ function ChatBaseInner({
   showSkillsMenu = false,
   codemodeEnabled = false,
   initialModel,
-  initialMcpServers,
+  mcpServers,
   initialSkills,
   className,
   loadingState,
@@ -1040,6 +1090,15 @@ function ChatBaseInner({
   // (the array reference changes on every render even if contents are the same)
   const connectedIdentitiesRef = useRef(connectedIdentities);
   connectedIdentitiesRef.current = connectedIdentities;
+
+  const isServerSelected = useCallback(
+    (server: { id: string; isConfig?: boolean }) => {
+      if (!mcpServers) return true;
+      const origin = server.isConfig === false ? 'catalog' : 'config';
+      return mcpServers.some(s => s.id === server.id && s.origin === origin);
+    },
+    [mcpServers],
+  );
 
   // Auto-focus input on mount
   useEffect(() => {
@@ -1150,11 +1209,9 @@ function ChatBaseInner({
         const newEnabledMcpTools = new Map<string, Set<string>>();
         for (const server of configQuery.data.mcpServers) {
           if (server.isAvailable && server.enabled) {
-            // If initialMcpServers is provided, only enable those servers
+            // If mcpServers is provided, only enable those servers
             // If not provided, enable all available servers
-            const shouldEnableServer = initialMcpServers
-              ? initialMcpServers.includes(server.id)
-              : true;
+            const shouldEnableServer = isServerSelected(server);
 
             if (shouldEnableServer) {
               const enabledToolNames = new Set(
@@ -1167,7 +1224,43 @@ function ChatBaseInner({
         setEnabledMcpTools(newEnabledMcpTools);
       }
     }
-  }, [configQuery.data, selectedModel, initialModel, initialMcpServers]);
+  }, [
+    configQuery.data,
+    selectedModel,
+    initialModel,
+    mcpServers,
+    isServerSelected,
+  ]);
+
+  // Update enabled MCP servers when mcpServers prop changes (e.g., server removed)
+  useEffect(() => {
+    if (!configQuery.data?.mcpServers || !mcpServers) return;
+
+    setEnabledMcpTools(prev => {
+      const newMap = new Map<string, Set<string>>();
+
+      // Only keep servers that are in mcpServers
+      for (const server of configQuery.data?.mcpServers ?? []) {
+        if (isServerSelected(server) && prev.has(server.id)) {
+          // Keep existing tool selection for this server
+          newMap.set(server.id, prev.get(server.id)!);
+        } else if (
+          isServerSelected(server) &&
+          server.isAvailable &&
+          server.enabled
+        ) {
+          // Newly added server - enable all tools
+          const enabledToolNames = new Set(
+            server.tools.filter(t => t.enabled).map(t => t.name),
+          );
+          newMap.set(server.id, enabledToolNames);
+        }
+        // Servers not in mcpServers are excluded
+      }
+
+      return newMap;
+    });
+  }, [mcpServers, configQuery.data?.mcpServers, isServerSelected]);
 
   // Initialize enabled skills from initialSkills prop
   useEffect(() => {
@@ -1229,13 +1322,17 @@ function ChatBaseInner({
   );
 
   // Get all enabled MCP tool names (for sending with requests)
+  // Only counts tools from servers that are in mcpServers (if provided)
   const getEnabledMcpToolNames = useCallback((): string[] => {
     const toolNames: string[] = [];
-    enabledMcpTools.forEach(tools => {
-      tools.forEach(toolName => toolNames.push(toolName));
+    enabledMcpTools.forEach((tools, serverId) => {
+      // Filter by mcpServers if provided
+      if (!mcpServers || mcpServers.some(s => s.id === serverId)) {
+        tools.forEach(toolName => toolNames.push(toolName));
+      }
     });
     return toolNames;
-  }, [enabledMcpTools]);
+  }, [enabledMcpTools, mcpServers]);
 
   // Get all enabled skill IDs (for sending with requests)
   const getEnabledSkillIds = useCallback((): string[] => {
@@ -2697,135 +2794,167 @@ function ChatBaseInner({
                         {/* MCP Server Tools */}
                         {configQuery.data?.mcpServers &&
                         configQuery.data.mcpServers.length > 0 ? (
-                          configQuery.data.mcpServers.map(server => {
-                            const serverTools = enabledMcpTools.get(server.id);
-                            const allToolNames = server.tools.map(t => t.name);
-                            const enabledCount = serverTools?.size ?? 0;
-                            const allEnabled =
-                              enabledCount === allToolNames.length &&
-                              allToolNames.length > 0;
-                            return (
-                              <ActionList.Group
-                                key={server.id}
-                                title={`${server.name}${server.isAvailable ? '' : ' (unavailable)'}`}
-                              >
-                                {/* Server-level toggle */}
-                                {server.isAvailable &&
-                                  server.tools.length > 0 && (
-                                    <Box
-                                      sx={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'space-between',
-                                        px: 3,
-                                        py: 2,
-                                        borderBottom: '1px solid',
-                                        borderColor: 'border.muted',
-                                      }}
-                                    >
-                                      <Text
-                                        id={`toggle-all-${server.id}`}
-                                        sx={{
-                                          fontSize: 0,
-                                          fontWeight: 'semibold',
-                                          color: 'fg.muted',
-                                        }}
-                                      >
-                                        Enable all ({enabledCount}/
-                                        {allToolNames.length})
-                                      </Text>
-                                      <ToggleSwitch
-                                        size="small"
-                                        checked={allEnabled}
-                                        onClick={() =>
-                                          toggleAllMcpServerTools(
-                                            server.id,
-                                            allToolNames,
-                                            !allEnabled,
-                                          )
-                                        }
-                                        aria-labelledby={`toggle-all-${server.id}`}
-                                      />
-                                    </Box>
-                                  )}
-                                {server.isAvailable &&
-                                server.tools.length > 0 ? (
-                                  server.tools.map(tool => {
-                                    const isEnabled =
-                                      serverTools?.has(tool.name) ?? false;
-                                    return (
-                                      <Box
-                                        key={`${server.id}-${tool.name}`}
-                                        sx={{
-                                          display: 'flex',
-                                          alignItems: 'center',
-                                          justifyContent: 'space-between',
-                                          px: 3,
-                                          py: 2,
-                                          '&:hover': {
-                                            backgroundColor: 'canvas.subtle',
-                                          },
-                                        }}
-                                      >
-                                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                          // Filter to only show selected servers (if mcpServers was provided)
+                          // If mcpServers is empty array, show no servers
+                          configQuery.data.mcpServers.filter(
+                            server => !mcpServers || isServerSelected(server),
+                          ).length > 0 ? (
+                            configQuery.data.mcpServers
+                              .filter(
+                                server =>
+                                  !mcpServers || isServerSelected(server),
+                              )
+                              .map(server => {
+                                const serverTools = enabledMcpTools.get(
+                                  server.id,
+                                );
+                                const allToolNames = server.tools.map(
+                                  t => t.name,
+                                );
+                                const enabledCount = serverTools?.size ?? 0;
+                                const allEnabled =
+                                  enabledCount === allToolNames.length &&
+                                  allToolNames.length > 0;
+                                return (
+                                  <ActionList.Group
+                                    key={server.id}
+                                    title={`${server.name}${server.isAvailable ? '' : ' (unavailable)'}`}
+                                  >
+                                    {/* Server-level toggle */}
+                                    {server.isAvailable &&
+                                      server.tools.length > 0 && (
+                                        <Box
+                                          sx={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'space-between',
+                                            px: 3,
+                                            py: 2,
+                                            borderBottom: '1px solid',
+                                            borderColor: 'border.muted',
+                                          }}
+                                        >
                                           <Text
-                                            id={`toggle-tool-${server.id}-${tool.name}`}
-                                            sx={{ fontWeight: 'semibold' }}
+                                            id={`toggle-all-${server.id}`}
+                                            sx={{
+                                              fontSize: 0,
+                                              fontWeight: 'semibold',
+                                              color: 'fg.muted',
+                                            }}
                                           >
-                                            {tool.name}
+                                            Enable all ({enabledCount}/
+                                            {allToolNames.length})
                                           </Text>
-                                          {tool.description && (
-                                            <Text
-                                              sx={{
-                                                display: 'block',
-                                                fontSize: 0,
-                                                color: 'fg.muted',
-                                                overflow: 'hidden',
-                                                textOverflow: 'ellipsis',
-                                                whiteSpace: 'nowrap',
-                                              }}
-                                            >
-                                              {tool.description}
-                                            </Text>
-                                          )}
+                                          <ToggleSwitch
+                                            size="small"
+                                            checked={allEnabled}
+                                            onClick={() =>
+                                              toggleAllMcpServerTools(
+                                                server.id,
+                                                allToolNames,
+                                                !allEnabled,
+                                              )
+                                            }
+                                            aria-labelledby={`toggle-all-${server.id}`}
+                                          />
                                         </Box>
-                                        <ToggleSwitch
-                                          size="small"
-                                          checked={isEnabled}
-                                          onClick={() =>
-                                            toggleMcpTool(server.id, tool.name)
-                                          }
-                                          aria-labelledby={`toggle-tool-${server.id}-${tool.name}`}
-                                        />
-                                      </Box>
-                                    );
-                                  })
-                                ) : server.isAvailable ? (
-                                  <ActionList.Item disabled>
-                                    <Text
-                                      sx={{
-                                        color: 'fg.muted',
-                                        fontStyle: 'italic',
-                                      }}
-                                    >
-                                      No tools discovered
-                                    </Text>
-                                  </ActionList.Item>
-                                ) : (
-                                  <ActionList.Item disabled>
-                                    <Text
-                                      sx={{
-                                        color: 'fg.muted',
-                                        fontStyle: 'italic',
-                                      }}
-                                    >
-                                      Server unavailable
-                                    </Text>
-                                  </ActionList.Item>
-                                )}
-                              </ActionList.Group>
-                            );
-                          })
+                                      )}
+                                    {server.isAvailable &&
+                                    server.tools.length > 0 ? (
+                                      server.tools.map(tool => {
+                                        const isEnabled =
+                                          serverTools?.has(tool.name) ?? false;
+                                        return (
+                                          <Box
+                                            key={`${server.id}-${tool.name}`}
+                                            sx={{
+                                              display: 'flex',
+                                              alignItems: 'center',
+                                              justifyContent: 'space-between',
+                                              px: 3,
+                                              py: 2,
+                                              '&:hover': {
+                                                backgroundColor:
+                                                  'canvas.subtle',
+                                              },
+                                            }}
+                                          >
+                                            <Box sx={{ flex: 1, minWidth: 0 }}>
+                                              <Text
+                                                id={`toggle-tool-${server.id}-${tool.name}`}
+                                                sx={{ fontWeight: 'semibold' }}
+                                              >
+                                                {tool.name}
+                                              </Text>
+                                              {tool.description && (
+                                                <Text
+                                                  sx={{
+                                                    display: 'block',
+                                                    fontSize: 0,
+                                                    color: 'fg.muted',
+                                                    overflow: 'hidden',
+                                                    textOverflow: 'ellipsis',
+                                                    whiteSpace: 'nowrap',
+                                                  }}
+                                                >
+                                                  {tool.description}
+                                                </Text>
+                                              )}
+                                            </Box>
+                                            <ToggleSwitch
+                                              size="small"
+                                              checked={isEnabled}
+                                              onClick={() =>
+                                                toggleMcpTool(
+                                                  server.id,
+                                                  tool.name,
+                                                )
+                                              }
+                                              aria-labelledby={`toggle-tool-${server.id}-${tool.name}`}
+                                            />
+                                          </Box>
+                                        );
+                                      })
+                                    ) : server.isAvailable ? (
+                                      <ActionList.Item disabled>
+                                        <Text
+                                          sx={{
+                                            color: 'fg.muted',
+                                            fontStyle: 'italic',
+                                          }}
+                                        >
+                                          No tools discovered
+                                        </Text>
+                                      </ActionList.Item>
+                                    ) : (
+                                      <ActionList.Item disabled>
+                                        <Text
+                                          sx={{
+                                            color: 'fg.muted',
+                                            fontStyle: 'italic',
+                                          }}
+                                        >
+                                          Server unavailable
+                                        </Text>
+                                      </ActionList.Item>
+                                    )}
+                                  </ActionList.Group>
+                                );
+                              })
+                          ) : (
+                            <ActionList.Group title="MCP Servers">
+                              <ActionList.Item disabled>
+                                <Text
+                                  sx={{
+                                    color: 'fg.muted',
+                                    fontStyle: 'italic',
+                                  }}
+                                >
+                                  No MCP servers selected
+                                </Text>
+                              </ActionList.Item>
+                            </ActionList.Group>
+                          )
                         ) : (
                           <ActionList.Group title="Available Tools">
                             {availableTools.length > 0 ? (

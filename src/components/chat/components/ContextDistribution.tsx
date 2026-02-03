@@ -30,22 +30,98 @@ interface Distribution {
 }
 
 /**
+ * Tool snapshot
+ */
+interface ToolSnapshot {
+  name: string;
+  description: string | null;
+  parametersTokens: number;
+  totalTokens: number;
+}
+
+/**
+ * Message snapshot
+ */
+interface MessageSnapshot {
+  role: string;
+  content: string;
+  estimatedTokens: number;
+  timestamp: string | null;
+}
+
+/**
+ * Request usage snapshot
+ */
+interface RequestUsageSnapshot {
+  requestNum: number;
+  inputTokens: number;
+  outputTokens: number;
+  toolNames: string[];
+  timestamp: string | null;
+  turnId: string | null;
+}
+
+/**
+ * Turn usage
+ */
+interface TurnUsage {
+  inputTokens: number;
+  outputTokens: number;
+  requests: number;
+  toolCalls: number;
+  toolNames: string[];
+}
+
+/**
+ * Session usage
+ */
+interface SessionUsage {
+  inputTokens: number;
+  outputTokens: number;
+  requests: number;
+  toolCalls: number;
+}
+
+/**
  * Context snapshot response from API
  */
 export interface ContextSnapshotResponse {
   agentId: string;
   systemPrompts: string[];
   systemPromptTokens: number;
-  messages: Array<{
-    role: string;
-    content: string;
-    estimatedTokens: number;
-    timestamp: string | null;
-  }>;
+  // Tool definitions
+  tools: ToolSnapshot[];
+  toolTokens: number;
+  // Tool usage
+  historyToolCallTokens: number;
+  historyToolReturnTokens: number;
+  currentToolCallTokens: number;
+  currentToolReturnTokens: number;
+  toolCallTokens: number;
+  toolReturnTokens: number;
+  // Messages
+  messages: MessageSnapshot[];
+  historyUserTokens: number;
+  historyAssistantTokens: number;
+  currentUserTokens: number;
+  currentAssistantTokens: number;
+  // Aggregates
+  historyTokens: number;
+  currentMessageTokens: number;
   userMessageTokens: number;
   assistantMessageTokens: number;
   totalTokens: number;
+  // Model-reported usage
+  modelInputTokens: number | null;
+  modelOutputTokens: number | null;
+  sumResponseInputTokens: number;
+  sumResponseOutputTokens: number;
+  perRequestUsage: RequestUsageSnapshot[];
   contextWindow: number;
+  // Turn and session
+  turnUsage: TurnUsage | null;
+  sessionUsage: SessionUsage | null;
+  // Treemap data
   distribution: Distribution;
   error?: string;
 }
@@ -287,27 +363,135 @@ export function ContextDistribution({
             </Box>
           )}
 
-          {/* Messages breakdown */}
-          {(snapshotData.userMessageTokens > 0 ||
-            snapshotData.assistantMessageTokens > 0) && (
+          {/* Tool definitions */}
+          {snapshotData.toolTokens > 0 && (
             <Box sx={{ mb: 2 }}>
               <Text sx={{ fontWeight: 'bold' }}>
-                Messages:{' '}
+                Tool Definitions: {formatTokens(snapshotData.toolTokens)} tokens
+                ({snapshotData.tools.length} tools)
+              </Text>
+              <Box sx={{ ml: 3, mt: 1 }}>
+                {snapshotData.tools.slice(0, 5).map((tool, idx) => (
+                  <Text key={idx} sx={{ display: 'block', color: 'fg.muted' }}>
+                    • {tool.name}: {formatTokens(tool.totalTokens)} tokens
+                  </Text>
+                ))}
+                {snapshotData.tools.length > 5 && (
+                  <Text
+                    sx={{
+                      display: 'block',
+                      color: 'fg.muted',
+                      fontStyle: 'italic',
+                    }}
+                  >
+                    ...and {snapshotData.tools.length - 5} more tools
+                  </Text>
+                )}
+              </Box>
+            </Box>
+          )}
+
+          {/* History breakdown */}
+          {(snapshotData.historyUserTokens > 0 ||
+            snapshotData.historyAssistantTokens > 0 ||
+            snapshotData.historyToolCallTokens > 0) && (
+            <Box sx={{ mb: 2 }}>
+              <Text sx={{ fontWeight: 'bold' }}>
+                History:{' '}
                 {formatTokens(
-                  snapshotData.userMessageTokens +
-                    snapshotData.assistantMessageTokens,
+                  snapshotData.historyUserTokens +
+                    snapshotData.historyAssistantTokens +
+                    snapshotData.historyToolCallTokens +
+                    snapshotData.historyToolReturnTokens,
                 )}{' '}
                 tokens
               </Text>
               <Box sx={{ ml: 3, mt: 1 }}>
                 <Text sx={{ display: 'block' }}>
                   • User Messages:{' '}
-                  {formatTokens(snapshotData.userMessageTokens)} tokens
+                  {formatTokens(snapshotData.historyUserTokens)} tokens
                 </Text>
                 <Text sx={{ display: 'block' }}>
                   • Assistant Responses:{' '}
-                  {formatTokens(snapshotData.assistantMessageTokens)} tokens
+                  {formatTokens(snapshotData.historyAssistantTokens)} tokens
                 </Text>
+                {snapshotData.historyToolCallTokens > 0 && (
+                  <Text sx={{ display: 'block' }}>
+                    • Tool Calls:{' '}
+                    {formatTokens(snapshotData.historyToolCallTokens)} tokens
+                  </Text>
+                )}
+                {snapshotData.historyToolReturnTokens > 0 && (
+                  <Text sx={{ display: 'block' }}>
+                    • Tool Returns:{' '}
+                    {formatTokens(snapshotData.historyToolReturnTokens)} tokens
+                  </Text>
+                )}
+              </Box>
+            </Box>
+          )}
+
+          {/* Current turn */}
+          {snapshotData.currentUserTokens > 0 && (
+            <Box sx={{ mb: 2 }}>
+              <Text sx={{ fontWeight: 'bold' }}>
+                Current User: {formatTokens(snapshotData.currentUserTokens)}{' '}
+                tokens
+              </Text>
+            </Box>
+          )}
+
+          {/* Turn usage (model-reported) */}
+          {snapshotData.turnUsage && (
+            <Box sx={{ mb: 2 }}>
+              <Text sx={{ fontWeight: 'bold' }}>
+                Turn Usage (model-reported):
+              </Text>
+              <Box sx={{ ml: 3, mt: 1 }}>
+                <Text sx={{ display: 'block' }}>
+                  • Input: {formatTokens(snapshotData.turnUsage.inputTokens)}{' '}
+                  tokens
+                </Text>
+                <Text sx={{ display: 'block' }}>
+                  • Output: {formatTokens(snapshotData.turnUsage.outputTokens)}{' '}
+                  tokens
+                </Text>
+                <Text sx={{ display: 'block' }}>
+                  • Requests: {snapshotData.turnUsage.requests}
+                </Text>
+                {snapshotData.turnUsage.toolCalls > 0 && (
+                  <Text sx={{ display: 'block' }}>
+                    • Tool Calls: {snapshotData.turnUsage.toolCalls}
+                    {snapshotData.turnUsage.toolNames.length > 0 && (
+                      <> ({snapshotData.turnUsage.toolNames.join(', ')})</>
+                    )}
+                  </Text>
+                )}
+              </Box>
+            </Box>
+          )}
+
+          {/* Session usage */}
+          {snapshotData.sessionUsage && (
+            <Box sx={{ mb: 2 }}>
+              <Text sx={{ fontWeight: 'bold' }}>Session Totals:</Text>
+              <Box sx={{ ml: 3, mt: 1 }}>
+                <Text sx={{ display: 'block' }}>
+                  • Total Input:{' '}
+                  {formatTokens(snapshotData.sessionUsage.inputTokens)} tokens
+                </Text>
+                <Text sx={{ display: 'block' }}>
+                  • Total Output:{' '}
+                  {formatTokens(snapshotData.sessionUsage.outputTokens)} tokens
+                </Text>
+                <Text sx={{ display: 'block' }}>
+                  • Total Requests: {snapshotData.sessionUsage.requests}
+                </Text>
+                {snapshotData.sessionUsage.toolCalls > 0 && (
+                  <Text sx={{ display: 'block' }}>
+                    • Total Tool Calls: {snapshotData.sessionUsage.toolCalls}
+                  </Text>
+                )}
               </Box>
             </Box>
           )}

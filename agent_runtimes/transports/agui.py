@@ -113,6 +113,16 @@ class AGUITransport(BaseTransport):
                 "AGUITransport requires a PydanticAIAgent that wraps a pydantic_ai.Agent"
             )
 
+    def _get_runtime_toolsets(self) -> list[Any]:
+        """Get runtime toolsets from the adapter.
+
+        Returns:
+            List of toolsets from the PydanticAIAdapter.
+        """
+        if hasattr(self.agent, "_get_runtime_toolsets"):
+            return self.agent._get_runtime_toolsets()
+        return []
+
     def get_app(self) -> "Starlette":
         """Get the Starlette/ASGI application for AG-UI.
 
@@ -138,6 +148,8 @@ class AGUITransport(BaseTransport):
             agui_kwargs = self._agui_kwargs
             agent_id = self._agent_id
             tracker = get_usage_tracker()
+            # Store reference to self for accessing runtime toolsets in the closure
+            transport_self = self
 
             async def run_agent(request: Request) -> Response:
                 """Endpoint to run the agent with per-request model override support."""
@@ -169,9 +181,11 @@ class AGUITransport(BaseTransport):
                     logger.debug(f"Could not extract model/identities from AG-UI request body: {e}")
 
                 # Create on_complete callback to track usage
-                async def on_complete(result: "AgentRunResult") -> AsyncIteratorType:
+                async def on_complete(result: "AgentRunResult") -> None:
                     """Callback to track usage after agent run completes."""
+                    logger.info(f"[AG-UI on_complete] Callback invoked for agent {agent_id}")
                     usage = result.usage()
+                    logger.info(f"[AG-UI on_complete] Usage object: {usage}")
                     if usage:
                         tracker.update_usage(
                             agent_id=agent_id,
@@ -189,14 +203,23 @@ class AGUITransport(BaseTransport):
                                 assistant_tokens=usage.output_tokens,
                             )
                         
-                        logger.debug(
+                        logger.info(
                             f"AG-UI tracked usage for agent {agent_id}: "
                             f"input={usage.input_tokens}, output={usage.output_tokens}, "
                             f"requests={usage.requests}, tools={usage.tool_calls}"
                         )
-                    # Must be an async generator, even if it yields nothing
-                    return
-                    yield  # type: ignore[misc]
+                    else:
+                        logger.warning(f"[AG-UI on_complete] No usage data available for agent {agent_id}")
+                    
+                    # Capture message history from the agent run
+                    try:
+                        messages = result.all_messages()
+                        stats = tracker.get_agent_stats(agent_id)
+                        if stats and messages:
+                            stats.store_messages(messages)
+                            logger.info(f"[AG-UI on_complete] Stored {len(messages)} messages for agent {agent_id}")
+                    except Exception as e:
+                        logger.warning(f"[AG-UI on_complete] Could not capture message history: {e}")
 
                 # Set the identity context for this request so that skill executors
                 # and codemode tools can access OAuth tokens during tool execution.
@@ -210,16 +233,45 @@ class AGUITransport(BaseTransport):
                 set_request_identities(identities_from_request)
                 logger.debug("[AG-UI] Set request identities for streaming")
                 
+                # Get runtime toolsets from the adapter (includes MCP servers)
+                runtime_toolsets = transport_self._get_runtime_toolsets()
+                
+                # Log detailed toolset information
+                if runtime_toolsets:
+                    toolset_names = []
+                    for ts in runtime_toolsets:
+                        name = getattr(ts, 'name', None) or getattr(ts, '__class__', type(ts)).__name__
+                        toolset_names.append(name)
+                    logger.info(f"[AG-UI] Passing {len(runtime_toolsets)} toolsets to agent run: {toolset_names}")
+                    
+                    # Extract and store tool definitions for context tracking
+                    try:
+                        from ..context.session import _extract_tool_definitions_from_toolsets
+                        tool_defs = _extract_tool_definitions_from_toolsets(runtime_toolsets)
+                        if tool_defs:
+                            stats = tracker.get_agent_stats(agent_id)
+                            if stats:
+                                stats.store_tools(tool_defs)
+                                logger.info(f"[AG-UI] Stored {len(tool_defs)} tool definitions for agent {agent_id}")
+                    except Exception as e:
+                        logger.warning(f"[AG-UI] Could not extract tool definitions: {e}")
+                else:
+                    logger.info("[AG-UI] Passing 0 toolsets to agent run (empty list)")
+                
                 return await AGUIAdapter.dispatch_request(
                     request,
                     agent=pydantic_agent,
                     model=model,
+                    toolsets=runtime_toolsets,
                     on_complete=on_complete,
                     **agui_kwargs,
                 )
 
+            # Create Starlette app for AG-UI endpoint
             self._app = Starlette(
-                routes=[Route("/", run_agent, methods=["POST"])],
+                routes=[
+                    Route("/", run_agent, methods=["POST"]),
+                ],
             )
 
         return self._app

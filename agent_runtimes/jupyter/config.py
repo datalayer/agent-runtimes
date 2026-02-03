@@ -38,7 +38,7 @@ class JupyterChatConfig:
         """Create default configuration file."""
         default_config = {
             "mcp_servers": [],
-            "default_model": "anthropic:claude-sonnet-4-5",
+            "default_model": "bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0",
             "enabled_tools": [],
         }
         self.save_config(default_config)
@@ -71,7 +71,7 @@ class JupyterChatConfig:
     def get_default_model(self) -> str:
         """Get the default model ID."""
         config = self.load_config()
-        return config.get("default_model", "anthropic:claude-sonnet-4-5")
+        return config.get("default_model", "bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0")
 
     def set_default_model(self, model_id: str) -> None:
         """Set the default model ID."""

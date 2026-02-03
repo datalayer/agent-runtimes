@@ -42,7 +42,7 @@ export interface UseAGUIOptions {
  * Hook to manage chat state with AG-UI protocol.
  *
  * This hook provides an interface to the AG-UI protocol endpoint
- * at /api/v1/ag-ui/{agent_id}/ which is powered by Pydantic AI's
+ * at /api/v1/ag-ui/{agent_id}/ (trailing slash required) which is powered by Pydantic AI's
  * native AGUIApp. The AG-UI protocol accepts POST requests with
  * prompts and streams back agent responses.
  *

@@ -3,24 +3,21 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import {
   Text,
   Button,
   PageLayout,
-  ToggleSwitch,
   AvatarStack,
   Avatar,
   Spinner,
   TextInput,
   FormControl,
-  AnchoredOverlay,
   IconButton,
 } from '@primer/react';
 import {
   ZapIcon,
   ListUnorderedIcon,
-  InfoIcon,
   PlayIcon,
   PauseIcon,
 } from '@primer/octicons-react';
@@ -133,14 +130,10 @@ interface HeaderProps {
   agentName?: string;
   agentDescription?: string;
   agentStatus?: 'running' | 'paused';
-  richEditor: boolean;
-  durable: boolean;
   showContextTree: boolean;
   isNewAgent?: boolean;
   isConfigured?: boolean;
   onSessionChange: (sessionId: string) => void;
-  onRichEditorChange: (value: boolean) => void;
-  onDurableChange: (value: boolean) => void;
   onToggleContextTree: () => void;
   onToggleStatus?: () => void;
 }
@@ -156,14 +149,10 @@ export const Header: React.FC<HeaderProps> = ({
   agentName,
   agentDescription,
   agentStatus,
-  richEditor,
-  durable,
   showContextTree,
   isNewAgent = false,
   isConfigured = false,
   onSessionChange,
-  onRichEditorChange,
-  onDurableChange,
   onToggleContextTree,
   onToggleStatus,
 }) => {
@@ -172,12 +161,6 @@ export const Header: React.FC<HeaderProps> = ({
   const [totalTokens, setTotalTokens] = useState('1.52M');
   const [showDetails, setShowDetails] = useState(false);
   const [showAvatarView, setShowAvatarView] = useState(false);
-  const [openOverlay, setOpenOverlay] = useState<
-    'richEditor' | 'durable' | null
-  >(null);
-
-  const richEditorRef = useRef<HTMLButtonElement>(null);
-  const durableRef = useRef<HTMLButtonElement>(null);
 
   const handleOptimize = () => {
     setIsOptimizing(true);
@@ -211,132 +194,6 @@ export const Header: React.FC<HeaderProps> = ({
             }}
           />
         )}
-
-        {/* Box 2: Switches */}
-        <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 3,
-            marginLeft: 'auto',
-          }}
-        >
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <ToggleSwitch
-              size="small"
-              checked={richEditor}
-              onClick={() => onRichEditorChange(!richEditor)}
-              aria-labelledby="rich-editor-label"
-              disabled={isNewAgent || !isConfigured}
-            />
-            <Text id="rich-editor-label" sx={{ fontSize: 0 }}>
-              Rich Editor
-            </Text>
-            <IconButton
-              ref={richEditorRef}
-              icon={InfoIcon}
-              size="small"
-              variant="invisible"
-              aria-label="Rich Editor info"
-              onClick={() =>
-                setOpenOverlay(
-                  openOverlay === 'richEditor' ? null : 'richEditor',
-                )
-              }
-            />
-            <AnchoredOverlay
-              open={openOverlay === 'richEditor'}
-              onOpen={() => setOpenOverlay('richEditor')}
-              onClose={() => setOpenOverlay(null)}
-              renderAnchor={() => <span />}
-              anchorRef={richEditorRef}
-            >
-              <Box
-                sx={{
-                  p: 3,
-                  maxWidth: '300px',
-                  bg: 'canvas.overlay',
-                  border: '1px solid',
-                  borderColor: 'border.default',
-                  borderRadius: 2,
-                  boxShadow: 'shadow.large',
-                }}
-              >
-                <Text
-                  sx={{
-                    fontSize: 0,
-                    display: 'block',
-                    mb: 1,
-                    fontWeight: 'bold',
-                  }}
-                >
-                  Rich Editor
-                </Text>
-                <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
-                  Enable rich text editing with formatting options, markdown
-                  support, and visual enhancements for a better editing
-                  experience.
-                </Text>
-              </Box>
-            </AnchoredOverlay>
-          </Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <ToggleSwitch
-              size="small"
-              checked={durable}
-              onClick={() => onDurableChange(!durable)}
-              aria-labelledby="durable-label"
-              disabled={isNewAgent || !isConfigured}
-            />
-            <Text id="durable-label" sx={{ fontSize: 0 }}>
-              Durable
-            </Text>
-            <IconButton
-              ref={durableRef}
-              icon={InfoIcon}
-              size="small"
-              variant="invisible"
-              aria-label="Durable info"
-              onClick={() =>
-                setOpenOverlay(openOverlay === 'durable' ? null : 'durable')
-              }
-            />
-            <AnchoredOverlay
-              open={openOverlay === 'durable'}
-              onOpen={() => setOpenOverlay('durable')}
-              onClose={() => setOpenOverlay(null)}
-              renderAnchor={() => <span />}
-              anchorRef={durableRef}
-            >
-              <Box
-                sx={{
-                  p: 3,
-                  maxWidth: '300px',
-                  bg: 'canvas.overlay',
-                  border: '1px solid',
-                  borderColor: 'border.default',
-                  borderRadius: 2,
-                  boxShadow: 'shadow.large',
-                }}
-              >
-                <Text
-                  sx={{
-                    fontSize: 0,
-                    display: 'block',
-                    mb: 1,
-                    fontWeight: 'bold',
-                  }}
-                >
-                  Durable
-                </Text>
-                <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
-                  Persist agent state and conversation history across sessions.
-                  Your work is automatically saved and restored when you return.
-                </Text>
-              </Box>
-            </AnchoredOverlay>
-          </Box>
-        </Box>
 
         {/* Box 3: Action Buttons - only shown when agent is selected */}
         {agentName && (

@@ -22,8 +22,8 @@ from mcp.client.stdio import stdio_client
 from agent_runtimes.types import MCPServer, MCPServerTool
 from agent_runtimes.mcp.toolsets import (
     MCP_SERVER_STARTUP_TIMEOUT,
-    get_mcp_toolsets,
-    wait_for_mcp_toolsets,
+    get_config_mcp_toolsets,
+    wait_for_config_mcp_toolsets,
 )
 
 logger = logging.getLogger(__name__)
@@ -227,7 +227,7 @@ async def create_mcp_servers_with_tools(
     """
     servers: list[MCPServer] = []
     configs = get_mcp_servers_from_config()
-    ready = await wait_for_mcp_toolsets()
+    ready = await wait_for_config_mcp_toolsets()
     if not ready:
         logger.warning(
             "MCP toolsets not ready after initialization; tool discovery may be incomplete"
@@ -250,7 +250,7 @@ async def create_mcp_servers_with_tools(
             tools: list[MCPServerTool] = []
 
             # Try to reuse running MCP toolset if available
-            running_toolsets = get_mcp_toolsets()
+            running_toolsets = get_config_mcp_toolsets()
             running_server = next(
                 (toolset for toolset in running_toolsets if getattr(toolset, "id", None) == config["id"]),
                 None,
@@ -317,12 +317,12 @@ _mcp_servers: list[MCPServer] | None = None
 _initialization_lock = asyncio.Lock()
 
 
-async def get_mcp_servers(
+async def get_config_mcp_servers(
     force_refresh: bool = False,
     discover_tools: bool = True,
 ) -> list[MCPServer]:
     """
-    Get the cached MCP servers, initializing if needed.
+    Get the cached config MCP servers (from ~/.datalayer/mcp.json), initializing if needed.
 
     Args:
         force_refresh: Force re-initialization
@@ -342,12 +342,12 @@ async def get_mcp_servers(
     return _mcp_servers
 
 
-def get_mcp_servers_sync() -> list[MCPServer]:
+def get_config_mcp_servers_sync() -> list[MCPServer]:
     """
-    Synchronous version to get cached MCP servers.
+    Synchronous version to get cached config MCP servers.
 
     Note: Returns empty list if not yet initialized.
-    Use get_mcp_servers() in async context for proper initialization.
+    Use get_config_mcp_servers() in async context for proper initialization.
 
     Returns:
         List of MCPServer objects or empty list if not initialized
@@ -356,16 +356,25 @@ def get_mcp_servers_sync() -> list[MCPServer]:
     return _mcp_servers or []
 
 
-async def initialize_mcp_servers(discover_tools: bool = True) -> list[MCPServer]:
+async def initialize_config_mcp_servers(discover_tools: bool = True) -> list[MCPServer]:
     """
-    Initialize MCP servers during application startup.
+    Initialize config MCP servers (from ~/.datalayer/mcp.json) during application startup.
 
     This should be called during FastAPI/Jupyter server startup.
+
+    Respects the AGENT_RUNTIMES_NO_CONFIG_MCP_SERVERS environment variable:
+    if set to "true", returns an empty list instead of loading config servers.
 
     Args:
         discover_tools: Whether to discover tools from servers
 
     Returns:
-        List of initialized MCPServer objects
+        List of initialized MCPServer objects, or empty list if config servers are disabled
     """
-    return await get_mcp_servers(force_refresh=True, discover_tools=discover_tools)
+    # Check if config MCP servers should be skipped (--no-config-mcp-servers CLI flag)
+    no_config_mcp_servers = os.environ.get("AGENT_RUNTIMES_NO_CONFIG_MCP_SERVERS", "").lower() == "true"
+    if no_config_mcp_servers:
+        logger.info("Config MCP servers disabled via AGENT_RUNTIMES_NO_CONFIG_MCP_SERVERS")
+        return []
+    
+    return await get_config_mcp_servers(force_refresh=True, discover_tools=discover_tools)

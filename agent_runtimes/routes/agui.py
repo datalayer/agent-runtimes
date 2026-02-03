@@ -139,6 +139,27 @@ def get_agui_app(agent_id: str) -> Starlette | None:
     return _agui_apps.get(agent_id)
 
 
+def get_agui_adapter(agent_id: str) -> "AGUITransport | None":
+    """Get an AG-UI adapter by ID.
+
+    Args:
+        agent_id: The agent identifier.
+
+    Returns:
+        The AGUITransport adapter if found, None otherwise.
+    """
+    return _agui_adapters.get(agent_id)
+
+
+def get_all_agui_adapters() -> dict[str, "AGUITransport"]:
+    """Get all registered AG-UI adapters.
+
+    Returns:
+        Dictionary mapping agent IDs to their AGUITransport adapters.
+    """
+    return _agui_adapters.copy()
+
+
 def get_agui_mounts() -> list[Mount]:
     """Get all AG-UI mounts for the FastAPI app.
 
@@ -147,7 +168,7 @@ def get_agui_mounts() -> list[Mount]:
     """
     mounts = []
     for agent_id, app in _agui_apps.items():
-        # Mount each AG-UI app at /api/v1/ag-ui/{agent_id}/
+        # Mount each AG-UI app at /api/v1/ag-ui/{agent_id}
         mount = Mount(f"/{agent_id}", app=app)
         mounts.append(mount)
     return mounts
@@ -185,7 +206,7 @@ async def agui_info() -> dict[str, str]:
         "documentation": "https://ai.pydantic.dev/ui/ag-ui/",
         "agents_endpoint": "/api/v1/ag-ui/agents",
         "terminate_endpoint": "/api/v1/ag-ui/terminate",
-        "note": "Each agent is mounted at /api/v1/ag-ui/{agent_id}/",
+        "note": "Each agent is mounted at /api/v1/ag-ui/{agent_id}/ (trailing slash required)",
     }
 
 
