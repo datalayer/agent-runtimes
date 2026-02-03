@@ -138,6 +138,7 @@ def serve_server(
     agent_id: Optional[str] = None,
     agent_name: Optional[str] = None,
     no_config_mcp_servers: bool = False,
+    no_catalog_mcp_servers: bool = False,
     mcp_servers: Optional[str] = None,
     codemode: bool = False,
     skills: Optional[str] = None,
@@ -159,6 +160,7 @@ def serve_server(
         agent_id: Agent spec ID from the library to start
         agent_name: Custom name for the agent
         no_config_mcp_servers: Skip starting config MCP servers from ~/.datalayer/mcp.json
+        no_catalog_mcp_servers: Skip starting catalog MCP servers defined in agent spec
         mcp_servers: Comma-separated list of MCP server IDs from the catalog to start
         codemode: Enable Code Mode (MCP servers become programmatic tools)
         skills: Comma-separated list of skills to enable (requires codemode)
@@ -212,6 +214,10 @@ def serve_server(
     if no_config_mcp_servers:
         os.environ["AGENT_RUNTIMES_NO_CONFIG_MCP_SERVERS"] = "true"
         logger.info("Config MCP servers disabled (--no-config-mcp-servers)")
+
+    if no_catalog_mcp_servers:
+        os.environ["AGENT_RUNTIMES_NO_CATALOG_MCP_SERVERS"] = "true"
+        logger.info("Catalog MCP servers disabled (--no-catalog-mcp-servers)")
 
     if mcp_servers:
         mcp_servers_list = parse_mcp_servers(mcp_servers)

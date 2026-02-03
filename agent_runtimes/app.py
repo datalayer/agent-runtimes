@@ -495,6 +495,7 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
                 cli_mcp_servers_str = os.environ.get("AGENT_RUNTIMES_MCP_SERVERS", "")
                 cli_mcp_servers = [s.strip() for s in cli_mcp_servers_str.split(",") if s.strip()] if cli_mcp_servers_str else []
                 protocol = os.environ.get("AGENT_RUNTIMES_PROTOCOL", "ag-ui")
+                no_catalog_mcp_servers = os.environ.get("AGENT_RUNTIMES_NO_CATALOG_MCP_SERVERS", "").lower() == "true"
                 
                 logger.info(f"Registering default agent from catalog: {agent_spec.name} (as '{agent_name}')")
                 logger.info(f"  Protocol: {protocol}")
@@ -502,14 +503,20 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
                 logger.info(f"  Skills: {skills_list}")
                 logger.info(f"  CLI MCP servers: {cli_mcp_servers}")
                 logger.info(f"  Agent spec MCP servers: {[s.id for s in agent_spec.mcp_servers]}")
+                logger.info(f"  No catalog MCP servers: {no_catalog_mcp_servers}")
                 
                 # Determine which MCP servers to use:
+                # - If --no-catalog-mcp-servers is specified, skip agent spec MCP servers entirely
                 # - If --mcp-servers is specified, use ONLY those (overrides agent spec servers)
                 # - Otherwise, use the agent spec servers
                 mcp_manager = get_mcp_manager()
                 lifecycle_manager = get_mcp_lifecycle_manager()
                 
-                if cli_mcp_servers:
+                if no_catalog_mcp_servers:
+                    # Skip all catalog MCP servers (both from agent spec and CLI --mcp-servers)
+                    logger.info("Catalog MCP servers disabled (--no-catalog-mcp-servers flag)")
+                    all_mcp_servers = []
+                elif cli_mcp_servers:
                     # CLI MCP servers OVERRIDE agent spec servers
                     logger.info(f"CLI --mcp-servers specified: using ONLY {cli_mcp_servers} (overriding agent spec servers)")
                     all_mcp_servers = []

@@ -13,6 +13,8 @@ Commands:
     - list_specs: List available agent specs from the library
     - mcp_servers_catalog: Display catalog MCP servers
     - mcp_servers_config: Display config MCP servers
+    - start_mcp_servers: Start MCP servers for a running agent
+    - stop_mcp_servers: Stop MCP servers for a running agent
 
 Usage as library:
     from agent_runtimes.commands import (
@@ -37,6 +39,12 @@ Usage as library:
         list_mcp_servers_config,
         get_mcp_servers_config,
         
+        # Agent MCP servers commands
+        start_agent_mcp_servers,
+        stop_agent_mcp_servers,
+        AgentMcpServersError,
+        parse_env_vars,
+        
         # Common
         OutputFormat,
     )
@@ -55,6 +63,10 @@ Usage as library:
     
     # Get config MCP servers
     config = get_mcp_servers_config()
+    
+    # Start/stop MCP servers for an agent
+    start_agent_mcp_servers(agent_id="my-agent", env_vars={"KEY": "value"})
+    stop_agent_mcp_servers(agent_id="my-agent")
 """
 
 from agent_runtimes.commands.serve import (
@@ -84,6 +96,13 @@ from agent_runtimes.commands.mcp_servers_config import (
     get_mcp_servers_config,
     list_mcp_servers_config,
 )
+from agent_runtimes.commands.agent_mcp_servers import (
+    AgentMcpServersError,
+    parse_env_vars,
+    start_agent_mcp_servers,
+    stop_agent_mcp_servers,
+    print_mcp_servers_result,
+)
 
 __all__ = [
     # Serve command
@@ -107,6 +126,12 @@ __all__ = [
     # MCP servers config command
     "list_mcp_servers_config",
     "get_mcp_servers_config",
+    # Agent MCP servers commands
+    "start_agent_mcp_servers",
+    "stop_agent_mcp_servers",
+    "AgentMcpServersError",
+    "parse_env_vars",
+    "print_mcp_servers_result",
     # Common
     "OutputFormat",
 ]

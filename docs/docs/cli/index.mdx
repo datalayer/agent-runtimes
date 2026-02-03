@@ -16,7 +16,7 @@ pip install agent-runtimes
 
 ## Commands Overview
 
-The CLI provides five main commands:
+The CLI provides seven main commands:
 
 | Command | Description |
 |---------|-------------|
@@ -25,6 +25,8 @@ The CLI provides five main commands:
 | `list-specs` | List available agent specs from the library |
 | `mcp-servers-catalog` | Display MCP servers from the catalog |
 | `mcp-servers-config` | Display MCP servers from the user's config |
+| `start-mcp-servers` | Start MCP servers for a running agent |
+| `stop-mcp-servers` | Stop MCP servers for a running agent |
 
 ```bash
 # Show available commands
@@ -61,6 +63,12 @@ from agent_runtimes.commands import (
     list_mcp_servers_config,
     get_mcp_servers_config,
     
+    # Agent MCP servers commands
+    start_agent_mcp_servers,
+    stop_agent_mcp_servers,
+    AgentMcpServersError,
+    parse_env_vars,
+    
     # Common
     OutputFormat,
 )
@@ -79,6 +87,10 @@ catalog = get_mcp_servers_catalog()
 
 # Get config MCP servers
 config = get_mcp_servers_config()
+
+# Start/stop MCP servers for an agent
+start_agent_mcp_servers(agent_id="my-agent", env_vars={"TAVILY_API_KEY": "xxx"})
+stop_agent_mcp_servers(agent_id="my-agent")
 ```
 
 ---
@@ -105,6 +117,7 @@ agent-runtimes serve [OPTIONS]
 | `--agent-name` | `-n` | `default` | `AGENT_RUNTIMES_AGENT_NAME` | Custom name for the agent (requires `--agent-id`) |
 | `--protocol` | `-t` | `ag-ui` | `AGENT_RUNTIMES_PROTOCOL` | Transport protocol (`ag-ui`, `vercel-ai`, `vercel-ai-jupyter`, `a2a`) |
 | `--no-config-mcp-servers` | - | `false` | `AGENT_RUNTIMES_NO_CONFIG_MCP_SERVERS` | Skip starting config MCP servers from `~/.datalayer/mcp.json` |
+| `--no-catalog-mcp-servers` | - | `false` | `AGENT_RUNTIMES_NO_CATALOG_MCP_SERVERS` | Skip starting catalog MCP servers defined in the agent spec (requires `--agent-id`) |
 | `--mcp-servers` | `-m` | - | `AGENT_RUNTIMES_MCP_SERVERS` | Comma-separated list of MCP server IDs from the catalog to start |
 | `--codemode` | `-c` | `false` | `AGENT_RUNTIMES_CODEMODE` | Enable Code Mode: MCP servers become programmatic tools via CodemodeToolset |
 | `--skills` | `-s` | - | `AGENT_RUNTIMES_SKILLS` | Comma-separated list of skills to enable (requires `--codemode`) |
@@ -174,6 +187,12 @@ agent-runtimes serve --no-config-mcp-servers
 
 # Start with agent but without config MCP servers
 agent-runtimes serve --agent-id crawler --no-config-mcp-servers
+
+# Start with agent but WITHOUT its catalog MCP servers (from agent spec)
+agent-runtimes serve --agent-id data-acquisition --no-catalog-mcp-servers
+
+# Start with neither config nor catalog MCP servers (minimal startup)
+agent-runtimes serve --agent-id crawler --no-config-mcp-servers --no-catalog-mcp-servers
 ```
 
 :::tip Managing MCP Servers at Runtime
@@ -692,6 +711,158 @@ list_mcp_servers_config(output=OutputFormat.table)
 
 ---
 
+## `start-mcp-servers` Command
+
+Start MCP servers for a running agent. This command starts the catalog MCP servers configured for the specified agent.
+
+```bash
+agent-runtimes start-mcp-servers [OPTIONS]
+```
+
+### Options
+
+| Option | Short | Default | Description |
+|--------|-------|---------|-------------|
+| `--agent-id` | `-a` | *required* | The agent identifier |
+| `--env-vars` | `-e` | - | Environment variables in format `VAR1:VALUE1;VAR2:VALUE2` |
+| `--host` | `-h` | `127.0.0.1` | Agent-runtimes server host |
+| `--port` | `-p` | `8000` | Agent-runtimes server port |
+
+### Examples
+
+```bash
+# Start MCP servers for an agent
+agent-runtimes start-mcp-servers --agent-id my-agent
+
+# Start with environment variables (e.g., API keys)
+agent-runtimes start-mcp-servers --agent-id my-agent \
+    --env-vars "TAVILY_API_KEY:xxx;GITHUB_TOKEN:yyy"
+
+# Connect to a different server
+agent-runtimes start-mcp-servers --agent-id my-agent \
+    --host 0.0.0.0 --port 8080
+
+# Using short options
+agent-runtimes start-mcp-servers -a my-agent -e "TAVILY_API_KEY:xxx"
+```
+
+### Output
+
+The command displays a formatted table showing the status of each MCP server:
+
+```
+╭─ MCP Servers Start - Agent: my-agent ─────────────────────╮
+│ Server ID          │ Status                               │
+├────────────────────┼──────────────────────────────────────┤
+│ tavily             │ ✓ Started                            │
+│ github             │ ⚡ Already running                   │
+│ filesystem         │ ✗ Failed: Missing FILESYSTEM_PATH    │
+╰────────────────────┴──────────────────────────────────────╯
+✓ Codemode toolset rebuilt
+
+Started 1 server(s), 1 already running, 1 failed
+```
+
+:::tip Codemode Toolset Rebuild
+If the agent has Codemode enabled, starting MCP servers will automatically rebuild the Codemode toolset to include the newly started servers as programmatic tools.
+:::
+
+### Programmatic Usage
+
+```python
+from agent_runtimes.commands import (
+    start_agent_mcp_servers,
+    AgentMcpServersError,
+    parse_env_vars,
+)
+
+# Parse env vars from string format
+env_vars = parse_env_vars("TAVILY_API_KEY:xxx;GITHUB_TOKEN:yyy")
+# Result: {"TAVILY_API_KEY": "xxx", "GITHUB_TOKEN": "yyy"}
+
+try:
+    result = start_agent_mcp_servers(
+        agent_id="my-agent",
+        env_vars=env_vars,
+        host="localhost",
+        port=8000,
+    )
+    print(f"Started: {result['started_servers']}")
+    print(f"Already running: {result['already_running']}")
+    print(f"Failed: {result['failed_servers']}")
+    if result['codemode_rebuilt']:
+        print("Codemode toolset was rebuilt")
+except AgentMcpServersError as e:
+    print(f"Error: {e}")
+```
+
+---
+
+## `stop-mcp-servers` Command
+
+Stop MCP servers for a running agent. This command stops the catalog MCP servers configured for the specified agent.
+
+```bash
+agent-runtimes stop-mcp-servers [OPTIONS]
+```
+
+### Options
+
+| Option | Short | Default | Description |
+|--------|-------|---------|-------------|
+| `--agent-id` | `-a` | *required* | The agent identifier |
+| `--host` | `-h` | `127.0.0.1` | Agent-runtimes server host |
+| `--port` | `-p` | `8000` | Agent-runtimes server port |
+
+### Examples
+
+```bash
+# Stop MCP servers for an agent
+agent-runtimes stop-mcp-servers --agent-id my-agent
+
+# Connect to a different server
+agent-runtimes stop-mcp-servers --agent-id my-agent \
+    --host 0.0.0.0 --port 8080
+
+# Using short options
+agent-runtimes stop-mcp-servers -a my-agent -h 0.0.0.0 -p 8080
+```
+
+### Output
+
+The command displays a formatted table showing the status of each MCP server:
+
+```
+╭─ MCP Servers Stop - Agent: my-agent ──────────────────────╮
+│ Server ID          │ Status                               │
+├────────────────────┼──────────────────────────────────────┤
+│ tavily             │ ✓ Stopped                            │
+│ github             │ ⚡ Already stopped                   │
+╰────────────────────┴──────────────────────────────────────╯
+
+Stopped 1 server(s), 1 already stopped
+```
+
+### Programmatic Usage
+
+```python
+from agent_runtimes.commands import stop_agent_mcp_servers, AgentMcpServersError
+
+try:
+    result = stop_agent_mcp_servers(
+        agent_id="my-agent",
+        host="localhost",
+        port=8000,
+    )
+    print(f"Stopped: {result['stopped_servers']}")
+    print(f"Already stopped: {result['already_stopped']}")
+    print(f"Failed: {result['failed_servers']}")
+except AgentMcpServersError as e:
+    print(f"Error: {e}")
+```
+
+---
+
 ## Environment Variables
 
 All CLI options can be configured via environment variables. These variables serve as defaults - CLI arguments will override them when provided.
@@ -732,6 +903,7 @@ agent-runtimes serve  # Production-ready configuration
 | `AGENT_RUNTIMES_DEFAULT_AGENT` | `--agent-id` | Agent spec ID to start |
 | `AGENT_RUNTIMES_AGENT_NAME` | `--agent-name` | Custom name for the agent |
 | `AGENT_RUNTIMES_NO_CONFIG_MCP_SERVERS` | `--no-config-mcp-servers` | Skip config MCP servers (`true`/`false`) |
+| `AGENT_RUNTIMES_NO_CATALOG_MCP_SERVERS` | `--no-catalog-mcp-servers` | Skip catalog MCP servers from agent spec (`true`/`false`) |
 | `AGENT_RUNTIMES_MCP_SERVERS` | `--mcp-servers` | Comma-separated list of MCP server IDs |
 | `AGENT_RUNTIMES_CODEMODE` | `--codemode` | Enable Code Mode (`true`/`false`) |
 | `AGENT_RUNTIMES_SKILLS` | `--skills` | Comma-separated list of skills |

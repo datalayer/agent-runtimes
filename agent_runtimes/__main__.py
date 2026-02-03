@@ -49,6 +49,13 @@ from agent_runtimes.commands.list_agents import (
 from agent_runtimes.commands.list_specs import list_agent_specs
 from agent_runtimes.commands.mcp_servers_catalog import list_mcp_servers_catalog
 from agent_runtimes.commands.mcp_servers_config import list_mcp_servers_config
+from agent_runtimes.commands.agent_mcp_servers import (
+    AgentMcpServersError,
+    parse_env_vars,
+    start_agent_mcp_servers,
+    stop_agent_mcp_servers,
+    print_mcp_servers_result,
+)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -119,6 +126,14 @@ def serve(
             "--no-config-mcp-servers",
             envvar="AGENT_RUNTIMES_NO_CONFIG_MCP_SERVERS",
             help="Skip starting config MCP servers from ~/.datalayer/mcp.json",
+        ),
+    ] = False,
+    no_catalog_mcp_servers: Annotated[
+        bool,
+        typer.Option(
+            "--no-catalog-mcp-servers",
+            envvar="AGENT_RUNTIMES_NO_CATALOG_MCP_SERVERS",
+            help="Skip starting catalog MCP servers defined in the agent spec (requires --agent-id)",
         ),
     ] = False,
     mcp_servers: Annotated[
@@ -195,6 +210,9 @@ def serve(
         # Start without config MCP servers (from ~/.datalayer/mcp.json)
         agent-runtimes serve --no-config-mcp-servers
 
+        # Start with an agent but without its catalog MCP servers
+        agent-runtimes serve --agent-id data-acquisition --no-catalog-mcp-servers
+
         # Start with specific MCP servers from the catalog
         agent-runtimes serve --mcp-servers tavily,github
 
@@ -228,6 +246,7 @@ def serve(
             agent_id=agent_id,
             agent_name=agent_name,
             no_config_mcp_servers=no_config_mcp_servers,
+            no_catalog_mcp_servers=no_catalog_mcp_servers,
             mcp_servers=mcp_servers,
             codemode=codemode,
             skills=skills,
@@ -366,6 +385,128 @@ def mcp_servers_config(
         agent-runtimes mcp-servers-config --output json
     """
     list_mcp_servers_config(output=output)
+
+
+# ============================================================================
+# start-mcp-servers command
+# ============================================================================
+
+
+@app.command("start-mcp-servers")
+def start_mcp_servers_cmd(
+    agent_id: Annotated[
+        str,
+        typer.Option(
+            "--agent-id",
+            "-a",
+            help="The agent identifier",
+        ),
+    ],
+    env_vars: Annotated[
+        Optional[str],
+        typer.Option(
+            "--env-vars",
+            "-e",
+            help="Environment variables in format VAR1:VALUE1;VAR2:VALUE2",
+        ),
+    ] = None,
+    host: Annotated[
+        str,
+        typer.Option("--host", "-h", help="Agent-runtimes server host"),
+    ] = "127.0.0.1",
+    port: Annotated[
+        int,
+        typer.Option("--port", "-p", help="Agent-runtimes server port"),
+    ] = 8000,
+) -> None:
+    """Start MCP servers for a running agent.
+
+    Starts the catalog MCP servers configured for the specified agent.
+    Environment variables can be provided to configure the servers
+    (e.g., API keys).
+
+    If the agent has Codemode enabled, the toolset will be rebuilt
+    to include the newly started servers as programmatic tools.
+
+    Examples:
+
+        # Start MCP servers for an agent
+        agent-runtimes start-mcp-servers --agent-id my-agent
+
+        # Start with environment variables
+        agent-runtimes start-mcp-servers --agent-id my-agent \\
+            --env-vars "TAVILY_API_KEY:xxx;OTHER_KEY:yyy"
+
+        # Connect to a different server
+        agent-runtimes start-mcp-servers --agent-id my-agent \\
+            --host 0.0.0.0 --port 8080
+    """
+    console = typer.echo
+    
+    try:
+        parsed_env_vars = parse_env_vars(env_vars)
+        result = start_agent_mcp_servers(
+            agent_id=agent_id,
+            env_vars=parsed_env_vars,
+            host=host,
+            port=port,
+        )
+        print_mcp_servers_result(result, operation="start")
+    except AgentMcpServersError as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(code=1)
+    except ValueError as e:
+        typer.echo(f"Invalid input: {e}", err=True)
+        raise typer.Exit(code=1)
+
+
+# ============================================================================
+# stop-mcp-servers command
+# ============================================================================
+
+
+@app.command("stop-mcp-servers")
+def stop_mcp_servers_cmd(
+    agent_id: Annotated[
+        str,
+        typer.Option(
+            "--agent-id",
+            "-a",
+            help="The agent identifier",
+        ),
+    ],
+    host: Annotated[
+        str,
+        typer.Option("--host", "-h", help="Agent-runtimes server host"),
+    ] = "127.0.0.1",
+    port: Annotated[
+        int,
+        typer.Option("--port", "-p", help="Agent-runtimes server port"),
+    ] = 8000,
+) -> None:
+    """Stop MCP servers for a running agent.
+
+    Stops the catalog MCP servers configured for the specified agent.
+
+    Examples:
+
+        # Stop MCP servers for an agent
+        agent-runtimes stop-mcp-servers --agent-id my-agent
+
+        # Connect to a different server
+        agent-runtimes stop-mcp-servers --agent-id my-agent \\
+            --host 0.0.0.0 --port 8080
+    """
+    try:
+        result = stop_agent_mcp_servers(
+            agent_id=agent_id,
+            host=host,
+            port=port,
+        )
+        print_mcp_servers_result(result, operation="stop")
+    except AgentMcpServersError as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(code=1)
 
 
 if __name__ == "__main__":
