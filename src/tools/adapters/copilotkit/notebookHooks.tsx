@@ -61,8 +61,15 @@ export function useNotebookToolActions(
   // Create DefaultExecutor (stable reference)
   // Only recreate when documentId changes, not on every state update
   // The executor holds a reference to the store which is always current
+  // TODO: Revisit - Cast to satisfy index signature requirement for dynamic method lookup
   const executor = useMemo(
-    () => new DefaultExecutor(documentId, notebookStore),
+    () =>
+      new DefaultExecutor(
+        documentId,
+        notebookStore as unknown as ConstructorParameters<
+          typeof DefaultExecutor
+        >[1],
+      ),
     [documentId], // Removed notebookStore - executor should be stable per ID
   );
 
