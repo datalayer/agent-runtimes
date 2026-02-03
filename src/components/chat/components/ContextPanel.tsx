@@ -131,16 +131,6 @@ export interface ContextSnapshotResponse {
   error?: string;
 }
 
-function getLocalApiBase(): string {
-  if (typeof window === 'undefined') {
-    return '';
-  }
-  const host = window.location.hostname;
-  return host === 'localhost' || host === '127.0.0.1'
-    ? 'http://127.0.0.1:8765'
-    : '';
-}
-
 /**
  * Format token count for display
  */
@@ -192,9 +182,29 @@ function getCategoryIcon(name: string) {
 
 type ViewMode = 'overview' | 'distribution' | 'history';
 
+/**
+ * Get the API base URL for fetching context data.
+ * If apiBase prop is provided, use it.
+ * Otherwise, fall back to localhost for local development.
+ */
+function getApiBase(apiBase?: string): string {
+  if (apiBase) {
+    return apiBase;
+  }
+  if (typeof window === 'undefined') {
+    return '';
+  }
+  const host = window.location.hostname;
+  return host === 'localhost' || host === '127.0.0.1'
+    ? 'http://127.0.0.1:8765'
+    : '';
+}
+
 export interface ContextPanelProps {
   /** Agent ID for fetching context details (required) */
   agentId: string;
+  /** API base URL for fetching context data */
+  apiBase?: string;
   /** Number of messages in conversation (from chat store) */
   messageCount?: number;
   /** Default view mode */
@@ -208,6 +218,7 @@ export interface ContextPanelProps {
  */
 export function ContextPanel({
   agentId,
+  apiBase,
   messageCount = 0,
   defaultView = 'overview',
   chartHeight = '200px',
@@ -220,11 +231,11 @@ export function ContextPanel({
     isLoading,
     error,
   } = useQuery<ContextSnapshotResponse>({
-    queryKey: ['context-snapshot', agentId],
+    queryKey: ['context-snapshot', agentId, apiBase],
     queryFn: async () => {
-      const apiBase = getLocalApiBase();
+      const base = getApiBase(apiBase);
       const response = await fetch(
-        `${apiBase}/api/v1/configure/agents/${encodeURIComponent(agentId)}/context-snapshot`,
+        `${base}/api/v1/configure/agents/${encodeURIComponent(agentId)}/context-snapshot`,
       );
       if (!response.ok) {
         throw new Error('Failed to fetch context snapshot');

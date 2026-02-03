@@ -509,6 +509,7 @@ export function Chat({
           url={protocolConfig?.endpoint || baseUrl}
           messageCount={messageCount}
           agentId={agentId}
+          apiBase={baseUrl}
           identityProviders={identityProviders}
           onIdentityConnect={onIdentityConnect}
           onIdentityDisconnect={onIdentityDisconnect}

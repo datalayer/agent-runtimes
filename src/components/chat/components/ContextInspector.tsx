@@ -99,7 +99,15 @@ export interface FullContextResponse {
   error?: string;
 }
 
-function getLocalApiBase(): string {
+/**
+ * Get the API base URL for fetching context data.
+ * If apiBase prop is provided, use it.
+ * Otherwise, fall back to localhost for local development.
+ */
+function getApiBase(apiBase?: string): string {
+  if (apiBase) {
+    return apiBase;
+  }
   if (typeof window === 'undefined') {
     return '';
   }
@@ -125,6 +133,8 @@ function formatTokens(tokens: number): string {
 export interface ContextInspectorProps {
   /** Agent ID for fetching full context */
   agentId: string;
+  /** API base URL for fetching context data */
+  apiBase?: string;
 }
 
 /**
@@ -398,17 +408,17 @@ function MessageDetailView({ message }: { message: MessageDetail }) {
 /**
  * ContextInspector component displays full detailed context snapshot.
  */
-export function ContextInspector({ agentId }: ContextInspectorProps) {
+export function ContextInspector({ agentId, apiBase }: ContextInspectorProps) {
   const {
     data: contextData,
     isLoading,
     error,
   } = useQuery<FullContextResponse>({
-    queryKey: ['full-context', agentId],
+    queryKey: ['full-context', agentId, apiBase],
     queryFn: async () => {
-      const apiBase = getLocalApiBase();
+      const base = getApiBase(apiBase);
       const response = await fetch(
-        `${apiBase}/api/v1/configure/agents/${encodeURIComponent(agentId)}/full-context`,
+        `${base}/api/v1/configure/agents/${encodeURIComponent(agentId)}/full-context`,
       );
       if (!response.ok) {
         throw new Error('Failed to fetch full context');

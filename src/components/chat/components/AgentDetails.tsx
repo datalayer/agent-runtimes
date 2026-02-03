@@ -46,6 +46,8 @@ export interface AgentDetailsProps {
   messageCount: number;
   /** Agent ID for context usage tracking */
   agentId?: string;
+  /** API base URL for fetching context data */
+  apiBase?: string;
   /** Identity provider configurations */
   identityProviders?: {
     [K in OAuthProvider]?: {
@@ -90,7 +92,15 @@ interface CodemodeStatus {
   }>;
 }
 
-function getLocalApiBase(): string {
+/**
+ * Get the API base URL for fetching data.
+ * If apiBase prop is provided, use it.
+ * Otherwise, fall back to localhost for local development.
+ */
+function getApiBase(apiBase?: string): string {
+  if (apiBase) {
+    return apiBase;
+  }
   if (typeof window === 'undefined') {
     return '';
   }
@@ -103,10 +113,13 @@ function getLocalApiBase(): string {
 /**
  * Convert context snapshot data to CSV format and trigger download
  */
-async function downloadContextSnapshotAsCSV(agentId: string): Promise<void> {
-  const apiBase = getLocalApiBase();
+async function downloadContextSnapshotAsCSV(
+  agentId: string,
+  apiBase?: string,
+): Promise<void> {
+  const base = getApiBase(apiBase);
   const response = await fetch(
-    `${apiBase}/api/v1/configure/agents/${encodeURIComponent(agentId)}/full-context`,
+    `${base}/api/v1/configure/agents/${encodeURIComponent(agentId)}/full-context`,
   );
   if (!response.ok) {
     throw new Error('Failed to fetch context snapshot');
@@ -264,6 +277,7 @@ export function AgentDetails({
   url,
   messageCount,
   agentId,
+  apiBase,
   identityProviders,
   onIdentityConnect,
   onIdentityDisconnect,
@@ -274,11 +288,11 @@ export function AgentDetails({
   // Fetch MCP toolsets status
   const { data: mcpStatus, isLoading: mcpLoading } =
     useQuery<MCPToolsetsStatus>({
-      queryKey: ['mcp-toolsets-status'],
+      queryKey: ['mcp-toolsets-status', apiBase],
       queryFn: async () => {
-        const apiBase = getLocalApiBase();
+        const base = getApiBase(apiBase);
         const response = await fetch(
-          `${apiBase}/api/v1/configure/mcp-toolsets-status`,
+          `${base}/api/v1/configure/mcp-toolsets-status`,
         );
         if (!response.ok) {
           throw new Error('Failed to fetch MCP status');
@@ -291,11 +305,11 @@ export function AgentDetails({
   // Fetch Codemode status
   const { data: codemodeStatus, isLoading: codemodeLoading } =
     useQuery<CodemodeStatus>({
-      queryKey: ['codemode-status'],
+      queryKey: ['codemode-status', apiBase],
       queryFn: async () => {
-        const apiBase = getLocalApiBase();
+        const base = getApiBase(apiBase);
         const response = await fetch(
-          `${apiBase}/api/v1/configure/codemode-status`,
+          `${base}/api/v1/configure/codemode-status`,
         );
         if (!response.ok) {
           throw new Error('Failed to fetch Codemode status');
@@ -308,17 +322,14 @@ export function AgentDetails({
   // Mutation to toggle codemode
   const toggleCodemodeMutation = useMutation({
     mutationFn: async (enabled: boolean) => {
-      const apiBase = getLocalApiBase();
-      const response = await fetch(
-        `${apiBase}/api/v1/configure/codemode/toggle`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ enabled }),
+      const base = getApiBase(apiBase);
+      const response = await fetch(`${base}/api/v1/configure/codemode/toggle`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
-      );
+        body: JSON.stringify({ enabled }),
+      });
       if (!response.ok) {
         throw new Error('Failed to toggle codemode');
       }
@@ -749,6 +760,7 @@ export function AgentDetails({
         {agentId && (
           <ContextPanel
             agentId={agentId}
+            apiBase={apiBase}
             messageCount={messageCount}
             chartHeight="200px"
           />
@@ -779,7 +791,7 @@ export function AgentDetails({
                 size="small"
                 variant="invisible"
                 leadingVisual={DownloadIcon}
-                onClick={() => downloadContextSnapshotAsCSV(agentId)}
+                onClick={() => downloadContextSnapshotAsCSV(agentId, apiBase)}
               >
                 Download
               </Button>
@@ -793,7 +805,7 @@ export function AgentDetails({
                 borderColor: 'border.default',
               }}
             >
-              <ContextInspector agentId={agentId} />
+              <ContextInspector agentId={agentId} apiBase={apiBase} />
             </Box>
           </Box>
         )}
