@@ -395,13 +395,13 @@ def mcp_servers_config(
 @app.command("start-mcp-servers")
 def start_mcp_servers_cmd(
     agent_id: Annotated[
-        str,
+        Optional[str],
         typer.Option(
             "--agent-id",
             "-a",
-            help="The agent identifier",
+            help="The agent identifier (if not provided, operates on all agents)",
         ),
-    ],
+    ] = None,
     env_vars: Annotated[
         Optional[str],
         typer.Option(
@@ -419,30 +419,37 @@ def start_mcp_servers_cmd(
         typer.Option("--port", "-p", help="Agent-runtimes server port"),
     ] = 8000,
 ) -> None:
-    """Start MCP servers for a running agent.
+    """Start MCP servers for running agent(s).
 
-    Starts the catalog MCP servers configured for the specified agent.
+    Starts the catalog MCP servers configured for the specified agent,
+    or for all agents if no agent-id is provided.
+    
     Environment variables can be provided to configure the servers
     (e.g., API keys).
 
-    If the agent has Codemode enabled, the toolset will be rebuilt
+    If an agent has Codemode enabled, the toolset will be rebuilt
     to include the newly started servers as programmatic tools.
 
     Examples:
 
-        # Start MCP servers for an agent
+        # Start MCP servers for all agents
+        agent-runtimes start-mcp-servers
+
+        # Start MCP servers for a specific agent
         agent-runtimes start-mcp-servers --agent-id my-agent
 
         # Start with environment variables
         agent-runtimes start-mcp-servers --agent-id my-agent \\
             --env-vars "TAVILY_API_KEY:xxx;OTHER_KEY:yyy"
 
+        # Start for all agents with environment variables
+        agent-runtimes start-mcp-servers \\
+            --env-vars "TAVILY_API_KEY:xxx"
+
         # Connect to a different server
         agent-runtimes start-mcp-servers --agent-id my-agent \\
             --host 0.0.0.0 --port 8080
     """
-    console = typer.echo
-    
     try:
         parsed_env_vars = parse_env_vars(env_vars)
         result = start_agent_mcp_servers(
@@ -468,13 +475,13 @@ def start_mcp_servers_cmd(
 @app.command("stop-mcp-servers")
 def stop_mcp_servers_cmd(
     agent_id: Annotated[
-        str,
+        Optional[str],
         typer.Option(
             "--agent-id",
             "-a",
-            help="The agent identifier",
+            help="The agent identifier (if not provided, operates on all agents)",
         ),
-    ],
+    ] = None,
     host: Annotated[
         str,
         typer.Option("--host", "-h", help="Agent-runtimes server host"),
@@ -484,13 +491,17 @@ def stop_mcp_servers_cmd(
         typer.Option("--port", "-p", help="Agent-runtimes server port"),
     ] = 8000,
 ) -> None:
-    """Stop MCP servers for a running agent.
+    """Stop MCP servers for running agent(s).
 
-    Stops the catalog MCP servers configured for the specified agent.
+    Stops the catalog MCP servers configured for the specified agent,
+    or for all agents if no agent-id is provided.
 
     Examples:
 
-        # Stop MCP servers for an agent
+        # Stop MCP servers for all agents
+        agent-runtimes stop-mcp-servers
+
+        # Stop MCP servers for a specific agent
         agent-runtimes stop-mcp-servers --agent-id my-agent
 
         # Connect to a different server

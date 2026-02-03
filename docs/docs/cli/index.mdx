@@ -88,7 +88,11 @@ catalog = get_mcp_servers_catalog()
 # Get config MCP servers
 config = get_mcp_servers_config()
 
-# Start/stop MCP servers for an agent
+# Start/stop MCP servers for all agents
+start_agent_mcp_servers(env_vars={"TAVILY_API_KEY": "xxx"})
+stop_agent_mcp_servers()
+
+# Start/stop MCP servers for a specific agent
 start_agent_mcp_servers(agent_id="my-agent", env_vars={"TAVILY_API_KEY": "xxx"})
 stop_agent_mcp_servers(agent_id="my-agent")
 ```
@@ -713,7 +717,7 @@ list_mcp_servers_config(output=OutputFormat.table)
 
 ## `start-mcp-servers` Command
 
-Start MCP servers for a running agent. This command starts the catalog MCP servers configured for the specified agent.
+Start MCP servers for running agents. This command starts the catalog MCP servers configured for the specified agent, or for all running agents if no agent ID is provided.
 
 ```bash
 agent-runtimes start-mcp-servers [OPTIONS]
@@ -723,7 +727,7 @@ agent-runtimes start-mcp-servers [OPTIONS]
 
 | Option | Short | Default | Description |
 |--------|-------|---------|-------------|
-| `--agent-id` | `-a` | *required* | The agent identifier |
+| `--agent-id` | `-a` | - | The agent identifier (optional, if not provided starts MCP servers for all agents) |
 | `--env-vars` | `-e` | - | Environment variables in format `VAR1:VALUE1;VAR2:VALUE2` |
 | `--host` | `-h` | `127.0.0.1` | Agent-runtimes server host |
 | `--port` | `-p` | `8000` | Agent-runtimes server port |
@@ -731,11 +735,18 @@ agent-runtimes start-mcp-servers [OPTIONS]
 ### Examples
 
 ```bash
-# Start MCP servers for an agent
+# Start MCP servers for all running agents
+agent-runtimes start-mcp-servers
+
+# Start MCP servers for a specific agent
 agent-runtimes start-mcp-servers --agent-id my-agent
 
 # Start with environment variables (e.g., API keys)
 agent-runtimes start-mcp-servers --agent-id my-agent \
+    --env-vars "TAVILY_API_KEY:xxx;GITHUB_TOKEN:yyy"
+
+# Start MCP servers for all agents with environment variables
+agent-runtimes start-mcp-servers \
     --env-vars "TAVILY_API_KEY:xxx;GITHUB_TOKEN:yyy"
 
 # Connect to a different server
@@ -763,6 +774,21 @@ The command displays a formatted table showing the status of each MCP server:
 Started 1 server(s), 1 already running, 1 failed
 ```
 
+When no agent ID is provided, the output shows results for all agents:
+
+```
+╭─ MCP Servers Start - All Agents ──────────────────────────╮
+│ Agents processed: agent-1, agent-2                        │
+├───────────────────────────────────────────────────────────┤
+│ Server ID          │ Status                               │
+├────────────────────┼──────────────────────────────────────┤
+│ tavily             │ ✓ Started                            │
+│ github             │ ✓ Started                            │
+╰────────────────────┴──────────────────────────────────────╯
+
+Started 2 server(s) across 2 agent(s)
+```
+
 :::tip Codemode Toolset Rebuild
 If the agent has Codemode enabled, starting MCP servers will automatically rebuild the Codemode toolset to include the newly started servers as programmatic tools.
 :::
@@ -780,6 +806,21 @@ from agent_runtimes.commands import (
 env_vars = parse_env_vars("TAVILY_API_KEY:xxx;GITHUB_TOKEN:yyy")
 # Result: {"TAVILY_API_KEY": "xxx", "GITHUB_TOKEN": "yyy"}
 
+# Start MCP servers for all agents
+try:
+    result = start_agent_mcp_servers(
+        env_vars=env_vars,
+        host="localhost",
+        port=8000,
+    )
+    print(f"Agents processed: {result['agents_processed']}")
+    print(f"Started: {result['started_servers']}")
+    print(f"Already running: {result['already_running']}")
+    print(f"Failed: {result['failed_servers']}")
+except AgentMcpServersError as e:
+    print(f"Error: {e}")
+
+# Start MCP servers for a specific agent
 try:
     result = start_agent_mcp_servers(
         agent_id="my-agent",
@@ -800,7 +841,7 @@ except AgentMcpServersError as e:
 
 ## `stop-mcp-servers` Command
 
-Stop MCP servers for a running agent. This command stops the catalog MCP servers configured for the specified agent.
+Stop MCP servers for running agents. This command stops the catalog MCP servers configured for the specified agent, or for all running agents if no agent ID is provided.
 
 ```bash
 agent-runtimes stop-mcp-servers [OPTIONS]
@@ -810,14 +851,17 @@ agent-runtimes stop-mcp-servers [OPTIONS]
 
 | Option | Short | Default | Description |
 |--------|-------|---------|-------------|
-| `--agent-id` | `-a` | *required* | The agent identifier |
+| `--agent-id` | `-a` | - | The agent identifier (optional, if not provided stops MCP servers for all agents) |
 | `--host` | `-h` | `127.0.0.1` | Agent-runtimes server host |
 | `--port` | `-p` | `8000` | Agent-runtimes server port |
 
 ### Examples
 
 ```bash
-# Stop MCP servers for an agent
+# Stop MCP servers for all running agents
+agent-runtimes stop-mcp-servers
+
+# Stop MCP servers for a specific agent
 agent-runtimes stop-mcp-servers --agent-id my-agent
 
 # Connect to a different server
@@ -843,11 +887,40 @@ The command displays a formatted table showing the status of each MCP server:
 Stopped 1 server(s), 1 already stopped
 ```
 
+When no agent ID is provided, the output shows results for all agents:
+
+```
+╭─ MCP Servers Stop - All Agents ───────────────────────────╮
+│ Agents processed: agent-1, agent-2                        │
+├───────────────────────────────────────────────────────────┤
+│ Server ID          │ Status                               │
+├────────────────────┼──────────────────────────────────────┤
+│ tavily             │ ✓ Stopped                            │
+│ github             │ ✓ Stopped                            │
+╰────────────────────┴──────────────────────────────────────╯
+
+Stopped 2 server(s) across 2 agent(s)
+```
+
 ### Programmatic Usage
 
 ```python
 from agent_runtimes.commands import stop_agent_mcp_servers, AgentMcpServersError
 
+# Stop MCP servers for all agents
+try:
+    result = stop_agent_mcp_servers(
+        host="localhost",
+        port=8000,
+    )
+    print(f"Agents processed: {result['agents_processed']}")
+    print(f"Stopped: {result['stopped_servers']}")
+    print(f"Already stopped: {result['already_stopped']}")
+    print(f"Failed: {result['failed_servers']}")
+except AgentMcpServersError as e:
+    print(f"Error: {e}")
+
+# Stop MCP servers for a specific agent
 try:
     result = stop_agent_mcp_servers(
         agent_id="my-agent",

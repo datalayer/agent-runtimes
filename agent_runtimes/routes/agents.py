@@ -1072,7 +1072,8 @@ class StartAgentMcpServersRequest(BaseModel):
 
 class AgentMcpServersResponse(BaseModel):
     """Response for agent MCP server operations."""
-    agent_id: str
+    agent_id: str | None = Field(default=None, description="Agent ID (None if operating on all agents)")
+    agents_processed: list[str] = Field(default_factory=list, description="List of agent IDs processed")
     started_servers: list[str] = Field(default_factory=list)
     stopped_servers: list[str] = Field(default_factory=list)
     already_running: list[str] = Field(default_factory=list)
@@ -1082,13 +1083,181 @@ class AgentMcpServersResponse(BaseModel):
     message: str
 
 
+async def _start_mcp_servers_for_agent(
+    agent_id: str,
+    env_vars: list[EnvVar],
+) -> tuple[list[str], list[str], list[dict[str, str]], bool]:
+    """
+    Internal helper to start MCP servers for a single agent.
+    
+    Returns:
+        Tuple of (started_servers, already_running, failed_servers, codemode_rebuilt)
+    """
+    adapter, info = _agents[agent_id]
+    
+    # Get the agent's selected MCP servers
+    selected_servers: list[Any] = []
+    if hasattr(adapter, "_selected_mcp_servers"):
+        selected_servers = adapter._selected_mcp_servers
+    elif hasattr(adapter, "selected_mcp_server_ids"):
+        selected_servers = [
+            McpServerSelection(id=s, origin="catalog") 
+            for s in adapter.selected_mcp_server_ids
+        ]
+    
+    if not selected_servers:
+        return [], [], [], False
+    
+    lifecycle_manager = get_mcp_lifecycle_manager()
+    
+    started: list[str] = []
+    already_running: list[str] = []
+    failed: list[dict[str, str]] = []
+    
+    for selection in selected_servers:
+        server_id = selection.id if hasattr(selection, 'id') else str(selection)
+        is_config = getattr(selection, 'origin', 'catalog') == 'config'
+        
+        # Check if already running
+        if lifecycle_manager.is_server_running(server_id, is_config=is_config):
+            already_running.append(server_id)
+            continue
+        
+        # Get server config from appropriate source
+        config = None
+        if is_config:
+            config = lifecycle_manager.get_server_config_from_file(server_id)
+        else:
+            config = MCP_SERVER_CATALOG.get(server_id)
+        
+        if config is None:
+            failed.append({
+                "server_id": server_id,
+                "error": f"Server config not found (origin={getattr(selection, 'origin', 'unknown')})",
+            })
+            continue
+        
+        # Start the server
+        try:
+            instance = await lifecycle_manager.start_server(server_id, config)
+            if instance is not None:
+                started.append(server_id)
+            else:
+                error = lifecycle_manager._failed_servers.get(server_id, "Unknown error")
+                failed.append({"server_id": server_id, "error": str(error)})
+        except Exception as e:
+            failed.append({"server_id": server_id, "error": str(e)})
+    
+    # Rebuild Codemode toolset if enabled
+    codemode_rebuilt = False
+    if hasattr(adapter, "_codemode_builder") and adapter._codemode_builder is not None:
+        try:
+            logger.info(f"Rebuilding Codemode toolset for agent '{agent_id}'...")
+            new_codemode = adapter._codemode_builder(selected_servers)
+            if new_codemode is not None:
+                # Initialize the new toolset
+                await new_codemode.start()
+                # Update the adapter's non-MCP toolsets
+                if hasattr(adapter, "_non_mcp_toolsets"):
+                    # Remove old codemode toolset
+                    adapter._non_mcp_toolsets = [
+                        t for t in adapter._non_mcp_toolsets 
+                        if "Codemode" not in type(t).__name__
+                    ]
+                    adapter._non_mcp_toolsets.append(new_codemode)
+                codemode_rebuilt = True
+                logger.info(f"Codemode toolset rebuilt for agent '{agent_id}'")
+        except Exception as e:
+            logger.warning(f"Failed to rebuild Codemode toolset: {e}")
+    
+    return started, already_running, failed, codemode_rebuilt
+
+
+@router.post("/mcp-servers/start")
+async def start_all_agents_mcp_servers(
+    request: StartAgentMcpServersRequest,
+) -> AgentMcpServersResponse:
+    """
+    Start catalog MCP servers for all running agents.
+    
+    This endpoint starts the MCP servers that are configured in each agent's
+    selected_mcp_servers list. Environment variables can be provided to
+    configure the servers (e.g., API keys).
+    
+    If an agent has Codemode enabled, the Codemode toolset will be rebuilt
+    to include the newly started servers as programmatic tools.
+    
+    Args:
+        request: Environment variables to set before starting servers.
+        
+    Returns:
+        Aggregated status of server start operations across all agents.
+    """
+    if not _agents:
+        return AgentMcpServersResponse(
+            agent_id=None,
+            agents_processed=[],
+            message="No agents registered",
+        )
+    
+    try:
+        # Set environment variables before starting servers
+        for env_var in request.env_vars:
+            os.environ[env_var.name] = env_var.value
+            logger.info(f"Set environment variable: {env_var.name}")
+        
+        all_started: list[str] = []
+        all_already_running: list[str] = []
+        all_failed: list[dict[str, str]] = []
+        any_codemode_rebuilt = False
+        agents_processed: list[str] = []
+        
+        for agent_id in _agents:
+            started, already_running, failed, codemode_rebuilt = await _start_mcp_servers_for_agent(
+                agent_id, request.env_vars
+            )
+            all_started.extend(started)
+            all_already_running.extend(already_running)
+            all_failed.extend(failed)
+            if codemode_rebuilt:
+                any_codemode_rebuilt = True
+            agents_processed.append(agent_id)
+        
+        message_parts = [f"Processed {len(agents_processed)} agent(s)"]
+        if all_started:
+            message_parts.append(f"started {len(all_started)} server(s)")
+        if all_already_running:
+            message_parts.append(f"{len(all_already_running)} already running")
+        if all_failed:
+            message_parts.append(f"{len(all_failed)} failed")
+        
+        return AgentMcpServersResponse(
+            agent_id=None,
+            agents_processed=agents_processed,
+            started_servers=all_started,
+            already_running=all_already_running,
+            failed_servers=all_failed,
+            codemode_rebuilt=any_codemode_rebuilt,
+            message=", ".join(message_parts),
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to start MCP servers for all agents: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to start MCP servers: {str(e)}",
+        )
+
+
 @router.post("/{agent_id}/mcp-servers/start")
 async def start_agent_mcp_servers(
     agent_id: str,
     request: StartAgentMcpServersRequest,
 ) -> AgentMcpServersResponse:
     """
-    Start catalog MCP servers defined for a running agent.
+    Start catalog MCP servers defined for a specific running agent.
     
     This endpoint starts the MCP servers that are configured in the agent's
     selected_mcp_servers list. Environment variables can be provided to
@@ -1111,90 +1280,21 @@ async def start_agent_mcp_servers(
         raise HTTPException(status_code=404, detail=f"Agent not found: {agent_id}")
     
     try:
-        adapter, info = _agents[agent_id]
-        
         # Set environment variables before starting servers
         for env_var in request.env_vars:
             os.environ[env_var.name] = env_var.value
             logger.info(f"Set environment variable: {env_var.name}")
         
-        # Get the agent's selected MCP servers
-        selected_servers: list[Any] = []
-        if hasattr(adapter, "_selected_mcp_servers"):
-            selected_servers = adapter._selected_mcp_servers
-        elif hasattr(adapter, "selected_mcp_server_ids"):
-            selected_servers = [
-                McpServerSelection(id=s, origin="catalog") 
-                for s in adapter.selected_mcp_server_ids
-            ]
+        started, already_running, failed, codemode_rebuilt = await _start_mcp_servers_for_agent(
+            agent_id, request.env_vars
+        )
         
-        if not selected_servers:
+        if not started and not already_running and not failed:
             return AgentMcpServersResponse(
                 agent_id=agent_id,
+                agents_processed=[agent_id],
                 message="No MCP servers configured for this agent",
             )
-        
-        lifecycle_manager = get_mcp_lifecycle_manager()
-        
-        started: list[str] = []
-        already_running: list[str] = []
-        failed: list[dict[str, str]] = []
-        
-        for selection in selected_servers:
-            server_id = selection.id if hasattr(selection, 'id') else str(selection)
-            is_config = getattr(selection, 'origin', 'catalog') == 'config'
-            
-            # Check if already running
-            if lifecycle_manager.is_server_running(server_id, is_config=is_config):
-                already_running.append(server_id)
-                continue
-            
-            # Get server config from appropriate source
-            config = None
-            if is_config:
-                config = lifecycle_manager.get_server_config_from_file(server_id)
-            else:
-                config = MCP_SERVER_CATALOG.get(server_id)
-            
-            if config is None:
-                failed.append({
-                    "server_id": server_id,
-                    "error": f"Server config not found (origin={getattr(selection, 'origin', 'unknown')})",
-                })
-                continue
-            
-            # Start the server
-            try:
-                instance = await lifecycle_manager.start_server(server_id, config)
-                if instance is not None:
-                    started.append(server_id)
-                else:
-                    error = lifecycle_manager._failed_servers.get(server_id, "Unknown error")
-                    failed.append({"server_id": server_id, "error": str(error)})
-            except Exception as e:
-                failed.append({"server_id": server_id, "error": str(e)})
-        
-        # Rebuild Codemode toolset if enabled
-        codemode_rebuilt = False
-        if hasattr(adapter, "_codemode_builder") and adapter._codemode_builder is not None:
-            try:
-                logger.info(f"Rebuilding Codemode toolset for agent '{agent_id}'...")
-                new_codemode = adapter._codemode_builder(selected_servers)
-                if new_codemode is not None:
-                    # Initialize the new toolset
-                    await new_codemode.start()
-                    # Update the adapter's non-MCP toolsets
-                    if hasattr(adapter, "_non_mcp_toolsets"):
-                        # Remove old codemode toolset
-                        adapter._non_mcp_toolsets = [
-                            t for t in adapter._non_mcp_toolsets 
-                            if "Codemode" not in type(t).__name__
-                        ]
-                        adapter._non_mcp_toolsets.append(new_codemode)
-                    codemode_rebuilt = True
-                    logger.info(f"Codemode toolset rebuilt for agent '{agent_id}'")
-            except Exception as e:
-                logger.warning(f"Failed to rebuild Codemode toolset: {e}")
         
         message_parts = []
         if started:
@@ -1206,6 +1306,7 @@ async def start_agent_mcp_servers(
         
         return AgentMcpServersResponse(
             agent_id=agent_id,
+            agents_processed=[agent_id],
             started_servers=started,
             already_running=already_running,
             failed_servers=failed,
@@ -1223,12 +1324,122 @@ async def start_agent_mcp_servers(
         )
 
 
+async def _stop_mcp_servers_for_agent(
+    agent_id: str,
+) -> tuple[list[str], list[str], list[dict[str, str]]]:
+    """
+    Internal helper to stop MCP servers for a single agent.
+    
+    Returns:
+        Tuple of (stopped_servers, already_stopped, failed_servers)
+    """
+    adapter, info = _agents[agent_id]
+    
+    # Get the agent's selected MCP servers
+    selected_servers: list[Any] = []
+    if hasattr(adapter, "_selected_mcp_servers"):
+        selected_servers = adapter._selected_mcp_servers
+    elif hasattr(adapter, "selected_mcp_server_ids"):
+        selected_servers = [
+            McpServerSelection(id=s, origin="catalog") 
+            for s in adapter.selected_mcp_server_ids
+        ]
+    
+    if not selected_servers:
+        return [], [], []
+    
+    lifecycle_manager = get_mcp_lifecycle_manager()
+    
+    stopped: list[str] = []
+    already_stopped: list[str] = []
+    failed: list[dict[str, str]] = []
+    
+    for selection in selected_servers:
+        server_id = selection.id if hasattr(selection, 'id') else str(selection)
+        is_config = getattr(selection, 'origin', 'catalog') == 'config'
+        
+        # Check if already stopped
+        if not lifecycle_manager.is_server_running(server_id, is_config=is_config):
+            already_stopped.append(server_id)
+            continue
+        
+        # Stop the server
+        try:
+            success = await lifecycle_manager.stop_server(server_id, is_config=is_config)
+            if success:
+                stopped.append(server_id)
+            else:
+                failed.append({"server_id": server_id, "error": "Stop returned False"})
+        except Exception as e:
+            failed.append({"server_id": server_id, "error": str(e)})
+    
+    return stopped, already_stopped, failed
+
+
+@router.post("/mcp-servers/stop")
+async def stop_all_agents_mcp_servers() -> AgentMcpServersResponse:
+    """
+    Stop catalog MCP servers for all running agents.
+    
+    This endpoint stops the MCP servers that are configured in each agent's
+    selected_mcp_servers list.
+    
+    Returns:
+        Aggregated status of server stop operations across all agents.
+    """
+    if not _agents:
+        return AgentMcpServersResponse(
+            agent_id=None,
+            agents_processed=[],
+            message="No agents registered",
+        )
+    
+    try:
+        all_stopped: list[str] = []
+        all_already_stopped: list[str] = []
+        all_failed: list[dict[str, str]] = []
+        agents_processed: list[str] = []
+        
+        for agent_id in _agents:
+            stopped, already_stopped, failed = await _stop_mcp_servers_for_agent(agent_id)
+            all_stopped.extend(stopped)
+            all_already_stopped.extend(already_stopped)
+            all_failed.extend(failed)
+            agents_processed.append(agent_id)
+        
+        message_parts = [f"Processed {len(agents_processed)} agent(s)"]
+        if all_stopped:
+            message_parts.append(f"stopped {len(all_stopped)} server(s)")
+        if all_already_stopped:
+            message_parts.append(f"{len(all_already_stopped)} already stopped")
+        if all_failed:
+            message_parts.append(f"{len(all_failed)} failed")
+        
+        return AgentMcpServersResponse(
+            agent_id=None,
+            agents_processed=agents_processed,
+            stopped_servers=all_stopped,
+            already_stopped=all_already_stopped,
+            failed_servers=all_failed,
+            message=", ".join(message_parts),
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to stop MCP servers for all agents: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to stop MCP servers: {str(e)}",
+        )
+
+
 @router.post("/{agent_id}/mcp-servers/stop")
 async def stop_agent_mcp_servers(
     agent_id: str,
 ) -> AgentMcpServersResponse:
     """
-    Stop catalog MCP servers for a running agent.
+    Stop catalog MCP servers for a specific running agent.
     
     This endpoint stops the MCP servers that are configured in the agent's
     selected_mcp_servers list.
@@ -1246,48 +1457,14 @@ async def stop_agent_mcp_servers(
         raise HTTPException(status_code=404, detail=f"Agent not found: {agent_id}")
     
     try:
-        adapter, info = _agents[agent_id]
+        stopped, already_stopped, failed = await _stop_mcp_servers_for_agent(agent_id)
         
-        # Get the agent's selected MCP servers
-        selected_servers: list[Any] = []
-        if hasattr(adapter, "_selected_mcp_servers"):
-            selected_servers = adapter._selected_mcp_servers
-        elif hasattr(adapter, "selected_mcp_server_ids"):
-            selected_servers = [
-                McpServerSelection(id=s, origin="catalog") 
-                for s in adapter.selected_mcp_server_ids
-            ]
-        
-        if not selected_servers:
+        if not stopped and not already_stopped and not failed:
             return AgentMcpServersResponse(
                 agent_id=agent_id,
+                agents_processed=[agent_id],
                 message="No MCP servers configured for this agent",
             )
-        
-        lifecycle_manager = get_mcp_lifecycle_manager()
-        
-        stopped: list[str] = []
-        already_stopped: list[str] = []
-        failed: list[dict[str, str]] = []
-        
-        for selection in selected_servers:
-            server_id = selection.id if hasattr(selection, 'id') else str(selection)
-            is_config = getattr(selection, 'origin', 'catalog') == 'config'
-            
-            # Check if already stopped
-            if not lifecycle_manager.is_server_running(server_id, is_config=is_config):
-                already_stopped.append(server_id)
-                continue
-            
-            # Stop the server
-            try:
-                success = await lifecycle_manager.stop_server(server_id, is_config=is_config)
-                if success:
-                    stopped.append(server_id)
-                else:
-                    failed.append({"server_id": server_id, "error": "Stop returned False"})
-            except Exception as e:
-                failed.append({"server_id": server_id, "error": str(e)})
         
         message_parts = []
         if stopped:
@@ -1299,6 +1476,7 @@ async def stop_agent_mcp_servers(
         
         return AgentMcpServersResponse(
             agent_id=agent_id,
+            agents_processed=[agent_id],
             stopped_servers=stopped,
             already_stopped=already_stopped,
             failed_servers=failed,

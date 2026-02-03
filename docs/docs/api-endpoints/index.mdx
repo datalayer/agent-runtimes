@@ -132,14 +132,65 @@ Dynamically update an agent's selected MCP servers without recreating the agent.
 
 ### Start Agent MCP Servers
 
+Start catalog MCP servers defined for running agents. Environment variables can be provided to configure the servers (e.g., API keys). If the agent has Codemode enabled, the Codemode toolset will be rebuilt to include the newly started servers as programmatic tools.
+
+#### Start MCP Servers for All Agents
+
+```http
+POST /api/v1/agents/mcp-servers/start
+Content-Type: application/json
+```
+
+Start catalog MCP servers for **all** running agents.
+
+**Request Body:**
+
+```json
+{
+  "env_vars": [
+    {"name": "TAVILY_API_KEY", "value": "tvly-xxx"},
+    {"name": "GITHUB_TOKEN", "value": "ghp_xxx"}
+  ]
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `env_vars` | array | No | List of environment variables to set before starting servers |
+| `env_vars[].name` | string | Yes | Environment variable name |
+| `env_vars[].value` | string | Yes | Environment variable value |
+
+**Example Request:**
+
+```bash
+curl -X POST http://localhost:8000/api/v1/agents/mcp-servers/start \
+  -H "Content-Type: application/json" \
+  -d '{"env_vars": [{"name": "TAVILY_API_KEY", "value": "tvly-xxx"}]}'
+```
+
+**Response:** `200 OK`
+
+```json
+{
+  "agents_processed": ["agent-1", "agent-2"],
+  "started_servers": ["tavily", "github"],
+  "stopped_servers": [],
+  "already_running": [],
+  "already_stopped": [],
+  "failed_servers": [],
+  "codemode_rebuilt": true,
+  "message": "Started 2 server(s) across 2 agent(s)"
+}
+```
+
+#### Start MCP Servers for a Specific Agent
+
 ```http
 POST /api/v1/agents/{agent_id}/mcp-servers/start
 Content-Type: application/json
 ```
 
-Start catalog MCP servers defined for a running agent. Environment variables can be provided to configure the servers (e.g., API keys).
-
-If the agent has Codemode enabled, the Codemode toolset will be rebuilt to include the newly started servers as programmatic tools.
+Start catalog MCP servers for a **specific** running agent.
 
 **Path Parameters:**
 
@@ -189,11 +240,12 @@ curl -X POST http://localhost:8000/api/v1/agents/my-agent/mcp-servers/start \
 }
 ```
 
-**Response Fields:**
+#### Response Fields
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `agent_id` | string | The agent identifier |
+| `agent_id` | string | The agent identifier (only for single-agent endpoint) |
+| `agents_processed` | array | List of agent IDs that were processed (only for all-agents endpoint) |
 | `started_servers` | array | List of server IDs that were successfully started |
 | `already_running` | array | List of server IDs that were already running |
 | `failed_servers` | array | List of servers that failed to start with error details |
@@ -204,16 +256,49 @@ curl -X POST http://localhost:8000/api/v1/agents/my-agent/mcp-servers/start \
 
 | Code | Description |
 |------|-------------|
-| `404` | Agent not found |
+| `404` | Agent not found (single-agent endpoint only) |
 | `500` | Failed to start MCP servers |
 
 ### Stop Agent MCP Servers
+
+Stop catalog MCP servers for running agents.
+
+#### Stop MCP Servers for All Agents
+
+```http
+POST /api/v1/agents/mcp-servers/stop
+```
+
+Stop catalog MCP servers for **all** running agents.
+
+**Example Request:**
+
+```bash
+curl -X POST http://localhost:8000/api/v1/agents/mcp-servers/stop
+```
+
+**Response:** `200 OK`
+
+```json
+{
+  "agents_processed": ["agent-1", "agent-2"],
+  "started_servers": [],
+  "stopped_servers": ["tavily", "github"],
+  "already_running": [],
+  "already_stopped": [],
+  "failed_servers": [],
+  "codemode_rebuilt": false,
+  "message": "Stopped 2 server(s) across 2 agent(s)"
+}
+```
+
+#### Stop MCP Servers for a Specific Agent
 
 ```http
 POST /api/v1/agents/{agent_id}/mcp-servers/stop
 ```
 
-Stop catalog MCP servers for a running agent.
+Stop catalog MCP servers for a **specific** running agent.
 
 **Path Parameters:**
 
@@ -242,11 +327,12 @@ curl -X POST http://localhost:8000/api/v1/agents/my-agent/mcp-servers/stop
 }
 ```
 
-**Response Fields:**
+#### Response Fields
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `agent_id` | string | The agent identifier |
+| `agent_id` | string | The agent identifier (only for single-agent endpoint) |
+| `agents_processed` | array | List of agent IDs that were processed (only for all-agents endpoint) |
 | `stopped_servers` | array | List of server IDs that were successfully stopped |
 | `already_stopped` | array | List of server IDs that were already stopped |
 | `failed_servers` | array | List of servers that failed to stop with error details |
@@ -256,7 +342,7 @@ curl -X POST http://localhost:8000/api/v1/agents/my-agent/mcp-servers/stop
 
 | Code | Description |
 |------|-------------|
-| `404` | Agent not found |
+| `404` | Agent not found (single-agent endpoint only) |
 | `500` | Failed to stop MCP servers |
 
 ### Delete Agent

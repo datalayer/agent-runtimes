@@ -13,7 +13,7 @@ Usage as library:
         parse_env_vars,
     )
     
-    # Start MCP servers with env vars
+    # Start MCP servers for a specific agent
     result = start_agent_mcp_servers(
         agent_id="my-agent",
         env_vars={"TAVILY_API_KEY": "xxx"},
@@ -21,9 +21,17 @@ Usage as library:
         port=8000,
     )
     
+    # Start MCP servers for all agents (agent_id=None)
+    result = start_agent_mcp_servers(
+        agent_id=None,
+        env_vars={"TAVILY_API_KEY": "xxx"},
+        host="127.0.0.1",
+        port=8000,
+    )
+    
     # Stop MCP servers
     result = stop_agent_mcp_servers(
-        agent_id="my-agent",
+        agent_id="my-agent",  # or None for all agents
         host="127.0.0.1",
         port=8000,
     )
@@ -77,17 +85,17 @@ def parse_env_vars(env_vars_str: str | None) -> dict[str, str]:
 
 
 def start_agent_mcp_servers(
-    agent_id: str,
+    agent_id: str | None = None,
     env_vars: dict[str, str] | None = None,
     host: str = "127.0.0.1",
     port: int = 8000,
     timeout: float = 60.0,
 ) -> dict[str, Any]:
     """
-    Start MCP servers for a running agent.
+    Start MCP servers for a running agent or all agents.
     
     Args:
-        agent_id: The agent identifier.
+        agent_id: The agent identifier. If None, operates on all agents.
         env_vars: Environment variables to set before starting servers.
         host: Server host.
         port: Server port.
@@ -100,7 +108,10 @@ def start_agent_mcp_servers(
         AgentMcpServersError: If the request fails.
     """
     base_url = f"http://{host}:{port}"
-    url = f"{base_url}/api/v1/agents/{agent_id}/mcp-servers/start"
+    if agent_id:
+        url = f"{base_url}/api/v1/agents/{agent_id}/mcp-servers/start"
+    else:
+        url = f"{base_url}/api/v1/agents/mcp-servers/start"
     
     # Build request body
     body = {
@@ -135,16 +146,16 @@ def start_agent_mcp_servers(
 
 
 def stop_agent_mcp_servers(
-    agent_id: str,
+    agent_id: str | None = None,
     host: str = "127.0.0.1",
     port: int = 8000,
     timeout: float = 60.0,
 ) -> dict[str, Any]:
     """
-    Stop MCP servers for a running agent.
+    Stop MCP servers for a running agent or all agents.
     
     Args:
-        agent_id: The agent identifier.
+        agent_id: The agent identifier. If None, operates on all agents.
         host: Server host.
         port: Server port.
         timeout: Request timeout in seconds.
@@ -156,7 +167,10 @@ def stop_agent_mcp_servers(
         AgentMcpServersError: If the request fails.
     """
     base_url = f"http://{host}:{port}"
-    url = f"{base_url}/api/v1/agents/{agent_id}/mcp-servers/stop"
+    if agent_id:
+        url = f"{base_url}/api/v1/agents/{agent_id}/mcp-servers/stop"
+    else:
+        url = f"{base_url}/api/v1/agents/mcp-servers/stop"
     
     try:
         with httpx.Client(timeout=timeout) as client:
@@ -192,12 +206,16 @@ def print_mcp_servers_result(result: dict[str, Any], operation: str = "start") -
     """
     console = Console()
     
-    agent_id = result.get("agent_id", "unknown")
+    agent_id = result.get("agent_id")
+    agents_processed = result.get("agents_processed", [])
     message = result.get("message", "")
     codemode_rebuilt = result.get("codemode_rebuilt", False)
     
     # Create summary panel
-    title = f"MCP Servers {operation.title()} - Agent: {agent_id}"
+    if agent_id:
+        title = f"MCP Servers {operation.title()} - Agent: {agent_id}"
+    else:
+        title = f"MCP Servers {operation.title()} - All Agents ({len(agents_processed)})"
     
     # Build status table
     table = Table(box=box.ROUNDED, show_header=True, header_style="bold")
@@ -223,6 +241,9 @@ def print_mcp_servers_result(result: dict[str, Any], operation: str = "start") -
     # Print results
     console.print()
     console.print(Panel(table, title=title, border_style="blue"))
+    
+    if agents_processed and not agent_id:
+        console.print(f"[dim]Agents processed: {', '.join(agents_processed)}[/dim]")
     
     if codemode_rebuilt:
         console.print("[green]✓ Codemode toolset rebuilt[/green]")
