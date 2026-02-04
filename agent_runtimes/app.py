@@ -400,11 +400,25 @@ async def _create_and_register_cli_agent(
                     allow_direct_tool_calls=False,
                 )
                 
-                # Create new toolset with the new registry
+                # Get fresh sandbox from manager (may have been reconfigured via API)
+                # Do NOT use the captured shared_sandbox from agent creation time
+                # This ensures that if the sandbox manager was reconfigured
+                # (e.g., from local-eval to local-jupyter via the /mcp-servers/start API),
+                # the rebuilt codemode will use the new sandbox configuration.
+                fresh_sandbox = None
+                try:
+                    from .services.code_sandbox_manager import get_code_sandbox_manager
+                    sandbox_manager = get_code_sandbox_manager()
+                    fresh_sandbox = sandbox_manager.get_sandbox()
+                    logger.info(f"rebuild_codemode: Using {sandbox_manager.variant} sandbox (url={sandbox_manager.config.jupyter_url})")
+                except ImportError as e:
+                    logger.warning(f"rebuild_codemode: code_sandboxes not available, using None: {e}")
+                
+                # Create new toolset with the new registry and fresh sandbox
                 new_codemode = CodemodeToolset(
                     registry=new_registry,
                     config=new_config,
-                    sandbox=shared_sandbox,
+                    sandbox=fresh_sandbox,
                     allow_discovery_tools=True,
                 )
                 
