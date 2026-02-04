@@ -575,12 +575,30 @@ async def create_agent(request: CreateAgentRequest, http_request: Request) -> Cr
             codemode_builder = None
             if request.enable_codemode:
                 def rebuild_codemode(new_servers: list[str | dict[str, str]]) -> Any:
-                    """Rebuild codemode toolset with new MCP server selection."""
+                    """Rebuild codemode toolset with new MCP server selection.
+                    
+                    IMPORTANT: Gets a fresh sandbox from CodeSandboxManager each time.
+                    This ensures that if the sandbox manager was reconfigured
+                    (e.g., from local-eval to local-jupyter via the /mcp-servers/start API),
+                    the rebuilt codemode will use the new sandbox configuration.
+                    """
                     # Create a temporary request object with new servers
                     import copy
                     temp_request = copy.copy(request)
                     temp_request.selected_mcp_servers = new_servers
-                    return _build_codemode_toolset(temp_request, http_request, sandbox=shared_sandbox)
+                    
+                    # Get fresh sandbox from manager (may have been reconfigured)
+                    # Do NOT use the captured shared_sandbox from agent creation time
+                    fresh_sandbox = None
+                    try:
+                        from ..services.code_sandbox_manager import get_code_sandbox_manager
+                        sandbox_manager = get_code_sandbox_manager()
+                        fresh_sandbox = sandbox_manager.get_sandbox()
+                        logger.info(f"Rebuild codemode using {sandbox_manager.variant} sandbox")
+                    except ImportError as e:
+                        logger.warning(f"code_sandboxes not available: {e}")
+                    
+                    return _build_codemode_toolset(temp_request, http_request, sandbox=fresh_sandbox)
                 codemode_builder = rebuild_codemode
             
             agent = PydanticAIAdapter(
