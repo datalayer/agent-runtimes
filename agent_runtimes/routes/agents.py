@@ -1246,27 +1246,61 @@ class AgentMcpServersResponse(BaseModel):
 async def _start_mcp_servers_for_agent(
     agent_id: str,
     env_vars: list[EnvVar],
+    request: Request | None = None,
 ) -> tuple[list[str], list[str], list[dict[str, str]], bool]:
     """
     Internal helper to start MCP servers for a single agent.
+    
+    Args:
+        agent_id: The agent ID to start servers for
+        env_vars: Environment variables to set before starting
+        request: Optional FastAPI request (used to access app.state.pending_mcp_servers)
     
     Returns:
         Tuple of (started_servers, already_running, failed_servers, codemode_rebuilt)
     """
     adapter, info = _agents[agent_id]
     
+    logger.info(f"_start_mcp_servers_for_agent: Starting for agent '{agent_id}'")
+    logger.info(f"_start_mcp_servers_for_agent: Adapter type: {type(adapter).__name__}")
+    
     # Get the agent's selected MCP servers
     selected_servers: list[Any] = []
     if hasattr(adapter, "_selected_mcp_servers"):
         selected_servers = adapter._selected_mcp_servers
+        logger.info(f"_start_mcp_servers_for_agent: Found {len(selected_servers)} servers in adapter._selected_mcp_servers")
     elif hasattr(adapter, "selected_mcp_server_ids"):
         selected_servers = [
             McpServerSelection(id=s, origin="catalog") 
             for s in adapter.selected_mcp_server_ids
         ]
+        logger.info(f"_start_mcp_servers_for_agent: Found {len(selected_servers)} servers in adapter.selected_mcp_server_ids")
+    else:
+        logger.warning(f"_start_mcp_servers_for_agent: Adapter has no selected MCP servers attribute")
+    
+    # If no selected servers, check for pending servers in app.state
+    # (set when --no-catalog-mcp-servers flag was used at startup)
+    if not selected_servers and request is not None:
+        try:
+            pending_mcp_servers = getattr(request.app.state, 'pending_mcp_servers', [])
+            if pending_mcp_servers:
+                logger.info(f"_start_mcp_servers_for_agent: Using {len(pending_mcp_servers)} pending MCP servers from app.state")
+                selected_servers = [
+                    McpServerSelection(id=s.id, origin="catalog")
+                    for s in pending_mcp_servers
+                ]
+                # Also update the adapter's selected servers so subsequent calls work
+                if hasattr(adapter, "_selected_mcp_servers"):
+                    adapter._selected_mcp_servers = selected_servers
+                    logger.info(f"_start_mcp_servers_for_agent: Updated adapter._selected_mcp_servers")
+        except Exception as e:
+            logger.warning(f"_start_mcp_servers_for_agent: Failed to get pending_mcp_servers: {e}")
     
     if not selected_servers:
+        logger.info(f"_start_mcp_servers_for_agent: No MCP servers selected for agent '{agent_id}', nothing to start")
         return [], [], [], False
+    
+    logger.info(f"_start_mcp_servers_for_agent: Will try to start {len(selected_servers)} servers: {[getattr(s, 'id', str(s)) for s in selected_servers]}")
     
     lifecycle_manager = get_mcp_lifecycle_manager()
     
@@ -1280,6 +1314,7 @@ async def _start_mcp_servers_for_agent(
         
         # Check if already running
         if lifecycle_manager.is_server_running(server_id, is_config=is_config):
+            logger.info(f"_start_mcp_servers_for_agent: Server '{server_id}' is already running")
             already_running.append(server_id)
             continue
         
@@ -1287,10 +1322,13 @@ async def _start_mcp_servers_for_agent(
         config = None
         if is_config:
             config = lifecycle_manager.get_server_config_from_file(server_id)
+            logger.info(f"_start_mcp_servers_for_agent: Got config for '{server_id}' from config file: {config is not None}")
         else:
             config = MCP_SERVER_CATALOG.get(server_id)
+            logger.info(f"_start_mcp_servers_for_agent: Got config for '{server_id}' from catalog: {config is not None}")
         
         if config is None:
+            logger.warning(f"_start_mcp_servers_for_agent: Server config not found for '{server_id}'")
             failed.append({
                 "server_id": server_id,
                 "error": f"Server config not found (origin={getattr(selection, 'origin', 'unknown')})",
@@ -1299,13 +1337,17 @@ async def _start_mcp_servers_for_agent(
         
         # Start the server
         try:
+            logger.info(f"_start_mcp_servers_for_agent: Starting server '{server_id}'...")
             instance = await lifecycle_manager.start_server(server_id, config)
             if instance is not None:
+                logger.info(f"_start_mcp_servers_for_agent: ✓ Successfully started server '{server_id}'")
                 started.append(server_id)
             else:
                 error = lifecycle_manager._failed_servers.get(server_id, "Unknown error")
+                logger.warning(f"_start_mcp_servers_for_agent: ✗ Failed to start server '{server_id}': {error}")
                 failed.append({"server_id": server_id, "error": str(error)})
         except Exception as e:
+            logger.error(f"_start_mcp_servers_for_agent: ✗ Exception starting server '{server_id}': {e}")
             failed.append({"server_id": server_id, "error": str(e)})
     
     # Rebuild Codemode toolset if enabled
@@ -1335,7 +1377,8 @@ async def _start_mcp_servers_for_agent(
 
 @router.post("/mcp-servers/start")
 async def start_all_agents_mcp_servers(
-    request: StartAgentMcpServersRequest,
+    body: StartAgentMcpServersRequest,
+    request: Request,
 ) -> AgentMcpServersResponse:
     """
     Start catalog MCP servers for all running agents.
@@ -1351,7 +1394,8 @@ async def start_all_agents_mcp_servers(
     to use the Jupyter kernel for code execution instead of local eval.
     
     Args:
-        request: Environment variables and optional jupyter_sandbox URL.
+        body: Environment variables and optional jupyter_sandbox URL.
+        request: FastAPI request object (provides access to app.state).
         
     Returns:
         Aggregated status of server start operations across all agents.
@@ -1365,21 +1409,21 @@ async def start_all_agents_mcp_servers(
     
     try:
         # Set environment variables before starting servers
-        for env_var in request.env_vars:
+        for env_var in body.env_vars:
             os.environ[env_var.name] = env_var.value
             logger.info(f"Set environment variable: {env_var.name}")
         
         # Configure sandbox manager if jupyter_sandbox is provided
         sandbox_configured = False
         sandbox_variant: str | None = None
-        if request.jupyter_sandbox:
+        if body.jupyter_sandbox:
             try:
                 from ..services.code_sandbox_manager import get_code_sandbox_manager
                 sandbox_manager = get_code_sandbox_manager()
-                sandbox_manager.configure_from_url(request.jupyter_sandbox)
+                sandbox_manager.configure_from_url(body.jupyter_sandbox)
                 sandbox_configured = True
                 sandbox_variant = sandbox_manager.variant
-                logger.info(f"Configured sandbox manager for Jupyter: {request.jupyter_sandbox.split('?')[0]}")
+                logger.info(f"Configured sandbox manager for Jupyter: {body.jupyter_sandbox.split('?')[0]}")
             except Exception as e:
                 logger.warning(f"Failed to configure Jupyter sandbox: {e}")
         
@@ -1391,7 +1435,7 @@ async def start_all_agents_mcp_servers(
         
         for agent_id in _agents:
             started, already_running, failed, codemode_rebuilt = await _start_mcp_servers_for_agent(
-                agent_id, request.env_vars
+                agent_id, body.env_vars, request
             )
             all_started.extend(started)
             all_already_running.extend(already_running)
@@ -1435,7 +1479,8 @@ async def start_all_agents_mcp_servers(
 @router.post("/{agent_id}/mcp-servers/start")
 async def start_agent_mcp_servers(
     agent_id: str,
-    request: StartAgentMcpServersRequest,
+    body: StartAgentMcpServersRequest,
+    request: Request,
 ) -> AgentMcpServersResponse:
     """
     Start catalog MCP servers defined for a specific running agent.
@@ -1452,7 +1497,8 @@ async def start_agent_mcp_servers(
     
     Args:
         agent_id: The agent identifier.
-        request: Environment variables and optional jupyter_sandbox URL.
+        body: Environment variables and optional jupyter_sandbox URL.
+        request: FastAPI request object (provides access to app.state).
         
     Returns:
         Status of each server start operation.
@@ -1465,26 +1511,26 @@ async def start_agent_mcp_servers(
     
     try:
         # Set environment variables before starting servers
-        for env_var in request.env_vars:
+        for env_var in body.env_vars:
             os.environ[env_var.name] = env_var.value
             logger.info(f"Set environment variable: {env_var.name}")
         
         # Configure sandbox manager if jupyter_sandbox is provided
         sandbox_configured = False
         sandbox_variant: str | None = None
-        if request.jupyter_sandbox:
+        if body.jupyter_sandbox:
             try:
                 from ..services.code_sandbox_manager import get_code_sandbox_manager
                 sandbox_manager = get_code_sandbox_manager()
-                sandbox_manager.configure_from_url(request.jupyter_sandbox)
+                sandbox_manager.configure_from_url(body.jupyter_sandbox)
                 sandbox_configured = True
                 sandbox_variant = sandbox_manager.variant
-                logger.info(f"Configured sandbox manager for Jupyter: {request.jupyter_sandbox.split('?')[0]}")
+                logger.info(f"Configured sandbox manager for Jupyter: {body.jupyter_sandbox.split('?')[0]}")
             except Exception as e:
                 logger.warning(f"Failed to configure Jupyter sandbox: {e}")
         
         started, already_running, failed, codemode_rebuilt = await _start_mcp_servers_for_agent(
-            agent_id, request.env_vars
+            agent_id, body.env_vars, request
         )
         
         if not started and not already_running and not failed and not sandbox_configured:

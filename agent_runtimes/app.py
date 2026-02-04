@@ -288,11 +288,18 @@ async def _create_and_register_cli_agent(
     
     # Build selected MCP servers list for the adapter
     # When codemode is enabled, MCP servers are accessed via CodemodeToolset registry
+    # If all_mcp_servers is empty but we have pending servers in app state, use those for selection
     from .routes.agents import McpServerSelection
+    
+    # Check for pending MCP servers (stored when --no-catalog-mcp-servers is used)
+    pending_servers = getattr(app.state, 'pending_mcp_servers', []) if app else []
+    servers_for_selection = all_mcp_servers if all_mcp_servers else pending_servers
+    
     selected_mcp_servers = [
         McpServerSelection(id=s.id, origin="catalog")
-        for s in all_mcp_servers
+        for s in servers_for_selection
     ]
+    logger.info(f"Agent '{agent_id}' selected MCP servers: {[s.id for s in selected_mcp_servers]}")
     
     # Create the underlying Pydantic AI Agent
     # Use default model - can be configured via environment
@@ -535,8 +542,14 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
                 
                 if no_catalog_mcp_servers:
                     # Skip all catalog MCP servers (both from agent spec and CLI --mcp-servers)
+                    # But still store the agent spec servers so they can be started later via API
                     logger.info("Catalog MCP servers disabled (--no-catalog-mcp-servers flag)")
                     all_mcp_servers = []
+                    
+                    # Store agent spec servers in app state for later API startup
+                    # This enables the /api/v1/agents/mcp-servers/start endpoint to start them
+                    app.state.pending_mcp_servers = list(agent_spec.mcp_servers)
+                    logger.info(f"Stored {len(agent_spec.mcp_servers)} pending MCP servers for later API startup: {[s.id for s in agent_spec.mcp_servers]}")
                 elif cli_mcp_servers:
                     # CLI MCP servers OVERRIDE agent spec servers
                     logger.info(f"CLI --mcp-servers specified: using ONLY {cli_mcp_servers} (overriding agent spec servers)")
