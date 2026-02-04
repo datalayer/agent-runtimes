@@ -477,6 +477,7 @@ interface AgentConfigurationProps {
   enableCodemode?: boolean;
   allowDirectToolCalls?: boolean;
   enableToolReranker?: boolean;
+  useJupyterSandbox?: boolean;
   availableSkills?: SkillOption[];
   selectedSkills?: string[];
   /** Selected MCP servers */
@@ -502,6 +503,7 @@ interface AgentConfigurationProps {
   onEnableCodemodeChange?: (enabled: boolean) => void;
   onAllowDirectToolCallsChange?: (enabled: boolean) => void;
   onEnableToolRerankerChange?: (enabled: boolean) => void;
+  onUseJupyterSandboxChange?: (enabled: boolean) => void;
   onSelectedSkillsChange?: (skills: string[]) => void;
   /** Callback when MCP server selection changes */
   onSelectedMcpServersChange?: (servers: McpServerSelection[]) => void;
@@ -535,6 +537,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
   enableCodemode = false,
   allowDirectToolCalls = false,
   enableToolReranker = false,
+  useJupyterSandbox = false,
   availableSkills = [],
   selectedSkills = [],
   selectedMcpServers = [],
@@ -553,6 +556,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
   onEnableCodemodeChange,
   onAllowDirectToolCallsChange,
   onEnableToolRerankerChange,
+  onUseJupyterSandboxChange,
   onSelectedSkillsChange,
   onSelectedMcpServersChange,
 }) => {
@@ -1028,6 +1032,19 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
                 </Text>
               </Box>
             </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Checkbox
+                checked={useJupyterSandbox}
+                disabled={selectedAgentId !== 'new-agent'}
+                onChange={e => onUseJupyterSandboxChange?.(e.target.checked)}
+              />
+              <Box>
+                <Text sx={{ fontSize: 1 }}>Use Jupyter Sandbox</Text>
+                <Text sx={{ fontSize: 0, color: 'fg.muted', display: 'block' }}>
+                  Execute code in a Jupyter kernel instead of local-eval
+                </Text>
+              </Box>
+            </Box>
           </Box>
         )}
       </Box>
@@ -1114,7 +1131,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
         )}
       </Box>
 
-      {/* MCP Config Servers Section (from mcp.json) */}
+      {/* MCP Servers Section */}
       <Box
         sx={{
           marginBottom: 3,
@@ -1134,9 +1151,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
           }}
         >
           <ToolsIcon size={16} />
-          <Text sx={{ fontSize: 1, fontWeight: 'bold' }}>
-            MCP Config Servers
-          </Text>
+          <Text sx={{ fontSize: 1, fontWeight: 'bold' }}>MCP Servers</Text>
           {mcpServersQuery.isLoading && <Spinner size="small" />}
           {!mcpServersQuery.isLoading && (
             <Button
@@ -1226,7 +1241,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
           </Box>
         )}
 
-        {/* MCP Config Servers Section */}
+        {/* MCP Config Servers Section (from mcp.json) */}
         {configServers.length > 0 && (
           <>
             <Text sx={{ fontWeight: 'semibold', marginTop: 3 }}>

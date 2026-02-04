@@ -101,6 +101,61 @@ async def get_agent_spec(agent_id: str) -> dict[str, Any]:
 # ============================================================================
 
 
+def _test_jupyter_sandbox(jupyter_sandbox_url: str) -> tuple[bool, str | None]:
+    """
+    Test connection to a Jupyter sandbox by pinging the server.
+    
+    Args:
+        jupyter_sandbox_url: The Jupyter server URL with optional token
+        
+    Returns:
+        Tuple of (connected: bool, error_message: str | None)
+    """
+    import httpx
+    from urllib.parse import urlparse, parse_qs
+    
+    try:
+        # Parse URL to extract base URL and token
+        parsed = urlparse(jupyter_sandbox_url)
+        query_params = parse_qs(parsed.query)
+        token = query_params.get("token", [None])[0]
+        
+        # Reconstruct base URL without query params
+        path = parsed.path
+        if path.endswith("/"):
+            path = path[:-1]
+        
+        base_url = f"{parsed.scheme}://{parsed.netloc}{path}"
+        
+        # Build headers with token
+        headers = {}
+        if token:
+            headers["Authorization"] = f"token {token}"
+        
+        # Test connection by hitting the Jupyter server extension API endpoint
+        # For jupyter-server extension at /api/jupyter-server, the API is at /api/jupyter-server/api
+        status_url = f"{base_url}/api"
+        logger.info(f"Testing Jupyter connection at: {status_url}")
+        
+        with httpx.Client(timeout=10.0) as client:
+            response = client.get(status_url, headers=headers, follow_redirects=True)
+            
+            if response.status_code == 200:
+                logger.info(f"Jupyter sandbox ping successful: {base_url}")
+                return True, None
+            elif response.status_code == 401 or response.status_code == 403:
+                return False, f"Authentication failed (HTTP {response.status_code}) - check your token"
+            else:
+                return False, f"Jupyter server returned HTTP {response.status_code}"
+                
+    except httpx.ConnectError as e:
+        return False, f"Connection refused - is Jupyter running at {base_url}?"
+    except httpx.TimeoutException:
+        return False, f"Connection timeout - Jupyter server not responding"
+    except Exception as e:
+        return False, f"Connection error: {str(e)}"
+
+
 def _build_codemode_toolset(
     request: "CreateAgentRequest",
     http_request: Request,
@@ -310,6 +365,10 @@ class CreateAgentRequest(BaseModel):
         default_factory=list,
         description="List of MCP server selections to include."
     )
+    jupyter_sandbox: str | None = Field(
+        default=None,
+        description="Jupyter server URL with token for code sandbox (e.g., http://localhost:8888?token=xxx). If provided, codemode will use Jupyter kernel instead of local-eval sandbox."
+    )
 
 
 class CreateAgentResponse(BaseModel):
@@ -408,6 +467,42 @@ async def create_agent(request: CreateAgentRequest, http_request: Request) -> Cr
                          logger.warning(f"Failed to start MCP server '{item}': {error}")
                 else:
                     logger.info(f"MCP server '{server_id}' already running")
+        
+        # Configure sandbox manager if jupyter_sandbox is provided
+        # This must happen BEFORE creating any sandboxes
+        if request.jupyter_sandbox:
+            try:
+                from ..services.code_sandbox_manager import get_code_sandbox_manager
+                
+                sandbox_manager = get_code_sandbox_manager()
+                sandbox_manager.configure_from_url(request.jupyter_sandbox)
+                logger.info(f"Configured sandbox manager for Jupyter: {request.jupyter_sandbox.split('?')[0]}")
+                
+                # Validate the Jupyter connection by running a ping execution
+                jupyter_connected, jupyter_error = _test_jupyter_sandbox(request.jupyter_sandbox)
+                if not jupyter_connected:
+                    logger.error(
+                        f"JUPYTER SANDBOX CONNECTION FAILED for agent '{agent_id}': {jupyter_error}. "
+                        f"URL: {request.jupyter_sandbox.split('?')[0]}. "
+                        f"Please ensure Jupyter server is running and accessible."
+                    )
+                    raise HTTPException(
+                        status_code=503,
+                        detail=f"Failed to connect to Jupyter sandbox: {jupyter_error}. Please ensure Jupyter server is running."
+                    )
+                else:
+                    logger.info(f"Successfully validated Jupyter sandbox connection for agent '{agent_id}'")
+                    
+            except HTTPException:
+                raise  # Re-raise HTTP exceptions
+            except ImportError as e:
+                logger.warning(f"code_sandboxes not installed, cannot configure Jupyter sandbox: {e}")
+            except Exception as e:
+                logger.error(f"Failed to configure Jupyter sandbox: {e}")
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Failed to configure Jupyter sandbox: {str(e)}"
+                )
         
         # Create shared sandbox for both codemode and skills toolsets
         # This ensures state persistence between execute_code and skill script executions

@@ -76,6 +76,17 @@ interface MCPToolsetsStatus {
 }
 
 /**
+ * Sandbox status response
+ */
+interface SandboxStatus {
+  variant: string;
+  jupyter_url: string | null;
+  jupyter_connected: boolean;
+  jupyter_error: string | null;
+  sandbox_running: boolean;
+}
+
+/**
  * Codemode status response
  */
 interface CodemodeStatus {
@@ -90,6 +101,7 @@ interface CodemodeStatus {
     description: string;
     tags: string[];
   }>;
+  sandbox: SandboxStatus | null;
 }
 
 /**
@@ -646,6 +658,192 @@ export function AgentDetails({
                     size="small"
                   />
                 </Box>
+
+                {/* Sandbox Status */}
+                {codemodeStatus.sandbox && (
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 2,
+                      p: 2,
+                      bg: 'canvas.default',
+                      borderRadius: 2,
+                      border: '1px solid',
+                      borderColor: 'border.default',
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <CodeIcon size={16} />
+                      <Text
+                        sx={{
+                          fontSize: 0,
+                          fontWeight: 'semibold',
+                          color: 'fg.muted',
+                        }}
+                      >
+                        Code Sandbox
+                      </Text>
+                    </Box>
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 1,
+                        pl: 4,
+                      }}
+                    >
+                      <Box
+                        sx={{ display: 'flex', alignItems: 'center', gap: 2 }}
+                      >
+                        <Text
+                          sx={{ fontSize: 0, color: 'fg.muted', width: 80 }}
+                        >
+                          Variant:
+                        </Text>
+                        <Label
+                          variant={
+                            codemodeStatus.sandbox.variant === 'local-jupyter'
+                              ? 'accent'
+                              : 'secondary'
+                          }
+                          size="small"
+                        >
+                          {codemodeStatus.sandbox.variant}
+                        </Label>
+                      </Box>
+                      {codemodeStatus.sandbox.variant === 'local-jupyter' && (
+                        <>
+                          <Box
+                            sx={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 2,
+                            }}
+                          >
+                            <Text
+                              sx={{ fontSize: 0, color: 'fg.muted', width: 80 }}
+                            >
+                              URL:
+                            </Text>
+                            <Text
+                              sx={{
+                                fontSize: 0,
+                                fontFamily: 'mono',
+                                color: 'fg.default',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              {codemodeStatus.sandbox.jupyter_url ||
+                                'Not configured'}
+                            </Text>
+                          </Box>
+                          <Box
+                            sx={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 2,
+                            }}
+                          >
+                            <Text
+                              sx={{ fontSize: 0, color: 'fg.muted', width: 80 }}
+                            >
+                              Status:
+                            </Text>
+                            {codemodeStatus.sandbox.jupyter_connected ? (
+                              <Box
+                                sx={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: 1,
+                                }}
+                              >
+                                <CheckCircleIcon size={12} fill="success.fg" />
+                                <Text sx={{ fontSize: 0, color: 'success.fg' }}>
+                                  Connected
+                                </Text>
+                              </Box>
+                            ) : (
+                              <Box
+                                sx={{
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  gap: 1,
+                                }}
+                              >
+                                <Box
+                                  sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 1,
+                                  }}
+                                >
+                                  <XCircleIcon size={12} fill="danger.fg" />
+                                  <Text
+                                    sx={{ fontSize: 0, color: 'danger.fg' }}
+                                  >
+                                    Not Connected
+                                  </Text>
+                                </Box>
+                                {codemodeStatus.sandbox.jupyter_error && (
+                                  <Text
+                                    sx={{
+                                      fontSize: 0,
+                                      color: 'danger.fg',
+                                      fontFamily: 'mono',
+                                      whiteSpace: 'pre-wrap',
+                                      wordBreak: 'break-word',
+                                    }}
+                                  >
+                                    {codemodeStatus.sandbox.jupyter_error}
+                                  </Text>
+                                )}
+                              </Box>
+                            )}
+                          </Box>
+                        </>
+                      )}
+                      <Box
+                        sx={{ display: 'flex', alignItems: 'center', gap: 2 }}
+                      >
+                        <Text
+                          sx={{ fontSize: 0, color: 'fg.muted', width: 80 }}
+                        >
+                          Running:
+                        </Text>
+                        {codemodeStatus.sandbox.sandbox_running ? (
+                          <Box
+                            sx={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 1,
+                            }}
+                          >
+                            <CheckCircleIcon size={12} fill="success.fg" />
+                            <Text sx={{ fontSize: 0, color: 'success.fg' }}>
+                              Yes
+                            </Text>
+                          </Box>
+                        ) : (
+                          <Box
+                            sx={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 1,
+                            }}
+                          >
+                            <XCircleIcon size={12} fill="fg.muted" />
+                            <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
+                              No
+                            </Text>
+                          </Box>
+                        )}
+                      </Box>
+                    </Box>
+                  </Box>
+                )}
 
                 {/* Active Skills */}
                 {codemodeStatus.skills.length > 0 && (

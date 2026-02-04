@@ -1,9 +1,6 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-# Copyright (c) Datalayer, Inc. https://datalayer.io
-# Distributed under the terms of the MIT License.
-
 SHELL=/bin/bash
 
 .DEFAULT_GOAL := default
@@ -57,25 +54,28 @@ publish-conda: # publish the conda package
 	@exec echo https://anaconda.org/datalayer/agent-runtimes
 	@exec echo conda install datalayer::agent-runtimes
 
-pydoc:
+pydoc: # pydoc
 	rm -fr docs/docs/python_api
 	python -m pydoc_markdown.main
 	echo -e "label: Python API\nposition: 4" > docs/docs/python_api/_category_.yml
 
-typedoc:
+typedoc: # typedoc
 	npm run typedoc
 	echo -e "label: TypeScript API\nposition: 5" > docs/docs/typescript_api/_category_.yml
 
 docs: pydoc typedoc ## build the api docs and serve the docs
 	cd docs && npm run start
 
-examples:
+examples: # examples
 	AWS_ACCESS_KEY_ID=${DATALAYER_BEDROCK_AWS_ACCESS_KEY_ID} \
 	AWS_SECRET_ACCESS_KEY=${DATALAYER_BEDROCK_AWS_SECRET_ACCESS_KEY} \
 	AWS_DEFAULT_REGION=${DATALAYER_BEDROCK_AWS_DEFAULT_REGION} \
 	  npm run examples
 
-agent-serve:
+jupyter-server: # jupyter-server
+	npm run jupyter:start
+
+agent-serve: # agent-server
 	@AWS_ACCESS_KEY_ID=${DATALAYER_BEDROCK_AWS_ACCESS_KEY_ID} \
 	AWS_SECRET_ACCESS_KEY=${DATALAYER_BEDROCK_AWS_SECRET_ACCESS_KEY} \
 	AWS_DEFAULT_REGION=${DATALAYER_BEDROCK_AWS_DEFAULT_REGION} \
@@ -91,12 +91,12 @@ agent-serve:
 	  --port 8765 \
 	  --debug
 
-agents:
+agents: # agents
 	agent-runtimes list-agents \
 	  --host 0.0.0.0 \
 	  --port 8765
 
-specs:
+specs: # specs
 	agent-runtimes list-specs
 	agent-runtimes mcp-servers-catalog
 	agent-runtimes mcp-servers-config

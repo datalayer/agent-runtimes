@@ -25,11 +25,21 @@ router = APIRouter(prefix="/configure", tags=["configure"])
 # Codemode Configuration Models
 # =========================================================================
 
+class SandboxStatus(BaseModel):
+    """Code sandbox status."""
+    variant: str  # "local-eval" or "local-jupyter"
+    jupyter_url: str | None = None
+    jupyter_connected: bool = False
+    jupyter_error: str | None = None
+    sandbox_running: bool = False
+
+
 class CodemodeStatus(BaseModel):
     """Codemode status response."""
     enabled: bool
     skills: list[dict[str, Any]]
     available_skills: list[dict[str, Any]]
+    sandbox: SandboxStatus | None = None
 
 
 class CodemodeToggleRequest(BaseModel):
@@ -374,7 +384,7 @@ async def get_codemode_status() -> CodemodeStatus:
     to the global state if no adapters are registered.
     
     Returns:
-        Current codemode enabled state, active skills, and available skills.
+        Current codemode enabled state, active skills, available skills, and sandbox status.
     """
     from agent_runtimes.routes.agui import get_all_agui_adapters
     
@@ -402,11 +412,99 @@ async def get_codemode_status() -> CodemodeStatus:
         if skill["name"] in active_skill_names:
             active_skills.append(skill)
     
+    # Get sandbox status
+    sandbox_status = _get_sandbox_status()
+    
     return CodemodeStatus(
         enabled=codemode_enabled,
         skills=active_skills,
         available_skills=available_skills,
+        sandbox=sandbox_status,
     )
+
+
+def _get_sandbox_status() -> SandboxStatus | None:
+    """
+    Get the current code sandbox status.
+    
+    Returns:
+        SandboxStatus with current sandbox configuration and connection status.
+    """
+    try:
+        from agent_runtimes.services.code_sandbox_manager import get_code_sandbox_manager
+        
+        manager = get_code_sandbox_manager()
+        status = manager.get_status()
+        
+        sandbox_status = SandboxStatus(
+            variant=status["variant"],
+            jupyter_url=status.get("jupyter_url"),
+            sandbox_running=status.get("sandbox_running", False),
+            jupyter_connected=False,
+            jupyter_error=None,
+        )
+        
+        # If Jupyter variant, test the connection
+        if status["variant"] == "local-jupyter" and status.get("jupyter_url"):
+            jupyter_connected, jupyter_error = _test_jupyter_connection(
+                status["jupyter_url"],
+                status.get("jupyter_token")
+            )
+            sandbox_status.jupyter_connected = jupyter_connected
+            sandbox_status.jupyter_error = jupyter_error
+        
+        return sandbox_status
+    except ImportError:
+        logger.debug("code_sandboxes not installed, cannot get sandbox status")
+        return None
+    except Exception as e:
+        logger.warning(f"Error getting sandbox status: {e}")
+        return None
+
+
+def _test_jupyter_connection(jupyter_url: str, jupyter_token: str | None) -> tuple[bool, str | None]:
+    """
+    Test connection to a Jupyter server.
+    
+    Args:
+        jupyter_url: The Jupyter server URL
+        jupyter_token: The authentication token
+        
+    Returns:
+        Tuple of (connected: bool, error_message: str | None)
+    """
+    import httpx
+    
+    try:
+        # Strip trailing slash if present
+        base_url = jupyter_url
+        if base_url.endswith("/"):
+            base_url = base_url[:-1]
+        
+        # Test connection by hitting the Jupyter server extension API endpoint
+        # For jupyter-server extension at /api/jupyter-server, the API is at /api/jupyter-server/api
+        headers = {}
+        if jupyter_token:
+            headers["Authorization"] = f"token {jupyter_token}"
+        
+        status_url = f"{base_url}/api"
+        
+        # Use a short timeout for the ping
+        with httpx.Client(timeout=5.0) as client:
+            response = client.get(status_url, headers=headers, follow_redirects=True)
+            
+            if response.status_code == 200:
+                return True, None
+            elif response.status_code == 401 or response.status_code == 403:
+                return False, f"Authentication failed (HTTP {response.status_code})"
+            else:
+                return False, f"Jupyter server returned HTTP {response.status_code}"
+    except httpx.ConnectError as e:
+        return False, f"Connection refused - is Jupyter running at {jupyter_url}?"
+    except httpx.TimeoutException:
+        return False, f"Connection timeout - Jupyter server at {jupyter_url} not responding"
+    except Exception as e:
+        return False, f"Connection error: {str(e)}"
 
 
 @router.post("/codemode/toggle")

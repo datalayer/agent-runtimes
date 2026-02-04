@@ -236,6 +236,15 @@ export interface ChatProps {
    * If not provided, defaults to `{protocol.endpoint}/history`.
    */
   historyEndpoint?: string;
+
+  /**
+   * Error banner to display at the top of the chat.
+   * Use this to show sandbox connection errors or other warnings.
+   */
+  errorBanner?: {
+    message: string;
+    variant?: 'danger' | 'warning';
+  };
 }
 
 /**
@@ -314,6 +323,7 @@ export function Chat({
   onIdentityDisconnect,
   runtimeId,
   historyEndpoint,
+  errorBanner,
 }: ChatProps) {
   const [error, setError] = useState<string | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
@@ -541,6 +551,46 @@ export function Chat({
           height: '100%',
         }}
       >
+        {/* Error banner for sandbox/connection issues */}
+        {errorBanner && (
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 2,
+              px: 3,
+              py: 2,
+              bg:
+                errorBanner.variant === 'warning'
+                  ? 'attention.subtle'
+                  : 'danger.subtle',
+              borderBottom: '1px solid',
+              borderColor:
+                errorBanner.variant === 'warning'
+                  ? 'attention.muted'
+                  : 'danger.muted',
+            }}
+          >
+            <AlertIcon
+              size={16}
+              fill={
+                errorBanner.variant === 'warning' ? 'attention.fg' : 'danger.fg'
+              }
+            />
+            <Text
+              sx={{
+                fontSize: 1,
+                color:
+                  errorBanner.variant === 'warning'
+                    ? 'attention.fg'
+                    : 'danger.fg',
+                flex: 1,
+              }}
+            >
+              {errorBanner.message}
+            </Text>
+          </Box>
+        )}
         <ChatBase
           title={title}
           showHeader={showHeader}
