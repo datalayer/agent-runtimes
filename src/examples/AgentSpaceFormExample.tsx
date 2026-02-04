@@ -51,6 +51,9 @@ interface SandboxStatus {
   jupyter_connected: boolean;
   jupyter_error: string | null;
   sandbox_running: boolean;
+  generated_path: string | null;
+  skills_path: string | null;
+  python_path: string | null;
 }
 
 interface CodemodeStatusResponse {

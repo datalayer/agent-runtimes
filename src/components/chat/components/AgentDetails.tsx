@@ -84,6 +84,9 @@ interface SandboxStatus {
   jupyter_connected: boolean;
   jupyter_error: string | null;
   sandbox_running: boolean;
+  generated_path: string | null;
+  skills_path: string | null;
+  python_path: string | null;
 }
 
 /**
@@ -604,7 +607,7 @@ export function AgentDetails({
               color: 'fg.muted',
             }}
           >
-            Code Mode
+            Codemode
           </Heading>
           <Box
             sx={{
@@ -639,7 +642,7 @@ export function AgentDetails({
                         id="codemode-toggle-label"
                         sx={{ fontSize: 1, fontWeight: 'semibold' }}
                       >
-                        Code Mode
+                        Codemode
                       </Text>
                       <Text
                         sx={{ fontSize: 0, color: 'fg.muted', marginLeft: 1 }}
@@ -841,6 +844,81 @@ export function AgentDetails({
                           </Box>
                         )}
                       </Box>
+                      {/* Generated Path */}
+                      {codemodeStatus.sandbox.generated_path && (
+                        <Box
+                          sx={{ display: 'flex', alignItems: 'center', gap: 2 }}
+                        >
+                          <Text
+                            sx={{ fontSize: 0, color: 'fg.muted', width: 80 }}
+                          >
+                            Generated:
+                          </Text>
+                          <Text
+                            sx={{
+                              fontSize: 0,
+                              fontFamily: 'mono',
+                              color: 'fg.default',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                            }}
+                            title={codemodeStatus.sandbox.generated_path}
+                          >
+                            {codemodeStatus.sandbox.generated_path}
+                          </Text>
+                        </Box>
+                      )}
+                      {/* Skills Path */}
+                      {codemodeStatus.sandbox.skills_path && (
+                        <Box
+                          sx={{ display: 'flex', alignItems: 'center', gap: 2 }}
+                        >
+                          <Text
+                            sx={{ fontSize: 0, color: 'fg.muted', width: 80 }}
+                          >
+                            Skills:
+                          </Text>
+                          <Text
+                            sx={{
+                              fontSize: 0,
+                              fontFamily: 'mono',
+                              color: 'fg.default',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                            }}
+                            title={codemodeStatus.sandbox.skills_path}
+                          >
+                            {codemodeStatus.sandbox.skills_path}
+                          </Text>
+                        </Box>
+                      )}
+                      {/* Python Path */}
+                      {codemodeStatus.sandbox.python_path && (
+                        <Box
+                          sx={{ display: 'flex', alignItems: 'center', gap: 2 }}
+                        >
+                          <Text
+                            sx={{ fontSize: 0, color: 'fg.muted', width: 80 }}
+                          >
+                            Python Path:
+                          </Text>
+                          <Text
+                            sx={{
+                              fontSize: 0,
+                              fontFamily: 'mono',
+                              color: 'fg.default',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                            }}
+                            title={codemodeStatus.sandbox.python_path}
+                          >
+                            {codemodeStatus.sandbox.python_path}
+                          </Text>
+                        </Box>
+                      )}
                     </Box>
                   </Box>
                 )}

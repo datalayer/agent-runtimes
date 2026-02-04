@@ -32,6 +32,9 @@ class SandboxStatus(BaseModel):
     jupyter_connected: bool = False
     jupyter_error: str | None = None
     sandbox_running: bool = False
+    generated_path: str | None = None
+    skills_path: str | None = None
+    python_path: str | None = None
 
 
 class CodemodeStatus(BaseModel):
@@ -442,6 +445,9 @@ def _get_sandbox_status() -> SandboxStatus | None:
             sandbox_running=status.get("sandbox_running", False),
             jupyter_connected=False,
             jupyter_error=None,
+            generated_path=status.get("generated_path"),
+            skills_path=status.get("skills_path"),
+            python_path=status.get("python_path"),
         )
         
         # If Jupyter variant, test the connection

@@ -309,13 +309,38 @@ class CodeSandboxManager:
         """Get the current status of the sandbox manager.
         
         Returns:
-            A dictionary with status information.
+            A dictionary with status information including paths.
         """
+        import os
+        from pathlib import Path
+        
+        # Get paths from environment or use defaults
+        repo_root = Path(__file__).resolve().parents[2]
+        generated_path = os.getenv(
+            "AGENT_RUNTIMES_GENERATED_CODE_FOLDER",
+            str((repo_root / "generated").resolve()),
+        )
+        skills_path = os.getenv(
+            "AGENT_RUNTIMES_SKILLS_FOLDER",
+            str((repo_root / "skills").resolve()),
+        )
+        
+        # Compute python_path (what gets added to sys.path)
+        # For Jupyter/remote sandboxes, it's /tmp
+        # For local-eval, it's the parent of generated_path
+        if self._config.variant in ("local-jupyter", "datalayer-runtime"):
+            python_path = "/tmp"
+        else:
+            python_path = str(Path(generated_path).resolve().parent)
+        
         return {
             "variant": self._config.variant,
             "jupyter_url": self._config.jupyter_url,
             "jupyter_token_set": self._config.jupyter_token is not None,
             "sandbox_running": self._sandbox is not None,
+            "generated_path": generated_path,
+            "skills_path": skills_path,
+            "python_path": python_path,
         }
 
 
