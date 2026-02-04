@@ -212,9 +212,46 @@ class CodeSandboxManager:
         """
         with self._sandbox_lock:
             if self._sandbox is None:
+                logger.info(
+                    f"Creating new {self._config.variant} sandbox "
+                    f"(url={self._config.jupyter_url})"
+                )
                 self._sandbox = self._create_sandbox()
                 self._sandbox.start()
                 logger.info(f"Started {self._config.variant} sandbox")
+            else:
+                logger.debug(
+                    f"Returning existing {self._config.variant} sandbox "
+                    f"(url={self._config.jupyter_url})"
+                )
+            return self._sandbox
+    
+    def get_or_create_sandbox(self, start: bool = True) -> Sandbox:
+        """Get existing sandbox or create a new one.
+        
+        This method allows getting an unstarted sandbox if needed,
+        which can be useful when the sandbox will be started later
+        or when passing to components that manage their own lifecycle.
+        
+        Args:
+            start: Whether to start the sandbox if creating new one.
+                   Default is True for backward compatibility.
+        
+        Returns:
+            The configured Sandbox instance.
+        """
+        with self._sandbox_lock:
+            if self._sandbox is None:
+                logger.info(
+                    f"Creating new {self._config.variant} sandbox "
+                    f"(url={self._config.jupyter_url}, start={start})"
+                )
+                self._sandbox = self._create_sandbox()
+                if start:
+                    self._sandbox.start()
+                    logger.info(f"Started {self._config.variant} sandbox")
+                else:
+                    logger.info(f"Created {self._config.variant} sandbox (not started)")
             return self._sandbox
     
     def _create_sandbox(self) -> Sandbox:

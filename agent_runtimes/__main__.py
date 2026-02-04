@@ -173,6 +173,24 @@ def serve(
                  "If provided, uses a Jupyter kernel for code execution instead of local eval.",
         ),
     ] = None,
+    generated_code_folder: Annotated[
+        Optional[str],
+        typer.Option(
+            "--generated-code-folder",
+            envvar="AGENT_RUNTIMES_GENERATED_CODE_FOLDER",
+            help="Folder for generated code bindings. When using a shared volume with Jupyter, "
+                 "set this to a path accessible by both containers.",
+        ),
+    ] = None,
+    skills_folder: Annotated[
+        Optional[str],
+        typer.Option(
+            "--skills-folder",
+            envvar="AGENT_RUNTIMES_SKILLS_FOLDER",
+            help="Folder for agent skills. When using a shared volume with Jupyter, "
+                 "set this to a path accessible by both containers.",
+        ),
+    ] = None,
     protocol: Annotated[
         Protocol,
         typer.Option(
@@ -264,6 +282,8 @@ def serve(
             codemode=codemode,
             skills=skills,
             jupyter_sandbox=jupyter_sandbox,
+            generated_code_folder=generated_code_folder,
+            skills_folder=skills_folder,
             protocol=protocol,
             find_free_port_flag=find_free_port,
         )

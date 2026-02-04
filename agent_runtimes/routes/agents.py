@@ -1377,21 +1377,63 @@ async def _start_mcp_servers_for_agent(
     codemode_rebuilt = False
     if hasattr(adapter, "_codemode_builder") and adapter._codemode_builder is not None:
         try:
-            logger.info(f"Rebuilding Codemode toolset for agent '{agent_id}'...")
+            # Log sandbox configuration before rebuild
+            try:
+                from ..services.code_sandbox_manager import get_code_sandbox_manager
+                sandbox_manager = get_code_sandbox_manager()
+                logger.info(
+                    f"Rebuilding Codemode toolset for agent '{agent_id}' "
+                    f"(sandbox={sandbox_manager.variant}, url={sandbox_manager.config.jupyter_url})..."
+                )
+            except ImportError:
+                logger.info(f"Rebuilding Codemode toolset for agent '{agent_id}'...")
+            
             new_codemode = adapter._codemode_builder(selected_servers)
             if new_codemode is not None:
-                # Initialize the new toolset
-                await new_codemode.start()
-                # Update the adapter's non-MCP toolsets
+                # Log which sandbox the new toolset is using
+                if hasattr(new_codemode, '_sandbox') and new_codemode._sandbox is not None:
+                    sandbox_type = type(new_codemode._sandbox).__name__
+                    logger.info(f"New codemode toolset has sandbox: {sandbox_type}")
+                elif hasattr(new_codemode, 'sandbox') and new_codemode.sandbox is not None:
+                    sandbox_type = type(new_codemode.sandbox).__name__
+                    logger.info(f"New codemode toolset has sandbox: {sandbox_type}")
+                else:
+                    logger.info(f"New codemode toolset has no sandbox attached")
+                
+                # Try to initialize the new toolset
+                # If start() fails (e.g., pickle error with Jupyter sandbox),
+                # we still want to use the new toolset since it has the correct sandbox
+                start_succeeded = False
+                try:
+                    await new_codemode.start()
+                    start_succeeded = True
+                    logger.info(f"Codemode toolset start() completed successfully")
+                except Exception as start_error:
+                    # Log the error but continue - the toolset may still work for execution
+                    logger.warning(
+                        f"Codemode toolset start() had an error (will still use toolset): {start_error}"
+                    )
+                
+                # Update the adapter's non-MCP toolsets regardless of start() result
+                # The sandbox is already configured and should work for code execution
                 if hasattr(adapter, "_non_mcp_toolsets"):
                     # Remove old codemode toolset
+                    old_toolsets = adapter._non_mcp_toolsets
                     adapter._non_mcp_toolsets = [
                         t for t in adapter._non_mcp_toolsets 
                         if "Codemode" not in type(t).__name__
                     ]
+                    removed_count = len(old_toolsets) - len(adapter._non_mcp_toolsets)
+                    logger.info(f"Removed {removed_count} old codemode toolset(s)")
+                    
                     adapter._non_mcp_toolsets.append(new_codemode)
+                    logger.info(f"Added new codemode toolset to adapter")
+                
                 codemode_rebuilt = True
-                logger.info(f"Codemode toolset rebuilt for agent '{agent_id}'")
+                logger.info(
+                    f"Codemode toolset rebuilt for agent '{agent_id}' "
+                    f"(start_succeeded={start_succeeded}, tools={len(new_codemode.registry.list_tools()) if new_codemode.registry else 0})"
+                )
         except Exception as e:
             logger.warning(f"Failed to rebuild Codemode toolset: {e}")
     

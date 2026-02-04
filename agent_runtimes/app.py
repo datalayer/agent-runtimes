@@ -255,13 +255,19 @@ async def _create_and_register_cli_agent(
                     logger.info(f"Added MCP server to codemode registry: {normalized_name}")
                 
                 # Configure paths for codemode
+                # Use CLI/env configured folders if provided, otherwise use defaults
                 repo_root = Path(__file__).resolve().parents[1]
+                generated_folder = os.getenv("AGENT_RUNTIMES_GENERATED_CODE_FOLDER")
+                skills_folder_path = os.getenv("AGENT_RUNTIMES_SKILLS_FOLDER")
+                
                 codemode_config = CodeModeConfig(
                     workspace_path=str((repo_root / "workspace").resolve()),
-                    generated_path=str((repo_root / "generated").resolve()),
-                    skills_path=str((repo_root / "skills").resolve()),
+                    generated_path=generated_folder or str((repo_root / "generated").resolve()),
+                    skills_path=skills_folder_path or str((repo_root / "skills").resolve()),
                     allow_direct_tool_calls=False,
                 )
+                
+                logger.info(f"Codemode config: generated_path={codemode_config.generated_path}, skills_path={codemode_config.skills_path}")
                 
                 codemode_toolset = CodemodeToolset(
                     registry=registry,
@@ -391,26 +397,40 @@ async def _create_and_register_cli_agent(
                 
                 logger.info(f"rebuild_codemode: Added {len(servers_added)} servers to registry: {servers_added}")
                 
-                # Create new config (use same paths as original)
+                # Create new config - use CLI/env configured folders if provided
                 repo_root = Path(__file__).resolve().parents[1]
+                generated_folder = os.getenv("AGENT_RUNTIMES_GENERATED_CODE_FOLDER")
+                skills_folder_path = os.getenv("AGENT_RUNTIMES_SKILLS_FOLDER")
+                
                 new_config = CodeModeConfig(
                     workspace_path=str((repo_root / "workspace").resolve()),
-                    generated_path=str((repo_root / "generated").resolve()),
-                    skills_path=str((repo_root / "skills").resolve()),
+                    generated_path=generated_folder or str((repo_root / "generated").resolve()),
+                    skills_path=skills_folder_path or str((repo_root / "skills").resolve()),
                     allow_direct_tool_calls=False,
                 )
+                
+                logger.info(f"rebuild_codemode: Using generated_path={new_config.generated_path}, skills_path={new_config.skills_path}")
                 
                 # Get fresh sandbox from manager (may have been reconfigured via API)
                 # Do NOT use the captured shared_sandbox from agent creation time
                 # This ensures that if the sandbox manager was reconfigured
                 # (e.g., from local-eval to local-jupyter via the /mcp-servers/start API),
                 # the rebuilt codemode will use the new sandbox configuration.
+                #
+                # IMPORTANT: We get an unstarted sandbox to avoid pickle errors.
+                # The Jupyter sandbox creates websocket connections and asyncio Futures
+                # when started, which cannot be pickled. By passing an unstarted sandbox,
+                # the CodemodeToolset can start it lazily when code is executed.
                 fresh_sandbox = None
                 try:
                     from .services.code_sandbox_manager import get_code_sandbox_manager
                     sandbox_manager = get_code_sandbox_manager()
+                    # Get the sandbox (starts it if needed - this connects to the colocated Jupyter server)
                     fresh_sandbox = sandbox_manager.get_sandbox()
-                    logger.info(f"rebuild_codemode: Using {sandbox_manager.variant} sandbox (url={sandbox_manager.config.jupyter_url})")
+                    logger.info(
+                        f"rebuild_codemode: Using {sandbox_manager.variant} sandbox "
+                        f"(url={sandbox_manager.config.jupyter_url})"
+                    )
                 except ImportError as e:
                     logger.warning(f"rebuild_codemode: code_sandboxes not available, using None: {e}")
                 

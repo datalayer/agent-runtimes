@@ -143,6 +143,8 @@ def serve_server(
     codemode: bool = False,
     skills: Optional[str] = None,
     jupyter_sandbox: Optional[str] = None,
+    generated_code_folder: Optional[str] = None,
+    skills_folder: Optional[str] = None,
     protocol: Protocol = Protocol.ag_ui,
     find_free_port_flag: bool = False,
 ) -> int:
@@ -167,6 +169,10 @@ def serve_server(
         skills: Comma-separated list of skills to enable (requires codemode)
         jupyter_sandbox: Jupyter server URL with token (e.g., http://localhost:8888?token=xxx)
                         for code execution instead of local eval
+        generated_code_folder: Folder for generated code bindings. When using Jupyter sandbox
+                              with a shared volume, set to a path accessible by both containers.
+        skills_folder: Folder for agent skills. When using Jupyter sandbox with a shared
+                      volume, set to a path accessible by both containers.
         protocol: Transport protocol to use (ag-ui, vercel-ai, vercel-ai-jupyter, a2a)
         find_free_port_flag: If True, find a free port starting from the given port
         
@@ -243,6 +249,16 @@ def serve_server(
     if jupyter_sandbox:
         os.environ["AGENT_RUNTIMES_JUPYTER_SANDBOX"] = jupyter_sandbox
         logger.info(f"Jupyter sandbox configured: using Jupyter kernel at {jupyter_sandbox.split('?')[0]}")
+
+    # Configure generated code folder if provided
+    if generated_code_folder:
+        os.environ["AGENT_RUNTIMES_GENERATED_CODE_FOLDER"] = generated_code_folder
+        logger.info(f"Generated code folder: {generated_code_folder}")
+
+    # Configure skills folder if provided
+    if skills_folder:
+        os.environ["AGENT_RUNTIMES_SKILLS_FOLDER"] = skills_folder
+        logger.info(f"Skills folder: {skills_folder}")
 
     # Set protocol
     os.environ["AGENT_RUNTIMES_PROTOCOL"] = protocol.value
