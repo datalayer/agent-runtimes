@@ -56,6 +56,9 @@ sync_packages() {
   rm -rf node_modules/@datalayer/jupyter-react/lib
   mkdir -p node_modules/@datalayer/jupyter-react/lib
   cp -r "$JUPYTER_UI_ROOT/packages/react/lib/." node_modules/@datalayer/jupyter-react/lib/
+  # Copy style directory
+  rm -rf node_modules/@datalayer/jupyter-react/style
+  cp -r "$JUPYTER_UI_ROOT/packages/react/style" node_modules/@datalayer/jupyter-react/
   cp "$JUPYTER_UI_ROOT/packages/react/package.json" node_modules/@datalayer/jupyter-react/
 
   # Now build jupyter-lexical (finds react via workspace hoisting)
@@ -75,6 +78,9 @@ sync_packages() {
   rm -rf node_modules/@datalayer/jupyter-lexical/lib
   mkdir -p node_modules/@datalayer/jupyter-lexical/lib
   cp -r "$JUPYTER_UI_ROOT/packages/lexical/lib/." node_modules/@datalayer/jupyter-lexical/lib/
+  # Copy style directory
+  rm -rf node_modules/@datalayer/jupyter-lexical/style
+  cp -r "$JUPYTER_UI_ROOT/packages/lexical/style" node_modules/@datalayer/jupyter-lexical/
   cp "$JUPYTER_UI_ROOT/packages/lexical/package.json" node_modules/@datalayer/jupyter-lexical/
 
   echo -e "${GREEN}✅ Successfully synced at $(date +"%H:%M:%S")${NC}"

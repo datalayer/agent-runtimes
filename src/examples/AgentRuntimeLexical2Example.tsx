@@ -68,8 +68,6 @@ import {
   FloatingTextFormatToolbarPlugin,
   CodeActionMenuPlugin,
   ListMaxIndentLevelPlugin,
-  LexicalConfigProvider,
-  LexicalStatePlugin,
   TableCellResizerPlugin,
   TablePlugin,
 } from '@datalayer/jupyter-lexical';
@@ -89,8 +87,8 @@ import {
 import { editorConfig } from './lexical/editorConfig';
 
 import '@datalayer/jupyter-lexical/style/index.css';
+import '@datalayer/jupyter-lexical/style/modal-overrides.css';
 import './lexical/lexical-theme.css';
-import './lexical/modal-overrides.css';
 
 // Fixed lexical document ID
 const LEXICAL_ID = 'chat-popup-lexical-example';
