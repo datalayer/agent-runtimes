@@ -221,6 +221,21 @@ export interface ChatProps {
 
   /** Callback when identity disconnects */
   onIdentityDisconnect?: (provider: OAuthProvider) => void;
+
+  /**
+   * Runtime ID for conversation persistence.
+   * When provided, messages are fetched from the server API on page reload
+   * and prevents message mixing between different agent spaces.
+   */
+  runtimeId?: string;
+
+  /**
+   * Endpoint URL for fetching conversation history.
+   * When runtimeId is provided, this endpoint is called to fetch
+   * the conversation history on mount.
+   * If not provided, defaults to `{protocol.endpoint}/history`.
+   */
+  historyEndpoint?: string;
 }
 
 /**
@@ -297,6 +312,8 @@ export function Chat({
   identityProviders,
   onIdentityConnect,
   onIdentityDisconnect,
+  runtimeId,
+  historyEndpoint,
 }: ChatProps) {
   const [error, setError] = useState<string | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
@@ -533,6 +550,8 @@ export function Chat({
           suggestions={suggestions}
           submitOnSuggestionClick={submitOnSuggestionClick}
           autoFocus={autoFocus}
+          runtimeId={runtimeId}
+          historyEndpoint={historyEndpoint}
           headerContent={
             <IconButton
               icon={InfoIcon}

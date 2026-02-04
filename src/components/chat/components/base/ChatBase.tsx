@@ -62,6 +62,7 @@ import { Streamdown } from 'streamdown';
 import { PoweredByTag, type PoweredByTagProps } from '../elements/PoweredByTag';
 import { requestAPI } from '../../handler';
 import { useChatStore } from '../../store/chatStore';
+import { useConversationStore } from '../../store/conversationStore';
 import type { ChatMessage, ContentPart } from '../../types/message';
 import {
   generateMessageId,
@@ -643,6 +644,27 @@ export interface ChatBaseProps {
     userId?: string;
     accessToken?: string;
   }>;
+
+  /**
+   * Runtime ID for conversation persistence.
+   * When provided, messages are fetched from the server API on page reload
+   * and prevents message mixing between different agent spaces.
+   */
+  runtimeId?: string;
+
+  /**
+   * Endpoint URL for fetching conversation history.
+   * When runtimeId is provided, this endpoint is called to fetch
+   * the conversation history on mount.
+   * If not provided, defaults to `{protocol.endpoint}/history`.
+   */
+  historyEndpoint?: string;
+
+  /**
+   * Auth token for the history endpoint.
+   * If not provided, uses the protocol's authToken.
+   */
+  historyAuthToken?: string;
 }
 
 /**
@@ -845,6 +867,10 @@ export function ChatBase({
   // Identity/Authorization props
   onAuthorizationRequired,
   connectedIdentities,
+  // Conversation persistence
+  runtimeId,
+  historyEndpoint,
+  historyAuthToken,
 }: ChatBaseProps) {
   // Convert agentRuntimeConfig to protocol if provided
   const protocol: ProtocolConfig | undefined = agentRuntimeConfig
@@ -917,6 +943,9 @@ export function ChatBase({
           frontendTools={frontendTools}
           onAuthorizationRequired={onAuthorizationRequired}
           connectedIdentities={connectedIdentities}
+          runtimeId={runtimeId}
+          historyEndpoint={historyEndpoint}
+          historyAuthToken={historyAuthToken}
         />
       </QueryClientProvider>
     );
@@ -973,6 +1002,9 @@ export function ChatBase({
       frontendTools={frontendTools}
       onAuthorizationRequired={onAuthorizationRequired}
       connectedIdentities={connectedIdentities}
+      runtimeId={runtimeId}
+      historyEndpoint={historyEndpoint}
+      historyAuthToken={historyAuthToken}
     />
   );
 }
@@ -1032,6 +1064,10 @@ function ChatBaseInner({
   // Identity/Authorization props
   onAuthorizationRequired,
   connectedIdentities,
+  // Conversation persistence
+  runtimeId,
+  historyEndpoint,
+  historyAuthToken,
 }: ChatBaseProps) {
   // Ensure Primer's default portal has high z-index for ActionMenu overlays
   useHighZIndexPortal();
@@ -1348,6 +1384,101 @@ function ChatBaseInner({
       }
     }
   }, [useStoreMode]);
+
+  // Fetch conversation history from server API when runtimeId is provided
+  // This runs once per runtimeId on mount (page reload)
+  useEffect(() => {
+    if (!runtimeId) return;
+
+    const store = useConversationStore.getState();
+
+    // Check if we need to fetch (not already fetched and not currently fetching)
+    if (!store.needsFetch(runtimeId)) {
+      // Already fetched - load from in-memory store
+      const storedMessages = store.getMessages(runtimeId);
+      if (storedMessages.length > 0) {
+        setDisplayItems(storedMessages);
+      }
+      return;
+    }
+
+    // Mark as fetching to prevent duplicate requests
+    store.setFetching(runtimeId, true);
+
+    // Build the history endpoint URL
+    const endpoint =
+      historyEndpoint ||
+      (protocol?.endpoint ? `${protocol.endpoint}/history` : null);
+
+    if (!endpoint) {
+      console.warn(
+        '[ChatBase] No history endpoint available for runtimeId:',
+        runtimeId,
+      );
+      store.markFetched(runtimeId);
+      return;
+    }
+
+    // Fetch conversation history from server
+    const fetchHistory = async () => {
+      try {
+        const authToken = historyAuthToken || protocol?.authToken;
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json',
+        };
+        if (authToken) {
+          headers['Authorization'] = `Bearer ${authToken}`;
+        }
+
+        const response = await fetch(endpoint, {
+          method: 'GET',
+          headers,
+          credentials: 'include',
+        });
+
+        if (!response.ok) {
+          throw new Error(
+            `Failed to fetch history: ${response.status} ${response.statusText}`,
+          );
+        }
+
+        const data = await response.json();
+        const messages: ChatMessage[] = data.messages || [];
+
+        // Store in memory and update display
+        if (messages.length > 0) {
+          store.setMessages(runtimeId, messages);
+          setDisplayItems(messages);
+        }
+
+        store.markFetched(runtimeId);
+      } catch (err) {
+        console.error('[ChatBase] Failed to fetch conversation history:', err);
+        store.markFetched(runtimeId);
+      }
+    };
+
+    fetchHistory();
+  }, [
+    runtimeId,
+    historyEndpoint,
+    historyAuthToken,
+    protocol?.endpoint,
+    protocol?.authToken,
+  ]);
+
+  // Keep in-memory store in sync with displayItems (for session persistence)
+  useEffect(() => {
+    if (runtimeId && displayItems.length > 0) {
+      // Filter to only save ChatMessage items (not tool call items)
+      const messagesToSave = displayItems.filter(
+        (item): item is ChatMessage => !isToolCallMessage(item),
+      );
+      if (messagesToSave.length > 0) {
+        useConversationStore.getState().setMessages(runtimeId, messagesToSave);
+      }
+    }
+  }, [runtimeId, displayItems]);
 
   // Derived state
   const messages = displayItems.filter(
@@ -1972,9 +2103,13 @@ function ChatBaseInner({
     if (useStoreMode) {
       clearStoreMessages();
     }
+    // Clear from conversation store if runtimeId is provided
+    if (runtimeId) {
+      useConversationStore.getState().clearMessages(runtimeId);
+    }
     onNewChat?.();
     headerButtons?.onNewChat?.();
-  }, [clearStoreMessages, onNewChat, headerButtons, useStoreMode]);
+  }, [clearStoreMessages, onNewChat, headerButtons, useStoreMode, runtimeId]);
 
   // Handle clear
   const handleClear = useCallback(() => {
@@ -1984,10 +2119,14 @@ function ChatBaseInner({
       if (useStoreMode) {
         clearStoreMessages();
       }
+      // Clear from conversation store if runtimeId is provided
+      if (runtimeId) {
+        useConversationStore.getState().clearMessages(runtimeId);
+      }
       onClear?.();
       headerButtons?.onClear?.();
     }
-  }, [clearStoreMessages, onClear, headerButtons, useStoreMode]);
+  }, [clearStoreMessages, onClear, headerButtons, useStoreMode, runtimeId]);
 
   // Not ready yet (store mode only)
   if (!ready) {
