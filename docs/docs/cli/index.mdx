@@ -125,6 +125,7 @@ agent-runtimes serve [OPTIONS]
 | `--mcp-servers` | `-m` | - | `AGENT_RUNTIMES_MCP_SERVERS` | Comma-separated list of MCP server IDs from the catalog to start |
 | `--codemode` | `-c` | `false` | `AGENT_RUNTIMES_CODEMODE` | Enable Code Mode: MCP servers become programmatic tools via CodemodeToolset |
 | `--skills` | `-s` | - | `AGENT_RUNTIMES_SKILLS` | Comma-separated list of skills to enable (requires `--codemode`) |
+| `--jupyter-sandbox` | `-j` | - | `AGENT_RUNTIMES_JUPYTER_SANDBOX` | Jupyter sandbox URL with token for code execution (e.g., `http://localhost:8888?token=xxx`) |
 | `--find-free-port` | `-f` | `false` | `AGENT_RUNTIMES_FIND_FREE_PORT` | If the port is in use, find the next available port |
 
 ### Basic Examples
@@ -242,6 +243,42 @@ When `--codemode` is enabled:
 4. Skills can be enabled for additional capabilities
 
 This allows the agent to compose multiple tool calls within a single code execution, improving efficiency and enabling more complex workflows.
+:::
+
+#### Jupyter Sandbox
+
+By default, Code Mode uses a local Python `exec()` sandbox for code execution. You can connect to an external Jupyter server instead, which provides:
+
+- **Persistent kernel state** across executions
+- **Rich output support** (plots, dataframes, etc.)
+- **Access to pre-installed packages** in the Jupyter environment
+- **Isolation** from the agent server process
+
+```bash
+# Start with Code Mode using a Jupyter sandbox
+agent-runtimes serve --codemode --jupyter-sandbox "http://localhost:8888?token=my-token"
+
+# Combine with MCP servers and skills
+agent-runtimes serve --codemode --mcp-servers tavily --skills web_search \
+  --jupyter-sandbox "http://localhost:8888?token=my-token"
+
+# Using environment variable
+AGENT_RUNTIMES_JUPYTER_SANDBOX="http://localhost:8888?token=xxx" \
+  agent-runtimes serve --codemode
+```
+
+:::tip Setting Up a Jupyter Server
+To use the Jupyter sandbox, you need a running Jupyter server. You can start one with:
+
+```bash
+# Start Jupyter server with a token
+jupyter server --port 8888 --IdentityProvider.token=my-token
+
+# Or using JupyterLab
+jupyter lab --port 8888 --IdentityProvider.token=my-token
+```
+
+The sandbox will connect to the kernel and persist state between code executions.
 :::
 
 #### Code Mode vs Standard Mode

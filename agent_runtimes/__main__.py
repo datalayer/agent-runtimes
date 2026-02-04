@@ -163,6 +163,16 @@ def serve(
             help="Comma-separated list of skills to enable (requires --codemode)",
         ),
     ] = None,
+    jupyter_sandbox: Annotated[
+        Optional[str],
+        typer.Option(
+            "--jupyter-sandbox",
+            "-j",
+            envvar="AGENT_RUNTIMES_JUPYTER_SANDBOX",
+            help="Jupyter sandbox URL with token (e.g., http://localhost:8888?token=xxx). "
+                 "If provided, uses a Jupyter kernel for code execution instead of local eval.",
+        ),
+    ] = None,
     protocol: Annotated[
         Protocol,
         typer.Option(
@@ -222,6 +232,9 @@ def serve(
         # Start with Code Mode and skills
         agent-runtimes serve --codemode --mcp-servers tavily --skills web_search,github_lookup
 
+        # Start with a Jupyter sandbox for code execution (connects to existing Jupyter server)
+        agent-runtimes serve --codemode --jupyter-sandbox "http://localhost:8888?token=my-token"
+
         # Start with a specific protocol
         agent-runtimes serve --agent-id crawler --protocol vercel-ai
 
@@ -250,6 +263,7 @@ def serve(
             mcp_servers=mcp_servers,
             codemode=codemode,
             skills=skills,
+            jupyter_sandbox=jupyter_sandbox,
             protocol=protocol,
             find_free_port_flag=find_free_port,
         )

@@ -411,16 +411,18 @@ async def create_agent(request: CreateAgentRequest, http_request: Request) -> Cr
         
         # Create shared sandbox for both codemode and skills toolsets
         # This ensures state persistence between execute_code and skill script executions
+        # Use CodeSandboxManager to support Jupyter sandbox configuration via API
         shared_sandbox = None
         skills_enabled = request.enable_skills or len(request.skills) > 0
         if request.enable_codemode and skills_enabled:
             try:
-                from code_sandboxes import LocalEvalSandbox
-                shared_sandbox = LocalEvalSandbox()
-                shared_sandbox.start()  # Must start before use by either toolset
-                logger.info(f"Created shared LocalEvalSandbox for agent {agent_id}")
-            except ImportError:
-                logger.warning("code_sandboxes not installed, cannot create shared sandbox")
+                from ..services.code_sandbox_manager import get_code_sandbox_manager
+                
+                sandbox_manager = get_code_sandbox_manager()
+                shared_sandbox = sandbox_manager.get_sandbox()
+                logger.info(f"Created shared {sandbox_manager.variant} sandbox for agent {agent_id}")
+            except ImportError as e:
+                logger.warning(f"code_sandboxes not installed, cannot create shared sandbox: {e}")
         
         # Add skills toolset if enabled
         if skills_enabled:
@@ -431,7 +433,6 @@ async def create_agent(request: CreateAgentRequest, http_request: Request) -> Cr
                     SandboxExecutor,
                     PYDANTIC_AI_AVAILABLE,
                 )
-                from code_sandboxes import LocalEvalSandbox
                 if PYDANTIC_AI_AVAILABLE:
                     repo_root = Path(__file__).resolve().parents[2]
                     skills_path = getattr(
@@ -471,9 +472,10 @@ async def create_agent(request: CreateAgentRequest, http_request: Request) -> Cr
                             executor = SandboxExecutor(shared_sandbox)
                             logger.info(f"Using shared sandbox for skills executor (agent {agent_id})")
                         else:
-                            # Create dedicated sandbox for skills
-                            skills_sandbox = LocalEvalSandbox()
-                            skills_sandbox.start()
+                            # Use CodeSandboxManager for skills-only sandbox
+                            from ..services.code_sandbox_manager import get_code_sandbox_manager
+                            sandbox_manager = get_code_sandbox_manager()
+                            skills_sandbox = sandbox_manager.get_sandbox()
                             executor = SandboxExecutor(skills_sandbox)
                         skills_toolset = AgentSkillsToolset(
                             skills=selected_skills,
@@ -486,9 +488,10 @@ async def create_agent(request: CreateAgentRequest, http_request: Request) -> Cr
                             executor = SandboxExecutor(shared_sandbox)
                             logger.info(f"Using shared sandbox for skills executor (agent {agent_id})")
                         else:
-                            # Create dedicated sandbox for skills
-                            skills_sandbox = LocalEvalSandbox()
-                            skills_sandbox.start()
+                            # Use CodeSandboxManager for skills-only sandbox
+                            from ..services.code_sandbox_manager import get_code_sandbox_manager
+                            sandbox_manager = get_code_sandbox_manager()
+                            skills_sandbox = sandbox_manager.get_sandbox()
                             executor = SandboxExecutor(skills_sandbox)
                         skills_toolset = AgentSkillsToolset(
                             directories=[skills_path],  # TODO: Make configurable
@@ -1052,6 +1055,150 @@ async def update_agent_mcp_servers(
 
 
 # ============================================================================
+# Code Sandbox Configuration
+# ============================================================================
+
+
+class ConfigureSandboxRequest(BaseModel):
+    """Request to configure the code sandbox manager."""
+    variant: Literal["local-eval", "local-jupyter"] = Field(
+        default="local-eval",
+        description="Sandbox variant to use: 'local-eval' (Python exec) or 'local-jupyter' (Jupyter kernel)",
+    )
+    jupyter_url: str | None = Field(
+        default=None,
+        description="Jupyter server URL (required for local-jupyter variant). "
+                    "Can include token as query param: http://localhost:8888?token=xxx",
+    )
+    jupyter_token: str | None = Field(
+        default=None,
+        description="Jupyter server token (optional, overrides token in URL if provided)",
+    )
+
+
+class SandboxStatusResponse(BaseModel):
+    """Response with current sandbox status."""
+    variant: str = Field(..., description="Current sandbox variant")
+    jupyter_url: str | None = Field(default=None, description="Jupyter URL if configured")
+    jupyter_token_set: bool = Field(default=False, description="Whether a Jupyter token is configured")
+    sandbox_running: bool = Field(default=False, description="Whether a sandbox instance is active")
+
+
+@router.get("/sandbox/status")
+async def get_sandbox_status() -> SandboxStatusResponse:
+    """
+    Get the current status of the code sandbox manager.
+    
+    Returns:
+        Current sandbox configuration and status.
+    """
+    try:
+        from ..services.code_sandbox_manager import get_code_sandbox_manager
+        manager = get_code_sandbox_manager()
+        status = manager.get_status()
+        return SandboxStatusResponse(**status)
+    except ImportError:
+        return SandboxStatusResponse(
+            variant="local-eval",
+            sandbox_running=False,
+        )
+
+
+@router.post("/sandbox/configure")
+async def configure_sandbox(request: ConfigureSandboxRequest) -> SandboxStatusResponse:
+    """
+    Configure the code sandbox manager.
+    
+    This endpoint allows runtime configuration of the sandbox variant.
+    Use 'local-eval' for simple Python exec-based execution, or
+    'local-jupyter' to connect to an existing Jupyter server.
+    
+    Note: If a sandbox is currently running with a different configuration,
+    it will be stopped and recreated on next use.
+    
+    Args:
+        request: Sandbox configuration including variant and Jupyter details.
+        
+    Returns:
+        Updated sandbox status.
+        
+    Raises:
+        HTTPException: If configuration fails.
+    """
+    try:
+        from ..services.code_sandbox_manager import get_code_sandbox_manager
+        
+        manager = get_code_sandbox_manager()
+        
+        # Configure the sandbox
+        if request.variant == "local-jupyter" and not request.jupyter_url:
+            raise HTTPException(
+                status_code=400,
+                detail="jupyter_url is required when variant is 'local-jupyter'",
+            )
+        
+        manager.configure(
+            variant=request.variant,
+            jupyter_url=request.jupyter_url,
+            jupyter_token=request.jupyter_token,
+        )
+        
+        logger.info(f"Sandbox configured: variant={request.variant}")
+        
+        status = manager.get_status()
+        return SandboxStatusResponse(**status)
+        
+    except HTTPException:
+        raise
+    except ImportError as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"code_sandboxes package not installed: {e}",
+        )
+    except Exception as e:
+        logger.error(f"Failed to configure sandbox: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to configure sandbox: {str(e)}",
+        )
+
+
+@router.post("/sandbox/restart")
+async def restart_sandbox() -> SandboxStatusResponse:
+    """
+    Restart the code sandbox with current configuration.
+    
+    This stops any running sandbox and creates a new instance
+    with the current configuration.
+    
+    Returns:
+        Updated sandbox status.
+    """
+    try:
+        from ..services.code_sandbox_manager import get_code_sandbox_manager
+        
+        manager = get_code_sandbox_manager()
+        manager.restart()
+        
+        logger.info(f"Sandbox restarted: variant={manager.variant}")
+        
+        status = manager.get_status()
+        return SandboxStatusResponse(**status)
+        
+    except ImportError as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"code_sandboxes package not installed: {e}",
+        )
+    except Exception as e:
+        logger.error(f"Failed to restart sandbox: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to restart sandbox: {str(e)}",
+        )
+
+
+# ============================================================================
 # Agent MCP Server Lifecycle Management
 # ============================================================================
 
@@ -1068,6 +1215,11 @@ class StartAgentMcpServersRequest(BaseModel):
         default_factory=list,
         description="Environment variables to set before starting MCP servers",
     )
+    jupyter_sandbox: str | None = Field(
+        default=None,
+        description="Jupyter sandbox URL with token (e.g., http://localhost:8888?token=xxx). "
+                    "If provided, configures the code sandbox manager to use Jupyter for code execution.",
+    )
 
 
 class AgentMcpServersResponse(BaseModel):
@@ -1080,6 +1232,14 @@ class AgentMcpServersResponse(BaseModel):
     already_stopped: list[str] = Field(default_factory=list)
     failed_servers: list[dict[str, str]] = Field(default_factory=list)
     codemode_rebuilt: bool = False
+    sandbox_configured: bool = Field(
+        default=False,
+        description="Whether the code sandbox was (re)configured"
+    )
+    sandbox_variant: str | None = Field(
+        default=None,
+        description="The sandbox variant after configuration (local-eval or local-jupyter)"
+    )
     message: str
 
 
@@ -1187,8 +1347,11 @@ async def start_all_agents_mcp_servers(
     If an agent has Codemode enabled, the Codemode toolset will be rebuilt
     to include the newly started servers as programmatic tools.
     
+    If jupyter_sandbox is provided, the code sandbox manager will be configured
+    to use the Jupyter kernel for code execution instead of local eval.
+    
     Args:
-        request: Environment variables to set before starting servers.
+        request: Environment variables and optional jupyter_sandbox URL.
         
     Returns:
         Aggregated status of server start operations across all agents.
@@ -1205,6 +1368,20 @@ async def start_all_agents_mcp_servers(
         for env_var in request.env_vars:
             os.environ[env_var.name] = env_var.value
             logger.info(f"Set environment variable: {env_var.name}")
+        
+        # Configure sandbox manager if jupyter_sandbox is provided
+        sandbox_configured = False
+        sandbox_variant: str | None = None
+        if request.jupyter_sandbox:
+            try:
+                from ..services.code_sandbox_manager import get_code_sandbox_manager
+                sandbox_manager = get_code_sandbox_manager()
+                sandbox_manager.configure_from_url(request.jupyter_sandbox)
+                sandbox_configured = True
+                sandbox_variant = sandbox_manager.variant
+                logger.info(f"Configured sandbox manager for Jupyter: {request.jupyter_sandbox.split('?')[0]}")
+            except Exception as e:
+                logger.warning(f"Failed to configure Jupyter sandbox: {e}")
         
         all_started: list[str] = []
         all_already_running: list[str] = []
@@ -1230,6 +1407,8 @@ async def start_all_agents_mcp_servers(
             message_parts.append(f"{len(all_already_running)} already running")
         if all_failed:
             message_parts.append(f"{len(all_failed)} failed")
+        if sandbox_configured:
+            message_parts.append(f"sandbox={sandbox_variant}")
         
         return AgentMcpServersResponse(
             agent_id=None,
@@ -1238,6 +1417,8 @@ async def start_all_agents_mcp_servers(
             already_running=all_already_running,
             failed_servers=all_failed,
             codemode_rebuilt=any_codemode_rebuilt,
+            sandbox_configured=sandbox_configured,
+            sandbox_variant=sandbox_variant,
             message=", ".join(message_parts),
         )
         
@@ -1266,9 +1447,12 @@ async def start_agent_mcp_servers(
     If the agent has Codemode enabled, the Codemode toolset will be rebuilt
     to include the newly started servers as programmatic tools.
     
+    If jupyter_sandbox is provided, the code sandbox manager will be configured
+    to use the Jupyter kernel for code execution instead of local eval.
+    
     Args:
         agent_id: The agent identifier.
-        request: Environment variables to set before starting servers.
+        request: Environment variables and optional jupyter_sandbox URL.
         
     Returns:
         Status of each server start operation.
@@ -1285,11 +1469,25 @@ async def start_agent_mcp_servers(
             os.environ[env_var.name] = env_var.value
             logger.info(f"Set environment variable: {env_var.name}")
         
+        # Configure sandbox manager if jupyter_sandbox is provided
+        sandbox_configured = False
+        sandbox_variant: str | None = None
+        if request.jupyter_sandbox:
+            try:
+                from ..services.code_sandbox_manager import get_code_sandbox_manager
+                sandbox_manager = get_code_sandbox_manager()
+                sandbox_manager.configure_from_url(request.jupyter_sandbox)
+                sandbox_configured = True
+                sandbox_variant = sandbox_manager.variant
+                logger.info(f"Configured sandbox manager for Jupyter: {request.jupyter_sandbox.split('?')[0]}")
+            except Exception as e:
+                logger.warning(f"Failed to configure Jupyter sandbox: {e}")
+        
         started, already_running, failed, codemode_rebuilt = await _start_mcp_servers_for_agent(
             agent_id, request.env_vars
         )
         
-        if not started and not already_running and not failed:
+        if not started and not already_running and not failed and not sandbox_configured:
             return AgentMcpServersResponse(
                 agent_id=agent_id,
                 agents_processed=[agent_id],
@@ -1303,6 +1501,8 @@ async def start_agent_mcp_servers(
             message_parts.append(f"{len(already_running)} already running")
         if failed:
             message_parts.append(f"{len(failed)} failed")
+        if sandbox_configured:
+            message_parts.append(f"sandbox={sandbox_variant}")
         
         return AgentMcpServersResponse(
             agent_id=agent_id,
@@ -1311,6 +1511,8 @@ async def start_agent_mcp_servers(
             already_running=already_running,
             failed_servers=failed,
             codemode_rebuilt=codemode_rebuilt,
+            sandbox_configured=sandbox_configured,
+            sandbox_variant=sandbox_variant,
             message=", ".join(message_parts) if message_parts else "No servers to start",
         )
         

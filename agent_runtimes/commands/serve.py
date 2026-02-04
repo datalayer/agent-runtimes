@@ -142,6 +142,7 @@ def serve_server(
     mcp_servers: Optional[str] = None,
     codemode: bool = False,
     skills: Optional[str] = None,
+    jupyter_sandbox: Optional[str] = None,
     protocol: Protocol = Protocol.ag_ui,
     find_free_port_flag: bool = False,
 ) -> int:
@@ -164,6 +165,8 @@ def serve_server(
         mcp_servers: Comma-separated list of MCP server IDs from the catalog to start
         codemode: Enable Code Mode (MCP servers become programmatic tools)
         skills: Comma-separated list of skills to enable (requires codemode)
+        jupyter_sandbox: Jupyter server URL with token (e.g., http://localhost:8888?token=xxx)
+                        for code execution instead of local eval
         protocol: Transport protocol to use (ag-ui, vercel-ai, vercel-ai-jupyter, a2a)
         find_free_port_flag: If True, find a free port starting from the given port
         
@@ -235,6 +238,11 @@ def serve_server(
             skills_list = parse_skills(skills)
             os.environ["AGENT_RUNTIMES_SKILLS"] = ",".join(skills_list)
             logger.info(f"Skills enabled: {skills_list}")
+
+    # Configure Jupyter sandbox if provided
+    if jupyter_sandbox:
+        os.environ["AGENT_RUNTIMES_JUPYTER_SANDBOX"] = jupyter_sandbox
+        logger.info(f"Jupyter sandbox configured: using Jupyter kernel at {jupyter_sandbox.split('?')[0]}")
 
     # Set protocol
     os.environ["AGENT_RUNTIMES_PROTOCOL"] = protocol.value

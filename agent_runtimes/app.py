@@ -126,15 +126,26 @@ async def _create_and_register_cli_agent(
     shared_sandbox = None
     
     # Create shared sandbox if both codemode and skills are enabled
+    # Use CodeSandboxManager to support Jupyter sandbox configuration via CLI/API
     skills_enabled = len(skills) > 0
     if enable_codemode and skills_enabled:
         try:
-            from code_sandboxes import LocalEvalSandbox
-            shared_sandbox = LocalEvalSandbox()
-            shared_sandbox.start()
-            logger.info(f"Created shared LocalEvalSandbox for agent {agent_id}")
-        except ImportError:
-            logger.warning("code_sandboxes not installed, cannot create shared sandbox")
+            from .services.code_sandbox_manager import get_code_sandbox_manager
+            
+            # Get the sandbox manager and configure if Jupyter sandbox URL is provided
+            sandbox_manager = get_code_sandbox_manager()
+            jupyter_sandbox_url = os.getenv("AGENT_RUNTIMES_JUPYTER_SANDBOX")
+            if jupyter_sandbox_url:
+                sandbox_manager.configure_from_url(jupyter_sandbox_url)
+                logger.info(f"Configured sandbox manager for Jupyter: {jupyter_sandbox_url.split('?')[0]}")
+            else:
+                # Use default local-eval sandbox
+                sandbox_manager.configure(variant="local-eval")
+            
+            shared_sandbox = sandbox_manager.get_sandbox()
+            logger.info(f"Created shared {sandbox_manager.variant} sandbox for agent {agent_id}")
+        except ImportError as e:
+            logger.warning(f"code_sandboxes not installed, cannot create shared sandbox: {e}")
     
     # Add skills toolset if enabled
     if skills_enabled:
@@ -173,8 +184,18 @@ async def _create_and_register_cli_agent(
                     executor = SandboxExecutor(shared_sandbox)
                     logger.info(f"Using shared sandbox for skills executor")
                 else:
-                    skills_sandbox = LocalEvalSandbox()
-                    skills_sandbox.start()
+                    # Use CodeSandboxManager for skills-only sandbox as well
+                    from .services.code_sandbox_manager import get_code_sandbox_manager
+                    sandbox_manager = get_code_sandbox_manager()
+                    
+                    # Configure if Jupyter sandbox URL is provided
+                    jupyter_sandbox_url = os.getenv("AGENT_RUNTIMES_JUPYTER_SANDBOX")
+                    if jupyter_sandbox_url:
+                        sandbox_manager.configure_from_url(jupyter_sandbox_url)
+                    else:
+                        sandbox_manager.configure(variant="local-eval")
+                    
+                    skills_sandbox = sandbox_manager.get_sandbox()
                     executor = SandboxExecutor(skills_sandbox)
                 
                 skills_toolset = AgentSkillsToolset(
