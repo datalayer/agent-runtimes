@@ -1,0 +1,55 @@
+/*
+ * Copyright (c) 2025-2026 Datalayer, Inc.
+ * Distributed under the terms of the Modified BSD License.
+ */
+
+/**
+ * SIMPLIFIED Excalidraw Modal fixes - pointer-events ONLY
+ */
+
+/* Overlay MUST capture events to prevent background interaction */
+.ExcalidrawModal__overlay {
+  pointer-events: auto !important;
+}
+
+/* Modal and all interactive elements */
+.ExcalidrawModal__modal,
+.ExcalidrawModal__row,
+.ExcalidrawModal__row > div,
+.ExcalidrawModal__row .excalidraw,
+.ExcalidrawModal__row .excalidraw *,
+.ExcalidrawModal__row canvas,
+.ExcalidrawModal__row button,
+.ExcalidrawModal__row label,
+.ExcalidrawModal__row input,
+.ExcalidrawModal__actions,
+.ExcalidrawModal__actions button {
+  pointer-events: auto !important;
+}
+
+/* Utility containers must not block */
+.ExcalidrawModal__row .excalidraw-eye-dropper-container,
+.ExcalidrawModal__row .excalidraw-textEditorContainer,
+.ExcalidrawModal__row .excalidraw-contextMenuContainer,
+.ExcalidrawModal__row .SVGLayer {
+  pointer-events: none !important;
+}
+
+/* Ensure Save/Discard buttons are visible and clickable */
+.ExcalidrawModal__actions {
+  position: absolute !important;
+  top: 5px !important;
+  right: 5px !important;
+  z-index: 9999 !important;
+  display: flex !important;
+  gap: 8px !important;
+  pointer-events: auto !important;
+}
+
+.ExcalidrawModal__actions button,
+.ExcalidrawModal__actions .action-button {
+  pointer-events: auto !important;
+  cursor: pointer !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
