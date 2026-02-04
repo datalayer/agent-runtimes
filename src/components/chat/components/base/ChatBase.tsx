@@ -1385,10 +1385,26 @@ function ChatBaseInner({
     }
   }, [useStoreMode]);
 
-  // Fetch conversation history from server API when runtimeId is provided
-  // This runs once per runtimeId on mount (page reload)
+  // Track previous runtimeId to detect changes
+  const prevRuntimeIdRef = useRef<string | undefined>(undefined);
+
+  // Clear displayItems and load messages when runtimeId changes
+  // This ensures each agent space has isolated conversation history
   useEffect(() => {
-    if (!runtimeId) return;
+    // If runtimeId changed, clear displayItems first
+    if (runtimeId !== prevRuntimeIdRef.current) {
+      prevRuntimeIdRef.current = runtimeId;
+
+      // Clear current display items when switching runtime
+      setDisplayItems([]);
+      toolCallsRef.current.clear();
+
+      // If no runtimeId, nothing more to do
+      if (!runtimeId) return;
+    } else {
+      // runtimeId didn't change, skip
+      return;
+    }
 
     const store = useConversationStore.getState();
 
