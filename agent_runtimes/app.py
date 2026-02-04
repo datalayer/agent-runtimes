@@ -18,6 +18,7 @@ import multiprocessing as mp
 import os
 import sys
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Any, AsyncGenerator
 
 # Load environment variables from .env file
@@ -318,10 +319,105 @@ async def _create_and_register_cli_agent(
     codemode_builder = None
     if enable_codemode:
         def rebuild_codemode(new_servers: list[str | dict[str, str]]) -> Any:
-            """Rebuild codemode toolset with new MCP server selection."""
-            # This is a simplified rebuild - full implementation in routes/agents.py
+            """Rebuild codemode toolset with new MCP server selection.
+            
+            This function properly rebuilds the codemode toolset by:
+            1. Creating a new ToolRegistry with the specified servers
+            2. Adding MCPServerConfig for each server from mcp_manager
+            3. Creating a new CodemodeToolset with the new registry
+            """
+            nonlocal codemode_toolset
             logger.info(f"Rebuild codemode requested with servers: {new_servers}")
-            return codemode_toolset
+            
+            try:
+                from agent_codemode import (
+                    CodemodeToolset,
+                    CodeModeConfig,
+                    ToolRegistry,
+                    MCPServerConfig,
+                )
+                
+                # Get the running MCP servers from mcp_manager
+                mcp_manager = get_mcp_manager()
+                available_servers = mcp_manager.get_servers()
+                logger.info(f"rebuild_codemode: Found {len(available_servers)} servers in mcp_manager")
+                
+                # Create new registry with the available servers
+                new_registry = ToolRegistry()
+                
+                # Extract server IDs from new_servers (may be McpServerSelection objects or dicts)
+                server_ids = set()
+                for s in new_servers:
+                    if hasattr(s, 'id'):
+                        server_ids.add(s.id)
+                    elif isinstance(s, dict) and 'id' in s:
+                        server_ids.add(s['id'])
+                    elif isinstance(s, str):
+                        server_ids.add(s)
+                
+                logger.info(f"rebuild_codemode: Target server IDs: {server_ids}")
+                
+                # Add servers to the registry
+                servers_added = []
+                for server in available_servers:
+                    if not server.enabled:
+                        continue
+                    if server_ids and server.id not in server_ids:
+                        continue
+                    
+                    # Normalize server name to valid Python identifier
+                    normalized_name = "".join(
+                        c if c.isalnum() or c == "_" else "_" for c in server.id
+                    )
+                    
+                    # Get env vars from environment
+                    server_env: dict[str, str] = {}
+                    for env_key in ["TAVILY_API_KEY", "KAGGLE_KEY", "KAGGLE_USERNAME", "GITHUB_TOKEN", "GITHUB_PERSONAL_ACCESS_TOKEN"]:
+                        env_val = os.getenv(env_key)
+                        if env_val:
+                            server_env[env_key] = env_val
+                    
+                    new_registry.add_server(
+                        MCPServerConfig(
+                            name=normalized_name,
+                            url=server.url if server.transport == "http" else "",
+                            command=server.command or "",
+                            args=server.args or [],
+                            env=server_env,
+                            enabled=server.enabled,
+                        )
+                    )
+                    servers_added.append(normalized_name)
+                
+                logger.info(f"rebuild_codemode: Added {len(servers_added)} servers to registry: {servers_added}")
+                
+                # Create new config (use same paths as original)
+                repo_root = Path(__file__).resolve().parents[1]
+                new_config = CodeModeConfig(
+                    workspace_path=str((repo_root / "workspace").resolve()),
+                    generated_path=str((repo_root / "generated").resolve()),
+                    skills_path=str((repo_root / "skills").resolve()),
+                    allow_direct_tool_calls=False,
+                )
+                
+                # Create new toolset with the new registry
+                new_codemode = CodemodeToolset(
+                    registry=new_registry,
+                    config=new_config,
+                    sandbox=shared_sandbox,
+                    allow_discovery_tools=True,
+                )
+                
+                # Update the reference
+                codemode_toolset = new_codemode
+                logger.info(f"rebuild_codemode: Successfully created new CodemodeToolset")
+                return new_codemode
+                
+            except Exception as e:
+                logger.error(f"rebuild_codemode: Failed to rebuild codemode toolset: {e}", exc_info=True)
+                # Return the old toolset on failure
+                return codemode_toolset
+        
         codemode_builder = rebuild_codemode
     
     # Wrap with our adapter

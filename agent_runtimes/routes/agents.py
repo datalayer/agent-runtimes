@@ -1342,6 +1342,11 @@ async def _start_mcp_servers_for_agent(
             if instance is not None:
                 logger.info(f"_start_mcp_servers_for_agent: ✓ Successfully started server '{server_id}'")
                 started.append(server_id)
+                # Add the server to mcp_manager so it's available for codemode rebuild
+                mcp_manager = get_mcp_manager()
+                if not mcp_manager.get_server(server_id):
+                    mcp_manager.add_server(config)
+                    logger.info(f"_start_mcp_servers_for_agent: Added server '{server_id}' to mcp_manager")
             else:
                 error = lifecycle_manager._failed_servers.get(server_id, "Unknown error")
                 logger.warning(f"_start_mcp_servers_for_agent: ✗ Failed to start server '{server_id}': {error}")
