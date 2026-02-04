@@ -1131,7 +1131,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
         )}
       </Box>
 
-      {/* MCP Servers Section */}
+      {/* MCP Config Servers Section */}
       <Box
         sx={{
           marginBottom: 3,
@@ -1151,7 +1151,9 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
           }}
         >
           <ToolsIcon size={16} />
-          <Text sx={{ fontSize: 1, fontWeight: 'bold' }}>MCP Servers</Text>
+          <Text sx={{ fontSize: 1, fontWeight: 'bold' }}>
+            MCP Config Servers
+          </Text>
           {mcpServersQuery.isLoading && <Spinner size="small" />}
           {!mcpServersQuery.isLoading && (
             <Button
@@ -1165,6 +1167,10 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
             </Button>
           )}
         </Box>
+
+        <Text sx={{ fontSize: 0, color: 'fg.muted', marginBottom: 2 }}>
+          Servers from your mcp.json configuration file. Started automatically.
+        </Text>
 
         {mcpServersQuery.isError && (
           <Flash variant="warning" sx={{ marginBottom: 2 }}>
@@ -1241,18 +1247,103 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
           </Box>
         )}
 
-        {/* MCP Config Servers Section (from mcp.json) */}
+        {/* Config Servers List */}
         {configServers.length > 0 && (
-          <>
-            <Text sx={{ fontWeight: 'semibold', marginTop: 3 }}>
-              MCP Config Servers
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {configServers.map(server => (
+              <Box
+                key={server.id}
+                sx={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: 2,
+                  padding: 2,
+                  borderRadius: 1,
+                  backgroundColor: 'canvas.subtle',
+                  opacity: mcpServersDisabled ? 0.6 : 1,
+                }}
+              >
+                <Checkbox
+                  checked={selectedConfigServers.includes(server.id)}
+                  disabled={mcpServersDisabled}
+                  onChange={e =>
+                    handleConfigServerChange(server.id, e.target.checked)
+                  }
+                />
+                <Box
+                  sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 1,
+                    flex: 1,
+                  }}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Text sx={{ fontWeight: 'semibold' }}>{server.name}</Text>
+                    <Label variant="success" size="small">
+                      Running
+                    </Label>
+                  </Box>
+                  {server.tools.length > 0 && (
+                    <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
+                      Tools: {server.tools.map(t => t.name).join(', ')}
+                    </Text>
+                  )}
+                </Box>
+              </Box>
+            ))}
+          </Box>
+        )}
+      </Box>
+
+      {/* MCP Catalog Servers Section */}
+      {catalogServers.length > 0 && (
+        <Box
+          sx={{
+            marginBottom: 3,
+            padding: 3,
+            border: '1px solid',
+            borderColor: 'border.default',
+            borderRadius: 2,
+            backgroundColor: 'canvas.default',
+          }}
+        >
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 2,
+              marginBottom: 2,
+            }}
+          >
+            <ToolsIcon size={16} />
+            <Text sx={{ fontSize: 1, fontWeight: 'bold' }}>
+              MCP Catalog Servers
             </Text>
-            <Text sx={{ fontSize: 0, color: 'fg.muted', marginLeft: 1 }}>
-              Servers from your mcp.json configuration file. Started
-              automatically.
-            </Text>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              {configServers.map(server => (
+          </Box>
+
+          <Text
+            sx={{
+              fontSize: 0,
+              color: 'fg.muted',
+              marginBottom: 2,
+            }}
+          >
+            Predefined servers that can be enabled on-demand. Select to start
+            and add to your agent.
+          </Text>
+
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {catalogServers.map(server => {
+              // If required env vars are not provided, treat as available
+              const hasRequiredEnvVars =
+                (server.requiredEnvVars?.length || 0) > 0;
+              const envVarsAvailable = hasRequiredEnvVars
+                ? server.isAvailable === true
+                : true;
+              const isRunning = server.isRunning === true;
+              const canSelect = envVarsAvailable || isRunning;
+              return (
                 <Box
                   key={server.id}
                   sx={{
@@ -1262,14 +1353,22 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
                     padding: 2,
                     borderRadius: 1,
                     backgroundColor: 'canvas.subtle',
-                    opacity: mcpServersDisabled ? 0.6 : 1,
+                    opacity: mcpServersDisabled || !canSelect ? 0.6 : 1,
                   }}
                 >
                   <Checkbox
-                    checked={selectedConfigServers.includes(server.id)}
-                    disabled={mcpServersDisabled}
+                    checked={selectedCatalogServers.includes(server.id)}
+                    disabled={
+                      mcpServersDisabled ||
+                      enableCatalogServerMutation.isPending ||
+                      !canSelect
+                    }
                     onChange={e =>
-                      handleConfigServerChange(server.id, e.target.checked)
+                      handleCatalogServerChange(
+                        server.id,
+                        e.target.checked,
+                        isRunning,
+                      )
                     }
                   />
                   <Box
@@ -1282,143 +1381,58 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
                   >
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                       <Text sx={{ fontWeight: 'semibold' }}>{server.name}</Text>
-                      <Label variant="success" size="small">
-                        Running
-                      </Label>
+                      {enableCatalogServerMutation.isPending &&
+                      enableCatalogServerMutation.variables === server.id ? (
+                        <Label variant="accent" size="small">
+                          Starting...
+                        </Label>
+                      ) : server.isRunning ? (
+                        <Label variant="success" size="small">
+                          Running
+                        </Label>
+                      ) : (
+                        <Label variant="secondary" size="small">
+                          Not Started
+                        </Label>
+                      )}
+                      {server.isConfig && (
+                        <Label variant="secondary" size="small">
+                          From Config
+                        </Label>
+                      )}
                     </Box>
-                    {server.tools.length > 0 && (
+                    {/* Required environment variables */}
+                    {hasRequiredEnvVars ? (
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                        {server.requiredEnvVars?.map(envVar => (
+                          <Label
+                            key={envVar}
+                            variant={envVarsAvailable ? 'success' : 'danger'}
+                            size="small"
+                          >
+                            {envVar}
+                          </Label>
+                        ))}
+                      </Box>
+                    ) : (
+                      <Box sx={{ display: 'flex' }}>
+                        <Label variant="success" size="small">
+                          No env vars required
+                        </Label>
+                      </Box>
+                    )}
+                    {server.tools && server.tools.length > 0 && (
                       <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
                         Tools: {server.tools.map(t => t.name).join(', ')}
                       </Text>
                     )}
                   </Box>
                 </Box>
-              ))}
-            </Box>
-          </>
-        )}
-
-        {/* MCP Catalog Servers Section */}
-        {catalogServers.length > 0 && (
-          <Box sx={{ marginTop: 3 }}>
-            <Text sx={{ fontWeight: 'semibold', marginTop: 3 }}>
-              MCP Catalog Servers
-            </Text>
-            <Text
-              sx={{
-                fontSize: 0,
-                color: 'fg.muted',
-                marginLeft: 1,
-              }}
-            >
-              Predefined servers that can be enabled on-demand. Select to start
-              and add to your agent.
-            </Text>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              {catalogServers.map(server => {
-                // If required env vars are not provided, treat as available
-                const hasRequiredEnvVars =
-                  (server.requiredEnvVars?.length || 0) > 0;
-                const envVarsAvailable = hasRequiredEnvVars
-                  ? server.isAvailable === true
-                  : true;
-                const isRunning = server.isRunning === true;
-                const canSelect = envVarsAvailable || isRunning;
-                return (
-                  <Box
-                    key={server.id}
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'flex-start',
-                      gap: 2,
-                      padding: 2,
-                      borderRadius: 1,
-                      backgroundColor: 'canvas.subtle',
-                      opacity: mcpServersDisabled || !canSelect ? 0.6 : 1,
-                    }}
-                  >
-                    <Checkbox
-                      checked={selectedCatalogServers.includes(server.id)}
-                      disabled={
-                        mcpServersDisabled ||
-                        enableCatalogServerMutation.isPending ||
-                        !canSelect
-                      }
-                      onChange={e =>
-                        handleCatalogServerChange(
-                          server.id,
-                          e.target.checked,
-                          isRunning,
-                        )
-                      }
-                    />
-                    <Box
-                      sx={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: 1,
-                        flex: 1,
-                      }}
-                    >
-                      <Box
-                        sx={{ display: 'flex', alignItems: 'center', gap: 2 }}
-                      >
-                        <Text sx={{ fontWeight: 'semibold' }}>
-                          {server.name}
-                        </Text>
-                        {enableCatalogServerMutation.isPending &&
-                        enableCatalogServerMutation.variables === server.id ? (
-                          <Label variant="accent" size="small">
-                            Starting...
-                          </Label>
-                        ) : server.isRunning ? (
-                          <Label variant="success" size="small">
-                            Running
-                          </Label>
-                        ) : (
-                          <Label variant="secondary" size="small">
-                            Not Started
-                          </Label>
-                        )}
-                        {server.isConfig && (
-                          <Label variant="secondary" size="small">
-                            From Config
-                          </Label>
-                        )}
-                      </Box>
-                      {/* Required environment variables */}
-                      {hasRequiredEnvVars ? (
-                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                          {server.requiredEnvVars?.map(envVar => (
-                            <Label
-                              key={envVar}
-                              variant={envVarsAvailable ? 'success' : 'danger'}
-                              size="small"
-                            >
-                              {envVar}
-                            </Label>
-                          ))}
-                        </Box>
-                      ) : (
-                        <Box sx={{ display: 'flex' }}>
-                          <Label variant="success" size="small">
-                            No env vars required
-                          </Label>
-                        </Box>
-                      )}
-                      {server.tools && server.tools.length > 0 && (
-                        <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
-                          Tools: {server.tools.map(t => t.name).join(', ')}
-                        </Text>
-                      )}
-                    </Box>
-                  </Box>
-                );
-              })}
-            </Box>
+              );
+            })}
           </Box>
-        )}
-      </Box>
+        </Box>
+      )}
 
       {createError && (
         <Flash variant="danger" sx={{ marginBottom: 3 }}>
