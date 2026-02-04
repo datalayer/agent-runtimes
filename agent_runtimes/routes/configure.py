@@ -307,9 +307,13 @@ def _get_available_skills() -> list[dict[str, Any]]:
     """Get all available skills from the skills directory."""
     skills = []
     try:
-        # Skills are stored in the skills directory at the repo root
-        repo_root = FilePath(__file__).resolve().parents[2]
-        skills_path = repo_root / "skills"
+        # Skills folder can be configured via env var, with fallback to repo root
+        skills_folder_path = os.getenv("AGENT_RUNTIMES_SKILLS_FOLDER")
+        if skills_folder_path:
+            skills_path = FilePath(skills_folder_path)
+        else:
+            repo_root = FilePath(__file__).resolve().parents[2]
+            skills_path = repo_root / "skills"
         
         if not skills_path.exists():
             logger.debug(f"Skills directory not found: {skills_path}")
