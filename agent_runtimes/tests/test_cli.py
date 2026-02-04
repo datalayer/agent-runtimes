@@ -15,7 +15,7 @@ from agent_runtimes.commands.serve import LogLevel, parse_skills, parse_mcp_serv
 from agent_runtimes.commands.list_agents import OutputFormat
 
 
-runner = CliRunner()
+runner = CliRunner(mix_stderr=False, env={"NO_COLOR": "1"})
 
 
 class TestCLIHelp:
