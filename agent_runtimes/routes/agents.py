@@ -1357,6 +1357,8 @@ class StartAgentMcpServersRequest(BaseModel):
     mcp_proxy_url should be provided to enable the full codemode flow:
     - jupyter_sandbox: URL of the Jupyter server for code execution
     - mcp_proxy_url: URL of the MCP proxy endpoint for tool calls
+    
+    In Kubernetes pods, containers communicate via localhost (127.0.0.1).
     """
     env_vars: list[EnvVar] = Field(
         default_factory=list,
@@ -1364,12 +1366,12 @@ class StartAgentMcpServersRequest(BaseModel):
     )
     jupyter_sandbox: str | None = Field(
         default=None,
-        description="Jupyter sandbox URL with token (e.g., http://localhost:8888?token=xxx). "
+        description="Jupyter sandbox URL with token (e.g., http://127.0.0.1:8888?token=xxx). "
                     "If provided, configures the code sandbox manager to use Jupyter for code execution.",
     )
     mcp_proxy_url: str | None = Field(
         default=None,
-        description="MCP tool proxy URL (e.g., http://0.0.0.0:8765/api/v1/mcp/proxy). "
+        description="MCP tool proxy URL (e.g., http://127.0.0.1:8765/api/v1/mcp/proxy). "
                     "If provided, the Jupyter kernel will call tools via HTTP to this URL "
                     "instead of requiring direct stdio access to MCP servers.",
     )

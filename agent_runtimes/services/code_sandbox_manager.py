@@ -219,7 +219,7 @@ class CodeSandboxManager:
         Args:
             jupyter_sandbox_url: The Jupyter server URL, optionally with token.
             mcp_proxy_url: The MCP tool proxy URL for two-container setups.
-                If not provided, will default to http://0.0.0.0:8765/api/v1/mcp/proxy
+                If not provided, will default to http://127.0.0.1:8765/api/v1/mcp/proxy
                 for local-jupyter variant (assumes colocated containers).
         """
         # Default to local agent-runtimes URL for Jupyter sandboxes
