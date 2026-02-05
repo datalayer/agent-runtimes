@@ -154,13 +154,12 @@ async def proxy_tool_call(
         logger.info(f"[MCP Proxy] Calling tool '{tool_name}' on server '{server_name}'")
         
         try:
-            # Use the session's call_tool method if available
-            if hasattr(pydantic_server, '_session') and pydantic_server._session:
-                session = pydantic_server._session
-                result = await session.call_tool(tool_name, request.arguments)
+            # Use direct_call_tool which doesn't require a RunContext
+            # This is the preferred method for proxy calls
+            if hasattr(pydantic_server, 'direct_call_tool'):
+                result = await pydantic_server.direct_call_tool(tool_name, request.arguments)
                 
-                # Parse the MCP response
-                # MCP results have content and isError fields
+                # Parse the MCP response - ToolResult has content and is_error
                 if hasattr(result, 'model_dump'):
                     result_dict = result.model_dump(by_alias=True, exclude_none=True)
                 elif hasattr(result, '__dict__'):
@@ -168,7 +167,8 @@ async def proxy_tool_call(
                 else:
                     result_dict = {"content": result}
                 
-                is_error = result_dict.get("isError", False)
+                # Handle both is_error (Python) and isError (JSON alias)
+                is_error = result_dict.get("is_error", result_dict.get("isError", False))
                 content = result_dict.get("content", [])
                 
                 # Extract text content from MCP response format
@@ -180,6 +180,8 @@ async def proxy_tool_call(
                             text_parts.append(item.get("text", ""))
                         elif isinstance(item, str):
                             text_parts.append(item)
+                        elif hasattr(item, "text"):
+                            text_parts.append(item.text)
                     result_data = "\n".join(text_parts) if text_parts else content
                 else:
                     result_data = content
@@ -192,11 +194,10 @@ async def proxy_tool_call(
                     error=str(result_data) if is_error else None,
                 )
             else:
-                # Fallback: try calling directly on the pydantic server
-                # This may happen if the session isn't exposed
+                # Fallback: pydantic_server doesn't have direct_call_tool
                 raise HTTPException(
                     status_code=500,
-                    detail=f"MCP server '{server_name}' session not accessible"
+                    detail=f"MCP server '{server_name}' does not support direct_call_tool"
                 )
                 
         except Exception as call_error:
