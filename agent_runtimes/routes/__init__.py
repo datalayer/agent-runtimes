@@ -34,6 +34,7 @@ from .health import router as health_router
 from .history import router as history_router
 from .identity import router as identity_router
 from .mcp import router as mcp_router
+from .mcp_proxy import router as mcp_proxy_router
 from .mcp_ui import register_mcp_ui_agent, router as mcp_ui_router, unregister_mcp_ui_agent
 from .skills import router as skills_router
 from .vercel_ai import register_vercel_agent, router as vercel_ai_router, unregister_vercel_agent
@@ -57,6 +58,7 @@ __all__ = [
     "health_router",
     "history_router",
     "identity_router",
+    "mcp_proxy_router",
     "mcp_router",
     "mcp_ui_router",
     "register_a2a_agent",

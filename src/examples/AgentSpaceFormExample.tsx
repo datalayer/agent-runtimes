@@ -54,6 +54,8 @@ interface SandboxStatus {
   generated_path: string | null;
   skills_path: string | null;
   python_path: string | null;
+  /** MCP proxy URL for two-container architecture (tool calls via HTTP) */
+  mcp_proxy_url: string | null;
 }
 
 interface CodemodeStatusResponse {
@@ -325,8 +327,33 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
   const autoSelectRef = useRef(false);
   const enableSkills = selectedSkills.length > 0;
 
+  // =====================================================================
+  // Two-Container Codemode Architecture
+  // =====================================================================
+  //
+  // When Jupyter sandbox is enabled, the architecture uses two containers:
+  //
+  // ┌─────────────────────────────────────┐  ┌─────────────────────────────────┐
+  // │  agent-runtimes (port 8765)         │  │  jupyter server (port 8888)     │
+  // │  ┌─────────────────────────────┐    │  │  ┌─────────────────────────┐    │
+  // │  │  MCP Servers (stdio)        │    │  │  │  Jupyter Kernel         │    │
+  // │  │  - github, filesystem, etc  │◀───┼──┼──│  executes generated     │    │
+  // │  └─────────────────────────────┘    │  │  │  Python code            │    │
+  // │  ┌─────────────────────────────┐    │  │  └─────────────────────────┘    │
+  // │  │  /api/v1/mcp/proxy/*        │    │  │                                 │
+  // │  │  HTTP proxy for tool calls  │    │  │  Tool calls go via HTTP to     │
+  // │  └─────────────────────────────┘    │  │  agent-runtimes MCP proxy      │
+  // └─────────────────────────────────────┘  └─────────────────────────────────┘
+  //
+  // The backend automatically configures mcp_proxy_url when jupyter_sandbox
+  // is provided, defaulting to http://0.0.0.0:8765/api/v1/mcp/proxy
+  //
+  // =====================================================================
+
   // Jupyter sandbox URL (used when useJupyterSandbox is true)
+  // Can be configured via VITE_JUPYTER_SANDBOX_URL environment variable
   const jupyterSandboxUrl =
+    import.meta.env.VITE_JUPYTER_SANDBOX_URL ||
     'http://localhost:8888/api/jupyter-server?token=60c1661cc408f978c309d04157af55c9588ff9557c9380e4fb50785750703da6';
 
   const handleSelectedServersChange = React.useCallback(

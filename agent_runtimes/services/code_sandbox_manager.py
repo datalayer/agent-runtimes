@@ -53,10 +53,17 @@ class SandboxConfig:
         variant: The sandbox variant to use.
         jupyter_url: The Jupyter server URL (only for local-jupyter variant).
         jupyter_token: The Jupyter server token (only for local-jupyter variant).
+        mcp_proxy_url: The MCP tool proxy URL for two-container setups.
+            When set, remote sandboxes will call tools via HTTP to this URL
+            instead of trying to use stdio MCP processes directly.
+            
+            Example for local dev: "http://localhost:8765/api/v1/mcp/proxy"
+            Example for K8s: "http://agent-runtimes:8765/api/v1/mcp/proxy"
     """
     variant: SandboxVariant = "local-eval"
     jupyter_url: str | None = None
     jupyter_token: str | None = None
+    mcp_proxy_url: str | None = None
 
 
 class CodeSandboxManager:
@@ -126,6 +133,7 @@ class CodeSandboxManager:
         variant: SandboxVariant | None = None,
         jupyter_url: str | None = None,
         jupyter_token: str | None = None,
+        mcp_proxy_url: str | None = None,
     ) -> None:
         """Configure the sandbox settings.
         
@@ -136,6 +144,8 @@ class CodeSandboxManager:
             variant: The sandbox variant to use. If None, keeps current.
             jupyter_url: The Jupyter server URL. Can include token as query param.
             jupyter_token: The Jupyter server token. Overrides token in URL.
+            mcp_proxy_url: The MCP tool proxy URL for two-container setups.
+                When set, remote sandboxes will call tools via HTTP to this URL.
         """
         with self._sandbox_lock:
             old_variant = self._config.variant
@@ -164,6 +174,10 @@ class CodeSandboxManager:
             if variant is not None:
                 self._config.variant = variant
             
+            # Set MCP proxy URL if provided
+            if mcp_proxy_url is not None:
+                self._config.mcp_proxy_url = mcp_proxy_url
+            
             # If variant changed or we're reconfiguring jupyter, stop existing sandbox
             if self._sandbox is not None:
                 config_changed = (
@@ -182,21 +196,38 @@ class CodeSandboxManager:
             
             logger.info(
                 f"Sandbox configured: variant={self._config.variant}, "
-                f"jupyter_url={self._config.jupyter_url}"
+                f"jupyter_url={self._config.jupyter_url}, "
+                f"mcp_proxy_url={self._config.mcp_proxy_url}"
             )
     
-    def configure_from_url(self, jupyter_sandbox_url: str) -> None:
+    def configure_from_url(
+        self,
+        jupyter_sandbox_url: str,
+        mcp_proxy_url: str | None = None,
+    ) -> None:
         """Configure for Jupyter sandbox from a URL with optional token.
         
         This is a convenience method for CLI/API usage where the URL format
         is: <URL>?token=<TOKEN>
         
+        For two-container setups (Kubernetes), the mcp_proxy_url should be
+        set to the agent-runtimes container's MCP proxy endpoint.
+        
         Args:
             jupyter_sandbox_url: The Jupyter server URL, optionally with token.
+            mcp_proxy_url: The MCP tool proxy URL for two-container setups.
+                If not provided, will default to http://0.0.0.0:8765/api/v1/mcp/proxy
+                for local-jupyter variant (assumes colocated containers).
         """
+        # Default to local agent-runtimes URL for Jupyter sandboxes
+        # In K8s, containers in the same pod can reach each other via 0.0.0.0
+        if mcp_proxy_url is None:
+            mcp_proxy_url = "http://0.0.0.0:8765/api/v1/mcp/proxy"
+        
         self.configure(
             variant="local-jupyter",
             jupyter_url=jupyter_sandbox_url,
+            mcp_proxy_url=mcp_proxy_url,
         )
     
     def get_sandbox(self) -> Sandbox:
@@ -341,6 +372,7 @@ class CodeSandboxManager:
             "generated_path": generated_path,
             "skills_path": skills_path,
             "python_path": python_path,
+            "mcp_proxy_url": self._config.mcp_proxy_url,
         }
 
 

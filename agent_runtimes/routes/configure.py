@@ -26,7 +26,11 @@ router = APIRouter(prefix="/configure", tags=["configure"])
 # =========================================================================
 
 class SandboxStatus(BaseModel):
-    """Code sandbox status."""
+    """Code sandbox status.
+    
+    For two-container setups (Kubernetes), the mcp_proxy_url enables
+    the Jupyter kernel to call MCP tools via HTTP to the agent-runtimes container.
+    """
     variant: str  # "local-eval" or "local-jupyter"
     jupyter_url: str | None = None
     jupyter_connected: bool = False
@@ -35,6 +39,7 @@ class SandboxStatus(BaseModel):
     generated_path: str | None = None
     skills_path: str | None = None
     python_path: str | None = None
+    mcp_proxy_url: str | None = None
 
 
 class CodemodeStatus(BaseModel):
@@ -448,6 +453,7 @@ def _get_sandbox_status() -> SandboxStatus | None:
             generated_path=status.get("generated_path"),
             skills_path=status.get("skills_path"),
             python_path=status.get("python_path"),
+            mcp_proxy_url=status.get("mcp_proxy_url"),
         )
         
         # If Jupyter variant, test the connection

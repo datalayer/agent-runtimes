@@ -55,6 +55,7 @@ from .routes import (
     health_router,
     history_router,
     identity_router,
+    mcp_proxy_router,
     mcp_router,
     mcp_ui_router,
     set_a2a_app,
@@ -261,14 +262,37 @@ async def _create_and_register_cli_agent(
                 generated_folder = os.getenv("AGENT_RUNTIMES_GENERATED_CODE_FOLDER")
                 skills_folder_path = os.getenv("AGENT_RUNTIMES_SKILLS_FOLDER")
                 
+                # Get MCP proxy URL from sandbox manager or environment
+                # This enables the two-container architecture where Jupyter kernel
+                # calls tools via HTTP to the agent-runtimes container
+                mcp_proxy_url = os.getenv("AGENT_RUNTIMES_MCP_PROXY_URL")
+                if not mcp_proxy_url and shared_sandbox is not None:
+                    # If sandbox manager has a proxy URL configured, use it
+                    try:
+                        from .services.code_sandbox_manager import get_code_sandbox_manager
+                        manager_status = get_code_sandbox_manager().get_status()
+                        mcp_proxy_url = manager_status.get("mcp_proxy_url")
+                    except Exception:
+                        pass
+                
+                # For Jupyter sandboxes, always use HTTP proxy if not already set
+                # This ensures local Jupyter examples also use the HTTP proxy pattern
+                if not mcp_proxy_url and shared_sandbox is not None:
+                    # Check if it's a Jupyter sandbox
+                    if hasattr(shared_sandbox, '_server_url'):
+                        # Default to local agent-runtimes proxy URL
+                        mcp_proxy_url = "http://localhost:8765/api/v1/mcp/proxy"
+                        logger.info(f"Using default MCP proxy URL for Jupyter sandbox: {mcp_proxy_url}")
+                
                 codemode_config = CodeModeConfig(
                     workspace_path=str((repo_root / "workspace").resolve()),
                     generated_path=generated_folder or str((repo_root / "generated").resolve()),
                     skills_path=skills_folder_path or str((repo_root / "skills").resolve()),
                     allow_direct_tool_calls=False,
+                    mcp_proxy_url=mcp_proxy_url,
                 )
                 
-                logger.info(f"Codemode config: generated_path={codemode_config.generated_path}, skills_path={codemode_config.skills_path}")
+                logger.info(f"Codemode config: generated_path={codemode_config.generated_path}, skills_path={codemode_config.skills_path}, mcp_proxy_url={codemode_config.mcp_proxy_url}")
                 
                 codemode_toolset = CodemodeToolset(
                     registry=registry,
@@ -403,14 +427,27 @@ async def _create_and_register_cli_agent(
                 generated_folder = os.getenv("AGENT_RUNTIMES_GENERATED_CODE_FOLDER")
                 skills_folder_path = os.getenv("AGENT_RUNTIMES_SKILLS_FOLDER")
                 
+                # Get MCP proxy URL from sandbox manager or environment
+                # This enables the two-container architecture where Jupyter kernel
+                # calls tools via HTTP to the agent-runtimes container
+                mcp_proxy_url = os.getenv("AGENT_RUNTIMES_MCP_PROXY_URL")
+                if not mcp_proxy_url:
+                    try:
+                        from .services.code_sandbox_manager import get_code_sandbox_manager
+                        manager_status = get_code_sandbox_manager().get_status()
+                        mcp_proxy_url = manager_status.get("mcp_proxy_url")
+                    except Exception:
+                        pass
+                
                 new_config = CodeModeConfig(
                     workspace_path=str((repo_root / "workspace").resolve()),
                     generated_path=generated_folder or str((repo_root / "generated").resolve()),
                     skills_path=skills_folder_path or str((repo_root / "skills").resolve()),
                     allow_direct_tool_calls=False,
+                    mcp_proxy_url=mcp_proxy_url,
                 )
                 
-                logger.info(f"rebuild_codemode: Using generated_path={new_config.generated_path}, skills_path={new_config.skills_path}")
+                logger.info(f"rebuild_codemode: Using generated_path={new_config.generated_path}, skills_path={new_config.skills_path}, mcp_proxy_url={new_config.mcp_proxy_url}")
                 
                 # Get fresh sandbox from manager (may have been reconfigured via API)
                 # Do NOT use the captured shared_sandbox from agent creation time
@@ -824,6 +861,7 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
     app.include_router(acp_router, prefix=config.api_prefix)
     app.include_router(configure_router, prefix=config.api_prefix)
     app.include_router(mcp_router, prefix=config.api_prefix)
+    app.include_router(mcp_proxy_router, prefix=config.api_prefix)
     app.include_router(skills_router, prefix=config.api_prefix)
     app.include_router(vercel_ai_router, prefix=config.api_prefix)
     app.include_router(agui_router, prefix=config.api_prefix)

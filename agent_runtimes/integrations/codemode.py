@@ -96,10 +96,25 @@ class CodemodeIntegration:
             # Discover tools from all servers
             await self._registry.discover_all()
             
+            # Get MCP proxy URL from sandbox manager or environment
+            # This enables two-container architecture where Jupyter kernel
+            # calls tools via HTTP to the agent-runtimes container
+            mcp_proxy_url = None
+            try:
+                import os
+                mcp_proxy_url = os.getenv("AGENT_RUNTIMES_MCP_PROXY_URL")
+                if not mcp_proxy_url:
+                    from ..services.code_sandbox_manager import get_code_sandbox_manager
+                    manager_status = get_code_sandbox_manager().get_status()
+                    mcp_proxy_url = manager_status.get("mcp_proxy_url")
+            except Exception:
+                pass
+            
             # Set up the code executor
             config = CodeModeConfig(
                 skills_path=self.skills_path,
                 sandbox_variant=self.sandbox_variant,
+                mcp_proxy_url=mcp_proxy_url,
             )
             self._executor = CodeModeExecutor(self._registry, config)
             await self._executor.setup()

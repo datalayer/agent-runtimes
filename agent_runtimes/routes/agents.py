@@ -279,6 +279,18 @@ def _build_codemode_toolset(
         "codemode_skills_path",
         str((repo_root / "skills").resolve()),
     )
+    
+    # Get MCP proxy URL from sandbox manager or environment
+    # This enables the two-container architecture where Jupyter kernel
+    # calls tools via HTTP to the agent-runtimes container
+    mcp_proxy_url = os.getenv("AGENT_RUNTIMES_MCP_PROXY_URL")
+    if not mcp_proxy_url:
+        try:
+            from ..services.code_sandbox_manager import get_code_sandbox_manager
+            manager_status = get_code_sandbox_manager().get_status()
+            mcp_proxy_url = manager_status.get("mcp_proxy_url")
+        except Exception:
+            pass
 
     # Create config with all required paths
     config = CodeModeConfig(
@@ -286,6 +298,7 @@ def _build_codemode_toolset(
         generated_path=generated_path,
         skills_path=skills_path,
         allow_direct_tool_calls=allow_direct,
+        mcp_proxy_url=mcp_proxy_url,
     )
 
     # Create toolset following the working agent_cli.py pattern:
@@ -1323,7 +1336,13 @@ class EnvVar(BaseModel):
 
 
 class StartAgentMcpServersRequest(BaseModel):
-    """Request to start MCP servers for a running agent."""
+    """Request to start MCP servers for a running agent.
+    
+    For two-container Kubernetes deployments, both jupyter_sandbox and
+    mcp_proxy_url should be provided to enable the full codemode flow:
+    - jupyter_sandbox: URL of the Jupyter server for code execution
+    - mcp_proxy_url: URL of the MCP proxy endpoint for tool calls
+    """
     env_vars: list[EnvVar] = Field(
         default_factory=list,
         description="Environment variables to set before starting MCP servers",
@@ -1332,6 +1351,12 @@ class StartAgentMcpServersRequest(BaseModel):
         default=None,
         description="Jupyter sandbox URL with token (e.g., http://localhost:8888?token=xxx). "
                     "If provided, configures the code sandbox manager to use Jupyter for code execution.",
+    )
+    mcp_proxy_url: str | None = Field(
+        default=None,
+        description="MCP tool proxy URL (e.g., http://0.0.0.0:8765/api/v1/mcp/proxy). "
+                    "If provided, the Jupyter kernel will call tools via HTTP to this URL "
+                    "instead of requiring direct stdio access to MCP servers.",
     )
 
 
@@ -1352,6 +1377,10 @@ class AgentMcpServersResponse(BaseModel):
     sandbox_variant: str | None = Field(
         default=None,
         description="The sandbox variant after configuration (local-eval or local-jupyter)"
+    )
+    mcp_proxy_url: str | None = Field(
+        default=None,
+        description="The MCP proxy URL configured for tool calls (if any)"
     )
     message: str
 
@@ -1574,16 +1603,24 @@ async def start_all_agents_mcp_servers(
             logger.info(f"Set environment variable: {env_var.name}")
         
         # Configure sandbox manager if jupyter_sandbox is provided
+        # For two-container setups, also configure the MCP proxy URL
         sandbox_configured = False
         sandbox_variant: str | None = None
+        mcp_proxy_url: str | None = None
         if body.jupyter_sandbox:
             try:
                 from ..services.code_sandbox_manager import get_code_sandbox_manager
                 sandbox_manager = get_code_sandbox_manager()
-                sandbox_manager.configure_from_url(body.jupyter_sandbox)
+                # Pass both jupyter URL and MCP proxy URL for two-container setup
+                sandbox_manager.configure_from_url(
+                    body.jupyter_sandbox,
+                    mcp_proxy_url=body.mcp_proxy_url,
+                )
                 sandbox_configured = True
                 sandbox_variant = sandbox_manager.variant
+                mcp_proxy_url = sandbox_manager.config.mcp_proxy_url
                 logger.info(f"Configured sandbox manager for Jupyter: {body.jupyter_sandbox.split('?')[0]}")
+                logger.info(f"MCP proxy URL configured: {mcp_proxy_url}")
             except Exception as e:
                 logger.warning(f"Failed to configure Jupyter sandbox: {e}")
         
@@ -1613,6 +1650,8 @@ async def start_all_agents_mcp_servers(
             message_parts.append(f"{len(all_failed)} failed")
         if sandbox_configured:
             message_parts.append(f"sandbox={sandbox_variant}")
+        if mcp_proxy_url:
+            message_parts.append(f"mcp_proxy={mcp_proxy_url}")
         
         return AgentMcpServersResponse(
             agent_id=None,
@@ -1623,6 +1662,7 @@ async def start_all_agents_mcp_servers(
             codemode_rebuilt=any_codemode_rebuilt,
             sandbox_configured=sandbox_configured,
             sandbox_variant=sandbox_variant,
+            mcp_proxy_url=mcp_proxy_url,
             message=", ".join(message_parts),
         )
         
@@ -1676,16 +1716,24 @@ async def start_agent_mcp_servers(
             logger.info(f"Set environment variable: {env_var.name}")
         
         # Configure sandbox manager if jupyter_sandbox is provided
+        # For two-container setups, also configure the MCP proxy URL
         sandbox_configured = False
         sandbox_variant: str | None = None
+        mcp_proxy_url: str | None = None
         if body.jupyter_sandbox:
             try:
                 from ..services.code_sandbox_manager import get_code_sandbox_manager
                 sandbox_manager = get_code_sandbox_manager()
-                sandbox_manager.configure_from_url(body.jupyter_sandbox)
+                # Pass both jupyter URL and MCP proxy URL for two-container setup
+                sandbox_manager.configure_from_url(
+                    body.jupyter_sandbox,
+                    mcp_proxy_url=body.mcp_proxy_url,
+                )
                 sandbox_configured = True
                 sandbox_variant = sandbox_manager.variant
+                mcp_proxy_url = sandbox_manager.config.mcp_proxy_url
                 logger.info(f"Configured sandbox manager for Jupyter: {body.jupyter_sandbox.split('?')[0]}")
+                logger.info(f"MCP proxy URL configured: {mcp_proxy_url}")
             except Exception as e:
                 logger.warning(f"Failed to configure Jupyter sandbox: {e}")
         
@@ -1709,6 +1757,8 @@ async def start_agent_mcp_servers(
             message_parts.append(f"{len(failed)} failed")
         if sandbox_configured:
             message_parts.append(f"sandbox={sandbox_variant}")
+        if mcp_proxy_url:
+            message_parts.append(f"mcp_proxy={mcp_proxy_url}")
         
         return AgentMcpServersResponse(
             agent_id=agent_id,
@@ -1719,6 +1769,7 @@ async def start_agent_mcp_servers(
             codemode_rebuilt=codemode_rebuilt,
             sandbox_configured=sandbox_configured,
             sandbox_variant=sandbox_variant,
+            mcp_proxy_url=mcp_proxy_url,
             message=", ".join(message_parts) if message_parts else "No servers to start",
         )
         
