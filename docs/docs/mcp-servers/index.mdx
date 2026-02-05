@@ -469,6 +469,138 @@ However, session file authentication is more reliable.
 5. **Tool Discovery** — Once connected, list available tools from each server (prefixed with server ID)
 6. **Status Tracking** — Track ready/failed servers for monitoring
 
+## MCP Tool Proxy
+
+The **MCP Tool Proxy** provides an HTTP endpoint that allows remote code execution environments (like Jupyter kernels in separate containers) to call MCP tools running as stdio subprocesses in the agent-runtimes container.
+
+### Two-Container Architecture
+
+In production deployments (e.g., Kubernetes), agent-runtimes and Jupyter often run in separate containers:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  Pod                                                                         │
+│  ┌────────────────────────────────┐    ┌────────────────────────────────┐  │
+│  │  agent-runtimes :8765          │    │  jupyter :2300                  │  │
+│  │  ┌──────────────────────────┐  │    │  ┌──────────────────────────┐  │  │
+│  │  │  MCP Servers (stdio)     │  │    │  │  Jupyter Kernel          │  │  │
+│  │  │  - github                │  │    │  │  - Executes Python code  │  │  │
+│  │  │  - filesystem            │◀─┼────┼──│  - Calls tools via HTTP   │  │  │
+│  │  │  - tavily                │  │HTTP│  │                          │  │  │
+│  │  └──────────────────────────┘  │    │  └──────────────────────────┘  │  │
+│  │  ┌──────────────────────────┐  │    │                                │  │
+│  │  │  /api/v1/mcp/proxy/*     │  │    │  Shared Volume:                │  │
+│  │  │  HTTP proxy for tools    │  │    │  /mnt/shared-agent/            │  │
+│  │  └──────────────────────────┘  │    │    ├── generated/  (bindings)  │  │
+│  └────────────────────────────────┘    │    └── skills/     (user code) │  │
+│                                        └────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+The problem: Jupyter kernel cannot directly access stdio MCP servers running in another container.
+
+The solution: **MCP Tool Proxy** exposes MCP tools via HTTP, allowing the Jupyter kernel to call tools through REST API.
+
+### How It Works
+
+1. **Agent-runtimes** starts MCP servers as stdio subprocesses
+2. **MCP Proxy endpoint** receives HTTP requests from Jupyter kernel
+3. **Routes the request** to the appropriate stdio MCP server
+4. **Returns the result** as JSON
+
+### API Endpoints
+
+**Call a Tool via Proxy**
+
+```bash
+POST /api/v1/mcp/proxy/{server_name}/tools/{tool_name}
+Content-Type: application/json
+
+{
+  "arguments": {
+    "owner": "datalayer",
+    "repo": "agent-runtimes"
+  }
+}
+```
+
+Response:
+```json
+{
+  "success": true,
+  "result": "Repository starred successfully",
+  "is_error": false
+}
+```
+
+**List Available Proxy Servers**
+
+```bash
+GET /api/v1/mcp/proxy/servers
+```
+
+```json
+{
+  "servers": ["github", "filesystem", "tavily"],
+  "count": 3
+}
+```
+
+**Health Check**
+
+```bash
+GET /api/v1/mcp/proxy/health
+```
+
+```json
+{
+  "status": "healthy",
+  "servers_available": 3
+}
+```
+
+### Configuration
+
+The MCP proxy URL is configured via environment variable or API:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `AGENT_RUNTIMES_MCP_PROXY_URL` | `http://0.0.0.0:8765/api/v1/mcp/proxy` | MCP proxy endpoint URL |
+
+When configuring a Jupyter sandbox, the proxy URL is automatically set:
+
+```python
+# In runtimes-companion (Kubernetes)
+payload["jupyter_sandbox"] = "http://0.0.0.0:2300?token=xxx"
+payload["mcp_proxy_url"] = "http://0.0.0.0:8765/api/v1/mcp/proxy"
+```
+
+### Codemode Integration
+
+When using [Codemode](/codemode) with a Jupyter sandbox, the executor automatically uses HTTP proxy mode:
+
+```python
+# CodeModeConfig with mcp_proxy_url
+config = CodeModeConfig(
+    mcp_proxy_url="http://0.0.0.0:8765/api/v1/mcp/proxy"
+)
+
+# Generated code in Jupyter kernel calls tools via HTTP:
+# from generated.servers.github import star_repo
+# result = await star_repo(owner="datalayer", repo="ui")
+# ↓ internally becomes ↓
+# POST http://0.0.0.0:8765/api/v1/mcp/proxy/github/tools/star_repo
+```
+
+### When to Use MCP Proxy
+
+| Scenario | Use MCP Proxy? |
+|----------|----------------|
+| Local development (single process) | No - direct stdio works |
+| Local Jupyter sandbox | Yes - recommended for consistency |
+| Kubernetes with separate containers | **Yes - required** |
+| Docker Compose with separate services | **Yes - required** |
+
 ## API Endpoints
 
 ### MCP Config Servers (from mcp.json)
