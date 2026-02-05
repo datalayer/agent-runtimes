@@ -224,7 +224,7 @@ class MCPUITransport(BaseTransport):
         # Extract request parameters
         message = request.get("message", "")
         session_id = request.get("session_id", f"session-{id(request)}")
-        ui_options = request.get("ui_options", {})
+        _ui_options = request.get("ui_options", {})  # Reserved for future use
         identities = request.get("identities")
 
         # Log identities if provided

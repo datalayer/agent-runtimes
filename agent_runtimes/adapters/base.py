@@ -170,7 +170,9 @@ class BaseAgent(ABC):
             prompt: User prompt/message.
             context: Execution context with session and history.
 
-        Yields:
+        Yields
+        ------
+        StreamEvent
             Stream events as they are produced.
         """
         # Use yield to make this an async generator, satisfying mypy's type checking

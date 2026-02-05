@@ -40,7 +40,7 @@ import json
 import logging
 import os
 from dataclasses import dataclass, field
-from typing import Any, Callable, Sequence, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Callable, Sequence
 
 if TYPE_CHECKING:
     from rich.table import Table
@@ -153,7 +153,11 @@ def _init_tokenizer() -> None:
 
         # Use cl100k_base encoding (used by GPT-4, Claude, and most modern models)
         encoding = tiktoken.get_encoding("cl100k_base")
-        _tokenizer = lambda text: len(encoding.encode(text)) if text else 0
+
+        def _tokenizer(text: str) -> int:
+            """Count tokens using tiktoken cl100k_base encoding."""
+            return len(encoding.encode(text)) if text else 0
+
         logger.debug("Using tiktoken for accurate token counting")
     except ImportError:
         logger.debug("tiktoken not available, using character-based estimation")
@@ -331,7 +335,6 @@ class UsageTracker:
             codemode: Whether this is a codemode session (affects tool call tracking)
             session_id: Optional session identifier for CSV export
         """
-        import time
         import uuid
 
         self.codemode = codemode

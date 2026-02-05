@@ -37,7 +37,6 @@ Usage as library:
     )
 """
 
-import json
 from typing import Any
 
 import httpx

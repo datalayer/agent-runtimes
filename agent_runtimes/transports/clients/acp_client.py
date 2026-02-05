@@ -29,7 +29,6 @@ from typing import Any, AsyncGenerator, Callable
 from acp import (
     AGENT_METHODS,
     CLIENT_METHODS,
-    PROTOCOL_VERSION,
     InitializeRequest,
     InitializeResponse,
     NewSessionRequest,
@@ -47,7 +46,7 @@ from acp.schema import (
 )
 
 try:
-    import websockets
+    import websockets  # noqa: F401
     from websockets.asyncio.client import connect as ws_connect
 
     HAS_WEBSOCKETS = True

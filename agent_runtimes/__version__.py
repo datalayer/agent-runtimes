@@ -2,5 +2,3 @@
 # Distributed under the terms of the Modified BSD License.
 
 """Agent Runtimes version information."""
-
-from ._version import __version__

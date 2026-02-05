@@ -118,7 +118,7 @@ def _print_agents(
             console.print()
             console.print(
                 Panel(
-                    f"[dim]No running agents found[/dim]",
+                    "[dim]No running agents found[/dim]",
                     title=f"🔍 Server: {host}:{port}",
                     border_style="yellow",
                 )
@@ -221,7 +221,7 @@ def _print_agents(
                         f"  [dim]... and {len(tools) - 10} more tools[/dim]"
                     )
             else:
-                detail_lines.append(f"[bold]Tools:[/bold] [dim]none[/dim]")
+                detail_lines.append("[bold]Tools:[/bold] [dim]none[/dim]")
 
             # Skills (if codemode enabled)
             skills = toolsets.get("skills", [])

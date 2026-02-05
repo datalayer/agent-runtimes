@@ -129,7 +129,8 @@ async def restaurant_query(request: A2UIQueryRequest) -> list[dict[str, Any]]:
 async def restaurant_health() -> dict[str, Any]:
     """Health check for the A2UI restaurant endpoint."""
     try:
-        from agent_runtimes.agents.restaurant_finder import create_restaurant_agent
+        # Import to check availability
+        from agent_runtimes.agents import restaurant_finder  # noqa: F401
 
         return {
             "status": "healthy",

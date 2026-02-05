@@ -24,7 +24,7 @@ The ACP (Agent Client Protocol) support uses the official SDK from:
 
 from typing import Any, Dict, List
 
-from agent_runtimes.__version__ import __version__
+from agent_runtimes._version import __version__
 
 # Agent interfaces
 from agent_runtimes.adapters.base import (

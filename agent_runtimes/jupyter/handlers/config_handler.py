@@ -11,7 +11,7 @@ from jupyter_server.extension.handler import (
 )
 from tornado.web import authenticated
 
-from agent_runtimes.__version__ import __version__
+from agent_runtimes._version import __version__
 
 
 class ConfigHandler(ExtensionHandlerMixin, APIHandler):

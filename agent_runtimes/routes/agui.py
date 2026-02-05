@@ -7,7 +7,7 @@ import asyncio
 import logging
 from typing import Any, Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 from pydantic import BaseModel
 from starlette.applications import Starlette
 from starlette.routing import Mount

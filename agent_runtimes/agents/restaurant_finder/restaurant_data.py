@@ -3,7 +3,6 @@
 
 """Restaurant data for the A2UI Restaurant Finder agent."""
 
-import json
 import logging
 from typing import Any
 

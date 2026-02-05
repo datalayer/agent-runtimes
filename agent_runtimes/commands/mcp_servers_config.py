@@ -26,14 +26,12 @@ Usage as library:
 
 import json
 from enum import Enum
-from pathlib import Path
 from typing import Any
 
 from rich import box
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
-from rich.text import Text
 
 
 class OutputFormat(str, Enum):
@@ -59,7 +57,6 @@ def get_mcp_servers_config() -> dict[str, Any]:
     """
     from agent_runtimes.mcp.config_mcp_servers import (
         get_mcp_config_path,
-        get_mcp_servers_from_config,
         load_mcp_config,
     )
 
@@ -161,7 +158,7 @@ def list_mcp_servers_config(
 
         # Rich table format
         table = Table(
-            title=f"📋 MCP Config Servers",
+            title="📋 MCP Config Servers",
             caption=f"[dim]Config: {config_path}[/dim]",
             box=box.ROUNDED,
             show_header=True,

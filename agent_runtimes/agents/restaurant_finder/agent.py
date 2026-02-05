@@ -12,7 +12,6 @@ This implementation uses a hybrid approach:
 - The A2UI response is built programmatically from tool results
 """
 
-import json
 import logging
 import os
 from typing import Any
@@ -452,7 +451,7 @@ Keep your responses brief and friendly.""",
         Returns:
             A description of the restaurants found.
         """
-        logger.info(f"--- TOOL CALLED: get_restaurants ---")
+        logger.info("--- TOOL CALLED: get_restaurants ---")
         logger.info(f"  - Cuisine: {cuisine}, Location: {location}, Count: {count}")
 
         # Get restaurant data and store it for A2UI generation

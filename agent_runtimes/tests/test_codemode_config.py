@@ -3,8 +3,8 @@
 
 """Tests for codemode configuration wiring in agent-runtimes."""
 
-from typing import Any, Callable, Optional
 from types import SimpleNamespace
+from typing import Any, Callable, Optional
 
 import pytest
 

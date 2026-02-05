@@ -20,18 +20,27 @@ import logging
 import traceback
 from typing import TYPE_CHECKING, Any, AsyncIterator
 
-from pydantic_ai import UsageLimits
-from pydantic_ai.ui.vercel_ai import VercelAIAdapter
 from starlette.requests import Request
 from starlette.responses import Response, StreamingResponse
+
+if TYPE_CHECKING:
+    from pydantic_ai import Agent, UsageLimits
+    from pydantic_ai.ui.vercel_ai import VercelAIAdapter
+else:
+    try:
+        from pydantic_ai import UsageLimits
+    except (ImportError, AttributeError):
+        UsageLimits = Any  # type: ignore[misc,assignment]
+
+    try:
+        from pydantic_ai.ui.vercel_ai import VercelAIAdapter
+    except (ImportError, AttributeError):
+        VercelAIAdapter = Any  # type: ignore[misc,assignment]
 
 from ..adapters.base import BaseAgent
 from ..context.identities import IdentityContextManager
 from ..context.usage import get_usage_tracker
 from .base import BaseTransport
-
-if TYPE_CHECKING:
-    from pydantic_ai import Agent
 
 logger = logging.getLogger(__name__)
 

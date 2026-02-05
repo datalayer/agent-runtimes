@@ -83,7 +83,6 @@ class CodemodeIntegration:
             from agent_codemode import (
                 CodeModeConfig,
                 CodeModeExecutor,
-                MCPServerConfig,
                 ToolRegistry,
             )
             from agent_skills.simple import SimpleSkillsManager
@@ -161,7 +160,12 @@ class CodemodeIntegration:
         if not self._setup_done:
             await self.setup()
 
-        if context and self._executor and hasattr(self._executor, '_sandbox') and self._executor._sandbox:
+        if (
+            context
+            and self._executor
+            and hasattr(self._executor, "_sandbox")
+            and self._executor._sandbox
+        ):
             for name, value in context.items():
                 self._executor._sandbox.set_variable(name, value)
 

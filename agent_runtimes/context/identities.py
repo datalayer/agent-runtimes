@@ -152,5 +152,7 @@ class IdentityContextManager:
     async def __aenter__(self) -> "IdentityContextManager":
         return self.__enter__()
 
-    async def __aexit__(self, exc_type: object, exc_val: object, exc_tb: object) -> None:
+    async def __aexit__(
+        self, exc_type: object, exc_val: object, exc_tb: object
+    ) -> None:
         self.__exit__(exc_type, exc_val, exc_tb)

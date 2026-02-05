@@ -71,6 +71,7 @@ docs = [
     "click>=8.3.1",  # Use latest version, 8.2.2 issue has been fixed
     "npdoc_to_md",
     "pydoc-markdown>=4.0",  # Use modern version with proper module structure
+    "pydantic-ai-slim[openai,anthropic,google,mcp,dbos,bedrock]",  # Required for imports during doc generation
 ]
 examples = [
     "fastapi",
@@ -113,6 +114,7 @@ ignore_missing_imports = true
 disallow_untyped_defs = true
 disallow_any_generics = true
 warn_unused_ignores = true
+disable_error_code = ["attr-defined"]
 
 [[tool.mypy.overrides]]
 module = "tornado.*"

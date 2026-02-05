@@ -27,7 +27,6 @@ Example: Recipe Builder
 
 from enum import StrEnum
 from textwrap import dedent
-from typing import Optional
 
 from ag_ui.core import EventType, StateSnapshotEvent
 from pydantic import BaseModel, Field

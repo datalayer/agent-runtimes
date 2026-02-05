@@ -78,7 +78,9 @@ class AgentUsageStats:
     system_prompt_tokens: int = 0
 
     # Tool tracking (definitions from last run)
-    tool_definitions: list[tuple[str, str | None, dict[str, Any]]] = field(default_factory=list)
+    tool_definitions: list[tuple[str, str | None, dict[str, Any]]] = field(
+        default_factory=list
+    )
     tool_tokens: int = 0
 
     # Per-request usage history
@@ -230,7 +232,9 @@ class AgentUsageStats:
         self.last_updated = datetime.now(timezone.utc)
         logger.debug(f"Stored {len(serialized)} messages for agent {self.agent_id}")
 
-    def store_tools(self, tool_definitions: list[tuple[str, str | None, dict[str, Any]]]) -> None:
+    def store_tools(
+        self, tool_definitions: list[tuple[str, str | None, dict[str, Any]]]
+    ) -> None:
         """
         Store tool definitions from an agent run.
 

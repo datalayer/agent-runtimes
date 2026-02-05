@@ -21,15 +21,21 @@ import json
 import logging
 from typing import TYPE_CHECKING, Any, AsyncIterator
 
-from pydantic_ai.ui.ag_ui._adapter import AGUIAdapter
+if TYPE_CHECKING:
+    from pydantic_ai.ui.ag_ui._adapter import AGUIAdapter
+    from starlette.applications import Starlette
+else:
+    try:
+        from pydantic_ai.ui.ag_ui._adapter import AGUIAdapter
+    except ImportError:
+        AGUIAdapter = Any  # type: ignore[misc,assignment]
+
+    from starlette.applications import Starlette  # type: ignore[assignment]
 
 from ..adapters.base import BaseAgent
 from ..context.identities import set_request_identities
 from ..context.usage import get_usage_tracker
 from .base import BaseTransport
-
-if TYPE_CHECKING:
-    from starlette.applications import Starlette
 
 logger = logging.getLogger(__name__)
 
@@ -140,7 +146,6 @@ class AGUITransport(BaseTransport):
             Starlette application implementing the AG-UI protocol.
         """
         if self._app is None:
-            from collections.abc import AsyncIterator as AsyncIteratorType
             from typing import TYPE_CHECKING
 
             from starlette.applications import Starlette

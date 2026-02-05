@@ -74,7 +74,7 @@ def print_request_details(result: Any, turn_number: int) -> None:
 
     # Show raw JSON payload
     print(f"\n{'─' * 80}")
-    print(f"📄 RAW PAYLOAD (JSON format):")
+    print("📄 RAW PAYLOAD (JSON format):")
     print(f"{'─' * 80}")
     try:
         messages_json = _messages.ModelMessagesTypeAdapter.dump_json(all_messages)

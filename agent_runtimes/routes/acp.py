@@ -26,55 +26,13 @@ Supported Methods:
 """
 
 import asyncio
-import json
 import logging
 import uuid
-from datetime import datetime, timezone
-from enum import Enum
 from typing import Any
-
-from acp import (
-    AGENT_METHODS,
-    CLIENT_METHODS,
-    session_notification,
-    update_agent_message_text,
-    update_agent_thought_text,
-    update_tool_call,
-)
 
 # Import from official ACP SDK
 from acp import (
     PROTOCOL_VERSION as ACP_PROTOCOL_VERSION,
-)
-from acp.schema import (
-    AgentCapabilities as ACPAgentCapabilities,
-)
-from acp.schema import (
-    Implementation,
-    McpCapabilities,
-    PromptCapabilities,
-    SessionCapabilities,
-)
-from acp.schema import (
-    InitializeRequest as ACPInitializeRequest,
-)
-from acp.schema import (
-    InitializeResponse as ACPInitializeResponse,
-)
-from acp.schema import (
-    NewSessionRequest as ACPNewSessionRequest,
-)
-from acp.schema import (
-    NewSessionResponse as ACPNewSessionResponse,
-)
-from acp.schema import (
-    PromptRequest as ACPPromptRequest,
-)
-from acp.schema import (
-    PromptResponse as ACPPromptResponse,
-)
-from acp.schema import (
-    SessionNotification as ACPSessionNotification,
 )
 from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel, Field

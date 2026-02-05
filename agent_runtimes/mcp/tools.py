@@ -9,10 +9,16 @@ Jupyter and FastAPI servers.
 """
 
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from urllib.parse import urljoin
 
-from pydantic_ai.mcp import MCPServerStreamableHTTP
+if TYPE_CHECKING:
+    from pydantic_ai.mcp import MCPServerStreamableHTTP
+else:
+    try:
+        from pydantic_ai.mcp import MCPServerStreamableHTTP
+    except ImportError:
+        MCPServerStreamableHTTP = Any  # type: ignore[misc,assignment]
 
 from agent_runtimes.types import BuiltinTool
 

@@ -28,9 +28,17 @@ MCP_SERVER_HANDSHAKE_TIMEOUT = 180
 MCP_SERVER_MAX_ATTEMPTS = 3
 
 try:  # Python 3.11+
-    BaseExceptionGroup
-except NameError:  # pragma: no cover - earlier Python versions
-    BaseExceptionGroup = ExceptionGroup
+    from builtins import BaseExceptionGroup
+    from builtins import ExceptionGroup as _ExceptionGroup
+except (ImportError, AttributeError):  # pragma: no cover - Python <3.11
+    # ExceptionGroup doesn't exist in Python <3.11
+    # Create a dummy type that will never match in isinstance checks
+    class BaseExceptionGroup(BaseException):  # type: ignore[no-redef]
+        """Dummy BaseExceptionGroup for Python <3.11 compatibility."""
+
+        pass
+
+    _ExceptionGroup = BaseExceptionGroup  # type: ignore[misc,assignment]
 
 
 class MCPServerInstance:
@@ -238,7 +246,7 @@ class MCPLifecycleManager:
             return [self._format_exception(exc_group)]
         details: list[str] = []
         for idx, exc in enumerate(getattr(exc_group, "exceptions", [])):
-            if isinstance(exc, (ExceptionGroup, BaseExceptionGroup)):
+            if isinstance(exc, (_ExceptionGroup, BaseExceptionGroup)):
                 nested_lines = self._format_exception_group(exc)
                 for nested_line in nested_lines:
                     details.append(f"[{idx}] {nested_line}")
@@ -428,7 +436,7 @@ class MCPLifecycleManager:
                     attempt += 1
                     continue
 
-                except (ExceptionGroup, BaseExceptionGroup) as eg:
+                except (_ExceptionGroup, BaseExceptionGroup) as eg:
                     error_lines = self._format_exception_group(eg)
                     for line in error_lines:
                         logger.error(f"✗ MCP server '{server_id}' exception: {line}")

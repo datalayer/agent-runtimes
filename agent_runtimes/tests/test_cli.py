@@ -7,14 +7,15 @@ import json
 import os
 from unittest.mock import MagicMock, patch
 
-import pytest
 from typer.testing import CliRunner
 
 from agent_runtimes.__main__ import app
 from agent_runtimes.commands.list_agents import OutputFormat
 from agent_runtimes.commands.serve import LogLevel, parse_mcp_servers, parse_skills
 
-runner = CliRunner(env={"NO_COLOR": "1"})
+runner = CliRunner(
+    env={"NO_COLOR": "1", "TERM": "dumb", "_TYPER_STANDARD_TRACEBACK": "1"}
+)
 
 
 class TestCLIHelp:

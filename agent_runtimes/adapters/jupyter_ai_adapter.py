@@ -8,7 +8,7 @@ Wraps a Jupyter AI agent to implement the BaseAgent interface,
 enabling use with protocol adapters.
 """
 
-from typing import Any, AsyncIterator, Optional
+from typing import Any, AsyncIterator
 
 from .base import (
     AgentContext,
