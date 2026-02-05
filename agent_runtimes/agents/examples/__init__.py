@@ -1,7 +1,8 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""AG-UI Example Agents.
+"""
+AG-UI Example Agents.
 
 This module provides example agents demonstrating AG-UI protocol features:
 - Agentic Chat: Basic conversational agent with tools
@@ -17,14 +18,20 @@ for the Datalayer agent-runtimes infrastructure.
 Reference: https://docs.copilotkit.ai/guides
 """
 
-from .agentic_chat import agent as agentic_chat_agent, app as agentic_chat_app
-from .human_in_the_loop import agent as human_in_the_loop_agent, app as human_in_the_loop_app
-from .tool_based_generative_ui import agent as tool_based_generative_ui_agent, app as tool_based_generative_ui_app
-from .shared_state import agent as shared_state_agent, app as shared_state_app
-from .agentic_generative_ui import agent as agentic_generative_ui_agent, app as agentic_generative_ui_app
-from .backend_tool_rendering import agent as backend_tool_rendering_agent, app as backend_tool_rendering_app
-from .haiku_generative_ui import agent as haiku_generative_ui_agent, app as haiku_generative_ui_app
-
+from .agentic_chat import agent as agentic_chat_agent
+from .agentic_chat import app as agentic_chat_app
+from .agentic_generative_ui import agent as agentic_generative_ui_agent
+from .agentic_generative_ui import app as agentic_generative_ui_app
+from .backend_tool_rendering import agent as backend_tool_rendering_agent
+from .backend_tool_rendering import app as backend_tool_rendering_app
+from .haiku_generative_ui import agent as haiku_generative_ui_agent
+from .haiku_generative_ui import app as haiku_generative_ui_app
+from .human_in_the_loop import agent as human_in_the_loop_agent
+from .human_in_the_loop import app as human_in_the_loop_app
+from .shared_state import agent as shared_state_agent
+from .shared_state import app as shared_state_app
+from .tool_based_generative_ui import agent as tool_based_generative_ui_agent
+from .tool_based_generative_ui import app as tool_based_generative_ui_app
 
 __all__ = [
     # Agentic Chat

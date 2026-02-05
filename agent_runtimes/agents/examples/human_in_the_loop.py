@@ -1,7 +1,8 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Human in the Loop example.
+"""
+Human in the Loop example.
 
 Demonstrates an agent that generates task plans requiring human approval.
 The agent creates a list of steps and waits for the user to approve,
@@ -21,18 +22,18 @@ This pattern is useful for:
 
 from typing import Literal
 
-from pydantic import BaseModel, Field
-
 from ag_ui.core import EventType, StateSnapshotEvent
+from pydantic import BaseModel, Field
 from pydantic_ai import Agent
-
 
 # Define types for task steps (ag-ui standard)
 StepStatus = Literal["enabled", "disabled", "executing"]
 
 
 class TaskStep(BaseModel):
-    """A step in a task plan."""
+    """
+    A step in a task plan.
+    """
 
     description: str = Field(description="The description of the step")
     status: StepStatus = Field(
@@ -42,7 +43,9 @@ class TaskStep(BaseModel):
 
 
 class TaskPlan(BaseModel):
-    """A task plan with multiple steps for human review."""
+    """
+    A task plan with multiple steps for human review.
+    """
 
     steps: list[TaskStep] = Field(
         default_factory=list,
@@ -55,14 +58,14 @@ agent = Agent(
     "openai:gpt-4o-mini",
     system_prompt="""
         You are a helpful task planning assistant.
-        
+
         When asked to plan or do a task:
         1. Use the `generate_task_steps` tool to create a list of steps
         2. The steps will be displayed to the user for review
         3. Wait for user feedback
         4. If accepted, confirm the plan and the number of enabled steps
         5. If not accepted, ask for clarification
-        
+
         IMPORTANT:
         - Only call `generate_task_steps` ONCE per request
         - Do NOT repeat the plan in your response after showing it
@@ -75,7 +78,8 @@ agent = Agent(
 
 @agent.tool_plain
 async def generate_task_steps(steps: list[str]) -> StateSnapshotEvent:
-    """Generate a list of task steps for the user to review and approve.
+    """
+    Generate a list of task steps for the user to review and approve.
 
     This creates a task plan that will be displayed to the user.
     The user can enable/disable steps before confirming execution.

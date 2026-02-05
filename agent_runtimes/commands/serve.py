@@ -9,13 +9,13 @@ It can be used directly by other libraries or through the CLI.
 
 Usage as library:
     from agent_runtimes.commands.serve import serve_server, LogLevel
-    
+
     # Start server programmatically
     serve_server(host="0.0.0.0", port=8080, debug=True)
-    
+
     # With agent from the library
     serve_server(agent_id="crawler", agent_name="my-crawler")
-    
+
     # With automatic port finding
     serve_server(port=8000, find_free_port=True)
 """
@@ -30,7 +30,9 @@ logger = logging.getLogger(__name__)
 
 
 class LogLevel(str, Enum):
-    """Log level options."""
+    """
+    Log level options.
+    """
 
     debug = "debug"
     info = "info"
@@ -40,7 +42,9 @@ class LogLevel(str, Enum):
 
 
 class Protocol(str, Enum):
-    """Transport protocol options."""
+    """
+    Transport protocol options.
+    """
 
     ag_ui = "ag-ui"
     vercel_ai = "vercel-ai"
@@ -49,12 +53,13 @@ class Protocol(str, Enum):
 
 
 def is_port_free(host: str, port: int) -> bool:
-    """Check if a port is available for binding.
-    
+    """
+    Check if a port is available for binding.
+
     Args:
         host: Host address to check
         port: Port number to check
-        
+
     Returns:
         True if port is free, False otherwise
     """
@@ -68,16 +73,17 @@ def is_port_free(host: str, port: int) -> bool:
 
 
 def find_free_port(host: str, start_port: int, max_attempts: int = 100) -> int:
-    """Find a free port starting from the given port.
-    
+    """
+    Find a free port starting from the given port.
+
     Args:
         host: Host address to check
         start_port: Starting port number
         max_attempts: Maximum number of ports to try
-        
+
     Returns:
         First available port found
-        
+
     Raises:
         ServeError: If no free port found within max_attempts
     """
@@ -90,41 +96,29 @@ def find_free_port(host: str, start_port: int, max_attempts: int = 100) -> int:
     )
 
 
-class LogLevel(str, Enum):
-    """Log level options."""
-
-    debug = "debug"
-    info = "info"
-    warning = "warning"
-    error = "error"
-    critical = "critical"
-
-
-class Protocol(str, Enum):
-    """Transport protocol options."""
-
-    ag_ui = "ag-ui"
-    vercel_ai = "vercel-ai"
-    vercel_ai_jupyter = "vercel-ai-jupyter"
-    a2a = "a2a"
-
-
 def parse_skills(value: Optional[str]) -> list[str]:
-    """Parse comma-separated skills string into a list."""
+    """
+    Parse comma-separated skills string into a list.
+    """
     if not value:
         return []
     return [s.strip() for s in value.split(",") if s.strip()]
 
 
 def parse_mcp_servers(value: Optional[str]) -> list[str]:
-    """Parse comma-separated MCP server IDs string into a list."""
+    """
+    Parse comma-separated MCP server IDs string into a list.
+    """
     if not value:
         return []
     return [s.strip() for s in value.split(",") if s.strip()]
 
 
 class ServeError(Exception):
-    """Error raised during serve command execution."""
+    """
+    Error raised during serve command execution.
+    """
+
     pass
 
 
@@ -147,9 +141,9 @@ def serve_server(
 ) -> int:
     """
     Start the agent-runtimes server.
-    
+
     This is the core logic of the serve command, usable by other libraries.
-    
+
     Args:
         host: Host to bind to
         port: Port to bind to
@@ -166,10 +160,10 @@ def serve_server(
         skills: Comma-separated list of skills to enable (requires codemode)
         protocol: Transport protocol to use (ag-ui, vercel-ai, vercel-ai-jupyter, a2a)
         find_free_port_flag: If True, find a free port starting from the given port
-        
+
     Returns:
         The actual port the server is running on
-        
+
     Raises:
         ServeError: If validation fails or server cannot start
     """
@@ -223,14 +217,20 @@ def serve_server(
         mcp_servers_list = parse_mcp_servers(mcp_servers)
         os.environ["AGENT_RUNTIMES_MCP_SERVERS"] = ",".join(mcp_servers_list)
         if codemode:
-            logger.info(f"MCP servers (Code Mode): {mcp_servers_list} - will be converted to programmatic tools")
+            logger.info(
+                f"MCP servers (Code Mode): {mcp_servers_list} - will be converted to programmatic tools"
+            )
         else:
-            logger.info(f"MCP servers: {mcp_servers_list} - will be started as toolsets")
+            logger.info(
+                f"MCP servers: {mcp_servers_list} - will be started as toolsets"
+            )
 
     if codemode:
         os.environ["AGENT_RUNTIMES_CODEMODE"] = "true"
-        logger.info("Code Mode enabled: MCP servers will become programmatic tools via CodemodeToolset")
-        
+        logger.info(
+            "Code Mode enabled: MCP servers will become programmatic tools via CodemodeToolset"
+        )
+
         if skills:
             skills_list = parse_skills(skills)
             os.environ["AGENT_RUNTIMES_SKILLS"] = ",".join(skills_list)
@@ -249,11 +249,15 @@ def serve_server(
     try:
         import uvicorn
     except ImportError:
-        raise ServeError("uvicorn is not installed. Install it with: pip install uvicorn")
+        raise ServeError(
+            "uvicorn is not installed. Install it with: pip install uvicorn"
+        )
 
     logger.info(f"Starting agent-runtimes server on {host}:{actual_port}")
     logger.info(f"API docs available at http://{host}:{actual_port}/docs")
-    logger.info(f"ACP WebSocket endpoint: ws://{host}:{actual_port}/api/v1/acp/ws/{{agent_id}}")
+    logger.info(
+        f"ACP WebSocket endpoint: ws://{host}:{actual_port}/api/v1/acp/ws/{{agent_id}}"
+    )
 
     # Exclude generated/ directory from reload watching (codemode generates bindings there)
     reload_excludes = ["generated/*", "generated/**/*", "*.pyc", "__pycache__"]
@@ -267,5 +271,5 @@ def serve_server(
         workers=workers if not reload else 1,
         log_level=log_level.value,
     )
-    
+
     return actual_port

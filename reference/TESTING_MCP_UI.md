@@ -56,27 +56,27 @@ agent = Agent("openai:gpt-4o")
 @agent.tool
 def show_dashboard(ctx) -> dict:
     """Display an interactive dashboard."""
-    
+
     html = """
     <div style="font-family: Arial, sans-serif; padding: 20px;">
         <h1>Interactive Dashboard</h1>
         <p>Welcome to the MCP-UI demo!</p>
-        
-        <button 
+
+        <button
             onclick="sendIntent('refresh', {action: 'refresh_data'})"
-            style="background: #007cba; color: white; padding: 10px 20px; 
+            style="background: #007cba; color: white; padding: 10px 20px;
                    border: none; border-radius: 4px; cursor: pointer;">
             Refresh Data
         </button>
-        
-        <div style="margin-top: 20px; padding: 15px; 
+
+        <div style="margin-top: 20px; padding: 15px;
                     background: #f6f8fa; border-radius: 6px;">
             <h3>Data Visualization</h3>
             <p>Chart would go here...</p>
         </div>
     </div>
     """
-    
+
     return create_ui_resource({
         "uri": "ui://dashboard/main",
         "content": {
@@ -92,7 +92,7 @@ def show_dashboard(ctx) -> dict:
 @agent.tool
 def show_external_app(ctx) -> dict:
     """Display an external application."""
-    
+
     return create_ui_resource({
         "uri": "ui://external/example",
         "content": {

@@ -40,7 +40,7 @@ for patch_file in patches/*.patch; do
     filename=$(basename "$patch_file")
     # Handle scoped packages: @datalayer+jupyter-lexical+1.0.8.patch -> @datalayer/jupyter-lexical
     pkg_name=$(echo "$filename" | sed 's/+/\//; s/+.*//')
-    
+
     if [ ! -d "node_modules/$pkg_name" ]; then
       echo -e "${YELLOW}⚠️  Package $pkg_name not found in local node_modules (may be hoisted in monorepo)${NC}"
       MISSING_PACKAGES=true

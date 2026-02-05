@@ -1,7 +1,8 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Agentic Generative UI example.
+"""
+Agentic Generative UI example.
 
 Demonstrates an agent that generates UI through plans and steps.
 The agent creates a plan with multiple steps, and can update
@@ -21,9 +22,8 @@ This pattern is useful for:
 
 from typing import Any, Literal, Optional
 
-from pydantic import BaseModel, Field
-
 from ag_ui.core import EventType, StateDeltaEvent, StateSnapshotEvent
+from pydantic import BaseModel, Field
 from pydantic_ai import Agent
 
 # Define types for the plan
@@ -31,7 +31,9 @@ StepStatus = Literal["pending", "completed"]
 
 
 class Step(BaseModel):
-    """A step in a plan."""
+    """
+    A step in a plan.
+    """
 
     description: str = Field(description="The description of the step")
     status: StepStatus = Field(
@@ -41,7 +43,9 @@ class Step(BaseModel):
 
 
 class Plan(BaseModel):
-    """A plan with multiple steps."""
+    """
+    A plan with multiple steps.
+    """
 
     steps: list[Step] = Field(
         default_factory=list,
@@ -50,7 +54,9 @@ class Plan(BaseModel):
 
 
 class JSONPatchOp(BaseModel):
-    """A JSON Patch operation (RFC 6902)."""
+    """
+    A JSON Patch operation (RFC 6902).
+    """
 
     op: Literal["add", "remove", "replace", "move", "copy", "test"] = Field(
         description="The operation to perform",
@@ -74,11 +80,11 @@ agent = Agent(
     "openai:gpt-4o-mini",
     system_prompt="""
         You are a helpful assistant that creates and executes plans.
-        
+
         When asked to do something:
         1. Call `create_plan` with a list of step descriptions
         2. As you work through steps, call `update_plan_step` to mark them complete
-        
+
         IMPORTANT:
         - Always create a plan first before doing anything
         - Mark steps as completed as you work through them
@@ -91,7 +97,8 @@ agent = Agent(
 
 @agent.tool_plain
 async def create_plan(steps: list[str]) -> StateSnapshotEvent:
-    """Create a plan with multiple steps.
+    """
+    Create a plan with multiple steps.
 
     This initializes the shared state with a new plan.
 
@@ -116,7 +123,8 @@ async def update_plan_step(
     description: Optional[str] = None,
     status: Optional[StepStatus] = None,
 ) -> StateDeltaEvent:
-    """Update a specific step in the plan.
+    """
+    Update a specific step in the plan.
 
     Uses JSON Patch (RFC 6902) for efficient incremental updates.
 
@@ -128,22 +136,26 @@ async def update_plan_step(
     Returns:
         StateDeltaEvent containing the JSON Patch operations.
     """
-    changes: list[dict] = []
-    
+    changes: list[dict[str, Any]] = []
+
     if description is not None:
-        changes.append({
-            "op": "replace",
-            "path": f"/steps/{index}/description",
-            "value": description,
-        })
-    
+        changes.append(
+            {
+                "op": "replace",
+                "path": f"/steps/{index}/description",
+                "value": description,
+            }
+        )
+
     if status is not None:
-        changes.append({
-            "op": "replace",
-            "path": f"/steps/{index}/status",
-            "value": status,
-        })
-    
+        changes.append(
+            {
+                "op": "replace",
+                "path": f"/steps/{index}/status",
+                "value": status,
+            }
+        )
+
     return StateDeltaEvent(
         type=EventType.STATE_DELTA,
         delta=changes,

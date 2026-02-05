@@ -3,7 +3,7 @@
 
 """A2UI JSON Schema for the Restaurant Finder agent."""
 
-A2UI_SCHEMA = r'''
+A2UI_SCHEMA = r"""
 {
   "title": "A2UI Message Schema",
   "description": "Describes a JSON payload for an A2UI (Agent to UI) message, which is used to dynamically construct and update user interfaces. A message MUST contain exactly ONE of the action properties: 'beginRendering', 'surfaceUpdate', 'dataModelUpdate', or 'deleteSurface'.",
@@ -147,4 +147,4 @@ A2UI_SCHEMA = r'''
     }
   }
 }
-'''
+"""

@@ -1,7 +1,8 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Integrations for agent-runtimes.
+"""
+Integrations for agent-runtimes.
 
 This module provides integration with:
 - agent-codemode: Code-first MCP tool composition

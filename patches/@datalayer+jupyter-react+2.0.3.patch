@@ -2016,7 +2016,7 @@ index 3a4d9ad..ba521e0 100644
 +import { useCellsStore } from '../components/cell/CellState';
  const CELL_ID = 'cell-example-1';
  const DEFAULT_SOURCE = `from IPython.display import display
- 
+
 diff --git a/node_modules/@datalayer/jupyter-react/lib/examples/CellLite.js b/node_modules/@datalayer/jupyter-react/lib/examples/CellLite.js
 index 00d682c..5fbdcbf 100644
 --- a/node_modules/@datalayer/jupyter-react/lib/examples/CellLite.js
@@ -2032,7 +2032,7 @@ index 00d682c..5fbdcbf 100644
 +import { useJupyter } from '../jupyter/JupyterUse';
 +import { Cell } from '../components/cell/Cell';
  const CODE = `import sys
- 
+
  print("👋 Hello Jupyter React Lite")
 diff --git a/node_modules/@datalayer/jupyter-react/lib/examples/Cells.js b/node_modules/@datalayer/jupyter-react/lib/examples/Cells.js
 index 5e34982..220ab08 100644
@@ -2468,7 +2468,7 @@ index c23bdbf..328aada 100644
 +import { Output } from '../components/output/Output';
  const CODE = `import sys
  print(sys.platform)
- 
+
 diff --git a/node_modules/@datalayer/jupyter-react/lib/examples/KernelExecutorLite.js b/node_modules/@datalayer/jupyter-react/lib/examples/KernelExecutorLite.js
 index 8a43acc..8bc5a51 100644
 --- a/node_modules/@datalayer/jupyter-react/lib/examples/KernelExecutorLite.js
@@ -2487,7 +2487,7 @@ index 8a43acc..8bc5a51 100644
 +import { KernelIndicator } from '../components/kernel/KernelIndicator';
  const CODE = `import sys
  print(sys.platform)
- 
+
 diff --git a/node_modules/@datalayer/jupyter-react/lib/examples/Kernels.js b/node_modules/@datalayer/jupyter-react/lib/examples/Kernels.js
 index 9bb3682..d771296 100644
 --- a/node_modules/@datalayer/jupyter-react/lib/examples/Kernels.js
@@ -3974,7 +3974,7 @@ index cd931a1..26ca21f 100644
   * Additionally, if the script tag has a prior img sibling with class
 - * 'jupyter-widget', then that img tag is deleted.import { HTMLManager } from './classic/htmlmanager.js';
 + * 'jupyter-widget', then that img tag is deleted.import { HTMLManager } from './classic/htmlmanager';
- 
+
   */
  async function renderManager(element, widgetState, managerFactory) {
 diff --git a/node_modules/@datalayer/jupyter-react/lib/jupyter/ipywidgets/libembed.js.map b/node_modules/@datalayer/jupyter-react/lib/jupyter/ipywidgets/libembed.js.map

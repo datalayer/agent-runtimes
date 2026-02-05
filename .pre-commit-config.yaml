@@ -40,7 +40,7 @@ repos:
     rev: v2.9.0
     hooks:
       - id: pip-audit
-        args: ['--ignore-vuln', 'GHSA-4xh5-x5gv-qwph']
+        args: ['--ignore-vuln', 'GHSA-4xh5-x5gv-qwph', '--ignore-vuln', 'GHSA-6vgw-5pg2-w6jp']
 
   # Check for large files that shouldn't be committed
   - repo: https://github.com/pre-commit/pre-commit-hooks

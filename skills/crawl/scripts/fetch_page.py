@@ -20,12 +20,13 @@ from bs4 import BeautifulSoup
 
 
 def fetch_page(url: str, timeout: float = 30.0) -> dict:
-    """Fetch a webpage and extract its content.
-    
+    """
+    Fetch a webpage and extract its content.
+
     Args:
         url: The URL to fetch.
         timeout: Request timeout in seconds.
-        
+
     Returns:
         Dictionary with title, text, and metadata.
     """
@@ -33,7 +34,7 @@ def fetch_page(url: str, timeout: float = 30.0) -> dict:
         "User-Agent": "Mozilla/5.0 (compatible; DataBot/1.0)",
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
     }
-    
+
     response = httpx.get(
         url,
         headers=headers,
@@ -41,25 +42,25 @@ def fetch_page(url: str, timeout: float = 30.0) -> dict:
         follow_redirects=True,
     )
     response.raise_for_status()
-    
+
     soup = BeautifulSoup(response.text, "html.parser")
-    
+
     # Remove non-content elements
     for element in soup(["script", "style", "nav", "footer", "header", "aside"]):
         element.decompose()
-    
+
     # Extract title
     title = soup.title.string.strip() if soup.title and soup.title.string else ""
-    
+
     # Extract meta description
     meta_desc = ""
     meta_tag = soup.find("meta", attrs={"name": "description"})
     if meta_tag and meta_tag.get("content"):
         meta_desc = meta_tag["content"]
-    
+
     # Extract main text content
     text = soup.get_text(separator="\n", strip=True)
-    
+
     return {
         "url": str(response.url),
         "status_code": response.status_code,
@@ -71,31 +72,37 @@ def fetch_page(url: str, timeout: float = 30.0) -> dict:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Fetch a webpage and extract its text content.")
+    parser = argparse.ArgumentParser(
+        description="Fetch a webpage and extract its text content."
+    )
     parser.add_argument("url", help="The URL of the webpage to fetch")
-    parser.add_argument("--output", "-o", help="Output file path (prints to stdout if not specified)")
-    parser.add_argument("--timeout", "-t", type=float, default=30.0, help="Request timeout in seconds")
-    
+    parser.add_argument(
+        "--output", "-o", help="Output file path (prints to stdout if not specified)"
+    )
+    parser.add_argument(
+        "--timeout", "-t", type=float, default=30.0, help="Request timeout in seconds"
+    )
+
     args = parser.parse_args()
-    
+
     try:
         result = fetch_page(args.url, timeout=args.timeout)
-        
-        output = f"""URL: {result['url']}
-Title: {result['title']}
-Description: {result['description']}
+
+        output = f"""URL: {result["url"]}
+Title: {result["title"]}
+Description: {result["description"]}
 
 --- Content ---
-{result['text']}
+{result["text"]}
 """
-        
+
         if args.output:
             with open(args.output, "w", encoding="utf-8") as f:
                 f.write(output)
             print(f"Content saved to {args.output}")
         else:
             print(output)
-            
+
     except httpx.HTTPStatusError as e:
         print(f"HTTP error: {e.response.status_code}", file=sys.stderr)
         sys.exit(1)

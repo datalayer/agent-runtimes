@@ -110,7 +110,7 @@ export default function ChatWithTools() {
         <div key={m.id}>
           <strong>{m.role}: </strong>
           {m.content}
-          
+
           {/* Show tool calls */}
           {m.toolInvocations?.map((tool, i) => (
             <div key={i} style={{ background: '#f0f0f0', padding: '8px' }}>

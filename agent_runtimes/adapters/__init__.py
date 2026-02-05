@@ -13,6 +13,8 @@ This package provides:
 - Configuration management
 """
 
+from agent_runtimes.mcp import MCPToolManager
+
 from .base import (
     AgentContext,
     AgentResponse,
@@ -24,7 +26,6 @@ from .base import (
 )
 from .jupyter_ai_adapter import JupyterAIAdapter
 from .langchain_adapter import LangChainAdapter
-from agent_runtimes.mcp import MCPToolManager
 from .pydantic_ai_adapter import PydanticAIAdapter
 
 __all__ = [

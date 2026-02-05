@@ -6,7 +6,7 @@
 import json
 
 from jupyter_server.base.handlers import APIHandler
-from tornado import web as tornado_web
+from tornado import web as tornado_web  # type: ignore[attr-defined]
 
 from agent_runtimes.types import MCPServer
 

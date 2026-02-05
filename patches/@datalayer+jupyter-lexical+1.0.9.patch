@@ -6052,17 +6052,17 @@ index 0000000..d81e363
 +                }
 +                node.remove();
 +            }
-+        }), 
++        }),
 +        // When collapsible is the last child pressing down/right arrow will insert paragraph
 +        // below it to allow adding more content. It's similar what $insertBlockNode
 +        // (mainly for decorators), except it'll always be possible to continue adding
 +        // new content even if trailing paragraph is accidentally deleted
-+        editor.registerCommand(KEY_ARROW_DOWN_COMMAND, $onEscapeDown, COMMAND_PRIORITY_LOW), editor.registerCommand(KEY_ARROW_RIGHT_COMMAND, $onEscapeDown, COMMAND_PRIORITY_LOW), 
++        editor.registerCommand(KEY_ARROW_DOWN_COMMAND, $onEscapeDown, COMMAND_PRIORITY_LOW), editor.registerCommand(KEY_ARROW_RIGHT_COMMAND, $onEscapeDown, COMMAND_PRIORITY_LOW),
 +        // When collapsible is the first child pressing up/left arrow will insert paragraph
 +        // above it to allow adding more content. It's similar what $insertBlockNode
 +        // (mainly for decorators), except it'll always be possible to continue adding
 +        // new content even if leading paragraph is accidentally deleted
-+        editor.registerCommand(KEY_ARROW_UP_COMMAND, $onEscapeUp, COMMAND_PRIORITY_LOW), editor.registerCommand(KEY_ARROW_LEFT_COMMAND, $onEscapeUp, COMMAND_PRIORITY_LOW), 
++        editor.registerCommand(KEY_ARROW_UP_COMMAND, $onEscapeUp, COMMAND_PRIORITY_LOW), editor.registerCommand(KEY_ARROW_LEFT_COMMAND, $onEscapeUp, COMMAND_PRIORITY_LOW),
 +        // Enter goes from Title to Content rather than a new line inside Title
 +        editor.registerCommand(INSERT_PARAGRAPH_COMMAND, () => {
 +            const selection = $getSelection();
@@ -6222,7 +6222,7 @@ index 60c6e30..747fb69 100644
              options.push(new ComponentPickerOption(`${rows}x${columns} Table`, {
                  icon: _jsx("i", { className: "icon table" }),
                  keywords: ['table'],
--                onSelect: () => 
+-                onSelect: () =>
 -                // @ts-expect-error Correct types, but since they're dynamic TS doesn't like it.
 -                editor.dispatchCommand(INSERT_TABLE_COMMAND, { columns, rows }),
 +                onSelect: () => editor.dispatchCommand(INSERT_TABLE_WITH_DIALOG_COMMAND, undefined),
@@ -6233,7 +6233,7 @@ index 60c6e30..747fb69 100644
              options.push(...Array.from({ length: 5 }, (_, i) => i + 1).map(columns => new ComponentPickerOption(`${rows}x${columns} Table`, {
                  icon: _jsx("i", { className: "icon table" }),
                  keywords: ['table'],
--                onSelect: () => 
+-                onSelect: () =>
 -                // @ts-expect-error Correct types, but since they're dynamic TS doesn't like it.
 -                editor.dispatchCommand(INSERT_TABLE_COMMAND, { columns, rows }),
 +                onSelect: () => editor.dispatchCommand(INSERT_TABLE_WITH_DIALOG_COMMAND, undefined),
@@ -14926,7 +14926,7 @@ index c8f4f07..ec1857f 100644
 @@ -147,33 +147,6 @@ i.add-comment {
    outline: 1px solid var(--vscode-focusBorder, rgb(66, 135, 245));
  }
- 
+
 -.CommentPlugin_ShowCommentsButton {
 -  position: fixed;
 -  top: 10px;
@@ -14969,17 +14969,17 @@ index e95cefc..fb69ad6 100644
 +  z-index: 0;
 +  overflow: visible;
  }
- 
+
  .test-recorder-output {
 @@ -579,131 +580,10 @@ i.prettier-error {
    background-image: url(icons/prettier-error.svg);
  }
- 
+
 -.link-editor .button.active,
  .toolbar .button.active {
    background-color: rgb(223, 232, 250);
  }
- 
+
 -.link-editor .link-input {
 -  display: block;
 -  width: calc(100% - 75px);
@@ -15407,7 +15407,7 @@ index 2a8de5f..d5a8c51 100644
 @@ -628,83 +628,8 @@ i.chevron-down {
    }
  }
- 
+
 -.link-editor {
 -  position: absolute;
 -  z-index: 100;
@@ -15439,7 +15439,7 @@ index 2a8de5f..d5a8c51 100644
 -  font-family: inherit;
 -}
 +/* link-editor styles moved to FloatingLinkEditorPlugin/index.css */
- 
+
 -.link-editor div.link-edit {
 -  background-image: url(icons/pencil-fill.svg);
 -  background-size: 16px;
@@ -15492,7 +15492,7 @@ index 2a8de5f..d5a8c51 100644
 @@ -721,6 +646,16 @@ i.redo {
    background-image: url(icons/arrow-clockwise.svg);
  }
- 
+
 +i.comments {
 +  background-image: url(./icons/comments.svg);
 +  opacity: 0.6;
@@ -15940,7 +15940,7 @@ index dc4c2e3..bec3dde 100644
 --- a/node_modules/@datalayer/jupyter-lexical/style/lexical/index.css
 +++ b/node_modules/@datalayer/jupyter-lexical/style/lexical/index.css
 @@ -6,6 +6,7 @@
- 
+
  @import url('Button.css');
  @import url('CodeActionMenuPlugin.css');
 +/* Collapsible.css - now imported directly in src/plugins/CollapsiblePlugin/index.ts */

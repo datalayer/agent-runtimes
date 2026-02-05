@@ -19,12 +19,12 @@ from typing import Any
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
-from agent_runtimes.types import MCPServer, MCPServerTool
 from agent_runtimes.mcp.toolsets import (
     MCP_SERVER_STARTUP_TIMEOUT,
     get_config_mcp_toolsets,
     wait_for_config_mcp_toolsets,
 )
+from agent_runtimes.types import MCPServer, MCPServerTool
 
 logger = logging.getLogger(__name__)
 
@@ -52,9 +52,9 @@ def expand_env_vars(value: str) -> str:
         String with env vars expanded
     """
     # Match ${VAR_NAME} pattern
-    pattern = r'\$\{([^}]+)\}'
+    pattern = r"\$\{([^}]+)\}"
 
-    def replace(match: re.Match) -> str:
+    def replace(match: re.Match[str]) -> str:
         var_name = match.group(1)
         return os.environ.get(var_name, "")
 
@@ -71,14 +71,13 @@ def expand_config_env_vars(config: dict[str, Any]) -> dict[str, Any]:
     Returns:
         Config with env vars expanded
     """
-    result = {}
+    result: dict[str, Any] = {}
     for key, value in config.items():
         if isinstance(value, str):
             result[key] = expand_env_vars(value)
         elif isinstance(value, list):
             result[key] = [
-                expand_env_vars(v) if isinstance(v, str) else v
-                for v in value
+                expand_env_vars(v) if isinstance(v, str) else v for v in value
             ]
         elif isinstance(value, dict):
             result[key] = expand_config_env_vars(value)
@@ -128,14 +127,16 @@ def get_mcp_servers_from_config() -> list[dict[str, Any]]:
         # Expand env vars in the config
         expanded_config = expand_config_env_vars(server_config)
 
-        servers.append({
-            "id": server_id,
-            "name": server_id.replace("-", " ").replace("_", " ").title(),
-            "command": expanded_config.get("command"),
-            "args": expanded_config.get("args", []),
-            "env": expanded_config.get("env", {}),
-            "transport": "stdio",  # Default to stdio
-        })
+        servers.append(
+            {
+                "id": server_id,
+                "name": server_id.replace("-", " ").replace("_", " ").title(),
+                "command": expanded_config.get("command"),
+                "args": expanded_config.get("args", []),
+                "env": expanded_config.get("env", {}),
+                "transport": "stdio",  # Default to stdio
+            }
+        )
 
     return servers
 
@@ -194,7 +195,9 @@ async def discover_mcp_server_tools(
                             description=tool.description or "",
                             enabled=True,
                             input_schema=(
-                                tool.inputSchema if hasattr(tool, "inputSchema") else None
+                                tool.inputSchema
+                                if hasattr(tool, "inputSchema")
+                                else None
                             ),
                         )
                         tools.append(mcp_tool)
@@ -252,7 +255,11 @@ async def create_mcp_servers_with_tools(
             # Try to reuse running MCP toolset if available
             running_toolsets = get_config_mcp_toolsets()
             running_server = next(
-                (toolset for toolset in running_toolsets if getattr(toolset, "id", None) == config["id"]),
+                (
+                    toolset
+                    for toolset in running_toolsets
+                    if getattr(toolset, "id", None) == config["id"]
+                ),
                 None,
             )
 
@@ -297,9 +304,13 @@ async def create_mcp_servers_with_tools(
 
         # Log status
         if server.is_available:
-            logger.info(f"MCP server {config['name']} loaded with {len(server.tools)} tools")
+            logger.info(
+                f"MCP server {config['name']} loaded with {len(server.tools)} tools"
+            )
         else:
-            logger.warning(f"MCP server {config['name']} has no tools or is unavailable")
+            logger.warning(
+                f"MCP server {config['name']} has no tools or is unavailable"
+            )
 
     # Log summary
     available_count = sum(1 for s in servers if s.is_available)
@@ -344,7 +355,7 @@ async def get_config_mcp_servers(
 
 def get_config_mcp_servers_sync() -> list[MCPServer]:
     """
-    Synchronous version to get cached config MCP servers.
+    Get cached config MCP servers synchronously.
 
     Note: Returns empty list if not yet initialized.
     Use get_config_mcp_servers() in async context for proper initialization.
@@ -372,9 +383,15 @@ async def initialize_config_mcp_servers(discover_tools: bool = True) -> list[MCP
         List of initialized MCPServer objects, or empty list if config servers are disabled
     """
     # Check if config MCP servers should be skipped (--no-config-mcp-servers CLI flag)
-    no_config_mcp_servers = os.environ.get("AGENT_RUNTIMES_NO_CONFIG_MCP_SERVERS", "").lower() == "true"
+    no_config_mcp_servers = (
+        os.environ.get("AGENT_RUNTIMES_NO_CONFIG_MCP_SERVERS", "").lower() == "true"
+    )
     if no_config_mcp_servers:
-        logger.info("Config MCP servers disabled via AGENT_RUNTIMES_NO_CONFIG_MCP_SERVERS")
+        logger.info(
+            "Config MCP servers disabled via AGENT_RUNTIMES_NO_CONFIG_MCP_SERVERS"
+        )
         return []
-    
-    return await get_config_mcp_servers(force_refresh=True, discover_tools=discover_tools)
+
+    return await get_config_mcp_servers(
+        force_refresh=True, discover_tools=discover_tools
+    )

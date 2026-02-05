@@ -15,16 +15,18 @@ Provider-specific notes:
 """
 
 import os
+from typing import Any, Optional
+
 import httpx
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from typing import Optional
 
 router = APIRouter(prefix="/api/v1/identity", tags=["identity"])
 
 
 class TokenExchangeRequest(BaseModel):
     """Request body for OAuth token exchange."""
+
     provider: str
     code: str
     code_verifier: str
@@ -33,6 +35,7 @@ class TokenExchangeRequest(BaseModel):
 
 class TokenExchangeResponse(BaseModel):
     """Response from OAuth token exchange."""
+
     access_token: str
     token_type: str = "Bearer"
     expires_in: Optional[int] = None
@@ -59,8 +62,7 @@ def get_client_id(provider: str) -> str:
     client_id = os.getenv(env_var)
     if not client_id:
         raise HTTPException(
-            status_code=500,
-            detail=f"Missing {env_var} environment variable"
+            status_code=500, detail=f"Missing {env_var} environment variable"
         )
     return client_id
 
@@ -72,26 +74,25 @@ def get_client_secret(provider: str) -> Optional[str]:
 
 
 @router.post("/oauth/token", response_model=TokenExchangeResponse)
-async def exchange_token(request: TokenExchangeRequest):
+async def exchange_token(request: TokenExchangeRequest) -> TokenExchangeResponse:
     """
     Exchange an authorization code for an access token.
-    
+
     This endpoint proxies the token exchange to the OAuth provider,
     which is necessary because most providers don't support CORS.
-    
+
     For PKCE flows, the client_secret is optional - the code_verifier
     provides the security instead.
     """
     if request.provider not in PROVIDER_TOKEN_URLS:
         raise HTTPException(
-            status_code=400,
-            detail=f"Unknown provider: {request.provider}"
+            status_code=400, detail=f"Unknown provider: {request.provider}"
         )
-    
+
     token_url = PROVIDER_TOKEN_URLS[request.provider]
     client_id = get_client_id(request.provider)
     client_secret = get_client_secret(request.provider)
-    
+
     # Build token request payload
     payload = {
         "client_id": client_id,
@@ -100,16 +101,16 @@ async def exchange_token(request: TokenExchangeRequest):
         "redirect_uri": request.redirect_uri,
         "grant_type": "authorization_code",
     }
-    
+
     # Add client_secret if available (not required for PKCE, but some providers want it)
     if client_secret:
         payload["client_secret"] = client_secret
-    
+
     # Set appropriate headers based on provider
     # Note: GitHub requires Accept: application/json header explicitly,
     # otherwise it returns form-encoded response
     headers = {"Accept": "application/json"}
-    
+
     try:
         async with httpx.AsyncClient() as client:
             response = await client.post(
@@ -118,25 +119,36 @@ async def exchange_token(request: TokenExchangeRequest):
                 headers=headers,
                 timeout=30.0,
             )
-            
+
             if response.status_code != 200:
-                error_data = response.json() if response.headers.get("content-type", "").startswith("application/json") else {}
-                error_msg = error_data.get("error_description") or error_data.get("error") or response.text
+                error_data = (
+                    response.json()
+                    if response.headers.get("content-type", "").startswith(
+                        "application/json"
+                    )
+                    else {}
+                )
+                error_msg = (
+                    error_data.get("error_description")
+                    or error_data.get("error")
+                    or response.text
+                )
                 raise HTTPException(
                     status_code=response.status_code,
-                    detail=f"Token exchange failed: {error_msg}"
+                    detail=f"Token exchange failed: {error_msg}",
                 )
-            
+
             token_data = response.json()
-            
+
             # Handle GitHub-specific error format
             # GitHub returns HTTP 200 with error in body instead of HTTP error codes
             if "error" in token_data:
                 raise HTTPException(
                     status_code=400,
-                    detail=token_data.get("error_description") or token_data.get("error")
+                    detail=token_data.get("error_description")
+                    or token_data.get("error"),
                 )
-            
+
             return TokenExchangeResponse(
                 access_token=token_data["access_token"],
                 token_type=token_data.get("token_type", "Bearer"),
@@ -144,11 +156,10 @@ async def exchange_token(request: TokenExchangeRequest):
                 refresh_token=token_data.get("refresh_token"),
                 scope=token_data.get("scope"),
             )
-            
+
     except httpx.RequestError as e:
         raise HTTPException(
-            status_code=502,
-            detail=f"Failed to connect to {request.provider}: {str(e)}"
+            status_code=502, detail=f"Failed to connect to {request.provider}: {str(e)}"
         )
 
 
@@ -162,45 +173,46 @@ PROVIDER_USERINFO_URLS = {
 
 class UserInfoRequest(BaseModel):
     """Request body for fetching user info."""
+
     provider: str
     access_token: str
 
 
 class UserInfoResponse(BaseModel):
     """Response from userinfo endpoint."""
+
     id: Optional[str] = None
     name: Optional[str] = None
     email: Optional[str] = None
     avatar_url: Optional[str] = None
     login: Optional[str] = None  # Username (GitHub calls it login)
-    raw: dict  # Full response from provider
+    raw: dict[str, Any]  # Full response from provider
 
 
 @router.post("/oauth/userinfo", response_model=UserInfoResponse)
-async def get_userinfo(request: UserInfoRequest):
+async def get_userinfo(request: UserInfoRequest) -> UserInfoResponse:
     """
     Fetch user information from the OAuth provider.
-    
+
     This endpoint proxies the userinfo request to the OAuth provider,
     normalizing the response into a common format.
     """
     if request.provider not in PROVIDER_USERINFO_URLS:
         raise HTTPException(
-            status_code=400,
-            detail=f"Unknown provider: {request.provider}"
+            status_code=400, detail=f"Unknown provider: {request.provider}"
         )
-    
+
     userinfo_url = PROVIDER_USERINFO_URLS[request.provider]
-    
+
     headers = {
         "Authorization": f"Bearer {request.access_token}",
         "Accept": "application/json",
     }
-    
+
     # GitHub requires User-Agent header
     if request.provider == "github":
         headers["User-Agent"] = "Datalayer-Agent-Runtimes"
-    
+
     try:
         async with httpx.AsyncClient() as client:
             response = await client.get(
@@ -208,17 +220,27 @@ async def get_userinfo(request: UserInfoRequest):
                 headers=headers,
                 timeout=30.0,
             )
-            
+
             if response.status_code != 200:
-                error_data = response.json() if response.headers.get("content-type", "").startswith("application/json") else {}
-                error_msg = error_data.get("message") or error_data.get("error") or response.text
+                error_data = (
+                    response.json()
+                    if response.headers.get("content-type", "").startswith(
+                        "application/json"
+                    )
+                    else {}
+                )
+                error_msg = (
+                    error_data.get("message")
+                    or error_data.get("error")
+                    or response.text
+                )
                 raise HTTPException(
                     status_code=response.status_code,
-                    detail=f"Failed to fetch user info: {error_msg}"
+                    detail=f"Failed to fetch user info: {error_msg}",
                 )
-            
+
             user_data = response.json()
-            
+
             # Normalize user info based on provider
             if request.provider == "github":
                 return UserInfoResponse(
@@ -257,9 +279,8 @@ async def get_userinfo(request: UserInfoRequest):
                     login=user_data.get("login") or user_data.get("username"),
                     raw=user_data,
                 )
-            
+
     except httpx.RequestError as e:
         raise HTTPException(
-            status_code=502,
-            detail=f"Failed to connect to {request.provider}: {str(e)}"
+            status_code=502, detail=f"Failed to connect to {request.provider}: {str(e)}"
         )

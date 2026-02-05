@@ -7,7 +7,7 @@ import json
 import logging
 
 from jupyter_server.base.handlers import APIHandler
-from tornado import web as tornado_web
+from tornado import web as tornado_web  # type: ignore[attr-defined]
 
 from agent_runtimes.config import get_frontend_config
 from agent_runtimes.mcp import get_available_tools

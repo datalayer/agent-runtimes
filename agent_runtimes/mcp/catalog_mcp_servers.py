@@ -9,10 +9,10 @@ Credentials are configured via environment variables.
 """
 
 import os
+import tempfile
 from typing import Dict
 
 from agent_runtimes.types import MCPServer
-
 
 # ============================================================================
 # MCP Server Definitions
@@ -35,7 +35,7 @@ FILESYSTEM_MCP_SERVER = MCPServer(
     name="Filesystem",
     description="Local filesystem read/write operations",
     command="npx",
-    args=["-y", "@anthropic/mcp-server-filesystem", "/tmp"],
+    args=["-y", "@anthropic/mcp-server-filesystem", tempfile.gettempdir()],
     transport="stdio",
     enabled=True,
     tools=[],
@@ -119,7 +119,11 @@ LINKEDIN_MCP_SERVER = MCPServer(
     name="LinkedIn",
     description="LinkedIn profile and job search operations",
     command="uvx",
-    args=["--from", "git+https://github.com/stickerdaniel/linkedin-mcp-server", "linkedin-mcp-server"],
+    args=[
+        "--from",
+        "git+https://github.com/stickerdaniel/linkedin-mcp-server",
+        "linkedin-mcp-server",
+    ],
     transport="stdio",
     enabled=True,
     tools=[],

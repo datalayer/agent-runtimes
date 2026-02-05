@@ -170,7 +170,7 @@ agent = Agent("openai:gpt-4o")
 @agent.tool
 def show_chart(ctx: RunContext[dict], data: list[int]) -> dict:
     """Display a chart visualization."""
-    
+
     # Create HTML chart
     html = f"""
     <div>
@@ -183,13 +183,13 @@ def show_chart(ctx: RunContext[dict], data: list[int]) -> dict:
         </script>
     </div>
     """
-    
+
     resource = create_ui_resource({
         "uri": "ui://chart/1",
         "content": {"type": "rawHtml", "htmlString": html},
         "encoding": "text"
     })
-    
+
     return resource
 ```
 
@@ -254,7 +254,7 @@ from mcp_ui_server import UIMetadataKey
 ui_metadata = {
     # Preferred iframe dimensions
     UIMetadataKey.PREFERRED_FRAME_SIZE: ["800px", "600px"],
-    
+
     # Initial data for the UI
     UIMetadataKey.INITIAL_RENDER_DATA: {
         "user": {"id": "123", "name": "John"},
@@ -290,7 +290,7 @@ function MyComponent({ resource }) {
       console.log('Notification:', result.payload.message);
       // Show notification
     }
-    
+
     return { status: 'handled' };
   };
 

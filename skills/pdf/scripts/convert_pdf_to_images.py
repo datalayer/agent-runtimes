@@ -6,7 +6,6 @@ import sys
 
 from pdf2image import convert_from_path
 
-
 # Converts each page of a PDF to a PNG image.
 
 
@@ -21,10 +20,10 @@ def convert(pdf_path, output_dir, max_dim=1000):
             new_width = int(width * scale_factor)
             new_height = int(height * scale_factor)
             image = image.resize((new_width, new_height))
-        
-        image_path = os.path.join(output_dir, f"page_{i+1}.png")
+
+        image_path = os.path.join(output_dir, f"page_{i + 1}.png")
         image.save(image_path)
-        print(f"Saved page {i+1} as {image_path} (size: {image.size})")
+        print(f"Saved page {i + 1} as {image_path} (size: {image.size})")
 
     print(f"Converted {len(images)} pages to PNG images")
 

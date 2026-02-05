@@ -1,7 +1,8 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Backend Tool Rendering example.
+"""
+Backend Tool Rendering example.
 
 Demonstrates an agent that uses backend tools to fetch data
 which is then rendered by the frontend. Unlike frontend tools,
@@ -46,7 +47,8 @@ app = agent.to_ag_ui()
 
 
 def _get_weather_condition(code: int) -> str:
-    """Map WMO weather code to human-readable condition.
+    """
+    Map WMO weather code to human-readable condition.
 
     Args:
         code: WMO weather code.
@@ -89,7 +91,8 @@ def _get_weather_condition(code: int) -> str:
 
 @agent.tool_plain
 async def get_weather(location: str) -> dict[str, str | float]:
-    """Get current weather for a location.
+    """
+    Get current weather for a location.
 
     This tool fetches real weather data from Open-Meteo API.
     The frontend can render this data as a weather card.
