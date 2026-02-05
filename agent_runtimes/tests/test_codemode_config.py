@@ -4,6 +4,7 @@
 """Tests for codemode configuration wiring in agent-runtimes."""
 
 from types import SimpleNamespace
+from typing import Any, Callable, Optional
 
 import pytest
 
@@ -11,18 +12,18 @@ from agent_runtimes.routes.agents import CreateAgentRequest, _build_codemode_too
 
 
 class _DummyApp:
-    def __init__(self, reranker=None):
+    def __init__(self, reranker: Optional[Callable[..., Any]] = None) -> None:
         self.state = SimpleNamespace(codemode_tool_reranker=reranker)
 
 
 class _DummyRequest:
-    def __init__(self, reranker=None):
+    def __init__(self, reranker: Optional[Callable[..., Any]] = None) -> None:
         self.app = _DummyApp(reranker=reranker)
 
 
 @pytest.mark.asyncio
-async def test_codemode_reranker_wiring():
-    async def reranker(tools, query, server):
+async def test_codemode_reranker_wiring() -> None:
+    async def reranker(tools: Any, query: Any, server: Any) -> Any:
         return tools
 
     request = CreateAgentRequest(
@@ -35,11 +36,11 @@ async def test_codemode_reranker_wiring():
     if toolset is None:
         pytest.skip("agent-codemode not available")
 
-    assert toolset.tool_reranker is reranker
+    assert toolset.tool_reranker is reranker  # type: ignore[union-attr]
 
 
 @pytest.mark.asyncio
-async def test_codemode_direct_call_override():
+async def test_codemode_direct_call_override() -> None:
     request = CreateAgentRequest(
         name="test-agent",
         enable_codemode=True,
@@ -50,4 +51,4 @@ async def test_codemode_direct_call_override():
     if toolset is None:
         pytest.skip("agent-codemode not available")
 
-    assert toolset.allow_direct_tool_calls is True
+    assert toolset.allow_direct_tool_calls is True  # type: ignore[union-attr]

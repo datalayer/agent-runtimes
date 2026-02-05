@@ -1,7 +1,8 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Base agent interface for agent-runtimes.
+"""
+Base agent interface for agent-runtimes.
 
 Provides an abstract base class that all agent implementations must follow,
 enabling consistent protocol adapter integration.
@@ -14,7 +15,8 @@ from typing import Any, AsyncIterator, Optional
 
 @dataclass
 class AgentContext:
-    """Context for agent execution.
+    """
+    Context for agent execution.
 
     Attributes:
         session_id: Unique session identifier.
@@ -31,7 +33,8 @@ class AgentContext:
 
 @dataclass
 class ToolCall:
-    """A tool call requested by the agent.
+    """
+    A tool call requested by the agent.
 
     Attributes:
         id: Unique identifier for this tool call.
@@ -46,7 +49,8 @@ class ToolCall:
 
 @dataclass
 class ToolResult:
-    """Result of a tool execution.
+    """
+    Result of a tool execution.
 
     Attributes:
         tool_call_id: ID of the tool call this is a result for.
@@ -60,13 +64,16 @@ class ToolResult:
 
     @property
     def success(self) -> bool:
-        """Whether the tool execution was successful."""
+        """
+        Whether the tool execution was successful.
+        """
         return self.error is None
 
 
 @dataclass
 class StreamEvent:
-    """An event from the agent's streaming response.
+    """
+    An event from the agent's streaming response.
 
     Attributes:
         type: Event type (text, tool_call, tool_result, done, error).
@@ -79,7 +86,8 @@ class StreamEvent:
 
 @dataclass
 class AgentResponse:
-    """Complete response from an agent.
+    """
+    Complete response from an agent.
 
     Attributes:
         content: Text content of the response.
@@ -98,7 +106,8 @@ class AgentResponse:
 
 @dataclass
 class ToolDefinition:
-    """Definition of a tool available to the agent.
+    """
+    Definition of a tool available to the agent.
 
     Attributes:
         name: Tool name.
@@ -114,7 +123,8 @@ class ToolDefinition:
 
 
 class BaseAgent(ABC):
-    """Abstract base class for all agent implementations.
+    """
+    Abstract base class for all agent implementations.
 
     This provides a consistent interface for agents that can be used
     with different protocol adapters (ACP, AG-UI, A2A, etc.).
@@ -135,7 +145,8 @@ class BaseAgent(ABC):
         prompt: str,
         context: AgentContext,
     ) -> AgentResponse:
-        """Run the agent with a prompt.
+        """
+        Run the agent with a prompt.
 
         Args:
             prompt: User prompt/message.
@@ -152,20 +163,27 @@ class BaseAgent(ABC):
         prompt: str,
         context: AgentContext,
     ) -> AsyncIterator[StreamEvent]:
-        """Run the agent with streaming output.
+        """
+        Run the agent with streaming output.
 
         Args:
             prompt: User prompt/message.
             context: Execution context with session and history.
 
-        Yields:
+        Yields
+        ------
+        StreamEvent
             Stream events as they are produced.
         """
-        pass
+        # Use yield to make this an async generator, satisfying mypy's type checking
+        # This is an abstract method, so it will never be called directly
+        yield  # type: ignore[misc]
+        raise NotImplementedError
 
     @abstractmethod
     def get_tools(self) -> list[ToolDefinition]:
-        """Get the list of tools available to this agent.
+        """
+        Get the list of tools available to this agent.
 
         Returns:
             List of tool definitions.
@@ -175,17 +193,23 @@ class BaseAgent(ABC):
     @property
     @abstractmethod
     def name(self) -> str:
-        """Get the agent's name."""
+        """
+        Get the agent's name.
+        """
         pass
 
     @property
     def description(self) -> str:
-        """Get the agent's description."""
+        """
+        Get the agent's description.
+        """
         return ""
 
     @property
     def version(self) -> str:
-        """Get the agent's version."""
+        """
+        Get the agent's version.
+        """
         return "1.0.0"
 
     async def handle_tool_result(
@@ -193,7 +217,8 @@ class BaseAgent(ABC):
         context: AgentContext,
         tool_result: ToolResult,
     ) -> Optional[AgentResponse]:
-        """Handle a tool result and optionally continue execution.
+        """
+        Handle a tool result and optionally continue execution.
 
         Some agents may need to continue processing after receiving
         tool results. Override this method to implement that behavior.
@@ -208,7 +233,8 @@ class BaseAgent(ABC):
         return None
 
     async def initialize(self) -> None:
-        """Initialize the agent.
+        """
+        Initialize the agent.
 
         Called once when the agent is first created.
         Override to perform async setup.
@@ -216,7 +242,8 @@ class BaseAgent(ABC):
         pass
 
     async def cleanup(self) -> None:
-        """Clean up agent resources.
+        """
+        Clean up agent resources.
 
         Called when the agent is being shut down.
         Override to perform async cleanup.

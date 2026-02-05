@@ -1,10 +1,12 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""MCP-UI routes for agent-runtimes server."""
+"""
+MCP-UI routes for agent-runtimes server.
+"""
 
 import logging
-from typing import Any
+from typing import Any, AsyncGenerator
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
@@ -25,14 +27,20 @@ _mcp_ui_adapters: dict[str, MCPUITransport] = {}
 
 
 class MCPUIRequest(BaseModel):
-    """MCP-UI chat request."""
+    """
+    MCP-UI chat request.
+    """
+
     message: str
     session_id: str | None = None
     ui_options: dict[str, Any] | None = None
 
 
 class MCPUIResponse(BaseModel):
-    """MCP-UI chat response."""
+    """
+    MCP-UI chat response.
+    """
+
     role: str
     content: list[dict[str, Any]]
     session_id: str | None = None
@@ -42,7 +50,8 @@ def register_mcp_ui_agent(
     agent_id: str,
     adapter: MCPUITransport,
 ) -> None:
-    """Register an MCP-UI adapter.
+    """
+    Register an MCP-UI adapter.
 
     Args:
         agent_id: Unique identifier for the agent.
@@ -53,7 +62,8 @@ def register_mcp_ui_agent(
 
 
 def get_mcp_ui_adapter(agent_id: str) -> MCPUITransport | None:
-    """Get an MCP-UI adapter by ID.
+    """
+    Get an MCP-UI adapter by ID.
 
     Args:
         agent_id: The agent identifier.
@@ -65,7 +75,8 @@ def get_mcp_ui_adapter(agent_id: str) -> MCPUITransport | None:
 
 
 def unregister_mcp_ui_agent(agent_id: str) -> bool:
-    """Unregister an MCP-UI adapter.
+    """
+    Unregister an MCP-UI adapter.
 
     Args:
         agent_id: The agent identifier.
@@ -82,7 +93,8 @@ def unregister_mcp_ui_agent(agent_id: str) -> bool:
 
 @router.get("/")
 async def mcp_ui_info() -> dict[str, Any]:
-    """Get MCP-UI service information.
+    """
+    Get MCP-UI service information.
 
     Returns:
         Information about the MCP-UI service.
@@ -109,7 +121,8 @@ async def mcp_ui_info() -> dict[str, Any]:
 
 @router.get("/agents")
 async def list_agents() -> dict[str, Any]:
-    """List available MCP-UI agents.
+    """
+    List available MCP-UI agents.
 
     Returns:
         Dictionary with list of agent IDs and their endpoints.
@@ -132,7 +145,8 @@ async def chat(
     agent_id: str,
     request: MCPUIRequest,
 ) -> MCPUIResponse:
-    """Handle MCP-UI chat request (non-streaming).
+    """
+    Handle MCP-UI chat request (non-streaming).
 
     This endpoint processes a chat message and returns a response that may
     include interactive UI resources.
@@ -209,7 +223,8 @@ async def stream(
     agent_id: str,
     request: MCPUIRequest,
 ) -> StreamingResponse:
-    """Handle MCP-UI streaming chat request.
+    """
+    Handle MCP-UI streaming chat request.
 
     This endpoint streams agent responses and UI resources as they become
     available, providing a real-time interactive experience.
@@ -262,8 +277,10 @@ async def stream(
             )
 
     # Create streaming response
-    async def event_generator():
-        """Generate server-sent events."""
+    async def event_generator() -> AsyncGenerator[str, None]:
+        """
+        Generate server-sent events.
+        """
         import json
 
         try:
@@ -272,7 +289,7 @@ async def stream(
                 yield f"{json.dumps(event)}\n"
         except Exception as e:
             logger.error(f"Error in stream: {e}")
-            yield f'{json.dumps({"type": "error", "error": str(e)})}\n'
+            yield f"{json.dumps({'type': 'error', 'error': str(e)})}\n"
 
     return StreamingResponse(
         event_generator(),

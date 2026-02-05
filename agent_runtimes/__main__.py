@@ -33,28 +33,41 @@ from typing import Annotated, Optional
 
 import typer
 
-from agent_runtimes.commands.serve import (
-    LogLevel,
-    Protocol,
-    ServeError,
-    parse_mcp_servers,
-    parse_skills,
-    serve_server,
+from agent_runtimes.commands.agent_mcp_servers import (
+    AgentMcpServersError,
+    parse_env_vars,
+    print_mcp_servers_result,
+    start_agent_mcp_servers,
+    stop_agent_mcp_servers,
 )
 from agent_runtimes.commands.list_agents import (
     ListAgentsError,
     OutputFormat,
     list_agents_from_server,
 )
-from agent_runtimes.commands.list_specs import list_agent_specs
-from agent_runtimes.commands.mcp_servers_catalog import list_mcp_servers_catalog
-from agent_runtimes.commands.mcp_servers_config import list_mcp_servers_config
-from agent_runtimes.commands.agent_mcp_servers import (
-    AgentMcpServersError,
-    parse_env_vars,
-    start_agent_mcp_servers,
-    stop_agent_mcp_servers,
-    print_mcp_servers_result,
+from agent_runtimes.commands.list_specs import (
+    OutputFormat as SpecsOutputFormat,
+)
+from agent_runtimes.commands.list_specs import (
+    list_agent_specs,
+)
+from agent_runtimes.commands.mcp_servers_catalog import (
+    OutputFormat as CatalogOutputFormat,
+)
+from agent_runtimes.commands.mcp_servers_catalog import (
+    list_mcp_servers_catalog,
+)
+from agent_runtimes.commands.mcp_servers_config import (
+    OutputFormat as ConfigOutputFormat,
+)
+from agent_runtimes.commands.mcp_servers_config import (
+    list_mcp_servers_config,
+)
+from agent_runtimes.commands.serve import (
+    LogLevel,
+    Protocol,
+    ServeError,
+    serve_server,
 )
 
 logging.basicConfig(
@@ -80,27 +93,48 @@ app = typer.Typer(
 def serve(
     host: Annotated[
         str,
-        typer.Option("--host", "-h", envvar="AGENT_RUNTIMES_HOST", help="Host to bind to"),
+        typer.Option(
+            "--host", "-h", envvar="AGENT_RUNTIMES_HOST", help="Host to bind to"
+        ),
     ] = "127.0.0.1",
     port: Annotated[
         int,
-        typer.Option("--port", "-p", envvar="AGENT_RUNTIMES_PORT", help="Port to bind to"),
+        typer.Option(
+            "--port", "-p", envvar="AGENT_RUNTIMES_PORT", help="Port to bind to"
+        ),
     ] = 8000,
     reload: Annotated[
         bool,
-        typer.Option("--reload", "-r", envvar="AGENT_RUNTIMES_RELOAD", help="Enable auto-reload for development"),
+        typer.Option(
+            "--reload",
+            "-r",
+            envvar="AGENT_RUNTIMES_RELOAD",
+            help="Enable auto-reload for development",
+        ),
     ] = False,
     debug: Annotated[
         bool,
-        typer.Option("--debug", "-d", envvar="AGENT_RUNTIMES_DEBUG", help="Enable debug mode with verbose logging"),
+        typer.Option(
+            "--debug",
+            "-d",
+            envvar="AGENT_RUNTIMES_DEBUG",
+            help="Enable debug mode with verbose logging",
+        ),
     ] = False,
     workers: Annotated[
         int,
-        typer.Option("--workers", "-w", envvar="AGENT_RUNTIMES_WORKERS", help="Number of worker processes"),
+        typer.Option(
+            "--workers",
+            "-w",
+            envvar="AGENT_RUNTIMES_WORKERS",
+            help="Number of worker processes",
+        ),
     ] = 1,
     log_level: Annotated[
         LogLevel,
-        typer.Option("--log-level", "-l", envvar="AGENT_RUNTIMES_LOG_LEVEL", help="Log level"),
+        typer.Option(
+            "--log-level", "-l", envvar="AGENT_RUNTIMES_LOG_LEVEL", help="Log level"
+        ),
     ] = LogLevel.info,
     agent_id: Annotated[
         Optional[str],
@@ -210,7 +244,8 @@ def serve(
         ),
     ] = False,
 ) -> None:
-    """Start the agent-runtimes server.
+    """
+    Start the agent-runtimes server.
 
     Examples:
 
@@ -301,18 +336,23 @@ def serve(
 def list_agents(
     host: Annotated[
         str,
-        typer.Option("--host", "-h", envvar="AGENT_RUNTIMES_HOST", help="Server host to query"),
+        typer.Option(
+            "--host", "-h", envvar="AGENT_RUNTIMES_HOST", help="Server host to query"
+        ),
     ] = "127.0.0.1",
     port: Annotated[
         int,
-        typer.Option("--port", "-p", envvar="AGENT_RUNTIMES_PORT", help="Server port to query"),
+        typer.Option(
+            "--port", "-p", envvar="AGENT_RUNTIMES_PORT", help="Server port to query"
+        ),
     ] = 8000,
     output: Annotated[
         OutputFormat,
         typer.Option("--output", "-o", help="Output format"),
     ] = OutputFormat.table,
 ) -> None:
-    """List running agents on a server.
+    """
+    List running agents on a server.
 
     Queries the agent-runtimes server API to get information about
     currently running agents.
@@ -346,11 +386,12 @@ def list_agents(
 @app.command("list-specs")
 def list_specs(
     output: Annotated[
-        OutputFormat,
+        SpecsOutputFormat,
         typer.Option("--output", "-o", help="Output format"),
-    ] = OutputFormat.table,
+    ] = SpecsOutputFormat.table,
 ) -> None:
-    """List available agent specs from the library.
+    """
+    List available agent specs from the library.
 
     Shows predefined agent templates that can be used when starting the server
     with --agent-id.
@@ -374,11 +415,12 @@ def list_specs(
 @app.command("mcp-servers-catalog")
 def mcp_servers_catalog(
     output: Annotated[
-        OutputFormat,
+        CatalogOutputFormat,
         typer.Option("--output", "-o", help="Output format"),
-    ] = OutputFormat.table,
+    ] = CatalogOutputFormat.table,
 ) -> None:
-    """List MCP servers from the catalog.
+    """
+    List MCP servers from the catalog.
 
     Shows predefined MCP server configurations with their availability status.
     Availability depends on whether required environment variables are set.
@@ -402,11 +444,12 @@ def mcp_servers_catalog(
 @app.command("mcp-servers-config")
 def mcp_servers_config(
     output: Annotated[
-        OutputFormat,
+        ConfigOutputFormat,
         typer.Option("--output", "-o", help="Output format"),
-    ] = OutputFormat.table,
+    ] = ConfigOutputFormat.table,
 ) -> None:
-    """List MCP servers from the user's config file.
+    """
+    List MCP servers from the user's config file.
 
     Shows MCP servers configured in ~/.datalayer/mcp.json.
 
@@ -453,11 +496,12 @@ def start_mcp_servers_cmd(
         typer.Option("--port", "-p", help="Agent-runtimes server port"),
     ] = 8000,
 ) -> None:
-    """Start MCP servers for running agent(s).
+    """
+    Start MCP servers for running agent(s).
 
     Starts the catalog MCP servers configured for the specified agent,
     or for all agents if no agent-id is provided.
-    
+
     Environment variables can be provided to configure the servers
     (e.g., API keys).
 
@@ -525,7 +569,8 @@ def stop_mcp_servers_cmd(
         typer.Option("--port", "-p", help="Agent-runtimes server port"),
     ] = 8000,
 ) -> None:
-    """Stop MCP servers for running agent(s).
+    """
+    Stop MCP servers for running agent(s).
 
     Stops the catalog MCP servers configured for the specified agent,
     or for all agents if no agent-id is provided.

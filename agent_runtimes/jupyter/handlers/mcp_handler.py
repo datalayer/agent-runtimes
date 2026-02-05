@@ -5,8 +5,8 @@
 
 import json
 
+import tornado.web
 from jupyter_server.base.handlers import APIHandler
-from tornado import web as tornado_web
 
 from agent_runtimes.types import MCPServer
 
@@ -14,7 +14,7 @@ from agent_runtimes.types import MCPServer
 class MCPServersHandler(APIHandler):
     """Handler for MCP server CRUD operations."""
 
-    @tornado_web.authenticated
+    @tornado.web.authenticated
     async def get(self) -> None:
         """Get all MCP servers."""
         try:
@@ -31,7 +31,7 @@ class MCPServersHandler(APIHandler):
             self.set_status(500)
             self.finish(json.dumps({"error": str(e)}))
 
-    @tornado_web.authenticated
+    @tornado.web.authenticated
     async def post(self) -> None:
         """Add a new MCP server."""
         try:
@@ -59,7 +59,7 @@ class MCPServersHandler(APIHandler):
 class MCPServerHandler(APIHandler):
     """Handler for individual MCP server operations."""
 
-    @tornado_web.authenticated
+    @tornado.web.authenticated
     async def put(self, server_id: str) -> None:
         """Update MCP server."""
         try:
@@ -83,7 +83,7 @@ class MCPServerHandler(APIHandler):
             self.set_status(500)
             self.finish(json.dumps({"error": str(e)}))
 
-    @tornado_web.authenticated
+    @tornado.web.authenticated
     async def delete(self, server_id: str) -> None:
         """Delete MCP server."""
         try:

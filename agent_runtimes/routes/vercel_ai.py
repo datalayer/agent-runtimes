@@ -1,7 +1,9 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Vercel AI SDK routes for agent-runtimes server."""
+"""
+Vercel AI SDK routes for agent-runtimes server.
+"""
 
 import asyncio
 import logging
@@ -30,23 +32,30 @@ _running_requests: dict[str, asyncio.Event] = {}
 
 
 class TerminateRequest(BaseModel):
-    """Request to terminate a running Vercel AI request."""
+    """
+    Request to terminate a running Vercel AI request.
+    """
+
     request_id: Optional[str] = None
 
 
 class TerminateResponse(BaseModel):
-    """Response from terminate request."""
+    """
+    Response from terminate request.
+    """
+
     success: bool
     message: str
     request_id: Optional[str] = None
 
 
 def register_request(request_id: str) -> asyncio.Event:
-    """Register a running request and return its cancellation event.
-    
+    """
+    Register a running request and return its cancellation event.
+
     Args:
         request_id: The unique request identifier.
-        
+
     Returns:
         An asyncio.Event that can be set to signal cancellation.
     """
@@ -57,8 +66,9 @@ def register_request(request_id: str) -> asyncio.Event:
 
 
 def unregister_request(request_id: str) -> None:
-    """Unregister a request when it completes.
-    
+    """
+    Unregister a request when it completes.
+
     Args:
         request_id: The request identifier to remove.
     """
@@ -68,11 +78,12 @@ def unregister_request(request_id: str) -> None:
 
 
 def cancel_request(request_id: str) -> bool:
-    """Cancel a running request.
-    
+    """
+    Cancel a running request.
+
     Args:
         request_id: The request identifier to cancel.
-        
+
     Returns:
         True if the request was found and cancelled, False otherwise.
     """
@@ -84,8 +95,9 @@ def cancel_request(request_id: str) -> bool:
 
 
 def cancel_all_requests() -> int:
-    """Cancel all running requests.
-    
+    """
+    Cancel all running requests.
+
     Returns:
         Number of requests cancelled.
     """
@@ -101,7 +113,8 @@ def register_vercel_agent(
     agent_id: str,
     adapter: VercelAITransport,
 ) -> None:
-    """Register a Vercel AI adapter.
+    """
+    Register a Vercel AI adapter.
 
     Args:
         agent_id: Unique identifier for the agent.
@@ -112,7 +125,8 @@ def register_vercel_agent(
 
 
 def unregister_vercel_agent(agent_id: str) -> None:
-    """Unregister a Vercel AI adapter.
+    """
+    Unregister a Vercel AI adapter.
 
     Args:
         agent_id: The agent identifier.
@@ -123,7 +137,8 @@ def unregister_vercel_agent(agent_id: str) -> None:
 
 
 def get_vercel_adapter(agent_id: str) -> VercelAITransport | None:
-    """Get a Vercel AI adapter by ID.
+    """
+    Get a Vercel AI adapter by ID.
 
     Args:
         agent_id: The agent identifier.
@@ -139,7 +154,8 @@ async def chat(
     request: Request,
     agent_id: str,
 ) -> Response:
-    """Handle Vercel AI SDK chat requests.
+    """
+    Handle Vercel AI SDK chat requests.
 
     This endpoint implements the Vercel AI SDK streaming protocol, providing:
     - Streaming chat responses
@@ -197,8 +213,9 @@ async def chat(
 
 
 @router.get("/agents")
-async def list_agents() -> dict[str, list[str]]:
-    """List available Vercel AI agents.
+async def list_agents() -> dict[str, Any]:
+    """
+    List available Vercel AI agents.
 
     Returns:
         Dictionary with list of agent IDs.
@@ -211,7 +228,8 @@ async def list_agents() -> dict[str, list[str]]:
 
 @router.post("/terminate", response_model=TerminateResponse)
 async def terminate_agent(request: TerminateRequest) -> TerminateResponse:
-    """Terminate a running Vercel AI request or all requests.
+    """
+    Terminate a running Vercel AI request or all requests.
 
     This endpoint allows clients to stop running agent executions.
     If request_id is provided, only that request is cancelled.
@@ -248,7 +266,8 @@ async def terminate_agent(request: TerminateRequest) -> TerminateResponse:
 
 @router.get("/requests")
 async def list_requests() -> dict[str, Any]:
-    """List all running Vercel AI requests.
+    """
+    List all running Vercel AI requests.
 
     Returns:
         Dictionary with list of running request IDs.

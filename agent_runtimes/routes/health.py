@@ -15,7 +15,7 @@ router = APIRouter(prefix="/health", tags=["health"])
 async def health_check() -> dict[str, Any]:
     """
     Basic health check endpoint.
-    
+
     Returns:
         Health status with timestamp.
     """
@@ -30,9 +30,9 @@ async def health_check() -> dict[str, Any]:
 async def readiness_check() -> dict[str, Any]:
     """
     Readiness check endpoint.
-    
+
     Checks if the service is ready to accept traffic.
-    
+
     Returns:
         Readiness status with component states.
     """
@@ -50,9 +50,9 @@ async def readiness_check() -> dict[str, Any]:
 async def liveness_check() -> dict[str, Any]:
     """
     Liveness check endpoint.
-    
+
     Simple check to verify the service is alive.
-    
+
     Returns:
         Liveness status.
     """

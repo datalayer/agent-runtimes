@@ -9,13 +9,13 @@ from typing import Any
 from fastapi import APIRouter, HTTPException
 
 from agent_runtimes.mcp import get_mcp_manager
-from agent_runtimes.mcp.lifecycle import get_mcp_lifecycle_manager
-from agent_runtimes.types import MCPServer
 from agent_runtimes.mcp.catalog_mcp_servers import (
     MCP_SERVER_CATALOG,
     check_env_vars_available,
     list_catalog_servers,
 )
+from agent_runtimes.mcp.lifecycle import get_mcp_lifecycle_manager
+from agent_runtimes.types import MCPServer
 
 logger = logging.getLogger(__name__)
 
@@ -26,10 +26,10 @@ router = APIRouter(prefix="/mcp/servers", tags=["mcp"])
 async def get_catalog_servers() -> list[dict[str, Any]]:
     """
     Get all MCP servers from the catalog (predefined servers).
-    
+
     These are servers that can be enabled on-demand via the /catalog/{server_name}/enable endpoint.
     They are NOT started automatically - users must explicitly enable them.
-    
+
     Note: Catalog servers are stored separately from config servers (mcp.json),
     so the same server ID can exist in both without conflict.
     """
@@ -59,20 +59,20 @@ async def get_catalog_servers() -> list[dict[str, Any]]:
 async def get_config_servers() -> list[dict[str, Any]]:
     """
     Get all MCP Config servers from ~/.datalayer/mcp.json.
-    
+
     MCP Config servers are user-defined servers that are started automatically
     when the agent runtime starts. Users can select which config servers to
     include as toolsets for their agents.
-    
+
     This is separate from the MCP Catalog which contains predefined servers
     that must be explicitly enabled.
-    
+
     Returns only running config servers (not catalog servers).
     """
     try:
         lifecycle_manager = get_mcp_lifecycle_manager()
         running_instances = lifecycle_manager.get_all_running_servers()
-        
+
         # Filter to only config servers (is_config=True means from mcp.json)
         config_servers = []
         for instance in running_instances:
@@ -81,7 +81,7 @@ async def get_config_servers() -> list[dict[str, Any]]:
                 server_dict["isRunning"] = True
                 server_dict["isAvailable"] = True
                 config_servers.append(server_dict)
-        
+
         logger.info(f"Returning {len(config_servers)} MCP config servers")
         return config_servers
 
@@ -94,9 +94,9 @@ async def get_config_servers() -> list[dict[str, Any]]:
 async def get_available_servers() -> list[dict[str, Any]]:
     """
     Get all available MCP servers - combines catalog servers with running config servers.
-    
+
     Config and catalog servers are managed separately, so the same ID can exist in both.
-    
+
     Returns:
     - All catalog servers (with isRunning status based on catalog server storage only)
     - All running config servers (from mcp.json, always with isRunning=True)
@@ -105,17 +105,19 @@ async def get_available_servers() -> list[dict[str, Any]]:
         # Get all catalog servers from the catalog definition
         catalog_servers = list_catalog_servers()
         logger.debug(f"Catalog servers: {[s.id for s in catalog_servers]}")
-        
+
         # Get running servers from lifecycle manager (separate storage)
         lifecycle_manager = get_mcp_lifecycle_manager()
         running_catalog_ids = set(lifecycle_manager.get_catalog_server_ids())
         running_config_instances = lifecycle_manager.get_config_servers()
-        
+
         logger.info(f"Running catalog server IDs: {running_catalog_ids}")
-        logger.info(f"Running config server IDs: {[i.server_id for i in running_config_instances]}")
-        
+        logger.info(
+            f"Running config server IDs: {[i.server_id for i in running_config_instances]}"
+        )
+
         result = []
-        
+
         # Add ALL catalog servers with their running status (based on catalog storage only)
         for server in catalog_servers:
             server_dict = server.model_dump(by_alias=True)
@@ -124,15 +126,19 @@ async def get_available_servers() -> list[dict[str, Any]]:
             server_dict["isRunning"] = is_running
             server_dict["isConfig"] = False  # Catalog servers are never config servers
             logger.debug(f"Catalog server {server.id}: isRunning={is_running}")
-            
+
             # If server is running in catalog, get tools from the running instance
             if is_running:
-                instance = lifecycle_manager.get_running_server(server.id, is_config=False)
+                instance = lifecycle_manager.get_running_server(
+                    server.id, is_config=False
+                )
                 if instance:
-                    server_dict["tools"] = [t.model_dump(by_alias=True) for t in instance.config.tools]
-            
+                    server_dict["tools"] = [
+                        t.model_dump(by_alias=True) for t in instance.config.tools
+                    ]
+
             result.append(server_dict)
-        
+
         # Add ALL running config servers (from mcp.json) - these are separate from catalog
         for instance in running_config_instances:
             server_dict = instance.config.model_dump(by_alias=True)
@@ -141,7 +147,7 @@ async def get_available_servers() -> list[dict[str, Any]]:
             server_dict["isAvailable"] = True  # Running means available
             logger.info(f"Adding config server: {instance.server_id}")
             result.append(server_dict)
-        
+
         return result
 
     except Exception as e:
@@ -156,7 +162,7 @@ async def enable_catalog_server(server_name: str) -> dict[str, Any]:
 
     This starts the MCP server process and adds it to the active session.
     The server will not persist across restarts.
-    
+
     Config and catalog servers are separate - enabling a catalog server works
     even if a config server with the same ID exists.
 
@@ -171,15 +177,17 @@ async def enable_catalog_server(server_name: str) -> dict[str, Any]:
             available = list(MCP_SERVER_CATALOG.keys())
             raise HTTPException(
                 status_code=404,
-                detail=f"Server '{server_name}' not found in catalog. Available: {available}"
+                detail=f"Server '{server_name}' not found in catalog. Available: {available}",
             )
 
         lifecycle_manager = get_mcp_lifecycle_manager()
-        
+
         # Check if already running in catalog storage specifically
         # (a server with same ID in config storage is separate and doesn't affect this)
         if lifecycle_manager.is_catalog_server_running(server_name):
-            instance = lifecycle_manager.get_running_server(server_name, is_config=False)
+            instance = lifecycle_manager.get_running_server(
+                server_name, is_config=False
+            )
             if instance:
                 logger.info(f"Catalog server '{server_name}' already running")
                 return instance.config.model_dump(by_alias=True)
@@ -187,7 +195,7 @@ async def enable_catalog_server(server_name: str) -> dict[str, Any]:
         # Ensure the config has is_config=False for catalog servers
         catalog_config = catalog_server.model_copy(deep=True)
         catalog_config.is_config = False  # Explicitly mark as catalog server
-        
+
         # Start the MCP server process
         instance = await lifecycle_manager.start_server(server_name, catalog_config)
         if not instance:
@@ -195,7 +203,7 @@ async def enable_catalog_server(server_name: str) -> dict[str, Any]:
             error = failed.get(server_name, "Unknown error")
             raise HTTPException(
                 status_code=500,
-                detail=f"Failed to start MCP server '{server_name}': {error}"
+                detail=f"Failed to start MCP server '{server_name}': {error}",
             )
 
         # Also add to manager for backward compatibility
@@ -232,13 +240,15 @@ async def disable_catalog_server(server_name: str) -> None:
             if not mcp_manager.get_server(server_name):
                 raise HTTPException(
                     status_code=404,
-                    detail=f"Server '{server_name}' is not currently enabled in catalog"
+                    detail=f"Server '{server_name}' is not currently enabled in catalog",
                 )
 
         # Stop the MCP server process (catalog servers only)
         stopped = await lifecycle_manager.stop_server(server_name, is_config=False)
         if not stopped:
-            logger.warning(f"Server '{server_name}' was not running in lifecycle manager")
+            logger.warning(
+                f"Server '{server_name}' was not running in lifecycle manager"
+            )
 
         # Also remove from manager for backward compatibility
         mcp_manager.remove_server(server_name)
@@ -259,11 +269,11 @@ async def get_servers() -> list[dict[str, Any]]:
         # Try lifecycle manager first (has actual running state)
         lifecycle_manager = get_mcp_lifecycle_manager()
         running_instances = lifecycle_manager.get_all_running_servers()
-        
+
         if running_instances:
             servers = [instance.config.model_dump() for instance in running_instances]
             return servers
-        
+
         # Fallback to mcp_manager (old path, for backward compatibility)
         mcp_manager = get_mcp_manager()
         servers = mcp_manager.get_servers()
@@ -282,7 +292,9 @@ async def get_server(server_id: str) -> dict[str, Any]:
         server = mcp_manager.get_server(server_id)
 
         if not server:
-            raise HTTPException(status_code=404, detail=f"Server not found: {server_id}")
+            raise HTTPException(
+                status_code=404, detail=f"Server not found: {server_id}"
+            )
 
         return server.model_dump()
 
@@ -324,7 +336,9 @@ async def update_server(server_id: str, server: MCPServer) -> dict[str, Any]:
 
         updated_server = mcp_manager.update_server(server_id, server)
         if not updated_server:
-            raise HTTPException(status_code=404, detail=f"Server not found: {server_id}")
+            raise HTTPException(
+                status_code=404, detail=f"Server not found: {server_id}"
+            )
 
         return updated_server.model_dump()
 
@@ -343,7 +357,9 @@ async def delete_server(server_id: str) -> None:
 
         removed = mcp_manager.remove_server(server_id)
         if not removed:
-            raise HTTPException(status_code=404, detail=f"Server not found: {server_id}")
+            raise HTTPException(
+                status_code=404, detail=f"Server not found: {server_id}"
+            )
 
     except HTTPException:
         raise

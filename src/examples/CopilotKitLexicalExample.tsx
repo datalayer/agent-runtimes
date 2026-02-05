@@ -60,6 +60,8 @@ import {
   HorizontalRulePlugin,
   EquationsPlugin,
   YouTubePlugin,
+  ExcalidrawPlugin,
+  CollapsiblePlugin,
   AutoLinkPlugin,
   AutoEmbedPlugin,
   LexicalConfigProvider,
@@ -67,6 +69,8 @@ import {
   FloatingTextFormatToolbarPlugin,
   CodeActionMenuPlugin,
   ListMaxIndentLevelPlugin,
+  TableCellResizerPlugin,
+  TablePlugin,
 } from '@datalayer/jupyter-lexical';
 import {
   ActionRegistrar,
@@ -77,6 +81,7 @@ import { editorConfig } from './lexical/editorConfig';
 import '@datalayer/jupyter-lexical/style/index.css';
 import '@copilotkit/react-ui/styles.css';
 
+import '@datalayer/jupyter-lexical/style/modal-overrides.css';
 import './lexical/lexical-theme.css';
 
 // Fixed lexical document ID
@@ -247,6 +252,8 @@ const LexicalUI = React.memo(function LexicalUI({
                 <CheckListPlugin />
                 <LinkPlugin />
                 <AutoLinkPlugin />
+                <TablePlugin />
+                <TableCellResizerPlugin />
                 <ListMaxIndentLevelPlugin maxDepth={7} />
                 <MarkdownShortcutPlugin transformers={TRANSFORMERS} />
                 <LoadContentPlugin content={content} />
@@ -255,6 +262,8 @@ const LexicalUI = React.memo(function LexicalUI({
                 <HorizontalRulePlugin />
                 <EquationsPlugin />
                 <YouTubePlugin />
+                <ExcalidrawPlugin />
+                <CollapsiblePlugin />
                 <AutoEmbedPlugin />
                 <JupyterCellPlugin />
                 {/* Wrap kernel plugins with Simple provider */}

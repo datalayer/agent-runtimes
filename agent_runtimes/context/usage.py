@@ -18,13 +18,18 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class UsageCategory:
-    """A category of usage with a name and token value."""
+    """
+    A category of usage with a name and token value.
+    """
+
     name: str
     value: int = 0
     children: list["UsageCategory"] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
-        """Convert to dictionary format for API response."""
+        """
+        Convert to dictionary format for API response.
+        """
         result: dict[str, Any] = {
             "name": self.name,
             "value": self.value,
@@ -36,7 +41,10 @@ class UsageCategory:
 
 @dataclass
 class RequestUsage:
-    """Usage for a single request/response cycle."""
+    """
+    Usage for a single request/response cycle.
+    """
+
     request_num: int
     input_tokens: int = 0
     output_tokens: int = 0
@@ -48,49 +56,57 @@ class RequestUsage:
 
 @dataclass
 class AgentUsageStats:
-    """Usage statistics for a single agent."""
-    
+    """
+    Usage statistics for a single agent.
+    """
+
     agent_id: str
-    
+
     # Token usage
     input_tokens: int = 0
     output_tokens: int = 0
     cache_read_tokens: int = 0
     cache_write_tokens: int = 0
-    
+
     # Request/run statistics
     requests: int = 0
     tool_calls: int = 0
-    
+
     # Message tracking
     user_message_tokens: int = 0
     assistant_message_tokens: int = 0
     system_prompt_tokens: int = 0
-    
+
     # Tool tracking (definitions from last run)
-    tool_definitions: list[tuple[str, str | None, dict]] = field(default_factory=list)
+    tool_definitions: list[tuple[str, str | None, dict[str, Any]]] = field(
+        default_factory=list
+    )
     tool_tokens: int = 0
-    
+
     # Per-request usage history
     request_usage_history: list[RequestUsage] = field(default_factory=list)
-    
+
     # Message history from agent runs (stored as JSON-serializable dicts)
     message_history: list[dict[str, Any]] = field(default_factory=list)
-    
+
     # Timestamps
     created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     last_updated: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
-    
+
     @property
     def total_tokens(self) -> int:
-        """Total tokens used (input + output)."""
+        """
+        Total tokens used (input + output).
+        """
         return self.input_tokens + self.output_tokens
-    
+
     @property
     def message_tokens(self) -> int:
-        """Total tokens in messages."""
+        """
+        Total tokens in messages.
+        """
         return self.user_message_tokens + self.assistant_message_tokens
-    
+
     def update_from_run_usage(
         self,
         input_tokens: int = 0,
@@ -101,7 +117,9 @@ class AgentUsageStats:
         tool_calls: int = 0,
         tool_names: list[str] | None = None,
     ) -> None:
-        """Update usage stats from a run result."""
+        """
+        Update usage stats from a run result.
+        """
         self.input_tokens += input_tokens
         self.output_tokens += output_tokens
         self.cache_read_tokens += cache_read_tokens
@@ -109,39 +127,46 @@ class AgentUsageStats:
         self.requests += requests
         self.tool_calls += tool_calls
         self.last_updated = datetime.now(timezone.utc)
-        
+
         # Add per-request usage entry
         request_num = len(self.request_usage_history) + 1
-        self.request_usage_history.append(RequestUsage(
-            request_num=request_num,
-            input_tokens=input_tokens,
-            output_tokens=output_tokens,
-            tool_calls=tool_calls,
-            tool_names=tool_names or [],
-            timestamp=datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
-        ))
-    
+        self.request_usage_history.append(
+            RequestUsage(
+                request_num=request_num,
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
+                tool_calls=tool_calls,
+                tool_names=tool_names or [],
+                timestamp=datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+            )
+        )
+
     def update_message_tokens(
         self,
         user_tokens: int = 0,
         assistant_tokens: int = 0,
     ) -> None:
-        """Update message token counts."""
+        """
+        Update message token counts.
+        """
         self.user_message_tokens += user_tokens
         self.assistant_message_tokens += assistant_tokens
         self.last_updated = datetime.now(timezone.utc)
-    
+
     def set_system_prompt_tokens(self, tokens: int) -> None:
-        """Set system prompt token count."""
+        """
+        Set system prompt token count.
+        """
         self.system_prompt_tokens = tokens
         self.last_updated = datetime.now(timezone.utc)
-    
+
     def store_messages(self, messages: list[Any]) -> None:
-        """Store message history from an agent run.
-        
+        """
+        Store message history from an agent run.
+
         Converts pydantic-ai ModelMessage objects to JSON-serializable dicts.
         Replaces the current message history (messages accumulate in the agent).
-        
+
         Args:
             messages: List of pydantic-ai ModelMessage objects.
         """
@@ -150,16 +175,16 @@ class AgentUsageStats:
             try:
                 # Handle pydantic-ai ModelMessage objects
                 msg_dict: dict[str, Any] = {}
-                
+
                 # Get the message kind (request or response)
                 msg_kind = getattr(msg, "kind", None)
                 msg_dict["kind"] = msg_kind
-                
+
                 # Get timestamp if available
                 timestamp = getattr(msg, "timestamp", None)
                 if timestamp:
                     msg_dict["timestamp"] = str(timestamp)
-                
+
                 # Process parts
                 parts = getattr(msg, "parts", [])
                 serialized_parts: list[dict[str, Any]] = []
@@ -167,7 +192,7 @@ class AgentUsageStats:
                     part_dict: dict[str, Any] = {}
                     part_kind = getattr(part, "part_kind", None)
                     part_dict["part_kind"] = part_kind
-                    
+
                     # Extract content based on part type
                     if hasattr(part, "content"):
                         content = part.content
@@ -177,7 +202,7 @@ class AgentUsageStats:
                             part_dict["content"] = str(content)
                     elif hasattr(part, "text"):
                         part_dict["content"] = part.text or ""
-                    
+
                     # Tool-specific fields
                     if hasattr(part, "tool_name"):
                         part_dict["tool_name"] = part.tool_name
@@ -186,30 +211,38 @@ class AgentUsageStats:
                     if hasattr(part, "args"):
                         try:
                             import json
-                            part_dict["args"] = json.dumps(part.args, default=str) if part.args else "{}"
+
+                            part_dict["args"] = (
+                                json.dumps(part.args, default=str)
+                                if part.args
+                                else "{}"
+                            )
                         except Exception:
                             part_dict["args"] = str(part.args)
-                    
+
                     serialized_parts.append(part_dict)
-                
+
                 msg_dict["parts"] = serialized_parts
                 serialized.append(msg_dict)
             except Exception as e:
                 logger.debug(f"Could not serialize message: {e}")
                 continue
-        
+
         self.message_history = serialized
         self.last_updated = datetime.now(timezone.utc)
         logger.debug(f"Stored {len(serialized)} messages for agent {self.agent_id}")
-    
-    def store_tools(self, tool_definitions: list[tuple[str, str | None, dict]]) -> None:
-        """Store tool definitions from an agent run.
-        
+
+    def store_tools(
+        self, tool_definitions: list[tuple[str, str | None, dict[str, Any]]]
+    ) -> None:
+        """
+        Store tool definitions from an agent run.
+
         Args:
             tool_definitions: List of (name, description, params_schema) tuples.
         """
         from .session import count_tokens_json
-        
+
         self.tool_definitions = tool_definitions
         # Calculate tool tokens
         total_tokens = 0
@@ -222,10 +255,14 @@ class AgentUsageStats:
             total_tokens += count_tokens_json(tool_def)
         self.tool_tokens = total_tokens
         self.last_updated = datetime.now(timezone.utc)
-        logger.debug(f"Stored {len(tool_definitions)} tools ({total_tokens} tokens) for agent {self.agent_id}")
-    
+        logger.debug(
+            f"Stored {len(tool_definitions)} tools ({total_tokens} tokens) for agent {self.agent_id}"
+        )
+
     def reset(self) -> None:
-        """Reset all usage statistics."""
+        """
+        Reset all usage statistics.
+        """
         self.input_tokens = 0
         self.output_tokens = 0
         self.cache_read_tokens = 0
@@ -244,14 +281,14 @@ class AgentUsageStats:
 class AgentUsageTracker:
     """
     Global tracker for agent usage statistics.
-    
+
     Maintains usage stats for all registered agents and provides
     context details for the frontend.
     """
-    
+
     # Default context window size (can be overridden per model)
     DEFAULT_CONTEXT_WINDOW = 128000  # 128K tokens (common for modern models)
-    
+
     # Model-specific context windows
     MODEL_CONTEXT_WINDOWS: dict[str, int] = {
         "gpt-4o": 128000,
@@ -267,63 +304,79 @@ class AgentUsageTracker:
         "gemini-1.5-flash": 1000000,
         "gemini-2.0-flash": 1000000,
     }
-    
+
     def __init__(self) -> None:
-        """Initialize the usage tracker."""
+        """
+        Initialize the usage tracker.
+        """
         self._agents: dict[str, AgentUsageStats] = {}
         self._model_overrides: dict[str, str] = {}  # agent_id -> model name
-    
-    def register_agent(self, agent_id: str, model: str | None = None) -> AgentUsageStats:
+
+    def register_agent(
+        self, agent_id: str, model: str | None = None
+    ) -> AgentUsageStats:
         """
         Register an agent for usage tracking.
-        
+
         Args:
             agent_id: Unique identifier for the agent.
             model: Optional model name for context window calculation.
-            
+
         Returns:
             The usage stats object for the agent.
         """
         if agent_id not in self._agents:
             self._agents[agent_id] = AgentUsageStats(agent_id=agent_id)
             logger.info(f"Registered agent '{agent_id}' for usage tracking")
-        
+
         if model:
             self._model_overrides[agent_id] = model
-        
+
         return self._agents[agent_id]
-    
+
     def unregister_agent(self, agent_id: str) -> None:
-        """Remove an agent from usage tracking."""
+        """
+        Remove an agent from usage tracking.
+        """
         if agent_id in self._agents:
             del self._agents[agent_id]
             logger.info(f"Unregistered agent '{agent_id}' from usage tracking")
         if agent_id in self._model_overrides:
             del self._model_overrides[agent_id]
-    
+
     def get_agent_stats(self, agent_id: str) -> AgentUsageStats | None:
-        """Get usage stats for an agent."""
+        """
+        Get usage stats for an agent.
+        """
         return self._agents.get(agent_id)
-    
+
     def get_or_create_stats(self, agent_id: str) -> AgentUsageStats:
-        """Get or create usage stats for an agent."""
+        """
+        Get or create usage stats for an agent.
+        """
         if agent_id not in self._agents:
             return self.register_agent(agent_id)
         return self._agents[agent_id]
-    
+
     def get_context_window(self, agent_id: str) -> int:
-        """Get the context window size for an agent."""
+        """
+        Get the context window size for an agent.
+        """
         model = self._model_overrides.get(agent_id)
         if model:
             # Extract model name without provider prefix (e.g., "openai:gpt-4o" -> "gpt-4o")
             model_name = model.split(":")[-1] if ":" in model else model
-            return self.MODEL_CONTEXT_WINDOWS.get(model_name, self.DEFAULT_CONTEXT_WINDOW)
+            return self.MODEL_CONTEXT_WINDOWS.get(
+                model_name, self.DEFAULT_CONTEXT_WINDOW
+            )
         return self.DEFAULT_CONTEXT_WINDOW
-    
+
     def set_model(self, agent_id: str, model: str) -> None:
-        """Set the model for an agent (affects context window calculation)."""
+        """
+        Set the model for an agent (affects context window calculation).
+        """
         self._model_overrides[agent_id] = model
-    
+
     def update_usage(
         self,
         agent_id: str,
@@ -337,7 +390,7 @@ class AgentUsageTracker:
     ) -> None:
         """
         Update usage statistics for an agent.
-        
+
         Args:
             agent_id: The agent identifier.
             input_tokens: Number of input tokens used.
@@ -358,23 +411,23 @@ class AgentUsageTracker:
             tool_calls=tool_calls,
             tool_names=tool_names,
         )
-    
+
     def get_context_details(self, agent_id: str) -> dict[str, Any]:
         """
         Get context usage details for an agent.
-        
+
         Returns a structured breakdown of context usage suitable
         for the frontend ContextUsage component.
-        
+
         Args:
             agent_id: The agent identifier.
-            
+
         Returns:
             Dictionary with context usage details.
         """
         stats = self._agents.get(agent_id)
         context_window = self.get_context_window(agent_id)
-        
+
         if stats is None:
             # Return empty stats for unknown agent
             return {
@@ -397,7 +450,7 @@ class AgentUsageTracker:
                     },
                 ],
             }
-        
+
         # Build the context breakdown
         # Messages category
         messages_category = UsageCategory(
@@ -405,10 +458,12 @@ class AgentUsageTracker:
             value=stats.user_message_tokens + stats.assistant_message_tokens,
             children=[
                 UsageCategory(name="User messages", value=stats.user_message_tokens),
-                UsageCategory(name="Assistant responses", value=stats.assistant_message_tokens),
+                UsageCategory(
+                    name="Assistant responses", value=stats.assistant_message_tokens
+                ),
             ],
         )
-        
+
         # Tools category (estimate based on tool calls)
         # Rough estimate: ~500 tokens per tool call on average
         tool_tokens = stats.tool_calls * 500
@@ -417,18 +472,22 @@ class AgentUsageTracker:
             value=tool_tokens,
             children=[
                 UsageCategory(name="Tool calls", value=tool_tokens),
-            ] if tool_tokens > 0 else [],
+            ]
+            if tool_tokens > 0
+            else [],
         )
-        
+
         # System prompt category
         system_category = UsageCategory(
             name="System",
             value=stats.system_prompt_tokens,
             children=[
                 UsageCategory(name="System prompt", value=stats.system_prompt_tokens),
-            ] if stats.system_prompt_tokens > 0 else [],
+            ]
+            if stats.system_prompt_tokens > 0
+            else [],
         )
-        
+
         # Cache category
         cache_value = stats.cache_read_tokens + stats.cache_write_tokens
         cache_category = UsageCategory(
@@ -437,12 +496,14 @@ class AgentUsageTracker:
             children=[
                 UsageCategory(name="Cache read", value=stats.cache_read_tokens),
                 UsageCategory(name="Cache write", value=stats.cache_write_tokens),
-            ] if cache_value > 0 else [],
+            ]
+            if cache_value > 0
+            else [],
         )
-        
+
         # Total used tokens
         used_tokens = stats.total_tokens
-        
+
         # Build children list, only including non-empty categories
         children = []
         if messages_category.value > 0:
@@ -453,31 +514,37 @@ class AgentUsageTracker:
             children.append(system_category.to_dict())
         if cache_category.value > 0:
             children.append(cache_category.to_dict())
-        
+
         # If no categories have data, add empty messages category
         if not children:
-            children.append({
-                "name": "Messages",
-                "value": 0,
-                "children": [
-                    {"name": "User messages", "value": 0},
-                    {"name": "Assistant responses", "value": 0},
-                ],
-            })
-        
+            children.append(
+                {
+                    "name": "Messages",
+                    "value": 0,
+                    "children": [
+                        {"name": "User messages", "value": 0},
+                        {"name": "Assistant responses", "value": 0},
+                    ],
+                }
+            )
+
         return {
             "name": "Context",
             "totalTokens": context_window,
             "usedTokens": used_tokens,
             "children": children,
         }
-    
+
     def list_agents(self) -> list[str]:
-        """List all tracked agent IDs."""
+        """
+        List all tracked agent IDs.
+        """
         return list(self._agents.keys())
-    
+
     def reset_agent(self, agent_id: str) -> None:
-        """Reset usage statistics for an agent."""
+        """
+        Reset usage statistics for an agent.
+        """
         if agent_id in self._agents:
             self._agents[agent_id].reset()
 
@@ -487,7 +554,9 @@ _usage_tracker: AgentUsageTracker | None = None
 
 
 def get_usage_tracker() -> AgentUsageTracker:
-    """Get the global usage tracker instance."""
+    """
+    Get the global usage tracker instance.
+    """
     global _usage_tracker
     if _usage_tracker is None:
         _usage_tracker = AgentUsageTracker()

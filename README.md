@@ -40,7 +40,7 @@ Agent Runtimes solves the complexity of deploying AI agents by providing:
 - **MCP-UI**: Interactive UI resources protocol with React/Web Components
 - **A2A**: Agent-to-agent communication
 
-### Multi-Agent Support  
+### Multi-Agent Support
 - **Pydantic AI**: Type-safe agents (fully implemented)
 - **LangChain**: Complex workflows (adapter ready)
 - **Jupyter AI**: Notebook integration (adapter ready)

@@ -10,12 +10,12 @@ Provides client implementations for consuming agent-runtimes protocols:
 
 Example:
     from agent_runtimes.transports.clients import ACPClient, AGUIClient
-    
+
     # ACP client (WebSocket)
     async with ACPClient("ws://localhost:8000/api/v1/acp/ws/agent-1") as client:
         async for event in client.run("Hello!"):
             print(event)
-    
+
     # AG-UI client (HTTP/SSE) - trailing slash required for mounted apps
     async with AGUIClient("http://localhost:8000/api/v1/ag-ui/agent-1/") as client:
         async for event in client.run("Hello!"):
@@ -30,15 +30,15 @@ from .acp_client import (
 from .ag_ui_client import (
     AGUIClient,
     AGUIClientError,
-    AGUIEvent,
     AGUIConversation,
+    AGUIEvent,
     connect_agui,
 )
 
 __all__ = [
     # ACP client
     "ACPClient",
-    "ACPClientError", 
+    "ACPClientError",
     "connect_acp",
     # AG-UI client
     "AGUIClient",

@@ -63,7 +63,6 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: ${{ matrix.node-version }}
-          cache: 'npm'
 
       - name: Install TypeScript dependencies
         run: npm install --workspaces

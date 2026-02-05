@@ -71,7 +71,9 @@ class JupyterChatConfig:
     def get_default_model(self) -> str:
         """Get the default model ID."""
         config = self.load_config()
-        return config.get("default_model", "bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0")
+        return config.get(
+            "default_model", "bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0"
+        )
 
     def set_default_model(self, model_id: str) -> None:
         """Set the default model ID."""

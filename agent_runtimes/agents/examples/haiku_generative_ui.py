@@ -1,7 +1,8 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Haiku Generative UI example.
+"""
+Haiku Generative UI example.
 
 Demonstrates tool-based generative UI where the agent generates
 haiku poetry that is rendered as beautiful cards in the frontend.
@@ -20,6 +21,7 @@ This follows the same pattern as the ag-ui Dojo implementation.
 """
 
 from textwrap import dedent
+
 from pydantic_ai import Agent
 
 # Create the agent
@@ -56,7 +58,8 @@ async def generate_haiku(
     english: list[str],
     gradient: str,
 ) -> str:
-    """Generate a haiku and display it in the UI.
+    """
+    Generate a haiku and display it in the UI.
 
     This tool creates a haiku with Japanese text, English translation,
     and a beautiful gradient background. The frontend will render this
@@ -65,7 +68,7 @@ async def generate_haiku(
     Args:
         japanese: Array of three lines of the haiku in Japanese (5-7-5 syllables).
         english: Array of three lines of the haiku translated to English.
-        gradient: CSS gradient string for the card background 
+        gradient: CSS gradient string for the card background
                   (e.g., "linear-gradient(135deg, #667eea 0%, #764ba2 100%)").
 
     Returns:

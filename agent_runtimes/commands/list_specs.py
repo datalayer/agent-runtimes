@@ -13,12 +13,12 @@ Usage as library:
         get_agent_specs,
         OutputFormat,
     )
-    
+
     # Get specs as list of dicts
     specs = get_agent_specs()
     for spec in specs:
         print(f"{spec['id']}: {spec['name']}")
-    
+
     # Print formatted output
     list_agent_specs(output=OutputFormat.table)
 """
@@ -27,11 +27,9 @@ import json
 from enum import Enum
 from typing import Any
 
-from rich.console import Console
-from rich.panel import Panel
-from rich.table import Table
-from rich.text import Text
 from rich import box
+from rich.console import Console
+from rich.table import Table
 
 
 class OutputFormat(str, Enum):
@@ -44,7 +42,7 @@ class OutputFormat(str, Enum):
 def get_agent_specs() -> list[dict[str, Any]]:
     """
     Get available agent specs from the library.
-    
+
     Returns:
         List of agent spec dictionaries with keys:
         - id: Agent spec ID
@@ -56,24 +54,26 @@ def get_agent_specs() -> list[dict[str, Any]]:
 
     specs = []
     for agent_id, agent in AGENT_SPECS.items():
-        specs.append({
-            "id": agent_id,
-            "name": agent.name,
-            "description": agent.description,
-            "mcp_servers": [s.id for s in agent.mcp_servers],
-        })
+        specs.append(
+            {
+                "id": agent_id,
+                "name": agent.name,
+                "description": agent.description,
+                "mcp_servers": [s.id for s in agent.mcp_servers],
+            }
+        )
     return specs
 
 
 def list_agent_specs(output: OutputFormat = OutputFormat.table) -> list[dict[str, Any]]:
     """
     List available agent specs from the library.
-    
+
     This is the core logic of the list-specs command, usable by other libraries.
-    
+
     Args:
         output: Output format (table or json). Controls how results are printed.
-        
+
     Returns:
         List of agent spec dictionaries.
     """
@@ -95,30 +95,36 @@ def list_agent_specs(output: OutputFormat = OutputFormat.table) -> list[dict[str
             border_style="blue",
             padding=(0, 1),
         )
-        
+
         table.add_column("ID", style="green", no_wrap=True)
         table.add_column("Name", style="bold white")
         table.add_column("Description", style="dim")
         table.add_column("MCP Servers", style="yellow")
-        
+
         for agent_id, agent in AGENT_SPECS.items():
             mcp_ids = [s.id for s in agent.mcp_servers]
             # Truncate description
-            desc = agent.description[:60] + "..." if len(agent.description) > 60 else agent.description
-            
+            desc = (
+                agent.description[:60] + "..."
+                if len(agent.description) > 60
+                else agent.description
+            )
+
             # Format MCP servers as badges
             mcp_text = ", ".join(mcp_ids) if mcp_ids else "[dim]none[/dim]"
-            
+
             table.add_row(
                 agent_id,
                 agent.name,
                 desc,
                 mcp_text,
             )
-        
+
         console.print()
         console.print(table)
         console.print()
-        console.print(f"[bold]Total:[/bold] [cyan]{len(AGENT_SPECS)}[/cyan] agent spec(s)")
+        console.print(
+            f"[bold]Total:[/bold] [cyan]{len(AGENT_SPECS)}[/cyan] agent spec(s)"
+        )
 
     return specs

@@ -9,19 +9,18 @@ Predefined agent specifications that can be instantiated as AgentSpaces.
 
 from typing import Dict
 
-from agent_runtimes.types import AgentSpec
 from agent_runtimes.mcp.catalog_mcp_servers import (
-    TAVILY_MCP_SERVER,
-    FILESYSTEM_MCP_SERVER,
-    GITHUB_MCP_SERVER,
-    SLACK_MCP_SERVER,
-    KAGGLE_MCP_SERVER,
     ALPHAVANTAGE_MCP_SERVER,
     CHART_MCP_SERVER,
-    GMAIL_MCP_SERVER,
+    FILESYSTEM_MCP_SERVER,
     GDRIVE_MCP_SERVER,
+    GITHUB_MCP_SERVER,
+    GMAIL_MCP_SERVER,
+    KAGGLE_MCP_SERVER,
+    SLACK_MCP_SERVER,
+    TAVILY_MCP_SERVER,
 )
-
+from agent_runtimes.types import AgentSpec
 
 # ============================================================================
 # Agent Specs

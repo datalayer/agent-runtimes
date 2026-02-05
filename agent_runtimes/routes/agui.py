@@ -7,7 +7,7 @@ import asyncio
 import logging
 from typing import Any, Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 from pydantic import BaseModel
 from starlette.applications import Starlette
 from starlette.routing import Mount
@@ -33,22 +33,25 @@ _running_threads: dict[str, asyncio.Event] = {}
 
 class TerminateRequest(BaseModel):
     """Request to terminate a running agent thread."""
+
     thread_id: Optional[str] = None
 
 
 class TerminateResponse(BaseModel):
     """Response from terminate request."""
+
     success: bool
     message: str
     thread_id: Optional[str] = None
 
 
 def register_thread(thread_id: str) -> asyncio.Event:
-    """Register a running thread and return its cancellation event.
-    
+    """
+    Register a running thread and return its cancellation event.
+
     Args:
         thread_id: The unique thread identifier.
-        
+
     Returns:
         An asyncio.Event that can be set to signal cancellation.
     """
@@ -59,8 +62,9 @@ def register_thread(thread_id: str) -> asyncio.Event:
 
 
 def unregister_thread(thread_id: str) -> None:
-    """Unregister a thread when it completes.
-    
+    """
+    Unregister a thread when it completes.
+
     Args:
         thread_id: The thread identifier to remove.
     """
@@ -70,11 +74,12 @@ def unregister_thread(thread_id: str) -> None:
 
 
 def cancel_thread(thread_id: str) -> bool:
-    """Cancel a running thread.
-    
+    """
+    Cancel a running thread.
+
     Args:
         thread_id: The thread identifier to cancel.
-        
+
     Returns:
         True if the thread was found and cancelled, False otherwise.
     """
@@ -86,8 +91,9 @@ def cancel_thread(thread_id: str) -> bool:
 
 
 def cancel_all_threads() -> int:
-    """Cancel all running threads.
-    
+    """
+    Cancel all running threads.
+
     Returns:
         Number of threads cancelled.
     """
@@ -103,7 +109,8 @@ def register_agui_agent(
     agent_id: str,
     adapter: AGUITransport,
 ) -> None:
-    """Register an AG-UI adapter.
+    """
+    Register an AG-UI adapter.
 
     Args:
         agent_id: Unique identifier for the agent.
@@ -115,7 +122,8 @@ def register_agui_agent(
 
 
 def unregister_agui_agent(agent_id: str) -> None:
-    """Unregister an AG-UI adapter.
+    """
+    Unregister an AG-UI adapter.
 
     Args:
         agent_id: The agent identifier.
@@ -128,7 +136,8 @@ def unregister_agui_agent(agent_id: str) -> None:
 
 
 def get_agui_app(agent_id: str) -> Starlette | None:
-    """Get an AG-UI Starlette app by ID.
+    """
+    Get an AG-UI Starlette app by ID.
 
     Args:
         agent_id: The agent identifier.
@@ -140,7 +149,8 @@ def get_agui_app(agent_id: str) -> Starlette | None:
 
 
 def get_agui_adapter(agent_id: str) -> "AGUITransport | None":
-    """Get an AG-UI adapter by ID.
+    """
+    Get an AG-UI adapter by ID.
 
     Args:
         agent_id: The agent identifier.
@@ -152,7 +162,8 @@ def get_agui_adapter(agent_id: str) -> "AGUITransport | None":
 
 
 def get_all_agui_adapters() -> dict[str, "AGUITransport"]:
-    """Get all registered AG-UI adapters.
+    """
+    Get all registered AG-UI adapters.
 
     Returns:
         Dictionary mapping agent IDs to their AGUITransport adapters.
@@ -161,7 +172,8 @@ def get_all_agui_adapters() -> dict[str, "AGUITransport"]:
 
 
 def get_agui_mounts() -> list[Mount]:
-    """Get all AG-UI mounts for the FastAPI app.
+    """
+    Get all AG-UI mounts for the FastAPI app.
 
     Returns:
         List of Starlette Mount objects for each AG-UI agent.
@@ -175,8 +187,9 @@ def get_agui_mounts() -> list[Mount]:
 
 
 @router.get("/agents")
-async def list_agents() -> dict[str, list[str]]:
-    """List available AG-UI agents.
+async def list_agents() -> dict[str, Any]:
+    """
+    List available AG-UI agents.
 
     Returns:
         Dictionary with list of agent IDs and their endpoints.
@@ -195,7 +208,8 @@ async def list_agents() -> dict[str, list[str]]:
 
 @router.get("/")
 async def agui_info() -> dict[str, str]:
-    """Get AG-UI service information.
+    """
+    Get AG-UI service information.
 
     Returns:
         Information about the AG-UI service.
@@ -212,7 +226,8 @@ async def agui_info() -> dict[str, str]:
 
 @router.post("/terminate", response_model=TerminateResponse)
 async def terminate_agent(request: TerminateRequest) -> TerminateResponse:
-    """Terminate a running agent thread or all threads.
+    """
+    Terminate a running agent thread or all threads.
 
     This endpoint allows clients to stop running agent executions.
     If thread_id is provided, only that thread is cancelled.
@@ -249,7 +264,8 @@ async def terminate_agent(request: TerminateRequest) -> TerminateResponse:
 
 @router.get("/threads")
 async def list_threads() -> dict[str, Any]:
-    """List all running AG-UI threads.
+    """
+    List all running AG-UI threads.
 
     Returns:
         Dictionary with list of running thread IDs.

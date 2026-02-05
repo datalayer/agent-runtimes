@@ -1,7 +1,8 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A2A (Agent-to-Agent) protocol adapter.
+"""
+A2A (Agent-to-Agent) protocol adapter.
 
 Implements the A2A protocol for agent-to-agent communication.
 Supports identity context for OAuth token propagation across agent boundaries.
@@ -18,7 +19,8 @@ logger = logging.getLogger(__name__)
 
 
 class A2ATransport(BaseTransport):
-    """A2A (Agent-to-Agent) protocol adapter.
+    """
+    A2A (Agent-to-Agent) protocol adapter.
 
     Implements the A2A protocol for inter-agent communication.
     This protocol enables agents to communicate and collaborate.
@@ -47,11 +49,14 @@ class A2ATransport(BaseTransport):
 
     @property
     def protocol_name(self) -> str:
-        """Get the protocol name."""
+        """
+        Get the protocol name.
+        """
         return "a2a"
 
     async def handle_request(self, request: dict[str, Any]) -> dict[str, Any]:
-        """Handle an A2A request.
+        """
+        Handle an A2A request.
 
         Args:
             request: A2A request data with keys:
@@ -81,7 +86,9 @@ class A2ATransport(BaseTransport):
         # Log identities if provided
         if identities:
             providers = [i.get("provider") for i in identities]
-            logger.info(f"A2A: Received identities from request for providers: {providers}")
+            logger.info(
+                f"A2A: Received identities from request for providers: {providers}"
+            )
 
         # Create agent context
         from ..adapters.base import AgentContext
@@ -141,7 +148,8 @@ class A2ATransport(BaseTransport):
     async def handle_stream(
         self, request: dict[str, Any]
     ) -> AsyncIterator[dict[str, Any]]:
-        """Handle a streaming A2A request.
+        """
+        Handle a streaming A2A request.
 
         Args:
             request: A2A request data with optional identities key for OAuth tokens.

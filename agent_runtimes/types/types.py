@@ -10,7 +10,8 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class AgentSkillSpec(BaseModel):
-    """Specification for an agent skill.
+    """
+    Specification for an agent skill.
 
     Simplified version of the full Skill type from agent-skills,
     containing only the fields needed for agent specification.
@@ -27,7 +28,9 @@ class AgentSkillSpec(BaseModel):
 
 
 class AgentStatus(str, Enum):
-    """Status of an agent space."""
+    """
+    Status of an agent space.
+    """
 
     STARTING = "starting"
     RUNNING = "running"
@@ -37,7 +40,9 @@ class AgentStatus(str, Enum):
 
 
 class ChatRequest(BaseModel):
-    """Chat request from frontend."""
+    """
+    Chat request from frontend.
+    """
 
     model: Optional[str] = Field(None, description="Model to use for this request")
     builtin_tools: List[str] = Field(
@@ -49,7 +54,9 @@ class ChatRequest(BaseModel):
 
 
 class AIModel(BaseModel):
-    """Configuration for an AI model."""
+    """
+    Configuration for an AI model.
+    """
 
     model_config = ConfigDict(populate_by_name=True, by_alias=True)
 
@@ -75,7 +82,9 @@ class AIModel(BaseModel):
 
 
 class BuiltinTool(BaseModel):
-    """Configuration for a builtin tool."""
+    """
+    Configuration for a builtin tool.
+    """
 
     model_config = ConfigDict(populate_by_name=True)
 
@@ -84,7 +93,9 @@ class BuiltinTool(BaseModel):
 
 
 class MCPServerTool(BaseModel):
-    """A tool provided by an MCP server."""
+    """
+    A tool provided by an MCP server.
+    """
 
     model_config = ConfigDict(populate_by_name=True, by_alias=True)
 
@@ -99,13 +110,17 @@ class MCPServerTool(BaseModel):
 
 
 class MCPServer(BaseModel):
-    """Configuration for an MCP server."""
+    """
+    Configuration for an MCP server.
+    """
 
     model_config = ConfigDict(populate_by_name=True, by_alias=True)
 
     id: str = Field(..., description="Unique server identifier")
     name: str = Field(..., description="Display name for the server")
-    description: str = Field(default="", description="Description of the server capabilities")
+    description: str = Field(
+        default="", description="Description of the server capabilities"
+    )
     url: str = Field(default="", description="Server URL (for HTTP-based servers)")
     enabled: bool = Field(default=True, description="Whether the server is enabled")
     tools: List[MCPServerTool] = Field(
@@ -151,7 +166,9 @@ class MCPServer(BaseModel):
 
 
 class FrontendConfig(BaseModel):
-    """Configuration returned to frontend."""
+    """
+    Configuration returned to frontend.
+    """
 
     model_config = ConfigDict(populate_by_name=True, by_alias=True)
 
@@ -171,7 +188,8 @@ class FrontendConfig(BaseModel):
 
 
 class AgentSpec(BaseModel):
-    """Specification for an AI agent.
+    """
+    Specification for an AI agent.
 
     Defines the configuration for a reusable agent template that can be
     instantiated as an AgentSpace.

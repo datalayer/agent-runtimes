@@ -6,8 +6,8 @@
 import json
 import logging
 
+import tornado.web
 from jupyter_server.base.handlers import APIHandler
-from tornado import web as tornado_web
 
 from agent_runtimes.config import get_frontend_config
 from agent_runtimes.mcp import get_available_tools
@@ -25,7 +25,7 @@ class ConfigureHandler(APIHandler):
     - MCP servers
     """
 
-    @tornado_web.authenticated
+    @tornado.web.authenticated
     async def get(self) -> None:
         """Return configuration for frontend."""
         try:

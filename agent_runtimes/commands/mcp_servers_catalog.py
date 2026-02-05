@@ -14,12 +14,12 @@ Usage as library:
         get_mcp_servers_catalog,
         OutputFormat,
     )
-    
+
     # Get servers as list of dicts
     servers = get_mcp_servers_catalog()
     for server in servers:
         print(f"{server['id']}: {server['name']}")
-    
+
     # Print formatted output
     list_mcp_servers_catalog(output=OutputFormat.table)
 """
@@ -29,11 +29,9 @@ import os
 from enum import Enum
 from typing import Any
 
-from rich.console import Console
-from rich.panel import Panel
-from rich.table import Table
-from rich.text import Text
 from rich import box
+from rich.console import Console
+from rich.table import Table
 
 
 class OutputFormat(str, Enum):
@@ -46,7 +44,7 @@ class OutputFormat(str, Enum):
 def get_mcp_servers_catalog() -> list[dict[str, Any]]:
     """
     Get the MCP servers catalog with availability status.
-    
+
     Returns:
         List of MCP server dictionaries with keys:
         - id: Server ID
@@ -66,28 +64,32 @@ def get_mcp_servers_catalog() -> list[dict[str, Any]]:
     servers = []
     for server_id, server in MCP_SERVER_CATALOG.items():
         is_available = check_env_vars_available(server.required_env_vars)
-        servers.append({
-            "id": server_id,
-            "name": server.name,
-            "description": server.description,
-            "command": server.command,
-            "args": server.args,
-            "transport": server.transport,
-            "required_env_vars": server.required_env_vars,
-            "is_available": is_available,
-        })
+        servers.append(
+            {
+                "id": server_id,
+                "name": server.name,
+                "description": server.description,
+                "command": server.command,
+                "args": server.args,
+                "transport": server.transport,
+                "required_env_vars": server.required_env_vars,
+                "is_available": is_available,
+            }
+        )
     return servers
 
 
-def list_mcp_servers_catalog(output: OutputFormat = OutputFormat.table) -> list[dict[str, Any]]:
+def list_mcp_servers_catalog(
+    output: OutputFormat = OutputFormat.table,
+) -> list[dict[str, Any]]:
     """
     List MCP servers from the catalog with availability status.
-    
+
     This is the core logic of the mcp-servers-catalog command, usable by other libraries.
-    
+
     Args:
         output: Output format (table or json). Controls how results are printed.
-        
+
     Returns:
         List of MCP server dictionaries.
     """
@@ -107,18 +109,18 @@ def list_mcp_servers_catalog(output: OutputFormat = OutputFormat.table) -> list[
             border_style="blue",
             padding=(0, 1),
         )
-        
+
         table.add_column("ID", style="green", no_wrap=True)
         table.add_column("Name", style="bold white")
         table.add_column("Status", style="yellow", justify="center")
         table.add_column("Transport", style="dim", justify="center")
         table.add_column("Env Vars", style="cyan")
         table.add_column("Description", style="dim")
-        
+
         # Count available/unavailable servers
         available_count = 0
         unavailable_count = 0
-        
+
         for server in servers:
             # Availability badge
             if server["is_available"]:
@@ -127,7 +129,7 @@ def list_mcp_servers_catalog(output: OutputFormat = OutputFormat.table) -> list[
             else:
                 status = "[red]○ missing env[/red]"
                 unavailable_count += 1
-            
+
             # Format env vars
             env_vars = server.get("required_env_vars", [])
             if env_vars:
@@ -141,11 +143,11 @@ def list_mcp_servers_catalog(output: OutputFormat = OutputFormat.table) -> list[
                 env_text = ", ".join(env_parts)
             else:
                 env_text = "[dim]none[/dim]"
-            
+
             # Truncate description
             desc = server["description"]
             desc = desc[:40] + "..." if len(desc) > 40 else desc
-            
+
             table.add_row(
                 server["id"],
                 server["name"],
@@ -154,11 +156,11 @@ def list_mcp_servers_catalog(output: OutputFormat = OutputFormat.table) -> list[
                 env_text,
                 desc,
             )
-        
+
         console.print()
         console.print(table)
         console.print()
-        
+
         # Summary with colored counts
         summary_parts = [
             f"[bold]Total:[/bold] [cyan]{len(servers)}[/cyan] server(s)",
@@ -166,7 +168,7 @@ def list_mcp_servers_catalog(output: OutputFormat = OutputFormat.table) -> list[
             f"[red]○ {unavailable_count} missing env[/red]",
         ]
         console.print(" • ".join(summary_parts))
-        
+
         if unavailable_count > 0:
             console.print()
             console.print(

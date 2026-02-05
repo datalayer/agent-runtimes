@@ -5,15 +5,16 @@
 
 import logging
 import os
-from typing import Any
+from typing import Any, Sequence
 
 from pydantic_ai.settings import ModelSettings
+
 from agent_runtimes.types import AIModel
 
 logger = logging.getLogger(__name__)
 
 
-def check_env_vars_available(required_vars: list[str]) -> bool:
+def check_env_vars_available(required_vars: Sequence[str]) -> bool:
     """
     Check if all required environment variables are set.
 
@@ -129,9 +130,9 @@ def create_model_with_provider(
         azure_provider_with_timeout = OpenAIProvider(openai_client=azure_client)
 
         return OpenAIChatModel(
-            model_name, 
+            model_name,
             provider=azure_provider_with_timeout,
-            settings=ModelSettings(parallel_tool_calls=False)
+            settings=ModelSettings(parallel_tool_calls=False),
         )
     elif model_provider.lower() == "anthropic":
         from anthropic import AsyncAnthropic
@@ -151,9 +152,9 @@ def create_model_with_provider(
         anthropic_provider = AnthropicProvider(anthropic_client=anthropic_client)
 
         return AnthropicModel(
-            model_name, 
+            model_name,
             provider=anthropic_provider,
-            settings=ModelSettings(parallel_tool_calls=False)
+            settings=ModelSettings(parallel_tool_calls=False),
         )
     elif model_provider.lower() in ["openai", "github-copilot"]:
         from pydantic_ai.models.openai import OpenAIChatModel
@@ -173,9 +174,9 @@ def create_model_with_provider(
         )
 
         return OpenAIChatModel(
-            model_name, 
+            model_name,
             provider=openai_provider,
-            settings=ModelSettings(parallel_tool_calls=False)
+            settings=ModelSettings(parallel_tool_calls=False),
         )
     else:
         # For other providers, use the standard string format

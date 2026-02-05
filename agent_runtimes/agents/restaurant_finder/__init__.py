@@ -6,8 +6,8 @@
 from .agent import (
     RestaurantDeps,
     create_restaurant_agent,
-    run_restaurant_agent,
     handle_a2ui_action,
+    run_restaurant_agent,
 )
 
 __all__ = [

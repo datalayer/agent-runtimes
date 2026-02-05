@@ -50,10 +50,12 @@ def _format_a2a_response(
     # Add A2UI data parts
     if a2ui_messages:
         for msg in a2ui_messages:
-            parts.append({
-                "kind": "data",
-                "data": msg,
-            })
+            parts.append(
+                {
+                    "kind": "data",
+                    "data": msg,  # type: ignore[dict-item]
+                }
+            )
 
     return parts
 
@@ -72,15 +74,17 @@ async def restaurant_query(request: A2UIQueryRequest) -> list[dict[str, Any]]:
     try:
         # Import here to avoid circular imports and ensure module is loaded
         from agent_runtimes.agents.restaurant_finder import (
-            run_restaurant_agent,
             handle_a2ui_action,
+            run_restaurant_agent,
         )
 
         base_url = "http://localhost:8765"
 
         if request.action and request.context:
             # Handle action (button click, form submission)
-            logger.info(f"A2UI action: {request.action} with context: {request.context}")
+            logger.info(
+                f"A2UI action: {request.action} with context: {request.context}"
+            )
             result = await handle_a2ui_action(
                 request.action,
                 request.context,
@@ -122,10 +126,11 @@ async def restaurant_query(request: A2UIQueryRequest) -> list[dict[str, Any]]:
 
 
 @router.get("/restaurant/health")
-async def restaurant_health():
+async def restaurant_health() -> dict[str, Any]:
     """Health check for the A2UI restaurant endpoint."""
     try:
-        from agent_runtimes.agents.restaurant_finder import restaurant_agent
+        # Import to check availability
+        from agent_runtimes.agents import restaurant_finder  # noqa: F401
 
         return {
             "status": "healthy",

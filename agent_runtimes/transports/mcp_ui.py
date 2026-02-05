@@ -1,7 +1,8 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""MCP-UI protocol adapter.
+"""
+MCP-UI protocol adapter.
 
 Implements the MCP-UI (Model Context Protocol UI) for agent-runtimes using the
 Python mcp-ui-server SDK.
@@ -20,9 +21,9 @@ MCP-UI provides:
 import logging
 from typing import Any, AsyncIterator
 
-from mcp_ui_server import UIResource, create_ui_resource, UIMetadataKey
+from mcp_ui_server import UIMetadataKey, UIResource, create_ui_resource
 
-from ..adapters.base import BaseAgent, AgentContext
+from ..adapters.base import AgentContext, BaseAgent
 from ..context.identities import IdentityContextManager
 from .base import BaseTransport
 
@@ -30,7 +31,8 @@ logger = logging.getLogger(__name__)
 
 
 class MCPUITransport(BaseTransport):
-    """MCP-UI protocol adapter.
+    """
+    MCP-UI protocol adapter.
 
     Wraps agent responses to include interactive UI resources using the
     MCP-UI protocol standard.
@@ -62,7 +64,8 @@ class MCPUITransport(BaseTransport):
         enable_ui_transforms: bool = True,
         default_frame_size: tuple[str, str] | None = None,
     ):
-        """Initialize the MCP-UI adapter.
+        """
+        Initialize the MCP-UI adapter.
 
         Args:
             agent: The agent to adapt.
@@ -77,7 +80,9 @@ class MCPUITransport(BaseTransport):
 
     @property
     def protocol_name(self) -> str:
-        """Get the protocol name."""
+        """
+        Get the protocol name.
+        """
         return "mcp-ui"
 
     def create_html_resource(
@@ -87,7 +92,8 @@ class MCPUITransport(BaseTransport):
         metadata: dict[str, Any] | None = None,
         frame_size: tuple[str, str] | None = None,
     ) -> UIResource:
-        """Create an HTML UI resource.
+        """
+        Create an HTML UI resource.
 
         Args:
             uri: Resource URI (must start with 'ui://').
@@ -103,16 +109,18 @@ class MCPUITransport(BaseTransport):
             size = frame_size or self._default_frame_size
             ui_metadata[UIMetadataKey.PREFERRED_FRAME_SIZE] = list(size)
 
-        return create_ui_resource({
-            "uri": uri,
-            "content": {
-                "type": "rawHtml",
-                "htmlString": html,
-            },
-            "encoding": "text",
-            "uiMetadata": ui_metadata,
-            "metadata": metadata or {},
-        })
+        return create_ui_resource(
+            {
+                "uri": uri,
+                "content": {
+                    "type": "rawHtml",
+                    "htmlString": html,
+                },
+                "encoding": "text",
+                "uiMetadata": ui_metadata,
+                "metadata": metadata or {},
+            }
+        )
 
     def create_external_url_resource(
         self,
@@ -121,7 +129,8 @@ class MCPUITransport(BaseTransport):
         metadata: dict[str, Any] | None = None,
         frame_size: tuple[str, str] | None = None,
     ) -> UIResource:
-        """Create an external URL UI resource.
+        """
+        Create an external URL UI resource.
 
         Args:
             uri: Resource URI (must start with 'ui://').
@@ -137,16 +146,18 @@ class MCPUITransport(BaseTransport):
             size = frame_size or self._default_frame_size
             ui_metadata[UIMetadataKey.PREFERRED_FRAME_SIZE] = list(size)
 
-        return create_ui_resource({
-            "uri": uri,
-            "content": {
-                "type": "externalUrl",
-                "iframeUrl": url,
-            },
-            "encoding": "text",
-            "uiMetadata": ui_metadata,
-            "metadata": metadata or {},
-        })
+        return create_ui_resource(
+            {
+                "uri": uri,
+                "content": {
+                    "type": "externalUrl",
+                    "iframeUrl": url,
+                },
+                "encoding": "text",
+                "uiMetadata": ui_metadata,
+                "metadata": metadata or {},
+            }
+        )
 
     def create_remote_dom_resource(
         self,
@@ -156,7 +167,8 @@ class MCPUITransport(BaseTransport):
         metadata: dict[str, Any] | None = None,
         frame_size: tuple[str, str] | None = None,
     ) -> UIResource:
-        """Create a Remote DOM UI resource.
+        """
+        Create a Remote DOM UI resource.
 
         Args:
             uri: Resource URI (must start with 'ui://').
@@ -169,27 +181,32 @@ class MCPUITransport(BaseTransport):
             UIResource ready to include in agent responses.
         """
         if framework not in ("react", "webcomponents"):
-            raise ValueError(f"Invalid framework: {framework}. Must be 'react' or 'webcomponents'")
+            raise ValueError(
+                f"Invalid framework: {framework}. Must be 'react' or 'webcomponents'"
+            )
 
         ui_metadata = {}
         if frame_size or self._default_frame_size:
             size = frame_size or self._default_frame_size
             ui_metadata[UIMetadataKey.PREFERRED_FRAME_SIZE] = list(size)
 
-        return create_ui_resource({
-            "uri": uri,
-            "content": {
-                "type": "remoteDom",
-                "script": script,
-                "framework": framework,
-            },
-            "encoding": "text",
-            "uiMetadata": ui_metadata,
-            "metadata": metadata or {},
-        })
+        return create_ui_resource(
+            {
+                "uri": uri,
+                "content": {
+                    "type": "remoteDom",
+                    "script": script,
+                    "framework": framework,
+                },
+                "encoding": "text",
+                "uiMetadata": ui_metadata,
+                "metadata": metadata or {},
+            }
+        )
 
     async def handle_request(self, request: dict[str, Any]) -> dict[str, Any]:
-        """Handle an MCP-UI request.
+        """
+        Handle an MCP-UI request.
 
         Processes the request through the agent and optionally transforms
         the response to include UI resources.
@@ -207,13 +224,15 @@ class MCPUITransport(BaseTransport):
         # Extract request parameters
         message = request.get("message", "")
         session_id = request.get("session_id", f"session-{id(request)}")
-        ui_options = request.get("ui_options", {})
+        _ui_options = request.get("ui_options", {})  # Reserved for future use
         identities = request.get("identities")
 
         # Log identities if provided
         if identities:
             providers = [i.get("provider") for i in identities]
-            logger.info(f"MCP-UI: Received identities from request for providers: {providers}")
+            logger.info(
+                f"MCP-UI: Received identities from request for providers: {providers}"
+            )
 
         # Create agent context
         context = AgentContext(session_id=session_id)
@@ -232,10 +251,12 @@ class MCPUITransport(BaseTransport):
 
             # Add text content if present
             if hasattr(result, "content") and result.content:
-                response["content"].append({
-                    "type": "text",
-                    "text": result.content,
-                })
+                response["content"].append(
+                    {
+                        "type": "text",
+                        "text": result.content,
+                    }
+                )
 
             # Add tool results if present and they contain UI resources
             if hasattr(result, "tool_results") and result.tool_results:
@@ -243,14 +264,19 @@ class MCPUITransport(BaseTransport):
                     # Check if tool result contains UI resources
                     if isinstance(tool_result, UIResource):
                         response["content"].append(tool_result)
-                    elif isinstance(tool_result, dict) and tool_result.get("type") == "resource":
+                    elif (
+                        isinstance(tool_result, dict)
+                        and tool_result.get("type") == "resource"
+                    ):
                         response["content"].append(tool_result)
                     else:
                         # Regular tool result
-                        response["content"].append({
-                            "type": "tool_result",
-                            "result": tool_result,
-                        })
+                        response["content"].append(
+                            {
+                                "type": "tool_result",
+                                "result": tool_result,
+                            }
+                        )
 
             # Add session info if available
             if session_id:
@@ -261,14 +287,17 @@ class MCPUITransport(BaseTransport):
     async def handle_stream(
         self, request: dict[str, Any]
     ) -> AsyncIterator[dict[str, Any]]:
-        """Handle a streaming MCP-UI request.
+        """
+        Handle a streaming MCP-UI request.
 
         Streams agent responses and UI resources as they become available.
 
         Args:
             request: Request data with optional identities key for OAuth tokens.
 
-        Yields:
+        Yields
+        ------
+        dict[str, Any]
             Stream events with text deltas and UI resources.
         """
         # Extract request parameters
@@ -333,5 +362,7 @@ class MCPUITransport(BaseTransport):
                 }
 
     async def initialize(self) -> None:
-        """Initialize the adapter."""
+        """
+        Initialize the adapter.
+        """
         await self.agent.initialize()

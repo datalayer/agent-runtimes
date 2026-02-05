@@ -59,11 +59,11 @@ class BaseAgent(ABC):
     @abstractmethod
     def name(self) -> str:
         """Agent name"""
-        
+
     @abstractmethod
     async def run(self, prompt: str, context: Optional[AgentContext]) -> AgentResponse:
         """Run the agent with a prompt"""
-        
+
     @abstractmethod
     async def stream(self, prompt: str, context: Optional[AgentContext]) -> AsyncIterator[StreamEvent]:
         """Stream agent responses"""
@@ -89,16 +89,16 @@ All protocol adapters implement the `BaseAdapter` abstract base class:
 class BaseAdapter(ABC):
     def __init__(self, agent: BaseAgent):
         self.agent = agent
-        
+
     @property
     @abstractmethod
     def protocol_name(self) -> str:
         """Protocol name"""
-        
+
     @abstractmethod
     async def handle_request(self, request: dict[str, Any]) -> dict[str, Any]:
         """Handle a protocol request"""
-        
+
     @abstractmethod
     async def handle_stream(self, request: dict[str, Any]) -> AsyncIterator[dict[str, Any]]:
         """Handle a streaming protocol request"""
@@ -268,7 +268,7 @@ from .base import BaseAgent, AgentContext, AgentResponse
 class MyAgent(BaseAgent):
     def __init__(self, underlying_agent):
         self._agent = underlying_agent
-        
+
     async def run(self, prompt: str, context: Optional[AgentContext]) -> AgentResponse:
         # Translate to your library's API
         result = await self._agent.execute(prompt)
@@ -295,7 +295,7 @@ class MyProtocolAdapter(BaseAdapter):
     @property
     def protocol_name(self) -> str:
         return "my-protocol"
-        
+
     async def handle_request(self, request: dict[str, Any]) -> dict[str, Any]:
         # Translate protocol request to agent call
         response = await self.agent.run(request["message"])

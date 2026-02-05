@@ -61,11 +61,15 @@ import {
   HorizontalRulePlugin,
   EquationsPlugin,
   YouTubePlugin,
+  ExcalidrawPlugin,
+  CollapsiblePlugin,
   AutoLinkPlugin,
   AutoEmbedPlugin,
   FloatingTextFormatToolbarPlugin,
   CodeActionMenuPlugin,
   ListMaxIndentLevelPlugin,
+  TableCellResizerPlugin,
+  TablePlugin,
 } from '@datalayer/jupyter-lexical';
 
 // Import Chat components
@@ -83,6 +87,7 @@ import {
 import { editorConfig } from './lexical/editorConfig';
 
 import '@datalayer/jupyter-lexical/style/index.css';
+import '@datalayer/jupyter-lexical/style/modal-overrides.css';
 import './lexical/lexical-theme.css';
 
 // Fixed lexical document ID
@@ -261,8 +266,12 @@ function LexicalEditor({
         <HorizontalRulePlugin />
         <EquationsPlugin />
         <YouTubePlugin />
+        <ExcalidrawPlugin />
+        <CollapsiblePlugin />
         <AutoLinkPlugin />
         <AutoEmbedPlugin />
+        <TablePlugin />
+        <TableCellResizerPlugin />
         <ListMaxIndentLevelPlugin maxDepth={7} />
 
         {/* Toolbar plugins */}

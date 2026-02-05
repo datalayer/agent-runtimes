@@ -3,7 +3,8 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Pydantic AI Agent CLI with Agent Codemode (STDIO).
+"""
+Pydantic AI Agent CLI with Agent Codemode (STDIO).
 
 This agent connects to a local MCP stdio server and provides an
 interactive CLI. It supports a Codemode variant that uses the
@@ -13,22 +14,24 @@ agent-codemode toolset for code-first tool composition.
 from __future__ import annotations
 
 import asyncio
+import inspect
 import io
-import sys
 import logging
+import sys
 from pathlib import Path
 from typing import Any, Optional
-import inspect
 
 try:
     from pydantic_ai import Agent
     from pydantic_ai.mcp import MCPServerStdio
+
     HAS_PYDANTIC_AI = True
 except ImportError:
     HAS_PYDANTIC_AI = False
 
 try:
     from rich.console import Console
+
     HAS_RICH = True
 except ImportError:
     HAS_RICH = False
@@ -49,22 +52,24 @@ def _resolve_config_path() -> str:
 
 
 def _load_mcp_config() -> list[dict[str, Any]]:
-    """Load MCP server configuration from JSON config file.
-    
+    """
+    Load MCP server configuration from JSON config file.
+
     Returns:
         List of MCP server configurations, or empty list if config not found.
     """
     config_path = _resolve_config_path()
-    
+
     if not Path(config_path).exists():
         logger.debug("Config file not found at %s, using default", config_path)
         return []
-    
+
     try:
         import json
+
         with open(config_path, "r") as f:
             config = json.load(f)
-        
+
         if config and "mcp_servers" in config:
             servers = config["mcp_servers"]
             logger.debug("Loaded %d MCP server(s) from config", len(servers))
@@ -87,9 +92,7 @@ def _build_prompt_examples(codemode: bool) -> str:
             "without returning the full content each time."
         )
     else:
-        base.append(
-            "(Standard) Use the MCP tools directly for each step."
-        )
+        base.append("(Standard) Use the MCP tools directly for each step.")
     return "\n".join(f"  - {item}" for item in base)
 
 
@@ -140,9 +143,9 @@ def _build_system_prompt(
         "",
         "## Recommended Workflow",
         "1. **Discover**: Use list_servers and search_tools to find relevant tools",
-# The above code is a comment in Python that provides guidance on understanding and using the
-# `get_tool_details` function. It suggests checking the parameters of the function and using any other
-# tools that may be helpful in correctly using subsequent tools.
+        # The above code is a comment in Python that provides guidance on understanding and using the
+        # `get_tool_details` function. It suggests checking the parameters of the function and using any other
+        # tools that may be helpful in correctly using subsequent tools.
         "2. **Understand**: Use get_tool_details to check parameters",
         "3. **Execute**: Use execute_code to perform multi-step tasks, calling tools as needed",
         "",
@@ -155,103 +158,117 @@ def _build_system_prompt(
     return "\n".join(lines)
 
 
-
-
-
 async def _dump_context_to_file(
     filename: str,
     agent: Any,
     message_history: list[Any] | None,
     codemode: bool = False,
 ) -> None:
-    """Dump the context in provider-specific format showing what the LLM sees."""
+    """
+    Dump the context in provider-specific format showing what the LLM sees.
+    """
     import json
     from datetime import datetime
-    
+
     lines: list[str] = []
     lines.append("=" * 80)
     lines.append(f"CONTEXT DUMP - {datetime.now().isoformat()}")
     lines.append("=" * 80)
-    
+
     if not message_history:
         lines.append("\n(No message history)")
         with open(filename, "w", encoding="utf-8") as f:
             f.write("\n".join(lines))
         return
-    
+
     # Get the underlying model (unwrap InstrumentedModel if needed)
     model = agent._model
-    while hasattr(model, 'wrapped'):
+    while hasattr(model, "wrapped"):
         model = model.wrapped
-    
+
     lines.append(f"\nModel: {model.model_name}")
     lines.append(f"Provider: {model.system}")
-    
+
     def serialize_provider_msg(msg: Any) -> Any:
-        """Recursively serialize provider message to JSON-safe format."""
+        """
+        Recursively serialize provider message to JSON-safe format.
+        """
         if isinstance(msg, dict):
             return {k: serialize_provider_msg(v) for k, v in msg.items()}
         elif isinstance(msg, list):
             return [serialize_provider_msg(item) for item in msg]
         elif isinstance(msg, bytes):
             return msg.decode("utf-8", errors="replace")
-        elif hasattr(msg, 'model_dump'):
+        elif hasattr(msg, "model_dump"):
             return msg.model_dump()
-        elif hasattr(msg, '__dict__'):
+        elif hasattr(msg, "__dict__"):
             return serialize_provider_msg(vars(msg))
         else:
             return msg
-    
+
     from pydantic_ai.models import ModelRequestParameters
+
     model_request_parameters = ModelRequestParameters()
-    model_settings = getattr(agent, 'model_settings', None) or {}
-    
+    model_settings = getattr(agent, "model_settings", None) or {}
+
     # Try to get tool definitions from the agent's toolsets
     tool_definitions = []
     try:
         from pydantic_ai.tools import ToolDefinition
-        
+
         # Get tools from agent.toolsets property (includes _function_toolset and _user_toolsets)
         for toolset in agent.toolsets:
             # Check for CodemodeToolset (from agent_codemode) - uses TOOL_SCHEMAS
-            if toolset.__class__.__name__ == 'CodemodeToolset':
+            if toolset.__class__.__name__ == "CodemodeToolset":
                 try:
                     from agent_codemode.tool_definitions import TOOL_SCHEMAS
+
                     for name, schema in TOOL_SCHEMAS.items():
                         # Check if this tool is enabled in the toolset
-                        if name in ["list_tool_names", "search_tools", "get_tool_details", "list_servers"]:
-                            if not getattr(toolset, 'allow_discovery_tools', True):
+                        if name in [
+                            "list_tool_names",
+                            "search_tools",
+                            "get_tool_details",
+                            "list_servers",
+                        ]:
+                            if not getattr(toolset, "allow_discovery_tools", True):
                                 continue
                         if name == "call_tool":
-                            if not getattr(toolset, 'allow_direct_tool_calls', False):
+                            if not getattr(toolset, "allow_direct_tool_calls", False):
                                 continue
-                        tool_definitions.append(ToolDefinition(
-                            name=name,
-                            description=schema.get("description", ""),
-                            parameters_json_schema=schema.get("parameters", {'type': 'object', 'properties': {}}),
-                        ))
+                        tool_definitions.append(
+                            ToolDefinition(
+                                name=name,
+                                description=schema.get("description", ""),
+                                parameters_json_schema=schema.get(
+                                    "parameters", {"type": "object", "properties": {}}
+                                ),
+                            )
+                        )
                 except ImportError:
                     pass
             # FunctionToolset has .tools dict with Tool objects
-            elif hasattr(toolset, 'tools') and isinstance(toolset.tools, dict):
+            elif hasattr(toolset, "tools") and isinstance(toolset.tools, dict):
                 for name, tool in toolset.tools.items():
-                    desc = getattr(tool, 'description', None) or ''
+                    desc = getattr(tool, "description", None) or ""
                     # Get the json schema from function_schema if available
-                    schema = {'type': 'object', 'properties': {}}
-                    if hasattr(tool, 'function_schema') and tool.function_schema:
-                        schema = getattr(tool.function_schema, 'json_schema', schema)
-                    tool_definitions.append(ToolDefinition(
-                        name=name,
-                        description=desc,
-                        parameters_json_schema=schema,
-                    ))
+                    schema = {"type": "object", "properties": {}}
+                    if hasattr(tool, "function_schema") and tool.function_schema:
+                        schema = getattr(tool.function_schema, "json_schema", schema)
+                    tool_definitions.append(
+                        ToolDefinition(
+                            name=name,
+                            description=desc,
+                            parameters_json_schema=schema,
+                        )
+                    )
     except Exception as e:
         lines.append(f"\n(Error extracting tool definitions: {e})")
-    
+
     provider_format_found = False
-    
+
     # Try Bedrock format (_map_messages - plural)
-    if hasattr(model, '_map_messages'):
+    if hasattr(model, "_map_messages"):
         try:
             system_blocks, provider_messages = await model._map_messages(
                 list(message_history),
@@ -259,7 +276,7 @@ async def _dump_context_to_file(
                 model_settings,
             )
             provider_format_found = True
-            
+
             lines.append("\n" + "-" * 40)
             lines.append("SYSTEM PROMPT (Bedrock Format)")
             lines.append("-" * 40)
@@ -268,22 +285,26 @@ async def _dump_context_to_file(
                 lines.append(json.dumps(serialized_system, indent=2, default=str))
             else:
                 lines.append("(empty)")
-            
+
             # Add tool configuration if available
-            if hasattr(model, '_map_tool_config') and tool_definitions:
+            if hasattr(model, "_map_tool_config") and tool_definitions:
                 try:
                     params_with_tools = ModelRequestParameters(
                         function_tools=tool_definitions,
                         allow_text_output=True,
                     )
-                    tool_config = model._map_tool_config(params_with_tools, model_settings)
-                    
+                    tool_config = model._map_tool_config(
+                        params_with_tools, model_settings
+                    )
+
                     lines.append("\n" + "-" * 40)
                     lines.append("TOOL CONFIGURATION (Bedrock Format)")
                     lines.append("-" * 40)
                     if tool_config:
                         serialized_tools = serialize_provider_msg(tool_config)
-                        lines.append(json.dumps(serialized_tools, indent=2, default=str))
+                        lines.append(
+                            json.dumps(serialized_tools, indent=2, default=str)
+                        )
                     else:
                         lines.append("(no tools)")
                 except Exception as e:
@@ -293,18 +314,18 @@ async def _dump_context_to_file(
                 lines.append("TOOL CONFIGURATION (Bedrock Format)")
                 lines.append("-" * 40)
                 lines.append("(no tools extracted from agent)")
-            
+
             lines.append("\n" + "-" * 40)
             lines.append("MESSAGES (Bedrock Format)")
             lines.append("-" * 40)
             serialized = serialize_provider_msg(provider_messages)
             lines.append(json.dumps(serialized, indent=2, default=str))
-            
+
         except Exception as e:
             lines.append(f"\n(Error getting Bedrock format: {e})")
-    
+
     # Try Anthropic format (_map_message - singular)
-    if not provider_format_found and hasattr(model, '_map_message'):
+    if not provider_format_found and hasattr(model, "_map_message"):
         try:
             system_prompt, provider_messages = await model._map_message(
                 list(message_history),
@@ -312,7 +333,7 @@ async def _dump_context_to_file(
                 model_settings,
             )
             provider_format_found = True
-            
+
             lines.append("\n" + "-" * 40)
             lines.append("SYSTEM PROMPT (Anthropic Format)")
             lines.append("-" * 40)
@@ -323,27 +344,30 @@ async def _dump_context_to_file(
                 lines.append(json.dumps(serialized_system, indent=2, default=str))
             else:
                 lines.append(str(system_prompt) if system_prompt else "(empty)")
-            
+
             lines.append("\n" + "-" * 40)
             lines.append("MESSAGES (Anthropic Format)")
             lines.append("-" * 40)
             serialized = serialize_provider_msg(provider_messages)
             lines.append(json.dumps(serialized, indent=2, default=str))
-            
+
         except Exception as e:
             lines.append(f"\n(Error getting Anthropic format: {e})")
-    
+
     # Fallback to pydantic-ai format
     if not provider_format_found:
         from pydantic_ai.messages import ModelMessagesTypeAdapter
-        lines.append("\n(No provider-specific format available, using pydantic-ai format)")
+
+        lines.append(
+            "\n(No provider-specific format available, using pydantic-ai format)"
+        )
         json_bytes = ModelMessagesTypeAdapter.dump_json(list(message_history), indent=2)
         lines.append(json_bytes.decode("utf-8"))
-    
+
     lines.append("\n" + "=" * 80)
     lines.append("END OF CONTEXT DUMP")
     lines.append("=" * 80)
-    
+
     with open(filename, "w", encoding="utf-8") as f:
         f.write("\n".join(lines))
 
@@ -419,10 +443,15 @@ def create_agent(model: str, codemode: bool) -> tuple[Agent, object | None]:
     mcp_server_path = _resolve_mcp_server_path()
 
     if codemode:
-        from agent_codemode import CodemodeToolset, ToolRegistry, MCPServerConfig, CodeModeConfig
+        from agent_codemode import (
+            CodeModeConfig,
+            CodemodeToolset,
+            MCPServerConfig,
+            ToolRegistry,
+        )
 
         registry = ToolRegistry()
-        
+
         # Load MCP servers from config file
         mcp_configs = _load_mcp_config()
         if mcp_configs:
@@ -499,7 +528,10 @@ def create_agent(model: str, codemode: bool) -> tuple[Agent, object | None]:
                     env=env,
                 )
                 toolsets.append(mcp_server)
-                logger.debug("Added MCP server from config: %s", server_config.get("name", "unnamed"))
+                logger.debug(
+                    "Added MCP server from config: %s",
+                    server_config.get("name", "unnamed"),
+                )
         else:
             # Fallback to default example_mcp server
             mcp_server = MCPServerStdio(
@@ -541,30 +573,25 @@ def main() -> None:
 
     # Suppress verbose MCP server logs
     logging.getLogger("mcp.server").setLevel(logging.WARNING)
-    
+
     import argparse
+
     parser = argparse.ArgumentParser(description="MCP Agent CLI with Agent Codemode")
     parser.add_argument(
         "--model",
         type=str,
         default="anthropic:claude-sonnet-4-0",
-        help="Model to use (default: anthropic:claude-sonnet-4-0)"
+        help="Model to use (default: anthropic:claude-sonnet-4-0)",
     )
     parser.add_argument(
-        "--codemode",
-        action="store_true",
-        help="Enable Agent Codemode mode"
+        "--codemode", action="store_true", help="Enable Agent Codemode mode"
     )
-    parser.add_argument(
-        "-q", "--query",
-        type=str,
-        help="Run a single query and exit"
-    )
+    parser.add_argument("-q", "--query", type=str, help="Run a single query and exit")
     args = parser.parse_args()
-    
+
     model = args.model
     codemode = args.codemode
-    query = getattr(args, 'query', None)
+    query = getattr(args, "query", None)
 
     print("\n" + "=" * 72)
     if codemode:
@@ -606,7 +633,11 @@ def main() -> None:
                     message_history = run.all_messages()
 
                 if run_result is not None:
-                    reply = getattr(run_result, "output", None) or getattr(run_result, "data", None) or str(run_result)
+                    reply = (
+                        getattr(run_result, "output", None)
+                        or getattr(run_result, "data", None)
+                        or str(run_result)
+                    )
                     print(reply)
 
                     # Record and display usage
@@ -619,15 +650,19 @@ def main() -> None:
                     if HAS_RICH:
                         console = Console()
                         console.print()
-                        
-                        from agent_runtimes.context import extract_context_snapshot, get_model_context_window
-                        
+
+                        from agent_runtimes.context import (
+                            extract_context_snapshot,
+                            get_model_context_window,
+                        )
+
                         turn_usage = usage_tracker.get_turn_usage()
                         session_usage_obj = usage_tracker.get_session_usage()
                         context_window = get_model_context_window(model)
 
                         snapshot = extract_context_snapshot(
-                            agent, "agent_cli",
+                            agent,
+                            "agent_cli",
                             context_window=context_window,
                             message_history=message_history,
                             model_input_tokens=turn_usage.input_tokens,
@@ -638,17 +673,25 @@ def main() -> None:
                             turn_start_time=usage_tracker._turn_start_time,
                         )
 
-                        per_req = snapshot.per_request_usage if hasattr(snapshot, 'per_request_usage') else []
+                        per_req = (
+                            snapshot.per_request_usage
+                            if hasattr(snapshot, "per_request_usage")
+                            else []
+                        )
                         tool_names = []
-                        for r in per_req[-turn_usage.requests:]:
+                        for r in per_req[-turn_usage.requests :]:
                             tool_names.extend(r.tool_names)
                         if tool_names and snapshot.turn_usage:
                             snapshot.turn_usage.tool_names = tool_names
 
                         console.print(snapshot.to_table(show_context=False))
                     else:
-                        print(f"\nToken usage (prompt): {usage_tracker.format_turn_usage()}")
-                        print(f"Token usage (session): {usage_tracker.format_session_usage()}")
+                        print(
+                            f"\nToken usage (prompt): {usage_tracker.format_turn_usage()}"
+                        )
+                        print(
+                            f"Token usage (session): {usage_tracker.format_session_usage()}"
+                        )
                 return
 
             mcp_server_path = _resolve_mcp_server_path()
@@ -684,7 +727,9 @@ def main() -> None:
                 if user_input == "/tools":
                     print("Listing available tools...")
                     try:
-                        tools = await _list_available_tools(codemode, codemode_toolset, mcp_server_path)
+                        tools = await _list_available_tools(
+                            codemode, codemode_toolset, mcp_server_path
+                        )
                         if tools:
                             for name, description in tools:
                                 if description:
@@ -704,8 +749,8 @@ def main() -> None:
                         filename = parts[2] if len(parts) >= 3 else "context_dump.txt"
                         try:
                             await _dump_context_to_file(
-                                filename, 
-                                agent, 
+                                filename,
+                                agent,
                                 message_history,
                                 codemode=codemode,
                             )
@@ -720,39 +765,43 @@ def main() -> None:
                 run_usage = None
                 iteration_count = 0
                 usage_tracker.start_turn()
-                async with agent.iter(user_input, message_history=message_history) as run:
+                async with agent.iter(
+                    user_input, message_history=message_history
+                ) as run:
                     async for node in run:
                         iteration_count += 1
                         node_type = type(node).__name__
                         # Print all node types for debugging
                         logger.debug("  [iter %s] %s", iteration_count, node_type)
-                        
-                        if node_type == 'CallToolsNode':
-                            mr = getattr(node, 'model_response', None)
-                            if mr and hasattr(mr, 'parts'):
+
+                        if node_type == "CallToolsNode":
+                            mr = getattr(node, "model_response", None)
+                            if mr and hasattr(mr, "parts"):
                                 for p in mr.parts:
-                                    if hasattr(p, 'tool_name'):
-                                        args = getattr(p, 'args', {})
-                                        if isinstance(args, dict) and 'code' in args:
-                                            code_preview = args['code'][:100].replace('\n', '\\n')
+                                    if hasattr(p, "tool_name"):
+                                        args = getattr(p, "args", {})
+                                        if isinstance(args, dict) and "code" in args:
+                                            code_preview = args["code"][:100].replace(
+                                                "\n", "\\n"
+                                            )
                                             logger.debug(
                                                 "    -> %s(code=%s...)",
                                                 p.tool_name,
                                                 code_preview,
                                             )
                                         else:
-                                            logger.debug("    -> %s(%s)", p.tool_name, args)
-                        elif node_type == 'HandleResponseNode':
+                                            logger.debug(
+                                                "    -> %s(%s)", p.tool_name, args
+                                            )
+                        elif node_type == "HandleResponseNode":
                             # Tool results might be here
-                            data = getattr(node, 'data', None)
+                            data = getattr(node, "data", None)
                             if data:
                                 logger.debug("    -> data: %s", str(data)[:200])
                     run_result = run.result
                     run_usage = run.usage()
                     # Update message history with the conversation
                     message_history = run.all_messages()
-                    
-
 
                 if run_result is None:
                     print("No result returned.")
@@ -776,10 +825,13 @@ def main() -> None:
                 if HAS_RICH:
                     console = Console()
                     console.print()
-                    
+
                     # Use the original extract_context_snapshot approach
-                    from agent_runtimes.context import extract_context_snapshot, get_model_context_window
-                    
+                    from agent_runtimes.context import (
+                        extract_context_snapshot,
+                        get_model_context_window,
+                    )
+
                     turn_usage = usage_tracker.get_turn_usage()
                     session_usage_obj = usage_tracker.get_session_usage()
 
@@ -787,7 +839,8 @@ def main() -> None:
                     context_window = get_model_context_window(model)
 
                     snapshot = extract_context_snapshot(
-                        agent, "agent_cli",
+                        agent,
+                        "agent_cli",
                         context_window=context_window,
                         message_history=message_history,
                         model_input_tokens=turn_usage.input_tokens,
@@ -799,9 +852,13 @@ def main() -> None:
 
                     # Get tool names from per_request_usage (last N requests for this turn)
                     # Each request can have multiple tools, so flatten the lists
-                    per_req = snapshot.per_request_usage if hasattr(snapshot, 'per_request_usage') else []
+                    per_req = (
+                        snapshot.per_request_usage
+                        if hasattr(snapshot, "per_request_usage")
+                        else []
+                    )
                     tool_names = []
-                    for r in per_req[-turn_usage.requests:]:
+                    for r in per_req[-turn_usage.requests :]:
                         tool_names.extend(r.tool_names)
                     if tool_names and snapshot.turn_usage:
                         snapshot.turn_usage.tool_names = tool_names
@@ -809,8 +866,12 @@ def main() -> None:
                     console.print(snapshot.to_table(show_context=False))
                     console.print()
                 else:
-                    print(f"\nToken usage (prompt): {usage_tracker.format_turn_usage()}")
-                    print(f"Token usage (session): {usage_tracker.format_session_usage()}\n")
+                    print(
+                        f"\nToken usage (prompt): {usage_tracker.format_turn_usage()}"
+                    )
+                    print(
+                        f"Token usage (session): {usage_tracker.format_session_usage()}\n"
+                    )
 
     try:
         asyncio.run(_run_cli())

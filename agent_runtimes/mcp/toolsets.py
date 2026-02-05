@@ -53,22 +53,28 @@ def ensure_config_mcp_toolsets_event() -> None:
 async def initialize_config_mcp_toolsets() -> None:
     """
     Initialize MCP toolsets at server startup.
-    
+
     This loads MCP servers from the config file and starts them.
     For each server in mcp.json:
     - If it matches a catalog server, use the catalog command
     - Otherwise use the command from mcp.json
-    
+
     Respects the AGENT_RUNTIMES_NO_CONFIG_MCP_SERVERS environment variable:
     if set to "true", skips initialization entirely.
     """
     # Check if config MCP servers should be skipped (--no-config-mcp-servers CLI flag)
-    no_config_mcp_servers = os.environ.get("AGENT_RUNTIMES_NO_CONFIG_MCP_SERVERS", "").lower() == "true"
+    no_config_mcp_servers = (
+        os.environ.get("AGENT_RUNTIMES_NO_CONFIG_MCP_SERVERS", "").lower() == "true"
+    )
     if no_config_mcp_servers:
-        logger.info("Config MCP toolsets initialization skipped via AGENT_RUNTIMES_NO_CONFIG_MCP_SERVERS")
+        logger.info(
+            "Config MCP toolsets initialization skipped via AGENT_RUNTIMES_NO_CONFIG_MCP_SERVERS"
+        )
         return
-    
-    logger.info("initialize_config_mcp_toolsets() called - delegating to lifecycle manager")
+
+    logger.info(
+        "initialize_config_mcp_toolsets() called - delegating to lifecycle manager"
+    )
     manager = get_mcp_lifecycle_manager()
     try:
         await manager.initialize_from_config()
@@ -80,7 +86,7 @@ async def initialize_config_mcp_toolsets() -> None:
 async def shutdown_config_mcp_toolsets() -> None:
     """
     Shutdown config MCP toolsets at server shutdown.
-    
+
     This stops all running MCP server connections/subprocesses.
     """
     manager = get_mcp_lifecycle_manager()
@@ -91,9 +97,9 @@ async def shutdown_config_mcp_toolsets() -> None:
 def get_config_mcp_toolsets() -> list[Any]:
     """
     Get the list of successfully started config MCP toolsets.
-    
+
     These can be passed directly to Pydantic AI Agent(toolsets=...).
-    
+
     Returns:
         List of MCP server toolsets
     """
@@ -104,7 +110,7 @@ def get_config_mcp_toolsets() -> list[Any]:
 def get_config_mcp_toolsets_status() -> dict[str, Any]:
     """
     Get the status of config MCP toolsets initialization.
-    
+
     Returns:
         Dict with status information including:
         - initialized: Whether initialization has completed
@@ -116,7 +122,7 @@ def get_config_mcp_toolsets_status() -> dict[str, Any]:
     manager = get_mcp_lifecycle_manager()
     running = manager.get_all_running_servers()
     failed = manager.get_failed_servers()
-    
+
     return {
         "initialized": manager.is_initialized(),
         "ready_count": len(running),
@@ -135,17 +141,17 @@ async def wait_for_config_mcp_toolsets(timeout: float | None = None) -> bool:
 def get_config_mcp_toolsets_info() -> list[dict[str, Any]]:
     """
     Get information about the loaded config MCP toolsets.
-    
+
     Returns:
         List of dicts with toolset info (type, id, command/url)
         Note: Sensitive information like cookies/tokens in args are redacted.
     """
     manager = get_mcp_lifecycle_manager()
     info = []
-    
+
     for instance in manager.get_all_running_servers():
         server = instance.pydantic_server
-        server_info = {
+        server_info: dict[str, Any] = {
             "type": type(server).__name__,
             "id": instance.server_id,
         }
@@ -164,7 +170,7 @@ def get_config_mcp_toolsets_info() -> list[dict[str, Any]]:
         if hasattr(server, "url"):
             server_info["url"] = server.url
         info.append(server_info)
-    
+
     return info
 
 

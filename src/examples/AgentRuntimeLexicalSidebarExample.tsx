@@ -47,7 +47,6 @@ import { registerCodeHighlighting } from '@lexical/code';
 import { ListPlugin } from '@lexical/react/LexicalListPlugin';
 import { CheckListPlugin } from '@lexical/react/LexicalCheckListPlugin';
 import { LinkPlugin } from '@lexical/react/LexicalLinkPlugin';
-import { TablePlugin } from '@lexical/react/LexicalTablePlugin';
 import type { ServiceManager } from '@jupyterlab/services';
 import { Box } from '@datalayer/primer-addons';
 import { JupyterReactTheme, useJupyter } from '@datalayer/jupyter-react';
@@ -69,6 +68,8 @@ import {
   ListMaxIndentLevelPlugin,
   LexicalConfigProvider,
   LexicalStatePlugin,
+  TableCellResizerPlugin,
+  TablePlugin,
 } from '@datalayer/jupyter-lexical';
 
 // Import Chat components
@@ -81,6 +82,7 @@ import { useLexicalTools } from '../tools/adapters/agent-runtimes/lexicalHooks';
 import { editorConfig } from './lexical/editorConfig';
 
 import '@datalayer/jupyter-lexical/style/index.css';
+import '@datalayer/jupyter-lexical/style/modal-overrides.css';
 import './lexical/lexical-theme.css';
 
 // Fixed lexical document ID
@@ -187,6 +189,7 @@ function LexicalEditor({ serviceManager }: LexicalEditorProps) {
           <CheckListPlugin />
           <LinkPlugin />
           <TablePlugin />
+          <TableCellResizerPlugin />
 
           {/* Simple Lexical plugins */}
           <JupyterCellPlugin />

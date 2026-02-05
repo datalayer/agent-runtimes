@@ -24,11 +24,8 @@ The ACP (Agent Client Protocol) support uses the official SDK from:
 
 from typing import Any, Dict, List
 
-from agent_runtimes.__version__ import __version__
-from agent_runtimes.app import create_app
-from agent_runtimes.routes.acp import router as acp_router
-from agent_runtimes.routes.health import router as health_router
-from agent_runtimes.jupyter.serverapplication import AgentRuntimesExtensionApp
+from agent_runtimes._version import __version__
+
 # Agent interfaces
 from agent_runtimes.adapters.base import (
     AgentContext,
@@ -40,9 +37,14 @@ from agent_runtimes.adapters.base import (
     ToolResult,
 )
 from agent_runtimes.adapters.pydantic_ai_adapter import PydanticAIAdapter
+from agent_runtimes.app import create_app
+from agent_runtimes.jupyter.serverapplication import AgentRuntimesExtensionApp
+from agent_runtimes.routes.acp import router as acp_router
+from agent_runtimes.routes.health import router as health_router
+from agent_runtimes.transports.acp import ACPSession, ACPTransport
+
 # Protocol adapters
 from agent_runtimes.transports.base import AdapterEvent, BaseTransport
-from agent_runtimes.transports.acp import ACPTransport, ACPSession
 
 
 def _jupyter_server_extension_points() -> List[Dict[str, Any]]:

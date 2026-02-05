@@ -205,28 +205,28 @@ class PageContent:
     title: str
     text: str
     links: list[dict]
-    
+
 def crawl_page(url: str, timeout: float = 30.0) -> PageContent:
     """Crawl a single webpage and extract its content."""
     headers = {
         "User-Agent": "Mozilla/5.0 (compatible; DataBot/1.0)",
     }
-    
+
     response = httpx.get(url, headers=headers, timeout=timeout, follow_redirects=True)
     response.raise_for_status()
-    
+
     soup = BeautifulSoup(response.text, "html.parser")
-    
+
     # Remove script and style elements
     for element in soup(["script", "style", "nav", "footer"]):
         element.decompose()
-    
+
     # Extract title
     title = soup.title.string if soup.title else ""
-    
+
     # Extract text
     text = soup.get_text(separator="\n", strip=True)
-    
+
     # Extract links
     links = []
     for a in soup.find_all("a", href=True):
@@ -236,7 +236,7 @@ def crawl_page(url: str, timeout: float = 30.0) -> PageContent:
                 "text": a.get_text(strip=True),
                 "url": urljoin(url, href),
             })
-    
+
     return PageContent(url=url, title=title, text=text, links=links)
 
 # Usage
@@ -259,39 +259,39 @@ def crawl_site(
     same_domain_only: bool = True,
 ) -> dict[str, dict]:
     """Crawl multiple pages starting from a URL."""
-    
+
     visited = {}
     queue = deque([(start_url, 0)])  # (url, depth)
     start_domain = urlparse(start_url).netloc
-    
+
     headers = {"User-Agent": "Mozilla/5.0 (compatible; DataBot/1.0)"}
-    
+
     with httpx.Client(headers=headers, timeout=30.0, follow_redirects=True) as client:
         while queue and len(visited) < max_pages:
             url, depth = queue.popleft()
-            
+
             if url in visited:
                 continue
-            
+
             if depth > max_depth:
                 continue
-            
+
             try:
                 response = client.get(url)
                 response.raise_for_status()
-                
+
                 soup = BeautifulSoup(response.text, "html.parser")
-                
+
                 # Remove non-content elements
                 for element in soup(["script", "style"]):
                     element.decompose()
-                
+
                 visited[url] = {
                     "title": soup.title.string if soup.title else "",
                     "text": soup.get_text(separator="\n", strip=True)[:5000],
                     "depth": depth,
                 }
-                
+
                 # Find new links to crawl
                 if depth < max_depth:
                     for a in soup.find_all("a", href=True):
@@ -299,16 +299,16 @@ def crawl_site(
                         if href and not href.startswith(("#", "javascript:")):
                             next_url = urljoin(url, href)
                             next_domain = urlparse(next_url).netloc
-                            
+
                             if same_domain_only and next_domain != start_domain:
                                 continue
-                            
+
                             if next_url not in visited:
                                 queue.append((next_url, depth + 1))
-                                
+
             except Exception as e:
                 visited[url] = {"error": str(e), "depth": depth}
-    
+
     return visited
 
 # Usage
@@ -346,7 +346,7 @@ def can_crawl(url: str, user_agent: str = "*") -> bool:
     from urllib.parse import urlparse
     parsed = urlparse(url)
     robots_url = f"{parsed.scheme}://{parsed.netloc}/robots.txt"
-    
+
     rp = RobotFileParser()
     rp.set_url(robots_url)
     try:
@@ -367,15 +367,15 @@ class RateLimitedClient:
         self.client = httpx.Client(timeout=30.0, follow_redirects=True)
         self.delay = 1.0 / requests_per_second
         self.last_request = defaultdict(float)
-    
+
     def get(self, url: str) -> httpx.Response:
         from urllib.parse import urlparse
         domain = urlparse(url).netloc
-        
+
         elapsed = time.time() - self.last_request[domain]
         if elapsed < self.delay:
             time.sleep(self.delay - elapsed)
-        
+
         response = self.client.get(url)
         self.last_request[domain] = time.time()
         return response

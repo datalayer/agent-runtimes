@@ -1,7 +1,8 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""ACP (Agent Client Protocol) adapter.
+"""
+ACP (Agent Client Protocol) adapter.
 
 Implements the Agent Client Protocol for agent-runtimes using the
 official Python SDK from https://github.com/agentclientprotocol/python-sdk
@@ -24,20 +25,21 @@ from typing import Any, AsyncIterator, Callable, Optional
 
 # Import from official ACP SDK
 from acp import (
-    PROTOCOL_VERSION,
     AGENT_METHODS,
     CLIENT_METHODS,
+    PROTOCOL_VERSION,
+    CancelNotification,
     # Request/Response types
     InitializeRequest,
     InitializeResponse,
-    NewSessionRequest,
-    NewSessionResponse,
     LoadSessionRequest,
     LoadSessionResponse,
+    NewSessionRequest,
+    NewSessionResponse,
     PromptRequest,
     PromptResponse,
-    CancelNotification,
     SessionNotification,
+    session_notification,
     # Helpers
     text_block,
     update_agent_message,
@@ -45,23 +47,22 @@ from acp import (
     update_agent_thought,
     update_agent_thought_text,
     update_tool_call,
-    session_notification,
 )
 from acp.schema import (
     # Capability types
     AgentCapabilities,
+    AudioContentBlock,
     ClientCapabilities,
-    PromptCapabilities,
-    McpCapabilities,
-    SessionCapabilities,
+    EmbeddedResourceContentBlock,
+    ImageContentBlock,
     Implementation,
+    McpCapabilities,
+    PromptCapabilities,
+    ResourceContentBlock,
+    SessionCapabilities,
     StopReason,
     # Content types
     TextContentBlock,
-    ImageContentBlock,
-    AudioContentBlock,
-    ResourceContentBlock,
-    EmbeddedResourceContentBlock,
 )
 
 from ..adapters.base import (
@@ -77,7 +78,8 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class ACPSession:
-    """An ACP session.
+    """
+    An ACP session.
 
     Attributes:
         id: Unique session identifier.
@@ -88,6 +90,9 @@ class ACPSession:
         current_mode: Current session mode.
         cancelled: Whether the session has been cancelled.
         identities: OAuth identities for this session (provider → token).
+        agent_id: Agent identifier for this session.
+        status: Session status (active, cancelled, completed).
+        metadata: Additional session metadata.
     """
 
     id: str
@@ -98,10 +103,14 @@ class ACPSession:
     current_mode: Optional[str] = None
     cancelled: bool = False
     identities: Optional[list[dict[str, Any]]] = None
+    agent_id: str = "unknown"
+    status: str = "active"
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 class ACPTransport(BaseTransport):
-    """Agent Client Protocol (ACP) adapter.
+    """
+    Agent Client Protocol (ACP) adapter.
 
     Implements the ACP protocol for agent-runtimes using official
     ACP SDK types and utilities for protocol compliance.
@@ -131,9 +140,10 @@ class ACPTransport(BaseTransport):
         self,
         agent: BaseAgent,
         agent_info: Optional[Implementation] = None,
-        permission_handler: Optional[Callable[[dict], bool]] = None,
+        permission_handler: Optional[Callable[[dict[str, Any]], bool]] = None,
     ):
-        """Initialize the ACP adapter.
+        """
+        Initialize the ACP adapter.
 
         Args:
             agent: The agent to adapt.
@@ -166,27 +176,32 @@ class ACPTransport(BaseTransport):
 
     @property
     def protocol_name(self) -> str:
-        """Get the protocol name."""
+        """
+        Get the protocol name.
+        """
         return "acp"
 
     @property
     def protocol_version(self) -> int:
-        """Get the protocol version from official SDK."""
+        """
+        Get the protocol version from official SDK.
+        """
         return PROTOCOL_VERSION
 
     @property
     def capabilities(self) -> AgentCapabilities:
-        """Get agent capabilities."""
+        """
+        Get agent capabilities.
+        """
         return self._capabilities
 
     # =========================================================================
     # ACP Request Handlers
     # =========================================================================
 
-    async def handle_initialize(
-        self, request: InitializeRequest
-    ) -> InitializeResponse:
-        """Handle ACP initialize request.
+    async def handle_initialize(self, request: InitializeRequest) -> InitializeResponse:
+        """
+        Handle ACP initialize request.
 
         Per ACP spec, negotiates protocol version and exchanges capabilities.
 
@@ -206,9 +221,12 @@ class ACPTransport(BaseTransport):
         )
 
     async def handle_new_session(
-        self, request: NewSessionRequest, identities: Optional[list[dict[str, Any]]] = None
+        self,
+        request: NewSessionRequest,
+        identities: Optional[list[dict[str, Any]]] = None,
     ) -> NewSessionResponse:
-        """Handle ACP session/new request.
+        """
+        Handle ACP session/new request.
 
         Creates a new session with the specified configuration.
 
@@ -248,7 +266,8 @@ class ACPTransport(BaseTransport):
     async def handle_load_session(
         self, request: LoadSessionRequest
     ) -> Optional[LoadSessionResponse]:
-        """Handle ACP session/load request.
+        """
+        Handle ACP session/load request.
 
         Loads an existing session by ID.
 
@@ -271,7 +290,8 @@ class ACPTransport(BaseTransport):
     async def handle_prompt(
         self, request: PromptRequest, identities: Optional[list[dict[str, Any]]] = None
     ) -> AsyncIterator[SessionNotification | PromptResponse]:
-        """Handle ACP session/prompt request.
+        """
+        Handle ACP session/prompt request.
 
         Processes a prompt and yields session update notifications,
         followed by the final prompt response.
@@ -298,7 +318,9 @@ class ACPTransport(BaseTransport):
             context = AgentContext(session_id=session_id)
 
         # Use per-request identities if provided, otherwise use session identities
-        effective_identities = identities if identities is not None else session.identities
+        effective_identities = (
+            identities if identities is not None else session.identities
+        )
         if effective_identities:
             providers = [i.get("provider") for i in effective_identities]
             logger.debug(f"ACP: Prompt using identities for providers: {providers}")
@@ -335,7 +357,8 @@ class ACPTransport(BaseTransport):
                 yield PromptResponse(stop_reason="refusal")
 
     async def handle_cancel(self, notification: CancelNotification) -> None:
-        """Handle ACP session/cancel notification.
+        """
+        Handle ACP session/cancel notification.
 
         Cancels ongoing operations for the specified session.
 
@@ -360,7 +383,8 @@ class ACPTransport(BaseTransport):
             | EmbeddedResourceContentBlock
         ],
     ) -> str:
-        """Extract text from content blocks.
+        """
+        Extract text from content blocks.
 
         Args:
             content: List of content blocks.
@@ -379,7 +403,8 @@ class ACPTransport(BaseTransport):
     def _convert_to_session_notification(
         self, session_id: str, event: StreamEvent
     ) -> Optional[SessionNotification]:
-        """Convert agent stream event to ACP session notification.
+        """
+        Convert agent stream event to ACP session notification.
 
         Args:
             session_id: The session ID.
@@ -435,7 +460,8 @@ class ACPTransport(BaseTransport):
     # =========================================================================
 
     async def handle_request(self, request: dict[str, Any]) -> dict[str, Any]:
-        """Handle a non-streaming ACP JSON-RPC request.
+        """
+        Handle a non-streaming ACP JSON-RPC request.
 
         Args:
             request: JSON-RPC request dictionary.
@@ -469,7 +495,8 @@ class ACPTransport(BaseTransport):
     async def handle_stream(
         self, request: dict[str, Any]
     ) -> AsyncIterator[dict[str, Any]]:
-        """Handle a streaming ACP JSON-RPC request.
+        """
+        Handle a streaming ACP JSON-RPC request.
 
         Args:
             request: JSON-RPC request dictionary.
@@ -498,7 +525,8 @@ class ACPTransport(BaseTransport):
     # =========================================================================
 
     def get_session(self, session_id: str) -> Optional[ACPSession]:
-        """Get a session by ID.
+        """
+        Get a session by ID.
 
         Args:
             session_id: Session ID.
@@ -510,7 +538,9 @@ class ACPTransport(BaseTransport):
 
     @property
     def active_session(self) -> Optional[ACPSession]:
-        """Get the active session."""
+        """
+        Get the active session.
+        """
         if self._active_session_id:
             return self._sessions.get(self._active_session_id)
         return None

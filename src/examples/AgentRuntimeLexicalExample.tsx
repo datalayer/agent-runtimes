@@ -57,12 +57,17 @@ import {
   HorizontalRulePlugin,
   EquationsPlugin,
   YouTubePlugin,
+  ExcalidrawPlugin,
+  CollapsiblePlugin,
   AutoLinkPlugin,
   AutoEmbedPlugin,
   LexicalConfigProvider,
   LexicalStatePlugin,
+  FloatingTextFormatToolbarPlugin,
   CodeActionMenuPlugin,
   ListMaxIndentLevelPlugin,
+  TableCellResizerPlugin,
+  TablePlugin,
 } from '@datalayer/jupyter-lexical';
 
 // Agent-runtimes imports
@@ -74,6 +79,7 @@ import { editorConfig } from './lexical/editorConfig';
 import '@datalayer/jupyter-lexical/style/index.css';
 
 import './lexical/lexical-theme.css';
+import '@datalayer/jupyter-lexical/style/modal-overrides.css';
 
 // Fixed lexical document ID
 const LEXICAL_ID = 'agui-lexical-example';
@@ -270,6 +276,7 @@ const LexicalUI = React.memo(function LexicalUI({
 }: LexicalUIProps): JSX.Element {
   const [floatingAnchorElem, setFloatingAnchorElem] =
     useState<HTMLDivElement | null>(null);
+  const [_isLinkEditMode, setIsLinkEditMode] = useState(false);
 
   const onRef = (_floatingAnchorElem: HTMLDivElement) => {
     if (_floatingAnchorElem !== null) {
@@ -350,7 +357,11 @@ const LexicalUI = React.memo(function LexicalUI({
               <HorizontalRulePlugin />
               <EquationsPlugin />
               <YouTubePlugin />
+              <ExcalidrawPlugin />
+              <CollapsiblePlugin />
               <AutoEmbedPlugin />
+              <TablePlugin />
+              <TableCellResizerPlugin />
               <JupyterCellPlugin />
               {/* Wrap kernel plugins with Simple provider */}
               <JupyterReactTheme>
@@ -359,6 +370,10 @@ const LexicalUI = React.memo(function LexicalUI({
               {floatingAnchorElem && (
                 <>
                   <DraggableBlockPlugin anchorElem={floatingAnchorElem} />
+                  <FloatingTextFormatToolbarPlugin
+                    anchorElem={floatingAnchorElem}
+                    setIsLinkEditMode={setIsLinkEditMode}
+                  />
                   <CodeActionMenuPlugin anchorElem={floatingAnchorElem} />
                 </>
               )}

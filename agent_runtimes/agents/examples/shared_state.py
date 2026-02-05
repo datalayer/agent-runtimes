@@ -1,7 +1,8 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Shared State example.
+"""
+Shared State example.
 
 Demonstrates bidirectional state synchronization between the agent
 and the UI. The agent can read and update shared state, and the UI
@@ -14,7 +15,7 @@ Features:
 
 This pattern is useful for:
 - Recipe builders
-- Form assistants  
+- Form assistants
 - Document editors
 - Any collaborative editing scenario
 
@@ -26,18 +27,18 @@ Example: Recipe Builder
 
 from enum import StrEnum
 from textwrap import dedent
-from typing import Optional
-
-from pydantic import BaseModel, Field
 
 from ag_ui.core import EventType, StateSnapshotEvent
+from pydantic import BaseModel, Field
 from pydantic_ai import Agent, RunContext
 from pydantic_ai.ag_ui import StateDeps
 
 
 # Define the state schema
 class SkillLevel(StrEnum):
-    """The skill level required for the recipe."""
+    """
+    The skill level required for the recipe.
+    """
 
     BEGINNER = "Beginner"
     INTERMEDIATE = "Intermediate"
@@ -45,7 +46,9 @@ class SkillLevel(StrEnum):
 
 
 class SpecialPreferences(StrEnum):
-    """Special preferences for the recipe."""
+    """
+    Special preferences for the recipe.
+    """
 
     HIGH_PROTEIN = "High Protein"
     LOW_CARB = "Low Carb"
@@ -57,7 +60,9 @@ class SpecialPreferences(StrEnum):
 
 
 class CookingTime(StrEnum):
-    """The cooking time of the recipe."""
+    """
+    The cooking time of the recipe.
+    """
 
     FIVE_MIN = "5 min"
     FIFTEEN_MIN = "15 min"
@@ -67,7 +72,9 @@ class CookingTime(StrEnum):
 
 
 class Ingredient(BaseModel):
-    """An ingredient in a recipe."""
+    """
+    An ingredient in a recipe.
+    """
 
     icon: str = Field(
         default="🥕",
@@ -78,7 +85,9 @@ class Ingredient(BaseModel):
 
 
 class Recipe(BaseModel):
-    """A recipe with all its details."""
+    """
+    A recipe with all its details.
+    """
 
     skill_level: SkillLevel = Field(
         default=SkillLevel.BEGINNER,
@@ -103,7 +112,9 @@ class Recipe(BaseModel):
 
 
 class RecipeSnapshot(BaseModel):
-    """The shared state for the recipe builder."""
+    """
+    The shared state for the recipe builder.
+    """
 
     recipe: Recipe = Field(
         default_factory=Recipe,
@@ -120,7 +131,8 @@ agent = Agent(
 
 @agent.tool_plain
 async def display_recipe(recipe: Recipe) -> StateSnapshotEvent:
-    """Display the recipe to the user.
+    """
+    Display the recipe to the user.
 
     This tool updates the shared state with the new recipe,
     which is then reflected in the UI.
@@ -139,7 +151,8 @@ async def display_recipe(recipe: Recipe) -> StateSnapshotEvent:
 
 @agent.instructions
 async def recipe_instructions(ctx: RunContext[StateDeps[RecipeSnapshot]]) -> str:
-    """Dynamic instructions based on current recipe state.
+    """
+    Dynamic instructions based on current recipe state.
 
     Args:
         ctx: The run context containing recipe state.
@@ -148,7 +161,7 @@ async def recipe_instructions(ctx: RunContext[StateDeps[RecipeSnapshot]]) -> str
         Instructions string for the agent.
     """
     current_recipe = ctx.deps.state.recipe.model_dump_json(indent=2)
-    
+
     return dedent(f"""
         You are a helpful recipe assistant.
 

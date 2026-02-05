@@ -17,8 +17,8 @@ from contextlib import AsyncExitStack
 from pathlib import Path
 from typing import Any
 
-from agent_runtimes.types import MCPServer, MCPServerTool
 from agent_runtimes.mcp.catalog_mcp_servers import MCP_SERVER_CATALOG
+from agent_runtimes.types import MCPServer, MCPServerTool
 
 logger = logging.getLogger(__name__)
 
@@ -28,9 +28,17 @@ MCP_SERVER_HANDSHAKE_TIMEOUT = 180
 MCP_SERVER_MAX_ATTEMPTS = 3
 
 try:  # Python 3.11+
-    BaseExceptionGroup  # type: ignore[name-defined]
-except NameError:  # pragma: no cover - earlier Python versions
-    BaseExceptionGroup = ExceptionGroup  # type: ignore
+    from builtins import BaseExceptionGroup
+    from builtins import ExceptionGroup as _ExceptionGroup
+except (ImportError, AttributeError):  # pragma: no cover - Python <3.11
+    # ExceptionGroup doesn't exist in Python <3.11
+    # Create a dummy type that will never match in isinstance checks
+    class BaseExceptionGroup(BaseException):  # type: ignore[no-redef]
+        """Dummy BaseExceptionGroup for Python <3.11 compatibility."""
+
+        pass
+
+    _ExceptionGroup = BaseExceptionGroup  # type: ignore[misc,assignment]
 
 
 class MCPServerInstance:
@@ -62,7 +70,7 @@ class MCPLifecycleManager:
     - Tracking running state (separately for config and catalog servers)
     - Merging mcp.json config with catalog commands
     - Tool discovery from running servers
-    
+
     Config servers (from mcp.json) and catalog servers (predefined) are managed
     in separate data structures so the same server ID can exist in both.
     """
@@ -85,9 +93,10 @@ class MCPLifecycleManager:
     def _expand_env_vars(self, value: str) -> str:
         """Expand environment variables in a string (${VAR_NAME} syntax)."""
         import re
-        pattern = r'\$\{([^}]+)\}'
 
-        def replace(match):
+        pattern = r"\$\{([^}]+)\}"
+
+        def replace(match: re.Match[str]) -> str:
             var_name = match.group(1)
             return os.environ.get(var_name, "")
 
@@ -95,14 +104,13 @@ class MCPLifecycleManager:
 
     def _expand_config_env_vars(self, config: dict[str, Any]) -> dict[str, Any]:
         """Recursively expand environment variables in a config dictionary."""
-        result = {}
+        result: dict[str, Any] = {}
         for key, value in config.items():
             if isinstance(value, str):
                 result[key] = self._expand_env_vars(value)
             elif isinstance(value, list):
                 result[key] = [
-                    self._expand_env_vars(v) if isinstance(v, str) else v
-                    for v in value
+                    self._expand_env_vars(v) if isinstance(v, str) else v for v in value
                 ]
             elif isinstance(value, dict):
                 result[key] = self._expand_config_env_vars(value)
@@ -133,27 +141,28 @@ class MCPLifecycleManager:
     def get_server_config_from_file(self, server_id: str) -> MCPServer | None:
         """
         Get config specifically from mcp.json for a server.
-        
+
         Args:
             server_id: The server identifier to look up in mcp.json
-            
+
         Returns:
             MCPServer config if found in mcp.json, None otherwise.
             The returned config will have is_config=True.
         """
         config_data = self._load_mcp_config()
         mcp_servers = config_data.get("mcpServers", {})
-        
+
         if server_id in mcp_servers:
             return self.get_merged_server_config(
-                server_id, 
-                user_config=mcp_servers[server_id],
-                from_config_file=True
+                server_id, user_config=mcp_servers[server_id], from_config_file=True
             )
         return None
 
     def get_merged_server_config(
-        self, server_id: str, user_config: dict[str, Any] | None = None, from_config_file: bool = False
+        self,
+        server_id: str,
+        user_config: dict[str, Any] | None = None,
+        from_config_file: bool = False,
     ) -> MCPServer | None:
         """
         Get server config, merging mcp.json with catalog if available.
@@ -176,14 +185,22 @@ class MCPLifecycleManager:
             expanded = self._expand_config_env_vars(user_config)
             if "command" in expanded:
                 logger.info(f"Using user-provided command for MCP server '{server_id}'")
-                
+
                 # Get any additional info from catalog (like name) if available
                 catalog_server = MCP_SERVER_CATALOG.get(server_id)
-                
+
                 return MCPServer(
                     id=server_id,
-                    name=expanded.get("name", catalog_server.name if catalog_server else server_id.replace("-", " ").replace("_", " ").title()),
-                    description=expanded.get("description", catalog_server.description if catalog_server else ""),
+                    name=expanded.get(
+                        "name",
+                        catalog_server.name
+                        if catalog_server
+                        else server_id.replace("-", " ").replace("_", " ").title(),
+                    ),
+                    description=expanded.get(
+                        "description",
+                        catalog_server.description if catalog_server else "",
+                    ),
                     command=expanded["command"],
                     args=expanded.get("args", []),
                     env=expanded.get("env", {}),
@@ -199,7 +216,7 @@ class MCPLifecycleManager:
         if catalog_server:
             # Start with catalog config
             config = catalog_server.model_copy(deep=True)
-            
+
             # Mark as config server if loaded from mcp.json
             config.is_config = from_config_file
 
@@ -218,7 +235,9 @@ class MCPLifecycleManager:
 
     def _format_exception(self, exc: BaseException) -> str:
         """Format exception with traceback details."""
-        formatted = ''.join(traceback.format_exception(type(exc), exc, exc.__traceback__)).strip()
+        formatted = "".join(
+            traceback.format_exception(type(exc), exc, exc.__traceback__)
+        ).strip()
         return formatted or f"{type(exc).__name__}: (no message)"
 
     def _format_exception_group(self, exc_group: BaseException) -> list[str]:
@@ -227,7 +246,7 @@ class MCPLifecycleManager:
             return [self._format_exception(exc_group)]
         details: list[str] = []
         for idx, exc in enumerate(getattr(exc_group, "exceptions", [])):
-            if isinstance(exc, (ExceptionGroup, BaseExceptionGroup)):
+            if isinstance(exc, (_ExceptionGroup, BaseExceptionGroup)):
                 nested_lines = self._format_exception_group(exc)
                 for nested_line in nested_lines:
                     details.append(f"[{idx}] {nested_line}")
@@ -235,7 +254,9 @@ class MCPLifecycleManager:
                 details.append(f"[{idx}] {self._format_exception(exc)}")
         return details
 
-    async def start_server(self, server_id: str, config: MCPServer | None = None) -> MCPServerInstance | None:
+    async def start_server(
+        self, server_id: str, config: MCPServer | None = None
+    ) -> MCPServerInstance | None:
         """
         Start an MCP server.
 
@@ -248,13 +269,13 @@ class MCPLifecycleManager:
             MCPServerInstance if started successfully, None otherwise
         """
         logger.info(f"🔄 start_server called for '{server_id}'")
-        
+
         async with self._lock:
             logger.debug(f"Acquired lock for '{server_id}'")
-            
+
             # Determine which storage to use based on config.is_config
             # (we need config first to know this)
-            
+
             # Get config
             if config is None:
                 config = self.get_merged_server_config(server_id)
@@ -264,19 +285,25 @@ class MCPLifecycleManager:
                 logger.error(error)
                 self._failed_servers[server_id] = error
                 return None
-            
+
             # Select the appropriate storage based on whether it's a config or catalog server
-            storage = self._config_servers if config.is_config else self._catalog_servers
+            storage = (
+                self._config_servers if config.is_config else self._catalog_servers
+            )
             storage_name = "config" if config.is_config else "catalog"
-            
+
             # Check if already running in the appropriate storage
             if server_id in storage:
                 instance = storage[server_id]
                 if instance.is_running:
-                    logger.info(f"MCP server '{server_id}' is already running (in {storage_name})")
+                    logger.info(
+                        f"MCP server '{server_id}' is already running (in {storage_name})"
+                    )
                     return instance
 
-            logger.info(f"🔧 Creating MCP server '{server_id}' ({storage_name}) with command: {config.command} {config.args}")
+            logger.info(
+                f"🔧 Creating MCP server '{server_id}' ({storage_name}) with command: {config.command} {config.args}"
+            )
 
             # Import pydantic_ai MCP support
             try:
@@ -310,10 +337,17 @@ class MCPLifecycleManager:
                 if hasattr(pydantic_server, "timeout"):
                     try:
                         current_timeout = getattr(pydantic_server, "timeout")
-                        if current_timeout is None or current_timeout < MCP_SERVER_HANDSHAKE_TIMEOUT:
-                            setattr(pydantic_server, "timeout", MCP_SERVER_HANDSHAKE_TIMEOUT)
+                        if (
+                            current_timeout is None
+                            or current_timeout < MCP_SERVER_HANDSHAKE_TIMEOUT
+                        ):
+                            setattr(
+                                pydantic_server, "timeout", MCP_SERVER_HANDSHAKE_TIMEOUT
+                            )
                     except Exception as timeout_error:
-                        logger.debug(f"Unable to adjust timeout for '{server_id}': {timeout_error}")
+                        logger.debug(
+                            f"Unable to adjust timeout for '{server_id}': {timeout_error}"
+                        )
 
             except Exception as e:
                 error = f"Failed to create MCP server: {e}"
@@ -354,10 +388,14 @@ class MCPLifecycleManager:
                                 )
                             )
                         tool_names = [t.name for t in tools]
-                        logger.info(f"✓ MCP server '{server_id}' started with tools: {tool_names}")
+                        logger.info(
+                            f"✓ MCP server '{server_id}' started with tools: {tool_names}"
+                        )
                     except Exception as e:
                         logger.warning(f"Failed to list tools for '{server_id}': {e}")
-                        logger.info(f"✓ MCP server '{server_id}' started (tools unavailable)")
+                        logger.info(
+                            f"✓ MCP server '{server_id}' started (tools unavailable)"
+                        )
 
                     # Update config with discovered tools
                     config.tools = tools
@@ -373,10 +411,16 @@ class MCPLifecycleManager:
                         tools=tools,
                     )
                     # Store in appropriate dict based on is_config
-                    storage = self._config_servers if config.is_config else self._catalog_servers
+                    storage = (
+                        self._config_servers
+                        if config.is_config
+                        else self._catalog_servers
+                    )
                     storage[server_id] = instance
                     self._failed_servers.pop(server_id, None)
-                    logger.info(f"✓ MCP server '{server_id}' stored in {'config' if config.is_config else 'catalog'} servers")
+                    logger.info(
+                        f"✓ MCP server '{server_id}' stored in {'config' if config.is_config else 'catalog'} servers"
+                    )
                     return instance
 
                 except asyncio.TimeoutError:
@@ -392,14 +436,21 @@ class MCPLifecycleManager:
                     attempt += 1
                     continue
 
-                except (ExceptionGroup, BaseExceptionGroup) as eg:
+                except (_ExceptionGroup, BaseExceptionGroup) as eg:
                     error_lines = self._format_exception_group(eg)
                     for line in error_lines:
                         logger.error(f"✗ MCP server '{server_id}' exception: {line}")
-                    error_detail = error_lines[0] if error_lines else "Unknown error in TaskGroup"
+                    error_detail = (
+                        error_lines[0] if error_lines else "Unknown error in TaskGroup"
+                    )
 
-                    if "BrokenResourceError" in error_detail and attempt < MCP_SERVER_MAX_ATTEMPTS:
-                        logger.warning(f"MCP server '{server_id}' hit BrokenResourceError; retrying")
+                    if (
+                        "BrokenResourceError" in error_detail
+                        and attempt < MCP_SERVER_MAX_ATTEMPTS
+                    ):
+                        logger.warning(
+                            f"MCP server '{server_id}' hit BrokenResourceError; retrying"
+                        )
                         await asyncio.sleep(min(2 * attempt, 5))
                         attempt += 1
                         continue
@@ -410,14 +461,21 @@ class MCPLifecycleManager:
 
                 except Exception as e:
                     error_detail = self._format_exception(e)
-                    if "BrokenResourceError" in error_detail and attempt < MCP_SERVER_MAX_ATTEMPTS:
-                        logger.warning(f"MCP server '{server_id}' hit BrokenResourceError; retrying")
+                    if (
+                        "BrokenResourceError" in error_detail
+                        and attempt < MCP_SERVER_MAX_ATTEMPTS
+                    ):
+                        logger.warning(
+                            f"MCP server '{server_id}' hit BrokenResourceError; retrying"
+                        )
                         await asyncio.sleep(min(2 * attempt, 5))
                         attempt += 1
                         continue
 
                     await exit_stack.__aexit__(None, None, None)
-                    logger.error(f"✗ MCP server '{server_id}' startup failed: {error_detail}")
+                    logger.error(
+                        f"✗ MCP server '{server_id}' startup failed: {error_detail}"
+                    )
                     self._failed_servers[server_id] = error_detail
                     return None
 
@@ -438,10 +496,12 @@ class MCPLifecycleManager:
             # Select the appropriate storage
             storage = self._config_servers if is_config else self._catalog_servers
             storage_name = "config" if is_config else "catalog"
-            
+
             instance = storage.pop(server_id, None)
             if instance is None:
-                logger.warning(f"MCP server '{server_id}' is not running in {storage_name}")
+                logger.warning(
+                    f"MCP server '{server_id}' is not running in {storage_name}"
+                )
                 return False
 
             try:
@@ -452,7 +512,9 @@ class MCPLifecycleManager:
                 return True
             except RuntimeError as e:
                 if "cancel scope" in str(e).lower():
-                    logger.debug(f"MCP server '{server_id}' stopped (cancel scope closed)")
+                    logger.debug(
+                        f"MCP server '{server_id}' stopped (cancel scope closed)"
+                    )
                 else:
                     logger.warning(f"Error stopping MCP server '{server_id}': {e}")
                 return True
@@ -460,9 +522,12 @@ class MCPLifecycleManager:
                 logger.warning(f"Error stopping MCP server '{server_id}': {e}")
                 return True
 
-    def get_running_server(self, server_id: str, is_config: bool | None = None) -> MCPServerInstance | None:
-        """Get a running server instance by ID.
-        
+    def get_running_server(
+        self, server_id: str, is_config: bool | None = None
+    ) -> MCPServerInstance | None:
+        """
+        Get a running server instance by ID.
+
         Args:
             server_id: The server identifier
             is_config: If True, only check config servers. If False, only check catalog.
@@ -474,35 +539,52 @@ class MCPLifecycleManager:
             return self._catalog_servers.get(server_id)
         else:
             # Check catalog first, then config
-            return self._catalog_servers.get(server_id) or self._config_servers.get(server_id)
+            return self._catalog_servers.get(server_id) or self._config_servers.get(
+                server_id
+            )
 
     def get_config_servers(self) -> list[MCPServerInstance]:
-        """Get all running config server instances (from mcp.json)."""
+        """
+        Get all running config server instances (from mcp.json).
+        """
         return list(self._config_servers.values())
 
     def get_catalog_servers(self) -> list[MCPServerInstance]:
-        """Get all running catalog server instances."""
+        """
+        Get all running catalog server instances.
+        """
         return list(self._catalog_servers.values())
 
     def get_all_running_servers(self) -> list[MCPServerInstance]:
-        """Get all running server instances (both config and catalog)."""
-        return list(self._config_servers.values()) + list(self._catalog_servers.values())
+        """
+        Get all running server instances (both config and catalog).
+        """
+        return list(self._config_servers.values()) + list(
+            self._catalog_servers.values()
+        )
 
     def get_running_server_ids(self) -> list[str]:
-        """Get IDs of all running servers (combined, may have duplicates)."""
+        """
+        Get IDs of all running servers (combined, may have duplicates).
+        """
         return list(self._config_servers.keys()) + list(self._catalog_servers.keys())
 
     def get_config_server_ids(self) -> list[str]:
-        """Get IDs of running config servers."""
+        """
+        Get IDs of running config servers.
+        """
         return list(self._config_servers.keys())
 
     def get_catalog_server_ids(self) -> list[str]:
-        """Get IDs of running catalog servers."""
+        """
+        Get IDs of running catalog servers.
+        """
         return list(self._catalog_servers.keys())
 
     def is_server_running(self, server_id: str, is_config: bool | None = None) -> bool:
-        """Check if a server is running.
-        
+        """
+        Check if a server is running.
+
         Args:
             server_id: The server identifier
             is_config: If True, only check config servers. If False, only check catalog.
@@ -512,18 +594,26 @@ class MCPLifecycleManager:
         return instance is not None and instance.is_running
 
     def is_config_server_running(self, server_id: str) -> bool:
-        """Check if a config server (from mcp.json) is running."""
+        """
+        Check if a config server (from mcp.json) is running.
+        """
         return self.is_server_running(server_id, is_config=True)
 
     def is_catalog_server_running(self, server_id: str) -> bool:
-        """Check if a catalog server is running."""
+        """
+        Check if a catalog server is running.
+        """
         return self.is_server_running(server_id, is_config=False)
 
     def get_failed_servers(self) -> dict[str, str]:
-        """Get dict of failed server IDs to error messages."""
+        """
+        Get dict of failed server IDs to error messages.
+        """
         return self._failed_servers.copy()
 
-    def get_server_status(self, server_id: str, is_config: bool | None = None) -> dict[str, Any]:
+    def get_server_status(
+        self, server_id: str, is_config: bool | None = None
+    ) -> dict[str, Any]:
         """Get status of a specific server."""
         instance = self.get_running_server(server_id, is_config)
         if instance:
@@ -546,10 +636,12 @@ class MCPLifecycleManager:
                 "status": "stopped",
             }
 
-    def get_pydantic_toolsets(self, include_config: bool = True, include_catalog: bool = True) -> list[Any]:
+    def get_pydantic_toolsets(
+        self, include_config: bool = True, include_catalog: bool = True
+    ) -> list[Any]:
         """
         Get running MCP servers as pydantic_ai toolsets.
-        
+
         Args:
             include_config: Whether to include config servers (from mcp.json)
             include_catalog: Whether to include catalog servers
@@ -559,17 +651,21 @@ class MCPLifecycleManager:
         """
         toolsets = []
         if include_config:
-            toolsets.extend([
-                instance.pydantic_server
-                for instance in self._config_servers.values()
-                if instance.is_running
-            ])
+            toolsets.extend(
+                [
+                    instance.pydantic_server
+                    for instance in self._config_servers.values()
+                    if instance.is_running
+                ]
+            )
         if include_catalog:
-            toolsets.extend([
-                instance.pydantic_server
-                for instance in self._catalog_servers.values()
-                if instance.is_running
-            ])
+            toolsets.extend(
+                [
+                    instance.pydantic_server
+                    for instance in self._catalog_servers.values()
+                    if instance.is_running
+                ]
+            )
         return toolsets
 
     async def initialize_from_config(self) -> None:
@@ -603,10 +699,14 @@ class MCPLifecycleManager:
             try:
                 # Get merged config (library + user overrides)
                 # Mark as from_config_file=True since these are from mcp.json
-                merged_config = self.get_merged_server_config(server_id, server_config, from_config_file=True)
+                merged_config = self.get_merged_server_config(
+                    server_id, server_config, from_config_file=True
+                )
 
                 if merged_config:
-                    logger.info(f"Starting MCP server '{server_id}' (is_config={merged_config.is_config})...")
+                    logger.info(
+                        f"Starting MCP server '{server_id}' (is_config={merged_config.is_config})..."
+                    )
                     instance = await self.start_server(server_id, merged_config)
                     if instance:
                         success_count += 1
@@ -616,7 +716,9 @@ class MCPLifecycleManager:
                 else:
                     logger.warning(f"No config available for MCP server '{server_id}'")
             except Exception as e:
-                logger.error(f"Exception starting MCP server '{server_id}': {e}", exc_info=True)
+                logger.error(
+                    f"Exception starting MCP server '{server_id}': {e}", exc_info=True
+                )
                 self._failed_servers[server_id] = str(e)
 
         logger.info(
@@ -630,7 +732,7 @@ class MCPLifecycleManager:
         config_ids = list(self._config_servers.keys())
         for server_id in config_ids:
             await self.stop_server(server_id, is_config=True)
-        
+
         # Stop catalog servers
         catalog_ids = list(self._catalog_servers.keys())
         for server_id in catalog_ids:
@@ -650,14 +752,19 @@ class MCPLifecycleManager:
             if timeout is None:
                 await self._initialization_event.wait()
             else:
-                await asyncio.wait_for(self._initialization_event.wait(), timeout=timeout)
+                await asyncio.wait_for(
+                    self._initialization_event.wait(), timeout=timeout
+                )
             return True
         except asyncio.TimeoutError:
             return False
 
     def is_initialized(self) -> bool:
         """Check if initialization has completed."""
-        return self._initialization_event is not None and self._initialization_event.is_set()
+        return (
+            self._initialization_event is not None
+            and self._initialization_event.is_set()
+        )
 
 
 # Global singleton instance

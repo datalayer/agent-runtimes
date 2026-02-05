@@ -13,7 +13,7 @@ Provides:
 """
 
 from .config import ObservabilityConfig, configure_observability
-from .storage import TraceStorage, SQLiteTraceStorage
+from .storage import SQLiteTraceStorage, TraceStorage
 from .tracer import AgentTracer, trace_agent_run, trace_tool_call
 
 __all__ = [

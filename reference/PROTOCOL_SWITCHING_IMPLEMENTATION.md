@@ -121,7 +121,7 @@ Successfully implemented protocol switching functionality for the Agent Runtimes
 - Message structure: `{ role, parts: [{ type: 'text', text }] }`
 - Status values different from expected: uses `submitted`, `ready` instead of `loading`
 
-### AG-UI Integration  
+### AG-UI Integration
 - Iframe-based for simplicity and full native UI support
 - Future enhancement: fetch-based API for custom UI
 - Pydantic AI's AGUIApp handles all protocol details

@@ -1,7 +1,8 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Routes for AG-UI example agents.
+"""
+Routes for AG-UI example agents.
 
 Exposes example agents demonstrating AG-UI protocol features:
 - /examples/agentic_chat - Basic chat with tools
@@ -33,12 +34,14 @@ _initialized = False
 
 
 def _init_example_apps() -> None:
-    """Initialize example apps lazily."""
+    """
+    Initialize example apps lazily.
+    """
     global _initialized, _example_apps
-    
+
     if _initialized:
         return
-    
+
     try:
         from ..agents.examples import (
             agentic_chat_app,
@@ -49,7 +52,7 @@ def _init_example_apps() -> None:
             shared_state_app,
             tool_based_generative_ui_app,
         )
-        
+
         _example_apps = {
             "agentic_chat": agentic_chat_app,
             "human_in_the_loop": human_in_the_loop_app,
@@ -61,7 +64,7 @@ def _init_example_apps() -> None:
         }
         _initialized = True
         logger.info(f"Initialized {len(_example_apps)} AG-UI example apps")
-        
+
     except ImportError as e:
         logger.warning(f"Could not initialize AG-UI examples: {e}")
         logger.warning("Make sure pydantic-ai and ag-ui are installed")
@@ -75,7 +78,8 @@ def _init_example_apps() -> None:
 
 
 def get_example_mounts(api_prefix: str = "/api/v1") -> list[Mount]:
-    """Get all example app mounts for the FastAPI app.
+    """
+    Get all example app mounts for the FastAPI app.
 
     Args:
         api_prefix: The API prefix to use for mounting.
@@ -84,26 +88,27 @@ def get_example_mounts(api_prefix: str = "/api/v1") -> list[Mount]:
         List of Starlette Mount objects for each example.
     """
     _init_example_apps()
-    
+
     mounts = []
     for name, app in _example_apps.items():
         # Mount each example at /api/v1/examples/{name}/
         mount = Mount(f"{api_prefix}/examples/{name}", app=app)
         mounts.append(mount)
         logger.info(f"Prepared example mount: {api_prefix}/examples/{name}/")
-    
+
     return mounts
 
 
 @router.get("/")
 async def list_examples() -> dict[str, Any]:
-    """List available AG-UI example agents.
+    """
+    List available AG-UI example agents.
 
     Returns:
         Dictionary with information about each example.
     """
     _init_example_apps()
-    
+
     examples = [
         {
             "id": "agentic_chat",
@@ -148,11 +153,11 @@ async def list_examples() -> dict[str, Any]:
             "features": ["Backend tools", "Real API calls", "Weather data"],
         },
     ]
-    
+
     # Filter to only available examples
     available_ids = set(_example_apps.keys())
     available_examples = [e for e in examples if e["id"] in available_ids]
-    
+
     return {
         "examples": available_examples,
         "count": len(available_examples),
@@ -163,7 +168,8 @@ async def list_examples() -> dict[str, Any]:
 
 @router.get("/{example_id}")
 async def get_example_info(example_id: str) -> dict[str, Any]:
-    """Get information about a specific example.
+    """
+    Get information about a specific example.
 
     Args:
         example_id: The example identifier.
@@ -172,8 +178,8 @@ async def get_example_info(example_id: str) -> dict[str, Any]:
         Information about the example.
     """
     _init_example_apps()
-    
-    example_info = {
+
+    example_info: dict[str, dict[str, Any]] = {
         "agentic_chat": {
             "id": "agentic_chat",
             "name": "Agentic Chat",
@@ -206,7 +212,11 @@ async def get_example_info(example_id: str) -> dict[str, Any]:
                 "dynamic UI components like cards, tables, and charts."
             ),
             "endpoint": "/api/v1/examples/tool_based_generative_ui/",
-            "features": ["Frontend render tools", "Dynamic UI generation", "Rich content"],
+            "features": [
+                "Frontend render tools",
+                "Dynamic UI generation",
+                "Rich content",
+            ],
             "tools": ["Defined by frontend"],
         },
         "shared_state": {
@@ -239,7 +249,11 @@ async def get_example_info(example_id: str) -> dict[str, Any]:
                 "individual steps as progress is made using JSON Patch."
             ),
             "endpoint": "/api/v1/examples/agentic_generative_ui/",
-            "features": ["Plan creation", "Incremental updates", "JSON Patch (RFC 6902)"],
+            "features": [
+                "Plan creation",
+                "Incremental updates",
+                "JSON Patch (RFC 6902)",
+            ],
             "tools": ["create_plan", "update_plan_step"],
             "state_schema": {
                 "steps": [{"description": "...", "status": "pending|completed"}]
@@ -258,17 +272,17 @@ async def get_example_info(example_id: str) -> dict[str, Any]:
             "api_source": "Open-Meteo (https://open-meteo.com/)",
         },
     }
-    
+
     if example_id not in example_info:
         return {"error": f"Example '{example_id}' not found"}
-    
+
     if example_id not in _example_apps:
         return {
             **example_info[example_id],
             "status": "unavailable",
             "reason": "Example not initialized (missing dependencies?)",
         }
-    
+
     return {
         **example_info[example_id],
         "status": "available",

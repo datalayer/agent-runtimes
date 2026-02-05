@@ -2,7 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 [build-system]
-requires = ["hatchling==1.21.1", "hatch-nodejs-version>=0.3.2"]
+requires = ["hatchling==1.21.1", "hatch-nodejs-version>=0.3.2", "pip>=26.0"]
 build-backend = "hatchling.build"
 
 [project]
@@ -34,14 +34,16 @@ dependencies = [
     "code-sandboxes",
     "datalayer-core",
     "fasta2a @ git+https://github.com/datalayer-externals/fasta2a.git@feature/sse-streaming-2#egg=fasta2a",
+    "filelock>=3.20.3",
     "jupyter-server>=2.10,<3",
     "mcp-ui-server",
-    "pydantic-ai-slim[openai,anthropic,google,mcp,dbos,bedrock]",
+    "pydantic-ai-slim[openai,anthropic,google,mcp,dbos,bedrock]>=1.43.0",
     "pydantic-graph",
     "pydantic-settings",
     "pydantic[email]",
     "tiktoken>=0.5.0",
     "typer",
+    "urllib3>=2.6.3",
 ]
 dynamic = ["version"]
 
@@ -111,6 +113,7 @@ ignore_missing_imports = true
 disallow_untyped_defs = true
 disallow_any_generics = true
 warn_unused_ignores = true
+disable_error_code = ["attr-defined"]
 
 [[tool.mypy.overrides]]
 module = "tornado.*"

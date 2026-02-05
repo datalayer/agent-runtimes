@@ -11,19 +11,23 @@ from jupyter_server.utils import url_path_join
 from traitlets import Bool, CInt, Instance, Unicode, default
 from traitlets.config import Configurable
 
-from agent_runtimes.__version__ import __version__
+from agent_runtimes._version import __version__
 from agent_runtimes.jupyter.agent import create_jupyter_chat_agent
 from agent_runtimes.jupyter.config import JupyterChatConfig
-from agent_runtimes.mcp import MCPToolManager, get_mcp_manager, initialize_config_mcp_servers
 from agent_runtimes.jupyter.handlers.chat_handler import VercelAIChatHandler
+from agent_runtimes.jupyter.handlers.config_handler import ConfigHandler
 from agent_runtimes.jupyter.handlers.configure_handler import ConfigureHandler
+from agent_runtimes.jupyter.handlers.index_handler import IndexHandler
+from agent_runtimes.jupyter.handlers.login_handler import LoginHandler
 from agent_runtimes.jupyter.handlers.mcp_handler import (
     MCPServerHandler,
     MCPServersHandler,
 )
-from agent_runtimes.jupyter.handlers.config_handler import ConfigHandler
-from agent_runtimes.jupyter.handlers.index_handler import IndexHandler
-from agent_runtimes.jupyter.handlers.login_handler import LoginHandler
+from agent_runtimes.mcp import (
+    MCPToolManager,
+    get_mcp_manager,
+    initialize_config_mcp_servers,
+)
 from agent_runtimes.services.authn.state import get_server_port
 
 DEFAULT_STATIC_FILES_PATH = os.path.join(os.path.dirname(__file__), "./static")
@@ -199,12 +203,13 @@ class AgentRuntimesExtensionApp(ExtensionAppJinjaMixin, ExtensionApp):
                 if loop.is_running():
                     # We're in an async context, create a task
                     import nest_asyncio
+
                     nest_asyncio.apply()
                 mcp_servers = loop.run_until_complete(
                     initialize_config_mcp_servers(discover_tools=True)
                 )
                 self.log.info(f"Initialized {len(mcp_servers)} MCP servers")
-                
+
                 # Load initialized MCP servers into the global MCP manager
                 mcp_manager_global = get_mcp_manager()
                 mcp_manager_global.load_servers(mcp_servers)

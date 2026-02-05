@@ -1,7 +1,8 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Tool Based Generative UI example.
+"""
+Tool Based Generative UI example.
 
 Demonstrates an agent that uses tools to render dynamic UI components.
 The frontend defines "render tools" that the agent can call to display

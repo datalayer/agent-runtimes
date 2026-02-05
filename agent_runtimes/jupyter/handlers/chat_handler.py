@@ -114,9 +114,13 @@ class VercelAIChatHandler(APIHandler):
                         # Extract builtinTools from request - these are the MCP tools
                         # the frontend wants to enable for this request
                         request_builtin_tools = body.get("builtinTools")
-                        if request_builtin_tools and isinstance(request_builtin_tools, list):
+                        if request_builtin_tools and isinstance(
+                            request_builtin_tools, list
+                        ):
                             builtin_tools = request_builtin_tools
-                            self.log.info(f"Using builtinTools from request: {builtin_tools}")
+                            self.log.info(
+                                f"Using builtinTools from request: {builtin_tools}"
+                            )
                 except Exception:
                     pass
 

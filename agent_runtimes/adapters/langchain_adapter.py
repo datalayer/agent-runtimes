@@ -1,13 +1,14 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""LangChain agent adapter.
+"""
+LangChain agent adapter.
 
 Wraps a LangChain agent/chain to implement the BaseAgent interface,
 enabling use with protocol adapters.
 """
 
-from typing import Any, AsyncIterator, Optional
+from typing import Any, AsyncIterator
 
 from .base import (
     AgentContext,
@@ -21,7 +22,8 @@ from .base import (
 
 
 class LangChainAdapter(BaseAgent):
-    """Adapter for LangChain agents.
+    """
+    Adapter for LangChain agents.
 
     Wraps a LangChain agent or chain to provide a consistent interface
     for protocol adapters.
@@ -49,7 +51,8 @@ class LangChainAdapter(BaseAgent):
         description: str = "A LangChain powered agent",
         version: str = "1.0.0",
     ):
-        """Initialize the LangChain agent adapter.
+        """
+        Initialize the LangChain agent adapter.
 
         Args:
             agent: The LangChain agent/chain instance.
@@ -65,7 +68,9 @@ class LangChainAdapter(BaseAgent):
         self._extract_tools()
 
     def _extract_tools(self) -> None:
-        """Extract tool definitions from the LangChain agent."""
+        """
+        Extract tool definitions from the LangChain agent.
+        """
         # LangChain agents have tools in .tools attribute
         if hasattr(self._agent, "tools"):
             for tool in self._agent.tools:
@@ -78,9 +83,7 @@ class LangChainAdapter(BaseAgent):
                     # Fallback to args dict if available
                     schema = {
                         "type": "object",
-                        "properties": {
-                            k: {"type": "string"} for k in tool.args.keys()
-                        },
+                        "properties": {k: {"type": "string"} for k in tool.args.keys()},
                     }
 
                 self._tools.append(
@@ -93,50 +96,68 @@ class LangChainAdapter(BaseAgent):
 
     @property
     def name(self) -> str:
-        """Get the agent name."""
+        """
+        Get the agent name.
+        """
         return self._name
 
     @property
     def description(self) -> str:
-        """Get the agent description."""
+        """
+        Get the agent description.
+        """
         return self._description
 
     @property
     def version(self) -> str:
-        """Get the agent version."""
+        """
+        Get the agent version.
+        """
         return self._version
 
     @property
     def tools(self) -> list[ToolDefinition]:
-        """Get available tools."""
+        """
+        Get available tools.
+        """
         return self._tools
 
+    def get_tools(self) -> list[ToolDefinition]:
+        """
+        Get the list of tools available to this agent.
+
+        Returns:
+            List of tool definitions.
+        """
+        return self._tools.copy()
+
     async def initialize(self) -> None:
-        """Initialize the agent."""
+        """
+        Initialize the agent.
+        """
         # LangChain agents typically don't need explicit initialization
         pass
 
     async def run(
         self,
         prompt: str,
-        context: Optional[AgentContext] = None,
-        tools: Optional[list[ToolDefinition]] = None,
+        context: AgentContext,
     ) -> AgentResponse:
-        """Run the agent with a prompt.
+        """
+        Run the agent with a prompt.
 
         Args:
             prompt: User prompt.
             context: Execution context.
-            tools: Available tools (optional, uses agent's tools if not provided).
 
         Returns:
             Agent response.
         """
         # Build input for LangChain
-        input_data = {"input": prompt}
+        input_data: dict[str, Any] = {"input": prompt}
 
         # Add conversation history if available
-        if context and context.conversation_history:
+        if context.conversation_history:
             input_data["chat_history"] = context.conversation_history
 
         # Run the agent
@@ -149,7 +170,9 @@ class LangChainAdapter(BaseAgent):
                 result = self._agent.invoke(input_data)
 
             # Extract output
-            output = result.get("output", "") if isinstance(result, dict) else str(result)
+            output = (
+                result.get("output", "") if isinstance(result, dict) else str(result)
+            )
 
             # Extract tool calls if present
             tool_calls = []
@@ -159,7 +182,9 @@ class LangChainAdapter(BaseAgent):
                         ToolCall(
                             id=f"call_{i}",
                             name=action.tool,
-                            arguments=action.tool_input if isinstance(action.tool_input, dict) else {"input": action.tool_input},
+                            arguments=action.tool_input
+                            if isinstance(action.tool_input, dict)
+                            else {"input": action.tool_input},
                         )
                     )
 
@@ -178,23 +203,22 @@ class LangChainAdapter(BaseAgent):
     async def stream(
         self,
         prompt: str,
-        context: Optional[AgentContext] = None,
-        tools: Optional[list[ToolDefinition]] = None,
+        context: AgentContext,
     ) -> AsyncIterator[StreamEvent]:
-        """Stream agent responses.
+        """
+        Stream agent responses.
 
         Args:
             prompt: User prompt.
             context: Execution context.
-            tools: Available tools (optional).
 
         Yields:
             Stream events.
         """
         # Build input for LangChain
-        input_data = {"input": prompt}
+        input_data: dict[str, Any] = {"input": prompt}
 
-        if context and context.conversation_history:
+        if context.conversation_history:
             input_data["chat_history"] = context.conversation_history
 
         # Check if streaming is supported
@@ -202,15 +226,17 @@ class LangChainAdapter(BaseAgent):
             try:
                 # Use astream_events if available (more detailed)
                 if hasattr(self._agent, "astream_events"):
-                    async for event in self._agent.astream_events(input_data, version="v1"):
+                    async for event in self._agent.astream_events(
+                        input_data, version="v1"
+                    ):
                         event_type = event.get("event", "")
-                        
+
                         if event_type == "on_chat_model_stream":
                             # Stream text chunks
                             chunk = event.get("data", {}).get("chunk", {})
                             if hasattr(chunk, "content") and chunk.content:
                                 yield StreamEvent(type="text", data=chunk.content)
-                        
+
                         elif event_type == "on_tool_start":
                             # Tool call started
                             tool_name = event.get("name", "")
@@ -223,7 +249,7 @@ class LangChainAdapter(BaseAgent):
                                     arguments=tool_input,
                                 ),
                             )
-                        
+
                         elif event_type == "on_tool_end":
                             # Tool call completed
                             yield StreamEvent(
@@ -248,17 +274,21 @@ class LangChainAdapter(BaseAgent):
                 yield StreamEvent(type="error", data=str(e))
         else:
             # No streaming support, fall back to run()
-            response = await self.run(prompt, context, tools)
+            response = await self.run(prompt, context)
             yield StreamEvent(type="text", data=response.content)
             yield StreamEvent(type="done", data=None)
 
     async def cancel(self) -> None:
-        """Cancel the current execution."""
+        """
+        Cancel the current execution.
+        """
         # LangChain doesn't have built-in cancellation
         # This would need to be implemented based on the specific agent type
         pass
 
     async def cleanup(self) -> None:
-        """Clean up resources."""
+        """
+        Clean up resources.
+        """
         # Cleanup if needed
         pass
