@@ -38,6 +38,12 @@ export const DATA_ACQUISITION_AGENT_SPEC: AgentSpec = {
   environmentName: 'ai-agents-env',
   icon: 'database',
   color: '#3B82F6', // Blue
+  suggestions: [
+    'Find popular machine learning datasets on Kaggle',
+    'Download and explore a dataset for sentiment analysis',
+    'List available files in my workspace',
+    'Search Kaggle for time series forecasting competitions',
+  ],
 };
 
 export const CRAWLER_AGENT_SPEC: AgentSpec = {
@@ -52,6 +58,12 @@ export const CRAWLER_AGENT_SPEC: AgentSpec = {
   environmentName: 'ai-agents-env',
   icon: 'globe',
   color: '#10B981', // Green
+  suggestions: [
+    'Search the web for recent news about AI agents',
+    'Find trending open-source Python projects on GitHub',
+    'Research best practices for building RAG applications',
+    'Compare popular JavaScript frameworks in 2024',
+  ],
 };
 
 export const GITHUB_AGENT_SPEC: AgentSpec = {
@@ -66,6 +78,12 @@ export const GITHUB_AGENT_SPEC: AgentSpec = {
   environmentName: 'ai-agents-env',
   icon: 'git-branch',
   color: '#6366F1', // Indigo
+  suggestions: [
+    'List my open pull requests across all repositories',
+    'Create an issue for a bug I found in datalayer/ui',
+    'Show recent commits on the main branch',
+    'Search for repositories related to Jupyter notebooks',
+  ],
 };
 
 export const FINANCIAL_VIZ_AGENT_SPEC: AgentSpec = {
@@ -80,6 +98,12 @@ export const FINANCIAL_VIZ_AGENT_SPEC: AgentSpec = {
   environmentName: 'ai-agents-env',
   icon: 'trending-up',
   color: '#F59E0B', // Amber
+  suggestions: [
+    'Show me the stock price history for AAPL',
+    'Create a chart comparing MSFT and GOOGL over the last year',
+    'Analyze the trading volume trends for Tesla',
+    'Get the latest market news for tech stocks',
+  ],
 };
 
 export const INFORMATION_ROUTING_AGENT_SPEC: AgentSpec = {
@@ -94,6 +118,12 @@ export const INFORMATION_ROUTING_AGENT_SPEC: AgentSpec = {
   environmentName: 'ai-agents-env',
   icon: 'share-2',
   color: '#EC4899', // Pink
+  suggestions: [
+    'Find documents shared with me in Google Drive',
+    "Send a summary of today's meeting notes to the #team channel",
+    'List recent files in my Drive folder',
+    'Post a reminder to Slack about the upcoming deadline',
+  ],
 };
 
 // ============================================================================
