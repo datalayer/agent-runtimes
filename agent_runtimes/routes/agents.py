@@ -284,13 +284,20 @@ def _build_codemode_toolset(
     # This enables the two-container architecture where Jupyter kernel
     # calls tools via HTTP to the agent-runtimes container
     mcp_proxy_url = os.getenv("AGENT_RUNTIMES_MCP_PROXY_URL")
+    logger.info(f"Checking mcp_proxy_url: env={mcp_proxy_url}")
     if not mcp_proxy_url:
         try:
             from ..services.code_sandbox_manager import get_code_sandbox_manager
             manager_status = get_code_sandbox_manager().get_status()
             mcp_proxy_url = manager_status.get("mcp_proxy_url")
-        except Exception:
-            pass
+            logger.info(f"Got mcp_proxy_url from sandbox manager: {mcp_proxy_url} (status={manager_status})")
+        except Exception as e:
+            logger.warning(f"Could not get mcp_proxy_url from sandbox manager: {e}")
+    
+    if mcp_proxy_url:
+        logger.info(f"Using MCP proxy URL for codemode: {mcp_proxy_url}")
+    else:
+        logger.warning("No MCP proxy URL configured - HTTP proxy mode disabled")
 
     # Create config with all required paths
     config = CodeModeConfig(
@@ -517,12 +524,20 @@ async def create_agent(request: CreateAgentRequest, http_request: Request) -> Cr
                     detail=f"Failed to configure Jupyter sandbox: {str(e)}"
                 )
         
-        # Create shared sandbox for both codemode and skills toolsets
+        # Create shared sandbox for codemode and/or skills toolsets
         # This ensures state persistence between execute_code and skill script executions
         # Use CodeSandboxManager to support Jupyter sandbox configuration via API
+        #
+        # IMPORTANT: When jupyter_sandbox is configured, we MUST get the sandbox from
+        # the sandbox manager, because the executor's Sandbox.create() doesn't have
+        # access to the Jupyter URL and token.
         shared_sandbox = None
         skills_enabled = request.enable_skills or len(request.skills) > 0
-        if request.enable_codemode and skills_enabled:
+        need_shared_sandbox = (
+            (request.enable_codemode and skills_enabled) or  # Both codemode and skills
+            (request.enable_codemode and request.jupyter_sandbox)  # Codemode with Jupyter
+        )
+        if need_shared_sandbox:
             try:
                 from ..services.code_sandbox_manager import get_code_sandbox_manager
                 
