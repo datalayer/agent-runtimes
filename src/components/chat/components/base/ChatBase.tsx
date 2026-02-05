@@ -84,6 +84,8 @@ import {
 } from '../../protocols';
 import type { FrontendToolDefinition } from '../../types/tool';
 import { ToolCallDisplay } from '../display/ToolCallDisplay';
+import type { BuiltinTool as BuiltinToolType } from '../../../../types';
+import type { MCPServerConfig as MCPServerConfigType } from '../../../AgentConfiguration';
 
 // Singleton QueryClient for ChatBase instances without external QueryClientProvider
 const internalQueryClient = new QueryClient({
@@ -328,12 +330,9 @@ export interface ModelConfig {
 }
 
 /**
- * Builtin tool configuration
+ * Builtin tool configuration (re-exported from types.ts)
  */
-export interface BuiltinTool {
-  name: string;
-  id: string;
-}
+export type BuiltinTool = BuiltinToolType;
 
 /**
  * MCP Server Tool configuration
@@ -348,17 +347,10 @@ export interface MCPServerTool {
 /**
  * MCP Server configuration from backend
  */
-export interface MCPServerConfig {
-  id: string;
-  name: string;
-  url?: string;
-  enabled: boolean;
-  tools: MCPServerTool[];
-  command?: string;
-  args?: string[];
-  isAvailable?: boolean;
-  transport?: string;
-}
+/**
+ * MCP Server configuration (re-exported from AgentConfiguration)
+ */
+export type MCPServerConfig = MCPServerConfigType;
 
 /**
  * Remote configuration from server

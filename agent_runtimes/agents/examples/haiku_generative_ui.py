@@ -68,8 +68,8 @@ async def generate_haiku(
     Args:
         japanese: Array of three lines of the haiku in Japanese (5-7-5 syllables).
         english: Array of three lines of the haiku translated to English.
-        gradient: CSS gradient string for the card background
-                  (e.g., "linear-gradient(135deg, #667eea 0%, #764ba2 100%)").
+        gradient: CSS gradient string for the card background.
+                  Example: linear-gradient(135deg, color1 0%, color2 100%)
 
     Returns:
         Confirmation message.

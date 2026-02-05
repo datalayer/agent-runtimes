@@ -21,12 +21,17 @@ import traceback
 from typing import TYPE_CHECKING, Any, AsyncIterator
 
 from pydantic_ai import UsageLimits
-from pydantic_ai.ui.vercel_ai import VercelAIAdapter
 from starlette.requests import Request
 from starlette.responses import Response, StreamingResponse
 
 if TYPE_CHECKING:
     from pydantic_ai import Agent
+    from pydantic_ai.ui.vercel_ai import VercelAIAdapter
+else:
+    try:
+        from pydantic_ai.ui.vercel_ai import VercelAIAdapter
+    except (ImportError, ModuleNotFoundError):
+        VercelAIAdapter = None  # type: ignore[assignment,misc]
 
 from ..adapters.base import BaseAgent
 from ..context.identities import IdentityContextManager

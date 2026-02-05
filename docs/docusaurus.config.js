@@ -10,12 +10,14 @@ module.exports = {
   url: 'https://agent-runtimes.datalayer.tech',
   baseUrl: '/',
   onBrokenLinks: 'throw',
-  onBrokenMarkdownLinks: 'warn',
   favicon: 'img/favicon.ico',
   organizationName: 'datalayer',
   projectName: 'datalayer',
   markdown: {
     mermaid: true,
+    hooks: {
+      onBrokenMarkdownLinks: 'warn',
+    },
   },
   plugins: [
     '@docusaurus/theme-live-codeblock',

@@ -30,14 +30,14 @@ import type {
   AgentRuntimeStatus,
 } from './types';
 
-interface UseAgentRuntimeOptions {
+export interface UseAgentRuntimeOptions {
   /** Agent configuration */
   agentConfig?: AgentConfig;
   /** Auto-create agent when runtime connects */
   autoCreateAgent?: boolean;
 }
 
-interface UseAgentRuntimeReturn {
+export interface UseAgentRuntimeReturn {
   /** Current runtime connection */
   runtime: RuntimeConnection | null;
   /** Current agent connection */

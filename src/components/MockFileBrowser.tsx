@@ -8,7 +8,7 @@ import { Text, SegmentedControl } from '@primer/react';
 import { DataTable } from '@primer/react/experimental';
 import { Box } from '@datalayer/primer-addons';
 
-interface MockFileBrowserProps {
+export interface MockFileBrowserProps {
   codemode?: boolean;
 }
 

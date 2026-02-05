@@ -8,13 +8,18 @@ import os
 from pathlib import Path as FilePath
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Query, Path
+from fastapi import APIRouter, HTTPException, Path, Query
 from pydantic import BaseModel
 
 from agent_runtimes.config import get_frontend_config
-from agent_runtimes.mcp import get_available_tools, get_mcp_manager, get_config_mcp_toolsets_status, get_config_mcp_toolsets_info
-from agent_runtimes.types import FrontendConfig
 from agent_runtimes.context.usage import get_usage_tracker
+from agent_runtimes.mcp import (
+    get_available_tools,
+    get_config_mcp_toolsets_info,
+    get_config_mcp_toolsets_status,
+    get_mcp_manager,
+)
+from agent_runtimes.types import FrontendConfig
 
 logger = logging.getLogger(__name__)
 
@@ -25,12 +30,15 @@ router = APIRouter(prefix="/configure", tags=["configure"])
 # Codemode Configuration Models
 # =========================================================================
 
+
 class SandboxStatus(BaseModel):
-    """Code sandbox status.
-    
+    """
+    Code sandbox status.
+
     For two-container setups (Kubernetes), the mcp_proxy_url enables
     the Jupyter kernel to call MCP tools via HTTP to the agent-runtimes container.
     """
+
     variant: str  # "local-eval" or "local-jupyter"
     jupyter_url: str | None = None
     jupyter_connected: bool = False
@@ -44,6 +52,7 @@ class SandboxStatus(BaseModel):
 
 class CodemodeStatus(BaseModel):
     """Codemode status response."""
+
     enabled: bool
     skills: list[dict[str, Any]]
     available_skills: list[dict[str, Any]]
@@ -52,6 +61,7 @@ class CodemodeStatus(BaseModel):
 
 class CodemodeToggleRequest(BaseModel):
     """Request to toggle codemode."""
+
     enabled: bool
     skills: list[str] | None = None
 
@@ -60,9 +70,13 @@ class CodemodeToggleRequest(BaseModel):
 # Codemode State (runtime state, not persistent)
 # =========================================================================
 
-_codemode_state = {
+_codemode_state: dict[str, Any] = {
     "enabled": os.environ.get("AGENT_RUNTIMES_CODEMODE", "").lower() == "true",
-    "skills": [s.strip() for s in os.environ.get("AGENT_RUNTIMES_SKILLS", "").split(",") if s.strip()],
+    "skills": [
+        s.strip()
+        for s in os.environ.get("AGENT_RUNTIMES_SKILLS", "").split(",")
+        if s.strip()
+    ],
 }
 
 
@@ -100,9 +114,12 @@ async def get_configuration(
         mcp_servers = []
         try:
             from agent_runtimes.mcp.lifecycle import get_mcp_lifecycle_manager
+
             lifecycle_manager = get_mcp_lifecycle_manager()
             running_instances = lifecycle_manager.get_all_running_servers()
-            logger.info(f"Lifecycle manager has {len(running_instances)} running instances")
+            logger.info(
+                f"Lifecycle manager has {len(running_instances)} running instances"
+            )
             if running_instances:
                 mcp_servers = [instance.config for instance in running_instances]
                 logger.info(f"Got {len(mcp_servers)} servers from lifecycle manager")
@@ -132,7 +149,7 @@ async def get_configuration(
 async def get_toolsets_status() -> dict[str, Any]:
     """
     Get the status of config MCP toolsets for Pydantic AI agents.
-    
+
     Returns:
         Status information including ready, pending, and failed servers.
     """
@@ -143,7 +160,7 @@ async def get_toolsets_status() -> dict[str, Any]:
 async def get_toolsets_info() -> list[dict[str, Any]]:
     """
     Get information about running config MCP toolsets.
-    
+
     Returns:
         List of running MCP server information (sensitive data redacted).
     """
@@ -159,15 +176,15 @@ async def get_agent_context_details(
 ) -> dict[str, Any]:
     """
     Get context usage details for a specific agent.
-    
+
     Returns context information including:
     - Total tokens available (context window)
     - Used tokens
     - Breakdown by category (messages, tools, system, cache)
-    
+
     Args:
         agent_id: The unique identifier of the agent.
-        
+
     Returns:
         Context usage details for the agent.
     """
@@ -184,35 +201,39 @@ async def get_agent_context_snapshot_endpoint(
 ) -> dict[str, Any]:
     """
     Get current context snapshot for a specific agent.
-    
+
     Returns the current context state including:
     - System prompts and their token counts
     - Message distribution (user/assistant)
     - Total context usage vs context window
     - Distribution data for visualization
-    
+
     Args:
         agent_id: The unique identifier of the agent.
-        
+
     Returns:
         Context snapshot with distribution data.
     """
-    from ..context.session import get_agent_context_snapshot, _agents
+    from ..context.session import _agents, get_agent_context_snapshot
     from ..context.usage import get_usage_tracker
-    
+
     # Debug logging
     logger.debug(f"[context-snapshot] Fetching snapshot for agent_id={agent_id}")
     logger.debug(f"[context-snapshot] Registered agents: {list(_agents.keys())}")
     tracker = get_usage_tracker()
     stats = tracker.get_agent_stats(agent_id)
     if stats:
-        logger.debug(f"[context-snapshot] Usage stats: input={stats.input_tokens}, output={stats.output_tokens}, user={stats.user_message_tokens}, assistant={stats.assistant_message_tokens}")
+        logger.debug(
+            f"[context-snapshot] Usage stats: input={stats.input_tokens}, output={stats.output_tokens}, user={stats.user_message_tokens}, assistant={stats.assistant_message_tokens}"
+        )
     else:
         logger.debug(f"[context-snapshot] No usage stats found for {agent_id}")
-    
+
     snapshot = get_agent_context_snapshot(agent_id)
     if snapshot is None:
-        logger.debug(f"[context-snapshot] Agent '{agent_id}' not found in session registry")
+        logger.debug(
+            f"[context-snapshot] Agent '{agent_id}' not found in session registry"
+        )
         return {
             "error": f"Agent '{agent_id}' not found",
             "agentId": agent_id,
@@ -229,9 +250,11 @@ async def get_agent_context_snapshot_endpoint(
                 "children": [],
             },
         }
-    
+
     result = snapshot.to_dict()
-    logger.debug(f"[context-snapshot] Returning snapshot: totalTokens={result.get('totalTokens', 0)}, toolTokens={result.get('toolTokens', 0)}, systemPromptTokens={result.get('systemPromptTokens', 0)}, distribution children={len(result.get('distribution', {}).get('children', []))}")
+    logger.debug(
+        f"[context-snapshot] Returning snapshot: totalTokens={result.get('totalTokens', 0)}, toolTokens={result.get('toolTokens', 0)}, systemPromptTokens={result.get('systemPromptTokens', 0)}, distribution children={len(result.get('distribution', {}).get('children', []))}"
+    )
     return result
 
 
@@ -244,7 +267,7 @@ async def get_agent_full_context_endpoint(
 ) -> dict[str, Any]:
     """
     Get full detailed context snapshot for a specific agent.
-    
+
     This provides complete introspection of the agent's context including:
     - Model configuration (name, context window, settings)
     - System prompts (complete text)
@@ -253,15 +276,15 @@ async def get_agent_full_context_endpoint(
     - Memory blocks (if available)
     - Tool environment variables (masked)
     - Tool rules and constraints
-    
+
     Args:
         agent_id: The unique identifier of the agent.
-        
+
     Returns:
         Full context snapshot with all detailed information.
     """
     from ..context.session import get_agent_full_context_snapshot
-    
+
     snapshot = get_agent_full_context_snapshot(agent_id)
     if snapshot is None:
         return {
@@ -292,7 +315,7 @@ async def get_agent_full_context_endpoint(
                 "usagePercent": 0,
             },
         }
-    
+
     return snapshot.to_dict()
 
 
@@ -305,10 +328,10 @@ async def reset_agent_context(
 ) -> dict[str, str]:
     """
     Reset context usage statistics for an agent.
-    
+
     Args:
         agent_id: The unique identifier of the agent.
-        
+
     Returns:
         Confirmation message.
     """
@@ -321,9 +344,10 @@ async def reset_agent_context(
 # Codemode Configuration Endpoints
 # =========================================================================
 
+
 def _get_available_skills() -> list[dict[str, Any]]:
     """Get all available skills from the skills directory."""
-    skills = []
+    skills: list[dict[str, Any]] = []
     try:
         # Skills folder can be configured via env var, with fallback to repo root
         skills_folder_path = os.getenv("AGENT_RUNTIMES_SKILLS_FOLDER")
@@ -332,23 +356,25 @@ def _get_available_skills() -> list[dict[str, Any]]:
         else:
             repo_root = FilePath(__file__).resolve().parents[2]
             skills_path = repo_root / "skills"
-        
+
         if not skills_path.exists():
             logger.debug(f"Skills directory not found: {skills_path}")
             return skills
-        
+
         # Try to use agent_skills if available
         try:
             from agent_skills import AgentSkill
-            
+
             for skill_md in skills_path.rglob("SKILL.md"):
                 try:
                     skill = AgentSkill.from_skill_md(skill_md)
-                    skills.append({
-                        "name": skill.name,
-                        "description": skill.description,
-                        "tags": skill.tags if hasattr(skill, 'tags') else [],
-                    })
+                    skills.append(
+                        {
+                            "name": skill.name,
+                            "description": skill.description,
+                            "tags": skill.tags if hasattr(skill, "tags") else [],
+                        }
+                    )
                 except Exception as exc:
                     logger.warning(f"Failed to load skill from {skill_md}: {exc}")
                     continue
@@ -365,21 +391,27 @@ def _get_available_skills() -> list[dict[str, Any]]:
                         for line in content.split("\n"):
                             if line.startswith("# "):
                                 name = line[2:].strip()
-                            elif line.strip() and not line.startswith("#") and not description:
+                            elif (
+                                line.strip()
+                                and not line.startswith("#")
+                                and not description
+                            ):
                                 description = line.strip()
                                 break
-                        skills.append({
-                            "name": name,
-                            "description": description,
-                            "tags": [],
-                        })
+                        skills.append(
+                            {
+                                "name": name,
+                                "description": description,
+                                "tags": [],
+                            }
+                        )
                     except Exception as exc:
                         logger.warning(f"Failed to parse {skill_md_path}: {exc}")
                         continue
-                        
+
     except Exception as e:
         logger.error(f"Error scanning skills directory: {e}")
-    
+
     return skills
 
 
@@ -387,42 +419,44 @@ def _get_available_skills() -> list[dict[str, Any]]:
 async def get_codemode_status() -> CodemodeStatus:
     """
     Get the current codemode status.
-    
+
     This checks the actual agent adapters for codemode state, falling back
     to the global state if no adapters are registered.
-    
+
     Returns:
         Current codemode enabled state, active skills, available skills, and sandbox status.
     """
     from agent_runtimes.routes.agui import get_all_agui_adapters
-    
+
     available_skills = _get_available_skills()
     active_skill_names = _codemode_state["skills"]
-    
+
     # Check actual adapter state - if any adapter has codemode enabled, report enabled
     adapters = get_all_agui_adapters()
     codemode_enabled = _codemode_state["enabled"]  # Default to global state
-    
+
     if adapters:
         # Check if any adapter actually has codemode enabled
         for agent_id, agui_transport in adapters.items():
             try:
                 agent_adapter = agui_transport.agent
-                if hasattr(agent_adapter, 'codemode_enabled'):
+                if hasattr(agent_adapter, "codemode_enabled"):
                     codemode_enabled = agent_adapter.codemode_enabled
                     break  # Use first adapter's state as the canonical state
             except Exception as e:
-                logger.debug(f"Could not check codemode status for agent {agent_id}: {e}")
-    
+                logger.debug(
+                    f"Could not check codemode status for agent {agent_id}: {e}"
+                )
+
     # Build active skills list with full info
     active_skills = []
     for skill in available_skills:
         if skill["name"] in active_skill_names:
             active_skills.append(skill)
-    
+
     # Get sandbox status
     sandbox_status = _get_sandbox_status()
-    
+
     return CodemodeStatus(
         enabled=codemode_enabled,
         skills=active_skills,
@@ -434,16 +468,18 @@ async def get_codemode_status() -> CodemodeStatus:
 def _get_sandbox_status() -> SandboxStatus | None:
     """
     Get the current code sandbox status.
-    
+
     Returns:
         SandboxStatus with current sandbox configuration and connection status.
     """
     try:
-        from agent_runtimes.services.code_sandbox_manager import get_code_sandbox_manager
-        
+        from agent_runtimes.services.code_sandbox_manager import (
+            get_code_sandbox_manager,
+        )
+
         manager = get_code_sandbox_manager()
         status = manager.get_status()
-        
+
         sandbox_status = SandboxStatus(
             variant=status["variant"],
             jupyter_url=status.get("jupyter_url"),
@@ -455,16 +491,15 @@ def _get_sandbox_status() -> SandboxStatus | None:
             python_path=status.get("python_path"),
             mcp_proxy_url=status.get("mcp_proxy_url"),
         )
-        
+
         # If Jupyter variant, test the connection
         if status["variant"] == "local-jupyter" and status.get("jupyter_url"):
             jupyter_connected, jupyter_error = _test_jupyter_connection(
-                status["jupyter_url"],
-                status.get("jupyter_token")
+                status["jupyter_url"], status.get("jupyter_token")
             )
             sandbox_status.jupyter_connected = jupyter_connected
             sandbox_status.jupyter_error = jupyter_error
-        
+
         return sandbox_status
     except ImportError:
         logger.debug("code_sandboxes not installed, cannot get sandbox status")
@@ -474,37 +509,39 @@ def _get_sandbox_status() -> SandboxStatus | None:
         return None
 
 
-def _test_jupyter_connection(jupyter_url: str, jupyter_token: str | None) -> tuple[bool, str | None]:
+def _test_jupyter_connection(
+    jupyter_url: str, jupyter_token: str | None
+) -> tuple[bool, str | None]:
     """
     Test connection to a Jupyter server.
-    
+
     Args:
         jupyter_url: The Jupyter server URL
         jupyter_token: The authentication token
-        
+
     Returns:
         Tuple of (connected: bool, error_message: str | None)
     """
     import httpx
-    
+
     try:
         # Strip trailing slash if present
         base_url = jupyter_url
         if base_url.endswith("/"):
             base_url = base_url[:-1]
-        
+
         # Test connection by hitting the Jupyter server extension API endpoint
         # For jupyter-server extension at /api/jupyter-server, the API is at /api/jupyter-server/api
         headers = {}
         if jupyter_token:
             headers["Authorization"] = f"token {jupyter_token}"
-        
+
         status_url = f"{base_url}/api"
-        
+
         # Use a short timeout for the ping
         with httpx.Client(timeout=5.0) as client:
             response = client.get(status_url, headers=headers, follow_redirects=True)
-            
+
             if response.status_code == 200:
                 return True, None
             elif response.status_code == 401 or response.status_code == 403:
@@ -514,7 +551,10 @@ def _test_jupyter_connection(jupyter_url: str, jupyter_token: str | None) -> tup
     except httpx.ConnectError as e:
         return False, f"Connection refused - is Jupyter running at {jupyter_url}?"
     except httpx.TimeoutException:
-        return False, f"Connection timeout - Jupyter server at {jupyter_url} not responding"
+        return (
+            False,
+            f"Connection timeout - Jupyter server at {jupyter_url} not responding",
+        )
     except Exception as e:
         return False, f"Connection error: {str(e)}"
 
@@ -523,28 +563,28 @@ def _test_jupyter_connection(jupyter_url: str, jupyter_token: str | None) -> tup
 async def toggle_codemode(request: CodemodeToggleRequest) -> dict[str, Any]:
     """
     Toggle codemode on/off and optionally update skills.
-    
+
     This updates the runtime state AND updates the agent adapters' toolsets
     so codemode is enabled/disabled immediately without requiring a restart.
-    
+
     Args:
         request: Toggle request with enabled state and optional skills list.
-        
+
     Returns:
         Updated codemode status.
     """
     from agent_runtimes.routes.agui import get_all_agui_adapters
-    
+
     _codemode_state["enabled"] = request.enabled
-    
+
     if request.skills is not None:
         _codemode_state["skills"] = request.skills
-    
+
     # Update environment variables for consistency
     os.environ["AGENT_RUNTIMES_CODEMODE"] = "true" if request.enabled else "false"
     if request.skills is not None:
         os.environ["AGENT_RUNTIMES_SKILLS"] = ",".join(request.skills)
-    
+
     # Update all registered AG-UI adapters
     adapters_updated = 0
     adapters_failed = 0
@@ -552,11 +592,13 @@ async def toggle_codemode(request: CodemodeToggleRequest) -> dict[str, Any]:
         try:
             # Get the underlying agent adapter (PydanticAIAdapter)
             agent_adapter = agui_transport.agent
-            if hasattr(agent_adapter, 'set_codemode_enabled'):
+            if hasattr(agent_adapter, "set_codemode_enabled"):
                 success = agent_adapter.set_codemode_enabled(request.enabled)
                 if success:
                     adapters_updated += 1
-                    logger.info(f"Codemode {'enabled' if request.enabled else 'disabled'} for agent: {agent_id}")
+                    logger.info(
+                        f"Codemode {'enabled' if request.enabled else 'disabled'} for agent: {agent_id}"
+                    )
                 else:
                     adapters_failed += 1
                     logger.warning(f"Failed to toggle codemode for agent: {agent_id}")
@@ -564,10 +606,14 @@ async def toggle_codemode(request: CodemodeToggleRequest) -> dict[str, Any]:
                 logger.debug(f"Agent {agent_id} does not support codemode toggling")
         except Exception as e:
             adapters_failed += 1
-            logger.error(f"Error toggling codemode for agent {agent_id}: {e}", exc_info=True)
-    
-    logger.info(f"Codemode toggled: enabled={request.enabled}, skills={_codemode_state['skills']}, adapters_updated={adapters_updated}, adapters_failed={adapters_failed}")
-    
+            logger.error(
+                f"Error toggling codemode for agent {agent_id}: {e}", exc_info=True
+            )
+
+    logger.info(
+        f"Codemode toggled: enabled={request.enabled}, skills={_codemode_state['skills']}, adapters_updated={adapters_updated}, adapters_failed={adapters_failed}"
+    )
+
     return {
         "status": "ok",
         "enabled": _codemode_state["enabled"],

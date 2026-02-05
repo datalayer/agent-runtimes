@@ -25,6 +25,10 @@ export {
   type ChatBaseProps,
   type ProtocolConfig,
   type AgentRuntimeConfig,
+  type AvatarConfig,
+  type EmptyStateConfig,
+  type HeaderButtonsConfig,
+  type StreamingMessageOptions,
 } from './base/ChatBase';
 export { AgentDetails, type AgentDetailsProps } from './AgentDetails';
 export {

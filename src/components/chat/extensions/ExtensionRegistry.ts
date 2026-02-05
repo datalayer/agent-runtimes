@@ -20,7 +20,7 @@ import type {
 } from '../types/extension';
 
 /** Internal extension type for registry organization */
-type InternalExtensionType =
+export type InternalExtensionType =
   | 'message-renderer'
   | 'activity-renderer'
   | 'tool-ui'

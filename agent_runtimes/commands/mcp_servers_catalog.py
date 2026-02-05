@@ -9,6 +9,7 @@ of available MCP servers. It can be used directly by other libraries or through
 the CLI.
 
 Usage as library:
+    ```python
     from agent_runtimes.commands.mcp_servers_catalog import (
         list_mcp_servers_catalog,
         get_mcp_servers_catalog,
@@ -22,6 +23,7 @@ Usage as library:
 
     # Print formatted output
     list_mcp_servers_catalog(output=OutputFormat.table)
+    ```
 """
 
 import json

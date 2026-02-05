@@ -125,7 +125,7 @@ const OPTIMIZED_CONTEXT_DATA = {
   ],
 };
 
-interface HeaderProps {
+export interface HeaderProps {
   activeSession: string;
   agentName?: string;
   agentDescription?: string;

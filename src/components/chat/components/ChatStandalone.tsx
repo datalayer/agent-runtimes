@@ -52,7 +52,7 @@ export interface ChatStandaloneProps {
   /**
    * Handler for sending messages - REQUIRED.
    * This function will be called when the user sends a message.
-   * Signature: (message, messages, options?) => Promise<string | void>
+   * Signature: `(message, messages, options?) => Promise<string | void>`
    * - message: The user's message text
    * - messages: All messages in the conversation (including the new user message)
    * - options: Streaming callbacks (onChunk, onComplete, onError, signal)

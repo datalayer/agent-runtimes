@@ -72,7 +72,10 @@ export {
   useChatExtensionRegistry,
   defaultChatConfig,
   type ChatStore,
+  type ChatState,
+  type ChatActions,
   type ChatConfig,
+  type ToolCallState,
 } from './store';
 
 // Hooks (re-exported from main hooks folder)
@@ -129,6 +132,7 @@ export {
   createA2UIRenderer,
   A2UIExtensionImpl,
   type A2UIMessage,
+  type InternalExtensionType,
 } from './extensions';
 
 // Components
@@ -165,6 +169,10 @@ export {
   type ChatBaseProps,
   type ProtocolConfig,
   type AgentRuntimeConfig,
+  type AvatarConfig,
+  type EmptyStateConfig,
+  type HeaderButtonsConfig,
+  type StreamingMessageOptions,
   type ToolApprovalDialogProps,
   type PoweredByTagProps,
   type FloatingBrandButtonProps,

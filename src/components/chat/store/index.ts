@@ -23,6 +23,8 @@ export {
   useChatExtensionRegistry,
   defaultChatConfig,
   type ChatStore,
+  type ChatState,
+  type ChatActions,
   type ChatConfig,
   type ToolCallState,
 } from './chatStore';

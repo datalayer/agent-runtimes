@@ -42,6 +42,7 @@ class MCPUITransport(BaseTransport):
     React components or web components.
 
     Example:
+        ```python
         from agent_runtimes.agents import PydanticAIAgent
         from agent_runtimes.transports import MCPUITransport
 
@@ -56,6 +57,7 @@ class MCPUITransport(BaseTransport):
 
         # Response will include UIResource objects that can be rendered
         # using <UIResourceRenderer /> from @mcp-ui/client
+        ```
     """
 
     def __init__(
@@ -216,7 +218,7 @@ class MCPUITransport(BaseTransport):
                 - message: User message
                 - session_id: Optional session identifier
                 - ui_options: Optional UI configuration
-                - identities: Optional OAuth identities (list of {provider, accessToken})
+                - identities: Optional OAuth identities (list of `{provider, accessToken}`)
 
         Returns:
             Response with potential UI resources in the content array.

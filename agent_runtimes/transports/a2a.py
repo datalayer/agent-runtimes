@@ -32,6 +32,7 @@ class A2ATransport(BaseTransport):
     - Capability negotiation
 
     Example:
+        ```python
         from agent_runtimes.agents import PydanticAIAgent
         from agent_runtimes.transports import A2ATransport
 
@@ -45,6 +46,7 @@ class A2ATransport(BaseTransport):
             "sender_agent_id": "agent-456",
             "conversation_id": "conv-789"
         })
+        ```
     """
 
     @property
@@ -65,7 +67,7 @@ class A2ATransport(BaseTransport):
                 - sender_agent_id: ID of the requesting agent
                 - conversation_id: Conversation identifier
                 - capabilities_required: Optional list of required capabilities
-                - identities: Optional OAuth identities (list of {provider, accessToken})
+                - identities: Optional OAuth identities (list of `{provider, accessToken}`)
 
         Returns:
             A2A response data with keys:

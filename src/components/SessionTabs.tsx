@@ -7,13 +7,13 @@ import React from 'react';
 import { Text } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 
-interface Session {
+export interface Session {
   id: string;
   name: string;
   active: boolean;
 }
 
-interface SessionTabsProps {
+export interface SessionTabsProps {
   sessions: Session[];
   activeSession: string;
   agentName?: string;

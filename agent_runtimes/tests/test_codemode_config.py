@@ -36,7 +36,7 @@ async def test_codemode_reranker_wiring() -> None:
     if toolset is None:
         pytest.skip("agent-codemode not available")
 
-    assert toolset.tool_reranker is reranker  # type: ignore[union-attr]
+    assert toolset.tool_reranker is reranker
 
 
 @pytest.mark.asyncio
@@ -51,4 +51,4 @@ async def test_codemode_direct_call_override() -> None:
     if toolset is None:
         pytest.skip("agent-codemode not available")
 
-    assert toolset.allow_direct_tool_calls is True  # type: ignore[union-attr]
+    assert toolset.allow_direct_tool_calls is True

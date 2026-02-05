@@ -44,10 +44,23 @@ export {
   getRuntimeState,
   subscribeToRuntime,
 } from './runtimeStore';
+export type {
+  RuntimeStore,
+  RuntimeStoreState,
+  RuntimeStoreActions,
+} from './runtimeStore';
 
 // Hooks
 export { useAgentConnection } from './useAgentConnection';
+export type {
+  UseAgentConnectionReturn,
+  UseAgentConnectionOptions,
+} from './useAgentConnection';
 export { useAgentRuntime } from './useAgentRuntime';
+export type {
+  UseAgentRuntimeReturn,
+  UseAgentRuntimeOptions,
+} from './useAgentRuntime';
 
 // Types - re-exported from @datalayer/core
 export type {

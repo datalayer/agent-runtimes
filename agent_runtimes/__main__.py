@@ -204,7 +204,7 @@ def serve(
             "-j",
             envvar="AGENT_RUNTIMES_JUPYTER_SANDBOX",
             help="Jupyter sandbox URL with token (e.g., http://localhost:8888?token=xxx). "
-                 "If provided, uses a Jupyter kernel for code execution instead of local eval.",
+            "If provided, uses a Jupyter kernel for code execution instead of local eval.",
         ),
     ] = None,
     generated_code_folder: Annotated[
@@ -213,7 +213,7 @@ def serve(
             "--generated-code-folder",
             envvar="AGENT_RUNTIMES_GENERATED_CODE_FOLDER",
             help="Folder for generated code bindings. When using a shared volume with Jupyter, "
-                 "set this to a path accessible by both containers.",
+            "set this to a path accessible by both containers.",
         ),
     ] = None,
     skills_folder: Annotated[
@@ -222,7 +222,7 @@ def serve(
             "--skills-folder",
             envvar="AGENT_RUNTIMES_SKILLS_FOLDER",
             help="Folder for agent skills. When using a shared volume with Jupyter, "
-                 "set this to a path accessible by both containers.",
+            "set this to a path accessible by both containers.",
         ),
     ] = None,
     protocol: Annotated[

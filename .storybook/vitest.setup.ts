@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2025-2026 Datalayer, Inc.
+ * Distributed under the terms of the Modified BSD License.
+ */
+
 import * as a11yAddonAnnotations from '@storybook/addon-a11y/preview';
 import { setProjectAnnotations } from '@storybook/react-vite';
 import * as projectAnnotations from './preview';

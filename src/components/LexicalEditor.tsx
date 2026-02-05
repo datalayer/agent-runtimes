@@ -128,7 +128,7 @@ function SimpleKernelPluginsInner() {
   );
 }
 
-interface LexicalEditorProps {
+export interface LexicalEditorProps {
   content?: string;
   serviceManager?: ServiceManager.IManager;
 }

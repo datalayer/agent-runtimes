@@ -296,7 +296,7 @@ export interface TokenProviderConfig {
   displayName: string;
   /** Icon URL */
   iconUrl?: string;
-  /** Profile URL template (use {username} placeholder) */
+  /** Profile URL template (use `{username}` placeholder) */
   profileUrlTemplate?: string;
   /** User info endpoint (called with Bearer token) */
   userInfoUrl?: string;

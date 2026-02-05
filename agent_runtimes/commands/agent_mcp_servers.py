@@ -7,6 +7,7 @@ Agent MCP servers commands for the Agent Runtimes CLI.
 This module provides commands to start and stop MCP servers for running agents.
 
 Usage as library:
+    ```python
     from agent_runtimes.commands.agent_mcp_servers import (
         start_agent_mcp_servers,
         stop_agent_mcp_servers,
@@ -35,6 +36,7 @@ Usage as library:
         host="127.0.0.1",
         port=8000,
     )
+    ```
 """
 
 from typing import Any

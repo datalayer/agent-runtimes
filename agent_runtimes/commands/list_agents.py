@@ -9,6 +9,7 @@ from an agent-runtimes server. It can be used directly by other libraries
 or through the CLI.
 
 Usage as library:
+    ```python
     from agent_runtimes.commands.list_agents import (
         list_agents_from_server,
         OutputFormat,
@@ -21,6 +22,7 @@ Usage as library:
 
     # Print formatted output
     list_agents_from_server(host="localhost", port=8000, output=OutputFormat.table)
+    ```
 """
 
 import json
@@ -64,7 +66,7 @@ def list_agents_from_server(
 
     Returns:
         Dictionary containing the agents response from the server.
-        Format: {"agents": [{"id": "...", "name": "...", "status": "..."}, ...]}
+        Format: `{"agents": [{"id": "...", "name": "...", "status": "..."}, ...]}`
 
     Raises:
         ListAgentsError: If the server cannot be reached or returns an error

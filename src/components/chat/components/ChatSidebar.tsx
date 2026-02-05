@@ -106,7 +106,7 @@ export interface ChatSidebarProps {
   /**
    * Handler for sending messages.
    * When provided, this is used instead of protocol mode.
-   * Signature: (message, messages, options?) => Promise<string | void>
+   * Signature: `(message, messages, options?) => Promise<string | void>`
    */
   onSendMessage?: MessageHandler;
 
