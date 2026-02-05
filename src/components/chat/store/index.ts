@@ -26,3 +26,12 @@ export {
   type ChatConfig,
   type ToolCallState,
 } from './chatStore';
+
+export {
+  useConversationStore,
+  useConversationMessages,
+  useNeedsFetch,
+  useIsFetching,
+  type ConversationStore,
+  type ConversationData,
+} from './conversationStore';

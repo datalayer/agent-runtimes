@@ -121,6 +121,8 @@ export interface AgentSpec {
   icon?: string;
   /** Theme color for the agent (hex code) */
   color?: string;
+  /** Chat suggestions to show users what this agent can do */
+  suggestions?: string[];
 }
 
 // ============================================================================

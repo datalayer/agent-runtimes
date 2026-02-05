@@ -10,7 +10,11 @@ import { PageLayout, IconButton } from '@primer/react';
 import { SidebarCollapseIcon, SidebarExpandIcon } from '@primer/octicons-react';
 import { AiAgentIcon } from '@datalayer/icons-react';
 import { Blankslate } from '@primer/react/experimental';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import {
+  QueryClient,
+  QueryClientProvider,
+  useQuery,
+} from '@tanstack/react-query';
 import { Box } from '@datalayer/primer-addons';
 import { DatalayerThemeProvider } from '@datalayer/core';
 import { Chat, useChatStore } from '../components/chat';
@@ -39,6 +43,109 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+// Types for codemode status
+interface SandboxStatus {
+  variant: string;
+  jupyter_url: string | null;
+  jupyter_connected: boolean;
+  jupyter_error: string | null;
+  sandbox_running: boolean;
+  generated_path: string | null;
+  skills_path: string | null;
+  python_path: string | null;
+  /** MCP proxy URL for two-container architecture (tool calls via HTTP) */
+  mcp_proxy_url: string | null;
+}
+
+interface CodemodeStatusResponse {
+  enabled: boolean;
+  skills: Array<{ name: string; description: string; tags: string[] }>;
+  available_skills: Array<{
+    name: string;
+    description: string;
+    tags: string[];
+  }>;
+  sandbox: SandboxStatus | null;
+}
+
+/**
+ * Hook to fetch codemode status and compute Jupyter error banner.
+ * Must be used inside QueryClientProvider.
+ */
+function useJupyterSandboxStatus(
+  baseUrl: string,
+  isConfigured: boolean,
+  enableCodemode: boolean,
+  useJupyterSandbox: boolean,
+): { message: string; variant: 'danger' | 'warning' } | undefined {
+  const { data: codemodeStatus } = useQuery<CodemodeStatusResponse>({
+    queryKey: ['codemode-status', baseUrl],
+    queryFn: async () => {
+      const response = await fetch(
+        `${baseUrl}/api/v1/configure/codemode-status`,
+      );
+      if (!response.ok) {
+        throw new Error('Failed to fetch codemode status');
+      }
+      return response.json();
+    },
+    enabled: isConfigured && enableCodemode && useJupyterSandbox,
+    refetchInterval: 10000, // Refresh every 10 seconds
+  });
+
+  return React.useMemo(() => {
+    if (!isConfigured || !enableCodemode || !useJupyterSandbox) {
+      return undefined;
+    }
+
+    const sandbox = codemodeStatus?.sandbox;
+    if (!sandbox) {
+      return undefined;
+    }
+
+    // Check if Jupyter variant is selected but not connected
+    if (sandbox.variant === 'local-jupyter' && !sandbox.jupyter_connected) {
+      return {
+        message: sandbox.jupyter_error
+          ? `Jupyter Sandbox Error: ${sandbox.jupyter_error}`
+          : 'Jupyter Sandbox not connected. Code execution may fail.',
+        variant: 'danger' as const,
+      };
+    }
+
+    return undefined;
+  }, [isConfigured, enableCodemode, useJupyterSandbox, codemodeStatus]);
+}
+
+/**
+ * Chat component wrapper that monitors Jupyter sandbox status.
+ * Must be rendered inside QueryClientProvider.
+ */
+interface ChatWithJupyterStatusProps {
+  baseUrl: string;
+  isConfigured: boolean;
+  enableCodemode: boolean;
+  useJupyterSandbox: boolean;
+  chatProps: React.ComponentProps<typeof Chat>;
+}
+
+function ChatWithJupyterStatus({
+  baseUrl,
+  isConfigured,
+  enableCodemode,
+  useJupyterSandbox,
+  chatProps,
+}: ChatWithJupyterStatusProps) {
+  const jupyterErrorBanner = useJupyterSandboxStatus(
+    baseUrl,
+    isConfigured,
+    enableCodemode,
+    useJupyterSandbox,
+  );
+
+  return <Chat {...chatProps} errorBanner={jupyterErrorBanner} />;
+}
 
 // Default configuration - use environment variable if available
 // Note: Vercel AI connects to Jupyter server (8888), other protocols connect to agent-runtimes server (8765)
@@ -207,6 +314,7 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
   // Agent capabilities state (moved from Header toggles)
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [enableCodemode, setEnableCodemode] = useState(initialEnableCodemode);
+  const [useJupyterSandbox, setUseJupyterSandbox] = useState(false);
   const [allowDirectToolCalls, setAllowDirectToolCalls] = useState(
     initialAllowDirectToolCalls,
   );
@@ -218,6 +326,35 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
   >(initialSelectedMcpServers);
   const autoSelectRef = useRef(false);
   const enableSkills = selectedSkills.length > 0;
+
+  // =====================================================================
+  // Two-Container Codemode Architecture
+  // =====================================================================
+  //
+  // When Jupyter sandbox is enabled, the architecture uses two containers:
+  //
+  // ┌─────────────────────────────────────┐  ┌─────────────────────────────────┐
+  // │  agent-runtimes (port 8765)         │  │  jupyter server (port 8888)     │
+  // │  ┌─────────────────────────────┐    │  │  ┌─────────────────────────┐    │
+  // │  │  MCP Servers (stdio)        │    │  │  │  Jupyter Kernel         │    │
+  // │  │  - github, filesystem, etc  │◀───┼──┼──│  executes generated     │    │
+  // │  └─────────────────────────────┘    │  │  │  Python code            │    │
+  // │  ┌─────────────────────────────┐    │  │  └─────────────────────────┘    │
+  // │  │  /api/v1/mcp/proxy/*        │    │  │                                 │
+  // │  │  HTTP proxy for tool calls  │    │  │  Tool calls go via HTTP to     │
+  // │  └─────────────────────────────┘    │  │  agent-runtimes MCP proxy      │
+  // └─────────────────────────────────────┘  └─────────────────────────────────┘
+  //
+  // The backend automatically configures mcp_proxy_url when jupyter_sandbox
+  // is provided, defaulting to http://0.0.0.0:8765/api/v1/mcp/proxy
+  //
+  // =====================================================================
+
+  // Jupyter sandbox URL (used when useJupyterSandbox is true)
+  // Can be configured via VITE_JUPYTER_SANDBOX_URL environment variable
+  const jupyterSandboxUrl =
+    import.meta.env.VITE_JUPYTER_SANDBOX_URL ||
+    'http://localhost:8888/api/jupyter-server?token=60c1661cc408f978c309d04157af55c9588ff9557c9380e4fb50785750703da6';
 
   const handleSelectedServersChange = React.useCallback(
     (newServers: McpServerSelection[]) => {
@@ -393,6 +530,7 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
     if (!enabled) {
       setAllowDirectToolCalls(false);
       setEnableToolReranker(false);
+      setUseJupyterSandbox(false);
     }
   };
 
@@ -493,6 +631,7 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
           enable_tool_reranker: enableToolReranker,
           selected_mcp_servers: selectedMcpServers,
           skills: selectedSkills,
+          jupyter_sandbox: useJupyterSandbox ? jupyterSandboxUrl : undefined,
         }),
       });
 
@@ -532,6 +671,8 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
     enableToolReranker,
     selectedMcpServers,
     selectedSkills,
+    useJupyterSandbox,
+    jupyterSandboxUrl,
   ]);
 
   /**
@@ -794,6 +935,7 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
                       isCreatingAgent={isCreatingAgent}
                       createError={createError}
                       enableCodemode={enableCodemode}
+                      useJupyterSandbox={useJupyterSandbox}
                       allowDirectToolCalls={allowDirectToolCalls}
                       enableToolReranker={enableToolReranker}
                       availableSkills={MOCK_SKILLS}
@@ -812,6 +954,7 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
                       onAgentSelect={handleAgentSelect}
                       onConnect={handleConnect}
                       onEnableCodemodeChange={handleEnableCodemodeChange}
+                      onUseJupyterSandboxChange={setUseJupyterSandbox}
                       onAllowDirectToolCallsChange={setAllowDirectToolCalls}
                       onEnableToolRerankerChange={setEnableToolReranker}
                       onSelectedSkillsChange={setSelectedSkills}
@@ -820,54 +963,61 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
                   ) : (
                     /* Chat Interface */
                     <Box sx={{ flex: 1, minHeight: 0 }}>
-                      <Chat
-                        transport={currentAgent?.transport || transport}
-                        extensions={extensions}
-                        wsUrl={wsUrl}
+                      <ChatWithJupyterStatus
                         baseUrl={baseUrl}
-                        agentId={currentAgent?.id || agentName}
-                        title={
-                          currentAgent?.name || agentName || 'AI Assistant'
-                        }
-                        autoConnect={true}
-                        autoFocus={true}
-                        placeholder="Type your message to the agent..."
-                        height="calc(100vh - 150px)"
-                        showModelSelector={true}
-                        showToolsMenu={true}
-                        showSkillsMenu={true}
-                        codemodeEnabled={enableCodemode}
-                        initialModel={model}
-                        mcpServers={selectedMcpServers}
-                        initialSkills={selectedSkills}
-                        identityProviders={oauthProvidersConfig}
-                        onIdentityConnect={handleIdentityConnect}
-                        onIdentityDisconnect={handleIdentityDisconnect}
-                        suggestions={[
-                          {
-                            title: '👋 Say hello',
-                            message: 'Hello! What can you help me with today?',
+                        isConfigured={isConfigured}
+                        enableCodemode={enableCodemode}
+                        useJupyterSandbox={useJupyterSandbox}
+                        chatProps={{
+                          transport: currentAgent?.transport || transport,
+                          extensions: extensions,
+                          wsUrl: wsUrl,
+                          baseUrl: baseUrl,
+                          agentId: currentAgent?.id || agentName,
+                          title:
+                            currentAgent?.name || agentName || 'AI Assistant',
+                          autoConnect: true,
+                          autoFocus: true,
+                          placeholder: 'Type your message to the agent...',
+                          height: 'calc(100vh - 150px)',
+                          showModelSelector: true,
+                          showToolsMenu: true,
+                          showSkillsMenu: true,
+                          codemodeEnabled: enableCodemode,
+                          initialModel: model,
+                          mcpServers: selectedMcpServers,
+                          initialSkills: selectedSkills,
+                          identityProviders: oauthProvidersConfig,
+                          onIdentityConnect: handleIdentityConnect,
+                          onIdentityDisconnect: handleIdentityDisconnect,
+                          suggestions: [
+                            {
+                              title: '👋 Say hello',
+                              message:
+                                'Hello! What can you help me with today?',
+                            },
+                            {
+                              title: '💡 Get ideas',
+                              message:
+                                'Can you suggest some creative project ideas?',
+                            },
+                            {
+                              title: '📝 Explain concepts',
+                              message: 'Can you explain how AI agents work?',
+                            },
+                            {
+                              title: '🔧 Help with code',
+                              message:
+                                'Can you help me write some Python code?',
+                            },
+                          ],
+                          onDisconnect: handleReset,
+                          onMessageSent: (_content: string) => {
+                            // Message sent
                           },
-                          {
-                            title: '💡 Get ideas',
-                            message:
-                              'Can you suggest some creative project ideas?',
+                          onMessageReceived: (_message: unknown) => {
+                            // Message received
                           },
-                          {
-                            title: '📝 Explain concepts',
-                            message: 'Can you explain how AI agents work?',
-                          },
-                          {
-                            title: '🔧 Help with code',
-                            message: 'Can you help me write some Python code?',
-                          },
-                        ]}
-                        onDisconnect={handleReset}
-                        onMessageSent={(_content: string) => {
-                          // Message sent
-                        }}
-                        onMessageReceived={(_message: unknown) => {
-                          // Message received
                         }}
                       />
                     </Box>

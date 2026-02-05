@@ -221,6 +221,30 @@ export interface ChatProps {
 
   /** Callback when identity disconnects */
   onIdentityDisconnect?: (provider: OAuthProvider) => void;
+
+  /**
+   * Runtime ID for conversation persistence.
+   * When provided, messages are fetched from the server API on page reload
+   * and prevents message mixing between different agent spaces.
+   */
+  runtimeId?: string;
+
+  /**
+   * Endpoint URL for fetching conversation history.
+   * When runtimeId is provided, this endpoint is called to fetch
+   * the conversation history on mount.
+   * If not provided, defaults to `{protocol.endpoint}/history`.
+   */
+  historyEndpoint?: string;
+
+  /**
+   * Error banner to display at the top of the chat.
+   * Use this to show sandbox connection errors or other warnings.
+   */
+  errorBanner?: {
+    message: string;
+    variant?: 'danger' | 'warning';
+  };
 }
 
 /**
@@ -297,6 +321,9 @@ export function Chat({
   identityProviders,
   onIdentityConnect,
   onIdentityDisconnect,
+  runtimeId,
+  historyEndpoint,
+  errorBanner,
 }: ChatProps) {
   const [error, setError] = useState<string | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
@@ -524,6 +551,46 @@ export function Chat({
           height: '100%',
         }}
       >
+        {/* Error banner for sandbox/connection issues */}
+        {errorBanner && (
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 2,
+              px: 3,
+              py: 2,
+              bg:
+                errorBanner.variant === 'warning'
+                  ? 'attention.subtle'
+                  : 'danger.subtle',
+              borderBottom: '1px solid',
+              borderColor:
+                errorBanner.variant === 'warning'
+                  ? 'attention.muted'
+                  : 'danger.muted',
+            }}
+          >
+            <AlertIcon
+              size={16}
+              fill={
+                errorBanner.variant === 'warning' ? 'attention.fg' : 'danger.fg'
+              }
+            />
+            <Text
+              sx={{
+                fontSize: 1,
+                color:
+                  errorBanner.variant === 'warning'
+                    ? 'attention.fg'
+                    : 'danger.fg',
+                flex: 1,
+              }}
+            >
+              {errorBanner.message}
+            </Text>
+          </Box>
+        )}
         <ChatBase
           title={title}
           showHeader={showHeader}
@@ -533,6 +600,8 @@ export function Chat({
           suggestions={suggestions}
           submitOnSuggestionClick={submitOnSuggestionClick}
           autoFocus={autoFocus}
+          runtimeId={runtimeId}
+          historyEndpoint={historyEndpoint}
           headerContent={
             <IconButton
               icon={InfoIcon}

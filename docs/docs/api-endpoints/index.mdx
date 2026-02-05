@@ -150,7 +150,8 @@ Start catalog MCP servers for **all** running agents.
   "env_vars": [
     {"name": "TAVILY_API_KEY", "value": "tvly-xxx"},
     {"name": "GITHUB_TOKEN", "value": "ghp_xxx"}
-  ]
+  ],
+  "jupyter_sandbox": "http://localhost:8888?token=my-token"
 }
 ```
 
@@ -159,6 +160,7 @@ Start catalog MCP servers for **all** running agents.
 | `env_vars` | array | No | List of environment variables to set before starting servers |
 | `env_vars[].name` | string | Yes | Environment variable name |
 | `env_vars[].value` | string | Yes | Environment variable value |
+| `jupyter_sandbox` | string | No | Jupyter server URL with token for code execution (configures the sandbox manager) |
 
 **Example Request:**
 
@@ -179,7 +181,9 @@ curl -X POST http://localhost:8000/api/v1/agents/mcp-servers/start \
   "already_stopped": [],
   "failed_servers": [],
   "codemode_rebuilt": true,
-  "message": "Started 2 server(s) across 2 agent(s)"
+  "sandbox_configured": true,
+  "sandbox_variant": "local-jupyter",
+  "message": "Started 2 server(s) across 2 agent(s), sandbox=local-jupyter"
 }
 ```
 
@@ -250,6 +254,8 @@ curl -X POST http://localhost:8000/api/v1/agents/my-agent/mcp-servers/start \
 | `already_running` | array | List of server IDs that were already running |
 | `failed_servers` | array | List of servers that failed to start with error details |
 | `codemode_rebuilt` | boolean | Whether the Codemode toolset was rebuilt |
+| `sandbox_configured` | boolean | Whether the code sandbox was (re)configured |
+| `sandbox_variant` | string | The sandbox variant after configuration (`local-eval` or `local-jupyter`) |
 | `message` | string | Summary message |
 
 **Error Responses:**
@@ -344,6 +350,132 @@ curl -X POST http://localhost:8000/api/v1/agents/my-agent/mcp-servers/stop
 |------|-------------|
 | `404` | Agent not found (single-agent endpoint only) |
 | `500` | Failed to stop MCP servers |
+
+### Code Sandbox Configuration
+
+The Code Sandbox Manager controls how code is executed when using Code Mode or Skills. It supports two variants:
+
+- **`local-eval`**: Uses Python `exec()` for simple code execution (default)
+- **`local-jupyter`**: Connects to an external Jupyter server for persistent kernel state
+
+#### Get Sandbox Status
+
+```http
+GET /api/v1/agents/sandbox/status
+```
+
+Get the current status of the code sandbox manager.
+
+**Example Request:**
+
+```bash
+curl http://localhost:8000/api/v1/agents/sandbox/status
+```
+
+**Response:** `200 OK`
+
+```json
+{
+  "variant": "local-eval",
+  "jupyter_url": null,
+  "jupyter_token_set": false,
+  "sandbox_running": true
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `variant` | string | Current sandbox variant (`local-eval` or `local-jupyter`) |
+| `jupyter_url` | string | Jupyter server URL if configured |
+| `jupyter_token_set` | boolean | Whether a Jupyter token is configured |
+| `sandbox_running` | boolean | Whether a sandbox instance is currently active |
+
+#### Configure Sandbox
+
+```http
+POST /api/v1/agents/sandbox/configure
+Content-Type: application/json
+```
+
+Configure the code sandbox manager at runtime. If a sandbox is running with a different configuration, it will be stopped and recreated on next use.
+
+**Request Body:**
+
+```json
+{
+  "variant": "local-jupyter",
+  "jupyter_url": "http://localhost:8888?token=my-token"
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `variant` | string | No | Sandbox variant: `local-eval` (default) or `local-jupyter` |
+| `jupyter_url` | string | Required for `local-jupyter` | Jupyter server URL (can include token as query param) |
+| `jupyter_token` | string | No | Jupyter token (overrides token in URL if provided) |
+
+**Example Requests:**
+
+```bash
+# Configure for Jupyter sandbox
+curl -X POST http://localhost:8000/api/v1/agents/sandbox/configure \
+  -H "Content-Type: application/json" \
+  -d '{"variant": "local-jupyter", "jupyter_url": "http://localhost:8888?token=my-token"}'
+
+# Reset to local-eval sandbox
+curl -X POST http://localhost:8000/api/v1/agents/sandbox/configure \
+  -H "Content-Type: application/json" \
+  -d '{"variant": "local-eval"}'
+```
+
+**Response:** `200 OK`
+
+```json
+{
+  "variant": "local-jupyter",
+  "jupyter_url": "http://localhost:8888",
+  "jupyter_token_set": true,
+  "sandbox_running": false
+}
+```
+
+**Error Responses:**
+
+| Code | Description |
+|------|-------------|
+| `400` | `jupyter_url` is required when variant is `local-jupyter` |
+| `500` | Failed to configure sandbox |
+
+#### Restart Sandbox
+
+```http
+POST /api/v1/agents/sandbox/restart
+```
+
+Restart the code sandbox with current configuration. This stops any running sandbox and creates a new instance.
+
+**Example Request:**
+
+```bash
+curl -X POST http://localhost:8000/api/v1/agents/sandbox/restart
+```
+
+**Response:** `200 OK`
+
+```json
+{
+  "variant": "local-jupyter",
+  "jupyter_url": "http://localhost:8888",
+  "jupyter_token_set": true,
+  "sandbox_running": true
+}
+```
+
+**Error Responses:**
+
+| Code | Description |
+|------|-------------|
+| `500` | Failed to restart sandbox |
 
 ### Delete Agent
 

@@ -9,10 +9,10 @@ Credentials are configured via environment variables.
 """
 
 import os
-import tempfile
 from typing import Dict
 
 from agent_runtimes.types import MCPServer
+
 
 # ============================================================================
 # MCP Server Definitions
@@ -35,7 +35,7 @@ FILESYSTEM_MCP_SERVER = MCPServer(
     name="Filesystem",
     description="Local filesystem read/write operations",
     command="npx",
-    args=["-y", "@anthropic/mcp-server-filesystem", tempfile.gettempdir()],
+    args=["-y", "@modelcontextprotocol/server-filesystem", "/tmp"],
     transport="stdio",
     enabled=True,
     tools=[],
@@ -47,7 +47,7 @@ GITHUB_MCP_SERVER = MCPServer(
     name="GitHub",
     description="GitHub repository operations (issues, PRs, code search)",
     command="npx",
-    args=["-y", "@anthropic/mcp-server-github"],
+    args=["-y", "@modelcontextprotocol/server-github"],
     transport="stdio",
     enabled=True,
     tools=[],
@@ -59,9 +59,9 @@ GOOGLE_WORKSPACE_MCP_SERVER = MCPServer(
     name="Google Workspace",
     description="Google Drive, Gmail, Calendar, and Docs integration",
     command="npx",
-    args=["-y", "@anthropic/mcp-server-google-workspace"],
+    args=["-y", "@modelcontextprotocol/server-google-maps"],  # Note: google-workspace not available, using google-maps as placeholder
     transport="stdio",
-    enabled=True,
+    enabled=False,  # Disabled - package may not exist
     tools=[],
     required_env_vars=["GOOGLE_OAUTH_CLIENT_ID", "GOOGLE_OAUTH_CLIENT_SECRET"],
 )
@@ -71,7 +71,7 @@ SLACK_MCP_SERVER = MCPServer(
     name="Slack",
     description="Slack messaging and channel operations",
     command="npx",
-    args=["-y", "@anthropic/mcp-server-slack"],
+    args=["-y", "@modelcontextprotocol/server-slack"],
     transport="stdio",
     enabled=True,
     tools=[],
@@ -95,9 +95,9 @@ ALPHAVANTAGE_MCP_SERVER = MCPServer(
     name="Alpha Vantage",
     description="Financial market data and stock information",
     command="npx",
-    args=["-y", "@anthropic/mcp-server-alphavantage"],
+    args=["-y", "mcp-server-alphavantage"],  # Community package
     transport="stdio",
-    enabled=True,
+    enabled=False,  # Disabled - need to verify package exists
     tools=[],
     required_env_vars=["ALPHAVANTAGE_API_KEY"],
 )
@@ -107,9 +107,9 @@ CHART_MCP_SERVER = MCPServer(
     name="Chart Generator",
     description="Generate charts and visualizations",
     command="npx",
-    args=["-y", "@anthropic/mcp-server-chart"],
+    args=["-y", "mcp-server-chart"],  # Community package if exists
     transport="stdio",
-    enabled=True,
+    enabled=False,  # Disabled - need to verify package exists
     tools=[],
     required_env_vars=[],  # No env vars required
 )
@@ -119,11 +119,7 @@ LINKEDIN_MCP_SERVER = MCPServer(
     name="LinkedIn",
     description="LinkedIn profile and job search operations",
     command="uvx",
-    args=[
-        "--from",
-        "git+https://github.com/stickerdaniel/linkedin-mcp-server",
-        "linkedin-mcp-server",
-    ],
+    args=["--from", "git+https://github.com/stickerdaniel/linkedin-mcp-server", "linkedin-mcp-server"],
     transport="stdio",
     enabled=True,
     tools=[],
@@ -135,9 +131,9 @@ GMAIL_MCP_SERVER = MCPServer(
     name="Gmail",
     description="Gmail email operations",
     command="npx",
-    args=["-y", "@anthropic/mcp-server-gmail"],
+    args=["-y", "@modelcontextprotocol/server-google-drive"],  # Note: dedicated gmail server may not exist
     transport="stdio",
-    enabled=True,
+    enabled=False,  # Disabled - need dedicated gmail server
     tools=[],
     required_env_vars=["GOOGLE_OAUTH_CLIENT_ID", "GOOGLE_OAUTH_CLIENT_SECRET"],
 )
@@ -147,7 +143,7 @@ GDRIVE_MCP_SERVER = MCPServer(
     name="Google Drive",
     description="Google Drive file operations",
     command="npx",
-    args=["-y", "@anthropic/mcp-server-gdrive"],
+    args=["-y", "@modelcontextprotocol/server-google-drive"],
     transport="stdio",
     enabled=True,
     tools=[],

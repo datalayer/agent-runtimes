@@ -197,6 +197,34 @@ def serve(
             help="Comma-separated list of skills to enable (requires --codemode)",
         ),
     ] = None,
+    jupyter_sandbox: Annotated[
+        Optional[str],
+        typer.Option(
+            "--jupyter-sandbox",
+            "-j",
+            envvar="AGENT_RUNTIMES_JUPYTER_SANDBOX",
+            help="Jupyter sandbox URL with token (e.g., http://localhost:8888?token=xxx). "
+                 "If provided, uses a Jupyter kernel for code execution instead of local eval.",
+        ),
+    ] = None,
+    generated_code_folder: Annotated[
+        Optional[str],
+        typer.Option(
+            "--generated-code-folder",
+            envvar="AGENT_RUNTIMES_GENERATED_CODE_FOLDER",
+            help="Folder for generated code bindings. When using a shared volume with Jupyter, "
+                 "set this to a path accessible by both containers.",
+        ),
+    ] = None,
+    skills_folder: Annotated[
+        Optional[str],
+        typer.Option(
+            "--skills-folder",
+            envvar="AGENT_RUNTIMES_SKILLS_FOLDER",
+            help="Folder for agent skills. When using a shared volume with Jupyter, "
+                 "set this to a path accessible by both containers.",
+        ),
+    ] = None,
     protocol: Annotated[
         Protocol,
         typer.Option(
@@ -257,6 +285,9 @@ def serve(
         # Start with Code Mode and skills
         agent-runtimes serve --codemode --mcp-servers tavily --skills web_search,github_lookup
 
+        # Start with a Jupyter sandbox for code execution (connects to existing Jupyter server)
+        agent-runtimes serve --codemode --jupyter-sandbox "http://localhost:8888?token=my-token"
+
         # Start with a specific protocol
         agent-runtimes serve --agent-id crawler --protocol vercel-ai
 
@@ -285,6 +316,9 @@ def serve(
             mcp_servers=mcp_servers,
             codemode=codemode,
             skills=skills,
+            jupyter_sandbox=jupyter_sandbox,
+            generated_code_folder=generated_code_folder,
+            skills_folder=skills_folder,
             protocol=protocol,
             find_free_port_flag=find_free_port,
         )
