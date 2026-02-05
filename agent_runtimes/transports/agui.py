@@ -19,18 +19,10 @@ AG-UI is a lightweight protocol focused on UI integration with:
 
 import json
 import logging
-from typing import TYPE_CHECKING, Any, AsyncIterator
+from typing import Any, AsyncIterator
 
-if TYPE_CHECKING:
-    from pydantic_ai.ui.ag_ui._adapter import AGUIAdapter
-    from starlette.applications import Starlette
-else:
-    try:
-        from pydantic_ai.ui.ag_ui._adapter import AGUIAdapter
-    except ImportError:
-        AGUIAdapter = Any  # type: ignore[misc,assignment]
-
-    from starlette.applications import Starlette  # type: ignore[assignment]
+from pydantic_ai.ui.ag_ui._adapter import AGUIAdapter
+from starlette.applications import Starlette
 
 from ..adapters.base import BaseAgent
 from ..context.identities import set_request_identities

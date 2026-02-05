@@ -37,7 +37,7 @@ dependencies = [
     "filelock>=3.20.3",
     "jupyter-server>=2.10,<3",
     "mcp-ui-server",
-    "pydantic-ai-slim[openai,anthropic,google,mcp,dbos,bedrock]",
+    "pydantic-ai-slim[openai,anthropic,google,mcp,dbos,bedrock]>=1.43.0",
     "pydantic-graph",
     "pydantic-settings",
     "pydantic[email]",
@@ -71,7 +71,6 @@ docs = [
     "click>=8.3.1",  # Use latest version, 8.2.2 issue has been fixed
     "npdoc_to_md",
     "pydoc-markdown>=4.0",  # Use modern version with proper module structure
-    "pydantic-ai-slim[openai,anthropic,google,mcp,dbos,bedrock]",  # Required for imports during doc generation
 ]
 examples = [
     "fastapi",
