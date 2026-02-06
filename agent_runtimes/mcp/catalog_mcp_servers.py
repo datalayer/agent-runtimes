@@ -60,7 +60,7 @@ FILESYSTEM_MCP_SERVER = MCPServer(
     args=[
         "-y",
         "@modelcontextprotocol/server-filesystem",
-        "/tmp",
+        "/tmp",  # nosec B108
     ],
     transport="stdio",
     enabled=True,
