@@ -19,7 +19,6 @@ from typing import Any, Literal
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 from pydantic_ai import Agent as PydanticAgent
-from starlette.routing import Mount
 
 from ..adapters.pydantic_ai_adapter import PydanticAIAdapter
 from ..config.agents import AGENT_SPECS
@@ -152,10 +151,10 @@ def _test_jupyter_sandbox(jupyter_sandbox_url: str) -> tuple[bool, str | None]:
             else:
                 return False, f"Jupyter server returned HTTP {response.status_code}"
 
-    except httpx.ConnectError as e:
+    except httpx.ConnectError:
         return False, f"Connection refused - is Jupyter running at {base_url}?"
     except httpx.TimeoutException:
-        return False, f"Connection timeout - Jupyter server not responding"
+        return False, "Connection timeout - Jupyter server not responding"
     except Exception as e:
         return False, f"Connection error: {str(e)}"
 
@@ -1575,7 +1574,7 @@ async def _start_mcp_servers_for_agent(
         )
     else:
         logger.warning(
-            f"_start_mcp_servers_for_agent: Adapter has no selected MCP servers attribute"
+            "_start_mcp_servers_for_agent: Adapter has no selected MCP servers attribute"
         )
 
     # If no selected servers, check for pending servers in app.state
@@ -1595,7 +1594,7 @@ async def _start_mcp_servers_for_agent(
                 if hasattr(adapter, "_selected_mcp_servers"):
                     adapter._selected_mcp_servers = selected_servers
                     logger.info(
-                        f"_start_mcp_servers_for_agent: Updated adapter._selected_mcp_servers"
+                        "_start_mcp_servers_for_agent: Updated adapter._selected_mcp_servers"
                     )
         except Exception as e:
             logger.warning(
@@ -1719,7 +1718,7 @@ async def _start_mcp_servers_for_agent(
                     sandbox_type = type(new_codemode.sandbox).__name__
                     logger.info(f"New codemode toolset has sandbox: {sandbox_type}")
                 else:
-                    logger.info(f"New codemode toolset has no sandbox attached")
+                    logger.info("New codemode toolset has no sandbox attached")
 
                 # Try to initialize the new toolset
                 # If start() fails (e.g., pickle error with Jupyter sandbox),
@@ -1728,7 +1727,7 @@ async def _start_mcp_servers_for_agent(
                 try:
                     await new_codemode.start()
                     start_succeeded = True
-                    logger.info(f"Codemode toolset start() completed successfully")
+                    logger.info("Codemode toolset start() completed successfully")
                 except Exception as start_error:
                     # Log the error but continue - the toolset may still work for execution
                     logger.warning(
@@ -1749,7 +1748,7 @@ async def _start_mcp_servers_for_agent(
                     logger.info(f"Removed {removed_count} old codemode toolset(s)")
 
                     adapter._non_mcp_toolsets.append(new_codemode)
-                    logger.info(f"Added new codemode toolset to adapter")
+                    logger.info("Added new codemode toolset to adapter")
 
                 codemode_rebuilt = True
                 logger.info(

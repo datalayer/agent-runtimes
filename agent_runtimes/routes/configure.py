@@ -548,7 +548,7 @@ def _test_jupyter_connection(
                 return False, f"Authentication failed (HTTP {response.status_code})"
             else:
                 return False, f"Jupyter server returned HTTP {response.status_code}"
-    except httpx.ConnectError as e:
+    except httpx.ConnectError:
         return False, f"Connection refused - is Jupyter running at {jupyter_url}?"
     except httpx.TimeoutException:
         return (

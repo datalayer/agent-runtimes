@@ -21,11 +21,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, AsyncGenerator
 
-# Load environment variables from .env file
 from dotenv import load_dotenv
-
-load_dotenv()
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
@@ -40,9 +36,8 @@ from .mcp import (
     initialize_config_mcp_toolsets,
     shutdown_config_mcp_toolsets,
 )
-from .mcp.catalog_mcp_servers import MCP_SERVER_CATALOG, get_catalog_server
+from .mcp.catalog_mcp_servers import get_catalog_server
 from .routes import (
-    A2AAgentCard,
     a2a_protocol_router,
     a2ui_router,
     acp_router,
@@ -66,6 +61,9 @@ from .routes import (
     vercel_ai_router,
 )
 from .routes.agents import set_api_prefix
+
+# Load environment variables from .env file
+load_dotenv()
 
 logger = logging.getLogger(__name__)
 
@@ -109,7 +107,6 @@ async def _create_and_register_cli_agent(
         api_prefix: API prefix for routes
         protocol: Transport protocol (ag-ui, vercel-ai, vercel-ai-jupyter, a2a)
     """
-    from pathlib import Path
 
     from pydantic_ai import Agent as PydanticAgent
 
@@ -170,7 +167,6 @@ async def _create_and_register_cli_agent(
                 AgentSkillsToolset,
                 SandboxExecutor,
             )
-            from code_sandboxes import LocalEvalSandbox
 
             if PYDANTIC_AI_AVAILABLE:
                 repo_root = Path(__file__).resolve().parents[1]
@@ -198,7 +194,7 @@ async def _create_and_register_cli_agent(
                 # Create executor for running skill scripts
                 if shared_sandbox is not None:
                     executor = SandboxExecutor(shared_sandbox)
-                    logger.info(f"Using shared sandbox for skills executor")
+                    logger.info("Using shared sandbox for skills executor")
                 else:
                     # Use CodeSandboxManager for skills-only sandbox as well
                     from .services.code_sandbox_manager import get_code_sandbox_manager
@@ -561,7 +557,7 @@ async def _create_and_register_cli_agent(
                 # Update the reference
                 codemode_toolset = new_codemode
                 logger.info(
-                    f"rebuild_codemode: Successfully created new CodemodeToolset"
+                    "rebuild_codemode: Successfully created new CodemodeToolset"
                 )
                 return new_codemode
 
@@ -652,7 +648,7 @@ async def _create_and_register_cli_agent(
     elif protocol == "a2a":
         # Register with A2A
         try:
-            from .routes.a2a import A2AAgentCard, get_a2a_mounts, register_a2a_agent
+            from .routes.a2a import A2AAgentCard, register_a2a_agent
 
             # Create A2A agent card from agent info
             a2a_card = A2AAgentCard(
@@ -873,7 +869,7 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
                 else:
                     # No CLI MCP servers, use agent spec servers
                     logger.info(
-                        f"No CLI --mcp-servers specified: using agent spec servers"
+                        "No CLI --mcp-servers specified: using agent spec servers"
                     )
                     for mcp_server in agent_spec.mcp_servers:
                         mcp_manager.add_server(mcp_server)
@@ -909,7 +905,7 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
                     await start_all_mcp_servers()
                 elif all_mcp_servers and enable_codemode:
                     logger.info(
-                        f"Codemode enabled: skipping lifecycle manager MCP server startup (codemode will manage servers)"
+                        "Codemode enabled: skipping lifecycle manager MCP server startup (codemode will manage servers)"
                     )
 
                 # Create and register the agent with codemode and skills if enabled

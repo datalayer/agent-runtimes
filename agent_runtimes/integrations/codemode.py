@@ -88,7 +88,6 @@ class CodemodeIntegration:
             from agent_codemode import (
                 CodeModeConfig,
                 CodeModeExecutor,
-                MCPServerConfig,
                 ToolRegistry,
             )
             from agent_skills.simple import SimpleSkillsManager
