@@ -60,114 +60,128 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
     for spec in specs:
         server_id = spec["id"]
         const_name = f"{server_id.upper().replace('-', '_')}_MCP_SERVER"
-        
+
         # Format args properly
         args_list = spec.get("args", [])
         if args_list:
-            args_formatted = "[\n" + ",\n".join(f'        "{arg}"' for arg in args_list) + ",\n    ]"
+            args_formatted = (
+                "[\n" + ",\n".join(f'        "{arg}"' for arg in args_list) + ",\n    ]"
+            )
         else:
             args_formatted = "[]"
-        
+
         # Format env dict
         env_dict = spec.get("env", {})
         if env_dict:
-            env_formatted = "{\n" + ",\n".join(
-                f'        "{key}": "{value}"' for key, value in env_dict.items()
-            ) + ",\n    }"
+            env_formatted = (
+                "{\n"
+                + ",\n".join(
+                    f'        "{key}": "{value}"' for key, value in env_dict.items()
+                )
+                + ",\n    }"
+            )
         else:
             env_formatted = None
-        
+
         # Format required env vars
         required_env = spec.get("required_env_vars", [])
         required_env_formatted = str(required_env) if required_env else "[]"
-        
-        lines.extend([
-            f"{const_name} = MCPServer(",
-            f'    id="{server_id}",',
-            f'    name="{spec["name"]}",',
-            f'    description="{spec["description"]}",',
-            f'    command="{spec["command"]}",',
-            f"    args={args_formatted},",
-            f'    transport="{spec.get("transport", "stdio")}",',
-            f'    enabled={spec.get("enabled", True)},',
-            "    tools=[],",
-        ])
-        
+
+        lines.extend(
+            [
+                f"{const_name} = MCPServer(",
+                f'    id="{server_id}",',
+                f'    name="{spec["name"]}",',
+                f'    description="{spec["description"]}",',
+                f'    command="{spec["command"]}",',
+                f"    args={args_formatted},",
+                f'    transport="{spec.get("transport", "stdio")}",',
+                f"    enabled={spec.get('enabled', True)},",
+                "    tools=[],",
+            ]
+        )
+
         # Add env field if present
         if env_formatted:
             lines.append(f"    env={env_formatted},")
-        
-        lines.extend([
-            f"    required_env_vars={required_env_formatted},",
-            ")",
-            "",
-        ])
+
+        lines.extend(
+            [
+                f"    required_env_vars={required_env_formatted},",
+                ")",
+                "",
+            ]
+        )
 
     # Generate catalog dictionary
-    lines.extend([
-        "# " + "=" * 76,
-        "# MCP Server Catalog",
-        "# " + "=" * 76,
-        "",
-        "MCP_SERVER_CATALOG: Dict[str, MCPServer] = {",
-    ])
-    
+    lines.extend(
+        [
+            "# " + "=" * 76,
+            "# MCP Server Catalog",
+            "# " + "=" * 76,
+            "",
+            "MCP_SERVER_CATALOG: Dict[str, MCPServer] = {",
+        ]
+    )
+
     for spec in specs:
         server_id = spec["id"]
         const_name = f"{server_id.upper().replace('-', '_')}_MCP_SERVER"
         lines.append(f'    "{server_id}": {const_name},')
-    
-    lines.extend([
-        "}",
-        "",
-        "",
-        "def check_env_vars_available(env_vars: list[str]) -> bool:",
-        '    """',
-        "    Check if all required environment variables are set.",
-        "",
-        "    Args:",
-        "        env_vars: List of environment variable names to check.",
-        "",
-        "    Returns:",
-        "        True if all env vars are set (non-empty), False otherwise.",
-        '    """',
-        "    if not env_vars:",
-        "        return True  # No env vars required",
-        "    return all(os.environ.get(var) for var in env_vars)",
-        "",
-        "",
-        "def get_catalog_server(server_id: str) -> MCPServer | None:",
-        '    """',
-        "    Get a catalog MCP server by ID.",
-        "",
-        "    Args:",
-        "        server_id: The unique identifier of the MCP server.",
-        "",
-        "    Returns:",
-        "        The MCPServer configuration, or None if not found.",
-        '    """',
-        "    return MCP_SERVER_CATALOG.get(server_id)",
-        "",
-        "",
-        "def list_catalog_servers() -> list[MCPServer]:",
-        '    """',
-        "    List all catalog MCP servers with availability status.",
-        "",
-        "    For each server, checks if the required environment variables are set",
-        "    and updates the `is_available` field accordingly.",
-        "",
-        "    Returns:",
-        "        List of all catalog MCPServer configurations with updated availability.",
-        '    """',
-        "    servers = []",
-        "    for server in MCP_SERVER_CATALOG.values():",
-        "        # Create a copy with updated availability",
-        "        server_copy = server.model_copy()",
-        "        server_copy.is_available = check_env_vars_available(server.required_env_vars)",
-        "        servers.append(server_copy)",
-        "    return servers",
-        "",
-    ])
+
+    lines.extend(
+        [
+            "}",
+            "",
+            "",
+            "def check_env_vars_available(env_vars: list[str]) -> bool:",
+            '    """',
+            "    Check if all required environment variables are set.",
+            "",
+            "    Args:",
+            "        env_vars: List of environment variable names to check.",
+            "",
+            "    Returns:",
+            "        True if all env vars are set (non-empty), False otherwise.",
+            '    """',
+            "    if not env_vars:",
+            "        return True  # No env vars required",
+            "    return all(os.environ.get(var) for var in env_vars)",
+            "",
+            "",
+            "def get_catalog_server(server_id: str) -> MCPServer | None:",
+            '    """',
+            "    Get a catalog MCP server by ID.",
+            "",
+            "    Args:",
+            "        server_id: The unique identifier of the MCP server.",
+            "",
+            "    Returns:",
+            "        The MCPServer configuration, or None if not found.",
+            '    """',
+            "    return MCP_SERVER_CATALOG.get(server_id)",
+            "",
+            "",
+            "def list_catalog_servers() -> list[MCPServer]:",
+            '    """',
+            "    List all catalog MCP servers with availability status.",
+            "",
+            "    For each server, checks if the required environment variables are set",
+            "    and updates the `is_available` field accordingly.",
+            "",
+            "    Returns:",
+            "        List of all catalog MCPServer configurations with updated availability.",
+            '    """',
+            "    servers = []",
+            "    for server in MCP_SERVER_CATALOG.values():",
+            "        # Create a copy with updated availability",
+            "        server_copy = server.model_copy()",
+            "        server_copy.is_available = check_env_vars_available(server.required_env_vars)",
+            "        servers.append(server_copy)",
+            "    return servers",
+            "",
+        ]
+    )
 
     return "\n".join(lines)
 
@@ -201,51 +215,59 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
     for spec in specs:
         server_id = spec["id"]
         const_name = f"{server_id.upper().replace('-', '_')}_MCP_SERVER"
-        
+
         # Format args
         args_list = spec.get("args", [])
         args_formatted = "[" + ", ".join(f"'{arg}'" for arg in args_list) + "]"
-        
+
         # Format required env vars
         required_env = spec.get("required_env_vars", [])
-        env_comment = f"  // Requires: {', '.join(required_env)}" if required_env else ""
-        
-        lines.extend([
-            f"export const {const_name}: MCPServer = {{",
-            f"  id: '{server_id}',",
-            f"  name: '{spec['name']}',",
-            f"  url: '',",
-            f"  command: '{spec['command']}',",
-            f"  args: {args_formatted},",
-            f"  transport: '{spec.get('transport', 'stdio')}',",
-            f"  enabled: {str(spec.get('enabled', True)).lower()},",
-            "  isAvailable: false,",
-            "  tools: [],",
-            f"{env_comment}",
-            "};",
-            "",
-        ])
+        env_comment = (
+            f"  // Requires: {', '.join(required_env)}" if required_env else ""
+        )
+
+        lines.extend(
+            [
+                f"export const {const_name}: MCPServer = {{",
+                f"  id: '{server_id}',",
+                f"  name: '{spec['name']}',",
+                f"  url: '',",
+                f"  command: '{spec['command']}',",
+                f"  args: {args_formatted},",
+                f"  transport: '{spec.get('transport', 'stdio')}',",
+                f"  enabled: {str(spec.get('enabled', True)).lower()},",
+                "  isAvailable: false,",
+                "  tools: [],",
+                f"{env_comment}",
+                "};",
+                "",
+            ]
+        )
 
     # Generate library object
-    lines.extend([
-        "// " + "=" * 76,
-        "// MCP Server Library",
-        "// " + "=" * 76,
-        "",
-        "export const MCP_SERVER_LIBRARY: Record<string, MCPServer> = {",
-    ])
-    
+    lines.extend(
+        [
+            "// " + "=" * 76,
+            "// MCP Server Library",
+            "// " + "=" * 76,
+            "",
+            "export const MCP_SERVER_LIBRARY: Record<string, MCPServer> = {",
+        ]
+    )
+
     for spec in specs:
         server_id = spec["id"]
         const_name = f"{server_id.upper().replace('-', '_')}_MCP_SERVER"
         # Quote keys with hyphens for valid JavaScript syntax
-        key = f"'{server_id}'" if '-' in server_id else server_id
+        key = f"'{server_id}'" if "-" in server_id else server_id
         lines.append(f"  {key}: {const_name},")
-    
-    lines.extend([
-        "};",
-        "",
-    ])
+
+    lines.extend(
+        [
+            "};",
+            "",
+        ]
+    )
 
     return "\n".join(lines)
 
@@ -258,51 +280,55 @@ def update_init_file(specs: list[dict[str, Any]], init_file: Path) -> None:
         server_id = spec["id"]
         const_name = server_id.upper().replace("-", "_") + "_MCP_SERVER"
         server_constants.append(const_name)
-    
+
     # Read the current __init__.py
     init_content = init_file.read_text()
-    
+
     # Find the catalog_mcp_servers import section
     import_start = init_content.find("from .catalog_mcp_servers import (")
     if import_start == -1:
         print(f"Warning: Could not find catalog_mcp_servers import in {init_file}")
         return
-    
+
     # Find the end of the import statement
     import_end = init_content.find(")", import_start)
     if import_end == -1:
-        print(f"Warning: Could not find end of catalog_mcp_servers import in {init_file}")
+        print(
+            f"Warning: Could not find end of catalog_mcp_servers import in {init_file}"
+        )
         return
-    
+
     # Generate new import lines
     new_imports = ["from .catalog_mcp_servers import ("]
     for const in sorted(server_constants):
         new_imports.append(f"    {const},")
-    new_imports.extend([
-        "    MCP_SERVER_CATALOG,",
-        "    check_env_vars_available,",
-        "    get_catalog_server,",
-        "    list_catalog_servers,",
-        ")",
-    ])
-    
+    new_imports.extend(
+        [
+            "    MCP_SERVER_CATALOG,",
+            "    check_env_vars_available,",
+            "    get_catalog_server,",
+            "    list_catalog_servers,",
+            ")",
+        ]
+    )
+
     # Replace the import section
     new_content = (
-        init_content[:import_start] +
-        "\n".join(new_imports) +
-        init_content[import_end + 1:]
+        init_content[:import_start]
+        + "\n".join(new_imports)
+        + init_content[import_end + 1 :]
     )
-    
+
     # Update the __all__ list - find the catalog_mcp_servers.py exports section
     all_start = new_content.find("# catalog_mcp_servers.py exports")
     if all_start != -1:
         # Find the end of this section (next closing bracket or end of __all__)
         all_section_start = all_start
         all_end = new_content.find("]", all_section_start)
-        
+
         # Generate new __all__ entries for MCP servers
         all_entries = [
-            '    # catalog_mcp_servers.py exports',
+            "    # catalog_mcp_servers.py exports",
             '    "MCP_SERVER_CATALOG",',
             '    "check_env_vars_available",',
             '    "get_catalog_server",',
@@ -311,13 +337,10 @@ def update_init_file(specs: list[dict[str, Any]], init_file: Path) -> None:
         for const in sorted(server_constants):
             all_entries.append(f'    "{const}",')
         all_entries.append("]")
-        
+
         # Replace the section
-        new_content = (
-            new_content[:all_section_start] +
-            "\n".join(all_entries)
-        )
-    
+        new_content = new_content[:all_section_start] + "\n".join(all_entries)
+
     # Write updated content
     init_file.write_text(new_content)
     print(f"✓ Updated {init_file}")

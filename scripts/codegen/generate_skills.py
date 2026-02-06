@@ -73,78 +73,84 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
     for spec in specs:
         skill_id = spec["id"]
         const_name = f"{skill_id.upper().replace('-', '_')}_SKILL_SPEC"
-        
-        lines.extend([
-            f"{const_name} = SkillSpec(",
-            f'    id="{skill_id}",',
-            f'    name="{spec["name"]}",',
-            f'    description="{spec["description"]}",',
-            f'    module="{spec.get("module", "")}",',
-            f"    required_env_vars={spec.get('required_env_vars', [])},",
-            f"    optional_env_vars={spec.get('optional_env_vars', [])},",
-            f"    dependencies={spec.get('dependencies', [])},",
-            f"    tags={spec.get('tags', [])},",
-            f"    enabled={spec.get('enabled', True)},",
-            ")",
-            "",
-        ])
+
+        lines.extend(
+            [
+                f"{const_name} = SkillSpec(",
+                f'    id="{skill_id}",',
+                f'    name="{spec["name"]}",',
+                f'    description="{spec["description"]}",',
+                f'    module="{spec.get("module", "")}",',
+                f"    required_env_vars={spec.get('required_env_vars', [])},",
+                f"    optional_env_vars={spec.get('optional_env_vars', [])},",
+                f"    dependencies={spec.get('dependencies', [])},",
+                f"    tags={spec.get('tags', [])},",
+                f"    enabled={spec.get('enabled', True)},",
+                ")",
+                "",
+            ]
+        )
 
     # Generate catalog dictionary
-    lines.extend([
-        "# " + "=" * 76,
-        "# Skill Catalog",
-        "# " + "=" * 76,
-        "",
-        "SKILL_CATALOG: Dict[str, SkillSpec] = {",
-    ])
-    
+    lines.extend(
+        [
+            "# " + "=" * 76,
+            "# Skill Catalog",
+            "# " + "=" * 76,
+            "",
+            "SKILL_CATALOG: Dict[str, SkillSpec] = {",
+        ]
+    )
+
     for spec in specs:
         skill_id = spec["id"]
         const_name = f"{skill_id.upper().replace('-', '_')}_SKILL_SPEC"
         lines.append(f'    "{skill_id}": {const_name},')
-    
-    lines.extend([
-        "}",
-        "",
-        "",
-        "def check_env_vars_available(env_vars: List[str]) -> bool:",
-        '    """',
-        "    Check if all required environment variables are set.",
-        "",
-        "    Args:",
-        "        env_vars: List of environment variable names to check.",
-        "",
-        "    Returns:",
-        "        True if all env vars are set (non-empty), False otherwise.",
-        '    """',
-        "    if not env_vars:",
-        "        return True",
-        "    return all(os.environ.get(var) for var in env_vars)",
-        "",
-        "",
-        "def get_skill_spec(skill_id: str) -> SkillSpec | None:",
-        '    """',
-        "    Get a skill specification by ID.",
-        "",
-        "    Args:",
-        "        skill_id: The unique identifier of the skill.",
-        "",
-        "    Returns:",
-        "        The SkillSpec, or None if not found.",
-        '    """',
-        "    return SKILL_CATALOG.get(skill_id)",
-        "",
-        "",
-        "def list_skill_specs() -> List[SkillSpec]:",
-        '    """',
-        "    List all skill specifications.",
-        "",
-        "    Returns:",
-        "        List of all SkillSpec configurations.",
-        '    """',
-        "    return list(SKILL_CATALOG.values())",
-        "",
-    ])
+
+    lines.extend(
+        [
+            "}",
+            "",
+            "",
+            "def check_env_vars_available(env_vars: List[str]) -> bool:",
+            '    """',
+            "    Check if all required environment variables are set.",
+            "",
+            "    Args:",
+            "        env_vars: List of environment variable names to check.",
+            "",
+            "    Returns:",
+            "        True if all env vars are set (non-empty), False otherwise.",
+            '    """',
+            "    if not env_vars:",
+            "        return True",
+            "    return all(os.environ.get(var) for var in env_vars)",
+            "",
+            "",
+            "def get_skill_spec(skill_id: str) -> SkillSpec | None:",
+            '    """',
+            "    Get a skill specification by ID.",
+            "",
+            "    Args:",
+            "        skill_id: The unique identifier of the skill.",
+            "",
+            "    Returns:",
+            "        The SkillSpec, or None if not found.",
+            '    """',
+            "    return SKILL_CATALOG.get(skill_id)",
+            "",
+            "",
+            "def list_skill_specs() -> List[SkillSpec]:",
+            '    """',
+            "    List all skill specifications.",
+            "",
+            "    Returns:",
+            "        List of all SkillSpec configurations.",
+            '    """',
+            "    return list(SKILL_CATALOG.values())",
+            "",
+        ]
+    )
 
     return "\n".join(lines)
 
@@ -188,58 +194,70 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
     for spec in specs:
         skill_id = spec["id"]
         const_name = f"{skill_id.upper().replace('-', '_')}_SKILL_SPEC"
-        
+
         required_env = spec.get("required_env_vars", [])
-        env_comment = f"  // Requires: {', '.join(required_env)}" if required_env else ""
-        
+        env_comment = (
+            f"  // Requires: {', '.join(required_env)}" if required_env else ""
+        )
+
         # Format arrays for TypeScript
-        required_env_vars_json = str(spec.get('required_env_vars', [])).replace("'", '"')
-        optional_env_vars_json = str(spec.get('optional_env_vars', [])).replace("'", '"')
-        dependencies_json = str(spec.get('dependencies', [])).replace("'", '"')
-        tags_json = str(spec.get('tags', [])).replace("'", '"')
-        
-        lines.extend([
-            f"export const {const_name}: SkillSpec = {{",
-            f"  id: '{skill_id}',",
-            f"  name: '{spec['name']}',",
-            f"  description: '{spec['description']}',",
-            f"  module: '{spec.get('module', '')}',",
-            f"  requiredEnvVars: {required_env_vars_json},",
-            f"  optionalEnvVars: {optional_env_vars_json},",
-            f"  dependencies: {dependencies_json},",
-            f"  tags: {tags_json},",
-            f"  enabled: {str(spec.get('enabled', True)).lower()},",
-            f"{env_comment}",
-            "};",
-            "",
-        ])
+        required_env_vars_json = str(spec.get("required_env_vars", [])).replace(
+            "'", '"'
+        )
+        optional_env_vars_json = str(spec.get("optional_env_vars", [])).replace(
+            "'", '"'
+        )
+        dependencies_json = str(spec.get("dependencies", [])).replace("'", '"')
+        tags_json = str(spec.get("tags", [])).replace("'", '"')
+
+        lines.extend(
+            [
+                f"export const {const_name}: SkillSpec = {{",
+                f"  id: '{skill_id}',",
+                f"  name: '{spec['name']}',",
+                f"  description: '{spec['description']}',",
+                f"  module: '{spec.get('module', '')}',",
+                f"  requiredEnvVars: {required_env_vars_json},",
+                f"  optionalEnvVars: {optional_env_vars_json},",
+                f"  dependencies: {dependencies_json},",
+                f"  tags: {tags_json},",
+                f"  enabled: {str(spec.get('enabled', True)).lower()},",
+                f"{env_comment}",
+                "};",
+                "",
+            ]
+        )
 
     # Generate catalog object
-    lines.extend([
-        "// " + "=" * 76,
-        "// Skill Catalog",
-        "// " + "=" * 76,
-        "",
-        "export const SKILL_CATALOG: Record<string, SkillSpec> = {",
-    ])
-    
+    lines.extend(
+        [
+            "// " + "=" * 76,
+            "// Skill Catalog",
+            "// " + "=" * 76,
+            "",
+            "export const SKILL_CATALOG: Record<string, SkillSpec> = {",
+        ]
+    )
+
     for spec in specs:
         skill_id = spec["id"]
         const_name = f"{skill_id.upper().replace('-', '_')}_SKILL_SPEC"
         lines.append(f"  '{skill_id}': {const_name},")
-    
-    lines.extend([
-        "};",
-        "",
-        "export function getSkillSpecs(): SkillSpec[] {",
-        "  return Object.values(SKILL_CATALOG);",
-        "}",
-        "",
-        "export function getSkillSpec(skillId: string): SkillSpec | undefined {",
-        "  return SKILL_CATALOG[skillId];",
-        "}",
-        "",
-    ])
+
+    lines.extend(
+        [
+            "};",
+            "",
+            "export function getSkillSpecs(): SkillSpec[] {",
+            "  return Object.values(SKILL_CATALOG);",
+            "}",
+            "",
+            "export function getSkillSpec(skillId: string): SkillSpec | undefined {",
+            "  return SKILL_CATALOG[skillId];",
+            "}",
+            "",
+        ]
+    )
 
     return "\n".join(lines)
 

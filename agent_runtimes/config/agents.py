@@ -35,7 +35,7 @@ CRAWLER_MCP_AGENT_SPEC = AgentSpec(
         "Research best practices for building RAG applications",
         "Compare popular JavaScript frameworks in 2024",
     ],
-    welcome_message="Hi! I'm the Crawler Agent. I can search the web using Tavily, explore  GitHub repositories, and help you research topics across the internet. ",
+    welcome_message="Hi! I'm the Crawler Agent. I can search the web using Tavily, explore GitHub repositories, and help you research topics across the internet. ",
     welcome_notebook=None,
     welcome_document=None,
     system_prompt="""You are a web crawling and research assistant with access to Tavily search and GitHub tools. Use Tavily to search the web for current information and search GitHub repositories for relevant projects. Synthesize information from multiple sources and provide clear summaries with sources cited.
@@ -78,7 +78,7 @@ CRAWLER_AGENT_SPEC = AgentSpec(
         "Research best practices for building RAG applications",
         "Compare popular JavaScript frameworks in 2024",
     ],
-    welcome_message="Hi! I'm the Crawler Agent. I can search the web using Tavily, explore  GitHub repositories, and help you research topics across the internet. ",
+    welcome_message="Hi! I'm the Crawler Agent. I can search the web using Tavily, explore GitHub repositories, and help you research topics across the internet. ",
     welcome_notebook=None,
     welcome_document=None,
     system_prompt="""You are a web crawling and research assistant with access to Tavily search and GitHub tools. Use Tavily to search the web for current information and search GitHub repositories for relevant projects. Synthesize information from multiple sources and provide clear summaries with sources cited.
@@ -121,7 +121,7 @@ DATA_ACQUISITION_AGENT_SPEC = AgentSpec(
         "List available files in my workspace",
         "Search Kaggle for time series forecasting competitions",
     ],
-    welcome_message="Hello! I'm the Data Acquisition Agent. I can help you find and download  datasets from Kaggle, manage files in your workspace, and explore data  sources for your projects. ",
+    welcome_message="Hello! I'm the Data Acquisition Agent. I can help you find and download datasets from Kaggle, manage files in your workspace, and explore data sources for your projects. ",
     welcome_notebook=None,
     welcome_document=None,
     system_prompt="""You are a data acquisition specialist with access to Kaggle datasets and filesystem tools. You can search for datasets, download data, read and write files, and help users prepare data for analysis. Guide users through finding relevant datasets and organizing their workspace efficiently.
@@ -164,7 +164,7 @@ FINANCIAL_VIZ_AGENT_SPEC = AgentSpec(
         "Analyze the trading volume trends for Tesla",
         "Get the latest market news for tech stocks",
     ],
-    welcome_message="Welcome! I'm the Financial Visualization Agent. I can help you analyze  stock market data, track financial instruments, and create charts to  visualize market trends. ",
+    welcome_message="Welcome! I'm the Financial Visualization Agent. I can help you analyze stock market data, track financial instruments, and create charts to visualize market trends. ",
     welcome_notebook=None,
     welcome_document=None,
     system_prompt="""You are a financial market analyst with access to Alpha Vantage market data and chart generation tools. You can fetch stock prices, analyze trading volumes, create visualizations, and track market trends. Provide clear insights with relevant data points and generate charts to illustrate patterns.
@@ -207,7 +207,7 @@ FINANCIAL_AGENT_SPEC = AgentSpec(
         "Analyze the trading volume trends for Tesla",
         "Get the latest market news for tech stocks",
     ],
-    welcome_message="Welcome! I'm the Financial Visualization Agent. I can help you analyze  stock market data, track financial instruments, and create charts to  visualize market trends. ",
+    welcome_message="Welcome! I'm the Financial Visualization Agent. I can help you analyze stock market data, track financial instruments, and create charts to visualize market trends. ",
     welcome_notebook=None,
     welcome_document=None,
     system_prompt="""You are a financial market analyst with access to Alpha Vantage market data tools. You can fetch stock prices, analyze trading volumes, create visualizations, and track market trends. Provide clear insights with relevant data points and suggest visualization approaches when appropriate.
@@ -336,7 +336,7 @@ INFORMATION_ROUTING_AGENT_SPEC = AgentSpec(
         "List recent files in my Drive folder",
         "Post a reminder to Slack about the upcoming deadline",
     ],
-    welcome_message="Hi there! I'm the Information Routing Agent. I can help you manage documents  in Google Drive and communicate with your team through Slack, making it easy  to route information where it needs to go. ",
+    welcome_message="Hi there! I'm the Information Routing Agent. I can help you manage documents in Google Drive and communicate with your team through Slack, making it easy to route information where it needs to go. ",
     welcome_notebook=None,
     welcome_document=None,
     system_prompt="""You are an information routing specialist with access to Google Drive and Slack tools. You can find and manage documents in Drive, send messages to Slack channels, and automate workflows between these platforms. Help users coordinate team communication and document management efficiently. Use "#" to denote Slack channels. Do not use file extension when referring to Google Drive documents.

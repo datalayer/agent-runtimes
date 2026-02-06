@@ -759,7 +759,9 @@ async def create_agent(
         # If codemode is enabled, append codemode instructions to the base prompt
         final_system_prompt = request.system_prompt
         if request.enable_codemode and request.system_prompt_codemode:
-            final_system_prompt = request.system_prompt + "\n\n" + request.system_prompt_codemode
+            final_system_prompt = (
+                request.system_prompt + "\n\n" + request.system_prompt_codemode
+            )
 
         # Create the agent based on the library
         if request.agent_library == "pydantic-ai":

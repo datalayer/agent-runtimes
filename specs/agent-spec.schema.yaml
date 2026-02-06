@@ -127,7 +127,7 @@ properties:
     description: Welcome message shown when agent starts
     examples:
       - >
-        Hello! I'm the Data Acquisition Agent. I can help you find and 
+        Hello! I'm the Data Acquisition Agent. I can help you find and
         download datasets from Kaggle.
 
   welcome_notebook:
@@ -150,7 +150,7 @@ examples:
   - id: data-acquisition
     name: Data Acquisition Agent
     description: >
-      Acquires and manages data from various sources including Kaggle 
+      Acquires and manages data from various sources including Kaggle
       datasets and local filesystem operations.
     tags:
       - data
@@ -168,7 +168,7 @@ examples:
       - Find popular machine learning datasets on Kaggle
       - List available files in my workspace
     welcome_message: >
-      Hello! I'm the Data Acquisition Agent. I can help you find and 
+      Hello! I'm the Data Acquisition Agent. I can help you find and
       download datasets.
     welcome_notebook: null
     welcome_document: null

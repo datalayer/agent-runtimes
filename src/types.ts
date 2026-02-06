@@ -107,6 +107,10 @@ export interface AgentSpec {
   name: string;
   /** Agent description */
   description: string;
+  /** System prompt for the agent */
+  systemPrompt?: string;
+  /** System prompt when codemode is enabled */
+  systemPromptCodemode?: string;
   /** Tags for categorization */
   tags: string[];
   /** Whether the agent is enabled */

@@ -254,23 +254,26 @@ async def _create_and_register_cli_agent(
                     # Pass through ALL environment variables from mcp_server config
                     # This includes both required_env_vars and any custom env from config
                     server_env: dict[str, str] = {}
-                    
+
                     # Add required env vars
                     for env_key in mcp_server.required_env_vars:
                         env_val = os.getenv(env_key)
                         if env_val:
                             server_env[env_key] = env_val
-                    
+
                     # Add any custom env from mcp_server.env (with expansion)
                     if mcp_server.env:
                         for env_key, env_value in mcp_server.env.items():
                             # Expand ${VAR} syntax
                             if isinstance(env_value, str) and "${" in env_value:
                                 import re
+
                                 pattern = r"\$\{([^}]+)\}"
-                                def replace(match):
+
+                                def replace(match: re.Match[str]) -> str:
                                     var_name = match.group(1)
                                     return os.environ.get(var_name, "")
+
                                 expanded_value = re.sub(pattern, replace, env_value)
                                 server_env[env_key] = expanded_value
                             else:
@@ -332,7 +335,11 @@ async def _create_and_register_cli_agent(
                     skills_path=skills_folder_path
                     or str((repo_root / "skills").resolve()),
                     allow_direct_tool_calls=False,
-                    **({} if mcp_proxy_url is None else {"mcp_proxy_url": mcp_proxy_url}),
+                    **(
+                        {}
+                        if mcp_proxy_url is None
+                        else {"mcp_proxy_url": mcp_proxy_url}
+                    ),
                 )
 
                 logger.info(
@@ -513,7 +520,11 @@ async def _create_and_register_cli_agent(
                     skills_path=skills_folder_path
                     or str((repo_root / "skills").resolve()),
                     allow_direct_tool_calls=False,
-                    **({} if mcp_proxy_url is None else {"mcp_proxy_url": mcp_proxy_url}),
+                    **(
+                        {}
+                        if mcp_proxy_url is None
+                        else {"mcp_proxy_url": mcp_proxy_url}
+                    ),
                 )
 
                 logger.info(
@@ -801,7 +812,9 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
                 skills_list = (
                     [s.strip() for s in skills_str.split(",") if s.strip()]
                     if skills_str
-                    else list(agent_spec.skills)  # Use agent spec skills if no CLI override
+                    else list(
+                        agent_spec.skills
+                    )  # Use agent spec skills if no CLI override
                 )
                 cli_mcp_servers_str = os.environ.get("AGENT_RUNTIMES_MCP_SERVERS", "")
                 cli_mcp_servers = (

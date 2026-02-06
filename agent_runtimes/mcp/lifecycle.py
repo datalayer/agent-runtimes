@@ -323,11 +323,13 @@ class MCPLifecycleManager:
             try:
                 # Build env dict
                 env = {**os.environ}
-                
+
                 if config.env:
                     # Expand environment variables in the env dict
                     expanded_env = {
-                        key: self._expand_env_vars(value) if isinstance(value, str) else value
+                        key: self._expand_env_vars(value)
+                        if isinstance(value, str)
+                        else value
                         for key, value in config.env.items()
                     }
                     logger.debug(f"  Expanded config.env: {list(expanded_env.keys())}")

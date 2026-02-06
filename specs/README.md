@@ -67,7 +67,7 @@ make specs
 
 This single command generates Python and TypeScript code for:
 - Agent specifications
-- MCP server specifications  
+- MCP server specifications
 - Skill specifications
 
 ### Legacy Command
@@ -100,7 +100,7 @@ make agentspecs-generate  # Still works, alias for 'make specs'
 id: data-acquisition
 name: Data Acquisition Agent
 description: >
-  Acquires and manages data from various sources including Kaggle datasets 
+  Acquires and manages data from various sources including Kaggle datasets
   and local filesystem operations.
 
 tags:
@@ -582,5 +582,5 @@ Multiple validation layers:
 
 ## License
 
-Copyright (c) 2025-2026 Datalayer, Inc.  
+Copyright (c) 2025-2026 Datalayer, Inc.
 Distributed under the terms of the Modified BSD License.

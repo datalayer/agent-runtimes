@@ -13,17 +13,14 @@
 
 import type { AgentSpec } from '../types';
 import {
-  TAVILY_MCP_SERVER,
-  FILESYSTEM_MCP_SERVER,
-  GITHUB_MCP_SERVER,
-  SLACK_MCP_SERVER,
-  KAGGLE_MCP_SERVER,
   ALPHAVANTAGE_MCP_SERVER,
   CHART_MCP_SERVER,
-  GMAIL_MCP_SERVER,
-  GDRIVE_MCP_SERVER,
+  FILESYSTEM_MCP_SERVER,
+  GITHUB_MCP_SERVER,
   GOOGLE_WORKSPACE_MCP_SERVER,
-  LINKEDIN_MCP_SERVER,
+  KAGGLE_MCP_SERVER,
+  SLACK_MCP_SERVER,
+  TAVILY_MCP_SERVER,
 } from './mcpServers';
 
 // ============================================================================
@@ -34,12 +31,9 @@ const MCP_SERVER_MAP: Record<string, any> = {
   alphavantage: ALPHAVANTAGE_MCP_SERVER,
   chart: CHART_MCP_SERVER,
   filesystem: FILESYSTEM_MCP_SERVER,
-  gdrive: GDRIVE_MCP_SERVER,
   github: GITHUB_MCP_SERVER,
-  gmail: GMAIL_MCP_SERVER,
   'google-workspace': GOOGLE_WORKSPACE_MCP_SERVER,
   kaggle: KAGGLE_MCP_SERVER,
-  linkedin: LINKEDIN_MCP_SERVER,
   slack: SLACK_MCP_SERVER,
   tavily: TAVILY_MCP_SERVER,
 };

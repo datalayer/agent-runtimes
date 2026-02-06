@@ -82,40 +82,42 @@ from agent_runtimes.types import AgentSpec
             else "[]"
         )
         # Escape multi-line strings properly
-        welcome = spec.get("welcome_message", "").replace('"', '\\"').replace('\n', ' ')
+        welcome = spec.get("welcome_message", "").replace('"', '\\"').replace("\n", " ")
         welcome_notebook = spec.get("welcome_notebook")
         welcome_document = spec.get("welcome_document")
         system_prompt = spec.get("system_prompt", "")
         system_prompt_codemode = spec.get("system_prompt_codemode", "")
-        
+
         # Escape triple quotes in system prompts for Python triple-quoted strings
         if system_prompt:
-            system_prompt = system_prompt.replace('"""', r'\"\"\"')
+            system_prompt = system_prompt.replace('"""', r"\"\"\"")
         if system_prompt_codemode:
-            system_prompt_codemode = system_prompt_codemode.replace('"""', r'\"\"\"')
-        
+            system_prompt_codemode = system_prompt_codemode.replace('"""', r"\"\"\"")
+
         # Clean description for Python (single line)
-        description = spec['description'].replace('\n', ' ').replace('  ', ' ').strip()
+        description = spec["description"].replace("\n", " ").replace("  ", " ").strip()
 
         # Use triple quotes for multiline system prompts
-        system_prompt_str = f'"""{system_prompt}"""' if system_prompt else 'None'
-        system_prompt_codemode_str = f'"""{system_prompt_codemode}"""' if system_prompt_codemode else 'None'
+        system_prompt_str = f'"""{system_prompt}"""' if system_prompt else "None"
+        system_prompt_codemode_str = (
+            f'"""{system_prompt_codemode}"""' if system_prompt_codemode else "None"
+        )
 
         code += f'''{const_name} = AgentSpec(
-    id="{spec['id']}",
-    name="{spec['name']}",
+    id="{spec["id"]}",
+    name="{spec["name"]}",
     description="{description}",
-    tags={spec.get('tags', [])},
-    enabled={spec.get('enabled', True)},
+    tags={spec.get("tags", [])},
+    enabled={spec.get("enabled", True)},
     mcp_servers=[{mcp_servers_str}],
-    skills={spec.get('skills', [])},
-    environment_name="{spec.get('environment_name', 'ai-agents')}",
+    skills={spec.get("skills", [])},
+    environment_name="{spec.get("environment_name", "ai-agents")}",
     icon={icon},
     color={color},
     suggestions={suggestions_str},
     welcome_message="{welcome}",
-    welcome_notebook={f'"{welcome_notebook}"' if welcome_notebook else 'None'},
-    welcome_document={f'"{welcome_document}"' if welcome_document else 'None'},
+    welcome_notebook={f'"{welcome_notebook}"' if welcome_notebook else "None"},
+    welcome_document={f'"{welcome_document}"' if welcome_document else "None"},
     system_prompt={system_prompt_str},
     system_prompt_codemode={system_prompt_codemode_str},
 )
@@ -162,10 +164,28 @@ def list_agent_specs() -> list[AgentSpec]:
     return code
 
 
-def generate_typescript_code(specs: List[Dict[str, Any]]) -> str:
+def generate_typescript_code(specs: List[Dict[str, Any]], mcp_specs_dir: str) -> str:
     """Generate TypeScript code from agent specifications."""
+    # Load available MCP servers from specs
+    import glob
+    import os
+
+    mcp_server_files = glob.glob(os.path.join(mcp_specs_dir, "*.yaml"))
+    mcp_server_ids = [
+        os.path.basename(f).replace(".yaml", "") for f in mcp_server_files
+    ]
+    mcp_server_ids.sort()
+
+    # Generate import names and map entries dynamically
+    mcp_imports = []
+    mcp_map_entries = []
+    for server_id in mcp_server_ids:
+        const_name = server_id.upper().replace("-", "_") + "_MCP_SERVER"
+        mcp_imports.append(const_name)
+        mcp_map_entries.append(f"  '{server_id}': {const_name},")
+
     # Header
-    code = '''/*
+    code = """/*
  * Copyright (c) 2025-2026 Datalayer, Inc.
  * Distributed under the terms of the Modified BSD License.
  */
@@ -180,42 +200,24 @@ def generate_typescript_code(specs: List[Dict[str, Any]]) -> str:
 
 import type { AgentSpec } from '../types';
 import {
-  TAVILY_MCP_SERVER,
-  FILESYSTEM_MCP_SERVER,
-  GITHUB_MCP_SERVER,
-  SLACK_MCP_SERVER,
-  KAGGLE_MCP_SERVER,
-  ALPHAVANTAGE_MCP_SERVER,
-  CHART_MCP_SERVER,
-  GMAIL_MCP_SERVER,
-  GDRIVE_MCP_SERVER,
-  GOOGLE_WORKSPACE_MCP_SERVER,
-  LINKEDIN_MCP_SERVER,
-} from './mcpServers';
+"""
+    code += "  " + ",\n  ".join(mcp_imports) + ",\n"
+    code += """} from './mcpServers';
 
 // ============================================================================
 // MCP Server Lookup
 // ============================================================================
 
 const MCP_SERVER_MAP: Record<string, any> = {
-  'alphavantage': ALPHAVANTAGE_MCP_SERVER,
-  'chart': CHART_MCP_SERVER,
-  'filesystem': FILESYSTEM_MCP_SERVER,
-  'gdrive': GDRIVE_MCP_SERVER,
-  'github': GITHUB_MCP_SERVER,
-  'gmail': GMAIL_MCP_SERVER,
-  'google-workspace': GOOGLE_WORKSPACE_MCP_SERVER,
-  'kaggle': KAGGLE_MCP_SERVER,
-  'linkedin': LINKEDIN_MCP_SERVER,
-  'slack': SLACK_MCP_SERVER,
-  'tavily': TAVILY_MCP_SERVER,
-};
+"""
+    code += "\n".join(mcp_map_entries) + "\n"
+    code += """};
 
 // ============================================================================
 // Agent Specs
 // ============================================================================
 
-'''
+"""
 
     # Generate agent spec constants
     agent_ids = []
@@ -231,7 +233,9 @@ const MCP_SERVER_MAP: Record<string, any> = {
 
         # Get MCP servers
         mcp_server_ids = spec.get("mcp_servers", [])
-        mcp_servers_str = ", ".join(f"MCP_SERVER_MAP['{sid}']" for sid in mcp_server_ids)
+        mcp_servers_str = ", ".join(
+            f"MCP_SERVER_MAP['{sid}']" for sid in mcp_server_ids
+        )
 
         # Format tags and suggestions as arrays
         tags = spec.get("tags", [])
@@ -251,33 +255,33 @@ const MCP_SERVER_MAP: Record<string, any> = {
         color = f"'{spec.get('color')}'" if spec.get("color") else "undefined"
         system_prompt = spec.get("system_prompt")
         system_prompt_codemode = spec.get("system_prompt_codemode")
-        
+
         # Escape backticks for TypeScript template literals
         if system_prompt:
-            system_prompt = system_prompt.replace('`', '\\`')
+            system_prompt = system_prompt.replace("`", "\\`")
         if system_prompt_codemode:
-            system_prompt_codemode = system_prompt_codemode.replace('`', '\\`')
-        
-        # Clean description for TypeScript (multi-line template literal)
-        description = spec['description'].replace('\n', ' ').replace('  ', ' ').strip()
+            system_prompt_codemode = system_prompt_codemode.replace("`", "\\`")
 
-        code += f'''export const {const_name}: AgentSpec = {{
-  id: '{spec['id']}',
-  name: '{spec['name']}',
+        # Clean description for TypeScript (multi-line template literal)
+        description = spec["description"].replace("\n", " ").replace("  ", " ").strip()
+
+        code += f"""export const {const_name}: AgentSpec = {{
+  id: '{spec["id"]}',
+  name: '{spec["name"]}',
   description: `{description}`,
   tags: {tags_str},
-  enabled: {str(spec.get('enabled', True)).lower()},
+  enabled: {str(spec.get("enabled", True)).lower()},
   mcpServers: [{mcp_servers_str}],
   skills: [],
-  environmentName: '{spec.get('environment_name', 'ai-agents-env')}',
+  environmentName: '{spec.get("environment_name", "ai-agents-env")}',
   icon: {icon},
   color: {color},
   suggestions: {suggestions_str},
-  systemPrompt: {f'`{system_prompt}`' if system_prompt else 'undefined'},
-  systemPromptCodemode: {f'`{system_prompt_codemode}`' if system_prompt_codemode else 'undefined'},
+  systemPrompt: {f"`{system_prompt}`" if system_prompt else "undefined"},
+  systemPromptCodemode: {f"`{system_prompt_codemode}`" if system_prompt_codemode else "undefined"},
 }};
 
-'''
+"""
 
     # Generate registry
     code += """// ============================================================================
@@ -354,7 +358,9 @@ def main():
 
     # Generate TypeScript code
     print(f"Generating TypeScript code to {args.typescript_output}...")
-    typescript_code = generate_typescript_code(specs)
+    # Get MCP specs directory (sibling to agents directory)
+    mcp_specs_dir = args.specs_dir.parent / "mcp-servers"
+    typescript_code = generate_typescript_code(specs, str(mcp_specs_dir))
     args.typescript_output.parent.mkdir(parents=True, exist_ok=True)
     with open(args.typescript_output, "w") as f:
         f.write(typescript_code)
