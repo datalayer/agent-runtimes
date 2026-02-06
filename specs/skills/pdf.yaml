@@ -1,0 +1,17 @@
+# Copyright (c) 2025-2026 Datalayer, Inc.
+# Distributed under the terms of the Modified BSD License.
+
+id: pdf
+name: PDF Processing Skill
+description: PDF document reading, parsing, and extraction
+
+module: agent_skills.pdf
+
+dependencies:
+  - PyPDF2>=3.0.0
+  - pdfplumber>=0.10.0
+
+tags:
+  - pdf
+  - documents
+  - extraction

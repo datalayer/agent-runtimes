@@ -5,7 +5,7 @@ SHELL=/bin/bash
 
 .DEFAULT_GOAL := default
 
-.PHONY: docs examples
+.PHONY: docs examples specs
 
 help: ## display this help
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
@@ -96,7 +96,28 @@ agents: # agents
 	  --host 0.0.0.0 \
 	  --port 8765
 
-specs: # specs
+list-specs: # list specs
 	agent-runtimes list-specs
+
+specs: ## generate Python and TypeScript code from YAML specifications (agents, MCP servers, skills)
+	@echo "Generating agent specifications..."
+	python scripts/codegen/generate_agents.py \
+	  --specs-dir specs/agents \
+	  --python-output agent_runtimes/config/agents.py \
+	  --typescript-output src/config/agents.ts
+	@echo "Generating MCP server specifications..."
+	python scripts/codegen/generate_mcp_servers.py \
+	  --specs-dir specs/mcp-servers \
+	  --python-output agent_runtimes/mcp/catalog_mcp_servers.py \
+	  --typescript-output src/config/mcpServers.ts
+	@echo "Generating skill specifications..."
+	python scripts/codegen/generate_skills.py \
+	  --specs-dir specs/skills \
+	  --python-output agent_runtimes/config/skills.py \
+	  --typescript-output src/config/skills.ts
+	@echo "✓ All specifications generated successfully"
 	agent-runtimes mcp-servers-catalog
 	agent-runtimes mcp-servers-config
+
+# Legacy alias for backwards compatibility
+agentspecs-generate: specs

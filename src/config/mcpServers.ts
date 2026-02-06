@@ -4,10 +4,12 @@
  */
 
 /**
- * MCP Server Library.
+ * MCP Server Catalog
  *
- * Predefined MCP server configurations that can be used by agents.
- * Credentials are configured via environment variables.
+ * Predefined MCP server configurations.
+ *
+ * This file is AUTO-GENERATED from YAML specifications.
+ * DO NOT EDIT MANUALLY - run 'make specs' to regenerate.
  */
 
 import type { MCPServer } from '../types';
@@ -15,6 +17,108 @@ import type { MCPServer } from '../types';
 // ============================================================================
 // MCP Server Definitions
 // ============================================================================
+
+export const ALPHAVANTAGE_MCP_SERVER: MCPServer = {
+  id: 'alphavantage',
+  name: 'Alpha Vantage',
+  url: '',
+  command: 'uvx',
+  args: ['av-mcp==0.2.1', '${ALPHAVANTAGE_API_KEY}'],
+  transport: 'stdio',
+  enabled: true,
+  isAvailable: false,
+  tools: [],
+  // Requires: ALPHAVANTAGE_API_KEY
+};
+
+export const CHART_MCP_SERVER: MCPServer = {
+  id: 'chart',
+  name: 'Chart Generator',
+  url: '',
+  command: 'npx',
+  args: ['-y', '@antv/mcp-server-chart'],
+  transport: 'stdio',
+  enabled: true,
+  isAvailable: false,
+  tools: [],
+};
+
+export const FILESYSTEM_MCP_SERVER: MCPServer = {
+  id: 'filesystem',
+  name: 'Filesystem',
+  url: '',
+  command: 'npx',
+  args: ['-y', '@modelcontextprotocol/server-filesystem', '/tmp'],
+  transport: 'stdio',
+  enabled: true,
+  isAvailable: false,
+  tools: [],
+};
+
+export const GITHUB_MCP_SERVER: MCPServer = {
+  id: 'github',
+  name: 'GitHub',
+  url: '',
+  command: 'docker',
+  args: [
+    'run',
+    '-i',
+    '--rm',
+    '-e',
+    'GITHUB_PERSONAL_ACCESS_TOKEN',
+    'ghcr.io/github/github-mcp-server',
+  ],
+  transport: 'stdio',
+  enabled: true,
+  isAvailable: false,
+  tools: [],
+  // Requires: GITHUB_PERSONAL_ACCESS_TOKEN
+};
+
+export const GOOGLE_WORKSPACE_MCP_SERVER: MCPServer = {
+  id: 'google-workspace',
+  name: 'Google Workspace',
+  url: '',
+  command: 'uvx',
+  args: ['workspace-mcp'],
+  transport: 'stdio',
+  enabled: true,
+  isAvailable: false,
+  tools: [],
+  // Requires: GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET
+};
+
+export const KAGGLE_MCP_SERVER: MCPServer = {
+  id: 'kaggle',
+  name: 'Kaggle',
+  url: '',
+  command: 'npx',
+  args: [
+    '-y',
+    'mcp-remote',
+    'https://www.kaggle.com/mcp',
+    '--header',
+    'Authorization: Bearer ${KAGGLE_TOKEN}',
+  ],
+  transport: 'stdio',
+  enabled: true,
+  isAvailable: false,
+  tools: [],
+  // Requires: KAGGLE_TOKEN
+};
+
+export const SLACK_MCP_SERVER: MCPServer = {
+  id: 'slack',
+  name: 'Slack',
+  url: '',
+  command: 'npx',
+  args: ['-y', '@datalayer/slack-mcp-server'],
+  transport: 'stdio',
+  enabled: true,
+  isAvailable: false,
+  tools: [],
+  // Requires: SLACK_BOT_TOKEN, SLACK_TEAM_ID, SLACK_CHANNEL_IDS
+};
 
 export const TAVILY_MCP_SERVER: MCPServer = {
   id: 'tavily',
@@ -29,162 +133,17 @@ export const TAVILY_MCP_SERVER: MCPServer = {
   // Requires: TAVILY_API_KEY
 };
 
-export const FILESYSTEM_MCP_SERVER: MCPServer = {
-  id: 'filesystem',
-  name: 'Filesystem',
-  url: '',
-  command: 'npx',
-  args: ['-y', '@anthropic/mcp-server-filesystem', '/tmp'],
-  transport: 'stdio',
-  enabled: true,
-  isAvailable: false,
-  tools: [],
-};
-
-export const GITHUB_MCP_SERVER: MCPServer = {
-  id: 'github',
-  name: 'GitHub',
-  url: '',
-  command: 'npx',
-  args: ['-y', '@anthropic/mcp-server-github'],
-  transport: 'stdio',
-  enabled: true,
-  isAvailable: false,
-  tools: [],
-  // Requires: GITHUB_TOKEN
-};
-
-export const GOOGLE_WORKSPACE_MCP_SERVER: MCPServer = {
-  id: 'google-workspace',
-  name: 'Google Workspace',
-  url: '',
-  command: 'npx',
-  args: ['-y', '@anthropic/mcp-server-google-workspace'],
-  transport: 'stdio',
-  enabled: true,
-  isAvailable: false,
-  tools: [],
-  // Requires: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET
-};
-
-export const SLACK_MCP_SERVER: MCPServer = {
-  id: 'slack',
-  name: 'Slack',
-  url: '',
-  command: 'npx',
-  args: ['-y', '@anthropic/mcp-server-slack'],
-  transport: 'stdio',
-  enabled: true,
-  isAvailable: false,
-  tools: [],
-  // Requires: SLACK_BOT_TOKEN
-};
-
-export const KAGGLE_MCP_SERVER: MCPServer = {
-  id: 'kaggle',
-  name: 'Kaggle',
-  url: '',
-  command: 'uvx',
-  args: ['kaggle-mcp-server'],
-  transport: 'stdio',
-  enabled: true,
-  isAvailable: false,
-  tools: [],
-  // Requires: KAGGLE_USERNAME, KAGGLE_KEY
-};
-
-export const ALPHAVANTAGE_MCP_SERVER: MCPServer = {
-  id: 'alphavantage',
-  name: 'Alpha Vantage',
-  url: '',
-  command: 'npx',
-  args: ['-y', '@anthropic/mcp-server-alphavantage'],
-  transport: 'stdio',
-  enabled: true,
-  isAvailable: false,
-  tools: [],
-  // Requires: ALPHAVANTAGE_API_KEY
-};
-
-export const CHART_MCP_SERVER: MCPServer = {
-  id: 'chart',
-  name: 'Chart Generator',
-  url: '',
-  command: 'npx',
-  args: ['-y', '@anthropic/mcp-server-chart'],
-  transport: 'stdio',
-  enabled: true,
-  isAvailable: false,
-  tools: [],
-};
-
-export const LINKEDIN_MCP_SERVER: MCPServer = {
-  id: 'linkedin',
-  name: 'LinkedIn',
-  url: '',
-  command: 'uvx',
-  args: ['linkedin-mcp-server'],
-  transport: 'stdio',
-  enabled: true,
-  isAvailable: false,
-  tools: [],
-  // Requires: LINKEDIN_ACCESS_TOKEN
-};
-
-export const GMAIL_MCP_SERVER: MCPServer = {
-  id: 'gmail',
-  name: 'Gmail',
-  url: '',
-  command: 'npx',
-  args: ['-y', '@anthropic/mcp-server-gmail'],
-  transport: 'stdio',
-  enabled: true,
-  isAvailable: false,
-  tools: [],
-  // Requires: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET
-};
-
-export const GDRIVE_MCP_SERVER: MCPServer = {
-  id: 'gdrive',
-  name: 'Google Drive',
-  url: '',
-  command: 'npx',
-  args: ['-y', '@anthropic/mcp-server-gdrive'],
-  transport: 'stdio',
-  enabled: true,
-  isAvailable: false,
-  tools: [],
-  // Requires: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET
-};
-
 // ============================================================================
 // MCP Server Library
 // ============================================================================
 
 export const MCP_SERVER_LIBRARY: Record<string, MCPServer> = {
-  tavily: TAVILY_MCP_SERVER,
+  alphavantage: ALPHAVANTAGE_MCP_SERVER,
+  chart: CHART_MCP_SERVER,
   filesystem: FILESYSTEM_MCP_SERVER,
   github: GITHUB_MCP_SERVER,
   'google-workspace': GOOGLE_WORKSPACE_MCP_SERVER,
-  slack: SLACK_MCP_SERVER,
   kaggle: KAGGLE_MCP_SERVER,
-  alphavantage: ALPHAVANTAGE_MCP_SERVER,
-  chart: CHART_MCP_SERVER,
-  linkedin: LINKEDIN_MCP_SERVER,
-  gmail: GMAIL_MCP_SERVER,
-  gdrive: GDRIVE_MCP_SERVER,
+  slack: SLACK_MCP_SERVER,
+  tavily: TAVILY_MCP_SERVER,
 };
-
-/**
- * Get an MCP server by ID.
- */
-export function getMcpServer(serverId: string): MCPServer | undefined {
-  return MCP_SERVER_LIBRARY[serverId];
-}
-
-/**
- * List all available MCP servers.
- */
-export function listMcpServers(): MCPServer[] {
-  return Object.values(MCP_SERVER_LIBRARY);
-}

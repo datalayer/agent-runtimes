@@ -207,9 +207,9 @@ class AgentSpec(BaseModel):
         description="MCP servers used by this agent",
         alias="mcpServers",
     )
-    skills: List[AgentSkillSpec] = Field(
+    skills: List[str] = Field(
         default_factory=list,
-        description="Skills available to this agent",
+        description="Skill IDs available to this agent",
     )
     environment_name: str = Field(
         default="ai-agents",
@@ -223,4 +223,33 @@ class AgentSpec(BaseModel):
     color: Optional[str] = Field(
         default=None,
         description="Theme color for the agent (hex code)",
+    )
+    suggestions: List[str] = Field(
+        default_factory=list,
+        description="Chat suggestions to show users what this agent can do",
+    )
+    welcome_message: Optional[str] = Field(
+        default=None,
+        description="Welcome message shown when agent starts",
+        alias="welcomeMessage",
+    )
+    welcome_notebook: Optional[str] = Field(
+        default=None,
+        description="Path to Jupyter notebook to show on agent creation",
+        alias="welcomeNotebook",
+    )
+    welcome_document: Optional[str] = Field(
+        default=None,
+        description="Path to Lexical document to show on agent creation",
+        alias="welcomeDocument",
+    )
+    system_prompt: Optional[str] = Field(
+        default=None,
+        description="System prompt for the agent",
+        alias="systemPrompt",
+    )
+    system_prompt_codemode: Optional[str] = Field(
+        default=None,
+        description="Additional system prompt instructions when codemode is enabled",
+        alias="systemPromptCodemode",
     )

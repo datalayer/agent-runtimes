@@ -385,6 +385,10 @@ class CreateAgentRequest(BaseModel):
         default="You are a helpful AI assistant.",
         description="System prompt for the agent",
     )
+    system_prompt_codemode: str | None = Field(
+        default=None,
+        description="Additional system prompt for codemode (appended when enable_codemode=True)",
+    )
     enable_skills: bool = Field(
         default=False,
         description="Enable agent-skills toolset for reusable skill compositions",
@@ -752,6 +756,12 @@ async def create_agent(
             f"Creating agent '{agent_id}' with selected_mcp_servers={selected_mcp_servers}"
         )
 
+        # Build the system prompt
+        # If codemode is enabled, append codemode instructions to the base prompt
+        final_system_prompt = request.system_prompt
+        if request.enable_codemode and request.system_prompt_codemode:
+            final_system_prompt = request.system_prompt + "\n\n" + request.system_prompt_codemode
+
         # Create the agent based on the library
         if request.agent_library == "pydantic-ai":
             # First create the underlying Pydantic AI Agent
@@ -760,7 +770,7 @@ async def create_agent(
             # Only non-MCP toolsets (codemode, skills) are passed at construction.
             pydantic_agent = PydanticAgent(
                 request.model,
-                system_prompt=request.system_prompt,
+                system_prompt=final_system_prompt,
                 # Don't pass toolsets here - they'll be dynamically provided at run time
             )
             # Then wrap it with our adapter (pass agent_id for usage tracking)

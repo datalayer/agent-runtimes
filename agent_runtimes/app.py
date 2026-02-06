@@ -255,16 +255,30 @@ async def _create_and_register_cli_agent(
                         c if c.isalnum() or c == "_" else "_" for c in mcp_server.id
                     )
 
-                    # Pass through relevant environment variables
+                    # Pass through ALL environment variables from mcp_server config
+                    # This includes both required_env_vars and any custom env from config
                     server_env: dict[str, str] = {}
-                    for env_key in [
-                        "TAVILY_API_KEY",
-                        "GITHUB_TOKEN",
-                        "LINKEDIN_API_KEY",
-                    ]:
+                    
+                    # Add required env vars
+                    for env_key in mcp_server.required_env_vars:
                         env_val = os.getenv(env_key)
                         if env_val:
                             server_env[env_key] = env_val
+                    
+                    # Add any custom env from mcp_server.env (with expansion)
+                    if mcp_server.env:
+                        for env_key, env_value in mcp_server.env.items():
+                            # Expand ${VAR} syntax
+                            if isinstance(env_value, str) and "${" in env_value:
+                                import re
+                                pattern = r"\$\{([^}]+)\}"
+                                def replace(match):
+                                    var_name = match.group(1)
+                                    return os.environ.get(var_name, "")
+                                expanded_value = re.sub(pattern, replace, env_value)
+                                server_env[env_key] = expanded_value
+                            else:
+                                server_env[env_key] = env_value
 
                     registry.add_server(
                         MCPServerConfig(
@@ -322,11 +336,11 @@ async def _create_and_register_cli_agent(
                     skills_path=skills_folder_path
                     or str((repo_root / "skills").resolve()),
                     allow_direct_tool_calls=False,
-                    mcp_proxy_url=mcp_proxy_url,
+                    **({} if mcp_proxy_url is None else {"mcp_proxy_url": mcp_proxy_url}),
                 )
 
                 logger.info(
-                    f"Codemode config: generated_path={codemode_config.generated_path}, skills_path={codemode_config.skills_path}, mcp_proxy_url={codemode_config.mcp_proxy_url}"
+                    f"Codemode config: generated_path={codemode_config.generated_path}, skills_path={codemode_config.skills_path}, mcp_proxy_url={getattr(codemode_config, 'mcp_proxy_url', None)}"
                 )
 
                 codemode_toolset = CodemodeToolset(
@@ -503,11 +517,11 @@ async def _create_and_register_cli_agent(
                     skills_path=skills_folder_path
                     or str((repo_root / "skills").resolve()),
                     allow_direct_tool_calls=False,
-                    mcp_proxy_url=mcp_proxy_url,
+                    **({} if mcp_proxy_url is None else {"mcp_proxy_url": mcp_proxy_url}),
                 )
 
                 logger.info(
-                    f"rebuild_codemode: Using generated_path={new_config.generated_path}, skills_path={new_config.skills_path}, mcp_proxy_url={new_config.mcp_proxy_url}"
+                    f"rebuild_codemode: Using generated_path={new_config.generated_path}, skills_path={new_config.skills_path}, mcp_proxy_url={getattr(new_config, 'mcp_proxy_url', None)}"
                 )
 
                 # Get fresh sandbox from manager (may have been reconfigured via API)
@@ -791,7 +805,7 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
                 skills_list = (
                     [s.strip() for s in skills_str.split(",") if s.strip()]
                     if skills_str
-                    else []
+                    else list(agent_spec.skills)  # Use agent spec skills if no CLI override
                 )
                 cli_mcp_servers_str = os.environ.get("AGENT_RUNTIMES_MCP_SERVERS", "")
                 cli_mcp_servers = (
@@ -886,12 +900,17 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
                                 f"✗ Error starting MCP server '{mcp_server.id}': {e}"
                             )
 
-                # Start MCP servers in background
-                if all_mcp_servers:
+                # Start MCP servers in background (only if codemode is disabled)
+                # When codemode is enabled, it will start its own MCP server instances
+                if all_mcp_servers and not enable_codemode:
                     logger.info(
                         f"Starting {len(all_mcp_servers)} MCP servers for agent '{agent_name}'..."
                     )
-                    asyncio.create_task(start_all_mcp_servers())
+                    await start_all_mcp_servers()
+                elif all_mcp_servers and enable_codemode:
+                    logger.info(
+                        f"Codemode enabled: skipping lifecycle manager MCP server startup (codemode will manage servers)"
+                    )
 
                 # Create and register the agent with codemode and skills if enabled
                 await _create_and_register_cli_agent(

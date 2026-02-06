@@ -98,7 +98,12 @@ class MCPLifecycleManager:
 
         def replace(match: re.Match[str]) -> str:
             var_name = match.group(1)
-            return os.environ.get(var_name, "")
+            env_value = os.environ.get(var_name, "")
+            if not env_value:
+                logger.warning(
+                    f"Environment variable '{var_name}' not found or empty during expansion"
+                )
+            return env_value
 
         return re.sub(pattern, replace, value)
 
@@ -318,8 +323,21 @@ class MCPLifecycleManager:
             try:
                 # Build env dict
                 env = {**os.environ}
+                
                 if config.env:
-                    env.update(config.env)
+                    # Expand environment variables in the env dict
+                    expanded_env = {
+                        key: self._expand_env_vars(value) if isinstance(value, str) else value
+                        for key, value in config.env.items()
+                    }
+                    logger.debug(f"  Expanded config.env: {list(expanded_env.keys())}")
+                    env.update(expanded_env)
+
+                # Expand environment variables in args (e.g., ${KAGGLE_TOKEN})
+                expanded_args = [
+                    self._expand_env_vars(arg) if isinstance(arg, str) else arg
+                    for arg in (config.args or [])
+                ]
 
                 # Use tool_prefix to avoid name conflicts if the same server type
                 # is selected multiple times (e.g., from both config and catalog)
@@ -327,7 +345,7 @@ class MCPLifecycleManager:
 
                 pydantic_server = MCPServerStdio(
                     config.command,
-                    args=config.args or [],
+                    args=expanded_args,
                     env=env,
                     tool_prefix=tool_prefix,
                     id=server_id,  # Pass id in constructor

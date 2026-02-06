@@ -1,11 +1,13 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
-
 """
 MCP Server Catalog.
 
 Predefined MCP server configurations that can be used by agents.
 Credentials are configured via environment variables.
+
+This file is AUTO-GENERATED from YAML specifications.
+DO NOT EDIT MANUALLY - run 'make specs' to regenerate.
 """
 
 import os
@@ -17,91 +19,22 @@ from agent_runtimes.types import MCPServer
 # MCP Server Definitions
 # ============================================================================
 
-TAVILY_MCP_SERVER = MCPServer(
-    id="tavily",
-    name="Tavily Search",
-    description="Web search and research capabilities via Tavily API",
-    command="npx",
-    args=["-y", "tavily-mcp"],
-    transport="stdio",
-    enabled=True,
-    tools=[],
-    required_env_vars=["TAVILY_API_KEY"],
-)
-
-FILESYSTEM_MCP_SERVER = MCPServer(
-    id="filesystem",
-    name="Filesystem",
-    description="Local filesystem read/write operations",
-    command="npx",
-    args=["-y", "@modelcontextprotocol/server-filesystem", "/tmp"],  # nosec B108
-    transport="stdio",
-    enabled=True,
-    tools=[],
-    required_env_vars=[],  # No env vars required
-)
-
-GITHUB_MCP_SERVER = MCPServer(
-    id="github",
-    name="GitHub",
-    description="GitHub repository operations (issues, PRs, code search)",
-    command="npx",
-    args=["-y", "@modelcontextprotocol/server-github"],
-    transport="stdio",
-    enabled=True,
-    tools=[],
-    required_env_vars=["GITHUB_TOKEN"],
-)
-
-GOOGLE_WORKSPACE_MCP_SERVER = MCPServer(
-    id="google-workspace",
-    name="Google Workspace",
-    description="Google Drive, Gmail, Calendar, and Docs integration",
-    command="npx",
-    args=[
-        "-y",
-        "@modelcontextprotocol/server-google-maps",
-    ],  # Note: google-workspace not available, using google-maps as placeholder
-    transport="stdio",
-    enabled=False,  # Disabled - package may not exist
-    tools=[],
-    required_env_vars=["GOOGLE_OAUTH_CLIENT_ID", "GOOGLE_OAUTH_CLIENT_SECRET"],
-)
-
-SLACK_MCP_SERVER = MCPServer(
-    id="slack",
-    name="Slack",
-    description="Slack messaging and channel operations",
-    command="npx",
-    args=["-y", "@modelcontextprotocol/server-slack"],
-    transport="stdio",
-    enabled=True,
-    tools=[],
-    required_env_vars=["SLACK_BOT_TOKEN", "SLACK_TEAM_ID"],
-)
-
-KAGGLE_MCP_SERVER = MCPServer(
-    id="kaggle",
-    name="Kaggle",
-    description="Kaggle datasets, models, competitions, and notebooks access",
-    command="npx",
-    args=["-y", "mcp-remote", "https://www.kaggle.com/mcp"],
-    transport="stdio",
-    enabled=True,
-    tools=[],
-    required_env_vars=[],  # Uses browser OAuth or token auth
-)
-
 ALPHAVANTAGE_MCP_SERVER = MCPServer(
     id="alphavantage",
     name="Alpha Vantage",
     description="Financial market data and stock information",
-    command="npx",
-    args=["-y", "mcp-server-alphavantage"],  # Community package
+    command="uvx",
+    args=[
+        "av-mcp==0.2.1",
+        "${ALPHAVANTAGE_API_KEY}",
+    ],
     transport="stdio",
-    enabled=False,  # Disabled - need to verify package exists
+    enabled=True,
     tools=[],
-    required_env_vars=["ALPHAVANTAGE_API_KEY"],
+    env={
+        "MAX_RESPONSE_TOKENS": "100000",
+    },
+    required_env_vars=['ALPHAVANTAGE_API_KEY'],
 )
 
 CHART_MCP_SERVER = MCPServer(
@@ -109,86 +42,142 @@ CHART_MCP_SERVER = MCPServer(
     name="Chart Generator",
     description="Generate charts and visualizations",
     command="npx",
-    args=["-y", "mcp-server-chart"],  # Community package if exists
-    transport="stdio",
-    enabled=False,  # Disabled - need to verify package exists
-    tools=[],
-    required_env_vars=[],  # No env vars required
-)
-
-LINKEDIN_MCP_SERVER = MCPServer(
-    id="linkedin",
-    name="LinkedIn",
-    description="LinkedIn profile and job search operations",
-    command="uvx",
     args=[
-        "--from",
-        "git+https://github.com/stickerdaniel/linkedin-mcp-server",
-        "linkedin-mcp-server",
+        "-y",
+        "@antv/mcp-server-chart",
     ],
     transport="stdio",
     enabled=True,
     tools=[],
-    required_env_vars=[],  # Uses session file or LI_AT cookie (checked separately)
+    required_env_vars=[],
 )
 
-GMAIL_MCP_SERVER = MCPServer(
-    id="gmail",
-    name="Gmail",
-    description="Gmail email operations",
+FILESYSTEM_MCP_SERVER = MCPServer(
+    id="filesystem",
+    name="Filesystem",
+    description="Local filesystem read/write operations",
     command="npx",
     args=[
         "-y",
-        "@modelcontextprotocol/server-google-drive",
-    ],  # Note: dedicated gmail server may not exist
-    transport="stdio",
-    enabled=False,  # Disabled - need dedicated gmail server
-    tools=[],
-    required_env_vars=["GOOGLE_OAUTH_CLIENT_ID", "GOOGLE_OAUTH_CLIENT_SECRET"],
-)
-
-GDRIVE_MCP_SERVER = MCPServer(
-    id="gdrive",
-    name="Google Drive",
-    description="Google Drive file operations",
-    command="npx",
-    args=["-y", "@modelcontextprotocol/server-google-drive"],
+        "@modelcontextprotocol/server-filesystem",
+        "/tmp",
+    ],
     transport="stdio",
     enabled=True,
     tools=[],
-    required_env_vars=["GOOGLE_OAUTH_CLIENT_ID", "GOOGLE_OAUTH_CLIENT_SECRET"],
+    required_env_vars=[],
 )
 
-BRAVE_SEARCH_MCP_SERVER = MCPServer(
-    id="brave-search",
-    name="Brave Search",
-    description="Web search using Brave Search API",
-    command="npx",
-    args=["-y", "@modelcontextprotocol/server-brave-search"],
+GITHUB_MCP_SERVER = MCPServer(
+    id="github",
+    name="GitHub",
+    description="GitHub repository operations (issues, PRs, code search)",
+    command="docker",
+    args=[
+        "run",
+        "-i",
+        "--rm",
+        "-e",
+        "GITHUB_PERSONAL_ACCESS_TOKEN",
+        "ghcr.io/github/github-mcp-server",
+    ],
     transport="stdio",
     enabled=True,
     tools=[],
-    required_env_vars=["BRAVE_API_KEY"],
+    env={
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PERSONAL_ACCESS_TOKEN}",
+    },
+    required_env_vars=['GITHUB_PERSONAL_ACCESS_TOKEN'],
 )
 
+GOOGLE_WORKSPACE_MCP_SERVER = MCPServer(
+    id="google-workspace",
+    name="Google Workspace",
+    description="Google Drive, Gmail, Calendar, and Docs integration",
+    command="uvx",
+    args=[
+        "workspace-mcp",
+    ],
+    transport="stdio",
+    enabled=True,
+    tools=[],
+    env={
+        "GOOGLE_OAUTH_CLIENT_ID": "${GOOGLE_OAUTH_CLIENT_ID}",
+        "GOOGLE_OAUTH_CLIENT_SECRET": "${GOOGLE_OAUTH_CLIENT_SECRET}",
+        "WORKSPACE_MCP_PORT": "9000",
+    },
+    required_env_vars=['GOOGLE_OAUTH_CLIENT_ID', 'GOOGLE_OAUTH_CLIENT_SECRET'],
+)
+
+KAGGLE_MCP_SERVER = MCPServer(
+    id="kaggle",
+    name="Kaggle",
+    description="Kaggle datasets, models, competitions, and notebooks access",
+    command="npx",
+    args=[
+        "-y",
+        "mcp-remote",
+        "https://www.kaggle.com/mcp",
+        "--header",
+        "Authorization: Bearer ${KAGGLE_TOKEN}",
+    ],
+    transport="stdio",
+    enabled=True,
+    tools=[],
+    required_env_vars=['KAGGLE_TOKEN'],
+)
+
+SLACK_MCP_SERVER = MCPServer(
+    id="slack",
+    name="Slack",
+    description="Slack messaging and channel operations",
+    command="npx",
+    args=[
+        "-y",
+        "@datalayer/slack-mcp-server",
+    ],
+    transport="stdio",
+    enabled=True,
+    tools=[],
+    env={
+        "SLACK_BOT_TOKEN": "${SLACK_BOT_TOKEN}",
+        "SLACK_TEAM_ID": "${SLACK_TEAM_ID}",
+        "SLACK_CHANNEL_IDS": "${SLACK_CHANNEL_IDS}",
+    },
+    required_env_vars=['SLACK_BOT_TOKEN', 'SLACK_TEAM_ID', 'SLACK_CHANNEL_IDS'],
+)
+
+TAVILY_MCP_SERVER = MCPServer(
+    id="tavily",
+    name="Tavily Search",
+    description="Web search and research capabilities via Tavily API",
+    command="npx",
+    args=[
+        "-y",
+        "tavily-mcp",
+    ],
+    transport="stdio",
+    enabled=True,
+    tools=[],
+    env={
+        "TAVILY_API_KEY": "${TAVILY_API_KEY}",
+    },
+    required_env_vars=['TAVILY_API_KEY'],
+)
 
 # ============================================================================
 # MCP Server Catalog
 # ============================================================================
 
 MCP_SERVER_CATALOG: Dict[str, MCPServer] = {
-    "tavily": TAVILY_MCP_SERVER,
+    "alphavantage": ALPHAVANTAGE_MCP_SERVER,
+    "chart": CHART_MCP_SERVER,
     "filesystem": FILESYSTEM_MCP_SERVER,
     "github": GITHUB_MCP_SERVER,
     "google-workspace": GOOGLE_WORKSPACE_MCP_SERVER,
-    "slack": SLACK_MCP_SERVER,
     "kaggle": KAGGLE_MCP_SERVER,
-    "alphavantage": ALPHAVANTAGE_MCP_SERVER,
-    "chart": CHART_MCP_SERVER,
-    "linkedin": LINKEDIN_MCP_SERVER,
-    "gmail": GMAIL_MCP_SERVER,
-    "gdrive": GDRIVE_MCP_SERVER,
-    "brave-search": BRAVE_SEARCH_MCP_SERVER,
+    "slack": SLACK_MCP_SERVER,
+    "tavily": TAVILY_MCP_SERVER,
 }
 
 

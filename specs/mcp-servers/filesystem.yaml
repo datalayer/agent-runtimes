@@ -1,0 +1,27 @@
+# Copyright (c) 2025-2026 Datalayer, Inc.
+# Distributed under the terms of the Modified BSD License.
+
+# MCP Server Specification: Filesystem
+# Local filesystem read/write operations
+
+id: filesystem
+name: Filesystem
+description: Local filesystem read/write operations
+
+command: npx
+args:
+  - "-y"
+  - "@modelcontextprotocol/server-filesystem"
+  - "/tmp"
+
+transport: stdio
+enabled: true
+
+required_env_vars: []
+
+env: {}
+
+tags:
+  - files
+  - local
+  - storage

@@ -1,0 +1,26 @@
+# Copyright (c) 2025-2026 Datalayer, Inc.
+# Distributed under the terms of the Modified BSD License.
+
+id: google-workspace
+name: Google Workspace
+description: Google Drive, Gmail, Calendar, and Docs integration
+
+command: uvx
+args:
+  - "workspace-mcp"
+
+transport: stdio
+
+required_env_vars:
+  - GOOGLE_OAUTH_CLIENT_ID
+  - GOOGLE_OAUTH_CLIENT_SECRET
+
+env:
+  GOOGLE_OAUTH_CLIENT_ID: "${GOOGLE_OAUTH_CLIENT_ID}"
+  GOOGLE_OAUTH_CLIENT_SECRET: "${GOOGLE_OAUTH_CLIENT_SECRET}"
+  WORKSPACE_MCP_PORT: "9000"
+
+tags:
+  - google
+  - productivity
+  - workspace
