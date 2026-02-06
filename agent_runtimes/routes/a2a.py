@@ -387,7 +387,7 @@ async def list_a2a_agents() -> dict[str, Any]:
     List all available A2A agents.
 
     Returns agent metadata for discovery. Each agent's full A2A endpoints
-    are available at /api/v1/a2a/agents/{agent_id}/.
+    are available at `/api/v1/a2a/agents/{agent_id}/`.
     """
     agents = []
     for agent_id, registration in _a2a_agents.items():

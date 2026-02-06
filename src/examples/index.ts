@@ -23,3 +23,11 @@ export { default as CopilotKitNotebookExample } from './CopilotKitNotebookExampl
 export { default as DatalayerNotebookExample } from './DatalayerNotebookExample';
 export { default as JupyterCellExample } from './JupyterCellExample';
 export { default as JupyterNotebookExample } from './JupyterNotebookExample';
+
+// Store types
+export type {
+  Agent,
+  AgentStatus,
+  AgentsState,
+  Transport,
+} from './stores/examplesStore';

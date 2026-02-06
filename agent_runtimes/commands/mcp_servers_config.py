@@ -9,6 +9,7 @@ configured in the user's ~/.datalayer/mcp.json file. It can be used directly
 by other libraries or through the CLI.
 
 Usage as library:
+    ```python
     from agent_runtimes.commands.mcp_servers_config import (
         list_mcp_servers_config,
         get_mcp_servers_config,
@@ -22,6 +23,7 @@ Usage as library:
 
     # Print formatted output
     list_mcp_servers_config(output=OutputFormat.table)
+    ```
 """
 
 import json

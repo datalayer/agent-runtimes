@@ -96,7 +96,7 @@ export interface ToolCallState {
 /**
  * Chat store state
  */
-interface ChatState {
+export interface ChatState {
   // === Configuration ===
   config: ChatConfig;
   ready: boolean;
@@ -137,7 +137,7 @@ interface ChatState {
 /**
  * Chat store actions
  */
-interface ChatActions {
+export interface ChatActions {
   // === Configuration actions ===
   setConfig: (config: Partial<ChatConfig>) => void;
   setReady: (ready: boolean) => void;

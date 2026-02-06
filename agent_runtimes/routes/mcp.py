@@ -27,7 +27,7 @@ async def get_catalog_servers() -> list[dict[str, Any]]:
     """
     Get all MCP servers from the catalog (predefined servers).
 
-    These are servers that can be enabled on-demand via the /catalog/{server_name}/enable endpoint.
+    These are servers that can be enabled on-demand via the `/catalog/{server_name}/enable` endpoint.
     They are NOT started automatically - users must explicitly enable them.
 
     Note: Catalog servers are stored separately from config servers (mcp.json),

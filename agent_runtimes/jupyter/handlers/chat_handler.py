@@ -5,12 +5,19 @@
 
 import json
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from jupyter_server.base.handlers import APIHandler
 from pydantic_ai import UsageLimits
-from pydantic_ai.ui.vercel_ai import VercelAIAdapter
 from starlette.requests import Request
+
+if TYPE_CHECKING:
+    from pydantic_ai.ui.vercel_ai import VercelAIAdapter
+else:
+    try:
+        from pydantic_ai.ui.vercel_ai import VercelAIAdapter
+    except (ImportError, ModuleNotFoundError):
+        VercelAIAdapter = None  # type: ignore[assignment,misc]
 
 from agent_runtimes.mcp import create_mcp_server
 
@@ -81,6 +88,19 @@ class VercelAIChatHandler(APIHandler):
     async def post(self) -> None:
         """Handle chat POST request with streaming."""
         try:
+            # Check if VercelAIAdapter is available
+            if VercelAIAdapter is None:
+                self.set_status(503)
+                self.finish(
+                    json.dumps(
+                        {
+                            "error": "VercelAIAdapter not available",
+                            "message": "The Vercel AI adapter is not available. This may be due to an incompatible pydantic-ai version.",
+                        }
+                    )
+                )
+                return
+
             # Get agent from application settings
             agent = self.settings.get("chat_agent")
             if not agent:

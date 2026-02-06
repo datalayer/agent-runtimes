@@ -15,7 +15,7 @@ import { McpServerManager, type McpServerSelection } from './McpServerManager';
 import matplotlib from '../examples/stores/notebooks/NotebookExample2.ipynb.json';
 import emptyNotebook from '../examples/stores/notebooks/Empty.ipynb.json';
 
-interface MainContentProps {
+export interface MainContentProps {
   showNotebook: boolean;
   timeTravel: number;
   onTimeTravelChange: (value: number) => void;

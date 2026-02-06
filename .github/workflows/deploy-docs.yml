@@ -32,10 +32,9 @@ jobs:
       - name: Install dependencies
         shell: bash -el {0}
         run: |
-          conda install boto3 python=3.13 make nodejs
-          python -m pip install --upgrade pip
-          python -m pip install .[docs]
-          python -m pip list | grep -E "(pydoc|click)"
+          conda install boto3 python=3.13 make nodejs uv pip
+          uv pip install ".[test,docs,examples]"
+          uv pip list
           npm install
 
       - name: Generate API docs

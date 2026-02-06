@@ -7,7 +7,7 @@ import React from 'react';
 import { Text } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 
-interface FooterMetricsProps {
+export interface FooterMetricsProps {
   tokens: number;
   cost: number;
 }

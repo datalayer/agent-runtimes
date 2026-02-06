@@ -248,7 +248,9 @@ def serve_server(
     # Configure Jupyter sandbox if provided
     if jupyter_sandbox:
         os.environ["AGENT_RUNTIMES_JUPYTER_SANDBOX"] = jupyter_sandbox
-        logger.info(f"Jupyter sandbox configured: using Jupyter kernel at {jupyter_sandbox.split('?')[0]}")
+        logger.info(
+            f"Jupyter sandbox configured: using Jupyter kernel at {jupyter_sandbox.split('?')[0]}"
+        )
 
     # Configure generated code folder if provided
     if generated_code_folder:

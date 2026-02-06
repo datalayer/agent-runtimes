@@ -7,7 +7,7 @@ import React from 'react';
 import { Text } from '@primer/react';
 import { Box, Slider } from '@datalayer/primer-addons';
 
-interface TimeTravelProps {
+export interface TimeTravelProps {
   value: number;
   onChange: (value: number) => void;
   min?: number;

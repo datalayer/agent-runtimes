@@ -9,9 +9,7 @@ export * from './runtime';
 export * from './identity';
 export * from './config';
 
-// Explicitly re-export from types, excluding duplicates that are already
-// exported from ./components (AgentRuntimeConfig, BuiltinTool, MCPServerTool)
-// and ./state (AgentStatus)
+// Explicitly re-export from types
 export type {
   ConversationEntry,
   MCPServer,
@@ -19,4 +17,6 @@ export type {
   AgentSpec,
   AIModel,
   FrontendConfig,
+  BuiltinTool,
+  MCPServerTool,
 } from './types';

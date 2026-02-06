@@ -25,9 +25,9 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
 ]
 dependencies = [
-    "a2a-sdk[all]",
-    "ag-ui-protocol",
-    "agent-client-protocol",
+    "a2a-sdk[all]>=0.3.22",
+    "ag-ui-protocol>=0.1.10",
+    "agent-client-protocol>=0.7.1",
     "agent-codemode",
     "agent-skills",
     "anthropic",
@@ -36,13 +36,13 @@ dependencies = [
     "fasta2a @ git+https://github.com/datalayer-externals/fasta2a.git@feature/sse-streaming-2#egg=fasta2a",
     "filelock>=3.20.3",
     "jupyter-server>=2.10,<3",
-    "mcp-ui-server",
-    "pydantic-ai-slim[openai,anthropic,google,mcp,dbos,bedrock]>=1.43.0",
-    "pydantic-graph",
-    "pydantic-settings",
-    "pydantic[email]",
+    "mcp-ui-server>=1.0.0",
+    "pydantic-ai-slim[openai,anthropic,google,mcp,dbos,bedrock]>=1.0,<1.43.0",
+    "pydantic-graph>=1.0,<1.43.0",
+    "pydantic-settings>=2.11.0",
+    "pydantic[email]>=2.11.7",
     "tiktoken>=0.5.0",
-    "typer",
+    "typer>=0.16.0",
     "urllib3>=2.6.3",
 ]
 dynamic = ["version"]
@@ -56,27 +56,26 @@ Changelog = "https://github.com/datalayer/agent-runtimes/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 test = [
-    "coverage",
-    "mypy",
-    "pytest",
-    "pytest-asyncio",
-    "pytest-cov",
-    "pytest_jupyter",
+    "coverage>=7.9.2",
+    "mypy>=1.16.1",
+    "pytest>=8.4.1",
+    "pytest-asyncio>=1.1.0",
+    "pytest-cov>=6.2.1",
+    "pytest_jupyter>=0.10.1",
     "pytest-tornasync",
-    "python-dotenv",
-    "types-requests",
-    "typing-extensions",
+    "python-dotenv>=1.1.1",
+    "types-requests>=2.32.4",
+    "typing-extensions>=4.15.0",
 ]
 docs = [
-    "click>=8.3.1",  # Use latest version, 8.2.2 issue has been fixed
-    "npdoc_to_md",
-    "pydoc-markdown>=4.0",  # Use modern version with proper module structure
+    "npdoc_to_md>=2.0.1",
+    "pydoc-markdown>=4.0",
 ]
 examples = [
-    "fastapi",
-    "pydantic",
-    "scikit-learn",
-    "streamlit",
+    "fastapi>=0.116.1",
+    "pydantic>=2.11.7",
+    "scikit-learn>=1.7.1",
+    "streamlit>=1.47.1",
     "torch",
     "uvicorn",
 ]

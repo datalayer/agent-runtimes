@@ -14,6 +14,7 @@ export {
   createMessageRenderer,
   createActivityRenderer,
 } from './ExtensionRegistry';
+export type { InternalExtensionType } from './ExtensionRegistry';
 
 export {
   createA2UIRenderer,

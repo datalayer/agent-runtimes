@@ -8,6 +8,7 @@ This module provides the list-specs command that shows available agent specs
 from the library. It can be used directly by other libraries or through the CLI.
 
 Usage as library:
+    ```python
     from agent_runtimes.commands.list_specs import (
         list_agent_specs,
         get_agent_specs,
@@ -21,6 +22,7 @@ Usage as library:
 
     # Print formatted output
     list_agent_specs(output=OutputFormat.table)
+    ```
 """
 
 import json

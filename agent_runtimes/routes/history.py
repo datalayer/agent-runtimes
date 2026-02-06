@@ -22,8 +22,10 @@ router = APIRouter(tags=["history"])
 # History Response Models
 # =========================================================================
 
+
 class HistoryMessage(BaseModel):
     """Message in the conversation history."""
+
     id: str
     role: str  # "user", "assistant", "system", "tool"
     content: str | list[dict[str, Any]]
@@ -35,6 +37,7 @@ class HistoryMessage(BaseModel):
 
 class HistoryResponse(BaseModel):
     """Response containing conversation history."""
+
     messages: list[HistoryMessage]
 
 
@@ -42,12 +45,13 @@ class HistoryResponse(BaseModel):
 # Helper Functions
 # =========================================================================
 
+
 def _convert_to_chat_messages(
-    message_history: list[dict[str, Any]],
-    agent_id: str
+    message_history: list[dict[str, Any]], agent_id: str
 ) -> list[HistoryMessage]:
-    """Convert internal message history to ChatMessage format.
-    
+    """
+    Convert internal message history to ChatMessage format.
+
     Internal format (from pydantic-ai):
     {
         "kind": "request" | "response",
@@ -62,7 +66,7 @@ def _convert_to_chat_messages(
             }
         ]
     }
-    
+
     Frontend ChatMessage format:
     {
         "id": "unique-id",
@@ -73,76 +77,86 @@ def _convert_to_chat_messages(
     }
     """
     messages: list[HistoryMessage] = []
-    
+
     for msg in message_history:
         kind = msg.get("kind")
         timestamp = msg.get("timestamp", datetime.now(timezone.utc).isoformat())
         parts = msg.get("parts", [])
-        
+
         if kind == "request":
             # Request messages contain user prompts and tool returns
             for part in parts:
                 part_kind = part.get("part_kind")
                 content = part.get("content", "")
-                
+
                 if part_kind == "user-prompt":
-                    messages.append(HistoryMessage(
-                        id=str(uuid.uuid4()),
-                        role="user",
-                        content=content,
-                        createdAt=timestamp,
-                        agentName=agent_id,
-                    ))
+                    messages.append(
+                        HistoryMessage(
+                            id=str(uuid.uuid4()),
+                            role="user",
+                            content=content,
+                            createdAt=timestamp,
+                            agentName=agent_id,
+                        )
+                    )
                 elif part_kind == "tool-return":
                     # Tool return - create a tool message
-                    messages.append(HistoryMessage(
-                        id=str(uuid.uuid4()),
-                        role="tool",
-                        content=content,
-                        createdAt=timestamp,
-                        agentName=agent_id,
-                        metadata={
-                            "toolCallId": part.get("tool_call_id"),
-                            "toolName": part.get("tool_name"),
-                        }
-                    ))
+                    messages.append(
+                        HistoryMessage(
+                            id=str(uuid.uuid4()),
+                            role="tool",
+                            content=content,
+                            createdAt=timestamp,
+                            agentName=agent_id,
+                            metadata={
+                                "toolCallId": part.get("tool_call_id"),
+                                "toolName": part.get("tool_name"),
+                            },
+                        )
+                    )
                 elif part_kind == "system-prompt":
-                    messages.append(HistoryMessage(
-                        id=str(uuid.uuid4()),
-                        role="system",
-                        content=content,
-                        createdAt=timestamp,
-                        agentName=agent_id,
-                    ))
-                    
+                    messages.append(
+                        HistoryMessage(
+                            id=str(uuid.uuid4()),
+                            role="system",
+                            content=content,
+                            createdAt=timestamp,
+                            agentName=agent_id,
+                        )
+                    )
+
         elif kind == "response":
             # Response messages contain assistant text and tool calls
             text_content = ""
             tool_calls: list[dict[str, Any]] = []
-            
+
             for part in parts:
                 part_kind = part.get("part_kind")
-                
+
                 if part_kind == "text":
                     text_content += part.get("content", "")
                 elif part_kind == "tool-call":
-                    tool_calls.append({
-                        "id": part.get("tool_call_id", str(uuid.uuid4())),
-                        "name": part.get("tool_name"),
-                        "arguments": part.get("args", "{}"),
-                    })
-            
+                    tool_calls.append(
+                        {
+                            "id": part.get("tool_call_id", str(uuid.uuid4())),
+                            "name": part.get("tool_name"),
+                            "arguments": part.get("args", "{}"),
+                        }
+                    )
+
             # Only add if there's content or tool calls
             if text_content or tool_calls:
-                messages.append(HistoryMessage(
-                    id=str(uuid.uuid4()),
-                    role="assistant",
-                    content=text_content if text_content else "",
-                    createdAt=timestamp,
-                    agentName=agent_id,
-                    toolCalls=tool_calls if tool_calls else None,
-                ))
-    
+                messages.append(
+                    HistoryMessage(
+                        id=str(uuid.uuid4()),
+                        role="assistant",
+                        content=text_content if text_content else "",
+                        createdAt=timestamp,
+                        agentName=agent_id,
+                        toolCalls=tool_calls if tool_calls else None,
+                    )
+                )
+
     return messages
 
 
@@ -150,47 +164,50 @@ def _convert_to_chat_messages(
 # History Routes
 # =========================================================================
 
+
 @router.get("/history", response_model=HistoryResponse)
 async def get_conversation_history(
-    agent_id: str = Query(default="default", description="Agent ID to get history for")
+    agent_id: str = Query(default="default", description="Agent ID to get history for"),
 ) -> HistoryResponse:
     """
     Get the conversation history for an agent.
-    
+
     Returns messages in the format expected by the frontend ChatMessage interface.
     """
     tracker = get_usage_tracker()
     stats = tracker.get_agent_stats(agent_id)
-    
+
     if not stats:
         logger.debug(f"No usage stats found for agent '{agent_id}'")
         return HistoryResponse(messages=[])
-    
+
     if not stats.message_history:
         logger.debug(f"No message history for agent '{agent_id}'")
         return HistoryResponse(messages=[])
-    
+
     messages = _convert_to_chat_messages(stats.message_history, agent_id)
     logger.debug(f"Returning {len(messages)} messages for agent '{agent_id}'")
-    
+
     return HistoryResponse(messages=messages)
 
 
 @router.delete("/history", response_model=dict)
 async def clear_conversation_history(
-    agent_id: str = Query(default="default", description="Agent ID to clear history for")
+    agent_id: str = Query(
+        default="default", description="Agent ID to clear history for"
+    ),
 ) -> dict[str, Any]:
     """
     Clear the conversation history for an agent.
-    
+
     This resets the message history but preserves usage statistics.
     """
     tracker = get_usage_tracker()
     stats = tracker.get_agent_stats(agent_id)
-    
+
     if stats:
         stats.message_history = []
         logger.info(f"Cleared message history for agent '{agent_id}'")
         return {"status": "ok", "message": f"History cleared for agent '{agent_id}'"}
-    
+
     return {"status": "ok", "message": f"No history found for agent '{agent_id}'"}

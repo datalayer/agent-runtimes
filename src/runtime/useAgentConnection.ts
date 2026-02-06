@@ -20,14 +20,14 @@ const DEFAULT_AGENT_CONFIG: AgentConfig = {
   transport: 'ag-ui',
 };
 
-interface UseAgentConnectionOptions {
+export interface UseAgentConnectionOptions {
   /** Agent configuration */
   config?: AgentConfig;
   /** Auto-create agent when runtime is ready */
   autoCreate?: boolean;
 }
 
-interface UseAgentConnectionReturn {
+export interface UseAgentConnectionReturn {
   /** Current agent connection */
   agent: AgentConnection | null;
   /** Whether the agent is ready */

@@ -57,7 +57,7 @@ interface MCPServer {
   isRunning?: boolean;
 }
 
-interface McpServerManagerProps {
+export interface McpServerManagerProps {
   /** Base URL for the API */
   baseUrl: string;
   /** Agent ID for updating the running agent's MCP servers */

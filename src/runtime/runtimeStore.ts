@@ -24,7 +24,7 @@ import type {
 /**
  * Runtime store state interface.
  */
-interface RuntimeStoreState {
+export interface RuntimeStoreState {
   /** Current runtime connection */
   runtime: RuntimeConnection | null;
   /** Current agent connection */
@@ -40,7 +40,7 @@ interface RuntimeStoreState {
 /**
  * Runtime store actions interface.
  */
-interface RuntimeStoreActions {
+export interface RuntimeStoreActions {
   /** Launch a new runtime */
   launchRuntime: (options: IRuntimeOptions) => Promise<RuntimeConnection>;
   /** Connect to an existing runtime */
@@ -62,7 +62,7 @@ interface RuntimeStoreActions {
   reset: () => void;
 }
 
-type RuntimeStore = RuntimeStoreState & RuntimeStoreActions;
+export type RuntimeStore = RuntimeStoreState & RuntimeStoreActions;
 
 const initialState: RuntimeStoreState = {
   runtime: null,

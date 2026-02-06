@@ -32,6 +32,7 @@ import type { McpServerSelection } from './McpServerManager';
 import { IdentityConnect, useIdentity } from '../identity';
 import type { OAuthProvider, OAuthProviderConfig, Identity } from '../identity';
 import { IdentityCard } from './chat';
+import type { MCPServerTool as MCPServerToolType } from '../types';
 
 /**
  * Props for IdentityConnectWithStatus component
@@ -335,13 +336,9 @@ function IdentityConnectWithStatus({
 }
 
 /**
- * MCP Server Tool type
+ * MCP Server Tool type (re-exported from types.ts)
  */
-export interface MCPServerTool {
-  name: string;
-  description?: string;
-  enabled: boolean;
-}
+export type MCPServerTool = MCPServerToolType;
 
 export interface SkillOption {
   id: string;
@@ -462,7 +459,7 @@ interface ConfigResponse {
   mcpServers?: MCPServerConfig[];
 }
 
-interface AgentConfigurationProps {
+export interface AgentConfigurationProps {
   agentLibrary: AgentLibrary;
   transport: Transport;
   extensions: Extension[];

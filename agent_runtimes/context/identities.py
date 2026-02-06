@@ -9,6 +9,7 @@ processing, allowing skill executors to access tokens without threading them
 through all the pydantic-ai layers.
 
 Usage:
+    ```python
     # In the transport layer (vercel_ai.py):
     from agent_runtimes.context.identities import set_request_identities, clear_request_identities
 
@@ -24,6 +25,7 @@ Usage:
     from agent_runtimes.context.identities import get_identity_env
 
     env = get_identity_env()  # Returns {"GITHUB_TOKEN": "...", ...}
+    ```
 """
 
 from __future__ import annotations

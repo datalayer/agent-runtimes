@@ -43,7 +43,7 @@ def expand_env_vars(value: str) -> str:
     """
     Expand environment variables in a string.
 
-    Supports ${VAR_NAME} syntax.
+    Supports `${VAR_NAME}` syntax.
 
     Args:
         value: String potentially containing env var references
