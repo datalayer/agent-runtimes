@@ -250,6 +250,23 @@ export interface ChatFloatingProps {
    */
   showSkillsMenu?: boolean;
 
+  /**
+   * Runtime ID used to scope and persist conversation history.
+   * When provided, history is fetched on mount from the historyEndpoint.
+   */
+  runtimeId?: string;
+
+  /**
+   * Endpoint URL for fetching conversation history.
+   * Defaults to `{protocol.endpoint}/history` when runtimeId is set.
+   */
+  historyEndpoint?: string;
+
+  /**
+   * Auth token for the history endpoint.
+   */
+  historyAuthToken?: string;
+
   /** Additional ChatBase props */
   panelProps?: Partial<ChatBaseProps>;
 }
@@ -322,6 +339,9 @@ export function ChatFloating({
   showModelSelector = false,
   showToolsMenu = false,
   showSkillsMenu = false,
+  runtimeId,
+  historyEndpoint,
+  historyAuthToken,
   panelProps,
 }: ChatFloatingProps) {
   // Store-based state
@@ -837,6 +857,9 @@ export function ChatFloating({
           showModelSelector={showModelSelector}
           showToolsMenu={showToolsMenu}
           showSkillsMenu={showSkillsMenu}
+          runtimeId={runtimeId}
+          historyEndpoint={historyEndpoint}
+          historyAuthToken={historyAuthToken}
           {...panelProps}
         >
           {children}
