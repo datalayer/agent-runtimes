@@ -86,9 +86,9 @@ properties:
   environment_name:
     type: string
     description: Runtime environment name for this agent
-    default: ai-agents
+    default: ai-agents-env
     examples:
-      - ai-agents
+      - ai-agents-env
       - production-env
 
   icon:
@@ -161,7 +161,7 @@ examples:
       - kaggle
       - filesystem
     skills: []
-    environment_name: ai-agents
+    environment_name: ai-agents-env
     icon: database
     color: "#3B82F6"
     suggestions:

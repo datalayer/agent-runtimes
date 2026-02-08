@@ -2606,7 +2606,9 @@ function ChatBaseInner({
                     maxWidth: '85%',
                     p: 2,
                     borderRadius: 2,
-                    backgroundColor: isUser ? 'accent.emphasis' : '#f6f8fa',
+                    backgroundColor: isUser
+                      ? 'accent.emphasis'
+                      : 'canvas.subtle',
                     color: isUser ? 'fg.onEmphasis' : 'fg.default',
                     // Streamdown code block styling
                     // Code block container
@@ -2622,10 +2624,10 @@ function ChatBaseInner({
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
-                      backgroundColor: '#e1e4e8',
+                      backgroundColor: 'canvas.subtle',
                       padding: '8px 12px',
                       fontSize: '12px',
-                      color: '#586069',
+                      color: 'fg.muted',
                     },
                     // Style the buttons in the header
                     '& [data-streamdown="code-block-header"] button': {
@@ -2633,16 +2635,16 @@ function ChatBaseInner({
                       border: 'none',
                       cursor: 'pointer',
                       padding: '4px',
-                      color: '#586069',
+                      color: 'fg.muted',
                       borderRadius: '4px',
                       '&:hover': {
-                        backgroundColor: 'rgba(0,0,0,0.1)',
-                        color: '#24292e',
+                        backgroundColor: 'neutral.muted',
+                        color: 'fg.default',
                       },
                     },
                     // Code block body
                     '& [data-streamdown="code-block-body"]': {
-                      backgroundColor: '#f6f8fa',
+                      backgroundColor: 'canvas.subtle',
                       padding: '12px',
                       margin: 0,
                       overflow: 'auto',

@@ -5,7 +5,7 @@
 # Web crawling and research agent that searches the web and GitHub repositories.
 
 id: crawler-mcp
-name: Crawler Agent
+name: Crawler Agent (MCP)
 description: >
   Web crawling and research agent that searches the web and GitHub
   repositories for information.
@@ -17,7 +17,7 @@ tags:
   - crawler
   - github
 
-enabled: true
+enabled: false
 
 # MCP servers used by this agent
 mcp_servers:
@@ -28,7 +28,7 @@ mcp_servers:
 skills: []
 
 # Runtime environment
-environment_name: ai-agents
+environment_name: ai-agents-env
 
 # UI customization
 icon: globe

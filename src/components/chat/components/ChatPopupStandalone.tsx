@@ -693,7 +693,7 @@ export function ChatPopupStandalone({
             border: '1px solid',
             borderColor: 'border.default',
             borderRadius: isMobile ? 0 : '12px',
-            boxShadow: '0 8px 30px rgba(0, 0, 0, 0.12)',
+            boxShadow: 'shadow.extra-large',
             overflow: 'hidden',
             transform: getAnimationTransform(isOpen),
             opacity: isOpen ? 1 : 0,

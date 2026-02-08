@@ -111,7 +111,7 @@ from agent_runtimes.types import AgentSpec
     enabled={spec.get("enabled", True)},
     mcp_servers=[{mcp_servers_str}],
     skills={spec.get("skills", [])},
-    environment_name="{spec.get("environment_name", "ai-agents")}",
+    environment_name="{spec.get("environment_name", "ai-agents-env")}",
     icon={icon},
     color={color},
     suggestions={suggestions_str},

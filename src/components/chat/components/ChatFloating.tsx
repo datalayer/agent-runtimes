@@ -776,9 +776,7 @@ export function ChatFloating({
           borderColor: 'border.default',
           borderRadius: viewMode === 'panel' || isMobile ? 0 : '12px',
           boxShadow:
-            viewMode === 'panel'
-              ? '-4px 0 20px rgba(0, 0, 0, 0.15)'
-              : '0 8px 30px rgba(0, 0, 0, 0.12)',
+            viewMode === 'panel' ? 'shadow.large' : 'shadow.extra-large',
           overflow: 'hidden',
           transform:
             viewMode === 'panel'

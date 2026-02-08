@@ -34,7 +34,7 @@ ALPHAVANTAGE_MCP_SERVER = MCPServer(
     env={
         "MAX_RESPONSE_TOKENS": "100000",
     },
-    required_env_vars=["ALPHAVANTAGE_API_KEY"],
+    required_env_vars=['ALPHAVANTAGE_API_KEY'],
 )
 
 CHART_MCP_SERVER = MCPServer(
@@ -60,7 +60,7 @@ FILESYSTEM_MCP_SERVER = MCPServer(
     args=[
         "-y",
         "@modelcontextprotocol/server-filesystem",
-        "/tmp",  # nosec B108
+        "/tmp",
     ],
     transport="stdio",
     enabled=True,
@@ -87,7 +87,7 @@ GITHUB_MCP_SERVER = MCPServer(
     env={
         "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PERSONAL_ACCESS_TOKEN}",
     },
-    required_env_vars=["GITHUB_PERSONAL_ACCESS_TOKEN"],
+    required_env_vars=['GITHUB_PERSONAL_ACCESS_TOKEN'],
 )
 
 GOOGLE_WORKSPACE_MCP_SERVER = MCPServer(
@@ -106,7 +106,7 @@ GOOGLE_WORKSPACE_MCP_SERVER = MCPServer(
         "GOOGLE_OAUTH_CLIENT_SECRET": "${GOOGLE_OAUTH_CLIENT_SECRET}",
         "WORKSPACE_MCP_PORT": "9000",
     },
-    required_env_vars=["GOOGLE_OAUTH_CLIENT_ID", "GOOGLE_OAUTH_CLIENT_SECRET"],
+    required_env_vars=['GOOGLE_OAUTH_CLIENT_ID', 'GOOGLE_OAUTH_CLIENT_SECRET'],
 )
 
 KAGGLE_MCP_SERVER = MCPServer(
@@ -124,7 +124,7 @@ KAGGLE_MCP_SERVER = MCPServer(
     transport="stdio",
     enabled=True,
     tools=[],
-    required_env_vars=["KAGGLE_TOKEN"],
+    required_env_vars=['KAGGLE_TOKEN'],
 )
 
 SLACK_MCP_SERVER = MCPServer(
@@ -144,7 +144,7 @@ SLACK_MCP_SERVER = MCPServer(
         "SLACK_TEAM_ID": "${SLACK_TEAM_ID}",
         "SLACK_CHANNEL_IDS": "${SLACK_CHANNEL_IDS}",
     },
-    required_env_vars=["SLACK_BOT_TOKEN", "SLACK_TEAM_ID", "SLACK_CHANNEL_IDS"],
+    required_env_vars=['SLACK_BOT_TOKEN', 'SLACK_TEAM_ID', 'SLACK_CHANNEL_IDS'],
 )
 
 TAVILY_MCP_SERVER = MCPServer(
@@ -162,7 +162,7 @@ TAVILY_MCP_SERVER = MCPServer(
     env={
         "TAVILY_API_KEY": "${TAVILY_API_KEY}",
     },
-    required_env_vars=["TAVILY_API_KEY"],
+    required_env_vars=['TAVILY_API_KEY'],
 )
 
 # ============================================================================

@@ -212,7 +212,7 @@ class AgentSpec(BaseModel):
         description="Skill IDs available to this agent",
     )
     environment_name: str = Field(
-        default="ai-agents",
+        default="ai-agents-env",
         description="Runtime environment name for this agent",
         alias="environmentName",
     )

@@ -5,7 +5,7 @@
 # Analyzes financial market data and creates visualizations and charts.
 
 id: financial-viz
-name: Financial Visualization Agent
+name: Financial Visualization Agent (Viz)
 description: >
   Analyzes financial market data and creates visualizations and charts.
 
@@ -15,7 +15,7 @@ tags:
   - visualization
   - charts
 
-enabled: true
+enabled: false
 
 # MCP servers used by this agent
 mcp_servers:
@@ -26,7 +26,7 @@ mcp_servers:
 skills: []
 
 # Runtime environment
-environment_name: ai-agents
+environment_name: ai-agents-env
 
 # UI customization
 icon: trending-up
