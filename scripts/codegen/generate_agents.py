@@ -164,7 +164,7 @@ def list_agent_specs() -> list[AgentSpec]:
     return code
 
 
-def generate_typescript_code(specs: List[Dict[str, Any]], mcp_specs_dir: str) -> str:
+def generate_typescript_code(specs: List[Dict[str, Any]], mcp_specs_dir: str, skills_specs_dir: str) -> str:
     """Generate TypeScript code from agent specifications."""
     # Load available MCP servers from specs
     import glob
@@ -176,6 +176,21 @@ def generate_typescript_code(specs: List[Dict[str, Any]], mcp_specs_dir: str) ->
     ]
     mcp_server_ids.sort()
 
+    # Load available skills from specs
+    skill_files = glob.glob(os.path.join(skills_specs_dir, "*.yaml"))
+    skill_ids = [
+        os.path.basename(f).replace(".yaml", "") for f in skill_files
+    ]
+    skill_ids.sort()
+
+    # Load skill YAML data (needed for requiredEnvVars)
+    skill_specs_data: Dict[str, Dict[str, Any]] = {}
+    for skill_file in skill_files:
+        with open(skill_file, "r") as f:
+            skill_data = yaml.safe_load(f)
+            if skill_data:
+                skill_specs_data[skill_data["id"]] = skill_data
+
     # Generate import names and map entries dynamically
     mcp_imports = []
     mcp_map_entries = []
@@ -183,6 +198,14 @@ def generate_typescript_code(specs: List[Dict[str, Any]], mcp_specs_dir: str) ->
         const_name = server_id.upper().replace("-", "_") + "_MCP_SERVER"
         mcp_imports.append(const_name)
         mcp_map_entries.append(f"  '{server_id}': {const_name},")
+
+    # Generate skill import names and map entries
+    skill_imports = []
+    skill_map_entries = []
+    for sid in skill_ids:
+        const_name = sid.upper().replace("-", "_") + "_SKILL_SPEC"
+        skill_imports.append(const_name)
+        skill_map_entries.append(f"  '{sid}': {const_name},")
 
     # Header
     code = """/*
@@ -203,6 +226,11 @@ import {
 """
     code += "  " + ",\n  ".join(mcp_imports) + ",\n"
     code += """} from './mcpServers';
+import {
+"""
+    code += "  " + ",\n  ".join(skill_imports) + ",\n"
+    code += """} from './skills';
+import type { SkillSpec } from './skills';
 
 // ============================================================================
 // MCP Server Lookup
@@ -212,6 +240,26 @@ const MCP_SERVER_MAP: Record<string, any> = {
 """
     code += "\n".join(mcp_map_entries) + "\n"
     code += """};
+
+/**
+ * Map skill IDs to SkillSpec objects, converting to AgentSkillSpec shape.
+ */
+const SKILL_MAP: Record<string, any> = {
+"""
+    code += "\n".join(skill_map_entries) + "\n"
+    code += """};
+
+function toAgentSkillSpec(skill: SkillSpec) {
+  return {
+    id: skill.id,
+    name: skill.name,
+    description: skill.description,
+    version: '1.0.0',
+    tags: skill.tags,
+    enabled: skill.enabled,
+    requiredEnvVars: skill.requiredEnvVars,
+  };
+}
 
 // ============================================================================
 // Agent Specs
@@ -236,6 +284,15 @@ const MCP_SERVER_MAP: Record<string, any> = {
         mcp_servers_str = ", ".join(
             f"MCP_SERVER_MAP['{sid}']" for sid in mcp_server_ids
         )
+
+        # Get skills - resolve to AgentSkillSpec via toAgentSkillSpec
+        skill_ids_list = spec.get("skills", [])
+        if skill_ids_list:
+            skills_str = ", ".join(
+                f"toAgentSkillSpec(SKILL_MAP['{sid}'])" for sid in skill_ids_list
+            )
+        else:
+            skills_str = ""
 
         # Format tags and suggestions as arrays
         tags = spec.get("tags", [])
@@ -272,7 +329,7 @@ const MCP_SERVER_MAP: Record<string, any> = {
   tags: {tags_str},
   enabled: {str(spec.get("enabled", True)).lower()},
   mcpServers: [{mcp_servers_str}],
-  skills: [],
+  skills: [{skills_str}],
   environmentName: '{spec.get("environment_name", "ai-agents-env")}',
   icon: {icon},
   color: {color},
@@ -307,6 +364,27 @@ export function getAgentSpecs(agentId: string): AgentSpec | undefined {
  */
 export function listAgentSpecs(): AgentSpec[] {
   return Object.values(AGENT_SPECS);
+}
+
+/**
+ * Collect all required environment variables for an agent spec.
+ *
+ * Iterates over the spec's MCP servers and skills and returns the
+ * deduplicated union of their `requiredEnvVars` arrays.
+ */
+export function getAgentSpecRequiredEnvVars(spec: AgentSpec): string[] {
+  const vars = new Set<string>();
+  for (const server of spec.mcpServers) {
+    for (const v of server.requiredEnvVars ?? []) {
+      vars.add(v);
+    }
+  }
+  for (const skill of spec.skills) {
+    for (const v of skill.requiredEnvVars ?? []) {
+      vars.add(v);
+    }
+  }
+  return Array.from(vars);
 }
 """
 
@@ -358,9 +436,10 @@ def main():
 
     # Generate TypeScript code
     print(f"Generating TypeScript code to {args.typescript_output}...")
-    # Get MCP specs directory (sibling to agents directory)
+    # Get MCP and skills specs directories (siblings to agents directory)
     mcp_specs_dir = args.specs_dir.parent / "mcp-servers"
-    typescript_code = generate_typescript_code(specs, str(mcp_specs_dir))
+    skills_specs_dir = args.specs_dir.parent / "skills"
+    typescript_code = generate_typescript_code(specs, str(mcp_specs_dir), str(skills_specs_dir))
     args.typescript_output.parent.mkdir(parents=True, exist_ok=True)
     with open(args.typescript_output, "w") as f:
         f.write(typescript_code)

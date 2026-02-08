@@ -28,7 +28,7 @@ export const ALPHAVANTAGE_MCP_SERVER: MCPServer = {
   enabled: true,
   isAvailable: false,
   tools: [],
-  // Requires: ALPHAVANTAGE_API_KEY
+  requiredEnvVars: ['ALPHAVANTAGE_API_KEY'],
 };
 
 export const CHART_MCP_SERVER: MCPServer = {
@@ -41,6 +41,7 @@ export const CHART_MCP_SERVER: MCPServer = {
   enabled: true,
   isAvailable: false,
   tools: [],
+  requiredEnvVars: [],
 };
 
 export const FILESYSTEM_MCP_SERVER: MCPServer = {
@@ -53,6 +54,7 @@ export const FILESYSTEM_MCP_SERVER: MCPServer = {
   enabled: true,
   isAvailable: false,
   tools: [],
+  requiredEnvVars: [],
 };
 
 export const GITHUB_MCP_SERVER: MCPServer = {
@@ -72,7 +74,7 @@ export const GITHUB_MCP_SERVER: MCPServer = {
   enabled: true,
   isAvailable: false,
   tools: [],
-  // Requires: GITHUB_PERSONAL_ACCESS_TOKEN
+  requiredEnvVars: ['GITHUB_PERSONAL_ACCESS_TOKEN'],
 };
 
 export const GOOGLE_WORKSPACE_MCP_SERVER: MCPServer = {
@@ -85,7 +87,7 @@ export const GOOGLE_WORKSPACE_MCP_SERVER: MCPServer = {
   enabled: true,
   isAvailable: false,
   tools: [],
-  // Requires: GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET
+  requiredEnvVars: ['GOOGLE_OAUTH_CLIENT_ID', 'GOOGLE_OAUTH_CLIENT_SECRET'],
 };
 
 export const KAGGLE_MCP_SERVER: MCPServer = {
@@ -104,7 +106,7 @@ export const KAGGLE_MCP_SERVER: MCPServer = {
   enabled: true,
   isAvailable: false,
   tools: [],
-  // Requires: KAGGLE_TOKEN
+  requiredEnvVars: ['KAGGLE_TOKEN'],
 };
 
 export const SLACK_MCP_SERVER: MCPServer = {
@@ -117,7 +119,7 @@ export const SLACK_MCP_SERVER: MCPServer = {
   enabled: true,
   isAvailable: false,
   tools: [],
-  // Requires: SLACK_BOT_TOKEN, SLACK_TEAM_ID, SLACK_CHANNEL_IDS
+  requiredEnvVars: ['SLACK_BOT_TOKEN', 'SLACK_TEAM_ID', 'SLACK_CHANNEL_IDS'],
 };
 
 export const TAVILY_MCP_SERVER: MCPServer = {
@@ -130,7 +132,7 @@ export const TAVILY_MCP_SERVER: MCPServer = {
   enabled: true,
   isAvailable: false,
   tools: [],
-  // Requires: TAVILY_API_KEY
+  requiredEnvVars: ['TAVILY_API_KEY'],
 };
 
 // ============================================================================

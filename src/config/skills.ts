@@ -38,7 +38,6 @@ export const CRAWL_SKILL_SPEC: SkillSpec = {
   dependencies: ['requests>=2.31.0', 'beautifulsoup4>=4.12.0'],
   tags: ['web', 'crawl', 'scraping'],
   enabled: true,
-  // Requires: TAVILY_API_KEY
 };
 
 export const GITHUB_SKILL_SPEC: SkillSpec = {
@@ -51,7 +50,6 @@ export const GITHUB_SKILL_SPEC: SkillSpec = {
   dependencies: ['PyGithub>=2.1.0'],
   tags: ['github', 'git', 'code'],
   enabled: true,
-  // Requires: GITHUB_TOKEN
 };
 
 export const PDF_SKILL_SPEC: SkillSpec = {

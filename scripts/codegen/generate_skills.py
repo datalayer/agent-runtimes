@@ -195,11 +195,6 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
         skill_id = spec["id"]
         const_name = f"{skill_id.upper().replace('-', '_')}_SKILL_SPEC"
 
-        required_env = spec.get("required_env_vars", [])
-        env_comment = (
-            f"  // Requires: {', '.join(required_env)}" if required_env else ""
-        )
-
         # Format arrays for TypeScript
         required_env_vars_json = str(spec.get("required_env_vars", [])).replace(
             "'", '"'
@@ -222,7 +217,6 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
                 f"  dependencies: {dependencies_json},",
                 f"  tags: {tags_json},",
                 f"  enabled: {str(spec.get('enabled', True)).lower()},",
-                f"{env_comment}",
                 "};",
                 "",
             ]

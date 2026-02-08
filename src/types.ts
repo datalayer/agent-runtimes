@@ -53,6 +53,8 @@ export interface MCPServer {
   isAvailable: boolean;
   /** Transport type: 'stdio' or 'http' */
   transport: 'stdio' | 'http';
+  /** Environment variables required by this server (e.g., API keys) */
+  requiredEnvVars?: string[];
 }
 
 // ============================================================================
@@ -78,6 +80,8 @@ export interface AgentSkillSpec {
   tags: string[];
   /** Whether the skill is enabled */
   enabled: boolean;
+  /** Environment variables required by this skill (e.g., API keys) */
+  requiredEnvVars?: string[];
 }
 
 // ============================================================================

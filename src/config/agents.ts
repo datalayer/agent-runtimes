@@ -22,6 +22,8 @@ import {
   SLACK_MCP_SERVER,
   TAVILY_MCP_SERVER,
 } from './mcpServers';
+import { CRAWL_SKILL_SPEC, GITHUB_SKILL_SPEC, PDF_SKILL_SPEC } from './skills';
+import type { SkillSpec } from './skills';
 
 // ============================================================================
 // MCP Server Lookup
@@ -37,6 +39,27 @@ const MCP_SERVER_MAP: Record<string, any> = {
   slack: SLACK_MCP_SERVER,
   tavily: TAVILY_MCP_SERVER,
 };
+
+/**
+ * Map skill IDs to SkillSpec objects, converting to AgentSkillSpec shape.
+ */
+const SKILL_MAP: Record<string, any> = {
+  crawl: CRAWL_SKILL_SPEC,
+  github: GITHUB_SKILL_SPEC,
+  pdf: PDF_SKILL_SPEC,
+};
+
+function toAgentSkillSpec(skill: SkillSpec) {
+  return {
+    id: skill.id,
+    name: skill.name,
+    description: skill.description,
+    version: '1.0.0',
+    tags: skill.tags,
+    enabled: skill.enabled,
+    requiredEnvVars: skill.requiredEnvVars,
+  };
+}
 
 // ============================================================================
 // Agent Specs
@@ -89,7 +112,7 @@ export const CRAWLER_AGENT_SPEC: AgentSpec = {
   tags: ['web', 'search', 'research', 'crawler', 'github'],
   enabled: false,
   mcpServers: [MCP_SERVER_MAP['tavily']],
-  skills: [],
+  skills: [toAgentSkillSpec(SKILL_MAP['github'])],
   environmentName: 'ai-agents-env',
   icon: 'globe',
   color: '#10B981',
@@ -289,7 +312,7 @@ export const GITHUB_AGENT_SPEC: AgentSpec = {
   tags: ['github', 'git', 'code', 'email'],
   enabled: false,
   mcpServers: [MCP_SERVER_MAP['google-workspace']],
-  skills: [],
+  skills: [toAgentSkillSpec(SKILL_MAP['github'])],
   environmentName: 'ai-agents-env',
   icon: 'git-branch',
   color: '#6366F1',
@@ -389,4 +412,25 @@ export function getAgentSpecs(agentId: string): AgentSpec | undefined {
  */
 export function listAgentSpecs(): AgentSpec[] {
   return Object.values(AGENT_SPECS);
+}
+
+/**
+ * Collect all required environment variables for an agent spec.
+ *
+ * Iterates over the spec's MCP servers and skills and returns the
+ * deduplicated union of their `requiredEnvVars` arrays.
+ */
+export function getAgentSpecRequiredEnvVars(spec: AgentSpec): string[] {
+  const vars = new Set<string>();
+  for (const server of spec.mcpServers) {
+    for (const v of server.requiredEnvVars ?? []) {
+      vars.add(v);
+    }
+  }
+  for (const skill of spec.skills) {
+    for (const v of skill.requiredEnvVars ?? []) {
+      vars.add(v);
+    }
+  }
+  return Array.from(vars);
 }

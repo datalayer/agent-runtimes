@@ -222,9 +222,10 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
 
         # Format required env vars
         required_env = spec.get("required_env_vars", [])
-        env_comment = (
-            f"  // Requires: {', '.join(required_env)}" if required_env else ""
-        )
+        if required_env:
+            required_env_formatted = "[" + ", ".join(f"'{v}'" for v in required_env) + "]"
+        else:
+            required_env_formatted = "[]"
 
         lines.extend(
             [
@@ -238,7 +239,7 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
                 f"  enabled: {str(spec.get('enabled', True)).lower()},",
                 "  isAvailable: false,",
                 "  tools: [],",
-                f"{env_comment}",
+                f"  requiredEnvVars: {required_env_formatted},",
                 "};",
                 "",
             ]

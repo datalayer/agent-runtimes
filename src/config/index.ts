@@ -5,4 +5,5 @@
 
 export * from './mcpServers';
 export * from './agents';
+export * from './skills';
 export * from './utils';
