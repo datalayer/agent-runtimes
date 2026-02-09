@@ -876,7 +876,19 @@ function useContextSnapshotQuery(
 ) {
   const queryClient = useContext(QueryClientContext);
 
+  console.log(
+    '[context-snapshot] queryClient:',
+    !!queryClient,
+    'enabled:',
+    enabled,
+    'configEndpoint:',
+    configEndpoint,
+    'agentId:',
+    agentId,
+  );
+
   if (!queryClient) {
+    console.log('[context-snapshot] No QueryClient - returning empty');
     return { data: undefined, isLoading: false, isError: false, error: null };
   }
 
@@ -884,6 +896,13 @@ function useContextSnapshotQuery(
     configEndpoint && agentId
       ? `${getApiBaseFromConfig(configEndpoint)}/configure/agents/${encodeURIComponent(agentId)}/context-snapshot`
       : undefined;
+
+  console.log(
+    '[context-snapshot] snapshotUrl:',
+    snapshotUrl,
+    'queryEnabled:',
+    enabled && !!snapshotUrl,
+  );
 
   // eslint-disable-next-line react-hooks/rules-of-hooks
   return useQuery<ContextSnapshotData>({
@@ -2358,6 +2377,12 @@ function ChatBaseInner({
 
   // Render token usage bar between input and selectors
   const renderTokenUsage = () => {
+    console.log(
+      '[renderTokenUsage] showTokenUsage:',
+      showTokenUsage,
+      'agentUsage:',
+      agentUsage,
+    );
     if (!showTokenUsage) return null;
 
     // Show bar when we have any context data (totalTokens > 0 means agent is active)
@@ -2379,7 +2404,7 @@ function ChatBaseInner({
         sx={{
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center',
+          justifyContent: 'flex-start',
           gap: 3,
           py: 1,
           px: padding,

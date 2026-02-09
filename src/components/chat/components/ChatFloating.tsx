@@ -251,6 +251,12 @@ export interface ChatFloatingProps {
   showSkillsMenu?: boolean;
 
   /**
+   * Show token usage bar between input and selectors.
+   * @default true
+   */
+  showTokenUsage?: boolean;
+
+  /**
    * Runtime ID used to scope and persist conversation history.
    * When provided, history is fetched on mount from the historyEndpoint.
    */
@@ -339,6 +345,7 @@ export function ChatFloating({
   showModelSelector = false,
   showToolsMenu = false,
   showSkillsMenu = false,
+  showTokenUsage = true,
   runtimeId,
   historyEndpoint,
   historyAuthToken,
@@ -374,17 +381,28 @@ export function ChatFloating({
 
     if (!endpoint) return undefined;
 
-    // Extract base URL from endpoint (e.g., http://localhost:8765/api/v1/ag-ui/agent -> http://localhost:8765)
-    const baseUrl = endpoint.match(/^(https?:\/\/[^/]+)/)?.[1] || '';
+    // Extract base URL from endpoint - everything before /api/v1/
+    // e.g., https://prod1.datalayer.run/agent-runtimes/pool1/rt123/api/v1/ag-ui/default/
+    //     -> https://prod1.datalayer.run/agent-runtimes/pool1/rt123
+    const baseUrl =
+      endpoint.match(/^(.*?)\/api\/v1\//)?.[1] ||
+      endpoint.match(/^(https?:\/\/[^/]+)/)?.[1] ||
+      '';
+
+    // Extract agentId from endpoint path (e.g., .../ag-ui/default/ -> default)
+    const agentIdMatch = endpoint.match(/\/ag-ui\/([^/]+)/);
+    const extractedAgentId = agentIdMatch ? agentIdMatch[1] : undefined;
 
     return {
       type: 'ag-ui' as const,
       endpoint,
-      // Enable config query for model/tools/skills selector
-      enableConfigQuery: showModelSelector || showToolsMenu || showSkillsMenu,
+      agentId: extractedAgentId,
+      // Enable config query for model/tools/skills selector or token usage
+      enableConfigQuery:
+        showModelSelector || showToolsMenu || showSkillsMenu || showTokenUsage,
       // Config endpoint is at /api/v1/configure (global, not per-agent)
       configEndpoint:
-        showModelSelector || showToolsMenu || showSkillsMenu
+        showModelSelector || showToolsMenu || showSkillsMenu || showTokenUsage
           ? `${baseUrl}/api/v1/configure`
           : undefined,
     };
@@ -394,6 +412,7 @@ export function ChatFloating({
     showModelSelector,
     showToolsMenu,
     showSkillsMenu,
+    showTokenUsage,
   ]);
 
   // Clear messages when endpoint/protocol changes (e.g., switching examples)
@@ -857,6 +876,7 @@ export function ChatFloating({
           showModelSelector={showModelSelector}
           showToolsMenu={showToolsMenu}
           showSkillsMenu={showSkillsMenu}
+          showTokenUsage={showTokenUsage}
           runtimeId={runtimeId}
           historyEndpoint={historyEndpoint}
           historyAuthToken={historyAuthToken}
