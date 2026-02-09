@@ -233,6 +233,13 @@ export interface ChatFloatingProps {
   showPanelBackdrop?: boolean;
 
   /**
+   * Override the list of available models.
+   * When provided, this list replaces the models returned by the config endpoint.
+   * Use this to restrict the model selector to a specific subset of models.
+   */
+  availableModels?: ModelConfig[];
+
+  /**
    * Show model selector in footer.
    * @default false
    */
@@ -342,6 +349,7 @@ export function ChatFloating({
   hideMessagesAfterToolUI = false,
   defaultViewMode = 'floating',
   showPanelBackdrop = false,
+  availableModels,
   showModelSelector = false,
   showToolsMenu = false,
   showSkillsMenu = false,
@@ -874,6 +882,7 @@ export function ChatFloating({
           backgroundColor="canvas.subtle"
           frontendTools={_tools as FrontendToolDefinition[] | undefined}
           showModelSelector={showModelSelector}
+          availableModels={availableModels}
           showToolsMenu={showToolsMenu}
           showSkillsMenu={showSkillsMenu}
           showTokenUsage={showTokenUsage}

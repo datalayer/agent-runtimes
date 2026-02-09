@@ -438,6 +438,13 @@ export interface ChatBaseProps {
   /** Initial model ID to select (e.g., 'openai:gpt-4o-mini') */
   initialModel?: string;
 
+  /**
+   * Override the list of available models.
+   * When provided, this list replaces the models returned by the config endpoint.
+   * Use this to restrict the model selector to a specific subset of models.
+   */
+  availableModels?: ModelConfig[];
+
   /** MCP servers to enable (others will be disabled) */
   mcpServers?: McpServerSelection[];
 
@@ -932,6 +939,7 @@ export function ChatBase({
   showSkillsMenu = false,
   codemodeEnabled = false,
   initialModel,
+  availableModels,
   mcpServers,
   initialSkills,
   className,
@@ -1013,6 +1021,7 @@ export function ChatBase({
           showSkillsMenu={showSkillsMenu}
           codemodeEnabled={codemodeEnabled}
           initialModel={initialModel}
+          availableModels={availableModels}
           mcpServers={mcpServers}
           initialSkills={initialSkills}
           className={className}
@@ -1073,6 +1082,7 @@ export function ChatBase({
       showSkillsMenu={showSkillsMenu}
       codemodeEnabled={codemodeEnabled}
       initialModel={initialModel}
+      availableModels={availableModels}
       mcpServers={mcpServers}
       initialSkills={initialSkills}
       className={className}
@@ -1133,6 +1143,7 @@ function ChatBaseInner({
   showSkillsMenu = false,
   codemodeEnabled = false,
   initialModel,
+  availableModels,
   mcpServers,
   initialSkills,
   className,
@@ -1326,42 +1337,42 @@ function ChatBaseInner({
 
   // Initialize model and tools when config is available
   useEffect(() => {
-    if (configQuery.data && !selectedModel) {
+    if ((configQuery.data || availableModels) && !selectedModel) {
+      // Use availableModels override if provided, otherwise use config models
+      const modelsList = availableModels || configQuery.data?.models || [];
       // Use initialModel if provided, otherwise select first available model
       if (initialModel) {
-        // Check if the initial model exists in the config
-        const modelExists = configQuery.data.models.some(
-          m => m.id === initialModel,
-        );
+        // Check if the initial model exists in the models list
+        const modelExists = modelsList.some(m => m.id === initialModel);
         if (modelExists) {
           setSelectedModel(initialModel);
         } else {
           // Fallback to first available model if initialModel not found
-          const firstAvailableModel = configQuery.data.models.find(
+          const firstAvailableModel = modelsList.find(
             m => m.isAvailable !== false,
           );
-          const firstModel = firstAvailableModel || configQuery.data.models[0];
+          const firstModel = firstAvailableModel || modelsList[0];
           if (firstModel) {
             setSelectedModel(firstModel.id);
           }
         }
       } else {
         // No initialModel provided, select first available model
-        const firstAvailableModel = configQuery.data.models.find(
+        const firstAvailableModel = modelsList.find(
           m => m.isAvailable !== false,
         );
-        const firstModel = firstAvailableModel || configQuery.data.models[0];
+        const firstModel = firstAvailableModel || modelsList[0];
         if (firstModel) {
           setSelectedModel(firstModel.id);
         }
       }
 
       const allToolIds =
-        configQuery.data.builtinTools?.map(tool => tool.id) || [];
+        configQuery.data?.builtinTools?.map(tool => tool.id) || [];
       setEnabledTools(allToolIds);
 
       // Initialize MCP server tools
-      if (configQuery.data.mcpServers) {
+      if (configQuery.data?.mcpServers) {
         const newEnabledMcpTools = new Map<string, Set<string>>();
         for (const server of configQuery.data.mcpServers) {
           if (server.isAvailable && server.enabled) {
@@ -1384,6 +1395,7 @@ function ChatBaseInner({
     configQuery.data,
     selectedModel,
     initialModel,
+    availableModels,
     mcpServers,
     isServerSelected,
   ]);
@@ -2386,15 +2398,18 @@ function ChatBaseInner({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'flex-start',
-          gap: 3,
+          gap: 2,
           py: 1,
           px: padding,
           bg: 'canvas.subtle',
-          flexWrap: 'wrap',
+          flexWrap: 'nowrap',
+          overflow: 'hidden',
+          whiteSpace: 'nowrap',
+          minWidth: 0,
         }}
       >
         {/* Context window usage */}
-        <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
+        <Text sx={{ fontSize: 0, color: 'fg.muted', flexShrink: 0 }}>
           <Text
             as="span"
             sx={{ fontWeight: 'semibold', color: 'fg.default', fontSize: 0 }}
@@ -2403,28 +2418,34 @@ function ChatBaseInner({
           </Text>
           {' / '}
           {formatTokenCount(agentUsage!.contextWindow)}
-          {' context'}
+          {' ctx'}
         </Text>
         {/* Session totals */}
         {hasSession && (
-          <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
-            {'· session '}
+          <Text sx={{ fontSize: 0, color: 'fg.muted', flexShrink: 0 }}>
+            {'· '}
             {formatTokenCount(agentUsage!.sessionUsage!.inputTokens)}
-            {' in'}
-            {' / '}
+            <Text as="span" sx={{ color: 'success.fg', fontSize: 0 }}>
+              {'▲'}
+            </Text>{' '}
             {formatTokenCount(agentUsage!.sessionUsage!.outputTokens)}
-            {' out'}
+            <Text as="span" sx={{ color: 'attention.fg', fontSize: 0 }}>
+              {'▼'}
+            </Text>
           </Text>
         )}
         {/* Last turn breakdown */}
         {hasTurn && (
-          <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
-            {'· last turn '}
+          <Text sx={{ fontSize: 0, color: 'fg.muted', flexShrink: 0 }}>
+            {'· turn '}
             {formatTokenCount(agentUsage!.turnUsage!.inputTokens)}
-            {' in'}
-            {' / '}
+            <Text as="span" sx={{ color: 'success.fg', fontSize: 0 }}>
+              {'▲'}
+            </Text>{' '}
             {formatTokenCount(agentUsage!.turnUsage!.outputTokens)}
-            {' out'}
+            <Text as="span" sx={{ color: 'attention.fg', fontSize: 0 }}>
+              {'▼'}
+            </Text>
           </Text>
         )}
       </Box>
@@ -3030,7 +3051,7 @@ function ChatBaseInner({
   // Render protocol mode input
   const renderProtocolInput = () => {
     const availableTools = configQuery.data?.builtinTools || [];
-    const models = configQuery.data?.models || [];
+    const models = availableModels || configQuery.data?.models || [];
 
     return (
       <Box>

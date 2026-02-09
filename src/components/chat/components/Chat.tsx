@@ -25,7 +25,7 @@ import { AlertIcon, SyncIcon, InfoIcon } from '@primer/octicons-react';
 import { Box } from '@datalayer/primer-addons';
 import { ChatBase, type Suggestion } from './base/ChatBase';
 import { AgentDetails } from './AgentDetails';
-import type { ProtocolConfig } from './base/ChatBase';
+import type { ProtocolConfig, ModelConfig } from './base/ChatBase';
 import type { McpServerSelection } from '../types';
 import { useConnectedIdentities } from '../../../identity';
 import type {
@@ -183,8 +183,21 @@ export interface ChatProps {
   /** Indicate tools are accessed via Codemode meta-tools */
   codemodeEnabled?: boolean;
 
+  /**
+   * Show token usage bar between input and selectors.
+   * @default true
+   */
+  showTokenUsage?: boolean;
+
   /** Initial model ID to select (e.g., 'openai:gpt-4o-mini') */
   initialModel?: string;
+
+  /**
+   * Override the list of available models.
+   * When provided, this list replaces the models returned by the config endpoint.
+   * Use this to restrict the model selector to a specific subset of models.
+   */
+  availableModels?: ModelConfig[];
 
   /** MCP server selections to enable (others will be disabled) */
   mcpServers?: McpServerSelection[];
@@ -310,7 +323,9 @@ export function Chat({
   showToolsMenu = true,
   showSkillsMenu = false,
   codemodeEnabled = false,
+  showTokenUsage = true,
   initialModel,
+  availableModels,
   mcpServers,
   initialSkills,
   clearOnMount: _clearOnMount = true,
@@ -614,8 +629,10 @@ export function Chat({
           showModelSelector={showModelSelector}
           showToolsMenu={showToolsMenu}
           showSkillsMenu={showSkillsMenu}
+          showTokenUsage={showTokenUsage}
           codemodeEnabled={codemodeEnabled}
           initialModel={initialModel}
+          availableModels={availableModels}
           mcpServers={mcpServers}
           initialSkills={initialSkills}
           connectedIdentities={identitiesForChat}
