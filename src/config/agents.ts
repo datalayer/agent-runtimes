@@ -385,6 +385,28 @@ export const INFORMATION_ROUTING_AGENT_SPEC: AgentSpec = {
 `,
 };
 
+export const SIMPLE_AGENT_SPEC: AgentSpec = {
+  id: 'simple',
+  name: 'A Simple Agent',
+  description: `A simple conversational agent. No tools, no MCP servers, no skills — just a helpful AI assistant you can chat with.`,
+  tags: ['simple', 'chat', 'assistant'],
+  enabled: true,
+  mcpServers: [],
+  skills: [],
+  environmentName: 'ai-agents-env',
+  icon: 'share-2',
+  color: '#6366F1',
+  suggestions: [
+    'Tell me a joke',
+    'Explain quantum computing in simple terms',
+    'Help me brainstorm ideas for a weekend project',
+    'Summarize the key points of a topic I describe',
+  ],
+  systemPrompt: `You are a helpful, friendly AI assistant. You do not have access to any external tools, MCP servers, or skills. Answer questions using your training knowledge, be concise, and let the user know if a question is outside your knowledge.
+`,
+  systemPromptCodemode: undefined,
+};
+
 // ============================================================================
 // Agent Specs Registry
 // ============================================================================
@@ -398,6 +420,7 @@ export const AGENT_SPECS: Record<string, AgentSpec> = {
   'github-agent-mcp': GITHUB_AGENT_MCP_AGENT_SPEC,
   'github-agent': GITHUB_AGENT_SPEC,
   'information-routing': INFORMATION_ROUTING_AGENT_SPEC,
+  simple: SIMPLE_AGENT_SPEC,
 };
 
 /**

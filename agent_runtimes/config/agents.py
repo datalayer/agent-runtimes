@@ -362,6 +362,31 @@ INFORMATION_ROUTING_AGENT_SPEC = AgentSpec(
 """,
 )
 
+SIMPLE_AGENT_SPEC = AgentSpec(
+    id="simple",
+    name="A Simple Agent",
+    description="A simple conversational agent. No tools, no MCP servers, no skills — just a helpful AI assistant you can chat with.",
+    tags=['simple', 'chat', 'assistant'],
+    enabled=True,
+    mcp_servers=[],
+    skills=[],
+    environment_name="ai-agents-env",
+    icon="share-2",
+    color="#6366F1",
+    suggestions=[
+        "Tell me a joke",
+        "Explain quantum computing in simple terms",
+        "Help me brainstorm ideas for a weekend project",
+        "Summarize the key points of a topic I describe",
+    ],
+    welcome_message="Hi! I'm a simple assistant. I don't have any special tools, but I'm happy to chat, answer questions, and help you think through ideas. ",
+    welcome_notebook=None,
+    welcome_document=None,
+    system_prompt="""You are a helpful, friendly AI assistant. You do not have access to any external tools, MCP servers, or skills. Answer questions using your training knowledge, be concise, and let the user know if a question is outside your knowledge.
+""",
+    system_prompt_codemode=None,
+)
+
 
 # ============================================================================
 # Agent Specs Registry
@@ -376,6 +401,7 @@ AGENT_SPECS: Dict[str, AgentSpec] = {
     "github-agent-mcp": GITHUB_AGENT_MCP_AGENT_SPEC,
     "github-agent": GITHUB_AGENT_SPEC,
     "information-routing": INFORMATION_ROUTING_AGENT_SPEC,
+    "simple": SIMPLE_AGENT_SPEC,
 }
 
 
