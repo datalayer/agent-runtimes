@@ -761,6 +761,7 @@ function useConfigQuery(
     },
     queryKey: ['models', configEndpoint || 'jupyter'],
     enabled,
+    retry: 1,
   });
 }
 
@@ -808,6 +809,7 @@ function useSkillsQuery(
     queryKey: ['skills', baseEndpoint || 'jupyter'],
     enabled,
     staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: 1,
   });
 }
 
@@ -876,19 +878,7 @@ function useContextSnapshotQuery(
 ) {
   const queryClient = useContext(QueryClientContext);
 
-  console.log(
-    '[context-snapshot] queryClient:',
-    !!queryClient,
-    'enabled:',
-    enabled,
-    'configEndpoint:',
-    configEndpoint,
-    'agentId:',
-    agentId,
-  );
-
   if (!queryClient) {
-    console.log('[context-snapshot] No QueryClient - returning empty');
     return { data: undefined, isLoading: false, isError: false, error: null };
   }
 
@@ -897,15 +887,8 @@ function useContextSnapshotQuery(
       ? `${getApiBaseFromConfig(configEndpoint)}/configure/agents/${encodeURIComponent(agentId)}/context-snapshot`
       : undefined;
 
-  console.log(
-    '[context-snapshot] snapshotUrl:',
-    snapshotUrl,
-    'queryEnabled:',
-    enabled && !!snapshotUrl,
-  );
-
   // eslint-disable-next-line react-hooks/rules-of-hooks
-  return useQuery<ContextSnapshotData>({
+  const result = useQuery<ContextSnapshotData>({
     queryKey: ['context-snapshot-header', agentId, snapshotUrl],
     queryFn: async () => {
       if (!snapshotUrl) {
@@ -924,10 +907,14 @@ function useContextSnapshotQuery(
       return response.json();
     },
     enabled: enabled && !!snapshotUrl,
-    refetchInterval: 10_000, // Poll every 10 seconds
+    // Poll every 10 seconds, but stop polling once the query has errored (e.g. runtime terminated)
+    refetchInterval: query => (query.state.status === 'error' ? false : 10_000),
     refetchOnMount: 'always',
     staleTime: 0,
+    retry: 1,
   });
+
+  return result;
 }
 
 /**
@@ -2377,12 +2364,6 @@ function ChatBaseInner({
 
   // Render token usage bar between input and selectors
   const renderTokenUsage = () => {
-    console.log(
-      '[renderTokenUsage] showTokenUsage:',
-      showTokenUsage,
-      'agentUsage:',
-      agentUsage,
-    );
     if (!showTokenUsage) return null;
 
     // Show bar when we have any context data (totalTokens > 0 means agent is active)
