@@ -678,9 +678,30 @@ export class AGUIAdapter extends BaseProtocolAdapter {
         break;
       }
 
-      case 'RUN_FINISHED':
-        // Run completed successfully
+      case 'RUN_FINISHED': {
+        // Run completed successfully — extract usage data if available
+        const usage = event.usage as
+          | {
+              promptTokens?: number;
+              completionTokens?: number;
+              totalTokens?: number;
+            }
+          | undefined;
+        if (usage) {
+          this.emit({
+            type: 'message',
+            usage: {
+              promptTokens: usage.promptTokens ?? 0,
+              completionTokens: usage.completionTokens ?? 0,
+              totalTokens:
+                usage.totalTokens ??
+                (usage.promptTokens ?? 0) + (usage.completionTokens ?? 0),
+            },
+            timestamp: new Date(),
+          });
+        }
         break;
+      }
 
       case 'RUN_ERROR': {
         const errorMessage = event.message as string | undefined;

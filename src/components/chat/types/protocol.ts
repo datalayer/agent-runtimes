@@ -88,6 +88,15 @@ export type ProtocolEventType =
   | 'error';
 
 /**
+ * Token usage statistics from a protocol event
+ */
+export interface ProtocolUsage {
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens?: number;
+}
+
+/**
  * Protocol event
  */
 export interface ProtocolEvent {
@@ -100,6 +109,8 @@ export interface ProtocolEvent {
     type: string;
     data: unknown;
   };
+  /** Token usage for this event (emitted on finish/run-complete events) */
+  usage?: ProtocolUsage;
   error?: Error;
   timestamp: Date;
 }

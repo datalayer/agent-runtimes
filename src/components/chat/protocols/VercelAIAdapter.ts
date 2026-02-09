@@ -345,6 +345,26 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
                     timestamp: new Date(),
                   });
                 }
+                // Extract and emit usage data from finish events
+                if (event.usage) {
+                  const usage = event.usage as {
+                    promptTokens?: number;
+                    completionTokens?: number;
+                    totalTokens?: number;
+                  };
+                  this.emit({
+                    type: 'message',
+                    usage: {
+                      promptTokens: usage.promptTokens ?? 0,
+                      completionTokens: usage.completionTokens ?? 0,
+                      totalTokens:
+                        usage.totalTokens ??
+                        (usage.promptTokens ?? 0) +
+                          (usage.completionTokens ?? 0),
+                    },
+                    timestamp: new Date(),
+                  });
+                }
               } else if (event.type === 'error') {
                 const errorMessage =
                   event.error ||

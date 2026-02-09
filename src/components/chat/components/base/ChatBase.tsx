@@ -406,6 +406,14 @@ export interface ChatBaseProps {
   /** Show header */
   showHeader?: boolean;
 
+  /**
+   * Show token usage bar (input/output token counts from the backend).
+   * Rendered independently of showHeader, so usage is visible even without a title bar.
+   * Requires the protocol to have enableConfigQuery=true and an agentId.
+   * @default true
+   */
+  showTokenUsage?: boolean;
+
   /** Show loading indicator */
   showLoadingIndicator?: boolean;
 
@@ -804,11 +812,112 @@ function useSkillsQuery(
 }
 
 /**
+ * Response from the context-snapshot API.
+ * Contains cumulative token usage tracked by the agent server.
+ */
+interface ContextSnapshotData {
+  totalTokens: number;
+  contextWindow: number;
+  sumResponseInputTokens: number;
+  sumResponseOutputTokens: number;
+  systemPromptTokens: number;
+  userMessageTokens: number;
+  assistantMessageTokens: number;
+  toolTokens: number;
+  turnUsage?: {
+    inputTokens: number;
+    outputTokens: number;
+    requests: number;
+    toolCalls: number;
+    toolNames: string[];
+    durationSeconds: number;
+  } | null;
+  sessionUsage?: {
+    inputTokens: number;
+    outputTokens: number;
+    requests: number;
+    toolCalls: number;
+    turns: number;
+    durationSeconds: number;
+  } | null;
+  error?: string;
+}
+
+/**
+ * Format token count for compact display
+ */
+function formatTokenCount(tokens: number): string {
+  if (tokens >= 1_000_000) return `${(tokens / 1_000_000).toFixed(1)}M`;
+  if (tokens >= 1_000) return `${(tokens / 1_000).toFixed(1)}K`;
+  return tokens.toString();
+}
+
+/**
+ * Derive the API base URL from a configEndpoint.
+ * configEndpoint may look like:
+ *   "http://host:port/api/v1/config"     (from agentRuntimeConfig)
+ *   "http://host:port/api/v1/configure"   (from Chat component)
+ * We strip the trailing path segment to get "http://host:port/api/v1".
+ */
+function getApiBaseFromConfig(configEndpoint: string): string {
+  return configEndpoint.replace(/\/(config|configure)\/?$/, '');
+}
+
+/**
+ * Hook to poll agent context-snapshot from the backend.
+ * Returns cumulative token usage (input/output breakdown) tracked by the agent server.
+ * Uses the same endpoint as codeai: GET /api/v1/configure/agents/{agentId}/context-snapshot
+ */
+function useContextSnapshotQuery(
+  enabled: boolean,
+  configEndpoint?: string,
+  agentId?: string,
+  authToken?: string,
+) {
+  const queryClient = useContext(QueryClientContext);
+
+  if (!queryClient) {
+    return { data: undefined, isLoading: false, isError: false, error: null };
+  }
+
+  const snapshotUrl =
+    configEndpoint && agentId
+      ? `${getApiBaseFromConfig(configEndpoint)}/configure/agents/${encodeURIComponent(agentId)}/context-snapshot`
+      : undefined;
+
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  return useQuery<ContextSnapshotData>({
+    queryKey: ['context-snapshot-header', agentId, snapshotUrl],
+    queryFn: async () => {
+      if (!snapshotUrl) {
+        throw new Error('No context-snapshot URL available');
+      }
+      const headers: HeadersInit = { 'Content-Type': 'application/json' };
+      if (authToken) {
+        headers['Authorization'] = `Bearer ${authToken}`;
+      }
+      const response = await fetch(snapshotUrl, { headers });
+      if (!response.ok) {
+        throw new Error(
+          `Context snapshot fetch failed: ${response.statusText}`,
+        );
+      }
+      return response.json();
+    },
+    enabled: enabled && !!snapshotUrl,
+    refetchInterval: 10_000, // Poll every 10 seconds
+    refetchOnMount: 'always',
+    staleTime: 0,
+  });
+}
+
+/**
  * ChatBase component - Universal chat panel supporting store, protocol, and custom modes
  */
 export function ChatBase({
   title,
   showHeader = false,
+  showTokenUsage = true,
   showLoadingIndicator = true,
   showErrors = true,
   showInput = true,
@@ -889,6 +998,7 @@ export function ChatBase({
         <ChatBaseInner
           title={title}
           showHeader={showHeader}
+          showTokenUsage={showTokenUsage}
           showLoadingIndicator={showLoadingIndicator}
           showErrors={showErrors}
           showInput={showInput}
@@ -948,6 +1058,7 @@ export function ChatBase({
     <ChatBaseInner
       title={title}
       showHeader={showHeader}
+      showTokenUsage={showTokenUsage}
       showLoadingIndicator={showLoadingIndicator}
       showErrors={showErrors}
       showInput={showInput}
@@ -1007,6 +1118,7 @@ export function ChatBase({
 function ChatBaseInner({
   title,
   showHeader = false,
+  showTokenUsage = true,
   showLoadingIndicator = true,
   showErrors = true,
   showInput = true,
@@ -1104,6 +1216,16 @@ function ChatBaseInner({
     protocol?.configEndpoint,
     protocol?.authToken,
   );
+
+  // Context snapshot query — polls agent-level cumulative token usage (input/output breakdown)
+  // Gated by showTokenUsage (not showHeader), so usage is visible even without a title bar.
+  const contextSnapshotQuery = useContextSnapshotQuery(
+    Boolean(protocol?.enableConfigQuery) && showTokenUsage,
+    protocol?.configEndpoint,
+    protocol?.agentId,
+    protocol?.authToken,
+  );
+  const agentUsage = contextSnapshotQuery.data;
 
   // Refs
   const adapterRef = useRef<BaseProtocolAdapter | null>(null);
@@ -2234,6 +2356,75 @@ function ChatBaseInner({
     );
   };
 
+  // Render token usage bar between input and selectors
+  const renderTokenUsage = () => {
+    if (!showTokenUsage) return null;
+
+    // Show bar when we have any context data (totalTokens > 0 means agent is active)
+    const hasContext =
+      agentUsage && !agentUsage.error && agentUsage.totalTokens > 0;
+    const hasTurn =
+      agentUsage?.turnUsage &&
+      (agentUsage.turnUsage.inputTokens > 0 ||
+        agentUsage.turnUsage.outputTokens > 0);
+    const hasSession =
+      agentUsage?.sessionUsage &&
+      (agentUsage.sessionUsage.inputTokens > 0 ||
+        agentUsage.sessionUsage.outputTokens > 0);
+
+    if (!hasContext) return null;
+
+    return (
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 3,
+          py: 1,
+          px: padding,
+          bg: 'canvas.subtle',
+          flexWrap: 'wrap',
+        }}
+      >
+        {/* Context window usage */}
+        <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
+          <Text
+            as="span"
+            sx={{ fontWeight: 'semibold', color: 'fg.default', fontSize: 0 }}
+          >
+            {formatTokenCount(agentUsage!.totalTokens)}
+          </Text>
+          {' / '}
+          {formatTokenCount(agentUsage!.contextWindow)}
+          {' context'}
+        </Text>
+        {/* Session totals */}
+        {hasSession && (
+          <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
+            {'· session '}
+            {formatTokenCount(agentUsage!.sessionUsage!.inputTokens)}
+            {' in'}
+            {' / '}
+            {formatTokenCount(agentUsage!.sessionUsage!.outputTokens)}
+            {' out'}
+          </Text>
+        )}
+        {/* Last turn breakdown */}
+        {hasTurn && (
+          <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
+            {'· last turn '}
+            {formatTokenCount(agentUsage!.turnUsage!.inputTokens)}
+            {' in'}
+            {' / '}
+            {formatTokenCount(agentUsage!.turnUsage!.outputTokens)}
+            {' out'}
+          </Text>
+        )}
+      </Box>
+    );
+  };
+
   // Render empty state
   const renderEmptyState = () => {
     if (emptyState?.render) {
@@ -2885,6 +3076,9 @@ function ChatBaseInner({
             )}
           </Box>
         </Box>
+
+        {/* Token usage bar - between input and selectors */}
+        {renderTokenUsage()}
 
         {/* Model, Skills, and Tools Footer - Below Input */}
         {(showModelSelector || showToolsMenu || showSkillsMenu) &&

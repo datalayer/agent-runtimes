@@ -2209,6 +2209,28 @@ def get_agent_context_snapshot(agent_id: str) -> ContextSnapshot | None:
             + snapshot.assistant_message_tokens
         )
 
+        # Populate turn usage from the last request in the history
+        if stats.request_usage_history:
+            last_req = stats.request_usage_history[-1]
+            snapshot.turn_usage = TurnUsage(
+                input_tokens=last_req.input_tokens,
+                output_tokens=last_req.output_tokens,
+                requests=1,
+                tool_calls=last_req.tool_calls,
+                tool_names=last_req.tool_names,
+                duration_seconds=round(last_req.duration_ms / 1000, 2) if last_req.duration_ms else 0.0,
+            )
+
+        # Populate session usage from cumulative stats
+        snapshot.session_usage = SessionUsage(
+            input_tokens=stats.input_tokens,
+            output_tokens=stats.output_tokens,
+            requests=stats.requests,
+            tool_calls=stats.tool_calls,
+            turns=len(stats.request_usage_history),
+            duration_seconds=0.0,
+        )
+
     return snapshot
 
 
