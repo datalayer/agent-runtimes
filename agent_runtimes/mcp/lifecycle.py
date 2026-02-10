@@ -90,15 +90,24 @@ class MCPLifecycleManager:
         """Get the path to the MCP configuration file."""
         return Path.home() / ".datalayer" / "mcp.json"
 
-    def _expand_env_vars(self, value: str) -> str:
-        """Expand environment variables in a string (${VAR_NAME} syntax)."""
+    def _expand_env_vars(
+        self, value: str, lookup_env: dict[str, str] | None = None
+    ) -> str:
+        """Expand environment variables in a string (${VAR_NAME} syntax).
+
+        Args:
+            value: The string containing ``${VAR_NAME}`` placeholders.
+            lookup_env: Optional env dict to resolve variables from.
+                Falls back to ``os.environ`` if not provided.
+        """
         import re
 
+        env_source = lookup_env if lookup_env is not None else os.environ
         pattern = r"\$\{([^}]+)\}"
 
         def replace(match: re.Match[str]) -> str:
             var_name = match.group(1)
-            env_value = os.environ.get(var_name, "")
+            env_value = env_source.get(var_name, "")
             if not env_value:
                 logger.warning(
                     f"Environment variable '{var_name}' not found or empty during expansion"
@@ -260,7 +269,10 @@ class MCPLifecycleManager:
         return details
 
     async def start_server(
-        self, server_id: str, config: MCPServer | None = None
+        self,
+        server_id: str,
+        config: MCPServer | None = None,
+        extra_env: dict[str, str] | None = None,
     ) -> MCPServerInstance | None:
         """
         Start an MCP server.
@@ -269,6 +281,10 @@ class MCPLifecycleManager:
             server_id: The server identifier
             config: Optional MCPServer config. If not provided, will try to
                    get from catalog or mcp.json.
+            extra_env: Additional environment variables to pass to the server
+                subprocess. These are merged on top of ``os.environ`` and
+                ``config.env``, and are also available for ``${VAR}``
+                expansion in server args and config env values.
 
         Returns:
             MCPServerInstance if started successfully, None otherwise
@@ -321,13 +337,26 @@ class MCPLifecycleManager:
 
             # Create the pydantic MCP server
             try:
-                # Build env dict
+                # Build env dict:
+                #  1. Start with the current process environment
+                #  2. Layer extra_env (from API request body, e.g. decoded secrets)
+                #  3. Layer config.env (from catalog/mcp.json, may contain ${VAR} refs)
+                # This ordering lets config.env reference extra_env values via ${VAR}.
                 env = {**os.environ}
 
+                if extra_env:
+                    env.update(extra_env)
+                    logger.debug(
+                        f"  Merged {len(extra_env)} extra env var(s): "
+                        f"{list(extra_env.keys())}"
+                    )
+
                 if config.env:
-                    # Expand environment variables in the env dict
+                    # Expand environment variables in the env dict.
+                    # Use the combined env for expansion so ${VAR} can
+                    # resolve values from extra_env as well.
                     expanded_env = {
-                        key: self._expand_env_vars(value)
+                        key: self._expand_env_vars(value, lookup_env=env)
                         if isinstance(value, str)
                         else value
                         for key, value in config.env.items()
@@ -335,9 +364,12 @@ class MCPLifecycleManager:
                     logger.debug(f"  Expanded config.env: {list(expanded_env.keys())}")
                     env.update(expanded_env)
 
-                # Expand environment variables in args (e.g., ${KAGGLE_TOKEN})
+                # Expand environment variables in args (e.g., ${KAGGLE_TOKEN}).
+                # Use the combined env so args can reference extra_env values.
                 expanded_args = [
-                    self._expand_env_vars(arg) if isinstance(arg, str) else arg
+                    self._expand_env_vars(arg, lookup_env=env)
+                    if isinstance(arg, str)
+                    else arg
                     for arg in (config.args or [])
                 ]
 

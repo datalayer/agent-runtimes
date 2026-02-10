@@ -1665,7 +1665,12 @@ async def _start_mcp_servers_for_agent(
             logger.info(
                 f"_start_mcp_servers_for_agent: Starting server '{server_id}'..."
             )
-            instance = await lifecycle_manager.start_server(server_id, config)
+            # Pass env vars explicitly so MCP subprocess gets them even if
+            # os.environ was not populated (robust, order-independent).
+            extra_env = {ev.name: ev.value for ev in env_vars} if env_vars else None
+            instance = await lifecycle_manager.start_server(
+                server_id, config, extra_env=extra_env
+            )
             if instance is not None:
                 logger.info(
                     f"_start_mcp_servers_for_agent: ✓ Successfully started server '{server_id}'"
