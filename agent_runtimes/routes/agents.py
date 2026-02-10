@@ -1805,10 +1805,20 @@ async def start_all_agents_mcp_servers(
         )
 
     try:
-        # Set environment variables before starting servers
+        # Set environment variables on the agent-runtimes process.
+        # These are propagated to:
+        #  1. MCP server subprocesses (npx, uvx, docker) via extra_env
+        #     passed explicitly to lifecycle_manager.start_server()
+        #  2. The Jupyter kernel via _inject_env_vars() in the sandbox
+        #     manager (runs `import os; os.environ[k] = v` in the kernel)
+        env_var_names = [ev.name for ev in body.env_vars]
         for env_var in body.env_vars:
             os.environ[env_var.name] = env_var.value
-            logger.info(f"Set environment variable: {env_var.name}")
+        if env_var_names:
+            logger.info(
+                f"Set {len(env_var_names)} env var(s) on process + "
+                f"will pass to MCP subprocesses and sandbox kernel: {env_var_names}"
+            )
 
         # Configure sandbox manager if jupyter_sandbox is provided
         # For two-container setups, also configure the MCP proxy URL
@@ -1933,10 +1943,16 @@ async def start_agent_mcp_servers(
         raise HTTPException(status_code=404, detail=f"Agent not found: {agent_id}")
 
     try:
-        # Set environment variables before starting servers
+        # Set environment variables on the agent-runtimes process.
+        # Propagated to MCP subprocesses (via extra_env) and Jupyter
+        # kernel (via _inject_env_vars).
+        env_var_names = [ev.name for ev in body.env_vars]
         for env_var in body.env_vars:
             os.environ[env_var.name] = env_var.value
-            logger.info(f"Set environment variable: {env_var.name}")
+        if env_var_names:
+            logger.info(
+                f"Set {len(env_var_names)} env var(s) for agent '{agent_id}': {env_var_names}"
+            )
 
         # Configure sandbox manager if jupyter_sandbox is provided
         # For two-container setups, also configure the MCP proxy URL

@@ -385,6 +385,17 @@ class MCPLifecycleManager:
                     id=server_id,  # Pass id in constructor
                 )
 
+                # Log the env vars that will be available in the subprocess.
+                # For npx-based servers (e.g., tavily, kaggle) this is the
+                # ONLY source of env vars — MCPServerStdio does not inherit
+                # from the parent process.
+                if extra_env:
+                    logger.info(
+                        f"  MCP server '{server_id}' ({config.command}) subprocess env "
+                        f"includes {len(extra_env)} injected var(s): "
+                        f"{sorted(extra_env.keys())}"
+                    )
+
                 # Adjust timeout if supported
                 if hasattr(pydantic_server, "timeout"):
                     try:
