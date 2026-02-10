@@ -79,6 +79,7 @@ class SandboxConfig:
     jupyter_url: str | None = None
     jupyter_token: str | None = None
     mcp_proxy_url: str | None = None
+    env_vars: dict[str, str] | None = None
 
 
 class ManagedSandbox:
@@ -374,6 +375,7 @@ class CodeSandboxManager:
         jupyter_url: str | None = None,
         jupyter_token: str | None = None,
         mcp_proxy_url: str | None = None,
+        env_vars: dict[str, str] | None = None,
     ) -> None:
         """
         Configure the sandbox settings.
@@ -387,6 +389,9 @@ class CodeSandboxManager:
             jupyter_token: The Jupyter server token. Overrides token in URL.
             mcp_proxy_url: The MCP tool proxy URL for two-container setups.
                 When set, remote sandboxes will call tools via HTTP to this URL.
+            env_vars: Environment variables to inject into the sandbox.
+                For local-jupyter, these are set in the Jupyter kernel's
+                os.environ so that executed code can access them (e.g. API keys).
         """
         with self._sandbox_lock:
             old_variant = self._config.variant
@@ -419,6 +424,12 @@ class CodeSandboxManager:
             if mcp_proxy_url is not None:
                 self._config.mcp_proxy_url = mcp_proxy_url
 
+            # Store env vars for injection into the sandbox after start
+            if env_vars is not None:
+                if self._config.env_vars is None:
+                    self._config.env_vars = {}
+                self._config.env_vars.update(env_vars)
+
             # If variant changed or we're reconfiguring jupyter, stop existing sandbox
             if self._sandbox is not None:
                 config_changed = old_variant != self._config.variant or (
@@ -444,6 +455,7 @@ class CodeSandboxManager:
         self,
         jupyter_sandbox_url: str,
         mcp_proxy_url: str | None = None,
+        env_vars: dict[str, str] | None = None,
     ) -> None:
         """
         Configure for Jupyter sandbox from a URL with optional token.
@@ -459,6 +471,8 @@ class CodeSandboxManager:
             mcp_proxy_url: The MCP tool proxy URL for two-container setups.
                 If not provided, will default to http://127.0.0.1:8765/api/v1/mcp/proxy
                 for local-jupyter variant (assumes colocated containers).
+            env_vars: Environment variables to inject into the sandbox kernel
+                (e.g. API keys decoded by the companion service).
         """
         # Default to local agent-runtimes URL for Jupyter sandboxes
         # Use 127.0.0.1 for local development (works for both local process and container)
@@ -470,6 +484,7 @@ class CodeSandboxManager:
             variant="local-jupyter",
             jupyter_url=jupyter_sandbox_url,
             mcp_proxy_url=mcp_proxy_url,
+            env_vars=env_vars,
         )
 
     def get_sandbox(self) -> Sandbox:
@@ -493,6 +508,11 @@ class CodeSandboxManager:
                 self._sandbox = self._create_sandbox()
                 self._sandbox.start()
                 logger.info(f"Started {self._config.variant} sandbox")
+                # Inject env vars into the sandbox after start.
+                # For local-jupyter this sets os.environ inside the
+                # Jupyter kernel (which runs in a separate container).
+                # For local-eval this sets them in the agent process.
+                self._inject_env_vars(self._sandbox)
             else:
                 logger.debug(
                     f"Returning existing {self._config.variant} sandbox "
@@ -525,6 +545,7 @@ class CodeSandboxManager:
                 if start:
                     self._sandbox.start()
                     logger.info(f"Started {self._config.variant} sandbox")
+                    self._inject_env_vars(self._sandbox)
                 else:
                     logger.info(f"Created {self._config.variant} sandbox (not started)")
             return self._sandbox
@@ -545,6 +566,49 @@ class CodeSandboxManager:
             A ``ManagedSandbox`` proxy that is safe to hold indefinitely.
         """
         return ManagedSandbox(self)
+
+    def _inject_env_vars(self, sandbox: Sandbox) -> None:
+        """Inject configured env vars into the sandbox.
+
+        For ``local-jupyter`` this runs a small code snippet in the Jupyter
+        kernel to set ``os.environ`` — necessary because the kernel runs in
+        a different container and does **not** share the agent-runtimes
+        process environment.
+
+        For ``local-eval`` this is a no-op because the eval sandbox shares
+        the agent-runtimes process, so env vars already set on
+        ``os.environ`` by the route handler are visible to executed code.
+        """
+        env_vars = self._config.env_vars
+        if not env_vars:
+            return
+
+        if self._config.variant == "local-jupyter":
+            # Build a Python snippet that sets every env var in the kernel.
+            lines = ["import os"]
+            for name, value in env_vars.items():
+                lines.append(f"os.environ[{name!r}] = {value!r}")
+            code = "\n".join(lines)
+            try:
+                result = sandbox.run_code(code)
+                if result.execution_ok:
+                    logger.info(
+                        f"Injected {len(env_vars)} env var(s) into Jupyter kernel: "
+                        f"{list(env_vars.keys())}"
+                    )
+                else:
+                    logger.warning(
+                        f"Failed to inject env vars into Jupyter kernel: "
+                        f"{result.execution_error}"
+                    )
+            except Exception as e:
+                logger.warning(f"Error injecting env vars into sandbox: {e}")
+        else:
+            # local-eval: env vars are already on os.environ
+            logger.debug(
+                f"Skipping env var injection for {self._config.variant} sandbox "
+                f"(process env is shared)"
+            )
 
     def _create_sandbox(self) -> Sandbox:
         """

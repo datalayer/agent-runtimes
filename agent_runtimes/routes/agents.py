@@ -537,6 +537,8 @@ async def create_agent(
                 from ..services.code_sandbox_manager import get_code_sandbox_manager
 
                 sandbox_manager = get_code_sandbox_manager()
+                # Env vars from the request body are not available here;
+                # they are injected later by the companion via /mcp-servers/start
                 sandbox_manager.configure_from_url(request.jupyter_sandbox)
                 logger.info(
                     f"Configured sandbox manager for Jupyter: {request.jupyter_sandbox.split('?')[0]}"
@@ -1533,6 +1535,10 @@ class AgentMcpServersResponse(BaseModel):
     mcp_proxy_url: str | None = Field(
         default=None, description="The MCP proxy URL configured for tool calls (if any)"
     )
+    env_vars_injected: int = Field(
+        default=0,
+        description="Number of env vars injected into the sandbox kernel",
+    )
     message: str
 
 
@@ -1809,10 +1815,14 @@ async def start_all_agents_mcp_servers(
                 from ..services.code_sandbox_manager import get_code_sandbox_manager
 
                 sandbox_manager = get_code_sandbox_manager()
-                # Pass both jupyter URL and MCP proxy URL for two-container setup
+                # Pass jupyter URL, MCP proxy URL, and env vars for two-container setup.
+                # Env vars will be injected into the Jupyter kernel's os.environ
+                # so that code executed in the kernel can access API keys, etc.
+                env_dict = {ev.name: ev.value for ev in body.env_vars} if body.env_vars else None
                 sandbox_manager.configure_from_url(
                     body.jupyter_sandbox,
                     mcp_proxy_url=body.mcp_proxy_url,
+                    env_vars=env_dict,
                 )
                 sandbox_configured = True
                 sandbox_variant = sandbox_manager.variant
@@ -1856,6 +1866,10 @@ async def start_all_agents_mcp_servers(
         if mcp_proxy_url:
             message_parts.append(f"mcp_proxy={mcp_proxy_url}")
 
+        env_count = len(body.env_vars) if body.env_vars else 0
+        if env_count:
+            message_parts.append(f"env_vars={env_count}")
+
         return AgentMcpServersResponse(
             agent_id=None,
             agents_processed=agents_processed,
@@ -1866,6 +1880,7 @@ async def start_all_agents_mcp_servers(
             sandbox_configured=sandbox_configured,
             sandbox_variant=sandbox_variant,
             mcp_proxy_url=mcp_proxy_url,
+            env_vars_injected=env_count,
             message=", ".join(message_parts),
         )
 
@@ -1928,10 +1943,12 @@ async def start_agent_mcp_servers(
                 from ..services.code_sandbox_manager import get_code_sandbox_manager
 
                 sandbox_manager = get_code_sandbox_manager()
-                # Pass both jupyter URL and MCP proxy URL for two-container setup
+                # Pass jupyter URL, MCP proxy URL, and env vars for two-container setup.
+                env_dict = {ev.name: ev.value for ev in body.env_vars} if body.env_vars else None
                 sandbox_manager.configure_from_url(
                     body.jupyter_sandbox,
                     mcp_proxy_url=body.mcp_proxy_url,
+                    env_vars=env_dict,
                 )
                 sandbox_configured = True
                 sandbox_variant = sandbox_manager.variant
@@ -1974,6 +1991,10 @@ async def start_agent_mcp_servers(
         if mcp_proxy_url:
             message_parts.append(f"mcp_proxy={mcp_proxy_url}")
 
+        env_count = len(body.env_vars) if body.env_vars else 0
+        if env_count:
+            message_parts.append(f"env_vars={env_count}")
+
         return AgentMcpServersResponse(
             agent_id=agent_id,
             agents_processed=[agent_id],
@@ -1984,6 +2005,7 @@ async def start_agent_mcp_servers(
             sandbox_configured=sandbox_configured,
             sandbox_variant=sandbox_variant,
             mcp_proxy_url=mcp_proxy_url,
+            env_vars_injected=env_count,
             message=", ".join(message_parts)
             if message_parts
             else "No servers to start",
