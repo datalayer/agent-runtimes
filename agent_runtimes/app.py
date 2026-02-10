@@ -130,8 +130,11 @@ async def _create_and_register_cli_agent(
     non_mcp_toolsets = []
     shared_sandbox = None
 
-    # Create shared sandbox if both codemode and skills are enabled
-    # Use CodeSandboxManager to support Jupyter sandbox configuration via CLI/API
+    # Create shared sandbox proxy if both codemode and skills are enabled.
+    # We use get_managed_sandbox() which returns a ManagedSandbox proxy.
+    # The proxy always delegates to the manager's current sandbox, so when
+    # the manager is reconfigured (e.g. local-eval → local-jupyter via the
+    # /mcp-servers/start API), all consumers automatically use the new one.
     skills_enabled = len(skills) > 0
     if enable_codemode and skills_enabled:
         try:
@@ -149,9 +152,9 @@ async def _create_and_register_cli_agent(
                 # Use default local-eval sandbox
                 sandbox_manager.configure(variant="local-eval")
 
-            shared_sandbox = sandbox_manager.get_sandbox()
+            shared_sandbox = sandbox_manager.get_managed_sandbox()
             logger.info(
-                f"Created shared {sandbox_manager.variant} sandbox for agent {agent_id}"
+                f"Created managed sandbox proxy (variant={sandbox_manager.variant}) for agent {agent_id}"
             )
         except ImportError as e:
             logger.warning(
@@ -197,10 +200,13 @@ async def _create_and_register_cli_agent(
                         f"Requested skills not found in {skills_path}: {sorted(missing)}"
                     )
 
-                # Create executor for running skill scripts
+                # Create executor for running skill scripts.
+                # Always use a ManagedSandbox proxy so that if the sandbox
+                # manager is reconfigured later (e.g. local-eval → local-jupyter),
+                # the executor automatically uses the new sandbox.
                 if shared_sandbox is not None:
                     executor = SandboxExecutor(shared_sandbox)
-                    logger.info("Using shared sandbox for skills executor")
+                    logger.info("Using shared managed sandbox for skills executor")
                 else:
                     # Use CodeSandboxManager for skills-only sandbox as well
                     from .services.code_sandbox_manager import get_code_sandbox_manager
@@ -214,7 +220,7 @@ async def _create_and_register_cli_agent(
                     else:
                         sandbox_manager.configure(variant="local-eval")
 
-                    skills_sandbox = sandbox_manager.get_sandbox()
+                    skills_sandbox = sandbox_manager.get_managed_sandbox()
                     executor = SandboxExecutor(skills_sandbox)
 
                 skills_toolset = AgentSkillsToolset(
@@ -537,26 +543,19 @@ async def _create_and_register_cli_agent(
                     f"rebuild_codemode: Using generated_path={new_config.generated_path}, skills_path={new_config.skills_path}, mcp_proxy_url={getattr(new_config, 'mcp_proxy_url', None)}"
                 )
 
-                # Get fresh sandbox from manager (may have been reconfigured via API)
-                # Do NOT use the captured shared_sandbox from agent creation time
-                # This ensures that if the sandbox manager was reconfigured
-                # (e.g., from local-eval to local-jupyter via the /mcp-servers/start API),
-                # the rebuilt codemode will use the new sandbox configuration.
-                #
-                # IMPORTANT: We get an unstarted sandbox to avoid pickle errors.
-                # The Jupyter sandbox creates websocket connections and asyncio Futures
-                # when started, which cannot be pickled. By passing an unstarted sandbox,
-                # the CodemodeToolset can start it lazily when code is executed.
+                # Use a ManagedSandbox proxy so the rebuilt toolset
+                # always delegates to the manager's current sandbox.
+                # No need to fetch a "fresh" concrete sandbox — the proxy
+                # handles reconfiguration transparently.
                 fresh_sandbox = None
                 try:
                     from .services.code_sandbox_manager import get_code_sandbox_manager
 
                     sandbox_manager = get_code_sandbox_manager()
-                    # Get the sandbox (starts it if needed - this connects to the colocated Jupyter server)
-                    fresh_sandbox = sandbox_manager.get_sandbox()
+                    fresh_sandbox = sandbox_manager.get_managed_sandbox()
                     logger.info(
-                        f"rebuild_codemode: Using {sandbox_manager.variant} sandbox "
-                        f"(url={sandbox_manager.config.jupyter_url})"
+                        f"rebuild_codemode: Using managed sandbox proxy "
+                        f"(variant={sandbox_manager.variant}, url={sandbox_manager.config.jupyter_url})"
                     )
                 except ImportError as e:
                     logger.warning(

@@ -11,6 +11,14 @@ Code Sandbox Manager for Agent Runtimes.
 This module provides a centralized manager for code sandbox instances,
 allowing runtime configuration of the sandbox variant (local-eval or local-jupyter).
 
+It also provides :class:`ManagedSandbox`, a transparent proxy that
+delegates every call to the manager's current sandbox.  All consumers
+(CodemodeToolset, SandboxExecutor, …) should receive a ``ManagedSandbox``
+instead of a concrete sandbox so that when the manager is reconfigured
+(e.g. switching from ``local-eval`` to ``local-jupyter`` via the
+``/mcp-servers/start`` API), every component automatically uses the
+new sandbox without being rebuilt.
+
 Usage:
     from agent_runtimes.services.code_sandbox_manager import (
         get_code_sandbox_manager,
@@ -27,20 +35,22 @@ Usage:
         jupyter_token="my-token",
     )
 
-    # Get the current sandbox for use with toolsets
-    sandbox = manager.get_sandbox()
+    # Get a managed proxy — safe to hold long-term
+    sandbox = manager.get_managed_sandbox()
 """
 
 from __future__ import annotations
 
 import logging
+from collections.abc import AsyncIterator, Iterator
 from dataclasses import dataclass
 from threading import Lock
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, Optional
 from urllib.parse import parse_qs, urlparse
 
 if TYPE_CHECKING:
-    from code_sandboxes import Sandbox
+    from code_sandboxes import ExecutionResult, Sandbox
+    from code_sandboxes.base import Context
 
 logger = logging.getLogger(__name__)
 
@@ -69,6 +79,203 @@ class SandboxConfig:
     jupyter_url: str | None = None
     jupyter_token: str | None = None
     mcp_proxy_url: str | None = None
+
+
+class ManagedSandbox:
+    """Transparent proxy that always delegates to the manager's current sandbox.
+
+    When the :class:`CodeSandboxManager` is reconfigured (e.g. switching
+    from ``local-eval`` to ``local-jupyter``), the proxy automatically
+    picks up the new sandbox.  Consumers that hold a reference to this
+    proxy never need to be rebuilt or notified.
+
+    This class implements the same interface as :class:`code_sandboxes.Sandbox`
+    so it is a drop-in replacement everywhere a ``Sandbox`` is expected
+    (``CodemodeToolset``, ``SandboxExecutor``, etc.).
+    """
+
+    def __init__(self, manager: CodeSandboxManager) -> None:
+        self._manager = manager
+
+    # -- helpers ---------------------------------------------------------
+
+    def _sandbox(self) -> Sandbox:
+        """Return the manager's current (started) sandbox."""
+        return self._manager.get_sandbox()
+
+    # -- Sandbox interface -----------------------------------------------
+
+    def start(self) -> None:
+        # get_sandbox() already starts the sandbox if needed
+        self._sandbox()
+
+    async def start_async(self) -> None:
+        self._sandbox()
+
+    def stop(self) -> None:
+        # Stopping is managed by the manager — not by individual consumers
+        pass
+
+    async def stop_async(self) -> None:
+        pass
+
+    def run_code(
+        self,
+        code: str,
+        language: str = "python",
+        context: Optional[Any] = None,
+        on_stdout: Any = None,
+        on_stderr: Any = None,
+        on_result: Any = None,
+        on_error: Any = None,
+        envs: Optional[dict[str, str]] = None,
+        timeout: Optional[float] = None,
+    ) -> ExecutionResult:
+        kwargs: dict[str, Any] = {"language": language}
+        if context is not None:
+            kwargs["context"] = context
+        if on_stdout is not None:
+            kwargs["on_stdout"] = on_stdout
+        if on_stderr is not None:
+            kwargs["on_stderr"] = on_stderr
+        if on_result is not None:
+            kwargs["on_result"] = on_result
+        if on_error is not None:
+            kwargs["on_error"] = on_error
+        if envs is not None:
+            kwargs["envs"] = envs
+        if timeout is not None:
+            kwargs["timeout"] = timeout
+        return self._sandbox().run_code(code, **kwargs)
+
+    async def run_code_async(
+        self,
+        code: str,
+        language: str = "python",
+        context: Optional[Any] = None,
+        on_stdout: Any = None,
+        on_stderr: Any = None,
+        on_result: Any = None,
+        on_error: Any = None,
+        envs: Optional[dict[str, str]] = None,
+        timeout: Optional[float] = None,
+    ) -> ExecutionResult:
+        kwargs: dict[str, Any] = {"language": language}
+        if context is not None:
+            kwargs["context"] = context
+        if on_stdout is not None:
+            kwargs["on_stdout"] = on_stdout
+        if on_stderr is not None:
+            kwargs["on_stderr"] = on_stderr
+        if on_result is not None:
+            kwargs["on_result"] = on_result
+        if on_error is not None:
+            kwargs["on_error"] = on_error
+        if envs is not None:
+            kwargs["envs"] = envs
+        if timeout is not None:
+            kwargs["timeout"] = timeout
+        return await self._sandbox().run_code_async(code, **kwargs)
+
+    def run_code_streaming(
+        self,
+        code: str,
+        language: str = "python",
+        context: Optional[Any] = None,
+        envs: Optional[dict[str, str]] = None,
+        timeout: Optional[float] = None,
+    ) -> Iterator:
+        return self._sandbox().run_code_streaming(
+            code, language=language, context=context, envs=envs, timeout=timeout
+        )
+
+    async def run_code_streaming_async(
+        self,
+        code: str,
+        language: str = "python",
+        context: Optional[Any] = None,
+        envs: Optional[dict[str, str]] = None,
+        timeout: Optional[float] = None,
+    ) -> AsyncIterator:
+        return await self._sandbox().run_code_streaming_async(
+            code, language=language, context=context, envs=envs, timeout=timeout
+        )
+
+    def create_context(self, name: Optional[str] = None) -> Any:
+        return self._sandbox().create_context(name=name)
+
+    def get_variable(self, name: str, context: Optional[Any] = None) -> Any:
+        return self._sandbox().get_variable(name, context=context)
+
+    def set_variable(self, name: str, value: Any, context: Optional[Any] = None) -> None:
+        self._sandbox().set_variable(name, value, context=context)
+
+    def set_variables(self, variables: dict[str, Any], context: Optional[Any] = None) -> None:
+        self._sandbox().set_variables(variables, context=context)
+
+    def install_packages(self, packages: list[str], timeout: Optional[float] = None) -> Any:
+        return self._sandbox().install_packages(packages, timeout=timeout)
+
+    def upload_file(self, local_path: str, remote_path: str) -> None:
+        self._sandbox().upload_file(local_path, remote_path)
+
+    def download_file(self, remote_path: str, local_path: str) -> None:
+        self._sandbox().download_file(remote_path, local_path)
+
+    def register_tool_caller(self, tool_caller: Any) -> None:
+        self._sandbox().register_tool_caller(tool_caller)
+
+    def set_tags(self, tags: dict[str, str]) -> None:
+        self._sandbox().set_tags(tags)
+
+    # -- Properties that consumers might inspect -------------------------
+
+    @property
+    def is_started(self) -> bool:
+        return self._manager._sandbox is not None
+
+    @property
+    def info(self) -> Any:
+        return self._sandbox().info if self.is_started else None
+
+    @property
+    def sandbox_id(self) -> Optional[str]:
+        return self._sandbox().sandbox_id if self.is_started else None
+
+    @property
+    def _server_url(self) -> Optional[str]:
+        """Expose for code that checks ``hasattr(sandbox, '_server_url')``."""
+        inner = self._sandbox()
+        return getattr(inner, "_server_url", None)
+
+    @property
+    def _namespaces(self) -> Any:
+        """Expose for CodeModeExecutor local-eval fast path."""
+        inner = self._sandbox()
+        return getattr(inner, "_namespaces", None)
+
+    # -- Context-manager support -----------------------------------------
+
+    def __enter__(self) -> ManagedSandbox:
+        self.start()
+        return self
+
+    def __exit__(self, *args: Any) -> None:
+        self.stop()
+
+    async def __aenter__(self) -> ManagedSandbox:
+        await self.start_async()
+        return self
+
+    async def __aexit__(self, *args: Any) -> None:
+        await self.stop_async()
+
+    # -- repr / str ------------------------------------------------------
+
+    def __repr__(self) -> str:
+        variant = self._manager.variant
+        has_sandbox = self._manager._sandbox is not None
+        return f"<ManagedSandbox variant={variant} active={has_sandbox}>"
 
 
 class CodeSandboxManager:
@@ -296,6 +503,23 @@ class CodeSandboxManager:
                 else:
                     logger.info(f"Created {self._config.variant} sandbox (not started)")
             return self._sandbox
+
+    def get_managed_sandbox(self) -> ManagedSandbox:
+        """Return a :class:`ManagedSandbox` proxy bound to this manager.
+
+        The proxy delegates every call to whatever concrete sandbox the
+        manager currently holds.  When the manager is reconfigured
+        (e.g. ``configure_from_url`` switches from ``local-eval`` to
+        ``local-jupyter``), the proxy automatically picks up the new
+        sandbox — consumers never need to be rebuilt.
+
+        This is the **recommended** way to obtain a sandbox for long-lived
+        components (``CodemodeToolset``, ``SandboxExecutor``, …).
+
+        Returns:
+            A ``ManagedSandbox`` proxy that is safe to hold indefinitely.
+        """
+        return ManagedSandbox(self)
 
     def _create_sandbox(self) -> Sandbox:
         """

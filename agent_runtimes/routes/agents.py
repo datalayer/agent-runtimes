@@ -594,9 +594,9 @@ async def create_agent(
                 from ..services.code_sandbox_manager import get_code_sandbox_manager
 
                 sandbox_manager = get_code_sandbox_manager()
-                shared_sandbox = sandbox_manager.get_sandbox()
+                shared_sandbox = sandbox_manager.get_managed_sandbox()
                 logger.info(
-                    f"Created shared {sandbox_manager.variant} sandbox for agent {agent_id}"
+                    f"Created managed sandbox proxy (variant={sandbox_manager.variant}) for agent {agent_id}"
                 )
             except ImportError as e:
                 logger.warning(
@@ -651,7 +651,7 @@ async def create_agent(
                         if shared_sandbox is not None:
                             executor = SandboxExecutor(shared_sandbox)
                             logger.info(
-                                f"Using shared sandbox for skills executor (agent {agent_id})"
+                                f"Using shared managed sandbox for skills executor (agent {agent_id})"
                             )
                         else:
                             # Use CodeSandboxManager for skills-only sandbox
@@ -660,7 +660,7 @@ async def create_agent(
                             )
 
                             sandbox_manager = get_code_sandbox_manager()
-                            skills_sandbox = sandbox_manager.get_sandbox()
+                            skills_sandbox = sandbox_manager.get_managed_sandbox()
                             executor = SandboxExecutor(skills_sandbox)
                         skills_toolset = AgentSkillsToolset(
                             skills=selected_skills,
@@ -672,7 +672,7 @@ async def create_agent(
                         if shared_sandbox is not None:
                             executor = SandboxExecutor(shared_sandbox)
                             logger.info(
-                                f"Using shared sandbox for skills executor (agent {agent_id})"
+                                f"Using shared managed sandbox for skills executor (agent {agent_id})"
                             )
                         else:
                             # Use CodeSandboxManager for skills-only sandbox
@@ -681,7 +681,7 @@ async def create_agent(
                             )
 
                             sandbox_manager = get_code_sandbox_manager()
-                            skills_sandbox = sandbox_manager.get_sandbox()
+                            skills_sandbox = sandbox_manager.get_managed_sandbox()
                             executor = SandboxExecutor(skills_sandbox)
                         skills_toolset = AgentSkillsToolset(
                             directories=[skills_path],  # TODO: Make configurable
@@ -788,10 +788,8 @@ async def create_agent(
                 def rebuild_codemode(new_servers: list[str | dict[str, str]]) -> Any:
                     """Rebuild codemode toolset with new MCP server selection.
 
-                    IMPORTANT: Gets a fresh sandbox from CodeSandboxManager each time.
-                    This ensures that if the sandbox manager was reconfigured
-                    (e.g., from local-eval to local-jupyter via the /mcp-servers/start API),
-                    the rebuilt codemode will use the new sandbox configuration.
+                    Uses a ManagedSandbox proxy so the rebuilt toolset
+                    automatically tracks any sandbox reconfiguration.
                     """
                     # Create a temporary request object with new servers
                     import copy
@@ -799,8 +797,8 @@ async def create_agent(
                     temp_request = copy.copy(request)
                     temp_request.selected_mcp_servers = new_servers  # type: ignore[assignment]
 
-                    # Get fresh sandbox from manager (may have been reconfigured)
-                    # Do NOT use the captured shared_sandbox from agent creation time
+                    # Use a managed sandbox proxy so the rebuilt toolset
+                    # always delegates to the manager's current sandbox
                     fresh_sandbox = None
                     try:
                         from ..services.code_sandbox_manager import (
@@ -808,9 +806,9 @@ async def create_agent(
                         )
 
                         sandbox_manager = get_code_sandbox_manager()
-                        fresh_sandbox = sandbox_manager.get_sandbox()
+                        fresh_sandbox = sandbox_manager.get_managed_sandbox()
                         logger.info(
-                            f"Rebuild codemode using {sandbox_manager.variant} sandbox"
+                            f"Rebuild codemode using managed sandbox proxy (variant={sandbox_manager.variant})"
                         )
                     except ImportError as e:
                         logger.warning(f"code_sandboxes not available: {e}")
