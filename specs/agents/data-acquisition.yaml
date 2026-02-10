@@ -23,6 +23,7 @@ enabled: true
 mcp_servers:
   - kaggle
   - filesystem
+  - tavily
 
 # Skills available to this agent
 skills:

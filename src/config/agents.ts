@@ -151,7 +151,11 @@ export const DATA_ACQUISITION_AGENT_SPEC: AgentSpec = {
   description: `Acquires and manages data from various sources including Kaggle datasets and local filesystem operations.`,
   tags: ['data', 'acquisition', 'kaggle', 'filesystem'],
   enabled: true,
-  mcpServers: [MCP_SERVER_MAP['kaggle'], MCP_SERVER_MAP['filesystem']],
+  mcpServers: [
+    MCP_SERVER_MAP['kaggle'],
+    MCP_SERVER_MAP['filesystem'],
+    MCP_SERVER_MAP['tavily'],
+  ],
   skills: [toAgentSkillSpec(SKILL_MAP['github'])],
   environmentName: 'ai-agents-env',
   icon: 'database',
