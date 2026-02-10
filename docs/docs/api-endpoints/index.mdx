@@ -134,6 +134,43 @@ Dynamically update an agent's selected MCP servers without recreating the agent.
 
 Start catalog MCP servers defined for running agents. Environment variables can be provided to configure the servers (e.g., API keys). If the agent has Codemode enabled, the Codemode toolset will be rebuilt to include the newly started servers as programmatic tools.
 
+:::info Two-Phase Sandbox Bootstrap (Kubernetes)
+
+In a Kubernetes pod, agent-runtimes starts **before** the Jupyter container is ready. The code sandbox goes through two phases:
+
+| Phase | Trigger | Sandbox Variant | Code Execution |
+|-------|---------|-----------------|----------------|
+| **1 — Startup** | Dockerfile CMD (`--codemode`, no `--jupyter-sandbox`) | `local-eval` | In-process `eval()` (fallback) |
+| **2 — Companion call** | `POST /api/v1/agents/mcp-servers/start` with `jupyter_sandbox` + `mcp_proxy_url` | `local-jupyter` | Jupyter kernel (`:2300`) |
+
+**Phase 1**: The agent-runtimes container starts with `--codemode` and `--no-catalog-mcp-servers`. Because no `--jupyter-sandbox` flag is provided, the `CodeSandboxManager` defaults to `variant="local-eval"`.
+
+**Phase 2**: Once all containers in the pod are healthy, the **runtimes-companion** sidecar calls this endpoint with:
+- `jupyter_sandbox`: `http://127.0.0.1:2300?token=<token>` — the Jupyter kernel URL
+- `mcp_proxy_url`: `http://127.0.0.1:8765/api/v1/mcp/proxy` — the HTTP-to-stdio proxy
+
+The endpoint calls `CodeSandboxManager.configure_from_url()`, which switches the variant to `local-jupyter` and rebuilds the Codemode toolset. All subsequent code execution runs inside the Jupyter kernel instead of local eval.
+
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│  Pod                                                                 │
+│                                                                      │
+│  companion ──POST /mcp-servers/start──▶ agent-runtimes :8765         │
+│              (jupyter_sandbox,           │                            │
+│               mcp_proxy_url,             ├─ starts MCP servers       │
+│               env_vars)                  ├─ switches to local-jupyter │
+│                                          └─ rebuilds codemode        │
+│                                                                      │
+│  agent-runtimes :8765 ──run_code()──▶ jupyter :2300                  │
+│  jupyter :2300 ──HTTP tool call──▶ agent-runtimes /api/v1/mcp/proxy  │
+│                                                                      │
+│  Shared Volume: /mnt/shared-agent/                                   │
+│  ├── generated/  (Python tool bindings written by codemode)          │
+│  └── skills/     (SKILL.md files for agent skills)                   │
+└──────────────────────────────────────────────────────────────────────┘
+```
+:::
+
 #### Start MCP Servers for All Agents
 
 ```http
@@ -151,7 +188,8 @@ Start catalog MCP servers for **all** running agents.
     {"name": "TAVILY_API_KEY", "value": "tvly-xxx"},
     {"name": "GITHUB_TOKEN", "value": "ghp_xxx"}
   ],
-  "jupyter_sandbox": "http://localhost:8888?token=my-token"
+  "jupyter_sandbox": "http://localhost:8888?token=my-token",
+  "mcp_proxy_url": "http://127.0.0.1:8765/api/v1/mcp/proxy"
 }
 ```
 
@@ -160,7 +198,8 @@ Start catalog MCP servers for **all** running agents.
 | `env_vars` | array | No | List of environment variables to set before starting servers |
 | `env_vars[].name` | string | Yes | Environment variable name |
 | `env_vars[].value` | string | Yes | Environment variable value |
-| `jupyter_sandbox` | string | No | Jupyter server URL with token for code execution (configures the sandbox manager) |
+| `jupyter_sandbox` | string | No | Jupyter server URL with token for code execution. When provided, switches the sandbox from `local-eval` to `local-jupyter` (Phase 2 of the bootstrap) |
+| `mcp_proxy_url` | string | No | HTTP proxy URL the Jupyter kernel uses to call MCP tools. Defaults to `http://127.0.0.1:8765/api/v1/mcp/proxy` when `jupyter_sandbox` is set |
 
 **Example Request:**
 
