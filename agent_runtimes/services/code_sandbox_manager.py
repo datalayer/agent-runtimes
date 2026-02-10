@@ -270,17 +270,14 @@ class ManagedSandbox:
     def sandbox_id(self) -> Optional[str]:
         return self._sandbox().sandbox_id if self.is_started else None
 
-    @property
-    def _server_url(self) -> Optional[str]:
-        """Expose for code that checks ``hasattr(sandbox, '_server_url')``."""
-        inner = self._sandbox()
-        return getattr(inner, "_server_url", None)
-
-    @property
-    def _namespaces(self) -> Any:
-        """Expose for CodeModeExecutor local-eval fast path."""
-        inner = self._sandbox()
-        return getattr(inner, "_namespaces", None)
+    # NOTE: _server_url, _namespaces, _default_context, and other
+    # variant-specific attributes are intentionally NOT defined as
+    # explicit properties here.  They are handled by __getattr__ which
+    # delegates to the underlying sandbox.  This is critical because
+    # consumers (e.g. CodeModeExecutor) use ``hasattr(sandbox, '_namespaces')``
+    # to decide the execution path.  An explicit property would always
+    # make ``hasattr`` return True (even when the underlying sandbox
+    # doesn't have the attribute), causing the wrong code-path to be taken.
 
     # -- Context-manager support -----------------------------------------
 
