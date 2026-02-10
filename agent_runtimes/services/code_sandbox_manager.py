@@ -95,7 +95,35 @@ class ManagedSandbox:
     """
 
     def __init__(self, manager: CodeSandboxManager) -> None:
-        self._manager = manager
+        # Use object.__setattr__ to avoid triggering our __setattr__ override
+        # before _manager is available.
+        object.__setattr__(self, "_manager", manager)
+
+    # -- Transparent attribute forwarding --------------------------------
+
+    def __getattr__(self, name: str) -> Any:
+        """Forward any attribute not found on the proxy to the current sandbox.
+
+        This catches attributes like ``_default_context``, ``config``,
+        ``_started``, ``_tool_caller``, ``_tags``, ``_namespaces``,
+        ``_execution_count``, etc. that the concrete sandbox sets in its
+        ``__init__`` / ``start()`` and that consumers access directly.
+
+        ``__getattr__`` is only called when normal lookup fails, so explicit
+        methods and properties defined on this class take precedence.
+        """
+        return getattr(self._sandbox(), name)
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        """Forward attribute writes to the current sandbox.
+
+        Attributes that belong to the proxy itself (``_manager``) are stored
+        on the proxy; everything else is forwarded.
+        """
+        if name == "_manager":
+            object.__setattr__(self, name, value)
+        else:
+            setattr(self._sandbox(), name, value)
 
     # -- helpers ---------------------------------------------------------
 
