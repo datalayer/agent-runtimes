@@ -152,7 +152,7 @@ export const DATA_ACQUISITION_AGENT_SPEC: AgentSpec = {
   tags: ['data', 'acquisition', 'kaggle', 'filesystem'],
   enabled: true,
   mcpServers: [MCP_SERVER_MAP['kaggle'], MCP_SERVER_MAP['filesystem']],
-  skills: [],
+  skills: [toAgentSkillSpec(SKILL_MAP['github'])],
   environmentName: 'ai-agents-env',
   icon: 'database',
   color: '#3B82F6',

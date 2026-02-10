@@ -25,7 +25,8 @@ mcp_servers:
   - filesystem
 
 # Skills available to this agent
-skills: []
+skills:
+  - github
 
 # Runtime environment
 environment_name: ai-agents-env
