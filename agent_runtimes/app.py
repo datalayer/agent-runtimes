@@ -169,8 +169,14 @@ async def _create_and_register_cli_agent(
             )
 
             if PYDANTIC_AI_AVAILABLE:
-                repo_root = Path(__file__).resolve().parents[1]
-                skills_path = str((repo_root / "skills").resolve())
+                # Use AGENT_RUNTIMES_SKILLS_FOLDER if set (e.g. --skills-folder flag),
+                # otherwise fall back to the repo-local skills/ directory.
+                skills_folder_env = os.getenv("AGENT_RUNTIMES_SKILLS_FOLDER")
+                if skills_folder_env:
+                    skills_path = str(Path(skills_folder_env).resolve())
+                else:
+                    repo_root = Path(__file__).resolve().parents[1]
+                    skills_path = str((repo_root / "skills").resolve())
 
                 selected_set = set(skills)
                 selected_skills: list[AgentSkill] = []
