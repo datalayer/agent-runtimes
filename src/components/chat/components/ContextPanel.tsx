@@ -468,7 +468,6 @@ export function ContextPanel({
 
   const { totalTokens, contextWindow, sessionUsage, turnUsage, distribution } =
     snapshotData;
-  const contextUsagePercent = (totalTokens / contextWindow) * 100;
   const hasDistributionData =
     distribution?.children && distribution.children.length > 0;
   const hasHistoryData =
@@ -510,29 +509,11 @@ export function ContextPanel({
           borderColor: 'border.default',
         }}
       >
-        {/* Overall progress bar */}
+        {/* Context usage */}
         <Box sx={{ mb: 3 }}>
-          <Box
-            sx={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              mb: 1,
-            }}
-          >
-            <Text sx={{ fontSize: 1, fontWeight: 'semibold' }}>
-              Total usage: {formatTokens(totalTokens)}
-            </Text>
-            <Text sx={{ fontSize: 1, color: 'fg.muted' }}>
-              {contextUsagePercent.toFixed(1)}%
-            </Text>
-          </Box>
-          <ProgressBar
-            progress={Math.min(contextUsagePercent, 100)}
-            sx={{ height: 8 }}
-            bg={
-              contextUsagePercent > 80 ? 'danger.emphasis' : 'accent.emphasis'
-            }
-          />
+          <Text sx={{ fontSize: 1, fontWeight: 'semibold' }}>
+            Total usage: {formatTokens(totalTokens)}
+          </Text>
         </Box>
 
         {/* Session & Turn stats row */}

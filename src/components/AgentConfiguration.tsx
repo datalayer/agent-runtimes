@@ -645,6 +645,9 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
   const isNewAgentMode =
     selectedAgentId === 'new-agent' || isSpecSelection(selectedAgentId);
 
+  // True when a library spec is selected (fields locked down except Name, URL, Library, Model, Transport, Extensions)
+  const isSpecMode = isSpecSelection(selectedAgentId);
+
   // Fetch skills from the backend (only when codemode is enabled)
   const skillsQuery = useQuery<{ skills: SkillOption[]; total: number }>({
     queryKey: ['agent-skills', baseUrl],
@@ -795,8 +798,8 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
     }
   };
 
-  // MCP servers are disabled for existing agents (new-agent and spec modes only)
-  const mcpServersDisabled = !isNewAgentMode;
+  // MCP servers are disabled for existing agents and when a spec is selected
+  const mcpServersDisabled = !isNewAgentMode || isSpecMode;
 
   // Determine which extensions are enabled based on transport
   const isExtensionEnabled = (ext: Extension): boolean => {
@@ -862,7 +865,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
         <FormControl.Caption>
           {isNewAgentMode
             ? selectedSpec
-              ? `Creating from spec: ${selectedSpec.name}`
+              ? `Creating from spec: ${selectedSpec.name} — capabilities are locked`
               : 'Configure a new custom agent'
             : 'Selected agent - form fields below are disabled'}
         </FormControl.Caption>
@@ -1003,6 +1006,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
           borderColor: 'border.default',
           borderRadius: 2,
           backgroundColor: 'canvas.default',
+          opacity: isSpecMode ? 0.6 : 1,
         }}
       >
         <Box
@@ -1026,7 +1030,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
         {/* Show connected identities with token status and connect buttons for unconnected providers */}
         <IdentityConnectWithStatus
           identityProviders={identityProviders}
-          disabled={!isNewAgentMode}
+          disabled={!isNewAgentMode || isSpecMode}
           onConnect={onIdentityConnect}
           onDisconnect={onIdentityDisconnect}
         />
@@ -1041,16 +1045,30 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
           borderColor: 'border.default',
           borderRadius: 2,
           backgroundColor: 'canvas.default',
+          opacity: isSpecMode ? 0.6 : 1,
         }}
       >
         <Text sx={{ fontSize: 1, fontWeight: 'bold', display: 'block', mb: 2 }}>
           Agent Capabilities
+          {isSpecMode && (
+            <Text
+              as="span"
+              sx={{
+                fontSize: 0,
+                color: 'fg.muted',
+                fontWeight: 'normal',
+                ml: 2,
+              }}
+            >
+              — defined by spec
+            </Text>
+          )}
         </Text>
-        <Box sx={{ display: 'flex', gap: 4 }}>
+        <Box sx={{ display: 'flex', gap: 4, opacity: isSpecMode ? 0.6 : 1 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <Checkbox
               checked={enableCodemode}
-              disabled={!isNewAgentMode}
+              disabled={!isNewAgentMode || isSpecMode}
               onChange={e => onEnableCodemodeChange?.(e.target.checked)}
             />
             <Box>
@@ -1074,7 +1092,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
               <Checkbox
                 checked={allowDirectToolCalls}
-                disabled={!isNewAgentMode}
+                disabled={!isNewAgentMode || isSpecMode}
                 onChange={e => onAllowDirectToolCallsChange?.(e.target.checked)}
               />
               <Box>
@@ -1087,7 +1105,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
               <Checkbox
                 checked={enableToolReranker}
-                disabled={!isNewAgentMode}
+                disabled={!isNewAgentMode || isSpecMode}
                 onChange={e => onEnableToolRerankerChange?.(e.target.checked)}
               />
               <Box>
@@ -1100,7 +1118,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
               <Checkbox
                 checked={useJupyterSandbox}
-                disabled={!isNewAgentMode}
+                disabled={!isNewAgentMode || isSpecMode}
                 onChange={e => onUseJupyterSandboxChange?.(e.target.checked)}
               />
               <Box>
@@ -1122,7 +1140,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
           borderColor: 'border.default',
           borderRadius: 2,
           backgroundColor: 'canvas.default',
-          opacity: enableCodemode ? 1 : 0.5,
+          opacity: isSpecMode ? 0.6 : enableCodemode ? 1 : 0.5,
         }}
       >
         <Box
@@ -1133,7 +1151,22 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
             marginBottom: 2,
           }}
         >
-          <Text sx={{ fontSize: 1, fontWeight: 'bold' }}>Skills</Text>
+          <Text sx={{ fontSize: 1, fontWeight: 'bold' }}>
+            Skills
+            {isSpecMode && (
+              <Text
+                as="span"
+                sx={{
+                  fontSize: 0,
+                  color: 'fg.muted',
+                  fontWeight: 'normal',
+                  ml: 2,
+                }}
+              >
+                — defined by spec
+              </Text>
+            )}
+          </Text>
           {skillsQuery.isLoading && <Spinner size="small" />}
           {enableCodemode && !skillsQuery.isLoading && (
             <Button
@@ -1174,12 +1207,12 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
                   padding: 2,
                   borderRadius: 1,
                   backgroundColor: 'canvas.subtle',
-                  opacity: !isNewAgentMode ? 0.6 : 1,
+                  opacity: !isNewAgentMode || isSpecMode ? 0.6 : 1,
                 }}
               >
                 <Checkbox
                   checked={selectedSkills.includes(skill.id)}
-                  disabled={!isNewAgentMode}
+                  disabled={!isNewAgentMode || isSpecMode}
                   onChange={e => handleSkillChange(skill.id, e.target.checked)}
                 />
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
@@ -1218,6 +1251,19 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
           <ToolsIcon size={16} />
           <Text sx={{ fontSize: 1, fontWeight: 'bold' }}>
             MCP Config Servers
+            {isSpecMode && (
+              <Text
+                as="span"
+                sx={{
+                  fontSize: 0,
+                  color: 'fg.muted',
+                  fontWeight: 'normal',
+                  ml: 2,
+                }}
+              >
+                — defined by spec
+              </Text>
+            )}
           </Text>
           {mcpServersQuery.isLoading && <Spinner size="small" />}
           {!mcpServersQuery.isLoading && (

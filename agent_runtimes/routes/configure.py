@@ -167,7 +167,7 @@ async def get_toolsets_info() -> list[dict[str, Any]]:
     return get_config_mcp_toolsets_info()
 
 
-@router.get("/agents/{agent_id}/context-details")
+@router.get("/agents/{agent_id:path}/context-details")
 async def get_agent_context_details(
     agent_id: str = Path(
         ...,
@@ -192,7 +192,7 @@ async def get_agent_context_details(
     return tracker.get_context_details(agent_id)
 
 
-@router.get("/agents/{agent_id}/context-snapshot")
+@router.get("/agents/{agent_id:path}/context-snapshot")
 async def get_agent_context_snapshot_endpoint(
     agent_id: str = Path(
         ...,
@@ -258,7 +258,7 @@ async def get_agent_context_snapshot_endpoint(
     return result
 
 
-@router.get("/agents/{agent_id}/full-context")
+@router.get("/agents/{agent_id:path}/full-context")
 async def get_agent_full_context_endpoint(
     agent_id: str = Path(
         ...,
@@ -319,7 +319,7 @@ async def get_agent_full_context_endpoint(
     return snapshot.to_dict()
 
 
-@router.post("/agents/{agent_id}/context-details/reset")
+@router.post("/agents/{agent_id:path}/context-details/reset")
 async def reset_agent_context(
     agent_id: str = Path(
         ...,
@@ -340,7 +340,7 @@ async def reset_agent_context(
     return {"status": "ok", "message": f"Context reset for agent '{agent_id}'"}
 
 
-@router.get("/agents/{agent_id}/spec")
+@router.get("/agents/{agent_id:path}/spec")
 async def get_agent_spec_endpoint(
     agent_id: str = Path(
         ...,
@@ -365,9 +365,9 @@ async def get_agent_spec_endpoint(
     Raises:
         HTTPException: If agent spec not found.
     """
-    from .agents import get_agent_spec
+    from .agents import get_stored_agent_spec
 
-    spec = get_agent_spec(agent_id)
+    spec = get_stored_agent_spec(agent_id)
     if spec is None:
         raise HTTPException(
             status_code=404,

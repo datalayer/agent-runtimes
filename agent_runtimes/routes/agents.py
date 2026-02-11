@@ -54,7 +54,7 @@ _api_prefix = "/api/v1"
 _agent_specs: dict[str, dict[str, Any]] = {}
 
 
-def get_agent_spec(agent_id: str) -> dict[str, Any] | None:
+def get_stored_agent_spec(agent_id: str) -> dict[str, Any] | None:
     """Get the original creation spec for an agent."""
     return _agent_specs.get(agent_id)
 
@@ -86,7 +86,7 @@ async def get_agent_spec_library() -> list[dict[str, Any]]:
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/library/{agent_id}", response_model=AgentSpec)
+@router.get("/library/{agent_id:path}", response_model=AgentSpec)
 async def get_agent_spec(agent_id: str) -> dict[str, Any]:
     """
     Get a specific agent specification from the library.
@@ -973,7 +973,7 @@ async def list_agents() -> AgentListResponse:
     return AgentListResponse(agents=agents)
 
 
-@router.get("/{agent_id}")
+@router.get("/{agent_id:path}")
 async def get_agent(agent_id: str) -> dict[str, Any]:
     """
     Get information about a specific agent.
@@ -994,7 +994,7 @@ async def get_agent(agent_id: str) -> dict[str, Any]:
     return _get_agent_details(agent, agent_id, info)
 
 
-@router.delete("/{agent_id}")
+@router.delete("/{agent_id:path}")
 async def delete_agent(agent_id: str) -> dict[str, str]:
     """
     Delete an agent.
@@ -1065,7 +1065,7 @@ class UpdateAgentMcpServersRequest(BaseModel):
     )
 
 
-@router.patch("/{agent_id}/mcp-servers")
+@router.patch("/{agent_id:path}/mcp-servers")
 async def update_agent_mcp_servers(
     agent_id: str,
     request: UpdateAgentMcpServersRequest,
@@ -1774,7 +1774,7 @@ async def start_all_agents_mcp_servers(
         )
 
 
-@router.post("/{agent_id}/mcp-servers/start")
+@router.post("/{agent_id:path}/mcp-servers/start")
 async def start_agent_mcp_servers(
     agent_id: str,
     body: StartAgentMcpServersRequest,
@@ -2025,7 +2025,7 @@ async def stop_all_agents_mcp_servers() -> AgentMcpServersResponse:
         )
 
 
-@router.post("/{agent_id}/mcp-servers/stop")
+@router.post("/{agent_id:path}/mcp-servers/stop")
 async def stop_agent_mcp_servers(
     agent_id: str,
 ) -> AgentMcpServersResponse:

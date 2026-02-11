@@ -497,21 +497,20 @@ export function ContextInspector({ agentId, apiBase }: ContextInspectorProps) {
     <Box>
       {/* Token Usage Summary */}
       <Box sx={{ mb: 3 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-          <Text sx={{ fontSize: 1, fontWeight: 'semibold' }}>
-            Total usage: {formatTokens(tokenSummary.total)}
-          </Text>
-          <Text sx={{ fontSize: 1, color: 'fg.muted' }}>
-            {tokenSummary.usagePercent.toFixed(1)}%
-          </Text>
-        </Box>
+        <Text sx={{ fontSize: 1, fontWeight: 'semibold' }}>
+          Total usage: {formatTokens(tokenSummary.total)} /{' '}
+          {formatTokens(tokenSummary.contextWindow)} (
+          {Math.round(tokenSummary.usagePercent)}%)
+        </Text>
         <ProgressBar
-          progress={tokenSummary.usagePercent}
-          sx={{ height: 8 }}
+          progress={Math.min(tokenSummary.usagePercent, 100)}
+          sx={{ mt: 2, height: 8 }}
           bg={
-            tokenSummary.usagePercent > 80
+            tokenSummary.usagePercent > 90
               ? 'danger.emphasis'
-              : 'accent.emphasis'
+              : tokenSummary.usagePercent > 70
+                ? 'attention.emphasis'
+                : 'success.emphasis'
           }
         />
         <Box

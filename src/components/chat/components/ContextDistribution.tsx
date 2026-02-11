@@ -223,7 +223,7 @@ export function ContextDistribution({
     );
   }
 
-  const { distribution, totalTokens, contextWindow } = snapshotData;
+  const { distribution, totalTokens } = snapshotData;
   const hasData = distribution.children && distribution.children.length > 0;
 
   // ECharts option for treemap

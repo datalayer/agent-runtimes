@@ -591,19 +591,25 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
   // Track previous MCP servers to detect changes
   const prevMcpServersRef = useRef<McpServerSelection[]>(selectedMcpServers);
 
-  // Fetch library specs so we can populate form fields when a spec is selected
-  const libraryQuery = useQuery<LibraryAgentSpec[]>({
-    queryKey: ['agent-library', baseUrl],
-    queryFn: async () => {
-      const response = await fetch(`${baseUrl}/api/v1/agents/library`);
-      if (!response.ok) throw new Error('Failed to fetch library');
-      return response.json();
-    },
-    enabled: !!baseUrl,
-    staleTime: 1000 * 60 * 5,
-  });
+  // Cache for library specs (fetched on-demand, outside QueryClientProvider)
+  const librarySpecsRef = useRef<LibraryAgentSpec[] | null>(null);
 
-  const handleAgentSelect = (agentId: string) => {
+  const fetchLibrarySpecs = useCallback(async (): Promise<
+    LibraryAgentSpec[]
+  > => {
+    if (librarySpecsRef.current) return librarySpecsRef.current;
+    try {
+      const response = await fetch(`${baseUrl}/api/v1/agents/library`);
+      if (!response.ok) return [];
+      const data = await response.json();
+      librarySpecsRef.current = data;
+      return data;
+    } catch {
+      return [];
+    }
+  }, [baseUrl]);
+
+  const handleAgentSelect = async (agentId: string) => {
     setSelectedAgentId(agentId);
     setCreateError(null);
     if (agentId === 'new-agent') {
@@ -613,7 +619,8 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
     } else if (isSpecSelection(agentId)) {
       // Populate form fields from the selected library spec
       const specId = getSpecId(agentId);
-      const spec = libraryQuery.data?.find(s => s.id === specId);
+      const specs = await fetchLibrarySpecs();
+      const spec = specs.find(s => s.id === specId);
       if (spec) {
         setAgentName(spec.id);
         // Keep current transport, model, agentLibrary - user can override
@@ -744,10 +751,11 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
     prevMcpServersRef.current = selectedMcpServers;
   }, [selectedMcpServers]);
 
-  const handleConnect = async () => {
-    const isNewMode =
-      selectedAgentId === 'new-agent' || isSpecSelection(selectedAgentId);
+  // True when creating a new agent (blank or from a library spec)
+  const isNewMode =
+    selectedAgentId === 'new-agent' || isSpecSelection(selectedAgentId);
 
+  const handleConnect = async () => {
     // For existing agents (not new-agent or spec), ensure transport and agentName are set
     if (!isNewMode) {
       const agent = agents.find(a => a.id === selectedAgentId);
@@ -806,17 +814,11 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
           {/* Header - empty content for new agent */}
           <Header
             activeSession={activeSession}
-            agentName={
-              selectedAgentId === 'new-agent' ? undefined : currentAgent?.name
-            }
-            agentDescription={
-              selectedAgentId === 'new-agent'
-                ? undefined
-                : currentAgent?.description
-            }
+            agentName={isNewMode ? undefined : currentAgent?.name}
+            agentDescription={isNewMode ? undefined : currentAgent?.description}
             agentStatus={currentAgent?.status}
             showContextTree={showContextTree}
-            isNewAgent={selectedAgentId === 'new-agent'}
+            isNewAgent={isNewMode}
             isConfigured={isConfigured}
             onSessionChange={setActiveSession}
             onToggleContextTree={() => setShowContextTree(!showContextTree)}
@@ -859,7 +861,7 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
                 sticky
                 width={{ min: '250px', default: '300px', max: '90px' }}
               >
-                {selectedAgentId === 'new-agent' ? (
+                {isNewMode ? (
                   <Blankslate border spacious narrow>
                     <Blankslate.Visual>
                       <AiAgentIcon colored size={48} />
@@ -911,7 +913,7 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
               richEditor={false}
               notebookFile={currentAgent?.notebookFile}
               lexicalFile={currentAgent?.lexicalFile}
-              isNewAgent={selectedAgentId === 'new-agent'}
+              isNewAgent={isNewMode}
               isConfigured={isConfigured}
               baseUrl={baseUrl}
               agentId={currentAgent?.id || agentName}
