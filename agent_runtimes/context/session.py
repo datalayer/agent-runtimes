@@ -2218,7 +2218,9 @@ def get_agent_context_snapshot(agent_id: str) -> ContextSnapshot | None:
                 requests=1,
                 tool_calls=last_req.tool_calls,
                 tool_names=last_req.tool_names,
-                duration_seconds=round(last_req.duration_ms / 1000, 2) if last_req.duration_ms else 0.0,
+                duration_seconds=round(last_req.duration_ms / 1000, 2)
+                if last_req.duration_ms
+                else 0.0,
             )
 
         # Populate session usage from cumulative stats

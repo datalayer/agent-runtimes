@@ -85,7 +85,12 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
 
         # Format required env vars
         required_env = spec.get("required_env_vars", [])
-        required_env_formatted = str(required_env) if required_env else "[]"
+        if required_env:
+            required_env_formatted = (
+                "[" + ", ".join(f'"{v}"' for v in required_env) + "]"
+            )
+        else:
+            required_env_formatted = "[]"
 
         lines.extend(
             [

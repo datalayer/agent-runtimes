@@ -83,7 +83,8 @@ class SandboxConfig:
 
 
 class ManagedSandbox:
-    """Transparent proxy that always delegates to the manager's current sandbox.
+    """
+    Transparent proxy that always delegates to the manager's current sandbox.
 
     When the :class:`CodeSandboxManager` is reconfigured (e.g. switching
     from ``local-eval`` to ``local-jupyter``), the proxy automatically
@@ -103,7 +104,8 @@ class ManagedSandbox:
     # -- Transparent attribute forwarding --------------------------------
 
     def __getattr__(self, name: str) -> Any:
-        """Forward any attribute not found on the proxy to the current sandbox.
+        """
+        Forward any attribute not found on the proxy to the current sandbox.
 
         This catches attributes like ``_default_context``, ``config``,
         ``_started``, ``_tool_caller``, ``_tags``, ``_namespaces``,
@@ -116,7 +118,8 @@ class ManagedSandbox:
         return getattr(self._sandbox(), name)
 
     def __setattr__(self, name: str, value: Any) -> None:
-        """Forward attribute writes to the current sandbox.
+        """
+        Forward attribute writes to the current sandbox.
 
         Attributes that belong to the proxy itself (``_manager``) are stored
         on the proxy; everything else is forwarded.
@@ -236,13 +239,19 @@ class ManagedSandbox:
     def get_variable(self, name: str, context: Optional[Any] = None) -> Any:
         return self._sandbox().get_variable(name, context=context)
 
-    def set_variable(self, name: str, value: Any, context: Optional[Any] = None) -> None:
+    def set_variable(
+        self, name: str, value: Any, context: Optional[Any] = None
+    ) -> None:
         self._sandbox().set_variable(name, value, context=context)
 
-    def set_variables(self, variables: dict[str, Any], context: Optional[Any] = None) -> None:
+    def set_variables(
+        self, variables: dict[str, Any], context: Optional[Any] = None
+    ) -> None:
         self._sandbox().set_variables(variables, context=context)
 
-    def install_packages(self, packages: list[str], timeout: Optional[float] = None) -> Any:
+    def install_packages(
+        self, packages: list[str], timeout: Optional[float] = None
+    ) -> Any:
         return self._sandbox().install_packages(packages, timeout=timeout)
 
     def upload_file(self, local_path: str, remote_path: str) -> None:
@@ -551,7 +560,8 @@ class CodeSandboxManager:
             return self._sandbox
 
     def get_managed_sandbox(self) -> ManagedSandbox:
-        """Return a :class:`ManagedSandbox` proxy bound to this manager.
+        """
+        Return a :class:`ManagedSandbox` proxy bound to this manager.
 
         The proxy delegates every call to whatever concrete sandbox the
         manager currently holds.  When the manager is reconfigured
@@ -568,7 +578,8 @@ class CodeSandboxManager:
         return ManagedSandbox(self)
 
     def _inject_env_vars(self, sandbox: Sandbox) -> None:
-        """Inject configured env vars into the sandbox.
+        """
+        Inject configured env vars into the sandbox.
 
         For ``local-jupyter`` this runs a small code snippet in the Jupyter
         kernel to set ``os.environ`` — necessary because the kernel runs in

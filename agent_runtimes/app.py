@@ -415,7 +415,11 @@ async def _create_and_register_cli_agent(
     # Build the system prompt
     # When codemode is enabled and a codemode-specific prompt exists, use it
     # (appended to the base system prompt, same logic as routes/agents.py)
-    base_prompt = agent_spec.system_prompt or agent_spec.description or "You are a helpful AI assistant."
+    base_prompt = (
+        agent_spec.system_prompt
+        or agent_spec.description
+        or "You are a helpful AI assistant."
+    )
     if enable_codemode and agent_spec.system_prompt_codemode:
         system_prompt = base_prompt + "\n\n" + agent_spec.system_prompt_codemode
     else:

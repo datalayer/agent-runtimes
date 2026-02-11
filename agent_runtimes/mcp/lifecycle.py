@@ -93,7 +93,8 @@ class MCPLifecycleManager:
     def _expand_env_vars(
         self, value: str, lookup_env: dict[str, str] | None = None
     ) -> str:
-        """Expand environment variables in a string (${VAR_NAME} syntax).
+        """
+        Expand environment variables in a string (${VAR_NAME} syntax).
 
         Args:
             value: The string containing ``${VAR_NAME}`` placeholders.

@@ -1833,7 +1833,11 @@ async def start_all_agents_mcp_servers(
                 # Pass jupyter URL, MCP proxy URL, and env vars for two-container setup.
                 # Env vars will be injected into the Jupyter kernel's os.environ
                 # so that code executed in the kernel can access API keys, etc.
-                env_dict = {ev.name: ev.value for ev in body.env_vars} if body.env_vars else None
+                env_dict = (
+                    {ev.name: ev.value for ev in body.env_vars}
+                    if body.env_vars
+                    else None
+                )
                 sandbox_manager.configure_from_url(
                     body.jupyter_sandbox,
                     mcp_proxy_url=body.mcp_proxy_url,
@@ -1965,7 +1969,11 @@ async def start_agent_mcp_servers(
 
                 sandbox_manager = get_code_sandbox_manager()
                 # Pass jupyter URL, MCP proxy URL, and env vars for two-container setup.
-                env_dict = {ev.name: ev.value for ev in body.env_vars} if body.env_vars else None
+                env_dict = (
+                    {ev.name: ev.value for ev in body.env_vars}
+                    if body.env_vars
+                    else None
+                )
                 sandbox_manager.configure_from_url(
                     body.jupyter_sandbox,
                     mcp_proxy_url=body.mcp_proxy_url,

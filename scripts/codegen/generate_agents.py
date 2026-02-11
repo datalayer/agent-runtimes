@@ -16,6 +16,13 @@ from typing import Any, Dict, List
 import yaml
 
 
+def _fmt_list(items: list[str]) -> str:
+    """Format a list of strings with double quotes for ruff compliance."""
+    if not items:
+        return "[]"
+    return "[" + ", ".join(f'"{item}"' for item in items) + "]"
+
+
 def load_yaml_specs(specs_dir: Path) -> List[Dict[str, Any]]:
     """Load all YAML agent specifications from directory."""
     specs = []
@@ -67,7 +74,7 @@ from agent_runtimes.types import AgentSpec
         # Get MCP servers
         mcp_server_ids = spec.get("mcp_servers", [])
         mcp_servers_str = ", ".join(
-            f"MCP_SERVER_CATALOG['{sid}']" for sid in mcp_server_ids
+            f'MCP_SERVER_CATALOG["{sid}"]' for sid in mcp_server_ids
         )
 
         # Format optional fields
@@ -107,10 +114,10 @@ from agent_runtimes.types import AgentSpec
     id="{spec["id"]}",
     name="{spec["name"]}",
     description="{description}",
-    tags={spec.get("tags", [])},
+    tags={_fmt_list(spec.get("tags", []))},
     enabled={spec.get("enabled", True)},
     mcp_servers=[{mcp_servers_str}],
-    skills={spec.get("skills", [])},
+    skills={_fmt_list(spec.get("skills", []))},
     environment_name="{spec.get("environment_name", "ai-agents-env")}",
     icon={icon},
     color={color},
