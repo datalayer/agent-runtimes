@@ -10,8 +10,8 @@ DO NOT EDIT MANUALLY - run 'make specs' to regenerate.
 """
 
 import os
-from dataclasses import dataclass
 from typing import Any, Dict, List
+from dataclasses import dataclass
 
 
 @dataclass

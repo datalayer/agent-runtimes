@@ -94,9 +94,9 @@ export const CODE_AI_SIMPLE_AGENT_SPEC: AgentSpec = {
 // Codemode Paper Agents
 // ============================================================================
 
-export const CODEMODE_PAPER_CRAWLER_MCP_AGENT_SPEC: AgentSpec = {
-  id: 'codemode-paper/crawler-mcp',
-  name: 'Crawler Agent (MCP)',
+export const CODEMODE_PAPER_CRAWLER_AGENT_SPEC: AgentSpec = {
+  id: 'codemode-paper/crawler',
+  name: 'Crawler Agent',
   description: `Web crawling and research agent that searches the web and GitHub repositories for information.`,
   tags: ['web', 'search', 'research', 'crawler', 'github'],
   enabled: false,
@@ -182,7 +182,7 @@ export const CODEMODE_PAPER_DATA_ACQUISITION_AGENT_SPEC: AgentSpec = {
 
 export const CODEMODE_PAPER_FINANCIAL_VIZ_AGENT_SPEC: AgentSpec = {
   id: 'codemode-paper/financial-viz',
-  name: 'Financial Visualization Agent (Viz)',
+  name: 'Financial Visualization Agent',
   description: `Analyzes financial market data and creates visualizations and charts.`,
   tags: ['finance', 'stocks', 'visualization', 'charts'],
   enabled: false,
@@ -221,8 +221,8 @@ export const CODEMODE_PAPER_FINANCIAL_VIZ_AGENT_SPEC: AgentSpec = {
 `,
 };
 
-export const CODEMODE_PAPER_GITHUB_AGENT_MCP_AGENT_SPEC: AgentSpec = {
-  id: 'codemode-paper/github-agent-mcp',
+export const CODEMODE_PAPER_GITHUB_AGENT_SPEC: AgentSpec = {
+  id: 'codemode-paper/github-agent',
   name: 'GitHub Agent',
   description: `Manages GitHub repositories, issues, and pull requests with email notification capabilities.`,
   tags: ['github', 'git', 'code', 'email'],
@@ -506,10 +506,10 @@ export const AGENT_SPECS: Record<string, AgentSpec> = {
   'code-ai/simple': CODE_AI_SIMPLE_AGENT_SPEC,
 
   // Codemode Paper
-  'codemode-paper/crawler-mcp': CODEMODE_PAPER_CRAWLER_MCP_AGENT_SPEC,
+  'codemode-paper/crawler': CODEMODE_PAPER_CRAWLER_AGENT_SPEC,
   'codemode-paper/data-acquisition': CODEMODE_PAPER_DATA_ACQUISITION_AGENT_SPEC,
   'codemode-paper/financial-viz': CODEMODE_PAPER_FINANCIAL_VIZ_AGENT_SPEC,
-  'codemode-paper/github-agent-mcp': CODEMODE_PAPER_GITHUB_AGENT_MCP_AGENT_SPEC,
+  'codemode-paper/github-agent': CODEMODE_PAPER_GITHUB_AGENT_SPEC,
   'codemode-paper/information-routing':
     CODEMODE_PAPER_INFORMATION_ROUTING_AGENT_SPEC,
 

@@ -52,9 +52,9 @@ CODE_AI_SIMPLE_AGENT_SPEC = AgentSpec(
 # Codemode Paper Agents
 # ============================================================================
 
-CODEMODE_PAPER_CRAWLER_MCP_AGENT_SPEC = AgentSpec(
-    id="codemode-paper/crawler-mcp",
-    name="Crawler Agent (MCP)",
+CODEMODE_PAPER_CRAWLER_AGENT_SPEC = AgentSpec(
+    id="codemode-paper/crawler",
+    name="Crawler Agent",
     description="Web crawling and research agent that searches the web and GitHub repositories for information.",
     tags=["web", "search", "research", "crawler", "github"],
     enabled=False,
@@ -102,11 +102,7 @@ CODEMODE_PAPER_DATA_ACQUISITION_AGENT_SPEC = AgentSpec(
     description="Acquires and manages data from various sources including Kaggle datasets and local filesystem operations.",
     tags=["data", "acquisition", "kaggle", "filesystem"],
     enabled=True,
-    mcp_servers=[
-        MCP_SERVER_CATALOG["kaggle"],
-        MCP_SERVER_CATALOG["filesystem"],
-        MCP_SERVER_CATALOG["tavily"],
-    ],
+    mcp_servers=[MCP_SERVER_CATALOG["kaggle"], MCP_SERVER_CATALOG["filesystem"], MCP_SERVER_CATALOG["tavily"]],
     skills=["github"],
     environment_name="ai-agents-env",
     icon="database",
@@ -146,7 +142,7 @@ CODEMODE_PAPER_DATA_ACQUISITION_AGENT_SPEC = AgentSpec(
 
 CODEMODE_PAPER_FINANCIAL_VIZ_AGENT_SPEC = AgentSpec(
     id="codemode-paper/financial-viz",
-    name="Financial Visualization Agent (Viz)",
+    name="Financial Visualization Agent",
     description="Analyzes financial market data and creates visualizations and charts.",
     tags=["finance", "stocks", "visualization", "charts"],
     enabled=False,
@@ -188,8 +184,8 @@ CODEMODE_PAPER_FINANCIAL_VIZ_AGENT_SPEC = AgentSpec(
 """,
 )
 
-CODEMODE_PAPER_GITHUB_AGENT_MCP_AGENT_SPEC = AgentSpec(
-    id="codemode-paper/github-agent-mcp",
+CODEMODE_PAPER_GITHUB_AGENT_SPEC = AgentSpec(
+    id="codemode-paper/github-agent",
     name="GitHub Agent",
     description="Manages GitHub repositories, issues, and pull requests with email notification capabilities.",
     tags=["github", "git", "code", "email"],
@@ -330,11 +326,7 @@ DATALAYER_AI_DATA_ACQUISITION_AGENT_SPEC = AgentSpec(
     description="Acquires and manages data from various sources including Kaggle datasets and local filesystem operations.",
     tags=["data", "acquisition", "kaggle", "filesystem"],
     enabled=True,
-    mcp_servers=[
-        MCP_SERVER_CATALOG["kaggle"],
-        MCP_SERVER_CATALOG["filesystem"],
-        MCP_SERVER_CATALOG["tavily"],
-    ],
+    mcp_servers=[MCP_SERVER_CATALOG["kaggle"], MCP_SERVER_CATALOG["filesystem"], MCP_SERVER_CATALOG["tavily"]],
     skills=["github"],
     environment_name="ai-agents-env",
     icon="database",
@@ -494,18 +486,21 @@ DATALAYER_AI_SIMPLE_AGENT_SPEC = AgentSpec(
 AGENT_SPECS: Dict[str, AgentSpec] = {
     # Code Ai
     "code-ai/simple": CODE_AI_SIMPLE_AGENT_SPEC,
+
     # Codemode Paper
-    "codemode-paper/crawler-mcp": CODEMODE_PAPER_CRAWLER_MCP_AGENT_SPEC,
+    "codemode-paper/crawler": CODEMODE_PAPER_CRAWLER_AGENT_SPEC,
     "codemode-paper/data-acquisition": CODEMODE_PAPER_DATA_ACQUISITION_AGENT_SPEC,
     "codemode-paper/financial-viz": CODEMODE_PAPER_FINANCIAL_VIZ_AGENT_SPEC,
-    "codemode-paper/github-agent-mcp": CODEMODE_PAPER_GITHUB_AGENT_MCP_AGENT_SPEC,
+    "codemode-paper/github-agent": CODEMODE_PAPER_GITHUB_AGENT_SPEC,
     "codemode-paper/information-routing": CODEMODE_PAPER_INFORMATION_ROUTING_AGENT_SPEC,
+
     # Datalayer Ai
     "datalayer-ai/crawler": DATALAYER_AI_CRAWLER_AGENT_SPEC,
     "datalayer-ai/data-acquisition": DATALAYER_AI_DATA_ACQUISITION_AGENT_SPEC,
     "datalayer-ai/financial": DATALAYER_AI_FINANCIAL_AGENT_SPEC,
     "datalayer-ai/github-agent": DATALAYER_AI_GITHUB_AGENT_SPEC,
     "datalayer-ai/simple": DATALAYER_AI_SIMPLE_AGENT_SPEC,
+
 }
 
 
