@@ -405,10 +405,18 @@ async def create_agent(
                 f"Using library spec '{request.agent_spec_id}' for agent '{agent_id}'"
             )
             # Apply spec defaults — only override fields the caller did not set.
-            if request.system_prompt == "You are a helpful AI assistant." and spec.system_prompt:
+            if (
+                request.system_prompt == "You are a helpful AI assistant."
+                and spec.system_prompt
+            ):
                 request.system_prompt = spec.system_prompt
-            if request.system_prompt_codemode_addons is None and spec.system_prompt_codemode_addons:
-                request.system_prompt_codemode_addons = spec.system_prompt_codemode_addons
+            if (
+                request.system_prompt_codemode_addons is None
+                and spec.system_prompt_codemode_addons
+            ):
+                request.system_prompt_codemode_addons = (
+                    spec.system_prompt_codemode_addons
+                )
             if not request.skills and spec.skills:
                 request.skills = spec.skills
             if spec.system_prompt_codemode_addons and not request.enable_codemode:

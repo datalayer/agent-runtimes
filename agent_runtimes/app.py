@@ -466,7 +466,9 @@ async def _create_and_register_cli_agent(
         "agent_library": "pydantic-ai",
         "transport": protocol,
         "model": model,
-        "system_prompt": agent_spec.system_prompt or agent_spec.description or "You are a helpful AI assistant.",
+        "system_prompt": agent_spec.system_prompt
+        or agent_spec.description
+        or "You are a helpful AI assistant.",
         "system_prompt_codemode_addons": agent_spec.system_prompt_codemode_addons,
         "enable_codemode": enable_codemode,
         "enable_skills": len(skills) > 0,
