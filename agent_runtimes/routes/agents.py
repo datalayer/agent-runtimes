@@ -1535,9 +1535,10 @@ class AgentMcpServersResponse(BaseModel):
     mcp_proxy_url: str | None = Field(
         default=None, description="The MCP proxy URL configured for tool calls (if any)"
     )
-    env_vars_injected: int = Field(
+    env_vars_set: int = Field(
         default=0,
-        description="Number of env vars injected into the sandbox kernel",
+        description="Number of env vars set on the process environment (and forwarded to MCP subprocesses). "
+        "For local-jupyter sandboxes they are also injected into the kernel when it is first used.",
     )
     message: str
 
@@ -1899,7 +1900,7 @@ async def start_all_agents_mcp_servers(
             sandbox_configured=sandbox_configured,
             sandbox_variant=sandbox_variant,
             mcp_proxy_url=mcp_proxy_url,
-            env_vars_injected=env_count,
+            env_vars_set=env_count,
             message=", ".join(message_parts),
         )
 
@@ -2034,7 +2035,7 @@ async def start_agent_mcp_servers(
             sandbox_configured=sandbox_configured,
             sandbox_variant=sandbox_variant,
             mcp_proxy_url=mcp_proxy_url,
-            env_vars_injected=env_count,
+            env_vars_set=env_count,
             message=", ".join(message_parts)
             if message_parts
             else "No servers to start",
