@@ -11,7 +11,7 @@ import {
   CheckCircleIcon,
   XCircleIcon,
   CodeIcon,
-  ZapIcon,
+  BriefcaseIcon,
   DownloadIcon,
   NoteIcon,
   ServerIcon,
@@ -1407,7 +1407,7 @@ export function AgentDetails({
                     sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}
                   >
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <ZapIcon size={16} />
+                      <BriefcaseIcon size={16} />
                       <Text
                         sx={{
                           fontSize: 0,
