@@ -74,7 +74,7 @@ def create_skills_toolset(
             from .code_sandbox_manager import get_code_sandbox_manager
 
             sandbox_manager = get_code_sandbox_manager()
-            
+
             # Configure if Jupyter sandbox URL is provided
             jupyter_sandbox_url = os.getenv("AGENT_RUNTIMES_JUPYTER_SANDBOX")
             if jupyter_sandbox_url:
@@ -89,9 +89,7 @@ def create_skills_toolset(
             skills=selected_skills,
             executor=executor,
         )
-        logger.info(
-            f"Created AgentSkillsToolset with {len(selected_skills)} skills"
-        )
+        logger.info(f"Created AgentSkillsToolset with {len(selected_skills)} skills")
         return skills_toolset
 
     except ImportError as e:
@@ -165,6 +163,7 @@ def create_codemode_toolset(
             # Add any custom env from mcp_server.env (with expansion)
             if mcp_server.env:
                 import re
+
                 for env_key, env_value in mcp_server.env.items():
                     # Expand ${VAR} syntax
                     if isinstance(env_value, str) and "${" in env_value:
@@ -222,9 +221,7 @@ def create_codemode_toolset(
         return codemode_toolset
 
     except ImportError as e:
-        logger.warning(
-            f"agent-codemode package not installed, codemode disabled: {e}"
-        )
+        logger.warning(f"agent-codemode package not installed, codemode disabled: {e}")
         return None
 
 
@@ -249,9 +246,7 @@ async def initialize_codemode_toolset(codemode_toolset: Any) -> None:
                 include_deferred=True
             )
             tool_names = [t.name for t in discovered_tools]
-            logger.info(
-                f"Codemode discovered {len(tool_names)} tools: {tool_names}"
-            )
+            logger.info(f"Codemode discovered {len(tool_names)} tools: {tool_names}")
 
         logger.info("Codemode toolset initialized successfully")
 

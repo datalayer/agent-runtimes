@@ -82,7 +82,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
     for spec in specs:
         envvar_id = spec["id"]
         const_name = f"{envvar_id}_SPEC"
-        
+
         registration_url_value = (
             f'"{spec.get("registrationUrl")}"'
             if spec.get("registrationUrl")
