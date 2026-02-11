@@ -520,7 +520,7 @@ export function ContextPanel({
             }}
           >
             <Text sx={{ fontSize: 1, fontWeight: 'semibold' }}>
-              {formatTokens(totalTokens)} / {formatTokens(contextWindow)} tokens
+              Total usage: {formatTokens(totalTokens)}
             </Text>
             <Text sx={{ fontSize: 1, color: 'fg.muted' }}>
               {contextUsagePercent.toFixed(1)}%

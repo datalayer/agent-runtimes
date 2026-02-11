@@ -13,6 +13,8 @@ import {
   CodeIcon,
   ZapIcon,
   DownloadIcon,
+  NoteIcon,
+  ServerIcon,
 } from '@primer/octicons-react';
 import {
   Button,
@@ -104,6 +106,25 @@ interface CodemodeStatus {
     description: string;
     tags: string[];
   }>;
+  sandbox: SandboxStatus | null;
+}
+
+/**
+ * Agent spec response - the original creation spec
+ * with separated system prompts.
+ */
+interface AgentSpecResponse {
+  name: string;
+  description: string;
+  agent_library: string;
+  transport: string;
+  model: string;
+  system_prompt: string;
+  system_prompt_codemode_addons: string | null;
+  enable_codemode: boolean;
+  enable_skills: boolean;
+  skills: string[];
+  jupyter_sandbox: string | null;
   sandbox: SandboxStatus | null;
 }
 
@@ -356,6 +377,23 @@ export function AgentDetails({
     },
   });
 
+  // Fetch agent spec (original creation request with separated system prompts)
+  const { data: agentSpec, isLoading: specLoading } =
+    useQuery<AgentSpecResponse>({
+      queryKey: ['agent-spec', agentId, apiBase],
+      queryFn: async () => {
+        const base = getApiBase(apiBase);
+        const response = await fetch(
+          `${base}/api/v1/configure/agents/${encodeURIComponent(agentId!)}/spec`,
+        );
+        if (!response.ok) {
+          throw new Error('Failed to fetch agent spec');
+        }
+        return response.json();
+      },
+      enabled: !!agentId,
+    });
+
   return (
     <Box
       sx={{
@@ -463,6 +501,446 @@ export function AgentDetails({
             </Box>
           </Box>
         </Box>
+
+        {/* Agent Spec Section */}
+        <Box>
+          <Heading
+            as="h4"
+            sx={{
+              fontSize: 1,
+              fontWeight: 'semibold',
+              mb: 2,
+              color: 'fg.muted',
+            }}
+          >
+            Agent Spec
+          </Heading>
+          <Box
+            sx={{
+              p: 3,
+              bg: 'canvas.subtle',
+              borderRadius: 2,
+              border: '1px solid',
+              borderColor: 'border.default',
+            }}
+          >
+            {specLoading ? (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Spinner size="small" />
+                <Text sx={{ fontSize: 1, color: 'fg.muted' }}>
+                  Loading agent spec...
+                </Text>
+              </Box>
+            ) : agentSpec ? (
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                {/* Key Attributes */}
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Text sx={{ fontSize: 0, color: 'fg.muted', width: 100 }}>
+                      Model:
+                    </Text>
+                    <Text
+                      sx={{
+                        fontSize: 0,
+                        fontFamily: 'mono',
+                        color: 'fg.default',
+                      }}
+                    >
+                      {agentSpec.model}
+                    </Text>
+                  </Box>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Text sx={{ fontSize: 0, color: 'fg.muted', width: 100 }}>
+                      Library:
+                    </Text>
+                    <Label variant="secondary" size="small">
+                      {agentSpec.agent_library}
+                    </Label>
+                  </Box>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Text sx={{ fontSize: 0, color: 'fg.muted', width: 100 }}>
+                      Codemode:
+                    </Text>
+                    <Label
+                      variant={
+                        agentSpec.enable_codemode ? 'accent' : 'secondary'
+                      }
+                      size="small"
+                    >
+                      {agentSpec.enable_codemode ? 'Enabled' : 'Disabled'}
+                    </Label>
+                  </Box>
+                  {agentSpec.enable_skills && agentSpec.skills.length > 0 && (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <Text sx={{ fontSize: 0, color: 'fg.muted', width: 100 }}>
+                        Skills:
+                      </Text>
+                      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                        {agentSpec.skills.map(skill => (
+                          <Label key={skill} variant="secondary" size="small">
+                            {skill}
+                          </Label>
+                        ))}
+                      </Box>
+                    </Box>
+                  )}
+                </Box>
+
+                {/* Base System Prompt */}
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <NoteIcon size={16} />
+                    <Text
+                      sx={{
+                        fontSize: 0,
+                        fontWeight: 'semibold',
+                        color: 'fg.muted',
+                      }}
+                    >
+                      System Prompt
+                    </Text>
+                  </Box>
+                  <Box
+                    sx={{
+                      p: 2,
+                      bg: 'canvas.default',
+                      borderRadius: 2,
+                      border: '1px solid',
+                      borderColor: 'border.default',
+                      maxHeight: 200,
+                      overflow: 'auto',
+                    }}
+                  >
+                    <Text
+                      sx={{
+                        fontSize: 0,
+                        fontFamily: 'mono',
+                        whiteSpace: 'pre-wrap',
+                        wordBreak: 'break-word',
+                        color: 'fg.default',
+                      }}
+                    >
+                      {agentSpec.system_prompt}
+                    </Text>
+                  </Box>
+                </Box>
+
+                {/* Codemode Addon System Prompt */}
+                {agentSpec.system_prompt_codemode_addons && (
+                  <Box
+                    sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <CodeIcon size={16} />
+                      <Text
+                        sx={{
+                          fontSize: 0,
+                          fontWeight: 'semibold',
+                          color: 'fg.muted',
+                        }}
+                      >
+                        Codemode Addon Prompt
+                      </Text>
+                      {agentSpec.enable_codemode ? (
+                        <Label variant="accent" size="small">
+                          Active
+                        </Label>
+                      ) : (
+                        <Label variant="secondary" size="small">
+                          Inactive
+                        </Label>
+                      )}
+                    </Box>
+                    <Box
+                      sx={{
+                        p: 2,
+                        bg: 'canvas.default',
+                        borderRadius: 2,
+                        border: '1px solid',
+                        borderColor: 'border.default',
+                        maxHeight: 200,
+                        overflow: 'auto',
+                      }}
+                    >
+                      <Text
+                        sx={{
+                          fontSize: 0,
+                          fontFamily: 'mono',
+                          whiteSpace: 'pre-wrap',
+                          wordBreak: 'break-word',
+                          color: 'fg.default',
+                        }}
+                      >
+                        {agentSpec.system_prompt_codemode_addons}
+                      </Text>
+                    </Box>
+                  </Box>
+                )}
+              </Box>
+            ) : (
+              <Text sx={{ fontSize: 1, color: 'fg.muted' }}>
+                No agent spec available
+              </Text>
+            )}
+          </Box>
+        </Box>
+
+        {/* Code Sandbox Section */}
+        {agentSpec?.sandbox && (
+          <Box>
+            <Heading
+              as="h4"
+              sx={{
+                fontSize: 1,
+                fontWeight: 'semibold',
+                mb: 2,
+                color: 'fg.muted',
+              }}
+            >
+              Code Sandbox
+            </Heading>
+            <Box
+              sx={{
+                p: 3,
+                bg: 'canvas.subtle',
+                borderRadius: 2,
+                border: '1px solid',
+                borderColor: 'border.default',
+              }}
+            >
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {/* Variant */}
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <ServerIcon size={16} />
+                  <Text sx={{ fontSize: 0, color: 'fg.muted', width: 100 }}>
+                    Variant:
+                  </Text>
+                  <Label
+                    variant={
+                      agentSpec.sandbox.variant === 'local-jupyter'
+                        ? 'accent'
+                        : 'secondary'
+                    }
+                    size="small"
+                  >
+                    {agentSpec.sandbox.variant}
+                  </Label>
+                </Box>
+
+                {/* Running */}
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Text
+                    sx={{ fontSize: 0, color: 'fg.muted', width: 100, pl: 4 }}
+                  >
+                    Running:
+                  </Text>
+                  {agentSpec.sandbox.sandbox_running ? (
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1,
+                      }}
+                    >
+                      <CheckCircleIcon size={12} fill="success.fg" />
+                      <Text sx={{ fontSize: 0, color: 'success.fg' }}>Yes</Text>
+                    </Box>
+                  ) : (
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1,
+                      }}
+                    >
+                      <XCircleIcon size={12} fill="fg.muted" />
+                      <Text sx={{ fontSize: 0, color: 'fg.muted' }}>No</Text>
+                    </Box>
+                  )}
+                </Box>
+
+                {/* Jupyter details (for local-jupyter variant) */}
+                {agentSpec.sandbox.variant === 'local-jupyter' && (
+                  <>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <Text
+                        sx={{
+                          fontSize: 0,
+                          color: 'fg.muted',
+                          width: 100,
+                          pl: 4,
+                        }}
+                      >
+                        Jupyter URL:
+                      </Text>
+                      <Text
+                        sx={{
+                          fontSize: 0,
+                          fontFamily: 'mono',
+                          color: 'fg.default',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {agentSpec.jupyter_sandbox ||
+                          agentSpec.sandbox.jupyter_url ||
+                          'Not configured'}
+                      </Text>
+                    </Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <Text
+                        sx={{
+                          fontSize: 0,
+                          color: 'fg.muted',
+                          width: 100,
+                          pl: 4,
+                        }}
+                      >
+                        Connection:
+                      </Text>
+                      {agentSpec.sandbox.jupyter_connected ? (
+                        <Box
+                          sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1,
+                          }}
+                        >
+                          <CheckCircleIcon size={12} fill="success.fg" />
+                          <Text sx={{ fontSize: 0, color: 'success.fg' }}>
+                            Connected
+                          </Text>
+                        </Box>
+                      ) : (
+                        <Box
+                          sx={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: 1,
+                          }}
+                        >
+                          <Box
+                            sx={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 1,
+                            }}
+                          >
+                            <XCircleIcon size={12} fill="danger.fg" />
+                            <Text sx={{ fontSize: 0, color: 'danger.fg' }}>
+                              Not Connected
+                            </Text>
+                          </Box>
+                          {agentSpec.sandbox.jupyter_error && (
+                            <Text
+                              sx={{
+                                fontSize: 0,
+                                color: 'danger.fg',
+                                fontFamily: 'mono',
+                                whiteSpace: 'pre-wrap',
+                                wordBreak: 'break-word',
+                              }}
+                            >
+                              {agentSpec.sandbox.jupyter_error}
+                            </Text>
+                          )}
+                        </Box>
+                      )}
+                    </Box>
+                  </>
+                )}
+
+                {/* Generated Path */}
+                {agentSpec.sandbox.generated_path && (
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Text
+                      sx={{
+                        fontSize: 0,
+                        color: 'fg.muted',
+                        width: 100,
+                        pl: 4,
+                      }}
+                    >
+                      Generated:
+                    </Text>
+                    <Text
+                      sx={{
+                        fontSize: 0,
+                        fontFamily: 'mono',
+                        color: 'fg.default',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                      title={agentSpec.sandbox.generated_path}
+                    >
+                      {agentSpec.sandbox.generated_path}
+                    </Text>
+                  </Box>
+                )}
+
+                {/* Skills Path */}
+                {agentSpec.sandbox.skills_path && (
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Text
+                      sx={{
+                        fontSize: 0,
+                        color: 'fg.muted',
+                        width: 100,
+                        pl: 4,
+                      }}
+                    >
+                      Skills:
+                    </Text>
+                    <Text
+                      sx={{
+                        fontSize: 0,
+                        fontFamily: 'mono',
+                        color: 'fg.default',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                      title={agentSpec.sandbox.skills_path}
+                    >
+                      {agentSpec.sandbox.skills_path}
+                    </Text>
+                  </Box>
+                )}
+
+                {/* Python Path */}
+                {agentSpec.sandbox.python_path && (
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Text
+                      sx={{
+                        fontSize: 0,
+                        color: 'fg.muted',
+                        width: 100,
+                        pl: 4,
+                      }}
+                    >
+                      Python:
+                    </Text>
+                    <Text
+                      sx={{
+                        fontSize: 0,
+                        fontFamily: 'mono',
+                        color: 'fg.default',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                      title={agentSpec.sandbox.python_path}
+                    >
+                      {agentSpec.sandbox.python_path}
+                    </Text>
+                  </Box>
+                )}
+              </Box>
+            </Box>
+          </Box>
+        )}
 
         {/* Config MCP Servers Status */}
         <Box>

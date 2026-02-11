@@ -457,6 +457,24 @@ async def _create_and_register_cli_agent(
     register_agent(agent, info)
     logger.info(f"Registered CLI agent '{agent_id}' with ACP (protocol: {protocol})")
 
+    # Store the original agent spec for the /configure/agents/{id}/spec endpoint
+    from .routes.agents import _agent_specs
+
+    _agent_specs[agent_id] = {
+        "name": agent_spec.name,
+        "description": agent_spec.description,
+        "agent_library": "pydantic-ai",
+        "transport": protocol,
+        "model": model,
+        "system_prompt": agent_spec.system_prompt or agent_spec.description or "You are a helpful AI assistant.",
+        "system_prompt_codemode_addons": agent_spec.system_prompt_codemode_addons,
+        "enable_codemode": enable_codemode,
+        "enable_skills": len(skills) > 0,
+        "skills": list(skills) if skills else [],
+        "jupyter_sandbox": jupyter_sandbox_url,
+    }
+    logger.info(f"Stored creation spec for CLI agent '{agent_id}'")
+
     # Register with context session for snapshot lookups
     register_agent_for_context(
         agent_id,

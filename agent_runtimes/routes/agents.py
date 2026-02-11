@@ -48,6 +48,16 @@ router = APIRouter(prefix="/agents", tags=["agents"])
 # Store the API prefix for dynamic mount paths
 _api_prefix = "/api/v1"
 
+# Store the original creation request (spec) for each agent, keyed by agent_id.
+# This preserves the separated system_prompt and system_prompt_codemode_addons
+# which are merged at agent creation time and lost in the running agent.
+_agent_specs: dict[str, dict[str, Any]] = {}
+
+
+def get_agent_spec(agent_id: str) -> dict[str, Any] | None:
+    """Get the original creation spec for an agent."""
+    return _agent_specs.get(agent_id)
+
 
 def set_api_prefix(prefix: str) -> None:
     """Set the API prefix for dynamic mount paths."""
@@ -330,6 +340,10 @@ class CreateAgentRequest(BaseModel):
         default=None,
         description="Jupyter server URL with token for code sandbox (e.g., http://localhost:8888?token=xxx). If provided, codemode will use Jupyter kernel instead of local-eval sandbox.",
     )
+    agent_spec_id: str | None = Field(
+        default=None,
+        description="ID of a library agent spec to use as base configuration. When provided, the spec's system_prompt, system_prompt_codemode_addons, skills, and MCP servers are used as defaults (request fields can override).",
+    )
 
 
 class CreateAgentResponse(BaseModel):
@@ -378,6 +392,32 @@ async def create_agent(
         )
 
     try:
+        # If an agent_spec_id is provided, load the library spec and apply
+        # its fields as defaults (request fields take precedence for overrides).
+        if request.agent_spec_id:
+            spec = get_library_agent_spec(request.agent_spec_id)
+            if not spec:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Agent spec '{request.agent_spec_id}' not found in library.",
+                )
+            logger.info(
+                f"Using library spec '{request.agent_spec_id}' for agent '{agent_id}'"
+            )
+            # Apply spec defaults — only override fields the caller did not set.
+            if request.system_prompt == "You are a helpful AI assistant." and spec.system_prompt:
+                request.system_prompt = spec.system_prompt
+            if request.system_prompt_codemode_addons is None and spec.system_prompt_codemode_addons:
+                request.system_prompt_codemode_addons = spec.system_prompt_codemode_addons
+            if not request.skills and spec.skills:
+                request.skills = spec.skills
+            if spec.system_prompt_codemode_addons and not request.enable_codemode:
+                request.enable_codemode = True
+            if spec.skills and not request.enable_skills:
+                request.enable_skills = True
+            if not request.description and spec.description:
+                request.description = spec.description
+
         # Build list of non-MCP toolsets (skills, codemode, etc.)
         # MCP toolsets will be dynamically fetched at run time by the adapter
         non_mcp_toolsets = []
@@ -677,6 +717,10 @@ async def create_agent(
             f"POST /agents: Registered agent '{agent_id}' in _agents. All registered: {list(_agents.keys())}"
         )
 
+        # Store the original creation spec (preserves separated system prompts)
+        _agent_specs[agent_id] = request.model_dump()
+        logger.info(f"Stored creation spec for agent '{agent_id}'")
+
         # Register with context session for snapshot lookups (enables usage tracking)
         from ..context.session import register_agent as register_agent_for_context
 
@@ -966,6 +1010,9 @@ async def delete_agent(agent_id: str) -> dict[str, str]:
     """
     if agent_id not in _agents:
         raise HTTPException(status_code=404, detail=f"Agent not found: {agent_id}")
+
+    # Remove the stored creation spec
+    _agent_specs.pop(agent_id, None)
 
     # Note: MCP servers are managed at server level (started on server startup,
     # stopped on server shutdown), so no cleanup needed per-agent.

@@ -286,8 +286,7 @@ export function ContextDistribution({
         }}
       >
         <Text sx={{ fontSize: 1, fontWeight: 'bold' }}>
-          Current Context ({formatTokens(totalTokens)} /{' '}
-          {formatTokens(contextWindow)} tokens)
+          Current Context ({formatTokens(totalTokens)} total)
         </Text>
         <Button
           size="small"

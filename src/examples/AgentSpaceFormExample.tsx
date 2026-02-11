@@ -31,6 +31,8 @@ import {
   type AgentLibrary,
   type McpServerSelection,
 } from '../components';
+import { isSpecSelection, getSpecId } from '../components/AgentConfiguration';
+import type { LibraryAgentSpec } from '../components/AgentConfiguration';
 
 // Create a query client for React Query
 const queryClient = new QueryClient({
@@ -589,6 +591,18 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
   // Track previous MCP servers to detect changes
   const prevMcpServersRef = useRef<McpServerSelection[]>(selectedMcpServers);
 
+  // Fetch library specs so we can populate form fields when a spec is selected
+  const libraryQuery = useQuery<LibraryAgentSpec[]>({
+    queryKey: ['agent-library', baseUrl],
+    queryFn: async () => {
+      const response = await fetch(`${baseUrl}/api/v1/agents/library`);
+      if (!response.ok) throw new Error('Failed to fetch library');
+      return response.json();
+    },
+    enabled: !!baseUrl,
+    staleTime: 1000 * 60 * 5,
+  });
+
   const handleAgentSelect = (agentId: string) => {
     setSelectedAgentId(agentId);
     setCreateError(null);
@@ -596,6 +610,21 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
       // Reset to defaults for new agent
       setAgentName(DEFAULT_AGENT_ID);
       setTransport('ag-ui');
+    } else if (isSpecSelection(agentId)) {
+      // Populate form fields from the selected library spec
+      const specId = getSpecId(agentId);
+      const spec = libraryQuery.data?.find(s => s.id === specId);
+      if (spec) {
+        setAgentName(spec.id);
+        // Keep current transport, model, agentLibrary - user can override
+        if (spec.skills.length > 0) {
+          setSelectedSkills(spec.skills);
+          setEnableCodemode(true);
+        }
+        if (spec.systemPromptCodemodeAddons) {
+          setEnableCodemode(true);
+        }
+      }
     } else {
       const agent = agents.find(a => a.id === agentId);
       if (agent) {
@@ -613,6 +642,11 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
     setCreateError(null);
 
     try {
+      // Resolve spec ID if creating from a library spec
+      const specId = isSpecSelection(selectedAgentId)
+        ? getSpecId(selectedAgentId)
+        : undefined;
+
       const response = await fetch(`${baseUrl}/api/v1/agents`, {
         method: 'POST',
         headers: {
@@ -632,6 +666,7 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
           selected_mcp_servers: selectedMcpServers,
           skills: selectedSkills,
           jupyter_sandbox: useJupyterSandbox ? jupyterSandboxUrl : undefined,
+          ...(specId ? { agent_spec_id: specId } : {}),
         }),
       });
 
@@ -673,6 +708,7 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
     selectedSkills,
     useJupyterSandbox,
     jupyterSandboxUrl,
+    selectedAgentId,
   ]);
 
   /**
@@ -709,8 +745,11 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
   }, [selectedMcpServers]);
 
   const handleConnect = async () => {
-    // For existing agents (not new-agent), ensure transport and agentName are set
-    if (selectedAgentId !== 'new-agent') {
+    const isNewMode =
+      selectedAgentId === 'new-agent' || isSpecSelection(selectedAgentId);
+
+    // For existing agents (not new-agent or spec), ensure transport and agentName are set
+    if (!isNewMode) {
       const agent = agents.find(a => a.id === selectedAgentId);
       if (agent) {
         setTransport(agent.transport);
@@ -751,7 +790,10 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
 
   const handleReset = async () => {
     // Delete the agent from the server if we created it
-    if (selectedAgentId === 'new-agent' && agentName) {
+    if (
+      (selectedAgentId === 'new-agent' || isSpecSelection(selectedAgentId)) &&
+      agentName
+    ) {
       await deleteAgentOnServer(agentName);
     }
     setIsConfigured(false);

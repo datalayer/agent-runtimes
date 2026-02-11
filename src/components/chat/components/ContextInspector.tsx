@@ -499,8 +499,7 @@ export function ContextInspector({ agentId, apiBase }: ContextInspectorProps) {
       <Box sx={{ mb: 3 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
           <Text sx={{ fontSize: 1, fontWeight: 'semibold' }}>
-            Context Usage: {formatTokens(tokenSummary.total)} /{' '}
-            {formatTokens(tokenSummary.contextWindow)}
+            Total usage: {formatTokens(tokenSummary.total)}
           </Text>
           <Text sx={{ fontSize: 1, color: 'fg.muted' }}>
             {tokenSummary.usagePercent.toFixed(1)}%

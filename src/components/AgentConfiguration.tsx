@@ -35,6 +35,36 @@ import { IdentityCard } from './chat';
 import type { MCPServerTool as MCPServerToolType } from '../types';
 
 /**
+ * Agent spec entry from the library endpoint.
+ */
+export interface LibraryAgentSpec {
+  id: string;
+  name: string;
+  description: string;
+  tags: string[];
+  enabled: boolean;
+  emoji?: string | null;
+  icon?: string | null;
+  color?: string | null;
+  skills: string[];
+  systemPrompt?: string | null;
+  systemPromptCodemodeAddons?: string | null;
+  suggestions: string[];
+  welcomeMessage?: string | null;
+  mcpServers: { name: string; id: string }[];
+}
+
+/**
+ * Helper: is the selected agent id a library spec?
+ */
+export const isSpecSelection = (id: string): boolean => id.startsWith('spec:');
+
+/**
+ * Helper: extract the spec id from a spec selection value.
+ */
+export const getSpecId = (id: string): string => id.replace(/^spec:/, '');
+
+/**
  * Props for IdentityConnectWithStatus component
  */
 interface IdentityConnectWithStatusProps {
@@ -587,6 +617,34 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
     retry: 1,
   });
 
+  // Fetch agent specs from library
+  const libraryQuery = useQuery<LibraryAgentSpec[]>({
+    queryKey: ['agent-library', baseUrl],
+    queryFn: async () => {
+      const response = await fetch(`${baseUrl}/api/v1/agents/library`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch agent library');
+      }
+      return response.json();
+    },
+    enabled: !!baseUrl,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    retry: 1,
+  });
+
+  const librarySpecs = libraryQuery.data || [];
+
+  // The currently selected library spec (if any)
+  const selectedSpec = useMemo(() => {
+    if (!isSpecSelection(selectedAgentId)) return null;
+    const specId = getSpecId(selectedAgentId);
+    return librarySpecs.find(s => s.id === specId) || null;
+  }, [selectedAgentId, librarySpecs]);
+
+  // When a spec is selected, form behaves like new-agent but with pre-filled values
+  const isNewAgentMode =
+    selectedAgentId === 'new-agent' || isSpecSelection(selectedAgentId);
+
   // Fetch skills from the backend (only when codemode is enabled)
   const skillsQuery = useQuery<{ skills: SkillOption[]; total: number }>({
     queryKey: ['agent-skills', baseUrl],
@@ -737,12 +795,12 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
     }
   };
 
-  // MCP servers are disabled for existing agents (new-agent only)
-  const mcpServersDisabled = selectedAgentId !== 'new-agent';
+  // MCP servers are disabled for existing agents (new-agent and spec modes only)
+  const mcpServersDisabled = !isNewAgentMode;
 
   // Determine which extensions are enabled based on transport
   const isExtensionEnabled = (ext: Extension): boolean => {
-    if (selectedAgentId !== 'new-agent') return false;
+    if (!isNewAgentMode) return false;
     if (transport === 'ag-ui') return true; // Both mcp-ui and a2ui enabled
     if (transport === 'a2a') return ext === 'a2ui'; // Only a2ui enabled
     return false; // All others disabled
@@ -786,6 +844,14 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
           sx={{ width: '100%' }}
         >
           <Select.Option value="new-agent">+ New Agent...</Select.Option>
+          {librarySpecs
+            .filter(s => s.enabled)
+            .map(spec => (
+              <Select.Option key={`spec:${spec.id}`} value={`spec:${spec.id}`}>
+                {spec.emoji ? `${spec.emoji} ` : ''}
+                {spec.name}
+              </Select.Option>
+            ))}
           {agents.map(agent => (
             <Select.Option key={agent.id} value={agent.id}>
               {agent.status === 'running' && '● '}
@@ -794,8 +860,10 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
           ))}
         </Select>
         <FormControl.Caption>
-          {selectedAgentId === 'new-agent'
-            ? 'Configure a new custom agent'
+          {isNewAgentMode
+            ? selectedSpec
+              ? `Creating from spec: ${selectedSpec.name}`
+              : 'Configure a new custom agent'
             : 'Selected agent - form fields below are disabled'}
         </FormControl.Caption>
       </FormControl>
@@ -805,7 +873,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
         <TextInput
           value={agentName}
           onChange={e => onAgentNameChange(e.target.value)}
-          disabled={selectedAgentId !== 'new-agent'}
+          disabled={!isNewAgentMode}
           placeholder="demo-agent"
           sx={{ width: '100%' }}
         />
@@ -825,7 +893,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
               ? onWsUrlChange(e.target.value)
               : onBaseUrlChange(e.target.value)
           }
-          disabled={selectedAgentId !== 'new-agent'}
+          disabled={!isNewAgentMode}
           placeholder={
             transport === 'acp'
               ? 'ws://localhost:8000/api/v1/acp/ws'
@@ -846,7 +914,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
           <Select
             value={agentLibrary}
             onChange={e => onAgentLibraryChange(e.target.value as AgentLibrary)}
-            disabled={selectedAgentId !== 'new-agent'}
+            disabled={!isNewAgentMode}
             sx={{ width: '100%' }}
           >
             {AGENT_LIBRARIES.map(lib => (
@@ -867,7 +935,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
           <Select
             value={model}
             onChange={e => onModelChange(e.target.value)}
-            disabled={selectedAgentId !== 'new-agent' || models.length === 0}
+            disabled={!isNewAgentMode || models.length === 0}
             sx={{ width: '100%' }}
           >
             {models.length === 0 ? (
@@ -892,7 +960,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
           <Select
             value={transport}
             onChange={e => onTransportChange(e.target.value as Transport)}
-            disabled={selectedAgentId !== 'new-agent'}
+            disabled={!isNewAgentMode}
             sx={{ width: '100%' }}
           >
             {TRANSPORTS.map(t => (
@@ -958,7 +1026,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
         {/* Show connected identities with token status and connect buttons for unconnected providers */}
         <IdentityConnectWithStatus
           identityProviders={identityProviders}
-          disabled={selectedAgentId !== 'new-agent'}
+          disabled={!isNewAgentMode}
           onConnect={onIdentityConnect}
           onDisconnect={onIdentityDisconnect}
         />
@@ -982,7 +1050,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <Checkbox
               checked={enableCodemode}
-              disabled={selectedAgentId !== 'new-agent'}
+              disabled={!isNewAgentMode}
               onChange={e => onEnableCodemodeChange?.(e.target.checked)}
             />
             <Box>
@@ -1006,7 +1074,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
               <Checkbox
                 checked={allowDirectToolCalls}
-                disabled={selectedAgentId !== 'new-agent'}
+                disabled={!isNewAgentMode}
                 onChange={e => onAllowDirectToolCallsChange?.(e.target.checked)}
               />
               <Box>
@@ -1019,7 +1087,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
               <Checkbox
                 checked={enableToolReranker}
-                disabled={selectedAgentId !== 'new-agent'}
+                disabled={!isNewAgentMode}
                 onChange={e => onEnableToolRerankerChange?.(e.target.checked)}
               />
               <Box>
@@ -1032,7 +1100,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
               <Checkbox
                 checked={useJupyterSandbox}
-                disabled={selectedAgentId !== 'new-agent'}
+                disabled={!isNewAgentMode}
                 onChange={e => onUseJupyterSandboxChange?.(e.target.checked)}
               />
               <Box>
@@ -1106,12 +1174,12 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
                   padding: 2,
                   borderRadius: 1,
                   backgroundColor: 'canvas.subtle',
-                  opacity: selectedAgentId !== 'new-agent' ? 0.6 : 1,
+                  opacity: !isNewAgentMode ? 0.6 : 1,
                 }}
               >
                 <Checkbox
                   checked={selectedSkills.includes(skill.id)}
-                  disabled={selectedAgentId !== 'new-agent'}
+                  disabled={!isNewAgentMode}
                   onChange={e => handleSkillChange(skill.id, e.target.checked)}
                 />
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
@@ -1493,8 +1561,12 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
             <Spinner size="small" />
             <span>Creating Agent...</span>
           </Box>
-        ) : selectedAgentId === 'new-agent' ? (
-          'Create the Agent'
+        ) : isNewAgentMode ? (
+          selectedSpec ? (
+            `Create from "${selectedSpec.name}"`
+          ) : (
+            'Create the Agent'
+          )
         ) : agents.find(a => a.id === selectedAgentId)?.status === 'running' ? (
           'Connect to the Agent'
         ) : (
