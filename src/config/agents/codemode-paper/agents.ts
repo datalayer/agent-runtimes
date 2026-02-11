@@ -22,11 +22,7 @@ import {
   SLACK_MCP_SERVER,
   TAVILY_MCP_SERVER,
 } from '../../mcpServers';
-import {
-  CRAWL_SKILL_SPEC,
-  GITHUB_SKILL_SPEC,
-  PDF_SKILL_SPEC,
-} from '../../skills';
+import { GITHUB_SKILL_SPEC } from '../../skills';
 import type { SkillSpec } from '../../skills';
 
 // ============================================================================
@@ -48,9 +44,7 @@ const MCP_SERVER_MAP: Record<string, any> = {
  * Map skill IDs to SkillSpec objects, converting to AgentSkillSpec shape.
  */
 const SKILL_MAP: Record<string, any> = {
-  crawl: CRAWL_SKILL_SPEC,
   github: GITHUB_SKILL_SPEC,
-  pdf: PDF_SKILL_SPEC,
 };
 
 function toAgentSkillSpec(skill: SkillSpec) {

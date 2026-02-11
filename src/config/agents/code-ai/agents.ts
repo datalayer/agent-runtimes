@@ -12,58 +12,6 @@
  */
 
 import type { AgentSpec } from '../../../types';
-import {
-  ALPHAVANTAGE_MCP_SERVER,
-  CHART_MCP_SERVER,
-  FILESYSTEM_MCP_SERVER,
-  GITHUB_MCP_SERVER,
-  GOOGLE_WORKSPACE_MCP_SERVER,
-  KAGGLE_MCP_SERVER,
-  SLACK_MCP_SERVER,
-  TAVILY_MCP_SERVER,
-} from '../../mcpServers';
-import {
-  CRAWL_SKILL_SPEC,
-  GITHUB_SKILL_SPEC,
-  PDF_SKILL_SPEC,
-} from '../../skills';
-import type { SkillSpec } from '../../skills';
-
-// ============================================================================
-// MCP Server Lookup
-// ============================================================================
-
-const MCP_SERVER_MAP: Record<string, any> = {
-  alphavantage: ALPHAVANTAGE_MCP_SERVER,
-  chart: CHART_MCP_SERVER,
-  filesystem: FILESYSTEM_MCP_SERVER,
-  github: GITHUB_MCP_SERVER,
-  'google-workspace': GOOGLE_WORKSPACE_MCP_SERVER,
-  kaggle: KAGGLE_MCP_SERVER,
-  slack: SLACK_MCP_SERVER,
-  tavily: TAVILY_MCP_SERVER,
-};
-
-/**
- * Map skill IDs to SkillSpec objects, converting to AgentSkillSpec shape.
- */
-const SKILL_MAP: Record<string, any> = {
-  crawl: CRAWL_SKILL_SPEC,
-  github: GITHUB_SKILL_SPEC,
-  pdf: PDF_SKILL_SPEC,
-};
-
-function toAgentSkillSpec(skill: SkillSpec) {
-  return {
-    id: skill.id,
-    name: skill.name,
-    description: skill.description,
-    version: '1.0.0',
-    tags: skill.tags,
-    enabled: skill.enabled,
-    requiredEnvVars: skill.requiredEnvVars,
-  };
-}
 
 // ============================================================================
 // Agent Specs

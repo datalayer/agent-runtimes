@@ -254,21 +254,36 @@ def generate_typescript_code(
     skill_ids = [os.path.basename(f).replace(".yaml", "") for f in skill_files]
     skill_ids.sort()
 
-    # Generate import names and map entries dynamically
+    # Determine which MCP servers and skills are actually used in these specs
+    used_mcp_servers = set()
+    used_skills = set()
+    for _, spec in specs:
+        for server in spec.get("mcp_servers", []):
+            used_mcp_servers.add(server)
+        for skill in spec.get("skills", []):
+            used_skills.add(skill)
+
+    # Only import what's actually used
     mcp_imports = []
     mcp_map_entries = []
     for server_id in mcp_server_ids:
-        const_name = server_id.upper().replace("-", "_") + "_MCP_SERVER"
-        mcp_imports.append(const_name)
-        mcp_map_entries.append(f"  '{server_id}': {const_name},")
+        if server_id in used_mcp_servers:
+            const_name = server_id.upper().replace("-", "_") + "_MCP_SERVER"
+            mcp_imports.append(const_name)
+            mcp_map_entries.append(f"  '{server_id}': {const_name},")
 
     # Generate skill import names and map entries
     skill_imports = []
     skill_map_entries = []
     for sid in skill_ids:
-        const_name = sid.upper().replace("-", "_") + "_SKILL_SPEC"
-        skill_imports.append(const_name)
-        skill_map_entries.append(f"  '{sid}': {const_name},")
+        if sid in used_skills:
+            const_name = sid.upper().replace("-", "_") + "_SKILL_SPEC"
+            skill_imports.append(const_name)
+            skill_map_entries.append(f"  '{sid}': {const_name},")
+
+    # Determine if we need any helper code
+    has_mcp = len(mcp_imports) > 0
+    has_skills = len(skill_imports) > 0
 
     # Header
     code = """/*
@@ -285,33 +300,44 @@ def generate_typescript_code(
  */
 
 import type { AgentSpec } from '../../../types';
-import {
 """
-    code += "  " + ",\n  ".join(mcp_imports) + ",\n"
-    code += """} from '../../mcpServers';
-import {
-"""
-    code += "  " + ",\n  ".join(skill_imports) + ",\n"
-    code += """} from '../../skills';
-import type { SkillSpec } from '../../skills';
 
+    # Only add MCP server imports if needed
+    if has_mcp:
+        code += "import {\n"
+        code += "  " + ",\n  ".join(mcp_imports) + ",\n"
+        code += "} from '../../mcpServers';\n"
+
+    # Only add skill imports if needed
+    if has_skills:
+        code += "import {\n"
+        code += "  " + ",\n  ".join(skill_imports) + ",\n"
+        code += "} from '../../skills';\n"
+        code += "import type { SkillSpec } from '../../skills';\n"
+
+    # Only add MCP server lookup if used
+    if has_mcp:
+        code += """
 // ============================================================================
 // MCP Server Lookup
 // ============================================================================
 
 const MCP_SERVER_MAP: Record<string, any> = {
 """
-    code += "\n".join(mcp_map_entries) + "\n"
-    code += """};
+        code += "\n".join(mcp_map_entries) + "\n"
+        code += "};\n"
 
+    # Only add skill lookup if used
+    if has_skills:
+        code += """
 /**
  * Map skill IDs to SkillSpec objects, converting to AgentSkillSpec shape.
  */
 const SKILL_MAP: Record<string, any> = {
 """
-    code += "\n".join(skill_map_entries) + "\n"
-    code += """};
-
+        code += "\n".join(skill_map_entries) + "\n"
+        code += "};\n"
+        code += """
 function toAgentSkillSpec(skill: SkillSpec) {
   return {
     id: skill.id,
@@ -323,7 +349,9 @@ function toAgentSkillSpec(skill: SkillSpec) {
     requiredEnvVars: skill.requiredEnvVars,
   };
 }
+"""
 
+    code += """
 // ============================================================================
 // Agent Specs
 // ============================================================================
@@ -370,13 +398,16 @@ function toAgentSkillSpec(skill: SkillSpec) {
 
             # Get MCP servers
             mcp_server_ids = spec.get("mcp_servers", [])
-            mcp_servers_str = ", ".join(
-                f"MCP_SERVER_MAP['{sid}']" for sid in mcp_server_ids
-            )
+            if has_mcp and mcp_server_ids:
+                mcp_servers_str = ", ".join(
+                    f"MCP_SERVER_MAP['{sid}']" for sid in mcp_server_ids
+                )
+            else:
+                mcp_servers_str = ""
 
             # Get skills - resolve to AgentSkillSpec via toAgentSkillSpec
             skill_ids_list = spec.get("skills", [])
-            if skill_ids_list:
+            if has_skills and skill_ids_list:
                 skills_str = ", ".join(
                     f"toAgentSkillSpec(SKILL_MAP['{sid}'])" for sid in skill_ids_list
                 )
@@ -703,17 +734,17 @@ import type { AgentSpec } from '../../types';
         if folder:
             folder_const = folder.replace("-", "_").upper()
             typescript_index_content += f"import {{ AGENT_SPECS as {folder_const}_AGENTS }} from './{folder}';\n"
-    
+
     typescript_index_content += """
 // Merge all agent specs from subfolders
 export const AGENT_SPECS: Record<string, AgentSpec> = {
 """
-    
+
     for folder in sorted(specs_by_folder.keys()):
         if folder:
             folder_const = folder.replace("-", "_").upper()
             typescript_index_content += f"  ...{folder_const}_AGENTS,\n"
-    
+
     typescript_index_content += """};
 
 /**
