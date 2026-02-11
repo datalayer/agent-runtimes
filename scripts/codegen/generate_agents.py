@@ -23,18 +23,35 @@ def _fmt_list(items: list[str]) -> str:
     return "[" + ", ".join(f'"{item}"' for item in items) + "]"
 
 
-def load_yaml_specs(specs_dir: Path) -> List[Dict[str, Any]]:
-    """Load all YAML agent specifications from directory."""
+def load_yaml_specs(specs_dir: Path) -> List[tuple[str, Dict[str, Any]]]:
+    """
+    Load all YAML agent specifications from directory and subdirectories.
+
+    Returns list of tuples: (subfolder_name, spec_dict)
+    where subfolder_name is the immediate parent folder name, or "" for root level.
+    """
     specs = []
+
+    # First, load specs from root level
     for yaml_file in sorted(specs_dir.glob("*.yaml")):
         with open(yaml_file, "r") as f:
             spec = yaml.safe_load(f)
             if spec:  # Skip empty files
-                specs.append(spec)
+                specs.append(("", spec))
+
+    # Then, load specs from subdirectories (one level deep)
+    for subdir in sorted(specs_dir.iterdir()):
+        if subdir.is_dir() and not subdir.name.startswith("."):
+            for yaml_file in sorted(subdir.glob("*.yaml")):
+                with open(yaml_file, "r") as f:
+                    spec = yaml.safe_load(f)
+                    if spec:  # Skip empty files
+                        specs.append((subdir.name, spec))
+
     return specs
 
 
-def generate_python_code(specs: List[Dict[str, Any]]) -> str:
+def generate_python_code(specs: List[tuple[str, Dict[str, Any]]]) -> str:
     """Generate Python code from agent specifications."""
     # Header
     code = '''# Copyright (c) 2025-2026 Datalayer, Inc.
@@ -59,59 +76,101 @@ from agent_runtimes.types import AgentSpec
 
 '''
 
-    # Generate agent spec constants
+    # Organize specs by subfolder
+    from collections import defaultdict
+
+    specs_by_folder: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
+    for folder, spec in specs:
+        specs_by_folder[folder].append(spec)
+
+    # Generate agent spec constants organized by folder
     agent_ids = []
-    for spec in specs:
-        agent_id = spec["id"]
-        # Create constant name: e.g., "data-acquisition" -> "DATA_ACQUISITION_AGENT_SPEC"
-        # But if id already ends with "-agent", don't duplicate: "github-agent" -> "GITHUB_AGENT_SPEC"
-        if agent_id.endswith("-agent"):
-            const_name = agent_id.upper().replace("-", "_") + "_SPEC"
-        else:
-            const_name = agent_id.upper().replace("-", "_") + "_AGENT_SPEC"
-        agent_ids.append((agent_id, const_name))
 
-        # Get MCP servers
-        mcp_server_ids = spec.get("mcp_servers", [])
-        mcp_servers_str = ", ".join(
-            f'MCP_SERVER_CATALOG["{sid}"]' for sid in mcp_server_ids
-        )
+    # Sort folders: empty string (root) first, then alphabetically
+    sorted_folders = sorted(
+        specs_by_folder.keys(), key=lambda x: ("" if x == "" else f"z{x}")
+    )
 
-        # Format optional fields
-        icon = f'"{spec.get("icon")}"' if spec.get("icon") else "None"
-        color = f'"{spec.get("color")}"' if spec.get("color") else "None"
-        suggestions = spec.get("suggestions", [])
-        suggestions_str = (
-            "[\n        "
-            + ",\n        ".join(f'"{s}"' for s in suggestions)
-            + ",\n    ]"
-            if suggestions
-            else "[]"
-        )
-        # Escape multi-line strings properly
-        welcome = spec.get("welcome_message", "").replace('"', '\\"').replace("\n", " ")
-        welcome_notebook = spec.get("welcome_notebook")
-        welcome_document = spec.get("welcome_document")
-        system_prompt = spec.get("system_prompt", "")
-        system_prompt_codemode = spec.get("system_prompt_codemode", "")
+    for folder in sorted_folders:
+        folder_specs = specs_by_folder[folder]
 
-        # Escape triple quotes in system prompts for Python triple-quoted strings
-        if system_prompt:
-            system_prompt = system_prompt.replace('"""', r"\"\"\"")
-        if system_prompt_codemode:
-            system_prompt_codemode = system_prompt_codemode.replace('"""', r"\"\"\"")
+        # Add folder header if not root
+        if folder:
+            code += f"\n# {folder.replace('-', ' ').title()} Agents\n"
+            code += f"# {'=' * 76}\n\n"
 
-        # Clean description for Python (single line)
-        description = spec["description"].replace("\n", " ").replace("  ", " ").strip()
+        for spec in folder_specs:
+            agent_id = spec["id"]
+            # Prefix agent ID with folder name for uniqueness
+            full_agent_id = f"{folder}/{agent_id}" if folder else agent_id
+            # Create constant name: e.g., "data-acquisition" -> "DATA_ACQUISITION_AGENT_SPEC"
+            # But if id already ends with "-agent", don't duplicate: "github-agent" -> "GITHUB_AGENT_SPEC"
+            # Prefix with folder for uniqueness: "datalayer-ai/simple" -> "DATALAYER_AI_SIMPLE_AGENT_SPEC"
+            if folder:
+                base_name = (
+                    f"{folder}_{agent_id}".upper().replace("-", "_").replace("/", "_")
+                )
+            else:
+                base_name = agent_id.upper().replace("-", "_")
 
-        # Use triple quotes for multiline system prompts
-        system_prompt_str = f'"""{system_prompt}"""' if system_prompt else "None"
-        system_prompt_codemode_str = (
-            f'"""{system_prompt_codemode}"""' if system_prompt_codemode else "None"
-        )
+            if agent_id.endswith("-agent"):
+                const_name = base_name + "_SPEC"
+            else:
+                const_name = base_name + "_AGENT_SPEC"
+            agent_ids.append((full_agent_id, const_name, folder))
 
-        code += f'''{const_name} = AgentSpec(
-    id="{spec["id"]}",
+            # Get MCP servers
+            mcp_server_ids = spec.get("mcp_servers", [])
+            mcp_servers_str = ", ".join(
+                f'MCP_SERVER_CATALOG["{sid}"]' for sid in mcp_server_ids
+            )
+
+            # Format optional fields
+            icon = f'"{spec.get("icon")}"' if spec.get("icon") else "None"
+            emoji = f'"{spec.get("emoji")}"' if spec.get("emoji") else "None"
+            color = f'"{spec.get("color")}"' if spec.get("color") else "None"
+            suggestions = spec.get("suggestions", [])
+            suggestions_str = (
+                "[\n        "
+                + ",\n        ".join(f'"{s}"' for s in suggestions)
+                + ",\n    ]"
+                if suggestions
+                else "[]"
+            )
+            # Escape multi-line strings properly
+            welcome = (
+                spec.get("welcome_message", "").replace('"', '\\"').replace("\n", " ")
+            )
+            welcome_notebook = spec.get("welcome_notebook")
+            welcome_document = spec.get("welcome_document")
+            system_prompt = spec.get("system_prompt", "")
+            system_prompt_codemode_addons = spec.get(
+                "system_prompt_codemode_addons", ""
+            )
+
+            # Escape triple quotes in system prompts for Python triple-quoted strings
+            if system_prompt:
+                system_prompt = system_prompt.replace('"""', r"\"\"\"")
+            if system_prompt_codemode_addons:
+                system_prompt_codemode_addons = system_prompt_codemode_addons.replace(
+                    '"""', r"\"\"\""
+                )
+
+            # Clean description for Python (single line)
+            description = (
+                spec["description"].replace("\n", " ").replace("  ", " ").strip()
+            )
+
+            # Use triple quotes for multiline system prompts
+            system_prompt_str = f'"""{system_prompt}"""' if system_prompt else "None"
+            system_prompt_codemode_addons_str = (
+                f'"""{system_prompt_codemode_addons}"""'
+                if system_prompt_codemode_addons
+                else "None"
+            )
+
+            code += f'''{const_name} = AgentSpec(
+    id="{full_agent_id}",
     name="{spec["name"]}",
     description="{description}",
     tags={_fmt_list(spec.get("tags", []))},
@@ -120,18 +179,19 @@ from agent_runtimes.types import AgentSpec
     skills={_fmt_list(spec.get("skills", []))},
     environment_name="{spec.get("environment_name", "ai-agents-env")}",
     icon={icon},
+    emoji={emoji},
     color={color},
     suggestions={suggestions_str},
     welcome_message="{welcome}",
     welcome_notebook={f'"{welcome_notebook}"' if welcome_notebook else "None"},
     welcome_document={f'"{welcome_document}"' if welcome_document else "None"},
     system_prompt={system_prompt_str},
-    system_prompt_codemode={system_prompt_codemode_str},
+    system_prompt_codemode_addons={system_prompt_codemode_addons_str},
 )
 
 '''
 
-    # Generate registry
+    # Generate registry organized by folder
     code += """
 # ============================================================================
 # Agent Specs Registry
@@ -139,8 +199,16 @@ from agent_runtimes.types import AgentSpec
 
 AGENT_SPECS: Dict[str, AgentSpec] = {
 """
-    for agent_id, const_name in agent_ids:
-        code += f'    "{agent_id}": {const_name},\n'
+
+    # Sort by folder for organized registry
+    for folder in sorted_folders:
+        folder_agents = [(aid, cname) for aid, cname, f in agent_ids if f == folder]
+        if folder_agents and folder:
+            code += f"    # {folder.replace('-', ' ').title()}\n"
+        for full_agent_id, const_name in folder_agents:
+            code += f'    "{full_agent_id}": {const_name},\n'
+        if folder_agents and folder:
+            code += "\n"
 
     code += """}
 
@@ -172,7 +240,7 @@ def list_agent_specs() -> list[AgentSpec]:
 
 
 def generate_typescript_code(
-    specs: List[Dict[str, Any]], mcp_specs_dir: str, skills_specs_dir: str
+    specs: List[tuple[str, Dict[str, Any]]], mcp_specs_dir: str, skills_specs_dir: str
 ) -> str:
     """Generate TypeScript code from agent specifications."""
     # Load available MCP servers from specs
@@ -266,63 +334,101 @@ function toAgentSkillSpec(skill: SkillSpec) {
 
 """
 
-    # Generate agent spec constants
+    # Organize specs by subfolder for TypeScript
+    from collections import defaultdict
+
+    specs_by_folder: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
+    for folder, spec in specs:
+        specs_by_folder[folder].append(spec)
+
+    # Sort folders: empty string (root) first, then alphabetically
+    sorted_folders = sorted(
+        specs_by_folder.keys(), key=lambda x: ("" if x == "" else f"z{x}")
+    )
+
+    # Generate agent spec constants organized by folder
     agent_ids = []
-    for spec in specs:
-        agent_id = spec["id"]
-        # Create constant name: e.g., "data-acquisition" -> "DATA_ACQUISITION_AGENT_SPEC"
-        # But if id already ends with "-agent", don't duplicate: "github-agent" -> "GITHUB_AGENT_SPEC"
-        if agent_id.endswith("-agent"):
-            const_name = agent_id.upper().replace("-", "_") + "_SPEC"
-        else:
-            const_name = agent_id.upper().replace("-", "_") + "_AGENT_SPEC"
-        agent_ids.append((agent_id, const_name))
 
-        # Get MCP servers
-        mcp_server_ids = spec.get("mcp_servers", [])
-        mcp_servers_str = ", ".join(
-            f"MCP_SERVER_MAP['{sid}']" for sid in mcp_server_ids
-        )
+    for folder in sorted_folders:
+        folder_specs = specs_by_folder[folder]
 
-        # Get skills - resolve to AgentSkillSpec via toAgentSkillSpec
-        skill_ids_list = spec.get("skills", [])
-        if skill_ids_list:
-            skills_str = ", ".join(
-                f"toAgentSkillSpec(SKILL_MAP['{sid}'])" for sid in skill_ids_list
+        # Add folder header if not root
+        if folder:
+            code += f"// {folder.replace('-', ' ').title()} Agents\n"
+            code += f"// {'=' * 76}\n\n"
+
+        for spec in folder_specs:
+            agent_id = spec["id"]
+            # Prefix agent ID with folder name for uniqueness
+            full_agent_id = f"{folder}/{agent_id}" if folder else agent_id
+            # Create constant name: e.g., "data-acquisition" -> "DATA_ACQUISITION_AGENT_SPEC"
+            # But if id already ends with "-agent", don't duplicate: "github-agent" -> "GITHUB_AGENT_SPEC"
+            # Prefix with folder for uniqueness: "datalayer-ai/simple" -> "DATALAYER_AI_SIMPLE_AGENT_SPEC"
+            if folder:
+                base_name = (
+                    f"{folder}_{agent_id}".upper().replace("-", "_").replace("/", "_")
+                )
+            else:
+                base_name = agent_id.upper().replace("-", "_")
+
+            if agent_id.endswith("-agent"):
+                const_name = base_name + "_SPEC"
+            else:
+                const_name = base_name + "_AGENT_SPEC"
+            agent_ids.append((full_agent_id, const_name, folder))
+
+            # Get MCP servers
+            mcp_server_ids = spec.get("mcp_servers", [])
+            mcp_servers_str = ", ".join(
+                f"MCP_SERVER_MAP['{sid}']" for sid in mcp_server_ids
             )
-        else:
-            skills_str = ""
 
-        # Format tags and suggestions as arrays
-        tags = spec.get("tags", [])
-        tags_str = "[" + ", ".join(f"'{t}'" for t in tags) + "]"
+            # Get skills - resolve to AgentSkillSpec via toAgentSkillSpec
+            skill_ids_list = spec.get("skills", [])
+            if skill_ids_list:
+                skills_str = ", ".join(
+                    f"toAgentSkillSpec(SKILL_MAP['{sid}'])" for sid in skill_ids_list
+                )
+            else:
+                skills_str = ""
 
-        suggestions = spec.get("suggestions", [])
-        # Escape single quotes in suggestions for TypeScript
-        escaped_suggestions = [s.replace("'", "\\'") for s in suggestions]
-        suggestions_str = (
-            "[\n    " + ",\n    ".join(f"'{s}'" for s in escaped_suggestions) + ",\n  ]"
-            if suggestions
-            else "[]"
-        )
+            # Format tags and suggestions as arrays
+            tags = spec.get("tags", [])
+            tags_str = "[" + ", ".join(f"'{t}'" for t in tags) + "]"
 
-        # Format optional fields
-        icon = f"'{spec.get('icon')}'" if spec.get("icon") else "undefined"
-        color = f"'{spec.get('color')}'" if spec.get("color") else "undefined"
-        system_prompt = spec.get("system_prompt")
-        system_prompt_codemode = spec.get("system_prompt_codemode")
+            suggestions = spec.get("suggestions", [])
+            # Escape single quotes in suggestions for TypeScript
+            escaped_suggestions = [s.replace("'", "\\'") for s in suggestions]
+            suggestions_str = (
+                "[\n    "
+                + ",\n    ".join(f"'{s}'" for s in escaped_suggestions)
+                + ",\n  ]"
+                if suggestions
+                else "[]"
+            )
 
-        # Escape backticks for TypeScript template literals
-        if system_prompt:
-            system_prompt = system_prompt.replace("`", "\\`")
-        if system_prompt_codemode:
-            system_prompt_codemode = system_prompt_codemode.replace("`", "\\`")
+            # Format optional fields
+            icon = f"'{spec.get('icon')}'" if spec.get("icon") else "undefined"
+            emoji = f"'{spec.get('emoji')}'" if spec.get("emoji") else "undefined"
+            color = f"'{spec.get('color')}'" if spec.get("color") else "undefined"
+            system_prompt = spec.get("system_prompt")
+            system_prompt_codemode_addons = spec.get("system_prompt_codemode_addons")
 
-        # Clean description for TypeScript (multi-line template literal)
-        description = spec["description"].replace("\n", " ").replace("  ", " ").strip()
+            # Escape backticks for TypeScript template literals
+            if system_prompt:
+                system_prompt = system_prompt.replace("`", "\\`")
+            if system_prompt_codemode_addons:
+                system_prompt_codemode_addons = system_prompt_codemode_addons.replace(
+                    "`", "\\`"
+                )
 
-        code += f"""export const {const_name}: AgentSpec = {{
-  id: '{spec["id"]}',
+            # Clean description for TypeScript (multi-line template literal)
+            description = (
+                spec["description"].replace("\n", " ").replace("  ", " ").strip()
+            )
+
+            code += f"""export const {const_name}: AgentSpec = {{
+  id: '{full_agent_id}',
   name: '{spec["name"]}',
   description: `{description}`,
   tags: {tags_str},
@@ -331,23 +437,32 @@ function toAgentSkillSpec(skill: SkillSpec) {
   skills: [{skills_str}],
   environmentName: '{spec.get("environment_name", "ai-agents-env")}',
   icon: {icon},
+  emoji: {emoji},
   color: {color},
   suggestions: {suggestions_str},
   systemPrompt: {f"`{system_prompt}`" if system_prompt else "undefined"},
-  systemPromptCodemode: {f"`{system_prompt_codemode}`" if system_prompt_codemode else "undefined"},
+  systemPromptCodemodeAddons: {f"`{system_prompt_codemode_addons}`" if system_prompt_codemode_addons else "undefined"},
 }};
 
 """
 
-    # Generate registry
+    # Generate registry organized by folder
     code += """// ============================================================================
 // Agent Specs Registry
 // ============================================================================
 
 export const AGENT_SPECS: Record<string, AgentSpec> = {
 """
-    for agent_id, const_name in agent_ids:
-        code += f"  '{agent_id}': {const_name},\n"
+
+    # Sort by folder for organized registry
+    for folder in sorted_folders:
+        folder_agents = [(aid, cname) for aid, cname, f in agent_ids if f == folder]
+        if folder_agents and folder:
+            code += f"  // {folder.replace('-', ' ').title()}\n"
+        for full_agent_id, const_name in folder_agents:
+            code += f"  '{full_agent_id}': {const_name},\n"
+        if folder_agents and folder:
+            code += "\n"
 
     code += """};
 
@@ -388,6 +503,55 @@ export function getAgentSpecRequiredEnvVars(spec: AgentSpec): string[] {
 """
 
     return code
+
+
+def update_init_file(
+    specs: List[tuple[str, Dict[str, Any]]], init_file_path: Path
+) -> None:
+    """Update __init__.py with the new agent spec constants."""
+    # Collect all constant names
+    const_names = []
+    for folder, spec in specs:
+        agent_id = spec["id"]
+        if folder:
+            base_name = (
+                f"{folder}_{agent_id}".upper().replace("-", "_").replace("/", "_")
+            )
+        else:
+            base_name = agent_id.upper().replace("-", "_")
+
+        if agent_id.endswith("-agent"):
+            const_name = base_name + "_SPEC"
+        else:
+            const_name = base_name + "_AGENT_SPEC"
+        const_names.append(const_name)
+
+    # Sort for consistent ordering
+    const_names.sort()
+
+    # Read the current __init__.py
+    with open(init_file_path, "r") as f:
+        content = f.read()
+
+    # Find the agents import block and replace it
+    import re
+
+    # Pattern to match the entire from .agents import block
+    pattern = r"(from \.agents import \(\n)(.*?)(\n\))"
+
+    # Build new imports
+    new_imports = "    AGENT_SPECS,\n"
+    for const_name in const_names:
+        new_imports += f"    {const_name},\n"
+    new_imports += "    get_agent_spec,\n"
+    new_imports += "    list_agent_specs,"
+
+    # Replace the imports
+    new_content = re.sub(pattern, r"\1" + new_imports + r"\3", content, flags=re.DOTALL)
+
+    # Write back
+    with open(init_file_path, "w") as f:
+        f.write(new_content)
 
 
 def main():
@@ -444,6 +608,12 @@ def main():
     args.typescript_output.parent.mkdir(parents=True, exist_ok=True)
     with open(args.typescript_output, "w") as f:
         f.write(typescript_code)
+
+    # Update __init__.py with new agent spec constants
+    init_file_path = args.python_output.parent / "__init__.py"
+    if init_file_path.exists():
+        print(f"Updating {init_file_path}...")
+        update_init_file(specs, init_file_path)
 
     print("✅ Code generation complete!")
 

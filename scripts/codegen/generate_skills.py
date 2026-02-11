@@ -64,10 +64,12 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         "    name: str",
         "    description: str",
         "    module: str",
-        "    required_env_vars: List[str]",
+        "    envvars: List[str]",
         "    optional_env_vars: List[str]",
         "    dependencies: List[str]",
         "    tags: List[str]",
+        "    icon: str | None",
+        "    emoji: str | None",
         "    enabled: bool",
         "",
         "",
@@ -82,6 +84,9 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         skill_id = spec["id"]
         const_name = f"{skill_id.upper().replace('-', '_')}_SKILL_SPEC"
 
+        icon = f'"{spec.get("icon")}"' if spec.get("icon") else "None"
+        emoji = f'"{spec.get("emoji")}"' if spec.get("emoji") else "None"
+
         lines.extend(
             [
                 f"{const_name} = SkillSpec(",
@@ -89,10 +94,12 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
                 f'    name="{spec["name"]}",',
                 f'    description="{spec["description"]}",',
                 f'    module="{spec.get("module", "")}",',
-                f"    required_env_vars={_fmt_list(spec.get('required_env_vars', []))},",
+                f"    envvars={_fmt_list(spec.get('envvars', []))},",
                 f"    optional_env_vars={_fmt_list(spec.get('optional_env_vars', []))},",
                 f"    dependencies={_fmt_list(spec.get('dependencies', []))},",
                 f"    tags={_fmt_list(spec.get('tags', []))},",
+                f"    icon={icon},",
+                f"    emoji={emoji},",
                 f"    enabled={spec.get('enabled', True)},",
                 ")",
                 "",
@@ -189,6 +196,8 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
         "  optionalEnvVars: string[];",
         "  dependencies: string[];",
         "  tags: string[];",
+        "  icon?: string;",
+        "  emoji?: string;",
         "  enabled: boolean;",
         "}",
         "",
@@ -204,14 +213,16 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
         const_name = f"{skill_id.upper().replace('-', '_')}_SKILL_SPEC"
 
         # Format arrays for TypeScript
-        required_env_vars_json = str(spec.get("required_env_vars", [])).replace(
-            "'", '"'
-        )
+        envvars_json = str(spec.get("envvars", [])).replace("'", '"')
         optional_env_vars_json = str(spec.get("optional_env_vars", [])).replace(
             "'", '"'
         )
         dependencies_json = str(spec.get("dependencies", [])).replace("'", '"')
         tags_json = str(spec.get("tags", [])).replace("'", '"')
+
+        # Format optional fields
+        icon = f"'{spec.get('icon')}'" if spec.get("icon") else "undefined"
+        emoji = f"'{spec.get('emoji')}'" if spec.get("emoji") else "undefined"
 
         lines.extend(
             [
@@ -220,10 +231,12 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
                 f"  name: '{spec['name']}',",
                 f"  description: '{spec['description']}',",
                 f"  module: '{spec.get('module', '')}',",
-                f"  requiredEnvVars: {required_env_vars_json},",
+                f"  requiredEnvVars: {envvars_json},",
                 f"  optionalEnvVars: {optional_env_vars_json},",
                 f"  dependencies: {dependencies_json},",
                 f"  tags: {tags_json},",
+                f"  icon: {icon},",
+                f"  emoji: {emoji},",
                 f"  enabled: {str(spec.get('enabled', True)).lower()},",
                 "};",
                 "",

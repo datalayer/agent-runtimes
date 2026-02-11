@@ -21,6 +21,9 @@ import type { MCPServer } from '../types';
 export const ALPHAVANTAGE_MCP_SERVER: MCPServer = {
   id: 'alphavantage',
   name: 'Alpha Vantage',
+  description: 'Financial market data and stock information',
+  icon: 'graph',
+  emoji: '💹',
   url: '',
   command: 'uvx',
   args: ['av-mcp==0.2.1', '${ALPHAVANTAGE_API_KEY}'],
@@ -34,6 +37,9 @@ export const ALPHAVANTAGE_MCP_SERVER: MCPServer = {
 export const CHART_MCP_SERVER: MCPServer = {
   id: 'chart',
   name: 'Chart Generator',
+  description: 'Generate charts and visualizations',
+  icon: 'graph',
+  emoji: '📊',
   url: '',
   command: 'npx',
   args: ['-y', '@antv/mcp-server-chart'],
@@ -47,6 +53,9 @@ export const CHART_MCP_SERVER: MCPServer = {
 export const FILESYSTEM_MCP_SERVER: MCPServer = {
   id: 'filesystem',
   name: 'Filesystem',
+  description: 'Local filesystem read/write operations',
+  icon: 'file-directory',
+  emoji: '📁',
   url: '',
   command: 'npx',
   args: ['-y', '@modelcontextprotocol/server-filesystem', '$TMPDIR'],
@@ -60,6 +69,9 @@ export const FILESYSTEM_MCP_SERVER: MCPServer = {
 export const GITHUB_MCP_SERVER: MCPServer = {
   id: 'github',
   name: 'GitHub',
+  description: 'GitHub repository operations (issues, PRs, code search)',
+  icon: 'mark-github',
+  emoji: '🐙 - git - collaboration',
   url: '',
   command: 'docker',
   args: [
@@ -67,19 +79,22 @@ export const GITHUB_MCP_SERVER: MCPServer = {
     '-i',
     '--rm',
     '-e',
-    'GITHUB_PERSONAL_ACCESS_TOKEN',
+    'GITHUB_TOKEN',
     'ghcr.io/github/github-mcp-server',
   ],
   transport: 'stdio',
   enabled: true,
   isAvailable: false,
   tools: [],
-  requiredEnvVars: ['GITHUB_PERSONAL_ACCESS_TOKEN'],
+  requiredEnvVars: ['GITHUB_TOKEN'],
 };
 
 export const GOOGLE_WORKSPACE_MCP_SERVER: MCPServer = {
   id: 'google-workspace',
   name: 'Google Workspace',
+  description: 'Google Drive, Gmail, Calendar, and Docs integration',
+  icon: 'mail',
+  emoji: '📧',
   url: '',
   command: 'uvx',
   args: ['workspace-mcp'],
@@ -93,6 +108,9 @@ export const GOOGLE_WORKSPACE_MCP_SERVER: MCPServer = {
 export const KAGGLE_MCP_SERVER: MCPServer = {
   id: 'kaggle',
   name: 'Kaggle',
+  description: 'Kaggle datasets, models, competitions, and notebooks access',
+  icon: 'database',
+  emoji: '📊',
   url: '',
   command: 'npx',
   args: [
@@ -112,6 +130,9 @@ export const KAGGLE_MCP_SERVER: MCPServer = {
 export const SLACK_MCP_SERVER: MCPServer = {
   id: 'slack',
   name: 'Slack',
+  description: 'Slack messaging and channel operations',
+  icon: 'comment-discussion',
+  emoji: '💬',
   url: '',
   command: 'npx',
   args: ['-y', '@datalayer/slack-mcp-server'],
@@ -125,6 +146,9 @@ export const SLACK_MCP_SERVER: MCPServer = {
 export const TAVILY_MCP_SERVER: MCPServer = {
   id: 'tavily',
   name: 'Tavily Search',
+  description: 'Web search and research capabilities via Tavily API',
+  icon: 'search',
+  emoji: '🔍',
   url: '',
   command: 'npx',
   args: ['-y', 'tavily-mcp'],

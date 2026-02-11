@@ -27,6 +27,12 @@ from ..config.agents import list_agent_specs as list_library_agents
 from ..mcp import get_mcp_manager, initialize_config_mcp_servers
 from ..mcp.catalog_mcp_servers import MCP_SERVER_CATALOG
 from ..mcp.lifecycle import get_mcp_lifecycle_manager
+from ..services import (
+    create_codemode_toolset,
+    create_shared_sandbox,
+    create_skills_toolset,
+    initialize_codemode_toolset,
+)
 from ..transports import AGUITransport, MCPUITransport, VercelAITransport
 from ..types import AgentSpec
 from .a2a import A2AAgentCard, register_a2a_agent, unregister_a2a_agent
@@ -180,95 +186,7 @@ def _build_codemode_toolset(
     if not request.enable_codemode:
         return None
 
-    try:
-        from pathlib import Path
-
-        from agent_codemode import (
-            PYDANTIC_AI_AVAILABLE as CODEMODE_AVAILABLE,
-        )
-        from agent_codemode import (
-            CodeModeConfig,
-            CodemodeToolset,
-            MCPServerConfig,
-            ToolRegistry,
-        )
-    except ImportError:
-        logger.warning("agent-codemode package not installed, codemode disabled")
-        return None
-
-    if not CODEMODE_AVAILABLE:
-        logger.warning("agent-codemode pydantic-ai integration not available")
-        return None
-
-    allow_direct = (
-        request.allow_direct_tool_calls
-        if request.allow_direct_tool_calls is not None
-        else False
-    )
-
-    reranker = None
-    if request.enable_tool_reranker:
-        reranker = getattr(http_request.app.state, "codemode_tool_reranker", None)
-        if reranker is None:
-            logger.warning("Tool reranker requested but not configured on app.state")
-
-    # Build registry with selected MCP servers
-    registry = ToolRegistry()
-    mcp_manager = get_mcp_manager()
-    servers = mcp_manager.get_servers()
-    logger.info(f"Building codemode registry from {len(servers)} available servers")
-
-    if request.selected_mcp_servers:
-        # Extract server IDs from McpServerSelection objects
-        selected_ids = {
-            s.id if hasattr(s, "id") else s for s in request.selected_mcp_servers
-        }
-        servers = [server for server in servers if server.id in selected_ids]
-        logger.info(f"Filtered to {len(servers)} selected servers: {selected_ids}")
-
-    servers_added = []
-    for server in servers:
-        if not server.enabled:
-            logger.debug(f"Skipping disabled MCP server: {server.id}")
-            continue
-        if not server.is_available:
-            logger.warning(f"Skipping unavailable MCP server for codemode: {server.id}")
-            continue
-
-        # Normalize server name to valid Python identifier
-        # Replace dashes and other invalid chars with underscores
-        normalized_name = "".join(
-            c if c.isalnum() or c == "_" else "_" for c in server.id
-        )
-
-        # Pass through relevant environment variables for MCP servers
-        server_env: dict[str, str] = {}
-        for env_key in ["TAVILY_API_KEY", "LINKEDIN_API_KEY", "LINKEDIN_ACCESS_TOKEN"]:
-            env_val = os.getenv(env_key)
-            if env_val:
-                server_env[env_key] = env_val
-
-        registry.add_server(
-            MCPServerConfig(
-                name=normalized_name,
-                url=server.url if server.transport == "http" else "",
-                command=server.command or "",
-                args=server.args or [],
-                env=server_env,
-                enabled=server.enabled,
-            )
-        )
-        servers_added.append(normalized_name)
-        logger.info(
-            f"Added MCP server to codemode registry: {normalized_name} (command={server.command}, args={server.args})"
-        )
-
-    logger.info(
-        f"Codemode registry built with {len(servers_added)} servers: {servers_added}"
-    )
-
-    # Configure paths for codemode environment (following agent_cli.py pattern)
-    # Use app state for custom paths if configured, otherwise use repo-relative defaults
+    # Configure paths for codemode environment
     repo_root = Path(__file__).resolve().parents[2]
     workspace_path = getattr(
         http_request.app.state,
@@ -286,11 +204,8 @@ def _build_codemode_toolset(
         str((repo_root / "skills").resolve()),
     )
 
-    # Get MCP proxy URL from sandbox manager or environment
-    # This enables the two-container architecture where Jupyter kernel
-    # calls tools via HTTP to the agent-runtimes container
+    # Get MCP proxy URL from environment or sandbox manager
     mcp_proxy_url = os.getenv("AGENT_RUNTIMES_MCP_PROXY_URL")
-    logger.info(f"Checking mcp_proxy_url: env={mcp_proxy_url}")
     if not mcp_proxy_url:
         try:
             from ..services.code_sandbox_manager import get_code_sandbox_manager
@@ -308,35 +223,35 @@ def _build_codemode_toolset(
     else:
         logger.warning("No MCP proxy URL configured - HTTP proxy mode disabled")
 
-    # Create config with all required paths
-    # Check if CodeModeConfig supports mcp_proxy_url (added in newer versions)
-    config_kwargs = {
-        "workspace_path": workspace_path,
-        "generated_path": generated_path,
-        "skills_path": skills_path,
-        "allow_direct_tool_calls": allow_direct,
-    }
+    allow_direct = (
+        request.allow_direct_tool_calls
+        if request.allow_direct_tool_calls is not None
+        else False
+    )
 
-    # Conditionally add mcp_proxy_url if supported by this version
-    if (
-        hasattr(CodeModeConfig, "model_fields")
-        and "mcp_proxy_url" in CodeModeConfig.model_fields
-    ):
-        config_kwargs["mcp_proxy_url"] = mcp_proxy_url
+    # Get MCP servers from manager
+    mcp_manager = get_mcp_manager()
+    servers = mcp_manager.get_servers()
+    logger.info(f"Building codemode registry from {len(servers)} available servers")
 
-    config = CodeModeConfig(**config_kwargs)
+    if request.selected_mcp_servers:
+        # Extract server IDs from McpServerSelection objects
+        selected_ids = {
+            s.id if hasattr(s, "id") else s for s in request.selected_mcp_servers
+        }
+        servers = [server for server in servers if server.id in selected_ids]
+        logger.info(f"Filtered to {len(servers)} selected servers: {selected_ids}")
 
-    # Create toolset following the working agent_cli.py pattern:
-    # - Use the config object
-    # - Enable discovery tools so LLM can find available MCP tools
-    # - Pass tool_reranker if configured
-    # - Pass sandbox if provided (to share with AgentSkillsToolset)
-    return CodemodeToolset(
-        registry=registry,
-        config=config,
-        sandbox=sandbox,
-        allow_discovery_tools=True,  # Enable discovery tools (search_tools, get_tool_details, etc.)
-        tool_reranker=reranker,
+    # Use factory to create codemode toolset
+    return create_codemode_toolset(
+        mcp_servers=servers,
+        workspace_path=workspace_path,
+        generated_path=generated_path,
+        skills_path=skills_path,
+        allow_direct_tool_calls=allow_direct,
+        shared_sandbox=sandbox,
+        mcp_proxy_url=mcp_proxy_url,
+        enable_discovery_tools=True,
     )
 
 
@@ -384,7 +299,7 @@ class CreateAgentRequest(BaseModel):
         default="You are a helpful AI assistant.",
         description="System prompt for the agent",
     )
-    system_prompt_codemode: str | None = Field(
+    system_prompt_codemode_addons: str | None = Field(
         default=None,
         description="Additional system prompt for codemode (appended when enable_codemode=True)",
     )
@@ -578,11 +493,6 @@ async def create_agent(
 
         # Create shared sandbox for codemode and/or skills toolsets
         # This ensures state persistence between execute_code and skill script executions
-        # Use CodeSandboxManager to support Jupyter sandbox configuration via API
-        #
-        # IMPORTANT: When jupyter_sandbox is configured, we MUST get the sandbox from
-        # the sandbox manager, because the executor's Sandbox.create() doesn't have
-        # access to the Jupyter URL and token.
         shared_sandbox = None
         skills_enabled = request.enable_skills or len(request.skills) > 0
         need_shared_sandbox = (
@@ -592,109 +502,25 @@ async def create_agent(
             )  # Codemode with Jupyter
         )
         if need_shared_sandbox:
-            try:
-                from ..services.code_sandbox_manager import get_code_sandbox_manager
-
-                sandbox_manager = get_code_sandbox_manager()
-                shared_sandbox = sandbox_manager.get_managed_sandbox()
-                logger.info(
-                    f"Created managed sandbox proxy (variant={sandbox_manager.variant}) for agent {agent_id}"
-                )
-            except ImportError as e:
-                logger.warning(
-                    f"code_sandboxes not installed, cannot create shared sandbox: {e}"
-                )
+            shared_sandbox = create_shared_sandbox(request.jupyter_sandbox)
 
         # Add skills toolset if enabled
         if skills_enabled:
-            try:
-                from agent_skills import (
-                    PYDANTIC_AI_AVAILABLE,
-                    AgentSkill,
-                    AgentSkillsToolset,
-                    SandboxExecutor,
-                )
+            repo_root = Path(__file__).resolve().parents[2]
+            skills_path = getattr(
+                http_request.app.state,
+                "codemode_skills_path",
+                str((repo_root / "skills").resolve()),
+            )
 
-                if PYDANTIC_AI_AVAILABLE:
-                    repo_root = Path(__file__).resolve().parents[2]
-                    skills_path = getattr(
-                        http_request.app.state,
-                        "codemode_skills_path",
-                        str((repo_root / "skills").resolve()),
-                    )
-
-                    selected = [s for s in request.skills if s]
-                    if selected:
-                        selected_set = set(selected)
-                        selected_skills: list[AgentSkill] = []
-                        for skill_md in Path(skills_path).rglob("SKILL.md"):
-                            try:
-                                skill = AgentSkill.from_skill_md(skill_md)
-                            except Exception as exc:
-                                logger.warning(
-                                    "Failed to load skill from %s: %s",
-                                    skill_md,
-                                    exc,
-                                )
-                                continue
-                            if skill.name in selected_set:
-                                selected_skills.append(skill)
-
-                        missing = selected_set - {s.name for s in selected_skills}
-                        if missing:
-                            logger.warning(
-                                "Requested skills not found in %s: %s",
-                                skills_path,
-                                sorted(missing),
-                            )
-
-                        # Create executor for running skill scripts
-                        # Use shared sandbox if available for state persistence with codemode
-                        if shared_sandbox is not None:
-                            executor = SandboxExecutor(shared_sandbox)
-                            logger.info(
-                                f"Using shared managed sandbox for skills executor (agent {agent_id})"
-                            )
-                        else:
-                            # Use CodeSandboxManager for skills-only sandbox
-                            from ..services.code_sandbox_manager import (
-                                get_code_sandbox_manager,
-                            )
-
-                            sandbox_manager = get_code_sandbox_manager()
-                            skills_sandbox = sandbox_manager.get_managed_sandbox()
-                            executor = SandboxExecutor(skills_sandbox)
-                        skills_toolset = AgentSkillsToolset(
-                            skills=selected_skills,
-                            executor=executor,
-                        )
-                    else:
-                        # Create executor for running skill scripts
-                        # Use shared sandbox if available for state persistence with codemode
-                        if shared_sandbox is not None:
-                            executor = SandboxExecutor(shared_sandbox)
-                            logger.info(
-                                f"Using shared managed sandbox for skills executor (agent {agent_id})"
-                            )
-                        else:
-                            # Use CodeSandboxManager for skills-only sandbox
-                            from ..services.code_sandbox_manager import (
-                                get_code_sandbox_manager,
-                            )
-
-                            sandbox_manager = get_code_sandbox_manager()
-                            skills_sandbox = sandbox_manager.get_managed_sandbox()
-                            executor = SandboxExecutor(skills_sandbox)
-                        skills_toolset = AgentSkillsToolset(
-                            directories=[skills_path],  # TODO: Make configurable
-                            executor=executor,
-                        )
-                    non_mcp_toolsets.append(skills_toolset)
-                    logger.info(f"Added AgentSkillsToolset for agent {agent_id}")
-                else:
-                    logger.warning("agent-skills pydantic-ai integration not available")
-            except ImportError:
-                logger.warning("agent-skills package not installed, skills disabled")
+            skills_toolset = create_skills_toolset(
+                skills=request.skills,
+                skills_path=skills_path,
+                shared_sandbox=shared_sandbox,
+            )
+            if skills_toolset:
+                non_mcp_toolsets.append(skills_toolset)
+                logger.info(f"Added AgentSkillsToolset for agent {agent_id}")
 
         # Add codemode toolset if enabled
         if request.enable_codemode:
@@ -710,20 +536,7 @@ async def create_agent(
                 request, http_request, sandbox=shared_sandbox
             )
             if codemode_toolset is not None:
-                # Initialize the toolset to discover tools and generate bindings
-                # This must happen before the agent can use execute_code
-                logger.info(f"Starting codemode toolset for agent {agent_id}...")
-                await codemode_toolset.start()
-
-                # Log discovered tools from the registry
-                if codemode_toolset.registry:
-                    discovered_tools = codemode_toolset.registry.list_tools(
-                        include_deferred=True
-                    )
-                    tool_names = [t.name for t in discovered_tools]
-                    logger.info(
-                        f"Codemode discovered {len(tool_names)} tools: {tool_names}"
-                    )
+                await initialize_codemode_toolset(codemode_toolset)
 
                 try:
                     generated_root = Path(codemode_toolset.config.generated_path)
@@ -760,9 +573,9 @@ async def create_agent(
         # Build the system prompt
         # If codemode is enabled, append codemode instructions to the base prompt
         final_system_prompt = request.system_prompt
-        if request.enable_codemode and request.system_prompt_codemode:
+        if request.enable_codemode and request.system_prompt_codemode_addons:
             final_system_prompt = (
-                request.system_prompt + "\n\n" + request.system_prompt_codemode
+                request.system_prompt + "\n\n" + request.system_prompt_codemode_addons
             )
 
         # Create the agent based on the library

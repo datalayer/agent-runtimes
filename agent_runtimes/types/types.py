@@ -9,6 +9,61 @@ from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, ConfigDict, Field
 
 
+class EnvvarSpec(BaseModel):
+    """
+    Specification for an environment variable.
+    """
+
+    model_config = ConfigDict(populate_by_name=True, by_alias=True)
+
+    id: str = Field(..., description="Unique environment variable identifier")
+    name: str = Field(..., description="Display name for the environment variable")
+    description: str = Field(default="", description="Environment variable description")
+    registration_url: Optional[str] = Field(
+        default=None,
+        description="URL where users can register to obtain this variable",
+        alias="registrationUrl",
+    )
+    tags: List[str] = Field(default_factory=list, description="Tags for categorization")
+    icon: Optional[str] = Field(
+        default=None,
+        description="Octicon name for UI display",
+    )
+    emoji: Optional[str] = Field(
+        default=None,
+        description="Unicode emoji for UI display",
+    )
+
+
+class SkillSpec(BaseModel):
+    """
+    Specification for a skill.
+    """
+
+    model_config = ConfigDict(populate_by_name=True, by_alias=True)
+
+    id: str = Field(..., description="Unique skill identifier")
+    name: str = Field(..., description="Display name for the skill")
+    description: str = Field(default="", description="Skill description")
+    module: Optional[str] = Field(default=None, description="Python module path")
+    envvars: List[str] = Field(
+        default_factory=list,
+        description="Environment variable IDs required by this skill",
+    )
+    dependencies: List[str] = Field(
+        default_factory=list, description="Python package dependencies"
+    )
+    tags: List[str] = Field(default_factory=list, description="Tags for categorization")
+    icon: Optional[str] = Field(
+        default=None,
+        description="Octicon name for UI display",
+    )
+    emoji: Optional[str] = Field(
+        default=None,
+        description="Unicode emoji for UI display",
+    )
+
+
 class AgentSkillSpec(BaseModel):
     """
     Specification for an agent skill.
@@ -121,6 +176,14 @@ class MCPServer(BaseModel):
     description: str = Field(
         default="", description="Description of the server capabilities"
     )
+    icon: Optional[str] = Field(
+        default=None,
+        description="Octicon name for UI display",
+    )
+    emoji: Optional[str] = Field(
+        default=None,
+        description="Unicode emoji for UI display",
+    )
     url: str = Field(default="", description="Server URL (for HTTP-based servers)")
     enabled: bool = Field(default=True, description="Whether the server is enabled")
     tools: List[MCPServerTool] = Field(
@@ -218,7 +281,11 @@ class AgentSpec(BaseModel):
     )
     icon: Optional[str] = Field(
         default=None,
-        description="Icon identifier or URL for the agent",
+        description="Octicon name for UI display",
+    )
+    emoji: Optional[str] = Field(
+        default=None,
+        description="Unicode emoji for UI display",
     )
     color: Optional[str] = Field(
         default=None,
@@ -248,8 +315,8 @@ class AgentSpec(BaseModel):
         description="System prompt for the agent",
         alias="systemPrompt",
     )
-    system_prompt_codemode: Optional[str] = Field(
+    system_prompt_codemode_addons: Optional[str] = Field(
         default=None,
         description="Additional system prompt instructions when codemode is enabled",
-        alias="systemPromptCodemode",
+        alias="systemPromptCodemodeAddons",
     )

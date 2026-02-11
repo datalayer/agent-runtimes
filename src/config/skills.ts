@@ -21,6 +21,8 @@ export interface SkillSpec {
   optionalEnvVars: string[];
   dependencies: string[];
   tags: string[];
+  icon?: string;
+  emoji?: string;
   enabled: boolean;
 }
 
@@ -37,6 +39,8 @@ export const CRAWL_SKILL_SPEC: SkillSpec = {
   optionalEnvVars: [],
   dependencies: ['requests>=2.31.0', 'beautifulsoup4>=4.12.0'],
   tags: ['web', 'crawl', 'scraping'],
+  icon: 'globe',
+  emoji: '🌐',
   enabled: true,
 };
 
@@ -49,6 +53,8 @@ export const GITHUB_SKILL_SPEC: SkillSpec = {
   optionalEnvVars: [],
   dependencies: ['PyGithub>=2.1.0'],
   tags: ['github', 'git', 'code'],
+  icon: 'mark-github',
+  emoji: '🐙',
   enabled: true,
 };
 
@@ -61,6 +67,8 @@ export const PDF_SKILL_SPEC: SkillSpec = {
   optionalEnvVars: [],
   dependencies: ['PyPDF2>=3.0.0', 'pdfplumber>=0.10.0'],
   tags: ['pdf', 'documents', 'extraction'],
+  icon: 'file',
+  emoji: '📄',
   enabled: true,
 };
 

@@ -116,6 +116,12 @@ async def _create_and_register_cli_agent(
     from .routes.agui import get_agui_app, register_agui_agent
     from .routes.configure import _codemode_state
     from .routes.mcp_ui import register_mcp_ui_agent
+    from .services import (
+        create_codemode_toolset,
+        create_shared_sandbox,
+        create_skills_toolset,
+        initialize_codemode_toolset,
+    )
     from .transports import AGUITransport, MCPUITransport
 
     logger.info(
@@ -128,267 +134,97 @@ async def _create_and_register_cli_agent(
 
     # Build list of non-MCP toolsets (codemode, skills)
     non_mcp_toolsets = []
-    shared_sandbox = None
 
-    # Create shared sandbox proxy if both codemode and skills are enabled.
-    # We use get_managed_sandbox() which returns a ManagedSandbox proxy.
-    # The proxy always delegates to the manager's current sandbox, so when
-    # the manager is reconfigured (e.g. local-eval → local-jupyter via the
-    # /mcp-servers/start API), all consumers automatically use the new one.
+    # Get Jupyter sandbox URL from environment if configured
+    jupyter_sandbox_url = os.getenv("AGENT_RUNTIMES_JUPYTER_SANDBOX")
+
+    # Create shared sandbox if both codemode and skills are enabled
     skills_enabled = len(skills) > 0
+    shared_sandbox = None
     if enable_codemode and skills_enabled:
-        try:
-            from .services.code_sandbox_manager import get_code_sandbox_manager
-
-            # Get the sandbox manager and configure if Jupyter sandbox URL is provided
-            sandbox_manager = get_code_sandbox_manager()
-            jupyter_sandbox_url = os.getenv("AGENT_RUNTIMES_JUPYTER_SANDBOX")
-            if jupyter_sandbox_url:
-                sandbox_manager.configure_from_url(jupyter_sandbox_url)
-                logger.info(
-                    f"Configured sandbox manager for Jupyter: {jupyter_sandbox_url.split('?')[0]}"
-                )
-            else:
-                # Use default local-eval sandbox
-                sandbox_manager.configure(variant="local-eval")
-
-            shared_sandbox = sandbox_manager.get_managed_sandbox()
-            logger.info(
-                f"Created managed sandbox proxy (variant={sandbox_manager.variant}) for agent {agent_id}"
-            )
-        except ImportError as e:
-            logger.warning(
-                f"code_sandboxes not installed, cannot create shared sandbox: {e}"
-            )
+        shared_sandbox = create_shared_sandbox(jupyter_sandbox_url)
 
     # Add skills toolset if enabled
     if skills_enabled:
-        try:
-            from agent_skills import (
-                PYDANTIC_AI_AVAILABLE,
-                AgentSkill,
-                AgentSkillsToolset,
-                SandboxExecutor,
-            )
+        # Use AGENT_RUNTIMES_SKILLS_FOLDER if set, otherwise use repo-local skills/
+        skills_folder_env = os.getenv("AGENT_RUNTIMES_SKILLS_FOLDER")
+        if skills_folder_env:
+            skills_path = str(Path(skills_folder_env).resolve())
+        else:
+            repo_root = Path(__file__).resolve().parents[1]
+            skills_path = str((repo_root / "skills").resolve())
 
-            if PYDANTIC_AI_AVAILABLE:
-                # Use AGENT_RUNTIMES_SKILLS_FOLDER if set (e.g. --skills-folder flag),
-                # otherwise fall back to the repo-local skills/ directory.
-                skills_folder_env = os.getenv("AGENT_RUNTIMES_SKILLS_FOLDER")
-                if skills_folder_env:
-                    skills_path = str(Path(skills_folder_env).resolve())
-                else:
-                    repo_root = Path(__file__).resolve().parents[1]
-                    skills_path = str((repo_root / "skills").resolve())
-
-                selected_set = set(skills)
-                selected_skills: list[AgentSkill] = []
-
-                for skill_md in Path(skills_path).rglob("SKILL.md"):
-                    try:
-                        skill = AgentSkill.from_skill_md(skill_md)
-                    except Exception as exc:
-                        logger.warning(f"Failed to load skill from {skill_md}: {exc}")
-                        continue
-                    if skill.name in selected_set:
-                        selected_skills.append(skill)
-                        logger.info(f"Loaded skill: {skill.name}")
-
-                missing = selected_set - {s.name for s in selected_skills}
-                if missing:
-                    logger.warning(
-                        f"Requested skills not found in {skills_path}: {sorted(missing)}"
-                    )
-
-                # Create executor for running skill scripts.
-                # Always use a ManagedSandbox proxy so that if the sandbox
-                # manager is reconfigured later (e.g. local-eval → local-jupyter),
-                # the executor automatically uses the new sandbox.
-                if shared_sandbox is not None:
-                    executor = SandboxExecutor(shared_sandbox)
-                    logger.info("Using shared managed sandbox for skills executor")
-                else:
-                    # Use CodeSandboxManager for skills-only sandbox as well
-                    from .services.code_sandbox_manager import get_code_sandbox_manager
-
-                    sandbox_manager = get_code_sandbox_manager()
-
-                    # Configure if Jupyter sandbox URL is provided
-                    jupyter_sandbox_url = os.getenv("AGENT_RUNTIMES_JUPYTER_SANDBOX")
-                    if jupyter_sandbox_url:
-                        sandbox_manager.configure_from_url(jupyter_sandbox_url)
-                    else:
-                        sandbox_manager.configure(variant="local-eval")
-
-                    skills_sandbox = sandbox_manager.get_managed_sandbox()
-                    executor = SandboxExecutor(skills_sandbox)
-
-                skills_toolset = AgentSkillsToolset(
-                    skills=selected_skills,
-                    executor=executor,
-                )
-                non_mcp_toolsets.append(skills_toolset)
-                logger.info(
-                    f"Added AgentSkillsToolset with {len(selected_skills)} skills for agent {agent_id}"
-                )
-            else:
-                logger.warning("agent-skills pydantic-ai integration not available")
-        except ImportError as e:
-            logger.warning(f"agent-skills package not installed, skills disabled: {e}")
+        skills_toolset = create_skills_toolset(
+            skills=list(skills),
+            skills_path=skills_path,
+            shared_sandbox=shared_sandbox,
+        )
+        if skills_toolset:
+            non_mcp_toolsets.append(skills_toolset)
+            logger.info(f"Added AgentSkillsToolset for agent {agent_id}")
 
     # Add codemode toolset if enabled
     codemode_toolset = None
     if enable_codemode:
-        try:
-            from agent_codemode import (
-                PYDANTIC_AI_AVAILABLE as CODEMODE_AVAILABLE,
-            )
-            from agent_codemode import (
-                CodeModeConfig,
-                CodemodeToolset,
-                MCPServerConfig,
-                ToolRegistry,
-            )
+        # Use AGENT_RUNTIMES_WORKSPACE_ROOT if set, otherwise default to repo root
+        workspace_env = os.getenv("AGENT_RUNTIMES_WORKSPACE_ROOT")
+        if workspace_env:
+            workspace_path = str(Path(workspace_env).resolve())
+        else:
+            repo_root = Path(__file__).resolve().parents[1]
+            workspace_path = str((repo_root / "workspace").resolve())
 
-            if CODEMODE_AVAILABLE:
-                # Build registry with all MCP servers
-                registry = ToolRegistry()
+        # Use AGENT_RUNTIMES_GENERATED_FOLDER if set, otherwise default to generated/
+        generated_env = os.getenv("AGENT_RUNTIMES_GENERATED_CODE_FOLDER")
+        if generated_env:
+            generated_path = str(Path(generated_env).resolve())
+        else:
+            repo_root = Path(__file__).resolve().parents[1]
+            generated_path = str((repo_root / "generated").resolve())
 
-                for mcp_server in all_mcp_servers:
-                    if not mcp_server.enabled:
-                        continue
+        # Use AGENT_RUNTIMES_SKILLS_FOLDER if set, otherwise repo-local skills/
+        skills_folder_env = os.getenv("AGENT_RUNTIMES_SKILLS_FOLDER")
+        if skills_folder_env:
+            skills_path = str(Path(skills_folder_env).resolve())
+        else:
+            repo_root = Path(__file__).resolve().parents[1]
+            skills_path = str((repo_root / "skills").resolve())
 
-                    # Normalize server name to valid Python identifier
-                    normalized_name = "".join(
-                        c if c.isalnum() or c == "_" else "_" for c in mcp_server.id
-                    )
+        # Get MCP proxy URL from environment or sandbox manager
+        mcp_proxy_url = os.getenv("AGENT_RUNTIMES_MCP_PROXY_URL")
+        if not mcp_proxy_url and shared_sandbox is not None:
+            # If sandbox manager has a proxy URL configured, use it
+            try:
+                from .services.code_sandbox_manager import get_code_sandbox_manager
 
-                    # Pass through ALL environment variables from mcp_server config
-                    # This includes both required_env_vars and any custom env from config
-                    server_env: dict[str, str] = {}
+                manager_status = get_code_sandbox_manager().get_status()
+                mcp_proxy_url = manager_status.get("mcp_proxy_url")
+            except Exception:
+                pass
 
-                    # Add required env vars
-                    for env_key in mcp_server.required_env_vars:
-                        env_val = os.getenv(env_key)
-                        if env_val:
-                            server_env[env_key] = env_val
-
-                    # Add any custom env from mcp_server.env (with expansion)
-                    if mcp_server.env:
-                        for env_key, env_value in mcp_server.env.items():
-                            # Expand ${VAR} syntax
-                            if isinstance(env_value, str) and "${" in env_value:
-                                import re
-
-                                pattern = r"\$\{([^}]+)\}"
-
-                                def replace(match: re.Match[str]) -> str:
-                                    var_name = match.group(1)
-                                    return os.environ.get(var_name, "")
-
-                                expanded_value = re.sub(pattern, replace, env_value)
-                                server_env[env_key] = expanded_value
-                            else:
-                                server_env[env_key] = env_value
-
-                    registry.add_server(
-                        MCPServerConfig(
-                            name=normalized_name,
-                            url=mcp_server.url
-                            if mcp_server.transport == "http"
-                            else "",
-                            command=mcp_server.command or "",
-                            args=mcp_server.args or [],
-                            env=server_env,
-                            enabled=mcp_server.enabled,
-                        )
-                    )
-                    logger.info(
-                        f"Added MCP server to codemode registry: {normalized_name}"
-                    )
-
-                # Configure paths for codemode
-                # Use CLI/env configured folders if provided, otherwise use defaults
-                repo_root = Path(__file__).resolve().parents[1]
-                generated_folder = os.getenv("AGENT_RUNTIMES_GENERATED_CODE_FOLDER")
-                skills_folder_path = os.getenv("AGENT_RUNTIMES_SKILLS_FOLDER")
-
-                # Get MCP proxy URL from sandbox manager or environment
-                # This enables the two-container architecture where Jupyter kernel
-                # calls tools via HTTP to the agent-runtimes container
-                mcp_proxy_url = os.getenv("AGENT_RUNTIMES_MCP_PROXY_URL")
-                if not mcp_proxy_url and shared_sandbox is not None:
-                    # If sandbox manager has a proxy URL configured, use it
-                    try:
-                        from .services.code_sandbox_manager import (
-                            get_code_sandbox_manager,
-                        )
-
-                        manager_status = get_code_sandbox_manager().get_status()
-                        mcp_proxy_url = manager_status.get("mcp_proxy_url")
-                    except Exception:
-                        pass
-
-                # For Jupyter sandboxes, always use HTTP proxy if not already set
-                # This ensures local Jupyter examples also use the HTTP proxy pattern
-                if not mcp_proxy_url and shared_sandbox is not None:
-                    # Check if it's a Jupyter sandbox
-                    if hasattr(shared_sandbox, "_server_url"):
-                        # Default to local agent-runtimes proxy URL
-                        mcp_proxy_url = "http://localhost:8765/api/v1/mcp/proxy"
-                        logger.info(
-                            f"Using default MCP proxy URL for Jupyter sandbox: {mcp_proxy_url}"
-                        )
-
-                codemode_config = CodeModeConfig(
-                    workspace_path=str((repo_root / "workspace").resolve()),
-                    generated_path=generated_folder
-                    or str((repo_root / "generated").resolve()),
-                    skills_path=skills_folder_path
-                    or str((repo_root / "skills").resolve()),
-                    allow_direct_tool_calls=False,
-                    **(
-                        {}
-                        if mcp_proxy_url is None
-                        else {"mcp_proxy_url": mcp_proxy_url}
-                    ),
-                )
-
+        # For Jupyter sandboxes, always use HTTP proxy if not already set
+        if not mcp_proxy_url and shared_sandbox is not None:
+            if hasattr(shared_sandbox, "_server_url"):
+                mcp_proxy_url = "http://localhost:8765/api/v1/mcp/proxy"
                 logger.info(
-                    f"Codemode config: generated_path={codemode_config.generated_path}, skills_path={codemode_config.skills_path}, mcp_proxy_url={getattr(codemode_config, 'mcp_proxy_url', None)}"
+                    f"Using default MCP proxy URL for Jupyter sandbox: {mcp_proxy_url}"
                 )
 
-                codemode_toolset = CodemodeToolset(
-                    registry=registry,
-                    config=codemode_config,
-                    sandbox=shared_sandbox,
-                    allow_discovery_tools=True,
-                )
+        codemode_toolset = create_codemode_toolset(
+            mcp_servers=all_mcp_servers,
+            workspace_path=workspace_path,
+            generated_path=generated_path,
+            skills_path=skills_path,
+            allow_direct_tool_calls=False,
+            shared_sandbox=shared_sandbox,
+            mcp_proxy_url=mcp_proxy_url,
+            enable_discovery_tools=True,
+        )
 
-                # Initialize the toolset
-                logger.info(f"Starting codemode toolset for agent {agent_id}...")
-                await codemode_toolset.start()
-
-                # Log discovered tools
-                if codemode_toolset.registry:
-                    discovered_tools = codemode_toolset.registry.list_tools(
-                        include_deferred=True
-                    )
-                    tool_names = [t.name for t in discovered_tools]
-                    logger.info(
-                        f"Codemode discovered {len(tool_names)} tools: {tool_names}"
-                    )
-
-                non_mcp_toolsets.append(codemode_toolset)
-                logger.info(
-                    f"Added and initialized CodemodeToolset for agent {agent_id}"
-                )
-            else:
-                logger.warning("agent-codemode pydantic-ai integration not available")
-        except ImportError as e:
-            logger.warning(
-                f"agent-codemode package not installed, codemode disabled: {e}"
-            )
+        if codemode_toolset:
+            await initialize_codemode_toolset(codemode_toolset)
+            non_mcp_toolsets.append(codemode_toolset)
+            logger.info(f"Added and initialized CodemodeToolset for agent {agent_id}")
 
     # Build selected MCP servers list for the adapter
     # When codemode is enabled, MCP servers are accessed via CodemodeToolset registry
@@ -420,8 +256,8 @@ async def _create_and_register_cli_agent(
         or agent_spec.description
         or "You are a helpful AI assistant."
     )
-    if enable_codemode and agent_spec.system_prompt_codemode:
-        system_prompt = base_prompt + "\n\n" + agent_spec.system_prompt_codemode
+    if enable_codemode and agent_spec.system_prompt_codemode_addons:
+        system_prompt = base_prompt + "\n\n" + agent_spec.system_prompt_codemode_addons
     else:
         system_prompt = base_prompt
 
@@ -490,13 +326,7 @@ async def _create_and_register_cli_agent(
 
                     # Get env vars from environment
                     server_env: dict[str, str] = {}
-                    for env_key in [
-                        "TAVILY_API_KEY",
-                        "KAGGLE_KEY",
-                        "KAGGLE_USERNAME",
-                        "GITHUB_TOKEN",
-                        "GITHUB_PERSONAL_ACCESS_TOKEN",
-                    ]:
+                    for env_key in server.required_env_vars:
                         env_val = os.getenv(env_key)
                         if env_val:
                             server_env[env_key] = env_val

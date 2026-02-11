@@ -88,14 +88,16 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         else:
             env_formatted = None
 
-        # Format required env vars
-        required_env = spec.get("required_env_vars", [])
-        if required_env:
-            required_env_formatted = (
-                "[" + ", ".join(f'"{v}"' for v in required_env) + "]"
-            )
+        # Format envvars
+        envvars = spec.get("envvars", [])
+        if envvars:
+            envvars_formatted = "[" + ", ".join(f'"{v}"' for v in envvars) + "]"
         else:
-            required_env_formatted = "[]"
+            envvars_formatted = "[]"
+
+        # Format optional fields
+        icon = f'"{spec.get("icon")}"' if spec.get("icon") else "None"
+        emoji = f'"{spec.get("emoji")}"' if spec.get("emoji") else "None"
 
         lines.extend(
             [
@@ -103,6 +105,8 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
                 f'    id="{server_id}",',
                 f'    name="{spec["name"]}",',
                 f'    description="{spec["description"]}",',
+                f"    icon={icon},",
+                f"    emoji={emoji},",
                 f'    command="{spec["command"]}",',
                 f"    args={args_formatted},",
                 f'    transport="{spec.get("transport", "stdio")}",',
@@ -117,7 +121,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
 
         lines.extend(
             [
-                f"    required_env_vars={required_env_formatted},",
+                f"    required_env_vars={envvars_formatted},",
                 ")",
                 "",
             ]
@@ -230,20 +234,28 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
         args_list = spec.get("args", [])
         args_formatted = "[" + ", ".join(f"'{arg}'" for arg in args_list) + "]"
 
-        # Format required env vars
-        required_env = spec.get("required_env_vars", [])
-        if required_env:
-            required_env_formatted = (
-                "[" + ", ".join(f"'{v}'" for v in required_env) + "]"
-            )
+        # Format envvars
+        envvars = spec.get("envvars", [])
+        if envvars:
+            envvars_formatted = "[" + ", ".join(f"'{v}'" for v in envvars) + "]"
         else:
-            required_env_formatted = "[]"
+            envvars_formatted = "[]"
+
+        # Format optional fields
+        icon = f"'{spec.get('icon')}'" if spec.get("icon") else "undefined"
+        emoji = f"'{spec.get('emoji')}'" if spec.get("emoji") else "undefined"
+
+        # Escape description for TypeScript
+        description = spec.get("description", "").replace("'", "\\'")
 
         lines.extend(
             [
                 f"export const {const_name}: MCPServer = {{",
                 f"  id: '{server_id}',",
                 f"  name: '{spec['name']}',",
+                f"  description: '{description}',",
+                f"  icon: {icon},",
+                f"  emoji: {emoji},",
                 f"  url: '',",
                 f"  command: '{spec['command']}',",
                 f"  args: {args_formatted},",
@@ -251,7 +263,7 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
                 f"  enabled: {str(spec.get('enabled', True)).lower()},",
                 "  isAvailable: false,",
                 "  tools: [],",
-                f"  requiredEnvVars: {required_env_formatted},",
+                f"  requiredEnvVars: {envvars_formatted},",
                 "};",
                 "",
             ]

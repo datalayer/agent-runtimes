@@ -39,6 +39,8 @@ export interface MCPServer {
   id: string;
   /** Display name for the server */
   name: string;
+  /** Server description */
+  description?: string;
   /** Server URL (for HTTP-based servers) */
   url: string;
   /** Whether the server is enabled */
@@ -55,6 +57,10 @@ export interface MCPServer {
   transport: 'stdio' | 'http';
   /** Environment variables required by this server (e.g., API keys) */
   requiredEnvVars?: string[];
+  /** Icon identifier for the server */
+  icon?: string;
+  /** Emoji identifier for the server */
+  emoji?: string;
 }
 
 // ============================================================================
@@ -113,8 +119,8 @@ export interface AgentSpec {
   description: string;
   /** System prompt for the agent */
   systemPrompt?: string;
-  /** System prompt when codemode is enabled */
-  systemPromptCodemode?: string;
+  /** System prompt addons when codemode is enabled */
+  systemPromptCodemodeAddons?: string;
   /** Tags for categorization */
   tags: string[];
   /** Whether the agent is enabled */
@@ -127,6 +133,8 @@ export interface AgentSpec {
   environmentName: string;
   /** Icon identifier or URL for the agent */
   icon?: string;
+  /** Emoji identifier for the agent */
+  emoji?: string;
   /** Theme color for the agent (hex code) */
   color?: string;
   /** Chat suggestions to show users what this agent can do */

@@ -3,6 +3,9 @@ agent_runtimes/labextension
 docs/docs/python_api
 docs/docs/typescript_api
 
+# Cloned agentspecs repository
+agentspecs/
+
 #
 yarn.lock
 *.bundle.*

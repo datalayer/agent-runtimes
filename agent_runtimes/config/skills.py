@@ -22,10 +22,12 @@ class SkillSpec:
     name: str
     description: str
     module: str
-    required_env_vars: List[str]
+    envvars: List[str]
     optional_env_vars: List[str]
     dependencies: List[str]
     tags: List[str]
+    icon: str | None
+    emoji: str | None
     enabled: bool
 
 
@@ -38,10 +40,12 @@ CRAWL_SKILL_SPEC = SkillSpec(
     name="Web Crawl Skill",
     description="Web crawling and content extraction capabilities",
     module="agent_skills.crawl",
-    required_env_vars=["TAVILY_API_KEY"],
+    envvars=["TAVILY_API_KEY"],
     optional_env_vars=[],
     dependencies=["requests>=2.31.0", "beautifulsoup4>=4.12.0"],
     tags=["web", "crawl", "scraping"],
+    icon="globe",
+    emoji="🌐",
     enabled=True,
 )
 
@@ -50,10 +54,12 @@ GITHUB_SKILL_SPEC = SkillSpec(
     name="GitHub Skill",
     description="GitHub repository management and code operations",
     module="agent_skills.github",
-    required_env_vars=["GITHUB_TOKEN"],
+    envvars=["GITHUB_TOKEN"],
     optional_env_vars=[],
     dependencies=["PyGithub>=2.1.0"],
     tags=["github", "git", "code"],
+    icon="mark-github",
+    emoji="🐙",
     enabled=True,
 )
 
@@ -62,10 +68,12 @@ PDF_SKILL_SPEC = SkillSpec(
     name="PDF Processing Skill",
     description="PDF document reading, parsing, and extraction",
     module="agent_skills.pdf",
-    required_env_vars=[],
+    envvars=[],
     optional_env_vars=[],
     dependencies=["PyPDF2>=3.0.0", "pdfplumber>=0.10.0"],
     tags=["pdf", "documents", "extraction"],
+    icon="file",
+    emoji="📄",
     enabled=True,
 )
 

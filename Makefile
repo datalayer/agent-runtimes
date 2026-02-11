@@ -99,26 +99,37 @@ agents: # agents
 list-specs: # list specs
 	agent-runtimes list-specs
 
-specs: ## generate Python and TypeScript code from YAML specifications (agents, MCP servers, skills)
+specs: ## generate Python and TypeScript code from YAML specifications (agents, MCP servers, skills, envvars)
+	@echo "Cloning agentspecs repository..."
+	@if [ ! -d "agentspecs" ]; then \
+		git clone https://github.com/datalayer/agentspecs.git agentspecs; \
+	else \
+		cd agentspecs && git pull origin main; \
+	fi
 	@echo "Generating agent specifications..."
 	python scripts/codegen/generate_agents.py \
-	  --specs-dir specs/agents \
+	  --specs-dir agentspecs/agentspecs/agents \
 	  --python-output agent_runtimes/config/agents.py \
 	  --typescript-output src/config/agents.ts
 	@echo "Generating MCP server specifications..."
 	python scripts/codegen/generate_mcp_servers.py \
-	  --specs-dir specs/mcp-servers \
+	  --specs-dir agentspecs/agentspecs/mcp-servers \
 	  --python-output agent_runtimes/mcp/catalog_mcp_servers.py \
 	  --typescript-output src/config/mcpServers.ts
 	@echo "Generating skill specifications..."
 	python scripts/codegen/generate_skills.py \
-	  --specs-dir specs/skills \
+	  --specs-dir agentspecs/agentspecs/skills \
 	  --python-output agent_runtimes/config/skills.py \
 	  --typescript-output src/config/skills.ts
+	@echo "Generating environment variable specifications..."
+	python scripts/codegen/generate_envvars.py \
+	  --specs-dir agentspecs/agentspecs/envvars \
+	  --python-output agent_runtimes/config/envvars.py \
+	  --typescript-output src/config/envvars.ts
 	@echo "✓ All specifications generated successfully"
 	@echo "Formatting generated files with ruff..."
-	ruff check --select I --fix agent_runtimes/config/agents.py agent_runtimes/config/skills.py agent_runtimes/mcp/catalog_mcp_servers.py agent_runtimes/mcp/__init__.py
-	ruff format agent_runtimes/config/agents.py agent_runtimes/config/skills.py agent_runtimes/mcp/catalog_mcp_servers.py agent_runtimes/mcp/__init__.py
+	ruff check --select I --fix agent_runtimes/config/agents.py agent_runtimes/config/skills.py agent_runtimes/config/envvars.py agent_runtimes/mcp/catalog_mcp_servers.py agent_runtimes/mcp/__init__.py
+	ruff format agent_runtimes/config/agents.py agent_runtimes/config/skills.py agent_runtimes/config/envvars.py agent_runtimes/mcp/catalog_mcp_servers.py agent_runtimes/mcp/__init__.py
 	agent-runtimes mcp-servers-catalog
 	agent-runtimes mcp-servers-config
 

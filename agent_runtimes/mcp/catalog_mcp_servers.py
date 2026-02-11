@@ -24,6 +24,8 @@ ALPHAVANTAGE_MCP_SERVER = MCPServer(
     id="alphavantage",
     name="Alpha Vantage",
     description="Financial market data and stock information",
+    icon="graph",
+    emoji="💹",
     command="uvx",
     args=[
         "av-mcp==0.2.1",
@@ -42,6 +44,8 @@ CHART_MCP_SERVER = MCPServer(
     id="chart",
     name="Chart Generator",
     description="Generate charts and visualizations",
+    icon="graph",
+    emoji="📊",
     command="npx",
     args=[
         "-y",
@@ -57,6 +61,8 @@ FILESYSTEM_MCP_SERVER = MCPServer(
     id="filesystem",
     name="Filesystem",
     description="Local filesystem read/write operations",
+    icon="file-directory",
+    emoji="📁",
     command="npx",
     args=[
         "-y",
@@ -73,28 +79,32 @@ GITHUB_MCP_SERVER = MCPServer(
     id="github",
     name="GitHub",
     description="GitHub repository operations (issues, PRs, code search)",
+    icon="mark-github",
+    emoji="🐙 - git - collaboration",
     command="docker",
     args=[
         "run",
         "-i",
         "--rm",
         "-e",
-        "GITHUB_PERSONAL_ACCESS_TOKEN",
+        "GITHUB_TOKEN",
         "ghcr.io/github/github-mcp-server",
     ],
     transport="stdio",
     enabled=True,
     tools=[],
     env={
-        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PERSONAL_ACCESS_TOKEN}",
+        "GITHUB_TOKEN": "${GITHUB_TOKEN}",
     },
-    required_env_vars=["GITHUB_PERSONAL_ACCESS_TOKEN"],
+    required_env_vars=["GITHUB_TOKEN"],
 )
 
 GOOGLE_WORKSPACE_MCP_SERVER = MCPServer(
     id="google-workspace",
     name="Google Workspace",
     description="Google Drive, Gmail, Calendar, and Docs integration",
+    icon="mail",
+    emoji="📧",
     command="uvx",
     args=[
         "workspace-mcp",
@@ -114,6 +124,8 @@ KAGGLE_MCP_SERVER = MCPServer(
     id="kaggle",
     name="Kaggle",
     description="Kaggle datasets, models, competitions, and notebooks access",
+    icon="database",
+    emoji="📊",
     command="npx",
     args=[
         "-y",
@@ -132,6 +144,8 @@ SLACK_MCP_SERVER = MCPServer(
     id="slack",
     name="Slack",
     description="Slack messaging and channel operations",
+    icon="comment-discussion",
+    emoji="💬",
     command="npx",
     args=[
         "-y",
@@ -152,6 +166,8 @@ TAVILY_MCP_SERVER = MCPServer(
     id="tavily",
     name="Tavily Search",
     description="Web search and research capabilities via Tavily API",
+    icon="search",
+    emoji="🔍",
     command="npx",
     args=[
         "-y",

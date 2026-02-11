@@ -10,9 +10,11 @@ from .types import (
     AIModel,
     BuiltinTool,
     ChatRequest,
+    EnvvarSpec,
     FrontendConfig,
     MCPServer,
     MCPServerTool,
+    SkillSpec,
 )
 
 __all__ = [
@@ -22,7 +24,9 @@ __all__ = [
     "AIModel",
     "BuiltinTool",
     "ChatRequest",
+    "EnvvarSpec",
     "FrontendConfig",
     "MCPServer",
     "MCPServerTool",
+    "SkillSpec",
 ]
