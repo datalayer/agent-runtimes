@@ -76,7 +76,9 @@ export const MainContent: React.FC<MainContentProps> = ({
       setLexicalContent(undefined);
     } else if (notebookFile) {
       // Dynamically import the notebook based on the file name
-      import(/* @vite-ignore */ `../stores/agents/${notebookFile}`)
+      import(
+        /* webpackIgnore: true */ /* @vite-ignore */ `../stores/agents/${notebookFile}`
+      )
         .then(module => {
           setNotebookData(module.default);
         })
@@ -92,7 +94,9 @@ export const MainContent: React.FC<MainContentProps> = ({
   React.useEffect(() => {
     if (lexicalFile && !isNewAgent) {
       // Dynamically import the lexical file based on the file name
-      import(/* @vite-ignore */ `../stores/agents/${lexicalFile}`)
+      import(
+        /* webpackIgnore: true */ /* @vite-ignore */ `../stores/agents/${lexicalFile}`
+      )
         .then(module => {
           // Convert the JSON to a string if needed
           setLexicalContent(
