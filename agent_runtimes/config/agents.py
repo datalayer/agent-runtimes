@@ -102,7 +102,11 @@ CODEMODE_PAPER_DATA_ACQUISITION_AGENT_SPEC = AgentSpec(
     description="Acquires and manages data from various sources including Kaggle datasets and local filesystem operations.",
     tags=["data", "acquisition", "kaggle", "filesystem"],
     enabled=True,
-    mcp_servers=[MCP_SERVER_CATALOG["kaggle"], MCP_SERVER_CATALOG["filesystem"], MCP_SERVER_CATALOG["tavily"]],
+    mcp_servers=[
+        MCP_SERVER_CATALOG["kaggle"],
+        MCP_SERVER_CATALOG["filesystem"],
+        MCP_SERVER_CATALOG["tavily"],
+    ],
     skills=["github"],
     environment_name="ai-agents-env",
     icon="database",
@@ -326,7 +330,11 @@ DATALAYER_AI_DATA_ACQUISITION_AGENT_SPEC = AgentSpec(
     description="Acquires and manages data from various sources including Kaggle datasets and local filesystem operations.",
     tags=["data", "acquisition", "kaggle", "filesystem"],
     enabled=True,
-    mcp_servers=[MCP_SERVER_CATALOG["kaggle"], MCP_SERVER_CATALOG["filesystem"], MCP_SERVER_CATALOG["tavily"]],
+    mcp_servers=[
+        MCP_SERVER_CATALOG["kaggle"],
+        MCP_SERVER_CATALOG["filesystem"],
+        MCP_SERVER_CATALOG["tavily"],
+    ],
     skills=["github"],
     environment_name="ai-agents-env",
     icon="database",
@@ -486,21 +494,18 @@ DATALAYER_AI_SIMPLE_AGENT_SPEC = AgentSpec(
 AGENT_SPECS: Dict[str, AgentSpec] = {
     # Code Ai
     "code-ai/simple": CODE_AI_SIMPLE_AGENT_SPEC,
-
     # Codemode Paper
     "codemode-paper/crawler": CODEMODE_PAPER_CRAWLER_AGENT_SPEC,
     "codemode-paper/data-acquisition": CODEMODE_PAPER_DATA_ACQUISITION_AGENT_SPEC,
     "codemode-paper/financial-viz": CODEMODE_PAPER_FINANCIAL_VIZ_AGENT_SPEC,
     "codemode-paper/github-agent": CODEMODE_PAPER_GITHUB_AGENT_SPEC,
     "codemode-paper/information-routing": CODEMODE_PAPER_INFORMATION_ROUTING_AGENT_SPEC,
-
     # Datalayer Ai
     "datalayer-ai/crawler": DATALAYER_AI_CRAWLER_AGENT_SPEC,
     "datalayer-ai/data-acquisition": DATALAYER_AI_DATA_ACQUISITION_AGENT_SPEC,
     "datalayer-ai/financial": DATALAYER_AI_FINANCIAL_AGENT_SPEC,
     "datalayer-ai/github-agent": DATALAYER_AI_GITHUB_AGENT_SPEC,
     "datalayer-ai/simple": DATALAYER_AI_SIMPLE_AGENT_SPEC,
-
 }
 
 

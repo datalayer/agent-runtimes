@@ -12,10 +12,10 @@ DO NOT EDIT MANUALLY - run 'make specs' to regenerate.
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 
-
 # ============================================================================
 # Environment Variable Specification
 # ============================================================================
+
 
 @dataclass
 class EnvvarSpec:
@@ -69,7 +69,14 @@ GOOGLE_OAUTH_CLIENT_SECRET_SPEC = EnvvarSpec(
     name="Google OAuth Client Secret",
     description="OAuth 2.0 client secret for Google Workspace authentication. Used in conjunction with client ID for secure API access to Google services.",
     registrationUrl="https://console.cloud.google.com/apis/credentials",
-    tags=["authentication", "oauth", "google", "workspace", "client-secret", "security"],
+    tags=[
+        "authentication",
+        "oauth",
+        "google",
+        "workspace",
+        "client-secret",
+        "security",
+    ],
     icon="lock",
     emoji="🔒",
 )
