@@ -71,9 +71,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
                     arg_items.append("        tempfile.gettempdir()")
                 else:
                     arg_items.append(f'        "{arg}"')
-            args_formatted = (
-                "[\n" + ",\n".join(arg_items) + ",\n    ]"
-            )
+            args_formatted = "[\n" + ",\n".join(arg_items) + ",\n    ]"
         else:
             args_formatted = "[]"
 
@@ -235,7 +233,9 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
         # Format required env vars
         required_env = spec.get("required_env_vars", [])
         if required_env:
-            required_env_formatted = "[" + ", ".join(f"'{v}'" for v in required_env) + "]"
+            required_env_formatted = (
+                "[" + ", ".join(f"'{v}'" for v in required_env) + "]"
+            )
         else:
             required_env_formatted = "[]"
 

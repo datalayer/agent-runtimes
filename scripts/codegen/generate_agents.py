@@ -171,7 +171,9 @@ def list_agent_specs() -> list[AgentSpec]:
     return code
 
 
-def generate_typescript_code(specs: List[Dict[str, Any]], mcp_specs_dir: str, skills_specs_dir: str) -> str:
+def generate_typescript_code(
+    specs: List[Dict[str, Any]], mcp_specs_dir: str, skills_specs_dir: str
+) -> str:
     """Generate TypeScript code from agent specifications."""
     # Load available MCP servers from specs
     import glob
@@ -185,18 +187,8 @@ def generate_typescript_code(specs: List[Dict[str, Any]], mcp_specs_dir: str, sk
 
     # Load available skills from specs
     skill_files = glob.glob(os.path.join(skills_specs_dir, "*.yaml"))
-    skill_ids = [
-        os.path.basename(f).replace(".yaml", "") for f in skill_files
-    ]
+    skill_ids = [os.path.basename(f).replace(".yaml", "") for f in skill_files]
     skill_ids.sort()
-
-    # Load skill YAML data (needed for requiredEnvVars)
-    skill_specs_data: Dict[str, Dict[str, Any]] = {}
-    for skill_file in skill_files:
-        with open(skill_file, "r") as f:
-            skill_data = yaml.safe_load(f)
-            if skill_data:
-                skill_specs_data[skill_data["id"]] = skill_data
 
     # Generate import names and map entries dynamically
     mcp_imports = []
@@ -446,7 +438,9 @@ def main():
     # Get MCP and skills specs directories (siblings to agents directory)
     mcp_specs_dir = args.specs_dir.parent / "mcp-servers"
     skills_specs_dir = args.specs_dir.parent / "skills"
-    typescript_code = generate_typescript_code(specs, str(mcp_specs_dir), str(skills_specs_dir))
+    typescript_code = generate_typescript_code(
+        specs, str(mcp_specs_dir), str(skills_specs_dir)
+    )
     args.typescript_output.parent.mkdir(parents=True, exist_ok=True)
     with open(args.typescript_output, "w") as f:
         f.write(typescript_code)
