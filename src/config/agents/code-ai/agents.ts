@@ -11,7 +11,7 @@
  * Generated from YAML specifications in specs/agents/
  */
 
-import type { AgentSpec } from '../types';
+import type { AgentSpec } from '../../types';
 import {
   ALPHAVANTAGE_MCP_SERVER,
   CHART_MCP_SERVER,
@@ -21,9 +21,13 @@ import {
   KAGGLE_MCP_SERVER,
   SLACK_MCP_SERVER,
   TAVILY_MCP_SERVER,
-} from './mcpServers';
-import { CRAWL_SKILL_SPEC, GITHUB_SKILL_SPEC, PDF_SKILL_SPEC } from './skills';
-import type { SkillSpec } from './skills';
+} from '../../mcpServers';
+import {
+  CRAWL_SKILL_SPEC,
+  GITHUB_SKILL_SPEC,
+  PDF_SKILL_SPEC,
+} from '../../skills';
+import type { SkillSpec } from '../../skills';
 
 // ============================================================================
 // MCP Server Lookup

@@ -284,16 +284,16 @@ def generate_typescript_code(
  * Generated from YAML specifications in specs/agents/
  */
 
-import type { AgentSpec } from '../types';
+import type { AgentSpec } from '../../types';
 import {
 """
     code += "  " + ",\n  ".join(mcp_imports) + ",\n"
-    code += """} from './mcpServers';
+    code += """} from '../../mcpServers';
 import {
 """
     code += "  " + ",\n  ".join(skill_imports) + ",\n"
-    code += """} from './skills';
-import type { SkillSpec } from './skills';
+    code += """} from '../../skills';
+import type { SkillSpec } from '../../skills';
 
 // ============================================================================
 // MCP Server Lookup
@@ -690,7 +690,7 @@ __all__ = ["AGENT_SPECS", "get_agent_spec", "list_agent_specs"]
 
 /**
  * Agent Library - Subfolder Organization.
- * 
+ *
  * THIS FILE IS AUTO-GENERATED. DO NOT EDIT MANUALLY.
  */
 
