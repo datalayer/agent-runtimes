@@ -31,6 +31,8 @@ import {
   type AgentLibrary,
   type McpServerSelection,
 } from '../components';
+import { isSpecSelection, getSpecId } from '../components/AgentConfiguration';
+import type { LibraryAgentSpec } from '../components/AgentConfiguration';
 
 // Create a query client for React Query
 const queryClient = new QueryClient({
@@ -589,13 +591,47 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
   // Track previous MCP servers to detect changes
   const prevMcpServersRef = useRef<McpServerSelection[]>(selectedMcpServers);
 
-  const handleAgentSelect = (agentId: string) => {
+  // Cache for library specs (fetched on-demand, outside QueryClientProvider)
+  const librarySpecsRef = useRef<LibraryAgentSpec[] | null>(null);
+
+  const fetchLibrarySpecs = useCallback(async (): Promise<
+    LibraryAgentSpec[]
+  > => {
+    if (librarySpecsRef.current) return librarySpecsRef.current;
+    try {
+      const response = await fetch(`${baseUrl}/api/v1/agents/library`);
+      if (!response.ok) return [];
+      const data = await response.json();
+      librarySpecsRef.current = data;
+      return data;
+    } catch {
+      return [];
+    }
+  }, [baseUrl]);
+
+  const handleAgentSelect = async (agentId: string) => {
     setSelectedAgentId(agentId);
     setCreateError(null);
     if (agentId === 'new-agent') {
       // Reset to defaults for new agent
       setAgentName(DEFAULT_AGENT_ID);
       setTransport('ag-ui');
+    } else if (isSpecSelection(agentId)) {
+      // Populate form fields from the selected library spec
+      const specId = getSpecId(agentId);
+      const specs = await fetchLibrarySpecs();
+      const spec = specs.find(s => s.id === specId);
+      if (spec) {
+        setAgentName(spec.id);
+        // Keep current transport, model, agentLibrary - user can override
+        if (spec.skills.length > 0) {
+          setSelectedSkills(spec.skills);
+          setEnableCodemode(true);
+        }
+        if (spec.systemPromptCodemodeAddons) {
+          setEnableCodemode(true);
+        }
+      }
     } else {
       const agent = agents.find(a => a.id === agentId);
       if (agent) {
@@ -613,6 +649,11 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
     setCreateError(null);
 
     try {
+      // Resolve spec ID if creating from a library spec
+      const specId = isSpecSelection(selectedAgentId)
+        ? getSpecId(selectedAgentId)
+        : undefined;
+
       const response = await fetch(`${baseUrl}/api/v1/agents`, {
         method: 'POST',
         headers: {
@@ -632,6 +673,7 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
           selected_mcp_servers: selectedMcpServers,
           skills: selectedSkills,
           jupyter_sandbox: useJupyterSandbox ? jupyterSandboxUrl : undefined,
+          ...(specId ? { agent_spec_id: specId } : {}),
         }),
       });
 
@@ -673,6 +715,7 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
     selectedSkills,
     useJupyterSandbox,
     jupyterSandboxUrl,
+    selectedAgentId,
   ]);
 
   /**
@@ -708,9 +751,13 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
     prevMcpServersRef.current = selectedMcpServers;
   }, [selectedMcpServers]);
 
+  // True when creating a new agent (blank or from a library spec)
+  const isNewMode =
+    selectedAgentId === 'new-agent' || isSpecSelection(selectedAgentId);
+
   const handleConnect = async () => {
-    // For existing agents (not new-agent), ensure transport and agentName are set
-    if (selectedAgentId !== 'new-agent') {
+    // For existing agents (not new-agent or spec), ensure transport and agentName are set
+    if (!isNewMode) {
       const agent = agents.find(a => a.id === selectedAgentId);
       if (agent) {
         setTransport(agent.transport);
@@ -751,7 +798,10 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
 
   const handleReset = async () => {
     // Delete the agent from the server if we created it
-    if (selectedAgentId === 'new-agent' && agentName) {
+    if (
+      (selectedAgentId === 'new-agent' || isSpecSelection(selectedAgentId)) &&
+      agentName
+    ) {
       await deleteAgentOnServer(agentName);
     }
     setIsConfigured(false);
@@ -764,17 +814,11 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
           {/* Header - empty content for new agent */}
           <Header
             activeSession={activeSession}
-            agentName={
-              selectedAgentId === 'new-agent' ? undefined : currentAgent?.name
-            }
-            agentDescription={
-              selectedAgentId === 'new-agent'
-                ? undefined
-                : currentAgent?.description
-            }
+            agentName={isNewMode ? undefined : currentAgent?.name}
+            agentDescription={isNewMode ? undefined : currentAgent?.description}
             agentStatus={currentAgent?.status}
             showContextTree={showContextTree}
-            isNewAgent={selectedAgentId === 'new-agent'}
+            isNewAgent={isNewMode}
             isConfigured={isConfigured}
             onSessionChange={setActiveSession}
             onToggleContextTree={() => setShowContextTree(!showContextTree)}
@@ -817,7 +861,7 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
                 sticky
                 width={{ min: '250px', default: '300px', max: '90px' }}
               >
-                {selectedAgentId === 'new-agent' ? (
+                {isNewMode ? (
                   <Blankslate border spacious narrow>
                     <Blankslate.Visual>
                       <AiAgentIcon colored size={48} />
@@ -869,7 +913,7 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
               richEditor={false}
               notebookFile={currentAgent?.notebookFile}
               lexicalFile={currentAgent?.lexicalFile}
-              isNewAgent={selectedAgentId === 'new-agent'}
+              isNewAgent={isNewMode}
               isConfigured={isConfigured}
               baseUrl={baseUrl}
               agentId={currentAgent?.id || agentName}

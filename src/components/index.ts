@@ -31,6 +31,8 @@ export {
   AGENT_LIBRARIES,
   TRANSPORTS,
   EXTENSIONS,
+  isSpecSelection,
+  getSpecId,
 } from './AgentConfiguration';
 export type {
   AgentLibrary,
@@ -40,6 +42,7 @@ export type {
   SkillOption,
   MCPServerConfig,
   MCPServerTool,
+  LibraryAgentSpec,
 } from './AgentConfiguration';
 export { McpServerManager } from './McpServerManager';
 export type {

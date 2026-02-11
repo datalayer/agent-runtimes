@@ -149,7 +149,7 @@ def get_vercel_adapter(agent_id: str) -> VercelAITransport | None:
     return _vercel_adapters.get(agent_id)
 
 
-@router.post("/{agent_id}")
+@router.post("/{agent_id:path}")
 async def chat(
     request: Request,
     agent_id: str,

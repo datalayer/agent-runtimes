@@ -225,7 +225,7 @@ async def list_agents() -> dict[str, Any]:
     return {"agents": [info.model_dump() for _, info in _agents.values()]}
 
 
-@router.get("/agents/{agent_id}")
+@router.get("/agents/{agent_id:path}")
 async def get_agent(agent_id: str) -> AgentInfo:
     """
     Get information about a specific agent.
@@ -325,7 +325,7 @@ async def close_session(session_id: str) -> dict[str, str]:
 
 
 # WebSocket Endpoint for ACP
-@router.websocket("/ws/{agent_id}")
+@router.websocket("/ws/{agent_id:path}")
 async def websocket_endpoint(websocket: WebSocket, agent_id: str) -> None:
     """
     WebSocket endpoint for ACP communication.

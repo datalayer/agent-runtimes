@@ -140,7 +140,7 @@ async def list_agents() -> dict[str, Any]:
     }
 
 
-@router.post("/chat/{agent_id}")
+@router.post("/chat/{agent_id:path}")
 async def chat(
     agent_id: str,
     request: MCPUIRequest,
@@ -218,7 +218,7 @@ async def chat(
         )
 
 
-@router.post("/stream/{agent_id}")
+@router.post("/stream/{agent_id:path}")
 async def stream(
     agent_id: str,
     request: MCPUIRequest,
