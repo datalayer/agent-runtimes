@@ -411,7 +411,15 @@ async def _create_and_register_cli_agent(
     model = os.environ.get(
         "AGENT_RUNTIMES_MODEL", "bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0"
     )
-    system_prompt = agent_spec.description or "You are a helpful AI assistant."
+
+    # Build the system prompt
+    # When codemode is enabled and a codemode-specific prompt exists, use it
+    # (appended to the base system prompt, same logic as routes/agents.py)
+    base_prompt = agent_spec.system_prompt or agent_spec.description or "You are a helpful AI assistant."
+    if enable_codemode and agent_spec.system_prompt_codemode:
+        system_prompt = base_prompt + "\n\n" + agent_spec.system_prompt_codemode
+    else:
+        system_prompt = base_prompt
 
     pydantic_agent = PydanticAgent(
         model,
