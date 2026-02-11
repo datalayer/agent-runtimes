@@ -284,7 +284,7 @@ def generate_typescript_code(
  * Generated from YAML specifications in specs/agents/
  */
 
-import type { AgentSpec } from '../../types';
+import type { AgentSpec } from '../../../types';
 import {
 """
     code += "  " + ",\n  ".join(mcp_imports) + ",\n"
@@ -629,7 +629,7 @@ export * from './agents';
 """)
 
         # Collect imports for main index
-        all_typescript_imports.append(f"export * from './agents/{folder}';")
+        all_typescript_imports.append(f"export * from './{folder}';")
 
     # Create main Python index file
     python_index = python_base / "__init__.py"
@@ -694,10 +694,60 @@ __all__ = ["AGENT_SPECS", "get_agent_spec", "list_agent_specs"]
  * THIS FILE IS AUTO-GENERATED. DO NOT EDIT MANUALLY.
  */
 
+import type { AgentSpec } from '../../types';
+
 """
 
-    for imp in all_typescript_imports:
-        typescript_index_content += f"{imp}\n"
+    # Import AGENT_SPECS from each subfolder
+    for folder in sorted(specs_by_folder.keys()):
+        if folder:
+            folder_const = folder.replace("-", "_").upper()
+            typescript_index_content += f"import {{ AGENT_SPECS as {folder_const}_AGENTS }} from './{folder}';\n"
+    
+    typescript_index_content += """
+// Merge all agent specs from subfolders
+export const AGENT_SPECS: Record<string, AgentSpec> = {
+"""
+    
+    for folder in sorted(specs_by_folder.keys()):
+        if folder:
+            folder_const = folder.replace("-", "_").upper()
+            typescript_index_content += f"  ...{folder_const}_AGENTS,\n"
+    
+    typescript_index_content += """};
+
+/**
+ * Get an agent specification by ID.
+ */
+export function getAgentSpecs(agentId: string): AgentSpec | undefined {
+  return AGENT_SPECS[agentId];
+}
+
+/**
+ * List all available agent specifications.
+ */
+export function listAgentSpecs(): AgentSpec[] {
+  return Object.values(AGENT_SPECS);
+}
+
+/**
+ * Collect all required environment variables for an agent spec.
+ */
+export function getAgentSpecRequiredEnvVars(spec: AgentSpec): string[] {
+  const vars = new Set<string>();
+  for (const server of spec.mcpServers) {
+    for (const v of server.requiredEnvVars ?? []) {
+      vars.add(v);
+    }
+  }
+  for (const skill of spec.skills) {
+    for (const v of skill.requiredEnvVars ?? []) {
+      vars.add(v);
+    }
+  }
+  return Array.from(vars);
+}
+"""
 
     with open(typescript_index, "w") as f:
         f.write(typescript_index_content)
