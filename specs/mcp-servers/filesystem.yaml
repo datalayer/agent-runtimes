@@ -12,7 +12,7 @@ command: npx
 args:
   - "-y"
   - "@modelcontextprotocol/server-filesystem"
-  - "/tmp"
+  - "$TMPDIR"
 
 transport: stdio
 enabled: true

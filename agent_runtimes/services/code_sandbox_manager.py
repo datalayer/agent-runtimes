@@ -216,7 +216,7 @@ class ManagedSandbox:
         context: Optional[Any] = None,
         envs: Optional[dict[str, str]] = None,
         timeout: Optional[float] = None,
-    ) -> Iterator:
+    ) -> Iterator[Any]:
         return self._sandbox().run_code_streaming(
             code, language=language, context=context, envs=envs, timeout=timeout
         )
@@ -228,7 +228,7 @@ class ManagedSandbox:
         context: Optional[Any] = None,
         envs: Optional[dict[str, str]] = None,
         timeout: Optional[float] = None,
-    ) -> AsyncIterator:
+    ) -> AsyncIterator[Any]:
         return await self._sandbox().run_code_streaming_async(
             code, language=language, context=context, envs=envs, timeout=timeout
         )

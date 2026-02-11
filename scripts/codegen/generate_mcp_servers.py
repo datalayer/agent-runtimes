@@ -46,6 +46,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         '"""',
         "",
         "import os",
+        "import tempfile",
         "from typing import Dict",
         "",
         "from agent_runtimes.types import MCPServer",
@@ -64,8 +65,14 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         # Format args properly
         args_list = spec.get("args", [])
         if args_list:
+            arg_items = []
+            for arg in args_list:
+                if arg == "$TMPDIR":
+                    arg_items.append("        tempfile.gettempdir()")
+                else:
+                    arg_items.append(f'        "{arg}"')
             args_formatted = (
-                "[\n" + ",\n".join(f'        "{arg}"' for arg in args_list) + ",\n    ]"
+                "[\n" + ",\n".join(arg_items) + ",\n    ]"
             )
         else:
             args_formatted = "[]"
@@ -304,19 +311,21 @@ def update_init_file(specs: list[dict[str, Any]], init_file: Path) -> None:
         )
         return
 
-    # Generate new import lines
-    new_imports = ["from .catalog_mcp_servers import ("]
-    for const in sorted(server_constants):
-        new_imports.append(f"    {const},")
-    new_imports.extend(
-        [
-            "    MCP_SERVER_CATALOG,",
-            "    check_env_vars_available,",
-            "    get_catalog_server,",
-            "    list_catalog_servers,",
-            ")",
-        ]
+    # Generate new import lines - all names sorted alphabetically (ruff/isort order)
+    all_names = sorted(
+        server_constants
+        + [
+            "MCP_SERVER_CATALOG",
+            "check_env_vars_available",
+            "get_catalog_server",
+            "list_catalog_servers",
+        ],
+        key=str.casefold,
     )
+    new_imports = ["from .catalog_mcp_servers import ("]
+    for name in all_names:
+        new_imports.append(f"    {name},")
+    new_imports.append(")")
 
     # Replace the import section
     new_content = (

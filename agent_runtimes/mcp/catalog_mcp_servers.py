@@ -11,6 +11,7 @@ DO NOT EDIT MANUALLY - run 'make specs' to regenerate.
 """
 
 import os
+import tempfile
 from typing import Dict
 
 from agent_runtimes.types import MCPServer
@@ -60,7 +61,7 @@ FILESYSTEM_MCP_SERVER = MCPServer(
     args=[
         "-y",
         "@modelcontextprotocol/server-filesystem",
-        "/tmp",
+        tempfile.gettempdir(),
     ],
     transport="stdio",
     enabled=True,

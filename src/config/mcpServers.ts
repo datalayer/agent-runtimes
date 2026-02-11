@@ -49,7 +49,7 @@ export const FILESYSTEM_MCP_SERVER: MCPServer = {
   name: 'Filesystem',
   url: '',
   command: 'npx',
-  args: ['-y', '@modelcontextprotocol/server-filesystem', '/tmp'],
+  args: ['-y', '@modelcontextprotocol/server-filesystem', '$TMPDIR'],
   transport: 'stdio',
   enabled: true,
   isAvailable: false,
