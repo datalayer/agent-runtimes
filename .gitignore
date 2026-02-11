@@ -5,6 +5,8 @@ docs/docs/typescript_api
 
 # Cloned agentspecs repository
 agentspecs/
+!docs/docs/agentspecs/
+!docs/docs/agentspecs/**
 
 #
 yarn.lock

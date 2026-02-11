@@ -87,6 +87,26 @@ pip install agent-runtimes
 python -m agent_runtimes
 ```
 
+## Agent Specs (agentspecs)
+
+Agent Runtimes pulls agent, MCP server, skill, and env var specs from the
+[agentspecs](https://github.com/datalayer/agentspecs) repository. The specs are
+cloned locally and used to generate the runtime catalogs.
+
+See the [Agent Specs](/agentspecs/) guide for details on cloning and generation.
+
+```bash
+# Clone or update agentspecs and regenerate catalogs
+make specs
+```
+
+This command:
+- Clones the agentspecs repository into ./agentspecs (or pulls updates)
+- Generates Python and TypeScript catalogs for agents, MCP servers, skills, and env vars
+
+If you already have agentspecs checked out elsewhere, copy or symlink it to
+./agentspecs before running make specs.
+
 Configure your model provider:
 
 ```bash

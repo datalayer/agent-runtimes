@@ -1,0 +1,47 @@
+---
+sidebar_position: 5
+title: Agent Specs
+---
+
+# Agent Specs (agentspecs)
+
+Agent Runtimes uses the [agentspecs](https://github.com/datalayer/agentspecs) repository
+as the source of truth for:
+
+- Agents
+- MCP servers
+- Skills
+- Environment variables
+
+These specs are cloned locally and then compiled into the runtime catalogs used by
+Agent Runtimes.
+
+## Clone and Generate
+
+From the repository root:
+
+```bash
+make specs
+```
+
+This command:
+- Clones the agentspecs repository into ./agentspecs (or pulls updates)
+- Generates Python and TypeScript catalogs for agents, MCP servers, skills, and env vars
+
+## Using a Local agentspecs Checkout
+
+If you already have agentspecs checked out elsewhere, copy or symlink it to
+./agentspecs before running make specs.
+
+## Where Specs Are Used
+
+The generated catalogs are written to:
+
+- agent_runtimes/config/agents.py
+- agent_runtimes/config/skills.py
+- agent_runtimes/config/envvars.py
+- agent_runtimes/mcp/catalog_mcp_servers.py
+- src/config/agents.ts
+- src/config/skills.ts
+- src/config/envvars.ts
+- src/config/mcpServers.ts
