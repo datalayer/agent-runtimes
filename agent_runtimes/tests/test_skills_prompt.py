@@ -3,18 +3,16 @@
 
 """Tests for generate_skills_prompt_section."""
 
-import pytest
-
 from agent_runtimes.services.agent_factory import generate_skills_prompt_section
 
 
 class TestGenerateSkillsPromptSection:
     """Tests for the skills system-prompt generator."""
 
-    def test_empty_metadata_returns_empty_string(self):
+    def test_empty_metadata_returns_empty_string(self) -> None:
         assert generate_skills_prompt_section([]) == ""
 
-    def test_returns_markdown_with_skills_header(self):
+    def test_returns_markdown_with_skills_header(self) -> None:
         metadata = [
             {
                 "name": "github",
@@ -28,7 +26,7 @@ class TestGenerateSkillsPromptSection:
         assert "`github`" in result
         assert "GitHub integration tools" in result
 
-    def test_includes_function_signatures_table(self):
+    def test_includes_function_signatures_table(self) -> None:
         metadata = [{"name": "test", "description": "Test skill"}]
         result = generate_skills_prompt_section(metadata)
         assert "### Skill Functions" in result
@@ -38,7 +36,7 @@ class TestGenerateSkillsPromptSection:
         assert "`read_skill_resource`" in result
         assert "from generated.skills import" in result
 
-    def test_includes_script_parameters(self):
+    def test_includes_script_parameters(self) -> None:
         metadata = [
             {
                 "name": "github",
@@ -84,7 +82,7 @@ class TestGenerateSkillsPromptSection:
         # Env vars
         assert "`GITHUB_TOKEN`" in result
 
-    def test_includes_resources(self):
+    def test_includes_resources(self) -> None:
         metadata = [
             {
                 "name": "myskill",
@@ -100,7 +98,7 @@ class TestGenerateSkillsPromptSection:
         assert "`template.txt`" in result
         assert "**Resources:**" in result
 
-    def test_includes_usage_example(self):
+    def test_includes_usage_example(self) -> None:
         metadata = [
             {
                 "name": "github",
@@ -121,7 +119,7 @@ class TestGenerateSkillsPromptSection:
         assert 'await run_skill("github", "list_repos"' in result
         assert 'result["success"]' in result
 
-    def test_multiple_skills(self):
+    def test_multiple_skills(self) -> None:
         metadata = [
             {"name": "github", "description": "GitHub integration"},
             {"name": "slack", "description": "Slack messaging"},
@@ -132,14 +130,14 @@ class TestGenerateSkillsPromptSection:
         assert "GitHub integration" in result
         assert "Slack messaging" in result
 
-    def test_run_skill_signature_in_table(self):
+    def test_run_skill_signature_in_table(self) -> None:
         """Ensure the function table documents the CLI-style args pattern."""
         metadata = [{"name": "x", "description": "x"}]
         result = generate_skills_prompt_section(metadata)
         assert "skill_name, script_name, args" in result
         assert '["--org", "datalayer"]' in result
 
-    def test_script_without_parameters(self):
+    def test_script_without_parameters(self) -> None:
         metadata = [
             {
                 "name": "util",

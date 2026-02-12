@@ -13,8 +13,6 @@ import os
 from pathlib import Path
 from typing import Any
 
-from ..mcp import get_mcp_manager
-
 logger = logging.getLogger(__name__)
 
 
@@ -300,7 +298,8 @@ def create_shared_sandbox(
 
 
 def generate_skills_prompt_section(skills_metadata: list[dict[str, Any]]) -> str:
-    """Generate a system prompt section describing available skills.
+    """
+    Generate a system prompt section describing available skills.
 
     Produces a Markdown section that gives the LLM visibility into the
     installed skills, their scripts, parameters, return values, and
@@ -347,7 +346,7 @@ def generate_skills_prompt_section(skills_metadata: list[dict[str, Any]]) -> str
     lines.append(
         "| `run_skill` | `await run_skill(skill_name, script_name, args)` "
         "→ `dict` | Execute a script. `args` is a list of CLI-style "
-        "strings, e.g. `[\"--org\", \"datalayer\"]`. Result dict has "
+        'strings, e.g. `["--org", "datalayer"]`. Result dict has '
         "keys: `success`, `output`, `exit_code`, `error`, `execution_time` |"
     )
     lines.append(
@@ -396,9 +395,7 @@ def generate_skills_prompt_section(skills_metadata: list[dict[str, Any]]) -> str
                         if pdesc:
                             part += f": {pdesc}"
                         param_parts.append(part)
-                    lines.append(
-                        "  Parameters: " + " | ".join(param_parts)
-                    )
+                    lines.append("  Parameters: " + " | ".join(param_parts))
 
                 # Returns
                 returns = script.get("returns", "")
@@ -413,9 +410,7 @@ def generate_skills_prompt_section(skills_metadata: list[dict[str, Any]]) -> str
                 # Environment variables
                 env_vars = script.get("env_vars", [])
                 if env_vars:
-                    lines.append(
-                        "  Env vars: " + ", ".join(f"`{v}`" for v in env_vars)
-                    )
+                    lines.append("  Env vars: " + ", ".join(f"`{v}`" for v in env_vars))
 
             lines.append("")
 
@@ -449,12 +444,12 @@ def generate_skills_prompt_section(skills_metadata: list[dict[str, Any]]) -> str
             lines.append(
                 f'result = await run_skill("{example_skill["name"]}", '
                 f'"{example_script["name"]}", '
-                f'[{example_args}])'
+                f"[{example_args}])"
             )
             lines.append('if result["success"]:')
             lines.append('    print(result["output"])')
             lines.append("else:")
-            lines.append('    print(f"Error: {result[\'error\']}")')
+            lines.append("    print(f\"Error: {result['error']}\")")
             lines.append("```")
             lines.append("")
 
@@ -465,7 +460,8 @@ def wire_skills_into_codemode(
     codemode_toolset: Any,
     skills_toolset: Any,
 ) -> str:
-    """Wire skill bindings and routing into a codemode toolset.
+    """
+    Wire skill bindings and routing into a codemode toolset.
 
     This performs three things:
 
@@ -494,9 +490,7 @@ def wire_skills_into_codemode(
 
     executor = getattr(codemode_toolset, "_executor", None)
     if executor is None:
-        logger.warning(
-            "wire_skills_into_codemode: codemode executor not initialised"
-        )
+        logger.warning("wire_skills_into_codemode: codemode executor not initialised")
         return ""
 
     # --- 1. Generate skill bindings -------------------------------------------
@@ -509,6 +503,7 @@ def wire_skills_into_codemode(
         _extract_schema = None
         try:
             from agent_skills.toolset import AgentSkill
+
             _extract_schema = AgentSkill._extract_script_schema
         except (ImportError, AttributeError):
             pass
@@ -543,22 +538,19 @@ def wire_skills_into_codemode(
                         except Exception as exc:
                             logger.debug(
                                 "Failed to extract schema from %s: %s",
-                                script_path, exc,
+                                script_path,
+                                exc,
                             )
                     script_entries.append(script_entry)
                 entry["scripts"] = script_entries
             resources = getattr(skill, "resources", [])
             if resources:
-                entry["resources"] = [
-                    {"name": r.name} for r in resources
-                ]
+                entry["resources"] = [{"name": r.name} for r in resources]
             skills_metadata.append(entry)
 
         try:
             codegen.generate_skill_bindings(skills_metadata)
-            logger.info(
-                "Generated skill bindings for %d skills", len(skills_metadata)
-            )
+            logger.info("Generated skill bindings for %d skills", len(skills_metadata))
         except Exception as exc:
             logger.error("Failed to generate skill bindings: %s", exc)
 
@@ -576,13 +568,11 @@ def wire_skills_into_codemode(
             )
 
     # --- 2. Set skill tool caller ---------------------------------------------
-    async def _skill_tool_caller(
-        tool_name: str, arguments: dict[str, Any]
-    ) -> Any:
+    async def _skill_tool_caller(tool_name: str, arguments: dict[str, Any]) -> Any:
         """Route skill__* tool calls to the skills toolset."""
         # Strip the 'skills__' prefix to get the bare tool name
         if tool_name.startswith("skills__"):
-            bare_name = tool_name[len("skills__"):]
+            bare_name = tool_name[len("skills__") :]
         else:
             bare_name = tool_name
 
@@ -594,9 +584,7 @@ def wire_skills_into_codemode(
         if bare_name == "list_skills":
             return skills_toolset._list_skills()
         elif bare_name == "load_skill":
-            return skills_toolset._load_skill(
-                arguments.get("skill_name", "")
-            )
+            return skills_toolset._load_skill(arguments.get("skill_name", ""))
         elif bare_name == "read_skill_resource":
             return await skills_toolset._read_skill_resource(
                 arguments.get("skill_name", ""),
@@ -618,6 +606,7 @@ def wire_skills_into_codemode(
     # --- 3. Register proxy caller for remote sandbox HTTP routing -------------
     try:
         from ..routes.mcp_proxy import set_skills_proxy_caller
+
         set_skills_proxy_caller(_skill_tool_caller)
     except ImportError:
         pass  # mcp_proxy route not available (standalone usage)
