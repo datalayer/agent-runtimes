@@ -40,7 +40,7 @@ import json
 import logging
 import os
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Callable, Sequence, cast
+from typing import TYPE_CHECKING, Any, Callable, Sequence
 
 if TYPE_CHECKING:
     from rich.table import Table
@@ -2227,23 +2227,23 @@ def get_agent_context_snapshot(agent_id: str) -> ContextSnapshot | None:
                     f"total={total_turn_duration_ms:.0f}ms, steps={len(snapshot.per_request_usage)}"
                 )
 
-                for i, req in enumerate(snapshot.per_request_usage):
+                for i, step in enumerate(snapshot.per_request_usage):
                     if i < len(snapshot.per_request_usage) - 1:
                         # For all steps except the last: duration = next step start - this step start
-                        next_req = snapshot.per_request_usage[i + 1]
-                        if req.timestamp and next_req.timestamp:
+                        next_step = snapshot.per_request_usage[i + 1]
+                        if step.timestamp and next_step.timestamp:
                             try:
                                 from datetime import datetime
 
                                 # Parse current step timestamp
-                                current_time_str = req.timestamp
+                                current_time_str = step.timestamp
                                 if current_time_str.endswith("Z"):
                                     current_time_str = current_time_str[:-1] + "+00:00"
                                 current_dt = datetime.fromisoformat(current_time_str)
                                 current_time = current_dt.timestamp()
 
                                 # Parse next step timestamp
-                                next_time_str = next_req.timestamp
+                                next_time_str = next_step.timestamp
                                 if next_time_str.endswith("Z"):
                                     next_time_str = next_time_str[:-1] + "+00:00"
                                 next_dt = datetime.fromisoformat(next_time_str)
@@ -2251,9 +2251,9 @@ def get_agent_context_snapshot(agent_id: str) -> ContextSnapshot | None:
 
                                 # Calculate duration in milliseconds
                                 duration_seconds = next_time - current_time
-                                req.duration_ms = duration_seconds * 1000
+                                step.duration_ms = duration_seconds * 1000
                                 logger.debug(
-                                    f"Step {i + 1} duration from timestamps: {req.duration_ms:.0f}ms"
+                                    f"Step {i + 1} duration from timestamps: {step.duration_ms:.0f}ms"
                                 )
 
                             except Exception as e:
@@ -2262,16 +2262,16 @@ def get_agent_context_snapshot(agent_id: str) -> ContextSnapshot | None:
                                 )
                         else:
                             logger.warning(
-                                f"Step {i + 1} missing timestamps: req={req.timestamp}, next={next_req.timestamp}"
+                                f"Step {i + 1} missing timestamps: step={step.timestamp}, next={next_step.timestamp}"
                             )
                     else:
                         # For the last step: duration = total_turn_duration - sum_of_previous_durations
                         previous_durations_ms = sum(
                             r.duration_ms for r in snapshot.per_request_usage[:-1]
                         )
-                        req.duration_ms = total_turn_duration_ms - previous_durations_ms
+                        step.duration_ms = total_turn_duration_ms - previous_durations_ms
                         logger.debug(
-                            f"Last step (Step {i + 1}) duration: {req.duration_ms:.0f}ms (total - previous = {total_turn_duration_ms:.0f} - {previous_durations_ms:.0f})"
+                            f"Last step (Step {i + 1}) duration: {step.duration_ms:.0f}ms (total - previous = {total_turn_duration_ms:.0f} - {previous_durations_ms:.0f})"
                         )
 
             # Update sum fields from tracker data
@@ -2293,11 +2293,9 @@ def get_agent_context_snapshot(agent_id: str) -> ContextSnapshot | None:
             unique_tool_names: list[str] = []
             seen = set()
 
-            from typing import cast
-
-            for req in snapshot.per_request_usage:
-                if req.tool_names:
-                    for tool_name in req.tool_names:
+            for snap in snapshot.per_request_usage:
+                if snap.tool_names:
+                    for tool_name in snap.tool_names:
                         if tool_name not in seen:
                             unique_tool_names.append(tool_name)
                             seen.add(tool_name)
@@ -2312,7 +2310,7 @@ def get_agent_context_snapshot(agent_id: str) -> ContextSnapshot | None:
                 output_tokens=snapshot.sum_response_output_tokens,
                 requests=len(snapshot.per_request_usage),
                 tool_calls=sum(
-                    1 for req in snapshot.per_request_usage if req.tool_names
+                    1 for snap in snapshot.per_request_usage if snap.tool_names
                 ),
                 tool_names=unique_tool_names,
                 duration_seconds=preserved_duration,  # Use preserved duration
