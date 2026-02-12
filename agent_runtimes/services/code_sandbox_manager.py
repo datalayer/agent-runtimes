@@ -273,6 +273,19 @@ class ManagedSandbox:
         return self._manager._sandbox is not None
 
     @property
+    def is_executing(self) -> bool:
+        """Check if the sandbox is currently executing code."""
+        if not self.is_started:
+            return False
+        return self._sandbox().is_executing
+
+    def interrupt(self) -> bool:
+        """Interrupt the currently running code."""
+        if not self.is_started:
+            return False
+        return self._sandbox().interrupt()
+
+    @property
     def info(self) -> Any:
         return self._sandbox().info if self.is_started else None
 

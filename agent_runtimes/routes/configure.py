@@ -44,6 +44,7 @@ class SandboxStatus(BaseModel):
     jupyter_connected: bool = False
     jupyter_error: str | None = None
     sandbox_running: bool = False
+    is_executing: bool = False
     generated_path: str | None = None
     skills_path: str | None = None
     python_path: str | None = None
@@ -508,6 +509,48 @@ async def get_codemode_status() -> CodemodeStatus:
     )
 
 
+@router.get("/sandbox-status")
+async def get_sandbox_status_endpoint() -> dict[str, Any]:
+    """
+    Get the current sandbox execution status.
+
+    Returns:
+        Sandbox status including whether code is executing.
+    """
+    status = _get_sandbox_status()
+    if status is None:
+        return {"available": False}
+    return {"available": True, **status.model_dump()}
+
+
+@router.post("/sandbox/interrupt")
+async def interrupt_sandbox() -> dict[str, Any]:
+    """
+    Interrupt the currently running code in the sandbox.
+
+    Returns:
+        Result of the interrupt request.
+    """
+    try:
+        from agent_runtimes.services.code_sandbox_manager import (
+            get_code_sandbox_manager,
+        )
+
+        manager = get_code_sandbox_manager()
+        sandbox = manager.get_managed_sandbox()
+
+        if not sandbox.is_executing:
+            return {"interrupted": False, "reason": "No code is currently executing"}
+
+        success = sandbox.interrupt()
+        return {"interrupted": success}
+    except ImportError:
+        return {"interrupted": False, "reason": "code_sandboxes not installed"}
+    except Exception as e:
+        logger.warning(f"Error interrupting sandbox: {e}")
+        return {"interrupted": False, "reason": str(e)}
+
+
 def _get_sandbox_status() -> SandboxStatus | None:
     """
     Get the current code sandbox status.
@@ -527,6 +570,7 @@ def _get_sandbox_status() -> SandboxStatus | None:
             variant=status["variant"],
             jupyter_url=status.get("jupyter_url"),
             sandbox_running=status.get("sandbox_running", False),
+            is_executing=False,
             jupyter_connected=False,
             jupyter_error=None,
             generated_path=status.get("generated_path"),
@@ -534,6 +578,13 @@ def _get_sandbox_status() -> SandboxStatus | None:
             python_path=status.get("python_path"),
             mcp_proxy_url=status.get("mcp_proxy_url"),
         )
+
+        # Check if sandbox is currently executing
+        try:
+            managed = manager.get_managed_sandbox()
+            sandbox_status.is_executing = managed.is_executing
+        except Exception:
+            pass
 
         # If Jupyter variant, test the connection
         if status["variant"] == "local-jupyter" and status.get("jupyter_url"):

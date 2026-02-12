@@ -335,6 +335,14 @@ def wire_skills_into_codemode(
     discovered = getattr(skills_toolset, "_discovered_skills", {})
 
     if codegen is not None and discovered:
+        # Import schema extraction helper from agent-skills
+        _extract_schema = None
+        try:
+            from agent_skills.toolset import AgentSkill
+            _extract_schema = AgentSkill._extract_script_schema
+        except (ImportError, AttributeError):
+            pass
+
         skills_metadata: list[dict[str, Any]] = []
         for skill in discovered.values():
             entry: dict[str, Any] = {
@@ -343,10 +351,32 @@ def wire_skills_into_codemode(
             }
             scripts = getattr(skill, "scripts", [])
             if scripts:
-                entry["scripts"] = [
-                    {"name": s.name, "description": getattr(s, "description", "")}
-                    for s in scripts
-                ]
+                script_entries = []
+                for s in scripts:
+                    script_entry: dict[str, Any] = {
+                        "name": s.name,
+                        "description": getattr(s, "description", ""),
+                    }
+                    # Enrich with schema extracted from the script file
+                    script_path = getattr(s, "path", None)
+                    if _extract_schema and script_path and script_path.exists():
+                        try:
+                            schema = _extract_schema(script_path)
+                            if schema.get("parameters"):
+                                script_entry["parameters"] = schema["parameters"]
+                            if schema.get("returns"):
+                                script_entry["returns"] = schema["returns"]
+                            if schema.get("usage"):
+                                script_entry["usage"] = schema["usage"]
+                            if schema.get("env_vars"):
+                                script_entry["env_vars"] = schema["env_vars"]
+                        except Exception as exc:
+                            logger.debug(
+                                "Failed to extract schema from %s: %s",
+                                script_path, exc,
+                            )
+                    script_entries.append(script_entry)
+                entry["scripts"] = script_entries
             resources = getattr(skill, "resources", [])
             if resources:
                 entry["resources"] = [

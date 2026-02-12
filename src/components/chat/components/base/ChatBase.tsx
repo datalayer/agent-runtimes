@@ -50,6 +50,8 @@ import {
   ToolsIcon,
   AiModelIcon,
   BriefcaseIcon,
+  CircleIcon,
+  SquareFillIcon,
 } from '@primer/octicons-react';
 import { AiAgentIcon } from '@datalayer/icons-react';
 import {
@@ -925,6 +927,68 @@ function useContextSnapshotQuery(
 }
 
 /**
+ * Sandbox status from the backend
+ */
+interface SandboxStatusData {
+  available: boolean;
+  sandbox_running?: boolean;
+  is_executing?: boolean;
+  variant?: string;
+}
+
+/**
+ * Hook to poll sandbox execution status from the backend.
+ * Returns whether a sandbox is available and if code is currently executing.
+ */
+function useSandboxStatusQuery(
+  enabled: boolean,
+  configEndpoint?: string,
+  authToken?: string,
+) {
+  const queryClient = useContext(QueryClientContext);
+
+  if (!queryClient) {
+    return {
+      data: undefined,
+      isLoading: false,
+      isError: false,
+      error: null,
+      refetch: () => Promise.resolve({} as any),
+    };
+  }
+
+  const statusUrl = configEndpoint
+    ? `${getApiBaseFromConfig(configEndpoint)}/configure/sandbox-status`
+    : undefined;
+
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const result = useQuery<SandboxStatusData>({
+    queryKey: ['sandbox-status', statusUrl],
+    queryFn: async () => {
+      if (!statusUrl) {
+        throw new Error('No sandbox status URL available');
+      }
+      const headers: HeadersInit = { 'Content-Type': 'application/json' };
+      if (authToken) {
+        headers['Authorization'] = `Bearer ${authToken}`;
+      }
+      const response = await fetch(statusUrl, { headers });
+      if (!response.ok) {
+        throw new Error(`Sandbox status fetch failed: ${response.statusText}`);
+      }
+      return response.json();
+    },
+    enabled: enabled && !!statusUrl,
+    refetchInterval: query => (query.state.status === 'error' ? false : 2_000),
+    refetchOnMount: 'always',
+    staleTime: 0,
+    retry: 1,
+  });
+
+  return result;
+}
+
+/**
  * ChatBase component - Universal chat panel supporting store, protocol, and custom modes
  */
 export function ChatBase({
@@ -1243,6 +1307,15 @@ function ChatBaseInner({
     protocol?.authToken,
   );
   const agentUsage = contextSnapshotQuery.data;
+
+  // Sandbox status query — polls sandbox execution state for the header indicator.
+  // Only active when codemode is enabled and there's a config endpoint.
+  const sandboxStatusQuery = useSandboxStatusQuery(
+    Boolean(protocol?.enableConfigQuery) && codemodeEnabled && showHeader,
+    protocol?.configEndpoint,
+    protocol?.authToken,
+  );
+  const sandboxStatus = sandboxStatusQuery.data;
 
   // Refs
   const adapterRef = useRef<BaseProtocolAdapter | null>(null);
@@ -2276,6 +2349,23 @@ function ChatBaseInner({
     }
   }, [clearStoreMessages, onClear, headerButtons, useStoreMode, runtimeId]);
 
+  // Handle sandbox interrupt
+  const handleSandboxInterrupt = useCallback(async () => {
+    if (!protocol?.configEndpoint) return;
+    const interruptUrl = `${getApiBaseFromConfig(protocol.configEndpoint)}/configure/sandbox/interrupt`;
+    try {
+      const headers: HeadersInit = { 'Content-Type': 'application/json' };
+      if (protocol.authToken) {
+        headers['Authorization'] = `Bearer ${protocol.authToken}`;
+      }
+      await fetch(interruptUrl, { method: 'POST', headers });
+      // Refetch status immediately so the icon updates
+      sandboxStatusQuery.refetch();
+    } catch (e) {
+      // Interrupt is best-effort
+    }
+  }, [protocol?.configEndpoint, protocol?.authToken, sandboxStatusQuery]);
+
   // Not ready yet (store mode only)
   if (!ready) {
     return (
@@ -2338,6 +2428,33 @@ function ChatBaseInner({
           </Box>
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            {/* Sandbox execution status indicator */}
+            {sandboxStatus?.available &&
+              sandboxStatus?.sandbox_running &&
+              (sandboxStatus.is_executing ? (
+                <IconButton
+                  icon={SquareFillIcon}
+                  aria-label="Interrupt code execution"
+                  variant="invisible"
+                  size="small"
+                  sx={{ color: 'danger.fg' }}
+                  onClick={handleSandboxInterrupt}
+                />
+              ) : (
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: 28,
+                    height: 28,
+                    color: 'fg.subtle',
+                  }}
+                  title="Code sandbox ready"
+                >
+                  <CircleIcon size={12} />
+                </Box>
+              ))}
             {/* Header buttons */}
             {headerButtons?.showNewChat && (
               <IconButton
