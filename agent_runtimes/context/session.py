@@ -2269,7 +2269,9 @@ def get_agent_context_snapshot(agent_id: str) -> ContextSnapshot | None:
                         previous_durations_ms = sum(
                             r.duration_ms for r in snapshot.per_request_usage[:-1]
                         )
-                        step.duration_ms = total_turn_duration_ms - previous_durations_ms
+                        step.duration_ms = (
+                            total_turn_duration_ms - previous_durations_ms
+                        )
                         logger.debug(
                             f"Last step (Step {i + 1}) duration: {step.duration_ms:.0f}ms (total - previous = {total_turn_duration_ms:.0f} - {previous_durations_ms:.0f})"
                         )
