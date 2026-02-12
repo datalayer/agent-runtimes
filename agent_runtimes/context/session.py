@@ -2227,7 +2227,10 @@ def get_agent_context_snapshot(agent_id: str) -> ContextSnapshot | None:
                     f"total={total_turn_duration_ms:.0f}ms, steps={len(snapshot.per_request_usage)}"
                 )
 
+                from typing import cast
+
                 for i, req in enumerate(snapshot.per_request_usage):
+                    req = cast(RequestUsageSnapshot, req)
                     if i < len(snapshot.per_request_usage) - 1:
                         # For all steps except the last: duration = next step start - this step start
                         next_req = snapshot.per_request_usage[i + 1]
@@ -2293,7 +2296,10 @@ def get_agent_context_snapshot(agent_id: str) -> ContextSnapshot | None:
             unique_tool_names: list[str] = []
             seen = set()
 
+            from typing import cast
+
             for req in snapshot.per_request_usage:
+                req = cast(RequestUsageSnapshot, req)
                 if req.tool_names:
                     for tool_name in req.tool_names:
                         if tool_name not in seen:
