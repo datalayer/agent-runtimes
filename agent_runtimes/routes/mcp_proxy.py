@@ -32,7 +32,7 @@ When running in a Kubernetes environment with separate containers:
 │  ┌────────────────────────────────────────────────────────────────────────┐  │
 │  │  Jupyter Server + Kernel                                                │  │
 │  │  - Executes generated Python code                                       │  │
-│  │  - `from generated.servers.github import star_repo`                     │  │
+│  │  - `from generated.mcp.github import star_repo`                     │  │
 │  │  - `result = await star_repo(owner="datalayer", repo="ui")`            │  │
 │  │  - Generated code calls HTTP proxy instead of stdio                     │  │
 │  │                                                                          │  │

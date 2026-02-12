@@ -19,14 +19,14 @@ title: Programmatic Tools
 ## Toggles and behavior
 - **Enable Codemode**: adds `CodemodeToolset` (list/search tools, execute Python code). When Codemode is on, selected MCP servers are used to build Codemode’s registry (tools are exposed via Codemode meta-tools rather than direct MCP tools).
 - **Enable Skills**: adds `AgentSkillsToolset` (skills discovery, load, resource read, script run). Uses the configured `skills/` directory.
-- **Both on**: Skills remain available for loading/running scripts; Codemode is used for tool discovery and code execution.
+- **Both on**: Skills are **automatically wired into Codemode** via `wire_skills_into_codemode()`. Skill operations become available as generated bindings (`from generated.skills import ...`) inside `execute_code`, alongside MCP tool bindings. The `AgentSkillsToolset` is still attached for direct tool access, but the primary interaction path is through Codemode's code execution.
 
 ## Codemode toolset capabilities
 - `list_tool_names` (fast names-only, supports `server`, `keywords`, `limit`)
 - `search_tools` (returns tool definitions; can be reranked, includes deferred tools by default)
 - `get_tool_details` (full schema, output shape, and examples for one tool)
 - `list_servers` (connected MCP servers)
-- `execute_code` (Python in sandbox; import bindings from `generated.servers.<server>`)
+- `execute_code` (Python in sandbox; import bindings from `generated.mcp.<server>`)
 - `call_tool` (single tool call) — **optional**, see below
 
 ## Direct tool calls: `allow_direct_tool_calls`
@@ -44,7 +44,7 @@ title: Programmatic Tools
 - This keeps discovery flexible without tying Codemode to any specific model provider.
 
 ## Execution model
-- Codemode runs **Python** in an isolated sandbox (code-sandboxes). Agents import tool bindings from `generated.servers.<server_name>`.
+- Codemode runs **Python** in an isolated sandbox (code-sandboxes). Agents import tool bindings from `generated.mcp.<server_name>`.
 - Use `async/await`, loops, conditionals, and `asyncio.gather` for parallelism.
 - Errors are caught and surfaced in the `execute_code` result payload, alongside `stdout`/`stderr`.
 
@@ -58,6 +58,66 @@ title: Programmatic Tools
 - Backend route `/api/v1/agents` builds toolsets accordingly:
 	- Skills enabled → add `AgentSkillsToolset`.
 	- Codemode enabled → add `CodemodeToolset` with `allow_direct_tool_calls=False` by default.
+	- **Both enabled** → add both toolsets, then wire skills into Codemode via `wire_skills_into_codemode()`.
+
+## Skills-in-Codemode wiring
+
+When both Skills and Codemode are enabled, agent-runtimes automatically **wires skills into Codemode** so that skill operations are available as generated bindings inside `execute_code`. This is handled by `wire_skills_into_codemode()` in `agent_factory.py`.
+
+### What the wiring does
+
+1. **Generates skill bindings** — Calls `generate_skill_bindings()` to create `generated/mcp/skills/` with wrapper functions for `list_skills`, `load_skill`, `read_skill_resource`, and `run_skill`.
+
+2. **Sets a skill tool caller** — Registers a callback on the executor that routes `skills__*` tool calls to the real `AgentSkillsToolset`.
+
+3. **Stores skills metadata** — Calls `set_skills_metadata()` on the executor so that remote sandboxes (Datalayer Runtime, Jupyter kernel) can regenerate skill bindings inline.
+
+4. **Registers a skills proxy caller** — For remote sandboxes, registers a proxy caller in `mcp_proxy.py` so that HTTP-routed `skills__*` calls reach the `AgentSkillsToolset`.
+
+### Post-init callback pattern
+
+Since `CodemodeToolset` lazily initializes its executor, the wiring is deferred using a **post-init callback**:
+
+```python
+# In rebuild_codemode (app.py / routes/agents.py)
+if skills_enabled:
+    codemode_toolset.add_post_init_callback(
+        lambda ts: wire_skills_into_codemode(ts, skills_toolset)
+    )
+```
+
+The callback fires once when the executor is first created (e.g., on the first `execute_code` call), ensuring the executor exists before binding generation and caller registration happen.
+
+### Using skills in execute_code
+
+Once wired, agents can call skill operations from within `execute_code`:
+
+```python
+execute_code(code='''
+from generated.skills import list_skills, load_skill, run_skill
+from generated.mcp.filesystem import read_file
+
+# Discover available skills
+skills = await list_skills({})
+print(f"Skills: {[s['name'] for s in skills]}")
+
+# Load a skill's instructions
+instructions = await load_skill({"skill_name": "pdf-extractor"})
+print(instructions)
+
+# Run a skill script
+result = await run_skill({
+    "skill_name": "pdf-extractor",
+    "script_name": "extract.py",
+    "args": {"path": "/data/report.pdf"}
+})
+print(result)
+''')
+```
+
+### Remote sandbox support
+
+When the code sandbox is remote (e.g., a Datalayer Runtime or Jupyter kernel), the skill bindings are generated **inline** inside the sandbox by `_generate_tools_in_sandbox()`. Tool calls from the remote sandbox make HTTP requests to agent-runtimes, where the **skills proxy** in `mcp_proxy.py` intercepts `server_name == "skills"` and routes the call to the registered `AgentSkillsToolset`.
 
 ## Skills-first, Codemode glue (example)
 Use Skills for curated, reusable steps and Codemode for orchestration:
@@ -68,11 +128,15 @@ load_skill("pdf-extractor")
 
 # 2) Compose multi-step flow in code
 execute_code(code='''
-from generated.servers.filesystem import read_file
-from skills.pdf_extractor import extract
+from generated.mcp.filesystem import read_file
+from generated.skills import run_skill
 
 doc = await read_file({"path": "/data/report.pdf"})
-result = await extract(doc)
+result = await run_skill({
+    "skill_name": "pdf-extractor",
+    "script_name": "extract.py",
+    "args": {"path": "/data/report.pdf"}
+})
 print(result)
 ''')
 ```
@@ -80,7 +144,7 @@ print(result)
 ## Choosing a pattern
 - **Use Skills** when you want repeatable, reviewed workflows and clearer governance.
 - **Use Codemode** when you need ad-hoc composition, control flow, and efficiency.
-- **Use both** when you want curated capabilities (Skills) plus the ability to glue them together with code (Codemode).
+- **Use both** when you want curated capabilities (Skills) plus the ability to glue them together with code (Codemode). When both are enabled, skills are automatically wired into Codemode as generated bindings (`from generated.skills import ...`), giving agents a unified import pattern for all tools.
 
 ## Configuration summary
 - `allow_direct_tool_calls`: hide or expose `call_tool` (defaults to false in agent-runtimes wiring).

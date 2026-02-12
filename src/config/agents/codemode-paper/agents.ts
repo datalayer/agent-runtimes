@@ -99,7 +99,7 @@ export const CRAWLER_AGENT_SPEC: AgentSpec = {
 4. **execute_code** - Run Python code that composes multiple tools
    Use this for complex multi-step operations. Code runs in a PERSISTENT sandbox.
    Variables, functions, and state PERSIST between execute_code calls.
-   Import tools using: \`from generated.servers.<server_name> import <function_name>\`
+   Import tools using: \`from generated.mcp.<server_name> import <function_name>\`
    NEVER use \`import *\` - always use explicit named imports.
 
 ## Recommended Workflow 1. **Discover**: Use list_servers and search_tools to find relevant tools 2. **Understand**: Use get_tool_details to check parameters 3. **Execute**: Use execute_code to perform multi-step tasks, calling tools as needed
@@ -144,7 +144,7 @@ export const DATA_ACQUISITION_AGENT_SPEC: AgentSpec = {
 4. **execute_code** - Run Python code that composes multiple tools
    Use this for complex multi-step operations. Code runs in a PERSISTENT sandbox.
    Variables, functions, and state PERSIST between execute_code calls.
-   Import tools using: \`from generated.servers.<server_name> import <function_name>\`
+   Import tools using: \`from generated.mcp.<server_name> import <function_name>\`
    NEVER use \`import *\` - always use explicit named imports.
 
 ## Recommended Workflow 1. **Discover**: Use list_servers and search_tools to find relevant tools 2. **Understand**: Use get_tool_details to check parameters 3. **Execute**: Use execute_code to perform multi-step tasks, calling tools as needed
@@ -185,7 +185,7 @@ export const FINANCIAL_VIZ_AGENT_SPEC: AgentSpec = {
 4. **execute_code** - Run Python code that composes multiple tools
    Use this for complex multi-step operations. Code runs in a PERSISTENT sandbox.
    Variables, functions, and state PERSIST between execute_code calls.
-   Import tools using: \`from generated.servers.<server_name> import <function_name>\`
+   Import tools using: \`from generated.mcp.<server_name> import <function_name>\`
    NEVER use \`import *\` - always use explicit named imports.
 
 ## Recommended Workflow 1. **Discover**: Use list_servers and search_tools to find relevant tools 2. **Understand**: Use get_tool_details to check parameters 3. **Execute**: Use execute_code to perform multi-step tasks, calling tools as needed
@@ -226,7 +226,7 @@ export const GITHUB_AGENT_SPEC: AgentSpec = {
 4. **execute_code** - Run Python code that composes multiple tools
    Use this for complex multi-step operations. Code runs in a PERSISTENT sandbox.
    Variables, functions, and state PERSIST between execute_code calls.
-   Import tools using: \`from generated.servers.<server_name> import <function_name>\`
+   Import tools using: \`from generated.mcp.<server_name> import <function_name>\`
    NEVER use \`import *\` - always use explicit named imports.
 
 ## Recommended Workflow 1. **Discover**: Use list_servers and search_tools to find relevant tools 2. **Understand**: Use get_tool_details to check parameters 3. **Execute**: Use execute_code to perform multi-step tasks, calling tools as needed
@@ -267,7 +267,7 @@ export const INFORMATION_ROUTING_AGENT_SPEC: AgentSpec = {
 4. **execute_code** - Run Python code that composes multiple tools
    Use this for complex multi-step operations. Code runs in a PERSISTENT sandbox.
    Variables, functions, and state PERSIST between execute_code calls.
-   Import tools using: \`from generated.servers.<server_name> import <function_name>\`
+   Import tools using: \`from generated.mcp.<server_name> import <function_name>\`
    NEVER use \`import *\` - always use explicit named imports.
 
 ## Recommended Workflow 1. **Discover**: Use list_servers and search_tools to find relevant tools 2. **Understand**: Use get_tool_details to check parameters 3. **Execute**: Use execute_code to perform multi-step tasks, calling tools as needed

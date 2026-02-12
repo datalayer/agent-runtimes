@@ -137,7 +137,7 @@ def _build_system_prompt(
         "4. **execute_code** - Run Python code that composes multiple tools",
         "   Use this for complex multi-step operations. Code runs in a PERSISTENT sandbox.",
         "   Variables, functions, and state PERSIST between execute_code calls.",
-        "   Import tools using: `from generated.servers.<server_name> import <function_name>`",
+        "   Import tools using: `from generated.mcp.<server_name> import <function_name>`",
         "   NEVER use `import *` - always use explicit named imports.",
         "",
         "",

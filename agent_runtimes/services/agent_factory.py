@@ -307,8 +307,8 @@ def wire_skills_into_codemode(
 
     This performs two things:
 
-    1. **Generates skill bindings** under ``generated/servers/skills/`` so
-       that ``execute_code`` can ``from generated.servers.skills import run_skill``.
+    1. **Generates skill bindings** under ``generated/skills/`` so
+       that ``execute_code`` can ``from generated.skills import run_skill``.
     2. **Sets a skill tool caller** on the codemode executor so that
        ``call_tool("skills__<name>", args)`` is routed to the skills
        toolset instead of the MCP registry.
@@ -362,9 +362,18 @@ def wire_skills_into_codemode(
         except Exception as exc:
             logger.error("Failed to generate skill bindings: %s", exc)
 
-        # Store metadata so remote sandbox codegen can regenerate bindings
+        # Store metadata so remote sandbox codegen can regenerate bindings.
+        # Then immediately generate skill bindings in the sandbox — this is
+        # necessary because _generate_tools_in_sandbox() ran during
+        # executor.setup() before skills metadata was available.
         if hasattr(executor, "set_skills_metadata"):
             executor.set_skills_metadata(skills_metadata)
+        if hasattr(executor, "generate_skills_in_sandbox"):
+            executor.generate_skills_in_sandbox()
+            logger.info(
+                "Generated skill bindings in remote sandbox for %d skills",
+                len(skills_metadata),
+            )
 
     # --- 2. Set skill tool caller ---------------------------------------------
     async def _skill_tool_caller(

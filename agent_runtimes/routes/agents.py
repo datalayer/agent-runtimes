@@ -589,21 +589,21 @@ async def create_agent(
 
                 try:
                     generated_root = Path(codemode_toolset.config.generated_path)
-                    servers_dir = generated_root / "servers"
-                    if servers_dir.exists():
+                    mcp_dir = generated_root / "mcp"
+                    if mcp_dir.exists():
                         server_modules = sorted(
                             p.name
-                            for p in servers_dir.iterdir()
+                            for p in mcp_dir.iterdir()
                             if p.is_dir() and not p.name.startswith("__")
                         )
                         logger.info(
-                            "Codemode bindings generated for servers: %s",
+                            "Codemode bindings generated for MCP servers: %s",
                             server_modules or "(none)",
                         )
                     else:
                         logger.warning(
-                            "Codemode generated servers directory not found: %s",
-                            servers_dir,
+                            "Codemode generated MCP directory not found: %s",
+                            mcp_dir,
                         )
                 except Exception as exc:
                     logger.warning(
@@ -616,7 +616,7 @@ async def create_agent(
                 )
 
         # Wire skill bindings into codemode so execute_code can import
-        # from generated.servers.skills and compose skills programmatically
+        # from generated.skills and compose skills programmatically
         if request.enable_codemode and skills_enabled:
             _skills_ts = next(
                 (t for t in non_mcp_toolsets if type(t).__name__ == "AgentSkillsToolset"),

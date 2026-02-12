@@ -228,7 +228,7 @@ async def _create_and_register_cli_agent(
             logger.info(f"Added and initialized CodemodeToolset for agent {agent_id}")
 
     # Wire skill bindings into codemode so execute_code can import
-    # from generated.servers.skills and compose skills programmatically
+    # from generated.skills and compose skills programmatically
     if codemode_toolset and skills_enabled:
         skills_ts = next(
             (t for t in non_mcp_toolsets if type(t).__name__ == "AgentSkillsToolset"),

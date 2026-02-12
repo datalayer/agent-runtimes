@@ -242,9 +242,11 @@ async def create_mcp_servers_with_tools(
             name=config["name"],
             command=config.get("command"),
             args=config.get("args", []),
+            env=config.get("env") or None,
             transport=config.get("transport", "stdio"),
             is_available=True,  # Assume available, tool discovery will confirm
             enabled=True,
+            is_config=True,
             tools=[],
         )
 

@@ -646,7 +646,7 @@ Available meta-tools:
 
 Example code for execute_code:
 ```python
-from generated.servers.bash import ls, cat
+from generated.mcp.bash import ls, cat
 
 files = await ls({"path": "/tmp"})
 for f in files:

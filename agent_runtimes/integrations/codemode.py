@@ -43,7 +43,7 @@ class CodemodeIntegration:
 
         # Execute code that uses tools
         result = await integration.execute_code('''
-            from generated.servers.filesystem import read_file
+            from generated.mcp.filesystem import read_file
             content = await read_file({"path": "/tmp/data.txt"})
             print(content)
         ''')
