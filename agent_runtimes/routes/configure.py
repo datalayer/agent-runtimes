@@ -259,7 +259,7 @@ async def get_agent_context_snapshot_endpoint(
     return result
 
 
-@router.get("/agents/{agent_id}/context-table")
+@router.get("/agents/{agent_id:path}/context-table")
 async def get_agent_context_table_endpoint(
     agent_id: str = Path(
         ...,
@@ -304,7 +304,7 @@ async def get_agent_context_table_endpoint(
     return {"agentId": agent_id, "table": console.export_text(styles=True)}
 
 
-@router.get("/agents/{agent_id}/full-context")
+@router.get("/agents/{agent_id:path}/full-context")
 async def get_agent_full_context_endpoint(
     agent_id: str = Path(
         ...,
@@ -386,7 +386,7 @@ async def reset_agent_context(
     return {"status": "ok", "message": f"Context reset for agent '{agent_id}'"}
 
 
-@router.get("/agents/{agent_id}/context-export")
+@router.get("/agents/{agent_id:path}/context-export")
 async def export_agent_context_csv(
     agent_id: str = Path(
         ...,
