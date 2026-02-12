@@ -381,40 +381,135 @@ class RateLimitedClient:
         return response
 ```
 
-## Scripts
+## Script Reference
 
-This skill includes ready-to-use scripts in the `scripts/` folder:
+This skill includes ready-to-use scripts in the `scripts/` folder.
 
-| Script | Description |
-|--------|-------------|
-| `fetch_page.py` | Fetch a single webpage and extract text content |
-| `extract_links.py` | Extract all links from a webpage with filtering |
-| `extract_tables.py` | Extract HTML tables as JSON or CSV |
-| `crawl_site.py` | Multi-page crawler with depth control |
-| `check_robots.py` | Check if URL is allowed by robots.txt |
-| `fetch_js_page.py` | Fetch JavaScript-rendered pages using Playwright |
+### `fetch_page.py`
 
-### Usage Examples
+Fetch a single webpage and extract its text content.
 
-```bash
-# Fetch a page and extract text
-python scripts/fetch_page.py https://example.com
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `url` | `str` | **Yes** | The URL to fetch (positional) |
+| `--output` | `str` | No | Output file path (prints to stdout if omitted) |
+| `--timeout` | `float` | No | Request timeout in seconds (default: `30`) |
 
-# Extract all links from a page
-python scripts/extract_links.py https://example.com --output links.json
+**Output:** Formatted text with:
+- `url` (str): Final URL after redirects
+- `status_code` (int): HTTP status code
+- `title` (str): Page title
+- `description` (str): Meta description
+- `text` (str): Extracted page text (scripts/styles/nav removed)
+- `content_type` (str): Response Content-Type header
 
-# Extract tables as CSV
-python scripts/extract_tables.py https://example.com --format csv
+**Usage:** `python fetch_page.py https://example.com --output page.txt`
 
-# Crawl a site (max 10 pages, depth 2)
-python scripts/crawl_site.py https://example.com --max-pages 10 --max-depth 2
+---
 
-# Check robots.txt permissions
-python scripts/check_robots.py https://example.com/page
+### `extract_links.py`
 
-# Fetch JavaScript-rendered page
-python scripts/fetch_js_page.py https://example.com --wait 1000
-```
+Extract all links from a webpage with optional filtering.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `url` | `str` | **Yes** | The URL of the webpage (positional) |
+| `--output` | `str` | No | Output file path (JSON format) |
+| `--absolute` | `flag` | No | Convert relative URLs to absolute (default: `True`) |
+| `--filter` | `str` | No | Only include links containing this pattern |
+| `--timeout` | `float` | No | Request timeout in seconds (default: `30`) |
+
+**Output (JSON format):** Array of objects, each with:
+- `text` (str): Link text
+- `url` (str): Link URL (absolute if `--absolute`)
+
+**Usage:** `python extract_links.py https://example.com --filter /docs --output links.json`
+
+---
+
+### `extract_tables.py`
+
+Extract HTML tables from a webpage as JSON or CSV.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `url` | `str` | **Yes** | The URL of the webpage (positional) |
+| `--output` | `str` | No | Output file path |
+| `--format` | `str` | No | Output format: `json` or `csv` (default: `json`) |
+| `--timeout` | `float` | No | Request timeout in seconds (default: `30`) |
+
+**Output (JSON format):** Array of tables, where each table is:
+- `list[list[str]]`: A list of rows, each row a list of cell text values
+
+**Usage:** `python extract_tables.py https://example.com/data --format csv --output tables.csv`
+
+---
+
+### `crawl_site.py`
+
+Crawl multiple pages starting from a URL, following links with depth control.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `url` | `str` | **Yes** | The starting URL to crawl (positional) |
+| `--max-pages` | `int` | No | Maximum number of pages to crawl (default: `10`) |
+| `--max-depth` | `int` | No | Maximum depth to follow links (default: `2`) |
+| `--same-domain` | `flag` | No | Only crawl same-domain pages (default: `True`) |
+| `--output` | `str` | No | Output file path (JSON format) |
+| `--timeout` | `float` | No | Request timeout in seconds (default: `30`) |
+
+**Output (JSON format):** Object mapping URL → page data, each with:
+- `title` (str): Page title
+- `text` (str): Extracted text (max 5000 chars)
+- `depth` (int): Crawl depth from start URL
+- `status_code` (int): HTTP status code
+- `error` (str, optional): Error message if the page could not be fetched
+
+**Usage:** `python crawl_site.py https://example.com --max-pages 5 --max-depth 1 --output site.json`
+
+---
+
+### `check_robots.py`
+
+Check if a URL is allowed by the site's `robots.txt`.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `url` | `str` | **Yes** | The URL to check (positional) |
+| `--user-agent` | `str` | No | User agent to check permissions for (default: `*`) |
+
+**Output:** Printed status message, plus structured result with:
+- `url` (str): The checked URL
+- `robots_url` (str): URL of the robots.txt file
+- `user_agent` (str): User agent checked
+- `allowed` (bool): Whether crawling is allowed
+- `crawl_delay` (float, optional): Crawl delay in seconds
+- `error` (str, optional): Error message if robots.txt could not be read
+
+**Usage:** `python check_robots.py https://example.com/private-page --user-agent DataBot`
+
+---
+
+### `fetch_js_page.py`
+
+Fetch a JavaScript-rendered page using Playwright (requires `playwright` and Chromium).
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `url` | `str` | **Yes** | The URL to fetch (positional) |
+| `--output` | `str` | No | Output file path |
+| `--wait` | `int` | No | Additional wait time in ms after page load (default: `0`) |
+| `--selector` | `str` | No | Wait for a specific CSS selector to appear |
+| `--timeout` | `int` | No | Page load timeout in ms (default: `30000`) |
+| `--html` | `flag` | No | Output raw HTML instead of extracted text |
+
+**Output:** Formatted text (or raw HTML with `--html`), with fields:
+- `url` (str): Final URL after redirects
+- `title` (str): Page title
+- `text` (str): Extracted text (scripts/styles/nav removed)
+- `html` (str): Full rendered HTML (with `--html` flag)
+
+**Usage:** `python fetch_js_page.py https://example.com/spa --wait 2000 --selector "#content"`
 
 ## Dependencies
 

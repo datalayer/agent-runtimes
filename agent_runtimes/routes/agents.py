@@ -617,6 +617,7 @@ async def create_agent(
 
         # Wire skill bindings into codemode so execute_code can import
         # from generated.skills and compose skills programmatically
+        skills_prompt_section = ""
         if request.enable_codemode and skills_enabled:
             _skills_ts = next(
                 (t for t in non_mcp_toolsets if type(t).__name__ == "AgentSkillsToolset"),
@@ -627,7 +628,7 @@ async def create_agent(
                 None,
             )
             if _skills_ts and _codemode_ts:
-                wire_skills_into_codemode(_codemode_ts, _skills_ts)
+                skills_prompt_section = wire_skills_into_codemode(_codemode_ts, _skills_ts)
 
         logger.info(
             f"Creating agent '{agent_id}' with selected_mcp_servers={selected_mcp_servers}"
@@ -640,6 +641,10 @@ async def create_agent(
             final_system_prompt = (
                 request.system_prompt + "\n\n" + request.system_prompt_codemode_addons
             )
+        # Append dynamic skills section so the LLM has visibility into
+        # installed skills, their scripts, parameters, and usage.
+        if skills_prompt_section:
+            final_system_prompt = final_system_prompt + "\n\n" + skills_prompt_section
 
         # Create the agent based on the library
         if request.agent_library == "pydantic-ai":

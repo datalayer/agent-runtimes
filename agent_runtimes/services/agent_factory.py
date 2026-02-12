@@ -299,19 +299,184 @@ def create_shared_sandbox(
         return None
 
 
+def generate_skills_prompt_section(skills_metadata: list[dict[str, Any]]) -> str:
+    """Generate a system prompt section describing available skills.
+
+    Produces a Markdown section that gives the LLM visibility into the
+    installed skills, their scripts, parameters, return values, and
+    usage examples so it can call ``run_skill()`` correctly without
+    needing to call ``list_skills()`` first for discovery.
+
+    Args:
+        skills_metadata: List of skill metadata dicts as built by
+            ``wire_skills_into_codemode``.
+
+    Returns:
+        A Markdown string suitable for appending to the system prompt.
+        Returns an empty string if no skills are available.
+    """
+    if not skills_metadata:
+        return ""
+
+    lines: list[str] = []
+    lines.append("## Available Skills")
+    lines.append("")
+    lines.append(
+        "You have access to pre-built **skills** alongside MCP tools. "
+        "Skills are domain-specific scripts you can run via `execute_code`."
+    )
+    lines.append("")
+    lines.append("### Skill Functions")
+    lines.append("Import in execute_code with:")
+    lines.append(
+        "```python\n"
+        "from generated.skills import list_skills, load_skill, run_skill, "
+        "read_skill_resource\n```"
+    )
+    lines.append("")
+    lines.append("| Function | Signature | Purpose |")
+    lines.append("|---|---|---|")
+    lines.append(
+        "| `list_skills` | `await list_skills()` → `list[dict]` | "
+        "Returns full catalog with parameter details |"
+    )
+    lines.append(
+        "| `load_skill` | `await load_skill(skill_name)` → `str` | "
+        "Returns SKILL.md documentation |"
+    )
+    lines.append(
+        "| `run_skill` | `await run_skill(skill_name, script_name, args)` "
+        "→ `dict` | Execute a script. `args` is a list of CLI-style "
+        "strings, e.g. `[\"--org\", \"datalayer\"]`. Result dict has "
+        "keys: `success`, `output`, `exit_code`, `error`, `execution_time` |"
+    )
+    lines.append(
+        "| `read_skill_resource` | "
+        "`await read_skill_resource(skill_name, resource_name)` → `str` | "
+        "Read a resource file |"
+    )
+    lines.append("")
+
+    # Per-skill details
+    lines.append("### Installed Skills")
+    lines.append("")
+
+    for skill in skills_metadata:
+        skill_name = skill.get("name", "unknown")
+        skill_desc = skill.get("description", "")
+        lines.append(f"#### `{skill_name}`")
+        if skill_desc:
+            lines.append(skill_desc)
+        lines.append("")
+
+        scripts = skill.get("scripts", [])
+        if scripts:
+            lines.append("**Scripts:**")
+            lines.append("")
+            for script in scripts:
+                sname = script.get("name", "")
+                sdesc = script.get("description", "")
+                lines.append(f"- **`{sname}`**" + (f" — {sdesc}" if sdesc else ""))
+
+                # Parameters
+                params = script.get("parameters", [])
+                if params:
+                    param_parts = []
+                    for p in params:
+                        pname = p.get("name", "")
+                        ptype = p.get("type", "")
+                        pdesc = p.get("description", "")
+                        preq = p.get("required", False)
+                        part = f"`--{pname}`"
+                        if ptype:
+                            part += f" ({ptype}"
+                            if preq:
+                                part += ", required"
+                            part += ")"
+                        if pdesc:
+                            part += f": {pdesc}"
+                        param_parts.append(part)
+                    lines.append(
+                        "  Parameters: " + " | ".join(param_parts)
+                    )
+
+                # Returns
+                returns = script.get("returns", "")
+                if returns:
+                    lines.append(f"  Returns: {returns}")
+
+                # Usage
+                usage = script.get("usage", "")
+                if usage:
+                    lines.append(f"  Usage: `{usage}`")
+
+                # Environment variables
+                env_vars = script.get("env_vars", [])
+                if env_vars:
+                    lines.append(
+                        "  Env vars: " + ", ".join(f"`{v}`" for v in env_vars)
+                    )
+
+            lines.append("")
+
+        resources = skill.get("resources", [])
+        if resources:
+            res_names = ", ".join(f"`{r.get('name', '')}`" for r in resources)
+            lines.append(f"**Resources:** {res_names}")
+            lines.append("")
+
+    # Usage example
+    if skills_metadata:
+        example_skill = skills_metadata[0]
+        example_scripts = example_skill.get("scripts", [])
+        if example_scripts:
+            example_script = example_scripts[0]
+            example_args = ""
+            params = example_script.get("parameters", [])
+            if params:
+                # Build example args from first 1-2 parameters
+                example_arg_parts = []
+                for p in params[:2]:
+                    pname = p.get("name", "")
+                    example_arg_parts.append(f'"--{pname}"')
+                    example_arg_parts.append(f'"<{pname}>"')
+                example_args = ", ".join(example_arg_parts)
+
+            lines.append("### Example")
+            lines.append("```python")
+            lines.append("from generated.skills import run_skill")
+            lines.append("")
+            lines.append(
+                f'result = await run_skill("{example_skill["name"]}", '
+                f'"{example_script["name"]}", '
+                f'[{example_args}])'
+            )
+            lines.append('if result["success"]:')
+            lines.append('    print(result["output"])')
+            lines.append("else:")
+            lines.append('    print(f"Error: {result[\'error\']}")')
+            lines.append("```")
+            lines.append("")
+
+    return "\n".join(lines)
+
+
 def wire_skills_into_codemode(
     codemode_toolset: Any,
     skills_toolset: Any,
-) -> None:
+) -> str:
     """Wire skill bindings and routing into a codemode toolset.
 
-    This performs two things:
+    This performs three things:
 
     1. **Generates skill bindings** under ``generated/skills/`` so
        that ``execute_code`` can ``from generated.skills import run_skill``.
     2. **Sets a skill tool caller** on the codemode executor so that
        ``call_tool("skills__<name>", args)`` is routed to the skills
        toolset instead of the MCP registry.
+    3. **Returns a system prompt section** describing the installed
+       skills, their scripts, parameters, and usage so the LLM has
+       full visibility into the skill catalog.
 
     Must be called *after* ``initialize_codemode_toolset`` so the
     executor and codegen are ready.
@@ -319,20 +484,25 @@ def wire_skills_into_codemode(
     Args:
         codemode_toolset: An initialised ``CodemodeToolset`` instance.
         skills_toolset: An initialised ``AgentSkillsToolset`` instance.
+
+    Returns:
+        A Markdown string for appending to the system prompt, or ``""``
+        if skills could not be wired.
     """
     if codemode_toolset is None or skills_toolset is None:
-        return
+        return ""
 
     executor = getattr(codemode_toolset, "_executor", None)
     if executor is None:
         logger.warning(
             "wire_skills_into_codemode: codemode executor not initialised"
         )
-        return
+        return ""
 
     # --- 1. Generate skill bindings -------------------------------------------
     codegen = getattr(executor, "_codegen", None)
     discovered = getattr(skills_toolset, "_discovered_skills", {})
+    skills_metadata: list[dict[str, Any]] = []
 
     if codegen is not None and discovered:
         # Import schema extraction helper from agent-skills
@@ -343,7 +513,7 @@ def wire_skills_into_codemode(
         except (ImportError, AttributeError):
             pass
 
-        skills_metadata: list[dict[str, Any]] = []
+        skills_metadata.clear()
         for skill in discovered.values():
             entry: dict[str, Any] = {
                 "name": getattr(skill, "name", ""),
@@ -451,3 +621,6 @@ def wire_skills_into_codemode(
         set_skills_proxy_caller(_skill_tool_caller)
     except ImportError:
         pass  # mcp_proxy route not available (standalone usage)
+
+    # --- 4. Generate system prompt section for skill visibility ----------------
+    return generate_skills_prompt_section(skills_metadata)

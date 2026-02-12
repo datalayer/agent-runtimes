@@ -229,13 +229,14 @@ async def _create_and_register_cli_agent(
 
     # Wire skill bindings into codemode so execute_code can import
     # from generated.skills and compose skills programmatically
+    skills_prompt_section = ""
     if codemode_toolset and skills_enabled:
         skills_ts = next(
             (t for t in non_mcp_toolsets if type(t).__name__ == "AgentSkillsToolset"),
             None,
         )
         if skills_ts:
-            wire_skills_into_codemode(codemode_toolset, skills_ts)
+            skills_prompt_section = wire_skills_into_codemode(codemode_toolset, skills_ts)
 
     # Build selected MCP servers list for the adapter
     # When codemode is enabled, MCP servers are accessed via CodemodeToolset registry
@@ -271,6 +272,10 @@ async def _create_and_register_cli_agent(
         system_prompt = base_prompt + "\n\n" + agent_spec.system_prompt_codemode_addons
     else:
         system_prompt = base_prompt
+    # Append dynamic skills section so the LLM has visibility into
+    # installed skills, their scripts, parameters, and usage.
+    if skills_prompt_section:
+        system_prompt = system_prompt + "\n\n" + skills_prompt_section
 
     pydantic_agent = PydanticAgent(
         model,
