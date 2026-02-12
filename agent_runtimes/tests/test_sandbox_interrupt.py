@@ -21,7 +21,7 @@ class DummySandbox:
         self._started = True
         self._executing = executing
         self.interrupt_called = False
-        self._namespaces = {}  # marks as local-eval-like
+        self._namespaces: dict[str, dict[str, object]] = {}  # marks as local-eval-like
 
     @property
     def is_executing(self) -> bool:
