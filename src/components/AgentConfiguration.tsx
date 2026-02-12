@@ -648,7 +648,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
   // True when a library spec is selected (fields locked down except Name, URL, Library, Model, Transport, Extensions)
   const isSpecMode = isSpecSelection(selectedAgentId);
 
-  // Fetch skills from the backend (only when codemode is enabled)
+  // Fetch skills from the backend (always available, independent of codemode)
   const skillsQuery = useQuery<{ skills: SkillOption[]; total: number }>({
     queryKey: ['agent-skills', baseUrl],
     queryFn: async () => {
@@ -658,7 +658,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
       }
       return response.json();
     },
-    enabled: !!baseUrl && enableCodemode,
+    enabled: !!baseUrl,
     staleTime: 1000 * 60 * 5, // 5 minutes
     retry: 1,
   });
@@ -708,9 +708,10 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
     mcpServersQuery.data || configQuery.data?.mcpServers || [];
   const catalogServers = catalogServersQuery.data || [];
   const models = configQuery.data?.models || [];
-  // Use fetched skills when codemode is enabled, otherwise use passed availableSkills (which may be empty)
+  // Use fetched skills when available, otherwise use passed availableSkills (which may be empty)
   const fetchedSkills = skillsQuery.data?.skills || [];
-  const displaySkills = enableCodemode ? fetchedSkills : availableSkills;
+  const displaySkills =
+    fetchedSkills.length > 0 ? fetchedSkills : availableSkills;
   const skillsEnabled = selectedSkills.length > 0;
 
   const selectedConfigServers = selectedMcpServers
@@ -1087,6 +1088,14 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
             </Text>
           </Flash>
         )}
+        {skillsEnabled && !enableCodemode && (
+          <Flash variant="default" sx={{ mt: 3 }}>
+            <Text sx={{ fontSize: 0 }}>
+              Skills will run with a standalone code sandbox for script
+              execution. Enable Codemode to compose skills with other tools.
+            </Text>
+          </Flash>
+        )}
         {enableCodemode && (
           <Box sx={{ mt: 3, display: 'flex', flexDirection: 'column', gap: 2 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -1140,7 +1149,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
           borderColor: 'border.default',
           borderRadius: 2,
           backgroundColor: 'canvas.default',
-          opacity: isSpecMode ? 0.6 : enableCodemode ? 1 : 0.5,
+          opacity: isSpecMode ? 0.6 : 1,
         }}
       >
         <Box
@@ -1168,7 +1177,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
             )}
           </Text>
           {skillsQuery.isLoading && <Spinner size="small" />}
-          {enableCodemode && !skillsQuery.isLoading && (
+          {!skillsQuery.isLoading && (
             <Button
               variant="invisible"
               size="small"
@@ -1181,11 +1190,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
           )}
         </Box>
 
-        {!enableCodemode ? (
-          <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
-            Enable Codemode to use skills.
-          </Text>
-        ) : skillsQuery.isError ? (
+        {skillsQuery.isError ? (
           <Flash variant="warning" sx={{ marginBottom: 2 }}>
             <Text sx={{ fontSize: 0 }}>
               Unable to fetch skills. Check that the server is running.

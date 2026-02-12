@@ -121,6 +121,7 @@ async def _create_and_register_cli_agent(
         create_shared_sandbox,
         create_skills_toolset,
         initialize_codemode_toolset,
+        wire_skills_into_codemode,
     )
     from .transports import AGUITransport, MCPUITransport
 
@@ -225,6 +226,16 @@ async def _create_and_register_cli_agent(
             await initialize_codemode_toolset(codemode_toolset)
             non_mcp_toolsets.append(codemode_toolset)
             logger.info(f"Added and initialized CodemodeToolset for agent {agent_id}")
+
+    # Wire skill bindings into codemode so execute_code can import
+    # from generated.servers.skills and compose skills programmatically
+    if codemode_toolset and skills_enabled:
+        skills_ts = next(
+            (t for t in non_mcp_toolsets if type(t).__name__ == "AgentSkillsToolset"),
+            None,
+        )
+        if skills_ts:
+            wire_skills_into_codemode(codemode_toolset, skills_ts)
 
     # Build selected MCP servers list for the adapter
     # When codemode is enabled, MCP servers are accessed via CodemodeToolset registry
@@ -411,6 +422,19 @@ async def _create_and_register_cli_agent(
                     sandbox=fresh_sandbox,
                     allow_discovery_tools=True,
                 )
+
+                # Register post-init callback to re-wire skill bindings.
+                # The callback runs after the executor is created during
+                # lazy initialisation, so codegen + skill caller are ready.
+                if skills_enabled:
+                    _skills_ts = next(
+                        (t for t in non_mcp_toolsets if type(t).__name__ == "AgentSkillsToolset"),
+                        None,
+                    )
+                    if _skills_ts is not None:
+                        new_codemode.add_post_init_callback(
+                            lambda ts, st=_skills_ts: wire_skills_into_codemode(ts, st)
+                        )
 
                 # Update the reference
                 codemode_toolset = new_codemode

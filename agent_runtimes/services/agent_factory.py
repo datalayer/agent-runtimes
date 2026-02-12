@@ -297,3 +297,118 @@ def create_shared_sandbox(
             f"code_sandboxes not installed, cannot create shared sandbox: {e}"
         )
         return None
+
+
+def wire_skills_into_codemode(
+    codemode_toolset: Any,
+    skills_toolset: Any,
+) -> None:
+    """Wire skill bindings and routing into a codemode toolset.
+
+    This performs two things:
+
+    1. **Generates skill bindings** under ``generated/servers/skills/`` so
+       that ``execute_code`` can ``from generated.servers.skills import run_skill``.
+    2. **Sets a skill tool caller** on the codemode executor so that
+       ``call_tool("skills__<name>", args)`` is routed to the skills
+       toolset instead of the MCP registry.
+
+    Must be called *after* ``initialize_codemode_toolset`` so the
+    executor and codegen are ready.
+
+    Args:
+        codemode_toolset: An initialised ``CodemodeToolset`` instance.
+        skills_toolset: An initialised ``AgentSkillsToolset`` instance.
+    """
+    if codemode_toolset is None or skills_toolset is None:
+        return
+
+    executor = getattr(codemode_toolset, "_executor", None)
+    if executor is None:
+        logger.warning(
+            "wire_skills_into_codemode: codemode executor not initialised"
+        )
+        return
+
+    # --- 1. Generate skill bindings -------------------------------------------
+    codegen = getattr(executor, "_codegen", None)
+    discovered = getattr(skills_toolset, "_discovered_skills", {})
+
+    if codegen is not None and discovered:
+        skills_metadata: list[dict[str, Any]] = []
+        for skill in discovered.values():
+            entry: dict[str, Any] = {
+                "name": getattr(skill, "name", ""),
+                "description": getattr(skill, "description", ""),
+            }
+            scripts = getattr(skill, "scripts", [])
+            if scripts:
+                entry["scripts"] = [
+                    {"name": s.name, "description": getattr(s, "description", "")}
+                    for s in scripts
+                ]
+            resources = getattr(skill, "resources", [])
+            if resources:
+                entry["resources"] = [
+                    {"name": r.name} for r in resources
+                ]
+            skills_metadata.append(entry)
+
+        try:
+            codegen.generate_skill_bindings(skills_metadata)
+            logger.info(
+                "Generated skill bindings for %d skills", len(skills_metadata)
+            )
+        except Exception as exc:
+            logger.error("Failed to generate skill bindings: %s", exc)
+
+        # Store metadata so remote sandbox codegen can regenerate bindings
+        if hasattr(executor, "set_skills_metadata"):
+            executor.set_skills_metadata(skills_metadata)
+
+    # --- 2. Set skill tool caller ---------------------------------------------
+    async def _skill_tool_caller(
+        tool_name: str, arguments: dict[str, Any]
+    ) -> Any:
+        """Route skill__* tool calls to the skills toolset."""
+        # Strip the 'skills__' prefix to get the bare tool name
+        if tool_name.startswith("skills__"):
+            bare_name = tool_name[len("skills__"):]
+        else:
+            bare_name = tool_name
+
+        # Ensure skills toolset is initialised
+        ensure = getattr(skills_toolset, "_ensure_initialized", None)
+        if ensure:
+            await ensure()
+
+        if bare_name == "list_skills":
+            return skills_toolset._list_skills()
+        elif bare_name == "load_skill":
+            return skills_toolset._load_skill(
+                arguments.get("skill_name", "")
+            )
+        elif bare_name == "read_skill_resource":
+            return await skills_toolset._read_skill_resource(
+                arguments.get("skill_name", ""),
+                arguments.get("resource_name", ""),
+            )
+        elif bare_name == "run_skill_script":
+            return await skills_toolset._run_skill_script(
+                arguments.get("skill_name", ""),
+                arguments.get("script_name", ""),
+                arguments.get("args", []),
+                ctx=None,  # No RunContext when called from codemode
+            )
+        else:
+            raise ValueError(f"Unknown skill tool: {bare_name}")
+
+    executor.set_skill_tool_caller(_skill_tool_caller)
+    logger.info("Wired skill tool caller into codemode executor")
+
+    # --- 3. Register proxy caller for remote sandbox HTTP routing -------------
+    try:
+        from ..routes.mcp_proxy import set_skills_proxy_caller
+        set_skills_proxy_caller(_skill_tool_caller)
+    except ImportError:
+        pass  # mcp_proxy route not available (standalone usage)

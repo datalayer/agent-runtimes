@@ -6,6 +6,7 @@ from .agent_factory import (
     create_shared_sandbox,
     create_skills_toolset,
     initialize_codemode_toolset,
+    wire_skills_into_codemode,
 )
 from .code_sandbox_manager import (
     CodeSandboxManager,
@@ -23,4 +24,5 @@ __all__ = [
     "create_shared_sandbox",
     "create_skills_toolset",
     "initialize_codemode_toolset",
+    "wire_skills_into_codemode",
 ]

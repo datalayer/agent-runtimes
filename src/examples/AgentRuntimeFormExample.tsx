@@ -225,7 +225,7 @@ type IdentityProvidersInput = {
   [provider: string]: IdentityProviderInput;
 };
 
-type AgentSpaceFormExampleProps = {
+type AgentRuntimeFormExampleProps = {
   initialWsUrl?: string;
   initialBaseUrl?: string;
   initialAgentName?: string;
@@ -285,7 +285,7 @@ const DEFAULT_IDENTITY_PROVIDERS: IdentityProvidersInput = {
     : {}),
 };
 
-const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
+const AgentRuntimeFormExample: React.FC<AgentRuntimeFormExampleProps> = ({
   initialWsUrl = DEFAULT_WS_URL,
   initialBaseUrl = DEFAULT_BASE_URL,
   initialAgentName = DEFAULT_AGENT_ID,
@@ -499,12 +499,12 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
       connectWithToken(provider, token, { displayName, iconUrl })
         .then(() => {
           console.log(
-            `[AgentSpaceFormExample] ${provider} connected with token`,
+            `[AgentRuntimeFormExample] ${provider} connected with token`,
           );
         })
         .catch(err => {
           console.error(
-            `[AgentSpaceFormExample] Failed to connect ${provider}:`,
+            `[AgentRuntimeFormExample] Failed to connect ${provider}:`,
             err,
           );
           // Remove from attempted set so we can retry
@@ -516,14 +516,14 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
   // Handle identity connect/disconnect
   const handleIdentityConnect = useCallback((identity: Identity) => {
     console.log(
-      '[AgentSpaceFormExample] Identity connected:',
+      '[AgentRuntimeFormExample] Identity connected:',
       identity.provider,
       identity.userInfo?.name || identity.userInfo?.email,
     );
   }, []);
 
   const handleIdentityDisconnect = useCallback((provider: OAuthProvider) => {
-    console.log('[AgentSpaceFormExample] Identity disconnected:', provider);
+    console.log('[AgentRuntimeFormExample] Identity disconnected:', provider);
   }, []);
 
   // Handle codemode change - keep MCP server selections to scope codemode tools
@@ -923,7 +923,7 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
               onMcpServersChange={() => {
                 // Trigger codemode tool regeneration when MCP servers change at runtime
                 console.log(
-                  '[AgentSpaceFormExample] MCP servers changed, regenerating codemode tools...',
+                  '[AgentRuntimeFormExample] MCP servers changed, regenerating codemode tools...',
                 );
                 // The Chat component will pick up the new selectedMcpServers via props
               }}
@@ -1117,4 +1117,4 @@ const AgentSpaceFormExample: React.FC<AgentSpaceFormExampleProps> = ({
   );
 };
 
-export default AgentSpaceFormExample;
+export default AgentRuntimeFormExample;

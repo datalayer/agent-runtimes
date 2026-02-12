@@ -22,7 +22,7 @@ export const EXAMPLES: Record<
   AgUiSharedStateExample: () => import('./AgUiSharedStateExample'),
   AgUiToolsBasedGenUIExample: () => import('./AgUiToolsBasedGenUIExample'),
   AgentRuntimeCustomExample: () => import('./AgentRuntimeCustomExample'),
-  AgentSpaceFormExample: () => import('./AgentSpaceFormExample'),
+  AgentRuntimeFormExample: () => import('./AgentRuntimeFormExample'),
   AgentRuntimeLexicalSidebarExample: () =>
     import('./AgentRuntimeLexicalSidebarExample'),
   AgentRuntimeNotebookExample: () => import('./AgentRuntimeNotebookExample'),
