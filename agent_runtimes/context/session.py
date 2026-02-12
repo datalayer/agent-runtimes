@@ -787,13 +787,16 @@ class ContextSnapshot:
                             else ""
                         )
 
-                        # Format tokens with real duration if available
-                        tokens_str = f"{req.input_tokens} in / {req.output_tokens} out"
+                        # Format step label with duration in parenthesis
+                        step_label = f"    Step {step_num}"
                         if hasattr(req, "duration_ms") and req.duration_ms > 0:
                             duration_s = req.duration_ms / 1000
-                            tokens_str += f" • {duration_s:.2f}s"
+                            step_label += f" ({duration_s:.2f}s)"
 
-                        table.add_row(f"    Step {step_num}", tokens_str, tools_str)
+                        # Format tokens
+                        tokens_str = f"{req.input_tokens} in / {req.output_tokens} out"
+
+                        table.add_row(step_label, tokens_str, tools_str)
                     # Show totals only if multiple steps
                     if len(turn_requests) > 1:
                         table.add_row(
@@ -1596,45 +1599,8 @@ def extract_context_snapshot(
         + snapshot.current_assistant_tokens
     )
 
-    # Calculate step durations from timestamps AFTER all RequestUsageSnapshots are created
-    # Since timestamps represent START times, duration = next_step_start - this_step_start
-    if snapshot.per_request_usage and turn_usage and turn_usage.duration_seconds > 0:
-        total_turn_duration_ms = turn_usage.duration_seconds * 1000
-
-        for i, req in enumerate(snapshot.per_request_usage):
-            if i < len(snapshot.per_request_usage) - 1:
-                # For all steps except the last: duration = next step start - this step start
-                next_req = snapshot.per_request_usage[i + 1]
-                if req.timestamp and next_req.timestamp:
-                    try:
-                        from datetime import datetime
-
-                        # Parse current step timestamp
-                        current_time_str = req.timestamp
-                        if current_time_str.endswith("Z"):
-                            current_time_str = current_time_str[:-1] + "+00:00"
-                        current_dt = datetime.fromisoformat(current_time_str)
-                        current_time = current_dt.timestamp()
-
-                        # Parse next step timestamp
-                        next_time_str = next_req.timestamp
-                        if next_time_str.endswith("Z"):
-                            next_time_str = next_time_str[:-1] + "+00:00"
-                        next_dt = datetime.fromisoformat(next_time_str)
-                        next_time = next_dt.timestamp()
-
-                        # Calculate duration in milliseconds
-                        duration_seconds = next_time - current_time
-                        req.duration_ms = duration_seconds * 1000
-
-                    except Exception:
-                        pass  # Keep duration_ms as 0.0
-            else:
-                # For the last step: duration = total_turn_duration - sum_of_previous_durations
-                previous_durations_ms = sum(
-                    r.duration_ms for r in snapshot.per_request_usage[:-1]
-                )
-                req.duration_ms = total_turn_duration_ms - previous_durations_ms
+    # Note: Duration calculation is now done in get_agent_context_snapshot
+    # after per_request_usage is merged from tracker data
 
     return snapshot
 
@@ -2135,19 +2101,45 @@ def get_agent_context_snapshot(agent_id: str) -> ContextSnapshot | None:
     agent, info = _agents[agent_id]
     logger.debug(f"get_agent_context_snapshot: Found agent type={type(agent).__name__}")
 
-    # Get context window from usage tracker
+    # Get context window and stats from usage tracker
     tracker = get_usage_tracker()
     context_window = tracker.get_context_window(agent_id)
+    stats = tracker.get_agent_stats(agent_id)
 
-    # Extract snapshot from agent
-    snapshot = extract_context_snapshot(agent, agent_id, context_window)
+    # Build TurnUsage from stats for duration calculation
+    turn_usage = None
+    if stats:
+        turn_usage = TurnUsage(
+            input_tokens=stats.input_tokens,
+            output_tokens=stats.output_tokens,
+            requests=len(stats.request_usage_history),
+            tool_calls=stats.tool_calls,
+            tool_names=[],
+            duration_seconds=stats.last_turn_duration_ms
+            / 1000.0,  # Use stored turn duration
+        )
+        logger.debug(
+            f"get_agent_context_snapshot: Built turn_usage - "
+            f"last_turn_duration_ms={stats.last_turn_duration_ms}, "
+            f"duration_seconds={turn_usage.duration_seconds}, "
+            f"requests={len(stats.request_usage_history)}"
+        )
+
+    # Extract snapshot from agent with message history and turn_usage
+    # This allows proper duration calculation from timestamps
+    snapshot = extract_context_snapshot(
+        agent,
+        agent_id,
+        context_window,
+        message_history=stats.message_history if stats else None,
+        turn_usage=turn_usage,
+    )
     logger.debug(
-        f"get_agent_context_snapshot: After extract - tool_tokens={snapshot.tool_tokens}, tools={len(snapshot.tools)}, system_prompt_tokens={snapshot.system_prompt_tokens}"
+        f"get_agent_context_snapshot: After extract - tool_tokens={snapshot.tool_tokens}, tools={len(snapshot.tools)}, system_prompt_tokens={snapshot.system_prompt_tokens}, per_request_usage={len(snapshot.per_request_usage)}"
     )
 
     # Merge with usage tracker data for message tokens and tools
     # (since message history is per-run, we use accumulated stats)
-    stats = tracker.get_agent_stats(agent_id)
     if stats:
         snapshot.user_message_tokens = stats.user_message_tokens
         snapshot.assistant_message_tokens = stats.assistant_message_tokens
@@ -2186,17 +2178,102 @@ def get_agent_context_snapshot(agent_id: str) -> ContextSnapshot | None:
         # Merge per-request usage from tracker if snapshot has none
         # (AG-UI doesn't populate _agent_messages, so snapshot extraction finds nothing)
         if not snapshot.per_request_usage and stats.request_usage_history:
-            for req in stats.request_usage_history:
+            # Extract timestamps from stored messages to match with request_usage_history
+            message_timestamps: list[str | None] = []
+            if stats.message_history:
+                for msg in stats.message_history:
+                    if isinstance(msg, dict):
+                        msg_kind = msg.get("kind")
+                    else:
+                        msg_kind = getattr(msg, "kind", None)
+
+                    if msg_kind == "response":
+                        if isinstance(msg, dict):
+                            ts = msg.get("timestamp")
+                        else:
+                            ts = getattr(msg, "timestamp", None)
+                        if ts and isinstance(ts, str):
+                            message_timestamps.append(ts)
+                        else:
+                            message_timestamps.append(None)
+
+            # Merge request usage with extracted timestamps
+            for i, req in enumerate(stats.request_usage_history):
+                ts = message_timestamps[i] if i < len(message_timestamps) else None
                 snapshot.per_request_usage.append(
                     RequestUsageSnapshot(
                         request_num=req.request_num,
                         input_tokens=req.input_tokens,
                         output_tokens=req.output_tokens,
                         tool_names=req.tool_names,
-                        timestamp=req.timestamp,
+                        timestamp=ts or req.timestamp,  # Prefer message timestamp
                         duration_ms=req.duration_ms,
                     )
                 )
+
+            logger.debug(
+                f"get_agent_context_snapshot: Merged {len(snapshot.per_request_usage)} per-request entries from tracker"
+            )
+
+            # NOW calculate durations from timestamps after per_request_usage is populated
+            if (
+                snapshot.per_request_usage
+                and turn_usage
+                and turn_usage.duration_seconds > 0
+            ):
+                total_turn_duration_ms = turn_usage.duration_seconds * 1000
+                logger.debug(
+                    f"get_agent_context_snapshot: Calculating step durations - "
+                    f"total={total_turn_duration_ms:.0f}ms, steps={len(snapshot.per_request_usage)}"
+                )
+
+                for i, req in enumerate(snapshot.per_request_usage):
+                    if i < len(snapshot.per_request_usage) - 1:
+                        # For all steps except the last: duration = next step start - this step start
+                        next_req = snapshot.per_request_usage[i + 1]
+                        if req.timestamp and next_req.timestamp:
+                            try:
+                                from datetime import datetime
+
+                                # Parse current step timestamp
+                                current_time_str = req.timestamp
+                                if current_time_str.endswith("Z"):
+                                    current_time_str = current_time_str[:-1] + "+00:00"
+                                current_dt = datetime.fromisoformat(current_time_str)
+                                current_time = current_dt.timestamp()
+
+                                # Parse next step timestamp
+                                next_time_str = next_req.timestamp
+                                if next_time_str.endswith("Z"):
+                                    next_time_str = next_time_str[:-1] + "+00:00"
+                                next_dt = datetime.fromisoformat(next_time_str)
+                                next_time = next_dt.timestamp()
+
+                                # Calculate duration in milliseconds
+                                duration_seconds = next_time - current_time
+                                req.duration_ms = duration_seconds * 1000
+                                logger.debug(
+                                    f"Step {i + 1} duration from timestamps: {req.duration_ms:.0f}ms"
+                                )
+
+                            except Exception as e:
+                                logger.warning(
+                                    f"Could not parse timestamps for step {i + 1}: {e}"
+                                )
+                        else:
+                            logger.warning(
+                                f"Step {i + 1} missing timestamps: req={req.timestamp}, next={next_req.timestamp}"
+                            )
+                    else:
+                        # For the last step: duration = total_turn_duration - sum_of_previous_durations
+                        previous_durations_ms = sum(
+                            r.duration_ms for r in snapshot.per_request_usage[:-1]
+                        )
+                        req.duration_ms = total_turn_duration_ms - previous_durations_ms
+                        logger.debug(
+                            f"Last step (Step {i + 1}) duration: {req.duration_ms:.0f}ms (total - previous = {total_turn_duration_ms:.0f} - {previous_durations_ms:.0f})"
+                        )
+
             # Update sum fields from tracker data
             snapshot.sum_response_input_tokens = stats.input_tokens
             snapshot.sum_response_output_tokens = stats.output_tokens
@@ -2209,18 +2286,34 @@ def get_agent_context_snapshot(agent_id: str) -> ContextSnapshot | None:
             + snapshot.assistant_message_tokens
         )
 
-        # Populate turn usage from the last request in the history
-        if stats.request_usage_history:
-            last_req = stats.request_usage_history[-1]
+        # Populate turn usage from the per-request history
+        # Use per_request_usage from snapshot since it's the authoritative source
+        if snapshot.per_request_usage:
+            # Collect unique tool names from all per-request entries
+            unique_tool_names: list[str] = []
+            seen = set()
+
+            for req in snapshot.per_request_usage:
+                if req.tool_names:
+                    for tool_name in req.tool_names:
+                        if tool_name not in seen:
+                            unique_tool_names.append(tool_name)
+                            seen.add(tool_name)
+
+            # Preserve duration from existing turn_usage if present
+            preserved_duration = (
+                snapshot.turn_usage.duration_seconds if snapshot.turn_usage else 0.0
+            )
+
             snapshot.turn_usage = TurnUsage(
-                input_tokens=last_req.input_tokens,
-                output_tokens=last_req.output_tokens,
-                requests=1,
-                tool_calls=last_req.tool_calls,
-                tool_names=last_req.tool_names,
-                duration_seconds=round(last_req.duration_ms / 1000, 2)
-                if last_req.duration_ms
-                else 0.0,
+                input_tokens=snapshot.sum_response_input_tokens,
+                output_tokens=snapshot.sum_response_output_tokens,
+                requests=len(snapshot.per_request_usage),
+                tool_calls=sum(
+                    1 for req in snapshot.per_request_usage if req.tool_names
+                ),
+                tool_names=unique_tool_names,
+                duration_seconds=preserved_duration,  # Use preserved duration
             )
 
         # Populate session usage from cumulative stats

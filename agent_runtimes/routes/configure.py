@@ -258,6 +258,51 @@ async def get_agent_context_snapshot_endpoint(
     return result
 
 
+@router.get("/agents/{agent_id}/context-table")
+async def get_agent_context_table_endpoint(
+    agent_id: str = Path(
+        ...,
+        description="Agent ID to get context table for",
+    ),
+    show_context: bool = True,
+) -> dict[str, Any]:
+    """
+    Render the context snapshot table as plain text.
+
+    Args:
+        agent_id: The unique identifier of the agent.
+        show_context: Whether to include the CONTEXT section.
+
+    Returns:
+        A dict containing the rendered table text.
+    """
+    from io import StringIO
+
+    from rich.console import Console
+
+    from ..context.session import get_agent_context_snapshot
+
+    snapshot = get_agent_context_snapshot(agent_id)
+    if snapshot is None:
+        return {
+            "error": f"Agent '{agent_id}' not found",
+            "agentId": agent_id,
+            "table": "",
+        }
+
+    table = snapshot.to_table(show_context=show_context)
+    buffer = StringIO()
+    console = Console(
+        record=True,
+        file=buffer,
+        force_terminal=True,
+        color_system="truecolor",
+        width=100,
+    )
+    console.print(table)
+    return {"agentId": agent_id, "table": console.export_text(styles=True)}
+
+
 @router.get("/agents/{agent_id}/full-context")
 async def get_agent_full_context_endpoint(
     agent_id: str = Path(
@@ -338,6 +383,128 @@ async def reset_agent_context(
     tracker = get_usage_tracker()
     tracker.reset_agent(agent_id)
     return {"status": "ok", "message": f"Context reset for agent '{agent_id}'"}
+
+
+@router.get("/agents/{agent_id}/context-export")
+async def export_agent_context_csv(
+    agent_id: str = Path(
+        ...,
+        description="Agent ID to export context for",
+    ),
+    truncate_message_chars: int = 200,
+) -> dict[str, Any]:
+    """
+    Export the current context snapshot as CSV text.
+
+    Args:
+        agent_id: The unique identifier of the agent.
+        truncate_message_chars: Max characters for message content (0 disables truncation).
+
+    Returns:
+        Dict containing filename and CSV content.
+    """
+    import csv
+    from datetime import datetime
+    from io import StringIO
+
+    from ..context.session import get_agent_context_snapshot
+
+    snapshot = get_agent_context_snapshot(agent_id)
+    if snapshot is None:
+        return {
+            "error": f"Agent '{agent_id}' not found",
+            "agentId": agent_id,
+            "filename": "",
+            "csv": "",
+        }
+
+    data = snapshot.to_dict()
+    output = StringIO()
+    writer = csv.writer(output)
+
+    # Write header
+    writer.writerow(["Category", "Key", "Value"])
+
+    # Write general info
+    writer.writerow(["General", "Agent ID", agent_id])
+    writer.writerow(["General", "Model", data.get("modelName", "unknown")])
+    writer.writerow(["General", "Context Window", data.get("contextWindow", 0)])
+    writer.writerow(["General", "Total Tokens", data.get("totalTokens", 0)])
+
+    # Write token breakdown
+    writer.writerow(
+        [
+            "Tokens",
+            "System Prompt",
+            data.get("systemPromptTokens", 0),
+        ]
+    )
+    writer.writerow(
+        [
+            "Tokens",
+            "Tool Definitions",
+            data.get("toolTokens", 0),
+        ]
+    )
+    writer.writerow(
+        [
+            "Tokens",
+            "User Messages",
+            data.get("userMessageTokens", 0),
+        ]
+    )
+    writer.writerow(
+        [
+            "Tokens",
+            "Assistant Messages",
+            data.get("assistantMessageTokens", 0),
+        ]
+    )
+    writer.writerow(
+        [
+            "Tokens",
+            "Total Input",
+            data.get("sumResponseInputTokens", 0),
+        ]
+    )
+    writer.writerow(
+        [
+            "Tokens",
+            "Total Output",
+            data.get("sumResponseOutputTokens", 0),
+        ]
+    )
+
+    # Write tools
+    tools = data.get("tools", [])
+    for tool in tools:
+        writer.writerow(
+            [
+                "Tool",
+                tool.get("name", "unknown"),
+                tool.get("description", ""),
+            ]
+        )
+
+    # Write messages summary
+    messages = data.get("messages", [])
+    for i, msg in enumerate(messages):
+        role = msg.get("role", "unknown")
+        content = msg.get("content", "")
+        if truncate_message_chars and len(content) > truncate_message_chars:
+            content = content[: max(0, truncate_message_chars - 3)] + "..."
+        writer.writerow(["Message", f"{i + 1}. {role}", content])
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"codeai_context_{timestamp}.csv"
+
+    return {
+        "agentId": agent_id,
+        "filename": filename,
+        "csv": output.getvalue(),
+        "toolsCount": len(tools),
+        "messagesCount": len(messages),
+    }
 
 
 # =========================================================================

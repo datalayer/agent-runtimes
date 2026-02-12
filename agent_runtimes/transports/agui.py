@@ -166,6 +166,9 @@ class AGUITransport(BaseTransport):
                 """
                 Endpoint to run the agent with per-request model override support.
                 """
+                import time
+
+                request_start = time.perf_counter()
                 # Extract model and identities from request body if provided
                 model: str | None = None
                 identities_from_request: list[dict[str, Any]] | None = None
@@ -201,6 +204,7 @@ class AGUITransport(BaseTransport):
                 async def on_complete(result: "AgentRunResult") -> None:
                     """
                     Callback to track usage after agent run completes.
+                    Extracts per-response usage data to show multiple steps.
                     """
                     logger.info(
                         f"[AG-UI on_complete] Callback invoked for agent {agent_id}"
@@ -208,27 +212,106 @@ class AGUITransport(BaseTransport):
                     usage = result.usage()
                     logger.info(f"[AG-UI on_complete] Usage object: {usage}")
                     if usage:
-                        tracker.update_usage(
-                            agent_id=agent_id,
-                            input_tokens=usage.input_tokens,
-                            output_tokens=usage.output_tokens,
-                            requests=usage.requests,
-                            tool_calls=usage.tool_calls,
-                        )
+                        duration_ms = (time.perf_counter() - request_start) * 1000
 
-                        # Also update message token tracking
-                        stats = tracker.get_agent_stats(agent_id)
-                        if stats:
-                            stats.update_message_tokens(
-                                user_tokens=usage.input_tokens,
-                                assistant_tokens=usage.output_tokens,
+                        # Extract per-response usage data from messages
+                        # Each response message may have multiple tool calls
+                        try:
+                            messages = result.all_messages()
+                            tracker = get_usage_tracker()
+
+                            # Store message history so extract_context_snapshot can extract proper timestamps
+                            tracker.get_agent_stats(agent_id).store_messages(messages)
+
+                            # Process each response message to extract per-step data
+                            response_count = 0
+                            for msg in messages:
+                                if hasattr(msg, "kind") and msg.kind == "response":
+                                    response_count += 1
+                                    response_usage = getattr(msg, "usage", None)
+
+                                    # Extract tool names and count from this response's parts
+                                    response_tool_names: list[str] = []
+                                    response_tool_call_count = 0
+                                    if hasattr(msg, "parts"):
+                                        for part in msg.parts:
+                                            # Check if part is a dict or object
+                                            if isinstance(part, dict):
+                                                if part.get("part_kind") == "tool-call":
+                                                    tool_name = part.get("tool_name")
+                                                    if tool_name:
+                                                        response_tool_names.append(
+                                                            tool_name
+                                                        )
+                                                        response_tool_call_count += 1
+                                            else:
+                                                # Object part
+                                                if hasattr(part, "tool_name"):
+                                                    response_tool_names.append(
+                                                        part.tool_name
+                                                    )
+                                                    response_tool_call_count += 1
+
+                                    # Track usage for this response step
+                                    if response_usage:
+                                        resp_input = (
+                                            getattr(response_usage, "input_tokens", 0)
+                                            or 0
+                                        )
+                                        resp_output = (
+                                            getattr(response_usage, "output_tokens", 0)
+                                            or 0
+                                        )
+
+                                        logger.info(
+                                            f"[AG-UI on_complete] Response {response_count}: "
+                                            f"in={resp_input}, out={resp_output}, tool_calls={response_tool_call_count}, tools={response_tool_names}"
+                                        )
+
+                                        # Record this response as a separate "request" for step tracking
+                                        # requests=1 means one API call, which created one response
+                                        # Duration is calculated from message timestamps in extract_context_snapshot
+                                        tracker.update_usage(
+                                            agent_id=agent_id,
+                                            input_tokens=resp_input,
+                                            output_tokens=resp_output,
+                                            requests=1,
+                                            tool_calls=response_tool_call_count,  # Count tool calls from parts
+                                            tool_names=response_tool_names
+                                            if response_tool_names
+                                            else None,
+                                            duration_ms=0.0,  # Duration will be calculated from message timestamps
+                                        )
+
+                            # Also update message token tracking (cumulative)
+                            stats = tracker.get_agent_stats(agent_id)
+                            if stats:
+                                stats.update_message_tokens(
+                                    user_tokens=usage.input_tokens,
+                                    assistant_tokens=usage.output_tokens,
+                                )
+                                # Store the total turn duration for step duration calculation
+                                stats.last_turn_duration_ms = duration_ms
+                                logger.debug(
+                                    f"AG-UI tracked {response_count} responses for agent {agent_id}: "
+                                    f"total_input={usage.input_tokens}, total_output={usage.output_tokens}, "
+                                    f"duration={duration_ms:.0f}ms"
+                                )
+                        except Exception as e:
+                            logger.warning(
+                                f"[AG-UI on_complete] Could not extract per-response data: {e}"
                             )
-
-                        logger.info(
-                            f"AG-UI tracked usage for agent {agent_id}: "
-                            f"input={usage.input_tokens}, output={usage.output_tokens}, "
-                            f"requests={usage.requests}, tools={usage.tool_calls}"
-                        )
+                            # Fallback: single aggregate update
+                            tracker = get_usage_tracker()
+                            tracker.update_usage(
+                                agent_id=agent_id,
+                                input_tokens=usage.input_tokens,
+                                output_tokens=usage.output_tokens,
+                                requests=1,
+                                tool_calls=usage.tool_calls,
+                                tool_names=None,
+                                duration_ms=duration_ms,
+                            )
                     else:
                         logger.warning(
                             f"[AG-UI on_complete] No usage data available for agent {agent_id}"

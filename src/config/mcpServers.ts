@@ -79,7 +79,7 @@ export const GITHUB_MCP_SERVER: MCPServer = {
     '-i',
     '--rm',
     '-e',
-    'GITHUB_TOKEN',
+    'GITHUB_PERSONAL_ACCESS_TOKEN',
     'ghcr.io/github/github-mcp-server',
   ],
   transport: 'stdio',

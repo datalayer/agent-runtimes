@@ -89,6 +89,9 @@ class AgentUsageStats:
     # Message history from agent runs (stored as JSON-serializable dicts)
     message_history: list[dict[str, Any]] = field(default_factory=list)
 
+    # Last turn total duration (milliseconds) for proper step duration calculation
+    last_turn_duration_ms: float = 0.0
+
     # Timestamps
     created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     last_updated: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
@@ -116,6 +119,7 @@ class AgentUsageStats:
         requests: int = 0,
         tool_calls: int = 0,
         tool_names: list[str] | None = None,
+        duration_ms: float = 0.0,
     ) -> None:
         """
         Update usage stats from a run result.
@@ -138,6 +142,7 @@ class AgentUsageStats:
                 tool_calls=tool_calls,
                 tool_names=tool_names or [],
                 timestamp=datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+                duration_ms=duration_ms,
             )
         )
 
@@ -387,6 +392,7 @@ class AgentUsageTracker:
         requests: int = 0,
         tool_calls: int = 0,
         tool_names: list[str] | None = None,
+        duration_ms: float = 0.0,
     ) -> None:
         """
         Update usage statistics for an agent.
@@ -410,6 +416,7 @@ class AgentUsageTracker:
             requests=requests,
             tool_calls=tool_calls,
             tool_names=tool_names,
+            duration_ms=duration_ms,
         )
 
     def get_context_details(self, agent_id: str) -> dict[str, Any]:

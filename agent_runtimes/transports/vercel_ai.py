@@ -287,6 +287,9 @@ class VercelAITransport(BaseTransport):
         # Create on_complete callback to track usage
         agent_id = self._agent_id
         tracker = get_usage_tracker()
+        import time
+
+        request_start = time.perf_counter()
 
         async def on_complete(result: "AgentRunResult") -> AsyncIterator[None]:
             """
@@ -299,12 +302,23 @@ class VercelAITransport(BaseTransport):
             """
             usage = result.usage()
             if usage:
+                # Extract tool names from result messages
+                tool_names: list[str] = []
+                if hasattr(result, "_messages"):
+                    for msg in result._messages:
+                        if hasattr(msg, "tool_calls"):
+                            for tc in msg.tool_calls:
+                                tool_names.append(tc.name)
+
+                duration_ms = (time.perf_counter() - request_start) * 1000
                 tracker.update_usage(
                     agent_id=agent_id,
                     input_tokens=usage.input_tokens,
                     output_tokens=usage.output_tokens,
                     requests=usage.requests,  # Number of requests made
                     tool_calls=usage.tool_calls,
+                    tool_names=tool_names if tool_names else None,
+                    duration_ms=duration_ms,
                 )
 
                 # Also update message token tracking

@@ -441,6 +441,8 @@ class PydanticAIAdapter(BaseAgent):
         # Extract model from context metadata for per-request model override
         model_override = context.metadata.get("model") if context.metadata else None
 
+        import time
+
         try:
             # Run the Pydantic AI agent
             # Pass model override if provided in context metadata
@@ -462,7 +464,9 @@ class PydanticAIAdapter(BaseAgent):
                 f"PydanticAIAdapter: Using {len(runtime_toolsets)} runtime toolsets"
             )
 
+            request_start = time.perf_counter()
             result = await self._agent.run(prompt, **run_kwargs)
+            duration_ms = (time.perf_counter() - request_start) * 1000
 
             # Extract response content
             content = str(result.output) if result.output else ""
@@ -470,12 +474,19 @@ class PydanticAIAdapter(BaseAgent):
             # Extract tool calls if any
             tool_calls: list[ToolCall] = []
             tool_results: list[ToolResult] = []
+            tool_names: list[str] = []
 
             # Pydantic AI handles tool calls internally, but we can
             # extract them from the messages if needed
             if hasattr(result, "_messages"):
+                logger.info(
+                    f"[PydanticAI] Result has _messages: {len(result._messages)} messages"
+                )
                 for msg in result._messages:
                     if hasattr(msg, "tool_calls"):
+                        logger.info(
+                            f"[PydanticAI] Message has tool_calls: {msg.tool_calls}"
+                        )
                         for tc in msg.tool_calls:
                             tool_calls.append(
                                 ToolCall(
@@ -484,6 +495,9 @@ class PydanticAIAdapter(BaseAgent):
                                     arguments=tc.arguments,
                                 )
                             )
+                            tool_names.append(tc.name)
+
+            logger.info(f"[PydanticAI] Extracted tool_names: {tool_names}")
 
             # Extract usage information and track it
             usage = {}
@@ -499,6 +513,9 @@ class PydanticAIAdapter(BaseAgent):
                 }
 
                 # Update the usage tracker with real data
+                logger.info(
+                    f"[PydanticAI] Calling tracker.update_usage with tool_names={tool_names if tool_names else None}"
+                )
                 tracker.update_usage(
                     agent_id=self._agent_id,
                     input_tokens=getattr(run_usage, "input_tokens", 0),
@@ -507,6 +524,8 @@ class PydanticAIAdapter(BaseAgent):
                     cache_write_tokens=getattr(run_usage, "cache_write_tokens", 0),
                     requests=getattr(run_usage, "requests", 1),
                     tool_calls=getattr(run_usage, "tool_calls", len(tool_calls)),
+                    tool_names=tool_names if tool_names else None,
+                    duration_ms=duration_ms,
                 )
 
                 # Update message token tracking
@@ -554,6 +573,8 @@ class PydanticAIAdapter(BaseAgent):
         # Extract model from context metadata for per-request model override
         model_override = context.metadata.get("model") if context.metadata else None
 
+        import time
+
         try:
             # Use Pydantic AI's run_stream for proper streaming
             # Pass model override if provided in context metadata
@@ -575,6 +596,7 @@ class PydanticAIAdapter(BaseAgent):
                 f"PydanticAIAdapter: Using {len(runtime_toolsets)} runtime toolsets for stream"
             )
 
+            request_start = time.perf_counter()
             async with self._agent.run_stream(prompt, **stream_kwargs) as result:
                 # stream_text() yields cumulative text, we need deltas
                 last_text = ""
@@ -585,10 +607,30 @@ class PydanticAIAdapter(BaseAgent):
                         last_text = text
                         yield StreamEvent(type="text", data=delta)
 
+                # Extract tool calls from result messages
+                tool_names: list[str] = []
+                if hasattr(result, "_messages"):
+                    logger.info(
+                        f"[PydanticAI Stream] Result has _messages: {len(result._messages)} messages"
+                    )
+                    for msg in result._messages:
+                        if hasattr(msg, "tool_calls"):
+                            logger.info(
+                                f"[PydanticAI Stream] Message has tool_calls: {msg.tool_calls}"
+                            )
+                            for tc in msg.tool_calls:
+                                tool_names.append(tc.name)
+
+                logger.info(f"[PydanticAI Stream] Extracted tool_names: {tool_names}")
+
                 # Track usage after streaming completes
                 tracker = get_usage_tracker()
                 if hasattr(result, "usage"):
                     run_usage = result.usage()
+                    duration_ms = (time.perf_counter() - request_start) * 1000
+                    logger.info(
+                        f"[PydanticAI Stream] Calling tracker.update_usage with tool_names={tool_names if tool_names else None}"
+                    )
                     tracker.update_usage(
                         agent_id=self._agent_id,
                         input_tokens=getattr(run_usage, "input_tokens", 0),
@@ -597,6 +639,8 @@ class PydanticAIAdapter(BaseAgent):
                         cache_write_tokens=getattr(run_usage, "cache_write_tokens", 0),
                         requests=getattr(run_usage, "requests", 1),
                         tool_calls=getattr(run_usage, "tool_calls", 0),
+                        tool_names=tool_names if tool_names else None,
+                        duration_ms=duration_ms,
                     )
 
                     # Update message token tracking

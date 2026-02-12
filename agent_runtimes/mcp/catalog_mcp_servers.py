@@ -87,14 +87,14 @@ GITHUB_MCP_SERVER = MCPServer(
         "-i",
         "--rm",
         "-e",
-        "GITHUB_TOKEN",
+        "GITHUB_PERSONAL_ACCESS_TOKEN",
         "ghcr.io/github/github-mcp-server",
     ],
     transport="stdio",
     enabled=True,
     tools=[],
     env={
-        "GITHUB_TOKEN": "${GITHUB_TOKEN}",
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}",
     },
     required_env_vars=["GITHUB_TOKEN"],
 )
