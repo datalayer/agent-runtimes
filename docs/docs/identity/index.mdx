@@ -253,10 +253,10 @@ VITE_KAGGLE_TOKEN=your-api-key-from-kaggle-json
 ```
 
 ```tsx
-import { AgentSpaceFormExample } from '@datalayer/agent-runtimes';
+import { AgentRuntimeFormExample } from '@datalayer/agent-runtimes';
 
 // Token auto-connects on component mount
-<AgentSpaceFormExample
+<AgentRuntimeFormExample
   identityProviders={{
     kaggle: {
       type: 'token',
@@ -1105,7 +1105,7 @@ if token:
     print(f"Logged in as: {user['login']}")
     
     # Combine with MCP tools
-    from generated.servers.filesystem import read_file
+    from generated.mcp.filesystem import read_file
     readme = await read_file({"path": "./README.md"})
     print(f"README has {len(readme['content'])} characters")
 else:

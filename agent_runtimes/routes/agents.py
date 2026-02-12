@@ -32,6 +32,7 @@ from ..services import (
     create_shared_sandbox,
     create_skills_toolset,
     initialize_codemode_toolset,
+    wire_skills_into_codemode,
 )
 from ..transports import AGUITransport, MCPUITransport, VercelAITransport
 from ..types import AgentSpec
@@ -47,6 +48,16 @@ router = APIRouter(prefix="/agents", tags=["agents"])
 
 # Store the API prefix for dynamic mount paths
 _api_prefix = "/api/v1"
+
+# Store the original creation request (spec) for each agent, keyed by agent_id.
+# This preserves the separated system_prompt and system_prompt_codemode_addons
+# which are merged at agent creation time and lost in the running agent.
+_agent_specs: dict[str, dict[str, Any]] = {}
+
+
+def get_stored_agent_spec(agent_id: str) -> dict[str, Any] | None:
+    """Get the original creation spec for an agent."""
+    return _agent_specs.get(agent_id)
 
 
 def set_api_prefix(prefix: str) -> None:
@@ -76,7 +87,7 @@ async def get_agent_spec_library() -> list[dict[str, Any]]:
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/library/{agent_id}", response_model=AgentSpec)
+@router.get("/library/{agent_id:path}", response_model=AgentSpec)
 async def get_agent_spec(agent_id: str) -> dict[str, Any]:
     """
     Get a specific agent specification from the library.
@@ -330,6 +341,10 @@ class CreateAgentRequest(BaseModel):
         default=None,
         description="Jupyter server URL with token for code sandbox (e.g., http://localhost:8888?token=xxx). If provided, codemode will use Jupyter kernel instead of local-eval sandbox.",
     )
+    agent_spec_id: str | None = Field(
+        default=None,
+        description="ID of a library agent spec to use as base configuration. When provided, the spec's system_prompt, system_prompt_codemode_addons, skills, and MCP servers are used as defaults (request fields can override).",
+    )
 
 
 class CreateAgentResponse(BaseModel):
@@ -378,6 +393,40 @@ async def create_agent(
         )
 
     try:
+        # If an agent_spec_id is provided, load the library spec and apply
+        # its fields as defaults (request fields take precedence for overrides).
+        if request.agent_spec_id:
+            spec = get_library_agent_spec(request.agent_spec_id)
+            if not spec:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Agent spec '{request.agent_spec_id}' not found in library.",
+                )
+            logger.info(
+                f"Using library spec '{request.agent_spec_id}' for agent '{agent_id}'"
+            )
+            # Apply spec defaults — only override fields the caller did not set.
+            if (
+                request.system_prompt == "You are a helpful AI assistant."
+                and spec.system_prompt
+            ):
+                request.system_prompt = spec.system_prompt
+            if (
+                request.system_prompt_codemode_addons is None
+                and spec.system_prompt_codemode_addons
+            ):
+                request.system_prompt_codemode_addons = (
+                    spec.system_prompt_codemode_addons
+                )
+            if not request.skills and spec.skills:
+                request.skills = spec.skills
+            if spec.system_prompt_codemode_addons and not request.enable_codemode:
+                request.enable_codemode = True
+            if spec.skills and not request.enable_skills:
+                request.enable_skills = True
+            if not request.description and spec.description:
+                request.description = spec.description
+
         # Build list of non-MCP toolsets (skills, codemode, etc.)
         # MCP toolsets will be dynamically fetched at run time by the adapter
         non_mcp_toolsets = []
@@ -540,21 +589,21 @@ async def create_agent(
 
                 try:
                     generated_root = Path(codemode_toolset.config.generated_path)
-                    servers_dir = generated_root / "servers"
-                    if servers_dir.exists():
+                    mcp_dir = generated_root / "mcp"
+                    if mcp_dir.exists():
                         server_modules = sorted(
                             p.name
-                            for p in servers_dir.iterdir()
+                            for p in mcp_dir.iterdir()
                             if p.is_dir() and not p.name.startswith("__")
                         )
                         logger.info(
-                            "Codemode bindings generated for servers: %s",
+                            "Codemode bindings generated for MCP servers: %s",
                             server_modules or "(none)",
                         )
                     else:
                         logger.warning(
-                            "Codemode generated servers directory not found: %s",
-                            servers_dir,
+                            "Codemode generated MCP directory not found: %s",
+                            mcp_dir,
                         )
                 except Exception as exc:
                     logger.warning(
@@ -564,6 +613,27 @@ async def create_agent(
                 non_mcp_toolsets.append(codemode_toolset)
                 logger.info(
                     f"Added and initialized CodemodeToolset for agent {agent_id}"
+                )
+
+        # Wire skill bindings into codemode so execute_code can import
+        # from generated.skills and compose skills programmatically
+        skills_prompt_section = ""
+        if request.enable_codemode and skills_enabled:
+            _skills_ts = next(
+                (
+                    t
+                    for t in non_mcp_toolsets
+                    if type(t).__name__ == "AgentSkillsToolset"
+                ),
+                None,
+            )
+            _codemode_ts = next(
+                (t for t in non_mcp_toolsets if type(t).__name__ == "CodemodeToolset"),
+                None,
+            )
+            if _skills_ts and _codemode_ts:
+                skills_prompt_section = wire_skills_into_codemode(
+                    _codemode_ts, _skills_ts
                 )
 
         logger.info(
@@ -577,6 +647,10 @@ async def create_agent(
             final_system_prompt = (
                 request.system_prompt + "\n\n" + request.system_prompt_codemode_addons
             )
+        # Append dynamic skills section so the LLM has visibility into
+        # installed skills, their scripts, parameters, and usage.
+        if skills_prompt_section:
+            final_system_prompt = final_system_prompt + "\n\n" + skills_prompt_section
 
         # Create the agent based on the library
         if request.agent_library == "pydantic-ai":
@@ -632,7 +706,29 @@ async def create_agent(
                         temp_request, http_request, sandbox=fresh_sandbox
                     )
 
-                codemode_builder = rebuild_codemode
+                # Wrap to register a post-init callback for skill re-wiring
+                _original_rebuild = rebuild_codemode
+
+                def rebuild_codemode_with_skills(
+                    new_servers: list[str | dict[str, str]],
+                ) -> Any:
+                    new_ts = _original_rebuild(new_servers)
+                    if new_ts is not None and skills_enabled:
+                        _sk = next(
+                            (
+                                t
+                                for t in non_mcp_toolsets
+                                if type(t).__name__ == "AgentSkillsToolset"
+                            ),
+                            None,
+                        )
+                        if _sk is not None:
+                            new_ts.add_post_init_callback(
+                                lambda ts, st=_sk: wire_skills_into_codemode(ts, st)
+                            )
+                    return new_ts
+
+                codemode_builder = rebuild_codemode_with_skills
 
             agent = PydanticAIAdapter(
                 agent=pydantic_agent,
@@ -676,6 +772,10 @@ async def create_agent(
         logger.info(
             f"POST /agents: Registered agent '{agent_id}' in _agents. All registered: {list(_agents.keys())}"
         )
+
+        # Store the original creation spec (preserves separated system prompts)
+        _agent_specs[agent_id] = request.model_dump()
+        logger.info(f"Stored creation spec for agent '{agent_id}'")
 
         # Register with context session for snapshot lookups (enables usage tracking)
         from ..context.session import register_agent as register_agent_for_context
@@ -929,7 +1029,7 @@ async def list_agents() -> AgentListResponse:
     return AgentListResponse(agents=agents)
 
 
-@router.get("/{agent_id}")
+@router.get("/{agent_id:path}")
 async def get_agent(agent_id: str) -> dict[str, Any]:
     """
     Get information about a specific agent.
@@ -950,7 +1050,7 @@ async def get_agent(agent_id: str) -> dict[str, Any]:
     return _get_agent_details(agent, agent_id, info)
 
 
-@router.delete("/{agent_id}")
+@router.delete("/{agent_id:path}")
 async def delete_agent(agent_id: str) -> dict[str, str]:
     """
     Delete an agent.
@@ -966,6 +1066,9 @@ async def delete_agent(agent_id: str) -> dict[str, str]:
     """
     if agent_id not in _agents:
         raise HTTPException(status_code=404, detail=f"Agent not found: {agent_id}")
+
+    # Remove the stored creation spec
+    _agent_specs.pop(agent_id, None)
 
     # Note: MCP servers are managed at server level (started on server startup,
     # stopped on server shutdown), so no cleanup needed per-agent.
@@ -1018,7 +1121,7 @@ class UpdateAgentMcpServersRequest(BaseModel):
     )
 
 
-@router.patch("/{agent_id}/mcp-servers")
+@router.patch("/{agent_id:path}/mcp-servers")
 async def update_agent_mcp_servers(
     agent_id: str,
     request: UpdateAgentMcpServersRequest,
@@ -1727,7 +1830,7 @@ async def start_all_agents_mcp_servers(
         )
 
 
-@router.post("/{agent_id}/mcp-servers/start")
+@router.post("/{agent_id:path}/mcp-servers/start")
 async def start_agent_mcp_servers(
     agent_id: str,
     body: StartAgentMcpServersRequest,
@@ -1978,7 +2081,7 @@ async def stop_all_agents_mcp_servers() -> AgentMcpServersResponse:
         )
 
 
-@router.post("/{agent_id}/mcp-servers/stop")
+@router.post("/{agent_id:path}/mcp-servers/stop")
 async def stop_agent_mcp_servers(
     agent_id: str,
 ) -> AgentMcpServersResponse:

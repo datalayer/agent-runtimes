@@ -102,13 +102,13 @@ class TestServeValidation:
         """Test that a valid --agent-id is accepted."""
         with patch("uvicorn.run") as mock_run:
             result = runner.invoke(
-                app, ["serve", "--agent-id", "codemode-paper/data-acquisition"]
+                app, ["serve", "--agent-id", "datalayer-ai/data-acquisition"]
             )
             assert result.exit_code == 0
             # Check environment variable was set
             assert (
                 os.environ.get("AGENT_RUNTIMES_DEFAULT_AGENT")
-                == "codemode-paper/data-acquisition"
+                == "datalayer-ai/data-acquisition"
             )
             mock_run.assert_called_once()
 

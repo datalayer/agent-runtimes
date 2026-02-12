@@ -44,6 +44,7 @@ class SandboxStatus(BaseModel):
     jupyter_connected: bool = False
     jupyter_error: str | None = None
     sandbox_running: bool = False
+    is_executing: bool = False
     generated_path: str | None = None
     skills_path: str | None = None
     python_path: str | None = None
@@ -167,7 +168,7 @@ async def get_toolsets_info() -> list[dict[str, Any]]:
     return get_config_mcp_toolsets_info()
 
 
-@router.get("/agents/{agent_id}/context-details")
+@router.get("/agents/{agent_id:path}/context-details")
 async def get_agent_context_details(
     agent_id: str = Path(
         ...,
@@ -192,7 +193,7 @@ async def get_agent_context_details(
     return tracker.get_context_details(agent_id)
 
 
-@router.get("/agents/{agent_id}/context-snapshot")
+@router.get("/agents/{agent_id:path}/context-snapshot")
 async def get_agent_context_snapshot_endpoint(
     agent_id: str = Path(
         ...,
@@ -364,7 +365,7 @@ async def get_agent_full_context_endpoint(
     return snapshot.to_dict()
 
 
-@router.post("/agents/{agent_id}/context-details/reset")
+@router.post("/agents/{agent_id:path}/context-details/reset")
 async def reset_agent_context(
     agent_id: str = Path(
         ...,
@@ -505,6 +506,49 @@ async def export_agent_context_csv(
         "toolsCount": len(tools),
         "messagesCount": len(messages),
     }
+  
+  
+@router.get("/agents/{agent_id:path}/spec")
+async def get_agent_spec_endpoint(
+    agent_id: str = Path(
+        ...,
+        description="Agent ID to get the creation spec for",
+    ),
+) -> dict[str, Any]:
+    """
+    Get the original creation spec for a specific agent.
+
+    Returns the spec as provided at agent creation time, including
+    separated system_prompt and system_prompt_codemode_addons fields
+    (which are merged at runtime and lost in the running agent).
+
+    This endpoint also includes the sandbox status when codemode is enabled.
+
+    Args:
+        agent_id: The unique identifier of the agent.
+
+    Returns:
+        The original agent creation spec with sandbox status.
+
+    Raises:
+        HTTPException: If agent spec not found.
+    """
+    from .agents import get_stored_agent_spec
+
+    spec = get_stored_agent_spec(agent_id)
+    if spec is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Agent spec not found for '{agent_id}'",
+        )
+
+    # Enrich with current sandbox status
+    sandbox_status = _get_sandbox_status()
+
+    return {
+        **spec,
+        "sandbox": sandbox_status.model_dump() if sandbox_status else None,
+    }
 
 
 # =========================================================================
@@ -632,6 +676,48 @@ async def get_codemode_status() -> CodemodeStatus:
     )
 
 
+@router.get("/sandbox-status")
+async def get_sandbox_status_endpoint() -> dict[str, Any]:
+    """
+    Get the current sandbox execution status.
+
+    Returns:
+        Sandbox status including whether code is executing.
+    """
+    status = _get_sandbox_status()
+    if status is None:
+        return {"available": False}
+    return {"available": True, **status.model_dump()}
+
+
+@router.post("/sandbox/interrupt")
+async def interrupt_sandbox() -> dict[str, Any]:
+    """
+    Interrupt the currently running code in the sandbox.
+
+    Returns:
+        Result of the interrupt request.
+    """
+    try:
+        from agent_runtimes.services.code_sandbox_manager import (
+            get_code_sandbox_manager,
+        )
+
+        manager = get_code_sandbox_manager()
+        sandbox = manager.get_managed_sandbox()
+
+        if not sandbox.is_executing:
+            return {"interrupted": False, "reason": "No code is currently executing"}
+
+        success = sandbox.interrupt()
+        return {"interrupted": success}
+    except ImportError:
+        return {"interrupted": False, "reason": "code_sandboxes not installed"}
+    except Exception as e:
+        logger.warning(f"Error interrupting sandbox: {e}")
+        return {"interrupted": False, "reason": str(e)}
+
+
 def _get_sandbox_status() -> SandboxStatus | None:
     """
     Get the current code sandbox status.
@@ -651,6 +737,7 @@ def _get_sandbox_status() -> SandboxStatus | None:
             variant=status["variant"],
             jupyter_url=status.get("jupyter_url"),
             sandbox_running=status.get("sandbox_running", False),
+            is_executing=False,
             jupyter_connected=False,
             jupyter_error=None,
             generated_path=status.get("generated_path"),
@@ -658,6 +745,13 @@ def _get_sandbox_status() -> SandboxStatus | None:
             python_path=status.get("python_path"),
             mcp_proxy_url=status.get("mcp_proxy_url"),
         )
+
+        # Check if sandbox is currently executing
+        try:
+            managed = manager.get_managed_sandbox()
+            sandbox_status.is_executing = managed.is_executing
+        except Exception:
+            pass
 
         # If Jupyter variant, test the connection
         if status["variant"] == "local-jupyter" and status.get("jupyter_url"):

@@ -374,17 +374,139 @@ def get_recent_repos(days: int = 30) -> list[dict]:
     return recent
 ```
 
-## Scripts
+## Script Reference
 
-This skill includes the following executable scripts in the `scripts/` directory:
+This skill includes the following executable scripts in the `scripts/` directory.
+All scripts require the `GITHUB_TOKEN` environment variable.
 
-| Script | Description | Usage |
-|--------|-------------|-------|
-| `list_repos.py` | List all repositories for the authenticated user | `python list_repos.py [--visibility all\|public\|private] [--format table\|json]` |
-| `get_repo.py` | Get details for a specific repository | `python get_repo.py <owner>/<repo>` |
-| `list_issues.py` | List issues for a repository | `python list_issues.py <owner>/<repo> [--state open\|closed\|all]` |
-| `list_prs.py` | List pull requests for a repository | `python list_prs.py <owner>/<repo> [--state open\|closed\|all]` |
-| `search_repos.py` | Search GitHub repositories | `python search_repos.py <query> [--language python]` |
+### `list_repos.py`
+
+List all repositories for the authenticated GitHub user.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `--visibility` | `str` | No | Filter: `all`, `public`, or `private` (default: `all`) |
+| `--format` | `str` | No | Output format: `table` or `json` (default: `table`) |
+| `--sort` | `str` | No | Sort by: `updated`, `created`, `pushed`, or `full_name` (default: `updated`) |
+| `--limit` | `int` | No | Maximum number of repos to display |
+
+**Output (JSON format):** Array of objects, each with:
+- `name` (str): Full repository name (e.g. `owner/repo`)
+- `private` (bool): Whether the repo is private
+- `language` (str): Primary programming language
+- `stars` (int): Star count
+- `forks` (int): Fork count
+- `url` (str): HTML URL
+- `description` (str): Repository description
+- `updated_at` (str): ISO 8601 timestamp
+
+**Usage:** `python list_repos.py --visibility public --format json --sort stars --limit 10`
+
+---
+
+### `get_repo.py`
+
+Get details for a specific GitHub repository.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `repo` | `str` | **Yes** | Repository in format `owner/repo` (positional) |
+| `--format` | `str` | No | Output format: `table` or `json` (default: `table`) |
+
+**Output (JSON format):** Object with:
+- `name` (str): Full repository name
+- `private` (bool): Whether the repo is private
+- `description` (str): Repository description
+- `language` (str): Primary programming language
+- `stars` (int), `forks` (int), `watchers` (int), `open_issues` (int): Counts
+- `default_branch` (str): Default branch name
+- `topics` (list[str]): Repository topics
+- `license` (str): License name
+- `url` (str), `clone_url` (str): URLs
+- `created_at` (str), `updated_at` (str), `pushed_at` (str): ISO 8601 timestamps
+
+**Usage:** `python get_repo.py datalayer/jupyter-ui --format json`
+
+---
+
+### `list_issues.py`
+
+List issues for a GitHub repository (excludes pull requests).
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `repo` | `str` | **Yes** | Repository in format `owner/repo` (positional) |
+| `--state` | `str` | No | Issue state: `open`, `closed`, or `all` (default: `open`) |
+| `--format` | `str` | No | Output format: `table` or `json` (default: `table`) |
+| `--limit` | `int` | No | Maximum number of issues (default: `50`) |
+
+**Output (JSON format):** Array of objects, each with:
+- `number` (int): Issue number
+- `title` (str): Issue title
+- `state` (str): `open` or `closed`
+- `author` (str): GitHub username of the author
+- `labels` (list[str]): Label names
+- `url` (str): HTML URL
+- `created_at` (str), `updated_at` (str): ISO 8601 timestamps
+- `comments` (int): Comment count
+
+**Usage:** `python list_issues.py datalayer/jupyter-ui --state open --format json --limit 20`
+
+---
+
+### `list_prs.py`
+
+List pull requests for a GitHub repository.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `repo` | `str` | **Yes** | Repository in format `owner/repo` (positional) |
+| `--state` | `str` | No | PR state: `open`, `closed`, or `all` (default: `open`) |
+| `--format` | `str` | No | Output format: `table` or `json` (default: `table`) |
+| `--limit` | `int` | No | Maximum number of PRs (default: `50`) |
+
+**Output (JSON format):** Array of objects, each with:
+- `number` (int): PR number
+- `title` (str): PR title
+- `state` (str): `open` or `closed`
+- `draft` (bool): Whether the PR is a draft
+- `merged` (bool): Whether the PR was merged
+- `author` (str): GitHub username of the author
+- `head_branch` (str): Source branch name
+- `base_branch` (str): Target branch name
+- `url` (str): HTML URL
+- `created_at` (str), `updated_at` (str): ISO 8601 timestamps
+
+**Usage:** `python list_prs.py datalayer/jupyter-ui --state all --format json --limit 10`
+
+---
+
+### `search_repos.py`
+
+Search GitHub repositories by query, language, user, or organization.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `query` | `str` | **Yes** | Search query (positional) |
+| `--language` | `str` | No | Filter by programming language |
+| `--user` | `str` | No | Filter by user/owner |
+| `--org` | `str` | No | Filter by organization |
+| `--sort` | `str` | No | Sort by: `stars`, `forks`, `updated`, or `best-match` (default: `best-match`) |
+| `--format` | `str` | No | Output format: `table` or `json` (default: `table`) |
+| `--limit` | `int` | No | Maximum number of results (default: `20`) |
+
+**Output (JSON format):** Object with:
+- `total_count` (int): Total matching repositories
+- `items` (list): Array of objects, each with:
+  - `name` (str): Full repository name
+  - `description` (str): Repository description
+  - `language` (str): Primary programming language
+  - `stars` (int), `forks` (int): Counts
+  - `url` (str): HTML URL
+  - `topics` (list[str]): Repository topics
+  - `updated_at` (str): ISO 8601 timestamp
+
+**Usage:** `python search_repos.py "jupyter notebook" --language python --sort stars --limit 5`
 
 ## Troubleshooting
 

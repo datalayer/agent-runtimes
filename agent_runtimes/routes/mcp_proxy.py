@@ -32,7 +32,7 @@ When running in a Kubernetes environment with separate containers:
 │  ┌────────────────────────────────────────────────────────────────────────┐  │
 │  │  Jupyter Server + Kernel                                                │  │
 │  │  - Executes generated Python code                                       │  │
-│  │  - `from generated.servers.github import star_repo`                     │  │
+│  │  - `from generated.mcp.github import star_repo`                     │  │
 │  │  - `result = await star_repo(owner="datalayer", repo="ui")`            │  │
 │  │  - Generated code calls HTTP proxy instead of stdio                     │  │
 │  │                                                                          │  │
@@ -66,6 +66,27 @@ from agent_runtimes.mcp.lifecycle import get_mcp_lifecycle_manager
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/mcp/proxy", tags=["mcp-proxy"])
+
+# ---------------------------------------------------------------------------
+# Skills proxy caller registry
+# ---------------------------------------------------------------------------
+# When skills are wired into codemode, a callback is registered here so that
+# remote sandboxes can call skills via the same HTTP proxy mechanism.
+# The callback signature is: async (tool_name: str, arguments: dict) -> Any
+
+_skills_proxy_caller: Any = None
+
+
+def set_skills_proxy_caller(caller: Any) -> None:
+    """Register a callable for proxying skill tool calls from remote sandboxes."""
+    global _skills_proxy_caller
+    _skills_proxy_caller = caller
+    logger.info("[MCP Proxy] Skills proxy caller registered")
+
+
+def get_skills_proxy_caller() -> Any:
+    """Return the currently registered skills proxy caller (or *None*)."""
+    return _skills_proxy_caller
 
 
 class ToolCallRequest(BaseModel):
@@ -126,6 +147,23 @@ async def proxy_tool_call(
     """
     logger.info(f"[MCP Proxy] Proxying tool call: {server_name}__{tool_name}")
     logger.debug(f"[MCP Proxy] Arguments: {request.arguments}")
+
+    # ------------------------------------------------------------------
+    # Skills pseudo-server: route to the registered skills proxy caller
+    # ------------------------------------------------------------------
+    if server_name == "skills":
+        caller = get_skills_proxy_caller()
+        if caller is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Skills proxy caller not registered — skills are not enabled for this agent.",
+            )
+        try:
+            result = await caller(f"skills__{tool_name}", request.arguments)
+            return ToolCallResponse(success=True, result=result)
+        except Exception as exc:
+            logger.error(f"[MCP Proxy] Skills call failed: {exc}", exc_info=True)
+            return ToolCallResponse(success=False, error=str(exc))
 
     try:
         lifecycle_manager = get_mcp_lifecycle_manager()

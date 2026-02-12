@@ -198,7 +198,7 @@ A complete agent workflow combining all features:
             code = f'''
 # Auto-generated code to use tools: {tool_names}
 # Import generated bindings
-# from generated.servers.* import ...
+# from generated.mcp.* import ...
 
 # Execute the task
 result = "Task completed using tools"
@@ -252,7 +252,7 @@ The integration works with agent-runtimes' MCP infrastructure:
 
     # And can be called via code execution
     result = await integration.execute_code('''
-from generated.servers.filesystem import list_directory
+from generated.mcp.filesystem import list_directory
 files = await list_directory({"path": "/tmp"})
 print(files)
 ''')

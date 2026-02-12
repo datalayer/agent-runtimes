@@ -7,7 +7,7 @@ slug: /
 import DocCardList from '@theme/DocCardList';
 import { useDocsSidebar } from '@docusaurus/plugin-content-docs/client';
 
-# 🤖 🏃🏻‍♂️‍➡️ Agent Runtimes
+# 🤖 🚀 Agent Runtimes
 
 **Agent Runtimes** is a flexible framework for building and deploying AI agents with multiple transport protocols, model providers, and MCP integrations.
 
@@ -67,7 +67,7 @@ await integration.setup()
 
 # Access agent-codemode features
 result = await integration.execute_code('''
-    from generated.servers.filesystem import read_file
+    from generated.mcp.filesystem import read_file
     content = await read_file({"path": "/data.txt"})
     print(content)
 ''')

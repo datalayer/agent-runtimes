@@ -8,7 +8,7 @@
 
 [![Become a Sponsor](https://img.shields.io/static/v1?label=Become%20a%20Sponsor&message=%E2%9D%A4&logo=GitHub&style=flat&color=1ABC9C)](https://github.com/sponsors/datalayer)
 
-# 🤖 Agent Runtimes
+# 🤖 🚀 Agent Runtimes
 
 [![Github Actions Status](https://github.com/datalayer/agent-runtimes/actions/workflows/build.yml/badge.svg)](https://github.com/datalayer/agent-runtimes/actions/workflows/build.yml)
 [![Netlify Status](https://api.netlify.com/api/v1/badges/f7f9e08a-884f-4f76-b20d-666d5873716c/deploy-status)](https://app.netlify.com/projects/agent-runtimes/deploys)
@@ -16,7 +16,7 @@
 
 **Agent Runtimes** is a unified platform for deploying, managing, and interacting with AI agents across multiple protocols and frameworks. It provides both a Python server for hosting agents and React components for seamless integration into web and desktop applications.
 
-## 🎯 What is Agent Runtimes?
+## What is Agent Runtimes?
 
 Agent Runtimes solves the complexity of deploying AI agents by providing:
 

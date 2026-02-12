@@ -223,7 +223,7 @@ export function ContextDistribution({
     );
   }
 
-  const { distribution, totalTokens, contextWindow } = snapshotData;
+  const { distribution, totalTokens } = snapshotData;
   const hasData = distribution.children && distribution.children.length > 0;
 
   // ECharts option for treemap
@@ -286,8 +286,7 @@ export function ContextDistribution({
         }}
       >
         <Text sx={{ fontSize: 1, fontWeight: 'bold' }}>
-          Current Context ({formatTokens(totalTokens)} /{' '}
-          {formatTokens(contextWindow)} tokens)
+          Current Context ({formatTokens(totalTokens)} total)
         </Text>
         <Button
           size="small"
