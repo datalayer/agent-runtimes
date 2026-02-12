@@ -236,7 +236,9 @@ async def _create_and_register_cli_agent(
             None,
         )
         if skills_ts:
-            skills_prompt_section = wire_skills_into_codemode(codemode_toolset, skills_ts)
+            skills_prompt_section = wire_skills_into_codemode(
+                codemode_toolset, skills_ts
+            )
 
     # Build selected MCP servers list for the adapter
     # When codemode is enabled, MCP servers are accessed via CodemodeToolset registry
@@ -433,7 +435,11 @@ async def _create_and_register_cli_agent(
                 # lazy initialisation, so codegen + skill caller are ready.
                 if skills_enabled:
                     _skills_ts = next(
-                        (t for t in non_mcp_toolsets if type(t).__name__ == "AgentSkillsToolset"),
+                        (
+                            t
+                            for t in non_mcp_toolsets
+                            if type(t).__name__ == "AgentSkillsToolset"
+                        ),
                         None,
                     )
                     if _skills_ts is not None:

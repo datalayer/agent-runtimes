@@ -620,7 +620,11 @@ async def create_agent(
         skills_prompt_section = ""
         if request.enable_codemode and skills_enabled:
             _skills_ts = next(
-                (t for t in non_mcp_toolsets if type(t).__name__ == "AgentSkillsToolset"),
+                (
+                    t
+                    for t in non_mcp_toolsets
+                    if type(t).__name__ == "AgentSkillsToolset"
+                ),
                 None,
             )
             _codemode_ts = next(
@@ -628,7 +632,9 @@ async def create_agent(
                 None,
             )
             if _skills_ts and _codemode_ts:
-                skills_prompt_section = wire_skills_into_codemode(_codemode_ts, _skills_ts)
+                skills_prompt_section = wire_skills_into_codemode(
+                    _codemode_ts, _skills_ts
+                )
 
         logger.info(
             f"Creating agent '{agent_id}' with selected_mcp_servers={selected_mcp_servers}"
@@ -709,7 +715,11 @@ async def create_agent(
                     new_ts = _original_rebuild(new_servers)
                     if new_ts is not None and skills_enabled:
                         _sk = next(
-                            (t for t in non_mcp_toolsets if type(t).__name__ == "AgentSkillsToolset"),
+                            (
+                                t
+                                for t in non_mcp_toolsets
+                                if type(t).__name__ == "AgentSkillsToolset"
+                            ),
                             None,
                         )
                         if _sk is not None:

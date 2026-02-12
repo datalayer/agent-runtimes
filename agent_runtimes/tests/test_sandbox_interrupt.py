@@ -3,10 +3,7 @@
 
 """Tests for sandbox interrupt and execution status features."""
 
-from unittest.mock import MagicMock, patch
-from typing import Any, Optional
-
-import pytest
+from typing import Any
 
 from agent_runtimes.services.code_sandbox_manager import (
     CodeSandboxManager,

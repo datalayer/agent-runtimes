@@ -50,7 +50,6 @@ from urllib.parse import parse_qs, urlparse
 
 if TYPE_CHECKING:
     from code_sandboxes import ExecutionResult, Sandbox
-    from code_sandboxes.base import Context
 
 logger = logging.getLogger(__name__)
 
