@@ -221,7 +221,9 @@ class AGUITransport(BaseTransport):
                             tracker = get_usage_tracker()
 
                             # Store message history so extract_context_snapshot can extract proper timestamps
-                            tracker.get_agent_stats(agent_id).store_messages(messages)
+                            stats = tracker.get_agent_stats(agent_id)
+                            if stats:
+                                stats.store_messages(messages)
 
                             # Process each response message to extract per-step data
                             response_count = 0

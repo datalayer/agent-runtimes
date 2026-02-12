@@ -2200,7 +2200,7 @@ def get_agent_context_snapshot(agent_id: str) -> ContextSnapshot | None:
             # Merge request usage with extracted timestamps
             for i, req in enumerate(stats.request_usage_history):
                 ts = message_timestamps[i] if i < len(message_timestamps) else None
-                snapshot.per_request_usage.append(
+                snapshot.per_request_usage.append(  # type: ignore[arg-type]
                     RequestUsageSnapshot(
                         request_num=req.request_num,
                         input_tokens=req.input_tokens,
