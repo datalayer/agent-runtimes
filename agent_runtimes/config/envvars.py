@@ -81,6 +81,16 @@ GOOGLE_OAUTH_CLIENT_SECRET_SPEC = EnvvarSpec(
     emoji="🔒",
 )
 
+HF_TOKEN_SPEC = EnvvarSpec(
+    id="HF_TOKEN",
+    name="Hugging Face Token",
+    description="Access token for Hugging Face API. Required for Hugging Face MCP server authentication. Create a READ token from your settings.",
+    registrationUrl="https://huggingface.co/settings/tokens",
+    tags=["authentication", "api-key", "huggingface", "machine-learning"],
+    icon="key",
+    emoji="🔑",
+)
+
 KAGGLE_TOKEN_SPEC = EnvvarSpec(
     id="KAGGLE_TOKEN",
     name="Kaggle API Token",
@@ -140,6 +150,7 @@ ENVVAR_CATALOG: Dict[str, EnvvarSpec] = {
     "GITHUB_TOKEN": GITHUB_TOKEN_SPEC,
     "GOOGLE_OAUTH_CLIENT_ID": GOOGLE_OAUTH_CLIENT_ID_SPEC,
     "GOOGLE_OAUTH_CLIENT_SECRET": GOOGLE_OAUTH_CLIENT_SECRET_SPEC,
+    "HF_TOKEN": HF_TOKEN_SPEC,
     "KAGGLE_TOKEN": KAGGLE_TOKEN_SPEC,
     "SLACK_BOT_TOKEN": SLACK_BOT_TOKEN_SPEC,
     "SLACK_CHANNEL_IDS": SLACK_CHANNEL_IDS_SPEC,

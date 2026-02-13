@@ -120,6 +120,26 @@ GOOGLE_WORKSPACE_MCP_SERVER = MCPServer(
     required_env_vars=["GOOGLE_OAUTH_CLIENT_ID", "GOOGLE_OAUTH_CLIENT_SECRET"],
 )
 
+HUGGINGFACE_MCP_SERVER = MCPServer(
+    id="huggingface",
+    name="Hugging Face",
+    description="Hugging Face models, datasets, spaces, and papers access",
+    icon="brain",
+    emoji="🤗",
+    command="npx",
+    args=[
+        "-y",
+        "mcp-remote",
+        "https://huggingface.co/mcp",
+        "--header",
+        "Authorization: Bearer ${HF_TOKEN}",
+    ],
+    transport="stdio",
+    enabled=True,
+    tools=[],
+    required_env_vars=["HF_TOKEN"],
+)
+
 KAGGLE_MCP_SERVER = MCPServer(
     id="kaggle",
     name="Kaggle",
@@ -192,6 +212,7 @@ MCP_SERVER_CATALOG: Dict[str, MCPServer] = {
     "filesystem": FILESYSTEM_MCP_SERVER,
     "github": GITHUB_MCP_SERVER,
     "google-workspace": GOOGLE_WORKSPACE_MCP_SERVER,
+    "huggingface": HUGGINGFACE_MCP_SERVER,
     "kaggle": KAGGLE_MCP_SERVER,
     "slack": SLACK_MCP_SERVER,
     "tavily": TAVILY_MCP_SERVER,

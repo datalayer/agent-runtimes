@@ -28,7 +28,12 @@ CRAWLER_AGENT_SPEC = AgentSpec(
     description="Web crawling and research agent that searches the web and GitHub repositories for information.",
     tags=["web", "search", "research", "crawler", "github"],
     enabled=False,
-    mcp_servers=[MCP_SERVER_CATALOG["tavily"], MCP_SERVER_CATALOG["github"]],
+    mcp_servers=[
+        MCP_SERVER_CATALOG["tavily"],
+        MCP_SERVER_CATALOG["github"],
+        MCP_SERVER_CATALOG["kaggle"],
+        MCP_SERVER_CATALOG["huggingface"],
+    ],
     skills=[],
     environment_name="ai-agents-env",
     icon="globe",
@@ -56,13 +61,13 @@ CRAWLER_AGENT_SPEC = AgentSpec(
    Use this to understand tool parameters before calling them.
 
 4. **execute_code** - Run Python code that composes multiple tools
-   Use this for complex multi-step operations. Code runs in a PERSISTENT sandbox.
    Variables, functions, and state PERSIST between execute_code calls.
-   Import tools using: `from generated.mcp.<server_name> import <function_name>`
+   Import tools using: `from generated.servers.<server_name> import <function_name>`
    NEVER use `import *` - always use explicit named imports.
 
 ## Recommended Workflow 1. **Discover**: Use list_servers and search_tools to find relevant tools 2. **Understand**: Use get_tool_details to check parameters 3. **Execute**: Use execute_code to perform multi-step tasks, calling tools as needed
-## Token Efficiency When possible, chain multiple tool calls in a single execute_code block. This reduces output tokens by processing intermediate results in code rather than returning them. If you want to examine results, print subsets, preview (maximum 20 first characters) and/or counts instead of full data, this is really important.
+## Token Efficiency Always chain multiple tool calls in a single execute_code block. This reduces output tokens by processing intermediate results in code rather than returning them. If you want to examine results, print subsets, preview (maximum 20 first characters) and/or counts instead of full data, this is really important.
+For huggingface tools, use search_doc tool to understand other tools return's schema.
 """,
 )
 
@@ -106,7 +111,7 @@ DATA_ACQUISITION_AGENT_SPEC = AgentSpec(
 4. **execute_code** - Run Python code that composes multiple tools
    Use this for complex multi-step operations. Code runs in a PERSISTENT sandbox.
    Variables, functions, and state PERSIST between execute_code calls.
-   Import tools using: `from generated.mcp.<server_name> import <function_name>`
+   Import tools using: `from generated.servers.<server_name> import <function_name>`
    NEVER use `import *` - always use explicit named imports.
 
 ## Recommended Workflow 1. **Discover**: Use list_servers and search_tools to find relevant tools 2. **Understand**: Use get_tool_details to check parameters 3. **Execute**: Use execute_code to perform multi-step tasks, calling tools as needed
@@ -150,7 +155,7 @@ FINANCIAL_VIZ_AGENT_SPEC = AgentSpec(
 4. **execute_code** - Run Python code that composes multiple tools
    Use this for complex multi-step operations. Code runs in a PERSISTENT sandbox.
    Variables, functions, and state PERSIST between execute_code calls.
-   Import tools using: `from generated.mcp.<server_name> import <function_name>`
+   Import tools using: `from generated.servers.<server_name> import <function_name>`
    NEVER use `import *` - always use explicit named imports.
 
 ## Recommended Workflow 1. **Discover**: Use list_servers and search_tools to find relevant tools 2. **Understand**: Use get_tool_details to check parameters 3. **Execute**: Use execute_code to perform multi-step tasks, calling tools as needed
@@ -194,7 +199,7 @@ GITHUB_AGENT_SPEC = AgentSpec(
 4. **execute_code** - Run Python code that composes multiple tools
    Code runs in a PERSISTENT sandbox.
    Variables, functions, and state PERSIST between execute_code calls.
-   Import tools using: `from generated.mcp.<server_name> import <function_name>`
+   Import tools using: `from generated.servers.<server_name> import <function_name>`
    NEVER use `import *` - always use explicit named imports.
 
 ## Recommended Workflow 1. **Discover**: Use list_servers and search_tools to find relevant tools 2. **Understand**: Use get_tool_details to check parameters 3. **Execute**: Use execute_code to perform multi-step tasks, calling tools as needed
@@ -205,10 +210,10 @@ GITHUB_AGENT_SPEC = AgentSpec(
 INFORMATION_ROUTING_AGENT_SPEC = AgentSpec(
     id="codemode-paper/information-routing",
     name="Information Routing Agent",
-    description="Routes information between Google Drive and Slack, managing document workflows and team communication.",
-    tags=["workflow", "communication", "gdrive", "slack"],
+    description="Routes information between Google Drive and other services, managing document workflows and information sharing.",
+    tags=["workflow", "communication", "gdrive"],
     enabled=False,
-    mcp_servers=[MCP_SERVER_CATALOG["google-workspace"], MCP_SERVER_CATALOG["slack"]],
+    mcp_servers=[MCP_SERVER_CATALOG["google-workspace"], MCP_SERVER_CATALOG["github"]],
     skills=[],
     environment_name="ai-agents-env",
     icon="share-2",
@@ -216,14 +221,14 @@ INFORMATION_ROUTING_AGENT_SPEC = AgentSpec(
     color="#EC4899",
     suggestions=[
         "Find documents shared with me in Google Drive",
-        "Send a summary of today's meeting notes to the",
         "List recent files in my Drive folder",
-        "Post a reminder to Slack about the upcoming deadline",
+        "Summarize the contents of a document in my Drive",
+        "Search for documents by keyword in Google Drive",
     ],
-    welcome_message="Hi there! I'm the Information Routing Agent. I can help you manage documents in Google Drive and communicate with your team through Slack, making it easy to route information where it needs to go. ",
+    welcome_message="Hi there! I'm the Information Routing Agent. I can help you manage documents in Google Drive and route information where it needs to go. ",
     welcome_notebook=None,
     welcome_document=None,
-    system_prompt="""You are an information routing specialist with access to Google Drive and Slack tools. You can find and manage documents in Drive, send messages to Slack channels, and automate workflows between these platforms. Help users coordinate team communication and document management efficiently. Use "#" to denote Slack channels. Do not use file extension when referring to Google Drive documents.
+    system_prompt="""You are an information routing specialist with access to Google Drive tools. You can find and manage documents in Drive and automate document workflows. Help users with document management efficiently. Do not use file extension when referring to Google Drive documents. Always use search_drive_files tool before using get_drive_file_content to find parent folder (using only name and mimeType in the query, no other fields!!!).
 """,
     system_prompt_codemode_addons="""## IMPORTANT: Be Honest About Your Capabilities NEVER claim to have tools or capabilities you haven't verified.
 ## Core Codemode Tools Use these 4 tools to accomplish any task: 1. **list_servers** - List available MCP servers
@@ -233,16 +238,16 @@ INFORMATION_ROUTING_AGENT_SPEC = AgentSpec(
    Use this to find relevant tools before executing tasks.
 
 3. **get_tool_details** - Get full tool schema and documentation
-   Use this to understand tool parameters before calling them.
+   Use this to understand tool parameters before calling them. If no output schema is specified, try using the tool on a subset and preview the result.
 
 4. **execute_code** - Run Python code that composes multiple tools
    Use this for complex multi-step operations. Code runs in a PERSISTENT sandbox.
    Variables, functions, and state PERSIST between execute_code calls.
-   Import tools using: `from generated.mcp.<server_name> import <function_name>`
+   Import tools using: `from generated.servers.<server_name> import <function_name>`
    NEVER use `import *` - always use explicit named imports.
 
-## Recommended Workflow 1. **Discover**: Use list_servers and search_tools to find relevant tools 2. **Understand**: Use get_tool_details to check parameters 3. **Execute**: Use execute_code to perform multi-step tasks, calling tools as needed
-## Token Efficiency When possible, chain multiple tool calls in a single execute_code block. This reduces output tokens by processing intermediate results in code rather than returning them. If you want to examine results, print subsets, preview (maximum 20 first characters) and/or counts instead of full data, this is really important.
+## Recommended Workflow 1. **Discover**: Use list_servers and search_tools to find relevant tools 2. **Understand**: Use get_tool_details to check input and output schemas 3. **Execute**: Use execute_code to perform multi-step tasks, calling tools as needed
+## Token Efficiency Always chain multiple tool calls in a single execute_code block. This reduces output tokens by processing intermediate results in code rather than returning them. If you want to examine results, print subsets, preview (maximum 20 first characters) and/or counts instead of full data, this is really important!!!!
 """,
 )
 

@@ -395,11 +395,14 @@ async def export_agent_context_csv(
     truncate_message_chars: int = 200,
 ) -> dict[str, Any]:
     """
-    Export the current context snapshot as CSV text.
+    Export per-step usage data as CSV text.
+
+    Each row represents one model request/response cycle (step) with
+    the tool that was called, token counts, and timestamp.
 
     Args:
         agent_id: The unique identifier of the agent.
-        truncate_message_chars: Max characters for message content (0 disables truncation).
+        truncate_message_chars: Unused, kept for backward compatibility.
 
     Returns:
         Dict containing filename and CSV content.
@@ -409,6 +412,7 @@ async def export_agent_context_csv(
     from io import StringIO
 
     from ..context.session import get_agent_context_snapshot
+    from ..context.usage import get_usage_tracker
 
     snapshot = get_agent_context_snapshot(agent_id)
     if snapshot is None:
@@ -419,82 +423,44 @@ async def export_agent_context_csv(
             "csv": "",
         }
 
-    data = snapshot.to_dict()
+    # Get session ID from the usage tracker
+    tracker = get_usage_tracker()
+    session_id = agent_id  # Use agent_id as session identifier
+
     output = StringIO()
     writer = csv.writer(output)
 
-    # Write header
-    writer.writerow(["Category", "Key", "Value"])
-
-    # Write general info
-    writer.writerow(["General", "Agent ID", agent_id])
-    writer.writerow(["General", "Model", data.get("modelName", "unknown")])
-    writer.writerow(["General", "Context Window", data.get("contextWindow", 0)])
-    writer.writerow(["General", "Total Tokens", data.get("totalTokens", 0)])
-
-    # Write token breakdown
+    # Write header matching the desired format
     writer.writerow(
         [
-            "Tokens",
-            "System Prompt",
-            data.get("systemPromptTokens", 0),
-        ]
-    )
-    writer.writerow(
-        [
-            "Tokens",
-            "Tool Definitions",
-            data.get("toolTokens", 0),
-        ]
-    )
-    writer.writerow(
-        [
-            "Tokens",
-            "User Messages",
-            data.get("userMessageTokens", 0),
-        ]
-    )
-    writer.writerow(
-        [
-            "Tokens",
-            "Assistant Messages",
-            data.get("assistantMessageTokens", 0),
-        ]
-    )
-    writer.writerow(
-        [
-            "Tokens",
-            "Total Input",
-            data.get("sumResponseInputTokens", 0),
-        ]
-    )
-    writer.writerow(
-        [
-            "Tokens",
-            "Total Output",
-            data.get("sumResponseOutputTokens", 0),
+            "Session_ID",
+            "Turn_ID",
+            "Step_Number",
+            "Tool_Name",
+            "Input_Tokens",
+            "Output_Tokens",
+            "Duration_ms",
+            "Timestamp",
         ]
     )
 
-    # Write tools
-    tools = data.get("tools", [])
-    for tool in tools:
-        writer.writerow(
-            [
-                "Tool",
-                tool.get("name", "unknown"),
-                tool.get("description", ""),
-            ]
-        )
-
-    # Write messages summary
-    messages = data.get("messages", [])
-    for i, msg in enumerate(messages):
-        role = msg.get("role", "unknown")
-        content = msg.get("content", "")
-        if truncate_message_chars and len(content) > truncate_message_chars:
-            content = content[: max(0, truncate_message_chars - 3)] + "..."
-        writer.writerow(["Message", f"{i + 1}. {role}", content])
+    # Write per-step rows from per_request_usage
+    turn_id = "turn_01"
+    if snapshot.per_request_usage:
+        for step in snapshot.per_request_usage:
+            tool_name = ", ".join(step.tool_names) if step.tool_names else "Response"
+            writer.writerow(
+                [
+                    session_id,
+                    turn_id,
+                    step.request_num,
+                    tool_name,
+                    step.input_tokens,
+                    step.output_tokens,
+                    f"{step.duration_ms:.0f}",
+                    step.timestamp or "",
+                ]
+            )
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"codeai_context_{timestamp}.csv"
@@ -503,8 +469,7 @@ async def export_agent_context_csv(
         "agentId": agent_id,
         "filename": filename,
         "csv": output.getvalue(),
-        "toolsCount": len(tools),
-        "messagesCount": len(messages),
+        "stepsCount": len(snapshot.per_request_usage),
     }
 
 

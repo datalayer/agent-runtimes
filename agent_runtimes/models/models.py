@@ -132,7 +132,7 @@ def create_model_with_provider(
         return OpenAIChatModel(
             model_name,
             provider=azure_provider_with_timeout,
-            settings=ModelSettings(parallel_tool_calls=False),
+            settings=ModelSettings(parallel_tool_calls=False, temperature=0),
         )
     elif model_provider.lower() == "anthropic":
         from anthropic import AsyncAnthropic
@@ -154,7 +154,7 @@ def create_model_with_provider(
         return AnthropicModel(
             model_name,
             provider=anthropic_provider,
-            settings=ModelSettings(parallel_tool_calls=False),
+            settings=ModelSettings(parallel_tool_calls=False, temperature=0),
         )
     elif model_provider.lower() in ["openai", "github-copilot"]:
         from pydantic_ai.models.openai import OpenAIChatModel
@@ -176,7 +176,7 @@ def create_model_with_provider(
         return OpenAIChatModel(
             model_name,
             provider=openai_provider,
-            settings=ModelSettings(parallel_tool_calls=False),
+            settings=ModelSettings(parallel_tool_calls=False, temperature=0),
         )
     else:
         # For other providers, use the standard string format
