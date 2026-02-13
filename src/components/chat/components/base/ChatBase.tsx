@@ -94,8 +94,8 @@ import type { MCPServerConfig as MCPServerConfigType } from '../../../AgentConfi
 
 /**
  * View mode for the chat component.
- * - 'floating': Standard floating popup
- * - 'floating-small': Compact floating popup (smaller dimensions)
+ * - 'floating': Full-height floating panel (pinned to the right edge with offset)
+ * - 'floating-small': Standard floating popup
  * - 'sidebar': Docked sidebar panel
  */
 export type ChatViewMode = 'floating' | 'floating-small' | 'sidebar';
@@ -2531,12 +2531,12 @@ function ChatBaseInner({
                     {
                       mode: 'floating' as const,
                       icon: CommentDiscussionIcon,
-                      label: 'Floating popup',
+                      label: 'Full-height popup',
                     },
                     {
                       mode: 'floating-small' as const,
                       icon: DeviceMobileIcon,
-                      label: 'Compact popup',
+                      label: 'Floating popup',
                     },
                     {
                       mode: 'sidebar' as const,

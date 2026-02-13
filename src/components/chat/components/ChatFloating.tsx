@@ -218,8 +218,8 @@ export interface ChatFloatingProps {
 
   /**
    * Default view mode.
-   * - 'floating': Standard floating popup
-   * - 'floating-small': Compact floating popup (smaller dimensions)
+   * - 'floating': Full-height floating panel (pinned to right edge with offset)
+   * - 'floating-small': Standard floating popup
    * - 'panel': Full-height side panel (right edge, no floating offset)
    * @default 'floating'
    */
@@ -797,8 +797,17 @@ export function ChatFloating({
         className={className}
         sx={{
           position: 'fixed',
-          ...((viewMode === 'floating' || viewMode === 'floating-small') &&
-          !isMobile
+          // floating (normal) — full-height column pinned to the right edge
+          ...(viewMode === 'floating' && !isMobile
+            ? {
+                top: 0,
+                right: 0,
+                bottom: 0,
+                left: 'auto',
+              }
+            : {}),
+          // floating-small — standard popup positioned via getPositionStyles()
+          ...(viewMode === 'floating-small' && !isMobile
             ? getPositionStyles()
             : {}),
           ...(viewMode === 'panel' && !isMobile
@@ -812,18 +821,26 @@ export function ChatFloating({
           width:
             viewMode === 'panel' && !isMobile
               ? '420px'
-              : viewMode === 'floating-small' && !isMobile
-                ? '320px'
-                : isMobile
-                  ? '100%'
-                  : typeof popupWidth === 'number'
+              : viewMode === 'floating' && !isMobile
+                ? typeof popupWidth === 'number'
+                  ? `${popupWidth}px`
+                  : popupWidth
+                : viewMode === 'floating-small' && !isMobile
+                  ? typeof popupWidth === 'number'
                     ? `${popupWidth}px`
-                    : popupWidth,
+                    : popupWidth
+                  : isMobile
+                    ? '100%'
+                    : typeof popupWidth === 'number'
+                      ? `${popupWidth}px`
+                      : popupWidth,
           height:
-            viewMode === 'panel' && !isMobile
+            (viewMode === 'panel' || viewMode === 'floating') && !isMobile
               ? 'auto'
               : viewMode === 'floating-small' && !isMobile
-                ? '420px'
+                ? typeof popupHeight === 'number'
+                  ? `${popupHeight}px`
+                  : popupHeight
                 : isMobile
                   ? '100%'
                   : typeof popupHeight === 'number'
