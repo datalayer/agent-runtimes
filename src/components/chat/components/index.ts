@@ -29,6 +29,7 @@ export {
   type EmptyStateConfig,
   type HeaderButtonsConfig,
   type StreamingMessageOptions,
+  type ChatViewMode,
 } from './base/ChatBase';
 export { AgentDetails, type AgentDetailsProps } from './AgentDetails';
 export {
@@ -111,6 +112,7 @@ export {
   type BuiltinTool,
   type MCPServerConfig,
   type MCPServerTool,
+  type ChatViewMode as ChatFloatingViewMode,
 } from './ChatFloating';
 
 // Inline chat component for text selection AI assistance

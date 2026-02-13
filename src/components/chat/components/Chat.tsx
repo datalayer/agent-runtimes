@@ -25,7 +25,11 @@ import { AlertIcon, SyncIcon, InfoIcon } from '@primer/octicons-react';
 import { Box } from '@datalayer/primer-addons';
 import { ChatBase, type Suggestion } from './base/ChatBase';
 import { AgentDetails } from './AgentDetails';
-import type { ProtocolConfig, ModelConfig } from './base/ChatBase';
+import type {
+  ProtocolConfig,
+  ModelConfig,
+  ChatViewMode,
+} from './base/ChatBase';
 import type { McpServerSelection } from '../types';
 import { useConnectedIdentities } from '../../../identity';
 import type {
@@ -258,6 +262,17 @@ export interface ChatProps {
     message: string;
     variant?: 'danger' | 'warning';
   };
+
+  /**
+   * Current chat view mode for the header segmented toggle.
+   * When provided, a view-mode toggle is rendered in the header.
+   */
+  chatViewMode?: ChatViewMode;
+
+  /**
+   * Callback when the user switches chat view mode via the header toggle.
+   */
+  onChatViewModeChange?: (mode: ChatViewMode) => void;
 }
 
 /**
@@ -339,6 +354,8 @@ export function Chat({
   runtimeId,
   historyEndpoint,
   errorBanner,
+  chatViewMode,
+  onChatViewModeChange,
 }: ChatProps) {
   const [error, setError] = useState<string | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
@@ -648,6 +665,8 @@ export function Chat({
           }}
           backgroundColor="canvas.default"
           focusTrigger={focusTrigger}
+          chatViewMode={chatViewMode}
+          onChatViewModeChange={onChatViewModeChange}
         />
       </Box>
     </Box>

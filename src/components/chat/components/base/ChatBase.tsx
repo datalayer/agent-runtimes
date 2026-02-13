@@ -52,6 +52,9 @@ import {
   BriefcaseIcon,
   CircleIcon,
   SquareFillIcon,
+  CommentDiscussionIcon,
+  DeviceMobileIcon,
+  SidebarExpandIcon,
 } from '@primer/octicons-react';
 import { AiAgentIcon } from '@datalayer/icons-react';
 import {
@@ -88,6 +91,14 @@ import type { FrontendToolDefinition } from '../../types/tool';
 import { ToolCallDisplay } from '../display/ToolCallDisplay';
 import type { BuiltinTool as BuiltinToolType } from '../../../../types';
 import type { MCPServerConfig as MCPServerConfigType } from '../../../AgentConfiguration';
+
+/**
+ * View mode for the chat component.
+ * - 'floating': Standard floating popup
+ * - 'floating-small': Compact floating popup (smaller dimensions)
+ * - 'sidebar': Docked sidebar panel
+ */
+export type ChatViewMode = 'floating' | 'floating-small' | 'sidebar';
 
 // Singleton QueryClient for ChatBase instances without external QueryClientProvider
 const internalQueryClient = new QueryClient({
@@ -461,6 +472,18 @@ export interface ChatBaseProps {
 
   /** Header actions */
   headerActions?: React.ReactNode;
+
+  /**
+   * Current chat view mode.
+   * When provided, a segmented view-mode toggle is rendered in the header
+   * with icons for each mode: floating (popup), floating-small (compact), sidebar (docked).
+   */
+  chatViewMode?: ChatViewMode;
+
+  /**
+   * Callback when the user clicks a different view mode in the header toggle.
+   */
+  onChatViewModeChange?: (mode: ChatViewMode) => void;
 
   // ============ Mode Selection ============
 
@@ -1009,6 +1032,8 @@ export function ChatBase({
   className,
   loadingState,
   headerActions,
+  chatViewMode,
+  onChatViewModeChange,
   // Mode selection
   useStore: useStoreMode = true,
   protocol: protocolProp,
@@ -1091,6 +1116,8 @@ export function ChatBase({
           className={className}
           loadingState={loadingState}
           headerActions={headerActions}
+          chatViewMode={chatViewMode}
+          onChatViewModeChange={onChatViewModeChange}
           useStore={effectiveUseStoreMode}
           protocol={protocol}
           onSendMessage={onSendMessage}
@@ -1152,6 +1179,8 @@ export function ChatBase({
       className={className}
       loadingState={loadingState}
       headerActions={headerActions}
+      chatViewMode={chatViewMode}
+      onChatViewModeChange={onChatViewModeChange}
       useStore={effectiveUseStoreMode}
       protocol={protocol}
       onSendMessage={onSendMessage}
@@ -1213,6 +1242,8 @@ function ChatBaseInner({
   className,
   loadingState,
   headerActions,
+  chatViewMode,
+  onChatViewModeChange,
   // Mode selection
   useStore: useStoreMode = true,
   protocol,
@@ -2482,6 +2513,74 @@ function ChatBaseInner({
                 size="small"
                 onClick={headerButtons.onSettings}
               />
+            )}
+            {/* View mode segmented toggle */}
+            {chatViewMode && onChatViewModeChange && (
+              <Box
+                sx={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  bg: 'neutral.muted',
+                  borderRadius: '6px',
+                  p: '2px',
+                  gap: '1px',
+                }}
+              >
+                {(
+                  [
+                    {
+                      mode: 'floating' as const,
+                      icon: CommentDiscussionIcon,
+                      label: 'Floating popup',
+                    },
+                    {
+                      mode: 'floating-small' as const,
+                      icon: DeviceMobileIcon,
+                      label: 'Compact popup',
+                    },
+                    {
+                      mode: 'sidebar' as const,
+                      icon: SidebarExpandIcon,
+                      label: 'Sidebar panel',
+                    },
+                  ] as const
+                ).map(({ mode, icon: ModeIcon, label }) => (
+                  <Box
+                    key={mode}
+                    as="button"
+                    aria-label={label}
+                    title={label}
+                    onClick={() => onChatViewModeChange(mode)}
+                    sx={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: 26,
+                      height: 24,
+                      borderRadius: '4px',
+                      border: 'none',
+                      cursor: 'pointer',
+                      bg:
+                        chatViewMode === mode
+                          ? 'canvas.default'
+                          : 'transparent',
+                      boxShadow:
+                        chatViewMode === mode ? 'shadow.small' : 'none',
+                      color: chatViewMode === mode ? 'fg.default' : 'fg.muted',
+                      transition: 'all 0.15s ease',
+                      '&:hover': {
+                        color: 'fg.default',
+                        bg:
+                          chatViewMode === mode
+                            ? 'canvas.default'
+                            : 'neutral.subtle',
+                      },
+                    }}
+                  >
+                    <ModeIcon size={14} />
+                  </Box>
+                ))}
+              </Box>
             )}
             {/* Custom header actions */}
             {headerActions}

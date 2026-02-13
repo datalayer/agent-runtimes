@@ -173,6 +173,7 @@ export {
   type EmptyStateConfig,
   type HeaderButtonsConfig,
   type StreamingMessageOptions,
+  type ChatViewMode,
   type ToolApprovalDialogProps,
   type PoweredByTagProps,
   type FloatingBrandButtonProps,
