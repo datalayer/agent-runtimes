@@ -19,15 +19,16 @@ from agent_runtimes.types import AgentSpec
 # ============================================================================
 
 
-# Code Ai Agents
+# Codeai Agents
 # ============================================================================
 
 SIMPLE_AGENT_SPEC = AgentSpec(
-    id="code-ai/simple",
+    id="codeai/simple",
     name="A Simple Agent",
     description="A simple conversational agent. No tools, no MCP servers, no skills — just a helpful AI assistant you can chat with.",
     tags=["simple", "chat", "assistant"],
     enabled=True,
+    model="bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0",
     mcp_servers=[],
     skills=[],
     environment_name="ai-agents-env",
@@ -54,8 +55,8 @@ SIMPLE_AGENT_SPEC = AgentSpec(
 # ============================================================================
 
 AGENT_SPECS: Dict[str, AgentSpec] = {
-    # Code Ai
-    "code-ai/simple": SIMPLE_AGENT_SPEC,
+    # Codeai
+    "codeai/simple": SIMPLE_AGENT_SPEC,
 }
 
 

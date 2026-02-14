@@ -110,9 +110,9 @@ The A2A protocol does not support per-request model selection. The model is fixe
 You can add custom model configurations by modifying the model list:
 
 ```python
-from agent_runtimes.types import AIModel
+from agent_runtimes.types import AIModelRuntime
 
-custom_model = AIModel(
+custom_model = AIModelRuntime(
     id="openai:gpt-4-custom",
     name="Custom GPT-4",
     builtin_tools=["search", "code_interpreter"],

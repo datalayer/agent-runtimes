@@ -125,6 +125,8 @@ export interface AgentSpec {
   tags: string[];
   /** Whether the agent is enabled */
   enabled: boolean;
+  /** AI model identifier to use for this agent */
+  model?: string;
   /** MCP servers used by this agent */
   mcpServers: MCPServer[];
   /** Skills available to this agent */
@@ -154,7 +156,7 @@ export interface AgentSpec {
 /**
  * Configuration for an AI model.
  */
-export interface AIModel {
+export interface AIModelRuntime {
   /** Model identifier (e.g., 'anthropic:claude-sonnet-4-5') */
   id: string;
   /** Display name for the model */
@@ -186,7 +188,7 @@ export interface BuiltinTool {
  */
 export interface FrontendConfig {
   /** Available AI models */
-  models: AIModel[];
+  models: AIModelRuntime[];
   /** Available builtin tools */
   builtinTools: BuiltinTool[];
   /** Configured MCP servers */

@@ -139,6 +139,7 @@ def serve_server(
     jupyter_sandbox: Optional[str] = None,
     generated_code_folder: Optional[str] = None,
     skills_folder: Optional[str] = None,
+    codesandbox_variant: Optional[str] = None,
     protocol: Protocol = Protocol.ag_ui,
     find_free_port_flag: bool = False,
 ) -> int:
@@ -167,6 +168,9 @@ def serve_server(
                               with a shared volume, set to a path accessible by both containers.
         skills_folder: Folder for agent skills. When using Jupyter sandbox with a shared
                       volume, set to a path accessible by both containers.
+        codesandbox_variant: Code sandbox variant to use ('local-eval', 'jupyter', or
+                           'local-jupyter'). When 'jupyter', a Jupyter server is started
+                           per agent via code_sandboxes.
         protocol: Transport protocol to use (ag-ui, vercel-ai, vercel-ai-jupyter, a2a)
         find_free_port_flag: If True, find a free port starting from the given port
 
@@ -261,6 +265,11 @@ def serve_server(
     if skills_folder:
         os.environ["AGENT_RUNTIMES_SKILLS_FOLDER"] = skills_folder
         logger.info(f"Skills folder: {skills_folder}")
+
+    # Configure codesandbox variant if provided
+    if codesandbox_variant:
+        os.environ["AGENT_RUNTIMES_CODESANDBOX_VARIANT"] = codesandbox_variant
+        logger.info(f"Code sandbox variant: {codesandbox_variant}")
 
     # Set protocol
     os.environ["AGENT_RUNTIMES_PROTOCOL"] = protocol.value

@@ -9,7 +9,12 @@ from typing import Any, Sequence
 
 from pydantic_ai.settings import ModelSettings
 
-from agent_runtimes.types import AIModel
+from agent_runtimes.types import AIModelRuntime
+from agent_runtimes.config.models import (
+    AI_MODEL_CATALOGUE as AI_MODEL_CATALOGUE_DICT,
+    AIModels,
+    DEFAULT_MODEL,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -184,155 +189,36 @@ def create_model_with_provider(
         return get_model_string(model_provider, model_name)
 
 
-def create_default_models(tool_ids: list[str]) -> list[AIModel]:
+def create_default_models(tool_ids: list[str]) -> list[AIModelRuntime]:
     """
-    Create default AI model configurations.
+    Create default AI model configurations from the generated model catalogue.
 
     Args:
         tool_ids: List of tool IDs to associate with models
 
     Returns:
-        List of AIModel configurations with availability based on environment variables
+        List of AIModelRuntime configurations with availability based on environment variables
     """
-    # Define model configurations with their required environment variables
-    model_configs = [
-        # Anthropic models
-        {
-            "id": "anthropic:claude-sonnet-4-5",
-            "name": "Claude Sonnet 4.5",
-            "required_env_vars": ["ANTHROPIC_API_KEY"],
-        },
-        {
-            "id": "anthropic:claude-opus-4",
-            "name": "Claude Opus 4",
-            "required_env_vars": ["ANTHROPIC_API_KEY"],
-        },
-        {
-            "id": "anthropic:claude-sonnet-4-20250514",
-            "name": "Claude Sonnet 4 (May 2025)",
-            "required_env_vars": ["ANTHROPIC_API_KEY"],
-        },
-        {
-            "id": "anthropic:claude-3-5-haiku-20241022",
-            "name": "Claude 3.5 Haiku",
-            "required_env_vars": ["ANTHROPIC_API_KEY"],
-        },
-        # OpenAI models
-        {
-            "id": "openai:gpt-4o",
-            "name": "GPT-4o",
-            "required_env_vars": ["OPENAI_API_KEY"],
-        },
-        {
-            "id": "openai:gpt-4o-mini",
-            "name": "GPT-4o Mini",
-            "required_env_vars": ["OPENAI_API_KEY"],
-        },
-        {
-            "id": "openai:gpt-4-turbo",
-            "name": "GPT-4 Turbo",
-            "required_env_vars": ["OPENAI_API_KEY"],
-        },
-        {
-            "id": "openai:o1",
-            "name": "o1",
-            "required_env_vars": ["OPENAI_API_KEY"],
-        },
-        {
-            "id": "openai:o1-mini",
-            "name": "o1 Mini",
-            "required_env_vars": ["OPENAI_API_KEY"],
-        },
-        {
-            "id": "openai:o3-mini",
-            "name": "o3 Mini",
-            "required_env_vars": ["OPENAI_API_KEY"],
-        },
-        # AWS Bedrock models
-        {
-            "id": "bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0",
-            "name": "Claude Sonnet 4.5 (Bedrock)",
-            "required_env_vars": ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"],
-        },
-        {
-            "id": "bedrock:us.anthropic.claude-haiku-4-5-20251001-v1:0",
-            "name": "Claude 4.5 Haiku (Bedrock)",
-            "required_env_vars": ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"],
-        },
-        {
-            "id": "bedrock:us.amazon.nova-pro-v1:0",
-            "name": "Amazon Nova Pro",
-            "required_env_vars": ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"],
-        },
-        {
-            "id": "bedrock:us.amazon.nova-lite-v1:0",
-            "name": "Amazon Nova Lite",
-            "required_env_vars": ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"],
-        },
-        # Azure OpenAI models
-        {
-            "id": "azure:gpt-4o",
-            "name": "GPT-4o (Azure)",
-            "required_env_vars": [
-                "AZURE_OPENAI_API_KEY",
-                "AZURE_OPENAI_ENDPOINT",
-            ],
-        },
-        {
-            "id": "azure:gpt-4o-mini",
-            "name": "GPT-4o Mini (Azure)",
-            "required_env_vars": [
-                "AZURE_OPENAI_API_KEY",
-                "AZURE_OPENAI_ENDPOINT",
-            ],
-        },
-        {
-            "id": "azure:gpt-4-turbo",
-            "name": "GPT-4 Turbo (Azure)",
-            "required_env_vars": [
-                "AZURE_OPENAI_API_KEY",
-                "AZURE_OPENAI_ENDPOINT",
-            ],
-        },
-        {
-            "id": "azure:o1",
-            "name": "o1 (Azure)",
-            "required_env_vars": [
-                "AZURE_OPENAI_API_KEY",
-                "AZURE_OPENAI_ENDPOINT",
-            ],
-        },
-        {
-            "id": "azure:o1-mini",
-            "name": "o1 Mini (Azure)",
-            "required_env_vars": [
-                "AZURE_OPENAI_API_KEY",
-                "AZURE_OPENAI_ENDPOINT",
-            ],
-        },
-    ]
-
-    # Create AIModel instances with availability checking
+    # Build AIModelRuntime instances from the generated catalogue
     models = []
-    for config in model_configs:
-        required_vars = config["required_env_vars"]
-        is_available = check_env_vars_available(required_vars)
+    for spec_model in AI_MODEL_CATALOGUE_DICT.values():
+        is_available = check_env_vars_available(spec_model.required_env_vars)
 
-        model = AIModel(
-            id=config["id"],
-            name=config["name"],
+        model = AIModelRuntime(
+            id=spec_model.id,
+            name=spec_model.name,
             builtin_tools=tool_ids,
-            required_env_vars=required_vars,
+            required_env_vars=spec_model.required_env_vars,
             is_available=is_available,
         )
         models.append(model)
 
         # Log availability status
         if is_available:
-            logger.info(f"Model {config['name']} is available")
+            logger.info(f"Model {spec_model.name} is available")
         else:
             logger.debug(
-                f"Model {config['name']} is unavailable (missing: {', '.join(required_vars)})"
+                f"Model {spec_model.name} is unavailable (missing: {', '.join(spec_model.required_env_vars)})"
             )
 
     # Log summary

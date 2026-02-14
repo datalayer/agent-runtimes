@@ -28,6 +28,8 @@ import { useNotebookTools } from '../tools/adapters/agent-runtimes/notebookHooks
 // Import Matplotlib notebook
 import MatplotlibNotebook from './stores/notebooks/Matplotlib.ipynb.json';
 
+import { DEFAULT_MODEL } from '../config';
+
 // Fixed notebook ID
 const NOTEBOOK_ID = 'agui-notebook-example';
 
@@ -71,7 +73,7 @@ function useEnsureAgent(
             description: 'Demo agent for notebook example',
             agent_library: 'pydantic-ai',
             transport: 'ag-ui',
-            model: 'openai:gpt-4o-mini',
+            model: DEFAULT_MODEL,
             system_prompt:
               'You are a helpful AI assistant that helps users work with Jupyter notebooks. You can help with code, explanations, and data analysis.',
           }),

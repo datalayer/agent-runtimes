@@ -15,7 +15,7 @@ export type {
   MCPServer,
   AgentSkillSpec,
   AgentSpec,
-  AIModel,
+  AIModelRuntime,
   FrontendConfig,
   BuiltinTool,
   MCPServerTool,

@@ -13,8 +13,9 @@ from typing import Any
 
 from agent_runtimes.mcp.tools import tools_to_builtin_list
 from agent_runtimes.models import create_default_models
+from agent_runtimes.config.models import DEFAULT_MODEL
 from agent_runtimes.types import (
-    AIModel,
+    AIModelRuntime,
     FrontendConfig,
     MCPServer,
 )
@@ -25,7 +26,7 @@ logger = logging.getLogger(__name__)
 async def get_frontend_config(
     tools: list[dict[str, Any]] | None = None,
     mcp_servers: list[MCPServer] | None = None,
-    models: list[AIModel] | None = None,
+    models: list[AIModelRuntime] | None = None,
 ) -> FrontendConfig:
     """
     Build frontend configuration.
@@ -53,6 +54,7 @@ async def get_frontend_config(
     # Create response
     config = FrontendConfig(
         models=models,
+        default_model=DEFAULT_MODEL.value if DEFAULT_MODEL else None,
         builtin_tools=builtin_tools,
         mcp_servers=mcp_servers or [],
     )

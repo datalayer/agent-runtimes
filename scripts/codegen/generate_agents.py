@@ -165,12 +165,17 @@ from agent_runtimes.types import AgentSpec
                 else "None"
             )
 
+            # Model field
+            model_id = spec.get("model")
+            model_str = f'"{model_id}"' if model_id else "None"
+
             code += f'''{const_name} = AgentSpec(
     id="{full_agent_id}",
     name="{spec["name"]}",
     description="{description}",
     tags={_fmt_list(spec.get("tags", []))},
     enabled={spec.get("enabled", True)},
+    model={model_str},
     mcp_servers=[{mcp_servers_str}],
     skills={_fmt_list(spec.get("skills", []))},
     environment_name="{spec.get("environment_name", "ai-agents-env")}",
@@ -449,12 +454,17 @@ function toAgentSkillSpec(skill: SkillSpec) {
                 spec["description"].replace("\n", " ").replace("  ", " ").strip()
             )
 
+            # Model field
+            model_id = spec.get("model")
+            model_ts = f"'{model_id}'" if model_id else "undefined"
+
             code += f"""export const {const_name}: AgentSpec = {{
   id: '{full_agent_id}',
   name: '{spec["name"]}',
   description: `{description}`,
   tags: {tags_str},
   enabled: {str(spec.get("enabled", True)).lower()},
+  model: {model_ts},
   mcpServers: [{mcp_servers_str}],
   skills: [{skills_str}],
   environmentName: '{spec.get("environment_name", "ai-agents-env")}',

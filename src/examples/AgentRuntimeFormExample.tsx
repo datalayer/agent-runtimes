@@ -18,6 +18,7 @@ import {
 import { Box } from '@datalayer/primer-addons';
 import { DatalayerThemeProvider } from '@datalayer/core';
 import { Chat, useChatStore } from '../components/chat';
+import { DEFAULT_MODEL } from '../config';
 import type { Transport, Extension, ChatMessage } from '../components/chat';
 import { useAgentsStore } from './stores/examplesStore';
 import { useIdentity } from '../identity';
@@ -291,7 +292,7 @@ const AgentRuntimeFormExample: React.FC<AgentRuntimeFormExampleProps> = ({
   initialAgentName = DEFAULT_AGENT_ID,
   initialAgentLibrary = 'pydantic-ai',
   initialTransport = 'ag-ui',
-  initialModel = 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  initialModel = DEFAULT_MODEL,
   initialEnableCodemode = false,
   initialAllowDirectToolCalls = false,
   initialEnableToolReranker = false,

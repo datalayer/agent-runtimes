@@ -11,13 +11,13 @@
 
 import type { AgentSpec } from '../../types';
 
-import { AGENT_SPECS as CODE_AI_AGENTS } from './code-ai';
+import { AGENT_SPECS as CODEAI_AGENTS } from './codeai';
 import { AGENT_SPECS as CODEMODE_PAPER_AGENTS } from './codemode-paper';
 import { AGENT_SPECS as DATALAYER_AI_AGENTS } from './datalayer-ai';
 
 // Merge all agent specs from subfolders
 export const AGENT_SPECS: Record<string, AgentSpec> = {
-  ...CODE_AI_AGENTS,
+  ...CODEAI_AGENTS,
   ...CODEMODE_PAPER_AGENTS,
   ...DATALAYER_AI_AGENTS,
 };

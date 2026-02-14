@@ -108,9 +108,9 @@ class ChatRequest(BaseModel):
     )
 
 
-class AIModel(BaseModel):
+class AIModelRuntime(BaseModel):
     """
-    Configuration for an AI model.
+    Runtime configuration for an AI model.
     """
 
     model_config = ConfigDict(populate_by_name=True, by_alias=True)
@@ -235,8 +235,13 @@ class FrontendConfig(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True, by_alias=True)
 
-    models: List[AIModel] = Field(
+    models: List[AIModelRuntime] = Field(
         default_factory=list, description="Available AI models"
+    )
+    default_model: Optional[str] = Field(
+        default=None,
+        description="Default model ID to select",
+        alias="defaultModel",
     )
     builtin_tools: List[BuiltinTool] = Field(
         default_factory=list,
@@ -265,6 +270,10 @@ class AgentSpec(BaseModel):
     description: str = Field(default="", description="Agent description")
     tags: List[str] = Field(default_factory=list, description="Tags for categorization")
     enabled: bool = Field(default=True, description="Whether the agent is enabled")
+    model: Optional[str] = Field(
+        default=None,
+        description="AI model identifier to use for this agent (e.g., 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0')",
+    )
     mcp_servers: List[MCPServer] = Field(
         default_factory=list,
         description="MCP servers used by this agent",

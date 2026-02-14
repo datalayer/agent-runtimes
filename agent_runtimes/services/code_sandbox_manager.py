@@ -54,7 +54,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-SandboxVariant = Literal["local-eval", "local-jupyter"]
+SandboxVariant = Literal["local-eval", "local-jupyter", "jupyter"]
 
 
 @dataclass
@@ -334,10 +334,13 @@ class CodeSandboxManager:
     - Runtime configuration of sandbox variant
     - Thread-safe sandbox creation and access
     - Automatic sandbox lifecycle management (start/stop)
+    - Per-agent sandbox isolation (each agent gets its own sandbox)
 
-    The manager supports two sandbox variants:
+    The manager supports three sandbox variants:
     - local-eval: Uses Python exec() for code execution (default)
-    - local-jupyter: Connects to a Jupyter server for persistent kernel state
+    - local-jupyter: Connects to an *existing* Jupyter server (URL required)
+    - jupyter: Delegates to code_sandboxes to start its own Jupyter server
+      on a random free port (no external URL needed)
     """
 
     _instance: CodeSandboxManager | None = None
@@ -348,6 +351,9 @@ class CodeSandboxManager:
         self._config = SandboxConfig()
         self._sandbox: Sandbox | None = None
         self._sandbox_lock = Lock()
+        # Per-agent sandboxes: each agent can have its own isolated sandbox
+        self._agent_sandboxes: dict[str, Sandbox] = {}
+        self._agent_sandbox_lock = Lock()
 
     @classmethod
     def get_instance(cls) -> CodeSandboxManager:
@@ -372,6 +378,7 @@ class CodeSandboxManager:
         """
         with cls._lock:
             if cls._instance is not None:
+                cls._instance.stop_all_agent_sandboxes()
                 cls._instance.stop()
                 cls._instance = None
 
@@ -606,7 +613,7 @@ class CodeSandboxManager:
         if not env_vars:
             return
 
-        if self._config.variant == "local-jupyter":
+        if self._config.variant in ("local-jupyter", "jupyter"):
             # Build a Python snippet that sets every env var in the kernel.
             lines = ["import os"]
             for name, value in env_vars.items():
@@ -633,9 +640,14 @@ class CodeSandboxManager:
                 f"(process env is shared)"
             )
 
-    def _create_sandbox(self) -> Sandbox:
+    def _create_sandbox(self, variant: SandboxVariant | None = None) -> Sandbox:
         """
         Create a new sandbox instance based on current configuration.
+
+        Args:
+            variant: Override the configured variant.  When ``None``
+                (the default) the manager's current ``_config.variant``
+                is used.
 
         Returns:
             A new Sandbox instance (not yet started).
@@ -644,12 +656,14 @@ class CodeSandboxManager:
             ImportError: If required sandbox dependencies are not installed.
             ValueError: If configuration is invalid.
         """
-        if self._config.variant == "local-eval":
+        effective_variant = variant or self._config.variant
+
+        if effective_variant == "local-eval":
             from code_sandboxes import LocalEvalSandbox
 
             return LocalEvalSandbox()
 
-        elif self._config.variant == "local-jupyter":
+        elif effective_variant == "local-jupyter":
             from code_sandboxes import LocalJupyterSandbox
 
             if not self._config.jupyter_url:
@@ -662,8 +676,15 @@ class CodeSandboxManager:
                 token=self._config.jupyter_token,
             )
 
+        elif effective_variant == "jupyter":
+            # Delegate to code_sandboxes to create AND start its own
+            # Jupyter server on a random free port.  No external URL needed.
+            from code_sandboxes import LocalJupyterSandbox
+
+            return LocalJupyterSandbox()
+
         else:
-            raise ValueError(f"Unknown sandbox variant: {self._config.variant}")
+            raise ValueError(f"Unknown sandbox variant: {effective_variant}")
 
     def stop(self) -> None:
         """Stop the current sandbox if running."""
@@ -676,6 +697,147 @@ class CodeSandboxManager:
                     logger.warning(f"Error stopping sandbox: {e}")
                 finally:
                     self._sandbox = None
+
+    # -- Per-agent sandbox management ------------------------------------
+
+    def create_agent_sandbox(
+        self,
+        agent_id: str,
+        variant: SandboxVariant = "local-eval",
+        env_vars: dict[str, str] | None = None,
+    ) -> Sandbox:
+        """
+        Create a dedicated sandbox for a specific agent.
+
+        Each agent gets its own isolated sandbox instance.  For the
+        ``"jupyter"`` variant, ``code_sandboxes.LocalJupyterSandbox``
+        starts its own Jupyter server on a random free port.
+
+        Args:
+            agent_id: Unique agent identifier.
+            variant: The sandbox variant (``"local-eval"``, ``"jupyter"``,
+                or ``"local-jupyter"``).
+            env_vars: Environment variables to inject into the sandbox
+                after it starts.
+
+        Returns:
+            The started ``Sandbox`` instance.
+
+        Raises:
+            ValueError: If the agent already has a sandbox.
+        """
+        with self._agent_sandbox_lock:
+            if agent_id in self._agent_sandboxes:
+                raise ValueError(
+                    f"Agent '{agent_id}' already has a sandbox.  "
+                    f"Call stop_agent_sandbox() first."
+                )
+
+            logger.info(
+                f"Creating {variant} sandbox for agent '{agent_id}'"
+            )
+            sandbox = self._create_sandbox(variant=variant)
+            sandbox.start()
+            logger.info(
+                f"Started {variant} sandbox for agent '{agent_id}'"
+            )
+
+            # Inject env vars if provided
+            if env_vars:
+                self._inject_env_vars_into(sandbox, variant, env_vars)
+
+            self._agent_sandboxes[agent_id] = sandbox
+            return sandbox
+
+    def get_agent_sandbox(self, agent_id: str) -> Sandbox | None:
+        """
+        Get the sandbox for a specific agent.
+
+        Args:
+            agent_id: Unique agent identifier.
+
+        Returns:
+            The agent's ``Sandbox`` or ``None`` if not found.
+        """
+        return self._agent_sandboxes.get(agent_id)
+
+    def stop_agent_sandbox(self, agent_id: str) -> None:
+        """
+        Stop and remove the sandbox for a specific agent.
+
+        For the ``"jupyter"`` variant this stops the Jupyter server that
+        ``code_sandboxes`` started.
+
+        Args:
+            agent_id: Unique agent identifier.
+        """
+        with self._agent_sandbox_lock:
+            sandbox = self._agent_sandboxes.pop(agent_id, None)
+            if sandbox is not None:
+                try:
+                    sandbox.stop()
+                    logger.info(f"Stopped sandbox for agent '{agent_id}'")
+                except Exception as e:
+                    logger.warning(
+                        f"Error stopping sandbox for agent '{agent_id}': {e}"
+                    )
+
+    def stop_all_agent_sandboxes(self) -> None:
+        """
+        Stop all per-agent sandboxes.
+
+        This should be called during server shutdown to ensure every
+        Jupyter server that ``code_sandboxes`` spawned is terminated.
+        """
+        with self._agent_sandbox_lock:
+            agent_ids = list(self._agent_sandboxes.keys())
+            for agent_id in agent_ids:
+                sandbox = self._agent_sandboxes.pop(agent_id, None)
+                if sandbox is not None:
+                    try:
+                        sandbox.stop()
+                        logger.info(
+                            f"Stopped sandbox for agent '{agent_id}' (shutdown)"
+                        )
+                    except Exception as e:
+                        logger.warning(
+                            f"Error stopping sandbox for agent '{agent_id}': {e}"
+                        )
+            logger.info(
+                f"Stopped {len(agent_ids)} per-agent sandbox(es) during shutdown"
+            )
+
+    def _inject_env_vars_into(
+        self,
+        sandbox: Sandbox,
+        variant: SandboxVariant,
+        env_vars: dict[str, str],
+    ) -> None:
+        """Inject environment variables into an arbitrary sandbox."""
+        if variant in ("local-jupyter", "jupyter"):
+            lines = ["import os"]
+            for name, value in env_vars.items():
+                lines.append(f"os.environ[{name!r}] = {value!r}")
+            code = "\n".join(lines)
+            try:
+                result = sandbox.run_code(code)
+                if result.execution_ok:
+                    logger.info(
+                        f"Injected {len(env_vars)} env var(s) into sandbox: "
+                        f"{list(env_vars.keys())}"
+                    )
+                else:
+                    logger.warning(
+                        f"Failed to inject env vars into sandbox: "
+                        f"{result.execution_error}"
+                    )
+            except Exception as e:
+                logger.warning(f"Error injecting env vars into sandbox: {e}")
+        else:
+            logger.debug(
+                f"Skipping env var injection for {variant} sandbox "
+                f"(process env is shared)"
+            )
 
     def restart(self) -> Sandbox:
         """
@@ -711,7 +873,7 @@ class CodeSandboxManager:
         # Compute python_path (what gets added to sys.path)
         # For Jupyter/remote sandboxes, it's /tmp
         # For local-eval, it's the parent of generated_path
-        if self._config.variant in ("local-jupyter", "datalayer-runtime"):
+        if self._config.variant in ("local-jupyter", "jupyter", "datalayer-runtime"):
             python_path = "/tmp"  # nosec B108
         else:
             python_path = str(Path(generated_path).resolve().parent)
@@ -721,6 +883,7 @@ class CodeSandboxManager:
             "jupyter_url": self._config.jupyter_url,
             "jupyter_token_set": self._config.jupyter_token is not None,
             "sandbox_running": self._sandbox is not None,
+            "agent_sandboxes": list(self._agent_sandboxes.keys()),
             "generated_path": generated_path,
             "skills_path": skills_path,
             "python_path": python_path,

@@ -24,6 +24,7 @@ from ..adapters.pydantic_ai_adapter import PydanticAIAdapter
 from ..config.agents import AGENT_SPECS
 from ..config.agents import get_agent_spec as get_library_agent_spec
 from ..config.agents import list_agent_specs as list_library_agents
+from ..config.models import DEFAULT_MODEL
 from ..mcp import get_mcp_manager, initialize_config_mcp_servers
 from ..mcp.catalog_mcp_servers import MCP_SERVER_CATALOG
 from ..mcp.lifecycle import get_mcp_lifecycle_manager
@@ -303,7 +304,7 @@ class CreateAgentRequest(BaseModel):
         default="ag-ui", description="Transport protocol to use"
     )
     model: str = Field(
-        default="bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0",
+        default=DEFAULT_MODEL.value,
         description="Model to use",
     )
     system_prompt: str = Field(
@@ -340,6 +341,16 @@ class CreateAgentRequest(BaseModel):
     jupyter_sandbox: str | None = Field(
         default=None,
         description="Jupyter server URL with token for code sandbox (e.g., http://localhost:8888?token=xxx). If provided, codemode will use Jupyter kernel instead of local-eval sandbox.",
+    )
+    codesandbox_variant: str | None = Field(
+        default=None,
+        description=(
+            "Code sandbox variant to use for this agent.  "
+            "Accepted values: 'local-eval' (in-process Python exec, default), "
+            "'jupyter' (starts a Jupyter server per agent via code_sandboxes), "
+            "'local-jupyter' (connects to an existing Jupyter server — requires jupyter_sandbox URL)."
+        ),
+        alias="codesandbox_variant",
     )
     agent_spec_id: str | None = Field(
         default=None,
@@ -426,6 +437,12 @@ async def create_agent(
                 request.enable_skills = True
             if not request.description and spec.description:
                 request.description = spec.description
+            # Use the model from the spec if the request still has the default
+            if (
+                request.model == DEFAULT_MODEL.value
+                and spec.model
+            ):
+                request.model = spec.model
 
         # Build list of non-MCP toolsets (skills, codemode, etc.)
         # MCP toolsets will be dynamically fetched at run time by the adapter
@@ -540,6 +557,11 @@ async def create_agent(
                     detail=f"Failed to configure Jupyter sandbox: {str(e)}",
                 )
 
+        # Determine the effective codesandbox variant
+        effective_variant = request.codesandbox_variant or (
+            "local-jupyter" if request.jupyter_sandbox else "local-eval"
+        )
+
         # Create shared sandbox for codemode and/or skills toolsets
         # This ensures state persistence between execute_code and skill script executions
         shared_sandbox = None
@@ -549,9 +571,40 @@ async def create_agent(
             or (
                 request.enable_codemode and request.jupyter_sandbox
             )  # Codemode with Jupyter
+            or (
+                request.enable_codemode and effective_variant == "jupyter"
+            )  # Codemode with jupyter variant
         )
         if need_shared_sandbox:
-            shared_sandbox = create_shared_sandbox(request.jupyter_sandbox)
+            if effective_variant == "jupyter":
+                # Delegate to code_sandboxes: create a per-agent sandbox
+                # that starts its own Jupyter server on a random free port.
+                try:
+                    from ..services.code_sandbox_manager import get_code_sandbox_manager
+
+                    sandbox_manager = get_code_sandbox_manager()
+                    agent_sandbox = sandbox_manager.create_agent_sandbox(
+                        agent_id=agent_id,
+                        variant="jupyter",
+                    )
+                    # Wrap in ManagedSandbox-like interface for compatibility
+                    shared_sandbox = agent_sandbox
+                    logger.info(
+                        f"Created per-agent Jupyter sandbox for '{agent_id}'"
+                    )
+                except ImportError as e:
+                    logger.warning(
+                        f"code_sandboxes not installed, falling back to local-eval: {e}"
+                    )
+                    shared_sandbox = create_shared_sandbox(None)
+                except Exception as e:
+                    logger.error(f"Failed to create Jupyter sandbox for agent '{agent_id}': {e}")
+                    raise HTTPException(
+                        status_code=500,
+                        detail=f"Failed to create Jupyter sandbox: {str(e)}",
+                    )
+            else:
+                shared_sandbox = create_shared_sandbox(request.jupyter_sandbox)
 
         # Add skills toolset if enabled
         if skills_enabled:

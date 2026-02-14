@@ -17,11 +17,11 @@ import type { AgentSpec } from '../../../types';
 // Agent Specs
 // ============================================================================
 
-// Code Ai Agents
+// Codeai Agents
 // ============================================================================
 
 export const SIMPLE_AGENT_SPEC: AgentSpec = {
-  id: 'code-ai/simple',
+  id: 'codeai/simple',
   name: 'A Simple Agent',
   description: `A simple conversational agent. No tools, no MCP servers, no skills — just a helpful AI assistant you can chat with.`,
   tags: ['simple', 'chat', 'assistant'],
@@ -49,8 +49,8 @@ export const SIMPLE_AGENT_SPEC: AgentSpec = {
 // ============================================================================
 
 export const AGENT_SPECS: Record<string, AgentSpec> = {
-  // Code Ai
-  'code-ai/simple': SIMPLE_AGENT_SPEC,
+  // Codeai
+  'codeai/simple': SIMPLE_AGENT_SPEC,
 };
 
 /**

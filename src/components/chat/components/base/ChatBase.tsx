@@ -370,6 +370,7 @@ export type MCPServerConfig = MCPServerConfigType;
  */
 export interface RemoteConfig {
   models: ModelConfig[];
+  defaultModel?: string;
   builtinTools: BuiltinTool[];
   mcpServers?: MCPServerConfig[];
 }
@@ -1444,14 +1445,15 @@ function ChatBaseInner({
     if ((configQuery.data || availableModels) && !selectedModel) {
       // Use availableModels override if provided, otherwise use config models
       const modelsList = availableModels || configQuery.data?.models || [];
-      // Use initialModel if provided, otherwise select first available model
-      if (initialModel) {
-        // Check if the initial model exists in the models list
-        const modelExists = modelsList.some(m => m.id === initialModel);
+      // Priority: initialModel prop > defaultModel from config > first available model
+      const preferredModel = initialModel || configQuery.data?.defaultModel;
+      if (preferredModel) {
+        // Check if the preferred model exists in the models list
+        const modelExists = modelsList.some(m => m.id === preferredModel);
         if (modelExists) {
-          setSelectedModel(initialModel);
+          setSelectedModel(preferredModel);
         } else {
-          // Fallback to first available model if initialModel not found
+          // Fallback to first available model if preferred model not found
           const firstAvailableModel = modelsList.find(
             m => m.isAvailable !== false,
           );
@@ -1461,7 +1463,7 @@ function ChatBaseInner({
           }
         }
       } else {
-        // No initialModel provided, select first available model
+        // No preferred model, select first available model
         const firstAvailableModel = modelsList.find(
           m => m.isAvailable !== false,
         );

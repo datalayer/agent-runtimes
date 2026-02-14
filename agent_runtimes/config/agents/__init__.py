@@ -11,13 +11,13 @@ from typing import Dict
 
 from agent_runtimes.types import AgentSpec
 
-from .code_ai import AGENT_SPECS as CODE_AI_AGENTS
+from .codeai import AGENT_SPECS as CODEAI_AGENTS
 from .codemode_paper import AGENT_SPECS as CODEMODE_PAPER_AGENTS
 from .datalayer_ai import AGENT_SPECS as DATALAYER_AI_AGENTS
 
 # Merge all agent specs from subfolders
 AGENT_SPECS: Dict[str, AgentSpec] = {}
-AGENT_SPECS.update(CODE_AI_AGENTS)
+AGENT_SPECS.update(CODEAI_AGENTS)
 AGENT_SPECS.update(CODEMODE_PAPER_AGENTS)
 AGENT_SPECS.update(DATALAYER_AI_AGENTS)
 

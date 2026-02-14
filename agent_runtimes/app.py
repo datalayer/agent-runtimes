@@ -90,6 +90,7 @@ async def _create_and_register_cli_agent(
     all_mcp_servers: list[Any],
     api_prefix: str,
     protocol: str = "ag-ui",
+    codesandbox_variant: str | None = None,
 ) -> None:
     """
     Create and register an agent from CLI options.
@@ -106,6 +107,9 @@ async def _create_and_register_cli_agent(
         all_mcp_servers: All MCP servers (agent spec + CLI servers)
         api_prefix: API prefix for routes
         protocol: Transport protocol (ag-ui, vercel-ai, vercel-ai-jupyter, a2a)
+        codesandbox_variant: Code sandbox variant ('local-eval', 'jupyter', or
+            'local-jupyter'). When 'jupyter', a per-agent Jupyter server is
+            started via code_sandboxes.
     """
 
     from pydantic_ai import Agent as PydanticAgent
@@ -126,7 +130,8 @@ async def _create_and_register_cli_agent(
     from .transports import AGUITransport, MCPUITransport
 
     logger.info(
-        f"Creating agent '{agent_id}' with codemode={enable_codemode}, skills={skills}"
+        f"Creating agent '{agent_id}' with codemode={enable_codemode}, "
+        f"skills={skills}, codesandbox_variant={codesandbox_variant}"
     )
 
     # Update the global codemode state so AgentDetails shows correct status
@@ -139,11 +144,47 @@ async def _create_and_register_cli_agent(
     # Get Jupyter sandbox URL from environment if configured
     jupyter_sandbox_url = os.getenv("AGENT_RUNTIMES_JUPYTER_SANDBOX")
 
-    # Create shared sandbox if both codemode and skills are enabled
+    # Determine effective sandbox variant
+    effective_variant = codesandbox_variant or (
+        "local-jupyter" if jupyter_sandbox_url else "local-eval"
+    )
+
+    # Create shared sandbox if both codemode and skills are enabled,
+    # or when the jupyter variant is used with codemode.
     skills_enabled = len(skills) > 0
     shared_sandbox = None
-    if enable_codemode and skills_enabled:
-        shared_sandbox = create_shared_sandbox(jupyter_sandbox_url)
+    need_shared_sandbox = (
+        (enable_codemode and skills_enabled)
+        or (enable_codemode and jupyter_sandbox_url)
+        or (enable_codemode and effective_variant == "jupyter")
+    )
+    if need_shared_sandbox:
+        if effective_variant == "jupyter":
+            # Delegate to code_sandboxes: create a per-agent sandbox
+            # that starts its own Jupyter server on a random free port.
+            try:
+                from .services.code_sandbox_manager import get_code_sandbox_manager
+
+                sandbox_manager = get_code_sandbox_manager()
+                shared_sandbox = sandbox_manager.create_agent_sandbox(
+                    agent_id=agent_id,
+                    variant="jupyter",
+                )
+                logger.info(
+                    f"Created per-agent Jupyter sandbox for CLI agent '{agent_id}'"
+                )
+            except ImportError as e:
+                logger.warning(
+                    f"code_sandboxes not installed, falling back to local-eval: {e}"
+                )
+                shared_sandbox = create_shared_sandbox(None)
+            except Exception as e:
+                logger.error(
+                    f"Failed to create Jupyter sandbox for agent '{agent_id}': {e}"
+                )
+                shared_sandbox = create_shared_sandbox(None)
+        else:
+            shared_sandbox = create_shared_sandbox(jupyter_sandbox_url)
 
     # Add skills toolset if enabled
     if skills_enabled:
@@ -257,10 +298,10 @@ async def _create_and_register_cli_agent(
     )
 
     # Create the underlying Pydantic AI Agent
-    # Use default model - can be configured via environment
-    model = os.environ.get(
-        "AGENT_RUNTIMES_MODEL", "bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0"
-    )
+    # Use model from agent spec, environment variable override, or global default
+    from agent_runtimes.config.models import DEFAULT_MODEL
+    env_model = os.environ.get("AGENT_RUNTIMES_MODEL")
+    model = env_model or agent_spec.model or DEFAULT_MODEL.value
 
     # Build the system prompt
     # When codemode is enabled and a codemode-specific prompt exists, use it
@@ -823,6 +864,11 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
                         "Codemode enabled: skipping lifecycle manager MCP server startup (codemode will manage servers)"
                     )
 
+                # Read codesandbox variant from environment
+                codesandbox_variant = os.environ.get(
+                    "AGENT_RUNTIMES_CODESANDBOX_VARIANT"
+                )
+
                 # Create and register the agent with codemode and skills if enabled
                 await _create_and_register_cli_agent(
                     app=app,
@@ -833,6 +879,7 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
                     all_mcp_servers=all_mcp_servers,
                     api_prefix=config.api_prefix,
                     protocol=protocol,
+                    codesandbox_variant=codesandbox_variant,
                 )
             else:
                 logger.warning(
@@ -902,6 +949,18 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
         # Shutdown MCP toolsets (stop all MCP server subprocesses)
         if not _is_reload_parent_process():
             await shutdown_config_mcp_toolsets()
+
+        # Stop all per-agent sandboxes (terminates any Jupyter servers
+        # that code_sandboxes started on behalf of agents).
+        try:
+            from .services.code_sandbox_manager import get_code_sandbox_manager
+
+            sandbox_manager = get_code_sandbox_manager()
+            sandbox_manager.stop_all_agent_sandboxes()
+            sandbox_manager.stop()
+            logger.info("All sandboxes stopped during shutdown")
+        except Exception as e:
+            logger.warning(f"Error stopping sandboxes during shutdown: {e}")
 
         logger.info("Shutting down agent-runtimes server...")
 
