@@ -149,7 +149,8 @@ async def _create_and_register_cli_agent(
     jupyter_sandbox_url = os.getenv("AGENT_RUNTIMES_JUPYTER_SANDBOX")
 
     # Determine effective sandbox variant
-    effective_variant = sandbox_variant or (
+    # Priority: CLI/env var > agent spec > environment-based default
+    effective_variant = sandbox_variant or agent_spec.sandbox_variant or (
         "local-jupyter" if jupyter_sandbox_url else "local-eval"
     )
 
@@ -170,6 +171,9 @@ async def _create_and_register_cli_agent(
                 from .services.code_sandbox_manager import get_code_sandbox_manager
 
                 sandbox_manager = get_code_sandbox_manager()
+                # Update manager config so /health/startup reports the
+                # correct variant instead of the default "local-eval".
+                sandbox_manager.configure(variant="jupyter")
                 shared_sandbox = sandbox_manager.create_agent_sandbox(
                     agent_id=agent_id,
                     variant="jupyter",
@@ -178,15 +182,14 @@ async def _create_and_register_cli_agent(
                     f"Created per-agent Jupyter sandbox for CLI agent '{agent_id}'"
                 )
             except ImportError as e:
-                logger.warning(
-                    f"code_sandboxes not installed, falling back to local-eval: {e}"
-                )
-                shared_sandbox = create_shared_sandbox(None)
+                raise RuntimeError(
+                    f"Cannot create Jupyter sandbox: code_sandboxes package is not installed. "
+                    f"Install it with: pip install code-sandboxes"
+                ) from e
             except Exception as e:
-                logger.error(
+                raise RuntimeError(
                     f"Failed to create Jupyter sandbox for agent '{agent_id}': {e}"
-                )
-                shared_sandbox = create_shared_sandbox(None)
+                ) from e
         else:
             shared_sandbox = create_shared_sandbox(jupyter_sandbox_url)
 
@@ -657,9 +660,11 @@ async def _create_and_register_cli_agent(
         jupyter_host = getattr(shared_sandbox, "_host", None)
         jupyter_port = getattr(shared_sandbox, "_port", None)
         jupyter_server_url = getattr(shared_sandbox, "_server_url", None)
+        jupyter_token = getattr(shared_sandbox, "_token", None)
         startup_info["sandbox"]["jupyter_host"] = jupyter_host
         startup_info["sandbox"]["jupyter_port"] = jupyter_port
         startup_info["sandbox"]["jupyter_url"] = jupyter_server_url
+        startup_info["sandbox"]["jupyter_token"] = jupyter_token
     elif effective_variant == "local-jupyter" and jupyter_sandbox_url:
         startup_info["sandbox"]["jupyter_url"] = jupyter_sandbox_url
 

@@ -319,6 +319,15 @@ class AgentSpec(BaseModel):
         description="Path to Lexical document to show on agent creation",
         alias="welcomeDocument",
     )
+    sandbox_variant: Optional[str] = Field(
+        default=None,
+        description=(
+            "Sandbox variant to use for this agent. "
+            "Accepted values: 'local-eval' (default), 'jupyter' (per-agent Jupyter server), "
+            "'local-jupyter' (existing Jupyter server)."
+        ),
+        alias="sandboxVariant",
+    )
     system_prompt: Optional[str] = Field(
         default=None,
         description="System prompt for the agent",

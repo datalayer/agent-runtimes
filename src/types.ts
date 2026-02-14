@@ -147,6 +147,8 @@ export interface AgentSpec {
   welcomeNotebook?: string;
   /** Path to Lexical document to show on agent creation */
   welcomeDocument?: string;
+  /** Sandbox variant to use for this agent ('local-eval', 'jupyter', 'local-jupyter') */
+  sandboxVariant?: string;
 }
 
 // ============================================================================

@@ -169,6 +169,10 @@ from agent_runtimes.types import AgentSpec
             model_id = spec.get("model")
             model_str = f'"{model_id}"' if model_id else "None"
 
+            # Sandbox variant field
+            sandbox_variant = spec.get("sandbox_variant")
+            sandbox_variant_str = f'"{sandbox_variant}"' if sandbox_variant else "None"
+
             code += f'''{const_name} = AgentSpec(
     id="{full_agent_id}",
     name="{spec["name"]}",
@@ -186,6 +190,7 @@ from agent_runtimes.types import AgentSpec
     welcome_message="{welcome}",
     welcome_notebook={f'"{welcome_notebook}"' if welcome_notebook else "None"},
     welcome_document={f'"{welcome_document}"' if welcome_document else "None"},
+    sandbox_variant={sandbox_variant_str},
     system_prompt={system_prompt_str},
     system_prompt_codemode_addons={system_prompt_codemode_addons_str},
 )
@@ -458,6 +463,10 @@ function toAgentSkillSpec(skill: SkillSpec) {
             model_id = spec.get("model")
             model_ts = f"'{model_id}'" if model_id else "undefined"
 
+            # Sandbox variant field
+            sandbox_variant = spec.get("sandbox_variant")
+            sandbox_variant_ts = f"'{sandbox_variant}'" if sandbox_variant else "undefined"
+
             code += f"""export const {const_name}: AgentSpec = {{
   id: '{full_agent_id}',
   name: '{spec["name"]}',
@@ -472,6 +481,7 @@ function toAgentSkillSpec(skill: SkillSpec) {
   emoji: {emoji},
   color: {color},
   suggestions: {suggestions_str},
+  sandboxVariant: {sandbox_variant_ts},
   systemPrompt: {f"`{system_prompt}`" if system_prompt else "undefined"},
   systemPromptCodemodeAddons: {f"`{system_prompt_codemode_addons}`" if system_prompt_codemode_addons else "undefined"},
 }};

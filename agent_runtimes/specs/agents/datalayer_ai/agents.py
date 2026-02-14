@@ -44,6 +44,7 @@ CRAWLER_AGENT_SPEC = AgentSpec(
     welcome_message="Hi! I'm the Crawler Agent. I can search the web using Tavily, explore GitHub repositories, and help you research topics across the internet. ",
     welcome_notebook=None,
     welcome_document=None,
+    sandbox_variant="jupyter",
     system_prompt="""You are a web crawling and research assistant with access to Tavily search and GitHub tools. Use Tavily to search the web for current information and search GitHub repositories for relevant projects. Synthesize information from multiple sources and provide clear summaries with sources cited.
 """,
     system_prompt_codemode_addons="""## IMPORTANT: Be Honest About Your Capabilities NEVER claim to have tools or capabilities you haven't verified.
@@ -74,11 +75,7 @@ DATA_ACQUISITION_AGENT_SPEC = AgentSpec(
     tags=["data", "acquisition", "kaggle", "filesystem"],
     enabled=True,
     model="bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0",
-    mcp_servers=[
-        MCP_SERVER_CATALOG["kaggle"],
-        MCP_SERVER_CATALOG["filesystem"],
-        MCP_SERVER_CATALOG["tavily"],
-    ],
+    mcp_servers=[MCP_SERVER_CATALOG["kaggle"], MCP_SERVER_CATALOG["filesystem"], MCP_SERVER_CATALOG["tavily"]],
     skills=["github"],
     environment_name="ai-agents-env",
     icon="database",
@@ -93,6 +90,7 @@ DATA_ACQUISITION_AGENT_SPEC = AgentSpec(
     welcome_message="Hello! I'm the Data Acquisition Agent. I can help you find and download datasets from Kaggle, manage files in your workspace, and explore data sources for your projects. ",
     welcome_notebook=None,
     welcome_document=None,
+    sandbox_variant="jupyter",
     system_prompt="""You are a data acquisition specialist with access to Kaggle datasets and filesystem tools. You can search for datasets, download data, read and write files, and help users prepare data for analysis. Guide users through finding relevant datasets and organizing their workspace efficiently.
 """,
     system_prompt_codemode_addons="""## IMPORTANT: Be Honest About Your Capabilities NEVER claim to have tools or capabilities you haven't verified.
@@ -138,6 +136,7 @@ FINANCIAL_AGENT_SPEC = AgentSpec(
     welcome_message="Welcome! I'm the Financial Visualization Agent. I can help you analyze stock market data, track financial instruments, and create charts to visualize market trends. ",
     welcome_notebook=None,
     welcome_document=None,
+    sandbox_variant="jupyter",
     system_prompt="""You are a financial market analyst with access to Alpha Vantage market data tools. You can fetch stock prices, analyze trading volumes, create visualizations, and track market trends. Provide clear insights with relevant data points and suggest visualization approaches when appropriate.
 """,
     system_prompt_codemode_addons="""## IMPORTANT: Be Honest About Your Capabilities NEVER claim to have tools or capabilities you haven't verified.
@@ -183,6 +182,7 @@ GITHUB_AGENT_SPEC = AgentSpec(
     welcome_message="Hello! I'm the GitHub Agent. I can help you manage repositories, create and  review issues and pull requests, search code, and send email notifications  about your GitHub activity. ",
     welcome_notebook=None,
     welcome_document=None,
+    sandbox_variant="jupyter",
     system_prompt="""You are a GitHub assistant with access to GitHub skills and Google Workspace for email notifications. You can list and search repositories, issues, and pull requests, create new issues, review PRs, search code, and send email notifications. Always confirm repository names before creating issues/PRs and provide clear summaries when listing multiple items.
 """,
     system_prompt_codemode_addons="""## IMPORTANT: Be Honest About Your Capabilities NEVER claim to have tools or capabilities you haven't verified.
@@ -228,6 +228,7 @@ SIMPLE_AGENT_SPEC = AgentSpec(
     welcome_message="Hi! I'm a simple assistant. I don't have any special tools, but I'm happy to chat, answer questions, and help you think through ideas. ",
     welcome_notebook=None,
     welcome_document=None,
+    sandbox_variant="jupyter",
     system_prompt="""You are a helpful, friendly AI assistant. You do not have access to any external tools, MCP servers, or skills. Answer questions using your training knowledge, be concise, and let the user know if a question is outside your knowledge.
 """,
     system_prompt_codemode_addons=None,
@@ -245,6 +246,7 @@ AGENT_SPECS: Dict[str, AgentSpec] = {
     "datalayer-ai/financial": FINANCIAL_AGENT_SPEC,
     "datalayer-ai/github-agent": GITHUB_AGENT_SPEC,
     "datalayer-ai/simple": SIMPLE_AGENT_SPEC,
+
 }
 
 

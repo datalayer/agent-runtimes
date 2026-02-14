@@ -79,6 +79,7 @@ export const CRAWLER_AGENT_SPEC: AgentSpec = {
     'Research best practices for building RAG applications',
     'Compare popular JavaScript frameworks in 2024',
   ],
+  sandboxVariant: 'jupyter',
   systemPrompt: `You are a web crawling and research assistant with access to Tavily search and GitHub tools. Use Tavily to search the web for current information and search GitHub repositories for relevant projects. Synthesize information from multiple sources and provide clear summaries with sources cited.
 `,
   systemPromptCodemodeAddons: `## IMPORTANT: Be Honest About Your Capabilities NEVER claim to have tools or capabilities you haven't verified.
@@ -125,6 +126,7 @@ export const DATA_ACQUISITION_AGENT_SPEC: AgentSpec = {
     'List available files in my workspace',
     'Search Kaggle for time series forecasting competitions',
   ],
+  sandboxVariant: 'jupyter',
   systemPrompt: `You are a data acquisition specialist with access to Kaggle datasets and filesystem tools. You can search for datasets, download data, read and write files, and help users prepare data for analysis. Guide users through finding relevant datasets and organizing their workspace efficiently.
 `,
   systemPromptCodemodeAddons: `## IMPORTANT: Be Honest About Your Capabilities NEVER claim to have tools or capabilities you haven't verified.
@@ -167,6 +169,7 @@ export const FINANCIAL_AGENT_SPEC: AgentSpec = {
     'Analyze the trading volume trends for Tesla',
     'Get the latest market news for tech stocks',
   ],
+  sandboxVariant: 'jupyter',
   systemPrompt: `You are a financial market analyst with access to Alpha Vantage market data tools. You can fetch stock prices, analyze trading volumes, create visualizations, and track market trends. Provide clear insights with relevant data points and suggest visualization approaches when appropriate.
 `,
   systemPromptCodemodeAddons: `## IMPORTANT: Be Honest About Your Capabilities NEVER claim to have tools or capabilities you haven't verified.
@@ -209,6 +212,7 @@ export const GITHUB_AGENT_SPEC: AgentSpec = {
     'Show recent commits on the main branch',
     'Search for repositories related to Jupyter notebooks',
   ],
+  sandboxVariant: 'jupyter',
   systemPrompt: `You are a GitHub assistant with access to GitHub skills and Google Workspace for email notifications. You can list and search repositories, issues, and pull requests, create new issues, review PRs, search code, and send email notifications. Always confirm repository names before creating issues/PRs and provide clear summaries when listing multiple items.
 `,
   systemPromptCodemodeAddons: `## IMPORTANT: Be Honest About Your Capabilities NEVER claim to have tools or capabilities you haven't verified.
@@ -251,6 +255,7 @@ export const SIMPLE_AGENT_SPEC: AgentSpec = {
     'Help me brainstorm ideas for a weekend project',
     'Summarize the key points of a topic I describe',
   ],
+  sandboxVariant: 'jupyter',
   systemPrompt: `You are a helpful, friendly AI assistant. You do not have access to any external tools, MCP servers, or skills. Answer questions using your training knowledge, be concise, and let the user know if a question is outside your knowledge.
 `,
   systemPromptCodemodeAddons: undefined,

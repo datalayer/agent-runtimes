@@ -442,6 +442,9 @@ async def create_agent(
                 and spec.model
             ):
                 request.model = spec.model
+            # Use the sandbox_variant from the spec if not set in the request
+            if not request.sandbox_variant and spec.sandbox_variant:
+                request.sandbox_variant = spec.sandbox_variant
 
         # Build list of non-MCP toolsets (skills, codemode, etc.)
         # MCP toolsets will be dynamically fetched at run time by the adapter

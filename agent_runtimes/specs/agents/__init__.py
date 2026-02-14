@@ -8,7 +8,6 @@ THIS FILE IS AUTO-GENERATED. DO NOT EDIT MANUALLY.
 """
 
 from typing import Dict
-
 from agent_runtimes.types import AgentSpec
 
 from .codeai import AGENT_SPECS as CODEAI_AGENTS
@@ -30,6 +29,5 @@ def get_agent_spec(agent_id: str) -> AgentSpec | None:
 def list_agent_specs() -> list[AgentSpec]:
     """List all available agent specifications."""
     return list(AGENT_SPECS.values())
-
 
 __all__ = ["AGENT_SPECS", "get_agent_spec", "list_agent_specs"]

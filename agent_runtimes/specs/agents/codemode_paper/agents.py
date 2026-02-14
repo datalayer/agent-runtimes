@@ -29,12 +29,7 @@ CRAWLER_AGENT_SPEC = AgentSpec(
     tags=["web", "search", "research", "crawler", "github"],
     enabled=False,
     model="bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0",
-    mcp_servers=[
-        MCP_SERVER_CATALOG["tavily"],
-        MCP_SERVER_CATALOG["github"],
-        MCP_SERVER_CATALOG["kaggle"],
-        MCP_SERVER_CATALOG["huggingface"],
-    ],
+    mcp_servers=[MCP_SERVER_CATALOG["tavily"], MCP_SERVER_CATALOG["github"], MCP_SERVER_CATALOG["kaggle"], MCP_SERVER_CATALOG["huggingface"]],
     skills=[],
     environment_name="ai-agents-env",
     icon="globe",
@@ -49,6 +44,7 @@ CRAWLER_AGENT_SPEC = AgentSpec(
     welcome_message="Hi! I'm the Crawler Agent. I can search the web using Tavily, explore GitHub repositories, and help you research topics across the internet. ",
     welcome_notebook=None,
     welcome_document=None,
+    sandbox_variant="jupyter",
     system_prompt="""You are a web crawling and research assistant with access to Tavily search and GitHub tools. Use Tavily to search the web for current information and search GitHub repositories for relevant projects. Synthesize information from multiple sources and provide clear summaries with sources cited.
 """,
     system_prompt_codemode_addons="""## IMPORTANT: Be Honest About Your Capabilities NEVER claim to have tools or capabilities you haven't verified.
@@ -79,11 +75,7 @@ DATA_ACQUISITION_AGENT_SPEC = AgentSpec(
     tags=["data", "acquisition", "kaggle", "filesystem"],
     enabled=True,
     model="bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0",
-    mcp_servers=[
-        MCP_SERVER_CATALOG["kaggle"],
-        MCP_SERVER_CATALOG["filesystem"],
-        MCP_SERVER_CATALOG["tavily"],
-    ],
+    mcp_servers=[MCP_SERVER_CATALOG["kaggle"], MCP_SERVER_CATALOG["filesystem"], MCP_SERVER_CATALOG["tavily"]],
     skills=["github"],
     environment_name="ai-agents-env",
     icon="database",
@@ -98,6 +90,7 @@ DATA_ACQUISITION_AGENT_SPEC = AgentSpec(
     welcome_message="Hello! I'm the Data Acquisition Agent. I can help you find and download datasets from Kaggle, manage files in your workspace, and explore data sources for your projects. ",
     welcome_notebook=None,
     welcome_document=None,
+    sandbox_variant="jupyter",
     system_prompt="""You are a data acquisition specialist with access to Kaggle datasets and filesystem tools. You can search for datasets, download data, read and write files, and help users prepare data for analysis. Guide users through finding relevant datasets and organizing their workspace efficiently.
 """,
     system_prompt_codemode_addons="""## IMPORTANT: Be Honest About Your Capabilities NEVER claim to have tools or capabilities you haven't verified.
@@ -143,6 +136,7 @@ FINANCIAL_VIZ_AGENT_SPEC = AgentSpec(
     welcome_message="Welcome! I'm the Financial Visualization Agent. I can help you analyze stock market data, track financial instruments, and create charts to visualize market trends. ",
     welcome_notebook=None,
     welcome_document=None,
+    sandbox_variant="jupyter",
     system_prompt="""You are a financial market analyst with access to Alpha Vantage market data and chart generation tools. You can fetch stock prices, analyze trading volumes, create visualizations, and track market trends. Provide clear insights with relevant data points and generate charts to illustrate patterns.
 """,
     system_prompt_codemode_addons="""## IMPORTANT: Be Honest About Your Capabilities NEVER claim to have tools or capabilities you haven't verified.
@@ -188,6 +182,7 @@ GITHUB_AGENT_SPEC = AgentSpec(
     welcome_message="Hello! I'm the GitHub Agent. I can help you manage repositories, create and  review issues and pull requests, search code, and send email notifications  about your GitHub activity. ",
     welcome_notebook=None,
     welcome_document=None,
+    sandbox_variant="jupyter",
     system_prompt="""You are a GitHub assistant with access to GitHub repository tools and Google Workspace for email notifications.
 """,
     system_prompt_codemode_addons="""## IMPORTANT: Be Honest About Your Capabilities NEVER claim to have tools or capabilities you haven't verified.
@@ -233,6 +228,7 @@ INFORMATION_ROUTING_AGENT_SPEC = AgentSpec(
     welcome_message="Hi there! I'm the Information Routing Agent. I can help you manage documents in Google Drive and route information where it needs to go. ",
     welcome_notebook=None,
     welcome_document=None,
+    sandbox_variant="jupyter",
     system_prompt="""You are an information routing specialist with access to Google Drive tools. You can find and manage documents in Drive and automate document workflows. Help users with document management efficiently. Do not use file extension when referring to Google Drive documents. Always use search_drive_files tool before using get_drive_file_content to find parent folder (using only name and mimeType in the query, no other fields!!!).
 """,
     system_prompt_codemode_addons="""## IMPORTANT: Be Honest About Your Capabilities NEVER claim to have tools or capabilities you haven't verified.
@@ -268,6 +264,7 @@ AGENT_SPECS: Dict[str, AgentSpec] = {
     "codemode-paper/financial-viz": FINANCIAL_VIZ_AGENT_SPEC,
     "codemode-paper/github-agent": GITHUB_AGENT_SPEC,
     "codemode-paper/information-routing": INFORMATION_ROUTING_AGENT_SPEC,
+
 }
 
 

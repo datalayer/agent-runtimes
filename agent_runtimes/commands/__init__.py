@@ -98,6 +98,7 @@ from agent_runtimes.commands.serve import (
     Protocol,
     ServeError,
     find_free_port,
+    find_random_free_port,
     is_port_free,
     parse_mcp_servers,
     parse_skills,
@@ -114,6 +115,7 @@ __all__ = [
     "parse_skills",
     "is_port_free",
     "find_free_port",
+    "find_random_free_port",
     # List agents command
     "list_agents_from_server",
     "ListAgentsError",

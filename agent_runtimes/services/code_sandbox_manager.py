@@ -881,6 +881,7 @@ class CodeSandboxManager:
         return {
             "variant": self._config.variant,
             "jupyter_url": self._config.jupyter_url,
+            "jupyter_token": self._config.jupyter_token,
             "jupyter_token_set": self._config.jupyter_token is not None,
             "sandbox_running": self._sandbox is not None,
             "agent_sandboxes": list(self._agent_sandboxes.keys()),

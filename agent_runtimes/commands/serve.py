@@ -96,6 +96,48 @@ def find_free_port(host: str, start_port: int, max_attempts: int = 100) -> int:
     )
 
 
+def find_random_free_port(
+    host: str = "127.0.0.1",
+    min_port: int = 10000,
+    max_port: int = 65000,
+    max_attempts: int = 20,
+) -> int:
+    """
+    Find a random free port within the given range.
+
+    Binds to port 0 to let the OS pick a free port, then validates it
+    falls within the desired range.  Retries up to *max_attempts* times.
+
+    Args:
+        host: Host address to check.
+        min_port: Minimum acceptable port (inclusive).
+        max_port: Maximum acceptable port (inclusive).
+        max_attempts: Number of attempts before giving up.
+
+    Returns:
+        A free port number.
+
+    Raises:
+        ServeError: If no free port could be found after *max_attempts*.
+    """
+    import random
+
+    for _ in range(max_attempts):
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+                sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                # Bind to a random port in the range
+                port = random.randint(min_port, max_port)
+                sock.bind((host, port))
+                return port
+        except OSError:
+            continue
+    raise ServeError(
+        f"Could not find a free port in range {min_port}-{max_port} "
+        f"after {max_attempts} attempts"
+    )
+
+
 def parse_skills(value: Optional[str]) -> list[str]:
     """
     Parse comma-separated skills string into a list.
@@ -124,7 +166,7 @@ class ServeError(Exception):
 
 def serve_server(
     host: str = "127.0.0.1",
-    port: int = 8000,
+    port: int = 0,
     reload: bool = False,
     debug: bool = False,
     workers: int = 1,
@@ -180,14 +222,27 @@ def serve_server(
     Raises:
         ServeError: If validation fails or server cannot start
     """
-    # Find a free port if requested
-    actual_port = port
-    if find_free_port_flag:
+    # Resolve the effective port:
+    # - port == 0  → pick a random free port (default behaviour)
+    # - port > 0 + find_free_port_flag → sequential search from port
+    # - port > 0 → use as-is
+    if port == 0:
+        actual_port = find_random_free_port(host)
+        logger.info(f"Auto-selected free port {actual_port}")
+    elif find_free_port_flag:
         if not is_port_free(host, port):
             actual_port = find_free_port(host, port)
             logger.info(f"Port {port} is in use, using port {actual_port} instead")
         else:
+            actual_port = port
             logger.info(f"Port {port} is available")
+    else:
+        actual_port = port
+
+    # Store the effective port in an env var so callers (e.g. codeai
+    # via multiprocessing) can retrieve it before the server starts.
+    os.environ["AGENT_RUNTIMES_PORT"] = str(actual_port)
+
     # Validate agent_name requires agent_id
     if agent_name and not agent_id:
         raise ServeError("--agent-name requires --agent-id to be specified")
