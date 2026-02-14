@@ -182,7 +182,12 @@ export default defineConfig(({ mode }) => {
     );
   }
 
+  // When building the default target, assets are served under /static/ by
+  // the FastAPI StaticFiles mount, so we set base accordingly.
+  const base = (isShowcaseVercelAiElements || isExamples) ? '/' : '/static/';
+
   return {
+    base,
     plugins,
     root: '.',
     publicDir: isExamples ? false : 'public',
