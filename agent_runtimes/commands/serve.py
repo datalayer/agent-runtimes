@@ -139,7 +139,7 @@ def serve_server(
     jupyter_sandbox: Optional[str] = None,
     generated_code_folder: Optional[str] = None,
     skills_folder: Optional[str] = None,
-    codesandbox_variant: Optional[str] = None,
+    sandbox_variant: Optional[str] = None,
     protocol: Protocol = Protocol.ag_ui,
     find_free_port_flag: bool = False,
 ) -> int:
@@ -168,7 +168,7 @@ def serve_server(
                               with a shared volume, set to a path accessible by both containers.
         skills_folder: Folder for agent skills. When using Jupyter sandbox with a shared
                       volume, set to a path accessible by both containers.
-        codesandbox_variant: Code sandbox variant to use ('local-eval', 'jupyter', or
+        sandbox_variant: Code sandbox variant to use ('local-eval', 'jupyter', or
                            'local-jupyter'). When 'jupyter', a Jupyter server is started
                            per agent via code_sandboxes.
         protocol: Transport protocol to use (ag-ui, vercel-ai, vercel-ai-jupyter, a2a)
@@ -198,7 +198,7 @@ def serve_server(
 
     # Validate agent if specified
     if agent_id:
-        from agent_runtimes.config.agents import AGENT_SPECS, get_agent_spec
+        from agent_runtimes.specs.agents import AGENT_SPECS, get_agent_spec
 
         agent_spec = get_agent_spec(agent_id)
         if not agent_spec:
@@ -266,10 +266,10 @@ def serve_server(
         os.environ["AGENT_RUNTIMES_SKILLS_FOLDER"] = skills_folder
         logger.info(f"Skills folder: {skills_folder}")
 
-    # Configure codesandbox variant if provided
-    if codesandbox_variant:
-        os.environ["AGENT_RUNTIMES_CODESANDBOX_VARIANT"] = codesandbox_variant
-        logger.info(f"Code sandbox variant: {codesandbox_variant}")
+    # Configure sandbox variant if provided
+    if sandbox_variant:
+        os.environ["AGENT_RUNTIMES_SANDBOX_VARIANT"] = sandbox_variant
+        logger.info(f"Sandbox variant: {sandbox_variant}")
 
     # Set protocol
     os.environ["AGENT_RUNTIMES_PROTOCOL"] = protocol.value

@@ -225,12 +225,12 @@ def serve(
             "set this to a path accessible by both containers.",
         ),
     ] = None,
-    codesandbox_variant: Annotated[
+    sandbox_variant: Annotated[
         Optional[str],
         typer.Option(
-            "--codesandbox-variant",
-            envvar="AGENT_RUNTIMES_CODESANDBOX_VARIANT",
-            help="Code sandbox variant: 'local-eval' (default in-process exec), "
+            "--sandbox-variant",
+            envvar="AGENT_RUNTIMES_SANDBOX_VARIANT",
+            help="Sandbox variant: 'local-eval' (default in-process exec), "
             "'jupyter' (starts a Jupyter server per agent via code_sandboxes), "
             "or 'local-jupyter' (connects to existing Jupyter server, requires --jupyter-sandbox).",
         ),
@@ -299,7 +299,7 @@ def serve(
         agent-runtimes serve --codemode --jupyter-sandbox "http://localhost:8888?token=my-token"
 
         # Start with a per-agent Jupyter sandbox (code_sandboxes starts its own server)
-        agent-runtimes serve --codemode --codesandbox-variant jupyter
+        agent-runtimes serve --codemode --sandbox-variant jupyter
 
         # Start with a specific protocol
         agent-runtimes serve --agent-id crawler --protocol vercel-ai
@@ -332,7 +332,7 @@ def serve(
             jupyter_sandbox=jupyter_sandbox,
             generated_code_folder=generated_code_folder,
             skills_folder=skills_folder,
-            codesandbox_variant=codesandbox_variant,
+            sandbox_variant=sandbox_variant,
             protocol=protocol,
             find_free_port_flag=find_free_port,
         )

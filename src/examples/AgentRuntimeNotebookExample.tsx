@@ -28,7 +28,7 @@ import { useNotebookTools } from '../tools/adapters/agent-runtimes/notebookHooks
 // Import Matplotlib notebook
 import MatplotlibNotebook from './stores/notebooks/Matplotlib.ipynb.json';
 
-import { DEFAULT_MODEL } from '../config';
+import { DEFAULT_MODEL } from '../specs';
 
 // Fixed notebook ID
 const NOTEBOOK_ID = 'agui-notebook-example';

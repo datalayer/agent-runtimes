@@ -10,7 +10,7 @@ from typing import Any, Sequence
 from pydantic_ai.settings import ModelSettings
 
 from agent_runtimes.types import AIModelRuntime
-from agent_runtimes.config.models import (
+from agent_runtimes.specs.models import (
     AI_MODEL_CATALOGUE as AI_MODEL_CATALOGUE_DICT,
     AIModels,
     DEFAULT_MODEL,

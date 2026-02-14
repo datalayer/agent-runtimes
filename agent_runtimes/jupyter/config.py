@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from agent_runtimes.config.models import DEFAULT_MODEL
+from agent_runtimes.specs.models import DEFAULT_MODEL
 from agent_runtimes.types import MCPServer
 
 

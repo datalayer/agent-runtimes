@@ -21,10 +21,10 @@ from pydantic import BaseModel, Field
 from pydantic_ai import Agent as PydanticAgent
 
 from ..adapters.pydantic_ai_adapter import PydanticAIAdapter
-from ..config.agents import AGENT_SPECS
-from ..config.agents import get_agent_spec as get_library_agent_spec
-from ..config.agents import list_agent_specs as list_library_agents
-from ..config.models import DEFAULT_MODEL
+from ..specs.agents import AGENT_SPECS
+from ..specs.agents import get_agent_spec as get_library_agent_spec
+from ..specs.agents import list_agent_specs as list_library_agents
+from ..specs.models import DEFAULT_MODEL
 from ..mcp import get_mcp_manager, initialize_config_mcp_servers
 from ..mcp.catalog_mcp_servers import MCP_SERVER_CATALOG
 from ..mcp.lifecycle import get_mcp_lifecycle_manager
@@ -342,15 +342,14 @@ class CreateAgentRequest(BaseModel):
         default=None,
         description="Jupyter server URL with token for code sandbox (e.g., http://localhost:8888?token=xxx). If provided, codemode will use Jupyter kernel instead of local-eval sandbox.",
     )
-    codesandbox_variant: str | None = Field(
+    sandbox_variant: str | None = Field(
         default=None,
         description=(
-            "Code sandbox variant to use for this agent.  "
+            "Sandbox variant to use for this agent.  "
             "Accepted values: 'local-eval' (in-process Python exec, default), "
             "'jupyter' (starts a Jupyter server per agent via code_sandboxes), "
             "'local-jupyter' (connects to an existing Jupyter server — requires jupyter_sandbox URL)."
         ),
-        alias="codesandbox_variant",
     )
     agent_spec_id: str | None = Field(
         default=None,
@@ -557,8 +556,8 @@ async def create_agent(
                     detail=f"Failed to configure Jupyter sandbox: {str(e)}",
                 )
 
-        # Determine the effective codesandbox variant
-        effective_variant = request.codesandbox_variant or (
+        # Determine the effective sandbox variant
+        effective_variant = request.sandbox_variant or (
             "local-jupyter" if request.jupyter_sandbox else "local-eval"
         )
 
@@ -1820,6 +1819,18 @@ async def start_all_agents_mcp_servers(
                     f"Configured sandbox manager for Jupyter: {body.jupyter_sandbox.split('?')[0]}"
                 )
                 logger.info(f"MCP proxy URL configured: {mcp_proxy_url}")
+
+                # Update startup_info on app.state so /health/startup
+                # reflects the reconfigured sandbox (e.g. after the
+                # runtimes-companion calls this endpoint).
+                existing_info: dict = getattr(request.app.state, "startup_info", None) or {}
+                sandbox_block = existing_info.get("sandbox", {})
+                sandbox_block["variant"] = sandbox_variant
+                sandbox_block["jupyter_url"] = body.jupyter_sandbox.split("?")[0]
+                if mcp_proxy_url:
+                    sandbox_block["mcp_proxy_url"] = mcp_proxy_url
+                existing_info["sandbox"] = sandbox_block
+                request.app.state.startup_info = existing_info
             except Exception as e:
                 logger.warning(f"Failed to configure Jupyter sandbox: {e}")
 
@@ -1956,6 +1967,17 @@ async def start_agent_mcp_servers(
                     f"Configured sandbox manager for Jupyter: {body.jupyter_sandbox.split('?')[0]}"
                 )
                 logger.info(f"MCP proxy URL configured: {mcp_proxy_url}")
+
+                # Update startup_info on app.state so /health/startup
+                # reflects the reconfigured sandbox.
+                existing_info: dict = getattr(request.app.state, "startup_info", None) or {}
+                sandbox_block = existing_info.get("sandbox", {})
+                sandbox_block["variant"] = sandbox_variant
+                sandbox_block["jupyter_url"] = body.jupyter_sandbox.split("?")[0]
+                if mcp_proxy_url:
+                    sandbox_block["mcp_proxy_url"] = mcp_proxy_url
+                existing_info["sandbox"] = sandbox_block
+                request.app.state.startup_info = existing_info
             except Exception as e:
                 logger.warning(f"Failed to configure Jupyter sandbox: {e}")
 

@@ -52,7 +52,7 @@ def get_agent_specs() -> list[dict[str, Any]]:
         - description: Description of the agent
         - mcp_servers: List of MCP server IDs the agent uses
     """
-    from agent_runtimes.config.agents import AGENT_SPECS
+    from agent_runtimes.specs.agents import AGENT_SPECS
 
     specs = []
     for agent_id, agent in AGENT_SPECS.items():
@@ -79,7 +79,7 @@ def list_agent_specs(output: OutputFormat = OutputFormat.table) -> list[dict[str
     Returns:
         List of agent spec dictionaries.
     """
-    from agent_runtimes.config.agents import AGENT_SPECS
+    from agent_runtimes.specs.agents import AGENT_SPECS
 
     specs = get_agent_specs()
     console = Console()

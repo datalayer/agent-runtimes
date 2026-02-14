@@ -13,7 +13,7 @@ from typing import Any
 
 from agent_runtimes.mcp.tools import tools_to_builtin_list
 from agent_runtimes.models import create_default_models
-from agent_runtimes.config.models import DEFAULT_MODEL
+from agent_runtimes.specs.models import DEFAULT_MODEL
 from agent_runtimes.types import (
     AIModelRuntime,
     FrontendConfig,

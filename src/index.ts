@@ -8,6 +8,7 @@ export * from './state';
 export * from './runtime';
 export * from './identity';
 export * from './config';
+export * from './specs';
 
 // Explicitly re-export from types
 export type {

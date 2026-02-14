@@ -18,7 +18,7 @@ import {
 import { Box } from '@datalayer/primer-addons';
 import { DatalayerThemeProvider } from '@datalayer/core';
 import { Chat, useChatStore } from '../components/chat';
-import { DEFAULT_MODEL } from '../config';
+import { DEFAULT_MODEL } from '../specs';
 import type { Transport, Extension, ChatMessage } from '../components/chat';
 import { useAgentsStore } from './stores/examplesStore';
 import { useIdentity } from '../identity';
