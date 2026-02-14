@@ -24,6 +24,7 @@ from typing import Any, AsyncGenerator
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from starlette.routing import Mount
 
@@ -1072,6 +1073,25 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
                 "examples": f"{config.api_prefix}/examples/",
             },
         }
+
+    # Serve the built frontend assets (agent.html, JS/CSS bundles, etc.)
+    # at /static so that /static/agent.html works.
+    # Look for the dist/ directory in two locations:
+    #   1. Repo root (development: ../dist relative to this file)
+    #   2. Package data (PyPI: bundled inside the installed package)
+    _dist_dir = Path(__file__).resolve().parent.parent / "dist"
+    if not _dist_dir.is_dir():
+        # Fallback: check for a dist/ directory packaged inside the module
+        _dist_dir = Path(__file__).resolve().parent / "static" / "dist"
+    if _dist_dir.is_dir():
+        # Mount AFTER all API routes so it never shadows them.
+        # html=True enables serving index.html for directory requests.
+        app.mount(
+            "/static",
+            StaticFiles(directory=str(_dist_dir), html=True),
+            name="frontend-static",
+        )
+        logger.info(f"Serving frontend static files from {_dist_dir}")
 
     return app
 

@@ -132,7 +132,10 @@ export default defineConfig(({ mode }) => {
   } else if (isExamples) {
     build.rollupOptions.input = path.resolve(__dirname, 'index-examples.html');
   } else {
-    build.rollupOptions.input = path.resolve(__dirname, 'index.html');
+    build.rollupOptions.input = {
+      main: path.resolve(__dirname, 'index.html'),
+      agent: path.resolve(__dirname, 'agent.html'),
+    };
   }
 
   const optimizeDeps: any = {
