@@ -75,7 +75,11 @@ DATA_ACQUISITION_AGENT_SPEC = AgentSpec(
     tags=["data", "acquisition", "kaggle", "filesystem"],
     enabled=True,
     model="bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0",
-    mcp_servers=[MCP_SERVER_CATALOG["kaggle"], MCP_SERVER_CATALOG["filesystem"], MCP_SERVER_CATALOG["tavily"]],
+    mcp_servers=[
+        MCP_SERVER_CATALOG["kaggle"],
+        MCP_SERVER_CATALOG["filesystem"],
+        MCP_SERVER_CATALOG["tavily"],
+    ],
     skills=["github"],
     environment_name="ai-agents-env",
     icon="database",
@@ -246,7 +250,6 @@ AGENT_SPECS: Dict[str, AgentSpec] = {
     "datalayer-ai/financial": FINANCIAL_AGENT_SPEC,
     "datalayer-ai/github-agent": GITHUB_AGENT_SPEC,
     "datalayer-ai/simple": SIMPLE_AGENT_SPEC,
-
 }
 
 
@@ -263,11 +266,17 @@ def get_agent_spec(agent_id: str) -> AgentSpec | None:
     return AGENT_SPECS.get(agent_id)
 
 
-def list_agent_specs() -> list[AgentSpec]:
+def list_agent_specs(prefix: str | None = None) -> list[AgentSpec]:
     """
     List all available agent specifications.
+
+    Args:
+        prefix: If provided, only return specs whose ID starts with this prefix.
 
     Returns:
         List of all AgentSpec configurations.
     """
-    return list(AGENT_SPECS.values())
+    specs = list(AGENT_SPECS.values())
+    if prefix is not None:
+        specs = [s for s in specs if s.id.startswith(prefix)]
+    return specs

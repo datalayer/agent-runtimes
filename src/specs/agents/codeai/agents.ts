@@ -147,9 +147,14 @@ export function getAgentSpecs(agentId: string): AgentSpec | undefined {
 
 /**
  * List all available agent specifications.
+ *
+ * @param prefix - If provided, only return specs whose ID starts with this prefix.
  */
-export function listAgentSpecs(): AgentSpec[] {
-  return Object.values(AGENT_SPECS);
+export function listAgentSpecs(prefix?: string): AgentSpec[] {
+  const specs = Object.values(AGENT_SPECS);
+  return prefix !== undefined
+    ? specs.filter(s => s.id.startsWith(prefix))
+    : specs;
 }
 
 /**

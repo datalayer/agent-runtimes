@@ -8,6 +8,7 @@ THIS FILE IS AUTO-GENERATED. DO NOT EDIT MANUALLY.
 """
 
 from typing import Dict
+
 from agent_runtimes.types import AgentSpec
 
 from .codeai import AGENT_SPECS as CODEAI_AGENTS
@@ -26,8 +27,16 @@ def get_agent_spec(agent_id: str) -> AgentSpec | None:
     return AGENT_SPECS.get(agent_id)
 
 
-def list_agent_specs() -> list[AgentSpec]:
-    """List all available agent specifications."""
-    return list(AGENT_SPECS.values())
+def list_agent_specs(prefix: str | None = None) -> list[AgentSpec]:
+    """List all available agent specifications.
+
+    Args:
+        prefix: If provided, only return specs whose ID starts with this prefix.
+    """
+    specs = list(AGENT_SPECS.values())
+    if prefix is not None:
+        specs = [s for s in specs if s.id.startswith(prefix)]
+    return specs
+
 
 __all__ = ["AGENT_SPECS", "get_agent_spec", "list_agent_specs"]

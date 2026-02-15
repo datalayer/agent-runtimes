@@ -232,14 +232,20 @@ def get_agent_spec(agent_id: str) -> AgentSpec | None:
     return AGENT_SPECS.get(agent_id)
 
 
-def list_agent_specs() -> list[AgentSpec]:
+def list_agent_specs(prefix: str | None = None) -> list[AgentSpec]:
     \"\"\"
     List all available agent specifications.
+
+    Args:
+        prefix: If provided, only return specs whose ID starts with this prefix.
 
     Returns:
         List of all AgentSpec configurations.
     \"\"\"
-    return list(AGENT_SPECS.values())
+    specs = list(AGENT_SPECS.values())
+    if prefix is not None:
+        specs = [s for s in specs if s.id.startswith(prefix)]
+    return specs
 """
 
     return code
@@ -517,9 +523,12 @@ export function getAgentSpecs(agentId: string): AgentSpec | undefined {
 
 /**
  * List all available agent specifications.
+ *
+ * @param prefix - If provided, only return specs whose ID starts with this prefix.
  */
-export function listAgentSpecs(): AgentSpec[] {
-  return Object.values(AGENT_SPECS);
+export function listAgentSpecs(prefix?: string): AgentSpec[] {
+  const specs = Object.values(AGENT_SPECS);
+  return prefix !== undefined ? specs.filter(s => s.id.startsWith(prefix)) : specs;
 }
 
 /**
@@ -722,9 +731,16 @@ def get_agent_spec(agent_id: str) -> AgentSpec | None:
     return AGENT_SPECS.get(agent_id)
 
 
-def list_agent_specs() -> list[AgentSpec]:
-    \"\"\"List all available agent specifications.\"\"\"
-    return list(AGENT_SPECS.values())
+def list_agent_specs(prefix: str | None = None) -> list[AgentSpec]:
+    \"\"\"List all available agent specifications.
+
+    Args:
+        prefix: If provided, only return specs whose ID starts with this prefix.
+    \"\"\"
+    specs = list(AGENT_SPECS.values())
+    if prefix is not None:
+        specs = [s for s in specs if s.id.startswith(prefix)]
+    return specs
 
 __all__ = ["AGENT_SPECS", "get_agent_spec", "list_agent_specs"]
 """
@@ -776,9 +792,12 @@ export function getAgentSpecs(agentId: string): AgentSpec | undefined {
 
 /**
  * List all available agent specifications.
+ *
+ * @param prefix - If provided, only return specs whose ID starts with this prefix.
  */
-export function listAgentSpecs(): AgentSpec[] {
-  return Object.values(AGENT_SPECS);
+export function listAgentSpecs(prefix?: string): AgentSpec[] {
+  const specs = Object.values(AGENT_SPECS);
+  return prefix !== undefined ? specs.filter(s => s.id.startsWith(prefix)) : specs;
 }
 
 /**
