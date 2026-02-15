@@ -138,7 +138,6 @@ export {
 // Components
 export {
   ChatMessages,
-  ChatInputPrompt,
   ChatSidebar,
   ChatStandalone,
   ChatBase,
@@ -162,7 +161,6 @@ export {
   formatDuration,
   formatExpirationStatus,
   type ChatMessagesProps,
-  type ChatInputPromptProps,
   type ChatSidebarProps,
   type ChatStandaloneProps,
   type MessageHandler,

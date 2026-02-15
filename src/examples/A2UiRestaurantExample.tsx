@@ -449,7 +449,7 @@ const A2UiRestaurantExample: React.FC = () => {
   );
 
   return (
-    <DatalayerThemeProvider colorMode="day">
+    <DatalayerThemeProvider>
       <A2UIProvider onAction={handleAction}>
         <Box
           sx={{

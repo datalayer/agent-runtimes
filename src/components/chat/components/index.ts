@@ -10,10 +10,6 @@
  */
 
 export { ChatMessages, type ChatMessagesProps } from './elements/ChatMessages';
-export {
-  ChatInputPrompt,
-  type ChatInputPromptProps,
-} from './elements/ChatInputPrompt';
 export { ChatSidebar, type ChatSidebarProps } from './ChatSidebar';
 export {
   ChatStandalone,

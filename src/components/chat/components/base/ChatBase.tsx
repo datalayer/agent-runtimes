@@ -3294,8 +3294,8 @@ function ChatBaseInner({
     );
   };
 
-  // Render protocol mode input
-  const renderProtocolInput = () => {
+  // Render input prompt
+  const renderInputPrompt = () => {
     const availableTools = configQuery.data?.builtinTools || [];
     const models = availableModels || configQuery.data?.models || [];
 
@@ -3873,7 +3873,7 @@ function ChatBaseInner({
       {footerContent}
 
       {/* Input */}
-      {showInput && renderProtocolInput()}
+      {showInput && renderInputPrompt()}
 
       {/* Powered by tag */}
       {showPoweredBy && <PoweredByTag {...poweredByProps} />}

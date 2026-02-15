@@ -80,7 +80,7 @@ export default defineConfig(({ mode }) => {
     : isExamples
       ? {
           port: 3000,
-          open: '/index-examples.html',
+          open: '/examples.html',
           fs: { strict: false, allow: ['..', '../..', '../../..'] },
           proxy: {
             // Identity OAuth token exchange must go to local backend
@@ -130,7 +130,7 @@ export default defineConfig(({ mode }) => {
     build.emptyOutDir = true;
     build.rollupOptions.input = path.resolve(__dirname, 'index-showcase-vercel-ai-elements.html');
   } else if (isExamples) {
-    build.rollupOptions.input = path.resolve(__dirname, 'index-examples.html');
+    build.rollupOptions.input = path.resolve(__dirname, 'examples.html');
   } else {
     build.rollupOptions.input = {
       main: path.resolve(__dirname, 'index.html'),
