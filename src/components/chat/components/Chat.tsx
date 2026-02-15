@@ -23,8 +23,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Text, Button, Spinner } from '@primer/react';
 import { AlertIcon, SyncIcon } from '@primer/octicons-react';
-import { Box, setupPrimerPortals } from '@datalayer/primer-addons';
-import { DatalayerThemeProvider } from '@datalayer/core';
+import { Box } from '@datalayer/primer-addons';
 import { ChatBase, type Suggestion } from './base/ChatBase';
 import { AgentDetails } from './AgentDetails';
 import type {
@@ -376,11 +375,6 @@ export function Chat({
   const [messageCount, setMessageCount] = useState(0);
   const [focusTrigger, setFocusTrigger] = useState(0);
 
-  // Setup Primer portals for overlay components
-  useEffect(() => {
-    setupPrimerPortals();
-  }, []);
-
   // Get connected identities to pass to backend for skill execution
   const connectedIdentities = useConnectedIdentities();
 
@@ -510,34 +504,32 @@ export function Chat({
   if (error) {
     return (
       <QueryClientProvider client={queryClient}>
-        <DatalayerThemeProvider>
-          <Box
-            className={className}
-            sx={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              height,
-              p: 4,
-              bg: 'canvas.default',
-            }}
+        <Box
+          className={className}
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            height,
+            p: 4,
+            bg: 'canvas.default',
+          }}
+        >
+          <AlertIcon size={48} />
+          <Text sx={{ mt: 3, color: 'danger.fg', fontSize: 2 }}>
+            Connection Error
+          </Text>
+          <Text sx={{ mt: 1, color: 'fg.muted', fontSize: 1 }}>{error}</Text>
+          <Button
+            variant="primary"
+            sx={{ mt: 3 }}
+            leadingVisual={SyncIcon}
+            onClick={handleReconnect}
           >
-            <AlertIcon size={48} />
-            <Text sx={{ mt: 3, color: 'danger.fg', fontSize: 2 }}>
-              Connection Error
-            </Text>
-            <Text sx={{ mt: 1, color: 'fg.muted', fontSize: 1 }}>{error}</Text>
-            <Button
-              variant="primary"
-              sx={{ mt: 3 }}
-              leadingVisual={SyncIcon}
-              onClick={handleReconnect}
-            >
-              Retry
-            </Button>
-          </Box>
-        </DatalayerThemeProvider>
+            Retry
+          </Button>
+        </Box>
       </QueryClientProvider>
     );
   }
@@ -546,154 +538,150 @@ export function Chat({
   if (isInitializing || !protocolConfig) {
     return (
       <QueryClientProvider client={queryClient}>
-        <DatalayerThemeProvider>
-          <Box
-            className={className}
-            sx={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              height,
-              p: 4,
-              bg: 'canvas.default',
-            }}
-          >
-            <Spinner size="large" />
-            <Text sx={{ mt: 3, color: 'fg.muted' }}>
-              Connecting to {transport.toUpperCase().replace('-', ' ')} agent...
-            </Text>
-          </Box>
-        </DatalayerThemeProvider>
+        <Box
+          className={className}
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            height,
+            p: 4,
+            bg: 'canvas.default',
+          }}
+        >
+          <Spinner size="large" />
+          <Text sx={{ mt: 3, color: 'fg.muted' }}>
+            Connecting to {transport.toUpperCase().replace('-', ' ')} agent...
+          </Text>
+        </Box>
       </QueryClientProvider>
     );
   }
 
   return (
     <QueryClientProvider client={queryClient}>
-      <DatalayerThemeProvider>
+      <Box
+        className={className}
+        sx={{
+          position: 'relative',
+          height,
+          bg: 'canvas.default',
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
+        {/* Agent details view - shown/hidden via CSS to preserve chat state */}
         <Box
-          className={className}
           sx={{
-            position: 'relative',
-            height,
-            bg: 'canvas.default',
-            display: 'flex',
+            display: showDetails ? 'flex' : 'none',
             flexDirection: 'column',
+            height: '100%',
           }}
         >
-          {/* Agent details view - shown/hidden via CSS to preserve chat state */}
-          <Box
-            sx={{
-              display: showDetails ? 'flex' : 'none',
-              flexDirection: 'column',
-              height: '100%',
-            }}
-          >
-            <AgentDetails
-              name={title || 'AI Agent'}
-              protocol={transport}
-              url={protocolConfig?.endpoint || baseUrl}
-              messageCount={messageCount}
-              agentId={agentId}
-              apiBase={baseUrl}
-              identityProviders={identityProviders}
-              onIdentityConnect={onIdentityConnect}
-              onIdentityDisconnect={onIdentityDisconnect}
-              onBack={() => setShowDetails(false)}
-            />
-          </Box>
-          {/* Chat view - shown/hidden via CSS to preserve message state */}
-          <Box
-            sx={{
-              display: showDetails ? 'none' : 'flex',
-              flexDirection: 'column',
-              height: '100%',
-            }}
-          >
-            {/* Error banner for sandbox/connection issues */}
-            {errorBanner && (
-              <Box
+          <AgentDetails
+            name={title || 'AI Agent'}
+            protocol={transport}
+            url={protocolConfig?.endpoint || baseUrl}
+            messageCount={messageCount}
+            agentId={agentId}
+            apiBase={baseUrl}
+            identityProviders={identityProviders}
+            onIdentityConnect={onIdentityConnect}
+            onIdentityDisconnect={onIdentityDisconnect}
+            onBack={() => setShowDetails(false)}
+          />
+        </Box>
+        {/* Chat view - shown/hidden via CSS to preserve message state */}
+        <Box
+          sx={{
+            display: showDetails ? 'none' : 'flex',
+            flexDirection: 'column',
+            height: '100%',
+          }}
+        >
+          {/* Error banner for sandbox/connection issues */}
+          {errorBanner && (
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 2,
+                px: 3,
+                py: 2,
+                bg:
+                  errorBanner.variant === 'warning'
+                    ? 'attention.subtle'
+                    : 'danger.subtle',
+                borderBottom: '1px solid',
+                borderColor:
+                  errorBanner.variant === 'warning'
+                    ? 'attention.muted'
+                    : 'danger.muted',
+              }}
+            >
+              <AlertIcon
+                size={16}
+                fill={
+                  errorBanner.variant === 'warning'
+                    ? 'attention.fg'
+                    : 'danger.fg'
+                }
+              />
+              <Text
                 sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 2,
-                  px: 3,
-                  py: 2,
-                  bg:
-                    errorBanner.variant === 'warning'
-                      ? 'attention.subtle'
-                      : 'danger.subtle',
-                  borderBottom: '1px solid',
-                  borderColor:
-                    errorBanner.variant === 'warning'
-                      ? 'attention.muted'
-                      : 'danger.muted',
-                }}
-              >
-                <AlertIcon
-                  size={16}
-                  fill={
+                  fontSize: 1,
+                  color:
                     errorBanner.variant === 'warning'
                       ? 'attention.fg'
-                      : 'danger.fg'
-                  }
-                />
-                <Text
-                  sx={{
-                    fontSize: 1,
-                    color:
-                      errorBanner.variant === 'warning'
-                        ? 'attention.fg'
-                        : 'danger.fg',
-                    flex: 1,
-                  }}
-                >
-                  {errorBanner.message}
-                </Text>
-              </Box>
-            )}
-            <ChatBase
-              title={title}
-              showHeader={showHeader}
-              protocol={protocolConfig}
-              placeholder={placeholder}
-              description={description}
-              suggestions={suggestions}
-              submitOnSuggestionClick={submitOnSuggestionClick}
-              autoFocus={autoFocus}
-              runtimeId={runtimeId}
-              historyEndpoint={historyEndpoint}
-              showInformation={showInformation}
-              onInformationClick={() => setShowDetails(true)}
-              showModelSelector={showModelSelector}
-              showToolsMenu={showToolsMenu}
-              showSkillsMenu={showSkillsMenu}
-              showTokenUsage={showTokenUsage}
-              codemodeEnabled={codemodeEnabled}
-              initialModel={initialModel}
-              availableModels={availableModels}
-              mcpServers={mcpServers}
-              initialSkills={initialSkills}
-              connectedIdentities={identitiesForChat}
-              onNewChat={handleNewChat}
-              onMessagesChange={messages => setMessageCount(messages.length)}
-              headerButtons={{
-                showNewChat: true,
-                showClear: true,
-                onNewChat: handleNewChat,
-              }}
-              avatarConfig={{
-                showAvatars: true,
-              }}
-              backgroundColor="canvas.default"
-              focusTrigger={focusTrigger}
-              chatViewMode={chatViewMode}
-              onChatViewModeChange={onChatViewModeChange}
-            />
-          </Box>
+                      : 'danger.fg',
+                  flex: 1,
+                }}
+              >
+                {errorBanner.message}
+              </Text>
+            </Box>
+          )}
+          <ChatBase
+            title={title}
+            showHeader={showHeader}
+            protocol={protocolConfig}
+            placeholder={placeholder}
+            description={description}
+            suggestions={suggestions}
+            submitOnSuggestionClick={submitOnSuggestionClick}
+            autoFocus={autoFocus}
+            runtimeId={runtimeId}
+            historyEndpoint={historyEndpoint}
+            showInformation={showInformation}
+            onInformationClick={() => setShowDetails(true)}
+            showModelSelector={showModelSelector}
+            showToolsMenu={showToolsMenu}
+            showSkillsMenu={showSkillsMenu}
+            showTokenUsage={showTokenUsage}
+            codemodeEnabled={codemodeEnabled}
+            initialModel={initialModel}
+            availableModels={availableModels}
+            mcpServers={mcpServers}
+            initialSkills={initialSkills}
+            connectedIdentities={identitiesForChat}
+            onNewChat={handleNewChat}
+            onMessagesChange={messages => setMessageCount(messages.length)}
+            headerButtons={{
+              showNewChat: true,
+              showClear: true,
+              onNewChat: handleNewChat,
+            }}
+            avatarConfig={{
+              showAvatars: true,
+            }}
+            backgroundColor="canvas.default"
+            focusTrigger={focusTrigger}
+            chatViewMode={chatViewMode}
+            onChatViewModeChange={onChatViewModeChange}
+          />
         </Box>
-      </DatalayerThemeProvider>
+      </Box>
     </QueryClientProvider>
   );
 }

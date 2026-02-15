@@ -16,7 +16,6 @@
  * opening the browser), then renders the unified Chat component.
  *
  * Uses the unified Chat component which handles:
- * - DatalayerThemeProvider theming
  * - AG-UI protocol configuration
  * - AgentDetails panel (via showInformation)
  * - Conversation history persistence
