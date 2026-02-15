@@ -19,9 +19,11 @@
 import React, { useEffect, useState } from 'react';
 import { Text, Spinner } from '@primer/react';
 import { AlertIcon } from '@primer/octicons-react';
-import { Box } from '@datalayer/primer-addons';
+import { Box, setupPrimerPortals } from '@datalayer/primer-addons';
 import { DatalayerThemeProvider } from '@datalayer/core';
 import { Chat } from '../components/chat';
+
+setupPrimerPortals();
 
 const BASE_URL = 'http://localhost:8765';
 const AGENT_SPEC_ID = 'codeai/simple';
@@ -172,7 +174,7 @@ const AgentRuntimeChatExample: React.FC = () => {
       autoFocus
       height="100vh"
       runtimeId={agentId}
-      historyEndpoint={`${BASE_URL}/api/v1/history?agent_id=${encodeURIComponent(agentId)}`}
+      historyEndpoint={`${BASE_URL}/api/v1/history`}
       suggestions={[
         {
           title: 'Hello',
