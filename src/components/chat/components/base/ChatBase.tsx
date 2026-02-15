@@ -3328,6 +3328,19 @@ function ChatBaseInner({
                 maxHeight: '120px',
                 overflow: 'hidden',
                 transition: 'height 0.1s ease-out',
+                // Explicit theme tokens so the textarea is styled even when
+                // Tailwind preflight or other CSS resets strip Primer defaults.
+                bg: 'canvas.default',
+                color: 'fg.default',
+                borderColor: 'border.muted',
+                borderWidth: '1px',
+                borderStyle: 'solid',
+                borderRadius: 2,
+                px: 2,
+                py: '2px',
+                fontFamily: 'normal',
+                fontSize: 1,
+                lineHeight: 'default',
               }}
               rows={1}
             />
