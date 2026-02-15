@@ -92,12 +92,15 @@ source = "nodejs"
 [tool.hatch.build.hooks.version]
 path = "agent_runtimes/_version.py"
 
+[tool.hatch.build.hooks.custom]
+path = "hatch_build.py"
+
 [tool.hatch.build.targets.sdist]
-artifacts = []
+artifacts = ["agent_runtimes/static/dist"]
 exclude = [".github", "binder"]
 
 [tool.hatch.build.targets.wheel]
-artifacts = []
+artifacts = ["agent_runtimes/static/dist"]
 
 [tool.hatch.build.targets.wheel.shared-data]
 "jupyter-config/server-config" = "etc/jupyter/jupyter_server_config.d"

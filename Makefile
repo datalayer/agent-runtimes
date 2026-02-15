@@ -39,11 +39,11 @@ publish-npm: clean build ## publish-npm
 	npm publish
 	echo open https://www.npmjs.com/package/@datalayer/agent-runtimes
 
-publish-pypi: # publish the pypi package
-	git clean -fdx && \
-		python -m build
+publish-pypi: clean build # publish the pypi package
+	git clean -fdx -e dist -e agent_runtimes/static/dist && \
+		python -m build --outdir python-dist
 	@exec echo
-	@exec echo twine upload ./dist/*-py3-none-any.whl
+	@exec echo twine upload ./python-dist/*-py3-none-any.whl
 	@exec echo
 	@exec echo https://pypi.org/project/agent-runtimes/#history
 

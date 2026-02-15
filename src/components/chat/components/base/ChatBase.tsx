@@ -55,6 +55,7 @@ import {
   CommentDiscussionIcon,
   DeviceMobileIcon,
   SidebarExpandIcon,
+  InfoIcon,
 } from '@primer/octicons-react';
 import { AiAgentIcon } from '@datalayer/icons-react';
 import {
@@ -559,6 +560,16 @@ export interface ChatBaseProps {
   /** Custom footer content (rendered above input) */
   footerContent?: ReactNode;
 
+  /**
+   * Show the information icon in the header.
+   * When clicked, fires onInformationClick.
+   * @default false
+   */
+  showInformation?: boolean;
+
+  /** Callback when the information icon is clicked */
+  onInformationClick?: () => void;
+
   /** Custom header content (rendered below title row) */
   headerContent?: ReactNode;
 
@@ -1050,6 +1061,8 @@ export function ChatBase({
   emptyState,
   renderToolResult,
   footerContent,
+  showInformation = false,
+  onInformationClick,
   headerContent,
   children,
   borderRadius,
@@ -1131,6 +1144,8 @@ export function ChatBase({
           emptyState={emptyState}
           renderToolResult={renderToolResult}
           footerContent={footerContent}
+          showInformation={showInformation}
+          onInformationClick={onInformationClick}
           headerContent={headerContent}
           children={children}
           borderRadius={borderRadius}
@@ -1194,6 +1209,8 @@ export function ChatBase({
       emptyState={emptyState}
       renderToolResult={renderToolResult}
       footerContent={footerContent}
+      showInformation={showInformation}
+      onInformationClick={onInformationClick}
       headerContent={headerContent}
       children={children}
       borderRadius={borderRadius}
@@ -1259,6 +1276,8 @@ function ChatBaseInner({
   emptyState,
   renderToolResult,
   footerContent,
+  showInformation = false,
+  onInformationClick,
   headerContent,
   children,
   borderRadius,
@@ -2458,6 +2477,15 @@ function ChatBaseInner({
             )}
             {/* Inline header content (e.g., protocol label) */}
             {headerContent}
+            {showInformation && (
+              <IconButton
+                icon={InfoIcon}
+                aria-label="Information"
+                variant="invisible"
+                size="small"
+                onClick={onInformationClick}
+              />
+            )}
           </Box>
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>

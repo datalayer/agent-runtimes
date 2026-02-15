@@ -1,5 +1,8 @@
 agent_runtimes/labextension
 
+# Frontend build artifacts copied by hatch_build.py for PyPI packaging
+agent_runtimes/static/dist
+
 docs/docs/python_api
 docs/docs/typescript_api
 
@@ -206,6 +209,8 @@ dmypy.json
 
 generated
 skills
+
+python-dist
 
 # Include
 !**/.*ignore

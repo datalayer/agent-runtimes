@@ -20,9 +20,10 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
-import { Text, Button, Spinner, IconButton } from '@primer/react';
-import { AlertIcon, SyncIcon, InfoIcon } from '@primer/octicons-react';
-import { Box } from '@datalayer/primer-addons';
+import { Text, Button, Spinner } from '@primer/react';
+import { AlertIcon, SyncIcon } from '@primer/octicons-react';
+import { Box, setupPrimerPortals } from '@datalayer/primer-addons';
+import { DatalayerThemeProvider } from '@datalayer/core';
 import { ChatBase, type Suggestion } from './base/ChatBase';
 import { AgentDetails } from './AgentDetails';
 import type {
@@ -264,6 +265,13 @@ export interface ChatProps {
   };
 
   /**
+   * Show the information icon in the header.
+   * When clicked, it opens the agent details panel.
+   * @default false
+   */
+  showInformation?: boolean;
+
+  /**
    * Current chat view mode for the header segmented toggle.
    * When provided, a view-mode toggle is rendered in the header.
    */
@@ -354,6 +362,7 @@ export function Chat({
   runtimeId,
   historyEndpoint,
   errorBanner,
+  showInformation = true,
   chatViewMode,
   onChatViewModeChange,
 }: ChatProps) {
@@ -362,6 +371,11 @@ export function Chat({
   const [showDetails, setShowDetails] = useState(false);
   const [messageCount, setMessageCount] = useState(0);
   const [focusTrigger, setFocusTrigger] = useState(0);
+
+  // Setup Primer portals for overlay components
+  useEffect(() => {
+    setupPrimerPortals();
+  }, []);
 
   // Get connected identities to pass to backend for skill execution
   const connectedIdentities = useConnectedIdentities();
@@ -491,185 +505,186 @@ export function Chat({
   // Render error state
   if (error) {
     return (
-      <Box
-        className={className}
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height,
-          p: 4,
-          bg: 'canvas.default',
-        }}
-      >
-        <AlertIcon size={48} />
-        <Text sx={{ mt: 3, color: 'danger.fg', fontSize: 2 }}>
-          Connection Error
-        </Text>
-        <Text sx={{ mt: 1, color: 'fg.muted', fontSize: 1 }}>{error}</Text>
-        <Button
-          variant="primary"
-          sx={{ mt: 3 }}
-          leadingVisual={SyncIcon}
-          onClick={handleReconnect}
+      <DatalayerThemeProvider>
+        <Box
+          className={className}
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            height,
+            p: 4,
+            bg: 'canvas.default',
+          }}
         >
-          Retry
-        </Button>
-      </Box>
+          <AlertIcon size={48} />
+          <Text sx={{ mt: 3, color: 'danger.fg', fontSize: 2 }}>
+            Connection Error
+          </Text>
+          <Text sx={{ mt: 1, color: 'fg.muted', fontSize: 1 }}>{error}</Text>
+          <Button
+            variant="primary"
+            sx={{ mt: 3 }}
+            leadingVisual={SyncIcon}
+            onClick={handleReconnect}
+          >
+            Retry
+          </Button>
+        </Box>
+      </DatalayerThemeProvider>
     );
   }
 
   // Render loading state
   if (isInitializing || !protocolConfig) {
     return (
-      <Box
-        className={className}
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height,
-          p: 4,
-          bg: 'canvas.default',
-        }}
-      >
-        <Spinner size="large" />
-        <Text sx={{ mt: 3, color: 'fg.muted' }}>
-          Connecting to {transport.toUpperCase().replace('-', ' ')} agent...
-        </Text>
-      </Box>
+      <DatalayerThemeProvider>
+        <Box
+          className={className}
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            height,
+            p: 4,
+            bg: 'canvas.default',
+          }}
+        >
+          <Spinner size="large" />
+          <Text sx={{ mt: 3, color: 'fg.muted' }}>
+            Connecting to {transport.toUpperCase().replace('-', ' ')} agent...
+          </Text>
+        </Box>
+      </DatalayerThemeProvider>
     );
   }
 
   return (
-    <Box
-      className={className}
-      sx={{
-        position: 'relative',
-        height,
-        bg: 'canvas.default',
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-    >
-      {/* Agent details view - shown/hidden via CSS to preserve chat state */}
+    <DatalayerThemeProvider>
       <Box
+        className={className}
         sx={{
-          display: showDetails ? 'flex' : 'none',
+          position: 'relative',
+          height,
+          bg: 'canvas.default',
+          display: 'flex',
           flexDirection: 'column',
-          height: '100%',
         }}
       >
-        <AgentDetails
-          name={title || 'AI Agent'}
-          protocol={transport}
-          url={protocolConfig?.endpoint || baseUrl}
-          messageCount={messageCount}
-          agentId={agentId}
-          apiBase={baseUrl}
-          identityProviders={identityProviders}
-          onIdentityConnect={onIdentityConnect}
-          onIdentityDisconnect={onIdentityDisconnect}
-          onBack={() => setShowDetails(false)}
-        />
-      </Box>
-      {/* Chat view - shown/hidden via CSS to preserve message state */}
-      <Box
-        sx={{
-          display: showDetails ? 'none' : 'flex',
-          flexDirection: 'column',
-          height: '100%',
-        }}
-      >
-        {/* Error banner for sandbox/connection issues */}
-        {errorBanner && (
-          <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 2,
-              px: 3,
-              py: 2,
-              bg:
-                errorBanner.variant === 'warning'
-                  ? 'attention.subtle'
-                  : 'danger.subtle',
-              borderBottom: '1px solid',
-              borderColor:
-                errorBanner.variant === 'warning'
-                  ? 'attention.muted'
-                  : 'danger.muted',
-            }}
-          >
-            <AlertIcon
-              size={16}
-              fill={
-                errorBanner.variant === 'warning' ? 'attention.fg' : 'danger.fg'
-              }
-            />
-            <Text
+        {/* Agent details view - shown/hidden via CSS to preserve chat state */}
+        <Box
+          sx={{
+            display: showDetails ? 'flex' : 'none',
+            flexDirection: 'column',
+            height: '100%',
+          }}
+        >
+          <AgentDetails
+            name={title || 'AI Agent'}
+            protocol={transport}
+            url={protocolConfig?.endpoint || baseUrl}
+            messageCount={messageCount}
+            agentId={agentId}
+            apiBase={baseUrl}
+            identityProviders={identityProviders}
+            onIdentityConnect={onIdentityConnect}
+            onIdentityDisconnect={onIdentityDisconnect}
+            onBack={() => setShowDetails(false)}
+          />
+        </Box>
+        {/* Chat view - shown/hidden via CSS to preserve message state */}
+        <Box
+          sx={{
+            display: showDetails ? 'none' : 'flex',
+            flexDirection: 'column',
+            height: '100%',
+          }}
+        >
+          {/* Error banner for sandbox/connection issues */}
+          {errorBanner && (
+            <Box
               sx={{
-                fontSize: 1,
-                color:
+                display: 'flex',
+                alignItems: 'center',
+                gap: 2,
+                px: 3,
+                py: 2,
+                bg:
                   errorBanner.variant === 'warning'
-                    ? 'attention.fg'
-                    : 'danger.fg',
-                flex: 1,
+                    ? 'attention.subtle'
+                    : 'danger.subtle',
+                borderBottom: '1px solid',
+                borderColor:
+                  errorBanner.variant === 'warning'
+                    ? 'attention.muted'
+                    : 'danger.muted',
               }}
             >
-              {errorBanner.message}
-            </Text>
-          </Box>
-        )}
-        <ChatBase
-          title={title}
-          showHeader={showHeader}
-          protocol={protocolConfig}
-          placeholder={placeholder}
-          description={description}
-          suggestions={suggestions}
-          submitOnSuggestionClick={submitOnSuggestionClick}
-          autoFocus={autoFocus}
-          runtimeId={runtimeId}
-          historyEndpoint={historyEndpoint}
-          headerContent={
-            <IconButton
-              icon={InfoIcon}
-              aria-label="Agent details"
-              variant="invisible"
-              size="small"
-              onClick={() => setShowDetails(true)}
-            />
-          }
-          showModelSelector={showModelSelector}
-          showToolsMenu={showToolsMenu}
-          showSkillsMenu={showSkillsMenu}
-          showTokenUsage={showTokenUsage}
-          codemodeEnabled={codemodeEnabled}
-          initialModel={initialModel}
-          availableModels={availableModels}
-          mcpServers={mcpServers}
-          initialSkills={initialSkills}
-          connectedIdentities={identitiesForChat}
-          onNewChat={handleNewChat}
-          onMessagesChange={messages => setMessageCount(messages.length)}
-          headerButtons={{
-            showNewChat: true,
-            showClear: true,
-            onNewChat: handleNewChat,
-          }}
-          avatarConfig={{
-            showAvatars: true,
-          }}
-          backgroundColor="canvas.default"
-          focusTrigger={focusTrigger}
-          chatViewMode={chatViewMode}
-          onChatViewModeChange={onChatViewModeChange}
-        />
+              <AlertIcon
+                size={16}
+                fill={
+                  errorBanner.variant === 'warning'
+                    ? 'attention.fg'
+                    : 'danger.fg'
+                }
+              />
+              <Text
+                sx={{
+                  fontSize: 1,
+                  color:
+                    errorBanner.variant === 'warning'
+                      ? 'attention.fg'
+                      : 'danger.fg',
+                  flex: 1,
+                }}
+              >
+                {errorBanner.message}
+              </Text>
+            </Box>
+          )}
+          <ChatBase
+            title={title}
+            showHeader={showHeader}
+            protocol={protocolConfig}
+            placeholder={placeholder}
+            description={description}
+            suggestions={suggestions}
+            submitOnSuggestionClick={submitOnSuggestionClick}
+            autoFocus={autoFocus}
+            runtimeId={runtimeId}
+            historyEndpoint={historyEndpoint}
+            showInformation={showInformation}
+            onInformationClick={() => setShowDetails(true)}
+            showModelSelector={showModelSelector}
+            showToolsMenu={showToolsMenu}
+            showSkillsMenu={showSkillsMenu}
+            showTokenUsage={showTokenUsage}
+            codemodeEnabled={codemodeEnabled}
+            initialModel={initialModel}
+            availableModels={availableModels}
+            mcpServers={mcpServers}
+            initialSkills={initialSkills}
+            connectedIdentities={identitiesForChat}
+            onNewChat={handleNewChat}
+            onMessagesChange={messages => setMessageCount(messages.length)}
+            headerButtons={{
+              showNewChat: true,
+              showClear: true,
+              onNewChat: handleNewChat,
+            }}
+            avatarConfig={{
+              showAvatars: true,
+            }}
+            backgroundColor="canvas.default"
+            focusTrigger={focusTrigger}
+            chatViewMode={chatViewMode}
+            onChatViewModeChange={onChatViewModeChange}
+          />
+        </Box>
       </Box>
-    </Box>
+    </DatalayerThemeProvider>
   );
 }
 

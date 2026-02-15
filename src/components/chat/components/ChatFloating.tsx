@@ -288,6 +288,16 @@ export interface ChatFloatingProps {
    */
   historyAuthToken?: string;
 
+  /**
+   * Show the information icon in the header.
+   * When clicked, fires onInformationClick.
+   * @default false
+   */
+  showInformation?: boolean;
+
+  /** Callback when the information icon is clicked */
+  onInformationClick?: () => void;
+
   /** Additional ChatBase props */
   panelProps?: Partial<ChatBaseProps>;
 }
@@ -366,6 +376,8 @@ export function ChatFloating({
   runtimeId,
   historyEndpoint,
   historyAuthToken,
+  showInformation = false,
+  onInformationClick,
   panelProps,
 }: ChatFloatingProps) {
   // Store-based state
@@ -916,6 +928,8 @@ export function ChatFloating({
           runtimeId={runtimeId}
           historyEndpoint={historyEndpoint}
           historyAuthToken={historyAuthToken}
+          showInformation={showInformation}
+          onInformationClick={onInformationClick}
           {...panelProps}
         >
           {children}
