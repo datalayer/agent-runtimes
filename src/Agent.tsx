@@ -8,16 +8,18 @@
  *
  * Standalone chat interface served at /agent.html.
  * Connects to the agent-runtimes AG-UI endpoint.
+ *
+ * Uses the unified Chat component which handles:
+ * - DatalayerThemeProvider theming
+ * - AG-UI protocol configuration
+ * - AgentDetails panel (via showInformation)
+ * - Conversation history persistence
+ * - Model/tools/skills selectors
+ * - Error and loading states
  */
 
-import React, { useState } from 'react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Box } from '@datalayer/primer-addons';
-import { DatalayerThemeProvider } from '@datalayer/core';
-import { ChatFloating } from './components/chat';
-import { AgentDetails } from './components/chat/components/AgentDetails';
-
-const queryClient = new QueryClient();
+import React from 'react';
+import { Chat } from './components/chat';
 
 // The AG-UI endpoint is relative to the server that serves this page.
 // When served from the agent-runtimes FastAPI, the origin already points
@@ -29,87 +31,42 @@ function getAgentId(): string {
   return params.get('agent') || 'default';
 }
 
-function getAgentEndpoint(): string {
-  return `${window.location.origin}/api/v1/ag-ui/${getAgentId()}`;
-}
-
 const AGENT_ID = getAgentId();
-const AGENT_ENDPOINT = getAgentEndpoint();
 const BASE_URL = window.location.origin;
 
 /**
  * Agent component — full-page chat interface
  */
 const Agent: React.FC = () => {
-  const [showDetails, setShowDetails] = useState(false);
-  const [messageCount, setMessageCount] = useState(0);
-
   return (
-    <DatalayerThemeProvider>
-      <Box
-        sx={{
-          minHeight: '100vh',
-          backgroundColor: 'canvas.default',
-        }}
-      >
-        {/* Floating chat widget */}
-        <ChatFloating
-          endpoint={AGENT_ENDPOINT}
-          title="Agent"
-          description="Chat with the agent"
-          position="bottom-right"
-          brandColor="#667eea"
-          defaultOpen={true}
-          showInformation={true}
-          onInformationClick={() => setShowDetails(true)}
-          suggestions={[
-            {
-              title: 'Hello',
-              message: 'Hello, what can you do?',
-            },
-            {
-              title: 'Help',
-              message: 'What tools do you have available?',
-            },
-          ]}
-          panelProps={{
-            onMessagesChange: messages => setMessageCount(messages.length),
-            backgroundColor: 'canvas.default',
-          }}
-        />
-
-        {/* Agent Details overlay */}
-        {showDetails && (
-          <QueryClientProvider client={queryClient}>
-            <Box
-              sx={{
-                position: 'fixed',
-                top: 0,
-                right: 0,
-                bottom: 0,
-                width: '400px',
-                zIndex: 1002,
-                bg: 'canvas.default',
-                borderLeft: '1px solid',
-                borderColor: 'border.default',
-                boxShadow: 'shadow.large',
-                overflow: 'auto',
-              }}
-            >
-              <AgentDetails
-                name="Agent"
-                protocol="ag-ui"
-                url={AGENT_ENDPOINT}
-                messageCount={messageCount}
-                agentId={AGENT_ID}
-                apiBase={BASE_URL}
-                onBack={() => setShowDetails(false)}
-              />
-            </Box>
-          </QueryClientProvider>
-        )}
-      </Box>
-    </DatalayerThemeProvider>
+    <Chat
+      transport="ag-ui"
+      baseUrl={BASE_URL}
+      agentId={AGENT_ID}
+      title="Agent"
+      placeholder="Send a message..."
+      description="Chat with the agent"
+      showHeader={true}
+      showModelSelector={true}
+      showToolsMenu={true}
+      showSkillsMenu={true}
+      showTokenUsage={true}
+      showInformation={true}
+      autoFocus
+      runtimeId={AGENT_ID}
+      historyEndpoint={`${BASE_URL}/api/v1/history?agent_id=${encodeURIComponent(AGENT_ID)}`}
+      suggestions={[
+        {
+          title: 'Hello',
+          message: 'Hello, what can you do?',
+        },
+        {
+          title: 'Help',
+          message: 'What tools do you have available?',
+        },
+      ]}
+      submitOnSuggestionClick
+    />
   );
 };
 

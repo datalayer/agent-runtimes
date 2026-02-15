@@ -700,7 +700,7 @@ export interface ChatBaseProps {
    * Endpoint URL for fetching conversation history.
    * When runtimeId is provided, this endpoint is called to fetch
    * the conversation history on mount.
-   * If not provided, defaults to `{protocol.endpoint}/history`.
+   * If not provided, defaults to `{protocol.endpoint}/api/v1/history`.
    */
   historyEndpoint?: string;
 
@@ -1679,9 +1679,9 @@ function ChatBaseInner({
     store.setFetching(runtimeId, true);
 
     // Build the history endpoint URL
-    const endpoint =
+    let endpoint =
       historyEndpoint ||
-      (protocol?.endpoint ? `${protocol.endpoint}/history` : null);
+      (protocol?.endpoint ? `${protocol.endpoint}/api/v1/history` : null);
 
     if (!endpoint) {
       console.warn(
@@ -1690,6 +1690,13 @@ function ChatBaseInner({
       );
       store.markFetched(runtimeId);
       return;
+    }
+
+    // Append agent_id query param if the protocol has an agentId
+    // and the URL doesn't already include one
+    if (protocol?.agentId && !endpoint.includes('agent_id=')) {
+      const separator = endpoint.includes('?') ? '&' : '?';
+      endpoint = `${endpoint}${separator}agent_id=${encodeURIComponent(protocol.agentId)}`;
     }
 
     // Fetch conversation history from server

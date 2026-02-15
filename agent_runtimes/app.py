@@ -1034,7 +1034,7 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
 
     # Include routers
     app.include_router(health_router)
-    app.include_router(history_router)  # No prefix - frontend calls /history directly
+    app.include_router(history_router, prefix=config.api_prefix)
     app.include_router(identity_router)  # No prefix - uses /api/v1/identity internally
     app.include_router(agents_router, prefix=config.api_prefix)
     app.include_router(acp_router, prefix=config.api_prefix)

@@ -279,7 +279,7 @@ export interface ChatFloatingProps {
 
   /**
    * Endpoint URL for fetching conversation history.
-   * Defaults to `{protocol.endpoint}/history` when runtimeId is set.
+   * Defaults to `{protocol.endpoint}/api/v1/history` when runtimeId is set.
    */
   historyEndpoint?: string;
 

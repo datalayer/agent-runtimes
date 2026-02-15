@@ -33,6 +33,7 @@ export const EXAMPLES: Record<
   //    import('./AgentRuntimeLexical2Example'),
   AgentRuntimeStandaloneExample: () =>
     import('./AgentRuntimeStandaloneExample'),
+  AgentRuntimeChatExample: () => import('./AgentRuntimeChatExample'),
   CopilotKitNotebookExample: () => import('./CopilotKitNotebookExample'),
   CopilotKitLexicalExample: () => import('./CopilotKitLexicalExample'),
   DatalayerNotebookExample: () => import('./DatalayerNotebookExample'),

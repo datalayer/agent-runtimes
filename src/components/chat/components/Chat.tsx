@@ -20,6 +20,7 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Text, Button, Spinner } from '@primer/react';
 import { AlertIcon, SyncIcon } from '@primer/octicons-react';
 import { Box, setupPrimerPortals } from '@datalayer/primer-addons';
@@ -68,6 +69,9 @@ try {
     // No Jupyter config available
   }
 }
+
+// Shared QueryClient for AgentDetails and ChatBase
+const queryClient = new QueryClient();
 
 /**
  * Supported transports (communication transports)
@@ -251,7 +255,7 @@ export interface ChatProps {
    * Endpoint URL for fetching conversation history.
    * When runtimeId is provided, this endpoint is called to fetch
    * the conversation history on mount.
-   * If not provided, defaults to `{protocol.endpoint}/history`.
+   * If not provided, defaults to `{protocol.endpoint}/api/v1/history`.
    */
   historyEndpoint?: string;
 
@@ -505,186 +509,192 @@ export function Chat({
   // Render error state
   if (error) {
     return (
-      <DatalayerThemeProvider>
-        <Box
-          className={className}
-          sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            height,
-            p: 4,
-            bg: 'canvas.default',
-          }}
-        >
-          <AlertIcon size={48} />
-          <Text sx={{ mt: 3, color: 'danger.fg', fontSize: 2 }}>
-            Connection Error
-          </Text>
-          <Text sx={{ mt: 1, color: 'fg.muted', fontSize: 1 }}>{error}</Text>
-          <Button
-            variant="primary"
-            sx={{ mt: 3 }}
-            leadingVisual={SyncIcon}
-            onClick={handleReconnect}
+      <QueryClientProvider client={queryClient}>
+        <DatalayerThemeProvider>
+          <Box
+            className={className}
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              height,
+              p: 4,
+              bg: 'canvas.default',
+            }}
           >
-            Retry
-          </Button>
-        </Box>
-      </DatalayerThemeProvider>
+            <AlertIcon size={48} />
+            <Text sx={{ mt: 3, color: 'danger.fg', fontSize: 2 }}>
+              Connection Error
+            </Text>
+            <Text sx={{ mt: 1, color: 'fg.muted', fontSize: 1 }}>{error}</Text>
+            <Button
+              variant="primary"
+              sx={{ mt: 3 }}
+              leadingVisual={SyncIcon}
+              onClick={handleReconnect}
+            >
+              Retry
+            </Button>
+          </Box>
+        </DatalayerThemeProvider>
+      </QueryClientProvider>
     );
   }
 
   // Render loading state
   if (isInitializing || !protocolConfig) {
     return (
-      <DatalayerThemeProvider>
-        <Box
-          className={className}
-          sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            height,
-            p: 4,
-            bg: 'canvas.default',
-          }}
-        >
-          <Spinner size="large" />
-          <Text sx={{ mt: 3, color: 'fg.muted' }}>
-            Connecting to {transport.toUpperCase().replace('-', ' ')} agent...
-          </Text>
-        </Box>
-      </DatalayerThemeProvider>
+      <QueryClientProvider client={queryClient}>
+        <DatalayerThemeProvider>
+          <Box
+            className={className}
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              height,
+              p: 4,
+              bg: 'canvas.default',
+            }}
+          >
+            <Spinner size="large" />
+            <Text sx={{ mt: 3, color: 'fg.muted' }}>
+              Connecting to {transport.toUpperCase().replace('-', ' ')} agent...
+            </Text>
+          </Box>
+        </DatalayerThemeProvider>
+      </QueryClientProvider>
     );
   }
 
   return (
-    <DatalayerThemeProvider>
-      <Box
-        className={className}
-        sx={{
-          position: 'relative',
-          height,
-          bg: 'canvas.default',
-          display: 'flex',
-          flexDirection: 'column',
-        }}
-      >
-        {/* Agent details view - shown/hidden via CSS to preserve chat state */}
+    <QueryClientProvider client={queryClient}>
+      <DatalayerThemeProvider>
         <Box
+          className={className}
           sx={{
-            display: showDetails ? 'flex' : 'none',
+            position: 'relative',
+            height,
+            bg: 'canvas.default',
+            display: 'flex',
             flexDirection: 'column',
-            height: '100%',
           }}
         >
-          <AgentDetails
-            name={title || 'AI Agent'}
-            protocol={transport}
-            url={protocolConfig?.endpoint || baseUrl}
-            messageCount={messageCount}
-            agentId={agentId}
-            apiBase={baseUrl}
-            identityProviders={identityProviders}
-            onIdentityConnect={onIdentityConnect}
-            onIdentityDisconnect={onIdentityDisconnect}
-            onBack={() => setShowDetails(false)}
-          />
-        </Box>
-        {/* Chat view - shown/hidden via CSS to preserve message state */}
-        <Box
-          sx={{
-            display: showDetails ? 'none' : 'flex',
-            flexDirection: 'column',
-            height: '100%',
-          }}
-        >
-          {/* Error banner for sandbox/connection issues */}
-          {errorBanner && (
-            <Box
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 2,
-                px: 3,
-                py: 2,
-                bg:
-                  errorBanner.variant === 'warning'
-                    ? 'attention.subtle'
-                    : 'danger.subtle',
-                borderBottom: '1px solid',
-                borderColor:
-                  errorBanner.variant === 'warning'
-                    ? 'attention.muted'
-                    : 'danger.muted',
-              }}
-            >
-              <AlertIcon
-                size={16}
-                fill={
-                  errorBanner.variant === 'warning'
-                    ? 'attention.fg'
-                    : 'danger.fg'
-                }
-              />
-              <Text
+          {/* Agent details view - shown/hidden via CSS to preserve chat state */}
+          <Box
+            sx={{
+              display: showDetails ? 'flex' : 'none',
+              flexDirection: 'column',
+              height: '100%',
+            }}
+          >
+            <AgentDetails
+              name={title || 'AI Agent'}
+              protocol={transport}
+              url={protocolConfig?.endpoint || baseUrl}
+              messageCount={messageCount}
+              agentId={agentId}
+              apiBase={baseUrl}
+              identityProviders={identityProviders}
+              onIdentityConnect={onIdentityConnect}
+              onIdentityDisconnect={onIdentityDisconnect}
+              onBack={() => setShowDetails(false)}
+            />
+          </Box>
+          {/* Chat view - shown/hidden via CSS to preserve message state */}
+          <Box
+            sx={{
+              display: showDetails ? 'none' : 'flex',
+              flexDirection: 'column',
+              height: '100%',
+            }}
+          >
+            {/* Error banner for sandbox/connection issues */}
+            {errorBanner && (
+              <Box
                 sx={{
-                  fontSize: 1,
-                  color:
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 2,
+                  px: 3,
+                  py: 2,
+                  bg:
                     errorBanner.variant === 'warning'
-                      ? 'attention.fg'
-                      : 'danger.fg',
-                  flex: 1,
+                      ? 'attention.subtle'
+                      : 'danger.subtle',
+                  borderBottom: '1px solid',
+                  borderColor:
+                    errorBanner.variant === 'warning'
+                      ? 'attention.muted'
+                      : 'danger.muted',
                 }}
               >
-                {errorBanner.message}
-              </Text>
-            </Box>
-          )}
-          <ChatBase
-            title={title}
-            showHeader={showHeader}
-            protocol={protocolConfig}
-            placeholder={placeholder}
-            description={description}
-            suggestions={suggestions}
-            submitOnSuggestionClick={submitOnSuggestionClick}
-            autoFocus={autoFocus}
-            runtimeId={runtimeId}
-            historyEndpoint={historyEndpoint}
-            showInformation={showInformation}
-            onInformationClick={() => setShowDetails(true)}
-            showModelSelector={showModelSelector}
-            showToolsMenu={showToolsMenu}
-            showSkillsMenu={showSkillsMenu}
-            showTokenUsage={showTokenUsage}
-            codemodeEnabled={codemodeEnabled}
-            initialModel={initialModel}
-            availableModels={availableModels}
-            mcpServers={mcpServers}
-            initialSkills={initialSkills}
-            connectedIdentities={identitiesForChat}
-            onNewChat={handleNewChat}
-            onMessagesChange={messages => setMessageCount(messages.length)}
-            headerButtons={{
-              showNewChat: true,
-              showClear: true,
-              onNewChat: handleNewChat,
-            }}
-            avatarConfig={{
-              showAvatars: true,
-            }}
-            backgroundColor="canvas.default"
-            focusTrigger={focusTrigger}
-            chatViewMode={chatViewMode}
-            onChatViewModeChange={onChatViewModeChange}
-          />
+                <AlertIcon
+                  size={16}
+                  fill={
+                    errorBanner.variant === 'warning'
+                      ? 'attention.fg'
+                      : 'danger.fg'
+                  }
+                />
+                <Text
+                  sx={{
+                    fontSize: 1,
+                    color:
+                      errorBanner.variant === 'warning'
+                        ? 'attention.fg'
+                        : 'danger.fg',
+                    flex: 1,
+                  }}
+                >
+                  {errorBanner.message}
+                </Text>
+              </Box>
+            )}
+            <ChatBase
+              title={title}
+              showHeader={showHeader}
+              protocol={protocolConfig}
+              placeholder={placeholder}
+              description={description}
+              suggestions={suggestions}
+              submitOnSuggestionClick={submitOnSuggestionClick}
+              autoFocus={autoFocus}
+              runtimeId={runtimeId}
+              historyEndpoint={historyEndpoint}
+              showInformation={showInformation}
+              onInformationClick={() => setShowDetails(true)}
+              showModelSelector={showModelSelector}
+              showToolsMenu={showToolsMenu}
+              showSkillsMenu={showSkillsMenu}
+              showTokenUsage={showTokenUsage}
+              codemodeEnabled={codemodeEnabled}
+              initialModel={initialModel}
+              availableModels={availableModels}
+              mcpServers={mcpServers}
+              initialSkills={initialSkills}
+              connectedIdentities={identitiesForChat}
+              onNewChat={handleNewChat}
+              onMessagesChange={messages => setMessageCount(messages.length)}
+              headerButtons={{
+                showNewChat: true,
+                showClear: true,
+                onNewChat: handleNewChat,
+              }}
+              avatarConfig={{
+                showAvatars: true,
+              }}
+              backgroundColor="canvas.default"
+              focusTrigger={focusTrigger}
+              chatViewMode={chatViewMode}
+              onChatViewModeChange={onChatViewModeChange}
+            />
+          </Box>
         </Box>
-      </Box>
-    </DatalayerThemeProvider>
+      </DatalayerThemeProvider>
+    </QueryClientProvider>
   );
 }
 
