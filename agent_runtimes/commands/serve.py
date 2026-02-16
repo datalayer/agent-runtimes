@@ -120,14 +120,14 @@ def find_random_free_port(
     Raises:
         ServeError: If no free port could be found after *max_attempts*.
     """
-    import random
+    import secrets
 
     for _ in range(max_attempts):
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
                 sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                 # Bind to a random port in the range
-                port = random.randint(min_port, max_port)
+                port = min_port + secrets.randbelow(max_port - min_port + 1)
                 sock.bind((host, port))
                 return port
         except OSError:

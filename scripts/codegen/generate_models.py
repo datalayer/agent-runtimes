@@ -31,7 +31,8 @@ def load_model_specs(specs_dir: Path) -> list[dict[str, Any]]:
 
 
 def _make_const_name(model_id: str) -> str:
-    """Convert a model ID to a Python/TypeScript constant name.
+    """
+    Convert a model ID to a Python/TypeScript constant name.
 
     E.g. 'anthropic:claude-sonnet-4-5-20250514' -> 'ANTHROPIC_CLAUDE_SONNET_4_5_20250514'
     """

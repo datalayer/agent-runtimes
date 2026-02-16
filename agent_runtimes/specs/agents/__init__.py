@@ -28,10 +28,13 @@ def get_agent_spec(agent_id: str) -> AgentSpec | None:
 
 
 def list_agent_specs(prefix: str | None = None) -> list[AgentSpec]:
-    """List all available agent specifications.
+    """
+    List all available agent specifications.
 
-    Args:
-        prefix: If provided, only return specs whose ID starts with this prefix.
+    Parameters
+    ----------
+    prefix : str or None
+        If provided, only return specs whose ID starts with this prefix.
     """
     specs = list(AGENT_SPECS.values())
     if prefix is not None:

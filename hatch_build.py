@@ -1,8 +1,9 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Hatch build hook that copies the Vite frontend build output into the
-Python package so that ``agent_runtimes.app`` can serve it at ``/static``.
+"""
+Hatch build hook that copies the Vite frontend build output into the Python
+package so that ``agent_runtimes.app`` can serve it at ``/static``.
 
 The hook runs automatically when you build the wheel/sdist with hatch
 (or ``python -m build``).  It copies ``<repo>/dist/`` → ``agent_runtimes/static/dist/``
@@ -31,7 +32,9 @@ PACKAGE_STATIC_DIST = Path("agent_runtimes") / "static" / "dist"
 
 
 class AgentRuntimesBuildHook(BuildHookInterface):
-    """Copies the Vite build output into the package's ``static/dist`` directory."""
+    """
+    Copy the Vite build output into the package's ``static/dist`` directory.
+    """
 
     PLUGIN_NAME = "agent_runtimes_frontend"
 
