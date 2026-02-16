@@ -90,7 +90,7 @@ export const CRAWLER_AGENT_SPEC: AgentSpec = {
     'Research best practices for building RAG applications',
     'Compare popular JavaScript frameworks in 2024',
   ],
-  sandboxVariant: 'jupyter',
+  sandboxVariant: 'local-eval',
   systemPrompt: `You are a web crawling and research assistant with access to Tavily search and GitHub tools. Use Tavily to search the web for current information and search GitHub repositories for relevant projects. Synthesize information from multiple sources and provide clear summaries with sources cited.
 `,
   systemPromptCodemodeAddons: `## IMPORTANT: Be Honest About Your Capabilities NEVER claim to have tools or capabilities you haven't verified.
@@ -137,7 +137,7 @@ export const DATA_ACQUISITION_AGENT_SPEC: AgentSpec = {
     'List available files in my workspace',
     'Search Kaggle for time series forecasting competitions',
   ],
-  sandboxVariant: 'jupyter',
+  sandboxVariant: 'local-eval',
   systemPrompt: `You are a data acquisition specialist with access to Kaggle datasets and filesystem tools. You can search for datasets, download data, read and write files, and help users prepare data for analysis. Guide users through finding relevant datasets and organizing their workspace efficiently.
 `,
   systemPromptCodemodeAddons: `## IMPORTANT: Be Honest About Your Capabilities NEVER claim to have tools or capabilities you haven't verified.
@@ -180,7 +180,7 @@ export const FINANCIAL_VIZ_AGENT_SPEC: AgentSpec = {
     'Analyze the trading volume trends for Tesla',
     'Get the latest market news for tech stocks',
   ],
-  sandboxVariant: 'jupyter',
+  sandboxVariant: 'local-eval',
   systemPrompt: `You are a financial market analyst with access to Alpha Vantage market data and chart generation tools. You can fetch stock prices, analyze trading volumes, create visualizations, and track market trends. Provide clear insights with relevant data points and generate charts to illustrate patterns.
 `,
   systemPromptCodemodeAddons: `## IMPORTANT: Be Honest About Your Capabilities NEVER claim to have tools or capabilities you haven't verified.
@@ -223,7 +223,7 @@ export const GITHUB_AGENT_SPEC: AgentSpec = {
     'Show recent commits on the main branch',
     'Search for repositories related to Jupyter notebooks',
   ],
-  sandboxVariant: 'jupyter',
+  sandboxVariant: 'local-eval',
   systemPrompt: `You are a GitHub assistant with access to GitHub repository tools and Google Workspace for email notifications.
 `,
   systemPromptCodemodeAddons: `## IMPORTANT: Be Honest About Your Capabilities NEVER claim to have tools or capabilities you haven't verified.
@@ -266,7 +266,7 @@ export const INFORMATION_ROUTING_AGENT_SPEC: AgentSpec = {
     'Summarize the contents of a document in my Drive',
     'Search for documents by keyword in Google Drive',
   ],
-  sandboxVariant: 'jupyter',
+  sandboxVariant: 'local-eval',
   systemPrompt: `You are an information routing specialist with access to Google Drive tools. You can find and manage documents in Drive and automate document workflows. Help users with document management efficiently. Do not use file extension when referring to Google Drive documents. Always use search_drive_files tool before using get_drive_file_content to find parent folder (using only name and mimeType in the query, no other fields!!!).
 `,
   systemPromptCodemodeAddons: `## IMPORTANT: Be Honest About Your Capabilities NEVER claim to have tools or capabilities you haven't verified.
