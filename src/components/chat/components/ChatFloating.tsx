@@ -289,6 +289,12 @@ export interface ChatFloatingProps {
   historyAuthToken?: string;
 
   /**
+   * An initial prompt to auto-submit after the chat is ready.
+   * Sent exactly once when the adapter and history are loaded.
+   */
+  initialPrompt?: string;
+
+  /**
    * Show the information icon in the header.
    * When clicked, fires onInformationClick.
    * @default false
@@ -376,6 +382,7 @@ export function ChatFloating({
   runtimeId,
   historyEndpoint,
   historyAuthToken,
+  initialPrompt,
   showInformation = false,
   onInformationClick,
   panelProps,
@@ -928,6 +935,7 @@ export function ChatFloating({
           runtimeId={runtimeId}
           historyEndpoint={historyEndpoint}
           historyAuthToken={historyAuthToken}
+          initialPrompt={initialPrompt}
           showInformation={showInformation}
           onInformationClick={onInformationClick}
           {...panelProps}

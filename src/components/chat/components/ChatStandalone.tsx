@@ -161,6 +161,12 @@ export interface ChatStandaloneProps {
    */
   renderToolResult?: RenderToolResult;
 
+  /**
+   * An initial prompt to auto-submit after the chat is ready.
+   * Sent exactly once when the adapter and history are loaded.
+   */
+  initialPrompt?: string;
+
   /** Additional ChatBase props */
   panelProps?: Partial<ChatBaseProps>;
 }
@@ -223,6 +229,7 @@ export function ChatStandalone({
   enableStreaming = true,
   emptyStateMessage = 'Start a conversation',
   renderToolResult,
+  initialPrompt,
   panelProps,
 }: ChatStandaloneProps) {
   // Use Zustand store for state management
@@ -610,6 +617,7 @@ export function ChatStandalone({
             }}
             backgroundColor="canvas.subtle"
             focusTrigger={focusTrigger}
+            initialPrompt={initialPrompt}
             {...panelProps}
           >
             {children}

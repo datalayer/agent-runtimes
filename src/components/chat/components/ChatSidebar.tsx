@@ -119,6 +119,12 @@ export interface ChatSidebarProps {
   /** Description shown in empty state */
   description?: string;
 
+  /**
+   * An initial prompt to auto-submit after the chat is ready.
+   * Sent exactly once when the adapter and history are loaded.
+   */
+  initialPrompt?: string;
+
   /** Additional ChatBase props */
   panelProps?: Partial<ChatBaseProps>;
 }
@@ -171,6 +177,7 @@ export function ChatSidebar({
   enableStreaming = true,
   placeholder = 'Ask a question...',
   description,
+  initialPrompt,
   panelProps,
 }: ChatSidebarProps) {
   const isOpen = useChatOpen();
@@ -447,6 +454,7 @@ export function ChatSidebar({
           description={description}
           onSendMessage={onSendMessage}
           enableStreaming={enableStreaming}
+          initialPrompt={initialPrompt}
           {...panelProps}
         >
           {children}

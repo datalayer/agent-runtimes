@@ -793,6 +793,14 @@ export interface ChatBaseProps {
    * If not provided, uses the protocol's authToken.
    */
   historyAuthToken?: string;
+
+  /**
+   * An initial prompt to auto-submit after the chat is ready
+   * (adapter initialised and conversation history loaded).
+   * The prompt is sent exactly once; passing a new value will
+   * NOT trigger another send.
+   */
+  initialPrompt?: string;
 }
 
 /**
@@ -1191,8 +1199,9 @@ export function ChatBase({
   runtimeId,
   historyEndpoint,
   historyAuthToken,
+  // Auto-submit
+  initialPrompt,
 }: ChatBaseProps) {
-  // Convert agentRuntimeConfig to protocol if provided
   const protocol: ProtocolConfig | undefined = agentRuntimeConfig
     ? {
         type: agentRuntimeConfig.protocol || 'ag-ui',
@@ -1272,6 +1281,7 @@ export function ChatBase({
           runtimeId={runtimeId}
           historyEndpoint={historyEndpoint}
           historyAuthToken={historyAuthToken}
+          initialPrompt={initialPrompt}
         />
       </QueryClientProvider>
     );
@@ -1337,6 +1347,7 @@ export function ChatBase({
       runtimeId={runtimeId}
       historyEndpoint={historyEndpoint}
       historyAuthToken={historyAuthToken}
+      initialPrompt={initialPrompt}
     />
   );
 }
@@ -1406,8 +1417,9 @@ function ChatBaseInner({
   runtimeId,
   historyEndpoint,
   historyAuthToken,
+  // Auto-submit
+  initialPrompt,
 }: ChatBaseProps) {
-  // Ensure Primer's default portal has high z-index for ActionMenu overlays
   useHighZIndexPortal();
 
   // Store (optional for message persistence)
@@ -1423,7 +1435,10 @@ function ChatBaseInner({
   const [error, setError] = useState<Error | null>(null);
   const [input, setInput] = useState('');
 
-  // Model and tools state
+  // History-loaded flag — true immediately when there is nothing to fetch
+  const [historyLoaded, setHistoryLoaded] = useState(!runtimeId);
+  // Guard so the initial prompt is sent at most once
+  const initialPromptSentRef = useRef(false);
   const [selectedModel, setSelectedModel] = useState<string>('');
   // enabledTools tracks which MCP server tools are enabled
   // Format: Map<serverId, Set<toolName>>
@@ -1870,9 +1885,11 @@ function ChatBaseInner({
         }
 
         store.markFetched(runtimeId);
+        setHistoryLoaded(true);
       } catch (err) {
         console.error('[ChatBase] Failed to fetch conversation history:', err);
         store.markFetched(runtimeId);
+        setHistoryLoaded(true);
       }
     };
 
@@ -2322,170 +2339,184 @@ function ChatBaseInner({
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [displayItems]);
 
-  // Handle sending message in protocol mode or custom mode
-  const handleSend = useCallback(async () => {
-    if (!input.trim() || isLoading) return;
+  // Handle sending message in protocol mode or custom mode.
+  // An optional messageOverride bypasses the input state (used by initialPrompt).
+  const handleSend = useCallback(
+    async (messageOverride?: string) => {
+      const messageContent = (messageOverride ?? input).trim();
+      if (!messageContent || isLoading) return;
 
-    // Need either an adapter (protocol mode) or onSendMessage handler (custom mode)
-    if (!adapterRef.current && !onSendMessage) return;
+      // Need either an adapter (protocol mode) or onSendMessage handler (custom mode)
+      if (!adapterRef.current && !onSendMessage) return;
 
-    const messageContent = input.trim();
-    const userMessage = createUserMessage(messageContent);
-    const currentMessages = displayItems.filter(
-      (item): item is ChatMessage => !isToolCallMessage(item),
-    );
-    const allMessages = [...currentMessages, userMessage];
+      const userMessage = createUserMessage(messageContent);
+      const currentMessages = displayItems.filter(
+        (item): item is ChatMessage => !isToolCallMessage(item),
+      );
+      const allMessages = [...currentMessages, userMessage];
 
-    setDisplayItems(prev => [...prev, userMessage]);
-    setInput('');
-    setIsLoading(true);
-    setIsStreaming(true);
-    setError(null);
-    currentAssistantMessageRef.current = null;
+      setDisplayItems(prev => [...prev, userMessage]);
+      setInput('');
+      setIsLoading(true);
+      setIsStreaming(true);
+      setError(null);
+      currentAssistantMessageRef.current = null;
 
-    // Persist user message to store if enabled
-    if (useStoreMode) {
-      useChatStore.getState().addMessage(userMessage);
-    }
+      // Persist user message to store if enabled
+      if (useStoreMode) {
+        useChatStore.getState().addMessage(userMessage);
+      }
 
-    try {
-      if (onSendMessage) {
-        // Custom mode: use the provided message handler
-        if (enableStreaming) {
-          // Streaming mode: create assistant message placeholder and stream updates
-          const assistantMessageId = generateMessageId();
-          const assistantMessage = createAssistantMessage('');
-          assistantMessage.id = assistantMessageId;
-          setDisplayItems(prev => [...prev, assistantMessage]);
-          currentAssistantMessageRef.current = assistantMessage;
-
-          if (useStoreMode) {
-            useChatStore.getState().addMessage(assistantMessage);
-            useChatStore.getState().startStreaming(assistantMessageId);
-          }
-
-          // Create abort controller for cancellation
-          abortControllerRef.current = new AbortController();
-
-          await onSendMessage(messageContent, allMessages, {
-            onChunk: (chunk: string) => {
-              // Append chunk to the assistant message
-              setDisplayItems(prev =>
-                prev.map(item =>
-                  item.id === assistantMessageId
-                    ? {
-                        ...item,
-                        content: (item as ChatMessage).content + chunk,
-                      }
-                    : item,
-                ),
-              );
-              if (useStoreMode) {
-                useChatStore
-                  .getState()
-                  .appendToStream(assistantMessageId, chunk);
-              }
-            },
-            onComplete: (fullResponse: string) => {
-              // Update assistant message with final content
-              setDisplayItems(prev =>
-                prev.map(item =>
-                  item.id === assistantMessageId
-                    ? { ...item, content: fullResponse }
-                    : item,
-                ),
-              );
-              if (useStoreMode) {
-                useChatStore
-                  .getState()
-                  .updateMessage(assistantMessageId, { content: fullResponse });
-                useChatStore.getState().stopStreaming();
-              }
-            },
-            onError: (error: Error) => {
-              // Update assistant message with error
-              const errorContent = `Error: ${error.message}`;
-              setDisplayItems(prev =>
-                prev.map(item =>
-                  item.id === assistantMessageId
-                    ? { ...item, content: errorContent }
-                    : item,
-                ),
-              );
-              if (useStoreMode) {
-                useChatStore
-                  .getState()
-                  .updateMessage(assistantMessageId, { content: errorContent });
-                useChatStore.getState().stopStreaming();
-              }
-              setError(error);
-            },
-            signal: abortControllerRef.current.signal,
-          });
-        } else {
-          // Non-streaming mode: wait for full response
-          const response = await onSendMessage(messageContent, allMessages);
-          if (response) {
-            const assistantMessage = createAssistantMessage(response);
+      try {
+        if (onSendMessage) {
+          // Custom mode: use the provided message handler
+          if (enableStreaming) {
+            // Streaming mode: create assistant message placeholder and stream updates
+            const assistantMessageId = generateMessageId();
+            const assistantMessage = createAssistantMessage('');
+            assistantMessage.id = assistantMessageId;
             setDisplayItems(prev => [...prev, assistantMessage]);
+            currentAssistantMessageRef.current = assistantMessage;
+
             if (useStoreMode) {
               useChatStore.getState().addMessage(assistantMessage);
+              useChatStore.getState().startStreaming(assistantMessageId);
+            }
+
+            // Create abort controller for cancellation
+            abortControllerRef.current = new AbortController();
+
+            await onSendMessage(messageContent, allMessages, {
+              onChunk: (chunk: string) => {
+                // Append chunk to the assistant message
+                setDisplayItems(prev =>
+                  prev.map(item =>
+                    item.id === assistantMessageId
+                      ? {
+                          ...item,
+                          content: (item as ChatMessage).content + chunk,
+                        }
+                      : item,
+                  ),
+                );
+                if (useStoreMode) {
+                  useChatStore
+                    .getState()
+                    .appendToStream(assistantMessageId, chunk);
+                }
+              },
+              onComplete: (fullResponse: string) => {
+                // Update assistant message with final content
+                setDisplayItems(prev =>
+                  prev.map(item =>
+                    item.id === assistantMessageId
+                      ? { ...item, content: fullResponse }
+                      : item,
+                  ),
+                );
+                if (useStoreMode) {
+                  useChatStore.getState().updateMessage(assistantMessageId, {
+                    content: fullResponse,
+                  });
+                  useChatStore.getState().stopStreaming();
+                }
+              },
+              onError: (error: Error) => {
+                // Update assistant message with error
+                const errorContent = `Error: ${error.message}`;
+                setDisplayItems(prev =>
+                  prev.map(item =>
+                    item.id === assistantMessageId
+                      ? { ...item, content: errorContent }
+                      : item,
+                  ),
+                );
+                if (useStoreMode) {
+                  useChatStore.getState().updateMessage(assistantMessageId, {
+                    content: errorContent,
+                  });
+                  useChatStore.getState().stopStreaming();
+                }
+                setError(error);
+              },
+              signal: abortControllerRef.current.signal,
+            });
+          } else {
+            // Non-streaming mode: wait for full response
+            const response = await onSendMessage(messageContent, allMessages);
+            if (response) {
+              const assistantMessage = createAssistantMessage(response);
+              setDisplayItems(prev => [...prev, assistantMessage]);
+              if (useStoreMode) {
+                useChatStore.getState().addMessage(assistantMessage);
+              }
             }
           }
+        } else if (adapterRef.current) {
+          // Protocol mode: use the adapter
+          // Convert frontend tools to AG-UI format (only serializable properties)
+          const toolsForRequest = (frontendTools || []).map(tool => ({
+            name: tool.name,
+            description: tool.description,
+            parameters: tool.parameters || { type: 'object', properties: {} },
+          }));
+
+          // Get enabled MCP tool names and skill IDs
+          const enabledMcpToolNames = getEnabledMcpToolNames();
+          const enabledSkillIds = getEnabledSkillIds();
+
+          await adapterRef.current.sendMessage(userMessage, {
+            threadId: threadIdRef.current,
+            messages: allMessages,
+            ...(selectedModel && { model: selectedModel }),
+            tools: toolsForRequest,
+            // Include enabled MCP tools as builtin_tools for backend
+            builtinTools: enabledMcpToolNames,
+            // Include enabled skills for backend
+            skills: enabledSkillIds,
+            // Include connected identities with access tokens (use ref to avoid infinite loops)
+            identities: connectedIdentitiesRef.current,
+          } as Parameters<typeof adapterRef.current.sendMessage>[1]);
         }
-      } else if (adapterRef.current) {
-        // Protocol mode: use the adapter
-        // Convert frontend tools to AG-UI format (only serializable properties)
-        const toolsForRequest = (frontendTools || []).map(tool => ({
-          name: tool.name,
-          description: tool.description,
-          parameters: tool.parameters || { type: 'object', properties: {} },
-        }));
-
-        // Get enabled MCP tool names and skill IDs
-        const enabledMcpToolNames = getEnabledMcpToolNames();
-        const enabledSkillIds = getEnabledSkillIds();
-
-        await adapterRef.current.sendMessage(userMessage, {
-          threadId: threadIdRef.current,
-          messages: allMessages,
-          ...(selectedModel && { model: selectedModel }),
-          tools: toolsForRequest,
-          // Include enabled MCP tools as builtin_tools for backend
-          builtinTools: enabledMcpToolNames,
-          // Include enabled skills for backend
-          skills: enabledSkillIds,
-          // Include connected identities with access tokens (use ref to avoid infinite loops)
-          identities: connectedIdentitiesRef.current,
-        } as Parameters<typeof adapterRef.current.sendMessage>[1]);
+      } catch (err) {
+        if ((err as Error).name !== 'AbortError') {
+          console.error('[ChatBase] Send error:', err);
+          const errorMessage = createAssistantMessage(
+            `Error: ${(err as Error).message}`,
+          );
+          setDisplayItems(prev => [...prev, errorMessage]);
+          setError(err as Error);
+        }
+      } finally {
+        setIsLoading(false);
+        setIsStreaming(false);
+        currentAssistantMessageRef.current = null;
+        abortControllerRef.current = null;
       }
-    } catch (err) {
-      if ((err as Error).name !== 'AbortError') {
-        console.error('[ChatBase] Send error:', err);
-        const errorMessage = createAssistantMessage(
-          `Error: ${(err as Error).message}`,
-        );
-        setDisplayItems(prev => [...prev, errorMessage]);
-        setError(err as Error);
-      }
-    } finally {
-      setIsLoading(false);
-      setIsStreaming(false);
-      currentAssistantMessageRef.current = null;
-      abortControllerRef.current = null;
-    }
-  }, [
-    input,
-    isLoading,
-    displayItems,
-    selectedModel,
-    frontendTools,
-    useStoreMode,
-    onSendMessage,
-    enableStreaming,
-    getEnabledMcpToolNames,
-    getEnabledSkillIds,
-  ]);
+    },
+    [
+      input,
+      isLoading,
+      displayItems,
+      selectedModel,
+      frontendTools,
+      useStoreMode,
+      onSendMessage,
+      enableStreaming,
+      getEnabledMcpToolNames,
+      getEnabledSkillIds,
+    ],
+  );
+
+  // Auto-submit the initial prompt once history is loaded and the
+  // adapter (or custom handler) is available.
+  useEffect(() => {
+    if (!initialPrompt || initialPromptSentRef.current) return;
+    if (!historyLoaded) return;
+    if (!adapterRef.current && !onSendMessage) return;
+    initialPromptSentRef.current = true;
+    handleSend(initialPrompt);
+  }, [initialPrompt, historyLoaded, handleSend, onSendMessage]);
 
   // Handle stop
   const handleStop = useCallback(() => {

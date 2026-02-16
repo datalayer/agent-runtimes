@@ -260,6 +260,12 @@ export interface ChatProps {
   historyEndpoint?: string;
 
   /**
+   * An initial prompt to auto-submit after the chat is ready.
+   * Sent exactly once when the adapter and history are loaded.
+   */
+  initialPrompt?: string;
+
+  /**
    * Error banner to display at the top of the chat.
    * Use this to show sandbox connection errors or other warnings.
    */
@@ -371,6 +377,7 @@ export function Chat({
   onIdentityDisconnect,
   runtimeId,
   historyEndpoint,
+  initialPrompt,
   errorBanner,
   showInformation = true,
   chatViewMode,
@@ -661,6 +668,7 @@ export function Chat({
             autoFocus={autoFocus}
             runtimeId={runtimeId}
             historyEndpoint={historyEndpoint}
+            initialPrompt={initialPrompt}
             showInformation={showInformation}
             onInformationClick={() => setShowDetails(true)}
             showModelSelector={showModelSelector}
