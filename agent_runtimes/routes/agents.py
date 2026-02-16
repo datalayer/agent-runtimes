@@ -716,6 +716,7 @@ async def create_agent(
             pydantic_agent = PydanticAgent(
                 request.model,
                 system_prompt=final_system_prompt,
+                builtin_tools=(),  # Explicitly disable Pydantic AI built-in tools (e.g. CodeExecutionTool)
                 # Don't pass toolsets here - they'll be dynamically provided at run time
             )
             # Then wrap it with our adapter (pass agent_id for usage tracking)

@@ -331,6 +331,7 @@ async def _create_and_register_cli_agent(
     pydantic_agent = PydanticAgent(
         model,
         system_prompt=system_prompt,
+        builtin_tools=(),  # Explicitly disable Pydantic AI built-in tools (e.g. CodeExecutionTool)
     )
 
     # Create codemode builder for dynamic rebuilding
