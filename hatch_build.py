@@ -2,8 +2,10 @@
 # Distributed under the terms of the Modified BSD License.
 
 """
-Hatch build hook that copies the Vite frontend build output into the Python
-package so that ``agent_runtimes.app`` can serve it at ``/static``.
+Hatch build hook for copying Vite output into the Python package.
+
+Copies the Vite frontend build output into the Python package so that
+``agent_runtimes.app`` can serve it at ``/static``.
 
 The hook runs automatically when you build the wheel/sdist with hatch
 (or ``python -m build``).  It copies ``<repo>/dist/`` → ``agent_runtimes/static/dist/``
@@ -39,7 +41,8 @@ class AgentRuntimesBuildHook(BuildHookInterface):
     PLUGIN_NAME = "agent_runtimes_frontend"
 
     def initialize(self, version: str, build_data: dict) -> None:  # noqa: ARG002
-        """Called by hatchling before building.
+        """
+        Called by hatchling before building.
 
         1. If ``agent_runtimes/static/dist/`` already exists (e.g. when
            building a wheel from an sdist), do nothing.
