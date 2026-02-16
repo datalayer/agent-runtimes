@@ -26,13 +26,14 @@ import {
 } from '@primer/octicons-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Box } from '@datalayer/primer-addons';
-import type { Agent } from '../examples/stores/examplesStore';
-import type { Transport, Extension } from './chat';
+import type { Agent } from '../types/Types';
+import { IdentityCard } from './chat/components';
+import type { Transport, MCPServerConfig } from './chat/components';
+import type { Extension } from './chat/types';
 import type { McpServerSelection } from './McpServerManager';
 import { IdentityConnect, useIdentity } from '../identity';
 import type { OAuthProvider, OAuthProviderConfig, Identity } from '../identity';
-import { IdentityCard } from './chat';
-import type { MCPServerTool as MCPServerToolType } from '../types';
+import type { MCPServerTool as MCPServerToolType } from '../types/Types';
 
 /**
  * Agent spec entry from the library endpoint.
@@ -374,26 +375,6 @@ export interface SkillOption {
   id: string;
   name: string;
   description?: string;
-}
-
-/**
- * MCP Server configuration from backend
- */
-export interface MCPServerConfig {
-  id: string;
-  name: string;
-  url?: string;
-  enabled: boolean;
-  tools: MCPServerTool[];
-  command?: string;
-  args?: string[];
-  isAvailable?: boolean;
-  isRunning?: boolean;
-  /** True if this server is from mcp.json config (vs catalog) */
-  isConfig?: boolean;
-  transport?: string;
-  /** Required environment variables for this server */
-  requiredEnvVars?: string[];
 }
 
 type AgentLibrary = 'pydantic-ai' | 'langchain' | 'jupyter-ai';

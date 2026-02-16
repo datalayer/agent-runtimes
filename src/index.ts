@@ -20,4 +20,4 @@ export type {
   FrontendConfig,
   BuiltinTool,
   MCPServerTool,
-} from './types';
+} from './types/Types';

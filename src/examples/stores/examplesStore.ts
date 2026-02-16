@@ -5,6 +5,12 @@
 
 import { createStore } from 'zustand/vanilla';
 import { useStore } from 'zustand';
+import type {
+  Agent,
+  AgentStatus,
+  AgentsState,
+  Transport,
+} from '../../types/Types';
 
 // Import agent examples data files.
 import earthquakeDetectorData from './agents/earthquake-detector.json';
@@ -12,31 +18,7 @@ import stocksWatcherData from './agents/stock-market.json';
 import salesForecasterData from './agents/sales-forecaster.json';
 import socialPostGeneratorData from './agents/social-post-generator.json';
 
-export type AgentStatus = 'running' | 'paused';
-export type Transport = 'acp' | 'ag-ui' | 'vercel-ai' | 'a2a';
-
-export interface Agent {
-  id: string;
-  name: string;
-  description: string;
-  author: string;
-  lastEdited: string;
-  screenshot: string;
-  status?: AgentStatus;
-  transport: Transport;
-  avatarUrl: string;
-  notebookFile: string;
-  lexicalFile: string;
-  stars: number;
-  notifications: number;
-}
-
-export type AgentsState = {
-  agents: readonly Agent[];
-  getAgentById: (id: string) => Agent | undefined;
-  updateAgentStatus: (id: string, status: AgentStatus) => void;
-  toggleAgentStatus: (id: string) => void;
-};
+export type { Agent, AgentStatus, AgentsState, Transport };
 
 // Helper function to transform JSON data to Agent format
 const transformAgentData = (

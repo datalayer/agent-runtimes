@@ -90,8 +90,7 @@ import {
 } from '../../protocols';
 import type { FrontendToolDefinition } from '../../types/tool';
 import { ToolCallDisplay } from '../display/ToolCallDisplay';
-import type { BuiltinTool as BuiltinToolType } from '../../../../types';
-import type { MCPServerConfig as MCPServerConfigType } from '../../../AgentConfiguration';
+import type { BuiltinTool as BuiltinToolType } from '../../../../types/Types';
 
 /**
  * View mode for the chat component.
@@ -437,10 +436,21 @@ export interface MCPServerTool {
 /**
  * MCP Server configuration from backend
  */
-/**
- * MCP Server configuration (re-exported from AgentConfiguration)
- */
-export type MCPServerConfig = MCPServerConfigType;
+export interface MCPServerConfig {
+  id: string;
+  name: string;
+  description?: string;
+  url?: string;
+  enabled: boolean;
+  tools: MCPServerTool[];
+  command?: string;
+  args?: string[];
+  requiredEnvVars?: string[];
+  isAvailable?: boolean;
+  transport?: string;
+  isConfig?: boolean;
+  isRunning?: boolean;
+}
 
 /**
  * Remote configuration from server
@@ -1582,7 +1592,7 @@ function ChatBaseInner({
             const shouldEnableServer = isServerSelected(server);
 
             if (shouldEnableServer) {
-              const enabledToolNames = new Set(
+              const enabledToolNames = new Set<string>(
                 server.tools.filter(t => t.enabled).map(t => t.name),
               );
               newEnabledMcpTools.set(server.id, enabledToolNames);
@@ -1619,7 +1629,7 @@ function ChatBaseInner({
           server.enabled
         ) {
           // Newly added server - enable all tools
-          const enabledToolNames = new Set(
+          const enabledToolNames = new Set<string>(
             server.tools.filter(t => t.enabled).map(t => t.name),
           );
           newMap.set(server.id, enabledToolNames);

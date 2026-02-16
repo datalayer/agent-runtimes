@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { Box } from '@datalayer/primer-addons';
-import { Sparklines, SparklinesLine } from './sparklines';
+import { Sparklines, SparklinesLine } from '../../components/sparklines';
 
 export interface HeaderControlsProps {
   onToggleContextTree: () => void;

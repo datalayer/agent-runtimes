@@ -4,3 +4,4 @@
  */
 
 export * from './AIAgent';
+export * from './Types';

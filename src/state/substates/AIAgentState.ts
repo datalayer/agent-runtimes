@@ -10,9 +10,6 @@ import type { Transport } from '../../components/chat/components/Chat';
 
 export type AgentStatus = 'running' | 'paused' | 'initializing' | 'error';
 
-// Re-export Transport from components to avoid duplication
-export type { Transport };
-
 /**
  * Unified Agent model combining runtime tracking and UI state
  */

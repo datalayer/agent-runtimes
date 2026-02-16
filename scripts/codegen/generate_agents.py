@@ -315,7 +315,7 @@ def generate_typescript_code(
  * Generated from YAML specifications in specs/agents/
  */
 
-import type { AgentSpec } from '../../../types';
+import type { AgentSpec } from '../../../types/Types';
 """
 
     # Only add MCP server imports if needed

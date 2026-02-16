@@ -52,7 +52,7 @@ import {
   CodeActionMenuPlugin,
   ListMaxIndentLevelPlugin,
 } from '@datalayer/jupyter-lexical';
-import { editorConfig } from '../examples/lexical/editorConfig';
+import { editorConfig } from '../lexical/editorConfig';
 
 import '@datalayer/jupyter-lexical/style/index.css';
 import '../examples/lexical/lexical-theme.css';

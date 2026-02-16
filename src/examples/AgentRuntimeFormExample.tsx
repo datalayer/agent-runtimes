@@ -28,6 +28,8 @@ import {
   MainContent,
   Header,
   FooterMetrics,
+} from './components';
+import {
   AgentConfiguration,
   type AgentLibrary,
   type McpServerSelection,

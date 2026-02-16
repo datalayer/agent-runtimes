@@ -10,10 +10,13 @@ import { JupyterReactTheme, Viewer } from '@datalayer/jupyter-react';
 import type { ServiceManager } from '@jupyterlab/services';
 import { TimeTravel } from './TimeTravel';
 import { LexicalEditor } from './LexicalEditor';
-import { McpServerManager, type McpServerSelection } from './McpServerManager';
+import {
+  McpServerManager,
+  type McpServerSelection,
+} from '../../components/McpServerManager';
 
-import matplotlib from '../examples/stores/notebooks/NotebookExample2.ipynb.json';
-import emptyNotebook from '../examples/stores/notebooks/Empty.ipynb.json';
+import matplotlib from '../stores/notebooks/NotebookExample2.ipynb.json';
+import emptyNotebook from '../stores/notebooks/Empty.ipynb.json';
 
 export interface MainContentProps {
   showNotebook: boolean;

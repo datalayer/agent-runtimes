@@ -11,7 +11,7 @@
  * Generated from YAML specifications in specs/agents/
  */
 
-import type { AgentSpec } from '../../../types';
+import type { AgentSpec } from '../../../types/Types';
 import {
   FILESYSTEM_MCP_SERVER,
   KAGGLE_MCP_SERVER,

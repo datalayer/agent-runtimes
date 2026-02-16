@@ -4,6 +4,49 @@
  */
 
 // ============================================================================
+// Agent Status
+// ============================================================================
+
+/**
+ * Status of an agent.
+ */
+export type AgentStatus =
+  | 'starting'
+  | 'running'
+  | 'paused'
+  | 'terminated'
+  | 'archived';
+
+// ============================================================================
+// Example Agent Types
+// ============================================================================
+
+export type Transport = 'acp' | 'ag-ui' | 'vercel-ai' | 'a2a';
+
+export interface Agent {
+  id: string;
+  name: string;
+  description: string;
+  author: string;
+  lastEdited: string;
+  screenshot: string;
+  status?: AgentStatus;
+  transport: Transport;
+  avatarUrl: string;
+  notebookFile: string;
+  lexicalFile: string;
+  stars: number;
+  notifications: number;
+}
+
+export type AgentsState = {
+  agents: readonly Agent[];
+  getAgentById: (id: string) => Agent | undefined;
+  updateAgentStatus: (id: string, status: AgentStatus) => void;
+  toggleAgentStatus: (id: string) => void;
+};
+
+// ============================================================================
 // Conversation Types
 // ============================================================================
 
@@ -93,16 +136,6 @@ export interface AgentSkillSpec {
 // ============================================================================
 // Agent Types
 // ============================================================================
-
-/**
- * Status of an agent space.
- */
-export type AgentStatus =
-  | 'starting'
-  | 'running'
-  | 'paused'
-  | 'terminated'
-  | 'archived';
 
 /**
  * Specification for an AI agent.

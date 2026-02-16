@@ -11,7 +11,7 @@
  * Generated from YAML specifications in specs/agents/
  */
 
-import type { AgentSpec } from '../../../types';
+import type { AgentSpec } from '../../../types/Types';
 import {
   ALPHAVANTAGE_MCP_SERVER,
   FILESYSTEM_MCP_SERVER,
