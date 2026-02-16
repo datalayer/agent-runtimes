@@ -9,7 +9,6 @@ Generates Python and TypeScript code from YAML agent specifications.
 """
 
 import argparse
-import subprocess
 import sys
 from pathlib import Path
 from typing import Any, Dict, List
@@ -471,7 +470,9 @@ function toAgentSkillSpec(skill: SkillSpec) {
 
             # Sandbox variant field
             sandbox_variant = spec.get("sandbox_variant")
-            sandbox_variant_ts = f"'{sandbox_variant}'" if sandbox_variant else "undefined"
+            sandbox_variant_ts = (
+                f"'{sandbox_variant}'" if sandbox_variant else "undefined"
+            )
 
             code += f"""export const {const_name}: AgentSpec = {{
   id: '{full_agent_id}',
@@ -650,7 +651,7 @@ def generate_subfolder_structure(specs: List[tuple[str, Dict[str, Any]]], args):
         # Create __init__.py for Python subfolder
         python_init = python_folder_dir / "__init__.py"
         with open(python_init, "w") as f:
-            f.write(f"""# Copyright (c) 2025-2026 Datalayer, Inc.
+            f.write("""# Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
 from .agents import *
@@ -680,7 +681,7 @@ __all__ = ["AGENT_SPECS", "get_agent_spec", "list_agent_specs"]
         # Create index.ts for TypeScript subfolder
         typescript_index = typescript_folder_dir / "index.ts"
         with open(typescript_index, "w") as f:
-            f.write(f"""/*
+            f.write("""/*
  * Copyright (c) 2025-2026 Datalayer, Inc.
  * Distributed under the terms of the Modified BSD License.
  */

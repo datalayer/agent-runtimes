@@ -28,7 +28,6 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from starlette.routing import Mount
 
-from .specs.agents import get_agent_spec
 from .mcp import (
     ensure_config_mcp_toolsets_event,
     get_mcp_lifecycle_manager,
@@ -62,6 +61,7 @@ from .routes import (
     vercel_ai_router,
 )
 from .routes.agents import set_api_prefix
+from .specs.agents import get_agent_spec
 
 # Load environment variables from .env file
 load_dotenv()
@@ -151,8 +151,10 @@ async def _create_and_register_cli_agent(
 
     # Determine effective sandbox variant
     # Priority: CLI/env var > agent spec > environment-based default
-    effective_variant = sandbox_variant or agent_spec.sandbox_variant or (
-        "local-jupyter" if jupyter_sandbox_url else "local-eval"
+    effective_variant = (
+        sandbox_variant
+        or agent_spec.sandbox_variant
+        or ("local-jupyter" if jupyter_sandbox_url else "local-eval")
     )
 
     # Create shared sandbox if both codemode and skills are enabled,
@@ -184,8 +186,8 @@ async def _create_and_register_cli_agent(
                 )
             except ImportError as e:
                 raise RuntimeError(
-                    f"Cannot create Jupyter sandbox: code_sandboxes package is not installed. "
-                    f"Install it with: pip install code-sandboxes"
+                    "Cannot create Jupyter sandbox: code_sandboxes package is not installed. "
+                    "Install it with: pip install code-sandboxes"
                 ) from e
             except Exception as e:
                 raise RuntimeError(
@@ -308,6 +310,7 @@ async def _create_and_register_cli_agent(
     # Create the underlying Pydantic AI Agent
     # Use model from agent spec, environment variable override, or global default
     from agent_runtimes.specs.models import DEFAULT_MODEL
+
     env_model = os.environ.get("AGENT_RUNTIMES_MODEL")
     model = env_model or agent_spec.model or DEFAULT_MODEL.value
 
@@ -639,6 +642,7 @@ async def _create_and_register_cli_agent(
 
     # Build startup info dict with agent and sandbox details
     from agent_runtimes.specs.models import DEFAULT_MODEL
+
     env_model = os.environ.get("AGENT_RUNTIMES_MODEL")
     startup_model = env_model or agent_spec.model or DEFAULT_MODEL.value
 
@@ -909,9 +913,7 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
                     )
 
                 # Read sandbox variant from environment
-                sandbox_variant = os.environ.get(
-                    "AGENT_RUNTIMES_SANDBOX_VARIANT"
-                )
+                sandbox_variant = os.environ.get("AGENT_RUNTIMES_SANDBOX_VARIANT")
 
                 # Create and register the agent with codemode and skills if enabled
                 startup_info = await _create_and_register_cli_agent(

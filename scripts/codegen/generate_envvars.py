@@ -132,7 +132,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
             "def get_envvar_spec(envvar_id: str) -> EnvvarSpec:",
             '    """Get environment variable specification by ID."""',
             "    if envvar_id not in ENVVAR_CATALOG:",
-            f'        raise ValueError(f"Unknown environment variable: {{envvar_id}}")',
+            '        raise ValueError(f"Unknown environment variable: {envvar_id}")',
             "    return ENVVAR_CATALOG[envvar_id]",
             "",
         ]

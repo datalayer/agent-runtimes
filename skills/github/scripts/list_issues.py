@@ -44,20 +44,20 @@ def list_issues(
     per_page: int = 100,
 ) -> list[dict]:
     """List issues for a repository.
-    
+
     Args:
         owner: Repository owner
         repo: Repository name
         state: Issue state - 'open', 'closed', or 'all'
         per_page: Number of results per page
-        
+
     Returns:
         List of issue dictionaries (excluding pull requests).
     """
     headers = get_github_headers()
     issues = []
     page = 1
-    
+
     while True:
         response = httpx.get(
             f"https://api.github.com/repos/{owner}/{repo}/issues",
@@ -69,25 +69,25 @@ def list_issues(
             },
             timeout=30.0,
         )
-        
+
         if response.status_code == 401:
             print("Error: Invalid or expired GITHUB_TOKEN", file=sys.stderr)
             sys.exit(1)
         elif response.status_code == 404:
             print(f"Error: Repository '{owner}/{repo}' not found", file=sys.stderr)
             sys.exit(1)
-            
+
         response.raise_for_status()
         page_issues = response.json()
-        
+
         if not page_issues:
             break
-        
+
         # Filter out pull requests (they appear in issues API too)
         real_issues = [i for i in page_issues if "pull_request" not in i]
         issues.extend(real_issues)
         page += 1
-        
+
     return issues
 
 
@@ -95,30 +95,28 @@ def format_table(issues: list[dict]) -> str:
     """Format issues as a table."""
     if not issues:
         return "No issues found."
-    
+
     lines = []
     lines.append(f"{'#':<7} {'State':<8} {'Title':<55} {'Author':<15} {'Created':<12}")
     lines.append("-" * 100)
-    
+
     for issue in issues:
         number = f"#{issue['number']}"
         state = "🟢 Open" if issue["state"] == "open" else "🔴 Closed"
         title = issue["title"][:53]
         author = (issue.get("user", {}).get("login") or "-")[:13]
         created = issue.get("created_at", "")[:10]
-        
+
         lines.append(f"{number:<7} {state:<8} {title:<55} {author:<15} {created:<12}")
-    
+
     lines.append("-" * 100)
     lines.append(f"Total: {len(issues)} issues")
-    
+
     return "\n".join(lines)
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="List issues for a GitHub repository."
-    )
+    parser = argparse.ArgumentParser(description="List issues for a GitHub repository.")
     parser.add_argument(
         "repo",
         help="Repository in format 'owner/repo'",
@@ -141,22 +139,22 @@ def main():
         default=50,
         help="Maximum number of issues to display (default: 50)",
     )
-    
+
     args = parser.parse_args()
-    
+
     # Parse owner/repo
     if "/" not in args.repo:
         print("Error: Repository must be in format 'owner/repo'", file=sys.stderr)
         sys.exit(1)
-    
+
     owner, repo = args.repo.split("/", 1)
-    
+
     try:
         issues = list_issues(owner, repo, state=args.state)
-        
+
         if args.limit:
-            issues = issues[:args.limit]
-        
+            issues = issues[: args.limit]
+
         if args.format == "json":
             simplified = [
                 {
@@ -175,7 +173,7 @@ def main():
             print(json.dumps(simplified, indent=2))
         else:
             print(format_table(issues))
-            
+
     except httpx.HTTPStatusError as e:
         print(f"HTTP error: {e.response.status_code}", file=sys.stderr)
         sys.exit(1)

@@ -21,10 +21,6 @@ from pydantic import BaseModel, Field
 from pydantic_ai import Agent as PydanticAgent
 
 from ..adapters.pydantic_ai_adapter import PydanticAIAdapter
-from ..specs.agents import AGENT_SPECS
-from ..specs.agents import get_agent_spec as get_library_agent_spec
-from ..specs.agents import list_agent_specs as list_library_agents
-from ..specs.models import DEFAULT_MODEL
 from ..mcp import get_mcp_manager, initialize_config_mcp_servers
 from ..mcp.catalog_mcp_servers import MCP_SERVER_CATALOG
 from ..mcp.lifecycle import get_mcp_lifecycle_manager
@@ -35,6 +31,10 @@ from ..services import (
     initialize_codemode_toolset,
     wire_skills_into_codemode,
 )
+from ..specs.agents import AGENT_SPECS
+from ..specs.agents import get_agent_spec as get_library_agent_spec
+from ..specs.agents import list_agent_specs as list_library_agents
+from ..specs.models import DEFAULT_MODEL
 from ..transports import AGUITransport, MCPUITransport, VercelAITransport
 from ..types import AgentSpec
 from .a2a import A2AAgentCard, register_a2a_agent, unregister_a2a_agent
@@ -437,10 +437,7 @@ async def create_agent(
             if not request.description and spec.description:
                 request.description = spec.description
             # Use the model from the spec if the request still has the default
-            if (
-                request.model == DEFAULT_MODEL.value
-                and spec.model
-            ):
+            if request.model == DEFAULT_MODEL.value and spec.model:
                 request.model = spec.model
             # Use the sandbox_variant from the spec if not set in the request
             if not request.sandbox_variant and spec.sandbox_variant:
@@ -591,16 +588,16 @@ async def create_agent(
                     )
                     # Wrap in ManagedSandbox-like interface for compatibility
                     shared_sandbox = agent_sandbox
-                    logger.info(
-                        f"Created per-agent Jupyter sandbox for '{agent_id}'"
-                    )
+                    logger.info(f"Created per-agent Jupyter sandbox for '{agent_id}'")
                 except ImportError as e:
                     logger.warning(
                         f"code_sandboxes not installed, falling back to local-eval: {e}"
                     )
                     shared_sandbox = create_shared_sandbox(None)
                 except Exception as e:
-                    logger.error(f"Failed to create Jupyter sandbox for agent '{agent_id}': {e}")
+                    logger.error(
+                        f"Failed to create Jupyter sandbox for agent '{agent_id}': {e}"
+                    )
                     raise HTTPException(
                         status_code=500,
                         detail=f"Failed to create Jupyter sandbox: {str(e)}",
@@ -1827,7 +1824,9 @@ async def start_all_agents_mcp_servers(
                 # Update startup_info on app.state so /health/startup
                 # reflects the reconfigured sandbox (e.g. after the
                 # runtimes-companion calls this endpoint).
-                existing_info: dict[str, Any] = getattr(request.app.state, "startup_info", None) or {}
+                existing_info: dict[str, Any] = (
+                    getattr(request.app.state, "startup_info", None) or {}
+                )
                 sandbox_block = existing_info.get("sandbox", {})
                 sandbox_block["variant"] = sandbox_variant
                 sandbox_block["jupyter_url"] = body.jupyter_sandbox.split("?")[0]
@@ -1974,7 +1973,9 @@ async def start_agent_mcp_servers(
 
                 # Update startup_info on app.state so /health/startup
                 # reflects the reconfigured sandbox.
-                existing_info: dict[str, Any] = getattr(request.app.state, "startup_info", None) or {}
+                existing_info: dict[str, Any] = (
+                    getattr(request.app.state, "startup_info", None) or {}
+                )
                 sandbox_block = existing_info.get("sandbox", {})
                 sandbox_block["variant"] = sandbox_variant
                 sandbox_block["jupyter_url"] = body.jupyter_sandbox.split("?")[0]

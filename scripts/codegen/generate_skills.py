@@ -314,14 +314,14 @@ def main():
     print(f"Loaded {len(specs)} skill specifications")
 
     # Generate Python code
-    print(f"Generating Python code...")
+    print("Generating Python code...")
     python_code = generate_python_code(specs)
     args.python_output.parent.mkdir(parents=True, exist_ok=True)
     args.python_output.write_text(python_code)
     print(f"✓ Generated {args.python_output}")
 
     # Generate TypeScript code
-    print(f"Generating TypeScript code...")
+    print("Generating TypeScript code...")
     typescript_code = generate_typescript_code(specs)
     args.typescript_output.parent.mkdir(parents=True, exist_ok=True)
     args.typescript_output.write_text(typescript_code)

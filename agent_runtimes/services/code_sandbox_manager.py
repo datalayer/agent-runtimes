@@ -733,14 +733,10 @@ class CodeSandboxManager:
                     f"Call stop_agent_sandbox() first."
                 )
 
-            logger.info(
-                f"Creating {variant} sandbox for agent '{agent_id}'"
-            )
+            logger.info(f"Creating {variant} sandbox for agent '{agent_id}'")
             sandbox = self._create_sandbox(variant=variant)
             sandbox.start()
-            logger.info(
-                f"Started {variant} sandbox for agent '{agent_id}'"
-            )
+            logger.info(f"Started {variant} sandbox for agent '{agent_id}'")
 
             # Inject env vars if provided
             if env_vars:

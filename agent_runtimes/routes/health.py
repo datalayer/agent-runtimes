@@ -82,9 +82,7 @@ async def startup_info(request: Request) -> dict[str, Any]:
     """
     import logging
 
-    info: dict[str, Any] = dict(
-        getattr(request.app.state, "startup_info", None) or {}
-    )
+    info: dict[str, Any] = dict(getattr(request.app.state, "startup_info", None) or {})
 
     # Dynamically enrich sandbox info from the sandbox manager so that
     # any reconfiguration (e.g. local-eval → local-jupyter) is reflected.

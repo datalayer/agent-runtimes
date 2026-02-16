@@ -72,9 +72,7 @@ class JupyterChatConfig:
     def get_default_model(self) -> str:
         """Get the default model ID."""
         config = self.load_config()
-        return config.get(
-            "default_model", DEFAULT_MODEL.value
-        )
+        return config.get("default_model", DEFAULT_MODEL.value)
 
     def set_default_model(self, model_id: str) -> None:
         """Set the default model ID."""

@@ -18,7 +18,6 @@ seamlessly use both Code Mode (for tool composition) and Skills
 
 import asyncio
 import shutil
-from pathlib import Path
 
 
 async def example_integration_setup():
@@ -92,7 +91,7 @@ env_info = {
 print(json.dumps(env_info, indent=2))
 """)
 
-        print(f"\nExecution result:")
+        print("\nExecution result:")
         print(f"  Success: {result['success']}")
         print(f"  Output:\n{result.get('output', 'No output')}")
 
@@ -110,7 +109,6 @@ async def example_tool_search():
     """
     Example 3: Searching for Tools via Integration.
     """
-    from agent_runtimes.integrations import CodemodeIntegration
 
     print("\n" + "=" * 60)
     print("Example 3: Tool Search via Integration")
@@ -138,7 +136,6 @@ async def example_skill_integration():
     """
     Example 4: Using Skills via Integration.
     """
-    from agent_runtimes.integrations import CodemodeIntegration
 
     print("\n" + "=" * 60)
     print("Example 4: Skills via Integration")
