@@ -257,6 +257,82 @@ function getMessageText(message: ChatMessage): string {
 }
 
 /**
+ * Convert history messages to display items.
+ *
+ * History returns:
+ * - Assistant messages with `toolCalls` array (tool invocations)
+ * - Tool messages (role='tool') with content (tool results)
+ *
+ * For display, we need to:
+ * 1. Keep user/assistant text messages as ChatMessage
+ * 2. Convert each toolCall from assistant messages into a ToolCallMessage
+ * 3. Match tool result messages (role='tool') to their ToolCallMessage and update result
+ * 4. Filter out raw tool messages (role='tool') from display — they're merged into ToolCallMessage
+ */
+function convertHistoryToDisplayItems(messages: ChatMessage[]): DisplayItem[] {
+  const displayItems: DisplayItem[] = [];
+  const toolCallMap = new Map<string, ToolCallMessage>();
+
+  // First pass: collect all tool calls and build the initial display list
+  for (const msg of messages) {
+    if (msg.role === 'tool') {
+      // Tool result messages — will be merged later
+      const toolCallId = msg.metadata?.toolCallId as string | undefined;
+      if (toolCallId && toolCallMap.has(toolCallId)) {
+        // Update the existing tool call with the result
+        const toolCall = toolCallMap.get(toolCallId)!;
+        toolCall.result = msg.content;
+        toolCall.status = 'complete';
+      }
+      // Don't add tool messages to display — they're represented by ToolCallMessage
+      continue;
+    }
+
+    if (msg.role === 'assistant' && msg.toolCalls && msg.toolCalls.length > 0) {
+      // Assistant message with tool calls
+      // First add any text content as a regular message
+      const textContent =
+        typeof msg.content === 'string' ? msg.content.trim() : '';
+      if (textContent) {
+        displayItems.push({
+          ...msg,
+          toolCalls: undefined, // Remove toolCalls from the text message
+        });
+      }
+
+      // Then add each tool call as a ToolCallMessage
+      // Map from message.ts ToolCallStatus to ChatBase ToolCallStatus
+      for (const tc of msg.toolCalls) {
+        let status: ToolCallStatus = 'complete';
+        if (tc.status === 'pending' || tc.status === 'awaiting-approval') {
+          status = 'inProgress';
+        } else if (tc.status === 'executing') {
+          status = 'executing';
+        } else if (tc.status === 'failed') {
+          status = 'error';
+        }
+        const toolCallMsg: ToolCallMessage = {
+          id: `tc-${tc.toolCallId}`,
+          type: 'tool-call',
+          toolCallId: tc.toolCallId,
+          toolName: tc.toolName,
+          args: tc.args || {},
+          status,
+          result: tc.result,
+        };
+        toolCallMap.set(tc.toolCallId, toolCallMsg);
+        displayItems.push(toolCallMsg);
+      }
+    } else {
+      // Regular user/assistant/system message
+      displayItems.push(msg);
+    }
+  }
+
+  return displayItems;
+}
+
+/**
  * Avatar configuration
  */
 export interface AvatarConfig {
@@ -1755,10 +1831,12 @@ function ChatBaseInner({
           },
         );
 
-        // Store in memory and update display
+        // Store in memory and convert to display items
         if (messages.length > 0) {
           store.setMessages(runtimeId, messages);
-          setDisplayItems(messages);
+          // Convert to display items: expand tool calls, merge tool results
+          const items = convertHistoryToDisplayItems(messages);
+          setDisplayItems(items);
         }
 
         store.markFetched(runtimeId);
