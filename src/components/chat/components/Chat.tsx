@@ -31,6 +31,7 @@ import type {
   ModelConfig,
   ChatViewMode,
 } from './base/ChatBase';
+import type { FrontendToolDefinition } from '../types/tool';
 import type { McpServerSelection } from '../types';
 import { useConnectedIdentities } from '../../../identity';
 import type {
@@ -284,6 +285,12 @@ export interface ChatProps {
    * Callback when the user switches chat view mode via the header toggle.
    */
   onChatViewModeChange?: (mode: ChatViewMode) => void;
+
+  /**
+   * Frontend tool definitions to register with the chat.
+   * Pass an empty array to explicitly disable all frontend tools.
+   */
+  frontendTools?: FrontendToolDefinition[];
 }
 
 /**
@@ -368,6 +375,7 @@ export function Chat({
   showInformation = true,
   chatViewMode,
   onChatViewModeChange,
+  frontendTools,
 }: ChatProps) {
   const [error, setError] = useState<string | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
@@ -679,6 +687,7 @@ export function Chat({
             focusTrigger={focusTrigger}
             chatViewMode={chatViewMode}
             onChatViewModeChange={onChatViewModeChange}
+            frontendTools={frontendTools}
           />
         </Box>
       </Box>
