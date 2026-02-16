@@ -1799,6 +1799,7 @@ function ChatBaseInner({
       if (storedMessages.length > 0) {
         setDisplayItems(storedMessages);
       }
+      setHistoryLoaded(true);
       return;
     }
 
@@ -1816,6 +1817,7 @@ function ChatBaseInner({
         runtimeId,
       );
       store.markFetched(runtimeId);
+      setHistoryLoaded(true);
       return;
     }
 
