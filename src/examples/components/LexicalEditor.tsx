@@ -55,7 +55,7 @@ import {
 import { editorConfig } from '../lexical/editorConfig';
 
 import '@datalayer/jupyter-lexical/style/index.css';
-import '../examples/lexical/lexical-theme.css';
+import '../lexical/lexical-theme.css';
 
 const LEXICAL_ID = 'agent-runtime-lexical-editor';
 const INITIAL_CONTENT = undefined;
