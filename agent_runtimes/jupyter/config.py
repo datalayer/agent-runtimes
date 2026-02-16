@@ -37,7 +37,7 @@ class JupyterChatConfig:
 
     def _create_default_config(self) -> None:
         """Create default configuration file."""
-        default_config = {
+        default_config: Dict[str, Any] = {
             "mcp_servers": [],
             "default_model": DEFAULT_MODEL.value,
             "enabled_tools": [],

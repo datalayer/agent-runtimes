@@ -37,7 +37,6 @@ import {
   LabelGroup,
   Label,
   ToggleSwitch,
-  AnchoredOverlay,
 } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import {
@@ -1483,6 +1482,10 @@ function ChatBaseInner({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  // State for context pie chart overlay
+  const [contextOverlayOpen, setContextOverlayOpen] = useState(false);
+  const contextAnchorRef = useRef<HTMLDivElement>(null);
+  const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Use a ref for connectedIdentities to avoid infinite loops in useCallback
   // (the array reference changes on every render even if contents are the same)
   const connectedIdentitiesRef = useRef(connectedIdentities);
@@ -2764,11 +2767,6 @@ function ChatBaseInner({
       </Box>
     );
   };
-
-  // State for context pie chart overlay
-  const [contextOverlayOpen, setContextOverlayOpen] = useState(false);
-  const contextAnchorRef = useRef<HTMLDivElement>(null);
-  const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Render token usage bar between input and selectors
   const renderTokenUsage = () => {

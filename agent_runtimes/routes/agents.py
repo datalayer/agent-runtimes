@@ -1827,7 +1827,7 @@ async def start_all_agents_mcp_servers(
                 # Update startup_info on app.state so /health/startup
                 # reflects the reconfigured sandbox (e.g. after the
                 # runtimes-companion calls this endpoint).
-                existing_info: dict = getattr(request.app.state, "startup_info", None) or {}
+                existing_info: dict[str, Any] = getattr(request.app.state, "startup_info", None) or {}
                 sandbox_block = existing_info.get("sandbox", {})
                 sandbox_block["variant"] = sandbox_variant
                 sandbox_block["jupyter_url"] = body.jupyter_sandbox.split("?")[0]
@@ -1974,7 +1974,7 @@ async def start_agent_mcp_servers(
 
                 # Update startup_info on app.state so /health/startup
                 # reflects the reconfigured sandbox.
-                existing_info: dict = getattr(request.app.state, "startup_info", None) or {}
+                existing_info: dict[str, Any] = getattr(request.app.state, "startup_info", None) or {}
                 sandbox_block = existing_info.get("sandbox", {})
                 sandbox_block["variant"] = sandbox_variant
                 sandbox_block["jupyter_url"] = body.jupyter_sandbox.split("?")[0]
