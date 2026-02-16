@@ -260,10 +260,10 @@ export interface ChatProps {
   historyEndpoint?: string;
 
   /**
-   * An initial prompt to auto-submit after the chat is ready.
-   * Sent exactly once when the adapter and history are loaded.
+   * A prompt to append and send after the conversation history is loaded.
+   * The message is shown in the chat and sent to the agent exactly once.
    */
-  initialPrompt?: string;
+  pendingPrompt?: string;
 
   /**
    * Error banner to display at the top of the chat.
@@ -377,7 +377,7 @@ export function Chat({
   onIdentityDisconnect,
   runtimeId,
   historyEndpoint,
-  initialPrompt,
+  pendingPrompt,
   errorBanner,
   showInformation = true,
   chatViewMode,
@@ -668,7 +668,7 @@ export function Chat({
             autoFocus={autoFocus}
             runtimeId={runtimeId}
             historyEndpoint={historyEndpoint}
-            initialPrompt={initialPrompt}
+            pendingPrompt={pendingPrompt}
             showInformation={showInformation}
             onInformationClick={() => setShowDetails(true)}
             showModelSelector={showModelSelector}

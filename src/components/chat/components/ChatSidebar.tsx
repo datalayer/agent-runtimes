@@ -120,10 +120,10 @@ export interface ChatSidebarProps {
   description?: string;
 
   /**
-   * An initial prompt to auto-submit after the chat is ready.
-   * Sent exactly once when the adapter and history are loaded.
+   * A prompt to append and send after the conversation history is loaded.
+   * The message is shown in the chat and sent to the agent exactly once.
    */
-  initialPrompt?: string;
+  pendingPrompt?: string;
 
   /** Additional ChatBase props */
   panelProps?: Partial<ChatBaseProps>;
@@ -177,7 +177,7 @@ export function ChatSidebar({
   enableStreaming = true,
   placeholder = 'Ask a question...',
   description,
-  initialPrompt,
+  pendingPrompt,
   panelProps,
 }: ChatSidebarProps) {
   const isOpen = useChatOpen();
@@ -454,7 +454,7 @@ export function ChatSidebar({
           description={description}
           onSendMessage={onSendMessage}
           enableStreaming={enableStreaming}
-          initialPrompt={initialPrompt}
+          pendingPrompt={pendingPrompt}
           {...panelProps}
         >
           {children}

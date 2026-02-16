@@ -795,12 +795,10 @@ export interface ChatBaseProps {
   historyAuthToken?: string;
 
   /**
-   * An initial prompt to auto-submit after the chat is ready
-   * (adapter initialised and conversation history loaded).
-   * The prompt is sent exactly once; passing a new value will
-   * NOT trigger another send.
+   * A prompt to append and send after the conversation history is loaded.
+   * The message is shown in the chat and sent to the agent exactly once.
    */
-  initialPrompt?: string;
+  pendingPrompt?: string;
 }
 
 /**
@@ -1199,8 +1197,8 @@ export function ChatBase({
   runtimeId,
   historyEndpoint,
   historyAuthToken,
-  // Auto-submit
-  initialPrompt,
+  // Pending prompt
+  pendingPrompt,
 }: ChatBaseProps) {
   const protocol: ProtocolConfig | undefined = agentRuntimeConfig
     ? {
@@ -1281,7 +1279,7 @@ export function ChatBase({
           runtimeId={runtimeId}
           historyEndpoint={historyEndpoint}
           historyAuthToken={historyAuthToken}
-          initialPrompt={initialPrompt}
+          pendingPrompt={pendingPrompt}
         />
       </QueryClientProvider>
     );
@@ -1347,7 +1345,7 @@ export function ChatBase({
       runtimeId={runtimeId}
       historyEndpoint={historyEndpoint}
       historyAuthToken={historyAuthToken}
-      initialPrompt={initialPrompt}
+      pendingPrompt={pendingPrompt}
     />
   );
 }
@@ -1417,10 +1415,16 @@ function ChatBaseInner({
   runtimeId,
   historyEndpoint,
   historyAuthToken,
-  // Auto-submit
-  initialPrompt,
+  // Pending prompt
+  pendingPrompt,
 }: ChatBaseProps) {
   useHighZIndexPortal();
+
+  // Stabilize the protocol reference so that the adapter-init effect only
+  // re-runs when the protocol *contents* actually change, not just when the
+  // parent re-renders with a new object literal that has the same values.
+
+  const protocolKey = protocol ? JSON.stringify(protocol) : '';
 
   // Store (optional for message persistence)
   const clearStoreMessages = useChatStore(state => state.clearMessages);
@@ -1437,8 +1441,10 @@ function ChatBaseInner({
 
   // History-loaded flag — true immediately when there is nothing to fetch
   const [historyLoaded, setHistoryLoaded] = useState(!runtimeId);
-  // Guard so the initial prompt is sent at most once
-  const initialPromptSentRef = useRef(false);
+  // Adapter-ready flag — flipped to true once the protocol adapter is initialised
+  const [adapterReady, setAdapterReady] = useState(false);
+  // Guard so the pending prompt is sent at most once
+  const pendingPromptSentRef = useRef(false);
   const [selectedModel, setSelectedModel] = useState<string>('');
   // enabledTools tracks which MCP server tools are enabled
   // Format: Map<serverId, Set<toolName>>
@@ -1955,6 +1961,7 @@ function ChatBaseInner({
     if (!adapter) return;
 
     adapterRef.current = adapter;
+    setAdapterReady(true);
 
     // Subscribe to protocol events
     unsubscribeRef.current = adapter.subscribe((event: ProtocolEvent) => {
@@ -2330,9 +2337,12 @@ function ChatBaseInner({
       unsubscribeRef.current?.();
       adapterRef.current?.disconnect();
     };
-    // Note: frontendTools is accessed via ref-like closure, not as reactive dependency
+    // protocolKey (JSON-serialised) replaces the protocol object reference so
+    // that parent re-renders producing a new-but-identical protocol object
+    // don't tear down and re-create the adapter mid-request.
+    // frontendTools is accessed via ref-like closure, not as reactive dependency
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [protocol, renderToolResult, onStateUpdate, useStoreMode]);
+  }, [protocolKey, renderToolResult, onStateUpdate, useStoreMode]);
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -2340,7 +2350,7 @@ function ChatBaseInner({
   }, [displayItems]);
 
   // Handle sending message in protocol mode or custom mode.
-  // An optional messageOverride bypasses the input state (used by initialPrompt).
+  // An optional messageOverride bypasses the input state (used by pendingPrompt).
   const handleSend = useCallback(
     async (messageOverride?: string) => {
       const messageContent = (messageOverride ?? input).trim();
@@ -2508,15 +2518,16 @@ function ChatBaseInner({
     ],
   );
 
-  // Auto-submit the initial prompt once history is loaded and the
+  // Send the pending prompt once history is loaded and the
   // adapter (or custom handler) is available.
   useEffect(() => {
-    if (!initialPrompt || initialPromptSentRef.current) return;
+    if (!pendingPrompt || pendingPromptSentRef.current) return;
     if (!historyLoaded) return;
-    if (!adapterRef.current && !onSendMessage) return;
-    initialPromptSentRef.current = true;
-    handleSend(initialPrompt);
-  }, [initialPrompt, historyLoaded, handleSend, onSendMessage]);
+    if (!adapterReady && !onSendMessage) return;
+    pendingPromptSentRef.current = true;
+    // Use a microtask to ensure the adapter subscription is fully wired.
+    queueMicrotask(() => handleSend(pendingPrompt));
+  }, [pendingPrompt, historyLoaded, adapterReady, handleSend, onSendMessage]);
 
   // Handle stop
   const handleStop = useCallback(() => {

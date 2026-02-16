@@ -289,10 +289,10 @@ export interface ChatFloatingProps {
   historyAuthToken?: string;
 
   /**
-   * An initial prompt to auto-submit after the chat is ready.
-   * Sent exactly once when the adapter and history are loaded.
+   * A prompt to append and send after the conversation history is loaded.
+   * The message is shown in the chat and sent to the agent exactly once.
    */
-  initialPrompt?: string;
+  pendingPrompt?: string;
 
   /**
    * Show the information icon in the header.
@@ -382,7 +382,7 @@ export function ChatFloating({
   runtimeId,
   historyEndpoint,
   historyAuthToken,
-  initialPrompt,
+  pendingPrompt,
   showInformation = false,
   onInformationClick,
   panelProps,
@@ -935,7 +935,7 @@ export function ChatFloating({
           runtimeId={runtimeId}
           historyEndpoint={historyEndpoint}
           historyAuthToken={historyAuthToken}
-          initialPrompt={initialPrompt}
+          pendingPrompt={pendingPrompt}
           showInformation={showInformation}
           onInformationClick={onInformationClick}
           {...panelProps}
