@@ -1723,7 +1723,37 @@ function ChatBaseInner({
         }
 
         const data = await response.json();
-        const messages: ChatMessage[] = data.messages || [];
+        // Map server history messages to ChatMessage format.
+        // The server may return toolCalls in either the legacy {id, name, arguments}
+        // shape or the correct ToolCallContentPart {toolCallId, toolName, args} shape.
+        // Normalize both to ToolCallContentPart so the AG-UI adapter can serialize them.
+        const messages: ChatMessage[] = (data.messages || []).map(
+          (msg: any) => {
+            if (msg.toolCalls && Array.isArray(msg.toolCalls)) {
+              msg.toolCalls = msg.toolCalls.map((tc: any) => {
+                // If already in ToolCallContentPart format, keep as-is
+                if (tc.toolCallId && tc.toolName) return tc;
+                // Legacy format: {id, name, arguments} → ToolCallContentPart
+                let parsedArgs = tc.args ?? tc.arguments ?? {};
+                if (typeof parsedArgs === 'string') {
+                  try {
+                    parsedArgs = JSON.parse(parsedArgs);
+                  } catch {
+                    parsedArgs = {};
+                  }
+                }
+                return {
+                  type: 'tool-call' as const,
+                  toolCallId: tc.toolCallId ?? tc.id ?? tc.tool_call_id ?? '',
+                  toolName: tc.toolName ?? tc.name ?? tc.tool_name ?? '',
+                  args: parsedArgs,
+                  status: tc.status ?? 'completed',
+                };
+              });
+            }
+            return msg as ChatMessage;
+          },
+        );
 
         // Store in memory and update display
         if (messages.length > 0) {

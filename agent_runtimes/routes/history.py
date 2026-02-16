@@ -3,6 +3,7 @@
 
 """FastAPI routes for conversation history."""
 
+import json
 import logging
 import uuid
 from datetime import datetime, timezone
@@ -136,11 +137,23 @@ def _convert_to_chat_messages(
                 if part_kind == "text":
                     text_content += part.get("content", "")
                 elif part_kind == "tool-call":
+                    # Format tool calls as ToolCallContentPart for the frontend
+                    raw_args = part.get("args", "{}")
+                    # args may be a JSON string or already a dict
+                    if isinstance(raw_args, str):
+                        try:
+                            parsed_args = json.loads(raw_args)
+                        except (json.JSONDecodeError, TypeError):
+                            parsed_args = {}
+                    else:
+                        parsed_args = raw_args if isinstance(raw_args, dict) else {}
                     tool_calls.append(
                         {
-                            "id": part.get("tool_call_id", str(uuid.uuid4())),
-                            "name": part.get("tool_name"),
-                            "arguments": part.get("args", "{}"),
+                            "type": "tool-call",
+                            "toolCallId": part.get("tool_call_id", str(uuid.uuid4())),
+                            "toolName": part.get("tool_name"),
+                            "args": parsed_args,
+                            "status": "completed",
                         }
                     )
 
