@@ -52,6 +52,7 @@ import {
   CodeActionMenuPlugin,
   ListMaxIndentLevelPlugin,
 } from '@datalayer/jupyter-lexical';
+import type { ToolbarItem } from '@datalayer/primer-addons';
 import { editorConfig } from '../lexical/editorConfig';
 
 import '@datalayer/jupyter-lexical/style/index.css';
@@ -131,6 +132,10 @@ function SimpleKernelPluginsInner() {
 export interface LexicalEditorProps {
   content?: string;
   serviceManager?: ServiceManager.IManager;
+  /** Optional extra toolbar items (e.g. AI actions from useChatInlineToolbarItems) */
+  extraItems?: ToolbarItem[];
+  /** Optional additional children to render inside the LexicalComposer */
+  children?: React.ReactNode;
 }
 
 /**
@@ -141,6 +146,8 @@ export interface LexicalEditorProps {
 export const LexicalEditor: React.FC<LexicalEditorProps> = ({
   content = INITIAL_CONTENT,
   serviceManager,
+  extraItems,
+  children,
 }) => {
   const [floatingAnchorElem, setFloatingAnchorElem] =
     useState<HTMLDivElement | null>(null);
@@ -209,10 +216,12 @@ export const LexicalEditor: React.FC<LexicalEditorProps> = ({
                 <FloatingTextFormatToolbarPlugin
                   anchorElem={floatingAnchorElem}
                   setIsLinkEditMode={setIsLinkEditMode}
+                  extraItems={extraItems}
                 />
                 <CodeActionMenuPlugin anchorElem={floatingAnchorElem} />
               </>
             )}
+            {children}
           </div>
         </LexicalComposer>
       </LexicalConfigProvider>

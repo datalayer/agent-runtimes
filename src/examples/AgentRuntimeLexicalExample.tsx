@@ -73,6 +73,7 @@ import {
 // Agent-runtimes imports
 import { ChatFloating } from '../components/chat';
 import { ChatInlinePlugin } from '../lexical/ChatInlinePlugin';
+import { useChatInlineToolbarItems } from '../lexical/useChatInlineToolbarItems';
 import { useLexicalTools } from '../tools/adapters/agent-runtimes/lexicalHooks';
 import { editorConfig } from './lexical/editorConfig';
 
@@ -278,6 +279,10 @@ const LexicalUI = React.memo(function LexicalUI({
     useState<HTMLDivElement | null>(null);
   const [_isLinkEditMode, setIsLinkEditMode] = useState(false);
 
+  // AI actions registered as toolbar items via the primer-addons toolbar extensibility
+  const { toolbarItems, isAiOpen, pendingPrompt, clearPendingPrompt, closeAi } =
+    useChatInlineToolbarItems();
+
   const onRef = (_floatingAnchorElem: HTMLDivElement) => {
     if (_floatingAnchorElem !== null) {
       setFloatingAnchorElem(_floatingAnchorElem);
@@ -373,16 +378,21 @@ const LexicalUI = React.memo(function LexicalUI({
                   <FloatingTextFormatToolbarPlugin
                     anchorElem={floatingAnchorElem}
                     setIsLinkEditMode={setIsLinkEditMode}
+                    extraItems={toolbarItems}
                   />
                   <CodeActionMenuPlugin anchorElem={floatingAnchorElem} />
                 </>
               )}
-              {/* AI Inline Chat Plugin - shows on text selection with formatting toolbar */}
+              {/* AI Inline Chat Plugin - controlled by useChatInlineToolbarItems */}
               <ChatInlinePlugin
                 protocol={{
                   type: 'ag-ui',
                   endpoint: AG_UI_ENDPOINT,
                 }}
+                isOpen={isAiOpen}
+                onClose={closeAi}
+                pendingPrompt={pendingPrompt}
+                onPendingPromptConsumed={clearPendingPrompt}
               />
             </div>
           </LexicalComposer>

@@ -15,3 +15,8 @@ export {
   SAVE_SELECTION_COMMAND,
   RESTORE_SELECTION_COMMAND,
 } from './ChatInlinePlugin';
+
+export {
+  useChatInlineToolbarItems,
+  type ChatInlineToolbarState,
+} from './useChatInlineToolbarItems';

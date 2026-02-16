@@ -6,16 +6,32 @@
 /**
  * ChatInlinePlugin - Lexical plugin for inline AI chat.
  *
- * This plugin displays a floating AI chat interface when text is selected
- * in the Lexical editor. It provides AI-powered text manipulation features
- * like improve, summarize, translate, etc.
+ * This plugin displays a floating AI chat interface when the user triggers
+ * an AI action (via the toolbar's AI dropdown or sparkle button). It provides
+ * AI-powered text manipulation features like improve, summarize, translate, etc.
  *
- * Features:
- * - Detects text selection in the editor
- * - Shows floating ChatInline component near the selection
- * - Supports custom prompts and pre-defined AI actions
- * - Can replace selection, insert inline, or insert below
- * - Uses floating-ui for positioning
+ * IMPORTANT: This plugin no longer renders its own formatting toolbar.
+ * Instead, AI actions are registered as `extraItems` in the
+ * `FloatingTextFormatToolbarPlugin` via the `useChatInlineToolbarItems` hook.
+ *
+ * Usage:
+ * ```tsx
+ * const { toolbarItems, isAiOpen, pendingPrompt, clearPendingPrompt, closeAi } =
+ *   useChatInlineToolbarItems();
+ *
+ * <FloatingTextFormatToolbarPlugin
+ *   anchorElem={floatingAnchorElem}
+ *   setIsLinkEditMode={setIsLinkEditMode}
+ *   extraItems={toolbarItems}
+ * />
+ * <ChatInlinePlugin
+ *   protocol={protocol}
+ *   isOpen={isAiOpen}
+ *   onClose={closeAi}
+ *   pendingPrompt={pendingPrompt}
+ *   onPendingPromptConsumed={clearPendingPrompt}
+ * />
+ * ```
  *
  * @module lexical/ChatInlinePlugin
  */
@@ -37,12 +53,9 @@ import {
   LexicalEditor,
   COMMAND_PRIORITY_LOW,
   createCommand,
-  FORMAT_TEXT_COMMAND,
   type LexicalCommand,
   type RangeSelection,
-  type TextFormatType,
 } from 'lexical';
-import { $isLinkNode, TOGGLE_LINK_COMMAND } from '@lexical/link';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import {
   autoUpdate,
@@ -53,15 +66,7 @@ import {
   size,
   useFloating,
 } from '@floating-ui/react-dom';
-import { Box, IconButton } from '@primer/react';
-import {
-  BoldIcon,
-  ItalicIcon,
-  StrikethroughIcon,
-  CodeIcon,
-  LinkIcon,
-  SparkleFillIcon,
-} from '@primer/octicons-react';
+import { Box } from '@primer/react';
 import {
   ChatInline,
   type ChatInlineProtocolConfig,
@@ -106,7 +111,6 @@ function usePreserveSelection(editor: LexicalEditor) {
           editor.update(() => {
             const selection = savedSelectionRef.current;
             if (selection) {
-              // Note: We create a new reference to avoid stale selection issues
               try {
                 const anchor = selection.anchor;
                 const focus = selection.focus;
@@ -145,18 +149,15 @@ function usePreserveSelection(editor: LexicalEditor) {
 
 /**
  * Hook to get current text selection range
- * Uses native DOM selection for immediate response during drag operations
  */
 function useRange() {
   const [editor] = useLexicalComposerContext();
   const [range, setRange] = useState<Range | null>(null);
 
   useEffect(() => {
-    // Function to update range from DOM selection
     const updateRange = () => {
       const domSelection = window.getSelection();
 
-      // Check if selection exists and is within the editor
       if (
         !domSelection ||
         domSelection.rangeCount === 0 ||
@@ -168,13 +169,11 @@ function useRange() {
 
       const domRange = domSelection.getRangeAt(0);
 
-      // Check if selection is within the editor
       if (!editor._rootElement.contains(domRange.commonAncestorContainer)) {
         setRange(null);
         return;
       }
 
-      // Check if selection is collapsed (just a cursor, no text selected)
       if (domRange.collapsed) {
         setRange(null);
         return;
@@ -183,14 +182,11 @@ function useRange() {
       setRange(domRange.cloneRange());
     };
 
-    // Listen for Lexical editor updates
     const unregister = editor.registerUpdateListener(({ tags }) => {
-      // Ignore collaboration updates
       if (tags.has('collaboration')) return;
       updateRange();
     });
 
-    // Listen for DOM selection changes to catch drag selections
     document.addEventListener('selectionchange', updateRange);
 
     return () => {
@@ -222,124 +218,47 @@ function useSelectionText() {
 }
 
 /**
- * Hook to detect if mouse is pressed outside a specific element (for drag selection detection)
- * Returns true only when mouse is down AND the click started outside the provided element
- */
-function useIsMouseDownOutside(getElement: () => HTMLElement | null): boolean {
-  const [isMouseDownOutside, setIsMouseDownOutside] = useState(false);
-  // Force update counter to trigger re-render on mouseup
-  const [, forceUpdate] = useState(0);
-
-  useEffect(() => {
-    const handleMouseDown = (e: MouseEvent) => {
-      const element = getElement();
-      // Check if the click is outside the toolbar element
-      if (element && element.contains(e.target as Node)) {
-        // Click is inside toolbar, don't set mouse down state
-        setIsMouseDownOutside(false);
-      } else {
-        // Click is outside toolbar (in editor), set mouse down state
-        setIsMouseDownOutside(true);
-      }
-    };
-    const handleMouseUp = () => {
-      setIsMouseDownOutside(false);
-      // Force a re-render to show toolbar after selection completes
-      forceUpdate(n => n + 1);
-    };
-
-    document.addEventListener('mousedown', handleMouseDown);
-    document.addEventListener('mouseup', handleMouseUp);
-
-    return () => {
-      document.removeEventListener('mousedown', handleMouseDown);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [getElement]);
-
-  return isMouseDownOutside;
-}
-
-/**
  * Props for ChatInlinePlugin
  */
 export interface ChatInlinePluginProps {
   /** Protocol configuration for the AI agent */
   protocol: ChatInlineProtocolConfig;
+  /** Whether the AI chat panel is open (controlled by useChatInlineToolbarItems) */
+  isOpen: boolean;
+  /** Callback to close the AI chat panel */
+  onClose: () => void;
+  /** A pending prompt to submit automatically (from toolbar dropdown action) */
+  pendingPrompt?: string | null;
+  /** Callback after the pending prompt has been consumed */
+  onPendingPromptConsumed?: () => void;
   /** Optional: Container element for the portal (defaults to document.body) */
   portalContainer?: HTMLElement;
 }
 
 /**
- * Floating toolbar state
- */
-type ToolbarState = 'closed' | 'button' | 'ai';
-
-/**
- * ChatInlinePlugin - Floating AI toolbar for Lexical text selection.
+ * ChatInlinePlugin - Floating AI chat panel for Lexical text selection.
+ *
+ * This plugin is controlled externally via `isOpen` prop. It positions a
+ * ChatInline component near the text selection when open.
  */
 export function ChatInlinePlugin({
   protocol,
+  isOpen,
+  onClose,
+  pendingPrompt,
+  onPendingPromptConsumed,
   portalContainer,
 }: ChatInlinePluginProps): JSX.Element | null {
   const [editor] = useLexicalComposerContext();
-  const [toolbarState, setToolbarState] = useState<ToolbarState>('closed');
-  const [fullWidth, setFullWidth] = useState(false);
   const padding = 20;
-
-  // Text format state
-  const [isBold, setIsBold] = useState(false);
-  const [isItalic, setIsItalic] = useState(false);
-  const [isStrikethrough, setIsStrikethrough] = useState(false);
-  const [isCode, setIsCode] = useState(false);
-  const [isLink, setIsLink] = useState(false);
-
-  // Update text format state based on selection
-  const updateFormatState = useCallback(() => {
-    editor.getEditorState().read(() => {
-      const selection = $getSelection();
-      if ($isRangeSelection(selection)) {
-        setIsBold(selection.hasFormat('bold'));
-        setIsItalic(selection.hasFormat('italic'));
-        setIsStrikethrough(selection.hasFormat('strikethrough'));
-        setIsCode(selection.hasFormat('code'));
-        // Check if selection contains a link
-        const nodes = selection.getNodes();
-        const isLinkNode = nodes.some(node => {
-          const parent = node.getParent();
-          return $isLinkNode(parent) || $isLinkNode(node);
-        });
-        setIsLink(isLinkNode);
-      }
-    });
-  }, [editor]);
-
-  // Listen for selection changes to update format state
-  useEffect(() => {
-    return editor.registerUpdateListener(({ editorState }) => {
-      editorState.read(() => {
-        updateFormatState();
-      });
-    });
-  }, [editor, updateFormatState]);
 
   // Selection preservation
   const { saveSelection, restoreSelection } = usePreserveSelection(editor);
-
-  // Ref for the toolbar container to detect clicks inside vs outside
-  const toolbarRef = useRef<HTMLDivElement>(null);
-
-  // Stable getter function for the toolbar element
-  const getToolbarElement = useCallback(() => toolbarRef.current, []);
-
-  // Track mouse state for detecting ongoing drag selections (only outside toolbar)
-  const isMouseDownOutside = useIsMouseDownOutside(getToolbarElement);
 
   // Floating UI setup
   const {
     refs: { setReference, setFloating },
     strategy,
-    x,
     y,
   } = useFloating({
     strategy: 'fixed',
@@ -368,17 +287,6 @@ export function ChatInlinePlugin({
         range?.getBoundingClientRect() || new DOMRect(),
     });
   }, [setReference, range]);
-
-  // Reset width when selection is removed, show button when selection appears
-  useEffect(() => {
-    if (range === null) {
-      setFullWidth(false);
-      setToolbarState('closed');
-    } else {
-      // Only transition from closed to button, not from ai to button
-      setToolbarState(prev => (prev === 'closed' ? 'button' : prev));
-    }
-  }, [range]);
 
   // Handle replace selection
   const handleReplaceSelection = useCallback(
@@ -426,36 +334,8 @@ export function ChatInlinePlugin({
     [editor],
   );
 
-  // Handle close
-  const handleClose = useCallback(() => {
-    setToolbarState('button');
-    setFullWidth(false);
-  }, []);
-
-  // Handle open AI
-  const handleOpenAI = useCallback(() => {
-    setToolbarState('ai');
-    setFullWidth(true);
-  }, []);
-
-  // Text formatting handlers
-  const handleFormat = useCallback(
-    (format: TextFormatType) => {
-      editor.dispatchCommand(FORMAT_TEXT_COMMAND, format);
-    },
-    [editor],
-  );
-
-  const handleToggleLink = useCallback(() => {
-    if (isLink) {
-      editor.dispatchCommand(TOGGLE_LINK_COMMAND, null);
-    } else {
-      editor.dispatchCommand(TOGGLE_LINK_COMMAND, 'https://');
-    }
-  }, [editor, isLink]);
-
-  // Don't render if no selection, mouse is still down outside toolbar (dragging), or toolbar closed
-  if (range === null || isMouseDownOutside || toolbarState === 'closed') {
+  // Don't render if not open or no selection
+  if (!isOpen || range === null) {
     return null;
   }
 
@@ -463,127 +343,33 @@ export function ChatInlinePlugin({
 
   return createPortal(
     <Box
-      ref={(el: HTMLDivElement | null) => {
-        setFloating(el);
-        (toolbarRef as React.MutableRefObject<HTMLDivElement | null>).current =
-          el;
-      }}
+      ref={setFloating}
       sx={{
         pointerEvents: 'auto',
         zIndex: 50,
         position: strategy,
         top: 0,
-        left:
-          fullWidth && editor._rootElement
-            ? editor._rootElement.getBoundingClientRect().left + MARGIN_X
-            : 0,
-        transform: fullWidth
-          ? `translate3d(0, ${Math.round(y)}px, 0)`
-          : `translate3d(${Math.round(x)}px, ${Math.round(y)}px, 0)`,
-        width:
-          fullWidth && editor._rootElement
-            ? editor._rootElement.getBoundingClientRect().width - MARGIN_X * 2
-            : 'auto',
-        minWidth: fullWidth ? undefined : 'max-content',
+        left: editor._rootElement
+          ? editor._rootElement.getBoundingClientRect().left + MARGIN_X
+          : 0,
+        transform: `translate3d(0, ${Math.round(y)}px, 0)`,
+        width: editor._rootElement
+          ? editor._rootElement.getBoundingClientRect().width - MARGIN_X * 2
+          : 'auto',
       }}
     >
-      {toolbarState === 'button' && (
-        <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 0,
-            p: 1,
-            borderRadius: '12px',
-            border: '1px solid',
-            borderColor: 'border.default',
-            boxShadow: 'shadow.large',
-            bg: 'canvas.default',
-          }}
-        >
-          {/* Text formatting buttons */}
-          <IconButton
-            icon={BoldIcon}
-            aria-label="Bold"
-            variant="invisible"
-            onClick={() => handleFormat('bold')}
-            sx={{
-              color: isBold ? 'accent.fg' : 'fg.muted',
-              bg: isBold ? 'accent.subtle' : 'transparent',
-            }}
-          />
-          <IconButton
-            icon={ItalicIcon}
-            aria-label="Italic"
-            variant="invisible"
-            onClick={() => handleFormat('italic')}
-            sx={{
-              color: isItalic ? 'accent.fg' : 'fg.muted',
-              bg: isItalic ? 'accent.subtle' : 'transparent',
-            }}
-          />
-          <IconButton
-            icon={StrikethroughIcon}
-            aria-label="Strikethrough"
-            variant="invisible"
-            onClick={() => handleFormat('strikethrough')}
-            sx={{
-              color: isStrikethrough ? 'accent.fg' : 'fg.muted',
-              bg: isStrikethrough ? 'accent.subtle' : 'transparent',
-            }}
-          />
-          <IconButton
-            icon={CodeIcon}
-            aria-label="Code"
-            variant="invisible"
-            onClick={() => handleFormat('code')}
-            sx={{
-              color: isCode ? 'accent.fg' : 'fg.muted',
-              bg: isCode ? 'accent.subtle' : 'transparent',
-            }}
-          />
-          <IconButton
-            icon={LinkIcon}
-            aria-label="Link"
-            variant="invisible"
-            onClick={handleToggleLink}
-            sx={{
-              color: isLink ? 'accent.fg' : 'fg.muted',
-              bg: isLink ? 'accent.subtle' : 'transparent',
-            }}
-          />
-          {/* Divider */}
-          <Box
-            sx={{
-              width: '1px',
-              height: '16px',
-              bg: 'border.default',
-              mx: 1,
-            }}
-          />
-          {/* AI Assistant button */}
-          <IconButton
-            icon={SparkleFillIcon}
-            aria-label="AI Assistant"
-            variant="invisible"
-            onClick={handleOpenAI}
-            sx={{ color: 'fg.muted' }}
-          />
-        </Box>
-      )}
-
-      {toolbarState === 'ai' && (
-        <ChatInline
-          selectedText={selectedText}
-          protocol={protocol}
-          onReplaceSelection={handleReplaceSelection}
-          onInsertInline={handleInsertInline}
-          onInsertBelow={handleInsertBelow}
-          onClose={handleClose}
-          onSaveSelection={saveSelection}
-          onRestoreSelection={restoreSelection}
-        />
-      )}
+      <ChatInline
+        selectedText={selectedText}
+        protocol={protocol}
+        onReplaceSelection={handleReplaceSelection}
+        onInsertInline={handleInsertInline}
+        onInsertBelow={handleInsertBelow}
+        onClose={onClose}
+        onSaveSelection={saveSelection}
+        onRestoreSelection={restoreSelection}
+        pendingPrompt={pendingPrompt}
+        onPendingPromptConsumed={onPendingPromptConsumed}
+      />
     </Box>,
     portalTarget,
   );

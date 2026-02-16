@@ -182,6 +182,10 @@ export interface ChatInlineProps {
   onSaveSelection?: () => void;
   /** Callback to restore selection after input blur */
   onRestoreSelection?: () => void;
+  /** A pending prompt to submit automatically (from toolbar dropdown action) */
+  pendingPrompt?: string | null;
+  /** Callback after the pending prompt has been consumed */
+  onPendingPromptConsumed?: () => void;
 }
 
 /**
@@ -196,6 +200,8 @@ export function ChatInline({
   onClose,
   onSaveSelection,
   onRestoreSelection,
+  pendingPrompt,
+  onPendingPromptConsumed,
 }: ChatInlineProps): JSX.Element {
   // Input state
   const [input, setInput] = useState('');
@@ -320,6 +326,14 @@ ${selectedText || ''}
     },
     [selectedText],
   );
+
+  // Handle pending prompt from toolbar dropdown
+  useEffect(() => {
+    if (pendingPrompt && aiState === 'initial') {
+      submitPrompt(pendingPrompt);
+      onPendingPromptConsumed?.();
+    }
+  }, [pendingPrompt, aiState, submitPrompt, onPendingPromptConsumed]);
 
   // Handle form submission
   const handleSubmit = useCallback(

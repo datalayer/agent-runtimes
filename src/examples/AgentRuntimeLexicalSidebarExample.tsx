@@ -78,6 +78,8 @@ import {
   type ProtocolConfig,
   type FrontendToolDefinition,
 } from '../components/chat';
+import { ChatInlinePlugin } from '../lexical/ChatInlinePlugin';
+import { useChatInlineToolbarItems } from '../lexical/useChatInlineToolbarItems';
 import { useLexicalTools } from '../tools/adapters/agent-runtimes/lexicalHooks';
 import { editorConfig } from './lexical/editorConfig';
 
@@ -117,6 +119,10 @@ function LexicalEditor({ serviceManager }: LexicalEditorProps) {
   const [floatingAnchorElem, setFloatingAnchorElem] =
     useState<HTMLDivElement | null>(null);
   const [_isLinkEditMode, setIsLinkEditMode] = useState(false);
+
+  // AI actions registered as toolbar items
+  const { toolbarItems, isAiOpen, pendingPrompt, clearPendingPrompt, closeAi } =
+    useChatInlineToolbarItems();
 
   const onRef = (_floatingAnchorElem: HTMLDivElement) => {
     if (_floatingAnchorElem !== null) {
@@ -212,10 +218,23 @@ function LexicalEditor({ serviceManager }: LexicalEditorProps) {
               <FloatingTextFormatToolbarPlugin
                 anchorElem={floatingAnchorElem}
                 setIsLinkEditMode={setIsLinkEditMode}
+                extraItems={toolbarItems}
               />
               <CodeActionMenuPlugin anchorElem={floatingAnchorElem} />
             </>
           )}
+
+          {/* AI Inline Chat Plugin - controlled by useChatInlineToolbarItems */}
+          <ChatInlinePlugin
+            protocol={{
+              type: 'ag-ui',
+              endpoint: `${DEFAULT_BASE_URL}/api/v1/examples/${DEFAULT_AGENT_ID}/`,
+            }}
+            isOpen={isAiOpen}
+            onClose={closeAi}
+            pendingPrompt={pendingPrompt}
+            onPendingPromptConsumed={clearPendingPrompt}
+          />
         </Box>
       </LexicalComposer>
     </LexicalConfigProvider>
