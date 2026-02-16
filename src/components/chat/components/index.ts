@@ -27,6 +27,7 @@ export {
   type StreamingMessageOptions,
   type ChatViewMode,
 } from './base/ChatBase';
+export { InputPrompt, type InputPromptProps } from './base/InputPrompt';
 export { AgentDetails, type AgentDetailsProps } from './AgentDetails';
 export {
   AgentIdentity,

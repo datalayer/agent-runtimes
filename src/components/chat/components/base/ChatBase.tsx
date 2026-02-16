@@ -23,14 +23,12 @@ import React, {
   useEffect,
   useRef,
   useState,
-  type KeyboardEvent,
 } from 'react';
 import {
   Heading,
   Text,
   Spinner,
   IconButton,
-  Textarea,
   Button,
   ActionMenu,
   ActionList,
@@ -45,8 +43,6 @@ import {
   TrashIcon,
   GearIcon,
   PersonIcon,
-  PaperAirplaneIcon,
-  SquareCircleIcon,
   ToolsIcon,
   AiModelIcon,
   BriefcaseIcon,
@@ -92,6 +88,7 @@ import {
 import type { FrontendToolDefinition } from '../../types/tool';
 import { ToolCallDisplay } from '../display/ToolCallDisplay';
 import type { BuiltinTool as BuiltinToolType } from '../../../../types/Types';
+import { InputPrompt } from './InputPrompt';
 
 /**
  * View mode for the chat component.
@@ -2504,17 +2501,6 @@ function ChatBaseInner({
     setIsStreaming(false);
   }, [useStoreMode]);
 
-  // Handle key press
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent<HTMLTextAreaElement>) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        handleSend();
-      }
-    },
-    [handleSend],
-  );
-
   // Handle new chat
   const handleNewChat = useCallback(() => {
     setDisplayItems([]);
@@ -3716,55 +3702,18 @@ function ChatBaseInner({
 
     return (
       <Box>
-        {/* Input Area */}
-        <Box
-          sx={{
-            p: padding,
-            borderTop: '1px solid',
-            borderColor: 'border.default',
-            bg: 'canvas.subtle',
-          }}
-        >
-          <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-end' }}>
-            <Textarea
-              ref={inputRef}
-              value={input}
-              onChange={e => {
-                setInput(e.target.value);
-                // Height adjustment happens via useEffect watching input
-              }}
-              onKeyDown={handleKeyDown}
-              placeholder={placeholder || 'Type a message...'}
-              disabled={isLoading}
-              sx={{
-                flex: 1,
-                resize: 'none',
-                minHeight: '40px',
-                maxHeight: '120px',
-                overflow: 'hidden',
-                transition: 'height 0.1s ease-out',
-                py: '2px',
-              }}
-              rows={1}
-            />
-            {isLoading ? (
-              <IconButton
-                icon={SquareCircleIcon}
-                aria-label="Stop"
-                onClick={handleStop}
-                sx={{ alignSelf: 'flex-end' }}
-              />
-            ) : (
-              <IconButton
-                icon={PaperAirplaneIcon}
-                aria-label="Send"
-                onClick={handleSend}
-                disabled={!input.trim()}
-                sx={{ alignSelf: 'flex-end' }}
-              />
-            )}
-          </Box>
-        </Box>
+        {/* Input Area — powered by the standalone InputPrompt component */}
+        <InputPrompt
+          placeholder={placeholder || 'Type a message...'}
+          isLoading={isLoading}
+          onSend={() => handleSend()}
+          onStop={handleStop}
+          autoFocus={autoFocus}
+          focusTrigger={focusTrigger}
+          padding={padding}
+          value={input}
+          onChange={setInput}
+        />
 
         {/* Token usage bar - between input and selectors */}
         {renderTokenUsage()}
