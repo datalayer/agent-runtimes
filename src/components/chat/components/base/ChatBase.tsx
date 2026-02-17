@@ -3603,14 +3603,80 @@ function ChatBaseInner({
                       sx={{
                         fontSize: 1,
                         lineHeight: 1.5,
+                        '& > *:first-child': { marginTop: 0 },
+                        '& > *:last-child': { marginBottom: 0 },
+                        '& p': { marginTop: 0, marginBottom: '0.75em' },
+                        '& h1, & h2, & h3, & h4, & h5, & h6': {
+                          marginTop: '1em',
+                          marginBottom: '0.5em',
+                          fontWeight: 'bold',
+                        },
+                        '& h1': { fontSize: '1.5em' },
+                        '& h2': { fontSize: '1.3em' },
+                        '& h3': { fontSize: '1.15em' },
                         '& ul, & ol': {
                           marginTop: '0.5em',
                           marginBottom: '0.5em',
                           paddingInlineStart: '1.25em',
-                          listStylePosition: 'inside',
                         },
                         '& li': {
                           paddingInlineStart: '0.25em',
+                          marginBottom: '0.25em',
+                        },
+                        '& code': {
+                          backgroundColor: 'neutral.muted',
+                          padding: '2px 4px',
+                          borderRadius: '4px',
+                          fontSize: '0.9em',
+                          fontFamily:
+                            'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
+                        },
+                        '& pre code': {
+                          backgroundColor: 'transparent',
+                          padding: 0,
+                        },
+                        '& blockquote': {
+                          borderLeft: '3px solid',
+                          borderColor: 'border.default',
+                          paddingLeft: '12px',
+                          marginLeft: 0,
+                          marginRight: 0,
+                          color: 'fg.muted',
+                        },
+                        '& a': {
+                          color: 'accent.fg',
+                          textDecoration: 'underline',
+                        },
+                        '& table': {
+                          width: '100%',
+                          borderCollapse: 'collapse',
+                          marginTop: '0.75em',
+                          marginBottom: '0.75em',
+                          fontSize: '0.9em',
+                        },
+                        '& th, & td': {
+                          border: '1px solid',
+                          borderColor: 'border.default',
+                          padding: '6px 12px',
+                          textAlign: 'left',
+                        },
+                        '& th': {
+                          backgroundColor: 'canvas.inset',
+                          fontWeight: 'bold',
+                        },
+                        '& tr:nth-of-type(even)': {
+                          backgroundColor: 'canvas.inset',
+                        },
+                        '& img': {
+                          maxWidth: '100%',
+                          borderRadius: '8px',
+                        },
+                        '& hr': {
+                          border: 'none',
+                          borderTop: '1px solid',
+                          borderColor: 'border.default',
+                          marginTop: '1em',
+                          marginBottom: '1em',
                         },
                       }}
                     >
