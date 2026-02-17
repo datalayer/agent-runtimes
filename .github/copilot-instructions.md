@@ -21,7 +21,7 @@
 # Start both Python server + Vite dev server
 npm run examples
 
-# Run specific example (see examples.html for EXAMPLE values)
+# Run specific example (see html/examples.html for EXAMPLE values)
 EXAMPLE=AgentCodemodeMcpExample npm run dev
 
 # Build TypeScript + Vite

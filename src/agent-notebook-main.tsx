@@ -4,9 +4,10 @@
  */
 
 import { createRoot } from 'react-dom/client';
-import { Agent } from './Agent';
+// import { Agent as AgentNotebook } from './Agent';
+import { AgentNotebook } from './AgentNotebook';
 
 const rootElement = document.getElementById('root');
 if (rootElement) {
-  createRoot(rootElement).render(<Agent />);
+  createRoot(rootElement).render(<AgentNotebook />);
 }

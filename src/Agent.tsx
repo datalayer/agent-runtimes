@@ -12,8 +12,8 @@
  * The page is opened by codeai with a URL like:
  *   http://127.0.0.1:<port>/static/agent.html?agentId=<id>
  *
- * On mount it verifies the agent exists (codeai creates it before
- * opening the browser), then renders the unified Chat component.
+ * On mount it ensures the agent exists — creating it automatically
+ * if it doesn't — then renders the unified Chat component.
  *
  * Uses the unified Chat component which handles:
  * - AG-UI protocol configuration
@@ -29,6 +29,7 @@ import { AlertIcon } from '@primer/octicons-react';
 import { Box, setupPrimerPortals } from '@datalayer/primer-addons';
 import { DatalayerThemeProvider } from '@datalayer/core';
 import { Chat } from './components/chat';
+import { DEFAULT_MODEL } from './specs';
 
 import '../style/primer-primitives.css';
 
@@ -47,30 +48,49 @@ function getAgentId(): string {
  * Reads the `agentId` query-string parameter, waits for the agent
  * to be available, then renders the Chat.
  */
-const Agent: React.FC = () => {
+export const Agent: React.FC = () => {
   const [agentId] = useState(getAgentId);
   const [isReady, setIsReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Verify the agent exists on mount
+  // Ensure the agent exists on mount — create it if it doesn't
   useEffect(() => {
     let cancelled = false;
 
-    const checkAgent = async () => {
+    const ensureAgent = async () => {
       try {
-        const response = await fetch(
+        // First check if the agent already exists
+        const getResp = await fetch(
           `${BASE_URL}/api/v1/agents/${encodeURIComponent(agentId)}`,
         );
-        if (!response.ok) {
-          const data = await response
-            .json()
-            .catch(() => ({ detail: 'Unknown error' }));
-          throw new Error(
-            data.detail || `Agent "${agentId}" not found (${response.status})`,
-          );
+        if (getResp.ok) {
+          if (!cancelled) setIsReady(true);
+          return;
         }
-        if (!cancelled) {
-          setIsReady(true);
+
+        // Agent doesn't exist — create it
+        const createResp = await fetch(`${BASE_URL}/api/v1/agents`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: agentId,
+            description: 'Agent created by Agent page',
+            agent_library: 'pydantic-ai',
+            transport: 'ag-ui',
+            model: DEFAULT_MODEL,
+            system_prompt:
+              'You are a helpful AI assistant. You can help with code, explanations, and data analysis.',
+          }),
+        });
+
+        if (createResp.ok || createResp.status === 400) {
+          // 400 means agent already exists (race condition), which is fine
+          if (!cancelled) setIsReady(true);
+        } else {
+          const errorData = await createResp.json().catch(() => ({}));
+          throw new Error(
+            errorData.detail || `Failed to create agent: ${createResp.status}`,
+          );
         }
       } catch (err) {
         if (!cancelled) {
@@ -81,7 +101,7 @@ const Agent: React.FC = () => {
       }
     };
 
-    checkAgent();
+    ensureAgent();
     return () => {
       cancelled = true;
     };
