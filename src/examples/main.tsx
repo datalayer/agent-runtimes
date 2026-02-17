@@ -422,92 +422,86 @@ export const ExampleApp: React.FC = () => {
   }
 
   return (
-    <JupyterReactTheme>
-      <div style={{ width: '100vw', height: '100vh', overflow: 'hidden' }}>
-        <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            zIndex: 100,
-            padding: '10px 20px',
-            background: '#f0f0f0',
-            borderBottom: '1px solid #ccc',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '15px',
-            fontSize: '14px',
-            fontFamily: 'system-ui, -apple-system, sans-serif',
-            height: '50px',
-            boxSizing: 'border-box',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-            <label style={{ fontWeight: 500, color: '#333' }}>
-              Select Example:
-            </label>
-            <select
-              value={selectedExample}
-              onChange={e => handleExampleChange(e.target.value)}
-              disabled={isChangingExample}
-              style={{
-                padding: '6px 12px',
-                fontSize: '14px',
-                border: '1px solid #ccc',
-                borderRadius: '4px',
-                background: 'white',
-                cursor: isChangingExample ? 'not-allowed' : 'pointer',
-                fontFamily: 'monospace',
-                minWidth: '250px',
-              }}
-            >
-              {getExampleNames()
-                .sort()
-                .map(name => (
-                  <option key={name} value={name}>
-                    {name}
-                  </option>
-                ))}
-            </select>
-            {isChangingExample && (
-              <span style={{ color: '#666', fontSize: '12px' }}>
-                Loading...
-              </span>
-            )}
-            {error && (
-              <span style={{ color: '#dc3545', fontSize: '12px' }}>
-                Error: {error}
-              </span>
-            )}
-          </div>
-          <img
-            src="https://assets.datalayer.tech/datalayer-25.svg"
-            alt="Datalayer"
-            style={{ height: '24px' }}
-          />
+    <div style={{ width: '100vw', height: '100vh', overflow: 'hidden' }}>
+      <div
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 100,
+          padding: '10px 20px',
+          background: '#f0f0f0',
+          borderBottom: '1px solid #ccc',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '15px',
+          fontSize: '14px',
+          fontFamily: 'system-ui, -apple-system, sans-serif',
+          height: '50px',
+          boxSizing: 'border-box',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+          <label style={{ fontWeight: 500, color: '#333' }}>
+            Select Example:
+          </label>
+          <select
+            value={selectedExample}
+            onChange={e => handleExampleChange(e.target.value)}
+            disabled={isChangingExample}
+            style={{
+              padding: '6px 12px',
+              fontSize: '14px',
+              border: '1px solid #ccc',
+              borderRadius: '4px',
+              background: 'white',
+              cursor: isChangingExample ? 'not-allowed' : 'pointer',
+              fontFamily: 'monospace',
+              minWidth: '250px',
+            }}
+          >
+            {getExampleNames()
+              .sort()
+              .map(name => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+          </select>
+          {isChangingExample && (
+            <span style={{ color: '#666', fontSize: '12px' }}>Loading...</span>
+          )}
+          {error && (
+            <span style={{ color: '#dc3545', fontSize: '12px' }}>
+              Error: {error}
+            </span>
+          )}
         </div>
-        <div
-          style={{
-            marginTop: '50px',
-            height: 'calc(100vh - 50px)',
-            overflow: 'auto',
-          }}
-        >
-          {isChangingExample ? (
-            <div
-              style={{ padding: '40px', textAlign: 'center', color: '#666' }}
-            >
-              <h3>Loading {selectedExample}...</h3>
-              <p>Please wait while the example loads.</p>
-            </div>
-          ) : ExampleComponent ? (
-            <ExampleComponent {...exampleProps} />
-          ) : null}
-        </div>
+        <img
+          src="https://assets.datalayer.tech/datalayer-25.svg"
+          alt="Datalayer"
+          style={{ height: '24px' }}
+        />
       </div>
-    </JupyterReactTheme>
+      <div
+        style={{
+          marginTop: '50px',
+          height: 'calc(100vh - 50px)',
+          overflow: 'auto',
+        }}
+      >
+        {isChangingExample ? (
+          <div style={{ padding: '40px', textAlign: 'center', color: '#666' }}>
+            <h3>Loading {selectedExample}...</h3>
+            <p>Please wait while the example loads.</p>
+          </div>
+        ) : ExampleComponent ? (
+          <ExampleComponent {...exampleProps} />
+        ) : null}
+      </div>
+    </div>
   );
 };
 

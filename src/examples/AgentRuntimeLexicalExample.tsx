@@ -473,7 +473,7 @@ function LexicalWithChat({
           defaultViewMode="panel"
           position="bottom-right"
           brandColor="#7c3aed"
-          tools={tools}
+          frontendTools={tools}
           useStore={false}
           showModelSelector={true}
           showToolsMenu={true}

@@ -350,20 +350,24 @@ export class DatalayerInferenceProvider extends BaseInferenceProvider {
       function: {
         name: tool.name,
         description: tool.description,
-        parameters: {
-          type: 'object',
-          properties: Object.fromEntries(
-            tool.parameters.map(p => [
-              p.name,
-              {
-                type: p.type || 'string',
-                description: p.description,
-                enum: p.enum,
-              },
-            ]),
-          ),
-          required: tool.parameters.filter(p => p.required).map(p => p.name),
-        },
+        parameters: Array.isArray(tool.parameters)
+          ? {
+              type: 'object',
+              properties: Object.fromEntries(
+                tool.parameters.map(p => [
+                  p.name,
+                  {
+                    type: p.type || 'string',
+                    description: p.description,
+                    enum: p.enum,
+                  },
+                ]),
+              ),
+              required: tool.parameters
+                .filter(p => p.required)
+                .map(p => p.name),
+            }
+          : tool.parameters,
       },
     }));
   }

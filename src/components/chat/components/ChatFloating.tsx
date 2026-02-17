@@ -187,13 +187,11 @@ export interface ChatFloatingProps {
    */
   renderToolResult?: RenderToolResult;
 
-  /** Custom tools to register (for tool-based examples) */
-  tools?: Array<{
-    name: string;
-    description: string;
-    parameters?: Record<string, unknown>;
-    handler: (args: unknown) => Promise<unknown>;
-  }>;
+  /**
+   * Frontend tool definitions to register with the chat.
+   * Consistent with Chat and ChatBase.
+   */
+  frontendTools?: FrontendToolDefinition[];
 
   /** Initial state (for shared state example) */
   initialState?: Record<string, unknown>;
@@ -366,7 +364,7 @@ export function ChatFloating({
   offset = 20,
   animationDuration = 200,
   renderToolResult,
-  tools: _tools,
+  frontendTools,
   initialState: _initialState,
   suggestions,
   submitOnSuggestionClick = true,
@@ -926,7 +924,7 @@ export function ChatFloating({
           }}
           placeholder="Type a message..."
           backgroundColor="canvas.subtle"
-          frontendTools={_tools as FrontendToolDefinition[] | undefined}
+          frontendTools={frontendTools}
           showModelSelector={showModelSelector}
           availableModels={availableModels}
           showToolsMenu={showToolsMenu}

@@ -19,7 +19,7 @@
 import React, { useEffect, useState } from 'react';
 import { Box } from '@datalayer/primer-addons';
 import { ServiceManager } from '@jupyterlab/services';
-import { Notebook } from '@datalayer/jupyter-react';
+import { JupyterReactTheme, Notebook } from '@datalayer/jupyter-react';
 
 // Agent-runtimes imports
 import { ChatFloating } from '../components/chat';
@@ -161,14 +161,16 @@ const NotebookUI = React.memo(function NotebookUI({
         }}
       >
         {serviceManager ? (
-          <Notebook
-            nbformat={NOTEBOOK_CONTENT}
-            id={NOTEBOOK_ID}
-            serviceManager={serviceManager}
-            height="600px"
-            cellSidebarMargin={120}
-            startDefaultKernel={true}
-          />
+          <JupyterReactTheme>
+            <Notebook
+              nbformat={NOTEBOOK_CONTENT}
+              id={NOTEBOOK_ID}
+              serviceManager={serviceManager}
+              height="600px"
+              cellSidebarMargin={120}
+              startDefaultKernel={true}
+            />
+          </JupyterReactTheme>
         ) : (
           <Box sx={{ padding: 3 }}>
             <p>Loading service manager...</p>
@@ -193,7 +195,7 @@ function NotebookWithChat({
   const { isReady, error } = useEnsureAgent(AGENT_ID, BASE_URL);
 
   // Get notebook tools for ChatFloating
-  const tools = useNotebookTools(NOTEBOOK_ID);
+  const frontendTools = useNotebookTools(NOTEBOOK_ID);
 
   return (
     <Box
@@ -232,7 +234,7 @@ function NotebookWithChat({
           defaultViewMode="panel"
           position="bottom-right"
           brandColor="#7c3aed"
-          tools={tools}
+          frontendTools={frontendTools}
           useStore={false}
           showModelSelector={true}
           showToolsMenu={true}

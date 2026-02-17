@@ -4,10 +4,11 @@
  */
 
 /**
- * Converts unified tool definitions to agent-runtimes ChatFloating tools format.
+ * Converts unified tool definitions to FrontendToolDefinition format
+ * for use with Chat, ChatFloating, and ChatBase components.
  *
- * This adapter enables integration with the ChatFloating component's built-in
- * tool handling via the AG-UI protocol.
+ * This adapter enables integration with the chat components' frontendTools prop
+ * via the AG-UI protocol.
  *
  * @module tools/adapters/agent-runtimes/AgentRuntimesToolAdapter
  */
@@ -18,23 +19,7 @@ import type {
   ToolExecutionContext,
 } from '@datalayer/jupyter-react';
 import { OperationRunner } from '@datalayer/jupyter-react';
-
-/**
- * Agent-runtimes tool definition (matches ChatFloating tools prop)
- */
-export interface AgentRuntimesTool {
-  /** Tool name */
-  name: string;
-
-  /** Description for AI model */
-  description: string;
-
-  /** Parameters (JSON Schema format) */
-  parameters?: Record<string, unknown>;
-
-  /** Handler function */
-  handler: (args: unknown) => Promise<unknown>;
-}
+import type { FrontendToolDefinition } from '../../../components/chat/types/tool';
 
 /**
  * Deduplication cache to prevent executing the same operation multiple times
@@ -114,18 +99,18 @@ function processParameters(params: unknown): unknown {
 }
 
 /**
- * Converts unified tool definition to agent-runtimes tool format
+ * Converts unified tool definition to FrontendToolDefinition format
  *
  * @param definition - Tool definition
  * @param operation - Core operation
  * @param context - Execution context (documentId + executor)
- * @returns Agent-runtimes tool
+ * @returns FrontendToolDefinition
  */
 export function createAgentRuntimesTool(
   definition: ToolDefinition,
   operation: ToolOperation<unknown, unknown>,
   context: ToolExecutionContext,
-): AgentRuntimesTool {
+): FrontendToolDefinition {
   // Create runner instance for this tool
   const runner = new OperationRunner();
 
@@ -176,19 +161,19 @@ export function createAgentRuntimesTool(
 }
 
 /**
- * Creates agent-runtimes tools from all tool definitions
+ * Creates FrontendToolDefinition[] from all tool definitions
  *
  * @param definitions - Tool definitions
  * @param operations - Core operations registry
  * @param context - Execution context (documentId + executor)
- * @returns Agent-runtimes tools array
+ * @returns FrontendToolDefinition array
  */
 export function createAllAgentRuntimesTools(
   definitions: ToolDefinition[],
   operations: Record<string, ToolOperation<unknown, unknown>>,
   context: ToolExecutionContext,
-): AgentRuntimesTool[] {
-  const tools: AgentRuntimesTool[] = [];
+): FrontendToolDefinition[] {
+  const tools: FrontendToolDefinition[] = [];
 
   for (const definition of definitions) {
     const operation = operations[definition.operation];
@@ -204,9 +189,7 @@ export function createAllAgentRuntimesTools(
     tools.push(tool);
   }
 
-  console.log(
-    `[agent-runtimes Tools] Created ${tools.length} agent-runtimes tools`,
-  );
+  console.log(`[agent-runtimes Tools] Created ${tools.length} frontend tools`);
 
   return tools;
 }

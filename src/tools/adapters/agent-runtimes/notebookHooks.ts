@@ -18,10 +18,8 @@ import {
   notebookToolDefinitions,
   notebookToolOperations,
 } from '@datalayer/jupyter-react';
-import {
-  createAllAgentRuntimesTools,
-  type AgentRuntimesTool,
-} from './AgentRuntimesToolAdapter';
+import { createAllAgentRuntimesTools } from './AgentRuntimesToolAdapter';
+import type { FrontendToolDefinition } from '../../../components/chat/types/tool';
 
 // Hook wrapper to get notebook store state
 const useNotebookStore = () => notebookStore.getState();
@@ -32,17 +30,17 @@ const useNotebookStore = () => notebookStore.getState();
  *
  * @param documentId - Document ID (notebook identifier)
  * @param contextOverrides - Optional context overrides (format, extras, etc.)
- * @returns Agent-runtimes tools array for ChatFloating
+ * @returns Frontend tools array for ChatFloating / Chat
  *
  * @example
  * ```typescript
  * // Default context (toon format for AI)
- * const tools = useNotebookTools("my-notebook-id");
+ * const frontendTools = useNotebookTools("my-notebook-id");
  *
  * // Use with ChatFloating
  * <ChatFloating
  *   endpoint="http://localhost:8765/api/v1/ag-ui/agent/"
- *   tools={tools}
+ *   frontendTools={frontendTools}
  * />
  * ```
  */
@@ -51,7 +49,7 @@ export function useNotebookTools(
   contextOverrides?: Partial<
     Omit<ToolExecutionContext, 'executor' | 'documentId'>
   >,
-): AgentRuntimesTool[] {
+): FrontendToolDefinition[] {
   const notebookStoreState = useNotebookStore();
 
   // Create DefaultExecutor (stable reference)
@@ -92,4 +90,4 @@ export function useNotebookTools(
   );
 }
 
-export type { AgentRuntimesTool };
+export type { FrontendToolDefinition };

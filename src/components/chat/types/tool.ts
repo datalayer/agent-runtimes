@@ -92,8 +92,11 @@ export interface FrontendToolDefinition<
   /** Description for the LLM */
   description: string;
 
-  /** Parameter definitions */
-  parameters: ToolParameter[];
+  /**
+   * Parameter definitions.
+   * Accepts either CopilotKit-style ToolParameter[] or JSON Schema format.
+   */
+  parameters: ToolParameter[] | Record<string, unknown>;
 
   /**
    * Execution location

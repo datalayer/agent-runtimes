@@ -114,7 +114,7 @@ export interface UseAgentRuntimeReturn {
  *     <>
  *       <Notebook />
  *       {isReady && (
- *         <ChatFloating endpoint={endpoint} tools={tools} />
+ *         <ChatFloating endpoint={endpoint} frontendTools={frontendTools} />
  *       )}
  *       {error && <ErrorBanner>{error}</ErrorBanner>}
  *     </>

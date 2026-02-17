@@ -18,7 +18,7 @@
 import React from 'react';
 import { Box } from '@datalayer/primer-addons';
 import { ServiceManager } from '@jupyterlab/services';
-import { Notebook } from '@datalayer/jupyter-react';
+import { JupyterReactTheme, Notebook } from '@datalayer/jupyter-react';
 
 // CopilotKit imports
 import { CopilotKit, useFrontendTool } from '@copilotkit/react-core';
@@ -88,14 +88,16 @@ const NotebookUI = React.memo(function NotebookUI({
           }}
         >
           {serviceManager ? (
-            <Notebook
-              nbformat={NOTEBOOK_CONTENT}
-              id={NOTEBOOK_ID}
-              serviceManager={serviceManager}
-              height="600px"
-              cellSidebarMargin={120}
-              startDefaultKernel={true}
-            />
+            <JupyterReactTheme>
+              <Notebook
+                nbformat={NOTEBOOK_CONTENT}
+                id={NOTEBOOK_ID}
+                serviceManager={serviceManager}
+                height="600px"
+                cellSidebarMargin={120}
+                startDefaultKernel={true}
+              />
+            </JupyterReactTheme>
           ) : (
             <Box style={{ padding: 24 }}>
               <p>Loading service manager...</p>

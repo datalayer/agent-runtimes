@@ -26,6 +26,7 @@ import { Box, setupPrimerPortals } from '@datalayer/primer-addons';
 import { DatalayerThemeProvider } from '@datalayer/core';
 import {
   Notebook,
+  JupyterReactTheme,
   loadJupyterConfig,
   createServerSettings,
   getJupyterServerUrl,
@@ -104,14 +105,18 @@ const NotebookPanel: React.FC<NotebookPanelProps> = ({ serviceManager }) => (
       borderColor: 'border.default',
     }}
   >
-    <Notebook
-      nbformat={MatplotlibNotebook as any}
-      id={NOTEBOOK_ID}
-      serviceManager={serviceManager}
-      height="100%"
-      cellSidebarMargin={120}
-      startDefaultKernel={true}
-    />
+    <JupyterReactTheme>
+      <Box sx={{ height: '100vh' }}>
+        <Notebook
+          nbformat={MatplotlibNotebook as any}
+          id={NOTEBOOK_ID}
+          serviceManager={serviceManager}
+          height="100vh"
+          cellSidebarMargin={120}
+          startDefaultKernel={true}
+        />
+      </Box>
+    </JupyterReactTheme>
   </Box>
 );
 
@@ -123,7 +128,7 @@ interface ChatPanelProps {
 
 const ChatPanel: React.FC<ChatPanelProps> = ({ agentId }) => {
   // Register notebook tools so the agent can manipulate cells
-  useNotebookTools(NOTEBOOK_ID);
+  const notebookTools = useNotebookTools(NOTEBOOK_ID);
 
   return (
     <Box
@@ -149,6 +154,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ agentId }) => {
         showSkillsMenu={true}
         showTokenUsage={true}
         showInformation={true}
+        frontendTools={notebookTools}
         autoFocus
         runtimeId={agentId}
         historyEndpoint={`${BASE_URL}/api/v1/history`}

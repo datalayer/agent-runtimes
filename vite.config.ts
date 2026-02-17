@@ -70,6 +70,50 @@ export default defineConfig(({ mode, command }) => {
         return null;
       },
     },
+    // @jupyter-widgets/controls and html-manager use
+    //   version = require("../package.json").version;
+    // which fails at runtime because requirejs can't resolve the relative
+    // path.  Resolve it at build time to the actual package.json file.
+    {
+      name: 'resolve-jupyter-widgets-package-json',
+      enforce: 'pre' as const,
+      resolveId(source: string, importer: string | undefined) {
+        if (source === '../package.json' && importer) {
+          const normImporter = importer.replace(/\\/g, '/');
+          if (normImporter.includes('@jupyter-widgets/')) {
+            const dir = path.dirname(importer);
+            return path.resolve(dir, source);
+          }
+        }
+        return null;
+      },
+    },
+    // Fallback: patch Node.js-only references that survive CJS→ESM bundling.
+    // - require("../package.json").version from @jupyter-widgets
+    // - __dirname from mathjax-full
+    {
+      name: 'patch-node-references-in-bundle',
+      generateBundle(_options: any, bundle: any) {
+        for (const [, chunk] of Object.entries(bundle)) {
+          const c = chunk as any;
+          if (c.type !== 'chunk' || !c.code) continue;
+          let code = c.code;
+          let changed = false;
+          if (code.includes('require("../package.json")')) {
+            code = code.replace(
+              /require\("\.\.\/package\.json"\)\.version/g,
+              '"0.0.0"',
+            );
+            changed = true;
+          }
+          if (code.includes('__dirname')) {
+            code = code.replace(/\b__dirname\b/g, '"/"');
+            changed = true;
+          }
+          if (changed) c.code = code;
+        }
+      },
+    },
   ];
 
   if (isExamples) {

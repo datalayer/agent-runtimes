@@ -18,10 +18,8 @@ import {
   lexicalToolDefinitions,
   lexicalToolOperations,
 } from '@datalayer/jupyter-lexical';
-import {
-  createAllAgentRuntimesTools,
-  type AgentRuntimesTool,
-} from './AgentRuntimesToolAdapter';
+import { createAllAgentRuntimesTools } from './AgentRuntimesToolAdapter';
+import type { FrontendToolDefinition } from '../../../components/chat/types/tool';
 
 /**
  * Hook that creates agent-runtimes tools for lexical operations.
@@ -29,17 +27,17 @@ import {
  *
  * @param documentId - Document ID (lexical document identifier)
  * @param contextOverrides - Optional context overrides (format, extras, etc.)
- * @returns Agent-runtimes tools array for ChatFloating
+ * @returns Frontend tools array for ChatFloating / Chat
  *
  * @example
  * ```typescript
  * // Default context (toon format for AI)
- * const tools = useLexicalTools("doc-123");
+ * const frontendTools = useLexicalTools("doc-123");
  *
  * // Use with ChatFloating
  * <ChatFloating
  *   endpoint="http://localhost:8765/api/v1/ag-ui/agent/"
- *   tools={tools}
+ *   frontendTools={frontendTools}
  * />
  * ```
  */
@@ -48,7 +46,7 @@ export function useLexicalTools(
   contextOverrides?: Partial<
     Omit<ToolExecutionContext, 'executor' | 'documentId'>
   >,
-): AgentRuntimesTool[] {
+): FrontendToolDefinition[] {
   console.log('[useLexicalTools] 🎣 Hook called with documentId:', documentId);
 
   // Get fresh store state every render - NO MEMOIZATION
@@ -87,4 +85,4 @@ export function useLexicalTools(
   return tools;
 }
 
-export type { AgentRuntimesTool };
+export type { FrontendToolDefinition };
