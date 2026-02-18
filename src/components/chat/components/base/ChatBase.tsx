@@ -1499,6 +1499,9 @@ function ChatBaseInner({
   const adapterRef = useRef<BaseProtocolAdapter | null>(null);
   const unsubscribeRef = useRef<(() => void) | null>(null);
   const toolCallsRef = useRef<Map<string, ToolCallMessage>>(new Map());
+  // Track the number of in-flight frontend tool executions.
+  // While > 0, isLoading must stay true (the agent turn is not finished).
+  const pendingToolExecutionsRef = useRef(0);
   const currentAssistantMessageRef = useRef<ChatMessage | null>(null);
   const threadIdRef = useRef<string>(generateMessageId());
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -2088,6 +2091,7 @@ function ChatBaseInner({
                 const toolHandler = frontendTool?.handler;
                 if (toolHandler && Object.keys(args).length > 0) {
                   // Execute frontend tool
+                  pendingToolExecutionsRef.current++;
                   (async () => {
                     try {
                       const result = await toolHandler(updatedToolCall.args);
@@ -2135,6 +2139,13 @@ function ChatBaseInner({
                             : item,
                         ),
                       );
+                    } finally {
+                      pendingToolExecutionsRef.current--;
+                      if (pendingToolExecutionsRef.current <= 0) {
+                        pendingToolExecutionsRef.current = 0;
+                        setIsLoading(false);
+                        setIsStreaming(false);
+                      }
                     }
                   })();
                 }
@@ -2160,6 +2171,7 @@ function ChatBaseInner({
               );
               const toolHandler = frontendTool?.handler;
               if (toolHandler && Object.keys(args).length > 0) {
+                pendingToolExecutionsRef.current++;
                 (async () => {
                   try {
                     const result = await toolHandler(args);
@@ -2207,6 +2219,13 @@ function ChatBaseInner({
                           : item,
                       ),
                     );
+                  } finally {
+                    pendingToolExecutionsRef.current--;
+                    if (pendingToolExecutionsRef.current <= 0) {
+                      pendingToolExecutionsRef.current = 0;
+                      setIsLoading(false);
+                      setIsStreaming(false);
+                    }
                   }
                 })();
               }
@@ -2530,8 +2549,13 @@ function ChatBaseInner({
           setError(err as Error);
         }
       } finally {
-        setIsLoading(false);
-        setIsStreaming(false);
+        // Only clear loading state if no frontend tool executions are
+        // still in flight.  When tools are pending, sendToolResult will
+        // trigger a continuation that eventually clears isLoading.
+        if (pendingToolExecutionsRef.current <= 0) {
+          setIsLoading(false);
+          setIsStreaming(false);
+        }
         currentAssistantMessageRef.current = null;
         abortControllerRef.current = null;
       }
@@ -2571,6 +2595,8 @@ function ChatBaseInner({
     if (useStoreMode) {
       useChatStore.getState().stopStreaming();
     }
+    // Reset pending tool counter so loading can clear
+    pendingToolExecutionsRef.current = 0;
     setIsLoading(false);
     setIsStreaming(false);
   }, [useStoreMode]);
@@ -2579,6 +2605,7 @@ function ChatBaseInner({
   const handleNewChat = useCallback(() => {
     setDisplayItems([]);
     toolCallsRef.current.clear();
+    pendingToolExecutionsRef.current = 0;
     setInput('');
     threadIdRef.current = generateMessageId();
     if (useStoreMode) {
