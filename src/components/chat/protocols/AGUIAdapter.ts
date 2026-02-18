@@ -191,7 +191,6 @@ export class AGUIAdapter extends BaseProtocolAdapter {
     if (!this.isContinuation) {
       this.lastAssistantContent = '';
       this.lastTurnContent = '';
-      this.lastAssistantMessageId = null;
     }
 
     // Convert ChatMessages to AG-UI message format
@@ -610,7 +609,6 @@ export class AGUIAdapter extends BaseProtocolAdapter {
         this.lastAssistantContent = context.getCurrentContent();
         // Store just this turn's text for the message history
         this.lastTurnContent = context.getCurrentTurnContent();
-        this.lastAssistantMessageId = finalMessage.id;
         this.emit({
           type: 'message',
           message: finalMessage,
