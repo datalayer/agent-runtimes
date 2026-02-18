@@ -53,6 +53,8 @@ jobs:
   typescript-build:
     name: TypeScript Build & Test
     runs-on: ubuntu-latest
+    env:
+      NODE_OPTIONS: '--max-old-space-size=8192'
     strategy:
       matrix:
         node-version: ['22.x', '24.x']

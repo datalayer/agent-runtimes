@@ -37,6 +37,8 @@ jobs:
   strict-mode-check:
     runs-on: ubuntu-latest
     needs: type-check
+    env:
+      NODE_OPTIONS: '--max-old-space-size=8192'
 
     steps:
     - uses: actions/checkout@v6
