@@ -130,7 +130,7 @@
     "@anthropic-ai/sdk": "^0.52.0",
     "@datalayer/core": "^1.0.1",
     "@datalayer/icons-react": "^1.0.6",
-    "@datalayer/jupyter-lexical": "^1.0.9",
+    "@datalayer/jupyter-lexical": "^1.0.11",
     "@datalayer/jupyter-react": "^2.0.3",
     "@datalayer/primer-addons": "^1.0.4",
     "@datalayer/primer-rjsf": "^1.0.1",
