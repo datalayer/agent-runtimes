@@ -2015,10 +2015,36 @@ function ChatBaseInner({
               );
               newMessage.id = event.message.id || newMessage.id;
               currentAssistantMessageRef.current = newMessage;
-              setDisplayItems(prev => [...prev, newMessage]);
-              // Add message to store
+              // Guard against duplicates: if an item with the same ID
+              // already exists (e.g. continuation arriving after
+              // handleSend's finally cleared currentAssistantMessageRef),
+              // update it in place instead of appending a second copy.
+              setDisplayItems(prev => {
+                const existingIdx = prev.findIndex(
+                  item => !isToolCallMessage(item) && item.id === newMessage.id,
+                );
+                if (existingIdx >= 0) {
+                  const newItems = [...prev];
+                  newItems[existingIdx] = {
+                    ...(newItems[existingIdx] as ChatMessage),
+                    content: event.message?.content ?? '',
+                  };
+                  return newItems;
+                }
+                return [...prev, newMessage];
+              });
+              // Add message to store (only if truly new)
               if (useStoreMode) {
-                useChatStore.getState().addMessage(newMessage);
+                const existingInStore = useChatStore
+                  .getState()
+                  .messages.find(m => m.id === newMessage.id);
+                if (existingInStore) {
+                  useChatStore.getState().updateMessage(newMessage.id, {
+                    content: event.message?.content ?? '',
+                  });
+                } else {
+                  useChatStore.getState().addMessage(newMessage);
+                }
               }
             }
           }

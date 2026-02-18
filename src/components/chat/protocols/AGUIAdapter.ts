@@ -45,10 +45,35 @@ export class AGUIAdapter extends BaseProtocolAdapter {
     }
   > = new Map();
 
+  // Collect tool results for batching — when the agent makes multiple tool
+  // calls in a single run, we must wait for ALL results before sending one
+  // combined continuation request.  Without this, each sendToolResult would
+  // fire its own sendMessage → SSE stream, causing duplicate/concurrent
+  // continuation runs, corrupted shared state, and duplicate agent responses.
+  private collectedToolResults: Map<
+    string,
+    {
+      toolCallId: string;
+      toolName: string;
+      parsedArgs: Record<string, unknown>;
+      result: ToolExecutionResult;
+    }
+  > = new Map();
+
   // Store conversation history for tool result continuation
   private messageHistory: ChatMessage[] = [];
   private lastAssistantContent: string = '';
+  // Text from the current turn only (not accumulated across continuations).
+  // Used for the message history sent to the LLM so each assistant message
+  // contains only its own text, preventing the LLM from seeing duplicated
+  // context that confuses it into making extra tool calls.
+  private lastTurnContent: string = '';
   private lastTools: ToolDefinition[] = [];
+
+  // Continuation tracking — each continuation creates a new message bubble
+  // that appears after the tool calls in the chat display.
+  private isContinuation = false;
+  private lastAssistantMessageId: string | null = null;
 
   constructor(config: AGUIAdapterConfig) {
     super(config);
@@ -161,7 +186,14 @@ export class AGUIAdapter extends BaseProtocolAdapter {
     // Store message history and tools for potential tool result continuation
     this.messageHistory = [...allMessages];
     this.lastTools = options?.tools || [];
-    this.lastAssistantContent = '';
+    // Only clear assistant content for fresh user messages, not continuations.
+    // For continuations, lastTurnContent is used in sendToolResult to build
+    // the assistant message content in the LLM history.
+    if (!this.isContinuation) {
+      this.lastAssistantContent = '';
+      this.lastTurnContent = '';
+      this.lastAssistantMessageId = null;
+    }
 
     // Convert ChatMessages to AG-UI message format
     // AG-UI expects:
@@ -275,37 +307,36 @@ export class AGUIAdapter extends BaseProtocolAdapter {
   }
 
   /**
-   * Send tool result back through AG-UI and continue the conversation
+   * Send tool result back through AG-UI and continue the conversation.
    *
-   * AG-UI requires tool results to be sent as a new request with the full
-   * message history including the tool result as a message with role: "tool"
+   * When the agent makes multiple tool calls in a single run, each call
+   * triggers an independent async execution in ChatBase.  This method
+   * **batches** the results: it stores each result as it arrives and only
+   * sends ONE continuation request once ALL pending tool calls have been
+   * resolved.  This prevents duplicate/concurrent SSE streams, corrupted
+   * shared state, and duplicate agent responses.
    */
   async sendToolResult(
     toolCallId: string,
     result: ToolExecutionResult,
   ): Promise<void> {
-    // First emit local event for UI updates
+    // 1. Emit local event for UI updates
     this.emit({
       type: 'tool-result',
       toolResult: result,
       timestamp: new Date(),
     });
 
-    // Get the tool name and args from pending tool calls
+    // 2. Retrieve tool metadata from pending map
     const pendingToolCall = this.pendingToolCalls.get(toolCallId);
     if (!pendingToolCall) {
       console.warn(
         '[AGUIAdapter] No pending tool call found for ID:',
         toolCallId,
       );
-      console.log(
-        '[AGUIAdapter] Pending tool calls:',
-        Array.from(this.pendingToolCalls.keys()),
-      );
     }
     const toolName = pendingToolCall?.toolName || 'unknown';
 
-    // Parse the args safely
     let parsedArgs: Record<string, unknown> = {};
     if (pendingToolCall?.argsJson) {
       try {
@@ -315,60 +346,109 @@ export class AGUIAdapter extends BaseProtocolAdapter {
       }
     }
 
-    // Build the assistant message that contained the tool call
-    // AG-UI expects assistant messages with tool_calls to potentially have empty content
-    const assistantMessageWithToolCall: ChatMessage = {
+    // 3. Collect this result (batching)
+    this.collectedToolResults.set(toolCallId, {
+      toolCallId,
+      toolName,
+      parsedArgs,
+      result,
+    });
+
+    // 4. Check whether ALL pending tool calls now have results
+    const allResolved = Array.from(this.pendingToolCalls.keys()).every(id =>
+      this.collectedToolResults.has(id),
+    );
+
+    if (!allResolved) {
+      // Other tool calls are still executing — wait for them
+      return;
+    }
+
+    // ── All tool results collected — build ONE combined continuation ──
+
+    // 5. Build a single assistant message containing ALL tool calls
+    const toolCalls = Array.from(this.collectedToolResults.values()).map(
+      tr => ({
+        type: 'tool-call' as const,
+        toolCallId: tr.toolCallId,
+        toolName: tr.toolName,
+        args: tr.parsedArgs,
+        status: 'completed' as const,
+      }),
+    );
+
+    const assistantMessageWithToolCalls: ChatMessage = {
       id: generateMessageId(),
       role: 'assistant',
-      content: this.lastAssistantContent || '',
+      // Use turn-only content for the history so the LLM doesn't see
+      // accumulated text from previous turns (which causes duplicate context
+      // and spurious extra tool calls).
+      content: this.lastTurnContent || this.lastAssistantContent || '',
       createdAt: new Date(),
-      toolCalls: [
-        {
-          type: 'tool-call',
-          toolCallId,
-          toolName,
-          args: parsedArgs,
-          status: 'completed',
-        },
-      ],
+      toolCalls,
     };
 
-    // Build the tool result message
-    const toolResultMessage: ChatMessage = {
+    // 6. Build individual tool-result messages (one per tool call)
+    const toolResultMessages: ChatMessage[] = Array.from(
+      this.collectedToolResults.values(),
+    ).map(tr => ({
       id: generateMessageId(),
-      role: 'tool',
+      role: 'tool' as const,
       content:
-        typeof result.result === 'string'
-          ? result.result
-          : JSON.stringify(result.result),
+        typeof tr.result.result === 'string'
+          ? tr.result.result
+          : JSON.stringify(tr.result.result),
       createdAt: new Date(),
       metadata: {
-        toolCallId,
-        toolName,
-        isError: !result.success,
+        toolCallId: tr.toolCallId,
+        toolName: tr.toolName,
+        isError: !tr.result.success,
       },
-    };
+    }));
 
-    // Build full message history for continuation
+    // 7. Assemble full continuation history
     const continuationMessages = [
       ...this.messageHistory,
-      assistantMessageWithToolCall,
-      toolResultMessage,
+      assistantMessageWithToolCalls,
+      ...toolResultMessages,
     ];
 
-    // Update stored message history
+    // 8. Clear batching state BEFORE the async sendMessage call
+    //    (pendingToolCalls will be repopulated by the next stream if needed)
+    this.pendingToolCalls.clear();
+    this.collectedToolResults.clear();
+
+    // 9. Update stored message history
     this.messageHistory = continuationMessages;
 
-    // Send continuation request to get agent's response to the tool result
-    // This will trigger a new SSE stream with the agent's response
-    await this.sendMessage(toolResultMessage, {
+    // DEBUG: Log continuation messages to inspect what the LLM sees
+    console.log('[AGUIAdapter] === CONTINUATION MESSAGES ===');
+    continuationMessages.forEach((msg, i) => {
+      const toolCallInfo = msg.toolCalls
+        ? ` [${msg.toolCalls.length} tool_calls: ${msg.toolCalls.map(tc => tc.toolName).join(', ')}]`
+        : '';
+      const metaInfo = msg.metadata?.toolCallId
+        ? ` [tool_call_id=${msg.metadata.toolCallId}]`
+        : '';
+      const contentPreview =
+        typeof msg.content === 'string' ? msg.content.slice(0, 80) : '';
+      console.log(
+        `[AGUIAdapter]   [${i}] role=${msg.role}${toolCallInfo}${metaInfo} content="${contentPreview}"`,
+      );
+    });
+    console.log('[AGUIAdapter] === END CONTINUATION MESSAGES ===');
+
+    // 10. Mark as continuation (for internal tracking; the continuation
+    //     will create a new message bubble that appears after the tool calls).
+    this.isContinuation = true;
+
+    // 11. Send ONE continuation request with all tool results
+    const lastToolResultMsg = toolResultMessages[toolResultMessages.length - 1];
+    await this.sendMessage(lastToolResultMsg, {
       messages: continuationMessages,
       tools: this.lastTools,
       threadId: this.currentThreadId || undefined,
     });
-
-    // Clear the pending tool call
-    this.pendingToolCalls.delete(toolCallId);
   }
 
   /**
@@ -396,8 +476,18 @@ export class AGUIAdapter extends BaseProtocolAdapter {
 
     const decoder = new TextDecoder();
     let buffer = '';
+
+    // Always start fresh — each turn gets its own message bubble.
+    // Continuations will naturally appear AFTER the tool calls in the
+    // display because they create a new message that is appended at the
+    // end of displayItems.
     let currentMessageId: string | null = null;
     let currentContent = '';
+    // Track just the current turn's text (not accumulated) for the message
+    // history sent to the LLM on the next continuation.
+    let currentTurnContent = '';
+    // Consume the flag — it was set by sendToolResult for this call only
+    this.isContinuation = false;
 
     try {
       while (true) {
@@ -432,6 +522,10 @@ export class AGUIAdapter extends BaseProtocolAdapter {
                   resetContent: () => {
                     currentContent = '';
                   },
+                  appendTurnContent: content => {
+                    currentTurnContent += content;
+                  },
+                  getCurrentTurnContent: () => currentTurnContent,
                 },
               );
             } catch (e) {
@@ -464,20 +558,30 @@ export class AGUIAdapter extends BaseProtocolAdapter {
       getCurrentContent: () => string;
       appendContent: (content: string) => void;
       resetContent: () => void;
+      appendTurnContent: (content: string) => void;
+      getCurrentTurnContent: () => string;
     },
   ): void {
     const eventType = event.type as string;
 
     switch (eventType) {
       case 'RUN_STARTED':
-        context.setCurrentMessageId(generateMessageId());
-        context.resetContent();
+        if (!context.getCurrentMessageId()) {
+          context.setCurrentMessageId(generateMessageId());
+        }
+        if (!context.getCurrentContent()) {
+          context.resetContent();
+        }
         break;
 
       case 'TEXT_MESSAGE_START': {
         const messageId = event.messageId as string | undefined;
-        context.setCurrentMessageId(messageId || generateMessageId());
-        context.resetContent();
+        if (!context.getCurrentMessageId()) {
+          context.setCurrentMessageId(messageId || generateMessageId());
+        }
+        if (!context.getCurrentContent()) {
+          context.resetContent();
+        }
         break;
       }
 
@@ -486,6 +590,7 @@ export class AGUIAdapter extends BaseProtocolAdapter {
         const delta = event.delta as string | undefined;
         if (delta) {
           context.appendContent(delta);
+          context.appendTurnContent(delta);
           const message = createAssistantMessage(context.getCurrentContent());
           message.id = context.getCurrentMessageId() || generateMessageId();
           this.emit({
@@ -502,8 +607,11 @@ export class AGUIAdapter extends BaseProtocolAdapter {
           context.getCurrentContent(),
         );
         finalMessage.id = context.getCurrentMessageId() || generateMessageId();
-        // Store the assistant content for tool result continuation
+        // Store assistant content and message ID for continuations
         this.lastAssistantContent = context.getCurrentContent();
+        // Store just this turn's text for the message history
+        this.lastTurnContent = context.getCurrentTurnContent();
+        this.lastAssistantMessageId = finalMessage.id;
         this.emit({
           type: 'message',
           message: finalMessage,
