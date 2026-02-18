@@ -98,6 +98,8 @@
     "start:agent:vite": "vite --open /html/agent.html",
     "start:agent-notebook": "run-p server:start jupyter:start start:agent-notebook:vite",
     "start:agent-notebook:vite": "vite --open /html/agent-notebook.html",
+    "start:agent-lexical": "run-p server:start jupyter:start start:agent-lexical:vite",
+    "start:agent-lexical:vite": "vite --open /html/agent-lexical.html",
     "storybook": "storybook dev -p 6006",
     "sync:jupyter": "bash scripts/sync-jupyter.sh",
     "sync:jupyter:watch": "bash scripts/sync-jupyter.sh --watch",

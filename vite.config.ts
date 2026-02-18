@@ -206,6 +206,7 @@ export default defineConfig(({ mode, command }) => {
       main: path.resolve(__dirname, 'html/index.html'),
       agent: path.resolve(__dirname, 'html/agent.html'),
       'agent-notebook': path.resolve(__dirname, 'html/agent-notebook.html'),
+      'agent-lexical': path.resolve(__dirname, 'html/agent-lexical.html'),
     };
   }
 
