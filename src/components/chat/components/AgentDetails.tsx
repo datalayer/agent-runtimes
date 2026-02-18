@@ -64,6 +64,8 @@ export interface AgentDetailsProps {
   onIdentityDisconnect?: (provider: OAuthProvider) => void;
   /** Callback to go back to chat view */
   onBack: () => void;
+  /** Whether to show the header with back button (default: true) */
+  showBackHeader?: boolean;
 }
 
 /**
@@ -318,6 +320,7 @@ export function AgentDetails({
   onIdentityConnect,
   onIdentityDisconnect,
   onBack,
+  showBackHeader = true,
 }: AgentDetailsProps) {
   const queryClient = useQueryClient();
 
@@ -405,26 +408,28 @@ export function AgentDetails({
       }}
     >
       {/* Header */}
-      <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 2,
-          p: 3,
-          borderBottom: '1px solid',
-          borderColor: 'border.default',
-        }}
-      >
-        <IconButton
-          icon={ArrowLeftIcon}
-          aria-label="Back to chat"
-          variant="invisible"
-          onClick={onBack}
-        />
-        <Heading as="h2" sx={{ fontSize: 3, fontWeight: 'semibold' }}>
-          Agent Details
-        </Heading>
-      </Box>
+      {showBackHeader && (
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 2,
+            p: 3,
+            borderBottom: '1px solid',
+            borderColor: 'border.default',
+          }}
+        >
+          <IconButton
+            icon={ArrowLeftIcon}
+            aria-label="Back to chat"
+            variant="invisible"
+            onClick={onBack}
+          />
+          <Heading as="h2" sx={{ fontSize: 3, fontWeight: 'semibold' }}>
+            Agent Details
+          </Heading>
+        </Box>
+      )}
 
       {/* Content */}
       <Box sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -1578,11 +1583,13 @@ export function AgentDetails({
         />
 
         {/* Back button */}
-        <Box sx={{ mt: 2 }}>
-          <Button variant="primary" onClick={onBack} sx={{ width: '100%' }}>
-            Back to Chat
-          </Button>
-        </Box>
+        {showBackHeader && (
+          <Box sx={{ mt: 2 }}>
+            <Button variant="primary" onClick={onBack} sx={{ width: '100%' }}>
+              Back to Chat
+            </Button>
+          </Box>
+        )}
       </Box>
     </Box>
   );
