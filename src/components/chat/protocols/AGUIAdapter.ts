@@ -73,7 +73,6 @@ export class AGUIAdapter extends BaseProtocolAdapter {
   // Continuation tracking — each continuation creates a new message bubble
   // that appears after the tool calls in the chat display.
   private isContinuation = false;
-  private lastAssistantMessageId: string | null = null;
 
   constructor(config: AGUIAdapterConfig) {
     super(config);
