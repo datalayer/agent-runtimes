@@ -62,6 +62,10 @@ import {
   QueryClientContext,
 } from '@tanstack/react-query';
 import { Streamdown } from 'streamdown';
+import {
+  streamdownMarkdownStyles,
+  streamdownCodeBlockStyles,
+} from '../styles/streamdownStyles';
 import { PoweredByTag, type PoweredByTagProps } from '../elements/PoweredByTag';
 import { requestAPI } from '../../handler';
 import { useChatStore } from '../../store/chatStore';
@@ -3519,73 +3523,7 @@ function ChatBaseInner({
                       ? 'accent.emphasis'
                       : 'canvas.subtle',
                     color: isUser ? 'fg.onEmphasis' : 'fg.default',
-                    // Streamdown code block styling
-                    // Code block container
-                    '& [data-streamdown="code-block"]': {
-                      borderRadius: '8px',
-                      border: '1px solid',
-                      borderColor: 'border.default',
-                      overflow: 'hidden',
-                      my: 2,
-                    },
-                    // Code block header with language label and buttons
-                    '& [data-streamdown="code-block-header"]': {
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      backgroundColor: 'canvas.subtle',
-                      padding: '8px 12px',
-                      fontSize: '12px',
-                      color: 'fg.muted',
-                    },
-                    // Style the buttons in the header
-                    '& [data-streamdown="code-block-header"] button': {
-                      background: 'none',
-                      border: 'none',
-                      cursor: 'pointer',
-                      padding: '4px',
-                      color: 'fg.muted',
-                      borderRadius: '4px',
-                      '&:hover': {
-                        backgroundColor: 'neutral.muted',
-                        color: 'fg.default',
-                      },
-                    },
-                    // Code block body
-                    '& [data-streamdown="code-block-body"]': {
-                      backgroundColor: 'canvas.subtle',
-                      padding: '12px',
-                      margin: 0,
-                      overflow: 'auto',
-                      fontSize: '13px',
-                      lineHeight: 1.5,
-                    },
-                    // Make each line display as a block for line breaks
-                    '& [data-streamdown="code-block-body"] code': {
-                      display: 'block',
-                      fontFamily:
-                        'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
-                    },
-                    '& [data-streamdown="code-block-body"] code > span.block': {
-                      display: 'block',
-                    },
-                    '& [data-streamdown="code-block-body"] code > span': {
-                      display: 'block',
-                    },
-                    // General pre/code styling fallback
-                    '& pre': {
-                      whiteSpace: 'pre-wrap',
-                      wordBreak: 'break-word',
-                      overflowX: 'auto',
-                      margin: 0,
-                    },
-                    '& pre code': {
-                      whiteSpace: 'pre-wrap',
-                    },
-                    '& code': {
-                      fontFamily:
-                        'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
-                    },
+                    ...streamdownCodeBlockStyles,
                   }}
                 >
                   {isUser ? (
@@ -3599,87 +3537,7 @@ function ChatBaseInner({
                       {getMessageText(message)}
                     </Text>
                   ) : (
-                    <Box
-                      sx={{
-                        fontSize: 1,
-                        lineHeight: 1.5,
-                        '& > *:first-child': { marginTop: 0 },
-                        '& > *:last-child': { marginBottom: 0 },
-                        '& p': { marginTop: 0, marginBottom: '0.75em' },
-                        '& h1, & h2, & h3, & h4, & h5, & h6': {
-                          marginTop: '1em',
-                          marginBottom: '0.5em',
-                          fontWeight: 'bold',
-                        },
-                        '& h1': { fontSize: '1.5em' },
-                        '& h2': { fontSize: '1.3em' },
-                        '& h3': { fontSize: '1.15em' },
-                        '& ul, & ol': {
-                          marginTop: '0.5em',
-                          marginBottom: '0.5em',
-                          paddingInlineStart: '1.25em',
-                        },
-                        '& li': {
-                          paddingInlineStart: '0.25em',
-                          marginBottom: '0.25em',
-                        },
-                        '& code': {
-                          backgroundColor: 'neutral.muted',
-                          padding: '2px 4px',
-                          borderRadius: '4px',
-                          fontSize: '0.9em',
-                          fontFamily:
-                            'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
-                        },
-                        '& pre code': {
-                          backgroundColor: 'transparent',
-                          padding: 0,
-                        },
-                        '& blockquote': {
-                          borderLeft: '3px solid',
-                          borderColor: 'border.default',
-                          paddingLeft: '12px',
-                          marginLeft: 0,
-                          marginRight: 0,
-                          color: 'fg.muted',
-                        },
-                        '& a': {
-                          color: 'accent.fg',
-                          textDecoration: 'underline',
-                        },
-                        '& table': {
-                          width: '100%',
-                          borderCollapse: 'collapse',
-                          marginTop: '0.75em',
-                          marginBottom: '0.75em',
-                          fontSize: '0.9em',
-                        },
-                        '& th, & td': {
-                          border: '1px solid',
-                          borderColor: 'border.default',
-                          padding: '6px 12px',
-                          textAlign: 'left',
-                        },
-                        '& th': {
-                          backgroundColor: 'canvas.inset',
-                          fontWeight: 'bold',
-                        },
-                        '& tr:nth-of-type(even)': {
-                          backgroundColor: 'canvas.inset',
-                        },
-                        '& img': {
-                          maxWidth: '100%',
-                          borderRadius: '8px',
-                        },
-                        '& hr': {
-                          border: 'none',
-                          borderTop: '1px solid',
-                          borderColor: 'border.default',
-                          marginTop: '1em',
-                          marginBottom: '1em',
-                        },
-                      }}
-                    >
+                    <Box sx={streamdownMarkdownStyles}>
                       <Streamdown>
                         {getMessageText(message) || (isStreaming ? '...' : '')}
                       </Streamdown>

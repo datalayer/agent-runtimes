@@ -15,6 +15,7 @@ import { Text, IconButton } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { CopyIcon, SyncIcon } from '@primer/octicons-react';
 import { Streamdown } from 'streamdown';
+import { streamdownMarkdownStyles } from '../styles/streamdownStyles';
 
 export interface TextPartProps {
   /** Text content to display */
@@ -95,78 +96,7 @@ export function TextPart({
           </Box>
         )}
       </Box>
-      <Box
-        sx={{
-          fontSize: 1,
-          lineHeight: 1.6,
-          '& > *:first-child': { marginTop: 0 },
-          '& > *:last-child': { marginBottom: 0 },
-          '& p': { marginTop: 0, marginBottom: '1em' },
-          '& h1, & h2, & h3, & h4, & h5, & h6': {
-            marginTop: '1em',
-            marginBottom: '0.5em',
-            fontWeight: 'bold',
-          },
-          '& ul, & ol': {
-            marginTop: '0.5em',
-            marginBottom: '0.5em',
-            paddingLeft: '1.2em',
-            marginLeft: '0.3em',
-          },
-          '& li': {
-            listStylePosition: 'inside',
-          },
-          '& code': {
-            backgroundColor: 'neutral.muted',
-            padding: '2px 4px',
-            borderRadius: 1,
-            fontSize: '0.9em',
-            fontFamily: 'mono',
-          },
-          '& pre': {
-            backgroundColor: 'canvas.inset',
-            padding: 3,
-            borderRadius: 2,
-            overflow: 'auto',
-            marginTop: '1em',
-            marginBottom: '1em',
-            border: '1px solid',
-            borderColor: 'border.default',
-          },
-          '& pre code': {
-            backgroundColor: 'transparent',
-            padding: 0,
-            fontSize: '0.875em',
-          },
-          '& blockquote': {
-            borderLeft: '3px solid',
-            borderColor: 'border.default',
-            paddingLeft: 3,
-            marginLeft: 0,
-            color: 'fg.muted',
-          },
-          '& a': {
-            color: 'accent.fg',
-            textDecoration: 'underline',
-          },
-          '& table': {
-            width: '100%',
-            borderCollapse: 'collapse',
-            marginTop: '1em',
-            marginBottom: '1em',
-          },
-          '& th, & td': {
-            border: '1px solid',
-            borderColor: 'border.default',
-            padding: 2,
-            textAlign: 'left',
-          },
-          '& th': {
-            backgroundColor: 'canvas.subtle',
-            fontWeight: 'bold',
-          },
-        }}
-      >
+      <Box sx={streamdownMarkdownStyles}>
         <Streamdown>{text}</Streamdown>
       </Box>
     </Box>

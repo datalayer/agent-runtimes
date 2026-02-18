@@ -15,6 +15,7 @@ import { Text, Button } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { ChevronDownIcon } from '@primer/octicons-react';
 import { Streamdown } from 'streamdown';
+import { streamdownMarkdownStyles } from '../styles/streamdownStyles';
 
 export interface ReasoningPartProps {
   /** Reasoning text content */
@@ -91,11 +92,8 @@ export function ReasoningPart({ text, isStreaming }: ReasoningPartProps) {
             borderRadius: 2,
             border: '1px solid',
             borderColor: 'border.default',
-            fontSize: 1,
-            lineHeight: 1.6,
             color: 'fg.muted',
-            '& > *:first-child': { marginTop: 0 },
-            '& > *:last-child': { marginBottom: 0 },
+            ...streamdownMarkdownStyles,
           }}
         >
           <Streamdown>{text}</Streamdown>
