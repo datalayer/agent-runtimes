@@ -53,18 +53,3 @@ jobs:
       test-command: 'npm run test:all && npm run test:coverage && npm run build:lib'
     secrets:
       TEST_DATALAYER_API_KEY: ${{ secrets.TEST_DATALAYER_API_KEY }}
-
-  test-26x:
-    needs: test-24x  # Run sequentially
-    uses: ./.github/workflows/reusable-typescript.yml
-    with:
-      node-version: '26.x'
-      install-command: 'npm install --workspaces'
-      build-command: 'npm run build'
-      run-format-check: false
-      run-lint: false
-      run-type-check: false
-      run-tests: true
-      test-command: 'npm run test:all && npm run test:coverage && npm run build:lib'
-    secrets:
-      TEST_DATALAYER_API_KEY: ${{ secrets.TEST_DATALAYER_API_KEY }}

@@ -80,7 +80,6 @@ import { editorConfig } from './lexical/editorConfig';
 import '@datalayer/jupyter-lexical/style/index.css';
 
 import './lexical/lexical-theme.css';
-import '@datalayer/jupyter-lexical/style/modal-overrides.css';
 
 // Fixed lexical document ID
 const LEXICAL_ID = 'agui-lexical-example';

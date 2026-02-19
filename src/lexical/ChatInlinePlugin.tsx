@@ -40,6 +40,7 @@ import {
   useCallback,
   useEffect,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
 } from 'react';
@@ -280,13 +281,40 @@ export function ChatInlinePlugin({
   const { range } = useRange();
   const selectedText = useSelectionText();
 
-  // Update floating reference position based on selection
+  // ---------------------------------------------------------------
+  // Latch: save position & text when AI panel opens so that a
+  // transient selection loss (e.g. portal render triggering
+  // selectionchange) does not unmount the panel.
+  // ---------------------------------------------------------------
+  const savedRectRef = useRef<DOMRect | null>(null);
+  const savedTextRef = useRef<string>('');
+
+  useEffect(() => {
+    if (isOpen && range) {
+      // Keep saving the latest rect/text while open and range is valid
+      savedRectRef.current = range.getBoundingClientRect();
+      savedTextRef.current = selectedText || '';
+    }
+    if (!isOpen) {
+      savedRectRef.current = null;
+      savedTextRef.current = '';
+    }
+  }, [isOpen, range, selectedText]);
+
+  // Effective values: prefer live selection, fall back to saved snapshot
+  const effectiveRect = useMemo(
+    () => range?.getBoundingClientRect() ?? savedRectRef.current ?? null,
+
+    [range],
+  );
+  const effectiveText = range ? selectedText : savedTextRef.current;
+
+  // Update floating reference position based on selection (or saved rect)
   useLayoutEffect(() => {
     setReference({
-      getBoundingClientRect: () =>
-        range?.getBoundingClientRect() || new DOMRect(),
+      getBoundingClientRect: () => effectiveRect || new DOMRect(),
     });
-  }, [setReference, range]);
+  }, [setReference, effectiveRect]);
 
   // Handle replace selection
   const handleReplaceSelection = useCallback(
@@ -334,8 +362,8 @@ export function ChatInlinePlugin({
     [editor],
   );
 
-  // Don't render if not open or no selection
-  if (!isOpen || range === null) {
+  // Don't render if not open, or if we have neither a live range nor a saved rect
+  if (!isOpen || (range === null && savedRectRef.current === null)) {
     return null;
   }
 
@@ -359,7 +387,7 @@ export function ChatInlinePlugin({
       }}
     >
       <ChatInline
-        selectedText={selectedText}
+        selectedText={effectiveText}
         protocol={protocol}
         onReplaceSelection={handleReplaceSelection}
         onInsertInline={handleInsertInline}
