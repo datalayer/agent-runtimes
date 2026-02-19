@@ -93,7 +93,6 @@ import { DEFAULT_MODEL } from './specs';
 
 import '@datalayer/jupyter-lexical/style/index.css';
 import './examples/lexical/lexical-theme.css';
-import '@datalayer/jupyter-lexical/style/modal-overrides.css';
 import '../style/primer-primitives.css';
 
 setupPrimerPortals();
