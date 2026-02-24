@@ -18,11 +18,11 @@ import {
 } from '@datalayer/jupyter-react';
 import { INotebookContent } from '@jupyterlab/nbformat';
 import { ServiceManager } from '@jupyterlab/services';
+import { DatalayerThemeProvider } from '@datalayer/primer-addons';
 import {
   coreStore,
   iamStore,
   createDatalayerServiceManager,
-  DatalayerThemeProvider,
 } from '@datalayer/core';
 import { useChatStore } from '../components/chat/store';
 import { OAuthCallback } from '../identity';

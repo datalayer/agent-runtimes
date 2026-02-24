@@ -132,7 +132,7 @@
     "@datalayer/icons-react": "^1.0.6",
     "@datalayer/jupyter-lexical": "^1.0.11",
     "@datalayer/jupyter-react": "^2.0.3",
-    "@datalayer/primer-addons": "^1.0.7",
+    "@datalayer/primer-addons": "^1.0.9",
     "@datalayer/primer-rjsf": "^1.0.1",
     "@jupyter-widgets/base-manager": "^1.0.12",
     "@jupyter-widgets/schema": "^0.5.6",

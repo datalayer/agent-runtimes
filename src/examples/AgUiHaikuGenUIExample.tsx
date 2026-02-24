@@ -25,8 +25,7 @@ import React, {
   forwardRef,
 } from 'react';
 import { Text } from '@primer/react';
-import { Box } from '@datalayer/primer-addons';
-import { DatalayerThemeProvider } from '@datalayer/core';
+import { Box, DatalayerThemeProvider } from '@datalayer/primer-addons';
 import { ChatFloating, type ToolCallRenderContext } from '../components/chat';
 import { InlineHaikuCard, HaikuDisplay, type HaikuResult } from './ag-ui/haiku';
 

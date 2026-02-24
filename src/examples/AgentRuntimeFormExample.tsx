@@ -15,8 +15,7 @@ import {
   QueryClientProvider,
   useQuery,
 } from '@tanstack/react-query';
-import { Box } from '@datalayer/primer-addons';
-import { DatalayerThemeProvider } from '@datalayer/core';
+import { Box, DatalayerThemeProvider } from '@datalayer/primer-addons';
 import { Chat, useChatStore } from '../components/chat';
 import { DEFAULT_MODEL } from '../specs';
 import type { Transport, Extension, ChatMessage } from '../components/chat';

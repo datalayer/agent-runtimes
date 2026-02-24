@@ -20,8 +20,7 @@
  */
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { Box } from '@datalayer/primer-addons';
-import { DatalayerThemeProvider } from '@datalayer/core';
+import { Box, DatalayerThemeProvider } from '@datalayer/primer-addons';
 import { Text, Spinner, TextInput, Button } from '@primer/react';
 import { A2UIProvider, A2UIRenderer, useA2UI, Types } from '../renderers/a2ui';
 
