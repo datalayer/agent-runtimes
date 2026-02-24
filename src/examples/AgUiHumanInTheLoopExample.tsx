@@ -25,7 +25,8 @@ import {
   ProgressBar,
   Button,
 } from '@primer/react';
-import { Box, DatalayerThemeProvider } from '@datalayer/primer-addons';
+import { Box } from '@datalayer/primer-addons';
+import { ThemedProvider, useThemeBrandColor } from './stores/themedProvider';
 import { ChatFloating, type ToolCallRenderContext } from '../components/chat';
 import {
   TasklistIcon,
@@ -344,8 +345,10 @@ const renderTaskStepsTool = (context: ToolCallRenderContext) => {
  * - UI state changes based on user actions
  */
 const AgUiHumanInTheLoopExample: React.FC = () => {
+  const brandColor = useThemeBrandColor();
+
   return (
-    <DatalayerThemeProvider>
+    <ThemedProvider>
       <Box
         sx={{
           minHeight: '100vh',
@@ -451,7 +454,7 @@ const AgUiHumanInTheLoopExample: React.FC = () => {
           title="Task Planner"
           description="I can help you plan tasks. I'll generate steps for your review."
           position="bottom-right"
-          brandColor="#059669"
+          brandColor={brandColor}
           renderToolResult={renderTaskStepsTool}
           hideMessagesAfterToolUI={true}
           suggestions={[
@@ -466,7 +469,7 @@ const AgUiHumanInTheLoopExample: React.FC = () => {
           ]}
         />
       </Box>
-    </DatalayerThemeProvider>
+    </ThemedProvider>
   );
 };
 

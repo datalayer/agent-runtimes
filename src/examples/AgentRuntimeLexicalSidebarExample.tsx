@@ -49,7 +49,8 @@ import { CheckListPlugin } from '@lexical/react/LexicalCheckListPlugin';
 import { LinkPlugin } from '@lexical/react/LexicalLinkPlugin';
 import type { ServiceManager } from '@jupyterlab/services';
 import { Box } from '@datalayer/primer-addons';
-import { JupyterReactTheme, useJupyter } from '@datalayer/jupyter-react';
+import { useJupyter } from '@datalayer/jupyter-react';
+import { ThemedJupyterProvider } from './stores/themedProvider';
 import {
   ComponentPickerMenuPlugin,
   JupyterCellPlugin,
@@ -355,9 +356,9 @@ export function ChatLexicalExampleInner({
  */
 export function AgentRuntimeLexicalSidebarExample() {
   return (
-    <JupyterReactTheme>
+    <ThemedJupyterProvider>
       <SimpleWrapper />
-    </JupyterReactTheme>
+    </ThemedJupyterProvider>
   );
 }
 

@@ -47,7 +47,8 @@ import { CheckListPlugin } from '@lexical/react/LexicalCheckListPlugin';
 import { LinkPlugin } from '@lexical/react/LexicalLinkPlugin';
 import type { ServiceManager } from '@jupyterlab/services';
 import { Box } from '@datalayer/primer-addons';
-import { JupyterReactTheme, useJupyter } from '@datalayer/jupyter-react';
+import { useJupyter } from '@datalayer/jupyter-react';
+import { ThemedJupyterProvider } from './stores/themedProvider';
 import {
   ComponentPickerMenuPlugin,
   JupyterCellPlugin,
@@ -368,9 +369,9 @@ const LexicalUI = React.memo(function LexicalUI({
               <TableCellResizerPlugin />
               <JupyterCellPlugin />
               {/* Wrap kernel plugins with Simple provider */}
-              <JupyterReactTheme>
+              <ThemedJupyterProvider>
                 <SimpleKernelPluginsInner />
-              </JupyterReactTheme>
+              </ThemedJupyterProvider>
               {floatingAnchorElem && (
                 <>
                   <DraggableBlockPlugin anchorElem={floatingAnchorElem} />
@@ -471,7 +472,6 @@ function LexicalWithChat({
           defaultOpen={true}
           defaultViewMode="panel"
           position="bottom-right"
-          brandColor="#7c3aed"
           frontendTools={tools}
           useStore={false}
           showModelSelector={true}

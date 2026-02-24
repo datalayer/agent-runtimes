@@ -18,7 +18,8 @@
 
 import React, { useCallback } from 'react';
 import { Text } from '@primer/react';
-import { Box, DatalayerThemeProvider } from '@datalayer/primer-addons';
+import { Box } from '@datalayer/primer-addons';
+import { ThemedProvider, useThemeBrandColor } from './stores/themedProvider';
 import { ChatFloating, type ToolCallRenderContext } from '../components/chat';
 import { InlineWeatherCard, type WeatherResult } from './ag-ui/weather';
 
@@ -67,6 +68,8 @@ const renderWeatherToolResult = (context: ToolCallRenderContext) => {
  * - Loading states while fetching data
  */
 const AgUiBackendToolRenderingExample: React.FC = () => {
+  const brandColor = useThemeBrandColor();
+
   // Optional: still track weather for sidebar display if needed
   const handleStateUpdate = useCallback((_state: unknown) => {
     // State updates are still available if needed for other purposes
@@ -74,7 +77,7 @@ const AgUiBackendToolRenderingExample: React.FC = () => {
   }, []);
 
   return (
-    <DatalayerThemeProvider>
+    <ThemedProvider>
       <Box
         sx={{
           minHeight: '100vh',
@@ -182,7 +185,7 @@ const AgUiBackendToolRenderingExample: React.FC = () => {
           title="Weather Assistant"
           description="Ask me about the weather anywhere in the world!"
           position="bottom-right"
-          brandColor="#667eea"
+          brandColor={brandColor}
           onStateUpdate={handleStateUpdate}
           renderToolResult={renderWeatherToolResult}
           suggestions={[
@@ -197,7 +200,7 @@ const AgUiBackendToolRenderingExample: React.FC = () => {
           ]}
         />
       </Box>
-    </DatalayerThemeProvider>
+    </ThemedProvider>
   );
 };
 

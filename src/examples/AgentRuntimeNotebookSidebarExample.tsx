@@ -22,11 +22,8 @@
 import { useMemo } from 'react';
 import { Box } from '@datalayer/primer-addons';
 import { ServiceManager } from '@jupyterlab/services';
-import {
-  Notebook,
-  JupyterReactTheme,
-  useJupyter,
-} from '@datalayer/jupyter-react';
+import { Notebook, useJupyter } from '@datalayer/jupyter-react';
+import { ThemedJupyterProvider } from './stores/themedProvider';
 
 // Import Chat components
 import {
@@ -213,9 +210,9 @@ export function AgentRuntimeNotebookExampleInner({
  */
 export function AgentRuntimeNotebookSidebarExample() {
   return (
-    <JupyterReactTheme>
+    <ThemedJupyterProvider>
       <SimpleWrapper />
-    </JupyterReactTheme>
+    </ThemedJupyterProvider>
   );
 }
 

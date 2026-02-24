@@ -19,7 +19,8 @@
 import React, { useEffect, useState } from 'react';
 import { Box } from '@datalayer/primer-addons';
 import { ServiceManager } from '@jupyterlab/services';
-import { JupyterReactTheme, Notebook } from '@datalayer/jupyter-react';
+import { Notebook } from '@datalayer/jupyter-react';
+import { ThemedJupyterProvider } from './stores/themedProvider';
 
 // Agent-runtimes imports
 import { ChatFloating } from '../components/chat';
@@ -161,7 +162,7 @@ const NotebookUI = React.memo(function NotebookUI({
         }}
       >
         {serviceManager ? (
-          <JupyterReactTheme>
+          <ThemedJupyterProvider>
             <Notebook
               nbformat={NOTEBOOK_CONTENT}
               id={NOTEBOOK_ID}
@@ -170,7 +171,7 @@ const NotebookUI = React.memo(function NotebookUI({
               cellSidebarMargin={120}
               startDefaultKernel={true}
             />
-          </JupyterReactTheme>
+          </ThemedJupyterProvider>
         ) : (
           <Box sx={{ padding: 3 }}>
             <p>Loading service manager...</p>
@@ -233,7 +234,6 @@ function NotebookWithChat({
           defaultOpen={true}
           defaultViewMode="panel"
           position="bottom-right"
-          brandColor="#7c3aed"
           frontendTools={frontendTools}
           useStore={false}
           showModelSelector={true}

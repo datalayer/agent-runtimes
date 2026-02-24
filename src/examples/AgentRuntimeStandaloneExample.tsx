@@ -19,7 +19,7 @@
 import React, { useCallback } from 'react';
 import { Text } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
-import { DatalayerThemeProvider } from '@datalayer/primer-addons';
+import { ThemedProvider } from './stores/themedProvider';
 import { ChatStandalone, type MessageHandler } from '../components/chat';
 
 /**
@@ -109,7 +109,7 @@ const AgentRuntimePopupStandaloneExample: React.FC = () => {
   );
 
   return (
-    <DatalayerThemeProvider>
+    <ThemedProvider>
       <Box
         sx={{
           minHeight: '100vh',
@@ -280,14 +280,13 @@ const AgentRuntimePopupStandaloneExample: React.FC = () => {
           title="Demo Assistant"
           onSendMessage={handleSendMessage}
           position="bottom-right"
-          brandColor="#7c3aed"
           enableStreaming={true}
           emptyStateMessage="Hi! I'm a demo assistant. Try asking me for the time, a joke, or what I can do!"
           buttonTooltip="Chat with Demo Assistant"
           showPoweredBy={true}
         />
       </Box>
-    </DatalayerThemeProvider>
+    </ThemedProvider>
   );
 };
 

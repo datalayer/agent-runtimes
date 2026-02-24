@@ -1,6 +1,6 @@
 {
   "name": "@datalayer/agent-runtimes",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "type": "module",
   "workspaces": [
     ".",
@@ -132,7 +132,7 @@
     "@datalayer/icons-react": "^1.0.6",
     "@datalayer/jupyter-lexical": "^1.0.13",
     "@datalayer/jupyter-react": "^2.0.3",
-    "@datalayer/primer-addons": "^1.0.9",
+    "@datalayer/primer-addons": "^1.0.10",
     "@datalayer/primer-rjsf": "^1.0.1",
     "@excalidraw/excalidraw": "^0.18.0",
     "@jupyter-widgets/base-manager": "^1.0.12",

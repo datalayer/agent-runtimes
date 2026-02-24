@@ -25,7 +25,8 @@ import React, {
   forwardRef,
 } from 'react';
 import { Text } from '@primer/react';
-import { Box, DatalayerThemeProvider } from '@datalayer/primer-addons';
+import { Box } from '@datalayer/primer-addons';
+import { ThemedProvider, useThemeBrandColor } from './stores/themedProvider';
 import { ChatFloating, type ToolCallRenderContext } from '../components/chat';
 import { InlineHaikuCard, HaikuDisplay, type HaikuResult } from './ag-ui/haiku';
 
@@ -95,6 +96,8 @@ HaikuDisplayWithRef.displayName = 'HaikuDisplayWithRef';
  * - Japanese/English text rendering
  */
 const AgUiHaikuGenUIExample: React.FC = () => {
+  const brandColor = useThemeBrandColor();
+
   // Ref to the main display for adding haikus
   const displayRef = useRef<HaikuDisplayHandle>(null);
 
@@ -155,7 +158,7 @@ const AgUiHaikuGenUIExample: React.FC = () => {
   );
 
   return (
-    <DatalayerThemeProvider>
+    <ThemedProvider>
       <Box
         sx={{
           minHeight: '100vh',
@@ -278,7 +281,7 @@ const AgUiHaikuGenUIExample: React.FC = () => {
           title="Haiku Generator"
           description="Ask me to write haiku poetry about any topic!"
           position="bottom-right"
-          brandColor="#667eea"
+          brandColor={brandColor}
           defaultOpen={true}
           renderToolResult={renderHaikuToolResult}
           hideMessagesAfterToolUI={true}
@@ -298,7 +301,7 @@ const AgUiHaikuGenUIExample: React.FC = () => {
           ]}
         />
       </Box>
-    </DatalayerThemeProvider>
+    </ThemedProvider>
   );
 };
 

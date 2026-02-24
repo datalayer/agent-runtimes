@@ -15,7 +15,8 @@
 
 import React, { useState, useCallback } from 'react';
 import { Text, ProgressBar, Button } from '@primer/react';
-import { Box, DatalayerThemeProvider } from '@datalayer/primer-addons';
+import { Box } from '@datalayer/primer-addons';
+import { ThemedProvider, useThemeBrandColor } from './stores/themedProvider';
 import { ChatFloating } from '../components/chat';
 import {
   CheckCircleIcon,
@@ -340,6 +341,7 @@ const PlanDisplay: React.FC<{
  * - Interactive step selection with Confirm/Reject buttons
  */
 const AgUiToolsBasedGenUIExample: React.FC = () => {
+  const brandColor = useThemeBrandColor();
   const [plan, setPlan] = useState<PlanState | null>(null);
   const [decision, setDecision] = useState<'confirmed' | 'rejected' | null>(
     null,
@@ -390,7 +392,7 @@ const AgUiToolsBasedGenUIExample: React.FC = () => {
   }, []);
 
   return (
-    <DatalayerThemeProvider>
+    <ThemedProvider>
       <Box
         sx={{
           minHeight: '100vh',
@@ -507,7 +509,7 @@ const AgUiToolsBasedGenUIExample: React.FC = () => {
           title="Plan Generator"
           description="I can create detailed plans and update them in real-time."
           position="bottom-right"
-          brandColor="#0969da"
+          brandColor={brandColor}
           onStateUpdate={handleStateUpdate}
           suggestions={[
             {
@@ -522,7 +524,7 @@ const AgUiToolsBasedGenUIExample: React.FC = () => {
           ]}
         />
       </Box>
-    </DatalayerThemeProvider>
+    </ThemedProvider>
   );
 };
 

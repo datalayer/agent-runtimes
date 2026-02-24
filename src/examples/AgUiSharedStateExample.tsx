@@ -15,7 +15,8 @@
 
 import React, { useState, useCallback } from 'react';
 import { Text, Button, TextInput, Label } from '@primer/react';
-import { Box, DatalayerThemeProvider } from '@datalayer/primer-addons';
+import { Box } from '@datalayer/primer-addons';
+import { ThemedProvider, useThemeBrandColor } from './stores/themedProvider';
 import { ChatFloating } from '../components/chat';
 import {
   PlusIcon,
@@ -315,6 +316,7 @@ const RecipeDisplay: React.FC<{
  * - Editable UI that updates shared state
  */
 const AgUiSharedStateExample: React.FC = () => {
+  const brandColor = useThemeBrandColor();
   const [recipe, setRecipe] = useState<RecipeState>(DEFAULT_RECIPE);
 
   // Handle state updates from AG-UI
@@ -341,7 +343,7 @@ const AgUiSharedStateExample: React.FC = () => {
   }, []);
 
   return (
-    <DatalayerThemeProvider>
+    <ThemedProvider>
       <Box
         sx={{
           minHeight: '100vh',
@@ -470,7 +472,7 @@ const AgUiSharedStateExample: React.FC = () => {
           title="Recipe Assistant"
           description="Let's build a recipe together! I can add ingredients, instructions, and more."
           position="bottom-right"
-          brandColor="#be185d"
+          brandColor={brandColor}
           onStateUpdate={handleStateUpdate}
           suggestions={[
             {
@@ -484,7 +486,7 @@ const AgUiSharedStateExample: React.FC = () => {
           ]}
         />
       </Box>
-    </DatalayerThemeProvider>
+    </ThemedProvider>
   );
 };
 

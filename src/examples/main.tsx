@@ -18,7 +18,15 @@ import {
 } from '@datalayer/jupyter-react';
 import { INotebookContent } from '@jupyterlab/nbformat';
 import { ServiceManager } from '@jupyterlab/services';
-import { DatalayerThemeProvider } from '@datalayer/primer-addons';
+import {
+  DatalayerThemeProvider,
+  themeConfigs,
+  themeVariants,
+  type ColorMode,
+} from '@datalayer/primer-addons';
+import { SegmentedControl } from '@primer/react';
+import { Box } from '@datalayer/primer-addons';
+import { MoonIcon, SunIcon, DeviceDesktopIcon } from '@primer/octicons-react';
 import {
   coreStore,
   iamStore,
@@ -27,6 +35,7 @@ import {
 import { useChatStore } from '../components/chat/store';
 import { OAuthCallback } from '../identity';
 import { EXAMPLES } from './example-selector';
+import { useExampleThemeStore } from './stores/themeStore';
 
 import nbformatExample from './stores/notebooks/NotebookExample1.ipynb.json';
 
@@ -423,45 +432,100 @@ export const ExampleApp: React.FC = () => {
   }
 
   return (
-    <DatalayerThemeProvider>
-      <div style={{ width: '100vw', height: '100vh', overflow: 'hidden' }}>
-        <div
-          style={{
+    <ExampleAppThemed
+      selectedExample={selectedExample}
+      isChangingExample={isChangingExample}
+      error={error}
+      ExampleComponent={ExampleComponent}
+      exampleProps={exampleProps}
+      onExampleChange={handleExampleChange}
+    />
+  );
+};
+
+/**
+ * Inner shell that reads from the theme store and wires
+ * DatalayerThemeProvider + the header bar with selectors.
+ */
+const ExampleAppThemed: React.FC<{
+  selectedExample: string;
+  isChangingExample: boolean;
+  error: string | null;
+  ExampleComponent: React.ComponentType<Record<string, unknown>> | null;
+  exampleProps: Record<string, unknown>;
+  onExampleChange: (name: string) => Promise<void>;
+}> = ({
+  selectedExample,
+  isChangingExample,
+  error,
+  ExampleComponent,
+  exampleProps,
+  onExampleChange,
+}) => {
+  const { colorMode, theme: themeVariant } = useExampleThemeStore();
+  const cfg = themeConfigs[themeVariant];
+
+  return (
+    <DatalayerThemeProvider
+      colorMode={colorMode}
+      theme={cfg.primerTheme}
+      themeStyles={cfg.themeStyles}
+    >
+      <Box
+        sx={{
+          width: '100vw',
+          height: '100vh',
+          overflow: 'hidden',
+          bg: 'canvas.default',
+          color: 'fg.default',
+        }}
+      >
+        {/* ── Header bar ─────────────────────────────────── */}
+        <Box
+          sx={{
             position: 'fixed',
             top: 0,
             left: 0,
             right: 0,
             zIndex: 100,
-            padding: '10px 20px',
-            background: '#f0f0f0',
-            borderBottom: '1px solid #ccc',
+            px: 3,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            gap: '15px',
-            fontSize: '14px',
-            fontFamily: 'system-ui, -apple-system, sans-serif',
+            gap: 3,
             height: '50px',
-            boxSizing: 'border-box',
+            bg: 'canvas.subtle',
+            borderBottom: '1px solid',
+            borderColor: 'border.default',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-            <label style={{ fontWeight: 500, color: '#333' }}>
-              Select Example:
-            </label>
-            <select
+          {/* Left: example selector */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Box
+              as="select"
+              // @ts-expect-error Box as select
               value={selectedExample}
-              onChange={e => handleExampleChange(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                onExampleChange(e.target.value)
+              }
               disabled={isChangingExample}
-              style={{
-                padding: '6px 12px',
-                fontSize: '14px',
-                border: '1px solid #ccc',
-                borderRadius: '4px',
-                background: 'white',
+              sx={{
+                px: 2,
+                py: '6px',
+                fontSize: 1,
+                fontFamily: 'mono',
+                border: '1px solid',
+                borderColor: 'border.default',
+                borderRadius: 2,
+                bg: 'canvas.default',
+                color: 'fg.default',
                 cursor: isChangingExample ? 'not-allowed' : 'pointer',
-                fontFamily: 'monospace',
                 minWidth: '250px',
+                outline: 'none',
+                '&:focus-visible': {
+                  boxShadow:
+                    '0 0 0 2px var(--bgColor-accent-muted, rgba(9,105,218,0.3))',
+                },
               }}
             >
               {getExampleNames()
@@ -471,43 +535,112 @@ export const ExampleApp: React.FC = () => {
                     {name}
                   </option>
                 ))}
-            </select>
+            </Box>
             {isChangingExample && (
-              <span style={{ color: '#666', fontSize: '12px' }}>
-                Loading...
-              </span>
+              <Box as="span" sx={{ color: 'fg.muted', fontSize: 0 }}>
+                Loading…
+              </Box>
             )}
             {error && (
-              <span style={{ color: '#dc3545', fontSize: '12px' }}>
+              <Box as="span" sx={{ color: 'danger.fg', fontSize: 0 }}>
                 Error: {error}
-              </span>
+              </Box>
             )}
-          </div>
-          <img
-            src="https://assets.datalayer.tech/datalayer-25.svg"
-            alt="Datalayer"
-            style={{ height: '24px' }}
-          />
-        </div>
-        <div
-          style={{
+          </Box>
+
+          {/* Right: theme picker + color mode + logo */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+            {/* Theme colored circles */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              {themeVariants.map(variant => {
+                const tcfg = themeConfigs[variant];
+                const isSelected = themeVariant === variant;
+                return (
+                  <Box
+                    as="button"
+                    key={variant}
+                    aria-label={tcfg.label}
+                    aria-pressed={isSelected}
+                    onClick={() =>
+                      useExampleThemeStore.getState().setTheme(variant, false)
+                    }
+                    sx={{
+                      width: 24,
+                      height: 24,
+                      borderRadius: '50%',
+                      backgroundColor: tcfg.brandColor,
+                      border: '2px solid',
+                      borderColor: isSelected ? 'accent.fg' : 'border.default',
+                      cursor: 'pointer',
+                      padding: 0,
+                      outline: 'none',
+                      transition: 'border-color 0.15s ease',
+                      boxShadow: isSelected
+                        ? '0 0 0 2px var(--bgColor-accent-muted, rgba(9,105,218,0.3))'
+                        : 'none',
+                      '&:hover': { borderColor: 'accent.fg' },
+                      '&:focus-visible': {
+                        boxShadow:
+                          '0 0 0 2px var(--bgColor-accent-muted, rgba(9,105,218,0.3))',
+                      },
+                    }}
+                  />
+                );
+              })}
+            </Box>
+
+            {/* Color mode segmented control */}
+            <SegmentedControl
+              aria-label="Color mode"
+              size="small"
+              onChange={(index: number) => {
+                const modes: ColorMode[] = ['light', 'dark', 'auto'];
+                useExampleThemeStore.getState().setColorMode(modes[index]);
+              }}
+            >
+              <SegmentedControl.IconButton
+                selected={colorMode === 'light'}
+                icon={SunIcon}
+                aria-label="Light"
+              />
+              <SegmentedControl.IconButton
+                selected={colorMode === 'dark'}
+                icon={MoonIcon}
+                aria-label="Dark"
+              />
+              <SegmentedControl.IconButton
+                selected={colorMode === 'auto'}
+                icon={DeviceDesktopIcon}
+                aria-label="Auto"
+              />
+            </SegmentedControl>
+
+            <img
+              src="https://assets.datalayer.tech/datalayer-25.svg"
+              alt="Datalayer"
+              style={{ height: '24px' }}
+            />
+          </Box>
+        </Box>
+
+        {/* ── Content area ───────────────────────────────── */}
+        <Box
+          sx={{
             marginTop: '50px',
             height: 'calc(100vh - 50px)',
             overflow: 'auto',
           }}
         >
           {isChangingExample ? (
-            <div
-              style={{ padding: '40px', textAlign: 'center', color: '#666' }}
-            >
-              <h3>Loading {selectedExample}...</h3>
+            <Box sx={{ p: 5, textAlign: 'center', color: 'fg.muted' }}>
+              <h3>Loading {selectedExample}…</h3>
               <p>Please wait while the example loads.</p>
-            </div>
+            </Box>
           ) : ExampleComponent ? (
             <ExampleComponent {...exampleProps} />
           ) : null}
-        </div>
-      </div>
+        </Box>
+      </Box>
     </DatalayerThemeProvider>
   );
 };

@@ -12,12 +12,12 @@
 import { useMemo } from 'react';
 import { Box } from '@datalayer/primer-addons';
 import {
-  JupyterReactTheme,
   Notebook,
   NotebookToolbar,
   CellSidebarExtension,
   CellSidebarButton,
 } from '@datalayer/jupyter-react';
+import { ThemedJupyterProvider } from './stores/themedProvider';
 import { ServiceManager } from '@jupyterlab/services';
 import nbformatExample from './stores/notebooks/NotebookExample1.ipynb.json';
 
@@ -36,7 +36,7 @@ export const JupyterNotebookExample = (props: IJupyterNotebookExampleProps) => {
     <>
       <Box as="h1">Jupyter Notebook Example</Box>
       {serviceManager && (
-        <JupyterReactTheme>
+        <ThemedJupyterProvider>
           <Notebook
             id={NOTEBOOK_ID}
             nbformat={nbformatExample}
@@ -45,7 +45,7 @@ export const JupyterNotebookExample = (props: IJupyterNotebookExampleProps) => {
             extensions={extensions}
             Toolbar={NotebookToolbar}
           />
-        </JupyterReactTheme>
+        </ThemedJupyterProvider>
       )}
     </>
   );
