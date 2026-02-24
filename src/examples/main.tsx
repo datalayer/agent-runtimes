@@ -503,7 +503,6 @@ const ExampleAppThemed: React.FC<{
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <Box
               as="select"
-              // @ts-expect-error Box as select
               value={selectedExample}
               onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
                 onExampleChange(e.target.value)
