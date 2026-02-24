@@ -50,7 +50,8 @@ import type { ServiceManager } from '@jupyterlab/services';
 import { CopilotKit, useFrontendTool } from '@copilotkit/react-core';
 import { CopilotSidebar } from '@copilotkit/react-ui';
 import { Box } from '@datalayer/primer-addons';
-import { JupyterReactTheme, useJupyter } from '@datalayer/jupyter-react';
+import { useJupyter } from '@datalayer/jupyter-react';
+import { ThemedJupyterProvider } from './stores/themedProvider';
 import {
   ComponentPickerMenuPlugin,
   JupyterCellPlugin,
@@ -266,9 +267,9 @@ const LexicalUI = React.memo(function LexicalUI({
                 <AutoEmbedPlugin />
                 <JupyterCellPlugin />
                 {/* Wrap kernel plugins with Simple provider */}
-                <JupyterReactTheme>
+                <ThemedJupyterProvider>
                   <SimpleKernelPluginsInner />
-                </JupyterReactTheme>
+                </ThemedJupyterProvider>
                 {floatingAnchorElem && (
                   <>
                     <DraggableBlockPlugin anchorElem={floatingAnchorElem} />

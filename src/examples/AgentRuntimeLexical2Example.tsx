@@ -51,7 +51,8 @@ import { LinkPlugin } from '@lexical/react/LexicalLinkPlugin';
 import type { ServiceManager } from '@jupyterlab/services';
 import { Box } from '@datalayer/primer-addons';
 import { Text } from '@primer/react';
-import { JupyterReactTheme, useJupyter } from '@datalayer/jupyter-react';
+import { useJupyter } from '@datalayer/jupyter-react';
+import { ThemedJupyterProvider } from './stores/themedProvider';
 import {
   ComponentPickerMenuPlugin,
   JupyterCellPlugin,
@@ -445,9 +446,9 @@ export function ChatLexicalExampleInner({
  */
 export function AgentRuntimePopupLexicalExample() {
   return (
-    <JupyterReactTheme>
+    <ThemedJupyterProvider>
       <JupyterWrapper />
-    </JupyterReactTheme>
+    </ThemedJupyterProvider>
   );
 }
 

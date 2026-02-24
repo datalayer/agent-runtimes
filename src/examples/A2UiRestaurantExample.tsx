@@ -21,7 +21,7 @@
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Box } from '@datalayer/primer-addons';
-import { DatalayerThemeProvider } from '@datalayer/core';
+import { ThemedProvider } from './stores/themedProvider';
 import { Text, Spinner, TextInput, Button } from '@primer/react';
 import { A2UIProvider, A2UIRenderer, useA2UI, Types } from '../renderers/a2ui';
 
@@ -449,7 +449,7 @@ const A2UiRestaurantExample: React.FC = () => {
   );
 
   return (
-    <DatalayerThemeProvider>
+    <ThemedProvider>
       <A2UIProvider onAction={handleAction}>
         <Box
           sx={{
@@ -506,7 +506,7 @@ const A2UiRestaurantExample: React.FC = () => {
           </Box>
         </Box>
       </A2UIProvider>
-    </DatalayerThemeProvider>
+    </ThemedProvider>
   );
 };
 

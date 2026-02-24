@@ -5,13 +5,13 @@
 
 import { ServiceManager } from '@jupyterlab/services';
 import {
-  JupyterReactTheme,
   Cell,
   KernelIndicator,
   useJupyter,
   useKernelsStore,
   useCellsStore,
 } from '@datalayer/jupyter-react';
+import { ThemedJupyterProvider } from './stores/themedProvider';
 import { Button, Label } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 
@@ -64,9 +64,9 @@ const JupyterCellExampleContent = () => {
 
 export const JupyterCellExample = (props: IJupyterCellExampleProps) => {
   return (
-    <JupyterReactTheme>
+    <ThemedJupyterProvider>
       <JupyterCellExampleContent />
-    </JupyterReactTheme>
+    </ThemedJupyterProvider>
   );
 };
 

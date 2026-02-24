@@ -13,11 +13,8 @@ import {
   createDatalayerServiceManager,
   DatalayerCollaborationProvider,
 } from '@datalayer/core';
-import {
-  loadJupyterConfig,
-  JupyterReactTheme,
-  Notebook,
-} from '@datalayer/jupyter-react';
+import { loadJupyterConfig, Notebook } from '@datalayer/jupyter-react';
+import { ThemedJupyterProvider } from './stores/themedProvider';
 
 import nbformatExample from './stores/notebooks/NotebookExample1.ipynb.json';
 
@@ -109,7 +106,7 @@ const DatalayerNotebookExample = (props: IDatalayerNotebookExampleProps) => {
   }, [enableCollaboration, configuration]);
 
   return (
-    <JupyterReactTheme>
+    <ThemedJupyterProvider>
       <Box p={3}>
         <Heading as="h2" sx={{ mb: 3 }}>
           Datalayer Notebook Collaboration Example
@@ -273,7 +270,7 @@ const DatalayerNotebookExample = (props: IDatalayerNotebookExampleProps) => {
           </ul>
         </Box>
       </Box>
-    </JupyterReactTheme>
+    </ThemedJupyterProvider>
   );
 };
 

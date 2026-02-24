@@ -50,8 +50,11 @@ import { CheckListPlugin } from '@lexical/react/LexicalCheckListPlugin';
 import { LinkPlugin } from '@lexical/react/LexicalLinkPlugin';
 import { Text, Spinner } from '@primer/react';
 import { AlertIcon } from '@primer/octicons-react';
-import { Box, setupPrimerPortals } from '@datalayer/primer-addons';
-import { DatalayerThemeProvider } from '@datalayer/core';
+import {
+  Box,
+  DatalayerThemeProvider,
+  setupPrimerPortals,
+} from '@datalayer/primer-addons';
 import {
   JupyterReactTheme,
   loadJupyterConfig,

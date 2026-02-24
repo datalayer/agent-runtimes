@@ -26,8 +26,11 @@
 import React, { useEffect, useState } from 'react';
 import { Text, Spinner } from '@primer/react';
 import { AlertIcon } from '@primer/octicons-react';
-import { Box, setupPrimerPortals } from '@datalayer/primer-addons';
-import { DatalayerThemeProvider } from '@datalayer/core';
+import {
+  Box,
+  DatalayerThemeProvider,
+  setupPrimerPortals,
+} from '@datalayer/primer-addons';
 import { Chat } from './components/chat';
 import { DEFAULT_MODEL } from './specs';
 

@@ -135,7 +135,9 @@ export interface ChatFloatingProps {
   /** Powered by tag props */
   poweredByProps?: Partial<PoweredByTagProps>;
 
-  /** Enable click outside to close */
+  /** Enable click outside to close
+   * @default false
+   */
   clickOutsideToClose?: boolean;
 
   /** Enable escape key to close */
@@ -171,7 +173,7 @@ export interface ChatFloatingProps {
   /** Button tooltip text */
   buttonTooltip?: string;
 
-  /** Brand color */
+  /** Brand color override. Defaults to the theme's `accent.emphasis` token. */
   brandColor?: string;
 
   /** Offset from edge (in pixels) */
@@ -348,7 +350,7 @@ export function ChatFloating({
   toggleShortcut = '/',
   showPoweredBy = true,
   poweredByProps,
-  clickOutsideToClose = true,
+  clickOutsideToClose = false,
   escapeToClose = true,
   className,
   onSettingsClick,
@@ -360,7 +362,7 @@ export function ChatFloating({
   brandIcon,
   buttonIcon,
   buttonTooltip = 'Chat with AI',
-  brandColor = '#7c3aed',
+  brandColor,
   offset = 20,
   animationDuration = 200,
   renderToolResult,

@@ -20,7 +20,7 @@ import React, { useEffect, useState } from 'react';
 import { Text, Spinner } from '@primer/react';
 import { AlertIcon } from '@primer/octicons-react';
 import { Box, setupPrimerPortals } from '@datalayer/primer-addons';
-import { DatalayerThemeProvider } from '@datalayer/core';
+import { ThemedProvider } from './stores/themedProvider';
 import { Chat } from '../components/chat';
 
 setupPrimerPortals();
@@ -108,7 +108,7 @@ const AgentRuntimeChatExample: React.FC = () => {
   // Loading state while agent is being created
   if (isCreating) {
     return (
-      <DatalayerThemeProvider>
+      <ThemedProvider>
         <Box
           sx={{
             display: 'flex',
@@ -125,14 +125,14 @@ const AgentRuntimeChatExample: React.FC = () => {
             Creating agent from {AGENT_SPEC_ID}...
           </Text>
         </Box>
-      </DatalayerThemeProvider>
+      </ThemedProvider>
     );
   }
 
   // Error state
   if (error || !agentId) {
     return (
-      <DatalayerThemeProvider>
+      <ThemedProvider>
         <Box
           sx={{
             display: 'flex',
@@ -152,7 +152,7 @@ const AgentRuntimeChatExample: React.FC = () => {
             {error || 'No agent ID returned'}
           </Text>
         </Box>
-      </DatalayerThemeProvider>
+      </ThemedProvider>
     );
   }
 

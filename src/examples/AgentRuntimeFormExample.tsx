@@ -16,7 +16,7 @@ import {
   useQuery,
 } from '@tanstack/react-query';
 import { Box } from '@datalayer/primer-addons';
-import { DatalayerThemeProvider } from '@datalayer/core';
+import { ThemedProvider } from './stores/themedProvider';
 import { Chat, useChatStore } from '../components/chat';
 import { DEFAULT_MODEL } from '../specs';
 import type { Transport, Extension, ChatMessage } from '../components/chat';
@@ -812,7 +812,7 @@ const AgentRuntimeFormExample: React.FC<AgentRuntimeFormExampleProps> = ({
 
   return (
     <QueryClientProvider client={queryClient}>
-      <DatalayerThemeProvider>
+      <ThemedProvider>
         <PageLayout containerWidth="full">
           {/* Header - empty content for new agent */}
           <Header
@@ -1115,7 +1115,7 @@ const AgentRuntimeFormExample: React.FC<AgentRuntimeFormExampleProps> = ({
             )}
           </PageLayout.Footer>
         </PageLayout>
-      </DatalayerThemeProvider>
+      </ThemedProvider>
     </QueryClientProvider>
   );
 };
