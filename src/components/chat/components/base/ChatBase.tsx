@@ -3282,7 +3282,9 @@ function ChatBaseInner({
                 sx={{
                   cursor: 'pointer',
                   '&:hover': {
-                    bg: 'accent.muted',
+                    bg: 'accent.emphasis',
+                    color: 'var(--button-primary-fgColor-rest)',
+                    borderColor: 'accent.emphasis',
                   },
                 }}
                 onClick={() => handleSuggestionClick(suggestion)}
