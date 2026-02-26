@@ -26,7 +26,7 @@ DATA_ACQUISITION_AGENT_SPEC = AgentSpec(
     id="codeai/data-acquisition",
     name="Data Acquisition Agent",
     description="Acquires and manages data from various sources including Kaggle datasets and local filesystem operations.",
-    tags=["data", "acquisition", "kaggle", "filesystem"],
+    tags=["{item}", "{item}", "{item}", "{item}"],
     enabled=True,
     model="bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0",
     mcp_servers=[
@@ -34,7 +34,7 @@ DATA_ACQUISITION_AGENT_SPEC = AgentSpec(
         MCP_SERVER_CATALOG["filesystem"],
         MCP_SERVER_CATALOG["tavily"],
     ],
-    skills=["github"],
+    skills=["{item}"],
     environment_name="ai-agents-env",
     icon="database",
     emoji="📊",
@@ -70,13 +70,27 @@ DATA_ACQUISITION_AGENT_SPEC = AgentSpec(
 ## Recommended Workflow 1. **Discover**: Use list_servers and search_tools to find relevant tools 2. **Understand**: Use get_tool_details to check parameters 3. **Execute**: Use execute_code to perform multi-step tasks, calling tools as needed
 ## Token Efficiency When possible, chain multiple tool calls in a single execute_code block. This reduces output tokens by processing intermediate results in code rather than returning them. If you want to examine results, print subsets, preview (maximum 20 first characters) and/or counts instead of full data, this is really important.
 """,
+    goal=None,
+    protocol=None,
+    ui_extension=None,
+    trigger=None,
+    model_configuration=None,
+    mcp_server_tools=None,
+    guardrails=None,
+    evals=None,
+    codemode=None,
+    output=None,
+    advanced=None,
+    authorization_policy=None,
+    notifications=None,
+    team=None,
 )
 
 SIMPLE_AGENT_SPEC = AgentSpec(
     id="codeai/simple",
     name="A Simple Agent",
     description="A simple conversational agent. No tools, no MCP servers, no skills — just a helpful AI assistant you can chat with.",
-    tags=["simple", "chat", "assistant"],
+    tags=["{item}", "{item}", "{item}"],
     enabled=True,
     model="bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0",
     mcp_servers=[],
@@ -98,6 +112,20 @@ SIMPLE_AGENT_SPEC = AgentSpec(
     system_prompt="""You are a helpful, friendly AI assistant. You do not have access to any external tools, MCP servers, or skills. Answer questions using your training knowledge, be concise, and let the user know if a question is outside your knowledge.
 """,
     system_prompt_codemode_addons=None,
+    goal=None,
+    protocol=None,
+    ui_extension=None,
+    trigger=None,
+    model_configuration=None,
+    mcp_server_tools=None,
+    guardrails=None,
+    evals=None,
+    codemode=None,
+    output=None,
+    advanced=None,
+    authorization_policy=None,
+    notifications=None,
+    team=None,
 )
 
 

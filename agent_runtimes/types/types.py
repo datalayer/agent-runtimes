@@ -338,3 +338,63 @@ class AgentSpec(BaseModel):
         description="Additional system prompt instructions when codemode is enabled",
         alias="systemPromptCodemodeAddons",
     )
+    goal: Optional[str] = Field(
+        default=None,
+        description="User-facing objective for the agent",
+    )
+    protocol: Optional[str] = Field(
+        default=None,
+        description="Communication protocol (e.g., 'ag-ui', 'acp', 'a2a', 'vercel-ai')",
+    )
+    ui_extension: Optional[str] = Field(
+        default=None,
+        description="UI extension type (e.g., 'a2ui', 'mcp-apps')",
+        alias="uiExtension",
+    )
+    trigger: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Trigger configuration (type, cron, description)",
+    )
+    model_configuration: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Model configuration (temperature, max_tokens)",
+        alias="modelConfig",
+    )
+    mcp_server_tools: Optional[List[Dict[str, Any]]] = Field(
+        default=None,
+        description="MCP server tool configurations with approval settings",
+        alias="mcpServerTools",
+    )
+    guardrails: Optional[List[Dict[str, Any]]] = Field(
+        default=None,
+        description="Guardrail configurations",
+    )
+    evals: Optional[List[Dict[str, Any]]] = Field(
+        default=None,
+        description="Evaluation configurations",
+    )
+    codemode: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Codemode configuration (enabled, token_reduction, speedup)",
+    )
+    output: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Output configuration (type/formats, template)",
+    )
+    advanced: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Advanced settings (cost_limit, time_limit, max_iterations, validation)",
+    )
+    authorization_policy: Optional[str] = Field(
+        default=None,
+        description="Authorization policy",
+        alias="authorizationPolicy",
+    )
+    notifications: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Notification configuration (email, slack)",
+    )
+    team: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Team configuration for multi-agent flows",
+    )
