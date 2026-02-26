@@ -9,6 +9,7 @@ Generates Python and TypeScript code from YAML agent specifications.
 """
 
 import argparse
+import json
 import sys
 from pathlib import Path
 from typing import Any, Dict, List
@@ -20,7 +21,21 @@ def _fmt_list(items: list[str]) -> str:
     """Format a list of strings with double quotes for ruff compliance."""
     if not items:
         return "[]"
-    return "[" + ", ".join(f'"{item}"' for item in items) + "]"
+    return "[" + ", ".join(f'"{{item}}"' for item in items) + "]"
+
+
+def _fmt_py_literal(value: Any) -> str:
+    """Format a value as a Python literal for code generation."""
+    if value is None:
+        return "None"
+    return repr(value)
+
+
+def _fmt_ts_literal(value: Any) -> str:
+    """Format a value as a TypeScript/JSON literal for code generation."""
+    if value is None:
+        return "undefined"
+    return json.dumps(value, ensure_ascii=False)
 
 
 def load_yaml_specs(specs_dir: Path) -> List[tuple[str, Dict[str, Any]]]:
@@ -172,6 +187,30 @@ from agent_runtimes.types import AgentSpec
             sandbox_variant = spec.get("sandbox_variant")
             sandbox_variant_str = f'"{sandbox_variant}"' if sandbox_variant else "None"
 
+            # New flow-level fields
+            goal_raw = spec.get("goal")
+            goal_str = (
+                f'"{goal_raw.replace(chr(10), " ").replace("  ", " ").strip()}"'
+                if goal_raw
+                else "None"
+            )
+            protocol_val = spec.get("protocol")
+            protocol_str = f'"{protocol_val}"' if protocol_val else "None"
+            ui_ext = spec.get("ui_extension")
+            ui_ext_str = f'"{ui_ext}"' if ui_ext else "None"
+            trigger_val = spec.get("trigger")
+            model_cfg = spec.get("model_config")
+            mcp_srv_tools = spec.get("mcp_server_tools")
+            guardrails_val = spec.get("guardrails")
+            evals_val = spec.get("evals")
+            codemode_val = spec.get("codemode")
+            output_val = spec.get("output")
+            advanced_val = spec.get("advanced")
+            auth_policy = spec.get("authorization_policy")
+            auth_policy_str = f'"{auth_policy}"' if auth_policy is not None else "None"
+            notifs = spec.get("notifications")
+            team_val = spec.get("team")
+
             code += f'''{const_name} = AgentSpec(
     id="{full_agent_id}",
     name="{spec["name"]}",
@@ -192,6 +231,20 @@ from agent_runtimes.types import AgentSpec
     sandbox_variant={sandbox_variant_str},
     system_prompt={system_prompt_str},
     system_prompt_codemode_addons={system_prompt_codemode_addons_str},
+    goal={goal_str},
+    protocol={protocol_str},
+    ui_extension={ui_ext_str},
+    trigger={_fmt_py_literal(trigger_val)},
+    model_configuration={_fmt_py_literal(model_cfg)},
+    mcp_server_tools={_fmt_py_literal(mcp_srv_tools)},
+    guardrails={_fmt_py_literal(guardrails_val)},
+    evals={_fmt_py_literal(evals_val)},
+    codemode={_fmt_py_literal(codemode_val)},
+    output={_fmt_py_literal(output_val)},
+    advanced={_fmt_py_literal(advanced_val)},
+    authorization_policy={auth_policy_str},
+    notifications={_fmt_py_literal(notifs)},
+    team={_fmt_py_literal(team_val)},
 )
 
 '''
@@ -474,6 +527,32 @@ function toAgentSkillSpec(skill: SkillSpec) {
                 f"'{sandbox_variant}'" if sandbox_variant else "undefined"
             )
 
+            # New flow-level fields
+            goal_raw = spec.get("goal")
+            goal_ts = (
+                f"`{goal_raw.replace(chr(10), ' ').replace('  ', ' ').strip().replace('`', chr(92) + '`')}`"
+                if goal_raw
+                else "undefined"
+            )
+            protocol_val = spec.get("protocol")
+            protocol_ts = f"'{protocol_val}'" if protocol_val else "undefined"
+            ui_ext = spec.get("ui_extension")
+            ui_ext_ts = f"'{ui_ext}'" if ui_ext else "undefined"
+            trigger_val = spec.get("trigger")
+            model_cfg = spec.get("model_config")
+            mcp_srv_tools = spec.get("mcp_server_tools")
+            guardrails_val = spec.get("guardrails")
+            evals_val = spec.get("evals")
+            codemode_val = spec.get("codemode")
+            output_val = spec.get("output")
+            advanced_val = spec.get("advanced")
+            auth_policy = spec.get("authorization_policy")
+            auth_policy_ts = (
+                f"'{auth_policy}'" if auth_policy is not None else "undefined"
+            )
+            notifs = spec.get("notifications")
+            team_val = spec.get("team")
+
             code += f"""export const {const_name}: AgentSpec = {{
   id: '{full_agent_id}',
   name: '{spec["name"]}',
@@ -491,6 +570,20 @@ function toAgentSkillSpec(skill: SkillSpec) {
   sandboxVariant: {sandbox_variant_ts},
   systemPrompt: {f"`{system_prompt}`" if system_prompt else "undefined"},
   systemPromptCodemodeAddons: {f"`{system_prompt_codemode_addons}`" if system_prompt_codemode_addons else "undefined"},
+  goal: {goal_ts},
+  protocol: {protocol_ts},
+  uiExtension: {ui_ext_ts},
+  trigger: {_fmt_ts_literal(trigger_val)},
+  modelConfig: {_fmt_ts_literal(model_cfg)},
+  mcpServerTools: {_fmt_ts_literal(mcp_srv_tools)},
+  guardrails: {_fmt_ts_literal(guardrails_val)},
+  evals: {_fmt_ts_literal(evals_val)},
+  codemode: {_fmt_ts_literal(codemode_val)},
+  output: {_fmt_ts_literal(output_val)},
+  advanced: {_fmt_ts_literal(advanced_val)},
+  authorizationPolicy: {auth_policy_ts},
+  notifications: {_fmt_ts_literal(notifs)},
+  team: {_fmt_ts_literal(team_val)},
 }};
 
 """

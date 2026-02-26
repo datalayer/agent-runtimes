@@ -26,7 +26,7 @@ CRAWLER_AGENT_SPEC = AgentSpec(
     id="codemode-paper/crawler",
     name="Crawler Agent",
     description="Web crawling and research agent that searches the web and GitHub repositories for information.",
-    tags=["web", "search", "research", "crawler", "github"],
+    tags=["{item}", "{item}", "{item}", "{item}", "{item}"],
     enabled=False,
     model="bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0",
     mcp_servers=[
@@ -71,13 +71,27 @@ CRAWLER_AGENT_SPEC = AgentSpec(
 ## Token Efficiency Always chain multiple tool calls in a single execute_code block. This reduces output tokens by processing intermediate results in code rather than returning them. If you want to examine results, print subsets, preview (maximum 20 first characters) and/or counts instead of full data, this is really important.
 For huggingface tools, use search_doc tool to understand other tools return's schema.
 """,
+    goal=None,
+    protocol=None,
+    ui_extension=None,
+    trigger=None,
+    model_configuration=None,
+    mcp_server_tools=None,
+    guardrails=None,
+    evals=None,
+    codemode=None,
+    output=None,
+    advanced=None,
+    authorization_policy=None,
+    notifications=None,
+    team=None,
 )
 
 DATA_ACQUISITION_AGENT_SPEC = AgentSpec(
     id="codemode-paper/data-acquisition",
     name="Data Acquisition Agent",
     description="Acquires and manages data from various sources including Kaggle datasets and local filesystem operations.",
-    tags=["data", "acquisition", "kaggle", "filesystem"],
+    tags=["{item}", "{item}", "{item}", "{item}"],
     enabled=True,
     model="bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0",
     mcp_servers=[
@@ -85,7 +99,7 @@ DATA_ACQUISITION_AGENT_SPEC = AgentSpec(
         MCP_SERVER_CATALOG["filesystem"],
         MCP_SERVER_CATALOG["tavily"],
     ],
-    skills=["github"],
+    skills=["{item}"],
     environment_name="ai-agents-env",
     icon="database",
     emoji="📊",
@@ -121,13 +135,27 @@ DATA_ACQUISITION_AGENT_SPEC = AgentSpec(
 ## Recommended Workflow 1. **Discover**: Use list_servers and search_tools to find relevant tools 2. **Understand**: Use get_tool_details to check parameters 3. **Execute**: Use execute_code to perform multi-step tasks, calling tools as needed
 ## Token Efficiency When possible, chain multiple tool calls in a single execute_code block. This reduces output tokens by processing intermediate results in code rather than returning them. If you want to examine results, print subsets, preview (maximum 20 first characters) and/or counts instead of full data, this is really important.
 """,
+    goal=None,
+    protocol=None,
+    ui_extension=None,
+    trigger=None,
+    model_configuration=None,
+    mcp_server_tools=None,
+    guardrails=None,
+    evals=None,
+    codemode=None,
+    output=None,
+    advanced=None,
+    authorization_policy=None,
+    notifications=None,
+    team=None,
 )
 
 FINANCIAL_VIZ_AGENT_SPEC = AgentSpec(
     id="codemode-paper/financial-viz",
     name="Financial Visualization Agent",
     description="Analyzes financial market data and creates visualizations and charts.",
-    tags=["finance", "stocks", "visualization", "charts"],
+    tags=["{item}", "{item}", "{item}", "{item}"],
     enabled=False,
     model="bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0",
     mcp_servers=[MCP_SERVER_CATALOG["alphavantage"], MCP_SERVER_CATALOG["chart"]],
@@ -167,13 +195,27 @@ FINANCIAL_VIZ_AGENT_SPEC = AgentSpec(
 ## Recommended Workflow 1. **Discover**: Use list_servers and search_tools to find relevant tools 2. **Understand**: Use get_tool_details to check parameters 3. **Execute**: Use execute_code to perform multi-step tasks, calling tools as needed
 ## Token Efficiency When possible, chain multiple tool calls in a single execute_code block. This reduces output tokens by processing intermediate results in code rather than returning them. If you want to examine results, print subsets, preview (maximum 20 first characters) and/or counts instead of full data, this is really important.
 """,
+    goal=None,
+    protocol=None,
+    ui_extension=None,
+    trigger=None,
+    model_configuration=None,
+    mcp_server_tools=None,
+    guardrails=None,
+    evals=None,
+    codemode=None,
+    output=None,
+    advanced=None,
+    authorization_policy=None,
+    notifications=None,
+    team=None,
 )
 
 GITHUB_AGENT_SPEC = AgentSpec(
     id="codemode-paper/github-agent",
     name="GitHub Agent",
     description="Manages GitHub repositories, issues, and pull requests with email notification capabilities.",
-    tags=["github", "git", "code", "email"],
+    tags=["{item}", "{item}", "{item}", "{item}"],
     enabled=False,
     model="bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0",
     mcp_servers=[MCP_SERVER_CATALOG["github"], MCP_SERVER_CATALOG["google-workspace"]],
@@ -213,13 +255,27 @@ GITHUB_AGENT_SPEC = AgentSpec(
 ## Recommended Workflow 1. **Discover**: Use list_servers and search_tools to find relevant tools 2. **Understand**: Use get_tool_details to check parameters 3. **Execute**: Use execute_code to perform multi-step tasks, calling tools as needed
 ## Token Efficiency Always chain multiple tool calls in a single execute_code block. This reduces output tokens by processing intermediate results in code rather than returning them. If you want to examine results, print subsets, preview (maximum 20 first characters) and/or counts instead of full data, this is really important.
 """,
+    goal=None,
+    protocol=None,
+    ui_extension=None,
+    trigger=None,
+    model_configuration=None,
+    mcp_server_tools=None,
+    guardrails=None,
+    evals=None,
+    codemode=None,
+    output=None,
+    advanced=None,
+    authorization_policy=None,
+    notifications=None,
+    team=None,
 )
 
 INFORMATION_ROUTING_AGENT_SPEC = AgentSpec(
     id="codemode-paper/information-routing",
     name="Information Routing Agent",
     description="Routes information between Google Drive and other services, managing document workflows and information sharing.",
-    tags=["workflow", "communication", "gdrive"],
+    tags=["{item}", "{item}", "{item}"],
     enabled=False,
     model="bedrock:us.anthropic.claude-opus-4-6-v1",
     mcp_servers=[MCP_SERVER_CATALOG["google-workspace"], MCP_SERVER_CATALOG["github"]],
@@ -259,6 +315,20 @@ INFORMATION_ROUTING_AGENT_SPEC = AgentSpec(
 ## Recommended Workflow 1. **Discover**: Use list_servers and search_tools to find relevant tools 2. **Understand**: Use get_tool_details to check input and output schemas 3. **Execute**: Use execute_code to perform multi-step tasks, calling tools as needed
 ## Token Efficiency Always chain multiple tool calls in a single execute_code block. This reduces output tokens by processing intermediate results in code rather than returning them. If you want to examine results, print subsets, preview (maximum 20 first characters) and/or counts instead of full data, this is really important!!!!
 """,
+    goal=None,
+    protocol=None,
+    ui_extension=None,
+    trigger=None,
+    model_configuration=None,
+    mcp_server_tools=None,
+    guardrails=None,
+    evals=None,
+    codemode=None,
+    output=None,
+    advanced=None,
+    authorization_policy=None,
+    notifications=None,
+    team=None,
 )
 
 

@@ -182,6 +182,34 @@ export interface AgentSpec {
   welcomeDocument?: string;
   /** Sandbox variant to use for this agent ('local-eval', 'jupyter', 'local-jupyter') */
   sandboxVariant?: string;
+  /** User-facing objective for the agent */
+  goal?: string;
+  /** Communication protocol (e.g., 'ag-ui', 'acp', 'a2a', 'vercel-ai') */
+  protocol?: string;
+  /** UI extension type (e.g., 'a2ui', 'mcp-apps') */
+  uiExtension?: string;
+  /** Trigger configuration (type, cron, description) */
+  trigger?: Record<string, any>;
+  /** Model configuration (temperature, max_tokens) */
+  modelConfig?: Record<string, any>;
+  /** MCP server tool configurations with approval settings */
+  mcpServerTools?: Record<string, any>[];
+  /** Guardrail configurations */
+  guardrails?: Record<string, any>[];
+  /** Evaluation configurations */
+  evals?: Record<string, any>[];
+  /** Codemode configuration (enabled, token_reduction, speedup) */
+  codemode?: Record<string, any>;
+  /** Output configuration (type/formats, template) */
+  output?: Record<string, any>;
+  /** Advanced settings (cost_limit, time_limit, max_iterations, validation) */
+  advanced?: Record<string, any>;
+  /** Authorization policy */
+  authorizationPolicy?: string;
+  /** Notification configuration (email, slack) */
+  notifications?: Record<string, any>;
+  /** Team configuration for multi-agent flows */
+  team?: Record<string, any>;
 }
 
 // ============================================================================
