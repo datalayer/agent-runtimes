@@ -12,7 +12,11 @@
  */
 
 import type { AgentSpec } from '../../../types/Types';
-import { FILESYSTEM_MCP_SERVER, SLACK_MCP_SERVER } from '../../mcpServers';
+import {
+  FILESYSTEM_MCP_SERVER,
+  SALESFORCE_MCP_SERVER,
+  SLACK_MCP_SERVER,
+} from '../../mcpServers';
 import {
   CRAWL_SKILL_SPEC,
   GITHUB_SKILL_SPEC,
@@ -26,6 +30,7 @@ import type { SkillSpec } from '../../skills';
 
 const MCP_SERVER_MAP: Record<string, any> = {
   filesystem: FILESYSTEM_MCP_SERVER,
+  salesforce: SALESFORCE_MCP_SERVER,
   slack: SLACK_MCP_SERVER,
 };
 

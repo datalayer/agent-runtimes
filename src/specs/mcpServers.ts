@@ -149,6 +149,22 @@ export const KAGGLE_MCP_SERVER: MCPServer = {
   requiredEnvVars: ['KAGGLE_TOKEN'],
 };
 
+export const SALESFORCE_MCP_SERVER: MCPServer = {
+  id: 'salesforce',
+  name: 'Salesforce',
+  description: 'Salesforce CRM operations (queries, reports, objects, SOQL)',
+  icon: 'briefcase',
+  emoji: '☁️',
+  url: '',
+  command: 'npx',
+  args: ['-y', '@anthropic/salesforce-mcp-server'],
+  transport: 'stdio',
+  enabled: true,
+  isAvailable: false,
+  tools: [],
+  requiredEnvVars: ['SALESFORCE_ACCESS_TOKEN', 'SALESFORCE_INSTANCE_URL'],
+};
+
 export const SLACK_MCP_SERVER: MCPServer = {
   id: 'slack',
   name: 'Slack',
@@ -193,6 +209,7 @@ export const MCP_SERVER_LIBRARY: Record<string, MCPServer> = {
   'google-workspace': GOOGLE_WORKSPACE_MCP_SERVER,
   huggingface: HUGGINGFACE_MCP_SERVER,
   kaggle: KAGGLE_MCP_SERVER,
+  salesforce: SALESFORCE_MCP_SERVER,
   slack: SLACK_MCP_SERVER,
   tavily: TAVILY_MCP_SERVER,
 };
