@@ -160,6 +160,27 @@ KAGGLE_MCP_SERVER = MCPServer(
     required_env_vars=["KAGGLE_TOKEN"],
 )
 
+SALESFORCE_MCP_SERVER = MCPServer(
+    id="salesforce",
+    name="Salesforce",
+    description="Salesforce CRM operations (queries, reports, objects, SOQL)",
+    icon="briefcase",
+    emoji="☁️",
+    command="npx",
+    args=[
+        "-y",
+        "@anthropic/salesforce-mcp-server",
+    ],
+    transport="stdio",
+    enabled=True,
+    tools=[],
+    env={
+        "SALESFORCE_ACCESS_TOKEN": "${SALESFORCE_ACCESS_TOKEN}",
+        "SALESFORCE_INSTANCE_URL": "${SALESFORCE_INSTANCE_URL}",
+    },
+    required_env_vars=["SALESFORCE_ACCESS_TOKEN", "SALESFORCE_INSTANCE_URL"],
+)
+
 SLACK_MCP_SERVER = MCPServer(
     id="slack",
     name="Slack",
@@ -214,6 +235,7 @@ MCP_SERVER_CATALOG: Dict[str, MCPServer] = {
     "google-workspace": GOOGLE_WORKSPACE_MCP_SERVER,
     "huggingface": HUGGINGFACE_MCP_SERVER,
     "kaggle": KAGGLE_MCP_SERVER,
+    "salesforce": SALESFORCE_MCP_SERVER,
     "slack": SLACK_MCP_SERVER,
     "tavily": TAVILY_MCP_SERVER,
 }

@@ -17,6 +17,7 @@ from .catalog_mcp_servers import (
     HUGGINGFACE_MCP_SERVER,
     KAGGLE_MCP_SERVER,
     MCP_SERVER_CATALOG,
+    SALESFORCE_MCP_SERVER,
     SLACK_MCP_SERVER,
     TAVILY_MCP_SERVER,
     check_env_vars_available,
@@ -119,6 +120,7 @@ __all__ = [
     "GOOGLE_WORKSPACE_MCP_SERVER",
     "HUGGINGFACE_MCP_SERVER",
     "KAGGLE_MCP_SERVER",
+    "SALESFORCE_MCP_SERVER",
     "SLACK_MCP_SERVER",
     "TAVILY_MCP_SERVER",
 ]
