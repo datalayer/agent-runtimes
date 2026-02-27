@@ -309,7 +309,7 @@ export const INFORMATION_ROUTING_AGENT_SPEC: AgentSpec = {
   description: `Routes information between Google Drive and other services, managing document workflows and information sharing.`,
   tags: ['workflow', 'communication', 'gdrive'],
   enabled: false,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  model: 'bedrock:us.anthropic.claude-opus-4-6-v1',
   mcpServers: [MCP_SERVER_MAP['google-workspace'], MCP_SERVER_MAP['github']],
   skills: [],
   environmentName: 'ai-agents-env',

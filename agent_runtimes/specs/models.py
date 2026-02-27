@@ -56,9 +56,7 @@ class AIModels(str, Enum):
     BEDROCK_US_ANTHROPIC_CLAUDE_3_5_HAIKU_20241022_V1_0 = (
         "bedrock:us.anthropic.claude-3-5-haiku-20241022-v1:0"
     )
-    BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_6_V1_0 = (
-        "bedrock:us.anthropic.claude-opus-4-6-v1:0"
-    )
+    BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_6_V1 = "bedrock:us.anthropic.claude-opus-4-6-v1"
     BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_20250514_V1_0 = (
         "bedrock:us.anthropic.claude-opus-4-20250514-v1:0"
     )
@@ -174,10 +172,10 @@ BEDROCK_US_ANTHROPIC_CLAUDE_3_5_HAIKU_20241022_V1_0 = AIModel(
     ],
 )
 
-BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_6_V1_0 = AIModel(
-    id="bedrock:us.anthropic.claude-opus-4-6-v1:0",
+BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_6_V1 = AIModel(
+    id="bedrock:us.anthropic.claude-opus-4-6-v1",
     name="Bedrock Claude Opus 4.6",
-    description="Claude Opus 4.6 via AWS Bedrock - latest flagship model",
+    description="Claude Opus 4.6 via AWS Bedrock",
     provider="bedrock",
     default=False,
     required_env_vars=[
@@ -295,7 +293,7 @@ AI_MODEL_CATALOGUE: Dict[str, AIModel] = {
     "azure-openai:gpt-4o-mini": AZURE_OPENAI_GPT_4O_MINI,
     "azure-openai:gpt-4o": AZURE_OPENAI_GPT_4O,
     "bedrock:us.anthropic.claude-3-5-haiku-20241022-v1:0": BEDROCK_US_ANTHROPIC_CLAUDE_3_5_HAIKU_20241022_V1_0,
-    "bedrock:us.anthropic.claude-opus-4-6-v1:0": BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_6_V1_0,
+    "bedrock:us.anthropic.claude-opus-4-6-v1": BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_6_V1,
     "bedrock:us.anthropic.claude-opus-4-20250514-v1:0": BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_20250514_V1_0,
     "bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0": BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_5_20250929_V1_0,
     "bedrock:us.anthropic.claude-sonnet-4-20250514-v1:0": BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_20250514_V1_0,
