@@ -75,7 +75,7 @@ export interface McpServerManagerProps {
 }
 
 /**
- * McpServerManager - Manage MCP servers for agent spaces
+ * McpServerManager - Manage MCP servers for agent runtimes
  *
  * Features:
  * - View MCP Catalog servers (predefined, can be enabled on-demand)

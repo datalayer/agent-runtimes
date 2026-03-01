@@ -75,7 +75,7 @@ def generate_python_code(specs: List[tuple[str, Dict[str, Any]]]) -> str:
 """
 Agent Library.
 
-Predefined agent specifications that can be instantiated as AgentSpaces.
+Predefined agent specifications that can be instantiated as Agent Runtimes.
 THIS FILE IS AUTO-GENERATED. DO NOT EDIT MANUALLY.
 Generated from YAML specifications in specs/agents/
 """
@@ -362,7 +362,7 @@ def generate_typescript_code(
 /**
  * Agent Library.
  *
- * Predefined agent specifications that can be instantiated as AgentSpaces.
+ * Predefined agent specifications that can be instantiated as Agent Runtimes.
  * THIS FILE IS AUTO-GENERATED. DO NOT EDIT MANUALLY.
  * Generated from YAML specifications in specs/agents/
  */

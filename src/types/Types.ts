@@ -141,7 +141,7 @@ export interface AgentSkillSpec {
  * Specification for an AI agent.
  *
  * Defines the configuration for a reusable agent template that can be
- * instantiated as an AgentSpace.
+ * instantiated as an Agent Runtime.
  */
 export interface AgentSpec {
   /** Unique agent identifier */

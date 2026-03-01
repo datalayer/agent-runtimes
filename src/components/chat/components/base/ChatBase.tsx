@@ -780,7 +780,7 @@ export interface ChatBaseProps {
   /**
    * Runtime ID for conversation persistence.
    * When provided, messages are fetched from the server API on page reload
-   * and prevents message mixing between different agent spaces.
+   * and prevents message mixing between different agent runtimes.
    */
   runtimeId?: string;
 
@@ -1780,7 +1780,7 @@ function ChatBaseInner({
   const prevRuntimeIdRef = useRef<string | undefined>(undefined);
 
   // Clear displayItems and load messages when runtimeId changes
-  // This ensures each agent space has isolated conversation history
+  // This ensures each agent runtime has isolated conversation history
   useEffect(() => {
     // If runtimeId changed, clear displayItems first
     if (runtimeId !== prevRuntimeIdRef.current) {
