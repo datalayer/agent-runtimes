@@ -104,6 +104,12 @@ export { useVercelChat } from './useVercelChat';
  * Datalayer AI Agents REST API hook.
  */
 export * from './useAgents';
+/**
+ * Agent runtimes service hooks for managing agent runtime instances.
+ */
 export * from './useAgentRuntimes';
+/**
+ * Centralized agent catalog store for available agent specs and running agents.
+ */
 export * from './useAgentStore';
 export * from './useNotebookAIAgent';

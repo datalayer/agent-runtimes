@@ -46,7 +46,7 @@ export type AgentStoreState = {
 
 // ── Store ──────────────────────────────────────────────────────────────────
 
-export const useAgentStore = create<AgentStoreState>()(set => ({
+export const useAgentCatalogStore = create<AgentStoreState>()(set => ({
   agentSpecs: listAgentSpecs('datalayer-ai/'),
   runningAgents: [],
 
