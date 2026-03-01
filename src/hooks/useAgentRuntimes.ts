@@ -14,6 +14,7 @@
  */
 
 import { useCache } from '@datalayer/core/lib/hooks';
+import type { AgentSpec } from '../types';
 
 /**
  * Agent Runtime data type (mapped from runtimes service).
@@ -41,8 +42,8 @@ export type AgentRuntimeData = {
   ingress?: string;
   url?: string;
   token?: string;
-  // Agent specification with suggestions for chat UI
-  agentSpec?: Record<string, any>;
+  // Agent specification with suggestions for chat UI (enriched by useAgentCatalogStore)
+  agentSpec?: AgentSpec;
   // ID of the agent spec used to create this runtime
   agent_spec_id?: string;
 };
