@@ -4,7 +4,7 @@
 """
 Agent Library.
 
-Predefined agent specifications that can be instantiated as AgentSpaces.
+Predefined agent specifications that can be instantiated as agent runtimes.
 THIS FILE IS AUTO-GENERATED. DO NOT EDIT MANUALLY.
 Generated from YAML specifications in specs/agents/
 """

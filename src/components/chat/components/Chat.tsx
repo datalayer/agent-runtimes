@@ -247,7 +247,7 @@ export interface ChatProps {
   /**
    * Runtime ID for conversation persistence.
    * When provided, messages are fetched from the server API on page reload
-   * and prevents message mixing between different agent spaces.
+   * and prevents message mixing between different agent runtimes.
    */
   runtimeId?: string;
 

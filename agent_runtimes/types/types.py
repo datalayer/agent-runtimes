@@ -84,7 +84,7 @@ class AgentSkillSpec(BaseModel):
 
 class AgentStatus(str, Enum):
     """
-    Status of an agent space.
+    Status of an agent runtime.
     """
 
     STARTING = "starting"
@@ -260,7 +260,7 @@ class AgentSpec(BaseModel):
     Specification for an AI agent.
 
     Defines the configuration for a reusable agent template that can be
-    instantiated as an AgentSpace.
+    instantiated as an agent runtime.
     """
 
     model_config = ConfigDict(populate_by_name=True, by_alias=True)

@@ -4,11 +4,11 @@
  */
 
 /**
- * Zustand store for conversation history per runtime/agent space.
+ * Zustand store for conversation history per agent runtime.
  * Stores messages per runtime ID in memory during the session.
  *
  * Key features:
- * - Messages are stored per runtime ID (agent space) in memory
+ * - Messages are stored per runtime ID in memory
  * - On page reload, messages are fetched from the server API
  * - No browser storage persistence - server is the source of truth
  *
@@ -23,7 +23,7 @@ import type { ChatMessage } from '../types/message';
  * Conversation data for a single runtime
  */
 export interface ConversationData {
-  /** Runtime/agent space ID */
+  /** Agent runtime ID */
   runtimeId: string;
   /** Messages in this conversation */
   messages: ChatMessage[];
