@@ -7,13 +7,16 @@
  * A2UiRestaurantExample
  *
  * Demonstrates A2UI (Agent-to-UI) protocol integration with a pydantic-ai
- * restaurant finder agent. The agent generates A2UI JSON messages that are
- * rendered into React components.
+ * restaurant finder agent using the official @a2ui/react renderer.
+ *
+ * The agent generates A2UI JSON messages that are rendered into
+ * interactive React components via A2UIProvider + A2UIRenderer.
  *
  * Features:
- * - A2UI protocol message processing
+ * - A2UI protocol message processing via @a2ui/react
  * - Dynamic UI generation from agent responses
  * - Restaurant search and booking interface
+ * - Action handling for interactive components (buttons, forms)
  * - Dark/light theme support
  *
  * Backend: /api/v1/a2ui/restaurant/
@@ -23,7 +26,17 @@ import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Box } from '@datalayer/primer-addons';
 import { ThemedProvider } from './stores/themedProvider';
 import { Text, Spinner, TextInput, Button } from '@primer/react';
-import { A2UIProvider, A2UIRenderer, useA2UI, Types } from '../renderers/a2ui';
+import {
+  A2UIProvider,
+  A2UIRenderer,
+  useA2UIActions,
+  initializeDefaultCatalog,
+} from '@a2ui/react';
+import type { Types } from '@a2ui/react';
+
+// Initialize the A2UI default component catalog (buttons, cards, text, etc.)
+// This must be called once before any A2UI rendering occurs.
+initializeDefaultCatalog();
 
 // A2UI endpoint for pydantic-ai restaurant agent
 const A2UI_RESTAURANT_ENDPOINT =
@@ -37,8 +50,8 @@ const LOADING_TEXT_LINES = [
 ];
 
 /**
- * Type for A2A server response parts
- * Note: Python SDK wraps parts in a `root` property, JS SDK does not
+ * Type for A2A server response parts.
+ * Note: Python SDK wraps parts in a `root` property, JS SDK does not.
  */
 interface A2AServerPayloadPart {
   kind?: 'text' | 'data';
@@ -54,29 +67,41 @@ interface A2AServerPayloadPart {
 type A2AServerPayload = A2AServerPayloadPart[] | { error: string };
 
 /**
+ * Extract ServerToClientMessage[] from A2A server payload,
+ * handling both Python SDK (root wrapper) and JS SDK (direct) formats.
+ */
+function extractMessages(
+  data: A2AServerPayloadPart[],
+): Types.ServerToClientMessage[] {
+  const messages: Types.ServerToClientMessage[] = [];
+  for (const item of data) {
+    const part = item.root || item;
+    if (part.kind === 'text') continue;
+    if (part.data) {
+      messages.push(part.data);
+    }
+  }
+  return messages;
+}
+
+/**
  * Custom hook for A2UI restaurant client communication.
+ * Uses useA2UIActions() from @a2ui/react for message processing.
  */
 function useA2UIRestaurantClient() {
-  const { surfaces, processMessages, clearSurfaces, sendAction } = useA2UI();
+  const { processMessages, clearSurfaces, getSurfaces } = useA2UIActions();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  /**
-   * Send a message to the A2UI backend and process the response.
-   */
   const makeRequest = useCallback(
     async (message: string) => {
-      let messages: Types.ServerToClientMessage[];
-
       try {
         setIsLoading(true);
         setError(null);
 
         const response = await fetch(A2UI_RESTAURANT_ENDPOINT, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ query: message }),
         });
 
@@ -86,21 +111,9 @@ function useA2UIRestaurantClient() {
         }
 
         const data = (await response.json()) as A2AServerPayload;
+        if ('error' in data) throw new Error(data.error);
 
-        if ('error' in data) {
-          throw new Error(data.error);
-        }
-
-        messages = [];
-        for (const item of data) {
-          // Handle both Python SDK (with root wrapper) and JS SDK (direct) formats
-          const part = item.root || item;
-          if (part.kind === 'text') continue;
-          if (part.data) {
-            messages.push(part.data);
-          }
-        }
-
+        const messages = extractMessages(data);
         clearSurfaces();
         processMessages(messages);
         return messages;
@@ -117,67 +130,11 @@ function useA2UIRestaurantClient() {
     [processMessages, clearSurfaces],
   );
 
-  /**
-   * Handle A2UI actions (button clicks, form submissions, etc.)
-   */
-  const handleAction = useCallback(
-    async (action: { actionId: string; context: Record<string, unknown> }) => {
-      try {
-        setIsLoading(true);
-        setError(null);
-
-        const response = await fetch(A2UI_RESTAURANT_ENDPOINT, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            action: action.actionId,
-            context: action.context,
-          }),
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Action failed');
-        }
-
-        const data = (await response.json()) as A2AServerPayload;
-
-        if ('error' in data) {
-          throw new Error(data.error);
-        }
-
-        const messages: Types.ServerToClientMessage[] = [];
-        for (const item of data) {
-          const part = item.root || item;
-          if (part.kind === 'text') continue;
-          if (part.data) {
-            messages.push(part.data);
-          }
-        }
-
-        clearSurfaces();
-        processMessages(messages);
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : 'Unknown error';
-        setError(errorMessage);
-        console.error('A2UI action error:', err);
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [processMessages, clearSurfaces],
-  );
-
   return {
-    surfaces,
+    getSurfaces,
     isLoading,
     error,
     makeRequest,
-    handleAction,
-    sendAction,
   };
 }
 
@@ -229,13 +186,7 @@ function RestaurantSearch({
           marginBottom: 2,
         }}
       >
-        <Text
-          sx={{
-            fontSize: '4rem',
-          }}
-        >
-          🍽️
-        </Text>
+        <Text sx={{ fontSize: '4rem' }}>🍽️</Text>
       </Box>
 
       <Text
@@ -250,13 +201,7 @@ function RestaurantSearch({
         Restaurant Finder
       </Text>
 
-      <Text
-        sx={{
-          color: 'fg.muted',
-          textAlign: 'center',
-          marginBottom: 3,
-        }}
-      >
+      <Text sx={{ color: 'fg.muted', textAlign: 'center', marginBottom: 3 }}>
         Powered by A2UI protocol and pydantic-ai
       </Text>
 
@@ -290,7 +235,6 @@ function LoadingState() {
     loadingIntervalRef.current = window.setInterval(() => {
       setLoadingTextIndex(prev => (prev + 1) % LOADING_TEXT_LINES.length);
     }, 2000);
-
     return () => {
       if (loadingIntervalRef.current) {
         clearInterval(loadingIntervalRef.current);
@@ -321,10 +265,10 @@ function LoadingState() {
  * Results display component with A2UI renderer
  */
 function ResultsDisplay({
-  surfaces,
+  surfaceEntries,
   onBack,
 }: {
-  surfaces: ReadonlyMap<string, Types.Surface>;
+  surfaceEntries: [string, unknown][];
   onBack: () => void;
 }) {
   return (
@@ -338,12 +282,8 @@ function ResultsDisplay({
       </Box>
 
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-        {Array.from(surfaces.entries()).map(([surfaceId]) => (
-          <A2UIRenderer
-            key={surfaceId}
-            surfaceId={surfaceId}
-            className="a2ui-surface"
-          />
+        {surfaceEntries.map(([surfaceId]) => (
+          <A2UIRenderer key={surfaceId} surfaceId={surfaceId} />
         ))}
       </Box>
     </Box>
@@ -378,11 +318,12 @@ function ErrorDisplay({
 }
 
 /**
- * Main A2UI Restaurant content component
- * (needs to be inside A2UIProvider to use hooks)
+ * Main A2UI Restaurant content component.
+ * Must be rendered inside A2UIProvider to access hooks.
  */
 function A2UIRestaurantContent() {
-  const { surfaces, isLoading, error, makeRequest } = useA2UIRestaurantClient();
+  const { getSurfaces, isLoading, error, makeRequest } =
+    useA2UIRestaurantClient();
   const [hasData, setHasData] = useState(false);
   const [lastQuery, setLastQuery] = useState('');
 
@@ -409,22 +350,22 @@ function A2UIRestaurantContent() {
     }
   }, [lastQuery, handleSearch]);
 
-  // Show error state
   if (error && !isLoading) {
     return <ErrorDisplay error={error} onRetry={handleRetry} />;
   }
 
-  // Show loading state
   if (isLoading) {
     return <LoadingState />;
   }
 
-  // Show search or results
   if (!hasData) {
     return <RestaurantSearch onSearch={handleSearch} isLoading={isLoading} />;
   }
 
-  return <ResultsDisplay surfaces={surfaces} onBack={handleBack} />;
+  const surfaces = getSurfaces();
+  const surfaceEntries = Array.from(surfaces.entries());
+
+  return <ResultsDisplay surfaceEntries={surfaceEntries} onBack={handleBack} />;
 }
 
 /**
@@ -433,17 +374,23 @@ function A2UIRestaurantContent() {
  * Demonstrates A2UI protocol integration with pydantic-ai.
  * The agent generates A2UI JSON messages for restaurant search,
  * display, and booking functionality.
+ *
+ * Uses @a2ui/react's two-context architecture:
+ * - A2UIProvider wraps the app, receives an onAction callback
+ * - useA2UIActions() provides processMessages/clearSurfaces/getSurfaces
+ * - A2UIRenderer renders surfaces by ID
  */
 const A2UiRestaurantExample: React.FC = () => {
-  // Handle A2UI actions globally
+  // Handle A2UI actions (button clicks, form submissions, etc.)
   const handleAction = useCallback(
-    (action: {
-      type: string;
-      actionId: string;
-      context: Record<string, unknown>;
-    }) => {
-      console.log('A2UI Action:', action);
-      // Actions are handled in the content component
+    (actionMessage: Types.A2UIClientEventMessage) => {
+      console.log('A2UI Action:', actionMessage);
+      // Send action back to the agent for processing
+      fetch(A2UI_RESTAURANT_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(actionMessage),
+      }).catch(err => console.error('Action send error:', err));
     },
     [],
   );
@@ -481,7 +428,7 @@ const A2UiRestaurantExample: React.FC = () => {
               🤖 A2UI Restaurant Example
             </Text>
             <Text sx={{ fontSize: '0.875rem', color: 'fg.muted' }}>
-              pydantic-ai agent with A2UI protocol rendering
+              pydantic-ai agent with A2UI protocol rendering (@a2ui/react)
             </Text>
           </Box>
 

@@ -120,7 +120,8 @@
   },
   "dependencies": {
     "@a2a-js/sdk": "^0.3.6",
-    "@a2ui/lit": "^0.8.1",
+    "@a2ui/lit": "file:../a2ui/renderers/lit",
+    "@a2ui/react": "file:../a2ui/renderers/react",
     "@ag-ui/client": "^0.0.42",
     "@ag-ui/core": "^0.0.42",
     "@ag-ui/encoder": "^0.0.42",
