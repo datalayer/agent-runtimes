@@ -3,7 +3,10 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
+export { default as A2UiComponentGalleryExample } from './A2UiComponentGalleryExample';
+export { default as A2UiContactCardExample } from './A2UiContactCardExample';
 export { default as A2UiRestaurantExample } from './A2UiRestaurantExample';
+export { default as A2UiViewerExample } from './A2UiViewerExample';
 export { default as AgUiAgenticExample } from './AgUiAgenticExample';
 export { default as AgUiBackendToolRenderingExample } from './AgUiBackendToolRenderingExample';
 export { default as AgUiHaikuGenUIExample } from './AgUiHaikuGenUIExample';

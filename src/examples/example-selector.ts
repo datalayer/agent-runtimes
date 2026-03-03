@@ -13,7 +13,10 @@ export const EXAMPLES: Record<
   string,
   () => Promise<{ default: React.ComponentType }>
 > = {
+  A2UiComponentGalleryExample: () => import('./A2UiComponentGalleryExample'),
+  A2UiContactCardExample: () => import('./A2UiContactCardExample'),
   A2UiRestaurantExample: () => import('./A2UiRestaurantExample'),
+  A2UiViewerExample: () => import('./A2UiViewerExample'),
   AgUiAgenticExample: () => import('./AgUiAgenticExample'),
   AgUiBackendToolRenderingExample: () =>
     import('./AgUiBackendToolRenderingExample'),
