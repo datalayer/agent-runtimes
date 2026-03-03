@@ -23,8 +23,9 @@
  */
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { Box } from '@datalayer/primer-addons';
+import { Box, getCardGradient } from '@datalayer/primer-addons';
 import { ThemedProvider } from './stores/themedProvider';
+import { useExampleThemeStore } from './stores/themeStore';
 import { Text, Spinner, TextInput, Button } from '@primer/react';
 import {
   A2UIProvider,
@@ -151,6 +152,8 @@ function RestaurantSearch({
   defaultValue?: string;
 }) {
   const [inputValue, setInputValue] = useState(defaultValue);
+  const { theme, colorMode } = useExampleThemeStore();
+  const gradient = getCardGradient(theme, colorMode);
 
   const handleSubmit = useCallback(
     (event: React.FormEvent<HTMLFormElement>) => {
@@ -179,7 +182,7 @@ function RestaurantSearch({
           width: '100%',
           height: '200px',
           borderRadius: '12px',
-          background: 'linear-gradient(135deg, #117A65 0%, #1ABC9C 100%)',
+          background: `linear-gradient(135deg, ${gradient.from} 0%, ${gradient.to} 100%)`,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
