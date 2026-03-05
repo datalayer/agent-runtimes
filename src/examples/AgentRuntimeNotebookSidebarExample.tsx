@@ -111,7 +111,7 @@ export function AgentRuntimeNotebookExampleInner({
     <>
       <Box
         sx={{
-          height: 'calc(100vh - 60px)',
+          height: '100vh',
           width: '100vw',
           display: 'flex',
           overflow: 'hidden',
