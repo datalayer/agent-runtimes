@@ -17,7 +17,8 @@ export type { ThemeVariant, ColorMode, ThemeState };
  * Persisted to localStorage under 'agent-runtimes-theme' key.
  * Delegates to the shared `createThemeStore` factory from primer-addons.
  */
-export const useExampleThemeStore = createThemeStore('agent-runtimes-theme', {
-  colorMode: 'light',
-  theme: 'datalayer',
-});
+export const useExampleThemeStore: ReturnType<typeof createThemeStore> =
+  createThemeStore('agent-runtimes-theme', {
+    colorMode: 'light',
+    theme: 'datalayer',
+  });
