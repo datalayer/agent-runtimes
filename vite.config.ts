@@ -272,6 +272,10 @@ export default defineConfig(({ mode, command }) => {
     assetsInclude: ['**/*.whl', '**/*.raw.css', '**/*.lexical'],
     build,
     resolve: {
+      // Force these packages to resolve from the root node_modules only.
+      // Without this, Vite follows the @datalayer/core symlink into the core
+      // source tree and picks up incompatible versions nestled there.
+      dedupe: ['date-fns', 'react', 'react-dom'],
       alias: [
         { find: '@', replacement: path.resolve(__dirname, './src') },
         { find: /^~(.*)$/, replacement: '$1' },

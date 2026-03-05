@@ -46,6 +46,16 @@ from agent_runtimes.transports.acp import ACPSession, ACPTransport
 # Protocol adapters
 from agent_runtimes.transports.base import AdapterEvent, BaseTransport
 
+# Observability
+from agent_runtimes.otel import (
+    setup_otel,
+    instrument_agent_runtimes,
+    uninstrument_agent_runtimes,
+    get_tracer,
+    get_meter,
+    create_otel_middleware,
+)
+
 
 def _jupyter_server_extension_points() -> List[Dict[str, Any]]:
     """
@@ -85,4 +95,11 @@ __all__ = [
     "AdapterEvent",
     "ACPTransport",
     "ACPSession",
+    # Observability
+    "setup_otel",
+    "instrument_agent_runtimes",
+    "uninstrument_agent_runtimes",
+    "get_tracer",
+    "get_meter",
+    "create_otel_middleware",
 ]

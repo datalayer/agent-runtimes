@@ -26,6 +26,7 @@ export const EXAMPLES: Record<
   AgUiToolsBasedGenUIExample: () => import('./AgUiToolsBasedGenUIExample'),
   AgentRuntimeCustomExample: () => import('./AgentRuntimeCustomExample'),
   AgentRuntimeFormExample: () => import('./AgentRuntimeFormExample'),
+  AgentRuntimeOtelExample: () => import('./AgentRuntimeOtelExample'),
   AgentRuntimeLexicalSidebarExample: () =>
     import('./AgentRuntimeLexicalSidebarExample'),
   AgentRuntimeNotebookExample: () => import('./AgentRuntimeNotebookExample'),
