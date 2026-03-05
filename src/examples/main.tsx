@@ -21,12 +21,9 @@ import { ServiceManager } from '@jupyterlab/services';
 import {
   DatalayerThemeProvider,
   themeConfigs,
-  themeVariants,
-  type ColorMode,
+  ThemeSwitcher,
+  Box,
 } from '@datalayer/primer-addons';
-import { SegmentedControl } from '@primer/react';
-import { Box } from '@datalayer/primer-addons';
-import { MoonIcon, SunIcon, DeviceDesktopIcon } from '@primer/octicons-react';
 import {
   coreStore,
   iamStore,
@@ -549,70 +546,7 @@ const ExampleAppThemed: React.FC<{
 
           {/* Right: theme picker + color mode + logo */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-            {/* Theme colored circles */}
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              {themeVariants.map(variant => {
-                const tcfg = themeConfigs[variant];
-                const isSelected = themeVariant === variant;
-                return (
-                  <Box
-                    as="button"
-                    key={variant}
-                    aria-label={tcfg.label}
-                    aria-pressed={isSelected}
-                    onClick={() =>
-                      useExampleThemeStore.getState().setTheme(variant, false)
-                    }
-                    sx={{
-                      width: 24,
-                      height: 24,
-                      borderRadius: '50%',
-                      backgroundColor: tcfg.brandColor,
-                      border: '2px solid',
-                      borderColor: isSelected ? 'accent.fg' : 'border.default',
-                      cursor: 'pointer',
-                      padding: 0,
-                      outline: 'none',
-                      transition: 'border-color 0.15s ease',
-                      boxShadow: isSelected
-                        ? '0 0 0 2px var(--bgColor-accent-muted, rgba(9,105,218,0.3))'
-                        : 'none',
-                      '&:hover': { borderColor: 'accent.fg' },
-                      '&:focus-visible': {
-                        boxShadow:
-                          '0 0 0 2px var(--bgColor-accent-muted, rgba(9,105,218,0.3))',
-                      },
-                    }}
-                  />
-                );
-              })}
-            </Box>
-
-            {/* Color mode segmented control */}
-            <SegmentedControl
-              aria-label="Color mode"
-              size="small"
-              onChange={(index: number) => {
-                const modes: ColorMode[] = ['light', 'dark', 'auto'];
-                useExampleThemeStore.getState().setColorMode(modes[index]);
-              }}
-            >
-              <SegmentedControl.IconButton
-                selected={colorMode === 'light'}
-                icon={SunIcon}
-                aria-label="Light"
-              />
-              <SegmentedControl.IconButton
-                selected={colorMode === 'dark'}
-                icon={MoonIcon}
-                aria-label="Dark"
-              />
-              <SegmentedControl.IconButton
-                selected={colorMode === 'auto'}
-                icon={DeviceDesktopIcon}
-                aria-label="Auto"
-              />
-            </SegmentedControl>
+            <ThemeSwitcher useStore={useExampleThemeStore} />
 
             <img
               src="https://assets.datalayer.tech/datalayer-25.svg"
