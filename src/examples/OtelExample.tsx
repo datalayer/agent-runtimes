@@ -43,10 +43,10 @@ import {
   useSimpleAuthStore,
 } from '@datalayer/core/lib/views/otel';
 import { SignInSimple } from '@datalayer/core/lib/views/iam';
-import { ChatSidebar, type ProtocolConfig } from '../chat';
-import { DEFAULT_MODEL } from '../specs';
 import type { Transport } from '../chat';
 import type { AgentLibrary } from '../config';
+import { ChatSidebar, type ProtocolConfig } from '../chat';
+import { DEFAULT_MODEL } from '../specs';
 
 // ─── Environment / defaults ────────────────────────────────────────────────
 

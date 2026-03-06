@@ -234,6 +234,67 @@ export default defineConfig(({ mode, command }) => {
         '.whl': 'text',
         '.lexical': 'json',
       },
+      // Fix prismjs language component load-order crash during pre-bundling.
+      // When esbuild pre-bundles @lexical/code, it inlines the prismjs CJS
+      // IIFEs and may reorder their execution.  prism-cpp.js extends 'c',
+      // which in turn extends 'clike'.  If prism-c.js hasn't run yet,
+      // `Prism.languages.c` is undefined and `.extend('c', ...)` crashes:
+      //   TypeError: Cannot set properties of undefined (setting 'class-name')
+      // The esbuild plugin below intercepts each derived prism language file
+      // and prepends explicit `require()` calls for its prerequisites so that
+      // the base language is always registered first, regardless of how
+      // esbuild orders the inlined modules.
+      plugins: [
+        {
+          name: 'fix-prismjs-language-deps',
+          setup(build: any) {
+            // Map of prism language files → their prerequisite requires
+            const prismDeps: Record<string, string[]> = {
+              'prism-cpp': [
+                "require('prismjs');",
+                "require('prismjs/components/prism-clike.js');",
+                "require('prismjs/components/prism-c.js');",
+              ],
+              'prism-objectivec': [
+                "require('prismjs');",
+                "require('prismjs/components/prism-clike.js');",
+                "require('prismjs/components/prism-c.js');",
+              ],
+              'prism-javascript': [
+                "require('prismjs');",
+                "require('prismjs/components/prism-clike.js');",
+              ],
+              'prism-typescript': [
+                "require('prismjs');",
+                "require('prismjs/components/prism-clike.js');",
+                "require('prismjs/components/prism-javascript.js');",
+              ],
+              'prism-java': [
+                "require('prismjs');",
+                "require('prismjs/components/prism-clike.js');",
+              ],
+              'prism-c': [
+                "require('prismjs');",
+                "require('prismjs/components/prism-clike.js');",
+              ],
+              'prism-markdown': [
+                "require('prismjs');",
+                "require('prismjs/components/prism-markup.js');",
+              ],
+            };
+            for (const [lang, deps] of Object.entries(prismDeps)) {
+              const re = new RegExp(`prismjs[\\/\\\\]components[\\/\\\\]${lang}\\.js$`);
+              build.onLoad({ filter: re }, async (args: any) => {
+                const original = await fs.promises.readFile(args.path, 'utf8');
+                return {
+                  contents: deps.join('\n') + '\n' + original,
+                  loader: 'js' as const,
+                };
+              });
+            }
+          },
+        },
+      ],
     },
   };
 
