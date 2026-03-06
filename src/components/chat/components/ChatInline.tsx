@@ -47,10 +47,10 @@ import {
   XIcon,
 } from '@primer/octicons-react';
 import { SparklesIcon } from '@datalayer/icons-react';
-import type { TransportType, ProtocolEvent } from '../types/protocol';
-import { AGUIAdapter, type BaseProtocolAdapter } from '../protocols';
-import type { ChatMessage } from '../types/message';
-import { generateMessageId } from '../types/message';
+import type { TransportType, ProtocolEvent } from '../../../types/protocol';
+import { AGUIAdapter, type BaseProtocolAdapter } from '../../../protocols';
+import type { ChatMessage } from '../../../types/message';
+import { generateMessageId } from '../../../types/message';
 
 /**
  * AI action option type

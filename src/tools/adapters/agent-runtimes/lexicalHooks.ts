@@ -19,7 +19,7 @@ import {
   lexicalToolOperations,
 } from '@datalayer/jupyter-lexical';
 import { createAllAgentRuntimesTools } from './AgentRuntimesToolAdapter';
-import type { FrontendToolDefinition } from '../../../components/chat/types/tool';
+import type { FrontendToolDefinition } from '../../../types/tool';
 
 /**
  * Hook that creates agent-runtimes tools for lexical operations.

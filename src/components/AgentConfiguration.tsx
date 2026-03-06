@@ -29,7 +29,7 @@ import { Box } from '@datalayer/primer-addons';
 import type { Agent } from '../types/Types';
 import { IdentityCard } from './chat/components';
 import type { Transport, MCPServerConfig } from './chat/components';
-import type { Extension } from './chat/types';
+import type { Extension } from '../types';
 import type { McpServerSelection } from './McpServerManager';
 import { IdentityConnect, useIdentity } from '../identity';
 import type { OAuthProvider, OAuthProviderConfig, Identity } from '../identity';
@@ -852,8 +852,8 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
             })}
           {agents.map(agent => (
             <Select.Option key={agent.id} value={agent.id}>
-              {agent.status === 'running' && '● '}
-              [Example] {agent.name}
+              [Example] {agent.status === 'running' && '● '}
+              {agent.name}
             </Select.Option>
           ))}
         </Select>

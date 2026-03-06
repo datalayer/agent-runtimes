@@ -11,14 +11,14 @@
  */
 
 import { useCallback, useMemo } from 'react';
-import { useChatStore } from '../components/chat/store';
-import type { ChatMessage } from '../components/chat/types/message';
-import type { InferenceRequestOptions } from '../components/chat/types/inference';
+import { useChatStore } from '../store';
+import type { ChatMessage } from '../types/message';
+import type { InferenceRequestOptions } from '../types/inference';
 import {
   createUserMessage,
   createAssistantMessage,
   generateMessageId,
-} from '../components/chat/types/message';
+} from '../types/message';
 
 /**
  * Return type for useChat hook

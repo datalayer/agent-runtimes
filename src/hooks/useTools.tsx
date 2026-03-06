@@ -11,14 +11,14 @@
  */
 
 import { useEffect, useMemo } from 'react';
-import { useChatStore, type ToolCallState } from '../components/chat/store';
+import { useChatStore, type ToolCallState } from '../store';
 import type {
   FrontendToolDefinition,
   ToolParameter,
   ToolRenderProps,
   ToolRenderAndWaitProps,
   ToolLocation,
-} from '../components/chat/types/tool';
+} from '../types/tool';
 
 /**
  * Type signature for useFrontendTool hook

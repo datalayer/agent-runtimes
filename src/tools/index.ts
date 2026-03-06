@@ -12,10 +12,26 @@
 // Export adapters
 export * from './adapters/copilotkit';
 
-// TODO: Re-export tool types from jupyter-react when available
-// export type {
-//   ToolDefinition,
-//   ToolConfig,
-//   ToolOperation,
-//   ToolExecutionContext,
-// } from '@datalayer/jupyter-react';
+// Tool executor
+export {
+  ToolExecutor,
+  createToolExecutor,
+  type ToolExecutionContext,
+} from './ToolExecutor';
+
+// Re-export tool types
+export type {
+  ToolDefinition,
+  FrontendToolDefinition,
+  BackendToolDefinition,
+  ToolLocation,
+  ToolParameter,
+  ToolRenderStatus,
+  ToolRenderProps,
+  ToolRenderAndWaitProps,
+  ToolCallRequest,
+  ToolExecutionResult,
+  ToolRegistryEntry,
+} from '../types/tool';
+
+export { isFrontendTool, isBackendTool, hasHitlRender } from '../types/tool';

@@ -3,19 +3,13 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
-/**
- * Tool exports for chat component.
- *
- * @module components/chat/tools
- */
-
+// Re-export from new location at src/tools/
 export {
   ToolExecutor,
   createToolExecutor,
   type ToolExecutionContext,
-} from './ToolExecutor';
+} from '../../../tools/ToolExecutor';
 
-// Re-export tool types
 export type {
   ToolDefinition,
   FrontendToolDefinition,
@@ -28,6 +22,10 @@ export type {
   ToolCallRequest,
   ToolExecutionResult,
   ToolRegistryEntry,
-} from '../types/tool';
+} from '../../../types/tool';
 
-export { isFrontendTool, isBackendTool, hasHitlRender } from '../types/tool';
+export {
+  isFrontendTool,
+  isBackendTool,
+  hasHitlRender,
+} from '../../../types/tool';

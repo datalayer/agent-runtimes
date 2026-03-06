@@ -45,12 +45,12 @@ import {
   useChatStore,
   useChatLoading,
   useChatStreaming,
-} from '../store/chatStore';
+} from '../../../store/chatStore';
 import {
   generateMessageId,
   createUserMessage,
   createAssistantMessage,
-} from '../types/message';
+} from '../../../types/message';
 import {
   useChatKeyboardShortcuts,
   getShortcutDisplay,

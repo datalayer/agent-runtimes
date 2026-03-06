@@ -68,28 +68,28 @@ import {
 } from '../styles/streamdownStyles';
 import { PoweredByTag, type PoweredByTagProps } from '../elements/PoweredByTag';
 import { requestAPI } from '../../handler';
-import { useChatStore } from '../../store/chatStore';
-import { useConversationStore } from '../../store/conversationStore';
-import type { ChatMessage, ContentPart } from '../../types/message';
+import { useChatStore } from '../../../../store/chatStore';
+import { useConversationStore } from '../../../../store/conversationStore';
+import type { ChatMessage, ContentPart } from '../../../../types/message';
 import {
   generateMessageId,
   createUserMessage,
   createAssistantMessage,
-} from '../../types/message';
+} from '../../../../types/message';
 import type {
   TransportType,
   ProtocolAdapterConfig,
   ProtocolEvent,
-} from '../../types/protocol';
-import type { McpServerSelection } from '../../types/inference';
+} from '../../../../types/protocol';
+import type { McpServerSelection } from '../../../../types/inference';
 import {
   AGUIAdapter,
   A2AAdapter,
   VercelAIAdapter,
   ACPAdapter,
   type BaseProtocolAdapter,
-} from '../../protocols';
-import type { FrontendToolDefinition } from '../../types/tool';
+} from '../../../../protocols';
+import type { FrontendToolDefinition } from '../../../../types/tool';
 import { ToolCallDisplay } from '../display/ToolCallDisplay';
 import type { BuiltinTool as BuiltinToolType } from '../../../../types/Types';
 import { InputPrompt } from './InputPrompt';

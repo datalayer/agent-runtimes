@@ -19,7 +19,7 @@ import type {
   ToolExecutionContext,
 } from '@datalayer/jupyter-react';
 import { OperationRunner } from '@datalayer/jupyter-react';
-import type { FrontendToolDefinition } from '../../../components/chat/types/tool';
+import type { FrontendToolDefinition } from '../../../types/tool';
 
 /**
  * Deduplication cache to prevent executing the same operation multiple times

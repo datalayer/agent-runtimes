@@ -55,7 +55,7 @@
  */
 
 // Types
-export * from './types';
+export * from '../../types';
 
 // Store (primary state management - no provider needed!)
 export {
@@ -76,7 +76,7 @@ export {
   type ChatActions,
   type ChatConfig,
   type ToolCallState,
-} from './store';
+} from '../../store';
 
 // Hooks (re-exported from main hooks folder)
 export {
@@ -95,7 +95,7 @@ export {
   SelfHostedInferenceProvider,
   type DatalayerInferenceConfig,
   type SelfHostedInferenceConfig,
-} from './inference';
+} from '../../inference';
 
 // Protocol Adapters
 export {
@@ -109,10 +109,10 @@ export {
   type ACPSession,
   type ACPAgent,
   type ACPPendingPermission,
-} from './protocols';
+} from '../../protocols';
 
 // Tools
-export { ToolExecutor, type ToolExecutionContext } from './tools';
+export { ToolExecutor, type ToolExecutionContext } from '../../tools';
 
 // Middleware
 export {
@@ -122,7 +122,7 @@ export {
   createHITLMiddleware,
   type RequestContext,
   type ResponseContext,
-} from './middleware';
+} from '../../middleware';
 
 // Extensions
 export {

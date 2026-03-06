@@ -30,7 +30,11 @@ import type { PoweredByTagProps } from './elements/PoweredByTag';
 
 // Re-export MessageHandler for consumers
 export type { MessageHandler };
-import { useChatStore, useChatOpen, useChatMessages } from '../store/chatStore';
+import {
+  useChatStore,
+  useChatOpen,
+  useChatMessages,
+} from '../../../store/chatStore';
 import {
   useChatKeyboardShortcuts,
   getShortcutDisplay,

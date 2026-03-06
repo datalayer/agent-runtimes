@@ -7,7 +7,7 @@
 export * from './chat';
 
 // Explicit re-exports for TypeDoc (can't follow deep export chains)
-export type { ToolCallStatus } from './chat/types/message';
+export type { ToolCallStatus } from '../types/message';
 export type { ToolCallStatus as DisplayToolCallStatus } from './chat/components/base/ChatBase';
 
 export {

@@ -574,12 +574,15 @@ export class AGUIAdapter extends BaseProtocolAdapter {
 
       case 'TEXT_MESSAGE_START': {
         const messageId = event.messageId as string | undefined;
-        if (!context.getCurrentMessageId()) {
-          context.setCurrentMessageId(messageId || generateMessageId());
-        }
-        if (!context.getCurrentContent()) {
-          context.resetContent();
-        }
+        // Always generate a fresh message ID and reset content for each
+        // TEXT_MESSAGE_START.  When backend tools execute, the entire flow
+        // (pre-tool text → tool call → post-tool text) happens in a single
+        // SSE stream.  Without resetting here, the post-tool text would
+        // reuse the same message ID and update IN PLACE at the original
+        // position BEFORE the tool call indicators, instead of appearing
+        // as a new message AFTER them.
+        context.setCurrentMessageId(messageId || generateMessageId());
+        context.resetContent();
         break;
       }
 

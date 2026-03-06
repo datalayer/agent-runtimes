@@ -46,12 +46,16 @@ import {
   type ChatViewMode,
 } from './base/ChatBase';
 import type { PoweredByTagProps } from './elements/PoweredByTag';
-import { useChatOpen, useChatMessages, useChatStore } from '../store/chatStore';
+import {
+  useChatOpen,
+  useChatMessages,
+  useChatStore,
+} from '../../../store/chatStore';
 import {
   useChatKeyboardShortcuts,
   getShortcutDisplay,
 } from '../../../hooks/useKeyboardShortcuts';
-import type { FrontendToolDefinition } from '../types/tool';
+import type { FrontendToolDefinition } from '../../../types/tool';
 
 // Re-export types for backward compatibility
 export type {

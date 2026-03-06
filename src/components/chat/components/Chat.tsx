@@ -31,8 +31,8 @@ import type {
   ModelConfig,
   ChatViewMode,
 } from './base/ChatBase';
-import type { FrontendToolDefinition } from '../types/tool';
-import type { McpServerSelection } from '../types';
+import type { FrontendToolDefinition } from '../../../types/tool';
+import type { McpServerSelection } from '../../../types';
 import { useConnectedIdentities } from '../../../identity';
 import type {
   OAuthProvider,
