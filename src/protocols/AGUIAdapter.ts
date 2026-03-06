@@ -6,7 +6,7 @@
 /**
  * AG-UI protocol adapter using SSE transport.
  *
- * @module components/chat/protocols/AGUIAdapter
+ * @module protocols/AGUIAdapter
  */
 
 import type { ProtocolAdapterConfig, AGUI } from '../types/protocol';

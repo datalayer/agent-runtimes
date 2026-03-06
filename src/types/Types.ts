@@ -8,9 +8,9 @@
 // ============================================================================
 
 /**
- * Status of an agent.
+ * Status of an example agent (for UI demos).
  */
-export type AgentStatus =
+export type ExampleAgentStatus =
   | 'starting'
   | 'running'
   | 'paused'
@@ -23,14 +23,14 @@ export type AgentStatus =
 
 export type Transport = 'acp' | 'ag-ui' | 'vercel-ai' | 'a2a';
 
-export interface Agent {
+export interface ExampleAgent {
   id: string;
   name: string;
   description: string;
   author: string;
   lastEdited: string;
   screenshot: string;
-  status?: AgentStatus;
+  status?: ExampleAgentStatus;
   transport: Transport;
   avatarUrl: string;
   notebookFile: string;
@@ -39,10 +39,10 @@ export interface Agent {
   notifications: number;
 }
 
-export type AgentsState = {
-  agents: readonly Agent[];
-  getAgentById: (id: string) => Agent | undefined;
-  updateAgentStatus: (id: string, status: AgentStatus) => void;
+export type ExampleAgentsState = {
+  agents: readonly ExampleAgent[];
+  getAgentById: (id: string) => ExampleAgent | undefined;
+  updateAgentStatus: (id: string, status: ExampleAgentStatus) => void;
   toggleAgentStatus: (id: string) => void;
 };
 

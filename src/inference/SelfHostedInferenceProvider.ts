@@ -7,7 +7,7 @@
  * Self-hosted inference provider for custom endpoints.
  * Supports OpenAI-compatible APIs.
  *
- * @module components/chat/inference/SelfHostedInferenceProvider
+ * @module inference/SelfHostedInferenceProvider
  */
 
 import type {

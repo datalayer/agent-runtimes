@@ -16,7 +16,7 @@
  * - Session updates via session/update notifications
  * - Permission handling via session/request_permission
  *
- * @module components/chat/protocols/ACPAdapter
+ * @module protocols/ACPAdapter
  */
 
 import {

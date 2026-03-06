@@ -23,7 +23,7 @@ import { Notebook } from '@datalayer/jupyter-react';
 import { ThemedJupyterProvider } from './stores/themedProvider';
 
 // Agent-runtimes imports
-import { ChatFloating } from '../components/chat';
+import { ChatFloating } from '../chat';
 import { useNotebookTools } from '../tools/adapters/agent-runtimes/notebookHooks';
 
 // Import Matplotlib notebook

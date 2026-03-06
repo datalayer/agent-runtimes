@@ -7,7 +7,7 @@
  * Datalayer inference provider implementation.
  * Uses Datalayer's API for LLM inference.
  *
- * @module components/chat/inference/DatalayerInferenceProvider
+ * @module inference/DatalayerInferenceProvider
  */
 
 import type {

@@ -21,7 +21,7 @@ import { Text, Spinner } from '@primer/react';
 import { AlertIcon } from '@primer/octicons-react';
 import { Box, setupPrimerPortals } from '@datalayer/primer-addons';
 import { ThemedProvider } from './stores/themedProvider';
-import { Chat } from '../components/chat';
+import { Chat } from '../chat';
 
 setupPrimerPortals();
 

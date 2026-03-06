@@ -7,7 +7,7 @@
  * Execution types for code/skills execution results.
  * Maps to the Python code-sandboxes ExecutionResult model.
  *
- * @module components/chat/types/execution
+ * @module types/execution
  */
 
 /**

@@ -7,7 +7,7 @@
  * Middleware pipeline for chat component.
  * Provides hooks for intercepting and modifying chat operations.
  *
- * @module components/chat/middleware/MiddlewarePipeline
+ * @module middleware/MiddlewarePipeline
  */
 
 import type {

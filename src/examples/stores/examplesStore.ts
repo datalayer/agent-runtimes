@@ -6,9 +6,9 @@
 import { createStore } from 'zustand/vanilla';
 import { useStore } from 'zustand';
 import type {
-  Agent,
-  AgentStatus,
-  AgentsState,
+  ExampleAgent,
+  ExampleAgentStatus,
+  ExampleAgentsState,
   Transport,
 } from '../../types/Types';
 
@@ -18,21 +18,21 @@ import stocksWatcherData from './agents/stock-market.json';
 import salesForecasterData from './agents/sales-forecaster.json';
 import socialPostGeneratorData from './agents/social-post-generator.json';
 
-export type { Agent, AgentStatus, AgentsState, Transport };
+export type { ExampleAgent, ExampleAgentStatus, ExampleAgentsState, Transport };
 
 // Helper function to transform JSON data to Agent format
 const transformAgentData = (
   data: any,
   notebookSuffix: string,
   lexicalSuffix: string,
-): Agent => ({
+): ExampleAgent => ({
   id: data.id,
   name: data.title,
   description: data.description,
   author: data.author,
   lastEdited: data.editTimestamp,
   screenshot: data.image,
-  status: data.status as AgentStatus | undefined,
+  status: data.status as ExampleAgentStatus | undefined,
   transport: data.transport as Transport,
   avatarUrl: data.avatarUrl,
   notebookFile: `${notebookSuffix}.ipynb.json`,
@@ -42,7 +42,7 @@ const transformAgentData = (
 });
 
 // Initialize agents from the agents folder
-const initialAgents: Agent[] = [
+const initialAgents: ExampleAgent[] = [
   transformAgentData(
     earthquakeDetectorData,
     'earthquake-detector',
@@ -61,13 +61,13 @@ const initialAgents: Agent[] = [
   ),
 ];
 
-export const agentsStore = createStore<AgentsState>(set => ({
+export const agentsStore = createStore<ExampleAgentsState>(set => ({
   agents: initialAgents,
   getAgentById: (id: string) => {
     const state = agentsStore.getState();
     return state.agents.find(agent => agent.id === id);
   },
-  updateAgentStatus: (id: string, status: AgentStatus) => {
+  updateAgentStatus: (id: string, status: ExampleAgentStatus) => {
     set(state => ({
       agents: state.agents.map(agent =>
         agent.id === id ? { ...agent, status } : agent,
@@ -88,8 +88,10 @@ export const agentsStore = createStore<AgentsState>(set => ({
   },
 }));
 
-export function useAgentsStore(): AgentsState;
-export function useAgentsStore<T>(selector: (state: AgentsState) => T): T;
+export function useAgentsStore(): ExampleAgentsState;
+export function useAgentsStore<T>(
+  selector: (state: ExampleAgentsState) => T,
+): T;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function useAgentsStore(selector?: any) {
   return useStore(agentsStore, selector);

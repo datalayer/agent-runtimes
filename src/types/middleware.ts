@@ -7,7 +7,7 @@
  * Middleware types for chat component.
  * Supports request/response interception and tool call middleware.
  *
- * @module components/chat/types/middleware
+ * @module types/middleware
  */
 
 import type { ChatMessage } from './message';

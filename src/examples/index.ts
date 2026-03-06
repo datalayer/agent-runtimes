@@ -30,8 +30,8 @@ export { default as OtelExample } from './OtelExample';
 
 // Store types
 export type {
-  Agent,
-  AgentStatus,
-  AgentsState,
+  ExampleAgent,
+  ExampleAgentStatus,
+  ExampleAgentsState,
   Transport,
 } from './stores/examplesStore';

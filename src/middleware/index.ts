@@ -6,7 +6,7 @@
 /**
  * Middleware exports for chat component.
  *
- * @module components/chat/middleware
+ * @module middleware
  */
 
 export {

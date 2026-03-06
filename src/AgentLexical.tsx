@@ -87,7 +87,7 @@ import {
   TablePlugin,
 } from '@datalayer/jupyter-lexical';
 import { ServiceManager } from '@jupyterlab/services';
-import { Chat } from './components/chat';
+import { Chat } from './chat';
 import { ChatInlinePlugin } from './lexical/ChatInlinePlugin';
 import { useChatInlineToolbarItems } from './lexical/useChatInlineToolbarItems';
 import { useLexicalTools } from './tools/adapters/agent-runtimes/lexicalHooks';

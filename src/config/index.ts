@@ -4,3 +4,19 @@
  */
 
 export * from './utils';
+
+export {
+  AgentConfiguration,
+  AGENT_LIBRARIES,
+  TRANSPORTS,
+  EXTENSIONS,
+  isSpecSelection,
+  getSpecId,
+} from './AgentConfiguration';
+export type {
+  AgentLibrary,
+  AgentConfigurationProps,
+  SkillOption,
+  MCPServerTool,
+  LibraryAgentSpec,
+} from './AgentConfiguration';

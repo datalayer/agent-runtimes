@@ -25,7 +25,7 @@ import { Box } from '@datalayer/primer-addons';
 import ReactECharts from 'echarts-for-react';
 import { SessionTabs } from './SessionTabs';
 import { HeaderControls } from './HeaderControls';
-import type { AgentStatus } from '../../types/Types';
+import type { ExampleAgentStatus } from '../../types/Types';
 
 // Mock session data
 const MOCK_SESSIONS = [
@@ -130,7 +130,7 @@ export interface HeaderProps {
   activeSession: string;
   agentName?: string;
   agentDescription?: string;
-  agentStatus?: AgentStatus;
+  agentStatus?: ExampleAgentStatus;
   showContextTree: boolean;
   isNewAgent?: boolean;
   isConfigured?: boolean;

@@ -7,7 +7,7 @@
  * Extension types for chat component.
  * Extensions add pluggable UI and protocol capabilities.
  *
- * @module components/chat/types/extension
+ * @module types/extension
  */
 
 import type { ReactNode } from 'react';

@@ -71,7 +71,7 @@ import { Box } from '@primer/react';
 import {
   ChatInline,
   type ChatInlineProtocolConfig,
-} from '../components/chat/components/ChatInline';
+} from '../chat/components/ChatInline';
 
 // Margin from editor edges
 const MARGIN_X = 32;

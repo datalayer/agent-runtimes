@@ -7,7 +7,7 @@
  * Protocol adapter types for chat component.
  * Supports AG-UI (SSE), A2A (SSE), ACP (WebSocket), MCP-UI.
  *
- * @module components/chat/types/protocol
+ * @module types/protocol
  */
 
 import type { ChatMessage } from './message';

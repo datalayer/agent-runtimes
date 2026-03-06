@@ -30,7 +30,7 @@ import {
   ChatSidebar,
   type ProtocolConfig,
   type FrontendToolDefinition,
-} from '../components/chat';
+} from '../chat';
 
 // Import agent-runtimes notebook tools
 import { useNotebookTools } from '../tools/adapters/agent-runtimes/notebookHooks';

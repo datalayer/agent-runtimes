@@ -6,7 +6,7 @@
 import { createStore } from 'zustand/vanilla';
 import { useStore } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import type { Transport } from '../../components/chat/components/Chat';
+import type { Transport } from '../../chat/components/Chat';
 
 export type AgentStatus = 'running' | 'paused' | 'initializing' | 'error';
 

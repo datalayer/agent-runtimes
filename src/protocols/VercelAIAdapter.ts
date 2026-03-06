@@ -9,7 +9,7 @@
  *
  * @see https://ai.pydantic.dev/ui/vercel-ai/
  *
- * @module components/chat/protocols/VercelAIAdapter
+ * @module protocols/VercelAIAdapter
  */
 
 import type { ProtocolAdapterConfig } from '../types/protocol';

@@ -27,7 +27,7 @@ import {
 } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { ThemedProvider, useThemeBrandColor } from './stores/themedProvider';
-import { ChatFloating, type ToolCallRenderContext } from '../components/chat';
+import { ChatFloating, type ToolCallRenderContext } from '../chat';
 import {
   TasklistIcon,
   CheckCircleFillIcon,

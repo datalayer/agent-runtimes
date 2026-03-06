@@ -6,7 +6,7 @@
 /**
  * Protocol adapter exports for chat component.
  *
- * @module components/chat/protocols
+ * @module protocols
  */
 
 export { BaseProtocolAdapter } from './BaseProtocolAdapter';

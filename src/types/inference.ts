@@ -7,7 +7,7 @@
  * Inference provider types for chat component.
  * Supports multiple backends: Datalayer, OpenAI, Anthropic, self-hosted.
  *
- * @module components/chat/types/inference
+ * @module types/inference
  */
 
 import type { ChatMessage, ChatMessageDelta } from './message';

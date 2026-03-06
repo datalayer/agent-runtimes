@@ -31,7 +31,7 @@ import {
   DatalayerThemeProvider,
   setupPrimerPortals,
 } from '@datalayer/primer-addons';
-import { Chat } from './components/chat';
+import { Chat } from './chat';
 import { DEFAULT_MODEL } from './specs';
 
 import '../style/primer-primitives.css';

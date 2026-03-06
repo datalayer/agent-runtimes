@@ -17,9 +17,9 @@ import {
 } from '@tanstack/react-query';
 import { Box } from '@datalayer/primer-addons';
 import { ThemedProvider } from './stores/themedProvider';
-import { Chat, useChatStore } from '../components/chat';
+import { Chat, useChatStore } from '../chat';
 import { DEFAULT_MODEL } from '../specs';
-import type { Transport, Extension, ChatMessage } from '../components/chat';
+import type { Transport, Extension, ChatMessage } from '../chat';
 import { useAgentsStore } from './stores/examplesStore';
 import { useIdentity } from '../identity';
 import type { OAuthProvider, Identity } from '../identity';
@@ -29,13 +29,10 @@ import {
   Header,
   FooterMetrics,
 } from './components';
-import {
-  AgentConfiguration,
-  type AgentLibrary,
-  type McpServerSelection,
-} from '../components';
-import { isSpecSelection, getSpecId } from '../components/AgentConfiguration';
-import type { LibraryAgentSpec } from '../components/AgentConfiguration';
+import { AgentConfiguration, type AgentLibrary } from '../config';
+import type { McpServerSelection } from '../types';
+import { isSpecSelection, getSpecId } from '../config/AgentConfiguration';
+import type { LibraryAgentSpec } from '../config/AgentConfiguration';
 
 // Create a query client for React Query
 const queryClient = new QueryClient({

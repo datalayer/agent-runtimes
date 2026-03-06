@@ -6,7 +6,7 @@
 /**
  * A2A (Agent-to-Agent) protocol adapter using SSE transport.
  *
- * @module components/chat/protocols/A2AAdapter
+ * @module protocols/A2AAdapter
  */
 
 import type { ProtocolAdapterConfig, AgentCard } from '../types/protocol';

@@ -13,7 +13,7 @@
  * @module hooks/useAgentRuntimes
  */
 
-import { useCache } from '@datalayer/core/hooks';
+import { useCache } from '@datalayer/core/lib/hooks';
 import type { AgentSpec } from '../types';
 
 /**

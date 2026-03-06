@@ -6,7 +6,7 @@
 /**
  * Inference provider exports for chat component.
  *
- * @module components/chat/inference
+ * @module inference
  */
 
 export { BaseInferenceProvider } from './BaseInferenceProvider';

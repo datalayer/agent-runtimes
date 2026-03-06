@@ -12,7 +12,7 @@
  * - On page reload, messages are fetched from the server API
  * - No browser storage persistence - server is the source of truth
  *
- * @module components/chat/store/conversationStore
+ * @module store/conversationStore
  */
 
 import { create } from 'zustand';

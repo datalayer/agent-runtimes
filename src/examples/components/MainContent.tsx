@@ -9,7 +9,7 @@ import { Box } from '@datalayer/primer-addons';
 import {
   McpServerManager,
   type McpServerSelection,
-} from '../../components/McpServerManager';
+} from '../../mcp/McpServerManager';
 
 export interface MainContentProps {
   /** Whether to show the welcome message */

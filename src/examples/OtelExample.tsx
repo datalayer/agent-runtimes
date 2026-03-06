@@ -41,12 +41,12 @@ import {
   SqlView,
   SystemView,
   useSimpleAuthStore,
-} from '@datalayer/core/views/otel';
-import { SignInSimple } from '@datalayer/core/views/iam';
-import { ChatSidebar, type ProtocolConfig } from '../components/chat';
+} from '@datalayer/core/lib/views/otel';
+import { SignInSimple } from '@datalayer/core/lib/views/iam';
+import { ChatSidebar, type ProtocolConfig } from '../chat';
 import { DEFAULT_MODEL } from '../specs';
-import type { Transport } from '../components/chat';
-import type { AgentLibrary } from '../components';
+import type { Transport } from '../chat';
+import type { AgentLibrary } from '../config';
 
 // ─── Environment / defaults ────────────────────────────────────────────────
 

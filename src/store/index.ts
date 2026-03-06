@@ -6,7 +6,7 @@
 /**
  * Store exports for chat component.
  *
- * @module components/chat/store
+ * @module store
  */
 
 export {

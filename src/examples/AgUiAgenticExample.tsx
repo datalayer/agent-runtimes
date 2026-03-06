@@ -19,7 +19,7 @@ import React from 'react';
 import { Text } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { ThemedProvider } from './stores/themedProvider';
-import { ChatFloating } from '../components/chat';
+import { ChatFloating } from '../chat';
 
 // AG-UI endpoint for agentic chat example
 const AGENTIC_CHAT_ENDPOINT =

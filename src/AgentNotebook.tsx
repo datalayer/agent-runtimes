@@ -38,7 +38,7 @@ import {
   setJupyterServerToken,
 } from '@datalayer/jupyter-react';
 import { ServiceManager } from '@jupyterlab/services';
-import { Chat } from './components/chat';
+import { Chat } from './chat';
 import { useNotebookTools } from './tools/adapters/agent-runtimes/notebookHooks';
 import { DEFAULT_MODEL } from './specs';
 

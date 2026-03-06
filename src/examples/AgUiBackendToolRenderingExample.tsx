@@ -20,7 +20,7 @@ import React, { useCallback } from 'react';
 import { Text } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { ThemedProvider, useThemeBrandColor } from './stores/themedProvider';
-import { ChatFloating, type ToolCallRenderContext } from '../components/chat';
+import { ChatFloating, type ToolCallRenderContext } from '../chat';
 import { InlineWeatherCard, type WeatherResult } from './ag-ui/weather';
 
 // AG-UI endpoint for backend tool rendering example

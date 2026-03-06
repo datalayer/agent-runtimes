@@ -72,7 +72,7 @@ import {
 } from '@datalayer/jupyter-lexical';
 
 // Agent-runtimes imports
-import { ChatFloating } from '../components/chat';
+import { ChatFloating } from '../chat';
 import { ChatInlinePlugin } from '../lexical/ChatInlinePlugin';
 import { useChatInlineToolbarItems } from '../lexical/useChatInlineToolbarItems';
 import { useLexicalTools } from '../tools/adapters/agent-runtimes/lexicalHooks';

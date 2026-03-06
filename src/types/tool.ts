@@ -7,7 +7,7 @@
  * Tool types for chat component.
  * Supports hybrid execution (frontend + backend) with per-tool annotation.
  *
- * @module components/chat/types/tool
+ * @module types/tool
  */
 
 import type { ReactNode } from 'react';

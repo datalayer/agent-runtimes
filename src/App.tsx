@@ -4,8 +4,8 @@
  */
 
 import { useJupyter, JupyterReactTheme } from '@datalayer/jupyter-react';
-import { JupyterCellExample } from './examples/JupyterCellExample';
-import { JupyterNotebookExample } from './examples/JupyterNotebookExample';
+import { JupyterCellExample } from './examples/CellSimpleExample';
+import { JupyterNotebookExample } from './examples/NotebookSimpleExample';
 
 import './App.css';
 

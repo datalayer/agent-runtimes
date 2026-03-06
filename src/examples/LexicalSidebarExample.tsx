@@ -78,7 +78,7 @@ import {
   ChatSidebar,
   type ProtocolConfig,
   type FrontendToolDefinition,
-} from '../components/chat';
+} from '../chat';
 import { ChatInlinePlugin } from '../lexical/ChatInlinePlugin';
 import { useChatInlineToolbarItems } from '../lexical/useChatInlineToolbarItems';
 import { useLexicalTools } from '../tools/adapters/agent-runtimes/lexicalHooks';

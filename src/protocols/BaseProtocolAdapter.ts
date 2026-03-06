@@ -6,7 +6,7 @@
 /**
  * Base protocol adapter class with common functionality.
  *
- * @module components/chat/protocols/BaseProtocolAdapter
+ * @module protocols/BaseProtocolAdapter
  */
 
 import type {

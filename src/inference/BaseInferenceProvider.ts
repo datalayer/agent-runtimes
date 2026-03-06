@@ -6,7 +6,7 @@
 /**
  * Base inference provider class with common functionality.
  *
- * @module components/chat/inference/BaseInferenceProvider
+ * @module inference/BaseInferenceProvider
  */
 
 import type {

@@ -80,7 +80,7 @@ import {
   useFrontendTool,
   DatalayerInferenceProvider,
   type ChatConfig,
-} from '../components/chat';
+} from '../chat';
 import {
   useLexicalToolActions,
   ActionRegistrar,

@@ -8,7 +8,7 @@
  * Provides centralized state for messages, tools, config, and instances.
  * This is the primary state management - NO React Context/Provider needed.
  *
- * @module components/chat/store/chatStore
+ * @module store/chatStore
  */
 
 import { create } from 'zustand';
@@ -27,7 +27,7 @@ import type { InferenceProvider } from '../types/inference';
 import type { ProtocolAdapter } from '../types/protocol';
 import type { ToolExecutor } from '../tools/ToolExecutor';
 import type { MiddlewarePipeline } from '../middleware/MiddlewarePipeline';
-import type { ExtensionRegistry } from '../components/chat/extensions/ExtensionRegistry';
+import type { ExtensionRegistry } from '../chat/extensions/ExtensionRegistry';
 
 /**
  * Chat configuration options

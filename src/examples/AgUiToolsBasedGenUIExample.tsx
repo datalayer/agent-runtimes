@@ -17,7 +17,7 @@ import React, { useState, useCallback } from 'react';
 import { Text, ProgressBar, Button } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { ThemedProvider, useThemeBrandColor } from './stores/themedProvider';
-import { ChatFloating } from '../components/chat';
+import { ChatFloating } from '../chat';
 import {
   CheckCircleIcon,
   CircleIcon,
