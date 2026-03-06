@@ -33,6 +33,7 @@ import { useChatStore } from '../components/chat/store';
 import { OAuthCallback } from '../identity';
 import { EXAMPLES } from './example-selector';
 import { useExampleThemeStore } from './stores/themeStore';
+import { ExampleWrapper } from './components/ExampleWrapper';
 
 import nbformatExample from './stores/notebooks/NotebookExample1.ipynb.json';
 
@@ -490,7 +491,7 @@ const ExampleAppThemed: React.FC<{
             alignItems: 'center',
             justifyContent: 'space-between',
             gap: 3,
-            height: '50px',
+            height: '60px',
             bg: 'canvas.subtle',
             borderBottom: '1px solid',
             borderColor: 'border.default',
@@ -559,9 +560,9 @@ const ExampleAppThemed: React.FC<{
         {/* ── Content area ───────────────────────────────── */}
         <Box
           sx={{
-            marginTop: '50px',
-            height: 'calc(100vh - 50px)',
-            overflow: 'auto',
+            marginTop: '60px',
+            height: 'calc(100vh - 60px)',
+            overflow: 'hidden',
           }}
         >
           {isChangingExample ? (
@@ -570,7 +571,9 @@ const ExampleAppThemed: React.FC<{
               <p>Please wait while the example loads.</p>
             </Box>
           ) : ExampleComponent ? (
-            <ExampleComponent {...exampleProps} />
+            <ExampleWrapper>
+              <ExampleComponent {...exampleProps} />
+            </ExampleWrapper>
           ) : null}
         </Box>
       </Box>

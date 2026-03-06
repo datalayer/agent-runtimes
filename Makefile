@@ -26,8 +26,7 @@ test-js: ## run js tests
 test-py: ## run python tests
 	python -m pytest
 
-start:
-	./dev/sh/start-jupyter-server.sh
+start: examples
 
 kill:
 	./dev/sh/kill.sh

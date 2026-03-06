@@ -20,3 +20,4 @@ export { TimeTravel } from './TimeTravel';
 export type { TimeTravelProps } from './TimeTravel';
 export { LexicalEditor } from './LexicalEditor';
 export type { LexicalEditorProps } from './LexicalEditor';
+export { ExampleWrapper } from './ExampleWrapper';

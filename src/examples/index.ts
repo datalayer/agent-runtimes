@@ -13,20 +13,20 @@ export { default as AgUiHaikuGenUIExample } from './AgUiHaikuGenUIExample';
 export { default as AgUiHumanInTheLoopExample } from './AgUiHumanInTheLoopExample';
 export { default as AgUiSharedStateExample } from './AgUiSharedStateExample';
 export { default as AgUiToolsBasedGenUIExample } from './AgUiToolsBasedGenUIExample';
-export { default as AgentRuntimeCustomExample } from './AgentRuntimeCustomExample';
-export { default as AgentRuntimeLexical2Example } from './AgentRuntimeLexical2Example';
-export { default as AgentRuntimeLexicalExample } from './AgentRuntimeLexicalExample';
-export { default as AgentRuntimeLexicalSidebarExample } from './AgentRuntimeLexicalSidebarExample';
-export { default as AgentRuntimeNotebookExample } from './AgentRuntimeNotebookExample';
-export { default as AgentRuntimeNotebookSidebarExample } from './AgentRuntimeNotebookSidebarExample';
-export { default as AgentRuntimeStandaloneExample } from './AgentRuntimeStandaloneExample';
-export { default as AgentRuntimeFormExample } from './AgentRuntimeFormExample';
-export { default as AgentRuntimeOtelExample } from './AgentRuntimeOtelExample';
+export { default as CellExample } from './CellSimpleExample';
+export { default as ChatFormExample } from './ChatFormExample';
+export { default as ChatStandaloneExample } from './ChatStandaloneExample';
 export { default as CopilotKitLexicalExample } from './CopilotKitLexicalExample';
 export { default as CopilotKitNotebookExample } from './CopilotKitNotebookExample';
+export { default as CustomExample } from './ChatCustomExample';
 export { default as DatalayerNotebookExample } from './DatalayerNotebookExample';
-export { default as JupyterCellExample } from './JupyterCellExample';
-export { default as JupyterNotebookExample } from './JupyterNotebookExample';
+export { default as Lexical2Example } from './Lexical2Example';
+export { default as LexicalExample } from './LexicalExample';
+export { default as LexicalSidebarExample } from './LexicalSidebarExample';
+export { default as NotebookExample } from './NotebookExample';
+export { default as NotebookSidebarExample } from './NotebookSidebarExample';
+export { default as NotebookSimpleExample } from './NotebookSimpleExample';
+export { default as OtelExample } from './OtelExample';
 
 // Store types
 export type {
