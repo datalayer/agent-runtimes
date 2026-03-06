@@ -256,7 +256,7 @@ export function ChatLexicalExampleInner({
     <>
       <Box
         sx={{
-          height: 'calc(100vh - 60px)',
+          height: 'calc(100vh - 70px)',
           width: '100vw',
           display: 'flex',
           overflow: 'hidden',
