@@ -177,7 +177,7 @@ const KAGGLE_TOKEN = import.meta.env.VITE_KAGGLE_TOKEN || '';
  * Demonstrates the multi-transport, multi-agent architecture of agent-runtimes.
  *
  * Features:
- * - Agent library selection (Pydantic AI, LangChain, Simple AI)
+ * - Agent library selection (Pydantic AI, LangChain, Google ADK, etc.)
  * - Transport selection (ACP, AG-UI, A2A)
  * - Configurable WebSocket URL and Agent ID
  * - Real-time streaming responses
@@ -543,10 +543,8 @@ const AgentRuntimeFormExample: React.FC<AgentRuntimeFormExampleProps> = ({
   const [activeSession, setActiveSession] = useState('session-1');
   const [codemode, _] = useState(false);
   const [showContextTree, setShowContextTree] = useState(false);
-  const [showNotebook] = useState(true);
   const [leftPaneVisible, setLeftPaneVisible] = useState(true);
   const [rightPaneVisible, setRightPaneVisible] = useState(true);
-  const [timeTravel, setTimeTravel] = useState(0);
   const [isCreatingAgent, setIsCreatingAgent] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
 
@@ -907,16 +905,10 @@ const AgentRuntimeFormExample: React.FC<AgentRuntimeFormExampleProps> = ({
             </Box>
           )}
 
-          {/* Content - Main area (Notebook or placeholder) */}
+          {/* Content - Main area (Welcome message) */}
           <PageLayout.Content>
             <MainContent
-              showNotebook={showNotebook}
-              timeTravel={timeTravel}
-              onTimeTravelChange={setTimeTravel}
-              richEditor={false}
-              notebookFile={currentAgent?.notebookFile}
-              lexicalFile={currentAgent?.lexicalFile}
-              isNewAgent={isNewMode}
+              showWelcomeMessage={true}
               isConfigured={isConfigured}
               baseUrl={baseUrl}
               agentId={currentAgent?.id || agentName}

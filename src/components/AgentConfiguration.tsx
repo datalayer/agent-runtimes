@@ -377,7 +377,7 @@ export interface SkillOption {
   description?: string;
 }
 
-type AgentLibrary = 'pydantic-ai' | 'langchain' | 'jupyter-ai';
+type AgentLibrary = 'pydantic-ai' | 'langchain' | 'google-adk';
 
 // Re-export types
 export type { AgentLibrary };
@@ -398,13 +398,13 @@ const AGENT_LIBRARIES: {
   {
     value: 'langchain',
     label: 'LangChain',
-    description: 'Complex chains and agent workflows',
+    description: 'LangChain agent implementations and tools',
     disabled: true,
   },
   {
-    value: 'jupyter-ai',
-    label: 'Simple AI',
-    description: 'Simple notebook integration',
+    value: 'google-adk',
+    label: 'Google ADK',
+    description: 'Google’s Agent Development Kit',
     disabled: true,
   },
 ];
@@ -428,25 +428,25 @@ const TRANSPORTS: { value: Transport; label: string; description: string }[] = [
   {
     value: 'vercel-ai-jupyter',
     label: 'Vercel AI (Jupyter)',
-    description: 'Vercel AI via Jupyter server endpoint',
+    description: 'Vercel AI via Jupyter Server endpoint',
   },
   {
     value: 'a2a',
     label: 'A2A (Agent-to-Agent)',
-    description: 'Inter-agent communication',
+    description: 'A2A Inter-agent communication',
   },
 ];
 
 const EXTENSIONS: { value: Extension; label: string; description: string }[] = [
   {
-    value: 'mcp-ui',
-    label: 'MCP-UI',
-    description: 'MCP UI resources extension',
-  },
-  {
     value: 'a2ui',
     label: 'A2UI',
     description: 'Agent-to-UI extension',
+  },
+  {
+    value: 'mcp-ui',
+    label: 'MCP-UI',
+    description: 'MCP UI resources extension',
   },
 ];
 
@@ -829,18 +829,31 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
           sx={{ width: '100%' }}
         >
           <Select.Option value="new-agent">+ New Agent...</Select.Option>
-          {librarySpecs
+          {[...librarySpecs]
             .filter(s => s.enabled)
-            .map(spec => (
-              <Select.Option key={`spec:${spec.id}`} value={`spec:${spec.id}`}>
-                {spec.emoji ? `${spec.emoji} ` : ''}
-                {spec.name}
-              </Select.Option>
-            ))}
+            .sort((a, b) => {
+              const pkgA = a.id.includes('/') ? a.id.split('/')[0] : '';
+              const pkgB = b.id.includes('/') ? b.id.split('/')[0] : '';
+              const cmp = pkgA.localeCompare(pkgB);
+              return cmp !== 0 ? cmp : a.name.localeCompare(b.name);
+            })
+            .map(spec => {
+              const pkg = spec.id.includes('/') ? spec.id.split('/')[0] : '';
+              return (
+                <Select.Option
+                  key={`spec:${spec.id}`}
+                  value={`spec:${spec.id}`}
+                >
+                  {spec.emoji ? `${spec.emoji} ` : ''}
+                  {pkg ? `[${pkg}] ` : ''}
+                  {spec.name}
+                </Select.Option>
+              );
+            })}
           {agents.map(agent => (
             <Select.Option key={agent.id} value={agent.id}>
               {agent.status === 'running' && '● '}
-              {agent.name}
+              [Example] {agent.name}
             </Select.Option>
           ))}
         </Select>
@@ -1114,7 +1127,8 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
               <Box>
                 <Text sx={{ fontSize: 1 }}>Use Jupyter Sandbox</Text>
                 <Text sx={{ fontSize: 0, color: 'fg.muted', display: 'block' }}>
-                  Execute code in a Jupyter kernel instead of local-eval
+                  Execute code in a Jupyter Sandbox instead of local-eval
+                  Sandbox
                 </Text>
               </Box>
             </Box>
@@ -1536,40 +1550,6 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
           {createError}
         </Flash>
       )}
-
-      {/* Rich Editor and Durable toggles - disabled for now */}
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 2,
-          marginBottom: 3,
-          padding: 3,
-          bg: 'canvas.subtle',
-          borderRadius: 2,
-          border: '1px solid',
-          borderColor: 'border.default',
-          opacity: 0.6,
-        }}
-      >
-        <Text sx={{ fontSize: 1, fontWeight: 'semibold', color: 'fg.muted' }}>
-          Coming Soon
-        </Text>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Checkbox checked={false} disabled={true} onChange={() => {}} />
-          <Text sx={{ fontSize: 1, color: 'fg.muted' }}>Rich Editor</Text>
-          <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
-            — Enable rich text editing with formatting options
-          </Text>
-        </Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Checkbox checked={false} disabled={true} onChange={() => {}} />
-          <Text sx={{ fontSize: 1, color: 'fg.muted' }}>Durable</Text>
-          <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
-            — Persist agent state across sessions
-          </Text>
-        </Box>
-      </Box>
 
       <Button
         variant="primary"

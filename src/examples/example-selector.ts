@@ -25,20 +25,20 @@ export const EXAMPLES: Record<
   AgUiHumanInTheLoopExample: () => import('./AgUiHumanInTheLoopExample'),
   AgUiSharedStateExample: () => import('./AgUiSharedStateExample'),
   AgUiToolsBasedGenUIExample: () => import('./AgUiToolsBasedGenUIExample'),
+  AgentFormExample: () => import('./AgentFormExample'),
   CellSimpleExample: () => import('./CellSimpleExample'),
   ChatCustomExample: () => import('./ChatCustomExample'),
   ChatExample: () => import('./ChatExample'),
+  ChatStandaloneExample: () => import('./ChatStandaloneExample'),
   CopilotKitLexicalExample: () => import('./CopilotKitLexicalExample'),
   CopilotKitNotebookExample: () => import('./CopilotKitNotebookExample'),
   DatalayerNotebookExample: () => import('./DatalayerNotebookExample'),
-  FormExample: () => import('./ChatFormExample'),
   LexicalExample: () => import('./LexicalExample'),
   LexicalSidebarExample: () => import('./LexicalSidebarExample'),
   NotebookExample: () => import('./NotebookExample'),
   NotebookSidebarExample: () => import('./NotebookSidebarExample'),
   NotebookSimpleExample: () => import('./NotebookSimpleExample'),
   OtelExample: () => import('./OtelExample'),
-  StandaloneExample: () => import('./ChatStandaloneExample'),
 };
 
 /**

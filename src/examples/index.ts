@@ -3,6 +3,7 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
+export { default as AgentFormExample } from './AgentFormExample';
 export { default as A2UiComponentGalleryExample } from './A2UiComponentGalleryExample';
 export { default as A2UiContactCardExample } from './A2UiContactCardExample';
 export { default as A2UiRestaurantExample } from './A2UiRestaurantExample';
@@ -14,7 +15,6 @@ export { default as AgUiHumanInTheLoopExample } from './AgUiHumanInTheLoopExampl
 export { default as AgUiSharedStateExample } from './AgUiSharedStateExample';
 export { default as AgUiToolsBasedGenUIExample } from './AgUiToolsBasedGenUIExample';
 export { default as CellExample } from './CellSimpleExample';
-export { default as ChatFormExample } from './ChatFormExample';
 export { default as ChatStandaloneExample } from './ChatStandaloneExample';
 export { default as CopilotKitLexicalExample } from './CopilotKitLexicalExample';
 export { default as CopilotKitNotebookExample } from './CopilotKitNotebookExample';
