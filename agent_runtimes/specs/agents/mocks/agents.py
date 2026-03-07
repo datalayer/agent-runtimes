@@ -123,6 +123,7 @@ ANALYZE_CAMPAIGN_PERFORMANCE_AGENT_SPEC = AgentSpec(
     },
     authorization_policy="",
     notifications={"email": "marketing@company.com", "slack": "#campaign-analytics"},
+    memory="ephemeral",
     team={
         "orchestration_protocol": "datalayer",
         "execution_mode": "sequential",
@@ -268,6 +269,7 @@ ANALYZE_SUPPORT_TICKETS_AGENT_SPEC = AgentSpec(
     },
     authorization_policy="",
     notifications={"email": "patricia.j@company.com", "slack": "#support-analysis"},
+    memory="ephemeral",
     team={
         "orchestration_protocol": "datalayer",
         "execution_mode": "sequential",
@@ -382,6 +384,7 @@ AUDIT_INVENTORY_LEVELS_AGENT_SPEC = AgentSpec(
     },
     authorization_policy="",
     notifications={"email": "linda.m@company.com", "slack": "#inventory-ops"},
+    memory="ephemeral",
     team={
         "orchestration_protocol": "datalayer",
         "execution_mode": "sequential",
@@ -548,6 +551,7 @@ AUTOMATE_REGULATORY_REPORTING_AGENT_SPEC = AgentSpec(
     },
     authorization_policy="",
     notifications={"email": "compliance@company.com", "slack": "#regulatory-reporting"},
+    memory="ephemeral",
     team={
         "orchestration_protocol": "datalayer",
         "execution_mode": "sequential",
@@ -704,6 +708,7 @@ CLASSIFY_ROUTE_EMAILS_AGENT_SPEC = AgentSpec(
     advanced=None,
     authorization_policy=None,
     notifications={"slack": "#email-routing", "email": "ops@acme.com"},
+    memory="ephemeral",
     team=None,
 )
 
@@ -769,6 +774,7 @@ COMPREHENSIVE_SALES_ANALYTICS_AGENT_SPEC = AgentSpec(
     advanced=None,
     authorization_policy=None,
     notifications={"slack": "#sales-analytics", "email": "leadership@acme.com"},
+    memory="ephemeral",
     team={
         "orchestration_protocol": "datalayer",
         "execution_mode": "sequential",
@@ -1012,6 +1018,7 @@ END_OF_MONTH_SALES_PERFORMANCE_AGENT_SPEC = AgentSpec(
     },
     authorization_policy="",
     notifications={"email": "cro@company.com", "slack": "#sales-performance"},
+    memory="ephemeral",
     team=None,
 )
 
@@ -1093,6 +1100,7 @@ EXTRACT_DATA_FROM_FILES_AGENT_SPEC = AgentSpec(
     advanced=None,
     authorization_policy=None,
     notifications={"slack": "#data-extraction", "email": "data-team@acme.com"},
+    memory="ephemeral",
     team=None,
 )
 
@@ -1185,6 +1193,7 @@ GENERATE_WEEKLY_REPORTS_AGENT_SPEC = AgentSpec(
     },
     authorization_policy="",
     notifications={"email": "robert.w@company.com", "slack": "#weekly-reports"},
+    memory="ephemeral",
     team=None,
 )
 
@@ -1274,6 +1283,7 @@ MONITOR_SALES_KPIS_AGENT_SPEC = AgentSpec(
     },
     authorization_policy="",
     notifications={"email": "marcus.r@company.com", "slack": "#sales-kpis"},
+    memory="ephemeral",
     team=None,
 )
 
@@ -1385,6 +1395,7 @@ OPTIMIZE_DYNAMIC_PRICING_AGENT_SPEC = AgentSpec(
         "email": "merchandising@company.com",
         "slack": "#pricing-intelligence",
     },
+    memory="ephemeral",
     team=None,
 )
 
@@ -1485,6 +1496,7 @@ OPTIMIZE_GRID_OPERATIONS_AGENT_SPEC = AgentSpec(
     },
     authorization_policy="",
     notifications={"email": "grid-ops@company.com", "slack": "#grid-operations"},
+    memory="ephemeral",
     team={
         "orchestration_protocol": "datalayer",
         "execution_mode": "sequential",
@@ -1670,6 +1682,7 @@ PROCESS_CITIZEN_REQUESTS_AGENT_SPEC = AgentSpec(
         "email": "citizen-services@agency.gov",
         "slack": "#citizen-services",
     },
+    memory="ephemeral",
     team={
         "orchestration_protocol": "datalayer",
         "execution_mode": "sequential",
@@ -1856,6 +1869,7 @@ PROCESS_CLINICAL_TRIAL_DATA_AGENT_SPEC = AgentSpec(
     },
     authorization_policy="",
     notifications={"email": "clinical-ops@company.com", "slack": "#clinical-data"},
+    memory="ephemeral",
     team={
         "orchestration_protocol": "datalayer",
         "execution_mode": "sequential",
@@ -2016,6 +2030,7 @@ PROCESS_FINANCIAL_TRANSACTIONS_AGENT_SPEC = AgentSpec(
     },
     authorization_policy="",
     notifications={"email": "david.t@company.com", "slack": "#finance-ops"},
+    memory="ephemeral",
     team=None,
 )
 
@@ -2096,6 +2111,7 @@ SUMMARIZE_DOCUMENTS_AGENT_SPEC = AgentSpec(
     advanced=None,
     authorization_policy=None,
     notifications={"slack": "#document-summaries", "email": "team@acme.com"},
+    memory="ephemeral",
     team=None,
 )
 
@@ -2169,6 +2185,7 @@ SYNC_CRM_CONTACTS_AGENT_SPEC = AgentSpec(
     },
     authorization_policy="",
     notifications={"email": "jennifer.c@company.com", "slack": "#crm-sync"},
+    memory="ephemeral",
     team={
         "orchestration_protocol": "datalayer",
         "execution_mode": "sequential",

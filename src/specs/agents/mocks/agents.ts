@@ -168,6 +168,7 @@ export const ANALYZE_CAMPAIGN_PERFORMANCE_AGENT_SPEC: AgentSpec = {
     email: 'marketing@company.com',
     slack: '#campaign-analytics',
   },
+  memory: 'ephemeral',
   team: {
     orchestration_protocol: 'datalayer',
     execution_mode: 'sequential',
@@ -321,6 +322,7 @@ export const ANALYZE_SUPPORT_TICKETS_AGENT_SPEC: AgentSpec = {
     email: 'patricia.j@company.com',
     slack: '#support-analysis',
   },
+  memory: 'ephemeral',
   team: {
     orchestration_protocol: 'datalayer',
     execution_mode: 'sequential',
@@ -437,6 +439,7 @@ export const AUDIT_INVENTORY_LEVELS_AGENT_SPEC: AgentSpec = {
   },
   authorizationPolicy: '',
   notifications: { email: 'linda.m@company.com', slack: '#inventory-ops' },
+  memory: 'ephemeral',
   team: {
     orchestration_protocol: 'datalayer',
     execution_mode: 'sequential',
@@ -614,6 +617,7 @@ export const AUTOMATE_REGULATORY_REPORTING_AGENT_SPEC: AgentSpec = {
     email: 'compliance@company.com',
     slack: '#regulatory-reporting',
   },
+  memory: 'ephemeral',
   team: {
     orchestration_protocol: 'datalayer',
     execution_mode: 'sequential',
@@ -768,6 +772,7 @@ export const CLASSIFY_ROUTE_EMAILS_AGENT_SPEC: AgentSpec = {
   advanced: undefined,
   authorizationPolicy: undefined,
   notifications: { slack: '#email-routing', email: 'ops@acme.com' },
+  memory: 'ephemeral',
   team: undefined,
 };
 
@@ -833,6 +838,7 @@ export const COMPREHENSIVE_SALES_ANALYTICS_AGENT_SPEC: AgentSpec = {
   advanced: undefined,
   authorizationPolicy: undefined,
   notifications: { slack: '#sales-analytics', email: 'leadership@acme.com' },
+  memory: 'ephemeral',
   team: {
     orchestration_protocol: 'datalayer',
     execution_mode: 'sequential',
@@ -1079,6 +1085,7 @@ export const END_OF_MONTH_SALES_PERFORMANCE_AGENT_SPEC: AgentSpec = {
   },
   authorizationPolicy: '',
   notifications: { email: 'cro@company.com', slack: '#sales-performance' },
+  memory: 'ephemeral',
   team: undefined,
 };
 
@@ -1161,6 +1168,7 @@ export const EXTRACT_DATA_FROM_FILES_AGENT_SPEC: AgentSpec = {
   advanced: undefined,
   authorizationPolicy: undefined,
   notifications: { slack: '#data-extraction', email: 'data-team@acme.com' },
+  memory: 'ephemeral',
   team: undefined,
 };
 
@@ -1250,6 +1258,7 @@ export const GENERATE_WEEKLY_REPORTS_AGENT_SPEC: AgentSpec = {
   },
   authorizationPolicy: '',
   notifications: { email: 'robert.w@company.com', slack: '#weekly-reports' },
+  memory: 'ephemeral',
   team: undefined,
 };
 
@@ -1339,6 +1348,7 @@ export const MONITOR_SALES_KPIS_AGENT_SPEC: AgentSpec = {
   },
   authorizationPolicy: '',
   notifications: { email: 'marcus.r@company.com', slack: '#sales-kpis' },
+  memory: 'ephemeral',
   team: undefined,
 };
 
@@ -1451,6 +1461,7 @@ export const OPTIMIZE_DYNAMIC_PRICING_AGENT_SPEC: AgentSpec = {
     email: 'merchandising@company.com',
     slack: '#pricing-intelligence',
   },
+  memory: 'ephemeral',
   team: undefined,
 };
 
@@ -1550,6 +1561,7 @@ export const OPTIMIZE_GRID_OPERATIONS_AGENT_SPEC: AgentSpec = {
   },
   authorizationPolicy: '',
   notifications: { email: 'grid-ops@company.com', slack: '#grid-operations' },
+  memory: 'ephemeral',
   team: {
     orchestration_protocol: 'datalayer',
     execution_mode: 'sequential',
@@ -1734,6 +1746,7 @@ export const PROCESS_CITIZEN_REQUESTS_AGENT_SPEC: AgentSpec = {
     email: 'citizen-services@agency.gov',
     slack: '#citizen-services',
   },
+  memory: 'ephemeral',
   team: {
     orchestration_protocol: 'datalayer',
     execution_mode: 'sequential',
@@ -1919,6 +1932,7 @@ export const PROCESS_CLINICAL_TRIAL_DATA_AGENT_SPEC: AgentSpec = {
   },
   authorizationPolicy: '',
   notifications: { email: 'clinical-ops@company.com', slack: '#clinical-data' },
+  memory: 'ephemeral',
   team: {
     orchestration_protocol: 'datalayer',
     execution_mode: 'sequential',
@@ -2083,6 +2097,7 @@ export const PROCESS_FINANCIAL_TRANSACTIONS_AGENT_SPEC: AgentSpec = {
   },
   authorizationPolicy: '',
   notifications: { email: 'david.t@company.com', slack: '#finance-ops' },
+  memory: 'ephemeral',
   team: undefined,
 };
 
@@ -2166,6 +2181,7 @@ export const SUMMARIZE_DOCUMENTS_AGENT_SPEC: AgentSpec = {
   advanced: undefined,
   authorizationPolicy: undefined,
   notifications: { slack: '#document-summaries', email: 'team@acme.com' },
+  memory: 'ephemeral',
   team: undefined,
 };
 
@@ -2237,6 +2253,7 @@ export const SYNC_CRM_CONTACTS_AGENT_SPEC: AgentSpec = {
   },
   authorizationPolicy: '',
   notifications: { email: 'jennifer.c@company.com', slack: '#crm-sync' },
+  memory: 'ephemeral',
   team: {
     orchestration_protocol: 'datalayer',
     execution_mode: 'sequential',

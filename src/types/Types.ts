@@ -208,6 +208,8 @@ export interface AgentSpec {
   authorizationPolicy?: string;
   /** Notification configuration (email, slack) */
   notifications?: Record<string, any>;
+  /** Memory backend identifier (e.g., 'ephemeral', 'mem0', 'memu', 'simplemem') */
+  memory?: string;
   /** Team configuration for multi-agent flows */
   team?: Record<string, any>;
 }

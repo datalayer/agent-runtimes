@@ -149,10 +149,15 @@ specs: ## generate Python and TypeScript code from YAML specifications (agents, 
 	  --specs-dir agentspecs/agentspecs/models \
 	  --python-output agent_runtimes/specs/models.py \
 	  --typescript-output src/specs/models.ts
+	@echo "Generating memory specifications..."
+	python scripts/codegen/generate_memory.py \
+	  --specs-dir agentspecs/agentspecs/memory \
+	  --python-output agent_runtimes/specs/memory.py \
+	  --typescript-output src/specs/memory.ts
 	@echo "✓ All specifications generated successfully"
 	@echo "Formatting generated files with ruff..."
-	ruff check --select I --fix agent_runtimes/specs/agents/ agent_runtimes/specs/skills.py agent_runtimes/specs/envvars.py agent_runtimes/specs/models.py agent_runtimes/specs/__init__.py agent_runtimes/mcp/catalog_mcp_servers.py agent_runtimes/mcp/__init__.py
-	ruff format agent_runtimes/specs/agents/ agent_runtimes/specs/skills.py agent_runtimes/specs/envvars.py agent_runtimes/specs/models.py agent_runtimes/specs/__init__.py agent_runtimes/mcp/catalog_mcp_servers.py agent_runtimes/mcp/__init__.py
+	ruff check --select I --fix agent_runtimes/specs/agents/ agent_runtimes/specs/skills.py agent_runtimes/specs/envvars.py agent_runtimes/specs/models.py agent_runtimes/specs/memory.py agent_runtimes/specs/__init__.py agent_runtimes/mcp/catalog_mcp_servers.py agent_runtimes/mcp/__init__.py
+	ruff format agent_runtimes/specs/agents/ agent_runtimes/specs/skills.py agent_runtimes/specs/envvars.py agent_runtimes/specs/models.py agent_runtimes/specs/memory.py agent_runtimes/specs/__init__.py agent_runtimes/mcp/catalog_mcp_servers.py agent_runtimes/mcp/__init__.py
 	@echo "Formatting generated files with prettier..."
 	npm run format
 	agent-runtimes mcp-servers-catalog

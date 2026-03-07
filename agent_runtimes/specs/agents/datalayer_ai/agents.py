@@ -79,6 +79,7 @@ CRAWLER_AGENT_SPEC = AgentSpec(
     advanced=None,
     authorization_policy=None,
     notifications=None,
+    memory="ephemeral",
     team=None,
 )
 
@@ -143,6 +144,7 @@ DATA_ACQUISITION_AGENT_SPEC = AgentSpec(
     advanced=None,
     authorization_policy=None,
     notifications=None,
+    memory="ephemeral",
     team=None,
 )
 
@@ -203,6 +205,7 @@ FINANCIAL_AGENT_SPEC = AgentSpec(
     advanced=None,
     authorization_policy=None,
     notifications=None,
+    memory="ephemeral",
     team=None,
 )
 
@@ -263,6 +266,7 @@ GITHUB_AGENT_SPEC = AgentSpec(
     advanced=None,
     authorization_policy=None,
     notifications=None,
+    memory="ephemeral",
     team=None,
 )
 
@@ -305,6 +309,7 @@ SIMPLE_AGENT_SPEC = AgentSpec(
     advanced=None,
     authorization_policy=None,
     notifications=None,
+    memory="ephemeral",
     team=None,
 )
 

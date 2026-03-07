@@ -84,6 +84,7 @@ For huggingface tools, use search_doc tool to understand other tools return's sc
     advanced=None,
     authorization_policy=None,
     notifications=None,
+    memory="ephemeral",
     team=None,
 )
 
@@ -148,6 +149,7 @@ DATA_ACQUISITION_AGENT_SPEC = AgentSpec(
     advanced=None,
     authorization_policy=None,
     notifications=None,
+    memory="ephemeral",
     team=None,
 )
 
@@ -208,6 +210,7 @@ FINANCIAL_VIZ_AGENT_SPEC = AgentSpec(
     advanced=None,
     authorization_policy=None,
     notifications=None,
+    memory="ephemeral",
     team=None,
 )
 
@@ -268,6 +271,7 @@ GITHUB_AGENT_SPEC = AgentSpec(
     advanced=None,
     authorization_policy=None,
     notifications=None,
+    memory="ephemeral",
     team=None,
 )
 
@@ -328,6 +332,7 @@ INFORMATION_ROUTING_AGENT_SPEC = AgentSpec(
     advanced=None,
     authorization_policy=None,
     notifications=None,
+    memory="ephemeral",
     team=None,
 )
 

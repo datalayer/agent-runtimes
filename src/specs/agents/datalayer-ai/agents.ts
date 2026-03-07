@@ -114,6 +114,7 @@ export const CRAWLER_AGENT_SPEC: AgentSpec = {
   advanced: undefined,
   authorizationPolicy: undefined,
   notifications: undefined,
+  memory: 'ephemeral',
   team: undefined,
 };
 
@@ -175,6 +176,7 @@ export const DATA_ACQUISITION_AGENT_SPEC: AgentSpec = {
   advanced: undefined,
   authorizationPolicy: undefined,
   notifications: undefined,
+  memory: 'ephemeral',
   team: undefined,
 };
 
@@ -232,6 +234,7 @@ export const FINANCIAL_AGENT_SPEC: AgentSpec = {
   advanced: undefined,
   authorizationPolicy: undefined,
   notifications: undefined,
+  memory: 'ephemeral',
   team: undefined,
 };
 
@@ -289,6 +292,7 @@ export const GITHUB_AGENT_SPEC: AgentSpec = {
   advanced: undefined,
   authorizationPolicy: undefined,
   notifications: undefined,
+  memory: 'ephemeral',
   team: undefined,
 };
 
@@ -328,6 +332,7 @@ export const SIMPLE_AGENT_SPEC: AgentSpec = {
   advanced: undefined,
   authorizationPolicy: undefined,
   notifications: undefined,
+  memory: 'ephemeral',
   team: undefined,
 };
 

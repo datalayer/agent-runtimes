@@ -210,6 +210,8 @@ from agent_runtimes.types import AgentSpec
             auth_policy_str = f'"{auth_policy}"' if auth_policy is not None else "None"
             notifs = spec.get("notifications")
             team_val = spec.get("team")
+            memory_val = spec.get("memory")
+            memory_str = f'"{memory_val}"' if memory_val else "None"
 
             code += f'''{const_name} = AgentSpec(
     id="{full_agent_id}",
@@ -244,6 +246,7 @@ from agent_runtimes.types import AgentSpec
     advanced={_fmt_py_literal(advanced_val)},
     authorization_policy={auth_policy_str},
     notifications={_fmt_py_literal(notifs)},
+    memory={memory_str},
     team={_fmt_py_literal(team_val)},
 )
 
@@ -552,6 +555,8 @@ function toAgentSkillSpec(skill: SkillSpec) {
             )
             notifs = spec.get("notifications")
             team_val = spec.get("team")
+            memory_val = spec.get("memory")
+            memory_ts = f"'{memory_val}'" if memory_val else "undefined"
 
             code += f"""export const {const_name}: AgentSpec = {{
   id: '{full_agent_id}',
@@ -583,6 +588,7 @@ function toAgentSkillSpec(skill: SkillSpec) {
   advanced: {_fmt_ts_literal(advanced_val)},
   authorizationPolicy: {auth_policy_ts},
   notifications: {_fmt_ts_literal(notifs)},
+  memory: {memory_ts},
   team: {_fmt_ts_literal(team_val)},
 }};
 

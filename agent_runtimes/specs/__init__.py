@@ -4,7 +4,7 @@
 """
 Specs module for agent-runtimes.
 
-Auto-generated specifications from YAML definitions (agents, models, skills, envvars).
+Auto-generated specifications from YAML definitions (agents, models, skills, envvars, memory).
 """
 
 from agent_runtimes.mcp.catalog_mcp_servers import (
@@ -83,4 +83,26 @@ __all__ = [
     "get_default_model",
     "get_model",
     "list_models",
+    # Memory
+    "MemorySpec",
+    "Memories",
+    "MEMORY_CATALOGUE",
+    "DEFAULT_MEMORY",
+    "get_default_memory",
+    "get_memory",
+    "list_memories",
 ]
+
+from .memory import (
+    DEFAULT_MEMORY,
+    EPHEMERAL_MEMORY,
+    MEM0_MEMORY,
+    MEMORY_CATALOGUE,
+    MEMU_MEMORY,
+    SIMPLEMEM_MEMORY,
+    Memories,
+    MemorySpec,
+    get_default_memory,
+    get_memory,
+    list_memories,
+)

@@ -394,6 +394,10 @@ class AgentSpec(BaseModel):
         default=None,
         description="Notification configuration (email, slack)",
     )
+    memory: Optional[str] = Field(
+        default=None,
+        description="Memory backend identifier (e.g., 'ephemeral', 'mem0', 'memu', 'simplemem')",
+    )
     team: Optional[Dict[str, Any]] = Field(
         default=None,
         description="Team configuration for multi-agent flows",
