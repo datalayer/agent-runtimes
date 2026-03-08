@@ -219,9 +219,18 @@ function CodeHighlightPlugin() {
 
 /**
  * Wrapper component for kernel-dependent Simple plugins.
+ * Accepts a serviceManager so it can initialise a Jupyter kernel
+ * (mirrors how the Notebook component bootstraps its runtime).
  */
-function SimpleKernelPluginsInner() {
-  const { defaultKernel } = useJupyter();
+function SimpleKernelPluginsInner({
+  serviceManager,
+}: {
+  serviceManager?: ServiceManager.IManager;
+}) {
+  const { defaultKernel } = useJupyter({
+    serviceManager,
+    startDefaultKernel: !!serviceManager,
+  });
 
   return (
     <>
@@ -255,7 +264,7 @@ function LexicalToolsPlugin({
  */
 interface LexicalUIProps {
   content?: string;
-  serviceManager?: any;
+  serviceManager?: ServiceManager.IManager;
   onToolsReady: (tools: ReturnType<typeof useLexicalTools>) => void;
 }
 
@@ -359,7 +368,7 @@ const LexicalUI = React.memo(function LexicalUI({
               <JupyterCellPlugin />
               {/* Wrap kernel plugins with Simple provider */}
               <ThemedJupyterProvider>
-                <SimpleKernelPluginsInner />
+                <SimpleKernelPluginsInner serviceManager={serviceManager} />
               </ThemedJupyterProvider>
               {floatingAnchorElem && (
                 <>

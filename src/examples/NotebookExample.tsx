@@ -167,7 +167,7 @@ const NotebookUI = React.memo(function NotebookUI({
               nbformat={NOTEBOOK_CONTENT}
               id={NOTEBOOK_ID}
               serviceManager={serviceManager}
-              height="600px"
+              height="calc(100vh - 300px)"
               cellSidebarMargin={120}
               startDefaultKernel={true}
             />
