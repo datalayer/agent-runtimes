@@ -8,11 +8,10 @@
  *
  * Demonstrates cron-based trigger configuration and monitoring for durable agents.
  *
- * - Launches an agent whose spec has `trigger.schedule.cron: "0 8 * * *"`
+ * - Creates a cloud runtime (environment: 'ai-agents-env') via the Datalayer
+ *   Runtimes API and deploys an agent on its sidecar
  * - Shows a control panel to view / update the cron expression
  * - Lists recent trigger history and next scheduled run
- *
- * Backend: `python -m agent_runtimes --port 8765 --debug`
  */
 
 /// <reference types="vite/client" />
@@ -35,14 +34,17 @@ import {
   CheckCircleIcon,
   XCircleIcon,
   PlayIcon,
+  SignOutIcon,
 } from '@primer/octicons-react';
 import { Box } from '@datalayer/primer-addons';
 import { ThemedProvider } from './stores/themedProvider';
+import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
+import { SignInSimple } from '@datalayer/core/lib/views/iam';
 import { Chat } from '../chat';
+import { useDurableAgent } from '../runtime/useDurableAgent';
 
 // ─── Constants ─────────────────────────────────────────────────────────────
 
-const BASE_URL = 'http://localhost:8765';
 const AGENT_NAME = 'cron-trigger-demo-agent';
 const AGENT_SPEC_ID = 'mocks/monitor-sales-kpis';
 const DEFAULT_CRON = '0 8 * * *'; // daily at 08:00 UTC
@@ -56,12 +58,28 @@ interface TriggerRecord {
   duration_ms?: number;
 }
 
-// ─── Component ─────────────────────────────────────────────────────────────
+// ─── Inner component (rendered after auth) ─────────────────────────────────
 
-const DurableCronTriggerExample: React.FC = () => {
-  const [agentId, setAgentId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [isCreating, setIsCreating] = useState(true);
+const DurableCronTriggerInner: React.FC<{ onLogout: () => void }> = ({
+  onLogout,
+}) => {
+  const { token } = useSimpleAuthStore();
+
+  const {
+    runtime,
+    agent,
+    runtimeStatus,
+    isReady,
+    error: hookError,
+  } = useDurableAgent({
+    agentSpecId: AGENT_SPEC_ID,
+    autoStart: true,
+    agentConfig: {
+      name: AGENT_NAME,
+      transport: 'ag-ui',
+      description: 'Agent with cron-based trigger scheduling',
+    },
+  });
 
   // Cron state
   const [cronExpr, setCronExpr] = useState(DEFAULT_CRON);
@@ -72,68 +90,33 @@ const DurableCronTriggerExample: React.FC = () => {
   const [isTriggeringNow, setIsTriggeringNow] = useState(false);
   const [triggerFlash, setTriggerFlash] = useState<string | null>(null);
 
-  // ── Create agent ─────────────────────────────────────────────────────────
+  const agentBaseUrl = runtime?.agentBaseUrl || '';
+  const agentId = agent?.agentId || AGENT_NAME;
+  const podName = runtime?.podName || '(launching…)';
 
-  useEffect(() => {
-    let cancelled = false;
-    const create = async () => {
-      try {
-        const check = await fetch(
-          `${BASE_URL}/api/v1/agents/${encodeURIComponent(AGENT_NAME)}`,
-        );
-        if (check.ok) {
-          if (!cancelled) {
-            setAgentId(AGENT_NAME);
-            setIsCreating(false);
-          }
-          return;
-        }
-
-        const res = await fetch(`${BASE_URL}/api/v1/agents`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: AGENT_NAME,
-            agent_spec_id: AGENT_SPEC_ID,
-            transport: 'ag-ui',
-          }),
-        });
-        if (!res.ok) {
-          const d = await res.json().catch(() => ({ detail: 'Unknown' }));
-          if (res.status === 400 && d.detail?.includes('already exists')) {
-            if (!cancelled) {
-              setAgentId(AGENT_NAME);
-              setIsCreating(false);
-            }
-            return;
-          }
-          throw new Error(d.detail);
-        }
-        const data = await res.json();
-        if (!cancelled) {
-          setAgentId(data.id);
-          setIsCreating(false);
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Failed');
-          setIsCreating(false);
-        }
-      }
-    };
-    create();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  // Authenticated fetch helper (for sidecar endpoints)
+  const authFetch = useCallback(
+    (url: string, opts: RequestInit = {}) =>
+      fetch(url, {
+        ...opts,
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...(opts.headers ?? {}),
+        },
+      }),
+    [token],
+  );
 
   // ── Poll trigger metadata ────────────────────────────────────────────────
 
   useEffect(() => {
-    if (!agentId) return;
+    if (!isReady || !agentBaseUrl) return;
     const poll = async () => {
       try {
-        const res = await fetch(`${BASE_URL}/api/v1/agents/${agentId}/trigger`);
+        const res = await authFetch(
+          `${agentBaseUrl}/api/v1/agents/${agentId}/trigger`,
+        );
         if (res.ok) {
           const d = await res.json();
           if (d.cron) setCronExpr(d.cron);
@@ -144,8 +127,8 @@ const DurableCronTriggerExample: React.FC = () => {
       }
 
       try {
-        const res = await fetch(
-          `${BASE_URL}/api/v1/agents/${agentId}/trigger/history`,
+        const res = await authFetch(
+          `${agentBaseUrl}/api/v1/agents/${agentId}/trigger/history`,
         );
         if (res.ok) {
           const d = await res.json();
@@ -159,19 +142,21 @@ const DurableCronTriggerExample: React.FC = () => {
     poll();
     const interval = setInterval(poll, 10_000);
     return () => clearInterval(interval);
-  }, [agentId]);
+  }, [isReady, agentBaseUrl, agentId, authFetch]);
 
   // ── Update cron ──────────────────────────────────────────────────────────
 
   const handleUpdateCron = useCallback(async () => {
-    if (!agentId || !editCron.trim()) return;
+    if (!agentBaseUrl || !editCron.trim()) return;
     setIsUpdating(true);
     try {
-      const res = await fetch(`${BASE_URL}/api/v1/agents/${agentId}/trigger`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cron: editCron.trim() }),
-      });
+      const res = await authFetch(
+        `${agentBaseUrl}/api/v1/agents/${agentId}/trigger`,
+        {
+          method: 'PUT',
+          body: JSON.stringify({ cron: editCron.trim() }),
+        },
+      );
       if (res.ok) {
         const d = await res.json();
         setCronExpr(d.cron ?? editCron.trim());
@@ -182,17 +167,17 @@ const DurableCronTriggerExample: React.FC = () => {
     } finally {
       setIsUpdating(false);
     }
-  }, [agentId, editCron]);
+  }, [agentBaseUrl, agentId, editCron, authFetch]);
 
   // ── Manual trigger ───────────────────────────────────────────────────────
 
   const handleTriggerNow = useCallback(async () => {
-    if (!agentId) return;
+    if (!agentBaseUrl) return;
     setIsTriggeringNow(true);
     setTriggerFlash(null);
     try {
-      const res = await fetch(
-        `${BASE_URL}/api/v1/agents/${agentId}/trigger/run`,
+      const res = await authFetch(
+        `${agentBaseUrl}/api/v1/agents/${agentId}/trigger/run`,
         { method: 'POST' },
       );
       if (res.ok) {
@@ -200,65 +185,92 @@ const DurableCronTriggerExample: React.FC = () => {
       } else {
         setTriggerFlash(`Trigger failed (${res.status})`);
       }
-    } catch (e) {
+    } catch {
       setTriggerFlash('Network error');
     } finally {
       setIsTriggeringNow(false);
     }
-  }, [agentId]);
+  }, [agentBaseUrl, agentId, authFetch]);
 
   // ── Loading / Error ──────────────────────────────────────────────────────
 
-  if (isCreating) {
+  if (!isReady && runtimeStatus !== 'error') {
     return (
-      <ThemedProvider>
-        <Box
-          sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            height: '100vh',
-            gap: 3,
-          }}
-        >
-          <Spinner size="large" />
-          <Text sx={{ color: 'fg.muted' }}>
-            Creating cron trigger demo agent…
-          </Text>
-        </Box>
-      </ThemedProvider>
+      <Box
+        sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: '100vh',
+          gap: 3,
+        }}
+      >
+        <Spinner size="large" />
+        <Text sx={{ color: 'fg.muted' }}>
+          {runtimeStatus === 'launching'
+            ? 'Launching runtime for cron trigger agent…'
+            : 'Creating cron trigger demo agent…'}
+        </Text>
+      </Box>
     );
   }
 
-  if (error || !agentId) {
+  if (runtimeStatus === 'error' || hookError) {
     return (
-      <ThemedProvider>
-        <Box
-          sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            height: '100vh',
-            gap: 3,
-          }}
-        >
-          <AlertIcon size={48} />
-          <Text sx={{ color: 'danger.fg' }}>{error || 'No agent ID'}</Text>
-        </Box>
-      </ThemedProvider>
+      <Box
+        sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: '100vh',
+          gap: 3,
+        }}
+      >
+        <AlertIcon size={48} />
+        <Text sx={{ color: 'danger.fg' }}>
+          {hookError?.message || 'Agent failed to start'}
+        </Text>
+      </Box>
     );
   }
 
   return (
-    <ThemedProvider>
-      <Box sx={{ height: '100vh', display: 'flex' }}>
+    <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+      {/* Toolbar */}
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 2,
+          px: 3,
+          py: 2,
+          borderBottom: '1px solid',
+          borderColor: 'border.default',
+          flexShrink: 0,
+        }}
+      >
+        <ClockIcon size={16} />
+        <Heading as="h3" sx={{ fontSize: 2, flex: 1 }}>
+          Cron Triggers — {podName}
+        </Heading>
+        <Button
+          size="small"
+          variant="invisible"
+          onClick={onLogout}
+          leadingVisual={SignOutIcon}
+          sx={{ color: 'fg.muted' }}
+        >
+          Logout
+        </Button>
+      </Box>
+      <Box sx={{ flex: 1, minHeight: 0, display: 'flex' }}>
         {/* Left: Chat */}
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <Chat
             transport="ag-ui"
-            baseUrl={BASE_URL}
+            baseUrl={agentBaseUrl}
             agentId={agentId}
             title="Cron Trigger Agent"
             placeholder="Ask about your scheduled KPI reports…"
@@ -266,8 +278,8 @@ const DurableCronTriggerExample: React.FC = () => {
             showHeader={true}
             autoFocus
             height="100%"
-            runtimeId={agentId}
-            historyEndpoint={`${BASE_URL}/api/v1/history`}
+            runtimeId={podName}
+            historyEndpoint={`${agentBaseUrl}/api/v1/history`}
             suggestions={[
               {
                 title: 'Last run',
@@ -409,6 +421,31 @@ const DurableCronTriggerExample: React.FC = () => {
           </Box>
         </Box>
       </Box>
+    </Box>
+  );
+};
+
+// ─── Main component with auth gate ─────────────────────────────────────────
+
+const DurableCronTriggerExample: React.FC = () => {
+  const { token, setAuth, clearAuth } = useSimpleAuthStore();
+
+  if (!token) {
+    return (
+      <ThemedProvider>
+        <SignInSimple
+          onSignIn={setAuth}
+          title="Cron Triggers"
+          description="Sign in to use agents with scheduled triggers."
+          leadingIcon={<ClockIcon size={24} />}
+        />
+      </ThemedProvider>
+    );
+  }
+
+  return (
+    <ThemedProvider>
+      <DurableCronTriggerInner onLogout={clearAuth} />
     </ThemedProvider>
   );
 };

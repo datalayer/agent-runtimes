@@ -141,13 +141,12 @@ export function useDurableAgent(
   const [durableError, setDurableError] = useState<Error | null>(null);
   const hasAutoStarted = useRef(false);
 
-  // Compute auth token and base URL from the store or environment
+  // Compute auth token and base URL from the core stores
   const getAuthHeaders = useCallback(async () => {
     try {
-      const { useCoreStore } = await import('@datalayer/core/lib/state');
-      const state = useCoreStore.getState();
-      const token = (state as any).token || '';
-      const runUrl = (state as any).runUrl || '';
+      const { iamStore, coreStore } = await import('@datalayer/core/lib/state');
+      const token = iamStore.getState().token || '';
+      const runUrl = coreStore.getState().configuration?.aiagentsRunUrl || '';
       return { token, runUrl };
     } catch {
       return { token: '', runUrl: '' };
@@ -161,7 +160,7 @@ export function useDurableAgent(
 
     try {
       await storeLaunchRuntime({
-        environmentName: agentSpecId,
+        environmentName: 'ai-agents-env',
         givenName: `durable-${agentSpecId}`,
       });
       setDurableStatus('ready');
