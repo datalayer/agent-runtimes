@@ -33,6 +33,11 @@ from .usage import (
     UsageCategory,
     get_usage_tracker,
 )
+from .window_config import ContextWindowConfig
+from .window_manager import ContextWindowManager
+from .summarization import ConversationSummarizer
+from .eviction import ToolOutputEviction
+from .history_archive import HistoryArchive
 
 __all__ = [
     "AgentUsageStats",
@@ -58,4 +63,10 @@ __all__ = [
     "get_identity_env",
     "get_request_identities",
     "set_request_identities",
+    # Context window management (durable agents)
+    "ContextWindowConfig",
+    "ContextWindowManager",
+    "ConversationSummarizer",
+    "ToolOutputEviction",
+    "HistoryArchive",
 ]

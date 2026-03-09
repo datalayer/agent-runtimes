@@ -56,10 +56,20 @@ export {
   type FullContextResponse,
 } from './ContextInspector';
 export {
+  CostTracker,
+  type CostTrackerProps,
+  type CostUsageResponse,
+} from './CostTracker';
+export {
   ToolApprovalDialog,
   useToolApprovalDialog,
   type ToolApprovalDialogProps,
 } from './elements/ToolApprovalDialog';
+export {
+  ToolApprovalBanner,
+  type ToolApprovalBannerProps,
+  type PendingApproval,
+} from './elements/ToolApprovalBanner';
 export { PoweredByTag, type PoweredByTagProps } from './elements/PoweredByTag';
 export {
   FloatingBrandButton,

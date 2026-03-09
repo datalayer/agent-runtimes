@@ -297,6 +297,10 @@ class CreateAgentRequest(BaseModel):
 
     name: str = Field(..., description="Agent name")
     description: str = Field(default="", description="Agent description")
+    goal: str | None = Field(
+        default=None,
+        description="User-facing objective for the agent. Used as system prompt if system_prompt is not provided.",
+    )
     agent_library: Literal["pydantic-ai", "langchain", "openai"] = Field(
         default="pydantic-ai", description="Agent library to use"
     )
@@ -421,6 +425,16 @@ async def create_agent(
                 and spec.system_prompt
             ):
                 request.system_prompt = spec.system_prompt
+            # Goal/system_prompt consolidation: if no explicit system_prompt
+            # was set and the spec has a goal, use goal as system_prompt.
+            if (
+                request.system_prompt == "You are a helpful AI assistant."
+                and not spec.system_prompt
+                and spec.goal
+            ):
+                request.system_prompt = spec.goal
+            if request.goal is None and spec.goal:
+                request.goal = spec.goal
             if (
                 request.system_prompt_codemode_addons is None
                 and spec.system_prompt_codemode_addons
@@ -716,6 +730,27 @@ async def create_agent(
                 builtin_tools=(),  # Explicitly disable Pydantic AI built-in tools (e.g. CodeExecutionTool)
                 # Don't pass toolsets here - they'll be dynamically provided at run time
             )
+
+            # Wrap with DBOS durable execution if enabled
+            durable_lifecycle = getattr(http_request.app.state, "durable_lifecycle", None)
+            if durable_lifecycle and durable_lifecycle.is_healthy():
+                try:
+                    from ..durable import DurableConfig, wrap_agent_durable
+
+                    # Check if the agent spec requests durable execution
+                    spec = get_library_agent_spec(request.agent_spec_id) if request.agent_spec_id else None
+                    spec_advanced = getattr(spec, "advanced", None) if spec else None
+                    durable_cfg = DurableConfig.from_agent_spec(spec_advanced)
+                    if durable_cfg.enabled:
+                        pydantic_agent = wrap_agent_durable(
+                            pydantic_agent, agent_id=agent_id
+                        )
+                        logger.info(f"Agent '{agent_id}' wrapped with DBOS durable execution")
+                except Exception as exc:
+                    logger.warning(
+                        f"Failed to wrap agent '{agent_id}' with DBOS — continuing without durability: {exc}"
+                    )
+
             # Then wrap it with our adapter (pass agent_id for usage tracking)
             # The adapter will dynamically fetch MCP toolsets at run time
             logger.info(
@@ -2217,4 +2252,130 @@ async def stop_agent_mcp_servers(
         raise HTTPException(
             status_code=500,
             detail=f"Failed to stop MCP servers: {str(e)}",
+        )
+
+
+# ============================================================================
+# Durable Agent Lifecycle Endpoints
+# ============================================================================
+
+
+@router.post("/prepare-checkpoint")
+async def prepare_checkpoint_endpoint(http_request: Request):
+    """Prepare the agent-runtimes service for a CRIU checkpoint.
+
+    Flushes DBOS state and closes connections to allow clean container freeze.
+    Called by the companion before ``criu dump``.
+    """
+    logger.info("Preparing for CRIU checkpoint...")
+    lifecycle = getattr(http_request.app.state, "durable_lifecycle", None)
+    if lifecycle is not None:
+        try:
+            await lifecycle.prepare_checkpoint()
+            logger.info("DBOS state flushed for checkpoint")
+        except Exception as e:
+            logger.warning("Error preparing DBOS for checkpoint: %s", e)
+    return {"success": True, "message": "Ready for checkpoint."}
+
+
+@router.post("/post-restore")
+async def post_restore_endpoint(http_request: Request):
+    """Re-initialize after a CRIU restore.
+
+    Re-launches DBOS and re-establishes connections after container thaw.
+    Called by the companion after ``criu restore``.
+    """
+    logger.info("Post-restore re-initialization...")
+    lifecycle = getattr(http_request.app.state, "durable_lifecycle", None)
+    if lifecycle is not None:
+        try:
+            await lifecycle.post_restore()
+            logger.info("DBOS re-launched after restore")
+        except Exception as e:
+            logger.warning("Error re-launching DBOS after restore: %s", e)
+    return {"success": True, "message": "Post-restore complete."}
+
+
+class ConfigureFromSpecRequest(BaseModel):
+    """Request body for the configure-from-spec endpoint."""
+    agent_spec_id: str
+    env_vars: list[dict[str, str]] = Field(default_factory=list)
+
+
+@router.post("/configure-from-spec")
+async def configure_from_spec_endpoint(
+    http_request: Request,
+    body: ConfigureFromSpecRequest,
+):
+    """Configure and create an agent from an AgentSpec ID.
+
+    Called by the companion during run-start-hooks when the operator
+    provides an ``agent_spec_id``. Looks up the spec from the library,
+    applies env vars, and creates the agent.
+    """
+    logger.info("Configuring agent from spec: %s", body.agent_spec_id)
+
+    # Set env vars from companion (secrets, API keys, etc.)
+    for env_var in body.env_vars:
+        name = env_var.get("name", "")
+        value = env_var.get("value", "")
+        if name:
+            os.environ[name] = value
+
+    # Look up the spec
+    spec = get_library_agent_spec(body.agent_spec_id)
+    if spec is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"AgentSpec '{body.agent_spec_id}' not found in library.",
+        )
+
+    # Build a CreateAgentRequest-like dict and delegate to the create logic.
+    # This reuses the same agent creation flow as POST /agents.
+    try:
+        # Use goal or system_prompt from spec
+        system_prompt = spec.system_prompt or spec.goal or spec.description or ""
+        model = spec.model or DEFAULT_MODEL
+
+        agent = PydanticAgent(
+            model=model,
+            system_prompt=system_prompt,
+        )
+
+        # Wrap with DBOS durability if configured
+        lifecycle = getattr(http_request.app.state, "durable_lifecycle", None)
+        if lifecycle is not None:
+            from ..durable import DurableConfig, wrap_agent_durable
+
+            durable_config = DurableConfig.from_agent_spec(
+                spec.advanced if spec.advanced else {}
+            )
+            if durable_config.enabled:
+                wrap_agent_durable(agent, agent_id=body.agent_spec_id)
+                logger.info("Wrapped agent '%s' with DBOS durability", body.agent_spec_id)
+
+        adapter = PydanticAIAdapter(agent)
+        agent_id = body.agent_spec_id
+
+        # Register across transports
+        register_agent(
+            agent_id,
+            AgentInfo(adapter=adapter, card=AgentCapabilities(name=agent_id)),
+        )
+        register_vercel_agent(agent_id, VercelAITransport(adapter))
+        register_mcp_ui_agent(agent_id, MCPUITransport(adapter))
+
+        logger.info("Agent '%s' created from spec and registered", agent_id)
+        return {
+            "success": True,
+            "agent_id": agent_id,
+            "model": model,
+            "message": f"Agent '{agent_id}' configured from spec.",
+        }
+
+    except Exception as e:
+        logger.error("Failed to configure agent from spec '%s': %s", body.agent_spec_id, e)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to create agent from spec: {str(e)}",
         )

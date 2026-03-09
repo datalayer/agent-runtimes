@@ -315,10 +315,14 @@ async def _create_and_register_cli_agent(
     model = env_model or agent_spec.model or DEFAULT_MODEL.value
 
     # Build the system prompt
-    # When codemode is enabled and a codemode-specific prompt exists, use it
-    # (appended to the base system prompt, same logic as routes/agents.py)
+    # Goal/system_prompt consolidation:
+    # 1. system_prompt (explicit technical prompt) takes highest priority
+    # 2. goal (user-facing objective) is used as the system prompt if no explicit prompt
+    # 3. description is the fallback
+    # When codemode is enabled and a codemode-specific prompt exists, it is appended.
     base_prompt = (
         agent_spec.system_prompt
+        or agent_spec.goal
         or agent_spec.description
         or "You are a helpful AI assistant."
     )
@@ -336,6 +340,27 @@ async def _create_and_register_cli_agent(
         system_prompt=system_prompt,
         builtin_tools=(),  # Explicitly disable Pydantic AI built-in tools (e.g. CodeExecutionTool)
     )
+
+    # Wrap with DBOS durable execution if enabled (globally or per-spec)
+    durable_lifecycle = getattr(app.state, "durable_lifecycle", None) if app else None
+    if durable_lifecycle and durable_lifecycle.is_healthy():
+        try:
+            from .durable import DurableConfig, wrap_agent_durable
+
+            spec_config = DurableConfig.from_agent_spec(
+                getattr(agent_spec, "advanced", None)
+            )
+            if spec_config.enabled:
+                pydantic_agent = wrap_agent_durable(
+                    pydantic_agent, agent_id=agent_id
+                )
+                logger.info(
+                    f"Agent '{agent_id}' wrapped with DBOS durable execution"
+                )
+        except Exception as exc:
+            logger.warning(
+                f"Failed to wrap agent '{agent_id}' with DBOS — continuing without durability: {exc}"
+            )
 
     # Create codemode builder for dynamic rebuilding
     codemode_builder = None
@@ -719,6 +744,7 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
     # Store reference to background task to prevent garbage collection
     _mcp_toolsets_task: asyncio.Task[Any] | None = None
     _mcp_servers_task: asyncio.Task[Any] | None = None
+    _durable_lifecycle: Any = None  # DurableLifecycle instance (when enabled)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
@@ -730,8 +756,22 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
         None
             Control is yielded to FastAPI during the application runtime.
         """
-        nonlocal _mcp_toolsets_task, _mcp_servers_task
+        nonlocal _mcp_toolsets_task, _mcp_servers_task, _durable_lifecycle
         logger.info("Starting agent-runtimes server...")
+
+        # ---- DBOS Durable Execution ----
+        from .durable import DurableConfig, DurableLifecycle
+
+        durable_config = DurableConfig.from_env()
+        if durable_config.enabled:
+            _durable_lifecycle = DurableLifecycle(durable_config)
+            try:
+                await _durable_lifecycle.launch()
+                app.state.durable_lifecycle = _durable_lifecycle
+                logger.info("DBOS durable execution launched")
+            except Exception as exc:
+                logger.error("DBOS launch failed — continuing without durability: %s", exc)
+                _durable_lifecycle = None
 
         is_reload_parent = _is_reload_parent_process()
         logger.info(f"Reload parent check: {is_reload_parent}")
@@ -998,6 +1038,14 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
         # Shutdown MCP toolsets (stop all MCP server subprocesses)
         if not _is_reload_parent_process():
             await shutdown_config_mcp_toolsets()
+
+        # Shutdown DBOS durable execution
+        if _durable_lifecycle is not None:
+            try:
+                await _durable_lifecycle.shutdown()
+                logger.info("DBOS durable execution shut down")
+            except Exception as exc:
+                logger.warning("DBOS shutdown error: %s", exc)
 
         # Stop all per-agent sandboxes (terminates any Jupyter servers
         # that code_sandboxes started on behalf of agents).
