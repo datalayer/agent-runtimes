@@ -239,7 +239,13 @@ const DurableGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
         : 'success.fg';
 
   return (
-    <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <Box
+      sx={{
+        height: 'calc(100vh - 60px)',
+        display: 'flex',
+        flexDirection: 'column',
+      }}
+    >
       {/* Guardrails header bar */}
       <Box
         sx={{

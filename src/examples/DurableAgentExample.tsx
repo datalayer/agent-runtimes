@@ -213,7 +213,13 @@ const DurableAgentInner: React.FC<{ onLogout: () => void }> = ({
   // ── Running / Paused ─────────────────────────────────────────────────────
 
   return (
-    <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <Box
+      sx={{
+        height: 'calc(100vh - 60px)',
+        display: 'flex',
+        flexDirection: 'column',
+      }}
+    >
       {/* Toolbar */}
       <Box
         sx={{

@@ -159,9 +159,18 @@ export function useDurableAgent(
     setDurableError(null);
 
     try {
+      // Sanitize givenName: K8s names must be lowercase alphanumeric + hyphens
+      const safeName = `durable-${agentSpecId}`
+        .replace(/\//g, '-')
+        .replace(/[^a-z0-9-]/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '')
+        .slice(0, 63);
+
       await storeLaunchRuntime({
         environmentName: 'ai-agents-env',
-        givenName: `durable-${agentSpecId}`,
+        creditsLimit: 10,
+        givenName: safeName,
       });
       setDurableStatus('ready');
     } catch (err) {

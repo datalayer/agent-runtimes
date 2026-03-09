@@ -88,7 +88,8 @@ async function createAgentOnRuntime(
       description: config.description || 'AI assistant',
       agent_library: config.agentLibrary || 'pydantic-ai',
       transport: config.transport || 'ag-ui',
-      model: config.model || 'anthropic:claude-sonnet-4-5',
+      model:
+        config.model || 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
       system_prompt: config.systemPrompt || 'You are a helpful AI assistant.',
     }),
   });
