@@ -34,7 +34,7 @@ dependencies = [
     "code-sandboxes",
     "croniter>=6.0.0",
     "datalayer-core",
-    "fasta2a @ git+https://github.com/datalayer-externals/fasta2a.git@feature/sse-streaming-2#egg=fasta2a",
+    "fasta2a @ git+https://github.com/datalayer-externals/fasta2a.git@feat/extensions#egg=fasta2a",
     "filelock>=3.20.3",
     "httpx>=0.28.0",
     "jupyter-server>=2.10,<3",
