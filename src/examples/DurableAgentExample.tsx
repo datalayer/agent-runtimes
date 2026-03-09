@@ -28,6 +28,7 @@ import {
   SquareIcon,
   HistoryIcon,
   CheckCircleIcon,
+  WorkflowIcon,
 } from '@primer/octicons-react';
 import { Box } from '@datalayer/primer-addons';
 import { ThemedProvider } from './stores/themedProvider';
@@ -71,7 +72,7 @@ interface CheckpointInfo {
 // ─── Component ─────────────────────────────────────────────────────────────
 
 const DurableAgentExample: React.FC = () => {
-  const { isSignedIn, token } = useSimpleAuthStore();
+  const { token, setAuth } = useSimpleAuthStore();
 
   const [agentId, setAgentId] = useState<string | null>(null);
   const [status, setStatus] = useState<AgentStatus>('creating');
@@ -95,7 +96,7 @@ const DurableAgentExample: React.FC = () => {
 
   // Create agent from the durable KPI spec on mount
   useEffect(() => {
-    if (!isSignedIn || !token) return;
+    if (!token) return;
     let cancelled = false;
 
     const ensureAgent = async () => {
@@ -157,7 +158,7 @@ const DurableAgentExample: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [isSignedIn, token, authFetch]);
+  }, [token, authFetch]);
 
   // ── Actions ──────────────────────────────────────────────────────────────
 
@@ -231,25 +232,15 @@ const DurableAgentExample: React.FC = () => {
 
   // ── Sign-in gate ─────────────────────────────────────────────────────────
 
-  if (!isSignedIn) {
+  if (!token) {
     return (
       <ThemedProvider>
-        <Box
-          sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            height: '100vh',
-            gap: 3,
-          }}
-        >
-          <Heading sx={{ fontSize: 3 }}>Durable Agent Example</Heading>
-          <Text sx={{ color: 'fg.muted', mb: 3 }}>
-            Sign in with your Datalayer token to launch a cloud agent.
-          </Text>
-          <SignInSimple />
-        </Box>
+        <SignInSimple
+          onSignIn={setAuth}
+          title="Durable Agents"
+          description="Sign in to launch and manage durable agents."
+          leadingIcon={<WorkflowIcon size={24} />}
+        />
       </ThemedProvider>
     );
   }
