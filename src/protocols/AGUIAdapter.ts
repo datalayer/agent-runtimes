@@ -74,6 +74,16 @@ export class AGUIAdapter extends BaseProtocolAdapter {
   // that appears after the tool calls in the chat display.
   private isContinuation = false;
 
+  // Stream parsing depth counter — prevents premature continuations.
+  // When parseSSEStream is active (depth > 0), the SSE stream may still
+  // emit more tool calls.  A fast tool handler could resolve between
+  // reader.read() yields, causing sendToolResult to see allResolved=true
+  // when only a subset of tool calls have been dispatched.  This counter
+  // lets sendToolResult defer the continuation until parsing finishes.
+  private _streamParsingDepth = 0;
+  private _streamDonePromise: Promise<void> | null = null;
+  private _streamDoneResolve: (() => void) | null = null;
+
   constructor(config: AGUIAdapterConfig) {
     super(config);
     // Ensure baseUrl ends with trailing slash (required for mounted Starlette apps)
@@ -353,13 +363,31 @@ export class AGUIAdapter extends BaseProtocolAdapter {
     });
 
     // 4. Check whether ALL pending tool calls now have results
-    const allResolved = Array.from(this.pendingToolCalls.keys()).every(id =>
+    let allResolved = Array.from(this.pendingToolCalls.keys()).every(id =>
       this.collectedToolResults.has(id),
     );
 
     if (!allResolved) {
       // Other tool calls are still executing — wait for them
       return;
+    }
+
+    // 4b. Guard against premature continuations.  If the SSE stream is
+    //     still being parsed, more TOOL_CALL events may arrive.  A fast
+    //     tool handler can resolve between reader.read() yields, causing
+    //     allResolved=true when only a subset of tool calls have been
+    //     dispatched.  We wait for the current stream to finish, then
+    //     re-check — by then all tool calls from this stream are in
+    //     pendingToolCalls.
+    if (this._streamParsingDepth > 0 && this._streamDonePromise) {
+      await this._streamDonePromise;
+      // Re-check: the stream may have emitted additional tool calls
+      allResolved = Array.from(this.pendingToolCalls.keys()).every(id =>
+        this.collectedToolResults.has(id),
+      );
+      if (!allResolved) {
+        return;
+      }
     }
 
     // ── All tool results collected — build ONE combined continuation ──
@@ -487,6 +515,15 @@ export class AGUIAdapter extends BaseProtocolAdapter {
     // Consume the flag — it was set by sendToolResult for this call only
     this.isContinuation = false;
 
+    // Track stream parsing depth so that sendToolResult can defer
+    // premature continuations while the stream is still emitting events.
+    if (this._streamParsingDepth === 0) {
+      this._streamDonePromise = new Promise<void>(resolve => {
+        this._streamDoneResolve = resolve;
+      });
+    }
+    this._streamParsingDepth++;
+
     try {
       while (true) {
         const { done, value } = await reader.read();
@@ -535,6 +572,15 @@ export class AGUIAdapter extends BaseProtocolAdapter {
       }
     } finally {
       reader.releaseLock();
+      this._streamParsingDepth--;
+      if (this._streamParsingDepth === 0) {
+        // All stream parsing is done — wake up any sendToolResult callers
+        // that deferred their continuation because the stream was still active.
+        const resolve = this._streamDoneResolve;
+        this._streamDonePromise = null;
+        this._streamDoneResolve = null;
+        resolve?.();
+      }
     }
   }
 
@@ -805,6 +851,16 @@ export class AGUIAdapter extends BaseProtocolAdapter {
                 usage.totalTokens ??
                 (usage.promptTokens ?? 0) + (usage.completionTokens ?? 0),
             },
+            timestamp: new Date(),
+          });
+        }
+        // Signal that this run is done.  If there are pending frontend
+        // tool calls the continuation triggered by sendToolResult will
+        // start a new run — the 'done' event will be emitted at the end
+        // of that final run instead.
+        if (this.pendingToolCalls.size === 0) {
+          this.emit({
+            type: 'done',
             timestamp: new Date(),
           });
         }

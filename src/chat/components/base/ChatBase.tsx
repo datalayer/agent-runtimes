@@ -288,6 +288,10 @@ function ChatBaseInner({
   const abortControllerRef = useRef<AbortController | null>(null);
   const connectedIdentitiesRef = useRef(connectedIdentities);
   connectedIdentitiesRef.current = connectedIdentities;
+  // Keep a ref to frontendTools so the event listener closure (which is NOT
+  // re-created when frontendTools changes) always accesses the latest value.
+  const frontendToolsRef = useRef(frontendTools);
+  frontendToolsRef.current = frontendTools;
 
   // ---- Helpers ----
   const isServerSelected = useCallback(
@@ -777,7 +781,7 @@ function ChatBaseInner({
                   ),
                 );
 
-                const frontendTool = frontendTools?.find(
+                const frontendTool = frontendToolsRef.current?.find(
                   t => t.name === toolName,
                 );
                 const toolHandler = frontendTool?.handler;
@@ -798,7 +802,7 @@ function ChatBaseInner({
               toolCallsRef.current.set(toolCallId, toolCallMsg);
               setDisplayItems(prev => [...prev, toolCallMsg]);
 
-              const frontendTool = frontendTools?.find(
+              const frontendTool = frontendToolsRef.current?.find(
                 t => t.name === toolName,
               );
               const toolHandler = frontendTool?.handler;
@@ -931,9 +935,18 @@ function ChatBaseInner({
           }
           break;
 
+        case 'done':
+          // The adapter signals the entire multi-turn conversation
+          // (including all continuations) has finished.
+          pendingToolExecutionsRef.current = 0;
+          setIsLoading(false);
+          setIsStreaming(false);
+          break;
+
         case 'error':
           console.error('[ChatBase] Protocol error:', event.error);
           setError(event.error || new Error('Unknown error'));
+          pendingToolExecutionsRef.current = 0;
           setIsLoading(false);
           setIsStreaming(false);
           break;
@@ -995,11 +1008,13 @@ function ChatBaseInner({
         );
       } finally {
         pendingToolExecutionsRef.current--;
-        if (pendingToolExecutionsRef.current <= 0) {
+        if (pendingToolExecutionsRef.current < 0) {
           pendingToolExecutionsRef.current = 0;
-          setIsLoading(false);
-          setIsStreaming(false);
         }
+        // NOTE: Do NOT reset isLoading here.  The adapter's 'done' event
+        // is the sole authority for ending the loading state — it fires
+        // only when RUN_FINISHED arrives with no pending tool calls,
+        // meaning the entire multi-turn conversation is truly complete.
       }
     })();
   }
@@ -1142,7 +1157,12 @@ function ChatBaseInner({
           setError(err as Error);
         }
       } finally {
-        if (pendingToolExecutionsRef.current <= 0) {
+        // NOTE: Do NOT reset isLoading here.  The adapter's 'done' event
+        // handles this — it fires only after the entire multi-turn
+        // conversation (including all tool-call continuations) completes.
+        // For the non-adapter path (onSendMessage), 'done' is never
+        // emitted so we reset when no adapter is present.
+        if (!adapterRef.current) {
           setIsLoading(false);
           setIsStreaming(false);
         }
@@ -1292,10 +1312,9 @@ function ChatBaseInner({
             } as Parameters<typeof adapterRef.current.sendMessage>[1]);
           } catch (err) {
             console.error('[ChatBase] HITL respond error:', err);
-          } finally {
-            setIsLoading(false);
-            setIsStreaming(false);
           }
+          // NOTE: Do NOT reset isLoading here — the adapter's 'done'
+          // event will handle it when the run truly completes.
         }
       }
     },
@@ -1332,8 +1351,8 @@ function ChatBaseInner({
           setError(err instanceof Error ? err : new Error(String(err)));
         })
         .finally(() => {
-          setIsLoading(false);
-          setIsStreaming(false);
+          // NOTE: Do NOT reset isLoading here — the adapter's 'done'
+          // event will handle it when the run truly completes.
         });
     },
     [frontendTools],

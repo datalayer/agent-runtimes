@@ -85,6 +85,7 @@ export type ProtocolEventType =
   | 'tool-result'
   | 'activity'
   | 'state-update'
+  | 'done'
   | 'error';
 
 /**

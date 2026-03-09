@@ -417,14 +417,16 @@ function LexicalWithChat({
 
   // State to hold tools - populated by LexicalToolsPlugin inside the context
   const [tools, setTools] = useState<ReturnType<typeof useLexicalTools>>([]);
-  const [toolsKey, setToolsKey] = useState(0);
 
   // Stable callback for receiving tools from LexicalToolsPlugin
+  // NOTE: Do NOT use a key={...} on ChatFloating to force re-render on tool changes.
+  // Changing the key remounts the entire chat component, resetting all state (including isLoading),
+  // which causes the run/pause button to flip to "send" mid-conversation.
+  // React will naturally pass updated frontendTools prop without remounting.
   const handleToolsReady = useCallback(
     (newTools: ReturnType<typeof useLexicalTools>) => {
       console.log('[LexicalWithChat] 🔄 Tools received, updating state');
       setTools(newTools);
-      setToolsKey(prev => prev + 1); // Force ChatFloating to see new tools
     },
     [],
   );
@@ -463,7 +465,6 @@ function LexicalWithChat({
 
       {isReady && (
         <ChatFloating
-          key={`chat-${toolsKey}`}
           endpoint={AG_UI_ENDPOINT}
           title="Lexical AI Agent Runtime"
           description="Hi! I can help you edit documents. Try: 'Insert a heading', 'Add a code block', or 'Create a list'"
