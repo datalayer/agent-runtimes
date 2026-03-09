@@ -20,6 +20,10 @@ export { default as CopilotKitLexicalExample } from './CopilotKitLexicalExample'
 export { default as CopilotKitNotebookExample } from './CopilotKitNotebookExample';
 export { default as CustomExample } from './ChatCustomExample';
 export { default as DatalayerNotebookExample } from './DatalayerNotebookExample';
+export { default as DurableAgentExample } from './DurableAgentExample';
+export { default as DurableCronTriggerExample } from './DurableCronTriggerExample';
+export { default as DurableGuardrailsExample } from './DurableGuardrailsExample';
+export { default as DurableMemoryExample } from './DurableMemoryExample';
 export { default as Lexical2Example } from './Lexical2Example';
 export { default as LexicalExample } from './LexicalExample';
 export { default as LexicalSidebarExample } from './LexicalSidebarExample';

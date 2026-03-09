@@ -61,6 +61,12 @@ export type {
   UseAgentRuntimeReturn,
   UseAgentRuntimeOptions,
 } from './useAgentRuntime';
+export { useDurableAgent } from './useDurableAgent';
+export type {
+  UseDurableAgentReturn,
+  UseDurableAgentOptions,
+  DurableRuntimeStatus,
+} from './useDurableAgent';
 
 // Types - re-exported from @datalayer/core
 export type {

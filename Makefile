@@ -121,8 +121,9 @@ specs: ## generate Python and TypeScript code from YAML specifications (agents, 
 	@if [ ! -d "agentspecs" ]; then \
 		git clone https://github.com/datalayer/agentspecs.git agentspecs; \
 	else \
-		cd agentspecs && git fetch origin && git checkout main && git pull origin main; \
+		cd agentspecs && git fetch origin; \
 	fi
+	@cd agentspecs && git checkout 38495e67f9066970bf6a933a9e812f62745487a5
 	@echo "Generating agent specifications..."
 	python scripts/codegen/generate_agents.py \
 	  --specs-dir agentspecs/agentspecs/agents \

@@ -54,6 +54,12 @@ from .skills import router as skills_router
 from .vercel_ai import register_vercel_agent, unregister_vercel_agent
 from .vercel_ai import router as vercel_ai_router
 
+# Trigger routes (optional — from triggers module)
+try:
+    from ..triggers.webhook import webhook_router as triggers_webhook_router
+except ImportError:
+    triggers_webhook_router = None  # type: ignore[assignment]
+
 __all__ = [
     "a2a_protocol_router",
     "A2AAgentCard",
@@ -85,6 +91,7 @@ __all__ = [
     "skills_router",
     "start_a2a_task_managers",
     "stop_a2a_task_managers",
+    "triggers_webhook_router",
     "unregister_a2a_agent",
     "unregister_agui_agent",
     "unregister_agui_thread",

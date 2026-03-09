@@ -58,6 +58,7 @@ from .routes import (
     skills_router,
     start_a2a_task_managers,
     stop_a2a_task_managers,
+    triggers_webhook_router,
     vercel_ai_router,
 )
 from .routes.agents import set_api_prefix
@@ -1099,6 +1100,8 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
     app.include_router(a2a_protocol_router, prefix=config.api_prefix)
     app.include_router(a2ui_router, prefix=config.api_prefix)
     app.include_router(examples_router, prefix=config.api_prefix)
+    if triggers_webhook_router is not None:
+        app.include_router(triggers_webhook_router, prefix=config.api_prefix)
 
     # Note: AG-UI mounts and example mounts are added dynamically during lifespan startup
 
