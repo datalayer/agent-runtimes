@@ -40,6 +40,7 @@ import { Box } from '@datalayer/primer-addons';
 import { ThemedProvider } from './stores/themedProvider';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { SignInSimple } from '@datalayer/core/lib/views/iam';
+import { UserBadge } from '@datalayer/core/lib/views/profile';
 import { Chat } from '../chat';
 import { useDurableAgent } from '../runtime/useDurableAgent';
 
@@ -261,6 +262,7 @@ const DurableCronTriggerInner: React.FC<{ onLogout: () => void }> = ({
         <Heading as="h3" sx={{ fontSize: 2, flex: 1 }}>
           Cron Triggers — {podName}
         </Heading>
+        {token && <UserBadge token={token} />}
         <Button
           size="small"
           variant="invisible"

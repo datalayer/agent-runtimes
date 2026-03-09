@@ -42,6 +42,8 @@ export interface UseDurableAgentOptions {
   autoStart?: boolean;
   /** Agent configuration overrides */
   agentConfig?: AgentConfig;
+  /** Full agent spec object (persisted with checkpoints) */
+  agentSpec?: Record<string, any>;
   /** Base URL for the ai-agents service (auto-detected if omitted) */
   baseUrl?: string;
 }
@@ -73,12 +75,35 @@ export interface UseDurableAgentReturn {
   resume: () => Promise<void>;
   /** Terminate the agent (delete runtime) */
   terminate: () => Promise<void>;
+  /** Take a checkpoint and persist it (pause → record → resume) */
+  checkpoint: (name?: string) => Promise<void>;
+  /** Refresh the checkpoints list from the backend */
+  refreshCheckpoints: () => Promise<void>;
+
+  // Checkpoints
+  /** List of persisted checkpoints for this runtime */
+  checkpoints: CheckpointRecord[];
 
   // Status
   /** Whether the agent is fully ready (runtime + agent connected) */
   isReady: boolean;
   /** Error if any */
   error: Error | null;
+}
+
+/**
+ * A persisted checkpoint record returned from the runtimes API.
+ */
+export interface CheckpointRecord {
+  uid: string;
+  name: string;
+  description: string;
+  pod_name: string;
+  agentspec_id: string;
+  agentspec: Record<string, any>;
+  metadata: Record<string, any>;
+  status: string;
+  updated_at: string;
 }
 
 /**
@@ -123,7 +148,7 @@ export interface UseDurableAgentReturn {
 export function useDurableAgent(
   options: UseDurableAgentOptions,
 ): UseDurableAgentReturn {
-  const { agentSpecId, autoStart = false, agentConfig } = options;
+  const { agentSpecId, autoStart = false, agentConfig, agentSpec } = options;
 
   // Base store state
   const runtime = useRuntime();
@@ -139,6 +164,9 @@ export function useDurableAgent(
   const [durableStatus, setDurableStatus] =
     useState<DurableRuntimeStatus>('idle');
   const [durableError, setDurableError] = useState<Error | null>(null);
+  const [checkpointRecords, setCheckpointRecords] = useState<
+    CheckpointRecord[]
+  >([]);
   const hasAutoStarted = useRef(false);
 
   // Compute auth token and base URL from the core stores
@@ -146,10 +174,12 @@ export function useDurableAgent(
     try {
       const { iamStore, coreStore } = await import('@datalayer/core/lib/state');
       const token = iamStore.getState().token || '';
-      const runUrl = coreStore.getState().configuration?.aiagentsRunUrl || '';
-      return { token, runUrl };
+      const config = coreStore.getState().configuration;
+      const runUrl = config?.aiagentsRunUrl || '';
+      const runtimesRunUrl = config?.runtimesRunUrl || '';
+      return { token, runUrl, runtimesRunUrl };
     } catch {
-      return { token: '', runUrl: '' };
+      return { token: '', runUrl: '', runtimesRunUrl: '' };
     }
   }, []);
 
@@ -238,6 +268,69 @@ export function useDurableAgent(
     }
   }, [runtime, getAuthHeaders, launchRuntime]);
 
+  // --- Checkpoint (Pause → Record → Resume) ---
+  const checkpoint = useCallback(
+    async (name?: string) => {
+      if (!runtime) {
+        setDurableError(new Error('No runtime to checkpoint'));
+        return;
+      }
+
+      try {
+        const { token, runUrl, runtimesRunUrl } = await getAuthHeaders();
+
+        // 1. Pause (CRIU checkpoint)
+        const { pauseAgent } =
+          await import('@datalayer/core/lib/api/ai-agents/agents');
+        await pauseAgent(token, runtime.podName, runUrl);
+
+        // 2. Persist checkpoint record with agentspec
+        const { createCheckpoint } =
+          await import('@datalayer/core/lib/api/runtimes/checkpoints');
+        const ckptName = name || `checkpoint-${Date.now()}`;
+        await createCheckpoint(
+          token,
+          {
+            pod_name: runtime.podName,
+            name: ckptName,
+            description: `CRIU checkpoint for ${agentSpecId}`,
+            agentspec_id: agentSpecId,
+            agentspec: agentSpec || {},
+          },
+          runtimesRunUrl,
+        );
+
+        // 3. Resume immediately
+        const { resumeAgent } =
+          await import('@datalayer/core/lib/api/ai-agents/agents');
+        await resumeAgent(token, runtime.podName, runUrl);
+        setDurableStatus('ready');
+
+        // 4. Refresh checkpoints list
+        await refreshCheckpoints();
+      } catch (err) {
+        const error = err instanceof Error ? err : new Error(String(err));
+        setDurableError(error);
+      }
+    },
+    [runtime, agentSpecId, agentSpec, getAuthHeaders],
+  );
+
+  // --- Refresh Checkpoints List ---
+  const refreshCheckpoints = useCallback(async () => {
+    try {
+      const { token, runtimesRunUrl } = await getAuthHeaders();
+      const { listCheckpoints } =
+        await import('@datalayer/core/lib/api/runtimes/checkpoints');
+      const podName = runtime?.podName;
+      const resp = await listCheckpoints(token, runtimesRunUrl, podName);
+      setCheckpointRecords(resp.checkpoints || []);
+    } catch (err) {
+      // Non-fatal — just log
+      console.warn('Failed to refresh checkpoints:', err);
+    }
+  }, [runtime, getAuthHeaders]);
+
   // --- Terminate (Delete Runtime) ---
   const terminate = useCallback(async () => {
     if (!runtime) {
@@ -247,10 +340,10 @@ export function useDurableAgent(
     }
 
     try {
-      const { token, runUrl } = await getAuthHeaders();
+      const { token, runtimesRunUrl } = await getAuthHeaders();
       const { deleteRuntime } =
         await import('@datalayer/core/lib/api/runtimes/runtimes');
-      await deleteRuntime(token, runtime.podName, runUrl);
+      await deleteRuntime(token, runtime.podName, runtimesRunUrl);
       storeDisconnect();
       setDurableStatus('idle');
       setDurableError(null);
@@ -297,6 +390,11 @@ export function useDurableAgent(
     pause,
     resume,
     terminate,
+    checkpoint,
+    refreshCheckpoints,
+
+    // Checkpoints
+    checkpoints: checkpointRecords,
 
     // Status
     isReady,

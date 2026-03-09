@@ -38,6 +38,7 @@ import { Box } from '@datalayer/primer-addons';
 import { ThemedProvider } from './stores/themedProvider';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { SignInSimple } from '@datalayer/core/lib/views/iam';
+import { UserBadge } from '@datalayer/core/lib/views/profile';
 import { Chat } from '../chat';
 import { useDurableAgent } from '../runtime/useDurableAgent';
 
@@ -288,6 +289,7 @@ const DurableGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
 
         {/* Token counter */}
         <Label variant="secondary">{totalTokens.toLocaleString()} tokens</Label>
+        {token && <UserBadge token={token} />}
         <Button
           size="small"
           variant="invisible"
