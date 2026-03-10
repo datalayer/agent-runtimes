@@ -652,17 +652,30 @@ const DurableAgentInner: React.FC<{ onLogout: () => void }> = ({
                         {a.description}
                       </Text>
                     )}
-                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        gap: 1,
+                        flexWrap: 'wrap',
+                        alignItems: 'center',
+                      }}
+                    >
                       {a.protocol && (
                         <Label sx={{ fontSize: '10px' }} variant="accent">
                           {a.protocol}
                         </Label>
                       )}
-                      {a.model && (
-                        <Label sx={{ fontSize: '10px' }} variant="secondary">
-                          {a.model}
-                        </Label>
-                      )}
+                      <Box sx={{ flex: 1 }} />
+                      <Button
+                        size="small"
+                        variant="danger"
+                        leadingVisual={XCircleIcon}
+                        onClick={handleTerminate}
+                        disabled={actionLoading}
+                        sx={{ fontSize: 0 }}
+                      >
+                        Terminate
+                      </Button>
                     </Box>
                   </Box>
                 ))

@@ -232,10 +232,10 @@ export function useDurableAgent(
     }
 
     try {
-      const { token, runUrl } = await getAuthHeaders();
-      const { pauseAgent } =
-        await import('@datalayer/core/lib/api/ai-agents/agents');
-      await pauseAgent(token, runtime.podName, runUrl);
+      const { token, runtimesRunUrl } = await getAuthHeaders();
+      const { pauseRuntime } =
+        await import('@datalayer/core/lib/api/runtimes/runtimes');
+      await pauseRuntime(token, runtime.podName, runtimesRunUrl);
       setDurableStatus('paused');
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err));
@@ -249,13 +249,13 @@ export function useDurableAgent(
     setDurableError(null);
 
     try {
-      const { token, runUrl } = await getAuthHeaders();
+      const { token, runtimesRunUrl } = await getAuthHeaders();
 
       if (runtime) {
         // Runtime still exists — just resume it
-        const { resumeAgent } =
-          await import('@datalayer/core/lib/api/ai-agents/agents');
-        await resumeAgent(token, runtime.podName, runUrl);
+        const { resumeRuntime } =
+          await import('@datalayer/core/lib/api/runtimes/runtimes');
+        await resumeRuntime(token, runtime.podName, runtimesRunUrl);
         setDurableStatus('ready');
       } else {
         // Runtime was destroyed — re-launch
@@ -276,41 +276,67 @@ export function useDurableAgent(
         return;
       }
 
+      let paused = false;
+      let recordError: Error | null = null;
+
       try {
-        const { token, runUrl, runtimesRunUrl } = await getAuthHeaders();
+        const { token, runtimesRunUrl } = await getAuthHeaders();
 
         // 1. Pause (CRIU checkpoint)
-        const { pauseAgent } =
-          await import('@datalayer/core/lib/api/ai-agents/agents');
-        await pauseAgent(token, runtime.podName, runUrl);
+        const { pauseRuntime } =
+          await import('@datalayer/core/lib/api/runtimes/runtimes');
+        await pauseRuntime(token, runtime.podName, runtimesRunUrl);
+        paused = true;
 
-        // 2. Persist checkpoint record with agentspec
-        const { createCheckpoint } =
-          await import('@datalayer/core/lib/api/runtimes/checkpoints');
-        const ckptName = name || `checkpoint-${Date.now()}`;
-        await createCheckpoint(
-          token,
-          {
-            pod_name: runtime.podName,
-            name: ckptName,
-            description: `CRIU checkpoint for ${agentSpecId}`,
-            agentspec_id: agentSpecId,
-            agentspec: agentSpec || {},
-          },
-          runtimesRunUrl,
-        );
+        // 2. Persist checkpoint record with agentspec (non-fatal)
+        try {
+          const { createCheckpoint } =
+            await import('@datalayer/core/lib/api/runtimes/checkpoints');
+          const ckptName = name || `checkpoint-${Date.now()}`;
+          await createCheckpoint(
+            token,
+            {
+              pod_name: runtime.podName,
+              name: ckptName,
+              description: `CRIU checkpoint for ${agentSpecId}`,
+              agentspec_id: agentSpecId,
+              agentspec: agentSpec || {},
+            },
+            runtimesRunUrl,
+          );
+        } catch (err) {
+          recordError = err instanceof Error ? err : new Error(String(err));
+          console.warn('Failed to persist checkpoint record:', recordError);
+        }
 
-        // 3. Resume immediately
-        const { resumeAgent } =
-          await import('@datalayer/core/lib/api/ai-agents/agents');
-        await resumeAgent(token, runtime.podName, runUrl);
+        // 3. Resume — always attempted after a successful pause
+        const { resumeRuntime } =
+          await import('@datalayer/core/lib/api/runtimes/runtimes');
+        await resumeRuntime(token, runtime.podName, runtimesRunUrl);
         setDurableStatus('ready');
 
         // 4. Refresh checkpoints list
         await refreshCheckpoints();
+
+        // Surface the record error (non-blocking) so the user knows
+        if (recordError) {
+          setDurableError(
+            new Error(
+              `Checkpoint taken but record not saved: ${recordError.message}`,
+            ),
+          );
+        }
       } catch (err) {
         const error = err instanceof Error ? err : new Error(String(err));
-        setDurableError(error);
+        // If we paused but failed to resume, tell the user
+        if (paused) {
+          setDurableError(
+            new Error(`Runtime paused but resume failed: ${error.message}`),
+          );
+          setDurableStatus('paused');
+        } else {
+          setDurableError(error);
+        }
       }
     },
     [runtime, agentSpecId, agentSpec, getAuthHeaders],
