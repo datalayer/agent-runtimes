@@ -4,7 +4,7 @@
  */
 
 /**
- * DurableMemoryExample
+ * AgentMemoryExample
  *
  * Demonstrates the Mem0 memory backend for durable agents.
  * Creates a cloud runtime (environment: 'ai-agents-env') via the Datalayer
@@ -57,9 +57,7 @@ interface MemoryEntry {
 
 // ─── Inner component (rendered after auth) ─────────────────────────────────
 
-const DurableMemoryInner: React.FC<{ onLogout: () => void }> = ({
-  onLogout,
-}) => {
+const AgentMemoryInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
   const { token } = useSimpleAuthStore();
 
   const {
@@ -419,7 +417,7 @@ const syncTokenToIamStore = (token: string) => {
 
 // ─── Main component with auth gate ─────────────────────────────────────────
 
-const DurableMemoryExample: React.FC = () => {
+const AgentMemoryExample: React.FC = () => {
   const { token, setAuth, clearAuth } = useSimpleAuthStore();
   const hasSynced = useRef(false);
 
@@ -463,9 +461,9 @@ const DurableMemoryExample: React.FC = () => {
 
   return (
     <ThemedProvider>
-      <DurableMemoryInner onLogout={handleLogout} />
+      <AgentMemoryInner onLogout={handleLogout} />
     </ThemedProvider>
   );
 };
 
-export default DurableMemoryExample;
+export default AgentMemoryExample;

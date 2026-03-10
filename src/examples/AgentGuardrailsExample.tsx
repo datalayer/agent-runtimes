@@ -4,7 +4,7 @@
  */
 
 /**
- * DurableGuardrailsExample
+ * AgentGuardrailsExample
  *
  * Demonstrates cost budget guardrails and tool approval flow for durable agents.
  *
@@ -59,7 +59,7 @@ interface ToolApprovalRequest {
 
 // ─── Inner component (rendered after auth) ─────────────────────────────────
 
-const DurableGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
+const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
   onLogout,
 }) => {
   const { token } = useSimpleAuthStore();
@@ -369,7 +369,7 @@ const syncTokenToIamStore = (token: string) => {
 
 // ─── Main component with auth gate ─────────────────────────────────────────
 
-const DurableGuardrailsExample: React.FC = () => {
+const AgentGuardrailsExample: React.FC = () => {
   const { token, setAuth, clearAuth } = useSimpleAuthStore();
   const hasSynced = useRef(false);
 
@@ -413,9 +413,9 @@ const DurableGuardrailsExample: React.FC = () => {
 
   return (
     <ThemedProvider>
-      <DurableGuardrailsInner onLogout={handleLogout} />
+      <AgentGuardrailsInner onLogout={handleLogout} />
     </ThemedProvider>
   );
 };
 
-export default DurableGuardrailsExample;
+export default AgentGuardrailsExample;

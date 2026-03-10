@@ -33,10 +33,14 @@ export const EXAMPLES: Record<
   CopilotKitLexicalExample: () => import('./CopilotKitLexicalExample'),
   CopilotKitNotebookExample: () => import('./CopilotKitNotebookExample'),
   DatalayerNotebookExample: () => import('./DatalayerNotebookExample'),
-  DurableAgentExample: () => import('./DurableAgentExample'),
-  DurableCronTriggerExample: () => import('./DurableCronTriggerExample'),
-  DurableGuardrailsExample: () => import('./DurableGuardrailsExample'),
-  DurableMemoryExample: () => import('./DurableMemoryExample'),
+  AgentCheckpointExample: () => import('./AgentCheckpointExample'),
+  AgentCodemodeExample: () => import('./AgentCodemodeExample'),
+  AgentEvalExample: () => import('./AgentEvalExample'),
+  AgentGuardrailsExample: () => import('./AgentGuardrailsExample'),
+  AgentMemoryExample: () => import('./AgentMemoryExample'),
+  AgentNotificationExample: () => import('./AgentNotificationExample'),
+  AgentOutputExample: () => import('./AgentOutputExample'),
+  AgentTriggerExample: () => import('./AgentTriggerExample'),
   LexicalExample: () => import('./LexicalExample'),
   LexicalSidebarExample: () => import('./LexicalSidebarExample'),
   NotebookExample: () => import('./NotebookExample'),
@@ -54,21 +58,20 @@ export function getExampleNames(): string[] {
 
 /**
  * Get the selected example based on environment variable
- * Falls back to 'NotebookSimpleExample' if not specified or invalid
+ * Falls back to 'NotebookExample' if not specified or invalid
  */
 export function getSelectedExample(): () => Promise<{
   default: React.ComponentType;
 }> {
   // import.meta.env.EXAMPLE is defined in vite config
-  const exampleName =
-    (import.meta.env.EXAMPLE as string) || 'NotebookSimpleExample';
+  const exampleName = (import.meta.env.EXAMPLE as string) || 'NotebookExample';
 
   if (!EXAMPLES[exampleName]) {
     console.warn(
       `Example "${exampleName}" not found. Available examples:`,
       getExampleNames(),
     );
-    return EXAMPLES['NotebookSimpleExample'];
+    return EXAMPLES['NotebookExample'];
   }
 
   return EXAMPLES[exampleName];
@@ -79,7 +82,6 @@ export function getSelectedExample(): () => Promise<{
  */
 export function getSelectedExampleName(): string {
   // import.meta.env.EXAMPLE is defined in vite config
-  const exampleName =
-    (import.meta.env.EXAMPLE as string) || 'NotebookSimpleExample';
-  return EXAMPLES[exampleName] ? exampleName : 'NotebookSimpleExample';
+  const exampleName = (import.meta.env.EXAMPLE as string) || 'NotebookExample';
+  return EXAMPLES[exampleName] ? exampleName : 'NotebookExample';
 }

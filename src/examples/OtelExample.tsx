@@ -344,7 +344,7 @@ const AgentRuntimeOtelExampleInner: React.FC<{
       sx={{
         display: 'flex',
         flexDirection: 'column',
-        height: '100vh',
+        height: 'calc(100vh - 90px)',
         overflow: 'hidden',
         bg: 'canvas.default',
         color: 'fg.default',
@@ -501,6 +501,7 @@ const AgentRuntimeOtelExample: React.FC = () => {
       {!token ? (
         <SignInSimple
           onSignIn={setAuth}
+          onApiKeySignIn={apiKey => setAuth(apiKey, 'api-key-user')}
           title="Datalayer OTEL"
           description="Sign in to access the observability dashboard."
           leadingIcon={<TelescopeIcon size={24} />}

@@ -4,7 +4,7 @@
  */
 
 /**
- * DurableAgentExample
+ * AgentCheckpointExample
  *
  * Demonstrates launching a durable agent in the Datalayer cloud,
  * with pause/resume (CRIU checkpoint) and lifecycle controls.
@@ -147,7 +147,7 @@ const SpecRow: React.FC<{
 
 // ─── Inner component (rendered after auth) ─────────────────────────────────
 
-const DurableAgentInner: React.FC<{ onLogout: () => void }> = ({
+const AgentCheckpointInner: React.FC<{ onLogout: () => void }> = ({
   onLogout,
 }) => {
   const { token } = useSimpleAuthStore();
@@ -808,7 +808,7 @@ const syncTokenToIamStore = (token: string) => {
 
 // ─── Main component with auth gate ─────────────────────────────────────────
 
-const DurableAgentExample: React.FC = () => {
+const AgentCheckpointExample: React.FC = () => {
   const { token, setAuth, clearAuth } = useSimpleAuthStore();
   const hasSynced = useRef(false);
 
@@ -855,9 +855,9 @@ const DurableAgentExample: React.FC = () => {
 
   return (
     <ThemedProvider>
-      <DurableAgentInner onLogout={handleLogout} />
+      <AgentCheckpointInner onLogout={handleLogout} />
     </ThemedProvider>
   );
 };
 
-export default DurableAgentExample;
+export default AgentCheckpointExample;
