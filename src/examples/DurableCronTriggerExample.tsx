@@ -16,7 +16,7 @@
 
 /// <reference types="vite/client" />
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   Text,
   Button,
@@ -433,16 +433,50 @@ const DurableCronTriggerInner: React.FC<{ onLogout: () => void }> = ({
   );
 };
 
+// ─── Sync token to core IAM store ──────────────────────────────────────────
+
+const syncTokenToIamStore = (token: string) => {
+  import('@datalayer/core/lib/state').then(({ iamStore }) => {
+    iamStore.setState({ token });
+  });
+};
+
 // ─── Main component with auth gate ─────────────────────────────────────────
 
 const DurableCronTriggerExample: React.FC = () => {
   const { token, setAuth, clearAuth } = useSimpleAuthStore();
+  const hasSynced = useRef(false);
+
+  useEffect(() => {
+    if (token && !hasSynced.current) {
+      hasSynced.current = true;
+      syncTokenToIamStore(token);
+    }
+  }, [token]);
+
+  const handleSignIn = useCallback(
+    (newToken: string, handle: string) => {
+      setAuth(newToken, handle);
+      hasSynced.current = true;
+      syncTokenToIamStore(newToken);
+    },
+    [setAuth],
+  );
+
+  const handleLogout = useCallback(() => {
+    clearAuth();
+    hasSynced.current = false;
+    import('@datalayer/core/lib/state').then(({ iamStore }) => {
+      iamStore.setState({ token: undefined });
+    });
+  }, [clearAuth]);
 
   if (!token) {
     return (
       <ThemedProvider>
         <SignInSimple
-          onSignIn={setAuth}
+          onSignIn={handleSignIn}
+          onApiKeySignIn={apiKey => handleSignIn(apiKey, 'api-key-user')}
           title="Cron Triggers"
           description="Sign in to use agents with scheduled triggers."
           leadingIcon={<ClockIcon size={24} />}
@@ -453,7 +487,7 @@ const DurableCronTriggerExample: React.FC = () => {
 
   return (
     <ThemedProvider>
-      <DurableCronTriggerInner onLogout={clearAuth} />
+      <DurableCronTriggerInner onLogout={handleLogout} />
     </ThemedProvider>
   );
 };

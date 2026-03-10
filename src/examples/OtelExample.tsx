@@ -356,6 +356,7 @@ const AgentRuntimeOtelExampleInner: React.FC<{
         token={token}
         onNavigate={handleNavigate}
         onSignOut={onSignOut}
+        showGenerateButtons={false}
         trailing={
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <TelescopeIcon size={16} />

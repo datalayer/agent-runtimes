@@ -22,7 +22,7 @@
 
 /// <reference types="vite/client" />
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Text, Button, Spinner, Label, Flash, Heading } from '@primer/react';
 import {
   AlertIcon,
@@ -792,16 +792,59 @@ const DurableAgentInner: React.FC<{ onLogout: () => void }> = ({
   );
 };
 
+// ─── Sync token to core IAM store ──────────────────────────────────────────
+
+/**
+ * Sync a token into the core `iamStore` so that stateful API helpers
+ * (e.g. `createRuntime`) can authenticate requests.  `useSimpleAuthStore`
+ * is a lightweight localStorage-backed store used by `SignInSimple`, but
+ * the stateful runtimes API reads credentials from `iamStore`.
+ */
+const syncTokenToIamStore = (token: string) => {
+  import('@datalayer/core/lib/state').then(({ iamStore }) => {
+    iamStore.setState({ token });
+  });
+};
+
 // ─── Main component with auth gate ─────────────────────────────────────────
 
 const DurableAgentExample: React.FC = () => {
   const { token, setAuth, clearAuth } = useSimpleAuthStore();
+  const hasSynced = useRef(false);
+
+  // Sync persisted token (from a previous session) to iamStore on mount
+  useEffect(() => {
+    if (token && !hasSynced.current) {
+      hasSynced.current = true;
+      syncTokenToIamStore(token);
+    }
+  }, [token]);
+
+  // Wrap setAuth to also sync the token to iamStore on sign-in
+  const handleSignIn = useCallback(
+    (newToken: string, handle: string) => {
+      setAuth(newToken, handle);
+      hasSynced.current = true;
+      syncTokenToIamStore(newToken);
+    },
+    [setAuth],
+  );
+
+  // Clear iamStore token on logout
+  const handleLogout = useCallback(() => {
+    clearAuth();
+    hasSynced.current = false;
+    import('@datalayer/core/lib/state').then(({ iamStore }) => {
+      iamStore.setState({ token: undefined });
+    });
+  }, [clearAuth]);
 
   if (!token) {
     return (
       <ThemedProvider>
         <SignInSimple
-          onSignIn={setAuth}
+          onSignIn={handleSignIn}
+          onApiKeySignIn={apiKey => handleSignIn(apiKey, 'api-key-user')}
           title="Durable Agents"
           description="Sign in to launch and manage durable agents."
           leadingIcon={<WorkflowIcon size={24} />}
@@ -812,7 +855,7 @@ const DurableAgentExample: React.FC = () => {
 
   return (
     <ThemedProvider>
-      <DurableAgentInner onLogout={clearAuth} />
+      <DurableAgentInner onLogout={handleLogout} />
     </ThemedProvider>
   );
 };
