@@ -13,8 +13,8 @@
  * @module components/chat/components/elements/ToolApprovalBanner
  */
 
-import { useCallback, useEffect, useState } from 'react';
-import { Box, Button, Text, CounterLabel, Flash } from '@primer/react';
+import { useState } from 'react';
+import { Box, Button, Text, CounterLabel } from '@primer/react';
 import {
   ShieldCheckIcon,
   AlertIcon,
@@ -182,7 +182,7 @@ export function ToolApprovalBanner({
             </Box>
             <Button
               size="small"
-              variant="outline"
+              variant="default"
               onClick={() => onReview(approval)}
             >
               Review

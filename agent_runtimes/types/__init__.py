@@ -15,6 +15,10 @@ from .types import (
     MCPServer,
     MCPServerTool,
     SkillSpec,
+    TeamAgentSpec,
+    TeamSpec,
+    TeamSupervisorSpec,
+    TeamValidationSpec,
 )
 
 __all__ = [
@@ -29,4 +33,8 @@ __all__ = [
     "MCPServer",
     "MCPServerTool",
     "SkillSpec",
+    "TeamAgentSpec",
+    "TeamSpec",
+    "TeamSupervisorSpec",
+    "TeamValidationSpec",
 ]

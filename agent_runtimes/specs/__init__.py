@@ -56,6 +56,11 @@ from .models import (
     get_model,
     list_models,
 )
+from .teams import (
+    TEAM_SPECS,
+    get_team_spec,
+    list_team_specs,
+)
 
 __all__ = [
     # MCP Catalog Servers
@@ -74,6 +79,10 @@ __all__ = [
     "AGENT_SPECS",
     "get_agent_spec",
     "list_agent_specs",
+    # Teams
+    "TEAM_SPECS",
+    "get_team_spec",
+    "list_team_specs",
     # AI Models
     "AIModel",
     "AIModels",

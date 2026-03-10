@@ -14,8 +14,9 @@
  *
  * The OTEL backend is configured via the `VITE_OTEL_BASE_URL` environment
  * variable (defaults to '' which routes through the Vite dev-server proxy).
- * The agent-runtimes backend is configured via `VITE_BASE_URL` (default:
- * http://localhost:8765).
+ * The agent-runtimes backend is configured via `VITE_BASE_URL` (also defaults
+ * to '' to route through the Vite proxy — prod1.datalayer.run in examples
+ * mode, localhost:8765 in plain dev mode).
  *
  * For Python-side observability, wire in `agent_runtimes/otel.py`:
  *   from agent_runtimes.otel import setup_otel
@@ -53,9 +54,13 @@ import { DEFAULT_MODEL } from '../specs';
 /** Base URL of the OTEL backend (generator + query APIs). */
 const OTEL_BASE_URL: string = import.meta.env.VITE_OTEL_BASE_URL ?? '';
 
-/** Base URL of the agent-runtimes server. */
-const AGENT_BASE_URL: string =
-  import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
+/**
+ * Base URL of the agent-runtimes server.
+ * Defaults to '' so that requests use relative paths and are forwarded by the
+ * Vite dev-server proxy (which routes /api → prod1.datalayer.run in examples
+ * mode, or /api → localhost:8765 in plain dev mode).
+ */
+const AGENT_BASE_URL: string = import.meta.env.VITE_BASE_URL || '';
 
 const DEFAULT_AGENT_TRANSPORT: Transport = 'ag-ui';
 const DEFAULT_AGENT_LIBRARY: AgentLibrary = 'pydantic-ai';

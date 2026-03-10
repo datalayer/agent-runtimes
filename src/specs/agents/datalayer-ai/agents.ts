@@ -115,7 +115,6 @@ export const CRAWLER_AGENT_SPEC: AgentSpec = {
   authorizationPolicy: undefined,
   notifications: undefined,
   memory: 'ephemeral',
-  team: undefined,
 };
 
 export const DATA_ACQUISITION_AGENT_SPEC: AgentSpec = {
@@ -177,7 +176,6 @@ export const DATA_ACQUISITION_AGENT_SPEC: AgentSpec = {
   authorizationPolicy: undefined,
   notifications: undefined,
   memory: 'ephemeral',
-  team: undefined,
 };
 
 export const FINANCIAL_AGENT_SPEC: AgentSpec = {
@@ -235,7 +233,6 @@ export const FINANCIAL_AGENT_SPEC: AgentSpec = {
   authorizationPolicy: undefined,
   notifications: undefined,
   memory: 'ephemeral',
-  team: undefined,
 };
 
 export const GITHUB_AGENT_SPEC: AgentSpec = {
@@ -293,7 +290,6 @@ export const GITHUB_AGENT_SPEC: AgentSpec = {
   authorizationPolicy: undefined,
   notifications: undefined,
   memory: 'ephemeral',
-  team: undefined,
 };
 
 export const SIMPLE_AGENT_SPEC: AgentSpec = {
@@ -333,7 +329,6 @@ export const SIMPLE_AGENT_SPEC: AgentSpec = {
   authorizationPolicy: undefined,
   notifications: undefined,
   memory: 'ephemeral',
-  team: undefined,
 };
 
 // ============================================================================

@@ -126,7 +126,6 @@ For huggingface tools, use search_doc tool to understand other tools return's sc
   authorizationPolicy: undefined,
   notifications: undefined,
   memory: 'ephemeral',
-  team: undefined,
 };
 
 export const DATA_ACQUISITION_AGENT_SPEC: AgentSpec = {
@@ -188,7 +187,6 @@ export const DATA_ACQUISITION_AGENT_SPEC: AgentSpec = {
   authorizationPolicy: undefined,
   notifications: undefined,
   memory: 'ephemeral',
-  team: undefined,
 };
 
 export const FINANCIAL_VIZ_AGENT_SPEC: AgentSpec = {
@@ -246,7 +244,6 @@ export const FINANCIAL_VIZ_AGENT_SPEC: AgentSpec = {
   authorizationPolicy: undefined,
   notifications: undefined,
   memory: 'ephemeral',
-  team: undefined,
 };
 
 export const GITHUB_AGENT_SPEC: AgentSpec = {
@@ -304,7 +301,6 @@ export const GITHUB_AGENT_SPEC: AgentSpec = {
   authorizationPolicy: undefined,
   notifications: undefined,
   memory: 'ephemeral',
-  team: undefined,
 };
 
 export const INFORMATION_ROUTING_AGENT_SPEC: AgentSpec = {
@@ -362,7 +358,6 @@ export const INFORMATION_ROUTING_AGENT_SPEC: AgentSpec = {
   authorizationPolicy: undefined,
   notifications: undefined,
   memory: 'ephemeral',
-  team: undefined,
 };
 
 // ============================================================================

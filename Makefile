@@ -116,19 +116,25 @@ agents: # agents
 list-specs: # list specs
 	agent-runtimes list-specs
 
-specs: ## generate Python and TypeScript code from YAML specifications (agents, MCP servers, skills, envvars)
+specs: ## generate Python and TypeScript code from YAML specifications (agents, teams, MCP servers, skills, envvars)
 	@echo "Cloning agentspecs repository..."
 	@if [ ! -d "agentspecs" ]; then \
 		git clone https://github.com/datalayer/agentspecs.git agentspecs; \
 	else \
 		cd agentspecs && git fetch origin; \
 	fi
-	@cd agentspecs && git checkout 38495e67f9066970bf6a933a9e812f62745487a5
+	@cd agentspecs && git checkout 20bdc18
 	@echo "Generating agent specifications..."
 	python scripts/codegen/generate_agents.py \
 	  --specs-dir agentspecs/agentspecs/agents \
 	  --python-output agent_runtimes/specs/agents.py \
 	  --typescript-output src/specs/agents.ts \
+	  --subfolder-structure
+	@echo "Generating team specifications..."
+	python scripts/codegen/generate_teams.py \
+	  --specs-dir agentspecs/agentspecs/teams \
+	  --python-output agent_runtimes/specs/teams.py \
+	  --typescript-output src/specs/teams.ts \
 	  --subfolder-structure
 	@echo "Generating MCP server specifications..."
 	python scripts/codegen/generate_mcp_servers.py \
@@ -157,8 +163,8 @@ specs: ## generate Python and TypeScript code from YAML specifications (agents, 
 	  --typescript-output src/specs/memory.ts
 	@echo "✓ All specifications generated successfully"
 	@echo "Formatting generated files with ruff..."
-	ruff check --select I --fix agent_runtimes/specs/agents/ agent_runtimes/specs/skills.py agent_runtimes/specs/envvars.py agent_runtimes/specs/models.py agent_runtimes/specs/memory.py agent_runtimes/specs/__init__.py agent_runtimes/mcp/catalog_mcp_servers.py agent_runtimes/mcp/__init__.py
-	ruff format agent_runtimes/specs/agents/ agent_runtimes/specs/skills.py agent_runtimes/specs/envvars.py agent_runtimes/specs/models.py agent_runtimes/specs/memory.py agent_runtimes/specs/__init__.py agent_runtimes/mcp/catalog_mcp_servers.py agent_runtimes/mcp/__init__.py
+	ruff check --select I --fix agent_runtimes/specs/agents/ agent_runtimes/specs/teams/ agent_runtimes/specs/skills.py agent_runtimes/specs/envvars.py agent_runtimes/specs/models.py agent_runtimes/specs/memory.py agent_runtimes/specs/__init__.py agent_runtimes/mcp/catalog_mcp_servers.py agent_runtimes/mcp/__init__.py
+	ruff format agent_runtimes/specs/agents/ agent_runtimes/specs/teams/ agent_runtimes/specs/skills.py agent_runtimes/specs/envvars.py agent_runtimes/specs/models.py agent_runtimes/specs/memory.py agent_runtimes/specs/__init__.py agent_runtimes/mcp/catalog_mcp_servers.py agent_runtimes/mcp/__init__.py
 	@echo "Formatting generated files with prettier..."
 	npm run format
 	agent-runtimes mcp-servers-catalog

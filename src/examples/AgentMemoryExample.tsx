@@ -227,7 +227,7 @@ const AgentMemoryInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
           leadingVisual={SignOutIcon}
           sx={{ color: 'fg.muted' }}
         >
-          Logout
+          Sign out
         </Button>
       </Box>
       <Box sx={{ display: 'flex', flex: 1, minHeight: 0 }}>

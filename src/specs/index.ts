@@ -6,6 +6,7 @@
 export * from './envvars';
 export * from './mcpServers';
 export * from './agents';
+export * from './teams';
 export * from './skills';
 export * from './models';
 export * from './memory';

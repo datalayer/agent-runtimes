@@ -210,8 +210,92 @@ export interface AgentSpec {
   notifications?: Record<string, any>;
   /** Memory backend identifier (e.g., 'ephemeral', 'mem0', 'memu', 'simplemem') */
   memory?: string;
-  /** Team configuration for multi-agent flows */
-  team?: Record<string, any>;
+}
+
+// ============================================================================
+// Team Types
+// ============================================================================
+
+/**
+ * Specification for an agent within a team.
+ */
+export interface TeamAgentSpec {
+  /** Agent identifier within the team */
+  id: string;
+  /** Display name for the team agent */
+  name: string;
+  /** Role within the team (e.g., 'Primary · Initiator', 'Secondary', 'Final') */
+  role?: string;
+  /** Goal or objective for this agent */
+  goal?: string;
+  /** AI model identifier */
+  model?: string;
+  /** MCP server used by this agent */
+  mcpServer?: string;
+  /** Tools available to this agent */
+  tools?: string[];
+  /** Trigger condition for this agent */
+  trigger?: string;
+  /** Approval policy: 'auto' or 'manual' */
+  approval?: string;
+}
+
+/**
+ * Supervisor agent configuration for a team.
+ */
+export interface TeamSupervisorSpec {
+  /** Supervisor agent name */
+  name: string;
+  /** AI model used by the supervisor */
+  model?: string;
+}
+
+/**
+ * Validation settings for a team.
+ */
+export interface TeamValidationSpec {
+  /** Maximum execution time (e.g., '300s') */
+  timeout?: string;
+  /** Whether to retry on failure */
+  retryOnFailure?: boolean;
+  /** Maximum number of retries */
+  maxRetries?: number;
+}
+
+/**
+ * Specification for a multi-agent team.
+ */
+export interface TeamSpec {
+  /** Unique team identifier */
+  id: string;
+  /** Display name for the team */
+  name: string;
+  /** Team description */
+  description: string;
+  /** Classification tags */
+  tags: string[];
+  /** Whether the team is enabled */
+  enabled: boolean;
+  /** Icon identifier */
+  icon?: string;
+  /** Emoji representation */
+  emoji?: string;
+  /** Theme color (hex) */
+  color?: string;
+  /** ID of the associated agent spec */
+  agentSpecId: string;
+  /** Orchestration protocol (e.g., 'datalayer') */
+  orchestrationProtocol: string;
+  /** Execution mode: 'sequential' or 'parallel' */
+  executionMode: string;
+  /** Supervisor agent configuration */
+  supervisor?: TeamSupervisorSpec;
+  /** Instructions for routing tasks between agents */
+  routingInstructions?: string;
+  /** Validation settings for the team */
+  validation?: TeamValidationSpec;
+  /** List of agents in the team */
+  agents: TeamAgentSpec[];
 }
 
 // ============================================================================

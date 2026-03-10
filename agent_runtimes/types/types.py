@@ -398,7 +398,83 @@ class AgentSpec(BaseModel):
         default=None,
         description="Memory backend identifier (e.g., 'ephemeral', 'mem0', 'memu', 'simplemem')",
     )
-    team: Optional[Dict[str, Any]] = Field(
-        default=None,
-        description="Team configuration for multi-agent flows",
+
+
+class TeamAgentSpec(BaseModel):
+    """Specification for an agent within a team."""
+
+    id: str = Field(..., description="Agent identifier within the team")
+    name: str = Field(..., description="Display name for the team agent")
+    role: str = Field(default="", description="Role within the team (e.g., 'Primary · Initiator', 'Secondary', 'Final')")
+    goal: str = Field(default="", description="Goal or objective for this agent")
+    model: str = Field(default="", description="AI model identifier")
+    mcp_server: str = Field(default="", description="MCP server used by this agent", alias="mcpServer")
+    tools: list[str] = Field(default_factory=list, description="Tools available to this agent")
+    trigger: str = Field(default="", description="Trigger condition for this agent")
+    approval: str = Field(default="auto", description="Approval policy: 'auto' or 'manual'")
+
+    model_config = {"populate_by_name": True}
+
+
+class TeamSupervisorSpec(BaseModel):
+    """Specification for a team supervisor agent."""
+
+    name: str = Field(..., description="Supervisor agent name")
+    model: str = Field(default="", description="AI model used by the supervisor")
+
+
+class TeamValidationSpec(BaseModel):
+    """Validation settings for a team."""
+
+    timeout: Optional[str] = Field(default=None, description="Maximum execution time (e.g., '300s')")
+    retry_on_failure: bool = Field(default=False, description="Whether to retry on failure", alias="retryOnFailure")
+    max_retries: int = Field(default=0, description="Maximum number of retries", alias="maxRetries")
+
+    model_config = {"populate_by_name": True}
+
+
+class TeamSpec(BaseModel):
+    """Specification for a multi-agent team."""
+
+    id: str = Field(..., description="Unique team identifier")
+    name: str = Field(..., description="Display name for the team")
+    description: str = Field(default="", description="Team description")
+    tags: list[str] = Field(default_factory=list, description="Classification tags")
+    enabled: bool = Field(default=False, description="Whether the team is enabled")
+    icon: str = Field(default="people", description="Icon identifier")
+    emoji: str = Field(default="👥", description="Emoji representation")
+    color: str = Field(default="#8250df", description="Theme color (hex)")
+    agent_spec_id: str = Field(
+        ...,
+        description="ID of the associated agent spec",
+        alias="agentSpecId",
     )
+    orchestration_protocol: str = Field(
+        default="datalayer",
+        description="Orchestration protocol (e.g., 'datalayer')",
+        alias="orchestrationProtocol",
+    )
+    execution_mode: str = Field(
+        default="sequential",
+        description="Execution mode: 'sequential' or 'parallel'",
+        alias="executionMode",
+    )
+    supervisor: Optional[TeamSupervisorSpec] = Field(
+        default=None,
+        description="Supervisor agent configuration",
+    )
+    routing_instructions: str = Field(
+        default="",
+        description="Instructions for routing tasks between agents",
+        alias="routingInstructions",
+    )
+    validation: Optional[TeamValidationSpec] = Field(
+        default=None,
+        description="Validation settings for the team",
+    )
+    agents: list[TeamAgentSpec] = Field(
+        default_factory=list,
+        description="List of agents in the team",
+    )
+
+    model_config = {"populate_by_name": True}

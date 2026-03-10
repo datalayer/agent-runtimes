@@ -297,7 +297,7 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
           leadingVisual={SignOutIcon}
           sx={{ color: 'fg.muted' }}
         >
-          Logout
+          Sign out
         </Button>
       </Box>
 

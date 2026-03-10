@@ -226,7 +226,7 @@ const AgentEvalInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
           leadingVisual={SignOutIcon}
           sx={{ color: 'fg.muted' }}
         >
-          Logout
+          Sign out
         </Button>
       </Box>
 

@@ -115,7 +115,6 @@ export const DATA_ACQUISITION_AGENT_SPEC: AgentSpec = {
   authorizationPolicy: undefined,
   notifications: undefined,
   memory: 'ephemeral',
-  team: undefined,
 };
 
 export const SIMPLE_AGENT_SPEC: AgentSpec = {
@@ -155,7 +154,6 @@ export const SIMPLE_AGENT_SPEC: AgentSpec = {
   authorizationPolicy: undefined,
   notifications: undefined,
   memory: 'ephemeral',
-  team: undefined,
 };
 
 // ============================================================================

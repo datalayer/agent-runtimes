@@ -355,7 +355,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
           leadingVisual={SignOutIcon}
           sx={{ color: 'fg.muted' }}
         >
-          Logout
+          Sign out
         </Button>
       </Box>
       <Box sx={{ flex: 1, minHeight: 0, display: 'flex' }}>

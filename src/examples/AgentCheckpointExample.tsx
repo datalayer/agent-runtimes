@@ -120,7 +120,8 @@ const SIDEBAR_WIDTH = 300;
 // ─── Spec attribute row helper ─────────────────────────────────────────────
 
 const SpecRow: React.FC<{
-  icon?: React.ComponentType<{ size?: number }>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  icon?: React.ComponentType<any>;
   label: string;
   value: string;
 }> = ({ icon: Icon, label, value }) => (
@@ -155,7 +156,7 @@ const AgentCheckpointInner: React.FC<{ onLogout: () => void }> = ({
     runtime,
     runtimeStatus,
     agent,
-    agentEndpoint,
+    agentEndpoint: _agentEndpoint,
     isReady,
     error: hookError,
     launchRuntime,
@@ -316,7 +317,7 @@ const AgentCheckpointInner: React.FC<{ onLogout: () => void }> = ({
           leadingVisual={SignOutIcon}
           sx={{ color: 'fg.muted', mt: 2 }}
         >
-          Logout
+          Sign out
         </Button>
       </Box>
     );
@@ -469,7 +470,7 @@ const AgentCheckpointInner: React.FC<{ onLogout: () => void }> = ({
           leadingVisual={SignOutIcon}
           sx={{ color: 'fg.muted' }}
         >
-          Logout
+          Sign out
         </Button>
       </Box>
 

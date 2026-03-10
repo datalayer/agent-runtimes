@@ -84,7 +84,6 @@ DATA_ACQUISITION_AGENT_SPEC = AgentSpec(
     authorization_policy=None,
     notifications=None,
     memory="ephemeral",
-    team=None,
 )
 
 SIMPLE_AGENT_SPEC = AgentSpec(
@@ -127,7 +126,6 @@ SIMPLE_AGENT_SPEC = AgentSpec(
     authorization_policy=None,
     notifications=None,
     memory="ephemeral",
-    team=None,
 )
 
 
