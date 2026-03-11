@@ -39,6 +39,7 @@ import {
   GlobeIcon,
   ZapIcon,
   GraphIcon,
+  AiModelIcon,
   PeopleIcon,
   SidebarCollapseIcon,
   SidebarExpandIcon,
@@ -517,7 +518,11 @@ const AgentCheckpointInner: React.FC<{ onLogout: () => void }> = ({
                 {AGENT_SPEC.description}
               </Text>
 
-              <SpecRow icon={CpuIcon} label="Model" value={AGENT_SPEC.model} />
+              <SpecRow
+                icon={AiModelIcon}
+                label="Model"
+                value={AGENT_SPEC.model}
+              />
               <SpecRow
                 icon={GlobeIcon}
                 label="Protocol"
@@ -702,7 +707,7 @@ const AgentCheckpointInner: React.FC<{ onLogout: () => void }> = ({
               ) : (
                 checkpoints.map((ckpt: CheckpointRecord) => (
                   <Box
-                    key={ckpt.uid}
+                    key={ckpt.id}
                     sx={{
                       p: 2,
                       mb: 1,
@@ -846,8 +851,8 @@ const AgentCheckpointExample: React.FC = () => {
         <SignInSimple
           onSignIn={handleSignIn}
           onApiKeySignIn={apiKey => handleSignIn(apiKey, 'api-key-user')}
-          title="Durable Agents"
-          description="Sign in to launch and manage durable agents."
+          title="Agent Checkpointing"
+          description="Sign in to launch and checkpoint durable agents."
           leadingIcon={<WorkflowIcon size={24} />}
         />
       </ThemedProvider>

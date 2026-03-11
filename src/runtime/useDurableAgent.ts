@@ -95,7 +95,7 @@ export interface UseDurableAgentReturn {
  * A persisted checkpoint record returned from the runtimes API.
  */
 export interface CheckpointRecord {
-  uid: string;
+  id: string;
   name: string;
   description: string;
   pod_name: string;
@@ -235,7 +235,26 @@ export function useDurableAgent(
       const { token, runtimesRunUrl } = await getAuthHeaders();
       const { pauseRuntime } =
         await import('@datalayer/core/lib/api/runtimes/runtimes');
-      await pauseRuntime(token, runtime.podName, runtimesRunUrl);
+      const resp = await pauseRuntime(token, runtime.podName, runtimesRunUrl);
+
+      // Poll until the checkpoint transitions to "paused" or "failed".
+      if (resp.checkpoint_id) {
+        const { waitForCheckpointStatus } =
+          await import('@datalayer/core/lib/api/runtimes/checkpoints');
+        const ckpt = await waitForCheckpointStatus(
+          token,
+          resp.checkpoint_id,
+          ['paused', 'failed'],
+          runtimesRunUrl,
+        );
+
+        if (ckpt.status === 'failed') {
+          throw new Error(
+            `Checkpoint ${resp.checkpoint_id} failed during CRIU pause`,
+          );
+        }
+      }
+
       setDurableStatus('paused');
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err));
@@ -255,7 +274,30 @@ export function useDurableAgent(
         // Runtime still exists — just resume it
         const { resumeRuntime } =
           await import('@datalayer/core/lib/api/runtimes/runtimes');
-        await resumeRuntime(token, runtime.podName, runtimesRunUrl);
+        const resp = await resumeRuntime(
+          token,
+          runtime.podName,
+          runtimesRunUrl,
+        );
+
+        // Poll until the checkpoint transitions to "resumed" or "failed".
+        if (resp.checkpoint_id) {
+          const { waitForCheckpointStatus } =
+            await import('@datalayer/core/lib/api/runtimes/checkpoints');
+          const ckpt = await waitForCheckpointStatus(
+            token,
+            resp.checkpoint_id,
+            ['resumed', 'failed'],
+            runtimesRunUrl,
+          );
+
+          if (ckpt.status === 'failed') {
+            throw new Error(
+              `Checkpoint ${resp.checkpoint_id} failed during CRIU resume`,
+            );
+          }
+        }
+
         setDurableStatus('ready');
       } else {
         // Runtime was destroyed — re-launch
@@ -268,7 +310,7 @@ export function useDurableAgent(
     }
   }, [runtime, getAuthHeaders, launchRuntime]);
 
-  // --- Checkpoint (Pause → Record → Resume) ---
+  // --- Checkpoint (Pause → Wait → Resume) ---
   const checkpoint = useCallback(
     async (name?: string) => {
       if (!runtime) {
@@ -277,39 +319,52 @@ export function useDurableAgent(
       }
 
       let paused = false;
-      let recordError: Error | null = null;
 
       try {
         const { token, runtimesRunUrl } = await getAuthHeaders();
 
-        // 1. Pause (CRIU checkpoint)
+        // 1. Pause (CRIU checkpoint) — the backend creates the checkpoint
+        //    record in Solr with status "pausing" and returns 202 immediately
+        //    with the checkpoint_id.  We pass agentspec metadata in the body
+        //    so it is stored in the checkpoint record.
         const { pauseRuntime } =
           await import('@datalayer/core/lib/api/runtimes/runtimes');
-        await pauseRuntime(token, runtime.podName, runtimesRunUrl);
-        paused = true;
+        const pauseResp = await pauseRuntime(
+          token,
+          runtime.podName,
+          runtimesRunUrl,
+          {
+            name: name || `checkpoint-${Date.now()}`,
+            description: `CRIU checkpoint for ${agentSpecId}`,
+            agentspec_id: agentSpecId,
+            agentspec: agentSpec || {},
+          },
+        );
+        const checkpointId = pauseResp.checkpoint_id;
 
-        // 2. Persist checkpoint record with agentspec (non-fatal)
-        try {
-          const { createCheckpoint } =
-            await import('@datalayer/core/lib/api/runtimes/checkpoints');
-          const ckptName = name || `checkpoint-${Date.now()}`;
-          await createCheckpoint(
-            token,
-            {
-              pod_name: runtime.podName,
-              name: ckptName,
-              description: `CRIU checkpoint for ${agentSpecId}`,
-              agentspec_id: agentSpecId,
-              agentspec: agentSpec || {},
-            },
-            runtimesRunUrl,
-          );
-        } catch (err) {
-          recordError = err instanceof Error ? err : new Error(String(err));
-          console.warn('Failed to persist checkpoint record:', recordError);
+        if (!checkpointId) {
+          throw new Error('Pause did not return a checkpoint_id');
         }
 
-        // 3. Resume — always attempted after a successful pause
+        // 2. Poll until the checkpoint reaches "paused" (or "failed").
+        const { waitForCheckpointStatus } =
+          await import('@datalayer/core/lib/api/runtimes/checkpoints');
+        const ckpt = await waitForCheckpointStatus(
+          token,
+          checkpointId,
+          ['paused', 'failed'],
+          runtimesRunUrl,
+        );
+
+        if (ckpt.status === 'failed') {
+          throw new Error(
+            `Checkpoint ${checkpointId} failed during CRIU pause`,
+          );
+        }
+
+        paused = true;
+
+        // 3. Resume — safe to call now that checkpoint is "paused".
         const { resumeRuntime } =
           await import('@datalayer/core/lib/api/runtimes/runtimes');
         await resumeRuntime(token, runtime.podName, runtimesRunUrl);
@@ -317,15 +372,6 @@ export function useDurableAgent(
 
         // 4. Refresh checkpoints list
         await refreshCheckpoints();
-
-        // Surface the record error (non-blocking) so the user knows
-        if (recordError) {
-          setDurableError(
-            new Error(
-              `Checkpoint taken but record not saved: ${recordError.message}`,
-            ),
-          );
-        }
       } catch (err) {
         const error = err instanceof Error ? err : new Error(String(err));
         // If we paused but failed to resume, tell the user

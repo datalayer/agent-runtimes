@@ -538,7 +538,7 @@ const AgentCodemodeExample: React.FC = () => {
         <SignInSimple
           onSignIn={handleSignIn}
           onApiKeySignIn={apiKey => handleSignIn(apiKey, 'api-key-user')}
-          title="Code Mode"
+          title="Agent Code Mode"
           description="Sign in to use Code Mode with structured tool outputs."
           leadingIcon={<CodeIcon size={24} />}
         />
