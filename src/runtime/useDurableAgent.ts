@@ -99,7 +99,7 @@ export interface CheckpointRecord {
   name: string;
   description: string;
   runtime_uid: string;
-  agentspec_id: string;
+  agent_spec_id: string;
   agentspec: Record<string, any>;
   metadata: Record<string, any>;
   status: string;
@@ -236,7 +236,10 @@ export function useDurableAgent(
       const { token, runtimesRunUrl } = await getAuthHeaders();
       const { pauseRuntime } =
         await import('@datalayer/core/lib/api/runtimes/runtimes');
-      const resp = await pauseRuntime(token, runtime.podName, runtimesRunUrl);
+      const resp = await pauseRuntime(token, runtime.podName, runtimesRunUrl, {
+        agent_spec_id: agentSpecId,
+        ...(agentSpec ? { agentspec: agentSpec } : {}),
+      });
 
       // Poll until the checkpoint transitions to "paused" or "failed".
       if (resp.checkpoint_id) {
@@ -262,7 +265,7 @@ export function useDurableAgent(
       const error = err instanceof Error ? err : new Error(String(err));
       setDurableError(error);
     }
-  }, [runtime, getAuthHeaders]);
+  }, [runtime, getAuthHeaders, agentSpecId, agentSpec]);
 
   // --- Resume (CRIU Restore) ---
   const resume = useCallback(async () => {
@@ -357,7 +360,7 @@ export function useDurableAgent(
           {
             name: name || `checkpoint-${Date.now()}`,
             description: `CRIU checkpoint for ${agentSpecId}`,
-            agentspec_id: agentSpecId,
+            agent_spec_id: agentSpecId,
             agentspec: agentSpec || {},
           },
         );

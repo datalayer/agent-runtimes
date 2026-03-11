@@ -783,9 +783,9 @@ const AgentCheckpointInner: React.FC<{ onLogout: () => void }> = ({
                         </button>
                       </Tooltip>
                     )}
-                    {ckpt.agentspec_id && (
+                    {ckpt.agent_spec_id && (
                       <Label sx={{ mt: 1, fontSize: '10px' }} variant="accent">
-                        {ckpt.agentspec_id}
+                        {ckpt.agent_spec_id}
                       </Label>
                     )}
                   </Box>
