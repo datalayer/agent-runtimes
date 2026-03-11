@@ -222,7 +222,7 @@ async def list_agents() -> dict[str, Any]:
     Returns:
         List of agent information.
     """
-    return {"agents": [info.model_dump() for _, info in _agents.values()]}
+    return {"agents": [info.model_dump() for _, info in list(_agents.values())]}
 
 
 @router.get("/agents/{agent_id:path}")
@@ -972,7 +972,7 @@ def get_registered_agents() -> list[AgentInfo]:
     """
     Get all registered agents.
     """
-    return [info for _, info in _agents.values()]
+    return [info for _, info in list(_agents.values())]
 
 
 def get_active_sessions() -> list[SessionInfo]:

@@ -1109,7 +1109,7 @@ async def list_agents() -> AgentListResponse:
         List of agent information including toolset details.
     """
     agents = []
-    for agent_id, (agent, info) in _agents.items():
+    for agent_id, (agent, info) in list(_agents.items()):
         # Get detailed agent information
         agent_details = _get_agent_details(agent, agent_id, info)
         agents.append(agent_details)
@@ -1878,7 +1878,7 @@ async def start_all_agents_mcp_servers(
         any_codemode_rebuilt = False
         agents_processed: list[str] = []
 
-        for agent_id in _agents:
+        for agent_id in list(_agents.keys()):
             (
                 started,
                 already_running,
@@ -2160,7 +2160,7 @@ async def stop_all_agents_mcp_servers() -> AgentMcpServersResponse:
         all_failed: list[dict[str, str]] = []
         agents_processed: list[str] = []
 
-        for agent_id in _agents:
+        for agent_id in list(_agents.keys()):
             stopped, already_stopped, failed = await _stop_mcp_servers_for_agent(
                 agent_id
             )
