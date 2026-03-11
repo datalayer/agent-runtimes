@@ -161,6 +161,31 @@ specs: ## generate Python and TypeScript code from YAML specifications (agents, 
 	  --specs-dir agentspecs/agentspecs/memory \
 	  --python-output agent_runtimes/specs/memory.py \
 	  --typescript-output src/specs/memory.ts
+	@echo "Generating guardrail specifications..."
+	python scripts/codegen/generate_guardrails.py \
+	  --specs-dir agentspecs/agentspecs/guardrails \
+	  --python-output agent_runtimes/specs/guardrails.py \
+	  --typescript-output src/specs/guardrails.ts
+	@echo "Generating eval specifications..."
+	python scripts/codegen/generate_evals.py \
+	  --specs-dir agentspecs/agentspecs/evals \
+	  --python-output agent_runtimes/specs/evals.py \
+	  --typescript-output src/specs/evals.ts
+	@echo "Generating trigger specifications..."
+	python scripts/codegen/generate_triggers.py \
+	  --specs-dir agentspecs/agentspecs/triggers \
+	  --python-output agent_runtimes/specs/triggers.py \
+	  --typescript-output src/specs/triggers.ts
+	@echo "Generating output specifications..."
+	python scripts/codegen/generate_outputs.py \
+	  --specs-dir agentspecs/agentspecs/outputs \
+	  --python-output agent_runtimes/specs/outputs.py \
+	  --typescript-output src/specs/outputs.ts
+	@echo "Generating notification specifications..."
+	python scripts/codegen/generate_notifications.py \
+	  --specs-dir agentspecs/agentspecs/notifications \
+	  --python-output agent_runtimes/specs/notifications.py \
+	  --typescript-output src/specs/notifications.ts
 	@echo "✓ All specifications generated successfully"
 	@echo "Formatting generated files with ruff..."
 	ruff check --select I --fix agent_runtimes/specs/agents/ agent_runtimes/specs/teams/ agent_runtimes/specs/skills.py agent_runtimes/specs/envvars.py agent_runtimes/specs/models.py agent_runtimes/specs/memory.py agent_runtimes/specs/__init__.py agent_runtimes/mcp/catalog_mcp_servers.py agent_runtimes/mcp/__init__.py

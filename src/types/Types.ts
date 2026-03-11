@@ -134,6 +134,256 @@ export interface AgentSkillSpec {
 }
 
 // ============================================================================
+// Guardrail Types
+// ============================================================================
+
+/**
+ * Permission flags for a guardrail identity.
+ */
+export interface GuardrailPermissions {
+  'read:data': boolean;
+  'write:data': boolean;
+  'execute:code': boolean;
+  'access:internet': boolean;
+  'send:email': boolean;
+  'deploy:production': boolean;
+}
+
+/**
+ * Token usage limits for a guardrail.
+ */
+export interface GuardrailTokenLimits {
+  per_run: string;
+  per_day: string;
+  per_month: string;
+}
+
+/**
+ * Data scope restrictions — which systems/objects are accessible.
+ */
+export interface GuardrailDataScope {
+  allowed_systems: string[];
+  allowed_objects: string[];
+  denied_objects: string[];
+  denied_fields: string[];
+}
+
+/**
+ * Data handling policies — aggregation, row-level, PII, redaction.
+ */
+export interface GuardrailDataHandling {
+  default_aggregation: boolean;
+  allow_row_level_output: boolean;
+  max_rows_in_output: number;
+  redact_fields: string[];
+  hash_fields: string[];
+  pii_detection: boolean;
+  pii_action: string;
+}
+
+/**
+ * Approval policy for sensitive operations.
+ */
+export interface GuardrailApprovalPolicy {
+  require_manual_approval_for: string[];
+  auto_approved: string[];
+}
+
+/**
+ * Tool invocation limits.
+ */
+export interface GuardrailToolLimits {
+  max_tool_calls: number;
+  max_query_rows: number;
+  max_query_runtime: string;
+  max_time_window_days: number;
+}
+
+/**
+ * Audit trail configuration.
+ */
+export interface GuardrailAudit {
+  log_tool_calls: boolean;
+  log_query_metadata_only: boolean;
+  retain_days: number;
+  require_lineage_in_report: boolean;
+}
+
+/**
+ * Content safety settings.
+ */
+export interface GuardrailContentSafety {
+  treat_crm_text_fields_as_untrusted: boolean;
+  do_not_follow_instructions_from_data: boolean;
+}
+
+/**
+ * Full guardrail specification.
+ */
+export interface GuardrailSpec {
+  /** Unique guardrail identifier */
+  id: string;
+  /** Display name */
+  name: string;
+  /** Description of the guardrail */
+  description: string;
+  /** Identity provider (e.g., 'datalayer', 'github', 'azure-ad', 'google') */
+  identity_provider: string;
+  /** Identity name within the provider */
+  identity_name: string;
+  /** Permission flags */
+  permissions: GuardrailPermissions;
+  /** Token usage limits */
+  token_limits: GuardrailTokenLimits;
+  /** Data scope restrictions */
+  data_scope?: GuardrailDataScope;
+  /** Data handling policies */
+  data_handling?: GuardrailDataHandling;
+  /** Approval policy */
+  approval_policy?: GuardrailApprovalPolicy;
+  /** Tool invocation limits */
+  tool_limits?: GuardrailToolLimits;
+  /** Audit trail configuration */
+  audit?: GuardrailAudit;
+  /** Content safety settings */
+  content_safety?: GuardrailContentSafety;
+}
+
+// ============================================================================
+// Eval Types
+// ============================================================================
+
+/**
+ * Evaluation benchmark specification.
+ */
+export interface EvalSpec {
+  /** Unique eval identifier */
+  id: string;
+  /** Display name */
+  name: string;
+  /** Description of the evaluation */
+  description: string;
+  /** Category: Coding, Knowledge, Reasoning, Agentic, or Safety */
+  category: 'Coding' | 'Knowledge' | 'Reasoning' | 'Agentic' | 'Safety';
+  /** Number of tasks in the benchmark */
+  task_count: number;
+  /** Primary metric (e.g., 'pass@1', 'accuracy', 'success_rate') */
+  metric: string;
+  /** Source URL or repository */
+  source: string;
+  /** Difficulty level */
+  difficulty: 'easy' | 'medium' | 'hard' | 'expert';
+  /** Relevant languages */
+  languages: string[];
+}
+
+// ============================================================================
+// Trigger Types
+// ============================================================================
+
+/**
+ * Dynamic field definition for a trigger type.
+ */
+export interface TriggerField {
+  /** Field key */
+  name: string;
+  /** Human-readable label */
+  label: string;
+  /** Field type */
+  type: 'string' | 'boolean' | 'number';
+  /** Whether the field is required */
+  required: boolean;
+  /** Placeholder text */
+  placeholder?: string;
+  /** Help text */
+  help?: string;
+  /** Font family hint (e.g., 'mono') */
+  font?: string;
+}
+
+/**
+ * Trigger type specification.
+ */
+export interface TriggerSpec {
+  /** Unique trigger identifier */
+  id: string;
+  /** Display name */
+  name: string;
+  /** Description of the trigger */
+  description: string;
+  /** Trigger type discriminator */
+  type: 'once' | 'schedule' | 'event';
+  /** Dynamic fields for this trigger type */
+  fields?: TriggerField[];
+}
+
+// ============================================================================
+// Output Types
+// ============================================================================
+
+/**
+ * Output format specification.
+ */
+export interface OutputSpec {
+  /** Unique output identifier */
+  id: string;
+  /** Display name */
+  name: string;
+  /** Description of the output format */
+  description: string;
+  /** Icon identifier */
+  icon: string;
+  /** Whether this format supports templates */
+  supports_template: boolean;
+  /** Whether this format supports storage paths */
+  supports_storage: boolean;
+  /** MIME types produced */
+  mime_types: string[];
+}
+
+// ============================================================================
+// Notification Channel Types
+// ============================================================================
+
+/**
+ * Dynamic field definition for a notification channel.
+ */
+export interface NotificationField {
+  /** Field key */
+  name: string;
+  /** Human-readable label */
+  label: string;
+  /** Field type */
+  type: 'string' | 'boolean' | 'number';
+  /** Whether the field is required */
+  required: boolean;
+  /** Placeholder text */
+  placeholder?: string;
+  /** Default value */
+  default?: string | boolean | number;
+}
+
+/**
+ * Notification channel specification.
+ */
+export interface NotificationChannelSpec {
+  /** Unique channel identifier */
+  id: string;
+  /** Display name */
+  name: string;
+  /** Description of the channel */
+  description: string;
+  /** Icon identifier */
+  icon: string;
+  /** Whether this channel is currently available */
+  available: boolean;
+  /** Whether this channel is marked as coming soon */
+  coming_soon?: boolean;
+  /** Dynamic configuration fields for this channel */
+  fields: NotificationField[];
+}
+
+// ============================================================================
 // Agent Types
 // ============================================================================
 
@@ -286,14 +536,14 @@ export interface TeamReactionRule {
  * Health monitoring configuration for a team.
  */
 export interface TeamHealthMonitoring {
-  /** Seconds between expected heartbeats */
-  heartbeatInterval: number;
-  /** Member marked stale after this many seconds */
-  staleThreshold: number;
-  /** Member marked unresponsive after this many seconds */
-  unresponsiveThreshold: number;
-  /** Member marked stuck after this many seconds */
-  stuckThreshold: number;
+  /** Duration between expected heartbeats (e.g. '30s', '1m') */
+  heartbeatInterval: string;
+  /** Member marked stale after this duration (e.g. '120s') */
+  staleThreshold: string;
+  /** Member marked unresponsive after this duration (e.g. '300s') */
+  unresponsiveThreshold: string;
+  /** Member marked stuck after this duration (e.g. '600s') */
+  stuckThreshold: string;
   /** Maximum restart attempts before giving up */
   maxRestartAttempts: number;
 }
