@@ -433,6 +433,40 @@ class TeamValidationSpec(BaseModel):
     model_config = {"populate_by_name": True}
 
 
+class TeamReactionRule(BaseModel):
+    """A reaction rule for automated team responses."""
+
+    id: str = Field(..., description="Unique reaction rule identifier")
+    trigger: str = Field(..., description="Event or condition that triggers this rule")
+    action: str = Field(..., description="Action to take when triggered")
+    auto: bool = Field(default=True, description="Whether the rule executes automatically")
+    max_retries: int = Field(default=1, description="Maximum retry attempts", alias="maxRetries")
+    escalate_after_retries: int = Field(default=1, description="Escalate after this many retries", alias="escalateAfterRetries")
+    priority: str = Field(default="medium", description="Priority level: 'low', 'medium', 'high', 'critical'")
+
+    model_config = {"populate_by_name": True}
+
+
+class TeamHealthMonitoring(BaseModel):
+    """Health monitoring configuration for a team."""
+
+    heartbeat_interval: str = Field(default="30s", description="Interval between heartbeat checks", alias="heartbeatInterval")
+    stale_threshold: str = Field(default="120s", description="Time before an agent is considered stale", alias="staleThreshold")
+    unresponsive_threshold: str = Field(default="300s", description="Time before an agent is considered unresponsive", alias="unresponsiveThreshold")
+    stuck_threshold: str = Field(default="600s", description="Time before an agent is considered stuck", alias="stuckThreshold")
+    max_restart_attempts: int = Field(default=3, description="Maximum restart attempts for unhealthy agents", alias="maxRestartAttempts")
+
+    model_config = {"populate_by_name": True}
+
+
+class TeamOutputSpec(BaseModel):
+    """Output configuration for a team."""
+
+    formats: list[str] = Field(default_factory=list, description="Output formats (e.g., 'pdf', 'csv', 'json')")
+    template: str = Field(default="", description="Report template name")
+    storage: str = Field(default="", description="Storage location (e.g., S3 path)")
+
+
 class TeamSpec(BaseModel):
     """Specification for a multi-agent team."""
 
@@ -475,6 +509,20 @@ class TeamSpec(BaseModel):
     agents: list[TeamAgentSpec] = Field(
         default_factory=list,
         description="List of agents in the team",
+    )
+    reaction_rules: list[TeamReactionRule] = Field(
+        default_factory=list,
+        description="Automated reaction rules",
+        alias="reactionRules",
+    )
+    health_monitoring: Optional[TeamHealthMonitoring] = Field(
+        default=None,
+        description="Health monitoring configuration",
+        alias="healthMonitoring",
+    )
+    output: Optional[TeamOutputSpec] = Field(
+        default=None,
+        description="Output configuration",
     )
 
     model_config = {"populate_by_name": True}

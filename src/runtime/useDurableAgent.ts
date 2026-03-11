@@ -280,6 +280,7 @@ export function useDurableAgent(
           token,
           runtime.podName,
           runtimesRunUrl,
+          { agent_spec_id: agentSpecId },
         );
 
         // Poll until the checkpoint transitions to "resumed" or "failed".
