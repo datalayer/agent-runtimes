@@ -263,6 +263,54 @@ export interface TeamValidationSpec {
 }
 
 /**
+ * A reaction rule for automatic team event handling.
+ */
+export interface TeamReactionRule {
+  /** Rule identifier */
+  id: string;
+  /** Trigger event (e.g., 'task-failed', 'member-unresponsive') */
+  trigger: string;
+  /** Action to take (e.g., 'send-to-agent', 'restart-member', 'notify') */
+  action: string;
+  /** Whether the action is automatic */
+  auto: boolean;
+  /** Maximum number of retries */
+  maxRetries: number;
+  /** Escalate after this many retries */
+  escalateAfterRetries: number;
+  /** Priority level (e.g., 'warning', 'action', 'urgent') */
+  priority: string;
+}
+
+/**
+ * Health monitoring configuration for a team.
+ */
+export interface TeamHealthMonitoring {
+  /** Seconds between expected heartbeats */
+  heartbeatInterval: number;
+  /** Member marked stale after this many seconds */
+  staleThreshold: number;
+  /** Member marked unresponsive after this many seconds */
+  unresponsiveThreshold: number;
+  /** Member marked stuck after this many seconds */
+  stuckThreshold: number;
+  /** Maximum restart attempts before giving up */
+  maxRestartAttempts: number;
+}
+
+/**
+ * Output configuration for a team.
+ */
+export interface TeamOutputSpec {
+  /** Output formats (e.g., 'JSON', 'PDF', 'CSV') */
+  formats: string[];
+  /** Output template name */
+  template?: string;
+  /** Storage location */
+  storage?: string;
+}
+
+/**
  * Specification for a multi-agent team.
  */
 export interface TeamSpec {
@@ -296,6 +344,14 @@ export interface TeamSpec {
   validation?: TeamValidationSpec;
   /** List of agents in the team */
   agents: TeamAgentSpec[];
+  /** Reaction rules for automatic event handling */
+  reactionRules?: TeamReactionRule[];
+  /** Health monitoring configuration */
+  healthMonitoring?: TeamHealthMonitoring;
+  /** Notification channel configuration */
+  notifications?: Record<string, boolean>;
+  /** Output configuration */
+  output?: TeamOutputSpec;
 }
 
 // ============================================================================

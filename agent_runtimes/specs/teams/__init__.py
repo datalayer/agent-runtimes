@@ -8,7 +8,6 @@ THIS FILE IS AUTO-GENERATED. DO NOT EDIT MANUALLY.
 """
 
 from typing import Dict
-
 from agent_runtimes.types import TeamSpec
 
 from .mocks import TEAM_SPECS as MOCKS_TEAMS
@@ -33,6 +32,5 @@ def list_team_specs(prefix: str | None = None) -> list[TeamSpec]:
     if prefix is not None:
         specs = [s for s in specs if s.id.startswith(prefix)]
     return specs
-
 
 __all__ = ["TEAM_SPECS", "get_team_spec", "list_team_specs"]

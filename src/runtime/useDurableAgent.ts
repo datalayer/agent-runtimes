@@ -75,7 +75,7 @@ export interface UseDurableAgentReturn {
   resume: () => Promise<void>;
   /** Terminate the agent (delete runtime) */
   terminate: () => Promise<void>;
-  /** Take a checkpoint and persist it (pause → record → resume) */
+  /** Take a checkpoint and persist it (pause → record → stay paused) */
   checkpoint: (name?: string) => Promise<void>;
   /** Refresh the checkpoints list from the backend */
   refreshCheckpoints: () => Promise<void>;
@@ -98,11 +98,12 @@ export interface CheckpointRecord {
   id: string;
   name: string;
   description: string;
-  pod_name: string;
+  runtime_uid: string;
   agentspec_id: string;
   agentspec: Record<string, any>;
   metadata: Record<string, any>;
   status: string;
+  status_message?: string;
   updated_at: string;
 }
 
@@ -243,6 +244,7 @@ export function useDurableAgent(
           await import('@datalayer/core/lib/api/runtimes/checkpoints');
         const ckpt = await waitForCheckpointStatus(
           token,
+          runtime.podName,
           resp.checkpoint_id,
           ['paused', 'failed'],
           runtimesRunUrl,
@@ -286,6 +288,7 @@ export function useDurableAgent(
             await import('@datalayer/core/lib/api/runtimes/checkpoints');
           const ckpt = await waitForCheckpointStatus(
             token,
+            runtime.podName,
             resp.checkpoint_id,
             ['resumed', 'failed'],
             runtimesRunUrl,
@@ -310,15 +313,32 @@ export function useDurableAgent(
     }
   }, [runtime, getAuthHeaders, launchRuntime]);
 
-  // --- Checkpoint (Pause → Wait → Resume) ---
+  // --- Refresh Checkpoints List ---
+  const refreshCheckpoints = useCallback(async () => {
+    try {
+      const { token, runtimesRunUrl } = await getAuthHeaders();
+      const { listCheckpoints } =
+        await import('@datalayer/core/lib/api/runtimes/checkpoints');
+      const podName = runtime?.podName;
+      if (!podName) {
+        console.warn('No runtime podName available for refreshCheckpoints');
+        return;
+      }
+      const resp = await listCheckpoints(token, runtimesRunUrl, podName);
+      setCheckpointRecords(resp.checkpoints || []);
+    } catch (err) {
+      // Non-fatal — just log
+      console.warn('Failed to refresh checkpoints:', err);
+    }
+  }, [runtime, getAuthHeaders]);
+
+  // --- Checkpoint (Pause → Wait → Stay Paused) ---
   const checkpoint = useCallback(
     async (name?: string) => {
       if (!runtime) {
         setDurableError(new Error('No runtime to checkpoint'));
         return;
       }
-
-      let paused = false;
 
       try {
         const { token, runtimesRunUrl } = await getAuthHeaders();
@@ -351,6 +371,7 @@ export function useDurableAgent(
           await import('@datalayer/core/lib/api/runtimes/checkpoints');
         const ckpt = await waitForCheckpointStatus(
           token,
+          runtime.podName,
           checkpointId,
           ['paused', 'failed'],
           runtimesRunUrl,
@@ -362,46 +383,18 @@ export function useDurableAgent(
           );
         }
 
-        paused = true;
+        // 3. Stay paused — the user can manually resume when ready.
+        setDurableStatus('paused');
 
-        // 3. Resume — safe to call now that checkpoint is "paused".
-        const { resumeRuntime } =
-          await import('@datalayer/core/lib/api/runtimes/runtimes');
-        await resumeRuntime(token, runtime.podName, runtimesRunUrl);
-        setDurableStatus('ready');
-
-        // 4. Refresh checkpoints list
+        // 4. Refresh checkpoints list so the new checkpoint appears in the sidebar.
         await refreshCheckpoints();
       } catch (err) {
         const error = err instanceof Error ? err : new Error(String(err));
-        // If we paused but failed to resume, tell the user
-        if (paused) {
-          setDurableError(
-            new Error(`Runtime paused but resume failed: ${error.message}`),
-          );
-          setDurableStatus('paused');
-        } else {
-          setDurableError(error);
-        }
+        setDurableError(error);
       }
     },
-    [runtime, agentSpecId, agentSpec, getAuthHeaders],
+    [runtime, agentSpecId, agentSpec, getAuthHeaders, refreshCheckpoints],
   );
-
-  // --- Refresh Checkpoints List ---
-  const refreshCheckpoints = useCallback(async () => {
-    try {
-      const { token, runtimesRunUrl } = await getAuthHeaders();
-      const { listCheckpoints } =
-        await import('@datalayer/core/lib/api/runtimes/checkpoints');
-      const podName = runtime?.podName;
-      const resp = await listCheckpoints(token, runtimesRunUrl, podName);
-      setCheckpointRecords(resp.checkpoints || []);
-    } catch (err) {
-      // Non-fatal — just log
-      console.warn('Failed to refresh checkpoints:', err);
-    }
-  }, [runtime, getAuthHeaders]);
 
   // --- Terminate (Delete Runtime) ---
   const terminate = useCallback(async () => {

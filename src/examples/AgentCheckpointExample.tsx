@@ -23,7 +23,16 @@
 /// <reference types="vite/client" />
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { Text, Button, Spinner, Label, Flash, Heading } from '@primer/react';
+import {
+  Text,
+  Button,
+  IconButton,
+  Spinner,
+  Label,
+  Flash,
+  Heading,
+  Tooltip,
+} from '@primer/react';
 import {
   AlertIcon,
   PlayIcon,
@@ -34,7 +43,6 @@ import {
   SignOutIcon,
   XCircleIcon,
   ClockIcon,
-  CpuIcon,
   TagIcon,
   GlobeIcon,
   ZapIcon,
@@ -43,6 +51,7 @@ import {
   PeopleIcon,
   SidebarCollapseIcon,
   SidebarExpandIcon,
+  SyncIcon,
 } from '@primer/octicons-react';
 import { Box } from '@datalayer/primer-addons';
 import { ThemedProvider } from './stores/themedProvider';
@@ -411,46 +420,38 @@ const AgentCheckpointInner: React.FC<{ onLogout: () => void }> = ({
         <Label variant={STATUS_COLORS[runtimeStatus] as any}>
           {runtimeStatus}
         </Label>
-        {(runtimeStatus === 'ready' || runtimeStatus === 'resuming') && (
+        {(runtimeStatus === 'ready' ||
+          runtimeStatus === 'resuming' ||
+          runtimeStatus === 'paused') && (
           <>
             <Button
               size="small"
               leadingVisual={SquareIcon}
               onClick={handlePause}
-              disabled={actionLoading}
+              disabled={actionLoading || runtimeStatus === 'paused'}
             >
               Pause
             </Button>
-            <Button
-              size="small"
-              leadingVisual={HistoryIcon}
-              onClick={handleCheckpoint}
-              disabled={actionLoading}
-            >
-              Checkpoint
-            </Button>
-            <Button
-              size="small"
-              variant="danger"
-              leadingVisual={XCircleIcon}
-              onClick={handleTerminate}
-              disabled={actionLoading}
-            >
-              Terminate
-            </Button>
-          </>
-        )}
-        {runtimeStatus === 'paused' && (
-          <>
-            <Button
-              size="small"
-              variant="primary"
-              leadingVisual={PlayIcon}
-              onClick={handleResume}
-              disabled={actionLoading}
-            >
-              Resume
-            </Button>
+            {runtimeStatus === 'paused' ? (
+              <Button
+                size="small"
+                variant="primary"
+                leadingVisual={PlayIcon}
+                onClick={handleResume}
+                disabled={actionLoading}
+              >
+                Resume
+              </Button>
+            ) : (
+              <Button
+                size="small"
+                leadingVisual={HistoryIcon}
+                onClick={handleCheckpoint}
+                disabled={actionLoading}
+              >
+                Checkpoint
+              </Button>
+            )}
             <Button
               size="small"
               variant="danger"
@@ -694,9 +695,16 @@ const AgentCheckpointInner: React.FC<{ onLogout: () => void }> = ({
                 sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}
               >
                 <HistoryIcon size={14} />
-                <Text sx={{ fontWeight: 'semibold', fontSize: 1 }}>
+                <Text sx={{ fontWeight: 'semibold', fontSize: 1, flex: 1 }}>
                   Checkpoints ({checkpoints.length})
                 </Text>
+                <IconButton
+                  aria-label="Refresh checkpoints"
+                  icon={SyncIcon}
+                  size="small"
+                  variant="invisible"
+                  onClick={refreshCheckpoints}
+                />
               </Box>
               {checkpoints.length === 0 ? (
                 <Text
@@ -725,16 +733,56 @@ const AgentCheckpointInner: React.FC<{ onLogout: () => void }> = ({
                         mb: 1,
                       }}
                     >
-                      <CheckCircleIcon size={12} />
-                      <Text sx={{ fontWeight: 'semibold', fontSize: 0 }}>
+                      {ckpt.status === 'failed' ? (
+                        <AlertIcon size={12} fill="var(--fgColor-danger)" />
+                      ) : (
+                        <CheckCircleIcon size={12} />
+                      )}
+                      <Text
+                        sx={{ fontWeight: 'semibold', fontSize: 0, flex: 1 }}
+                      >
                         {ckpt.name}
                       </Text>
+                      <Label
+                        variant={
+                          ckpt.status === 'failed'
+                            ? 'danger'
+                            : ckpt.status === 'paused'
+                              ? 'done'
+                              : 'secondary'
+                        }
+                        sx={{ fontSize: '9px', textTransform: 'capitalize' }}
+                      >
+                        {ckpt.status}
+                      </Label>
                     </Box>
                     <Text
                       sx={{ fontSize: 0, color: 'fg.muted', display: 'block' }}
                     >
                       {new Date(ckpt.updated_at).toLocaleString()}
                     </Text>
+                    {ckpt.status_message && (
+                      <Tooltip text={ckpt.status_message} direction="w">
+                        <button
+                          type="button"
+                          style={{
+                            all: 'unset',
+                            display: 'block',
+                            marginTop: 4,
+                            cursor: 'pointer',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            maxWidth: '100%',
+                            fontSize: 'var(--text-body-size-small, 12px)',
+                            color:
+                              'var(--fgColor-danger, var(--color-danger-fg))',
+                          }}
+                        >
+                          {ckpt.status_message}
+                        </button>
+                      </Tooltip>
+                    )}
                     {ckpt.agentspec_id && (
                       <Label sx={{ mt: 1, fontSize: '10px' }} variant="accent">
                         {ckpt.agentspec_id}

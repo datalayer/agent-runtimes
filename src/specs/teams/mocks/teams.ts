@@ -112,6 +112,44 @@ export const MOCKS_ANALYZE_CAMPAIGN_PERFORMANCE_TEAM_SPEC: TeamSpec = {
       approval: 'manual',
     },
   ],
+  reactionRules: [
+    {
+      id: 'rr-camp-1',
+      trigger: 'budget_threshold_exceeded',
+      action: 'pause_and_notify',
+      auto: true,
+      maxRetries: 1,
+      escalateAfterRetries: 1,
+      priority: 'high',
+    },
+    {
+      id: 'rr-camp-2',
+      trigger: 'data_quality_low',
+      action: 'retry_collection',
+      auto: true,
+      maxRetries: 3,
+      escalateAfterRetries: 3,
+      priority: 'medium',
+    },
+  ],
+  healthMonitoring: {
+    heartbeatInterval: '30s',
+    staleThreshold: '120s',
+    unresponsiveThreshold: '300s',
+    stuckThreshold: '600s',
+    maxRestartAttempts: 3,
+  },
+  notifications: {
+    on_start: true,
+    on_completion: true,
+    on_failure: true,
+    on_escalation: true,
+  },
+  output: {
+    formats: ['pdf', 'csv', 'json'],
+    template: 'Campaign Performance Report',
+    storage: 's3://reports/campaign-analytics/',
+  },
 };
 
 export const MOCKS_ANALYZE_SUPPORT_TICKETS_TEAM_SPEC: TeamSpec = {
@@ -168,6 +206,44 @@ export const MOCKS_ANALYZE_SUPPORT_TICKETS_TEAM_SPEC: TeamSpec = {
       approval: 'manual',
     },
   ],
+  reactionRules: [
+    {
+      id: 'rr-supp-1',
+      trigger: 'ticket_surge_detected',
+      action: 'escalate_to_supervisor',
+      auto: true,
+      maxRetries: 2,
+      escalateAfterRetries: 2,
+      priority: 'high',
+    },
+    {
+      id: 'rr-supp-2',
+      trigger: 'classification_confidence_low',
+      action: 'request_human_review',
+      auto: false,
+      maxRetries: 1,
+      escalateAfterRetries: 1,
+      priority: 'medium',
+    },
+  ],
+  healthMonitoring: {
+    heartbeatInterval: '15s',
+    staleThreshold: '60s',
+    unresponsiveThreshold: '180s',
+    stuckThreshold: '300s',
+    maxRestartAttempts: 3,
+  },
+  notifications: {
+    on_start: false,
+    on_completion: true,
+    on_failure: true,
+    on_escalation: true,
+  },
+  output: {
+    formats: ['pdf', 'json'],
+    template: 'Support Ticket Analysis',
+    storage: 's3://reports/support-analytics/',
+  },
 };
 
 export const MOCKS_AUDIT_INVENTORY_LEVELS_TEAM_SPEC: TeamSpec = {
@@ -246,6 +322,44 @@ export const MOCKS_AUDIT_INVENTORY_LEVELS_TEAM_SPEC: TeamSpec = {
       approval: 'auto',
     },
   ],
+  reactionRules: [
+    {
+      id: 'rr-inv-1',
+      trigger: 'stockout_risk_detected',
+      action: 'escalate_to_supervisor',
+      auto: true,
+      maxRetries: 1,
+      escalateAfterRetries: 1,
+      priority: 'high',
+    },
+    {
+      id: 'rr-inv-2',
+      trigger: 'discrepancy_threshold_exceeded',
+      action: 'flag_for_manual_audit',
+      auto: false,
+      maxRetries: 2,
+      escalateAfterRetries: 2,
+      priority: 'high',
+    },
+  ],
+  healthMonitoring: {
+    heartbeatInterval: '30s',
+    staleThreshold: '120s',
+    unresponsiveThreshold: '300s',
+    stuckThreshold: '600s',
+    maxRestartAttempts: 3,
+  },
+  notifications: {
+    on_start: true,
+    on_completion: true,
+    on_failure: true,
+    on_escalation: true,
+  },
+  output: {
+    formats: ['pdf', 'xlsx', 'csv'],
+    template: 'Inventory Audit Report',
+    storage: 's3://reports/inventory-audits/',
+  },
 };
 
 export const MOCKS_AUTOMATE_REGULATORY_REPORTING_TEAM_SPEC: TeamSpec = {
@@ -332,6 +446,44 @@ export const MOCKS_AUTOMATE_REGULATORY_REPORTING_TEAM_SPEC: TeamSpec = {
       approval: 'auto',
     },
   ],
+  reactionRules: [
+    {
+      id: 'rr-reg-1',
+      trigger: 'compliance_violation_detected',
+      action: 'halt_and_escalate',
+      auto: true,
+      maxRetries: 0,
+      escalateAfterRetries: 0,
+      priority: 'critical',
+    },
+    {
+      id: 'rr-reg-2',
+      trigger: 'data_validation_failure',
+      action: 'retry_with_fallback',
+      auto: true,
+      maxRetries: 3,
+      escalateAfterRetries: 3,
+      priority: 'high',
+    },
+  ],
+  healthMonitoring: {
+    heartbeatInterval: '15s',
+    staleThreshold: '60s',
+    unresponsiveThreshold: '120s',
+    stuckThreshold: '300s',
+    maxRestartAttempts: 2,
+  },
+  notifications: {
+    on_start: true,
+    on_completion: true,
+    on_failure: true,
+    on_escalation: true,
+  },
+  output: {
+    formats: ['pdf', 'xbrl', 'json'],
+    template: 'Regulatory Submission Report',
+    storage: 's3://reports/regulatory-submissions/',
+  },
 };
 
 export const MOCKS_COMPREHENSIVE_SALES_ANALYTICS_TEAM_SPEC: TeamSpec = {
@@ -403,6 +555,44 @@ export const MOCKS_COMPREHENSIVE_SALES_ANALYTICS_TEAM_SPEC: TeamSpec = {
       approval: 'manual',
     },
   ],
+  reactionRules: [
+    {
+      id: 'rr-sales-1',
+      trigger: 'anomaly_critical',
+      action: 'escalate_to_supervisor',
+      auto: true,
+      maxRetries: 2,
+      escalateAfterRetries: 2,
+      priority: 'high',
+    },
+    {
+      id: 'rr-sales-2',
+      trigger: 'data_stale',
+      action: 'retry_collection',
+      auto: true,
+      maxRetries: 3,
+      escalateAfterRetries: 3,
+      priority: 'medium',
+    },
+  ],
+  healthMonitoring: {
+    heartbeatInterval: '30s',
+    staleThreshold: '120s',
+    unresponsiveThreshold: '300s',
+    stuckThreshold: '600s',
+    maxRestartAttempts: 3,
+  },
+  notifications: {
+    on_start: true,
+    on_completion: true,
+    on_failure: true,
+    on_escalation: true,
+  },
+  output: {
+    formats: ['pdf', 'xlsx', 'json'],
+    template: 'Executive Sales Dashboard',
+    storage: 's3://reports/sales-analytics/',
+  },
 };
 
 export const MOCKS_OPTIMIZE_GRID_OPERATIONS_TEAM_SPEC: TeamSpec = {
@@ -496,6 +686,44 @@ export const MOCKS_OPTIMIZE_GRID_OPERATIONS_TEAM_SPEC: TeamSpec = {
       approval: 'auto',
     },
   ],
+  reactionRules: [
+    {
+      id: 'rr-grid-1',
+      trigger: 'grid_instability_detected',
+      action: 'emergency_rebalance',
+      auto: true,
+      maxRetries: 1,
+      escalateAfterRetries: 1,
+      priority: 'critical',
+    },
+    {
+      id: 'rr-grid-2',
+      trigger: 'forecast_deviation_high',
+      action: 'recalibrate_model',
+      auto: true,
+      maxRetries: 2,
+      escalateAfterRetries: 2,
+      priority: 'medium',
+    },
+  ],
+  healthMonitoring: {
+    heartbeatInterval: '10s',
+    staleThreshold: '30s',
+    unresponsiveThreshold: '60s',
+    stuckThreshold: '120s',
+    maxRestartAttempts: 5,
+  },
+  notifications: {
+    on_start: true,
+    on_completion: true,
+    on_failure: true,
+    on_escalation: true,
+  },
+  output: {
+    formats: ['json', 'csv', 'pdf'],
+    template: 'Grid Operations Dashboard',
+    storage: 's3://reports/grid-operations/',
+  },
 };
 
 export const MOCKS_PROCESS_CITIZEN_REQUESTS_TEAM_SPEC: TeamSpec = {
@@ -589,6 +817,44 @@ export const MOCKS_PROCESS_CITIZEN_REQUESTS_TEAM_SPEC: TeamSpec = {
       approval: 'auto',
     },
   ],
+  reactionRules: [
+    {
+      id: 'rr-cit-1',
+      trigger: 'priority_request_detected',
+      action: 'fast_track_processing',
+      auto: true,
+      maxRetries: 2,
+      escalateAfterRetries: 2,
+      priority: 'high',
+    },
+    {
+      id: 'rr-cit-2',
+      trigger: 'policy_ambiguity_detected',
+      action: 'request_human_review',
+      auto: false,
+      maxRetries: 1,
+      escalateAfterRetries: 1,
+      priority: 'medium',
+    },
+  ],
+  healthMonitoring: {
+    heartbeatInterval: '30s',
+    staleThreshold: '120s',
+    unresponsiveThreshold: '300s',
+    stuckThreshold: '600s',
+    maxRestartAttempts: 3,
+  },
+  notifications: {
+    on_start: false,
+    on_completion: true,
+    on_failure: true,
+    on_escalation: true,
+  },
+  output: {
+    formats: ['pdf', 'json'],
+    template: 'Citizen Request Processing Report',
+    storage: 's3://reports/citizen-requests/',
+  },
 };
 
 export const MOCKS_PROCESS_CLINICAL_TRIAL_DATA_TEAM_SPEC: TeamSpec = {
@@ -681,6 +947,44 @@ export const MOCKS_PROCESS_CLINICAL_TRIAL_DATA_TEAM_SPEC: TeamSpec = {
       approval: 'auto',
     },
   ],
+  reactionRules: [
+    {
+      id: 'rr-clin-1',
+      trigger: 'safety_signal_detected',
+      action: 'halt_and_escalate',
+      auto: true,
+      maxRetries: 0,
+      escalateAfterRetries: 0,
+      priority: 'critical',
+    },
+    {
+      id: 'rr-clin-2',
+      trigger: 'data_integrity_violation',
+      action: 'quarantine_and_notify',
+      auto: true,
+      maxRetries: 1,
+      escalateAfterRetries: 1,
+      priority: 'critical',
+    },
+  ],
+  healthMonitoring: {
+    heartbeatInterval: '10s',
+    staleThreshold: '45s',
+    unresponsiveThreshold: '90s',
+    stuckThreshold: '180s',
+    maxRestartAttempts: 2,
+  },
+  notifications: {
+    on_start: true,
+    on_completion: true,
+    on_failure: true,
+    on_escalation: true,
+  },
+  output: {
+    formats: ['pdf', 'json', 'xml'],
+    template: 'Clinical Trial Data Report',
+    storage: 's3://reports/clinical-trials/',
+  },
 };
 
 export const MOCKS_SYNC_CRM_CONTACTS_TEAM_SPEC: TeamSpec = {
@@ -747,6 +1051,44 @@ export const MOCKS_SYNC_CRM_CONTACTS_TEAM_SPEC: TeamSpec = {
       approval: 'auto',
     },
   ],
+  reactionRules: [
+    {
+      id: 'rr-crm-1',
+      trigger: 'sync_conflict_detected',
+      action: 'log_and_skip',
+      auto: true,
+      maxRetries: 3,
+      escalateAfterRetries: 3,
+      priority: 'medium',
+    },
+    {
+      id: 'rr-crm-2',
+      trigger: 'api_rate_limit_hit',
+      action: 'backoff_and_retry',
+      auto: true,
+      maxRetries: 5,
+      escalateAfterRetries: 5,
+      priority: 'low',
+    },
+  ],
+  healthMonitoring: {
+    heartbeatInterval: '30s',
+    staleThreshold: '120s',
+    unresponsiveThreshold: '300s',
+    stuckThreshold: '600s',
+    maxRestartAttempts: 3,
+  },
+  notifications: {
+    on_start: false,
+    on_completion: true,
+    on_failure: true,
+    on_escalation: false,
+  },
+  output: {
+    formats: ['json', 'csv'],
+    template: 'CRM Sync Summary',
+    storage: 's3://reports/crm-sync/',
+  },
 };
 
 // ============================================================================

@@ -152,6 +152,9 @@ from typing import Dict, Optional
 
 from agent_runtimes.types import (
     TeamAgentSpec,
+    TeamHealthMonitoring,
+    TeamOutputSpec,
+    TeamReactionRule,
     TeamSpec,
     TeamSupervisorSpec,
     TeamValidationSpec,
@@ -228,6 +231,60 @@ from agent_runtimes.types import (
 
             routing = spec.get("routing_instructions", "").replace("\n", " ").replace("  ", " ").replace('"', '\\"').strip()
 
+            # Reaction rules
+            reaction_rules = spec.get("reaction_rules", [])
+            if reaction_rules:
+                rr_items = []
+                for rr in reaction_rules:
+                    rr_items.append(
+                        f'TeamReactionRule(id="{rr.get("id", "")}", '
+                        f'trigger="{rr.get("trigger", "")}", '
+                        f'action="{rr.get("action", "")}", '
+                        f'auto={rr.get("auto", True)}, '
+                        f'max_retries={rr.get("max_retries", 0)}, '
+                        f'escalate_after_retries={rr.get("escalate_after_retries", 0)}, '
+                        f'priority="{rr.get("priority", "medium")}")'
+                    )
+                reaction_rules_code = "[\n        " + ",\n        ".join(rr_items) + ",\n    ]"
+            else:
+                reaction_rules_code = "None"
+
+            # Health monitoring
+            health_monitoring = spec.get("health_monitoring")
+            if health_monitoring and isinstance(health_monitoring, dict):
+                hm = health_monitoring
+                health_monitoring_code = (
+                    f'TeamHealthMonitoring('
+                    f'heartbeat_interval="{hm.get("heartbeat_interval", "30s")}", '
+                    f'stale_threshold="{hm.get("stale_threshold", "120s")}", '
+                    f'unresponsive_threshold="{hm.get("unresponsive_threshold", "300s")}", '
+                    f'stuck_threshold="{hm.get("stuck_threshold", "600s")}", '
+                    f'max_restart_attempts={hm.get("max_restart_attempts", 3)})'
+                )
+            else:
+                health_monitoring_code = "None"
+
+            # Notifications
+            notifications = spec.get("notifications")
+            if notifications and isinstance(notifications, dict):
+                notifications_code = _fmt_py_literal(notifications)
+            else:
+                notifications_code = "None"
+
+            # Output
+            output = spec.get("output")
+            if output and isinstance(output, dict):
+                formats = _fmt_list(output.get("formats", []))
+                template = output.get("template", "")
+                storage = output.get("storage", "")
+                output_code = (
+                    f'TeamOutputSpec(formats={formats}, '
+                    f'template="{template}", '
+                    f'storage="{storage}")'
+                )
+            else:
+                output_code = "None"
+
             code += f'{const_name} = TeamSpec(\n'
             code += f'    id="{full_team_id}",\n'
             code += f'    name="{spec["name"]}",\n'
@@ -244,6 +301,14 @@ from agent_runtimes.types import (
             code += f'    routing_instructions="{routing}",\n'
             code += f"    validation={validation_code},\n"
             code += f"    agents={agents_code},\n"
+            if reaction_rules_code != "None":
+                code += f"    reaction_rules={reaction_rules_code},\n"
+            if health_monitoring_code != "None":
+                code += f"    health_monitoring={health_monitoring_code},\n"
+            if notifications_code != "None":
+                code += f"    notifications={notifications_code},\n"
+            if output_code != "None":
+                code += f"    output={output_code},\n"
             code += f")\n\n"
 
     # Generate registry
@@ -370,6 +435,58 @@ import type {{ TeamSpec }} from '{types_import_path}';
 
             routing = spec.get("routing_instructions", "").replace("`", "\\`").replace("\n", " ").replace("  ", " ").strip()
 
+            # Reaction rules
+            reaction_rules = spec.get("reaction_rules", [])
+            if reaction_rules:
+                rr_ts = json.dumps([
+                    {
+                        "id": rr.get("id", ""),
+                        "trigger": rr.get("trigger", ""),
+                        "action": rr.get("action", ""),
+                        "auto": rr.get("auto", True),
+                        "maxRetries": rr.get("max_retries", 0),
+                        "escalateAfterRetries": rr.get("escalate_after_retries", 0),
+                        "priority": rr.get("priority", "medium"),
+                    }
+                    for rr in reaction_rules
+                ], indent=2)
+            else:
+                rr_ts = None
+
+            # Health monitoring
+            health_monitoring = spec.get("health_monitoring")
+            if health_monitoring and isinstance(health_monitoring, dict):
+                hm = health_monitoring
+                hm_ts = json.dumps({
+                    "heartbeatInterval": hm.get("heartbeat_interval", "30s"),
+                    "staleThreshold": hm.get("stale_threshold", "120s"),
+                    "unresponsiveThreshold": hm.get("unresponsive_threshold", "300s"),
+                    "stuckThreshold": hm.get("stuck_threshold", "600s"),
+                    "maxRestartAttempts": hm.get("max_restart_attempts", 3),
+                }, indent=2)
+            else:
+                hm_ts = None
+
+            # Notifications
+            notifications = spec.get("notifications")
+            if notifications and isinstance(notifications, dict):
+                notif_ts = json.dumps({
+                    k.replace("_", ""): v for k, v in notifications.items()
+                } if False else notifications, indent=2)
+            else:
+                notif_ts = None
+
+            # Output
+            output = spec.get("output")
+            if output and isinstance(output, dict):
+                output_ts = json.dumps({
+                    "formats": output.get("formats", []),
+                    "template": output.get("template", ""),
+                    "storage": output.get("storage", ""),
+                }, indent=2)
+            else:
+                output_ts = None
+
             code += f"export const {const_name}: TeamSpec = {{\n"
             code += f"  id: '{full_team_id}',\n"
             code += f"  name: '{spec['name']}',\n"
@@ -386,6 +503,14 @@ import type {{ TeamSpec }} from '{types_import_path}';
             code += f"  routingInstructions: `{routing}`,\n"
             code += f"  validation: {validation_ts},\n"
             code += f"  agents: {agents_ts},\n"
+            if rr_ts is not None:
+                code += f"  reactionRules: {rr_ts},\n"
+            if hm_ts is not None:
+                code += f"  healthMonitoring: {hm_ts},\n"
+            if notif_ts is not None:
+                code += f"  notifications: {notif_ts},\n"
+            if output_ts is not None:
+                code += f"  output: {output_ts},\n"
             code += f"}};\n\n"
 
     # Registry
