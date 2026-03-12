@@ -42,7 +42,7 @@ import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { SignInSimple } from '@datalayer/core/lib/views/iam';
 import { UserBadge } from '@datalayer/core/lib/views/profile';
 import { Chat } from '../chat';
-import { useAgent } from '../agents/useAgent';
+import { useAgent } from '../hooks/useAgent';
 
 // ─── Constants ─────────────────────────────────────────────────────────────
 

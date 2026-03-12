@@ -6,7 +6,7 @@
 import { useEffect } from 'react';
 import type { Agent } from '../state';
 import { useAgentStore } from '../state';
-import { useAIAgents } from './useAgents';
+import { useAIAgents } from './useAgent';
 
 /**
  * Get the document AI Agent if any.

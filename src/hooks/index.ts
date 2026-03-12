@@ -103,13 +103,78 @@ export { useVercelChat } from './useVercelChat';
 /**
  * Datalayer AI Agents REST API hook.
  */
-export * from './useAgents';
+export { useAIAgents, type RequestOptions, type RoomType } from './useAgent';
 /**
  * Agent runtimes service hooks for managing agent runtime instances.
  */
-export * from './useAgentRuntimes';
+export {
+  useAgentRuntimesCache,
+  useAgentRuntimes,
+  useAgentRuntimeByPodName,
+  useCreateAgentRuntime,
+  useDeleteAgentRuntime,
+  useDeletePausedAgentRuntime,
+  useRefreshAgentRuntimes,
+  type AgentRuntimeData,
+} from './useAgent';
 /**
  * Centralized agent catalog store for available agent specs and running agents.
  */
-export * from './useAgentStore';
+export { useAgentCatalogStore, type AgentCatalogStoreState } from './useAgent';
 export * from './useNotebookAIAgent';
+
+// =============================================================================
+// Agent Runtime Store & Unified Hook (formerly agents/)
+// =============================================================================
+
+/**
+ * Zustand store for runtime connection management.
+ */
+export {
+  useAgentRuntimeStore,
+  useAgentRuntime,
+  useAgentFromStore,
+  useAgentStatus,
+  useAgentError,
+  useIsLaunching,
+  getAgentState,
+  subscribeToAgent,
+} from '../state/substates/AIAgentState';
+export type {
+  AgentStore,
+  AgentStoreState,
+  AgentStoreActions,
+} from '../state/substates/AIAgentState';
+
+/**
+ * Unified hook for managing agents — both ephemeral and durable.
+ */
+export { useAgent } from './useAgent';
+export type {
+  UseAgentReturn,
+  UseAgentOptions,
+  CheckpointRecord,
+} from './useAgent';
+
+// Types - re-exported from @datalayer/core
+export type {
+  IRuntimeLocation,
+  IRuntimeType,
+  IRuntimeCapabilities,
+  IRuntimePod,
+  IRuntimeOptions,
+  IRuntimeDesc,
+} from './useAgent';
+
+// Types - agent-runtimes specific
+export type {
+  RuntimeConnection,
+  AgentRuntimeStatus,
+  AgentStatus,
+  AgentConfig,
+  AgentConnection,
+  AgentRuntimeState,
+} from './useAgent';
+
+// Constants
+export { DEFAULT_AGENT_CONFIG } from './useAgent';

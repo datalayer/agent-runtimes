@@ -6,7 +6,7 @@
 export * from './chat';
 export * from './mcp';
 export * from './state';
-export * from './agents';
+// agents/ merged into hooks/ — all exports now come from hooks
 export * from './identity';
 export * from './config';
 export * from './specs';

@@ -9,7 +9,10 @@
  * Merges the functionality of the former `useAgentRuntime` (ephemeral connect)
  * and `useDurableAgent` (CRIU lifecycle) into a single hook.
  *
- * @module agents/useAgent
+ * Also re-exports the runtime/agent type definitions that were previously in
+ * `agents/types.ts`, and the Zustand store selectors from `AIAgentState`.
+ *
+ * @module hooks/useAgent
  */
 
 import { useState, useCallback, useEffect, useRef } from 'react';
@@ -22,18 +25,147 @@ import {
   useAgentError,
   useIsLaunching,
 } from '../state/substates/AIAgentState';
-import type {
-  IRuntimeOptions,
-  AgentConfig,
-  AgentConnection,
-  RuntimeConnection,
-  AgentStatus,
-} from './types';
-import { DEFAULT_AGENT_CONFIG } from './types';
 
-// ─── Types ────────────────────────────────────────────────────────────────
+// Imports for useAgentRuntimes hooks
+import { useCache } from '@datalayer/core/lib/hooks';
 
-// AgentStatus is imported from ./types (unified superset)
+// Imports for useAIAgents hook
+import { useCoreStore, useDatalayer } from '@datalayer/core';
+import { URLExt } from '@jupyterlab/coreutils';
+
+// Imports for useAgentCatalogStore
+import { create } from 'zustand';
+import { listAgentSpecs } from '../specs';
+import type { AgentSpec } from '../types';
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Types (formerly agents/types.ts)
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Re-export core runtime types from @datalayer/core
+export type {
+  IRuntimeLocation,
+  IRuntimeType,
+  IRuntimeCapabilities,
+  IRuntimePod,
+  IRuntimeDesc,
+} from '@datalayer/core/lib/models';
+
+export type { IRuntimeOptions } from '@datalayer/core/lib/stateful/runtimes/apis';
+
+/**
+ * Runtime connection status for the agent-runtimes store.
+ */
+export type AgentRuntimeStatus =
+  | 'idle'
+  | 'launching'
+  | 'connecting'
+  | 'ready'
+  | 'error'
+  | 'disconnected';
+
+/**
+ * Unified agent status — superset of runtime connection status and UI agent status.
+ *
+ * Covers both the runtime lifecycle (idle → launching → connecting → ready → disconnected)
+ * and the agent UI state (initializing, running, paused, resuming).
+ */
+export type AgentStatus =
+  | 'idle'
+  | 'initializing'
+  | 'launching'
+  | 'connecting'
+  | 'ready'
+  | 'running'
+  | 'paused'
+  | 'resuming'
+  | 'error'
+  | 'disconnected';
+
+/**
+ * Information about a connected runtime with agent-runtimes server.
+ * Extends the basic runtime info with URLs for both Jupyter and agent services.
+ */
+export interface RuntimeConnection {
+  /** Runtime pod name (unique identifier) */
+  podName: string;
+  /** Environment name */
+  environmentName: string;
+  /** Base URL for the Jupyter server */
+  jupyterBaseUrl: string;
+  /** Base URL for the agent-runtimes server */
+  agentBaseUrl: string;
+  /** JupyterLab ServiceManager for the runtime */
+  serviceManager: ServiceManager.IManager;
+  /** Runtime status */
+  status: AgentRuntimeStatus;
+  /** Kernel ID if connected */
+  kernelId?: string;
+}
+
+/**
+ * Configuration for creating an agent on a runtime.
+ */
+export interface AgentConfig {
+  /** Agent name/ID (defaults to runtime pod name) */
+  name?: string;
+  /** Agent description */
+  description?: string;
+  /** AI model to use (e.g., 'anthropic:claude-sonnet-4-5') */
+  model?: string;
+  /** System prompt for the agent */
+  systemPrompt?: string;
+  /** Agent library (defaults to 'pydantic-ai') */
+  agentLibrary?: 'pydantic-ai' | 'langchain' | 'openai';
+  /** Transport protocol (defaults to 'ag-ui') */
+  transport?: 'ag-ui' | 'vercel-ai' | 'acp' | 'a2a';
+}
+
+/**
+ * Information about a connected agent.
+ */
+export interface AgentConnection {
+  /** Agent ID */
+  agentId: string;
+  /** Full endpoint URL for the agent */
+  endpoint: string;
+  /** Whether the agent is ready to use */
+  isReady: boolean;
+}
+
+/**
+ * Complete state for an agent runtime in the Zustand store.
+ */
+export interface AgentRuntimeState {
+  /** Runtime connection (null if not connected) */
+  runtime: RuntimeConnection | null;
+  /** Agent connection (null if not created) */
+  agent: AgentConnection | null;
+  /** Current status */
+  status: AgentRuntimeStatus;
+  /** Error message if any */
+  error: string | null;
+  /** Whether the runtime is launching */
+  isLaunching: boolean;
+  /** Whether the agent is ready */
+  isReady: boolean;
+}
+
+/**
+ * Default agent configuration values.
+ */
+export const DEFAULT_AGENT_CONFIG: Required<AgentConfig> = {
+  name: 'ai-agent',
+  description: 'AI Assistant',
+  model: 'anthropic:claude-sonnet-4-5',
+  systemPrompt: 'You are a helpful AI assistant.',
+  agentLibrary: 'pydantic-ai',
+  transport: 'ag-ui',
+};
+
+// ═══════════════════════════════════════════════════════════════════════════
+// useAgent hook types
+// ═══════════════════════════════════════════════════════════════════════════
 
 /**
  * A persisted checkpoint record returned from the runtimes API.
@@ -124,6 +256,13 @@ export interface UseAgentReturn {
   /** Error if any */
   error: string | null;
 }
+
+// Need to re-import IRuntimeOptions as a value-level reference for use in the hook
+import type { IRuntimeOptions } from '@datalayer/core/lib/stateful/runtimes/apis';
+
+// ═══════════════════════════════════════════════════════════════════════════
+// useAgent hook
+// ═══════════════════════════════════════════════════════════════════════════
 
 /**
  * Unified hook for managing agents.
@@ -556,3 +695,302 @@ export function useAgent(options: UseAgentOptions = {}): UseAgentReturn {
     error,
   };
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Agent Runtimes hooks (formerly useAgentRuntimes.ts)
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Agent Runtime data type (mapped from runtimes service).
+ *
+ * Backend RuntimePod fields: pod_name, environment_name, environment_title, uid,
+ * type, given_name, token, ingress, reservation_id, started_at, expired_at, burning_rate.
+ *
+ * We map 'ingress' to 'url' for consistency with the UI.
+ */
+export type AgentRuntimeData = {
+  pod_name: string;
+  id: string;
+  name: string;
+  environment_name: string;
+  environment_title?: string;
+  given_name: string;
+  phase?: string;
+  type: string;
+  started_at?: string;
+  expired_at?: string;
+  burning_rate?: number;
+  status: 'starting' | 'running' | 'paused' | 'terminated' | 'archived';
+  messageCount: number;
+  // Backend returns 'ingress', mapped to 'url' in useCache
+  ingress?: string;
+  url?: string;
+  token?: string;
+  // Agent specification with suggestions for chat UI (enriched by useAgentCatalogStore)
+  agentSpec?: AgentSpec;
+  // ID of the agent spec used to create this runtime
+  agent_spec_id?: string;
+};
+
+/**
+ * Hook to access all agent runtime operations from the centralized cache.
+ *
+ * @example
+ * ```tsx
+ * const {
+ *   useAgentRuntime,
+ *   useAgentRuntimes,
+ *   useCreateAgentRuntime,
+ *   useDeleteAgentRuntime,
+ *   useRefreshAgentRuntimes,
+ * } = useAgentRuntimesCache();
+ * ```
+ */
+export function useAgentRuntimesCache() {
+  const cache = useCache();
+
+  return {
+    useAgentRuntime: cache.useAgentRuntime,
+    useAgentRuntimes: cache.useAgentRuntimes,
+    useCreateAgentRuntime: cache.useCreateAgentRuntime,
+    useDeleteAgentRuntime: cache.useDeleteAgentRuntime,
+    useDeletePausedAgentRuntime: cache.useDeletePausedAgentRuntime,
+    useRefreshAgentRuntimes: cache.useRefreshAgentRuntimes,
+    queryKeys: cache.queryKeys,
+  };
+}
+
+/**
+ * Hook to fetch user's agent runtimes (running agent instances).
+ * Used by the sidebar to show running/paused/terminated agents.
+ */
+export function useAgentRuntimes() {
+  const { useAgentRuntimes: hook } = useCache();
+  return hook();
+}
+
+/**
+ * Hook to fetch a single agent runtime by pod name.
+ */
+export function useAgentRuntimeByPodName(podName: string | undefined) {
+  const { useAgentRuntime: hook } = useCache();
+  return hook(podName);
+}
+
+/**
+ * Hook to create a new agent runtime.
+ */
+export function useCreateAgentRuntime() {
+  const { useCreateAgentRuntime: hook } = useCache();
+  return hook();
+}
+
+/**
+ * Hook to delete an agent runtime.
+ */
+export function useDeleteAgentRuntime() {
+  const { useDeleteAgentRuntime: hook } = useCache();
+  return hook();
+}
+
+/**
+ * Hook to delete a paused agent runtime (removes Solr checkpoint records).
+ */
+export function useDeletePausedAgentRuntime() {
+  const { useDeletePausedAgentRuntime: hook } = useCache();
+  return hook();
+}
+
+/**
+ * Hook to refresh agent runtimes list.
+ */
+export function useRefreshAgentRuntimes() {
+  const { useRefreshAgentRuntimes: hook } = useCache();
+  return hook();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// AI Agents REST API hook (formerly useAgents.tsx)
+// ═══════════════════════════════════════════════════════════════════════════
+
+export type RequestOptions = {
+  signal?: AbortSignal;
+  baseUrl?: string;
+};
+
+export type RoomType = 'notebook_persist' | 'notebook_memory' | 'doc_memory';
+
+export const useAIAgents = (baseUrlOverride = 'api/ai-agents/v1') => {
+  const { configuration } = useCoreStore();
+  const { requestDatalayer } = useDatalayer({ notifyOnError: false });
+  const createAIAgent = (
+    documentId: string,
+    documentType: RoomType,
+    ingress?: string,
+    token?: string,
+    kernelId?: string,
+    { signal, baseUrl = baseUrlOverride }: RequestOptions = {},
+  ) => {
+    return requestDatalayer({
+      url: URLExt.join(configuration.aiagentsRunUrl, baseUrl, 'agents'),
+      method: 'POST',
+      body: {
+        document_id: documentId,
+        document_type: documentType,
+        runtime: {
+          ingress,
+          token,
+          kernel_id: kernelId,
+        },
+      },
+      signal,
+    });
+  };
+  const getAIAgents = ({
+    signal,
+    baseUrl = baseUrlOverride,
+  }: RequestOptions = {}) => {
+    return requestDatalayer({
+      url: URLExt.join(configuration.aiagentsRunUrl, baseUrl, 'agents'),
+      method: 'GET',
+      signal,
+    });
+  };
+  const deleteAIAgent = (
+    documentId: string,
+    { signal, baseUrl = baseUrlOverride }: RequestOptions = {},
+  ) => {
+    return requestDatalayer({
+      url: URLExt.join(
+        configuration.aiagentsRunUrl,
+        baseUrl,
+        'agents',
+        documentId,
+      ),
+      method: 'DELETE',
+      signal,
+    });
+  };
+  const getAIAgent = (
+    documentId: string,
+    { signal, baseUrl = baseUrlOverride }: RequestOptions = {},
+  ) => {
+    return requestDatalayer({
+      url: URLExt.join(
+        configuration.aiagentsRunUrl,
+        baseUrl,
+        'agents',
+        documentId,
+      ),
+      method: 'GET',
+      signal,
+    });
+  };
+  const patchAIAgent = (
+    documentId: string,
+    ingress?: string,
+    token?: string,
+    kernelId?: string,
+    { signal, baseUrl = baseUrlOverride }: RequestOptions = {},
+  ) => {
+    return requestDatalayer({
+      url: URLExt.join(
+        configuration.aiagentsRunUrl,
+        baseUrl,
+        'agents',
+        documentId,
+      ),
+      method: 'PATCH',
+      body: {
+        runtime:
+          ingress && token && kernelId
+            ? {
+                ingress,
+                token,
+                kernel_id: kernelId,
+              }
+            : null,
+      },
+      signal,
+    });
+  };
+  return {
+    createAIAgent,
+    getAIAgents,
+    deleteAIAgent,
+    getAIAgent,
+    patchAIAgent,
+  };
+};
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Agent Catalog Store (formerly useAgentStore.ts)
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Centralised Zustand store for agents.
+ *
+ * Two collections are maintained:
+ *
+ * 1. **agentSpecs** – the static catalogue of available agent blueprints
+ *    (from `@datalayer/agent-runtimes/lib/specs`).
+ *    Populated once at import time; call `refreshSpecs()` to re-read.
+ *
+ * 2. **runningAgents** – live agent runtimes fetched from the runtimes
+ *    service.  Updated via `setRunningAgents()` whenever the TanStack
+ *    query refreshes.
+ *
+ * The store is consumed by `AgentAssignMenu` to show two action groups:
+ * • **Running Agents** – already-running runtimes that can be re-attached
+ * • **New Agents** – agent specs that can be instantiated
+ */
+
+export type AgentCatalogStoreState = {
+  /** Static catalogue of agent blueprints. */
+  agentSpecs: AgentSpec[];
+
+  /** Live agent runtimes (running / starting). */
+  runningAgents: AgentRuntimeData[];
+
+  /** Live agent runtimes (paused). */
+  pausedAgents: AgentRuntimeData[];
+
+  // ---- Mutators ----
+
+  /** Re-read agent specs from the config. */
+  refreshSpecs: () => void;
+
+  /** Replace the running agents list (call from TanStack query effect). */
+  setRunningAgents: (agents: AgentRuntimeData[]) => void;
+
+  /** Replace the paused agents list (call from TanStack query effect). */
+  setPausedAgents: (agents: AgentRuntimeData[]) => void;
+};
+
+export const useAgentCatalogStore = create<AgentCatalogStoreState>()(set => ({
+  agentSpecs: listAgentSpecs('datalayer-ai/'),
+  runningAgents: [],
+  pausedAgents: [],
+
+  refreshSpecs: () => set({ agentSpecs: listAgentSpecs('datalayer-ai/') }),
+
+  setRunningAgents: agents =>
+    set(state => ({
+      runningAgents: agents.map(agent => {
+        if (agent.agentSpec) return agent;
+        if (!agent.agent_spec_id) return agent;
+        const spec = state.agentSpecs.find(s => s.id === agent.agent_spec_id);
+        return spec ? { ...agent, agentSpec: spec } : agent;
+      }),
+    })),
+
+  setPausedAgents: agents =>
+    set(state => ({
+      pausedAgents: agents.map(agent => {
+        if (agent.agentSpec) return agent;
+        if (!agent.agent_spec_id) return agent;
+        const spec = state.agentSpecs.find(s => s.id === agent.agent_spec_id);
+        return spec ? { ...agent, agentSpec: spec } : agent;
+      }),
+    })),
+}));
