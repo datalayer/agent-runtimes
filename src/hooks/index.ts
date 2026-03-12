@@ -29,7 +29,7 @@
  * Hooks for Datalayer platform integration.
  *
  * - `useAIAgents` - Datalayer AI Agents REST API
- * - `useNotebookAIAgent` - Notebook-specific agent management
+ * - `useNotebookAgents` - Notebook-specific agent management
  *
  * @module hooks
  */
@@ -103,7 +103,7 @@ export { useVercelChat } from './useVercelChat';
 /**
  * Datalayer AI Agents REST API hook.
  */
-export { useAIAgents, type RequestOptions, type RoomType } from './useAgent';
+export { useAIAgents, type RequestOptions, type RoomType } from './useAgents';
 /**
  * Agent runtimes service hooks for managing agent runtime instances.
  */
@@ -116,45 +116,22 @@ export {
   useDeletePausedAgentRuntime,
   useRefreshAgentRuntimes,
   type AgentRuntimeData,
-} from './useAgent';
+} from './useAgents';
 /**
  * Centralized agent catalog store for available agent specs and running agents.
  */
-export { useAgentCatalogStore, type AgentCatalogStoreState } from './useAgent';
-export * from './useNotebookAIAgent';
-
-// =============================================================================
-// Agent Runtime Store & Unified Hook (formerly agents/)
-// =============================================================================
-
-/**
- * Zustand store for runtime connection management.
- */
-export {
-  useAgentRuntimeStore,
-  useAgentRuntime,
-  useAgentFromStore,
-  useAgentStatus,
-  useAgentError,
-  useIsLaunching,
-  getAgentState,
-  subscribeToAgent,
-} from '../state/substates/AIAgentState';
-export type {
-  AgentStore,
-  AgentStoreState,
-  AgentStoreActions,
-} from '../state/substates/AIAgentState';
+export { useAgentCatalogStore, type AgentCatalogStoreState } from './useAgents';
+export * from './useNotebookAgents';
 
 /**
  * Unified hook for managing agents — both ephemeral and durable.
  */
-export { useAgent } from './useAgent';
+export { useAgents } from './useAgents';
 export type {
   UseAgentReturn,
   UseAgentOptions,
   CheckpointRecord,
-} from './useAgent';
+} from './useAgents';
 
 // Types - re-exported from @datalayer/core
 export type {
@@ -164,17 +141,16 @@ export type {
   IRuntimePod,
   IRuntimeOptions,
   IRuntimeDesc,
-} from './useAgent';
+} from './useAgents';
 
 // Types - agent-runtimes specific
 export type {
   RuntimeConnection,
-  AgentRuntimeStatus,
   AgentStatus,
   AgentConfig,
   AgentConnection,
   AgentRuntimeState,
-} from './useAgent';
+} from './useAgents';
 
 // Constants
-export { DEFAULT_AGENT_CONFIG } from './useAgent';
+export { DEFAULT_AGENT_CONFIG } from './useAgents';

@@ -46,7 +46,7 @@ import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { SignInSimple } from '@datalayer/core/lib/views/iam';
 import { UserBadge } from '@datalayer/core/lib/views/profile';
 import { Chat } from '../chat';
-import { useAgent } from '../hooks/useAgent';
+import { useAgents } from '../hooks/useAgents';
 
 // ─── Constants ─────────────────────────────────────────────────────────────
 
@@ -79,7 +79,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
     status: runtimeStatus,
     isReady,
     error: hookError,
-  } = useAgent({
+  } = useAgents({
     agentSpecId: AGENT_SPEC_ID,
     autoStart: true,
     agentConfig: {

@@ -12,7 +12,7 @@ Agent Runtimes provides a comprehensive set of React hooks for building AI agent
 |----------|-------|---------|
 | **Chat Component System** | `useChat`, `useFrontendTool`, `useBackendTool`, `useKeyboardShortcuts` | Work with the Zustand-based chat components |
 | **Transport-Specific** | `useAGUI`, `useA2A`, `useAcp`, `useVercelChat` | Direct protocol access without chat components |
-| **Datalayer Platform** | `useAIAgents`, `useNotebookAIAgent` | Datalayer platform integration |
+| **Datalayer Platform** | `useAIAgents`, `useNotebookAgents` | Datalayer platform integration |
 | **Identity** | `useIdentity` | OAuth identity management |
 
 ---
@@ -410,19 +410,19 @@ function AgentManager() {
 }
 ```
 
-### `useNotebookAIAgent`
+### `useNotebookAgents`
 
 Hook for notebook-specific agent management. Handles agent lifecycle tied to a notebook document.
 
 ```typescript
-import { useNotebookAIAgent } from '@datalayer/agent-runtimes';
+import { useNotebookAgents } from '@datalayer/agent-runtimes';
 
 function NotebookChat({ notebookId }: { notebookId: string }) {
   // Automatically manages agent lifecycle for this notebook
   // - Checks agent health every 60 seconds
   // - Updates agent state when runtime changes
   // - Cleans up when notebook is closed
-  const agent = useNotebookAIAgent(notebookId);
+  const agent = useNotebookAgents(notebookId);
 
   if (!agent) {
     return <div>No AI agent for this notebook</div>;

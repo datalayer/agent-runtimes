@@ -6,14 +6,14 @@
 import { useEffect } from 'react';
 import type { Agent } from '../state';
 import { useAgentStore } from '../state';
-import { useAIAgents } from './useAgent';
+import { useAIAgents } from './useAgents';
 
 /**
  * Get the document AI Agent if any.
  *
  * It handles checking the AI Agent is alive so it should only be use once per document.
  */
-export function useNotebookAIAgent(notebookId: string): Agent | undefined {
+export function useNotebookAgents(notebookId: string): Agent | undefined {
   const { getAIAgent } = useAIAgents();
   const agents = useAgentStore(state => state.agents);
   const upsertAgent = useAgentStore(state => state.upsertAgent);
@@ -75,4 +75,4 @@ export function useNotebookAIAgent(notebookId: string): Agent | undefined {
   return aiAgent;
 }
 
-export default useNotebookAIAgent;
+export default useNotebookAgents;

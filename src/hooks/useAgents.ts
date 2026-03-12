@@ -4,21 +4,15 @@
  */
 
 /**
- * Unified hook for managing agents — both ephemeral and durable.
+ * Unified hook for managing agents.
  *
- * Merges the functionality of the former `useAgentRuntime` (ephemeral connect)
- * and `useDurableAgent` (CRIU lifecycle) into a single hook.
- *
- * Also re-exports the runtime/agent type definitions that were previously in
- * `agents/types.ts`, and the Zustand store selectors from `AIAgentState`.
- *
- * @module hooks/useAgent
+ * @module hooks/useAgents
  */
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import type { ServiceManager } from '@jupyterlab/services';
 import {
-  useAgentRuntimeStore,
+  useAgentStore,
   useAgentRuntime,
   useAgentFromStore,
   useAgentStatus,
@@ -54,18 +48,7 @@ export type {
 export type { IRuntimeOptions } from '@datalayer/core/lib/stateful/runtimes/apis';
 
 /**
- * Runtime connection status for the agent-runtimes store.
- */
-export type AgentRuntimeStatus =
-  | 'idle'
-  | 'launching'
-  | 'connecting'
-  | 'ready'
-  | 'error'
-  | 'disconnected';
-
-/**
- * Unified agent status — superset of runtime connection status and UI agent status.
+ * Unified agent status covering the full lifecycle.
  *
  * Covers both the runtime lifecycle (idle → launching → connecting → ready → disconnected)
  * and the agent UI state (initializing, running, paused, resuming).
@@ -84,7 +67,7 @@ export type AgentStatus =
 
 /**
  * Information about a connected runtime with agent-runtimes server.
- * Extends the basic runtime info with URLs for both Jupyter and agent services.
+ * Combines runtime infrastructure and agent connection details.
  */
 export interface RuntimeConnection {
   /** Runtime pod name (unique identifier) */
@@ -98,10 +81,24 @@ export interface RuntimeConnection {
   /** JupyterLab ServiceManager for the runtime */
   serviceManager: ServiceManager.IManager;
   /** Runtime status */
-  status: AgentRuntimeStatus;
+  status: AgentStatus;
   /** Kernel ID if connected */
   kernelId?: string;
+  /** Agent ID */
+  agentId?: string;
+  /** Full endpoint URL for the agent */
+  endpoint?: string;
+  /** Whether the agent is ready to use */
+  isReady?: boolean;
 }
+
+/**
+ * @deprecated Use `RuntimeConnection` instead. Will be removed in a future version.
+ */
+export type AgentConnection = Pick<
+  RuntimeConnection,
+  'agentId' | 'endpoint' | 'isReady'
+>;
 
 /**
  * Configuration for creating an agent on a runtime.
@@ -122,27 +119,15 @@ export interface AgentConfig {
 }
 
 /**
- * Information about a connected agent.
- */
-export interface AgentConnection {
-  /** Agent ID */
-  agentId: string;
-  /** Full endpoint URL for the agent */
-  endpoint: string;
-  /** Whether the agent is ready to use */
-  isReady: boolean;
-}
-
-/**
  * Complete state for an agent runtime in the Zustand store.
  */
 export interface AgentRuntimeState {
-  /** Runtime connection (null if not connected) */
+  /** Runtime connection including agent info (null if not connected) */
   runtime: RuntimeConnection | null;
-  /** Agent connection (null if not created) */
+  /** @deprecated Use `runtime.agentId`, `runtime.endpoint`, `runtime.isReady` instead */
   agent: AgentConnection | null;
   /** Current status */
-  status: AgentRuntimeStatus;
+  status: AgentStatus;
   /** Error message if any */
   error: string | null;
   /** Whether the runtime is launching */
@@ -164,7 +149,7 @@ export const DEFAULT_AGENT_CONFIG: Required<AgentConfig> = {
 };
 
 // ═══════════════════════════════════════════════════════════════════════════
-// useAgent hook types
+// useAgentshook types
 // ═══════════════════════════════════════════════════════════════════════════
 
 /**
@@ -184,7 +169,7 @@ export interface CheckpointRecord {
 }
 
 /**
- * Options for the useAgent hook.
+ * Options for the useAgentshook.
  */
 export interface UseAgentOptions {
   /** Agent spec ID (used as identifier for durable lifecycle) */
@@ -200,7 +185,7 @@ export interface UseAgentOptions {
 }
 
 /**
- * Return type for the useAgent hook.
+ * Return type for the useAgentshook.
  */
 export interface UseAgentReturn {
   // Runtime
@@ -223,9 +208,9 @@ export interface UseAgentReturn {
   disconnect: () => void;
 
   // Agent
-  /** Current agent connection (null if not created) */
+  /** @deprecated Use `runtime.agentId`, `runtime.endpoint`, `runtime.isReady` instead */
   agent: AgentConnection | null;
-  /** Agent endpoint URL (shortcut) */
+  /** Agent endpoint URL (shortcut for `runtime.endpoint`) */
   endpoint: string | null;
   /** ServiceManager for the runtime */
   serviceManager: ServiceManager.IManager | null;
@@ -261,7 +246,7 @@ export interface UseAgentReturn {
 import type { IRuntimeOptions } from '@datalayer/core/lib/stateful/runtimes/apis';
 
 // ═══════════════════════════════════════════════════════════════════════════
-// useAgent hook
+// useAgentshook
 // ═══════════════════════════════════════════════════════════════════════════
 
 /**
@@ -277,20 +262,20 @@ import type { IRuntimeOptions } from '@datalayer/core/lib/stateful/runtimes/apis
  * @example
  * ```tsx
  * // Ephemeral mode — connect to an existing runtime
- * const { isReady, endpoint, connectToRuntime } = useAgent({
+ * const { isReady, endpoint, connectToRuntime } = useAgents({
  *   autoCreateAgent: true,
  *   agentConfig: { model: 'anthropic:claude-sonnet-4-5' },
  * });
  *
  * // Durable mode — full lifecycle
- * const { isReady, endpoint, pause, resume, terminate } = useAgent({
+ * const { isReady, endpoint, pause, resume, terminate } = useAgents({
  *   agentSpecId: 'my-agent-spec',
  *   autoStart: true,
  *   agentConfig: { name: 'my-agent', transport: 'ag-ui' },
  * });
  * ```
  */
-export function useAgent(options: UseAgentOptions = {}): UseAgentReturn {
+export function useAgents(options: UseAgentOptions = {}): UseAgentReturn {
   const {
     agentSpecId,
     agentConfig,
@@ -307,10 +292,10 @@ export function useAgent(options: UseAgentOptions = {}): UseAgentReturn {
   const isLaunching = useIsLaunching();
 
   // Store actions
-  const storeLaunchAgent = useAgentRuntimeStore(state => state.launchAgent);
-  const storeConnectAgent = useAgentRuntimeStore(state => state.connectAgent);
-  const storeCreateAgent = useAgentRuntimeStore(state => state.createAgent);
-  const storeDisconnect = useAgentRuntimeStore(state => state.disconnect);
+  const storeLaunchAgent = useAgentStore(state => state.launchAgent);
+  const storeConnectAgent = useAgentStore(state => state.connectAgent);
+  const storeCreateAgent = useAgentStore(state => state.createAgent);
+  const storeDisconnect = useAgentStore(state => state.disconnect);
 
   // Durable-specific local state
   const [durableStatus, setDurableStatus] = useState<AgentStatus>('idle');

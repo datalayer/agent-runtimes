@@ -59,9 +59,9 @@ import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { SignInSimple } from '@datalayer/core/lib/views/iam';
 import { UserBadge } from '@datalayer/core/lib/views/profile';
 import { Chat } from '../chat';
-import { useAgent } from '../hooks/useAgent';
-import type { CheckpointRecord } from '../hooks/useAgent';
-import type { AgentStatus } from '../hooks/useAgent';
+import { useAgents } from '../hooks/useAgents';
+import type { CheckpointRecord } from '../hooks/useAgents';
+import type { AgentStatus } from '../hooks/useAgents';
 
 // ─── Running agent entry ───────────────────────────────────────────────────
 
@@ -179,7 +179,7 @@ const AgentCheckpointInner: React.FC<{ onLogout: () => void }> = ({
     checkpoint,
     refreshCheckpoints,
     checkpoints,
-  } = useAgent({
+  } = useAgents({
     agentSpecId: AGENT_SPEC_ID,
     autoStart: false,
     agentSpec: AGENT_SPEC,

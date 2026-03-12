@@ -7,18 +7,17 @@ import { createStore } from 'zustand/vanilla';
 import { useStore } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { Transport } from '../../chat/components/Chat';
-import type { AgentStatus } from '../../hooks/useAgent';
+import type { AgentStatus } from '../../hooks/useAgents';
 import type { ServiceManager } from '@jupyterlab/services';
 import type {
   IRuntimeOptions,
   RuntimeConnection,
-  AgentRuntimeStatus,
   AgentConfig,
   AgentConnection,
-} from '../../hooks/useAgent';
+} from '../../hooks/useAgents';
 
 // Re-export AgentStatus so consumers of `../state` can still access it
-export type { AgentStatus } from '../../hooks/useAgent';
+export type { AgentStatus } from '../../hooks/useAgents';
 
 /**
  * Unified Agent model combining runtime tracking and UI state
@@ -61,7 +60,7 @@ export interface AgentStoreState {
   /** Current agent connection */
   agent: AgentConnection | null;
   /** Current status */
-  status: AgentRuntimeStatus;
+  status: AgentStatus;
   /** Error message if any */
   error: string | null;
   /** Whether a launch is in progress */
@@ -454,38 +453,19 @@ export function useAgentStore<T>(selector?: (state: AgentState) => T) {
   return useStore(agentStore, selector!);
 }
 
-/**
- * useAgentRuntimeStore — backward-compatible React hook for the runtime
- * connection slice. Works identically to the old `create()` store hook:
- *
- * @example
- * ```ts
- * const { runtime, launchAgent } = useAgentRuntimeStore();
- * const runtime = useAgentRuntimeStore(state => state.runtime);
- * ```
- */
-export function useAgentRuntimeStore(): AgentState;
-export function useAgentRuntimeStore<T>(selector: (state: AgentState) => T): T;
-export function useAgentRuntimeStore<T>(selector?: (state: AgentState) => T) {
-  return useStore(agentStore, selector!);
-}
-
 // Attach getState and subscribe so non-React code works:
-// e.g. useAgentRuntimeStore.getState(), useAgentRuntimeStore.subscribe(...)
-(useAgentRuntimeStore as any).getState = agentStore.getState;
-(useAgentRuntimeStore as any).subscribe = agentStore.subscribe;
+// e.g. useAgentStore.getState(), useAgentStore.subscribe(...)
+(useAgentStore as any).getState = agentStore.getState;
+(useAgentStore as any).subscribe = agentStore.subscribe;
 
 /**
  * Selector hooks for common use cases (runtime connection).
  */
-export const useAgentRuntime = () =>
-  useAgentRuntimeStore(state => state.runtime);
-export const useAgentFromStore = () =>
-  useAgentRuntimeStore(state => state.agent);
-export const useAgentStatus = () => useAgentRuntimeStore(state => state.status);
-export const useAgentError = () => useAgentRuntimeStore(state => state.error);
-export const useIsLaunching = () =>
-  useAgentRuntimeStore(state => state.isLaunching);
+export const useAgentRuntime = () => useAgentStore(state => state.runtime);
+export const useAgentFromStore = () => useAgentStore(state => state.agent);
+export const useAgentStatus = () => useAgentStore(state => state.status);
+export const useAgentError = () => useAgentStore(state => state.error);
+export const useIsLaunching = () => useAgentStore(state => state.isLaunching);
 
 /**
  * Get agent store state without React (for use outside components).
@@ -496,10 +476,5 @@ export const getAgentState = () => agentStore.getState();
  * Subscribe to agent store changes (for use outside React).
  */
 export const subscribeToAgent = agentStore.subscribe;
-
-// Backward compatibility exports
-export type AIAgentState = AgentState;
-export const aiAgentStore = agentStore;
-export const useAIAgentStore = useAgentStore;
 
 export default useAgentStore;
