@@ -782,10 +782,36 @@ export function useDeletePausedAgentRuntime() {
 }
 
 /**
+ * Hook to resume a paused agent runtime via CRIU restore.
+ * Calls the runtimes service POST /runtimes/{podName}/resume endpoint.
+ */
+export function useResumePausedAgentRuntime() {
+  const { useResumePausedAgentRuntime: hook } = useCache();
+  return hook();
+}
+
+/**
  * Hook to refresh agent runtimes list.
  */
 export function useRefreshAgentRuntimes() {
   const { useRefreshAgentRuntimes: hook } = useCache();
+  return hook();
+}
+
+/**
+ * Hook to fetch all runtime checkpoints (CRIU full-pod checkpoints).
+ * Returns checkpoint records from the runtimes service.
+ */
+export function useCheckpoints() {
+  const { useCheckpoints: hook } = useCache();
+  return hook();
+}
+
+/**
+ * Hook to refresh the checkpoints list.
+ */
+export function useRefreshCheckpoints() {
+  const { useRefreshCheckpoints: hook } = useCache();
   return hook();
 }
 
@@ -932,9 +958,6 @@ export type AgentCatalogStoreState = {
   /** Live agent runtimes (running / starting). */
   runningAgents: AgentRuntimeData[];
 
-  /** Live agent runtimes (paused). */
-  pausedAgents: AgentRuntimeData[];
-
   // ---- Mutators ----
 
   /** Re-read agent specs from the config. */
@@ -942,31 +965,17 @@ export type AgentCatalogStoreState = {
 
   /** Replace the running agents list (call from TanStack query effect). */
   setRunningAgents: (agents: AgentRuntimeData[]) => void;
-
-  /** Replace the paused agents list (call from TanStack query effect). */
-  setPausedAgents: (agents: AgentRuntimeData[]) => void;
 };
 
 export const useAgentCatalogStore = create<AgentCatalogStoreState>()(set => ({
   agentSpecs: listAgentSpecs('datalayer-ai/'),
   runningAgents: [],
-  pausedAgents: [],
 
   refreshSpecs: () => set({ agentSpecs: listAgentSpecs('datalayer-ai/') }),
 
   setRunningAgents: agents =>
     set(state => ({
       runningAgents: agents.map(agent => {
-        if (agent.agentSpec) return agent;
-        if (!agent.agent_spec_id) return agent;
-        const spec = state.agentSpecs.find(s => s.id === agent.agent_spec_id);
-        return spec ? { ...agent, agentSpec: spec } : agent;
-      }),
-    })),
-
-  setPausedAgents: agents =>
-    set(state => ({
-      pausedAgents: agents.map(agent => {
         if (agent.agentSpec) return agent;
         if (!agent.agent_spec_id) return agent;
         const spec = state.agentSpecs.find(s => s.id === agent.agent_spec_id);

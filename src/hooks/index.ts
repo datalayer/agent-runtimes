@@ -114,7 +114,10 @@ export {
   useCreateAgentRuntime,
   useDeleteAgentRuntime,
   useDeletePausedAgentRuntime,
+  useResumePausedAgentRuntime,
   useRefreshAgentRuntimes,
+  useCheckpoints,
+  useRefreshCheckpoints,
   type AgentRuntimeData,
 } from './useAgents';
 /**
