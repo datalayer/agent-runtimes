@@ -148,7 +148,6 @@ export type {
   RuntimeConnection,
   AgentStatus,
   AgentConfig,
-  AgentConnection,
   AgentRuntimeState,
 } from './useAgents';
 

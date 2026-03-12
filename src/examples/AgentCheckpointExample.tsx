@@ -87,7 +87,7 @@ const AGENT_SPEC = {
   name: 'Monitor Sales KPIs',
   description:
     'Monitor and analyze sales KPIs from the CRM system. Generate daily reports, identify trends, and flag anomalies.',
-  model: 'openai-gpt-4-1',
+  model: 'bedrock:us.anthropic.claude-3-5-haiku-20241022-v1:0',
   protocol: 'ag-ui',
   memory: 'mem0',
   sandbox_variant: 'jupyter',

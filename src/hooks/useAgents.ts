@@ -18,7 +18,7 @@ import {
   useAgentStatus,
   useAgentError,
   useIsLaunching,
-} from '../state/substates/AIAgentState';
+} from '../state/substates/AgentState';
 
 // Imports for useAgentRuntimes hooks
 import { useCache } from '@datalayer/core/lib/hooks';
@@ -93,14 +93,6 @@ export interface RuntimeConnection {
 }
 
 /**
- * @deprecated Use `RuntimeConnection` instead. Will be removed in a future version.
- */
-export type AgentConnection = Pick<
-  RuntimeConnection,
-  'agentId' | 'endpoint' | 'isReady'
->;
-
-/**
  * Configuration for creating an agent on a runtime.
  */
 export interface AgentConfig {
@@ -108,7 +100,7 @@ export interface AgentConfig {
   name?: string;
   /** Agent description */
   description?: string;
-  /** AI model to use (e.g., 'anthropic:claude-sonnet-4-5') */
+  /** AI model to use (e.g., 'bedrock:us.anthropic.claude-3-5-haiku-20241022-v1:0') */
   model?: string;
   /** System prompt for the agent */
   systemPrompt?: string;
@@ -124,8 +116,8 @@ export interface AgentConfig {
 export interface AgentRuntimeState {
   /** Runtime connection including agent info (null if not connected) */
   runtime: RuntimeConnection | null;
-  /** @deprecated Use `runtime.agentId`, `runtime.endpoint`, `runtime.isReady` instead */
-  agent: AgentConnection | null;
+  /** Agent connection info (agentId, endpoint, isReady) */
+  agent: Pick<RuntimeConnection, 'agentId' | 'endpoint' | 'isReady'> | null;
   /** Current status */
   status: AgentStatus;
   /** Error message if any */
@@ -137,12 +129,12 @@ export interface AgentRuntimeState {
 }
 
 /**
- * Default agent configuration values.
+ * Default agent configuration values (minimal fallbacks when no spec is provided).
  */
 export const DEFAULT_AGENT_CONFIG: Required<AgentConfig> = {
   name: 'ai-agent',
   description: 'AI Assistant',
-  model: 'anthropic:claude-sonnet-4-5',
+  model: '',
   systemPrompt: 'You are a helpful AI assistant.',
   agentLibrary: 'pydantic-ai',
   transport: 'ag-ui',
@@ -208,14 +200,16 @@ export interface UseAgentReturn {
   disconnect: () => void;
 
   // Agent
-  /** @deprecated Use `runtime.agentId`, `runtime.endpoint`, `runtime.isReady` instead */
-  agent: AgentConnection | null;
+  /** Agent connection info (agentId, endpoint, isReady) */
+  agent: Pick<RuntimeConnection, 'agentId' | 'endpoint' | 'isReady'> | null;
   /** Agent endpoint URL (shortcut for `runtime.endpoint`) */
   endpoint: string | null;
   /** ServiceManager for the runtime */
   serviceManager: ServiceManager.IManager | null;
   /** Create an agent on the runtime */
-  createAgent: (config?: AgentConfig) => Promise<AgentConnection>;
+  createAgent: (
+    config?: AgentConfig,
+  ) => Promise<Pick<RuntimeConnection, 'agentId' | 'endpoint' | 'isReady'>>;
   /** Whether agent creation is currently in progress */
   isCreating: boolean;
 
@@ -264,7 +258,7 @@ import type { IRuntimeOptions } from '@datalayer/core/lib/stateful/runtimes/apis
  * // Ephemeral mode — connect to an existing runtime
  * const { isReady, endpoint, connectToRuntime } = useAgents({
  *   autoCreateAgent: true,
- *   agentConfig: { model: 'anthropic:claude-sonnet-4-5' },
+ *   agentConfig: { model: 'bedrock:us.anthropic.claude-3-5-haiku-20241022-v1:0' },
  * });
  *
  * // Durable mode — full lifecycle
@@ -380,9 +374,24 @@ export function useAgents(options: UseAgentOptions = {}): UseAgentReturn {
       setIsCreating(true);
 
       try {
-        // Merge configs: defaults < options.agentConfig < override config
+        // Build spec-derived defaults from the agent spec (if provided)
+        const specDefaults: Partial<AgentConfig> = {};
+        if (agentSpec) {
+          if (agentSpec.model) specDefaults.model = agentSpec.model;
+          if (agentSpec.protocol)
+            specDefaults.transport =
+              agentSpec.protocol as AgentConfig['transport'];
+          if (agentSpec.systemPrompt)
+            specDefaults.systemPrompt = agentSpec.systemPrompt;
+          if (agentSpec.description)
+            specDefaults.description = agentSpec.description;
+          if (agentSpec.name) specDefaults.name = agentSpec.name;
+        }
+
+        // Merge configs: DEFAULT_AGENT_CONFIG < spec < options.agentConfig < override config
         const mergedConfig: AgentConfig = {
           ...DEFAULT_AGENT_CONFIG,
+          ...specDefaults,
           ...agentConfig,
           ...config,
           name:
@@ -407,7 +416,7 @@ export function useAgents(options: UseAgentOptions = {}): UseAgentReturn {
         setIsCreating(false);
       }
     },
-    [agentSpecId, agentConfig, isDurable, runtime, storeCreateAgent],
+    [agentSpecId, agentConfig, agentSpec, isDurable, runtime, storeCreateAgent],
   );
 
   // ─── Pause (CRIU Checkpoint) ────────────────────────────────────────

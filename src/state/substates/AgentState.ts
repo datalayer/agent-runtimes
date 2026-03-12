@@ -13,7 +13,6 @@ import type {
   IRuntimeOptions,
   RuntimeConnection,
   AgentConfig,
-  AgentConnection,
 } from '../../hooks/useAgents';
 
 // Re-export AgentStatus so consumers of `../state` can still access it
@@ -58,7 +57,7 @@ export interface AgentStoreState {
   /** Current runtime connection */
   runtime: RuntimeConnection | null;
   /** Current agent connection */
-  agent: AgentConnection | null;
+  agent: Pick<RuntimeConnection, 'agentId' | 'endpoint' | 'isReady'> | null;
   /** Current status */
   status: AgentStatus;
   /** Error message if any */
@@ -81,7 +80,9 @@ export interface AgentStoreActions {
     kernelId?: string;
   }) => void;
   /** Create an agent on the current runtime */
-  createAgent: (config?: AgentConfig) => Promise<AgentConnection>;
+  createAgent: (
+    config?: AgentConfig,
+  ) => Promise<Pick<RuntimeConnection, 'agentId' | 'endpoint' | 'isReady'>>;
   /** Disconnect from the current runtime */
   disconnect: () => void;
   /** Clear any errors */
@@ -144,7 +145,7 @@ async function createAgentOnRuntime(
   agentBaseUrl: string,
   agentId: string,
   config: AgentConfig = {},
-): Promise<AgentConnection> {
+): Promise<Pick<RuntimeConnection, 'agentId' | 'endpoint' | 'isReady'>> {
   const response = await fetch(`${agentBaseUrl}/api/v1/agents`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

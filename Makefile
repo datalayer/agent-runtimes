@@ -123,7 +123,7 @@ specs: ## generate Python and TypeScript code from YAML specifications (agents, 
 	else \
 		cd agentspecs && git fetch origin; \
 	fi
-	@cd agentspecs && git checkout 20bdc18
+	@cd agentspecs && git checkout d7aadd960dfac984f9df7546f1bd3390fdd17e07
 	@echo "Generating agent specifications..."
 	python scripts/codegen/generate_agents.py \
 	  --specs-dir agentspecs/agentspecs/agents \

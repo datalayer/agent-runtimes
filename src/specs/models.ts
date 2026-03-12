@@ -306,17 +306,3 @@ export const DEFAULT_MODEL: AIModelId =
   AIModels.BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_5_20250929_V1_0;
 export const DEFAULT_MODEL_SPEC: AIModel =
   BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_5_20250929_V1_0;
-
-// ============================================================================
-// Model Lookup Helpers
-// ============================================================================
-
-/** Return all models in the catalogue as an array. */
-export function listModels(): AIModel[] {
-  return Object.values(AI_MODEL_CATALOGUE);
-}
-
-/** Look up a single model by its string id. Returns `undefined` if not found. */
-export function getModel(id: string): AIModel | undefined {
-  return AI_MODEL_CATALOGUE[id];
-}
