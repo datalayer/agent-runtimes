@@ -43,19 +43,14 @@ export {
   useIsLaunching,
   getAgentState,
   subscribeToAgent,
-} from './agentStore';
+} from '../state/substates/AIAgentState';
 export type {
   AgentStore,
   AgentStoreState,
   AgentStoreActions,
-} from './agentStore';
+} from '../state/substates/AIAgentState';
 
 // Hooks
-export { useAgentConnection } from './useAgentConnection';
-export type {
-  UseAgentConnectionReturn,
-  UseAgentConnectionOptions,
-} from './useAgentConnection';
 export { useAgent } from './useAgent';
 export type {
   UseAgentReturn,

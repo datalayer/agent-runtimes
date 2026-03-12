@@ -21,7 +21,7 @@ import {
   useAgentStatus,
   useAgentError,
   useIsLaunching,
-} from './agentStore';
+} from '../state/substates/AIAgentState';
 import type {
   IRuntimeOptions,
   AgentConfig,
@@ -29,6 +29,7 @@ import type {
   RuntimeConnection,
   AgentStatus,
 } from './types';
+import { DEFAULT_AGENT_CONFIG } from './types';
 
 // ─── Types ────────────────────────────────────────────────────────────────
 
@@ -98,6 +99,8 @@ export interface UseAgentReturn {
   serviceManager: ServiceManager.IManager | null;
   /** Create an agent on the runtime */
   createAgent: (config?: AgentConfig) => Promise<AgentConnection>;
+  /** Whether agent creation is currently in progress */
+  isCreating: boolean;
 
   // Lifecycle (durable)
   /** Pause the agent (CRIU checkpoint) */
@@ -173,11 +176,13 @@ export function useAgent(options: UseAgentOptions = {}): UseAgentReturn {
   // Durable-specific local state
   const [durableStatus, setDurableStatus] = useState<AgentStatus>('idle');
   const [durableError, setDurableError] = useState<string | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
   const [checkpointRecords, setCheckpointRecords] = useState<
     CheckpointRecord[]
   >([]);
   const hasAutoStarted = useRef(false);
   const hasCreatedAgentRef = useRef(false);
+  const creatingRef = useRef(false);
   const agentConfigRef = useRef(agentConfig);
   agentConfigRef.current = agentConfig;
 
@@ -243,20 +248,42 @@ export function useAgent(options: UseAgentOptions = {}): UseAgentReturn {
 
   const createAgent = useCallback(
     async (config?: AgentConfig) => {
-      const merged = config || agentConfig;
-      if (isDurable && agentSpecId) {
-        try {
-          return await storeCreateAgent({ name: agentSpecId, ...merged });
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : String(err);
+      if (creatingRef.current) {
+        throw new Error('Agent creation already in progress');
+      }
+
+      creatingRef.current = true;
+      setIsCreating(true);
+
+      try {
+        // Merge configs: defaults < options.agentConfig < override config
+        const mergedConfig: AgentConfig = {
+          ...DEFAULT_AGENT_CONFIG,
+          ...agentConfig,
+          ...config,
+          name:
+            config?.name ||
+            agentConfig?.name ||
+            (isDurable && agentSpecId ? agentSpecId : runtime?.podName),
+        };
+
+        if (isDurable && agentSpecId) {
+          return await storeCreateAgent({ name: agentSpecId, ...mergedConfig });
+        }
+        return await storeCreateAgent(mergedConfig);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        if (isDurable) {
           setDurableError(msg);
           setDurableStatus('error');
-          throw err;
         }
+        throw err;
+      } finally {
+        creatingRef.current = false;
+        setIsCreating(false);
       }
-      return storeCreateAgent(merged);
     },
-    [agentSpecId, agentConfig, isDurable, storeCreateAgent],
+    [agentSpecId, agentConfig, isDurable, runtime, storeCreateAgent],
   );
 
   // ─── Pause (CRIU Checkpoint) ────────────────────────────────────────
@@ -512,6 +539,7 @@ export function useAgent(options: UseAgentOptions = {}): UseAgentReturn {
     endpoint,
     serviceManager,
     createAgent,
+    isCreating,
 
     // Lifecycle (durable)
     pause,
