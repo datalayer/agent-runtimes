@@ -9,7 +9,7 @@
  * Demonstrates launching a durable agent in the Datalayer cloud,
  * with pause/resume (CRIU checkpoint) and lifecycle controls.
  *
- * Uses the `useDurableAgent` hook which:
+ * Uses the `useAgent` hook which:
  *   1. Creates a cloud runtime via the Datalayer Runtimes API
  *      (environment: 'ai-agents-env')
  *   2. Deploys an agent on the runtime's agent-runtimes sidecar
@@ -59,11 +59,9 @@ import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { SignInSimple } from '@datalayer/core/lib/views/iam';
 import { UserBadge } from '@datalayer/core/lib/views/profile';
 import { Chat } from '../chat';
-import { useDurableAgent } from '../runtime/useDurableAgent';
-import type {
-  DurableRuntimeStatus,
-  CheckpointRecord,
-} from '../runtime/useDurableAgent';
+import { useAgent } from '../agents/useAgent';
+import type { CheckpointRecord } from '../agents/useAgent';
+import type { AgentStatus } from '../agents/types';
 
 // ─── Running agent entry ───────────────────────────────────────────────────
 
@@ -114,13 +112,17 @@ const AGENT_SPEC = {
 
 // ─── Status badge ──────────────────────────────────────────────────────────
 
-const STATUS_COLORS: Record<DurableRuntimeStatus, string> = {
+const STATUS_COLORS: Record<AgentStatus, string> = {
   idle: 'secondary',
+  initializing: 'attention',
   launching: 'attention',
+  connecting: 'attention',
   ready: 'success',
+  running: 'success',
   paused: 'severe',
   resuming: 'accent',
   error: 'danger',
+  disconnected: 'secondary',
 };
 
 // ─── Sidebar width ─────────────────────────────────────────────────────────
@@ -164,9 +166,9 @@ const AgentCheckpointInner: React.FC<{ onLogout: () => void }> = ({
   const { token } = useSimpleAuthStore();
   const {
     runtime,
-    runtimeStatus,
+    status: runtimeStatus,
     agent,
-    agentEndpoint: _agentEndpoint,
+    endpoint: _agentEndpoint,
     isReady,
     error: hookError,
     launchRuntime,
@@ -177,7 +179,7 @@ const AgentCheckpointInner: React.FC<{ onLogout: () => void }> = ({
     checkpoint,
     refreshCheckpoints,
     checkpoints,
-  } = useDurableAgent({
+  } = useAgent({
     agentSpecId: AGENT_SPEC_ID,
     autoStart: false,
     agentSpec: AGENT_SPEC,
@@ -195,7 +197,7 @@ const AgentCheckpointInner: React.FC<{ onLogout: () => void }> = ({
   const [actionError, setActionError] = useState<string | null>(null);
   const [runningAgents, setRunningAgents] = useState<RunningAgent[]>([]);
 
-  const displayError = hookError?.message || actionError;
+  const displayError = hookError || actionError;
   const podName = runtime?.podName || '(launching…)';
   const agentId = agent?.agentId || AGENT_SPEC_ID;
   const agentBaseUrl = runtime?.agentBaseUrl || '';

@@ -4,28 +4,28 @@
  */
 
 /**
- * Runtime management module for agent-runtimes.
+ * Agent management module for agent-runtimes.
  *
  * Provides a Zustand store and hooks for launching and managing cloud runtimes
  * with integrated AI agent support.
  *
- * @module runtime
+ * @module agents
  *
  * @example
  * ```typescript
- * import { useRuntimeStore, useRuntime, useAgent } from '@datalayer/agent-runtimes/lib/runtime';
+ * import { useAgentRuntimeStore, useAgent } from '@datalayer/agent-runtimes/lib/agents';
  *
  * // Launch a new runtime
- * const { launchRuntime, createAgent } = useRuntimeStore();
- * const runtime = await launchRuntime({ environmentName: 'python-simple', creditsLimit: 100 });
+ * const { launchAgent, createAgent } = useAgentRuntimeStore();
+ * const runtime = await launchAgent({ environmentName: 'python-simple', creditsLimit: 100 });
  * const agent = await createAgent({ model: 'anthropic:claude-sonnet-4-5' });
  *
  * // Use in ChatFloating
  * <ChatFloating endpoint={agent.endpoint} />
  *
  * // Or connect to an existing runtime
- * const { connectToRuntime } = useRuntimeStore();
- * connectToRuntime({
+ * const { connectAgent } = useAgentRuntimeStore();
+ * connectAgent({
  *   podName: 'my-pod',
  *   environmentName: 'python-simple',
  *   serviceManager: myServiceManager,
@@ -33,22 +33,22 @@
  * ```
  */
 
-// Zustand store
+// Zustand store for runtime connection management
 export {
-  useRuntimeStore,
-  useRuntime,
-  useAgent,
-  useRuntimeStatus,
-  useRuntimeError,
+  useAgentRuntimeStore,
+  useAgentRuntime,
+  useAgentFromStore,
+  useAgentStatus,
+  useAgentError,
   useIsLaunching,
-  getRuntimeState,
-  subscribeToRuntime,
-} from './runtimeStore';
+  getAgentState,
+  subscribeToAgent,
+} from './agentStore';
 export type {
-  RuntimeStore,
-  RuntimeStoreState,
-  RuntimeStoreActions,
-} from './runtimeStore';
+  AgentStore,
+  AgentStoreState,
+  AgentStoreActions,
+} from './agentStore';
 
 // Hooks
 export { useAgentConnection } from './useAgentConnection';
@@ -56,17 +56,12 @@ export type {
   UseAgentConnectionReturn,
   UseAgentConnectionOptions,
 } from './useAgentConnection';
-export { useAgentRuntime } from './useAgentRuntime';
+export { useAgent } from './useAgent';
 export type {
-  UseAgentRuntimeReturn,
-  UseAgentRuntimeOptions,
-} from './useAgentRuntime';
-export { useDurableAgent } from './useDurableAgent';
-export type {
-  UseDurableAgentReturn,
-  UseDurableAgentOptions,
-  DurableRuntimeStatus,
-} from './useDurableAgent';
+  UseAgentReturn,
+  UseAgentOptions,
+  CheckpointRecord,
+} from './useAgent';
 
 // Types - re-exported from @datalayer/core
 export type {
@@ -78,10 +73,11 @@ export type {
   IRuntimeDesc,
 } from './types';
 
-// Types - agent-runtimes specific
+// Types - agent-runtimes specific (unified AgentStatus superset)
 export type {
   RuntimeConnection,
-  AgentRuntimeStatus as RuntimeStatus,
+  AgentRuntimeStatus,
+  AgentStatus,
   AgentConfig,
   AgentConnection,
   AgentRuntimeState,

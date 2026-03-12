@@ -37,6 +37,24 @@ export type AgentRuntimeStatus =
   | 'disconnected';
 
 /**
+ * Unified agent status — superset of runtime connection status and UI agent status.
+ *
+ * Covers both the runtime lifecycle (idle → launching → connecting → ready → disconnected)
+ * and the agent UI state (initializing, running, paused, resuming).
+ */
+export type AgentStatus =
+  | 'idle'
+  | 'initializing'
+  | 'launching'
+  | 'connecting'
+  | 'ready'
+  | 'running'
+  | 'paused'
+  | 'resuming'
+  | 'error'
+  | 'disconnected';
+
+/**
  * Information about a connected runtime with agent-runtimes server.
  * Extends the basic runtime info with URLs for both Jupyter and agent services.
  */

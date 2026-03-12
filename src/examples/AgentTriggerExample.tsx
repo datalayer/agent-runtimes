@@ -46,7 +46,7 @@ import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { SignInSimple } from '@datalayer/core/lib/views/iam';
 import { UserBadge } from '@datalayer/core/lib/views/profile';
 import { Chat } from '../chat';
-import { useDurableAgent } from '../runtime/useDurableAgent';
+import { useAgent } from '../agents/useAgent';
 
 // ─── Constants ─────────────────────────────────────────────────────────────
 
@@ -76,10 +76,10 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
   const {
     runtime,
     agent,
-    runtimeStatus,
+    status: runtimeStatus,
     isReady,
     error: hookError,
-  } = useDurableAgent({
+  } = useAgent({
     agentSpecId: AGENT_SPEC_ID,
     autoStart: true,
     agentConfig: {
@@ -316,7 +316,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
       >
         <AlertIcon size={48} />
         <Text sx={{ color: 'danger.fg' }}>
-          {hookError?.message || 'Agent failed to start'}
+          {hookError || 'Agent failed to start'}
         </Text>
       </Box>
     );

@@ -6,11 +6,11 @@
 /**
  * Hook for creating and managing agent connections on a runtime.
  *
- * @module runtime/useAgentConnection
+ * @module agents/useAgentConnection
  */
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { useRuntimeStore } from './runtimeStore';
+import { useAgentRuntimeStore } from './agentStore';
 import type { AgentConfig, AgentConnection } from './types';
 
 const DEFAULT_AGENT_CONFIG: AgentConfig = {
@@ -50,7 +50,7 @@ export interface UseAgentConnectionReturn {
  * @example
  * ```tsx
  * function MyComponent() {
- *   const { runtime } = useRuntimeStore();
+ *   const { runtime } = useAgentRuntimeStore();
  *   const { agent, isReady } = useAgentConnection({
  *     autoCreate: true,
  *     config: {
@@ -70,9 +70,9 @@ export function useAgentConnection(
 ): UseAgentConnectionReturn {
   const { config, autoCreate = false } = options;
 
-  const runtime = useRuntimeStore(state => state.runtime);
-  const storeAgent = useRuntimeStore(state => state.agent);
-  const createStoreAgent = useRuntimeStore(state => state.createAgent);
+  const runtime = useAgentRuntimeStore(state => state.runtime);
+  const storeAgent = useAgentRuntimeStore(state => state.agent);
+  const createStoreAgent = useAgentRuntimeStore(state => state.createAgent);
 
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
