@@ -11,7 +11,7 @@ import type { AgentStatus } from '../../hooks/useAgents';
 import type { ServiceManager } from '@jupyterlab/services';
 import type {
   IRuntimeOptions,
-  RuntimeConnection,
+  AgentConnection,
   AgentConfig,
 } from '../../hooks/useAgents';
 
@@ -54,10 +54,8 @@ export interface Agent {
  * Agent runtime store state interface.
  */
 export interface AgentStoreState {
-  /** Current runtime connection */
-  runtime: RuntimeConnection | null;
-  /** Current agent connection */
-  agent: Pick<RuntimeConnection, 'agentId' | 'endpoint' | 'isReady'> | null;
+  /** Current runtime connection (includes agent fields when an agent is created) */
+  runtime: AgentConnection | null;
   /** Current status */
   status: AgentStatus;
   /** Error message if any */
@@ -71,7 +69,7 @@ export interface AgentStoreState {
  */
 export interface AgentStoreActions {
   /** Launch a new runtime for the agent */
-  launchAgent: (options: IRuntimeOptions) => Promise<RuntimeConnection>;
+  launchAgent: (options: IRuntimeOptions) => Promise<AgentConnection>;
   /** Connect to an existing runtime */
   connectAgent: (connection: {
     podName: string;
@@ -82,7 +80,7 @@ export interface AgentStoreActions {
   /** Create an agent on the current runtime */
   createAgent: (
     config?: AgentConfig,
-  ) => Promise<Pick<RuntimeConnection, 'agentId' | 'endpoint' | 'isReady'>>;
+  ) => Promise<Pick<AgentConnection, 'agentId' | 'endpoint' | 'isReady'>>;
   /** Disconnect from the current runtime */
   disconnect: () => void;
   /** Clear any errors */
@@ -145,7 +143,7 @@ async function createAgentOnRuntime(
   agentBaseUrl: string,
   agentId: string,
   config: AgentConfig = {},
-): Promise<Pick<RuntimeConnection, 'agentId' | 'endpoint' | 'isReady'>> {
+): Promise<Pick<AgentConnection, 'agentId' | 'endpoint' | 'isReady'>> {
   const response = await fetch(`${agentBaseUrl}/api/v1/agents`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -180,7 +178,6 @@ async function createAgentOnRuntime(
 
 const initialRuntimeState: AgentStoreState = {
   runtime: null,
-  agent: null,
   status: 'idle',
   error: null,
   isLaunching: false,
@@ -294,7 +291,7 @@ export const agentStore = createStore<AgentState>()(
           '/agent-runtimes/',
         );
 
-        const fullConnection: RuntimeConnection = {
+        const fullConnection: AgentConnection = {
           podName: connection.podName,
           environmentName: connection.environmentName,
           jupyterBaseUrl: baseUrl,
@@ -349,7 +346,7 @@ export const agentStore = createStore<AgentState>()(
             '/agent-runtimes/',
           );
 
-          const connection: RuntimeConnection = {
+          const connection: AgentConnection = {
             podName: runtimePod.pod_name,
             environmentName: runtimePod.environment_name,
             jupyterBaseUrl,
@@ -394,7 +391,15 @@ export const agentStore = createStore<AgentState>()(
             config,
           );
 
-          set({ agent: agentConnection });
+          // Merge agent fields into the runtime connection
+          set({
+            runtime: {
+              ...runtime,
+              agentId: agentConnection.agentId,
+              endpoint: agentConnection.endpoint,
+              isReady: agentConnection.isReady,
+            },
+          });
           return agentConnection;
         } catch (err) {
           const errorMessage =
@@ -407,7 +412,6 @@ export const agentStore = createStore<AgentState>()(
       disconnect: () => {
         set({
           runtime: null,
-          agent: null,
           status: 'disconnected',
           error: null,
         });
@@ -463,7 +467,17 @@ export function useAgentStore<T>(selector?: (state: AgentState) => T) {
  * Selector hooks for common use cases (runtime connection).
  */
 export const useAgentRuntime = () => useAgentStore(state => state.runtime);
-export const useAgentFromStore = () => useAgentStore(state => state.agent);
+/** @deprecated Use useAgentRuntime() instead — agent fields are now on the runtime connection. */
+export const useAgentFromStore = () =>
+  useAgentStore(state =>
+    state.runtime
+      ? {
+          agentId: state.runtime.agentId,
+          endpoint: state.runtime.endpoint,
+          isReady: state.runtime.isReady,
+        }
+      : null,
+  );
 export const useAgentStatus = () => useAgentStore(state => state.status);
 export const useAgentError = () => useAgentStore(state => state.error);
 export const useIsLaunching = () => useAgentStore(state => state.isLaunching);

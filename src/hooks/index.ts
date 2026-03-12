@@ -145,7 +145,7 @@ export type {
 
 // Types - agent-runtimes specific
 export type {
-  RuntimeConnection,
+  AgentConnection,
   AgentStatus,
   AgentConfig,
   AgentRuntimeState,

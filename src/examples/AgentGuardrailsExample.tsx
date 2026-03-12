@@ -66,7 +66,6 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
 
   const {
     runtime,
-    agent,
     status: runtimeStatus,
     isReady,
     error: hookError,
@@ -89,7 +88,7 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
   const [approvalLoading, setApprovalLoading] = useState<string | null>(null);
 
   const agentBaseUrl = runtime?.agentBaseUrl || '';
-  const agentId = agent?.agentId || AGENT_NAME;
+  const agentId = runtime?.agentId || AGENT_NAME;
   const podName = runtime?.podName || '(launching…)';
 
   // Authenticated fetch helper (for sidecar endpoints)

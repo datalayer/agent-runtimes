@@ -14,7 +14,6 @@ import type { ServiceManager } from '@jupyterlab/services';
 import {
   useAgentStore,
   useAgentRuntime,
-  useAgentFromStore,
   useAgentStatus,
   useAgentError,
   useIsLaunching,
@@ -66,10 +65,10 @@ export type AgentStatus =
   | 'disconnected';
 
 /**
- * Information about a connected runtime with agent-runtimes server.
- * Combines runtime infrastructure and agent connection details.
+ * Information about a connected agent with agent-runtimes server.
+ * Combines agent infrastructure and connection details.
  */
-export interface RuntimeConnection {
+export interface AgentConnection {
   /** Runtime pod name (unique identifier) */
   podName: string;
   /** Environment name */
@@ -115,9 +114,7 @@ export interface AgentConfig {
  */
 export interface AgentRuntimeState {
   /** Runtime connection including agent info (null if not connected) */
-  runtime: RuntimeConnection | null;
-  /** Agent connection info (agentId, endpoint, isReady) */
-  agent: Pick<RuntimeConnection, 'agentId' | 'endpoint' | 'isReady'> | null;
+  runtime: AgentConnection | null;
   /** Current status */
   status: AgentStatus;
   /** Error message if any */
@@ -182,13 +179,13 @@ export interface UseAgentOptions {
 export interface UseAgentReturn {
   // Runtime
   /** Current runtime connection (null if not connected) */
-  runtime: RuntimeConnection | null;
+  runtime: AgentConnection | null;
   /** Combined agent status */
   status: AgentStatus;
   /** Whether the runtime is launching */
   isLaunching: boolean;
   /** Launch a new runtime */
-  launchRuntime: (options?: IRuntimeOptions) => Promise<RuntimeConnection>;
+  launchRuntime: (options?: IRuntimeOptions) => Promise<AgentConnection>;
   /** Connect to an existing runtime */
   connectToRuntime: (options: {
     podName: string;
@@ -200,16 +197,14 @@ export interface UseAgentReturn {
   disconnect: () => void;
 
   // Agent
-  /** Agent connection info (agentId, endpoint, isReady) */
-  agent: Pick<RuntimeConnection, 'agentId' | 'endpoint' | 'isReady'> | null;
-  /** Agent endpoint URL (shortcut for `runtime.endpoint`) */
+  /** Agent endpoint URL (derived from runtime connection) */
   endpoint: string | null;
   /** ServiceManager for the runtime */
   serviceManager: ServiceManager.IManager | null;
   /** Create an agent on the runtime */
   createAgent: (
     config?: AgentConfig,
-  ) => Promise<Pick<RuntimeConnection, 'agentId' | 'endpoint' | 'isReady'>>;
+  ) => Promise<Pick<AgentConnection, 'agentId' | 'endpoint' | 'isReady'>>;
   /** Whether agent creation is currently in progress */
   isCreating: boolean;
 
@@ -280,7 +275,6 @@ export function useAgents(options: UseAgentOptions = {}): UseAgentReturn {
 
   // Base store state
   const runtime = useAgentRuntime();
-  const agent = useAgentFromStore();
   const baseStatus = useAgentStatus();
   const storeError = useAgentError();
   const isLaunching = useIsLaunching();
@@ -598,7 +592,7 @@ export function useAgents(options: UseAgentOptions = {}): UseAgentReturn {
       autoCreateAgent &&
       runtime &&
       baseStatus === 'ready' &&
-      !agent &&
+      !runtime.isReady &&
       !hasCreatedAgentRef.current
     ) {
       hasCreatedAgentRef.current = true;
@@ -607,14 +601,7 @@ export function useAgents(options: UseAgentOptions = {}): UseAgentReturn {
         hasCreatedAgentRef.current = false;
       });
     }
-  }, [
-    isDurable,
-    autoCreateAgent,
-    runtime,
-    baseStatus,
-    agent,
-    storeCreateAgent,
-  ]);
+  }, [isDurable, autoCreateAgent, runtime, baseStatus, storeCreateAgent]);
 
   // Reset agent creation tracking on disconnect
   useEffect(() => {
@@ -653,9 +640,9 @@ export function useAgents(options: UseAgentOptions = {}): UseAgentReturn {
     : (baseStatus as AgentStatus);
   const error = isDurable ? durableError || storeError : storeError;
   const isReady = isDurable
-    ? durableStatus === 'ready' && !!agent?.isReady
-    : baseStatus === 'ready' && !!agent?.isReady;
-  const endpoint = agent?.endpoint || null;
+    ? durableStatus === 'ready' && !!runtime?.isReady
+    : baseStatus === 'ready' && !!runtime?.isReady;
+  const endpoint = runtime?.endpoint || null;
   const serviceManager = runtime?.serviceManager || null;
 
   return {
@@ -668,7 +655,6 @@ export function useAgents(options: UseAgentOptions = {}): UseAgentReturn {
     disconnect: storeDisconnect,
 
     // Agent
-    agent,
     endpoint,
     serviceManager,
     createAgent,

@@ -62,7 +62,6 @@ const AgentMemoryInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
 
   const {
     runtime,
-    agent,
     status: runtimeStatus,
     isReady,
     error: hookError,
@@ -82,7 +81,7 @@ const AgentMemoryInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
   const [searching, setSearching] = useState(false);
 
   const agentBaseUrl = runtime?.agentBaseUrl || '';
-  const agentId = agent?.agentId || AGENT_NAME;
+  const agentId = runtime?.agentId || AGENT_NAME;
   const podName = runtime?.podName || '(launching…)';
 
   // Authenticated fetch helper (for sidecar endpoints)

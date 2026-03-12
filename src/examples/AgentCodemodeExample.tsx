@@ -64,7 +64,6 @@ const AgentCodemodeInner: React.FC<{ onLogout: () => void }> = ({
 
   const {
     runtime,
-    agent,
     status: runtimeStatus,
     isReady,
     error: hookError,
@@ -84,7 +83,7 @@ const AgentCodemodeInner: React.FC<{ onLogout: () => void }> = ({
   const [flash, setFlash] = useState<string | null>(null);
 
   const agentBaseUrl = runtime?.agentBaseUrl || '';
-  const agentId = agent?.agentId || AGENT_NAME;
+  const agentId = runtime?.agentId || AGENT_NAME;
   const podName = runtime?.podName || '(launching…)';
 
   // Authenticated fetch helper
