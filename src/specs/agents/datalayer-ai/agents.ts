@@ -302,7 +302,7 @@ export const SIMPLE_AGENT_SPEC: AgentSpec = {
   mcpServers: [],
   skills: [],
   environmentName: 'ai-agents-env',
-  icon: 'share-2',
+  icon: 'agent',
   emoji: '🤖',
   color: '#6366F1',
   suggestions: [

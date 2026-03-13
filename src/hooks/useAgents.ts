@@ -770,6 +770,8 @@ export type CheckpointData = {
   status: string;
   status_message: string;
   updated_at: string;
+  start_date?: string;
+  end_date?: string;
 };
 
 /**
