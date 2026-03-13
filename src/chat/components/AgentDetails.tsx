@@ -71,6 +71,8 @@ export interface AgentDetailsProps {
   onBack: () => void;
   /** Whether to show the header with back button (default: true) */
   showBackHeader?: boolean;
+  /** Whether to show context usage/history and context snapshot sections (default: true) */
+  showUsage?: boolean;
 }
 
 /**
@@ -328,6 +330,7 @@ export function AgentDetails({
   onIdentityDisconnect,
   onBack,
   showBackHeader = true,
+  showUsage = true,
 }: AgentDetailsProps) {
   const queryClient = useQueryClient();
 
@@ -1531,7 +1534,7 @@ export function AgentDetails({
         </Box>
 
         {/* Unified Context Panel - usage, distribution, and history */}
-        {agentId && (
+        {showUsage && agentId && (
           <ContextPanel
             agentId={agentId}
             apiBase={apiBase}
@@ -1541,7 +1544,7 @@ export function AgentDetails({
         )}
 
         {/* Context Snapshot - detailed inspection of agent context */}
-        {agentId && (
+        {showUsage && agentId && (
           <Box sx={{ mt: 3 }}>
             <Box
               sx={{
