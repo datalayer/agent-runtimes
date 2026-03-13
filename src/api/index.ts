@@ -12,6 +12,32 @@
  * @module api
  */
 
+// AI Agents API (durable agent management: agents, tool-approvals, notifications, etc.)
+export * as agents from './agents';
+export * as toolApprovals from './tool-approvals';
+export * as notifications from './notifications';
+export * as output from './output';
+export * as evals from './evals';
+export * as context from './context';
+export type {
+  RunningAgent,
+  AgentStatus,
+  ToolApproval,
+  ToolApprovalStatus,
+  ToolApprovalFilters,
+  AgentNotification,
+  NotificationLevel,
+  NotificationFilters,
+  ConversationCheckpoint,
+  AgentUsageSummary,
+  OutputArtifact,
+  EvalReport,
+  RunEvalsRequest,
+  ContextUsage,
+  CostUsage,
+  ModelCostBreakdown,
+} from './types';
+
 /** Base URL for the agent-runtimes API (same-origin by default). */
 const DEFAULT_BASE_URL = '/api/v1';
 

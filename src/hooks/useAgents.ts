@@ -19,8 +19,9 @@ import {
   useIsLaunching,
 } from '../state/substates/AgentState';
 
-// Imports for useAgentRuntimes hooks
-import { useCache } from '@datalayer/core/lib/hooks';
+// Imports for useAgentRuntimes hooks (self-contained, no useCache dependency)
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useIAMStore } from '@datalayer/core/lib/state';
 
 // Imports for useAIAgents hook
 import { useCoreStore, useDatalayer } from '@datalayer/core';
@@ -34,17 +35,6 @@ import type { AgentSpec } from '../types';
 // ═══════════════════════════════════════════════════════════════════════════
 // Types (formerly agents/types.ts)
 // ═══════════════════════════════════════════════════════════════════════════
-
-// Re-export core runtime types from @datalayer/core
-export type {
-  IRuntimeLocation,
-  IRuntimeType,
-  IRuntimeCapabilities,
-  IRuntimePod,
-  IRuntimeDesc,
-} from '@datalayer/core/lib/models';
-
-export type { IRuntimeOptions } from '@datalayer/core/lib/stateful/runtimes/apis';
 
 /**
  * Unified agent status covering the full lifecycle.
@@ -461,30 +451,11 @@ export function useAgents(options: UseAgentOptions = {}): UseAgentReturn {
       if (runtime) {
         const { resumeRuntime } =
           await import('@datalayer/core/lib/api/runtimes/runtimes');
-        const resp = await resumeRuntime(
-          token,
-          runtime.podName,
-          runtimesRunUrl,
-          {
-            agent_spec_id: agentSpecId,
-          },
-        );
-        if (resp.checkpoint_id) {
-          const { waitForCheckpointStatus } =
-            await import('@datalayer/core/lib/api/runtimes/checkpoints');
-          const ckpt = await waitForCheckpointStatus(
-            token,
-            runtime.podName,
-            resp.checkpoint_id,
-            ['resumed', 'failed'],
-            runtimesRunUrl,
-          );
-          if (ckpt.status === 'failed') {
-            throw new Error(
-              `Checkpoint ${resp.checkpoint_id} failed during CRIU resume`,
-            );
-          }
-        }
+        await resumeRuntime(token, runtime.podName, runtimesRunUrl, {
+          agent_spec_id: agentSpecId,
+        });
+        // The checkpoint stays "paused"; the agent pod will transition
+        // to running on its own.
         setDurableStatus('ready');
       } else {
         await launchRuntime();
@@ -677,8 +648,42 @@ export function useAgents(options: UseAgentOptions = {}): UseAgentReturn {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// Agent Runtimes hooks (formerly useAgentRuntimes.ts)
+// Agent Runtimes hooks (self-contained, no useCache dependency)
 // ═══════════════════════════════════════════════════════════════════════════
+
+/** Default query options for all agent runtime queries. */
+const AGENT_QUERY_OPTIONS = {
+  staleTime: 5 * 60 * 1000, // 5 minutes
+  gcTime: 10 * 60 * 1000, // 10 minutes
+};
+
+/** Query keys for agent runtimes and checkpoints. */
+export const agentQueryKeys = {
+  agentRuntimes: {
+    all: () => ['agentRuntimes'] as const,
+    lists: () => [...agentQueryKeys.agentRuntimes.all(), 'list'] as const,
+    details: () => [...agentQueryKeys.agentRuntimes.all(), 'detail'] as const,
+    detail: (podName: string) =>
+      [...agentQueryKeys.agentRuntimes.details(), podName] as const,
+  },
+  checkpoints: {
+    all: () => ['checkpoints'] as const,
+    lists: () => [...agentQueryKeys.checkpoints.all(), 'list'] as const,
+  },
+} as const;
+
+/** Request payload for creating a new agent runtime. */
+export type CreateAgentRuntimeRequest = {
+  environmentName?: string;
+  givenName?: string;
+  creditsLimit?: number;
+  type?: string;
+  /** 'none', 'notebook', or 'document' */
+  editorVariant?: string;
+  enableCodemode?: boolean;
+  /** ID of the agent spec used to create this runtime */
+  agentSpecId?: string;
+};
 
 /**
  * Agent Runtime data type (mapped from runtimes service).
@@ -702,7 +707,7 @@ export type AgentRuntimeData = {
   burning_rate?: number;
   status: 'starting' | 'running' | 'paused' | 'terminated' | 'archived';
   messageCount: number;
-  // Backend returns 'ingress', mapped to 'url' in useCache
+  // Backend returns 'ingress', mapped to 'url'
   ingress?: string;
   url?: string;
   token?: string;
@@ -713,7 +718,41 @@ export type AgentRuntimeData = {
 };
 
 /**
- * Hook to access all agent runtime operations from the centralized cache.
+ * Checkpoint data returned by the runtime-checkpoints API.
+ */
+export type CheckpointData = {
+  id: string;
+  name: string;
+  description: string;
+  runtime_uid: string;
+  agent_spec_id: string;
+  agentspec: Record<string, unknown>;
+  metadata: Record<string, unknown>;
+  status: string;
+  status_message: string;
+  updated_at: string;
+};
+
+/**
+ * Helper: map a raw runtime phase to a UI-friendly status.
+ */
+function mapPhaseToStatus(phase?: string): AgentRuntimeData['status'] {
+  switch (phase) {
+    case 'Pending':
+      return 'starting';
+    case 'Terminated':
+      return 'terminated';
+    case 'Paused':
+      return 'paused';
+    case 'Archived':
+      return 'archived';
+    default:
+      return 'running';
+  }
+}
+
+/**
+ * Hook to access all agent runtime operations.
  *
  * @example
  * ```tsx
@@ -727,96 +766,312 @@ export type AgentRuntimeData = {
  * ```
  */
 export function useAgentRuntimesCache() {
-  const cache = useCache();
-
   return {
-    useAgentRuntime: cache.useAgentRuntime,
-    useAgentRuntimes: cache.useAgentRuntimes,
-    useCreateAgentRuntime: cache.useCreateAgentRuntime,
-    useDeleteAgentRuntime: cache.useDeleteAgentRuntime,
-    useDeletePausedAgentRuntime: cache.useDeletePausedAgentRuntime,
-    useRefreshAgentRuntimes: cache.useRefreshAgentRuntimes,
-    queryKeys: cache.queryKeys,
+    useAgentRuntime: useAgentRuntimeByPodName,
+    useAgentRuntimes,
+    useCreateAgentRuntime,
+    useDeleteAgentRuntime,
+    useDeletePausedAgentRuntime,
+    useRefreshAgentRuntimes,
+    queryKeys: agentQueryKeys,
   };
 }
 
 /**
  * Hook to fetch user's agent runtimes (running agent instances).
- * Used by the sidebar to show running/paused/terminated agents.
+ *
+ * The backend returns active runtimes from the operator **plus** paused
+ * runtimes synthesised from Solr checkpoint records (with ``phase="Paused"``).
+ *
+ * Phase to status mapping:
+ * - ``Pending``    → ``starting``
+ * - ``Paused``     → ``paused``
+ * - ``Terminated`` → ``terminated``
+ * - ``Archived``   → ``archived``
+ * - (default)      → ``running``
  */
 export function useAgentRuntimes() {
-  const { useAgentRuntimes: hook } = useCache();
-  return hook();
+  const { configuration } = useCoreStore();
+  const { requestDatalayer } = useDatalayer({ notifyOnError: false });
+  const { user } = useIAMStore();
+  const queryClient = useQueryClient();
+
+  return useQuery({
+    queryKey: agentQueryKeys.agentRuntimes.lists(),
+    queryFn: async () => {
+      const resp = await requestDatalayer({
+        url: `${configuration.runtimesRunUrl}/api/runtimes/v1/runtimes`,
+        method: 'GET',
+      });
+      if (resp.success && resp.runtimes) {
+        const agentRuntimes = (resp.runtimes as AgentRuntimeData[])
+          .filter(
+            (rt: AgentRuntimeData) => rt.environment_name === 'ai-agents-env',
+          )
+          .map((rt: AgentRuntimeData) => ({
+            ...rt,
+            status: mapPhaseToStatus(rt.phase),
+            name: rt.given_name || rt.pod_name,
+            id: rt.pod_name,
+            url: rt.ingress,
+            messageCount: 0,
+            agent_spec_id: rt.agent_spec_id || undefined,
+          }));
+        agentRuntimes.forEach((runtime: AgentRuntimeData) => {
+          queryClient.setQueryData(
+            agentQueryKeys.agentRuntimes.detail(runtime.pod_name),
+            runtime,
+          );
+        });
+        return agentRuntimes;
+      }
+      return [];
+    },
+    ...AGENT_QUERY_OPTIONS,
+    refetchInterval: 10000,
+    enabled: !!user,
+  });
 }
 
 /**
  * Hook to fetch a single agent runtime by pod name.
  */
 export function useAgentRuntimeByPodName(podName: string | undefined) {
-  const { useAgentRuntime: hook } = useCache();
-  return hook(podName);
+  const { configuration } = useCoreStore();
+  const { requestDatalayer } = useDatalayer({ notifyOnError: false });
+
+  return useQuery({
+    queryKey: agentQueryKeys.agentRuntimes.detail(podName ?? ''),
+    queryFn: async () => {
+      const resp = await requestDatalayer({
+        url: `${configuration.runtimesRunUrl}/api/runtimes/v1/runtimes/${podName}`,
+        method: 'GET',
+      });
+      if (resp.runtime) {
+        const rt = resp.runtime as AgentRuntimeData;
+        return {
+          ...rt,
+          status: mapPhaseToStatus(rt.phase),
+          name: rt.given_name || rt.pod_name,
+          id: rt.pod_name,
+          url: rt.ingress,
+          messageCount: 0,
+          agent_spec_id: rt.agent_spec_id || undefined,
+        };
+      }
+      throw new Error('Failed to fetch agent runtime');
+    },
+    ...AGENT_QUERY_OPTIONS,
+    refetchInterval: query => {
+      if (query.state.error) return false;
+      return 5000;
+    },
+    retry: false,
+    enabled: !!podName,
+  });
 }
 
 /**
  * Hook to create a new agent runtime.
  */
 export function useCreateAgentRuntime() {
-  const { useCreateAgentRuntime: hook } = useCache();
-  return hook();
+  const { configuration } = useCoreStore();
+  const { requestDatalayer } = useDatalayer({ notifyOnError: false });
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: CreateAgentRuntimeRequest) => {
+      return requestDatalayer({
+        url: `${configuration.runtimesRunUrl}/api/runtimes/v1/runtimes`,
+        method: 'POST',
+        body: {
+          environment_name: data.environmentName || 'ai-agents-env',
+          given_name: data.givenName || 'Agent',
+          credits_limit: data.creditsLimit || 10,
+          type: data.type || 'notebook',
+          editor_variant: data.editorVariant || 'none',
+          enable_codemode: data.enableCodemode ?? false,
+          agent_spec_id: data.agentSpecId || undefined,
+        },
+      });
+    },
+    onSuccess: resp => {
+      if (resp.success && resp.runtime) {
+        const rt = resp.runtime as AgentRuntimeData;
+        queryClient.setQueryData(
+          agentQueryKeys.agentRuntimes.detail(rt.pod_name),
+          {
+            ...rt,
+            status: mapPhaseToStatus(rt.phase),
+            name: rt.given_name || rt.pod_name,
+            id: rt.pod_name,
+            url: rt.ingress,
+            messageCount: 0,
+            agent_spec_id: rt.agent_spec_id || undefined,
+          },
+        );
+        queryClient.invalidateQueries({
+          queryKey: agentQueryKeys.agentRuntimes.all(),
+        });
+      }
+    },
+  });
 }
 
 /**
  * Hook to delete an agent runtime.
  */
 export function useDeleteAgentRuntime() {
-  const { useDeleteAgentRuntime: hook } = useCache();
-  return hook();
+  const { configuration } = useCoreStore();
+  const { requestDatalayer } = useDatalayer({ notifyOnError: false });
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (podName: string) => {
+      return requestDatalayer({
+        url: `${configuration.runtimesRunUrl}/api/runtimes/v1/runtimes/${podName}`,
+        method: 'DELETE',
+      });
+    },
+    onSuccess: (_data, podName) => {
+      queryClient.cancelQueries({
+        queryKey: agentQueryKeys.agentRuntimes.detail(podName),
+      });
+      queryClient.removeQueries({
+        queryKey: agentQueryKeys.agentRuntimes.detail(podName),
+      });
+      queryClient.invalidateQueries({
+        queryKey: agentQueryKeys.agentRuntimes.lists(),
+      });
+    },
+  });
 }
 
 /**
- * Hook to delete a paused agent runtime (removes Solr checkpoint records).
+ * Hook to delete a paused agent runtime.
+ *
+ * Paused agents have no K8s pod — their state lives entirely in Solr
+ * checkpoint records. This calls the dedicated
+ * ``DELETE /runtimes/{podName}/paused`` endpoint which removes those
+ * Solr records.
  */
 export function useDeletePausedAgentRuntime() {
-  const { useDeletePausedAgentRuntime: hook } = useCache();
-  return hook();
+  const { configuration } = useCoreStore();
+  const { requestDatalayer } = useDatalayer({ notifyOnError: false });
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (podName: string) => {
+      return requestDatalayer({
+        url: `${configuration.runtimesRunUrl}/api/runtimes/v1/runtimes/${podName}/paused`,
+        method: 'DELETE',
+      });
+    },
+    onSuccess: (_data, podName) => {
+      queryClient.cancelQueries({
+        queryKey: agentQueryKeys.agentRuntimes.detail(podName),
+      });
+      queryClient.removeQueries({
+        queryKey: agentQueryKeys.agentRuntimes.detail(podName),
+      });
+      queryClient.invalidateQueries({
+        queryKey: agentQueryKeys.agentRuntimes.lists(),
+      });
+      queryClient.invalidateQueries({
+        queryKey: agentQueryKeys.checkpoints.all(),
+      });
+    },
+  });
 }
 
 /**
  * Hook to resume a paused agent runtime via CRIU restore.
- * Calls the runtimes service POST /runtimes/{podName}/resume endpoint.
+ *
+ * Calls ``POST /runtimes/{podName}/resume`` which triggers an async
+ * background restore from the latest CRIU checkpoint.
  */
 export function useResumePausedAgentRuntime() {
-  const { useResumePausedAgentRuntime: hook } = useCache();
-  return hook();
+  const { configuration } = useCoreStore();
+  const { requestDatalayer } = useDatalayer({ notifyOnError: false });
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (podName: string) => {
+      return requestDatalayer({
+        url: `${configuration.runtimesRunUrl}/api/runtimes/v1/runtimes/${podName}/resume`,
+        method: 'POST',
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: agentQueryKeys.agentRuntimes.all(),
+      });
+      queryClient.invalidateQueries({
+        queryKey: agentQueryKeys.checkpoints.all(),
+      });
+    },
+  });
 }
 
 /**
  * Hook to refresh agent runtimes list.
  */
 export function useRefreshAgentRuntimes() {
-  const { useRefreshAgentRuntimes: hook } = useCache();
-  return hook();
+  const queryClient = useQueryClient();
+  return () => {
+    queryClient.invalidateQueries({
+      queryKey: agentQueryKeys.agentRuntimes.all(),
+    });
+  };
 }
 
+// ============================================================================
+// Checkpoint Hooks (CRIU full-pod checkpoints)
+// ============================================================================
+
 /**
- * Hook to fetch all runtime checkpoints (CRIU full-pod checkpoints).
- * Returns checkpoint records from the runtimes service.
+ * Fetch all runtime checkpoints for the current user.
+ *
+ * Calls ``GET /api/runtimes/v1/runtime-checkpoints`` and returns
+ * the list of checkpoint records in visible states.
  */
 export function useCheckpoints() {
-  const { useCheckpoints: hook } = useCache();
-  return hook();
+  const { configuration } = useCoreStore();
+  const { requestDatalayer } = useDatalayer({ notifyOnError: false });
+  const { user } = useIAMStore();
+
+  return useQuery({
+    queryKey: agentQueryKeys.checkpoints.lists(),
+    queryFn: async () => {
+      const resp = await requestDatalayer({
+        url: `${configuration.runtimesRunUrl}/api/runtimes/v1/runtime-checkpoints`,
+        method: 'GET',
+      });
+      if (resp.success && resp.checkpoints) {
+        return resp.checkpoints as CheckpointData[];
+      }
+      return [] as CheckpointData[];
+    },
+    ...AGENT_QUERY_OPTIONS,
+    refetchInterval: 15000,
+    enabled: !!user,
+  });
 }
 
 /**
  * Hook to refresh the checkpoints list.
  */
 export function useRefreshCheckpoints() {
-  const { useRefreshCheckpoints: hook } = useCache();
-  return hook();
+  const queryClient = useQueryClient();
+  return () => {
+    queryClient.invalidateQueries({
+      queryKey: agentQueryKeys.checkpoints.all(),
+    });
+  };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// AI Agents REST API hook (formerly useAgents.tsx)
+// AI Agents REST API hook.
 // ═══════════════════════════════════════════════════════════════════════════
 
 export type RequestOptions = {

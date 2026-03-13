@@ -40,6 +40,8 @@ import type {
 export interface AgentDetailsProps {
   /** Agent name/title */
   name?: string;
+  /** Emoji from the agent spec (displayed instead of the default icon) */
+  emoji?: string;
   /** Protocol being used */
   protocol: string;
   /** Endpoint URL */
@@ -311,6 +313,7 @@ async function downloadContextSnapshotAsCSV(
  */
 export function AgentDetails({
   name = 'AI Agent',
+  emoji,
   protocol,
   url,
   messageCount,
@@ -453,7 +456,11 @@ export function AgentDetails({
               borderRadius: 2,
             }}
           >
-            <AiAgentIcon colored size={32} />
+            {emoji ? (
+              <Text sx={{ fontSize: 5, lineHeight: 1 }}>{emoji}</Text>
+            ) : (
+              <AiAgentIcon colored size={32} />
+            )}
           </Box>
           <Box sx={{ flex: 1 }}>
             <Heading

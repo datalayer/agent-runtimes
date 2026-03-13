@@ -9,11 +9,8 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import type { Transport } from '../../chat/components/Chat';
 import type { AgentStatus } from '../../hooks/useAgents';
 import type { ServiceManager } from '@jupyterlab/services';
-import type {
-  IRuntimeOptions,
-  AgentConnection,
-  AgentConfig,
-} from '../../hooks/useAgents';
+import type { IRuntimeOptions } from '@datalayer/core/lib/stateful/runtimes/apis';
+import type { AgentConnection, AgentConfig } from '../../hooks/useAgents';
 
 // Re-export AgentStatus so consumers of `../state` can still access it
 export type { AgentStatus } from '../../hooks/useAgents';

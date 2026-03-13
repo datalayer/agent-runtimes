@@ -118,7 +118,10 @@ export {
   useRefreshAgentRuntimes,
   useCheckpoints,
   useRefreshCheckpoints,
+  agentQueryKeys,
   type AgentRuntimeData,
+  type CreateAgentRuntimeRequest,
+  type CheckpointData,
 } from './useAgents';
 /**
  * Centralized agent catalog store for available agent specs and running agents.
@@ -134,16 +137,6 @@ export type {
   UseAgentReturn,
   UseAgentOptions,
   CheckpointRecord,
-} from './useAgents';
-
-// Types - re-exported from @datalayer/core
-export type {
-  IRuntimeLocation,
-  IRuntimeType,
-  IRuntimeCapabilities,
-  IRuntimePod,
-  IRuntimeOptions,
-  IRuntimeDesc,
 } from './useAgents';
 
 // Types - agent-runtimes specific
