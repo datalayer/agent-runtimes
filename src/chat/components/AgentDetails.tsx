@@ -6,6 +6,7 @@
  * including name, protocol, URL, message count, and context details.
  */
 
+import type { ReactNode } from 'react';
 import {
   ArrowLeftIcon,
   CheckCircleIcon,
@@ -40,6 +41,8 @@ import type {
 export interface AgentDetailsProps {
   /** Agent name/title */
   name?: string;
+  /** Custom icon node (e.g. an Octicon component) shown instead of the default icon */
+  icon?: ReactNode;
   /** Emoji from the agent spec (displayed instead of the default icon) */
   emoji?: string;
   /** Protocol being used */
@@ -313,6 +316,7 @@ async function downloadContextSnapshotAsCSV(
  */
 export function AgentDetails({
   name = 'AI Agent',
+  icon,
   emoji,
   protocol,
   url,
@@ -456,7 +460,11 @@ export function AgentDetails({
               borderRadius: 2,
             }}
           >
-            {emoji ? (
+            {icon ? (
+              <Box sx={{ display: 'inline-flex', color: 'accent.fg' }}>
+                {icon}
+              </Box>
+            ) : emoji ? (
               <Text sx={{ fontSize: 5, lineHeight: 1 }}>{emoji}</Text>
             ) : (
               <AiAgentIcon colored size={32} />

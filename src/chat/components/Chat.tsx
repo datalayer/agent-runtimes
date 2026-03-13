@@ -20,6 +20,7 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
+import type { ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Text, Button, Spinner } from '@primer/react';
 import { AlertIcon, SyncIcon } from '@primer/octicons-react';
@@ -149,6 +150,9 @@ export interface ChatProps {
 
   /** Custom title */
   title?: string;
+
+  /** Brand icon shown in chat header/empty state and details title */
+  brandIcon?: ReactNode;
 
   /** Whether to auto-connect on mount */
   autoConnect?: boolean;
@@ -348,6 +352,7 @@ export function Chat({
   agentId,
   placeholder = 'Type your message...',
   title,
+  brandIcon,
   autoConnect: _autoConnect = true,
   streaming: _streaming = true,
   onMessageSent: _onMessageSent,
@@ -596,6 +601,7 @@ export function Chat({
         >
           <AgentDetails
             name={title || 'AI Agent'}
+            icon={brandIcon}
             protocol={transport}
             url={protocolConfig?.endpoint || baseUrl}
             messageCount={messageCount}
@@ -659,6 +665,7 @@ export function Chat({
           )}
           <ChatBase
             title={title}
+            brandIcon={brandIcon}
             showHeader={showHeader}
             protocol={protocolConfig}
             placeholder={placeholder}
