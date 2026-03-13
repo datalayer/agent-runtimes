@@ -50,9 +50,37 @@ export type AgentStatus =
   | 'ready'
   | 'running'
   | 'paused'
+  | 'pausing'
+  | 'resumed'
   | 'resuming'
   | 'error'
   | 'disconnected';
+
+/** Shared Label variants for agent lifecycle statuses. */
+export type AgentStatusColorVariant =
+  | 'secondary'
+  | 'attention'
+  | 'success'
+  | 'severe'
+  | 'accent'
+  | 'danger';
+
+/** Shared Label variants for agent lifecycle statuses. */
+export const AGENT_STATUS_COLORS: Record<AgentStatus, AgentStatusColorVariant> =
+  {
+    idle: 'secondary',
+    initializing: 'attention',
+    launching: 'attention',
+    connecting: 'attention',
+    ready: 'success',
+    running: 'success',
+    pausing: 'attention',
+    paused: 'severe',
+    resumed: 'accent',
+    resuming: 'accent',
+    error: 'danger',
+    disconnected: 'secondary',
+  };
 
 /**
  * Information about a connected agent with agent-runtimes server.
@@ -410,6 +438,10 @@ export function useAgents(options: UseAgentOptions = {}): UseAgentReturn {
       setDurableError('No runtime to pause');
       return;
     }
+    if (durableStatus === 'resumed') {
+      setDurableError('Resumed agents cannot be paused');
+      return;
+    }
     try {
       const { token, runtimesRunUrl } = await getAuthHeaders();
       const { pauseRuntime } =
@@ -439,7 +471,7 @@ export function useAgents(options: UseAgentOptions = {}): UseAgentReturn {
       const msg = err instanceof Error ? err.message : String(err);
       setDurableError(msg);
     }
-  }, [runtime, getAuthHeaders, agentSpecId, agentSpec]);
+  }, [runtime, durableStatus, getAuthHeaders, agentSpecId, agentSpec]);
 
   // ─── Resume (CRIU Restore) ─────────────────────────────────────────
 
@@ -454,9 +486,7 @@ export function useAgents(options: UseAgentOptions = {}): UseAgentReturn {
         await resumeRuntime(token, runtime.podName, runtimesRunUrl, {
           agent_spec_id: agentSpecId,
         });
-        // The checkpoint stays "paused"; the agent pod will transition
-        // to running on its own.
-        setDurableStatus('ready');
+        setDurableStatus('resumed');
       } else {
         await launchRuntime();
       }
@@ -611,7 +641,8 @@ export function useAgents(options: UseAgentOptions = {}): UseAgentReturn {
     : (baseStatus as AgentStatus);
   const error = isDurable ? durableError || storeError : storeError;
   const isReady = isDurable
-    ? durableStatus === 'ready' && !!runtime?.isReady
+    ? (durableStatus === 'ready' || durableStatus === 'resumed') &&
+      !!runtime?.isReady
     : baseStatus === 'ready' && !!runtime?.isReady;
   const endpoint = runtime?.endpoint || null;
   const serviceManager = runtime?.serviceManager || null;
@@ -705,7 +736,15 @@ export type AgentRuntimeData = {
   started_at?: string;
   expired_at?: string;
   burning_rate?: number;
-  status: 'starting' | 'running' | 'paused' | 'terminated' | 'archived';
+  status:
+    | 'starting'
+    | 'running'
+    | 'pausing'
+    | 'resuming'
+    | 'resumed'
+    | 'paused'
+    | 'terminated'
+    | 'archived';
   messageCount: number;
   // Backend returns 'ingress', mapped to 'url'
   ingress?: string;
@@ -737,18 +776,71 @@ export type CheckpointData = {
  * Helper: map a raw runtime phase to a UI-friendly status.
  */
 function mapPhaseToStatus(phase?: string): AgentRuntimeData['status'] {
-  switch (phase) {
-    case 'Pending':
+  switch ((phase || '').toLowerCase()) {
+    case 'resume':
+    case 'resumed':
+      return 'resumed';
+    case 'resuming':
+      return 'resuming';
+    case 'pausing':
+      return 'pausing';
+    case 'pending':
       return 'starting';
-    case 'Terminated':
+    case 'terminated':
       return 'terminated';
-    case 'Paused':
+    case 'paused':
       return 'paused';
-    case 'Archived':
+    case 'archived':
       return 'archived';
     default:
       return 'running';
   }
+}
+
+/**
+ * Normalize raw runtime status values from the backend.
+ *
+ * Some backends emit transient `resume`; we normalize it to `resumed`.
+ */
+function normalizeRuntimeStatus(
+  status?: string,
+): AgentRuntimeData['status'] | undefined {
+  if (!status) return undefined;
+  switch (status.toLowerCase()) {
+    case 'resume':
+    case 'resumed':
+      return 'resumed';
+    case 'resuming':
+      return 'resuming';
+    case 'pausing':
+      return 'pausing';
+    case 'paused':
+      return 'paused';
+    case 'starting':
+    case 'pending':
+    case 'launching':
+      return 'starting';
+    case 'terminated':
+      return 'terminated';
+    case 'archived':
+      return 'archived';
+    case 'running':
+      return 'running';
+    default:
+      return 'running';
+  }
+}
+
+/**
+ * Map runtime record to UI status, preferring explicit runtime.status when present.
+ */
+function mapRuntimeToStatus(runtime: {
+  status?: string;
+  phase?: string;
+}): AgentRuntimeData['status'] {
+  return (
+    normalizeRuntimeStatus(runtime.status) || mapPhaseToStatus(runtime.phase)
+  );
 }
 
 /**
@@ -810,7 +902,7 @@ export function useAgentRuntimes() {
           )
           .map((rt: AgentRuntimeData) => ({
             ...rt,
-            status: mapPhaseToStatus(rt.phase),
+            status: mapRuntimeToStatus(rt),
             name: rt.given_name || rt.pod_name,
             id: rt.pod_name,
             url: rt.ingress,
@@ -851,7 +943,7 @@ export function useAgentRuntimeByPodName(podName: string | undefined) {
         const rt = resp.runtime as AgentRuntimeData;
         return {
           ...rt,
-          status: mapPhaseToStatus(rt.phase),
+          status: mapRuntimeToStatus(rt),
           name: rt.given_name || rt.pod_name,
           id: rt.pod_name,
           url: rt.ingress,
@@ -902,7 +994,7 @@ export function useCreateAgentRuntime() {
           agentQueryKeys.agentRuntimes.detail(rt.pod_name),
           {
             ...rt,
-            status: mapPhaseToStatus(rt.phase),
+            status: mapRuntimeToStatus(rt),
             name: rt.given_name || rt.pod_name,
             id: rt.pod_name,
             url: rt.ingress,

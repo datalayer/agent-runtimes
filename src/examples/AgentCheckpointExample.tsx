@@ -59,9 +59,8 @@ import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { SignInSimple } from '@datalayer/core/lib/views/iam';
 import { UserBadge } from '@datalayer/core/lib/views/profile';
 import { Chat } from '../chat';
-import { useAgents } from '../hooks/useAgents';
+import { useAgents, AGENT_STATUS_COLORS } from '../hooks/useAgents';
 import type { CheckpointRecord } from '../hooks/useAgents';
-import type { AgentStatus } from '../hooks/useAgents';
 
 // ─── Running agent entry ───────────────────────────────────────────────────
 
@@ -112,18 +111,7 @@ const AGENT_SPEC = {
 
 // ─── Status badge ──────────────────────────────────────────────────────────
 
-const STATUS_COLORS: Record<AgentStatus, string> = {
-  idle: 'secondary',
-  initializing: 'attention',
-  launching: 'attention',
-  connecting: 'attention',
-  ready: 'success',
-  running: 'success',
-  paused: 'severe',
-  resuming: 'accent',
-  error: 'danger',
-  disconnected: 'secondary',
-};
+const STATUS_COLORS = AGENT_STATUS_COLORS;
 
 // ─── Sidebar width ─────────────────────────────────────────────────────────
 
@@ -418,10 +406,9 @@ const AgentCheckpointInner: React.FC<{ onLogout: () => void }> = ({
         <Heading as="h3" sx={{ fontSize: 2, flex: 1 }}>
           Durable Agent — {podName}
         </Heading>
-        <Label variant={STATUS_COLORS[runtimeStatus] as any}>
-          {runtimeStatus}
-        </Label>
+        <Label variant={STATUS_COLORS[runtimeStatus]}>{runtimeStatus}</Label>
         {(runtimeStatus === 'ready' ||
+          runtimeStatus === 'resumed' ||
           runtimeStatus === 'resuming' ||
           runtimeStatus === 'paused') && (
           <>
@@ -429,7 +416,11 @@ const AgentCheckpointInner: React.FC<{ onLogout: () => void }> = ({
               size="small"
               leadingVisual={SquareIcon}
               onClick={handlePause}
-              disabled={actionLoading || runtimeStatus === 'paused'}
+              disabled={
+                actionLoading ||
+                runtimeStatus === 'paused' ||
+                runtimeStatus === 'resumed'
+              }
             >
               Pause
             </Button>
@@ -439,7 +430,12 @@ const AgentCheckpointInner: React.FC<{ onLogout: () => void }> = ({
                 variant="primary"
                 leadingVisual={PlayIcon}
                 onClick={handleResume}
-                disabled={actionLoading}
+                disabled={
+                  actionLoading ||
+                  runtimeStatus === 'paused' ||
+                  runtimeStatus === 'resuming' ||
+                  runtimeStatus === 'resumed'
+                }
               >
                 Resume
               </Button>
@@ -711,7 +707,8 @@ const AgentCheckpointInner: React.FC<{ onLogout: () => void }> = ({
                 <Text
                   sx={{ fontSize: 0, color: 'fg.muted', fontStyle: 'italic' }}
                 >
-                  No checkpoints yet. Click "Checkpoint" to create one.
+                  No checkpoints yet. Click &quot;Checkpoint&quot; to create
+                  one.
                 </Text>
               ) : (
                 checkpoints.map((ckpt: CheckpointRecord) => (

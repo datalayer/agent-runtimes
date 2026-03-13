@@ -148,4 +148,4 @@ export type {
 } from './useAgents';
 
 // Constants
-export { DEFAULT_AGENT_CONFIG } from './useAgents';
+export { DEFAULT_AGENT_CONFIG, AGENT_STATUS_COLORS } from './useAgents';
