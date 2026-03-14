@@ -465,11 +465,7 @@ const AgentCheckpointInner: React.FC<{ onLogout: () => void }> = ({
                   variant="primary"
                   leadingVisual={PlayIcon}
                   onClick={() => handleResume(resumeMode)}
-                  disabled={
-                    actionLoading ||
-                    runtimeStatus === 'resuming' ||
-                    runtimeStatus === 'resumed'
-                  }
+                  disabled={actionLoading}
                 >
                   {resumeMode === 'light' ? 'Resume (light)' : 'Resume (criu)'}
                 </Button>
