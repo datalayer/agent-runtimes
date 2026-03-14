@@ -9,33 +9,32 @@ This file is AUTO-GENERATED from YAML specifications.
 DO NOT EDIT MANUALLY - run 'make specs' to regenerate.
 """
 
-from typing import Any, Dict, List, Optional
-from dataclasses import dataclass, field
+from typing import Dict, List, Literal, Optional
+
+from pydantic import BaseModel, Field
 
 
-@dataclass
-class NotificationField:
+class NotificationField(BaseModel):
     """Dynamic field definition for a notification channel."""
 
-    name: str
-    label: str
-    type: str
-    required: bool
-    placeholder: Optional[str] = None
-    default: Any = None
+    name: str = Field(..., description="Field key")
+    label: str = Field(..., description="Display label")
+    type: Literal["string", "boolean", "number"] = Field(..., description="Input type")
+    required: bool = Field(default=False, description="Whether this field is required")
+    placeholder: Optional[str] = Field(default=None, description="UI placeholder")
+    default: str | bool | int | float | None = Field(default=None, description="Default value")
 
 
-@dataclass
-class NotificationChannelSpec:
+class NotificationChannelSpec(BaseModel):
     """Notification channel specification."""
 
-    id: str
-    name: str
-    description: str
-    icon: str
-    available: bool
-    coming_soon: bool = False
-    fields: List[NotificationField] = field(default_factory=list)
+    id: str = Field(..., description="Unique channel identifier")
+    name: str = Field(..., description="Display name")
+    description: str = Field(default="", description="Channel description")
+    icon: str = Field(default="bell", description="Icon identifier")
+    available: bool = Field(default=True, description="Whether channel is currently available")
+    coming_soon: bool = Field(default=False, description="Whether channel is planned but not available yet")
+    fields: List[NotificationField] = Field(default_factory=list, description="Channel configuration fields")
 
 
 # ============================================================================

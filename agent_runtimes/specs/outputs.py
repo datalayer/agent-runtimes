@@ -10,20 +10,20 @@ DO NOT EDIT MANUALLY - run 'make specs' to regenerate.
 """
 
 from typing import Dict, List
-from dataclasses import dataclass
+
+from pydantic import BaseModel, Field
 
 
-@dataclass
-class OutputSpec:
+class OutputSpec(BaseModel):
     """Output format specification."""
 
-    id: str
-    name: str
-    description: str
-    icon: str
-    supports_template: bool
-    supports_storage: bool
-    mime_types: List[str]
+    id: str = Field(..., description="Unique output identifier")
+    name: str = Field(..., description="Display name")
+    description: str = Field(default="", description="Output description")
+    icon: str = Field(default="", description="Icon identifier")
+    supports_template: bool = Field(default=False, description="Whether this output supports templating")
+    supports_storage: bool = Field(default=False, description="Whether this output can be persisted")
+    mime_types: List[str] = Field(default_factory=list, description="Supported MIME types")
 
 
 # ============================================================================

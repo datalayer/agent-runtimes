@@ -59,43 +59,9 @@ def load_specs(specs_dir: Path) -> list[dict[str, Any]]:
 # Python code generation
 # ============================================================================
 
-def _py_permissions(perms: dict[str, bool]) -> str:
-    """Format permissions dict for Python."""
-    lines = []
-    for key in ["read:data", "write:data", "execute:code", "access:internet", "send:email", "deploy:production"]:
-        lines.append(f'        "{key}": {perms.get(key, False)},')
-    return "{\n" + "\n".join(lines) + "\n    }"
 
-
-def _py_token_limits(tl: dict[str, Any]) -> str:
-    """Format token limits for Python."""
-    return (
-        "{"
-        + f'"per_run": "{tl.get("per_run", "0")}", '
-        + f'"per_day": "{tl.get("per_day", "0")}", '
-        + f'"per_month": "{tl.get("per_month", "0")}"'
-        + "}"
-    )
-
-
-def _py_optional_dict(d: dict[str, Any] | None, keys: list[str]) -> str:
-    """Format an optional dict for Python."""
-    if d is None:
-        return "None"
-    parts = []
-    for k in keys:
-        v = d.get(k)
-        if isinstance(v, bool):
-            parts.append(f'"{k}": {v}')
-        elif isinstance(v, int):
-            parts.append(f'"{k}": {v}')
-        elif isinstance(v, str):
-            parts.append(f'"{k}": "{_esc_dq(v)}"')
-        elif isinstance(v, list):
-            parts.append(f'"{k}": {_fmt_list(v)}')
-        elif v is None:
-            parts.append(f'"{k}": None')
-    return "{" + ", ".join(parts) + "}"
+def _py_bool(value: bool) -> str:
+    return "True" if value else "False"
 
 
 def generate_python_code(specs: list[dict[str, Any]]) -> str:
@@ -112,12 +78,84 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         "DO NOT EDIT MANUALLY - run 'make specs' to regenerate.",
         '"""',
         "",
-        "from typing import Any, Dict, List, Optional",
-        "from dataclasses import dataclass, field",
+        "from typing import Dict, List, Optional",
+        "",
+        "from pydantic import BaseModel, Field",
         "",
         "",
-        "@dataclass",
-        "class GuardrailSpec:",
+        "class GuardrailPermissions(BaseModel):",
+        '    """Permission toggles for a guardrail profile."""',
+        "",
+        '    read_data: bool = Field(default=False, description="Allow data reads")',
+        '    write_data: bool = Field(default=False, description="Allow data writes")',
+        '    execute_code: bool = Field(default=False, description="Allow code execution")',
+        '    access_internet: bool = Field(default=False, description="Allow internet access")',
+        '    send_email: bool = Field(default=False, description="Allow email sending")',
+        '    deploy_production: bool = Field(default=False, description="Allow production deploys")',
+        "",
+        "",
+        "class TokenLimitsSpec(BaseModel):",
+        '    """Token budget limits."""',
+        "",
+        '    per_run: str = Field(default="0", description="Token budget per run")',
+        '    per_day: str = Field(default="0", description="Token budget per day")',
+        '    per_month: str = Field(default="0", description="Token budget per month")',
+        "",
+        "",
+        "class DataScopeSpec(BaseModel):",
+        '    """Data-access scoping rules."""',
+        "",
+        '    allowed_systems: List[str] = Field(default_factory=list)',
+        '    allowed_objects: List[str] = Field(default_factory=list)',
+        '    denied_objects: List[str] = Field(default_factory=list)',
+        '    denied_fields: List[str] = Field(default_factory=list)',
+        "",
+        "",
+        "class DataHandlingSpec(BaseModel):",
+        '    """Data output and PII handling policy."""',
+        "",
+        "    default_aggregation: bool = Field(default=False)",
+        "    allow_row_level_output: bool = Field(default=False)",
+        "    max_rows_in_output: int = Field(default=0, ge=0)",
+        "    redact_fields: List[str] = Field(default_factory=list)",
+        "    hash_fields: List[str] = Field(default_factory=list)",
+        "    pii_detection: bool = Field(default=False)",
+        "    pii_action: str = Field(default='warn')",
+        "",
+        "",
+        "class ApprovalPolicySpec(BaseModel):",
+        '    """Manual/automatic approval policy."""',
+        "",
+        "    require_manual_approval_for: List[str] = Field(default_factory=list)",
+        "    auto_approved: List[str] = Field(default_factory=list)",
+        "",
+        "",
+        "class ToolLimitsSpec(BaseModel):",
+        '    """Tool-call limits for a run."""',
+        "",
+        "    max_tool_calls: int = Field(default=0, ge=0)",
+        "    max_query_rows: int = Field(default=0, ge=0)",
+        "    max_query_runtime: str = Field(default='0s')",
+        "    max_time_window_days: int = Field(default=0, ge=0)",
+        "",
+        "",
+        "class AuditSpec(BaseModel):",
+        '    """Audit/logging policy."""',
+        "",
+        "    log_tool_calls: bool = Field(default=True)",
+        "    log_query_metadata_only: bool = Field(default=False)",
+        "    retain_days: int = Field(default=30, ge=0)",
+        "    require_lineage_in_report: bool = Field(default=False)",
+        "",
+        "",
+        "class ContentSafetySpec(BaseModel):",
+        '    """Prompt-injection and untrusted-content policy."""',
+        "",
+        "    treat_crm_text_fields_as_untrusted: bool = Field(default=False)",
+        "    do_not_follow_instructions_from_data: bool = Field(default=True)",
+        "",
+        "",
+        "class GuardrailSpec(BaseModel):",
         '    """Guardrail specification."""',
         "",
         "    id: str",
@@ -125,14 +163,14 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         "    description: str",
         "    identity_provider: str",
         "    identity_name: str",
-        "    permissions: Dict[str, bool]",
-        "    token_limits: Dict[str, str]",
-        "    data_scope: Optional[Dict[str, Any]] = None",
-        "    data_handling: Optional[Dict[str, Any]] = None",
-        "    approval_policy: Optional[Dict[str, Any]] = None",
-        "    tool_limits: Optional[Dict[str, Any]] = None",
-        "    audit: Optional[Dict[str, Any]] = None",
-        "    content_safety: Optional[Dict[str, Any]] = None",
+        "    permissions: GuardrailPermissions",
+        "    token_limits: TokenLimitsSpec",
+        "    data_scope: Optional[DataScopeSpec] = None",
+        "    data_handling: Optional[DataHandlingSpec] = None",
+        "    approval_policy: Optional[ApprovalPolicySpec] = None",
+        "    tool_limits: Optional[ToolLimitsSpec] = None",
+        "    audit: Optional[AuditSpec] = None",
+        "    content_safety: Optional[ContentSafetySpec] = None",
         "",
         "",
         "# " + "=" * 76,
@@ -156,41 +194,93 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
                 f'    description="{desc}",',
                 f'    identity_provider="{spec.get("identity_provider", "")}",',
                 f'    identity_name="{spec.get("identity_name", "")}",',
-                f"    permissions={_py_permissions(perms)},",
-                f"    token_limits={_py_token_limits(tl)},",
+                "    permissions=GuardrailPermissions(",
+                f"        read_data={_py_bool(perms.get('read:data', False))},",
+                f"        write_data={_py_bool(perms.get('write:data', False))},",
+                f"        execute_code={_py_bool(perms.get('execute:code', False))},",
+                f"        access_internet={_py_bool(perms.get('access:internet', False))},",
+                f"        send_email={_py_bool(perms.get('send:email', False))},",
+                f"        deploy_production={_py_bool(perms.get('deploy:production', False))},",
+                "    ),",
+                "    token_limits=TokenLimitsSpec(",
+                f"        per_run=\"{_esc_dq(str(tl.get('per_run', '0')))}\",",
+                f"        per_day=\"{_esc_dq(str(tl.get('per_day', '0')))}\",",
+                f"        per_month=\"{_esc_dq(str(tl.get('per_month', '0')))}\",",
+                "    ),",
             ]
         )
 
         # Optional sections
         ds = spec.get("data_scope")
         if ds:
-            lines.append(
-                f"    data_scope={_py_optional_dict(ds, ['allowed_systems', 'allowed_objects', 'denied_objects', 'denied_fields'])},"
+            lines.extend(
+                [
+                    "    data_scope=DataScopeSpec(",
+                    f"        allowed_systems={_fmt_list(ds.get('allowed_systems', []))},",
+                    f"        allowed_objects={_fmt_list(ds.get('allowed_objects', []))},",
+                    f"        denied_objects={_fmt_list(ds.get('denied_objects', []))},",
+                    f"        denied_fields={_fmt_list(ds.get('denied_fields', []))},",
+                    "    ),",
+                ]
             )
         dh = spec.get("data_handling")
         if dh:
-            lines.append(
-                f"    data_handling={_py_optional_dict(dh, ['default_aggregation', 'allow_row_level_output', 'max_rows_in_output', 'redact_fields', 'hash_fields', 'pii_detection', 'pii_action'])},"
+            lines.extend(
+                [
+                    "    data_handling=DataHandlingSpec(",
+                    f"        default_aggregation={_py_bool(dh.get('default_aggregation', False))},",
+                    f"        allow_row_level_output={_py_bool(dh.get('allow_row_level_output', False))},",
+                    f"        max_rows_in_output={int(dh.get('max_rows_in_output', 0))},",
+                    f"        redact_fields={_fmt_list(dh.get('redact_fields', []))},",
+                    f"        hash_fields={_fmt_list(dh.get('hash_fields', []))},",
+                    f"        pii_detection={_py_bool(dh.get('pii_detection', False))},",
+                    f"        pii_action=\"{_esc_dq(str(dh.get('pii_action', 'warn')))}\",",
+                    "    ),",
+                ]
             )
         ap = spec.get("approval_policy")
         if ap:
-            lines.append(
-                f"    approval_policy={_py_optional_dict(ap, ['require_manual_approval_for', 'auto_approved'])},"
+            lines.extend(
+                [
+                    "    approval_policy=ApprovalPolicySpec(",
+                    f"        require_manual_approval_for={_fmt_list(ap.get('require_manual_approval_for', []))},",
+                    f"        auto_approved={_fmt_list(ap.get('auto_approved', []))},",
+                    "    ),",
+                ]
             )
         tlim = spec.get("tool_limits")
         if tlim:
-            lines.append(
-                f"    tool_limits={_py_optional_dict(tlim, ['max_tool_calls', 'max_query_rows', 'max_query_runtime', 'max_time_window_days'])},"
+            lines.extend(
+                [
+                    "    tool_limits=ToolLimitsSpec(",
+                    f"        max_tool_calls={int(tlim.get('max_tool_calls', 0))},",
+                    f"        max_query_rows={int(tlim.get('max_query_rows', 0))},",
+                    f"        max_query_runtime=\"{_esc_dq(str(tlim.get('max_query_runtime', '0s')))}\",",
+                    f"        max_time_window_days={int(tlim.get('max_time_window_days', 0))},",
+                    "    ),",
+                ]
             )
         aud = spec.get("audit")
         if aud:
-            lines.append(
-                f"    audit={_py_optional_dict(aud, ['log_tool_calls', 'log_query_metadata_only', 'retain_days', 'require_lineage_in_report'])},"
+            lines.extend(
+                [
+                    "    audit=AuditSpec(",
+                    f"        log_tool_calls={_py_bool(aud.get('log_tool_calls', True))},",
+                    f"        log_query_metadata_only={_py_bool(aud.get('log_query_metadata_only', False))},",
+                    f"        retain_days={int(aud.get('retain_days', 30))},",
+                    f"        require_lineage_in_report={_py_bool(aud.get('require_lineage_in_report', False))},",
+                    "    ),",
+                ]
             )
         cs = spec.get("content_safety")
         if cs:
-            lines.append(
-                f"    content_safety={_py_optional_dict(cs, ['treat_crm_text_fields_as_untrusted', 'do_not_follow_instructions_from_data'])},"
+            lines.extend(
+                [
+                    "    content_safety=ContentSafetySpec(",
+                    f"        treat_crm_text_fields_as_untrusted={_py_bool(cs.get('treat_crm_text_fields_as_untrusted', False))},",
+                    f"        do_not_follow_instructions_from_data={_py_bool(cs.get('do_not_follow_instructions_from_data', True))},",
+                    "    ),",
+                ]
             )
 
         lines.extend([")", ""])

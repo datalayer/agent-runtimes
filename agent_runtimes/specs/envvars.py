@@ -9,25 +9,25 @@ This file is AUTO-GENERATED from YAML specifications.
 DO NOT EDIT MANUALLY - run 'make specs' to regenerate.
 """
 
-from dataclasses import dataclass
 from typing import Dict, List, Optional
+
+from pydantic import BaseModel, Field
+
 
 # ============================================================================
 # Environment Variable Specification
 # ============================================================================
 
-
-@dataclass
-class EnvvarSpec:
+class EnvvarSpec(BaseModel):
     """Environment variable specification."""
 
-    id: str
-    name: str
-    description: str
-    registrationUrl: Optional[str]
-    tags: List[str]
-    icon: Optional[str]
-    emoji: Optional[str]
+    id: str = Field(..., description="Environment variable identifier")
+    name: str = Field(..., description="Display name")
+    description: str = Field(default="", description="Environment variable description")
+    registrationUrl: Optional[str] = Field(default=None, description="Registration URL or docs link")
+    tags: List[str] = Field(default_factory=list, description="Search/discovery tags")
+    icon: Optional[str] = Field(default=None, description="Icon identifier")
+    emoji: Optional[str] = Field(default=None, description="Emoji representation")
 
 
 # ============================================================================
@@ -69,14 +69,7 @@ GOOGLE_OAUTH_CLIENT_SECRET_SPEC = EnvvarSpec(
     name="Google OAuth Client Secret",
     description="OAuth 2.0 client secret for Google Workspace authentication. Used in conjunction with client ID for secure API access to Google services.",
     registrationUrl="https://console.cloud.google.com/apis/credentials",
-    tags=[
-        "authentication",
-        "oauth",
-        "google",
-        "workspace",
-        "client-secret",
-        "security",
-    ],
+    tags=["authentication", "oauth", "google", "workspace", "client-secret", "security"],
     icon="lock",
     emoji="🔒",
 )

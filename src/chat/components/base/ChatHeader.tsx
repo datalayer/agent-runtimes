@@ -14,7 +14,7 @@
  */
 
 import { type ReactNode } from 'react';
-import { Heading, IconButton } from '@primer/react';
+import { Heading, IconButton, Truncate } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import {
   PlusIcon,
@@ -104,11 +104,29 @@ export function ChatBaseHeader({
           p: padding,
         }}
       >
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 2,
+            minWidth: 0,
+            flex: '1 1 auto',
+          }}
+        >
           {brandIcon || <AiAgentIcon colored size={20} />}
           {title && (
-            <Heading as="h3" sx={{ fontSize: 2, fontWeight: 'semibold' }}>
-              {title}
+            <Heading
+              as="h3"
+              sx={{
+                fontSize: 2,
+                fontWeight: 'semibold',
+                minWidth: 0,
+                maxWidth: '100%',
+              }}
+            >
+              <Truncate title={title} maxWidth="28ch">
+                {title}
+              </Truncate>
             </Heading>
           )}
           {/* Inline header content (e.g., protocol label) */}
@@ -124,7 +142,9 @@ export function ChatBaseHeader({
           )}
         </Box>
 
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Box
+          sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}
+        >
           {/* Sandbox execution status indicator */}
           {sandboxStatus?.available &&
             sandboxStatus?.sandbox_running &&

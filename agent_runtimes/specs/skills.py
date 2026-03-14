@@ -10,25 +10,25 @@ DO NOT EDIT MANUALLY - run 'make specs' to regenerate.
 """
 
 import os
-from dataclasses import dataclass
-from typing import Any, Dict, List
+from typing import Dict, List, Optional
+
+from pydantic import BaseModel, Field
 
 
-@dataclass
-class SkillSpec:
+class SkillSpec(BaseModel):
     """Skill specification."""
 
-    id: str
-    name: str
-    description: str
-    module: str
-    envvars: List[str]
-    optional_env_vars: List[str]
-    dependencies: List[str]
-    tags: List[str]
-    icon: str | None
-    emoji: str | None
-    enabled: bool
+    id: str = Field(..., description="Skill identifier")
+    name: str = Field(..., description="Display name")
+    description: str = Field(default="", description="Skill description")
+    module: str = Field(default="", description="Python module path")
+    envvars: List[str] = Field(default_factory=list, description="Required environment variables")
+    optional_env_vars: List[str] = Field(default_factory=list, description="Optional environment variables")
+    dependencies: List[str] = Field(default_factory=list, description="Python package dependencies")
+    tags: List[str] = Field(default_factory=list, description="Search/discovery tags")
+    icon: Optional[str] = Field(default=None, description="Icon identifier")
+    emoji: Optional[str] = Field(default=None, description="Emoji representation")
+    enabled: bool = Field(default=True, description="Whether skill is enabled")
 
 
 # ============================================================================

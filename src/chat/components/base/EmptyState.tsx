@@ -13,7 +13,7 @@
  */
 
 import { type ReactNode } from 'react';
-import { Text, LabelGroup, Label } from '@primer/react';
+import { Text, LabelGroup, Label, Truncate } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { AiAgentIcon } from '@datalayer/icons-react';
 
@@ -93,8 +93,11 @@ export function ChatEmptyState({
             <Label
               key={index}
               variant="accent"
+              title={suggestion.title}
               sx={{
                 cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
                 '&:hover': {
                   bg: 'accent.emphasis',
                   color: 'var(--button-primary-fgColor-rest)',
@@ -103,7 +106,11 @@ export function ChatEmptyState({
               }}
               onClick={() => handleSuggestionClick(suggestion)}
             >
-              {suggestion.title}
+              <Box sx={{ width: 140, maxWidth: 140, minWidth: 140 }}>
+                <Truncate title={suggestion.title} maxWidth="100%">
+                  {suggestion.title}
+                </Truncate>
+              </Box>
             </Label>
           ))}
         </LabelGroup>
