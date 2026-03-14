@@ -62,6 +62,8 @@ import { Chat } from '../chat';
 import { useAgents, AGENT_STATUS_COLORS } from '../hooks/useAgents';
 import type { CheckpointRecord } from '../hooks/useAgents';
 
+type CheckpointMode = 'criu' | 'light';
+
 // ─── Running agent entry ───────────────────────────────────────────────────
 
 interface RunningAgent {
@@ -183,6 +185,13 @@ const AgentCheckpointInner: React.FC<{ onLogout: () => void }> = ({
   const [actionLoading, setActionLoading] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [runningAgents, setRunningAgents] = useState<RunningAgent[]>([]);
+  const [pauseMode, setPauseMode] = useState<CheckpointMode>('light');
+  const [resumeMode, setResumeMode] = useState<CheckpointMode>('light');
+
+  const lightCheckpointMessages = [
+    '[Checkpoint] Captured message history snapshot',
+    '[Checkpoint] Saved conversational context for lightweight resume',
+  ];
 
   const displayError = hookError || actionError;
   const podName = runtime?.podName || '(launching…)';
@@ -204,41 +213,57 @@ const AgentCheckpointInner: React.FC<{ onLogout: () => void }> = ({
 
   // ── Actions ──────────────────────────────────────────────────────────────
 
-  const handlePause = useCallback(async () => {
-    setActionLoading(true);
-    setActionError(null);
-    try {
-      await pause();
-    } catch (e) {
-      setActionError(e instanceof Error ? e.message : 'Pause failed');
-    } finally {
-      setActionLoading(false);
-    }
-  }, [pause]);
+  const handlePause = useCallback(
+    async (mode: CheckpointMode) => {
+      setActionLoading(true);
+      setActionError(null);
+      try {
+        await pause(
+          mode,
+          mode === 'light' ? lightCheckpointMessages : undefined,
+        );
+      } catch (e) {
+        setActionError(e instanceof Error ? e.message : 'Pause failed');
+      } finally {
+        setActionLoading(false);
+      }
+    },
+    [pause],
+  );
 
-  const handleResume = useCallback(async () => {
-    setActionLoading(true);
-    setActionError(null);
-    try {
-      await resume();
-    } catch (e) {
-      setActionError(e instanceof Error ? e.message : 'Resume failed');
-    } finally {
-      setActionLoading(false);
-    }
-  }, [resume]);
+  const handleResume = useCallback(
+    async (mode: CheckpointMode) => {
+      setActionLoading(true);
+      setActionError(null);
+      try {
+        await resume(mode);
+      } catch (e) {
+        setActionError(e instanceof Error ? e.message : 'Resume failed');
+      } finally {
+        setActionLoading(false);
+      }
+    },
+    [resume],
+  );
 
-  const handleCheckpoint = useCallback(async () => {
-    setActionLoading(true);
-    setActionError(null);
-    try {
-      await checkpoint();
-    } catch (e) {
-      setActionError(e instanceof Error ? e.message : 'Checkpoint failed');
-    } finally {
-      setActionLoading(false);
-    }
-  }, [checkpoint]);
+  const handleCheckpoint = useCallback(
+    async (mode: CheckpointMode) => {
+      setActionLoading(true);
+      setActionError(null);
+      try {
+        await checkpoint(
+          undefined,
+          mode,
+          mode === 'light' ? lightCheckpointMessages : undefined,
+        );
+      } catch (e) {
+        setActionError(e instanceof Error ? e.message : 'Checkpoint failed');
+      } finally {
+        setActionLoading(false);
+      }
+    },
+    [checkpoint],
+  );
 
   // Fetch running agents from the sidecar
   const refreshAgents = useCallback(async () => {
@@ -415,38 +440,59 @@ const AgentCheckpointInner: React.FC<{ onLogout: () => void }> = ({
             <Button
               size="small"
               leadingVisual={SquareIcon}
-              onClick={handlePause}
+              onClick={() => handlePause(pauseMode)}
               disabled={
                 actionLoading ||
                 runtimeStatus === 'paused' ||
                 runtimeStatus === 'resumed'
               }
             >
-              Pause
+              {pauseMode === 'light' ? 'Pause (light)' : 'Pause (criu)'}
+            </Button>
+            <Button
+              size="small"
+              onClick={() =>
+                setPauseMode(prev => (prev === 'light' ? 'criu' : 'light'))
+              }
+              disabled={actionLoading}
+            >
+              Pause mode: {pauseMode.toUpperCase()}
             </Button>
             {runtimeStatus === 'paused' ? (
-              <Button
-                size="small"
-                variant="primary"
-                leadingVisual={PlayIcon}
-                onClick={handleResume}
-                disabled={
-                  actionLoading ||
-                  runtimeStatus === 'paused' ||
-                  runtimeStatus === 'resuming' ||
-                  runtimeStatus === 'resumed'
-                }
-              >
-                Resume
-              </Button>
+              <>
+                <Button
+                  size="small"
+                  variant="primary"
+                  leadingVisual={PlayIcon}
+                  onClick={() => handleResume(resumeMode)}
+                  disabled={
+                    actionLoading ||
+                    runtimeStatus === 'resuming' ||
+                    runtimeStatus === 'resumed'
+                  }
+                >
+                  {resumeMode === 'light' ? 'Resume (light)' : 'Resume (criu)'}
+                </Button>
+                <Button
+                  size="small"
+                  onClick={() =>
+                    setResumeMode(prev => (prev === 'light' ? 'criu' : 'light'))
+                  }
+                  disabled={actionLoading}
+                >
+                  Resume mode: {resumeMode.toUpperCase()}
+                </Button>
+              </>
             ) : (
               <Button
                 size="small"
                 leadingVisual={HistoryIcon}
-                onClick={handleCheckpoint}
+                onClick={() => handleCheckpoint(pauseMode)}
                 disabled={actionLoading}
               >
-                Checkpoint
+                {pauseMode === 'light'
+                  ? 'Checkpoint (light)'
+                  : 'Checkpoint (criu)'}
               </Button>
             )}
             <Button
@@ -759,6 +805,14 @@ const AgentCheckpointInner: React.FC<{ onLogout: () => void }> = ({
                     >
                       {new Date(ckpt.updated_at).toLocaleString()}
                     </Text>
+                    {ckpt.checkpoint_mode && (
+                      <Label
+                        sx={{ mt: 1, mr: 1, fontSize: '10px' }}
+                        variant="attention"
+                      >
+                        {ckpt.checkpoint_mode.toUpperCase()}
+                      </Label>
+                    )}
                     {ckpt.status_message && (
                       <Tooltip text={ckpt.status_message} direction="w">
                         <button

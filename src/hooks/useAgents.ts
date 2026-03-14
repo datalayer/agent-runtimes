@@ -170,10 +170,14 @@ export interface CheckpointRecord {
   agent_spec_id: string;
   agentspec: Record<string, any>;
   metadata: Record<string, any>;
+  checkpoint_mode?: 'criu' | 'light';
+  messages?: string[];
   status: string;
   status_message?: string;
   updated_at: string;
 }
+
+export type CheckpointMode = 'criu' | 'light';
 
 /**
  * Options for the useAgentshook.
@@ -227,14 +231,18 @@ export interface UseAgentReturn {
   isCreating: boolean;
 
   // Lifecycle (durable)
-  /** Pause the agent (CRIU checkpoint) */
-  pause: () => Promise<void>;
-  /** Resume a paused agent (CRIU restore) */
-  resume: () => Promise<void>;
+  /** Pause the agent (checkpoint mode aware) */
+  pause: (mode?: CheckpointMode, messages?: string[]) => Promise<void>;
+  /** Resume a paused agent (checkpoint mode aware) */
+  resume: (mode?: CheckpointMode, checkpointId?: string) => Promise<void>;
   /** Terminate the agent (delete runtime) */
   terminate: () => Promise<void>;
   /** Take a checkpoint and persist (pause → record → stay paused) */
-  checkpoint: (name?: string) => Promise<void>;
+  checkpoint: (
+    name?: string,
+    mode?: CheckpointMode,
+    messages?: string[],
+  ) => Promise<void>;
   /** Refresh the checkpoints list from the backend */
   refreshCheckpoints: () => Promise<void>;
 
@@ -433,69 +441,84 @@ export function useAgents(options: UseAgentOptions = {}): UseAgentReturn {
 
   // ─── Pause (CRIU Checkpoint) ────────────────────────────────────────
 
-  const pause = useCallback(async () => {
-    if (!runtime) {
-      setDurableError('No runtime to pause');
-      return;
-    }
-    if (durableStatus === 'resumed') {
-      setDurableError('Resumed agents cannot be paused');
-      return;
-    }
-    try {
-      const { token, runtimesRunUrl } = await getAuthHeaders();
-      const { pauseRuntime } =
-        await import('@datalayer/core/lib/api/runtimes/runtimes');
-      const resp = await pauseRuntime(token, runtime.podName, runtimesRunUrl, {
-        agent_spec_id: agentSpecId,
-        ...(agentSpec ? { agentspec: agentSpec } : {}),
-      });
-      if (resp.checkpoint_id) {
-        const { waitForCheckpointStatus } =
-          await import('@datalayer/core/lib/api/runtimes/checkpoints');
-        const ckpt = await waitForCheckpointStatus(
+  const pause = useCallback(
+    async (mode: CheckpointMode = 'criu', messages?: string[]) => {
+      if (!runtime) {
+        setDurableError('No runtime to pause');
+        return;
+      }
+      if (durableStatus === 'resumed') {
+        setDurableError('Resumed agents cannot be paused');
+        return;
+      }
+      try {
+        const { token, runtimesRunUrl } = await getAuthHeaders();
+        const { pauseRuntime } =
+          await import('@datalayer/core/lib/api/runtimes/runtimes');
+        const resp = await pauseRuntime(
           token,
           runtime.podName,
-          resp.checkpoint_id,
-          ['paused', 'failed'],
           runtimesRunUrl,
+          {
+            agent_spec_id: agentSpecId,
+            checkpoint_mode: mode,
+            ...(messages && mode === 'light' ? { messages } : {}),
+            ...(agentSpec ? { agentspec: agentSpec } : {}),
+          },
         );
-        if (ckpt.status === 'failed') {
-          throw new Error(
-            `Checkpoint ${resp.checkpoint_id} failed during CRIU pause`,
+        if (resp.checkpoint_id) {
+          const { waitForCheckpointStatus } =
+            await import('@datalayer/core/lib/api/runtimes/checkpoints');
+          const ckpt = await waitForCheckpointStatus(
+            token,
+            runtime.podName,
+            resp.checkpoint_id,
+            ['paused', 'failed'],
+            runtimesRunUrl,
           );
+          if (ckpt.status === 'failed') {
+            throw new Error(
+              `Checkpoint ${resp.checkpoint_id} failed during CRIU pause`,
+            );
+          }
         }
+        setDurableStatus('paused');
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        setDurableError(msg);
       }
-      setDurableStatus('paused');
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      setDurableError(msg);
-    }
-  }, [runtime, durableStatus, getAuthHeaders, agentSpecId, agentSpec]);
+    },
+    [runtime, durableStatus, getAuthHeaders, agentSpecId, agentSpec],
+  );
 
   // ─── Resume (CRIU Restore) ─────────────────────────────────────────
 
-  const resume = useCallback(async () => {
-    setDurableStatus('resuming');
-    setDurableError(null);
-    try {
-      const { token, runtimesRunUrl } = await getAuthHeaders();
-      if (runtime) {
-        const { resumeRuntime } =
-          await import('@datalayer/core/lib/api/runtimes/runtimes');
-        await resumeRuntime(token, runtime.podName, runtimesRunUrl, {
-          agent_spec_id: agentSpecId,
-        });
-        setDurableStatus('resumed');
-      } else {
-        await launchRuntime();
+  const resume = useCallback(
+    async (mode: CheckpointMode = 'criu', checkpointId?: string) => {
+      setDurableStatus('resuming');
+      setDurableError(null);
+      try {
+        const { token, runtimesRunUrl } = await getAuthHeaders();
+        if (runtime) {
+          const { resumeRuntime } =
+            await import('@datalayer/core/lib/api/runtimes/runtimes');
+          await resumeRuntime(token, runtime.podName, runtimesRunUrl, {
+            agent_spec_id: agentSpecId,
+            checkpoint_mode: mode,
+            ...(checkpointId ? { checkpoint_id: checkpointId } : {}),
+          });
+          setDurableStatus('resumed');
+        } else {
+          await launchRuntime();
+        }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        setDurableError(msg);
+        setDurableStatus('error');
       }
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      setDurableError(msg);
-      setDurableStatus('error');
-    }
-  }, [runtime, getAuthHeaders, agentSpecId, launchRuntime]);
+    },
+    [runtime, getAuthHeaders, agentSpecId, launchRuntime],
+  );
 
   // ─── Refresh Checkpoints ───────────────────────────────────────────
 
@@ -516,7 +539,11 @@ export function useAgents(options: UseAgentOptions = {}): UseAgentReturn {
   // ─── Checkpoint (Pause → Wait → Stay Paused) ──────────────────────
 
   const checkpoint = useCallback(
-    async (name?: string) => {
+    async (
+      name?: string,
+      mode: CheckpointMode = 'criu',
+      messages?: string[],
+    ) => {
       if (!runtime) {
         setDurableError('No runtime to checkpoint');
         return;
@@ -531,7 +558,9 @@ export function useAgents(options: UseAgentOptions = {}): UseAgentReturn {
           runtimesRunUrl,
           {
             name: name || `checkpoint-${Date.now()}`,
-            description: `CRIU checkpoint for ${agentSpecId}`,
+            description: `${mode.toUpperCase()} checkpoint for ${agentSpecId}`,
+            checkpoint_mode: mode,
+            ...(messages && mode === 'light' ? { messages } : {}),
             agent_spec_id: agentSpecId,
             agentspec: agentSpec || {},
           },
@@ -767,6 +796,8 @@ export type CheckpointData = {
   agent_spec_id: string;
   agentspec: Record<string, unknown>;
   metadata: Record<string, unknown>;
+  checkpoint_mode?: 'criu' | 'light';
+  messages?: string[];
   status: string;
   status_message: string;
   updated_at: string;
