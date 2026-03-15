@@ -439,10 +439,10 @@ export function useAgents(options: UseAgentOptions = {}): UseAgentReturn {
     [agentSpecId, agentConfig, agentSpec, isDurable, runtime, storeCreateAgent],
   );
 
-  // ─── Pause (CRIU Checkpoint) ────────────────────────────────────────
+  // ─── Pause (checkpoint mode aware) ───────────────────────────────────
 
   const pause = useCallback(
-    async (mode: CheckpointMode = 'criu', messages?: string[]) => {
+    async (mode: CheckpointMode = 'light', messages?: string[]) => {
       if (!runtime) {
         setDurableError('No runtime to pause');
         return;
