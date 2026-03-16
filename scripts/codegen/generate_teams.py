@@ -565,6 +565,8 @@ def generate_subfolder_structure(specs: List[tuple[str, Dict[str, Any]]], args):
     # Determine base directories
     python_base = args.python_output.parent / "teams"
     typescript_base = args.typescript_output.parent / "teams"
+    python_base.mkdir(parents=True, exist_ok=True)
+    typescript_base.mkdir(parents=True, exist_ok=True)
 
     print(f"Generating subfolder structure in {python_base} and {typescript_base}...")
 
@@ -572,25 +574,30 @@ def generate_subfolder_structure(specs: List[tuple[str, Dict[str, Any]]], args):
     all_typescript_imports = []
 
     for folder, folder_specs in sorted(specs_by_folder.items()):
-        if not folder:
-            continue
+        is_root = not folder
+        if is_root:
+            print("  Generating teams for root level")
+        else:
+            print(f"  Generating teams for subfolder: {folder}")
 
-        print(f"  Generating teams for subfolder: {folder}")
+        folder_python_name = folder.replace("-", "_") if folder else "teams"
 
-        folder_python_name = folder.replace("-", "_")
-
-        # Create Python subfolder
-        python_folder_dir = python_base / folder_python_name
-        python_folder_dir.mkdir(parents=True, exist_ok=True)
-        python_file = python_folder_dir / "teams.py"
+        # Create Python output file
+        if is_root:
+            python_file = python_base / "teams.py"
+        else:
+            python_folder_dir = python_base / folder_python_name
+            python_folder_dir.mkdir(parents=True, exist_ok=True)
+            python_file = python_folder_dir / "teams.py"
 
         python_code = generate_python_code([(folder, spec) for spec in folder_specs])
         with open(python_file, "w") as f:
             f.write(python_code)
 
-        python_init = python_folder_dir / "__init__.py"
-        with open(python_init, "w") as f:
-            f.write("""# Copyright (c) 2025-2026 Datalayer, Inc.
+        if not is_root:
+            python_init = python_folder_dir / "__init__.py"
+            with open(python_init, "w") as f:
+                f.write("""# Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
 from .teams import *
@@ -598,25 +605,32 @@ from .teams import *
 __all__ = ["TEAM_SPECS", "get_team_spec", "list_team_specs"]
 """)
 
-        all_python_imports.append(
-            f"from .{folder_python_name} import TEAM_SPECS as {folder_python_name.upper()}_TEAMS"
-        )
+        if is_root:
+            all_python_imports.append("from .teams import TEAM_SPECS as ROOT_TEAMS")
+        else:
+            all_python_imports.append(
+                f"from .{folder_python_name} import TEAM_SPECS as {folder_python_name.upper()}_TEAMS"
+            )
 
-        # Create TypeScript subfolder
-        typescript_folder_dir = typescript_base / folder
-        typescript_folder_dir.mkdir(parents=True, exist_ok=True)
-        typescript_file = typescript_folder_dir / "teams.ts"
+        # Create TypeScript output file
+        if is_root:
+            typescript_file = typescript_base / "teams.ts"
+        else:
+            typescript_folder_dir = typescript_base / folder
+            typescript_folder_dir.mkdir(parents=True, exist_ok=True)
+            typescript_file = typescript_folder_dir / "teams.ts"
 
         typescript_code = generate_typescript_code(
             [(folder, spec) for spec in folder_specs],
-            types_import_path="../../../types/Types",
+            types_import_path="../../types/Types" if is_root else "../../../types/Types",
         )
         with open(typescript_file, "w") as f:
             f.write(typescript_code)
 
-        typescript_index = typescript_folder_dir / "index.ts"
-        with open(typescript_index, "w") as f:
-            f.write("""/*
+        if not is_root:
+            typescript_index = typescript_folder_dir / "index.ts"
+            with open(typescript_index, "w") as f:
+                f.write("""/*
  * Copyright (c) 2025-2026 Datalayer, Inc.
  * Distributed under the terms of the Modified BSD License.
  */
@@ -624,7 +638,10 @@ __all__ = ["TEAM_SPECS", "get_team_spec", "list_team_specs"]
 export * from './teams';
 """)
 
-        all_typescript_imports.append(f"export * from './{folder}';")
+        if is_root:
+            all_typescript_imports.append("export * from './teams';")
+        else:
+            all_typescript_imports.append(f"export * from './{folder}';")
 
     # Create main Python index file
     python_index = python_base / "__init__.py"
@@ -656,6 +673,8 @@ TEAM_SPECS: Dict[str, TeamSpec] = {}
             python_index_content += (
                 f"TEAM_SPECS.update({folder_python_name.upper()}_TEAMS)\n"
             )
+        else:
+            python_index_content += "TEAM_SPECS.update(ROOT_TEAMS)\n"
 
     python_index_content += """
 
@@ -702,6 +721,8 @@ import type { TeamSpec } from '../../types';
         if folder:
             folder_const = folder.replace("-", "_").upper()
             typescript_index_content += f"import {{ TEAM_SPECS as {folder_const}_TEAMS }} from './{folder}';\n"
+        else:
+            typescript_index_content += "import { TEAM_SPECS as ROOT_TEAMS } from './teams';\n"
 
     typescript_index_content += """
 // Merge all team specs from subfolders
@@ -712,6 +733,8 @@ export const TEAM_SPECS: Record<string, TeamSpec> = {
         if folder:
             folder_const = folder.replace("-", "_").upper()
             typescript_index_content += f"  ...{folder_const}_TEAMS,\n"
+        else:
+            typescript_index_content += "  ...ROOT_TEAMS,\n"
 
     typescript_index_content += """};
 

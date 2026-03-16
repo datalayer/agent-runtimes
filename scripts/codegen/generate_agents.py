@@ -354,6 +354,13 @@ def generate_typescript_code(
     has_mcp = len(mcp_imports) > 0
     has_skills = len(skill_imports) > 0
 
+    # Root-level specs produce src/specs/agents/agents.ts, while nested specs
+    # produce src/specs/agents/<folder>/agents.ts. Import paths differ.
+    is_root_layout = all(folder == "" for folder, _ in specs)
+    types_import_path = "../../types/Types" if is_root_layout else "../../../types/Types"
+    mcp_import_path = "../mcpServers" if is_root_layout else "../../mcpServers"
+    skills_import_path = "../skills" if is_root_layout else "../../skills"
+
     # Header
     code = """/*
  * Copyright (c) 2025-2026 Datalayer, Inc.
@@ -368,21 +375,29 @@ def generate_typescript_code(
  * Generated from YAML specifications in specs/agents/
  */
 
-import type { AgentSpec } from '../../../types/Types';
+import type { AgentSpec } from '"""
+    code += types_import_path
+    code += """';
 """
 
     # Only add MCP server imports if needed
     if has_mcp:
         code += "import {\n"
         code += "  " + ",\n  ".join(mcp_imports) + ",\n"
-        code += "} from '../../mcpServers';\n"
+        code += "} from '"
+        code += mcp_import_path
+        code += "';\n"
 
     # Only add skill imports if needed
     if has_skills:
         code += "import {\n"
         code += "  " + ",\n  ".join(skill_imports) + ",\n"
-        code += "} from '../../skills';\n"
-        code += "import type { SkillSpec } from '../../skills';\n"
+        code += "} from '"
+        code += skills_import_path
+        code += "';\n"
+        code += "import type { SkillSpec } from '"
+        code += skills_import_path
+        code += "';\n"
 
     # Only add MCP server lookup if used
     if has_mcp:
@@ -717,6 +732,8 @@ def generate_subfolder_structure(specs: List[tuple[str, Dict[str, Any]]], args):
     # Determine base directories
     python_base = args.python_output.parent / "agents"
     typescript_base = args.typescript_output.parent / "agents"
+    python_base.mkdir(parents=True, exist_ok=True)
+    typescript_base.mkdir(parents=True, exist_ok=True)
 
     print(f"Generating subfolder structure in {python_base} and {typescript_base}...")
 
@@ -725,18 +742,22 @@ def generate_subfolder_structure(specs: List[tuple[str, Dict[str, Any]]], args):
     all_typescript_imports = []
 
     for folder, folder_specs in sorted(specs_by_folder.items()):
-        if not folder:  # Skip root level for now
-            continue
-
-        print(f"  Generating agents for subfolder: {folder}")
+        is_root = not folder
+        if is_root:
+            print("  Generating agents for root level")
+        else:
+            print(f"  Generating agents for subfolder: {folder}")
 
         # Convert folder name to valid Python module name (replace hyphens with underscores)
-        folder_python_name = folder.replace("-", "_")
+        folder_python_name = folder.replace("-", "_") if folder else "agents"
 
-        # Create Python subfolder file
-        python_folder_dir = python_base / folder_python_name
-        python_folder_dir.mkdir(parents=True, exist_ok=True)
-        python_file = python_folder_dir / "agents.py"
+        # Create Python output file
+        if is_root:
+            python_file = python_base / "agents.py"
+        else:
+            python_folder_dir = python_base / folder_python_name
+            python_folder_dir.mkdir(parents=True, exist_ok=True)
+            python_file = python_folder_dir / "agents.py"
 
         # Generate Python code for this folder
         python_code = generate_python_code([(folder, spec) for spec in folder_specs])
@@ -744,9 +765,10 @@ def generate_subfolder_structure(specs: List[tuple[str, Dict[str, Any]]], args):
             f.write(python_code)
 
         # Create __init__.py for Python subfolder
-        python_init = python_folder_dir / "__init__.py"
-        with open(python_init, "w") as f:
-            f.write("""# Copyright (c) 2025-2026 Datalayer, Inc.
+        if not is_root:
+            python_init = python_folder_dir / "__init__.py"
+            with open(python_init, "w") as f:
+                f.write("""# Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
 from .agents import *
@@ -755,14 +777,20 @@ __all__ = ["AGENT_SPECS", "get_agent_spec", "list_agent_specs"]
 """)
 
         # Collect imports for main index
-        all_python_imports.append(
-            f"from .{folder_python_name} import AGENT_SPECS as {folder_python_name.upper()}_AGENTS"
-        )
+        if is_root:
+            all_python_imports.append("from .agents import AGENT_SPECS as ROOT_AGENTS")
+        else:
+            all_python_imports.append(
+                f"from .{folder_python_name} import AGENT_SPECS as {folder_python_name.upper()}_AGENTS"
+            )
 
-        # Create TypeScript subfolder file
-        typescript_folder_dir = typescript_base / folder
-        typescript_folder_dir.mkdir(parents=True, exist_ok=True)
-        typescript_file = typescript_folder_dir / "agents.ts"
+        # Create TypeScript output file
+        if is_root:
+            typescript_file = typescript_base / "agents.ts"
+        else:
+            typescript_folder_dir = typescript_base / folder
+            typescript_folder_dir.mkdir(parents=True, exist_ok=True)
+            typescript_file = typescript_folder_dir / "agents.ts"
 
         # Generate TypeScript code for this folder
         typescript_code = generate_typescript_code(
@@ -774,9 +802,10 @@ __all__ = ["AGENT_SPECS", "get_agent_spec", "list_agent_specs"]
             f.write(typescript_code)
 
         # Create index.ts for TypeScript subfolder
-        typescript_index = typescript_folder_dir / "index.ts"
-        with open(typescript_index, "w") as f:
-            f.write("""/*
+        if not is_root:
+            typescript_index = typescript_folder_dir / "index.ts"
+            with open(typescript_index, "w") as f:
+                f.write("""/*
  * Copyright (c) 2025-2026 Datalayer, Inc.
  * Distributed under the terms of the Modified BSD License.
  */
@@ -785,7 +814,10 @@ export * from './agents';
 """)
 
         # Collect imports for main index
-        all_typescript_imports.append(f"export * from './{folder}';")
+        if is_root:
+            all_typescript_imports.append("export * from './agents';")
+        else:
+            all_typescript_imports.append(f"export * from './{folder}';")
 
     # Create main Python index file
     python_index = python_base / "__init__.py"
@@ -819,6 +851,8 @@ AGENT_SPECS: Dict[str, AgentSpec] = {}
             python_index_content += (
                 f"AGENT_SPECS.update({folder_python_name.upper()}_AGENTS)\n"
             )
+        else:
+            python_index_content += "AGENT_SPECS.update(ROOT_AGENTS)\n"
 
     python_index_content += """
 
@@ -866,6 +900,8 @@ import type { AgentSpec } from '../../types';
         if folder:
             folder_const = folder.replace("-", "_").upper()
             typescript_index_content += f"import {{ AGENT_SPECS as {folder_const}_AGENTS }} from './{folder}';\n"
+        else:
+            typescript_index_content += "import { AGENT_SPECS as ROOT_AGENTS } from './agents';\n"
 
     typescript_index_content += """
 // Merge all agent specs from subfolders
@@ -876,6 +912,8 @@ export const AGENT_SPECS: Record<string, AgentSpec> = {
         if folder:
             folder_const = folder.replace("-", "_").upper()
             typescript_index_content += f"  ...{folder_const}_AGENTS,\n"
+        else:
+            typescript_index_content += "  ...ROOT_AGENTS,\n"
 
     typescript_index_content += """};
 
@@ -919,6 +957,42 @@ export function getAgentSpecRequiredEnvVars(spec: AgentSpec): string[] {
         f.write(typescript_index_content)
 
     print(f"✓ Generated {len(specs_by_folder)} subfolder(s)")
+
+
+def ensure_specs_barrel(specs_dir: Path) -> None:
+    """Ensure top-level TypeScript specs barrel file exists.
+
+    This keeps imports like ``from './specs'`` valid even when regenerating
+    from an empty ``src/specs`` tree.
+    """
+    specs_dir.mkdir(parents=True, exist_ok=True)
+    index_path = specs_dir / "index.ts"
+    index_path.write_text(
+        """/*
+ * Copyright (c) 2025-2026 Datalayer, Inc.
+ * Distributed under the terms of the Modified BSD License.
+ */
+
+/**
+ * Specs exports.
+ *
+ * This file is AUTO-GENERATED. DO NOT EDIT MANUALLY.
+ */
+
+export * from './agents';
+export * from './teams';
+export * from './envvars';
+export * from './evals';
+export * from './guardrails';
+export * from './mcpServers';
+export * from './memory';
+export * from './models';
+export * from './notifications';
+export * from './outputs';
+export * from './skills';
+export * from './triggers';
+"""
+    )
 
 
 def main():
@@ -965,6 +1039,7 @@ def main():
     if args.subfolder_structure:
         # Generate separate files per subfolder
         generate_subfolder_structure(specs, args)
+        ensure_specs_barrel(args.typescript_output.parent)
     else:
         # Generate Python code (single file)
         print(f"Generating Python code to {args.python_output}...")
@@ -984,6 +1059,8 @@ def main():
         args.typescript_output.parent.mkdir(parents=True, exist_ok=True)
         with open(args.typescript_output, "w") as f:
             f.write(typescript_code)
+
+        ensure_specs_barrel(args.typescript_output.parent)
 
         # Update __init__.py with new agent spec constants
         init_file_path = args.python_output.parent / "__init__.py"

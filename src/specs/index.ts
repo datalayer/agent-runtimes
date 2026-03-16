@@ -3,15 +3,21 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
-export * from './envvars';
-export * from './mcpServers';
+/**
+ * Specs exports.
+ *
+ * This file is AUTO-GENERATED. DO NOT EDIT MANUALLY.
+ */
+
 export * from './agents';
 export * from './teams';
-export * from './skills';
-export * from './models';
-export * from './memory';
-export * from './guardrails';
+export * from './envvars';
 export * from './evals';
-export * from './triggers';
-export * from './outputs';
+export * from './guardrails';
+export * from './mcpServers';
+export * from './memory';
+export * from './models';
 export * from './notifications';
+export * from './outputs';
+export * from './skills';
+export * from './triggers';

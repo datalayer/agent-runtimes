@@ -18,12 +18,8 @@ from agent_runtimes.types import AgentSpec
 # Agent Specs
 # ============================================================================
 
-
-# Mocks Agents
-# ============================================================================
-
 ANALYZE_CAMPAIGN_PERFORMANCE_AGENT_SPEC = AgentSpec(
-    id="mocks/analyze-campaign-performance",
+    id="analyze-campaign-performance",
     name="Analyze Campaign Performance",
     description="A multi-agent team that unifies marketing data from Google Ads, Meta, TikTok, LinkedIn, GA4, CRM, and email platforms. Normalises metrics into a unified view, detects performance anomalies in real time, and generates budget reallocation recommendations to maximise ROAS.",
     tags=[
@@ -126,7 +122,7 @@ ANALYZE_CAMPAIGN_PERFORMANCE_AGENT_SPEC = AgentSpec(
 )
 
 ANALYZE_SUPPORT_TICKETS_AGENT_SPEC = AgentSpec(
-    id="mocks/analyze-support-tickets",
+    id="analyze-support-tickets",
     name="Analyze Support Tickets",
     description="A multi-agent team that triages incoming support tickets, categorizes by urgency and topic, identifies recurring patterns, and generates resolution recommendations with escalation paths.",
     tags=["analytics", "data", "support", "tickets"],
@@ -195,7 +191,7 @@ ANALYZE_SUPPORT_TICKETS_AGENT_SPEC = AgentSpec(
 )
 
 AUDIT_INVENTORY_LEVELS_AGENT_SPEC = AgentSpec(
-    id="mocks/audit-inventory-levels",
+    id="audit-inventory-levels",
     name="Audit Inventory Levels",
     description="A multi-agent team that monitors inventory levels across warehouses, detects discrepancies between physical and system counts, forecasts demand by SKU, and generates automated reorder recommendations.",
     tags=["finance", "automation", "inventory", "supply-chain"],
@@ -264,7 +260,7 @@ AUDIT_INVENTORY_LEVELS_AGENT_SPEC = AgentSpec(
 )
 
 AUTOMATE_REGULATORY_REPORTING_AGENT_SPEC = AgentSpec(
-    id="mocks/automate-regulatory-reporting",
+    id="automate-regulatory-reporting",
     name="Automate Regulatory Reporting",
     description="A multi-agent team that automates end-to-end regulatory reporting for financial institutions. Ingests data from trading systems, risk engines, and accounting platforms, reconciles positions, computes risk metrics, validates against regulatory rules (Basel III/IV, MiFID II, SOX), and generates submission-ready compliance reports with full audit trails.",
     tags=["finance", "compliance", "regulatory", "risk", "banking", "audit"],
@@ -356,7 +352,7 @@ AUTOMATE_REGULATORY_REPORTING_AGENT_SPEC = AgentSpec(
 )
 
 CLASSIFY_ROUTE_EMAILS_AGENT_SPEC = AgentSpec(
-    id="mocks/classify-route-emails",
+    id="classify-route-emails",
     name="Classify & Route Emails",
     description="A generic email classification and routing agent. Analyzes incoming emails to determine intent (inquiry, complaint, order, support request), assigns priority (critical, high, medium, low), and routes to the appropriate department queue. Works across any industry with email-based workflows.",
     tags=["email", "classification", "routing", "horizontal", "automation"],
@@ -437,7 +433,7 @@ CLASSIFY_ROUTE_EMAILS_AGENT_SPEC = AgentSpec(
 )
 
 COMPREHENSIVE_SALES_ANALYTICS_AGENT_SPEC = AgentSpec(
-    id="mocks/comprehensive-sales-analytics",
+    id="comprehensive-sales-analytics",
     name="Comprehensive Sales Analytics",
     description="A multi-agent team that replaces a single KPI monitor with four specialized agents: a Data Collector that pulls real-time CRM metrics, an Anomaly Detector that flags statistical outliers, a Trend Analyzer that identifies patterns and forecasts, and a Report Generator that compiles executive dashboards and sends alerts. Together they deliver deeper insights, faster detection, and richer reporting than any single agent could.",
     tags=["sales", "analytics", "kpi", "monitoring", "horizontal"],
@@ -501,8 +497,132 @@ COMPREHENSIVE_SALES_ANALYTICS_AGENT_SPEC = AgentSpec(
     memory="ephemeral",
 )
 
+CRAWLER_AGENT_SPEC = AgentSpec(
+    id="crawler",
+    name="Crawler Agent",
+    description="Web crawling and research agent that searches the web and GitHub repositories for information.",
+    tags=["web", "search", "research", "crawler", "github"],
+    enabled=True,
+    model="bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0",
+    mcp_servers=[MCP_SERVER_CATALOG["tavily"]],
+    skills=["github"],
+    environment_name="ai-agents-env",
+    icon="globe",
+    emoji="🌐",
+    color="#10B981",
+    suggestions=[
+        "Search the web for recent news about AI agents",
+        "Find trending open-source Python projects on GitHub",
+        "Research best practices for building RAG applications",
+        "Compare popular JavaScript frameworks in 2024",
+    ],
+    welcome_message="Hi! I'm the Crawler Agent. I can search the web using Tavily, explore GitHub repositories, and help you research topics across the internet. ",
+    welcome_notebook=None,
+    welcome_document=None,
+    sandbox_variant="jupyter",
+    system_prompt="""You are a web crawling and research assistant with access to Tavily search and GitHub tools. Use Tavily to search the web for current information and search GitHub repositories for relevant projects. Synthesize information from multiple sources and provide clear summaries with sources cited.
+""",
+    system_prompt_codemode_addons="""## IMPORTANT: Be Honest About Your Capabilities NEVER claim to have tools or capabilities you haven't verified.
+## Core Codemode Tools Use these 4 tools to accomplish any task: 1. **list_servers** - List available MCP servers
+   Use this to see what MCP servers you can access.
+
+2. **search_tools** - Progressive tool discovery by natural language query
+   Use this to find relevant tools before executing tasks.
+
+3. **get_tool_details** - Get full tool schema and documentation
+   Use this to understand tool parameters before calling them.
+
+4. **execute_code** - Run Python code that composes multiple tools
+   Use this for complex multi-step operations. Code runs in a PERSISTENT sandbox.
+   Variables, functions, and state PERSIST between execute_code calls.
+   Import tools using: `from generated.servers.<server_name> import <function_name>`
+   NEVER use `import *` - always use explicit named imports.
+
+## Recommended Workflow 1. **Discover**: Use list_servers and search_tools to find relevant tools 2. **Understand**: Use get_tool_details to check parameters 3. **Execute**: Use execute_code to perform multi-step tasks, calling tools as needed
+## Token Efficiency When possible, chain multiple tool calls in a single execute_code block. This reduces output tokens by processing intermediate results in code rather than returning them. If you want to examine results, print subsets, preview (maximum 20 first characters) and/or counts instead of full data, this is really important.
+""",
+    goal=None,
+    protocol=None,
+    ui_extension=None,
+    trigger=None,
+    model_configuration=None,
+    mcp_server_tools=None,
+    guardrails=None,
+    evals=None,
+    codemode=None,
+    output=None,
+    advanced=None,
+    authorization_policy=None,
+    notifications=None,
+    memory="ephemeral",
+)
+
+DATA_ACQUISITION_AGENT_SPEC = AgentSpec(
+    id="data-acquisition",
+    name="Data Acquisition Agent",
+    description="Acquires and manages data from various sources including Kaggle datasets and local filesystem operations.",
+    tags=["data", "acquisition", "kaggle", "filesystem"],
+    enabled=True,
+    model="bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0",
+    mcp_servers=[
+        MCP_SERVER_CATALOG["kaggle"],
+        MCP_SERVER_CATALOG["filesystem"],
+        MCP_SERVER_CATALOG["tavily"],
+    ],
+    skills=["github"],
+    environment_name="ai-agents-env",
+    icon="database",
+    emoji="📊",
+    color="#3B82F6",
+    suggestions=[
+        "Find popular machine learning datasets on Kaggle",
+        "Download and explore a dataset for sentiment analysis",
+        "List available files in my workspace",
+        "Search Kaggle for time series forecasting competitions",
+    ],
+    welcome_message="Hello! I'm the Data Acquisition Agent. I can help you find and download datasets from Kaggle, manage files in your workspace, and explore data sources for your projects. ",
+    welcome_notebook=None,
+    welcome_document=None,
+    sandbox_variant="jupyter",
+    system_prompt="""You are a data acquisition specialist with access to Kaggle datasets and filesystem tools. You can search for datasets, download data, read and write files, and help users prepare data for analysis. Guide users through finding relevant datasets and organizing their workspace efficiently.
+""",
+    system_prompt_codemode_addons="""## IMPORTANT: Be Honest About Your Capabilities NEVER claim to have tools or capabilities you haven't verified.
+## Core Codemode Tools Use these 4 tools to accomplish any task: 1. **list_servers** - List available MCP servers
+   Use this to see what MCP servers you can access.
+
+2. **search_tools** - Progressive tool discovery by natural language query
+   Use this to find relevant tools before executing tasks.
+
+3. **get_tool_details** - Get full tool schema and documentation
+   Use this to understand tool parameters before calling them.
+
+4. **execute_code** - Run Python code that composes multiple tools
+   Use this for complex multi-step operations. Code runs in a PERSISTENT sandbox.
+   Variables, functions, and state PERSIST between execute_code calls.
+   Import tools using: `from generated.servers.<server_name> import <function_name>`
+   NEVER use `import *` - always use explicit named imports.
+
+## Recommended Workflow 1. **Discover**: Use list_servers and search_tools to find relevant tools 2. **Understand**: Use get_tool_details to check parameters 3. **Execute**: Use execute_code to perform multi-step tasks, calling tools as needed
+## Token Efficiency When possible, chain multiple tool calls in a single execute_code block. This reduces output tokens by processing intermediate results in code rather than returning them. If you want to examine results, print subsets, preview (maximum 20 first characters) and/or counts instead of full data, this is really important.
+""",
+    goal=None,
+    protocol=None,
+    ui_extension=None,
+    trigger=None,
+    model_configuration=None,
+    mcp_server_tools=None,
+    guardrails=None,
+    evals=None,
+    codemode=None,
+    output=None,
+    advanced=None,
+    authorization_policy=None,
+    notifications=None,
+    memory="ephemeral",
+)
+
 END_OF_MONTH_SALES_PERFORMANCE_AGENT_SPEC = AgentSpec(
-    id="mocks/end-of-month-sales-performance",
+    id="end-of-month-sales-performance",
     name="End of Month Sales Performance",
     description="Consolidates and analyzes end-of-month retail sales data directly from Salesforce. Computes revenue performance vs targets by SKU, detects anomalies in bookings and discounting, explains variances by region/segment/product/SKU, and generates executive-ready sales performance reports with full data lineage.",
     tags=[
@@ -685,7 +805,7 @@ END_OF_MONTH_SALES_PERFORMANCE_AGENT_SPEC = AgentSpec(
 )
 
 EXTRACT_DATA_FROM_FILES_AGENT_SPEC = AgentSpec(
-    id="mocks/extract-data-from-files",
+    id="extract-data-from-files",
     name="Extract Data from Files",
     description="A generic data extraction agent that processes unstructured files (PDFs, scanned documents, spreadsheets, images with text) and extracts structured data — tables, key-value pairs, line items, totals. Outputs clean JSON or CSV ready for downstream systems. Applicable to invoices, receipts, forms, medical records, legal documents, and more.",
     tags=["extraction", "data", "horizontal", "automation", "documents"],
@@ -765,8 +885,128 @@ EXTRACT_DATA_FROM_FILES_AGENT_SPEC = AgentSpec(
     memory="ephemeral",
 )
 
+FINANCIAL_VIZ_AGENT_SPEC = AgentSpec(
+    id="financial-viz",
+    name="Financial Visualization Agent",
+    description="Analyzes financial market data and creates visualizations and charts.",
+    tags=["finance", "stocks", "visualization", "charts"],
+    enabled=False,
+    model="bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0",
+    mcp_servers=[MCP_SERVER_CATALOG["alphavantage"], MCP_SERVER_CATALOG["chart"]],
+    skills=[],
+    environment_name="ai-agents-env",
+    icon="trending-up",
+    emoji="📈",
+    color="#F59E0B",
+    suggestions=[
+        "Show me the stock price history for AAPL",
+        "Create a chart comparing MSFT and GOOGL over the last year",
+        "Analyze the trading volume trends for Tesla",
+        "Get the latest market news for tech stocks",
+    ],
+    welcome_message="Welcome! I'm the Financial Visualization Agent. I can help you analyze stock market data, track financial instruments, and create charts to visualize market trends. ",
+    welcome_notebook=None,
+    welcome_document=None,
+    sandbox_variant="local-eval",
+    system_prompt="""You are a financial market analyst with access to Alpha Vantage market data and chart generation tools. You can fetch stock prices, analyze trading volumes, create visualizations, and track market trends. Provide clear insights with relevant data points and generate charts to illustrate patterns.
+""",
+    system_prompt_codemode_addons="""## IMPORTANT: Be Honest About Your Capabilities NEVER claim to have tools or capabilities you haven't verified.
+## Core Codemode Tools Use these 4 tools to accomplish any task: 1. **list_servers** - List available MCP servers
+   Use this to see what MCP servers you can access.
+
+2. **search_tools** - Progressive tool discovery by natural language query
+   Use this to find relevant tools before executing tasks.
+
+3. **get_tool_details** - Get full tool schema and documentation
+   Use this to understand tool parameters before calling them.
+
+4. **execute_code** - Run Python code that composes multiple tools
+   Use this for complex multi-step operations. Code runs in a PERSISTENT sandbox.
+   Variables, functions, and state PERSIST between execute_code calls.
+   Import tools using: `from generated.servers.<server_name> import <function_name>`
+   NEVER use `import *` - always use explicit named imports.
+
+## Recommended Workflow 1. **Discover**: Use list_servers and search_tools to find relevant tools 2. **Understand**: Use get_tool_details to check parameters 3. **Execute**: Use execute_code to perform multi-step tasks, calling tools as needed
+## Token Efficiency When possible, chain multiple tool calls in a single execute_code block. This reduces output tokens by processing intermediate results in code rather than returning them. If you want to examine results, print subsets, preview (maximum 20 first characters) and/or counts instead of full data, this is really important.
+""",
+    goal=None,
+    protocol=None,
+    ui_extension=None,
+    trigger=None,
+    model_configuration=None,
+    mcp_server_tools=None,
+    guardrails=None,
+    evals=None,
+    codemode=None,
+    output=None,
+    advanced=None,
+    authorization_policy=None,
+    notifications=None,
+    memory="ephemeral",
+)
+
+FINANCIAL_AGENT_SPEC = AgentSpec(
+    id="financial",
+    name="Financial Visualization Agent",
+    description="Analyzes financial market data and creates visualizations and charts.",
+    tags=["finance", "stocks", "visualization", "charts"],
+    enabled=True,
+    model="bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0",
+    mcp_servers=[MCP_SERVER_CATALOG["alphavantage"]],
+    skills=[],
+    environment_name="ai-agents-env",
+    icon="trending-up",
+    emoji="📈",
+    color="#F59E0B",
+    suggestions=[
+        "Show me the stock price history for AAPL",
+        "Create a chart comparing MSFT and GOOGL over the last year",
+        "Analyze the trading volume trends for Tesla",
+        "Get the latest market news for tech stocks",
+    ],
+    welcome_message="Welcome! I'm the Financial Visualization Agent. I can help you analyze stock market data, track financial instruments, and create charts to visualize market trends. ",
+    welcome_notebook=None,
+    welcome_document=None,
+    sandbox_variant="jupyter",
+    system_prompt="""You are a financial market analyst with access to Alpha Vantage market data tools. You can fetch stock prices, analyze trading volumes, create visualizations, and track market trends. Provide clear insights with relevant data points and suggest visualization approaches when appropriate.
+""",
+    system_prompt_codemode_addons="""## IMPORTANT: Be Honest About Your Capabilities NEVER claim to have tools or capabilities you haven't verified.
+## Core Codemode Tools Use these 4 tools to accomplish any task: 1. **list_servers** - List available MCP servers
+   Use this to see what MCP servers you can access.
+
+2. **search_tools** - Progressive tool discovery by natural language query
+   Use this to find relevant tools before executing tasks.
+
+3. **get_tool_details** - Get full tool schema and documentation
+   Use this to understand tool parameters before calling them.
+
+4. **execute_code** - Run Python code that composes multiple tools
+   Use this for complex multi-step operations. Code runs in a PERSISTENT sandbox.
+   Variables, functions, and state PERSIST between execute_code calls.
+   Import tools using: `from generated.servers.<server_name> import <function_name>`
+   NEVER use `import *` - always use explicit named imports.
+
+## Recommended Workflow 1. **Discover**: Use list_servers and search_tools to find relevant tools 2. **Understand**: Use get_tool_details to check parameters 3. **Execute**: Use execute_code to perform multi-step tasks, calling tools as needed
+## Token Efficiency When possible, chain multiple tool calls in a single execute_code block. This reduces output tokens by processing intermediate results in code rather than returning them. If you want to examine results, print subsets, preview (maximum 20 first characters) and/or counts instead of full data, this is really important.
+""",
+    goal=None,
+    protocol=None,
+    ui_extension=None,
+    trigger=None,
+    model_configuration=None,
+    mcp_server_tools=None,
+    guardrails=None,
+    evals=None,
+    codemode=None,
+    output=None,
+    advanced=None,
+    authorization_policy=None,
+    notifications=None,
+    memory="ephemeral",
+)
+
 GENERATE_WEEKLY_REPORTS_AGENT_SPEC = AgentSpec(
-    id="mocks/generate-weekly-reports",
+    id="generate-weekly-reports",
     name="Generate Weekly Reports",
     description="Aggregates data across marketing, sales, and operations departments. Generates structured weekly reports with charts, KPI summaries, trend analysis, and executive-level takeaways.",
     tags=["marketing", "reports", "weekly", "analytics", "automation"],
@@ -857,12 +1097,132 @@ GENERATE_WEEKLY_REPORTS_AGENT_SPEC = AgentSpec(
     memory="ephemeral",
 )
 
+GITHUB_AGENT_SPEC = AgentSpec(
+    id="github-agent",
+    name="GitHub Agent",
+    description="Manages GitHub repositories, issues, and pull requests with email notification capabilities.",
+    tags=["github", "git", "code", "email"],
+    enabled=True,
+    model="bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0",
+    mcp_servers=[MCP_SERVER_CATALOG["google-workspace"]],
+    skills=["github"],
+    environment_name="ai-agents-env",
+    icon="git-branch",
+    emoji="🐙",
+    color="#6366F1",
+    suggestions=[
+        "List my open pull requests across all repositories",
+        "Create an issue for a bug I found in datalayer/ui",
+        "Show recent commits on the main branch",
+        "Search for repositories related to Jupyter notebooks",
+    ],
+    welcome_message="Hello! I'm the GitHub Agent. I can help you manage repositories, create and  review issues and pull requests, search code, and send email notifications  about your GitHub activity. ",
+    welcome_notebook=None,
+    welcome_document=None,
+    sandbox_variant="jupyter",
+    system_prompt="""You are a GitHub assistant with access to GitHub skills and Google Workspace for email notifications. You can list and search repositories, issues, and pull requests, create new issues, review PRs, search code, and send email notifications. Always confirm repository names before creating issues/PRs and provide clear summaries when listing multiple items.
+""",
+    system_prompt_codemode_addons="""## IMPORTANT: Be Honest About Your Capabilities NEVER claim to have tools or capabilities you haven't verified.
+## Core Codemode Tools Use these 4 tools to accomplish any task: 1. **list_servers** - List available MCP servers
+   Use this to see what MCP servers you can access.
+
+2. **search_tools** - Progressive tool discovery by natural language query
+   Use this to find relevant tools before executing tasks.
+
+3. **get_tool_details** - Get full tool schema and documentation
+   Use this to understand tool parameters before calling them.
+
+4. **execute_code** - Run Python code that composes multiple tools
+   Use this for complex multi-step operations. Code runs in a PERSISTENT sandbox.
+   Variables, functions, and state PERSIST between execute_code calls.
+   Import tools using: `from generated.servers.<server_name> import <function_name>`
+   NEVER use `import *` - always use explicit named imports.
+
+## Recommended Workflow 1. **Discover**: Use list_servers and search_tools to find relevant tools 2. **Understand**: Use get_tool_details to check parameters 3. **Execute**: Use execute_code to perform multi-step tasks, calling tools as needed
+## Token Efficiency When possible, chain multiple tool calls in a single execute_code block. This reduces output tokens by processing intermediate results in code rather than returning them. If you want to examine results, print subsets, preview (maximum 20 first characters) and/or counts instead of full data, this is really important.
+""",
+    goal=None,
+    protocol=None,
+    ui_extension=None,
+    trigger=None,
+    model_configuration=None,
+    mcp_server_tools=None,
+    guardrails=None,
+    evals=None,
+    codemode=None,
+    output=None,
+    advanced=None,
+    authorization_policy=None,
+    notifications=None,
+    memory="ephemeral",
+)
+
+INFORMATION_ROUTING_AGENT_SPEC = AgentSpec(
+    id="information-routing",
+    name="Information Routing Agent",
+    description="Routes information between Google Drive and other services, managing document workflows and information sharing.",
+    tags=["workflow", "communication", "gdrive"],
+    enabled=False,
+    model="bedrock:us.anthropic.claude-opus-4-6-v1",
+    mcp_servers=[MCP_SERVER_CATALOG["google-workspace"], MCP_SERVER_CATALOG["github"]],
+    skills=[],
+    environment_name="ai-agents-env",
+    icon="share-2",
+    emoji="🔀",
+    color="#EC4899",
+    suggestions=[
+        "Find documents shared with me in Google Drive",
+        "List recent files in my Drive folder",
+        "Summarize the contents of a document in my Drive",
+        "Search for documents by keyword in Google Drive",
+    ],
+    welcome_message="Hi there! I'm the Information Routing Agent. I can help you manage documents in Google Drive and route information where it needs to go. ",
+    welcome_notebook=None,
+    welcome_document=None,
+    sandbox_variant="local-eval",
+    system_prompt="""You are an information routing specialist with access to Google Drive tools. You can find and manage documents in Drive and automate document workflows. Help users with document management efficiently. Do not use file extension when referring to Google Drive documents. Always use search_drive_files tool before using get_drive_file_content to find parent folder (using only name and mimeType in the query, no other fields!!!).
+""",
+    system_prompt_codemode_addons="""## IMPORTANT: Be Honest About Your Capabilities NEVER claim to have tools or capabilities you haven't verified.
+## Core Codemode Tools Use these 4 tools to accomplish any task: 1. **list_servers** - List available MCP servers
+   Use this to see what MCP servers you can access.
+
+2. **search_tools** - Progressive tool discovery by natural language query
+   Use this to find relevant tools before executing tasks.
+
+3. **get_tool_details** - Get full tool schema and documentation
+   Use this to understand tool parameters before calling them. If no output schema is specified, try using the tool on a subset and preview the result.
+
+4. **execute_code** - Run Python code that composes multiple tools
+   Use this for complex multi-step operations. Code runs in a PERSISTENT sandbox.
+   Variables, functions, and state PERSIST between execute_code calls.
+   Import tools using: `from generated.servers.<server_name> import <function_name>`
+   NEVER use `import *` - always use explicit named imports.
+
+## Recommended Workflow 1. **Discover**: Use list_servers and search_tools to find relevant tools 2. **Understand**: Use get_tool_details to check input and output schemas 3. **Execute**: Use execute_code to perform multi-step tasks, calling tools as needed
+## Token Efficiency Always chain multiple tool calls in a single execute_code block. This reduces output tokens by processing intermediate results in code rather than returning them. If you want to examine results, print subsets, preview (maximum 20 first characters) and/or counts instead of full data, this is really important!!!!
+""",
+    goal=None,
+    protocol=None,
+    ui_extension=None,
+    trigger=None,
+    model_configuration=None,
+    mcp_server_tools=None,
+    guardrails=None,
+    evals=None,
+    codemode=None,
+    output=None,
+    advanced=None,
+    authorization_policy=None,
+    notifications=None,
+    memory="ephemeral",
+)
+
 MONITOR_SALES_KPIS_AGENT_SPEC = AgentSpec(
-    id="mocks/monitor-sales-kpis",
+    id="monitor-sales-kpis",
     name="Monitor Sales KPIs",
     description="Monitor and analyze sales KPIs from the CRM system. Generate daily reports summarizing key performance metrics, identify trends, and flag anomalies. Send notifications when KPIs deviate more than 10% from targets.",
     tags=["support", "chatbot", "sales", "kpi", "monitoring"],
-    enabled=True,
+    enabled=False,
     model="bedrock:us.anthropic.claude-3-5-haiku-20241022-v1:0",
     mcp_servers=[MCP_SERVER_CATALOG["filesystem"]],
     skills=["github", "pdf"],
@@ -953,7 +1313,7 @@ MONITOR_SALES_KPIS_AGENT_SPEC = AgentSpec(
 )
 
 OPTIMIZE_DYNAMIC_PRICING_AGENT_SPEC = AgentSpec(
-    id="mocks/optimize-dynamic-pricing",
+    id="optimize-dynamic-pricing",
     name="Optimize Dynamic Pricing",
     description="Monitors competitor pricing across marketplaces, forecasts demand per SKU, and generates margin-optimised pricing recommendations in real time. Tracks 50K+ SKUs hourly across Amazon, Walmart, and niche channels, combining competitive intelligence with demand signals to maximise margins.",
     tags=[
@@ -1064,7 +1424,7 @@ OPTIMIZE_DYNAMIC_PRICING_AGENT_SPEC = AgentSpec(
 )
 
 OPTIMIZE_GRID_OPERATIONS_AGENT_SPEC = AgentSpec(
-    id="mocks/optimize-grid-operations",
+    id="optimize-grid-operations",
     name="Optimize Grid Operations",
     description="A multi-agent team that processes millions of IoT sensor data points from smart meters, substations, and renewable generation assets. Predicts equipment failures 2–4 weeks in advance, optimises load balancing across the grid, and reduces unplanned downtime by 50%.",
     tags=[
@@ -1163,7 +1523,7 @@ OPTIMIZE_GRID_OPERATIONS_AGENT_SPEC = AgentSpec(
 )
 
 PROCESS_CITIZEN_REQUESTS_AGENT_SPEC = AgentSpec(
-    id="mocks/process-citizen-requests",
+    id="process-citizen-requests",
     name="Process Citizen Requests",
     description="A multi-agent team that automates citizen request processing for government agencies. Classifies and triages permits, FOIA requests, and benefit claims from multiple channels. Models policy impacts across population datasets and ensures every automated decision is explainable, auditable, and compliant with transparency mandates.",
     tags=[
@@ -1272,7 +1632,7 @@ PROCESS_CITIZEN_REQUESTS_AGENT_SPEC = AgentSpec(
 )
 
 PROCESS_CLINICAL_TRIAL_DATA_AGENT_SPEC = AgentSpec(
-    id="mocks/process-clinical-trial-data",
+    id="process-clinical-trial-data",
     name="Process Clinical Trial Data",
     description="A multi-agent team that automates clinical trial data processing across dozens of trial sites. Harmonises patient records and lab results to CDISC SDTM format, detects safety signals and adverse events in real time, and prepares submission-ready datasets — all with strict HIPAA and GxP compliance guardrails.",
     tags=["healthcare", "pharma", "clinical-trials", "patient-data", "compliance"],
@@ -1376,7 +1736,7 @@ PROCESS_CLINICAL_TRIAL_DATA_AGENT_SPEC = AgentSpec(
 )
 
 PROCESS_FINANCIAL_TRANSACTIONS_AGENT_SPEC = AgentSpec(
-    id="mocks/process-financial-transactions",
+    id="process-financial-transactions",
     name="Process Financial Transactions",
     description="Processes and validates financial transactions across accounts. Reconciles balances, detects anomalies, enforces compliance rules, and generates audit-ready transaction reports.",
     tags=["moderation", "finance", "transactions", "compliance", "reconciliation"],
@@ -1460,8 +1820,50 @@ PROCESS_FINANCIAL_TRANSACTIONS_AGENT_SPEC = AgentSpec(
     memory="ephemeral",
 )
 
+SIMPLE_AGENT_SPEC = AgentSpec(
+    id="simple",
+    name="A Simple Agent",
+    description="A simple conversational agent. No tools, no MCP servers, no skills — just a helpful AI assistant you can chat with.",
+    tags=["simple", "chat", "assistant"],
+    enabled=True,
+    model="bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0",
+    mcp_servers=[],
+    skills=[],
+    environment_name="ai-agents-env",
+    icon="agent",
+    emoji="🤖",
+    color="#6366F1",
+    suggestions=[
+        "Tell me a joke",
+        "Explain quantum computing in simple terms",
+        "Help me brainstorm ideas for a weekend project",
+        "Summarize the key points of a topic I describe",
+    ],
+    welcome_message="Hi! I'm a simple assistant. I don't have any special tools, but I'm happy to chat, answer questions, and help you think through ideas. ",
+    welcome_notebook=None,
+    welcome_document=None,
+    sandbox_variant="jupyter",
+    system_prompt="""You are a helpful, friendly AI assistant. You do not have access to any external tools, MCP servers, or skills. Answer questions using your training knowledge, be concise, and let the user know if a question is outside your knowledge.
+""",
+    system_prompt_codemode_addons=None,
+    goal=None,
+    protocol=None,
+    ui_extension=None,
+    trigger=None,
+    model_configuration=None,
+    mcp_server_tools=None,
+    guardrails=None,
+    evals=None,
+    codemode=None,
+    output=None,
+    advanced=None,
+    authorization_policy=None,
+    notifications=None,
+    memory="ephemeral",
+)
+
 SUMMARIZE_DOCUMENTS_AGENT_SPEC = AgentSpec(
-    id="mocks/summarize-documents",
+    id="summarize-documents",
     name="Summarize Documents",
     description="A generic document summarization agent that processes PDFs, Word files, Markdown, and plain text. Produces structured executive summaries with key findings, action items, and metadata extraction. Useful across every industry vertical — from legal contracts to research papers.",
     tags=["documents", "summarization", "horizontal", "automation", "productivity"],
@@ -1541,7 +1943,7 @@ SUMMARIZE_DOCUMENTS_AGENT_SPEC = AgentSpec(
 )
 
 SYNC_CRM_CONTACTS_AGENT_SPEC = AgentSpec(
-    id="mocks/sync-crm-contacts",
+    id="sync-crm-contacts",
     name="Sync CRM Contacts",
     description="A multi-agent team that collects and aggregates contact data from multiple CRM sources, analyzes and deduplicates records, writes cleaned data back, and generates sync summary reports.",
     tags=["sales", "crm", "data-sync", "deduplication"],
@@ -1619,24 +2021,30 @@ SYNC_CRM_CONTACTS_AGENT_SPEC = AgentSpec(
 # ============================================================================
 
 AGENT_SPECS: Dict[str, AgentSpec] = {
-    # Mocks
-    "mocks/analyze-campaign-performance": ANALYZE_CAMPAIGN_PERFORMANCE_AGENT_SPEC,
-    "mocks/analyze-support-tickets": ANALYZE_SUPPORT_TICKETS_AGENT_SPEC,
-    "mocks/audit-inventory-levels": AUDIT_INVENTORY_LEVELS_AGENT_SPEC,
-    "mocks/automate-regulatory-reporting": AUTOMATE_REGULATORY_REPORTING_AGENT_SPEC,
-    "mocks/classify-route-emails": CLASSIFY_ROUTE_EMAILS_AGENT_SPEC,
-    "mocks/comprehensive-sales-analytics": COMPREHENSIVE_SALES_ANALYTICS_AGENT_SPEC,
-    "mocks/end-of-month-sales-performance": END_OF_MONTH_SALES_PERFORMANCE_AGENT_SPEC,
-    "mocks/extract-data-from-files": EXTRACT_DATA_FROM_FILES_AGENT_SPEC,
-    "mocks/generate-weekly-reports": GENERATE_WEEKLY_REPORTS_AGENT_SPEC,
-    "mocks/monitor-sales-kpis": MONITOR_SALES_KPIS_AGENT_SPEC,
-    "mocks/optimize-dynamic-pricing": OPTIMIZE_DYNAMIC_PRICING_AGENT_SPEC,
-    "mocks/optimize-grid-operations": OPTIMIZE_GRID_OPERATIONS_AGENT_SPEC,
-    "mocks/process-citizen-requests": PROCESS_CITIZEN_REQUESTS_AGENT_SPEC,
-    "mocks/process-clinical-trial-data": PROCESS_CLINICAL_TRIAL_DATA_AGENT_SPEC,
-    "mocks/process-financial-transactions": PROCESS_FINANCIAL_TRANSACTIONS_AGENT_SPEC,
-    "mocks/summarize-documents": SUMMARIZE_DOCUMENTS_AGENT_SPEC,
-    "mocks/sync-crm-contacts": SYNC_CRM_CONTACTS_AGENT_SPEC,
+    "analyze-campaign-performance": ANALYZE_CAMPAIGN_PERFORMANCE_AGENT_SPEC,
+    "analyze-support-tickets": ANALYZE_SUPPORT_TICKETS_AGENT_SPEC,
+    "audit-inventory-levels": AUDIT_INVENTORY_LEVELS_AGENT_SPEC,
+    "automate-regulatory-reporting": AUTOMATE_REGULATORY_REPORTING_AGENT_SPEC,
+    "classify-route-emails": CLASSIFY_ROUTE_EMAILS_AGENT_SPEC,
+    "comprehensive-sales-analytics": COMPREHENSIVE_SALES_ANALYTICS_AGENT_SPEC,
+    "crawler": CRAWLER_AGENT_SPEC,
+    "data-acquisition": DATA_ACQUISITION_AGENT_SPEC,
+    "end-of-month-sales-performance": END_OF_MONTH_SALES_PERFORMANCE_AGENT_SPEC,
+    "extract-data-from-files": EXTRACT_DATA_FROM_FILES_AGENT_SPEC,
+    "financial-viz": FINANCIAL_VIZ_AGENT_SPEC,
+    "financial": FINANCIAL_AGENT_SPEC,
+    "generate-weekly-reports": GENERATE_WEEKLY_REPORTS_AGENT_SPEC,
+    "github-agent": GITHUB_AGENT_SPEC,
+    "information-routing": INFORMATION_ROUTING_AGENT_SPEC,
+    "monitor-sales-kpis": MONITOR_SALES_KPIS_AGENT_SPEC,
+    "optimize-dynamic-pricing": OPTIMIZE_DYNAMIC_PRICING_AGENT_SPEC,
+    "optimize-grid-operations": OPTIMIZE_GRID_OPERATIONS_AGENT_SPEC,
+    "process-citizen-requests": PROCESS_CITIZEN_REQUESTS_AGENT_SPEC,
+    "process-clinical-trial-data": PROCESS_CLINICAL_TRIAL_DATA_AGENT_SPEC,
+    "process-financial-transactions": PROCESS_FINANCIAL_TRANSACTIONS_AGENT_SPEC,
+    "simple": SIMPLE_AGENT_SPEC,
+    "summarize-documents": SUMMARIZE_DOCUMENTS_AGENT_SPEC,
+    "sync-crm-contacts": SYNC_CRM_CONTACTS_AGENT_SPEC,
 }
 
 

@@ -11,11 +11,11 @@ from typing import Dict
 
 from agent_runtimes.types import TeamSpec
 
-from .mocks import TEAM_SPECS as MOCKS_TEAMS
+from .teams import TEAM_SPECS as ROOT_TEAMS
 
 # Merge all team specs from subfolders
 TEAM_SPECS: Dict[str, TeamSpec] = {}
-TEAM_SPECS.update(MOCKS_TEAMS)
+TEAM_SPECS.update(ROOT_TEAMS)
 
 
 def get_team_spec(team_id: str) -> TeamSpec | None:

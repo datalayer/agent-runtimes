@@ -5,7 +5,35 @@ SHELL=/bin/bash
 
 .DEFAULT_GOAL := default
 
-.PHONY: docs examples specs
+.PHONY: \
+	help default clean build test test-js test-py start kill warning \
+	publish-npm publish-pypi publish-conda pydoc typedoc docs \
+	examples agent agent-notebook agent-lexical jupyter-server agent-serve \
+	agents list-specs specs specs-clone specs-generate specs-format
+
+AGENTSPECS_REPO ?= https://github.com/datalayer/agentspecs.git
+AGENTSPECS_DIR ?= agentspecs
+AGENTSPECS_REF ?= 63ebae65a79600d4c615959d8fb520c0a7e46d06
+
+BEDROCK_ENV = \
+	AWS_ACCESS_KEY_ID=${DATALAYER_BEDROCK_AWS_ACCESS_KEY_ID} \
+	AWS_SECRET_ACCESS_KEY=${DATALAYER_BEDROCK_AWS_SECRET_ACCESS_KEY} \
+	AWS_DEFAULT_REGION=${DATALAYER_BEDROCK_AWS_DEFAULT_REGION}
+
+RUFF_TARGETS = \
+	agent_runtimes/specs/agents/ \
+	agent_runtimes/specs/teams/ \
+	agent_runtimes/specs/skills.py \
+	agent_runtimes/specs/envvars.py \
+	agent_runtimes/specs/models.py \
+	agent_runtimes/specs/memory.py \
+	agent_runtimes/specs/guardrails.py \
+	agent_runtimes/specs/evals.py \
+	agent_runtimes/specs/triggers.py \
+	agent_runtimes/specs/outputs.py \
+	agent_runtimes/specs/notifications.py \
+	agent_runtimes/mcp/catalog_mcp_servers.py \
+	agent_runtimes/mcp/__init__.py
 
 help: ## display this help
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
@@ -66,37 +94,22 @@ docs: pydoc typedoc ## build the api docs and serve the docs
 	cd docs && npm run start
 
 examples: # examples
-	AWS_ACCESS_KEY_ID=${DATALAYER_BEDROCK_AWS_ACCESS_KEY_ID} \
-	AWS_SECRET_ACCESS_KEY=${DATALAYER_BEDROCK_AWS_SECRET_ACCESS_KEY} \
-	AWS_DEFAULT_REGION=${DATALAYER_BEDROCK_AWS_DEFAULT_REGION} \
-	  npm run examples
+	$(BEDROCK_ENV) npm run examples
 
 agent: # agent - open agent.html with vite dev server
-	AWS_ACCESS_KEY_ID=${DATALAYER_BEDROCK_AWS_ACCESS_KEY_ID} \
-	AWS_SECRET_ACCESS_KEY=${DATALAYER_BEDROCK_AWS_SECRET_ACCESS_KEY} \
-	AWS_DEFAULT_REGION=${DATALAYER_BEDROCK_AWS_DEFAULT_REGION} \
-	  npm run start:agent
+	$(BEDROCK_ENV) npm run start:agent
 
 agent-notebook: # agent-notebook - open agent-notebook.html with vite dev server
-	AWS_ACCESS_KEY_ID=${DATALAYER_BEDROCK_AWS_ACCESS_KEY_ID} \
-	AWS_SECRET_ACCESS_KEY=${DATALAYER_BEDROCK_AWS_SECRET_ACCESS_KEY} \
-	AWS_DEFAULT_REGION=${DATALAYER_BEDROCK_AWS_DEFAULT_REGION} \
-	  npm run start:agent-notebook
+	$(BEDROCK_ENV) npm run start:agent-notebook
 
 agent-lexical: # agent-lexical - open agent-lexical.html with vite dev server
-	AWS_ACCESS_KEY_ID=${DATALAYER_BEDROCK_AWS_ACCESS_KEY_ID} \
-	AWS_SECRET_ACCESS_KEY=${DATALAYER_BEDROCK_AWS_SECRET_ACCESS_KEY} \
-	AWS_DEFAULT_REGION=${DATALAYER_BEDROCK_AWS_DEFAULT_REGION} \
-	  npm run start:agent-lexical
+	$(BEDROCK_ENV) npm run start:agent-lexical
 
 jupyter-server: # jupyter-server
 	npm run jupyter:start
 
 agent-serve: # agent-server
-	@AWS_ACCESS_KEY_ID=${DATALAYER_BEDROCK_AWS_ACCESS_KEY_ID} \
-	AWS_SECRET_ACCESS_KEY=${DATALAYER_BEDROCK_AWS_SECRET_ACCESS_KEY} \
-	AWS_DEFAULT_REGION=${DATALAYER_BEDROCK_AWS_DEFAULT_REGION} \
-	agent-runtimes serve \
+	@$(BEDROCK_ENV) agent-runtimes serve \
 	  --agent-id data-acquisition \
 	  --agent-name dla-1 \
 	  --protocol ag-ui \
@@ -116,80 +129,86 @@ agents: # agents
 list-specs: # list specs
 	agent-runtimes list-specs
 
-specs: ## generate Python and TypeScript code from YAML specifications (agents, teams, MCP servers, skills, envvars)
+specs: specs-clone specs-generate specs-format ## generate Python and TypeScript code from YAML specifications (agents, teams, MCP servers, skills, envvars)
+
+specs-clone: ## clone/update pinned agentspecs repository
 	@echo "Cloning agentspecs repository..."
-	@if [ ! -d "agentspecs" ]; then \
-		git clone https://github.com/datalayer/agentspecs.git agentspecs; \
+	@if [ ! -d "$(AGENTSPECS_DIR)" ]; then \
+		git clone $(AGENTSPECS_REPO) $(AGENTSPECS_DIR); \
 	else \
-		cd agentspecs && git fetch origin; \
+		cd $(AGENTSPECS_DIR) && git fetch origin; \
 	fi
-	@cd agentspecs && git checkout d7aadd960dfac984f9df7546f1bd3390fdd17e07
+	@cd $(AGENTSPECS_DIR) && git checkout $(AGENTSPECS_REF)
+
+specs-generate: ## generate all Python and TypeScript specs from YAML
 	@echo "Generating agent specifications..."
 	python scripts/codegen/generate_agents.py \
-	  --specs-dir agentspecs/agentspecs/agents \
+	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/agents \
 	  --python-output agent_runtimes/specs/agents.py \
 	  --typescript-output src/specs/agents.ts \
 	  --subfolder-structure
 	@echo "Generating team specifications..."
 	python scripts/codegen/generate_teams.py \
-	  --specs-dir agentspecs/agentspecs/teams \
+	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/teams \
 	  --python-output agent_runtimes/specs/teams.py \
 	  --typescript-output src/specs/teams.ts \
 	  --subfolder-structure
 	@echo "Generating MCP server specifications..."
 	python scripts/codegen/generate_mcp_servers.py \
-	  --specs-dir agentspecs/agentspecs/mcp-servers \
+	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/mcp-servers \
 	  --python-output agent_runtimes/mcp/catalog_mcp_servers.py \
 	  --typescript-output src/specs/mcpServers.ts
 	@echo "Generating skill specifications..."
 	python scripts/codegen/generate_skills.py \
-	  --specs-dir agentspecs/agentspecs/skills \
+	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/skills \
 	  --python-output agent_runtimes/specs/skills.py \
 	  --typescript-output src/specs/skills.ts
 	@echo "Generating environment variable specifications..."
 	python scripts/codegen/generate_envvars.py \
-	  --specs-dir agentspecs/agentspecs/envvars \
+	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/envvars \
 	  --python-output agent_runtimes/specs/envvars.py \
 	  --typescript-output src/specs/envvars.ts
 	@echo "Generating AI model specifications..."
 	python scripts/codegen/generate_models.py \
-	  --specs-dir agentspecs/agentspecs/models \
+	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/models \
 	  --python-output agent_runtimes/specs/models.py \
 	  --typescript-output src/specs/models.ts
 	@echo "Generating memory specifications..."
 	python scripts/codegen/generate_memory.py \
-	  --specs-dir agentspecs/agentspecs/memory \
+	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/memory \
 	  --python-output agent_runtimes/specs/memory.py \
 	  --typescript-output src/specs/memory.ts
 	@echo "Generating guardrail specifications..."
 	python scripts/codegen/generate_guardrails.py \
-	  --specs-dir agentspecs/agentspecs/guardrails \
+	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/guardrails \
 	  --python-output agent_runtimes/specs/guardrails.py \
 	  --typescript-output src/specs/guardrails.ts
 	@echo "Generating eval specifications..."
 	python scripts/codegen/generate_evals.py \
-	  --specs-dir agentspecs/agentspecs/evals \
+	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/evals \
 	  --python-output agent_runtimes/specs/evals.py \
 	  --typescript-output src/specs/evals.ts
 	@echo "Generating trigger specifications..."
 	python scripts/codegen/generate_triggers.py \
-	  --specs-dir agentspecs/agentspecs/triggers \
+	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/triggers \
 	  --python-output agent_runtimes/specs/triggers.py \
 	  --typescript-output src/specs/triggers.ts
 	@echo "Generating output specifications..."
 	python scripts/codegen/generate_outputs.py \
-	  --specs-dir agentspecs/agentspecs/outputs \
+	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/outputs \
 	  --python-output agent_runtimes/specs/outputs.py \
 	  --typescript-output src/specs/outputs.ts
 	@echo "Generating notification specifications..."
 	python scripts/codegen/generate_notifications.py \
-	  --specs-dir agentspecs/agentspecs/notifications \
+	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/notifications \
 	  --python-output agent_runtimes/specs/notifications.py \
 	  --typescript-output src/specs/notifications.ts
 	@echo "✓ All specifications generated successfully"
+
+specs-format: ## format generated specs and refresh MCP catalogs
 	@echo "Formatting generated files with ruff..."
-	ruff check --select I --fix agent_runtimes/specs/agents/ agent_runtimes/specs/teams/ agent_runtimes/specs/skills.py agent_runtimes/specs/envvars.py agent_runtimes/specs/models.py agent_runtimes/specs/memory.py agent_runtimes/specs/guardrails.py agent_runtimes/specs/evals.py agent_runtimes/specs/triggers.py agent_runtimes/specs/outputs.py agent_runtimes/specs/notifications.py agent_runtimes/specs/__init__.py agent_runtimes/mcp/catalog_mcp_servers.py agent_runtimes/mcp/__init__.py
-	ruff format agent_runtimes/specs/agents/ agent_runtimes/specs/teams/ agent_runtimes/specs/skills.py agent_runtimes/specs/envvars.py agent_runtimes/specs/models.py agent_runtimes/specs/memory.py agent_runtimes/specs/guardrails.py agent_runtimes/specs/evals.py agent_runtimes/specs/triggers.py agent_runtimes/specs/outputs.py agent_runtimes/specs/notifications.py agent_runtimes/specs/__init__.py agent_runtimes/mcp/catalog_mcp_servers.py agent_runtimes/mcp/__init__.py
+	ruff check --select I --fix $(RUFF_TARGETS)
+	ruff format $(RUFF_TARGETS)
 	@echo "Formatting generated files with prettier..."
 	npm run format
 	agent-runtimes mcp-servers-catalog

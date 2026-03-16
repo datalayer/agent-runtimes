@@ -71,7 +71,7 @@ export function AgentsMixin<TBase extends Constructor>(Base: TBase) {
     }
 
     /**
-     * Pause a running agent (CRIU checkpoint).
+     * Pause a running agent (light checkpoint by default, CRIU optional).
      * @param podName - Pod name hosting the agent
      */
     async pauseAgent(podName: string): Promise<void> {

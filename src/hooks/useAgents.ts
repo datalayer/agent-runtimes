@@ -478,7 +478,7 @@ export function useAgents(options: UseAgentOptions = {}): UseAgentReturn {
           );
           if (ckpt.status === 'failed') {
             throw new Error(
-              `Checkpoint ${resp.checkpoint_id} failed during CRIU pause`,
+              `Checkpoint ${resp.checkpoint_id} failed during ${mode.toUpperCase()} pause`,
             );
           }
         }
@@ -491,7 +491,7 @@ export function useAgents(options: UseAgentOptions = {}): UseAgentReturn {
     [runtime, durableStatus, getAuthHeaders, agentSpecId, agentSpec],
   );
 
-  // ─── Resume (CRIU Restore) ─────────────────────────────────────────
+  // ─── Resume (checkpoint restore) ───────────────────────────────────
 
   const resume = useCallback(
     async (mode: CheckpointMode = 'criu', checkpointId?: string) => {
@@ -579,7 +579,7 @@ export function useAgents(options: UseAgentOptions = {}): UseAgentReturn {
         );
         if (ckpt.status === 'failed') {
           throw new Error(
-            `Checkpoint ${checkpointId} failed during CRIU pause`,
+            `Checkpoint ${checkpointId} failed during ${mode.toUpperCase()} pause`,
           );
         }
         setDurableStatus('paused');
@@ -1110,10 +1110,10 @@ export function useDeletePausedAgentRuntime() {
 }
 
 /**
- * Hook to resume a paused agent runtime via CRIU restore.
+ * Hook to resume a paused agent runtime via checkpoint restore.
  *
  * Calls ``POST /runtimes/{podName}/resume`` which triggers an async
- * background restore from the latest CRIU checkpoint.
+ * background restore from the latest checkpoint.
  */
 export function useResumePausedAgentRuntime() {
   const { configuration } = useCoreStore();
@@ -1151,7 +1151,7 @@ export function useRefreshAgentRuntimes() {
 }
 
 // ============================================================================
-// Checkpoint Hooks (CRIU full-pod checkpoints)
+// Checkpoint Hooks (light by default, CRIU optional)
 // ============================================================================
 
 /**
@@ -1348,10 +1348,10 @@ export type AgentCatalogStoreState = {
 };
 
 export const useAgentCatalogStore = create<AgentCatalogStoreState>()(set => ({
-  agentSpecs: listAgentSpecs('datalayer-ai/'),
+  agentSpecs: listAgentSpecs(),
   runningAgents: [],
 
-  refreshSpecs: () => set({ agentSpecs: listAgentSpecs('datalayer-ai/') }),
+  refreshSpecs: () => set({ agentSpecs: listAgentSpecs() }),
 
   setRunningAgents: agents =>
     set(state => ({

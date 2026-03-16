@@ -24,12 +24,8 @@ from agent_runtimes.types import (
 # Team Definitions
 # ============================================================================
 
-# ============================================================================
-# Mocks
-# ============================================================================
-
-MOCKS_ANALYZE_CAMPAIGN_PERFORMANCE_TEAM_SPEC = TeamSpec(
-    id="mocks/analyze-campaign-performance",
+ANALYZE_CAMPAIGN_PERFORMANCE_TEAM_SPEC = TeamSpec(
+    id="analyze-campaign-performance",
     name="Analyze Campaign Performance",
     description="A multi-agent team that unifies marketing data from Google Ads, Meta, TikTok, LinkedIn, GA4, CRM, and email platforms. Normalises metrics into a unified view, detects performance anomalies in real time, and generates budget reallocation recommendations to maximise ROAS.",
     tags=[
@@ -159,8 +155,8 @@ MOCKS_ANALYZE_CAMPAIGN_PERFORMANCE_TEAM_SPEC = TeamSpec(
     ),
 )
 
-MOCKS_ANALYZE_SUPPORT_TICKETS_TEAM_SPEC = TeamSpec(
-    id="mocks/analyze-support-tickets",
+ANALYZE_SUPPORT_TICKETS_TEAM_SPEC = TeamSpec(
+    id="analyze-support-tickets",
     name="Analyze Support Tickets",
     description="A multi-agent team that triages incoming support tickets, categorizes by urgency and topic, identifies recurring patterns, and generates resolution recommendations with escalation paths.",
     tags=["analytics", "data", "support", "tickets"],
@@ -251,8 +247,8 @@ MOCKS_ANALYZE_SUPPORT_TICKETS_TEAM_SPEC = TeamSpec(
     ),
 )
 
-MOCKS_AUDIT_INVENTORY_LEVELS_TEAM_SPEC = TeamSpec(
-    id="mocks/audit-inventory-levels",
+AUDIT_INVENTORY_LEVELS_TEAM_SPEC = TeamSpec(
+    id="audit-inventory-levels",
     name="Audit Inventory Levels",
     description="A multi-agent team that monitors inventory levels across warehouses, detects discrepancies between physical and system counts, forecasts demand by SKU, and generates automated reorder recommendations.",
     tags=["finance", "automation", "inventory", "supply-chain"],
@@ -369,8 +365,8 @@ MOCKS_AUDIT_INVENTORY_LEVELS_TEAM_SPEC = TeamSpec(
     ),
 )
 
-MOCKS_AUTOMATE_REGULATORY_REPORTING_TEAM_SPEC = TeamSpec(
-    id="mocks/automate-regulatory-reporting",
+AUTOMATE_REGULATORY_REPORTING_TEAM_SPEC = TeamSpec(
+    id="automate-regulatory-reporting",
     name="Automate Regulatory Reporting",
     description="A multi-agent team that automates end-to-end regulatory reporting for financial institutions. Ingests data from trading systems, risk engines, and accounting platforms, reconciles positions, computes risk metrics, validates against regulatory rules (Basel III/IV, MiFID II, SOX), and generates submission-ready compliance reports with full audit trails.",
     tags=["finance", "compliance", "regulatory", "risk", "banking", "audit"],
@@ -488,8 +484,8 @@ MOCKS_AUTOMATE_REGULATORY_REPORTING_TEAM_SPEC = TeamSpec(
     ),
 )
 
-MOCKS_COMPREHENSIVE_SALES_ANALYTICS_TEAM_SPEC = TeamSpec(
-    id="mocks/comprehensive-sales-analytics",
+COMPREHENSIVE_SALES_ANALYTICS_TEAM_SPEC = TeamSpec(
+    id="comprehensive-sales-analytics",
     name="Comprehensive Sales Analytics",
     description="A multi-agent team that replaces a single KPI monitor with four specialized agents: a Data Collector that pulls real-time CRM metrics, an Anomaly Detector that flags statistical outliers, a Trend Analyzer that identifies patterns and forecasts, and a Report Generator that compiles executive dashboards and sends alerts. Together they deliver deeper insights, faster detection, and richer reporting than any single agent could.",
     tags=["sales", "analytics", "kpi", "monitoring", "horizontal"],
@@ -591,8 +587,8 @@ MOCKS_COMPREHENSIVE_SALES_ANALYTICS_TEAM_SPEC = TeamSpec(
     ),
 )
 
-MOCKS_OPTIMIZE_GRID_OPERATIONS_TEAM_SPEC = TeamSpec(
-    id="mocks/optimize-grid-operations",
+OPTIMIZE_GRID_OPERATIONS_TEAM_SPEC = TeamSpec(
+    id="optimize-grid-operations",
     name="Optimize Grid Operations",
     description="A multi-agent team that processes millions of IoT sensor data points from smart meters, substations, and renewable generation assets. Predicts equipment failures 2–4 weeks in advance, optimises load balancing across the grid, and reduces unplanned downtime by 50%.",
     tags=[
@@ -721,8 +717,8 @@ MOCKS_OPTIMIZE_GRID_OPERATIONS_TEAM_SPEC = TeamSpec(
     ),
 )
 
-MOCKS_PROCESS_CITIZEN_REQUESTS_TEAM_SPEC = TeamSpec(
-    id="mocks/process-citizen-requests",
+PROCESS_CITIZEN_REQUESTS_TEAM_SPEC = TeamSpec(
+    id="process-citizen-requests",
     name="Process Citizen Requests",
     description="A multi-agent team that automates citizen request processing for government agencies. Classifies and triages permits, FOIA requests, and benefit claims from multiple channels. Models policy impacts across population datasets and ensures every automated decision is explainable, auditable, and compliant with transparency mandates.",
     tags=[
@@ -851,8 +847,8 @@ MOCKS_PROCESS_CITIZEN_REQUESTS_TEAM_SPEC = TeamSpec(
     ),
 )
 
-MOCKS_PROCESS_CLINICAL_TRIAL_DATA_TEAM_SPEC = TeamSpec(
-    id="mocks/process-clinical-trial-data",
+PROCESS_CLINICAL_TRIAL_DATA_TEAM_SPEC = TeamSpec(
+    id="process-clinical-trial-data",
     name="Process Clinical Trial Data",
     description="A multi-agent team that automates clinical trial data processing across dozens of trial sites. Harmonises patient records and lab results to CDISC SDTM format, detects safety signals and adverse events in real time, and prepares submission-ready datasets — all with strict HIPAA and GxP compliance guardrails.",
     tags=["healthcare", "pharma", "clinical-trials", "patient-data", "compliance"],
@@ -969,8 +965,8 @@ MOCKS_PROCESS_CLINICAL_TRIAL_DATA_TEAM_SPEC = TeamSpec(
     ),
 )
 
-MOCKS_SYNC_CRM_CONTACTS_TEAM_SPEC = TeamSpec(
-    id="mocks/sync-crm-contacts",
+SYNC_CRM_CONTACTS_TEAM_SPEC = TeamSpec(
+    id="sync-crm-contacts",
     name="Sync CRM Contacts",
     description="A multi-agent team that collects and aggregates contact data from multiple CRM sources, analyzes and deduplicates records, writes cleaned data back, and generates sync summary reports.",
     tags=["sales", "crm", "data-sync", "deduplication"],
@@ -1077,16 +1073,15 @@ MOCKS_SYNC_CRM_CONTACTS_TEAM_SPEC = TeamSpec(
 # ============================================================================
 
 TEAM_SPECS: Dict[str, TeamSpec] = {
-    # Mocks
-    "mocks/analyze-campaign-performance": MOCKS_ANALYZE_CAMPAIGN_PERFORMANCE_TEAM_SPEC,
-    "mocks/analyze-support-tickets": MOCKS_ANALYZE_SUPPORT_TICKETS_TEAM_SPEC,
-    "mocks/audit-inventory-levels": MOCKS_AUDIT_INVENTORY_LEVELS_TEAM_SPEC,
-    "mocks/automate-regulatory-reporting": MOCKS_AUTOMATE_REGULATORY_REPORTING_TEAM_SPEC,
-    "mocks/comprehensive-sales-analytics": MOCKS_COMPREHENSIVE_SALES_ANALYTICS_TEAM_SPEC,
-    "mocks/optimize-grid-operations": MOCKS_OPTIMIZE_GRID_OPERATIONS_TEAM_SPEC,
-    "mocks/process-citizen-requests": MOCKS_PROCESS_CITIZEN_REQUESTS_TEAM_SPEC,
-    "mocks/process-clinical-trial-data": MOCKS_PROCESS_CLINICAL_TRIAL_DATA_TEAM_SPEC,
-    "mocks/sync-crm-contacts": MOCKS_SYNC_CRM_CONTACTS_TEAM_SPEC,
+    "analyze-campaign-performance": ANALYZE_CAMPAIGN_PERFORMANCE_TEAM_SPEC,
+    "analyze-support-tickets": ANALYZE_SUPPORT_TICKETS_TEAM_SPEC,
+    "audit-inventory-levels": AUDIT_INVENTORY_LEVELS_TEAM_SPEC,
+    "automate-regulatory-reporting": AUTOMATE_REGULATORY_REPORTING_TEAM_SPEC,
+    "comprehensive-sales-analytics": COMPREHENSIVE_SALES_ANALYTICS_TEAM_SPEC,
+    "optimize-grid-operations": OPTIMIZE_GRID_OPERATIONS_TEAM_SPEC,
+    "process-citizen-requests": PROCESS_CITIZEN_REQUESTS_TEAM_SPEC,
+    "process-clinical-trial-data": PROCESS_CLINICAL_TRIAL_DATA_TEAM_SPEC,
+    "sync-crm-contacts": SYNC_CRM_CONTACTS_TEAM_SPEC,
 }
 
 

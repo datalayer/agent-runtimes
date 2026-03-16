@@ -11,11 +11,11 @@
 
 import type { TeamSpec } from '../../types';
 
-import { TEAM_SPECS as MOCKS_TEAMS } from './mocks';
+import { TEAM_SPECS as ROOT_TEAMS } from './teams';
 
 // Merge all team specs from subfolders
 export const TEAM_SPECS: Record<string, TeamSpec> = {
-  ...MOCKS_TEAMS,
+  ...ROOT_TEAMS,
 };
 
 /**

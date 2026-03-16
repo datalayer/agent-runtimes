@@ -66,7 +66,7 @@ export const getAgentStatus = async (
 };
 
 /**
- * Pause a running agent (CRIU checkpoint or application-level pause).
+ * Pause a running agent (light checkpoint by default, CRIU optional).
  * @param token - Authentication token
  * @param podName - Pod name
  * @param baseUrl - Base URL

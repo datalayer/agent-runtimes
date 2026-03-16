@@ -21,9 +21,15 @@ class OutputSpec(BaseModel):
     name: str = Field(..., description="Display name")
     description: str = Field(default="", description="Output description")
     icon: str = Field(default="", description="Icon identifier")
-    supports_template: bool = Field(default=False, description="Whether this output supports templating")
-    supports_storage: bool = Field(default=False, description="Whether this output can be persisted")
-    mime_types: List[str] = Field(default_factory=list, description="Supported MIME types")
+    supports_template: bool = Field(
+        default=False, description="Whether this output supports templating"
+    )
+    supports_storage: bool = Field(
+        default=False, description="Whether this output can be persisted"
+    )
+    mime_types: List[str] = Field(
+        default_factory=list, description="Supported MIME types"
+    )
 
 
 # ============================================================================
@@ -67,7 +73,11 @@ DOCUMENT_OUTPUT_SPEC = OutputSpec(
     icon="file",
     supports_template=True,
     supports_storage=True,
-    mime_types=["application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "text/markdown"],
+    mime_types=[
+        "application/pdf",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "text/markdown",
+    ],
 )
 
 EMAIL_OUTPUT_SPEC = OutputSpec(
