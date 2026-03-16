@@ -22,7 +22,9 @@ import {
   InfoIcon,
 } from '@primer/octicons-react';
 import { useQuery } from '@tanstack/react-query';
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+
+const RETRY_INTERVAL_SECONDS = 5;
 
 /**
  * Tool detail from API
@@ -409,10 +411,12 @@ function MessageDetailView({ message }: { message: MessageDetail }) {
  * ContextInspector component displays full detailed context snapshot.
  */
 export function ContextInspector({ agentId, apiBase }: ContextInspectorProps) {
+  const [retryCountdown, setRetryCountdown] = useState(RETRY_INTERVAL_SECONDS);
   const {
     data: contextData,
     isLoading,
     error,
+    refetch,
   } = useQuery<FullContextResponse>({
     queryKey: ['full-context', agentId, apiBase],
     queryFn: async () => {
@@ -425,10 +429,26 @@ export function ContextInspector({ agentId, apiBase }: ContextInspectorProps) {
       }
       return response.json();
     },
-    refetchInterval: 30000, // Refresh every 30 seconds (less frequent than snapshot)
+    refetchInterval: RETRY_INTERVAL_SECONDS * 1000,
     refetchOnMount: 'always',
     staleTime: 0,
   });
+
+  const hasRetryError = Boolean(error) || Boolean(contextData?.error);
+
+  useEffect(() => {
+    if (!hasRetryError) {
+      setRetryCountdown(RETRY_INTERVAL_SECONDS);
+      return;
+    }
+    setRetryCountdown(RETRY_INTERVAL_SECONDS);
+    const timer = window.setInterval(() => {
+      setRetryCountdown(prev =>
+        prev <= 1 ? RETRY_INTERVAL_SECONDS : prev - 1,
+      );
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [hasRetryError]);
 
   // Separate messages by in_context status
   const { inContextMessages, outOfContextMessages } = useMemo(() => {
@@ -464,13 +484,35 @@ export function ContextInspector({ agentId, apiBase }: ContextInspectorProps) {
       <Box
         sx={{
           p: 3,
-          bg: 'danger.subtle',
+          bg: 'attention.subtle',
           borderRadius: 2,
           border: '1px solid',
-          borderColor: 'danger.muted',
+          borderColor: 'attention.muted',
         }}
       >
-        <Text sx={{ color: 'danger.fg' }}>Failed to load context snapshot</Text>
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 2,
+          }}
+        >
+          <Text sx={{ color: 'attention.fg' }}>
+            Service not available for context snapshot. Retrying in{' '}
+            {retryCountdown} second{retryCountdown === 1 ? '' : 's'}...
+          </Text>
+          <Button
+            size="small"
+            variant="invisible"
+            onClick={() => {
+              setRetryCountdown(RETRY_INTERVAL_SECONDS);
+              void refetch();
+            }}
+          >
+            Retry now
+          </Button>
+        </Box>
       </Box>
     );
   }
@@ -486,7 +528,28 @@ export function ContextInspector({ agentId, apiBase }: ContextInspectorProps) {
           borderColor: 'attention.muted',
         }}
       >
-        <Text sx={{ color: 'attention.fg' }}>{contextData.error}</Text>
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 2,
+          }}
+        >
+          <Text sx={{ color: 'attention.fg' }}>
+            {`${contextData.error} Retrying in ${retryCountdown} second${retryCountdown === 1 ? '' : 's'}...`}
+          </Text>
+          <Button
+            size="small"
+            variant="invisible"
+            onClick={() => {
+              setRetryCountdown(RETRY_INTERVAL_SECONDS);
+              void refetch();
+            }}
+          >
+            Retry now
+          </Button>
+        </Box>
       </Box>
     );
   }

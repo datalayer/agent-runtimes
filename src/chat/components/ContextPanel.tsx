@@ -28,7 +28,7 @@ import {
 import { Box } from '@datalayer/primer-addons';
 import { useQuery } from '@tanstack/react-query';
 import ReactECharts from 'echarts-for-react';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 
 /**
  * Distribution child item for treemap
@@ -182,6 +182,8 @@ function getCategoryIcon(name: string) {
 
 type ViewMode = 'overview' | 'distribution' | 'history';
 
+const RETRY_INTERVAL_SECONDS = 5;
+
 /**
  * Get the API base URL for fetching context data.
  * If apiBase prop is provided, use it.
@@ -225,11 +227,13 @@ export function ContextPanel({
 }: ContextPanelProps) {
   const [viewMode, setViewMode] = useState<ViewMode>(defaultView);
   const [showDetails, setShowDetails] = useState(false);
+  const [retryCountdown, setRetryCountdown] = useState(RETRY_INTERVAL_SECONDS);
 
   const {
     data: snapshotData,
     isLoading,
     error,
+    refetch,
   } = useQuery<ContextSnapshotResponse>({
     queryKey: ['context-snapshot', agentId, apiBase],
     queryFn: async () => {
@@ -242,10 +246,24 @@ export function ContextPanel({
       }
       return response.json();
     },
-    refetchInterval: 5000,
+    refetchInterval: RETRY_INTERVAL_SECONDS * 1000,
     refetchOnMount: 'always',
     staleTime: 0,
   });
+
+  useEffect(() => {
+    if (!error) {
+      setRetryCountdown(RETRY_INTERVAL_SECONDS);
+      return;
+    }
+    setRetryCountdown(RETRY_INTERVAL_SECONDS);
+    const timer = window.setInterval(() => {
+      setRetryCountdown(prev =>
+        prev <= 1 ? RETRY_INTERVAL_SECONDS : prev - 1,
+      );
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [error]);
 
   // Build historic usage chart data from perRequestUsage
   const historyChartOption = useMemo(() => {
@@ -452,15 +470,35 @@ export function ContextPanel({
         <Box
           sx={{
             p: 3,
-            bg: 'canvas.subtle',
+            bg: 'attention.subtle',
             borderRadius: 2,
             border: '1px solid',
-            borderColor: 'border.default',
+            borderColor: 'attention.muted',
           }}
         >
-          <Text sx={{ fontSize: 1, color: 'fg.muted' }}>
-            Failed to load context details. Make sure the agent is running.
-          </Text>
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 2,
+            }}
+          >
+            <Text sx={{ fontSize: 1, color: 'attention.fg' }}>
+              Service not available for context usage. Retrying in{' '}
+              {retryCountdown} second{retryCountdown === 1 ? '' : 's'}...
+            </Text>
+            <Button
+              size="small"
+              variant="invisible"
+              onClick={() => {
+                setRetryCountdown(RETRY_INTERVAL_SECONDS);
+                void refetch();
+              }}
+            >
+              Retry now
+            </Button>
+          </Box>
         </Box>
       </Box>
     );
