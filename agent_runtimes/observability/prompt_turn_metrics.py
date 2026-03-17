@@ -25,6 +25,13 @@ _emitter: "PromptTurnMetricsEmitter | None" = None
 _emitter_init_attempted = False
 
 
+def _bool_env(name: str, default: bool = False) -> bool:
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    return raw.strip().lower() in {"1", "true", "yes", "on"}
+
+
 def _resolve_otlp_endpoint() -> str:
     explicit = os.environ.get("DATALAYER_OTLP_URL") or os.environ.get(
         "OTEL_EXPORTER_OTLP_ENDPOINT"
@@ -58,12 +65,16 @@ class PromptTurnMetricsEmitter:
         from opentelemetry.sdk.resources import Resource
 
         endpoint = _resolve_otlp_endpoint()
+        self.metrics_endpoint = f"{endpoint}/v1/metrics"
         headers: dict[str, str] | None = None
         resolved_key = api_key or os.environ.get("DATALAYER_OTEL_API_KEY")
         if resolved_key:
             headers = {"Authorization": f"Bearer {resolved_key}"}
+        self._log_request_response = _bool_env(
+            "DATALAYER_OTEL_LOG_REQUEST_RESPONSE", default=True
+        )
 
-        exporter = OTLPMetricExporter(endpoint=f"{endpoint}/v1/metrics", headers=headers)
+        exporter = OTLPMetricExporter(endpoint=self.metrics_endpoint, headers=headers)
         reader = PeriodicExportingMetricReader(
             exporter=exporter,
             export_interval_millis=5_000,
@@ -119,8 +130,13 @@ class PromptTurnMetricsEmitter:
         logger.info(
             "Prompt-turn OTEL metrics configured: service=%s endpoint=%s auth_header=%s",
             service_name,
-            f"{endpoint}/v1/metrics",
+            self.metrics_endpoint,
             "present" if resolved_key else "missing",
+        )
+        logger.info(
+            "Prompt-turn OTEL server=%s request_response_logging=%s",
+            self.metrics_endpoint,
+            self._log_request_response,
         )
 
     def record(
@@ -170,6 +186,39 @@ class PromptTurnMetricsEmitter:
         self.tools_description_tokens.add(0, attrs)
         self.tools_usage_tokens.add(max(0, tool_call_count), attrs)
         self.turn_duration_ms.record(max(duration_ms, 0.0), attrs)
+
+        if self._log_request_response:
+            logger.info(
+                "Prompt-turn OTEL request: server=%s metric=agent_runtimes.prompt.turn.* attrs=%s duration_ms=%.2f tool_calls=%s",
+                self.metrics_endpoint,
+                {
+                    "protocol": attrs.get("protocol"),
+                    "model": attrs.get("model"),
+                    "user.id": attrs.get("user.id"),
+                    "identity.provider": attrs.get("identity.provider"),
+                    "identity.count": attrs.get("identity.count"),
+                    "success": attrs.get("success"),
+                    "stop_reason": attrs.get("stop_reason"),
+                },
+                max(duration_ms, 0.0),
+                max(0, tool_call_count),
+            )
+            try:
+                try:
+                    flushed = bool(self.provider.force_flush(timeout_millis=2_000))
+                except TypeError:
+                    flushed = bool(self.provider.force_flush())
+                logger.info(
+                    "Prompt-turn OTEL response: server=%s flush_success=%s",
+                    self.metrics_endpoint,
+                    flushed,
+                )
+            except Exception as exc:  # noqa: BLE001
+                logger.warning(
+                    "Prompt-turn OTEL response: server=%s flush_error=%s",
+                    self.metrics_endpoint,
+                    exc,
+                )
 
 
 def _get_emitter() -> PromptTurnMetricsEmitter | None:
