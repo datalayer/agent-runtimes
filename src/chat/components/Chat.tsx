@@ -145,6 +145,9 @@ export interface ChatProps {
   /** Agent ID */
   agentId?: string;
 
+  /** Authentication token (JWT) to send as Authorization Bearer header */
+  authToken?: string;
+
   /** Custom placeholder text */
   placeholder?: string;
 
@@ -350,6 +353,7 @@ export function Chat({
   baseUrl = 'http://localhost:8765',
   wsUrl,
   agentId,
+  authToken: authTokenProp,
   placeholder = 'Type your message...',
   title,
   brandIcon,
@@ -424,7 +428,7 @@ export function Chat({
   const protocolConfig = useMemo((): ProtocolConfig | undefined => {
     try {
       let endpoint: string;
-      let authToken: string | undefined;
+      let authToken: string | undefined = authTokenProp;
       let options: Record<string, unknown> | undefined;
 
       switch (transport) {
@@ -497,7 +501,7 @@ export function Chat({
       setError(err instanceof Error ? err.message : 'Failed to configure');
       return undefined;
     }
-  }, [transport, baseUrl, wsUrl, agentId]);
+  }, [transport, baseUrl, wsUrl, agentId, authTokenProp]);
 
   // Set initialized once protocol config is built
   useEffect(() => {
