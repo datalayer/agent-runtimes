@@ -36,7 +36,10 @@ from starlette.applications import Starlette
 from ..adapters.base import BaseAgent
 from ..context.identities import set_request_identities
 from ..context.usage import get_usage_tracker
-from ..observability.prompt_turn_metrics import record_prompt_turn_completion
+from ..observability.prompt_turn_metrics import (
+    extract_bearer_token,
+    record_prompt_turn_completion,
+)
 from .base import BaseTransport
 
 logger = logging.getLogger(__name__)
@@ -179,6 +182,9 @@ class AGUITransport(BaseTransport):
                 identities_from_request: list[dict[str, Any]] | None = None
                 metric_user_id: str | None = None
                 metric_user_provider: str | None = None
+                metric_user_jwt_token = extract_bearer_token(
+                    request.headers.get("authorization")
+                )
                 try:
                     # Read the body once and cache it
                     body_bytes = await request.body()
@@ -381,6 +387,7 @@ class AGUITransport(BaseTransport):
                                     if isinstance(identities_from_request, list)
                                     else None
                                 ),
+                                user_jwt_token=metric_user_jwt_token,
                             )
                             metric_emitted = True
                         except Exception as e:
@@ -414,6 +421,7 @@ class AGUITransport(BaseTransport):
                                     if isinstance(identities_from_request, list)
                                     else None
                                 ),
+                                user_jwt_token=metric_user_jwt_token,
                             )
                             metric_emitted = True
                     else:
@@ -524,6 +532,7 @@ class AGUITransport(BaseTransport):
                                 if isinstance(identities_from_request, list)
                                 else None
                             ),
+                            user_jwt_token=metric_user_jwt_token,
                         )
                         metric_emitted = True
                     raise
@@ -546,6 +555,7 @@ class AGUITransport(BaseTransport):
                                 if isinstance(identities_from_request, list)
                                 else None
                             ),
+                            user_jwt_token=metric_user_jwt_token,
                         )
                         metric_emitted = True
                     raise

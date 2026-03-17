@@ -39,7 +39,10 @@ from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel, Field
 
 from ..adapters.base import BaseAgent
-from ..observability.prompt_turn_metrics import record_prompt_turn_completion
+from ..observability.prompt_turn_metrics import (
+    extract_bearer_token,
+    record_prompt_turn_completion,
+)
 from ..transports.acp import ACPSession, ACPTransport
 
 logger = logging.getLogger(__name__)
@@ -357,6 +360,9 @@ async def websocket_endpoint(websocket: WebSocket, agent_id: str) -> None:
     agent, agent_info = _agents[agent_id]
     session_id: str | None = None
     adapter: ACPTransport | None = None
+    websocket_user_jwt_token = extract_bearer_token(
+        websocket.headers.get("authorization")
+    )
 
     try:
         while True:
@@ -407,7 +413,14 @@ async def websocket_endpoint(websocket: WebSocket, agent_id: str) -> None:
                     )
                     continue
 
-                await _handle_prompt(websocket, message, session_id, agent, adapter)
+                await _handle_prompt(
+                    websocket,
+                    message,
+                    session_id,
+                    agent,
+                    adapter,
+                    websocket_user_jwt_token,
+                )
 
             # Legacy method name: acp.session.run
             elif message.method == "acp.session.run":
@@ -643,6 +656,7 @@ async def _handle_prompt(
     session_id: str,
     agent: BaseAgent,
     adapter: ACPTransport | None,
+    user_jwt_token: str | None = None,
 ) -> None:
     """
     Handle session/prompt method.
@@ -796,6 +810,7 @@ async def _handle_prompt(
             user_id=str(session_user_id) if session_user_id else None,
             user_provider="acp-session",
             identities_count=None,
+            user_jwt_token=user_jwt_token,
         )
 
 

@@ -6,13 +6,17 @@
 Emits OTEL metrics to the Datalayer OTEL service on every completed prompt turn.
 The exporter is configured lazily and reads:
 
-- ``DATALAYER_OTEL_API_KEY`` for Bearer auth
+- per-request user JWT token from transport route Authorization headers
 - ``DATALAYER_OTEL_SERVICE_NAME`` for service.name resource attribute
+- ``DATALAYER_OTLP_METRICS_URL`` / ``OTEL_EXPORTER_OTLP_METRICS_ENDPOINT``
+    (explicit metrics endpoint override)
 - ``DATALAYER_OTLP_URL`` / ``OTEL_EXPORTER_OTLP_ENDPOINT`` / ``DATALAYER_OTEL_RUN_URL``
+    (base OTLP endpoint)
 """
 
 from __future__ import annotations
 
+import hashlib
 import logging
 import os
 import threading
@@ -21,8 +25,8 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 _emitter_lock = threading.Lock()
-_emitter: "PromptTurnMetricsEmitter | None" = None
-_emitter_init_attempted = False
+_emitters: dict[str, "PromptTurnMetricsEmitter"] = {}
+_emitter_init_attempted_keys: set[str] = set()
 
 
 def _bool_env(name: str, default: bool = False) -> bool:
@@ -30,6 +34,26 @@ def _bool_env(name: str, default: bool = False) -> bool:
     if raw is None:
         return default
     return raw.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def extract_bearer_token(auth_header: str | None) -> str | None:
+    """Extract a bearer token from an Authorization header value."""
+    if not auth_header or not isinstance(auth_header, str):
+        return None
+    value = auth_header.strip()
+    if not value:
+        return None
+    if value.lower().startswith("bearer "):
+        token = value[7:].strip()
+        return token or None
+    return None
+
+
+def _token_cache_key(user_jwt_token: str | None) -> str:
+    """Build a stable cache key without storing raw JWT in map keys."""
+    if not user_jwt_token:
+        return "anon"
+    return "jwt:" + hashlib.sha256(user_jwt_token.encode("utf-8")).hexdigest()
 
 
 def _resolve_otlp_endpoint() -> str:
@@ -46,6 +70,24 @@ def _resolve_otlp_endpoint() -> str:
     return f"{run_url.rstrip('/')}/api/otel/v1/otlp"
 
 
+def _resolve_otlp_metrics_endpoint() -> str | None:
+    explicit_metrics = os.environ.get("DATALAYER_OTLP_METRICS_URL") or os.environ.get(
+        "OTEL_EXPORTER_OTLP_METRICS_ENDPOINT"
+    )
+    if explicit_metrics:
+        return explicit_metrics.rstrip("/")
+    return None
+
+
+def _resolve_default_metrics_endpoint(otlp_base_endpoint: str) -> str:
+    """Return the default OTLP metrics endpoint from a base OTLP URL.
+
+    Mirrors the core OTEL smoke-test and OTEL generator conventions:
+    <otlp-base>/v1/metrics
+    """
+    return f"{otlp_base_endpoint.rstrip('/')}/v1/metrics"
+
+
 def _estimate_tokens(text: str) -> int:
     if not text:
         return 0
@@ -55,7 +97,7 @@ def _estimate_tokens(text: str) -> int:
 class PromptTurnMetricsEmitter:
     """Emits prompt-turn metrics through OTLP HTTP exporter."""
 
-    def __init__(self, service_name: str, api_key: str | None = None) -> None:
+    def __init__(self, service_name: str, user_jwt_token: str | None = None) -> None:
         from opentelemetry import metrics
         from opentelemetry.exporter.otlp.proto.http.metric_exporter import (
             OTLPMetricExporter,
@@ -65,11 +107,11 @@ class PromptTurnMetricsEmitter:
         from opentelemetry.sdk.resources import Resource
 
         endpoint = _resolve_otlp_endpoint()
-        self.metrics_endpoint = f"{endpoint}/v1/metrics"
+        metrics_endpoint = _resolve_otlp_metrics_endpoint()
+        self.metrics_endpoint = metrics_endpoint or _resolve_default_metrics_endpoint(endpoint)
         headers: dict[str, str] | None = None
-        resolved_key = api_key or os.environ.get("DATALAYER_OTEL_API_KEY")
-        if resolved_key:
-            headers = {"Authorization": f"Bearer {resolved_key}"}
+        if user_jwt_token:
+            headers = {"Authorization": f"Bearer {user_jwt_token}"}
         self._log_request_response = _bool_env(
             "DATALAYER_OTEL_LOG_REQUEST_RESPONSE", default=True
         )
@@ -131,7 +173,7 @@ class PromptTurnMetricsEmitter:
             "Prompt-turn OTEL metrics configured: service=%s endpoint=%s auth_header=%s",
             service_name,
             self.metrics_endpoint,
-            "present" if resolved_key else "missing",
+            "present" if user_jwt_token else "missing",
         )
         logger.info(
             "Prompt-turn OTEL server=%s request_response_logging=%s",
@@ -221,23 +263,28 @@ class PromptTurnMetricsEmitter:
                 )
 
 
-def _get_emitter() -> PromptTurnMetricsEmitter | None:
-    global _emitter, _emitter_init_attempted
+def _get_emitter(user_jwt_token: str | None = None) -> PromptTurnMetricsEmitter | None:
+    cache_key = _token_cache_key(user_jwt_token)
     with _emitter_lock:
-        if _emitter is not None:
-            return _emitter
-        if _emitter_init_attempted:
+        existing = _emitters.get(cache_key)
+        if existing is not None:
+            return existing
+        if cache_key in _emitter_init_attempted_keys:
             return None
-        _emitter_init_attempted = True
+        _emitter_init_attempted_keys.add(cache_key)
         try:
             service_name = os.environ.get(
                 "DATALAYER_OTEL_SERVICE_NAME", "agent-runtimes"
             )
-            _emitter = PromptTurnMetricsEmitter(service_name=service_name)
+            emitter = PromptTurnMetricsEmitter(
+                service_name=service_name,
+                user_jwt_token=user_jwt_token,
+            )
+            _emitters[cache_key] = emitter
+            return emitter
         except Exception as exc:  # noqa: BLE001
             logger.warning("Prompt-turn OTEL metrics disabled: %s", exc)
-            _emitter = None
-        return _emitter
+        return None
 
 
 def record_prompt_turn_completion(
@@ -253,13 +300,14 @@ def record_prompt_turn_completion(
     user_id: str | None = None,
     user_provider: str | None = None,
     identities_count: int | None = None,
+    user_jwt_token: str | None = None,
 ) -> None:
     """Emit prompt-turn completion metrics.
 
     This function is safe to call from request paths: failures are swallowed
     and logged without affecting prompt execution.
     """
-    emitter = _get_emitter()
+    emitter = _get_emitter(user_jwt_token=user_jwt_token)
     if emitter is None:
         return
     try:
