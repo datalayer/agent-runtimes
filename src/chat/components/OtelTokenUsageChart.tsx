@@ -6,8 +6,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import ReactECharts from 'echarts-for-react';
 
-const DEFAULT_DAYS = 7;
-
 const SERIES = [
   {
     label: 'System prompt',
@@ -33,6 +31,49 @@ const SERIES = [
 
 type SeriesLabel = (typeof SERIES)[number]['label'];
 
+/** dayKey → metric label → accumulated total */
+type DayData = Record<string, Record<SeriesLabel, number>>;
+
+function emptyDay(): Record<SeriesLabel, number> {
+  return SERIES.reduce(
+    (acc, s) => {
+      acc[s.label] = 0;
+      return acc;
+    },
+    {} as Record<SeriesLabel, number>,
+  );
+}
+
+const DEFAULT_DAYS = 7;
+
+/** Build a fallback list of day keys for the last N days. */
+function buildFallbackDays(days: number): string[] {
+  const result: string[] = [];
+  const now = new Date();
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(now.getDate() - i);
+    result.push(d.toISOString().slice(0, 10));
+  }
+  return result;
+}
+
+/** Build a contiguous list of day keys between min and max (inclusive),
+ *  always padding at least one day on each side so single-day data is visible. */
+function fillDayRange(sortedKeys: string[]): string[] {
+  if (sortedKeys.length === 0) return [];
+  const start = new Date(sortedKeys[0] + 'T00:00:00');
+  const end = new Date(sortedKeys[sortedKeys.length - 1] + 'T00:00:00');
+  // Pad one day before and after so a single-point line/area is visible
+  start.setDate(start.getDate() - 1);
+  end.setDate(end.getDate() + 1);
+  const filled: string[] = [];
+  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    filled.push(d.toISOString().slice(0, 10));
+  }
+  return filled;
+}
+
 export interface OtelTokenUsageChartProps {
   serviceName?: string;
   apiKey?: string;
@@ -42,31 +83,36 @@ export interface OtelTokenUsageChartProps {
   days?: number;
 }
 
-function buildDays(days: number): { keys: string[]; labels: string[] } {
-  const keys: string[] = [];
-  const labels: string[] = [];
-  const now = new Date();
-  for (let i = days - 1; i >= 0; i--) {
-    const date = new Date(now);
-    date.setDate(now.getDate() - i);
-    keys.push(date.toISOString().slice(0, 10));
-    labels.push(date.toLocaleDateString('en-US', { weekday: 'short' }));
-  }
-  return { keys, labels };
-}
-
-function toNumber(value: unknown): number {
-  if (typeof value === 'number' && Number.isFinite(value)) {
-    return value;
-  }
-  if (typeof value === 'string') {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : 0;
+function toMetricValue(row: Record<string, unknown>): number {
+  // OTEL schema uses value_double / value_int; fallback to generic value
+  const candidates = [row.value_double, row.value_int, row.value];
+  for (const v of candidates) {
+    if (typeof v === 'number' && Number.isFinite(v)) {
+      return v;
+    }
+    if (typeof v === 'string') {
+      const parsed = Number(v);
+      if (Number.isFinite(parsed)) {
+        return parsed;
+      }
+    }
   }
   return 0;
 }
 
-function toTimestamp(row: Record<string, unknown>): string | undefined {
+function toDayKey(row: Record<string, unknown>): string | undefined {
+  // Prefer nanosecond integer timestamps (OTEL schema)
+  const nanoTs = row.timestamp_unix_nano ?? row.observed_timestamp_unix_nano;
+  if (typeof nanoTs === 'number' && nanoTs > 0) {
+    return new Date(nanoTs / 1_000_000).toISOString().slice(0, 10);
+  }
+  if (typeof nanoTs === 'string' && nanoTs.length > 0) {
+    const parsed = Number(nanoTs);
+    if (Number.isFinite(parsed) && parsed > 0) {
+      return new Date(parsed / 1_000_000).toISOString().slice(0, 10);
+    }
+  }
+  // Fallback to ISO string timestamps
   const candidates = [
     row.timestamp,
     row.observed_timestamp,
@@ -74,8 +120,8 @@ function toTimestamp(row: Record<string, unknown>): string | undefined {
     row.created_at,
   ];
   for (const candidate of candidates) {
-    if (typeof candidate === 'string' && candidate.length > 0) {
-      return candidate;
+    if (typeof candidate === 'string' && candidate.length >= 10) {
+      return candidate.slice(0, 10);
     }
   }
   return undefined;
@@ -110,31 +156,26 @@ export function OtelTokenUsageChart({
   height = 160,
   days = DEFAULT_DAYS,
 }: OtelTokenUsageChartProps) {
-  const { keys, labels } = useMemo(() => buildDays(days), [days]);
-  const [refreshVersion, setRefreshVersion] = useState(0);
+  const [dayData, setDayData] = useState<DayData>({});
 
-  const [seriesData, setSeriesData] = useState<Record<SeriesLabel, number[]>>(
-    () =>
-      SERIES.reduce(
-        (acc, item) => {
-          acc[item.label] = Array.from({ length: days }, () => 0);
-          return acc;
-        },
-        {} as Record<SeriesLabel, number[]>,
-      ),
-  );
+  // Derive contiguous day keys and display labels from the data,
+  // falling back to the last N days when there is no data yet.
+  const { filledKeys, dayLabels } = useMemo(() => {
+    const rawKeys = Object.keys(dayData).sort();
+    const filled =
+      rawKeys.length > 0 ? fillDayRange(rawKeys) : buildFallbackDays(days);
+    const labels = filled.map(k =>
+      new Date(k + 'T00:00:00').toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+      }),
+    );
+    return { filledKeys: filled, dayLabels: labels };
+  }, [dayData, days]);
 
   useEffect(() => {
     if (!serviceName) {
-      setSeriesData(
-        SERIES.reduce(
-          (acc, item) => {
-            acc[item.label] = Array.from({ length: days }, () => 0);
-            return acc;
-          },
-          {} as Record<SeriesLabel, number[]>,
-        ),
-      );
+      setDayData({});
       return;
     }
 
@@ -152,13 +193,7 @@ export function OtelTokenUsageChart({
     }
 
     const load = async () => {
-      const result = SERIES.reduce(
-        (acc, item) => {
-          acc[item.label] = Array.from({ length: days }, () => 0);
-          return acc;
-        },
-        {} as Record<SeriesLabel, number[]>,
-      );
+      const result: DayData = {};
 
       await Promise.all(
         SERIES.map(async item => {
@@ -186,17 +221,15 @@ export function OtelTokenUsageChart({
 
             for (const row of rows) {
               const typedRow = row as Record<string, unknown>;
-              const ts = toTimestamp(typedRow);
-              if (!ts) {
+              const dayKey = toDayKey(typedRow);
+              if (!dayKey) {
                 continue;
               }
-              const dayKey = ts.slice(0, 10);
-              const idx = keys.indexOf(dayKey);
-              if (idx < 0) {
-                continue;
+              if (!result[dayKey]) {
+                result[dayKey] = emptyDay();
               }
-              const value = toNumber(typedRow.value);
-              result[item.label][idx] += value;
+              const value = toMetricValue(typedRow);
+              result[dayKey][item.label] += value;
             }
           } catch {
             return;
@@ -205,7 +238,7 @@ export function OtelTokenUsageChart({
       );
 
       if (!cancelled) {
-        setSeriesData(result);
+        setDayData(result);
       }
     };
 
@@ -214,7 +247,7 @@ export function OtelTokenUsageChart({
     return () => {
       cancelled = true;
     };
-  }, [apiKey, days, keys, refreshVersion, runUrl, serviceName]);
+  }, [apiKey, runUrl, serviceName]);
 
   useEffect(() => {
     if (!serviceName || !apiKey) {
@@ -261,13 +294,37 @@ export function OtelTokenUsageChart({
           return;
         }
         const rows = Array.isArray(msg.data) ? msg.data : [];
-        const hasMatchingService = rows.some(row => {
-          const service = extractServiceName(row);
-          return service === serviceName;
-        });
-        if (hasMatchingService) {
-          setRefreshVersion(v => v + 1);
+        const matchingRows = rows.filter(
+          row => extractServiceName(row) === serviceName,
+        );
+        if (matchingRows.length === 0) {
+          return;
         }
+        // Update chart directly from WS data (bypasses HTTP fetch which
+        // may fail due to CORS when the UI runs on a different origin).
+        setDayData(prev => {
+          const updated = { ...prev };
+          for (const row of matchingRows) {
+            const metricName = row.metric_name as string;
+            const seriesItem = SERIES.find(s => s.metric === metricName);
+            if (!seriesItem) {
+              continue;
+            }
+            const dayKey = toDayKey(row);
+            if (!dayKey) {
+              continue;
+            }
+            if (!updated[dayKey]) {
+              updated[dayKey] = emptyDay();
+            } else {
+              // Clone to avoid mutating prev
+              updated[dayKey] = { ...updated[dayKey] };
+            }
+            const value = toMetricValue(row);
+            updated[dayKey][seriesItem.label] += value;
+          }
+          return updated;
+        });
       } catch {
         return;
       }
@@ -302,7 +359,7 @@ export function OtelTokenUsageChart({
       xAxis: {
         type: 'category',
         boundaryGap: false,
-        data: labels,
+        data: dayLabels,
         axisLabel: { fontSize: 9 },
         axisLine: { lineStyle: { color: '#d0d7de' } },
       },
@@ -315,7 +372,7 @@ export function OtelTokenUsageChart({
         name: item.label,
         type: 'line',
         stack: 'tokens',
-        data: seriesData[item.label],
+        data: filledKeys.map(k => dayData[k]?.[item.label] ?? 0),
         areaStyle: {},
         smooth: true,
         symbol: 'none',
@@ -323,7 +380,7 @@ export function OtelTokenUsageChart({
       })),
       color: ['#2da44e', '#0969da', '#8250df', '#bf8700', '#cf222e'],
     }),
-    [labels, seriesData],
+    [dayLabels, filledKeys, dayData],
   );
 
   return (
