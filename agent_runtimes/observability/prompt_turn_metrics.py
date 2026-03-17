@@ -116,7 +116,12 @@ class PromptTurnMetricsEmitter:
             unit="ms",
         )
 
-        logger.info("Prompt-turn OTEL metrics configured for service '%s'", service_name)
+        logger.info(
+            "Prompt-turn OTEL metrics configured: service=%s endpoint=%s auth_header=%s",
+            service_name,
+            f"{endpoint}/v1/metrics",
+            "present" if resolved_key else "missing",
+        )
 
     def record(
         self,
@@ -129,6 +134,9 @@ class PromptTurnMetricsEmitter:
         success: bool,
         model: str | None,
         tool_call_count: int,
+        user_id: str | None,
+        user_provider: str | None,
+        identities_count: int | None,
     ) -> None:
         attrs: dict[str, Any] = {
             "protocol": protocol,
@@ -137,6 +145,23 @@ class PromptTurnMetricsEmitter:
         }
         if model:
             attrs["model"] = model
+        if user_id:
+            attrs["user.id"] = user_id
+        if user_provider:
+            attrs["identity.provider"] = user_provider
+        if identities_count is not None:
+            attrs["identity.count"] = int(max(0, identities_count))
+
+        logger.debug(
+            "Prompt-turn OTEL emit attrs: protocol=%s model=%s user.id=%s provider=%s identities=%s success=%s stop_reason=%s",
+            protocol,
+            model,
+            attrs.get("user.id"),
+            attrs.get("identity.provider"),
+            attrs.get("identity.count"),
+            success,
+            stop_reason,
+        )
 
         self.turn_completions.add(1, attrs)
         self.user_message_tokens.add(_estimate_tokens(prompt), attrs)
@@ -176,6 +201,9 @@ def record_prompt_turn_completion(
     success: bool,
     model: str | None,
     tool_call_count: int,
+    user_id: str | None = None,
+    user_provider: str | None = None,
+    identities_count: int | None = None,
 ) -> None:
     """Emit prompt-turn completion metrics.
 
@@ -195,6 +223,9 @@ def record_prompt_turn_completion(
             success=success,
             model=model,
             tool_call_count=tool_call_count,
+            user_id=user_id,
+            user_provider=user_provider,
+            identities_count=identities_count,
         )
     except Exception as exc:  # noqa: BLE001
         logger.debug("Failed to emit prompt-turn metrics: %s", exc)

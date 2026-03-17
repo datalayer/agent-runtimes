@@ -686,6 +686,17 @@ async def _handle_prompt(
     tool_call_count = 0
     response_chunks: list[str] = []
     completed_without_error = False
+    session_user_id = (
+        _sessions.get(session_id).context.user_id
+        if _sessions.get(session_id) and _sessions.get(session_id).context
+        else None
+    )
+    logger.info(
+        "ACP prompt metrics context: session_id=%s user_id=%s model=%s",
+        session_id,
+        session_user_id,
+        model,
+    )
 
     # Register this prompt for potential cancellation
     cancel_event = register_prompt(session_id)
@@ -782,6 +793,9 @@ async def _handle_prompt(
             success=completed_without_error,
             model=model if isinstance(model, str) else None,
             tool_call_count=tool_call_count,
+            user_id=str(session_user_id) if session_user_id else None,
+            user_provider="acp-session",
+            identities_count=None,
         )
 
 

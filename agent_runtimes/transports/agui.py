@@ -177,6 +177,8 @@ class AGUITransport(BaseTransport):
                 # Extract model and identities from request body if provided
                 model: str | None = None
                 identities_from_request: list[dict[str, Any]] | None = None
+                metric_user_id: str | None = None
+                metric_user_provider: str | None = None
                 try:
                     # Read the body once and cache it
                     body_bytes = await request.body()
@@ -216,8 +218,27 @@ class AGUITransport(BaseTransport):
                     identities_from_request = body.get("identities")
                     if identities_from_request:
                         providers = [i.get("provider") for i in identities_from_request]
+                        first_identity = (
+                            identities_from_request[0]
+                            if isinstance(identities_from_request, list)
+                            and len(identities_from_request) > 0
+                            and isinstance(identities_from_request[0], dict)
+                            else {}
+                        )
+                        metric_user_provider = first_identity.get("provider") or None
+                        metric_user_id = (
+                            first_identity.get("userId")
+                            or first_identity.get("id")
+                            or first_identity.get("sub")
+                            or first_identity.get("email")
+                            or first_identity.get("username")
+                            or None
+                        )
                         logger.debug(
-                            f"[AG-UI] Received identities for providers: {providers}"
+                            "[AG-UI] Received identities for providers=%s count=%s user_hint=%s",
+                            providers,
+                            len(identities_from_request),
+                            metric_user_id,
                         )
                     else:
                         logger.debug("[AG-UI] No identities in request body")
@@ -353,6 +374,13 @@ class AGUITransport(BaseTransport):
                                 success=True,
                                 model=model if isinstance(model, str) else None,
                                 tool_call_count=total_tool_calls or int(getattr(usage, "tool_calls", 0) or 0),
+                                user_id=metric_user_id,
+                                user_provider=metric_user_provider,
+                                identities_count=(
+                                    len(identities_from_request)
+                                    if isinstance(identities_from_request, list)
+                                    else None
+                                ),
                             )
                             metric_emitted = True
                         except Exception as e:
@@ -379,6 +407,13 @@ class AGUITransport(BaseTransport):
                                 success=True,
                                 model=model if isinstance(model, str) else None,
                                 tool_call_count=int(getattr(usage, "tool_calls", 0) or 0),
+                                user_id=metric_user_id,
+                                user_provider=metric_user_provider,
+                                identities_count=(
+                                    len(identities_from_request)
+                                    if isinstance(identities_from_request, list)
+                                    else None
+                                ),
                             )
                             metric_emitted = True
                     else:
@@ -411,6 +446,16 @@ class AGUITransport(BaseTransport):
                 # entire request duration via contextvars.
                 set_request_identities(identities_from_request)
                 logger.debug("[AG-UI] Set request identities for streaming")
+                logger.info(
+                    "[AG-UI] Prompt metrics identity context: user_id=%s provider=%s identities=%s",
+                    metric_user_id,
+                    metric_user_provider,
+                    (
+                        len(identities_from_request)
+                        if isinstance(identities_from_request, list)
+                        else 0
+                    ),
+                )
 
                 # Get runtime toolsets from the adapter (includes MCP servers)
                 runtime_toolsets = transport_self._get_runtime_toolsets()
@@ -472,6 +517,13 @@ class AGUITransport(BaseTransport):
                             success=False,
                             model=model if isinstance(model, str) else None,
                             tool_call_count=0,
+                            user_id=metric_user_id,
+                            user_provider=metric_user_provider,
+                            identities_count=(
+                                len(identities_from_request)
+                                if isinstance(identities_from_request, list)
+                                else None
+                            ),
                         )
                         metric_emitted = True
                     raise
@@ -487,6 +539,13 @@ class AGUITransport(BaseTransport):
                             success=False,
                             model=model if isinstance(model, str) else None,
                             tool_call_count=0,
+                            user_id=metric_user_id,
+                            user_provider=metric_user_provider,
+                            identities_count=(
+                                len(identities_from_request)
+                                if isinstance(identities_from_request, list)
+                                else None
+                            ),
                         )
                         metric_emitted = True
                     raise
