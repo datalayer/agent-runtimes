@@ -122,6 +122,11 @@ export {
   type AgentRuntimeData,
   type CreateAgentRuntimeRequest,
   type CheckpointData,
+  useAgentLifecycleStore,
+  useLifecycleRunningAgents,
+  getAgentLifecycleKey,
+  type AgentLifecycleRecord,
+  type LifecycleRunningAgent,
 } from './useAgents';
 /**
  * Centralized agent catalog store for available agent specs and running agents.

@@ -29,6 +29,7 @@ import { URLExt } from '@jupyterlab/coreutils';
 
 // Imports for useAgentCatalogStore
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import { listAgentSpecs } from '../specs';
 import type { AgentSpec } from '../types';
 
@@ -1193,6 +1194,101 @@ export function useRefreshCheckpoints() {
       queryKey: agentQueryKeys.checkpoints.all(),
     });
   };
+}
+
+// ============================================================================
+// Lifecycle Store (resume / pause local UI state)
+// ============================================================================
+
+export type AgentLifecycleRecord = {
+  resumePending: boolean;
+  pauseLockedForResumed: boolean;
+};
+
+export type LifecycleRunningAgent = AgentRuntimeData;
+
+export const getAgentLifecycleKey = (runtimeKey: string) =>
+  `datalayer:agent-durable:lifecycle:${runtimeKey}`;
+
+type AgentLifecycleState = {
+  byRuntimeKey: Record<string, AgentLifecycleRecord>;
+  markResumePending: (runtimeKey: string) => void;
+  markResumeFailed: (runtimeKey: string) => void;
+  markResumeSettled: (runtimeKey: string) => void;
+  clearRuntimeLifecycle: (runtimeKey: string) => void;
+};
+
+const DEFAULT_LIFECYCLE_RECORD: AgentLifecycleRecord = {
+  resumePending: false,
+  pauseLockedForResumed: false,
+};
+
+export const useAgentLifecycleStore = create<AgentLifecycleState>()(
+  persist(
+    (set, get) => ({
+      byRuntimeKey: {},
+
+      markResumePending: (runtimeKey: string) => {
+        if (!runtimeKey) return;
+        set(state => ({
+          byRuntimeKey: {
+            ...state.byRuntimeKey,
+            [runtimeKey]: {
+              ...DEFAULT_LIFECYCLE_RECORD,
+              ...(state.byRuntimeKey[runtimeKey] ?? {}),
+              resumePending: true,
+            },
+          },
+        }));
+      },
+
+      markResumeFailed: (runtimeKey: string) => {
+        if (!runtimeKey) return;
+        set(state => ({
+          byRuntimeKey: {
+            ...state.byRuntimeKey,
+            [runtimeKey]: {
+              ...DEFAULT_LIFECYCLE_RECORD,
+              ...(state.byRuntimeKey[runtimeKey] ?? {}),
+              resumePending: false,
+              pauseLockedForResumed: false,
+            },
+          },
+        }));
+      },
+
+      markResumeSettled: (runtimeKey: string) => {
+        if (!runtimeKey) return;
+        set(state => ({
+          byRuntimeKey: {
+            ...state.byRuntimeKey,
+            [runtimeKey]: {
+              ...DEFAULT_LIFECYCLE_RECORD,
+              ...(state.byRuntimeKey[runtimeKey] ?? {}),
+              resumePending: false,
+              pauseLockedForResumed: true,
+            },
+          },
+        }));
+      },
+
+      clearRuntimeLifecycle: (runtimeKey: string) => {
+        if (!runtimeKey) return;
+        const next = { ...get().byRuntimeKey };
+        delete next[runtimeKey];
+        set({ byRuntimeKey: next });
+      },
+    }),
+    {
+      name: 'datalayer-agent-lifecycle',
+      storage: createJSONStorage(() => localStorage),
+      partialize: state => ({ byRuntimeKey: state.byRuntimeKey }),
+    },
+  ),
+);
+
+export function useLifecycleRunningAgents() {
+  return useAgentRuntimes();
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
