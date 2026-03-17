@@ -89,24 +89,51 @@ def extract_jwt_token(*header_values: str | None) -> str | None:
     return None
 
 
-def extract_user_id_from_jwt(user_jwt_token: str | None) -> str | None:
-    """Best-effort JWT claim extraction without signature verification."""
-    if not _looks_like_jwt(user_jwt_token):
+def _decode_jwt_payload(token: str | None) -> dict[str, Any] | None:
+    """Decode the JWT payload without signature verification."""
+    if not _looks_like_jwt(token):
         return None
     try:
-        payload = user_jwt_token.split(".")[1]
-        # JWT uses URL-safe base64 without padding.
-        payload += "=" * (-len(payload) % 4)
-        decoded = base64.urlsafe_b64decode(payload.encode("utf-8"))
+        payload_b64 = token.split(".")[1]
+        payload_b64 += "=" * (-len(payload_b64) % 4)
+        decoded = base64.urlsafe_b64decode(payload_b64.encode("utf-8"))
         claims = json.loads(decoded.decode("utf-8"))
-        if not isinstance(claims, dict):
-            return None
-        for key in ("sub", "preferred_username", "email", "upn", "name"):
-            value = claims.get(key)
-            if isinstance(value, str) and value.strip():
-                return value.strip()
+        return claims if isinstance(claims, dict) else None
     except Exception:  # noqa: BLE001
         return None
+
+
+def decode_user_uid(token: str | None) -> str | None:
+    """Extract the Datalayer ``user_uid`` from a JWT token.
+
+    Follows the platform convention: ``payload.user.uid`` first,
+    then ``payload.sub``.
+    """
+    claims = _decode_jwt_payload(token)
+    if not claims:
+        return None
+    user_claim = claims.get("user")
+    if isinstance(user_claim, dict) and user_claim.get("uid"):
+        return str(user_claim["uid"])
+    sub = claims.get("sub")
+    if isinstance(sub, str) and sub.strip():
+        return sub.strip()
+    return None
+
+
+def extract_user_id_from_jwt(user_jwt_token: str | None) -> str | None:
+    """Best-effort JWT claim extraction without signature verification."""
+    uid = decode_user_uid(user_jwt_token)
+    if uid:
+        return uid
+    # Fallback to common identity claims.
+    claims = _decode_jwt_payload(user_jwt_token)
+    if not claims:
+        return None
+    for key in ("preferred_username", "email", "upn", "name"):
+        value = claims.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
     return None
 
 
@@ -216,12 +243,19 @@ class PromptTurnMetricsEmitter:
             export_interval_millis=5_000,
         )
 
-        resource = Resource.create(
-            {
-                "service.name": service_name,
-                "service.version": os.environ.get("AGENT_RUNTIMES_VERSION", "unknown"),
-            }
-        )
+        resource_attrs: dict[str, str] = {
+            "service.name": service_name,
+            "service.version": os.environ.get("AGENT_RUNTIMES_VERSION", "unknown"),
+        }
+        user_uid = decode_user_uid(user_jwt_token) or os.environ.get("DATALAYER_USER_UID")
+        if user_uid:
+            resource_attrs["datalayer.user_uid"] = user_uid
+            logger.info("Prompt-turn OTEL resource attribute: datalayer.user_uid=%s", user_uid)
+        else:
+            logger.warning(
+                "No user_uid resolved from JWT – metrics will not be associated with a user account."
+            )
+        resource = Resource.create(resource_attrs)
 
         self.provider = MeterProvider(resource=resource, metric_readers=[reader])
         metrics.set_meter_provider(self.provider)
