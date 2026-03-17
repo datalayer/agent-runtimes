@@ -27,6 +27,7 @@ Supported Methods:
 
 import asyncio
 import logging
+import time
 import uuid
 from typing import Any
 
@@ -38,6 +39,7 @@ from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel, Field
 
 from ..adapters.base import BaseAgent
+from ..observability.prompt_turn_metrics import record_prompt_turn_completion
 from ..transports.acp import ACPSession, ACPTransport
 
 logger = logging.getLogger(__name__)
@@ -680,6 +682,10 @@ async def _handle_prompt(
     )
 
     stop_reason = "end_turn"
+    start_time = time.perf_counter()
+    tool_call_count = 0
+    response_chunks: list[str] = []
+    completed_without_error = False
 
     # Register this prompt for potential cancellation
     cancel_event = register_prompt(session_id)
@@ -695,6 +701,20 @@ async def _handle_prompt(
                     logger.info(f"Prompt cancelled for session {session_id}")
                     stop_reason = "cancelled"
                     break
+
+                event_type = ""
+                event_data: Any = None
+                if hasattr(event, "type"):
+                    event_type = getattr(event, "type", "")
+                    event_data = getattr(event, "data", None)
+                elif isinstance(event, dict):
+                    event_type = event.get("type", "")
+                    event_data = event.get("data")
+
+                if event_type == "text" and isinstance(event_data, str):
+                    response_chunks.append(event_data)
+                elif event_type == "tool_call":
+                    tool_call_count += 1
 
                 event_count += 1
                 logger.info(f"Received event #{event_count}: {event}")
@@ -720,9 +740,14 @@ async def _handle_prompt(
                     result={"stopReason": stop_reason},
                 ).model_dump()
             )
+            completed_without_error = True
         else:
             # Non-streaming response
             response = await agent.run(prompt, context)
+            response_content = response.content if response else ""
+            if response and response.tool_calls:
+                tool_call_count = len(response.tool_calls)
+            response_chunks.append(response_content)
 
             await websocket.send_json(
                 ACPMessage(
@@ -730,10 +755,11 @@ async def _handle_prompt(
                     id=message.id,
                     result={
                         "stopReason": stop_reason,
-                        "output": response.content if response else "",
+                        "output": response_content,
                     },
                 ).model_dump()
             )
+            completed_without_error = True
 
     except Exception as e:
         logger.error(f"Agent prompt error: {e}")
@@ -746,6 +772,17 @@ async def _handle_prompt(
     finally:
         # Always unregister the prompt when done
         unregister_prompt(session_id)
+        duration_ms = (time.perf_counter() - start_time) * 1000.0
+        record_prompt_turn_completion(
+            prompt=prompt,
+            response="".join(response_chunks),
+            duration_ms=duration_ms,
+            protocol="acp",
+            stop_reason=stop_reason,
+            success=completed_without_error,
+            model=model if isinstance(model, str) else None,
+            tool_call_count=tool_call_count,
+        )
 
 
 def _convert_event_to_session_update(

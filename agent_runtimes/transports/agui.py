@@ -17,8 +17,10 @@ AG-UI is a lightweight protocol focused on UI integration with:
 - Identity context support for OAuth token propagation
 """
 
+import asyncio
 import json
 import logging
+import time
 from typing import TYPE_CHECKING, Any, AsyncIterator
 
 if TYPE_CHECKING:
@@ -34,6 +36,7 @@ from starlette.applications import Starlette
 from ..adapters.base import BaseAgent
 from ..context.identities import set_request_identities
 from ..context.usage import get_usage_tracker
+from ..observability.prompt_turn_metrics import record_prompt_turn_completion
 from .base import BaseTransport
 
 logger = logging.getLogger(__name__)
@@ -169,6 +172,8 @@ class AGUITransport(BaseTransport):
                 import time
 
                 request_start = time.perf_counter()
+                request_prompt = ""
+                metric_emitted = False
                 # Extract model and identities from request body if provided
                 model: str | None = None
                 identities_from_request: list[dict[str, Any]] | None = None
@@ -179,6 +184,33 @@ class AGUITransport(BaseTransport):
                     model = body.get("model")
                     if model:
                         logger.info(f"AG-UI using model from request body: {model}")
+
+                    prompt_candidate = body.get("prompt")
+                    if isinstance(prompt_candidate, str):
+                        request_prompt = prompt_candidate
+                    if not request_prompt:
+                        messages_candidate = body.get("messages")
+                        if isinstance(messages_candidate, list):
+                            for msg in reversed(messages_candidate):
+                                if not isinstance(msg, dict):
+                                    continue
+                                role = msg.get("role")
+                                if role not in ("user", "input"):
+                                    continue
+                                content = msg.get("content")
+                                if isinstance(content, str):
+                                    request_prompt = content
+                                    break
+                                if isinstance(content, list):
+                                    text_parts: list[str] = []
+                                    for block in content:
+                                        if isinstance(block, dict) and block.get("type") == "text":
+                                            text = block.get("text")
+                                            if isinstance(text, str):
+                                                text_parts.append(text)
+                                    if text_parts:
+                                        request_prompt = "\n".join(text_parts)
+                                        break
 
                     # Extract identities from request (OAuth tokens from frontend)
                     identities_from_request = body.get("identities")
@@ -211,6 +243,9 @@ class AGUITransport(BaseTransport):
                     )
                     usage = result.usage()
                     logger.info(f"[AG-UI on_complete] Usage object: {usage}")
+                    response_text_chunks: list[str] = []
+                    total_tool_calls = 0
+                    nonlocal metric_emitted
                     if usage:
                         duration_ms = (time.perf_counter() - request_start) * 1000
 
@@ -246,6 +281,10 @@ class AGUITransport(BaseTransport):
                                                             tool_name
                                                         )
                                                         response_tool_call_count += 1
+                                                    elif part.get("part_kind") in ("text", "output_text"):
+                                                        text_content = part.get("content") or part.get("text")
+                                                        if isinstance(text_content, str):
+                                                            response_text_chunks.append(text_content)
                                             else:
                                                 # Object part
                                                 if hasattr(part, "tool_name"):
@@ -253,6 +292,11 @@ class AGUITransport(BaseTransport):
                                                         part.tool_name
                                                     )
                                                     response_tool_call_count += 1
+                                                text_content = getattr(part, "content", None) or getattr(part, "text", None)
+                                                if isinstance(text_content, str):
+                                                    response_text_chunks.append(text_content)
+
+                                    total_tool_calls += response_tool_call_count
 
                                     # Track usage for this response step
                                     if response_usage:
@@ -299,6 +343,18 @@ class AGUITransport(BaseTransport):
                                     f"total_input={usage.input_tokens}, total_output={usage.output_tokens}, "
                                     f"duration={duration_ms:.0f}ms"
                                 )
+
+                            record_prompt_turn_completion(
+                                prompt=request_prompt,
+                                response="\n".join(response_text_chunks),
+                                duration_ms=duration_ms,
+                                protocol="ag-ui",
+                                stop_reason="end_turn",
+                                success=True,
+                                model=model if isinstance(model, str) else None,
+                                tool_call_count=total_tool_calls or int(getattr(usage, "tool_calls", 0) or 0),
+                            )
+                            metric_emitted = True
                         except Exception as e:
                             logger.warning(
                                 f"[AG-UI on_complete] Could not extract per-response data: {e}"
@@ -314,6 +370,17 @@ class AGUITransport(BaseTransport):
                                 tool_names=None,
                                 duration_ms=duration_ms,
                             )
+                            record_prompt_turn_completion(
+                                prompt=request_prompt,
+                                response="",
+                                duration_ms=duration_ms,
+                                protocol="ag-ui",
+                                stop_reason="end_turn",
+                                success=True,
+                                model=model if isinstance(model, str) else None,
+                                tool_call_count=int(getattr(usage, "tool_calls", 0) or 0),
+                            )
+                            metric_emitted = True
                     else:
                         logger.warning(
                             f"[AG-UI on_complete] No usage data available for agent {agent_id}"
@@ -384,14 +451,45 @@ class AGUITransport(BaseTransport):
                 else:
                     logger.info("[AG-UI] Passing 0 toolsets to agent run (empty list)")
 
-                return await AGUIAdapter.dispatch_request(
-                    request,
-                    agent=pydantic_agent,
-                    model=model,
-                    toolsets=runtime_toolsets,
-                    on_complete=on_complete,
-                    **agui_kwargs,
-                )
+                try:
+                    return await AGUIAdapter.dispatch_request(
+                        request,
+                        agent=pydantic_agent,
+                        model=model,
+                        toolsets=runtime_toolsets,
+                        on_complete=on_complete,
+                        **agui_kwargs,
+                    )
+                except asyncio.CancelledError:
+                    if not metric_emitted:
+                        record_prompt_turn_completion(
+                            prompt=request_prompt,
+                            response="",
+                            duration_ms=(time.perf_counter() - request_start)
+                            * 1000.0,
+                            protocol="ag-ui",
+                            stop_reason="cancelled",
+                            success=False,
+                            model=model if isinstance(model, str) else None,
+                            tool_call_count=0,
+                        )
+                        metric_emitted = True
+                    raise
+                except Exception:
+                    if not metric_emitted:
+                        record_prompt_turn_completion(
+                            prompt=request_prompt,
+                            response="",
+                            duration_ms=(time.perf_counter() - request_start)
+                            * 1000.0,
+                            protocol="ag-ui",
+                            stop_reason="error",
+                            success=False,
+                            model=model if isinstance(model, str) else None,
+                            tool_call_count=0,
+                        )
+                        metric_emitted = True
+                    raise
 
             # Create Starlette app for AG-UI endpoint
             self._app = Starlette(

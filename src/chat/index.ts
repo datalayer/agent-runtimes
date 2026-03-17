@@ -158,6 +158,7 @@ export {
   AgentDetails,
   AgentIdentity,
   IdentityCard,
+  OtelTokenUsageChart,
   getTokenStatus,
   formatDuration,
   formatExpirationStatus,
@@ -191,6 +192,7 @@ export {
   type AgentDetailsProps,
   type AgentIdentityProps,
   type IdentityCardProps,
+  type OtelTokenUsageChartProps,
   type TokenStatus,
   // Merged from chat
   type ChatHeaderProps,

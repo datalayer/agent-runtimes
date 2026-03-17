@@ -128,3 +128,7 @@ export {
   type ChatInlineProps,
   type ChatInlineProtocolConfig,
 } from './ChatInline';
+export {
+  OtelTokenUsageChart,
+  type OtelTokenUsageChartProps,
+} from './OtelTokenUsageChart';
