@@ -40,6 +40,7 @@ from pydantic import BaseModel, Field
 
 from ..adapters.base import BaseAgent
 from ..observability.prompt_turn_metrics import (
+    extract_identity_hints,
     extract_jwt_token,
     extract_user_id_from_jwt,
     record_prompt_turn_completion,
@@ -669,6 +670,11 @@ async def _handle_prompt(
     params = message.params or {}
     content = params.get("content", [])
     metadata = params.get("metadata", {})
+    metadata_identities = (
+        metadata.get("identities")
+        if isinstance(metadata, dict)
+        else None
+    )
 
     # Extract model from metadata for per-request model override
     model = metadata.get("model") if isinstance(metadata, dict) else None
@@ -707,6 +713,13 @@ async def _handle_prompt(
         if _sessions.get(session_id) and _sessions.get(session_id).context
         else None
     )
+    metric_user_provider = "acp-session"
+    hint_user_id, hint_provider, hint_token = extract_identity_hints(metadata_identities)
+    user_jwt_token = hint_token or user_jwt_token
+    if hint_user_id:
+        session_user_id = hint_user_id
+    if hint_provider:
+        metric_user_provider = hint_provider
     if not session_user_id:
         session_user_id = extract_user_id_from_jwt(user_jwt_token)
     logger.info(
@@ -812,7 +825,7 @@ async def _handle_prompt(
             model=model if isinstance(model, str) else None,
             tool_call_count=tool_call_count,
             user_id=str(session_user_id) if session_user_id else None,
-            user_provider="acp-session",
+            user_provider=metric_user_provider,
             identities_count=None,
             user_jwt_token=user_jwt_token,
         )

@@ -37,6 +37,7 @@ from ..adapters.base import BaseAgent
 from ..context.identities import set_request_identities
 from ..context.usage import get_usage_tracker
 from ..observability.prompt_turn_metrics import (
+    extract_identity_hints,
     extract_jwt_token,
     extract_user_id_from_jwt,
     record_prompt_turn_completion,
@@ -226,22 +227,12 @@ class AGUITransport(BaseTransport):
                     identities_from_request = body.get("identities")
                     if identities_from_request:
                         providers = [i.get("provider") for i in identities_from_request]
-                        first_identity = (
-                            identities_from_request[0]
-                            if isinstance(identities_from_request, list)
-                            and len(identities_from_request) > 0
-                            and isinstance(identities_from_request[0], dict)
-                            else {}
+                        hint_user_id, hint_provider, hint_token = extract_identity_hints(
+                            identities_from_request
                         )
-                        metric_user_provider = first_identity.get("provider") or None
-                        metric_user_id = (
-                            first_identity.get("userId")
-                            or first_identity.get("id")
-                            or first_identity.get("sub")
-                            or first_identity.get("email")
-                            or first_identity.get("username")
-                            or None
-                        )
+                        metric_user_provider = hint_provider or metric_user_provider
+                        metric_user_id = hint_user_id or metric_user_id
+                        metric_user_jwt_token = hint_token or metric_user_jwt_token
                         logger.debug(
                             "[AG-UI] Received identities for providers=%s count=%s user_hint=%s",
                             providers,

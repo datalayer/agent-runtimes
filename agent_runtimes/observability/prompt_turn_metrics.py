@@ -110,6 +110,39 @@ def extract_user_id_from_jwt(user_jwt_token: str | None) -> str | None:
     return None
 
 
+def extract_identity_hints(
+    identities: list[dict[str, Any]] | None,
+) -> tuple[str | None, str | None, str | None]:
+    """Return ``(user_id, provider, jwt_token)`` from identities payload."""
+    if not isinstance(identities, list):
+        return None, None, None
+    for identity in identities:
+        if not isinstance(identity, dict):
+            continue
+        provider = identity.get("provider") or identity.get("issuer") or None
+        user_id = (
+            identity.get("userId")
+            or identity.get("id")
+            or identity.get("sub")
+            or identity.get("email")
+            or identity.get("username")
+            or None
+        )
+        token = extract_jwt_token(
+            identity.get("accessToken"),
+            identity.get("token"),
+            identity.get("jwt"),
+            identity.get("idToken"),
+        )
+        if user_id or provider or token:
+            return (
+                str(user_id) if user_id else None,
+                str(provider) if provider else None,
+                token,
+            )
+    return None, None, None
+
+
 def _token_cache_key(user_jwt_token: str | None) -> str:
     """Build a stable cache key without storing raw JWT in map keys."""
     if not user_jwt_token:
