@@ -37,7 +37,8 @@ from ..adapters.base import BaseAgent
 from ..context.identities import set_request_identities
 from ..context.usage import get_usage_tracker
 from ..observability.prompt_turn_metrics import (
-    extract_bearer_token,
+    extract_jwt_token,
+    extract_user_id_from_jwt,
     record_prompt_turn_completion,
 )
 from .base import BaseTransport
@@ -182,8 +183,9 @@ class AGUITransport(BaseTransport):
                 identities_from_request: list[dict[str, Any]] | None = None
                 metric_user_id: str | None = None
                 metric_user_provider: str | None = None
-                metric_user_jwt_token = extract_bearer_token(
-                    request.headers.get("authorization")
+                metric_user_jwt_token = extract_jwt_token(
+                    request.headers.get("authorization"),
+                    request.headers.get("x-external-token"),
                 )
                 try:
                     # Read the body once and cache it
@@ -248,6 +250,11 @@ class AGUITransport(BaseTransport):
                         )
                     else:
                         logger.debug("[AG-UI] No identities in request body")
+
+                    if not metric_user_id:
+                        metric_user_id = extract_user_id_from_jwt(metric_user_jwt_token)
+                    if metric_user_id and not metric_user_provider:
+                        metric_user_provider = "jwt"
 
                     # Create a new request with the cached body for pydantic-ai to consume
                     async def receive() -> dict[str, Any]:

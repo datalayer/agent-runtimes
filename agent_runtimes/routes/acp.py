@@ -40,7 +40,8 @@ from pydantic import BaseModel, Field
 
 from ..adapters.base import BaseAgent
 from ..observability.prompt_turn_metrics import (
-    extract_bearer_token,
+    extract_jwt_token,
+    extract_user_id_from_jwt,
     record_prompt_turn_completion,
 )
 from ..transports.acp import ACPSession, ACPTransport
@@ -360,8 +361,9 @@ async def websocket_endpoint(websocket: WebSocket, agent_id: str) -> None:
     agent, agent_info = _agents[agent_id]
     session_id: str | None = None
     adapter: ACPTransport | None = None
-    websocket_user_jwt_token = extract_bearer_token(
-        websocket.headers.get("authorization")
+    websocket_user_jwt_token = extract_jwt_token(
+        websocket.headers.get("authorization"),
+        websocket.headers.get("x-external-token"),
     )
 
     try:
@@ -705,6 +707,8 @@ async def _handle_prompt(
         if _sessions.get(session_id) and _sessions.get(session_id).context
         else None
     )
+    if not session_user_id:
+        session_user_id = extract_user_id_from_jwt(user_jwt_token)
     logger.info(
         "ACP prompt metrics context: session_id=%s user_id=%s model=%s",
         session_id,

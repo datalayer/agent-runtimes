@@ -16,7 +16,9 @@ The exporter is configured lazily and reads:
 
 from __future__ import annotations
 
+import base64
 import hashlib
+import json
 import logging
 import os
 import threading
@@ -46,6 +48,65 @@ def extract_bearer_token(auth_header: str | None) -> str | None:
     if value.lower().startswith("bearer "):
         token = value[7:].strip()
         return token or None
+    return None
+
+
+def _looks_like_jwt(token: str | None) -> bool:
+    if not token:
+        return False
+    parts = token.split(".")
+    return len(parts) == 3 and all(parts)
+
+
+def extract_jwt_token(*header_values: str | None) -> str | None:
+    """Extract JWT token from common auth header value forms.
+
+    Supports:
+    - ``Authorization: Bearer <jwt>``
+    - ``Authorization: token <jwt>``
+    - raw JWT values (e.g., X-External-Token)
+    """
+    for header_value in header_values:
+        if not header_value or not isinstance(header_value, str):
+            continue
+        stripped = header_value.strip()
+        if not stripped:
+            continue
+
+        bearer = extract_bearer_token(stripped)
+        if bearer:
+            return bearer
+
+        lower = stripped.lower()
+        if lower.startswith("token "):
+            token = stripped[6:].strip()
+            if _looks_like_jwt(token):
+                return token
+
+        if _looks_like_jwt(stripped):
+            return stripped
+
+    return None
+
+
+def extract_user_id_from_jwt(user_jwt_token: str | None) -> str | None:
+    """Best-effort JWT claim extraction without signature verification."""
+    if not _looks_like_jwt(user_jwt_token):
+        return None
+    try:
+        payload = user_jwt_token.split(".")[1]
+        # JWT uses URL-safe base64 without padding.
+        payload += "=" * (-len(payload) % 4)
+        decoded = base64.urlsafe_b64decode(payload.encode("utf-8"))
+        claims = json.loads(decoded.decode("utf-8"))
+        if not isinstance(claims, dict):
+            return None
+        for key in ("sub", "preferred_username", "email", "upn", "name"):
+            value = claims.get(key)
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+    except Exception:  # noqa: BLE001
+        return None
     return None
 
 
