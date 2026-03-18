@@ -43,25 +43,25 @@ import type {
   DisplayItem,
   ToolCallMessage,
   Suggestion,
-} from './types';
+} from '../../types';
 import {
   internalQueryClient,
   isToolCallMessage,
   convertHistoryToDisplayItems,
   createProtocolAdapter,
   getApiBaseFromConfig,
-} from './utils';
+} from '../../utils';
 import {
   useHighZIndexPortal,
   useConfigQuery,
   useSkillsQuery,
   useContextSnapshotQuery,
   useSandboxStatusQuery,
-} from './hooks';
-import { ChatBaseHeader } from './ChatHeader';
-import { ChatEmptyState } from './EmptyState';
-import { MessageList } from './MessageList';
-import { InputFooter } from './InputFooter';
+} from '../../../hooks';
+import { ChatBaseHeader } from '../elements/ChatHeaderBase';
+import { ChatEmptyState } from '../elements/EmptyState';
+import { MessageList } from '../elements/MessageList';
+import { InputFooter } from '../elements/InputFooter';
 
 // ---------------------------------------------------------------------------
 // Re-exports — keep backward-compatible imports from this file
@@ -94,9 +94,9 @@ export type {
   SkillsResponse,
   ContextSnapshotData,
   SandboxStatusData,
-} from './types';
+} from '../../types';
 
-export { isToolCallMessage, getMessageText } from './utils';
+export { isToolCallMessage, getMessageText } from '../../utils';
 
 // ---------------------------------------------------------------------------
 // ChatBase (outer wrapper — ensures QueryClient is available)
@@ -668,7 +668,7 @@ function ChatBaseInner({
     >
   > = {
     userAvatar: <PersonIcon size={16} />,
-    assistantAvatar: <AiAgentIcon colored size={16} />,
+    assistantAvatar: <AiAgentIcon size={16} />,
     showAvatars: true,
     avatarSize: 32,
     userAvatarBg: 'neutral.muted',

@@ -6,7 +6,7 @@
 /**
  * Extension exports for chat component.
  *
- * @module components/chat/extensions
+ * @module components/extensions
  */
 
 export {
@@ -39,4 +39,4 @@ export type {
   ProtocolEventExtension,
   PanelExtension,
   A2UIExtension,
-} from '../../types/extension';
+} from '../types/extension';

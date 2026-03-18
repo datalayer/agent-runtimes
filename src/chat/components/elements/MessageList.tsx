@@ -7,7 +7,7 @@
  * MessageList — Renders the scrollable list of chat messages, tool calls,
  * and the typing indicator.
  *
- * @module components/chat/components/base/MessageList
+ * @module components/chat/components/elements/MessageList
  */
 
 import { type ReactNode, type RefObject } from 'react';
@@ -18,16 +18,16 @@ import {
   streamdownMarkdownStyles,
   streamdownCodeBlockStyles,
 } from '../styles/streamdownStyles';
-import { ToolCallDisplay } from '../display/ToolCallDisplay';
+import { ToolCallDisplay } from '../tools/ToolCallDisplay';
 
-import { isToolCallMessage, getMessageText } from './utils';
+import { isToolCallMessage, getMessageText } from '../../utils';
 import type {
   DisplayItem,
   ToolCallMessage,
   AvatarConfig,
   RenderToolResult,
   RespondCallback,
-} from './types';
+} from '../../types';
 import type { ChatMessage } from '../../../types/message';
 
 // ---------------------------------------------------------------------------
@@ -259,7 +259,9 @@ export function MessageList({
                     bg: isUser
                       ? avatarConfig.userAvatarBg
                       : avatarConfig.assistantAvatarBg,
-                    color: isUser ? 'fg.default' : 'fg.onEmphasis',
+                    color: isUser
+                      ? 'fg.default'
+                      : 'var(--button-primary-fgColor-rest, var(--fgColor-onEmphasis))',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -279,7 +281,11 @@ export function MessageList({
                   p: 2,
                   borderRadius: 2,
                   backgroundColor: isUser ? 'accent.emphasis' : 'canvas.subtle',
-                  color: isUser ? 'fg.onEmphasis' : 'fg.default',
+                  // Use primary-button text token for better contrast when
+                  // accent.emphasis is bright (e.g. Matrix dark theme).
+                  color: isUser
+                    ? 'var(--button-primary-fgColor-rest, var(--fgColor-onEmphasis))'
+                    : 'fg.default',
                   ...streamdownCodeBlockStyles,
                 }}
               >
@@ -331,7 +337,8 @@ export function MessageList({
                   height: avatarConfig.avatarSize,
                   borderRadius: '50%',
                   bg: avatarConfig.assistantAvatarBg,
-                  color: 'fg.onEmphasis',
+                  color:
+                    'var(--button-primary-fgColor-rest, var(--fgColor-onEmphasis))',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',

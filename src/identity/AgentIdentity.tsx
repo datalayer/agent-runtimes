@@ -7,7 +7,7 @@
  * AgentIdentity component - Shows connected identity providers with token status.
  * Displays expiration details and allows reconnection if token expired.
  *
- * @module components/chat/components/AgentIdentity
+ * @module components/identity/AgentIdentity
  */
 
 import React, { useCallback, useMemo } from 'react';
@@ -30,17 +30,10 @@ import {
   SyncIcon,
   KeyIcon,
 } from '@primer/octicons-react';
-import { useIdentity, IdentityButton } from '../../identity';
-import type {
-  OAuthProvider,
-  OAuthProviderConfig,
-  Identity,
-} from '../../identity';
-import {
-  GITHUB_PROVIDER,
-  GOOGLE_PROVIDER,
-  KAGGLE_PROVIDER,
-} from '../../identity';
+import { useIdentity } from './useIdentity';
+import { IdentityButton } from './IdentityConnect';
+import type { OAuthProvider, OAuthProviderConfig, Identity } from './types';
+import { GITHUB_PROVIDER, GOOGLE_PROVIDER, KAGGLE_PROVIDER } from './types';
 
 /**
  * Provider display configuration

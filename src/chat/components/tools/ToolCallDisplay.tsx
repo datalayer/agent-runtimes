@@ -7,7 +7,7 @@
  * Default tool call display component.
  * Shows tool execution with collapsible details.
  *
- * @module components/chat/components/display/ToolCallDisplay
+ * @module components/chat/components/tools/ToolCallDisplay
  */
 
 import React, { useState } from 'react';

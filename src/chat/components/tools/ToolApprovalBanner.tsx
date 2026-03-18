@@ -10,7 +10,7 @@
  * pending tool approval requests. Provides quick counts and
  * a review button that opens the full ToolApprovalDialog.
  *
- * @module components/chat/components/elements/ToolApprovalBanner
+ * @module components/chat/components/tools/ToolApprovalBanner
  */
 
 import { useState } from 'react';

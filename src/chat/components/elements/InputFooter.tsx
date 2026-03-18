@@ -9,7 +9,7 @@
  * Contains the InputPrompt component, the TokenUsageBar, and the
  * model / tools / skills action-menu selectors.
  *
- * @module components/chat/components/base/InputFooter
+ * @module components/chat/components/elements/InputFooter
  */
 
 import {
@@ -30,7 +30,7 @@ import type {
   MCPServerConfig,
   SkillInfo,
   ContextSnapshotData,
-} from './types';
+} from '../../types';
 
 // ---------------------------------------------------------------------------
 // Props

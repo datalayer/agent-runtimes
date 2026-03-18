@@ -7,15 +7,15 @@
  * A2UI extension for chat component.
  * Renders A2UI protocol messages from A2A agents using @a2ui/react.
  *
- * @module components/chat/extensions/A2UIExtension
+ * @module components/extensions/A2UIExtension
  */
 
 import React from 'react';
 import { A2UIViewer, initializeDefaultCatalog } from '@a2ui/react';
 import type { ComponentInstance } from '@a2ui/react';
-import type { ActivityRendererExtension } from '../../types/extension';
-import type { A2UIExtension as A2UIExtensionNamespace } from '../../types/extension';
-import type { ChatMessage } from '../../types/message';
+import type { ActivityRendererExtension } from '../types/extension';
+import type { A2UIExtension as A2UIExtensionNamespace } from '../types/extension';
+import type { ChatMessage } from '../types/message';
 
 // Ensure the default component catalog is registered
 initializeDefaultCatalog();

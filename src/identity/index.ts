@@ -128,5 +128,17 @@ export {
   type IdentityMenuProps,
 } from './IdentityConnect';
 
+// Agent identity status UI
+export {
+  AgentIdentity,
+  IdentityCard,
+  getTokenStatus,
+  formatDuration,
+  formatExpirationStatus,
+  type AgentIdentityProps,
+  type IdentityCardProps,
+  type TokenStatus,
+} from './AgentIdentity';
+
 // OAuth Callback
 export { OAuthCallback, type OAuthCallbackProps } from './OAuthCallback';

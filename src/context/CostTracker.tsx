@@ -9,7 +9,7 @@
  * Shows per-run cost, cumulative cost, and budget utilization
  * with a progress bar and optional alert when approaching limits.
  *
- * @module components/chat/components/CostTracker
+ * @module components/context/CostTracker
  */
 
 import {

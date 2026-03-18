@@ -133,7 +133,7 @@ export {
   A2UIExtensionImpl,
   type A2UIMessage,
   type InternalExtensionType,
-} from './extensions';
+} from '../extensions';
 
 // Components
 export {

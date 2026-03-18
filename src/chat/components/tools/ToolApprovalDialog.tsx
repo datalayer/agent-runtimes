@@ -7,7 +7,7 @@
  * Tool approval dialog component.
  * Shows a dialog for HITL tool approval.
  *
- * @module components/chat/components/elements/ToolApprovalDialog
+ * @module components/chat/components/tools/ToolApprovalDialog
  */
 
 import { useCallback, useState } from 'react';

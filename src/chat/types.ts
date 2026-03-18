@@ -6,17 +6,17 @@
 /**
  * Type definitions for the ChatBase component and its sub-components.
  *
- * @module components/chat/components/base/types
+ * @module components/chat/types
  */
 
 import type { ReactNode } from 'react';
 
-import type { ChatMessage } from '../../../types/message';
-import type { TransportType } from '../../../types/protocol';
-import type { McpServerSelection } from '../../../types/inference';
-import type { BuiltinTool as BuiltinToolType } from '../../../types/Types';
-import type { PoweredByTagProps } from '../elements/PoweredByTag';
-import type { FrontendToolDefinition } from '../../../types/tool';
+import type { ChatMessage } from '../types/message';
+import type { TransportType } from '../types/protocol';
+import type { McpServerSelection } from '../types/inference';
+import type { BuiltinTool as BuiltinToolType } from '../types/Types';
+import type { PoweredByTagProps } from './components/elements/PoweredByTag';
+import type { FrontendToolDefinition } from '../types/tool';
 
 // ---------------------------------------------------------------------------
 // View mode

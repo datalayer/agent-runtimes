@@ -6,20 +6,20 @@
 /**
  * Utility functions and constants for ChatBase.
  *
- * @module components/chat/components/base/utils
+ * @module components/chat/utils
  */
 
 import { QueryClient } from '@tanstack/react-query';
 
-import type { ChatMessage, ContentPart } from '../../../types/message';
-import type { ProtocolAdapterConfig } from '../../../types/protocol';
+import type { ChatMessage, ContentPart } from '../types/message';
+import type { ProtocolAdapterConfig } from '../types/protocol';
 import {
   AGUIAdapter,
   A2AAdapter,
   VercelAIAdapter,
   ACPAdapter,
   type BaseProtocolAdapter,
-} from '../../../protocols';
+} from '../protocols';
 
 import type {
   ToolCallMessage,

@@ -16,7 +16,7 @@ import { Box } from '@datalayer/primer-addons';
 import { PersonIcon, ToolsIcon } from '@primer/octicons-react';
 import { AiAgentIcon } from '@datalayer/icons-react';
 import type { ChatMessage, ContentPart } from '../../../types/message';
-import type { ExtensionRegistry } from '../../extensions/ExtensionRegistry';
+import type { ExtensionRegistry } from '../../../extensions/ExtensionRegistry';
 import {
   useChatMessages,
   useChatExtensionRegistry,
@@ -131,13 +131,16 @@ export function ChatMessages({
                     : message.role === 'assistant'
                       ? 'accent.emphasis'
                       : 'attention.emphasis',
-                color: message.role === 'user' ? 'fg.default' : 'fg.onEmphasis',
+                color:
+                  message.role === 'user'
+                    ? 'fg.default'
+                    : 'var(--button-primary-fgColor-rest, var(--fgColor-onEmphasis))',
               }}
             >
               {message.role === 'user' ? (
                 <PersonIcon size={16} />
               ) : message.role === 'assistant' ? (
-                <AiAgentIcon colored size={16} />
+                <AiAgentIcon size={16} />
               ) : (
                 <ToolsIcon size={16} />
               )}

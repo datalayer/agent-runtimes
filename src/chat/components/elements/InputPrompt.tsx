@@ -12,7 +12,7 @@
  * Can be used independently of ChatBase for embedding a prompt input
  * in any context (e.g. landing pages, home screens).
  *
- * @module components/chat/components/base/InputPrompt
+ * @module components/chat/components/elements/InputPrompt
  */
 
 import {

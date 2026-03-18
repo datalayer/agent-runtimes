@@ -10,7 +10,7 @@
  * (new chat, clear, settings), view-mode segmented toggle, and custom
  * header actions / content.
  *
- * @module components/chat/components/base/ChatHeader
+ * @module components/chat/components/elements/ChatHeaderBase
  */
 
 import { type ReactNode } from 'react';
@@ -33,7 +33,7 @@ import type {
   ChatViewMode,
   HeaderButtonsConfig,
   SandboxStatusData,
-} from './types';
+} from '../../types';
 
 // ---------------------------------------------------------------------------
 // Props

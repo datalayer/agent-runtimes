@@ -29,9 +29,12 @@ import {
 import { Box } from '@datalayer/primer-addons';
 import { AiAgentIcon } from '@datalayer/icons-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ContextPanel } from './ContextPanel';
-import { ContextInspector, type FullContextResponse } from './ContextInspector';
-import { AgentIdentity } from './AgentIdentity';
+import { ContextPanel } from '../../context/ContextPanel';
+import {
+  ContextInspector,
+  type FullContextResponse,
+} from '../../context/ContextInspector';
+import { AgentIdentity } from '../../identity/AgentIdentity';
 import type {
   OAuthProvider,
   OAuthProviderConfig,

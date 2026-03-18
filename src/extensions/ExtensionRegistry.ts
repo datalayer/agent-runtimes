@@ -7,7 +7,7 @@
  * Extension registry for chat component.
  * Manages custom renderers and extension points.
  *
- * @module components/chat/extensions/ExtensionRegistry
+ * @module components/extensions/ExtensionRegistry
  */
 
 import type {
@@ -17,7 +17,7 @@ import type {
   ToolUIExtension,
   ProtocolEventExtension,
   PanelExtension,
-} from '../../types/extension';
+} from '../types/extension';
 
 /** Internal extension type for registry organization */
 export type InternalExtensionType =
@@ -182,4 +182,4 @@ export class ExtensionRegistry {
 export {
   createMessageRenderer,
   createActivityRenderer,
-} from '../../types/extension';
+} from '../types/extension';

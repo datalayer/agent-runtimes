@@ -7,11 +7,11 @@
  * MCP-UI extension for chat component.
  * Renders MCP UI protocol messages and resources.
  *
- * @module components/chat/extensions/MCPUIExtension
+ * @module components/extensions/MCPUIExtension
  */
 
 import React from 'react';
-import type { ActivityRendererExtension } from '../../types/extension';
+import type { ActivityRendererExtension } from '../types/extension';
 
 /**
  * MCP-UI resource types

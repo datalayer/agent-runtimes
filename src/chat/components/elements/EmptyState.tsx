@@ -9,7 +9,7 @@
  * Supports a custom render function, icon overrides, description text, and
  * clickable suggestion pills.
  *
- * @module components/chat/components/base/EmptyState
+ * @module components/chat/components/elements/EmptyState
  */
 
 import { type ReactNode } from 'react';
@@ -17,7 +17,7 @@ import { Text, LabelGroup, Label, Truncate } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { AiAgentIcon } from '@datalayer/icons-react';
 
-import type { EmptyStateConfig, Suggestion } from './types';
+import type { EmptyStateConfig, Suggestion } from '../../types';
 
 // ---------------------------------------------------------------------------
 // Props

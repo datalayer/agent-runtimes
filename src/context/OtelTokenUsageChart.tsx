@@ -363,19 +363,23 @@ export function OtelTokenUsageChart({
         axisLabel: { fontSize: 9 },
         axisLine: { lineStyle: { color: '#d0d7de' } },
       },
-      yAxis: {
+      yAxis: SERIES.map((_, index) => ({
         type: 'value',
-        axisLabel: { fontSize: 9 },
-        splitLine: { lineStyle: { color: '#f0f0f0' } },
-      },
-      series: SERIES.map(item => ({
+        scale: true,
+        show: false,
+        splitLine: {
+          show: index === 0,
+          lineStyle: { color: '#f0f0f0' },
+        },
+      })),
+      series: SERIES.map((item, index) => ({
         name: item.label,
         type: 'line',
-        stack: 'tokens',
+        yAxisIndex: index,
         data: filledKeys.map(k => dayData[k]?.[item.label] ?? 0),
-        areaStyle: {},
         smooth: true,
-        symbol: 'none',
+        symbol: 'circle',
+        symbolSize: 4,
         lineStyle: { width: 1.5 },
       })),
       color: ['#2da44e', '#0969da', '#8250df', '#bf8700', '#cf222e'],

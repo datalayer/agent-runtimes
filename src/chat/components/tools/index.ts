@@ -6,7 +6,7 @@
 /**
  * Display components barrel export.
  *
- * @module components/chat/components/display
+ * @module components/chat/components/tools
  */
 
 export {

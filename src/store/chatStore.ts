@@ -27,7 +27,7 @@ import type { InferenceProvider } from '../types/inference';
 import type { ProtocolAdapter } from '../types/protocol';
 import type { ToolExecutor } from '../tools/ToolExecutor';
 import type { MiddlewarePipeline } from '../middleware/MiddlewarePipeline';
-import type { ExtensionRegistry } from '../chat/extensions/ExtensionRegistry';
+import type { ExtensionRegistry } from '../extensions/ExtensionRegistry';
 
 /**
  * Chat configuration options

@@ -68,6 +68,15 @@ export {
   type UseKeyboardShortcutsOptions,
 } from './useKeyboardShortcuts';
 
+/**
+ * ChatBase infrastructure hooks.
+ */
+export { useHighZIndexPortal } from './useHighZIndexPortal';
+export { useConfigQuery } from './useConfigQuery';
+export { useSkillsQuery } from './useSkillsQuery';
+export { useContextSnapshotQuery } from './useContextSnapshotQuery';
+export { useSandboxStatusQuery } from './useSandboxStatusQuery';
+
 // =============================================================================
 // Transport-Specific Hooks (Direct Protocol Access)
 // =============================================================================

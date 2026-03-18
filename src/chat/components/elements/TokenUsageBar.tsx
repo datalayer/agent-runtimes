@@ -8,7 +8,7 @@
  * tiny pie chart, session totals, and a hover overlay with category
  * breakdown.
  *
- * @module components/chat/components/base/TokenUsageBar
+ * @module components/chat/components/elements/TokenUsageBar
  */
 
 import { useRef, useState } from 'react';
@@ -16,8 +16,8 @@ import { Text } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import ReactECharts from 'echarts-for-react';
 
-import { formatTokenCount } from './utils';
-import type { ContextSnapshotData } from './types';
+import { formatTokenCount } from '../../utils';
+import type { ContextSnapshotData } from '../../types';
 
 // ---------------------------------------------------------------------------
 // Props

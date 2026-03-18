@@ -27,7 +27,7 @@ export {
   type StreamingMessageOptions,
   type ChatViewMode,
 } from './base/ChatBase';
-export { InputPrompt, type InputPromptProps } from './base/InputPrompt';
+export { InputPrompt, type InputPromptProps } from './elements/InputPrompt';
 export { AgentDetails, type AgentDetailsProps } from './AgentDetails';
 export {
   AgentIdentity,
@@ -38,38 +38,41 @@ export {
   type AgentIdentityProps,
   type IdentityCardProps,
   type TokenStatus,
-} from './AgentIdentity';
+} from '../../identity/AgentIdentity';
 export {
   ContextUsage,
   type ContextUsageProps,
   type ContextDetailsResponse,
-} from './ContextUsage';
+} from '../../context/ContextUsage';
 export {
   ContextDistribution,
   type ContextDistributionProps,
   type ContextSnapshotResponse,
-} from './ContextDistribution';
-export { ContextPanel, type ContextPanelProps } from './ContextPanel';
+} from '../../context/ContextDistribution';
+export {
+  ContextPanel,
+  type ContextPanelProps,
+} from '../../context/ContextPanel';
 export {
   ContextInspector,
   type ContextInspectorProps,
   type FullContextResponse,
-} from './ContextInspector';
+} from '../../context/ContextInspector';
 export {
   CostTracker,
   type CostTrackerProps,
   type CostUsageResponse,
-} from './CostTracker';
+} from '../../context/CostTracker';
 export {
   ToolApprovalDialog,
   useToolApprovalDialog,
   type ToolApprovalDialogProps,
-} from './elements/ToolApprovalDialog';
+} from './tools/ToolApprovalDialog';
 export {
   ToolApprovalBanner,
   type ToolApprovalBannerProps,
   type PendingApproval,
-} from './elements/ToolApprovalBanner';
+} from './tools/ToolApprovalBanner';
 export { PoweredByTag, type PoweredByTagProps } from './elements/PoweredByTag';
 export {
   FloatingBrandButton,
@@ -98,7 +101,7 @@ export {
   type DynamicToolPartProps,
 } from './parts';
 // Display components for message parts
-export { ToolCallDisplay, type ToolCallDisplayProps } from './display';
+export { ToolCallDisplay, type ToolCallDisplayProps } from './tools';
 
 // Chat component (transport-agnostic)
 // Supports: 'acp', 'vercel-ai', 'ag-ui', 'a2a', 'vercel-ai-jupyter' transports
@@ -131,4 +134,4 @@ export {
 export {
   OtelTokenUsageChart,
   type OtelTokenUsageChartProps,
-} from './OtelTokenUsageChart';
+} from '../../context/OtelTokenUsageChart';
