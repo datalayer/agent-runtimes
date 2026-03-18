@@ -22,15 +22,9 @@ class SkillSpec(BaseModel):
     name: str = Field(..., description="Display name")
     description: str = Field(default="", description="Skill description")
     module: str = Field(default="", description="Python module path")
-    envvars: List[str] = Field(
-        default_factory=list, description="Required environment variables"
-    )
-    optional_env_vars: List[str] = Field(
-        default_factory=list, description="Optional environment variables"
-    )
-    dependencies: List[str] = Field(
-        default_factory=list, description="Python package dependencies"
-    )
+    envvars: List[str] = Field(default_factory=list, description="Required environment variables")
+    optional_env_vars: List[str] = Field(default_factory=list, description="Optional environment variables")
+    dependencies: List[str] = Field(default_factory=list, description="Python package dependencies")
     tags: List[str] = Field(default_factory=list, description="Search/discovery tags")
     icon: Optional[str] = Field(default=None, description="Icon identifier")
     emoji: Optional[str] = Field(default=None, description="Emoji representation")
@@ -52,6 +46,20 @@ CRAWL_SKILL_SPEC = SkillSpec(
     tags=["web", "crawl", "scraping"],
     icon="globe",
     emoji="🌐",
+    enabled=True,
+)
+
+EVENTS_SKILL_SPEC = SkillSpec(
+    id="events",
+    name="Events Skill",
+    description="Event generation, enrichment, and lifecycle orchestration",
+    module="agent_skills.events",
+    envvars=[],
+    optional_env_vars=[],
+    dependencies=["httpx>=0.27.0"],
+    tags=["events", "orchestration", "automation"],
+    icon="bell",
+    emoji="📅",
     enabled=True,
 )
 
@@ -89,6 +97,7 @@ PDF_SKILL_SPEC = SkillSpec(
 
 SKILL_CATALOG: Dict[str, SkillSpec] = {
     "crawl": CRAWL_SKILL_SPEC,
+    "events": EVENTS_SKILL_SPEC,
     "github": GITHUB_SKILL_SPEC,
     "pdf": PDF_SKILL_SPEC,
 }

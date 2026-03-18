@@ -47,6 +47,14 @@ export const EVENT_TRIGGER_SPEC: TriggerSpec = {
       required: false,
       placeholder: "Description (e.g. 'Triggered on incoming email')",
     },
+    {
+      name: 'prompt',
+      label: 'Trigger Prompt',
+      type: 'string',
+      required: false,
+      placeholder:
+        'Handle the incoming event and execute the workflow end-to-end.',
+    },
   ],
 };
 
@@ -55,7 +63,16 @@ export const ONCE_TRIGGER_SPEC: TriggerSpec = {
   name: 'Run Once',
   description: 'Execute agent immediately after deployment.',
   type: 'once',
-  fields: [],
+  fields: [
+    {
+      name: 'prompt',
+      label: 'Trigger Prompt',
+      type: 'string',
+      required: false,
+      placeholder:
+        'Start when requested by a user and complete the workflow once.',
+    },
+  ],
 };
 
 export const SCHEDULE_TRIGGER_SPEC: TriggerSpec = {
@@ -79,6 +96,14 @@ export const SCHEDULE_TRIGGER_SPEC: TriggerSpec = {
       type: 'string',
       required: false,
       placeholder: "Description (e.g. 'Monthly sales report')",
+    },
+    {
+      name: 'prompt',
+      label: 'Trigger Prompt',
+      type: 'string',
+      required: false,
+      placeholder:
+        'Run the scheduled workflow and produce the configured deliverable.',
     },
   ],
 };

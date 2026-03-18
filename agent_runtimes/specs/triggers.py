@@ -32,12 +32,8 @@ class TriggerSpec(BaseModel):
     id: str = Field(..., description="Unique trigger identifier")
     name: str = Field(..., description="Display name")
     description: str = Field(default="", description="Trigger description")
-    type: Literal["once", "schedule", "event"] = Field(
-        ..., description="Trigger execution mode"
-    )
-    fields: List[TriggerField] = Field(
-        default_factory=list, description="Trigger configuration fields"
-    )
+    type: Literal["once", "schedule", "event"] = Field(..., description="Trigger execution mode")
+    fields: List[TriggerField] = Field(default_factory=list, description="Trigger configuration fields")
 
 
 # ============================================================================
@@ -50,34 +46,10 @@ EVENT_TRIGGER_SPEC = TriggerSpec(
     description="Trigger on specific events such as a webhook call, API request, database change, file upload, or email arrival.",
     type="event",
     fields=[
-        TriggerField(
-            **{
-                "name": "event_source",
-                "label": "Event Source URL",
-                "type": "string",
-                "required": False,
-                "placeholder": "https://helpdesk.example.com/webhooks",
-                "help": "Allowed event source URL (leave empty to allow any source)",
-            }
-        ),
-        TriggerField(
-            **{
-                "name": "event",
-                "label": "Event Name",
-                "type": "string",
-                "required": False,
-                "placeholder": "email_received",
-            }
-        ),
-        TriggerField(
-            **{
-                "name": "description",
-                "label": "Description",
-                "type": "string",
-                "required": False,
-                "placeholder": "Description (e.g. 'Triggered on incoming email')",
-            }
-        ),
+        TriggerField(**{"name": "event_source", "label": "Event Source URL", "type": "string", "required": False, "placeholder": "https://helpdesk.example.com/webhooks", "help": "Allowed event source URL (leave empty to allow any source)"}),
+        TriggerField(**{"name": "event", "label": "Event Name", "type": "string", "required": False, "placeholder": "email_received"}),
+        TriggerField(**{"name": "description", "label": "Description", "type": "string", "required": False, "placeholder": "Description (e.g. 'Triggered on incoming email')"}),
+        TriggerField(**{"name": "prompt", "label": "Trigger Prompt", "type": "string", "required": False, "placeholder": "Handle the incoming event and execute the workflow end-to-end."}),
     ],
 )
 
@@ -86,6 +58,9 @@ ONCE_TRIGGER_SPEC = TriggerSpec(
     name="Run Once",
     description="Execute agent immediately after deployment.",
     type="once",
+    fields=[
+        TriggerField(**{"name": "prompt", "label": "Trigger Prompt", "type": "string", "required": False, "placeholder": "Start when requested by a user and complete the workflow once."}),
+    ],
 )
 
 SCHEDULE_TRIGGER_SPEC = TriggerSpec(
@@ -94,25 +69,9 @@ SCHEDULE_TRIGGER_SPEC = TriggerSpec(
     description="Run on a recurring schedule using a cron expression (e.g. daily at 9 AM, every Monday, monthly on the 1st).",
     type="schedule",
     fields=[
-        TriggerField(
-            **{
-                "name": "cron",
-                "label": "Cron Expression",
-                "type": "string",
-                "required": True,
-                "placeholder": "0 9 * * * (every day at 9 AM)",
-                "font": "mono",
-            }
-        ),
-        TriggerField(
-            **{
-                "name": "description",
-                "label": "Description",
-                "type": "string",
-                "required": False,
-                "placeholder": "Description (e.g. 'Monthly sales report')",
-            }
-        ),
+        TriggerField(**{"name": "cron", "label": "Cron Expression", "type": "string", "required": True, "placeholder": "0 9 * * * (every day at 9 AM)", "font": "mono"}),
+        TriggerField(**{"name": "description", "label": "Description", "type": "string", "required": False, "placeholder": "Description (e.g. 'Monthly sales report')"}),
+        TriggerField(**{"name": "prompt", "label": "Trigger Prompt", "type": "string", "required": False, "placeholder": "Run the scheduled workflow and produce the configured deliverable."}),
     ],
 )
 

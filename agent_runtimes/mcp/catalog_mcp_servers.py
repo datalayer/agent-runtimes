@@ -57,6 +57,41 @@ CHART_MCP_SERVER = MCPServer(
     required_env_vars=[],
 )
 
+EARTHDATA_MCP_SERVER = MCPServer(
+    id="earthdata",
+    name="Earthdata MCP",
+    description="Access NASA Earthdata search and metadata capabilities",
+    icon="globe",
+    emoji="🌍",
+    command="npx",
+    args=[
+        "-y",
+        "earthdata-mcp-server",
+    ],
+    transport="stdio",
+    enabled=True,
+    tools=[],
+    env={
+        "EARTHDATA_USERNAME": "${EARTHDATA_USERNAME}",
+        "EARTHDATA_PASSWORD": "${EARTHDATA_PASSWORD}",
+    },
+    required_env_vars=["EARTHDATA_USERNAME", "EARTHDATA_PASSWORD"],
+)
+
+EURUS_MCP_SERVER = MCPServer(
+    id="eurus",
+    name="Eurus Climate MCP",
+    description="Climate and reanalysis analysis tools for spatial workflows",
+    icon="graph",
+    emoji="🌦️",
+    command="eurus-mcp",
+    args=[],
+    transport="stdio",
+    enabled=True,
+    tools=[],
+    required_env_vars=[],
+)
+
 FILESYSTEM_MCP_SERVER = MCPServer(
     id="filesystem",
     name="Filesystem",
@@ -230,6 +265,8 @@ TAVILY_MCP_SERVER = MCPServer(
 MCP_SERVER_CATALOG: Dict[str, MCPServer] = {
     "alphavantage": ALPHAVANTAGE_MCP_SERVER,
     "chart": CHART_MCP_SERVER,
+    "earthdata": EARTHDATA_MCP_SERVER,
+    "eurus": EURUS_MCP_SERVER,
     "filesystem": FILESYSTEM_MCP_SERVER,
     "github": GITHUB_MCP_SERVER,
     "google-workspace": GOOGLE_WORKSPACE_MCP_SERVER,

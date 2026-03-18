@@ -44,6 +44,20 @@ export const CRAWL_SKILL_SPEC: SkillSpec = {
   enabled: true,
 };
 
+export const EVENTS_SKILL_SPEC: SkillSpec = {
+  id: 'events',
+  name: 'Events Skill',
+  description: 'Event generation, enrichment, and lifecycle orchestration',
+  module: 'agent_skills.events',
+  requiredEnvVars: [],
+  optionalEnvVars: [],
+  dependencies: ['httpx>=0.27.0'],
+  tags: ['events', 'orchestration', 'automation'],
+  icon: 'bell',
+  emoji: '📅',
+  enabled: true,
+};
+
 export const GITHUB_SKILL_SPEC: SkillSpec = {
   id: 'github',
   name: 'GitHub Skill',
@@ -78,6 +92,7 @@ export const PDF_SKILL_SPEC: SkillSpec = {
 
 export const SKILL_CATALOG: Record<string, SkillSpec> = {
   crawl: CRAWL_SKILL_SPEC,
+  events: EVENTS_SKILL_SPEC,
   github: GITHUB_SKILL_SPEC,
   pdf: PDF_SKILL_SPEC,
 };

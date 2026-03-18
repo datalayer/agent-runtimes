@@ -528,6 +528,10 @@ function toAgentSkillSpec(skill: SkillSpec) {
                     "`", "\\`"
                 )
 
+            welcome_message = spec.get("welcome_message")
+            welcome_notebook = spec.get("welcome_notebook")
+            welcome_document = spec.get("welcome_document")
+
             # Clean description for TypeScript (multi-line template literal)
             description = (
                 spec["description"].replace("\n", " ").replace("  ", " ").strip()
@@ -584,6 +588,9 @@ function toAgentSkillSpec(skill: SkillSpec) {
   emoji: {emoji},
   color: {color},
   suggestions: {suggestions_str},
+    welcomeMessage: {_fmt_ts_literal(welcome_message)},
+    welcomeNotebook: {_fmt_ts_literal(welcome_notebook)},
+    welcomeDocument: {_fmt_ts_literal(welcome_document)},
   sandboxVariant: {sandbox_variant_ts},
   systemPrompt: {f"`{system_prompt}`" if system_prompt else "undefined"},
   systemPromptCodemodeAddons: {f"`{system_prompt_codemode_addons}`" if system_prompt_codemode_addons else "undefined"},

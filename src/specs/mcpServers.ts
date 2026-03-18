@@ -50,6 +50,38 @@ export const CHART_MCP_SERVER: MCPServer = {
   requiredEnvVars: [],
 };
 
+export const EARTHDATA_MCP_SERVER: MCPServer = {
+  id: 'earthdata',
+  name: 'Earthdata MCP',
+  description: 'Access NASA Earthdata search and metadata capabilities',
+  icon: 'globe',
+  emoji: '🌍',
+  url: '',
+  command: 'npx',
+  args: ['-y', 'earthdata-mcp-server'],
+  transport: 'stdio',
+  enabled: true,
+  isAvailable: false,
+  tools: [],
+  requiredEnvVars: ['EARTHDATA_USERNAME', 'EARTHDATA_PASSWORD'],
+};
+
+export const EURUS_MCP_SERVER: MCPServer = {
+  id: 'eurus',
+  name: 'Eurus Climate MCP',
+  description: 'Climate and reanalysis analysis tools for spatial workflows',
+  icon: 'graph',
+  emoji: '🌦️',
+  url: '',
+  command: 'eurus-mcp',
+  args: [],
+  transport: 'stdio',
+  enabled: true,
+  isAvailable: false,
+  tools: [],
+  requiredEnvVars: [],
+};
+
 export const FILESYSTEM_MCP_SERVER: MCPServer = {
   id: 'filesystem',
   name: 'Filesystem',
@@ -204,6 +236,8 @@ export const TAVILY_MCP_SERVER: MCPServer = {
 export const MCP_SERVER_LIBRARY: Record<string, MCPServer> = {
   alphavantage: ALPHAVANTAGE_MCP_SERVER,
   chart: CHART_MCP_SERVER,
+  earthdata: EARTHDATA_MCP_SERVER,
+  eurus: EURUS_MCP_SERVER,
   filesystem: FILESYSTEM_MCP_SERVER,
   github: GITHUB_MCP_SERVER,
   'google-workspace': GOOGLE_WORKSPACE_MCP_SERVER,
