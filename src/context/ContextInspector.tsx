@@ -600,7 +600,7 @@ export function ContextInspector({ agentId, apiBase }: ContextInspectorProps) {
       <CollapsibleSection
         title="Model Configuration"
         icon={AiModelIcon}
-        defaultExpanded={true}
+        defaultExpanded={false}
       >
         <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 2 }}>
           <Text sx={{ fontWeight: 'semibold', fontSize: 1 }}>Model:</Text>
