@@ -237,7 +237,11 @@ export interface UseAgentReturn {
   /** Pause the agent (checkpoint mode aware) */
   pause: (mode?: CheckpointMode, messages?: string[]) => Promise<void>;
   /** Resume a paused agent (checkpoint mode aware) */
-  resume: (mode?: CheckpointMode, checkpointId?: string) => Promise<void>;
+  resume: (
+    mode?: CheckpointMode,
+    checkpointId?: string,
+    podName?: string,
+  ) => Promise<void>;
   /** Terminate the agent (delete runtime) */
   terminate: () => Promise<void>;
   /** Take a checkpoint and persist (pause → record → stay paused) */
@@ -528,15 +532,26 @@ export function useAgents(options: UseAgentOptions = {}): UseAgentReturn {
   // ─── Resume (checkpoint restore) ───────────────────────────────────
 
   const resume = useCallback(
-    async (mode: CheckpointMode = 'criu', checkpointId?: string) => {
+    async (
+      mode: CheckpointMode = 'criu',
+      checkpointId?: string,
+      podName?: string,
+    ) => {
       setDurableStatus('resuming');
       setDurableError(null);
       try {
         const { token, runtimesRunUrl } = await getAuthHeaders();
-        if (runtime) {
+        // Resolve the pod name: explicit arg > current runtime > checkpoint record lookup
+        const targetPodName =
+          podName ||
+          runtime?.podName ||
+          (checkpointId
+            ? checkpointRecords.find(c => c.id === checkpointId)?.runtime_uid
+            : undefined);
+        if (targetPodName) {
           const { resumeRuntime, listRuntimes } =
             await import('@datalayer/core/lib/api/runtimes/runtimes');
-          await resumeRuntime(token, runtime.podName, runtimesRunUrl, {
+          await resumeRuntime(token, targetPodName, runtimesRunUrl, {
             agent_spec_id: agentSpecId,
             checkpoint_mode: mode,
             ...(checkpointId ? { checkpoint_id: checkpointId } : {}),
@@ -590,7 +605,14 @@ export function useAgents(options: UseAgentOptions = {}): UseAgentReturn {
         setDurableStatus('error');
       }
     },
-    [runtime, getAuthHeaders, agentSpecId, launchRuntime, storeConnectAgent],
+    [
+      runtime,
+      checkpointRecords,
+      getAuthHeaders,
+      agentSpecId,
+      launchRuntime,
+      storeConnectAgent,
+    ],
   );
 
   // ─── Refresh Checkpoints ───────────────────────────────────────────

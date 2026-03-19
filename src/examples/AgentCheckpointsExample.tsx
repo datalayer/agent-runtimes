@@ -249,11 +249,11 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
   );
 
   const handleResume = useCallback(
-    async (mode: CheckpointMode, checkpointId?: string) => {
+    async (mode: CheckpointMode, checkpointId?: string, podName?: string) => {
       setActionLoading(true);
       setActionError(null);
       try {
-        await resume(mode, checkpointId);
+        await resume(mode, checkpointId, podName);
         await Promise.all([refreshCheckpoints(), refreshAgents()]);
       } catch (e) {
         setActionError(e instanceof Error ? e.message : 'Resume failed');
@@ -799,7 +799,9 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
                       size="small"
                       variant="primary"
                       leadingVisual={PlayIcon}
-                      onClick={() => handleResume(resumeMode)}
+                      onClick={() =>
+                        handleResume(resumeMode, undefined, a.podName)
+                      }
                       disabled={actionLoading}
                     >
                       Resume
