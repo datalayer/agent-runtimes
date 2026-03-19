@@ -63,6 +63,10 @@ import { ChatEmptyState } from '../elements/EmptyState';
 import { MessageList } from '../elements/MessageList';
 import { InputFooter } from '../elements/InputFooter';
 
+// Tracks pending prompts already auto-sent for a given conversation scope.
+// This prevents layout-driven unmount/remount cycles from re-sending prompts.
+const sentPendingPromptKeys = new Set<string>();
+
 // ---------------------------------------------------------------------------
 // Re-exports — keep backward-compatible imports from this file
 // ---------------------------------------------------------------------------
@@ -240,6 +244,14 @@ function ChatBaseInner({
   const [adapterReady, setAdapterReady] = useState(false);
   // Guard so the pending prompt is sent at most once
   const pendingPromptSentRef = useRef(false);
+  const pendingPromptKey =
+    pendingPrompt &&
+    [
+      runtimeId || historyEndpoint || protocol?.endpoint || protocol?.agentId,
+      pendingPrompt,
+    ]
+      .filter(Boolean)
+      .join('::');
   const [selectedModel, setSelectedModel] = useState<string>('');
   // enabledTools tracks which MCP server tools are enabled
   // Format: Map<serverId, Set<toolName>>
@@ -1187,11 +1199,25 @@ function ChatBaseInner({
   // Send pending prompt once history loaded and adapter/handler available
   useEffect(() => {
     if (!pendingPrompt || pendingPromptSentRef.current) return;
+    if (pendingPromptKey && sentPendingPromptKeys.has(pendingPromptKey)) {
+      pendingPromptSentRef.current = true;
+      return;
+    }
     if (!historyLoaded) return;
     if (!adapterReady && !onSendMessage) return;
     pendingPromptSentRef.current = true;
+    if (pendingPromptKey) {
+      sentPendingPromptKeys.add(pendingPromptKey);
+    }
     queueMicrotask(() => handleSend(pendingPrompt));
-  }, [pendingPrompt, historyLoaded, adapterReady, handleSend, onSendMessage]);
+  }, [
+    pendingPrompt,
+    pendingPromptKey,
+    historyLoaded,
+    adapterReady,
+    handleSend,
+    onSendMessage,
+  ]);
 
   // ---- handleStop ----
   const handleStop = useCallback(() => {

@@ -22,6 +22,7 @@ import {
 // Imports for useAgentRuntimes hooks (self-contained, no useCache dependency)
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useIAMStore } from '@datalayer/core/lib/state';
+import * as aiAgentsApi from '../api';
 
 // Imports for useAIAgents hook
 import { useCoreStore, useDatalayer } from '@datalayer/core';
@@ -1404,6 +1405,192 @@ export const useAIAgents = (baseUrlOverride = 'api/ai-agents/v1') => {
     patchAIAgent,
   };
 };
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Dashboard data hooks (tool approvals, notifications, events)
+// ═══════════════════════════════════════════════════════════════════════════
+
+function useDashboardAuthToken(): string {
+  const token = useIAMStore((s: any) => s.token);
+  return token ?? '';
+}
+
+function useDashboardBaseUrl(): string {
+  const config = useCoreStore((s: any) => s.configuration);
+  return config?.aiagentsRunUrl ?? config?.iamRunUrl ?? '';
+}
+
+export function useToolApprovals(filters?: aiAgentsApi.ToolApprovalFilters) {
+  const token = useDashboardAuthToken();
+  const baseUrl = useDashboardBaseUrl();
+
+  return useQuery({
+    queryKey: ['tool-approvals', filters],
+    queryFn: () =>
+      aiAgentsApi.toolApprovals.getToolApprovals(token, filters, baseUrl),
+    enabled: !!token,
+    staleTime: 10_000,
+    refetchInterval: 15_000,
+  });
+}
+
+export function usePendingApprovalCount() {
+  const token = useDashboardAuthToken();
+  const baseUrl = useDashboardBaseUrl();
+
+  return useQuery({
+    queryKey: ['tool-approvals', 'pending-count'],
+    queryFn: () =>
+      aiAgentsApi.toolApprovals.getPendingApprovalCount(token, baseUrl),
+    enabled: !!token,
+    staleTime: 5_000,
+    refetchInterval: 10_000,
+  });
+}
+
+export function useApproveToolRequest() {
+  const token = useDashboardAuthToken();
+  const baseUrl = useDashboardBaseUrl();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, note }: { id: string; note?: string }) =>
+      aiAgentsApi.toolApprovals.approveToolRequest(token, id, note, baseUrl),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tool-approvals'] });
+    },
+  });
+}
+
+export function useRejectToolRequest() {
+  const token = useDashboardAuthToken();
+  const baseUrl = useDashboardBaseUrl();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, note }: { id: string; note?: string }) =>
+      aiAgentsApi.toolApprovals.rejectToolRequest(token, id, note, baseUrl),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tool-approvals'] });
+    },
+  });
+}
+
+export function useNotifications(filters?: aiAgentsApi.NotificationFilters) {
+  const token = useDashboardAuthToken();
+  const baseUrl = useDashboardBaseUrl();
+
+  return useQuery({
+    queryKey: ['agent-notifications', filters],
+    queryFn: () =>
+      aiAgentsApi.notifications.getNotifications(token, filters, baseUrl),
+    enabled: !!token,
+    staleTime: 10_000,
+    refetchInterval: 15_000,
+  });
+}
+
+export function useUnreadNotificationCount() {
+  const token = useDashboardAuthToken();
+  const baseUrl = useDashboardBaseUrl();
+
+  return useQuery({
+    queryKey: ['agent-notifications', 'unread-count'],
+    queryFn: () => aiAgentsApi.notifications.getUnreadCount(token, baseUrl),
+    enabled: !!token,
+    staleTime: 5_000,
+    refetchInterval: 10_000,
+  });
+}
+
+export function useMarkNotificationRead() {
+  const token = useDashboardAuthToken();
+  const baseUrl = useDashboardBaseUrl();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) =>
+      aiAgentsApi.notifications.markNotificationRead(token, id, baseUrl),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['agent-notifications'] });
+    },
+  });
+}
+
+export function useMarkAllNotificationsRead() {
+  const token = useDashboardAuthToken();
+  const baseUrl = useDashboardBaseUrl();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () => aiAgentsApi.notifications.markAllRead(token, baseUrl),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['agent-notifications'] });
+    },
+  });
+}
+
+export function useAgentEvents(params?: aiAgentsApi.ListAgentEventsParams) {
+  const token = useDashboardAuthToken();
+  const baseUrl = useDashboardBaseUrl();
+
+  return useQuery({
+    queryKey: ['agent-events', params],
+    queryFn: () => aiAgentsApi.events.listEvents(token, params ?? {}, baseUrl),
+    enabled: !!token,
+    staleTime: 10_000,
+    refetchInterval: 15_000,
+  });
+}
+
+export function useAgentEvent(eventId?: string) {
+  const token = useDashboardAuthToken();
+  const baseUrl = useDashboardBaseUrl();
+
+  return useQuery({
+    queryKey: ['agent-events', eventId],
+    queryFn: () =>
+      aiAgentsApi.events.getEvent(token, eventId as string, baseUrl),
+    enabled: !!token && !!eventId,
+    staleTime: 10_000,
+  });
+}
+
+export function useCreateAgentEvent() {
+  const token = useDashboardAuthToken();
+  const baseUrl = useDashboardBaseUrl();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (payload: aiAgentsApi.CreateAgentEventRequest) =>
+      aiAgentsApi.events.createEvent(token, payload, baseUrl),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['agent-events'] });
+    },
+  });
+}
+
+export function useUpdateAgentEvent() {
+  const token = useDashboardAuthToken();
+  const baseUrl = useDashboardBaseUrl();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      eventId,
+      payload,
+    }: {
+      eventId: string;
+      payload: aiAgentsApi.UpdateAgentEventRequest;
+    }) => aiAgentsApi.events.updateEvent(token, eventId, payload, baseUrl),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['agent-events'] });
+      queryClient.invalidateQueries({
+        queryKey: ['agent-events', variables.eventId],
+      });
+    },
+  });
+}
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Agent Catalog Store (formerly useAgentStore.ts)

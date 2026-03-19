@@ -112,7 +112,23 @@ export { useVercelChat } from './useVercelChat';
 /**
  * Datalayer AI Agents REST API hook.
  */
-export { useAIAgents, type RequestOptions, type RoomType } from './useAgents';
+export {
+  useAIAgents,
+  useToolApprovals,
+  usePendingApprovalCount,
+  useApproveToolRequest,
+  useRejectToolRequest,
+  useNotifications,
+  useUnreadNotificationCount,
+  useMarkNotificationRead,
+  useMarkAllNotificationsRead,
+  useAgentEvents,
+  useAgentEvent,
+  useCreateAgentEvent,
+  useUpdateAgentEvent,
+  type RequestOptions,
+  type RoomType,
+} from './useAgents';
 /**
  * Agent runtimes service hooks for managing agent runtime instances.
  */

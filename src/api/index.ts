@@ -16,10 +16,17 @@
 export * as agents from './agents';
 export * as toolApprovals from './tool-approvals';
 export * as notifications from './notifications';
+export * as events from './events';
 export * as output from './output';
 export * as evals from './evals';
 export * as context from './context';
 export type {
+  AgentEvent,
+  CreateAgentEventRequest,
+  UpdateAgentEventRequest,
+  ListAgentEventsParams,
+  GetAgentEventResponse,
+  ListAgentEventsResponse,
   RunningAgent,
   AgentStatus,
   ToolApproval,

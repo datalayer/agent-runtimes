@@ -12,6 +12,56 @@
  * @module api/types
  */
 
+// ---- Agent Events ----
+
+export interface AgentEvent {
+  id: string;
+  agent_id: string;
+  title: string;
+  kind: string;
+  status: string;
+  payload: Record<string, unknown>;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateAgentEventRequest {
+  agent_id: string;
+  title: string;
+  kind?: string;
+  status?: string;
+  payload?: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
+}
+
+export interface UpdateAgentEventRequest {
+  title?: string;
+  kind?: string;
+  status?: string;
+  payload?: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
+}
+
+export interface ListAgentEventsParams {
+  agent_id?: string;
+  kind?: string;
+  status?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export interface GetAgentEventResponse {
+  success: boolean;
+  event: AgentEvent;
+}
+
+export interface ListAgentEventsResponse {
+  success: boolean;
+  total: number;
+  events: AgentEvent[];
+}
+
 // ---- Running Agents ----
 
 export interface RunningAgent {

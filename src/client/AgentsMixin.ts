@@ -19,10 +19,17 @@
 import * as agents from '../api/agents';
 import * as toolApprovals from '../api/tool-approvals';
 import * as notifications from '../api/notifications';
+import * as events from '../api/events';
 import * as output from '../api/output';
 import * as evals from '../api/evals';
 import * as context from '../api/context';
 import type {
+  AgentEvent,
+  CreateAgentEventRequest,
+  GetAgentEventResponse,
+  ListAgentEventsParams,
+  ListAgentEventsResponse,
+  UpdateAgentEventRequest,
   RunningAgent,
   AgentUsageSummary,
   ConversationCheckpoint,
@@ -200,6 +207,62 @@ export function AgentsMixin<TBase extends Constructor>(Base: TBase) {
       const token = (this as any).getToken();
       const baseUrl = (this as any).getIamRunUrl();
       return notifications.markAllRead(token, undefined, baseUrl);
+    }
+
+    // ========================================================================
+    // Events
+    // ========================================================================
+
+    /**
+     * Create an event for an agent.
+     * @param data - Event payload
+     * @returns Created event
+     */
+    async createEvent(
+      data: CreateAgentEventRequest,
+    ): Promise<{ success: boolean; event: AgentEvent }> {
+      const token = (this as any).getToken();
+      const baseUrl = (this as any).getIamRunUrl();
+      return events.createEvent(token, data, baseUrl);
+    }
+
+    /**
+     * List events with optional filters.
+     * @param params - Optional list filters
+     * @returns Paginated events response
+     */
+    async listEvents(
+      params: ListAgentEventsParams = {},
+    ): Promise<ListAgentEventsResponse> {
+      const token = (this as any).getToken();
+      const baseUrl = (this as any).getIamRunUrl();
+      return events.listEvents(token, params, baseUrl);
+    }
+
+    /**
+     * Get a single event by identifier.
+     * @param eventId - Event identifier
+     * @returns Event response
+     */
+    async getEvent(eventId: string): Promise<GetAgentEventResponse> {
+      const token = (this as any).getToken();
+      const baseUrl = (this as any).getIamRunUrl();
+      return events.getEvent(token, eventId, baseUrl);
+    }
+
+    /**
+     * Update an event.
+     * @param eventId - Event identifier
+     * @param data - Event patch payload
+     * @returns Updated event response
+     */
+    async updateEvent(
+      eventId: string,
+      data: UpdateAgentEventRequest,
+    ): Promise<GetAgentEventResponse> {
+      const token = (this as any).getToken();
+      const baseUrl = (this as any).getIamRunUrl();
+      return events.updateEvent(token, eventId, data, baseUrl);
     }
 
     // ========================================================================
