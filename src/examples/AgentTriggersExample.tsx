@@ -18,6 +18,7 @@
 /// <reference types="vite/client" />
 
 import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   Text,
   Button,
@@ -42,6 +43,8 @@ import {
 } from '@primer/octicons-react';
 import { Box } from '@datalayer/primer-addons';
 import { ThemedProvider } from './stores/themedProvider';
+
+const queryClient = new QueryClient();
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { SignInSimple } from '@datalayer/core/lib/views/iam';
 import { UserBadge } from '@datalayer/core/lib/views/profile';
@@ -824,9 +827,11 @@ const AgentTriggersExample: React.FC = () => {
   }
 
   return (
-    <ThemedProvider>
-      <AgentTriggerInner onLogout={handleLogout} />
-    </ThemedProvider>
+    <QueryClientProvider client={queryClient}>
+      <ThemedProvider>
+        <AgentTriggerInner onLogout={handleLogout} />
+      </ThemedProvider>
+    </QueryClientProvider>
   );
 };
 

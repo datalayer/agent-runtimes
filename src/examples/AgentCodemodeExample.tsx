@@ -29,12 +29,15 @@ import {
   SignOutIcon,
 } from '@primer/octicons-react';
 import { Box } from '@datalayer/primer-addons';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemedProvider } from './stores/themedProvider';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { SignInSimple } from '@datalayer/core/lib/views/iam';
 import { UserBadge } from '@datalayer/core/lib/views/profile';
 import { Chat } from '../chat';
 import { useAgents } from '../hooks/useAgents';
+
+const queryClient = new QueryClient();
 
 // ─── Constants ─────────────────────────────────────────────────────────────
 
@@ -546,9 +549,11 @@ const AgentCodemodeExample: React.FC = () => {
   }
 
   return (
-    <ThemedProvider>
-      <AgentCodemodeInner onLogout={handleLogout} />
-    </ThemedProvider>
+    <QueryClientProvider client={queryClient}>
+      <ThemedProvider>
+        <AgentCodemodeInner onLogout={handleLogout} />
+      </ThemedProvider>
+    </QueryClientProvider>
   );
 };
 
