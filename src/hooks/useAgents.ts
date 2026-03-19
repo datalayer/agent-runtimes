@@ -214,7 +214,8 @@ export interface UseAgentReturn {
   connectToRuntime: (options: {
     podName: string;
     environmentName: string;
-    serviceManager: ServiceManager.IManager;
+    serviceManager?: ServiceManager.IManager;
+    jupyterBaseUrl?: string;
     kernelId?: string;
   }) => void;
   /** Disconnect from the runtime */
@@ -257,6 +258,28 @@ export interface UseAgentReturn {
   isReady: boolean;
   /** Error if any */
   error: string | null;
+
+  // Runtime catalog operations (merged from useAgentRuntimes* hooks)
+  /** All runtimes (running + paused) available for the user */
+  runtimes: AgentRuntimeData[];
+  /** Loading state for runtime list */
+  isRuntimesLoading: boolean;
+  /** Error state for runtime list */
+  isRuntimesError: boolean;
+  /** Error object for runtime list */
+  runtimesError: unknown;
+  /** Refetch runtime list immediately */
+  refetchRuntimes: () => Promise<void>;
+  /** Invalidate runtime list query */
+  refreshRuntimes: () => void;
+  /** Delete a running runtime by pod name */
+  deleteRuntimeByPod: (podName: string) => Promise<unknown>;
+  /** Delete a paused runtime record by pod name */
+  deletePausedRuntimeByPod: (podName: string) => Promise<unknown>;
+  /** Resume a paused runtime by pod name */
+  resumePausedRuntimeByPod: (podName: string) => Promise<unknown>;
+  /** Create a runtime */
+  createRuntime: (data: CreateAgentRuntimeRequest) => Promise<unknown>;
 }
 
 // Need to re-import IRuntimeOptions as a value-level reference for use in the hook
@@ -312,6 +335,14 @@ export function useAgents(options: UseAgentOptions = {}): UseAgentReturn {
   const storeConnectAgent = useAgentStore(state => state.connectAgent);
   const storeCreateAgent = useAgentStore(state => state.createAgent);
   const storeDisconnect = useAgentStore(state => state.disconnect);
+
+  // Runtime catalog hooks (single-hook surface for consumers)
+  const runtimesQuery = useAgentRuntimes();
+  const createRuntimeMutation = useCreateAgentRuntime();
+  const deleteRuntimeMutation = useDeleteAgentRuntime();
+  const deletePausedRuntimeMutation = useDeletePausedAgentRuntime();
+  const resumePausedRuntimeMutation = useResumePausedAgentRuntime();
+  const refreshRuntimes = useRefreshAgentRuntimes();
 
   // Durable-specific local state
   const [durableStatus, setDurableStatus] = useState<AgentStatus>('idle');
@@ -862,6 +893,24 @@ export function useAgents(options: UseAgentOptions = {}): UseAgentReturn {
     // Status
     isReady,
     error,
+
+    // Runtime catalog operations
+    runtimes: runtimesQuery.data || [],
+    isRuntimesLoading: runtimesQuery.isLoading,
+    isRuntimesError: runtimesQuery.isError,
+    runtimesError: runtimesQuery.error,
+    refetchRuntimes: async () => {
+      await runtimesQuery.refetch();
+    },
+    refreshRuntimes,
+    deleteRuntimeByPod: async (podName: string) =>
+      deleteRuntimeMutation.mutateAsync(podName),
+    deletePausedRuntimeByPod: async (podName: string) =>
+      deletePausedRuntimeMutation.mutateAsync(podName),
+    resumePausedRuntimeByPod: async (podName: string) =>
+      resumePausedRuntimeMutation.mutateAsync(podName),
+    createRuntime: async (data: CreateAgentRuntimeRequest) =>
+      createRuntimeMutation.mutateAsync(data),
   };
 }
 

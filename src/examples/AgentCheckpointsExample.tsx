@@ -62,13 +62,7 @@ import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { SignInSimple } from '@datalayer/core/lib/views/iam';
 import { UserBadge } from '@datalayer/core/lib/views/profile';
 import { Chat } from '../chat';
-import {
-  useAgents,
-  AGENT_STATUS_COLORS,
-  useAgentRuntimes,
-  useDeleteAgentRuntime,
-  useDeletePausedAgentRuntime,
-} from '../hooks/useAgents';
+import { useAgents, AGENT_STATUS_COLORS } from '../hooks/useAgents';
 import type { CheckpointRecord } from '../hooks/useAgents';
 
 const queryClient = new QueryClient();
@@ -186,6 +180,10 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
     terminate,
     refreshCheckpoints,
     checkpoints,
+    runtimes: agentRuntimes,
+    refetchRuntimes,
+    deleteRuntimeByPod,
+    deletePausedRuntimeByPod,
   } = useAgents({
     agentSpecId: AGENT_SPEC_ID,
     autoStart: false,
@@ -204,10 +202,6 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
   const [actionError, setActionError] = useState<string | null>(null);
   const [runningAgents, setRunningAgents] = useState<RunningAgent[]>([]);
   const [resumeMode, setResumeMode] = useState<CheckpointMode>('light');
-  const { data: agentRuntimes = [], refetch: refetchAgentRuntimes } =
-    useAgentRuntimes();
-  const deleteRuntimeMutation = useDeleteAgentRuntime();
-  const deletePausedRuntimeMutation = useDeletePausedAgentRuntime();
 
   const displayError = hookError || actionError;
   const podName = runtime?.podName || '(launching…)';
@@ -230,8 +224,8 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
   // ── Actions ──────────────────────────────────────────────────────────────
 
   const refreshAgents = useCallback(async () => {
-    await refetchAgentRuntimes();
-  }, [refetchAgentRuntimes]);
+    await refetchRuntimes();
+  }, [refetchRuntimes]);
 
   const handlePause = useCallback(
     async (mode: CheckpointMode) => {
@@ -327,9 +321,9 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
       setActionError(null);
       try {
         if (agent.status === 'paused') {
-          await deletePausedRuntimeMutation.mutateAsync(agent.podName);
+          await deletePausedRuntimeByPod(agent.podName);
         } else {
-          await deleteRuntimeMutation.mutateAsync(agent.podName);
+          await deleteRuntimeByPod(agent.podName);
         }
         if (runtime?.podName === agent.podName) {
           await terminate();
@@ -342,8 +336,8 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
       }
     },
     [
-      deletePausedRuntimeMutation,
-      deleteRuntimeMutation,
+      deletePausedRuntimeByPod,
+      deleteRuntimeByPod,
       refreshAgents,
       refreshCheckpoints,
       runtime?.podName,

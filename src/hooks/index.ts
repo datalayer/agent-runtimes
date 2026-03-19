@@ -133,14 +133,7 @@ export {
  * Agent runtimes service hooks for managing agent runtime instances.
  */
 export {
-  useAgentRuntimesCache,
-  useAgentRuntimes,
   useAgentRuntimeByPodName,
-  useCreateAgentRuntime,
-  useDeleteAgentRuntime,
-  useDeletePausedAgentRuntime,
-  useResumePausedAgentRuntime,
-  useRefreshAgentRuntimes,
   useCheckpoints,
   useRefreshCheckpoints,
   agentQueryKeys,
