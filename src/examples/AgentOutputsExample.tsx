@@ -9,7 +9,7 @@
  * Demonstrates rich output rendering for agent responses: structured data
  * tables, charts, downloadable artifacts, and multi-format output panels.
  *
- * - Creates a cloud runtime (environment: 'ai-agents-env') via the Datalayer
+ * - Creates a cloud agent runtime (environment: 'ai-agents-env') via the Datalayer
  *   Runtimes API and deploys an agent on its sidecar
  * - Shows an output gallery alongside the chat with tabs for different
  *   output formats (table, JSON, chart, file)
@@ -190,7 +190,7 @@ const AgentOutputsInner: React.FC<{ onLogout: () => void }> = ({
         <Heading as="h3" sx={{ fontSize: 2, flex: 1 }}>
           Agent Outputs — {podName}
         </Heading>
-        {token && <UserBadge token={token} />}
+        {token && <UserBadge token={token} variant="small" />}
         <Button
           size="small"
           variant="invisible"

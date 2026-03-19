@@ -71,7 +71,8 @@ export interface AgentStoreActions {
   connectAgent: (connection: {
     podName: string;
     environmentName: string;
-    serviceManager: ServiceManager.IManager;
+    serviceManager?: ServiceManager.IManager;
+    jupyterBaseUrl?: string;
     kernelId?: string;
   }) => void;
   /** Create an agent on the current runtime */
@@ -282,7 +283,14 @@ export const agentStore = createStore<AgentState>()(
       ...initialRuntimeState,
 
       connectAgent: connection => {
-        const baseUrl = connection.serviceManager.serverSettings.baseUrl;
+        const baseUrl =
+          connection.jupyterBaseUrl ||
+          connection.serviceManager?.serverSettings.baseUrl;
+        if (!baseUrl) {
+          throw new Error(
+            'connectAgent requires either jupyterBaseUrl or serviceManager',
+          );
+        }
         const agentBaseUrl = baseUrl.replace(
           '/jupyter/server/',
           '/agent-runtimes/',
@@ -310,9 +318,7 @@ export const agentStore = createStore<AgentState>()(
 
         try {
           // Import @datalayer/core dynamically to avoid circular dependencies
-          const { createRuntime, makeDatalayerSettings } =
-            await import('@datalayer/core/lib/api');
-          const { ServiceManager } = await import('@jupyterlab/services');
+          const { createRuntime } = await import('@datalayer/core/lib/api');
 
           // Create the runtime using IRuntimeOptions from @datalayer/core
           const runtimePod = await createRuntime({
@@ -326,18 +332,8 @@ export const agentStore = createStore<AgentState>()(
 
           set({ status: 'connecting' });
 
-          // Create service manager for the runtime
-          const serverSettings = makeDatalayerSettings(
-            runtimePod.ingress,
-            runtimePod.token,
-          );
-          const serviceManager = new ServiceManager({ serverSettings });
-
-          // Wait for the service manager to be ready
-          await serviceManager.ready;
-
           // Construct URLs
-          const jupyterBaseUrl = serverSettings.baseUrl;
+          const jupyterBaseUrl = runtimePod.ingress;
           const agentBaseUrl = jupyterBaseUrl.replace(
             '/jupyter/server/',
             '/agent-runtimes/',
@@ -348,7 +344,6 @@ export const agentStore = createStore<AgentState>()(
             environmentName: runtimePod.environment_name,
             jupyterBaseUrl,
             agentBaseUrl,
-            serviceManager,
             status: 'ready',
           };
 

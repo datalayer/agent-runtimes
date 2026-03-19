@@ -9,7 +9,7 @@
  * Demonstrates notification channels for agents: in-app toasts, email digests,
  * Slack webhook integrations, and notification preference management.
  *
- * - Creates a cloud runtime (environment: 'ai-agents-env') via the Datalayer
+ * - Creates a cloud agent runtime (environment: 'ai-agents-env') via the Datalayer
  *   Runtimes API and deploys an agent on its sidecar
  * - Shows a notification center alongside the chat where users can configure
  *   channels and review recent notifications
@@ -301,7 +301,7 @@ const AgentNotificationsInner: React.FC<{ onLogout: () => void }> = ({
             {unreadCount} unread
           </Label>
         )}
-        {token && <UserBadge token={token} />}
+        {token && <UserBadge token={token} variant="small" />}
         <Button
           size="small"
           variant="invisible"

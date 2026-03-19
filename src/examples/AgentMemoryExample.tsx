@@ -7,7 +7,7 @@
  * AgentMemoryExample
  *
  * Demonstrates the Mem0 memory backend for durable agents.
- * Creates a cloud runtime (environment: 'ai-agents-env') via the Datalayer
+ * Creates a cloud agent runtime (environment: 'ai-agents-env') via the Datalayer
  * Runtimes API, then deploys an agent with persistent memory on its sidecar.
  *
  * The left panel shows a standard Chat. The right panel shows the
@@ -218,7 +218,7 @@ const AgentMemoryInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
         <Heading as="h3" sx={{ fontSize: 2, flex: 1 }}>
           Durable Memory — {podName}
         </Heading>
-        {token && <UserBadge token={token} />}
+        {token && <UserBadge token={token} variant="small" />}
         <Button
           size="small"
           variant="invisible"
@@ -450,7 +450,7 @@ const AgentMemoryExample: React.FC = () => {
         <SignInSimple
           onSignIn={handleSignIn}
           onApiKeySignIn={apiKey => handleSignIn(apiKey, 'api-key-user')}
-          title="Durable Memory"
+          title="Memory Agent"
           description="Sign in to use agents with persistent memory."
           leadingIcon={<DatabaseIcon size={24} />}
         />

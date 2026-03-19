@@ -4,13 +4,13 @@
  */
 
 /**
- * AgentCheckpointExample
+ * AgentCheckpointsExample
  *
  * Demonstrates launching a agent in the Datalayer cloud,
  * with pause/resume (checkpoint) and lifecycle controls.
  *
  * Uses the `useAgent` hook which:
- *   1. Creates a cloud runtime via the Datalayer Runtimes API
+ *   1. Creates a cloud agent runtime via the Datalayer Runtimes API
  *      (environment: 'ai-agents-env')
  *   2. Deploys an agent on the runtime's agent-runtimes sidecar
  *   3. Provides pause/resume/terminate lifecycle backed by CRIU
@@ -79,6 +79,11 @@ interface RunningAgent {
 // ─── Defaults ──────────────────────────────────────────────────────────────
 
 const AGENT_SPEC_ID = 'monitor-sales-kpis';
+const DEMO_AGENT_NAME = AGENT_SPEC_ID;
+const LIGHT_CHECKPOINT_MESSAGES = [
+  '[Checkpoint] Captured message history snapshot',
+  '[Checkpoint] Saved conversational context for lightweight resume',
+];
 
 /**
  * Agent spec attributes displayed in the sidebar.
@@ -151,7 +156,7 @@ const SpecRow: React.FC<{
 
 // ─── Inner component (rendered after auth) ─────────────────────────────────
 
-const AgentCheckpointInner: React.FC<{ onLogout: () => void }> = ({
+const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
   onLogout,
 }) => {
   const { token } = useSimpleAuthStore();
@@ -166,7 +171,6 @@ const AgentCheckpointInner: React.FC<{ onLogout: () => void }> = ({
     pause,
     resume,
     terminate,
-    checkpoint,
     refreshCheckpoints,
     checkpoints,
   } = useAgents({
@@ -174,10 +178,10 @@ const AgentCheckpointInner: React.FC<{ onLogout: () => void }> = ({
     autoStart: false,
     agentSpec: AGENT_SPEC,
     agentConfig: {
-      name: 'durable-kpi-agent',
+      name: DEMO_AGENT_NAME,
       transport: 'ag-ui',
       description:
-        'Durable KPI agent — exercises pause/resume and CRIU checkpointing',
+        'Monitor Sales KPI agent — exercises pause/resume checkpointing',
     },
   });
 
@@ -186,17 +190,11 @@ const AgentCheckpointInner: React.FC<{ onLogout: () => void }> = ({
   const [actionLoading, setActionLoading] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [runningAgents, setRunningAgents] = useState<RunningAgent[]>([]);
-  const [pauseMode, setPauseMode] = useState<CheckpointMode>('light');
   const [resumeMode, setResumeMode] = useState<CheckpointMode>('light');
-
-  const lightCheckpointMessages = [
-    '[Checkpoint] Captured message history snapshot',
-    '[Checkpoint] Saved conversational context for lightweight resume',
-  ];
 
   const displayError = hookError || actionError;
   const podName = runtime?.podName || '(launching…)';
-  const agentId = runtime?.agentId || AGENT_SPEC_ID;
+  const agentId = runtime?.agentId || 'default';
   const agentBaseUrl = runtime?.agentBaseUrl || '';
 
   const handleLaunch = useCallback(async () => {
@@ -214,6 +212,42 @@ const AgentCheckpointInner: React.FC<{ onLogout: () => void }> = ({
 
   // ── Actions ──────────────────────────────────────────────────────────────
 
+  // Fetch running agents from the sidecar
+  const refreshAgents = useCallback(async () => {
+    if (!agentBaseUrl) return;
+    try {
+      const res = await fetch(`${agentBaseUrl}/api/v1/agents`);
+      if (!res.ok) return;
+      const data = await res.json();
+      const rawAgents = Array.isArray(data?.agents)
+        ? data.agents
+        : Array.isArray(data)
+          ? data
+          : [];
+      const keyedAgents = new Map<string, RunningAgent>();
+      for (const rawAgent of rawAgents as RunningAgent[]) {
+        const key = rawAgent.id || rawAgent.name;
+        if (!key) {
+          continue;
+        }
+        keyedAgents.set(key, rawAgent);
+      }
+      const uniqueAgents = Array.from(keyedAgents.values());
+      const filteredAgents: RunningAgent[] = uniqueAgents.filter(agent => {
+        const candidateId = (agent.id ?? '').trim();
+        const candidateName = (agent.name ?? '').trim();
+        return (
+          candidateId === agentId ||
+          candidateName === DEMO_AGENT_NAME ||
+          candidateId === DEMO_AGENT_NAME
+        );
+      });
+      setRunningAgents(filteredAgents);
+    } catch {
+      // silently ignore – agents list is informational
+    }
+  }, [agentBaseUrl, agentId]);
+
   const handlePause = useCallback(
     async (mode: CheckpointMode) => {
       setActionLoading(true);
@@ -221,15 +255,18 @@ const AgentCheckpointInner: React.FC<{ onLogout: () => void }> = ({
       try {
         await pause(
           mode,
-          mode === 'light' ? lightCheckpointMessages : undefined,
+          mode === 'light' ? LIGHT_CHECKPOINT_MESSAGES : undefined,
         );
+        await Promise.all([refreshCheckpoints(), refreshAgents()]);
+        await terminate();
+        setRunningAgents([]);
       } catch (e) {
-        setActionError(e instanceof Error ? e.message : 'Pause failed');
+        setActionError(e instanceof Error ? e.message : 'Checkpoint failed');
       } finally {
         setActionLoading(false);
       }
     },
-    [pause],
+    [pause, refreshCheckpoints, refreshAgents, terminate],
   );
 
   const handleResume = useCallback(
@@ -238,46 +275,15 @@ const AgentCheckpointInner: React.FC<{ onLogout: () => void }> = ({
       setActionError(null);
       try {
         await resume(mode);
+        await Promise.all([refreshCheckpoints(), refreshAgents()]);
       } catch (e) {
         setActionError(e instanceof Error ? e.message : 'Resume failed');
       } finally {
         setActionLoading(false);
       }
     },
-    [resume],
+    [resume, refreshCheckpoints, refreshAgents],
   );
-
-  const handleCheckpoint = useCallback(
-    async (mode: CheckpointMode) => {
-      setActionLoading(true);
-      setActionError(null);
-      try {
-        await checkpoint(
-          undefined,
-          mode,
-          mode === 'light' ? lightCheckpointMessages : undefined,
-        );
-      } catch (e) {
-        setActionError(e instanceof Error ? e.message : 'Checkpoint failed');
-      } finally {
-        setActionLoading(false);
-      }
-    },
-    [checkpoint],
-  );
-
-  // Fetch running agents from the sidecar
-  const refreshAgents = useCallback(async () => {
-    if (!agentBaseUrl) return;
-    try {
-      const res = await fetch(`${agentBaseUrl}/api/v1/agents`);
-      if (!res.ok) return;
-      const data = await res.json();
-      setRunningAgents(data.agents ?? []);
-    } catch {
-      // silently ignore – agents list is informational
-    }
-  }, [agentBaseUrl]);
 
   // Refresh checkpoints and agents when runtime becomes ready
   useEffect(() => {
@@ -318,7 +324,7 @@ const AgentCheckpointInner: React.FC<{ onLogout: () => void }> = ({
           Checkpoint Agent
         </Heading>
         <Text sx={{ color: 'fg.muted', textAlign: 'center', maxWidth: 400 }}>
-          Launch a cloud runtime with pause/resume and CRIU checkpointing. The
+          Launch a cloud agent runtime with pause/resume checkpointing. The
           agent will be deployed from the <strong>{AGENT_SPEC_ID}</strong> spec.
         </Text>
         {displayError && (
@@ -334,7 +340,7 @@ const AgentCheckpointInner: React.FC<{ onLogout: () => void }> = ({
         >
           Launch Agent
         </Button>
-        {token && <UserBadge token={token} />}
+        {token && <UserBadge token={token} variant="small" />}
         <Button
           size="small"
           variant="invisible"
@@ -441,23 +447,26 @@ const AgentCheckpointInner: React.FC<{ onLogout: () => void }> = ({
             <Button
               size="small"
               leadingVisual={SquareIcon}
-              onClick={() => handlePause(pauseMode)}
+              onClick={() => handlePause('light')}
               disabled={
                 actionLoading ||
                 runtimeStatus === 'paused' ||
                 runtimeStatus === 'resumed'
               }
             >
-              {pauseMode === 'light' ? 'Pause (light)' : 'Pause (criu)'}
+              Checkpoint (Light) + Terminate
             </Button>
             <Button
               size="small"
-              onClick={() =>
-                setPauseMode(prev => (prev === 'light' ? 'criu' : 'light'))
+              leadingVisual={SquareIcon}
+              onClick={() => handlePause('criu')}
+              disabled={
+                actionLoading ||
+                runtimeStatus === 'paused' ||
+                runtimeStatus === 'resumed'
               }
-              disabled={actionLoading}
             >
-              Pause mode: {pauseMode.toUpperCase()}
+              Checkpoint (CRIU) + Terminate
             </Button>
             {runtimeStatus === 'paused' ? (
               <>
@@ -472,26 +481,22 @@ const AgentCheckpointInner: React.FC<{ onLogout: () => void }> = ({
                 </Button>
                 <Button
                   size="small"
-                  onClick={() =>
-                    setResumeMode(prev => (prev === 'light' ? 'criu' : 'light'))
-                  }
+                  variant={resumeMode === 'light' ? 'primary' : 'invisible'}
+                  onClick={() => setResumeMode('light')}
                   disabled={actionLoading}
                 >
-                  Resume mode: {resumeMode.toUpperCase()}
+                  Light
+                </Button>
+                <Button
+                  size="small"
+                  variant={resumeMode === 'criu' ? 'primary' : 'invisible'}
+                  onClick={() => setResumeMode('criu')}
+                  disabled={actionLoading}
+                >
+                  CRIU checkpoint
                 </Button>
               </>
-            ) : (
-              <Button
-                size="small"
-                leadingVisual={HistoryIcon}
-                onClick={() => handleCheckpoint(pauseMode)}
-                disabled={actionLoading}
-              >
-                {pauseMode === 'light'
-                  ? 'Checkpoint (light)'
-                  : 'Checkpoint (criu)'}
-              </Button>
-            )}
+            ) : null}
             <Button
               size="small"
               variant="danger"
@@ -504,7 +509,7 @@ const AgentCheckpointInner: React.FC<{ onLogout: () => void }> = ({
           </>
         )}
         {actionLoading && <Spinner size="small" />}
-        {token && <UserBadge token={token} />}
+        {token && <UserBadge token={token} variant="small" />}
         <Button
           size="small"
           variant="invisible"
@@ -529,6 +534,8 @@ const AgentCheckpointInner: React.FC<{ onLogout: () => void }> = ({
         {sidebarOpen && (
           <Box
             sx={{
+              display: 'flex',
+              flexDirection: 'column',
               width: SIDEBAR_WIDTH,
               flexShrink: 0,
               borderRight: '1px solid',
@@ -540,6 +547,7 @@ const AgentCheckpointInner: React.FC<{ onLogout: () => void }> = ({
             {/* Spec Attributes */}
             <Box
               sx={{
+                order: 3,
                 p: 3,
                 borderBottom: '1px solid',
                 borderColor: 'border.default',
@@ -638,6 +646,7 @@ const AgentCheckpointInner: React.FC<{ onLogout: () => void }> = ({
             {/* Running Agents */}
             <Box
               sx={{
+                order: 2,
                 p: 3,
                 borderBottom: '1px solid',
                 borderColor: 'border.default',
@@ -678,8 +687,19 @@ const AgentCheckpointInner: React.FC<{ onLogout: () => void }> = ({
                         mb: 1,
                       }}
                     >
-                      <Label variant="success" sx={{ fontSize: '10px' }}>
-                        {a.status ?? 'running'}
+                      <Label
+                        variant={
+                          STATUS_COLORS[
+                            (a.id === agentId || a.name === DEMO_AGENT_NAME
+                              ? runtimeStatus
+                              : a.status) ?? 'running'
+                          ] ?? 'secondary'
+                        }
+                        sx={{ fontSize: '10px' }}
+                      >
+                        {(a.id === agentId || a.name === DEMO_AGENT_NAME
+                          ? runtimeStatus
+                          : a.status) ?? 'running'}
                       </Label>
                       <Text
                         sx={{ fontWeight: 'semibold', fontSize: 0, flex: 1 }}
@@ -730,7 +750,14 @@ const AgentCheckpointInner: React.FC<{ onLogout: () => void }> = ({
             </Box>
 
             {/* Checkpoints List */}
-            <Box sx={{ p: 3 }}>
+            <Box
+              sx={{
+                order: 1,
+                p: 3,
+                borderBottom: '1px solid',
+                borderColor: 'border.default',
+              }}
+            >
               <Box
                 sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}
               >
@@ -750,8 +777,8 @@ const AgentCheckpointInner: React.FC<{ onLogout: () => void }> = ({
                 <Text
                   sx={{ fontSize: 0, color: 'fg.muted', fontStyle: 'italic' }}
                 >
-                  No checkpoints yet. Click &quot;Checkpoint&quot; to create
-                  one.
+                  No checkpoints yet. Use Pause (Light) or Pause (CRIU) to
+                  create one.
                 </Text>
               ) : (
                 checkpoints.map((ckpt: CheckpointRecord) => (
@@ -851,9 +878,9 @@ const AgentCheckpointInner: React.FC<{ onLogout: () => void }> = ({
               transport="ag-ui"
               baseUrl={agentBaseUrl}
               agentId={agentId}
-              title="Durable KPI Agent"
+              title="Monitor Sales KPI Agent"
               placeholder="Ask about sales KPIs…"
-              description="Durable agent with pause/resume and CRIU checkpointing"
+              description="Monitor Sales KPI agent with pause/resume checkpointing"
               showHeader={false}
               showTokenUsage={true}
               autoFocus
@@ -911,7 +938,7 @@ const syncTokenToIamStore = (token: string) => {
 
 // ─── Main component with auth gate ─────────────────────────────────────────
 
-const AgentCheckpointExample: React.FC = () => {
+const AgentCheckpointsExample: React.FC = () => {
   const { token, setAuth, clearAuth } = useSimpleAuthStore();
   const hasSynced = useRef(false);
 
@@ -958,9 +985,9 @@ const AgentCheckpointExample: React.FC = () => {
 
   return (
     <ThemedProvider>
-      <AgentCheckpointInner onLogout={handleLogout} />
+      <AgentCheckpointsInner onLogout={handleLogout} />
     </ThemedProvider>
   );
 };
 
-export default AgentCheckpointExample;
+export default AgentCheckpointsExample;

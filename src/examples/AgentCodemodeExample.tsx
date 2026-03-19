@@ -9,7 +9,7 @@
  * Demonstrates Code Mode: tools that return structured outputs with schemas
  * rendered inline as executable code blocks, diffs, or file previews.
  *
- * - Creates a cloud runtime (environment: 'ai-agents-env') via the Datalayer
+ * - Creates a cloud agent runtime (environment: 'ai-agents-env') via the Datalayer
  *   Runtimes API and deploys an agent on its sidecar
  * - Shows a code panel alongside the chat displaying tool outputs with
  *   syntax highlighting, diff views, and the ability to accept/reject changes
@@ -229,7 +229,7 @@ const AgentCodemodeInner: React.FC<{ onLogout: () => void }> = ({
             {pendingCount} pending
           </Label>
         )}
-        {token && <UserBadge token={token} />}
+        {token && <UserBadge token={token} variant="small" />}
         <Button
           size="small"
           variant="invisible"

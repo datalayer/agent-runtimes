@@ -9,7 +9,7 @@
  * Demonstrates runtime and agent monitoring with a live metrics panel,
  * health status, and recent alert history.
  *
- * - Creates a cloud runtime (environment: 'ai-agents-env') via the Datalayer
+ * - Creates a cloud agent runtime (environment: 'ai-agents-env') via the Datalayer
  *   Runtimes API and deploys an agent on its sidecar
  * - Shows a monitoring panel alongside the chat with key operational signals
  */
@@ -375,7 +375,7 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
         <Label variant={statusVariant(latest.status)} size="small">
           {latest.status}
         </Label>
-        {token && <UserBadge token={token} />}
+        {token && <UserBadge token={token} variant="small" />}
         <Button
           size="small"
           variant="invisible"

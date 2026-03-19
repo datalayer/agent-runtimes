@@ -8,7 +8,7 @@
  *
  * Demonstrates cost budget guardrails and tool approval flow for durable agents.
  *
- * - Creates a cloud runtime (environment: 'ai-agents-env') via the Datalayer
+ * - Creates a cloud agent runtime (environment: 'ai-agents-env') via the Datalayer
  *   Runtimes API and deploys an agent on its sidecar
  * - Shows a real-time cost tracker alongside the chat
  * - Surfaces tool approval requests: when the agent calls a tool marked
@@ -288,7 +288,7 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
 
         {/* Token counter */}
         <Label variant="secondary">{totalTokens.toLocaleString()} tokens</Label>
-        {token && <UserBadge token={token} />}
+        {token && <UserBadge token={token} variant="small" />}
         <Button
           size="small"
           variant="invisible"

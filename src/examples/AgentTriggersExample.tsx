@@ -9,7 +9,7 @@
  * Demonstrates multiple trigger types for agents: cron schedules,
  * webhook URLs, event-based listeners, and manual invocations.
  *
- * - Creates a cloud runtime (environment: 'ai-agents-env') via the Datalayer
+ * - Creates a cloud agent runtime (environment: 'ai-agents-env') via the Datalayer
  *   Runtimes API and deploys an agent on its sidecar
  * - Shows a tabbed control panel to configure each trigger type
  * - Lists recent trigger history and next scheduled run
@@ -346,7 +346,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
         <Heading as="h3" sx={{ fontSize: 2, flex: 1 }}>
           Triggers — {podName}
         </Heading>
-        {token && <UserBadge token={token} />}
+        {token && <UserBadge token={token} variant="small" />}
         <Button
           size="small"
           variant="invisible"

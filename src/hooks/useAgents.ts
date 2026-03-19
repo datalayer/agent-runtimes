@@ -98,7 +98,7 @@ export interface AgentConnection {
   /** Base URL for the agent-runtimes server */
   agentBaseUrl: string;
   /** JupyterLab ServiceManager for the runtime */
-  serviceManager: ServiceManager.IManager;
+  serviceManager?: ServiceManager.IManager;
   /** Runtime status */
   status: AgentStatus;
   /** Kernel ID if connected */
@@ -352,7 +352,7 @@ export function useAgents(options: UseAgentOptions = {}): UseAgentReturn {
         setDurableStatus('launching');
         setDurableError(null);
         try {
-          const safeName = `durable-${agentSpecId}`
+          const safeName = `${agentSpecId}`
             .replace(/\//g, '-')
             .replace(/[^a-z0-9-]/g, '-')
             .replace(/-+/g, '-')
@@ -423,7 +423,7 @@ export function useAgents(options: UseAgentOptions = {}): UseAgentReturn {
         };
 
         if (isDurable && agentSpecId) {
-          return await storeCreateAgent({ name: agentSpecId, ...mergedConfig });
+          return await storeCreateAgent(mergedConfig);
         }
         return await storeCreateAgent(mergedConfig);
       } catch (err) {
@@ -502,13 +502,62 @@ export function useAgents(options: UseAgentOptions = {}): UseAgentReturn {
       try {
         const { token, runtimesRunUrl } = await getAuthHeaders();
         if (runtime) {
-          const { resumeRuntime } =
+          const { resumeRuntime, listRuntimes } =
             await import('@datalayer/core/lib/api/runtimes/runtimes');
           await resumeRuntime(token, runtime.podName, runtimesRunUrl, {
             agent_spec_id: agentSpecId,
             checkpoint_mode: mode,
             ...(checkpointId ? { checkpoint_id: checkpointId } : {}),
           });
+
+          // Resume (especially light restore) may move the session to a
+          // different pool pod. Refresh and rebind runtime connection so
+          // downstream calls target the restored runtime URL.
+          try {
+            const runtimesResponse = await listRuntimes(token, runtimesRunUrl);
+            const runtimes = runtimesResponse.runtimes || [];
+            const aiAgentRuntimes = runtimes.filter(rt => {
+              if (rt.environment_name !== 'ai-agents-env') {
+                return false;
+              }
+              if (!agentSpecId) {
+                return true;
+              }
+              const runtimeAgentSpecId = (rt as { agent_spec_id?: string })
+                .agent_spec_id;
+              return runtimeAgentSpecId === agentSpecId;
+            });
+            const latestRuntime = aiAgentRuntimes.slice().sort((a, b) => {
+              const aTs = Number(a.started_at || 0);
+              const bTs = Number(b.started_at || 0);
+              return bTs - aTs;
+            })[0];
+            if (latestRuntime?.pod_name && latestRuntime?.ingress) {
+              const nextAgentBaseUrl = latestRuntime.ingress.replace(
+                '/jupyter/server/',
+                '/agent-runtimes/',
+              );
+              // Temporary debug log for validating light-restore routing.
+              console.info('[useAgents.resume] Rebinding restored runtime', {
+                previousPodName: runtime.podName,
+                restoredPodName: latestRuntime.pod_name,
+                agentSpecId,
+                restoredAgentBaseUrl: nextAgentBaseUrl,
+                expectedConfigureDefaultUrl: `${nextAgentBaseUrl}/api/v1/configure/agents/default/full-context`,
+              });
+              storeConnectAgent({
+                podName: latestRuntime.pod_name,
+                environmentName: latestRuntime.environment_name,
+                jupyterBaseUrl: latestRuntime.ingress,
+              });
+            }
+          } catch (refreshError) {
+            console.warn(
+              'Failed to refresh runtime binding after resume:',
+              refreshError,
+            );
+          }
+
           setDurableStatus('resumed');
         } else {
           await launchRuntime();
@@ -519,7 +568,7 @@ export function useAgents(options: UseAgentOptions = {}): UseAgentReturn {
         setDurableStatus('error');
       }
     },
-    [runtime, getAuthHeaders, agentSpecId, launchRuntime],
+    [runtime, getAuthHeaders, agentSpecId, launchRuntime, storeConnectAgent],
   );
 
   // ─── Refresh Checkpoints ───────────────────────────────────────────

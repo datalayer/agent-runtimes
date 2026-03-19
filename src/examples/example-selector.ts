@@ -33,7 +33,7 @@ export const EXAMPLES: Record<
   CopilotKitLexicalExample: () => import('./CopilotKitLexicalExample'),
   CopilotKitNotebookExample: () => import('./CopilotKitNotebookExample'),
   DatalayerNotebookExample: () => import('./DatalayerNotebookExample'),
-  AgentCheckpointExample: () => import('./AgentCheckpointExample'),
+  AgentCheckpointsExample: () => import('./AgentCheckpointsExample'),
   AgentCodemodeExample: () => import('./AgentCodemodeExample'),
   AgentEvalsExample: () => import('./AgentEvalsExample'),
   AgentGuardrailsExample: () => import('./AgentGuardrailsExample'),

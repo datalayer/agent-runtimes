@@ -20,7 +20,7 @@ export { default as CopilotKitLexicalExample } from './CopilotKitLexicalExample'
 export { default as CopilotKitNotebookExample } from './CopilotKitNotebookExample';
 export { default as CustomExample } from './ChatCustomExample';
 export { default as DatalayerNotebookExample } from './DatalayerNotebookExample';
-export { default as AgentCheckpointExample } from './AgentCheckpointExample';
+export { default as AgentCheckpointsExample } from './AgentCheckpointsExample';
 export { default as AgentCodemodeExample } from './AgentCodemodeExample';
 export { default as AgentEvalsExample } from './AgentEvalsExample';
 export { default as AgentGuardrailsExample } from './AgentGuardrailsExample';

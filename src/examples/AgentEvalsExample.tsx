@@ -9,7 +9,7 @@
  * Demonstrates agent evaluation workflows: scoring agent responses, tracking
  * quality metrics, and reviewing evaluation history over time.
  *
- * - Creates a cloud runtime (environment: 'ai-agents-env') via the Datalayer
+ * - Creates a cloud agent runtime (environment: 'ai-agents-env') via the Datalayer
  *   Runtimes API and deploys an agent on its sidecar
  * - Shows an evaluation panel alongside the chat with quality scores,
  *   pass/fail status, and the ability to run eval suites
@@ -217,7 +217,7 @@ const AgentEvalsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
         <Heading as="h3" sx={{ fontSize: 2, flex: 1 }}>
           Evaluation — {podName}
         </Heading>
-        {token && <UserBadge token={token} />}
+        {token && <UserBadge token={token} variant="small" />}
         <Button
           size="small"
           variant="invisible"
