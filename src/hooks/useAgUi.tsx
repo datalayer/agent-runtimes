@@ -53,7 +53,7 @@ export interface UseAGUIOptions {
  *
  * Example:
  * ```tsx
- * const { messages, sendMessage, isConnected } = useAGUI({
+ * const { messages, sendMessage, isConnected } = useAgUi({
  *   baseUrl: 'http://localhost:8765',
  *   agentId: 'demo-agent',
  * });
@@ -61,7 +61,7 @@ export interface UseAGUIOptions {
  * await sendMessage('Hello!');
  * ```
  */
-export function useAGUI(options: UseAGUIOptions = {}) {
+export function useAgUi(options: UseAGUIOptions = {}) {
   const {
     baseUrl = 'http://localhost:8765',
     agentId = 'demo-agent',

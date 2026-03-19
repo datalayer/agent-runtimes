@@ -322,6 +322,7 @@ export function useAgents(options: UseAgentOptions = {}): UseAgentReturn {
   >([]);
   const hasAutoStarted = useRef(false);
   const hasCreatedAgentRef = useRef(false);
+  const lastRuntimePodRef = useRef<string | null>(null);
   const creatingRef = useRef(false);
   const agentConfigRef = useRef(agentConfig);
   agentConfigRef.current = agentConfig;
@@ -533,18 +534,6 @@ export function useAgents(options: UseAgentOptions = {}): UseAgentReturn {
               return bTs - aTs;
             })[0];
             if (latestRuntime?.pod_name && latestRuntime?.ingress) {
-              const nextAgentBaseUrl = latestRuntime.ingress.replace(
-                '/jupyter/server/',
-                '/agent-runtimes/',
-              );
-              // Temporary debug log for validating light-restore routing.
-              console.info('[useAgents.resume] Rebinding restored runtime', {
-                previousPodName: runtime.podName,
-                restoredPodName: latestRuntime.pod_name,
-                agentSpecId,
-                restoredAgentBaseUrl: nextAgentBaseUrl,
-                expectedConfigureDefaultUrl: `${nextAgentBaseUrl}/api/v1/configure/agents/default/full-context`,
-              });
               storeConnectAgent({
                 podName: latestRuntime.pod_name,
                 environmentName: latestRuntime.environment_name,
@@ -558,6 +547,8 @@ export function useAgents(options: UseAgentOptions = {}): UseAgentReturn {
             );
           }
 
+          // Force agent re-creation on the (possibly new) restored pod.
+          hasCreatedAgentRef.current = false;
           setDurableStatus('resumed');
         } else {
           await launchRuntime();
@@ -684,6 +675,122 @@ export function useAgents(options: UseAgentOptions = {}): UseAgentReturn {
     }
   }, [isDurable, autoCreateAgent, runtime, baseStatus, storeCreateAgent]);
 
+  // ─── Auto-create agent when runtime is ready (durable mode) ─────────
+
+  useEffect(() => {
+    if (
+      isDurable &&
+      autoCreateAgent &&
+      runtime &&
+      (durableStatus === 'ready' || durableStatus === 'resumed') &&
+      !runtime.isReady &&
+      !hasCreatedAgentRef.current
+    ) {
+      hasCreatedAgentRef.current = true;
+      createAgent(agentConfigRef.current).catch(err => {
+        console.error('[useAgents] Failed to auto-create durable agent:', err);
+        const message = err instanceof Error ? err.message : String(err);
+        setDurableError(message);
+        setDurableStatus('error');
+        hasCreatedAgentRef.current = false;
+      });
+    }
+  }, [isDurable, autoCreateAgent, runtime, durableStatus, createAgent]);
+
+  // If runtime pod changes (e.g. after restore), force re-creation on new pod.
+  useEffect(() => {
+    const currentPod = runtime?.podName || null;
+    if (!currentPod) {
+      lastRuntimePodRef.current = null;
+      return;
+    }
+    if (lastRuntimePodRef.current && lastRuntimePodRef.current !== currentPod) {
+      hasCreatedAgentRef.current = false;
+    }
+    lastRuntimePodRef.current = currentPod;
+  }, [runtime?.podName]);
+
+  // ─── Durable bootstrap on initial load ───────────────────────────────
+
+  useEffect(() => {
+    if (!isDurable || runtime || autoStart || durableStatus !== 'idle') {
+      return;
+    }
+
+    let cancelled = false;
+    const bootstrap = async () => {
+      try {
+        const { token, runtimesRunUrl } = await getAuthHeaders();
+        if (!token) {
+          return;
+        }
+        const { listRuntimes } =
+          await import('@datalayer/core/lib/api/runtimes/runtimes');
+        const runtimesResponse = await listRuntimes(token, runtimesRunUrl);
+        const runtimes = runtimesResponse.runtimes || [];
+        const aiAgentRuntimes = runtimes.filter(rt => {
+          if (rt.environment_name !== 'ai-agents-env') {
+            return false;
+          }
+          if (!agentSpecId) {
+            return true;
+          }
+          const runtimeAgentSpecId = (rt as { agent_spec_id?: string })
+            .agent_spec_id;
+          return runtimeAgentSpecId === agentSpecId;
+        });
+
+        const latestRuntime = aiAgentRuntimes.slice().sort((a, b) => {
+          const aTs = Number(a.started_at || 0);
+          const bTs = Number(b.started_at || 0);
+          return bTs - aTs;
+        })[0];
+
+        if (cancelled || !latestRuntime?.pod_name || !latestRuntime?.ingress) {
+          return;
+        }
+
+        storeConnectAgent({
+          podName: latestRuntime.pod_name,
+          environmentName: latestRuntime.environment_name,
+          jupyterBaseUrl: latestRuntime.ingress,
+        });
+
+        // Ensure auto-create fires for this reconnected runtime.
+        hasCreatedAgentRef.current = false;
+
+        const resolvedStatus = mapRuntimeToStatus(
+          latestRuntime as { status?: string; phase?: string },
+        );
+        if (resolvedStatus === 'paused') {
+          setDurableStatus('paused');
+        } else if (
+          resolvedStatus === 'resuming' ||
+          resolvedStatus === 'resumed'
+        ) {
+          setDurableStatus('resumed');
+        } else {
+          setDurableStatus('ready');
+        }
+      } catch (err) {
+        console.warn('[useAgents] Failed to bootstrap durable runtime:', err);
+      }
+    };
+
+    bootstrap();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    isDurable,
+    runtime,
+    autoStart,
+    durableStatus,
+    getAuthHeaders,
+    agentSpecId,
+    storeConnectAgent,
+  ]);
+
   // Reset agent creation tracking on disconnect
   useEffect(() => {
     if (baseStatus === 'disconnected' || baseStatus === 'idle') {
@@ -701,9 +808,9 @@ export function useAgents(options: UseAgentOptions = {}): UseAgentReturn {
       durableStatus === 'idle'
     ) {
       hasAutoStarted.current = true;
-      launchRuntime().then(() => createAgent());
+      launchRuntime();
     }
-  }, [isDurable, autoStart, durableStatus, launchRuntime, createAgent]);
+  }, [isDurable, autoStart, durableStatus, launchRuntime]);
 
   // ─── Sync store errors ─────────────────────────────────────────────
 

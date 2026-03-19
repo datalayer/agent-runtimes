@@ -20,7 +20,7 @@
  * These hooks provide direct protocol access without the chat component system.
  * Use these for custom implementations or when you need fine-grained control.
  *
- * - `useAGUI` - AG-UI protocol (Pydantic AI's native protocol)
+ * - `useAgUi` - AG-UI protocol (Pydantic AI's native protocol)
  * - `useA2A` - A2A protocol (Agent-to-Agent with JSON-RPC)
  * - `useAcp` - ACP protocol (Agent Client Protocol via WebSocket)
  * - `useVercelChat` - Vercel AI SDK chat protocol
@@ -85,7 +85,7 @@ export { useSandboxStatusQuery } from './useSandboxStatusQuery';
  * AG-UI protocol hook - Pydantic AI's native protocol.
  * Use for direct AG-UI communication without the chat component system.
  */
-export { useAGUI } from './useAGUI';
+export { useAgUi } from './useAgUi';
 
 /**
  * A2A protocol hook - Agent-to-Agent with JSON-RPC 2.0.

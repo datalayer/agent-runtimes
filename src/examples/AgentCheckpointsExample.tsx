@@ -23,6 +23,7 @@
 /// <reference types="vite/client" />
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   Text,
   Button,
@@ -55,13 +56,22 @@ import {
   AgentIcon,
 } from '@primer/octicons-react';
 import { Box } from '@datalayer/primer-addons';
+import { coreStore } from '@datalayer/core';
 import { ThemedProvider } from './stores/themedProvider';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { SignInSimple } from '@datalayer/core/lib/views/iam';
 import { UserBadge } from '@datalayer/core/lib/views/profile';
 import { Chat } from '../chat';
-import { useAgents, AGENT_STATUS_COLORS } from '../hooks/useAgents';
+import {
+  useAgents,
+  AGENT_STATUS_COLORS,
+  useAgentRuntimes,
+  useDeleteAgentRuntime,
+  useDeletePausedAgentRuntime,
+} from '../hooks/useAgents';
 import type { CheckpointRecord } from '../hooks/useAgents';
+
+const queryClient = new QueryClient();
 
 type CheckpointMode = 'criu' | 'light';
 
@@ -69,11 +79,14 @@ type CheckpointMode = 'criu' | 'light';
 
 interface RunningAgent {
   id: string;
+  podName: string;
   name?: string;
   description?: string;
   status?: string;
   protocol?: string;
   model?: string;
+  environmentName?: string;
+  jupyterBaseUrl?: string;
 }
 
 // ─── Defaults ──────────────────────────────────────────────────────────────
@@ -167,7 +180,7 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
     isReady,
     error: hookError,
     launchRuntime,
-    createAgent,
+    connectToRuntime,
     pause,
     resume,
     terminate,
@@ -191,6 +204,10 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
   const [actionError, setActionError] = useState<string | null>(null);
   const [runningAgents, setRunningAgents] = useState<RunningAgent[]>([]);
   const [resumeMode, setResumeMode] = useState<CheckpointMode>('light');
+  const { data: agentRuntimes = [], refetch: refetchAgentRuntimes } =
+    useAgentRuntimes();
+  const deleteRuntimeMutation = useDeleteAgentRuntime();
+  const deletePausedRuntimeMutation = useDeletePausedAgentRuntime();
 
   const displayError = hookError || actionError;
   const podName = runtime?.podName || '(launching…)';
@@ -202,51 +219,19 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
     setActionError(null);
     try {
       await launchRuntime();
-      await createAgent();
+      // Auto-create effect will fire once durableStatus='ready' and runtime is set.
     } catch (e) {
       setActionError(e instanceof Error ? e.message : 'Launch failed');
     } finally {
       setIsStarting(false);
     }
-  }, [launchRuntime, createAgent]);
+  }, [launchRuntime]);
 
   // ── Actions ──────────────────────────────────────────────────────────────
 
-  // Fetch running agents from the sidecar
   const refreshAgents = useCallback(async () => {
-    if (!agentBaseUrl) return;
-    try {
-      const res = await fetch(`${agentBaseUrl}/api/v1/agents`);
-      if (!res.ok) return;
-      const data = await res.json();
-      const rawAgents = Array.isArray(data?.agents)
-        ? data.agents
-        : Array.isArray(data)
-          ? data
-          : [];
-      const keyedAgents = new Map<string, RunningAgent>();
-      for (const rawAgent of rawAgents as RunningAgent[]) {
-        const key = rawAgent.id || rawAgent.name;
-        if (!key) {
-          continue;
-        }
-        keyedAgents.set(key, rawAgent);
-      }
-      const uniqueAgents = Array.from(keyedAgents.values());
-      const filteredAgents: RunningAgent[] = uniqueAgents.filter(agent => {
-        const candidateId = (agent.id ?? '').trim();
-        const candidateName = (agent.name ?? '').trim();
-        return (
-          candidateId === agentId ||
-          candidateName === DEMO_AGENT_NAME ||
-          candidateId === DEMO_AGENT_NAME
-        );
-      });
-      setRunningAgents(filteredAgents);
-    } catch {
-      // silently ignore – agents list is informational
-    }
-  }, [agentBaseUrl, agentId]);
+    await refetchAgentRuntimes();
+  }, [refetchAgentRuntimes]);
 
   const handlePause = useCallback(
     async (mode: CheckpointMode) => {
@@ -270,11 +255,11 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
   );
 
   const handleResume = useCallback(
-    async (mode: CheckpointMode) => {
+    async (mode: CheckpointMode, checkpointId?: string) => {
       setActionLoading(true);
       setActionError(null);
       try {
-        await resume(mode);
+        await resume(mode, checkpointId);
         await Promise.all([refreshCheckpoints(), refreshAgents()]);
       } catch (e) {
         setActionError(e instanceof Error ? e.message : 'Resume failed');
@@ -285,13 +270,44 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
     [resume, refreshCheckpoints, refreshAgents],
   );
 
-  // Refresh checkpoints and agents when runtime becomes ready
+  // Refresh checkpoints and runtimes on initial load and runtime changes.
   useEffect(() => {
-    if (runtimeStatus === 'ready' && runtime) {
+    if (runtime) {
       refreshCheckpoints();
       refreshAgents();
     }
   }, [runtimeStatus, runtime, refreshCheckpoints, refreshAgents]);
+
+  useEffect(() => {
+    const mappedAgents: RunningAgent[] = (agentRuntimes || []).map(rt => ({
+      id: rt.id,
+      podName: rt.pod_name,
+      name: rt.name,
+      description: rt.environment_title || rt.environment_name,
+      status: rt.status,
+      protocol: 'ag-ui',
+      environmentName: rt.environment_name,
+      jupyterBaseUrl: rt.url,
+    }));
+    setRunningAgents(mappedAgents);
+  }, [agentRuntimes]);
+
+  // Auto-bind to matching runtime when idle so actions target a real runtime.
+  useEffect(() => {
+    if (runtime || runtimeStatus !== 'idle' || runningAgents.length === 0) {
+      return;
+    }
+    const candidate =
+      runningAgents.find(a => a.name === DEMO_AGENT_NAME) || runningAgents[0];
+    if (!candidate?.jupyterBaseUrl || !candidate.environmentName) {
+      return;
+    }
+    connectToRuntime({
+      podName: candidate.podName,
+      environmentName: candidate.environmentName,
+      jupyterBaseUrl: candidate.jupyterBaseUrl,
+    });
+  }, [runtime, runtimeStatus, runningAgents, connectToRuntime]);
 
   const handleTerminate = useCallback(async () => {
     setActionLoading(true);
@@ -305,82 +321,46 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
     }
   }, [terminate]);
 
-  // ── Idle — show launch page ──────────────────────────────────────────────
+  const handleTerminateRuntime = useCallback(
+    async (agent: RunningAgent) => {
+      setActionLoading(true);
+      setActionError(null);
+      try {
+        if (agent.status === 'paused') {
+          await deletePausedRuntimeMutation.mutateAsync(agent.podName);
+        } else {
+          await deleteRuntimeMutation.mutateAsync(agent.podName);
+        }
+        if (runtime?.podName === agent.podName) {
+          await terminate();
+        }
+        await Promise.all([refreshAgents(), refreshCheckpoints()]);
+      } catch (e) {
+        setActionError(e instanceof Error ? e.message : 'Terminate failed');
+      } finally {
+        setActionLoading(false);
+      }
+    },
+    [
+      deletePausedRuntimeMutation,
+      deleteRuntimeMutation,
+      refreshAgents,
+      refreshCheckpoints,
+      runtime?.podName,
+      terminate,
+    ],
+  );
 
-  if (runtimeStatus === 'idle' && !isStarting) {
-    return (
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: 'calc(100vh - 60px)',
-          gap: 3,
-        }}
-      >
-        <AgentIcon size={48} />
-        <Heading as="h2" sx={{ fontSize: 3 }}>
-          Checkpoint Agent
-        </Heading>
-        <Text sx={{ color: 'fg.muted', textAlign: 'center', maxWidth: 400 }}>
-          Launch a cloud agent runtime with pause/resume checkpointing. The
-          agent will be deployed from the <strong>{AGENT_SPEC_ID}</strong> spec.
-        </Text>
-        {displayError && (
-          <Flash variant="danger" sx={{ maxWidth: 400 }}>
-            {displayError}
-          </Flash>
-        )}
-        <Button
-          variant="primary"
-          size="large"
-          leadingVisual={PlayIcon}
-          onClick={handleLaunch}
-        >
-          Launch Agent
-        </Button>
-        {token && <UserBadge token={token} variant="small" />}
-        <Button
-          size="small"
-          variant="invisible"
-          onClick={onLogout}
-          leadingVisual={SignOutIcon}
-          sx={{ color: 'fg.muted', mt: 2 }}
-        >
-          Sign out
-        </Button>
-      </Box>
-    );
-  }
+  const pausedAgents = runningAgents.filter(a => a.status === 'paused');
+  const activeAgents = runningAgents.filter(a => a.status !== 'paused');
 
-  // ── Launching ────────────────────────────────────────────────────────────
-
-  if (
+  const showNoAgentRunningView =
+    (runtimeStatus === 'idle' || runtimeStatus === 'disconnected') &&
+    !isStarting;
+  const showLaunchingView =
     runtimeStatus === 'launching' ||
-    isStarting ||
-    (runtimeStatus === 'ready' && !isReady)
-  ) {
-    return (
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: 'calc(100vh - 60px)',
-          gap: 3,
-        }}
-      >
-        <Spinner size="large" />
-        <Text sx={{ color: 'fg.muted' }}>
-          {runtimeStatus === 'launching'
-            ? `Launching runtime for ${AGENT_SPEC_ID}…`
-            : 'Creating agent on runtime…'}
-        </Text>
-      </Box>
-    );
-  }
+    runtimeStatus === 'connecting' ||
+    isStarting;
 
   // ── Error ────────────────────────────────────────────────────────────────
 
@@ -657,17 +637,17 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
               >
                 <PeopleIcon size={14} />
                 <Text sx={{ fontWeight: 'semibold', fontSize: 1 }}>
-                  Running Agents ({runningAgents.length})
+                  Running Agents ({activeAgents.length})
                 </Text>
               </Box>
-              {runningAgents.length === 0 ? (
+              {activeAgents.length === 0 ? (
                 <Text
                   sx={{ fontSize: 0, color: 'fg.muted', fontStyle: 'italic' }}
                 >
-                  No agents running on this runtime.
+                  No running agents.
                 </Text>
               ) : (
-                runningAgents.map((a: RunningAgent) => (
+                activeAgents.map((a: RunningAgent) => (
                   <Box
                     key={a.id}
                     sx={{
@@ -737,7 +717,7 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
                         size="small"
                         variant="danger"
                         leadingVisual={XCircleIcon}
-                        onClick={handleTerminate}
+                        onClick={() => handleTerminateRuntime(a)}
                         disabled={actionLoading}
                         sx={{ fontSize: 0 }}
                       >
@@ -763,7 +743,7 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
               >
                 <HistoryIcon size={14} />
                 <Text sx={{ fontWeight: 'semibold', fontSize: 1, flex: 1 }}>
-                  Checkpoints ({checkpoints.length})
+                  Checkpoints ({checkpoints.length + pausedAgents.length})
                 </Text>
                 <IconButton
                   aria-label="Refresh checkpoints"
@@ -773,7 +753,67 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
                   onClick={refreshCheckpoints}
                 />
               </Box>
-              {checkpoints.length === 0 ? (
+              {/* Paused agents shown as checkpoint entries */}
+              {pausedAgents.map((a: RunningAgent) => (
+                <Box
+                  key={`paused-${a.id}`}
+                  sx={{
+                    p: 2,
+                    mb: 1,
+                    bg: 'canvas.default',
+                    borderRadius: 2,
+                    border: '1px solid',
+                    borderColor: 'attention.muted',
+                  }}
+                >
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1,
+                      mb: 1,
+                    }}
+                  >
+                    <SquareIcon size={12} />
+                    <Text sx={{ fontWeight: 'semibold', fontSize: 0, flex: 1 }}>
+                      {a.name ?? a.id}
+                    </Text>
+                    <Label variant="severe" sx={{ fontSize: '9px' }}>
+                      paused
+                    </Label>
+                  </Box>
+                  {a.description && (
+                    <Text
+                      sx={{
+                        fontSize: 0,
+                        color: 'fg.muted',
+                        display: 'block',
+                        mb: 1,
+                      }}
+                    >
+                      {a.description}
+                    </Text>
+                  )}
+                  <Box
+                    sx={{
+                      mt: 2,
+                      display: 'flex',
+                      justifyContent: 'flex-end',
+                    }}
+                  >
+                    <Button
+                      size="small"
+                      variant="primary"
+                      leadingVisual={PlayIcon}
+                      onClick={() => handleResume(resumeMode)}
+                      disabled={actionLoading}
+                    >
+                      Resume
+                    </Button>
+                  </Box>
+                </Box>
+              ))}
+              {checkpoints.length === 0 && pausedAgents.length === 0 ? (
                 <Text
                   sx={{ fontSize: 0, color: 'fg.muted', fontStyle: 'italic' }}
                 >
@@ -864,6 +904,25 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
                         {ckpt.agent_spec_id}
                       </Label>
                     )}
+                    <Box
+                      sx={{
+                        mt: 2,
+                        display: 'flex',
+                        justifyContent: 'flex-end',
+                      }}
+                    >
+                      <Button
+                        size="small"
+                        variant="primary"
+                        leadingVisual={PlayIcon}
+                        onClick={() =>
+                          handleResume(ckpt.checkpoint_mode || 'light', ckpt.id)
+                        }
+                        disabled={actionLoading || ckpt.status === 'failed'}
+                      >
+                        Resume
+                      </Button>
+                    </Box>
                   </Box>
                 ))
               )}
@@ -873,7 +932,62 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
 
         {/* ── Chat area ───────────────────────────────────────────────── */}
         <Box sx={{ flex: 1, minHeight: 0 }}>
-          {isReady && runtimeStatus !== 'paused' ? (
+          {showLaunchingView ? (
+            <Box
+              sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                height: '100%',
+                gap: 3,
+              }}
+            >
+              <Spinner size="large" />
+              <Text sx={{ color: 'fg.muted' }}>
+                {runtimeStatus === 'launching'
+                  ? `Launching runtime for ${AGENT_SPEC_ID}…`
+                  : 'Creating agent on runtime…'}
+              </Text>
+            </Box>
+          ) : showNoAgentRunningView ? (
+            <Box
+              sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                height: '100%',
+                gap: 3,
+                px: 3,
+              }}
+            >
+              <AgentIcon size={48} />
+              <Heading as="h2" sx={{ fontSize: 3 }}>
+                Checkpoint Agent
+              </Heading>
+              <Text
+                sx={{ color: 'fg.muted', textAlign: 'center', maxWidth: 560 }}
+              >
+                Launch a cloud agent runtime with pause/resume checkpointing.
+                The agent will be deployed from the{' '}
+                <strong>{AGENT_SPEC_ID}</strong> spec.
+              </Text>
+              {displayError && (
+                <Flash variant="danger" sx={{ maxWidth: 560, width: '100%' }}>
+                  {displayError}
+                </Flash>
+              )}
+              <Button
+                variant="primary"
+                size="large"
+                leadingVisual={PlayIcon}
+                onClick={handleLaunch}
+              >
+                Launch Agent
+              </Button>
+            </Box>
+          ) : isReady && runtimeStatus !== 'paused' ? (
             <Chat
               transport="ag-ui"
               baseUrl={agentBaseUrl}
@@ -903,37 +1017,53 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
             <Box
               sx={{
                 display: 'flex',
+                flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
                 height: '100%',
                 color: 'fg.muted',
+                gap: 3,
               }}
             >
-              <Text sx={{ fontSize: 2 }}>
-                {runtimeStatus === 'paused'
-                  ? 'Agent is paused — click Resume to continue the conversation.'
-                  : 'Connecting to agent…'}
-              </Text>
+              {runtimeStatus === 'paused' ? (
+                <Text sx={{ fontSize: 2 }}>
+                  Agent is paused — click Resume to continue the conversation.
+                </Text>
+              ) : runtimeStatus === 'idle' ||
+                runtimeStatus === 'disconnected' ? (
+                <Text sx={{ fontSize: 2 }}>
+                  No active runtime connection. Launch an agent or select one in
+                  the sidebar.
+                </Text>
+              ) : runtimeStatus === 'error' ? (
+                <>
+                  <AlertIcon size={32} />
+                  <Text sx={{ fontSize: 2, color: 'danger.fg' }}>
+                    Agent failed to connect
+                  </Text>
+                  {displayError && (
+                    <Text sx={{ fontSize: 1, color: 'fg.muted' }}>
+                      {displayError}
+                    </Text>
+                  )}
+                  <Button variant="primary" onClick={handleLaunch}>
+                    Retry Launch
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Spinner size="medium" />
+                  <Text sx={{ fontSize: 2 }}>
+                    Connecting to agent… (status: {runtimeStatus})
+                  </Text>
+                </>
+              )}
             </Box>
           )}
         </Box>
       </Box>
     </Box>
   );
-};
-
-// ─── Sync token to core IAM store ──────────────────────────────────────────
-
-/**
- * Sync a token into the core `iamStore` so that stateful API helpers
- * (e.g. `createRuntime`) can authenticate requests.  `useSimpleAuthStore`
- * is a lightweight localStorage-backed store used by `SignInSimple`, but
- * the stateful runtimes API reads credentials from `iamStore`.
- */
-const syncTokenToIamStore = (token: string) => {
-  import('@datalayer/core/lib/state').then(({ iamStore }) => {
-    iamStore.setState({ token });
-  });
 };
 
 // ─── Main component with auth gate ─────────────────────────────────────────
@@ -946,7 +1076,9 @@ const AgentCheckpointsExample: React.FC = () => {
   useEffect(() => {
     if (token && !hasSynced.current) {
       hasSynced.current = true;
-      syncTokenToIamStore(token);
+      import('@datalayer/core/lib/state').then(({ iamStore }) => {
+        iamStore.getState().refreshUserByToken(token);
+      });
     }
   }, [token]);
 
@@ -955,7 +1087,9 @@ const AgentCheckpointsExample: React.FC = () => {
     (newToken: string, handle: string) => {
       setAuth(newToken, handle);
       hasSynced.current = true;
-      syncTokenToIamStore(newToken);
+      import('@datalayer/core/lib/state').then(({ iamStore }) => {
+        iamStore.getState().refreshUserByToken(newToken);
+      });
     },
     [setAuth],
   );
@@ -965,9 +1099,17 @@ const AgentCheckpointsExample: React.FC = () => {
     clearAuth();
     hasSynced.current = false;
     import('@datalayer/core/lib/state').then(({ iamStore }) => {
-      iamStore.setState({ token: undefined });
+      iamStore.getState().logout();
     });
   }, [clearAuth]);
+
+  const loginUrl = useRef(
+    `${
+      coreStore.getState().configuration?.iamRunUrl ||
+      coreStore.getState().configuration?.runUrl ||
+      'https://prod1.datalayer.run'
+    }/api/iam/v1/login`,
+  ).current;
 
   if (!token) {
     return (
@@ -975,6 +1117,7 @@ const AgentCheckpointsExample: React.FC = () => {
         <SignInSimple
           onSignIn={handleSignIn}
           onApiKeySignIn={apiKey => handleSignIn(apiKey, 'api-key-user')}
+          loginUrl={loginUrl}
           title="Agent Checkpointing"
           description="Sign in to launch and checkpoint durable agents."
           leadingIcon={<WorkflowIcon size={24} />}
@@ -985,7 +1128,9 @@ const AgentCheckpointsExample: React.FC = () => {
 
   return (
     <ThemedProvider>
-      <AgentCheckpointsInner onLogout={handleLogout} />
+      <QueryClientProvider client={queryClient}>
+        <AgentCheckpointsInner onLogout={handleLogout} />
+      </QueryClientProvider>
     </ThemedProvider>
   );
 };
