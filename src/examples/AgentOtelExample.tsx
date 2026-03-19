@@ -4,7 +4,7 @@
  */
 
 /**
- * AgentRuntimeOtelExample
+ * AgentOtelExample
  *
  * Combines the Datalayer OTEL observability dashboard with an AI agent sidebar.
  * The main view shows the same Live / SQL / System content as the standalone
@@ -12,11 +12,11 @@
  * is a ChatSidebar whose agent is selected from the agent-runtimes library spec
  * list and launched on demand.
  *
- * The OTEL backend is configured via the `VITE_OTEL_BASE_URL` environment
- * variable (defaults to '' which routes through the Vite dev-server proxy).
- * The agent-runtimes backend is configured via `VITE_BASE_URL` (also defaults
- * to '' to route through the Vite proxy — prod1.datalayer.run in examples
- * mode, localhost:8765 in plain dev mode).
+ * The OTEL backend is configured via `configuration.otelRunUrl` when available
+ * (falling back to `configuration.runUrl`, then `VITE_OTEL_BASE_URL`, then
+ * `VITE_DATALAYER_RUN_URL`, then https://prod1.datalayer.run).
+ * Agent routes use `VITE_BASE_URL` when provided, otherwise the same resolved
+ * direct run URL to avoid proxy-relative calls.
  *
  * For Python-side observability, wire in `agent_runtimes/otel.py`:
  *   from agent_runtimes.otel import setup_otel
@@ -44,6 +44,7 @@ import {
   useSimpleAuthStore,
 } from '@datalayer/core/lib/views/otel';
 import { SignInSimple } from '@datalayer/core/lib/views/iam';
+import { useCoreStore } from '@datalayer/core';
 import type { Transport } from '../chat';
 import type { AgentLibrary } from '../config';
 import { ChatSidebar, type ProtocolConfig } from '../chat';
@@ -51,16 +52,15 @@ import { DEFAULT_MODEL } from '../specs';
 
 // ─── Environment / defaults ────────────────────────────────────────────────
 
-/** Base URL of the OTEL backend (generator + query APIs). */
-const OTEL_BASE_URL: string = import.meta.env.VITE_OTEL_BASE_URL ?? '';
+const OTEL_BASE_URL_ENV: string = import.meta.env.VITE_OTEL_BASE_URL ?? '';
+const DATALAYER_RUN_URL_ENV: string =
+  import.meta.env.VITE_DATALAYER_RUN_URL ?? '';
 
 /**
  * Base URL of the agent-runtimes server.
- * Defaults to '' so that requests use relative paths and are forwarded by the
- * Vite dev-server proxy (which routes /api → prod1.datalayer.run in examples
- * mode, or /api → localhost:8765 in plain dev mode).
+ * Defaults to proxy-relative calls when VITE_BASE_URL is unset.
  */
-const AGENT_BASE_URL: string = import.meta.env.VITE_BASE_URL || '';
+const AGENT_BASE_URL_ENV: string = import.meta.env.VITE_BASE_URL || '';
 
 const DEFAULT_AGENT_TRANSPORT: Transport = 'ag-ui';
 const DEFAULT_AGENT_LIBRARY: AgentLibrary = 'pydantic-ai';
@@ -112,10 +112,7 @@ const AgentSelectorPanel: React.FC<AgentSelectorPanelProps> = ({
         if (data.length > 0) setSelectedSpecId(data[0].id);
       } catch (e) {
         setError('Could not load agent specs from the backend.');
-        console.warn(
-          '[AgentRuntimeOtelExample] Failed to load library specs:',
-          e,
-        );
+        console.warn('[AgentOtelExample] Failed to load library specs:', e);
       }
     };
     void load();
@@ -136,7 +133,7 @@ const AgentSelectorPanel: React.FC<AgentSelectorPanelProps> = ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: selectedSpecId,
-          description: `Launched from AgentRuntimeOtelExample`,
+          description: `Launched from AgentOtelExample`,
           agent_library: DEFAULT_AGENT_LIBRARY,
           transport,
           model: DEFAULT_MODEL,
@@ -268,10 +265,20 @@ const TAB_SX = (active: boolean) => ({
   '&:hover': { color: 'fg.default' },
 });
 
-const AgentRuntimeOtelExampleInner: React.FC<{
+const AgentOtelExampleInner: React.FC<{
   token: string;
   onSignOut: () => void;
 }> = ({ token, onSignOut }) => {
+  const { configuration } = useCoreStore();
+  const resolvedRunUrl =
+    configuration?.otelRunUrl ||
+    configuration?.runUrl ||
+    OTEL_BASE_URL_ENV ||
+    DATALAYER_RUN_URL_ENV ||
+    'https://prod1.datalayer.run';
+  const otelBaseUrl = resolvedRunUrl;
+  const agentBaseUrl = AGENT_BASE_URL_ENV;
+
   // ── OTEL view state ─────────────────────────────────────────────
   const [view, setView] = useState<OtelView>('dashboard');
   const signalSetterRef = useRef<
@@ -309,15 +316,15 @@ const AgentRuntimeOtelExampleInner: React.FC<{
   const handleAgentDisconnected = useCallback(async () => {
     if (connectedAgentId) {
       try {
-        await fetch(`${AGENT_BASE_URL}/api/v1/agents/${connectedAgentId}`, {
+        await fetch(`${agentBaseUrl}/api/v1/agents/${connectedAgentId}`, {
           method: 'DELETE',
         });
       } catch (e) {
-        console.warn('[AgentRuntimeOtelExample] Failed to delete agent:', e);
+        console.warn('[AgentOtelExample] Failed to delete agent:', e);
       }
     }
     setConnectedAgentId(null);
-  }, [connectedAgentId]);
+  }, [connectedAgentId, agentBaseUrl]);
 
   // Build AG-UI protocol config from connected agent
   const protocolConfig = useMemo((): ProtocolConfig | undefined => {
@@ -325,24 +332,24 @@ const AgentRuntimeOtelExampleInner: React.FC<{
     if (connectedAgentTransport === 'ag-ui') {
       return {
         type: 'ag-ui',
-        endpoint: `${AGENT_BASE_URL}/api/v1/examples/${connectedAgentId}/`,
+        endpoint: `${agentBaseUrl}/api/v1/examples/${connectedAgentId}/`,
         agentId: connectedAgentId,
       };
     }
     if (connectedAgentTransport === 'a2a') {
       return {
         type: 'a2a',
-        endpoint: `${AGENT_BASE_URL}/api/v1/a2a/${connectedAgentId}`,
+        endpoint: `${agentBaseUrl}/api/v1/a2a/${connectedAgentId}`,
         agentId: connectedAgentId,
       };
     }
     // Fallback – try ag-ui
     return {
       type: 'ag-ui',
-      endpoint: `${AGENT_BASE_URL}/api/v1/examples/${connectedAgentId}/`,
+      endpoint: `${agentBaseUrl}/api/v1/examples/${connectedAgentId}/`,
       agentId: connectedAgentId,
     };
-  }, [connectedAgentId, connectedAgentTransport]);
+  }, [connectedAgentId, connectedAgentTransport, agentBaseUrl]);
 
   return (
     <Box
@@ -357,7 +364,7 @@ const AgentRuntimeOtelExampleInner: React.FC<{
     >
       {/* ── Header ── */}
       <OtelHeader
-        baseUrl={OTEL_BASE_URL}
+        baseUrl={otelBaseUrl}
         token={token}
         onNavigate={handleNavigate}
         onSignOut={onSignOut}
@@ -365,9 +372,7 @@ const AgentRuntimeOtelExampleInner: React.FC<{
         trailing={
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <TelescopeIcon size={16} />
-            <Text sx={{ fontSize: 1, color: 'fg.muted' }}>
-              {OTEL_BASE_URL || 'local'}
-            </Text>
+            <Text sx={{ fontSize: 1, color: 'fg.muted' }}>{otelBaseUrl}</Text>
           </Box>
         }
       />
@@ -423,8 +428,8 @@ const AgentRuntimeOtelExampleInner: React.FC<{
           >
             {view === 'dashboard' ? (
               <DashboardView
-                baseUrl={OTEL_BASE_URL}
-                wsBaseUrl={OTEL_BASE_URL}
+                baseUrl={otelBaseUrl}
+                wsBaseUrl={otelBaseUrl}
                 token={token}
                 autoRefreshMs={5000}
                 defaultSignal="traces"
@@ -432,9 +437,9 @@ const AgentRuntimeOtelExampleInner: React.FC<{
                 onSignalRef={handleSignalRef}
               />
             ) : view === 'sql' ? (
-              <SqlView baseUrl={OTEL_BASE_URL} token={token} />
+              <SqlView baseUrl={otelBaseUrl} token={token} />
             ) : (
-              <SystemView baseUrl={OTEL_BASE_URL} token={token} />
+              <SystemView baseUrl={otelBaseUrl} token={token} />
             )}
           </Box>
         </Box>
@@ -481,7 +486,7 @@ const AgentRuntimeOtelExampleInner: React.FC<{
         >
           {/* Agent selector rendered above the chat area */}
           <AgentSelectorPanel
-            baseUrl={AGENT_BASE_URL}
+            baseUrl={agentBaseUrl}
             onConnected={handleAgentConnected}
             onDisconnected={handleAgentDisconnected}
             isConnected={!!connectedAgentId}
@@ -494,9 +499,9 @@ const AgentRuntimeOtelExampleInner: React.FC<{
 };
 
 /**
- * AgentRuntimeOtelExample – themed root with auth gate.
+ * AgentOtelExample – themed root with auth gate.
  */
-const AgentRuntimeOtelExample: React.FC = () => {
+const AgentOtelExample: React.FC = () => {
   const token = useSimpleAuthStore(s => s.token);
   const setAuth = useSimpleAuthStore(s => s.setAuth);
   const clearAuth = useSimpleAuthStore(s => s.clearAuth);
@@ -512,10 +517,10 @@ const AgentRuntimeOtelExample: React.FC = () => {
           leadingIcon={<TelescopeIcon size={24} />}
         />
       ) : (
-        <AgentRuntimeOtelExampleInner token={token} onSignOut={clearAuth} />
+        <AgentOtelExampleInner token={token} onSignOut={clearAuth} />
       )}
     </ThemedProvider>
   );
 };
 
-export default AgentRuntimeOtelExample;
+export default AgentOtelExample;

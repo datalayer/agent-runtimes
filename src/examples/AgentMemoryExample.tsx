@@ -44,7 +44,7 @@ import { useAgents } from '../hooks/useAgents';
 // ─── Constants ─────────────────────────────────────────────────────────────
 
 const AGENT_NAME = 'memory-demo-agent';
-const AGENT_SPEC_ID = 'mocks/monitor-sales-kpis'; // uses mem0 memory
+const AGENT_SPEC_ID = 'monitor-sales-kpis'; // uses mem0 memory
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 

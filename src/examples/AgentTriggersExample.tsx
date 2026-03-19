@@ -4,7 +4,7 @@
  */
 
 /**
- * AgentTriggerExample
+ * AgentTriggersExample
  *
  * Demonstrates multiple trigger types for agents: cron schedules,
  * webhook URLs, event-based listeners, and manual invocations.
@@ -51,7 +51,7 @@ import { useAgents } from '../hooks/useAgents';
 // ─── Constants ─────────────────────────────────────────────────────────────
 
 const AGENT_NAME = 'trigger-demo-agent';
-const AGENT_SPEC_ID = 'mocks/monitor-sales-kpis';
+const AGENT_SPEC_ID = 'monitor-sales-kpis';
 const DEFAULT_CRON = '0 8 * * *'; // daily at 08:00 UTC
 
 // ─── Types ─────────────────────────────────────────────────────────────────
@@ -781,7 +781,7 @@ const syncTokenToIamStore = (token: string) => {
 
 // ─── Main component with auth gate ─────────────────────────────────────────
 
-const AgentTriggerExample: React.FC = () => {
+const AgentTriggersExample: React.FC = () => {
   const { token, setAuth, clearAuth } = useSimpleAuthStore();
   const hasSynced = useRef(false);
 
@@ -830,4 +830,4 @@ const AgentTriggerExample: React.FC = () => {
   );
 };
 
-export default AgentTriggerExample;
+export default AgentTriggersExample;

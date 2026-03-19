@@ -39,7 +39,7 @@ import { useAgents } from '../hooks/useAgents';
 // ─── Constants ─────────────────────────────────────────────────────────────
 
 const AGENT_NAME = 'codemode-demo-agent';
-const AGENT_SPEC_ID = 'mocks/monitor-sales-kpis';
+const AGENT_SPEC_ID = 'monitor-sales-kpis';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 

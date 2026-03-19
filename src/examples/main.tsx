@@ -37,6 +37,12 @@ import { ExampleWrapper } from './components/ExampleWrapper';
 
 import nbformatExample from './stores/notebooks/NotebookExample1.ipynb.json';
 
+declare global {
+  interface Window {
+    __agentRuntimesExamplesRoot?: ReturnType<typeof createRoot>;
+  }
+}
+
 // Load configurations from DOM
 const loadConfigurations = () => {
   // Load Datalayer configuration
@@ -584,20 +590,24 @@ const ExampleAppThemed: React.FC<{
 // Mount the app - check route to determine which app to render
 const root = document.getElementById('root');
 if (root) {
+  const appRoot =
+    window.__agentRuntimesExamplesRoot ??
+    (window.__agentRuntimesExamplesRoot = createRoot(root));
+
   if (isOAuthCallback()) {
     // Handle OAuth callback - render OAuthCallback component
     console.log('Rendering OAuthCallback (popup flow)');
-    createRoot(root).render(
+    appRoot.render(
       <JupyterReactTheme>
         <OAuthCallback autoClose={true} autoCloseDelay={1000} />
       </JupyterReactTheme>,
     );
   } else if (isNotebookOnlyRoute()) {
     console.log('Rendering NotebookOnlyApp');
-    createRoot(root).render(<NotebookOnlyApp />);
+    appRoot.render(<NotebookOnlyApp />);
   } else {
     console.log('Rendering ExampleApp');
-    createRoot(root).render(<ExampleApp />);
+    appRoot.render(<ExampleApp />);
   }
 } else {
   console.error('Root element not found');

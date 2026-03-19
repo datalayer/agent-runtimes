@@ -6,8 +6,8 @@
 /**
  * AgentCheckpointExample
  *
- * Demonstrates launching a durable agent in the Datalayer cloud,
- * with pause/resume (CRIU checkpoint) and lifecycle controls.
+ * Demonstrates launching a agent in the Datalayer cloud,
+ * with pause/resume (checkpoint) and lifecycle controls.
  *
  * Uses the `useAgent` hook which:
  *   1. Creates a cloud runtime via the Datalayer Runtimes API
@@ -52,6 +52,7 @@ import {
   SidebarCollapseIcon,
   SidebarExpandIcon,
   SyncIcon,
+  AgentIcon,
 } from '@primer/octicons-react';
 import { Box } from '@datalayer/primer-addons';
 import { ThemedProvider } from './stores/themedProvider';
@@ -77,7 +78,7 @@ interface RunningAgent {
 
 // ─── Defaults ──────────────────────────────────────────────────────────────
 
-const AGENT_SPEC_ID = 'mocks/monitor-sales-kpis';
+const AGENT_SPEC_ID = 'monitor-sales-kpis';
 
 /**
  * Agent spec attributes displayed in the sidebar.
@@ -312,9 +313,9 @@ const AgentCheckpointInner: React.FC<{ onLogout: () => void }> = ({
           gap: 3,
         }}
       >
-        <WorkflowIcon size={48} />
+        <AgentIcon size={48} />
         <Heading as="h2" sx={{ fontSize: 3 }}>
-          Durable Agent
+          Checkpoint Agent
         </Heading>
         <Text sx={{ color: 'fg.muted', textAlign: 'center', maxWidth: 400 }}>
           Launch a cloud runtime with pause/resume and CRIU checkpointing. The
@@ -331,7 +332,7 @@ const AgentCheckpointInner: React.FC<{ onLogout: () => void }> = ({
           leadingVisual={PlayIcon}
           onClick={handleLaunch}
         >
-          Launch Durable Agent
+          Launch Agent
         </Button>
         {token && <UserBadge token={token} />}
         <Button
@@ -429,7 +430,7 @@ const AgentCheckpointInner: React.FC<{ onLogout: () => void }> = ({
           aria-label={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
         />
         <Heading as="h3" sx={{ fontSize: 2, flex: 1 }}>
-          Durable Agent — {podName}
+          Agent — {podName}
         </Heading>
         <Label variant={STATUS_COLORS[runtimeStatus]}>{runtimeStatus}</Label>
         {(runtimeStatus === 'ready' ||

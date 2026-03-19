@@ -4,7 +4,7 @@
  */
 
 /**
- * AgentEvalExample
+ * AgentEvalsExample
  *
  * Demonstrates agent evaluation workflows: scoring agent responses, tracking
  * quality metrics, and reviewing evaluation history over time.
@@ -46,7 +46,7 @@ import { useAgents } from '../hooks/useAgents';
 // ─── Constants ─────────────────────────────────────────────────────────────
 
 const AGENT_NAME = 'eval-demo-agent';
-const AGENT_SPEC_ID = 'mocks/monitor-sales-kpis';
+const AGENT_SPEC_ID = 'monitor-sales-kpis';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -61,7 +61,7 @@ interface EvalRun {
 
 // ─── Inner component (rendered after auth) ─────────────────────────────────
 
-const AgentEvalInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
+const AgentEvalsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
   const { token } = useSimpleAuthStore();
 
   const {
@@ -397,7 +397,7 @@ const syncTokenToIamStore = (token: string) => {
 
 // ─── Main component with auth gate ─────────────────────────────────────────
 
-const AgentEvalExample: React.FC = () => {
+const AgentEvalsExample: React.FC = () => {
   const { token, setAuth, clearAuth } = useSimpleAuthStore();
   const hasSynced = useRef(false);
 
@@ -441,9 +441,9 @@ const AgentEvalExample: React.FC = () => {
 
   return (
     <ThemedProvider>
-      <AgentEvalInner onLogout={handleLogout} />
+      <AgentEvalsInner onLogout={handleLogout} />
     </ThemedProvider>
   );
 };
 
-export default AgentEvalExample;
+export default AgentEvalsExample;

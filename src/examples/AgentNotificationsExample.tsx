@@ -4,7 +4,7 @@
  */
 
 /**
- * AgentNotificationExample
+ * AgentNotificationsExample
  *
  * Demonstrates notification channels for agents: in-app toasts, email digests,
  * Slack webhook integrations, and notification preference management.
@@ -47,7 +47,7 @@ import { useAgents } from '../hooks/useAgents';
 // ─── Constants ─────────────────────────────────────────────────────────────
 
 const AGENT_NAME = 'notification-demo-agent';
-const AGENT_SPEC_ID = 'mocks/monitor-sales-kpis';
+const AGENT_SPEC_ID = 'monitor-sales-kpis';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -70,7 +70,7 @@ interface ChannelConfig {
 
 // ─── Inner component (rendered after auth) ─────────────────────────────────
 
-const AgentNotificationInner: React.FC<{ onLogout: () => void }> = ({
+const AgentNotificationsInner: React.FC<{ onLogout: () => void }> = ({
   onLogout,
 }) => {
   const { token } = useSimpleAuthStore();
@@ -506,7 +506,7 @@ const syncTokenToIamStore = (token: string) => {
 
 // ─── Main component with auth gate ─────────────────────────────────────────
 
-const AgentNotificationExample: React.FC = () => {
+const AgentNotificationsExample: React.FC = () => {
   const { token, setAuth, clearAuth } = useSimpleAuthStore();
   const hasSynced = useRef(false);
 
@@ -550,9 +550,9 @@ const AgentNotificationExample: React.FC = () => {
 
   return (
     <ThemedProvider>
-      <AgentNotificationInner onLogout={handleLogout} />
+      <AgentNotificationsInner onLogout={handleLogout} />
     </ThemedProvider>
   );
 };
 
-export default AgentNotificationExample;
+export default AgentNotificationsExample;

@@ -22,19 +22,20 @@ export { default as CustomExample } from './ChatCustomExample';
 export { default as DatalayerNotebookExample } from './DatalayerNotebookExample';
 export { default as AgentCheckpointExample } from './AgentCheckpointExample';
 export { default as AgentCodemodeExample } from './AgentCodemodeExample';
-export { default as AgentEvalExample } from './AgentEvalExample';
+export { default as AgentEvalsExample } from './AgentEvalsExample';
 export { default as AgentGuardrailsExample } from './AgentGuardrailsExample';
 export { default as AgentMemoryExample } from './AgentMemoryExample';
-export { default as AgentNotificationExample } from './AgentNotificationExample';
-export { default as AgentOutputExample } from './AgentOutputExample';
-export { default as AgentTriggerExample } from './AgentTriggerExample';
+export { default as AgentOtelExample } from './AgentOtelExample';
+export { default as AgentMonitoringExample } from './AgentMonitoringExample';
+export { default as AgentNotificationsExample } from './AgentNotificationsExample';
+export { default as AgentOutputsExample } from './AgentOutputsExample';
+export { default as AgentTriggersExample } from './AgentTriggersExample';
 export { default as Lexical2Example } from './Lexical2Example';
 export { default as LexicalExample } from './LexicalExample';
 export { default as LexicalSidebarExample } from './LexicalSidebarExample';
 export { default as NotebookExample } from './NotebookExample';
 export { default as NotebookSidebarExample } from './NotebookSidebarExample';
 export { default as NotebookSimpleExample } from './NotebookSimpleExample';
-export { default as OtelExample } from './OtelExample';
 
 // Store types
 export type {

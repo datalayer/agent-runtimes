@@ -4,7 +4,7 @@
  */
 
 /**
- * AgentOutputExample
+ * AgentOutputsExample
  *
  * Demonstrates rich output rendering for agent responses: structured data
  * tables, charts, downloadable artifacts, and multi-format output panels.
@@ -39,7 +39,7 @@ import { useAgents } from '../hooks/useAgents';
 // ─── Constants ─────────────────────────────────────────────────────────────
 
 const AGENT_NAME = 'output-demo-agent';
-const AGENT_SPEC_ID = 'mocks/monitor-sales-kpis';
+const AGENT_SPEC_ID = 'monitor-sales-kpis';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -56,7 +56,9 @@ interface OutputArtifact {
 
 // ─── Inner component (rendered after auth) ─────────────────────────────────
 
-const AgentOutputInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
+const AgentOutputsInner: React.FC<{ onLogout: () => void }> = ({
+  onLogout,
+}) => {
   const { token } = useSimpleAuthStore();
 
   const {
@@ -376,7 +378,7 @@ const syncTokenToIamStore = (token: string) => {
 
 // ─── Main component with auth gate ─────────────────────────────────────────
 
-const AgentOutputExample: React.FC = () => {
+const AgentOutputsExample: React.FC = () => {
   const { token, setAuth, clearAuth } = useSimpleAuthStore();
   const hasSynced = useRef(false);
 
@@ -420,9 +422,9 @@ const AgentOutputExample: React.FC = () => {
 
   return (
     <ThemedProvider>
-      <AgentOutputInner onLogout={handleLogout} />
+      <AgentOutputsInner onLogout={handleLogout} />
     </ThemedProvider>
   );
 };
 
-export default AgentOutputExample;
+export default AgentOutputsExample;
