@@ -22,7 +22,13 @@
 
 /// <reference types="vite/client" />
 
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, {
+  useState,
+  useCallback,
+  useEffect,
+  useRef,
+  useMemo,
+} from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   Text,
@@ -200,12 +206,15 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
-  const [runningAgents, setRunningAgents] = useState<RunningAgent[]>([]);
+  const [runningAgentsOverride, setRunningAgentsOverride] = useState<
+    RunningAgent[] | null
+  >(null);
   const [resumeMode, setResumeMode] = useState<CheckpointMode>('light');
+  const autoConnectAttemptRef = useRef<string | null>(null);
 
   const displayError = hookError || actionError;
   const podName = runtime?.podName || '(launching…)';
-  const agentId = runtime?.agentId || 'default';
+  const agentId = runtime?.agentId || runtime?.name || AGENT_SPEC_ID;
   const agentBaseUrl = runtime?.agentBaseUrl || '';
 
   const handleLaunch = useCallback(async () => {
@@ -238,7 +247,7 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
         );
         await Promise.all([refreshCheckpoints(), refreshAgents()]);
         await terminate();
-        setRunningAgents([]);
+        setRunningAgentsOverride([]);
       } catch (e) {
         setActionError(e instanceof Error ? e.message : 'Checkpoint failed');
       } finally {
@@ -264,16 +273,24 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
     [resume, refreshCheckpoints, refreshAgents],
   );
 
-  // Refresh checkpoints and runtimes on initial load and runtime changes.
+  // Refresh lists when a runtime connection is established.
   useEffect(() => {
-    if (runtime) {
+    if (runtime?.podName) {
       refreshCheckpoints();
       refreshAgents();
     }
-  }, [runtimeStatus, runtime, refreshCheckpoints, refreshAgents]);
+  }, [runtime?.podName, refreshCheckpoints, refreshAgents]);
 
+  // Clear the manual override once a real runtimes fetch lands.
   useEffect(() => {
-    const mappedAgents: RunningAgent[] = (agentRuntimes || []).map(rt => ({
+    if (runningAgentsOverride && agentRuntimes) {
+      setRunningAgentsOverride(null);
+    }
+  }, [agentRuntimes, runningAgentsOverride]);
+
+  const runningAgents = useMemo<RunningAgent[]>(() => {
+    if (runningAgentsOverride) return runningAgentsOverride;
+    return (agentRuntimes || []).map(rt => ({
       id: rt.id,
       podName: rt.pod_name,
       name: rt.name,
@@ -283,19 +300,34 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
       environmentName: rt.environment_name,
       jupyterBaseUrl: rt.url,
     }));
-    setRunningAgents(mappedAgents);
-  }, [agentRuntimes]);
+  }, [agentRuntimes, runningAgentsOverride]);
 
   // Auto-bind to matching runtime when idle so actions target a real runtime.
   useEffect(() => {
-    if (runtime || runtimeStatus !== 'idle' || runningAgents.length === 0) {
+    if (runtime) {
+      autoConnectAttemptRef.current = null;
       return;
     }
+
+    if (
+      (runtimeStatus !== 'idle' && runtimeStatus !== 'disconnected') ||
+      runningAgents.length === 0
+    ) {
+      return;
+    }
+
     const candidate =
       runningAgents.find(a => a.name === DEMO_AGENT_NAME) || runningAgents[0];
     if (!candidate?.jupyterBaseUrl || !candidate.environmentName) {
       return;
     }
+
+    // Prevent reconnect loops to the same runtime while status remains idle/disconnected.
+    if (autoConnectAttemptRef.current === candidate.podName) {
+      return;
+    }
+    autoConnectAttemptRef.current = candidate.podName;
+
     connectToRuntime({
       podName: candidate.podName,
       environmentName: candidate.environmentName,
@@ -320,12 +352,17 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
       setActionLoading(true);
       setActionError(null);
       try {
+        const isCurrentRuntime = runtime?.podName === agent.podName;
+        const isLastKnownRuntime =
+          runningAgents.length === 1 &&
+          runningAgents[0].podName === agent.podName;
         if (agent.status === 'paused') {
           await deletePausedRuntimeByPod(agent.podName);
         } else {
           await deleteRuntimeByPod(agent.podName);
         }
-        if (runtime?.podName === agent.podName) {
+        // Ensure sidebar terminate resets to the home state like header terminate.
+        if (isCurrentRuntime || isLastKnownRuntime) {
           await terminate();
         }
         await Promise.all([refreshAgents(), refreshCheckpoints()]);
@@ -340,6 +377,7 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
       deleteRuntimeByPod,
       refreshAgents,
       refreshCheckpoints,
+      runningAgents,
       runtime?.podName,
       terminate,
     ],
@@ -347,6 +385,14 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
 
   const pausedAgents = runningAgents.filter(a => a.status === 'paused');
   const activeAgents = runningAgents.filter(a => a.status !== 'paused');
+  const checkpointRuntimeIds = new Set(
+    checkpoints
+      .map((ckpt: CheckpointRecord) => ckpt.runtime_uid)
+      .filter((value): value is string => Boolean(value)),
+  );
+  const pausedAgentsWithoutCheckpoint = pausedAgents.filter(
+    (a: RunningAgent) => !checkpointRuntimeIds.has(a.podName),
+  );
 
   const showNoAgentRunningView =
     (runtimeStatus === 'idle' || runtimeStatus === 'disconnected') &&
@@ -737,7 +783,8 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
               >
                 <HistoryIcon size={14} />
                 <Text sx={{ fontWeight: 'semibold', fontSize: 1, flex: 1 }}>
-                  Checkpoints ({checkpoints.length + pausedAgents.length})
+                  Checkpoints (
+                  {checkpoints.length + pausedAgentsWithoutCheckpoint.length})
                 </Text>
                 <IconButton
                   aria-label="Refresh checkpoints"
@@ -748,7 +795,7 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
                 />
               </Box>
               {/* Paused agents shown as checkpoint entries */}
-              {pausedAgents.map((a: RunningAgent) => (
+              {pausedAgentsWithoutCheckpoint.map((a: RunningAgent) => (
                 <Box
                   key={`paused-${a.id}`}
                   sx={{
@@ -809,7 +856,8 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
                   </Box>
                 </Box>
               ))}
-              {checkpoints.length === 0 && pausedAgents.length === 0 ? (
+              {checkpoints.length === 0 &&
+              pausedAgentsWithoutCheckpoint.length === 0 ? (
                 <Text
                   sx={{ fontSize: 0, color: 'fg.muted', fontStyle: 'italic' }}
                 >
@@ -912,7 +960,11 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
                         variant="primary"
                         leadingVisual={PlayIcon}
                         onClick={() =>
-                          handleResume(ckpt.checkpoint_mode || 'light', ckpt.id)
+                          handleResume(
+                            ckpt.checkpoint_mode || 'light',
+                            ckpt.id,
+                            ckpt.runtime_uid,
+                          )
                         }
                         disabled={actionLoading || ckpt.status === 'failed'}
                       >
@@ -983,7 +1035,8 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
                 Launch Agent
               </Button>
             </Box>
-          ) : isReady && runtimeStatus !== 'paused' ? (
+          ) : (isReady || runtimeStatus === 'resumed') &&
+            runtimeStatus !== 'paused' ? (
             <Chat
               transport="ag-ui"
               baseUrl={agentBaseUrl}
@@ -1073,7 +1126,7 @@ const AgentCheckpointsExample: React.FC = () => {
     if (token && !hasSynced.current) {
       hasSynced.current = true;
       import('@datalayer/core/lib/state').then(({ iamStore }) => {
-        iamStore.getState().refreshUserByToken(token);
+        iamStore.setState({ token });
       });
     }
   }, [token]);
@@ -1084,7 +1137,7 @@ const AgentCheckpointsExample: React.FC = () => {
       setAuth(newToken, handle);
       hasSynced.current = true;
       import('@datalayer/core/lib/state').then(({ iamStore }) => {
-        iamStore.getState().refreshUserByToken(newToken);
+        iamStore.setState({ token: newToken });
       });
     },
     [setAuth],
@@ -1095,7 +1148,7 @@ const AgentCheckpointsExample: React.FC = () => {
     clearAuth();
     hasSynced.current = false;
     import('@datalayer/core/lib/state').then(({ iamStore }) => {
-      iamStore.getState().logout();
+      iamStore.setState({ token: undefined });
     });
   }, [clearAuth]);
 

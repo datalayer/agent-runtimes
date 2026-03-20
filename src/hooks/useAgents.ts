@@ -9,7 +9,7 @@
  * @module hooks/useAgents
  */
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import type { ServiceManager } from '@jupyterlab/services';
 import {
   useAgentStore,
@@ -867,6 +867,36 @@ export function useAgents(options: UseAgentOptions = {}): UseAgentReturn {
     }
   }, [isDurable, autoStart, durableStatus, launchRuntime]);
 
+  // ─── Stable runtime catalog operations ────────────────────────────
+
+  const runtimeCatalogOps = useMemo(
+    () => ({
+      runtimes: runtimesQuery.data ?? EMPTY_RUNTIMES,
+      isRuntimesLoading: runtimesQuery.isLoading,
+      isRuntimesError: runtimesQuery.isError,
+      runtimesError: runtimesQuery.error,
+      refetchRuntimes: () => runtimesQuery.refetch(),
+      refreshRuntimes,
+      deleteRuntimeByPod: async (podName: string) =>
+        deleteRuntimeMutation.mutateAsync(podName),
+      deletePausedRuntimeByPod: async (podName: string) =>
+        deletePausedRuntimeMutation.mutateAsync(podName),
+      resumePausedRuntimeByPod: async (podName: string) =>
+        resumePausedRuntimeMutation.mutateAsync(podName),
+      createRuntime: async (data: CreateAgentRuntimeRequest) =>
+        createRuntimeMutation.mutateAsync(data),
+    }),
+    // Only recompute when the data identity or loading flags actually change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [
+      runtimesQuery.data,
+      runtimesQuery.isLoading,
+      runtimesQuery.isError,
+      runtimesQuery.error,
+      refreshRuntimes,
+    ],
+  );
+
   // ─── Sync store errors ─────────────────────────────────────────────
 
   useEffect(() => {
@@ -918,27 +948,17 @@ export function useAgents(options: UseAgentOptions = {}): UseAgentReturn {
     isReady,
     error,
 
-    // Runtime catalog operations
-    runtimes: runtimesQuery.data || [],
-    isRuntimesLoading: runtimesQuery.isLoading,
-    isRuntimesError: runtimesQuery.isError,
-    runtimesError: runtimesQuery.error,
-    refetchRuntimes: () => runtimesQuery.refetch(),
-    refreshRuntimes,
-    deleteRuntimeByPod: async (podName: string) =>
-      deleteRuntimeMutation.mutateAsync(podName),
-    deletePausedRuntimeByPod: async (podName: string) =>
-      deletePausedRuntimeMutation.mutateAsync(podName),
-    resumePausedRuntimeByPod: async (podName: string) =>
-      resumePausedRuntimeMutation.mutateAsync(podName),
-    createRuntime: async (data: CreateAgentRuntimeRequest) =>
-      createRuntimeMutation.mutateAsync(data),
+    // Runtime catalog operations (stable references via useMemo block below)
+    ...runtimeCatalogOps,
   };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Agent Runtimes hooks (self-contained, no useCache dependency)
 // ═══════════════════════════════════════════════════════════════════════════
+
+/** Stable fallback to avoid new‐reference on every render. */
+const EMPTY_RUNTIMES: AgentRuntimeData[] = [];
 
 /** Default query options for all agent runtime queries. */
 const AGENT_QUERY_OPTIONS = {
@@ -1377,11 +1397,11 @@ export function useResumePausedAgentRuntime() {
  */
 export function useRefreshAgentRuntimes() {
   const queryClient = useQueryClient();
-  return () => {
+  return useCallback(() => {
     queryClient.invalidateQueries({
       queryKey: agentQueryKeys.agentRuntimes.all(),
     });
-  };
+  }, [queryClient]);
 }
 
 // ============================================================================
