@@ -214,7 +214,7 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
 
   const displayError = hookError || actionError;
   const podName = runtime?.podName || '(launching…)';
-  const agentId = runtime?.agentId || runtime?.name || AGENT_SPEC_ID;
+  const agentId = runtime?.agentId || AGENT_SPEC_ID;
   const agentBaseUrl = runtime?.agentBaseUrl || '';
 
   const handleLaunch = useCallback(async () => {
