@@ -3,6 +3,8 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
+import type { TransportType } from './protocol';
+
 // ============================================================================
 // Agent Status
 // ============================================================================
@@ -664,4 +666,6 @@ export interface AgentRuntimeConfig {
   agentId?: string;
   /** Optional authentication token */
   authToken?: string;
+  /** Optional protocol type (defaults handled by consumers) */
+  protocol?: TransportType;
 }

@@ -5,6 +5,7 @@
 
 export * from './AIAgent';
 export * from './Types';
+export * from './chat';
 export * from './message';
 export * from './tool';
 export * from './inference';

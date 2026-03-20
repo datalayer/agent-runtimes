@@ -9,7 +9,7 @@
  * Inspired by the AG-UI Dojo implementation, this component renders weather
  * data with dynamic theming based on weather conditions.
  *
- * @module components/chat/components/InlineWeatherCard
+ * @module components/chat/InlineWeatherCard
  */
 
 import { Spinner } from '@primer/react';

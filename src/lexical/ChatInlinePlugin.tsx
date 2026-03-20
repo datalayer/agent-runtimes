@@ -68,10 +68,7 @@ import {
   useFloating,
 } from '@floating-ui/react-dom';
 import { Box } from '@primer/react';
-import {
-  ChatInline,
-  type ChatInlineProtocolConfig,
-} from '../chat/components/ChatInline';
+import { ChatInline, type ChatInlineProtocolConfig } from '../chat/ChatInline';
 
 // Margin from editor edges
 const MARGIN_X = 32;

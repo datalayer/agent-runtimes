@@ -21,8 +21,8 @@ import type {
   ChatExtension,
   ExtensionRegistryEntry,
   ChatMiddleware,
-  ToolCallStatus,
 } from '../types';
+import type { ToolCallStatus } from '../types/message';
 import type { InferenceProvider } from '../types/inference';
 import type { ProtocolAdapter } from '../types/protocol';
 import type { ToolExecutor } from '../tools/ToolExecutor';

@@ -210,7 +210,7 @@ export {
 } from './components';
 
 // Simple API request handler (merged from chat)
-export { requestAPI } from './handler';
+export { requestAPI } from '../api/handler';
 
 // Keyboard shortcuts (re-exported from main hooks folder)
 export {
