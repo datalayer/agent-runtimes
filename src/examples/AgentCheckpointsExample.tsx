@@ -813,7 +813,7 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
                 <Text
                   sx={{ fontSize: 0, color: 'fg.muted', fontStyle: 'italic' }}
                 >
-                  No checkpoints yet. Use Pause (Light) or Pause (CRIU) to
+                  No checkpoints yet. Use Checkpoint (Light) or Checkpoint
                   create one.
                 </Text>
               ) : (

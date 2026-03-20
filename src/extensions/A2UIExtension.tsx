@@ -5,7 +5,7 @@
 
 /**
  * A2UI extension for chat component.
- * Renders A2UI protocol messages from A2A agents using @a2ui/react.
+ * Renders A2UI protocol messages from A2A agents using @a2ui/react v0.8.
  *
  * @module components/extensions/A2UIExtension
  */
@@ -17,194 +17,158 @@ import type { ActivityRendererExtension } from '../types/extension';
 import type { A2UIExtension as A2UIExtensionNamespace } from '../types/extension';
 import type { ChatMessage } from '../types/message';
 
-// Ensure the default component catalog is registered
 initializeDefaultCatalog();
 
-/**
- * A2UI message types (maps to Types.ServerToClientMessage)
- */
-export interface A2UIMessage {
-  /** Begin rendering command */
-  beginRendering?: {
-    surface: string;
-    mimeType?: string;
-    surfaceDefinition?: unknown;
-  };
-
-  /** Surface update */
-  surfaceUpdate?: {
-    surface: string;
-    patch?: unknown;
-    replace?: unknown;
-  };
-
-  /** Data model update */
-  dataModelUpdate?: {
-    dataModel: string;
-    patch?: unknown;
-    replace?: unknown;
-  };
-
-  /** Finish rendering */
-  finishRendering?: {
-    surface: string;
-  };
+interface ValueMap {
+  key: string;
+  valueString?: string;
+  valueNumber?: number;
+  valueBoolean?: boolean;
+  valueMap?: ValueMap[];
 }
 
 /**
- * A2UI surface state
+ * A2UI v0.8 message shape (latest only).
  */
+export interface A2UIMessage {
+  beginRendering?: {
+    surfaceId: string;
+    root: string;
+    mimeType?: string;
+  };
+
+  surfaceUpdate?: {
+    surfaceId: string;
+    components: ComponentInstance[];
+  };
+
+  dataModelUpdate?: {
+    surfaceId: string;
+    path?: string;
+    contents: ValueMap[];
+  };
+
+  finishRendering?: {
+    surfaceId: string;
+  };
+}
+
 interface SurfaceState {
-  surface: string;
+  surfaceId: string;
+  root: string;
   mimeType?: string;
   components: ComponentInstance[];
   data: Record<string, unknown>;
   finished: boolean;
 }
 
-/**
- * A2UI extension context
- */
 interface A2UIContext {
   surfaces: Map<string, SurfaceState>;
   dataModels: Map<string, unknown>;
 }
 
-/**
- * Create A2UI activity renderer.
- *
- * Uses @a2ui/react's A2UIViewer to render surfaces with full component support
- * (buttons, cards, text, interactive elements, etc.)
- */
-export function createA2UIRenderer(
-  _customRenderers?: Record<string, React.ComponentType<{ content: unknown }>>,
-): ActivityRendererExtension {
-  const contexts = new Map<string, A2UIContext>();
-
-  const getContext = (sessionId: string): A2UIContext => {
-    if (!contexts.has(sessionId)) {
-      contexts.set(sessionId, {
-        surfaces: new Map(),
-        dataModels: new Map(),
-      });
+function valueMapToObject(valueMap: ValueMap[]): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  for (const item of valueMap) {
+    if (item.valueString !== undefined) {
+      result[item.key] = item.valueString;
+      continue;
     }
-    return contexts.get(sessionId)!;
-  };
-
-  return {
-    name: 'a2ui-renderer',
-    type: 'activity-renderer',
-    activityTypes: ['a2ui'],
-
-    render: ({ activityType: _activityType, data, message: _message }) => {
-      const sessionId = 'default';
-      const a2uiContext = getContext(sessionId);
-      const a2uiData = data as A2UIMessage;
-
-      // Process message to update surface state
-      if (a2uiData.beginRendering) {
-        a2uiContext.surfaces.set(a2uiData.beginRendering.surface, {
-          surface: a2uiData.beginRendering.surface,
-          mimeType: a2uiData.beginRendering.mimeType,
-          components: [],
-          data: {},
-          finished: false,
-        });
-      }
-
-      if (a2uiData.surfaceUpdate) {
-        const surface = a2uiContext.surfaces.get(
-          a2uiData.surfaceUpdate.surface,
-        );
-        if (surface) {
-          if (a2uiData.surfaceUpdate.replace !== undefined) {
-            const replaced = a2uiData.surfaceUpdate.replace as {
-              components?: ComponentInstance[];
-            };
-            surface.components = replaced.components || [];
-          } else if (a2uiData.surfaceUpdate.patch !== undefined) {
-            surface.components = applyPatch(
-              surface.components,
-              a2uiData.surfaceUpdate.patch,
-            ) as ComponentInstance[];
-          }
-        }
-      }
-
-      if (a2uiData.dataModelUpdate) {
-        const existing = a2uiContext.dataModels.get(
-          a2uiData.dataModelUpdate.dataModel,
-        );
-        if (a2uiData.dataModelUpdate.replace !== undefined) {
-          a2uiContext.dataModels.set(
-            a2uiData.dataModelUpdate.dataModel,
-            a2uiData.dataModelUpdate.replace,
-          );
-        } else if (a2uiData.dataModelUpdate.patch !== undefined) {
-          a2uiContext.dataModels.set(
-            a2uiData.dataModelUpdate.dataModel,
-            applyPatch(existing, a2uiData.dataModelUpdate.patch),
-          );
-        }
-      }
-
-      if (a2uiData.finishRendering) {
-        const surface = a2uiContext.surfaces.get(
-          a2uiData.finishRendering.surface,
-        );
-        if (surface) {
-          surface.finished = true;
-        }
-      }
-
-      // Render surfaces using A2UIViewer
-      const surfacesToRender = Array.from(a2uiContext.surfaces.values());
-
-      return React.createElement(
-        'div',
-        { className: 'chat-a2ui-container' },
-        surfacesToRender.map(surface => {
-          // Use A2UIViewer if we have structured components
-          if (surface.components.length > 0) {
-            return React.createElement(A2UIViewer, {
-              key: surface.surface,
-              root: surface.surface,
-              components: surface.components,
-              data: surface.data,
-              onAction: action => {
-                console.log('A2UI chat action:', action);
-              },
-            });
-          }
-
-          // Fallback for surfaces without structured components
-          return React.createElement(
-            'div',
-            {
-              key: surface.surface,
-              className: `chat-a2ui-surface chat-a2ui-surface--${surface.mimeType?.replace('/', '-') || 'unknown'}`,
-            },
-            renderSurfaceContent(surface),
-          );
-        }),
-      );
-    },
-
-    priority: 10,
-  };
+    if (item.valueNumber !== undefined) {
+      result[item.key] = item.valueNumber;
+      continue;
+    }
+    if (item.valueBoolean !== undefined) {
+      result[item.key] = item.valueBoolean;
+      continue;
+    }
+    if (item.valueMap !== undefined) {
+      result[item.key] = valueMapToObject(item.valueMap);
+      continue;
+    }
+    result[item.key] = null;
+  }
+  return result;
 }
 
-/**
- * Render surface content as fallback for non-component surfaces
- */
+function setNestedValue(
+  obj: Record<string, unknown>,
+  path: string[],
+  value: unknown,
+): void {
+  let current: Record<string, unknown> = obj;
+  for (let i = 0; i < path.length - 1; i++) {
+    const key = path[i];
+    const next = current[key];
+    if (!next || typeof next !== 'object' || Array.isArray(next)) {
+      current[key] = {};
+    }
+    current = current[key] as Record<string, unknown>;
+  }
+  if (path.length > 0) {
+    current[path[path.length - 1]] = value;
+  }
+}
+
+function processA2UIMessage(context: A2UIContext, message: A2UIMessage): void {
+  if (message.beginRendering) {
+    context.surfaces.set(message.beginRendering.surfaceId, {
+      surfaceId: message.beginRendering.surfaceId,
+      root: message.beginRendering.root,
+      mimeType: message.beginRendering.mimeType,
+      components: [],
+      data: {},
+      finished: false,
+    });
+  }
+
+  if (message.surfaceUpdate) {
+    const surface = context.surfaces.get(message.surfaceUpdate.surfaceId);
+    if (surface) {
+      surface.components = message.surfaceUpdate.components;
+    }
+  }
+
+  if (message.dataModelUpdate) {
+    const surface = context.surfaces.get(message.dataModelUpdate.surfaceId);
+    const nextData = valueMapToObject(message.dataModelUpdate.contents);
+
+    if (surface) {
+      if (
+        message.dataModelUpdate.path &&
+        message.dataModelUpdate.path !== '/'
+      ) {
+        const pathParts = message.dataModelUpdate.path
+          .split('/')
+          .filter(Boolean);
+        setNestedValue(surface.data, pathParts, nextData);
+      } else {
+        surface.data = {
+          ...surface.data,
+          ...nextData,
+        };
+      }
+      context.dataModels.set(message.dataModelUpdate.surfaceId, surface.data);
+    } else {
+      context.dataModels.set(message.dataModelUpdate.surfaceId, nextData);
+    }
+  }
+
+  if (message.finishRendering) {
+    const surface = context.surfaces.get(message.finishRendering.surfaceId);
+    if (surface) {
+      surface.finished = true;
+    }
+  }
+}
+
 function renderSurfaceContent(surface: SurfaceState): React.ReactNode {
   const { components, mimeType } = surface;
 
-  if (!components || components.length === 0) {
+  if (components.length === 0) {
     return null;
   }
 
-  // For non-structured content, stringify
   switch (mimeType) {
     case 'text/plain':
       return React.createElement(
@@ -227,79 +191,71 @@ function renderSurfaceContent(surface: SurfaceState): React.ReactNode {
   }
 }
 
+function renderSurfaces(context: A2UIContext): React.ReactElement {
+  const surfacesToRender = Array.from(context.surfaces.values());
+
+  return React.createElement(
+    'div',
+    { className: 'chat-a2ui-container' },
+    surfacesToRender.map(surface => {
+      if (surface.components.length > 0) {
+        return React.createElement(A2UIViewer, {
+          key: surface.surfaceId,
+          root: surface.root,
+          components: surface.components,
+          data: surface.data,
+          onAction: action => {
+            console.log('A2UI chat action:', action);
+          },
+        });
+      }
+
+      return React.createElement(
+        'div',
+        {
+          key: surface.surfaceId,
+          className: `chat-a2ui-surface chat-a2ui-surface--${surface.mimeType?.replace('/', '-') || 'unknown'}`,
+        },
+        renderSurfaceContent(surface),
+      );
+    }),
+  );
+}
+
 /**
- * Simple JSON patch application (RFC 6902 subset)
+ * Create A2UI activity renderer.
  */
-function applyPatch(target: unknown, patch: unknown): unknown {
-  if (!Array.isArray(patch)) {
-    return patch;
-  }
+export function createA2UIRenderer(
+  _customRenderers?: Record<string, React.ComponentType<{ content: unknown }>>,
+): ActivityRendererExtension {
+  const contexts = new Map<string, A2UIContext>();
 
-  const result = structuredClone(target) || {};
-
-  for (const op of patch) {
-    if (typeof op !== 'object' || !op) continue;
-
-    const {
-      op: operation,
-      path,
-      value,
-    } = op as {
-      op: string;
-      path: string;
-      value?: unknown;
-    };
-
-    const pathParts = path.split('/').filter(Boolean);
-
-    switch (operation) {
-      case 'add':
-      case 'replace':
-        setNestedValue(result, pathParts, value);
-        break;
-
-      case 'remove':
-        removeNestedValue(result, pathParts);
-        break;
-
-      case 'copy':
-      case 'move':
-        break;
+  const getContext = (sessionId: string): A2UIContext => {
+    if (!contexts.has(sessionId)) {
+      contexts.set(sessionId, {
+        surfaces: new Map(),
+        dataModels: new Map(),
+      });
     }
-  }
+    return contexts.get(sessionId)!;
+  };
 
-  return result;
-}
-
-function setNestedValue(obj: any, path: string[], value: unknown): void {
-  let current = obj;
-  for (let i = 0; i < path.length - 1; i++) {
-    const key = path[i];
-    if (!(key in current)) {
-      current[key] = {};
-    }
-    current = current[key];
-  }
-  if (path.length > 0) {
-    current[path[path.length - 1]] = value;
-  }
-}
-
-function removeNestedValue(obj: any, path: string[]): void {
-  let current = obj;
-  for (let i = 0; i < path.length - 1; i++) {
-    const key = path[i];
-    if (!(key in current)) return;
-    current = current[key];
-  }
-  if (path.length > 0) {
-    delete current[path[path.length - 1]];
-  }
+  return {
+    name: 'a2ui-renderer',
+    type: 'activity-renderer',
+    activityTypes: ['a2ui'],
+    render: ({ data }) => {
+      const sessionId = 'default';
+      const context = getContext(sessionId);
+      processA2UIMessage(context, data as A2UIMessage);
+      return renderSurfaces(context);
+    },
+    priority: 10,
+  };
 }
 
 /**
  * A2UI Extension implementation class.
- * Uses @a2ui/react's A2UIViewer for rendering surfaces in chat.
  */
 export class A2UIExtensionImpl implements ActivityRendererExtension {
   readonly name = 'a2ui';
@@ -309,9 +265,6 @@ export class A2UIExtensionImpl implements ActivityRendererExtension {
 
   private contexts = new Map<string, A2UIContext>();
 
-  /**
-   * Get the current surfaces for a session
-   */
   getSurfaces(sessionId: string): Map<string, unknown> {
     const context = this.contexts.get(sessionId);
     if (!context) return new Map();
@@ -323,16 +276,10 @@ export class A2UIExtensionImpl implements ActivityRendererExtension {
     return result;
   }
 
-  /**
-   * Get the current data models for a session
-   */
   getDataModels(sessionId: string): Map<string, unknown> {
     return this.contexts.get(sessionId)?.dataModels || new Map();
   }
 
-  /**
-   * Process an A2UI message
-   */
   processMessage(sessionId: string, message: A2UIMessage): void {
     if (!this.contexts.has(sessionId)) {
       this.contexts.set(sessionId, {
@@ -342,69 +289,13 @@ export class A2UIExtensionImpl implements ActivityRendererExtension {
     }
 
     const context = this.contexts.get(sessionId)!;
-
-    if (message.beginRendering) {
-      context.surfaces.set(message.beginRendering.surface, {
-        surface: message.beginRendering.surface,
-        mimeType: message.beginRendering.mimeType,
-        components: [],
-        data: {},
-        finished: false,
-      });
-    }
-
-    if (message.surfaceUpdate) {
-      const surface = context.surfaces.get(message.surfaceUpdate.surface);
-      if (surface) {
-        if (message.surfaceUpdate.replace !== undefined) {
-          const replaced = message.surfaceUpdate.replace as {
-            components?: ComponentInstance[];
-          };
-          surface.components = replaced.components || [];
-        } else if (message.surfaceUpdate.patch !== undefined) {
-          surface.components = applyPatch(
-            surface.components,
-            message.surfaceUpdate.patch,
-          ) as ComponentInstance[];
-        }
-      }
-    }
-
-    if (message.dataModelUpdate) {
-      const existing = context.dataModels.get(
-        message.dataModelUpdate.dataModel,
-      );
-      if (message.dataModelUpdate.replace !== undefined) {
-        context.dataModels.set(
-          message.dataModelUpdate.dataModel,
-          message.dataModelUpdate.replace,
-        );
-      } else if (message.dataModelUpdate.patch !== undefined) {
-        context.dataModels.set(
-          message.dataModelUpdate.dataModel,
-          applyPatch(existing, message.dataModelUpdate.patch),
-        );
-      }
-    }
-
-    if (message.finishRendering) {
-      const surface = context.surfaces.get(message.finishRendering.surface);
-      if (surface) {
-        surface.finished = true;
-      }
-    }
+    processA2UIMessage(context, message);
   }
 
-  /**
-   * Clear a session's context
-   */
   clearSession(sessionId: string): void {
     this.contexts.delete(sessionId);
   }
 
-  /**
-   * Render method — uses A2UIViewer for structured surfaces
-   */
   render = ({
     activityType: _activityType,
     data,
@@ -420,36 +311,8 @@ export class A2UIExtensionImpl implements ActivityRendererExtension {
     const ctx = this.contexts.get(sessionId);
     if (!ctx) return null;
 
-    const surfacesToRender = Array.from(ctx.surfaces.values());
-
-    return React.createElement(
-      'div',
-      { className: 'chat-a2ui-container' },
-      surfacesToRender.map(surface => {
-        if (surface.components.length > 0) {
-          return React.createElement(A2UIViewer, {
-            key: surface.surface,
-            root: surface.surface,
-            components: surface.components,
-            data: surface.data,
-            onAction: action => {
-              console.log('A2UI chat action:', action);
-            },
-          });
-        }
-
-        return React.createElement(
-          'div',
-          {
-            key: surface.surface,
-            className: 'chat-a2ui-surface',
-          },
-          renderSurfaceContent(surface),
-        );
-      }),
-    );
+    return renderSurfaces(ctx);
   };
 }
 
-// Re-export namespace for external use
 export type { A2UIExtensionNamespace };

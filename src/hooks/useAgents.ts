@@ -273,7 +273,7 @@ export interface UseAgentReturn {
   /** Error object for runtime list */
   runtimesError: unknown;
   /** Refetch runtime list immediately */
-  refetchRuntimes: () => Promise<void>;
+  refetchRuntimes: () => Promise<{ data?: AgentRuntimeData[] }>;
   /** Invalidate runtime list query */
   refreshRuntimes: () => void;
   /** Delete a running runtime by pod name */
@@ -283,7 +283,9 @@ export interface UseAgentReturn {
   /** Resume a paused runtime by pod name */
   resumePausedRuntimeByPod: (podName: string) => Promise<unknown>;
   /** Create a runtime */
-  createRuntime: (data: CreateAgentRuntimeRequest) => Promise<unknown>;
+  createRuntime: (
+    data: CreateAgentRuntimeRequest,
+  ) => Promise<CreateRuntimeApiResponse>;
 }
 
 // Need to re-import IRuntimeOptions as a value-level reference for use in the hook
@@ -921,9 +923,7 @@ export function useAgents(options: UseAgentOptions = {}): UseAgentReturn {
     isRuntimesLoading: runtimesQuery.isLoading,
     isRuntimesError: runtimesQuery.isError,
     runtimesError: runtimesQuery.error,
-    refetchRuntimes: async () => {
-      await runtimesQuery.refetch();
-    },
+    refetchRuntimes: () => runtimesQuery.refetch(),
     refreshRuntimes,
     deleteRuntimeByPod: async (podName: string) =>
       deleteRuntimeMutation.mutateAsync(podName),
@@ -972,6 +972,11 @@ export type CreateAgentRuntimeRequest = {
   enableCodemode?: boolean;
   /** ID of the agent spec used to create this runtime */
   agentSpecId?: string;
+};
+
+export type CreateRuntimeApiResponse = {
+  success?: boolean;
+  runtime?: AgentRuntimeData;
 };
 
 /**

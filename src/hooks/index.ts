@@ -139,6 +139,7 @@ export {
   agentQueryKeys,
   type AgentRuntimeData,
   type CreateAgentRuntimeRequest,
+  type CreateRuntimeApiResponse,
   type CheckpointData,
   useAgentLifecycleStore,
   useLifecycleRunningAgents,

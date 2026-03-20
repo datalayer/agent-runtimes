@@ -6,14 +6,11 @@
 import { createStore } from 'zustand/vanilla';
 import { useStore } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import type { Transport } from '../../chat/components/Chat';
-import type { AgentStatus } from '../../hooks/useAgents';
 import type { ServiceManager } from '@jupyterlab/services';
 import type { IRuntimeOptions } from '@datalayer/core/lib/stateful/runtimes/apis';
+import type { Transport } from '../../chat/components/Chat';
+import type { AgentStatus } from '../../hooks/useAgents';
 import type { AgentConnection, AgentConfig } from '../../hooks/useAgents';
-
-// Re-export AgentStatus so consumers of `../state` can still access it
-export type { AgentStatus } from '../../hooks/useAgents';
 
 /**
  * Unified Agent model combining runtime tracking and UI state

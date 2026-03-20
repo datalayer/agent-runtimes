@@ -315,58 +315,88 @@ export function ChatSidebar({
         ref={sidebarRef}
         className={className}
         sx={{
-          position: 'relative',
+          position: 'fixed',
+          top: 12,
+          left: 12,
+          zIndex: 1001,
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          p: 2,
-          bg: 'canvas.subtle',
-          borderLeft: position === 'right' ? '1px solid' : 'none',
-          borderRight: position === 'left' ? '1px solid' : 'none',
-          borderColor: 'border.default',
-          width: 48,
+          gap: 2,
         }}
       >
-        <IconButton
-          icon={position === 'right' ? SidebarExpandIcon : SidebarCollapseIcon}
-          aria-label={`Open chat${shortcutHint ? ` (${shortcutHint})` : ''}`}
-          onClick={handleToggle}
-          variant="invisible"
-        />
+        <Box sx={{ position: 'relative' }}>
+          <IconButton
+            icon={
+              position === 'right' ? SidebarExpandIcon : SidebarCollapseIcon
+            }
+            aria-label={`Open chat${shortcutHint ? ` (${shortcutHint})` : ''}`}
+            onClick={handleToggle}
+            variant="default"
+            size="small"
+            sx={{
+              bg: 'canvas.default',
+              border: '1px solid',
+              borderColor: 'border.default',
+              boxShadow: 'shadow.small',
+            }}
+          />
 
-        <Box sx={{ mt: 2 }}>
-          {brandIcon || <AiAgentIcon colored size={24} />}
+          {messages.length > 0 && (
+            <Box
+              sx={{
+                position: 'absolute',
+                top: -6,
+                right: -6,
+                minWidth: 16,
+                height: 16,
+                px: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                bg: 'accent.emphasis',
+                color: 'fg.onEmphasis',
+                borderRadius: '50%',
+                fontSize: '10px',
+                fontWeight: 'bold',
+                boxShadow: 'shadow.small',
+              }}
+            >
+              {messages.length > 99 ? '99+' : messages.length}
+            </Box>
+          )}
         </Box>
 
-        {messages.length > 0 && (
-          <Box
-            sx={{
-              mt: 2,
-              px: 2,
-              py: 1,
-              bg: 'accent.emphasis',
-              color: 'fg.onEmphasis',
-              borderRadius: '50%',
-              fontSize: 0,
-              fontWeight: 'bold',
-            }}
-          >
-            {messages.length}
-          </Box>
-        )}
+        <Box
+          sx={{
+            width: 32,
+            height: 32,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            bg: 'canvas.default',
+            border: '1px solid',
+            borderColor: 'border.default',
+            borderRadius: 2,
+            boxShadow: 'shadow.small',
+          }}
+        >
+          {brandIcon || <AiAgentIcon colored size={20} />}
+        </Box>
 
         {/* Keyboard shortcut hint */}
         {shortcutHint && (
           <Box
             sx={{
-              mt: 'auto',
-              mb: 1,
               px: 1,
               py: '2px',
-              bg: 'neutral.muted',
+              bg: 'canvas.default',
+              border: '1px solid',
+              borderColor: 'border.default',
               color: 'fg.muted',
               borderRadius: 1,
               fontSize: 0,
+              boxShadow: 'shadow.small',
             }}
           >
             <Text sx={{ fontSize: '10px', fontFamily: 'mono' }}>

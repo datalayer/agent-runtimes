@@ -116,6 +116,125 @@ function textFieldMessages(): Types.ServerToClientMessage[] {
   );
 }
 
+function textMessages(): Types.ServerToClientMessage[] {
+  return singleComponentSurface(
+    'gallery-text-block',
+    'gallery-text-block-root',
+    {
+      Text: {
+        usageHint: 'h3',
+        text: { literalString: 'Hello from A2UI Text component' },
+      },
+    },
+  );
+}
+
+function imageMessages(): Types.ServerToClientMessage[] {
+  return singleComponentSurface(
+    'gallery-image',
+    'gallery-image-root',
+    {
+      Image: {
+        url: { path: 'galleryData/imageUrl' },
+        altText: { literalString: 'A2UI demo landscape' },
+        fit: 'cover',
+      },
+    },
+    dataModelMsg('gallery-image', [
+      {
+        key: 'galleryData',
+        valueMap: [
+          {
+            key: 'imageUrl',
+            valueString:
+              'https://images.unsplash.com/photo-1511884642898-4c92249e20b6?w=900&h=450&fit=crop',
+          },
+        ],
+      },
+    ]),
+  );
+}
+
+function videoMessages(): Types.ServerToClientMessage[] {
+  return singleComponentSurface('gallery-video', 'gallery-video-root', {
+    Video: {
+      sourceUrl: {
+        literalString:
+          'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4',
+      },
+    },
+  });
+}
+
+function audioMessages(): Types.ServerToClientMessage[] {
+  return singleComponentSurface('gallery-audio', 'gallery-audio-root', {
+    AudioPlayer: {
+      sourceUrl: {
+        literalString:
+          'https://interactive-examples.mdn.mozilla.net/media/cc0-audio/t-rex-roar.mp3',
+      },
+    },
+  });
+}
+
+function layoutMessages(): Types.ServerToClientMessage[] {
+  return multiComponentSurface('gallery-layout', 'gallery-layout-root', [
+    {
+      id: 'gallery-layout-root',
+      component: {
+        Column: {
+          children: { explicitList: ['layout-title', 'layout-row'] },
+          gap: 'small',
+        },
+      },
+    },
+    {
+      id: 'layout-title',
+      component: {
+        Text: {
+          usageHint: 'caption',
+          text: {
+            literalString: 'Row and Column layout composition',
+          },
+        },
+      },
+    },
+    {
+      id: 'layout-row',
+      component: {
+        Row: {
+          children: { explicitList: ['layout-card-1', 'layout-card-2'] },
+          gap: 'small',
+        },
+      },
+    },
+    {
+      id: 'layout-card-1',
+      component: {
+        Card: { child: 'layout-card-1-text' },
+      },
+    },
+    {
+      id: 'layout-card-1-text',
+      component: {
+        Text: { text: { literalString: 'Column -> Row -> Card #1' } },
+      },
+    },
+    {
+      id: 'layout-card-2',
+      component: {
+        Card: { child: 'layout-card-2-text' },
+      },
+    },
+    {
+      id: 'layout-card-2-text',
+      component: {
+        Text: { text: { literalString: 'Column -> Row -> Card #2' } },
+      },
+    },
+  ]);
+}
+
 function checkboxMessages(): Types.ServerToClientMessage[] {
   return singleComponentSurface(
     'gallery-checkbox',
@@ -387,6 +506,11 @@ function modalMessages(): Types.ServerToClientMessage[] {
 /** Collect all gallery messages */
 function getAllGalleryMessages(): Types.ServerToClientMessage[] {
   return [
+    ...textMessages(),
+    ...imageMessages(),
+    ...videoMessages(),
+    ...audioMessages(),
+    ...layoutMessages(),
     ...textFieldMessages(),
     ...checkboxMessages(),
     ...sliderMessages(),
@@ -412,6 +536,23 @@ interface GallerySection {
 }
 
 const SECTIONS: GallerySection[] = [
+  {
+    label: 'Text',
+    surfaceId: 'gallery-text-block',
+    messages: textMessages,
+  },
+  { label: 'Image', surfaceId: 'gallery-image', messages: imageMessages },
+  { label: 'Video', surfaceId: 'gallery-video', messages: videoMessages },
+  {
+    label: 'AudioPlayer',
+    surfaceId: 'gallery-audio',
+    messages: audioMessages,
+  },
+  {
+    label: 'Row + Column',
+    surfaceId: 'gallery-layout',
+    messages: layoutMessages,
+  },
   {
     label: 'TextField',
     surfaceId: 'gallery-text',
