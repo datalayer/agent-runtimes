@@ -4,16 +4,23 @@
  */
 
 import { useEffect, useState } from 'react';
+import { createOtelClient } from '@datalayer/core/lib/otel';
 
 export interface OtelQueryOptions {
   metric: string;
-  serviceName: string;
+  serviceName?: string;
   runUrl?: string;
   apiKey?: string;
   limit?: number;
 }
 
-export function toMetricValue(row: Record<string, unknown>): number {
+interface MetricValueRow {
+  value?: unknown;
+  value_double?: unknown;
+  value_int?: unknown;
+}
+
+export function toMetricValue(row: MetricValueRow): number {
   const candidates = [row.value_double, row.value_int, row.value];
   for (const candidate of candidates) {
     if (typeof candidate === 'number' && Number.isFinite(candidate)) {
@@ -29,67 +36,31 @@ export function toMetricValue(row: Record<string, unknown>): number {
   return 0;
 }
 
-export function getOtelBaseUrl(runUrl?: string): string {
-  return (
-    runUrl ||
-    (typeof window !== 'undefined' ? window.location.origin : '') ||
-    ''
-  ).replace(/\/$/, '');
-}
-
-export function getOtelHeaders(apiKey?: string): HeadersInit {
-  const headers: HeadersInit = {};
-  if (apiKey && apiKey.trim().length > 0) {
-    headers.Authorization = `Bearer ${apiKey}`;
-  }
-  return headers;
-}
-
-function extractRows(payload: unknown): Array<Record<string, unknown>> {
-  if (
-    payload &&
-    typeof payload === 'object' &&
-    Array.isArray((payload as { data?: unknown[] }).data)
-  ) {
-    return (payload as { data: Array<Record<string, unknown>> }).data;
-  }
-  if (Array.isArray(payload)) {
-    return payload as Array<Record<string, unknown>>;
-  }
-  return [];
-}
-
 export async function fetchOtelMetricRows({
   metric,
   serviceName,
   runUrl,
   apiKey,
   limit = 500,
-}: OtelQueryOptions): Promise<Array<Record<string, unknown>>> {
-  if (!serviceName) {
-    return [];
-  }
-
-  const baseUrl = getOtelBaseUrl(runUrl);
-  if (!baseUrl) {
-    return [];
-  }
-
-  const query = new URLSearchParams({
-    name: metric,
-    service_name: serviceName,
-    limit: String(limit),
+}: OtelQueryOptions): Promise<MetricValueRow[]> {
+  const client = createOtelClient({
+    baseUrl: runUrl,
+    token: apiKey,
   });
-
-  const response = await fetch(
-    `${baseUrl}/api/otel/v1/metrics/query/?${query.toString()}`,
-    { headers: getOtelHeaders(apiKey) },
-  );
-  if (!response.ok) {
-    return [];
+  const filtered = await client.fetchMetrics({
+    metricName: metric,
+    serviceName,
+    limit,
+  });
+  if (filtered.data.length > 0 || !serviceName) {
+    return filtered.data;
   }
-  const payload = await response.json();
-  return extractRows(payload);
+
+  const fallback = await client.fetchMetrics({
+    metricName: metric,
+    limit,
+  });
+  return fallback.data;
 }
 
 export async function fetchOtelMetricTotal(
@@ -100,7 +71,7 @@ export async function fetchOtelMetricTotal(
 }
 
 export interface OtelTotalTokensOptions {
-  serviceName: string;
+  serviceName?: string;
   runUrl?: string;
   apiKey?: string;
   limit?: number;
@@ -112,10 +83,6 @@ export async function fetchOtelTotalTokens({
   apiKey,
   limit = 500,
 }: OtelTotalTokensOptions): Promise<number> {
-  if (!serviceName) {
-    return 0;
-  }
-
   const total = await fetchOtelMetricTotal({
     metric: 'agent_runtimes.prompt.turn.total_tokens',
     serviceName,
@@ -177,11 +144,6 @@ export function useOtelTotalTokens({
   const [tokensLabel, setTokensLabel] = useState('-');
 
   useEffect(() => {
-    if (!serviceName) {
-      setTokensLabel('-');
-      return;
-    }
-
     let cancelled = false;
 
     const load = async () => {
