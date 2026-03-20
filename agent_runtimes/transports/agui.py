@@ -378,6 +378,12 @@ class AGUITransport(BaseTransport):
                                 success=True,
                                 model=model if isinstance(model, str) else None,
                                 tool_call_count=total_tool_calls or int(getattr(usage, "tool_calls", 0) or 0),
+                                input_tokens=int(getattr(usage, "input_tokens", 0) or 0),
+                                output_tokens=int(getattr(usage, "output_tokens", 0) or 0),
+                                total_tokens=int(
+                                    (getattr(usage, "input_tokens", 0) or 0)
+                                    + (getattr(usage, "output_tokens", 0) or 0)
+                                ),
                                 user_id=metric_user_id,
                                 user_provider=metric_user_provider,
                                 identities_count=(
@@ -412,6 +418,12 @@ class AGUITransport(BaseTransport):
                                 success=True,
                                 model=model if isinstance(model, str) else None,
                                 tool_call_count=int(getattr(usage, "tool_calls", 0) or 0),
+                                input_tokens=int(getattr(usage, "input_tokens", 0) or 0),
+                                output_tokens=int(getattr(usage, "output_tokens", 0) or 0),
+                                total_tokens=int(
+                                    (getattr(usage, "input_tokens", 0) or 0)
+                                    + (getattr(usage, "output_tokens", 0) or 0)
+                                ),
                                 user_id=metric_user_id,
                                 user_provider=metric_user_provider,
                                 identities_count=(
@@ -523,6 +535,9 @@ class AGUITransport(BaseTransport):
                             success=False,
                             model=model if isinstance(model, str) else None,
                             tool_call_count=0,
+                            input_tokens=0,
+                            output_tokens=0,
+                            total_tokens=0,
                             user_id=metric_user_id,
                             user_provider=metric_user_provider,
                             identities_count=(
@@ -546,6 +561,9 @@ class AGUITransport(BaseTransport):
                             success=False,
                             model=model if isinstance(model, str) else None,
                             tool_call_count=0,
+                            input_tokens=0,
+                            output_tokens=0,
+                            total_tokens=0,
                             user_id=metric_user_id,
                             user_provider=metric_user_provider,
                             identities_count=(

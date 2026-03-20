@@ -132,3 +132,10 @@ export {
   OtelTokenUsageChart,
   type OtelTokenUsageChartProps,
 } from '../context/OtelTokenUsageChart';
+export {
+  fetchOtelMetricRows,
+  fetchOtelMetricTotal,
+  fetchOtelTotalTokens,
+  useOtelTotalTokens,
+  toMetricValue,
+} from '../context/otelMetrics';

@@ -266,6 +266,21 @@ class PromptTurnMetricsEmitter:
             description="Completed prompt turns",
             unit="1",
         )
+        self.prompt_tokens = meter.create_counter(
+            name="agent_runtimes.prompt.turn.prompt_tokens",
+            description="Prompt tokens on completed turns",
+            unit="1",
+        )
+        self.completion_tokens = meter.create_counter(
+            name="agent_runtimes.prompt.turn.completion_tokens",
+            description="Completion tokens on completed turns",
+            unit="1",
+        )
+        self.total_tokens = meter.create_counter(
+            name="agent_runtimes.prompt.turn.total_tokens",
+            description="Total tokens on completed turns",
+            unit="1",
+        )
         self.user_message_tokens = meter.create_counter(
             name="agent_runtimes.prompt.turn.user_message_tokens",
             description="Estimated user-message tokens on completed turns",
@@ -320,6 +335,9 @@ class PromptTurnMetricsEmitter:
         success: bool,
         model: str | None,
         tool_call_count: int,
+        input_tokens: int | None,
+        output_tokens: int | None,
+        total_tokens: int | None,
         user_id: str | None,
         user_provider: str | None,
         identities_count: int | None,
@@ -349,9 +367,29 @@ class PromptTurnMetricsEmitter:
             stop_reason,
         )
 
+        resolved_input_tokens = max(
+            int(input_tokens) if isinstance(input_tokens, int) else _estimate_tokens(prompt),
+            0,
+        )
+        resolved_output_tokens = max(
+            int(output_tokens)
+            if isinstance(output_tokens, int)
+            else _estimate_tokens(response),
+            0,
+        )
+        resolved_total_tokens = max(
+            int(total_tokens)
+            if isinstance(total_tokens, int)
+            else resolved_input_tokens + resolved_output_tokens,
+            0,
+        )
+
         self.turn_completions.add(1, attrs)
-        self.user_message_tokens.add(_estimate_tokens(prompt), attrs)
-        self.ai_message_tokens.add(_estimate_tokens(response), attrs)
+        self.prompt_tokens.add(resolved_input_tokens, attrs)
+        self.completion_tokens.add(resolved_output_tokens, attrs)
+        self.total_tokens.add(resolved_total_tokens, attrs)
+        self.user_message_tokens.add(resolved_input_tokens, attrs)
+        self.ai_message_tokens.add(resolved_output_tokens, attrs)
         self.system_prompt_tokens.add(0, attrs)
         self.tools_description_tokens.add(0, attrs)
         self.tools_usage_tokens.add(max(0, tool_call_count), attrs)
@@ -425,6 +463,9 @@ def record_prompt_turn_completion(
     success: bool,
     model: str | None,
     tool_call_count: int,
+    input_tokens: int | None = None,
+    output_tokens: int | None = None,
+    total_tokens: int | None = None,
     user_id: str | None = None,
     user_provider: str | None = None,
     identities_count: int | None = None,
@@ -448,6 +489,9 @@ def record_prompt_turn_completion(
             success=success,
             model=model,
             tool_call_count=tool_call_count,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            total_tokens=total_tokens,
             user_id=user_id,
             user_provider=user_provider,
             identities_count=identities_count,

@@ -5,6 +5,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import ReactECharts from 'echarts-for-react';
+import { fetchOtelMetricRows, toMetricValue } from './otelMetrics';
 
 const SERIES = [
   {
@@ -81,23 +82,6 @@ export interface OtelTokenUsageChartProps {
   wsRunUrl?: string;
   height?: number;
   days?: number;
-}
-
-function toMetricValue(row: Record<string, unknown>): number {
-  // OTEL schema uses value_double / value_int; fallback to generic value
-  const candidates = [row.value_double, row.value_int, row.value];
-  for (const v of candidates) {
-    if (typeof v === 'number' && Number.isFinite(v)) {
-      return v;
-    }
-    if (typeof v === 'string') {
-      const parsed = Number(v);
-      if (Number.isFinite(parsed)) {
-        return parsed;
-      }
-    }
-  }
-  return 0;
 }
 
 function toDayKey(row: Record<string, unknown>): string | undefined {
@@ -181,43 +165,19 @@ export function OtelTokenUsageChart({
 
     let cancelled = false;
 
-    const baseUrl = (
-      runUrl ||
-      (typeof window !== 'undefined' ? window.location.origin : '') ||
-      ''
-    ).replace(/\/$/, '');
-
-    const headers: HeadersInit = {};
-    if (apiKey && apiKey.trim().length > 0) {
-      headers.Authorization = `Bearer ${apiKey}`;
-    }
-
     const load = async () => {
       const result: DayData = {};
 
       await Promise.all(
         SERIES.map(async item => {
           try {
-            const query = new URLSearchParams({
-              name: item.metric,
-              service_name: serviceName,
-              limit: '500',
+            const rows = await fetchOtelMetricRows({
+              metric: item.metric,
+              serviceName,
+              runUrl,
+              apiKey,
+              limit: 500,
             });
-            const response = await fetch(
-              `${baseUrl}/api/otel/v1/metrics/query/?${query.toString()}`,
-              {
-                headers,
-              },
-            );
-            if (!response.ok) {
-              return;
-            }
-            const payload = await response.json();
-            const rows = Array.isArray(payload?.data)
-              ? payload.data
-              : Array.isArray(payload)
-                ? payload
-                : [];
 
             for (const row of rows) {
               const typedRow = row as Record<string, unknown>;
