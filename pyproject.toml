@@ -143,9 +143,12 @@ checks = [
     "SA01",  # See Also section found
     "ES01",  # No extended summary found
     "GL08",  # The object does not have a docstring
+    "GL01",  # Summary placement strictness for opening triple quotes
     "PR01",  # Parameters not documented
     "PR02",  # Unknown parameters
     "RT01",  # No Returns section found
+    "RT05",  # Return value description punctuation strictness
+    "SS06",  # Summary should fit on a single line
 ]
 
 exclude = [  # don't report on objects that match any of these regex

@@ -6,6 +6,8 @@
 from __future__ import annotations
 
 import logging
+import os
+import tempfile
 import time
 import uuid
 from dataclasses import dataclass, field
@@ -16,6 +18,8 @@ from .report import CaseResult, EvalReportData, format_report, save_report_json
 from .spec_adapter import build_dataset_from_spec, parse_eval_spec
 
 logger = logging.getLogger(__name__)
+
+_DEFAULT_EVALS_DIR = os.path.join(tempfile.gettempdir(), "agent-evals")
 
 
 @dataclass
@@ -51,7 +55,7 @@ class EvalRunner:
         self,
         agent_id: str,
         agent_fn: Callable[[dict[str, Any]], Awaitable[str]] | None = None,
-        output_dir: str = "/tmp/agent-evals",
+        output_dir: str = _DEFAULT_EVALS_DIR,
     ):
         self.agent_id = agent_id
         self.agent_fn = agent_fn or self._noop_agent

@@ -11,12 +11,13 @@ default) and PostgreSQL (multi-pod, production).
 
 import logging
 import os
+import tempfile
 from dataclasses import dataclass, field
 
 logger = logging.getLogger(__name__)
 
 # Default SQLite path inside the agent pod volume
-_DEFAULT_SQLITE_PATH = "/tmp/dbos/agent_durable.db"
+_DEFAULT_SQLITE_PATH = os.path.join(tempfile.gettempdir(), "dbos", "agent_durable.db")
 
 
 @dataclass

@@ -8,11 +8,14 @@ from __future__ import annotations
 import json
 import logging
 import os
+import tempfile
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any
 
 logger = logging.getLogger(__name__)
+
+_DEFAULT_EVALS_DIR = os.path.join(tempfile.gettempdir(), "agent-evals")
 
 
 @dataclass
@@ -134,7 +137,7 @@ def _compute_summary(case_results: list[CaseResult]) -> ReportSummary:
 
 def save_report_json(
     report: EvalReportData,
-    output_dir: str = "/tmp/agent-evals",
+    output_dir: str = _DEFAULT_EVALS_DIR,
 ) -> str:
     """Persist an eval report as JSON.  Returns the file path."""
     os.makedirs(output_dir, exist_ok=True)

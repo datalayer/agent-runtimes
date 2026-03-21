@@ -23,6 +23,8 @@ from .base import AgentResult, BaseOutputGenerator, OutputArtifact
 
 logger = logging.getLogger(__name__)
 
+_DEFAULT_OUTPUT_DIR = os.path.join(tempfile.gettempdir(), "agent-output")
+
 # Default template: just wrap markdown-rendered HTML in a basic page
 _DEFAULT_HTML_TEMPLATE = """
 <!DOCTYPE html>
@@ -74,7 +76,7 @@ class PDFOutputGenerator(BaseOutputGenerator):
         self,
         template_path: str | None = None,
         sandbox_url: str = "http://localhost:8888",
-        output_dir: str = "/tmp/agent-output",
+        output_dir: str = _DEFAULT_OUTPUT_DIR,
     ):
         self.template_path = template_path
         self.sandbox_url = sandbox_url

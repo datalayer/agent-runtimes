@@ -6,7 +6,10 @@
 from __future__ import annotations
 
 import os
+import tempfile
 from dataclasses import dataclass, field
+
+_DEFAULT_CHECKPOINTS_DIR = os.path.join(tempfile.gettempdir(), "agent-checkpoints")
 
 
 @dataclass
@@ -31,7 +34,7 @@ class CheckpointConfig:
     frequency: str = "every_turn"  # "every_tool" | "every_turn" | "manual_only"
     max_checkpoints: int = 20
     store: str = "in_memory"  # "in_memory" | "file" | "s3"
-    file_dir: str = "/tmp/agent-checkpoints"
+    file_dir: str = _DEFAULT_CHECKPOINTS_DIR
     metadata: dict = field(default_factory=dict)
 
     @classmethod
@@ -44,7 +47,7 @@ class CheckpointConfig:
             frequency=spec_checkpoints.get("frequency", "every_turn"),
             max_checkpoints=spec_checkpoints.get("max_checkpoints", 20),
             store=spec_checkpoints.get("store", "in_memory"),
-            file_dir=spec_checkpoints.get("file_dir", "/tmp/agent-checkpoints"),
+            file_dir=spec_checkpoints.get("file_dir", _DEFAULT_CHECKPOINTS_DIR),
         )
 
     @classmethod
@@ -59,5 +62,5 @@ class CheckpointConfig:
             frequency=os.environ.get("AGENT_CHECKPOINTS_FREQUENCY", "every_turn"),
             max_checkpoints=int(os.environ.get("AGENT_CHECKPOINTS_MAX", "20")),
             store=os.environ.get("AGENT_CHECKPOINTS_STORE", "in_memory"),
-            file_dir=os.environ.get("AGENT_CHECKPOINTS_DIR", "/tmp/agent-checkpoints"),
+            file_dir=os.environ.get("AGENT_CHECKPOINTS_DIR", _DEFAULT_CHECKPOINTS_DIR),
         )

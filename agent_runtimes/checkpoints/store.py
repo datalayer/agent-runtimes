@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import tempfile
 import uuid
 from abc import ABC, abstractmethod
 from dataclasses import asdict, dataclass, field
@@ -19,6 +20,8 @@ from pathlib import Path
 from typing import Any
 
 logger = logging.getLogger(__name__)
+
+_DEFAULT_CHECKPOINTS_DIR = os.path.join(tempfile.gettempdir(), "agent-checkpoints")
 
 
 class RewindRequested(Exception):
@@ -139,7 +142,7 @@ class InMemoryCheckpointStore(CheckpointStore):
 class FileCheckpointStore(CheckpointStore):
     """File-based checkpoint store. Persists to JSON files."""
 
-    def __init__(self, directory: str = "/tmp/agent-checkpoints") -> None:
+    def __init__(self, directory: str = _DEFAULT_CHECKPOINTS_DIR) -> None:
         self._dir = Path(directory)
         self._dir.mkdir(parents=True, exist_ok=True)
 
@@ -188,7 +191,7 @@ def create_checkpoint_store(
     """Factory to create a checkpoint store from config."""
     if store_type == "file":
         return FileCheckpointStore(
-            directory=kwargs.get("file_dir", "/tmp/agent-checkpoints")
+            directory=kwargs.get("file_dir", _DEFAULT_CHECKPOINTS_DIR)
         )
     # Default: in-memory
     return InMemoryCheckpointStore()

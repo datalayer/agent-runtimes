@@ -14,12 +14,15 @@ from __future__ import annotations
 import json
 import logging
 import os
+import tempfile
 from datetime import datetime, timezone
 from typing import Any
 
 logger = logging.getLogger(__name__)
 
-_DEFAULT_ARCHIVE_PATH = "/tmp/agent-history/conversation.jsonl"
+_DEFAULT_ARCHIVE_PATH = os.path.join(
+    tempfile.gettempdir(), "agent-history", "conversation.jsonl"
+)
 
 
 class HistoryArchive:

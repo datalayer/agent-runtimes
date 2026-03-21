@@ -14,13 +14,14 @@ from __future__ import annotations
 import hashlib
 import logging
 import os
+import tempfile
 from pathlib import Path
 from typing import Any
 
 logger = logging.getLogger(__name__)
 
 # Default eviction directory inside the agent pod workspace
-_DEFAULT_EVICTION_DIR = "/tmp/agent-evicted"
+_DEFAULT_EVICTION_DIR = os.path.join(tempfile.gettempdir(), "agent-evicted")
 
 
 class ToolOutputEviction:
@@ -72,7 +73,9 @@ class ToolOutputEviction:
         os.makedirs(self.eviction_dir, exist_ok=True)
 
         # Generate unique filename
-        content_hash = hashlib.md5(content.encode()[:1000]).hexdigest()[:8]
+        content_hash = hashlib.md5(
+            content.encode()[:1000], usedforsecurity=False
+        ).hexdigest()[:8]
         self._eviction_count += 1
         filename = f"tool_{self._eviction_count}_{tool_name}_{content_hash}.txt"
         filepath = os.path.join(self.eviction_dir, filename)
