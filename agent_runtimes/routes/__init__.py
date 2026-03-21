@@ -3,6 +3,8 @@
 
 """Server routes for agent-runtimes."""
 
+from typing import Any
+
 from .a2a import (
     A2AAgentCard,
     get_a2a_agents,
@@ -56,9 +58,11 @@ from .vercel_ai import router as vercel_ai_router
 
 # Trigger routes (optional — from triggers module)
 try:
-    from ..triggers.webhook import webhook_router as triggers_webhook_router
+    from ..triggers.webhook import webhook_router as _triggers_webhook_router
+
+    triggers_webhook_router = _triggers_webhook_router
 except ImportError:
-    triggers_webhook_router = None  # type: ignore[assignment]
+    triggers_webhook_router = None
 
 __all__ = [
     "a2a_protocol_router",

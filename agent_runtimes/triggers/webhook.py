@@ -273,6 +273,13 @@ async def _execute_agent_webhook(
         raise ValueError(f"Agent '{agent_id}' not found in registry")
 
     adapter, _info = agent_entry
+    from ..adapters.base import AgentContext
+
+    context = AgentContext(
+        session_id=f"webhook-{agent_id}",
+        conversation_history=[{"role": "user", "content": message}],
+        metadata={"trigger": "webhook", "agent_id": agent_id},
+    )
 
     # Try to run as DBOS workflow for durability
     try:
@@ -280,7 +287,7 @@ async def _execute_agent_webhook(
 
         @DBOS.workflow()
         async def webhook_workflow(msg: str) -> dict[str, Any]:
-            result = await adapter.run(msg)
+            result = await adapter.run(msg, context)
             return {
                 "output": str(result) if result else None,
                 "workflow_id": DBOS.workflow_id,
@@ -289,5 +296,5 @@ async def _execute_agent_webhook(
         return await webhook_workflow(message)
     except ImportError:
         # No DBOS — run directly
-        result = await adapter.run(message)
+        result = await adapter.run(message, context)
         return {"output": str(result) if result else None}

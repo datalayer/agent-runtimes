@@ -2261,7 +2261,7 @@ async def stop_agent_mcp_servers(
 
 
 @router.post("/prepare-checkpoint")
-async def prepare_checkpoint_endpoint(http_request: Request):
+async def prepare_checkpoint_endpoint(http_request: Request) -> dict[str, Any]:
     """Prepare the agent-runtimes service for a CRIU checkpoint.
 
     Flushes DBOS state and closes connections to allow clean container freeze.
@@ -2279,7 +2279,7 @@ async def prepare_checkpoint_endpoint(http_request: Request):
 
 
 @router.post("/post-restore")
-async def post_restore_endpoint(http_request: Request):
+async def post_restore_endpoint(http_request: Request) -> dict[str, Any]:
     """Re-initialize after a CRIU restore.
 
     Re-launches DBOS and re-establishes connections after container thaw.
@@ -2306,7 +2306,7 @@ class ConfigureFromSpecRequest(BaseModel):
 async def configure_from_spec_endpoint(
     http_request: Request,
     body: ConfigureFromSpecRequest,
-):
+) -> dict[str, Any]:
     """Configure and create an agent from an AgentSpec ID.
 
     Called by the companion during run-start-hooks when the operator
@@ -2359,8 +2359,17 @@ async def configure_from_spec_endpoint(
 
         # Register across transports
         register_agent(
-            agent_id,
-            AgentInfo(adapter=adapter, card=AgentCapabilities(name=agent_id)),
+            adapter,
+            AgentInfo(
+                id=agent_id,
+                name=agent_id,
+                description=(spec.description or ""),
+                capabilities=AgentCapabilities(
+                    streaming=True,
+                    tool_calling=True,
+                    code_execution=False,
+                ),
+            ),
         )
         register_vercel_agent(agent_id, VercelAITransport(adapter))
         register_mcp_ui_agent(agent_id, MCPUITransport(adapter))

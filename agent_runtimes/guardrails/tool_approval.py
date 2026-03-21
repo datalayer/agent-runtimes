@@ -270,7 +270,7 @@ def wrap_tool_with_approval(
     import functools
 
     @functools.wraps(tool_fn)
-    async def wrapper(*args, **kwargs):
+    async def wrapper(*args: Any, **kwargs: Any) -> Any:
         if approval_manager.requires_approval(tool_name):
             # Build a serializable snapshot of the arguments
             safe_args = {}

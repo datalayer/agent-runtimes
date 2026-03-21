@@ -141,7 +141,7 @@ class PDFOutputGenerator(BaseOutputGenerator):
     def _markdown_to_html(self, markdown_text: str) -> str:
         """Best-effort Markdown → HTML conversion."""
         try:
-            import markdown
+            import markdown  # type: ignore[import-untyped]
 
             return markdown.markdown(
                 markdown_text,

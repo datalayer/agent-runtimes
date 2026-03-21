@@ -13,6 +13,7 @@ from __future__ import annotations
 import logging
 import os
 from dataclasses import dataclass
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +55,9 @@ class ContextWindowConfig:
     history_archive: bool = True
 
     @classmethod
-    def from_spec(cls, spec_context: dict | None) -> "ContextWindowConfig":
+    def from_spec(
+        cls, spec_context: dict[str, Any] | None
+    ) -> "ContextWindowConfig":
         """Build from AgentSpec ``context_management`` dict."""
         if not spec_context:
             return cls()
@@ -71,6 +74,7 @@ class ContextWindowConfig:
     def from_env(cls) -> "ContextWindowConfig":
         """Build from environment variables."""
         enabled = os.environ.get("AGENT_CONTEXT_MGMT_ENABLED", "").lower() == "true"
+        eviction_limit = os.environ.get("AGENT_CONTEXT_EVICTION_LIMIT")
         return cls(
             enabled=enabled,
             max_tokens=int(os.environ.get("AGENT_CONTEXT_MAX_TOKENS", "0")),
@@ -78,9 +82,5 @@ class ContextWindowConfig:
                 os.environ.get("AGENT_CONTEXT_COMPRESS_THRESHOLD", "0.9")
             ),
             summarization_model=os.environ.get("AGENT_CONTEXT_SUMMARIZATION_MODEL"),
-            eviction_token_limit=(
-                int(os.environ.get("AGENT_CONTEXT_EVICTION_LIMIT"))
-                if os.environ.get("AGENT_CONTEXT_EVICTION_LIMIT")
-                else None
-            ),
+            eviction_token_limit=int(eviction_limit) if eviction_limit else None,
         )

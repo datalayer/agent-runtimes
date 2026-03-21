@@ -107,7 +107,7 @@ class CheckpointStore(ABC):
 class InMemoryCheckpointStore(CheckpointStore):
     """In-memory checkpoint store. Data lost on process restart."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._checkpoints: dict[str, ConversationCheckpoint] = {}
 
     async def save(self, checkpoint: ConversationCheckpoint) -> None:
@@ -139,7 +139,7 @@ class InMemoryCheckpointStore(CheckpointStore):
 class FileCheckpointStore(CheckpointStore):
     """File-based checkpoint store. Persists to JSON files."""
 
-    def __init__(self, directory: str = "/tmp/agent-checkpoints"):
+    def __init__(self, directory: str = "/tmp/agent-checkpoints") -> None:
         self._dir = Path(directory)
         self._dir.mkdir(parents=True, exist_ok=True)
 
@@ -182,7 +182,9 @@ class FileCheckpointStore(CheckpointStore):
         return len(to_remove)
 
 
-def create_checkpoint_store(store_type: str = "in_memory", **kwargs) -> CheckpointStore:
+def create_checkpoint_store(
+    store_type: str = "in_memory", **kwargs: Any
+) -> CheckpointStore:
     """Factory to create a checkpoint store from config."""
     if store_type == "file":
         return FileCheckpointStore(directory=kwargs.get("file_dir", "/tmp/agent-checkpoints"))

@@ -13,7 +13,7 @@ SHELL=/bin/bash
 
 AGENTSPECS_REPO ?= https://github.com/datalayer/agentspecs.git
 AGENTSPECS_DIR ?= agentspecs
-AGENTSPECS_REF ?= 63ebae65a79600d4c615959d8fb520c0a7e46d06
+AGENTSPECS_BRANCH ?= "feat/new"
 
 BEDROCK_ENV = \
 	AWS_ACCESS_KEY_ID=${DATALAYER_BEDROCK_AWS_ACCESS_KEY_ID} \
@@ -131,14 +131,14 @@ list-specs: # list specs
 
 specs: specs-clone specs-generate specs-format ## generate Python and TypeScript code from YAML specifications (agents, teams, MCP servers, skills, envvars)
 
-specs-clone: ## clone/update pinned agentspecs repository
+specs-clone: ## clone/update agentspecs repository
 	@echo "Cloning agentspecs repository..."
 	@if [ ! -d "$(AGENTSPECS_DIR)" ]; then \
 		git clone $(AGENTSPECS_REPO) $(AGENTSPECS_DIR); \
 	else \
 		cd $(AGENTSPECS_DIR) && git fetch origin; \
 	fi
-	@cd $(AGENTSPECS_DIR) && git checkout $(AGENTSPECS_REF)
+	@cd $(AGENTSPECS_DIR) && git checkout $(AGENTSPECS_BRANCH)
 
 specs-generate: ## generate all Python and TypeScript specs from YAML
 	@echo "Generating agent specifications..."

@@ -47,7 +47,7 @@ import logging
 import os
 import time
 from collections.abc import AsyncIterator, Callable
-from typing import TYPE_CHECKING, Any, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 try:
     from opentelemetry import trace
@@ -56,12 +56,12 @@ try:
     OTEL_AVAILABLE = True
 except ImportError:
     OTEL_AVAILABLE = False
-    trace = None  # type: ignore
-    Span = None  # type: ignore
-    SpanKind = None  # type: ignore
-    Status = None  # type: ignore
-    StatusCode = None  # type: ignore
-    Tracer = None  # type: ignore
+    trace = cast(Any, None)
+    Span = cast(Any, None)
+    SpanKind = cast(Any, None)
+    Status = cast(Any, None)
+    StatusCode = cast(Any, None)
+    Tracer = cast(Any, None)
 
 # Optional metrics support
 try:
@@ -71,10 +71,10 @@ try:
     METRICS_AVAILABLE = True
 except ImportError:
     METRICS_AVAILABLE = False
-    metrics = None  # type: ignore
-    Counter = None  # type: ignore
-    Histogram = None  # type: ignore
-    UpDownCounter = None  # type: ignore
+    metrics = cast(Any, None)
+    Counter = cast(Any, None)
+    Histogram = cast(Any, None)
+    UpDownCounter = cast(Any, None)
 
 if TYPE_CHECKING:
     from opentelemetry.sdk.metrics import MeterProvider
@@ -429,7 +429,9 @@ def uninstrument_agent_runtimes() -> None:
 # ============================================================================
 
 
-def _instrument_adapters(tracer: Any, capture_config: dict) -> None:
+def _instrument_adapters(
+    tracer: Any, capture_config: dict[str, bool]
+) -> None:
     """Instrument BaseAgent.run() and BaseAgent.stream()."""
     try:
         from agent_runtimes.adapters.base import BaseAgent
@@ -483,7 +485,7 @@ def _instrument_adapters(tracer: Any, capture_config: dict) -> None:
                     _metrics.agent_run_errors.add(1, {"agent.name": agent_name})
                 raise
 
-    BaseAgent.run = traced_run
+    setattr(BaseAgent, "run", traced_run)
 
     # --- stream() ---
     original_stream = BaseAgent.stream
@@ -519,7 +521,7 @@ def _instrument_adapters(tracer: Any, capture_config: dict) -> None:
                 span.record_exception(exc)
                 raise
 
-    BaseAgent.stream = traced_stream
+    setattr(BaseAgent, "stream", traced_stream)
 
     logger.debug("Instrumented BaseAgent.run and BaseAgent.stream")
 
@@ -529,7 +531,9 @@ def _instrument_adapters(tracer: Any, capture_config: dict) -> None:
 # ============================================================================
 
 
-def _instrument_transports(tracer: Any, capture_config: dict) -> None:
+def _instrument_transports(
+    tracer: Any, capture_config: dict[str, bool]
+) -> None:
     """Instrument BaseTransport.handle_request()."""
     try:
         from agent_runtimes.transports.base import BaseTransport
@@ -568,7 +572,7 @@ def _instrument_transports(tracer: Any, capture_config: dict) -> None:
                     _metrics.transport_request_errors.add(1, {"transport.protocol": protocol})
                 raise
 
-    BaseTransport.handle_request = traced_handle_request
+    setattr(BaseTransport, "handle_request", traced_handle_request)
 
     logger.debug("Instrumented BaseTransport.handle_request")
 
@@ -609,7 +613,11 @@ def create_otel_middleware(tracer: Any = None, service_name: str = "agent-runtim
         return None
 
     class OtelHTTPMiddleware(BaseHTTPMiddleware):
-        async def dispatch(self, request: Request, call_next: Callable) -> Response:
+        async def dispatch(
+            self,
+            request: Request,
+            call_next: Callable[[Request], Any],
+        ) -> Response:
             if tracer is None:
                 return await call_next(request)
 

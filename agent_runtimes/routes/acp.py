@@ -712,11 +712,8 @@ async def _handle_prompt(
     total_tokens: int | None = None
     response_chunks: list[str] = []
     completed_without_error = False
-    session_agent_id = (
-        _sessions.get(session_id).agent_id
-        if _sessions.get(session_id)
-        else None
-    )
+    session = _sessions.get(session_id)
+    session_agent_id = session.agent_id if session else None
     usage_tracker = get_usage_tracker()
     usage_history_len_before = 0
     if session_agent_id:
@@ -750,9 +747,7 @@ async def _handle_prompt(
         return parsed_input, parsed_output, parsed_total
 
     session_user_id = (
-        _sessions.get(session_id).context.user_id
-        if _sessions.get(session_id) and _sessions.get(session_id).context
-        else None
+        session.context.user_id if session and session.context else None
     )
     metric_user_provider = "acp-session"
     hint_user_id, hint_provider, hint_token = extract_identity_hints(metadata_identities)

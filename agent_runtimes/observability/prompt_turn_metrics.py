@@ -91,6 +91,8 @@ def extract_jwt_token(*header_values: str | None) -> str | None:
 
 def _decode_jwt_payload(token: str | None) -> dict[str, Any] | None:
     """Decode the JWT payload without signature verification."""
+    if not isinstance(token, str) or not token:
+        return None
     if not _looks_like_jwt(token):
         return None
     try:

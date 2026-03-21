@@ -20,7 +20,6 @@ from agent_runtimes.types import (
     TeamValidationSpec,
 )
 
-
 # ============================================================================
 # Team Definitions
 # ============================================================================
@@ -29,7 +28,14 @@ ANALYZE_CAMPAIGN_PERFORMANCE_TEAM_SPEC = TeamSpec(
     id="analyze-campaign-performance",
     name="Analyze Campaign Performance",
     description="A multi-agent team that unifies marketing data from Google Ads, Meta, TikTok, LinkedIn, GA4, CRM, and email platforms. Normalises metrics into a unified view, detects performance anomalies in real time, and generates budget reallocation recommendations to maximise ROAS.",
-    tags=["marketing", "media", "campaigns", "analytics", "advertising", "social-media"],
+    tags=[
+        "marketing",
+        "media",
+        "campaigns",
+        "analytics",
+        "advertising",
+        "social-media",
+    ],
     enabled=True,
     icon="megaphone",
     emoji="📢",
@@ -37,7 +43,9 @@ ANALYZE_CAMPAIGN_PERFORMANCE_TEAM_SPEC = TeamSpec(
     agent_spec_id="analyze-campaign-performance",
     orchestration_protocol="datalayer",
     execution_mode="sequential",
-    supervisor=TeamSupervisorSpec(name="Campaign Analytics Orchestrator Agent", model="openai-gpt-4-1"),
+    supervisor=TeamSupervisorSpec(
+        name="Campaign Analytics Orchestrator Agent", model="openai-gpt-4-1"
+    ),
     routing_instructions="Start with Platform Connector to pull data from all ad platforms, then Metrics Normaliser for unified KPIs, then Anomaly Detector for real-time performance monitoring, then Budget Optimiser for reallocation recommendations. Escalate CPA spikes above 50% immediately.",
     validation=TeamValidationSpec(timeout="300s", retry_on_failure=True, max_retries=2),
     agents=[
@@ -48,7 +56,13 @@ ANALYZE_CAMPAIGN_PERFORMANCE_TEAM_SPEC = TeamSpec(
             goal="Pull campaign data from Google Ads, Meta, TikTok, LinkedIn, GA4, and email platforms",
             model="openai-gpt-4-1",
             mcp_server="Ad Platforms MCP",
-            tools=["Google Ads Connector", "Meta Ads Connector", "TikTok Ads Connector", "LinkedIn Ads Connector", "GA4 Connector"],
+            tools=[
+                "Google Ads Connector",
+                "Meta Ads Connector",
+                "TikTok Ads Connector",
+                "LinkedIn Ads Connector",
+                "GA4 Connector",
+            ],
             trigger="Schedule: Every 4 hours",
             approval="auto",
         ),
@@ -59,7 +73,12 @@ ANALYZE_CAMPAIGN_PERFORMANCE_TEAM_SPEC = TeamSpec(
             goal="Normalise CPA, ROAS, CTR, and attribution across all platforms into unified view",
             model="openai-gpt-4-1",
             mcp_server="Analytics MCP",
-            tools=["Metric Unifier", "Currency Converter", "Attribution Mapper", "Naming Convention Resolver"],
+            tools=[
+                "Metric Unifier",
+                "Currency Converter",
+                "Attribution Mapper",
+                "Naming Convention Resolver",
+            ],
             trigger="On completion of Platform Connector Agent",
             approval="auto",
         ),
@@ -70,7 +89,12 @@ ANALYZE_CAMPAIGN_PERFORMANCE_TEAM_SPEC = TeamSpec(
             goal="Monitor all KPIs for CTR drops, CPA spikes, and budget pacing issues",
             model="anthropic-claude-sonnet-4",
             mcp_server="Monitoring MCP",
-            tools=["Anomaly Scanner", "Budget Pacer", "Alert Generator", "Campaign Pauser"],
+            tools=[
+                "Anomaly Scanner",
+                "Budget Pacer",
+                "Alert Generator",
+                "Campaign Pauser",
+            ],
             trigger="On completion of Metrics Normaliser Agent",
             approval="manual",
         ),
@@ -81,18 +105,54 @@ ANALYZE_CAMPAIGN_PERFORMANCE_TEAM_SPEC = TeamSpec(
             goal="Generate budget reallocation recommendations to maximise ROAS across channels",
             model="openai-gpt-4-1",
             mcp_server="Optimisation MCP",
-            tools=["ROAS Calculator", "Budget Allocator", "Scenario Modeller", "Report Generator"],
+            tools=[
+                "ROAS Calculator",
+                "Budget Allocator",
+                "Scenario Modeller",
+                "Report Generator",
+            ],
             trigger="On completion of Anomaly Detector Agent",
             approval="manual",
         ),
     ],
     reaction_rules=[
-        TeamReactionRule(id="rr-camp-1", trigger="budget_threshold_exceeded", action="pause_and_notify", auto=True, max_retries=1, escalate_after_retries=1, priority="high"),
-        TeamReactionRule(id="rr-camp-2", trigger="data_quality_low", action="retry_collection", auto=True, max_retries=3, escalate_after_retries=3, priority="medium"),
+        TeamReactionRule(
+            id="rr-camp-1",
+            trigger="budget_threshold_exceeded",
+            action="pause_and_notify",
+            auto=True,
+            max_retries=1,
+            escalate_after_retries=1,
+            priority="high",
+        ),
+        TeamReactionRule(
+            id="rr-camp-2",
+            trigger="data_quality_low",
+            action="retry_collection",
+            auto=True,
+            max_retries=3,
+            escalate_after_retries=3,
+            priority="medium",
+        ),
     ],
-    health_monitoring=TeamHealthMonitoring(heartbeat_interval="30s", stale_threshold="120s", unresponsive_threshold="300s", stuck_threshold="600s", max_restart_attempts=3),
-    notifications={"on_start": True, "on_completion": True, "on_failure": True, "on_escalation": True},
-    output=TeamOutputSpec(formats=["pdf", "csv", "json"], template="Campaign Performance Report", storage="s3://reports/campaign-analytics/"),
+    health_monitoring=TeamHealthMonitoring(
+        heartbeat_interval="30s",
+        stale_threshold="120s",
+        unresponsive_threshold="300s",
+        stuck_threshold="600s",
+        max_restart_attempts=3,
+    ),
+    notifications={
+        "on_start": True,
+        "on_completion": True,
+        "on_failure": True,
+        "on_escalation": True,
+    },
+    output=TeamOutputSpec(
+        formats=["pdf", "csv", "json"],
+        template="Campaign Performance Report",
+        storage="s3://reports/campaign-analytics/",
+    ),
 )
 
 ANALYZE_SUPPORT_TICKETS_TEAM_SPEC = TeamSpec(
@@ -107,7 +167,9 @@ ANALYZE_SUPPORT_TICKETS_TEAM_SPEC = TeamSpec(
     agent_spec_id="analyze-support-tickets",
     orchestration_protocol="datalayer",
     execution_mode="sequential",
-    supervisor=TeamSupervisorSpec(name="Support Orchestrator Agent", model="openai-gpt-4-1"),
+    supervisor=TeamSupervisorSpec(
+        name="Support Orchestrator Agent", model="openai-gpt-4-1"
+    ),
     routing_instructions="Route new tickets to the Triage Agent first, then to the Categorizer, then to the Pattern Analyzer. Escalate P1/critical tickets immediately to human support leads.",
     validation=TeamValidationSpec(timeout="180s", retry_on_failure=True, max_retries=2),
     agents=[
@@ -146,12 +208,43 @@ ANALYZE_SUPPORT_TICKETS_TEAM_SPEC = TeamSpec(
         ),
     ],
     reaction_rules=[
-        TeamReactionRule(id="rr-supp-1", trigger="ticket_surge_detected", action="escalate_to_supervisor", auto=True, max_retries=2, escalate_after_retries=2, priority="high"),
-        TeamReactionRule(id="rr-supp-2", trigger="classification_confidence_low", action="request_human_review", auto=False, max_retries=1, escalate_after_retries=1, priority="medium"),
+        TeamReactionRule(
+            id="rr-supp-1",
+            trigger="ticket_surge_detected",
+            action="escalate_to_supervisor",
+            auto=True,
+            max_retries=2,
+            escalate_after_retries=2,
+            priority="high",
+        ),
+        TeamReactionRule(
+            id="rr-supp-2",
+            trigger="classification_confidence_low",
+            action="request_human_review",
+            auto=False,
+            max_retries=1,
+            escalate_after_retries=1,
+            priority="medium",
+        ),
     ],
-    health_monitoring=TeamHealthMonitoring(heartbeat_interval="15s", stale_threshold="60s", unresponsive_threshold="180s", stuck_threshold="300s", max_restart_attempts=3),
-    notifications={"on_start": False, "on_completion": True, "on_failure": True, "on_escalation": True},
-    output=TeamOutputSpec(formats=["pdf", "json"], template="Support Ticket Analysis", storage="s3://reports/support-analytics/"),
+    health_monitoring=TeamHealthMonitoring(
+        heartbeat_interval="15s",
+        stale_threshold="60s",
+        unresponsive_threshold="180s",
+        stuck_threshold="300s",
+        max_restart_attempts=3,
+    ),
+    notifications={
+        "on_start": False,
+        "on_completion": True,
+        "on_failure": True,
+        "on_escalation": True,
+    },
+    output=TeamOutputSpec(
+        formats=["pdf", "json"],
+        template="Support Ticket Analysis",
+        storage="s3://reports/support-analytics/",
+    ),
 )
 
 AUDIT_INVENTORY_LEVELS_TEAM_SPEC = TeamSpec(
@@ -166,7 +259,9 @@ AUDIT_INVENTORY_LEVELS_TEAM_SPEC = TeamSpec(
     agent_spec_id="audit-inventory-levels",
     orchestration_protocol="datalayer",
     execution_mode="sequential",
-    supervisor=TeamSupervisorSpec(name="Inventory Orchestrator Agent", model="openai-gpt-4-1"),
+    supervisor=TeamSupervisorSpec(
+        name="Inventory Orchestrator Agent", model="openai-gpt-4-1"
+    ),
     routing_instructions="Start with the Scanner to pull current levels, then Auditor to check discrepancies, then Forecaster for demand predictions, then Planner for reorder recommendations, then Reporter for the final audit report. Escalate critical shortages immediately.",
     validation=TeamValidationSpec(timeout="600s", retry_on_failure=True, max_retries=3),
     agents=[
@@ -199,7 +294,11 @@ AUDIT_INVENTORY_LEVELS_TEAM_SPEC = TeamSpec(
             goal="Forecast demand by SKU using historical sales and seasonal patterns",
             model="anthropic-claude-sonnet-4",
             mcp_server="Analytics MCP",
-            tools=["Time Series Model", "Seasonal Analyzer", "External Signals Fetcher"],
+            tools=[
+                "Time Series Model",
+                "Seasonal Analyzer",
+                "External Signals Fetcher",
+            ],
             trigger="On completion of Discrepancy Auditor",
             approval="auto",
         ),
@@ -227,12 +326,43 @@ AUDIT_INVENTORY_LEVELS_TEAM_SPEC = TeamSpec(
         ),
     ],
     reaction_rules=[
-        TeamReactionRule(id="rr-inv-1", trigger="stockout_risk_detected", action="escalate_to_supervisor", auto=True, max_retries=1, escalate_after_retries=1, priority="high"),
-        TeamReactionRule(id="rr-inv-2", trigger="discrepancy_threshold_exceeded", action="flag_for_manual_audit", auto=False, max_retries=2, escalate_after_retries=2, priority="high"),
+        TeamReactionRule(
+            id="rr-inv-1",
+            trigger="stockout_risk_detected",
+            action="escalate_to_supervisor",
+            auto=True,
+            max_retries=1,
+            escalate_after_retries=1,
+            priority="high",
+        ),
+        TeamReactionRule(
+            id="rr-inv-2",
+            trigger="discrepancy_threshold_exceeded",
+            action="flag_for_manual_audit",
+            auto=False,
+            max_retries=2,
+            escalate_after_retries=2,
+            priority="high",
+        ),
     ],
-    health_monitoring=TeamHealthMonitoring(heartbeat_interval="30s", stale_threshold="120s", unresponsive_threshold="300s", stuck_threshold="600s", max_restart_attempts=3),
-    notifications={"on_start": True, "on_completion": True, "on_failure": True, "on_escalation": True},
-    output=TeamOutputSpec(formats=["pdf", "xlsx", "csv"], template="Inventory Audit Report", storage="s3://reports/inventory-audits/"),
+    health_monitoring=TeamHealthMonitoring(
+        heartbeat_interval="30s",
+        stale_threshold="120s",
+        unresponsive_threshold="300s",
+        stuck_threshold="600s",
+        max_restart_attempts=3,
+    ),
+    notifications={
+        "on_start": True,
+        "on_completion": True,
+        "on_failure": True,
+        "on_escalation": True,
+    },
+    output=TeamOutputSpec(
+        formats=["pdf", "xlsx", "csv"],
+        template="Inventory Audit Report",
+        storage="s3://reports/inventory-audits/",
+    ),
 )
 
 AUTOMATE_REGULATORY_REPORTING_TEAM_SPEC = TeamSpec(
@@ -247,7 +377,9 @@ AUTOMATE_REGULATORY_REPORTING_TEAM_SPEC = TeamSpec(
     agent_spec_id="automate-regulatory-reporting",
     orchestration_protocol="datalayer",
     execution_mode="sequential",
-    supervisor=TeamSupervisorSpec(name="Compliance Orchestrator Agent", model="openai-gpt-4-1"),
+    supervisor=TeamSupervisorSpec(
+        name="Compliance Orchestrator Agent", model="openai-gpt-4-1"
+    ),
     routing_instructions="Start with Data Ingestion to pull positions and transactions, then Risk Calculator for metric computation, then Reconciliation Agent to cross-check figures, then Validation Agent for regulatory rule checks, then Report Generator for submission-ready output. Escalate any reconciliation breaks above $10K immediately to the compliance team.",
     validation=TeamValidationSpec(timeout="900s", retry_on_failure=True, max_retries=2),
     agents=[
@@ -269,7 +401,12 @@ AUTOMATE_REGULATORY_REPORTING_TEAM_SPEC = TeamSpec(
             goal="Compute Basel III/IV risk-weighted assets, capital ratios, and VaR metrics",
             model="anthropic-claude-sonnet-4",
             mcp_server="Risk Engine MCP",
-            tools=["RWA Calculator", "VaR Engine", "Capital Ratio Computer", "Stress Test Runner"],
+            tools=[
+                "RWA Calculator",
+                "VaR Engine",
+                "Capital Ratio Computer",
+                "Stress Test Runner",
+            ],
             trigger="On completion of Data Ingestion Agent",
             approval="auto",
         ),
@@ -308,12 +445,43 @@ AUTOMATE_REGULATORY_REPORTING_TEAM_SPEC = TeamSpec(
         ),
     ],
     reaction_rules=[
-        TeamReactionRule(id="rr-reg-1", trigger="compliance_violation_detected", action="halt_and_escalate", auto=True, max_retries=0, escalate_after_retries=0, priority="critical"),
-        TeamReactionRule(id="rr-reg-2", trigger="data_validation_failure", action="retry_with_fallback", auto=True, max_retries=3, escalate_after_retries=3, priority="high"),
+        TeamReactionRule(
+            id="rr-reg-1",
+            trigger="compliance_violation_detected",
+            action="halt_and_escalate",
+            auto=True,
+            max_retries=0,
+            escalate_after_retries=0,
+            priority="critical",
+        ),
+        TeamReactionRule(
+            id="rr-reg-2",
+            trigger="data_validation_failure",
+            action="retry_with_fallback",
+            auto=True,
+            max_retries=3,
+            escalate_after_retries=3,
+            priority="high",
+        ),
     ],
-    health_monitoring=TeamHealthMonitoring(heartbeat_interval="15s", stale_threshold="60s", unresponsive_threshold="120s", stuck_threshold="300s", max_restart_attempts=2),
-    notifications={"on_start": True, "on_completion": True, "on_failure": True, "on_escalation": True},
-    output=TeamOutputSpec(formats=["pdf", "xbrl", "json"], template="Regulatory Submission Report", storage="s3://reports/regulatory-submissions/"),
+    health_monitoring=TeamHealthMonitoring(
+        heartbeat_interval="15s",
+        stale_threshold="60s",
+        unresponsive_threshold="120s",
+        stuck_threshold="300s",
+        max_restart_attempts=2,
+    ),
+    notifications={
+        "on_start": True,
+        "on_completion": True,
+        "on_failure": True,
+        "on_escalation": True,
+    },
+    output=TeamOutputSpec(
+        formats=["pdf", "xbrl", "json"],
+        template="Regulatory Submission Report",
+        storage="s3://reports/regulatory-submissions/",
+    ),
 )
 
 COMPREHENSIVE_SALES_ANALYTICS_TEAM_SPEC = TeamSpec(
@@ -328,7 +496,9 @@ COMPREHENSIVE_SALES_ANALYTICS_TEAM_SPEC = TeamSpec(
     agent_spec_id="comprehensive-sales-analytics",
     orchestration_protocol="datalayer",
     execution_mode="sequential",
-    supervisor=TeamSupervisorSpec(name="Sales Analytics Supervisor", model="anthropic-claude-opus-4"),
+    supervisor=TeamSupervisorSpec(
+        name="Sales Analytics Supervisor", model="anthropic-claude-opus-4"
+    ),
     routing_instructions="Route data collection to KPI Collector first, then pass raw metrics to Anomaly Detector and Trend Analyzer in parallel, then aggregate all outputs into the Report Generator. Escalate if anomalies exceed the critical threshold (>25% deviation from target).",
     validation=TeamValidationSpec(timeout="300s", retry_on_failure=True, max_retries=3),
     agents=[
@@ -378,19 +548,57 @@ COMPREHENSIVE_SALES_ANALYTICS_TEAM_SPEC = TeamSpec(
         ),
     ],
     reaction_rules=[
-        TeamReactionRule(id="rr-sales-1", trigger="anomaly_critical", action="escalate_to_supervisor", auto=True, max_retries=2, escalate_after_retries=2, priority="high"),
-        TeamReactionRule(id="rr-sales-2", trigger="data_stale", action="retry_collection", auto=True, max_retries=3, escalate_after_retries=3, priority="medium"),
+        TeamReactionRule(
+            id="rr-sales-1",
+            trigger="anomaly_critical",
+            action="escalate_to_supervisor",
+            auto=True,
+            max_retries=2,
+            escalate_after_retries=2,
+            priority="high",
+        ),
+        TeamReactionRule(
+            id="rr-sales-2",
+            trigger="data_stale",
+            action="retry_collection",
+            auto=True,
+            max_retries=3,
+            escalate_after_retries=3,
+            priority="medium",
+        ),
     ],
-    health_monitoring=TeamHealthMonitoring(heartbeat_interval="30s", stale_threshold="120s", unresponsive_threshold="300s", stuck_threshold="600s", max_restart_attempts=3),
-    notifications={"on_start": True, "on_completion": True, "on_failure": True, "on_escalation": True},
-    output=TeamOutputSpec(formats=["pdf", "xlsx", "json"], template="Executive Sales Dashboard", storage="s3://reports/sales-analytics/"),
+    health_monitoring=TeamHealthMonitoring(
+        heartbeat_interval="30s",
+        stale_threshold="120s",
+        unresponsive_threshold="300s",
+        stuck_threshold="600s",
+        max_restart_attempts=3,
+    ),
+    notifications={
+        "on_start": True,
+        "on_completion": True,
+        "on_failure": True,
+        "on_escalation": True,
+    },
+    output=TeamOutputSpec(
+        formats=["pdf", "xlsx", "json"],
+        template="Executive Sales Dashboard",
+        storage="s3://reports/sales-analytics/",
+    ),
 )
 
 OPTIMIZE_GRID_OPERATIONS_TEAM_SPEC = TeamSpec(
     id="optimize-grid-operations",
     name="Optimize Grid Operations",
     description="A multi-agent team that processes millions of IoT sensor data points from smart meters, substations, and renewable generation assets. Predicts equipment failures 2–4 weeks in advance, optimises load balancing across the grid, and reduces unplanned downtime by 50%.",
-    tags=["energy", "utilities", "smart-grid", "iot", "predictive-maintenance", "sustainability"],
+    tags=[
+        "energy",
+        "utilities",
+        "smart-grid",
+        "iot",
+        "predictive-maintenance",
+        "sustainability",
+    ],
     enabled=True,
     icon="zap",
     emoji="⚡",
@@ -398,7 +606,9 @@ OPTIMIZE_GRID_OPERATIONS_TEAM_SPEC = TeamSpec(
     agent_spec_id="optimize-grid-operations",
     orchestration_protocol="datalayer",
     execution_mode="sequential",
-    supervisor=TeamSupervisorSpec(name="Grid Operations Orchestrator Agent", model="openai-gpt-4-1"),
+    supervisor=TeamSupervisorSpec(
+        name="Grid Operations Orchestrator Agent", model="openai-gpt-4-1"
+    ),
     routing_instructions="Start with Sensor Ingestion to process real-time telemetry, then Anomaly Detector for pattern identification, then Failure Predictor for maintenance forecasting, then Grid Balancer for load optimisation. Escalate critical failure predictions (< 48h) immediately to operations dispatch.",
     validation=TeamValidationSpec(timeout="600s", retry_on_failure=True, max_retries=3),
     agents=[
@@ -409,7 +619,12 @@ OPTIMIZE_GRID_OPERATIONS_TEAM_SPEC = TeamSpec(
             goal="Ingest and process real-time telemetry from SCADA, smart meters, and IoT gateways",
             model="openai-gpt-4-1",
             mcp_server="SCADA MCP",
-            tools=["SCADA Connector", "Smart Meter Reader", "IoT Gateway Adapter", "Time Series Processor"],
+            tools=[
+                "SCADA Connector",
+                "Smart Meter Reader",
+                "IoT Gateway Adapter",
+                "Time Series Processor",
+            ],
             trigger="Schedule: Every 5 minutes",
             approval="auto",
         ),
@@ -420,7 +635,12 @@ OPTIMIZE_GRID_OPERATIONS_TEAM_SPEC = TeamSpec(
             goal="Detect vibration, temperature, and voltage anomalies across all grid assets",
             model="openai-gpt-4-1",
             mcp_server="Monitoring MCP",
-            tools=["Vibration Analyzer", "Temperature Anomaly Detector", "Voltage Pattern Scanner", "Historical Comparator"],
+            tools=[
+                "Vibration Analyzer",
+                "Temperature Anomaly Detector",
+                "Voltage Pattern Scanner",
+                "Historical Comparator",
+            ],
             trigger="On completion of Sensor Ingestion Agent",
             approval="auto",
         ),
@@ -431,7 +651,12 @@ OPTIMIZE_GRID_OPERATIONS_TEAM_SPEC = TeamSpec(
             goal="Predict equipment failures 2–4 weeks in advance using anomaly patterns and failure history",
             model="anthropic-claude-sonnet-4",
             mcp_server="Predictive Analytics MCP",
-            tools=["Failure Correlation Engine", "Risk Scorer", "Maintenance Scheduler", "Work Order Generator"],
+            tools=[
+                "Failure Correlation Engine",
+                "Risk Scorer",
+                "Maintenance Scheduler",
+                "Work Order Generator",
+            ],
             trigger="On completion of Anomaly Detector Agent",
             approval="manual",
         ),
@@ -442,25 +667,68 @@ OPTIMIZE_GRID_OPERATIONS_TEAM_SPEC = TeamSpec(
             goal="Optimise real-time load balancing across renewable and conventional generation sources",
             model="openai-gpt-4-1",
             mcp_server="Grid Control MCP",
-            tools=["Load Forecaster", "Renewable Integration Model", "Dispatch Optimiser", "Grid Stability Checker"],
+            tools=[
+                "Load Forecaster",
+                "Renewable Integration Model",
+                "Dispatch Optimiser",
+                "Grid Stability Checker",
+            ],
             trigger="On completion of Failure Predictor Agent",
             approval="auto",
         ),
     ],
     reaction_rules=[
-        TeamReactionRule(id="rr-grid-1", trigger="grid_instability_detected", action="emergency_rebalance", auto=True, max_retries=1, escalate_after_retries=1, priority="critical"),
-        TeamReactionRule(id="rr-grid-2", trigger="forecast_deviation_high", action="recalibrate_model", auto=True, max_retries=2, escalate_after_retries=2, priority="medium"),
+        TeamReactionRule(
+            id="rr-grid-1",
+            trigger="grid_instability_detected",
+            action="emergency_rebalance",
+            auto=True,
+            max_retries=1,
+            escalate_after_retries=1,
+            priority="critical",
+        ),
+        TeamReactionRule(
+            id="rr-grid-2",
+            trigger="forecast_deviation_high",
+            action="recalibrate_model",
+            auto=True,
+            max_retries=2,
+            escalate_after_retries=2,
+            priority="medium",
+        ),
     ],
-    health_monitoring=TeamHealthMonitoring(heartbeat_interval="10s", stale_threshold="30s", unresponsive_threshold="60s", stuck_threshold="120s", max_restart_attempts=5),
-    notifications={"on_start": True, "on_completion": True, "on_failure": True, "on_escalation": True},
-    output=TeamOutputSpec(formats=["json", "csv", "pdf"], template="Grid Operations Dashboard", storage="s3://reports/grid-operations/"),
+    health_monitoring=TeamHealthMonitoring(
+        heartbeat_interval="10s",
+        stale_threshold="30s",
+        unresponsive_threshold="60s",
+        stuck_threshold="120s",
+        max_restart_attempts=5,
+    ),
+    notifications={
+        "on_start": True,
+        "on_completion": True,
+        "on_failure": True,
+        "on_escalation": True,
+    },
+    output=TeamOutputSpec(
+        formats=["json", "csv", "pdf"],
+        template="Grid Operations Dashboard",
+        storage="s3://reports/grid-operations/",
+    ),
 )
 
 PROCESS_CITIZEN_REQUESTS_TEAM_SPEC = TeamSpec(
     id="process-citizen-requests",
     name="Process Citizen Requests",
     description="A multi-agent team that automates citizen request processing for government agencies. Classifies and triages permits, FOIA requests, and benefit claims from multiple channels. Models policy impacts across population datasets and ensures every automated decision is explainable, auditable, and compliant with transparency mandates.",
-    tags=["government", "public-sector", "civic", "policy", "compliance", "transparency"],
+    tags=[
+        "government",
+        "public-sector",
+        "civic",
+        "policy",
+        "compliance",
+        "transparency",
+    ],
     enabled=True,
     icon="organization",
     emoji="🏛️",
@@ -468,7 +736,9 @@ PROCESS_CITIZEN_REQUESTS_TEAM_SPEC = TeamSpec(
     agent_spec_id="process-citizen-requests",
     orchestration_protocol="datalayer",
     execution_mode="sequential",
-    supervisor=TeamSupervisorSpec(name="Citizen Services Orchestrator Agent", model="openai-gpt-4-1"),
+    supervisor=TeamSupervisorSpec(
+        name="Citizen Services Orchestrator Agent", model="openai-gpt-4-1"
+    ),
     routing_instructions="Route incoming citizen requests to the Intake Agent for classification and triage, then to the Case Processor for handling and routing, then to the Policy Analyst for impact assessment on relevant items, then to the Transparency Agent for audit trail and public documentation. Escalate urgent citizen safety issues immediately to supervisors.",
     validation=TeamValidationSpec(timeout="300s", retry_on_failure=True, max_retries=2),
     agents=[
@@ -479,7 +749,12 @@ PROCESS_CITIZEN_REQUESTS_TEAM_SPEC = TeamSpec(
             goal="Classify, triage, and route citizen submissions from web portals, email, and documents",
             model="openai-gpt-4-1",
             mcp_server="Citizen Portal MCP",
-            tools=["Request Classifier", "Urgency Assessor", "Jurisdiction Router", "OCR Scanner"],
+            tools=[
+                "Request Classifier",
+                "Urgency Assessor",
+                "Jurisdiction Router",
+                "OCR Scanner",
+            ],
             trigger="Event: new citizen request received",
             approval="auto",
         ),
@@ -490,7 +765,12 @@ PROCESS_CITIZEN_REQUESTS_TEAM_SPEC = TeamSpec(
             goal="Process and route requests to appropriate departments with required documentation",
             model="openai-gpt-4-1",
             mcp_server="Case Management MCP",
-            tools=["Case Creator", "Document Assembler", "Department Router", "Status Tracker"],
+            tools=[
+                "Case Creator",
+                "Document Assembler",
+                "Department Router",
+                "Status Tracker",
+            ],
             trigger="On completion of Intake Agent",
             approval="auto",
         ),
@@ -501,7 +781,12 @@ PROCESS_CITIZEN_REQUESTS_TEAM_SPEC = TeamSpec(
             goal="Model policy outcomes across population datasets with scenario simulation",
             model="anthropic-claude-sonnet-4",
             mcp_server="Policy Analytics MCP",
-            tools=["Monte Carlo Simulator", "Demographic Analyzer", "Budget Impact Model", "Scenario Comparator"],
+            tools=[
+                "Monte Carlo Simulator",
+                "Demographic Analyzer",
+                "Budget Impact Model",
+                "Scenario Comparator",
+            ],
             trigger="On completion of Case Processor Agent",
             approval="manual",
         ),
@@ -512,18 +797,54 @@ PROCESS_CITIZEN_REQUESTS_TEAM_SPEC = TeamSpec(
             goal="Generate explainable decision documentation with full audit trail for public record",
             model="openai-gpt-4-1",
             mcp_server="Compliance MCP",
-            tools=["Decision Explainer", "Audit Trail Builder", "FOIA Compliance Checker", "Public Record Generator"],
+            tools=[
+                "Decision Explainer",
+                "Audit Trail Builder",
+                "FOIA Compliance Checker",
+                "Public Record Generator",
+            ],
             trigger="On completion of Policy Impact Analyst Agent",
             approval="auto",
         ),
     ],
     reaction_rules=[
-        TeamReactionRule(id="rr-cit-1", trigger="priority_request_detected", action="fast_track_processing", auto=True, max_retries=2, escalate_after_retries=2, priority="high"),
-        TeamReactionRule(id="rr-cit-2", trigger="policy_ambiguity_detected", action="request_human_review", auto=False, max_retries=1, escalate_after_retries=1, priority="medium"),
+        TeamReactionRule(
+            id="rr-cit-1",
+            trigger="priority_request_detected",
+            action="fast_track_processing",
+            auto=True,
+            max_retries=2,
+            escalate_after_retries=2,
+            priority="high",
+        ),
+        TeamReactionRule(
+            id="rr-cit-2",
+            trigger="policy_ambiguity_detected",
+            action="request_human_review",
+            auto=False,
+            max_retries=1,
+            escalate_after_retries=1,
+            priority="medium",
+        ),
     ],
-    health_monitoring=TeamHealthMonitoring(heartbeat_interval="30s", stale_threshold="120s", unresponsive_threshold="300s", stuck_threshold="600s", max_restart_attempts=3),
-    notifications={"on_start": False, "on_completion": True, "on_failure": True, "on_escalation": True},
-    output=TeamOutputSpec(formats=["pdf", "json"], template="Citizen Request Processing Report", storage="s3://reports/citizen-requests/"),
+    health_monitoring=TeamHealthMonitoring(
+        heartbeat_interval="30s",
+        stale_threshold="120s",
+        unresponsive_threshold="300s",
+        stuck_threshold="600s",
+        max_restart_attempts=3,
+    ),
+    notifications={
+        "on_start": False,
+        "on_completion": True,
+        "on_failure": True,
+        "on_escalation": True,
+    },
+    output=TeamOutputSpec(
+        formats=["pdf", "json"],
+        template="Citizen Request Processing Report",
+        storage="s3://reports/citizen-requests/",
+    ),
 )
 
 PROCESS_CLINICAL_TRIAL_DATA_TEAM_SPEC = TeamSpec(
@@ -538,7 +859,9 @@ PROCESS_CLINICAL_TRIAL_DATA_TEAM_SPEC = TeamSpec(
     agent_spec_id="process-clinical-trial-data",
     orchestration_protocol="datalayer",
     execution_mode="sequential",
-    supervisor=TeamSupervisorSpec(name="Clinical Data Orchestrator Agent", model="anthropic-claude-sonnet-4"),
+    supervisor=TeamSupervisorSpec(
+        name="Clinical Data Orchestrator Agent", model="anthropic-claude-sonnet-4"
+    ),
     routing_instructions="Route incoming data through the Ingestion Agent first for format detection and parsing, then to Harmonisation Agent for CDISC SDTM standardisation, then Safety Monitor for adverse event screening, then Submission Preparer for final dataset assembly. Escalate serious adverse events (SAEs) immediately to the medical officer.",
     validation=TeamValidationSpec(timeout="600s", retry_on_failure=True, max_retries=2),
     agents=[
@@ -549,7 +872,12 @@ PROCESS_CLINICAL_TRIAL_DATA_TEAM_SPEC = TeamSpec(
             goal="Ingest patient records, lab results, and CRFs from clinical sites",
             model="openai-gpt-4-1",
             mcp_server="Clinical EDC MCP",
-            tools=["Medidata Connector", "Veeva Vault Reader", "Oracle Clinical Adapter", "Format Detector"],
+            tools=[
+                "Medidata Connector",
+                "Veeva Vault Reader",
+                "Oracle Clinical Adapter",
+                "Format Detector",
+            ],
             trigger="Event: new data batch received from site",
             approval="auto",
         ),
@@ -571,7 +899,12 @@ PROCESS_CLINICAL_TRIAL_DATA_TEAM_SPEC = TeamSpec(
             goal="Screen every data point for adverse events and safety signals",
             model="anthropic-claude-sonnet-4",
             mcp_server="Safety Database MCP",
-            tools=["AE Classifier", "Signal Detector", "SAE Escalator", "Evidence Trail Builder"],
+            tools=[
+                "AE Classifier",
+                "Signal Detector",
+                "SAE Escalator",
+                "Evidence Trail Builder",
+            ],
             trigger="On completion of Harmonisation Agent",
             approval="manual",
         ),
@@ -582,18 +915,54 @@ PROCESS_CLINICAL_TRIAL_DATA_TEAM_SPEC = TeamSpec(
             goal="Assemble submission-ready SDTM datasets with validation and define.xml",
             model="openai-gpt-4-1",
             mcp_server="Submission MCP",
-            tools=["Dataset Validator", "Define.xml Generator", "PDF Report Builder", "Compliance Checker"],
+            tools=[
+                "Dataset Validator",
+                "Define.xml Generator",
+                "PDF Report Builder",
+                "Compliance Checker",
+            ],
             trigger="On completion of Safety Monitor Agent",
             approval="auto",
         ),
     ],
     reaction_rules=[
-        TeamReactionRule(id="rr-clin-1", trigger="safety_signal_detected", action="halt_and_escalate", auto=True, max_retries=0, escalate_after_retries=0, priority="critical"),
-        TeamReactionRule(id="rr-clin-2", trigger="data_integrity_violation", action="quarantine_and_notify", auto=True, max_retries=1, escalate_after_retries=1, priority="critical"),
+        TeamReactionRule(
+            id="rr-clin-1",
+            trigger="safety_signal_detected",
+            action="halt_and_escalate",
+            auto=True,
+            max_retries=0,
+            escalate_after_retries=0,
+            priority="critical",
+        ),
+        TeamReactionRule(
+            id="rr-clin-2",
+            trigger="data_integrity_violation",
+            action="quarantine_and_notify",
+            auto=True,
+            max_retries=1,
+            escalate_after_retries=1,
+            priority="critical",
+        ),
     ],
-    health_monitoring=TeamHealthMonitoring(heartbeat_interval="10s", stale_threshold="45s", unresponsive_threshold="90s", stuck_threshold="180s", max_restart_attempts=2),
-    notifications={"on_start": True, "on_completion": True, "on_failure": True, "on_escalation": True},
-    output=TeamOutputSpec(formats=["pdf", "json", "xml"], template="Clinical Trial Data Report", storage="s3://reports/clinical-trials/"),
+    health_monitoring=TeamHealthMonitoring(
+        heartbeat_interval="10s",
+        stale_threshold="45s",
+        unresponsive_threshold="90s",
+        stuck_threshold="180s",
+        max_restart_attempts=2,
+    ),
+    notifications={
+        "on_start": True,
+        "on_completion": True,
+        "on_failure": True,
+        "on_escalation": True,
+    },
+    output=TeamOutputSpec(
+        formats=["pdf", "json", "xml"],
+        template="Clinical Trial Data Report",
+        storage="s3://reports/clinical-trials/",
+    ),
 )
 
 SYNC_CRM_CONTACTS_TEAM_SPEC = TeamSpec(
@@ -608,7 +977,9 @@ SYNC_CRM_CONTACTS_TEAM_SPEC = TeamSpec(
     agent_spec_id="sync-crm-contacts",
     orchestration_protocol="datalayer",
     execution_mode="sequential",
-    supervisor=TeamSupervisorSpec(name="CRM Orchestrator Agent", model="anthropic-claude-opus-4"),
+    supervisor=TeamSupervisorSpec(
+        name="CRM Orchestrator Agent", model="anthropic-claude-opus-4"
+    ),
     routing_instructions="Route data collection tasks to the Data Collector first, then analysis, then sync, then reporting. Escalate to human if sync fails 3 times.",
     validation=TeamValidationSpec(timeout="300s", retry_on_failure=True, max_retries=3),
     agents=[
@@ -658,12 +1029,43 @@ SYNC_CRM_CONTACTS_TEAM_SPEC = TeamSpec(
         ),
     ],
     reaction_rules=[
-        TeamReactionRule(id="rr-crm-1", trigger="sync_conflict_detected", action="log_and_skip", auto=True, max_retries=3, escalate_after_retries=3, priority="medium"),
-        TeamReactionRule(id="rr-crm-2", trigger="api_rate_limit_hit", action="backoff_and_retry", auto=True, max_retries=5, escalate_after_retries=5, priority="low"),
+        TeamReactionRule(
+            id="rr-crm-1",
+            trigger="sync_conflict_detected",
+            action="log_and_skip",
+            auto=True,
+            max_retries=3,
+            escalate_after_retries=3,
+            priority="medium",
+        ),
+        TeamReactionRule(
+            id="rr-crm-2",
+            trigger="api_rate_limit_hit",
+            action="backoff_and_retry",
+            auto=True,
+            max_retries=5,
+            escalate_after_retries=5,
+            priority="low",
+        ),
     ],
-    health_monitoring=TeamHealthMonitoring(heartbeat_interval="30s", stale_threshold="120s", unresponsive_threshold="300s", stuck_threshold="600s", max_restart_attempts=3),
-    notifications={"on_start": False, "on_completion": True, "on_failure": True, "on_escalation": False},
-    output=TeamOutputSpec(formats=["json", "csv"], template="CRM Sync Summary", storage="s3://reports/crm-sync/"),
+    health_monitoring=TeamHealthMonitoring(
+        heartbeat_interval="30s",
+        stale_threshold="120s",
+        unresponsive_threshold="300s",
+        stuck_threshold="600s",
+        max_restart_attempts=3,
+    ),
+    notifications={
+        "on_start": False,
+        "on_completion": True,
+        "on_failure": True,
+        "on_escalation": False,
+    },
+    output=TeamOutputSpec(
+        formats=["json", "csv"],
+        template="CRM Sync Summary",
+        storage="s3://reports/crm-sync/",
+    ),
 )
 
 # ============================================================================

@@ -75,7 +75,7 @@ class CronTrigger:
 
     def __init__(self, config: CronTriggerConfig) -> None:
         self.config = config
-        self._task: asyncio.Task | None = None
+        self._task: asyncio.Task[Any] | None = None
         self._running = False
 
     @property
@@ -168,7 +168,7 @@ class CronTrigger:
     async def _run_fallback_schedule(self) -> None:
         """Fallback: simple asyncio loop with croniter for scheduling."""
         try:
-            from croniter import croniter
+            from croniter import croniter  # type: ignore[import-untyped]
         except ImportError:
             logger.error(
                 "Neither DBOS nor croniter is available. "
@@ -276,8 +276,15 @@ async def _execute_agent(agent_id: str, message: str) -> Any:
         raise ValueError(f"Agent '{agent_id}' not found in registry")
 
     adapter, _info = agent_entry
+    from ..adapters.base import AgentContext
+
+    context = AgentContext(
+        session_id=f"cron-{agent_id}",
+        conversation_history=[{"role": "user", "content": message}],
+        metadata={"trigger": "cron", "agent_id": agent_id},
+    )
 
     # Run the agent via its adapter
-    result = await adapter.run(message)
+    result = await adapter.run(message, context)
     logger.info(f"Agent {agent_id} completed: {type(result).__name__}")
     return result

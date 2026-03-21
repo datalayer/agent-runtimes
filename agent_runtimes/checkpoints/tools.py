@@ -17,7 +17,7 @@ from .store import RewindRequested
 logger = logging.getLogger(__name__)
 
 
-def save_checkpoint_tool_fn(middleware: Any):
+def save_checkpoint_tool_fn(middleware: Any) -> dict[str, Any]:
     """Create a ``save_checkpoint`` tool bound to the middleware.
 
     Returns a dict describing the tool for PydanticAI registration.
@@ -66,7 +66,7 @@ def save_checkpoint_tool_fn(middleware: Any):
     }
 
 
-def list_checkpoints_tool_fn(middleware: Any):
+def list_checkpoints_tool_fn(middleware: Any) -> dict[str, Any]:
     """Create a ``list_checkpoints`` tool bound to the middleware."""
 
     async def list_checkpoints() -> str:
@@ -101,7 +101,7 @@ def list_checkpoints_tool_fn(middleware: Any):
     }
 
 
-def rewind_to_tool_fn(middleware: Any):
+def rewind_to_tool_fn(middleware: Any) -> dict[str, Any]:
     """Create a ``rewind_to`` tool bound to the middleware.
 
     When the agent calls this tool, a ``RewindRequested`` exception
