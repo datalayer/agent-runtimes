@@ -67,9 +67,7 @@ class CostBudgetGuardrail(BaseGuardrail):
         self.run_cost_usd: float = 0.0
         self.cumulative_cost_usd: float = 0.0
 
-    async def check_post_request(
-        self, usage: dict, **kwargs: Any
-    ) -> GuardrailResult:
+    async def check_post_request(self, usage: dict, **kwargs: Any) -> GuardrailResult:
         """Calculate cost from token usage and enforce budget limits."""
         model = kwargs.get("model", "")
         model_pricing = kwargs.get("model_pricing") or _DEFAULT_PRICING.get(
@@ -106,9 +104,7 @@ class CostBudgetGuardrail(BaseGuardrail):
             return GuardrailResult(passed=True, warning=message)
         elif self.on_budget_exceeded == "degrade":
             logger.warning("Cost budget degrade: %s", message)
-            return GuardrailResult(
-                passed=True, action="degrade_model", warning=message
-            )
+            return GuardrailResult(passed=True, action="degrade_model", warning=message)
         else:
             raise GuardrailViolation(message, guardrail_name=self.name)
 

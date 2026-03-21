@@ -57,11 +57,7 @@ class CheckpointConfig:
         return cls(
             enabled=enabled,
             frequency=os.environ.get("AGENT_CHECKPOINTS_FREQUENCY", "every_turn"),
-            max_checkpoints=int(
-                os.environ.get("AGENT_CHECKPOINTS_MAX", "20")
-            ),
+            max_checkpoints=int(os.environ.get("AGENT_CHECKPOINTS_MAX", "20")),
             store=os.environ.get("AGENT_CHECKPOINTS_STORE", "in_memory"),
-            file_dir=os.environ.get(
-                "AGENT_CHECKPOINTS_DIR", "/tmp/agent-checkpoints"
-            ),
+            file_dir=os.environ.get("AGENT_CHECKPOINTS_DIR", "/tmp/agent-checkpoints"),
         )

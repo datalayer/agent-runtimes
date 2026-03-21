@@ -8,7 +8,7 @@ Provides structured output generation from agent results, with built-in
 support for PDF generation via the Jupyter sandbox.
 """
 
-from .base import BaseOutputGenerator, OutputArtifact, AgentResult
+from .base import AgentResult, BaseOutputGenerator, OutputArtifact
 from .pdf_generator import PDFOutputGenerator
 from .registry import OutputRegistry, create_output_generator
 

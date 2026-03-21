@@ -3,7 +3,7 @@
 
 """Agent delegation with cross-agent usage tracking and observability."""
 
-from .delegate import delegate_to_agent, DelegationConfig, DelegationResult
+from .delegate import DelegationConfig, DelegationResult, delegate_to_agent
 
 __all__ = [
     "delegate_to_agent",

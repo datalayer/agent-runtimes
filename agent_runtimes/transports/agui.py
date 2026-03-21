@@ -215,7 +215,10 @@ class AGUITransport(BaseTransport):
                                 if isinstance(content, list):
                                     text_parts: list[str] = []
                                     for block in content:
-                                        if isinstance(block, dict) and block.get("type") == "text":
+                                        if (
+                                            isinstance(block, dict)
+                                            and block.get("type") == "text"
+                                        ):
                                             text = block.get("text")
                                             if isinstance(text, str):
                                                 text_parts.append(text)
@@ -227,8 +230,8 @@ class AGUITransport(BaseTransport):
                     identities_from_request = body.get("identities")
                     if identities_from_request:
                         providers = [i.get("provider") for i in identities_from_request]
-                        hint_user_id, hint_provider, hint_token = extract_identity_hints(
-                            identities_from_request
+                        hint_user_id, hint_provider, hint_token = (
+                            extract_identity_hints(identities_from_request)
                         )
                         metric_user_provider = hint_provider or metric_user_provider
                         metric_user_id = hint_user_id or metric_user_id
@@ -306,10 +309,19 @@ class AGUITransport(BaseTransport):
                                                             tool_name
                                                         )
                                                         response_tool_call_count += 1
-                                                    elif part.get("part_kind") in ("text", "output_text"):
-                                                        text_content = part.get("content") or part.get("text")
-                                                        if isinstance(text_content, str):
-                                                            response_text_chunks.append(text_content)
+                                                    elif part.get("part_kind") in (
+                                                        "text",
+                                                        "output_text",
+                                                    ):
+                                                        text_content = part.get(
+                                                            "content"
+                                                        ) or part.get("text")
+                                                        if isinstance(
+                                                            text_content, str
+                                                        ):
+                                                            response_text_chunks.append(
+                                                                text_content
+                                                            )
                                             else:
                                                 # Object part
                                                 if hasattr(part, "tool_name"):
@@ -317,9 +329,13 @@ class AGUITransport(BaseTransport):
                                                         part.tool_name
                                                     )
                                                     response_tool_call_count += 1
-                                                text_content = getattr(part, "content", None) or getattr(part, "text", None)
+                                                text_content = getattr(
+                                                    part, "content", None
+                                                ) or getattr(part, "text", None)
                                                 if isinstance(text_content, str):
-                                                    response_text_chunks.append(text_content)
+                                                    response_text_chunks.append(
+                                                        text_content
+                                                    )
 
                                     total_tool_calls += response_tool_call_count
 
@@ -377,9 +393,14 @@ class AGUITransport(BaseTransport):
                                 stop_reason="end_turn",
                                 success=True,
                                 model=model if isinstance(model, str) else None,
-                                tool_call_count=total_tool_calls or int(getattr(usage, "tool_calls", 0) or 0),
-                                input_tokens=int(getattr(usage, "input_tokens", 0) or 0),
-                                output_tokens=int(getattr(usage, "output_tokens", 0) or 0),
+                                tool_call_count=total_tool_calls
+                                or int(getattr(usage, "tool_calls", 0) or 0),
+                                input_tokens=int(
+                                    getattr(usage, "input_tokens", 0) or 0
+                                ),
+                                output_tokens=int(
+                                    getattr(usage, "output_tokens", 0) or 0
+                                ),
                                 total_tokens=int(
                                     (getattr(usage, "input_tokens", 0) or 0)
                                     + (getattr(usage, "output_tokens", 0) or 0)
@@ -417,9 +438,15 @@ class AGUITransport(BaseTransport):
                                 stop_reason="end_turn",
                                 success=True,
                                 model=model if isinstance(model, str) else None,
-                                tool_call_count=int(getattr(usage, "tool_calls", 0) or 0),
-                                input_tokens=int(getattr(usage, "input_tokens", 0) or 0),
-                                output_tokens=int(getattr(usage, "output_tokens", 0) or 0),
+                                tool_call_count=int(
+                                    getattr(usage, "tool_calls", 0) or 0
+                                ),
+                                input_tokens=int(
+                                    getattr(usage, "input_tokens", 0) or 0
+                                ),
+                                output_tokens=int(
+                                    getattr(usage, "output_tokens", 0) or 0
+                                ),
                                 total_tokens=int(
                                     (getattr(usage, "input_tokens", 0) or 0)
                                     + (getattr(usage, "output_tokens", 0) or 0)
@@ -528,8 +555,7 @@ class AGUITransport(BaseTransport):
                         record_prompt_turn_completion(
                             prompt=request_prompt,
                             response="",
-                            duration_ms=(time.perf_counter() - request_start)
-                            * 1000.0,
+                            duration_ms=(time.perf_counter() - request_start) * 1000.0,
                             protocol="ag-ui",
                             stop_reason="cancelled",
                             success=False,
@@ -554,8 +580,7 @@ class AGUITransport(BaseTransport):
                         record_prompt_turn_completion(
                             prompt=request_prompt,
                             response="",
-                            duration_ms=(time.perf_counter() - request_start)
-                            * 1000.0,
+                            duration_ms=(time.perf_counter() - request_start) * 1000.0,
                             protocol="ag-ui",
                             stop_reason="error",
                             success=False,

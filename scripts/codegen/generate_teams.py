@@ -41,7 +41,9 @@ def _fmt_py_literal(value: Any) -> str:
         return str(value)
     if isinstance(value, str):
         # Escape backslashes and quotes
-        escaped = value.replace("\\", "\\\\").replace('"', '\\"').replace("\n", " ").strip()
+        escaped = (
+            value.replace("\\", "\\\\").replace('"', '\\"').replace("\n", " ").strip()
+        )
         return f'"{escaped}"'
     if isinstance(value, (int, float)):
         return str(value)
@@ -196,7 +198,13 @@ from agent_runtimes.types import (
 
             team_ids.append((full_team_id, const_name, folder))
 
-            description = spec.get("description", "").replace("\n", " ").replace("  ", " ").replace('"', '\\"').strip()
+            description = (
+                spec.get("description", "")
+                .replace("\n", " ")
+                .replace("  ", " ")
+                .replace('"', '\\"')
+                .strip()
+            )
             tags = _fmt_list(spec.get("tags", []))
 
             # Supervisor
@@ -204,7 +212,9 @@ from agent_runtimes.types import (
             if supervisor and isinstance(supervisor, dict):
                 sup_name = supervisor.get("name", "").replace('"', '\\"')
                 sup_model = supervisor.get("model", "")
-                supervisor_code = f'TeamSupervisorSpec(name="{sup_name}", model="{sup_model}")'
+                supervisor_code = (
+                    f'TeamSupervisorSpec(name="{sup_name}", model="{sup_model}")'
+                )
             else:
                 supervisor_code = "None"
 
@@ -229,7 +239,13 @@ from agent_runtimes.types import (
             else:
                 agents_code = "[]"
 
-            routing = spec.get("routing_instructions", "").replace("\n", " ").replace("  ", " ").replace('"', '\\"').strip()
+            routing = (
+                spec.get("routing_instructions", "")
+                .replace("\n", " ")
+                .replace("  ", " ")
+                .replace('"', '\\"')
+                .strip()
+            )
 
             # Reaction rules
             reaction_rules = spec.get("reaction_rules", [])
@@ -240,12 +256,14 @@ from agent_runtimes.types import (
                         f'TeamReactionRule(id="{rr.get("id", "")}", '
                         f'trigger="{rr.get("trigger", "")}", '
                         f'action="{rr.get("action", "")}", '
-                        f'auto={rr.get("auto", True)}, '
-                        f'max_retries={rr.get("max_retries", 0)}, '
-                        f'escalate_after_retries={rr.get("escalate_after_retries", 0)}, '
+                        f"auto={rr.get('auto', True)}, "
+                        f"max_retries={rr.get('max_retries', 0)}, "
+                        f"escalate_after_retries={rr.get('escalate_after_retries', 0)}, "
                         f'priority="{rr.get("priority", "medium")}")'
                     )
-                reaction_rules_code = "[\n        " + ",\n        ".join(rr_items) + ",\n    ]"
+                reaction_rules_code = (
+                    "[\n        " + ",\n        ".join(rr_items) + ",\n    ]"
+                )
             else:
                 reaction_rules_code = "None"
 
@@ -254,12 +272,12 @@ from agent_runtimes.types import (
             if health_monitoring and isinstance(health_monitoring, dict):
                 hm = health_monitoring
                 health_monitoring_code = (
-                    f'TeamHealthMonitoring('
+                    f"TeamHealthMonitoring("
                     f'heartbeat_interval="{hm.get("heartbeat_interval", "30s")}", '
                     f'stale_threshold="{hm.get("stale_threshold", "120s")}", '
                     f'unresponsive_threshold="{hm.get("unresponsive_threshold", "300s")}", '
                     f'stuck_threshold="{hm.get("stuck_threshold", "600s")}", '
-                    f'max_restart_attempts={hm.get("max_restart_attempts", 3)})'
+                    f"max_restart_attempts={hm.get('max_restart_attempts', 3)})"
                 )
             else:
                 health_monitoring_code = "None"
@@ -278,14 +296,14 @@ from agent_runtimes.types import (
                 template = output.get("template", "")
                 storage = output.get("storage", "")
                 output_code = (
-                    f'TeamOutputSpec(formats={formats}, '
+                    f"TeamOutputSpec(formats={formats}, "
                     f'template="{template}", '
                     f'storage="{storage}")'
                 )
             else:
                 output_code = "None"
 
-            code += f'{const_name} = TeamSpec(\n'
+            code += f"{const_name} = TeamSpec(\n"
             code += f'    id="{full_team_id}",\n'
             code += f'    name="{spec["name"]}",\n'
             code += f'    description="{description}",\n'
@@ -296,7 +314,9 @@ from agent_runtimes.types import (
             code += f'    color="{spec.get("color", "#8250df")}",\n'
             code += f'    agent_spec_id="{spec.get("agent_spec_id", "")}",\n'
             code += f'    orchestration_protocol="{spec.get("orchestration_protocol", "datalayer")}",\n'
-            code += f'    execution_mode="{spec.get("execution_mode", "sequential")}",\n'
+            code += (
+                f'    execution_mode="{spec.get("execution_mode", "sequential")}",\n'
+            )
             code += f"    supervisor={supervisor_code},\n"
             code += f'    routing_instructions="{routing}",\n'
             code += f"    validation={validation_code},\n"
@@ -351,7 +371,9 @@ def list_team_specs(prefix: str | None = None) -> list[TeamSpec]:
     return code
 
 
-def generate_typescript_code(specs: List[tuple[str, Dict[str, Any]]], types_import_path: str = "../types") -> str:
+def generate_typescript_code(
+    specs: List[tuple[str, Dict[str, Any]]], types_import_path: str = "../types"
+) -> str:
     """Generate TypeScript code from team specifications."""
     code = f"""/*
  * Copyright (c) 2025-2026 Datalayer, Inc.
@@ -402,7 +424,13 @@ import type {{ TeamSpec }} from '{types_import_path}';
 
             team_ids.append((full_team_id, const_name, folder))
 
-            description = spec.get("description", "").replace("`", "\\`").replace("\n", " ").replace("  ", " ").strip()
+            description = (
+                spec.get("description", "")
+                .replace("`", "\\`")
+                .replace("\n", " ")
+                .replace("  ", " ")
+                .strip()
+            )
             tags = json.dumps(spec.get("tags", []))
 
             # Supervisor
@@ -433,23 +461,32 @@ import type {{ TeamSpec }} from '{types_import_path}';
             else:
                 agents_ts = "[]"
 
-            routing = spec.get("routing_instructions", "").replace("`", "\\`").replace("\n", " ").replace("  ", " ").strip()
+            routing = (
+                spec.get("routing_instructions", "")
+                .replace("`", "\\`")
+                .replace("\n", " ")
+                .replace("  ", " ")
+                .strip()
+            )
 
             # Reaction rules
             reaction_rules = spec.get("reaction_rules", [])
             if reaction_rules:
-                rr_ts = json.dumps([
-                    {
-                        "id": rr.get("id", ""),
-                        "trigger": rr.get("trigger", ""),
-                        "action": rr.get("action", ""),
-                        "auto": rr.get("auto", True),
-                        "maxRetries": rr.get("max_retries", 0),
-                        "escalateAfterRetries": rr.get("escalate_after_retries", 0),
-                        "priority": rr.get("priority", "medium"),
-                    }
-                    for rr in reaction_rules
-                ], indent=2)
+                rr_ts = json.dumps(
+                    [
+                        {
+                            "id": rr.get("id", ""),
+                            "trigger": rr.get("trigger", ""),
+                            "action": rr.get("action", ""),
+                            "auto": rr.get("auto", True),
+                            "maxRetries": rr.get("max_retries", 0),
+                            "escalateAfterRetries": rr.get("escalate_after_retries", 0),
+                            "priority": rr.get("priority", "medium"),
+                        }
+                        for rr in reaction_rules
+                    ],
+                    indent=2,
+                )
             else:
                 rr_ts = None
 
@@ -457,33 +494,44 @@ import type {{ TeamSpec }} from '{types_import_path}';
             health_monitoring = spec.get("health_monitoring")
             if health_monitoring and isinstance(health_monitoring, dict):
                 hm = health_monitoring
-                hm_ts = json.dumps({
-                    "heartbeatInterval": hm.get("heartbeat_interval", "30s"),
-                    "staleThreshold": hm.get("stale_threshold", "120s"),
-                    "unresponsiveThreshold": hm.get("unresponsive_threshold", "300s"),
-                    "stuckThreshold": hm.get("stuck_threshold", "600s"),
-                    "maxRestartAttempts": hm.get("max_restart_attempts", 3),
-                }, indent=2)
+                hm_ts = json.dumps(
+                    {
+                        "heartbeatInterval": hm.get("heartbeat_interval", "30s"),
+                        "staleThreshold": hm.get("stale_threshold", "120s"),
+                        "unresponsiveThreshold": hm.get(
+                            "unresponsive_threshold", "300s"
+                        ),
+                        "stuckThreshold": hm.get("stuck_threshold", "600s"),
+                        "maxRestartAttempts": hm.get("max_restart_attempts", 3),
+                    },
+                    indent=2,
+                )
             else:
                 hm_ts = None
 
             # Notifications
             notifications = spec.get("notifications")
             if notifications and isinstance(notifications, dict):
-                notif_ts = json.dumps({
-                    k.replace("_", ""): v for k, v in notifications.items()
-                } if False else notifications, indent=2)
+                notif_ts = json.dumps(
+                    {k.replace("_", ""): v for k, v in notifications.items()}
+                    if False
+                    else notifications,
+                    indent=2,
+                )
             else:
                 notif_ts = None
 
             # Output
             output = spec.get("output")
             if output and isinstance(output, dict):
-                output_ts = json.dumps({
-                    "formats": output.get("formats", []),
-                    "template": output.get("template", ""),
-                    "storage": output.get("storage", ""),
-                }, indent=2)
+                output_ts = json.dumps(
+                    {
+                        "formats": output.get("formats", []),
+                        "template": output.get("template", ""),
+                        "storage": output.get("storage", ""),
+                    },
+                    indent=2,
+                )
             else:
                 output_ts = None
 
@@ -622,7 +670,9 @@ __all__ = ["TEAM_SPECS", "get_team_spec", "list_team_specs"]
 
         typescript_code = generate_typescript_code(
             [(folder, spec) for spec in folder_specs],
-            types_import_path="../../types/Types" if is_root else "../../../types/Types",
+            types_import_path="../../types/Types"
+            if is_root
+            else "../../../types/Types",
         )
         with open(typescript_file, "w") as f:
             f.write(typescript_code)
@@ -720,9 +770,13 @@ import type { TeamSpec } from '../../types';
     for folder in sorted(specs_by_folder.keys()):
         if folder:
             folder_const = folder.replace("-", "_").upper()
-            typescript_index_content += f"import {{ TEAM_SPECS as {folder_const}_TEAMS }} from './{folder}';\n"
+            typescript_index_content += (
+                f"import {{ TEAM_SPECS as {folder_const}_TEAMS }} from './{folder}';\n"
+            )
         else:
-            typescript_index_content += "import { TEAM_SPECS as ROOT_TEAMS } from './teams';\n"
+            typescript_index_content += (
+                "import { TEAM_SPECS as ROOT_TEAMS } from './teams';\n"
+            )
 
     typescript_index_content += """
 // Merge all team specs from subfolders

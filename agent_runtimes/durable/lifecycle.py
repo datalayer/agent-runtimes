@@ -55,8 +55,7 @@ class DurableLifecycle:
                 "Install with: pip install dbos"
             )
             raise ImportError(
-                "DBOS durable execution requires 'dbos'. "
-                "Install with: pip install dbos"
+                "DBOS durable execution requires 'dbos'. Install with: pip install dbos"
             ) from exc
 
         # Configure DBOS database
@@ -71,7 +70,9 @@ class DurableLifecycle:
             # DBOS uses DBOS_DATABASE_URL or falls back to its internal config.
             # For SQLite, we set the path in the environment.
             os.environ.setdefault("DBOS_SQLITE_PATH", self.config.sqlite_path)
-            logger.info("DBOS configured with SQLite backend: %s", self.config.sqlite_path)
+            logger.info(
+                "DBOS configured with SQLite backend: %s", self.config.sqlite_path
+            )
 
         # Launch DBOS
         try:
@@ -98,9 +99,7 @@ class DurableLifecycle:
 
             # DBOS automatically recovers pending workflows on launch.
             # We log the recovery status for observability.
-            logger.info(
-                "DBOS workflow recovery completed (automatic on launch)"
-            )
+            logger.info("DBOS workflow recovery completed (automatic on launch)")
         except Exception as exc:
             logger.warning("DBOS workflow recovery encountered an error: %s", exc)
 

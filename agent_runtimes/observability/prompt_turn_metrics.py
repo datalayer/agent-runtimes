@@ -231,7 +231,9 @@ class PromptTurnMetricsEmitter:
 
         endpoint = _resolve_otlp_endpoint()
         metrics_endpoint = _resolve_otlp_metrics_endpoint()
-        self.metrics_endpoint = metrics_endpoint or _resolve_default_metrics_endpoint(endpoint)
+        self.metrics_endpoint = metrics_endpoint or _resolve_default_metrics_endpoint(
+            endpoint
+        )
         headers: dict[str, str] | None = None
         if user_jwt_token:
             headers = {"Authorization": f"Bearer {user_jwt_token}"}
@@ -249,10 +251,14 @@ class PromptTurnMetricsEmitter:
             "service.name": service_name,
             "service.version": os.environ.get("AGENT_RUNTIMES_VERSION", "unknown"),
         }
-        user_uid = decode_user_uid(user_jwt_token) or os.environ.get("DATALAYER_USER_UID")
+        user_uid = decode_user_uid(user_jwt_token) or os.environ.get(
+            "DATALAYER_USER_UID"
+        )
         if user_uid:
             resource_attrs["datalayer.user_uid"] = user_uid
-            logger.info("Prompt-turn OTEL resource attribute: datalayer.user_uid=%s", user_uid)
+            logger.info(
+                "Prompt-turn OTEL resource attribute: datalayer.user_uid=%s", user_uid
+            )
         else:
             logger.warning(
                 "No user_uid resolved from JWT – metrics will not be associated with a user account."
@@ -370,7 +376,9 @@ class PromptTurnMetricsEmitter:
         )
 
         resolved_input_tokens = max(
-            int(input_tokens) if isinstance(input_tokens, int) else _estimate_tokens(prompt),
+            int(input_tokens)
+            if isinstance(input_tokens, int)
+            else _estimate_tokens(prompt),
             0,
         )
         resolved_output_tokens = max(

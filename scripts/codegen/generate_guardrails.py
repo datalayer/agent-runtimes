@@ -105,10 +105,10 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         "class DataScopeSpec(BaseModel):",
         '    """Data-access scoping rules."""',
         "",
-        '    allowed_systems: List[str] = Field(default_factory=list)',
-        '    allowed_objects: List[str] = Field(default_factory=list)',
-        '    denied_objects: List[str] = Field(default_factory=list)',
-        '    denied_fields: List[str] = Field(default_factory=list)',
+        "    allowed_systems: List[str] = Field(default_factory=list)",
+        "    allowed_objects: List[str] = Field(default_factory=list)",
+        "    denied_objects: List[str] = Field(default_factory=list)",
+        "    denied_fields: List[str] = Field(default_factory=list)",
         "",
         "",
         "class DataHandlingSpec(BaseModel):",
@@ -203,9 +203,9 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
                 f"        deploy_production={_py_bool(perms.get('deploy:production', False))},",
                 "    ),",
                 "    token_limits=TokenLimitsSpec(",
-                f"        per_run=\"{_esc_dq(str(tl.get('per_run', '0')))}\",",
-                f"        per_day=\"{_esc_dq(str(tl.get('per_day', '0')))}\",",
-                f"        per_month=\"{_esc_dq(str(tl.get('per_month', '0')))}\",",
+                f'        per_run="{_esc_dq(str(tl.get("per_run", "0")))}",',
+                f'        per_day="{_esc_dq(str(tl.get("per_day", "0")))}",',
+                f'        per_month="{_esc_dq(str(tl.get("per_month", "0")))}",',
                 "    ),",
             ]
         )
@@ -234,7 +234,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
                     f"        redact_fields={_fmt_list(dh.get('redact_fields', []))},",
                     f"        hash_fields={_fmt_list(dh.get('hash_fields', []))},",
                     f"        pii_detection={_py_bool(dh.get('pii_detection', False))},",
-                    f"        pii_action=\"{_esc_dq(str(dh.get('pii_action', 'warn')))}\",",
+                    f'        pii_action="{_esc_dq(str(dh.get("pii_action", "warn")))}",',
                     "    ),",
                 ]
             )
@@ -255,7 +255,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
                     "    tool_limits=ToolLimitsSpec(",
                     f"        max_tool_calls={int(tlim.get('max_tool_calls', 0))},",
                     f"        max_query_rows={int(tlim.get('max_query_rows', 0))},",
-                    f"        max_query_runtime=\"{_esc_dq(str(tlim.get('max_query_runtime', '0s')))}\",",
+                    f'        max_query_runtime="{_esc_dq(str(tlim.get("max_query_runtime", "0s")))}",',
                     f"        max_time_window_days={int(tlim.get('max_time_window_days', 0))},",
                     "    ),",
                 ]
@@ -321,10 +321,18 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
 # TypeScript code generation
 # ============================================================================
 
+
 def _ts_permissions(perms: dict[str, bool]) -> str:
     """Format permissions for TypeScript."""
     lines = []
-    for key in ["read:data", "write:data", "execute:code", "access:internet", "send:email", "deploy:production"]:
+    for key in [
+        "read:data",
+        "write:data",
+        "execute:code",
+        "access:internet",
+        "send:email",
+        "deploy:production",
+    ]:
         lines.append(f"    '{key}': {str(perms.get(key, False)).lower()},")
     return "{\n" + "\n".join(lines) + "\n  }"
 

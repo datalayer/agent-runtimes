@@ -10,7 +10,7 @@ import time
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Any, Callable, Awaitable
+from typing import Any, Awaitable, Callable
 
 from .report import CaseResult, EvalReportData, format_report, save_report_json
 from .spec_adapter import build_dataset_from_spec, parse_eval_spec
@@ -160,9 +160,7 @@ class EvalRunner:
                         score=1.0 if passed else 0.0,
                         actual_output=output,
                         expected_output=(
-                            str(case.expected_output)
-                            if case.expected_output
-                            else None
+                            str(case.expected_output) if case.expected_output else None
                         ),
                         duration_ms=duration,
                         metadata=case.metadata or {},
@@ -182,18 +180,14 @@ class EvalRunner:
 
         return results
 
-    async def _run_manual(
-        self, eval_spec: list[dict[str, Any]]
-    ) -> list[CaseResult]:
+    async def _run_manual(self, eval_spec: list[dict[str, Any]]) -> list[CaseResult]:
         """Fallback: run evaluations without pydantic-evals library."""
         suites = parse_eval_spec(eval_spec)
         results: list[CaseResult] = []
 
         for suite in suites:
             for i in range(min(suite.task_count, 10)):  # Cap at 10 for manual mode
-                prompt = (
-                    f"[{suite.category}] Test case {i + 1} for: {suite.name}"
-                )
+                prompt = f"[{suite.category}] Test case {i + 1} for: {suite.name}"
                 start = time.monotonic()
                 try:
                     output = await self.agent_fn({"prompt": prompt})

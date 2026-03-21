@@ -352,12 +352,8 @@ async def _create_and_register_cli_agent(
                 getattr(agent_spec, "advanced", None)
             )
             if spec_config.enabled:
-                pydantic_agent = wrap_agent_durable(
-                    pydantic_agent, agent_id=agent_id
-                )
-                logger.info(
-                    f"Agent '{agent_id}' wrapped with DBOS durable execution"
-                )
+                pydantic_agent = wrap_agent_durable(pydantic_agent, agent_id=agent_id)
+                logger.info(f"Agent '{agent_id}' wrapped with DBOS durable execution")
         except Exception as exc:
             logger.warning(
                 f"Failed to wrap agent '{agent_id}' with DBOS — continuing without durability: {exc}"
@@ -771,7 +767,9 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
                 app.state.durable_lifecycle = _durable_lifecycle
                 logger.info("DBOS durable execution launched")
             except Exception as exc:
-                logger.error("DBOS launch failed — continuing without durability: %s", exc)
+                logger.error(
+                    "DBOS launch failed — continuing without durability: %s", exc
+                )
                 _durable_lifecycle = None
 
         is_reload_parent = _is_reload_parent_process()

@@ -57,9 +57,7 @@ class DataScopeGuardrail(BaseGuardrail):
         self.denied_objects = set(denied_objects or [])
         self.denied_field_patterns = denied_fields or []
 
-    async def check_pre_tool(
-        self, tool_name: str, tool_args: dict
-    ) -> GuardrailResult:
+    async def check_pre_tool(self, tool_name: str, tool_args: dict) -> GuardrailResult:
         """Inspect tool arguments for system/object references and enforce scope."""
         # Extract references from common argument patterns
         system = tool_args.get("system") or tool_args.get("datasource") or ""
@@ -93,9 +91,7 @@ class DataScopeGuardrail(BaseGuardrail):
 
         return GuardrailResult(passed=True)
 
-    async def check_post_tool(
-        self, tool_name: str, result: Any
-    ) -> GuardrailResult:
+    async def check_post_tool(self, tool_name: str, result: Any) -> GuardrailResult:
         """Inspect tool results to ensure no denied fields leak through."""
         if not self.denied_field_patterns:
             return GuardrailResult(passed=True)

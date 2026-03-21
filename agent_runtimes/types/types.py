@@ -405,13 +405,22 @@ class TeamAgentSpec(BaseModel):
 
     id: str = Field(..., description="Agent identifier within the team")
     name: str = Field(..., description="Display name for the team agent")
-    role: str = Field(default="", description="Role within the team (e.g., 'Primary · Initiator', 'Secondary', 'Final')")
+    role: str = Field(
+        default="",
+        description="Role within the team (e.g., 'Primary · Initiator', 'Secondary', 'Final')",
+    )
     goal: str = Field(default="", description="Goal or objective for this agent")
     model: str = Field(default="", description="AI model identifier")
-    mcp_server: str = Field(default="", description="MCP server used by this agent", alias="mcpServer")
-    tools: list[str] = Field(default_factory=list, description="Tools available to this agent")
+    mcp_server: str = Field(
+        default="", description="MCP server used by this agent", alias="mcpServer"
+    )
+    tools: list[str] = Field(
+        default_factory=list, description="Tools available to this agent"
+    )
     trigger: str = Field(default="", description="Trigger condition for this agent")
-    approval: str = Field(default="auto", description="Approval policy: 'auto' or 'manual'")
+    approval: str = Field(
+        default="auto", description="Approval policy: 'auto' or 'manual'"
+    )
 
     model_config = {"populate_by_name": True}
 
@@ -426,9 +435,15 @@ class TeamSupervisorSpec(BaseModel):
 class TeamValidationSpec(BaseModel):
     """Validation settings for a team."""
 
-    timeout: Optional[str] = Field(default=None, description="Maximum execution time (e.g., '300s')")
-    retry_on_failure: bool = Field(default=False, description="Whether to retry on failure", alias="retryOnFailure")
-    max_retries: int = Field(default=0, description="Maximum number of retries", alias="maxRetries")
+    timeout: Optional[str] = Field(
+        default=None, description="Maximum execution time (e.g., '300s')"
+    )
+    retry_on_failure: bool = Field(
+        default=False, description="Whether to retry on failure", alias="retryOnFailure"
+    )
+    max_retries: int = Field(
+        default=0, description="Maximum number of retries", alias="maxRetries"
+    )
 
     model_config = {"populate_by_name": True}
 
@@ -439,10 +454,21 @@ class TeamReactionRule(BaseModel):
     id: str = Field(..., description="Unique reaction rule identifier")
     trigger: str = Field(..., description="Event or condition that triggers this rule")
     action: str = Field(..., description="Action to take when triggered")
-    auto: bool = Field(default=True, description="Whether the rule executes automatically")
-    max_retries: int = Field(default=1, description="Maximum retry attempts", alias="maxRetries")
-    escalate_after_retries: int = Field(default=1, description="Escalate after this many retries", alias="escalateAfterRetries")
-    priority: str = Field(default="medium", description="Priority level: 'low', 'medium', 'high', 'critical'")
+    auto: bool = Field(
+        default=True, description="Whether the rule executes automatically"
+    )
+    max_retries: int = Field(
+        default=1, description="Maximum retry attempts", alias="maxRetries"
+    )
+    escalate_after_retries: int = Field(
+        default=1,
+        description="Escalate after this many retries",
+        alias="escalateAfterRetries",
+    )
+    priority: str = Field(
+        default="medium",
+        description="Priority level: 'low', 'medium', 'high', 'critical'",
+    )
 
     model_config = {"populate_by_name": True}
 
@@ -450,11 +476,31 @@ class TeamReactionRule(BaseModel):
 class TeamHealthMonitoring(BaseModel):
     """Health monitoring configuration for a team."""
 
-    heartbeat_interval: str = Field(default="30s", description="Interval between heartbeat checks", alias="heartbeatInterval")
-    stale_threshold: str = Field(default="120s", description="Time before an agent is considered stale", alias="staleThreshold")
-    unresponsive_threshold: str = Field(default="300s", description="Time before an agent is considered unresponsive", alias="unresponsiveThreshold")
-    stuck_threshold: str = Field(default="600s", description="Time before an agent is considered stuck", alias="stuckThreshold")
-    max_restart_attempts: int = Field(default=3, description="Maximum restart attempts for unhealthy agents", alias="maxRestartAttempts")
+    heartbeat_interval: str = Field(
+        default="30s",
+        description="Interval between heartbeat checks",
+        alias="heartbeatInterval",
+    )
+    stale_threshold: str = Field(
+        default="120s",
+        description="Time before an agent is considered stale",
+        alias="staleThreshold",
+    )
+    unresponsive_threshold: str = Field(
+        default="300s",
+        description="Time before an agent is considered unresponsive",
+        alias="unresponsiveThreshold",
+    )
+    stuck_threshold: str = Field(
+        default="600s",
+        description="Time before an agent is considered stuck",
+        alias="stuckThreshold",
+    )
+    max_restart_attempts: int = Field(
+        default=3,
+        description="Maximum restart attempts for unhealthy agents",
+        alias="maxRestartAttempts",
+    )
 
     model_config = {"populate_by_name": True}
 
@@ -462,7 +508,9 @@ class TeamHealthMonitoring(BaseModel):
 class TeamOutputSpec(BaseModel):
     """Output configuration for a team."""
 
-    formats: list[str] = Field(default_factory=list, description="Output formats (e.g., 'pdf', 'csv', 'json')")
+    formats: list[str] = Field(
+        default_factory=list, description="Output formats (e.g., 'pdf', 'csv', 'json')"
+    )
     template: str = Field(default="", description="Report template name")
     storage: str = Field(default="", description="Storage location (e.g., S3 path)")
 

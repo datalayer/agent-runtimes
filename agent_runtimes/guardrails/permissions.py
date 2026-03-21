@@ -62,9 +62,7 @@ class PermissionGuardrail(BaseGuardrail):
         self.permissions = permissions
         self.tool_permission_map = tool_permission_map or _DEFAULT_TOOL_PERMISSIONS
 
-    async def check_pre_tool(
-        self, tool_name: str, tool_args: dict
-    ) -> GuardrailResult:
+    async def check_pre_tool(self, tool_name: str, tool_args: dict) -> GuardrailResult:
         """Check whether the tool call satisfies all required permissions."""
         required_perms = self._classify_tool(tool_name, tool_args)
         denied = []

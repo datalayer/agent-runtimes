@@ -25,6 +25,7 @@ _eval_reports: dict[str, dict[str, Any]] = {}
 # Request / response models
 # ---------------------------------------------------------------------------
 
+
 class RunEvalsRequest(BaseModel):
     """Request body for triggering an eval run."""
 

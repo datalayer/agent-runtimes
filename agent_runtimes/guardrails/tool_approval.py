@@ -172,9 +172,7 @@ class ToolApprovalManager:
         }
 
         try:
-            resp = await client.post(
-                "/api/ai-agents/v1/tool-approvals", json=payload
-            )
+            resp = await client.post("/api/ai-agents/v1/tool-approvals", json=payload)
             resp.raise_for_status()
         except httpx.HTTPError as exc:
             # If the ai-agents service is unreachable, auto-approve
@@ -220,7 +218,9 @@ class ToolApprovalManager:
 
             status = record.get("status", "pending")
             if status == "approved":
-                logger.info("Tool '%s' approved (approval_id=%s)", tool_name, approval_id)
+                logger.info(
+                    "Tool '%s' approved (approval_id=%s)", tool_name, approval_id
+                )
                 return record
             elif status == "rejected":
                 note = record.get("note")

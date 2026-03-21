@@ -156,7 +156,9 @@ def setup_otel(
     # Read configuration from environment variables if not provided
     token = token or os.environ.get("DATALAYER_LOGFIRE_TOKEN")
     project = project or os.environ.get("DATALAYER_LOGFIRE_PROJECT", "starter-project")
-    url = url or os.environ.get("DATALAYER_LOGFIRE_URL", "https://logfire-us.pydantic.dev")
+    url = url or os.environ.get(
+        "DATALAYER_LOGFIRE_URL", "https://logfire-us.pydantic.dev"
+    )
 
     if not token:
         raise ValueError(
@@ -200,8 +202,12 @@ def setup_otel(
             endpoint=f"{url}/v1/metrics",
             headers={"Authorization": token},
         )
-        metric_reader = PeriodicExportingMetricReader(metric_exporter, export_interval_millis=10_000)
-        meter_provider = MeterProvider(resource=resource, metric_readers=[metric_reader])
+        metric_reader = PeriodicExportingMetricReader(
+            metric_exporter, export_interval_millis=10_000
+        )
+        meter_provider = MeterProvider(
+            resource=resource, metric_readers=[metric_reader]
+        )
         metrics.set_meter_provider(meter_provider)
         _meter_provider = meter_provider
 
@@ -362,7 +368,9 @@ def instrument_agent_runtimes(
         return
 
     if _instrumented:
-        logger.warning("agent-runtimes is already instrumented. Call uninstrument_agent_runtimes() first.")
+        logger.warning(
+            "agent-runtimes is already instrumented. Call uninstrument_agent_runtimes() first."
+        )
         return
 
     # Resolve tracer provider
@@ -429,14 +437,14 @@ def uninstrument_agent_runtimes() -> None:
 # ============================================================================
 
 
-def _instrument_adapters(
-    tracer: Any, capture_config: dict[str, bool]
-) -> None:
+def _instrument_adapters(tracer: Any, capture_config: dict[str, bool]) -> None:
     """Instrument BaseAgent.run() and BaseAgent.stream()."""
     try:
         from agent_runtimes.adapters.base import BaseAgent
     except ImportError:
-        logger.warning("Could not import agent_runtimes.adapters.base – skipping adapter instrumentation")
+        logger.warning(
+            "Could not import agent_runtimes.adapters.base – skipping adapter instrumentation"
+        )
         return
 
     # --- run() ---
@@ -466,14 +474,18 @@ def _instrument_adapters(
                 if capture_config.get("responses") and hasattr(response, "content"):
                     span.set_attribute("agent.response", str(response.content)[:500])
                 if hasattr(response, "tool_calls"):
-                    span.set_attribute("agent.tool_call_count", len(response.tool_calls))
+                    span.set_attribute(
+                        "agent.tool_call_count", len(response.tool_calls)
+                    )
                 if hasattr(response, "usage"):
                     for k, v in (response.usage or {}).items():
                         span.set_attribute(f"agent.usage.{k}", v)
 
                 if _metrics:
                     _metrics.agent_run_count.add(1, {"agent.name": agent_name})
-                    _metrics.agent_run_duration.record(duration, {"agent.name": agent_name})
+                    _metrics.agent_run_duration.record(
+                        duration, {"agent.name": agent_name}
+                    )
 
                 return response
             except Exception as exc:
@@ -514,7 +526,9 @@ def _instrument_adapters(
                 span.set_attribute("agent.stream.event_count", event_count)
                 if _metrics:
                     _metrics.agent_stream_count.add(1, {"agent.name": agent_name})
-                    _metrics.agent_stream_events.add(event_count, {"agent.name": agent_name})
+                    _metrics.agent_stream_events.add(
+                        event_count, {"agent.name": agent_name}
+                    )
             except Exception as exc:
                 if OTEL_AVAILABLE and StatusCode is not None:
                     span.set_status(Status(StatusCode.ERROR, str(exc)))
@@ -531,20 +545,24 @@ def _instrument_adapters(
 # ============================================================================
 
 
-def _instrument_transports(
-    tracer: Any, capture_config: dict[str, bool]
-) -> None:
+def _instrument_transports(tracer: Any, capture_config: dict[str, bool]) -> None:
     """Instrument BaseTransport.handle_request()."""
     try:
         from agent_runtimes.transports.base import BaseTransport
     except ImportError:
-        logger.warning("Could not import agent_runtimes.transports.base – skipping transport instrumentation")
+        logger.warning(
+            "Could not import agent_runtimes.transports.base – skipping transport instrumentation"
+        )
         return
 
     original_handle_request = BaseTransport.handle_request
-    _original_methods["agent_runtimes.transports.base.BaseTransport.handle_request"] = original_handle_request
+    _original_methods["agent_runtimes.transports.base.BaseTransport.handle_request"] = (
+        original_handle_request
+    )
 
-    async def traced_handle_request(self: Any, request: dict[str, Any]) -> dict[str, Any]:
+    async def traced_handle_request(
+        self: Any, request: dict[str, Any]
+    ) -> dict[str, Any]:
         protocol = getattr(self, "protocol_name", type(self).__name__)
         span_name = f"transport.request {protocol}"
         attributes: dict[str, Any] = {
@@ -559,8 +577,12 @@ def _instrument_transports(
                 duration = time.perf_counter() - t0
 
                 if _metrics:
-                    _metrics.transport_request_count.add(1, {"transport.protocol": protocol})
-                    _metrics.transport_request_duration.record(duration, {"transport.protocol": protocol})
+                    _metrics.transport_request_count.add(
+                        1, {"transport.protocol": protocol}
+                    )
+                    _metrics.transport_request_duration.record(
+                        duration, {"transport.protocol": protocol}
+                    )
 
                 return response
             except Exception as exc:
@@ -569,7 +591,9 @@ def _instrument_transports(
                     span.set_status(Status(StatusCode.ERROR, str(exc)))
                 span.record_exception(exc)
                 if _metrics:
-                    _metrics.transport_request_errors.add(1, {"transport.protocol": protocol})
+                    _metrics.transport_request_errors.add(
+                        1, {"transport.protocol": protocol}
+                    )
                 raise
 
     setattr(BaseTransport, "handle_request", traced_handle_request)
@@ -582,7 +606,9 @@ def _instrument_transports(
 # ============================================================================
 
 
-def create_otel_middleware(tracer: Any = None, service_name: str = "agent-runtimes") -> Any:
+def create_otel_middleware(
+    tracer: Any = None, service_name: str = "agent-runtimes"
+) -> Any:
     """
     Create a Starlette/FastAPI middleware that traces every HTTP request.
 

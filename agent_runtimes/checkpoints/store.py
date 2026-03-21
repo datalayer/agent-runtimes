@@ -187,6 +187,8 @@ def create_checkpoint_store(
 ) -> CheckpointStore:
     """Factory to create a checkpoint store from config."""
     if store_type == "file":
-        return FileCheckpointStore(directory=kwargs.get("file_dir", "/tmp/agent-checkpoints"))
+        return FileCheckpointStore(
+            directory=kwargs.get("file_dir", "/tmp/agent-checkpoints")
+        )
     # Default: in-memory
     return InMemoryCheckpointStore()

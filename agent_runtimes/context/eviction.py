@@ -85,11 +85,13 @@ class ToolOutputEviction:
 
         # Build preview
         head = lines[: self.preview_lines]
-        tail = lines[-self.preview_lines :] if total_lines > self.preview_lines * 2 else []
+        tail = (
+            lines[-self.preview_lines :] if total_lines > self.preview_lines * 2 else []
+        )
         truncated = total_lines - len(head) - len(tail)
 
         preview_parts = [
-            f"Tool result too large ({total_lines} lines, ~{len(content)//4} tokens), saved to: {filepath}",
+            f"Tool result too large ({total_lines} lines, ~{len(content) // 4} tokens), saved to: {filepath}",
             f'Read with: read_file(path="{filepath}", offset=0, limit=100)',
             "",
             f"Preview (first {len(head)} / last {len(tail)} lines):",

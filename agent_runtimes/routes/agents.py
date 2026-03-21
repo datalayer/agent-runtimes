@@ -732,20 +732,28 @@ async def create_agent(
             )
 
             # Wrap with DBOS durable execution if enabled
-            durable_lifecycle = getattr(http_request.app.state, "durable_lifecycle", None)
+            durable_lifecycle = getattr(
+                http_request.app.state, "durable_lifecycle", None
+            )
             if durable_lifecycle and durable_lifecycle.is_healthy():
                 try:
                     from ..durable import DurableConfig, wrap_agent_durable
 
                     # Check if the agent spec requests durable execution
-                    spec = get_library_agent_spec(request.agent_spec_id) if request.agent_spec_id else None
+                    spec = (
+                        get_library_agent_spec(request.agent_spec_id)
+                        if request.agent_spec_id
+                        else None
+                    )
                     spec_advanced = getattr(spec, "advanced", None) if spec else None
                     durable_cfg = DurableConfig.from_agent_spec(spec_advanced)
                     if durable_cfg.enabled:
                         pydantic_agent = wrap_agent_durable(
                             pydantic_agent, agent_id=agent_id
                         )
-                        logger.info(f"Agent '{agent_id}' wrapped with DBOS durable execution")
+                        logger.info(
+                            f"Agent '{agent_id}' wrapped with DBOS durable execution"
+                        )
                 except Exception as exc:
                     logger.warning(
                         f"Failed to wrap agent '{agent_id}' with DBOS — continuing without durability: {exc}"
@@ -2298,6 +2306,7 @@ async def post_restore_endpoint(http_request: Request) -> dict[str, Any]:
 
 class ConfigureFromSpecRequest(BaseModel):
     """Request body for the configure-from-spec endpoint."""
+
     agent_spec_id: str
     env_vars: list[dict[str, str]] = Field(default_factory=list)
 
@@ -2352,7 +2361,9 @@ async def configure_from_spec_endpoint(
             )
             if durable_config.enabled:
                 wrap_agent_durable(agent, agent_id=body.agent_spec_id)
-                logger.info("Wrapped agent '%s' with DBOS durability", body.agent_spec_id)
+                logger.info(
+                    "Wrapped agent '%s' with DBOS durability", body.agent_spec_id
+                )
 
         adapter = PydanticAIAdapter(agent)
         agent_id = body.agent_spec_id
@@ -2383,7 +2394,9 @@ async def configure_from_spec_endpoint(
         }
 
     except Exception as e:
-        logger.error("Failed to configure agent from spec '%s': %s", body.agent_spec_id, e)
+        logger.error(
+            "Failed to configure agent from spec '%s': %s", body.agent_spec_id, e
+        )
         raise HTTPException(
             status_code=500,
             detail=f"Failed to create agent from spec: {str(e)}",

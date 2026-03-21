@@ -115,21 +115,13 @@ class GuardrailPipeline:
         guardrails: list[BaseGuardrail] = []
         for entry in spec_guardrails:
             if "token_limits" in entry:
-                guardrails.append(
-                    TokenLimitGuardrail.from_spec(entry["token_limits"])
-                )
+                guardrails.append(TokenLimitGuardrail.from_spec(entry["token_limits"]))
             if "cost_budget" in entry:
-                guardrails.append(
-                    CostBudgetGuardrail.from_spec(entry["cost_budget"])
-                )
+                guardrails.append(CostBudgetGuardrail.from_spec(entry["cost_budget"]))
             if "permissions" in entry:
-                guardrails.append(
-                    PermissionGuardrail.from_spec(entry["permissions"])
-                )
+                guardrails.append(PermissionGuardrail.from_spec(entry["permissions"]))
             if "data_scope" in entry:
-                guardrails.append(
-                    DataScopeGuardrail.from_spec(entry["data_scope"])
-                )
+                guardrails.append(DataScopeGuardrail.from_spec(entry["data_scope"]))
             if "content_safety" in entry:
                 guardrails.append(
                     ContentSafetyGuardrail.from_spec(entry["content_safety"])

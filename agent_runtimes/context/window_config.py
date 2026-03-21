@@ -55,9 +55,7 @@ class ContextWindowConfig:
     history_archive: bool = True
 
     @classmethod
-    def from_spec(
-        cls, spec_context: dict[str, Any] | None
-    ) -> "ContextWindowConfig":
+    def from_spec(cls, spec_context: dict[str, Any] | None) -> "ContextWindowConfig":
         """Build from AgentSpec ``context_management`` dict."""
         if not spec_context:
             return cls()

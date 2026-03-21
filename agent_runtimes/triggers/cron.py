@@ -114,9 +114,7 @@ class CronTrigger:
         try:
             await self._run_dbos_schedule()
         except ImportError:
-            logger.info(
-                "DBOS not available, falling back to asyncio cron loop"
-            )
+            logger.info("DBOS not available, falling back to asyncio cron loop")
             await self._run_fallback_schedule()
 
     async def _run_dbos_schedule(self) -> None:
@@ -148,9 +146,7 @@ class CronTrigger:
                     workflow_id=DBOS.workflow_id,
                 )
             except Exception as e:
-                logger.error(
-                    f"Cron trigger failed for agent {agent_id}: {e}"
-                )
+                logger.error(f"Cron trigger failed for agent {agent_id}: {e}")
                 return CronTriggerResult(
                     agent_id=agent_id,
                     scheduled_at=scheduled_at,
@@ -193,17 +189,12 @@ class CronTrigger:
             if not self._running:
                 break
 
-            logger.info(
-                f"Cron trigger firing for agent {self.config.agent_id}"
-            )
+            logger.info(f"Cron trigger firing for agent {self.config.agent_id}")
             try:
-                await _execute_agent(
-                    self.config.agent_id, self.config.input_message
-                )
+                await _execute_agent(self.config.agent_id, self.config.input_message)
             except Exception as e:
                 logger.error(
-                    f"Cron trigger execution failed for "
-                    f"{self.config.agent_id}: {e}"
+                    f"Cron trigger execution failed for {self.config.agent_id}: {e}"
                 )
 
 

@@ -273,7 +273,9 @@ async def get_conversation_history(
 @router.post("/history", response_model=dict)
 async def upsert_conversation_history(
     body: HistoryUpsertRequest,
-    agent_id: str = Query(default="default", description="Agent ID to restore history for"),
+    agent_id: str = Query(
+        default="default", description="Agent ID to restore history for"
+    ),
 ) -> dict[str, Any]:
     """Inject/restore conversation history for an agent."""
     tracker = get_usage_tracker()

@@ -91,9 +91,7 @@ class TokenLimitGuardrail(BaseGuardrail):
             logger.warning("pydantic_ai.usage.UsageLimits not available")
             return None
 
-    async def check_post_request(
-        self, usage: dict, **kwargs: Any
-    ) -> GuardrailResult:
+    async def check_post_request(self, usage: dict, **kwargs: Any) -> GuardrailResult:
         """Called after each LLM request. Raises if limit exceeded."""
         total_tokens = usage.get("total_tokens", 0)
         self.counters["run_tokens"] += total_tokens
@@ -126,9 +124,7 @@ class TokenLimitGuardrail(BaseGuardrail):
             )
         return GuardrailResult(passed=True)
 
-    async def check_pre_tool(
-        self, tool_name: str, tool_args: dict
-    ) -> GuardrailResult:
+    async def check_pre_tool(self, tool_name: str, tool_args: dict) -> GuardrailResult:
         """Track tool call count and enforce tool_calls_limit."""
         self.counters["run_tool_calls"] += 1
         if (

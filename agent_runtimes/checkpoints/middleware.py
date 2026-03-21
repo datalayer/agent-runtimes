@@ -108,9 +108,7 @@ class AutoCheckpointMiddleware:
                 **(metadata or {}),
             },
         )
-        logger.debug(
-            "Auto-checkpoint created: %s (tool %s)", label, tool_name
-        )
+        logger.debug("Auto-checkpoint created: %s (tool %s)", label, tool_name)
         return checkpoint
 
     async def save_manual(

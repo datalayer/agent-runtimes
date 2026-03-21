@@ -63,13 +63,9 @@ class ContentSafetyGuardrail(BaseGuardrail):
         self.block_data_instructions = block_data_instructions
         self.patterns = _INJECTION_PATTERNS + (extra_patterns or [])
         # Pre-compile patterns
-        self._compiled = [
-            re.compile(p, re.IGNORECASE) for p in self.patterns
-        ]
+        self._compiled = [re.compile(p, re.IGNORECASE) for p in self.patterns]
 
-    async def check_post_tool(
-        self, tool_name: str, result: Any
-    ) -> GuardrailResult:
+    async def check_post_tool(self, tool_name: str, result: Any) -> GuardrailResult:
         """Scan tool output for prompt injection patterns."""
         if not self.treat_text_as_untrusted:
             return GuardrailResult(passed=True)
@@ -83,9 +79,7 @@ class ContentSafetyGuardrail(BaseGuardrail):
                     f"'{tool_name}' output (pattern: {match.group()!r})"
                 )
                 if self.block_data_instructions:
-                    raise GuardrailViolation(
-                        message, guardrail_name=self.name
-                    )
+                    raise GuardrailViolation(message, guardrail_name=self.name)
                 else:
                     logger.warning(message)
                     return GuardrailResult(passed=True, warning=message)

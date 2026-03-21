@@ -57,9 +57,7 @@ class WebhookTriggerResult:
     """Result of a webhook trigger execution."""
 
     agent_id: str
-    triggered_at: datetime = field(
-        default_factory=lambda: datetime.now(timezone.utc)
-    )
+    triggered_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     success: bool = False
     workflow_id: str | None = None
     output: str | None = None
@@ -199,9 +197,7 @@ async def webhook_trigger(agent_id: str, request: Request) -> WebhookResponse:
         request.headers.get("Origin", request.client.host if request.client else ""),
     )
     if not trigger.validate_source(origin):
-        logger.warning(
-            f"Unauthorized webhook source '{origin}' for agent {agent_id}"
-        )
+        logger.warning(f"Unauthorized webhook source '{origin}' for agent {agent_id}")
         raise HTTPException(
             status_code=403,
             detail="Unauthorized event source",
@@ -257,9 +253,7 @@ async def webhook_info(agent_id: str) -> WebhookInfo:
 # --- Agent execution helper ---
 
 
-async def _execute_agent_webhook(
-    agent_id: str, message: str
-) -> dict[str, Any]:
+async def _execute_agent_webhook(agent_id: str, message: str) -> dict[str, Any]:
     """Execute an agent via webhook, wrapping in DBOS workflow if available.
 
     Returns:

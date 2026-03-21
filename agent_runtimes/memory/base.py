@@ -58,9 +58,7 @@ class BaseMemoryBackend(ABC):
         """
         ...
 
-    async def get_relevant_context(
-        self, query: str, max_tokens: int = 2000
-    ) -> str:
+    async def get_relevant_context(self, query: str, max_tokens: int = 2000) -> str:
         """Get relevant memory context for system prompt injection.
 
         Parameters

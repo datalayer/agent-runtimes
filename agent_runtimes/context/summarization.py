@@ -85,7 +85,9 @@ class ConversationSummarizer:
         summary = await self._call_summarizer(formatted)
 
         if not summary:
-            logger.warning("Summarization returned empty result — keeping original messages")
+            logger.warning(
+                "Summarization returned empty result — keeping original messages"
+            )
             return messages, ""
 
         self._summary_count += 1

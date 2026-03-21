@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import logging
 import re
-from typing import Any, Callable, Awaitable
+from typing import Any, Awaitable, Callable
 
 from .base import HookEvent, HookInput, HookResult
 from .middleware import HookRegistration, HooksMiddleware

@@ -14,7 +14,13 @@ strategic failures — wrong approach, dead-end reasoning.
 
 from .config import CheckpointConfig
 from .middleware import AutoCheckpointMiddleware
-from .store import CheckpointStore, ConversationCheckpoint, FileCheckpointStore, InMemoryCheckpointStore, RewindRequested
+from .store import (
+    CheckpointStore,
+    ConversationCheckpoint,
+    FileCheckpointStore,
+    InMemoryCheckpointStore,
+    RewindRequested,
+)
 from .tools import (
     list_checkpoints_tool_fn,
     rewind_to_tool_fn,

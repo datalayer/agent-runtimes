@@ -106,9 +106,7 @@ class PDFOutputGenerator(BaseOutputGenerator):
             },
         )
 
-        logger.info(
-            "Generated PDF output: %s (%d bytes)", pdf_path, size
-        )
+        logger.info("Generated PDF output: %s (%d bytes)", pdf_path, size)
         return artifact
 
     def _render_html(self, agent_result: AgentResult) -> str:
@@ -162,16 +160,12 @@ class PDFOutputGenerator(BaseOutputGenerator):
         try:
             return await self._generate_via_sandbox(html_content, pdf_path)
         except Exception as e:
-            logger.warning(
-                "Sandbox PDF generation failed, trying local: %s", e
-            )
+            logger.warning("Sandbox PDF generation failed, trying local: %s", e)
 
         # Local fallback
         return self._generate_local(html_content, pdf_path)
 
-    async def _generate_via_sandbox(
-        self, html_content: str, pdf_path: str
-    ) -> str:
+    async def _generate_via_sandbox(self, html_content: str, pdf_path: str) -> str:
         """Execute WeasyPrint in the Jupyter sandbox kernel."""
         # Write HTML to temp file accessible by sandbox
         html_path = pdf_path.replace(".pdf", ".html")
@@ -185,9 +179,7 @@ weasyprint.HTML(filename='{html_path}').write_pdf('{pdf_path}')
 print('PDF generated successfully')
 """
 
-        async with httpx.AsyncClient(
-            base_url=self.sandbox_url, timeout=60.0
-        ) as client:
+        async with httpx.AsyncClient(base_url=self.sandbox_url, timeout=60.0) as client:
             # Execute code via Jupyter kernel gateway API
             resp = await client.post(
                 "/api/kernels",

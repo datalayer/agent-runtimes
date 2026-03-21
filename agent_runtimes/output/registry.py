@@ -57,9 +57,7 @@ class OutputRegistry:
         """Return available output format names."""
         return list(self._generators.keys())
 
-    def create(
-        self, format_name: str, **kwargs: Any
-    ) -> BaseOutputGenerator:
+    def create(self, format_name: str, **kwargs: Any) -> BaseOutputGenerator:
         """Create an output generator by format name."""
         cls = self._generators.get(format_name)
         if cls is None:
@@ -69,9 +67,7 @@ class OutputRegistry:
             )
         return cls(**kwargs)
 
-    def create_from_spec(
-        self, spec_config: dict[str, Any]
-    ) -> BaseOutputGenerator:
+    def create_from_spec(self, spec_config: dict[str, Any]) -> BaseOutputGenerator:
         """Create an output generator from agentspec output configuration.
 
         Expected spec_config keys:

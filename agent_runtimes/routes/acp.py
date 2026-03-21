@@ -672,9 +672,7 @@ async def _handle_prompt(
     content = params.get("content", [])
     metadata = params.get("metadata", {})
     metadata_identities = (
-        metadata.get("identities")
-        if isinstance(metadata, dict)
-        else None
+        metadata.get("identities") if isinstance(metadata, dict) else None
     )
 
     # Extract model from metadata for per-request model override
@@ -746,11 +744,11 @@ async def _handle_prompt(
 
         return parsed_input, parsed_output, parsed_total
 
-    session_user_id = (
-        session.context.user_id if session and session.context else None
-    )
+    session_user_id = session.context.user_id if session and session.context else None
     metric_user_provider = "acp-session"
-    hint_user_id, hint_provider, hint_token = extract_identity_hints(metadata_identities)
+    hint_user_id, hint_provider, hint_token = extract_identity_hints(
+        metadata_identities
+    )
     user_jwt_token = hint_token or user_jwt_token
     if hint_user_id:
         session_user_id = hint_user_id
@@ -799,7 +797,9 @@ async def _handle_prompt(
                         if isinstance(event_data, dict)
                         else None
                     )
-                    parsed_input, parsed_output, parsed_total = _parse_usage_tokens(done_usage)
+                    parsed_input, parsed_output, parsed_total = _parse_usage_tokens(
+                        done_usage
+                    )
                     if parsed_input is not None:
                         input_tokens = parsed_input
                     if parsed_output is not None:
@@ -839,7 +839,9 @@ async def _handle_prompt(
             if response and response.tool_calls:
                 tool_call_count = len(response.tool_calls)
             response_usage = response.usage if response else None
-            parsed_input, parsed_output, parsed_total = _parse_usage_tokens(response_usage)
+            parsed_input, parsed_output, parsed_total = _parse_usage_tokens(
+                response_usage
+            )
             if parsed_input is not None:
                 input_tokens = parsed_input
             if parsed_output is not None:
@@ -878,7 +880,9 @@ async def _handle_prompt(
                 stats_after
                 and len(stats_after.request_usage_history) > usage_history_len_before
             ):
-                delta_history = stats_after.request_usage_history[usage_history_len_before:]
+                delta_history = stats_after.request_usage_history[
+                    usage_history_len_before:
+                ]
                 if input_tokens is None:
                     input_tokens = sum(item.input_tokens for item in delta_history)
                 if output_tokens is None:

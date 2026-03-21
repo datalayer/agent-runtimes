@@ -357,7 +357,9 @@ def generate_typescript_code(
     # Root-level specs produce src/specs/agents/agents.ts, while nested specs
     # produce src/specs/agents/<folder>/agents.ts. Import paths differ.
     is_root_layout = all(folder == "" for folder, _ in specs)
-    types_import_path = "../../types/Types" if is_root_layout else "../../../types/Types"
+    types_import_path = (
+        "../../types/Types" if is_root_layout else "../../../types/Types"
+    )
     mcp_import_path = "../mcpServers" if is_root_layout else "../../mcpServers"
     skills_import_path = "../skills" if is_root_layout else "../../skills"
 
@@ -908,7 +910,9 @@ import type { AgentSpec } from '../../types';
             folder_const = folder.replace("-", "_").upper()
             typescript_index_content += f"import {{ AGENT_SPECS as {folder_const}_AGENTS }} from './{folder}';\n"
         else:
-            typescript_index_content += "import { AGENT_SPECS as ROOT_AGENTS } from './agents';\n"
+            typescript_index_content += (
+                "import { AGENT_SPECS as ROOT_AGENTS } from './agents';\n"
+            )
 
     typescript_index_content += """
 // Merge all agent specs from subfolders

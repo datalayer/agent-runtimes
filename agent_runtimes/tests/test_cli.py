@@ -101,15 +101,10 @@ class TestServeValidation:
     def test_valid_agent_id(self) -> None:
         """Test that a valid --agent-id is accepted."""
         with patch("uvicorn.run") as mock_run:
-            result = runner.invoke(
-                app, ["serve", "--agent-id", "data-acquisition"]
-            )
+            result = runner.invoke(app, ["serve", "--agent-id", "data-acquisition"])
             assert result.exit_code == 0
             # Check environment variable was set
-            assert (
-                os.environ.get("AGENT_RUNTIMES_DEFAULT_AGENT")
-                == "data-acquisition"
-            )
+            assert os.environ.get("AGENT_RUNTIMES_DEFAULT_AGENT") == "data-acquisition"
             mock_run.assert_called_once()
 
     def test_valid_agent_id_with_custom_name(self) -> None:
@@ -126,9 +121,7 @@ class TestServeValidation:
                 ],
             )
             assert result.exit_code == 0
-            assert (
-                os.environ.get("AGENT_RUNTIMES_DEFAULT_AGENT") == "crawler"
-            )
+            assert os.environ.get("AGENT_RUNTIMES_DEFAULT_AGENT") == "crawler"
             assert os.environ.get("AGENT_RUNTIMES_AGENT_NAME") == "my-crawler"
             mock_run.assert_called_once()
 
@@ -206,10 +199,7 @@ class TestTyperEnvVarDefaults:
                 result = runner.invoke(app, ["serve"])
                 assert result.exit_code == 0
                 # The CLI should accept the env var via Typer
-                assert (
-                    os.environ.get("AGENT_RUNTIMES_DEFAULT_AGENT")
-                    == "crawler"
-                )
+                assert os.environ.get("AGENT_RUNTIMES_DEFAULT_AGENT") == "crawler"
 
     def test_cli_overrides_env_var(self) -> None:
         """Test that CLI arguments override env var defaults."""
@@ -318,16 +308,12 @@ class TestShortOptions:
         with patch("uvicorn.run"):
             result = runner.invoke(app, ["serve", "-a", "crawler"])
             assert result.exit_code == 0
-            assert (
-                os.environ.get("AGENT_RUNTIMES_DEFAULT_AGENT") == "crawler"
-            )
+            assert os.environ.get("AGENT_RUNTIMES_DEFAULT_AGENT") == "crawler"
 
     def test_short_agent_name_option(self) -> None:
         """Test -n short option for --agent-name."""
         with patch("uvicorn.run"):
-            result = runner.invoke(
-                app, ["serve", "-a", "crawler", "-n", "my-crawler"]
-            )
+            result = runner.invoke(app, ["serve", "-a", "crawler", "-n", "my-crawler"])
             assert result.exit_code == 0
             assert os.environ.get("AGENT_RUNTIMES_AGENT_NAME") == "my-crawler"
 
@@ -425,9 +411,7 @@ class TestCodeModeOptions:
                 app, ["serve", "--agent-id", "crawler", "--codemode"]
             )
             assert result.exit_code == 0
-            assert (
-                os.environ.get("AGENT_RUNTIMES_DEFAULT_AGENT") == "crawler"
-            )
+            assert os.environ.get("AGENT_RUNTIMES_DEFAULT_AGENT") == "crawler"
             assert os.environ.get("AGENT_RUNTIMES_CODEMODE") == "true"
 
     def test_codemode_with_skills_and_agent_id(self) -> None:
@@ -445,9 +429,7 @@ class TestCodeModeOptions:
                 ],
             )
             assert result.exit_code == 0
-            assert (
-                os.environ.get("AGENT_RUNTIMES_DEFAULT_AGENT") == "crawler"
-            )
+            assert os.environ.get("AGENT_RUNTIMES_DEFAULT_AGENT") == "crawler"
             assert os.environ.get("AGENT_RUNTIMES_CODEMODE") == "true"
             assert os.environ.get("AGENT_RUNTIMES_SKILLS") == "write-code,edit-code"
 
@@ -496,9 +478,7 @@ class TestMcpServersOption:
                 ],
             )
             assert result.exit_code == 0
-            assert (
-                os.environ.get("AGENT_RUNTIMES_DEFAULT_AGENT") == "crawler"
-            )
+            assert os.environ.get("AGENT_RUNTIMES_DEFAULT_AGENT") == "crawler"
             assert os.environ.get("AGENT_RUNTIMES_MCP_SERVERS") == "filesystem"
 
     def test_short_mcp_servers_option(self) -> None:

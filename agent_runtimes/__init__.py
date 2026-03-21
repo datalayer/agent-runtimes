@@ -40,22 +40,22 @@ from agent_runtimes.adapters.pydantic_ai_adapter import PydanticAIAdapter
 from agent_runtimes.app import create_app
 from agent_runtimes.events import create_event, get_event, list_events, update_event
 from agent_runtimes.jupyter.serverapplication import AgentRuntimesExtensionApp
+
+# Observability
+from agent_runtimes.otel import (
+    create_otel_middleware,
+    get_meter,
+    get_tracer,
+    instrument_agent_runtimes,
+    setup_otel,
+    uninstrument_agent_runtimes,
+)
 from agent_runtimes.routes.acp import router as acp_router
 from agent_runtimes.routes.health import router as health_router
 from agent_runtimes.transports.acp import ACPSession, ACPTransport
 
 # Protocol adapters
 from agent_runtimes.transports.base import AdapterEvent, BaseTransport
-
-# Observability
-from agent_runtimes.otel import (
-    setup_otel,
-    instrument_agent_runtimes,
-    uninstrument_agent_runtimes,
-    get_tracer,
-    get_meter,
-    create_otel_middleware,
-)
 
 
 def _jupyter_server_extension_points() -> List[Dict[str, Any]]:

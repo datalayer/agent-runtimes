@@ -56,21 +56,15 @@ class BaseGuardrail(ABC):
 
     name: str = "base"
 
-    async def check_pre_tool(
-        self, tool_name: str, tool_args: dict
-    ) -> GuardrailResult:
+    async def check_pre_tool(self, tool_name: str, tool_args: dict) -> GuardrailResult:
         """Called before tool execution. Override to enforce pre-tool checks."""
         return GuardrailResult(passed=True)
 
-    async def check_post_tool(
-        self, tool_name: str, result: Any
-    ) -> GuardrailResult:
+    async def check_post_tool(self, tool_name: str, result: Any) -> GuardrailResult:
         """Called after tool execution. Override to enforce post-tool checks."""
         return GuardrailResult(passed=True)
 
-    async def check_post_request(
-        self, usage: dict, **kwargs: Any
-    ) -> GuardrailResult:
+    async def check_post_request(self, usage: dict, **kwargs: Any) -> GuardrailResult:
         """Called after each LLM request. Override to enforce request-level checks.
 
         Parameters

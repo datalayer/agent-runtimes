@@ -16,7 +16,6 @@ from typing import Any
 
 import httpx
 
-
 DEFAULT_AI_AGENTS_BASE_URL = "https://prod1.datalayer.run"
 
 

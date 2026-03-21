@@ -9,7 +9,7 @@ import asyncio
 import logging
 import re
 from dataclasses import dataclass, field
-from typing import Any, Callable, Awaitable
+from typing import Any, Awaitable, Callable
 
 from .base import HookEvent, HookInput, HookResult
 
@@ -183,9 +183,7 @@ class HooksMiddleware:
     ) -> list[HookRegistration]:
         """Get hooks matching the given event and tool name."""
         return [
-            h
-            for h in self._hooks
-            if h.event == event and h.matcher.search(tool_name)
+            h for h in self._hooks if h.event == event and h.matcher.search(tool_name)
         ]
 
     async def _run_hook_with_timeout(
