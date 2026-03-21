@@ -83,7 +83,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         '    task_count: int = Field(..., ge=0, description="Number of benchmark tasks")',
         '    metric: str = Field(..., description="Primary evaluation metric")',
         '    source: str = Field(default="", description="Source URL or dataset reference")',
-        '    difficulty: Literal["easy", "medium", "hard"] = Field(default="medium", description="Benchmark difficulty")',
+        '    difficulty: Literal["easy", "medium", "hard", "expert"] = Field(default="medium", description="Benchmark difficulty")',
         '    languages: List[str] = Field(default_factory=list, description="Target languages")',
         "",
         "",

@@ -11,6 +11,7 @@ pydantic-ai's ``UsageLimits`` for native enforcement.
 from __future__ import annotations
 
 import logging
+from datetime import datetime, timezone
 from typing import Any
 
 from .base import BaseGuardrail, GuardrailResult, GuardrailViolation
@@ -63,6 +64,9 @@ class TokenLimitGuardrail(BaseGuardrail):
         self.per_month = per_month
         self.request_limit = request_limit
         self.tool_calls_limit = tool_calls_limit
+        now = datetime.now(timezone.utc)
+        self._current_day = now.date().isoformat()
+        self._current_month = f"{now.year:04d}-{now.month:02d}"
         self.counters = {
             "run_tokens": 0,
             "run_requests": 0,
@@ -93,6 +97,16 @@ class TokenLimitGuardrail(BaseGuardrail):
 
     async def check_post_request(self, usage: dict, **kwargs: Any) -> GuardrailResult:
         """Called after each LLM request. Raises if limit exceeded."""
+        now = datetime.now(timezone.utc)
+        today = now.date().isoformat()
+        month = f"{now.year:04d}-{now.month:02d}"
+        if today != self._current_day:
+            self.counters["day_tokens"] = 0
+            self._current_day = today
+        if month != self._current_month:
+            self.counters["month_tokens"] = 0
+            self._current_month = month
+
         total_tokens = usage.get("total_tokens", 0)
         self.counters["run_tokens"] += total_tokens
         self.counters["run_requests"] += 1

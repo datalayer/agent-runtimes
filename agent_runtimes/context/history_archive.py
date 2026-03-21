@@ -15,7 +15,6 @@ import json
 import logging
 import os
 from datetime import datetime, timezone
-from pathlib import Path
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -99,10 +98,10 @@ class HistoryArchive:
 
 def search_conversation_history_tool_fn(
     archive: HistoryArchive,
-) -> dict:
+) -> dict[str, Any]:
     """Create a tool definition for the agent to search conversation history.
 
-    Returns a dict with ``name``, ``description``, ``parameters`` and ``handler``
+    Returns a dict with ``name``, ``description``, ``parameters`` and ``function``
     suitable for registration as a PydanticAI tool.
     """
 
@@ -133,5 +132,17 @@ def search_conversation_history_tool_fn(
             "Search through the full conversation history, including messages "
             "that were compressed away to save context space."
         ),
-        "handler": handler,
+        "function": handler,
+        "parameters": {
+            "query": {
+                "type": "string",
+                "description": "Search query for archived conversation messages",
+                "required": True,
+            },
+            "max_results": {
+                "type": "integer",
+                "description": "Maximum number of matching messages to return",
+                "required": False,
+            },
+        },
     }

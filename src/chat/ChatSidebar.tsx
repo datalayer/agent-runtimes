@@ -313,7 +313,7 @@ export function ChatSidebar({
         sx={{
           position: 'fixed',
           top: 12,
-          left: 12,
+          ...(position === 'right' ? { right: 12 } : { left: 12 }),
           zIndex: 1001,
           display: 'flex',
           flexDirection: 'column',

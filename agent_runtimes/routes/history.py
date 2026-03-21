@@ -7,16 +7,19 @@ import json
 import logging
 import uuid
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Literal
 
-from fastapi import APIRouter, Query
-from pydantic import BaseModel
+from fastapi import APIRouter, HTTPException, Query
+from pydantic import BaseModel, Field
 
 from agent_runtimes.context.usage import get_usage_tracker
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["history"])
+
+MAX_UPSERT_MESSAGES = 500
+MAX_UPSERT_PAYLOAD_BYTES = 1_000_000
 
 
 # =========================================================================
@@ -45,7 +48,19 @@ class HistoryResponse(BaseModel):
 class HistoryUpsertRequest(BaseModel):
     """Request payload for injecting/restoring conversation history."""
 
-    messages: list[dict[str, Any]]
+    class InputMessage(BaseModel):
+        """Validated chat message payload accepted by upsert endpoint."""
+
+        role: Literal["user", "assistant", "system", "tool"]
+        content: str | list[dict[str, Any]]
+        createdAt: str | None = None
+        metadata: dict[str, Any] | None = None
+        toolCalls: list[dict[str, Any]] | None = None
+
+    messages: list[InputMessage] = Field(
+        default_factory=list,
+        max_length=MAX_UPSERT_MESSAGES,
+    )
     replace: bool = True
 
 
@@ -278,12 +293,30 @@ async def upsert_conversation_history(
     ),
 ) -> dict[str, Any]:
     """Inject/restore conversation history for an agent."""
+    payload_size = len(
+        json.dumps(
+            [msg.model_dump(exclude_none=True) for msg in body.messages],
+            ensure_ascii=False,
+        ).encode("utf-8")
+    )
+    if payload_size > MAX_UPSERT_PAYLOAD_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail=(
+                "History payload too large "
+                f"({payload_size} bytes > {MAX_UPSERT_PAYLOAD_BYTES} bytes)"
+            ),
+        )
+
     tracker = get_usage_tracker()
     stats = tracker.register_agent(agent_id)
 
     converted = [
         internal
-        for internal in (_chat_message_to_internal(msg) for msg in body.messages)
+        for internal in (
+            _chat_message_to_internal(msg.model_dump(exclude_none=True))
+            for msg in body.messages
+        )
         if internal is not None
     ]
 
