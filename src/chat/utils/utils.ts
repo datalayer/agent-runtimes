@@ -57,19 +57,63 @@ export function isToolCallMessage(item: DisplayItem): item is ToolCallMessage {
 }
 
 /**
+ * Strip low-level protocol/tool-call markup from assistant text content.
+ *
+ * Some models occasionally leak internal call formats (for example,
+ * <calls>...</calls> or <tml:invoke ...>) into natural-language responses.
+ * Keep user/system text untouched and sanitize assistant-visible text only.
+ */
+export function sanitizeAssistantContent(content: string): string {
+  if (!content || !content.includes('<')) {
+    return content;
+  }
+
+  let sanitized = content;
+
+  // Remove complete blocks first.
+  sanitized = sanitized
+    .replace(/<\s*calls\b[\s\S]*?<\s*\/\s*calls\s*>/gi, '')
+    .replace(
+      /<\s*(?:an:)?tml:invoke\b[\s\S]*?<\s*\/\s*(?:an:)?tml:invoke\s*>/gi,
+      '',
+    )
+    .replace(
+      /<\s*(?:an:)?tml:parameter\b[\s\S]*?<\s*\/\s*(?:an:)?tml:parameter\s*>/gi,
+      '',
+    );
+
+  // Remove standalone/open/close tags and malformed tag fragments.
+  sanitized = sanitized
+    .replace(/<\s*\/?\s*(?:an:[a-z_]+|tml:[a-z_]+|calls)\b[^>]*>?/gi, '')
+    .replace(/<\s*\/\s*>/g, '')
+    .replace(/^[ \t]+$/gm, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+
+  return sanitized;
+}
+
+/**
  * Extract text content from a ChatMessage
  */
 export function getMessageText(message: ChatMessage): string {
-  if (typeof message.content === 'string') {
-    return message.content;
+  const text =
+    typeof message.content === 'string'
+      ? message.content
+      : // Array of ContentPart - extract text parts
+        (message.content as ContentPart[])
+          .filter(
+            (part): part is { type: 'text'; text: string } =>
+              part.type === 'text',
+          )
+          .map(part => part.text)
+          .join('');
+
+  if (message.role === 'assistant') {
+    return sanitizeAssistantContent(text);
   }
-  // Array of ContentPart - extract text parts
-  return (message.content as ContentPart[])
-    .filter(
-      (part): part is { type: 'text'; text: string } => part.type === 'text',
-    )
-    .map(part => part.text)
-    .join('');
+
+  return text;
 }
 
 // ---------------------------------------------------------------------------
@@ -113,11 +157,13 @@ export function convertHistoryToDisplayItems(
     if (msg.role === 'assistant' && msg.toolCalls && msg.toolCalls.length > 0) {
       // Assistant message with tool calls
       // First add any text content as a regular message
-      const textContent =
+      const rawTextContent =
         typeof msg.content === 'string' ? msg.content.trim() : '';
+      const textContent = sanitizeAssistantContent(rawTextContent);
       if (textContent) {
         displayItems.push({
           ...msg,
+          content: textContent,
           toolCalls: undefined, // Remove toolCalls from the text message
         });
       }

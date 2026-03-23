@@ -16,6 +16,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Box } from '@datalayer/primer-addons';
 import { Button, Heading, Spinner, Text } from '@primer/react';
 import { AlertIcon, ToolsIcon, SignOutIcon } from '@primer/octicons-react';
+import { DEFAULT_SERVICE_URLS } from '@datalayer/core/lib/api/constants';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { SignInSimple } from '@datalayer/core/lib/views/iam';
 import { UserBadge } from '@datalayer/core/lib/views/profile';
@@ -32,6 +33,8 @@ const AGENT_NAME = 'tool-approval-demo-agent';
 const AGENT_SPEC_ID = 'monitor-sales-kpis';
 const DEFAULT_LOCAL_BASE_URL =
   import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
+const DEFAULT_AI_AGENTS_BASE_URL =
+  import.meta.env.VITE_AI_AGENTS_URL || DEFAULT_SERVICE_URLS.AI_AGENTS;
 
 interface ToolApprovalRequest {
   id: string;
@@ -60,6 +63,7 @@ const AgentToolApprovalInner: React.FC<{ onLogout: () => void }> = ({
   const chatAuthToken: string | undefined = token === null ? undefined : token;
 
   const agentBaseUrl = DEFAULT_LOCAL_BASE_URL;
+  const aiAgentsBaseUrl = DEFAULT_AI_AGENTS_BASE_URL;
   const podName = 'localhost';
 
   const authFetch = useCallback(
@@ -93,6 +97,13 @@ const AgentToolApprovalInner: React.FC<{ onLogout: () => void }> = ({
             agent_library: 'pydantic-ai',
             transport: 'vercel-ai',
             agent_spec_id: AGENT_SPEC_ID,
+            enable_skills: false,
+            skills: [],
+            tools: [
+              'runtime-echo',
+              'runtime-sensitive-echo',
+              'runtime-send-mail',
+            ],
           }),
         });
 
@@ -154,17 +165,28 @@ const AgentToolApprovalInner: React.FC<{ onLogout: () => void }> = ({
     }
     try {
       const res = await authFetch(
-        `${agentBaseUrl}/api/ai-agents/v1/tool-approvals?agent_id=${encodeURIComponent(agentId)}&status=pending`,
+        `${aiAgentsBaseUrl}/api/ai-agents/v1/tool-approvals`,
       );
       if (!res.ok) {
         return;
       }
       const data = await res.json();
-      setApprovals(Array.isArray(data) ? data : (data.requests ?? []));
+      const allApprovals = Array.isArray(data)
+        ? data
+        : (data.approvals ?? data.requests ?? []);
+      const pendingForAgent = allApprovals.filter(
+        (
+          approval: ToolApprovalRequest & {
+            agent_id?: string;
+            status?: string;
+          },
+        ) => approval.agent_id === agentId && approval.status === 'pending',
+      );
+      setApprovals(pendingForAgent);
     } catch {
       // Ignore transient polling errors.
     }
-  }, [isReady, agentBaseUrl, agentId, authFetch]);
+  }, [isReady, aiAgentsBaseUrl, agentId, authFetch]);
 
   useEffect(() => {
     pollApprovals();
@@ -180,7 +202,7 @@ const AgentToolApprovalInner: React.FC<{ onLogout: () => void }> = ({
       setApprovalLoading(requestId);
       try {
         await authFetch(
-          `${agentBaseUrl}/api/ai-agents/v1/tool-approvals/${requestId}/approve`,
+          `${aiAgentsBaseUrl}/api/ai-agents/v1/tool-approvals/${requestId}/approve`,
           {
             method: 'POST',
             body: JSON.stringify(note ? { note } : {}),
@@ -191,7 +213,7 @@ const AgentToolApprovalInner: React.FC<{ onLogout: () => void }> = ({
         setApprovalLoading(null);
       }
     },
-    [agentBaseUrl, agentId, authFetch],
+    [aiAgentsBaseUrl, authFetch],
   );
 
   const reject = useCallback(
@@ -202,7 +224,7 @@ const AgentToolApprovalInner: React.FC<{ onLogout: () => void }> = ({
       setApprovalLoading(requestId);
       try {
         await authFetch(
-          `${agentBaseUrl}/api/ai-agents/v1/tool-approvals/${requestId}/reject`,
+          `${aiAgentsBaseUrl}/api/ai-agents/v1/tool-approvals/${requestId}/reject`,
           {
             method: 'POST',
             body: JSON.stringify(note ? { note } : {}),
@@ -213,7 +235,7 @@ const AgentToolApprovalInner: React.FC<{ onLogout: () => void }> = ({
         setApprovalLoading(null);
       }
     },
-    [agentBaseUrl, agentId, authFetch],
+    [aiAgentsBaseUrl, authFetch],
   );
 
   const pendingApprovals: PendingApproval[] = useMemo(
@@ -375,7 +397,7 @@ const AgentToolApprovalInner: React.FC<{ onLogout: () => void }> = ({
             {
               title: 'List Tools',
               message:
-                'List the available tools first, then ask me which one to run. Use tool calls only and do not write Python code.',
+                'List exactly these runtime tools first: runtime_echo, runtime_sensitive_echo, runtime_send_mail. Do not call list_skills, load_skill, read_skill_resource, or run_skill_script. Then ask me which tool to run. Use tool calls only and do not write Python code.',
             },
             {
               title: 'Manual Approval Tool',

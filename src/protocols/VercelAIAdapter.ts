@@ -267,6 +267,13 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
     let buffer = '';
     let currentMessageId = generateMessageId();
     let accumulatedText = '';
+    const pendingToolInputs = new Map<
+      string,
+      {
+        toolName?: string;
+        inputText: string;
+      }
+    >();
     let doneEmitted = false;
 
     const emitDoneOnce = () => {
@@ -276,6 +283,35 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
         type: 'done',
         timestamp: new Date(),
       });
+    };
+
+    const normalizeToolArgs = (
+      rawArgs: unknown,
+      fallbackText = '',
+    ): Record<string, unknown> => {
+      if (rawArgs && typeof rawArgs === 'object' && !Array.isArray(rawArgs)) {
+        return rawArgs as Record<string, unknown>;
+      }
+
+      const asText =
+        typeof rawArgs === 'string' && rawArgs.trim().length > 0
+          ? rawArgs
+          : fallbackText;
+
+      if (!asText.trim()) {
+        return {};
+      }
+
+      try {
+        const parsed = JSON.parse(asText);
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+          return parsed as Record<string, unknown>;
+        }
+      } catch {
+        // Keep empty args if we can't parse structured input.
+      }
+
+      return {};
     };
 
     try {
@@ -347,7 +383,11 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
                 // New text block starting
                 currentMessageId = event.id || generateMessageId();
                 accumulatedText = '';
-              } else if (event.type === 'finish' || event.type === 'end-step') {
+              } else if (
+                event.type === 'finish' ||
+                event.type === 'end-step' ||
+                event.type === 'finish-step'
+              ) {
                 if (accumulatedText) {
                   const message = createAssistantMessage(accumulatedText);
                   message.id = currentMessageId;
@@ -380,6 +420,108 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
                 if (event.type === 'finish') {
                   emitDoneOnce();
                 }
+              } else if (event.type === 'tool-input-start') {
+                const toolCallId =
+                  event.toolCallId ||
+                  event.tool_call_id ||
+                  event.id ||
+                  generateMessageId();
+                const toolName =
+                  event.toolName ||
+                  event.tool_name ||
+                  event.name ||
+                  event.tool?.name;
+
+                pendingToolInputs.set(toolCallId, {
+                  toolName,
+                  inputText: '',
+                });
+              } else if (event.type === 'tool-input-delta') {
+                const toolCallId =
+                  event.toolCallId || event.tool_call_id || event.id;
+                if (toolCallId && pendingToolInputs.has(toolCallId)) {
+                  const existing = pendingToolInputs.get(toolCallId);
+                  if (existing) {
+                    existing.inputText += event.inputTextDelta || '';
+                    pendingToolInputs.set(toolCallId, existing);
+                  }
+                }
+              } else if (event.type === 'tool-input-available') {
+                const toolCallId =
+                  event.toolCallId ||
+                  event.tool_call_id ||
+                  event.id ||
+                  generateMessageId();
+                const pending = pendingToolInputs.get(toolCallId);
+                const toolName =
+                  event.toolName ||
+                  event.tool_name ||
+                  event.name ||
+                  pending?.toolName ||
+                  event.tool?.name;
+                const args = normalizeToolArgs(
+                  event.input || event.args || event.arguments,
+                  pending?.inputText || '',
+                );
+
+                if (toolName) {
+                  this.emit({
+                    type: 'tool-call',
+                    toolCall: {
+                      toolCallId,
+                      toolName,
+                      args,
+                    },
+                    timestamp: new Date(),
+                  });
+                }
+              } else if (event.type === 'tool-output-available') {
+                const toolCallId =
+                  event.toolCallId ||
+                  event.tool_call_id ||
+                  event.id ||
+                  generateMessageId();
+                const output =
+                  event.output ?? event.result ?? event.data ?? event.content;
+
+                this.emit({
+                  type: 'tool-result',
+                  toolResult: {
+                    toolCallId,
+                    success: true,
+                    result: output,
+                  },
+                  timestamp: new Date(),
+                });
+
+                pendingToolInputs.delete(toolCallId);
+              } else if (
+                event.type === 'tool-output-error' ||
+                event.type === 'tool-error'
+              ) {
+                const toolCallId =
+                  event.toolCallId ||
+                  event.tool_call_id ||
+                  event.id ||
+                  generateMessageId();
+                const errorMessage =
+                  event.error ||
+                  event.errorText ||
+                  event.message ||
+                  'Tool error';
+
+                this.emit({
+                  type: 'tool-result',
+                  toolResult: {
+                    toolCallId,
+                    success: false,
+                    error: errorMessage,
+                    result: event.output ?? event.result,
+                  },
+                  timestamp: new Date(),
+                });
+
+                pendingToolInputs.delete(toolCallId);
               } else if (event.type === 'error') {
                 const errorMessage =
                   event.error ||
@@ -404,11 +546,12 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
                   event.name ||
                   event.tool?.name;
                 const args =
-                  event.args ||
-                  event.arguments ||
-                  event.input ||
-                  event.tool?.arguments ||
-                  {};
+                  normalizeToolArgs(
+                    event.args ||
+                      event.arguments ||
+                      event.input ||
+                      event.tool?.arguments,
+                  ) || {};
                 const toolCallId =
                   event.toolCallId ||
                   event.tool_call_id ||

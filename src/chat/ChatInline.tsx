@@ -51,6 +51,7 @@ import type { TransportType, ProtocolEvent } from '../types/protocol';
 import { AGUIAdapter, type BaseProtocolAdapter } from '../protocols';
 import type { ChatMessage } from '../types/message';
 import { generateMessageId } from '../types/message';
+import { sanitizeAssistantContent } from './utils';
 
 /**
  * AI action option type
@@ -251,11 +252,11 @@ export function ChatInline({
       switch (event.type) {
         case 'message':
           if (event.message?.content) {
-            setAiResponse(
+            const content =
               typeof event.message.content === 'string'
-                ? event.message.content
-                : '',
-            );
+                ? sanitizeAssistantContent(event.message.content)
+                : '';
+            setAiResponse(content);
           }
           break;
         case 'error':

@@ -50,6 +50,7 @@ import {
   convertHistoryToDisplayItems,
   createProtocolAdapter,
   getApiBaseFromConfig,
+  sanitizeAssistantContent,
 } from '../utils';
 import {
   useHighZIndexPortal,
@@ -720,27 +721,39 @@ function ChatBaseInner({
                     item.id === currentAssistantMessageRef.current?.id,
                 );
                 if (idx >= 0 && !isToolCallMessage(newItems[idx])) {
+                  const rawContent = event.message?.content;
+                  const sanitizedContent =
+                    typeof rawContent === 'string'
+                      ? sanitizeAssistantContent(rawContent)
+                      : (rawContent ?? '');
                   newItems[idx] = {
                     ...(newItems[idx] as ChatMessage),
-                    content: event.message?.content ?? '',
+                    content: sanitizedContent,
                   };
                 }
                 return newItems;
               });
               if (useStoreMode && currentAssistantMessageRef.current) {
+                const rawContent = event.message?.content;
+                const sanitizedContent =
+                  typeof rawContent === 'string'
+                    ? sanitizeAssistantContent(rawContent)
+                    : (rawContent ?? '');
                 useChatStore
                   .getState()
                   .updateMessage(currentAssistantMessageRef.current.id, {
-                    content: event.message?.content ?? '',
+                    content: sanitizedContent,
                   });
               }
             } else {
               const content = event.message.content;
               const contentStr =
                 typeof content === 'string' ? content : (content ?? '');
-              const newMessage = createAssistantMessage(
-                typeof contentStr === 'string' ? contentStr : '',
-              );
+              const sanitizedContent =
+                typeof contentStr === 'string'
+                  ? sanitizeAssistantContent(contentStr)
+                  : '';
+              const newMessage = createAssistantMessage(sanitizedContent);
               newMessage.id = event.message.id || newMessage.id;
               currentAssistantMessageRef.current = newMessage;
               setDisplayItems(prev => {
@@ -751,7 +764,7 @@ function ChatBaseInner({
                   const newItems = [...prev];
                   newItems[existingIdx] = {
                     ...(newItems[existingIdx] as ChatMessage),
-                    content: event.message?.content ?? '',
+                    content: sanitizedContent,
                   };
                   return newItems;
                 }
@@ -763,7 +776,7 @@ function ChatBaseInner({
                   .messages.find(m => m.id === newMessage.id);
                 if (existingInStore) {
                   useChatStore.getState().updateMessage(newMessage.id, {
-                    content: event.message?.content ?? '',
+                    content: sanitizedContent,
                   });
                 } else {
                   useChatStore.getState().addMessage(newMessage);
