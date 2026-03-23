@@ -16,7 +16,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Box } from '@datalayer/primer-addons';
 import { Button, Heading, Spinner, Text } from '@primer/react';
 import { AlertIcon, ToolsIcon, SignOutIcon } from '@primer/octicons-react';
-import { DEFAULT_SERVICE_URLS } from '@datalayer/core/lib/api/constants';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { SignInSimple } from '@datalayer/core/lib/views/iam';
 import { UserBadge } from '@datalayer/core/lib/views/profile';
@@ -33,8 +32,6 @@ const AGENT_NAME = 'tool-approval-demo-agent';
 const AGENT_SPEC_ID = 'monitor-sales-kpis';
 const DEFAULT_LOCAL_BASE_URL =
   import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
-const DEFAULT_AI_AGENTS_BASE_URL =
-  import.meta.env.VITE_AI_AGENTS_URL || DEFAULT_SERVICE_URLS.AI_AGENTS;
 
 interface ToolApprovalRequest {
   id: string;
@@ -44,7 +41,7 @@ interface ToolApprovalRequest {
   created_at?: string;
 }
 
-const AgentToolApprovalInner: React.FC<{ onLogout: () => void }> = ({
+const AgentToolApprovalSyncInner: React.FC<{ onLogout: () => void }> = ({
   onLogout,
 }) => {
   const { token } = useSimpleAuthStore();
@@ -60,10 +57,11 @@ const AgentToolApprovalInner: React.FC<{ onLogout: () => void }> = ({
   const [activeApproval, setActiveApproval] =
     useState<ToolApprovalRequest | null>(null);
   const [approvalLoading, setApprovalLoading] = useState<string | null>(null);
+  const [approvalError, setApprovalError] = useState<string | null>(null);
   const chatAuthToken: string | undefined = token === null ? undefined : token;
 
   const agentBaseUrl = DEFAULT_LOCAL_BASE_URL;
-  const aiAgentsBaseUrl = DEFAULT_AI_AGENTS_BASE_URL;
+  const approvalsBaseUrl = agentBaseUrl;
   const podName = 'localhost';
 
   const authFetch = useCallback(
@@ -164,9 +162,7 @@ const AgentToolApprovalInner: React.FC<{ onLogout: () => void }> = ({
       return;
     }
     try {
-      const res = await authFetch(
-        `${aiAgentsBaseUrl}/api/ai-agents/v1/tool-approvals`,
-      );
+      const res = await authFetch(`${approvalsBaseUrl}/api/v1/tool-approvals`);
       if (!res.ok) {
         return;
       }
@@ -180,13 +176,15 @@ const AgentToolApprovalInner: React.FC<{ onLogout: () => void }> = ({
             agent_id?: string;
             status?: string;
           },
-        ) => approval.agent_id === agentId && approval.status === 'pending',
+        ) =>
+          approval.status === 'pending' &&
+          (approval.agent_id === agentId || !approval.agent_id),
       );
       setApprovals(pendingForAgent);
     } catch {
       // Ignore transient polling errors.
     }
-  }, [isReady, aiAgentsBaseUrl, agentId, authFetch]);
+  }, [isReady, approvalsBaseUrl, agentId, authFetch]);
 
   useEffect(() => {
     pollApprovals();
@@ -195,47 +193,85 @@ const AgentToolApprovalInner: React.FC<{ onLogout: () => void }> = ({
   }, [pollApprovals]);
 
   const approve = useCallback(
-    async (requestId: string, note?: string) => {
+    async (requestId: string, note?: string): Promise<boolean> => {
       if (!agentBaseUrl) {
-        return;
+        return false;
       }
       setApprovalLoading(requestId);
+      setApprovalError(null);
       try {
-        await authFetch(
-          `${aiAgentsBaseUrl}/api/ai-agents/v1/tool-approvals/${requestId}/approve`,
+        const response = await authFetch(
+          `${approvalsBaseUrl}/api/v1/tool-approvals/${requestId}/approve`,
           {
             method: 'POST',
             body: JSON.stringify(note ? { note } : {}),
           },
         );
+
+        if (!response.ok) {
+          const errorText = await response.text().catch(() => '');
+          throw new Error(
+            errorText ||
+              `Failed to approve request (${response.status} ${response.statusText})`,
+          );
+        }
+
         setApprovals(prev => prev.filter(a => a.id !== requestId));
+        void pollApprovals();
+        return true;
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : 'Failed to approve tool request';
+        setApprovalError(message);
+        return false;
       } finally {
         setApprovalLoading(null);
       }
     },
-    [aiAgentsBaseUrl, authFetch],
+    [agentBaseUrl, approvalsBaseUrl, authFetch, pollApprovals],
   );
 
   const reject = useCallback(
-    async (requestId: string, note?: string) => {
+    async (requestId: string, note?: string): Promise<boolean> => {
       if (!agentBaseUrl) {
-        return;
+        return false;
       }
       setApprovalLoading(requestId);
+      setApprovalError(null);
       try {
-        await authFetch(
-          `${aiAgentsBaseUrl}/api/ai-agents/v1/tool-approvals/${requestId}/reject`,
+        const response = await authFetch(
+          `${approvalsBaseUrl}/api/v1/tool-approvals/${requestId}/reject`,
           {
             method: 'POST',
             body: JSON.stringify(note ? { note } : {}),
           },
         );
+
+        if (!response.ok) {
+          const errorText = await response.text().catch(() => '');
+          throw new Error(
+            errorText ||
+              `Failed to reject request (${response.status} ${response.statusText})`,
+          );
+        }
+
         setApprovals(prev => prev.filter(a => a.id !== requestId));
+        void pollApprovals();
+        return true;
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : 'Failed to reject tool request';
+        setApprovalError(message);
+        return false;
       } finally {
         setApprovalLoading(null);
       }
     },
-    [aiAgentsBaseUrl, authFetch],
+    [agentBaseUrl, approvalsBaseUrl, authFetch, pollApprovals],
   );
 
   const pendingApprovals: PendingApproval[] = useMemo(
@@ -312,7 +348,7 @@ const AgentToolApprovalInner: React.FC<{ onLogout: () => void }> = ({
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1 }}>
           <ToolsIcon size={16} />
           <Heading as="h3" sx={{ fontSize: 2 }}>
-            Tool Approval Demo - {podName}
+            Tool Approval Demo (Sync) - {podName}
           </Heading>
           {isReconnectedAgent && (
             <Text sx={{ color: 'fg.muted', fontSize: 1 }}>
@@ -355,21 +391,31 @@ const AgentToolApprovalInner: React.FC<{ onLogout: () => void }> = ({
         args={activeApproval?.tool_args ?? {}}
         onApprove={async () => {
           if (activeApproval) {
-            await approve(activeApproval.id);
+            const ok = await approve(activeApproval.id);
+            if (ok) {
+              setActiveApproval(null);
+            }
           }
-          setActiveApproval(null);
         }}
         onDeny={async () => {
           if (activeApproval) {
-            await reject(
+            const ok = await reject(
               activeApproval.id,
               'Rejected from tool approval dialog',
             );
+            if (ok) {
+              setActiveApproval(null);
+            }
           }
-          setActiveApproval(null);
         }}
         onClose={() => setActiveApproval(null)}
       />
+
+      {approvalError && (
+        <Box sx={{ px: 3, py: 1 }}>
+          <Text sx={{ color: 'danger.fg', fontSize: 0 }}>{approvalError}</Text>
+        </Box>
+      )}
 
       {approvalLoading && (
         <Box sx={{ px: 3, py: 1 }}>
@@ -428,7 +474,7 @@ const syncTokenToIamStore = (token: string) => {
   });
 };
 
-const AgentToolApprovalsExample: React.FC = () => {
+const AgentToolApprovalsSyncExample: React.FC = () => {
   const { token, setAuth, clearAuth } = useSimpleAuthStore();
   const hasSynced = useRef(false);
 
@@ -462,8 +508,8 @@ const AgentToolApprovalsExample: React.FC = () => {
         <SignInSimple
           onSignIn={handleSignIn}
           onApiKeySignIn={apiKey => handleSignIn(apiKey, 'api-key-user')}
-          title="Tool Approval Agent"
-          description="Sign in to test manual and automatic tool approvals."
+          title="Tool Approval Agent (Sync)"
+          description="Sign in to test local agent-runtimes-backed tool approvals."
           leadingIcon={<ToolsIcon size={24} />}
         />
       </ThemedProvider>
@@ -473,10 +519,10 @@ const AgentToolApprovalsExample: React.FC = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemedProvider>
-        <AgentToolApprovalInner onLogout={handleLogout} />
+        <AgentToolApprovalSyncInner onLogout={handleLogout} />
       </ThemedProvider>
     </QueryClientProvider>
   );
 };
 
-export default AgentToolApprovalsExample;
+export default AgentToolApprovalsSyncExample;

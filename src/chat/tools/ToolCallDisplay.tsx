@@ -68,7 +68,7 @@ function getStatusDisplay(
   switch (status) {
     case 'inProgress':
       return {
-        icon: <Spinner size="small" />,
+        icon: <ClockIcon size={14} />,
         color: 'attention.fg',
         label: 'Preparing...',
         bgColor: 'attention.subtle',
@@ -209,6 +209,12 @@ export function ToolCallDisplay({
   const statusDisplay = getStatusDisplay(status, errorType);
   const displayName = formatToolName(toolName);
   const argsSummary = getArgsSummary(args);
+  const resultObject =
+    result && typeof result === 'object'
+      ? (result as Record<string, unknown>)
+      : undefined;
+  const isPendingApproval =
+    status === 'inProgress' && resultObject?.pending_approval === true;
 
   // Get error details from various sources (prefer rich error info)
   const effectiveCodeError =
@@ -310,7 +316,7 @@ export function ToolCallDisplay({
               color: statusDisplay.color,
             }}
           >
-            {statusDisplay.label}
+            {isPendingApproval ? 'Awaiting approval...' : statusDisplay.label}
           </Text>
         </Box>
 

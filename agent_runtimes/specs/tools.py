@@ -31,6 +31,7 @@ class ToolSpec(BaseModel):
     tags: List[str] = Field(default_factory=list, description="Search/discovery tags")
     enabled: bool = Field(default=True, description="Whether tool is enabled")
     approval: Literal['auto', 'manual'] = Field(default='auto', description='Approval policy')
+    requires_approval: bool = Field(default=False, description="Whether tool requires human approval before execution")
     runtime: ToolRuntimeSpec = Field(..., description="Runtime binding metadata")
     icon: Optional[str] = Field(default=None, description="Icon identifier")
     emoji: Optional[str] = Field(default=None, description="Emoji representation")
@@ -47,6 +48,7 @@ RUNTIME_ECHO_TOOL_SPEC = ToolSpec(
     tags=["runtime", "utility"],
     enabled=True,
     approval="auto",
+    requires_approval=False,
     runtime=ToolRuntimeSpec(
         language="python",
         package="agent_runtimes.examples.tools",
@@ -63,6 +65,7 @@ RUNTIME_SEND_MAIL_TOOL_SPEC = ToolSpec(
     tags=["runtime", "approval", "mail"],
     enabled=True,
     approval="manual",
+    requires_approval=True,
     runtime=ToolRuntimeSpec(
         language="python",
         package="agent_runtimes.examples.tools",
@@ -79,6 +82,7 @@ RUNTIME_SENSITIVE_ECHO_TOOL_SPEC = ToolSpec(
     tags=["runtime", "approval"],
     enabled=True,
     approval="manual",
+    requires_approval=True,
     runtime=ToolRuntimeSpec(
         language="python",
         package="agent_runtimes.examples.tools",

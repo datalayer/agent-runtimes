@@ -68,6 +68,14 @@ import { InputFooter } from '../elements/InputFooter';
 // This prevents layout-driven unmount/remount cycles from re-sending prompts.
 const sentPendingPromptKeys = new Set<string>();
 
+function isToolCallOnlyPrompt(content: string): boolean {
+  const normalized = content.toLowerCase();
+  return (
+    /tool\s*call\s*only/.test(normalized) ||
+    /use\s+(?:a\s+)?tool\s+call\s+only/.test(normalized)
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Re-exports — keep backward-compatible imports from this file
 // ---------------------------------------------------------------------------
@@ -297,6 +305,7 @@ function ChatBaseInner({
   const toolCallsRef = useRef<Map<string, ToolCallMessage>>(new Map());
   const pendingToolExecutionsRef = useRef(0);
   const currentAssistantMessageRef = useRef<ChatMessage | null>(null);
+  const suppressAssistantTextForToolOnlyRef = useRef(false);
   const threadIdRef = useRef<string>(generateMessageId());
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -706,6 +715,23 @@ function ChatBaseInner({
     unsubscribeRef.current = adapter.subscribe((event: ProtocolEvent) => {
       switch (event.type) {
         case 'message':
+          if (suppressAssistantTextForToolOnlyRef.current) {
+            const suppressedMessageId = currentAssistantMessageRef.current?.id;
+            if (suppressedMessageId) {
+              setDisplayItems(prev =>
+                prev.filter(
+                  item =>
+                    isToolCallMessage(item) || item.id !== suppressedMessageId,
+                ),
+              );
+              if (useStoreMode) {
+                useChatStore.getState().deleteMessage(suppressedMessageId);
+              }
+              currentAssistantMessageRef.current = null;
+            }
+            break;
+          }
+
           if (event.message) {
             const incomingId = event.message.id;
             const currentId = currentAssistantMessageRef.current?.id;
@@ -858,9 +884,16 @@ function ChatBaseInner({
                 let executionError: string | undefined;
                 let codeError: ToolCallMessage['codeError'] | undefined;
                 let exitCode: number | null | undefined;
+                let isPendingApproval = false;
                 let hasError = !!event.toolResult.error;
 
                 if (resultData && typeof resultData === 'object') {
+                  if (
+                    'pending_approval' in resultData &&
+                    resultData.pending_approval === true
+                  ) {
+                    isPendingApproval = true;
+                  }
                   if (
                     resultData.execution_error &&
                     typeof resultData.execution_error === 'string'
@@ -898,9 +931,11 @@ function ChatBaseInner({
                   result: event.toolResult.result,
                   status: hasError
                     ? 'error'
-                    : isHumanInTheLoop
-                      ? 'executing'
-                      : 'complete',
+                    : isPendingApproval
+                      ? 'inProgress'
+                      : isHumanInTheLoop
+                        ? 'executing'
+                        : 'complete',
                   error: event.toolResult.error,
                   executionError,
                   codeError,
@@ -965,6 +1000,7 @@ function ChatBaseInner({
         case 'done':
           // The adapter signals the entire multi-turn conversation
           // (including all continuations) has finished.
+          suppressAssistantTextForToolOnlyRef.current = false;
           pendingToolExecutionsRef.current = 0;
           setIsLoading(false);
           setIsStreaming(false);
@@ -972,6 +1008,7 @@ function ChatBaseInner({
 
         case 'error':
           console.error('[ChatBase] Protocol error:', event.error);
+          suppressAssistantTextForToolOnlyRef.current = false;
           setError(event.error || new Error('Unknown error'));
           pendingToolExecutionsRef.current = 0;
           setIsLoading(false);
@@ -1059,6 +1096,8 @@ function ChatBaseInner({
       const messageContent = (messageOverride ?? input).trim();
       if (!messageContent || isLoading) return;
       if (!adapterRef.current && !onSendMessage) return;
+      suppressAssistantTextForToolOnlyRef.current =
+        isToolCallOnlyPrompt(messageContent);
 
       const userMessage = createUserMessage(messageContent);
       const currentMessages = displayItems.filter(
@@ -1193,6 +1232,7 @@ function ChatBaseInner({
           setIsLoading(false);
           setIsStreaming(false);
         }
+        suppressAssistantTextForToolOnlyRef.current = false;
         currentAssistantMessageRef.current = null;
         abortControllerRef.current = null;
       }

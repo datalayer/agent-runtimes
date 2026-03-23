@@ -25,6 +25,7 @@ export interface ToolSpec {
   tags: string[];
   enabled: boolean;
   approval: 'auto' | 'manual';
+  requiresApproval: boolean;
   runtime: ToolRuntimeSpec;
   icon?: string;
   emoji?: string;
@@ -41,6 +42,7 @@ export const RUNTIME_ECHO_TOOL_SPEC: ToolSpec = {
   tags: ['runtime', 'utility'],
   enabled: true,
   approval: 'auto',
+  requiresApproval: false,
   runtime: {
     language: 'python',
     package: 'agent_runtimes.examples.tools',
@@ -58,6 +60,7 @@ export const RUNTIME_SEND_MAIL_TOOL_SPEC: ToolSpec = {
   tags: ['runtime', 'approval', 'mail'],
   enabled: true,
   approval: 'manual',
+  requiresApproval: true,
   runtime: {
     language: 'python',
     package: 'agent_runtimes.examples.tools',
@@ -74,6 +77,7 @@ export const RUNTIME_SENSITIVE_ECHO_TOOL_SPEC: ToolSpec = {
   tags: ['runtime', 'approval'],
   enabled: true,
   approval: 'manual',
+  requiresApproval: true,
   runtime: {
     language: 'python',
     package: 'agent_runtimes.examples.tools',

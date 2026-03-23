@@ -47,6 +47,13 @@ def _require_runtime(spec: dict[str, Any]) -> dict[str, str]:
     }
 
 
+def _requires_approval(spec: dict[str, Any]) -> bool:
+    explicit = spec.get("requires_approval")
+    if explicit is not None:
+        return bool(explicit)
+    return str(spec.get("approval", "auto")).lower() == "manual"
+
+
 def load_tool_specs(specs_dir: Path) -> list[dict[str, Any]]:
     specs: list[dict[str, Any]] = []
     for yaml_file in sorted(specs_dir.glob("*.yaml")):
@@ -90,6 +97,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         '    tags: List[str] = Field(default_factory=list, description="Search/discovery tags")',
         '    enabled: bool = Field(default=True, description="Whether tool is enabled")',
         "    approval: Literal['auto', 'manual'] = Field(default='auto', description='Approval policy')",
+        '    requires_approval: bool = Field(default=False, description="Whether tool requires human approval before execution")',
         '    runtime: ToolRuntimeSpec = Field(..., description="Runtime binding metadata")',
         '    icon: Optional[str] = Field(default=None, description="Icon identifier")',
         '    emoji: Optional[str] = Field(default=None, description="Emoji representation")',
@@ -105,6 +113,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         tool_id = spec["id"]
         const_name = f"{tool_id.upper().replace('-', '_')}_TOOL_SPEC"
         runtime = _require_runtime(spec)
+        requires_approval = _requires_approval(spec)
         icon = f'"{spec.get("icon")}"' if spec.get("icon") else "None"
         emoji = f'"{spec.get("emoji")}"' if spec.get("emoji") else "None"
 
@@ -117,6 +126,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
                 f"    tags={_fmt_list(spec.get('tags', []))},",
                 f"    enabled={spec.get('enabled', True)},",
                 f"    approval=\"{spec.get('approval', 'auto')}\",",
+                f"    requires_approval={requires_approval},",
                 "    runtime=ToolRuntimeSpec(",
                 f"        language=\"{runtime['language']}\",",
                 f"        package=\"{runtime['package']}\",",
@@ -193,6 +203,7 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
         "  tags: string[];",
         "  enabled: boolean;",
         "  approval: 'auto' | 'manual';",
+        "  requiresApproval: boolean;",
         "  runtime: ToolRuntimeSpec;",
         "  icon?: string;",
         "  emoji?: string;",
@@ -208,6 +219,7 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
         tool_id = spec["id"]
         const_name = f"{tool_id.upper().replace('-', '_')}_TOOL_SPEC"
         runtime = _require_runtime(spec)
+        requires_approval = _requires_approval(spec)
         tags_json = str(spec.get("tags", [])).replace("'", '"')
         icon = f"'{spec.get('icon')}'" if spec.get("icon") else "undefined"
         emoji = f"'{spec.get('emoji')}'" if spec.get("emoji") else "undefined"
@@ -221,6 +233,7 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
                 f"  tags: {tags_json},",
                 f"  enabled: {str(spec.get('enabled', True)).lower()},",
                 f"  approval: '{spec.get('approval', 'auto')}',",
+                f"  requiresApproval: {str(requires_approval).lower()},",
                 "  runtime: {",
                 f"    language: '{runtime['language']}',",
                 f"    package: '{runtime['package']}',",

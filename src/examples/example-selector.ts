@@ -37,7 +37,10 @@ export const EXAMPLES: Record<
   AgentCodemodeExample: () => import('./AgentCodemodeExample'),
   AgentEvalsExample: () => import('./AgentEvalsExample'),
   AgentGuardrailsExample: () => import('./AgentGuardrailsExample'),
-  AgentToolApprovalsExample: () => import('./AgentToolApprovalsExample'),
+  AgentToolApprovalsSyncExample: () =>
+    import('./AgentToolApprovalsSyncExample'),
+  AgentToolApprovalsAsyncExample: () =>
+    import('./AgentToolApprovalsAsyncExample'),
   AgentMemoryExample: () => import('./AgentMemoryExample'),
   AgentOtelExample: () => import('./AgentOtelExample'),
   AgentMonitoringExample: () => import('./AgentMonitoringExample'),

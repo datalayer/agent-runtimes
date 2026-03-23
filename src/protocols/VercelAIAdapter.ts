@@ -417,6 +417,32 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
                     timestamp: new Date(),
                   });
                 }
+
+                const finishReason = String(
+                  event.finishReason || event.finish_reason || '',
+                ).toLowerCase();
+                if (
+                  event.type === 'finish' &&
+                  (finishReason === 'tool-calls' ||
+                    finishReason === 'tool_calls') &&
+                  pendingToolInputs.size > 0
+                ) {
+                  for (const [toolCallId] of pendingToolInputs.entries()) {
+                    this.emit({
+                      type: 'tool-result',
+                      toolResult: {
+                        toolCallId,
+                        success: true,
+                        result: {
+                          pending_approval: true,
+                          message: 'Awaiting user approval',
+                        },
+                      },
+                      timestamp: new Date(),
+                    });
+                  }
+                }
+
                 if (event.type === 'finish') {
                   emitDoneOnce();
                 }

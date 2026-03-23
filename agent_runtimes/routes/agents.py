@@ -18,7 +18,7 @@ from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
-from pydantic_ai import Agent as PydanticAgent
+from pydantic_ai import Agent as PydanticAgent, DeferredToolRequests
 
 from ..adapters.pydantic_ai_adapter import PydanticAIAdapter
 from ..mcp import get_mcp_manager, initialize_config_mcp_servers
@@ -30,6 +30,8 @@ from ..services import (
     create_skills_toolset,
     initialize_codemode_toolset,
     register_agent_tools,
+    tools_require_approval,
+    tools_requiring_approval_ids,
     wire_skills_into_codemode,
 )
 from ..specs.agents import AGENT_SPECS
@@ -731,15 +733,30 @@ async def create_agent(
             # NOTE: We don't pass MCP toolsets here. They will be dynamically
             # fetched at run time by the adapter to reflect current server state.
             # Only non-MCP toolsets (codemode, skills) are passed at construction.
-            pydantic_agent = PydanticAgent(
-                request.model,
-                system_prompt=final_system_prompt,
-                builtin_tools=(),  # Explicitly disable Pydantic AI built-in tools (e.g. CodeExecutionTool)
+            tool_ids = list(request.tools or [])
+            agent_kwargs: dict[str, Any] = {
+                "system_prompt": final_system_prompt,
+                # Explicitly disable Pydantic AI built-in tools (e.g. CodeExecutionTool)
+                "builtin_tools": (),
                 # Don't pass toolsets here - they'll be dynamically provided at run time
-            )
+            }
+            approval_tool_ids = tools_requiring_approval_ids(tool_ids)
+            if tools_require_approval(tool_ids):
+                agent_kwargs["output_type"] = [str, DeferredToolRequests]
+                logger.info(
+                    "Auto-enabled DeferredToolRequests for agent '%s'; tools requiring approval: %s",
+                    agent_id,
+                    approval_tool_ids,
+                )
+
+            pydantic_agent = PydanticAgent(request.model, **agent_kwargs)
 
             # Register runtime tools declared in the request/spec.
-            register_agent_tools(pydantic_agent, request.tools)
+            register_agent_tools(
+                pydantic_agent,
+                tool_ids,
+                agent_id=agent_id,
+            )
 
             # Wrap with DBOS durable execution if enabled
             durable_lifecycle = getattr(
@@ -2356,12 +2373,27 @@ async def configure_from_spec_endpoint(
         system_prompt = spec.system_prompt or spec.goal or spec.description or ""
         model = spec.model or DEFAULT_MODEL
 
-        agent = PydanticAgent(
-            model=model,
-            system_prompt=system_prompt,
-        )
+        tool_ids = list(spec.tools or [])
+        agent_kwargs: dict[str, Any] = {
+            "model": model,
+            "system_prompt": system_prompt,
+        }
+        approval_tool_ids = tools_requiring_approval_ids(tool_ids)
+        if tools_require_approval(tool_ids):
+            agent_kwargs["output_type"] = [str, DeferredToolRequests]
+            logger.info(
+                "Auto-enabled DeferredToolRequests for agent '%s'; tools requiring approval: %s",
+                body.agent_spec_id,
+                approval_tool_ids,
+            )
 
-        register_agent_tools(agent, list(spec.tools or []))
+        agent = PydanticAgent(**agent_kwargs)
+
+        register_agent_tools(
+            agent,
+            tool_ids,
+            agent_id=body.agent_spec_id,
+        )
 
         # Wrap with DBOS durability if configured
         lifecycle = getattr(http_request.app.state, "durable_lifecycle", None)

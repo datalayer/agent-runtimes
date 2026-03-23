@@ -56,6 +56,8 @@ from .routes import (
     mcp_ui_router,
     set_a2a_app,
     skills_router,
+    tool_approvals_legacy_router,
+    tool_approvals_router,
     start_a2a_task_managers,
     stop_a2a_task_managers,
     triggers_webhook_router,
@@ -118,7 +120,7 @@ async def _create_and_register_cli_agent(
         its sandbox (variant, jupyter host/port when applicable).
     """
 
-    from pydantic_ai import Agent as PydanticAgent
+    from pydantic_ai import Agent as PydanticAgent, DeferredToolRequests
 
     from .adapters.pydantic_ai_adapter import PydanticAIAdapter
     from .context.session import register_agent as register_agent_for_context
@@ -132,6 +134,8 @@ async def _create_and_register_cli_agent(
         create_skills_toolset,
         initialize_codemode_toolset,
         register_agent_tools,
+        tools_require_approval,
+        tools_requiring_approval_ids,
         wire_skills_into_codemode,
     )
     from .transports import AGUITransport, MCPUITransport
@@ -337,14 +341,29 @@ async def _create_and_register_cli_agent(
     if skills_prompt_section:
         system_prompt = system_prompt + "\n\n" + skills_prompt_section
 
-    pydantic_agent = PydanticAgent(
-        model,
-        system_prompt=system_prompt,
-        builtin_tools=(),  # Explicitly disable Pydantic AI built-in tools (e.g. CodeExecutionTool)
-    )
+    tool_ids = list(agent_spec.tools or [])
+    agent_kwargs: dict[str, Any] = {
+        "system_prompt": system_prompt,
+        # Explicitly disable Pydantic AI built-in tools (e.g. CodeExecutionTool)
+        "builtin_tools": (),
+    }
+    approval_tool_ids = tools_requiring_approval_ids(tool_ids)
+    if tools_require_approval(tool_ids):
+        agent_kwargs["output_type"] = [str, DeferredToolRequests]
+        logger.info(
+            "Auto-enabled DeferredToolRequests for agent '%s'; tools requiring approval: %s",
+            agent_id,
+            approval_tool_ids,
+        )
+
+    pydantic_agent = PydanticAgent(model, **agent_kwargs)
 
     # Register runtime tools declared in AgentSpec.
-    registered_tools = register_agent_tools(pydantic_agent, list(agent_spec.tools or []))
+    registered_tools = register_agent_tools(
+        pydantic_agent,
+        tool_ids,
+        agent_id=agent_id,
+    )
 
     # Wrap with DBOS durable execution if enabled (globally or per-spec)
     durable_lifecycle = getattr(app.state, "durable_lifecycle", None) if app else None
@@ -1098,6 +1117,8 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
     app.include_router(mcp_router, prefix=config.api_prefix)
     app.include_router(mcp_proxy_router, prefix=config.api_prefix)
     app.include_router(skills_router, prefix=config.api_prefix)
+    app.include_router(tool_approvals_router, prefix=config.api_prefix)
+    app.include_router(tool_approvals_legacy_router)
     app.include_router(vercel_ai_router, prefix=config.api_prefix)
     app.include_router(agui_router, prefix=config.api_prefix)
     app.include_router(mcp_ui_router, prefix=config.api_prefix)

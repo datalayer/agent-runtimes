@@ -29,6 +29,13 @@ import httpx
 logger = logging.getLogger(__name__)
 
 
+def _env_bool(name: str, default: bool = False) -> bool:
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
 # ============================================================================
 # Configuration
 # ============================================================================
@@ -52,6 +59,9 @@ class ToolApprovalConfig:
     poll_interval: float = 2.0
     # Maximum wait time in seconds before expiring
     timeout: float = 300.0
+    # Whether to auto-approve if ai-agents is unavailable/misconfigured.
+    # Default is fail-closed for safety.
+    fail_open_on_error: bool = False
 
     @classmethod
     def from_env(cls) -> "ToolApprovalConfig":
@@ -62,6 +72,7 @@ class ToolApprovalConfig:
             token=os.environ.get("DATALAYER_API_KEY", ""),
             agent_id=os.environ.get("AGENT_ID", "default"),
             pod_name=os.environ.get("POD_NAME", ""),
+            fail_open_on_error=_env_bool("TOOL_APPROVAL_FAIL_OPEN", False),
         )
 
     @classmethod
@@ -82,6 +93,8 @@ class ToolApprovalConfig:
         base.tools_requiring_approval = spec_config.get("tools", [])
         base.timeout = spec_config.get("timeout", 300.0)
         base.poll_interval = spec_config.get("poll_interval", 2.0)
+        if "fail_open_on_error" in spec_config:
+            base.fail_open_on_error = bool(spec_config.get("fail_open_on_error"))
         return base
 
 
@@ -162,6 +175,8 @@ class ToolApprovalManager:
             If a human rejects the tool call.
         """
         client = await self._get_client()
+        poll_client = client
+        using_fallback_client = False
 
         # 1. Create the approval request
         payload = {
@@ -171,27 +186,73 @@ class ToolApprovalManager:
             "tool_args": tool_args,
         }
 
-        try:
-            resp = await client.post("/api/ai-agents/v1/tool-approvals", json=payload)
-            resp.raise_for_status()
-        except httpx.HTTPError as exc:
-            # If the ai-agents service is unreachable, auto-approve
-            logger.warning(
-                "Could not reach ai-agents service for tool approval, auto-approving: %s",
-                exc,
-            )
-            return {"status": "auto_approved", "tool_name": tool_name}
+        approval_path = "/api/ai-agents/v1/tool-approvals"
 
-        # The ai-agents service doesn't have a POST endpoint for creating yet
-        # (Phase 2.1 only has admin-facing endpoints), so we use the internal
-        # store directly when running in the same process, or fall back to
-        # a local wait loop.
-        approval_data = resp.json()
+        try:
+            resp = await client.post(approval_path, json=payload)
+            resp.raise_for_status()
+            approval_data = resp.json()
+        except httpx.HTTPError as exc:
+            fallback_base_url = os.environ.get(
+                "AGENT_RUNTIMES_URL", "http://127.0.0.1:8765"
+            )
+            if self.config.ai_agents_url.rstrip("/") == fallback_base_url.rstrip("/"):
+                if self.config.fail_open_on_error:
+                    logger.warning(
+                        "Could not reach tool approval service, auto-approving due to fail-open policy: %s",
+                        exc,
+                    )
+                    return {"status": "auto_approved", "tool_name": tool_name}
+                raise RuntimeError(
+                    "Manual approval required, but tool-approval service is unavailable. "
+                    "Set TOOL_APPROVAL_FAIL_OPEN=true to bypass in non-production setups."
+                ) from exc
+
+            logger.warning(
+                "Primary tool approval backend unavailable at %s; falling back to local agent-runtimes endpoint %s",
+                self.config.ai_agents_url,
+                fallback_base_url,
+            )
+            fallback_headers: dict[str, str] = {}
+            if self.config.token:
+                fallback_headers["Authorization"] = f"Bearer {self.config.token}"
+
+            try:
+                poll_client = httpx.AsyncClient(
+                    base_url=fallback_base_url,
+                    headers=fallback_headers,
+                    timeout=30.0,
+                )
+                using_fallback_client = True
+                approval_path = "/api/v1/tool-approvals"
+                fallback_resp = await poll_client.post(
+                    approval_path,
+                    json=payload,
+                )
+                fallback_resp.raise_for_status()
+                approval_data = fallback_resp.json()
+            except httpx.HTTPError as fallback_exc:
+                if self.config.fail_open_on_error:
+                    logger.warning(
+                        "Fallback tool approval backend unavailable, auto-approving due to fail-open policy: %s",
+                        fallback_exc,
+                    )
+                    return {"status": "auto_approved", "tool_name": tool_name}
+                raise RuntimeError(
+                    "Manual approval required, but tool-approval service is unavailable. "
+                    "Set TOOL_APPROVAL_FAIL_OPEN=true to bypass in non-production setups."
+                ) from fallback_exc
         approval_id = approval_data.get("id")
         if not approval_id:
-            # Possibly running against an older service version
-            logger.warning("No approval ID returned, auto-approving tool %s", tool_name)
-            return {"status": "auto_approved", "tool_name": tool_name}
+            if self.config.fail_open_on_error:
+                logger.warning(
+                    "No approval ID returned for tool '%s', auto-approving due to fail-open policy",
+                    tool_name,
+                )
+                return {"status": "auto_approved", "tool_name": tool_name}
+            raise RuntimeError(
+                "Manual approval required, but ai-agents did not return an approval ID."
+            )
 
         logger.info(
             "Waiting for human approval of tool '%s' (approval_id=%s, timeout=%ss)",
@@ -200,41 +261,45 @@ class ToolApprovalManager:
             self.config.timeout,
         )
 
-        # 2. Poll until resolved or timed out
-        elapsed = 0.0
-        while elapsed < self.config.timeout:
-            await asyncio.sleep(self.config.poll_interval)
-            elapsed += self.config.poll_interval
+        try:
+            # 2. Poll until resolved or timed out
+            elapsed = 0.0
+            while elapsed < self.config.timeout:
+                await asyncio.sleep(self.config.poll_interval)
+                elapsed += self.config.poll_interval
 
-            try:
-                resp = await client.get(
-                    f"/api/ai-agents/v1/tool-approvals/{approval_id}"
-                )
-                resp.raise_for_status()
-                record = resp.json()
-            except httpx.HTTPError:
-                logger.warning("Error polling approval %s, will retry", approval_id)
-                continue
+                try:
+                    resp = await poll_client.get(
+                        f"{approval_path}/{approval_id}"
+                    )
+                    resp.raise_for_status()
+                    record = resp.json()
+                except httpx.HTTPError:
+                    logger.warning("Error polling approval %s, will retry", approval_id)
+                    continue
 
-            status = record.get("status", "pending")
-            if status == "approved":
-                logger.info(
-                    "Tool '%s' approved (approval_id=%s)", tool_name, approval_id
-                )
-                return record
-            elif status == "rejected":
-                note = record.get("note")
-                logger.info(
-                    "Tool '%s' rejected (approval_id=%s, note=%s)",
-                    tool_name,
-                    approval_id,
-                    note,
-                )
-                raise ToolApprovalRejectedError(tool_name, note)
-            elif status == "expired":
-                raise ToolApprovalTimeoutError(
-                    f"Approval for tool '{tool_name}' expired server-side"
-                )
+                status = record.get("status", "pending")
+                if status == "approved":
+                    logger.info(
+                        "Tool '%s' approved (approval_id=%s)", tool_name, approval_id
+                    )
+                    return record
+                elif status == "rejected":
+                    note = record.get("note")
+                    logger.info(
+                        "Tool '%s' rejected (approval_id=%s, note=%s)",
+                        tool_name,
+                        approval_id,
+                        note,
+                    )
+                    raise ToolApprovalRejectedError(tool_name, note)
+                elif status == "expired":
+                    raise ToolApprovalTimeoutError(
+                        f"Approval for tool '{tool_name}' expired server-side"
+                    )
+        finally:
+            if using_fallback_client and poll_client is not client and not poll_client.is_closed:
+                await poll_client.aclose()
 
         # Timed out locally
         raise ToolApprovalTimeoutError(
