@@ -309,6 +309,11 @@ const AgentToolapprovalInner: React.FC<{ onLogout: () => void }> = ({
                 'Use runtime sensitive echo with text hello and reason audit',
             },
             {
+              title: 'Fake Mail Tool',
+              message:
+                'Use runtime send mail to finance@example.com with subject KPI Alert and body Revenue dropped by 12 percent this week',
+            },
+            {
               title: 'Auto Tool',
               message: 'Use runtime echo with text hello world',
             },

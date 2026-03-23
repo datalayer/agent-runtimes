@@ -151,6 +151,12 @@ export interface ToolSpec {
   enabled: boolean;
   /** Approval policy for this tool */
   approval: 'auto' | 'manual';
+  /** Runtime binding metadata */
+  runtime: {
+    language: 'python' | 'typescript';
+    package: string;
+    method: string;
+  };
   /** Icon identifier */
   icon?: string;
   /** Emoji identifier */

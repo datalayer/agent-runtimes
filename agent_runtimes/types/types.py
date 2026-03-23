@@ -64,6 +64,25 @@ class SkillSpec(BaseModel):
     )
 
 
+class ToolRuntimeSpec(BaseModel):
+    """Runtime binding for resolving a tool implementation."""
+
+    model_config = ConfigDict(populate_by_name=True, by_alias=True)
+
+    language: str = Field(
+        ...,
+        description="Implementation language ('python' or 'typescript')",
+    )
+    package: str = Field(
+        ...,
+        description="Module/package containing the implementation",
+    )
+    method: str = Field(
+        ...,
+        description="Callable/function name in the package",
+    )
+
+
 class ToolSpec(BaseModel):
     """
     Specification for a runtime tool.
@@ -79,6 +98,10 @@ class ToolSpec(BaseModel):
     approval: str = Field(
         default="auto",
         description="Approval policy for the tool ('auto' or 'manual')",
+    )
+    runtime: ToolRuntimeSpec = Field(
+        ...,
+        description="Runtime binding metadata",
     )
     icon: Optional[str] = Field(
         default=None,

@@ -34,6 +34,7 @@ import {
 import type { SkillSpec } from '../skills';
 import {
   RUNTIME_ECHO_TOOL_SPEC,
+  RUNTIME_SEND_MAIL_TOOL_SPEC,
   RUNTIME_SENSITIVE_ECHO_TOOL_SPEC,
 } from '../tools';
 
@@ -82,6 +83,7 @@ function toAgentSkillSpec(skill: SkillSpec) {
  */
 const TOOL_MAP: Record<string, any> = {
   'runtime-echo': RUNTIME_ECHO_TOOL_SPEC,
+  'runtime-send-mail': RUNTIME_SEND_MAIL_TOOL_SPEC,
   'runtime-sensitive-echo': RUNTIME_SENSITIVE_ECHO_TOOL_SPEC,
 };
 
@@ -1432,7 +1434,11 @@ export const MONITOR_SALES_KPIS_AGENT_SPEC: AgentSpec = {
     toAgentSkillSpec(SKILL_MAP['pdf']),
     toAgentSkillSpec(SKILL_MAP['events']),
   ],
-  tools: [TOOL_MAP['runtime-echo'], TOOL_MAP['runtime-sensitive-echo']],
+  tools: [
+    TOOL_MAP['runtime-echo'],
+    TOOL_MAP['runtime-sensitive-echo'],
+    TOOL_MAP['runtime-send-mail'],
+  ],
   environmentName: 'ai-agents-env',
   icon: 'graph',
   emoji: '📊',

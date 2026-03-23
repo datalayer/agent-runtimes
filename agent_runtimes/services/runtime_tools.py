@@ -9,11 +9,11 @@ registers them into a ``pydantic_ai.Agent`` instance.
 
 from __future__ import annotations
 
+import importlib
 import logging
 from typing import Callable, List
 
-from agent_runtimes.specs.tools import get_tool_spec
-from agent_runtimes.types import ToolSpec
+from agent_runtimes.specs.tools import ToolSpec, get_tool_spec
 
 from ..guardrails.tool_approval import (
     ToolApprovalConfig,
@@ -24,24 +24,6 @@ from ..guardrails.tool_approval import (
 logger = logging.getLogger(__name__)
 
 
-async def runtime_echo(text: str) -> str:
-    """Echo input text back to the caller."""
-    return text
-
-
-async def runtime_sensitive_echo(text: str, reason: str | None = None) -> str:
-    """Echo input text and optional reason after approval."""
-    if reason:
-        return f"{text} (reason: {reason})"
-    return text
-
-
-TOOL_IMPLEMENTATIONS: dict[str, Callable[..., object]] = {
-    "runtime-echo": runtime_echo,
-    "runtime-sensitive-echo": runtime_sensitive_echo,
-}
-
-
 def _tool_name_to_identifier(tool_name: str) -> str:
     """Convert spec tool IDs to Python identifiers used by tool_plain."""
     return tool_name.replace("-", "_")
@@ -50,6 +32,44 @@ def _tool_name_to_identifier(tool_name: str) -> str:
 def _build_approval_manager(tool_id: str) -> ToolApprovalManager:
     cfg = ToolApprovalConfig.from_spec({"tools": [tool_id]})
     return ToolApprovalManager(cfg)
+
+
+def _resolve_python_tool(spec: ToolSpec) -> Callable[..., object] | None:
+    runtime = getattr(spec, "runtime", None)
+    if runtime is None:
+        logger.warning("Tool '%s' does not define runtime metadata; skipping", spec.id)
+        return None
+
+    if runtime.language != "python":
+        logger.info(
+            "Tool '%s' uses unsupported runtime language '%s' for backend registration",
+            spec.id,
+            runtime.language,
+        )
+        return None
+
+    try:
+        module = importlib.import_module(runtime.package)
+    except Exception as exc:  # pragma: no cover - defensive error path
+        logger.warning(
+            "Failed to import Python package '%s' for tool '%s': %s",
+            runtime.package,
+            spec.id,
+            exc,
+        )
+        return None
+
+    impl = getattr(module, runtime.method, None)
+    if impl is None or not callable(impl):
+        logger.warning(
+            "Python method '%s' not found/callable in package '%s' for tool '%s'",
+            runtime.method,
+            runtime.package,
+            spec.id,
+        )
+        return None
+
+    return impl
 
 
 def register_agent_tools(agent: object, tool_ids: List[str]) -> list[str]:
@@ -81,9 +101,9 @@ def register_agent_tools(agent: object, tool_ids: List[str]) -> list[str]:
             logger.info("Tool '%s' is disabled; skipping", tool_id)
             continue
 
-        impl = TOOL_IMPLEMENTATIONS.get(tool_id)
+        impl = _resolve_python_tool(spec)
         if impl is None:
-            logger.warning("No Python implementation for tool '%s'; skipping", tool_id)
+            logger.warning("No Python implementation resolved for tool '%s'; skipping", tool_id)
             continue
 
         tool_fn = impl

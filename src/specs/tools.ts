@@ -12,6 +12,12 @@
  * DO NOT EDIT MANUALLY - run 'make specs' to regenerate.
  */
 
+export interface ToolRuntimeSpec {
+  language: 'python' | 'typescript';
+  package: string;
+  method: string;
+}
+
 export interface ToolSpec {
   id: string;
   name: string;
@@ -19,6 +25,7 @@ export interface ToolSpec {
   tags: string[];
   enabled: boolean;
   approval: 'auto' | 'manual';
+  runtime: ToolRuntimeSpec;
   icon?: string;
   emoji?: string;
 }
@@ -34,8 +41,30 @@ export const RUNTIME_ECHO_TOOL_SPEC: ToolSpec = {
   tags: ['runtime', 'utility'],
   enabled: true,
   approval: 'auto',
+  runtime: {
+    language: 'python',
+    package: 'agent_runtimes.examples.tools',
+    method: 'runtime_echo',
+  },
   icon: 'comment',
   emoji: '💬',
+};
+
+export const RUNTIME_SEND_MAIL_TOOL_SPEC: ToolSpec = {
+  id: 'runtime-send-mail',
+  name: 'Runtime Send Mail (Fake)',
+  description:
+    'Fake mail sender for tool approval demos; returns a simulated send receipt.',
+  tags: ['runtime', 'approval', 'mail'],
+  enabled: true,
+  approval: 'manual',
+  runtime: {
+    language: 'python',
+    package: 'agent_runtimes.examples.tools',
+    method: 'runtime_send_mail',
+  },
+  icon: 'mail',
+  emoji: '📧',
 };
 
 export const RUNTIME_SENSITIVE_ECHO_TOOL_SPEC: ToolSpec = {
@@ -45,6 +74,11 @@ export const RUNTIME_SENSITIVE_ECHO_TOOL_SPEC: ToolSpec = {
   tags: ['runtime', 'approval'],
   enabled: true,
   approval: 'manual',
+  runtime: {
+    language: 'python',
+    package: 'agent_runtimes.examples.tools',
+    method: 'runtime_sensitive_echo',
+  },
   icon: 'shield',
   emoji: '🛡️',
 };
@@ -55,6 +89,7 @@ export const RUNTIME_SENSITIVE_ECHO_TOOL_SPEC: ToolSpec = {
 
 export const TOOL_CATALOG: Record<string, ToolSpec> = {
   'runtime-echo': RUNTIME_ECHO_TOOL_SPEC,
+  'runtime-send-mail': RUNTIME_SEND_MAIL_TOOL_SPEC,
   'runtime-sensitive-echo': RUNTIME_SENSITIVE_ECHO_TOOL_SPEC,
 };
 
