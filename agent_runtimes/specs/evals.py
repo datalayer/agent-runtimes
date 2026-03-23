@@ -20,15 +20,11 @@ class EvalSpec(BaseModel):
     id: str = Field(..., description="Unique eval identifier")
     name: str = Field(..., description="Display name")
     description: str = Field(default="", description="Eval description")
-    category: Literal["Coding", "Knowledge", "Reasoning", "Agentic", "Safety"] = Field(
-        ..., description="Eval category"
-    )
+    category: Literal["Coding", "Knowledge", "Reasoning", "Agentic", "Safety"] = Field(..., description="Eval category")
     task_count: int = Field(..., ge=0, description="Number of benchmark tasks")
     metric: str = Field(..., description="Primary evaluation metric")
     source: str = Field(default="", description="Source URL or dataset reference")
-    difficulty: Literal["easy", "medium", "hard", "expert"] = Field(
-        default="medium", description="Benchmark difficulty"
-    )
+    difficulty: Literal["easy", "medium", "hard", "expert"] = Field(default="medium", description="Benchmark difficulty")
     languages: List[str] = Field(default_factory=list, description="Target languages")
 
 

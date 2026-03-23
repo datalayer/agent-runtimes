@@ -15,6 +15,7 @@ from typing import Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
+
 # ============================================================================
 # AIModel Pydantic class
 # ============================================================================
@@ -27,9 +28,7 @@ class AIModel(BaseModel):
     name: str = Field(..., description="Display name")
     description: str = Field(default="", description="Model description")
     provider: str = Field(..., description="Provider name")
-    default: bool = Field(
-        default=False, description="Whether this is the default model"
-    )
+    default: bool = Field(default=False, description="Whether this is the default model")
     required_env_vars: List[str] = Field(
         default_factory=list,
         description="Required environment variable names",
@@ -53,19 +52,11 @@ class AIModels(str, Enum):
     AZURE_OPENAI_GPT_4_1 = "azure-openai:gpt-4.1"
     AZURE_OPENAI_GPT_4O_MINI = "azure-openai:gpt-4o-mini"
     AZURE_OPENAI_GPT_4O = "azure-openai:gpt-4o"
-    BEDROCK_US_ANTHROPIC_CLAUDE_3_5_HAIKU_20241022_V1_0 = (
-        "bedrock:us.anthropic.claude-3-5-haiku-20241022-v1:0"
-    )
+    BEDROCK_US_ANTHROPIC_CLAUDE_3_5_HAIKU_20241022_V1_0 = "bedrock:us.anthropic.claude-3-5-haiku-20241022-v1:0"
     BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_6_V1 = "bedrock:us.anthropic.claude-opus-4-6-v1"
-    BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_20250514_V1_0 = (
-        "bedrock:us.anthropic.claude-opus-4-20250514-v1:0"
-    )
-    BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_5_20250929_V1_0 = (
-        "bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0"
-    )
-    BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_20250514_V1_0 = (
-        "bedrock:us.anthropic.claude-sonnet-4-20250514-v1:0"
-    )
+    BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_20250514_V1_0 = "bedrock:us.anthropic.claude-opus-4-20250514-v1:0"
+    BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_5_20250929_V1_0 = "bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0"
+    BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_20250514_V1_0 = "bedrock:us.anthropic.claude-sonnet-4-20250514-v1:0"
     OPENAI_GPT_4_1_MINI = "openai:gpt-4.1-mini"
     OPENAI_GPT_4_1_NANO = "openai:gpt-4.1-nano"
     OPENAI_GPT_4_1 = "openai:gpt-4.1"
@@ -165,11 +156,7 @@ BEDROCK_US_ANTHROPIC_CLAUDE_3_5_HAIKU_20241022_V1_0 = AIModel(
     description="Claude Haiku 3.5 via AWS Bedrock - fast and efficient",
     provider="bedrock",
     default=False,
-    required_env_vars=[
-        "AWS_ACCESS_KEY_ID",
-        "AWS_SECRET_ACCESS_KEY",
-        "AWS_DEFAULT_REGION",
-    ],
+    required_env_vars=["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_DEFAULT_REGION"],
 )
 
 BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_6_V1 = AIModel(
@@ -178,11 +165,7 @@ BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_6_V1 = AIModel(
     description="Claude Opus 4.6 via AWS Bedrock",
     provider="bedrock",
     default=False,
-    required_env_vars=[
-        "AWS_ACCESS_KEY_ID",
-        "AWS_SECRET_ACCESS_KEY",
-        "AWS_DEFAULT_REGION",
-    ],
+    required_env_vars=["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_DEFAULT_REGION"],
 )
 
 BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_20250514_V1_0 = AIModel(
@@ -191,11 +174,7 @@ BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_20250514_V1_0 = AIModel(
     description="Claude Opus 4 via AWS Bedrock - highest capability",
     provider="bedrock",
     default=False,
-    required_env_vars=[
-        "AWS_ACCESS_KEY_ID",
-        "AWS_SECRET_ACCESS_KEY",
-        "AWS_DEFAULT_REGION",
-    ],
+    required_env_vars=["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_DEFAULT_REGION"],
 )
 
 BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_5_20250929_V1_0 = AIModel(
@@ -204,11 +183,7 @@ BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_5_20250929_V1_0 = AIModel(
     description="Claude Sonnet 4.5 via AWS Bedrock - balanced performance",
     provider="bedrock",
     default=True,
-    required_env_vars=[
-        "AWS_ACCESS_KEY_ID",
-        "AWS_SECRET_ACCESS_KEY",
-        "AWS_DEFAULT_REGION",
-    ],
+    required_env_vars=["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_DEFAULT_REGION"],
 )
 
 BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_20250514_V1_0 = AIModel(
@@ -217,11 +192,7 @@ BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_20250514_V1_0 = AIModel(
     description="Claude Sonnet 4 via AWS Bedrock - strong reasoning",
     provider="bedrock",
     default=False,
-    required_env_vars=[
-        "AWS_ACCESS_KEY_ID",
-        "AWS_SECRET_ACCESS_KEY",
-        "AWS_DEFAULT_REGION",
-    ],
+    required_env_vars=["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_DEFAULT_REGION"],
 )
 
 OPENAI_GPT_4_1_MINI = AIModel(

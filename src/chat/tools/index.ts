@@ -14,3 +14,15 @@ export {
   type ToolCallDisplayProps,
   type ErrorType,
 } from './ToolCallDisplay';
+
+export {
+  ToolApprovalBanner,
+  type ToolApprovalBannerProps,
+  type PendingApproval,
+} from './ToolApprovalBanner';
+
+export {
+  ToolApprovalDialog,
+  useToolApprovalDialog,
+  type ToolApprovalDialogProps,
+} from './ToolApprovalDialog';

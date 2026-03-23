@@ -29,6 +29,7 @@ from ..services import (
     create_shared_sandbox,
     create_skills_toolset,
     initialize_codemode_toolset,
+    register_agent_tools,
     wire_skills_into_codemode,
 )
 from ..specs.agents import AGENT_SPECS
@@ -327,6 +328,10 @@ class CreateAgentRequest(BaseModel):
         default_factory=list,
         description="Selected skill names to enable for this agent",
     )
+    tools: list[str] = Field(
+        default_factory=list,
+        description="Selected runtime tool IDs to enable for this agent",
+    )
     enable_codemode: bool = Field(
         default=False,
         description="Enable agent-codemode toolset for code-based tool composition",
@@ -444,6 +449,8 @@ async def create_agent(
                 )
             if not request.skills and spec.skills:
                 request.skills = spec.skills
+            if not request.tools and spec.tools:
+                request.tools = spec.tools
             if spec.system_prompt_codemode_addons and not request.enable_codemode:
                 request.enable_codemode = True
             if spec.skills and not request.enable_skills:
@@ -730,6 +737,9 @@ async def create_agent(
                 builtin_tools=(),  # Explicitly disable Pydantic AI built-in tools (e.g. CodeExecutionTool)
                 # Don't pass toolsets here - they'll be dynamically provided at run time
             )
+
+            # Register runtime tools declared in the request/spec.
+            register_agent_tools(pydantic_agent, request.tools)
 
             # Wrap with DBOS durable execution if enabled
             durable_lifecycle = getattr(
@@ -2350,6 +2360,8 @@ async def configure_from_spec_endpoint(
             model=model,
             system_prompt=system_prompt,
         )
+
+        register_agent_tools(agent, list(spec.tools or []))
 
         # Wrap with DBOS durability if configured
         lifecycle = getattr(http_request.app.state, "durable_lifecycle", None)

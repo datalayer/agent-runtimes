@@ -135,6 +135,28 @@ export interface AgentSkillSpec {
   requiredEnvVars?: string[];
 }
 
+/**
+ * Specification for a runtime tool.
+ */
+export interface ToolSpec {
+  /** Unique tool identifier */
+  id: string;
+  /** Display name for the tool */
+  name: string;
+  /** Tool description */
+  description: string;
+  /** Tags for categorization */
+  tags: string[];
+  /** Whether the tool is enabled */
+  enabled: boolean;
+  /** Approval policy for this tool */
+  approval: 'auto' | 'manual';
+  /** Icon identifier */
+  icon?: string;
+  /** Emoji identifier */
+  emoji?: string;
+}
+
 // ============================================================================
 // Guardrail Types
 // ============================================================================
@@ -416,6 +438,8 @@ export interface AgentSpec {
   mcpServers: MCPServer[];
   /** Skills available to this agent */
   skills: AgentSkillSpec[];
+  /** Runtime tools available to this agent */
+  tools?: ToolSpec[];
   /** Runtime environment name for this agent */
   environmentName: string;
   /** Icon identifier or URL for the agent */

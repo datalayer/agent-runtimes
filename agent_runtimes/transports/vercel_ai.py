@@ -17,6 +17,7 @@ The Vercel AI SDK protocol provides:
 """
 
 import logging
+import inspect
 import traceback
 from typing import TYPE_CHECKING, Any, AsyncIterator
 
@@ -195,6 +196,7 @@ class VercelAITransport(BaseTransport):
         # Extract model, builtinTools, and identities from request body if not provided
         builtin_tools_from_request: list[str] | None = None
         identities_from_request: list[dict[str, Any]] | None = None
+        sdk_version: str | None = None
         body: dict[str, Any] | None = None
 
         try:
@@ -226,6 +228,9 @@ class VercelAITransport(BaseTransport):
                 logger.info(
                     f"Vercel AI: Received identities from request for providers: {providers}"
                 )
+
+            # Extract SDK version when present (newer AI SDK clients).
+            sdk_version = body.get("sdkVersion") or body.get("sdk_version")
 
             # Create a new request with the cached body for pydantic-ai to consume
             # We need to wrap the request with cached body
@@ -386,14 +391,24 @@ class VercelAITransport(BaseTransport):
                 logger.debug(
                     f"[Vercel AI] Calling VercelAIAdapter.dispatch_request with model={model}"
                 )
+                dispatch_kwargs: dict[str, Any] = {
+                    "request": request,
+                    "agent": pydantic_agent,
+                    "model": model,
+                    "usage_limits": self._usage_limits,
+                    "toolsets": runtime_toolsets,
+                    "builtin_tools": effective_builtin_tools,
+                    "on_complete": on_complete,
+                }
+
+                # Pass sdk_version only if supported by installed pydantic-ai.
+                if sdk_version and "sdk_version" in inspect.signature(
+                    VercelAIAdapter.dispatch_request
+                ).parameters:
+                    dispatch_kwargs["sdk_version"] = sdk_version
+
                 response = await VercelAIAdapter.dispatch_request(
-                    request,
-                    agent=pydantic_agent,
-                    model=model,
-                    usage_limits=self._usage_limits,
-                    toolsets=runtime_toolsets,
-                    builtin_tools=effective_builtin_tools,
-                    on_complete=on_complete,
+                    **dispatch_kwargs,
                 )
                 logger.debug(
                     f"[Vercel AI] dispatch_request returned response type: {type(response)}"

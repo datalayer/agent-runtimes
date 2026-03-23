@@ -64,6 +64,32 @@ class SkillSpec(BaseModel):
     )
 
 
+class ToolSpec(BaseModel):
+    """
+    Specification for a runtime tool.
+    """
+
+    model_config = ConfigDict(populate_by_name=True, by_alias=True)
+
+    id: str = Field(..., description="Unique tool identifier")
+    name: str = Field(..., description="Display name for the tool")
+    description: str = Field(default="", description="Tool description")
+    tags: List[str] = Field(default_factory=list, description="Tags for categorization")
+    enabled: bool = Field(default=True, description="Whether the tool is enabled")
+    approval: str = Field(
+        default="auto",
+        description="Approval policy for the tool ('auto' or 'manual')",
+    )
+    icon: Optional[str] = Field(
+        default=None,
+        description="Octicon name for UI display",
+    )
+    emoji: Optional[str] = Field(
+        default=None,
+        description="Unicode emoji for UI display",
+    )
+
+
 class AgentSkillSpec(BaseModel):
     """
     Specification for an agent skill.
@@ -282,6 +308,10 @@ class AgentSpec(BaseModel):
     skills: List[str] = Field(
         default_factory=list,
         description="Skill IDs available to this agent",
+    )
+    tools: List[str] = Field(
+        default_factory=list,
+        description="Tool IDs available to this agent",
     )
     environment_name: str = Field(
         default="ai-agents-env",

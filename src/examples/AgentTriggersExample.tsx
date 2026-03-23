@@ -10,7 +10,7 @@
  * webhook URLs, event-based listeners, and manual invocations.
  *
  * - Creates a cloud agent runtime (environment: 'ai-agents-env') via the Datalayer
- *   Runtimes API and deploys an agent on its sidecar
+ *   Runtimes API and deploys an agent via its sidecar
  * - Shows a tabbed control panel to configure each trigger type
  * - Lists recent trigger history and next scheduled run
  */

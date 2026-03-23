@@ -14,6 +14,7 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
+
 # ============================================================================
 # MemorySpec Type
 # ============================================================================
@@ -25,14 +26,8 @@ class MemorySpec(BaseModel):
     id: str = Field(..., description="Unique memory identifier")
     name: str = Field(..., description="Display name for the memory backend")
     description: str = Field(default="", description="Memory backend description")
-    persistence: str = Field(
-        default="none",
-        description="Persistence level: none, session, cross-session, permanent",
-    )
-    scope: str = Field(
-        default="agent",
-        description="Memory scope: agent, team, repository, user, global",
-    )
+    persistence: str = Field(default="none", description="Persistence level: none, session, cross-session, permanent")
+    scope: str = Field(default="agent", description="Memory scope: agent, team, repository, user, global")
     backend: str = Field(default="in-memory", description="Storage backend identifier")
     icon: str = Field(default="database", description="Icon identifier")
     emoji: str = Field(default="\U0001f9e0", description="Emoji representation")

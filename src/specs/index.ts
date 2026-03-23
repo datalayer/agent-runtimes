@@ -20,4 +20,5 @@ export * from './models';
 export * from './notifications';
 export * from './outputs';
 export * from './skills';
+export * from './tools';
 export * from './triggers';

@@ -14,6 +14,7 @@ from .code_sandbox_manager import (
     SandboxVariant,
     get_code_sandbox_manager,
 )
+from .runtime_tools import register_agent_tools
 
 __all__ = [
     "CodeSandboxManager",
@@ -25,4 +26,5 @@ __all__ = [
     "create_skills_toolset",
     "initialize_codemode_toolset",
     "wire_skills_into_codemode",
+    "register_agent_tools",
 ]

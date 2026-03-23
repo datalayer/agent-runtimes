@@ -24,6 +24,7 @@ RUFF_TARGETS = \
 	agent_runtimes/specs/agents/ \
 	agent_runtimes/specs/teams/ \
 	agent_runtimes/specs/skills.py \
+	agent_runtimes/specs/tools.py \
 	agent_runtimes/specs/envvars.py \
 	agent_runtimes/specs/models.py \
 	agent_runtimes/specs/memory.py \
@@ -163,6 +164,11 @@ specs-generate: ## generate all Python and TypeScript specs from YAML
 	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/skills \
 	  --python-output agent_runtimes/specs/skills.py \
 	  --typescript-output src/specs/skills.ts
+	@echo "Generating tool specifications..."
+	python scripts/codegen/generate_tools.py \
+	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/tools \
+	  --python-output agent_runtimes/specs/tools.py \
+	  --typescript-output src/specs/tools.ts
 	@echo "Generating environment variable specifications..."
 	python scripts/codegen/generate_envvars.py \
 	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/envvars \

@@ -22,9 +22,7 @@ class GuardrailPermissions(BaseModel):
     execute_code: bool = Field(default=False, description="Allow code execution")
     access_internet: bool = Field(default=False, description="Allow internet access")
     send_email: bool = Field(default=False, description="Allow email sending")
-    deploy_production: bool = Field(
-        default=False, description="Allow production deploys"
-    )
+    deploy_production: bool = Field(default=False, description="Allow production deploys")
 
 
 class TokenLimitsSpec(BaseModel):
@@ -53,7 +51,7 @@ class DataHandlingSpec(BaseModel):
     redact_fields: List[str] = Field(default_factory=list)
     hash_fields: List[str] = Field(default_factory=list)
     pii_detection: bool = Field(default=False)
-    pii_action: str = Field(default="warn")
+    pii_action: str = Field(default='warn')
 
 
 class ApprovalPolicySpec(BaseModel):
@@ -68,7 +66,7 @@ class ToolLimitsSpec(BaseModel):
 
     max_tool_calls: int = Field(default=0, ge=0)
     max_query_rows: int = Field(default=0, ge=0)
-    max_query_runtime: str = Field(default="0s")
+    max_query_runtime: str = Field(default='0s')
     max_time_window_days: int = Field(default=0, ge=0)
 
 
@@ -145,16 +143,8 @@ DATA_ENGINEERING_POWER_USER_GUARDRAIL_SPEC = GuardrailSpec(
         pii_action="redact",
     ),
     approval_policy=ApprovalPolicySpec(
-        require_manual_approval_for=[
-            "Schema changes",
-            "Drop or truncate operations",
-            "Production data modifications",
-        ],
-        auto_approved=[
-            "Read queries",
-            "Data transformations",
-            "Pipeline orchestration",
-        ],
+        require_manual_approval_for=["Schema changes", "Drop or truncate operations", "Production data modifications"],
+        auto_approved=["Read queries", "Data transformations", "Pipeline orchestration"],
     ),
     tool_limits=ToolLimitsSpec(
         max_tool_calls=500,
@@ -265,15 +255,8 @@ GITHUB_ACTIONS_DEPLOY_GUARDRAIL_SPEC = GuardrailSpec(
         pii_action="warn",
     ),
     approval_policy=ApprovalPolicySpec(
-        require_manual_approval_for=[
-            "Production environment changes",
-            "Infrastructure scaling beyond limits",
-        ],
-        auto_approved=[
-            "Staging deployments",
-            "Test environment operations",
-            "Build and package operations",
-        ],
+        require_manual_approval_for=["Production environment changes", "Infrastructure scaling beyond limits"],
+        auto_approved=["Staging deployments", "Test environment operations", "Build and package operations"],
     ),
     tool_limits=ToolLimitsSpec(
         max_tool_calls=300,
@@ -328,15 +311,8 @@ GITHUB_CI_BOT_GUARDRAIL_SPEC = GuardrailSpec(
         pii_action="warn",
     ),
     approval_policy=ApprovalPolicySpec(
-        require_manual_approval_for=[
-            "Any production deployment",
-            "Any write to protected branches",
-        ],
-        auto_approved=[
-            "Build and test operations",
-            "Package installation",
-            "Code analysis and linting",
-        ],
+        require_manual_approval_for=["Any production deployment", "Any write to protected branches"],
+        auto_approved=["Build and test operations", "Package installation", "Code analysis and linting"],
     ),
     tool_limits=ToolLimitsSpec(
         max_tool_calls=200,
@@ -391,16 +367,8 @@ GOOGLE_WORKSPACE_AGENT_GUARDRAIL_SPEC = GuardrailSpec(
         pii_action="warn",
     ),
     approval_policy=ApprovalPolicySpec(
-        require_manual_approval_for=[
-            "Sending external emails",
-            "Sharing files outside organization",
-            "Modifying calendar events for other users",
-        ],
-        auto_approved=[
-            "Reading emails and documents",
-            "Creating drafts",
-            "Reading calendar",
-        ],
+        require_manual_approval_for=["Sending external emails", "Sharing files outside organization", "Modifying calendar events for other users"],
+        auto_approved=["Reading emails and documents", "Creating drafts", "Reading calendar"],
     ),
     tool_limits=ToolLimitsSpec(
         max_tool_calls=100,

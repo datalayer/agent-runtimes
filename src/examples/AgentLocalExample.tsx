@@ -23,12 +23,7 @@ import type { Transport, Extension, ChatMessage } from '../chat';
 import { useAgentsStore } from './stores/examplesStore';
 import { useIdentity } from '../identity';
 import type { OAuthProvider, Identity } from '../identity';
-import {
-  MockFileBrowser,
-  MainContent,
-  Header,
-  FooterMetrics,
-} from './components';
+import { MockFileBrowser, MainContent, Header } from './components';
 import { AgentConfiguration, type AgentLibrary } from '../config';
 import type { McpServerSelection } from '../types';
 import { isSpecSelection, getSpecId } from '../config/AgentConfiguration';
@@ -1086,23 +1081,6 @@ const AgentRuntimeFormExample: React.FC<AgentRuntimeFormExampleProps> = ({
               />
             </Box>
           )}
-
-          {/* Footer */}
-          <PageLayout.Footer
-            divider="line"
-            sx={{
-              position: 'fixed',
-              bottom: 0,
-              left: 0,
-              right: 0,
-              bg: 'canvas.default',
-              zIndex: 10,
-            }}
-          >
-            {selectedAgentId !== 'new-agent' && (
-              <FooterMetrics tokens={1523552} cost={2.01} />
-            )}
-          </PageLayout.Footer>
         </PageLayout>
       </ThemedProvider>
     </QueryClientProvider>

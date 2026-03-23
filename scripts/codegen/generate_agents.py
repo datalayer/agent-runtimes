@@ -305,7 +305,10 @@ def list_agent_specs(prefix: str | None = None) -> list[AgentSpec]:
 
 
 def generate_typescript_code(
-    specs: List[tuple[str, Dict[str, Any]]], mcp_specs_dir: str, skills_specs_dir: str
+    specs: List[tuple[str, Dict[str, Any]]],
+    mcp_specs_dir: str,
+    skills_specs_dir: str,
+    tools_specs_dir: str,
 ) -> str:
     """Generate TypeScript code from agent specifications."""
     # Load available MCP servers from specs
@@ -323,14 +326,22 @@ def generate_typescript_code(
     skill_ids = [os.path.basename(f).replace(".yaml", "") for f in skill_files]
     skill_ids.sort()
 
+    # Load available tools from specs
+    tool_files = glob.glob(os.path.join(tools_specs_dir, "*.yaml"))
+    tool_ids = [os.path.basename(f).replace(".yaml", "") for f in tool_files]
+    tool_ids.sort()
+
     # Determine which MCP servers and skills are actually used in these specs
     used_mcp_servers = set()
     used_skills = set()
+    used_tools = set()
     for _, spec in specs:
         for server in spec.get("mcp_servers", []):
             used_mcp_servers.add(server)
         for skill in spec.get("skills", []):
             used_skills.add(skill)
+        for tool in spec.get("tools", []):
+            used_tools.add(tool)
 
     # Only import what's actually used
     mcp_imports = []
@@ -350,9 +361,19 @@ def generate_typescript_code(
             skill_imports.append(const_name)
             skill_map_entries.append(f"  '{sid}': {const_name},")
 
+    # Generate tool import names and map entries
+    tool_imports = []
+    tool_map_entries = []
+    for tid in tool_ids:
+        if tid in used_tools:
+            const_name = tid.upper().replace("-", "_") + "_TOOL_SPEC"
+            tool_imports.append(const_name)
+            tool_map_entries.append(f"  '{tid}': {const_name},")
+
     # Determine if we need any helper code
     has_mcp = len(mcp_imports) > 0
     has_skills = len(skill_imports) > 0
+    has_tools = len(tool_imports) > 0
 
     # Root-level specs produce src/specs/agents/agents.ts, while nested specs
     # produce src/specs/agents/<folder>/agents.ts. Import paths differ.
@@ -362,6 +383,7 @@ def generate_typescript_code(
     )
     mcp_import_path = "../mcpServers" if is_root_layout else "../../mcpServers"
     skills_import_path = "../skills" if is_root_layout else "../../skills"
+    tools_import_path = "../tools" if is_root_layout else "../../tools"
 
     # Header
     code = """/*
@@ -401,6 +423,14 @@ import type { AgentSpec } from '"""
         code += skills_import_path
         code += "';\n"
 
+    # Only add tool imports if needed
+    if has_tools:
+        code += "import {\n"
+        code += "  " + ",\n  ".join(tool_imports) + ",\n"
+        code += "} from '"
+        code += tools_import_path
+        code += "';\n"
+
     # Only add MCP server lookup if used
     if has_mcp:
         code += """
@@ -436,6 +466,18 @@ function toAgentSkillSpec(skill: SkillSpec) {
   };
 }
 """
+
+    # Only add tool lookup if used
+    if has_tools:
+        code += """
+/**
+ * Map tool IDs to ToolSpec objects.
+ */
+const TOOL_MAP: Record<string, any> = {
+"""
+        code += "\n".join(tool_map_entries) + "\n"
+        code += "};\n"
+
 
     code += """
 // ============================================================================
@@ -499,6 +541,15 @@ function toAgentSkillSpec(skill: SkillSpec) {
                 )
             else:
                 skills_str = ""
+
+            # Get tools - resolve to ToolSpec via TOOL_MAP
+            tool_ids_list = spec.get("tools", [])
+            if has_tools and tool_ids_list:
+                tools_str = ", ".join(
+                    f"TOOL_MAP['{tid}']" for tid in tool_ids_list
+                )
+            else:
+                tools_str = ""
 
             # Format tags and suggestions as arrays
             tags = spec.get("tags", [])
@@ -585,6 +636,7 @@ function toAgentSkillSpec(skill: SkillSpec) {
   model: {model_ts},
   mcpServers: [{mcp_servers_str}],
   skills: [{skills_str}],
+    tools: [{tools_str}],
   environmentName: '{spec.get("environment_name", "ai-agents-env")}',
   icon: {icon},
   emoji: {emoji},
@@ -737,6 +789,7 @@ def generate_subfolder_structure(specs: List[tuple[str, Dict[str, Any]]], args):
     # Get MCP and skills specs directories
     mcp_specs_dir = args.specs_dir.parent / "mcp-servers"
     skills_specs_dir = args.specs_dir.parent / "skills"
+    tools_specs_dir = args.specs_dir.parent / "tools"
 
     # Determine base directories
     python_base = args.python_output.parent / "agents"
@@ -806,6 +859,7 @@ __all__ = ["AGENT_SPECS", "get_agent_spec", "list_agent_specs"]
             [(folder, spec) for spec in folder_specs],
             str(mcp_specs_dir),
             str(skills_specs_dir),
+            str(tools_specs_dir),
         )
         with open(typescript_file, "w") as f:
             f.write(typescript_code)
@@ -1001,6 +1055,7 @@ export * from './models';
 export * from './notifications';
 export * from './outputs';
 export * from './skills';
+export * from './tools';
 export * from './triggers';
 """
     )
@@ -1064,8 +1119,12 @@ def main():
         # Get MCP and skills specs directories (siblings to agents directory)
         mcp_specs_dir = args.specs_dir.parent / "mcp-servers"
         skills_specs_dir = args.specs_dir.parent / "skills"
+        tools_specs_dir = args.specs_dir.parent / "tools"
         typescript_code = generate_typescript_code(
-            specs, str(mcp_specs_dir), str(skills_specs_dir)
+            specs,
+            str(mcp_specs_dir),
+            str(skills_specs_dir),
+            str(tools_specs_dir),
         )
         args.typescript_output.parent.mkdir(parents=True, exist_ok=True)
         with open(args.typescript_output, "w") as f:

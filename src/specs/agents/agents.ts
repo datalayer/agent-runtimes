@@ -32,6 +32,10 @@ import {
   PDF_SKILL_SPEC,
 } from '../skills';
 import type { SkillSpec } from '../skills';
+import {
+  RUNTIME_ECHO_TOOL_SPEC,
+  RUNTIME_SENSITIVE_ECHO_TOOL_SPEC,
+} from '../tools';
 
 // ============================================================================
 // MCP Server Lookup
@@ -73,6 +77,14 @@ function toAgentSkillSpec(skill: SkillSpec) {
   };
 }
 
+/**
+ * Map tool IDs to ToolSpec objects.
+ */
+const TOOL_MAP: Record<string, any> = {
+  'runtime-echo': RUNTIME_ECHO_TOOL_SPEC,
+  'runtime-sensitive-echo': RUNTIME_SENSITIVE_ECHO_TOOL_SPEC,
+};
+
 // ============================================================================
 // Agent Specs
 // ============================================================================
@@ -97,6 +109,7 @@ export const ANALYZE_CAMPAIGN_PERFORMANCE_AGENT_SPEC: AgentSpec = {
     toAgentSkillSpec(SKILL_MAP['crawl']),
     toAgentSkillSpec(SKILL_MAP['events']),
   ],
+  tools: [],
   environmentName: 'ai-agents-env',
   icon: 'megaphone',
   emoji: '📢',
@@ -117,7 +130,7 @@ export const ANALYZE_CAMPAIGN_PERFORMANCE_AGENT_SPEC: AgentSpec = {
 `,
   systemPromptCodemodeAddons: undefined,
   goal: `Unify marketing data from Google Ads, Meta, TikTok, LinkedIn, GA4, and email platforms. Normalise metrics into a single cross-channel view with unified CPA, ROAS, and CTR definitions. Detect performance anomalies in real time and generate budget reallocation recommendations to maximise ROAS.`,
-  protocol: 'ag-ui',
+  protocol: 'vercel-ai',
   uiExtension: 'a2ui',
   trigger: {
     type: 'schedule',
@@ -205,6 +218,7 @@ export const ANALYZE_SUPPORT_TICKETS_AGENT_SPEC: AgentSpec = {
     toAgentSkillSpec(SKILL_MAP['crawl']),
     toAgentSkillSpec(SKILL_MAP['events']),
   ],
+  tools: [],
   environmentName: 'ai-agents-env',
   icon: 'issue-opened',
   emoji: '🎫',
@@ -224,7 +238,7 @@ export const ANALYZE_SUPPORT_TICKETS_AGENT_SPEC: AgentSpec = {
 `,
   systemPromptCodemodeAddons: undefined,
   goal: `Triage incoming support tickets by urgency, categorize by topic and sentiment, identify recurring patterns, and generate resolution recommendations with escalation paths for critical issues.`,
-  protocol: 'ag-ui',
+  protocol: 'vercel-ai',
   uiExtension: 'a2ui',
   trigger: {
     type: 'schedule',
@@ -287,6 +301,7 @@ export const AUDIT_INVENTORY_LEVELS_AGENT_SPEC: AgentSpec = {
     toAgentSkillSpec(SKILL_MAP['pdf']),
     toAgentSkillSpec(SKILL_MAP['events']),
   ],
+  tools: [],
   environmentName: 'ai-agents-env',
   icon: 'package',
   emoji: '📦',
@@ -306,7 +321,7 @@ export const AUDIT_INVENTORY_LEVELS_AGENT_SPEC: AgentSpec = {
 `,
   systemPromptCodemodeAddons: undefined,
   goal: `Monitor inventory levels across all warehouses every 6 hours. Detect discrepancies between system and physical counts, forecast demand by SKU, generate reorder recommendations, and compile audit reports with findings.`,
-  protocol: 'ag-ui',
+  protocol: 'vercel-ai',
   uiExtension: 'a2ui',
   trigger: {
     type: 'schedule',
@@ -366,6 +381,7 @@ export const AUTOMATE_REGULATORY_REPORTING_AGENT_SPEC: AgentSpec = {
     toAgentSkillSpec(SKILL_MAP['pdf']),
     toAgentSkillSpec(SKILL_MAP['events']),
   ],
+  tools: [],
   environmentName: 'ai-agents-env',
   icon: 'shield-check',
   emoji: '🏦',
@@ -386,7 +402,7 @@ export const AUTOMATE_REGULATORY_REPORTING_AGENT_SPEC: AgentSpec = {
 `,
   systemPromptCodemodeAddons: undefined,
   goal: `Automate end-to-end regulatory reporting: ingest data from trading and accounting systems, compute risk-weighted assets and capital ratios, reconcile positions, validate against Basel III/IV, MiFID II, and SOX rules, and generate submission-ready compliance reports with full audit trails.`,
-  protocol: 'ag-ui',
+  protocol: 'vercel-ai',
   uiExtension: 'a2ui',
   trigger: {
     type: 'schedule',
@@ -469,6 +485,7 @@ export const CLASSIFY_ROUTE_EMAILS_AGENT_SPEC: AgentSpec = {
     toAgentSkillSpec(SKILL_MAP['github']),
     toAgentSkillSpec(SKILL_MAP['events']),
   ],
+  tools: [],
   environmentName: 'ai-agents-env',
   icon: 'mail',
   emoji: '📬',
@@ -481,7 +498,7 @@ export const CLASSIFY_ROUTE_EMAILS_AGENT_SPEC: AgentSpec = {
   systemPrompt: undefined,
   systemPromptCodemodeAddons: undefined,
   goal: `Classify incoming emails by intent (inquiry, complaint, order, support), assign priority (critical/high/medium/low), extract key entities (sender, subject, account ID, product), and route to the correct department queue. Flag urgent items for immediate human review.`,
-  protocol: 'ag-ui',
+  protocol: 'vercel-ai',
   uiExtension: 'a2ui',
   trigger: {
     type: 'event',
@@ -556,6 +573,7 @@ export const COMPREHENSIVE_SALES_ANALYTICS_AGENT_SPEC: AgentSpec = {
     toAgentSkillSpec(SKILL_MAP['github']),
     toAgentSkillSpec(SKILL_MAP['events']),
   ],
+  tools: [],
   environmentName: 'ai-agents-env',
   icon: 'graph',
   emoji: '📈',
@@ -568,7 +586,7 @@ export const COMPREHENSIVE_SALES_ANALYTICS_AGENT_SPEC: AgentSpec = {
   systemPrompt: undefined,
   systemPromptCodemodeAddons: undefined,
   goal: `Run a comprehensive daily sales analytics pipeline: collect KPIs from CRM and ERP, detect anomalies and classify severity, analyze trends and produce 30-day forecasts, then compile everything into an executive dashboard sent via Slack and email. Flag critical deviations for immediate human review.`,
-  protocol: 'ag-ui',
+  protocol: 'vercel-ai',
   uiExtension: 'a2ui',
   trigger: {
     type: 'once',
@@ -627,6 +645,7 @@ export const CRAWLER_AGENT_SPEC: AgentSpec = {
     toAgentSkillSpec(SKILL_MAP['github']),
     toAgentSkillSpec(SKILL_MAP['events']),
   ],
+  tools: [],
   environmentName: 'ai-agents-env',
   icon: 'globe',
   emoji: '🌐',
@@ -698,6 +717,7 @@ export const DATA_ACQUISITION_AGENT_SPEC: AgentSpec = {
     toAgentSkillSpec(SKILL_MAP['github']),
     toAgentSkillSpec(SKILL_MAP['events']),
   ],
+  tools: [],
   environmentName: 'ai-agents-env',
   icon: 'database',
   emoji: '📊',
@@ -774,6 +794,7 @@ export const END_OF_MONTH_SALES_PERFORMANCE_AGENT_SPEC: AgentSpec = {
     toAgentSkillSpec(SKILL_MAP['pdf']),
     toAgentSkillSpec(SKILL_MAP['events']),
   ],
+  tools: [],
   environmentName: 'ai-agents-env',
   icon: 'graph',
   emoji: '📊',
@@ -797,7 +818,7 @@ export const END_OF_MONTH_SALES_PERFORMANCE_AGENT_SPEC: AgentSpec = {
 `,
   systemPromptCodemodeAddons: undefined,
   goal: `Consolidate, validate, and analyze end-of-month Salesforce retail sales data. Compute revenue performance vs targets by SKU, detect anomalies in bookings and discounting, explain variances by region/segment/product/SKU, and generate an executive-ready PDF performance report with full data lineage.`,
-  protocol: 'ag-ui',
+  protocol: 'vercel-ai',
   uiExtension: 'a2ui',
   trigger: {
     type: 'schedule',
@@ -960,6 +981,7 @@ export const EXTRACT_DATA_FROM_FILES_AGENT_SPEC: AgentSpec = {
     toAgentSkillSpec(SKILL_MAP['github']),
     toAgentSkillSpec(SKILL_MAP['events']),
   ],
+  tools: [],
   environmentName: 'ai-agents-env',
   icon: 'database',
   emoji: '🗃️',
@@ -972,7 +994,7 @@ export const EXTRACT_DATA_FROM_FILES_AGENT_SPEC: AgentSpec = {
   systemPrompt: undefined,
   systemPromptCodemodeAddons: undefined,
   goal: `Extract structured data from unstructured files. Parse tables, key-value pairs, line items, dates, amounts, and named entities from PDFs, images, spreadsheets, and scanned documents. Output clean JSON and CSV with confidence scores for each extracted field.`,
-  protocol: 'ag-ui',
+  protocol: 'vercel-ai',
   uiExtension: 'a2ui',
   trigger: {
     type: 'event',
@@ -1044,6 +1066,7 @@ export const FINANCIAL_VIZ_AGENT_SPEC: AgentSpec = {
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
   mcpServers: [MCP_SERVER_MAP['alphavantage'], MCP_SERVER_MAP['chart']],
   skills: [toAgentSkillSpec(SKILL_MAP['events'])],
+  tools: [],
   environmentName: 'ai-agents-env',
   icon: 'trending-up',
   emoji: '📈',
@@ -1108,6 +1131,7 @@ export const FINANCIAL_AGENT_SPEC: AgentSpec = {
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
   mcpServers: [MCP_SERVER_MAP['alphavantage']],
   skills: [toAgentSkillSpec(SKILL_MAP['events'])],
+  tools: [],
   environmentName: 'ai-agents-env',
   icon: 'trending-up',
   emoji: '📈',
@@ -1175,6 +1199,7 @@ export const GENERATE_WEEKLY_REPORTS_AGENT_SPEC: AgentSpec = {
     toAgentSkillSpec(SKILL_MAP['pdf']),
     toAgentSkillSpec(SKILL_MAP['events']),
   ],
+  tools: [],
   environmentName: 'ai-agents-env',
   icon: 'file',
   emoji: '📝',
@@ -1194,7 +1219,7 @@ export const GENERATE_WEEKLY_REPORTS_AGENT_SPEC: AgentSpec = {
 `,
   systemPromptCodemodeAddons: undefined,
   goal: `Aggregate data across marketing, sales, and operations departments every Monday. Generate a structured executive report with charts, KPI summaries, trend analysis, and the top 3 actionable takeaways for leadership.`,
-  protocol: 'ag-ui',
+  protocol: 'vercel-ai',
   uiExtension: 'a2ui',
   trigger: {
     type: 'schedule',
@@ -1273,6 +1298,7 @@ export const GITHUB_AGENT_SPEC: AgentSpec = {
     toAgentSkillSpec(SKILL_MAP['github']),
     toAgentSkillSpec(SKILL_MAP['events']),
   ],
+  tools: [],
   environmentName: 'ai-agents-env',
   icon: 'git-branch',
   emoji: '🐙',
@@ -1337,6 +1363,7 @@ export const INFORMATION_ROUTING_AGENT_SPEC: AgentSpec = {
   model: 'bedrock:us.anthropic.claude-opus-4-6-v1',
   mcpServers: [MCP_SERVER_MAP['google-workspace'], MCP_SERVER_MAP['github']],
   skills: [toAgentSkillSpec(SKILL_MAP['events'])],
+  tools: [],
   environmentName: 'ai-agents-env',
   icon: 'share-2',
   emoji: '🔀',
@@ -1405,6 +1432,7 @@ export const MONITOR_SALES_KPIS_AGENT_SPEC: AgentSpec = {
     toAgentSkillSpec(SKILL_MAP['pdf']),
     toAgentSkillSpec(SKILL_MAP['events']),
   ],
+  tools: [TOOL_MAP['runtime-echo'], TOOL_MAP['runtime-sensitive-echo']],
   environmentName: 'ai-agents-env',
   icon: 'graph',
   emoji: '📊',
@@ -1426,7 +1454,7 @@ export const MONITOR_SALES_KPIS_AGENT_SPEC: AgentSpec = {
 `,
   systemPromptCodemodeAddons: undefined,
   goal: `Monitor and analyze sales KPIs from the CRM system. Generate daily reports summarizing key performance metrics, identify trends, and flag anomalies. Send notifications when KPIs deviate more than 10% from targets.`,
-  protocol: 'ag-ui',
+  protocol: 'vercel-ai',
   uiExtension: 'a2ui',
   trigger: {
     type: 'schedule',
@@ -1514,6 +1542,7 @@ export const OPTIMIZE_DYNAMIC_PRICING_AGENT_SPEC: AgentSpec = {
     toAgentSkillSpec(SKILL_MAP['crawl']),
     toAgentSkillSpec(SKILL_MAP['events']),
   ],
+  tools: [],
   environmentName: 'ai-agents-env',
   icon: 'tag',
   emoji: '🏷️',
@@ -1534,7 +1563,7 @@ export const OPTIMIZE_DYNAMIC_PRICING_AGENT_SPEC: AgentSpec = {
 `,
   systemPromptCodemodeAddons: undefined,
   goal: `Track competitor pricing across 50K+ SKUs hourly on Amazon, Walmart, and niche marketplaces. Forecast demand per SKU-location pair using historical sales, seasonality, and external signals. Generate margin-optimised pricing recommendations with confidence intervals and projected revenue impact.`,
-  protocol: 'ag-ui',
+  protocol: 'vercel-ai',
   uiExtension: 'a2ui',
   trigger: {
     type: 'schedule',
@@ -1632,6 +1661,7 @@ export const OPTIMIZE_GRID_OPERATIONS_AGENT_SPEC: AgentSpec = {
     toAgentSkillSpec(SKILL_MAP['pdf']),
     toAgentSkillSpec(SKILL_MAP['events']),
   ],
+  tools: [],
   environmentName: 'ai-agents-env',
   icon: 'zap',
   emoji: '⚡',
@@ -1652,7 +1682,7 @@ export const OPTIMIZE_GRID_OPERATIONS_AGENT_SPEC: AgentSpec = {
 `,
   systemPromptCodemodeAddons: undefined,
   goal: `Process millions of IoT sensor data points from SCADA systems, smart meters, and renewable assets. Detect equipment anomalies in real time, predict failures 2–4 weeks in advance, and optimise grid load balancing across renewable and conventional sources to reduce unplanned downtime by 50%.`,
-  protocol: 'ag-ui',
+  protocol: 'vercel-ai',
   uiExtension: 'a2ui',
   trigger: {
     type: 'schedule',
@@ -1739,6 +1769,7 @@ export const PROCESS_CITIZEN_REQUESTS_AGENT_SPEC: AgentSpec = {
     toAgentSkillSpec(SKILL_MAP['pdf']),
     toAgentSkillSpec(SKILL_MAP['events']),
   ],
+  tools: [],
   environmentName: 'ai-agents-env',
   icon: 'organization',
   emoji: '🏛️',
@@ -1759,7 +1790,7 @@ export const PROCESS_CITIZEN_REQUESTS_AGENT_SPEC: AgentSpec = {
 `,
   systemPromptCodemodeAddons: undefined,
   goal: `Process citizen requests from web portals, email, and scanned documents. Classify by type, urgency, and jurisdiction, route to appropriate departments, model policy impacts across population datasets with Monte Carlo simulation, and generate explainable, auditable decision documentation for public record.`,
-  protocol: 'ag-ui',
+  protocol: 'vercel-ai',
   uiExtension: 'a2ui',
   trigger: {
     type: 'event',
@@ -1854,6 +1885,7 @@ export const PROCESS_CLINICAL_TRIAL_DATA_AGENT_SPEC: AgentSpec = {
     toAgentSkillSpec(SKILL_MAP['pdf']),
     toAgentSkillSpec(SKILL_MAP['events']),
   ],
+  tools: [],
   environmentName: 'ai-agents-env',
   icon: 'heart',
   emoji: '🏥',
@@ -1874,7 +1906,7 @@ export const PROCESS_CLINICAL_TRIAL_DATA_AGENT_SPEC: AgentSpec = {
 `,
   systemPromptCodemodeAddons: undefined,
   goal: `Process clinical trial data from multiple sites: ingest patient records and lab results, harmonise to CDISC SDTM format with MedDRA coding, screen for adverse events and safety signals in real time, and prepare submission-ready datasets with full validation and audit trails.`,
-  protocol: 'ag-ui',
+  protocol: 'vercel-ai',
   uiExtension: 'a2ui',
   trigger: {
     type: 'event',
@@ -1971,6 +2003,7 @@ export const PROCESS_FINANCIAL_TRANSACTIONS_AGENT_SPEC: AgentSpec = {
     toAgentSkillSpec(SKILL_MAP['pdf']),
     toAgentSkillSpec(SKILL_MAP['events']),
   ],
+  tools: [],
   environmentName: 'ai-agents-env',
   icon: 'credit-card',
   emoji: '💳',
@@ -1990,7 +2023,7 @@ export const PROCESS_FINANCIAL_TRANSACTIONS_AGENT_SPEC: AgentSpec = {
 `,
   systemPromptCodemodeAddons: undefined,
   goal: `Process and validate incoming financial transaction batches. Reconcile balances across accounts, run AML compliance checks, flag suspicious transactions for human review, and generate audit-ready reports.`,
-  protocol: 'ag-ui',
+  protocol: 'vercel-ai',
   uiExtension: 'a2ui',
   trigger: {
     type: 'event',
@@ -2059,6 +2092,7 @@ export const SIMPLE_AGENT_SPEC: AgentSpec = {
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
   mcpServers: [],
   skills: [toAgentSkillSpec(SKILL_MAP['events'])],
+  tools: [TOOL_MAP['runtime-echo']],
   environmentName: 'ai-agents-env',
   icon: 'agent',
   emoji: '🤖',
@@ -2109,6 +2143,7 @@ export const SPATIAL_DATA_ANALYSIS_AGENT_SPEC: AgentSpec = {
     MCP_SERVER_MAP['filesystem'],
   ],
   skills: [toAgentSkillSpec(SKILL_MAP['events'])],
+  tools: [],
   environmentName: 'ai-agents-env',
   icon: 'globe',
   emoji: '🛰️',
@@ -2168,6 +2203,7 @@ export const SUMMARIZE_DOCUMENTS_AGENT_SPEC: AgentSpec = {
     toAgentSkillSpec(SKILL_MAP['pdf']),
     toAgentSkillSpec(SKILL_MAP['events']),
   ],
+  tools: [],
   environmentName: 'ai-agents-env',
   icon: 'file',
   emoji: '📄',
@@ -2180,7 +2216,7 @@ export const SUMMARIZE_DOCUMENTS_AGENT_SPEC: AgentSpec = {
   systemPrompt: undefined,
   systemPromptCodemodeAddons: undefined,
   goal: `Summarize uploaded documents (PDFs, Word, Markdown, text) into structured executive summaries. Extract key findings, decisions, action items, dates, and named entities. Output a concise summary (max 500 words) plus metadata in JSON format.`,
-  protocol: 'ag-ui',
+  protocol: 'vercel-ai',
   uiExtension: 'a2ui',
   trigger: {
     type: 'event',
@@ -2253,6 +2289,7 @@ export const SYNC_CRM_CONTACTS_AGENT_SPEC: AgentSpec = {
     toAgentSkillSpec(SKILL_MAP['pdf']),
     toAgentSkillSpec(SKILL_MAP['events']),
   ],
+  tools: [],
   environmentName: 'ai-agents-env',
   icon: 'people',
   emoji: '🔄',
@@ -2272,7 +2309,7 @@ export const SYNC_CRM_CONTACTS_AGENT_SPEC: AgentSpec = {
 `,
   systemPromptCodemodeAddons: undefined,
   goal: `Collect and aggregate contact data from multiple CRM sources, analyze and deduplicate records, write cleaned data back to CRM systems, and generate sync summary reports with notifications.`,
-  protocol: 'ag-ui',
+  protocol: 'vercel-ai',
   uiExtension: 'a2ui',
   trigger: {
     type: 'schedule',

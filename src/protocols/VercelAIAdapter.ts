@@ -378,6 +378,39 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
                   error: new Error(errorMessage),
                   timestamp: new Date(),
                 });
+              } else if (
+                event.type === 'tool-call' ||
+                event.type === 'tool-call-start' ||
+                event.type === 'tool-approval-request'
+              ) {
+                const toolName =
+                  event.toolName ||
+                  event.tool_name ||
+                  event.name ||
+                  event.tool?.name;
+                const args =
+                  event.args ||
+                  event.arguments ||
+                  event.input ||
+                  event.tool?.arguments ||
+                  {};
+                const toolCallId =
+                  event.toolCallId ||
+                  event.tool_call_id ||
+                  event.id ||
+                  generateMessageId();
+
+                if (toolName) {
+                  this.emit({
+                    type: 'tool-call',
+                    toolCall: {
+                      toolCallId,
+                      toolName,
+                      args,
+                    },
+                    timestamp: new Date(),
+                  });
+                }
               }
             } catch (parseError) {
               console.error(

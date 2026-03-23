@@ -131,6 +131,7 @@ async def _create_and_register_cli_agent(
         create_shared_sandbox,
         create_skills_toolset,
         initialize_codemode_toolset,
+        register_agent_tools,
         wire_skills_into_codemode,
     )
     from .transports import AGUITransport, MCPUITransport
@@ -341,6 +342,9 @@ async def _create_and_register_cli_agent(
         system_prompt=system_prompt,
         builtin_tools=(),  # Explicitly disable Pydantic AI built-in tools (e.g. CodeExecutionTool)
     )
+
+    # Register runtime tools declared in AgentSpec.
+    registered_tools = register_agent_tools(pydantic_agent, list(agent_spec.tools or []))
 
     # Wrap with DBOS durable execution if enabled (globally or per-spec)
     durable_lifecycle = getattr(app.state, "durable_lifecycle", None) if app else None
@@ -583,6 +587,7 @@ async def _create_and_register_cli_agent(
         "enable_codemode": enable_codemode,
         "enable_skills": len(skills) > 0,
         "skills": list(skills) if skills else [],
+        "tools": list(agent_spec.tools) if agent_spec.tools else [],
         "jupyter_sandbox": jupyter_sandbox_url,
     }
     logger.info(f"Stored creation spec for CLI agent '{agent_id}'")
@@ -676,6 +681,7 @@ async def _create_and_register_cli_agent(
             "model": startup_model,
             "codemode": enable_codemode,
             "skills": list(skills) if skills else [],
+            "tools": registered_tools,
             "mcp_servers": [s.id for s in all_mcp_servers] if all_mcp_servers else [],
         },
         "sandbox": {
