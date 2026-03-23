@@ -12,7 +12,7 @@ import type { ContextSnapshotData } from '../types/chat';
  * Hook to poll agent context-snapshot from the backend.
  * Returns cumulative token usage (input/output breakdown) tracked by the agent server.
  */
-export function useContextSnapshotQuery(
+export function useContextSnapshot(
   enabled: boolean,
   configEndpoint?: string,
   agentId?: string,

@@ -13,7 +13,7 @@ export interface Message {
   content: string;
 }
 
-export interface UseVercelChatOptions {
+export interface UseVercelAIOptions {
   /**
    * Base URL for the Vercel AI endpoint (e.g., 'http://localhost:8000')
    */
@@ -46,14 +46,14 @@ export interface UseVercelChatOptions {
  *
  * Example:
  * ```tsx
- * const { messages, sendMessage, isLoading } = useVercelChat({
+ * const { messages, sendMessage, isLoading } = useVercelAI({
  *   baseUrl: 'http://localhost:8888',
  *   agentId: 'demo-agent',
  * });
  * ```
  */
-export function useVercelChat(
-  options: UseVercelChatOptions = {},
+export function useVercelAI(
+  options: UseVercelAIOptions = {},
 ): UseChatHelpers<UIMessage> {
   const {
     baseUrl = 'http://localhost:8888',

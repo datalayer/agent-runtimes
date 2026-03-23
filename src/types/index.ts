@@ -3,8 +3,8 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
-export * from './AIAgent';
-export * from './Types';
+export * from './agents';
+export * from './types';
 export * from './chat';
 export * from './message';
 export * from './tool';

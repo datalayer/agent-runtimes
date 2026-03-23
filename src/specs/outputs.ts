@@ -12,7 +12,7 @@
  * DO NOT EDIT MANUALLY - run 'make specs' to regenerate.
  */
 
-import type { OutputSpec } from '../types/Types';
+import type { OutputSpec } from '../types/types';
 
 // ============================================================================
 // Output Definitions

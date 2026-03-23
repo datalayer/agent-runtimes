@@ -30,7 +30,7 @@ import type {
   SkillInfo,
   ContextSnapshotData,
 } from '../../types/chat';
-import type { BuiltinTool } from '../../types/Types';
+import type { BuiltinTool } from '../../types/types';
 
 // ---------------------------------------------------------------------------
 // Props

@@ -267,6 +267,16 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
     let buffer = '';
     let currentMessageId = generateMessageId();
     let accumulatedText = '';
+    let doneEmitted = false;
+
+    const emitDoneOnce = () => {
+      if (doneEmitted) return;
+      doneEmitted = true;
+      this.emit({
+        type: 'done',
+        timestamp: new Date(),
+      });
+    };
 
     try {
       while (true) {
@@ -283,6 +293,7 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
               timestamp: new Date(),
             });
           }
+          emitDoneOnce();
           break;
         }
 
@@ -312,6 +323,7 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
                   timestamp: new Date(),
                 });
               }
+              emitDoneOnce();
               break;
             }
 
@@ -364,6 +376,9 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
                     },
                     timestamp: new Date(),
                   });
+                }
+                if (event.type === 'finish') {
+                  emitDoneOnce();
                 }
               } else if (event.type === 'error') {
                 const errorMessage =

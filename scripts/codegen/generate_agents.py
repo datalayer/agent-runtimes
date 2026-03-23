@@ -379,7 +379,7 @@ def generate_typescript_code(
     # produce src/specs/agents/<folder>/agents.ts. Import paths differ.
     is_root_layout = all(folder == "" for folder, _ in specs)
     types_import_path = (
-        "../../types/Types" if is_root_layout else "../../../types/Types"
+        "../../types/types" if is_root_layout else "../../../types/types"
     )
     mcp_import_path = "../mcpServers" if is_root_layout else "../../mcpServers"
     skills_import_path = "../skills" if is_root_layout else "../../skills"

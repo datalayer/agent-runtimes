@@ -670,9 +670,9 @@ __all__ = ["TEAM_SPECS", "get_team_spec", "list_team_specs"]
 
         typescript_code = generate_typescript_code(
             [(folder, spec) for spec in folder_specs],
-            types_import_path="../../types/Types"
+            types_import_path="../../types/types"
             if is_root
-            else "../../../types/Types",
+            else "../../../types/types",
         )
         with open(typescript_file, "w") as f:
             f.write(typescript_code)

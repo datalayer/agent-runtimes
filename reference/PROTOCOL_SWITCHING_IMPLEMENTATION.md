@@ -6,11 +6,11 @@ Successfully implemented protocol switching functionality for the Agent Runtimes
 ## New Files Created
 
 ### Hooks
-1. **`src/hooks/useVercelChat.tsx`**
+1. **`src/hooks/useVercelAI.tsx`**
    - Wraps Vercel AI SDK's `useChat` for agent-runtimes Vercel AI endpoint
    - Endpoint: `/api/v1/vercel-ai/chat`
    - Features: SSE streaming, automatic message management, callbacks
-   - Exports: `useVercelChat` hook and `Message` type
+   - Exports: `useVercelAI` hook and `Message` type
 
 2. **`src/hooks/useAGUI.tsx`**
    - Provides interface to AG-UI protocol endpoint
@@ -32,7 +32,7 @@ Successfully implemented protocol switching functionality for the Agent Runtimes
 ## Modified Files
 
 ### Hooks Index
-- **`src/hooks/index.ts`**: Added exports for `useAGUI` and `useVercelChat`
+- **`src/hooks/index.ts`**: Added exports for `useAGUI` and `useVercelAI`
 
 ### Components Index
 - **`src/components/chat/index.ts`**: Added exports for `AGUIChatComponent` and `VercelChatComponent`
@@ -68,7 +68,7 @@ Successfully implemented protocol switching functionality for the Agent Runtimes
 - **Transport**: HTTP/SSE
 - **URL**: `http://localhost:8000/api/v1/vercel-ai/chat`
 - **Component**: `VercelChatComponent`
-- **Hook**: `useVercelChat`
+- **Hook**: `useVercelAI`
 - **Implementation**: Streaming responses using Vercel AI SDK
 
 ### A2A (Agent-to-Agent)
@@ -83,7 +83,7 @@ Successfully implemented protocol switching functionality for the Agent Runtimes
 - Dynamic endpoint URL display based on protocol selection
 
 ### Hook Architecture
-- **`useVercelChat`**:
+- **`useVercelAI`**:
   - Uses `@ai-sdk/react` and `ai` packages
   - Wraps `useChat` with custom transport configuration
   - Sends messages via SSE streaming

@@ -153,7 +153,7 @@ const getDefaultExampleName = (): string => {
   if (stored && EXAMPLES[stored]) {
     return stored;
   }
-  return 'DatalayerNotebookExample';
+  return 'NotebookExample';
 };
 
 // Notebook-only component for iframe display - renders ONLY the notebook without any UI chrome

@@ -12,7 +12,7 @@
  * DO NOT EDIT MANUALLY - run 'make specs' to regenerate.
  */
 
-import type { GuardrailSpec } from '../types/Types';
+import type { GuardrailSpec } from '../types/types';
 
 // ============================================================================
 // Guardrail Definitions

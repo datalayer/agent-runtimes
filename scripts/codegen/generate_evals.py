@@ -164,7 +164,7 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
         " * DO NOT EDIT MANUALLY - run 'make specs' to regenerate.",
         " */",
         "",
-        "import type { EvalSpec } from '../types/Types';",
+        "import type { EvalSpec } from '../types/types';",
         "",
         "// " + "=" * 76,
         "// Eval Definitions",

@@ -14,7 +14,7 @@ import type { ReactNode } from 'react';
 import type { ChatMessage } from './message';
 import type { TransportType } from './protocol';
 import type { McpServerSelection } from './inference';
-import type { BuiltinTool, MCPServerTool, AgentRuntimeConfig } from './Types';
+import type { BuiltinTool, MCPServerTool, AgentRuntimeConfig } from './types';
 import type { PoweredByTagProps } from '../chat/elements/PoweredByTag';
 import type { FrontendToolDefinition } from './tool';
 

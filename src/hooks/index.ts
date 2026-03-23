@@ -23,7 +23,7 @@
  * - `useAgUi` - AG-UI protocol (Pydantic AI's native protocol)
  * - `useA2A` - A2A protocol (Agent-to-Agent with JSON-RPC)
  * - `useAcp` - ACP protocol (Agent Client Protocol via WebSocket)
- * - `useVercelChat` - Vercel AI SDK chat protocol
+ * - `useVercelAI` - Vercel AI SDK chat protocol
  *
  * ## Datalayer-Specific Hooks
  * Hooks for Datalayer platform integration.
@@ -72,10 +72,10 @@ export {
  * ChatBase infrastructure hooks.
  */
 export { useHighZIndexPortal } from './useHighZIndexPortal';
-export { useConfigQuery } from './useConfigQuery';
+export { useConfig } from './useConfig';
 export { useSkillsQuery } from './useSkillsQuery';
-export { useContextSnapshotQuery } from './useContextSnapshotQuery';
-export { useSandboxStatusQuery } from './useSandboxStatusQuery';
+export { useContextSnapshot } from './useContextSnapshot';
+export { useSandbox } from './useSandbox';
 
 // =============================================================================
 // Transport-Specific Hooks (Direct Protocol Access)
@@ -103,7 +103,7 @@ export * from './useAcp';
  * Vercel AI SDK chat hook - HTTP/SSE streaming.
  * Use for direct Vercel AI communication without the chat component system.
  */
-export { useVercelChat } from './useVercelChat';
+export { useVercelAI } from './useVercelAI';
 
 // =============================================================================
 // Datalayer Platform Hooks
@@ -114,6 +114,7 @@ export { useVercelChat } from './useVercelChat';
  */
 export {
   useAIAgents,
+  useNotebookAgents,
   useToolApprovals,
   usePendingApprovalCount,
   useApproveToolRequest,
@@ -151,7 +152,6 @@ export {
  * Centralized agent catalog store for available agent specs and running agents.
  */
 export { useAgentCatalogStore, type AgentCatalogStoreState } from './useAgents';
-export * from './useNotebookAgents';
 
 /**
  * Unified hook for managing agents — both ephemeral and durable.

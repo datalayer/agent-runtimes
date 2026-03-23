@@ -12,7 +12,7 @@
  * DO NOT EDIT MANUALLY - run 'make specs' to regenerate.
  */
 
-import type { NotificationChannelSpec } from '../types/Types';
+import type { NotificationChannelSpec } from '../types/types';
 
 // ============================================================================
 // Notification Channel Definitions

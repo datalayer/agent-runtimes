@@ -53,10 +53,10 @@ import {
 } from '../utils';
 import {
   useHighZIndexPortal,
-  useConfigQuery,
+  useConfig,
   useSkillsQuery,
-  useContextSnapshotQuery,
-  useSandboxStatusQuery,
+  useContextSnapshot,
+  useSandbox,
 } from '../../hooks';
 import { ChatBaseHeader } from '../elements/ChatHeaderBase';
 import { ChatEmptyState } from '../elements/EmptyState';
@@ -100,7 +100,7 @@ export type {
   BuiltinTool,
   MCPServerTool,
   AgentRuntimeConfig,
-} from '../../types/Types';
+} from '../../types/types';
 
 export { isToolCallMessage, getMessageText } from '../utils';
 
@@ -266,7 +266,7 @@ function ChatBaseInner({
   const [enabledSkills, setEnabledSkills] = useState<Set<string>>(new Set());
 
   // ---- Data queries ----
-  const configQuery = useConfigQuery(
+  const configQuery = useConfig(
     Boolean(protocol?.enableConfigQuery),
     protocol?.configEndpoint,
     protocol?.authToken,
@@ -276,14 +276,14 @@ function ChatBaseInner({
     protocol?.configEndpoint,
     protocol?.authToken,
   );
-  const contextSnapshotQuery = useContextSnapshotQuery(
+  const contextSnapshotQuery = useContextSnapshot(
     Boolean(protocol?.enableConfigQuery) && showTokenUsage,
     protocol?.configEndpoint,
     protocol?.agentId,
     protocol?.authToken,
   );
   const agentUsage = contextSnapshotQuery.data;
-  const sandboxStatusQuery = useSandboxStatusQuery(
+  const sandboxStatusQuery = useSandbox(
     Boolean(protocol?.enableConfigQuery) && codemodeEnabled && showHeader,
     protocol?.configEndpoint,
     protocol?.authToken,

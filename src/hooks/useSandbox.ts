@@ -12,7 +12,7 @@ import type { SandboxStatusData } from '../types/chat';
  * Hook to poll sandbox execution status from the backend.
  * Returns whether a sandbox is available and if code is currently executing.
  */
-export function useSandboxStatusQuery(
+export function useSandbox(
   enabled: boolean,
   configEndpoint?: string,
   authToken?: string,

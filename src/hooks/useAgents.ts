@@ -22,6 +22,7 @@ import {
 // Imports for useAgentRuntimes hooks (self-contained, no useCache dependency)
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useIAMStore } from '@datalayer/core/lib/state';
+import { DEFAULT_SERVICE_URLS } from '@datalayer/core/lib/api/constants';
 import * as aiAgentsApi from '../api';
 
 // Imports for useAIAgents hook
@@ -1658,6 +1659,71 @@ export const useAIAgents = (baseUrlOverride = 'api/ai-agents/v1') => {
   };
 };
 
+/**
+ * Get the notebook AI agent if any.
+ *
+ * This performs a periodic liveness check and keeps the local store in sync.
+ */
+export function useNotebookAgents(notebookId: string) {
+  const { getAIAgent } = useAIAgents();
+  const agents = useAgentStore(state => state.agents);
+  const upsertAgent = useAgentStore(state => state.upsertAgent);
+  const deleteAgent = useAgentStore(state => state.deleteAgent);
+  const getAgentById = useAgentStore(state => state.getAgentById);
+
+  useEffect(() => {
+    let abortController: AbortController;
+
+    const refreshAIAgent = async () => {
+      abortController = new AbortController();
+      try {
+        const response = await getAIAgent(notebookId, {
+          signal: abortController.signal,
+        });
+        if (!response.success) {
+          deleteAgent(notebookId);
+          return;
+        }
+        const currentAgent = getAgentById(notebookId);
+        const runtimeId = response.agent.runtime?.id;
+
+        if (currentAgent) {
+          if (currentAgent.runtimeId !== runtimeId) {
+            upsertAgent({
+              id: notebookId,
+              baseUrl: currentAgent.baseUrl,
+              transport: currentAgent.transport,
+              runtimeId,
+              status: 'running',
+            });
+          }
+        } else {
+          upsertAgent({
+            id: notebookId,
+            name: `Notebook ${notebookId}`,
+            description: 'AI agent for notebook',
+            baseUrl: '',
+            transport: 'vercel-ai',
+            documentId: notebookId,
+            runtimeId,
+            status: 'running',
+          });
+        }
+      } catch {
+        deleteAgent(notebookId);
+      }
+    };
+
+    const refreshInterval = setInterval(refreshAIAgent, 60_000);
+    return () => {
+      abortController?.abort('Component unmounted');
+      clearInterval(refreshInterval);
+    };
+  }, [agents, notebookId, getAIAgent, deleteAgent, getAgentById, upsertAgent]);
+
+  return getAgentById(notebookId);
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // Dashboard data hooks (tool approvals, notifications, events)
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1669,7 +1735,7 @@ function useDashboardAuthToken(): string {
 
 function useDashboardBaseUrl(): string {
   const config = useCoreStore((s: any) => s.configuration);
-  return config?.aiagentsRunUrl ?? config?.iamRunUrl ?? '';
+  return config?.aiagentsRunUrl ?? DEFAULT_SERVICE_URLS.AI_AGENTS;
 }
 
 export function useToolApprovals(filters?: aiAgentsApi.ToolApprovalFilters) {

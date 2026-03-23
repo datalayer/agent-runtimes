@@ -12,7 +12,7 @@
  * DO NOT EDIT MANUALLY - run 'make specs' to regenerate.
  */
 
-import type { MCPServer } from '../types/Types';
+import type { MCPServer } from '../types/types';
 
 // ============================================================================
 // MCP Server Definitions

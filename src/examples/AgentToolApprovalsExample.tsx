@@ -15,17 +15,12 @@ import React, {
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Box } from '@datalayer/primer-addons';
 import { Button, Heading, Spinner, Text } from '@primer/react';
-import {
-  AlertIcon,
-  ShieldCheckIcon,
-  SignOutIcon,
-} from '@primer/octicons-react';
+import { AlertIcon, ToolsIcon, SignOutIcon } from '@primer/octicons-react';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { SignInSimple } from '@datalayer/core/lib/views/iam';
 import { UserBadge } from '@datalayer/core/lib/views/profile';
 import { ThemedProvider } from './stores/themedProvider';
 import { Chat } from '../chat';
-import { useAgents } from '../hooks/useAgents';
 import {
   ToolApprovalBanner,
   ToolApprovalDialog,
@@ -35,6 +30,8 @@ import {
 const queryClient = new QueryClient();
 const AGENT_NAME = 'tool-approval-demo-agent';
 const AGENT_SPEC_ID = 'monitor-sales-kpis';
+const DEFAULT_LOCAL_BASE_URL =
+  import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
 
 interface ToolApprovalRequest {
   id: string;
@@ -44,33 +41,26 @@ interface ToolApprovalRequest {
   created_at?: string;
 }
 
-const AgentToolapprovalInner: React.FC<{ onLogout: () => void }> = ({
+const AgentToolApprovalInner: React.FC<{ onLogout: () => void }> = ({
   onLogout,
 }) => {
   const { token } = useSimpleAuthStore();
-  const {
-    runtime,
-    status: runtimeStatus,
-    isReady,
-    error: hookError,
-  } = useAgents({
-    agentSpecId: AGENT_SPEC_ID,
-    autoStart: true,
-    agentConfig: {
-      name: AGENT_NAME,
-      transport: 'vercel-ai',
-      description: 'Agent with runtime tool approvals',
-    },
-  });
+  const [runtimeStatus, setRuntimeStatus] = useState<
+    'launching' | 'ready' | 'error'
+  >('launching');
+  const [isReady, setIsReady] = useState(false);
+  const [hookError, setHookError] = useState<string | null>(null);
+  const [agentId, setAgentId] = useState<string>(AGENT_NAME);
+  const [isReconnectedAgent, setIsReconnectedAgent] = useState(false);
 
   const [approvals, setApprovals] = useState<ToolApprovalRequest[]>([]);
   const [activeApproval, setActiveApproval] =
     useState<ToolApprovalRequest | null>(null);
   const [approvalLoading, setApprovalLoading] = useState<string | null>(null);
+  const chatAuthToken: string | undefined = token === null ? undefined : token;
 
-  const agentBaseUrl = runtime?.agentBaseUrl || '';
-  const agentId = runtime?.agentId || AGENT_NAME;
-  const podName = runtime?.podName || '(launching...)';
+  const agentBaseUrl = DEFAULT_LOCAL_BASE_URL;
+  const podName = 'localhost';
 
   const authFetch = useCallback(
     (url: string, opts: RequestInit = {}) =>
@@ -85,13 +75,86 @@ const AgentToolapprovalInner: React.FC<{ onLogout: () => void }> = ({
     [token],
   );
 
+  useEffect(() => {
+    let isCancelled = false;
+
+    const createLocalAgent = async () => {
+      setRuntimeStatus('launching');
+      setIsReady(false);
+      setHookError(null);
+      setIsReconnectedAgent(false);
+
+      try {
+        const response = await authFetch(`${agentBaseUrl}/api/v1/agents`, {
+          method: 'POST',
+          body: JSON.stringify({
+            name: AGENT_NAME,
+            description: 'Agent with runtime tool approvals',
+            agent_library: 'pydantic-ai',
+            transport: 'vercel-ai',
+            agent_spec_id: AGENT_SPEC_ID,
+          }),
+        });
+
+        let resolvedAgentId = AGENT_NAME;
+        let isAlreadyRunning = false;
+
+        if (response.ok) {
+          const data = await response.json();
+          resolvedAgentId = data?.id || AGENT_NAME;
+        } else {
+          const contentType = response.headers.get('content-type') || '';
+          let detail = '';
+
+          if (contentType.includes('application/json')) {
+            const data = await response.json().catch(() => null);
+            detail =
+              (typeof data?.detail === 'string' && data.detail) ||
+              (typeof data?.message === 'string' && data.message) ||
+              '';
+          } else {
+            detail = await response.text();
+          }
+
+          if (response.status === 409 || /already exists/i.test(detail || '')) {
+            isAlreadyRunning = true;
+          } else {
+            throw new Error(
+              detail || `Failed to create local agent: ${response.status}`,
+            );
+          }
+        }
+
+        if (!isCancelled) {
+          setAgentId(resolvedAgentId);
+          setIsReconnectedAgent(isAlreadyRunning);
+          setIsReady(true);
+          setRuntimeStatus('ready');
+        }
+      } catch (error) {
+        if (!isCancelled) {
+          setHookError(
+            error instanceof Error ? error.message : 'Agent failed to start',
+          );
+          setRuntimeStatus('error');
+        }
+      }
+    };
+
+    void createLocalAgent();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [agentBaseUrl, authFetch]);
+
   const pollApprovals = useCallback(async () => {
     if (!isReady || !agentBaseUrl) {
       return;
     }
     try {
       const res = await authFetch(
-        `${agentBaseUrl}/api/v1/agents/${agentId}/tool-approvals?status=pending`,
+        `${agentBaseUrl}/api/ai-agents/v1/tool-approvals?agent_id=${encodeURIComponent(agentId)}&status=pending`,
       );
       if (!res.ok) {
         return;
@@ -117,7 +180,7 @@ const AgentToolapprovalInner: React.FC<{ onLogout: () => void }> = ({
       setApprovalLoading(requestId);
       try {
         await authFetch(
-          `${agentBaseUrl}/api/v1/agents/${agentId}/tool-approvals/${requestId}/approve`,
+          `${agentBaseUrl}/api/ai-agents/v1/tool-approvals/${requestId}/approve`,
           {
             method: 'POST',
             body: JSON.stringify(note ? { note } : {}),
@@ -139,7 +202,7 @@ const AgentToolapprovalInner: React.FC<{ onLogout: () => void }> = ({
       setApprovalLoading(requestId);
       try {
         await authFetch(
-          `${agentBaseUrl}/api/v1/agents/${agentId}/tool-approvals/${requestId}/reject`,
+          `${agentBaseUrl}/api/ai-agents/v1/tool-approvals/${requestId}/reject`,
           {
             method: 'POST',
             body: JSON.stringify(note ? { note } : {}),
@@ -225,10 +288,15 @@ const AgentToolapprovalInner: React.FC<{ onLogout: () => void }> = ({
         }}
       >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1 }}>
-          <ShieldCheckIcon size={16} />
+          <ToolsIcon size={16} />
           <Heading as="h3" sx={{ fontSize: 2 }}>
             Tool Approval Demo - {podName}
           </Heading>
+          {isReconnectedAgent && (
+            <Text sx={{ color: 'fg.muted', fontSize: 1 }}>
+              Agent already running - reconnected
+            </Text>
+          )}
         </Box>
         <Text sx={{ color: 'fg.muted', fontSize: 1 }}>
           Pending: {pendingApprovals.length}
@@ -294,28 +362,35 @@ const AgentToolapprovalInner: React.FC<{ onLogout: () => void }> = ({
           transport="vercel-ai"
           baseUrl={agentBaseUrl}
           agentId={agentId}
+          authToken={chatAuthToken}
           title="Tool Approval Agent"
           placeholder="Ask for actions that require approval..."
           showHeader={false}
           showTokenUsage={true}
           autoFocus
           height="100%"
-          runtimeId={podName}
+          runtimeId={agentId}
           historyEndpoint={`${agentBaseUrl}/api/v1/history`}
           suggestions={[
             {
+              title: 'List Tools',
+              message:
+                'List the available tools first, then ask me which one to run. Use tool calls only and do not write Python code.',
+            },
+            {
               title: 'Manual Approval Tool',
               message:
-                'Use runtime sensitive echo with text hello and reason audit',
+                'Call the runtime_sensitive_echo tool with text "hello" and reason "audit". Use a tool call only and do not write Python code.',
             },
             {
               title: 'Fake Mail Tool',
               message:
-                'Use runtime send mail to finance@example.com with subject KPI Alert and body Revenue dropped by 12 percent this week',
+                'Call the runtime_send_mail tool with to "finance@example.com", subject "KPI Alert", and body "Revenue dropped by 12 percent this week". Use a tool call only and do not write Python code.',
             },
             {
               title: 'Auto Tool',
-              message: 'Use runtime echo with text hello world',
+              message:
+                'Call the runtime_echo tool with text "hello world". Use a tool call only and do not write Python code.',
             },
           ]}
           submitOnSuggestionClick
@@ -331,7 +406,7 @@ const syncTokenToIamStore = (token: string) => {
   });
 };
 
-const AgentToolapprovalExample: React.FC = () => {
+const AgentToolApprovalsExample: React.FC = () => {
   const { token, setAuth, clearAuth } = useSimpleAuthStore();
   const hasSynced = useRef(false);
 
@@ -367,7 +442,7 @@ const AgentToolapprovalExample: React.FC = () => {
           onApiKeySignIn={apiKey => handleSignIn(apiKey, 'api-key-user')}
           title="Tool Approval Agent"
           description="Sign in to test manual and automatic tool approvals."
-          leadingIcon={<ShieldCheckIcon size={24} />}
+          leadingIcon={<ToolsIcon size={24} />}
         />
       </ThemedProvider>
     );
@@ -376,10 +451,10 @@ const AgentToolapprovalExample: React.FC = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemedProvider>
-        <AgentToolapprovalInner onLogout={handleLogout} />
+        <AgentToolApprovalInner onLogout={handleLogout} />
       </ThemedProvider>
     </QueryClientProvider>
   );
 };
 
-export default AgentToolapprovalExample;
+export default AgentToolApprovalsExample;

@@ -46,4 +46,4 @@ export type {
   OutputSpec,
   NotificationChannelSpec,
   NotificationField,
-} from './types/Types';
+} from './types/types';

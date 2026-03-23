@@ -12,7 +12,7 @@ import type { RemoteConfig } from '../types/chat';
  * Hook to safely use query when QueryClient is available.
  * Returns a mock result if no QueryClientProvider is present.
  */
-export function useConfigQuery(
+export function useConfig(
   enabled: boolean,
   configEndpoint?: string,
   authToken?: string,

@@ -11,7 +11,7 @@ Agent Runtimes provides a comprehensive set of React hooks for building AI agent
 | Category | Hooks | Purpose |
 |----------|-------|---------|
 | **Chat Component System** | `useChat`, `useFrontendTool`, `useBackendTool`, `useKeyboardShortcuts` | Work with the Zustand-based chat components |
-| **Transport-Specific** | `useAGUI`, `useA2A`, `useAcp`, `useVercelChat` | Direct protocol access without chat components |
+| **Transport-Specific** | `useAGUI`, `useA2A`, `useAcp`, `useVercelAI` | Direct protocol access without chat components |
 | **Datalayer Platform** | `useAIAgents`, `useNotebookAgents` | Datalayer platform integration |
 | **Identity** | `useIdentity` | OAuth identity management |
 
@@ -340,12 +340,12 @@ function ACPChat() {
 }
 ```
 
-### `useVercelChat`
+### `useVercelAI`
 
 Vercel AI SDK chat hook - HTTP/SSE streaming.
 
 ```typescript
-import { useVercelChat } from '@datalayer/agent-runtimes';
+import { useVercelAI } from '@datalayer/agent-runtimes';
 
 function VercelChat() {
   const {
@@ -356,7 +356,7 @@ function VercelChat() {
     stop,            // Stop generation
     reload,          // Regenerate last response
     setMessages,     // Directly set messages
-  } = useVercelChat({
+  } = useVercelAI({
     api: '/api/chat',
     initialMessages: [],
     onFinish: (message) => console.log('Complete:', message),

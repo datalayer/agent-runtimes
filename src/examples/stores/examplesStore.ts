@@ -10,7 +10,7 @@ import type {
   ExampleAgentStatus,
   ExampleAgentsState,
   Transport,
-} from '../../types/Types';
+} from '../../types/types';
 
 // Import agent examples data files.
 import earthquakeDetectorData from './agents/earthquake-detector.json';

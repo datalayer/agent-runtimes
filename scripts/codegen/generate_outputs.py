@@ -160,7 +160,7 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
         " * DO NOT EDIT MANUALLY - run 'make specs' to regenerate.",
         " */",
         "",
-        "import type { OutputSpec } from '../types/Types';",
+        "import type { OutputSpec } from '../types/types';",
         "",
         "// " + "=" * 76,
         "// Output Definitions",
