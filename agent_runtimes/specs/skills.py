@@ -19,6 +19,7 @@ class SkillSpec(BaseModel):
     """Skill specification."""
 
     id: str = Field(..., description="Skill identifier")
+    version: str = Field(default="0.0.1", description="Skill version")
     name: str = Field(..., description="Display name")
     description: str = Field(default="", description="Skill description")
     module: str = Field(default="", description="Python module path")
@@ -35,12 +36,13 @@ class SkillSpec(BaseModel):
 # Skill Definitions
 # ============================================================================
 
-CRAWL_SKILL_SPEC = SkillSpec(
+CRAWL_SKILL_SPEC_0_0_1 = SkillSpec(
     id="crawl",
+    version="0.0.1",
     name="Web Crawl Skill",
     description="Web crawling and content extraction capabilities",
     module="agent_skills.crawl",
-    envvars=["TAVILY_API_KEY"],
+    envvars=["TAVILY_API_KEY:0.0.1"],
     optional_env_vars=[],
     dependencies=["requests>=2.31.0", "beautifulsoup4>=4.12.0"],
     tags=["web", "crawl", "scraping"],
@@ -49,8 +51,9 @@ CRAWL_SKILL_SPEC = SkillSpec(
     enabled=True,
 )
 
-EVENTS_SKILL_SPEC = SkillSpec(
+EVENTS_SKILL_SPEC_0_0_1 = SkillSpec(
     id="events",
+    version="0.0.1",
     name="Events Skill",
     description="Event generation, enrichment, and lifecycle orchestration",
     module="agent_skills.events",
@@ -63,12 +66,13 @@ EVENTS_SKILL_SPEC = SkillSpec(
     enabled=True,
 )
 
-GITHUB_SKILL_SPEC = SkillSpec(
+GITHUB_SKILL_SPEC_0_0_1 = SkillSpec(
     id="github",
+    version="0.0.1",
     name="GitHub Skill",
     description="GitHub repository management and code operations",
     module="agent_skills.github",
-    envvars=["GITHUB_TOKEN"],
+    envvars=["GITHUB_TOKEN:0.0.1"],
     optional_env_vars=[],
     dependencies=["PyGithub>=2.1.0"],
     tags=["github", "git", "code"],
@@ -77,8 +81,9 @@ GITHUB_SKILL_SPEC = SkillSpec(
     enabled=True,
 )
 
-PDF_SKILL_SPEC = SkillSpec(
+PDF_SKILL_SPEC_0_0_1 = SkillSpec(
     id="pdf",
+    version="0.0.1",
     name="PDF Processing Skill",
     description="PDF document reading, parsing, and extraction",
     module="agent_skills.pdf",
@@ -96,10 +101,14 @@ PDF_SKILL_SPEC = SkillSpec(
 # ============================================================================
 
 SKILL_CATALOG: Dict[str, SkillSpec] = {
-    "crawl": CRAWL_SKILL_SPEC,
-    "events": EVENTS_SKILL_SPEC,
-    "github": GITHUB_SKILL_SPEC,
-    "pdf": PDF_SKILL_SPEC,
+    "crawl": CRAWL_SKILL_SPEC_0_0_1,
+    "crawl:0.0.1": CRAWL_SKILL_SPEC_0_0_1,
+    "events": EVENTS_SKILL_SPEC_0_0_1,
+    "events:0.0.1": EVENTS_SKILL_SPEC_0_0_1,
+    "github": GITHUB_SKILL_SPEC_0_0_1,
+    "github:0.0.1": GITHUB_SKILL_SPEC_0_0_1,
+    "pdf": PDF_SKILL_SPEC_0_0_1,
+    "pdf:0.0.1": PDF_SKILL_SPEC_0_0_1,
 }
 
 
@@ -115,7 +124,7 @@ def check_env_vars_available(env_vars: List[str]) -> bool:
     """
     if not env_vars:
         return True
-    return all(os.environ.get(var) for var in env_vars)
+    return all(os.environ.get(var.rsplit(':', 1)[0]) for var in env_vars)
 
 
 def get_skill_spec(skill_id: str) -> SkillSpec | None:

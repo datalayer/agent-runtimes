@@ -19,6 +19,8 @@ from typing import Any
 
 import yaml
 
+from versioning import ensure_spec_version, version_suffix, versioned_ref
+
 
 def load_model_specs(specs_dir: Path) -> list[dict[str, Any]]:
     """Load all AI model YAML specifications from a directory."""
@@ -26,6 +28,7 @@ def load_model_specs(specs_dir: Path) -> list[dict[str, Any]]:
     for yaml_file in sorted(specs_dir.glob("*.yaml")):
         with open(yaml_file) as f:
             spec = yaml.safe_load(f)
+            ensure_spec_version(spec)
             specs.append(spec)
     return specs
 
@@ -74,6 +77,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         '    """Specification for an AI model."""',
         "",
         '    id: str = Field(..., description="Unique model identifier")',
+        '    version: str = Field(default="0.0.1", description="Model spec version")',
         '    name: str = Field(..., description="Display name")',
         '    description: str = Field(default="", description="Model description")',
         '    provider: str = Field(..., description="Provider name")',
@@ -112,7 +116,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
 
     # Generate model constants
     for spec in specs:
-        const_name = _make_const_name(spec["id"])
+        const_name = _make_const_name(spec["id"]) + version_suffix(spec["version"])
 
         # Format required_env_vars
         env_vars = spec.get("required_env_vars", [])
@@ -125,6 +129,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
             [
                 f"{const_name} = AIModel(",
                 f'    id="{spec["id"]}",',
+                f'    version="{spec["version"]}",',
                 f'    name="{spec["name"]}",',
                 f'    description="{spec.get("description", "")}",',
                 f'    provider="{spec["provider"]}",',
@@ -148,8 +153,9 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
 
     for spec in specs:
         model_id = spec["id"]
-        const_name = _make_const_name(model_id)
+        const_name = _make_const_name(model_id) + version_suffix(spec["version"])
         lines.append(f'    "{model_id}": {const_name},')
+        lines.append(f'    "{versioned_ref(model_id, spec["version"])}": {const_name},')
 
     lines.extend(
         [
@@ -264,6 +270,8 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
         "export interface AIModel {",
         "  /** Unique model identifier (e.g., 'anthropic:claude-sonnet-4-5-20250514') */",
         "  id: string;",
+        "  /** Model spec version */",
+        "  version: string;",
         "  /** Display name for the model */",
         "  name: string;",
         "  /** Model description */",
@@ -303,7 +311,7 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
 
     # Generate model constants
     for spec in specs:
-        const_name = _make_const_name(spec["id"])
+        const_name = _make_const_name(spec["id"]) + version_suffix(spec["version"])
 
         # Format required_env_vars
         env_vars = spec.get("required_env_vars", [])
@@ -319,6 +327,7 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
             [
                 f"export const {const_name}: AIModel = {{",
                 f"  id: '{spec['id']}',",
+                f"  version: '{spec['version']}',",
                 f"  name: '{spec['name']}',",
                 f"  description: '{description}',",
                 f"  provider: '{spec['provider']}',",
@@ -342,8 +351,9 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
 
     for spec in specs:
         model_id = spec["id"]
-        const_name = _make_const_name(model_id)
+        const_name = _make_const_name(model_id) + version_suffix(spec["version"])
         lines.append(f"  '{model_id}': {const_name},")
+        lines.append(f"  '{versioned_ref(model_id, spec['version'])}': {const_name},")
 
     lines.extend(
         [
@@ -356,7 +366,7 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
     default_specs = [s for s in specs if s.get("default", False)]
     if default_specs:
         default_id = default_specs[0]["id"]
-        default_const = _make_const_name(default_id)
+        default_const = _make_const_name(default_id) + version_suffix(default_specs[0]["version"])
         lines.extend(
             [
                 f"export const DEFAULT_MODEL: AIModelId = AIModels.{_make_enum_name(default_id)};",
@@ -373,7 +383,7 @@ def update_init_file(specs: list[dict[str, Any]], init_file: Path) -> None:
     # Generate list of model constant names
     model_constants = []
     for spec in specs:
-        const_name = _make_const_name(spec["id"])
+        const_name = _make_const_name(spec["id"]) + version_suffix(spec["version"])
         model_constants.append(const_name)
 
     # Read the current __init__.py

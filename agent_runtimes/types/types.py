@@ -17,6 +17,7 @@ class EnvvarSpec(BaseModel):
     model_config = ConfigDict(populate_by_name=True, by_alias=True)
 
     id: str = Field(..., description="Unique environment variable identifier")
+    version: str = Field(default="0.0.1", description="Environment variable version")
     name: str = Field(..., description="Display name for the environment variable")
     description: str = Field(default="", description="Environment variable description")
     registration_url: Optional[str] = Field(
@@ -43,6 +44,7 @@ class SkillSpec(BaseModel):
     model_config = ConfigDict(populate_by_name=True, by_alias=True)
 
     id: str = Field(..., description="Unique skill identifier")
+    version: str = Field(default="0.0.1", description="Skill version")
     name: str = Field(..., description="Display name for the skill")
     description: str = Field(default="", description="Skill description")
     module: Optional[str] = Field(default=None, description="Python module path")
@@ -91,6 +93,7 @@ class ToolSpec(BaseModel):
     model_config = ConfigDict(populate_by_name=True, by_alias=True)
 
     id: str = Field(..., description="Unique tool identifier")
+    version: str = Field(default="0.0.1", description="Tool version")
     name: str = Field(..., description="Display name for the tool")
     description: str = Field(default="", description="Tool description")
     tags: List[str] = Field(default_factory=list, description="Tags for categorization")
@@ -221,6 +224,7 @@ class MCPServer(BaseModel):
     model_config = ConfigDict(populate_by_name=True, by_alias=True)
 
     id: str = Field(..., description="Unique server identifier")
+    version: str = Field(default="0.0.1", description="MCP server version")
     name: str = Field(..., description="Display name for the server")
     description: str = Field(
         default="", description="Description of the server capabilities"
@@ -315,6 +319,7 @@ class AgentSpec(BaseModel):
     model_config = ConfigDict(populate_by_name=True, by_alias=True)
 
     id: str = Field(..., description="Unique agent identifier")
+    version: str = Field(default="0.0.1", description="Agent version")
     name: str = Field(..., description="Display name for the agent")
     description: str = Field(default="", description="Agent description")
     tags: List[str] = Field(default_factory=list, description="Tags for categorization")
@@ -572,6 +577,7 @@ class TeamSpec(BaseModel):
     """Specification for a multi-agent team."""
 
     id: str = Field(..., description="Unique team identifier")
+    version: str = Field(default="0.0.1", description="Team spec version")
     name: str = Field(..., description="Display name for the team")
     description: str = Field(default="", description="Team description")
     tags: list[str] = Field(default_factory=list, description="Classification tags")

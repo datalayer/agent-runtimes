@@ -13,6 +13,8 @@ from typing import Any
 
 import yaml
 
+from versioning import ensure_spec_version, version_suffix, versioned_ref
+
 
 def _fmt_list(items: list[str]) -> str:
     if not items:
@@ -58,7 +60,9 @@ def load_tool_specs(specs_dir: Path) -> list[dict[str, Any]]:
     specs: list[dict[str, Any]] = []
     for yaml_file in sorted(specs_dir.glob("*.yaml")):
         with open(yaml_file) as f:
-            specs.append(yaml.safe_load(f))
+            spec = yaml.safe_load(f)
+            ensure_spec_version(spec)
+            specs.append(spec)
     return specs
 
 
@@ -92,6 +96,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         '    """Tool specification."""',
         "",
         '    id: str = Field(..., description="Tool identifier")',
+        '    version: str = Field(default="0.0.1", description="Tool version")',
         '    name: str = Field(..., description="Display name")',
         '    description: str = Field(default="", description="Tool description")',
         '    tags: List[str] = Field(default_factory=list, description="Search/discovery tags")',
@@ -111,7 +116,8 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
 
     for spec in specs:
         tool_id = spec["id"]
-        const_name = f"{tool_id.upper().replace('-', '_')}_TOOL_SPEC"
+        version = spec["version"]
+        const_name = f"{tool_id.upper().replace('-', '_')}_TOOL_SPEC{version_suffix(version)}"
         runtime = _require_runtime(spec)
         requires_approval = _requires_approval(spec)
         icon = f'"{spec.get("icon")}"' if spec.get("icon") else "None"
@@ -121,6 +127,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
             [
                 f"{const_name} = ToolSpec(",
                 f'    id="{tool_id}",',
+                f'    version="{version}",',
                 f'    name="{spec["name"]}",',
                 f'    description="{spec.get("description", "")}",',
                 f"    tags={_fmt_list(spec.get('tags', []))},",
@@ -151,8 +158,10 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
 
     for spec in specs:
         tool_id = spec["id"]
-        const_name = f"{tool_id.upper().replace('-', '_')}_TOOL_SPEC"
+        version = spec["version"]
+        const_name = f"{tool_id.upper().replace('-', '_')}_TOOL_SPEC{version_suffix(version)}"
         lines.append(f'    "{tool_id}": {const_name},')
+        lines.append(f'    "{versioned_ref(tool_id, version)}": {const_name},')
 
     lines.extend(
         [
@@ -198,6 +207,7 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
         "",
         "export interface ToolSpec {",
         "  id: string;",
+        "  version: string;",
         "  name: string;",
         "  description: string;",
         "  tags: string[];",
@@ -217,7 +227,8 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
 
     for spec in specs:
         tool_id = spec["id"]
-        const_name = f"{tool_id.upper().replace('-', '_')}_TOOL_SPEC"
+        version = spec["version"]
+        const_name = f"{tool_id.upper().replace('-', '_')}_TOOL_SPEC{version_suffix(version)}"
         runtime = _require_runtime(spec)
         requires_approval = _requires_approval(spec)
         tags_json = str(spec.get("tags", [])).replace("'", '"')
@@ -228,6 +239,7 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
             [
                 f"export const {const_name}: ToolSpec = {{",
                 f"  id: '{tool_id}',",
+                f"  version: '{version}',",
                 f"  name: '{spec['name']}',",
                 f"  description: '{spec.get('description', '')}',",
                 f"  tags: {tags_json},",
@@ -258,8 +270,10 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
 
     for spec in specs:
         tool_id = spec["id"]
-        const_name = f"{tool_id.upper().replace('-', '_')}_TOOL_SPEC"
+        version = spec["version"]
+        const_name = f"{tool_id.upper().replace('-', '_')}_TOOL_SPEC{version_suffix(version)}"
         lines.append(f"  '{tool_id}': {const_name},")
+        lines.append(f"  '{versioned_ref(tool_id, version)}': {const_name},")
 
     lines.extend(
         [

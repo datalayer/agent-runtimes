@@ -18,8 +18,9 @@ import type { TriggerSpec } from '../types/types';
 // Trigger Definitions
 // ============================================================================
 
-export const EVENT_TRIGGER_SPEC: TriggerSpec = {
+export const EVENT_TRIGGER_SPEC_0_0_1: TriggerSpec = {
   id: 'event',
+  version: '0.0.1',
   name: 'Event-Based',
   description:
     'Trigger on specific events such as a webhook call, API request, database change, file upload, or email arrival.',
@@ -58,8 +59,9 @@ export const EVENT_TRIGGER_SPEC: TriggerSpec = {
   ],
 };
 
-export const ONCE_TRIGGER_SPEC: TriggerSpec = {
+export const ONCE_TRIGGER_SPEC_0_0_1: TriggerSpec = {
   id: 'once',
+  version: '0.0.1',
   name: 'Run Once',
   description: 'Execute agent immediately after deployment.',
   type: 'once',
@@ -75,8 +77,9 @@ export const ONCE_TRIGGER_SPEC: TriggerSpec = {
   ],
 };
 
-export const SCHEDULE_TRIGGER_SPEC: TriggerSpec = {
+export const SCHEDULE_TRIGGER_SPEC_0_0_1: TriggerSpec = {
   id: 'schedule',
+  version: '0.0.1',
   name: 'Schedule',
   description:
     'Run on a recurring schedule using a cron expression (e.g. daily at 9 AM, every Monday, monthly on the 1st).',
@@ -113,9 +116,12 @@ export const SCHEDULE_TRIGGER_SPEC: TriggerSpec = {
 // ============================================================================
 
 export const TRIGGER_CATALOG: Record<string, TriggerSpec> = {
-  event: EVENT_TRIGGER_SPEC,
-  once: ONCE_TRIGGER_SPEC,
-  schedule: SCHEDULE_TRIGGER_SPEC,
+  event: EVENT_TRIGGER_SPEC_0_0_1,
+  'event:0.0.1': EVENT_TRIGGER_SPEC_0_0_1,
+  once: ONCE_TRIGGER_SPEC_0_0_1,
+  'once:0.0.1': ONCE_TRIGGER_SPEC_0_0_1,
+  schedule: SCHEDULE_TRIGGER_SPEC_0_0_1,
+  'schedule:0.0.1': SCHEDULE_TRIGGER_SPEC_0_0_1,
 };
 
 export function getTriggerSpecs(): TriggerSpec[] {

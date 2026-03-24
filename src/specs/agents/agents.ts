@@ -13,29 +13,29 @@
 
 import type { AgentSpec } from '../../types/types';
 import {
-  ALPHAVANTAGE_MCP_SERVER,
-  CHART_MCP_SERVER,
-  EARTHDATA_MCP_SERVER,
-  EURUS_MCP_SERVER,
-  FILESYSTEM_MCP_SERVER,
-  GITHUB_MCP_SERVER,
-  GOOGLE_WORKSPACE_MCP_SERVER,
-  KAGGLE_MCP_SERVER,
-  SALESFORCE_MCP_SERVER,
-  SLACK_MCP_SERVER,
-  TAVILY_MCP_SERVER,
+  ALPHAVANTAGE_MCP_SERVER_0_0_1,
+  CHART_MCP_SERVER_0_0_1,
+  EARTHDATA_MCP_SERVER_0_0_1,
+  EURUS_MCP_SERVER_0_0_1,
+  FILESYSTEM_MCP_SERVER_0_0_1,
+  GITHUB_MCP_SERVER_0_0_1,
+  GOOGLE_WORKSPACE_MCP_SERVER_0_0_1,
+  KAGGLE_MCP_SERVER_0_0_1,
+  SALESFORCE_MCP_SERVER_0_0_1,
+  SLACK_MCP_SERVER_0_0_1,
+  TAVILY_MCP_SERVER_0_0_1,
 } from '../mcpServers';
 import {
-  CRAWL_SKILL_SPEC,
-  EVENTS_SKILL_SPEC,
-  GITHUB_SKILL_SPEC,
-  PDF_SKILL_SPEC,
+  CRAWL_SKILL_SPEC_0_0_1,
+  EVENTS_SKILL_SPEC_0_0_1,
+  GITHUB_SKILL_SPEC_0_0_1,
+  PDF_SKILL_SPEC_0_0_1,
 } from '../skills';
 import type { SkillSpec } from '../skills';
 import {
-  RUNTIME_ECHO_TOOL_SPEC,
-  RUNTIME_SEND_MAIL_TOOL_SPEC,
-  RUNTIME_SENSITIVE_ECHO_TOOL_SPEC,
+  RUNTIME_ECHO_TOOL_SPEC_0_0_1,
+  RUNTIME_SEND_MAIL_TOOL_SPEC_0_0_1,
+  RUNTIME_SENSITIVE_ECHO_TOOL_SPEC_0_0_1,
 } from '../tools';
 
 // ============================================================================
@@ -43,27 +43,42 @@ import {
 // ============================================================================
 
 const MCP_SERVER_MAP: Record<string, any> = {
-  alphavantage: ALPHAVANTAGE_MCP_SERVER,
-  chart: CHART_MCP_SERVER,
-  earthdata: EARTHDATA_MCP_SERVER,
-  eurus: EURUS_MCP_SERVER,
-  filesystem: FILESYSTEM_MCP_SERVER,
-  github: GITHUB_MCP_SERVER,
-  'google-workspace': GOOGLE_WORKSPACE_MCP_SERVER,
-  kaggle: KAGGLE_MCP_SERVER,
-  salesforce: SALESFORCE_MCP_SERVER,
-  slack: SLACK_MCP_SERVER,
-  tavily: TAVILY_MCP_SERVER,
+  'alphavantage:0.0.1': ALPHAVANTAGE_MCP_SERVER_0_0_1,
+  alphavantage: ALPHAVANTAGE_MCP_SERVER_0_0_1,
+  'chart:0.0.1': CHART_MCP_SERVER_0_0_1,
+  chart: CHART_MCP_SERVER_0_0_1,
+  'earthdata:0.0.1': EARTHDATA_MCP_SERVER_0_0_1,
+  earthdata: EARTHDATA_MCP_SERVER_0_0_1,
+  'eurus:0.0.1': EURUS_MCP_SERVER_0_0_1,
+  eurus: EURUS_MCP_SERVER_0_0_1,
+  'filesystem:0.0.1': FILESYSTEM_MCP_SERVER_0_0_1,
+  filesystem: FILESYSTEM_MCP_SERVER_0_0_1,
+  'github:0.0.1': GITHUB_MCP_SERVER_0_0_1,
+  github: GITHUB_MCP_SERVER_0_0_1,
+  'google-workspace:0.0.1': GOOGLE_WORKSPACE_MCP_SERVER_0_0_1,
+  'google-workspace': GOOGLE_WORKSPACE_MCP_SERVER_0_0_1,
+  'kaggle:0.0.1': KAGGLE_MCP_SERVER_0_0_1,
+  kaggle: KAGGLE_MCP_SERVER_0_0_1,
+  'salesforce:0.0.1': SALESFORCE_MCP_SERVER_0_0_1,
+  salesforce: SALESFORCE_MCP_SERVER_0_0_1,
+  'slack:0.0.1': SLACK_MCP_SERVER_0_0_1,
+  slack: SLACK_MCP_SERVER_0_0_1,
+  'tavily:0.0.1': TAVILY_MCP_SERVER_0_0_1,
+  tavily: TAVILY_MCP_SERVER_0_0_1,
 };
 
 /**
  * Map skill IDs to SkillSpec objects, converting to AgentSkillSpec shape.
  */
 const SKILL_MAP: Record<string, any> = {
-  crawl: CRAWL_SKILL_SPEC,
-  events: EVENTS_SKILL_SPEC,
-  github: GITHUB_SKILL_SPEC,
-  pdf: PDF_SKILL_SPEC,
+  'crawl:0.0.1': CRAWL_SKILL_SPEC_0_0_1,
+  crawl: CRAWL_SKILL_SPEC_0_0_1,
+  'events:0.0.1': EVENTS_SKILL_SPEC_0_0_1,
+  events: EVENTS_SKILL_SPEC_0_0_1,
+  'github:0.0.1': GITHUB_SKILL_SPEC_0_0_1,
+  github: GITHUB_SKILL_SPEC_0_0_1,
+  'pdf:0.0.1': PDF_SKILL_SPEC_0_0_1,
+  pdf: PDF_SKILL_SPEC_0_0_1,
 };
 
 function toAgentSkillSpec(skill: SkillSpec) {
@@ -71,7 +86,7 @@ function toAgentSkillSpec(skill: SkillSpec) {
     id: skill.id,
     name: skill.name,
     description: skill.description,
-    version: '1.0.0',
+    version: skill.version ?? '0.0.1',
     tags: skill.tags,
     enabled: skill.enabled,
     requiredEnvVars: skill.requiredEnvVars,
@@ -82,17 +97,21 @@ function toAgentSkillSpec(skill: SkillSpec) {
  * Map tool IDs to ToolSpec objects.
  */
 const TOOL_MAP: Record<string, any> = {
-  'runtime-echo': RUNTIME_ECHO_TOOL_SPEC,
-  'runtime-send-mail': RUNTIME_SEND_MAIL_TOOL_SPEC,
-  'runtime-sensitive-echo': RUNTIME_SENSITIVE_ECHO_TOOL_SPEC,
+  'runtime-echo:0.0.1': RUNTIME_ECHO_TOOL_SPEC_0_0_1,
+  'runtime-echo': RUNTIME_ECHO_TOOL_SPEC_0_0_1,
+  'runtime-send-mail:0.0.1': RUNTIME_SEND_MAIL_TOOL_SPEC_0_0_1,
+  'runtime-send-mail': RUNTIME_SEND_MAIL_TOOL_SPEC_0_0_1,
+  'runtime-sensitive-echo:0.0.1': RUNTIME_SENSITIVE_ECHO_TOOL_SPEC_0_0_1,
+  'runtime-sensitive-echo': RUNTIME_SENSITIVE_ECHO_TOOL_SPEC_0_0_1,
 };
 
 // ============================================================================
 // Agent Specs
 // ============================================================================
 
-export const ANALYZE_CAMPAIGN_PERFORMANCE_AGENT_SPEC: AgentSpec = {
+export const ANALYZE_CAMPAIGN_PERFORMANCE_AGENT_SPEC_0_0_1: AgentSpec = {
   id: 'analyze-campaign-performance',
+  version: '0.0.1',
   name: 'Analyze Campaign Performance',
   description: `A multi-agent team that unifies marketing data from Google Ads, Meta, TikTok, LinkedIn, GA4, CRM, and email platforms. Normalises metrics into a unified view, detects performance anomalies in real time, and generates budget reallocation recommendations to maximise ROAS.`,
   tags: [
@@ -105,11 +124,14 @@ export const ANALYZE_CAMPAIGN_PERFORMANCE_AGENT_SPEC: AgentSpec = {
   ],
   enabled: false,
   model: 'bedrock:us.anthropic.claude-3-5-haiku-20241022-v1:0',
-  mcpServers: [MCP_SERVER_MAP['filesystem'], MCP_SERVER_MAP['slack']],
+  mcpServers: [
+    MCP_SERVER_MAP['filesystem:0.0.1'],
+    MCP_SERVER_MAP['slack:0.0.1'],
+  ],
   skills: [
-    toAgentSkillSpec(SKILL_MAP['pdf']),
-    toAgentSkillSpec(SKILL_MAP['crawl']),
-    toAgentSkillSpec(SKILL_MAP['events']),
+    toAgentSkillSpec(SKILL_MAP['pdf:0.0.1']),
+    toAgentSkillSpec(SKILL_MAP['crawl:0.0.1']),
+    toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
   ],
   tools: [],
   environmentName: 'ai-agents-env',
@@ -207,18 +229,22 @@ export const ANALYZE_CAMPAIGN_PERFORMANCE_AGENT_SPEC: AgentSpec = {
   memory: 'ephemeral',
 };
 
-export const ANALYZE_SUPPORT_TICKETS_AGENT_SPEC: AgentSpec = {
+export const ANALYZE_SUPPORT_TICKETS_AGENT_SPEC_0_0_1: AgentSpec = {
   id: 'analyze-support-tickets',
+  version: '0.0.1',
   name: 'Analyze Support Tickets',
   description: `A multi-agent team that triages incoming support tickets, categorizes by urgency and topic, identifies recurring patterns, and generates resolution recommendations with escalation paths.`,
   tags: ['analytics', 'data', 'support', 'tickets'],
   enabled: false,
   model: 'bedrock:us.anthropic.claude-3-5-haiku-20241022-v1:0',
-  mcpServers: [MCP_SERVER_MAP['filesystem'], MCP_SERVER_MAP['slack']],
+  mcpServers: [
+    MCP_SERVER_MAP['filesystem:0.0.1'],
+    MCP_SERVER_MAP['slack:0.0.1'],
+  ],
   skills: [
-    toAgentSkillSpec(SKILL_MAP['pdf']),
-    toAgentSkillSpec(SKILL_MAP['crawl']),
-    toAgentSkillSpec(SKILL_MAP['events']),
+    toAgentSkillSpec(SKILL_MAP['pdf:0.0.1']),
+    toAgentSkillSpec(SKILL_MAP['crawl:0.0.1']),
+    toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
   ],
   tools: [],
   environmentName: 'ai-agents-env',
@@ -291,17 +317,21 @@ export const ANALYZE_SUPPORT_TICKETS_AGENT_SPEC: AgentSpec = {
   memory: 'ephemeral',
 };
 
-export const AUDIT_INVENTORY_LEVELS_AGENT_SPEC: AgentSpec = {
+export const AUDIT_INVENTORY_LEVELS_AGENT_SPEC_0_0_1: AgentSpec = {
   id: 'audit-inventory-levels',
+  version: '0.0.1',
   name: 'Audit Inventory Levels',
   description: `A multi-agent team that monitors inventory levels across warehouses, detects discrepancies between physical and system counts, forecasts demand by SKU, and generates automated reorder recommendations.`,
   tags: ['finance', 'automation', 'inventory', 'supply-chain'],
   enabled: false,
   model: 'bedrock:us.anthropic.claude-3-5-haiku-20241022-v1:0',
-  mcpServers: [MCP_SERVER_MAP['filesystem'], MCP_SERVER_MAP['slack']],
+  mcpServers: [
+    MCP_SERVER_MAP['filesystem:0.0.1'],
+    MCP_SERVER_MAP['slack:0.0.1'],
+  ],
   skills: [
-    toAgentSkillSpec(SKILL_MAP['pdf']),
-    toAgentSkillSpec(SKILL_MAP['events']),
+    toAgentSkillSpec(SKILL_MAP['pdf:0.0.1']),
+    toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
   ],
   tools: [],
   environmentName: 'ai-agents-env',
@@ -371,17 +401,21 @@ export const AUDIT_INVENTORY_LEVELS_AGENT_SPEC: AgentSpec = {
   memory: 'ephemeral',
 };
 
-export const AUTOMATE_REGULATORY_REPORTING_AGENT_SPEC: AgentSpec = {
+export const AUTOMATE_REGULATORY_REPORTING_AGENT_SPEC_0_0_1: AgentSpec = {
   id: 'automate-regulatory-reporting',
+  version: '0.0.1',
   name: 'Automate Regulatory Reporting',
   description: `A multi-agent team that automates end-to-end regulatory reporting for financial institutions. Ingests data from trading systems, risk engines, and accounting platforms, reconciles positions, computes risk metrics, validates against regulatory rules (Basel III/IV, MiFID II, SOX), and generates submission-ready compliance reports with full audit trails.`,
   tags: ['finance', 'compliance', 'regulatory', 'risk', 'banking', 'audit'],
   enabled: false,
   model: 'bedrock:us.anthropic.claude-3-5-haiku-20241022-v1:0',
-  mcpServers: [MCP_SERVER_MAP['filesystem'], MCP_SERVER_MAP['slack']],
+  mcpServers: [
+    MCP_SERVER_MAP['filesystem:0.0.1'],
+    MCP_SERVER_MAP['slack:0.0.1'],
+  ],
   skills: [
-    toAgentSkillSpec(SKILL_MAP['pdf']),
-    toAgentSkillSpec(SKILL_MAP['events']),
+    toAgentSkillSpec(SKILL_MAP['pdf:0.0.1']),
+    toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
   ],
   tools: [],
   environmentName: 'ai-agents-env',
@@ -475,17 +509,18 @@ export const AUTOMATE_REGULATORY_REPORTING_AGENT_SPEC: AgentSpec = {
   memory: 'ephemeral',
 };
 
-export const CLASSIFY_ROUTE_EMAILS_AGENT_SPEC: AgentSpec = {
+export const CLASSIFY_ROUTE_EMAILS_AGENT_SPEC_0_0_1: AgentSpec = {
   id: 'classify-route-emails',
+  version: '0.0.1',
   name: 'Classify & Route Emails',
   description: `A generic email classification and routing agent. Analyzes incoming emails to determine intent (inquiry, complaint, order, support request), assigns priority (critical, high, medium, low), and routes to the appropriate department queue. Works across any industry with email-based workflows.`,
   tags: ['email', 'classification', 'routing', 'horizontal', 'automation'],
   enabled: false,
   model: 'bedrock:us.anthropic.claude-3-5-haiku-20241022-v1:0',
-  mcpServers: [MCP_SERVER_MAP['slack']],
+  mcpServers: [MCP_SERVER_MAP['slack:0.0.1']],
   skills: [
-    toAgentSkillSpec(SKILL_MAP['github']),
-    toAgentSkillSpec(SKILL_MAP['events']),
+    toAgentSkillSpec(SKILL_MAP['github:0.0.1']),
+    toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
   ],
   tools: [],
   environmentName: 'ai-agents-env',
@@ -562,18 +597,22 @@ export const CLASSIFY_ROUTE_EMAILS_AGENT_SPEC: AgentSpec = {
   memory: 'ephemeral',
 };
 
-export const COMPREHENSIVE_SALES_ANALYTICS_AGENT_SPEC: AgentSpec = {
+export const COMPREHENSIVE_SALES_ANALYTICS_AGENT_SPEC_0_0_1: AgentSpec = {
   id: 'comprehensive-sales-analytics',
+  version: '0.0.1',
   name: 'Comprehensive Sales Analytics',
   description: `A multi-agent team that replaces a single KPI monitor with four specialized agents: a Data Collector that pulls real-time CRM metrics, an Anomaly Detector that flags statistical outliers, a Trend Analyzer that identifies patterns and forecasts, and a Report Generator that compiles executive dashboards and sends alerts. Together they deliver deeper insights, faster detection, and richer reporting than any single agent could.`,
   tags: ['sales', 'analytics', 'kpi', 'monitoring', 'horizontal'],
   enabled: false,
   model: 'bedrock:us.anthropic.claude-3-5-haiku-20241022-v1:0',
-  mcpServers: [MCP_SERVER_MAP['filesystem'], MCP_SERVER_MAP['slack']],
+  mcpServers: [
+    MCP_SERVER_MAP['filesystem:0.0.1'],
+    MCP_SERVER_MAP['slack:0.0.1'],
+  ],
   skills: [
-    toAgentSkillSpec(SKILL_MAP['pdf']),
-    toAgentSkillSpec(SKILL_MAP['github']),
-    toAgentSkillSpec(SKILL_MAP['events']),
+    toAgentSkillSpec(SKILL_MAP['pdf:0.0.1']),
+    toAgentSkillSpec(SKILL_MAP['github:0.0.1']),
+    toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
   ],
   tools: [],
   environmentName: 'ai-agents-env',
@@ -635,17 +674,18 @@ export const COMPREHENSIVE_SALES_ANALYTICS_AGENT_SPEC: AgentSpec = {
   memory: 'ephemeral',
 };
 
-export const CRAWLER_AGENT_SPEC: AgentSpec = {
+export const CRAWLER_AGENT_SPEC_0_0_1: AgentSpec = {
   id: 'crawler',
+  version: '0.0.1',
   name: 'Crawler Agent',
   description: `Web crawling and research agent that searches the web and GitHub repositories for information.`,
   tags: ['web', 'search', 'research', 'crawler', 'github'],
   enabled: true,
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-  mcpServers: [MCP_SERVER_MAP['tavily']],
+  mcpServers: [MCP_SERVER_MAP['tavily:0.0.1']],
   skills: [
-    toAgentSkillSpec(SKILL_MAP['github']),
-    toAgentSkillSpec(SKILL_MAP['events']),
+    toAgentSkillSpec(SKILL_MAP['github:0.0.1']),
+    toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
   ],
   tools: [],
   environmentName: 'ai-agents-env',
@@ -703,21 +743,22 @@ export const CRAWLER_AGENT_SPEC: AgentSpec = {
   memory: 'ephemeral',
 };
 
-export const DATA_ACQUISITION_AGENT_SPEC: AgentSpec = {
+export const DATA_ACQUISITION_AGENT_SPEC_0_0_1: AgentSpec = {
   id: 'data-acquisition',
+  version: '0.0.1',
   name: 'Data Acquisition Agent',
   description: `Acquires and manages data from various sources including Kaggle datasets and local filesystem operations.`,
   tags: ['data', 'acquisition', 'kaggle', 'filesystem'],
   enabled: true,
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
   mcpServers: [
-    MCP_SERVER_MAP['kaggle'],
-    MCP_SERVER_MAP['filesystem'],
-    MCP_SERVER_MAP['tavily'],
+    MCP_SERVER_MAP['kaggle:0.0.1'],
+    MCP_SERVER_MAP['filesystem:0.0.1'],
+    MCP_SERVER_MAP['tavily:0.0.1'],
   ],
   skills: [
-    toAgentSkillSpec(SKILL_MAP['github']),
-    toAgentSkillSpec(SKILL_MAP['events']),
+    toAgentSkillSpec(SKILL_MAP['github:0.0.1']),
+    toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
   ],
   tools: [],
   environmentName: 'ai-agents-env',
@@ -775,8 +816,9 @@ export const DATA_ACQUISITION_AGENT_SPEC: AgentSpec = {
   memory: 'ephemeral',
 };
 
-export const END_OF_MONTH_SALES_PERFORMANCE_AGENT_SPEC: AgentSpec = {
+export const END_OF_MONTH_SALES_PERFORMANCE_AGENT_SPEC_0_0_1: AgentSpec = {
   id: 'end-of-month-sales-performance',
+  version: '0.0.1',
   name: 'End of Month Sales Performance',
   description: `Consolidates and analyzes end-of-month retail sales data directly from Salesforce. Computes revenue performance vs targets by SKU, detects anomalies in bookings and discounting, explains variances by region/segment/product/SKU, and generates executive-ready sales performance reports with full data lineage.`,
   tags: [
@@ -791,10 +833,10 @@ export const END_OF_MONTH_SALES_PERFORMANCE_AGENT_SPEC: AgentSpec = {
   ],
   enabled: false,
   model: 'bedrock:us.anthropic.claude-3-5-haiku-20241022-v1:0',
-  mcpServers: [MCP_SERVER_MAP['salesforce']],
+  mcpServers: [MCP_SERVER_MAP['salesforce:0.0.1']],
   skills: [
-    toAgentSkillSpec(SKILL_MAP['pdf']),
-    toAgentSkillSpec(SKILL_MAP['events']),
+    toAgentSkillSpec(SKILL_MAP['pdf:0.0.1']),
+    toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
   ],
   tools: [],
   environmentName: 'ai-agents-env',
@@ -970,18 +1012,19 @@ export const END_OF_MONTH_SALES_PERFORMANCE_AGENT_SPEC: AgentSpec = {
   memory: 'ephemeral',
 };
 
-export const EXTRACT_DATA_FROM_FILES_AGENT_SPEC: AgentSpec = {
+export const EXTRACT_DATA_FROM_FILES_AGENT_SPEC_0_0_1: AgentSpec = {
   id: 'extract-data-from-files',
+  version: '0.0.1',
   name: 'Extract Data from Files',
   description: `A generic data extraction agent that processes unstructured files (PDFs, scanned documents, spreadsheets, images with text) and extracts structured data — tables, key-value pairs, line items, totals. Outputs clean JSON or CSV ready for downstream systems. Applicable to invoices, receipts, forms, medical records, legal documents, and more.`,
   tags: ['extraction', 'data', 'horizontal', 'automation', 'documents'],
   enabled: false,
   model: 'bedrock:us.anthropic.claude-3-5-haiku-20241022-v1:0',
-  mcpServers: [MCP_SERVER_MAP['filesystem']],
+  mcpServers: [MCP_SERVER_MAP['filesystem:0.0.1']],
   skills: [
-    toAgentSkillSpec(SKILL_MAP['pdf']),
-    toAgentSkillSpec(SKILL_MAP['github']),
-    toAgentSkillSpec(SKILL_MAP['events']),
+    toAgentSkillSpec(SKILL_MAP['pdf:0.0.1']),
+    toAgentSkillSpec(SKILL_MAP['github:0.0.1']),
+    toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
   ],
   tools: [],
   environmentName: 'ai-agents-env',
@@ -1059,15 +1102,19 @@ export const EXTRACT_DATA_FROM_FILES_AGENT_SPEC: AgentSpec = {
   memory: 'ephemeral',
 };
 
-export const FINANCIAL_VIZ_AGENT_SPEC: AgentSpec = {
+export const FINANCIAL_VIZ_AGENT_SPEC_0_0_1: AgentSpec = {
   id: 'financial-viz',
+  version: '0.0.1',
   name: 'Financial Visualization Agent',
   description: `Analyzes financial market data and creates visualizations and charts.`,
   tags: ['finance', 'stocks', 'visualization', 'charts'],
   enabled: false,
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-  mcpServers: [MCP_SERVER_MAP['alphavantage'], MCP_SERVER_MAP['chart']],
-  skills: [toAgentSkillSpec(SKILL_MAP['events'])],
+  mcpServers: [
+    MCP_SERVER_MAP['alphavantage:0.0.1'],
+    MCP_SERVER_MAP['chart:0.0.1'],
+  ],
+  skills: [toAgentSkillSpec(SKILL_MAP['events:0.0.1'])],
   tools: [],
   environmentName: 'ai-agents-env',
   icon: 'trending-up',
@@ -1124,15 +1171,16 @@ export const FINANCIAL_VIZ_AGENT_SPEC: AgentSpec = {
   memory: 'ephemeral',
 };
 
-export const FINANCIAL_AGENT_SPEC: AgentSpec = {
+export const FINANCIAL_AGENT_SPEC_0_0_1: AgentSpec = {
   id: 'financial',
+  version: '0.0.1',
   name: 'Financial Data Analysis Agent',
   description: `Analyzes financial market data and provides chart-ready insights.`,
   tags: ['finance', 'stocks', 'visualization', 'charts'],
   enabled: false,
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-  mcpServers: [MCP_SERVER_MAP['alphavantage']],
-  skills: [toAgentSkillSpec(SKILL_MAP['events'])],
+  mcpServers: [MCP_SERVER_MAP['alphavantage:0.0.1']],
+  skills: [toAgentSkillSpec(SKILL_MAP['events:0.0.1'])],
   tools: [],
   environmentName: 'ai-agents-env',
   icon: 'trending-up',
@@ -1189,17 +1237,21 @@ export const FINANCIAL_AGENT_SPEC: AgentSpec = {
   memory: 'ephemeral',
 };
 
-export const GENERATE_WEEKLY_REPORTS_AGENT_SPEC: AgentSpec = {
+export const GENERATE_WEEKLY_REPORTS_AGENT_SPEC_0_0_1: AgentSpec = {
   id: 'generate-weekly-reports',
+  version: '0.0.1',
   name: 'Generate Weekly Reports',
   description: `Aggregates data across marketing, sales, and operations departments. Generates structured weekly reports with charts, KPI summaries, trend analysis, and executive-level takeaways.`,
   tags: ['marketing', 'reports', 'weekly', 'analytics', 'automation'],
   enabled: false,
   model: 'bedrock:us.anthropic.claude-3-5-haiku-20241022-v1:0',
-  mcpServers: [MCP_SERVER_MAP['filesystem'], MCP_SERVER_MAP['slack']],
+  mcpServers: [
+    MCP_SERVER_MAP['filesystem:0.0.1'],
+    MCP_SERVER_MAP['slack:0.0.1'],
+  ],
   skills: [
-    toAgentSkillSpec(SKILL_MAP['pdf']),
-    toAgentSkillSpec(SKILL_MAP['events']),
+    toAgentSkillSpec(SKILL_MAP['pdf:0.0.1']),
+    toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
   ],
   tools: [],
   environmentName: 'ai-agents-env',
@@ -1288,17 +1340,18 @@ export const GENERATE_WEEKLY_REPORTS_AGENT_SPEC: AgentSpec = {
   memory: 'ephemeral',
 };
 
-export const GITHUB_AGENT_SPEC: AgentSpec = {
+export const GITHUB_AGENT_SPEC_0_0_1: AgentSpec = {
   id: 'github-agent',
+  version: '0.0.1',
   name: 'GitHub Agent',
   description: `Manages GitHub repositories, issues, and pull requests with email notification capabilities.`,
   tags: ['github', 'git', 'code', 'email'],
   enabled: false,
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-  mcpServers: [MCP_SERVER_MAP['google-workspace']],
+  mcpServers: [MCP_SERVER_MAP['google-workspace:0.0.1']],
   skills: [
-    toAgentSkillSpec(SKILL_MAP['github']),
-    toAgentSkillSpec(SKILL_MAP['events']),
+    toAgentSkillSpec(SKILL_MAP['github:0.0.1']),
+    toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
   ],
   tools: [],
   environmentName: 'ai-agents-env',
@@ -1356,15 +1409,19 @@ export const GITHUB_AGENT_SPEC: AgentSpec = {
   memory: 'ephemeral',
 };
 
-export const INFORMATION_ROUTING_AGENT_SPEC: AgentSpec = {
+export const INFORMATION_ROUTING_AGENT_SPEC_0_0_1: AgentSpec = {
   id: 'information-routing',
+  version: '0.0.1',
   name: 'Information Routing Agent',
   description: `Routes information between Google Drive and other services, managing document workflows and information sharing.`,
   tags: ['workflow', 'communication', 'gdrive'],
   enabled: false,
   model: 'bedrock:us.anthropic.claude-opus-4-6-v1',
-  mcpServers: [MCP_SERVER_MAP['google-workspace'], MCP_SERVER_MAP['github']],
-  skills: [toAgentSkillSpec(SKILL_MAP['events'])],
+  mcpServers: [
+    MCP_SERVER_MAP['google-workspace:0.0.1'],
+    MCP_SERVER_MAP['github:0.0.1'],
+  ],
+  skills: [toAgentSkillSpec(SKILL_MAP['events:0.0.1'])],
   tools: [],
   environmentName: 'ai-agents-env',
   icon: 'share-2',
@@ -1421,23 +1478,24 @@ export const INFORMATION_ROUTING_AGENT_SPEC: AgentSpec = {
   memory: 'ephemeral',
 };
 
-export const MONITOR_SALES_KPIS_AGENT_SPEC: AgentSpec = {
+export const MONITOR_SALES_KPIS_AGENT_SPEC_0_0_1: AgentSpec = {
   id: 'monitor-sales-kpis',
+  version: '0.0.1',
   name: 'Monitor Sales KPIs',
   description: `Monitor and analyze sales KPIs from the CRM system. Generate daily reports summarizing key performance metrics, identify trends, and flag anomalies. Send notifications when KPIs deviate more than 10% from targets.`,
   tags: ['support', 'chatbot', 'sales', 'kpi', 'monitoring'],
   enabled: false,
   model: 'bedrock:us.anthropic.claude-3-5-haiku-20241022-v1:0',
-  mcpServers: [MCP_SERVER_MAP['filesystem']],
+  mcpServers: [MCP_SERVER_MAP['filesystem:0.0.1']],
   skills: [
-    toAgentSkillSpec(SKILL_MAP['github']),
-    toAgentSkillSpec(SKILL_MAP['pdf']),
-    toAgentSkillSpec(SKILL_MAP['events']),
+    toAgentSkillSpec(SKILL_MAP['github:0.0.1']),
+    toAgentSkillSpec(SKILL_MAP['pdf:0.0.1']),
+    toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
   ],
   tools: [
-    TOOL_MAP['runtime-echo'],
-    TOOL_MAP['runtime-sensitive-echo'],
-    TOOL_MAP['runtime-send-mail'],
+    TOOL_MAP['runtime-echo:0.0.1'],
+    TOOL_MAP['runtime-sensitive-echo:0.0.1'],
+    TOOL_MAP['runtime-send-mail:0.0.1'],
   ],
   environmentName: 'ai-agents-env',
   icon: 'graph',
@@ -1528,8 +1586,9 @@ export const MONITOR_SALES_KPIS_AGENT_SPEC: AgentSpec = {
   memory: 'mem0',
 };
 
-export const OPTIMIZE_DYNAMIC_PRICING_AGENT_SPEC: AgentSpec = {
+export const OPTIMIZE_DYNAMIC_PRICING_AGENT_SPEC_0_0_1: AgentSpec = {
   id: 'optimize-dynamic-pricing',
+  version: '0.0.1',
   name: 'Optimize Dynamic Pricing',
   description: `Monitors competitor pricing across marketplaces, forecasts demand per SKU, and generates margin-optimised pricing recommendations in real time. Tracks 50K+ SKUs hourly across Amazon, Walmart, and niche channels, combining competitive intelligence with demand signals to maximise margins.`,
   tags: [
@@ -1542,11 +1601,11 @@ export const OPTIMIZE_DYNAMIC_PRICING_AGENT_SPEC: AgentSpec = {
   ],
   enabled: false,
   model: 'bedrock:us.anthropic.claude-3-5-haiku-20241022-v1:0',
-  mcpServers: [MCP_SERVER_MAP['filesystem']],
+  mcpServers: [MCP_SERVER_MAP['filesystem:0.0.1']],
   skills: [
-    toAgentSkillSpec(SKILL_MAP['pdf']),
-    toAgentSkillSpec(SKILL_MAP['crawl']),
-    toAgentSkillSpec(SKILL_MAP['events']),
+    toAgentSkillSpec(SKILL_MAP['pdf:0.0.1']),
+    toAgentSkillSpec(SKILL_MAP['crawl:0.0.1']),
+    toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
   ],
   tools: [],
   environmentName: 'ai-agents-env',
@@ -1648,8 +1707,9 @@ export const OPTIMIZE_DYNAMIC_PRICING_AGENT_SPEC: AgentSpec = {
   memory: 'ephemeral',
 };
 
-export const OPTIMIZE_GRID_OPERATIONS_AGENT_SPEC: AgentSpec = {
+export const OPTIMIZE_GRID_OPERATIONS_AGENT_SPEC_0_0_1: AgentSpec = {
   id: 'optimize-grid-operations',
+  version: '0.0.1',
   name: 'Optimize Grid Operations',
   description: `A multi-agent team that processes millions of IoT sensor data points from smart meters, substations, and renewable generation assets. Predicts equipment failures 2–4 weeks in advance, optimises load balancing across the grid, and reduces unplanned downtime by 50%.`,
   tags: [
@@ -1662,10 +1722,10 @@ export const OPTIMIZE_GRID_OPERATIONS_AGENT_SPEC: AgentSpec = {
   ],
   enabled: false,
   model: 'bedrock:us.anthropic.claude-3-5-haiku-20241022-v1:0',
-  mcpServers: [MCP_SERVER_MAP['filesystem']],
+  mcpServers: [MCP_SERVER_MAP['filesystem:0.0.1']],
   skills: [
-    toAgentSkillSpec(SKILL_MAP['pdf']),
-    toAgentSkillSpec(SKILL_MAP['events']),
+    toAgentSkillSpec(SKILL_MAP['pdf:0.0.1']),
+    toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
   ],
   tools: [],
   environmentName: 'ai-agents-env',
@@ -1756,8 +1816,9 @@ export const OPTIMIZE_GRID_OPERATIONS_AGENT_SPEC: AgentSpec = {
   memory: 'ephemeral',
 };
 
-export const PROCESS_CITIZEN_REQUESTS_AGENT_SPEC: AgentSpec = {
+export const PROCESS_CITIZEN_REQUESTS_AGENT_SPEC_0_0_1: AgentSpec = {
   id: 'process-citizen-requests',
+  version: '0.0.1',
   name: 'Process Citizen Requests',
   description: `A multi-agent team that automates citizen request processing for government agencies. Classifies and triages permits, FOIA requests, and benefit claims from multiple channels. Models policy impacts across population datasets and ensures every automated decision is explainable, auditable, and compliant with transparency mandates.`,
   tags: [
@@ -1770,10 +1831,10 @@ export const PROCESS_CITIZEN_REQUESTS_AGENT_SPEC: AgentSpec = {
   ],
   enabled: false,
   model: 'bedrock:us.anthropic.claude-3-5-haiku-20241022-v1:0',
-  mcpServers: [MCP_SERVER_MAP['filesystem']],
+  mcpServers: [MCP_SERVER_MAP['filesystem:0.0.1']],
   skills: [
-    toAgentSkillSpec(SKILL_MAP['pdf']),
-    toAgentSkillSpec(SKILL_MAP['events']),
+    toAgentSkillSpec(SKILL_MAP['pdf:0.0.1']),
+    toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
   ],
   tools: [],
   environmentName: 'ai-agents-env',
@@ -1873,8 +1934,9 @@ export const PROCESS_CITIZEN_REQUESTS_AGENT_SPEC: AgentSpec = {
   memory: 'ephemeral',
 };
 
-export const PROCESS_CLINICAL_TRIAL_DATA_AGENT_SPEC: AgentSpec = {
+export const PROCESS_CLINICAL_TRIAL_DATA_AGENT_SPEC_0_0_1: AgentSpec = {
   id: 'process-clinical-trial-data',
+  version: '0.0.1',
   name: 'Process Clinical Trial Data',
   description: `A multi-agent team that automates clinical trial data processing across dozens of trial sites. Harmonises patient records and lab results to CDISC SDTM format, detects safety signals and adverse events in real time, and prepares submission-ready datasets — all with strict HIPAA and GxP compliance guardrails.`,
   tags: [
@@ -1886,10 +1948,10 @@ export const PROCESS_CLINICAL_TRIAL_DATA_AGENT_SPEC: AgentSpec = {
   ],
   enabled: false,
   model: 'bedrock:us.anthropic.claude-3-5-haiku-20241022-v1:0',
-  mcpServers: [MCP_SERVER_MAP['filesystem']],
+  mcpServers: [MCP_SERVER_MAP['filesystem:0.0.1']],
   skills: [
-    toAgentSkillSpec(SKILL_MAP['pdf']),
-    toAgentSkillSpec(SKILL_MAP['events']),
+    toAgentSkillSpec(SKILL_MAP['pdf:0.0.1']),
+    toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
   ],
   tools: [],
   environmentName: 'ai-agents-env',
@@ -1991,8 +2053,9 @@ export const PROCESS_CLINICAL_TRIAL_DATA_AGENT_SPEC: AgentSpec = {
   memory: 'ephemeral',
 };
 
-export const PROCESS_FINANCIAL_TRANSACTIONS_AGENT_SPEC: AgentSpec = {
+export const PROCESS_FINANCIAL_TRANSACTIONS_AGENT_SPEC_0_0_1: AgentSpec = {
   id: 'process-financial-transactions',
+  version: '0.0.1',
   name: 'Process Financial Transactions',
   description: `Processes and validates financial transactions across accounts. Reconciles balances, detects anomalies, enforces compliance rules, and generates audit-ready transaction reports.`,
   tags: [
@@ -2004,10 +2067,10 @@ export const PROCESS_FINANCIAL_TRANSACTIONS_AGENT_SPEC: AgentSpec = {
   ],
   enabled: false,
   model: 'bedrock:us.anthropic.claude-3-5-haiku-20241022-v1:0',
-  mcpServers: [MCP_SERVER_MAP['filesystem']],
+  mcpServers: [MCP_SERVER_MAP['filesystem:0.0.1']],
   skills: [
-    toAgentSkillSpec(SKILL_MAP['pdf']),
-    toAgentSkillSpec(SKILL_MAP['events']),
+    toAgentSkillSpec(SKILL_MAP['pdf:0.0.1']),
+    toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
   ],
   tools: [],
   environmentName: 'ai-agents-env',
@@ -2089,16 +2152,17 @@ export const PROCESS_FINANCIAL_TRANSACTIONS_AGENT_SPEC: AgentSpec = {
   memory: 'ephemeral',
 };
 
-export const SIMPLE_BASE_AGENT_SPEC: AgentSpec = {
+export const SIMPLE_BASE_AGENT_SPEC_0_0_1: AgentSpec = {
   id: 'simple-base',
+  version: '0.0.1',
   name: 'A Simple Agent',
   description: `A simple conversational agent. No tools, no MCP servers, no skills — just a helpful AI assistant you can chat with.`,
   tags: ['simple', 'chat', 'assistant'],
   enabled: true,
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
   mcpServers: [],
-  skills: [toAgentSkillSpec(SKILL_MAP['events'])],
-  tools: [TOOL_MAP['runtime-echo']],
+  skills: [toAgentSkillSpec(SKILL_MAP['events:0.0.1'])],
+  tools: [TOOL_MAP['runtime-echo:0.0.1']],
   environmentName: 'ai-agents-env',
   icon: 'agent',
   emoji: '🤖',
@@ -2136,16 +2200,20 @@ export const SIMPLE_BASE_AGENT_SPEC: AgentSpec = {
   memory: 'ephemeral',
 };
 
-export const SIMPLE_FULL_AGENT_SPEC: AgentSpec = {
+export const SIMPLE_FULL_AGENT_SPEC_0_0_1: AgentSpec = {
   id: 'simple-full',
+  version: '0.0.1',
   name: 'Tool Approval Demo',
   description: `A minimal demonstration agent showcasing the human-in-the-loop tool approval flow. Includes one tool that runs automatically and one that requires explicit human approval before execution, plus Tavily web search.`,
   tags: ['demo', 'approval', 'human-in-the-loop', 'utility'],
   enabled: true,
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-  mcpServers: [MCP_SERVER_MAP['tavily']],
-  skills: [toAgentSkillSpec(SKILL_MAP['events'])],
-  tools: [TOOL_MAP['runtime-echo'], TOOL_MAP['runtime-sensitive-echo']],
+  mcpServers: [MCP_SERVER_MAP['tavily:0.0.1']],
+  skills: [toAgentSkillSpec(SKILL_MAP['events:0.0.1'])],
+  tools: [
+    TOOL_MAP['runtime-echo:0.0.1'],
+    TOOL_MAP['runtime-sensitive-echo:0.0.1'],
+  ],
   environmentName: 'ai-agents-env',
   icon: 'shield',
   emoji: '🛡️',
@@ -2182,19 +2250,20 @@ export const SIMPLE_FULL_AGENT_SPEC: AgentSpec = {
   memory: 'ephemeral',
 };
 
-export const SPATIAL_DATA_ANALYSIS_AGENT_SPEC: AgentSpec = {
+export const SPATIAL_DATA_ANALYSIS_AGENT_SPEC_0_0_1: AgentSpec = {
   id: 'spatial-data-analysis',
+  version: '0.0.1',
   name: 'Spatial Data Analysis Agent',
   description: `Discovers, acquires, and analyzes geospatial datasets using Earthdata and Eurus tools. Produces map-ready summaries, anomaly diagnostics, and reproducible analysis artifacts for environmental and climate use cases.`,
   tags: ['geospatial', 'climate', 'earth-observation', 'analytics'],
   enabled: true,
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
   mcpServers: [
-    MCP_SERVER_MAP['earthdata'],
-    MCP_SERVER_MAP['eurus'],
-    MCP_SERVER_MAP['filesystem'],
+    MCP_SERVER_MAP['earthdata:0.0.1'],
+    MCP_SERVER_MAP['eurus:0.0.1'],
+    MCP_SERVER_MAP['filesystem:0.0.1'],
   ],
-  skills: [toAgentSkillSpec(SKILL_MAP['events'])],
+  skills: [toAgentSkillSpec(SKILL_MAP['events:0.0.1'])],
   tools: [],
   environmentName: 'ai-agents-env',
   icon: 'globe',
@@ -2237,8 +2306,9 @@ export const SPATIAL_DATA_ANALYSIS_AGENT_SPEC: AgentSpec = {
   memory: 'ephemeral',
 };
 
-export const SUMMARIZE_DOCUMENTS_AGENT_SPEC: AgentSpec = {
+export const SUMMARIZE_DOCUMENTS_AGENT_SPEC_0_0_1: AgentSpec = {
   id: 'summarize-documents',
+  version: '0.0.1',
   name: 'Summarize Documents',
   description: `A generic document summarization agent that processes PDFs, Word files, Markdown, and plain text. Produces structured executive summaries with key findings, action items, and metadata extraction. Useful across every industry vertical — from legal contracts to research papers.`,
   tags: [
@@ -2250,10 +2320,10 @@ export const SUMMARIZE_DOCUMENTS_AGENT_SPEC: AgentSpec = {
   ],
   enabled: false,
   model: 'bedrock:us.anthropic.claude-3-5-haiku-20241022-v1:0',
-  mcpServers: [MCP_SERVER_MAP['filesystem']],
+  mcpServers: [MCP_SERVER_MAP['filesystem:0.0.1']],
   skills: [
-    toAgentSkillSpec(SKILL_MAP['pdf']),
-    toAgentSkillSpec(SKILL_MAP['events']),
+    toAgentSkillSpec(SKILL_MAP['pdf:0.0.1']),
+    toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
   ],
   tools: [],
   environmentName: 'ai-agents-env',
@@ -2329,17 +2399,21 @@ export const SUMMARIZE_DOCUMENTS_AGENT_SPEC: AgentSpec = {
   memory: 'ephemeral',
 };
 
-export const SYNC_CRM_CONTACTS_AGENT_SPEC: AgentSpec = {
+export const SYNC_CRM_CONTACTS_AGENT_SPEC_0_0_1: AgentSpec = {
   id: 'sync-crm-contacts',
+  version: '0.0.1',
   name: 'Sync CRM Contacts',
   description: `A multi-agent team that collects and aggregates contact data from multiple CRM sources, analyzes and deduplicates records, writes cleaned data back, and generates sync summary reports.`,
   tags: ['sales', 'crm', 'data-sync', 'deduplication'],
   enabled: false,
   model: 'bedrock:us.anthropic.claude-3-5-haiku-20241022-v1:0',
-  mcpServers: [MCP_SERVER_MAP['filesystem'], MCP_SERVER_MAP['slack']],
+  mcpServers: [
+    MCP_SERVER_MAP['filesystem:0.0.1'],
+    MCP_SERVER_MAP['slack:0.0.1'],
+  ],
   skills: [
-    toAgentSkillSpec(SKILL_MAP['pdf']),
-    toAgentSkillSpec(SKILL_MAP['events']),
+    toAgentSkillSpec(SKILL_MAP['pdf:0.0.1']),
+    toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
   ],
   tools: [],
   environmentName: 'ai-agents-env',
@@ -2415,32 +2489,68 @@ export const SYNC_CRM_CONTACTS_AGENT_SPEC: AgentSpec = {
 // ============================================================================
 
 export const AGENT_SPECS: Record<string, AgentSpec> = {
-  'analyze-campaign-performance': ANALYZE_CAMPAIGN_PERFORMANCE_AGENT_SPEC,
-  'analyze-support-tickets': ANALYZE_SUPPORT_TICKETS_AGENT_SPEC,
-  'audit-inventory-levels': AUDIT_INVENTORY_LEVELS_AGENT_SPEC,
-  'automate-regulatory-reporting': AUTOMATE_REGULATORY_REPORTING_AGENT_SPEC,
-  'classify-route-emails': CLASSIFY_ROUTE_EMAILS_AGENT_SPEC,
-  'comprehensive-sales-analytics': COMPREHENSIVE_SALES_ANALYTICS_AGENT_SPEC,
-  crawler: CRAWLER_AGENT_SPEC,
-  'data-acquisition': DATA_ACQUISITION_AGENT_SPEC,
-  'end-of-month-sales-performance': END_OF_MONTH_SALES_PERFORMANCE_AGENT_SPEC,
-  'extract-data-from-files': EXTRACT_DATA_FROM_FILES_AGENT_SPEC,
-  'financial-viz': FINANCIAL_VIZ_AGENT_SPEC,
-  financial: FINANCIAL_AGENT_SPEC,
-  'generate-weekly-reports': GENERATE_WEEKLY_REPORTS_AGENT_SPEC,
-  'github-agent': GITHUB_AGENT_SPEC,
-  'information-routing': INFORMATION_ROUTING_AGENT_SPEC,
-  'monitor-sales-kpis': MONITOR_SALES_KPIS_AGENT_SPEC,
-  'optimize-dynamic-pricing': OPTIMIZE_DYNAMIC_PRICING_AGENT_SPEC,
-  'optimize-grid-operations': OPTIMIZE_GRID_OPERATIONS_AGENT_SPEC,
-  'process-citizen-requests': PROCESS_CITIZEN_REQUESTS_AGENT_SPEC,
-  'process-clinical-trial-data': PROCESS_CLINICAL_TRIAL_DATA_AGENT_SPEC,
-  'process-financial-transactions': PROCESS_FINANCIAL_TRANSACTIONS_AGENT_SPEC,
-  'simple-base': SIMPLE_BASE_AGENT_SPEC,
-  'simple-full': SIMPLE_FULL_AGENT_SPEC,
-  'spatial-data-analysis': SPATIAL_DATA_ANALYSIS_AGENT_SPEC,
-  'summarize-documents': SUMMARIZE_DOCUMENTS_AGENT_SPEC,
-  'sync-crm-contacts': SYNC_CRM_CONTACTS_AGENT_SPEC,
+  'analyze-campaign-performance': ANALYZE_CAMPAIGN_PERFORMANCE_AGENT_SPEC_0_0_1,
+  'analyze-campaign-performance:0.0.1':
+    ANALYZE_CAMPAIGN_PERFORMANCE_AGENT_SPEC_0_0_1,
+  'analyze-support-tickets': ANALYZE_SUPPORT_TICKETS_AGENT_SPEC_0_0_1,
+  'analyze-support-tickets:0.0.1': ANALYZE_SUPPORT_TICKETS_AGENT_SPEC_0_0_1,
+  'audit-inventory-levels': AUDIT_INVENTORY_LEVELS_AGENT_SPEC_0_0_1,
+  'audit-inventory-levels:0.0.1': AUDIT_INVENTORY_LEVELS_AGENT_SPEC_0_0_1,
+  'automate-regulatory-reporting':
+    AUTOMATE_REGULATORY_REPORTING_AGENT_SPEC_0_0_1,
+  'automate-regulatory-reporting:0.0.1':
+    AUTOMATE_REGULATORY_REPORTING_AGENT_SPEC_0_0_1,
+  'classify-route-emails': CLASSIFY_ROUTE_EMAILS_AGENT_SPEC_0_0_1,
+  'classify-route-emails:0.0.1': CLASSIFY_ROUTE_EMAILS_AGENT_SPEC_0_0_1,
+  'comprehensive-sales-analytics':
+    COMPREHENSIVE_SALES_ANALYTICS_AGENT_SPEC_0_0_1,
+  'comprehensive-sales-analytics:0.0.1':
+    COMPREHENSIVE_SALES_ANALYTICS_AGENT_SPEC_0_0_1,
+  crawler: CRAWLER_AGENT_SPEC_0_0_1,
+  'crawler:0.0.1': CRAWLER_AGENT_SPEC_0_0_1,
+  'data-acquisition': DATA_ACQUISITION_AGENT_SPEC_0_0_1,
+  'data-acquisition:0.0.1': DATA_ACQUISITION_AGENT_SPEC_0_0_1,
+  'end-of-month-sales-performance':
+    END_OF_MONTH_SALES_PERFORMANCE_AGENT_SPEC_0_0_1,
+  'end-of-month-sales-performance:0.0.1':
+    END_OF_MONTH_SALES_PERFORMANCE_AGENT_SPEC_0_0_1,
+  'extract-data-from-files': EXTRACT_DATA_FROM_FILES_AGENT_SPEC_0_0_1,
+  'extract-data-from-files:0.0.1': EXTRACT_DATA_FROM_FILES_AGENT_SPEC_0_0_1,
+  'financial-viz': FINANCIAL_VIZ_AGENT_SPEC_0_0_1,
+  'financial-viz:0.0.1': FINANCIAL_VIZ_AGENT_SPEC_0_0_1,
+  financial: FINANCIAL_AGENT_SPEC_0_0_1,
+  'financial:0.0.1': FINANCIAL_AGENT_SPEC_0_0_1,
+  'generate-weekly-reports': GENERATE_WEEKLY_REPORTS_AGENT_SPEC_0_0_1,
+  'generate-weekly-reports:0.0.1': GENERATE_WEEKLY_REPORTS_AGENT_SPEC_0_0_1,
+  'github-agent': GITHUB_AGENT_SPEC_0_0_1,
+  'github-agent:0.0.1': GITHUB_AGENT_SPEC_0_0_1,
+  'information-routing': INFORMATION_ROUTING_AGENT_SPEC_0_0_1,
+  'information-routing:0.0.1': INFORMATION_ROUTING_AGENT_SPEC_0_0_1,
+  'monitor-sales-kpis': MONITOR_SALES_KPIS_AGENT_SPEC_0_0_1,
+  'monitor-sales-kpis:0.0.1': MONITOR_SALES_KPIS_AGENT_SPEC_0_0_1,
+  'optimize-dynamic-pricing': OPTIMIZE_DYNAMIC_PRICING_AGENT_SPEC_0_0_1,
+  'optimize-dynamic-pricing:0.0.1': OPTIMIZE_DYNAMIC_PRICING_AGENT_SPEC_0_0_1,
+  'optimize-grid-operations': OPTIMIZE_GRID_OPERATIONS_AGENT_SPEC_0_0_1,
+  'optimize-grid-operations:0.0.1': OPTIMIZE_GRID_OPERATIONS_AGENT_SPEC_0_0_1,
+  'process-citizen-requests': PROCESS_CITIZEN_REQUESTS_AGENT_SPEC_0_0_1,
+  'process-citizen-requests:0.0.1': PROCESS_CITIZEN_REQUESTS_AGENT_SPEC_0_0_1,
+  'process-clinical-trial-data': PROCESS_CLINICAL_TRIAL_DATA_AGENT_SPEC_0_0_1,
+  'process-clinical-trial-data:0.0.1':
+    PROCESS_CLINICAL_TRIAL_DATA_AGENT_SPEC_0_0_1,
+  'process-financial-transactions':
+    PROCESS_FINANCIAL_TRANSACTIONS_AGENT_SPEC_0_0_1,
+  'process-financial-transactions:0.0.1':
+    PROCESS_FINANCIAL_TRANSACTIONS_AGENT_SPEC_0_0_1,
+  'simple-base': SIMPLE_BASE_AGENT_SPEC_0_0_1,
+  'simple-base:0.0.1': SIMPLE_BASE_AGENT_SPEC_0_0_1,
+  'simple-full': SIMPLE_FULL_AGENT_SPEC_0_0_1,
+  'simple-full:0.0.1': SIMPLE_FULL_AGENT_SPEC_0_0_1,
+  'spatial-data-analysis': SPATIAL_DATA_ANALYSIS_AGENT_SPEC_0_0_1,
+  'spatial-data-analysis:0.0.1': SPATIAL_DATA_ANALYSIS_AGENT_SPEC_0_0_1,
+  'summarize-documents': SUMMARIZE_DOCUMENTS_AGENT_SPEC_0_0_1,
+  'summarize-documents:0.0.1': SUMMARIZE_DOCUMENTS_AGENT_SPEC_0_0_1,
+  'sync-crm-contacts': SYNC_CRM_CONTACTS_AGENT_SPEC_0_0_1,
+  'sync-crm-contacts:0.0.1': SYNC_CRM_CONTACTS_AGENT_SPEC_0_0_1,
 };
 
 /**
@@ -2470,14 +2580,15 @@ export function listAgentSpecs(prefix?: string): AgentSpec[] {
  */
 export function getAgentSpecRequiredEnvVars(spec: AgentSpec): string[] {
   const vars = new Set<string>();
+  const baseEnvVar = (v: string): string => v.split(':')[0] ?? v;
   for (const server of spec.mcpServers) {
     for (const v of server.requiredEnvVars ?? []) {
-      vars.add(v);
+      vars.add(baseEnvVar(v));
     }
   }
   for (const skill of spec.skills) {
     for (const v of skill.requiredEnvVars ?? []) {
-      vars.add(v);
+      vars.add(baseEnvVar(v));
     }
   }
   return Array.from(vars);

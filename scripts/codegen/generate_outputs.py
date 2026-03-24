@@ -19,6 +19,8 @@ from typing import Any
 
 import yaml
 
+from versioning import ensure_spec_version, version_suffix, versioned_ref
+
 
 def _fmt_list(items: list[str]) -> str:
     """Format a list of strings with double quotes for ruff compliance."""
@@ -50,6 +52,7 @@ def load_specs(specs_dir: Path) -> list[dict[str, Any]]:
     for yaml_file in sorted(specs_dir.rglob("*.yaml")):
         with open(yaml_file) as f:
             spec = yaml.safe_load(f)
+            ensure_spec_version(spec)
             specs.append(spec)
     return specs
 
@@ -77,6 +80,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         '    """Output format specification."""',
         "",
         '    id: str = Field(..., description="Unique output identifier")',
+        '    version: str = Field(default="0.0.1", description="Output version")',
         '    name: str = Field(..., description="Display name")',
         '    description: str = Field(default="", description="Output description")',
         '    icon: str = Field(default="", description="Icon identifier")',
@@ -93,13 +97,15 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
 
     for spec in specs:
         output_id = spec["id"]
-        const_name = f"{output_id.upper().replace('-', '_')}_OUTPUT_SPEC"
+        version = spec["version"]
+        const_name = f"{output_id.upper().replace('-', '_')}_OUTPUT_SPEC{version_suffix(version)}"
         desc = _esc_dq(spec.get("description", "").strip().replace("\n", " "))
 
         lines.extend(
             [
                 f"{const_name} = OutputSpec(",
                 f'    id="{output_id}",',
+                f'    version="{version}",',
                 f'    name="{spec["name"]}",',
                 f'    description="{desc}",',
                 f'    icon="{spec.get("icon", "")}",',
@@ -122,8 +128,10 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
     )
     for spec in specs:
         output_id = spec["id"]
-        const_name = f"{output_id.upper().replace('-', '_')}_OUTPUT_SPEC"
+        version = spec["version"]
+        const_name = f"{output_id.upper().replace('-', '_')}_OUTPUT_SPEC{version_suffix(version)}"
         lines.append(f'    "{output_id}": {const_name},')
+        lines.append(f'    "{versioned_ref(output_id, version)}": {const_name},')
     lines.extend(
         [
             "}",
@@ -170,13 +178,15 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
 
     for spec in specs:
         output_id = spec["id"]
-        const_name = f"{output_id.upper().replace('-', '_')}_OUTPUT_SPEC"
+        version = spec["version"]
+        const_name = f"{output_id.upper().replace('-', '_')}_OUTPUT_SPEC{version_suffix(version)}"
         desc = _esc(spec.get("description", "").strip().replace("\n", " "))
 
         lines.extend(
             [
                 f"export const {const_name}: OutputSpec = {{",
                 f"  id: '{output_id}',",
+                f"  version: '{version}',",
                 f"  name: '{_esc(spec['name'])}',",
                 f"  description: '{desc}',",
                 f"  icon: '{spec.get('icon', '')}',",
@@ -199,8 +209,10 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
     )
     for spec in specs:
         output_id = spec["id"]
-        const_name = f"{output_id.upper().replace('-', '_')}_OUTPUT_SPEC"
+        version = spec["version"]
+        const_name = f"{output_id.upper().replace('-', '_')}_OUTPUT_SPEC{version_suffix(version)}"
         lines.append(f"  '{output_id}': {const_name},")
+        lines.append(f"  '{versioned_ref(output_id, version)}': {const_name},")
     lines.extend(
         [
             "};",

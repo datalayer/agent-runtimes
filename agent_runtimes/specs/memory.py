@@ -24,6 +24,7 @@ class MemorySpec(BaseModel):
     """Specification for a memory backend."""
 
     id: str = Field(..., description="Unique memory identifier")
+    version: str = Field(default="0.0.1", description="Memory spec version")
     name: str = Field(..., description="Display name for the memory backend")
     description: str = Field(default="", description="Memory backend description")
     persistence: str = Field(default="none", description="Persistence level: none, session, cross-session, permanent")
@@ -51,8 +52,9 @@ class Memories(str, Enum):
 # Memory Definitions
 # ============================================================================
 
-EPHEMERAL_MEMORY = MemorySpec(
+EPHEMERAL_MEMORY_0_0_1 = MemorySpec(
     id="ephemeral",
+    version="0.0.1",
     name="Ephemeral Memory",
     description="Simple in-process memory that lives and dies with the agent. Stores facts, preferences, and context in a local dictionary during the agent session. When the agent terminates, all memory is lost. Best suited for short-lived tasks, stateless assistants, and development/testing.",
     persistence="none",
@@ -62,8 +64,9 @@ EPHEMERAL_MEMORY = MemorySpec(
     emoji="⚡",
 )
 
-MEM0_MEMORY = MemorySpec(
+MEM0_MEMORY_0_0_1 = MemorySpec(
     id="mem0",
+    version="0.0.1",
     name="Mem0 Memory",
     description="Universal memory layer powered by Mem0 (mem-zero). Enhances AI agents with an intelligent, persistent memory that remembers user preferences, adapts to individual needs, and continuously learns over time. Supports multi-level memory (User, Session, Agent state) with semantic search, automatic fact extraction, and conflict resolution. 26% more accurate than OpenAI Memory on the LOCOMO benchmark with 90% fewer tokens.",
     persistence="permanent",
@@ -73,8 +76,9 @@ MEM0_MEMORY = MemorySpec(
     emoji="🧠",
 )
 
-MEMU_MEMORY = MemorySpec(
+MEMU_MEMORY_0_0_1 = MemorySpec(
     id="memu",
+    version="0.0.1",
     name="memU Proactive Memory",
     description="Proactive memory framework built for 24/7 always-on agents. Continuously captures and understands user intent, enabling agents that can anticipate needs and act proactively. Organizes memory as a hierarchical file system (categories → items → resources) with auto-categorization, cross-references, and pattern detection. Reduces LLM token cost by caching insights and avoiding redundant calls. 92% average accuracy on the LoCoMo benchmark.",
     persistence="permanent",
@@ -84,8 +88,9 @@ MEMU_MEMORY = MemorySpec(
     emoji="👁️",
 )
 
-SIMPLEMEM_MEMORY = MemorySpec(
+SIMPLEMEM_MEMORY_0_0_1 = MemorySpec(
     id="simplemem",
+    version="0.0.1",
     name="SimpleMem Lifelong Memory",
     description="Efficient lifelong memory framework based on semantic lossless compression. Maximizes information density and token utilization through a three-stage pipeline: Semantic Structured Compression, Online Semantic Synthesis, and Intent-Aware Retrieval Planning. Achieves 43.24% F1 score on LoCoMo (26.4% above Mem0) with 30x fewer tokens than full-context methods. Supports cross-session memory with 64% improvement over Claude-Mem.",
     persistence="cross-session",
@@ -101,10 +106,14 @@ SIMPLEMEM_MEMORY = MemorySpec(
 # ============================================================================
 
 MEMORY_CATALOGUE: dict[str, MemorySpec] = {
-    "ephemeral": EPHEMERAL_MEMORY,
-    "mem0": MEM0_MEMORY,
-    "memu": MEMU_MEMORY,
-    "simplemem": SIMPLEMEM_MEMORY,
+    "ephemeral": EPHEMERAL_MEMORY_0_0_1,
+    "ephemeral:0.0.1": EPHEMERAL_MEMORY_0_0_1,
+    "mem0": MEM0_MEMORY_0_0_1,
+    "mem0:0.0.1": MEM0_MEMORY_0_0_1,
+    "memu": MEMU_MEMORY_0_0_1,
+    "memu:0.0.1": MEMU_MEMORY_0_0_1,
+    "simplemem": SIMPLEMEM_MEMORY_0_0_1,
+    "simplemem:0.0.1": SIMPLEMEM_MEMORY_0_0_1,
 }
 
 

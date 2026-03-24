@@ -30,6 +30,7 @@ class TriggerSpec(BaseModel):
     """Trigger type specification."""
 
     id: str = Field(..., description="Unique trigger identifier")
+    version: str = Field(default="0.0.1", description="Trigger version")
     name: str = Field(..., description="Display name")
     description: str = Field(default="", description="Trigger description")
     type: Literal["once", "schedule", "event"] = Field(..., description="Trigger execution mode")
@@ -40,8 +41,9 @@ class TriggerSpec(BaseModel):
 # Trigger Definitions
 # ============================================================================
 
-EVENT_TRIGGER_SPEC = TriggerSpec(
+EVENT_TRIGGER_SPEC_0_0_1 = TriggerSpec(
     id="event",
+    version="0.0.1",
     name="Event-Based",
     description="Trigger on specific events such as a webhook call, API request, database change, file upload, or email arrival.",
     type="event",
@@ -53,8 +55,9 @@ EVENT_TRIGGER_SPEC = TriggerSpec(
     ],
 )
 
-ONCE_TRIGGER_SPEC = TriggerSpec(
+ONCE_TRIGGER_SPEC_0_0_1 = TriggerSpec(
     id="once",
+    version="0.0.1",
     name="Run Once",
     description="Execute agent immediately after deployment.",
     type="once",
@@ -63,8 +66,9 @@ ONCE_TRIGGER_SPEC = TriggerSpec(
     ],
 )
 
-SCHEDULE_TRIGGER_SPEC = TriggerSpec(
+SCHEDULE_TRIGGER_SPEC_0_0_1 = TriggerSpec(
     id="schedule",
+    version="0.0.1",
     name="Schedule",
     description="Run on a recurring schedule using a cron expression (e.g. daily at 9 AM, every Monday, monthly on the 1st).",
     type="schedule",
@@ -80,9 +84,12 @@ SCHEDULE_TRIGGER_SPEC = TriggerSpec(
 # ============================================================================
 
 TRIGGER_CATALOG: Dict[str, TriggerSpec] = {
-    "event": EVENT_TRIGGER_SPEC,
-    "once": ONCE_TRIGGER_SPEC,
-    "schedule": SCHEDULE_TRIGGER_SPEC,
+    "event": EVENT_TRIGGER_SPEC_0_0_1,
+    "event:0.0.1": EVENT_TRIGGER_SPEC_0_0_1,
+    "once": ONCE_TRIGGER_SPEC_0_0_1,
+    "once:0.0.1": ONCE_TRIGGER_SPEC_0_0_1,
+    "schedule": SCHEDULE_TRIGGER_SPEC_0_0_1,
+    "schedule:0.0.1": SCHEDULE_TRIGGER_SPEC_0_0_1,
 }
 
 

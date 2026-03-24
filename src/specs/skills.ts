@@ -14,6 +14,7 @@
 
 export interface SkillSpec {
   id: string;
+  version: string;
   name: string;
   description: string;
   module: string;
@@ -30,12 +31,13 @@ export interface SkillSpec {
 // Skill Definitions
 // ============================================================================
 
-export const CRAWL_SKILL_SPEC: SkillSpec = {
+export const CRAWL_SKILL_SPEC_0_0_1: SkillSpec = {
   id: 'crawl',
+  version: '0.0.1',
   name: 'Web Crawl Skill',
   description: 'Web crawling and content extraction capabilities',
   module: 'agent_skills.crawl',
-  requiredEnvVars: ['TAVILY_API_KEY'],
+  requiredEnvVars: ['TAVILY_API_KEY:0.0.1'],
   optionalEnvVars: [],
   dependencies: ['requests>=2.31.0', 'beautifulsoup4>=4.12.0'],
   tags: ['web', 'crawl', 'scraping'],
@@ -44,8 +46,9 @@ export const CRAWL_SKILL_SPEC: SkillSpec = {
   enabled: true,
 };
 
-export const EVENTS_SKILL_SPEC: SkillSpec = {
+export const EVENTS_SKILL_SPEC_0_0_1: SkillSpec = {
   id: 'events',
+  version: '0.0.1',
   name: 'Events Skill',
   description: 'Event generation, enrichment, and lifecycle orchestration',
   module: 'agent_skills.events',
@@ -58,12 +61,13 @@ export const EVENTS_SKILL_SPEC: SkillSpec = {
   enabled: true,
 };
 
-export const GITHUB_SKILL_SPEC: SkillSpec = {
+export const GITHUB_SKILL_SPEC_0_0_1: SkillSpec = {
   id: 'github',
+  version: '0.0.1',
   name: 'GitHub Skill',
   description: 'GitHub repository management and code operations',
   module: 'agent_skills.github',
-  requiredEnvVars: ['GITHUB_TOKEN'],
+  requiredEnvVars: ['GITHUB_TOKEN:0.0.1'],
   optionalEnvVars: [],
   dependencies: ['PyGithub>=2.1.0'],
   tags: ['github', 'git', 'code'],
@@ -72,8 +76,9 @@ export const GITHUB_SKILL_SPEC: SkillSpec = {
   enabled: true,
 };
 
-export const PDF_SKILL_SPEC: SkillSpec = {
+export const PDF_SKILL_SPEC_0_0_1: SkillSpec = {
   id: 'pdf',
+  version: '0.0.1',
   name: 'PDF Processing Skill',
   description: 'PDF document reading, parsing, and extraction',
   module: 'agent_skills.pdf',
@@ -91,10 +96,14 @@ export const PDF_SKILL_SPEC: SkillSpec = {
 // ============================================================================
 
 export const SKILL_CATALOG: Record<string, SkillSpec> = {
-  crawl: CRAWL_SKILL_SPEC,
-  events: EVENTS_SKILL_SPEC,
-  github: GITHUB_SKILL_SPEC,
-  pdf: PDF_SKILL_SPEC,
+  crawl: CRAWL_SKILL_SPEC_0_0_1,
+  'crawl:0.0.1': CRAWL_SKILL_SPEC_0_0_1,
+  events: EVENTS_SKILL_SPEC_0_0_1,
+  'events:0.0.1': EVENTS_SKILL_SPEC_0_0_1,
+  github: GITHUB_SKILL_SPEC_0_0_1,
+  'github:0.0.1': GITHUB_SKILL_SPEC_0_0_1,
+  pdf: PDF_SKILL_SPEC_0_0_1,
+  'pdf:0.0.1': PDF_SKILL_SPEC_0_0_1,
 };
 
 export function getSkillSpecs(): SkillSpec[] {

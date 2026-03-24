@@ -16,8 +16,9 @@ import type { TeamSpec } from '../../types/types';
 // Team Definitions
 // ============================================================================
 
-export const ANALYZE_CAMPAIGN_PERFORMANCE_TEAM_SPEC: TeamSpec = {
+export const ANALYZE_CAMPAIGN_PERFORMANCE_TEAM_SPEC_0_0_1: TeamSpec = {
   id: 'analyze-campaign-performance',
+  version: '0.0.1',
   name: 'Analyze Campaign Performance',
   description: `A multi-agent team that unifies marketing data from Google Ads, Meta, TikTok, LinkedIn, GA4, CRM, and email platforms. Normalises metrics into a unified view, detects performance anomalies in real time, and generates budget reallocation recommendations to maximise ROAS.`,
   tags: [
@@ -32,7 +33,7 @@ export const ANALYZE_CAMPAIGN_PERFORMANCE_TEAM_SPEC: TeamSpec = {
   icon: 'megaphone',
   emoji: '📢',
   color: '#8250df',
-  agentSpecId: 'analyze-campaign-performance',
+  agentSpecId: 'analyze-campaign-performance:0.0.1',
   orchestrationProtocol: 'datalayer',
   executionMode: 'sequential',
   supervisor: {
@@ -148,8 +149,9 @@ export const ANALYZE_CAMPAIGN_PERFORMANCE_TEAM_SPEC: TeamSpec = {
   },
 };
 
-export const ANALYZE_SUPPORT_TICKETS_TEAM_SPEC: TeamSpec = {
+export const ANALYZE_SUPPORT_TICKETS_TEAM_SPEC_0_0_1: TeamSpec = {
   id: 'analyze-support-tickets',
+  version: '0.0.1',
   name: 'Analyze Support Tickets',
   description: `A multi-agent team that triages incoming support tickets, categorizes by urgency and topic, identifies recurring patterns, and generates resolution recommendations with escalation paths.`,
   tags: ['analytics', 'data', 'support', 'tickets'],
@@ -157,7 +159,7 @@ export const ANALYZE_SUPPORT_TICKETS_TEAM_SPEC: TeamSpec = {
   icon: 'issue-opened',
   emoji: '🎫',
   color: '#bf8700',
-  agentSpecId: 'analyze-support-tickets',
+  agentSpecId: 'analyze-support-tickets:0.0.1',
   orchestrationProtocol: 'datalayer',
   executionMode: 'sequential',
   supervisor: { name: 'Support Orchestrator Agent', model: 'openai-gpt-4-1' },
@@ -242,8 +244,9 @@ export const ANALYZE_SUPPORT_TICKETS_TEAM_SPEC: TeamSpec = {
   },
 };
 
-export const AUDIT_INVENTORY_LEVELS_TEAM_SPEC: TeamSpec = {
+export const AUDIT_INVENTORY_LEVELS_TEAM_SPEC_0_0_1: TeamSpec = {
   id: 'audit-inventory-levels',
+  version: '0.0.1',
   name: 'Audit Inventory Levels',
   description: `A multi-agent team that monitors inventory levels across warehouses, detects discrepancies between physical and system counts, forecasts demand by SKU, and generates automated reorder recommendations.`,
   tags: ['finance', 'automation', 'inventory', 'supply-chain'],
@@ -251,7 +254,7 @@ export const AUDIT_INVENTORY_LEVELS_TEAM_SPEC: TeamSpec = {
   icon: 'package',
   emoji: '📦',
   color: '#0969da',
-  agentSpecId: 'audit-inventory-levels',
+  agentSpecId: 'audit-inventory-levels:0.0.1',
   orchestrationProtocol: 'datalayer',
   executionMode: 'sequential',
   supervisor: { name: 'Inventory Orchestrator Agent', model: 'openai-gpt-4-1' },
@@ -358,8 +361,9 @@ export const AUDIT_INVENTORY_LEVELS_TEAM_SPEC: TeamSpec = {
   },
 };
 
-export const AUTOMATE_REGULATORY_REPORTING_TEAM_SPEC: TeamSpec = {
+export const AUTOMATE_REGULATORY_REPORTING_TEAM_SPEC_0_0_1: TeamSpec = {
   id: 'automate-regulatory-reporting',
+  version: '0.0.1',
   name: 'Automate Regulatory Reporting',
   description: `A multi-agent team that automates end-to-end regulatory reporting for financial institutions. Ingests data from trading systems, risk engines, and accounting platforms, reconciles positions, computes risk metrics, validates against regulatory rules (Basel III/IV, MiFID II, SOX), and generates submission-ready compliance reports with full audit trails.`,
   tags: ['finance', 'compliance', 'regulatory', 'risk', 'banking', 'audit'],
@@ -367,7 +371,7 @@ export const AUTOMATE_REGULATORY_REPORTING_TEAM_SPEC: TeamSpec = {
   icon: 'shield-check',
   emoji: '🏦',
   color: '#0969da',
-  agentSpecId: 'automate-regulatory-reporting',
+  agentSpecId: 'automate-regulatory-reporting:0.0.1',
   orchestrationProtocol: 'datalayer',
   executionMode: 'sequential',
   supervisor: {
@@ -482,8 +486,9 @@ export const AUTOMATE_REGULATORY_REPORTING_TEAM_SPEC: TeamSpec = {
   },
 };
 
-export const COMPREHENSIVE_SALES_ANALYTICS_TEAM_SPEC: TeamSpec = {
+export const COMPREHENSIVE_SALES_ANALYTICS_TEAM_SPEC_0_0_1: TeamSpec = {
   id: 'comprehensive-sales-analytics',
+  version: '0.0.1',
   name: 'Comprehensive Sales Analytics',
   description: `A multi-agent team that replaces a single KPI monitor with four specialized agents: a Data Collector that pulls real-time CRM metrics, an Anomaly Detector that flags statistical outliers, a Trend Analyzer that identifies patterns and forecasts, and a Report Generator that compiles executive dashboards and sends alerts. Together they deliver deeper insights, faster detection, and richer reporting than any single agent could.`,
   tags: ['sales', 'analytics', 'kpi', 'monitoring', 'horizontal'],
@@ -491,7 +496,7 @@ export const COMPREHENSIVE_SALES_ANALYTICS_TEAM_SPEC: TeamSpec = {
   icon: 'graph',
   emoji: '📈',
   color: '#1a7f37',
-  agentSpecId: 'comprehensive-sales-analytics',
+  agentSpecId: 'comprehensive-sales-analytics:0.0.1',
   orchestrationProtocol: 'datalayer',
   executionMode: 'sequential',
   supervisor: {
@@ -591,8 +596,9 @@ export const COMPREHENSIVE_SALES_ANALYTICS_TEAM_SPEC: TeamSpec = {
   },
 };
 
-export const OPTIMIZE_GRID_OPERATIONS_TEAM_SPEC: TeamSpec = {
+export const OPTIMIZE_GRID_OPERATIONS_TEAM_SPEC_0_0_1: TeamSpec = {
   id: 'optimize-grid-operations',
+  version: '0.0.1',
   name: 'Optimize Grid Operations',
   description: `A multi-agent team that processes millions of IoT sensor data points from smart meters, substations, and renewable generation assets. Predicts equipment failures 2–4 weeks in advance, optimises load balancing across the grid, and reduces unplanned downtime by 50%.`,
   tags: [
@@ -607,7 +613,7 @@ export const OPTIMIZE_GRID_OPERATIONS_TEAM_SPEC: TeamSpec = {
   icon: 'zap',
   emoji: '⚡',
   color: '#1a7f37',
-  agentSpecId: 'optimize-grid-operations',
+  agentSpecId: 'optimize-grid-operations:0.0.1',
   orchestrationProtocol: 'datalayer',
   executionMode: 'sequential',
   supervisor: {
@@ -722,8 +728,9 @@ export const OPTIMIZE_GRID_OPERATIONS_TEAM_SPEC: TeamSpec = {
   },
 };
 
-export const PROCESS_CITIZEN_REQUESTS_TEAM_SPEC: TeamSpec = {
+export const PROCESS_CITIZEN_REQUESTS_TEAM_SPEC_0_0_1: TeamSpec = {
   id: 'process-citizen-requests',
+  version: '0.0.1',
   name: 'Process Citizen Requests',
   description: `A multi-agent team that automates citizen request processing for government agencies. Classifies and triages permits, FOIA requests, and benefit claims from multiple channels. Models policy impacts across population datasets and ensures every automated decision is explainable, auditable, and compliant with transparency mandates.`,
   tags: [
@@ -738,7 +745,7 @@ export const PROCESS_CITIZEN_REQUESTS_TEAM_SPEC: TeamSpec = {
   icon: 'organization',
   emoji: '🏛️',
   color: '#0550ae',
-  agentSpecId: 'process-citizen-requests',
+  agentSpecId: 'process-citizen-requests:0.0.1',
   orchestrationProtocol: 'datalayer',
   executionMode: 'sequential',
   supervisor: {
@@ -853,8 +860,9 @@ export const PROCESS_CITIZEN_REQUESTS_TEAM_SPEC: TeamSpec = {
   },
 };
 
-export const PROCESS_CLINICAL_TRIAL_DATA_TEAM_SPEC: TeamSpec = {
+export const PROCESS_CLINICAL_TRIAL_DATA_TEAM_SPEC_0_0_1: TeamSpec = {
   id: 'process-clinical-trial-data',
+  version: '0.0.1',
   name: 'Process Clinical Trial Data',
   description: `A multi-agent team that automates clinical trial data processing across dozens of trial sites. Harmonises patient records and lab results to CDISC SDTM format, detects safety signals and adverse events in real time, and prepares submission-ready datasets — all with strict HIPAA and GxP compliance guardrails.`,
   tags: [
@@ -868,7 +876,7 @@ export const PROCESS_CLINICAL_TRIAL_DATA_TEAM_SPEC: TeamSpec = {
   icon: 'heart',
   emoji: '🏥',
   color: '#cf222e',
-  agentSpecId: 'process-clinical-trial-data',
+  agentSpecId: 'process-clinical-trial-data:0.0.1',
   orchestrationProtocol: 'datalayer',
   executionMode: 'sequential',
   supervisor: {
@@ -983,8 +991,9 @@ export const PROCESS_CLINICAL_TRIAL_DATA_TEAM_SPEC: TeamSpec = {
   },
 };
 
-export const SYNC_CRM_CONTACTS_TEAM_SPEC: TeamSpec = {
+export const SYNC_CRM_CONTACTS_TEAM_SPEC_0_0_1: TeamSpec = {
   id: 'sync-crm-contacts',
+  version: '0.0.1',
   name: 'Sync CRM Contacts',
   description: `A multi-agent team that collects and aggregates contact data from multiple CRM sources, analyzes and deduplicates records, writes cleaned data back, and generates sync summary reports.`,
   tags: ['sales', 'crm', 'data-sync', 'deduplication'],
@@ -992,7 +1001,7 @@ export const SYNC_CRM_CONTACTS_TEAM_SPEC: TeamSpec = {
   icon: 'people',
   emoji: '🔄',
   color: '#0969da',
-  agentSpecId: 'sync-crm-contacts',
+  agentSpecId: 'sync-crm-contacts:0.0.1',
   orchestrationProtocol: 'datalayer',
   executionMode: 'sequential',
   supervisor: {
@@ -1092,15 +1101,30 @@ export const SYNC_CRM_CONTACTS_TEAM_SPEC: TeamSpec = {
 // ============================================================================
 
 export const TEAM_SPECS: Record<string, TeamSpec> = {
-  'analyze-campaign-performance': ANALYZE_CAMPAIGN_PERFORMANCE_TEAM_SPEC,
-  'analyze-support-tickets': ANALYZE_SUPPORT_TICKETS_TEAM_SPEC,
-  'audit-inventory-levels': AUDIT_INVENTORY_LEVELS_TEAM_SPEC,
-  'automate-regulatory-reporting': AUTOMATE_REGULATORY_REPORTING_TEAM_SPEC,
-  'comprehensive-sales-analytics': COMPREHENSIVE_SALES_ANALYTICS_TEAM_SPEC,
-  'optimize-grid-operations': OPTIMIZE_GRID_OPERATIONS_TEAM_SPEC,
-  'process-citizen-requests': PROCESS_CITIZEN_REQUESTS_TEAM_SPEC,
-  'process-clinical-trial-data': PROCESS_CLINICAL_TRIAL_DATA_TEAM_SPEC,
-  'sync-crm-contacts': SYNC_CRM_CONTACTS_TEAM_SPEC,
+  'analyze-campaign-performance': ANALYZE_CAMPAIGN_PERFORMANCE_TEAM_SPEC_0_0_1,
+  'analyze-campaign-performance:0.0.1':
+    ANALYZE_CAMPAIGN_PERFORMANCE_TEAM_SPEC_0_0_1,
+  'analyze-support-tickets': ANALYZE_SUPPORT_TICKETS_TEAM_SPEC_0_0_1,
+  'analyze-support-tickets:0.0.1': ANALYZE_SUPPORT_TICKETS_TEAM_SPEC_0_0_1,
+  'audit-inventory-levels': AUDIT_INVENTORY_LEVELS_TEAM_SPEC_0_0_1,
+  'audit-inventory-levels:0.0.1': AUDIT_INVENTORY_LEVELS_TEAM_SPEC_0_0_1,
+  'automate-regulatory-reporting':
+    AUTOMATE_REGULATORY_REPORTING_TEAM_SPEC_0_0_1,
+  'automate-regulatory-reporting:0.0.1':
+    AUTOMATE_REGULATORY_REPORTING_TEAM_SPEC_0_0_1,
+  'comprehensive-sales-analytics':
+    COMPREHENSIVE_SALES_ANALYTICS_TEAM_SPEC_0_0_1,
+  'comprehensive-sales-analytics:0.0.1':
+    COMPREHENSIVE_SALES_ANALYTICS_TEAM_SPEC_0_0_1,
+  'optimize-grid-operations': OPTIMIZE_GRID_OPERATIONS_TEAM_SPEC_0_0_1,
+  'optimize-grid-operations:0.0.1': OPTIMIZE_GRID_OPERATIONS_TEAM_SPEC_0_0_1,
+  'process-citizen-requests': PROCESS_CITIZEN_REQUESTS_TEAM_SPEC_0_0_1,
+  'process-citizen-requests:0.0.1': PROCESS_CITIZEN_REQUESTS_TEAM_SPEC_0_0_1,
+  'process-clinical-trial-data': PROCESS_CLINICAL_TRIAL_DATA_TEAM_SPEC_0_0_1,
+  'process-clinical-trial-data:0.0.1':
+    PROCESS_CLINICAL_TRIAL_DATA_TEAM_SPEC_0_0_1,
+  'sync-crm-contacts': SYNC_CRM_CONTACTS_TEAM_SPEC_0_0_1,
+  'sync-crm-contacts:0.0.1': SYNC_CRM_CONTACTS_TEAM_SPEC_0_0_1,
 };
 
 /**

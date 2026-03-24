@@ -18,8 +18,9 @@ import type { NotificationChannelSpec } from '../types/types';
 // Notification Channel Definitions
 // ============================================================================
 
-export const EMAIL_NOTIFICATION_SPEC: NotificationChannelSpec = {
+export const EMAIL_NOTIFICATION_SPEC_0_0_1: NotificationChannelSpec = {
   id: 'email',
+  version: '0.0.1',
   name: 'Email',
   description:
     'Send notifications via email when agent events occur. Supports completion alerts, failure reports, and summary digests.',
@@ -51,8 +52,9 @@ export const EMAIL_NOTIFICATION_SPEC: NotificationChannelSpec = {
   ],
 };
 
-export const SLACK_NOTIFICATION_SPEC: NotificationChannelSpec = {
+export const SLACK_NOTIFICATION_SPEC_0_0_1: NotificationChannelSpec = {
   id: 'slack',
+  version: '0.0.1',
   name: 'Slack',
   description:
     'Post notifications to a Slack channel or direct message when agent events occur. Supports rich message formatting with blocks.',
@@ -84,8 +86,9 @@ export const SLACK_NOTIFICATION_SPEC: NotificationChannelSpec = {
   ],
 };
 
-export const TEAMS_NOTIFICATION_SPEC: NotificationChannelSpec = {
+export const TEAMS_NOTIFICATION_SPEC_0_0_1: NotificationChannelSpec = {
   id: 'teams',
+  version: '0.0.1',
   name: 'Teams',
   description:
     'Post notifications to a Microsoft Teams channel via incoming webhook connector when agent events occur.',
@@ -110,8 +113,9 @@ export const TEAMS_NOTIFICATION_SPEC: NotificationChannelSpec = {
   ],
 };
 
-export const WEBHOOK_NOTIFICATION_SPEC: NotificationChannelSpec = {
+export const WEBHOOK_NOTIFICATION_SPEC_0_0_1: NotificationChannelSpec = {
   id: 'webhook',
+  version: '0.0.1',
   name: 'Webhook',
   description:
     'Send notifications to a custom HTTP endpoint via POST request. Payload includes event type, agent metadata, and optional output.',
@@ -148,10 +152,14 @@ export const WEBHOOK_NOTIFICATION_SPEC: NotificationChannelSpec = {
 // ============================================================================
 
 export const NOTIFICATION_CATALOG: Record<string, NotificationChannelSpec> = {
-  email: EMAIL_NOTIFICATION_SPEC,
-  slack: SLACK_NOTIFICATION_SPEC,
-  teams: TEAMS_NOTIFICATION_SPEC,
-  webhook: WEBHOOK_NOTIFICATION_SPEC,
+  email: EMAIL_NOTIFICATION_SPEC_0_0_1,
+  'email:0.0.1': EMAIL_NOTIFICATION_SPEC_0_0_1,
+  slack: SLACK_NOTIFICATION_SPEC_0_0_1,
+  'slack:0.0.1': SLACK_NOTIFICATION_SPEC_0_0_1,
+  teams: TEAMS_NOTIFICATION_SPEC_0_0_1,
+  'teams:0.0.1': TEAMS_NOTIFICATION_SPEC_0_0_1,
+  webhook: WEBHOOK_NOTIFICATION_SPEC_0_0_1,
+  'webhook:0.0.1': WEBHOOK_NOTIFICATION_SPEC_0_0_1,
 };
 
 export function getNotificationSpecs(): NotificationChannelSpec[] {

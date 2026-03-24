@@ -11,7 +11,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { Button, Text, Spinner } from '@primer/react';
+import { Button, Text } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import {
   ChevronDownIcon,

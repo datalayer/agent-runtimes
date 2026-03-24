@@ -14,6 +14,7 @@
 
 export interface EnvvarSpec {
   id: string;
+  version: string;
   name: string;
   description: string;
   registrationUrl?: string;
@@ -26,8 +27,9 @@ export interface EnvvarSpec {
 // Environment Variable Definitions
 // ============================================================================
 
-export const ALPHAVANTAGE_API_KEY_SPEC: EnvvarSpec = {
+export const ALPHAVANTAGE_API_KEY_SPEC_0_0_1: EnvvarSpec = {
   id: 'ALPHAVANTAGE_API_KEY',
+  version: '0.0.1',
   name: 'Alpha Vantage API Key',
   description:
     'API key for accessing Alpha Vantage financial market data and stock information. Provides real-time and historical stock prices, forex data, and cryptocurrency information.',
@@ -37,8 +39,9 @@ export const ALPHAVANTAGE_API_KEY_SPEC: EnvvarSpec = {
   emoji: '🔑',
 };
 
-export const GITHUB_TOKEN_SPEC: EnvvarSpec = {
+export const GITHUB_TOKEN_SPEC_0_0_1: EnvvarSpec = {
   id: 'GITHUB_TOKEN',
+  version: '0.0.1',
   name: 'GitHub Token',
   description:
     'GitHub API token for repository management and code operations. Required for GitHub MCP server and GitHub skill to interact with GitHub repositories programmatically.',
@@ -48,8 +51,9 @@ export const GITHUB_TOKEN_SPEC: EnvvarSpec = {
   emoji: '🔑',
 };
 
-export const GOOGLE_OAUTH_CLIENT_ID_SPEC: EnvvarSpec = {
+export const GOOGLE_OAUTH_CLIENT_ID_SPEC_0_0_1: EnvvarSpec = {
   id: 'GOOGLE_OAUTH_CLIENT_ID',
+  version: '0.0.1',
   name: 'Google OAuth Client ID',
   description:
     'OAuth 2.0 client ID for Google Workspace authentication. Required for Google Drive, Gmail, Calendar, and Docs integration through the Google Workspace MCP server.',
@@ -59,8 +63,9 @@ export const GOOGLE_OAUTH_CLIENT_ID_SPEC: EnvvarSpec = {
   emoji: '🔑',
 };
 
-export const GOOGLE_OAUTH_CLIENT_SECRET_SPEC: EnvvarSpec = {
+export const GOOGLE_OAUTH_CLIENT_SECRET_SPEC_0_0_1: EnvvarSpec = {
   id: 'GOOGLE_OAUTH_CLIENT_SECRET',
+  version: '0.0.1',
   name: 'Google OAuth Client Secret',
   description:
     'OAuth 2.0 client secret for Google Workspace authentication. Used in conjunction with client ID for secure API access to Google services.',
@@ -77,8 +82,9 @@ export const GOOGLE_OAUTH_CLIENT_SECRET_SPEC: EnvvarSpec = {
   emoji: '🔒',
 };
 
-export const HF_TOKEN_SPEC: EnvvarSpec = {
+export const HF_TOKEN_SPEC_0_0_1: EnvvarSpec = {
   id: 'HF_TOKEN',
+  version: '0.0.1',
   name: 'Hugging Face Token',
   description:
     'Access token for Hugging Face API. Required for Hugging Face MCP server authentication. Create a READ token from your settings.',
@@ -88,8 +94,9 @@ export const HF_TOKEN_SPEC: EnvvarSpec = {
   emoji: '🔑',
 };
 
-export const KAGGLE_TOKEN_SPEC: EnvvarSpec = {
+export const KAGGLE_TOKEN_SPEC_0_0_1: EnvvarSpec = {
   id: 'KAGGLE_TOKEN',
+  version: '0.0.1',
   name: 'Kaggle API Token',
   description:
     'API token for accessing Kaggle datasets, competitions, notebooks, and models. Required for Kaggle MCP server authentication.',
@@ -99,8 +106,9 @@ export const KAGGLE_TOKEN_SPEC: EnvvarSpec = {
   emoji: '🔑',
 };
 
-export const SLACK_BOT_TOKEN_SPEC: EnvvarSpec = {
+export const SLACK_BOT_TOKEN_SPEC_0_0_1: EnvvarSpec = {
   id: 'SLACK_BOT_TOKEN',
+  version: '0.0.1',
   name: 'Slack Bot Token',
   description:
     'OAuth token for Slack bot authentication. Required for Slack MCP server to send messages, manage channels, and interact with workspace members.',
@@ -110,8 +118,9 @@ export const SLACK_BOT_TOKEN_SPEC: EnvvarSpec = {
   emoji: '🔑',
 };
 
-export const SLACK_CHANNEL_IDS_SPEC: EnvvarSpec = {
+export const SLACK_CHANNEL_IDS_SPEC_0_0_1: EnvvarSpec = {
   id: 'SLACK_CHANNEL_IDS',
+  version: '0.0.1',
   name: 'Slack Channel IDs',
   description:
     'Comma-separated list of Slack channel IDs that the bot is allowed to access. Restricts bot operations to specific channels for security and organization.',
@@ -120,8 +129,9 @@ export const SLACK_CHANNEL_IDS_SPEC: EnvvarSpec = {
   emoji: undefined,
 };
 
-export const SLACK_TEAM_ID_SPEC: EnvvarSpec = {
+export const SLACK_TEAM_ID_SPEC_0_0_1: EnvvarSpec = {
   id: 'SLACK_TEAM_ID',
+  version: '0.0.1',
   name: 'Slack Team ID',
   description:
     'Unique identifier for the Slack workspace (team). Required to specify which workspace the bot should connect to.',
@@ -131,8 +141,9 @@ export const SLACK_TEAM_ID_SPEC: EnvvarSpec = {
   emoji: '🏢',
 };
 
-export const TAVILY_API_KEY_SPEC: EnvvarSpec = {
+export const TAVILY_API_KEY_SPEC_0_0_1: EnvvarSpec = {
   id: 'TAVILY_API_KEY',
+  version: '0.0.1',
   name: 'Tavily API Key',
   description:
     'API key for Tavily web search and research capabilities. Required for web crawling, content extraction, and search operations.',
@@ -147,16 +158,26 @@ export const TAVILY_API_KEY_SPEC: EnvvarSpec = {
 // ============================================================================
 
 export const ENVVAR_CATALOG: Record<string, EnvvarSpec> = {
-  ALPHAVANTAGE_API_KEY: ALPHAVANTAGE_API_KEY_SPEC,
-  GITHUB_TOKEN: GITHUB_TOKEN_SPEC,
-  GOOGLE_OAUTH_CLIENT_ID: GOOGLE_OAUTH_CLIENT_ID_SPEC,
-  GOOGLE_OAUTH_CLIENT_SECRET: GOOGLE_OAUTH_CLIENT_SECRET_SPEC,
-  HF_TOKEN: HF_TOKEN_SPEC,
-  KAGGLE_TOKEN: KAGGLE_TOKEN_SPEC,
-  SLACK_BOT_TOKEN: SLACK_BOT_TOKEN_SPEC,
-  SLACK_CHANNEL_IDS: SLACK_CHANNEL_IDS_SPEC,
-  SLACK_TEAM_ID: SLACK_TEAM_ID_SPEC,
-  TAVILY_API_KEY: TAVILY_API_KEY_SPEC,
+  ALPHAVANTAGE_API_KEY: ALPHAVANTAGE_API_KEY_SPEC_0_0_1,
+  'ALPHAVANTAGE_API_KEY:0.0.1': ALPHAVANTAGE_API_KEY_SPEC_0_0_1,
+  GITHUB_TOKEN: GITHUB_TOKEN_SPEC_0_0_1,
+  'GITHUB_TOKEN:0.0.1': GITHUB_TOKEN_SPEC_0_0_1,
+  GOOGLE_OAUTH_CLIENT_ID: GOOGLE_OAUTH_CLIENT_ID_SPEC_0_0_1,
+  'GOOGLE_OAUTH_CLIENT_ID:0.0.1': GOOGLE_OAUTH_CLIENT_ID_SPEC_0_0_1,
+  GOOGLE_OAUTH_CLIENT_SECRET: GOOGLE_OAUTH_CLIENT_SECRET_SPEC_0_0_1,
+  'GOOGLE_OAUTH_CLIENT_SECRET:0.0.1': GOOGLE_OAUTH_CLIENT_SECRET_SPEC_0_0_1,
+  HF_TOKEN: HF_TOKEN_SPEC_0_0_1,
+  'HF_TOKEN:0.0.1': HF_TOKEN_SPEC_0_0_1,
+  KAGGLE_TOKEN: KAGGLE_TOKEN_SPEC_0_0_1,
+  'KAGGLE_TOKEN:0.0.1': KAGGLE_TOKEN_SPEC_0_0_1,
+  SLACK_BOT_TOKEN: SLACK_BOT_TOKEN_SPEC_0_0_1,
+  'SLACK_BOT_TOKEN:0.0.1': SLACK_BOT_TOKEN_SPEC_0_0_1,
+  SLACK_CHANNEL_IDS: SLACK_CHANNEL_IDS_SPEC_0_0_1,
+  'SLACK_CHANNEL_IDS:0.0.1': SLACK_CHANNEL_IDS_SPEC_0_0_1,
+  SLACK_TEAM_ID: SLACK_TEAM_ID_SPEC_0_0_1,
+  'SLACK_TEAM_ID:0.0.1': SLACK_TEAM_ID_SPEC_0_0_1,
+  TAVILY_API_KEY: TAVILY_API_KEY_SPEC_0_0_1,
+  'TAVILY_API_KEY:0.0.1': TAVILY_API_KEY_SPEC_0_0_1,
 };
 
 export function getEnvvarSpec(envvarId: string): EnvvarSpec {

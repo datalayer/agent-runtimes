@@ -20,6 +20,8 @@ from typing import Any, Dict, List
 
 import yaml
 
+from versioning import ensure_spec_version, version_suffix, versioned_ref
+
 
 def _make_const_name(team_id: str) -> str:
     """Convert a team ID to a constant name (e.g., 'analyze-campaign-performance' -> 'ANALYZE_CAMPAIGN_PERFORMANCE_TEAM_SPEC')."""
@@ -86,6 +88,7 @@ def load_yaml_specs(specs_dir: Path) -> List[tuple[str, Dict[str, Any]]]:
         with open(yaml_file) as f:
             spec = yaml.safe_load(f)
             if spec:
+                ensure_spec_version(spec)
                 specs.append(("", spec))
 
     # Load specs from subdirectories (one level deep)
@@ -95,6 +98,7 @@ def load_yaml_specs(specs_dir: Path) -> List[tuple[str, Dict[str, Any]]]:
                 with open(yaml_file) as f:
                     spec = yaml.safe_load(f)
                     if spec:
+                        ensure_spec_version(spec)
                         specs.append((subdir.name, spec))
 
     return specs
@@ -189,12 +193,13 @@ from agent_runtimes.types import (
 
         for spec in folder_specs:
             team_id = spec["id"]
+            version = spec["version"]
             if folder:
                 full_team_id = f"{folder}/{team_id}"
-                const_name = _make_const_name(f"{folder}_{team_id}")
+                const_name = _make_const_name(f"{folder}_{team_id}") + version_suffix(version)
             else:
                 full_team_id = team_id
-                const_name = _make_const_name(team_id)
+                const_name = _make_const_name(team_id) + version_suffix(version)
 
             team_ids.append((full_team_id, const_name, folder))
 
@@ -305,6 +310,7 @@ from agent_runtimes.types import (
 
             code += f"{const_name} = TeamSpec(\n"
             code += f'    id="{full_team_id}",\n'
+            code += f'    version="{version}",\n'
             code += f'    name="{spec["name"]}",\n'
             code += f'    description="{description}",\n'
             code += f"    tags={tags},\n"
@@ -345,6 +351,8 @@ TEAM_SPECS: Dict[str, TeamSpec] = {
             code += f"    # {folder.replace('-', ' ').title()}\n"
         for full_team_id, const_name in folder_teams:
             code += f'    "{full_team_id}": {const_name},\n'
+            team_spec = next(s for f, s in specs if (f + "/" + s["id"] if f else s["id"]) == full_team_id)
+            code += f'    "{versioned_ref(full_team_id, team_spec["version"])}": {const_name},\n'
         if folder_teams and folder:
             code += "\n"
 
@@ -415,12 +423,13 @@ import type {{ TeamSpec }} from '{types_import_path}';
 
         for spec in folder_specs:
             team_id = spec["id"]
+            version = spec["version"]
             if folder:
                 full_team_id = f"{folder}/{team_id}"
-                const_name = _make_const_name(f"{folder}_{team_id}")
+                const_name = _make_const_name(f"{folder}_{team_id}") + version_suffix(version)
             else:
                 full_team_id = team_id
-                const_name = _make_const_name(team_id)
+                const_name = _make_const_name(team_id) + version_suffix(version)
 
             team_ids.append((full_team_id, const_name, folder))
 
@@ -537,6 +546,7 @@ import type {{ TeamSpec }} from '{types_import_path}';
 
             code += f"export const {const_name}: TeamSpec = {{\n"
             code += f"  id: '{full_team_id}',\n"
+            code += f"  version: '{version}',\n"
             code += f"  name: '{spec['name']}',\n"
             code += f"  description: `{description}`,\n"
             code += f"  tags: {tags},\n"
@@ -575,6 +585,8 @@ export const TEAM_SPECS: Record<string, TeamSpec> = {
             code += f"  // {folder.replace('-', ' ').title()}\n"
         for full_team_id, const_name in folder_teams:
             code += f"  '{full_team_id}': {const_name},\n"
+            team_spec = next(s for f, s in specs if (f + "/" + s["id"] if f else s["id"]) == full_team_id)
+            code += f"  '{versioned_ref(full_team_id, team_spec['version'])}': {const_name},\n"
         if folder_teams and folder:
             code += "\n"
 

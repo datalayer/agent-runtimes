@@ -18,8 +18,9 @@ import type { GuardrailSpec } from '../types/types';
 // Guardrail Definitions
 // ============================================================================
 
-export const DATA_ENGINEERING_POWER_USER_GUARDRAIL_SPEC: GuardrailSpec = {
+export const DATA_ENGINEERING_POWER_USER_GUARDRAIL_SPEC_0_0_1: GuardrailSpec = {
   id: 'data-engineering-power-user',
+  version: '0.0.1',
   name: 'Data Engineering Power User',
   description:
     'Power-user guardrail for data engineering agents with full read/write access, high token limits, and ability to deploy pipelines. Suitable for ETL, data transformation, and pipeline management agents.',
@@ -79,8 +80,9 @@ export const DATA_ENGINEERING_POWER_USER_GUARDRAIL_SPEC: GuardrailSpec = {
   },
 };
 
-export const DEFAULT_PLATFORM_USER_GUARDRAIL_SPEC: GuardrailSpec = {
+export const DEFAULT_PLATFORM_USER_GUARDRAIL_SPEC_0_0_1: GuardrailSpec = {
   id: 'default-platform-user',
+  version: '0.0.1',
   name: 'Default Platform User',
   description:
     'Standard platform user guardrail with moderate permissions. Suitable for general-purpose agents that need read access and limited code execution.',
@@ -132,8 +134,9 @@ export const DEFAULT_PLATFORM_USER_GUARDRAIL_SPEC: GuardrailSpec = {
   },
 };
 
-export const GITHUB_ACTIONS_DEPLOY_GUARDRAIL_SPEC: GuardrailSpec = {
+export const GITHUB_ACTIONS_DEPLOY_GUARDRAIL_SPEC_0_0_1: GuardrailSpec = {
   id: 'github-actions-deploy',
+  version: '0.0.1',
   name: 'GitHub Actions Deploy',
   description:
     'Full-access guardrail for deployment agents running via GitHub Actions. All permissions enabled including production deployment. Very high token limits for complex multi-step deployment workflows.',
@@ -192,8 +195,9 @@ export const GITHUB_ACTIONS_DEPLOY_GUARDRAIL_SPEC: GuardrailSpec = {
   },
 };
 
-export const GITHUB_CI_BOT_GUARDRAIL_SPEC: GuardrailSpec = {
+export const GITHUB_CI_BOT_GUARDRAIL_SPEC_0_0_1: GuardrailSpec = {
   id: 'github-ci-bot',
+  version: '0.0.1',
   name: 'GitHub CI Bot',
   description:
     'Guardrail for automated CI/CD agents running via GitHub Actions. High token limits for batch processing, full code execution, and internet access for package installation.',
@@ -252,8 +256,9 @@ export const GITHUB_CI_BOT_GUARDRAIL_SPEC: GuardrailSpec = {
   },
 };
 
-export const GOOGLE_WORKSPACE_AGENT_GUARDRAIL_SPEC: GuardrailSpec = {
+export const GOOGLE_WORKSPACE_AGENT_GUARDRAIL_SPEC_0_0_1: GuardrailSpec = {
   id: 'google-workspace-agent',
+  version: '0.0.1',
   name: 'Google Workspace Agent',
   description:
     'Guardrail for agents integrating with Google Workspace services (Gmail, Drive, Calendar, Sheets). Moderate permissions with email sending enabled. Service account-based identity with Google OAuth.',
@@ -318,8 +323,9 @@ export const GOOGLE_WORKSPACE_AGENT_GUARDRAIL_SPEC: GuardrailSpec = {
   },
 };
 
-export const RESTRICTED_VIEWER_GUARDRAIL_SPEC: GuardrailSpec = {
+export const RESTRICTED_VIEWER_GUARDRAIL_SPEC_0_0_1: GuardrailSpec = {
   id: 'restricted-viewer',
+  version: '0.0.1',
   name: 'Restricted Viewer',
   description:
     'Minimal-permissions guardrail for read-only monitoring agents. No code execution, no write access, very low token limits. Suitable for dashboard viewers and audit observers.',
@@ -376,12 +382,20 @@ export const RESTRICTED_VIEWER_GUARDRAIL_SPEC: GuardrailSpec = {
 // ============================================================================
 
 export const GUARDRAIL_CATALOG: Record<string, GuardrailSpec> = {
-  'data-engineering-power-user': DATA_ENGINEERING_POWER_USER_GUARDRAIL_SPEC,
-  'default-platform-user': DEFAULT_PLATFORM_USER_GUARDRAIL_SPEC,
-  'github-actions-deploy': GITHUB_ACTIONS_DEPLOY_GUARDRAIL_SPEC,
-  'github-ci-bot': GITHUB_CI_BOT_GUARDRAIL_SPEC,
-  'google-workspace-agent': GOOGLE_WORKSPACE_AGENT_GUARDRAIL_SPEC,
-  'restricted-viewer': RESTRICTED_VIEWER_GUARDRAIL_SPEC,
+  'data-engineering-power-user':
+    DATA_ENGINEERING_POWER_USER_GUARDRAIL_SPEC_0_0_1,
+  'data-engineering-power-user:0.0.1':
+    DATA_ENGINEERING_POWER_USER_GUARDRAIL_SPEC_0_0_1,
+  'default-platform-user': DEFAULT_PLATFORM_USER_GUARDRAIL_SPEC_0_0_1,
+  'default-platform-user:0.0.1': DEFAULT_PLATFORM_USER_GUARDRAIL_SPEC_0_0_1,
+  'github-actions-deploy': GITHUB_ACTIONS_DEPLOY_GUARDRAIL_SPEC_0_0_1,
+  'github-actions-deploy:0.0.1': GITHUB_ACTIONS_DEPLOY_GUARDRAIL_SPEC_0_0_1,
+  'github-ci-bot': GITHUB_CI_BOT_GUARDRAIL_SPEC_0_0_1,
+  'github-ci-bot:0.0.1': GITHUB_CI_BOT_GUARDRAIL_SPEC_0_0_1,
+  'google-workspace-agent': GOOGLE_WORKSPACE_AGENT_GUARDRAIL_SPEC_0_0_1,
+  'google-workspace-agent:0.0.1': GOOGLE_WORKSPACE_AGENT_GUARDRAIL_SPEC_0_0_1,
+  'restricted-viewer': RESTRICTED_VIEWER_GUARDRAIL_SPEC_0_0_1,
+  'restricted-viewer:0.0.1': RESTRICTED_VIEWER_GUARDRAIL_SPEC_0_0_1,
 };
 
 /**

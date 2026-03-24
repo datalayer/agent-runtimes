@@ -19,6 +19,8 @@ from typing import Any
 
 import yaml
 
+from versioning import ensure_spec_version, version_suffix, versioned_ref
+
 
 def _fmt_list(items: list[str]) -> str:
     """Format a list of strings with double quotes for ruff compliance."""
@@ -33,6 +35,7 @@ def load_skill_specs(specs_dir: Path) -> list[dict[str, Any]]:
     for yaml_file in sorted(specs_dir.glob("*.yaml")):
         with open(yaml_file) as f:
             spec = yaml.safe_load(f)
+            ensure_spec_version(spec)
             specs.append(spec)
     return specs
 
@@ -61,6 +64,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         '    """Skill specification."""',
         "",
         '    id: str = Field(..., description="Skill identifier")',
+        '    version: str = Field(default="0.0.1", description="Skill version")',
         '    name: str = Field(..., description="Display name")',
         '    description: str = Field(default="", description="Skill description")',
         '    module: str = Field(default="", description="Python module path")',
@@ -82,7 +86,8 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
     # Generate skill constants
     for spec in specs:
         skill_id = spec["id"]
-        const_name = f"{skill_id.upper().replace('-', '_')}_SKILL_SPEC"
+        version = spec["version"]
+        const_name = f"{skill_id.upper().replace('-', '_')}_SKILL_SPEC{version_suffix(version)}"
 
         icon = f'"{spec.get("icon")}"' if spec.get("icon") else "None"
         emoji = f'"{spec.get("emoji")}"' if spec.get("emoji") else "None"
@@ -91,6 +96,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
             [
                 f"{const_name} = SkillSpec(",
                 f'    id="{skill_id}",',
+                f'    version="{version}",',
                 f'    name="{spec["name"]}",',
                 f'    description="{spec["description"]}",',
                 f'    module="{spec.get("module", "")}",',
@@ -119,8 +125,10 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
 
     for spec in specs:
         skill_id = spec["id"]
-        const_name = f"{skill_id.upper().replace('-', '_')}_SKILL_SPEC"
+        version = spec["version"]
+        const_name = f"{skill_id.upper().replace('-', '_')}_SKILL_SPEC{version_suffix(version)}"
         lines.append(f'    "{skill_id}": {const_name},')
+        lines.append(f'    "{versioned_ref(skill_id, version)}": {const_name},')
 
     lines.extend(
         [
@@ -139,7 +147,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
             '    """',
             "    if not env_vars:",
             "        return True",
-            "    return all(os.environ.get(var) for var in env_vars)",
+            "    return all(os.environ.get(var.rsplit(':', 1)[0]) for var in env_vars)",
             "",
             "",
             "def get_skill_spec(skill_id: str) -> SkillSpec | None:",
@@ -189,6 +197,7 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
         "",
         "export interface SkillSpec {",
         "  id: string;",
+        "  version: string;",
         "  name: string;",
         "  description: string;",
         "  module: string;",
@@ -210,7 +219,8 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
     # Generate skill constants
     for spec in specs:
         skill_id = spec["id"]
-        const_name = f"{skill_id.upper().replace('-', '_')}_SKILL_SPEC"
+        version = spec["version"]
+        const_name = f"{skill_id.upper().replace('-', '_')}_SKILL_SPEC{version_suffix(version)}"
 
         # Format arrays for TypeScript
         envvars_json = str(spec.get("envvars", [])).replace("'", '"')
@@ -228,6 +238,7 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
             [
                 f"export const {const_name}: SkillSpec = {{",
                 f"  id: '{skill_id}',",
+                f"  version: '{version}',",
                 f"  name: '{spec['name']}',",
                 f"  description: '{spec['description']}',",
                 f"  module: '{spec.get('module', '')}',",
@@ -256,8 +267,10 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
 
     for spec in specs:
         skill_id = spec["id"]
-        const_name = f"{skill_id.upper().replace('-', '_')}_SKILL_SPEC"
+        version = spec["version"]
+        const_name = f"{skill_id.upper().replace('-', '_')}_SKILL_SPEC{version_suffix(version)}"
         lines.append(f"  '{skill_id}': {const_name},")
+        lines.append(f"  '{versioned_ref(skill_id, version)}': {const_name},")
 
     lines.extend(
         [

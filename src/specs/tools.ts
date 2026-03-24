@@ -20,6 +20,7 @@ export interface ToolRuntimeSpec {
 
 export interface ToolSpec {
   id: string;
+  version: string;
   name: string;
   description: string;
   tags: string[];
@@ -35,8 +36,9 @@ export interface ToolSpec {
 // Tool Definitions
 // ============================================================================
 
-export const RUNTIME_ECHO_TOOL_SPEC: ToolSpec = {
+export const RUNTIME_ECHO_TOOL_SPEC_0_0_1: ToolSpec = {
   id: 'runtime-echo',
+  version: '0.0.1',
   name: 'Runtime Echo',
   description: 'Echo text back to the caller for quick runtime verification.',
   tags: ['runtime', 'utility'],
@@ -52,8 +54,9 @@ export const RUNTIME_ECHO_TOOL_SPEC: ToolSpec = {
   emoji: '💬',
 };
 
-export const RUNTIME_SEND_MAIL_TOOL_SPEC: ToolSpec = {
+export const RUNTIME_SEND_MAIL_TOOL_SPEC_0_0_1: ToolSpec = {
   id: 'runtime-send-mail',
+  version: '0.0.1',
   name: 'Runtime Send Mail (Fake)',
   description:
     'Fake mail sender for tool approval demos; returns a simulated send receipt.',
@@ -70,8 +73,9 @@ export const RUNTIME_SEND_MAIL_TOOL_SPEC: ToolSpec = {
   emoji: '📧',
 };
 
-export const RUNTIME_SENSITIVE_ECHO_TOOL_SPEC: ToolSpec = {
+export const RUNTIME_SENSITIVE_ECHO_TOOL_SPEC_0_0_1: ToolSpec = {
   id: 'runtime-sensitive-echo',
+  version: '0.0.1',
   name: 'Runtime Sensitive Echo',
   description: 'Echo text with a manual approval checkpoint before execution.',
   tags: ['runtime', 'approval'],
@@ -92,9 +96,12 @@ export const RUNTIME_SENSITIVE_ECHO_TOOL_SPEC: ToolSpec = {
 // ============================================================================
 
 export const TOOL_CATALOG: Record<string, ToolSpec> = {
-  'runtime-echo': RUNTIME_ECHO_TOOL_SPEC,
-  'runtime-send-mail': RUNTIME_SEND_MAIL_TOOL_SPEC,
-  'runtime-sensitive-echo': RUNTIME_SENSITIVE_ECHO_TOOL_SPEC,
+  'runtime-echo': RUNTIME_ECHO_TOOL_SPEC_0_0_1,
+  'runtime-echo:0.0.1': RUNTIME_ECHO_TOOL_SPEC_0_0_1,
+  'runtime-send-mail': RUNTIME_SEND_MAIL_TOOL_SPEC_0_0_1,
+  'runtime-send-mail:0.0.1': RUNTIME_SEND_MAIL_TOOL_SPEC_0_0_1,
+  'runtime-sensitive-echo': RUNTIME_SENSITIVE_ECHO_TOOL_SPEC_0_0_1,
+  'runtime-sensitive-echo:0.0.1': RUNTIME_SENSITIVE_ECHO_TOOL_SPEC_0_0_1,
 };
 
 export function getToolSpecs(): ToolSpec[] {

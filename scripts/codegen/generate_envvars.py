@@ -19,6 +19,8 @@ from typing import Any
 
 import yaml
 
+from versioning import ensure_spec_version, version_suffix, versioned_ref
+
 
 def _fmt_list(items: list[str]) -> str:
     """Format a list of strings with double quotes for ruff compliance."""
@@ -33,6 +35,7 @@ def load_envvar_specs(specs_dir: Path) -> list[dict[str, Any]]:
     for yaml_file in sorted(specs_dir.glob("*.yaml")):
         with open(yaml_file) as f:
             spec = yaml.safe_load(f)
+            ensure_spec_version(spec)
             specs.append(spec)
     return specs
 
@@ -64,6 +67,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         '    """Environment variable specification."""',
         "",
         '    id: str = Field(..., description="Environment variable identifier")',
+        '    version: str = Field(default="0.0.1", description="Environment variable version")',
         '    name: str = Field(..., description="Display name")',
         '    description: str = Field(default="", description="Environment variable description")',
         '    registrationUrl: Optional[str] = Field(default=None, description="Registration URL or docs link")',
@@ -81,7 +85,8 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
     # Generate envvar constants
     for spec in specs:
         envvar_id = spec["id"]
-        const_name = f"{envvar_id}_SPEC"
+        version = spec["version"]
+        const_name = f"{envvar_id}_SPEC{version_suffix(version)}"
 
         registration_url_value = (
             f'"{spec.get("registrationUrl")}"'
@@ -97,6 +102,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
             [
                 f"{const_name} = EnvvarSpec(",
                 f'    id="{envvar_id}",',
+                f'    version="{version}",',
                 f'    name="{spec["name"]}",',
                 f'    description="{spec["description"]}",',
                 f"    registrationUrl={registration_url_value},",
@@ -121,8 +127,10 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
 
     for spec in specs:
         envvar_id = spec["id"]
-        const_name = f"{envvar_id}_SPEC"
+        version = spec["version"]
+        const_name = f"{envvar_id}_SPEC{version_suffix(version)}"
         lines.append(f'    "{envvar_id}": {const_name},')
+        lines.append(f'    "{versioned_ref(envvar_id, version)}": {const_name},')
 
     lines.extend(
         [
@@ -160,6 +168,7 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
         "",
         "export interface EnvvarSpec {",
         "  id: string;",
+        "  version: string;",
         "  name: string;",
         "  description: string;",
         "  registrationUrl?: string;",
@@ -177,7 +186,8 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
     # Generate envvar constants
     for spec in specs:
         envvar_id = spec["id"]
-        const_name = f"{envvar_id}_SPEC"
+        version = spec["version"]
+        const_name = f"{envvar_id}_SPEC{version_suffix(version)}"
 
         # Format arrays for TypeScript
         tags_json = str(spec.get("tags", [])).replace("'", '"')
@@ -195,6 +205,7 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
             [
                 f"export const {const_name}: EnvvarSpec = {{",
                 f"  id: '{envvar_id}',",
+                f"  version: '{version}',",
                 f"  name: '{spec['name']}',",
                 f"  description: '{spec['description']}',",
             ]
@@ -226,8 +237,10 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
 
     for spec in specs:
         envvar_id = spec["id"]
-        const_name = f"{envvar_id}_SPEC"
+        version = spec["version"]
+        const_name = f"{envvar_id}_SPEC{version_suffix(version)}"
         lines.append(f"  '{envvar_id}': {const_name},")
+        lines.append(f"  '{versioned_ref(envvar_id, version)}': {const_name},")
 
     lines.extend(
         [

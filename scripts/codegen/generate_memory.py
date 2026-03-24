@@ -19,6 +19,8 @@ from typing import Any
 
 import yaml
 
+from versioning import ensure_spec_version, version_suffix, versioned_ref
+
 
 def _make_const_name(memory_id: str) -> str:
     """Convert a memory ID to a Python/TS constant name (e.g., 'mem0' -> 'MEM0_MEMORY')."""
@@ -43,6 +45,7 @@ def load_memory_specs(specs_dir: Path) -> list[dict[str, Any]]:
     for yaml_file in sorted(specs_dir.glob("*.yaml")):
         with open(yaml_file) as f:
             spec = yaml.safe_load(f)
+            ensure_spec_version(spec)
             specs.append(spec)
     return specs
 
@@ -76,6 +79,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         '    """Specification for a memory backend."""',
         "",
         '    id: str = Field(..., description="Unique memory identifier")',
+        '    version: str = Field(default="0.0.1", description="Memory spec version")',
         '    name: str = Field(..., description="Display name for the memory backend")',
         '    description: str = Field(default="", description="Memory backend description")',
         '    persistence: str = Field(default="none", description="Persistence level: none, session, cross-session, permanent")',
@@ -112,7 +116,8 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
 
     # Generate memory constants
     for spec in specs:
-        const_name = _make_const_name(spec["id"])
+        version = spec["version"]
+        const_name = _make_const_name(spec["id"]) + version_suffix(version)
 
         # Clean description
         description = (
@@ -128,6 +133,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
             [
                 f"{const_name} = MemorySpec(",
                 f'    id="{spec["id"]}",',
+                f'    version="{version}",',
                 f'    name="{spec["name"]}",',
                 f'    description="{description}",',
                 f'    persistence="{spec.get("persistence", "none")}",',
@@ -154,8 +160,10 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
 
     for spec in specs:
         memory_id = spec["id"]
-        const_name = _make_const_name(memory_id)
+        version = spec["version"]
+        const_name = _make_const_name(memory_id) + version_suffix(version)
         lines.append(f'    "{memory_id}": {const_name},')
+        lines.append(f'    "{versioned_ref(memory_id, version)}": {const_name},')
 
     lines.extend(
         [
@@ -233,6 +241,8 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
         "export interface MemorySpec {",
         "  /** Unique memory identifier (e.g., 'ephemeral', 'mem0') */",
         "  id: string;",
+        "  /** Version */",
+        "  version: string;",
         "  /** Display name for the memory backend */",
         "  name: string;",
         "  /** Memory backend description */",
@@ -276,7 +286,8 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
 
     # Generate memory constants
     for spec in specs:
-        const_name = _make_const_name(spec["id"])
+        version = spec["version"]
+        const_name = _make_const_name(spec["id"]) + version_suffix(version)
 
         # Clean description
         description = (
@@ -289,6 +300,7 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
             [
                 f"export const {const_name}: MemorySpec = {{",
                 f"  id: '{spec['id']}',",
+                f"  version: '{version}',",
                 f"  name: '{spec['name']}',",
                 f"  description: '{description}',",
                 f"  persistence: '{spec.get('persistence', 'none')}',",
@@ -314,8 +326,10 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
 
     for spec in specs:
         memory_id = spec["id"]
-        const_name = _make_const_name(memory_id)
+        version = spec["version"]
+        const_name = _make_const_name(memory_id) + version_suffix(version)
         lines.append(f"  '{memory_id}': {const_name},")
+        lines.append(f"  '{versioned_ref(memory_id, version)}': {const_name},")
 
     lines.extend(
         [

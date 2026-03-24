@@ -29,6 +29,7 @@ class NotificationChannelSpec(BaseModel):
     """Notification channel specification."""
 
     id: str = Field(..., description="Unique channel identifier")
+    version: str = Field(default="0.0.1", description="Channel version")
     name: str = Field(..., description="Display name")
     description: str = Field(default="", description="Channel description")
     icon: str = Field(default="bell", description="Icon identifier")
@@ -41,8 +42,9 @@ class NotificationChannelSpec(BaseModel):
 # Notification Channel Definitions
 # ============================================================================
 
-EMAIL_NOTIFICATION_SPEC = NotificationChannelSpec(
+EMAIL_NOTIFICATION_SPEC_0_0_1 = NotificationChannelSpec(
     id="email",
+    version="0.0.1",
     name="Email",
     description="Send notifications via email when agent events occur. Supports completion alerts, failure reports, and summary digests.",
     icon="mail",
@@ -55,8 +57,9 @@ EMAIL_NOTIFICATION_SPEC = NotificationChannelSpec(
     ],
 )
 
-SLACK_NOTIFICATION_SPEC = NotificationChannelSpec(
+SLACK_NOTIFICATION_SPEC_0_0_1 = NotificationChannelSpec(
     id="slack",
+    version="0.0.1",
     name="Slack",
     description="Post notifications to a Slack channel or direct message when agent events occur. Supports rich message formatting with blocks.",
     icon="bell",
@@ -69,8 +72,9 @@ SLACK_NOTIFICATION_SPEC = NotificationChannelSpec(
     ],
 )
 
-TEAMS_NOTIFICATION_SPEC = NotificationChannelSpec(
+TEAMS_NOTIFICATION_SPEC_0_0_1 = NotificationChannelSpec(
     id="teams",
+    version="0.0.1",
     name="Teams",
     description="Post notifications to a Microsoft Teams channel via incoming webhook connector when agent events occur.",
     icon="bell",
@@ -82,8 +86,9 @@ TEAMS_NOTIFICATION_SPEC = NotificationChannelSpec(
     ],
 )
 
-WEBHOOK_NOTIFICATION_SPEC = NotificationChannelSpec(
+WEBHOOK_NOTIFICATION_SPEC_0_0_1 = NotificationChannelSpec(
     id="webhook",
+    version="0.0.1",
     name="Webhook",
     description="Send notifications to a custom HTTP endpoint via POST request. Payload includes event type, agent metadata, and optional output.",
     icon="bell",
@@ -101,10 +106,14 @@ WEBHOOK_NOTIFICATION_SPEC = NotificationChannelSpec(
 # ============================================================================
 
 NOTIFICATION_CATALOG: Dict[str, NotificationChannelSpec] = {
-    "email": EMAIL_NOTIFICATION_SPEC,
-    "slack": SLACK_NOTIFICATION_SPEC,
-    "teams": TEAMS_NOTIFICATION_SPEC,
-    "webhook": WEBHOOK_NOTIFICATION_SPEC,
+    "email": EMAIL_NOTIFICATION_SPEC_0_0_1,
+    "email:0.0.1": EMAIL_NOTIFICATION_SPEC_0_0_1,
+    "slack": SLACK_NOTIFICATION_SPEC_0_0_1,
+    "slack:0.0.1": SLACK_NOTIFICATION_SPEC_0_0_1,
+    "teams": TEAMS_NOTIFICATION_SPEC_0_0_1,
+    "teams:0.0.1": TEAMS_NOTIFICATION_SPEC_0_0_1,
+    "webhook": WEBHOOK_NOTIFICATION_SPEC_0_0_1,
+    "webhook:0.0.1": WEBHOOK_NOTIFICATION_SPEC_0_0_1,
 }
 
 

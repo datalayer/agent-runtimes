@@ -25,8 +25,9 @@ from agent_runtimes.types import (
 # Team Definitions
 # ============================================================================
 
-ANALYZE_CAMPAIGN_PERFORMANCE_TEAM_SPEC = TeamSpec(
+ANALYZE_CAMPAIGN_PERFORMANCE_TEAM_SPEC_0_0_1 = TeamSpec(
     id="analyze-campaign-performance",
+    version="0.0.1",
     name="Analyze Campaign Performance",
     description="A multi-agent team that unifies marketing data from Google Ads, Meta, TikTok, LinkedIn, GA4, CRM, and email platforms. Normalises metrics into a unified view, detects performance anomalies in real time, and generates budget reallocation recommendations to maximise ROAS.",
     tags=["marketing", "media", "campaigns", "analytics", "advertising", "social-media"],
@@ -34,7 +35,7 @@ ANALYZE_CAMPAIGN_PERFORMANCE_TEAM_SPEC = TeamSpec(
     icon="megaphone",
     emoji="📢",
     color="#8250df",
-    agent_spec_id="analyze-campaign-performance",
+    agent_spec_id="analyze-campaign-performance:0.0.1",
     orchestration_protocol="datalayer",
     execution_mode="sequential",
     supervisor=TeamSupervisorSpec(name="Campaign Analytics Orchestrator Agent", model="openai-gpt-4-1"),
@@ -95,8 +96,9 @@ ANALYZE_CAMPAIGN_PERFORMANCE_TEAM_SPEC = TeamSpec(
     output=TeamOutputSpec(formats=["pdf", "csv", "json"], template="Campaign Performance Report", storage="s3://reports/campaign-analytics/"),
 )
 
-ANALYZE_SUPPORT_TICKETS_TEAM_SPEC = TeamSpec(
+ANALYZE_SUPPORT_TICKETS_TEAM_SPEC_0_0_1 = TeamSpec(
     id="analyze-support-tickets",
+    version="0.0.1",
     name="Analyze Support Tickets",
     description="A multi-agent team that triages incoming support tickets, categorizes by urgency and topic, identifies recurring patterns, and generates resolution recommendations with escalation paths.",
     tags=["analytics", "data", "support", "tickets"],
@@ -104,7 +106,7 @@ ANALYZE_SUPPORT_TICKETS_TEAM_SPEC = TeamSpec(
     icon="issue-opened",
     emoji="🎫",
     color="#bf8700",
-    agent_spec_id="analyze-support-tickets",
+    agent_spec_id="analyze-support-tickets:0.0.1",
     orchestration_protocol="datalayer",
     execution_mode="sequential",
     supervisor=TeamSupervisorSpec(name="Support Orchestrator Agent", model="openai-gpt-4-1"),
@@ -154,8 +156,9 @@ ANALYZE_SUPPORT_TICKETS_TEAM_SPEC = TeamSpec(
     output=TeamOutputSpec(formats=["pdf", "json"], template="Support Ticket Analysis", storage="s3://reports/support-analytics/"),
 )
 
-AUDIT_INVENTORY_LEVELS_TEAM_SPEC = TeamSpec(
+AUDIT_INVENTORY_LEVELS_TEAM_SPEC_0_0_1 = TeamSpec(
     id="audit-inventory-levels",
+    version="0.0.1",
     name="Audit Inventory Levels",
     description="A multi-agent team that monitors inventory levels across warehouses, detects discrepancies between physical and system counts, forecasts demand by SKU, and generates automated reorder recommendations.",
     tags=["finance", "automation", "inventory", "supply-chain"],
@@ -163,7 +166,7 @@ AUDIT_INVENTORY_LEVELS_TEAM_SPEC = TeamSpec(
     icon="package",
     emoji="📦",
     color="#0969da",
-    agent_spec_id="audit-inventory-levels",
+    agent_spec_id="audit-inventory-levels:0.0.1",
     orchestration_protocol="datalayer",
     execution_mode="sequential",
     supervisor=TeamSupervisorSpec(name="Inventory Orchestrator Agent", model="openai-gpt-4-1"),
@@ -235,8 +238,9 @@ AUDIT_INVENTORY_LEVELS_TEAM_SPEC = TeamSpec(
     output=TeamOutputSpec(formats=["pdf", "xlsx", "csv"], template="Inventory Audit Report", storage="s3://reports/inventory-audits/"),
 )
 
-AUTOMATE_REGULATORY_REPORTING_TEAM_SPEC = TeamSpec(
+AUTOMATE_REGULATORY_REPORTING_TEAM_SPEC_0_0_1 = TeamSpec(
     id="automate-regulatory-reporting",
+    version="0.0.1",
     name="Automate Regulatory Reporting",
     description="A multi-agent team that automates end-to-end regulatory reporting for financial institutions. Ingests data from trading systems, risk engines, and accounting platforms, reconciles positions, computes risk metrics, validates against regulatory rules (Basel III/IV, MiFID II, SOX), and generates submission-ready compliance reports with full audit trails.",
     tags=["finance", "compliance", "regulatory", "risk", "banking", "audit"],
@@ -244,7 +248,7 @@ AUTOMATE_REGULATORY_REPORTING_TEAM_SPEC = TeamSpec(
     icon="shield-check",
     emoji="🏦",
     color="#0969da",
-    agent_spec_id="automate-regulatory-reporting",
+    agent_spec_id="automate-regulatory-reporting:0.0.1",
     orchestration_protocol="datalayer",
     execution_mode="sequential",
     supervisor=TeamSupervisorSpec(name="Compliance Orchestrator Agent", model="openai-gpt-4-1"),
@@ -316,8 +320,9 @@ AUTOMATE_REGULATORY_REPORTING_TEAM_SPEC = TeamSpec(
     output=TeamOutputSpec(formats=["pdf", "xbrl", "json"], template="Regulatory Submission Report", storage="s3://reports/regulatory-submissions/"),
 )
 
-COMPREHENSIVE_SALES_ANALYTICS_TEAM_SPEC = TeamSpec(
+COMPREHENSIVE_SALES_ANALYTICS_TEAM_SPEC_0_0_1 = TeamSpec(
     id="comprehensive-sales-analytics",
+    version="0.0.1",
     name="Comprehensive Sales Analytics",
     description="A multi-agent team that replaces a single KPI monitor with four specialized agents: a Data Collector that pulls real-time CRM metrics, an Anomaly Detector that flags statistical outliers, a Trend Analyzer that identifies patterns and forecasts, and a Report Generator that compiles executive dashboards and sends alerts. Together they deliver deeper insights, faster detection, and richer reporting than any single agent could.",
     tags=["sales", "analytics", "kpi", "monitoring", "horizontal"],
@@ -325,7 +330,7 @@ COMPREHENSIVE_SALES_ANALYTICS_TEAM_SPEC = TeamSpec(
     icon="graph",
     emoji="📈",
     color="#1a7f37",
-    agent_spec_id="comprehensive-sales-analytics",
+    agent_spec_id="comprehensive-sales-analytics:0.0.1",
     orchestration_protocol="datalayer",
     execution_mode="sequential",
     supervisor=TeamSupervisorSpec(name="Sales Analytics Supervisor", model="anthropic-claude-opus-4"),
@@ -386,8 +391,9 @@ COMPREHENSIVE_SALES_ANALYTICS_TEAM_SPEC = TeamSpec(
     output=TeamOutputSpec(formats=["pdf", "xlsx", "json"], template="Executive Sales Dashboard", storage="s3://reports/sales-analytics/"),
 )
 
-OPTIMIZE_GRID_OPERATIONS_TEAM_SPEC = TeamSpec(
+OPTIMIZE_GRID_OPERATIONS_TEAM_SPEC_0_0_1 = TeamSpec(
     id="optimize-grid-operations",
+    version="0.0.1",
     name="Optimize Grid Operations",
     description="A multi-agent team that processes millions of IoT sensor data points from smart meters, substations, and renewable generation assets. Predicts equipment failures 2–4 weeks in advance, optimises load balancing across the grid, and reduces unplanned downtime by 50%.",
     tags=["energy", "utilities", "smart-grid", "iot", "predictive-maintenance", "sustainability"],
@@ -395,7 +401,7 @@ OPTIMIZE_GRID_OPERATIONS_TEAM_SPEC = TeamSpec(
     icon="zap",
     emoji="⚡",
     color="#1a7f37",
-    agent_spec_id="optimize-grid-operations",
+    agent_spec_id="optimize-grid-operations:0.0.1",
     orchestration_protocol="datalayer",
     execution_mode="sequential",
     supervisor=TeamSupervisorSpec(name="Grid Operations Orchestrator Agent", model="openai-gpt-4-1"),
@@ -456,8 +462,9 @@ OPTIMIZE_GRID_OPERATIONS_TEAM_SPEC = TeamSpec(
     output=TeamOutputSpec(formats=["json", "csv", "pdf"], template="Grid Operations Dashboard", storage="s3://reports/grid-operations/"),
 )
 
-PROCESS_CITIZEN_REQUESTS_TEAM_SPEC = TeamSpec(
+PROCESS_CITIZEN_REQUESTS_TEAM_SPEC_0_0_1 = TeamSpec(
     id="process-citizen-requests",
+    version="0.0.1",
     name="Process Citizen Requests",
     description="A multi-agent team that automates citizen request processing for government agencies. Classifies and triages permits, FOIA requests, and benefit claims from multiple channels. Models policy impacts across population datasets and ensures every automated decision is explainable, auditable, and compliant with transparency mandates.",
     tags=["government", "public-sector", "civic", "policy", "compliance", "transparency"],
@@ -465,7 +472,7 @@ PROCESS_CITIZEN_REQUESTS_TEAM_SPEC = TeamSpec(
     icon="organization",
     emoji="🏛️",
     color="#0550ae",
-    agent_spec_id="process-citizen-requests",
+    agent_spec_id="process-citizen-requests:0.0.1",
     orchestration_protocol="datalayer",
     execution_mode="sequential",
     supervisor=TeamSupervisorSpec(name="Citizen Services Orchestrator Agent", model="openai-gpt-4-1"),
@@ -526,8 +533,9 @@ PROCESS_CITIZEN_REQUESTS_TEAM_SPEC = TeamSpec(
     output=TeamOutputSpec(formats=["pdf", "json"], template="Citizen Request Processing Report", storage="s3://reports/citizen-requests/"),
 )
 
-PROCESS_CLINICAL_TRIAL_DATA_TEAM_SPEC = TeamSpec(
+PROCESS_CLINICAL_TRIAL_DATA_TEAM_SPEC_0_0_1 = TeamSpec(
     id="process-clinical-trial-data",
+    version="0.0.1",
     name="Process Clinical Trial Data",
     description="A multi-agent team that automates clinical trial data processing across dozens of trial sites. Harmonises patient records and lab results to CDISC SDTM format, detects safety signals and adverse events in real time, and prepares submission-ready datasets — all with strict HIPAA and GxP compliance guardrails.",
     tags=["healthcare", "pharma", "clinical-trials", "patient-data", "compliance"],
@@ -535,7 +543,7 @@ PROCESS_CLINICAL_TRIAL_DATA_TEAM_SPEC = TeamSpec(
     icon="heart",
     emoji="🏥",
     color="#cf222e",
-    agent_spec_id="process-clinical-trial-data",
+    agent_spec_id="process-clinical-trial-data:0.0.1",
     orchestration_protocol="datalayer",
     execution_mode="sequential",
     supervisor=TeamSupervisorSpec(name="Clinical Data Orchestrator Agent", model="anthropic-claude-sonnet-4"),
@@ -596,8 +604,9 @@ PROCESS_CLINICAL_TRIAL_DATA_TEAM_SPEC = TeamSpec(
     output=TeamOutputSpec(formats=["pdf", "json", "xml"], template="Clinical Trial Data Report", storage="s3://reports/clinical-trials/"),
 )
 
-SYNC_CRM_CONTACTS_TEAM_SPEC = TeamSpec(
+SYNC_CRM_CONTACTS_TEAM_SPEC_0_0_1 = TeamSpec(
     id="sync-crm-contacts",
+    version="0.0.1",
     name="Sync CRM Contacts",
     description="A multi-agent team that collects and aggregates contact data from multiple CRM sources, analyzes and deduplicates records, writes cleaned data back, and generates sync summary reports.",
     tags=["sales", "crm", "data-sync", "deduplication"],
@@ -605,7 +614,7 @@ SYNC_CRM_CONTACTS_TEAM_SPEC = TeamSpec(
     icon="people",
     emoji="🔄",
     color="#0969da",
-    agent_spec_id="sync-crm-contacts",
+    agent_spec_id="sync-crm-contacts:0.0.1",
     orchestration_protocol="datalayer",
     execution_mode="sequential",
     supervisor=TeamSupervisorSpec(name="CRM Orchestrator Agent", model="anthropic-claude-opus-4"),
@@ -671,15 +680,24 @@ SYNC_CRM_CONTACTS_TEAM_SPEC = TeamSpec(
 # ============================================================================
 
 TEAM_SPECS: Dict[str, TeamSpec] = {
-    "analyze-campaign-performance": ANALYZE_CAMPAIGN_PERFORMANCE_TEAM_SPEC,
-    "analyze-support-tickets": ANALYZE_SUPPORT_TICKETS_TEAM_SPEC,
-    "audit-inventory-levels": AUDIT_INVENTORY_LEVELS_TEAM_SPEC,
-    "automate-regulatory-reporting": AUTOMATE_REGULATORY_REPORTING_TEAM_SPEC,
-    "comprehensive-sales-analytics": COMPREHENSIVE_SALES_ANALYTICS_TEAM_SPEC,
-    "optimize-grid-operations": OPTIMIZE_GRID_OPERATIONS_TEAM_SPEC,
-    "process-citizen-requests": PROCESS_CITIZEN_REQUESTS_TEAM_SPEC,
-    "process-clinical-trial-data": PROCESS_CLINICAL_TRIAL_DATA_TEAM_SPEC,
-    "sync-crm-contacts": SYNC_CRM_CONTACTS_TEAM_SPEC,
+    "analyze-campaign-performance": ANALYZE_CAMPAIGN_PERFORMANCE_TEAM_SPEC_0_0_1,
+    "analyze-campaign-performance:0.0.1": ANALYZE_CAMPAIGN_PERFORMANCE_TEAM_SPEC_0_0_1,
+    "analyze-support-tickets": ANALYZE_SUPPORT_TICKETS_TEAM_SPEC_0_0_1,
+    "analyze-support-tickets:0.0.1": ANALYZE_SUPPORT_TICKETS_TEAM_SPEC_0_0_1,
+    "audit-inventory-levels": AUDIT_INVENTORY_LEVELS_TEAM_SPEC_0_0_1,
+    "audit-inventory-levels:0.0.1": AUDIT_INVENTORY_LEVELS_TEAM_SPEC_0_0_1,
+    "automate-regulatory-reporting": AUTOMATE_REGULATORY_REPORTING_TEAM_SPEC_0_0_1,
+    "automate-regulatory-reporting:0.0.1": AUTOMATE_REGULATORY_REPORTING_TEAM_SPEC_0_0_1,
+    "comprehensive-sales-analytics": COMPREHENSIVE_SALES_ANALYTICS_TEAM_SPEC_0_0_1,
+    "comprehensive-sales-analytics:0.0.1": COMPREHENSIVE_SALES_ANALYTICS_TEAM_SPEC_0_0_1,
+    "optimize-grid-operations": OPTIMIZE_GRID_OPERATIONS_TEAM_SPEC_0_0_1,
+    "optimize-grid-operations:0.0.1": OPTIMIZE_GRID_OPERATIONS_TEAM_SPEC_0_0_1,
+    "process-citizen-requests": PROCESS_CITIZEN_REQUESTS_TEAM_SPEC_0_0_1,
+    "process-citizen-requests:0.0.1": PROCESS_CITIZEN_REQUESTS_TEAM_SPEC_0_0_1,
+    "process-clinical-trial-data": PROCESS_CLINICAL_TRIAL_DATA_TEAM_SPEC_0_0_1,
+    "process-clinical-trial-data:0.0.1": PROCESS_CLINICAL_TRIAL_DATA_TEAM_SPEC_0_0_1,
+    "sync-crm-contacts": SYNC_CRM_CONTACTS_TEAM_SPEC_0_0_1,
+    "sync-crm-contacts:0.0.1": SYNC_CRM_CONTACTS_TEAM_SPEC_0_0_1,
 }
 
 

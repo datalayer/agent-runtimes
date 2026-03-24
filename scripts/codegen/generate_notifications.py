@@ -19,6 +19,8 @@ from typing import Any
 
 import yaml
 
+from versioning import ensure_spec_version, version_suffix, versioned_ref
+
 
 def _esc(text: str) -> str:
     """Escape single quotes for TypeScript string literals."""
@@ -36,6 +38,7 @@ def load_specs(specs_dir: Path) -> list[dict[str, Any]]:
     for yaml_file in sorted(specs_dir.rglob("*.yaml")):
         with open(yaml_file) as f:
             spec = yaml.safe_load(f)
+            ensure_spec_version(spec)
             specs.append(spec)
     return specs
 
@@ -116,6 +119,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         '    """Notification channel specification."""',
         "",
         '    id: str = Field(..., description="Unique channel identifier")',
+        '    version: str = Field(default="0.0.1", description="Channel version")',
         '    name: str = Field(..., description="Display name")',
         '    description: str = Field(default="", description="Channel description")',
         '    icon: str = Field(default="bell", description="Icon identifier")',
@@ -132,7 +136,8 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
 
     for spec in specs:
         ch_id = spec["id"]
-        const_name = f"{ch_id.upper().replace('-', '_')}_NOTIFICATION_SPEC"
+        version = spec["version"]
+        const_name = f"{ch_id.upper().replace('-', '_')}_NOTIFICATION_SPEC{version_suffix(version)}"
         desc = _esc_dq(spec.get("description", "").strip().replace("\n", " "))
         fields = spec.get("fields", [])
 
@@ -140,6 +145,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
             [
                 f"{const_name} = NotificationChannelSpec(",
                 f'    id="{ch_id}",',
+                f'    version="{version}",',
                 f'    name="{spec["name"]}",',
                 f'    description="{desc}",',
                 f'    icon="{spec.get("icon", "bell")}",',
@@ -166,8 +172,10 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
     )
     for spec in specs:
         ch_id = spec["id"]
-        const_name = f"{ch_id.upper().replace('-', '_')}_NOTIFICATION_SPEC"
+        version = spec["version"]
+        const_name = f"{ch_id.upper().replace('-', '_')}_NOTIFICATION_SPEC{version_suffix(version)}"
         lines.append(f'    "{ch_id}": {const_name},')
+        lines.append(f'    "{versioned_ref(ch_id, version)}": {const_name},')
     lines.extend(
         [
             "}",
@@ -214,7 +222,8 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
 
     for spec in specs:
         ch_id = spec["id"]
-        const_name = f"{ch_id.upper().replace('-', '_')}_NOTIFICATION_SPEC"
+        version = spec["version"]
+        const_name = f"{ch_id.upper().replace('-', '_')}_NOTIFICATION_SPEC{version_suffix(version)}"
         desc = _esc(spec.get("description", "").strip().replace("\n", " "))
         fields = spec.get("fields", [])
 
@@ -222,6 +231,7 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
             [
                 f"export const {const_name}: NotificationChannelSpec = {{",
                 f"  id: '{ch_id}',",
+                f"  version: '{version}',",
                 f"  name: '{_esc(spec['name'])}',",
                 f"  description: '{desc}',",
                 f"  icon: '{spec.get('icon', 'bell')}',",
@@ -250,8 +260,10 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
     )
     for spec in specs:
         ch_id = spec["id"]
-        const_name = f"{ch_id.upper().replace('-', '_')}_NOTIFICATION_SPEC"
+        version = spec["version"]
+        const_name = f"{ch_id.upper().replace('-', '_')}_NOTIFICATION_SPEC{version_suffix(version)}"
         lines.append(f"  '{ch_id}': {const_name},")
+        lines.append(f"  '{versioned_ref(ch_id, version)}': {const_name},")
     lines.extend(
         [
             "};",

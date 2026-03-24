@@ -16,6 +16,13 @@ from typing import Any, Dict, List
 
 import yaml
 
+from versioning import (
+    ensure_spec_version,
+    split_spec_ref,
+    version_suffix,
+    versioned_ref,
+)
+
 
 def _fmt_list(items: list[str]) -> str:
     """Format a list of strings with double quotes for ruff compliance."""
@@ -52,6 +59,7 @@ def load_yaml_specs(specs_dir: Path) -> List[tuple[str, Dict[str, Any]]]:
         with open(yaml_file, "r") as f:
             spec = yaml.safe_load(f)
             if spec:  # Skip empty files
+                ensure_spec_version(spec)
                 specs.append(("", spec))
 
     # Then, load specs from subdirectories (one level deep)
@@ -61,6 +69,7 @@ def load_yaml_specs(specs_dir: Path) -> List[tuple[str, Dict[str, Any]]]:
                 with open(yaml_file, "r") as f:
                     spec = yaml.safe_load(f)
                     if spec:  # Skip empty files
+                        ensure_spec_version(spec)
                         specs.append((subdir.name, spec))
 
     return specs
@@ -116,6 +125,7 @@ from agent_runtimes.types import AgentSpec
 
         for spec in folder_specs:
             agent_id = spec["id"]
+            version = spec["version"]
             # Prefix agent ID with folder name for uniqueness
             full_agent_id = f"{folder}/{agent_id}" if folder else agent_id
             # Create constant name: e.g., "data-acquisition" -> "DATA_ACQUISITION_AGENT_SPEC"
@@ -127,13 +137,23 @@ from agent_runtimes.types import AgentSpec
                 const_name = base_name + "_SPEC"
             else:
                 const_name = base_name + "_AGENT_SPEC"
+            const_name += version_suffix(version)
             agent_ids.append((full_agent_id, const_name, folder))
 
             # Get MCP servers
-            mcp_server_ids = spec.get("mcp_servers", [])
+            mcp_server_refs = [
+                versioned_ref(*split_spec_ref(sid)) for sid in spec.get("mcp_servers", [])
+            ]
             mcp_servers_str = ", ".join(
-                f'MCP_SERVER_CATALOG["{sid}"]' for sid in mcp_server_ids
+                f'MCP_SERVER_CATALOG["{sid}"]' for sid in mcp_server_refs
             )
+
+            skill_refs = [
+                versioned_ref(*split_spec_ref(skill)) for skill in spec.get("skills", [])
+            ]
+            tool_refs = [
+                versioned_ref(*split_spec_ref(tool)) for tool in spec.get("tools", [])
+            ]
 
             # Format optional fields
             icon = f'"{spec.get("icon")}"' if spec.get("icon") else "None"
@@ -214,13 +234,15 @@ from agent_runtimes.types import AgentSpec
 
             code += f'''{const_name} = AgentSpec(
     id="{full_agent_id}",
+    version="{version}",
     name="{spec["name"]}",
     description="{description}",
     tags={_fmt_list(spec.get("tags", []))},
     enabled={spec.get("enabled", True)},
     model={model_str},
     mcp_servers=[{mcp_servers_str}],
-    skills={_fmt_list(spec.get("skills", []))},
+    skills={_fmt_list(skill_refs)},
+    tools={_fmt_list(tool_refs)},
     environment_name="{spec.get("environment_name", "ai-agents-env")}",
     icon={icon},
     emoji={emoji},
@@ -266,6 +288,9 @@ AGENT_SPECS: Dict[str, AgentSpec] = {
             code += f"    # {folder.replace('-', ' ').title()}\n"
         for full_agent_id, const_name in folder_agents:
             code += f'    "{full_agent_id}": {const_name},\n'
+            # Backward-compatible alias for explicit version lookups.
+            agent_spec = next(s for f, s in specs if (f + "/" + s["id"] if f else s["id"]) == full_agent_id)
+            code += f'    "{versioned_ref(full_agent_id, agent_spec["version"])}": {const_name},\n'
         if folder_agents and folder:
             code += "\n"
 
@@ -316,20 +341,33 @@ def generate_typescript_code(
     import os
 
     mcp_server_files = glob.glob(os.path.join(mcp_specs_dir, "*.yaml"))
-    mcp_server_ids = [
-        os.path.basename(f).replace(".yaml", "") for f in mcp_server_files
-    ]
-    mcp_server_ids.sort()
+    mcp_specs = []
+    for fpath in mcp_server_files:
+        with open(fpath, "r") as f:
+            spec = yaml.safe_load(f)
+            ensure_spec_version(spec)
+            mcp_specs.append(spec)
+    mcp_specs.sort(key=lambda s: s["id"])
 
     # Load available skills from specs
     skill_files = glob.glob(os.path.join(skills_specs_dir, "*.yaml"))
-    skill_ids = [os.path.basename(f).replace(".yaml", "") for f in skill_files]
-    skill_ids.sort()
+    skill_specs = []
+    for fpath in skill_files:
+        with open(fpath, "r") as f:
+            spec = yaml.safe_load(f)
+            ensure_spec_version(spec)
+            skill_specs.append(spec)
+    skill_specs.sort(key=lambda s: s["id"])
 
     # Load available tools from specs
     tool_files = glob.glob(os.path.join(tools_specs_dir, "*.yaml"))
-    tool_ids = [os.path.basename(f).replace(".yaml", "") for f in tool_files]
-    tool_ids.sort()
+    tool_specs = []
+    for fpath in tool_files:
+        with open(fpath, "r") as f:
+            spec = yaml.safe_load(f)
+            ensure_spec_version(spec)
+            tool_specs.append(spec)
+    tool_specs.sort(key=lambda s: s["id"])
 
     # Determine which MCP servers and skills are actually used in these specs
     used_mcp_servers = set()
@@ -337,37 +375,46 @@ def generate_typescript_code(
     used_tools = set()
     for _, spec in specs:
         for server in spec.get("mcp_servers", []):
-            used_mcp_servers.add(server)
+            used_mcp_servers.add(versioned_ref(*split_spec_ref(server)))
         for skill in spec.get("skills", []):
-            used_skills.add(skill)
+            used_skills.add(versioned_ref(*split_spec_ref(skill)))
         for tool in spec.get("tools", []):
-            used_tools.add(tool)
+            used_tools.add(versioned_ref(*split_spec_ref(tool)))
 
     # Only import what's actually used
     mcp_imports = []
     mcp_map_entries = []
-    for server_id in mcp_server_ids:
-        if server_id in used_mcp_servers:
-            const_name = server_id.upper().replace("-", "_") + "_MCP_SERVER"
+    for spec in mcp_specs:
+        server_id = spec["id"]
+        server_ref = versioned_ref(server_id, spec["version"])
+        if server_ref in used_mcp_servers:
+            const_name = server_id.upper().replace("-", "_") + "_MCP_SERVER" + version_suffix(spec["version"])
             mcp_imports.append(const_name)
+            mcp_map_entries.append(f"  '{server_ref}': {const_name},")
             mcp_map_entries.append(f"  '{server_id}': {const_name},")
 
     # Generate skill import names and map entries
     skill_imports = []
     skill_map_entries = []
-    for sid in skill_ids:
-        if sid in used_skills:
-            const_name = sid.upper().replace("-", "_") + "_SKILL_SPEC"
+    for spec in skill_specs:
+        sid = spec["id"]
+        sref = versioned_ref(sid, spec["version"])
+        if sref in used_skills:
+            const_name = sid.upper().replace("-", "_") + "_SKILL_SPEC" + version_suffix(spec["version"])
             skill_imports.append(const_name)
+            skill_map_entries.append(f"  '{sref}': {const_name},")
             skill_map_entries.append(f"  '{sid}': {const_name},")
 
     # Generate tool import names and map entries
     tool_imports = []
     tool_map_entries = []
-    for tid in tool_ids:
-        if tid in used_tools:
-            const_name = tid.upper().replace("-", "_") + "_TOOL_SPEC"
+    for spec in tool_specs:
+        tid = spec["id"]
+        tref = versioned_ref(tid, spec["version"])
+        if tref in used_tools:
+            const_name = tid.upper().replace("-", "_") + "_TOOL_SPEC" + version_suffix(spec["version"])
             tool_imports.append(const_name)
+            tool_map_entries.append(f"  '{tref}': {const_name},")
             tool_map_entries.append(f"  '{tid}': {const_name},")
 
     # Determine if we need any helper code
@@ -459,7 +506,7 @@ function toAgentSkillSpec(skill: SkillSpec) {
     id: skill.id,
     name: skill.name,
     description: skill.description,
-    version: '1.0.0',
+        version: skill.version ?? '0.0.1',
     tags: skill.tags,
     enabled: skill.enabled,
     requiredEnvVars: skill.requiredEnvVars,
@@ -511,6 +558,7 @@ const TOOL_MAP: Record<string, any> = {
 
         for spec in folder_specs:
             agent_id = spec["id"]
+            version = spec["version"]
             # Prefix agent ID with folder name for uniqueness
             full_agent_id = f"{folder}/{agent_id}" if folder else agent_id
             # Create constant name: e.g., "data-acquisition" -> "DATA_ACQUISITION_AGENT_SPEC"
@@ -522,10 +570,11 @@ const TOOL_MAP: Record<string, any> = {
                 const_name = base_name + "_SPEC"
             else:
                 const_name = base_name + "_AGENT_SPEC"
+            const_name += version_suffix(version)
             agent_ids.append((full_agent_id, const_name, folder))
 
             # Get MCP servers
-            mcp_server_ids = spec.get("mcp_servers", [])
+            mcp_server_ids = [versioned_ref(*split_spec_ref(sid)) for sid in spec.get("mcp_servers", [])]
             if has_mcp and mcp_server_ids:
                 mcp_servers_str = ", ".join(
                     f"MCP_SERVER_MAP['{sid}']" for sid in mcp_server_ids
@@ -534,7 +583,7 @@ const TOOL_MAP: Record<string, any> = {
                 mcp_servers_str = ""
 
             # Get skills - resolve to AgentSkillSpec via toAgentSkillSpec
-            skill_ids_list = spec.get("skills", [])
+            skill_ids_list = [versioned_ref(*split_spec_ref(sid)) for sid in spec.get("skills", [])]
             if has_skills and skill_ids_list:
                 skills_str = ", ".join(
                     f"toAgentSkillSpec(SKILL_MAP['{sid}'])" for sid in skill_ids_list
@@ -543,7 +592,7 @@ const TOOL_MAP: Record<string, any> = {
                 skills_str = ""
 
             # Get tools - resolve to ToolSpec via TOOL_MAP
-            tool_ids_list = spec.get("tools", [])
+            tool_ids_list = [versioned_ref(*split_spec_ref(sid)) for sid in spec.get("tools", [])]
             if has_tools and tool_ids_list:
                 tools_str = ", ".join(
                     f"TOOL_MAP['{tid}']" for tid in tool_ids_list
@@ -629,6 +678,7 @@ const TOOL_MAP: Record<string, any> = {
 
             code += f"""export const {const_name}: AgentSpec = {{
   id: '{full_agent_id}',
+    version: '{version}',
   name: '{spec["name"]}',
   description: `{description}`,
   tags: {tags_str},
@@ -681,6 +731,8 @@ export const AGENT_SPECS: Record<string, AgentSpec> = {
             code += f"  // {folder.replace('-', ' ').title()}\n"
         for full_agent_id, const_name in folder_agents:
             code += f"  '{full_agent_id}': {const_name},\n"
+            agent_spec = next(s for f, s in specs if (f + "/" + s["id"] if f else s["id"]) == full_agent_id)
+            code += f"  '{versioned_ref(full_agent_id, agent_spec['version'])}': {const_name},\n"
         if folder_agents and folder:
             code += "\n"
 
@@ -711,14 +763,15 @@ export function listAgentSpecs(prefix?: string): AgentSpec[] {
  */
 export function getAgentSpecRequiredEnvVars(spec: AgentSpec): string[] {
   const vars = new Set<string>();
+    const baseEnvVar = (v: string): string => v.split(':')[0] ?? v;
   for (const server of spec.mcpServers) {
     for (const v of server.requiredEnvVars ?? []) {
-      vars.add(v);
+            vars.add(baseEnvVar(v));
     }
   }
   for (const skill of spec.skills) {
     for (const v of skill.requiredEnvVars ?? []) {
-      vars.add(v);
+            vars.add(baseEnvVar(v));
     }
   }
   return Array.from(vars);

@@ -18,8 +18,9 @@ import type { EvalSpec } from '../types/types';
 // Eval Definitions
 // ============================================================================
 
-export const AGENTBENCH_EVAL_SPEC: EvalSpec = {
+export const AGENTBENCH_EVAL_SPEC_0_0_1: EvalSpec = {
   id: 'agentbench',
+  version: '0.0.1',
   name: 'AgentBench',
   description:
     'Multi-dimensional LLM-as-agent evaluation across 8 diverse environments including web browsing, operating system interaction, database queries, digital card games, lateral thinking, and household tasks.',
@@ -31,8 +32,9 @@ export const AGENTBENCH_EVAL_SPEC: EvalSpec = {
   languages: ['python', 'sql', 'bash'],
 };
 
-export const GPQA_DIAMOND_EVAL_SPEC: EvalSpec = {
+export const GPQA_DIAMOND_EVAL_SPEC_0_0_1: EvalSpec = {
   id: 'gpqa-diamond',
+  version: '0.0.1',
   name: 'GPQA Diamond',
   description:
     'Graduate-level science questions crafted by domain experts. Tests advanced reasoning in physics, chemistry, and biology with questions that require PhD-level understanding to answer correctly.',
@@ -44,8 +46,9 @@ export const GPQA_DIAMOND_EVAL_SPEC: EvalSpec = {
   languages: ['english'],
 };
 
-export const HUMANEVAL_EVAL_SPEC: EvalSpec = {
+export const HUMANEVAL_EVAL_SPEC_0_0_1: EvalSpec = {
   id: 'humaneval',
+  version: '0.0.1',
   name: 'HumanEval',
   description:
     'Python function implementation from docstrings. Measures functional correctness of code generation by testing against hand-written test cases. Widely used as a baseline for code generation benchmarks.',
@@ -57,8 +60,9 @@ export const HUMANEVAL_EVAL_SPEC: EvalSpec = {
   languages: ['python'],
 };
 
-export const MMLU_EVAL_SPEC: EvalSpec = {
+export const MMLU_EVAL_SPEC_0_0_1: EvalSpec = {
   id: 'mmlu',
+  version: '0.0.1',
   name: 'MMLU',
   description:
     'Massive Multitask Language Understanding: 57-subject knowledge benchmark spanning STEM, humanities, social sciences, and more. Tests broad knowledge and reasoning across diverse academic domains.',
@@ -70,8 +74,9 @@ export const MMLU_EVAL_SPEC: EvalSpec = {
   languages: ['english'],
 };
 
-export const SWE_BENCH_VERIFIED_EVAL_SPEC: EvalSpec = {
+export const SWE_BENCH_VERIFIED_EVAL_SPEC_0_0_1: EvalSpec = {
   id: 'swe-bench-verified',
+  version: '0.0.1',
   name: 'SWE-bench Verified',
   description:
     'Human-validated subset of SWE-bench with verified ground-truth patches. Provides higher confidence evaluation of software engineering capabilities by eliminating ambiguous or flawed test cases from the full benchmark.',
@@ -83,8 +88,9 @@ export const SWE_BENCH_VERIFIED_EVAL_SPEC: EvalSpec = {
   languages: ['python'],
 };
 
-export const SWE_BENCH_EVAL_SPEC: EvalSpec = {
+export const SWE_BENCH_EVAL_SPEC_0_0_1: EvalSpec = {
   id: 'swe-bench',
+  version: '0.0.1',
   name: 'SWE-bench',
   description:
     "Real-world software engineering tasks from GitHub issues. Tests an agent's ability to understand bug reports and feature requests, then produce working code patches that pass existing test suites.",
@@ -96,8 +102,9 @@ export const SWE_BENCH_EVAL_SPEC: EvalSpec = {
   languages: ['python'],
 };
 
-export const TOOLBENCH_EVAL_SPEC: EvalSpec = {
+export const TOOLBENCH_EVAL_SPEC_0_0_1: EvalSpec = {
   id: 'toolbench',
+  version: '0.0.1',
   name: 'ToolBench',
   description:
     'Large-scale benchmark for tool-augmented LLMs covering 16000+ real-world APIs across 49 categories. Evaluates multi-step tool usage, API selection, argument generation, and response parsing in complex, chained workflows.',
@@ -109,8 +116,9 @@ export const TOOLBENCH_EVAL_SPEC: EvalSpec = {
   languages: ['python', 'json'],
 };
 
-export const TRUTHFULQA_EVAL_SPEC: EvalSpec = {
+export const TRUTHFULQA_EVAL_SPEC_0_0_1: EvalSpec = {
   id: 'truthfulqa',
+  version: '0.0.1',
   name: 'TruthfulQA',
   description:
     'Benchmark measuring whether a language model generates truthful answers to questions spanning 38 categories including health, law, finance, and politics. Designed to test resilience against common human misconceptions and falsehoods that models may have learned from training data.',
@@ -127,14 +135,22 @@ export const TRUTHFULQA_EVAL_SPEC: EvalSpec = {
 // ============================================================================
 
 export const EVAL_CATALOG: Record<string, EvalSpec> = {
-  agentbench: AGENTBENCH_EVAL_SPEC,
-  'gpqa-diamond': GPQA_DIAMOND_EVAL_SPEC,
-  humaneval: HUMANEVAL_EVAL_SPEC,
-  mmlu: MMLU_EVAL_SPEC,
-  'swe-bench-verified': SWE_BENCH_VERIFIED_EVAL_SPEC,
-  'swe-bench': SWE_BENCH_EVAL_SPEC,
-  toolbench: TOOLBENCH_EVAL_SPEC,
-  truthfulqa: TRUTHFULQA_EVAL_SPEC,
+  agentbench: AGENTBENCH_EVAL_SPEC_0_0_1,
+  'agentbench:0.0.1': AGENTBENCH_EVAL_SPEC_0_0_1,
+  'gpqa-diamond': GPQA_DIAMOND_EVAL_SPEC_0_0_1,
+  'gpqa-diamond:0.0.1': GPQA_DIAMOND_EVAL_SPEC_0_0_1,
+  humaneval: HUMANEVAL_EVAL_SPEC_0_0_1,
+  'humaneval:0.0.1': HUMANEVAL_EVAL_SPEC_0_0_1,
+  mmlu: MMLU_EVAL_SPEC_0_0_1,
+  'mmlu:0.0.1': MMLU_EVAL_SPEC_0_0_1,
+  'swe-bench-verified': SWE_BENCH_VERIFIED_EVAL_SPEC_0_0_1,
+  'swe-bench-verified:0.0.1': SWE_BENCH_VERIFIED_EVAL_SPEC_0_0_1,
+  'swe-bench': SWE_BENCH_EVAL_SPEC_0_0_1,
+  'swe-bench:0.0.1': SWE_BENCH_EVAL_SPEC_0_0_1,
+  toolbench: TOOLBENCH_EVAL_SPEC_0_0_1,
+  'toolbench:0.0.1': TOOLBENCH_EVAL_SPEC_0_0_1,
+  truthfulqa: TRUTHFULQA_EVAL_SPEC_0_0_1,
+  'truthfulqa:0.0.1': TRUTHFULQA_EVAL_SPEC_0_0_1,
 };
 
 export function getEvalSpecs(): EvalSpec[] {

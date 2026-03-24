@@ -82,6 +82,8 @@ export interface MCPServerTool {
 export interface MCPServer {
   /** Unique server identifier */
   id: string;
+  /** Version */
+  version?: string;
   /** Display name for the server */
   name: string;
   /** Server description */
@@ -141,6 +143,8 @@ export interface AgentSkillSpec {
 export interface ToolSpec {
   /** Unique tool identifier */
   id: string;
+  /** Version */
+  version?: string;
   /** Display name for the tool */
   name: string;
   /** Tool description */
@@ -253,6 +257,8 @@ export interface GuardrailContentSafety {
 export interface GuardrailSpec {
   /** Unique guardrail identifier */
   id: string;
+  /** Version */
+  version?: string;
   /** Display name */
   name: string;
   /** Description of the guardrail */
@@ -289,6 +295,8 @@ export interface GuardrailSpec {
 export interface EvalSpec {
   /** Unique eval identifier */
   id: string;
+  /** Version */
+  version?: string;
   /** Display name */
   name: string;
   /** Description of the evaluation */
@@ -337,6 +345,8 @@ export interface TriggerField {
 export interface TriggerSpec {
   /** Unique trigger identifier */
   id: string;
+  /** Version */
+  version?: string;
   /** Display name */
   name: string;
   /** Description of the trigger */
@@ -357,6 +367,8 @@ export interface TriggerSpec {
 export interface OutputSpec {
   /** Unique output identifier */
   id: string;
+  /** Version */
+  version?: string;
   /** Display name */
   name: string;
   /** Description of the output format */
@@ -399,6 +411,8 @@ export interface NotificationField {
 export interface NotificationChannelSpec {
   /** Unique channel identifier */
   id: string;
+  /** Version */
+  version?: string;
   /** Display name */
   name: string;
   /** Description of the channel */
@@ -426,6 +440,8 @@ export interface NotificationChannelSpec {
 export interface AgentSpec {
   /** Unique agent identifier */
   id: string;
+  /** Version */
+  version?: string;
   /** Display name for the agent */
   name: string;
   /** Agent description */
@@ -598,6 +614,8 @@ export interface TeamOutputSpec {
 export interface TeamSpec {
   /** Unique team identifier */
   id: string;
+  /** Version */
+  version?: string;
   /** Display name for the team */
   name: string;
   /** Team description */

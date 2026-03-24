@@ -18,8 +18,9 @@ import type { OutputSpec } from '../types/types';
 // Output Definitions
 // ============================================================================
 
-export const API_PUSH_OUTPUT_SPEC: OutputSpec = {
+export const API_PUSH_OUTPUT_SPEC_0_0_1: OutputSpec = {
   id: 'api-push',
+  version: '0.0.1',
   name: 'API Push',
   description:
     'Push results to an external API endpoint via HTTP POST. Useful for integrating with downstream services, data warehouses, or event-driven architectures.',
@@ -29,8 +30,9 @@ export const API_PUSH_OUTPUT_SPEC: OutputSpec = {
   mime_types: ['application/json'],
 };
 
-export const CSV_OUTPUT_SPEC: OutputSpec = {
+export const CSV_OUTPUT_SPEC_0_0_1: OutputSpec = {
   id: 'csv',
+  version: '0.0.1',
   name: 'CSV',
   description:
     'Deliver results as a CSV file for easy import into spreadsheets, data pipelines, or other analysis tools.',
@@ -40,8 +42,9 @@ export const CSV_OUTPUT_SPEC: OutputSpec = {
   mime_types: ['text/csv'],
 };
 
-export const DASHBOARD_OUTPUT_SPEC: OutputSpec = {
+export const DASHBOARD_OUTPUT_SPEC_0_0_1: OutputSpec = {
   id: 'dashboard',
+  version: '0.0.1',
   name: 'Dashboard',
   description:
     'Deliver results as an interactive dashboard with charts, tables, and filter controls rendered in the browser.',
@@ -51,8 +54,9 @@ export const DASHBOARD_OUTPUT_SPEC: OutputSpec = {
   mime_types: ['text/html', 'application/json'],
 };
 
-export const DOCUMENT_OUTPUT_SPEC: OutputSpec = {
+export const DOCUMENT_OUTPUT_SPEC_0_0_1: OutputSpec = {
   id: 'document',
+  version: '0.0.1',
   name: 'Document',
   description:
     'Deliver results as a structured document (PDF, DOCX, or Markdown) suitable for sharing, archiving, or regulatory compliance.',
@@ -66,8 +70,9 @@ export const DOCUMENT_OUTPUT_SPEC: OutputSpec = {
   ],
 };
 
-export const EMAIL_OUTPUT_SPEC: OutputSpec = {
+export const EMAIL_OUTPUT_SPEC_0_0_1: OutputSpec = {
   id: 'email',
+  version: '0.0.1',
   name: 'Email',
   description:
     'Send results as an email attachment or inline HTML body. Supports rich formatting with embedded tables and charts.',
@@ -77,8 +82,9 @@ export const EMAIL_OUTPUT_SPEC: OutputSpec = {
   mime_types: ['text/html', 'application/pdf'],
 };
 
-export const JSON_OUTPUT_SPEC: OutputSpec = {
+export const JSON_OUTPUT_SPEC_0_0_1: OutputSpec = {
   id: 'json',
+  version: '0.0.1',
   name: 'JSON',
   description:
     'Deliver results as structured JSON data, suitable for programmatic consumption by APIs, pipelines, or dashboards.',
@@ -88,8 +94,9 @@ export const JSON_OUTPUT_SPEC: OutputSpec = {
   mime_types: ['application/json'],
 };
 
-export const NOTEBOOK_OUTPUT_SPEC: OutputSpec = {
+export const NOTEBOOK_OUTPUT_SPEC_0_0_1: OutputSpec = {
   id: 'notebook',
+  version: '0.0.1',
   name: 'Notebook',
   description:
     'Deliver results as a Jupyter notebook with executable cells, inline visualizations, and rich markdown narrative.',
@@ -99,8 +106,9 @@ export const NOTEBOOK_OUTPUT_SPEC: OutputSpec = {
   mime_types: ['application/x-ipynb+json'],
 };
 
-export const SPREADSHEET_OUTPUT_SPEC: OutputSpec = {
+export const SPREADSHEET_OUTPUT_SPEC_0_0_1: OutputSpec = {
   id: 'spreadsheet',
+  version: '0.0.1',
   name: 'Spreadsheet',
   description:
     'Deliver results as an Excel spreadsheet with formatted tables, charts, and multiple sheets for structured analysis.',
@@ -117,14 +125,22 @@ export const SPREADSHEET_OUTPUT_SPEC: OutputSpec = {
 // ============================================================================
 
 export const OUTPUT_CATALOG: Record<string, OutputSpec> = {
-  'api-push': API_PUSH_OUTPUT_SPEC,
-  csv: CSV_OUTPUT_SPEC,
-  dashboard: DASHBOARD_OUTPUT_SPEC,
-  document: DOCUMENT_OUTPUT_SPEC,
-  email: EMAIL_OUTPUT_SPEC,
-  json: JSON_OUTPUT_SPEC,
-  notebook: NOTEBOOK_OUTPUT_SPEC,
-  spreadsheet: SPREADSHEET_OUTPUT_SPEC,
+  'api-push': API_PUSH_OUTPUT_SPEC_0_0_1,
+  'api-push:0.0.1': API_PUSH_OUTPUT_SPEC_0_0_1,
+  csv: CSV_OUTPUT_SPEC_0_0_1,
+  'csv:0.0.1': CSV_OUTPUT_SPEC_0_0_1,
+  dashboard: DASHBOARD_OUTPUT_SPEC_0_0_1,
+  'dashboard:0.0.1': DASHBOARD_OUTPUT_SPEC_0_0_1,
+  document: DOCUMENT_OUTPUT_SPEC_0_0_1,
+  'document:0.0.1': DOCUMENT_OUTPUT_SPEC_0_0_1,
+  email: EMAIL_OUTPUT_SPEC_0_0_1,
+  'email:0.0.1': EMAIL_OUTPUT_SPEC_0_0_1,
+  json: JSON_OUTPUT_SPEC_0_0_1,
+  'json:0.0.1': JSON_OUTPUT_SPEC_0_0_1,
+  notebook: NOTEBOOK_OUTPUT_SPEC_0_0_1,
+  'notebook:0.0.1': NOTEBOOK_OUTPUT_SPEC_0_0_1,
+  spreadsheet: SPREADSHEET_OUTPUT_SPEC_0_0_1,
+  'spreadsheet:0.0.1': SPREADSHEET_OUTPUT_SPEC_0_0_1,
 };
 
 export function getOutputSpecs(): OutputSpec[] {

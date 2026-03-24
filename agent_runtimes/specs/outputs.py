@@ -18,6 +18,7 @@ class OutputSpec(BaseModel):
     """Output format specification."""
 
     id: str = Field(..., description="Unique output identifier")
+    version: str = Field(default="0.0.1", description="Output version")
     name: str = Field(..., description="Display name")
     description: str = Field(default="", description="Output description")
     icon: str = Field(default="", description="Icon identifier")
@@ -30,8 +31,9 @@ class OutputSpec(BaseModel):
 # Output Definitions
 # ============================================================================
 
-API_PUSH_OUTPUT_SPEC = OutputSpec(
+API_PUSH_OUTPUT_SPEC_0_0_1 = OutputSpec(
     id="api-push",
+    version="0.0.1",
     name="API Push",
     description="Push results to an external API endpoint via HTTP POST. Useful for integrating with downstream services, data warehouses, or event-driven architectures.",
     icon="upload",
@@ -40,8 +42,9 @@ API_PUSH_OUTPUT_SPEC = OutputSpec(
     mime_types=["application/json"],
 )
 
-CSV_OUTPUT_SPEC = OutputSpec(
+CSV_OUTPUT_SPEC_0_0_1 = OutputSpec(
     id="csv",
+    version="0.0.1",
     name="CSV",
     description="Deliver results as a CSV file for easy import into spreadsheets, data pipelines, or other analysis tools.",
     icon="table",
@@ -50,8 +53,9 @@ CSV_OUTPUT_SPEC = OutputSpec(
     mime_types=["text/csv"],
 )
 
-DASHBOARD_OUTPUT_SPEC = OutputSpec(
+DASHBOARD_OUTPUT_SPEC_0_0_1 = OutputSpec(
     id="dashboard",
+    version="0.0.1",
     name="Dashboard",
     description="Deliver results as an interactive dashboard with charts, tables, and filter controls rendered in the browser.",
     icon="graph",
@@ -60,8 +64,9 @@ DASHBOARD_OUTPUT_SPEC = OutputSpec(
     mime_types=["text/html", "application/json"],
 )
 
-DOCUMENT_OUTPUT_SPEC = OutputSpec(
+DOCUMENT_OUTPUT_SPEC_0_0_1 = OutputSpec(
     id="document",
+    version="0.0.1",
     name="Document",
     description="Deliver results as a structured document (PDF, DOCX, or Markdown) suitable for sharing, archiving, or regulatory compliance.",
     icon="file",
@@ -70,8 +75,9 @@ DOCUMENT_OUTPUT_SPEC = OutputSpec(
     mime_types=["application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "text/markdown"],
 )
 
-EMAIL_OUTPUT_SPEC = OutputSpec(
+EMAIL_OUTPUT_SPEC_0_0_1 = OutputSpec(
     id="email",
+    version="0.0.1",
     name="Email",
     description="Send results as an email attachment or inline HTML body. Supports rich formatting with embedded tables and charts.",
     icon="mail",
@@ -80,8 +86,9 @@ EMAIL_OUTPUT_SPEC = OutputSpec(
     mime_types=["text/html", "application/pdf"],
 )
 
-JSON_OUTPUT_SPEC = OutputSpec(
+JSON_OUTPUT_SPEC_0_0_1 = OutputSpec(
     id="json",
+    version="0.0.1",
     name="JSON",
     description="Deliver results as structured JSON data, suitable for programmatic consumption by APIs, pipelines, or dashboards.",
     icon="code",
@@ -90,8 +97,9 @@ JSON_OUTPUT_SPEC = OutputSpec(
     mime_types=["application/json"],
 )
 
-NOTEBOOK_OUTPUT_SPEC = OutputSpec(
+NOTEBOOK_OUTPUT_SPEC_0_0_1 = OutputSpec(
     id="notebook",
+    version="0.0.1",
     name="Notebook",
     description="Deliver results as a Jupyter notebook with executable cells, inline visualizations, and rich markdown narrative.",
     icon="file-code",
@@ -100,8 +108,9 @@ NOTEBOOK_OUTPUT_SPEC = OutputSpec(
     mime_types=["application/x-ipynb+json"],
 )
 
-SPREADSHEET_OUTPUT_SPEC = OutputSpec(
+SPREADSHEET_OUTPUT_SPEC_0_0_1 = OutputSpec(
     id="spreadsheet",
+    version="0.0.1",
     name="Spreadsheet",
     description="Deliver results as an Excel spreadsheet with formatted tables, charts, and multiple sheets for structured analysis.",
     icon="table",
@@ -115,14 +124,22 @@ SPREADSHEET_OUTPUT_SPEC = OutputSpec(
 # ============================================================================
 
 OUTPUT_CATALOG: Dict[str, OutputSpec] = {
-    "api-push": API_PUSH_OUTPUT_SPEC,
-    "csv": CSV_OUTPUT_SPEC,
-    "dashboard": DASHBOARD_OUTPUT_SPEC,
-    "document": DOCUMENT_OUTPUT_SPEC,
-    "email": EMAIL_OUTPUT_SPEC,
-    "json": JSON_OUTPUT_SPEC,
-    "notebook": NOTEBOOK_OUTPUT_SPEC,
-    "spreadsheet": SPREADSHEET_OUTPUT_SPEC,
+    "api-push": API_PUSH_OUTPUT_SPEC_0_0_1,
+    "api-push:0.0.1": API_PUSH_OUTPUT_SPEC_0_0_1,
+    "csv": CSV_OUTPUT_SPEC_0_0_1,
+    "csv:0.0.1": CSV_OUTPUT_SPEC_0_0_1,
+    "dashboard": DASHBOARD_OUTPUT_SPEC_0_0_1,
+    "dashboard:0.0.1": DASHBOARD_OUTPUT_SPEC_0_0_1,
+    "document": DOCUMENT_OUTPUT_SPEC_0_0_1,
+    "document:0.0.1": DOCUMENT_OUTPUT_SPEC_0_0_1,
+    "email": EMAIL_OUTPUT_SPEC_0_0_1,
+    "email:0.0.1": EMAIL_OUTPUT_SPEC_0_0_1,
+    "json": JSON_OUTPUT_SPEC_0_0_1,
+    "json:0.0.1": JSON_OUTPUT_SPEC_0_0_1,
+    "notebook": NOTEBOOK_OUTPUT_SPEC_0_0_1,
+    "notebook:0.0.1": NOTEBOOK_OUTPUT_SPEC_0_0_1,
+    "spreadsheet": SPREADSHEET_OUTPUT_SPEC_0_0_1,
+    "spreadsheet:0.0.1": SPREADSHEET_OUTPUT_SPEC_0_0_1,
 }
 
 

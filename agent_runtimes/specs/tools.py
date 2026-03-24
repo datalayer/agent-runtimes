@@ -26,6 +26,7 @@ class ToolSpec(BaseModel):
     """Tool specification."""
 
     id: str = Field(..., description="Tool identifier")
+    version: str = Field(default="0.0.1", description="Tool version")
     name: str = Field(..., description="Display name")
     description: str = Field(default="", description="Tool description")
     tags: List[str] = Field(default_factory=list, description="Search/discovery tags")
@@ -41,8 +42,9 @@ class ToolSpec(BaseModel):
 # Tool Definitions
 # ============================================================================
 
-RUNTIME_ECHO_TOOL_SPEC = ToolSpec(
+RUNTIME_ECHO_TOOL_SPEC_0_0_1 = ToolSpec(
     id="runtime-echo",
+    version="0.0.1",
     name="Runtime Echo",
     description="Echo text back to the caller for quick runtime verification.",
     tags=["runtime", "utility"],
@@ -58,8 +60,9 @@ RUNTIME_ECHO_TOOL_SPEC = ToolSpec(
     emoji="💬",
 )
 
-RUNTIME_SEND_MAIL_TOOL_SPEC = ToolSpec(
+RUNTIME_SEND_MAIL_TOOL_SPEC_0_0_1 = ToolSpec(
     id="runtime-send-mail",
+    version="0.0.1",
     name="Runtime Send Mail (Fake)",
     description="Fake mail sender for tool approval demos; returns a simulated send receipt.",
     tags=["runtime", "approval", "mail"],
@@ -75,8 +78,9 @@ RUNTIME_SEND_MAIL_TOOL_SPEC = ToolSpec(
     emoji="📧",
 )
 
-RUNTIME_SENSITIVE_ECHO_TOOL_SPEC = ToolSpec(
+RUNTIME_SENSITIVE_ECHO_TOOL_SPEC_0_0_1 = ToolSpec(
     id="runtime-sensitive-echo",
+    version="0.0.1",
     name="Runtime Sensitive Echo",
     description="Echo text with a manual approval checkpoint before execution.",
     tags=["runtime", "approval"],
@@ -97,9 +101,12 @@ RUNTIME_SENSITIVE_ECHO_TOOL_SPEC = ToolSpec(
 # ============================================================================
 
 TOOL_CATALOG: Dict[str, ToolSpec] = {
-    "runtime-echo": RUNTIME_ECHO_TOOL_SPEC,
-    "runtime-send-mail": RUNTIME_SEND_MAIL_TOOL_SPEC,
-    "runtime-sensitive-echo": RUNTIME_SENSITIVE_ECHO_TOOL_SPEC,
+    "runtime-echo": RUNTIME_ECHO_TOOL_SPEC_0_0_1,
+    "runtime-echo:0.0.1": RUNTIME_ECHO_TOOL_SPEC_0_0_1,
+    "runtime-send-mail": RUNTIME_SEND_MAIL_TOOL_SPEC_0_0_1,
+    "runtime-send-mail:0.0.1": RUNTIME_SEND_MAIL_TOOL_SPEC_0_0_1,
+    "runtime-sensitive-echo": RUNTIME_SENSITIVE_ECHO_TOOL_SPEC_0_0_1,
+    "runtime-sensitive-echo:0.0.1": RUNTIME_SENSITIVE_ECHO_TOOL_SPEC_0_0_1,
 }
 
 

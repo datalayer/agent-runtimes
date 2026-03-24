@@ -20,6 +20,8 @@ from typing import Any
 
 import yaml
 
+from versioning import ensure_spec_version, version_suffix, versioned_ref
+
 
 def _fmt_list(items: list[str]) -> str:
     """Format a list of strings with double quotes for ruff compliance."""
@@ -51,6 +53,7 @@ def load_specs(specs_dir: Path) -> list[dict[str, Any]]:
     for yaml_file in sorted(specs_dir.rglob("*.yaml")):
         with open(yaml_file) as f:
             spec = yaml.safe_load(f)
+            ensure_spec_version(spec)
             specs.append(spec)
     return specs
 
@@ -159,6 +162,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         '    """Guardrail specification."""',
         "",
         "    id: str",
+        '    version: str = "0.0.1"',
         "    name: str",
         "    description: str",
         "    identity_provider: str",
@@ -181,7 +185,8 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
 
     for spec in specs:
         g_id = spec["id"]
-        const_name = f"{g_id.upper().replace('-', '_')}_GUARDRAIL_SPEC"
+        version = spec["version"]
+        const_name = f"{g_id.upper().replace('-', '_')}_GUARDRAIL_SPEC{version_suffix(version)}"
         desc = _esc_dq(spec.get("description", "").strip().replace("\n", " "))
         perms = spec.get("permissions", {})
         tl = spec.get("token_limits", {})
@@ -190,6 +195,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
             [
                 f"{const_name} = GuardrailSpec(",
                 f'    id="{g_id}",',
+                f'    version="{version}",',
                 f'    name="{spec["name"]}",',
                 f'    description="{desc}",',
                 f'    identity_provider="{spec.get("identity_provider", "")}",',
@@ -296,8 +302,10 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
     )
     for spec in specs:
         g_id = spec["id"]
-        const_name = f"{g_id.upper().replace('-', '_')}_GUARDRAIL_SPEC"
+        version = spec["version"]
+        const_name = f"{g_id.upper().replace('-', '_')}_GUARDRAIL_SPEC{version_suffix(version)}"
         lines.append(f'    "{g_id}": {const_name},')
+        lines.append(f'    "{versioned_ref(g_id, version)}": {const_name},')
     lines.extend(
         [
             "}",
@@ -393,7 +401,8 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
 
     for spec in specs:
         g_id = spec["id"]
-        const_name = f"{g_id.upper().replace('-', '_')}_GUARDRAIL_SPEC"
+        version = spec["version"]
+        const_name = f"{g_id.upper().replace('-', '_')}_GUARDRAIL_SPEC{version_suffix(version)}"
         desc = _esc(spec.get("description", "").strip().replace("\n", " "))
         perms = spec.get("permissions", {})
         tl = spec.get("token_limits", {})
@@ -402,6 +411,7 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
             [
                 f"export const {const_name}: GuardrailSpec = {{",
                 f"  id: '{g_id}',",
+                f"  version: '{version}',",
                 f"  name: '{_esc(spec['name'])}',",
                 f"  description: '{desc}',",
                 f"  identity_provider: '{spec.get('identity_provider', '')}',",
@@ -456,8 +466,10 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
     )
     for spec in specs:
         g_id = spec["id"]
-        const_name = f"{g_id.upper().replace('-', '_')}_GUARDRAIL_SPEC"
+        version = spec["version"]
+        const_name = f"{g_id.upper().replace('-', '_')}_GUARDRAIL_SPEC{version_suffix(version)}"
         lines.append(f"  '{g_id}': {const_name},")
+        lines.append(f"  '{versioned_ref(g_id, version)}': {const_name},")
     lines.extend(
         [
             "};",
