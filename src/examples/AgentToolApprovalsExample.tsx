@@ -142,6 +142,15 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
   );
 
   const createdApprovalSignatures = useRef<Set<string>>(new Set());
+  const resolveLocalRef = useRef<
+    (
+      toolName: string,
+      toolArgs: Record<string, unknown>,
+    ) => Promise<ToolApprovalRequest | null>
+  >(async () => null);
+  const authFetchRef = useRef<
+    (url: string, opts?: RequestInit) => Promise<Response>
+  >((url, opts) => fetch(url, opts));
   const chatAuthToken: string | undefined = token === null ? undefined : token;
   const configuredAiAgentsBaseUrl = useCoreStore(
     (s: any) => s.configuration?.aiagentsRunUrl,
@@ -384,25 +393,62 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
     ws.onmessage = event => {
       try {
         const payload = JSON.parse(String(event.data));
-        if (payload?.event !== 'tool_approval_created' || !payload?.approval) {
+        const wsEvent = payload?.event as string | undefined;
+        const approval = payload?.approval as ToolApprovalRequest | undefined;
+        if (!wsEvent || !approval) {
           return;
         }
-        const approval = payload.approval as ToolApprovalRequest;
-        if (
-          approval.status !== 'pending' ||
-          (approval.agent_id && approval.agent_id !== agentId)
-        ) {
-          return;
-        }
-        setApprovals(prev => {
-          const next = prev.filter(item => item.id !== approval.id);
-          next.unshift({
-            ...approval,
-            backendBaseUrl: aiAgentsBaseUrl,
-            apiPrefix: `${AI_AGENTS_API_PREFIX}/tool-approvals`,
+
+        if (wsEvent === 'tool_approval_created') {
+          if (
+            approval.status !== 'pending' ||
+            (approval.agent_id && approval.agent_id !== agentId)
+          ) {
+            return;
+          }
+          setApprovals(prev => {
+            const next = prev.filter(item => item.id !== approval.id);
+            next.unshift({
+              ...approval,
+              backendBaseUrl: aiAgentsBaseUrl,
+              apiPrefix: `${AI_AGENTS_API_PREFIX}/tool-approvals`,
+            });
+            return next;
           });
-          return next;
-        });
+          return;
+        }
+
+        if (
+          wsEvent === 'tool_approval_approved' ||
+          wsEvent === 'tool_approval_rejected'
+        ) {
+          // Remove from the server approval queue.
+          setApprovals(prev => prev.filter(item => item.id !== approval.id));
+
+          // Bridge the decision to the local agent-runtimes approval.
+          const action =
+            wsEvent === 'tool_approval_approved' ? 'approve' : 'reject';
+          void (async () => {
+            try {
+              const localMatch = await resolveLocalRef.current(
+                approval.tool_name,
+                approval.tool_args ?? {},
+              );
+              if (localMatch) {
+                const localBaseUrl = `${agentBaseUrl}/api/v1/tool-approvals/${localMatch.id}/${action}`;
+                await authFetchRef.current(localBaseUrl, {
+                  method: 'POST',
+                  body: JSON.stringify(
+                    approval.note ? { note: approval.note } : {},
+                  ),
+                });
+              }
+            } catch {
+              // Local bridge errors are non-fatal; poll will reconcile.
+            }
+          })();
+          return;
+        }
       } catch {
         // Ignore malformed WS payloads.
       }
@@ -423,7 +469,23 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
       ws.close();
       setWsState('closed');
     };
-  }, [isReady, mode, aiAgentsBaseUrl, chatAuthToken, agentId, pollApprovals]);
+  }, [
+    isReady,
+    mode,
+    aiAgentsBaseUrl,
+    agentBaseUrl,
+    chatAuthToken,
+    agentId,
+    pollApprovals,
+  ]);
+
+  // Keep refs in sync so the WS handler always has the latest functions.
+  useEffect(() => {
+    resolveLocalRef.current = resolveLocalApprovalForTool;
+  }, [resolveLocalApprovalForTool]);
+  useEffect(() => {
+    authFetchRef.current = authFetch;
+  }, [authFetch]);
 
   const approve = useCallback(
     async (requestId: string, note?: string): Promise<boolean> => {
@@ -456,34 +518,12 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
           );
         }
 
-        const isServerApproval =
-          mode === 'server' &&
-          approval?.apiPrefix === `${AI_AGENTS_API_PREFIX}/tool-approvals`;
-        if (isServerApproval && approval) {
-          const localMatch = await resolveLocalApprovalForTool(
-            approval.tool_name,
-            approval.tool_args ?? {},
-          );
-          if (localMatch) {
-            const localResponse = await authFetch(
-              `${agentBaseUrl}/api/v1/tool-approvals/${localMatch.id}/approve`,
-              {
-                method: 'POST',
-                body: JSON.stringify(note ? { note } : {}),
-              },
-            );
-            if (!localResponse.ok) {
-              const localErrorText = await localResponse.text().catch(() => '');
-              throw new Error(
-                localErrorText ||
-                  `Failed to approve local runtime request (${localResponse.status} ${localResponse.statusText})`,
-              );
-            }
-          }
+        // In server mode the WS event will remove from queue and bridge to
+        // the local runtime — don't do it here to keep flow server-driven.
+        if (mode !== 'server') {
+          setApprovals(prev => prev.filter(a => a.id !== requestId));
+          void pollApprovals();
         }
-
-        setApprovals(prev => prev.filter(a => a.id !== requestId));
-        void pollApprovals();
         return true;
       } catch (error) {
         const message =
@@ -496,15 +536,7 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
         setApprovalLoading(null);
       }
     },
-    [
-      approvals,
-      mode,
-      aiAgentsBaseUrl,
-      agentBaseUrl,
-      authFetch,
-      pollApprovals,
-      resolveLocalApprovalForTool,
-    ],
+    [approvals, mode, aiAgentsBaseUrl, agentBaseUrl, authFetch, pollApprovals],
   );
 
   const reject = useCallback(
@@ -538,34 +570,12 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
           );
         }
 
-        const isServerApproval =
-          mode === 'server' &&
-          approval?.apiPrefix === `${AI_AGENTS_API_PREFIX}/tool-approvals`;
-        if (isServerApproval && approval) {
-          const localMatch = await resolveLocalApprovalForTool(
-            approval.tool_name,
-            approval.tool_args ?? {},
-          );
-          if (localMatch) {
-            const localResponse = await authFetch(
-              `${agentBaseUrl}/api/v1/tool-approvals/${localMatch.id}/reject`,
-              {
-                method: 'POST',
-                body: JSON.stringify(note ? { note } : {}),
-              },
-            );
-            if (!localResponse.ok) {
-              const localErrorText = await localResponse.text().catch(() => '');
-              throw new Error(
-                localErrorText ||
-                  `Failed to reject local runtime request (${localResponse.status} ${localResponse.statusText})`,
-              );
-            }
-          }
+        // In server mode the WS event will remove from queue and bridge to
+        // the local runtime — don't do it here to keep flow server-driven.
+        if (mode !== 'server') {
+          setApprovals(prev => prev.filter(a => a.id !== requestId));
+          void pollApprovals();
         }
-
-        setApprovals(prev => prev.filter(a => a.id !== requestId));
-        void pollApprovals();
         return true;
       } catch (error) {
         const message =
@@ -578,15 +588,7 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
         setApprovalLoading(null);
       }
     },
-    [
-      approvals,
-      mode,
-      aiAgentsBaseUrl,
-      agentBaseUrl,
-      authFetch,
-      pollApprovals,
-      resolveLocalApprovalForTool,
-    ],
+    [approvals, mode, aiAgentsBaseUrl, agentBaseUrl, authFetch, pollApprovals],
   );
 
   const ensureServerApproval = useCallback(
