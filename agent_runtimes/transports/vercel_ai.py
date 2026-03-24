@@ -110,7 +110,7 @@ class VercelAITransport(BaseTransport):
         """
         super().__init__(agent)
         self._usage_limits = usage_limits or UsageLimits(
-            tool_calls_limit=5,
+            tool_calls_limit=20,
             output_tokens_limit=5000,
             total_tokens_limit=100000,
         )

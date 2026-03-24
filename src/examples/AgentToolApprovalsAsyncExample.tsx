@@ -50,7 +50,7 @@ const stableStringify = (value: unknown): string => {
 
 const queryClient = new QueryClient();
 const AGENT_NAME = 'tool-approval-demo-agent';
-const AGENT_SPEC_ID = 'monitor-sales-kpis';
+const AGENT_SPEC_ID = 'simple-full';
 const DEFAULT_LOCAL_BASE_URL =
   import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
 const DEFAULT_AI_AGENTS_BASE_URL =
@@ -121,15 +121,9 @@ const AgentToolApprovalAsyncInner: React.FC<{ onLogout: () => void }> = ({
             agent_library: 'pydantic-ai',
             transport: 'vercel-ai',
             agent_spec_id: AGENT_SPEC_ID,
-            system_prompt:
-              'You are a helpful assistant. You have access to three tools: runtime_echo (echoes text, no approval needed), runtime_sensitive_echo (echoes text, requires approval), and runtime_send_mail (sends an email, requires approval). When asked to list your tools, call each tool with a brief description as the argument to demonstrate them. Do not call list_skills, load_skill, read_skill_resource, or run_skill_script.',
             enable_skills: false,
             skills: [],
-            tools: [
-              'runtime-echo',
-              'runtime-sensitive-echo',
-              'runtime-send-mail',
-            ],
+            tools: ['runtime-echo', 'runtime-sensitive-echo'],
           }),
         });
 

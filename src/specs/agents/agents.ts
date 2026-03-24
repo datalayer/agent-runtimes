@@ -1448,7 +1448,6 @@ export const MONITOR_SALES_KPIS_AGENT_SPEC: AgentSpec = {
     'What are the current revenue trends?',
     'Flag any KPIs that deviate more than 10% from targets',
     'Generate a weekly summary report',
-    'Call the runtime_echo tool with text "hello world". This tool does not require approval. Use a tool call only and do not write Python code.',
   ],
   welcomeMessage:
     "Hello! I'm the Sales KPI Monitor. I continuously track your CRM data, generate daily reports on key performance metrics, and alert you when KPIs deviate significantly from targets.\n",
@@ -2090,8 +2089,8 @@ export const PROCESS_FINANCIAL_TRANSACTIONS_AGENT_SPEC: AgentSpec = {
   memory: 'ephemeral',
 };
 
-export const SIMPLE_AGENT_SPEC: AgentSpec = {
-  id: 'simple',
+export const SIMPLE_BASE_AGENT_SPEC: AgentSpec = {
+  id: 'simple-base',
   name: 'A Simple Agent',
   description: `A simple conversational agent. No tools, no MCP servers, no skills — just a helpful AI assistant you can chat with.`,
   tags: ['simple', 'chat', 'assistant'],
@@ -2116,6 +2115,52 @@ export const SIMPLE_AGENT_SPEC: AgentSpec = {
   welcomeDocument: undefined,
   sandboxVariant: 'jupyter',
   systemPrompt: `You are a helpful, friendly AI assistant. You do not have access to any external tools, MCP servers, or skills. Answer questions using your training knowledge, be concise, and let the user know if a question is outside your knowledge.
+`,
+  systemPromptCodemodeAddons: undefined,
+  goal: undefined,
+  protocol: undefined,
+  uiExtension: undefined,
+  trigger: {
+    type: 'once',
+    prompt: 'Start when requested by a user and complete the workflow once.',
+  },
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: undefined,
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+};
+
+export const SIMPLE_FULL_AGENT_SPEC: AgentSpec = {
+  id: 'simple-full',
+  name: 'Tool Approval Demo',
+  description: `A minimal demonstration agent showcasing the human-in-the-loop tool approval flow. Includes one tool that runs automatically and one that requires explicit human approval before execution, plus Tavily web search.`,
+  tags: ['demo', 'approval', 'human-in-the-loop', 'utility'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  mcpServers: [MCP_SERVER_MAP['tavily']],
+  skills: [toAgentSkillSpec(SKILL_MAP['events'])],
+  tools: [TOOL_MAP['runtime-echo'], TOOL_MAP['runtime-sensitive-echo']],
+  environmentName: 'ai-agents-env',
+  icon: 'shield',
+  emoji: '🛡️',
+  color: '#6366F1',
+  suggestions: [
+    'list your tools',
+    "Call the runtime_sensitive_echo tool with text 'hello' and reason 'audit'. Use a tool call only and do not write Python code.",
+    "Call the runtime_echo tool with text 'hello world'. Use a tool call only and do not write Python code.",
+  ],
+  welcomeMessage:
+    "Hi! I'm the Tool Approval Demo agent. I have two echo tools — one runs immediately, the other requires your approval before executing. I can also search the web with Tavily.\n",
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'jupyter',
+  systemPrompt: `You are a helpful assistant demonstrating the tool approval workflow. You have access to two runtime tools: - runtime_echo: echoes text back immediately, no approval required. - runtime_sensitive_echo: echoes text with a reason, but requires human approval before executing. You also have access to the Tavily MCP server for web search. When asked to list your tools, briefly describe each one and ask the user which to run. Do not call list_skills, load_skill, read_skill_resource, or run_skill_script.
 `,
   systemPromptCodemodeAddons: undefined,
   goal: undefined,
@@ -2391,7 +2436,8 @@ export const AGENT_SPECS: Record<string, AgentSpec> = {
   'process-citizen-requests': PROCESS_CITIZEN_REQUESTS_AGENT_SPEC,
   'process-clinical-trial-data': PROCESS_CLINICAL_TRIAL_DATA_AGENT_SPEC,
   'process-financial-transactions': PROCESS_FINANCIAL_TRANSACTIONS_AGENT_SPEC,
-  simple: SIMPLE_AGENT_SPEC,
+  'simple-base': SIMPLE_BASE_AGENT_SPEC,
+  'simple-full': SIMPLE_FULL_AGENT_SPEC,
   'spatial-data-analysis': SPATIAL_DATA_ANALYSIS_AGENT_SPEC,
   'summarize-documents': SUMMARIZE_DOCUMENTS_AGENT_SPEC,
   'sync-crm-contacts': SYNC_CRM_CONTACTS_AGENT_SPEC,
