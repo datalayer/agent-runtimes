@@ -31,6 +31,7 @@ import type {
   ProtocolConfig,
   ModelConfig,
   ChatViewMode,
+  RenderToolResult,
 } from './base/ChatBase';
 import type { FrontendToolDefinition } from '../types/tool';
 import type { McpServerSelection } from '../types';
@@ -183,6 +184,12 @@ export interface ChatProps {
   /** Show header with connection status */
   showHeader?: boolean;
 
+  /** Show the new chat (+) button in the header */
+  showNewChatButton?: boolean;
+
+  /** Show the clear chat button in the header */
+  showClearButton?: boolean;
+
   /** Show model selector (fetched from /configure endpoint) */
   showModelSelector?: boolean;
 
@@ -300,6 +307,15 @@ export interface ChatProps {
    * Pass an empty array to explicitly disable all frontend tools.
    */
   frontendTools?: FrontendToolDefinition[];
+
+  /** Optional custom renderer for tool-call message cards. */
+  renderToolResult?: RenderToolResult;
+
+  /**
+   * Hide assistant messages that follow a rendered tool call UI.
+   * Useful to suppress raw tool-call/continuation text and show only tool cards.
+   */
+  hideMessagesAfterToolUI?: boolean;
 }
 
 /**
@@ -363,6 +379,8 @@ export function Chat({
   className,
   height = '600px',
   showHeader = true,
+  showNewChatButton = true,
+  showClearButton = true,
   showModelSelector = true,
   showToolsMenu = true,
   showSkillsMenu = false,
@@ -388,6 +406,8 @@ export function Chat({
   chatViewMode,
   onChatViewModeChange,
   frontendTools,
+  renderToolResult,
+  hideMessagesAfterToolUI = false,
 }: ChatProps) {
   const [error, setError] = useState<string | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
@@ -691,8 +711,8 @@ export function Chat({
             onNewChat={handleNewChat}
             onMessagesChange={messages => setMessageCount(messages.length)}
             headerButtons={{
-              showNewChat: true,
-              showClear: true,
+              showNewChat: showNewChatButton,
+              showClear: showClearButton,
               onNewChat: handleNewChat,
             }}
             avatarConfig={{
@@ -703,6 +723,8 @@ export function Chat({
             chatViewMode={chatViewMode}
             onChatViewModeChange={onChatViewModeChange}
             frontendTools={frontendTools}
+            renderToolResult={renderToolResult}
+            hideMessagesAfterToolUI={hideMessagesAfterToolUI}
           />
         </Box>
       </Box>

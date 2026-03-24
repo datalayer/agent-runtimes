@@ -1448,6 +1448,7 @@ export const MONITOR_SALES_KPIS_AGENT_SPEC: AgentSpec = {
     'What are the current revenue trends?',
     'Flag any KPIs that deviate more than 10% from targets',
     'Generate a weekly summary report',
+    'Call the runtime_echo tool with text "hello world". This tool does not require approval. Use a tool call only and do not write Python code.',
   ],
   welcomeMessage:
     "Hello! I'm the Sales KPI Monitor. I continuously track your CRM data, generate daily reports on key performance metrics, and alert you when KPIs deviate significantly from targets.\n",

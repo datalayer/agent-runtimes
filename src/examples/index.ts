@@ -10,7 +10,7 @@ export { default as A2UiRestaurantExample } from './A2UiRestaurantExample';
 export { default as A2UiViewerExample } from './A2UiViewerExample';
 export { default as AgUiAgenticExample } from './AgUiAgenticExample';
 export { default as AgUiBackendToolRenderingExample } from './AgUiBackendToolRenderingExample';
-export { default as AgUiHaikuGenUIExample } from './AgUiHaikuGenUIExample';
+export { default as AgUiHaikuGenUiExample } from './AgUiHaikuGenUiExample';
 export { default as AgUiHumanInTheLoopExample } from './AgUiHumanInTheLoopExample';
 export { default as AgUiSharedStateExample } from './AgUiSharedStateExample';
 export { default as AgUiToolsBasedGenUIExample } from './AgUiToolsBasedGenUIExample';

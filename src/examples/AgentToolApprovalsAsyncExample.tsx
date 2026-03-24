@@ -21,12 +21,32 @@ import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { SignInSimple } from '@datalayer/core/lib/views/iam';
 import { UserBadge } from '@datalayer/core/lib/views/profile';
 import { ThemedProvider } from './stores/themedProvider';
-import { Chat } from '../chat';
+import { Chat, type RenderToolResult } from '../chat';
 import {
+  ToolCallDisplay,
   ToolApprovalBanner,
   ToolApprovalDialog,
   type PendingApproval,
 } from '../chat/tools';
+
+const normalizeToolName = (value: string): string =>
+  value.replace(/[-_]/g, '').toLowerCase();
+
+const stableStringify = (value: unknown): string => {
+  if (value === null || typeof value !== 'object') {
+    return JSON.stringify(value);
+  }
+  if (Array.isArray(value)) {
+    return `[${value.map(item => stableStringify(item)).join(',')}]`;
+  }
+  const entries = Object.entries(value as Record<string, unknown>)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(
+      ([key, itemValue]) =>
+        `${JSON.stringify(key)}:${stableStringify(itemValue)}`,
+    );
+  return `{${entries.join(',')}}`;
+};
 
 const queryClient = new QueryClient();
 const AGENT_NAME = 'tool-approval-demo-agent';
@@ -61,6 +81,9 @@ const AgentToolApprovalAsyncInner: React.FC<{ onLogout: () => void }> = ({
     useState<ToolApprovalRequest | null>(null);
   const [approvalLoading, setApprovalLoading] = useState<string | null>(null);
   const [approvalError, setApprovalError] = useState<string | null>(null);
+  const [toolApprovalState, setToolApprovalState] = useState<
+    Record<string, 'approved' | 'denied'>
+  >({});
   const chatAuthToken: string | undefined = token === null ? undefined : token;
 
   const agentBaseUrl = DEFAULT_LOCAL_BASE_URL;
@@ -290,6 +313,95 @@ const AgentToolApprovalAsyncInner: React.FC<{ onLogout: () => void }> = ({
     [approvals, agentId],
   );
 
+  const findMatchingApproval = useCallback(
+    (
+      toolName: string,
+      args: Record<string, unknown>,
+    ): ToolApprovalRequest | null => {
+      const normalizedToolName = normalizeToolName(toolName);
+      const argsSig = stableStringify(args ?? {});
+      return (
+        approvals.find(approval => {
+          if (normalizeToolName(approval.tool_name) !== normalizedToolName) {
+            return false;
+          }
+          return stableStringify(approval.tool_args ?? {}) === argsSig;
+        }) || null
+      );
+    },
+    [approvals],
+  );
+
+  const handleToolLevelApprove = useCallback(
+    async (toolCallId: string, requestId: string) => {
+      const ok = await approve(requestId, 'Approved from tool message card');
+      if (ok) {
+        setToolApprovalState(prev => ({ ...prev, [toolCallId]: 'approved' }));
+      }
+    },
+    [approve],
+  );
+
+  const handleToolLevelDeny = useCallback(
+    async (toolCallId: string, requestId: string) => {
+      const ok = await reject(requestId, 'Rejected from tool message card');
+      if (ok) {
+        setToolApprovalState(prev => ({ ...prev, [toolCallId]: 'denied' }));
+      }
+    },
+    [reject],
+  );
+
+  const renderToolResult: RenderToolResult = useCallback(
+    ({ toolCallId, toolName, args, result, status, error }) => {
+      const matchedApproval = findMatchingApproval(toolName, args);
+      const resultObject =
+        result && typeof result === 'object'
+          ? (result as Record<string, unknown>)
+          : undefined;
+      const pendingByResult =
+        status === 'inProgress' && resultObject?.pending_approval === true;
+      const toolDecision = toolApprovalState[toolCallId];
+      const loadingThisApproval =
+        !!matchedApproval && approvalLoading === matchedApproval.id;
+      const approvalState: 'pending' | 'approved' | 'denied' | undefined =
+        toolDecision ||
+        (pendingByResult || !!matchedApproval ? 'pending' : undefined);
+
+      return (
+        <ToolCallDisplay
+          toolCallId={toolCallId}
+          toolName={toolName}
+          args={args}
+          result={result}
+          status={status}
+          error={error}
+          approvalRequired={!!approvalState}
+          approvalState={approvalState}
+          approvalLoading={loadingThisApproval}
+          onApprove={
+            matchedApproval
+              ? () =>
+                  void handleToolLevelApprove(toolCallId, matchedApproval.id)
+              : undefined
+          }
+          onDeny={
+            matchedApproval
+              ? () => void handleToolLevelDeny(toolCallId, matchedApproval.id)
+              : undefined
+          }
+        />
+      );
+    },
+    [
+      findMatchingApproval,
+      toolApprovalState,
+      approvalLoading,
+      handleToolLevelApprove,
+      handleToolLevelDeny,
+    ],
+  );
+
   if (!isReady && runtimeStatus !== 'error') {
     return (
       <Box
@@ -459,11 +571,12 @@ const AgentToolApprovalAsyncInner: React.FC<{ onLogout: () => void }> = ({
                 'Call the runtime_send_mail tool with to "finance@example.com", subject "KPI Alert", and body "Revenue dropped by 12 percent this week". Use a tool call only and do not write Python code.',
             },
             {
-              title: 'Auto Tool',
+              title: 'No Approval Tool',
               message:
-                'Call the runtime_echo tool with text "hello world". Use a tool call only and do not write Python code.',
+                'Call the runtime_echo tool with text "hello world". This tool does not require approval. Use a tool call only and do not write Python code.',
             },
           ]}
+          renderToolResult={renderToolResult}
           submitOnSuggestionClick
         />
       </Box>

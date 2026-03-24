@@ -4,7 +4,7 @@
  */
 
 /**
- * AgUiHaikuGenUIExample
+ * AgUiHaikuGenUiExample
  *
  * Demonstrates tool-based generative UI where the agent generates haiku
  * poetry that is rendered:
@@ -80,7 +80,7 @@ const HaikuDisplayWithRef = forwardRef<
 HaikuDisplayWithRef.displayName = 'HaikuDisplayWithRef';
 
 /**
- * AgUiHaikuGenUIExample Component
+ * AgUiHaikuGenUiExample Component
  *
  * Demonstrates tool-based generative UI with haiku generation.
  * The agent has a `generate_haiku` tool that returns structured
@@ -95,7 +95,7 @@ HaikuDisplayWithRef.displayName = 'HaikuDisplayWithRef';
  * - Dynamic gradient backgrounds
  * - Japanese/English text rendering
  */
-const AgUiHaikuGenUIExample: React.FC = () => {
+const AgUiHaikuGenUiExample: React.FC = () => {
   const brandColor = useThemeBrandColor();
 
   // Ref to the main display for adding haikus
@@ -305,4 +305,4 @@ const AgUiHaikuGenUIExample: React.FC = () => {
   );
 };
 
-export default AgUiHaikuGenUIExample;
+export default AgUiHaikuGenUiExample;

@@ -20,12 +20,32 @@ import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { SignInSimple } from '@datalayer/core/lib/views/iam';
 import { UserBadge } from '@datalayer/core/lib/views/profile';
 import { ThemedProvider } from './stores/themedProvider';
-import { Chat } from '../chat';
+import { Chat, type RenderToolResult } from '../chat';
 import {
+  ToolCallDisplay,
   ToolApprovalBanner,
   ToolApprovalDialog,
   type PendingApproval,
 } from '../chat/tools';
+
+const normalizeToolName = (value: string): string =>
+  value.replace(/[-_]/g, '').toLowerCase();
+
+const stableStringify = (value: unknown): string => {
+  if (value === null || typeof value !== 'object') {
+    return JSON.stringify(value);
+  }
+  if (Array.isArray(value)) {
+    return `[${value.map(item => stableStringify(item)).join(',')}]`;
+  }
+  const entries = Object.entries(value as Record<string, unknown>)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(
+      ([key, itemValue]) =>
+        `${JSON.stringify(key)}:${stableStringify(itemValue)}`,
+    );
+  return `{${entries.join(',')}}`;
+};
 
 const queryClient = new QueryClient();
 const AGENT_NAME = 'tool-approval-demo-agent';
@@ -39,6 +59,10 @@ interface ToolApprovalRequest {
   tool_args?: Record<string, unknown>;
   note?: string;
   created_at?: string;
+  status?: string;
+  agent_id?: string;
+  backendBaseUrl?: string;
+  apiPrefix?: string;
 }
 
 const AgentToolApprovalSyncInner: React.FC<{ onLogout: () => void }> = ({
@@ -58,10 +82,14 @@ const AgentToolApprovalSyncInner: React.FC<{ onLogout: () => void }> = ({
     useState<ToolApprovalRequest | null>(null);
   const [approvalLoading, setApprovalLoading] = useState<string | null>(null);
   const [approvalError, setApprovalError] = useState<string | null>(null);
+  const [toolApprovalState, setToolApprovalState] = useState<
+    Record<string, 'approved' | 'denied'>
+  >({});
   const chatAuthToken: string | undefined = token === null ? undefined : token;
 
   const agentBaseUrl = DEFAULT_LOCAL_BASE_URL;
   const approvalsBaseUrl = agentBaseUrl;
+  const aiAgentsBaseUrl = import.meta.env.VITE_AI_AGENTS_URL || '';
   const podName = 'localhost';
 
   const authFetch = useCallback(
@@ -161,30 +189,72 @@ const AgentToolApprovalSyncInner: React.FC<{ onLogout: () => void }> = ({
     if (!isReady || !agentBaseUrl) {
       return;
     }
-    try {
-      const res = await authFetch(`${approvalsBaseUrl}/api/v1/tool-approvals`);
+
+    const fetchPendingApprovals = async (
+      baseUrl: string,
+      apiPrefix: string,
+    ): Promise<ToolApprovalRequest[]> => {
+      const res = await authFetch(`${baseUrl}${apiPrefix}`);
       if (!res.ok) {
-        return;
+        return [];
       }
       const data = await res.json();
       const allApprovals = Array.isArray(data)
         ? data
         : (data.approvals ?? data.requests ?? []);
-      const pendingForAgent = allApprovals.filter(
-        (
-          approval: ToolApprovalRequest & {
-            agent_id?: string;
-            status?: string;
-          },
-        ) =>
-          approval.status === 'pending' &&
-          (approval.agent_id === agentId || !approval.agent_id),
-      );
-      setApprovals(pendingForAgent);
+
+      return allApprovals
+        .filter(
+          (approval: ToolApprovalRequest) =>
+            approval.status === 'pending' &&
+            (approval.agent_id === agentId || !approval.agent_id),
+        )
+        .map((approval: ToolApprovalRequest) => ({
+          ...approval,
+          backendBaseUrl: baseUrl,
+          apiPrefix,
+        }));
+    };
+
+    try {
+      const sources: Array<{ baseUrl: string; apiPrefix: string }> = [
+        { baseUrl: approvalsBaseUrl, apiPrefix: '/api/v1/tool-approvals' },
+      ];
+
+      if (
+        aiAgentsBaseUrl &&
+        aiAgentsBaseUrl.replace(/\/$/, '') !==
+          approvalsBaseUrl.replace(/\/$/, '')
+      ) {
+        sources.push({
+          baseUrl: aiAgentsBaseUrl,
+          apiPrefix: '/api/ai-agents/v1/tool-approvals',
+        });
+      }
+
+      const merged = new Map<string, ToolApprovalRequest>();
+      for (const source of sources) {
+        const pendingForSource = await fetchPendingApprovals(
+          source.baseUrl,
+          source.apiPrefix,
+        );
+        for (const approval of pendingForSource) {
+          merged.set(approval.id, approval);
+        }
+      }
+
+      setApprovals(Array.from(merged.values()));
     } catch {
       // Ignore transient polling errors.
     }
-  }, [isReady, approvalsBaseUrl, agentId, authFetch]);
+  }, [
+    isReady,
+    agentBaseUrl,
+    approvalsBaseUrl,
+    aiAgentsBaseUrl,
+    agentId,
+    authFetch,
+  ]);
 
   useEffect(() => {
     pollApprovals();
@@ -200,8 +270,11 @@ const AgentToolApprovalSyncInner: React.FC<{ onLogout: () => void }> = ({
       setApprovalLoading(requestId);
       setApprovalError(null);
       try {
+        const approval = approvals.find(item => item.id === requestId);
+        const baseUrl = approval?.backendBaseUrl ?? approvalsBaseUrl;
+        const apiPrefix = approval?.apiPrefix ?? '/api/v1/tool-approvals';
         const response = await authFetch(
-          `${approvalsBaseUrl}/api/v1/tool-approvals/${requestId}/approve`,
+          `${baseUrl}${apiPrefix}/${requestId}/approve`,
           {
             method: 'POST',
             body: JSON.stringify(note ? { note } : {}),
@@ -230,7 +303,7 @@ const AgentToolApprovalSyncInner: React.FC<{ onLogout: () => void }> = ({
         setApprovalLoading(null);
       }
     },
-    [agentBaseUrl, approvalsBaseUrl, authFetch, pollApprovals],
+    [agentBaseUrl, approvals, approvalsBaseUrl, authFetch, pollApprovals],
   );
 
   const reject = useCallback(
@@ -241,8 +314,11 @@ const AgentToolApprovalSyncInner: React.FC<{ onLogout: () => void }> = ({
       setApprovalLoading(requestId);
       setApprovalError(null);
       try {
+        const approval = approvals.find(item => item.id === requestId);
+        const baseUrl = approval?.backendBaseUrl ?? approvalsBaseUrl;
+        const apiPrefix = approval?.apiPrefix ?? '/api/v1/tool-approvals';
         const response = await authFetch(
-          `${approvalsBaseUrl}/api/v1/tool-approvals/${requestId}/reject`,
+          `${baseUrl}${apiPrefix}/${requestId}/reject`,
           {
             method: 'POST',
             body: JSON.stringify(note ? { note } : {}),
@@ -271,7 +347,7 @@ const AgentToolApprovalSyncInner: React.FC<{ onLogout: () => void }> = ({
         setApprovalLoading(null);
       }
     },
-    [agentBaseUrl, approvalsBaseUrl, authFetch, pollApprovals],
+    [agentBaseUrl, approvals, approvalsBaseUrl, authFetch, pollApprovals],
   );
 
   const pendingApprovals: PendingApproval[] = useMemo(
@@ -285,6 +361,95 @@ const AgentToolApprovalSyncInner: React.FC<{ onLogout: () => void }> = ({
         requestedAt: req.created_at ?? new Date().toISOString(),
       })),
     [approvals, agentId],
+  );
+
+  const findMatchingApproval = useCallback(
+    (
+      toolName: string,
+      args: Record<string, unknown>,
+    ): ToolApprovalRequest | null => {
+      const normalizedToolName = normalizeToolName(toolName);
+      const argsSig = stableStringify(args ?? {});
+      return (
+        approvals.find(approval => {
+          if (normalizeToolName(approval.tool_name) !== normalizedToolName) {
+            return false;
+          }
+          return stableStringify(approval.tool_args ?? {}) === argsSig;
+        }) || null
+      );
+    },
+    [approvals],
+  );
+
+  const handleToolLevelApprove = useCallback(
+    async (toolCallId: string, requestId: string) => {
+      const ok = await approve(requestId, 'Approved from tool message card');
+      if (ok) {
+        setToolApprovalState(prev => ({ ...prev, [toolCallId]: 'approved' }));
+      }
+    },
+    [approve],
+  );
+
+  const handleToolLevelDeny = useCallback(
+    async (toolCallId: string, requestId: string) => {
+      const ok = await reject(requestId, 'Rejected from tool message card');
+      if (ok) {
+        setToolApprovalState(prev => ({ ...prev, [toolCallId]: 'denied' }));
+      }
+    },
+    [reject],
+  );
+
+  const renderToolResult: RenderToolResult = useCallback(
+    ({ toolCallId, toolName, args, result, status, error }) => {
+      const matchedApproval = findMatchingApproval(toolName, args);
+      const resultObject =
+        result && typeof result === 'object'
+          ? (result as Record<string, unknown>)
+          : undefined;
+      const pendingByResult =
+        status === 'inProgress' && resultObject?.pending_approval === true;
+      const toolDecision = toolApprovalState[toolCallId];
+      const loadingThisApproval =
+        !!matchedApproval && approvalLoading === matchedApproval.id;
+      const approvalState: 'pending' | 'approved' | 'denied' | undefined =
+        toolDecision ||
+        (pendingByResult || !!matchedApproval ? 'pending' : undefined);
+
+      return (
+        <ToolCallDisplay
+          toolCallId={toolCallId}
+          toolName={toolName}
+          args={args}
+          result={result}
+          status={status}
+          error={error}
+          approvalRequired={!!approvalState}
+          approvalState={approvalState}
+          approvalLoading={loadingThisApproval}
+          onApprove={
+            matchedApproval
+              ? () =>
+                  void handleToolLevelApprove(toolCallId, matchedApproval.id)
+              : undefined
+          }
+          onDeny={
+            matchedApproval
+              ? () => void handleToolLevelDeny(toolCallId, matchedApproval.id)
+              : undefined
+          }
+        />
+      );
+    },
+    [
+      findMatchingApproval,
+      toolApprovalState,
+      approvalLoading,
+      handleToolLevelApprove,
+      handleToolLevelDeny,
+    ],
   );
 
   if (!isReady && runtimeStatus !== 'error') {
@@ -433,7 +598,9 @@ const AgentToolApprovalSyncInner: React.FC<{ onLogout: () => void }> = ({
           authToken={chatAuthToken}
           title="Tool Approval Agent"
           placeholder="Ask for actions that require approval..."
-          showHeader={false}
+          showHeader={true}
+          showNewChatButton={true}
+          showClearButton={false}
           showTokenUsage={true}
           autoFocus
           height="100%"
@@ -456,11 +623,12 @@ const AgentToolApprovalSyncInner: React.FC<{ onLogout: () => void }> = ({
                 'Call the runtime_send_mail tool with to "finance@example.com", subject "KPI Alert", and body "Revenue dropped by 12 percent this week". Use a tool call only and do not write Python code.',
             },
             {
-              title: 'Auto Tool',
+              title: 'No Approval Tool',
               message:
-                'Call the runtime_echo tool with text "hello world". Use a tool call only and do not write Python code.',
+                'Call the runtime_echo tool with text "hello world". This tool does not require approval. Use a tool call only and do not write Python code.',
             },
           ]}
+          renderToolResult={renderToolResult}
           submitOnSuggestionClick
         />
       </Box>

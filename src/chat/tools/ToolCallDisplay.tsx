@@ -10,8 +10,8 @@
  * @module components/chat/tools/ToolCallDisplay
  */
 
-import React, { useState } from 'react';
-import { Text, Spinner } from '@primer/react';
+import React, { useEffect, useState } from 'react';
+import { Button, Text, Spinner } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import {
   ChevronDownIcon,
@@ -51,6 +51,16 @@ export interface ToolCallDisplayProps {
   exitCode?: number | null;
   /** Execution/infrastructure error message */
   executionError?: string;
+  /** Whether this tool call requires explicit user approval */
+  approvalRequired?: boolean;
+  /** Approval state for this tool call */
+  approvalState?: 'pending' | 'approved' | 'denied';
+  /** Called when user approves this tool call */
+  onApprove?: () => void;
+  /** Called when user denies this tool call */
+  onDeny?: () => void;
+  /** Loading state for approval actions */
+  approvalLoading?: boolean;
 }
 
 /**
@@ -186,6 +196,11 @@ export function ToolCallDisplay({
   codeError,
   exitCode,
   executionError,
+  approvalRequired = false,
+  approvalState,
+  onApprove,
+  onDeny,
+  approvalLoading = false,
 }: ToolCallDisplayProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -214,7 +229,14 @@ export function ToolCallDisplay({
       ? (result as Record<string, unknown>)
       : undefined;
   const isPendingApproval =
-    status === 'inProgress' && resultObject?.pending_approval === true;
+    approvalState === 'pending' ||
+    (status === 'inProgress' && resultObject?.pending_approval === true);
+
+  useEffect(() => {
+    if (isPendingApproval) {
+      setIsExpanded(true);
+    }
+  }, [isPendingApproval]);
 
   // Get error details from various sources (prefer rich error info)
   const effectiveCodeError =
@@ -316,7 +338,7 @@ export function ToolCallDisplay({
               color: statusDisplay.color,
             }}
           >
-            {isPendingApproval ? 'Awaiting approval...' : statusDisplay.label}
+            {isPendingApproval ? 'Awaiting Approval' : statusDisplay.label}
           </Text>
         </Box>
 
@@ -428,6 +450,46 @@ export function ToolCallDisplay({
                     : JSON.stringify(result, null, 2)}
                 </pre>
               </Box>
+            </Box>
+          )}
+
+          {/* Approval section */}
+          {approvalRequired && (
+            <Box
+              sx={{ mt: status === 'complete' && result !== undefined ? 3 : 0 }}
+            >
+              {approvalState === 'approved' ? (
+                <Text sx={{ color: 'success.fg', fontSize: 1 }}>
+                  Approved. Executing tool.
+                </Text>
+              ) : approvalState === 'denied' ? (
+                <Text sx={{ color: 'danger.fg', fontSize: 1 }}>
+                  Denied. Tool will not run.
+                </Text>
+              ) : (
+                <>
+                  <Text sx={{ fontSize: 1, color: 'fg.default' }}>
+                    This tool requires your approval to run.
+                  </Text>
+                  <Box sx={{ mt: 2, display: 'flex', gap: 2 }}>
+                    <Button
+                      size="small"
+                      onClick={onApprove}
+                      disabled={approvalLoading || !onApprove}
+                    >
+                      Approve
+                    </Button>
+                    <Button
+                      size="small"
+                      variant="danger"
+                      onClick={onDeny}
+                      disabled={approvalLoading || !onDeny}
+                    >
+                      Deny
+                    </Button>
+                  </Box>
+                </>
+              )}
             </Box>
           )}
 

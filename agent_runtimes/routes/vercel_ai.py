@@ -11,7 +11,7 @@ from typing import Any, Optional
 
 from fastapi import APIRouter, Request
 from pydantic import BaseModel
-from starlette.responses import Response
+from starlette.responses import JSONResponse, Response
 
 from ..transports import VercelAITransport
 
@@ -149,69 +149,6 @@ def get_vercel_adapter(agent_id: str) -> VercelAITransport | None:
     return _vercel_adapters.get(agent_id)
 
 
-@router.post("/{agent_id:path}")
-async def chat(
-    request: Request,
-    agent_id: str,
-) -> Response:
-    """
-    Handle Vercel AI SDK chat requests.
-
-    This endpoint implements the Vercel AI SDK streaming protocol, providing:
-    - Streaming chat responses
-    - Tool call support
-    - Token usage tracking
-    - Standard message format
-
-    The model can be specified in the request body to override the agent's default.
-
-    Args:
-        request: The FastAPI/Starlette request.
-        agent_id: The agent to use (defaults to "demo-agent").
-
-    Returns:
-        Streaming response compatible with Vercel AI SDK.
-
-    Example:
-        ```javascript
-        // Client-side with Vercel AI SDK
-        import { useChat } from 'ai/react';
-
-        const { messages, input, handleInputChange, handleSubmit } = useChat({
-          api: '/api/v1/vercel-ai/chat',
-        });
-        ```
-    """
-    # Get the adapter for this agent
-    adapter = get_vercel_adapter(agent_id)
-
-    if not adapter:
-        # Try to create a default adapter if we have a demo agent
-        from ..demo.demo_adapter import create_demo_agent
-
-        try:
-            agent, _ = create_demo_agent()
-            # Create Vercel AI adapter with agent_id for usage tracking
-            adapter = VercelAITransport(agent, agent_id=agent_id)
-            register_vercel_agent(agent_id, adapter)
-            logger.info(f"Auto-registered demo agent for Vercel AI: {agent_id}")
-        except Exception as e:
-            logger.error(f"Could not create demo agent: {e}")
-            from starlette.responses import JSONResponse
-
-            return JSONResponse(
-                status_code=404,
-                content={
-                    "error": f"Agent '{agent_id}' not found",
-                    "message": "No agent registered for this ID",
-                },
-            )
-
-    # Handle the request using the Vercel AI adapter
-    # The model override is extracted from the request body inside handle_vercel_request
-    return await adapter.handle_vercel_request(request)
-
-
 @router.get("/agents")
 async def list_agents() -> dict[str, Any]:
     """
@@ -276,3 +213,53 @@ async def list_requests() -> dict[str, Any]:
         "requests": list(_running_requests.keys()),
         "count": len(_running_requests),
     }
+
+
+@router.post("/{agent_id:path}")
+async def chat(
+    request: Request,
+    agent_id: str,
+) -> Response:
+    """
+    Handle Vercel AI SDK chat requests.
+
+    This endpoint implements the Vercel AI SDK streaming protocol, providing:
+    - Streaming chat responses
+    - Tool call support
+    - Token usage tracking
+    - Standard message format
+
+    The model can be specified in the request body to override the agent's default.
+
+    Args:
+        request: The FastAPI/Starlette request.
+        agent_id: The agent to use (defaults to "demo-agent").
+
+    Returns:
+        Streaming response compatible with Vercel AI SDK.
+
+    Example:
+        ```javascript
+        // Client-side with Vercel AI SDK
+        import { useChat } from 'ai/react';
+
+        const { messages, input, handleInputChange, handleSubmit } = useChat({
+          api: '/api/v1/vercel-ai/chat',
+        });
+        ```
+    """
+    # Get the adapter for this agent
+    adapter = get_vercel_adapter(agent_id)
+
+    if not adapter:
+        return JSONResponse(
+            status_code=404,
+            content={
+                "error": f"Agent '{agent_id}' not found",
+                "message": "No agent registered for this ID",
+            },
+        )
+
+    # Handle the request using the Vercel AI adapter
+    # The model override is extracted from the request body inside handle_vercel_request
+    return await adapter.handle_vercel_request(request)

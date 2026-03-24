@@ -76,6 +76,27 @@ function isToolCallOnlyPrompt(content: string): boolean {
   );
 }
 
+function formatToolResultFallback(result: unknown): string {
+  if (typeof result === 'string') {
+    return result;
+  }
+  if (
+    typeof result === 'number' ||
+    typeof result === 'boolean' ||
+    result === null
+  ) {
+    return String(result);
+  }
+  try {
+    const serialized = JSON.stringify(result, null, 2);
+    return serialized.length > 2000
+      ? `${serialized.slice(0, 2000)}\n...`
+      : serialized;
+  } catch {
+    return 'Tool completed successfully.';
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Re-exports — keep backward-compatible imports from this file
 // ---------------------------------------------------------------------------
@@ -306,6 +327,8 @@ function ChatBaseInner({
   const pendingToolExecutionsRef = useRef(0);
   const currentAssistantMessageRef = useRef<ChatMessage | null>(null);
   const suppressAssistantTextForToolOnlyRef = useRef(false);
+  const hideMessagesAfterToolUIRef = useRef(hideMessagesAfterToolUI);
+  hideMessagesAfterToolUIRef.current = hideMessagesAfterToolUI;
   const threadIdRef = useRef<string>(generateMessageId());
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -1000,6 +1023,49 @@ function ChatBaseInner({
         case 'done':
           // The adapter signals the entire multi-turn conversation
           // (including all continuations) has finished.
+          if (
+            suppressAssistantTextForToolOnlyRef.current &&
+            hideMessagesAfterToolUIRef.current
+          ) {
+            setDisplayItems(prev => {
+              const hasAssistantContent = prev.some(
+                item =>
+                  !isToolCallMessage(item) &&
+                  item.role === 'assistant' &&
+                  String(item.content || '').trim().length > 0,
+              );
+
+              if (hasAssistantContent) {
+                return prev;
+              }
+
+              const latestCompletedTool = [...prev]
+                .reverse()
+                .find(
+                  item =>
+                    isToolCallMessage(item) &&
+                    item.status === 'complete' &&
+                    item.result !== undefined,
+                );
+
+              if (
+                !latestCompletedTool ||
+                !isToolCallMessage(latestCompletedTool)
+              ) {
+                return prev;
+              }
+
+              const fallbackMessage = createAssistantMessage(
+                formatToolResultFallback(latestCompletedTool.result),
+              );
+
+              if (useStoreMode) {
+                useChatStore.getState().addMessage(fallbackMessage);
+              }
+
+              return [...prev, fallbackMessage];
+            });
+          }
           suppressAssistantTextForToolOnlyRef.current = false;
           pendingToolExecutionsRef.current = 0;
           setIsLoading(false);
@@ -1008,6 +1074,50 @@ function ChatBaseInner({
 
         case 'error':
           console.error('[ChatBase] Protocol error:', event.error);
+          if (
+            event.error?.message &&
+            /exceeded maximum retries/i.test(event.error.message) &&
+            hideMessagesAfterToolUIRef.current
+          ) {
+            setDisplayItems(prev => {
+              const hasAssistantContent = prev.some(
+                item =>
+                  !isToolCallMessage(item) &&
+                  item.role === 'assistant' &&
+                  String(item.content || '').trim().length > 0,
+              );
+
+              if (hasAssistantContent) {
+                return prev;
+              }
+
+              const latestCompletedTool = [...prev]
+                .reverse()
+                .find(
+                  item =>
+                    isToolCallMessage(item) &&
+                    item.status === 'complete' &&
+                    item.result !== undefined,
+                );
+
+              if (
+                !latestCompletedTool ||
+                !isToolCallMessage(latestCompletedTool)
+              ) {
+                return prev;
+              }
+
+              const fallbackMessage = createAssistantMessage(
+                formatToolResultFallback(latestCompletedTool.result),
+              );
+
+              if (useStoreMode) {
+                useChatStore.getState().addMessage(fallbackMessage);
+              }
+
+              return [...prev, fallbackMessage];
+            });
+          }
           suppressAssistantTextForToolOnlyRef.current = false;
           setError(event.error || new Error('Unknown error'));
           pendingToolExecutionsRef.current = 0;
@@ -1024,7 +1134,7 @@ function ChatBaseInner({
       adapterRef.current?.disconnect();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [protocolKey, renderToolResult, onStateUpdate, useStoreMode]);
+  }, [protocolKey, onStateUpdate, useStoreMode]);
 
   // Helper to run a frontend tool and send result back via adapter
   function executeFrontendTool(
@@ -1405,38 +1515,9 @@ function ChatBaseInner({
   // ---- Suggestion handlers (for EmptyState) ----
   const handleSuggestionSubmit = useCallback(
     (suggestion: Suggestion) => {
-      const userMessage: ChatMessage = {
-        id: generateMessageId(),
-        role: 'user',
-        content: suggestion.message,
-        createdAt: new Date(),
-      };
-      setDisplayItems(prev => [...prev, userMessage]);
-      setIsLoading(true);
-      setIsStreaming(true);
-
-      const toolsForSuggestion = (frontendTools || []).map(tool => ({
-        name: tool.name,
-        description: tool.description,
-        parameters: tool.parameters || { type: 'object', properties: {} },
-      }));
-
-      adapterRef.current
-        ?.sendMessage(userMessage, {
-          threadId: threadIdRef.current,
-          messages: [userMessage],
-          tools: toolsForSuggestion,
-        } as Parameters<typeof adapterRef.current.sendMessage>[1])
-        .catch(err => {
-          console.error('[ChatBase] Suggestion send error:', err);
-          setError(err instanceof Error ? err : new Error(String(err)));
-        })
-        .finally(() => {
-          // NOTE: Do NOT reset isLoading here — the adapter's 'done'
-          // event will handle it when the run truly completes.
-        });
+      void handleSend(suggestion.message);
     },
-    [frontendTools],
+    [handleSend],
   );
 
   const handleSuggestionFill = useCallback((message: string) => {

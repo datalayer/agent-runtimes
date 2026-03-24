@@ -21,7 +21,7 @@ export const EXAMPLES: Record<
   AgUiAgenticExample: () => import('./AgUiAgenticExample'),
   AgUiBackendToolRenderingExample: () =>
     import('./AgUiBackendToolRenderingExample'),
-  AgUiHaikuGenUIExample: () => import('./AgUiHaikuGenUIExample'),
+  AgUiHaikuGenUiExample: () => import('./AgUiHaikuGenUiExample'),
   AgUiHumanInTheLoopExample: () => import('./AgUiHumanInTheLoopExample'),
   AgUiSharedStateExample: () => import('./AgUiSharedStateExample'),
   AgUiToolsBasedGenUIExample: () => import('./AgUiToolsBasedGenUIExample'),
