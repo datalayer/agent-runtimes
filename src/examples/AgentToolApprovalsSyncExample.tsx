@@ -123,6 +123,8 @@ const AgentToolApprovalSyncInner: React.FC<{ onLogout: () => void }> = ({
             agent_library: 'pydantic-ai',
             transport: 'vercel-ai',
             agent_spec_id: AGENT_SPEC_ID,
+            system_prompt:
+              'You are a helpful assistant. You have access to three tools: runtime_echo (echoes text, no approval needed), runtime_sensitive_echo (echoes text, requires approval), and runtime_send_mail (sends an email, requires approval). When asked to list your tools, call each tool with a brief description as the argument to demonstrate them. Do not call list_skills, load_skill, read_skill_resource, or run_skill_script.',
             enable_skills: false,
             skills: [],
             tools: [
@@ -608,24 +610,18 @@ const AgentToolApprovalSyncInner: React.FC<{ onLogout: () => void }> = ({
           historyEndpoint={`${agentBaseUrl}/api/v1/history`}
           suggestions={[
             {
-              title: 'List Tools',
-              message:
-                'List exactly these runtime tools first: runtime_echo, runtime_sensitive_echo, runtime_send_mail. Do not call list_skills, load_skill, read_skill_resource, or run_skill_script. Then ask me which tool to run. Use tool calls only and do not write Python code.',
+              title: 'List your tools',
+              message: 'list your tools',
             },
             {
-              title: 'Manual Approval Tool',
+              title: 'Run tool with approval',
               message:
                 'Call the runtime_sensitive_echo tool with text "hello" and reason "audit". Use a tool call only and do not write Python code.',
             },
             {
-              title: 'Fake Mail Tool',
+              title: 'Run tool without approval',
               message:
-                'Call the runtime_send_mail tool with to "finance@example.com", subject "KPI Alert", and body "Revenue dropped by 12 percent this week". Use a tool call only and do not write Python code.',
-            },
-            {
-              title: 'No Approval Tool',
-              message:
-                'Call the runtime_echo tool with text "hello world". This tool does not require approval. Use a tool call only and do not write Python code.',
+                'Call the runtime_echo tool with text "hello world". Use a tool call only and do not write Python code.',
             },
           ]}
           renderToolResult={renderToolResult}
