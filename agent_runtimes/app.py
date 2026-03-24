@@ -350,6 +350,7 @@ async def _create_and_register_cli_agent(
     approval_tool_ids = tools_requiring_approval_ids(tool_ids)
     if tools_require_approval(tool_ids):
         agent_kwargs["output_type"] = [str, DeferredToolRequests]
+        agent_kwargs["output_retries"] = 3
         logger.info(
             "Auto-enabled DeferredToolRequests for agent '%s'; tools requiring approval: %s",
             agent_id,

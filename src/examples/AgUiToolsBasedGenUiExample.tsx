@@ -4,7 +4,7 @@
  */
 
 /**
- * AgUiToolsBasedGenUIExample
+ * AgUiToolsBasedGenUiExample
  *
  * Demonstrates tool-based generative UI where the backend calls tools
  * that render UI components. Unlike frontend tools, these are backend
@@ -328,7 +328,7 @@ const PlanDisplay: React.FC<{
 };
 
 /**
- * AgUiToolsBasedGenUIExample Component
+ * AgUiToolsBasedGenUiExample Component
  *
  * Demonstrates tool-based generative UI with AG-UI.
  * The agent uses tools (create_plan, update_plan_step) that emit
@@ -340,7 +340,7 @@ const PlanDisplay: React.FC<{
  * - Real-time UI updates as agent works
  * - Interactive step selection with Confirm/Reject buttons
  */
-const AgUiToolsBasedGenUIExample: React.FC = () => {
+const AgUiToolsBasedGenUiExample: React.FC = () => {
   const brandColor = useThemeBrandColor();
   const [plan, setPlan] = useState<PlanState | null>(null);
   const [decision, setDecision] = useState<'confirmed' | 'rejected' | null>(
@@ -528,4 +528,4 @@ const AgUiToolsBasedGenUIExample: React.FC = () => {
   );
 };
 
-export default AgUiToolsBasedGenUIExample;
+export default AgUiToolsBasedGenUiExample;

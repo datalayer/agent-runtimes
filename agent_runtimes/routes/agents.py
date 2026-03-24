@@ -746,30 +746,14 @@ async def create_agent(
                 # Increase retries: the union output_type [str, DeferredToolRequests]
                 # can intermittently fail pydantic-ai's output validator on the final
                 # text response, causing "Exceeded maximum retries (1)" with the default.
-                agent_kwargs["max_result_retries"] = 3
+                agent_kwargs["output_retries"] = 3
                 logger.info(
                     "Auto-enabled DeferredToolRequests for agent '%s'; tools requiring approval: %s",
                     agent_id,
                     approval_tool_ids,
                 )
 
-            try:
-                pydantic_agent = PydanticAgent(request.model, **agent_kwargs)
-            except Exception as exc:
-                # Backward compatibility: some pydantic-ai versions don't
-                # support `max_result_retries` in Agent kwargs and raise
-                # framework-specific user errors instead of TypeError.
-                if "max_result_retries" in agent_kwargs and (
-                    "max_result_retries" in str(exc)
-                    or "Unknown keyword arguments" in str(exc)
-                ):
-                    logger.warning(
-                        "Installed pydantic-ai does not support max_result_retries; retrying without it"
-                    )
-                    agent_kwargs.pop("max_result_retries", None)
-                    pydantic_agent = PydanticAgent(request.model, **agent_kwargs)
-                else:
-                    raise
+            pydantic_agent = PydanticAgent(request.model, **agent_kwargs)
 
             # Register runtime tools declared in the request/spec.
             register_agent_tools(
@@ -2401,6 +2385,7 @@ async def configure_from_spec_endpoint(
         approval_tool_ids = tools_requiring_approval_ids(tool_ids)
         if tools_require_approval(tool_ids):
             agent_kwargs["output_type"] = [str, DeferredToolRequests]
+            agent_kwargs["output_retries"] = 3
             logger.info(
                 "Auto-enabled DeferredToolRequests for agent '%s'; tools requiring approval: %s",
                 body.agent_spec_id,

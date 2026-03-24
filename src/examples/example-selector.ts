@@ -24,7 +24,7 @@ export const EXAMPLES: Record<
   AgUiHaikuGenUiExample: () => import('./AgUiHaikuGenUiExample'),
   AgUiHumanInTheLoopExample: () => import('./AgUiHumanInTheLoopExample'),
   AgUiSharedStateExample: () => import('./AgUiSharedStateExample'),
-  AgUiToolsBasedGenUIExample: () => import('./AgUiToolsBasedGenUIExample'),
+  AgUiToolsBasedGenUiExample: () => import('./AgUiToolsBasedGenUiExample'),
   AgentLocalExample: () => import('./AgentLocalExample'),
   CellSimpleExample: () => import('./CellSimpleExample'),
   ChatCustomExample: () => import('./ChatCustomExample'),
@@ -37,10 +37,7 @@ export const EXAMPLES: Record<
   AgentCodemodeExample: () => import('./AgentCodemodeExample'),
   AgentEvalsExample: () => import('./AgentEvalsExample'),
   AgentGuardrailsExample: () => import('./AgentGuardrailsExample'),
-  AgentToolApprovalsSyncExample: () =>
-    import('./AgentToolApprovalsSyncExample'),
-  AgentToolApprovalsAsyncExample: () =>
-    import('./AgentToolApprovalsAsyncExample'),
+  AgentToolApprovalsExample: () => import('./AgentToolApprovalsExample'),
   AgentMemoryExample: () => import('./AgentMemoryExample'),
   AgentOtelExample: () => import('./AgentOtelExample'),
   AgentMonitoringExample: () => import('./AgentMonitoringExample'),

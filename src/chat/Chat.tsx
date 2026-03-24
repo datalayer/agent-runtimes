@@ -236,6 +236,12 @@ export interface ChatProps {
   /** Description shown in empty state */
   description?: string;
 
+  /** Custom content to render in the chat header title row (left side). */
+  headerContent?: ReactNode;
+
+  /** Custom actions to render in the chat header title row (right side). */
+  headerActions?: ReactNode;
+
   /** Auto-focus the input on mount */
   autoFocus?: boolean;
 
@@ -394,6 +400,8 @@ export function Chat({
   suggestions,
   submitOnSuggestionClick = true,
   description,
+  headerContent,
+  headerActions,
   autoFocus = false,
   identityProviders,
   onIdentityConnect,
@@ -698,6 +706,8 @@ export function Chat({
             pendingPrompt={pendingPrompt}
             showInformation={showInformation}
             onInformationClick={() => setShowDetails(true)}
+            headerContent={headerContent}
+            headerActions={headerActions}
             showModelSelector={showModelSelector}
             showToolsMenu={showToolsMenu}
             showSkillsMenu={showSkillsMenu}

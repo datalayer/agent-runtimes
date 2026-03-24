@@ -1053,6 +1053,7 @@ SIMPLE_FULL_AGENT_SPEC = AgentSpec(
     model="bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0",
     mcp_servers=[MCP_SERVER_CATALOG["tavily"]],
     skills=["events"],
+    tools=["runtime-echo", "runtime-sensitive-echo"],
     environment_name="ai-agents-env",
     icon="shield",
     emoji="🛡️",

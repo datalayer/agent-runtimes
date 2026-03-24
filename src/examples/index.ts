@@ -13,7 +13,7 @@ export { default as AgUiBackendToolRenderingExample } from './AgUiBackendToolRen
 export { default as AgUiHaikuGenUiExample } from './AgUiHaikuGenUiExample';
 export { default as AgUiHumanInTheLoopExample } from './AgUiHumanInTheLoopExample';
 export { default as AgUiSharedStateExample } from './AgUiSharedStateExample';
-export { default as AgUiToolsBasedGenUIExample } from './AgUiToolsBasedGenUIExample';
+export { default as AgUiToolsBasedGenUiExample } from './AgUiToolsBasedGenUiExample';
 export { default as CellExample } from './CellSimpleExample';
 export { default as ChatStandaloneExample } from './ChatStandaloneExample';
 export { default as CopilotKitLexicalExample } from './CopilotKitLexicalExample';
@@ -24,8 +24,7 @@ export { default as AgentCheckpointsExample } from './AgentCheckpointsExample';
 export { default as AgentCodemodeExample } from './AgentCodemodeExample';
 export { default as AgentEvalsExample } from './AgentEvalsExample';
 export { default as AgentGuardrailsExample } from './AgentGuardrailsExample';
-export { default as AgentToolApprovalsSyncExample } from './AgentToolApprovalsSyncExample';
-export { default as AgentToolApprovalsAsyncExample } from './AgentToolApprovalsAsyncExample';
+export { default as AgentToolApprovalsExample } from './AgentToolApprovalsExample';
 export { default as AgentMemoryExample } from './AgentMemoryExample';
 export { default as AgentOtelExample } from './AgentOtelExample';
 export { default as AgentMonitoringExample } from './AgentMonitoringExample';
