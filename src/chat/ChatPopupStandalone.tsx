@@ -54,7 +54,7 @@ import {
 import {
   useChatKeyboardShortcuts,
   getShortcutDisplay,
-} from '../hooks/useKeyboardShortcuts';
+} from '@datalayer/core/lib/hooks';
 
 // Re-export types for backward compatibility
 export type { ToolCallStatus, ToolCallRenderContext, RenderToolResult };

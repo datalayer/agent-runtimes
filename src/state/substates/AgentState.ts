@@ -9,8 +9,11 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import type { ServiceManager } from '@jupyterlab/services';
 import type { IRuntimeOptions } from '@datalayer/core/lib/stateful/runtimes/apis';
 import type { Transport } from '../../chat/Chat';
-import type { AgentStatus } from '../../hooks/useAgents';
-import type { AgentConnection, AgentConfig } from '../../hooks/useAgents';
+import type {
+  AgentStatus,
+  AgentConnection,
+  AgentConfig,
+} from '../../types/agents';
 
 /**
  * Unified Agent model combining runtime tracking and UI state

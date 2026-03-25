@@ -34,7 +34,7 @@ import { useChatStore, useChatOpen, useChatMessages } from '../store/chatStore';
 import {
   useChatKeyboardShortcuts,
   getShortcutDisplay,
-} from '../hooks/useKeyboardShortcuts';
+} from '@datalayer/core/lib/hooks';
 
 /**
  * ChatSidebar props

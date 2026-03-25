@@ -14,7 +14,6 @@
  *
  * - `useChat` - Main chat hook for messages, streaming, and state
  * - `useFrontendTool`, `useBackendTool` - Tool registration hooks
- * - `useKeyboardShortcuts` - Keyboard shortcut handling
  *
  * ## Transport-Specific Hooks
  * These hooks provide direct protocol access without the chat component system.
@@ -58,22 +57,10 @@ export {
 } from './useTools';
 
 /**
- * Keyboard shortcut hooks for chat UI.
- */
-export {
-  useKeyboardShortcuts,
-  useChatKeyboardShortcuts,
-  getShortcutDisplay,
-  type KeyboardShortcut,
-  type UseKeyboardShortcutsOptions,
-} from './useKeyboardShortcuts';
-
-/**
  * ChatBase infrastructure hooks.
  */
-export { useHighZIndexPortal } from './useHighZIndexPortal';
 export { useConfig } from './useConfig';
-export { useSkillsQuery } from './useSkillsQuery';
+export { useSkills } from './useSkills';
 export { useContextSnapshot } from './useContextSnapshot';
 export { useSandbox } from './useSandbox';
 
@@ -110,66 +97,103 @@ export { useVercelAI } from './useVercelAI';
 // =============================================================================
 
 /**
- * Datalayer AI Agents REST API hook.
+ * Unified hook for managing agents — both ephemeral and durable.
+ */
+export { useAgents } from './useAgents';
+export type { UseAgentReturn, UseAgentOptions } from './useAgents';
+
+/**
+ * Runtime query and mutation hooks.
  */
 export {
+  useAgentsRuntimes,
+  useAgentRuntimes,
+  useAgentRuntimeByPodName,
+  useCreateAgentRuntime,
+  useDeleteAgentRuntime,
+  useRefreshAgentRuntimes,
+  agentQueryKeys,
+  AGENT_QUERY_OPTIONS,
+  useAgentLifecycleStore,
+  useLifecycleRunningAgents,
+  getAgentLifecycleKey,
+  type UseAgentsRuntimesReturn,
+  type AgentRuntimeData,
+  type CreateAgentRuntimeRequest,
+  type CreateRuntimeApiResponse,
+  type AgentLifecycleRecord,
+  type LifecycleRunningAgent,
+} from './useAgents';
+
+/**
+ * Agent catalog store, AI Agents REST API, and registry hooks.
+ */
+export {
+  useAgentCatalogStore,
   useAIAgents,
   useNotebookAgents,
+  useAgentRegistry,
+  type AgentCatalogStoreState,
+  type RequestOptions,
+  type RoomType,
+} from './useAgentsCatalog';
+
+/**
+ * Focused hooks split by responsibility.
+ */
+export {
+  useCheckpoints,
+  useCheckpointsQuery,
+  useRefreshCheckpoints,
+  useDeletePausedAgentRuntime,
+  useResumePausedAgentRuntime,
+  usePauseAgent,
+  useResumeAgent,
+  useCheckpointAgent,
+  useTerminateAgent,
+  useAgentDurableLifecycle,
+  type CheckpointData,
+  type PauseAgentParams,
+  type ResumeAgentParams,
+  type CheckpointAgentParams,
+  type TerminateAgentParams,
+  type DurableLifecycleOptions,
+  type DurableLifecycleReturn,
+} from './useCheckpoints';
+
+export {
   useToolApprovals,
+  useToolApprovalsQuery,
   usePendingApprovalCount,
   useApproveToolRequest,
   useRejectToolRequest,
+} from './useToolApprovals';
+
+export {
+  useAgentsNotifications,
   useNotifications,
   useUnreadNotificationCount,
   useMarkNotificationRead,
   useMarkAllNotificationsRead,
+} from './useNotifications';
+
+export {
+  useMonitoring,
   useAgentEvents,
   useAgentEvent,
   useCreateAgentEvent,
   useUpdateAgentEvent,
-  type RequestOptions,
-  type RoomType,
-} from './useAgents';
-/**
- * Agent runtimes service hooks for managing agent runtime instances.
- */
-export {
-  useAgentRuntimeByPodName,
-  useCheckpoints,
-  useRefreshCheckpoints,
-  agentQueryKeys,
-  type AgentRuntimeData,
-  type CreateAgentRuntimeRequest,
-  type CreateRuntimeApiResponse,
-  type CheckpointData,
-  useAgentLifecycleStore,
-  useLifecycleRunningAgents,
-  getAgentLifecycleKey,
-  type AgentLifecycleRecord,
-  type LifecycleRunningAgent,
-} from './useAgents';
-/**
- * Centralized agent catalog store for available agent specs and running agents.
- */
-export { useAgentCatalogStore, type AgentCatalogStoreState } from './useAgents';
+} from './useMonitoring';
 
-/**
- * Unified hook for managing agents — both ephemeral and durable.
- */
-export { useAgents } from './useAgents';
-export type {
-  UseAgentReturn,
-  UseAgentOptions,
-  CheckpointRecord,
-} from './useAgents';
-
-// Types - agent-runtimes specific
+// Types from the shared types module
 export type {
   AgentConnection,
   AgentStatus,
   AgentConfig,
   AgentRuntimeState,
-} from './useAgents';
+  CheckpointRecord,
+  CheckpointMode,
+} from '../types/agents';
 
-// Constants
-export { DEFAULT_AGENT_CONFIG, AGENT_STATUS_COLORS } from './useAgents';
+// Constants from the shared types module
+export { DEFAULT_AGENT_CONFIG, AGENT_STATUS_COLORS } from '../types/agents';

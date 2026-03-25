@@ -50,7 +50,7 @@ import { useChatOpen, useChatMessages, useChatStore } from '../store/chatStore';
 import {
   useChatKeyboardShortcuts,
   getShortcutDisplay,
-} from '../hooks/useKeyboardShortcuts';
+} from '@datalayer/core/lib/hooks';
 import type { FrontendToolDefinition } from '../types/tool';
 
 // Re-export types for backward compatibility

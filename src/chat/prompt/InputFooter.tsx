@@ -23,7 +23,7 @@ import { Box } from '@datalayer/primer-addons';
 import { ToolsIcon, BriefcaseIcon, AiModelIcon } from '@primer/octicons-react';
 
 import { InputPrompt } from './InputPrompt';
-import { TokenUsageBar } from '../elements/TokenUsageBar';
+import { TokenUsageBar } from '../usage/TokenUsageBar';
 import type {
   ModelConfig,
   MCPServerConfig,

@@ -10,7 +10,7 @@ import type { SkillsResponse } from '../types/chat';
 /**
  * Hook to fetch available skills from backend.
  */
-export function useSkillsQuery(
+export function useSkills(
   enabled: boolean,
   baseEndpoint?: string,
   authToken?: string,

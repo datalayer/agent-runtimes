@@ -6,11 +6,18 @@
 /**
  * Unified hook for managing agents.
  *
+ * Combines agent lifecycle management (ephemeral/durable),
+ * runtime catalog (React Query CRUD), lifecycle/catalog stores,
+ * and the AI Agents REST API.
+ *
  * @module hooks/useAgents
  */
 
-import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import type { ServiceManager } from '@jupyterlab/services';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import {
   useAgentStore,
   useAgentRuntime,
@@ -18,169 +25,118 @@ import {
   useAgentError,
   useIsLaunching,
 } from '../state/substates/AgentState';
-
-// Imports for useAgentRuntimes hooks (self-contained, no useCache dependency)
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useIAMStore } from '@datalayer/core/lib/state';
-import { DEFAULT_SERVICE_URLS } from '@datalayer/core/lib/api/constants';
-import * as aiAgentsApi from '../api';
-
-// Imports for useAIAgents hook
 import { useCoreStore, useDatalayer } from '@datalayer/core';
-import { URLExt } from '@jupyterlab/coreutils';
-
-// Imports for useAgentCatalogStore
-import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
-import { listAgentSpecs } from '../specs';
-import type { AgentSpec } from '../types';
+import { useIAMStore } from '@datalayer/core/lib/state';
+import type {
+  AgentStatus,
+  AgentConnection,
+  AgentConfig,
+  AgentRuntimeData,
+} from '../types/agents';
+export type { AgentRuntimeData } from '../types/agents';
+import { DEFAULT_AGENT_CONFIG } from '../types/agents';
 
 // ═══════════════════════════════════════════════════════════════════════════
-// Types (formerly agents/types.ts)
+// Runtime Types
 // ═══════════════════════════════════════════════════════════════════════════
 
-/**
- * Unified agent status covering the full lifecycle.
- *
- * Covers both the runtime lifecycle (idle → launching → connecting → ready → disconnected)
- * and the agent UI state (initializing, running, paused, resuming).
- */
-export type AgentStatus =
-  | 'idle'
-  | 'initializing'
-  | 'launching'
-  | 'connecting'
-  | 'ready'
-  | 'running'
-  | 'paused'
-  | 'pausing'
-  | 'resumed'
-  | 'resuming'
-  | 'error'
-  | 'disconnected';
+/** Request payload for creating a new agent runtime. */
+export type CreateAgentRuntimeRequest = {
+  environmentName?: string;
+  givenName?: string;
+  creditsLimit?: number;
+  type?: string;
+  /** 'none', 'notebook', or 'document' */
+  editorVariant?: string;
+  enableCodemode?: boolean;
+  /** ID of the agent spec used to create this runtime */
+  agentSpecId?: string;
+};
 
-/** Shared Label variants for agent lifecycle statuses. */
-export type AgentStatusColorVariant =
-  | 'secondary'
-  | 'attention'
-  | 'success'
-  | 'severe'
-  | 'accent'
-  | 'danger';
-
-/** Shared Label variants for agent lifecycle statuses. */
-export const AGENT_STATUS_COLORS: Record<AgentStatus, AgentStatusColorVariant> =
-  {
-    idle: 'secondary',
-    initializing: 'attention',
-    launching: 'attention',
-    connecting: 'attention',
-    ready: 'success',
-    running: 'success',
-    pausing: 'attention',
-    paused: 'severe',
-    resumed: 'accent',
-    resuming: 'accent',
-    error: 'danger',
-    disconnected: 'secondary',
-  };
-
-/**
- * Information about a connected agent with agent-runtimes server.
- * Combines agent infrastructure and connection details.
- */
-export interface AgentConnection {
-  /** Runtime pod name (unique identifier) */
-  podName: string;
-  /** Environment name */
-  environmentName: string;
-  /** Base URL for the Jupyter server */
-  jupyterBaseUrl: string;
-  /** Base URL for the agent-runtimes server */
-  agentBaseUrl: string;
-  /** JupyterLab ServiceManager for the runtime */
-  serviceManager?: ServiceManager.IManager;
-  /** Runtime status */
-  status: AgentStatus;
-  /** Kernel ID if connected */
-  kernelId?: string;
-  /** Agent ID */
-  agentId?: string;
-  /** Full endpoint URL for the agent */
-  endpoint?: string;
-  /** Whether the agent is ready to use */
-  isReady?: boolean;
-}
-
-/**
- * Configuration for creating an agent on a runtime.
- */
-export interface AgentConfig {
-  /** Agent name/ID (defaults to runtime pod name) */
-  name?: string;
-  /** Agent description */
-  description?: string;
-  /** AI model to use (e.g., 'bedrock:us.anthropic.claude-3-5-haiku-20241022-v1:0') */
-  model?: string;
-  /** System prompt for the agent */
-  systemPrompt?: string;
-  /** Agent library (defaults to 'pydantic-ai') */
-  agentLibrary?: 'pydantic-ai' | 'langchain' | 'openai';
-  /** Transport protocol (defaults to 'ag-ui') */
-  transport?: 'ag-ui' | 'vercel-ai' | 'acp' | 'a2a';
-}
-
-/**
- * Complete state for an agent runtime in the Zustand store.
- */
-export interface AgentRuntimeState {
-  /** Runtime connection including agent info (null if not connected) */
-  runtime: AgentConnection | null;
-  /** Current status */
-  status: AgentStatus;
-  /** Error message if any */
-  error: string | null;
-  /** Whether the runtime is launching */
-  isLaunching: boolean;
-  /** Whether the agent is ready */
-  isReady: boolean;
-}
-
-/**
- * Default agent configuration values (minimal fallbacks when no spec is provided).
- */
-export const DEFAULT_AGENT_CONFIG: Required<AgentConfig> = {
-  name: 'ai-agent',
-  description: 'AI Assistant',
-  model: '',
-  systemPrompt: 'You are a helpful AI assistant.',
-  agentLibrary: 'pydantic-ai',
-  transport: 'ag-ui',
+export type CreateRuntimeApiResponse = {
+  success?: boolean;
+  runtime?: AgentRuntimeData;
 };
 
 // ═══════════════════════════════════════════════════════════════════════════
-// useAgentshook types
+// Constants
+// ═══════════════════════════════════════════════════════════════════════════
+
+/** Stable fallback to avoid new-reference on every render. */
+const EMPTY_RUNTIMES: AgentRuntimeData[] = [];
+
+/** Default query options for all agent runtime queries. */
+export const AGENT_QUERY_OPTIONS = {
+  staleTime: 5 * 60 * 1000, // 5 minutes
+  gcTime: 10 * 60 * 1000, // 10 minutes
+};
+
+/** Query keys for agent runtimes and checkpoints. */
+export const agentQueryKeys = {
+  agentRuntimes: {
+    all: () => ['agentRuntimes'] as const,
+    lists: () => [...agentQueryKeys.agentRuntimes.all(), 'list'] as const,
+    details: () => [...agentQueryKeys.agentRuntimes.all(), 'detail'] as const,
+    detail: (podName: string) =>
+      [...agentQueryKeys.agentRuntimes.details(), podName] as const,
+  },
+  checkpoints: {
+    all: () => ['checkpoints'] as const,
+    lists: () => [...agentQueryKeys.checkpoints.all(), 'list'] as const,
+  },
+} as const;
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Helpers
 // ═══════════════════════════════════════════════════════════════════════════
 
 /**
- * A persisted checkpoint record returned from the runtimes API.
+ * Normalize a raw backend status or phase string to a canonical AgentStatus.
+ *
+ * The backend may send the lifecycle state as either `status` or `phase`
+ * (they mean the same thing). Pass both; the explicit `status` wins.
  */
-export interface CheckpointRecord {
-  id: string;
-  name: string;
-  description: string;
-  runtime_uid: string;
-  agent_spec_id: string;
-  agentspec: Record<string, any>;
-  metadata: Record<string, any>;
-  checkpoint_mode?: 'criu' | 'light';
-  messages?: string[];
-  status: string;
-  status_message?: string;
-  updated_at: string;
+function normalizeStatus(status?: string, phase?: string): AgentStatus {
+  const raw = status || phase;
+  if (!raw) return 'running';
+  switch (raw.toLowerCase()) {
+    case 'resume':
+    case 'resumed':
+      return 'resumed';
+    case 'resuming':
+      return 'resuming';
+    case 'pausing':
+      return 'pausing';
+    case 'paused':
+      return 'paused';
+    case 'starting':
+    case 'pending':
+    case 'launching':
+      return 'starting';
+    case 'terminated':
+      return 'terminated';
+    case 'archived':
+      return 'archived';
+    case 'running':
+    default:
+      return 'running';
+  }
 }
 
-export type CheckpointMode = 'criu' | 'light';
+/**
+ * Map a raw backend runtime record to AgentRuntimeData.
+ */
+function toAgentRuntimeData(raw: Record<string, any>): AgentRuntimeData {
+  return {
+    ...raw,
+    status: normalizeStatus(raw.status, raw.phase),
+    name: raw.given_name || raw.pod_name,
+    id: raw.pod_name,
+    url: raw.ingress,
+    messageCount: 0,
+    agent_spec_id: raw.agent_spec_id || undefined,
+  } as AgentRuntimeData;
+}
 
 /**
  * Options for the useAgentshook.
@@ -234,62 +190,13 @@ export interface UseAgentReturn {
   /** Whether agent creation is currently in progress */
   isCreating: boolean;
 
-  // Lifecycle (durable)
-  /** Pause the agent (checkpoint mode aware) */
-  pause: (mode?: CheckpointMode, messages?: string[]) => Promise<void>;
-  /** Resume a paused agent (checkpoint mode aware) */
-  resume: (
-    mode?: CheckpointMode,
-    checkpointId?: string,
-    podName?: string,
-  ) => Promise<void>;
-  /** Terminate the agent (delete runtime) */
-  terminate: () => Promise<void>;
-  /** Take a checkpoint and persist (pause → record → stay paused) */
-  checkpoint: (
-    name?: string,
-    mode?: CheckpointMode,
-    messages?: string[],
-  ) => Promise<void>;
-  /** Refresh the checkpoints list from the backend */
-  refreshCheckpoints: () => Promise<void>;
-
-  // Checkpoints
-  /** List of persisted checkpoints for this runtime */
-  checkpoints: CheckpointRecord[];
-
   // Status
   /** Whether everything is ready (runtime + agent) */
   isReady: boolean;
   /** Error if any */
   error: string | null;
-
-  // Runtime catalog operations (merged from useAgentRuntimes* hooks)
-  /** All runtimes (running + paused) available for the user */
-  runtimes: AgentRuntimeData[];
-  /** Loading state for runtime list */
-  isRuntimesLoading: boolean;
-  /** Error state for runtime list */
-  isRuntimesError: boolean;
-  /** Error object for runtime list */
-  runtimesError: unknown;
-  /** Refetch runtime list immediately */
-  refetchRuntimes: () => Promise<{ data?: AgentRuntimeData[] }>;
-  /** Invalidate runtime list query */
-  refreshRuntimes: () => void;
-  /** Delete a running runtime by pod name */
-  deleteRuntimeByPod: (podName: string) => Promise<unknown>;
-  /** Delete a paused runtime record by pod name */
-  deletePausedRuntimeByPod: (podName: string) => Promise<unknown>;
-  /** Resume a paused runtime by pod name */
-  resumePausedRuntimeByPod: (podName: string) => Promise<unknown>;
-  /** Create a runtime */
-  createRuntime: (
-    data: CreateAgentRuntimeRequest,
-  ) => Promise<CreateRuntimeApiResponse>;
 }
 
-// Need to re-import IRuntimeOptions as a value-level reference for use in the hook
 import type { IRuntimeOptions } from '@datalayer/core/lib/stateful/runtimes/apis';
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -343,21 +250,10 @@ export function useAgents(options: UseAgentOptions = {}): UseAgentReturn {
   const storeCreateAgent = useAgentStore(state => state.createAgent);
   const storeDisconnect = useAgentStore(state => state.disconnect);
 
-  // Runtime catalog hooks (single-hook surface for consumers)
-  const runtimesQuery = useAgentRuntimes();
-  const createRuntimeMutation = useCreateAgentRuntime();
-  const deleteRuntimeMutation = useDeleteAgentRuntime();
-  const deletePausedRuntimeMutation = useDeletePausedAgentRuntime();
-  const resumePausedRuntimeMutation = useResumePausedAgentRuntime();
-  const refreshRuntimes = useRefreshAgentRuntimes();
-
   // Durable-specific local state
   const [durableStatus, setDurableStatus] = useState<AgentStatus>('idle');
   const [durableError, setDurableError] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
-  const [checkpointRecords, setCheckpointRecords] = useState<
-    CheckpointRecord[]
-  >([]);
   const hasAutoStarted = useRef(false);
   const hasCreatedAgentRef = useRef(false);
   const lastRuntimePodRef = useRef<string | null>(null);
@@ -480,238 +376,6 @@ export function useAgents(options: UseAgentOptions = {}): UseAgentReturn {
     [agentSpecId, agentConfig, agentSpec, isDurable, runtime, storeCreateAgent],
   );
 
-  // ─── Pause (checkpoint mode aware) ───────────────────────────────────
-
-  const pause = useCallback(
-    async (mode: CheckpointMode = 'light', messages?: string[]) => {
-      if (!runtime) {
-        setDurableError('No runtime to pause');
-        return;
-      }
-      if (durableStatus === 'resumed') {
-        setDurableError('Resumed agents cannot be paused');
-        return;
-      }
-      try {
-        const { token, runtimesRunUrl } = await getAuthHeaders();
-        const { pauseRuntime } =
-          await import('@datalayer/core/lib/api/runtimes/runtimes');
-        const resp = await pauseRuntime(
-          token,
-          runtime.podName,
-          runtimesRunUrl,
-          {
-            agent_spec_id: agentSpecId,
-            checkpoint_mode: mode,
-            ...(messages && mode === 'light' ? { messages } : {}),
-            ...(agentSpec ? { agentspec: agentSpec } : {}),
-          },
-        );
-        if (resp.checkpoint_id) {
-          const { waitForCheckpointStatus } =
-            await import('@datalayer/core/lib/api/runtimes/checkpoints');
-          const ckpt = await waitForCheckpointStatus(
-            token,
-            runtime.podName,
-            resp.checkpoint_id,
-            ['paused', 'failed'],
-            runtimesRunUrl,
-          );
-          if (ckpt.status === 'failed') {
-            throw new Error(
-              `Checkpoint ${resp.checkpoint_id} failed during ${mode.toUpperCase()} pause`,
-            );
-          }
-        }
-        setDurableStatus('paused');
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        setDurableError(msg);
-      }
-    },
-    [runtime, durableStatus, getAuthHeaders, agentSpecId, agentSpec],
-  );
-
-  // ─── Resume (checkpoint restore) ───────────────────────────────────
-
-  const resume = useCallback(
-    async (
-      mode: CheckpointMode = 'criu',
-      checkpointId?: string,
-      podName?: string,
-    ) => {
-      setDurableStatus('resuming');
-      setDurableError(null);
-      try {
-        const { token, runtimesRunUrl } = await getAuthHeaders();
-        // Resolve the pod name: explicit arg > current runtime > checkpoint record lookup
-        const targetPodName =
-          podName ||
-          runtime?.podName ||
-          (checkpointId
-            ? checkpointRecords.find(c => c.id === checkpointId)?.runtime_uid
-            : undefined);
-        if (targetPodName) {
-          const { resumeRuntime, listRuntimes } =
-            await import('@datalayer/core/lib/api/runtimes/runtimes');
-          await resumeRuntime(token, targetPodName, runtimesRunUrl, {
-            agent_spec_id: agentSpecId,
-            checkpoint_mode: mode,
-            ...(checkpointId ? { checkpoint_id: checkpointId } : {}),
-          });
-
-          // Resume (especially light restore) may move the session to a
-          // different pool pod. Refresh and rebind runtime connection so
-          // downstream calls target the restored runtime URL.
-          try {
-            const runtimesResponse = await listRuntimes(token, runtimesRunUrl);
-            const runtimes = runtimesResponse.runtimes || [];
-            const aiAgentRuntimes = runtimes.filter(rt => {
-              if (rt.environment_name !== 'ai-agents-env') {
-                return false;
-              }
-              if (!agentSpecId) {
-                return true;
-              }
-              const runtimeAgentSpecId = (rt as { agent_spec_id?: string })
-                .agent_spec_id;
-              return runtimeAgentSpecId === agentSpecId;
-            });
-            const latestRuntime = aiAgentRuntimes.slice().sort((a, b) => {
-              const aTs = Number(a.started_at || 0);
-              const bTs = Number(b.started_at || 0);
-              return bTs - aTs;
-            })[0];
-            if (latestRuntime?.pod_name && latestRuntime?.ingress) {
-              storeConnectAgent({
-                podName: latestRuntime.pod_name,
-                environmentName: latestRuntime.environment_name,
-                jupyterBaseUrl: latestRuntime.ingress,
-              });
-            }
-          } catch (refreshError) {
-            console.warn(
-              'Failed to refresh runtime binding after resume:',
-              refreshError,
-            );
-          }
-
-          // Force agent re-creation on the (possibly new) restored pod.
-          hasCreatedAgentRef.current = false;
-          setDurableStatus('resumed');
-        } else {
-          await launchRuntime();
-        }
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        setDurableError(msg);
-        setDurableStatus('error');
-      }
-    },
-    [
-      runtime,
-      checkpointRecords,
-      getAuthHeaders,
-      agentSpecId,
-      launchRuntime,
-      storeConnectAgent,
-    ],
-  );
-
-  // ─── Refresh Checkpoints ───────────────────────────────────────────
-
-  const refreshCheckpoints = useCallback(async () => {
-    try {
-      const { token, runtimesRunUrl } = await getAuthHeaders();
-      const podName = runtime?.podName;
-      if (!podName) return;
-      const { listCheckpoints } =
-        await import('@datalayer/core/lib/api/runtimes/checkpoints');
-      const resp = await listCheckpoints(token, runtimesRunUrl, podName);
-      setCheckpointRecords(resp.checkpoints || []);
-    } catch (err) {
-      console.warn('Failed to refresh checkpoints:', err);
-    }
-  }, [runtime, getAuthHeaders]);
-
-  // ─── Checkpoint (Pause → Wait → Stay Paused) ──────────────────────
-
-  const checkpoint = useCallback(
-    async (
-      name?: string,
-      mode: CheckpointMode = 'criu',
-      messages?: string[],
-    ) => {
-      if (!runtime) {
-        setDurableError('No runtime to checkpoint');
-        return;
-      }
-      try {
-        const { token, runtimesRunUrl } = await getAuthHeaders();
-        const { pauseRuntime } =
-          await import('@datalayer/core/lib/api/runtimes/runtimes');
-        const pauseResp = await pauseRuntime(
-          token,
-          runtime.podName,
-          runtimesRunUrl,
-          {
-            name: name || `checkpoint-${Date.now()}`,
-            description: `${mode.toUpperCase()} checkpoint for ${agentSpecId}`,
-            checkpoint_mode: mode,
-            ...(messages && mode === 'light' ? { messages } : {}),
-            agent_spec_id: agentSpecId,
-            agentspec: agentSpec || {},
-          },
-        );
-        const checkpointId = pauseResp.checkpoint_id;
-        if (!checkpointId)
-          throw new Error('Pause did not return a checkpoint_id');
-        const { waitForCheckpointStatus } =
-          await import('@datalayer/core/lib/api/runtimes/checkpoints');
-        const ckpt = await waitForCheckpointStatus(
-          token,
-          runtime.podName,
-          checkpointId,
-          ['paused', 'failed'],
-          runtimesRunUrl,
-        );
-        if (ckpt.status === 'failed') {
-          throw new Error(
-            `Checkpoint ${checkpointId} failed during ${mode.toUpperCase()} pause`,
-          );
-        }
-        setDurableStatus('paused');
-        await refreshCheckpoints();
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        setDurableError(msg);
-      }
-    },
-    [runtime, agentSpecId, agentSpec, getAuthHeaders, refreshCheckpoints],
-  );
-
-  // ─── Terminate ─────────────────────────────────────────────────────
-
-  const terminate = useCallback(async () => {
-    if (!runtime) {
-      storeDisconnect();
-      setDurableStatus('idle');
-      return;
-    }
-    try {
-      const { token, runtimesRunUrl } = await getAuthHeaders();
-      const { deleteRuntime } =
-        await import('@datalayer/core/lib/api/runtimes/runtimes');
-      await deleteRuntime(token, runtime.podName, runtimesRunUrl);
-      storeDisconnect();
-      setDurableStatus('idle');
-      setDurableError(null);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      setDurableError(msg);
-    }
-  }, [runtime, getAuthHeaders, storeDisconnect]);
-
   // ─── Auto-create agent when runtime is ready (ephemeral mode) ──────
 
   useEffect(() => {
@@ -815,8 +479,9 @@ export function useAgents(options: UseAgentOptions = {}): UseAgentReturn {
         // Ensure auto-create fires for this reconnected runtime.
         hasCreatedAgentRef.current = false;
 
-        const resolvedStatus = mapRuntimeToStatus(
-          latestRuntime as { status?: string; phase?: string },
+        const resolvedStatus = normalizeStatus(
+          (latestRuntime as Record<string, any>).status,
+          (latestRuntime as Record<string, any>).phase,
         );
         if (resolvedStatus === 'paused') {
           setDurableStatus('paused');
@@ -868,36 +533,6 @@ export function useAgents(options: UseAgentOptions = {}): UseAgentReturn {
     }
   }, [isDurable, autoStart, durableStatus, launchRuntime]);
 
-  // ─── Stable runtime catalog operations ────────────────────────────
-
-  const runtimeCatalogOps = useMemo(
-    () => ({
-      runtimes: runtimesQuery.data ?? EMPTY_RUNTIMES,
-      isRuntimesLoading: runtimesQuery.isLoading,
-      isRuntimesError: runtimesQuery.isError,
-      runtimesError: runtimesQuery.error,
-      refetchRuntimes: () => runtimesQuery.refetch(),
-      refreshRuntimes,
-      deleteRuntimeByPod: async (podName: string) =>
-        deleteRuntimeMutation.mutateAsync(podName),
-      deletePausedRuntimeByPod: async (podName: string) =>
-        deletePausedRuntimeMutation.mutateAsync(podName),
-      resumePausedRuntimeByPod: async (podName: string) =>
-        resumePausedRuntimeMutation.mutateAsync(podName),
-      createRuntime: async (data: CreateAgentRuntimeRequest) =>
-        createRuntimeMutation.mutateAsync(data),
-    }),
-    // Only recompute when the data identity or loading flags actually change.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [
-      runtimesQuery.data,
-      runtimesQuery.isLoading,
-      runtimesQuery.isError,
-      runtimesQuery.error,
-      refreshRuntimes,
-    ],
-  );
-
   // ─── Sync store errors ─────────────────────────────────────────────
 
   useEffect(() => {
@@ -935,240 +570,21 @@ export function useAgents(options: UseAgentOptions = {}): UseAgentReturn {
     createAgent,
     isCreating,
 
-    // Lifecycle (durable)
-    pause,
-    resume,
-    terminate,
-    checkpoint,
-    refreshCheckpoints,
-
-    // Checkpoints
-    checkpoints: checkpointRecords,
-
     // Status
     isReady,
     error,
-
-    // Runtime catalog operations (stable references via useMemo block below)
-    ...runtimeCatalogOps,
   };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// Agent Runtimes hooks (self-contained, no useCache dependency)
+// Runtime Catalog Hooks (React Query)
 // ═══════════════════════════════════════════════════════════════════════════
-
-/** Stable fallback to avoid new‐reference on every render. */
-const EMPTY_RUNTIMES: AgentRuntimeData[] = [];
-
-/** Default query options for all agent runtime queries. */
-const AGENT_QUERY_OPTIONS = {
-  staleTime: 5 * 60 * 1000, // 5 minutes
-  gcTime: 10 * 60 * 1000, // 10 minutes
-};
-
-/** Query keys for agent runtimes and checkpoints. */
-export const agentQueryKeys = {
-  agentRuntimes: {
-    all: () => ['agentRuntimes'] as const,
-    lists: () => [...agentQueryKeys.agentRuntimes.all(), 'list'] as const,
-    details: () => [...agentQueryKeys.agentRuntimes.all(), 'detail'] as const,
-    detail: (podName: string) =>
-      [...agentQueryKeys.agentRuntimes.details(), podName] as const,
-  },
-  checkpoints: {
-    all: () => ['checkpoints'] as const,
-    lists: () => [...agentQueryKeys.checkpoints.all(), 'list'] as const,
-  },
-} as const;
-
-/** Request payload for creating a new agent runtime. */
-export type CreateAgentRuntimeRequest = {
-  environmentName?: string;
-  givenName?: string;
-  creditsLimit?: number;
-  type?: string;
-  /** 'none', 'notebook', or 'document' */
-  editorVariant?: string;
-  enableCodemode?: boolean;
-  /** ID of the agent spec used to create this runtime */
-  agentSpecId?: string;
-};
-
-export type CreateRuntimeApiResponse = {
-  success?: boolean;
-  runtime?: AgentRuntimeData;
-};
-
-/**
- * Agent Runtime data type (mapped from runtimes service).
- *
- * Backend RuntimePod fields: pod_name, environment_name, environment_title, uid,
- * type, given_name, token, ingress, reservation_id, started_at, expired_at, burning_rate.
- *
- * We map 'ingress' to 'url' for consistency with the UI.
- */
-export type AgentRuntimeData = {
-  pod_name: string;
-  id: string;
-  name: string;
-  environment_name: string;
-  environment_title?: string;
-  given_name: string;
-  phase?: string;
-  type: string;
-  started_at?: string;
-  expired_at?: string;
-  burning_rate?: number;
-  status:
-    | 'starting'
-    | 'running'
-    | 'pausing'
-    | 'resuming'
-    | 'resumed'
-    | 'paused'
-    | 'terminated'
-    | 'archived';
-  messageCount: number;
-  // Backend returns 'ingress', mapped to 'url'
-  ingress?: string;
-  url?: string;
-  token?: string;
-  // Agent specification with suggestions for chat UI (enriched by useAgentCatalogStore)
-  agentSpec?: AgentSpec;
-  // ID of the agent spec used to create this runtime
-  agent_spec_id?: string;
-};
-
-/**
- * Checkpoint data returned by the runtime-checkpoints API.
- */
-export type CheckpointData = {
-  id: string;
-  name: string;
-  description: string;
-  runtime_uid: string;
-  agent_spec_id: string;
-  agentspec: Record<string, unknown>;
-  metadata: Record<string, unknown>;
-  checkpoint_mode?: 'criu' | 'light';
-  messages?: string[];
-  status: string;
-  status_message: string;
-  updated_at: string;
-  start_date?: string;
-  end_date?: string;
-};
-
-/**
- * Helper: map a raw runtime phase to a UI-friendly status.
- */
-function mapPhaseToStatus(phase?: string): AgentRuntimeData['status'] {
-  switch ((phase || '').toLowerCase()) {
-    case 'resume':
-    case 'resumed':
-      return 'resumed';
-    case 'resuming':
-      return 'resuming';
-    case 'pausing':
-      return 'pausing';
-    case 'pending':
-      return 'starting';
-    case 'terminated':
-      return 'terminated';
-    case 'paused':
-      return 'paused';
-    case 'archived':
-      return 'archived';
-    default:
-      return 'running';
-  }
-}
-
-/**
- * Normalize raw runtime status values from the backend.
- *
- * Some backends emit transient `resume`; we normalize it to `resumed`.
- */
-function normalizeRuntimeStatus(
-  status?: string,
-): AgentRuntimeData['status'] | undefined {
-  if (!status) return undefined;
-  switch (status.toLowerCase()) {
-    case 'resume':
-    case 'resumed':
-      return 'resumed';
-    case 'resuming':
-      return 'resuming';
-    case 'pausing':
-      return 'pausing';
-    case 'paused':
-      return 'paused';
-    case 'starting':
-    case 'pending':
-    case 'launching':
-      return 'starting';
-    case 'terminated':
-      return 'terminated';
-    case 'archived':
-      return 'archived';
-    case 'running':
-      return 'running';
-    default:
-      return 'running';
-  }
-}
-
-/**
- * Map runtime record to UI status, preferring explicit runtime.status when present.
- */
-function mapRuntimeToStatus(runtime: {
-  status?: string;
-  phase?: string;
-}): AgentRuntimeData['status'] {
-  return (
-    normalizeRuntimeStatus(runtime.status) || mapPhaseToStatus(runtime.phase)
-  );
-}
-
-/**
- * Hook to access all agent runtime operations.
- *
- * @example
- * ```tsx
- * const {
- *   useAgentRuntime,
- *   useAgentRuntimes,
- *   useCreateAgentRuntime,
- *   useDeleteAgentRuntime,
- *   useRefreshAgentRuntimes,
- * } = useAgentRuntimesCache();
- * ```
- */
-export function useAgentRuntimesCache() {
-  return {
-    useAgentRuntime: useAgentRuntimeByPodName,
-    useAgentRuntimes,
-    useCreateAgentRuntime,
-    useDeleteAgentRuntime,
-    useDeletePausedAgentRuntime,
-    useRefreshAgentRuntimes,
-    queryKeys: agentQueryKeys,
-  };
-}
 
 /**
  * Hook to fetch user's agent runtimes (running agent instances).
  *
  * The backend returns active runtimes from the operator **plus** paused
  * runtimes synthesised from Solr checkpoint records (with ``phase="Paused"``).
- *
- * Phase to status mapping:
- * - ``Pending``    → ``starting``
- * - ``Paused``     → ``paused``
- * - ``Terminated`` → ``terminated``
- * - ``Archived``   → ``archived``
- * - (default)      → ``running``
  */
 export function useAgentRuntimes() {
   const { configuration } = useCoreStore();
@@ -1184,19 +600,9 @@ export function useAgentRuntimes() {
         method: 'GET',
       });
       if (resp.success && resp.runtimes) {
-        const agentRuntimes = (resp.runtimes as AgentRuntimeData[])
-          .filter(
-            (rt: AgentRuntimeData) => rt.environment_name === 'ai-agents-env',
-          )
-          .map((rt: AgentRuntimeData) => ({
-            ...rt,
-            status: mapRuntimeToStatus(rt),
-            name: rt.given_name || rt.pod_name,
-            id: rt.pod_name,
-            url: rt.ingress,
-            messageCount: 0,
-            agent_spec_id: rt.agent_spec_id || undefined,
-          }));
+        const agentRuntimes = (resp.runtimes as Record<string, any>[])
+          .filter(rt => rt.environment_name === 'ai-agents-env')
+          .map(toAgentRuntimeData);
         agentRuntimes.forEach((runtime: AgentRuntimeData) => {
           queryClient.setQueryData(
             agentQueryKeys.agentRuntimes.detail(runtime.pod_name),
@@ -1228,16 +634,7 @@ export function useAgentRuntimeByPodName(podName: string | undefined) {
         method: 'GET',
       });
       if (resp.runtime) {
-        const rt = resp.runtime as AgentRuntimeData;
-        return {
-          ...rt,
-          status: mapRuntimeToStatus(rt),
-          name: rt.given_name || rt.pod_name,
-          id: rt.pod_name,
-          url: rt.ingress,
-          messageCount: 0,
-          agent_spec_id: rt.agent_spec_id || undefined,
-        };
+        return toAgentRuntimeData(resp.runtime as Record<string, any>);
       }
       throw new Error('Failed to fetch agent runtime');
     },
@@ -1277,18 +674,10 @@ export function useCreateAgentRuntime() {
     },
     onSuccess: resp => {
       if (resp.success && resp.runtime) {
-        const rt = resp.runtime as AgentRuntimeData;
+        const mapped = toAgentRuntimeData(resp.runtime as Record<string, any>);
         queryClient.setQueryData(
-          agentQueryKeys.agentRuntimes.detail(rt.pod_name),
-          {
-            ...rt,
-            status: mapRuntimeToStatus(rt),
-            name: rt.given_name || rt.pod_name,
-            id: rt.pod_name,
-            url: rt.ingress,
-            messageCount: 0,
-            agent_spec_id: rt.agent_spec_id || undefined,
-          },
+          agentQueryKeys.agentRuntimes.detail(mapped.pod_name),
+          mapped,
         );
         queryClient.invalidateQueries({
           queryKey: agentQueryKeys.agentRuntimes.all(),
@@ -1328,72 +717,6 @@ export function useDeleteAgentRuntime() {
 }
 
 /**
- * Hook to delete a paused agent runtime.
- *
- * Paused agents have no K8s pod — their state lives entirely in Solr
- * checkpoint records. This calls the dedicated
- * ``DELETE /runtimes/{podName}/paused`` endpoint which removes those
- * Solr records.
- */
-export function useDeletePausedAgentRuntime() {
-  const { configuration } = useCoreStore();
-  const { requestDatalayer } = useDatalayer({ notifyOnError: false });
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (podName: string) => {
-      return requestDatalayer({
-        url: `${configuration.runtimesRunUrl}/api/runtimes/v1/runtimes/${podName}/paused`,
-        method: 'DELETE',
-      });
-    },
-    onSuccess: (_data, podName) => {
-      queryClient.cancelQueries({
-        queryKey: agentQueryKeys.agentRuntimes.detail(podName),
-      });
-      queryClient.removeQueries({
-        queryKey: agentQueryKeys.agentRuntimes.detail(podName),
-      });
-      queryClient.invalidateQueries({
-        queryKey: agentQueryKeys.agentRuntimes.lists(),
-      });
-      queryClient.invalidateQueries({
-        queryKey: agentQueryKeys.checkpoints.all(),
-      });
-    },
-  });
-}
-
-/**
- * Hook to resume a paused agent runtime via checkpoint restore.
- *
- * Calls ``POST /runtimes/{podName}/resume`` which triggers an async
- * background restore from the latest checkpoint.
- */
-export function useResumePausedAgentRuntime() {
-  const { configuration } = useCoreStore();
-  const { requestDatalayer } = useDatalayer({ notifyOnError: false });
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (podName: string) => {
-      return requestDatalayer({
-        url: `${configuration.runtimesRunUrl}/api/runtimes/v1/runtimes/${podName}/resume`,
-        method: 'POST',
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: agentQueryKeys.agentRuntimes.all(),
-      });
-      queryClient.invalidateQueries({
-        queryKey: agentQueryKeys.checkpoints.all(),
-      });
-    },
-  });
-}
-
-/**
  * Hook to refresh agent runtimes list.
  */
 export function useRefreshAgentRuntimes() {
@@ -1405,54 +728,9 @@ export function useRefreshAgentRuntimes() {
   }, [queryClient]);
 }
 
-// ============================================================================
-// Checkpoint Hooks (light by default, CRIU optional)
-// ============================================================================
-
-/**
- * Fetch all runtime checkpoints for the current user.
- *
- * Calls ``GET /api/runtimes/v1/runtime-checkpoints`` and returns
- * the list of checkpoint records in visible states.
- */
-export function useCheckpoints() {
-  const { configuration } = useCoreStore();
-  const { requestDatalayer } = useDatalayer({ notifyOnError: false });
-  const { user } = useIAMStore();
-
-  return useQuery({
-    queryKey: agentQueryKeys.checkpoints.lists(),
-    queryFn: async () => {
-      const resp = await requestDatalayer({
-        url: `${configuration.runtimesRunUrl}/api/runtimes/v1/runtime-checkpoints`,
-        method: 'GET',
-      });
-      if (resp.success && resp.checkpoints) {
-        return resp.checkpoints as CheckpointData[];
-      }
-      return [] as CheckpointData[];
-    },
-    ...AGENT_QUERY_OPTIONS,
-    refetchInterval: 15000,
-    enabled: !!user,
-  });
-}
-
-/**
- * Hook to refresh the checkpoints list.
- */
-export function useRefreshCheckpoints() {
-  const queryClient = useQueryClient();
-  return () => {
-    queryClient.invalidateQueries({
-      queryKey: agentQueryKeys.checkpoints.all(),
-    });
-  };
-}
-
-// ============================================================================
+// ═══════════════════════════════════════════════════════════════════════════
 // Lifecycle Store (resume / pause local UI state)
-// ============================================================================
+// ═══════════════════════════════════════════════════════════════════════════
 
 export type AgentLifecycleRecord = {
   resumePending: boolean;
@@ -1546,421 +824,62 @@ export function useLifecycleRunningAgents() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// AI Agents REST API hook.
+// Consolidated Runtime Composite
 // ═══════════════════════════════════════════════════════════════════════════
 
-export type RequestOptions = {
-  signal?: AbortSignal;
-  baseUrl?: string;
-};
-
-export type RoomType = 'notebook_persist' | 'notebook_memory' | 'doc_memory';
-
-export const useAIAgents = (baseUrlOverride = 'api/ai-agents/v1') => {
-  const { configuration } = useCoreStore();
-  const { requestDatalayer } = useDatalayer({ notifyOnError: false });
-  const createAIAgent = (
-    documentId: string,
-    documentType: RoomType,
-    ingress?: string,
-    token?: string,
-    kernelId?: string,
-    { signal, baseUrl = baseUrlOverride }: RequestOptions = {},
-  ) => {
-    return requestDatalayer({
-      url: URLExt.join(configuration.aiagentsRunUrl, baseUrl, 'agents'),
-      method: 'POST',
-      body: {
-        document_id: documentId,
-        document_type: documentType,
-        runtime: {
-          ingress,
-          token,
-          kernel_id: kernelId,
-        },
-      },
-      signal,
-    });
-  };
-  const getAIAgents = ({
-    signal,
-    baseUrl = baseUrlOverride,
-  }: RequestOptions = {}) => {
-    return requestDatalayer({
-      url: URLExt.join(configuration.aiagentsRunUrl, baseUrl, 'agents'),
-      method: 'GET',
-      signal,
-    });
-  };
-  const deleteAIAgent = (
-    documentId: string,
-    { signal, baseUrl = baseUrlOverride }: RequestOptions = {},
-  ) => {
-    return requestDatalayer({
-      url: URLExt.join(
-        configuration.aiagentsRunUrl,
-        baseUrl,
-        'agents',
-        documentId,
-      ),
-      method: 'DELETE',
-      signal,
-    });
-  };
-  const getAIAgent = (
-    documentId: string,
-    { signal, baseUrl = baseUrlOverride }: RequestOptions = {},
-  ) => {
-    return requestDatalayer({
-      url: URLExt.join(
-        configuration.aiagentsRunUrl,
-        baseUrl,
-        'agents',
-        documentId,
-      ),
-      method: 'GET',
-      signal,
-    });
-  };
-  const patchAIAgent = (
-    documentId: string,
-    ingress?: string,
-    token?: string,
-    kernelId?: string,
-    { signal, baseUrl = baseUrlOverride }: RequestOptions = {},
-  ) => {
-    return requestDatalayer({
-      url: URLExt.join(
-        configuration.aiagentsRunUrl,
-        baseUrl,
-        'agents',
-        documentId,
-      ),
-      method: 'PATCH',
-      body: {
-        runtime:
-          ingress && token && kernelId
-            ? {
-                ingress,
-                token,
-                kernel_id: kernelId,
-              }
-            : null,
-      },
-      signal,
-    });
-  };
-  return {
-    createAIAgent,
-    getAIAgents,
-    deleteAIAgent,
-    getAIAgent,
-    patchAIAgent,
-  };
-};
+export interface UseAgentsRuntimesReturn {
+  runtimes: AgentRuntimeData[];
+  isRuntimesLoading: boolean;
+  isRuntimesError: boolean;
+  runtimesError: unknown;
+  refetchRuntimes: () => Promise<{ data?: AgentRuntimeData[] }>;
+  refreshRuntimes: () => void;
+  deleteRuntimeByPod: (podName: string) => Promise<unknown>;
+  createRuntime: (
+    data: CreateAgentRuntimeRequest,
+  ) => Promise<CreateRuntimeApiResponse>;
+}
 
 /**
- * Get the notebook AI agent if any.
- *
- * This performs a periodic liveness check and keeps the local store in sync.
+ * Consolidated runtime list and mutations.
  */
-export function useNotebookAgents(notebookId: string) {
-  const { getAIAgent } = useAIAgents();
-  const agents = useAgentStore(state => state.agents);
-  const upsertAgent = useAgentStore(state => state.upsertAgent);
-  const deleteAgent = useAgentStore(state => state.deleteAgent);
-  const getAgentById = useAgentStore(state => state.getAgentById);
+export function useAgentsRuntimes(): UseAgentsRuntimesReturn {
+  const runtimesQuery = useAgentRuntimes();
+  const createRuntimeMutation = useCreateAgentRuntime();
+  const deleteRuntimeMutation = useDeleteAgentRuntime();
+  const refreshRuntimes = useRefreshAgentRuntimes();
 
-  useEffect(() => {
-    let abortController: AbortController;
-
-    const refreshAIAgent = async () => {
-      abortController = new AbortController();
-      try {
-        const response = await getAIAgent(notebookId, {
-          signal: abortController.signal,
-        });
-        if (!response.success) {
-          deleteAgent(notebookId);
-          return;
-        }
-        const currentAgent = getAgentById(notebookId);
-        const runtimeId = response.agent.runtime?.id;
-
-        if (currentAgent) {
-          if (currentAgent.runtimeId !== runtimeId) {
-            upsertAgent({
-              id: notebookId,
-              baseUrl: currentAgent.baseUrl,
-              transport: currentAgent.transport,
-              runtimeId,
-              status: 'running',
-            });
-          }
-        } else {
-          upsertAgent({
-            id: notebookId,
-            name: `Notebook ${notebookId}`,
-            description: 'AI agent for notebook',
-            baseUrl: '',
-            transport: 'vercel-ai',
-            documentId: notebookId,
-            runtimeId,
-            status: 'running',
-          });
-        }
-      } catch {
-        deleteAgent(notebookId);
-      }
-    };
-
-    const refreshInterval = setInterval(refreshAIAgent, 60_000);
-    return () => {
-      abortController?.abort('Component unmounted');
-      clearInterval(refreshInterval);
-    };
-  }, [agents, notebookId, getAIAgent, deleteAgent, getAgentById, upsertAgent]);
-
-  return getAgentById(notebookId);
+  return useMemo(
+    () => ({
+      runtimes: runtimesQuery.data ?? EMPTY_RUNTIMES,
+      isRuntimesLoading: runtimesQuery.isLoading,
+      isRuntimesError: runtimesQuery.isError,
+      runtimesError: runtimesQuery.error,
+      refetchRuntimes: () => runtimesQuery.refetch(),
+      refreshRuntimes,
+      deleteRuntimeByPod: async (podName: string) =>
+        deleteRuntimeMutation.mutateAsync(podName),
+      createRuntime: async (data: CreateAgentRuntimeRequest) =>
+        createRuntimeMutation.mutateAsync(data),
+    }),
+    [
+      runtimesQuery.data,
+      runtimesQuery.isLoading,
+      runtimesQuery.isError,
+      runtimesQuery.error,
+      runtimesQuery.refetch,
+      refreshRuntimes,
+      createRuntimeMutation,
+      deleteRuntimeMutation,
+    ],
+  );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// Dashboard data hooks (tool approvals, notifications, events)
-// ═══════════════════════════════════════════════════════════════════════════
-
-function useDashboardAuthToken(): string {
-  const token = useIAMStore((s: any) => s.token);
-  return token ?? '';
-}
-
-function useDashboardBaseUrl(): string {
-  const config = useCoreStore((s: any) => s.configuration);
-  return config?.aiagentsRunUrl ?? DEFAULT_SERVICE_URLS.AI_AGENTS;
-}
-
-export function useToolApprovals(filters?: aiAgentsApi.ToolApprovalFilters) {
-  const token = useDashboardAuthToken();
-  const baseUrl = useDashboardBaseUrl();
-
-  return useQuery({
-    queryKey: ['tool-approvals', filters],
-    queryFn: () =>
-      aiAgentsApi.toolApprovals.getToolApprovals(token, filters, baseUrl),
-    enabled: !!token,
-    staleTime: 10_000,
-    refetchInterval: 15_000,
-  });
-}
-
-export function usePendingApprovalCount() {
-  const token = useDashboardAuthToken();
-  const baseUrl = useDashboardBaseUrl();
-
-  return useQuery({
-    queryKey: ['tool-approvals', 'pending-count'],
-    queryFn: () =>
-      aiAgentsApi.toolApprovals.getPendingApprovalCount(token, baseUrl),
-    enabled: !!token,
-    staleTime: 5_000,
-    refetchInterval: 10_000,
-  });
-}
-
-export function useApproveToolRequest() {
-  const token = useDashboardAuthToken();
-  const baseUrl = useDashboardBaseUrl();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ id, note }: { id: string; note?: string }) =>
-      aiAgentsApi.toolApprovals.approveToolRequest(token, id, note, baseUrl),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tool-approvals'] });
-    },
-  });
-}
-
-export function useRejectToolRequest() {
-  const token = useDashboardAuthToken();
-  const baseUrl = useDashboardBaseUrl();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ id, note }: { id: string; note?: string }) =>
-      aiAgentsApi.toolApprovals.rejectToolRequest(token, id, note, baseUrl),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tool-approvals'] });
-    },
-  });
-}
-
-export function useNotifications(filters?: aiAgentsApi.NotificationFilters) {
-  const token = useDashboardAuthToken();
-  const baseUrl = useDashboardBaseUrl();
-
-  return useQuery({
-    queryKey: ['agent-notifications', filters],
-    queryFn: () =>
-      aiAgentsApi.notifications.getNotifications(token, filters, baseUrl),
-    enabled: !!token,
-    staleTime: 10_000,
-    refetchInterval: 15_000,
-  });
-}
-
-export function useUnreadNotificationCount() {
-  const token = useDashboardAuthToken();
-  const baseUrl = useDashboardBaseUrl();
-
-  return useQuery({
-    queryKey: ['agent-notifications', 'unread-count'],
-    queryFn: () => aiAgentsApi.notifications.getUnreadCount(token, baseUrl),
-    enabled: !!token,
-    staleTime: 5_000,
-    refetchInterval: 10_000,
-  });
-}
-
-export function useMarkNotificationRead() {
-  const token = useDashboardAuthToken();
-  const baseUrl = useDashboardBaseUrl();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (id: string) =>
-      aiAgentsApi.notifications.markNotificationRead(token, id, baseUrl),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['agent-notifications'] });
-    },
-  });
-}
-
-export function useMarkAllNotificationsRead() {
-  const token = useDashboardAuthToken();
-  const baseUrl = useDashboardBaseUrl();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: () => aiAgentsApi.notifications.markAllRead(token, baseUrl),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['agent-notifications'] });
-    },
-  });
-}
-
-export function useAgentEvents(params?: aiAgentsApi.ListAgentEventsParams) {
-  const token = useDashboardAuthToken();
-  const baseUrl = useDashboardBaseUrl();
-
-  return useQuery({
-    queryKey: ['agent-events', params],
-    queryFn: () => aiAgentsApi.events.listEvents(token, params ?? {}, baseUrl),
-    enabled: !!token,
-    staleTime: 10_000,
-    refetchInterval: 15_000,
-  });
-}
-
-export function useAgentEvent(eventId?: string) {
-  const token = useDashboardAuthToken();
-  const baseUrl = useDashboardBaseUrl();
-
-  return useQuery({
-    queryKey: ['agent-events', eventId],
-    queryFn: () =>
-      aiAgentsApi.events.getEvent(token, eventId as string, baseUrl),
-    enabled: !!token && !!eventId,
-    staleTime: 10_000,
-  });
-}
-
-export function useCreateAgentEvent() {
-  const token = useDashboardAuthToken();
-  const baseUrl = useDashboardBaseUrl();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (payload: aiAgentsApi.CreateAgentEventRequest) =>
-      aiAgentsApi.events.createEvent(token, payload, baseUrl),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['agent-events'] });
-    },
-  });
-}
-
-export function useUpdateAgentEvent() {
-  const token = useDashboardAuthToken();
-  const baseUrl = useDashboardBaseUrl();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({
-      eventId,
-      payload,
-    }: {
-      eventId: string;
-      payload: aiAgentsApi.UpdateAgentEventRequest;
-    }) => aiAgentsApi.events.updateEvent(token, eventId, payload, baseUrl),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['agent-events'] });
-      queryClient.invalidateQueries({
-        queryKey: ['agent-events', variables.eventId],
-      });
-    },
-  });
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// Agent Catalog Store (formerly useAgentStore.ts)
-// ═══════════════════════════════════════════════════════════════════════════
-
-/**
- * Centralised Zustand store for agents.
- *
- * Two collections are maintained:
- *
- * 1. **agentSpecs** – the static catalogue of available agent blueprints
- *    (from `@datalayer/agent-runtimes/lib/specs`).
- *    Populated once at import time; call `refreshSpecs()` to re-read.
- *
- * 2. **runningAgents** – live agent runtimes fetched from the runtimes
- *    service.  Updated via `setRunningAgents()` whenever the TanStack
- *    query refreshes.
- *
- * The store is consumed by `AgentAssignMenu` to show two action groups:
- * • **Running Agents** – already-running runtimes that can be re-attached
- * • **New Agents** – agent specs that can be instantiated
- */
-
-export type AgentCatalogStoreState = {
-  /** Static catalogue of agent blueprints. */
-  agentSpecs: AgentSpec[];
-
-  /** Live agent runtimes (running / starting). */
-  runningAgents: AgentRuntimeData[];
-
-  // ---- Mutators ----
-
-  /** Re-read agent specs from the config. */
-  refreshSpecs: () => void;
-
-  /** Replace the running agents list (call from TanStack query effect). */
-  setRunningAgents: (agents: AgentRuntimeData[]) => void;
-};
-
-export const useAgentCatalogStore = create<AgentCatalogStoreState>()(set => ({
-  agentSpecs: listAgentSpecs(),
-  runningAgents: [],
-
-  refreshSpecs: () => set({ agentSpecs: listAgentSpecs() }),
-
-  setRunningAgents: agents =>
-    set(state => ({
-      runningAgents: agents.map(agent => {
-        if (agent.agentSpec) return agent;
-        if (!agent.agent_spec_id) return agent;
-        const spec = state.agentSpecs.find(s => s.id === agent.agent_spec_id);
-        return spec ? { ...agent, agentSpec: spec } : agent;
-      }),
-    })),
-}));
+// Re-export catalog hooks for consumers that import from useAgents
+export {
+  useAIAgents,
+  useNotebookAgents,
+  useAgentRegistry,
+  type RequestOptions,
+  type RoomType,
+} from './useAgentsCatalog';

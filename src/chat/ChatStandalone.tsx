@@ -34,7 +34,7 @@ import { useChatOpen, useChatMessages, useChatStore } from '../store/chatStore';
 import {
   useChatKeyboardShortcuts,
   getShortcutDisplay,
-} from '../hooks/useKeyboardShortcuts';
+} from '@datalayer/core/lib/hooks';
 
 // Re-export types for consumers
 export type {

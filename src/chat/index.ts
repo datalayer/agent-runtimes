@@ -136,7 +136,7 @@ export {
 } from '../extensions';
 
 // Components - Chat elements
-export { ChatMessages, type ChatMessagesProps } from './elements/ChatMessages';
+export { ChatMessages, type ChatMessagesProps } from './messages/ChatMessages';
 export { ChatSidebar, type ChatSidebarProps } from './ChatSidebar';
 export {
   ChatStandalone,
@@ -273,4 +273,4 @@ export {
   getShortcutDisplay,
   type KeyboardShortcut,
   type UseKeyboardShortcutsOptions,
-} from '../hooks';
+} from '@datalayer/core/lib/hooks';

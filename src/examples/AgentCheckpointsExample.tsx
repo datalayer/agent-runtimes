@@ -68,8 +68,16 @@ import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { SignInSimple } from '@datalayer/core/lib/views/iam';
 import { UserBadge } from '@datalayer/core/lib/views/profile';
 import { Chat } from '../chat';
-import { useAgents, AGENT_STATUS_COLORS } from '../hooks/useAgents';
-import type { CheckpointRecord } from '../hooks/useAgents';
+import { useAgents } from '../hooks/useAgents';
+import { useAgentDurableLifecycle } from '../hooks/useCheckpoints';
+import {
+  useAgentRuntimes,
+  useRefreshAgentRuntimes,
+  useDeleteAgentRuntime,
+} from '../hooks/useAgents';
+import { useDeletePausedAgentRuntime } from '../hooks/useCheckpoints';
+import { AGENT_STATUS_COLORS } from '../types/agents';
+import type { CheckpointRecord } from '../types/agents';
 
 const queryClient = new QueryClient();
 
@@ -181,15 +189,7 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
     error: hookError,
     launchRuntime,
     connectToRuntime,
-    pause,
-    resume,
-    terminate,
-    refreshCheckpoints,
-    checkpoints,
-    runtimes: agentRuntimes,
-    refetchRuntimes,
-    deleteRuntimeByPod,
-    deletePausedRuntimeByPod,
+    disconnect,
   } = useAgents({
     agentSpecId: AGENT_SPEC_ID,
     autoStart: false,
@@ -201,6 +201,24 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
         'Monitor Sales KPI agent — exercises pause/resume checkpointing',
     },
   });
+
+  const { pause, resume, terminate, refreshCheckpoints, checkpoints } =
+    useAgentDurableLifecycle({
+      agentSpecId: AGENT_SPEC_ID,
+      agentSpec: AGENT_SPEC,
+      runtime,
+      connectToRuntime,
+      disconnect,
+      launchRuntime,
+    });
+
+  // Agent runtimes from the focused hook
+  const { data: agentRuntimes } = useAgentRuntimes();
+  const refetchRuntimes = useRefreshAgentRuntimes();
+  const deleteRuntimeMutation = useDeleteAgentRuntime();
+  const deletePausedRuntimeMutation = useDeletePausedAgentRuntime();
+  const deleteRuntimeByPod = deleteRuntimeMutation.mutateAsync;
+  const deletePausedRuntimeByPod = deletePausedRuntimeMutation.mutateAsync;
 
   const [isStarting, setIsStarting] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);

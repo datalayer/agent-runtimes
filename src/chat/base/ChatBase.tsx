@@ -53,15 +53,15 @@ import {
   sanitizeAssistantContent,
 } from '../utils';
 import {
-  useHighZIndexPortal,
   useConfig,
-  useSkillsQuery,
+  useSkills,
   useContextSnapshot,
   useSandbox,
 } from '../../hooks';
+import { useHighZIndexPortal } from '@datalayer/core/lib/hooks';
 import { ChatBaseHeader } from '../elements/ChatHeaderBase';
 import { ChatEmptyState } from '../elements/EmptyState';
-import { MessageList } from '../elements/MessageList';
+import { MessageList } from '../messages/MessageList';
 import { InputFooter } from '../prompt/InputFooter';
 
 // Tracks pending prompts already auto-sent for a given conversation scope.
@@ -301,7 +301,7 @@ function ChatBaseInner({
     protocol?.configEndpoint,
     protocol?.authToken,
   );
-  const skillsQuery = useSkillsQuery(
+  const skillsQuery = useSkills(
     Boolean(protocol?.enableConfigQuery) && showSkillsMenu,
     protocol?.configEndpoint,
     protocol?.authToken,
