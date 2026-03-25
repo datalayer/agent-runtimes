@@ -24,3 +24,14 @@ export interface OutputSpec {
   /** MIME types produced */
   mime_types: string[];
 }
+
+/**
+ * Output configuration for an agent spec.
+ */
+export interface AgentOutputConfig {
+  type?: string;
+  formats?: string[];
+  template?: string;
+  storage?: string;
+  [key: string]: unknown;
+}

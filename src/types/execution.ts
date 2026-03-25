@@ -136,3 +136,13 @@ export function formatCodeError(
   }
   return message;
 }
+
+/**
+ * Validation configuration for an agent spec.
+ */
+export interface AgentValidationConfig {
+  timeout?: string;
+  retryOnFailure?: boolean;
+  maxRetries?: number;
+  [key: string]: string | number | boolean | undefined;
+}

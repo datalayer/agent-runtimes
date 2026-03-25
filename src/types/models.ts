@@ -6,7 +6,27 @@
 import type { MCPServer } from './mcp';
 
 /**
- * Configuration for an AI model.
+ * Specification for an AI model from the catalog.
+ */
+export interface AIModel {
+  /** Unique model identifier (e.g., 'anthropic:claude-sonnet-4-5-20250514') */
+  id: string;
+  /** Model spec version */
+  version: string;
+  /** Display name for the model */
+  name: string;
+  /** Model description */
+  description: string;
+  /** Provider name (anthropic, openai, bedrock, azure-openai) */
+  provider: string;
+  /** Whether this is the default model */
+  default: boolean;
+  /** Required environment variable names */
+  requiredEnvVars: string[];
+}
+
+/**
+ * Configuration for an AI model runtime (as returned by the server).
  */
 export interface AIModelRuntime {
   /** Model identifier (e.g., 'anthropic:claude-sonnet-4-5') */
@@ -41,4 +61,13 @@ export interface FrontendConfig {
   builtinTools: BuiltinTool[];
   /** Configured MCP servers */
   mcpServers: MCPServer[];
+}
+
+/**
+ * Model configuration for an agent spec.
+ */
+export interface AgentModelConfig {
+  temperature?: number;
+  max_tokens?: number;
+  [key: string]: string | number | boolean | undefined;
 }

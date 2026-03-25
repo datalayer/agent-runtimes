@@ -27,13 +27,12 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Box } from '@datalayer/primer-addons';
 import type { ExampleAgent } from '../types';
-import { IdentityCard } from '../chat';
-import type { Transport, MCPServerConfig } from '../chat';
-import type { Extension } from '../types';
-import type { McpServerSelection } from '../mcp/McpServerManager';
-import { IdentityConnect, useIdentity } from '../identity';
 import type { OAuthProvider, OAuthProviderConfig, Identity } from '../identity';
-import type { MCPServerTool as MCPServerToolType } from '../types';
+import { IdentityConnect, useIdentity } from '../identity';
+import type { Transport, MCPServerConfig } from '../chat';
+import { IdentityCard } from '../chat';
+import type { McpServerSelection } from '../mcp';
+import type { Extension, MCPServerTool as MCPServerToolType } from '../types';
 
 /**
  * Agent spec entry from the library endpoint.

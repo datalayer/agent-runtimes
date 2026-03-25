@@ -31,7 +31,7 @@ import {
   GITHUB_SKILL_SPEC_0_0_1,
   PDF_SKILL_SPEC_0_0_1,
 } from '../skills';
-import type { SkillSpec } from '../skills';
+import type { SkillSpec } from '../../types';
 import {
   RUNTIME_ECHO_TOOL_SPEC_0_0_1,
   RUNTIME_SEND_MAIL_TOOL_SPEC_0_0_1,

@@ -217,7 +217,7 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
         " * DO NOT EDIT MANUALLY - run 'make specs' to regenerate.",
         " */",
         "",
-        "import type { NotificationChannelSpec } from '../types/types';",
+        "import type { NotificationChannelSpec } from '../types';",
         "",
         "// " + "=" * 76,
         "// Notification Channel Definitions",

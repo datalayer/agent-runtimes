@@ -42,3 +42,14 @@ export interface NotificationChannelSpec {
   /** Dynamic configuration fields for this channel */
   fields: NotificationField[];
 }
+
+/**
+ * Notification configuration for an agent spec.
+ */
+export interface AgentNotificationConfig {
+  email?: string;
+  slack?: string;
+  teams?: string;
+  webhook?: string;
+  [key: string]: string | number | boolean | undefined;
+}

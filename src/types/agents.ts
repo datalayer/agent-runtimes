@@ -7,7 +7,7 @@
  * AI Agent model
  */
 import type { ServiceManager } from '@jupyterlab/services';
-import type { AgentSpec } from './agent-specs';
+import type { AgentSpec } from './agentspecs';
 
 /**
  * Unified agent status covering runtime lifecycle and UI lifecycle.

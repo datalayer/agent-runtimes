@@ -4,6 +4,18 @@
  */
 
 /**
+ * Runtime binding metadata for a tool implementation.
+ */
+export interface ToolRuntimeSpec {
+  /** Implementation language */
+  language: 'python' | 'typescript';
+  /** Module/package containing the implementation */
+  package: string;
+  /** Callable/function name in the package */
+  method: string;
+}
+
+/**
  * Specification for a runtime tool.
  */
 export interface ToolSpec {
@@ -21,12 +33,10 @@ export interface ToolSpec {
   enabled: boolean;
   /** Approval policy for this tool */
   approval: 'auto' | 'manual';
+  /** Whether tool requires human approval before execution */
+  requiresApproval?: boolean;
   /** Runtime binding metadata */
-  runtime: {
-    language: 'python' | 'typescript';
-    package: string;
-    method: string;
-  };
+  runtime: ToolRuntimeSpec;
   /** Icon identifier */
   icon?: string;
   /** Emoji identifier */

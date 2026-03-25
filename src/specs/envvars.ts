@@ -12,16 +12,7 @@
  * DO NOT EDIT MANUALLY - run 'make specs' to regenerate.
  */
 
-export interface EnvvarSpec {
-  id: string;
-  version: string;
-  name: string;
-  description: string;
-  registrationUrl?: string;
-  tags: string[];
-  icon?: string;
-  emoji?: string;
-}
+import type { EnvvarSpec } from '../types';
 
 // ============================================================================
 // Environment Variable Definitions

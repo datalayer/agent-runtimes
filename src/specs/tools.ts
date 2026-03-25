@@ -12,25 +12,7 @@
  * DO NOT EDIT MANUALLY - run 'make specs' to regenerate.
  */
 
-export interface ToolRuntimeSpec {
-  language: 'python' | 'typescript';
-  package: string;
-  method: string;
-}
-
-export interface ToolSpec {
-  id: string;
-  version: string;
-  name: string;
-  description: string;
-  tags: string[];
-  enabled: boolean;
-  approval: 'auto' | 'manual';
-  requiresApproval: boolean;
-  runtime: ToolRuntimeSpec;
-  icon?: string;
-  emoji?: string;
-}
+import type { ToolSpec } from '../types';
 
 // ============================================================================
 // Tool Definitions

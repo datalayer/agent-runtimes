@@ -50,3 +50,14 @@ export interface MCPServer {
   /** Emoji identifier for the server */
   emoji?: string;
 }
+
+/**
+ * MCP server tool configuration for an agent spec.
+ */
+export interface AgentMCPServerToolConfig {
+  server?: string;
+  tool?: string;
+  enabled?: boolean;
+  approval_required?: boolean;
+  [key: string]: unknown;
+}

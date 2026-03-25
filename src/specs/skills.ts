@@ -12,20 +12,7 @@
  * DO NOT EDIT MANUALLY - run 'make specs' to regenerate.
  */
 
-export interface SkillSpec {
-  id: string;
-  version: string;
-  name: string;
-  description: string;
-  module: string;
-  requiredEnvVars: string[];
-  optionalEnvVars: string[];
-  dependencies: string[];
-  tags: string[];
-  icon?: string;
-  emoji?: string;
-  enabled: boolean;
-}
+import type { SkillSpec } from '../types';
 
 // ============================================================================
 // Skill Definitions

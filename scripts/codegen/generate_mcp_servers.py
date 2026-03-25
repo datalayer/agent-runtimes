@@ -229,7 +229,7 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
         " * DO NOT EDIT MANUALLY - run 'make specs' to regenerate.",
         " */",
         "",
-        "import type { MCPServer } from '../types/types';",
+        "import type { MCPServer } from '../types';",
         "",
         "// " + "=" * 76,
         "// MCP Server Definitions",

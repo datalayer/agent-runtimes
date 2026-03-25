@@ -28,3 +28,19 @@ export interface EvalSpec {
   /** Relevant languages */
   languages: string[];
 }
+
+/**
+ * Eval configuration for an agent spec.
+ */
+export interface AgentEvalConfig {
+  id?: string;
+  name?: string;
+  description?: string;
+  category?: string;
+  task_count?: number;
+  metric?: string;
+  source?: string;
+  difficulty?: string;
+  languages?: string[];
+  [key: string]: unknown;
+}

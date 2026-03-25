@@ -3,101 +3,16 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
-import type { AgentSkillSpec } from './skills';
-import type { MCPServer } from './mcp';
+import type { SkillSpec } from './skills';
+import type { MCPServer, AgentMCPServerToolConfig } from './mcp';
 import type { ToolSpec } from './tools';
-
-export interface AgentTriggerConfig {
-  type?: string;
-  cron?: string;
-  event_source?: string;
-  event?: string;
-  description?: string;
-  prompt?: string;
-  [key: string]: string | number | boolean | undefined;
-}
-
-export interface AgentModelConfig {
-  temperature?: number;
-  max_tokens?: number;
-  [key: string]: string | number | boolean | undefined;
-}
-
-export interface AgentMCPServerToolConfig {
-  server?: string;
-  tool?: string;
-  enabled?: boolean;
-  approval_required?: boolean;
-  [key: string]: unknown;
-}
-
-export interface AgentCodemodeConfig {
-  enabled?: boolean;
-  token_reduction?: string;
-  speedup?: string;
-  [key: string]: string | number | boolean | undefined;
-}
-
-export interface AgentOutputConfig {
-  type?: string;
-  formats?: string[];
-  template?: string;
-  storage?: string;
-  [key: string]: unknown;
-}
-
-export interface AgentValidationConfig {
-  timeout?: string;
-  retryOnFailure?: boolean;
-  maxRetries?: number;
-  [key: string]: string | number | boolean | undefined;
-}
-
-export interface AgentGuardrailConfig {
-  id?: string;
-  name?: string;
-  description?: string;
-  identity_provider?: string;
-  identity_name?: string;
-  permissions?: Record<string, boolean>;
-  token_limits?: Record<string, string>;
-  data_scope?: Record<string, unknown>;
-  data_handling?: Record<string, unknown>;
-  approval_policy?: Record<string, unknown>;
-  tool_limits?: Record<string, unknown>;
-  audit?: Record<string, unknown>;
-  content_safety?: Record<string, unknown>;
-  [key: string]: unknown;
-}
-
-export interface AgentEvalConfig {
-  id?: string;
-  name?: string;
-  description?: string;
-  category?: string;
-  task_count?: number;
-  metric?: string;
-  source?: string;
-  difficulty?: string;
-  languages?: string[];
-  [key: string]: unknown;
-}
-
-export interface AgentAdvancedConfig {
-  cost_limit?: string;
-  time_limit?: string;
-  max_iterations?: number;
-  validation?: AgentValidationConfig | string;
-  [key: string]: unknown;
-}
-
-export interface AgentNotificationConfig {
-  email?: string;
-  slack?: string;
-  teams?: string;
-  webhook?: string;
-  [key: string]: string | number | boolean | undefined;
-}
+import type { AgentTriggerConfig } from './triggers';
+import type { AgentModelConfig } from './models';
+import type { AgentOutputConfig } from './outputs';
+import type { AgentGuardrailConfig } from './guardrails';
+import type { AgentEvalConfig } from './evals';
+import type { AgentNotificationConfig } from './notifications';
+import type { AgentCodemodeConfig, AgentAdvancedConfig } from './config';
 
 /**
  * Specification for an AI agent.
@@ -127,7 +42,7 @@ export interface AgentSpec {
   /** MCP servers used by this agent */
   mcpServers: MCPServer[];
   /** Skills available to this agent */
-  skills: AgentSkillSpec[];
+  skills: SkillSpec[];
   /** Runtime tools available to this agent */
   tools?: ToolSpec[];
   /** Runtime environment name for this agent */

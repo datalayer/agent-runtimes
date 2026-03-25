@@ -207,7 +207,7 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
         " * DO NOT EDIT MANUALLY - run 'make specs' to regenerate.",
         " */",
         "",
-        "import type { TriggerSpec } from '../types/types';",
+        "import type { TriggerSpec } from '../types';",
         "",
         "// " + "=" * 76,
         "// Trigger Definitions",

@@ -116,3 +116,23 @@ export interface GuardrailSpec {
   /** Content safety settings */
   content_safety?: GuardrailContentSafety;
 }
+
+/**
+ * Guardrail configuration for an agent spec.
+ */
+export interface AgentGuardrailConfig {
+  id?: string;
+  name?: string;
+  description?: string;
+  identity_provider?: string;
+  identity_name?: string;
+  permissions?: Record<string, boolean>;
+  token_limits?: Record<string, string>;
+  data_scope?: Record<string, unknown>;
+  data_handling?: Record<string, unknown>;
+  approval_policy?: Record<string, unknown>;
+  tool_limits?: Record<string, unknown>;
+  audit?: Record<string, unknown>;
+  content_safety?: Record<string, unknown>;
+  [key: string]: unknown;
+}

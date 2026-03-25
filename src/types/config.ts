@@ -4,6 +4,7 @@
  */
 
 import type { TransportType } from './protocol';
+import type { AgentValidationConfig } from './execution';
 
 /**
  * Configuration for connecting to an agent runtime.
@@ -17,4 +18,25 @@ export interface AgentRuntimeConfig {
   authToken?: string;
   /** Optional protocol type (defaults handled by consumers) */
   protocol?: TransportType;
+}
+
+/**
+ * Codemode configuration for an agent spec.
+ */
+export interface AgentCodemodeConfig {
+  enabled?: boolean;
+  token_reduction?: string;
+  speedup?: string;
+  [key: string]: string | number | boolean | undefined;
+}
+
+/**
+ * Advanced configuration for an agent spec.
+ */
+export interface AgentAdvancedConfig {
+  cost_limit?: string;
+  time_limit?: string;
+  max_iterations?: number;
+  validation?: AgentValidationConfig | string;
+  [key: string]: unknown;
 }

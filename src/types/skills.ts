@@ -4,24 +4,38 @@
  */
 
 /**
- * Specification for an agent skill.
- *
- * Simplified version of the full Skill type from agent-skills,
- * containing only the fields needed for agent specification.
+ * Specification for a skill.
  */
-export interface AgentSkillSpec {
+export interface SkillSpec {
   /** Unique skill identifier */
   id: string;
+  /** Skill version */
+  version: string;
   /** Display name for the skill */
   name: string;
   /** Skill description */
   description: string;
-  /** Skill version */
-  version: string;
+  /** Python module path */
+  module?: string;
+  /** Environment variables required by this skill */
+  requiredEnvVars: string[];
+  /** Optional environment variables */
+  optionalEnvVars?: string[];
+  /** Python package dependencies */
+  dependencies?: string[];
   /** Tags for categorization */
   tags: string[];
+  /** Icon identifier */
+  icon?: string;
+  /** Emoji identifier */
+  emoji?: string;
   /** Whether the skill is enabled */
   enabled: boolean;
-  /** Environment variables required by this skill (e.g., API keys) */
-  requiredEnvVars?: string[];
 }
+
+/**
+ * Simplified skill reference used in AgentSpec.
+ *
+ * @deprecated Use SkillSpec instead.
+ */
+export type AgentSkillSpec = SkillSpec;

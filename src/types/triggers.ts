@@ -40,3 +40,16 @@ export interface TriggerSpec {
   /** Dynamic fields for this trigger type */
   fields?: TriggerField[];
 }
+
+/**
+ * Trigger configuration for an agent spec.
+ */
+export interface AgentTriggerConfig {
+  type?: string;
+  cron?: string;
+  event_source?: string;
+  event?: string;
+  description?: string;
+  prompt?: string;
+  [key: string]: string | number | boolean | undefined;
+}
