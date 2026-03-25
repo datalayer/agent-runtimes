@@ -51,6 +51,8 @@ export type CreateAgentRuntimeRequest = {
   enableCodemode?: boolean;
   /** ID of the agent spec used to create this runtime */
   agentSpecId?: string;
+  /** Full agent spec payload to propagate to backend services */
+  agentSpec?: Record<string, any>;
 };
 
 export type CreateRuntimeApiResponse = {
@@ -669,6 +671,7 @@ export function useCreateAgentRuntime() {
           editor_variant: data.editorVariant || 'none',
           enable_codemode: data.enableCodemode ?? false,
           agent_spec_id: data.agentSpecId || undefined,
+          agent_spec: data.agentSpec || undefined,
         },
       });
     },

@@ -6,17 +6,16 @@
 /**
  * Type definitions for the ChatBase component and its sub-components.
  *
- * @module components/chat/types
+ * @module types/chat
  */
 
 import type { ReactNode } from 'react';
-
 import type { ChatMessage } from './message';
 import type { TransportType } from './protocol';
 import type { McpServerSelection } from './inference';
 import type { BuiltinTool, MCPServerTool, AgentRuntimeConfig } from './types';
-import type { PoweredByTagProps } from '../chat/elements/PoweredByTag';
 import type { FrontendToolDefinition } from './tool';
+import type { PoweredByTagProps } from '../chat/elements/PoweredByTag';
 
 // ---------------------------------------------------------------------------
 // View mode
@@ -671,6 +670,3 @@ export interface ChatBaseProps {
    */
   pendingPrompt?: string;
 }
-
-// Re-export PoweredByTagProps for backward compatibility
-export type { PoweredByTagProps };

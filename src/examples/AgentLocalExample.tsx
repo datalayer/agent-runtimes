@@ -151,6 +151,12 @@ const DEFAULT_WS_URL =
 const DEFAULT_BASE_URL =
   import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
 const DEFAULT_AGENT_ID = 'demo-agent';
+const DEFAULT_SYSTEM_PROMPT = 'You are a helpful AI assistant.';
+const RIGHT_PANE_WIDTH = {
+  min: '420px',
+  default: '80vw',
+  max: '95vw',
+} as unknown as React.ComponentProps<typeof PageLayout.Pane>['width'];
 
 // GitHub OAuth client ID - set via environment variable for security
 // For development, you can create a GitHub OAuth App at:
@@ -306,6 +312,15 @@ const AgentRuntimeFormExample: React.FC<AgentRuntimeFormExampleProps> = ({
   const [transport, setTransport] = useState<Transport>(initialTransport);
   const [extensions, setExtensions] = useState<Extension[]>([]);
   const [model, setModel] = useState(initialModel);
+  const [description, setDescription] = useState('');
+  const [goal, setGoal] = useState('');
+  const [systemPrompt, setSystemPrompt] = useState(DEFAULT_SYSTEM_PROMPT);
+  const [systemPromptCodemodeAddons, setSystemPromptCodemodeAddons] =
+    useState('');
+  const [tools, setTools] = useState<string[]>([]);
+  const [sandboxVariant, setSandboxVariant] = useState('');
+  const [selectedLibrarySpec, setSelectedLibrarySpec] =
+    useState<LibraryAgentSpec | null>(null);
   const [isConfigured, setIsConfigured] = useState(false);
 
   // Agent capabilities state (moved from Header toggles)
@@ -535,7 +550,7 @@ const AgentRuntimeFormExample: React.FC<AgentRuntimeFormExampleProps> = ({
   const [activeSession, setActiveSession] = useState('session-1');
   const [codemode, _] = useState(false);
   const [showContextTree, setShowContextTree] = useState(false);
-  const [leftPaneVisible, setLeftPaneVisible] = useState(true);
+  const [leftPaneVisible, setLeftPaneVisible] = useState(false);
   const [rightPaneVisible, setRightPaneVisible] = useState(true);
   const [isCreatingAgent, setIsCreatingAgent] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
@@ -608,6 +623,19 @@ const AgentRuntimeFormExample: React.FC<AgentRuntimeFormExampleProps> = ({
     if (agentId === 'new-agent') {
       // Reset to defaults for new agent
       setAgentName(DEFAULT_AGENT_ID);
+      setDescription('');
+      setGoal('');
+      setSystemPrompt(DEFAULT_SYSTEM_PROMPT);
+      setSystemPromptCodemodeAddons('');
+      setTools([]);
+      setSandboxVariant('');
+      setSelectedSkills([]);
+      setSelectedMcpServers([]);
+      setSelectedLibrarySpec(null);
+      setEnableCodemode(false);
+      setAllowDirectToolCalls(false);
+      setEnableToolReranker(false);
+      setUseJupyterSandbox(false);
       setTransport('ag-ui');
     } else if (isSpecSelection(agentId)) {
       // Populate form fields from the selected library spec
@@ -615,17 +643,63 @@ const AgentRuntimeFormExample: React.FC<AgentRuntimeFormExampleProps> = ({
       const specs = await fetchLibrarySpecs();
       const spec = specs.find(s => s.id === specId);
       if (spec) {
+        setSelectedLibrarySpec(spec);
         setAgentName(spec.id);
-        // Keep current transport, model, agentLibrary - user can override
-        if (spec.skills.length > 0) {
-          setSelectedSkills(spec.skills);
-          setEnableCodemode(true);
+        setDescription(spec.description || '');
+        setGoal(spec.goal || '');
+        setSystemPrompt(
+          spec.systemPrompt || spec.goal || DEFAULT_SYSTEM_PROMPT,
+        );
+        setSystemPromptCodemodeAddons(spec.systemPromptCodemodeAddons || '');
+        setTools(spec.tools || []);
+        setSandboxVariant(spec.sandboxVariant || '');
+        if (spec.model) {
+          setModel(spec.model);
         }
-        if (spec.systemPromptCodemodeAddons) {
-          setEnableCodemode(true);
+        if (
+          spec.protocol === 'ag-ui' ||
+          spec.protocol === 'acp' ||
+          spec.protocol === 'vercel-ai' ||
+          spec.protocol === 'a2a'
+        ) {
+          setTransport(spec.protocol);
         }
+        setSelectedMcpServers(
+          (spec.mcpServers || []).map(server => ({
+            id: server.id,
+            origin: 'config' as const,
+          })),
+        );
+        setSelectedSkills(spec.skills || []);
+
+        const codemodeConfig =
+          spec.codemode && typeof spec.codemode === 'object'
+            ? (spec.codemode as Record<string, unknown>)
+            : null;
+        const codemodeEnabled =
+          !!spec.systemPromptCodemodeAddons || !!codemodeConfig?.enabled;
+        setEnableCodemode(codemodeEnabled);
+        setAllowDirectToolCalls(
+          Boolean(
+            codemodeConfig?.allowDirectToolCalls ??
+            codemodeConfig?.allow_direct_tool_calls,
+          ),
+        );
+        setEnableToolReranker(
+          Boolean(
+            codemodeConfig?.enableToolReranker ??
+            codemodeConfig?.enable_tool_reranker,
+          ),
+        );
+        setUseJupyterSandbox(
+          spec.sandboxVariant === 'local-jupyter' ||
+            spec.sandboxVariant === 'jupyter',
+        );
+      } else {
+        setSelectedLibrarySpec(null);
       }
     } else {
+      setSelectedLibrarySpec(null);
       const agent = agents.find(a => a.id === agentId);
       if (agent) {
         setAgentName(agent.id);
@@ -654,11 +728,16 @@ const AgentRuntimeFormExample: React.FC<AgentRuntimeFormExampleProps> = ({
         },
         body: JSON.stringify({
           name: agentName,
-          description: `Agent created via UI (${agentLibrary})`,
+          description: description || `Agent created via UI (${agentLibrary})`,
+          goal: goal || undefined,
           agent_library: agentLibrary,
           transport: transport,
           model: model,
-          system_prompt: 'You are a helpful AI assistant.',
+          system_prompt: systemPrompt || DEFAULT_SYSTEM_PROMPT,
+          system_prompt_codemode_addons:
+            systemPromptCodemodeAddons || undefined,
+          tools: tools,
+          sandbox_variant: sandboxVariant || undefined,
           enable_skills: enableSkills,
           enable_codemode: enableCodemode,
           allow_direct_tool_calls: allowDirectToolCalls,
@@ -666,6 +745,7 @@ const AgentRuntimeFormExample: React.FC<AgentRuntimeFormExampleProps> = ({
           selected_mcp_servers: selectedMcpServers,
           skills: selectedSkills,
           jupyter_sandbox: useJupyterSandbox ? jupyterSandboxUrl : undefined,
+          agent_spec: selectedLibrarySpec || undefined,
           ...(specId ? { agent_spec_id: specId } : {}),
         }),
       });
@@ -698,8 +778,14 @@ const AgentRuntimeFormExample: React.FC<AgentRuntimeFormExampleProps> = ({
     baseUrl,
     agentName,
     agentLibrary,
+    description,
+    goal,
     transport,
     model,
+    systemPrompt,
+    systemPromptCodemodeAddons,
+    tools,
+    sandboxVariant,
     enableSkills,
     enableCodemode,
     allowDirectToolCalls,
@@ -709,6 +795,7 @@ const AgentRuntimeFormExample: React.FC<AgentRuntimeFormExampleProps> = ({
     useJupyterSandbox,
     jupyterSandboxUrl,
     selectedAgentId,
+    selectedLibrarySpec,
   ]);
 
   /**
@@ -850,6 +937,7 @@ const AgentRuntimeFormExample: React.FC<AgentRuntimeFormExampleProps> = ({
               </Box>
               <PageLayout.Pane
                 position="start"
+                aria-label="File browser pane"
                 resizable
                 sticky
                 width={{ min: '250px', default: '300px', max: '90px' }}
@@ -943,7 +1031,13 @@ const AgentRuntimeFormExample: React.FC<AgentRuntimeFormExampleProps> = ({
                   }}
                 />
               </Box>
-              <PageLayout.Pane position="end" width="large" resizable sticky>
+              <PageLayout.Pane
+                position="end"
+                aria-label="Agent configuration and chat pane"
+                width={RIGHT_PANE_WIDTH}
+                resizable
+                sticky
+              >
                 <Box
                   sx={{
                     height: '100%',
@@ -960,7 +1054,13 @@ const AgentRuntimeFormExample: React.FC<AgentRuntimeFormExampleProps> = ({
                       wsUrl={wsUrl}
                       baseUrl={baseUrl}
                       agentName={agentName}
+                      description={description}
+                      goal={goal}
                       model={model}
+                      systemPrompt={systemPrompt}
+                      systemPromptCodemodeAddons={systemPromptCodemodeAddons}
+                      tools={tools}
+                      sandboxVariant={sandboxVariant}
                       agents={agents}
                       selectedAgentId={selectedAgentId}
                       isCreatingAgent={isCreatingAgent}
@@ -981,7 +1081,15 @@ const AgentRuntimeFormExample: React.FC<AgentRuntimeFormExampleProps> = ({
                       onWsUrlChange={setWsUrl}
                       onBaseUrlChange={setBaseUrl}
                       onAgentNameChange={setAgentName}
+                      onDescriptionChange={setDescription}
+                      onGoalChange={setGoal}
                       onModelChange={setModel}
+                      onSystemPromptChange={setSystemPrompt}
+                      onSystemPromptCodemodeAddonsChange={
+                        setSystemPromptCodemodeAddons
+                      }
+                      onToolsChange={setTools}
+                      onSandboxVariantChange={setSandboxVariant}
                       onAgentSelect={handleAgentSelect}
                       onConnect={handleConnect}
                       onEnableCodemodeChange={handleEnableCodemodeChange}

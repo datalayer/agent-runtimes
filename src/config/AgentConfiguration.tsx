@@ -39,19 +39,40 @@ import type { MCPServerTool as MCPServerToolType } from '../types/types';
  * Agent spec entry from the library endpoint.
  */
 export interface LibraryAgentSpec {
+  [key: string]: unknown;
   id: string;
+  version?: string;
   name: string;
   description: string;
   tags: string[];
   enabled: boolean;
+  model?: string | null;
+  goal?: string | null;
   emoji?: string | null;
   icon?: string | null;
   color?: string | null;
   skills: string[];
+  tools?: string[];
   systemPrompt?: string | null;
   systemPromptCodemodeAddons?: string | null;
   suggestions: string[];
   welcomeMessage?: string | null;
+  welcomeNotebook?: string | null;
+  welcomeDocument?: string | null;
+  sandboxVariant?: string | null;
+  protocol?: string | null;
+  uiExtension?: string | null;
+  trigger?: Record<string, unknown> | null;
+  modelConfig?: Record<string, unknown> | null;
+  mcpServerTools?: Array<Record<string, unknown>> | null;
+  guardrails?: Array<Record<string, unknown>> | null;
+  evals?: Array<Record<string, unknown>> | null;
+  codemode?: Record<string, unknown> | null;
+  output?: Record<string, unknown> | null;
+  advanced?: Record<string, unknown> | null;
+  authorizationPolicy?: string | null;
+  notifications?: Record<string, unknown> | null;
+  memory?: string | null;
   mcpServers: { name: string; id: string }[];
 }
 
@@ -477,7 +498,13 @@ export interface AgentConfigurationProps {
   wsUrl: string;
   baseUrl: string;
   agentName: string;
+  description: string;
+  goal: string;
   model: string;
+  systemPrompt: string;
+  systemPromptCodemodeAddons: string;
+  tools: string[];
+  sandboxVariant: string;
   agents: readonly ExampleAgent[];
   selectedAgentId: string;
   isCreatingAgent?: boolean;
@@ -505,7 +532,13 @@ export interface AgentConfigurationProps {
   onWsUrlChange: (url: string) => void;
   onBaseUrlChange: (url: string) => void;
   onAgentNameChange: (name: string) => void;
+  onDescriptionChange: (description: string) => void;
+  onGoalChange: (goal: string) => void;
   onModelChange: (model: string) => void;
+  onSystemPromptChange: (systemPrompt: string) => void;
+  onSystemPromptCodemodeAddonsChange: (addons: string) => void;
+  onToolsChange: (tools: string[]) => void;
+  onSandboxVariantChange: (sandboxVariant: string) => void;
   onAgentSelect: (agentId: string) => void;
   onConnect: () => void;
   onEnableCodemodeChange?: (enabled: boolean) => void;
@@ -537,7 +570,13 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
   wsUrl,
   baseUrl,
   agentName,
+  description,
+  goal,
   model,
+  systemPrompt,
+  systemPromptCodemodeAddons,
+  tools,
+  sandboxVariant,
   agents,
   selectedAgentId,
   isCreatingAgent = false,
@@ -558,7 +597,13 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
   onWsUrlChange,
   onBaseUrlChange,
   onAgentNameChange,
+  onDescriptionChange,
+  onGoalChange,
   onModelChange,
+  onSystemPromptChange,
+  onSystemPromptCodemodeAddonsChange,
+  onToolsChange,
+  onSandboxVariantChange,
   onAgentSelect,
   onConnect,
   onEnableCodemodeChange,
@@ -622,12 +667,22 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
     return librarySpecs.find(s => s.id === specId) || null;
   }, [selectedAgentId, librarySpecs]);
 
+  const selectedSpecEntries = useMemo(() => {
+    if (!selectedSpec) return [] as Array<[string, unknown]>;
+    return Object.entries(selectedSpec).filter(
+      ([, value]) => value !== undefined,
+    );
+  }, [selectedSpec]);
+
   // When a spec is selected, form behaves like new-agent but with pre-filled values
   const isNewAgentMode =
     selectedAgentId === 'new-agent' || isSpecSelection(selectedAgentId);
 
   // True when a library spec is selected (fields locked down except Name, URL, Library, Model, Transport, Extensions)
   const isSpecMode = isSpecSelection(selectedAgentId);
+
+  // Entire form is read-only for existing agents and library spec selections.
+  const isFormReadOnly = !isNewAgentMode || isSpecMode;
 
   // Fetch skills from the backend (always available, independent of codemode)
   const skillsQuery = useQuery<{ skills: SkillOption[]; total: number }>({
@@ -866,12 +921,11 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
         </FormControl.Caption>
       </FormControl>
 
-      <FormControl sx={{ marginBottom: 3 }}>
+      <FormControl sx={{ marginBottom: 3 }} disabled={isFormReadOnly}>
         <FormControl.Label>Agent Name</FormControl.Label>
         <TextInput
           value={agentName}
           onChange={e => onAgentNameChange(e.target.value)}
-          disabled={!isNewAgentMode}
           placeholder="demo-agent"
           sx={{ width: '100%' }}
         />
@@ -880,7 +934,27 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
         </FormControl.Caption>
       </FormControl>
 
-      <FormControl sx={{ marginBottom: 3 }}>
+      <FormControl sx={{ marginBottom: 3 }} disabled={isFormReadOnly}>
+        <FormControl.Label>Description</FormControl.Label>
+        <TextInput
+          value={description}
+          onChange={e => onDescriptionChange(e.target.value)}
+          placeholder="Short agent description"
+          sx={{ width: '100%' }}
+        />
+      </FormControl>
+
+      <FormControl sx={{ marginBottom: 3 }} disabled={isFormReadOnly}>
+        <FormControl.Label>Goal</FormControl.Label>
+        <TextInput
+          value={goal}
+          onChange={e => onGoalChange(e.target.value)}
+          placeholder="User-facing objective"
+          sx={{ width: '100%' }}
+        />
+      </FormControl>
+
+      <FormControl sx={{ marginBottom: 3 }} disabled={isFormReadOnly}>
         <FormControl.Label>
           {transport === 'acp' ? 'WebSocket URL' : 'Base URL'}
         </FormControl.Label>
@@ -891,7 +965,6 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
               ? onWsUrlChange(e.target.value)
               : onBaseUrlChange(e.target.value)
           }
-          disabled={!isNewAgentMode}
           placeholder={
             transport === 'acp'
               ? 'ws://localhost:8000/api/v1/acp/ws'
@@ -907,12 +980,11 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
       </FormControl>
 
       <Box sx={{ display: 'flex', gap: 3, marginBottom: 3 }}>
-        <FormControl sx={{ flex: 1 }}>
+        <FormControl sx={{ flex: 1 }} disabled={isFormReadOnly}>
           <FormControl.Label>Agent Library</FormControl.Label>
           <Select
             value={agentLibrary}
             onChange={e => onAgentLibraryChange(e.target.value as AgentLibrary)}
-            disabled={!isNewAgentMode}
             sx={{ width: '100%' }}
           >
             {AGENT_LIBRARIES.map(lib => (
@@ -928,12 +1000,14 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
           </Select>
         </FormControl>
 
-        <FormControl sx={{ flex: 1 }}>
+        <FormControl
+          sx={{ flex: 1 }}
+          disabled={isFormReadOnly || models.length === 0}
+        >
           <FormControl.Label>Model</FormControl.Label>
           <Select
             value={model}
             onChange={e => onModelChange(e.target.value)}
-            disabled={!isNewAgentMode || models.length === 0}
             sx={{ width: '100%' }}
           >
             {models.length === 0 ? (
@@ -953,12 +1027,11 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
           </Select>
         </FormControl>
 
-        <FormControl sx={{ flex: 1 }}>
+        <FormControl sx={{ flex: 1 }} disabled={isFormReadOnly}>
           <FormControl.Label>Transport</FormControl.Label>
           <Select
             value={transport}
             onChange={e => onTransportChange(e.target.value as Transport)}
-            disabled={!isNewAgentMode}
             sx={{ width: '100%' }}
           >
             {TRANSPORTS.map(t => (
@@ -980,7 +1053,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
                 <Checkbox
                   value={ext.value}
                   checked={extensions.includes(ext.value)}
-                  disabled={!isExtensionEnabled(ext.value)}
+                  disabled={isFormReadOnly || !isExtensionEnabled(ext.value)}
                   onChange={e =>
                     handleExtensionChange(ext.value, e.target.checked)
                   }
@@ -989,6 +1062,59 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
               </Box>
             ))}
           </Box>
+        </FormControl>
+      </Box>
+
+      <FormControl sx={{ marginBottom: 3 }} disabled={isFormReadOnly}>
+        <FormControl.Label>System Prompt</FormControl.Label>
+        <TextInput
+          value={systemPrompt}
+          onChange={e => onSystemPromptChange(e.target.value)}
+          placeholder="You are a helpful AI assistant."
+          sx={{ width: '100%' }}
+        />
+      </FormControl>
+
+      <FormControl sx={{ marginBottom: 3 }} disabled={isFormReadOnly}>
+        <FormControl.Label>System Prompt Codemode Addons</FormControl.Label>
+        <TextInput
+          value={systemPromptCodemodeAddons}
+          onChange={e => onSystemPromptCodemodeAddonsChange(e.target.value)}
+          placeholder="Additional codemode instructions"
+          sx={{ width: '100%' }}
+        />
+      </FormControl>
+
+      <Box sx={{ display: 'flex', gap: 3, marginBottom: 3 }}>
+        <FormControl sx={{ flex: 1 }} disabled={isFormReadOnly}>
+          <FormControl.Label>Tools (comma-separated)</FormControl.Label>
+          <TextInput
+            value={tools.join(', ')}
+            onChange={e =>
+              onToolsChange(
+                e.target.value
+                  .split(',')
+                  .map(tool => tool.trim())
+                  .filter(Boolean),
+              )
+            }
+            placeholder="tool_a, tool_b"
+            sx={{ width: '100%' }}
+          />
+        </FormControl>
+
+        <FormControl sx={{ flex: 1 }} disabled={isFormReadOnly}>
+          <FormControl.Label>Sandbox Variant</FormControl.Label>
+          <Select
+            value={sandboxVariant}
+            onChange={e => onSandboxVariantChange(e.target.value)}
+            sx={{ width: '100%' }}
+          >
+            <Select.Option value="">Default</Select.Option>
+            <Select.Option value="local-eval">local-eval</Select.Option>
+            <Select.Option value="jupyter">jupyter</Select.Option>
+            <Select.Option value="local-jupyter">local-jupyter</Select.Option>
+          </Select>
         </FormControl>
       </Box>
 
@@ -1549,6 +1675,46 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
         <Flash variant="danger" sx={{ marginBottom: 3 }}>
           {createError}
         </Flash>
+      )}
+
+      {selectedSpec && (
+        <Box
+          sx={{
+            marginBottom: 3,
+            padding: 3,
+            border: '1px solid',
+            borderColor: 'border.default',
+            borderRadius: 2,
+            backgroundColor: 'canvas.default',
+          }}
+        >
+          <Text
+            sx={{ fontSize: 1, fontWeight: 'bold', display: 'block', mb: 2 }}
+          >
+            Agent Spec Attributes
+          </Text>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {selectedSpecEntries.map(([key, value]) => (
+              <Box
+                key={key}
+                sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}
+              >
+                <Text sx={{ fontSize: 0, fontWeight: 'semibold' }}>{key}</Text>
+                <Text
+                  sx={{
+                    fontSize: 0,
+                    color: 'fg.muted',
+                    whiteSpace: 'pre-wrap',
+                  }}
+                >
+                  {typeof value === 'string'
+                    ? value
+                    : JSON.stringify(value, null, 2)}
+                </Text>
+              </Box>
+            ))}
+          </Box>
+        </Box>
       )}
 
       <Button

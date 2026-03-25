@@ -6,7 +6,7 @@
 /**
  * Utility functions and constants for ChatBase.
  *
- * @module components/chat/utils
+ * @module chat/utils
  */
 
 import { QueryClient } from '@tanstack/react-query';

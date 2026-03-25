@@ -366,6 +366,10 @@ class CreateAgentRequest(BaseModel):
         default=None,
         description="ID of a library agent spec to use as base configuration. When provided, the spec's system_prompt, system_prompt_codemode_addons, skills, and MCP servers are used as defaults (request fields can override).",
     )
+    agent_spec: dict[str, Any] | None = Field(
+        default=None,
+        description="Optional complete agent spec payload forwarded by the UI. Used to prefill fields when creating from a library spec.",
+    )
 
 
 class CreateAgentResponse(BaseModel):
@@ -414,6 +418,16 @@ async def create_agent(
         )
 
     try:
+        # Normalize optional UI-forwarded spec payload to make applying defaults easier.
+        # This accepts both camelCase and snake_case keys.
+        forwarded_spec = request.agent_spec or {}
+
+        def _spec_value(*keys: str) -> Any:
+            for key in keys:
+                if key in forwarded_spec and forwarded_spec[key] is not None:
+                    return forwarded_spec[key]
+            return None
+
         # If an agent_spec_id is provided, load the library spec and apply
         # its fields as defaults (request fields take precedence for overrides).
         if request.agent_spec_id:
@@ -465,6 +479,109 @@ async def create_agent(
             # Use the sandbox_variant from the spec if not set in the request
             if not request.sandbox_variant and spec.sandbox_variant:
                 request.sandbox_variant = spec.sandbox_variant
+            # Apply protocol/transport from spec when request keeps default
+            if request.transport == "ag-ui" and spec.protocol in {
+                "ag-ui",
+                "vercel-ai",
+                "acp",
+                "a2a",
+            }:
+                request.transport = spec.protocol  # type: ignore[assignment]
+            # Apply MCP servers from spec when not explicitly selected
+            if not request.selected_mcp_servers and spec.mcp_servers:
+                request.selected_mcp_servers = [
+                    McpServerSelection(id=server.id, origin="config")
+                    for server in spec.mcp_servers
+                ]
+            # Apply codemode defaults from spec codemode block
+            if isinstance(spec.codemode, dict):
+                codemode_cfg = spec.codemode
+                if not request.enable_codemode and bool(codemode_cfg.get("enabled")):
+                    request.enable_codemode = True
+                if request.allow_direct_tool_calls is None:
+                    direct_calls = codemode_cfg.get(
+                        "allow_direct_tool_calls",
+                        codemode_cfg.get("allowDirectToolCalls"),
+                    )
+                    if isinstance(direct_calls, bool):
+                        request.allow_direct_tool_calls = direct_calls
+                if not request.enable_tool_reranker:
+                    reranker = codemode_cfg.get(
+                        "enable_tool_reranker",
+                        codemode_cfg.get("enableToolReranker"),
+                    )
+                    if isinstance(reranker, bool):
+                        request.enable_tool_reranker = reranker
+
+        # Apply defaults from forwarded full spec payload when request fields
+        # are still unset/defaulted.
+        if forwarded_spec:
+            if not request.description:
+                request.description = _spec_value("description") or request.description
+            if request.goal is None:
+                request.goal = _spec_value("goal")
+            if request.model == DEFAULT_MODEL.value:
+                request.model = _spec_value("model") or request.model
+            if request.system_prompt == "You are a helpful AI assistant.":
+                request.system_prompt = (
+                    _spec_value("systemPrompt", "system_prompt") or request.system_prompt
+                )
+            if request.system_prompt_codemode_addons is None:
+                request.system_prompt_codemode_addons = _spec_value(
+                    "systemPromptCodemodeAddons", "system_prompt_codemode_addons"
+                )
+            if not request.skills:
+                raw_skills = _spec_value("skills")
+                if isinstance(raw_skills, list):
+                    request.skills = [str(s) for s in raw_skills]
+            if not request.tools:
+                raw_tools = _spec_value("tools")
+                if isinstance(raw_tools, list):
+                    request.tools = [str(t) for t in raw_tools]
+            if not request.sandbox_variant:
+                request.sandbox_variant = _spec_value(
+                    "sandboxVariant", "sandbox_variant"
+                )
+            if request.transport == "ag-ui":
+                protocol = _spec_value("protocol")
+                if protocol in {"ag-ui", "vercel-ai", "acp", "a2a"}:
+                    request.transport = protocol
+            if not request.selected_mcp_servers:
+                raw_servers = _spec_value("mcpServers", "mcp_servers")
+                if isinstance(raw_servers, list):
+                    selected_servers: list[McpServerSelection] = []
+                    for server in raw_servers:
+                        if isinstance(server, dict) and server.get("id"):
+                            raw_origin = str(server.get("origin", "config"))
+                            origin: McpOrigin = (
+                                "catalog" if raw_origin == "catalog" else "config"
+                            )
+                            selected_servers.append(
+                                McpServerSelection(
+                                    id=str(server.get("id")),
+                                    origin=origin,
+                                )
+                            )
+                    request.selected_mcp_servers = selected_servers
+            codemode_cfg = _spec_value("codemode")
+            if isinstance(codemode_cfg, dict):
+                if not request.enable_codemode and bool(codemode_cfg.get("enabled")):
+                    request.enable_codemode = True
+                if request.allow_direct_tool_calls is None:
+                    direct_calls = codemode_cfg.get(
+                        "allow_direct_tool_calls",
+                        codemode_cfg.get("allowDirectToolCalls"),
+                    )
+                    if isinstance(direct_calls, bool):
+                        request.allow_direct_tool_calls = direct_calls
+                if not request.enable_tool_reranker:
+                    reranker = codemode_cfg.get(
+                        "enable_tool_reranker",
+                        codemode_cfg.get("enableToolReranker"),
+                    )
+                    if isinstance(reranker, bool):
+                        request.enable_tool_reranker = reranker
+
 
         # Build list of non-MCP toolsets (skills, codemode, etc.)
         # MCP toolsets will be dynamically fetched at run time by the adapter
@@ -2339,6 +2456,7 @@ class ConfigureFromSpecRequest(BaseModel):
     """Request body for the configure-from-spec endpoint."""
 
     agent_spec_id: str
+    agent_spec: dict[str, Any] | None = None
     env_vars: list[dict[str, str]] = Field(default_factory=list)
 
 
@@ -2350,8 +2468,9 @@ async def configure_from_spec_endpoint(
     """Configure and create an agent from an AgentSpec ID.
 
     Called by the companion during run-start-hooks when the operator
-    provides an ``agent_spec_id``. Looks up the spec from the library,
-    applies env vars, and creates the agent.
+    provides an ``agent_spec_id``. Applies env vars and reuses the
+    canonical ``POST /agents`` creation logic so all spec attributes
+    are handled consistently.
     """
     logger.info("Configuring agent from spec: %s", body.agent_spec_id)
 
@@ -2362,7 +2481,7 @@ async def configure_from_spec_endpoint(
         if name:
             os.environ[name] = value
 
-    # Look up the spec
+    # Validate that the referenced library spec exists.
     spec = get_library_agent_spec(body.agent_spec_id)
     if spec is None:
         raise HTTPException(
@@ -2370,75 +2489,22 @@ async def configure_from_spec_endpoint(
             detail=f"AgentSpec '{body.agent_spec_id}' not found in library.",
         )
 
-    # Build a CreateAgentRequest-like dict and delegate to the create logic.
-    # This reuses the same agent creation flow as POST /agents.
+    # Delegate to the canonical create flow. Defaults from the library spec
+    # and optional forwarded agent_spec are applied in create_agent().
     try:
-        # Use goal or system_prompt from spec
-        system_prompt = spec.system_prompt or spec.goal or spec.description or ""
-        model = spec.model or DEFAULT_MODEL
-
-        tool_ids = list(spec.tools or [])
-        agent_kwargs: dict[str, Any] = {
-            "model": model,
-            "system_prompt": system_prompt,
-        }
-        approval_tool_ids = tools_requiring_approval_ids(tool_ids)
-        if tools_require_approval(tool_ids):
-            agent_kwargs["output_type"] = [str, DeferredToolRequests]
-            agent_kwargs["output_retries"] = 3
-            logger.info(
-                "Auto-enabled DeferredToolRequests for agent '%s'; tools requiring approval: %s",
-                body.agent_spec_id,
-                approval_tool_ids,
-            )
-
-        agent = PydanticAgent(**agent_kwargs)
-
-        register_agent_tools(
-            agent,
-            tool_ids,
-            agent_id=body.agent_spec_id,
-        )
-
-        # Wrap with DBOS durability if configured
-        lifecycle = getattr(http_request.app.state, "durable_lifecycle", None)
-        if lifecycle is not None:
-            from ..durable import DurableConfig, wrap_agent_durable
-
-            durable_config = DurableConfig.from_agent_spec(
-                spec.advanced if spec.advanced else {}
-            )
-            if durable_config.enabled:
-                wrap_agent_durable(agent, agent_id=body.agent_spec_id)
-                logger.info(
-                    "Wrapped agent '%s' with DBOS durability", body.agent_spec_id
-                )
-
-        adapter = PydanticAIAdapter(agent)
-        agent_id = body.agent_spec_id
-
-        # Register across transports
-        register_agent(
-            adapter,
-            AgentInfo(
-                id=agent_id,
-                name=agent_id,
-                description=(spec.description or ""),
-                capabilities=AgentCapabilities(
-                    streaming=True,
-                    tool_calling=True,
-                    code_execution=False,
-                ),
+        created = await create_agent(
+            CreateAgentRequest(
+                name=body.agent_spec_id,
+                agent_spec_id=body.agent_spec_id,
+                agent_spec=body.agent_spec,
             ),
+            http_request,
         )
-        register_vercel_agent(agent_id, VercelAITransport(adapter))
-        register_mcp_ui_agent(agent_id, MCPUITransport(adapter))
-
-        logger.info("Agent '%s' created from spec and registered", agent_id)
+        logger.info("Agent '%s' created from spec and registered", body.agent_spec_id)
         return {
             "success": True,
-            "agent_id": agent_id,
-            "model": model,
+            "agent_id": created.get("id", body.agent_spec_id),
+            "model": created.get("model", spec.model or DEFAULT_MODEL),
             "message": f"Agent '{agent_id}' configured from spec.",
         }
 

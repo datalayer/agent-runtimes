@@ -9,7 +9,7 @@
  * Includes query hooks for listing checkpoints and mutation hooks
  * for pause, resume, and checkpoint lifecycle operations.
  *
- * @module hooks/useAgentsCheckpoints
+ * @module hooks/useCheckpoints
  */
 
 import { useMemo, useState, useCallback } from 'react';
