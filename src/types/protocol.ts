@@ -15,7 +15,7 @@ import type {
   ToolDefinition,
   ToolCallRequest,
   ToolExecutionResult,
-} from './tool';
+} from './tools';
 
 /**
  * Supported transport types (communication transports)

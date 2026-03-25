@@ -9,16 +9,14 @@ import type {
   ExampleAgent,
   ExampleAgentStatus,
   ExampleAgentsState,
-  Transport,
-} from '../../types/types';
+  TransportType,
+} from '../../types';
 
 // Import agent examples data files.
 import earthquakeDetectorData from './agents/earthquake-detector.json';
 import stocksWatcherData from './agents/stock-market.json';
 import salesForecasterData from './agents/sales-forecaster.json';
 import socialPostGeneratorData from './agents/social-post-generator.json';
-
-export type { ExampleAgent, ExampleAgentStatus, ExampleAgentsState, Transport };
 
 // Helper function to transform JSON data to Agent format
 const transformAgentData = (
@@ -33,7 +31,7 @@ const transformAgentData = (
   lastEdited: data.editTimestamp,
   screenshot: data.image,
   status: data.status as ExampleAgentStatus | undefined,
-  transport: data.transport as Transport,
+  transport: data.transport as TransportType,
   avatarUrl: data.avatarUrl,
   notebookFile: `${notebookSuffix}.ipynb.json`,
   lexicalFile: `${lexicalSuffix}.lexical.json`,

@@ -6,7 +6,7 @@
 import { useContext } from 'react';
 import { useQuery, QueryClientContext } from '@tanstack/react-query';
 import { getApiBaseFromConfig } from '../chat/utils';
-import type { ContextSnapshotData } from '../types/chat';
+import type { ContextSnapshotData } from '../types/context';
 
 /**
  * Hook to poll agent context-snapshot from the backend.

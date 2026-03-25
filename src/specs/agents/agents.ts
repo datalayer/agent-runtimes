@@ -11,7 +11,7 @@
  * Generated from YAML specifications in specs/agents/
  */
 
-import type { AgentSpec } from '../../types/types';
+import type { AgentSpec } from '../../types';
 import {
   ALPHAVANTAGE_MCP_SERVER_0_0_1,
   CHART_MCP_SERVER_0_0_1,

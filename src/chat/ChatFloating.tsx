@@ -51,7 +51,7 @@ import {
   useChatKeyboardShortcuts,
   getShortcutDisplay,
 } from '@datalayer/core/lib/hooks';
-import type { FrontendToolDefinition } from '../types/tool';
+import type { FrontendToolDefinition } from '../types/tools';
 
 // Re-export types for backward compatibility
 export type {

@@ -10,7 +10,7 @@
  * DO NOT EDIT MANUALLY - run 'make specs' to regenerate.
  */
 
-import type { TeamSpec } from '../../types/types';
+import type { TeamSpec } from '../../types';
 
 // ============================================================================
 // Team Definitions

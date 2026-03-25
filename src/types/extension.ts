@@ -12,7 +12,7 @@
 
 import type { ReactNode } from 'react';
 import type { ChatMessage } from './message';
-import type { ToolRenderProps } from './tool';
+import type { ToolRenderProps } from './tools';
 import type { ProtocolEvent } from './protocol';
 
 /**

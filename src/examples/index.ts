@@ -37,11 +37,3 @@ export { default as LexicalSidebarExample } from './LexicalSidebarExample';
 export { default as NotebookExample } from './NotebookExample';
 export { default as NotebookSidebarExample } from './NotebookSidebarExample';
 export { default as NotebookSimpleExample } from './NotebookSimpleExample';
-
-// Store types
-export type {
-  ExampleAgent,
-  ExampleAgentStatus,
-  ExampleAgentsState,
-  Transport,
-} from './stores/examplesStore';

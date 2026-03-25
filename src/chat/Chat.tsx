@@ -33,7 +33,7 @@ import type {
   ChatViewMode,
   RenderToolResult,
 } from './base/ChatBase';
-import type { FrontendToolDefinition } from '../types/tool';
+import type { FrontendToolDefinition } from '../types/tools';
 import type { McpServerSelection } from '../types';
 import { useConnectedIdentities } from '../identity';
 import type { OAuthProvider, OAuthProviderConfig, Identity } from '../identity';

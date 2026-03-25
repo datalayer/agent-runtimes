@@ -18,7 +18,7 @@ import type {
   ToolRenderProps,
   ToolRenderAndWaitProps,
   ToolLocation,
-} from '../types/tool';
+} from '../types/tools';
 
 /**
  * Type signature for useFrontendTool hook

@@ -20,7 +20,7 @@ import type {
   AgentCard,
 } from '../types/protocol';
 import type { ChatMessage } from '../types/message';
-import type { ToolDefinition, ToolExecutionResult } from '../types/tool';
+import type { ToolDefinition, ToolExecutionResult } from '../types/tools';
 
 /**
  * Abstract base class for protocol adapters

@@ -15,7 +15,7 @@ import type {
   ToolDefinition,
   ToolCallRequest,
   ToolExecutionResult,
-} from './tool';
+} from './tools';
 
 /**
  * Type alias for MCP server identifier

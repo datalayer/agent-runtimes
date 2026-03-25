@@ -16,9 +16,9 @@ import type {
   ToolCallRequest,
   ToolExecutionResult,
   ToolRenderStatus,
-} from '../types/tool';
+} from '../types/tools';
 import type { InferenceProvider } from '../types/inference';
-import { hasHitlRender } from '../types/tool';
+import { hasHitlRender } from '../types/tools';
 
 /**
  * Execution context for tool calls

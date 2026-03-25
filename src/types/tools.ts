@@ -4,11 +4,34 @@
  */
 
 /**
- * Tool types for chat component.
- * Supports hybrid execution (frontend + backend) with per-tool annotation.
- *
- * @module types/tool
+ * Specification for a runtime tool.
  */
+export interface ToolSpec {
+  /** Unique tool identifier */
+  id: string;
+  /** Version */
+  version?: string;
+  /** Display name for the tool */
+  name: string;
+  /** Tool description */
+  description: string;
+  /** Tags for categorization */
+  tags: string[];
+  /** Whether the tool is enabled */
+  enabled: boolean;
+  /** Approval policy for this tool */
+  approval: 'auto' | 'manual';
+  /** Runtime binding metadata */
+  runtime: {
+    language: 'python' | 'typescript';
+    package: string;
+    method: string;
+  };
+  /** Icon identifier */
+  icon?: string;
+  /** Emoji identifier */
+  emoji?: string;
+}
 
 import type { ReactNode } from 'react';
 

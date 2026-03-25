@@ -7,7 +7,7 @@
  * AI Agent model
  */
 import type { ServiceManager } from '@jupyterlab/services';
-import type { AgentSpec } from './types';
+import type { AgentSpec } from './agent-specs';
 
 /**
  * Unified agent status covering runtime lifecycle and UI lifecycle.
@@ -170,8 +170,8 @@ export interface CheckpointRecord {
   description: string;
   runtime_uid: string;
   agent_spec_id: string;
-  agentspec: Record<string, any>;
-  metadata: Record<string, any>;
+  agentspec: Record<string, unknown>;
+  metadata: Record<string, unknown>;
   checkpoint_mode?: 'criu' | 'light';
   messages?: string[];
   status: string;

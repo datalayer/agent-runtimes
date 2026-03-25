@@ -6,13 +6,12 @@
 /**
  * Agent monitoring/event hooks.
  *
- * @module hooks/useAgentsMonitoring
+ * @module hooks/useMonitoring
  */
 
 import { useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useIAMStore } from '@datalayer/core/lib/state';
-import { useCoreStore } from '@datalayer/core';
+import { useCoreStore, useIAMStore } from '@datalayer/core/lib/state';
 import { DEFAULT_SERVICE_URLS } from '@datalayer/core/lib/api/constants';
 import * as aiAgentsApi from '../api';
 import type {

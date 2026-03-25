@@ -32,6 +32,6 @@ export type {
   ToolCallRequest,
   ToolExecutionResult,
   ToolRegistryEntry,
-} from '../types/tool';
+} from '../types/tools';
 
-export { isFrontendTool, isBackendTool, hasHitlRender } from '../types/tool';
+export { isFrontendTool, isBackendTool, hasHitlRender } from '../types/tools';

@@ -24,13 +24,9 @@ import { ToolsIcon, BriefcaseIcon, AiModelIcon } from '@primer/octicons-react';
 
 import { InputPrompt } from './InputPrompt';
 import { TokenUsageBar } from '../usage/TokenUsageBar';
-import type {
-  ModelConfig,
-  MCPServerConfig,
-  SkillInfo,
-  ContextSnapshotData,
-} from '../../types/chat';
-import type { BuiltinTool } from '../../types/types';
+import type { ModelConfig, MCPServerConfig, SkillInfo } from '../../types/chat';
+import type { ContextSnapshotData } from '../../types/context';
+import type { BuiltinTool } from '../../types';
 
 // ---------------------------------------------------------------------------
 // Props

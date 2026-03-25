@@ -29,11 +29,8 @@ import {
 } from '@primer/octicons-react';
 import { AiAgentIcon } from '@datalayer/icons-react';
 
-import type {
-  ChatViewMode,
-  HeaderButtonsConfig,
-  SandboxStatusData,
-} from '../../types/chat';
+import type { ChatViewMode, HeaderButtonsConfig } from '../../types/chat';
+import type { SandboxStatusData } from '../../types/context';
 
 // ---------------------------------------------------------------------------
 // Props

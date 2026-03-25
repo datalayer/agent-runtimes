@@ -13,9 +13,13 @@ import type { ReactNode } from 'react';
 import type { ChatMessage } from './message';
 import type { TransportType } from './protocol';
 import type { McpServerSelection } from './inference';
-import type { BuiltinTool, MCPServerTool, AgentRuntimeConfig } from './types';
-import type { FrontendToolDefinition } from './tool';
+import type { BuiltinTool } from './models';
+import type { MCPServerTool } from './mcp';
+import type { AgentRuntimeConfig } from './config';
+import type { FrontendToolDefinition } from './tools';
 import type { PoweredByTagProps } from '../chat/elements/PoweredByTag';
+
+export type { PoweredByTagProps } from '../chat/elements/PoweredByTag';
 
 // ---------------------------------------------------------------------------
 // View mode
@@ -293,72 +297,6 @@ export interface SkillsResponse {
   skills: SkillInfo[];
   total: number;
   skills_path?: string;
-}
-
-/**
- * Distribution child entry for context snapshot pie chart.
- */
-export interface DistributionChild {
-  name: string;
-  value: number;
-}
-
-/**
- * Distribution entry for context snapshot pie chart.
- */
-export interface Distribution {
-  name: string;
-  value: number;
-  children: DistributionChild[];
-}
-
-/**
- * Response from the context-snapshot API.
- * Contains cumulative token usage tracked by the agent server.
- */
-export interface ContextSnapshotData {
-  totalTokens: number;
-  contextWindow: number;
-  sumResponseInputTokens: number;
-  sumResponseOutputTokens: number;
-  systemPromptTokens: number;
-  userMessageTokens: number;
-  assistantMessageTokens: number;
-  toolTokens: number;
-  toolCallTokens: number;
-  toolReturnTokens: number;
-  historyToolCallTokens: number;
-  historyToolReturnTokens: number;
-  currentToolCallTokens: number;
-  currentToolReturnTokens: number;
-  distribution?: Distribution;
-  turnUsage?: {
-    inputTokens: number;
-    outputTokens: number;
-    requests: number;
-    toolCalls: number;
-    toolNames: string[];
-    durationSeconds: number;
-  } | null;
-  sessionUsage?: {
-    inputTokens: number;
-    outputTokens: number;
-    requests: number;
-    toolCalls: number;
-    turns: number;
-    durationSeconds: number;
-  } | null;
-  error?: string;
-}
-
-/**
- * Sandbox status from the backend
- */
-export interface SandboxStatusData {
-  available: boolean;
-  sandbox_running?: boolean;
-  is_executing?: boolean;
-  variant?: string;
 }
 
 // ---------------------------------------------------------------------------

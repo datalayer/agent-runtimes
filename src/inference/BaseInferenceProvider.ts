@@ -17,7 +17,7 @@ import type {
   StreamEventHandler,
 } from '../types';
 import type { ChatMessage } from '../types/message';
-import type { ToolExecutionResult } from '../types/tool';
+import type { ToolExecutionResult } from '../types/tools';
 
 /**
  * Abstract base class for inference providers

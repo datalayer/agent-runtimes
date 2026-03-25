@@ -6,7 +6,7 @@
 /**
  * Agent notification hooks.
  *
- * @module hooks/useAgentsNotifications
+ * @module hooks/useNotifications
  */
 
 import { useMemo } from 'react';

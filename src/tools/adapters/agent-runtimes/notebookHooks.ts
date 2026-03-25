@@ -19,7 +19,7 @@ import {
   notebookToolOperations,
 } from '@datalayer/jupyter-react';
 import { createAllAgentRuntimesTools } from './AgentRuntimesToolAdapter';
-import type { FrontendToolDefinition } from '../../../types/tool';
+import type { FrontendToolDefinition } from '../../../types/tools';
 
 // Hook wrapper to get notebook store state
 const useNotebookStore = () => notebookStore.getState();

@@ -26,14 +26,14 @@ import {
 } from '@primer/octicons-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Box } from '@datalayer/primer-addons';
-import type { ExampleAgent } from '../types/types';
+import type { ExampleAgent } from '../types';
 import { IdentityCard } from '../chat';
 import type { Transport, MCPServerConfig } from '../chat';
 import type { Extension } from '../types';
 import type { McpServerSelection } from '../mcp/McpServerManager';
 import { IdentityConnect, useIdentity } from '../identity';
 import type { OAuthProvider, OAuthProviderConfig, Identity } from '../identity';
-import type { MCPServerTool as MCPServerToolType } from '../types/types';
+import type { MCPServerTool as MCPServerToolType } from '../types';
 
 /**
  * Agent spec entry from the library endpoint.

@@ -12,7 +12,7 @@
  * DO NOT EDIT MANUALLY - run 'make specs' to regenerate.
  */
 
-import type { EvalSpec } from '../types/types';
+import type { EvalSpec } from '../types';
 
 // ============================================================================
 // Eval Definitions

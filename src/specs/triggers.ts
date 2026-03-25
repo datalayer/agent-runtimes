@@ -12,7 +12,7 @@
  * DO NOT EDIT MANUALLY - run 'make specs' to regenerate.
  */
 
-import type { TriggerSpec } from '../types/types';
+import type { TriggerSpec } from '../types';
 
 // ============================================================================
 // Trigger Definitions

@@ -23,7 +23,7 @@ import type {
   ToolDefinition,
   ToolCallRequest,
   ToolExecutionResult,
-} from '../types/tool';
+} from '../types/tools';
 import type {
   InferenceRequestOptions,
   InferenceResponse,

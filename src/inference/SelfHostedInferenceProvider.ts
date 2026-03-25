@@ -17,7 +17,7 @@ import type {
   StreamEventHandler,
 } from '../types';
 import type { ChatMessage, ToolCallContentPart } from '../types/message';
-import type { ToolDefinition } from '../types/tool';
+import type { ToolDefinition } from '../types/tools';
 import { generateMessageId, createAssistantMessage } from '../types/message';
 import { BaseInferenceProvider } from './BaseInferenceProvider';
 

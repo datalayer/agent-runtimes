@@ -6,7 +6,7 @@
 import { useContext } from 'react';
 import { useQuery, QueryClientContext } from '@tanstack/react-query';
 import { getApiBaseFromConfig } from '../chat/utils';
-import type { SandboxStatusData } from '../types/chat';
+import type { SandboxStatusData } from '../types/context';
 
 /**
  * Hook to poll sandbox execution status from the backend.
