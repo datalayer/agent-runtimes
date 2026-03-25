@@ -97,17 +97,24 @@ export const RUNTIME_SENSITIVE_ECHO_TOOL_SPEC_0_0_1: ToolSpec = {
 
 export const TOOL_CATALOG: Record<string, ToolSpec> = {
   'runtime-echo': RUNTIME_ECHO_TOOL_SPEC_0_0_1,
-  'runtime-echo:0.0.1': RUNTIME_ECHO_TOOL_SPEC_0_0_1,
   'runtime-send-mail': RUNTIME_SEND_MAIL_TOOL_SPEC_0_0_1,
-  'runtime-send-mail:0.0.1': RUNTIME_SEND_MAIL_TOOL_SPEC_0_0_1,
   'runtime-sensitive-echo': RUNTIME_SENSITIVE_ECHO_TOOL_SPEC_0_0_1,
-  'runtime-sensitive-echo:0.0.1': RUNTIME_SENSITIVE_ECHO_TOOL_SPEC_0_0_1,
 };
 
 export function getToolSpecs(): ToolSpec[] {
   return Object.values(TOOL_CATALOG);
 }
 
+function resolveToolId(toolId: string): string {
+  if (toolId in TOOL_CATALOG) return toolId;
+  const idx = toolId.lastIndexOf(':');
+  if (idx > 0) {
+    const base = toolId.slice(0, idx);
+    if (base in TOOL_CATALOG) return base;
+  }
+  return toolId;
+}
+
 export function getToolSpec(toolId: string): ToolSpec | undefined {
-  return TOOL_CATALOG[toolId];
+  return TOOL_CATALOG[resolveToolId(toolId)];
 }

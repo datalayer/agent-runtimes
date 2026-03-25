@@ -7,7 +7,7 @@
  * React hooks for chat tool registration and usage.
  * Compatible with CopilotKit's useFrontendTool pattern.
  *
- * @module components/chat/hooks/useTools
+ * @module components/hooks/useTools
  */
 
 import { useEffect, useMemo } from 'react';

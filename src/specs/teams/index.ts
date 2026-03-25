@@ -18,11 +18,21 @@ export const TEAM_SPECS: Record<string, TeamSpec> = {
   ...ROOT_TEAMS,
 };
 
+function resolveTeamId(teamId: string): string {
+  if (teamId in TEAM_SPECS) return teamId;
+  const idx = teamId.lastIndexOf(':');
+  if (idx > 0) {
+    const base = teamId.slice(0, idx);
+    if (base in TEAM_SPECS) return base;
+  }
+  return teamId;
+}
+
 /**
  * Get a team specification by ID.
  */
 export function getTeamSpec(teamId: string): TeamSpec | undefined {
-  return TEAM_SPECS[teamId];
+  return TEAM_SPECS[resolveTeamId(teamId)];
 }
 
 /**

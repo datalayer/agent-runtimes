@@ -9,7 +9,7 @@
  * Contains the InputPrompt component, the TokenUsageBar, and the
  * model / tools / skills action-menu selectors.
  *
- * @module components/chat/elements/InputFooter
+ * @module components/chat/prompt/InputFooter
  */
 
 import {
@@ -23,7 +23,7 @@ import { Box } from '@datalayer/primer-addons';
 import { ToolsIcon, BriefcaseIcon, AiModelIcon } from '@primer/octicons-react';
 
 import { InputPrompt } from './InputPrompt';
-import { TokenUsageBar } from './TokenUsageBar';
+import { TokenUsageBar } from '../elements/TokenUsageBar';
 import type {
   ModelConfig,
   MCPServerConfig,

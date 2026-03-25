@@ -142,7 +142,7 @@ from agent_runtimes.types import AgentSpec
 
             # Get MCP servers
             mcp_server_refs = [
-                versioned_ref(*split_spec_ref(sid)) for sid in spec.get("mcp_servers", [])
+                split_spec_ref(sid)[0] for sid in spec.get("mcp_servers", [])
             ]
             mcp_servers_str = ", ".join(
                 f'MCP_SERVER_CATALOG["{sid}"]' for sid in mcp_server_refs
@@ -288,9 +288,6 @@ AGENT_SPECS: Dict[str, AgentSpec] = {
             code += f"    # {folder.replace('-', ' ').title()}\n"
         for full_agent_id, const_name in folder_agents:
             code += f'    "{full_agent_id}": {const_name},\n'
-            # Backward-compatible alias for explicit version lookups.
-            agent_spec = next(s for f, s in specs if (f + "/" + s["id"] if f else s["id"]) == full_agent_id)
-            code += f'    "{versioned_ref(full_agent_id, agent_spec["version"])}": {const_name},\n'
         if folder_agents and folder:
             code += "\n"
 
@@ -299,7 +296,7 @@ AGENT_SPECS: Dict[str, AgentSpec] = {
 
 def get_agent_spec(agent_id: str) -> AgentSpec | None:
     \"\"\"
-    Get an agent specification by ID.
+    Get an agent specification by ID (accepts both bare and versioned refs).
 
     Args:
         agent_id: The unique identifier of the agent.
@@ -307,7 +304,13 @@ def get_agent_spec(agent_id: str) -> AgentSpec | None:
     Returns:
         The AgentSpec configuration, or None if not found.
     \"\"\"
-    return AGENT_SPECS.get(agent_id)
+    spec = AGENT_SPECS.get(agent_id)
+    if spec is not None:
+        return spec
+    base, _, ver = agent_id.rpartition(':')
+    if base and '.' in ver:
+        return AGENT_SPECS.get(base)
+    return None
 
 
 def list_agent_specs(prefix: str | None = None) -> list[AgentSpec]:
@@ -731,18 +734,26 @@ export const AGENT_SPECS: Record<string, AgentSpec> = {
             code += f"  // {folder.replace('-', ' ').title()}\n"
         for full_agent_id, const_name in folder_agents:
             code += f"  '{full_agent_id}': {const_name},\n"
-            agent_spec = next(s for f, s in specs if (f + "/" + s["id"] if f else s["id"]) == full_agent_id)
-            code += f"  '{versioned_ref(full_agent_id, agent_spec['version'])}': {const_name},\n"
         if folder_agents and folder:
             code += "\n"
 
     code += """};
 
+function resolveAgentId(agentId: string): string {
+  if (agentId in AGENT_SPECS) return agentId;
+  const idx = agentId.lastIndexOf(':');
+  if (idx > 0) {
+    const base = agentId.slice(0, idx);
+    if (base in AGENT_SPECS) return base;
+  }
+  return agentId;
+}
+
 /**
  * Get an agent specification by ID.
  */
 export function getAgentSpecs(agentId: string): AgentSpec | undefined {
-  return AGENT_SPECS[agentId];
+  return AGENT_SPECS[resolveAgentId(agentId)];
 }
 
 /**
@@ -974,7 +985,13 @@ AGENT_SPECS: Dict[str, AgentSpec] = {}
 
 def get_agent_spec(agent_id: str) -> AgentSpec | None:
     \"\"\"Get an agent specification by ID.\"\"\"
-    return AGENT_SPECS.get(agent_id)
+    spec = AGENT_SPECS.get(agent_id)
+    if spec is not None:
+        return spec
+    base, _, ver = agent_id.rpartition(':')
+    if base and '.' in ver:
+        return AGENT_SPECS.get(base)
+    return None
 
 
 def list_agent_specs(prefix: str | None = None) -> list[AgentSpec]:
@@ -1035,11 +1052,21 @@ export const AGENT_SPECS: Record<string, AgentSpec> = {
 
     typescript_index_content += """};
 
+function resolveAgentId(agentId: string): string {
+  if (agentId in AGENT_SPECS) return agentId;
+  const idx = agentId.lastIndexOf(':');
+  if (idx > 0) {
+    const base = agentId.slice(0, idx);
+    if (base in AGENT_SPECS) return base;
+  }
+  return agentId;
+}
+
 /**
  * Get an agent specification by ID.
  */
 export function getAgentSpecs(agentId: string): AgentSpec | undefined {
-  return AGENT_SPECS[agentId];
+  return AGENT_SPECS[resolveAgentId(agentId)];
 }
 
 /**

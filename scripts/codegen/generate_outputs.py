@@ -131,15 +131,20 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         version = spec["version"]
         const_name = f"{output_id.upper().replace('-', '_')}_OUTPUT_SPEC{version_suffix(version)}"
         lines.append(f'    "{output_id}": {const_name},')
-        lines.append(f'    "{versioned_ref(output_id, version)}": {const_name},')
     lines.extend(
         [
             "}",
             "",
             "",
             "def get_output_spec(output_id: str) -> OutputSpec | None:",
-            '    """Get an output specification by ID."""',
-            "    return OUTPUT_CATALOG.get(output_id)",
+            '    """Get an output specification by ID (accepts both bare and versioned refs)."""',
+            "    spec = OUTPUT_CATALOG.get(output_id)",
+            "    if spec is not None:",
+            "        return spec",
+            "    base, _, ver = output_id.rpartition(':')",
+            "    if base and '.' in ver:",
+            "        return OUTPUT_CATALOG.get(base)",
+            "    return None",
             "",
             "",
             "def list_output_specs() -> List[OutputSpec]:",
@@ -212,7 +217,6 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
         version = spec["version"]
         const_name = f"{output_id.upper().replace('-', '_')}_OUTPUT_SPEC{version_suffix(version)}"
         lines.append(f"  '{output_id}': {const_name},")
-        lines.append(f"  '{versioned_ref(output_id, version)}': {const_name},")
     lines.extend(
         [
             "};",
@@ -221,8 +225,18 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
             "  return Object.values(OUTPUT_CATALOG);",
             "}",
             "",
+            "function resolveOutputId(outputId: string): string {",
+            "  if (outputId in OUTPUT_CATALOG) return outputId;",
+            "  const idx = outputId.lastIndexOf(':');",
+            "  if (idx > 0) {",
+            "    const base = outputId.slice(0, idx);",
+            "    if (base in OUTPUT_CATALOG) return base;",
+            "  }",
+            "  return outputId;",
+            "}",
+            "",
             "export function getOutputSpec(outputId: string): OutputSpec | undefined {",
-            "  return OUTPUT_CATALOG[outputId];",
+            "  return OUTPUT_CATALOG[resolveOutputId(outputId)];",
             "}",
             "",
         ]

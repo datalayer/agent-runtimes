@@ -151,30 +151,27 @@ TAVILY_API_KEY_SPEC_0_0_1 = EnvvarSpec(
 
 ENVVAR_CATALOG: Dict[str, EnvvarSpec] = {
     "ALPHAVANTAGE_API_KEY": ALPHAVANTAGE_API_KEY_SPEC_0_0_1,
-    "ALPHAVANTAGE_API_KEY:0.0.1": ALPHAVANTAGE_API_KEY_SPEC_0_0_1,
     "GITHUB_TOKEN": GITHUB_TOKEN_SPEC_0_0_1,
-    "GITHUB_TOKEN:0.0.1": GITHUB_TOKEN_SPEC_0_0_1,
     "GOOGLE_OAUTH_CLIENT_ID": GOOGLE_OAUTH_CLIENT_ID_SPEC_0_0_1,
-    "GOOGLE_OAUTH_CLIENT_ID:0.0.1": GOOGLE_OAUTH_CLIENT_ID_SPEC_0_0_1,
     "GOOGLE_OAUTH_CLIENT_SECRET": GOOGLE_OAUTH_CLIENT_SECRET_SPEC_0_0_1,
-    "GOOGLE_OAUTH_CLIENT_SECRET:0.0.1": GOOGLE_OAUTH_CLIENT_SECRET_SPEC_0_0_1,
     "HF_TOKEN": HF_TOKEN_SPEC_0_0_1,
-    "HF_TOKEN:0.0.1": HF_TOKEN_SPEC_0_0_1,
     "KAGGLE_TOKEN": KAGGLE_TOKEN_SPEC_0_0_1,
-    "KAGGLE_TOKEN:0.0.1": KAGGLE_TOKEN_SPEC_0_0_1,
     "SLACK_BOT_TOKEN": SLACK_BOT_TOKEN_SPEC_0_0_1,
-    "SLACK_BOT_TOKEN:0.0.1": SLACK_BOT_TOKEN_SPEC_0_0_1,
     "SLACK_CHANNEL_IDS": SLACK_CHANNEL_IDS_SPEC_0_0_1,
-    "SLACK_CHANNEL_IDS:0.0.1": SLACK_CHANNEL_IDS_SPEC_0_0_1,
     "SLACK_TEAM_ID": SLACK_TEAM_ID_SPEC_0_0_1,
-    "SLACK_TEAM_ID:0.0.1": SLACK_TEAM_ID_SPEC_0_0_1,
     "TAVILY_API_KEY": TAVILY_API_KEY_SPEC_0_0_1,
-    "TAVILY_API_KEY:0.0.1": TAVILY_API_KEY_SPEC_0_0_1,
 }
 
 
 def get_envvar_spec(envvar_id: str) -> EnvvarSpec:
-    """Get environment variable specification by ID."""
-    if envvar_id not in ENVVAR_CATALOG:
+    """Get environment variable specification by ID (accepts both bare and versioned refs)."""
+    spec = ENVVAR_CATALOG.get(envvar_id)
+    if spec is not None:
+        return spec
+    # Try stripping version suffix for versioned refs like 'NAME:0.0.1'
+    base, _, ver = envvar_id.rpartition(':')
+    if base and '.' in ver:
+        spec = ENVVAR_CATALOG.get(base)
+    if spec is None:
         raise ValueError(f"Unknown environment variable: {envvar_id}")
-    return ENVVAR_CATALOG[envvar_id]
+    return spec

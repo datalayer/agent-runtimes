@@ -126,27 +126,29 @@ export const SPREADSHEET_OUTPUT_SPEC_0_0_1: OutputSpec = {
 
 export const OUTPUT_CATALOG: Record<string, OutputSpec> = {
   'api-push': API_PUSH_OUTPUT_SPEC_0_0_1,
-  'api-push:0.0.1': API_PUSH_OUTPUT_SPEC_0_0_1,
   csv: CSV_OUTPUT_SPEC_0_0_1,
-  'csv:0.0.1': CSV_OUTPUT_SPEC_0_0_1,
   dashboard: DASHBOARD_OUTPUT_SPEC_0_0_1,
-  'dashboard:0.0.1': DASHBOARD_OUTPUT_SPEC_0_0_1,
   document: DOCUMENT_OUTPUT_SPEC_0_0_1,
-  'document:0.0.1': DOCUMENT_OUTPUT_SPEC_0_0_1,
   email: EMAIL_OUTPUT_SPEC_0_0_1,
-  'email:0.0.1': EMAIL_OUTPUT_SPEC_0_0_1,
   json: JSON_OUTPUT_SPEC_0_0_1,
-  'json:0.0.1': JSON_OUTPUT_SPEC_0_0_1,
   notebook: NOTEBOOK_OUTPUT_SPEC_0_0_1,
-  'notebook:0.0.1': NOTEBOOK_OUTPUT_SPEC_0_0_1,
   spreadsheet: SPREADSHEET_OUTPUT_SPEC_0_0_1,
-  'spreadsheet:0.0.1': SPREADSHEET_OUTPUT_SPEC_0_0_1,
 };
 
 export function getOutputSpecs(): OutputSpec[] {
   return Object.values(OUTPUT_CATALOG);
 }
 
+function resolveOutputId(outputId: string): string {
+  if (outputId in OUTPUT_CATALOG) return outputId;
+  const idx = outputId.lastIndexOf(':');
+  if (idx > 0) {
+    const base = outputId.slice(0, idx);
+    if (base in OUTPUT_CATALOG) return base;
+  }
+  return outputId;
+}
+
 export function getOutputSpec(outputId: string): OutputSpec | undefined {
-  return OUTPUT_CATALOG[outputId];
+  return OUTPUT_CATALOG[resolveOutputId(outputId)];
 }

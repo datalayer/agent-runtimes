@@ -13,3 +13,4 @@ export { TextPart, type TextPartProps } from './TextPart';
 export { ReasoningPart, type ReasoningPartProps } from './ReasoningPart';
 export { ToolPart, type ToolPartProps } from './ToolPart';
 export { DynamicToolPart, type DynamicToolPartProps } from './DynamicToolPart';
+export { MessagePart, type MessagePartProps } from './MessagePart';

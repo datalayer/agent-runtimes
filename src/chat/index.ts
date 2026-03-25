@@ -135,42 +135,16 @@ export {
   type InternalExtensionType,
 } from '../extensions';
 
-// Components
+// Components - Chat elements
+export { ChatMessages, type ChatMessagesProps } from './elements/ChatMessages';
+export { ChatSidebar, type ChatSidebarProps } from './ChatSidebar';
 export {
-  ChatMessages,
-  ChatSidebar,
   ChatStandalone,
-  ChatBase,
-  InputPrompt,
-  ToolApprovalDialog,
-  useToolApprovalDialog,
-  PoweredByTag,
-  FloatingBrandButton,
-  ChatHeader,
-  MessagePart,
-  TextPart,
-  ReasoningPart,
-  ToolPart,
-  DynamicToolPart,
-  ToolCallDisplay,
-  Chat,
-  ChatFloating,
-  AgentDetails,
-  AgentIdentity,
-  IdentityCard,
-  OtelTokenUsageChart,
-  fetchOtelMetricRows,
-  fetchOtelMetricTotal,
-  fetchOtelTotalTokens,
-  useOtelTotalTokens,
-  toMetricValue,
-  getTokenStatus,
-  formatDuration,
-  formatExpirationStatus,
-  type ChatMessagesProps,
-  type ChatSidebarProps,
   type ChatStandaloneProps,
   type MessageHandler,
+} from './ChatStandalone';
+export {
+  ChatBase,
   type ChatBaseProps,
   type ProtocolConfig,
   type AgentRuntimeConfig,
@@ -179,10 +153,50 @@ export {
   type HeaderButtonsConfig,
   type StreamingMessageOptions,
   type ChatViewMode,
-  type InputPromptProps,
-  type ToolApprovalDialogProps,
-  type PoweredByTagProps,
+} from './base/ChatBase';
+export { InputPrompt, type InputPromptProps } from './prompt';
+export { PoweredByTag, type PoweredByTagProps } from './elements/PoweredByTag';
+export {
+  FloatingBrandButton,
   type FloatingBrandButtonProps,
+} from './elements/FloatingBrandButton';
+export {
+  ChatHeader,
+  type ChatHeaderProps,
+  type ConnectionState,
+} from './elements/ChatHeader';
+
+// Components - Message part renderers
+export {
+  MessagePart,
+  type MessagePartProps,
+  TextPart,
+  type TextPartProps,
+  ReasoningPart,
+  type ReasoningPartProps,
+  ToolPart,
+  type ToolPartProps,
+  DynamicToolPart,
+  type DynamicToolPartProps,
+} from './parts';
+
+// Components - Tool UI
+export { ToolCallDisplay, type ToolCallDisplayProps } from './tools';
+export {
+  ToolApprovalDialog,
+  useToolApprovalDialog,
+  type ToolApprovalDialogProps,
+} from './tools/ToolApprovalDialog';
+export {
+  ToolApprovalBanner,
+  type ToolApprovalBannerProps,
+  type PendingApproval,
+} from './tools/ToolApprovalBanner';
+
+// Components - Transport-agnostic chat
+export { Chat, type ChatProps, type Transport, type Extension } from './Chat';
+export {
+  ChatFloating,
   type ChatFloatingProps,
   type ToolCallRenderContext,
   type ToolCallStatus,
@@ -194,25 +208,60 @@ export {
   type BuiltinTool,
   type MCPServerConfig,
   type MCPServerTool,
-  type AgentDetailsProps,
+  type ChatViewMode as ChatFloatingViewMode,
+} from './ChatFloating';
+export {
+  ChatInline,
+  type ChatInlineProps,
+  type ChatInlineProtocolConfig,
+} from './ChatInline';
+
+// Components - Agent details & identity
+export { AgentDetails, type AgentDetailsProps } from '../agents/AgentDetails';
+export {
+  AgentIdentity,
+  IdentityCard,
+  getTokenStatus,
+  formatDuration,
+  formatExpirationStatus,
   type AgentIdentityProps,
   type IdentityCardProps,
-  type OtelTokenUsageChartProps,
   type TokenStatus,
-  // Merged from chat
-  type ChatHeaderProps,
-  type ConnectionState,
-  type MessagePartProps,
-  type TextPartProps,
-  type ReasoningPartProps,
-  type ToolPartProps,
-  type DynamicToolPartProps,
-  type ToolCallDisplayProps,
-  // Unified chat types (supports: 'acp', 'ag-ui', 'a2a', 'vercel-ai', 'vercel-ai-jupyter' transports)
-  type ChatProps,
-  type Transport,
-  type Extension,
-} from './components';
+} from '../identity/AgentIdentity';
+
+// Components - Context & observability
+export {
+  ContextUsage,
+  type ContextUsageProps,
+  type ContextDetailsResponse,
+} from '../context/ContextUsage';
+export {
+  ContextDistribution,
+  type ContextDistributionProps,
+  type ContextSnapshotResponse,
+} from '../context/ContextDistribution';
+export { ContextPanel, type ContextPanelProps } from '../context/ContextPanel';
+export {
+  ContextInspector,
+  type ContextInspectorProps,
+  type FullContextResponse,
+} from '../context/ContextInspector';
+export {
+  CostTracker,
+  type CostTrackerProps,
+  type CostUsageResponse,
+} from '../context/CostTracker';
+export {
+  OtelTokenUsageChart,
+  type OtelTokenUsageChartProps,
+} from '../context/OtelTokenUsageChart';
+export {
+  fetchOtelMetricRows,
+  fetchOtelMetricTotal,
+  fetchOtelTotalTokens,
+  useOtelTotalTokens,
+  toMetricValue,
+} from '../context/otelMetrics';
 
 // Simple API request handler (merged from chat)
 export { requestAPI } from '../api/handler';

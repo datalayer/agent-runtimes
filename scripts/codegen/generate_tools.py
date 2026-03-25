@@ -161,7 +161,6 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         version = spec["version"]
         const_name = f"{tool_id.upper().replace('-', '_')}_TOOL_SPEC{version_suffix(version)}"
         lines.append(f'    "{tool_id}": {const_name},')
-        lines.append(f'    "{versioned_ref(tool_id, version)}": {const_name},')
 
     lines.extend(
         [
@@ -169,8 +168,14 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
             "",
             "",
             "def get_tool_spec(tool_id: str) -> ToolSpec | None:",
-            '    """Get a tool specification by ID."""',
-            "    return TOOL_CATALOG.get(tool_id)",
+            '    """Get a tool specification by ID (accepts both bare and versioned refs)."""',
+            "    spec = TOOL_CATALOG.get(tool_id)",
+            "    if spec is not None:",
+            "        return spec",
+            "    base, _, ver = tool_id.rpartition(':')",
+            "    if base and '.' in ver:",
+            "        return TOOL_CATALOG.get(base)",
+            "    return None",
             "",
             "",
             "def list_tool_specs() -> List[ToolSpec]:",
@@ -273,7 +278,6 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
         version = spec["version"]
         const_name = f"{tool_id.upper().replace('-', '_')}_TOOL_SPEC{version_suffix(version)}"
         lines.append(f"  '{tool_id}': {const_name},")
-        lines.append(f"  '{versioned_ref(tool_id, version)}': {const_name},")
 
     lines.extend(
         [
@@ -283,8 +287,18 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
             "  return Object.values(TOOL_CATALOG);",
             "}",
             "",
+            "function resolveToolId(toolId: string): string {",
+            "  if (toolId in TOOL_CATALOG) return toolId;",
+            "  const idx = toolId.lastIndexOf(':');",
+            "  if (idx > 0) {",
+            "    const base = toolId.slice(0, idx);",
+            "    if (base in TOOL_CATALOG) return base;",
+            "  }",
+            "  return toolId;",
+            "}",
+            "",
             "export function getToolSpec(toolId: string): ToolSpec | undefined {",
-            "  return TOOL_CATALOG[toolId];",
+            "  return TOOL_CATALOG[resolveToolId(toolId)];",
             "}",
             "",
         ]

@@ -102,13 +102,9 @@ PDF_SKILL_SPEC_0_0_1 = SkillSpec(
 
 SKILL_CATALOG: Dict[str, SkillSpec] = {
     "crawl": CRAWL_SKILL_SPEC_0_0_1,
-    "crawl:0.0.1": CRAWL_SKILL_SPEC_0_0_1,
     "events": EVENTS_SKILL_SPEC_0_0_1,
-    "events:0.0.1": EVENTS_SKILL_SPEC_0_0_1,
     "github": GITHUB_SKILL_SPEC_0_0_1,
-    "github:0.0.1": GITHUB_SKILL_SPEC_0_0_1,
     "pdf": PDF_SKILL_SPEC_0_0_1,
-    "pdf:0.0.1": PDF_SKILL_SPEC_0_0_1,
 }
 
 
@@ -129,7 +125,7 @@ def check_env_vars_available(env_vars: List[str]) -> bool:
 
 def get_skill_spec(skill_id: str) -> SkillSpec | None:
     """
-    Get a skill specification by ID.
+    Get a skill specification by ID (accepts both bare and versioned refs).
 
     Args:
         skill_id: The unique identifier of the skill.
@@ -137,7 +133,13 @@ def get_skill_spec(skill_id: str) -> SkillSpec | None:
     Returns:
         The SkillSpec, or None if not found.
     """
-    return SKILL_CATALOG.get(skill_id)
+    spec = SKILL_CATALOG.get(skill_id)
+    if spec is not None:
+        return spec
+    base, _, ver = skill_id.rpartition(':')
+    if base and '.' in ver:
+        return SKILL_CATALOG.get(base)
+    return None
 
 
 def list_skill_specs() -> List[SkillSpec]:

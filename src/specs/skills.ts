@@ -97,19 +97,25 @@ export const PDF_SKILL_SPEC_0_0_1: SkillSpec = {
 
 export const SKILL_CATALOG: Record<string, SkillSpec> = {
   crawl: CRAWL_SKILL_SPEC_0_0_1,
-  'crawl:0.0.1': CRAWL_SKILL_SPEC_0_0_1,
   events: EVENTS_SKILL_SPEC_0_0_1,
-  'events:0.0.1': EVENTS_SKILL_SPEC_0_0_1,
   github: GITHUB_SKILL_SPEC_0_0_1,
-  'github:0.0.1': GITHUB_SKILL_SPEC_0_0_1,
   pdf: PDF_SKILL_SPEC_0_0_1,
-  'pdf:0.0.1': PDF_SKILL_SPEC_0_0_1,
 };
 
 export function getSkillSpecs(): SkillSpec[] {
   return Object.values(SKILL_CATALOG);
 }
 
+function resolveSkillId(skillId: string): string {
+  if (skillId in SKILL_CATALOG) return skillId;
+  const idx = skillId.lastIndexOf(':');
+  if (idx > 0) {
+    const base = skillId.slice(0, idx);
+    if (base in SKILL_CATALOG) return base;
+  }
+  return skillId;
+}
+
 export function getSkillSpec(skillId: string): SkillSpec | undefined {
-  return SKILL_CATALOG[skillId];
+  return SKILL_CATALOG[resolveSkillId(skillId)];
 }

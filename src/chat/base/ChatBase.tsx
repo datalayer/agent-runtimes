@@ -62,7 +62,7 @@ import {
 import { ChatBaseHeader } from '../elements/ChatHeaderBase';
 import { ChatEmptyState } from '../elements/EmptyState';
 import { MessageList } from '../elements/MessageList';
-import { InputFooter } from '../elements/InputFooter';
+import { InputFooter } from '../prompt/InputFooter';
 
 // Tracks pending prompts already auto-sent for a given conversation scope.
 // This prevents layout-driven unmount/remount cycles from re-sending prompts.

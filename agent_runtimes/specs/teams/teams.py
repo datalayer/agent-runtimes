@@ -681,29 +681,26 @@ SYNC_CRM_CONTACTS_TEAM_SPEC_0_0_1 = TeamSpec(
 
 TEAM_SPECS: Dict[str, TeamSpec] = {
     "analyze-campaign-performance": ANALYZE_CAMPAIGN_PERFORMANCE_TEAM_SPEC_0_0_1,
-    "analyze-campaign-performance:0.0.1": ANALYZE_CAMPAIGN_PERFORMANCE_TEAM_SPEC_0_0_1,
     "analyze-support-tickets": ANALYZE_SUPPORT_TICKETS_TEAM_SPEC_0_0_1,
-    "analyze-support-tickets:0.0.1": ANALYZE_SUPPORT_TICKETS_TEAM_SPEC_0_0_1,
     "audit-inventory-levels": AUDIT_INVENTORY_LEVELS_TEAM_SPEC_0_0_1,
-    "audit-inventory-levels:0.0.1": AUDIT_INVENTORY_LEVELS_TEAM_SPEC_0_0_1,
     "automate-regulatory-reporting": AUTOMATE_REGULATORY_REPORTING_TEAM_SPEC_0_0_1,
-    "automate-regulatory-reporting:0.0.1": AUTOMATE_REGULATORY_REPORTING_TEAM_SPEC_0_0_1,
     "comprehensive-sales-analytics": COMPREHENSIVE_SALES_ANALYTICS_TEAM_SPEC_0_0_1,
-    "comprehensive-sales-analytics:0.0.1": COMPREHENSIVE_SALES_ANALYTICS_TEAM_SPEC_0_0_1,
     "optimize-grid-operations": OPTIMIZE_GRID_OPERATIONS_TEAM_SPEC_0_0_1,
-    "optimize-grid-operations:0.0.1": OPTIMIZE_GRID_OPERATIONS_TEAM_SPEC_0_0_1,
     "process-citizen-requests": PROCESS_CITIZEN_REQUESTS_TEAM_SPEC_0_0_1,
-    "process-citizen-requests:0.0.1": PROCESS_CITIZEN_REQUESTS_TEAM_SPEC_0_0_1,
     "process-clinical-trial-data": PROCESS_CLINICAL_TRIAL_DATA_TEAM_SPEC_0_0_1,
-    "process-clinical-trial-data:0.0.1": PROCESS_CLINICAL_TRIAL_DATA_TEAM_SPEC_0_0_1,
     "sync-crm-contacts": SYNC_CRM_CONTACTS_TEAM_SPEC_0_0_1,
-    "sync-crm-contacts:0.0.1": SYNC_CRM_CONTACTS_TEAM_SPEC_0_0_1,
 }
 
 
 def get_team_spec(team_id: str) -> TeamSpec | None:
     """Get a team specification by ID."""
-    return TEAM_SPECS.get(team_id)
+    spec = TEAM_SPECS.get(team_id)
+    if spec is not None:
+        return spec
+    base, _, ver = team_id.rpartition(':')
+    if base and '.' in ver:
+        return TEAM_SPECS.get(base)
+    return None
 
 
 def list_team_specs(prefix: str | None = None) -> list[TeamSpec]:

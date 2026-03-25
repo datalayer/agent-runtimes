@@ -276,29 +276,17 @@ TAVILY_MCP_SERVER_0_0_1 = MCPServer(
 
 MCP_SERVER_CATALOG: Dict[str, MCPServer] = {
     "alphavantage": ALPHAVANTAGE_MCP_SERVER_0_0_1,
-    "alphavantage:0.0.1": ALPHAVANTAGE_MCP_SERVER_0_0_1,
     "chart": CHART_MCP_SERVER_0_0_1,
-    "chart:0.0.1": CHART_MCP_SERVER_0_0_1,
     "earthdata": EARTHDATA_MCP_SERVER_0_0_1,
-    "earthdata:0.0.1": EARTHDATA_MCP_SERVER_0_0_1,
     "eurus": EURUS_MCP_SERVER_0_0_1,
-    "eurus:0.0.1": EURUS_MCP_SERVER_0_0_1,
     "filesystem": FILESYSTEM_MCP_SERVER_0_0_1,
-    "filesystem:0.0.1": FILESYSTEM_MCP_SERVER_0_0_1,
     "github": GITHUB_MCP_SERVER_0_0_1,
-    "github:0.0.1": GITHUB_MCP_SERVER_0_0_1,
     "google-workspace": GOOGLE_WORKSPACE_MCP_SERVER_0_0_1,
-    "google-workspace:0.0.1": GOOGLE_WORKSPACE_MCP_SERVER_0_0_1,
     "huggingface": HUGGINGFACE_MCP_SERVER_0_0_1,
-    "huggingface:0.0.1": HUGGINGFACE_MCP_SERVER_0_0_1,
     "kaggle": KAGGLE_MCP_SERVER_0_0_1,
-    "kaggle:0.0.1": KAGGLE_MCP_SERVER_0_0_1,
     "salesforce": SALESFORCE_MCP_SERVER_0_0_1,
-    "salesforce:0.0.1": SALESFORCE_MCP_SERVER_0_0_1,
     "slack": SLACK_MCP_SERVER_0_0_1,
-    "slack:0.0.1": SLACK_MCP_SERVER_0_0_1,
     "tavily": TAVILY_MCP_SERVER_0_0_1,
-    "tavily:0.0.1": TAVILY_MCP_SERVER_0_0_1,
 }
 
 
@@ -319,7 +307,7 @@ def check_env_vars_available(env_vars: list[str]) -> bool:
 
 def get_catalog_server(server_id: str) -> MCPServer | None:
     """
-    Get a catalog MCP server by ID.
+    Get a catalog MCP server by ID (accepts both bare and versioned refs).
 
     Args:
         server_id: The unique identifier of the MCP server.
@@ -327,7 +315,13 @@ def get_catalog_server(server_id: str) -> MCPServer | None:
     Returns:
         The MCPServer configuration, or None if not found.
     """
-    return MCP_SERVER_CATALOG.get(server_id)
+    server = MCP_SERVER_CATALOG.get(server_id)
+    if server is not None:
+        return server
+    base, _, ver = server_id.rpartition(':')
+    if base and '.' in ver:
+        return MCP_SERVER_CATALOG.get(base)
+    return None
 
 
 def list_catalog_servers() -> list[MCPServer]:

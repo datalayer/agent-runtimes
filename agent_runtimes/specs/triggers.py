@@ -85,17 +85,20 @@ SCHEDULE_TRIGGER_SPEC_0_0_1 = TriggerSpec(
 
 TRIGGER_CATALOG: Dict[str, TriggerSpec] = {
     "event": EVENT_TRIGGER_SPEC_0_0_1,
-    "event:0.0.1": EVENT_TRIGGER_SPEC_0_0_1,
     "once": ONCE_TRIGGER_SPEC_0_0_1,
-    "once:0.0.1": ONCE_TRIGGER_SPEC_0_0_1,
     "schedule": SCHEDULE_TRIGGER_SPEC_0_0_1,
-    "schedule:0.0.1": SCHEDULE_TRIGGER_SPEC_0_0_1,
 }
 
 
 def get_trigger_spec(trigger_id: str) -> TriggerSpec | None:
-    """Get a trigger specification by ID."""
-    return TRIGGER_CATALOG.get(trigger_id)
+    """Get a trigger specification by ID (accepts both bare and versioned refs)."""
+    spec = TRIGGER_CATALOG.get(trigger_id)
+    if spec is not None:
+        return spec
+    base, _, ver = trigger_id.rpartition(':')
+    if base and '.' in ver:
+        return TRIGGER_CATALOG.get(base)
+    return None
 
 
 def list_trigger_specs() -> List[TriggerSpec]:

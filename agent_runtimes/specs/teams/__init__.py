@@ -19,7 +19,13 @@ TEAM_SPECS.update(ROOT_TEAMS)
 
 def get_team_spec(team_id: str) -> TeamSpec | None:
     """Get a team specification by ID."""
-    return TEAM_SPECS.get(team_id)
+    spec = TEAM_SPECS.get(team_id)
+    if spec is not None:
+        return spec
+    base, _, ver = team_id.rpartition(':')
+    if base and '.' in ver:
+        return TEAM_SPECS.get(base)
+    return None
 
 
 def list_team_specs(prefix: str | None = None) -> list[TeamSpec]:

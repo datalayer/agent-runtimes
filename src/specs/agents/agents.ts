@@ -2490,74 +2490,52 @@ export const SYNC_CRM_CONTACTS_AGENT_SPEC_0_0_1: AgentSpec = {
 
 export const AGENT_SPECS: Record<string, AgentSpec> = {
   'analyze-campaign-performance': ANALYZE_CAMPAIGN_PERFORMANCE_AGENT_SPEC_0_0_1,
-  'analyze-campaign-performance:0.0.1':
-    ANALYZE_CAMPAIGN_PERFORMANCE_AGENT_SPEC_0_0_1,
   'analyze-support-tickets': ANALYZE_SUPPORT_TICKETS_AGENT_SPEC_0_0_1,
-  'analyze-support-tickets:0.0.1': ANALYZE_SUPPORT_TICKETS_AGENT_SPEC_0_0_1,
   'audit-inventory-levels': AUDIT_INVENTORY_LEVELS_AGENT_SPEC_0_0_1,
-  'audit-inventory-levels:0.0.1': AUDIT_INVENTORY_LEVELS_AGENT_SPEC_0_0_1,
   'automate-regulatory-reporting':
     AUTOMATE_REGULATORY_REPORTING_AGENT_SPEC_0_0_1,
-  'automate-regulatory-reporting:0.0.1':
-    AUTOMATE_REGULATORY_REPORTING_AGENT_SPEC_0_0_1,
   'classify-route-emails': CLASSIFY_ROUTE_EMAILS_AGENT_SPEC_0_0_1,
-  'classify-route-emails:0.0.1': CLASSIFY_ROUTE_EMAILS_AGENT_SPEC_0_0_1,
   'comprehensive-sales-analytics':
     COMPREHENSIVE_SALES_ANALYTICS_AGENT_SPEC_0_0_1,
-  'comprehensive-sales-analytics:0.0.1':
-    COMPREHENSIVE_SALES_ANALYTICS_AGENT_SPEC_0_0_1,
   crawler: CRAWLER_AGENT_SPEC_0_0_1,
-  'crawler:0.0.1': CRAWLER_AGENT_SPEC_0_0_1,
   'data-acquisition': DATA_ACQUISITION_AGENT_SPEC_0_0_1,
-  'data-acquisition:0.0.1': DATA_ACQUISITION_AGENT_SPEC_0_0_1,
   'end-of-month-sales-performance':
     END_OF_MONTH_SALES_PERFORMANCE_AGENT_SPEC_0_0_1,
-  'end-of-month-sales-performance:0.0.1':
-    END_OF_MONTH_SALES_PERFORMANCE_AGENT_SPEC_0_0_1,
   'extract-data-from-files': EXTRACT_DATA_FROM_FILES_AGENT_SPEC_0_0_1,
-  'extract-data-from-files:0.0.1': EXTRACT_DATA_FROM_FILES_AGENT_SPEC_0_0_1,
   'financial-viz': FINANCIAL_VIZ_AGENT_SPEC_0_0_1,
-  'financial-viz:0.0.1': FINANCIAL_VIZ_AGENT_SPEC_0_0_1,
   financial: FINANCIAL_AGENT_SPEC_0_0_1,
-  'financial:0.0.1': FINANCIAL_AGENT_SPEC_0_0_1,
   'generate-weekly-reports': GENERATE_WEEKLY_REPORTS_AGENT_SPEC_0_0_1,
-  'generate-weekly-reports:0.0.1': GENERATE_WEEKLY_REPORTS_AGENT_SPEC_0_0_1,
   'github-agent': GITHUB_AGENT_SPEC_0_0_1,
-  'github-agent:0.0.1': GITHUB_AGENT_SPEC_0_0_1,
   'information-routing': INFORMATION_ROUTING_AGENT_SPEC_0_0_1,
-  'information-routing:0.0.1': INFORMATION_ROUTING_AGENT_SPEC_0_0_1,
   'monitor-sales-kpis': MONITOR_SALES_KPIS_AGENT_SPEC_0_0_1,
-  'monitor-sales-kpis:0.0.1': MONITOR_SALES_KPIS_AGENT_SPEC_0_0_1,
   'optimize-dynamic-pricing': OPTIMIZE_DYNAMIC_PRICING_AGENT_SPEC_0_0_1,
-  'optimize-dynamic-pricing:0.0.1': OPTIMIZE_DYNAMIC_PRICING_AGENT_SPEC_0_0_1,
   'optimize-grid-operations': OPTIMIZE_GRID_OPERATIONS_AGENT_SPEC_0_0_1,
-  'optimize-grid-operations:0.0.1': OPTIMIZE_GRID_OPERATIONS_AGENT_SPEC_0_0_1,
   'process-citizen-requests': PROCESS_CITIZEN_REQUESTS_AGENT_SPEC_0_0_1,
-  'process-citizen-requests:0.0.1': PROCESS_CITIZEN_REQUESTS_AGENT_SPEC_0_0_1,
   'process-clinical-trial-data': PROCESS_CLINICAL_TRIAL_DATA_AGENT_SPEC_0_0_1,
-  'process-clinical-trial-data:0.0.1':
-    PROCESS_CLINICAL_TRIAL_DATA_AGENT_SPEC_0_0_1,
   'process-financial-transactions':
     PROCESS_FINANCIAL_TRANSACTIONS_AGENT_SPEC_0_0_1,
-  'process-financial-transactions:0.0.1':
-    PROCESS_FINANCIAL_TRANSACTIONS_AGENT_SPEC_0_0_1,
   'simple-base': SIMPLE_BASE_AGENT_SPEC_0_0_1,
-  'simple-base:0.0.1': SIMPLE_BASE_AGENT_SPEC_0_0_1,
   'simple-full': SIMPLE_FULL_AGENT_SPEC_0_0_1,
-  'simple-full:0.0.1': SIMPLE_FULL_AGENT_SPEC_0_0_1,
   'spatial-data-analysis': SPATIAL_DATA_ANALYSIS_AGENT_SPEC_0_0_1,
-  'spatial-data-analysis:0.0.1': SPATIAL_DATA_ANALYSIS_AGENT_SPEC_0_0_1,
   'summarize-documents': SUMMARIZE_DOCUMENTS_AGENT_SPEC_0_0_1,
-  'summarize-documents:0.0.1': SUMMARIZE_DOCUMENTS_AGENT_SPEC_0_0_1,
   'sync-crm-contacts': SYNC_CRM_CONTACTS_AGENT_SPEC_0_0_1,
-  'sync-crm-contacts:0.0.1': SYNC_CRM_CONTACTS_AGENT_SPEC_0_0_1,
 };
+
+function resolveAgentId(agentId: string): string {
+  if (agentId in AGENT_SPECS) return agentId;
+  const idx = agentId.lastIndexOf(':');
+  if (idx > 0) {
+    const base = agentId.slice(0, idx);
+    if (base in AGENT_SPECS) return base;
+  }
+  return agentId;
+}
 
 /**
  * Get an agent specification by ID.
  */
 export function getAgentSpecs(agentId: string): AgentSpec | undefined {
-  return AGENT_SPECS[agentId];
+  return AGENT_SPECS[resolveAgentId(agentId)];
 }
 
 /**

@@ -384,18 +384,11 @@ export const RESTRICTED_VIEWER_GUARDRAIL_SPEC_0_0_1: GuardrailSpec = {
 export const GUARDRAIL_CATALOG: Record<string, GuardrailSpec> = {
   'data-engineering-power-user':
     DATA_ENGINEERING_POWER_USER_GUARDRAIL_SPEC_0_0_1,
-  'data-engineering-power-user:0.0.1':
-    DATA_ENGINEERING_POWER_USER_GUARDRAIL_SPEC_0_0_1,
   'default-platform-user': DEFAULT_PLATFORM_USER_GUARDRAIL_SPEC_0_0_1,
-  'default-platform-user:0.0.1': DEFAULT_PLATFORM_USER_GUARDRAIL_SPEC_0_0_1,
   'github-actions-deploy': GITHUB_ACTIONS_DEPLOY_GUARDRAIL_SPEC_0_0_1,
-  'github-actions-deploy:0.0.1': GITHUB_ACTIONS_DEPLOY_GUARDRAIL_SPEC_0_0_1,
   'github-ci-bot': GITHUB_CI_BOT_GUARDRAIL_SPEC_0_0_1,
-  'github-ci-bot:0.0.1': GITHUB_CI_BOT_GUARDRAIL_SPEC_0_0_1,
   'google-workspace-agent': GOOGLE_WORKSPACE_AGENT_GUARDRAIL_SPEC_0_0_1,
-  'google-workspace-agent:0.0.1': GOOGLE_WORKSPACE_AGENT_GUARDRAIL_SPEC_0_0_1,
   'restricted-viewer': RESTRICTED_VIEWER_GUARDRAIL_SPEC_0_0_1,
-  'restricted-viewer:0.0.1': RESTRICTED_VIEWER_GUARDRAIL_SPEC_0_0_1,
 };
 
 /**
@@ -412,8 +405,18 @@ export function getGuardrailSpecs(): GuardrailSpec[] {
   return Object.values(GUARDRAIL_CATALOG);
 }
 
+function resolveGuardrailId(guardrailId: string): string {
+  if (guardrailId in GUARDRAIL_CATALOG) return guardrailId;
+  const idx = guardrailId.lastIndexOf(':');
+  if (idx > 0) {
+    const base = guardrailId.slice(0, idx);
+    if (base in GUARDRAIL_CATALOG) return base;
+  }
+  return guardrailId;
+}
+
 export function getGuardrailSpec(
   guardrailId: string,
 ): GuardrailSpec | undefined {
-  return GUARDRAIL_CATALOG[guardrailId];
+  return GUARDRAIL_CATALOG[resolveGuardrailId(guardrailId)];
 }

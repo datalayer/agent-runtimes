@@ -107,13 +107,9 @@ SIMPLEMEM_MEMORY_0_0_1 = MemorySpec(
 
 MEMORY_CATALOGUE: dict[str, MemorySpec] = {
     "ephemeral": EPHEMERAL_MEMORY_0_0_1,
-    "ephemeral:0.0.1": EPHEMERAL_MEMORY_0_0_1,
     "mem0": MEM0_MEMORY_0_0_1,
-    "mem0:0.0.1": MEM0_MEMORY_0_0_1,
     "memu": MEMU_MEMORY_0_0_1,
-    "memu:0.0.1": MEMU_MEMORY_0_0_1,
     "simplemem": SIMPLEMEM_MEMORY_0_0_1,
-    "simplemem:0.0.1": SIMPLEMEM_MEMORY_0_0_1,
 }
 
 
@@ -122,7 +118,7 @@ DEFAULT_MEMORY: str = "ephemeral"
 
 def get_memory(memory_id: str) -> Optional[MemorySpec]:
     """
-    Get a memory specification by ID.
+    Get a memory specification by ID (accepts both bare and versioned refs).
 
     Args:
         memory_id: The unique identifier of the memory backend.
@@ -130,7 +126,13 @@ def get_memory(memory_id: str) -> Optional[MemorySpec]:
     Returns:
         The MemorySpec, or None if not found.
     """
-    return MEMORY_CATALOGUE.get(memory_id)
+    mem = MEMORY_CATALOGUE.get(memory_id)
+    if mem is not None:
+        return mem
+    base, _, ver = memory_id.rpartition(':')
+    if base and '.' in ver:
+        return MEMORY_CATALOGUE.get(base)
+    return None
 
 
 def get_default_memory() -> Optional[MemorySpec]:

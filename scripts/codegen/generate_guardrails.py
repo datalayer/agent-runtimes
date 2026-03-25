@@ -305,15 +305,20 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         version = spec["version"]
         const_name = f"{g_id.upper().replace('-', '_')}_GUARDRAIL_SPEC{version_suffix(version)}"
         lines.append(f'    "{g_id}": {const_name},')
-        lines.append(f'    "{versioned_ref(g_id, version)}": {const_name},')
     lines.extend(
         [
             "}",
             "",
             "",
             "def get_guardrail_spec(guardrail_id: str) -> GuardrailSpec | None:",
-            '    """Get a guardrail specification by ID."""',
-            "    return GUARDRAIL_CATALOG.get(guardrail_id)",
+            '    """Get a guardrail specification by ID (accepts both bare and versioned refs)."""',
+            "    spec = GUARDRAIL_CATALOG.get(guardrail_id)",
+            "    if spec is not None:",
+            "        return spec",
+            "    base, _, ver = guardrail_id.rpartition(':')",
+            "    if base and '.' in ver:",
+            "        return GUARDRAIL_CATALOG.get(base)",
+            "    return None",
             "",
             "",
             "def list_guardrail_specs() -> List[GuardrailSpec]:",
@@ -469,7 +474,6 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
         version = spec["version"]
         const_name = f"{g_id.upper().replace('-', '_')}_GUARDRAIL_SPEC{version_suffix(version)}"
         lines.append(f"  '{g_id}': {const_name},")
-        lines.append(f"  '{versioned_ref(g_id, version)}': {const_name},")
     lines.extend(
         [
             "};",
@@ -488,10 +492,20 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
             "  return Object.values(GUARDRAIL_CATALOG);",
             "}",
             "",
+            "function resolveGuardrailId(guardrailId: string): string {",
+            "  if (guardrailId in GUARDRAIL_CATALOG) return guardrailId;",
+            "  const idx = guardrailId.lastIndexOf(':');",
+            "  if (idx > 0) {",
+            "    const base = guardrailId.slice(0, idx);",
+            "    if (base in GUARDRAIL_CATALOG) return base;",
+            "  }",
+            "  return guardrailId;",
+            "}",
+            "",
             "export function getGuardrailSpec(",
             "  guardrailId: string,",
             "): GuardrailSpec | undefined {",
-            "  return GUARDRAIL_CATALOG[guardrailId];",
+            "  return GUARDRAIL_CATALOG[resolveGuardrailId(guardrailId)];",
             "}",
             "",
         ]

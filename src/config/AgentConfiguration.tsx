@@ -27,8 +27,8 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Box } from '@datalayer/primer-addons';
 import type { ExampleAgent } from '../types/types';
-import { IdentityCard } from '../chat/components';
-import type { Transport, MCPServerConfig } from '../chat/components';
+import { IdentityCard } from '../chat';
+import type { Transport, MCPServerConfig } from '../chat';
 import type { Extension } from '../types';
 import type { McpServerSelection } from '../mcp/McpServerManager';
 import { IdentityConnect, useIdentity } from '../identity';

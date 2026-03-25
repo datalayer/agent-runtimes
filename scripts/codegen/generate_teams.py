@@ -351,8 +351,6 @@ TEAM_SPECS: Dict[str, TeamSpec] = {
             code += f"    # {folder.replace('-', ' ').title()}\n"
         for full_team_id, const_name in folder_teams:
             code += f'    "{full_team_id}": {const_name},\n'
-            team_spec = next(s for f, s in specs if (f + "/" + s["id"] if f else s["id"]) == full_team_id)
-            code += f'    "{versioned_ref(full_team_id, team_spec["version"])}": {const_name},\n'
         if folder_teams and folder:
             code += "\n"
 
@@ -361,7 +359,13 @@ TEAM_SPECS: Dict[str, TeamSpec] = {
 
 def get_team_spec(team_id: str) -> TeamSpec | None:
     \"\"\"Get a team specification by ID.\"\"\"
-    return TEAM_SPECS.get(team_id)
+    spec = TEAM_SPECS.get(team_id)
+    if spec is not None:
+        return spec
+    base, _, ver = team_id.rpartition(':')
+    if base and '.' in ver:
+        return TEAM_SPECS.get(base)
+    return None
 
 
 def list_team_specs(prefix: str | None = None) -> list[TeamSpec]:
@@ -585,18 +589,26 @@ export const TEAM_SPECS: Record<string, TeamSpec> = {
             code += f"  // {folder.replace('-', ' ').title()}\n"
         for full_team_id, const_name in folder_teams:
             code += f"  '{full_team_id}': {const_name},\n"
-            team_spec = next(s for f, s in specs if (f + "/" + s["id"] if f else s["id"]) == full_team_id)
-            code += f"  '{versioned_ref(full_team_id, team_spec['version'])}': {const_name},\n"
         if folder_teams and folder:
             code += "\n"
 
     code += """};
 
+function resolveTeamId(teamId: string): string {
+  if (teamId in TEAM_SPECS) return teamId;
+  const idx = teamId.lastIndexOf(':');
+  if (idx > 0) {
+    const base = teamId.slice(0, idx);
+    if (base in TEAM_SPECS) return base;
+  }
+  return teamId;
+}
+
 /**
  * Get a team specification by ID.
  */
 export function getTeamSpec(teamId: string): TeamSpec | undefined {
-  return TEAM_SPECS[teamId];
+  return TEAM_SPECS[resolveTeamId(teamId)];
 }
 
 /**
@@ -742,7 +754,13 @@ TEAM_SPECS: Dict[str, TeamSpec] = {}
 
 def get_team_spec(team_id: str) -> TeamSpec | None:
     \"\"\"Get a team specification by ID.\"\"\"
-    return TEAM_SPECS.get(team_id)
+    spec = TEAM_SPECS.get(team_id)
+    if spec is not None:
+        return spec
+    base, _, ver = team_id.rpartition(':')
+    if base and '.' in ver:
+        return TEAM_SPECS.get(base)
+    return None
 
 
 def list_team_specs(prefix: str | None = None) -> list[TeamSpec]:
@@ -804,11 +822,21 @@ export const TEAM_SPECS: Record<string, TeamSpec> = {
 
     typescript_index_content += """};
 
+function resolveTeamId(teamId: string): string {
+  if (teamId in TEAM_SPECS) return teamId;
+  const idx = teamId.lastIndexOf(':');
+  if (idx > 0) {
+    const base = teamId.slice(0, idx);
+    if (base in TEAM_SPECS) return base;
+  }
+  return teamId;
+}
+
 /**
  * Get a team specification by ID.
  */
 export function getTeamSpec(teamId: string): TeamSpec | undefined {
-  return TEAM_SPECS[teamId];
+  return TEAM_SPECS[resolveTeamId(teamId)];
 }
 
 /**

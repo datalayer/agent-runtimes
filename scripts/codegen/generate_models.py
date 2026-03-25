@@ -155,7 +155,6 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         model_id = spec["id"]
         const_name = _make_const_name(model_id) + version_suffix(spec["version"])
         lines.append(f'    "{model_id}": {const_name},')
-        lines.append(f'    "{versioned_ref(model_id, spec["version"])}": {const_name},')
 
     lines.extend(
         [
@@ -206,7 +205,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
             "",
             "def get_model(model_id: str) -> Optional[AIModel]:",
             '    """',
-            "    Get an AI model by ID.",
+            "    Get an AI model by ID (accepts both bare and versioned refs).",
             "",
             "    Args:",
             "        model_id: The unique identifier of the AI model.",
@@ -214,7 +213,13 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
             "    Returns:",
             "        The AIModel specification, or None if not found.",
             '    """',
-            "    return AI_MODEL_CATALOGUE.get(model_id)",
+            "    model = AI_MODEL_CATALOGUE.get(model_id)",
+            "    if model is not None:",
+            "        return model",
+            "    base, _, ver = model_id.rpartition(':')",
+            "    if base and '.' in ver:",
+            "        return AI_MODEL_CATALOGUE.get(base)",
+            "    return None",
             "",
             "",
             "def get_default_model() -> Optional[AIModel]:",
@@ -353,7 +358,6 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
         model_id = spec["id"]
         const_name = _make_const_name(model_id) + version_suffix(spec["version"])
         lines.append(f"  '{model_id}': {const_name},")
-        lines.append(f"  '{versioned_ref(model_id, spec['version'])}': {const_name},")
 
     lines.extend(
         [

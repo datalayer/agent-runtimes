@@ -117,17 +117,24 @@ export const SCHEDULE_TRIGGER_SPEC_0_0_1: TriggerSpec = {
 
 export const TRIGGER_CATALOG: Record<string, TriggerSpec> = {
   event: EVENT_TRIGGER_SPEC_0_0_1,
-  'event:0.0.1': EVENT_TRIGGER_SPEC_0_0_1,
   once: ONCE_TRIGGER_SPEC_0_0_1,
-  'once:0.0.1': ONCE_TRIGGER_SPEC_0_0_1,
   schedule: SCHEDULE_TRIGGER_SPEC_0_0_1,
-  'schedule:0.0.1': SCHEDULE_TRIGGER_SPEC_0_0_1,
 };
 
 export function getTriggerSpecs(): TriggerSpec[] {
   return Object.values(TRIGGER_CATALOG);
 }
 
+function resolveTriggerIdTs(triggerId: string): string {
+  if (triggerId in TRIGGER_CATALOG) return triggerId;
+  const idx = triggerId.lastIndexOf(':');
+  if (idx > 0) {
+    const base = triggerId.slice(0, idx);
+    if (base in TRIGGER_CATALOG) return base;
+  }
+  return triggerId;
+}
+
 export function getTriggerSpec(triggerId: string): TriggerSpec | undefined {
-  return TRIGGER_CATALOG[triggerId];
+  return TRIGGER_CATALOG[resolveTriggerIdTs(triggerId)];
 }

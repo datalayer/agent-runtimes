@@ -112,22 +112,28 @@ export const SIMPLEMEM_MEMORY_0_0_1: MemorySpec = {
 
 export const MEMORY_CATALOGUE: Record<string, MemorySpec> = {
   ephemeral: EPHEMERAL_MEMORY_0_0_1,
-  'ephemeral:0.0.1': EPHEMERAL_MEMORY_0_0_1,
   mem0: MEM0_MEMORY_0_0_1,
-  'mem0:0.0.1': MEM0_MEMORY_0_0_1,
   memu: MEMU_MEMORY_0_0_1,
-  'memu:0.0.1': MEMU_MEMORY_0_0_1,
   simplemem: SIMPLEMEM_MEMORY_0_0_1,
-  'simplemem:0.0.1': SIMPLEMEM_MEMORY_0_0_1,
 };
 
 export const DEFAULT_MEMORY: MemoryId = Memories.EPHEMERAL;
+
+function resolveMemoryId(memoryId: string): string {
+  if (memoryId in MEMORY_CATALOGUE) return memoryId;
+  const idx = memoryId.lastIndexOf(':');
+  if (idx > 0) {
+    const base = memoryId.slice(0, idx);
+    if (base in MEMORY_CATALOGUE) return base;
+  }
+  return memoryId;
+}
 
 /**
  * Get a memory specification by ID.
  */
 export function getMemory(memoryId: string): MemorySpec | undefined {
-  return MEMORY_CATALOGUE[memoryId];
+  return MEMORY_CATALOGUE[resolveMemoryId(memoryId)];
 }
 
 /**

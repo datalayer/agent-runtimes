@@ -130,7 +130,6 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         version = spec["version"]
         const_name = f"{envvar_id}_SPEC{version_suffix(version)}"
         lines.append(f'    "{envvar_id}": {const_name},')
-        lines.append(f'    "{versioned_ref(envvar_id, version)}": {const_name},')
 
     lines.extend(
         [
@@ -138,10 +137,17 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
             "",
             "",
             "def get_envvar_spec(envvar_id: str) -> EnvvarSpec:",
-            '    """Get environment variable specification by ID."""',
-            "    if envvar_id not in ENVVAR_CATALOG:",
+            '    """Get environment variable specification by ID (accepts both bare and versioned refs)."""',
+            "    spec = ENVVAR_CATALOG.get(envvar_id)",
+            "    if spec is not None:",
+            "        return spec",
+            "    # Try stripping version suffix for versioned refs like 'NAME:0.0.1'",
+            "    base, _, ver = envvar_id.rpartition(':')",
+            "    if base and '.' in ver:",
+            "        spec = ENVVAR_CATALOG.get(base)",
+            "    if spec is None:",
             '        raise ValueError(f"Unknown environment variable: {envvar_id}")',
-            "    return ENVVAR_CATALOG[envvar_id]",
+            "    return spec",
             "",
         ]
     )
@@ -240,14 +246,23 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
         version = spec["version"]
         const_name = f"{envvar_id}_SPEC{version_suffix(version)}"
         lines.append(f"  '{envvar_id}': {const_name},")
-        lines.append(f"  '{versioned_ref(envvar_id, version)}': {const_name},")
 
     lines.extend(
         [
             "};",
             "",
+            "function resolveEnvvarId(envvarId: string): string {",
+            "  if (envvarId in ENVVAR_CATALOG) return envvarId;",
+            "  const idx = envvarId.lastIndexOf(':');",
+            "  if (idx > 0) {",
+            "    const base = envvarId.slice(0, idx);",
+            "    if (base in ENVVAR_CATALOG) return base;",
+            "  }",
+            "  return envvarId;",
+            "}",
+            "",
             "export function getEnvvarSpec(envvarId: string): EnvvarSpec {",
-            "  const spec = ENVVAR_CATALOG[envvarId];",
+            "  const spec = ENVVAR_CATALOG[resolveEnvvarId(envvarId)];",
             "  if (!spec) {",
             "    throw new Error(`Unknown environment variable: ${envvarId}`);",
             "  }",

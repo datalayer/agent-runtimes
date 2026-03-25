@@ -102,17 +102,20 @@ RUNTIME_SENSITIVE_ECHO_TOOL_SPEC_0_0_1 = ToolSpec(
 
 TOOL_CATALOG: Dict[str, ToolSpec] = {
     "runtime-echo": RUNTIME_ECHO_TOOL_SPEC_0_0_1,
-    "runtime-echo:0.0.1": RUNTIME_ECHO_TOOL_SPEC_0_0_1,
     "runtime-send-mail": RUNTIME_SEND_MAIL_TOOL_SPEC_0_0_1,
-    "runtime-send-mail:0.0.1": RUNTIME_SEND_MAIL_TOOL_SPEC_0_0_1,
     "runtime-sensitive-echo": RUNTIME_SENSITIVE_ECHO_TOOL_SPEC_0_0_1,
-    "runtime-sensitive-echo:0.0.1": RUNTIME_SENSITIVE_ECHO_TOOL_SPEC_0_0_1,
 }
 
 
 def get_tool_spec(tool_id: str) -> ToolSpec | None:
-    """Get a tool specification by ID."""
-    return TOOL_CATALOG.get(tool_id)
+    """Get a tool specification by ID (accepts both bare and versioned refs)."""
+    spec = TOOL_CATALOG.get(tool_id)
+    if spec is not None:
+        return spec
+    base, _, ver = tool_id.rpartition(':')
+    if base and '.' in ver:
+        return TOOL_CATALOG.get(base)
+    return None
 
 
 def list_tool_specs() -> List[ToolSpec]:

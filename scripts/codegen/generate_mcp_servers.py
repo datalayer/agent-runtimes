@@ -148,7 +148,6 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         version = spec["version"]
         const_name = f"{server_id.upper().replace('-', '_')}_MCP_SERVER{version_suffix(version)}"
         lines.append(f'    "{server_id}": {const_name},')
-        lines.append(f'    "{versioned_ref(server_id, version)}": {const_name},')
 
     lines.extend(
         [
@@ -172,7 +171,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
             "",
             "def get_catalog_server(server_id: str) -> MCPServer | None:",
             '    """',
-            "    Get a catalog MCP server by ID.",
+            "    Get a catalog MCP server by ID (accepts both bare and versioned refs).",
             "",
             "    Args:",
             "        server_id: The unique identifier of the MCP server.",
@@ -180,7 +179,13 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
             "    Returns:",
             "        The MCPServer configuration, or None if not found.",
             '    """',
-            "    return MCP_SERVER_CATALOG.get(server_id)",
+            "    server = MCP_SERVER_CATALOG.get(server_id)",
+            "    if server is not None:",
+            "        return server",
+            "    base, _, ver = server_id.rpartition(':')",
+            "    if base and '.' in ver:",
+            "        return MCP_SERVER_CATALOG.get(base)",
+            "    return None",
             "",
             "",
             "def list_catalog_servers() -> list[MCPServer]:",
@@ -296,7 +301,6 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
         # Quote keys with hyphens for valid JavaScript syntax
         key = f"'{server_id}'" if "-" in server_id else server_id
         lines.append(f"  {key}: {const_name},")
-        lines.append(f"  '{versioned_ref(server_id, version)}': {const_name},")
 
     lines.extend(
         [

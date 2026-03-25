@@ -18,11 +18,21 @@ export const AGENT_SPECS: Record<string, AgentSpec> = {
   ...ROOT_AGENTS,
 };
 
+function resolveAgentId(agentId: string): string {
+  if (agentId in AGENT_SPECS) return agentId;
+  const idx = agentId.lastIndexOf(':');
+  if (idx > 0) {
+    const base = agentId.slice(0, idx);
+    if (base in AGENT_SPECS) return base;
+  }
+  return agentId;
+}
+
 /**
  * Get an agent specification by ID.
  */
 export function getAgentSpecs(agentId: string): AgentSpec | undefined {
-  return AGENT_SPECS[agentId];
+  return AGENT_SPECS[resolveAgentId(agentId)];
 }
 
 /**

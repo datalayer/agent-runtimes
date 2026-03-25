@@ -163,7 +163,6 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         version = spec["version"]
         const_name = _make_const_name(memory_id) + version_suffix(version)
         lines.append(f'    "{memory_id}": {const_name},')
-        lines.append(f'    "{versioned_ref(memory_id, version)}": {const_name},')
 
     lines.extend(
         [
@@ -181,7 +180,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
             "",
             "def get_memory(memory_id: str) -> Optional[MemorySpec]:",
             '    """',
-            "    Get a memory specification by ID.",
+            "    Get a memory specification by ID (accepts both bare and versioned refs).",
             "",
             "    Args:",
             "        memory_id: The unique identifier of the memory backend.",
@@ -189,7 +188,13 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
             "    Returns:",
             "        The MemorySpec, or None if not found.",
             '    """',
-            "    return MEMORY_CATALOGUE.get(memory_id)",
+            "    mem = MEMORY_CATALOGUE.get(memory_id)",
+            "    if mem is not None:",
+            "        return mem",
+            "    base, _, ver = memory_id.rpartition(':')",
+            "    if base and '.' in ver:",
+            "        return MEMORY_CATALOGUE.get(base)",
+            "    return None",
             "",
             "",
             "def get_default_memory() -> Optional[MemorySpec]:",
@@ -329,7 +334,6 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
         version = spec["version"]
         const_name = _make_const_name(memory_id) + version_suffix(version)
         lines.append(f"  '{memory_id}': {const_name},")
-        lines.append(f"  '{versioned_ref(memory_id, version)}': {const_name},")
 
     lines.extend(
         [
@@ -337,11 +341,21 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
             "",
             "export const DEFAULT_MEMORY: MemoryId = Memories.EPHEMERAL;",
             "",
+            "function resolveMemoryId(memoryId: string): string {",
+            "  if (memoryId in MEMORY_CATALOGUE) return memoryId;",
+            "  const idx = memoryId.lastIndexOf(':');",
+            "  if (idx > 0) {",
+            "    const base = memoryId.slice(0, idx);",
+            "    if (base in MEMORY_CATALOGUE) return base;",
+            "  }",
+            "  return memoryId;",
+            "}",
+            "",
             "/**",
             " * Get a memory specification by ID.",
             " */",
             "export function getMemory(memoryId: string): MemorySpec | undefined {",
-            "  return MEMORY_CATALOGUE[memoryId];",
+            "  return MEMORY_CATALOGUE[resolveMemoryId(memoryId)];",
             "}",
             "",
             "/**",

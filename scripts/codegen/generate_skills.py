@@ -128,7 +128,6 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         version = spec["version"]
         const_name = f"{skill_id.upper().replace('-', '_')}_SKILL_SPEC{version_suffix(version)}"
         lines.append(f'    "{skill_id}": {const_name},')
-        lines.append(f'    "{versioned_ref(skill_id, version)}": {const_name},')
 
     lines.extend(
         [
@@ -152,7 +151,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
             "",
             "def get_skill_spec(skill_id: str) -> SkillSpec | None:",
             '    """',
-            "    Get a skill specification by ID.",
+            "    Get a skill specification by ID (accepts both bare and versioned refs).",
             "",
             "    Args:",
             "        skill_id: The unique identifier of the skill.",
@@ -160,7 +159,13 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
             "    Returns:",
             "        The SkillSpec, or None if not found.",
             '    """',
-            "    return SKILL_CATALOG.get(skill_id)",
+            "    spec = SKILL_CATALOG.get(skill_id)",
+            "    if spec is not None:",
+            "        return spec",
+            "    base, _, ver = skill_id.rpartition(':')",
+            "    if base and '.' in ver:",
+            "        return SKILL_CATALOG.get(base)",
+            "    return None",
             "",
             "",
             "def list_skill_specs() -> List[SkillSpec]:",
@@ -270,7 +275,6 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
         version = spec["version"]
         const_name = f"{skill_id.upper().replace('-', '_')}_SKILL_SPEC{version_suffix(version)}"
         lines.append(f"  '{skill_id}': {const_name},")
-        lines.append(f"  '{versioned_ref(skill_id, version)}': {const_name},")
 
     lines.extend(
         [
@@ -280,8 +284,18 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
             "  return Object.values(SKILL_CATALOG);",
             "}",
             "",
+            "function resolveSkillId(skillId: string): string {",
+            "  if (skillId in SKILL_CATALOG) return skillId;",
+            "  const idx = skillId.lastIndexOf(':');",
+            "  if (idx > 0) {",
+            "    const base = skillId.slice(0, idx);",
+            "    if (base in SKILL_CATALOG) return base;",
+            "  }",
+            "  return skillId;",
+            "}",
+            "",
             "export function getSkillSpec(skillId: string): SkillSpec | undefined {",
-            "  return SKILL_CATALOG[skillId];",
+            "  return SKILL_CATALOG[resolveSkillId(skillId)];",
             "}",
             "",
         ]

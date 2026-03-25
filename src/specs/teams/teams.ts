@@ -1102,36 +1102,33 @@ export const SYNC_CRM_CONTACTS_TEAM_SPEC_0_0_1: TeamSpec = {
 
 export const TEAM_SPECS: Record<string, TeamSpec> = {
   'analyze-campaign-performance': ANALYZE_CAMPAIGN_PERFORMANCE_TEAM_SPEC_0_0_1,
-  'analyze-campaign-performance:0.0.1':
-    ANALYZE_CAMPAIGN_PERFORMANCE_TEAM_SPEC_0_0_1,
   'analyze-support-tickets': ANALYZE_SUPPORT_TICKETS_TEAM_SPEC_0_0_1,
-  'analyze-support-tickets:0.0.1': ANALYZE_SUPPORT_TICKETS_TEAM_SPEC_0_0_1,
   'audit-inventory-levels': AUDIT_INVENTORY_LEVELS_TEAM_SPEC_0_0_1,
-  'audit-inventory-levels:0.0.1': AUDIT_INVENTORY_LEVELS_TEAM_SPEC_0_0_1,
   'automate-regulatory-reporting':
-    AUTOMATE_REGULATORY_REPORTING_TEAM_SPEC_0_0_1,
-  'automate-regulatory-reporting:0.0.1':
     AUTOMATE_REGULATORY_REPORTING_TEAM_SPEC_0_0_1,
   'comprehensive-sales-analytics':
     COMPREHENSIVE_SALES_ANALYTICS_TEAM_SPEC_0_0_1,
-  'comprehensive-sales-analytics:0.0.1':
-    COMPREHENSIVE_SALES_ANALYTICS_TEAM_SPEC_0_0_1,
   'optimize-grid-operations': OPTIMIZE_GRID_OPERATIONS_TEAM_SPEC_0_0_1,
-  'optimize-grid-operations:0.0.1': OPTIMIZE_GRID_OPERATIONS_TEAM_SPEC_0_0_1,
   'process-citizen-requests': PROCESS_CITIZEN_REQUESTS_TEAM_SPEC_0_0_1,
-  'process-citizen-requests:0.0.1': PROCESS_CITIZEN_REQUESTS_TEAM_SPEC_0_0_1,
   'process-clinical-trial-data': PROCESS_CLINICAL_TRIAL_DATA_TEAM_SPEC_0_0_1,
-  'process-clinical-trial-data:0.0.1':
-    PROCESS_CLINICAL_TRIAL_DATA_TEAM_SPEC_0_0_1,
   'sync-crm-contacts': SYNC_CRM_CONTACTS_TEAM_SPEC_0_0_1,
-  'sync-crm-contacts:0.0.1': SYNC_CRM_CONTACTS_TEAM_SPEC_0_0_1,
 };
+
+function resolveTeamId(teamId: string): string {
+  if (teamId in TEAM_SPECS) return teamId;
+  const idx = teamId.lastIndexOf(':');
+  if (idx > 0) {
+    const base = teamId.slice(0, idx);
+    if (base in TEAM_SPECS) return base;
+  }
+  return teamId;
+}
 
 /**
  * Get a team specification by ID.
  */
 export function getTeamSpec(teamId: string): TeamSpec | undefined {
-  return TEAM_SPECS[teamId];
+  return TEAM_SPECS[resolveTeamId(teamId)];
 }
 
 /**

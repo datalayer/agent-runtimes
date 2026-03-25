@@ -175,15 +175,20 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         version = spec["version"]
         const_name = f"{ch_id.upper().replace('-', '_')}_NOTIFICATION_SPEC{version_suffix(version)}"
         lines.append(f'    "{ch_id}": {const_name},')
-        lines.append(f'    "{versioned_ref(ch_id, version)}": {const_name},')
     lines.extend(
         [
             "}",
             "",
             "",
             "def get_notification_spec(channel_id: str) -> NotificationChannelSpec | None:",
-            '    """Get a notification channel specification by ID."""',
-            "    return NOTIFICATION_CATALOG.get(channel_id)",
+            '    """Get a notification channel specification by ID (accepts both bare and versioned refs)."""',
+            "    spec = NOTIFICATION_CATALOG.get(channel_id)",
+            "    if spec is not None:",
+            "        return spec",
+            "    base, _, ver = channel_id.rpartition(':')",
+            "    if base and '.' in ver:",
+            "        return NOTIFICATION_CATALOG.get(base)",
+            "    return None",
             "",
             "",
             "def list_notification_specs() -> List[NotificationChannelSpec]:",
@@ -263,7 +268,6 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
         version = spec["version"]
         const_name = f"{ch_id.upper().replace('-', '_')}_NOTIFICATION_SPEC{version_suffix(version)}"
         lines.append(f"  '{ch_id}': {const_name},")
-        lines.append(f"  '{versioned_ref(ch_id, version)}': {const_name},")
     lines.extend(
         [
             "};",
@@ -272,10 +276,20 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
             "  return Object.values(NOTIFICATION_CATALOG);",
             "}",
             "",
+            "function resolveNotificationId(channelId: string): string {",
+            "  if (channelId in NOTIFICATION_CATALOG) return channelId;",
+            "  const idx = channelId.lastIndexOf(':');",
+            "  if (idx > 0) {",
+            "    const base = channelId.slice(0, idx);",
+            "    if (base in NOTIFICATION_CATALOG) return base;",
+            "  }",
+            "  return channelId;",
+            "}",
+            "",
             "export function getNotificationSpec(",
             "  channelId: string,",
             "): NotificationChannelSpec | undefined {",
-            "  return NOTIFICATION_CATALOG[channelId];",
+            "  return NOTIFICATION_CATALOG[resolveNotificationId(channelId)];",
             "}",
             "",
         ]

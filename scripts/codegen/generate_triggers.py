@@ -165,15 +165,20 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         version = spec["version"]
         const_name = f"{trigger_id.upper().replace('-', '_')}_TRIGGER_SPEC{version_suffix(version)}"
         lines.append(f'    "{trigger_id}": {const_name},')
-        lines.append(f'    "{versioned_ref(trigger_id, version)}": {const_name},')
     lines.extend(
         [
             "}",
             "",
             "",
             "def get_trigger_spec(trigger_id: str) -> TriggerSpec | None:",
-            '    """Get a trigger specification by ID."""',
-            "    return TRIGGER_CATALOG.get(trigger_id)",
+            '    """Get a trigger specification by ID (accepts both bare and versioned refs)."""',
+            "    spec = TRIGGER_CATALOG.get(trigger_id)",
+            "    if spec is not None:",
+            "        return spec",
+            "    base, _, ver = trigger_id.rpartition(':')",
+            "    if base and '.' in ver:",
+            "        return TRIGGER_CATALOG.get(base)",
+            "    return None",
             "",
             "",
             "def list_trigger_specs() -> List[TriggerSpec]:",
@@ -251,7 +256,6 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
         version = spec["version"]
         const_name = f"{trigger_id.upper().replace('-', '_')}_TRIGGER_SPEC{version_suffix(version)}"
         lines.append(f"  '{trigger_id}': {const_name},")
-        lines.append(f"  '{versioned_ref(trigger_id, version)}': {const_name},")
     lines.extend(
         [
             "};",
@@ -260,8 +264,18 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
             "  return Object.values(TRIGGER_CATALOG);",
             "}",
             "",
+            "function resolveTriggerIdTs(triggerId: string): string {",
+            "  if (triggerId in TRIGGER_CATALOG) return triggerId;",
+            "  const idx = triggerId.lastIndexOf(':');",
+            "  if (idx > 0) {",
+            "    const base = triggerId.slice(0, idx);",
+            "    if (base in TRIGGER_CATALOG) return base;",
+            "  }",
+            "  return triggerId;",
+            "}",
+            "",
             "export function getTriggerSpec(triggerId: string): TriggerSpec | undefined {",
-            "  return TRIGGER_CATALOG[triggerId];",
+            "  return TRIGGER_CATALOG[resolveTriggerIdTs(triggerId)];",
             "}",
             "",
         ]

@@ -136,27 +136,29 @@ export const TRUTHFULQA_EVAL_SPEC_0_0_1: EvalSpec = {
 
 export const EVAL_CATALOG: Record<string, EvalSpec> = {
   agentbench: AGENTBENCH_EVAL_SPEC_0_0_1,
-  'agentbench:0.0.1': AGENTBENCH_EVAL_SPEC_0_0_1,
   'gpqa-diamond': GPQA_DIAMOND_EVAL_SPEC_0_0_1,
-  'gpqa-diamond:0.0.1': GPQA_DIAMOND_EVAL_SPEC_0_0_1,
   humaneval: HUMANEVAL_EVAL_SPEC_0_0_1,
-  'humaneval:0.0.1': HUMANEVAL_EVAL_SPEC_0_0_1,
   mmlu: MMLU_EVAL_SPEC_0_0_1,
-  'mmlu:0.0.1': MMLU_EVAL_SPEC_0_0_1,
   'swe-bench-verified': SWE_BENCH_VERIFIED_EVAL_SPEC_0_0_1,
-  'swe-bench-verified:0.0.1': SWE_BENCH_VERIFIED_EVAL_SPEC_0_0_1,
   'swe-bench': SWE_BENCH_EVAL_SPEC_0_0_1,
-  'swe-bench:0.0.1': SWE_BENCH_EVAL_SPEC_0_0_1,
   toolbench: TOOLBENCH_EVAL_SPEC_0_0_1,
-  'toolbench:0.0.1': TOOLBENCH_EVAL_SPEC_0_0_1,
   truthfulqa: TRUTHFULQA_EVAL_SPEC_0_0_1,
-  'truthfulqa:0.0.1': TRUTHFULQA_EVAL_SPEC_0_0_1,
 };
 
 export function getEvalSpecs(): EvalSpec[] {
   return Object.values(EVAL_CATALOG);
 }
 
+function resolveEvalId(evalId: string): string {
+  if (evalId in EVAL_CATALOG) return evalId;
+  const idx = evalId.lastIndexOf(':');
+  if (idx > 0) {
+    const base = evalId.slice(0, idx);
+    if (base in EVAL_CATALOG) return base;
+  }
+  return evalId;
+}
+
 export function getEvalSpec(evalId: string): EvalSpec | undefined {
-  return EVAL_CATALOG[evalId];
+  return EVAL_CATALOG[resolveEvalId(evalId)];
 }

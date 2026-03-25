@@ -143,27 +143,25 @@ TRUTHFULQA_EVAL_SPEC_0_0_1 = EvalSpec(
 
 EVAL_CATALOG: Dict[str, EvalSpec] = {
     "agentbench": AGENTBENCH_EVAL_SPEC_0_0_1,
-    "agentbench:0.0.1": AGENTBENCH_EVAL_SPEC_0_0_1,
     "gpqa-diamond": GPQA_DIAMOND_EVAL_SPEC_0_0_1,
-    "gpqa-diamond:0.0.1": GPQA_DIAMOND_EVAL_SPEC_0_0_1,
     "humaneval": HUMANEVAL_EVAL_SPEC_0_0_1,
-    "humaneval:0.0.1": HUMANEVAL_EVAL_SPEC_0_0_1,
     "mmlu": MMLU_EVAL_SPEC_0_0_1,
-    "mmlu:0.0.1": MMLU_EVAL_SPEC_0_0_1,
     "swe-bench-verified": SWE_BENCH_VERIFIED_EVAL_SPEC_0_0_1,
-    "swe-bench-verified:0.0.1": SWE_BENCH_VERIFIED_EVAL_SPEC_0_0_1,
     "swe-bench": SWE_BENCH_EVAL_SPEC_0_0_1,
-    "swe-bench:0.0.1": SWE_BENCH_EVAL_SPEC_0_0_1,
     "toolbench": TOOLBENCH_EVAL_SPEC_0_0_1,
-    "toolbench:0.0.1": TOOLBENCH_EVAL_SPEC_0_0_1,
     "truthfulqa": TRUTHFULQA_EVAL_SPEC_0_0_1,
-    "truthfulqa:0.0.1": TRUTHFULQA_EVAL_SPEC_0_0_1,
 }
 
 
 def get_eval_spec(eval_id: str) -> EvalSpec | None:
-    """Get an eval specification by ID."""
-    return EVAL_CATALOG.get(eval_id)
+    """Get an eval specification by ID (accepts both bare and versioned refs)."""
+    spec = EVAL_CATALOG.get(eval_id)
+    if spec is not None:
+        return spec
+    base, _, ver = eval_id.rpartition(':')
+    if base and '.' in ver:
+        return EVAL_CATALOG.get(base)
+    return None
 
 
 def list_eval_specs() -> List[EvalSpec]:

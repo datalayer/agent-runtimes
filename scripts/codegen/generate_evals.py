@@ -135,15 +135,20 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         version = spec["version"]
         const_name = f"{eval_id.upper().replace('-', '_')}_EVAL_SPEC{version_suffix(version)}"
         lines.append(f'    "{eval_id}": {const_name},')
-        lines.append(f'    "{versioned_ref(eval_id, version)}": {const_name},')
     lines.extend(
         [
             "}",
             "",
             "",
             "def get_eval_spec(eval_id: str) -> EvalSpec | None:",
-            '    """Get an eval specification by ID."""',
-            "    return EVAL_CATALOG.get(eval_id)",
+            '    """Get an eval specification by ID (accepts both bare and versioned refs)."""',
+            "    spec = EVAL_CATALOG.get(eval_id)",
+            "    if spec is not None:",
+            "        return spec",
+            "    base, _, ver = eval_id.rpartition(':')",
+            "    if base and '.' in ver:",
+            "        return EVAL_CATALOG.get(base)",
+            "    return None",
             "",
             "",
             "def list_eval_specs() -> List[EvalSpec]:",
@@ -218,7 +223,6 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
         version = spec["version"]
         const_name = f"{eval_id.upper().replace('-', '_')}_EVAL_SPEC{version_suffix(version)}"
         lines.append(f"  '{eval_id}': {const_name},")
-        lines.append(f"  '{versioned_ref(eval_id, version)}': {const_name},")
     lines.extend(
         [
             "};",
@@ -227,8 +231,18 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
             "  return Object.values(EVAL_CATALOG);",
             "}",
             "",
+            "function resolveEvalId(evalId: string): string {",
+            "  if (evalId in EVAL_CATALOG) return evalId;",
+            "  const idx = evalId.lastIndexOf(':');",
+            "  if (idx > 0) {",
+            "    const base = evalId.slice(0, idx);",
+            "    if (base in EVAL_CATALOG) return base;",
+            "  }",
+            "  return evalId;",
+            "}",
+            "",
             "export function getEvalSpec(evalId: string): EvalSpec | undefined {",
-            "  return EVAL_CATALOG[evalId];",
+            "  return EVAL_CATALOG[resolveEvalId(evalId)];",
             "}",
             "",
         ]

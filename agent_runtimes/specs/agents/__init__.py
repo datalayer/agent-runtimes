@@ -19,7 +19,13 @@ AGENT_SPECS.update(ROOT_AGENTS)
 
 def get_agent_spec(agent_id: str) -> AgentSpec | None:
     """Get an agent specification by ID."""
-    return AGENT_SPECS.get(agent_id)
+    spec = AGENT_SPECS.get(agent_id)
+    if spec is not None:
+        return spec
+    base, _, ver = agent_id.rpartition(':')
+    if base and '.' in ver:
+        return AGENT_SPECS.get(base)
+    return None
 
 
 def list_agent_specs(prefix: str | None = None) -> list[AgentSpec]:

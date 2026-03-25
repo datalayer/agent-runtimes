@@ -153,21 +153,27 @@ export const WEBHOOK_NOTIFICATION_SPEC_0_0_1: NotificationChannelSpec = {
 
 export const NOTIFICATION_CATALOG: Record<string, NotificationChannelSpec> = {
   email: EMAIL_NOTIFICATION_SPEC_0_0_1,
-  'email:0.0.1': EMAIL_NOTIFICATION_SPEC_0_0_1,
   slack: SLACK_NOTIFICATION_SPEC_0_0_1,
-  'slack:0.0.1': SLACK_NOTIFICATION_SPEC_0_0_1,
   teams: TEAMS_NOTIFICATION_SPEC_0_0_1,
-  'teams:0.0.1': TEAMS_NOTIFICATION_SPEC_0_0_1,
   webhook: WEBHOOK_NOTIFICATION_SPEC_0_0_1,
-  'webhook:0.0.1': WEBHOOK_NOTIFICATION_SPEC_0_0_1,
 };
 
 export function getNotificationSpecs(): NotificationChannelSpec[] {
   return Object.values(NOTIFICATION_CATALOG);
 }
 
+function resolveNotificationId(channelId: string): string {
+  if (channelId in NOTIFICATION_CATALOG) return channelId;
+  const idx = channelId.lastIndexOf(':');
+  if (idx > 0) {
+    const base = channelId.slice(0, idx);
+    if (base in NOTIFICATION_CATALOG) return base;
+  }
+  return channelId;
+}
+
 export function getNotificationSpec(
   channelId: string,
 ): NotificationChannelSpec | undefined {
-  return NOTIFICATION_CATALOG[channelId];
+  return NOTIFICATION_CATALOG[resolveNotificationId(channelId)];
 }

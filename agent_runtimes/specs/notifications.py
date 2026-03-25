@@ -107,19 +107,21 @@ WEBHOOK_NOTIFICATION_SPEC_0_0_1 = NotificationChannelSpec(
 
 NOTIFICATION_CATALOG: Dict[str, NotificationChannelSpec] = {
     "email": EMAIL_NOTIFICATION_SPEC_0_0_1,
-    "email:0.0.1": EMAIL_NOTIFICATION_SPEC_0_0_1,
     "slack": SLACK_NOTIFICATION_SPEC_0_0_1,
-    "slack:0.0.1": SLACK_NOTIFICATION_SPEC_0_0_1,
     "teams": TEAMS_NOTIFICATION_SPEC_0_0_1,
-    "teams:0.0.1": TEAMS_NOTIFICATION_SPEC_0_0_1,
     "webhook": WEBHOOK_NOTIFICATION_SPEC_0_0_1,
-    "webhook:0.0.1": WEBHOOK_NOTIFICATION_SPEC_0_0_1,
 }
 
 
 def get_notification_spec(channel_id: str) -> NotificationChannelSpec | None:
-    """Get a notification channel specification by ID."""
-    return NOTIFICATION_CATALOG.get(channel_id)
+    """Get a notification channel specification by ID (accepts both bare and versioned refs)."""
+    spec = NOTIFICATION_CATALOG.get(channel_id)
+    if spec is not None:
+        return spec
+    base, _, ver = channel_id.rpartition(':')
+    if base and '.' in ver:
+        return NOTIFICATION_CATALOG.get(base)
+    return None
 
 
 def list_notification_specs() -> List[NotificationChannelSpec]:

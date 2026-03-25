@@ -7,14 +7,14 @@
  * Message part renderer component.
  * Routes message parts to appropriate display components based on type.
  *
- * @module components/chat/elements/MessagePart
+ * @module components/chat/parts/MessagePart
  */
 
 import type { UIDataTypes, UIMessagePart, UITools, UIMessage } from 'ai';
-import { TextPart } from '../parts/TextPart';
-import { ReasoningPart } from '../parts/ReasoningPart';
-import { ToolPart } from '../parts/ToolPart';
-import { DynamicToolPart } from '../parts/DynamicToolPart';
+import { TextPart } from './TextPart';
+import { ReasoningPart } from './ReasoningPart';
+import { ToolPart } from './ToolPart';
+import { DynamicToolPart } from './DynamicToolPart';
 
 /**
  * MessagePart props
