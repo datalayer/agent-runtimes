@@ -37,7 +37,7 @@ export interface ChatConfig {
   defaultProvider?: 'datalayer' | 'openai' | 'anthropic' | 'self-hosted';
 
   /** Default protocol type */
-  defaultProtocol?: 'ag-ui' | 'a2a' | 'acp' | 'mcp-ui';
+  defaultProtocol?: 'ag-ui' | 'vercel-ai' | 'a2a' | 'acp' | 'mcp-ui';
 
   /** API base URL for inference */
   apiBaseUrl?: string;
@@ -72,7 +72,7 @@ export interface ChatConfig {
  */
 export const defaultChatConfig: ChatConfig = {
   defaultProvider: 'datalayer',
-  defaultProtocol: 'ag-ui',
+  defaultProtocol: 'vercel-ai',
   enableStreaming: true,
   requireToolApproval: false,
   debug: false,

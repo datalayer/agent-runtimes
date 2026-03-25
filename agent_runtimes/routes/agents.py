@@ -308,7 +308,7 @@ class CreateAgentRequest(BaseModel):
         default="pydantic-ai", description="Agent library to use"
     )
     transport: Literal["ag-ui", "vercel-ai", "acp", "a2a"] = Field(
-        default="ag-ui", description="Transport protocol to use"
+        default="vercel-ai", description="Transport protocol to use"
     )
     model: str = Field(
         default=DEFAULT_MODEL.value,
@@ -480,7 +480,7 @@ async def create_agent(
             if not request.sandbox_variant and spec.sandbox_variant:
                 request.sandbox_variant = spec.sandbox_variant
             # Apply protocol/transport from spec when request keeps default
-            if request.transport == "ag-ui" and spec.protocol in {
+            if request.transport == "vercel-ai" and spec.protocol in {
                 "ag-ui",
                 "vercel-ai",
                 "acp",

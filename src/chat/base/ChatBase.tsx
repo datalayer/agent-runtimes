@@ -152,7 +152,7 @@ export function ChatBase(props: ChatBaseProps) {
 
   const protocol: ProtocolConfig | undefined = agentRuntimeConfig
     ? {
-        type: agentRuntimeConfig.protocol || 'ag-ui',
+        type: agentRuntimeConfig.protocol || 'vercel-ai',
         endpoint: agentRuntimeConfig.url,
         authToken: agentRuntimeConfig.authToken,
         agentId: agentRuntimeConfig.agentId,

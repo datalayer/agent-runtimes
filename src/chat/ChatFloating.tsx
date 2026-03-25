@@ -446,12 +446,24 @@ export function ChatFloating({
       endpoint.match(/^(https?:\/\/[^/]+)/)?.[1] ||
       '';
 
-    // Extract agentId from endpoint path (e.g., .../ag-ui/default/ -> default)
-    const agentIdMatch = endpoint.match(/\/ag-ui\/([^/]+)/);
+    // Detect protocol type from endpoint path
+    const protocolMatch = endpoint.match(
+      /\/api\/v1\/(ag-ui|vercel-ai|a2a|acp)\//,
+    );
+    const detectedType = (protocolMatch?.[1] ?? 'ag-ui') as
+      | 'ag-ui'
+      | 'vercel-ai'
+      | 'a2a'
+      | 'acp';
+
+    // Extract agentId from endpoint path
+    const agentIdMatch = endpoint.match(
+      /\/api\/v1\/(?:ag-ui|vercel-ai|a2a\/agents|acp\/ws)\/([^/]+)/,
+    );
     const extractedAgentId = agentIdMatch ? agentIdMatch[1] : undefined;
 
     return {
-      type: 'ag-ui' as const,
+      type: detectedType,
       endpoint,
       agentId: extractedAgentId,
       // Enable config query for model/tools/skills selector or token usage

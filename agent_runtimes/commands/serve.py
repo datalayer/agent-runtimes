@@ -182,7 +182,7 @@ def serve_server(
     generated_code_folder: Optional[str] = None,
     skills_folder: Optional[str] = None,
     sandbox_variant: Optional[str] = None,
-    protocol: Protocol = Protocol.ag_ui,
+    protocol: Protocol = Protocol.vercel_ai,
     find_free_port_flag: bool = False,
 ) -> int:
     """

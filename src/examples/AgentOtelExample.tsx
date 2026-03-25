@@ -62,7 +62,7 @@ const DATALAYER_RUN_URL_ENV: string =
  */
 const AGENT_BASE_URL_ENV: string = import.meta.env.VITE_BASE_URL || '';
 
-const DEFAULT_AGENT_TRANSPORT: Transport = 'ag-ui';
+const DEFAULT_AGENT_TRANSPORT: Transport = 'vercel-ai';
 const DEFAULT_AGENT_LIBRARY: AgentLibrary = 'pydantic-ai';
 
 // ─── Types ─────────────────────────────────────────────────────────────────

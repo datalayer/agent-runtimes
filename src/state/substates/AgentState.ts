@@ -135,6 +135,26 @@ export type AgentState = AgentRegistryState &
   AgentStoreState &
   AgentStoreActions;
 
+// ─── Helper: build the transport-specific endpoint URL ────────────────
+
+function getTransportEndpoint(
+  baseUrl: string,
+  transport: string,
+  agentId: string,
+): string {
+  switch (transport) {
+    case 'vercel-ai':
+      return `${baseUrl}/api/v1/vercel-ai/${agentId}`;
+    case 'a2a':
+      return `${baseUrl}/api/v1/a2a/agents/${agentId}/`;
+    case 'acp':
+      return `${baseUrl}/api/v1/acp/ws/${agentId}`;
+    case 'ag-ui':
+    default:
+      return `${baseUrl}/api/v1/ag-ui/${agentId}/`;
+  }
+}
+
 // ─── Helper: create agent on runtime ──────────────────────────────────
 
 async function createAgentOnRuntime(
@@ -142,6 +162,7 @@ async function createAgentOnRuntime(
   agentId: string,
   config: AgentConfig = {},
 ): Promise<Pick<AgentConnection, 'agentId' | 'endpoint' | 'isReady'>> {
+  const transport = config.transport || 'ag-ui';
   const response = await fetch(`${agentBaseUrl}/api/v1/agents`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -149,7 +170,7 @@ async function createAgentOnRuntime(
       name: config.name || agentId,
       description: config.description || 'AI assistant',
       agent_library: config.agentLibrary || 'pydantic-ai',
-      transport: config.transport || 'ag-ui',
+      transport,
       model:
         config.model || 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
       system_prompt: config.systemPrompt || 'You are a helpful AI assistant.',
@@ -158,7 +179,7 @@ async function createAgentOnRuntime(
 
   if (response.ok || response.status === 400) {
     // 400 means agent already exists, which is fine
-    const endpoint = `${agentBaseUrl}/api/v1/ag-ui/${agentId}/`;
+    const endpoint = getTransportEndpoint(agentBaseUrl, transport, agentId);
     return {
       agentId,
       endpoint,

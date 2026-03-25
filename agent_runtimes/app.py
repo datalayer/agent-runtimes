@@ -93,7 +93,7 @@ async def _create_and_register_cli_agent(
     skills: list[str],
     all_mcp_servers: list[Any],
     api_prefix: str,
-    protocol: str = "ag-ui",
+    protocol: str = "vercel-ai",
     sandbox_variant: str | None = None,
 ) -> dict[str, Any]:
     """
@@ -878,7 +878,10 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
                     if cli_mcp_servers_str
                     else []
                 )
-                protocol = os.environ.get("AGENT_RUNTIMES_PROTOCOL", "ag-ui")
+                protocol = os.environ.get(
+                    "AGENT_RUNTIMES_PROTOCOL",
+                    agent_spec.protocol or "vercel-ai",
+                )
                 no_catalog_mcp_servers = (
                     os.environ.get("AGENT_RUNTIMES_NO_CATALOG_MCP_SERVERS", "").lower()
                     == "true"

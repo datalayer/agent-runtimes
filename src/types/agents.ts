@@ -158,7 +158,7 @@ export const DEFAULT_AGENT_CONFIG: Required<AgentConfig> = {
   model: '',
   systemPrompt: 'You are a helpful AI assistant.',
   agentLibrary: 'pydantic-ai',
-  transport: 'ag-ui',
+  transport: 'vercel-ai',
 };
 
 /**
