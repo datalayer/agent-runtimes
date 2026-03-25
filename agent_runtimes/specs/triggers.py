@@ -9,32 +9,9 @@ This file is AUTO-GENERATED from YAML specifications.
 DO NOT EDIT MANUALLY - run 'make specs' to regenerate.
 """
 
-from typing import Dict, List, Literal, Optional
+from typing import Dict, List
 
-from pydantic import BaseModel, Field
-
-
-class TriggerField(BaseModel):
-    """Dynamic field definition for a trigger type."""
-
-    name: str = Field(..., description="Field key")
-    label: str = Field(..., description="Display label")
-    type: Literal["string", "boolean", "number"] = Field(..., description="Input type")
-    required: bool = Field(default=False, description="Whether field is required")
-    placeholder: Optional[str] = Field(default=None, description="UI placeholder")
-    help: Optional[str] = Field(default=None, description="Help text")
-    font: Optional[str] = Field(default=None, description="Suggested font style")
-
-
-class TriggerSpec(BaseModel):
-    """Trigger type specification."""
-
-    id: str = Field(..., description="Unique trigger identifier")
-    version: str = Field(default="0.0.1", description="Trigger version")
-    name: str = Field(..., description="Display name")
-    description: str = Field(default="", description="Trigger description")
-    type: Literal["once", "schedule", "event"] = Field(..., description="Trigger execution mode")
-    fields: List[TriggerField] = Field(default_factory=list, description="Trigger configuration fields")
+from agent_runtimes.types import TriggerField, TriggerSpec
 
 
 # ============================================================================

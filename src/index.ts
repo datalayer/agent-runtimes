@@ -20,7 +20,6 @@ export type {
   ConversationEntry,
   MCPServer,
   SkillSpec,
-  AgentSkillSpec,
   ToolSpec,
   ToolRuntimeSpec,
   AgentSpec,

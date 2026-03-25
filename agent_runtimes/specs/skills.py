@@ -10,26 +10,9 @@ DO NOT EDIT MANUALLY - run 'make specs' to regenerate.
 """
 
 import os
-from typing import Dict, List, Optional
+from typing import Dict, List
 
-from pydantic import BaseModel, Field
-
-
-class SkillSpec(BaseModel):
-    """Skill specification."""
-
-    id: str = Field(..., description="Skill identifier")
-    version: str = Field(default="0.0.1", description="Skill version")
-    name: str = Field(..., description="Display name")
-    description: str = Field(default="", description="Skill description")
-    module: str = Field(default="", description="Python module path")
-    envvars: List[str] = Field(default_factory=list, description="Required environment variables")
-    optional_env_vars: List[str] = Field(default_factory=list, description="Optional environment variables")
-    dependencies: List[str] = Field(default_factory=list, description="Python package dependencies")
-    tags: List[str] = Field(default_factory=list, description="Search/discovery tags")
-    icon: Optional[str] = Field(default=None, description="Icon identifier")
-    emoji: Optional[str] = Field(default=None, description="Emoji representation")
-    enabled: bool = Field(default=True, description="Whether skill is enabled")
+from agent_runtimes.types import SkillSpec
 
 
 # ============================================================================

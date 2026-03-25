@@ -9,26 +9,9 @@ This file is AUTO-GENERATED from YAML specifications.
 DO NOT EDIT MANUALLY - run 'make specs' to regenerate.
 """
 
-from typing import Dict, List, Optional
+from typing import Dict
 
-from pydantic import BaseModel, Field
-
-
-# ============================================================================
-# Environment Variable Specification
-# ============================================================================
-
-class EnvvarSpec(BaseModel):
-    """Environment variable specification."""
-
-    id: str = Field(..., description="Environment variable identifier")
-    version: str = Field(default="0.0.1", description="Environment variable version")
-    name: str = Field(..., description="Display name")
-    description: str = Field(default="", description="Environment variable description")
-    registrationUrl: Optional[str] = Field(default=None, description="Registration URL or docs link")
-    tags: List[str] = Field(default_factory=list, description="Search/discovery tags")
-    icon: Optional[str] = Field(default=None, description="Icon identifier")
-    emoji: Optional[str] = Field(default=None, description="Emoji representation")
+from agent_runtimes.types import EnvvarSpec
 
 
 # ============================================================================

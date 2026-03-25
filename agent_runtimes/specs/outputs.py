@@ -11,20 +11,7 @@ DO NOT EDIT MANUALLY - run 'make specs' to regenerate.
 
 from typing import Dict, List
 
-from pydantic import BaseModel, Field
-
-
-class OutputSpec(BaseModel):
-    """Output format specification."""
-
-    id: str = Field(..., description="Unique output identifier")
-    version: str = Field(default="0.0.1", description="Output version")
-    name: str = Field(..., description="Display name")
-    description: str = Field(default="", description="Output description")
-    icon: str = Field(default="", description="Icon identifier")
-    supports_template: bool = Field(default=False, description="Whether this output supports templating")
-    supports_storage: bool = Field(default=False, description="Whether this output can be persisted")
-    mime_types: List[str] = Field(default_factory=list, description="Supported MIME types")
+from agent_runtimes.types import OutputSpec
 
 
 # ============================================================================

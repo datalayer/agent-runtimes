@@ -9,24 +9,9 @@ This file is AUTO-GENERATED from YAML specifications.
 DO NOT EDIT MANUALLY - run 'make specs' to regenerate.
 """
 
-from typing import Dict, List, Literal
+from typing import Dict, List
 
-from pydantic import BaseModel, Field
-
-
-class EvalSpec(BaseModel):
-    """Evaluation benchmark specification."""
-
-    id: str = Field(..., description="Unique eval identifier")
-    version: str = Field(default="0.0.1", description="Eval version")
-    name: str = Field(..., description="Display name")
-    description: str = Field(default="", description="Eval description")
-    category: Literal["Coding", "Knowledge", "Reasoning", "Agentic", "Safety"] = Field(..., description="Eval category")
-    task_count: int = Field(..., ge=0, description="Number of benchmark tasks")
-    metric: str = Field(..., description="Primary evaluation metric")
-    source: str = Field(default="", description="Source URL or dataset reference")
-    difficulty: Literal["easy", "medium", "hard", "expert"] = Field(default="medium", description="Benchmark difficulty")
-    languages: List[str] = Field(default_factory=list, description="Target languages")
+from agent_runtimes.types import EvalSpec
 
 
 # ============================================================================

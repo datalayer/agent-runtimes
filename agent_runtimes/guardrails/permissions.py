@@ -11,7 +11,6 @@ Maps tool invocations to required permissions and blocks unauthorized calls.
 from __future__ import annotations
 
 import logging
-from typing import Any
 
 from .base import BaseGuardrail, GuardrailResult, GuardrailViolation
 

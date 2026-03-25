@@ -32,10 +32,3 @@ export interface SkillSpec {
   /** Whether the skill is enabled */
   enabled: boolean;
 }
-
-/**
- * Simplified skill reference used in AgentSpec.
- *
- * @deprecated Use SkillSpec instead.
- */
-export type AgentSkillSpec = SkillSpec;
