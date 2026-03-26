@@ -25,37 +25,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Box } from '@datalayer/primer-addons';
 import type { McpServerSelection } from '../types';
-
-export type { McpServerSelection };
-
-/**
- * MCP Server Tool configuration
- */
-interface MCPServerTool {
-  name: string;
-  description?: string;
-}
-
-/**
- * MCP Server configuration
- */
-interface MCPServer {
-  id: string;
-  name: string;
-  description?: string;
-  url?: string;
-  enabled: boolean;
-  tools: MCPServerTool[];
-  command?: string;
-  args?: string[];
-  requiredEnvVars?: string[];
-  isAvailable?: boolean;
-  transport?: string;
-  /** True if this server is from mcp.json config (not in catalog) */
-  isConfig?: boolean;
-  /** True if this server is currently running */
-  isRunning?: boolean;
-}
+import type { MCPServerManager as MCPServer } from '../types/mcp';
 
 export interface McpServerManagerProps {
   /** Base URL for the API */

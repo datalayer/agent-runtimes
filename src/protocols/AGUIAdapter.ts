@@ -10,9 +10,9 @@
  */
 
 import type { ProtocolAdapterConfig, AGUI } from '../types';
-import type { ChatMessage, ContentPart } from '../types/message';
+import type { ChatMessage, ContentPart } from '../types/messges';
 import type { ToolDefinition, ToolExecutionResult } from '../types/tools';
-import { generateMessageId, createAssistantMessage } from '../types/message';
+import { generateMessageId, createAssistantMessage } from '../types/messges';
 import { BaseProtocolAdapter } from './BaseProtocolAdapter';
 
 /**

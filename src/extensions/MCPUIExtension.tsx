@@ -11,7 +11,7 @@
  */
 
 import React from 'react';
-import type { ActivityRendererExtension } from '../types/extension';
+import type { ActivityRendererExtension } from '../types/extensions';
 
 /**
  * MCP-UI resource types

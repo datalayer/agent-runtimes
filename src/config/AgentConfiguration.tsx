@@ -29,11 +29,10 @@ import { Box } from '@datalayer/primer-addons';
 import type { ExampleAgent, MCPServerConfig } from '../types';
 import type { OAuthProvider, OAuthProviderConfig, Identity } from '../identity';
 import { IdentityCard, IdentityConnect, useIdentity } from '../identity';
-import type { McpServerSelection } from '../mcp';
 import type {
   AgentLibrary,
   Extension,
-  MCPServerTool as MCPServerToolType,
+  McpServerSelection,
   Protocol,
 } from '../types';
 
@@ -388,11 +387,6 @@ function IdentityConnectWithStatus({
     </Box>
   );
 }
-
-/**
- * MCP Server Tool type (re-exported from types.ts)
- */
-export type MCPServerTool = MCPServerToolType;
 
 export interface SkillOption {
   id: string;

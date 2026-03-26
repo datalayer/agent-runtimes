@@ -44,7 +44,7 @@ import {
   generateMessageId,
   createUserMessage,
   createAssistantMessage,
-} from '../types/message';
+} from '../types/messges';
 import {
   useChatKeyboardShortcuts,
   getShortcutDisplay,

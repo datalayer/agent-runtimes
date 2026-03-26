@@ -61,3 +61,32 @@ export interface AgentMCPServerToolConfig {
   approval_required?: boolean;
   [key: string]: unknown;
 }
+
+/**
+ * Lightweight MCP server tool shape used by MCP management views.
+ */
+export interface MCPServerManagerTool {
+  name: string;
+  description?: string;
+}
+
+/**
+ * MCP server shape used by MCP management views and /available endpoint payloads.
+ */
+export interface MCPServerManager {
+  id: string;
+  name: string;
+  description?: string;
+  url?: string;
+  enabled: boolean;
+  tools: MCPServerManagerTool[];
+  command?: string;
+  args?: string[];
+  requiredEnvVars?: string[];
+  isAvailable?: boolean;
+  transport?: string;
+  /** True if this server is from mcp.json config (not in catalog) */
+  isConfig?: boolean;
+  /** True if this server is currently running */
+  isRunning?: boolean;
+}

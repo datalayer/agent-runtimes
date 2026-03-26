@@ -11,7 +11,7 @@
  */
 
 import { AgentCard } from './a2a';
-import type { ChatMessage } from './message';
+import type { ChatMessage } from './messges';
 import type {
   ToolDefinition,
   ToolCallRequest,

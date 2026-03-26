@@ -11,7 +11,7 @@
 
 import { QueryClient } from '@tanstack/react-query';
 
-import type { ChatMessage, ContentPart } from '../types/message';
+import type { ChatMessage, ContentPart } from '../types/messges';
 import type { ProtocolAdapterConfig } from '../types/protocol';
 import {
   AGUIAdapter,

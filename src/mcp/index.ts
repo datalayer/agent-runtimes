@@ -4,7 +4,3 @@
  */
 
 export { McpServerManager } from './McpServerManager';
-export type {
-  McpServerSelection,
-  McpServerManagerProps,
-} from './McpServerManager';

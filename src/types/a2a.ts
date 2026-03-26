@@ -3,7 +3,7 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
-import { ChatMessage } from './message';
+import { ChatMessage } from './messges';
 
 /**
  * Agent card for A2A protocol

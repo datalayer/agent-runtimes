@@ -26,12 +26,12 @@ import { QueryClientProvider, QueryClientContext } from '@tanstack/react-query';
 import { PoweredByTag } from '../elements/PoweredByTag';
 import { useChatStore } from '../../store/chatStore';
 import { useConversationStore } from '../../store/conversationStore';
-import type { ChatMessage } from '../../types/message';
+import type { ChatMessage } from '../../types/messges';
 import {
   generateMessageId,
   createUserMessage,
   createAssistantMessage,
-} from '../../types/message';
+} from '../../types/messges';
 import type { ProtocolEvent } from '../../types/protocol';
 import type { BaseProtocolAdapter } from '../../protocols';
 

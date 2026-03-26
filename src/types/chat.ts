@@ -10,7 +10,7 @@
  */
 
 import type { ReactNode } from 'react';
-import type { ChatMessage } from './message';
+import type { ChatMessage } from './messges';
 import type { Protocol } from './protocol';
 import type { McpServerSelection } from './inference';
 import type { BuiltinTool } from './models';

@@ -470,7 +470,7 @@ import type { AgentSpec } from '"""
         code += skills_import_path
         code += "';\n"
         code += "import type { SkillSpec } from '"
-        code += skills_import_path
+        code += types_import_path
         code += "';\n"
 
     # Only add tool imports if needed

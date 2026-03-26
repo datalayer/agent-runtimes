@@ -9,7 +9,7 @@ import type { ToolSpec } from './tools';
 import type { AgentTriggerConfig } from './triggers';
 import type { AgentModelConfig } from './models';
 import type { AgentOutputConfig } from './outputs';
-import type { AgentGuardrailConfig } from './guardrails';
+import type { GuardrailSpec } from './guardrails';
 import type { AgentEvalConfig } from './evals';
 import type { AgentNotificationConfig } from './notifications';
 import type { AgentCodemodeConfig, AgentAdvancedConfig } from './config';
@@ -76,7 +76,7 @@ export interface AgentSpec {
   /** MCP server tool configurations with approval settings */
   mcpServerTools?: AgentMCPServerToolConfig[];
   /** Guardrail configurations */
-  guardrails?: AgentGuardrailConfig[];
+  guardrails?: GuardrailSpec[];
   /** Evaluation configurations */
   evals?: AgentEvalConfig[];
   /** Codemode configuration (enabled, token_reduction, speedup) */

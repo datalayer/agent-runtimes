@@ -88,51 +88,32 @@ export interface GuardrailContentSafety {
  */
 export interface GuardrailSpec {
   /** Unique guardrail identifier */
-  id: string;
+  id?: string;
   /** Version */
   version?: string;
   /** Display name */
-  name: string;
-  /** Description of the guardrail */
-  description: string;
-  /** Identity provider (e.g., 'datalayer', 'github', 'azure-ad', 'google') */
-  identity_provider: string;
-  /** Identity name within the provider */
-  identity_name: string;
-  /** Permission flags */
-  permissions: GuardrailPermissions;
-  /** Token usage limits */
-  token_limits: GuardrailTokenLimits;
-  /** Data scope restrictions */
-  data_scope?: GuardrailDataScope;
-  /** Data handling policies */
-  data_handling?: GuardrailDataHandling;
-  /** Approval policy */
-  approval_policy?: GuardrailApprovalPolicy;
-  /** Tool invocation limits */
-  tool_limits?: GuardrailToolLimits;
-  /** Audit trail configuration */
-  audit?: GuardrailAudit;
-  /** Content safety settings */
-  content_safety?: GuardrailContentSafety;
-}
-
-/**
- * Guardrail configuration for an agent spec.
- */
-export interface AgentGuardrailConfig {
-  id?: string;
   name?: string;
+  /** Description of the guardrail */
   description?: string;
+  /** Identity provider (e.g., 'datalayer', 'github', 'azure-ad', 'google') */
   identity_provider?: string;
+  /** Identity name within the provider */
   identity_name?: string;
-  permissions?: Record<string, boolean>;
-  token_limits?: Record<string, string>;
-  data_scope?: Record<string, unknown>;
-  data_handling?: Record<string, unknown>;
-  approval_policy?: Record<string, unknown>;
-  tool_limits?: Record<string, unknown>;
-  audit?: Record<string, unknown>;
-  content_safety?: Record<string, unknown>;
+  /** Permission flags */
+  permissions?: GuardrailPermissions | Record<string, boolean>;
+  /** Token usage limits */
+  token_limits?: GuardrailTokenLimits | Record<string, string>;
+  /** Data scope restrictions */
+  data_scope?: GuardrailDataScope | Record<string, unknown>;
+  /** Data handling policies */
+  data_handling?: GuardrailDataHandling | Record<string, unknown>;
+  /** Approval policy */
+  approval_policy?: GuardrailApprovalPolicy | Record<string, unknown>;
+  /** Tool invocation limits */
+  tool_limits?: GuardrailToolLimits | Record<string, unknown>;
+  /** Audit trail configuration */
+  audit?: GuardrailAudit | Record<string, unknown>;
+  /** Content safety settings */
+  content_safety?: GuardrailContentSafety | Record<string, unknown>;
   [key: string]: unknown;
 }

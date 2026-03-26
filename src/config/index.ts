@@ -16,6 +16,5 @@ export {
 export type {
   AgentConfigurationProps,
   SkillOption,
-  MCPServerTool,
   LibraryAgentSpec,
 } from './AgentConfiguration';

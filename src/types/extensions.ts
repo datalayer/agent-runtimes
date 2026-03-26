@@ -11,7 +11,7 @@
  */
 
 import type { ReactNode } from 'react';
-import type { ChatMessage } from './message';
+import type { ChatMessage } from './messges';
 import type { ToolRenderProps } from './tools';
 import type { ProtocolEvent } from './protocol';
 

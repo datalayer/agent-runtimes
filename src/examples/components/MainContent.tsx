@@ -6,10 +6,8 @@
 import React from 'react';
 import { Text } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
-import {
-  McpServerManager,
-  type McpServerSelection,
-} from '../../mcp/McpServerManager';
+import { McpServerManager } from '../../mcp/McpServerManager';
+import { McpServerSelection } from '../../types';
 
 export interface MainContentProps {
   /** Whether to show the welcome message */

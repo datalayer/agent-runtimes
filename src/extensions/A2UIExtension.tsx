@@ -13,9 +13,11 @@
 import React from 'react';
 import { A2UIViewer, initializeDefaultCatalog } from '@a2ui/react';
 import type { ComponentInstance } from '@a2ui/react';
-import type { ActivityRendererExtension } from '../types/extension';
-import type { A2UIExtension as A2UIExtensionNamespace } from '../types/extension';
-import type { ChatMessage } from '../types/message';
+import type { ChatMessage } from '../types/messges';
+import type {
+  ActivityRendererExtension,
+  A2UIExtension as A2UIExtensionNamespace,
+} from '../types/extensions';
 
 initializeDefaultCatalog();
 

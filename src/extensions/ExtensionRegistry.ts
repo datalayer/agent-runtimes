@@ -17,7 +17,7 @@ import type {
   ToolUIExtension,
   ProtocolEventExtension,
   PanelExtension,
-} from '../types/extension';
+} from '../types/extensions';
 
 /** Internal extension type for registry organization */
 export type InternalExtensionType =
@@ -177,9 +177,3 @@ export class ExtensionRegistry {
     }
   }
 }
-
-// Re-export the helper functions from types/extension
-export {
-  createMessageRenderer,
-  createActivityRenderer,
-} from '../types/extension';

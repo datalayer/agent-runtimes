@@ -28,7 +28,7 @@ import type {
   RenderToolResult,
   RespondCallback,
 } from '../../types/chat';
-import type { ChatMessage } from '../../types/message';
+import type { ChatMessage } from '../../types/messges';
 
 // ---------------------------------------------------------------------------
 // Props

@@ -12,13 +12,13 @@
 
 import { useCallback, useMemo } from 'react';
 import { useChatStore } from '../store';
-import type { ChatMessage } from '../types/message';
+import type { ChatMessage } from '../types/messges';
 import type { InferenceRequestOptions } from '../types/inference';
 import {
   createUserMessage,
   createAssistantMessage,
   generateMessageId,
-} from '../types/message';
+} from '../types/messges';
 import { sanitizeAssistantContent } from '../utils';
 
 /**

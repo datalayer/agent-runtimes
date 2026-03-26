@@ -49,8 +49,8 @@ import {
 import { SparklesIcon } from '@datalayer/icons-react';
 import type { Protocol, ProtocolEvent } from '../types/protocol';
 import { AGUIAdapter, type BaseProtocolAdapter } from '../protocols';
-import type { ChatMessage } from '../types/message';
-import { generateMessageId } from '../types/message';
+import type { ChatMessage } from '../types/messges';
+import { generateMessageId } from '../types/messges';
 import { sanitizeAssistantContent } from '../utils';
 
 /**

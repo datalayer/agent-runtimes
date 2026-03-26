@@ -15,7 +15,7 @@ import { Text, RelativeTime } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { PersonIcon, ToolsIcon } from '@primer/octicons-react';
 import { AiAgentIcon } from '@datalayer/icons-react';
-import type { ChatMessage, ContentPart } from '../../types/message';
+import type { ChatMessage, ContentPart } from '../../types/messges';
 import type { ExtensionRegistry } from '../../extensions/ExtensionRegistry';
 import {
   useChatMessages,

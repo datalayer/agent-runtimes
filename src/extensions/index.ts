@@ -9,11 +9,7 @@
  * @module components/extensions
  */
 
-export {
-  ExtensionRegistry,
-  createMessageRenderer,
-  createActivityRenderer,
-} from './ExtensionRegistry';
+export { ExtensionRegistry } from './ExtensionRegistry';
 export type { InternalExtensionType } from './ExtensionRegistry';
 
 export {
@@ -28,15 +24,3 @@ export {
   type MCPUIMessage,
   type MCPUIResource,
 } from './MCPUIExtension';
-
-// Re-export extension types
-export type {
-  ChatExtension,
-  ExtensionType,
-  MessageRendererExtension,
-  ActivityRendererExtension,
-  ToolUIExtension,
-  ProtocolEventExtension,
-  PanelExtension,
-  A2UIExtension,
-} from '../types/extension';

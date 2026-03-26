@@ -180,7 +180,7 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
         " * DO NOT EDIT MANUALLY - run 'make specs' to regenerate.",
         " */",
         "",
-        "import type { ToolRuntimeSpec, ToolSpec } from '../types';",
+        "import type { ToolSpec } from '../types';",
         "",
         "// " + "=" * 76,
         "// Tool Definitions",
