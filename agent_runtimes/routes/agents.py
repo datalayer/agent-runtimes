@@ -2656,11 +2656,13 @@ async def configure_from_spec_endpoint(
             http_request,
         )
         logger.info("Agent '%s' created from spec and registered", body.agent_spec_id)
+        created_id = getattr(created, "id", body.agent_spec_id)
+        created_model = getattr(created, "model", spec.model or DEFAULT_MODEL)
         return {
             "success": True,
-            "agent_id": created.get("id", body.agent_spec_id),
-            "model": created.get("model", spec.model or DEFAULT_MODEL),
-            "message": f"Agent '{agent_id}' configured from spec.",
+            "agent_id": created_id,
+            "model": created_model,
+            "message": f"Agent '{body.agent_spec_id}' configured from spec.",
         }
 
     except Exception as e:
