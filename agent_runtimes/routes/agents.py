@@ -2491,12 +2491,18 @@ async def configure_from_spec_endpoint(
 
     # Delegate to the canonical create flow. Defaults from the library spec
     # and optional forwarded agent_spec are applied in create_agent().
+    #
+    # Propagate the server-level codemode flag so that sandbox creation
+    # (which is gated on enable_codemode) respects the --codemode startup flag
+    # even when the forwarded agent_spec has no explicit codemode block.
+    server_codemode = os.environ.get("AGENT_RUNTIMES_CODEMODE", "").lower() == "true"
     try:
         created = await create_agent(
             CreateAgentRequest(
                 name=body.agent_spec_id,
                 agent_spec_id=body.agent_spec_id,
                 agent_spec=body.agent_spec,
+                enable_codemode=server_codemode,
             ),
             http_request,
         )
