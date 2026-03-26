@@ -379,7 +379,7 @@ const AgentSkillsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
               {
                 title: 'Crawl a webpage',
                 message:
-                  'Use the crawl skill to fetch the content of https://example.com and summarize it.',
+                  'Use the crawl skill to fetch the content of https://datalayer.ai and summarize it.',
               },
               {
                 title: 'Summarize text',

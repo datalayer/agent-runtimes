@@ -616,6 +616,9 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
                 });
 
                 pendingToolInputs.delete(toolCallId);
+                // Server already executed this tool — remove from pending
+                // frontend tool calls so emitDoneOnce is not blocked.
+                this.pendingToolCalls.delete(toolCallId);
               } else if (
                 event.type === 'tool-output-error' ||
                 event.type === 'tool-error'
@@ -630,6 +633,10 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
                   event.errorText ||
                   event.message ||
                   'Tool error';
+
+                // Server handled the error — clear from pending frontend
+                // tool calls so emitDoneOnce is not blocked.
+                this.pendingToolCalls.delete(toolCallId);
 
                 this.emit({
                   type: 'tool-result',
