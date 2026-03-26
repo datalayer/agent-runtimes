@@ -9,7 +9,7 @@ import type {
   ExampleAgent,
   ExampleAgentStatus,
   ExampleAgentsState,
-  TransportType,
+  Protocol,
 } from '../../types';
 
 // Import agent examples data files.
@@ -31,7 +31,7 @@ const transformAgentData = (
   lastEdited: data.editTimestamp,
   screenshot: data.image,
   status: data.status as ExampleAgentStatus | undefined,
-  transport: data.transport as TransportType,
+  transport: data.transport as Protocol,
   avatarUrl: data.avatarUrl,
   notebookFile: `${notebookSuffix}.ipynb.json`,
   lexicalFile: `${lexicalSuffix}.lexical.json`,

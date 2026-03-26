@@ -11,22 +11,22 @@
 
 import { QueryClient } from '@tanstack/react-query';
 
-import type { ChatMessage, ContentPart } from '../../types/message';
-import type { ProtocolAdapterConfig } from '../../types/protocol';
+import type { ChatMessage, ContentPart } from '../types/message';
+import type { ProtocolAdapterConfig } from '../types/protocol';
 import {
   AGUIAdapter,
   A2AAdapter,
   VercelAIAdapter,
   ACPAdapter,
   type BaseProtocolAdapter,
-} from '../../protocols';
+} from '../protocols';
 
 import type {
   ToolCallMessage,
   DisplayItem,
   DisplayToolCallStatus,
   ProtocolConfig,
-} from '../../types/chat';
+} from '../types/chat';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -235,7 +235,7 @@ export function createProtocolAdapter(
   config: ProtocolConfig,
 ): BaseProtocolAdapter | null {
   const adapterConfig: ProtocolAdapterConfig = {
-    type: config.type,
+    protocol: config.type,
     baseUrl: config.endpoint,
     authToken: config.authToken,
     agentId: config.agentId,

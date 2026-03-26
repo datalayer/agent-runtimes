@@ -47,11 +47,11 @@ import {
   XIcon,
 } from '@primer/octicons-react';
 import { SparklesIcon } from '@datalayer/icons-react';
-import type { TransportType, ProtocolEvent } from '../types/protocol';
+import type { Protocol, ProtocolEvent } from '../types/protocol';
 import { AGUIAdapter, type BaseProtocolAdapter } from '../protocols';
 import type { ChatMessage } from '../types/message';
 import { generateMessageId } from '../types/message';
-import { sanitizeAssistantContent } from './utils';
+import { sanitizeAssistantContent } from '../utils';
 
 /**
  * AI action option type
@@ -152,7 +152,7 @@ type ChatInlineState = 'initial' | 'loading' | 'complete';
  */
 export interface ChatInlineProtocolConfig {
   /** Protocol type (ag-ui, vercel-ai, etc.) */
-  type: TransportType;
+  type: Protocol;
   /** Endpoint URL */
   endpoint: string;
   /** Authentication token */
@@ -238,7 +238,7 @@ export function ChatInline({
     if (!protocol) return;
 
     const adapter = new AGUIAdapter({
-      type: protocol.type,
+      protocol: protocol.type,
       baseUrl: protocol.endpoint,
       authToken: protocol.authToken,
       agentId: protocol.agentId,

@@ -11,7 +11,7 @@
 
 import type { ReactNode } from 'react';
 import type { ChatMessage } from './message';
-import type { TransportType } from './protocol';
+import type { Protocol } from './protocol';
 import type { McpServerSelection } from './inference';
 import type { BuiltinTool } from './models';
 import type { MCPServerTool } from './mcp';
@@ -258,7 +258,7 @@ export interface RemoteConfig {
  */
 export interface ProtocolConfig {
   /** Protocol/transport type */
-  type: TransportType;
+  type: Protocol;
   /** Endpoint URL */
   endpoint: string;
   /** Authentication token */

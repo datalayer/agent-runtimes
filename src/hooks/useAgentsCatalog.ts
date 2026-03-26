@@ -17,8 +17,7 @@ import { create } from 'zustand';
 import { useCoreStore, useDatalayer } from '@datalayer/core';
 import { URLExt } from '@jupyterlab/coreutils';
 import { useAgentStore } from '../state/substates/AgentState';
-import type { AgentRuntimeData } from '../types/agents';
-import type { AgentSpec } from '../types';
+import type { AgentRuntimeData, AgentSpec } from '../types';
 import { listAgentSpecs } from '../specs';
 
 // ═══════════════════════════════════════════════════════════════════════════

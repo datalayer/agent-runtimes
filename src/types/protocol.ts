@@ -10,6 +10,7 @@
  * @module types/protocol
  */
 
+import { AgentCard } from './a2a';
 import type { ChatMessage } from './message';
 import type {
   ToolDefinition,
@@ -18,19 +19,9 @@ import type {
 } from './tools';
 
 /**
- * Supported transport types (communication transports)
+ * Supported protocol (communication protocols with agent backends)
  */
-export type TransportType = 'ag-ui' | 'a2a' | 'acp' | 'vercel-ai';
-
-/**
- * UI format for interactive elements
- */
-export type Extension = 'mcp-ui' | 'a2ui';
-
-/**
- * Protocol transport mechanism
- */
-export type ProtocolTransport = 'sse' | 'websocket' | 'http';
+export type Protocol = 'ag-ui' | 'a2a' | 'acp' | 'vercel-ai';
 
 /**
  * Protocol connection state
@@ -43,11 +34,21 @@ export type ProtocolConnectionState =
   | 'reconnecting';
 
 /**
+ * Protocol transport mechanism
+ */
+export type ProtocolTransport = 'sse' | 'websocket' | 'http';
+
+/**
+ * UI format for interactive elements
+ */
+export type Extension = 'mcp-ui' | 'a2ui';
+
+/**
  * Transport adapter configuration
  */
 export interface ProtocolAdapterConfig {
   /** Transport type */
-  type: TransportType;
+  protocol: Protocol;
 
   /** Base URL for the protocol endpoint */
   baseUrl: string;
@@ -73,20 +74,6 @@ export interface ProtocolAdapterConfig {
   /** Additional protocol-specific options */
   options?: Record<string, unknown>;
 }
-
-/**
- * Protocol event types
- */
-export type ProtocolEventType =
-  | 'connected'
-  | 'disconnected'
-  | 'message'
-  | 'tool-call'
-  | 'tool-result'
-  | 'activity'
-  | 'state-update'
-  | 'done'
-  | 'error';
 
 /**
  * Token usage statistics from a protocol event
@@ -117,36 +104,30 @@ export interface ProtocolEvent {
 }
 
 /**
+ * Protocol event types
+ */
+export type ProtocolEventType =
+  | 'connected'
+  | 'disconnected'
+  | 'message'
+  | 'tool-call'
+  | 'tool-result'
+  | 'activity'
+  | 'state-update'
+  | 'done'
+  | 'error';
+
+/**
  * Callback for handling protocol events
  */
 export type ProtocolEventHandler = (event: ProtocolEvent) => void;
-
-/**
- * Agent card for A2A protocol
- */
-export interface AgentCard {
-  name: string;
-  description?: string;
-  url: string;
-  version?: string;
-  capabilities?: {
-    streaming?: boolean;
-    extensions?: string[];
-  };
-  skills?: Array<{
-    id: string;
-    name: string;
-    description?: string;
-    examples?: string[];
-  }>;
-}
 
 /**
  * Abstract protocol adapter interface
  */
 export interface ProtocolAdapter {
   /** Transport type */
-  readonly type: TransportType;
+  readonly type: Protocol;
 
   /** Transport mechanism used */
   readonly transport: ProtocolTransport;
@@ -229,70 +210,4 @@ export interface ProtocolMessageConverter {
 
   /** Convert protocol message to internal format */
   fromProtocol(data: unknown): ChatMessage | null;
-}
-
-/**
- * AG-UI specific types
- */
-export namespace AGUI {
-  export interface RunAgentInput {
-    threadId: string;
-    runId: string;
-    messages: ChatMessage[];
-    state: Record<string, unknown> | null;
-    tools: ToolDefinition[];
-    context: Array<{ type: string; content: string }>;
-    forwardedProps: Record<string, unknown> | null;
-    /** Optional model override for per-request model selection */
-    model?: string;
-  }
-
-  export interface Event {
-    type: string;
-    data?: unknown;
-  }
-}
-
-/**
- * A2A specific types
- */
-export namespace A2A {
-  export interface Task {
-    id: string;
-    status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
-    messages: ChatMessage[];
-    result?: unknown;
-  }
-
-  export interface Message {
-    role: string;
-    parts: Array<{
-      type: string;
-      text?: string;
-      data?: unknown;
-    }>;
-  }
-}
-
-/**
- * ACP specific types (WebSocket-based)
- */
-export namespace ACP {
-  export interface JsonRpcRequest {
-    jsonrpc: '2.0';
-    method: string;
-    params?: unknown;
-    id: string | number;
-  }
-
-  export interface JsonRpcResponse {
-    jsonrpc: '2.0';
-    result?: unknown;
-    error?: {
-      code: number;
-      message: string;
-      data?: unknown;
-    };
-    id: string | number;
-  }
 }

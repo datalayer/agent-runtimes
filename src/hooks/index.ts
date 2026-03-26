@@ -118,7 +118,6 @@ export {
   useLifecycleRunningAgents,
   getAgentLifecycleKey,
   type UseAgentsRuntimesReturn,
-  type AgentRuntimeData,
   type CreateAgentRuntimeRequest,
   type CreateRuntimeApiResponse,
   type AgentLifecycleRecord,
@@ -170,8 +169,8 @@ export {
 } from './useToolApprovals';
 
 export {
-  useAgentsNotifications,
-  useNotifications,
+  useNotifications as useAgentsNotifications,
+  useFilteredNotifications as useNotifications,
   useUnreadNotificationCount,
   useMarkNotificationRead,
   useMarkAllNotificationsRead,

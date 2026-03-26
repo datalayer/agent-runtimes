@@ -20,21 +20,3 @@ export {
   type ACPAgent,
   type ACPPendingPermission,
 } from './ACPAdapter';
-
-// Re-export protocol types
-export type {
-  ProtocolAdapter,
-  ProtocolAdapterConfig,
-  ProtocolAdapterFactory,
-  TransportType,
-  ProtocolTransport,
-  ProtocolConnectionState,
-  ProtocolEvent,
-  ProtocolEventType,
-  ProtocolEventHandler,
-  ProtocolMessageConverter,
-  AgentCard,
-  AGUI,
-  A2A,
-  ACP,
-} from '../types/protocol';

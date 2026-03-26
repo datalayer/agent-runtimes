@@ -3,7 +3,7 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
-import type { TransportType } from './protocol';
+import type { Protocol } from './protocol';
 import type { AgentValidationConfig } from './execution';
 
 /**
@@ -17,7 +17,7 @@ export interface AgentRuntimeConfig {
   /** Optional authentication token */
   authToken?: string;
   /** Optional protocol type (defaults handled by consumers) */
-  protocol?: TransportType;
+  protocol?: Protocol;
 }
 
 /**

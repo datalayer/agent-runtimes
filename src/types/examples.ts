@@ -3,7 +3,7 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
-import { TransportType } from './protocol';
+import { Protocol } from './protocol';
 
 /**
  * Status of an example agent (for UI demos).
@@ -23,7 +23,7 @@ export interface ExampleAgent {
   lastEdited: string;
   screenshot: string;
   status?: ExampleAgentStatus;
-  transport: TransportType;
+  transport: Protocol;
   avatarUrl: string;
   notebookFile: string;
   lexicalFile: string;

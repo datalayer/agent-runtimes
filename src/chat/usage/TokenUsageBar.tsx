@@ -16,7 +16,7 @@ import { Text } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import ReactECharts from 'echarts-for-react';
 
-import { formatTokenCount } from '../utils';
+import { formatTokenCount } from '../../utils';
 import type { ContextSnapshotData } from '../../types/context';
 
 // ---------------------------------------------------------------------------

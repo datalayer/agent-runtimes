@@ -18,6 +18,8 @@ import type { ServiceManager } from '@jupyterlab/services';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import { useCoreStore, useDatalayer } from '@datalayer/core';
+import { useIAMStore } from '@datalayer/core/lib/state';
 import {
   useAgentStore,
   useAgentRuntime,
@@ -25,16 +27,13 @@ import {
   useAgentError,
   useIsLaunching,
 } from '../state/substates/AgentState';
-import { useCoreStore, useDatalayer } from '@datalayer/core';
-import { useIAMStore } from '@datalayer/core/lib/state';
+import { DEFAULT_AGENT_CONFIG } from '../types/agents';
 import type {
   AgentStatus,
   AgentConnection,
   AgentConfig,
   AgentRuntimeData,
 } from '../types/agents';
-export type { AgentRuntimeData } from '../types/agents';
-import { DEFAULT_AGENT_CONFIG } from '../types/agents';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Runtime Types
@@ -92,46 +91,29 @@ export const agentQueryKeys = {
 // Helpers
 // ═══════════════════════════════════════════════════════════════════════════
 
-/**
- * Normalize a raw backend status or phase string to a canonical AgentStatus.
- *
- * The backend may send the lifecycle state as either `status` or `phase`
- * (they mean the same thing). Pass both; the explicit `status` wins.
- */
-function normalizeStatus(status?: string, phase?: string): AgentStatus {
-  const raw = status || phase;
-  if (!raw) return 'running';
-  switch (raw.toLowerCase()) {
-    case 'resume':
-    case 'resumed':
-      return 'resumed';
-    case 'resuming':
-      return 'resuming';
-    case 'pausing':
-      return 'pausing';
-    case 'paused':
-      return 'paused';
-    case 'starting':
-    case 'pending':
-    case 'launching':
-      return 'starting';
-    case 'terminated':
-      return 'terminated';
-    case 'archived':
-      return 'archived';
-    case 'running':
-    default:
-      return 'running';
-  }
-}
+const RUNTIME_STATUS_MAP: Record<string, AgentStatus> = {
+  resume: 'resumed',
+  resumed: 'resumed',
+  resuming: 'resuming',
+  pausing: 'pausing',
+  paused: 'paused',
+  starting: 'starting',
+  pending: 'starting',
+  launching: 'starting',
+  terminated: 'terminated',
+  archived: 'archived',
+  running: 'running',
+};
 
 /**
  * Map a raw backend runtime record to AgentRuntimeData.
  */
 function toAgentRuntimeData(raw: Record<string, any>): AgentRuntimeData {
+  const status = typeof raw.status === 'string' ? raw.status.toLowerCase() : '';
+  const normalizedStatus: AgentStatus = RUNTIME_STATUS_MAP[status] ?? 'running';
   return {
     ...raw,
-    status: normalizeStatus(raw.status, raw.phase),
+    status: normalizedStatus,
     name: raw.given_name || raw.pod_name,
     id: raw.pod_name,
     url: raw.ingress,
@@ -481,16 +463,23 @@ export function useAgents(options: UseAgentOptions = {}): UseAgentReturn {
         // Ensure auto-create fires for this reconnected runtime.
         hasCreatedAgentRef.current = false;
 
-        const resolvedStatus = normalizeStatus(
-          (latestRuntime as Record<string, any>).status,
-          (latestRuntime as Record<string, any>).phase,
-        );
+        const latestRuntimeRecord = latestRuntime as { status?: unknown };
+        const latestRuntimeStatus =
+          typeof latestRuntimeRecord.status === 'string'
+            ? latestRuntimeRecord.status.toLowerCase()
+            : '';
+        const normalizedLatestStatus: AgentStatus =
+          RUNTIME_STATUS_MAP[latestRuntimeStatus] ?? 'running';
+        const resolvedStatus: AgentStatus =
+          normalizedLatestStatus === 'paused'
+            ? 'paused'
+            : normalizedLatestStatus === 'resuming' ||
+                normalizedLatestStatus === 'resumed'
+              ? 'resumed'
+              : 'running';
         if (resolvedStatus === 'paused') {
           setDurableStatus('paused');
-        } else if (
-          resolvedStatus === 'resuming' ||
-          resolvedStatus === 'resumed'
-        ) {
+        } else if (resolvedStatus === 'resumed') {
           setDurableStatus('resumed');
         } else {
           setDurableStatus('ready');
@@ -586,7 +575,7 @@ export function useAgents(options: UseAgentOptions = {}): UseAgentReturn {
  * Hook to fetch user's agent runtimes (running agent instances).
  *
  * The backend returns active runtimes from the operator **plus** paused
- * runtimes synthesised from Solr checkpoint records (with ``phase="Paused"``).
+ * runtimes synthesised from Solr checkpoint records (with ``status="paused"``).
  */
 export function useAgentRuntimes() {
   const { configuration } = useCoreStore();

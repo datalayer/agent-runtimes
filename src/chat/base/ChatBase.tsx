@@ -51,7 +51,7 @@ import {
   createProtocolAdapter,
   getApiBaseFromConfig,
   sanitizeAssistantContent,
-} from '../utils';
+} from '../../utils';
 import {
   useConfig,
   useSkills,
@@ -134,7 +134,7 @@ export type {
   AgentRuntimeConfig,
 } from '../../types';
 
-export { isToolCallMessage, getMessageText } from '../utils';
+export { isToolCallMessage, getMessageText } from '../../utils';
 
 // ---------------------------------------------------------------------------
 // ChatBase (outer wrapper — ensures QueryClient is available)

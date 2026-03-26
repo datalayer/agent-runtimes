@@ -5,7 +5,7 @@
 
 import { useContext } from 'react';
 import { useQuery, QueryClientContext } from '@tanstack/react-query';
-import { getApiBaseFromConfig } from '../chat/utils';
+import { getApiBaseFromConfig } from '../utils';
 import type { ContextSnapshotData } from '../types/context';
 
 /**

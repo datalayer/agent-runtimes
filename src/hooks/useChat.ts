@@ -19,7 +19,7 @@ import {
   createAssistantMessage,
   generateMessageId,
 } from '../types/message';
-import { sanitizeAssistantContent } from '../chat/utils';
+import { sanitizeAssistantContent } from '../utils';
 
 /**
  * Return type for useChat hook

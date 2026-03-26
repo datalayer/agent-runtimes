@@ -30,7 +30,7 @@ import {
   type ToolCallUpdate,
 } from '@agentclientprotocol/sdk';
 
-import type { ProtocolAdapterConfig, ACP } from '../types/protocol';
+import type { ProtocolAdapterConfig, ACP } from '../types';
 import type { ChatMessage } from '../types/message';
 import type { ToolDefinition, ToolExecutionResult } from '../types/tools';
 import { generateMessageId, createAssistantMessage } from '../types/message';

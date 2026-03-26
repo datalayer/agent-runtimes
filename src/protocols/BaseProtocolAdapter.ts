@@ -12,13 +12,13 @@
 import type {
   ProtocolAdapter,
   ProtocolAdapterConfig,
-  TransportType,
+  Protocol,
   ProtocolTransport,
   ProtocolConnectionState,
   ProtocolEvent,
   ProtocolEventHandler,
   AgentCard,
-} from '../types/protocol';
+} from '../types';
 import type { ChatMessage } from '../types/message';
 import type { ToolDefinition, ToolExecutionResult } from '../types/tools';
 
@@ -26,7 +26,7 @@ import type { ToolDefinition, ToolExecutionResult } from '../types/tools';
  * Abstract base class for protocol adapters
  */
 export abstract class BaseProtocolAdapter implements ProtocolAdapter {
-  abstract readonly type: TransportType;
+  abstract readonly type: Protocol;
   abstract readonly transport: ProtocolTransport;
 
   protected config: ProtocolAdapterConfig;

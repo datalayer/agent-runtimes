@@ -19,21 +19,21 @@ import type { NotificationFilters } from '../api/types';
 
 // ─── Auth helpers ────────────────────────────────────────────────────
 
-function useDashboardAuthToken(): string {
+function useAuthToken(): string {
   const token = useIAMStore((s: any) => s.token);
   return token ?? '';
 }
 
-function useDashboardBaseUrl(): string {
+function useBaseUrl(): string {
   const config = useCoreStore((s: any) => s.configuration);
   return config?.aiagentsRunUrl ?? DEFAULT_SERVICE_URLS.AI_AGENTS;
 }
 
 // ─── Base hooks ──────────────────────────────────────────────────────
 
-export function useNotifications(filters?: NotificationFilters) {
-  const token = useDashboardAuthToken();
-  const baseUrl = useDashboardBaseUrl();
+export function useFilteredNotifications(filters?: NotificationFilters) {
+  const token = useAuthToken();
+  const baseUrl = useBaseUrl();
 
   return useQuery({
     queryKey: ['agent-notifications', filters],
@@ -46,8 +46,8 @@ export function useNotifications(filters?: NotificationFilters) {
 }
 
 export function useUnreadNotificationCount() {
-  const token = useDashboardAuthToken();
-  const baseUrl = useDashboardBaseUrl();
+  const token = useAuthToken();
+  const baseUrl = useBaseUrl();
 
   return useQuery({
     queryKey: ['agent-notifications', 'unread-count'],
@@ -59,8 +59,8 @@ export function useUnreadNotificationCount() {
 }
 
 export function useMarkNotificationRead() {
-  const token = useDashboardAuthToken();
-  const baseUrl = useDashboardBaseUrl();
+  const token = useAuthToken();
+  const baseUrl = useBaseUrl();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -73,8 +73,8 @@ export function useMarkNotificationRead() {
 }
 
 export function useMarkAllNotificationsRead() {
-  const token = useDashboardAuthToken();
-  const baseUrl = useDashboardBaseUrl();
+  const token = useAuthToken();
+  const baseUrl = useBaseUrl();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -87,8 +87,8 @@ export function useMarkAllNotificationsRead() {
 
 // ─── Composite hook ──────────────────────────────────────────────────
 
-export function useAgentsNotifications(filters?: NotificationFilters) {
-  const notificationsQuery = useNotifications(filters);
+export function useNotifications(filters?: NotificationFilters) {
+  const notificationsQuery = useFilteredNotifications(filters);
   const unreadCountQuery = useUnreadNotificationCount();
   const markRead = useMarkNotificationRead();
   const markAllRead = useMarkAllNotificationsRead();

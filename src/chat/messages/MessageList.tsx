@@ -20,7 +20,7 @@ import {
 } from '../styles/streamdownStyles';
 import { ToolCallDisplay } from '../tools/ToolCallDisplay';
 
-import { isToolCallMessage, getMessageText } from '../utils';
+import { isToolCallMessage, getMessageText } from '../../utils';
 import type {
   DisplayItem,
   ToolCallMessage,
