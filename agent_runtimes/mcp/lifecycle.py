@@ -347,6 +347,11 @@ class MCPLifecycleManager:
 
                 if extra_env:
                     env.update(extra_env)
+                    for k, v in extra_env.items():
+                        stripped = v[:5] + "..." if len(v) > 5 else v
+                        logger.info(
+                            f"  [mcp/lifecycle] extra env var for '{server_id}': {k} = {stripped}"
+                        )
                     logger.debug(
                         f"  Merged {len(extra_env)} extra env var(s): "
                         f"{list(extra_env.keys())}"

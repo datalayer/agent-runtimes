@@ -1849,6 +1849,12 @@ async def _start_mcp_servers_for_agent(
 
     logger.info(f"_start_mcp_servers_for_agent: Starting for agent '{agent_id}'")
     logger.info(f"_start_mcp_servers_for_agent: Adapter type: {type(adapter).__name__}")
+    if env_vars:
+        for ev in env_vars:
+            stripped = ev.value[:5] + "..." if len(ev.value) > 5 else ev.value
+            logger.info(f"_start_mcp_servers_for_agent: env var: {ev.name} = {stripped}")
+    else:
+        logger.info("_start_mcp_servers_for_agent: no env vars provided")
 
     # Get the agent's selected MCP servers
     selected_servers: list[Any] = []
@@ -2059,6 +2065,111 @@ async def _start_mcp_servers_for_agent(
     return started, already_running, failed, codemode_rebuilt
 
 
+async def _setup_env_and_sandbox(
+    body: StartAgentMcpServersRequest,
+    request: Request,
+    agent_id: str | None = None,
+) -> tuple[bool, str | None, str | None]:
+    """
+    Shared helper: set process env vars and configure sandbox from request body.
+
+    Environment variables are propagated to:
+      1. MCP server subprocesses (npx, uvx, docker) via extra_env
+         passed explicitly to lifecycle_manager.start_server()
+      2. The Jupyter kernel via _inject_env_vars() in the sandbox
+         manager (runs ``import os; os.environ[k] = v`` in the kernel)
+
+    Returns:
+        (sandbox_configured, sandbox_variant, mcp_proxy_url)
+    """
+    label = f"mcp-servers/start/{agent_id}" if agent_id else "mcp-servers/start"
+    env_var_names = [ev.name for ev in body.env_vars]
+    for env_var in body.env_vars:
+        stripped = env_var.value[:5] + "..." if len(env_var.value) > 5 else env_var.value
+        logger.info("[%s] setting env var: %s = %s", label, env_var.name, stripped)
+        os.environ[env_var.name] = env_var.value
+    if env_var_names:
+        logger.info(
+            f"Set {len(env_var_names)} env var(s)"
+            f"{f' for agent {agent_id!r}' if agent_id else ' on process'}"
+            f" + will pass to MCP subprocesses and sandbox kernel: {env_var_names}"
+        )
+
+    sandbox_configured = False
+    sandbox_variant: str | None = None
+    mcp_proxy_url: str | None = None
+    if body.jupyter_sandbox:
+        try:
+            from ..services.code_sandbox_manager import get_code_sandbox_manager
+
+            sandbox_manager = get_code_sandbox_manager()
+            env_dict = (
+                {ev.name: ev.value for ev in body.env_vars}
+                if body.env_vars
+                else None
+            )
+            sandbox_manager.configure_from_url(
+                body.jupyter_sandbox,
+                mcp_proxy_url=body.mcp_proxy_url,
+                env_vars=env_dict,
+            )
+            sandbox_configured = True
+            sandbox_variant = sandbox_manager.variant
+            mcp_proxy_url = sandbox_manager.config.mcp_proxy_url
+            logger.info(
+                f"Configured sandbox manager for Jupyter: {body.jupyter_sandbox.split('?')[0]}"
+            )
+            logger.info(f"MCP proxy URL configured: {mcp_proxy_url}")
+
+            # Update startup_info on app.state so /health/startup
+            # reflects the reconfigured sandbox (e.g. after the
+            # runtimes-companion calls this endpoint).
+            existing_info: dict[str, Any] = (
+                getattr(request.app.state, "startup_info", None) or {}
+            )
+            sandbox_block = existing_info.get("sandbox", {})
+            sandbox_block["variant"] = sandbox_variant
+            sandbox_block["jupyter_url"] = body.jupyter_sandbox.split("?")[0]
+            if mcp_proxy_url:
+                sandbox_block["mcp_proxy_url"] = mcp_proxy_url
+            existing_info["sandbox"] = sandbox_block
+            request.app.state.startup_info = existing_info
+        except Exception as e:
+            logger.warning(f"Failed to configure Jupyter sandbox: {e}")
+
+    return sandbox_configured, sandbox_variant, mcp_proxy_url
+
+
+def _build_mcp_response_message(
+    *,
+    agents_processed: list[str],
+    started: list[str],
+    already_running: list[str],
+    failed: list[dict[str, str]],
+    sandbox_configured: bool,
+    sandbox_variant: str | None,
+    mcp_proxy_url: str | None,
+    env_count: int,
+) -> str:
+    """Build a human-readable summary message for MCP server start responses."""
+    parts: list[str] = []
+    if len(agents_processed) > 1:
+        parts.append(f"Processed {len(agents_processed)} agent(s)")
+    if started:
+        parts.append(f"Started {len(started)} server(s)")
+    if already_running:
+        parts.append(f"{len(already_running)} already running")
+    if failed:
+        parts.append(f"{len(failed)} failed")
+    if sandbox_configured:
+        parts.append(f"sandbox={sandbox_variant}")
+    if mcp_proxy_url:
+        parts.append(f"mcp_proxy={mcp_proxy_url}")
+    if env_count:
+        parts.append(f"env_vars={env_count}")
+    return ", ".join(parts) if parts else "No servers to start"
+
+
 @router.post("/mcp-servers/start")
 async def start_all_agents_mcp_servers(
     body: StartAgentMcpServersRequest,
@@ -2092,67 +2203,9 @@ async def start_all_agents_mcp_servers(
         )
 
     try:
-        # Set environment variables on the agent-runtimes process.
-        # These are propagated to:
-        #  1. MCP server subprocesses (npx, uvx, docker) via extra_env
-        #     passed explicitly to lifecycle_manager.start_server()
-        #  2. The Jupyter kernel via _inject_env_vars() in the sandbox
-        #     manager (runs `import os; os.environ[k] = v` in the kernel)
-        env_var_names = [ev.name for ev in body.env_vars]
-        for env_var in body.env_vars:
-            os.environ[env_var.name] = env_var.value
-        if env_var_names:
-            logger.info(
-                f"Set {len(env_var_names)} env var(s) on process + "
-                f"will pass to MCP subprocesses and sandbox kernel: {env_var_names}"
-            )
-
-        # Configure sandbox manager if jupyter_sandbox is provided
-        # For two-container setups, also configure the MCP proxy URL
-        sandbox_configured = False
-        sandbox_variant: str | None = None
-        mcp_proxy_url: str | None = None
-        if body.jupyter_sandbox:
-            try:
-                from ..services.code_sandbox_manager import get_code_sandbox_manager
-
-                sandbox_manager = get_code_sandbox_manager()
-                # Pass jupyter URL, MCP proxy URL, and env vars for two-container setup.
-                # Env vars will be injected into the Jupyter kernel's os.environ
-                # so that code executed in the kernel can access API keys, etc.
-                env_dict = (
-                    {ev.name: ev.value for ev in body.env_vars}
-                    if body.env_vars
-                    else None
-                )
-                sandbox_manager.configure_from_url(
-                    body.jupyter_sandbox,
-                    mcp_proxy_url=body.mcp_proxy_url,
-                    env_vars=env_dict,
-                )
-                sandbox_configured = True
-                sandbox_variant = sandbox_manager.variant
-                mcp_proxy_url = sandbox_manager.config.mcp_proxy_url
-                logger.info(
-                    f"Configured sandbox manager for Jupyter: {body.jupyter_sandbox.split('?')[0]}"
-                )
-                logger.info(f"MCP proxy URL configured: {mcp_proxy_url}")
-
-                # Update startup_info on app.state so /health/startup
-                # reflects the reconfigured sandbox (e.g. after the
-                # runtimes-companion calls this endpoint).
-                existing_info: dict[str, Any] = (
-                    getattr(request.app.state, "startup_info", None) or {}
-                )
-                sandbox_block = existing_info.get("sandbox", {})
-                sandbox_block["variant"] = sandbox_variant
-                sandbox_block["jupyter_url"] = body.jupyter_sandbox.split("?")[0]
-                if mcp_proxy_url:
-                    sandbox_block["mcp_proxy_url"] = mcp_proxy_url
-                existing_info["sandbox"] = sandbox_block
-                request.app.state.startup_info = existing_info
-            except Exception as e:
-                logger.warning(f"Failed to configure Jupyter sandbox: {e}")
+        sandbox_configured, sandbox_variant, mcp_proxy_url = (
+            await _setup_env_and_sandbox(body, request)
+        )
 
         all_started: list[str] = []
         all_already_running: list[str] = []
@@ -2174,21 +2227,7 @@ async def start_all_agents_mcp_servers(
                 any_codemode_rebuilt = True
             agents_processed.append(agent_id)
 
-        message_parts = [f"Processed {len(agents_processed)} agent(s)"]
-        if all_started:
-            message_parts.append(f"started {len(all_started)} server(s)")
-        if all_already_running:
-            message_parts.append(f"{len(all_already_running)} already running")
-        if all_failed:
-            message_parts.append(f"{len(all_failed)} failed")
-        if sandbox_configured:
-            message_parts.append(f"sandbox={sandbox_variant}")
-        if mcp_proxy_url:
-            message_parts.append(f"mcp_proxy={mcp_proxy_url}")
-
         env_count = len(body.env_vars) if body.env_vars else 0
-        if env_count:
-            message_parts.append(f"env_vars={env_count}")
 
         return AgentMcpServersResponse(
             agent_id=None,
@@ -2201,7 +2240,16 @@ async def start_all_agents_mcp_servers(
             sandbox_variant=sandbox_variant,
             mcp_proxy_url=mcp_proxy_url,
             env_vars_set=env_count,
-            message=", ".join(message_parts),
+            message=_build_mcp_response_message(
+                agents_processed=agents_processed,
+                started=all_started,
+                already_running=all_already_running,
+                failed=all_failed,
+                sandbox_configured=sandbox_configured,
+                sandbox_variant=sandbox_variant,
+                mcp_proxy_url=mcp_proxy_url,
+                env_count=env_count,
+            ),
         )
 
     except HTTPException:
@@ -2248,60 +2296,9 @@ async def start_agent_mcp_servers(
         raise HTTPException(status_code=404, detail=f"Agent not found: {agent_id}")
 
     try:
-        # Set environment variables on the agent-runtimes process.
-        # Propagated to MCP subprocesses (via extra_env) and Jupyter
-        # kernel (via _inject_env_vars).
-        env_var_names = [ev.name for ev in body.env_vars]
-        for env_var in body.env_vars:
-            os.environ[env_var.name] = env_var.value
-        if env_var_names:
-            logger.info(
-                f"Set {len(env_var_names)} env var(s) for agent '{agent_id}': {env_var_names}"
-            )
-
-        # Configure sandbox manager if jupyter_sandbox is provided
-        # For two-container setups, also configure the MCP proxy URL
-        sandbox_configured = False
-        sandbox_variant: str | None = None
-        mcp_proxy_url: str | None = None
-        if body.jupyter_sandbox:
-            try:
-                from ..services.code_sandbox_manager import get_code_sandbox_manager
-
-                sandbox_manager = get_code_sandbox_manager()
-                # Pass jupyter URL, MCP proxy URL, and env vars for two-container setup.
-                env_dict = (
-                    {ev.name: ev.value for ev in body.env_vars}
-                    if body.env_vars
-                    else None
-                )
-                sandbox_manager.configure_from_url(
-                    body.jupyter_sandbox,
-                    mcp_proxy_url=body.mcp_proxy_url,
-                    env_vars=env_dict,
-                )
-                sandbox_configured = True
-                sandbox_variant = sandbox_manager.variant
-                mcp_proxy_url = sandbox_manager.config.mcp_proxy_url
-                logger.info(
-                    f"Configured sandbox manager for Jupyter: {body.jupyter_sandbox.split('?')[0]}"
-                )
-                logger.info(f"MCP proxy URL configured: {mcp_proxy_url}")
-
-                # Update startup_info on app.state so /health/startup
-                # reflects the reconfigured sandbox.
-                existing_info: dict[str, Any] = (
-                    getattr(request.app.state, "startup_info", None) or {}
-                )
-                sandbox_block = existing_info.get("sandbox", {})
-                sandbox_block["variant"] = sandbox_variant
-                sandbox_block["jupyter_url"] = body.jupyter_sandbox.split("?")[0]
-                if mcp_proxy_url:
-                    sandbox_block["mcp_proxy_url"] = mcp_proxy_url
-                existing_info["sandbox"] = sandbox_block
-                request.app.state.startup_info = existing_info
-            except Exception as e:
-                logger.warning(f"Failed to configure Jupyter sandbox: {e}")
+        sandbox_configured, sandbox_variant, mcp_proxy_url = (
+            await _setup_env_and_sandbox(body, request, agent_id)
+        )
 
         (
             started,
@@ -2322,21 +2319,7 @@ async def start_agent_mcp_servers(
                 message="No MCP servers configured for this agent",
             )
 
-        message_parts = []
-        if started:
-            message_parts.append(f"Started {len(started)} server(s)")
-        if already_running:
-            message_parts.append(f"{len(already_running)} already running")
-        if failed:
-            message_parts.append(f"{len(failed)} failed")
-        if sandbox_configured:
-            message_parts.append(f"sandbox={sandbox_variant}")
-        if mcp_proxy_url:
-            message_parts.append(f"mcp_proxy={mcp_proxy_url}")
-
         env_count = len(body.env_vars) if body.env_vars else 0
-        if env_count:
-            message_parts.append(f"env_vars={env_count}")
 
         return AgentMcpServersResponse(
             agent_id=agent_id,
@@ -2349,9 +2332,16 @@ async def start_agent_mcp_servers(
             sandbox_variant=sandbox_variant,
             mcp_proxy_url=mcp_proxy_url,
             env_vars_set=env_count,
-            message=", ".join(message_parts)
-            if message_parts
-            else "No servers to start",
+            message=_build_mcp_response_message(
+                agents_processed=[agent_id],
+                started=started,
+                already_running=already_running,
+                failed=failed,
+                sandbox_configured=sandbox_configured,
+                sandbox_variant=sandbox_variant,
+                mcp_proxy_url=mcp_proxy_url,
+                env_count=env_count,
+            ),
         )
 
     except HTTPException:
@@ -2605,6 +2595,8 @@ async def configure_from_spec_endpoint(
         name = env_var.get("name", "")
         value = env_var.get("value", "")
         if name:
+            stripped = value[:5] + "..." if len(value) > 5 else value
+            logger.info("[configure-from-spec] setting env var: %s = %s", name, stripped)
             os.environ[name] = value
 
     # Validate that the referenced library spec exists.
