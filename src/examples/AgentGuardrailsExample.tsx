@@ -338,7 +338,7 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
       {/* Chat */}
       <Box sx={{ flex: 1, minHeight: 0 }}>
         <Chat
-          transport="ag-ui"
+          protocol="ag-ui"
           baseUrl={agentBaseUrl}
           agentId={agentId}
           title="Guardrails Agent"

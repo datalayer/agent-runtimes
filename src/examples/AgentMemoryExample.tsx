@@ -243,7 +243,7 @@ const AgentMemoryInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
           }}
         >
           <Chat
-            transport="ag-ui"
+            protocol="ag-ui"
             baseUrl={agentBaseUrl}
             agentId={agentId}
             title="Memory Agent"

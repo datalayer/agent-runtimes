@@ -393,7 +393,7 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
       <Box sx={{ flex: 1, minHeight: 0, display: 'flex' }}>
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <Chat
-            transport="ag-ui"
+            protocol="ag-ui"
             baseUrl={agentBaseUrl}
             agentId={agentId}
             title="Monitoring Agent"

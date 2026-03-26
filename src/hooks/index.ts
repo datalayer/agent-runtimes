@@ -100,7 +100,10 @@ export { useVercelAI } from './useVercelAI';
  * Unified hook for managing agents — both ephemeral and durable.
  */
 export { useAgents } from './useAgents';
-export type { UseAgentReturn, UseAgentOptions } from './useAgents';
+export type {
+  UseAgentReturn,
+  UseAgentOptions,
+} from '../types/agents-lifecycle';
 
 /**
  * Runtime query and mutation hooks.
@@ -117,12 +120,14 @@ export {
   useAgentLifecycleStore,
   useLifecycleRunningAgents,
   getAgentLifecycleKey,
-  type UseAgentsRuntimesReturn,
-  type CreateAgentRuntimeRequest,
-  type CreateRuntimeApiResponse,
-  type AgentLifecycleRecord,
-  type LifecycleRunningAgent,
 } from './useAgents';
+export type {
+  UseAgentsRuntimesReturn,
+  CreateAgentRuntimeRequest,
+  CreateRuntimeApiResponse,
+  AgentLifecycleRecord,
+  LifecycleRunningAgent,
+} from '../types/agents-lifecycle';
 
 /**
  * Agent catalog store, AI Agents REST API, and registry hooks.
@@ -150,14 +155,14 @@ export {
   useResumeAgent,
   useCheckpointAgent,
   useTerminateAgent,
-  useAgentDurableLifecycle,
+  useAgentLifecycle,
   type CheckpointData,
   type PauseAgentParams,
   type ResumeAgentParams,
   type CheckpointAgentParams,
   type TerminateAgentParams,
-  type DurableLifecycleOptions,
-  type DurableLifecycleReturn,
+  type AgentLifecycleOptions,
+  type AgentLifecycleReturn,
 } from './useCheckpoints';
 
 export {

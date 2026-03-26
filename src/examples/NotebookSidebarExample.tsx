@@ -24,18 +24,10 @@ import { Box } from '@datalayer/primer-addons';
 import { ServiceManager } from '@jupyterlab/services';
 import { Notebook, useJupyter } from '@datalayer/jupyter-react';
 import { ThemedJupyterProvider } from './stores/themedProvider';
-
-// Import Chat components
-import {
-  ChatSidebar,
-  type ProtocolConfig,
-  type FrontendToolDefinition,
-} from '../chat';
-
-// Import agent-runtimes notebook tools
+import { ChatSidebar } from '../chat';
+import type { ProtocolConfig, FrontendToolDefinition } from '../types';
 import { useNotebookTools } from '../tools/adapters/agent-runtimes/notebookHooks';
 
-// Import sample notebook
 import MatplotlibNotebook from './stores/notebooks/Matplotlib.ipynb.json';
 
 // Fixed notebook ID

@@ -26,8 +26,8 @@ import type { ToolDefinition, ToolExecutionResult } from '../types/tools';
  * Abstract base class for protocol adapters
  */
 export abstract class BaseProtocolAdapter implements ProtocolAdapter {
-  abstract readonly type: Protocol;
-  abstract readonly transport: ProtocolTransport;
+  abstract readonly protocol: Protocol;
+  abstract readonly protocolTransport: ProtocolTransport;
 
   protected config: ProtocolAdapterConfig;
   protected _connectionState: ProtocolConnectionState = 'disconnected';
@@ -115,7 +115,7 @@ export abstract class BaseProtocolAdapter implements ProtocolAdapter {
       try {
         handler(event);
       } catch (error) {
-        console.error(`[${this.type}] Error in event handler:`, error);
+        console.error(`[${this.protocol}] Error in event handler:`, error);
       }
     }
   }

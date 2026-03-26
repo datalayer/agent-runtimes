@@ -248,7 +248,7 @@ const AgentCodemodeInner: React.FC<{ onLogout: () => void }> = ({
         {/* Left: Chat */}
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <Chat
-            transport="ag-ui"
+            protocol="ag-ui"
             baseUrl={agentBaseUrl}
             agentId={agentId}
             title="Code Mode Agent"

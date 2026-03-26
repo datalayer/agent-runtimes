@@ -3,32 +3,52 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
+/**
+ * Zustand store for agent runtime connection state.
+ *
+ * Manages two distinct concepts:
+ *
+ * 1. **Agent Runtime** — a single currently-connected pod (launch, connect,
+ *    create agent, disconnect).  Runtime pods are ephemeral; they have a
+ *    `podName` and a lifecycle (idle → launching → ready → disconnected).
+ *
+ * 2. **Agents Registry** — a persisted registry of URL-addressable agents
+ *    that were previously connected.  Each entry has a `baseUrl` + transport
+ *    pair and can be from any source (agent runtimes OR the stable agents
+ *    service at `/api/v1/ai-agents/`).
+ *
+ * @module store/agentRuntimeStore
+ */
+
 import { createStore } from 'zustand/vanilla';
 import { useStore } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { ServiceManager } from '@jupyterlab/services';
 import type { IRuntimeOptions } from '@datalayer/core/lib/stateful/runtimes/apis';
-import type { Transport } from '../../chat/Chat';
 import type {
   AgentStatus,
   AgentConnection,
   AgentConfig,
-} from '../../types/agents';
+  Protocol,
+} from '../types';
+
+// ─── Agent registry entry ──────────────────────────────────────────────────
 
 /**
- * Unified Agent model combining runtime tracking and UI state
+ * A URL-addressable agent that has been previously connected.
+ * May originate from an agent runtime pod OR from the stable agents service.
  */
-export interface Agent {
+export interface AgentRegistryEntry {
   /** Unique agent identifier */
   id: string;
   /** Display name */
   name: string;
   /** Agent description */
   description: string;
-  /** Base URL for the agent (for Jupyter: baseUrl, for FastAPI: baseUrl) */
+  /** Base URL for the agent */
   baseUrl: string;
   /** Transport protocol used */
-  transport: Transport;
+  protocol: Protocol;
   /** Current status */
   status: AgentStatus;
   /** Last error message if status is 'error' */
@@ -37,7 +57,7 @@ export interface Agent {
   lastUpdated: number;
   /** Document ID (for document-based agents) */
   documentId?: string;
-  /** Runtime ID (for Jupyter kernel-based agents) */
+  /** Runtime ID (for agent runtime pods) */
   runtimeId?: string;
   /** Author name (optional, for display) */
   author?: string;
@@ -45,13 +65,11 @@ export interface Agent {
   avatarUrl?: string;
 }
 
-// ─── Runtime connection store types (merged from agentStore) ──────────
+// ─── Agent runtime store state & actions ──────────────────────────────────
 
-/**
- * Agent runtime store state interface.
- */
-export interface AgentStoreState {
-  /** Current runtime connection (includes agent fields when an agent is created) */
+/** State for the currently-connected agent runtime pod. */
+export interface AgentRuntimeStoreState {
+  /** Current runtime connection (null if not connected) */
   runtime: AgentConnection | null;
   /** Current status */
   status: AgentStatus;
@@ -61,13 +79,11 @@ export interface AgentStoreState {
   isLaunching: boolean;
 }
 
-/**
- * Agent runtime store actions interface.
- */
-export interface AgentStoreActions {
-  /** Launch a new runtime for the agent */
+/** Actions for the agent runtime pod lifecycle. */
+export interface AgentRuntimeStoreActions {
+  /** Launch a new runtime pod */
   launchAgent: (options: IRuntimeOptions) => Promise<AgentConnection>;
-  /** Connect to an existing runtime */
+  /** Connect to an existing runtime pod */
   connectAgent: (connection: {
     podName: string;
     environmentName: string;
@@ -75,7 +91,7 @@ export interface AgentStoreActions {
     jupyterBaseUrl?: string;
     kernelId?: string;
   }) => void;
-  /** Create an agent on the current runtime */
+  /** Create an agent process on the connected runtime */
   createAgent: (
     config?: AgentConfig,
   ) => Promise<Pick<AgentConnection, 'agentId' | 'endpoint' | 'isReady'>>;
@@ -89,53 +105,51 @@ export interface AgentStoreActions {
   reset: () => void;
 }
 
-export type AgentStore = AgentStoreState & AgentStoreActions;
+export type AgentRuntimeStore = AgentRuntimeStoreState &
+  AgentRuntimeStoreActions;
 
-// ─── Agent registry types ─────────────────────────────────────────────
+// ─── Agent registry state ──────────────────────────────────────────────────
 
+/** Persisted registry of URL-addressable agents. */
 export type AgentRegistryState = {
-  /** All registered agents */
-  agents: readonly Agent[];
-
-  /** Add or update an agent */
+  /** Registered agents */
+  agents: readonly AgentRegistryEntry[];
+  /** Add or update an agent entry */
   upsertAgent: (
-    agent: Partial<Agent> & {
+    agent: Partial<AgentRegistryEntry> & {
       id: string;
       baseUrl: string;
-      transport: Transport;
+      protocol: Protocol;
     },
   ) => void;
-
   /** Get agent by ID */
-  getAgentById: (id: string) => Agent | undefined;
-
+  getAgentById: (id: string) => AgentRegistryEntry | undefined;
   /** Get agent by baseUrl and transport */
-  getAgentByUrl: (baseUrl: string, transport: Transport) => Agent | undefined;
-
+  getAgentByUrl: (
+    baseUrl: string,
+    protocol: Protocol,
+  ) => AgentRegistryEntry | undefined;
   /** Update agent status */
   updateAgentStatus: (
     id: string,
     status: AgentStatus,
     error?: string | null,
   ) => void;
-
   /** Toggle agent status between running/paused */
   toggleAgentStatus: (id: string) => void;
-
-  /** Delete an agent */
+  /** Remove an agent entry */
   deleteAgent: (id: string) => void;
-
-  /** Clear all agents */
+  /** Clear all agent entries */
   clearAgents: () => void;
 };
 
-// ─── Combined state ───────────────────────────────────────────────────
+// ─── Combined store type ───────────────────────────────────────────────────
 
 export type AgentState = AgentRegistryState &
-  AgentStoreState &
-  AgentStoreActions;
+  AgentRuntimeStoreState &
+  AgentRuntimeStoreActions;
 
-// ─── Helper: build the transport-specific endpoint URL ────────────────
+// ─── Helper: build the transport-specific endpoint URL ────────────────────
 
 function getTransportEndpoint(
   baseUrl: string,
@@ -155,7 +169,7 @@ function getTransportEndpoint(
   }
 }
 
-// ─── Helper: create agent on runtime ──────────────────────────────────
+// ─── Helper: register agent on the runtime ────────────────────────────────
 
 async function createAgentOnRuntime(
   agentBaseUrl: string,
@@ -180,11 +194,7 @@ async function createAgentOnRuntime(
   if (response.ok || response.status === 400) {
     // 400 means agent already exists, which is fine
     const endpoint = getTransportEndpoint(agentBaseUrl, transport, agentId);
-    return {
-      agentId,
-      endpoint,
-      isReady: true,
-    };
+    return { agentId, endpoint, isReady: true };
   }
 
   const errorData = await response.json().catch(() => ({}));
@@ -193,21 +203,21 @@ async function createAgentOnRuntime(
   );
 }
 
-// ─── Initial runtime state ────────────────────────────────────────────
+// ─── Initial runtime state ────────────────────────────────────────────────
 
-const initialRuntimeState: AgentStoreState = {
+const initialRuntimeState: AgentRuntimeStoreState = {
   runtime: null,
   status: 'idle',
   error: null,
   isLaunching: false,
 };
 
-// ─── Combined store ───────────────────────────────────────────────────
+// ─── Combined Zustand store ───────────────────────────────────────────────
 
 export const agentStore = createStore<AgentState>()(
   persist(
     (set, get) => ({
-      // ── Agent registry state ──────────────────────────────────────
+      // ── Agent registry ────────────────────────────────────────────────
       agents: [],
 
       upsertAgent: agentData => {
@@ -216,9 +226,7 @@ export const agentStore = createStore<AgentState>()(
             a => a.id === agentData.id,
           );
           const now = Date.now();
-
           if (existingIndex >= 0) {
-            // Update existing agent
             const updatedAgents = [...state.agents];
             updatedAgents[existingIndex] = {
               ...updatedAgents[existingIndex],
@@ -226,29 +234,25 @@ export const agentStore = createStore<AgentState>()(
               lastUpdated: now,
             };
             return { agents: updatedAgents };
-          } else {
-            // Add new agent
-            const newAgent: Agent = {
-              name: agentData.name || agentData.id,
-              description: agentData.description || '',
-              status: agentData.status || 'initializing',
-              lastUpdated: now,
-              ...agentData,
-            };
-            return { agents: [...state.agents, newAgent] };
           }
+          const newAgent: AgentRegistryEntry = {
+            name: agentData.name || agentData.id,
+            description: agentData.description || '',
+            status: agentData.status || 'initializing',
+            lastUpdated: now,
+            ...agentData,
+          };
+          return { agents: [...state.agents, newAgent] };
         });
       },
 
       getAgentById: (id: string) => {
-        const { agents } = get();
-        return agents.find(agent => agent.id === id);
+        return get().agents.find(agent => agent.id === id);
       },
 
-      getAgentByUrl: (baseUrl: string, transport: Transport) => {
-        const { agents } = get();
-        return agents.find(
-          agent => agent.baseUrl === baseUrl && agent.transport === transport,
+      getAgentByUrl: (baseUrl: string, protocol: Protocol) => {
+        return get().agents.find(
+          agent => agent.baseUrl === baseUrl && agent.protocol === protocol,
         );
       },
 
@@ -300,7 +304,7 @@ export const agentStore = createStore<AgentState>()(
         set({ agents: [] });
       },
 
-      // ── Runtime connection state (merged from agentStore) ─────────
+      // ── Agent runtime pod ───────────────────────────────────────────
       ...initialRuntimeState,
 
       connectAgent: connection => {
@@ -316,19 +320,16 @@ export const agentStore = createStore<AgentState>()(
           '/jupyter/server/',
           '/agent-runtimes/',
         );
-
-        const fullConnection: AgentConnection = {
-          podName: connection.podName,
-          environmentName: connection.environmentName,
-          jupyterBaseUrl: baseUrl,
-          agentBaseUrl,
-          serviceManager: connection.serviceManager,
-          status: 'ready',
-          kernelId: connection.kernelId,
-        };
-
         set({
-          runtime: fullConnection,
+          runtime: {
+            podName: connection.podName,
+            environmentName: connection.environmentName,
+            jupyterBaseUrl: baseUrl,
+            agentBaseUrl,
+            serviceManager: connection.serviceManager,
+            status: 'ready',
+            kernelId: connection.kernelId,
+          },
           status: 'ready',
           error: null,
         });
@@ -336,12 +337,8 @@ export const agentStore = createStore<AgentState>()(
 
       launchAgent: async config => {
         set({ status: 'launching', error: null, isLaunching: true });
-
         try {
-          // Import @datalayer/core dynamically to avoid circular dependencies
           const { createRuntime } = await import('@datalayer/core/lib/api');
-
-          // Create the runtime using IRuntimeOptions from @datalayer/core
           const runtimePod = await createRuntime({
             environmentName: config.environmentName,
             creditsLimit: config.creditsLimit,
@@ -350,16 +347,12 @@ export const agentStore = createStore<AgentState>()(
             capabilities: config.capabilities,
             snapshot: config.snapshot,
           });
-
           set({ status: 'connecting' });
-
-          // Construct URLs
           const jupyterBaseUrl = runtimePod.ingress;
           const agentBaseUrl = jupyterBaseUrl.replace(
             '/jupyter/server/',
             '/agent-runtimes/',
           );
-
           const connection: AgentConnection = {
             podName: runtimePod.pod_name,
             environmentName: runtimePod.environment_name,
@@ -367,35 +360,23 @@ export const agentStore = createStore<AgentState>()(
             agentBaseUrl,
             status: 'ready',
           };
-
-          set({
-            runtime: connection,
-            status: 'ready',
-            isLaunching: false,
-          });
-
+          set({ runtime: connection, status: 'ready', isLaunching: false });
           return connection;
         } catch (err) {
           const errorMessage =
             err instanceof Error ? err.message : 'Failed to launch runtime';
-          set({
-            status: 'error',
-            error: errorMessage,
-            isLaunching: false,
-          });
+          set({ status: 'error', error: errorMessage, isLaunching: false });
           throw err;
         }
       },
 
       createAgent: async (config = {}) => {
         const { runtime } = get();
-
         if (!runtime) {
           throw new Error(
             'No runtime connected. Launch or connect to a runtime first.',
           );
         }
-
         try {
           const agentId = config.name || runtime.podName;
           const agentConnection = await createAgentOnRuntime(
@@ -403,8 +384,6 @@ export const agentStore = createStore<AgentState>()(
             agentId,
             config,
           );
-
-          // Merge agent fields into the runtime connection
           set({
             runtime: {
               ...runtime,
@@ -423,36 +402,26 @@ export const agentStore = createStore<AgentState>()(
       },
 
       disconnect: () => {
-        set({
-          runtime: null,
-          status: 'disconnected',
-          error: null,
-        });
+        set({ runtime: null, status: 'disconnected', error: null });
       },
 
-      clearError: () => {
-        set({ error: null });
-      },
+      clearError: () => set({ error: null }),
 
-      setError: error => {
-        set({ error, status: 'error' });
-      },
+      setError: error => set({ error, status: 'error' }),
 
-      reset: () => {
-        set(initialRuntimeState);
-      },
+      reset: () => set(initialRuntimeState),
     }),
     {
       name: 'agent-runtimes-storage',
       storage: createJSONStorage(() => localStorage),
-      // Only persist the agent registry fields, NOT runtime connection state
+      // Only persist the agent registry; runtime connection state is ephemeral.
       partialize: state => ({
         agents: state.agents.map(agent => ({
           id: agent.id,
           name: agent.name,
           description: agent.description,
           baseUrl: agent.baseUrl,
-          transport: agent.transport,
+          transport: agent.protocol,
           status: agent.status,
           lastUpdated: agent.lastUpdated,
           documentId: agent.documentId,
@@ -463,7 +432,7 @@ export const agentStore = createStore<AgentState>()(
   ),
 );
 
-// ─── React hooks ──────────────────────────────────────────────────────
+// ─── React hook ────────────────────────────────────────────────────────────
 
 export function useAgentStore(): AgentState;
 export function useAgentStore<T>(selector: (state: AgentState) => T): T;
@@ -471,16 +440,18 @@ export function useAgentStore<T>(selector?: (state: AgentState) => T) {
   return useStore(agentStore, selector!);
 }
 
-// Attach getState and subscribe so non-React code works:
-// e.g. useAgentStore.getState(), useAgentStore.subscribe(...)
+// Attach getState / subscribe for non-React consumers
 (useAgentStore as any).getState = agentStore.getState;
 (useAgentStore as any).subscribe = agentStore.subscribe;
 
-/**
- * Selector hooks for common use cases (runtime connection).
- */
+// ─── Focused selector hooks ────────────────────────────────────────────────
+
+/** Currently-connected agent runtime pod connection. */
 export const useAgentRuntime = () => useAgentStore(state => state.runtime);
-/** @deprecated Use useAgentRuntime() instead — agent fields are now on the runtime connection. */
+
+/**
+ * @deprecated Use useAgentRuntime() — agent fields are merged onto the runtime connection.
+ */
 export const useAgentFromStore = () =>
   useAgentStore(state =>
     state.runtime
@@ -491,18 +462,17 @@ export const useAgentFromStore = () =>
         }
       : null,
   );
+
 export const useAgentStatus = () => useAgentStore(state => state.status);
 export const useAgentError = () => useAgentStore(state => state.error);
 export const useIsLaunching = () => useAgentStore(state => state.isLaunching);
 
-/**
- * Get agent store state without React (for use outside components).
- */
+// ─── Non-React access ──────────────────────────────────────────────────────
+
+/** Get agent runtime store state outside React. */
 export const getAgentState = () => agentStore.getState();
 
-/**
- * Subscribe to agent store changes (for use outside React).
- */
+/** Subscribe to agent runtime store outside React. */
 export const subscribeToAgent = agentStore.subscribe;
 
 export default useAgentStore;

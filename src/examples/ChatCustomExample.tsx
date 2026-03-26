@@ -228,7 +228,7 @@ const AgentRuntimeCustomExample: React.FC = () => {
               </Box>
             ) : agentId ? (
               <Chat
-                transport="ag-ui"
+                protocol="ag-ui"
                 agentId={agentId}
                 showModelSelector={true}
                 showToolsMenu={true}

@@ -28,7 +28,8 @@ import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { SignInSimple } from '@datalayer/core/lib/views/iam';
 import { UserBadge } from '@datalayer/core/lib/views/profile';
 import { ThemedProvider } from './stores/themedProvider';
-import { Chat, type RenderToolResult } from '../chat';
+import { Chat } from '../chat';
+import type { RenderToolResult } from '../types';
 import {
   ToolCallDisplay,
   ToolApprovalBanner,
@@ -969,7 +970,7 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
       <Box sx={{ flex: 1, minHeight: 0, display: 'flex' }}>
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <Chat
-            transport="vercel-ai"
+            protocol="vercel-ai"
             baseUrl={agentBaseUrl}
             agentId={agentId}
             authToken={chatAuthToken}

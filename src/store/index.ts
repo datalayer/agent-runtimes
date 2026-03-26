@@ -4,10 +4,28 @@
  */
 
 /**
- * Store exports for chat component.
+ * Store exports for agent runtime and chat.
  *
  * @module store
  */
+
+export {
+  useAgentStore,
+  useAgentRuntime,
+  useAgentFromStore,
+  useAgentStatus,
+  useAgentError,
+  useIsLaunching,
+  getAgentState,
+  subscribeToAgent,
+  agentStore,
+  type AgentRegistryEntry,
+  type AgentRuntimeStoreState,
+  type AgentRuntimeStoreActions,
+  type AgentRuntimeStore,
+  type AgentRegistryState,
+  type AgentState,
+} from './agentRuntimeStore';
 
 export {
   useChatStore,

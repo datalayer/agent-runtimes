@@ -9,6 +9,8 @@
 import type { ServiceManager } from '@jupyterlab/services';
 import type { AgentSpec } from './agentspecs';
 
+export type AgentLibrary = 'pydantic-ai' | 'langchain' | 'google-adk';
+
 /**
  * Unified agent status covering runtime lifecycle and UI lifecycle.
  */

@@ -27,8 +27,9 @@ import React, {
 import { Text } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { ThemedProvider, useThemeBrandColor } from './stores/themedProvider';
-import { ChatFloating, type ToolCallRenderContext } from '../chat';
+import { ChatFloating } from '../chat';
 import { InlineHaikuCard, HaikuDisplay, type HaikuResult } from './ag-ui/haiku';
+import type { ToolCallRenderContext } from '../types';
 
 // AG-UI endpoint for haiku generative UI example
 const HAIKU_ENDPOINT =

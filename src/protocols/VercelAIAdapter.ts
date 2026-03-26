@@ -43,8 +43,8 @@ export interface VercelAIAdapterConfig extends ProtocolAdapterConfig {
  * Compatible with Pydantic AI's Vercel AI Data Stream Protocol
  */
 export class VercelAIAdapter extends BaseProtocolAdapter {
-  readonly type = 'vercel-ai' as const;
-  readonly transport = 'sse' as const;
+  readonly protocol = 'vercel-ai' as const;
+  readonly protocolTransport = 'sse' as const;
 
   private vercelConfig: VercelAIAdapterConfig;
   private abortController: AbortController | null = null;

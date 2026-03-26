@@ -17,17 +17,23 @@ import {
 } from '@tanstack/react-query';
 import { Box } from '@datalayer/primer-addons';
 import { ThemedProvider } from './stores/themedProvider';
-import { Chat, useChatStore } from '../chat';
+import { Chat } from '../chat';
 import { DEFAULT_MODEL } from '../specs';
-import type { Transport, Extension, ChatMessage } from '../chat';
+import type { LibraryAgentSpec } from '../config/AgentConfiguration';
+import type { OAuthProvider, Identity } from '../identity';
 import { useAgentsStore } from './stores/examplesStore';
 import { useIdentity } from '../identity';
-import type { OAuthProvider, Identity } from '../identity';
-import { MockFileBrowser, MainContent, Header } from './components';
-import { AgentConfiguration, type AgentLibrary } from '../config';
-import type { McpServerSelection } from '../types';
 import { isSpecSelection, getSpecId } from '../config/AgentConfiguration';
-import type { LibraryAgentSpec } from '../config/AgentConfiguration';
+import { MockFileBrowser, MainContent, Header } from './components';
+import { AgentConfiguration } from '../config';
+import { useChatStore } from '../store';
+import type {
+  AgentLibrary,
+  McpServerSelection,
+  Extension,
+  ChatMessage,
+  Protocol,
+} from '../types';
 
 // Create a query client for React Query
 const queryClient = new QueryClient({
@@ -231,7 +237,7 @@ type AgentRuntimeFormExampleProps = {
   initialBaseUrl?: string;
   initialAgentName?: string;
   initialAgentLibrary?: AgentLibrary;
-  initialTransport?: Transport;
+  initialTransport?: Protocol;
   initialModel?: string;
   initialEnableCodemode?: boolean;
   initialAllowDirectToolCalls?: boolean;
@@ -309,7 +315,7 @@ const AgentRuntimeFormExample: React.FC<AgentRuntimeFormExampleProps> = ({
   const [selectedAgentId, setSelectedAgentId] = useState('new-agent');
   const [agentLibrary, setAgentLibrary] =
     useState<AgentLibrary>(initialAgentLibrary);
-  const [transport, setTransport] = useState<Transport>(initialTransport);
+  const [transport, setTransport] = useState<Protocol>(initialTransport);
   const [extensions, setExtensions] = useState<Extension[]>([]);
   const [model, setModel] = useState(initialModel);
   const [description, setDescription] = useState('');
@@ -565,7 +571,7 @@ const AgentRuntimeFormExample: React.FC<AgentRuntimeFormExampleProps> = ({
   // Initialize transport from selected agent on mount
   useEffect(() => {
     if (currentAgent) {
-      setTransport(currentAgent.transport);
+      setTransport(currentAgent.protocol);
       setAgentName(currentAgent.id);
     }
   }, [currentAgent]);
@@ -703,7 +709,7 @@ const AgentRuntimeFormExample: React.FC<AgentRuntimeFormExampleProps> = ({
       const agent = agents.find(a => a.id === agentId);
       if (agent) {
         setAgentName(agent.id);
-        setTransport(agent.transport);
+        setTransport(agent.protocol);
       }
     }
   };
@@ -840,7 +846,7 @@ const AgentRuntimeFormExample: React.FC<AgentRuntimeFormExampleProps> = ({
     if (!isNewMode) {
       const agent = agents.find(a => a.id === selectedAgentId);
       if (agent) {
-        setTransport(agent.transport);
+        setTransport(agent.protocol);
         setAgentName(agent.id);
       }
       setIsConfigured(true);
@@ -1049,7 +1055,7 @@ const AgentRuntimeFormExample: React.FC<AgentRuntimeFormExampleProps> = ({
                   {!isConfigured ? (
                     <AgentConfiguration
                       agentLibrary={agentLibrary}
-                      transport={currentAgent?.transport || transport}
+                      protocol={currentAgent?.protocol || transport}
                       extensions={extensions}
                       wsUrl={wsUrl}
                       baseUrl={baseUrl}
@@ -1108,7 +1114,7 @@ const AgentRuntimeFormExample: React.FC<AgentRuntimeFormExampleProps> = ({
                         enableCodemode={enableCodemode}
                         useJupyterSandbox={useJupyterSandbox}
                         chatProps={{
-                          transport: currentAgent?.transport || transport,
+                          protocol: currentAgent?.protocol || transport,
                           extensions: extensions,
                           wsUrl: wsUrl,
                           baseUrl: baseUrl,

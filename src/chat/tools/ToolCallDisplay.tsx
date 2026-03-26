@@ -22,8 +22,11 @@ import {
   ClockIcon,
   AlertIcon,
 } from '@primer/octicons-react';
-import type { ToolCallStatus } from '../base/ChatBase';
-import type { CodeError, ExecutionResult } from '../../types/execution';
+import type {
+  CodeError,
+  ExecutionResult,
+  DisplayToolCallStatus,
+} from '../../types';
 
 /**
  * Error type classification for display purposes
@@ -40,7 +43,7 @@ export interface ToolCallDisplayProps {
   /** Tool result (when complete) */
   result?: unknown;
   /** Current status */
-  status: ToolCallStatus;
+  status: DisplayToolCallStatus;
   /** Error message if failed (backwards compatible) */
   error?: string;
   /** Rich execution result with detailed error information */
@@ -67,7 +70,7 @@ export interface ToolCallDisplayProps {
  * Get status icon and color based on tool call status
  */
 function getStatusDisplay(
-  status: ToolCallStatus,
+  status: DisplayToolCallStatus,
   errorType?: ErrorType,
 ): {
   icon: React.ReactNode;

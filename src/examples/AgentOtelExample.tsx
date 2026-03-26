@@ -35,7 +35,6 @@ import React, {
 import { Text, Button, Select, FormControl } from '@primer/react';
 import { TelescopeIcon, PlugIcon, XIcon } from '@primer/octicons-react';
 import { Box } from '@datalayer/primer-addons';
-import { ThemedProvider } from './stores/themedProvider';
 import {
   OtelHeader,
   DashboardView,
@@ -45,10 +44,11 @@ import {
 } from '@datalayer/core/lib/views/otel';
 import { SignInSimple } from '@datalayer/core/lib/views/iam';
 import { useCoreStore } from '@datalayer/core';
-import type { Transport } from '../chat';
-import type { AgentLibrary } from '../config';
-import { ChatSidebar, type ProtocolConfig } from '../chat';
+import { ThemedProvider } from './stores/themedProvider';
+import { ChatSidebar } from '../chat';
 import { DEFAULT_MODEL } from '../specs';
+import type { AgentLibrary, ProtocolConfig } from '../types';
+import { Protocol } from '../types';
 
 // ─── Environment / defaults ────────────────────────────────────────────────
 
@@ -62,7 +62,7 @@ const DATALAYER_RUN_URL_ENV: string =
  */
 const AGENT_BASE_URL_ENV: string = import.meta.env.VITE_BASE_URL || '';
 
-const DEFAULT_AGENT_TRANSPORT: Transport = 'vercel-ai';
+const DEFAULT_AGENT_PROTOCOL: Protocol = 'vercel-ai';
 const DEFAULT_AGENT_LIBRARY: AgentLibrary = 'pydantic-ai';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
@@ -79,7 +79,7 @@ interface LibrarySpec {
 
 interface AgentSelectorPanelProps {
   baseUrl: string;
-  onConnected: (agentId: string, transport: Transport) => void;
+  onConnected: (agentId: string, protocol: Protocol) => void;
   onDisconnected: () => void;
   isConnected: boolean;
   connectedAgentName?: string;
@@ -125,8 +125,7 @@ const AgentSelectorPanel: React.FC<AgentSelectorPanelProps> = ({
 
     try {
       const spec = specs.find(s => s.id === selectedSpecId);
-      const transport =
-        (spec?.transport as Transport) ?? DEFAULT_AGENT_TRANSPORT;
+      const transport = (spec?.transport as Protocol) ?? DEFAULT_AGENT_PROTOCOL;
 
       const res = await fetch(`${baseUrl}/api/v1/agents`, {
         method: 'POST',
@@ -303,12 +302,12 @@ const AgentOtelExampleInner: React.FC<{
   // ── Agent state ─────────────────────────────────────────────────
   const [connectedAgentId, setConnectedAgentId] = useState<string | null>(null);
   const [connectedAgentTransport, setConnectedAgentTransport] =
-    useState<Transport>(DEFAULT_AGENT_TRANSPORT);
+    useState<Protocol>(DEFAULT_AGENT_PROTOCOL);
 
   const handleAgentConnected = useCallback(
-    (agentId: string, transport: Transport) => {
+    (agentId: string, protocol: Protocol) => {
       setConnectedAgentId(agentId);
-      setConnectedAgentTransport(transport);
+      setConnectedAgentTransport(protocol);
     },
     [],
   );

@@ -28,45 +28,22 @@ import { IconButton, Text, Tooltip } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { XIcon, CommentDiscussionIcon } from '@primer/octicons-react';
 import { AiAgentIcon } from '@datalayer/icons-react';
-
-import {
-  ChatBase,
-  type ChatBaseProps,
-  type RenderToolResult,
-  type ToolCallRenderContext,
-  type ToolCallStatus,
-  type ProtocolConfig,
-  type RespondCallback,
-  type Suggestion,
-  type RemoteConfig,
-  type ModelConfig,
-  type BuiltinTool,
-  type MCPServerConfig,
-  type MCPServerTool,
-  type ChatViewMode,
-} from './base/ChatBase';
+import { ChatBase } from './base/ChatBase';
 import type { PoweredByTagProps } from './elements/PoweredByTag';
 import { useChatOpen, useChatMessages, useChatStore } from '../store/chatStore';
 import {
   useChatKeyboardShortcuts,
   getShortcutDisplay,
 } from '@datalayer/core/lib/hooks';
-import type { FrontendToolDefinition } from '../types/tools';
-
-// Re-export types for backward compatibility
-export type {
-  ToolCallStatus,
-  ToolCallRenderContext,
-  RenderToolResult,
-  RespondCallback,
-  Suggestion,
-  RemoteConfig,
-  ModelConfig,
-  BuiltinTool,
-  MCPServerConfig,
-  MCPServerTool,
+import type {
+  ChatBaseProps,
   ChatViewMode,
-};
+  FrontendToolDefinition,
+  ModelConfig,
+  ProtocolConfig,
+  RenderToolResult,
+  Suggestion,
+} from '../types';
 
 /**
  * ChatFloating props

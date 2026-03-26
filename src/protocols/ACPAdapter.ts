@@ -102,8 +102,8 @@ export interface ACPAdapterConfig extends ProtocolAdapterConfig {
  * Uses WebSocket with JSON-RPC 2.0 for bidirectional communication
  */
 export class ACPAdapter extends BaseProtocolAdapter {
-  readonly type = 'acp' as const;
-  readonly transport = 'websocket' as const;
+  readonly protocol = 'acp' as const;
+  readonly protocolTransport = 'websocket' as const;
 
   private acpConfig: ACPAdapterConfig;
   private ws: WebSocket | null = null;

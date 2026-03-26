@@ -31,8 +31,8 @@ export interface A2AAdapterConfig extends ProtocolAdapterConfig {
  * Uses JSON-RPC 2.0 with SSE streaming for responses
  */
 export class A2AAdapter extends BaseProtocolAdapter {
-  readonly type = 'a2a' as const;
-  readonly transport = 'sse' as const;
+  readonly protocol = 'a2a' as const;
+  readonly protocolTransport = 'sse' as const;
 
   private a2aConfig: A2AAdapterConfig;
   private abortController: AbortController | null = null;

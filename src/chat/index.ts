@@ -54,106 +54,11 @@
  * ```
  */
 
-// Types
-export * from '../types';
-
-// Store (primary state management - no provider needed!)
-export {
-  useChatStore,
-  useChatMessages,
-  useChatLoading,
-  useChatStreaming,
-  useChatError,
-  useChatTools,
-  useChatOpen,
-  useChatConfig,
-  useChatReady,
-  useChatInferenceProvider,
-  useChatExtensionRegistry,
-  defaultChatConfig,
-  type ChatStore,
-  type ChatState,
-  type ChatActions,
-  type ChatConfig,
-  type ToolCallState,
-} from '../store';
-
-// Hooks (re-exported from main hooks folder)
-export {
-  useChat,
-  useFrontendTool,
-  useBackendTool,
-  ActionRegistrar,
-  type UseChatReturn,
-  type UseFrontendToolFn,
-} from '../hooks';
-
-// Inference Providers
-export {
-  BaseInferenceProvider,
-  DatalayerInferenceProvider,
-  SelfHostedInferenceProvider,
-  type DatalayerInferenceConfig,
-  type SelfHostedInferenceConfig,
-} from '../inference';
-
-// Protocol Adapters
-export {
-  BaseProtocolAdapter,
-  AGUIAdapter,
-  A2AAdapter,
-  ACPAdapter,
-  type AGUIAdapterConfig,
-  type A2AAdapterConfig,
-  type ACPAdapterConfig,
-  type ACPSession,
-  type ACPAgent,
-  type ACPPendingPermission,
-} from '../protocols';
-
-// Tools
-export { ToolExecutor, type ToolExecutionContext } from '../tools';
-
-// Middleware
-export {
-  MiddlewarePipeline,
-  createMiddleware,
-  loggingMiddleware,
-  createHITLMiddleware,
-  type RequestContext,
-  type ResponseContext,
-} from '../middleware';
-
-// Extensions
-export {
-  ExtensionRegistry,
-  createMessageRenderer,
-  createActivityRenderer,
-  createA2UIRenderer,
-  A2UIExtensionImpl,
-  type A2UIMessage,
-  type InternalExtensionType,
-} from '../extensions';
-
 // Components - Chat elements
 export { ChatMessages, type ChatMessagesProps } from './messages/ChatMessages';
 export { ChatSidebar, type ChatSidebarProps } from './ChatSidebar';
-export {
-  ChatStandalone,
-  type ChatStandaloneProps,
-  type MessageHandler,
-} from './ChatStandalone';
-export {
-  ChatBase,
-  type ChatBaseProps,
-  type ProtocolConfig,
-  type AgentRuntimeConfig,
-  type AvatarConfig,
-  type EmptyStateConfig,
-  type HeaderButtonsConfig,
-  type StreamingMessageOptions,
-  type ChatViewMode,
-} from './base/ChatBase';
+export { ChatStandalone } from './ChatStandalone';
+export { ChatBase } from './base/ChatBase';
 export { InputPrompt, type InputPromptProps } from './prompt';
 export { PoweredByTag, type PoweredByTagProps } from './elements/PoweredByTag';
 export {
@@ -194,83 +99,26 @@ export {
 } from './tools/ToolApprovalBanner';
 
 // Components - Transport-agnostic chat
-export { Chat, type ChatProps, type Transport, type Extension } from './Chat';
-export {
-  ChatFloating,
-  type ChatFloatingProps,
-  type ToolCallRenderContext,
-  type ToolCallStatus,
-  type RenderToolResult,
-  type RespondCallback,
-  type Suggestion,
-  type RemoteConfig,
-  type ModelConfig,
-  type BuiltinTool,
-  type MCPServerConfig,
-  type MCPServerTool,
-  type ChatViewMode as ChatFloatingViewMode,
-} from './ChatFloating';
+export { Chat, type ChatProps } from './Chat';
+export { ChatFloating, type ChatFloatingProps } from './ChatFloating';
 export {
   ChatInline,
   type ChatInlineProps,
   type ChatInlineProtocolConfig,
 } from './ChatInline';
 
-// Components - Agent details & identity
-export { AgentDetails, type AgentDetailsProps } from '../agents/AgentDetails';
-export {
-  AgentIdentity,
-  IdentityCard,
-  getTokenStatus,
-  formatDuration,
-  formatExpirationStatus,
-  type AgentIdentityProps,
-  type IdentityCardProps,
-  type TokenStatus,
-} from '../identity/AgentIdentity';
+// Components - Agent and context views (compatibility exports)
+export { AgentDetails } from '../agents/AgentDetails';
+export { OtelTokenUsageChart } from '../context/OtelTokenUsageChart';
+export { ContextPanel } from '../context/ContextPanel';
+export { ContextInspector } from '../context/ContextInspector';
 
-// Components - Context & observability
-export {
-  ContextUsage,
-  type ContextUsageProps,
-  type ContextDetailsResponse,
-} from '../context/ContextUsage';
-export {
-  ContextDistribution,
-  type ContextDistributionProps,
-  type ContextSnapshotResponse,
-} from '../context/ContextDistribution';
-export { ContextPanel, type ContextPanelProps } from '../context/ContextPanel';
-export {
-  ContextInspector,
-  type ContextInspectorProps,
-  type FullContextResponse,
-} from '../context/ContextInspector';
-export {
-  CostTracker,
-  type CostTrackerProps,
-  type CostUsageResponse,
-} from '../context/CostTracker';
-export {
-  OtelTokenUsageChart,
-  type OtelTokenUsageChartProps,
-} from '../context/OtelTokenUsageChart';
-export {
-  fetchOtelMetricRows,
-  fetchOtelMetricTotal,
-  fetchOtelTotalTokens,
-  useOtelTotalTokens,
-  toMetricValue,
-} from '../context/otelMetrics';
-
-// Simple API request handler (merged from chat)
-export { requestAPI } from '../api/handler';
-
-// Keyboard shortcuts (re-exported from main hooks folder)
-export {
-  useKeyboardShortcuts,
-  useChatKeyboardShortcuts,
-  getShortcutDisplay,
-  type KeyboardShortcut,
-  type UseKeyboardShortcutsOptions,
-} from '@datalayer/core/lib/hooks';
+// Types - chat configuration and rendering types
+export type {
+  Suggestion,
+  ModelConfig,
+  ChatViewMode,
+  ProtocolConfig,
+  RenderToolResult,
+  MessageHandler,
+} from '../types';

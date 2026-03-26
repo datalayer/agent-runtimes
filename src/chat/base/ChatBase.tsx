@@ -98,45 +98,6 @@ function formatToolResultFallback(result: unknown): string {
 }
 
 // ---------------------------------------------------------------------------
-// Re-exports — keep backward-compatible imports from this file
-// ---------------------------------------------------------------------------
-
-export type {
-  ChatViewMode,
-  DisplayToolCallStatus as ToolCallStatus,
-  RespondCallback,
-  Suggestion,
-  ToolCallRenderContext,
-  RenderToolResult,
-  ToolCallMessage,
-  DisplayItem,
-  AvatarConfig,
-  HeaderButtonsConfig,
-  EmptyStateConfig,
-  StreamingMessageOptions,
-  MessageHandler,
-  ModelConfig,
-  MCPServerConfig,
-  RemoteConfig,
-  ProtocolConfig,
-  ChatBaseProps,
-  PoweredByTagProps,
-  SkillInfo,
-  SkillsResponse,
-} from '../../types/chat';
-export type {
-  ContextSnapshotData,
-  SandboxStatusData,
-} from '../../types/context';
-export type {
-  BuiltinTool,
-  MCPServerTool,
-  AgentRuntimeConfig,
-} from '../../types';
-
-export { isToolCallMessage, getMessageText } from '../../utils';
-
-// ---------------------------------------------------------------------------
 // ChatBase (outer wrapper — ensures QueryClient is available)
 // ---------------------------------------------------------------------------
 

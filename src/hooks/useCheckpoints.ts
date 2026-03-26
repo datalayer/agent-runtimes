@@ -382,14 +382,14 @@ export function useTerminateAgent() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// Durable lifecycle hook
+// Agent lifecycle hook
 // ═══════════════════════════════════════════════════════════════════════════
 
 /**
- * Options for {@link useAgentDurableLifecycle}.
+ * Options for {@link useAgentLifecycle}.
  */
-export interface DurableLifecycleOptions {
-  /** Agent spec ID (required for durable lifecycle) */
+export interface AgentLifecycleOptions {
+  /** Agent spec ID (identifies the agent for lifecycle management) */
   agentSpecId?: string;
   /** Full agent spec object (persisted with checkpoints) */
   agentSpec?: Record<string, any>;
@@ -413,9 +413,9 @@ export interface DurableLifecycleOptions {
 }
 
 /**
- * Return type for {@link useAgentDurableLifecycle}.
+ * Return type for {@link useAgentLifecycle}.
  */
-export interface DurableLifecycleReturn {
+export interface AgentLifecycleReturn {
   /** Pause the agent (checkpoint-mode aware) */
   pause: (mode?: CheckpointMode, messages?: string[]) => Promise<void>;
   /** Resume a paused agent (checkpoint restore) */
@@ -436,26 +436,26 @@ export interface DurableLifecycleReturn {
   refreshCheckpoints: () => void;
   /** List of persisted checkpoints */
   checkpoints: CheckpointRecord[];
-  /** Durable lifecycle status */
-  durableStatus: AgentStatus;
-  /** Durable lifecycle error */
-  durableError: string | null;
-  /** Update the durable status directly */
-  setDurableStatus: (status: AgentStatus) => void;
-  /** Update the durable error directly */
-  setDurableError: (error: string | null) => void;
+  /** Lifecycle status */
+  status: AgentStatus;
+  /** Lifecycle error */
+  error: string | null;
+  /** Update the lifecycle status directly */
+  setStatus: (status: AgentStatus) => void;
+  /** Update the lifecycle error directly */
+  setError: (error: string | null) => void;
 }
 
 /**
- * High-level hook that manages the full durable agent lifecycle:
+ * High-level hook that manages the full agent lifecycle:
  * pause, resume, checkpoint, terminate, and status tracking.
  *
  * Designed to be composed inside `useAgents` or used standalone
  * by advanced consumers who need direct access.
  */
-export function useAgentDurableLifecycle(
-  options: DurableLifecycleOptions,
-): DurableLifecycleReturn {
+export function useAgentLifecycle(
+  options: AgentLifecycleOptions,
+): AgentLifecycleReturn {
   const {
     agentSpecId,
     agentSpec,
@@ -467,8 +467,8 @@ export function useAgentDurableLifecycle(
   } = options;
 
   // Local lifecycle state
-  const [durableStatus, setDurableStatus] = useState<AgentStatus>('idle');
-  const [durableError, setDurableError] = useState<string | null>(null);
+  const [lifecycleStatus, setLifecycleStatus] = useState<AgentStatus>('idle');
+  const [lifecycleError, setLifecycleError] = useState<string | null>(null);
 
   // Mutation hooks
   const pauseAgentMutation = usePauseAgent();
@@ -483,11 +483,11 @@ export function useAgentDurableLifecycle(
   const pause = useCallback(
     async (mode: CheckpointMode = 'light', messages?: string[]) => {
       if (!runtime) {
-        setDurableError('No runtime to pause');
+        setLifecycleError('No runtime to pause');
         return;
       }
-      if (durableStatus === 'resumed') {
-        setDurableError('Resumed agents cannot be paused');
+      if (lifecycleStatus === 'resumed') {
+        setLifecycleError('Resumed agents cannot be paused');
         return;
       }
       try {
@@ -498,13 +498,13 @@ export function useAgentDurableLifecycle(
           agentSpec,
           messages,
         });
-        setDurableStatus('paused');
+        setLifecycleStatus('paused');
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        setDurableError(msg);
+        setLifecycleError(msg);
       }
     },
-    [runtime, durableStatus, agentSpecId, agentSpec, pauseAgentMutation],
+    [runtime, lifecycleStatus, agentSpecId, agentSpec, pauseAgentMutation],
   );
 
   // ─── Resume ─────────────────────────────────────────────────────────
@@ -515,8 +515,8 @@ export function useAgentDurableLifecycle(
       checkpointId?: string,
       podName?: string,
     ) => {
-      setDurableStatus('resuming');
-      setDurableError(null);
+      setLifecycleStatus('resuming');
+      setLifecycleError(null);
       try {
         const checkpoints = checkpointsQuery.data || [];
         const targetPodName =
@@ -579,14 +579,14 @@ export function useAgentDurableLifecycle(
           }
 
           onResetAgentCreation?.();
-          setDurableStatus('resumed');
+          setLifecycleStatus('resumed');
         } else {
           await launchRuntime();
         }
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        setDurableError(msg);
-        setDurableStatus('error');
+        setLifecycleError(msg);
+        setLifecycleStatus('error');
       }
     },
     [
@@ -609,7 +609,7 @@ export function useAgentDurableLifecycle(
       messages?: string[],
     ) => {
       if (!runtime) {
-        setDurableError('No runtime to checkpoint');
+        setLifecycleError('No runtime to checkpoint');
         return;
       }
       try {
@@ -621,10 +621,10 @@ export function useAgentDurableLifecycle(
           agentSpec,
           messages,
         });
-        setDurableStatus('paused');
+        setLifecycleStatus('paused');
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        setDurableError(msg);
+        setLifecycleError(msg);
       }
     },
     [runtime, agentSpecId, agentSpec, checkpointAgentMutation],
@@ -635,7 +635,7 @@ export function useAgentDurableLifecycle(
   const terminate = useCallback(async () => {
     if (!runtime) {
       disconnect();
-      setDurableStatus('idle');
+      setLifecycleStatus('idle');
       return;
     }
     try {
@@ -643,11 +643,11 @@ export function useAgentDurableLifecycle(
         podName: runtime.podName,
       });
       disconnect();
-      setDurableStatus('idle');
-      setDurableError(null);
+      setLifecycleStatus('idle');
+      setLifecycleError(null);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      setDurableError(msg);
+      setLifecycleError(msg);
     }
   }, [runtime, terminateAgentMutation, disconnect]);
 
@@ -664,10 +664,10 @@ export function useAgentDurableLifecycle(
     checkpoint,
     refreshCheckpoints,
     checkpoints: (checkpointsQuery.data || []) as CheckpointRecord[],
-    durableStatus,
-    durableError,
-    setDurableStatus,
-    setDurableError,
+    status: lifecycleStatus,
+    error: lifecycleError,
+    setStatus: setLifecycleStatus,
+    setError: setLifecycleError,
   };
 }
 

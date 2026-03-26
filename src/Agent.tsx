@@ -163,7 +163,7 @@ export const Agent: React.FC = () => {
   return (
     <DatalayerThemeProvider>
       <Chat
-        transport="ag-ui"
+        protocol="ag-ui"
         baseUrl={BASE_URL}
         agentId={agentId}
         title="Agent"

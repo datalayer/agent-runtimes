@@ -144,7 +144,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ agentId }) => {
       }}
     >
       <Chat
-        transport="ag-ui"
+        protocol="ag-ui"
         baseUrl={BASE_URL}
         agentId={agentId}
         title="Agent Notebook"

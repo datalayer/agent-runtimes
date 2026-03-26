@@ -31,13 +31,7 @@ import {
 } from '@primer/octicons-react';
 import { AiAgentIcon } from '@datalayer/icons-react';
 
-import {
-  ChatBase,
-  type ChatBaseProps,
-  type RenderToolResult,
-  type ToolCallRenderContext,
-  type ToolCallStatus,
-} from './base/ChatBase';
+import { ChatBase } from './base/ChatBase';
 import { PoweredByTag, type PoweredByTagProps } from './elements/PoweredByTag';
 import {
   useChatOpen,
@@ -55,9 +49,7 @@ import {
   useChatKeyboardShortcuts,
   getShortcutDisplay,
 } from '@datalayer/core/lib/hooks';
-
-// Re-export types for backward compatibility
-export type { ToolCallStatus, ToolCallRenderContext, RenderToolResult };
+import { ChatBaseProps, RenderToolResult } from '../types';
 
 /**
  * Simple message handler type for standalone usage

@@ -22,19 +22,13 @@ import {
 } from '@primer/octicons-react';
 import { AiAgentIcon } from '@datalayer/icons-react';
 import {
-  ChatBase,
-  type ChatBaseProps,
-  type MessageHandler,
-} from './base/ChatBase';
-import type { PoweredByTagProps } from './elements/PoweredByTag';
-
-// Re-export MessageHandler for consumers
-export type { MessageHandler };
-import { useChatStore, useChatOpen, useChatMessages } from '../store/chatStore';
-import {
   useChatKeyboardShortcuts,
   getShortcutDisplay,
 } from '@datalayer/core/lib/hooks';
+import { ChatBase } from './base/ChatBase';
+import type { PoweredByTagProps } from './elements/PoweredByTag';
+import type { ChatBaseProps, MessageHandler } from '../types';
+import { useChatStore, useChatOpen, useChatMessages } from '../store/chatStore';
 
 /**
  * ChatSidebar props
@@ -165,7 +159,6 @@ export function ChatSidebar({
   showPoweredBy = true,
   poweredByProps,
   clickOutsideToClose = true,
-  escapeToClose = true,
   className,
   onSettingsClick,
   onNewChat,

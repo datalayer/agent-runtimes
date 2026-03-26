@@ -25,18 +25,21 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Text, Button, Spinner } from '@primer/react';
 import { AlertIcon, SyncIcon } from '@primer/octicons-react';
 import { Box } from '@datalayer/primer-addons';
-import { ChatBase, type Suggestion } from './base/ChatBase';
-import { AgentDetails } from '../agents/AgentDetails';
-import type {
-  ProtocolConfig,
-  ModelConfig,
-  ChatViewMode,
-  RenderToolResult,
-} from './base/ChatBase';
-import type { FrontendToolDefinition } from '../types/tools';
-import type { McpServerSelection } from '../types';
-import { useConnectedIdentities } from '../identity';
 import type { OAuthProvider, OAuthProviderConfig, Identity } from '../identity';
+import { useConnectedIdentities } from '../identity';
+import type {
+  Extension,
+  FrontendToolDefinition,
+  McpServerSelection,
+  Protocol,
+  ChatViewMode,
+  ModelConfig,
+  ProtocolConfig,
+  RenderToolResult,
+  Suggestion,
+} from '../types';
+import { ChatBase } from './base/ChatBase';
+import { AgentDetails } from '../agents/AgentDetails';
 
 // Try to get Jupyter settings if available
 let getJupyterSettings: (() => { baseUrl: string; token: string }) | undefined;
@@ -72,25 +75,10 @@ try {
 const queryClient = new QueryClient();
 
 /**
- * Supported transports (communication transports)
- */
-export type Transport =
-  | 'ag-ui'
-  | 'a2a'
-  | 'acp'
-  | 'vercel-ai'
-  | 'vercel-ai-jupyter';
-
-/**
- * Extension type for chat features
- */
-export type Extension = 'mcp-ui' | 'a2ui';
-
-/**
  * Get transport endpoint path
  */
-function getEndpointPath(transport: Transport, agentId?: string): string {
-  switch (transport) {
+function getEndpointPath(protocol: Protocol, agentId?: string): string {
+  switch (protocol) {
     case 'vercel-ai':
       return `/api/v1/vercel-ai/${agentId}`;
     case 'vercel-ai-jupyter':
@@ -113,13 +101,13 @@ function getEndpointPath(transport: Transport, agentId?: string): string {
  * Map transport type to protocol type
  */
 function getProtocolType(
-  transport: Transport,
+  protocol: Protocol,
 ): 'ag-ui' | 'a2a' | 'acp' | 'vercel-ai' {
-  switch (transport) {
+  switch (protocol) {
     case 'vercel-ai-jupyter':
       return 'vercel-ai';
     default:
-      return transport;
+      return protocol;
   }
 }
 
@@ -128,7 +116,7 @@ function getProtocolType(
  */
 export interface ChatProps {
   /** Transport to use */
-  transport: Transport;
+  protocol: Protocol;
 
   /** Extensions for chat features */
   extensions?: Extension[];
@@ -366,7 +354,7 @@ export interface ChatProps {
  * ```
  */
 export function Chat({
-  transport,
+  protocol: transport,
   extensions: _extensions,
   baseUrl = 'http://localhost:8765',
   wsUrl,

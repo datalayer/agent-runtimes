@@ -69,7 +69,7 @@ import { SignInSimple } from '@datalayer/core/lib/views/iam';
 import { UserBadge } from '@datalayer/core/lib/views/profile';
 import { Chat } from '../chat';
 import { useAgents } from '../hooks/useAgents';
-import { useAgentDurableLifecycle } from '../hooks/useCheckpoints';
+import { useAgentLifecycle } from '../hooks/useCheckpoints';
 import {
   useAgentRuntimes,
   useRefreshAgentRuntimes,
@@ -203,7 +203,7 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
   });
 
   const { pause, resume, terminate, refreshCheckpoints, checkpoints } =
-    useAgentDurableLifecycle({
+    useAgentLifecycle({
       agentSpecId: AGENT_SPEC_ID,
       agentSpec: AGENT_SPEC,
       runtime,
@@ -240,7 +240,7 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
     setActionError(null);
     try {
       await launchRuntime();
-      // Auto-create effect will fire once durableStatus='ready' and runtime is set.
+      // Auto-create effect will fire once lifecycleStatus='ready' and runtime is set.
     } catch (e) {
       setActionError(e instanceof Error ? e.message : 'Launch failed');
     } finally {
@@ -1056,7 +1056,7 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
           ) : (isReady || runtimeStatus === 'resumed') &&
             runtimeStatus !== 'paused' ? (
             <Chat
-              transport="ag-ui"
+              protocol="ag-ui"
               baseUrl={agentBaseUrl}
               agentId={agentId}
               title="Monitor Sales KPI Agent"

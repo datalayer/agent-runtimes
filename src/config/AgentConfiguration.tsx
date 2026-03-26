@@ -26,13 +26,16 @@ import {
 } from '@primer/octicons-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Box } from '@datalayer/primer-addons';
-import type { ExampleAgent } from '../types';
+import type { ExampleAgent, MCPServerConfig } from '../types';
 import type { OAuthProvider, OAuthProviderConfig, Identity } from '../identity';
-import { IdentityConnect, useIdentity } from '../identity';
-import type { Transport, MCPServerConfig } from '../chat';
-import { IdentityCard } from '../chat';
+import { IdentityCard, IdentityConnect, useIdentity } from '../identity';
 import type { McpServerSelection } from '../mcp';
-import type { Extension, MCPServerTool as MCPServerToolType } from '../types';
+import type {
+  AgentLibrary,
+  Extension,
+  MCPServerTool as MCPServerToolType,
+  Protocol,
+} from '../types';
 
 /**
  * Agent spec entry from the library endpoint.
@@ -397,13 +400,6 @@ export interface SkillOption {
   description?: string;
 }
 
-type AgentLibrary = 'pydantic-ai' | 'langchain' | 'google-adk';
-
-// Re-export types
-export type { AgentLibrary };
-export type { Transport };
-export type { Extension };
-
 const AGENT_LIBRARIES: {
   value: AgentLibrary;
   label: string;
@@ -429,7 +425,7 @@ const AGENT_LIBRARIES: {
   },
 ];
 
-const TRANSPORTS: { value: Transport; label: string; description: string }[] = [
+const TRANSPORTS: { value: Protocol; label: string; description: string }[] = [
   {
     value: 'ag-ui',
     label: 'AG-UI',
@@ -492,7 +488,7 @@ interface ConfigResponse {
 
 export interface AgentConfigurationProps {
   agentLibrary: AgentLibrary;
-  transport: Transport;
+  protocol: Protocol;
   extensions: Extension[];
   wsUrl: string;
   baseUrl: string;
@@ -526,7 +522,7 @@ export interface AgentConfigurationProps {
   onIdentityConnect?: (identity: Identity) => void;
   onIdentityDisconnect?: (provider: OAuthProvider) => void;
   onAgentLibraryChange: (library: AgentLibrary) => void;
-  onTransportChange: (transport: Transport) => void;
+  onTransportChange: (protocol: Protocol) => void;
   onExtensionsChange: (extensions: Extension[]) => void;
   onWsUrlChange: (url: string) => void;
   onBaseUrlChange: (url: string) => void;
@@ -551,10 +547,10 @@ export interface AgentConfigurationProps {
   richEditor?: boolean;
   /** Callback when rich editor changes */
   onRichEditorChange?: (enabled: boolean) => void;
-  /** Durable mode */
-  durable?: boolean;
-  /** Callback when durable changes */
-  onDurableChange?: (enabled: boolean) => void;
+  /** Managed lifecycle mode */
+  managed?: boolean;
+  /** Callback when managed changes */
+  onManagedChange?: (enabled: boolean) => void;
 }
 
 /**
@@ -564,7 +560,7 @@ export interface AgentConfigurationProps {
  */
 export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
   agentLibrary,
-  transport,
+  protocol: transport,
   extensions,
   wsUrl,
   baseUrl,
@@ -1030,7 +1026,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
           <FormControl.Label>Transport</FormControl.Label>
           <Select
             value={transport}
-            onChange={e => onTransportChange(e.target.value as Transport)}
+            onChange={e => onTransportChange(e.target.value as Protocol)}
             sx={{ width: '100%' }}
           >
             {TRANSPORTS.map(t => (

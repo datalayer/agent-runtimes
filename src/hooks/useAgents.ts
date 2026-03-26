@@ -14,7 +14,7 @@
  */
 
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
-import type { ServiceManager } from '@jupyterlab/services';
+import type { IRuntimeOptions } from '@datalayer/core/lib/stateful/runtimes/apis';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
@@ -26,38 +26,21 @@ import {
   useAgentStatus,
   useAgentError,
   useIsLaunching,
-} from '../state/substates/AgentState';
+} from '../store/agentRuntimeStore';
 import { DEFAULT_AGENT_CONFIG } from '../types/agents';
 import type {
   AgentStatus,
-  AgentConnection,
   AgentConfig,
   AgentRuntimeData,
 } from '../types/agents';
-
-// ═══════════════════════════════════════════════════════════════════════════
-// Runtime Types
-// ═══════════════════════════════════════════════════════════════════════════
-
-/** Request payload for creating a new agent runtime. */
-export type CreateAgentRuntimeRequest = {
-  environmentName?: string;
-  givenName?: string;
-  creditsLimit?: number;
-  type?: string;
-  /** 'none', 'notebook', or 'document' */
-  editorVariant?: string;
-  enableCodemode?: boolean;
-  /** ID of the agent spec used to create this runtime */
-  agentSpecId?: string;
-  /** Full agent spec payload to propagate to backend services */
-  agentSpec?: Record<string, any>;
-};
-
-export type CreateRuntimeApiResponse = {
-  success?: boolean;
-  runtime?: AgentRuntimeData;
-};
+import type {
+  CreateAgentRuntimeRequest,
+  UseAgentOptions,
+  UseAgentReturn,
+  AgentLifecycleRecord,
+  AgentLifecycleState,
+  UseAgentsRuntimesReturn,
+} from '../types/agents-lifecycle';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Constants
@@ -122,91 +105,30 @@ function toAgentRuntimeData(raw: Record<string, any>): AgentRuntimeData {
   } as AgentRuntimeData;
 }
 
-/**
- * Options for the useAgentshook.
- */
-export interface UseAgentOptions {
-  /** Agent spec ID (used as identifier for durable lifecycle) */
-  agentSpecId?: string;
-  /** Agent configuration */
-  agentConfig?: AgentConfig;
-  /** Auto-create agent when runtime connects (default: true) */
-  autoCreateAgent?: boolean;
-  /** Auto-start runtime on mount — durable mode (default: false) */
-  autoStart?: boolean;
-  /** Full agent spec object (persisted with checkpoints) */
-  agentSpec?: Record<string, any>;
-}
-
-/**
- * Return type for the useAgentshook.
- */
-export interface UseAgentReturn {
-  // Runtime
-  /** Current runtime connection (null if not connected) */
-  runtime: AgentConnection | null;
-  /** Combined agent status */
-  status: AgentStatus;
-  /** Whether the runtime is launching */
-  isLaunching: boolean;
-  /** Launch a new runtime */
-  launchRuntime: (options?: IRuntimeOptions) => Promise<AgentConnection>;
-  /** Connect to an existing runtime */
-  connectToRuntime: (options: {
-    podName: string;
-    environmentName: string;
-    serviceManager?: ServiceManager.IManager;
-    jupyterBaseUrl?: string;
-    kernelId?: string;
-  }) => void;
-  /** Disconnect from the runtime */
-  disconnect: () => void;
-
-  // Agent
-  /** Agent endpoint URL (derived from runtime connection) */
-  endpoint: string | null;
-  /** ServiceManager for the runtime */
-  serviceManager: ServiceManager.IManager | null;
-  /** Create an agent on the runtime */
-  createAgent: (
-    config?: AgentConfig,
-  ) => Promise<Pick<AgentConnection, 'agentId' | 'endpoint' | 'isReady'>>;
-  /** Whether agent creation is currently in progress */
-  isCreating: boolean;
-
-  // Status
-  /** Whether everything is ready (runtime + agent) */
-  isReady: boolean;
-  /** Error if any */
-  error: string | null;
-}
-
-import type { IRuntimeOptions } from '@datalayer/core/lib/stateful/runtimes/apis';
-
 // ═══════════════════════════════════════════════════════════════════════════
 // useAgentshook
 // ═══════════════════════════════════════════════════════════════════════════
 
 /**
- * Unified hook for managing agents.
+ * Unified hook for managing agent runtimes.
  *
  * Works in two modes:
- * - **Ephemeral** (no `agentSpecId`): connect to an existing runtime, auto-create agent
- * - **Durable** (with `agentSpecId`): full lifecycle with launch, pause, resume, terminate
+ * - **Connect** (no `agentSpecId`): connect to an existing runtime and auto-create agent
+ * - **Lifecycle** (with `agentSpecId`): full lifecycle — launch, pause, resume, terminate
  *
  * @param options - Configuration options
  * @returns Complete agent state and controls
  *
  * @example
  * ```tsx
- * // Ephemeral mode — connect to an existing runtime
+ * // Connect mode — attach to an existing runtime
  * const { isReady, endpoint, connectToRuntime } = useAgents({
  *   autoCreateAgent: true,
  *   agentConfig: { model: 'bedrock:us.anthropic.claude-3-5-haiku-20241022-v1:0' },
  * });
  *
- * // Durable mode — full lifecycle
- * const { isReady, endpoint, pause, resume, terminate } = useAgents({
+ * // Lifecycle mode — full lifecycle with agentSpecId
+ * const { isReady, endpoint, launchRuntime } = useAgents({
  *   agentSpecId: 'my-agent-spec',
  *   autoStart: true,
  *   agentConfig: { name: 'my-agent', transport: 'ag-ui' },
@@ -234,9 +156,9 @@ export function useAgents(options: UseAgentOptions = {}): UseAgentReturn {
   const storeCreateAgent = useAgentStore(state => state.createAgent);
   const storeDisconnect = useAgentStore(state => state.disconnect);
 
-  // Durable-specific local state
-  const [durableStatus, setDurableStatus] = useState<AgentStatus>('idle');
-  const [durableError, setDurableError] = useState<string | null>(null);
+  // Lifecycle local state
+  const [lifecycleStatus, setLifecycleStatus] = useState<AgentStatus>('idle');
+  const [lifecycleError, setLifecycleError] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const hasAutoStarted = useRef(false);
   const hasCreatedAgentRef = useRef(false);
@@ -245,10 +167,10 @@ export function useAgents(options: UseAgentOptions = {}): UseAgentReturn {
   const agentConfigRef = useRef(agentConfig);
   agentConfigRef.current = agentConfig;
 
-  // Whether we're operating in durable mode
-  const isDurable = !!agentSpecId;
+  // Whether we're managing a full agent lifecycle (agentSpecId provided)
+  const hasSpec = !!agentSpecId;
 
-  // ─── Auth helpers (durable mode) ────────────────────────────────────
+  // ─── Auth helpers ─────────────────────────────────────────────────
 
   const getAuthHeaders = useCallback(async () => {
     try {
@@ -267,9 +189,9 @@ export function useAgents(options: UseAgentOptions = {}): UseAgentReturn {
 
   const launchRuntime = useCallback(
     async (runtimeOptions?: IRuntimeOptions) => {
-      if (isDurable) {
-        setDurableStatus('launching');
-        setDurableError(null);
+      if (hasSpec) {
+        setLifecycleStatus('launching');
+        setLifecycleError(null);
         try {
           const safeName = `${agentSpecId}`
             .replace(/\//g, '-')
@@ -285,22 +207,22 @@ export function useAgents(options: UseAgentOptions = {}): UseAgentReturn {
               givenName: safeName,
             },
           );
-          setDurableStatus('ready');
+          setLifecycleStatus('ready');
           return conn;
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err);
-          setDurableError(msg);
-          setDurableStatus('error');
+          setLifecycleError(msg);
+          setLifecycleStatus('error');
           throw err;
         }
       } else {
         if (!runtimeOptions) {
-          throw new Error('Runtime options are required in ephemeral mode');
+          throw new Error('Runtime options are required in connect mode');
         }
         return storeLaunchAgent(runtimeOptions);
       }
     },
-    [agentSpecId, isDurable, storeLaunchAgent],
+    [agentSpecId, hasSpec, storeLaunchAgent],
   );
 
   // ─── Create Agent ───────────────────────────────────────────────────
@@ -338,18 +260,15 @@ export function useAgents(options: UseAgentOptions = {}): UseAgentReturn {
           name:
             config?.name ||
             agentConfig?.name ||
-            (isDurable && agentSpecId ? agentSpecId : runtime?.podName),
+            (hasSpec && agentSpecId ? agentSpecId : runtime?.podName),
         };
 
-        if (isDurable && agentSpecId) {
-          return await storeCreateAgent(mergedConfig);
-        }
         return await storeCreateAgent(mergedConfig);
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        if (isDurable) {
-          setDurableError(msg);
-          setDurableStatus('error');
+        if (hasSpec) {
+          setLifecycleError(msg);
+          setLifecycleStatus('error');
         }
         throw err;
       } finally {
@@ -357,14 +276,14 @@ export function useAgents(options: UseAgentOptions = {}): UseAgentReturn {
         setIsCreating(false);
       }
     },
-    [agentSpecId, agentConfig, agentSpec, isDurable, runtime, storeCreateAgent],
+    [agentSpecId, agentConfig, agentSpec, hasSpec, runtime, storeCreateAgent],
   );
 
-  // ─── Auto-create agent when runtime is ready (ephemeral mode) ──────
+  // ─── Auto-create agent when runtime is ready (connect mode) ───────
 
   useEffect(() => {
     if (
-      !isDurable &&
+      !hasSpec &&
       autoCreateAgent &&
       runtime &&
       baseStatus === 'ready' &&
@@ -377,29 +296,29 @@ export function useAgents(options: UseAgentOptions = {}): UseAgentReturn {
         hasCreatedAgentRef.current = false;
       });
     }
-  }, [isDurable, autoCreateAgent, runtime, baseStatus, storeCreateAgent]);
+  }, [hasSpec, autoCreateAgent, runtime, baseStatus, storeCreateAgent]);
 
-  // ─── Auto-create agent when runtime is ready (durable mode) ─────────
+  // ─── Auto-create agent when runtime is ready (lifecycle mode) ──────
 
   useEffect(() => {
     if (
-      isDurable &&
+      hasSpec &&
       autoCreateAgent &&
       runtime &&
-      (durableStatus === 'ready' || durableStatus === 'resumed') &&
+      (lifecycleStatus === 'ready' || lifecycleStatus === 'resumed') &&
       !runtime.isReady &&
       !hasCreatedAgentRef.current
     ) {
       hasCreatedAgentRef.current = true;
       createAgent(agentConfigRef.current).catch(err => {
-        console.error('[useAgents] Failed to auto-create durable agent:', err);
+        console.error('[useAgents] Failed to auto-create agent:', err);
         const message = err instanceof Error ? err.message : String(err);
-        setDurableError(message);
-        setDurableStatus('error');
+        setLifecycleError(message);
+        setLifecycleStatus('error');
         hasCreatedAgentRef.current = false;
       });
     }
-  }, [isDurable, autoCreateAgent, runtime, durableStatus, createAgent]);
+  }, [hasSpec, autoCreateAgent, runtime, lifecycleStatus, createAgent]);
 
   // If runtime pod changes (e.g. after restore), force re-creation on new pod.
   useEffect(() => {
@@ -414,10 +333,10 @@ export function useAgents(options: UseAgentOptions = {}): UseAgentReturn {
     lastRuntimePodRef.current = currentPod;
   }, [runtime?.podName]);
 
-  // ─── Durable bootstrap on initial load ───────────────────────────────
+  // ─── Bootstrap: connect to existing runtime on initial load ─────────
 
   useEffect(() => {
-    if (!isDurable || runtime || autoStart || durableStatus !== 'idle') {
+    if (!hasSpec || runtime || autoStart || lifecycleStatus !== 'idle') {
       return;
     }
 
@@ -478,14 +397,14 @@ export function useAgents(options: UseAgentOptions = {}): UseAgentReturn {
               ? 'resumed'
               : 'running';
         if (resolvedStatus === 'paused') {
-          setDurableStatus('paused');
+          setLifecycleStatus('paused');
         } else if (resolvedStatus === 'resumed') {
-          setDurableStatus('resumed');
+          setLifecycleStatus('resumed');
         } else {
-          setDurableStatus('ready');
+          setLifecycleStatus('ready');
         }
       } catch (err) {
-        console.warn('[useAgents] Failed to bootstrap durable runtime:', err);
+        console.warn('[useAgents] Failed to find existing runtime:', err);
       }
     };
 
@@ -494,10 +413,10 @@ export function useAgents(options: UseAgentOptions = {}): UseAgentReturn {
       cancelled = true;
     };
   }, [
-    isDurable,
+    hasSpec,
     runtime,
     autoStart,
-    durableStatus,
+    lifecycleStatus,
     getAuthHeaders,
     agentSpecId,
     storeConnectAgent,
@@ -510,37 +429,37 @@ export function useAgents(options: UseAgentOptions = {}): UseAgentReturn {
     }
   }, [baseStatus]);
 
-  // ─── Auto-start (durable mode) ────────────────────────────────────
+  // ─── Auto-start (lifecycle mode) ──────────────────────────────────
 
   useEffect(() => {
     if (
-      isDurable &&
+      hasSpec &&
       autoStart &&
       !hasAutoStarted.current &&
-      durableStatus === 'idle'
+      lifecycleStatus === 'idle'
     ) {
       hasAutoStarted.current = true;
       launchRuntime();
     }
-  }, [isDurable, autoStart, durableStatus, launchRuntime]);
+  }, [hasSpec, autoStart, lifecycleStatus, launchRuntime]);
 
   // ─── Sync store errors ─────────────────────────────────────────────
 
   useEffect(() => {
-    if (storeError && isDurable && durableStatus !== 'error') {
-      setDurableError(storeError);
-      setDurableStatus('error');
+    if (storeError && hasSpec && lifecycleStatus !== 'error') {
+      setLifecycleError(storeError);
+      setLifecycleStatus('error');
     }
-  }, [storeError, isDurable, durableStatus]);
+  }, [storeError, hasSpec, lifecycleStatus]);
 
   // ─── Derived state ─────────────────────────────────────────────────
 
-  const status: AgentStatus = isDurable
-    ? durableStatus
+  const status: AgentStatus = hasSpec
+    ? lifecycleStatus
     : (baseStatus as AgentStatus);
-  const error = isDurable ? durableError || storeError : storeError;
-  const isReady = isDurable
-    ? (durableStatus === 'ready' || durableStatus === 'resumed') &&
+  const error = hasSpec ? lifecycleError || storeError : storeError;
+  const isReady = hasSpec
+    ? (lifecycleStatus === 'ready' || lifecycleStatus === 'resumed') &&
       !!runtime?.isReady
     : baseStatus === 'ready' && !!runtime?.isReady;
   const endpoint = runtime?.endpoint || null;
@@ -724,23 +643,8 @@ export function useRefreshAgentRuntimes() {
 // Lifecycle Store (resume / pause local UI state)
 // ═══════════════════════════════════════════════════════════════════════════
 
-export type AgentLifecycleRecord = {
-  resumePending: boolean;
-  pauseLockedForResumed: boolean;
-};
-
-export type LifecycleRunningAgent = AgentRuntimeData;
-
 export const getAgentLifecycleKey = (runtimeKey: string) =>
   `datalayer:agent-durable:lifecycle:${runtimeKey}`;
-
-type AgentLifecycleState = {
-  byRuntimeKey: Record<string, AgentLifecycleRecord>;
-  markResumePending: (runtimeKey: string) => void;
-  markResumeFailed: (runtimeKey: string) => void;
-  markResumeSettled: (runtimeKey: string) => void;
-  clearRuntimeLifecycle: (runtimeKey: string) => void;
-};
 
 const DEFAULT_LIFECYCLE_RECORD: AgentLifecycleRecord = {
   resumePending: false,
@@ -818,19 +722,6 @@ export function useLifecycleRunningAgents() {
 // ═══════════════════════════════════════════════════════════════════════════
 // Consolidated Runtime Composite
 // ═══════════════════════════════════════════════════════════════════════════
-
-export interface UseAgentsRuntimesReturn {
-  runtimes: AgentRuntimeData[];
-  isRuntimesLoading: boolean;
-  isRuntimesError: boolean;
-  runtimesError: unknown;
-  refetchRuntimes: () => Promise<{ data?: AgentRuntimeData[] }>;
-  refreshRuntimes: () => void;
-  deleteRuntimeByPod: (podName: string) => Promise<unknown>;
-  createRuntime: (
-    data: CreateAgentRuntimeRequest,
-  ) => Promise<CreateRuntimeApiResponse>;
-}
 
 /**
  * Consolidated runtime list and mutations.

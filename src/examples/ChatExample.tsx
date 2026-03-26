@@ -159,7 +159,7 @@ const AgentRuntimeChatExample: React.FC = () => {
   // Agent is ready — render the Chat component
   return (
     <Chat
-      transport="ag-ui"
+      protocol="ag-ui"
       baseUrl={BASE_URL}
       agentId={agentId}
       title="Simple Agent"

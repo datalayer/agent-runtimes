@@ -61,17 +61,12 @@ import {
   TableCellResizerPlugin,
   TablePlugin,
 } from '@datalayer/jupyter-lexical';
-
-// Import Chat components
-import {
-  ChatSidebar,
-  type ProtocolConfig,
-  type FrontendToolDefinition,
-} from '../chat';
+import { ChatSidebar } from '../chat';
 import { ChatInlinePlugin } from '../lexical/ChatInlinePlugin';
 import { useChatInlineToolbarItems } from '../lexical/useChatInlineToolbarItems';
 import { useLexicalTools } from '../tools/adapters/agent-runtimes/lexicalHooks';
 import { editorConfig } from './lexical/editorConfig';
+import type { FrontendToolDefinition, ProtocolConfig } from '../types';
 
 import '@datalayer/jupyter-lexical/style/index.css';
 import './lexical/lexical-theme.css';

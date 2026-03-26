@@ -12,7 +12,7 @@
  * @module api
  */
 
-// AI Agents API (durable agent management: agents, tool-approvals, notifications, etc.)
+// Agents Service API (agents, tool-approvals, notifications, etc.)
 export * as agents from './agents';
 export * as toolApprovals from './tool-approvals';
 export * as notifications from './notifications';

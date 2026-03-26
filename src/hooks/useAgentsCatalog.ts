@@ -16,7 +16,7 @@ import { useEffect } from 'react';
 import { create } from 'zustand';
 import { useCoreStore, useDatalayer } from '@datalayer/core';
 import { URLExt } from '@jupyterlab/coreutils';
-import { useAgentStore } from '../state/substates/AgentState';
+import { useAgentStore } from '../store/agentRuntimeStore';
 import type { AgentRuntimeData, AgentSpec } from '../types';
 import { listAgentSpecs } from '../specs';
 
@@ -218,7 +218,7 @@ export function useNotebookAgents(notebookId: string) {
             upsertAgent({
               id: notebookId,
               baseUrl: currentAgent.baseUrl,
-              transport: currentAgent.transport,
+              protocol: currentAgent.protocol,
               runtimeId,
               status: 'running',
             });
@@ -229,7 +229,7 @@ export function useNotebookAgents(notebookId: string) {
             name: `Notebook ${notebookId}`,
             description: 'AI agent for notebook',
             baseUrl: '',
-            transport: 'vercel-ai',
+            protocol: 'vercel-ai',
             documentId: notebookId,
             runtimeId,
             status: 'running',

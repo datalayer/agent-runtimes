@@ -23,7 +23,7 @@ export interface ExampleAgent {
   lastEdited: string;
   screenshot: string;
   status?: ExampleAgentStatus;
-  transport: Protocol;
+  protocol: Protocol;
   avatarUrl: string;
   notebookFile: string;
   lexicalFile: string;

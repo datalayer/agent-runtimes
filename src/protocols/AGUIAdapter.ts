@@ -28,8 +28,8 @@ export interface AGUIAdapterConfig extends ProtocolAdapterConfig {
  * Uses HTTP POST with SSE streaming for responses
  */
 export class AGUIAdapter extends BaseProtocolAdapter {
-  readonly type = 'ag-ui' as const;
-  readonly transport = 'sse' as const;
+  readonly protocol = 'ag-ui' as const;
+  readonly protocolTransport = 'sse' as const;
 
   private aguiConfig: AGUIAdapterConfig;
   private abortController: AbortController | null = null;

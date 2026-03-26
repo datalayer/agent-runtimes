@@ -21,7 +21,12 @@ import type {
 /**
  * Supported protocol (communication protocols with agent backends)
  */
-export type Protocol = 'ag-ui' | 'a2a' | 'acp' | 'vercel-ai';
+export type Protocol =
+  | 'ag-ui'
+  | 'a2a'
+  | 'acp'
+  | 'vercel-ai'
+  | 'vercel-ai-jupyter';
 
 /**
  * Protocol connection state
@@ -126,11 +131,11 @@ export type ProtocolEventHandler = (event: ProtocolEvent) => void;
  * Abstract protocol adapter interface
  */
 export interface ProtocolAdapter {
-  /** Transport type */
-  readonly type: Protocol;
+  /** Protocol */
+  readonly protocol: Protocol;
 
   /** Transport mechanism used */
-  readonly transport: ProtocolTransport;
+  readonly protocolTransport: ProtocolTransport;
 
   /** Current connection state */
   readonly connectionState: ProtocolConnectionState;

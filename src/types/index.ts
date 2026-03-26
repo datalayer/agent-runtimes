@@ -7,6 +7,7 @@ export * from './a2a';
 export * from './acp';
 export * from './ag-ui';
 export * from './agents';
+export * from './agents-lifecycle';
 export * from './examples';
 export * from './mcp';
 export * from './skills';

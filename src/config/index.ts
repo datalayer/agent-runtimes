@@ -14,7 +14,6 @@ export {
   getSpecId,
 } from './AgentConfiguration';
 export type {
-  AgentLibrary,
   AgentConfigurationProps,
   SkillOption,
   MCPServerTool,

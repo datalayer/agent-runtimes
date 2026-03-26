@@ -31,7 +31,7 @@ const transformAgentData = (
   lastEdited: data.editTimestamp,
   screenshot: data.image,
   status: data.status as ExampleAgentStatus | undefined,
-  transport: data.transport as Protocol,
+  protocol: data.transport as Protocol,
   avatarUrl: data.avatarUrl,
   notebookFile: `${notebookSuffix}.ipynb.json`,
   lexicalFile: `${lexicalSuffix}.lexical.json`,

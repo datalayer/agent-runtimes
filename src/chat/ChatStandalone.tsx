@@ -19,31 +19,18 @@ import { IconButton, Text, Tooltip } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { XIcon, CommentDiscussionIcon } from '@primer/octicons-react';
 import { AiAgentIcon } from '@datalayer/icons-react';
-
-import {
-  ChatBase,
-  type ChatBaseProps,
-  type RenderToolResult,
-  type ToolCallRenderContext,
-  type ToolCallStatus,
-  type StreamingMessageOptions,
-  type MessageHandler,
-} from './base/ChatBase';
-import { PoweredByTag, type PoweredByTagProps } from './elements/PoweredByTag';
-import { useChatOpen, useChatMessages, useChatStore } from '../store/chatStore';
 import {
   useChatKeyboardShortcuts,
   getShortcutDisplay,
 } from '@datalayer/core/lib/hooks';
-
-// Re-export types for consumers
-export type {
-  ToolCallStatus,
-  ToolCallRenderContext,
-  RenderToolResult,
-  StreamingMessageOptions,
-  MessageHandler,
-};
+import { ChatBase } from './base/ChatBase';
+import { PoweredByTag, type PoweredByTagProps } from './elements/PoweredByTag';
+import { useChatOpen, useChatMessages, useChatStore } from '../store/chatStore';
+import {
+  type ChatBaseProps,
+  type RenderToolResult,
+  type MessageHandler,
+} from '../types';
 
 /**
  * ChatStandalone props
