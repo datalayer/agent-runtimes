@@ -16,8 +16,9 @@
  * @module examples/AgentRuntimeNotebookExample
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Box } from '@datalayer/primer-addons';
+import { SegmentedControl, Text } from '@primer/react';
 import { ServiceManager } from '@jupyterlab/services';
 import { Notebook } from '@datalayer/jupyter-react';
 import { ThemedJupyterProvider } from './stores/themedProvider';
@@ -31,6 +32,8 @@ import MatplotlibNotebook from './stores/notebooks/Matplotlib.ipynb.json';
 
 import { DEFAULT_MODEL } from '../specs';
 
+type TransportProtocol = 'ag-ui' | 'vercel-ai';
+
 // Fixed notebook ID
 const NOTEBOOK_ID = 'agui-notebook-example';
 
@@ -41,8 +44,16 @@ const NOTEBOOK_CONTENT = MatplotlibNotebook;
 const BASE_URL = 'http://localhost:8765';
 const AGENT_ID = 'notebook-agent-runtime-example';
 
-// AG-UI endpoint for notebook operations (trailing slash required for mounted Starlette apps)
-const AG_UI_ENDPOINT = `${BASE_URL}/api/v1/ag-ui/${AGENT_ID}/`;
+/**
+ * Build the endpoint URL for a given transport protocol.
+ * AG-UI endpoints need a trailing slash for mounted Starlette apps.
+ */
+function getEndpoint(protocol: TransportProtocol): string {
+  if (protocol === 'ag-ui') {
+    return `${BASE_URL}/api/v1/ag-ui/${AGENT_ID}/`;
+  }
+  return `${BASE_URL}/api/v1/vercel-ai/${AGENT_ID}`;
+}
 
 /**
  * Hook to ensure the demo-agent exists on the server.
@@ -51,6 +62,7 @@ const AG_UI_ENDPOINT = `${BASE_URL}/api/v1/ag-ui/${AGENT_ID}/`;
 function useEnsureAgent(
   agentId: string,
   baseUrl: string,
+  transport: TransportProtocol,
 ): {
   isReady: boolean;
   error: string | null;
@@ -73,7 +85,7 @@ function useEnsureAgent(
             name: agentId,
             description: 'Demo agent for notebook example',
             agent_library: 'pydantic-ai',
-            transport: 'ag-ui',
+            transport,
             model: DEFAULT_MODEL,
             system_prompt:
               'You are a helpful AI assistant that helps users work with Jupyter notebooks. You can help with code, explanations, and data analysis.',
@@ -112,7 +124,7 @@ function useEnsureAgent(
     return () => {
       mounted = false;
     };
-  }, [agentId, baseUrl]);
+  }, [agentId, baseUrl, transport]);
 
   return { isReady, error };
 }
@@ -122,10 +134,16 @@ function useEnsureAgent(
  */
 interface NotebookUIProps {
   serviceManager?: ServiceManager.IManager;
+  protocol: TransportProtocol;
+  isSwitching: boolean;
+  onProtocolChange: (index: number) => void;
 }
 
 const NotebookUI = React.memo(function NotebookUI({
   serviceManager,
+  protocol,
+  isSwitching,
+  onProtocolChange,
 }: NotebookUIProps): JSX.Element {
   return (
     <Box
@@ -145,7 +163,37 @@ const NotebookUI = React.memo(function NotebookUI({
           borderColor: 'border.default',
         }}
       >
-        <Box as="h1">Agent Runtime Notebook Example</Box>
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
+          <Box as="h1" sx={{ margin: 0 }}>
+            Agent Runtime Notebook Example
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Text sx={{ color: 'fg.muted', fontSize: 1 }}>Protocol:</Text>
+            <SegmentedControl
+              aria-label="Transport protocol"
+              size="small"
+              onChange={onProtocolChange}
+            >
+              <SegmentedControl.Button selected={protocol === 'ag-ui'}>
+                AG-UI
+              </SegmentedControl.Button>
+              <SegmentedControl.Button selected={protocol === 'vercel-ai'}>
+                Vercel AI
+              </SegmentedControl.Button>
+            </SegmentedControl>
+            {isSwitching && (
+              <Text sx={{ color: 'attention.fg', fontSize: 0 }}>
+                Switching...
+              </Text>
+            )}
+          </Box>
+        </Box>
         <p>
           Platform-agnostic tool usage with agent-runtimes integration. Use the
           AI copilot to manipulate the notebook.
@@ -192,11 +240,55 @@ interface NotebookWithChatProps {
 function NotebookWithChat({
   serviceManager,
 }: NotebookWithChatProps): JSX.Element {
+  const [protocol, setProtocol] = useState<TransportProtocol>('vercel-ai');
+  const [isSwitching, setIsSwitching] = useState(false);
+
   // Ensure the agent exists before rendering chat
-  const { isReady, error } = useEnsureAgent(AGENT_ID, BASE_URL);
+  const { isReady, error } = useEnsureAgent(AGENT_ID, BASE_URL, protocol);
 
   // Get notebook tools for ChatFloating
   const frontendTools = useNotebookTools(NOTEBOOK_ID);
+
+  // Compute endpoint from current protocol
+  const endpoint = getEndpoint(protocol);
+
+  // Handle protocol toggle
+  const handleProtocolChange = useCallback(
+    async (index: number) => {
+      const newProtocol: TransportProtocol =
+        index === 0 ? 'ag-ui' : 'vercel-ai';
+      if (newProtocol === protocol) return;
+
+      setIsSwitching(true);
+      try {
+        const response = await fetch(
+          `${BASE_URL}/api/v1/agents/${AGENT_ID}/transport`,
+          {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ transport: newProtocol }),
+          },
+        );
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          console.error(
+            '[NotebookExample] Failed to switch transport:',
+            errorData,
+          );
+          return;
+        }
+        console.log(
+          `[NotebookExample] Switched transport: ${protocol} -> ${newProtocol}`,
+        );
+        setProtocol(newProtocol);
+      } catch (err) {
+        console.error('[NotebookExample] Error switching transport:', err);
+      } finally {
+        setIsSwitching(false);
+      }
+    },
+    [protocol],
+  );
 
   return (
     <Box
@@ -207,7 +299,12 @@ function NotebookWithChat({
         overflow: 'hidden',
       }}
     >
-      <NotebookUI serviceManager={serviceManager} />
+      <NotebookUI
+        serviceManager={serviceManager}
+        protocol={protocol}
+        isSwitching={isSwitching}
+        onProtocolChange={handleProtocolChange}
+      />
 
       {error && (
         <Box
@@ -228,7 +325,9 @@ function NotebookWithChat({
 
       {isReady && (
         <ChatFloating
-          endpoint={AG_UI_ENDPOINT}
+          key={protocol}
+          protocol={protocol}
+          endpoint={endpoint}
           title="Notebook AI Agent Runtime"
           description="Hi! I can help you edit notebook cells. Try: 'Add a new code cell', 'Run cell 1', or 'Delete the last cell'"
           defaultOpen={true}

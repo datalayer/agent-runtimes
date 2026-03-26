@@ -468,6 +468,7 @@ const AgUiSharedStateExample: React.FC = () => {
 
         {/* Floating chat with initial state */}
         <ChatFloating
+          protocol="ag-ui"
           endpoint={SHARED_STATE_ENDPOINT}
           title="Recipe Assistant"
           description="Let's build a recipe together! I can add ingredients, instructions, and more."

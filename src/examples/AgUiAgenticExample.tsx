@@ -145,6 +145,7 @@ const AgUiAgenticExample: React.FC = () => {
 
         {/* Floating chat */}
         <ChatFloating
+          protocol="ag-ui"
           endpoint={AGENTIC_CHAT_ENDPOINT}
           title="Agentic Chat"
           description="Chat with an AI agent that can use tools like getting the current time."

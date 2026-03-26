@@ -34,6 +34,10 @@ else:
     except (ImportError, ModuleNotFoundError):
         VercelAIAdapter = None  # type: ignore[assignment,misc]
 
+from pydantic_ai import DeferredToolRequests
+from pydantic_ai.tools import ToolDefinition
+from pydantic_ai.toolsets import ExternalToolset
+
 from ..adapters.base import BaseAgent
 from ..context.identities import IdentityContextManager
 from ..context.usage import get_usage_tracker
@@ -193,9 +197,10 @@ class VercelAITransport(BaseTransport):
         logger = logging.getLogger(__name__)
         pydantic_agent = self._get_pydantic_agent()
 
-        # Extract model, builtinTools, and identities from request body if not provided
+        # Extract model, builtinTools, identities, and frontend tools from request body if not provided
         builtin_tools_from_request: list[str] | None = None
         identities_from_request: list[dict[str, Any]] | None = None
+        frontend_tools_from_request: list[dict[str, Any]] | None = None
         sdk_version: str | None = None
         body: dict[str, Any] | None = None
 
@@ -231,6 +236,13 @@ class VercelAITransport(BaseTransport):
 
             # Extract SDK version when present (newer AI SDK clients).
             sdk_version = body.get("sdkVersion") or body.get("sdk_version")
+
+            # Extract frontend tools from request body
+            frontend_tools_from_request = body.get("tools")
+            if frontend_tools_from_request:
+                logger.info(
+                    f"Vercel AI: Received {len(frontend_tools_from_request)} frontend tools from request"
+                )
 
             # Create a new request with the cached body for pydantic-ai to consume
             # We need to wrap the request with cached body
@@ -350,6 +362,52 @@ class VercelAITransport(BaseTransport):
                 # Get runtime toolsets from the adapter (includes MCP servers)
                 runtime_toolsets = self._get_runtime_toolsets()
 
+                # Add frontend tools as an ExternalToolset if provided in the request
+                has_frontend_tools = False
+                if frontend_tools_from_request:
+                    frontend_tool_defs = []
+                    for tool in frontend_tools_from_request:
+                        tool_name = tool.get("name", "")
+                        tool_desc = tool.get("description", "")
+                        tool_params = tool.get("parameters", {})
+                        # Normalize parameters: accept both JSON Schema and array formats
+                        if isinstance(tool_params, list):
+                            # Convert CopilotKit-style array to JSON Schema
+                            properties = {}
+                            required = []
+                            for p in tool_params:
+                                p_name = p.get("name", "")
+                                p_type = p.get("type", "string")
+                                properties[p_name] = {
+                                    "type": p_type,
+                                    "description": p.get("description", ""),
+                                }
+                                if p.get("required"):
+                                    required.append(p_name)
+                            tool_params = {
+                                "type": "object",
+                                "properties": properties,
+                                "required": required,
+                            }
+                        if tool_name:
+                            frontend_tool_defs.append(
+                                ToolDefinition(
+                                    name=tool_name,
+                                    description=tool_desc,
+                                    parameters_json_schema=tool_params,
+                                )
+                            )
+                    if frontend_tool_defs:
+                        frontend_toolset: ExternalToolset = ExternalToolset(
+                            frontend_tool_defs, id="frontend-tools"
+                        )
+                        runtime_toolsets.append(frontend_toolset)
+                        has_frontend_tools = True
+                        logger.info(
+                            f"[Vercel AI] Added frontend ExternalToolset with {len(frontend_tool_defs)} tools: "
+                            f"{[t.name for t in frontend_tool_defs]}"
+                        )
+
                 # Log toolsets being used with detailed inspection
                 if runtime_toolsets:
                     toolset_info = []
@@ -400,6 +458,15 @@ class VercelAITransport(BaseTransport):
                     "builtin_tools": effective_builtin_tools,
                     "on_complete": on_complete,
                 }
+
+                # When frontend tools are present as ExternalToolset, pydantic-ai
+                # requires DeferredToolRequests in the output types so external
+                # tool calls can be returned to the client for execution.
+                if has_frontend_tools:
+                    dispatch_kwargs["output_type"] = [str, DeferredToolRequests]
+                    logger.info(
+                        "[Vercel AI] Enabled DeferredToolRequests output_type for frontend tools"
+                    )
 
                 # Pass sdk_version only if supported by installed pydantic-ai.
                 if sdk_version and "sdk_version" in inspect.signature(

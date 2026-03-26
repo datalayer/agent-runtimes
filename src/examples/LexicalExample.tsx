@@ -465,6 +465,7 @@ function LexicalWithChat({
 
       {isReady && (
         <ChatFloating
+          protocol="ag-ui"
           endpoint={AG_UI_ENDPOINT}
           title="Lexical AI Agent Runtime"
           description="Hi! I can help you edit documents. Try: 'Insert a heading', 'Add a code block', or 'Create a list'"

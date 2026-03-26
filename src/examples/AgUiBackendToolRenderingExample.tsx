@@ -182,6 +182,7 @@ const AgUiBackendToolRenderingExample: React.FC = () => {
 
         {/* Floating chat with inline tool rendering */}
         <ChatFloating
+          protocol="ag-ui"
           endpoint={BACKEND_TOOL_RENDERING_ENDPOINT}
           title="Weather Assistant"
           description="Ask me about the weather anywhere in the world!"

@@ -40,6 +40,7 @@ import type {
   ChatViewMode,
   FrontendToolDefinition,
   ModelConfig,
+  Protocol,
   ProtocolConfig,
   RenderToolResult,
   Suggestion,
@@ -56,10 +57,15 @@ export interface ChatFloatingProps {
   endpoint?: string;
 
   /**
-   * Protocol configuration for other protocols (A2A, ACP, Vercel AI).
-   * Takes precedence over endpoint when provided.
+   * Protocol type or full configuration.
+   *
+   * When a `Protocol` string is provided (e.g. `'vercel-ai'`), it overrides the
+   * auto-detected protocol from the endpoint URL. When a full `ProtocolConfig`
+   * object is provided, it is used directly and takes precedence over endpoint.
+   *
+   * @default 'vercel-ai'
    */
-  protocol?: ProtocolConfig;
+  protocol?: Protocol | ProtocolConfig;
 
   /**
    * Use Zustand store for state management instead of protocol endpoint.
@@ -411,9 +417,14 @@ export function ChatFloating({
   // Build protocol config from endpoint if not provided directly
   // Memoize to avoid creating new object on every render (which would trigger useEffect re-runs)
   const protocol: ProtocolConfig | undefined = useMemo(() => {
-    if (protocolProp) return protocolProp;
+    // Full ProtocolConfig object takes precedence
+    if (protocolProp && typeof protocolProp === 'object') return protocolProp;
 
     if (!endpoint) return undefined;
+
+    // If protocolProp is a Protocol string, use it as explicit type override
+    const explicitType =
+      typeof protocolProp === 'string' ? protocolProp : undefined;
 
     // Extract base URL from endpoint - everything before /api/v1/
     // e.g., https://prod1.datalayer.run/agent-runtimes/pool1/rt123/api/v1/ag-ui/default/
@@ -423,11 +434,11 @@ export function ChatFloating({
       endpoint.match(/^(https?:\/\/[^/]+)/)?.[1] ||
       '';
 
-    // Detect protocol type from endpoint path
+    // Detect protocol type from endpoint path (fallback when no explicit type)
     const protocolMatch = endpoint.match(
       /\/api\/v1\/(ag-ui|vercel-ai|a2a|acp)\//,
     );
-    const detectedType = (protocolMatch?.[1] ?? 'ag-ui') as
+    const detectedType = (explicitType ?? protocolMatch?.[1] ?? 'vercel-ai') as
       | 'ag-ui'
       | 'vercel-ai'
       | 'a2a'

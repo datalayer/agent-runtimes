@@ -50,6 +50,35 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
   private abortController: AbortController | null = null;
   private currentRequestId: string | null = null;
 
+  // Frontend tool continuation state (modelled after AGUIAdapter)
+  private pendingToolCalls: Map<
+    string,
+    { toolCallId: string; toolName: string; args: Record<string, unknown> }
+  > = new Map();
+  private collectedToolResults: Map<
+    string,
+    {
+      toolCallId: string;
+      toolName: string;
+      args: Record<string, unknown>;
+      result: ToolExecutionResult;
+    }
+  > = new Map();
+  // Store conversation history for continuation
+  private messageHistory: Array<{
+    id: string;
+    role: string;
+    parts: Array<Record<string, unknown>>;
+  }> = [];
+  private lastAssistantText = '';
+  private lastTools: ToolDefinition[] = [];
+  private isContinuation = false;
+
+  // Stream parsing depth — prevents premature continuations
+  private _streamParsingDepth = 0;
+  private _streamDonePromise: Promise<void> | null = null;
+  private _streamDoneResolve: (() => void) | null = null;
+
   constructor(config: VercelAIAdapterConfig) {
     super(config);
     this.vercelConfig = config;
@@ -136,6 +165,12 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
         provider: string;
         accessToken?: string;
       }>;
+      /** Pre-built Vercel AI message array for continuation requests */
+      _vercelMessages?: Array<{
+        id: string;
+        role: string;
+        parts: Array<Record<string, unknown>>;
+      }>;
     },
   ): Promise<void> {
     if (this.abortController) {
@@ -148,45 +183,68 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
     const requestId = options?.threadId || generateMessageId();
     this.currentRequestId = requestId;
 
-    try {
-      // Extract the message content as a string
-      const messageContent =
-        typeof message.content === 'string'
-          ? message.content
-          : String(message.content);
+    // Store tools for potential continuation
+    if (options?.tools) {
+      this.lastTools = options.tools;
+    }
 
-      // Build single message in Vercel AI SDK format
-      const vercelMessage = {
-        id: message.id,
-        role: message.role,
-        parts: [
-          {
-            type: 'text',
-            text: messageContent,
-          },
-        ],
-      };
+    // Reset assistant content tracking for fresh (non-continuation) messages
+    if (!this.isContinuation) {
+      this.lastAssistantText = '';
+    }
+
+    try {
+      let vercelMessages: Array<{
+        id: string;
+        role: string;
+        parts: Array<Record<string, unknown>>;
+      }>;
+
+      if (options?._vercelMessages) {
+        // Continuation: use pre-built messages
+        vercelMessages = options._vercelMessages;
+      } else {
+        // Fresh message: build a single user message
+        const messageContent =
+          typeof message.content === 'string'
+            ? message.content
+            : String(message.content);
+
+        const vercelMessage = {
+          id: message.id,
+          role: message.role,
+          parts: [
+            {
+              type: 'text' as const,
+              text: messageContent,
+            },
+          ],
+        };
+        vercelMessages = [vercelMessage];
+      }
+
+      // Store message history for continuation
+      if (!this.isContinuation) {
+        this.messageHistory = [...vercelMessages];
+      } else {
+        this.messageHistory = [...vercelMessages];
+      }
 
       // Build Vercel AI request
       const requestBody = {
-        id: requestId, // Run ID for tracking
-        messages: [vercelMessage],
-        trigger: 'submit-message',
-        // Optional fields based on Pydantic AI's Vercel adapter
+        id: requestId,
+        messages: vercelMessages,
+        trigger: 'submit-message' as const,
         ...(options?.tools && { tools: options.tools }),
-        // Model override for per-request model selection
         ...(options?.model && { model: options.model }),
-        // Builtin tools / MCP tools to enable
         ...(options?.builtinTools &&
           options.builtinTools.length > 0 && {
             builtinTools: options.builtinTools,
           }),
-        // Skills to enable
         ...(options?.skills &&
           options.skills.length > 0 && {
             skills: options.skills,
           }),
-        // Connected identities with access tokens
         ...(options?.identities &&
           options.identities.length > 0 && {
             identities: options.identities,
@@ -276,8 +334,22 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
     >();
     let doneEmitted = false;
 
+    // Consume the continuation flag — set by sendToolResult for this call only
+    this.isContinuation = false;
+
+    // Track stream parsing depth for sendToolResult synchronisation
+    if (this._streamParsingDepth === 0) {
+      this._streamDonePromise = new Promise<void>(resolve => {
+        this._streamDoneResolve = resolve;
+      });
+    }
+    this._streamParsingDepth++;
+
     const emitDoneOnce = () => {
       if (doneEmitted) return;
+      // Don't emit 'done' if there are pending frontend tool calls
+      // — the continuation triggered by sendToolResult will do it later
+      if (this.pendingToolCalls.size > 0) return;
       doneEmitted = true;
       this.emit({
         type: 'done',
@@ -321,6 +393,7 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
         if (done) {
           // Stream ended - emit final message if we have accumulated text
           if (accumulatedText) {
+            this.lastAssistantText = accumulatedText;
             const message = createAssistantMessage(accumulatedText);
             message.id = currentMessageId;
             this.emit({
@@ -351,6 +424,7 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
             if (data === '[DONE]') {
               // Stream complete
               if (accumulatedText) {
+                this.lastAssistantText = accumulatedText;
                 const message = createAssistantMessage(accumulatedText);
                 message.id = currentMessageId;
                 this.emit({
@@ -427,19 +501,24 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
                     finishReason === 'tool_calls') &&
                   pendingToolInputs.size > 0
                 ) {
+                  // Only emit pending_approval for tool calls that are NOT in
+                  // pendingToolCalls (i.e., server-side tools waiting for approval,
+                  // not frontend tools that will be handled by sendToolResult)
                   for (const [toolCallId] of pendingToolInputs.entries()) {
-                    this.emit({
-                      type: 'tool-result',
-                      toolResult: {
-                        toolCallId,
-                        success: true,
-                        result: {
-                          pending_approval: true,
-                          message: 'Awaiting user approval',
+                    if (!this.pendingToolCalls.has(toolCallId)) {
+                      this.emit({
+                        type: 'tool-result',
+                        toolResult: {
+                          toolCallId,
+                          success: true,
+                          result: {
+                            pending_approval: true,
+                            message: 'Awaiting user approval',
+                          },
                         },
-                      },
-                      timestamp: new Date(),
-                    });
+                        timestamp: new Date(),
+                      });
+                    }
                   }
                 }
 
@@ -491,6 +570,13 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
                 );
 
                 if (toolName) {
+                  // Track as a pending frontend tool call for continuation
+                  this.pendingToolCalls.set(toolCallId, {
+                    toolCallId,
+                    toolName,
+                    args,
+                  });
+
                   this.emit({
                     type: 'tool-call',
                     toolCall: {
@@ -607,17 +693,141 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
       }
     } finally {
       reader.releaseLock();
+      this._streamParsingDepth--;
+      if (this._streamParsingDepth === 0) {
+        const resolve = this._streamDoneResolve;
+        this._streamDonePromise = null;
+        this._streamDoneResolve = null;
+        resolve?.();
+      }
     }
   }
 
   /**
-   * Send tool result (not supported in Vercel AI adapter)
+   * Send tool result back and continue the conversation.
+   *
+   * When the agent makes multiple frontend tool calls in a single run, each
+   * call triggers an independent async execution in ChatBase. This method
+   * batches the results: it stores each result as it arrives and only sends
+   * ONE continuation request once ALL pending tool calls have been resolved.
    */
   async sendToolResult(
-    _toolCallId: string,
-    _result: ToolExecutionResult,
+    toolCallId: string,
+    result: ToolExecutionResult,
   ): Promise<void> {
-    throw new Error('Tool result not supported in Vercel AI adapter');
+    // 1. Emit local event for UI updates
+    this.emit({
+      type: 'tool-result',
+      toolResult: result,
+      timestamp: new Date(),
+    });
+
+    // 2. Retrieve tool metadata from pending map
+    const pendingToolCall = this.pendingToolCalls.get(toolCallId);
+    if (!pendingToolCall) {
+      console.warn(
+        '[VercelAIAdapter] No pending tool call found for ID:',
+        toolCallId,
+      );
+    }
+    const toolName = pendingToolCall?.toolName ?? 'unknown';
+    const toolArgs = pendingToolCall?.args ?? {};
+
+    // 3. Collect this result (batching)
+    this.collectedToolResults.set(toolCallId, {
+      toolCallId,
+      toolName,
+      args: toolArgs,
+      result,
+    });
+
+    // 4. Check whether ALL pending tool calls now have results
+    let allResolved = Array.from(this.pendingToolCalls.keys()).every(id =>
+      this.collectedToolResults.has(id),
+    );
+
+    if (!allResolved) {
+      return;
+    }
+
+    // 4b. Guard against premature continuations while stream is still parsing
+    if (this._streamParsingDepth > 0 && this._streamDonePromise) {
+      await this._streamDonePromise;
+      allResolved = Array.from(this.pendingToolCalls.keys()).every(id =>
+        this.collectedToolResults.has(id),
+      );
+      if (!allResolved) {
+        return;
+      }
+    }
+
+    // ── All tool results collected — build ONE continuation request ──
+
+    // 5. Build an assistant message with DynamicToolUIParts (output-available)
+    const assistantParts: Array<Record<string, unknown>> = [];
+
+    // Include the assistant text if any was produced before tool calls
+    if (this.lastAssistantText) {
+      assistantParts.push({
+        type: 'text',
+        text: this.lastAssistantText,
+        state: 'done',
+      });
+    }
+
+    // Add each tool call with its result as a DynamicToolUIPart
+    for (const tr of this.collectedToolResults.values()) {
+      assistantParts.push({
+        type: 'dynamic-tool',
+        toolName: tr.toolName,
+        toolCallId: tr.toolCallId,
+        state: 'output-available',
+        input: tr.args,
+        output: tr.result.success
+          ? tr.result.result
+          : { error: tr.result.error ?? 'Tool execution failed' },
+      });
+    }
+
+    const assistantMessage = {
+      id: generateMessageId(),
+      role: 'assistant',
+      parts: assistantParts,
+    };
+
+    // 6. Build full continuation messages
+    const continuationMessages = [...this.messageHistory, assistantMessage];
+
+    // 7. Clear batching state BEFORE the async sendMessage call
+    this.pendingToolCalls.clear();
+    this.collectedToolResults.clear();
+
+    // 8. Update stored message history
+    this.messageHistory = continuationMessages;
+
+    console.log(
+      '[VercelAIAdapter] === CONTINUATION MESSAGES ===',
+      continuationMessages.map(
+        (m, i) => `[${i}] role=${m.role} parts=${m.parts.length}`,
+      ),
+    );
+
+    // 9. Mark as continuation
+    this.isContinuation = true;
+
+    // 10. Send ONE continuation request with all tool results
+    const dummyMessage: ChatMessage = {
+      id: generateMessageId(),
+      role: 'user',
+      content: '',
+      createdAt: new Date(),
+    };
+
+    await this.sendMessage(dummyMessage, {
+      _vercelMessages: continuationMessages,
+      tools: this.lastTools,
+      threadId: this.currentRequestId ?? undefined,
+    });
   }
 
   /**
@@ -625,6 +835,19 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
    */
   async requestPermission(_permission: string): Promise<boolean> {
     return true;
+  }
+
+  /**
+   * Check feature support
+   */
+  supportsFeature(feature: string): boolean {
+    const supportedFeatures = [
+      'streaming',
+      'tools',
+      'frontend-tools',
+      'backend-tools',
+    ];
+    return supportedFeatures.includes(feature);
   }
 
   /**

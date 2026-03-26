@@ -300,6 +300,7 @@ export function ChatLexicalExampleInner({
         {/* Chat sidebar */}
         <ChatSidebar
           title="AI Assistant"
+          protocol={protocolConfig}
           position="right"
           width={400}
           showNewChatButton={true}

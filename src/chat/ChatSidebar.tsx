@@ -27,7 +27,12 @@ import {
 } from '@datalayer/core/lib/hooks';
 import { ChatBase } from './base/ChatBase';
 import type { PoweredByTagProps } from './elements/PoweredByTag';
-import type { ChatBaseProps, MessageHandler } from '../types';
+import type {
+  ChatBaseProps,
+  MessageHandler,
+  Protocol,
+  ProtocolConfig,
+} from '../types';
 import { useChatStore, useChatOpen, useChatMessages } from '../store/chatStore';
 
 /**
@@ -36,6 +41,17 @@ import { useChatStore, useChatOpen, useChatMessages } from '../store/chatStore';
 export interface ChatSidebarProps {
   /** Sidebar title */
   title?: string;
+
+  /**
+   * Protocol type or full configuration.
+   *
+   * When a `Protocol` string is provided (e.g. `'vercel-ai'`), it is forwarded
+   * to ChatBase. When a full `ProtocolConfig` object is provided, it is passed
+   * directly via `panelProps`.
+   *
+   * @default 'vercel-ai'
+   */
+  protocol?: Protocol | ProtocolConfig;
 
   /** Initial open state */
   defaultOpen?: boolean;
@@ -147,6 +163,7 @@ function useIsMobile(breakpoint = 640): boolean {
  */
 export function ChatSidebar({
   title = 'Chat',
+  protocol: protocolProp,
   defaultOpen = true,
   position = 'right',
   width = 400,
@@ -455,6 +472,7 @@ export function ChatSidebar({
           title={title}
           showHeader={showHeader}
           brandIcon={brandIcon}
+          protocol={protocolProp}
           headerButtons={{
             showNewChat: showNewChatButton,
             showClear: showClearButton && messages.length > 0,

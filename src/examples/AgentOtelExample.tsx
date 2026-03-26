@@ -325,7 +325,7 @@ const AgentOtelExampleInner: React.FC<{
     setConnectedAgentId(null);
   }, [connectedAgentId, agentBaseUrl]);
 
-  // Build AG-UI protocol config from connected agent
+  // Build protocol config from connected agent
   const protocolConfig = useMemo((): ProtocolConfig | undefined => {
     if (!connectedAgentId) return undefined;
     if (connectedAgentTransport === 'ag-ui') {
@@ -342,10 +342,17 @@ const AgentOtelExampleInner: React.FC<{
         agentId: connectedAgentId,
       };
     }
-    // Fallback – try ag-ui
+    if (connectedAgentTransport === 'vercel-ai') {
+      return {
+        type: 'vercel-ai',
+        endpoint: `${agentBaseUrl}/api/v1/vercel-ai/${connectedAgentId}`,
+        agentId: connectedAgentId,
+      };
+    }
+    // Fallback – vercel-ai
     return {
-      type: 'ag-ui',
-      endpoint: `${agentBaseUrl}/api/v1/examples/${connectedAgentId}/`,
+      type: 'vercel-ai',
+      endpoint: `${agentBaseUrl}/api/v1/vercel-ai/${connectedAgentId}`,
       agentId: connectedAgentId,
     };
   }, [connectedAgentId, connectedAgentTransport, agentBaseUrl]);
@@ -446,6 +453,7 @@ const AgentOtelExampleInner: React.FC<{
         {/* ── Agent sidebar ────────────────────────────────────────── */}
         <ChatSidebar
           title="AI Agent"
+          protocol={protocolConfig}
           position="right"
           width={380}
           defaultOpen={true}

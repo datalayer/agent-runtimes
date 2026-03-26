@@ -391,8 +391,15 @@ export interface ChatBaseProps {
   /**
    * Protocol configuration for connecting to backend.
    * When provided and useStore is false, enables protocol mode.
+   *
+   * Accepts either a full `ProtocolConfig` object or a simple `Protocol` string
+   * (e.g. `'vercel-ai'`). When a string is provided, it is used as the protocol
+   * type and combined with other props (endpoint, agentRuntimeConfig) to build
+   * the full configuration.
+   *
+   * @default 'vercel-ai'
    */
-  protocol?: ProtocolConfig;
+  protocol?: Protocol | ProtocolConfig;
 
   /**
    * Simplified agent runtime configuration.

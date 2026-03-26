@@ -278,6 +278,7 @@ const AgUiHaikuGenUiExample: React.FC = () => {
 
         {/* Floating chat with haiku tool rendering */}
         <ChatFloating
+          protocol="ag-ui"
           endpoint={HAIKU_ENDPOINT}
           title="Haiku Generator"
           description="Ask me to write haiku poetry about any topic!"

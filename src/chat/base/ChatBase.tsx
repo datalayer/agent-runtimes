@@ -111,16 +111,23 @@ export function ChatBase(props: ChatBaseProps) {
     useStore: useStoreMode = true,
   } = props;
 
+  // Resolve protocol: string Protocol overrides type in agentRuntimeConfig or
+  // is combined with a full ProtocolConfig object.
+  const protocolType =
+    typeof protocolProp === 'string' ? protocolProp : undefined;
+  const protocolConfigProp =
+    typeof protocolProp === 'object' ? protocolProp : undefined;
+
   const protocol: ProtocolConfig | undefined = agentRuntimeConfig
     ? {
-        type: agentRuntimeConfig.protocol || 'vercel-ai',
+        type: protocolType || agentRuntimeConfig.protocol || 'vercel-ai',
         endpoint: agentRuntimeConfig.url,
         authToken: agentRuntimeConfig.authToken,
         agentId: agentRuntimeConfig.agentId,
         enableConfigQuery: true,
         configEndpoint: `${agentRuntimeConfig.url}/api/v1/config`,
       }
-    : protocolProp;
+    : protocolConfigProp;
 
   // If agentRuntimeConfig is provided, force protocol mode
   const effectiveUseStoreMode = agentRuntimeConfig ? false : useStoreMode;
@@ -130,7 +137,9 @@ export function ChatBase(props: ChatBaseProps) {
 
   const innerProps: ChatBaseProps = {
     ...props,
-    protocol,
+    // Protocol is resolved to ProtocolConfig | undefined by the outer wrapper.
+    // Force the type to satisfy ChatBaseProps (which accepts the union).
+    protocol: protocol as ChatBaseProps['protocol'],
     useStore: effectiveUseStoreMode,
   };
 
@@ -171,7 +180,7 @@ function ChatBaseInner({
   onChatViewModeChange,
   // Mode selection
   useStore: useStoreMode = true,
-  protocol,
+  protocol: protocolRaw,
   onSendMessage,
   enableStreaming = false,
   // Extended props
@@ -215,6 +224,11 @@ function ChatBaseInner({
   pendingPrompt,
 }: ChatBaseProps) {
   useHighZIndexPortal();
+
+  // The outer ChatBase wrapper always resolves a string Protocol to a full
+  // ProtocolConfig (or undefined).  Narrow the type for internal use.
+  const protocol: ProtocolConfig | undefined =
+    typeof protocolRaw === 'object' ? protocolRaw : undefined;
 
   // Stabilize the protocol reference so that the adapter-init effect only
   // re-runs when the protocol *contents* actually change.

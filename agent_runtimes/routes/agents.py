@@ -1356,6 +1356,112 @@ async def delete_agent(agent_id: str) -> dict[str, str]:
     return {"message": f"Agent {agent_id} deleted successfully"}
 
 
+class UpdateAgentTransportRequest(BaseModel):
+    """Request to update an agent's transport protocol."""
+
+    transport: Literal["ag-ui", "vercel-ai"] = Field(
+        ..., description="New transport protocol"
+    )
+
+
+@router.patch("/{agent_id:path}/transport")
+async def update_agent_transport(
+    agent_id: str,
+    request: UpdateAgentTransportRequest,
+    http_request: Request,
+) -> dict[str, Any]:
+    """
+    Update an agent's transport protocol (ag-ui or vercel-ai).
+
+    This re-registers the agent with the new transport while keeping
+    the same underlying agent instance.
+
+    Args:
+        agent_id: The agent identifier.
+        request: The transport update request.
+        http_request: The FastAPI request.
+
+    Returns:
+        Updated agent information.
+    """
+    if agent_id not in _agents:
+        raise HTTPException(status_code=404, detail=f"Agent not found: {agent_id}")
+
+    agent, info = _agents[agent_id]
+    current_transport = getattr(info, "transport", None)
+    new_transport = request.transport
+
+    if current_transport == new_transport:
+        return {
+            "id": agent_id,
+            "transport": new_transport,
+            "message": f"Agent already using {new_transport} transport",
+        }
+
+    # Unregister from old transport
+    if current_transport == "ag-ui":
+        try:
+            unregister_agui_agent(agent_id)
+            # Remove the dynamic mount
+            if http_request.app:
+                mount_path = f"{_api_prefix}/ag-ui/{agent_id}"
+                http_request.app.routes[:] = [
+                    r
+                    for r in http_request.app.routes
+                    if not (hasattr(r, "path") and getattr(r, "path", None) == mount_path)
+                ]
+            logger.info(f"Unregistered agent from AG-UI: {agent_id}")
+        except Exception as e:
+            logger.warning(f"Could not unregister from AG-UI: {e}")
+    elif current_transport == "vercel-ai":
+        try:
+            unregister_vercel_agent(agent_id)
+            logger.info(f"Unregistered agent from Vercel AI: {agent_id}")
+        except Exception as e:
+            logger.warning(f"Could not unregister from Vercel AI: {e}")
+
+    # Register with new transport
+    if new_transport == "ag-ui":
+        try:
+            agui_adapter = AGUITransport(agent, agent_id=agent_id)
+            register_agui_agent(agent_id, agui_adapter)
+            # Dynamically add the AG-UI mount
+            agui_app = get_agui_app(agent_id)
+            if agui_app and http_request.app:
+                mount_path = f"{_api_prefix}/ag-ui/{agent_id}"
+                http_request.app.mount(
+                    mount_path, agui_app, name=f"agui-{agent_id}"
+                )
+                logger.info(f"Dynamically mounted AG-UI route: {mount_path}/")
+            logger.info(f"Registered agent with AG-UI: {agent_id}")
+        except Exception as e:
+            raise HTTPException(
+                status_code=500, detail=f"Failed to register with AG-UI: {e}"
+            )
+    elif new_transport == "vercel-ai":
+        try:
+            vercel_adapter = VercelAITransport(agent, agent_id=agent_id)
+            register_vercel_agent(agent_id, vercel_adapter)
+            logger.info(f"Registered agent with Vercel AI: {agent_id}")
+        except Exception as e:
+            raise HTTPException(
+                status_code=500, detail=f"Failed to register with Vercel AI: {e}"
+            )
+
+    # Update the stored info transport field
+    if hasattr(info, "transport"):
+        info.transport = new_transport
+
+    logger.info(f"Updated agent {agent_id} transport: {current_transport} -> {new_transport}")
+
+    return {
+        "id": agent_id,
+        "transport": new_transport,
+        "previous_transport": current_transport,
+        "message": f"Agent transport updated to {new_transport}",
+    }
+
+
 class UpdateAgentMcpServersRequest(BaseModel):
     """Request to update an agent's MCP servers."""
 
