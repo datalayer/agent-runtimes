@@ -80,6 +80,49 @@ logging.getLogger("httpcore").setLevel(logging.WARNING)
 logging.getLogger("httpx").setLevel(logging.WARNING)
 
 
+def _resolve_generated_code_path(explicit_path: str | None) -> str:
+    """Return a writable generated-code directory path.
+
+    Preference order:
+    1. Explicit env/CLI path (when writable)
+    2. Repo-local generated/ folder
+    3. Shared volume /mnt/shared-agent/generated
+    4. /tmp/agent-runtimes-generated fallback
+    """
+
+    repo_root = Path(__file__).resolve().parents[1]
+    default_path = (repo_root / "generated").resolve()
+
+    candidates: list[Path] = []
+    if explicit_path:
+        candidates.append(Path(explicit_path).resolve())
+    candidates.append(default_path)
+    candidates.append(Path("/mnt/shared-agent/generated"))
+    candidates.append(Path("/tmp/agent-runtimes-generated"))
+
+    for candidate in candidates:
+        try:
+            candidate.mkdir(parents=True, exist_ok=True)
+            probe = candidate / ".write_probe"
+            probe.write_text("ok", encoding="utf-8")
+            probe.unlink(missing_ok=True)
+
+            if explicit_path and str(candidate) != str(Path(explicit_path).resolve()):
+                logger.warning(
+                    "Generated code folder '%s' not writable; falling back to '%s'",
+                    explicit_path,
+                    str(candidate),
+                )
+            return str(candidate)
+        except Exception:
+            continue
+
+    raise PermissionError(
+        "No writable generated code folder found (checked env path, repo generated/, "
+        "/mnt/shared-agent/generated, /tmp/agent-runtimes-generated)"
+    )
+
+
 def _is_reload_parent_process() -> bool:
     """Return True when running inside the reload supervisor parent."""
     return "--reload" in sys.argv and mp.current_process().name == "MainProcess"
@@ -232,13 +275,9 @@ async def _create_and_register_cli_agent(
             repo_root = Path(__file__).resolve().parents[1]
             workspace_path = str((repo_root / "workspace").resolve())
 
-        # Use AGENT_RUNTIMES_GENERATED_FOLDER if set, otherwise default to generated/
+        # Resolve a writable generated folder.
         generated_env = os.getenv("AGENT_RUNTIMES_GENERATED_CODE_FOLDER")
-        if generated_env:
-            generated_path = str(Path(generated_env).resolve())
-        else:
-            repo_root = Path(__file__).resolve().parents[1]
-            generated_path = str((repo_root / "generated").resolve())
+        generated_path = _resolve_generated_code_path(generated_env)
 
         # Use AGENT_RUNTIMES_SKILLS_FOLDER if set, otherwise repo-local skills/
         skills_folder_env = os.getenv("AGENT_RUNTIMES_SKILLS_FOLDER")
@@ -465,7 +504,6 @@ async def _create_and_register_cli_agent(
                 )
 
                 # Create new config - use CLI/env configured folders if provided
-                repo_root = Path(__file__).resolve().parents[1]
                 generated_folder = os.getenv("AGENT_RUNTIMES_GENERATED_CODE_FOLDER")
                 skills_folder_path = os.getenv("AGENT_RUNTIMES_SKILLS_FOLDER")
 
@@ -484,10 +522,10 @@ async def _create_and_register_cli_agent(
                     except Exception:
                         pass
 
+                repo_root = Path(__file__).resolve().parents[1]
                 new_config = CodeModeConfig(
                     workspace_path=str((repo_root / "workspace").resolve()),
-                    generated_path=generated_folder
-                    or str((repo_root / "generated").resolve()),
+                    generated_path=_resolve_generated_code_path(generated_folder),
                     skills_path=skills_folder_path
                     or str((repo_root / "skills").resolve()),
                     allow_direct_tool_calls=False,
