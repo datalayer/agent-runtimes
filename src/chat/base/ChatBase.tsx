@@ -838,7 +838,11 @@ function ChatBaseInner({
                   t => t.name === toolName,
                 );
                 const toolHandler = frontendTool?.handler;
-                if (toolHandler && Object.keys(args).length > 0) {
+                if (
+                  toolHandler &&
+                  existingToolCall.status === 'executing' &&
+                  Object.keys(args).length > 0
+                ) {
                   pendingToolExecutionsRef.current++;
                   executeFrontendTool(toolHandler, updatedToolCall, toolCallId);
                 }
@@ -859,7 +863,7 @@ function ChatBaseInner({
                 t => t.name === toolName,
               );
               const toolHandler = frontendTool?.handler;
-              if (toolHandler && Object.keys(args).length > 0) {
+              if (toolHandler) {
                 pendingToolExecutionsRef.current++;
                 executeFrontendTool(toolHandler, toolCallMsg, toolCallId);
               }
@@ -1287,6 +1291,12 @@ function ChatBaseInner({
             description: tool.description,
             parameters: tool.parameters || { type: 'object', properties: {} },
           }));
+          console.log(
+            '[ChatBase] frontendTools count:',
+            frontendTools?.length ?? 0,
+            'toolsForRequest:',
+            toolsForRequest.map(t => t.name),
+          );
           const enabledMcpToolNames = getEnabledMcpToolNames();
           const enabledSkillIds = getEnabledSkillIds();
 

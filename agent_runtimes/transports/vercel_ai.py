@@ -102,6 +102,7 @@ class VercelAITransport(BaseTransport):
         toolsets: list[Any] | None = None,
         builtin_tools: list[str] | None = None,
         agent_id: str | None = None,
+        has_spec_frontend_tools: bool = False,
     ):
         """Initialize the Vercel AI adapter.
 
@@ -111,6 +112,7 @@ class VercelAITransport(BaseTransport):
             toolsets: Additional toolsets (e.g., MCP servers).
             builtin_tools: List of built-in tool names to expose.
             agent_id: Agent ID for usage tracking.
+            has_spec_frontend_tools: Whether the agent spec declares frontend tools.
         """
         super().__init__(agent)
         self._usage_limits = usage_limits or UsageLimits(
@@ -120,6 +122,7 @@ class VercelAITransport(BaseTransport):
         )
         self._toolsets = toolsets or []
         self._builtin_tools = builtin_tools or []
+        self._has_spec_frontend_tools = has_spec_frontend_tools
         # Get agent_id from adapter if available
         if agent_id:
             self._agent_id = agent_id
@@ -462,7 +465,7 @@ class VercelAITransport(BaseTransport):
                 # When frontend tools are present as ExternalToolset, pydantic-ai
                 # requires DeferredToolRequests in the output types so external
                 # tool calls can be returned to the client for execution.
-                if has_frontend_tools:
+                if has_frontend_tools or self._has_spec_frontend_tools:
                     dispatch_kwargs["output_type"] = [str, DeferredToolRequests]
                     logger.info(
                         "[Vercel AI] Enabled DeferredToolRequests output_type for frontend tools"

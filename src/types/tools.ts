@@ -43,6 +43,30 @@ export interface ToolSpec {
   emoji?: string;
 }
 
+/**
+ * Specification for a frontend tool set.
+ */
+export interface FrontendToolSpec {
+  /** Unique frontend tool identifier */
+  id: string;
+  /** Version */
+  version?: string;
+  /** Display name for the frontend tool */
+  name: string;
+  /** Frontend tool description */
+  description: string;
+  /** Tags for categorization */
+  tags: string[];
+  /** Whether the frontend tool is enabled */
+  enabled: boolean;
+  /** Which tools from the toolset to include ('all' or specific list) */
+  toolset: string;
+  /** Icon identifier */
+  icon?: string;
+  /** Emoji identifier */
+  emoji?: string;
+}
+
 import type { ReactNode } from 'react';
 
 /**

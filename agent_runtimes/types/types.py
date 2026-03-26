@@ -116,6 +116,33 @@ class ToolSpec(BaseModel):
     )
 
 
+class FrontendToolSpec(BaseModel):
+    """
+    Specification for a frontend tool set.
+    """
+
+    model_config = ConfigDict(populate_by_name=True, by_alias=True)
+
+    id: str = Field(..., description="Unique frontend tool identifier")
+    version: str = Field(default="0.0.1", description="Frontend tool version")
+    name: str = Field(..., description="Display name for the frontend tool")
+    description: str = Field(default="", description="Frontend tool description")
+    tags: List[str] = Field(default_factory=list, description="Tags for categorization")
+    enabled: bool = Field(default=True, description="Whether the frontend tool is enabled")
+    toolset: str = Field(
+        default="all",
+        description="Which tools from the toolset to include ('all' or a list)",
+    )
+    icon: Optional[str] = Field(
+        default=None,
+        description="Octicon name for UI display",
+    )
+    emoji: Optional[str] = Field(
+        default=None,
+        description="Unicode emoji for UI display",
+    )
+
+
 class AIModel(BaseModel):
     """Specification for an AI model."""
 
@@ -622,6 +649,11 @@ class AgentSpec(BaseModel):
     tools: List[str] = Field(
         default_factory=list,
         description="Tool IDs available to this agent",
+    )
+    frontend_tools: List[str] = Field(
+        default_factory=list,
+        description="Frontend tool IDs available to this agent",
+        alias="frontendTools",
     )
     environment_name: str = Field(
         default="ai-agents-env",

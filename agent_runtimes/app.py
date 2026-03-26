@@ -642,7 +642,11 @@ async def _create_and_register_cli_agent(
             from .routes.vercel_ai import register_vercel_agent
             from .transports import VercelAITransport
 
-            vercel_adapter = VercelAITransport(agent, agent_id=agent_id)
+            vercel_adapter = VercelAITransport(
+                agent,
+                agent_id=agent_id,
+                has_spec_frontend_tools=bool(agent_spec.frontend_tools),
+            )
             register_vercel_agent(agent_id, vercel_adapter)
             logger.info(f"Registered agent with Vercel AI: {agent_id}")
         except Exception as e:
@@ -653,7 +657,11 @@ async def _create_and_register_cli_agent(
             from .routes.vercel_ai import register_vercel_agent
             from .transports import VercelAITransport
 
-            vercel_adapter = VercelAITransport(agent, agent_id=agent_id)
+            vercel_adapter = VercelAITransport(
+                agent,
+                agent_id=agent_id,
+                has_spec_frontend_tools=bool(agent_spec.frontend_tools),
+            )
             register_vercel_agent(agent_id, vercel_adapter)
             logger.info(f"Registered agent with Vercel AI Jupyter: {agent_id}")
         except Exception as e:

@@ -1029,6 +1029,17 @@ async def create_agent(
         )
         logger.info(f"Registered agent '{agent_id}' for context snapshots")
 
+        # Determine whether the agent spec declares frontend tools
+        _lib_spec = (
+            get_library_agent_spec(request.agent_spec_id)
+            if request.agent_spec_id
+            else None
+        )
+        has_spec_frontend_tools = bool(
+            (_lib_spec and _lib_spec.frontend_tools)
+            or _spec_value("frontendTools", "frontend_tools")
+        )
+
         # Register with the specified transport
         if request.transport == "ag-ui":
             try:
@@ -1052,7 +1063,7 @@ async def create_agent(
 
         elif request.transport == "vercel-ai":
             try:
-                vercel_adapter = VercelAITransport(agent, agent_id=agent_id)
+                vercel_adapter = VercelAITransport(agent, agent_id=agent_id, has_spec_frontend_tools=has_spec_frontend_tools)
                 register_vercel_agent(agent_id, vercel_adapter)
                 logger.info(f"Registered agent with Vercel AI: {agent_id}")
             except Exception as e:
@@ -1440,7 +1451,16 @@ async def update_agent_transport(
             )
     elif new_transport == "vercel-ai":
         try:
-            vercel_adapter = VercelAITransport(agent, agent_id=agent_id)
+            stored_spec = _agent_specs.get(agent_id, {})
+            stored_agent_spec = stored_spec.get("agent_spec") or {}
+            _has_ft = bool(
+                stored_agent_spec.get("frontendTools")
+                or stored_agent_spec.get("frontend_tools")
+            )
+            if not _has_ft and stored_spec.get("agent_spec_id"):
+                _lib = get_library_agent_spec(stored_spec["agent_spec_id"])
+                _has_ft = bool(_lib and _lib.frontend_tools)
+            vercel_adapter = VercelAITransport(agent, agent_id=agent_id, has_spec_frontend_tools=_has_ft)
             register_vercel_agent(agent_id, vercel_adapter)
             logger.info(f"Registered agent with Vercel AI: {agent_id}")
         except Exception as e:

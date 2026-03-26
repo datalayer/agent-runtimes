@@ -5,7 +5,7 @@
 
 import type { SkillSpec } from './skills';
 import type { MCPServer, AgentMCPServerToolConfig } from './mcp';
-import type { ToolSpec } from './tools';
+import type { ToolSpec, FrontendToolSpec } from './tools';
 import type { AgentTriggerConfig } from './triggers';
 import type { AgentModelConfig } from './models';
 import type { AgentOutputConfig } from './outputs';
@@ -45,6 +45,8 @@ export interface AgentSpec {
   skills: SkillSpec[];
   /** Runtime tools available to this agent */
   tools?: ToolSpec[];
+  /** Frontend tool sets available to this agent */
+  frontendTools?: FrontendToolSpec[];
   /** Runtime environment name for this agent */
   environmentName: string;
   /** Icon identifier or URL for the agent */

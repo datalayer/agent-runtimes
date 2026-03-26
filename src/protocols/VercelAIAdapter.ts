@@ -251,6 +251,15 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
           }),
       };
 
+      if (options?.tools && options.tools.length > 0) {
+        console.log(
+          '[VercelAIAdapter] Sending with frontend tools:',
+          options.tools.map((t: { name: string }) => t.name),
+        );
+      } else {
+        console.log('[VercelAIAdapter] No frontend tools in request');
+      }
+
       if (options?.model) {
         console.log('[VercelAIAdapter] Sending with model:', options.model);
       }

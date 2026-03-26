@@ -154,6 +154,9 @@ from agent_runtimes.types import AgentSpec
             tool_refs = [
                 versioned_ref(*split_spec_ref(tool)) for tool in spec.get("tools", [])
             ]
+            frontend_tool_refs = [
+                versioned_ref(*split_spec_ref(ft)) for ft in spec.get("frontend_tools", [])
+            ]
 
             # Format optional fields
             icon = f'"{spec.get("icon")}"' if spec.get("icon") else "None"
@@ -243,6 +246,7 @@ from agent_runtimes.types import AgentSpec
     mcp_servers=[{mcp_servers_str}],
     skills={_fmt_list(skill_refs)},
     tools={_fmt_list(tool_refs)},
+    frontend_tools={_fmt_list(frontend_tool_refs)},
     environment_name="{spec.get("environment_name", "ai-agents-env")}",
     icon={icon},
     emoji={emoji},
@@ -376,6 +380,7 @@ def generate_typescript_code(
     used_mcp_servers = set()
     used_skills = set()
     used_tools = set()
+    used_frontend_tools = set()
     for _, spec in specs:
         for server in spec.get("mcp_servers", []):
             used_mcp_servers.add(versioned_ref(*split_spec_ref(server)))
@@ -383,6 +388,8 @@ def generate_typescript_code(
             used_skills.add(versioned_ref(*split_spec_ref(skill)))
         for tool in spec.get("tools", []):
             used_tools.add(versioned_ref(*split_spec_ref(tool)))
+        for ft in spec.get("frontend_tools", []):
+            used_frontend_tools.add(versioned_ref(*split_spec_ref(ft)))
 
     # Only import what's actually used
     mcp_imports = []
@@ -420,10 +427,32 @@ def generate_typescript_code(
             tool_map_entries.append(f"  '{tref}': {const_name},")
             tool_map_entries.append(f"  '{tid}': {const_name},")
 
+    # Generate frontend tool import names and map entries
+    frontend_tool_imports = []
+    frontend_tool_map_entries = []
+    frontend_tools_specs_dir = Path(tools_specs_dir).parent / "frontend-tools"
+    frontend_tool_specs = []
+    if frontend_tools_specs_dir.exists():
+        frontend_tool_files = sorted(frontend_tools_specs_dir.glob("*.yaml"))
+        for fpath in frontend_tool_files:
+            with open(fpath, "r") as f:
+                ft_spec = yaml.safe_load(f)
+                ensure_spec_version(ft_spec)
+                frontend_tool_specs.append(ft_spec)
+        for ft_spec in frontend_tool_specs:
+            ftid = ft_spec["id"]
+            ftref = versioned_ref(ftid, ft_spec["version"])
+            if ftref in used_frontend_tools:
+                const_name = ftid.upper().replace("-", "_") + "_FRONTEND_TOOL_SPEC" + version_suffix(ft_spec["version"])
+                frontend_tool_imports.append(const_name)
+                frontend_tool_map_entries.append(f"  '{ftref}': {const_name},")
+                frontend_tool_map_entries.append(f"  '{ftid}': {const_name},")
+
     # Determine if we need any helper code
     has_mcp = len(mcp_imports) > 0
     has_skills = len(skill_imports) > 0
     has_tools = len(tool_imports) > 0
+    has_frontend_tools = len(frontend_tool_imports) > 0
 
     # Root-level specs produce src/specs/agents/agents.ts, while nested specs
     # produce src/specs/agents/<folder>/agents.ts. Import paths differ.
@@ -434,6 +463,7 @@ def generate_typescript_code(
     mcp_import_path = "../mcpServers" if is_root_layout else "../../mcpServers"
     skills_import_path = "../skills" if is_root_layout else "../../skills"
     tools_import_path = "../tools" if is_root_layout else "../../tools"
+    frontend_tools_import_path = "../frontendTools" if is_root_layout else "../../frontendTools"
 
     # Header
     code = """/*
@@ -481,6 +511,14 @@ import type { AgentSpec } from '"""
         code += tools_import_path
         code += "';\n"
 
+    # Only add frontend tool imports if needed
+    if has_frontend_tools:
+        code += "import {\n"
+        code += "  " + ",\n  ".join(frontend_tool_imports) + ",\n"
+        code += "} from '"
+        code += frontend_tools_import_path
+        code += "';\n"
+
     # Only add MCP server lookup if used
     if has_mcp:
         code += """
@@ -526,6 +564,17 @@ function toAgentSkillSpec(skill: SkillSpec) {
 const TOOL_MAP: Record<string, any> = {
 """
         code += "\n".join(tool_map_entries) + "\n"
+        code += "};\n"
+
+    # Only add frontend tool lookup if used
+    if has_frontend_tools:
+        code += """
+/**
+ * Map frontend tool IDs to FrontendToolSpec objects.
+ */
+const FRONTEND_TOOL_MAP: Record<string, any> = {
+"""
+        code += "\n".join(frontend_tool_map_entries) + "\n"
         code += "};\n"
 
 
@@ -602,6 +651,15 @@ const TOOL_MAP: Record<string, any> = {
                 )
             else:
                 tools_str = ""
+
+            # Get frontend tools - resolve to FrontendToolSpec via FRONTEND_TOOL_MAP
+            frontend_tool_ids_list = [versioned_ref(*split_spec_ref(sid)) for sid in spec.get("frontend_tools", [])]
+            if has_frontend_tools and frontend_tool_ids_list:
+                frontend_tools_str = ", ".join(
+                    f"FRONTEND_TOOL_MAP['{ftid}']" for ftid in frontend_tool_ids_list
+                )
+            else:
+                frontend_tools_str = ""
 
             # Format tags and suggestions as arrays
             tags = spec.get("tags", [])
@@ -690,6 +748,7 @@ const TOOL_MAP: Record<string, any> = {
   mcpServers: [{mcp_servers_str}],
   skills: [{skills_str}],
     tools: [{tools_str}],
+    frontendTools: [{frontend_tools_str}],
   environmentName: '{spec.get("environment_name", "ai-agents-env")}',
   icon: {icon},
   emoji: {emoji},

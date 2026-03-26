@@ -37,6 +37,10 @@ import {
   RUNTIME_SEND_MAIL_TOOL_SPEC_0_0_1,
   RUNTIME_SENSITIVE_ECHO_TOOL_SPEC_0_0_1,
 } from '../tools';
+import {
+  JUPYTER_NOTEBOOK_FRONTEND_TOOL_SPEC_0_0_1,
+  LEXICAL_DOCUMENT_FRONTEND_TOOL_SPEC_0_0_1,
+} from '../frontendTools';
 
 // ============================================================================
 // MCP Server Lookup
@@ -105,6 +109,16 @@ const TOOL_MAP: Record<string, any> = {
   'runtime-sensitive-echo': RUNTIME_SENSITIVE_ECHO_TOOL_SPEC_0_0_1,
 };
 
+/**
+ * Map frontend tool IDs to FrontendToolSpec objects.
+ */
+const FRONTEND_TOOL_MAP: Record<string, any> = {
+  'jupyter-notebook:0.0.1': JUPYTER_NOTEBOOK_FRONTEND_TOOL_SPEC_0_0_1,
+  'jupyter-notebook': JUPYTER_NOTEBOOK_FRONTEND_TOOL_SPEC_0_0_1,
+  'lexical-document:0.0.1': LEXICAL_DOCUMENT_FRONTEND_TOOL_SPEC_0_0_1,
+  'lexical-document': LEXICAL_DOCUMENT_FRONTEND_TOOL_SPEC_0_0_1,
+};
+
 // ============================================================================
 // Agent Specs
 // ============================================================================
@@ -134,6 +148,10 @@ export const ANALYZE_CAMPAIGN_PERFORMANCE_AGENT_SPEC_0_0_1: AgentSpec = {
     toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
   ],
   tools: [],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
   environmentName: 'ai-agents-env',
   icon: 'megaphone',
   emoji: '📢',
@@ -247,6 +265,10 @@ export const ANALYZE_SUPPORT_TICKETS_AGENT_SPEC_0_0_1: AgentSpec = {
     toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
   ],
   tools: [],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
   environmentName: 'ai-agents-env',
   icon: 'issue-opened',
   emoji: '🎫',
@@ -334,6 +356,10 @@ export const AUDIT_INVENTORY_LEVELS_AGENT_SPEC_0_0_1: AgentSpec = {
     toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
   ],
   tools: [],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
   environmentName: 'ai-agents-env',
   icon: 'package',
   emoji: '📦',
@@ -418,6 +444,10 @@ export const AUTOMATE_REGULATORY_REPORTING_AGENT_SPEC_0_0_1: AgentSpec = {
     toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
   ],
   tools: [],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
   environmentName: 'ai-agents-env',
   icon: 'shield-check',
   emoji: '🏦',
@@ -523,6 +553,10 @@ export const CLASSIFY_ROUTE_EMAILS_AGENT_SPEC_0_0_1: AgentSpec = {
     toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
   ],
   tools: [],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
   environmentName: 'ai-agents-env',
   icon: 'mail',
   emoji: '📬',
@@ -615,6 +649,10 @@ export const COMPREHENSIVE_SALES_ANALYTICS_AGENT_SPEC_0_0_1: AgentSpec = {
     toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
   ],
   tools: [],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
   environmentName: 'ai-agents-env',
   icon: 'graph',
   emoji: '📈',
@@ -688,6 +726,10 @@ export const CRAWLER_AGENT_SPEC_0_0_1: AgentSpec = {
     toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
   ],
   tools: [],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
   environmentName: 'ai-agents-env',
   icon: 'globe',
   emoji: '🌐',
@@ -761,6 +803,10 @@ export const DATA_ACQUISITION_AGENT_SPEC_0_0_1: AgentSpec = {
     toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
   ],
   tools: [],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
   environmentName: 'ai-agents-env',
   icon: 'database',
   emoji: '📊',
@@ -839,6 +885,10 @@ export const END_OF_MONTH_SALES_PERFORMANCE_AGENT_SPEC_0_0_1: AgentSpec = {
     toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
   ],
   tools: [],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
   environmentName: 'ai-agents-env',
   icon: 'graph',
   emoji: '📊',
@@ -1027,6 +1077,10 @@ export const EXTRACT_DATA_FROM_FILES_AGENT_SPEC_0_0_1: AgentSpec = {
     toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
   ],
   tools: [],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
   environmentName: 'ai-agents-env',
   icon: 'database',
   emoji: '🗃️',
@@ -1116,6 +1170,10 @@ export const FINANCIAL_VIZ_AGENT_SPEC_0_0_1: AgentSpec = {
   ],
   skills: [toAgentSkillSpec(SKILL_MAP['events:0.0.1'])],
   tools: [],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
   environmentName: 'ai-agents-env',
   icon: 'trending-up',
   emoji: '📈',
@@ -1182,6 +1240,10 @@ export const FINANCIAL_AGENT_SPEC_0_0_1: AgentSpec = {
   mcpServers: [MCP_SERVER_MAP['alphavantage:0.0.1']],
   skills: [toAgentSkillSpec(SKILL_MAP['events:0.0.1'])],
   tools: [],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
   environmentName: 'ai-agents-env',
   icon: 'trending-up',
   emoji: '📈',
@@ -1254,6 +1316,10 @@ export const GENERATE_WEEKLY_REPORTS_AGENT_SPEC_0_0_1: AgentSpec = {
     toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
   ],
   tools: [],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
   environmentName: 'ai-agents-env',
   icon: 'file',
   emoji: '📝',
@@ -1354,6 +1420,10 @@ export const GITHUB_AGENT_SPEC_0_0_1: AgentSpec = {
     toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
   ],
   tools: [],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
   environmentName: 'ai-agents-env',
   icon: 'git-branch',
   emoji: '🐙',
@@ -1423,6 +1493,10 @@ export const INFORMATION_ROUTING_AGENT_SPEC_0_0_1: AgentSpec = {
   ],
   skills: [toAgentSkillSpec(SKILL_MAP['events:0.0.1'])],
   tools: [],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
   environmentName: 'ai-agents-env',
   icon: 'share-2',
   emoji: '🔀',
@@ -1496,6 +1570,10 @@ export const MONITOR_SALES_KPIS_AGENT_SPEC_0_0_1: AgentSpec = {
     TOOL_MAP['runtime-echo:0.0.1'],
     TOOL_MAP['runtime-sensitive-echo:0.0.1'],
     TOOL_MAP['runtime-send-mail:0.0.1'],
+  ],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
   ],
   environmentName: 'ai-agents-env',
   icon: 'graph',
@@ -1608,6 +1686,10 @@ export const OPTIMIZE_DYNAMIC_PRICING_AGENT_SPEC_0_0_1: AgentSpec = {
     toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
   ],
   tools: [],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
   environmentName: 'ai-agents-env',
   icon: 'tag',
   emoji: '🏷️',
@@ -1728,6 +1810,10 @@ export const OPTIMIZE_GRID_OPERATIONS_AGENT_SPEC_0_0_1: AgentSpec = {
     toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
   ],
   tools: [],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
   environmentName: 'ai-agents-env',
   icon: 'zap',
   emoji: '⚡',
@@ -1837,6 +1923,10 @@ export const PROCESS_CITIZEN_REQUESTS_AGENT_SPEC_0_0_1: AgentSpec = {
     toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
   ],
   tools: [],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
   environmentName: 'ai-agents-env',
   icon: 'organization',
   emoji: '🏛️',
@@ -1954,6 +2044,10 @@ export const PROCESS_CLINICAL_TRIAL_DATA_AGENT_SPEC_0_0_1: AgentSpec = {
     toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
   ],
   tools: [],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
   environmentName: 'ai-agents-env',
   icon: 'heart',
   emoji: '🏥',
@@ -2073,6 +2167,10 @@ export const PROCESS_FINANCIAL_TRANSACTIONS_AGENT_SPEC_0_0_1: AgentSpec = {
     toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
   ],
   tools: [],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
   environmentName: 'ai-agents-env',
   icon: 'credit-card',
   emoji: '💳',
@@ -2163,6 +2261,10 @@ export const SIMPLE_BASE_AGENT_SPEC_0_0_1: AgentSpec = {
   mcpServers: [],
   skills: [toAgentSkillSpec(SKILL_MAP['events:0.0.1'])],
   tools: [TOOL_MAP['runtime-echo:0.0.1']],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
   environmentName: 'ai-agents-env',
   icon: 'agent',
   emoji: '🤖',
@@ -2213,6 +2315,10 @@ export const SIMPLE_FULL_AGENT_SPEC_0_0_1: AgentSpec = {
   tools: [
     TOOL_MAP['runtime-echo:0.0.1'],
     TOOL_MAP['runtime-sensitive-echo:0.0.1'],
+  ],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
   ],
   environmentName: 'ai-agents-env',
   icon: 'shield',
@@ -2265,6 +2371,10 @@ export const SPATIAL_DATA_ANALYSIS_AGENT_SPEC_0_0_1: AgentSpec = {
   ],
   skills: [toAgentSkillSpec(SKILL_MAP['events:0.0.1'])],
   tools: [],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
   environmentName: 'ai-agents-env',
   icon: 'globe',
   emoji: '🛰️',
@@ -2326,6 +2436,10 @@ export const SUMMARIZE_DOCUMENTS_AGENT_SPEC_0_0_1: AgentSpec = {
     toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
   ],
   tools: [],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
   environmentName: 'ai-agents-env',
   icon: 'file',
   emoji: '📄',
@@ -2416,6 +2530,10 @@ export const SYNC_CRM_CONTACTS_AGENT_SPEC_0_0_1: AgentSpec = {
     toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
   ],
   tools: [],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
   environmentName: 'ai-agents-env',
   icon: 'people',
   emoji: '🔄',
