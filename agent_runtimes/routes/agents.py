@@ -59,6 +59,36 @@ _api_prefix = "/api/v1"
 _agent_specs: dict[str, dict[str, Any]] = {}
 
 
+def _resolve_writable_generated_path(path: str) -> str:
+    """Return a writable generated folder for codemode bindings."""
+    candidate = Path(path).resolve()
+    fallbacks = [
+        candidate,
+        Path("/mnt/shared-agent/generated"),
+        Path("/tmp/agent-runtimes-generated"),
+    ]
+
+    for folder in fallbacks:
+        try:
+            folder.mkdir(parents=True, exist_ok=True)
+            probe = folder / ".write_probe"
+            probe.write_text("ok", encoding="utf-8")
+            probe.unlink(missing_ok=True)
+            if folder != candidate:
+                logger.warning(
+                    "Codemode generated path '%s' is not writable; using '%s'",
+                    str(candidate),
+                    str(folder),
+                )
+            return str(folder)
+        except Exception:
+            continue
+
+    raise PermissionError(
+        f"No writable codemode generated path found (tried: {[str(f) for f in fallbacks]})"
+    )
+
+
 def get_stored_agent_spec(agent_id: str) -> dict[str, Any] | None:
     """Get the original creation spec for an agent."""
     return _agent_specs.get(agent_id)
@@ -213,6 +243,7 @@ def _build_codemode_toolset(
         "codemode_generated_path",
         str((repo_root / "generated").resolve()),
     )
+    generated_path = _resolve_writable_generated_path(generated_path)
     skills_path = getattr(
         http_request.app.state,
         "codemode_skills_path",
