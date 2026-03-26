@@ -74,26 +74,47 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
 
         icon = f'"{spec.get("icon")}"' if spec.get("icon") else "None"
         emoji = f'"{spec.get("emoji")}"' if spec.get("emoji") else "None"
+        module_val = f'"{spec["module"]}"' if spec.get("module") else "None"
+        package_val = f'"{spec["package"]}"' if spec.get("package") else "None"
+        method_val = f'"{spec["method"]}"' if spec.get("method") else "None"
 
-        lines.extend(
-            [
-                f"{const_name} = SkillSpec(",
-                f'    id="{skill_id}",',
-                f'    version="{version}",',
-                f'    name="{spec["name"]}",',
-                f'    description="{spec["description"]}",',
-                f'    module="{spec.get("module", "")}",',
-                f"    envvars={_fmt_list(spec.get('envvars', []))},",
-                f"    optional_env_vars={_fmt_list(spec.get('optional_env_vars', []))},",
-                f"    dependencies={_fmt_list(spec.get('dependencies', []))},",
-                f"    tags={_fmt_list(spec.get('tags', []))},",
-                f"    icon={icon},",
-                f"    emoji={emoji},",
-                f"    enabled={spec.get('enabled', True)},",
-                ")",
-                "",
-            ]
-        )
+        spec_lines = [
+            f"{const_name} = SkillSpec(",
+            f'    id="{skill_id}",',
+            f'    version="{version}",',
+            f'    name="{spec["name"]}",',
+            f'    description="{spec["description"]}",',
+            f"    module={module_val},",
+            f"    package={package_val},",
+            f"    method={method_val},",
+        ]
+
+        # Only emit agentskills.io attributes when present in the YAML
+        if spec.get("license"):
+            spec_lines.append(f'    license="{spec["license"]}",')
+        if spec.get("compatibility"):
+            spec_lines.append(f'    compatibility="{spec["compatibility"]}",')
+        if spec.get("allowed-tools"):
+            spec_lines.append(f"    allowed_tools={_fmt_list(spec['allowed-tools'])},")
+        if spec.get("skill-metadata"):
+            skill_metadata_val = (
+                "{" + ", ".join(f'"{k}": "{v}"' for k, v in spec["skill-metadata"].items()) + "}"
+            )
+            spec_lines.append(f"    skill_metadata={skill_metadata_val},")
+
+        spec_lines.extend([
+            f"    envvars={_fmt_list(spec.get('envvars', []))},",
+            f"    optional_env_vars={_fmt_list(spec.get('optional_env_vars', []))},",
+            f"    dependencies={_fmt_list(spec.get('dependencies', []))},",
+            f"    tags={_fmt_list(spec.get('tags', []))},",
+            f"    icon={icon},",
+            f"    emoji={emoji},",
+            f"    enabled={spec.get('enabled', True)},",
+            ")",
+            "",
+        ])
+
+        lines.extend(spec_lines)
 
     # Generate catalog dictionary
     lines.extend(
@@ -208,26 +229,48 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
         # Format optional fields
         icon = f"'{spec.get('icon')}'" if spec.get("icon") else "undefined"
         emoji = f"'{spec.get('emoji')}'" if spec.get("emoji") else "undefined"
+        module_ts = f"'{spec['module']}'" if spec.get("module") else "undefined"
+        package_ts = f"'{spec['package']}'" if spec.get("package") else "undefined"
+        method_ts = f"'{spec['method']}'" if spec.get("method") else "undefined"
 
-        lines.extend(
-            [
-                f"export const {const_name}: SkillSpec = {{",
-                f"  id: '{skill_id}',",
-                f"  version: '{version}',",
-                f"  name: '{spec['name']}',",
-                f"  description: '{spec['description']}',",
-                f"  module: '{spec.get('module', '')}',",
-                f"  requiredEnvVars: {envvars_json},",
-                f"  optionalEnvVars: {optional_env_vars_json},",
-                f"  dependencies: {dependencies_json},",
-                f"  tags: {tags_json},",
-                f"  icon: {icon},",
-                f"  emoji: {emoji},",
-                f"  enabled: {str(spec.get('enabled', True)).lower()},",
-                "};",
-                "",
-            ]
-        )
+        ts_lines = [
+            f"export const {const_name}: SkillSpec = {{",
+            f"  id: '{skill_id}',",
+            f"  version: '{version}',",
+            f"  name: '{spec['name']}',",
+            f"  description: '{spec['description']}',",
+            f"  module: {module_ts},",
+            f"  package: {package_ts},",
+            f"  method: {method_ts},",
+        ]
+
+        # Only emit agentskills.io attributes when present in the YAML
+        if spec.get("license"):
+            ts_lines.append(f"  license: '{spec['license']}',")
+        if spec.get("compatibility"):
+            ts_lines.append(f"  compatibility: '{spec['compatibility']}',")
+        if spec.get("allowed-tools"):
+            allowed_tools_json = str(spec["allowed-tools"]).replace("'", '"')
+            ts_lines.append(f"  allowedTools: {allowed_tools_json},")
+        if spec.get("skill-metadata"):
+            meta_entries = ", ".join(
+                f"'{k}': '{v}'" for k, v in spec["skill-metadata"].items()
+            )
+            ts_lines.append(f"  skillMetadata: {{ {meta_entries} }},")
+
+        ts_lines.extend([
+            f"  requiredEnvVars: {envvars_json},",
+            f"  optionalEnvVars: {optional_env_vars_json},",
+            f"  dependencies: {dependencies_json},",
+            f"  tags: {tags_json},",
+            f"  icon: {icon},",
+            f"  emoji: {emoji},",
+            f"  enabled: {str(spec.get('enabled', True)).lower()},",
+            "};",
+            "",
+        ])
+
+        lines.extend(ts_lines)
 
     # Generate catalog object
     lines.extend(

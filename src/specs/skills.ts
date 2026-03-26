@@ -24,6 +24,8 @@ export const CRAWL_SKILL_SPEC_0_0_1: SkillSpec = {
   name: 'Web Crawl Skill',
   description: 'Web crawling and content extraction capabilities',
   module: 'agent_skills.crawl',
+  package: undefined,
+  method: undefined,
   requiredEnvVars: ['TAVILY_API_KEY:0.0.1'],
   optionalEnvVars: [],
   dependencies: ['requests>=2.31.0', 'beautifulsoup4>=4.12.0'],
@@ -39,6 +41,8 @@ export const EVENTS_SKILL_SPEC_0_0_1: SkillSpec = {
   name: 'Events Skill',
   description: 'Event generation, enrichment, and lifecycle orchestration',
   module: 'agent_skills.events',
+  package: undefined,
+  method: undefined,
   requiredEnvVars: [],
   optionalEnvVars: [],
   dependencies: ['httpx>=0.27.0'],
@@ -54,6 +58,8 @@ export const GITHUB_SKILL_SPEC_0_0_1: SkillSpec = {
   name: 'GitHub Skill',
   description: 'GitHub repository management and code operations',
   module: 'agent_skills.github',
+  package: undefined,
+  method: undefined,
   requiredEnvVars: ['GITHUB_TOKEN:0.0.1'],
   optionalEnvVars: [],
   dependencies: ['PyGithub>=2.1.0'],
@@ -69,12 +75,32 @@ export const PDF_SKILL_SPEC_0_0_1: SkillSpec = {
   name: 'PDF Processing Skill',
   description: 'PDF document reading, parsing, and extraction',
   module: 'agent_skills.pdf',
+  package: undefined,
+  method: undefined,
   requiredEnvVars: [],
   optionalEnvVars: [],
   dependencies: ['PyPDF2>=3.0.0', 'pdfplumber>=0.10.0'],
   tags: ['pdf', 'documents', 'extraction'],
   icon: 'file',
   emoji: '📄',
+  enabled: true,
+};
+
+export const TEXT_SUMMARIZER_SKILL_SPEC_0_0_1: SkillSpec = {
+  id: 'text-summarizer',
+  version: '0.0.1',
+  name: 'Text Summarizer Skill',
+  description:
+    'Summarize text content using extractive and abstractive techniques. Use when the user asks for summaries, key points, or condensed versions of documents.',
+  module: undefined,
+  package: 'agent_skills.skills.text_summarizer',
+  method: 'summarize_text',
+  requiredEnvVars: [],
+  optionalEnvVars: [],
+  dependencies: ['agent-skills>=0.0.1'],
+  tags: ['nlp', 'summarization', 'text-processing'],
+  icon: 'note',
+  emoji: '📝',
   enabled: true,
 };
 
@@ -87,6 +113,7 @@ export const SKILL_CATALOG: Record<string, SkillSpec> = {
   events: EVENTS_SKILL_SPEC_0_0_1,
   github: GITHUB_SKILL_SPEC_0_0_1,
   pdf: PDF_SKILL_SPEC_0_0_1,
+  'text-summarizer': TEXT_SUMMARIZER_SKILL_SPEC_0_0_1,
 };
 
 export function getSkillSpecs(): SkillSpec[] {

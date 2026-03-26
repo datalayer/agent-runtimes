@@ -5,6 +5,15 @@
 
 /**
  * Specification for a skill.
+ *
+ * Supports two variants:
+ * - Variant 1 (name-based): Uses `module` to discover and load a skill
+ *   from a Python module path (e.g. `agent_skills.events`).
+ * - Variant 2 (package-based): Uses `package` and `method` to reference
+ *   a callable in an installable Python package.  Attributes such as
+ *   `license`, `compatibility`, `allowedTools`, and `skillMetadata`
+ *   are discovered at runtime from the `SKILL.md` packaged inside the
+ *   Python package — they should NOT be duplicated in the YAML spec.
  */
 export interface SkillSpec {
   /** Unique skill identifier */
@@ -15,8 +24,20 @@ export interface SkillSpec {
   name: string;
   /** Skill description */
   description: string;
-  /** Python module path */
+  /** Python module path for name-based discovery (variant 1) */
   module?: string;
+  /** Python package containing the skill implementation (variant 2) */
+  package?: string;
+  /** Callable/function name in the package (variant 2) */
+  method?: string;
+  /** License name or reference (agentskills.io spec) */
+  license?: string;
+  /** Environment requirements (agentskills.io spec) */
+  compatibility?: string;
+  /** Pre-approved tools the skill may use (agentskills.io spec) */
+  allowedTools?: string[];
+  /** Arbitrary key-value metadata (agentskills.io spec) */
+  skillMetadata?: Record<string, string>;
   /** Environment variables required by this skill */
   requiredEnvVars: string[];
   /** Optional environment variables */

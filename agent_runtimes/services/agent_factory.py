@@ -24,6 +24,11 @@ def create_skills_toolset(
     """
     Create an AgentSkillsToolset with the specified skills.
 
+    Supports two variants:
+    - Variant 1 (name-based): Discovered from SKILL.md files in skills_path.
+    - Variant 2 (package-based): Loaded from a Python package + method via
+      the skill catalog specs.
+
     Args:
         skills: List of skill names to load
         skills_path: Path to the skills directory
@@ -47,6 +52,7 @@ def create_skills_toolset(
         selected_set = set(skills)
         selected_skills: list[AgentSkill] = []
 
+        # Variant 1: discover skills from SKILL.md files
         for skill_md in Path(skills_path).rglob("SKILL.md"):
             try:
                 skill = AgentSkill.from_skill_md(skill_md)
@@ -55,13 +61,47 @@ def create_skills_toolset(
                 continue
             if skill.name in selected_set:
                 selected_skills.append(skill)
-                logger.info(f"Loaded skill: {skill.name}")
+                logger.info(f"Loaded skill (name-based): {skill.name}")
 
-        missing = selected_set - {s.name for s in selected_skills}
+        # Variant 2: load package-based skills from the catalog for any
+        # skills not yet found via SKILL.md discovery
+        found_names = {s.name for s in selected_skills}
+        missing = selected_set - found_names
         if missing:
-            logger.warning(
-                f"Requested skills not found in {skills_path}: {sorted(missing)}"
-            )
+            try:
+                from ..specs.skills import get_skill_spec
+            except ImportError:
+                get_skill_spec = None
+
+            if get_skill_spec is not None:
+                for skill_name in sorted(missing):
+                    spec = get_skill_spec(skill_name)
+                    if spec is None or not spec.package or not spec.method:
+                        continue
+                    try:
+                        skill = AgentSkill.from_package(
+                            package=spec.package,
+                            method=spec.method,
+                            name=spec.name,
+                            description=spec.description,
+                            version=spec.version,
+                            tags=list(spec.tags) if spec.tags else None,
+                        )
+                        selected_skills.append(skill)
+                        logger.info(
+                            f"Loaded skill (package-based): {skill_name} "
+                            f"from {spec.package}.{spec.method}"
+                        )
+                    except Exception as exc:
+                        logger.warning(
+                            f"Failed to load package-based skill '{skill_name}': {exc}"
+                        )
+
+            still_missing = selected_set - {s.name for s in selected_skills}
+            if still_missing:
+                logger.warning(
+                    f"Requested skills not found: {sorted(still_missing)}"
+                )
 
         # Create executor - use shared sandbox if available
         if shared_sandbox is not None:

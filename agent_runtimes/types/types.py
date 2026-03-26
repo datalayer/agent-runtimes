@@ -39,6 +39,15 @@ class EnvvarSpec(BaseModel):
 class SkillSpec(BaseModel):
     """
     Specification for a skill.
+
+    Supports two variants:
+    - Variant 1 (name-based): Uses ``module`` to discover and load a skill
+      from a Python module path (e.g. ``agent_skills.events``).
+    - Variant 2 (package-based): Uses ``package`` and ``method`` to reference
+      a callable in an installable Python package.  Attributes such as
+      ``license``, ``compatibility``, ``allowed_tools``, and ``metadata``
+      are discovered at runtime from the ``SKILL.md`` packaged inside the
+      Python package — they should NOT be duplicated in the YAML spec.
     """
 
     model_config = ConfigDict(populate_by_name=True, by_alias=True)
@@ -47,7 +56,25 @@ class SkillSpec(BaseModel):
     version: str = Field(default="0.0.1", description="Skill version")
     name: str = Field(..., description="Display name for the skill")
     description: str = Field(default="", description="Skill description")
-    module: Optional[str] = Field(default=None, description="Python module path")
+    # Variant 1: module-based discovery
+    module: Optional[str] = Field(default=None, description="Python module path for name-based discovery")
+    # Variant 2: package + method reference
+    package: Optional[str] = Field(default=None, description="Python package containing the skill implementation")
+    method: Optional[str] = Field(default=None, description="Callable/function name in the package")
+    # agentskills.io frontmatter attributes
+    license: Optional[str] = Field(default=None, description="License name or reference (agentskills.io spec)")
+    compatibility: Optional[str] = Field(default=None, description="Environment requirements (agentskills.io spec)")
+    allowed_tools: List[str] = Field(
+        default_factory=list,
+        alias="allowed-tools",
+        description="Pre-approved tools the skill may use (agentskills.io spec)",
+    )
+    skill_metadata: Optional[Dict[str, str]] = Field(
+        default=None,
+        alias="skill-metadata",
+        description="Arbitrary key-value metadata (agentskills.io spec)",
+    )
+    # Common fields
     envvars: List[str] = Field(
         default_factory=list,
         description="Environment variable IDs required by this skill",

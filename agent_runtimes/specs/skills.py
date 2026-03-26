@@ -25,6 +25,8 @@ CRAWL_SKILL_SPEC_0_0_1 = SkillSpec(
     name="Web Crawl Skill",
     description="Web crawling and content extraction capabilities",
     module="agent_skills.crawl",
+    package=None,
+    method=None,
     envvars=["TAVILY_API_KEY:0.0.1"],
     optional_env_vars=[],
     dependencies=["requests>=2.31.0", "beautifulsoup4>=4.12.0"],
@@ -40,6 +42,8 @@ EVENTS_SKILL_SPEC_0_0_1 = SkillSpec(
     name="Events Skill",
     description="Event generation, enrichment, and lifecycle orchestration",
     module="agent_skills.events",
+    package=None,
+    method=None,
     envvars=[],
     optional_env_vars=[],
     dependencies=["httpx>=0.27.0"],
@@ -55,6 +59,8 @@ GITHUB_SKILL_SPEC_0_0_1 = SkillSpec(
     name="GitHub Skill",
     description="GitHub repository management and code operations",
     module="agent_skills.github",
+    package=None,
+    method=None,
     envvars=["GITHUB_TOKEN:0.0.1"],
     optional_env_vars=[],
     dependencies=["PyGithub>=2.1.0"],
@@ -70,12 +76,31 @@ PDF_SKILL_SPEC_0_0_1 = SkillSpec(
     name="PDF Processing Skill",
     description="PDF document reading, parsing, and extraction",
     module="agent_skills.pdf",
+    package=None,
+    method=None,
     envvars=[],
     optional_env_vars=[],
     dependencies=["PyPDF2>=3.0.0", "pdfplumber>=0.10.0"],
     tags=["pdf", "documents", "extraction"],
     icon="file",
     emoji="📄",
+    enabled=True,
+)
+
+TEXT_SUMMARIZER_SKILL_SPEC_0_0_1 = SkillSpec(
+    id="text-summarizer",
+    version="0.0.1",
+    name="Text Summarizer Skill",
+    description="Summarize text content using extractive and abstractive techniques. Use when the user asks for summaries, key points, or condensed versions of documents.",
+    module=None,
+    package="agent_skills.skills.text_summarizer",
+    method="summarize_text",
+    envvars=[],
+    optional_env_vars=[],
+    dependencies=["agent-skills>=0.0.1"],
+    tags=["nlp", "summarization", "text-processing"],
+    icon="note",
+    emoji="📝",
     enabled=True,
 )
 
@@ -88,6 +113,7 @@ SKILL_CATALOG: Dict[str, SkillSpec] = {
     "events": EVENTS_SKILL_SPEC_0_0_1,
     "github": GITHUB_SKILL_SPEC_0_0_1,
     "pdf": PDF_SKILL_SPEC_0_0_1,
+    "text-summarizer": TEXT_SUMMARIZER_SKILL_SPEC_0_0_1,
 }
 
 

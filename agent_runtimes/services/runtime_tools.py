@@ -169,7 +169,9 @@ def register_agent_tools(
             tool_fn = wrap_tool_with_approval(tool_fn, tool_id, manager)
 
         # Ensure function name is a valid Python identifier for pydantic_ai.
-        tool_fn.__name__ = _tool_name_to_identifier(tool_id)
+        # Use spec.id (unversioned) rather than tool_id which may contain
+        # a version suffix like ":0.0.1" that is invalid for LLM APIs.
+        tool_fn.__name__ = _tool_name_to_identifier(spec.id)
 
         try:
             if use_deferred_tool_approval:
@@ -186,7 +188,7 @@ def register_agent_tools(
                     pod_name=pod_name,
                 )
                 tool_fn = wrap_tool_with_approval(tool_fn, tool_id, manager)
-                tool_fn.__name__ = _tool_name_to_identifier(tool_id)
+                tool_fn.__name__ = _tool_name_to_identifier(spec.id)
             tool_plain(tool_fn)
         registered.append(tool_fn.__name__)
 

@@ -3,7 +3,7 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
-export { default as AgentLocalExample } from './AgentLocalExample';
+export { default as AgentspecExample } from './AgentspecExample';
 export { default as A2UiComponentGalleryExample } from './A2UiComponentGalleryExample';
 export { default as A2UiContactCardExample } from './A2UiContactCardExample';
 export { default as A2UiRestaurantExample } from './A2UiRestaurantExample';
