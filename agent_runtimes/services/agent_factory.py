@@ -11,7 +11,7 @@ Used by both app.py (CLI agents) and routes/agents.py (API agents).
 import logging
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 logger = logging.getLogger(__name__)
 
@@ -68,10 +68,13 @@ def create_skills_toolset(
         found_names = {s.name for s in selected_skills}
         missing = selected_set - found_names
         if missing:
+            get_skill_spec: Callable[[str], Any | None] | None
             try:
-                from ..specs.skills import get_skill_spec
+                from ..specs.skills import get_skill_spec as _get_skill_spec
             except ImportError:
                 get_skill_spec = None
+            else:
+                get_skill_spec = _get_skill_spec
 
             if get_skill_spec is not None:
                 for skill_name in sorted(missing):

@@ -53,7 +53,7 @@ def creation_spy(monkeypatch: pytest.MonkeyPatch) -> dict[str, object]:
             captured["pydantic_model"] = model
             captured["pydantic_kwargs"] = kwargs
             self.model = model
-            self._function_tools = {}
+            self._function_tools: dict[str, object] = {}
 
     class _DummyAdapter:
         def __init__(self, **kwargs: object) -> None:
