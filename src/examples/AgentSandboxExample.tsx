@@ -177,6 +177,14 @@ const AgentSandboxInner: React.FC<{ onLogout: () => void }> = ({
       setIsReconnectedAgent(false);
 
       try {
+        // Always delete any existing agent with this name first so we
+        // recreate it with the latest configuration (system prompt, toolsets).
+        await authFetch(`${agentBaseUrl}/api/v1/agents/${AGENT_NAME}`, {
+          method: 'DELETE',
+        }).catch(() => {
+          /* ignore 404 / not-found */
+        });
+
         const response = await authFetch(`${agentBaseUrl}/api/v1/agents`, {
           method: 'POST',
           body: JSON.stringify({
@@ -185,6 +193,11 @@ const AgentSandboxInner: React.FC<{ onLogout: () => void }> = ({
             agent_library: 'pydantic-ai',
             transport: 'vercel-ai',
             agent_spec_id: AGENT_SPEC_ID,
+            system_prompt:
+              'You are a helpful AI assistant with a Python execution sandbox. ' +
+              'When asked to run code, count, loop, assign variables, compute, or ' +
+              'perform any programming task, use the execute_code tool to run ' +
+              'Python code in the sandbox. Always use execute_code for Python computation.',
             enable_skills: false,
             skills: [],
             tools: [],
@@ -195,7 +208,6 @@ const AgentSandboxInner: React.FC<{ onLogout: () => void }> = ({
         });
 
         let resolvedAgentId = AGENT_NAME;
-        let isAlreadyRunning = false;
 
         if (response.ok) {
           const data = await response.json();
@@ -214,13 +226,9 @@ const AgentSandboxInner: React.FC<{ onLogout: () => void }> = ({
             detail = await response.text();
           }
 
-          if (response.status === 409 || /already exists/i.test(detail || '')) {
-            isAlreadyRunning = true;
-          } else {
-            throw new Error(
-              detail || `Failed to create local agent: ${response.status}`,
-            );
-          }
+          throw new Error(
+            detail || `Failed to create local agent: ${response.status}`,
+          );
         }
 
         if (!isCancelled) {
@@ -291,7 +299,7 @@ const AgentSandboxInner: React.FC<{ onLogout: () => void }> = ({
           });
 
           setAgentId(resolvedAgentId);
-          setIsReconnectedAgent(isAlreadyRunning);
+          setIsReconnectedAgent(false);
           setIsReady(true);
           setRuntimeStatus('ready');
         }

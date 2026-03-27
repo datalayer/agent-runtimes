@@ -29,7 +29,9 @@ import {
   CRAWL_SKILL_SPEC_0_0_1,
   EVENTS_SKILL_SPEC_0_0_1,
   GITHUB_SKILL_SPEC_0_0_1,
+  JOKES_SKILL_SPEC_0_0_1,
   PDF_SKILL_SPEC_0_0_1,
+  TEXT_SUMMARIZER_SKILL_SPEC_0_0_1,
 } from '../skills';
 import type { SkillSpec } from '../../types';
 import {
@@ -81,8 +83,12 @@ const SKILL_MAP: Record<string, any> = {
   events: EVENTS_SKILL_SPEC_0_0_1,
   'github:0.0.1': GITHUB_SKILL_SPEC_0_0_1,
   github: GITHUB_SKILL_SPEC_0_0_1,
+  'jokes:0.0.1': JOKES_SKILL_SPEC_0_0_1,
+  jokes: JOKES_SKILL_SPEC_0_0_1,
   'pdf:0.0.1': PDF_SKILL_SPEC_0_0_1,
   pdf: PDF_SKILL_SPEC_0_0_1,
+  'text-summarizer:0.0.1': TEXT_SUMMARIZER_SKILL_SPEC_0_0_1,
+  'text-summarizer': TEXT_SUMMARIZER_SKILL_SPEC_0_0_1,
 };
 
 function toAgentSkillSpec(skill: SkillSpec) {
@@ -2311,7 +2317,14 @@ export const SIMPLE_FULL_AGENT_SPEC_0_0_1: AgentSpec = {
   enabled: true,
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
   mcpServers: [MCP_SERVER_MAP['tavily:0.0.1']],
-  skills: [toAgentSkillSpec(SKILL_MAP['events:0.0.1'])],
+  skills: [
+    toAgentSkillSpec(SKILL_MAP['crawl:0.0.1']),
+    toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
+    toAgentSkillSpec(SKILL_MAP['github:0.0.1']),
+    toAgentSkillSpec(SKILL_MAP['pdf:0.0.1']),
+    toAgentSkillSpec(SKILL_MAP['text-summarizer:0.0.1']),
+    toAgentSkillSpec(SKILL_MAP['jokes:0.0.1']),
+  ],
   tools: [
     TOOL_MAP['runtime-echo:0.0.1'],
     TOOL_MAP['runtime-sensitive-echo:0.0.1'],

@@ -10,6 +10,7 @@ Used by both app.py (CLI agents) and routes/agents.py (API agents).
 
 import logging
 import os
+from importlib import import_module
 from pathlib import Path
 from typing import Any, Callable
 
@@ -24,10 +25,12 @@ def create_skills_toolset(
     """
     Create an AgentSkillsToolset with the specified skills.
 
-    Supports two variants:
+        Supports three variants:
     - Variant 1 (name-based): Discovered from SKILL.md files in skills_path.
     - Variant 2 (package-based): Loaded from a Python package + method via
       the skill catalog specs.
+        - Variant 3 (path-based): Loaded from a local path declared in the
+            skill catalog specs.
 
     Args:
         skills: List of skill names to load
@@ -49,8 +52,16 @@ def create_skills_toolset(
             logger.warning("agent-skills pydantic-ai integration not available")
             return None
 
-        selected_set = set(skills)
+        def _skill_id_from_ref(ref: str) -> str:
+            base, _, ver = ref.rpartition(":")
+            if base and "." in ver:
+                return base
+            return ref
+
+        selected_ids = {_skill_id_from_ref(s) for s in skills if s}
         selected_skills: list[AgentSkill] = []
+        loaded_ids: set[str] = set()
+        loaded_skill_names: set[str] = set()
 
         # Variant 1: discover skills from SKILL.md files
         for skill_md in Path(skills_path).rglob("SKILL.md"):
@@ -59,15 +70,16 @@ def create_skills_toolset(
             except Exception as exc:
                 logger.warning(f"Failed to load skill from {skill_md}: {exc}")
                 continue
-            if skill.name in selected_set:
+            if skill.name in selected_ids and skill.name not in loaded_skill_names:
                 selected_skills.append(skill)
+                loaded_ids.add(skill.name)
+                loaded_skill_names.add(skill.name)
                 logger.info(f"Loaded skill (name-based): {skill.name}")
 
-        # Variant 2: load package-based skills from the catalog for any
-        # skills not yet found via SKILL.md discovery
-        found_names = {s.name for s in selected_skills}
-        missing = selected_set - found_names
-        if missing:
+        # Variant 2 + 3: load package-based and path-based skills from the
+        # catalog for any skills not yet found via SKILL.md discovery.
+        missing_ids = selected_ids - loaded_ids
+        if missing_ids:
             get_skill_spec: Callable[[str], Any | None] | None
             try:
                 from ..specs.skills import get_skill_spec as _get_skill_spec
@@ -77,30 +89,91 @@ def create_skills_toolset(
                 get_skill_spec = _get_skill_spec
 
             if get_skill_spec is not None:
-                for skill_name in sorted(missing):
+                for skill_name in sorted(missing_ids):
                     spec = get_skill_spec(skill_name)
-                    if spec is None or not spec.package or not spec.method:
+                    if spec is None:
                         continue
-                    try:
-                        skill = AgentSkill.from_package(
-                            package=spec.package,
-                            method=spec.method,
-                            name=spec.name,
-                            description=spec.description,
-                            version=spec.version,
-                            tags=list(spec.tags) if spec.tags else None,
-                        )
-                        selected_skills.append(skill)
-                        logger.info(
-                            f"Loaded skill (package-based): {skill_name} "
-                            f"from {spec.package}.{spec.method}"
-                        )
-                    except Exception as exc:
-                        logger.warning(
-                            f"Failed to load package-based skill '{skill_name}': {exc}"
-                        )
 
-            still_missing = selected_set - {s.name for s in selected_skills}
+                    # Variant 1b: module-based skill from installed package
+                    spec_module = getattr(spec, "module", None)
+                    if spec_module and skill_name not in loaded_ids:
+                        try:
+                            module = import_module(spec_module)
+                            module_file = getattr(module, "__file__", None)
+                            if module_file:
+                                skill_md = Path(module_file).resolve().parent / "SKILL.md"
+                                if skill_md.exists():
+                                    skill = AgentSkill.from_skill_md(skill_md)
+                                    if skill.name not in loaded_skill_names:
+                                        selected_skills.append(skill)
+                                        loaded_ids.add(skill_name)
+                                        loaded_skill_names.add(skill.name)
+                                        logger.info(
+                                            f"Loaded skill (module-based): {skill.name} "
+                                            f"from {spec_module}"
+                                        )
+                        except Exception as exc:
+                            logger.warning(
+                                f"Failed to load module-based skill '{skill_name}' "
+                                f"from {spec_module}: {exc}"
+                            )
+
+                    # Variant 3: path-based skill from catalog
+                    spec_path = getattr(spec, "path", None)
+                    if spec_path and skill_name not in loaded_ids:
+                        candidate = Path(spec_path)
+                        if not candidate.is_absolute():
+                            candidate = Path(skills_path) / candidate
+                        skill_md = (
+                            candidate
+                            if candidate.name == "SKILL.md"
+                            else candidate / "SKILL.md"
+                        )
+                        if skill_md.exists():
+                            try:
+                                skill = AgentSkill.from_skill_md(skill_md)
+                                if skill.name not in loaded_skill_names:
+                                    selected_skills.append(skill)
+                                    loaded_ids.add(skill_name)
+                                    loaded_skill_names.add(skill.name)
+                                    logger.info(
+                                        f"Loaded skill (path-based): {skill.name} "
+                                        f"from {skill_md}"
+                                    )
+                            except Exception as exc:
+                                logger.warning(
+                                    f"Failed to load path-based skill '{skill_name}' "
+                                    f"from {skill_md}: {exc}"
+                                )
+                        else:
+                            logger.warning(
+                                f"Path-based skill '{skill_name}' not found at {skill_md}"
+                            )
+
+                    # Variant 2: package-based skill from catalog
+                    if spec.package and spec.method and skill_name not in loaded_ids:
+                        try:
+                            skill = AgentSkill.from_package(
+                                package=spec.package,
+                                method=spec.method,
+                                name=spec.name,
+                                description=spec.description,
+                                version=spec.version,
+                                tags=list(spec.tags) if spec.tags else None,
+                            )
+                            selected_skills.append(skill)
+                            loaded_ids.add(skill_name)
+                            loaded_skill_names.add(skill.name)
+                            logger.info(
+                                f"Loaded skill (package-based): {skill_name} "
+                                f"from {spec.package}.{spec.method}"
+                            )
+                        except Exception as exc:
+                            logger.warning(
+                                f"Failed to load package-based skill '{skill_name}': {exc}"
+                            )
+
+            still_missing = selected_ids - loaded_ids
             if still_missing:
                 logger.warning(f"Requested skills not found: {sorted(still_missing)}")
 

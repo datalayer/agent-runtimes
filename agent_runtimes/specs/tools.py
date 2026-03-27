@@ -13,6 +13,7 @@ from typing import Dict, List
 
 from agent_runtimes.types import ToolRuntimeSpec, ToolSpec
 
+
 # ============================================================================
 # Tool Definitions
 # ============================================================================
@@ -87,8 +88,8 @@ def get_tool_spec(tool_id: str) -> ToolSpec | None:
     spec = TOOL_CATALOG.get(tool_id)
     if spec is not None:
         return spec
-    base, _, ver = tool_id.rpartition(":")
-    if base and "." in ver:
+    base, _, ver = tool_id.rpartition(':')
+    if base and '.' in ver:
         return TOOL_CATALOG.get(base)
     return None
 

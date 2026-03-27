@@ -159,10 +159,7 @@ GOOGLE_WORKSPACE_MCP_SERVER_0_0_1 = MCPServer(
         "GOOGLE_OAUTH_CLIENT_SECRET": "${GOOGLE_OAUTH_CLIENT_SECRET}",
         "WORKSPACE_MCP_PORT": "9000",
     },
-    required_env_vars=[
-        "GOOGLE_OAUTH_CLIENT_ID:0.0.1",
-        "GOOGLE_OAUTH_CLIENT_SECRET:0.0.1",
-    ],
+    required_env_vars=["GOOGLE_OAUTH_CLIENT_ID:0.0.1", "GOOGLE_OAUTH_CLIENT_SECRET:0.0.1"],
 )
 
 HUGGINGFACE_MCP_SERVER_0_0_1 = MCPServer(
@@ -226,10 +223,7 @@ SALESFORCE_MCP_SERVER_0_0_1 = MCPServer(
         "SALESFORCE_ACCESS_TOKEN": "${SALESFORCE_ACCESS_TOKEN}",
         "SALESFORCE_INSTANCE_URL": "${SALESFORCE_INSTANCE_URL}",
     },
-    required_env_vars=[
-        "SALESFORCE_ACCESS_TOKEN:0.0.1",
-        "SALESFORCE_INSTANCE_URL:0.0.1",
-    ],
+    required_env_vars=["SALESFORCE_ACCESS_TOKEN:0.0.1", "SALESFORCE_INSTANCE_URL:0.0.1"],
 )
 
 SLACK_MCP_SERVER_0_0_1 = MCPServer(
@@ -252,11 +246,7 @@ SLACK_MCP_SERVER_0_0_1 = MCPServer(
         "SLACK_TEAM_ID": "${SLACK_TEAM_ID}",
         "SLACK_CHANNEL_IDS": "${SLACK_CHANNEL_IDS}",
     },
-    required_env_vars=[
-        "SLACK_BOT_TOKEN:0.0.1",
-        "SLACK_TEAM_ID:0.0.1",
-        "SLACK_CHANNEL_IDS:0.0.1",
-    ],
+    required_env_vars=["SLACK_BOT_TOKEN:0.0.1", "SLACK_TEAM_ID:0.0.1", "SLACK_CHANNEL_IDS:0.0.1"],
 )
 
 TAVILY_MCP_SERVER_0_0_1 = MCPServer(
@@ -312,7 +302,7 @@ def check_env_vars_available(env_vars: list[str]) -> bool:
     """
     if not env_vars:
         return True  # No env vars required
-    return all(os.environ.get(var.rsplit(":", 1)[0]) for var in env_vars)
+    return all(os.environ.get(var.rsplit(':', 1)[0]) for var in env_vars)
 
 
 def get_catalog_server(server_id: str) -> MCPServer | None:
@@ -328,8 +318,8 @@ def get_catalog_server(server_id: str) -> MCPServer | None:
     server = MCP_SERVER_CATALOG.get(server_id)
     if server is not None:
         return server
-    base, _, ver = server_id.rpartition(":")
-    if base and "." in ver:
+    base, _, ver = server_id.rpartition(':')
+    if base and '.' in ver:
         return MCP_SERVER_CATALOG.get(base)
     return None
 

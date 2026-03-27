@@ -90,7 +90,7 @@ class CodemodeIntegration:
                 CodeModeExecutor,
                 ToolRegistry,
             )
-            from agent_skills.simple import SimpleSkillsManager
+            from agent_skills.manager import SkillsManager
 
             # Set up the tool registry
             self._registry = ToolRegistry()
@@ -129,8 +129,8 @@ class CodemodeIntegration:
             self._executor = CodeModeExecutor(self._registry, config)
             await self._executor.setup()
 
-            # Set up the skill manager (simple, file-based)
-            self._skill_manager = SimpleSkillsManager(self.skills_path)
+            # Set up the main skill manager
+            self._skill_manager = SkillsManager(self.skills_path)
 
             self._setup_done = True
             logger.info("Codemode integration set up successfully")
@@ -326,13 +326,15 @@ class CodemodeIntegration:
         if not self._setup_done:
             await self.setup()
 
+        result = self._skill_manager.search(query, limit=limit)
+
         return [
             {
                 "name": s.name,
                 "description": s.description,
-                "tags": s.tags,
+                "tags": s.metadata.tags,
             }
-            for s in self._skill_manager.search_skills(query, limit=limit)
+            for s in result.skills
         ]
 
     # =========================================================================

@@ -473,6 +473,16 @@ async def create_agent(
         selected_mcp_servers_explicit = (
             "selected_mcp_servers" in request.model_fields_set
         )
+        # Detect when the caller explicitly passed enable_skills=false so spec
+        # skills are not auto-applied (e.g. sandbox demo that wants codemode only).
+        caller_disabled_skills = (
+            "enable_skills" in request.model_fields_set and not request.enable_skills
+        )
+        # Detect when the caller explicitly passed tools=[] so spec tools are
+        # not auto-applied (e.g. sandbox demo that wants no pre-built tools).
+        caller_disabled_tools = (
+            "tools" in request.model_fields_set and len(request.tools) == 0
+        )
 
         # Normalize optional UI-forwarded spec payload to make applying defaults easier.
         # This accepts both camelCase and snake_case keys.
@@ -519,13 +529,13 @@ async def create_agent(
                 request.system_prompt_codemode_addons = (
                     spec.system_prompt_codemode_addons
                 )
-            if not request.skills and spec.skills:
+            if not request.skills and spec.skills and not caller_disabled_skills:
                 request.skills = spec.skills
-            if not request.tools and spec.tools:
+            if not request.tools and spec.tools and not caller_disabled_tools:
                 request.tools = spec.tools
             if spec.system_prompt_codemode_addons and not request.enable_codemode:
                 request.enable_codemode = True
-            if spec.skills and not request.enable_skills:
+            if spec.skills and not request.enable_skills and not caller_disabled_skills:
                 request.enable_skills = True
             if not request.description and spec.description:
                 request.description = spec.description
@@ -821,6 +831,9 @@ async def create_agent(
             or (
                 request.enable_codemode and effective_variant == "jupyter"
             )  # Codemode with jupyter variant
+            or (
+                request.enable_codemode and bool(request.sandbox_variant)
+            )  # Codemode with any explicit sandbox variant
         )
         if need_shared_sandbox:
             if effective_variant == "jupyter":

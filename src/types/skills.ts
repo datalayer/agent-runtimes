@@ -28,7 +28,7 @@ export interface SkillsResponse {
 /**
  * Specification for a skill.
  *
- * Supports two variants:
+ * Supports three variants:
  * - Variant 1 (name-based): Uses `module` to discover and load a skill
  *   from a Python module path (e.g. `agent_skills.events`).
  * - Variant 2 (package-based): Uses `package` and `method` to reference
@@ -36,6 +36,8 @@ export interface SkillsResponse {
  *   `license`, `compatibility`, `allowedTools`, and `skillMetadata`
  *   are discovered at runtime from the `SKILL.md` packaged inside the
  *   Python package — they should NOT be duplicated in the YAML spec.
+ * - Variant 3 (path-based): Uses `path` to load a local skill directory
+ *   containing `SKILL.md` (relative to the configured skills folder).
  */
 export interface SkillSpec {
   /** Unique skill identifier */
@@ -52,6 +54,8 @@ export interface SkillSpec {
   package?: string;
   /** Callable/function name in the package (variant 2) */
   method?: string;
+  /** Path to a local skill directory or SKILL.md file (variant 3) */
+  path?: string;
   /** License name or reference (agentskills.io spec) */
   license?: string;
   /** Environment requirements (agentskills.io spec) */

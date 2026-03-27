@@ -78,6 +78,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         module_val = f'"{spec["module"]}"' if spec.get("module") else "None"
         package_val = f'"{spec["package"]}"' if spec.get("package") else "None"
         method_val = f'"{spec["method"]}"' if spec.get("method") else "None"
+        path_val = f'"{spec["path"]}"' if spec.get("path") else "None"
 
         spec_lines = [
             f"{const_name} = SkillSpec(",
@@ -88,6 +89,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
             f"    module={module_val},",
             f"    package={package_val},",
             f"    method={method_val},",
+            f"    path={path_val},",
         ]
 
         # Only emit agentskills.io attributes when present in the YAML
@@ -241,6 +243,7 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
         module_ts = f"'{spec['module']}'" if spec.get("module") else "undefined"
         package_ts = f"'{spec['package']}'" if spec.get("package") else "undefined"
         method_ts = f"'{spec['method']}'" if spec.get("method") else "undefined"
+        path_ts = f"'{spec['path']}'" if spec.get("path") else "undefined"
 
         ts_lines = [
             f"export const {const_name}: SkillSpec = {{",
@@ -251,6 +254,7 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
             f"  module: {module_ts},",
             f"  package: {package_ts},",
             f"  method: {method_ts},",
+            f"  path: {path_ts},",
         ]
 
         # Only emit agentskills.io attributes when present in the YAML

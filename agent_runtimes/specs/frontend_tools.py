@@ -13,6 +13,7 @@ from typing import Dict, List
 
 from agent_runtimes.types import FrontendToolSpec
 
+
 # ============================================================================
 # Frontend Tool Definitions
 # ============================================================================
@@ -56,8 +57,8 @@ def get_frontend_tool_spec(tool_id: str) -> FrontendToolSpec | None:
     spec = FRONTEND_TOOL_CATALOG.get(tool_id)
     if spec is not None:
         return spec
-    base, _, ver = tool_id.rpartition(":")
-    if base and "." in ver:
+    base, _, ver = tool_id.rpartition(':')
+    if base and '.' in ver:
         return FRONTEND_TOOL_CATALOG.get(base)
     return None
 

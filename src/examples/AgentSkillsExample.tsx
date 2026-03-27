@@ -38,10 +38,11 @@ const DEFAULT_LOCAL_BASE_URL =
 interface SkillInfo {
   name: string;
   description: string;
-  variant: 'module' | 'package';
+  variant: 'module' | 'package' | 'path';
   module?: string;
   package?: string;
   method?: string;
+  path?: string;
   license?: string;
   compatibility?: string;
   allowedTools?: string[];
@@ -66,9 +67,13 @@ const SkillCard: React.FC<{ skill: SkillInfo }> = ({ skill }) => (
       <Text sx={{ fontWeight: 600, fontSize: 1 }}>{skill.name}</Text>
       <Label
         size="small"
-        variant={skill.variant === 'module' ? 'primary' : 'accent'}
+        variant={skill.variant === 'package' ? 'accent' : 'primary'}
       >
-        {skill.variant === 'module' ? 'name-based' : 'package-based'}
+        {skill.variant === 'package'
+          ? 'package-based'
+          : skill.variant === 'path'
+            ? 'path-based'
+            : 'name-based'}
       </Label>
     </Box>
     <Text as="p" sx={{ fontSize: 0, color: 'fg.muted', mb: 1, mt: 0 }}>
@@ -84,6 +89,11 @@ const SkillCard: React.FC<{ skill: SkillInfo }> = ({ skill }) => (
         <Text sx={{ display: 'block' }}>package: {skill.package}</Text>
         <Text sx={{ display: 'block' }}>method: {skill.method}</Text>
       </Box>
+    )}
+    {skill.variant === 'path' && skill.path && (
+      <Text sx={{ fontSize: 0, fontFamily: 'mono', color: 'fg.muted' }}>
+        path: {skill.path}
+      </Text>
     )}
     {skill.license && (
       <Text sx={{ fontSize: 0, color: 'fg.muted', display: 'block', mt: 1 }}>
@@ -150,19 +160,18 @@ const AgentSkillsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
       setIsReconnectedAgent(false);
 
       try {
-        // Create agent with skills enabled — using both variant 1 (crawl, name-based)
-        // and variant 2 (text-summarizer, package-based) skills
+        // Create local agent runtime using the simple-full spec.
+        // The spec contains both code-based and path-based skills.
         const response = await authFetch(`${agentBaseUrl}/api/v1/agents`, {
           method: 'POST',
           body: JSON.stringify({
             name: AGENT_NAME,
             description:
-              'Agent with skills demo - name-based and package-based skills',
+              'Agent with skills demo - code-based and path-based skills',
             agent_library: 'pydantic-ai',
             transport: 'vercel-ai',
             agent_spec_id: AGENT_SPEC_ID,
             enable_skills: true,
-            skills: ['crawl', 'text-summarizer'],
             tools: [],
           }),
         });
@@ -232,12 +241,23 @@ const AgentSkillsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
         const spec = await res.json();
         const skillNames: string[] = spec?.skills ?? [];
 
-        // For each skill name, build a SkillInfo. Check the skills catalog
-        // for package-based skills with enriched metadata.
+        // For each skill name, build a SkillInfo from the catalog when possible.
         const { getSkillSpec } = await import('../specs/skills');
         const infos: SkillInfo[] = skillNames.map((name: string) => {
           const baseName = name.includes(':') ? name.split(':')[0] : name;
           const catalogSpec = getSkillSpec(baseName);
+
+          if (catalogSpec?.path) {
+            // Variant 3: path-based skill
+            return {
+              name: catalogSpec.name,
+              description: catalogSpec.description || `Skill: ${baseName}`,
+              variant: 'path' as const,
+              path: catalogSpec.path,
+              tags: catalogSpec.tags ? [...catalogSpec.tags] : [],
+              emoji: catalogSpec.emoji,
+            };
+          }
 
           if (catalogSpec?.package && catalogSpec?.method) {
             // Variant 2: package-based skill
@@ -261,7 +281,7 @@ const AgentSkillsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
             name: catalogSpec?.name ?? baseName,
             description: catalogSpec?.description ?? `Skill: ${baseName}`,
             variant: 'module' as const,
-            module: catalogSpec?.module ?? `agent_skills.${baseName}`,
+            module: catalogSpec?.module ?? `agent_skills.skills.${baseName}`,
             tags: catalogSpec?.tags ? [...catalogSpec.tags] : [],
             emoji: catalogSpec?.emoji,
           };
@@ -512,7 +532,7 @@ const AgentSkillsExample: React.FC = () => {
           onSignIn={handleSignIn}
           onApiKeySignIn={apiKey => handleSignIn(apiKey, 'api-key-user')}
           title="Agent Skills Demo"
-          description="Sign in to test name-based and package-based agent skills."
+          description="Sign in to test code-based and path-based agent skills."
           leadingIcon={<BriefcaseIcon size={24} />}
         />
       </ThemedProvider>

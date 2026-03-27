@@ -40,7 +40,7 @@ class SkillSpec(BaseModel):
     """
     Specification for a skill.
 
-    Supports two variants:
+        Supports three variants:
     - Variant 1 (name-based): Uses ``module`` to discover and load a skill
       from a Python module path (e.g. ``agent_skills.events``).
     - Variant 2 (package-based): Uses ``package`` and ``method`` to reference
@@ -48,6 +48,8 @@ class SkillSpec(BaseModel):
       ``license``, ``compatibility``, ``allowed_tools``, and ``metadata``
       are discovered at runtime from the ``SKILL.md`` packaged inside the
       Python package — they should NOT be duplicated in the YAML spec.
+        - Variant 3 (path-based): Uses ``path`` to load a local skill directory
+            containing ``SKILL.md`` (relative to the configured skills folder).
     """
 
     model_config = ConfigDict(populate_by_name=True, by_alias=True)
@@ -66,6 +68,11 @@ class SkillSpec(BaseModel):
     )
     method: Optional[str] = Field(
         default=None, description="Callable/function name in the package"
+    )
+    # Variant 3: path to a local skill directory (or SKILL.md file)
+    path: Optional[str] = Field(
+        default=None,
+        description="Path to a local skill directory or SKILL.md file",
     )
     # agentskills.io frontmatter attributes
     license: Optional[str] = Field(
