@@ -19,7 +19,7 @@ import {
   DEFAULT_SERVICE_URLS,
 } from '@datalayer/core/lib/api/constants';
 import { validateToken } from '@datalayer/core/lib/api/utils/validation';
-import type { ToolApproval, ToolApprovalFilters } from './types';
+import type { ToolApproval, ToolApprovalFilters } from '../types';
 
 /**
  * List tool approvals with optional filters.

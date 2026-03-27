@@ -35,3 +35,26 @@ export interface AgentOutputConfig {
   storage?: string;
   [key: string]: unknown;
 }
+
+// ---- Output Artifacts ----
+
+export interface OutputArtifact {
+  /** Unique artifact ID */
+  id: string;
+  /** Agent that produced the artifact */
+  agentId: string;
+  /** Artifact type (e.g. 'pdf', 'csv') */
+  type: string;
+  /** Filename for download */
+  filename: string;
+  /** Download URL */
+  url: string;
+  /** Size in bytes */
+  sizeBytes: number;
+  /** MIME content type */
+  contentType: string;
+  /** When the artifact was generated */
+  createdAt: string;
+  /** Additional metadata */
+  metadata?: Record<string, unknown>;
+}

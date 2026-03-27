@@ -44,3 +44,33 @@ export interface AgentEvalConfig {
   languages?: string[];
   [key: string]: unknown;
 }
+
+// ---- Eval Reports ----
+
+export interface EvalReport {
+  /** Unique eval run ID */
+  evalId: string;
+  /** Agent that was evaluated */
+  agentId: string;
+  /** Total number of test cases */
+  totalCases: number;
+  /** Number of passing cases */
+  passed: number;
+  /** Number of failing cases */
+  failed: number;
+  /** Average score (0-1) if applicable */
+  avgScore: number | null;
+  /** Total eval duration in milliseconds */
+  durationMs: number;
+  /** Path or URL to detailed report */
+  reportPath: string | null;
+}
+
+export interface RunEvalsRequest {
+  /** The evals config list from the agentspec */
+  evalSpec: Array<Record<string, unknown>>;
+  /** Agent system prompt for synthetic case generation */
+  agentSystemPrompt?: string;
+  /** Tool JSON schemas for grounding */
+  toolSchemas?: Array<Record<string, unknown>>;
+}

@@ -18,7 +18,7 @@ import {
   DEFAULT_SERVICE_URLS,
 } from '@datalayer/core/lib/api/constants';
 import { validateToken } from '@datalayer/core/lib/api/utils/validation';
-import type { ContextUsage, CostUsage } from './types';
+import type { ContextUsage, CostUsage } from '../types';
 
 /**
  * Get current context window usage for an agent.

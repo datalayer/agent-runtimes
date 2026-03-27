@@ -18,7 +18,7 @@ import {
   DEFAULT_SERVICE_URLS,
 } from '@datalayer/core/lib/api/constants';
 import { validateToken } from '@datalayer/core/lib/api/utils/validation';
-import type { EvalReport, RunEvalsRequest } from './types';
+import type { EvalReport, RunEvalsRequest } from '../types';
 
 /**
  * Trigger an evaluation run for the specified agent.

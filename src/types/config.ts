@@ -3,11 +3,11 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
+import { AgentLibrary } from './agents';
+import { MCPServerConfig, ModelConfig } from './chat';
 import type { Protocol } from './protocol';
 import type { AgentValidationConfig } from './execution';
-import { MCPServerConfig, ModelConfig } from './chat';
 import { BuiltinTool } from './models';
-import { AgentLibrary } from './agents';
 
 /**
  * Default agent configuration values.

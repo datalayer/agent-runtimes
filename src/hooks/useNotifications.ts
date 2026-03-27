@@ -14,8 +14,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useIAMStore } from '@datalayer/core/lib/state';
 import { useCoreStore } from '@datalayer/core';
 import { DEFAULT_SERVICE_URLS } from '@datalayer/core/lib/api/constants';
-import * as aiAgentsApi from '../api';
-import type { NotificationFilters } from '../api/types';
+import { notifications } from '../api';
+import type { NotificationFilters } from '../types';
 
 // ─── Auth helpers ────────────────────────────────────────────────────
 
@@ -37,8 +37,7 @@ export function useFilteredNotifications(filters?: NotificationFilters) {
 
   return useQuery({
     queryKey: ['agent-notifications', filters],
-    queryFn: () =>
-      aiAgentsApi.notifications.getNotifications(token, filters, baseUrl),
+    queryFn: () => notifications.getNotifications(token, filters, baseUrl),
     enabled: !!token,
     staleTime: 10_000,
     refetchInterval: 15_000,
@@ -51,7 +50,7 @@ export function useUnreadNotificationCount() {
 
   return useQuery({
     queryKey: ['agent-notifications', 'unread-count'],
-    queryFn: () => aiAgentsApi.notifications.getUnreadCount(token, baseUrl),
+    queryFn: () => notifications.getUnreadCount(token, baseUrl),
     enabled: !!token,
     staleTime: 5_000,
     refetchInterval: 10_000,
@@ -65,7 +64,7 @@ export function useMarkNotificationRead() {
 
   return useMutation({
     mutationFn: (id: string) =>
-      aiAgentsApi.notifications.markNotificationRead(token, id, baseUrl),
+      notifications.markNotificationRead(token, id, baseUrl),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['agent-notifications'] });
     },
@@ -78,7 +77,7 @@ export function useMarkAllNotificationsRead() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: () => aiAgentsApi.notifications.markAllRead(token, baseUrl),
+    mutationFn: () => notifications.markAllRead(token, baseUrl),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['agent-notifications'] });
     },

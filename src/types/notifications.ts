@@ -53,3 +53,45 @@ export interface AgentNotificationConfig {
   webhook?: string;
   [key: string]: string | number | boolean | undefined;
 }
+
+// ---- Agent Notifications ----
+
+export interface AgentNotification {
+  /** Unique notification ID */
+  id: string;
+  /** Agent that generated the notification */
+  agentId: string;
+  /** Pod running the agent */
+  podName: string;
+  /** Notification severity */
+  level: NotificationLevel;
+  /** Notification title */
+  title: string;
+  /** Notification body (markdown) */
+  body: string;
+  /** Whether the user has read this notification */
+  read: boolean;
+  /** When the notification was created */
+  createdAt: string;
+  /** Category for grouping */
+  category: string;
+  /** Additional metadata */
+  metadata?: Record<string, unknown>;
+}
+
+export type NotificationLevel = 'info' | 'warning' | 'error' | 'success';
+
+export interface NotificationFilters {
+  /** Filter by agent ID */
+  agentId?: string;
+  /** Filter by level */
+  level?: NotificationLevel;
+  /** Only unread notifications */
+  unreadOnly?: boolean;
+  /** Filter by category */
+  category?: string;
+  /** Maximum results */
+  limit?: number;
+  /** Offset for pagination */
+  offset?: number;
+}

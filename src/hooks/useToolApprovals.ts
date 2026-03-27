@@ -13,8 +13,8 @@ import { useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useCoreStore, useIAMStore } from '@datalayer/core/lib/state';
 import { DEFAULT_SERVICE_URLS } from '@datalayer/core/lib/api/constants';
-import * as aiAgentsApi from '../api';
-import type { ToolApprovalFilters } from '../api/types';
+import { toolApprovals } from '../api';
+import type { ToolApprovalFilters } from '../types/tool-approvals';
 
 // ─── Auth helpers ────────────────────────────────────────────────────
 
@@ -36,8 +36,7 @@ export function useToolApprovalsQuery(filters?: ToolApprovalFilters) {
 
   return useQuery({
     queryKey: ['tool-approvals', filters],
-    queryFn: () =>
-      aiAgentsApi.toolApprovals.getToolApprovals(token, filters, baseUrl),
+    queryFn: () => toolApprovals.getToolApprovals(token, filters, baseUrl),
     enabled: !!token,
     staleTime: 10_000,
     refetchInterval: 15_000,
@@ -50,8 +49,7 @@ export function usePendingApprovalCount() {
 
   return useQuery({
     queryKey: ['tool-approvals', 'pending-count'],
-    queryFn: () =>
-      aiAgentsApi.toolApprovals.getPendingApprovalCount(token, baseUrl),
+    queryFn: () => toolApprovals.getPendingApprovalCount(token, baseUrl),
     enabled: !!token,
     staleTime: 5_000,
     refetchInterval: 10_000,
@@ -65,7 +63,7 @@ export function useApproveToolRequest() {
 
   return useMutation({
     mutationFn: ({ id, note }: { id: string; note?: string }) =>
-      aiAgentsApi.toolApprovals.approveToolRequest(token, id, note, baseUrl),
+      toolApprovals.approveToolRequest(token, id, note, baseUrl),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tool-approvals'] });
     },
@@ -79,7 +77,7 @@ export function useRejectToolRequest() {
 
   return useMutation({
     mutationFn: ({ id, note }: { id: string; note?: string }) =>
-      aiAgentsApi.toolApprovals.rejectToolRequest(token, id, note, baseUrl),
+      toolApprovals.rejectToolRequest(token, id, note, baseUrl),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tool-approvals'] });
     },

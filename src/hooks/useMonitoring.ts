@@ -13,12 +13,12 @@ import { useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useCoreStore, useIAMStore } from '@datalayer/core/lib/state';
 import { DEFAULT_SERVICE_URLS } from '@datalayer/core/lib/api/constants';
-import * as aiAgentsApi from '../api';
+import { events } from '../api';
 import type {
   ListAgentEventsParams,
   CreateAgentEventRequest,
   UpdateAgentEventRequest,
-} from '../api/types';
+} from '../types';
 
 // ─── Auth helpers ────────────────────────────────────────────────────
 
@@ -40,7 +40,7 @@ export function useAgentEvents(params?: ListAgentEventsParams) {
 
   return useQuery({
     queryKey: ['agent-events', params],
-    queryFn: () => aiAgentsApi.events.listEvents(token, params ?? {}, baseUrl),
+    queryFn: () => events.listEvents(token, params ?? {}, baseUrl),
     enabled: !!token,
     staleTime: 10_000,
     refetchInterval: 15_000,
@@ -53,8 +53,7 @@ export function useAgentEvent(eventId?: string) {
 
   return useQuery({
     queryKey: ['agent-events', eventId],
-    queryFn: () =>
-      aiAgentsApi.events.getEvent(token, eventId as string, baseUrl),
+    queryFn: () => events.getEvent(token, eventId as string, baseUrl),
     enabled: !!token && !!eventId,
     staleTime: 10_000,
   });
@@ -67,7 +66,7 @@ export function useCreateAgentEvent() {
 
   return useMutation({
     mutationFn: (payload: CreateAgentEventRequest) =>
-      aiAgentsApi.events.createEvent(token, payload, baseUrl),
+      events.createEvent(token, payload, baseUrl),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['agent-events'] });
     },
@@ -86,7 +85,7 @@ export function useUpdateAgentEvent() {
     }: {
       eventId: string;
       payload: UpdateAgentEventRequest;
-    }) => aiAgentsApi.events.updateEvent(token, eventId, payload, baseUrl),
+    }) => events.updateEvent(token, eventId, payload, baseUrl),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['agent-events'] });
       queryClient.invalidateQueries({

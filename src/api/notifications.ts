@@ -19,7 +19,7 @@ import {
   DEFAULT_SERVICE_URLS,
 } from '@datalayer/core/lib/api/constants';
 import { validateToken } from '@datalayer/core/lib/api/utils/validation';
-import type { AgentNotification, NotificationFilters } from './types';
+import type { AgentNotification, NotificationFilters } from '../types';
 
 /**
  * List agent notifications with optional filters.

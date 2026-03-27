@@ -16,6 +16,7 @@
  * @module client/AgentsMixin
  */
 
+import type { Constructor } from '@datalayer/core/lib/client/utils/mixins';
 import * as agents from '../api/agents';
 import * as toolApprovals from '../api/tool-approvals';
 import * as notifications from '../api/notifications';
@@ -33,8 +34,6 @@ import type {
   RunningAgent,
   AgentUsageSummary,
   ConversationCheckpoint,
-  ToolApproval,
-  ToolApprovalFilters,
   AgentNotification,
   NotificationFilters,
   OutputArtifact,
@@ -42,8 +41,11 @@ import type {
   RunEvalsRequest,
   ContextUsage,
   CostUsage,
-} from '../api/types';
-import type { Constructor } from '@datalayer/core/lib/client/utils/mixins';
+} from '../types';
+import type {
+  ToolApproval,
+  ToolApprovalFilters,
+} from '../types/tool-approvals';
 
 /** Agents mixin providing durable agent management. */
 export function AgentsMixin<TBase extends Constructor>(Base: TBase) {

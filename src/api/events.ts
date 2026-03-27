@@ -27,7 +27,7 @@ import type {
   ListAgentEventsParams,
   ListAgentEventsResponse,
   UpdateAgentEventRequest,
-} from './types';
+} from '../types';
 
 const toQueryString = (params: ListAgentEventsParams): string => {
   const searchParams = new URLSearchParams();
