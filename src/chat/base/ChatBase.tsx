@@ -60,7 +60,7 @@ import { ChatBaseHeader } from '../header/ChatHeaderBase';
 import { ChatEmptyState } from '../display/EmptyState';
 import { PoweredByTag } from '../display/PoweredByTag';
 import { ChatMessageList } from '../messages/ChatMessageList';
-import { InputFooter } from '../prompt/InputFooter';
+import { InputToolbar } from '../prompt/InputFooter';
 
 // Tracks pending prompts already auto-sent for a given conversation scope.
 // This prevents layout-driven unmount/remount cycles from re-sending prompts.
@@ -1538,7 +1538,7 @@ function ChatBaseInner({
     );
   }
 
-  // ---- Compute data for InputFooter ----
+  // ---- Compute data for InputToolbar ----
   const filteredMcpServers = (configQuery.data?.mcpServers || []).filter(
     server => !mcpServers || isServerSelected(server),
   );
@@ -1646,7 +1646,7 @@ function ChatBaseInner({
 
       {/* Input */}
       {showInput && (
-        <InputFooter
+        <InputToolbar
           input={input}
           setInput={setInput}
           isLoading={isLoading}

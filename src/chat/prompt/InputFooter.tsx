@@ -4,12 +4,12 @@
  */
 
 /**
- * InputFooter — Bottom section of the ChatBase component.
+ * InputToolbar — Bottom toolbar below the InputPrompt component.
  *
  * Contains the InputPrompt component, the TokenUsageBar, and the
  * model / tools / skills action-menu selectors.
  *
- * @module chat/prompt/InputFooter
+ * @module chat/prompt/InputToolbar
  */
 
 import {
@@ -32,7 +32,7 @@ import type { BuiltinTool } from '../../types';
 // Props
 // ---------------------------------------------------------------------------
 
-export interface InputFooterProps {
+export interface InputToolbarProps {
   // ---- Input ----
   input: string;
   setInput: (value: string) => void;
@@ -87,7 +87,7 @@ export interface InputFooterProps {
 // Component
 // ---------------------------------------------------------------------------
 
-export function InputFooter({
+export function InputToolbar({
   input,
   setInput,
   isLoading,
@@ -120,7 +120,7 @@ export function InputFooter({
   enabledSkills,
   onToggleSkill,
   onToggleAllSkills,
-}: InputFooterProps) {
+}: InputToolbarProps) {
   // Show token usage when we have valid context data
   const hasContext =
     agentUsage && !agentUsage.error && agentUsage.totalTokens > 0;

@@ -9,5 +9,22 @@
  * @module chat/prompt
  */
 
-export { InputPrompt, type InputPromptProps } from './InputPrompt';
-export { InputFooter, type InputFooterProps } from './InputFooter';
+export {
+  InputPrompt,
+  type InputPromptProps,
+  type InputPromptVariant,
+} from './InputPrompt';
+export {
+  InputPromptHeader,
+  type InputPromptHeaderProps,
+} from './InputPromptHeader';
+export {
+  InputPromptFooter,
+  type InputPromptFooterProps,
+} from './InputPromptFooter';
+export { InputPromptText, type InputPromptTextProps } from './InputPromptText';
+export {
+  InputPromptLexical,
+  type InputPromptLexicalProps,
+} from './InputPromptLexical';
+export { InputToolbar, type InputToolbarProps } from './InputFooter';

@@ -4,35 +4,40 @@
  */
 
 /**
- * InputPrompt - Standalone input prompt component extracted from ChatBase.
+ * InputPrompt — Integrated chat input component.
  *
- * Provides a textarea with a send/stop button, auto-resize behavior,
- * and keyboard shortcuts (Enter to send, Shift+Enter for newline).
+ * Layout (top → bottom):
+ *   1. Header   – slot for dropdowns / indicators
+ *   2. Input    – "text" (textarea) or "lexical" (plain-text Lexical editor)
+ *   3. Footer   – left slot for controls, submit / stop buttons on the right
  *
- * Can be used independently of ChatBase for embedding a prompt input
- * in any context (e.g. landing pages, home screens).
+ * The component is wrapped in a rounded container with a subtle border,
+ * giving it a more integrated visual appearance.
  *
  * @module chat/prompt/InputPrompt
  */
 
-import {
-  type KeyboardEvent as ReactKeyboardEvent,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from 'react';
-import { Textarea, IconButton } from '@primer/react';
+import type { ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Box } from '@datalayer/primer-addons';
-import { PaperAirplaneIcon, SquareCircleIcon } from '@primer/octicons-react';
+
+import { InputPromptHeader } from './InputPromptHeader';
+import { InputPromptFooter } from './InputPromptFooter';
+import { InputPromptText } from './InputPromptText';
+import { InputPromptLexical } from './InputPromptLexical';
+
+/** Input variant type. */
+export type InputPromptVariant = 'text' | 'lexical';
 
 /**
  * Props for the InputPrompt component.
  */
 export interface InputPromptProps {
-  /** Placeholder text for the textarea */
+  /** Input variant — "text" (default) or "lexical" */
+  variant?: InputPromptVariant;
+  /** Placeholder text */
   placeholder?: string;
-  /** Whether the input is in a loading/sending state */
+  /** Whether the agent is loading / streaming */
   isLoading?: boolean;
   /** Callback when a message is submitted */
   onSend: (message: string) => void;
@@ -42,11 +47,11 @@ export interface InputPromptProps {
   autoFocus?: boolean;
   /** Trigger value change to refocus input */
   focusTrigger?: number;
-  /** Whether to show a border on top */
+  /** Whether to show a border on top of the outer wrapper */
   showBorderTop?: boolean;
-  /** Whether to use subtle background */
+  /** Whether to use a subtle background */
   showBackground?: boolean;
-  /** Custom padding (default: 3) */
+  /** Custom outer padding (default: 3) */
   padding?: number;
   /** Whether the prompt is disabled */
   disabled?: boolean;
@@ -56,19 +61,18 @@ export interface InputPromptProps {
   value?: string;
   /** Controlled input onChange (external state) */
   onChange?: (value: string) => void;
+  /** Content rendered in the header slot */
+  headerContent?: ReactNode;
+  /** Content rendered on the left side of the footer */
+  footerContent?: ReactNode;
 }
 
 /**
- * InputPrompt — A standalone chat input with send button.
- *
- * Features:
- * - Auto-resizing textarea (min 40px, max 120px)
- * - Enter to send, Shift+Enter for newline
- * - Send / Stop toggle based on loading state
- * - Auto-focus support
+ * InputPrompt — Integrated chat input with header, input area, and footer.
  */
 export function InputPrompt({
-  placeholder = 'Type a message...',
+  variant = 'text',
+  placeholder = 'Ask anything…',
   isLoading = false,
   onSend,
   onStop,
@@ -81,104 +85,69 @@ export function InputPrompt({
   sx,
   value: controlledValue,
   onChange: controlledOnChange,
+  headerContent,
+  footerContent,
 }: InputPromptProps) {
-  // Internal state (used when not controlled)
+  // ---- Controlled / uncontrolled state -----------------------------------
   const [internalInput, setInternalInput] = useState('');
   const input = controlledValue !== undefined ? controlledValue : internalInput;
   const setInput =
     controlledOnChange !== undefined ? controlledOnChange : setInternalInput;
 
+  // ---- Refs (text variant only) ------------------------------------------
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  // Auto-focus on mount
+  // ---- Auto-focus --------------------------------------------------------
   useEffect(() => {
-    if (autoFocus && inputRef.current) {
-      const timeoutId = setTimeout(() => {
-        inputRef.current?.focus();
-      }, 100);
-      return () => clearTimeout(timeoutId);
+    if (autoFocus && variant === 'text' && inputRef.current) {
+      const t = setTimeout(() => inputRef.current?.focus(), 100);
+      return () => clearTimeout(t);
     }
-  }, [autoFocus]);
+  }, [autoFocus, variant]);
 
-  // Refocus when focusTrigger changes
+  // ---- Refocus when focusTrigger changes ---------------------------------
   useEffect(() => {
-    if (focusTrigger !== undefined && focusTrigger > 0 && inputRef.current) {
-      const timeoutId = setTimeout(() => {
-        inputRef.current?.focus();
-      }, 150);
-      return () => clearTimeout(timeoutId);
+    if (
+      focusTrigger !== undefined &&
+      focusTrigger > 0 &&
+      variant === 'text' &&
+      inputRef.current
+    ) {
+      const t = setTimeout(() => inputRef.current?.focus(), 150);
+      return () => clearTimeout(t);
     }
-  }, [focusTrigger]);
+  }, [focusTrigger, variant]);
 
-  // Track previous loading state to detect when loading completes
+  // ---- Refocus after loading completes -----------------------------------
   const wasLoadingRef = useRef(false);
-
-  // Refocus input when loading completes
   useEffect(() => {
-    if (wasLoadingRef.current && !isLoading && inputRef.current) {
-      const timeoutId = setTimeout(() => {
-        inputRef.current?.focus();
-      }, 50);
-      return () => clearTimeout(timeoutId);
+    if (
+      wasLoadingRef.current &&
+      !isLoading &&
+      variant === 'text' &&
+      inputRef.current
+    ) {
+      const t = setTimeout(() => inputRef.current?.focus(), 50);
+      return () => clearTimeout(t);
     }
     wasLoadingRef.current = isLoading;
-  }, [isLoading]);
+  }, [isLoading, variant]);
 
-  // Auto-resize textarea based on content
-  const adjustTextareaHeight = useCallback(() => {
-    const textarea = inputRef.current;
-    if (textarea) {
-      textarea.style.height = 'auto';
-      const maxHeight = 120;
-      const minHeight = 40;
-      const newHeight = Math.min(
-        Math.max(textarea.scrollHeight, minHeight),
-        maxHeight,
-      );
-      textarea.style.height = `${newHeight}px`;
-      textarea.style.overflowY =
-        textarea.scrollHeight > maxHeight ? 'auto' : 'hidden';
-    }
-  }, []);
-
-  // Adjust textarea height when input changes
-  useEffect(() => {
-    adjustTextareaHeight();
-  }, [input, adjustTextareaHeight]);
-
-  // Ensure textarea has a minimum height on mount
-  useEffect(() => {
-    const timer = setTimeout(adjustTextareaHeight, 0);
-    return () => clearTimeout(timer);
-  }, [adjustTextareaHeight]);
-
-  // Send handler
+  // ---- Send / Stop handlers ----------------------------------------------
   const handleSend = useCallback(() => {
     if (!input.trim() || isLoading || disabled) return;
     const message = input.trim();
-    // Only clear input if not controlled externally
     if (controlledValue === undefined) {
       setInput('');
     }
     onSend(message);
   }, [input, isLoading, disabled, onSend, setInput, controlledValue]);
 
-  // Stop handler
   const handleStop = useCallback(() => {
     onStop?.();
   }, [onStop]);
 
-  // Keyboard handler
-  const handleKeyDown = useCallback(
-    (e: ReactKeyboardEvent<HTMLTextAreaElement>) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        handleSend();
-      }
-    },
-    [handleSend],
-  );
-
+  // ---- Render ------------------------------------------------------------
   return (
     <Box sx={sx}>
       <Box
@@ -193,43 +162,54 @@ export function InputPrompt({
           }),
         }}
       >
-        <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-end' }}>
-          <Textarea
-            ref={inputRef}
-            value={input}
-            onChange={e => {
-              setInput(e.target.value);
-            }}
-            onKeyDown={handleKeyDown}
-            placeholder={placeholder}
-            disabled={isLoading || disabled}
-            sx={{
-              flex: 1,
-              resize: 'none',
-              minHeight: '40px',
-              maxHeight: '120px',
-              overflow: 'hidden',
-              transition: 'height 0.1s ease-out',
-              py: '2px',
-            }}
-            rows={1}
-          />
-          {isLoading ? (
-            <IconButton
-              icon={SquareCircleIcon}
-              aria-label="Stop"
-              onClick={handleStop}
-              sx={{ alignSelf: 'flex-end' }}
+        <Box
+          sx={{
+            border: '1px solid',
+            borderColor: 'border.default',
+            borderRadius: 2,
+            bg: 'canvas.default',
+            overflow: 'hidden',
+            transition: 'border-color 0.2s ease',
+            '&:focus-within': {
+              borderColor: 'accent.fg',
+              boxShadow: (t: Record<string, unknown>) =>
+                `0 0 0 1px ${(t as any)?.colors?.accent?.fg ?? '#0969da'}`,
+            },
+          }}
+        >
+          {/* Header */}
+          <InputPromptHeader>{headerContent}</InputPromptHeader>
+
+          {/* Input area */}
+          {variant === 'lexical' ? (
+            <InputPromptLexical
+              value={input}
+              onChange={setInput}
+              placeholder={placeholder}
+              disabled={isLoading || disabled}
+              onSubmit={handleSend}
+              autoFocus={autoFocus}
             />
           ) : (
-            <IconButton
-              icon={PaperAirplaneIcon}
-              aria-label="Send"
-              onClick={handleSend}
-              disabled={!input.trim() || disabled}
-              sx={{ alignSelf: 'flex-end' }}
+            <InputPromptText
+              value={input}
+              onChange={setInput}
+              placeholder={placeholder}
+              disabled={isLoading || disabled}
+              onSubmit={handleSend}
+              inputRef={inputRef}
             />
           )}
+
+          {/* Footer */}
+          <InputPromptFooter
+            isLoading={isLoading}
+            sendDisabled={!input.trim() || disabled}
+            onSend={handleSend}
+            onStop={handleStop}
+          >
+            {footerContent}
+          </InputPromptFooter>
         </Box>
       </Box>
     </Box>
