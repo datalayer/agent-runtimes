@@ -7,7 +7,7 @@
  * Tool call display component.
  * Renders tool execution with input, output, and status.
  *
- * @module components/chat/display/ToolPart
+ * @module chat/display/ToolPart
  */
 
 import React from 'react';

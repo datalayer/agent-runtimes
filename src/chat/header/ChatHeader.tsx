@@ -6,7 +6,7 @@
 /**
  * Chat header component with connection status indicator.
  *
- * @module components/chat/elements/ChatHeader
+ * @module chat/header/ChatHeader
  */
 
 import { Text, IconButton, Button } from '@primer/react';

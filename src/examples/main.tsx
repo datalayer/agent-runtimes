@@ -29,7 +29,7 @@ import {
   iamStore,
   createDatalayerServiceManager,
 } from '@datalayer/core';
-import { useChatStore } from '../store';
+import { useChatStore } from '../stores';
 import { OAuthCallback } from '../identity';
 import { EXAMPLES } from './example-selector';
 import { useExampleThemeStore } from './stores/themeStore';

@@ -26,7 +26,7 @@ import { useIdentity } from '../identity';
 import { isSpecSelection, getSpecId } from '../config/AgentConfiguration';
 import { MockFileBrowser, MainContent, Header } from './components';
 import { AgentConfiguration } from '../config';
-import { useChatStore } from '../store';
+import { useChatStore } from '../stores';
 import type {
   AgentLibrary,
   McpServerSelection,

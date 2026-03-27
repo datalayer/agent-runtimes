@@ -11,7 +11,7 @@
  * This component uses ChatBase for all chat functionality and provides
  * a floating popup wrapper with animation, positioning, and FAB button.
  *
- * @module components/chat/ChatPopupStandalone
+ * @module chat/ChatPopupStandalone
  */
 
 import React, {
@@ -30,25 +30,24 @@ import {
   SquareCircleIcon,
 } from '@primer/octicons-react';
 import { AiAgentIcon } from '@datalayer/icons-react';
-
+import {
+  useChatKeyboardShortcuts,
+  getShortcutDisplay,
+} from '@datalayer/core/lib/hooks';
 import { ChatBase } from './base/ChatBase';
-import { PoweredByTag, type PoweredByTagProps } from './elements/PoweredByTag';
+import { PoweredByTag, type PoweredByTagProps } from './display/PoweredByTag';
 import {
   useChatOpen,
   useChatMessages,
   useChatStore,
   useChatLoading,
   useChatStreaming,
-} from '../store/chatStore';
+} from '../stores/chatStore';
 import {
   generateMessageId,
   createUserMessage,
   createAssistantMessage,
-} from '../types/messges';
-import {
-  useChatKeyboardShortcuts,
-  getShortcutDisplay,
-} from '@datalayer/core/lib/hooks';
+} from '../types/messages';
 import { ChatBaseProps, RenderToolResult } from '../types';
 
 /**

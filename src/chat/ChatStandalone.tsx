@@ -11,7 +11,7 @@
  * This component uses ChatBase for all chat functionality and provides
  * a floating popup wrapper with animation, positioning, and FAB button.
  *
- * @module components/chat/ChatStandalone
+ * @module chat/ChatStandalone
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -24,8 +24,12 @@ import {
   getShortcutDisplay,
 } from '@datalayer/core/lib/hooks';
 import { ChatBase } from './base/ChatBase';
-import { PoweredByTag, type PoweredByTagProps } from './elements/PoweredByTag';
-import { useChatOpen, useChatMessages, useChatStore } from '../store/chatStore';
+import { PoweredByTag, type PoweredByTagProps } from './display/PoweredByTag';
+import {
+  useChatOpen,
+  useChatMessages,
+  useChatStore,
+} from '../stores/chatStore';
 import {
   type ChatBaseProps,
   type RenderToolResult,

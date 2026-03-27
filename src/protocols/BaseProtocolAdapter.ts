@@ -19,7 +19,7 @@ import type {
   ProtocolEventHandler,
   AgentCard,
 } from '../types';
-import type { ChatMessage } from '../types/messges';
+import type { ChatMessage } from '../types/messages';
 import type { ToolDefinition, ToolExecutionResult } from '../types/tools';
 
 /**

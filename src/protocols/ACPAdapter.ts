@@ -31,9 +31,9 @@ import {
 } from '@agentclientprotocol/sdk';
 
 import type { ProtocolAdapterConfig, ACP } from '../types';
-import type { ChatMessage } from '../types/messges';
+import type { ChatMessage } from '../types/messages';
 import type { ToolDefinition, ToolExecutionResult } from '../types/tools';
-import { generateMessageId, createAssistantMessage } from '../types/messges';
+import { generateMessageId, createAssistantMessage } from '../types/messages';
 import { BaseProtocolAdapter } from './BaseProtocolAdapter';
 
 /**

@@ -6,7 +6,7 @@
 /**
  * Prompt components barrel export.
  *
- * @module components/chat/prompt
+ * @module chat/prompt
  */
 
 export { InputPrompt, type InputPromptProps } from './InputPrompt';

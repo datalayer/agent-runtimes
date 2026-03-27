@@ -7,7 +7,7 @@
  * Reasoning message part display component.
  * Renders AI reasoning/thinking content with collapsible section.
  *
- * @module components/chat/display/ReasoningPart
+ * @module chat/display/ReasoningPart
  */
 
 import React from 'react';

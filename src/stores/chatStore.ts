@@ -22,7 +22,7 @@ import type {
   ExtensionRegistryEntry,
   ChatMiddleware,
 } from '../types';
-import type { ToolCallStatus } from '../types/messges';
+import type { ToolCallStatus } from '../types/messages';
 import type { InferenceProvider } from '../types/inference';
 import type { ProtocolAdapter } from '../types/protocol';
 import type { ToolExecutor } from '../tools/ToolExecutor';

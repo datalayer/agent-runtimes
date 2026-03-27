@@ -86,7 +86,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
     autoStart: true,
     agentConfig: {
       name: AGENT_NAME,
-      transport: 'ag-ui',
+      protocol: 'ag-ui',
       description: 'Agent with cron, webhook, event, and manual triggers',
     },
   });

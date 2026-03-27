@@ -188,16 +188,3 @@ export {
   useCreateAgentEvent,
   useUpdateAgentEvent,
 } from './useMonitoring';
-
-// Types from the shared types module
-export type {
-  AgentConnection,
-  AgentStatus,
-  AgentConfig,
-  AgentRuntimeState,
-  CheckpointRecord,
-  CheckpointMode,
-} from '../types/agents';
-
-// Constants from the shared types module
-export { DEFAULT_AGENT_CONFIG, AGENT_STATUS_COLORS } from '../types/agents';

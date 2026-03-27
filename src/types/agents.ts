@@ -87,24 +87,6 @@ export interface AgentConnection {
 }
 
 /**
- * Configuration for creating an agent on a runtime.
- */
-export interface AgentConfig {
-  /** Agent name/ID (defaults to runtime pod name). */
-  name?: string;
-  /** Agent description. */
-  description?: string;
-  /** AI model to use. */
-  model?: string;
-  /** System prompt for the agent. */
-  systemPrompt?: string;
-  /** Agent library (defaults to `pydantic-ai`). */
-  agentLibrary?: 'pydantic-ai' | 'langchain' | 'openai';
-  /** Transport protocol (defaults to `ag-ui`). */
-  transport?: 'ag-ui' | 'vercel-ai' | 'acp' | 'a2a';
-}
-
-/**
  * Complete state for an agent runtime in the Zustand store.
  */
 export interface AgentRuntimeState {
@@ -149,18 +131,6 @@ export type AgentRuntimeData = {
   agentSpec?: AgentSpec;
   // ID of the agent spec used to create this runtime
   agent_spec_id?: string;
-};
-
-/**
- * Default agent configuration values.
- */
-export const DEFAULT_AGENT_CONFIG: Required<AgentConfig> = {
-  name: 'ai-agent',
-  description: 'AI Assistant',
-  model: '',
-  systemPrompt: 'You are a helpful AI assistant.',
-  agentLibrary: 'pydantic-ai',
-  transport: 'vercel-ai',
 };
 
 /**

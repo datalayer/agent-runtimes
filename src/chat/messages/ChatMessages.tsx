@@ -7,7 +7,7 @@
  * Chat message list component.
  * Renders the list of chat messages with support for custom renderers.
  *
- * @module components/chat/elements/ChatMessages
+ * @module chat/messages/ChatMessages
  */
 
 import React, { useRef, useEffect } from 'react';
@@ -15,12 +15,12 @@ import { Text, RelativeTime } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { PersonIcon, ToolsIcon } from '@primer/octicons-react';
 import { AiAgentIcon } from '@datalayer/icons-react';
-import type { ChatMessage, ContentPart } from '../../types/messges';
+import type { ChatMessage, ContentPart } from '../../types/messages';
 import type { ExtensionRegistry } from '../../extensions/ExtensionRegistry';
 import {
   useChatMessages,
   useChatExtensionRegistry,
-} from '../../store/chatStore';
+} from '../../stores/chatStore';
 
 /**
  * ChatMessages props

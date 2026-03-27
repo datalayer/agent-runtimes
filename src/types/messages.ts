@@ -7,7 +7,7 @@
  * Message types for chat component.
  * Based on AG-UI protocol message format for interoperability.
  *
- * @module types/message
+ * @module types/messages
  */
 
 /**

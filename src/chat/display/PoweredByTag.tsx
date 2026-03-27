@@ -7,7 +7,7 @@
  * PoweredBy tag component for Chat.
  * Shows branding at the bottom of the chat.
  *
- * @module components/chat/elements/PoweredByTag
+ * @module chat/display/PoweredByTag
  */
 
 import React from 'react';

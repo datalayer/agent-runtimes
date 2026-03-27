@@ -16,7 +16,7 @@ import { useEffect } from 'react';
 import { create } from 'zustand';
 import { useCoreStore, useDatalayer } from '@datalayer/core';
 import { URLExt } from '@jupyterlab/coreutils';
-import { useAgentStore } from '../store/agentRuntimeStore';
+import { useAgentStore } from '../stores/agentRuntimeStore';
 import type { AgentRuntimeData, AgentSpec } from '../types';
 import { listAgentSpecs } from '../specs';
 

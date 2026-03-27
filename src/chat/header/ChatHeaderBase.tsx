@@ -10,7 +10,7 @@
  * (new chat, clear, settings), view-mode segmented toggle, and custom
  * header actions / content.
  *
- * @module components/chat/elements/ChatHeaderBase
+ * @module chat/header/ChatHeaderBase
  */
 
 import { type ReactNode } from 'react';

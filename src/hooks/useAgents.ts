@@ -26,13 +26,10 @@ import {
   useAgentStatus,
   useAgentError,
   useIsLaunching,
-} from '../store/agentRuntimeStore';
-import { DEFAULT_AGENT_CONFIG } from '../types/agents';
-import type {
-  AgentStatus,
-  AgentConfig,
-  AgentRuntimeData,
-} from '../types/agents';
+} from '../stores/agentRuntimeStore';
+import { DEFAULT_AGENT_CONFIG } from '../types/config';
+import type { AgentConfig } from '../types/config';
+import type { AgentStatus, AgentRuntimeData } from '../types/agents';
 import type {
   CreateAgentRuntimeRequest,
   UseAgentOptions,
@@ -110,7 +107,7 @@ function toAgentRuntimeData(raw: Record<string, any>): AgentRuntimeData {
 // ═══════════════════════════════════════════════════════════════════════════
 
 /**
- * Unified hook for managing agent runtimes.
+ * Hook for managing agent runtimes.
  *
  * Works in two modes:
  * - **Connect** (no `agentSpecId`): connect to an existing runtime and auto-create agent
@@ -242,8 +239,8 @@ export function useAgents(options: UseAgentOptions = {}): UseAgentReturn {
         if (agentSpec) {
           if (agentSpec.model) specDefaults.model = agentSpec.model;
           if (agentSpec.protocol)
-            specDefaults.transport =
-              agentSpec.protocol as AgentConfig['transport'];
+            specDefaults.protocol =
+              agentSpec.protocol as AgentConfig['protocol'];
           if (agentSpec.systemPrompt)
             specDefaults.systemPrompt = agentSpec.systemPrompt;
           if (agentSpec.description)

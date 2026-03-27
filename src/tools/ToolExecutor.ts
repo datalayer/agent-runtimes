@@ -7,7 +7,7 @@
  * Tool executor for hybrid tool execution (frontend + backend).
  * Handles routing tool calls to appropriate execution location.
  *
- * @module components/chat/tools/ToolExecutor
+ * @module chat/tools/ToolExecutor
  */
 
 import type {

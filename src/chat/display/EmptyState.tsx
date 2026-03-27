@@ -9,7 +9,7 @@
  * Supports a custom render function, icon overrides, description text, and
  * clickable suggestion pills.
  *
- * @module components/chat/elements/EmptyState
+ * @module chat/display/EmptyState
  */
 
 import { type ReactNode } from 'react';

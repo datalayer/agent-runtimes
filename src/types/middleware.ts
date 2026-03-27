@@ -10,7 +10,7 @@
  * @module types/middleware
  */
 
-import type { ChatMessage } from './messges';
+import type { ChatMessage } from './messages';
 import type { ToolCallRequest, ToolExecutionResult } from './tools';
 import type { InferenceRequestOptions, InferenceResponse } from './inference';
 

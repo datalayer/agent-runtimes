@@ -16,7 +16,7 @@ import type {
   InferenceResponse,
   StreamEventHandler,
 } from '../types';
-import type { ChatMessage } from '../types/messges';
+import type { ChatMessage } from '../types/messages';
 import type { ToolExecutionResult } from '../types/tools';
 
 /**

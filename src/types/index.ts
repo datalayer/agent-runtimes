@@ -21,7 +21,7 @@ export * from './guardrails';
 export * from './inference';
 export * from './mcp';
 export * from './memory';
-export * from './messges';
+export * from './messages';
 export * from './middleware';
 export * from './models';
 export * from './notifications';

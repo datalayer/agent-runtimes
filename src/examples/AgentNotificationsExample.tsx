@@ -88,7 +88,7 @@ const AgentNotificationsInner: React.FC<{ onLogout: () => void }> = ({
     autoStart: true,
     agentConfig: {
       name: AGENT_NAME,
-      transport: 'ag-ui',
+      protocol: 'ag-ui',
       description: 'Agent with multi-channel notification support',
     },
   });

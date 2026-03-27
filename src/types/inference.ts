@@ -10,7 +10,7 @@
  * @module types/inference
  */
 
-import type { ChatMessage, ChatMessageDelta } from './messges';
+import type { ChatMessage, ChatMessageDelta } from './messages';
 import type {
   ToolDefinition,
   ToolCallRequest,

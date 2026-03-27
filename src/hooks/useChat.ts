@@ -7,18 +7,18 @@
  * Main chat hook for chat component.
  * Provides chat state, message sending, and streaming functionality.
  *
- * @module components/chat/hooks/useChat
+ * @module chat/hooks/useChat
  */
 
 import { useCallback, useMemo } from 'react';
-import { useChatStore } from '../store';
-import type { ChatMessage } from '../types/messges';
+import { useChatStore } from '../stores';
+import type { ChatMessage } from '../types/messages';
 import type { InferenceRequestOptions } from '../types/inference';
 import {
   createUserMessage,
   createAssistantMessage,
   generateMessageId,
-} from '../types/messges';
+} from '../types/messages';
 import { sanitizeAssistantContent } from '../utils';
 
 /**

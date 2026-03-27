@@ -3,7 +3,7 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
-import { ChatMessage } from './messges';
+import { ChatMessage } from './messages';
 import { ToolDefinition } from './tools';
 
 /**

@@ -16,7 +16,7 @@
  * - Vercel AI - HTTP/SSE streaming (via SelfHostedInferenceProvider)
  * - Vercel AI Jupyter - Same as Vercel AI but served by Jupyter server
  *
- * @module components/chat/Chat
+ * @module chat/Chat
  */
 
 import { useEffect, useMemo, useState } from 'react';

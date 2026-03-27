@@ -18,7 +18,7 @@ import type {
   ToolCallMiddleware,
   ErrorMiddleware,
 } from '../types/middleware';
-import type { ChatMessage } from '../types/messges';
+import type { ChatMessage } from '../types/messages';
 import type {
   ToolDefinition,
   ToolCallRequest,

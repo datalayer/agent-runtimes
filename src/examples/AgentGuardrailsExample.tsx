@@ -77,7 +77,7 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
     autoStart: true,
     agentConfig: {
       name: AGENT_NAME,
-      transport: 'ag-ui',
+      protocol: 'ag-ui',
       description: 'Agent with cost budget and tool approval guardrails',
     },
   });

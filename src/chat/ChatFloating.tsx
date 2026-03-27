@@ -14,7 +14,7 @@
  * 2. Store mode: When `useStore` is true
  * 3. Any protocol supported by ChatBase (AG-UI, A2A, ACP, Vercel AI)
  *
- * @module components/chat/ChatFloating
+ * @module chat/ChatFloating
  */
 
 import React, {
@@ -29,8 +29,12 @@ import { Box } from '@datalayer/primer-addons';
 import { XIcon, CommentDiscussionIcon } from '@primer/octicons-react';
 import { AiAgentIcon } from '@datalayer/icons-react';
 import { ChatBase } from './base/ChatBase';
-import type { PoweredByTagProps } from './elements/PoweredByTag';
-import { useChatOpen, useChatMessages, useChatStore } from '../store/chatStore';
+import type { PoweredByTagProps } from './display/PoweredByTag';
+import {
+  useChatOpen,
+  useChatMessages,
+  useChatStore,
+} from '../stores/chatStore';
 import {
   useChatKeyboardShortcuts,
   getShortcutDisplay,

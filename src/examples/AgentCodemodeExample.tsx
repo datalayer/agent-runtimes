@@ -75,7 +75,7 @@ const AgentCodemodeInner: React.FC<{ onLogout: () => void }> = ({
     autoStart: true,
     agentConfig: {
       name: AGENT_NAME,
-      transport: 'ag-ui',
+      protocol: 'ag-ui',
       description: 'Agent with Code Mode structured tool outputs',
     },
   });

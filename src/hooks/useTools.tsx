@@ -11,7 +11,7 @@
  */
 
 import { useEffect, useMemo } from 'react';
-import { useChatStore, type ToolCallState } from '../store';
+import { useChatStore, type ToolCallState } from '../stores';
 import type {
   FrontendToolDefinition,
   ToolParameter,

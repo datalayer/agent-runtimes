@@ -10,7 +10,7 @@
  * Since we don't load Tailwind CSS, we provide equivalent styles via
  * Primer's sx prop targeting the Tailwind class names.
  *
- * @module components/chat/styles/streamdownStyles
+ * @module chat/styles/streamdownStyles
  */
 
 /** Style object compatible with Primer's sx prop */

@@ -6,7 +6,7 @@
 import { useContext } from 'react';
 import { useQuery, QueryClientContext } from '@tanstack/react-query';
 import { requestAPI } from '../api/handler';
-import type { RemoteConfig } from '../types/chat';
+import type { RemoteConfig } from '../types/config';
 
 /**
  * Hook to safely use query when QueryClient is available.

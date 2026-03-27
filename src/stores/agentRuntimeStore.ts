@@ -176,7 +176,7 @@ async function createAgentOnRuntime(
   agentId: string,
   config: AgentConfig = {},
 ): Promise<Pick<AgentConnection, 'agentId' | 'endpoint' | 'isReady'>> {
-  const transport = config.transport || 'ag-ui';
+  const transport = config.protocol || 'ag-ui';
   const response = await fetch(`${agentBaseUrl}/api/v1/agents`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

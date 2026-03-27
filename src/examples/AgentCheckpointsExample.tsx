@@ -196,7 +196,7 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
     agentSpec: AGENT_SPEC,
     agentConfig: {
       name: DEMO_AGENT_NAME,
-      transport: 'ag-ui',
+      protocol: 'ag-ui',
       description:
         'Monitor Sales KPI agent — exercises pause/resume checkpointing',
     },

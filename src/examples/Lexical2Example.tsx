@@ -68,7 +68,7 @@ import {
 } from '../tools/adapters/copilotkit/lexicalHooks';
 import { editorConfig } from './lexical/editorConfig';
 import { useFrontendTool } from '../hooks';
-import { useChatStore, type ChatConfig } from '../store';
+import { useChatStore, type ChatConfig } from '../stores';
 import { DatalayerInferenceProvider } from '../inference';
 
 import '@datalayer/jupyter-lexical/style/index.css';

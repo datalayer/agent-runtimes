@@ -17,7 +17,7 @@
 
 import { create } from 'zustand';
 import { devtools, subscribeWithSelector } from 'zustand/middleware';
-import type { ChatMessage } from '../types/messges';
+import type { ChatMessage } from '../types/messages';
 
 /**
  * Conversation data for a single runtime

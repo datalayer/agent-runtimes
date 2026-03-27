@@ -9,7 +9,7 @@
  * Features: keyboard shortcuts, mobile responsive, powered by tag.
  * Built on top of ChatBase for core chat functionality.
  *
- * @module components/chat/ChatSidebar
+ * @module chat/ChatSidebar
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -26,14 +26,18 @@ import {
   getShortcutDisplay,
 } from '@datalayer/core/lib/hooks';
 import { ChatBase } from './base/ChatBase';
-import type { PoweredByTagProps } from './elements/PoweredByTag';
+import type { PoweredByTagProps } from './display/PoweredByTag';
 import type {
   ChatBaseProps,
   MessageHandler,
   Protocol,
   ProtocolConfig,
 } from '../types';
-import { useChatStore, useChatOpen, useChatMessages } from '../store/chatStore';
+import {
+  useChatStore,
+  useChatOpen,
+  useChatMessages,
+} from '../stores/chatStore';
 
 /**
  * ChatSidebar props

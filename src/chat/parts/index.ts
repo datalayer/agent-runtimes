@@ -6,7 +6,7 @@
 /**
  * Display components barrel export.
  *
- * @module components/chat/parts
+ * @module chat/parts
  */
 
 export { TextPart, type TextPartProps } from './TextPart';

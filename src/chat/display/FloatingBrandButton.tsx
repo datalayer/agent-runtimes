@@ -7,7 +7,7 @@
  * Floating brand button component for Chat.
  * A hoverable button that opens the chat sidebar.
  *
- * @module components/chat/elements/FloatingBrandButton
+ * @module chat/display/FloatingBrandButton
  */
 
 import React, { useState } from 'react';

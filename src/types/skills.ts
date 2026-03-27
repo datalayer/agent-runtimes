@@ -4,6 +4,28 @@
  */
 
 /**
+ * Skill information from backend
+ */
+export interface SkillInfo {
+  id: string;
+  name: string;
+  description?: string;
+  version?: string;
+  tags?: string[];
+  has_scripts?: boolean;
+  has_resources?: boolean;
+}
+
+/**
+ * Skills response from backend
+ */
+export interface SkillsResponse {
+  skills: SkillInfo[];
+  total: number;
+  skills_path?: string;
+}
+
+/**
  * Specification for a skill.
  *
  * Supports two variants:

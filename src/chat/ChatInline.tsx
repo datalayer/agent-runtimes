@@ -15,7 +15,7 @@
  *
  * Uses Primer UI components instead of Tailwind CSS.
  *
- * @module components/chat/ChatInline
+ * @module chat/ChatInline
  */
 
 import {
@@ -49,8 +49,8 @@ import {
 import { SparklesIcon } from '@datalayer/icons-react';
 import type { Protocol, ProtocolEvent } from '../types/protocol';
 import { AGUIAdapter, type BaseProtocolAdapter } from '../protocols';
-import type { ChatMessage } from '../types/messges';
-import { generateMessageId } from '../types/messges';
+import type { ChatMessage } from '../types/messages';
+import { generateMessageId } from '../types/messages';
 import { sanitizeAssistantContent } from '../utils';
 
 /**

@@ -9,10 +9,10 @@
  * @module protocols/A2AAdapter
  */
 
-import type { ChatMessage } from '../types/messges';
+import type { ChatMessage } from '../types/messages';
 import type { ProtocolAdapterConfig, AgentCard } from '../types';
 import type { ToolDefinition, ToolExecutionResult } from '../types/tools';
-import { generateMessageId, createAssistantMessage } from '../types/messges';
+import { generateMessageId, createAssistantMessage } from '../types/messages';
 import { BaseProtocolAdapter } from './BaseProtocolAdapter';
 
 /**

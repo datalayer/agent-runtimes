@@ -7,7 +7,7 @@
  * Text message part display component.
  * Renders text content with markdown support, copy button, and regenerate action.
  *
- * @module components/chat/display/TextPart
+ * @module chat/display/TextPart
  */
 
 import type { UIMessage } from 'ai';

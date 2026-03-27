@@ -10,16 +10,13 @@
  */
 
 import type { ReactNode } from 'react';
-import type { ChatMessage } from './messges';
+import type { ChatMessage } from './messages';
 import type { Protocol } from './protocol';
 import type { McpServerSelection } from './inference';
-import type { BuiltinTool } from './models';
 import type { MCPServerTool } from './mcp';
 import type { AgentRuntimeConfig } from './config';
 import type { FrontendToolDefinition } from './tools';
-import type { PoweredByTagProps } from '../chat/elements/PoweredByTag';
-
-export type { PoweredByTagProps } from '../chat/elements/PoweredByTag';
+import type { PoweredByTagProps } from '../chat/display/PoweredByTag';
 
 // ---------------------------------------------------------------------------
 // View mode
@@ -239,16 +236,6 @@ export interface MCPServerConfig {
   isRunning?: boolean;
 }
 
-/**
- * Remote configuration from server
- */
-export interface RemoteConfig {
-  models: ModelConfig[];
-  defaultModel?: string;
-  builtinTools: BuiltinTool[];
-  mcpServers?: MCPServerConfig[];
-}
-
 // ---------------------------------------------------------------------------
 // Protocol / Runtime configuration
 // ---------------------------------------------------------------------------
@@ -274,30 +261,8 @@ export interface ProtocolConfig {
 }
 
 // ---------------------------------------------------------------------------
-// Internal data types (used by hooks & sub-components)
+// Data types
 // ---------------------------------------------------------------------------
-
-/**
- * Skill information from backend
- */
-export interface SkillInfo {
-  id: string;
-  name: string;
-  description?: string;
-  version?: string;
-  tags?: string[];
-  has_scripts?: boolean;
-  has_resources?: boolean;
-}
-
-/**
- * Skills response from backend
- */
-export interface SkillsResponse {
-  skills: SkillInfo[];
-  total: number;
-  skills_path?: string;
-}
 
 // ---------------------------------------------------------------------------
 // ChatBase props

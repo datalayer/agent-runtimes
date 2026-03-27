@@ -8,7 +8,7 @@
  * tiny pie chart, session totals, and a hover overlay with category
  * breakdown.
  *
- * @module components/chat/elements/TokenUsageBar
+ * @module chat/elements/TokenUsageBar
  */
 
 import { useRef, useState } from 'react';

@@ -7,7 +7,7 @@
  * MessageList — Renders the scrollable list of chat messages, tool calls,
  * and the typing indicator.
  *
- * @module components/chat/elements/MessageList
+ * @module chat/messages/MessageList
  */
 
 import { type ReactNode, type RefObject } from 'react';
@@ -28,13 +28,13 @@ import type {
   RenderToolResult,
   RespondCallback,
 } from '../../types/chat';
-import type { ChatMessage } from '../../types/messges';
+import type { ChatMessage } from '../../types/messages';
 
 // ---------------------------------------------------------------------------
 // Props
 // ---------------------------------------------------------------------------
 
-export interface MessageListProps {
+export interface ChatMessageListProps {
   /** All display items (messages + tool calls) */
   displayItems: DisplayItem[];
   /** Whether the agent is loading */
@@ -76,7 +76,7 @@ export interface MessageListProps {
 // Component
 // ---------------------------------------------------------------------------
 
-export function MessageList({
+export function ChatMessageList({
   displayItems,
   isLoading,
   isStreaming,
@@ -88,7 +88,7 @@ export function MessageList({
   emptyContent,
   messagesEndRef,
   onRespond,
-}: MessageListProps) {
+}: ChatMessageListProps) {
   if (displayItems.length === 0) {
     return <>{emptyContent}</>;
   }

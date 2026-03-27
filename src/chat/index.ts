@@ -15,7 +15,7 @@
  * - Primer React UI components
  * - Zustand state management (NO provider required!)
  *
- * @module components/chat
+ * @module chat
  *
  * @example
  * ```tsx
@@ -60,16 +60,16 @@ export { ChatSidebar, type ChatSidebarProps } from './ChatSidebar';
 export { ChatStandalone } from './ChatStandalone';
 export { ChatBase } from './base/ChatBase';
 export { InputPrompt, type InputPromptProps } from './prompt';
-export { PoweredByTag, type PoweredByTagProps } from './elements/PoweredByTag';
+export { PoweredByTag, type PoweredByTagProps } from './display/PoweredByTag';
 export {
   FloatingBrandButton,
   type FloatingBrandButtonProps,
-} from './elements/FloatingBrandButton';
+} from './display/FloatingBrandButton';
 export {
   ChatHeader,
   type ChatHeaderProps,
   type ConnectionState,
-} from './elements/ChatHeader';
+} from './header/ChatHeader';
 
 // Components - Message part renderers
 export {
@@ -106,19 +106,3 @@ export {
   type ChatInlineProps,
   type ChatInlineProtocolConfig,
 } from './ChatInline';
-
-// Components - Agent and context views (compatibility exports)
-export { AgentDetails } from '../agents/AgentDetails';
-export { OtelTokenUsageChart } from '../context/OtelTokenUsageChart';
-export { ContextPanel } from '../context/ContextPanel';
-export { ContextInspector } from '../context/ContextInspector';
-
-// Types - chat configuration and rendering types
-export type {
-  Suggestion,
-  ModelConfig,
-  ChatViewMode,
-  ProtocolConfig,
-  RenderToolResult,
-  MessageHandler,
-} from '../types';

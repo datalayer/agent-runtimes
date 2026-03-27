@@ -73,7 +73,7 @@ const AgentMemoryInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
     autoStart: true,
     agentConfig: {
       name: AGENT_NAME,
-      transport: 'ag-ui',
+      protocol: 'ag-ui',
       description: 'Agent with Mem0 persistent memory',
     },
   });

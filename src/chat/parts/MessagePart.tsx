@@ -7,7 +7,7 @@
  * Message part renderer component.
  * Routes message parts to appropriate display components based on type.
  *
- * @module components/chat/parts/MessagePart
+ * @module chat/parts/MessagePart
  */
 
 import type { UIDataTypes, UIMessagePart, UITools, UIMessage } from 'ai';

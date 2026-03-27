@@ -13,7 +13,7 @@
  * 2. Protocol mode: Connects to backend via AG-UI, A2A, Vercel AI, or ACP protocols
  * 3. Custom mode: Uses onSendMessage prop for custom message handling
  *
- * @module components/chat/ChatBase
+ * @module chat/base/ChatBase
  */
 
 import { useContext } from 'react';
@@ -23,19 +23,17 @@ import { Box } from '@datalayer/primer-addons';
 import { AlertIcon, PersonIcon } from '@primer/octicons-react';
 import { AiAgentIcon } from '@datalayer/icons-react';
 import { QueryClientProvider, QueryClientContext } from '@tanstack/react-query';
-import { PoweredByTag } from '../elements/PoweredByTag';
-import { useChatStore } from '../../store/chatStore';
-import { useConversationStore } from '../../store/conversationStore';
-import type { ChatMessage } from '../../types/messges';
+import { useHighZIndexPortal } from '@datalayer/core/lib/hooks';
+import { useChatStore } from '../../stores/chatStore';
+import { useConversationStore } from '../../stores/conversationStore';
+import type { ChatMessage } from '../../types/messages';
 import {
   generateMessageId,
   createUserMessage,
   createAssistantMessage,
-} from '../../types/messges';
+} from '../../types/messages';
 import type { ProtocolEvent } from '../../types/protocol';
 import type { BaseProtocolAdapter } from '../../protocols';
-
-// ---- Local sub-modules ----
 import type {
   ChatBaseProps,
   AvatarConfig,
@@ -58,10 +56,10 @@ import {
   useContextSnapshot,
   useSandbox,
 } from '../../hooks';
-import { useHighZIndexPortal } from '@datalayer/core/lib/hooks';
-import { ChatBaseHeader } from '../elements/ChatHeaderBase';
-import { ChatEmptyState } from '../elements/EmptyState';
-import { MessageList } from '../messages/MessageList';
+import { ChatBaseHeader } from '../header/ChatHeaderBase';
+import { ChatEmptyState } from '../display/EmptyState';
+import { PoweredByTag } from '../display/PoweredByTag';
+import { ChatMessageList } from '../messages/ChatMessageList';
 import { InputFooter } from '../prompt/InputFooter';
 
 // Tracks pending prompts already auto-sent for a given conversation scope.
@@ -1616,7 +1614,7 @@ function ChatBaseInner({
               bg: 'canvas.default',
             }}
           >
-            <MessageList
+            <ChatMessageList
               displayItems={displayItems}
               isLoading={isLoading}
               isStreaming={isStreaming}

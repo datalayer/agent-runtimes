@@ -5,7 +5,7 @@
 
 import { useContext } from 'react';
 import { useQuery, QueryClientContext } from '@tanstack/react-query';
-import type { SkillsResponse } from '../types/chat';
+import type { SkillsResponse } from '../types/skills';
 
 /**
  * Hook to fetch available skills from backend.

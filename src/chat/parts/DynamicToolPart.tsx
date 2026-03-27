@@ -7,7 +7,7 @@
  * Dynamic tool display component.
  * Renders dynamic tool UI parts with placeholder/warning styling.
  *
- * @module components/chat/display/DynamicToolPart
+ * @module chat/display/DynamicToolPart
  */
 
 import type { DynamicToolUIPart } from 'ai';

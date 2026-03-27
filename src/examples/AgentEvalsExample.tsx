@@ -77,7 +77,7 @@ const AgentEvalsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
     autoStart: true,
     agentConfig: {
       name: AGENT_NAME,
-      transport: 'ag-ui',
+      protocol: 'ag-ui',
       description: 'Agent with evaluation and quality scoring',
     },
   });

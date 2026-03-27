@@ -12,12 +12,8 @@
 
 import type { ServiceManager } from '@jupyterlab/services';
 import type { IRuntimeOptions } from '@datalayer/core/lib/stateful/runtimes/apis';
-import type {
-  AgentStatus,
-  AgentConnection,
-  AgentConfig,
-  AgentRuntimeData,
-} from './agents';
+import type { AgentConfig } from './config';
+import type { AgentStatus, AgentConnection, AgentRuntimeData } from './agents';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Runtime API Request / Response

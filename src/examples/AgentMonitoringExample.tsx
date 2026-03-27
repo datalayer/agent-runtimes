@@ -234,7 +234,7 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
     autoStart: true,
     agentConfig: {
       name: AGENT_NAME,
-      transport: 'ag-ui',
+      protocol: 'ag-ui',
       description: 'Agent with runtime and alert monitoring signals',
     },
   });

@@ -22,12 +22,12 @@ import type {
 
 // ─── Auth helpers ────────────────────────────────────────────────────
 
-function useDashboardAuthToken(): string {
+function useAuthToken(): string {
   const token = useIAMStore((s: any) => s.token);
   return token ?? '';
 }
 
-function useDashboardBaseUrl(): string {
+function useBaseUrl(): string {
   const config = useCoreStore((s: any) => s.configuration);
   return config?.aiagentsRunUrl ?? DEFAULT_SERVICE_URLS.AI_AGENTS;
 }
@@ -35,8 +35,8 @@ function useDashboardBaseUrl(): string {
 // ─── Base hooks ──────────────────────────────────────────────────────
 
 export function useAgentEvents(params?: ListAgentEventsParams) {
-  const token = useDashboardAuthToken();
-  const baseUrl = useDashboardBaseUrl();
+  const token = useAuthToken();
+  const baseUrl = useBaseUrl();
 
   return useQuery({
     queryKey: ['agent-events', params],
@@ -48,8 +48,8 @@ export function useAgentEvents(params?: ListAgentEventsParams) {
 }
 
 export function useAgentEvent(eventId?: string) {
-  const token = useDashboardAuthToken();
-  const baseUrl = useDashboardBaseUrl();
+  const token = useAuthToken();
+  const baseUrl = useBaseUrl();
 
   return useQuery({
     queryKey: ['agent-events', eventId],
@@ -61,8 +61,8 @@ export function useAgentEvent(eventId?: string) {
 }
 
 export function useCreateAgentEvent() {
-  const token = useDashboardAuthToken();
-  const baseUrl = useDashboardBaseUrl();
+  const token = useAuthToken();
+  const baseUrl = useBaseUrl();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -75,8 +75,8 @@ export function useCreateAgentEvent() {
 }
 
 export function useUpdateAgentEvent() {
-  const token = useDashboardAuthToken();
-  const baseUrl = useDashboardBaseUrl();
+  const token = useAuthToken();
+  const baseUrl = useBaseUrl();
   const queryClient = useQueryClient();
 
   return useMutation({
