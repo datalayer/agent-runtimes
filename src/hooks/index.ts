@@ -27,7 +27,7 @@
  * ## Datalayer-Specific Hooks
  * Hooks for Datalayer platform integration.
  *
- * - `useAIAgents` - Datalayer AI Agents REST API
+ * - `useAgentsService` - Datalayer AI Agents REST API
  * - `useNotebookAgents` - Notebook-specific agent management
  *
  * @module hooks
@@ -100,10 +100,6 @@ export { useVercelAI } from './useVercelAI';
  * Unified hook for managing agents — both ephemeral and durable.
  */
 export { useAgents } from './useAgents';
-export type {
-  UseAgentReturn,
-  UseAgentOptions,
-} from '../types/agents-lifecycle';
 
 /**
  * Runtime query and mutation hooks.
@@ -118,29 +114,26 @@ export {
   agentQueryKeys,
   AGENT_QUERY_OPTIONS,
   useAgentLifecycleStore,
-  useLifecycleRunningAgents,
   getAgentLifecycleKey,
 } from './useAgents';
-export type {
-  UseAgentsRuntimesReturn,
-  CreateAgentRuntimeRequest,
-  CreateRuntimeApiResponse,
-  AgentLifecycleRecord,
-  LifecycleRunningAgent,
-} from '../types/agents-lifecycle';
 
 /**
  * Agent catalog store, AI Agents REST API, and registry hooks.
  */
 export {
   useAgentCatalogStore,
-  useAIAgents,
-  useNotebookAgents,
-  useAgentRegistry,
   type AgentCatalogStoreState,
-  type RequestOptions,
-  type RoomType,
 } from './useAgentsCatalog';
+
+/**
+ * Agent registry hook.
+ */
+export { useAgentRegistry } from './useAgentsRegistry';
+
+/**
+ * Agents Service REST API (deprecated).
+ */
+export { useAgentsService, useNotebookAgents } from './useAgentsService';
 
 /**
  * Focused hooks split by responsibility.

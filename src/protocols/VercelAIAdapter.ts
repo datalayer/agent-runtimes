@@ -204,23 +204,49 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
         // Continuation: use pre-built messages
         vercelMessages = options._vercelMessages;
       } else {
-        // Fresh message: build a single user message
-        const messageContent =
-          typeof message.content === 'string'
-            ? message.content
-            : String(message.content);
+        // Use full message history if provided, otherwise just the new message
+        const allMessages = options?.messages || [message];
 
-        const vercelMessage = {
-          id: message.id,
-          role: message.role,
-          parts: [
+        vercelMessages = allMessages.map(msg => {
+          const messageContent =
+            typeof msg.content === 'string'
+              ? msg.content
+              : String(msg.content ?? '');
+
+          const parts: Array<Record<string, unknown>> = [
             {
               type: 'text' as const,
               text: messageContent,
             },
-          ],
-        };
-        vercelMessages = [vercelMessage];
+          ];
+
+          // For assistant messages with tool calls, add tool-invocation parts
+          if (
+            msg.role === 'assistant' &&
+            msg.toolCalls &&
+            msg.toolCalls.length > 0
+          ) {
+            for (const tc of msg.toolCalls) {
+              parts.push({
+                type: 'tool-invocation',
+                toolInvocationId: tc.toolCallId,
+                toolName: tc.toolName,
+                args: tc.args,
+                state: 'result',
+                result: tc.result,
+              });
+            }
+          }
+
+          return {
+            id: msg.id,
+            role: msg.role,
+            parts,
+          };
+        });
+
+        // For tool-result messages, add them as separate tool parts
+        // (handled inline above via toolCalls on assistant messages)
       }
 
       // Store message history for continuation

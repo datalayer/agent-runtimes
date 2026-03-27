@@ -111,8 +111,6 @@ export type AgentLifecycleRecord = {
   pauseLockedForResumed: boolean;
 };
 
-export type LifecycleRunningAgent = AgentRuntimeData;
-
 export type AgentLifecycleState = {
   byRuntimeKey: Record<string, AgentLifecycleRecord>;
   markResumePending: (runtimeKey: string) => void;

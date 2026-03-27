@@ -20,12 +20,12 @@ export {
   subscribeToAgent,
   agentStore,
   type AgentRegistryEntry,
-  type AgentRuntimeStoreState,
-  type AgentRuntimeStoreActions,
-  type AgentRuntimeStore,
+  type agentsStoreState,
+  type agentsStoreActions,
+  type agentsStore,
   type AgentRegistryState,
   type AgentState,
-} from './agentRuntimeStore';
+} from './agentsStore';
 
 export {
   useChatStore,

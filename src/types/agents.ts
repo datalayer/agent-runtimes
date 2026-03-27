@@ -168,3 +168,14 @@ export type IAIAgent = {
 };
 
 export default IAIAgent;
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Request / Room types for AI Agents REST API
+// ═══════════════════════════════════════════════════════════════════════════
+
+export type RequestOptions = {
+  signal?: AbortSignal;
+  baseUrl?: string;
+};
+
+export type RoomType = 'notebook_persist' | 'notebook_memory' | 'doc_memory';

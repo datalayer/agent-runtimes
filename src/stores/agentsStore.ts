@@ -17,7 +17,7 @@
  *    pair and can be from any source (agent runtimes OR the stable agents
  *    service at `/api/v1/ai-agents/`).
  *
- * @module store/agentRuntimeStore
+ * @module store/agentsStore
  */
 
 import { createStore } from 'zustand/vanilla';
@@ -68,7 +68,7 @@ export interface AgentRegistryEntry {
 // ─── Agent runtime store state & actions ──────────────────────────────────
 
 /** State for the currently-connected agent runtime pod. */
-export interface AgentRuntimeStoreState {
+export interface agentsStoreState {
   /** Current runtime connection (null if not connected) */
   runtime: AgentConnection | null;
   /** Current status */
@@ -80,7 +80,7 @@ export interface AgentRuntimeStoreState {
 }
 
 /** Actions for the agent runtime pod lifecycle. */
-export interface AgentRuntimeStoreActions {
+export interface agentsStoreActions {
   /** Launch a new runtime pod */
   launchAgent: (options: IRuntimeOptions) => Promise<AgentConnection>;
   /** Connect to an existing runtime pod */
@@ -105,8 +105,7 @@ export interface AgentRuntimeStoreActions {
   reset: () => void;
 }
 
-export type AgentRuntimeStore = AgentRuntimeStoreState &
-  AgentRuntimeStoreActions;
+export type agentsStore = agentsStoreState & agentsStoreActions;
 
 // ─── Agent registry state ──────────────────────────────────────────────────
 
@@ -146,8 +145,8 @@ export type AgentRegistryState = {
 // ─── Combined store type ───────────────────────────────────────────────────
 
 export type AgentState = AgentRegistryState &
-  AgentRuntimeStoreState &
-  AgentRuntimeStoreActions;
+  agentsStoreState &
+  agentsStoreActions;
 
 // ─── Helper: build the transport-specific endpoint URL ────────────────────
 
@@ -205,7 +204,7 @@ async function createAgentOnRuntime(
 
 // ─── Initial runtime state ────────────────────────────────────────────────
 
-const initialRuntimeState: AgentRuntimeStoreState = {
+const initialRuntimeState: agentsStoreState = {
   runtime: null,
   status: 'idle',
   error: null,

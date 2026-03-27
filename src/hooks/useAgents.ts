@@ -26,7 +26,7 @@ import {
   useAgentStatus,
   useAgentError,
   useIsLaunching,
-} from '../stores/agentRuntimeStore';
+} from '../stores/agentsStore';
 import { DEFAULT_AGENT_CONFIG } from '../types/config';
 import type { AgentConfig } from '../types/config';
 import type { AgentStatus, AgentRuntimeData } from '../types/agents';
@@ -712,10 +712,6 @@ export const useAgentLifecycleStore = create<AgentLifecycleState>()(
   ),
 );
 
-export function useLifecycleRunningAgents() {
-  return useAgentRuntimes();
-}
-
 // ═══════════════════════════════════════════════════════════════════════════
 // Consolidated Runtime Composite
 // ═══════════════════════════════════════════════════════════════════════════
@@ -754,12 +750,3 @@ export function useAgentsRuntimes(): UseAgentsRuntimesReturn {
     ],
   );
 }
-
-// Re-export catalog hooks for consumers that import from useAgents
-export {
-  useAIAgents,
-  useNotebookAgents,
-  useAgentRegistry,
-  type RequestOptions,
-  type RoomType,
-} from './useAgentsCatalog';
