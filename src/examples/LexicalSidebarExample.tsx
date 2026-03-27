@@ -39,7 +39,7 @@ import { LinkPlugin } from '@lexical/react/LexicalLinkPlugin';
 import type { ServiceManager } from '@jupyterlab/services';
 import { Box } from '@datalayer/primer-addons';
 import { useJupyter } from '@datalayer/jupyter-react';
-import { ThemedJupyterProvider } from './stores/themedProvider';
+import { ThemedJupyterProvider } from './utils/themedProvider';
 import {
   ComponentPickerMenuPlugin,
   JupyterCellPlugin,

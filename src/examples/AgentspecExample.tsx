@@ -16,12 +16,12 @@ import {
   useQuery,
 } from '@tanstack/react-query';
 import { Box } from '@datalayer/primer-addons';
-import { ThemedProvider } from './stores/themedProvider';
+import { ThemedProvider } from './utils/themedProvider';
 import { Chat } from '../chat';
 import { DEFAULT_MODEL } from '../specs';
 import type { LibraryAgentSpec } from '../config/AgentConfiguration';
 import type { OAuthProvider, Identity } from '../identity';
-import { useAgentsStore } from './stores/examplesStore';
+import { useAgentsStore } from './utils/examplesStore';
 import { useIdentity } from '../identity';
 import { isSpecSelection, getSpecId } from '../config/AgentConfiguration';
 import { MockFileBrowser, MainContent, Header } from './components';

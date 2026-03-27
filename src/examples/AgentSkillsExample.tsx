@@ -26,7 +26,7 @@ import {
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { SignInSimple } from '@datalayer/core/lib/views/iam';
 import { UserBadge } from '@datalayer/core/lib/views/profile';
-import { ThemedProvider } from './stores/themedProvider';
+import { ThemedProvider } from './utils/themedProvider';
 import { Chat } from '../chat';
 
 const queryClient = new QueryClient();

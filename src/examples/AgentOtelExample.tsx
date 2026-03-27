@@ -44,7 +44,7 @@ import {
 } from '@datalayer/core/lib/views/otel';
 import { SignInSimple } from '@datalayer/core/lib/views/iam';
 import { useCoreStore } from '@datalayer/core';
-import { ThemedProvider } from './stores/themedProvider';
+import { ThemedProvider } from './utils/themedProvider';
 import { ChatSidebar } from '../chat';
 import { DEFAULT_MODEL } from '../specs';
 import type { AgentLibrary, ProtocolConfig } from '../types';

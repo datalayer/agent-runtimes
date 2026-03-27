@@ -42,14 +42,14 @@ import {
   CopyIcon,
 } from '@primer/octicons-react';
 import { Box } from '@datalayer/primer-addons';
-import { ThemedProvider } from './stores/themedProvider';
-
-const queryClient = new QueryClient();
+import { ThemedProvider } from './utils/themedProvider';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { SignInSimple } from '@datalayer/core/lib/views/iam';
 import { UserBadge } from '@datalayer/core/lib/views/profile';
 import { Chat } from '../chat';
 import { useAgents } from '../hooks/useAgents';
+
+const queryClient = new QueryClient();
 
 // ─── Constants ─────────────────────────────────────────────────────────────
 

@@ -7,7 +7,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Spinner, Text } from '@primer/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Box } from '@datalayer/primer-addons';
-import { ThemedProvider } from './stores/themedProvider';
+import { ThemedProvider } from './utils/themedProvider';
 import { Chat } from '../chat';
 
 // Create a query client for React Query

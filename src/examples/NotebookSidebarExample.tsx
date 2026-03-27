@@ -23,12 +23,12 @@ import { useMemo } from 'react';
 import { Box } from '@datalayer/primer-addons';
 import { ServiceManager } from '@jupyterlab/services';
 import { Notebook, useJupyter } from '@datalayer/jupyter-react';
-import { ThemedJupyterProvider } from './stores/themedProvider';
+import { useNotebookTools } from '../tools/adapters/agent-runtimes/notebookHooks';
+import { ThemedJupyterProvider } from './utils/themedProvider';
 import { ChatSidebar } from '../chat';
 import type { ProtocolConfig, FrontendToolDefinition } from '../types';
-import { useNotebookTools } from '../tools/adapters/agent-runtimes/notebookHooks';
 
-import MatplotlibNotebook from './stores/notebooks/Matplotlib.ipynb.json';
+import MatplotlibNotebook from './utils/notebooks/Matplotlib.ipynb.json';
 
 // Fixed notebook ID
 const NOTEBOOK_ID = 'chat-notebook-example';

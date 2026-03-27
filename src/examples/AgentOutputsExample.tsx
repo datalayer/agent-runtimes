@@ -30,14 +30,14 @@ import {
   SignOutIcon,
 } from '@primer/octicons-react';
 import { Box } from '@datalayer/primer-addons';
-import { ThemedProvider } from './stores/themedProvider';
-
-const queryClient = new QueryClient();
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { SignInSimple } from '@datalayer/core/lib/views/iam';
 import { UserBadge } from '@datalayer/core/lib/views/profile';
-import { Chat } from '../chat';
+import { ThemedProvider } from './utils/themedProvider';
 import { useAgents } from '../hooks/useAgents';
+import { Chat } from '../chat';
+
+const queryClient = new QueryClient();
 
 // ─── Constants ─────────────────────────────────────────────────────────────
 

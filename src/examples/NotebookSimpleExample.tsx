@@ -17,9 +17,9 @@ import {
   CellSidebarExtension,
   CellSidebarButton,
 } from '@datalayer/jupyter-react';
-import { ThemedJupyterProvider } from './stores/themedProvider';
+import { ThemedJupyterProvider } from './utils/themedProvider';
 import { ServiceManager } from '@jupyterlab/services';
-import nbformatExample from './stores/notebooks/NotebookExample1.ipynb.json';
+import nbformatExample from './utils/notebooks/NotebookExample1.ipynb.json';
 
 const NOTEBOOK_ID = 'notebook-example-1';
 type IJupyterNotebookExampleProps = {

@@ -42,7 +42,7 @@ import { Chat } from './chat';
 import { useNotebookTools } from './tools/adapters/agent-runtimes/notebookHooks';
 import { DEFAULT_MODEL } from './specs';
 
-import MatplotlibNotebook from './examples/stores/notebooks/Matplotlib.ipynb.json';
+import MatplotlibNotebook from './examples/utils/notebooks/Matplotlib.ipynb.json';
 
 import '../style/primer-primitives.css';
 

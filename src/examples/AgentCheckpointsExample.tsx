@@ -63,7 +63,7 @@ import {
 } from '@primer/octicons-react';
 import { Box } from '@datalayer/primer-addons';
 import { coreStore } from '@datalayer/core';
-import { ThemedProvider } from './stores/themedProvider';
+import { ThemedProvider } from './utils/themedProvider';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { SignInSimple } from '@datalayer/core/lib/views/iam';
 import { UserBadge } from '@datalayer/core/lib/views/profile';

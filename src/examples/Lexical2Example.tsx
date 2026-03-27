@@ -41,7 +41,7 @@ import type { ServiceManager } from '@jupyterlab/services';
 import { Box } from '@datalayer/primer-addons';
 import { Text } from '@primer/react';
 import { useJupyter } from '@datalayer/jupyter-react';
-import { ThemedJupyterProvider } from './stores/themedProvider';
+import { ThemedJupyterProvider } from './utils/themedProvider';
 import {
   ComponentPickerMenuPlugin,
   JupyterCellPlugin,

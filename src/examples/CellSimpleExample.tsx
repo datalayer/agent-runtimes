@@ -11,7 +11,7 @@ import {
   useKernelsStore,
   useCellsStore,
 } from '@datalayer/jupyter-react';
-import { ThemedJupyterProvider } from './stores/themedProvider';
+import { ThemedJupyterProvider } from './utils/themedProvider';
 import { Button, Label } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 

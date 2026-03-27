@@ -21,14 +21,14 @@ import { Box } from '@datalayer/primer-addons';
 import { SegmentedControl, Text } from '@primer/react';
 import { ServiceManager } from '@jupyterlab/services';
 import { Notebook } from '@datalayer/jupyter-react';
-import { ThemedJupyterProvider } from './stores/themedProvider';
+import { ThemedJupyterProvider } from './utils/themedProvider';
 
 // Agent-runtimes imports
 import { ChatFloating } from '../chat';
 import { useNotebookTools } from '../tools/adapters/agent-runtimes/notebookHooks';
 
 // Import Matplotlib notebook
-import MatplotlibNotebook from './stores/notebooks/Matplotlib.ipynb.json';
+import MatplotlibNotebook from './utils/notebooks/Matplotlib.ipynb.json';
 
 import { DEFAULT_MODEL } from '../specs';
 

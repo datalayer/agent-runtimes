@@ -32,10 +32,10 @@ import {
 import { useChatStore } from '../stores';
 import { OAuthCallback } from '../identity';
 import { EXAMPLES } from './example-selector';
-import { useExampleThemeStore } from './stores/themeStore';
+import { useExampleThemeStore } from './utils/themeStore';
 import { ExampleWrapper } from './components/ExampleWrapper';
 
-import nbformatExample from './stores/notebooks/NotebookExample1.ipynb.json';
+import nbformatExample from './utils/notebooks/NotebookExample1.ipynb.json';
 
 declare global {
   interface Window {

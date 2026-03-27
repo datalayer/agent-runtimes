@@ -24,16 +24,16 @@
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Box, getCardGradient } from '@datalayer/primer-addons';
-import { ThemedProvider } from './stores/themedProvider';
-import { useExampleThemeStore } from './stores/themeStore';
+import { ThemedProvider } from './utils/themedProvider';
+import { useExampleThemeStore } from './utils/themeStore';
 import { Text, Spinner, TextInput, Button } from '@primer/react';
+import type { Types } from '@a2ui/react';
 import {
   A2UIProvider,
   A2UIRenderer,
   useA2UIActions,
   initializeDefaultCatalog,
 } from '@a2ui/react';
-import type { Types } from '@a2ui/react';
 
 // Initialize the A2UI default component catalog (buttons, cards, text, etc.)
 // This must be called once before any A2UI rendering occurs.

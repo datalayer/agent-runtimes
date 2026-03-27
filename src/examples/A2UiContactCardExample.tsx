@@ -20,7 +20,7 @@
 
 import React, { useState, useCallback } from 'react';
 import { Box } from '@datalayer/primer-addons';
-import { ThemedProvider } from './stores/themedProvider';
+import { ThemedProvider } from './utils/themedProvider';
 import { Text, Button as PrimerButton } from '@primer/react';
 import {
   A2UIProvider,

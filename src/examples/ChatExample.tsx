@@ -20,7 +20,7 @@ import React, { useEffect, useState } from 'react';
 import { Text, Spinner } from '@primer/react';
 import { AlertIcon } from '@primer/octicons-react';
 import { Box, setupPrimerPortals } from '@datalayer/primer-addons';
-import { ThemedProvider } from './stores/themedProvider';
+import { ThemedProvider } from './utils/themedProvider';
 import { Chat } from '../chat';
 
 setupPrimerPortals();

@@ -26,7 +26,7 @@ import {
   Button,
 } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
-import { ThemedProvider, useThemeBrandColor } from './stores/themedProvider';
+import { ThemedProvider, useThemeBrandColor } from './utils/themedProvider';
 import { ChatFloating } from '../chat';
 import type { ToolCallRenderContext } from '../types';
 import {

@@ -7,19 +7,17 @@
  * CopilotKit Notebook Example with CopilotKit Integration
  *
  * To run this example, create a .env file in the core directory with:
- * - VITE_DATALAYER_API_TOKEN: Get from https://datalayer.app/settings/iam/tokens
+ * - VITE_DATALAYER_API_TOKEN: Get from https://datalayer.ai/settings/iam/tokens
  * - VITE_COPILOT_KIT_API_KEY: Get from https://cloud.copilotkit.ai/dashboard
  *
- * You also will need to connect co[pilot kit to some sort of LLM Add LLM Provider API Key
- *
- * @module datalayer-core/CopilotKitNotebookExample
+ * You also will need to connect copilotkit to some sort of LLM Add LLM Provider API Key
  */
 
 import React from 'react';
 import { Box } from '@datalayer/primer-addons';
 import { ServiceManager } from '@jupyterlab/services';
 import { Notebook } from '@datalayer/jupyter-react';
-import { ThemedJupyterProvider } from './stores/themedProvider';
+import { ThemedJupyterProvider } from './utils/themedProvider';
 
 // CopilotKit imports
 import { CopilotKit, useFrontendTool } from '@copilotkit/react-core';
@@ -33,7 +31,7 @@ import {
 } from '../tools/adapters/copilotkit/notebookHooks';
 
 // Import Matplotlib notebook
-import MatplotlibNotebook from './stores/notebooks/Matplotlib.ipynb.json';
+import MatplotlibNotebook from './utils/notebooks/Matplotlib.ipynb.json';
 
 // Fixed notebook ID
 const NOTEBOOK_ID = 'agui-notebook-example';

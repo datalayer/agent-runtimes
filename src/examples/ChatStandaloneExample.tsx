@@ -19,7 +19,7 @@
 import React, { useCallback } from 'react';
 import { Text } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
-import { ThemedProvider } from './stores/themedProvider';
+import { ThemedProvider } from './utils/themedProvider';
 import { ChatStandalone } from '../chat';
 import type { MessageHandler } from '../types';
 

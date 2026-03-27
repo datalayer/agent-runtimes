@@ -7,10 +7,10 @@
  * CopilotKit Lexical Example with CopilotKit Integration.
  *
  * To run this example, create a .env file in the core directory with:
- * - VITE_DATALAYER_API_TOKEN: Get from https://datalayer.app/settings/iam/tokens
+ * - VITE_DATALAYER_API_TOKEN: Get from https://datalayer.ai/settings/iam/tokens
  * - VITE_COPILOT_KIT_API_KEY: Get from https://cloud.copilotkit.ai/dashboard
  *
- * You also will need to connect copilot kit to some sort of LLM Add LLM Provider API Key.
+ * You also will need to connect copilotkit to some sort of LLM Add LLM Provider API Key.
  *
  * https://docs.copilotkit.ai/reference/hooks/useFrontendTool
  *
@@ -40,7 +40,7 @@ import { CopilotKit, useFrontendTool } from '@copilotkit/react-core';
 import { CopilotSidebar } from '@copilotkit/react-ui';
 import { Box } from '@datalayer/primer-addons';
 import { useJupyter } from '@datalayer/jupyter-react';
-import { ThemedJupyterProvider } from './stores/themedProvider';
+import { ThemedJupyterProvider } from './utils/themedProvider';
 import {
   ComponentPickerMenuPlugin,
   JupyterCellPlugin,
