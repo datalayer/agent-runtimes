@@ -41,8 +41,6 @@ Instrumented operations:
 
 from __future__ import annotations
 
-import asyncio
-import functools
 import logging
 import os
 import time
@@ -77,8 +75,7 @@ except ImportError:
     UpDownCounter = cast(Any, None)
 
 if TYPE_CHECKING:
-    from opentelemetry.sdk.metrics import MeterProvider
-    from opentelemetry.sdk.trace import TracerProvider
+    pass
 
 logger = logging.getLogger(__name__)
 

@@ -89,8 +89,6 @@ def _make_durable(agent: Any, agent_name: str) -> Any:
     support, we leverage that integration point.
     """
     try:
-        from dbos import DBOS
-
         # The pydantic-ai DBOS integration works by wrapping the agent's
         # model calls as DBOS steps. We ensure DBOS is initialized and
         # then mark the agent for durable tracking.

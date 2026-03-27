@@ -20,7 +20,6 @@ AG-UI is a lightweight protocol focused on UI integration with:
 import asyncio
 import json
 import logging
-import time
 from typing import TYPE_CHECKING, Any, AsyncIterator
 
 if TYPE_CHECKING:

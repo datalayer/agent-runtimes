@@ -18,8 +18,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-
-from versioning import ensure_spec_version, version_suffix, versioned_ref
+from versioning import ensure_spec_version, version_suffix
 
 
 def _fmt_list(items: list[str]) -> str:
@@ -70,7 +69,9 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
     for spec in specs:
         skill_id = spec["id"]
         version = spec["version"]
-        const_name = f"{skill_id.upper().replace('-', '_')}_SKILL_SPEC{version_suffix(version)}"
+        const_name = (
+            f"{skill_id.upper().replace('-', '_')}_SKILL_SPEC{version_suffix(version)}"
+        )
 
         icon = f'"{spec.get("icon")}"' if spec.get("icon") else "None"
         emoji = f'"{spec.get("emoji")}"' if spec.get("emoji") else "None"
@@ -98,21 +99,25 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
             spec_lines.append(f"    allowed_tools={_fmt_list(spec['allowed-tools'])},")
         if spec.get("skill-metadata"):
             skill_metadata_val = (
-                "{" + ", ".join(f'"{k}": "{v}"' for k, v in spec["skill-metadata"].items()) + "}"
+                "{"
+                + ", ".join(f'"{k}": "{v}"' for k, v in spec["skill-metadata"].items())
+                + "}"
             )
             spec_lines.append(f"    skill_metadata={skill_metadata_val},")
 
-        spec_lines.extend([
-            f"    envvars={_fmt_list(spec.get('envvars', []))},",
-            f"    optional_env_vars={_fmt_list(spec.get('optional_env_vars', []))},",
-            f"    dependencies={_fmt_list(spec.get('dependencies', []))},",
-            f"    tags={_fmt_list(spec.get('tags', []))},",
-            f"    icon={icon},",
-            f"    emoji={emoji},",
-            f"    enabled={spec.get('enabled', True)},",
-            ")",
-            "",
-        ])
+        spec_lines.extend(
+            [
+                f"    envvars={_fmt_list(spec.get('envvars', []))},",
+                f"    optional_env_vars={_fmt_list(spec.get('optional_env_vars', []))},",
+                f"    dependencies={_fmt_list(spec.get('dependencies', []))},",
+                f"    tags={_fmt_list(spec.get('tags', []))},",
+                f"    icon={icon},",
+                f"    emoji={emoji},",
+                f"    enabled={spec.get('enabled', True)},",
+                ")",
+                "",
+            ]
+        )
 
         lines.extend(spec_lines)
 
@@ -130,7 +135,9 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
     for spec in specs:
         skill_id = spec["id"]
         version = spec["version"]
-        const_name = f"{skill_id.upper().replace('-', '_')}_SKILL_SPEC{version_suffix(version)}"
+        const_name = (
+            f"{skill_id.upper().replace('-', '_')}_SKILL_SPEC{version_suffix(version)}"
+        )
         lines.append(f'    "{skill_id}": {const_name},')
 
     lines.extend(
@@ -216,7 +223,9 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
     for spec in specs:
         skill_id = spec["id"]
         version = spec["version"]
-        const_name = f"{skill_id.upper().replace('-', '_')}_SKILL_SPEC{version_suffix(version)}"
+        const_name = (
+            f"{skill_id.upper().replace('-', '_')}_SKILL_SPEC{version_suffix(version)}"
+        )
 
         # Format arrays for TypeScript
         envvars_json = str(spec.get("envvars", [])).replace("'", '"')
@@ -258,17 +267,19 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
             )
             ts_lines.append(f"  skillMetadata: {{ {meta_entries} }},")
 
-        ts_lines.extend([
-            f"  requiredEnvVars: {envvars_json},",
-            f"  optionalEnvVars: {optional_env_vars_json},",
-            f"  dependencies: {dependencies_json},",
-            f"  tags: {tags_json},",
-            f"  icon: {icon},",
-            f"  emoji: {emoji},",
-            f"  enabled: {str(spec.get('enabled', True)).lower()},",
-            "};",
-            "",
-        ])
+        ts_lines.extend(
+            [
+                f"  requiredEnvVars: {envvars_json},",
+                f"  optionalEnvVars: {optional_env_vars_json},",
+                f"  dependencies: {dependencies_json},",
+                f"  tags: {tags_json},",
+                f"  icon: {icon},",
+                f"  emoji: {emoji},",
+                f"  enabled: {str(spec.get('enabled', True)).lower()},",
+                "};",
+                "",
+            ]
+        )
 
         lines.extend(ts_lines)
 
@@ -286,7 +297,9 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
     for spec in specs:
         skill_id = spec["id"]
         version = spec["version"]
-        const_name = f"{skill_id.upper().replace('-', '_')}_SKILL_SPEC{version_suffix(version)}"
+        const_name = (
+            f"{skill_id.upper().replace('-', '_')}_SKILL_SPEC{version_suffix(version)}"
+        )
         lines.append(f"  '{skill_id}': {const_name},")
 
     lines.extend(

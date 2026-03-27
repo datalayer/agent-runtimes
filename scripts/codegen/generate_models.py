@@ -18,8 +18,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-
-from versioning import ensure_spec_version, version_suffix, versioned_ref
+from versioning import ensure_spec_version, version_suffix
 
 
 def load_model_specs(specs_dir: Path) -> list[dict[str, Any]]:
@@ -331,7 +330,9 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
     default_specs = [s for s in specs if s.get("default", False)]
     if default_specs:
         default_id = default_specs[0]["id"]
-        default_const = _make_const_name(default_id) + version_suffix(default_specs[0]["version"])
+        default_const = _make_const_name(default_id) + version_suffix(
+            default_specs[0]["version"]
+        )
         lines.extend(
             [
                 f"export const DEFAULT_MODEL: AIModelId = AIModels.{_make_enum_name(default_id)};",

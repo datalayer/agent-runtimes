@@ -18,9 +18,8 @@ import tempfile
 from pathlib import Path
 from typing import Optional
 
-from typing_extensions import TypedDict
-
 from mcp.server.fastmcp import FastMCP
+from typing_extensions import TypedDict
 
 mcp = FastMCP("example-mcp-server")
 

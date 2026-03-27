@@ -13,7 +13,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from .base import BaseGuardrail, GuardrailResult, GuardrailViolation
+from .base import BaseGuardrail, GuardrailResult
 
 logger = logging.getLogger(__name__)
 

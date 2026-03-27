@@ -12,7 +12,6 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-
 from versioning import ensure_spec_version, version_suffix
 
 

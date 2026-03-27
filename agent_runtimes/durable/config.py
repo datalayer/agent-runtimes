@@ -12,7 +12,7 @@ default) and PostgreSQL (multi-pod, production).
 import logging
 import os
 import tempfile
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
 

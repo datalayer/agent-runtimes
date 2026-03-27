@@ -95,8 +95,6 @@ class DurableLifecycle:
         while workflows were in progress.
         """
         try:
-            from dbos import DBOS
-
             # DBOS automatically recovers pending workflows on launch.
             # We log the recovery status for observability.
             logger.info("DBOS workflow recovery completed (automatic on launch)")
@@ -145,8 +143,6 @@ class DurableLifecycle:
             return {"status": "not_launched"}
 
         try:
-            from dbos import DBOS
-
             # Flush any pending state.
             # DBOS uses database transactions so state should be consistent,
             # but we force a sync here for safety.

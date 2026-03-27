@@ -19,8 +19,7 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 import yaml
-
-from versioning import ensure_spec_version, version_suffix, versioned_ref
+from versioning import ensure_spec_version, version_suffix
 
 
 def _make_const_name(team_id: str) -> str:
@@ -196,7 +195,9 @@ from agent_runtimes.types import (
             version = spec["version"]
             if folder:
                 full_team_id = f"{folder}/{team_id}"
-                const_name = _make_const_name(f"{folder}_{team_id}") + version_suffix(version)
+                const_name = _make_const_name(f"{folder}_{team_id}") + version_suffix(
+                    version
+                )
             else:
                 full_team_id = team_id
                 const_name = _make_const_name(team_id) + version_suffix(version)
@@ -335,7 +336,7 @@ from agent_runtimes.types import (
                 code += f"    notifications={notifications_code},\n"
             if output_code != "None":
                 code += f"    output={output_code},\n"
-            code += f")\n\n"
+            code += ")\n\n"
 
     # Generate registry
     code += """# ============================================================================
@@ -430,7 +431,9 @@ import type {{ TeamSpec }} from '{types_import_path}';
             version = spec["version"]
             if folder:
                 full_team_id = f"{folder}/{team_id}"
-                const_name = _make_const_name(f"{folder}_{team_id}") + version_suffix(version)
+                const_name = _make_const_name(f"{folder}_{team_id}") + version_suffix(
+                    version
+                )
             else:
                 full_team_id = team_id
                 const_name = _make_const_name(team_id) + version_suffix(version)
@@ -573,7 +576,7 @@ import type {{ TeamSpec }} from '{types_import_path}';
                 code += f"  notifications: {notif_ts},\n"
             if output_ts is not None:
                 code += f"  output: {output_ts},\n"
-            code += f"}};\n\n"
+            code += "};\n\n"
 
     # Registry
     code += """// ============================================================================
@@ -694,9 +697,7 @@ __all__ = ["TEAM_SPECS", "get_team_spec", "list_team_specs"]
 
         typescript_code = generate_typescript_code(
             [(folder, spec) for spec in folder_specs],
-            types_import_path="../../types"
-            if is_root
-            else "../../../types",
+            types_import_path="../../types" if is_root else "../../../types",
         )
         with open(typescript_file, "w") as f:
             f.write(typescript_code)

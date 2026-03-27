@@ -18,8 +18,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-
-from versioning import ensure_spec_version, version_suffix, versioned_ref
+from versioning import ensure_spec_version, version_suffix
 
 
 def _fmt_list(items: list[str]) -> str:

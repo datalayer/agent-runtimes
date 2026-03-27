@@ -18,8 +18,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-
-from versioning import ensure_spec_version, version_suffix, versioned_ref
+from versioning import ensure_spec_version, version_suffix
 
 
 def load_mcp_specs(specs_dir: Path) -> list[dict[str, Any]]:
@@ -64,7 +63,9 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
     for spec in specs:
         server_id = spec["id"]
         version = spec["version"]
-        const_name = f"{server_id.upper().replace('-', '_')}_MCP_SERVER{version_suffix(version)}"
+        const_name = (
+            f"{server_id.upper().replace('-', '_')}_MCP_SERVER{version_suffix(version)}"
+        )
 
         # Format args properly
         args_list = spec.get("args", [])
@@ -146,7 +147,9 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
     for spec in specs:
         server_id = spec["id"]
         version = spec["version"]
-        const_name = f"{server_id.upper().replace('-', '_')}_MCP_SERVER{version_suffix(version)}"
+        const_name = (
+            f"{server_id.upper().replace('-', '_')}_MCP_SERVER{version_suffix(version)}"
+        )
         lines.append(f'    "{server_id}": {const_name},')
 
     lines.extend(
@@ -241,7 +244,9 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
     for spec in specs:
         server_id = spec["id"]
         version = spec["version"]
-        const_name = f"{server_id.upper().replace('-', '_')}_MCP_SERVER{version_suffix(version)}"
+        const_name = (
+            f"{server_id.upper().replace('-', '_')}_MCP_SERVER{version_suffix(version)}"
+        )
 
         # Format args
         args_list = spec.get("args", [])
@@ -297,7 +302,9 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
     for spec in specs:
         server_id = spec["id"]
         version = spec["version"]
-        const_name = f"{server_id.upper().replace('-', '_')}_MCP_SERVER{version_suffix(version)}"
+        const_name = (
+            f"{server_id.upper().replace('-', '_')}_MCP_SERVER{version_suffix(version)}"
+        )
         # Quote keys with hyphens for valid JavaScript syntax
         key = f"'{server_id}'" if "-" in server_id else server_id
         lines.append(f"  {key}: {const_name},")
@@ -319,7 +326,11 @@ def update_init_file(specs: list[dict[str, Any]], init_file: Path) -> None:
     for spec in specs:
         server_id = spec["id"]
         version = spec.get("version", "0.0.1")
-        const_name = server_id.upper().replace("-", "_") + "_MCP_SERVER" + version_suffix(version)
+        const_name = (
+            server_id.upper().replace("-", "_")
+            + "_MCP_SERVER"
+            + version_suffix(version)
+        )
         server_constants.append(const_name)
 
     # Read the current __init__.py

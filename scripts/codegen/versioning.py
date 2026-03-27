@@ -10,14 +10,18 @@ from typing import Any, Tuple
 DEFAULT_SPEC_VERSION = "0.0.1"
 
 
-def ensure_spec_version(spec: dict[str, Any], *, default: str = DEFAULT_SPEC_VERSION) -> str:
+def ensure_spec_version(
+    spec: dict[str, Any], *, default: str = DEFAULT_SPEC_VERSION
+) -> str:
     """Ensure a spec dict has a version and return it."""
     version = str(spec.get("version") or default)
     spec["version"] = version
     return version
 
 
-def split_spec_ref(ref: str | None, *, default: str = DEFAULT_SPEC_VERSION) -> Tuple[str, str]:
+def split_spec_ref(
+    ref: str | None, *, default: str = DEFAULT_SPEC_VERSION
+) -> Tuple[str, str]:
     """Split a ref like ``name:0.0.1`` into ``(name, 0.0.1)``.
 
     Uses rsplit so values that include ``:`` (e.g. model IDs) are preserved.

@@ -13,14 +13,12 @@ Usage:
 """
 
 import argparse
-import json
 import sys
 from pathlib import Path
 from typing import Any
 
 import yaml
-
-from versioning import ensure_spec_version, version_suffix, versioned_ref
+from versioning import ensure_spec_version, version_suffix
 
 
 def _esc(text: str) -> str:

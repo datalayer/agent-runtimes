@@ -12,8 +12,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-
-from versioning import ensure_spec_version, version_suffix, versioned_ref
+from versioning import ensure_spec_version, version_suffix
 
 
 def _fmt_list(items: list[str]) -> str:
@@ -25,7 +24,9 @@ def _fmt_list(items: list[str]) -> str:
 def _require_runtime(spec: dict[str, Any]) -> dict[str, str]:
     runtime = spec.get("runtime")
     if not isinstance(runtime, dict):
-        raise ValueError(f"Tool '{spec.get('id', '<unknown>')}' is missing required 'runtime' object")
+        raise ValueError(
+            f"Tool '{spec.get('id', '<unknown>')}' is missing required 'runtime' object"
+        )
 
     language = runtime.get("language")
     package = runtime.get("package")
@@ -93,7 +94,9 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
     for spec in specs:
         tool_id = spec["id"]
         version = spec["version"]
-        const_name = f"{tool_id.upper().replace('-', '_')}_TOOL_SPEC{version_suffix(version)}"
+        const_name = (
+            f"{tool_id.upper().replace('-', '_')}_TOOL_SPEC{version_suffix(version)}"
+        )
         runtime = _require_runtime(spec)
         requires_approval = _requires_approval(spec)
         icon = f'"{spec.get("icon")}"' if spec.get("icon") else "None"
@@ -108,12 +111,12 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
                 f'    description="{spec.get("description", "")}",',
                 f"    tags={_fmt_list(spec.get('tags', []))},",
                 f"    enabled={spec.get('enabled', True)},",
-                f"    approval=\"{spec.get('approval', 'auto')}\",",
+                f'    approval="{spec.get("approval", "auto")}",',
                 f"    requires_approval={requires_approval},",
                 "    runtime=ToolRuntimeSpec(",
-                f"        language=\"{runtime['language']}\",",
-                f"        package=\"{runtime['package']}\",",
-                f"        method=\"{runtime['method']}\",",
+                f'        language="{runtime["language"]}",',
+                f'        package="{runtime["package"]}",',
+                f'        method="{runtime["method"]}",',
                 "    ),",
                 f"    icon={icon},",
                 f"    emoji={emoji},",
@@ -135,7 +138,9 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
     for spec in specs:
         tool_id = spec["id"]
         version = spec["version"]
-        const_name = f"{tool_id.upper().replace('-', '_')}_TOOL_SPEC{version_suffix(version)}"
+        const_name = (
+            f"{tool_id.upper().replace('-', '_')}_TOOL_SPEC{version_suffix(version)}"
+        )
         lines.append(f'    "{tool_id}": {const_name},')
 
     lines.extend(
@@ -191,7 +196,9 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
     for spec in specs:
         tool_id = spec["id"]
         version = spec["version"]
-        const_name = f"{tool_id.upper().replace('-', '_')}_TOOL_SPEC{version_suffix(version)}"
+        const_name = (
+            f"{tool_id.upper().replace('-', '_')}_TOOL_SPEC{version_suffix(version)}"
+        )
         runtime = _require_runtime(spec)
         requires_approval = _requires_approval(spec)
         tags_json = str(spec.get("tags", [])).replace("'", '"')
@@ -234,7 +241,9 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
     for spec in specs:
         tool_id = spec["id"]
         version = spec["version"]
-        const_name = f"{tool_id.upper().replace('-', '_')}_TOOL_SPEC{version_suffix(version)}"
+        const_name = (
+            f"{tool_id.upper().replace('-', '_')}_TOOL_SPEC{version_suffix(version)}"
+        )
         lines.append(f"  '{tool_id}': {const_name},")
 
     lines.extend(

@@ -15,7 +15,6 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 import yaml
-
 from versioning import (
     ensure_spec_version,
     split_spec_ref,
@@ -149,13 +148,15 @@ from agent_runtimes.types import AgentSpec
             )
 
             skill_refs = [
-                versioned_ref(*split_spec_ref(skill)) for skill in spec.get("skills", [])
+                versioned_ref(*split_spec_ref(skill))
+                for skill in spec.get("skills", [])
             ]
             tool_refs = [
                 versioned_ref(*split_spec_ref(tool)) for tool in spec.get("tools", [])
             ]
             frontend_tool_refs = [
-                versioned_ref(*split_spec_ref(ft)) for ft in spec.get("frontend_tools", [])
+                versioned_ref(*split_spec_ref(ft))
+                for ft in spec.get("frontend_tools", [])
             ]
 
             # Format optional fields
@@ -398,7 +399,11 @@ def generate_typescript_code(
         server_id = spec["id"]
         server_ref = versioned_ref(server_id, spec["version"])
         if server_ref in used_mcp_servers:
-            const_name = server_id.upper().replace("-", "_") + "_MCP_SERVER" + version_suffix(spec["version"])
+            const_name = (
+                server_id.upper().replace("-", "_")
+                + "_MCP_SERVER"
+                + version_suffix(spec["version"])
+            )
             mcp_imports.append(const_name)
             mcp_map_entries.append(f"  '{server_ref}': {const_name},")
             mcp_map_entries.append(f"  '{server_id}': {const_name},")
@@ -410,7 +415,11 @@ def generate_typescript_code(
         sid = spec["id"]
         sref = versioned_ref(sid, spec["version"])
         if sref in used_skills:
-            const_name = sid.upper().replace("-", "_") + "_SKILL_SPEC" + version_suffix(spec["version"])
+            const_name = (
+                sid.upper().replace("-", "_")
+                + "_SKILL_SPEC"
+                + version_suffix(spec["version"])
+            )
             skill_imports.append(const_name)
             skill_map_entries.append(f"  '{sref}': {const_name},")
             skill_map_entries.append(f"  '{sid}': {const_name},")
@@ -422,7 +431,11 @@ def generate_typescript_code(
         tid = spec["id"]
         tref = versioned_ref(tid, spec["version"])
         if tref in used_tools:
-            const_name = tid.upper().replace("-", "_") + "_TOOL_SPEC" + version_suffix(spec["version"])
+            const_name = (
+                tid.upper().replace("-", "_")
+                + "_TOOL_SPEC"
+                + version_suffix(spec["version"])
+            )
             tool_imports.append(const_name)
             tool_map_entries.append(f"  '{tref}': {const_name},")
             tool_map_entries.append(f"  '{tid}': {const_name},")
@@ -443,7 +456,11 @@ def generate_typescript_code(
             ftid = ft_spec["id"]
             ftref = versioned_ref(ftid, ft_spec["version"])
             if ftref in used_frontend_tools:
-                const_name = ftid.upper().replace("-", "_") + "_FRONTEND_TOOL_SPEC" + version_suffix(ft_spec["version"])
+                const_name = (
+                    ftid.upper().replace("-", "_")
+                    + "_FRONTEND_TOOL_SPEC"
+                    + version_suffix(ft_spec["version"])
+                )
                 frontend_tool_imports.append(const_name)
                 frontend_tool_map_entries.append(f"  '{ftref}': {const_name},")
                 frontend_tool_map_entries.append(f"  '{ftid}': {const_name},")
@@ -457,13 +474,13 @@ def generate_typescript_code(
     # Root-level specs produce src/specs/agents/agents.ts, while nested specs
     # produce src/specs/agents/<folder>/agents.ts. Import paths differ.
     is_root_layout = all(folder == "" for folder, _ in specs)
-    types_import_path = (
-        "../../types" if is_root_layout else "../../../types"
-    )
+    types_import_path = "../../types" if is_root_layout else "../../../types"
     mcp_import_path = "../mcpServers" if is_root_layout else "../../mcpServers"
     skills_import_path = "../skills" if is_root_layout else "../../skills"
     tools_import_path = "../tools" if is_root_layout else "../../tools"
-    frontend_tools_import_path = "../frontendTools" if is_root_layout else "../../frontendTools"
+    frontend_tools_import_path = (
+        "../frontendTools" if is_root_layout else "../../frontendTools"
+    )
 
     # Header
     code = """/*
@@ -577,7 +594,6 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
         code += "\n".join(frontend_tool_map_entries) + "\n"
         code += "};\n"
 
-
     code += """
 // ============================================================================
 // Agent Specs
@@ -626,7 +642,10 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
             agent_ids.append((full_agent_id, const_name, folder))
 
             # Get MCP servers
-            mcp_server_ids = [versioned_ref(*split_spec_ref(sid)) for sid in spec.get("mcp_servers", [])]
+            mcp_server_ids = [
+                versioned_ref(*split_spec_ref(sid))
+                for sid in spec.get("mcp_servers", [])
+            ]
             if has_mcp and mcp_server_ids:
                 mcp_servers_str = ", ".join(
                     f"MCP_SERVER_MAP['{sid}']" for sid in mcp_server_ids
@@ -635,7 +654,9 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
                 mcp_servers_str = ""
 
             # Get skills - resolve to AgentSkillSpec via toAgentSkillSpec
-            skill_ids_list = [versioned_ref(*split_spec_ref(sid)) for sid in spec.get("skills", [])]
+            skill_ids_list = [
+                versioned_ref(*split_spec_ref(sid)) for sid in spec.get("skills", [])
+            ]
             if has_skills and skill_ids_list:
                 skills_str = ", ".join(
                     f"toAgentSkillSpec(SKILL_MAP['{sid}'])" for sid in skill_ids_list
@@ -644,16 +665,19 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
                 skills_str = ""
 
             # Get tools - resolve to ToolSpec via TOOL_MAP
-            tool_ids_list = [versioned_ref(*split_spec_ref(sid)) for sid in spec.get("tools", [])]
+            tool_ids_list = [
+                versioned_ref(*split_spec_ref(sid)) for sid in spec.get("tools", [])
+            ]
             if has_tools and tool_ids_list:
-                tools_str = ", ".join(
-                    f"TOOL_MAP['{tid}']" for tid in tool_ids_list
-                )
+                tools_str = ", ".join(f"TOOL_MAP['{tid}']" for tid in tool_ids_list)
             else:
                 tools_str = ""
 
             # Get frontend tools - resolve to FrontendToolSpec via FRONTEND_TOOL_MAP
-            frontend_tool_ids_list = [versioned_ref(*split_spec_ref(sid)) for sid in spec.get("frontend_tools", [])]
+            frontend_tool_ids_list = [
+                versioned_ref(*split_spec_ref(sid))
+                for sid in spec.get("frontend_tools", [])
+            ]
             if has_frontend_tools and frontend_tool_ids_list:
                 frontend_tools_str = ", ".join(
                     f"FRONTEND_TOOL_MAP['{ftid}']" for ftid in frontend_tool_ids_list

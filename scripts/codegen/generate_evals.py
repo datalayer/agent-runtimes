@@ -18,8 +18,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-
-from versioning import ensure_spec_version, version_suffix, versioned_ref
+from versioning import ensure_spec_version, version_suffix
 
 
 def _fmt_list(items: list[str]) -> str:
@@ -85,7 +84,9 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
     for spec in specs:
         eval_id = spec["id"]
         version = spec["version"]
-        const_name = f"{eval_id.upper().replace('-', '_')}_EVAL_SPEC{version_suffix(version)}"
+        const_name = (
+            f"{eval_id.upper().replace('-', '_')}_EVAL_SPEC{version_suffix(version)}"
+        )
         desc = _esc_dq(spec.get("description", "").strip().replace("\n", " "))
 
         lines.extend(
@@ -118,7 +119,9 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
     for spec in specs:
         eval_id = spec["id"]
         version = spec["version"]
-        const_name = f"{eval_id.upper().replace('-', '_')}_EVAL_SPEC{version_suffix(version)}"
+        const_name = (
+            f"{eval_id.upper().replace('-', '_')}_EVAL_SPEC{version_suffix(version)}"
+        )
         lines.append(f'    "{eval_id}": {const_name},')
     lines.extend(
         [
@@ -173,7 +176,9 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
     for spec in specs:
         eval_id = spec["id"]
         version = spec["version"]
-        const_name = f"{eval_id.upper().replace('-', '_')}_EVAL_SPEC{version_suffix(version)}"
+        const_name = (
+            f"{eval_id.upper().replace('-', '_')}_EVAL_SPEC{version_suffix(version)}"
+        )
         desc = _esc(spec.get("description", "").strip().replace("\n", " "))
 
         lines.extend(
@@ -206,7 +211,9 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
     for spec in specs:
         eval_id = spec["id"]
         version = spec["version"]
-        const_name = f"{eval_id.upper().replace('-', '_')}_EVAL_SPEC{version_suffix(version)}"
+        const_name = (
+            f"{eval_id.upper().replace('-', '_')}_EVAL_SPEC{version_suffix(version)}"
+        )
         lines.append(f"  '{eval_id}': {const_name},")
     lines.extend(
         [
