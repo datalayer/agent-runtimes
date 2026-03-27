@@ -72,16 +72,35 @@ def creation_spy(monkeypatch: pytest.MonkeyPatch) -> dict[str, object]:
     )
     monkeypatch.setattr(agents_route, "register_agent", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(
-        agents_route, "register_agent_for_context", lambda *_args, **_kwargs: None, raising=False
+        agents_route,
+        "register_agent_for_context",
+        lambda *_args, **_kwargs: None,
+        raising=False,
     )
-    monkeypatch.setattr(agents_route, "register_agui_agent", lambda *_args, **_kwargs: None)
-    monkeypatch.setattr(agents_route, "register_vercel_agent", lambda *_args, **_kwargs: None)
-    monkeypatch.setattr(agents_route, "register_a2a_agent", lambda *_args, **_kwargs: None)
-    monkeypatch.setattr(agents_route, "register_mcp_ui_agent", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(
+        agents_route, "register_agui_agent", lambda *_args, **_kwargs: None
+    )
+    monkeypatch.setattr(
+        agents_route, "register_vercel_agent", lambda *_args, **_kwargs: None
+    )
+    monkeypatch.setattr(
+        agents_route, "register_a2a_agent", lambda *_args, **_kwargs: None
+    )
+    monkeypatch.setattr(
+        agents_route, "register_mcp_ui_agent", lambda *_args, **_kwargs: None
+    )
     monkeypatch.setattr(agents_route, "get_agui_app", lambda *_args, **_kwargs: None)
-    monkeypatch.setattr(agents_route, "create_skills_toolset", lambda **_kwargs: _DummyToolset())
-    monkeypatch.setattr(agents_route, "wire_skills_into_codemode", lambda *_args, **_kwargs: "")
-    monkeypatch.setattr(agents_route, "_build_codemode_toolset", lambda *_args, **_kwargs: _DummyToolset())
+    monkeypatch.setattr(
+        agents_route, "create_skills_toolset", lambda **_kwargs: _DummyToolset()
+    )
+    monkeypatch.setattr(
+        agents_route, "wire_skills_into_codemode", lambda *_args, **_kwargs: ""
+    )
+    monkeypatch.setattr(
+        agents_route,
+        "_build_codemode_toolset",
+        lambda *_args, **_kwargs: _DummyToolset(),
+    )
     monkeypatch.setattr(agents_route, "initialize_codemode_toolset", _noop_async)
     monkeypatch.setattr(agents_route, "initialize_config_mcp_servers", _noop_async)
     monkeypatch.setattr(agents_route, "get_mcp_manager", lambda: _DummyMcpManager())

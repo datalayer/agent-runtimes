@@ -16,8 +16,8 @@ The Vercel AI SDK protocol provides:
 - Standard message format compatible with Vercel AI SDK
 """
 
-import logging
 import inspect
+import logging
 import traceback
 from typing import TYPE_CHECKING, Any, AsyncIterator
 
@@ -472,9 +472,11 @@ class VercelAITransport(BaseTransport):
                     )
 
                 # Pass sdk_version only if supported by installed pydantic-ai.
-                if sdk_version and "sdk_version" in inspect.signature(
-                    VercelAIAdapter.dispatch_request
-                ).parameters:
+                if (
+                    sdk_version
+                    and "sdk_version"
+                    in inspect.signature(VercelAIAdapter.dispatch_request).parameters
+                ):
                     dispatch_kwargs["sdk_version"] = sdk_version
 
                 response = await VercelAIAdapter.dispatch_request(

@@ -136,9 +136,7 @@ def register_agent_tools(
     )
     logger.info(
         "Tool approval mode: %s",
-        "pydantic-deferred"
-        if use_deferred_tool_approval
-        else "ai-agents-wrapper",
+        "pydantic-deferred" if use_deferred_tool_approval else "ai-agents-wrapper",
     )
 
     for tool_id in tool_ids:
@@ -152,7 +150,9 @@ def register_agent_tools(
 
         impl = _resolve_python_tool(spec)
         if impl is None:
-            logger.warning("No Python implementation resolved for tool '%s'; skipping", tool_id)
+            logger.warning(
+                "No Python implementation resolved for tool '%s'; skipping", tool_id
+            )
             continue
 
         tool_fn = impl

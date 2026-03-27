@@ -17,6 +17,7 @@ import logging
 import multiprocessing as mp
 import os
 import sys
+import tempfile
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, AsyncGenerator
@@ -56,10 +57,10 @@ from .routes import (
     mcp_ui_router,
     set_a2a_app,
     skills_router,
-    tool_approvals_legacy_router,
-    tool_approvals_router,
     start_a2a_task_managers,
     stop_a2a_task_managers,
+    tool_approvals_legacy_router,
+    tool_approvals_router,
     triggers_webhook_router,
     vercel_ai_router,
 )
@@ -87,7 +88,7 @@ def _resolve_generated_code_path(explicit_path: str | None) -> str:
     1. Explicit env/CLI path (when writable)
     2. Repo-local generated/ folder
     3. Shared volume /mnt/shared-agent/generated
-    4. /tmp/agent-runtimes-generated fallback
+    4. System temp dir fallback
     """
 
     repo_root = Path(__file__).resolve().parents[1]
@@ -98,7 +99,7 @@ def _resolve_generated_code_path(explicit_path: str | None) -> str:
         candidates.append(Path(explicit_path).resolve())
     candidates.append(default_path)
     candidates.append(Path("/mnt/shared-agent/generated"))
-    candidates.append(Path("/tmp/agent-runtimes-generated"))
+    candidates.append(Path(tempfile.gettempdir()) / "agent-runtimes-generated")
 
     for candidate in candidates:
         try:
@@ -115,11 +116,11 @@ def _resolve_generated_code_path(explicit_path: str | None) -> str:
                 )
             return str(candidate)
         except Exception:
-            continue
+            pass
 
     raise PermissionError(
         "No writable generated code folder found (checked env path, repo generated/, "
-        "/mnt/shared-agent/generated, /tmp/agent-runtimes-generated)"
+        "/mnt/shared-agent/generated, system temp dir)"
     )
 
 
@@ -163,7 +164,8 @@ async def _create_and_register_cli_agent(
         its sandbox (variant, jupyter host/port when applicable).
     """
 
-    from pydantic_ai import Agent as PydanticAgent, DeferredToolRequests
+    from pydantic_ai import Agent as PydanticAgent
+    from pydantic_ai import DeferredToolRequests
 
     from .adapters.pydantic_ai_adapter import PydanticAIAdapter
     from .context.session import register_agent as register_agent_for_context

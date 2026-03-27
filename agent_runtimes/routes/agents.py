@@ -13,12 +13,14 @@ Provides REST API endpoints for:
 
 import logging
 import os
+import tempfile
 from pathlib import Path
 from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
-from pydantic_ai import Agent as PydanticAgent, DeferredToolRequests
+from pydantic_ai import Agent as PydanticAgent
+from pydantic_ai import DeferredToolRequests
 
 from ..adapters.pydantic_ai_adapter import PydanticAIAdapter
 from ..mcp import get_mcp_manager, initialize_config_mcp_servers
@@ -65,7 +67,7 @@ def _resolve_writable_generated_path(path: str) -> str:
     fallbacks = [
         candidate,
         Path("/mnt/shared-agent/generated"),
-        Path("/tmp/agent-runtimes-generated"),
+        Path(tempfile.gettempdir()) / "agent-runtimes-generated",
     ]
 
     for folder in fallbacks:
@@ -82,7 +84,7 @@ def _resolve_writable_generated_path(path: str) -> str:
                 )
             return str(folder)
         except Exception:
-            continue
+            pass
 
     raise PermissionError(
         f"No writable codemode generated path found (tried: {[str(f) for f in fallbacks]})"
@@ -555,7 +557,8 @@ async def create_agent(
                 request.model = _spec_value("model") or request.model
             if request.system_prompt == "You are a helpful AI assistant.":
                 request.system_prompt = (
-                    _spec_value("systemPrompt", "system_prompt") or request.system_prompt
+                    _spec_value("systemPrompt", "system_prompt")
+                    or request.system_prompt
                 )
             if request.system_prompt_codemode_addons is None:
                 request.system_prompt_codemode_addons = _spec_value(
@@ -612,7 +615,6 @@ async def create_agent(
                     )
                     if isinstance(reranker, bool):
                         request.enable_tool_reranker = reranker
-
 
         # Build list of non-MCP toolsets (skills, codemode, etc.)
         # MCP toolsets will be dynamically fetched at run time by the adapter
@@ -1067,7 +1069,7 @@ async def create_agent(
             else None
         )
         has_spec_frontend_tools = bool(
-            (_lib_spec and _lib_spec.frontend_tools)
+            (_lib_spec and getattr(_lib_spec, "frontend_tools", None))
             or _spec_value("frontendTools", "frontend_tools")
         )
 
@@ -1094,7 +1096,11 @@ async def create_agent(
 
         elif request.transport == "vercel-ai":
             try:
-                vercel_adapter = VercelAITransport(agent, agent_id=agent_id, has_spec_frontend_tools=has_spec_frontend_tools)
+                vercel_adapter = VercelAITransport(
+                    agent,
+                    agent_id=agent_id,
+                    has_spec_frontend_tools=has_spec_frontend_tools,
+                )
                 register_vercel_agent(agent_id, vercel_adapter)
                 logger.info(f"Registered agent with Vercel AI: {agent_id}")
             except Exception as e:
@@ -1450,7 +1456,9 @@ async def update_agent_transport(
                 http_request.app.routes[:] = [
                     r
                     for r in http_request.app.routes
-                    if not (hasattr(r, "path") and getattr(r, "path", None) == mount_path)
+                    if not (
+                        hasattr(r, "path") and getattr(r, "path", None) == mount_path
+                    )
                 ]
             logger.info(f"Unregistered agent from AG-UI: {agent_id}")
         except Exception as e:
@@ -1471,9 +1479,7 @@ async def update_agent_transport(
             agui_app = get_agui_app(agent_id)
             if agui_app and http_request.app:
                 mount_path = f"{_api_prefix}/ag-ui/{agent_id}"
-                http_request.app.mount(
-                    mount_path, agui_app, name=f"agui-{agent_id}"
-                )
+                http_request.app.mount(mount_path, agui_app, name=f"agui-{agent_id}")
                 logger.info(f"Dynamically mounted AG-UI route: {mount_path}/")
             logger.info(f"Registered agent with AG-UI: {agent_id}")
         except Exception as e:
@@ -1490,8 +1496,10 @@ async def update_agent_transport(
             )
             if not _has_ft and stored_spec.get("agent_spec_id"):
                 _lib = get_library_agent_spec(stored_spec["agent_spec_id"])
-                _has_ft = bool(_lib and _lib.frontend_tools)
-            vercel_adapter = VercelAITransport(agent, agent_id=agent_id, has_spec_frontend_tools=_has_ft)
+                _has_ft = bool(_lib and getattr(_lib, "frontend_tools", None))
+            vercel_adapter = VercelAITransport(
+                agent, agent_id=agent_id, has_spec_frontend_tools=_has_ft
+            )
             register_vercel_agent(agent_id, vercel_adapter)
             logger.info(f"Registered agent with Vercel AI: {agent_id}")
         except Exception as e:
@@ -1503,7 +1511,9 @@ async def update_agent_transport(
     if hasattr(info, "transport"):
         info.transport = new_transport
 
-    logger.info(f"Updated agent {agent_id} transport: {current_transport} -> {new_transport}")
+    logger.info(
+        f"Updated agent {agent_id} transport: {current_transport} -> {new_transport}"
+    )
 
     return {
         "id": agent_id,
@@ -1883,7 +1893,9 @@ async def _start_mcp_servers_for_agent(
     if env_vars:
         for ev in env_vars:
             stripped = ev.value[:5] + "..." if len(ev.value) > 5 else ev.value
-            logger.info(f"_start_mcp_servers_for_agent: env var: {ev.name} = {stripped}")
+            logger.info(
+                f"_start_mcp_servers_for_agent: env var: {ev.name} = {stripped}"
+            )
     else:
         logger.info("_start_mcp_servers_for_agent: no env vars provided")
 
@@ -2116,7 +2128,9 @@ async def _setup_env_and_sandbox(
     label = f"mcp-servers/start/{agent_id}" if agent_id else "mcp-servers/start"
     env_var_names = [ev.name for ev in body.env_vars]
     for env_var in body.env_vars:
-        stripped = env_var.value[:5] + "..." if len(env_var.value) > 5 else env_var.value
+        stripped = (
+            env_var.value[:5] + "..." if len(env_var.value) > 5 else env_var.value
+        )
         logger.info("[%s] setting env var: %s = %s", label, env_var.name, stripped)
         os.environ[env_var.name] = env_var.value
     if env_var_names:
@@ -2135,9 +2149,7 @@ async def _setup_env_and_sandbox(
 
             sandbox_manager = get_code_sandbox_manager()
             env_dict = (
-                {ev.name: ev.value for ev in body.env_vars}
-                if body.env_vars
-                else None
+                {ev.name: ev.value for ev in body.env_vars} if body.env_vars else None
             )
             sandbox_manager.configure_from_url(
                 body.jupyter_sandbox,
@@ -2234,9 +2246,11 @@ async def start_all_agents_mcp_servers(
         )
 
     try:
-        sandbox_configured, sandbox_variant, mcp_proxy_url = (
-            await _setup_env_and_sandbox(body, request)
-        )
+        (
+            sandbox_configured,
+            sandbox_variant,
+            mcp_proxy_url,
+        ) = await _setup_env_and_sandbox(body, request)
 
         all_started: list[str] = []
         all_already_running: list[str] = []
@@ -2327,9 +2341,11 @@ async def start_agent_mcp_servers(
         raise HTTPException(status_code=404, detail=f"Agent not found: {agent_id}")
 
     try:
-        sandbox_configured, sandbox_variant, mcp_proxy_url = (
-            await _setup_env_and_sandbox(body, request, agent_id)
-        )
+        (
+            sandbox_configured,
+            sandbox_variant,
+            mcp_proxy_url,
+        ) = await _setup_env_and_sandbox(body, request, agent_id)
 
         (
             started,
@@ -2627,7 +2643,9 @@ async def configure_from_spec_endpoint(
         value = env_var.get("value", "")
         if name:
             stripped = value[:5] + "..." if len(value) > 5 else value
-            logger.info("[configure-from-spec] setting env var: %s = %s", name, stripped)
+            logger.info(
+                "[configure-from-spec] setting env var: %s = %s", name, stripped
+            )
             os.environ[name] = value
 
     # Validate that the referenced library spec exists.

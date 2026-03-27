@@ -57,13 +57,23 @@ class SkillSpec(BaseModel):
     name: str = Field(..., description="Display name for the skill")
     description: str = Field(default="", description="Skill description")
     # Variant 1: module-based discovery
-    module: Optional[str] = Field(default=None, description="Python module path for name-based discovery")
+    module: Optional[str] = Field(
+        default=None, description="Python module path for name-based discovery"
+    )
     # Variant 2: package + method reference
-    package: Optional[str] = Field(default=None, description="Python package containing the skill implementation")
-    method: Optional[str] = Field(default=None, description="Callable/function name in the package")
+    package: Optional[str] = Field(
+        default=None, description="Python package containing the skill implementation"
+    )
+    method: Optional[str] = Field(
+        default=None, description="Callable/function name in the package"
+    )
     # agentskills.io frontmatter attributes
-    license: Optional[str] = Field(default=None, description="License name or reference (agentskills.io spec)")
-    compatibility: Optional[str] = Field(default=None, description="Environment requirements (agentskills.io spec)")
+    license: Optional[str] = Field(
+        default=None, description="License name or reference (agentskills.io spec)"
+    )
+    compatibility: Optional[str] = Field(
+        default=None, description="Environment requirements (agentskills.io spec)"
+    )
     allowed_tools: List[str] = Field(
         default_factory=list,
         alias="allowed-tools",
@@ -155,7 +165,9 @@ class FrontendToolSpec(BaseModel):
     name: str = Field(..., description="Display name for the frontend tool")
     description: str = Field(default="", description="Frontend tool description")
     tags: List[str] = Field(default_factory=list, description="Tags for categorization")
-    enabled: bool = Field(default=True, description="Whether the frontend tool is enabled")
+    enabled: bool = Field(
+        default=True, description="Whether the frontend tool is enabled"
+    )
     toolset: str = Field(
         default="all",
         description="Which tools from the toolset to include ('all' or a list)",
@@ -180,7 +192,9 @@ class AIModel(BaseModel):
     name: str = Field(..., description="Display name")
     description: str = Field(default="", description="Model description")
     provider: str = Field(..., description="Provider name")
-    default: bool = Field(default=False, description="Whether this is the default model")
+    default: bool = Field(
+        default=False, description="Whether this is the default model"
+    )
     required_env_vars: List[str] = Field(
         default_factory=list,
         description="Required environment variable names",
@@ -229,7 +243,9 @@ class GuardrailPermissions(BaseModel):
     execute_code: bool = Field(default=False, description="Allow code execution")
     access_internet: bool = Field(default=False, description="Allow internet access")
     send_email: bool = Field(default=False, description="Allow email sending")
-    deploy_production: bool = Field(default=False, description="Allow production deploys")
+    deploy_production: bool = Field(
+        default=False, description="Allow production deploys"
+    )
 
 
 class TokenLimitsSpec(BaseModel):
@@ -324,7 +340,9 @@ class GuardrailSpec(BaseModel):
     token_limits: TokenLimitsSpec = Field(
         default_factory=TokenLimitsSpec, description="Token budget limits"
     )
-    data_scope: Optional[DataScopeSpec] = Field(default=None, description="Data-access scope")
+    data_scope: Optional[DataScopeSpec] = Field(
+        default=None, description="Data-access scope"
+    )
     data_handling: Optional[DataHandlingSpec] = Field(
         default=None, description="Data handling policy"
     )
@@ -334,7 +352,9 @@ class GuardrailSpec(BaseModel):
     tool_limits: Optional[ToolLimitsSpec] = Field(
         default=None, description="Tool invocation limits"
     )
-    audit: Optional[AuditSpec] = Field(default=None, description="Audit trail configuration")
+    audit: Optional[AuditSpec] = Field(
+        default=None, description="Audit trail configuration"
+    )
     content_safety: Optional[ContentSafetySpec] = Field(
         default=None, description="Content safety settings"
     )
@@ -354,7 +374,8 @@ class MemorySpec(BaseModel):
         description="Persistence level: none, session, cross-session, permanent",
     )
     scope: str = Field(
-        default="agent", description="Memory scope: agent, team, repository, user, global"
+        default="agent",
+        description="Memory scope: agent, team, repository, user, global",
     )
     backend: str = Field(default="in-memory", description="Storage backend identifier")
     icon: str = Field(default="database", description="Icon identifier")
@@ -395,8 +416,12 @@ class NotificationChannelSpec(BaseModel):
     name: str = Field(..., description="Display name")
     description: str = Field(default="", description="Channel description")
     icon: str = Field(default="bell", description="Icon identifier")
-    available: bool = Field(default=True, description="Whether channel is currently available")
-    coming_soon: bool = Field(default=False, description="Whether channel is planned but not available yet")
+    available: bool = Field(
+        default=True, description="Whether channel is currently available"
+    )
+    coming_soon: bool = Field(
+        default=False, description="Whether channel is planned but not available yet"
+    )
     fields: List[NotificationField] = Field(
         default_factory=list, description="Channel configuration fields"
     )
@@ -418,7 +443,9 @@ class OutputSpec(BaseModel):
     supports_storage: bool = Field(
         default=False, description="Whether this output can be persisted"
     )
-    mime_types: List[str] = Field(default_factory=list, description="Supported MIME types")
+    mime_types: List[str] = Field(
+        default_factory=list, description="Supported MIME types"
+    )
 
 
 class TriggerField(BaseModel):

@@ -99,9 +99,7 @@ def create_skills_toolset(
 
             still_missing = selected_set - {s.name for s in selected_skills}
             if still_missing:
-                logger.warning(
-                    f"Requested skills not found: {sorted(still_missing)}"
-                )
+                logger.warning(f"Requested skills not found: {sorted(still_missing)}")
 
         # Create executor - use shared sandbox if available
         if shared_sandbox is not None:

@@ -269,9 +269,7 @@ class ToolApprovalManager:
                 elapsed += self.config.poll_interval
 
                 try:
-                    resp = await poll_client.get(
-                        f"{approval_path}/{approval_id}"
-                    )
+                    resp = await poll_client.get(f"{approval_path}/{approval_id}")
                     resp.raise_for_status()
                     record = resp.json()
                 except httpx.HTTPError:
@@ -298,7 +296,11 @@ class ToolApprovalManager:
                         f"Approval for tool '{tool_name}' expired server-side"
                     )
         finally:
-            if using_fallback_client and poll_client is not client and not poll_client.is_closed:
+            if (
+                using_fallback_client
+                and poll_client is not client
+                and not poll_client.is_closed
+            ):
                 await poll_client.aclose()
 
         # Timed out locally
