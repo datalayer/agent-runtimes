@@ -41,6 +41,7 @@ export const EXAMPLES: Record<
   AgentMemoryExample: () => import('./AgentMemoryExample'),
   AgentSkillsExample: () => import('./AgentSkillsExample'),
   AgentOtelExample: () => import('./AgentOtelExample'),
+  AgentSandboxExample: () => import('./AgentSandboxExample'),
   AgentMonitoringExample: () => import('./AgentMonitoringExample'),
   AgentNotificationsExample: () => import('./AgentNotificationsExample'),
   AgentOutputsExample: () => import('./AgentOutputsExample'),

@@ -216,6 +216,7 @@ def _build_codemode_toolset(
     request: "CreateAgentRequest",
     http_request: Request,
     sandbox: Any | None = None,
+    disable_mcp_servers: bool = False,
 ) -> Any:
     """
     Create a CodemodeToolset based on request flags and app configuration.
@@ -278,9 +279,13 @@ def _build_codemode_toolset(
     )
 
     # Get MCP servers from manager
-    mcp_manager = get_mcp_manager()
-    servers = mcp_manager.get_servers()
-    logger.info(f"Building codemode registry from {len(servers)} available servers")
+    if disable_mcp_servers:
+        servers = []
+        logger.info("Building codemode registry with MCP disabled (0 servers)")
+    else:
+        mcp_manager = get_mcp_manager()
+        servers = mcp_manager.get_servers()
+        logger.info(f"Building codemode registry from {len(servers)} available servers")
 
     if request.selected_mcp_servers:
         # Extract server IDs from McpServerSelection objects
@@ -451,6 +456,10 @@ async def create_agent(
         )
 
     try:
+        selected_mcp_servers_explicit = (
+            "selected_mcp_servers" in request.model_fields_set
+        )
+
         # Normalize optional UI-forwarded spec payload to make applying defaults easier.
         # This accepts both camelCase and snake_case keys.
         forwarded_spec = request.agent_spec or {}
@@ -521,7 +530,11 @@ async def create_agent(
             }:
                 request.transport = spec.protocol  # type: ignore[assignment]
             # Apply MCP servers from spec when not explicitly selected
-            if not request.selected_mcp_servers and spec.mcp_servers:
+            if (
+                not selected_mcp_servers_explicit
+                and not request.selected_mcp_servers
+                and spec.mcp_servers
+            ):
                 request.selected_mcp_servers = [
                     McpServerSelection(id=server.id, origin="config")
                     for server in spec.mcp_servers
@@ -580,7 +593,7 @@ async def create_agent(
                 protocol = _spec_value("protocol")
                 if protocol in {"ag-ui", "vercel-ai", "acp", "a2a"}:
                     request.transport = protocol
-            if not request.selected_mcp_servers:
+            if not selected_mcp_servers_explicit and not request.selected_mcp_servers:
                 raw_servers = _spec_value("mcpServers", "mcp_servers")
                 if isinstance(raw_servers, list):
                     selected_servers: list[McpServerSelection] = []
@@ -734,6 +747,54 @@ async def create_agent(
             "local-jupyter" if request.jupyter_sandbox else "local-eval"
         )
 
+        # When a sandbox variant is explicitly requested, eagerly ensure a sandbox
+        # is configured and started for that variant even if no MCP servers are
+        # selected. This guarantees that sandbox status/WS reflects availability.
+        if request.sandbox_variant:
+            try:
+                from ..services.code_sandbox_manager import get_code_sandbox_manager
+
+                sandbox_manager = get_code_sandbox_manager()
+
+                if effective_variant == "jupyter":
+                    sandbox_manager.create_agent_sandbox(
+                        agent_id=agent_id,
+                        variant="jupyter",
+                    )
+                    logger.info(
+                        "Eager-started per-agent jupyter sandbox for '%s'",
+                        agent_id,
+                    )
+                elif effective_variant == "local-jupyter":
+                    if not request.jupyter_sandbox:
+                        raise HTTPException(
+                            status_code=400,
+                            detail=(
+                                "jupyter_sandbox is required when sandbox_variant is 'local-jupyter'"
+                            ),
+                        )
+                    # jupyter_sandbox URL is already applied above via configure_from_url.
+                    sandbox_manager.get_sandbox()
+                    logger.info("Eager-started local-jupyter sandbox")
+                else:
+                    # local-eval
+                    sandbox_manager.configure(variant="local-eval")
+                    sandbox_manager.get_sandbox()
+                    logger.info("Eager-started local-eval sandbox")
+            except HTTPException:
+                raise
+            except ImportError as e:
+                logger.warning(
+                    "code_sandboxes not installed, cannot eager-start sandbox: %s",
+                    e,
+                )
+            except Exception as e:
+                logger.error("Failed to eager-start sandbox for '%s': %s", agent_id, e)
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Failed to initialize sandbox variant '{effective_variant}': {str(e)}",
+                )
+
         # Create shared sandbox for codemode and/or skills toolsets
         # This ensures state persistence between execute_code and skill script executions
         shared_sandbox = None
@@ -798,16 +859,23 @@ async def create_agent(
 
         # Add codemode toolset if enabled
         if request.enable_codemode:
+            disable_mcp_for_codemode = (
+                selected_mcp_servers_explicit
+                and len(request.selected_mcp_servers) == 0
+            )
             # Ensure MCP servers are loaded before building codemode toolset
             mcp_manager = get_mcp_manager()
-            if not mcp_manager.get_servers():
+            if not disable_mcp_for_codemode and not mcp_manager.get_servers():
                 mcp_servers = await initialize_config_mcp_servers(discover_tools=True)
                 mcp_manager.load_servers(mcp_servers)
                 logger.info(
                     f"Loaded {len(mcp_servers)} MCP servers for codemode agent {agent_id}"
                 )
             codemode_toolset = _build_codemode_toolset(
-                request, http_request, sandbox=shared_sandbox
+                request,
+                http_request,
+                sandbox=shared_sandbox,
+                disable_mcp_servers=disable_mcp_for_codemode,
             )
             if codemode_toolset is not None:
                 await initialize_codemode_toolset(codemode_toolset)
@@ -950,6 +1018,10 @@ async def create_agent(
             # This allows rebuilding the codemode toolset when MCP servers change
             codemode_builder = None
             if request.enable_codemode:
+                disable_mcp_for_codemode = (
+                    selected_mcp_servers_explicit
+                    and len(request.selected_mcp_servers) == 0
+                )
 
                 def rebuild_codemode(new_servers: list[str | dict[str, str]]) -> Any:
                     """Rebuild codemode toolset with new MCP server selection.
@@ -980,7 +1052,10 @@ async def create_agent(
                         logger.warning(f"code_sandboxes not available: {e}")
 
                     return _build_codemode_toolset(
-                        temp_request, http_request, sandbox=fresh_sandbox
+                        temp_request,
+                        http_request,
+                        sandbox=fresh_sandbox,
+                        disable_mcp_servers=disable_mcp_for_codemode,
                     )
 
                 # Wrap to register a post-init callback for skill re-wiring
@@ -1651,9 +1726,13 @@ async def update_agent_mcp_servers(
 class ConfigureSandboxRequest(BaseModel):
     """Request to configure the code sandbox manager."""
 
-    variant: Literal["local-eval", "local-jupyter"] = Field(
+    variant: Literal["local-eval", "local-jupyter", "jupyter"] = Field(
         default="local-eval",
-        description="Sandbox variant to use: 'local-eval' (Python exec) or 'local-jupyter' (Jupyter kernel)",
+        description=(
+            "Sandbox variant to use: 'local-eval' (Python exec), "
+            "'jupyter' (managed Jupyter sandbox), or "
+            "'local-jupyter' (existing Jupyter server URL)"
+        ),
     )
     jupyter_url: str | None = Field(
         default=None,
@@ -1708,7 +1787,8 @@ async def configure_sandbox(request: ConfigureSandboxRequest) -> SandboxStatusRe
     Configure the code sandbox manager.
 
     This endpoint allows runtime configuration of the sandbox variant.
-    Use 'local-eval' for simple Python exec-based execution, or
+    Use 'local-eval' for simple Python exec-based execution,
+    'jupyter' for a managed Jupyter sandbox, or
     'local-jupyter' to connect to an existing Jupyter server.
 
     Note: If a sandbox is currently running with a different configuration,

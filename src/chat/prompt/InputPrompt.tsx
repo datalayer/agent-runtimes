@@ -65,6 +65,8 @@ export interface InputPromptProps {
   headerContent?: ReactNode;
   /** Content rendered on the left side of the footer */
   footerContent?: ReactNode;
+  /** Content rendered on the right side of the footer, next to send/stop */
+  footerRightContent?: ReactNode;
 }
 
 /**
@@ -87,6 +89,7 @@ export function InputPrompt({
   onChange: controlledOnChange,
   headerContent,
   footerContent,
+  footerRightContent,
 }: InputPromptProps) {
   // ---- Controlled / uncontrolled state -----------------------------------
   const [internalInput, setInternalInput] = useState('');
@@ -207,6 +210,7 @@ export function InputPrompt({
             sendDisabled={!input.trim() || disabled}
             onSend={handleSend}
             onStop={handleStop}
+            rightContent={footerRightContent}
           >
             {footerContent}
           </InputPromptFooter>

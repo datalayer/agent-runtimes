@@ -19,11 +19,10 @@
 import { useContext } from 'react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Text, Spinner } from '@primer/react';
-import { Box } from '@datalayer/primer-addons';
+import { Box, setupPrimerPortals } from '@datalayer/primer-addons';
 import { AlertIcon, PersonIcon } from '@primer/octicons-react';
 import { AiAgentIcon } from '@datalayer/icons-react';
 import { QueryClientProvider, QueryClientContext } from '@tanstack/react-query';
-import { useHighZIndexPortal } from '@datalayer/core/lib/hooks';
 import { useChatStore } from '../../stores/chatStore';
 import { useConversationStore } from '../../stores/conversationStore';
 import type { ChatMessage } from '../../types/messages';
@@ -221,7 +220,9 @@ function ChatBaseInner({
   // Pending prompt
   pendingPrompt,
 }: ChatBaseProps) {
-  useHighZIndexPortal();
+  useEffect(() => {
+    setupPrimerPortals();
+  }, []);
 
   // The outer ChatBase wrapper always resolves a string Protocol to a full
   // ProtocolConfig (or undefined).  Narrow the type for internal use.
@@ -1379,7 +1380,16 @@ function ChatBaseInner({
     pendingToolExecutionsRef.current = 0;
     setIsLoading(false);
     setIsStreaming(false);
-  }, [useStoreMode]);
+    // Also interrupt any code running in the sandbox (best-effort).
+    if (protocol?.configEndpoint) {
+      const interruptUrl = `${getApiBaseFromConfig(protocol.configEndpoint)}/configure/sandbox/interrupt`;
+      const headers: HeadersInit = { 'Content-Type': 'application/json' };
+      if (protocol.authToken) {
+        headers['Authorization'] = `Bearer ${protocol.authToken}`;
+      }
+      fetch(interruptUrl, { method: 'POST', headers }).catch(() => {});
+    }
+  }, [useStoreMode, protocol?.configEndpoint, protocol?.authToken]);
 
   // ---- handleNewChat ----
   const handleNewChat = useCallback(() => {

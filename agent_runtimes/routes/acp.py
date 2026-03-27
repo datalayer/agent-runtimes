@@ -174,7 +174,7 @@ def unregister_prompt(session_id: str) -> None:
 
 def cancel_prompt(session_id: str) -> bool:
     """
-    Cancel a running prompt.
+    Cancel a running prompt and interrupt the sandbox.
 
     Args:
         session_id: The session identifier to cancel.
@@ -185,13 +185,20 @@ def cancel_prompt(session_id: str) -> bool:
     if session_id in _running_prompts:
         _running_prompts[session_id].set()
         logger.info(f"Cancelled ACP prompt for session: {session_id}")
+        # Also interrupt the sandbox so running code stops immediately.
+        try:
+            from agent_runtimes.services.code_sandbox_manager import interrupt_sandbox
+
+            interrupt_sandbox()
+        except Exception:
+            pass
         return True
     return False
 
 
 def cancel_all_prompts() -> int:
     """
-    Cancel all running prompts.
+    Cancel all running prompts and interrupt the sandbox.
 
     Returns:
         Number of prompts cancelled.
@@ -201,6 +208,13 @@ def cancel_all_prompts() -> int:
         cancel_event.set()
         count += 1
         logger.info(f"Cancelled ACP prompt for session: {session_id}")
+    if count > 0:
+        try:
+            from agent_runtimes.services.code_sandbox_manager import interrupt_sandbox
+
+            interrupt_sandbox()
+        except Exception:
+            pass
     return count
 
 

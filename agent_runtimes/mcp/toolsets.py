@@ -118,6 +118,7 @@ def get_config_mcp_toolsets_status() -> dict[str, Any]:
         - failed_count: Number of servers that failed to start
         - ready_servers: List of server IDs that are ready
         - failed_servers: Dict of server ID -> error message for failed servers
+        - servers: List of per-server status dicts with id, status, error, tools_count
     """
     manager = get_mcp_lifecycle_manager()
     running = manager.get_all_running_servers()
@@ -129,6 +130,7 @@ def get_config_mcp_toolsets_status() -> dict[str, Any]:
         "failed_count": len(failed),
         "ready_servers": [s.server_id for s in running],
         "failed_servers": failed,
+        "servers": manager.get_all_servers_status(),
     }
 
 

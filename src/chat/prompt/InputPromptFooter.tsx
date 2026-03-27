@@ -20,6 +20,8 @@ import { PaperAirplaneIcon, SquareCircleIcon } from '@primer/octicons-react';
 export interface InputPromptFooterProps {
   /** Content to render on the left side (dropdowns, indicators, etc.) */
   children?: ReactNode;
+  /** Content to render on the right side, just before the send/stop button */
+  rightContent?: ReactNode;
   /** Whether the agent is loading / streaming */
   isLoading?: boolean;
   /** Whether the send button should be disabled */
@@ -32,6 +34,7 @@ export interface InputPromptFooterProps {
 
 export function InputPromptFooter({
   children,
+  rightContent,
   isLoading = false,
   sendDisabled = false,
   onSend,
@@ -53,23 +56,26 @@ export function InputPromptFooter({
         {children}
       </Box>
 
-      {/* Right — submit / stop */}
-      {isLoading ? (
-        <IconButton
-          icon={SquareCircleIcon}
-          aria-label="Stop"
-          onClick={onStop}
-          size="small"
-        />
-      ) : (
-        <IconButton
-          icon={PaperAirplaneIcon}
-          aria-label="Send"
-          onClick={onSend}
-          disabled={sendDisabled}
-          size="small"
-        />
-      )}
+      {/* Right — indicators + submit / stop */}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        {rightContent}
+        {isLoading ? (
+          <IconButton
+            icon={SquareCircleIcon}
+            aria-label="Stop"
+            onClick={onStop}
+            size="small"
+          />
+        ) : (
+          <IconButton
+            icon={PaperAirplaneIcon}
+            aria-label="Send"
+            onClick={onSend}
+            disabled={sendDisabled}
+            size="small"
+          />
+        )}
+      </Box>
     </Box>
   );
 }

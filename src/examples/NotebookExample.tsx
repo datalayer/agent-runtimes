@@ -13,7 +13,7 @@
  * 1. Start the agent-runtimes server: `npm run start:server`
  * 2. Start the frontend: `npm run dev`
  *
- * @module examples/AgentRuntimeNotebookExample
+ * @module examples/NotebookExample
  */
 
 import React, { useCallback, useEffect, useState } from 'react';

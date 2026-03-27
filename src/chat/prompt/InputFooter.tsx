@@ -4,12 +4,12 @@
  */
 
 /**
- * InputToolbar — Bottom toolbar below the InputPrompt component.
+ * InputFooter — Bottom toolbar below the InputPrompt component.
  *
  * Contains the InputPrompt component, the TokenUsageBar, and the
  * model / tools / skills action-menu selectors.
  *
- * @module chat/prompt/InputToolbar
+ * @module chat/prompt/InputFooter
  */
 
 import {
@@ -21,12 +21,17 @@ import {
 } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { ToolsIcon, BriefcaseIcon, AiModelIcon } from '@primer/octicons-react';
-
 import { InputPrompt } from './InputPrompt';
 import { TokenUsageBar } from '../usage/TokenUsageBar';
-import type { ModelConfig, MCPServerConfig, SkillInfo } from '../../types';
-import type { ContextSnapshotData } from '../../types/context';
-import type { BuiltinTool } from '../../types';
+import { McpStatusIndicator } from '../indicators/McpStatusIndicator';
+import { SandboxStatusIndicator } from '../indicators/SandboxStatusIndicator';
+import type {
+  BuiltinTool,
+  ContextSnapshotData,
+  MCPServerConfig,
+  ModelConfig,
+  SkillInfo,
+} from '../../types';
 
 // ---------------------------------------------------------------------------
 // Props
@@ -138,6 +143,12 @@ export function InputToolbar({
         padding={padding}
         value={input}
         onChange={setInput}
+        footerRightContent={
+          <>
+            <SandboxStatusIndicator />
+            <McpStatusIndicator />
+          </>
+        }
       />
 
       {/* Token usage bar — between input and selectors */}

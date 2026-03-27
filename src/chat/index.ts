@@ -60,6 +60,16 @@ export { ChatSidebar, type ChatSidebarProps } from './ChatSidebar';
 export { ChatStandalone } from './ChatStandalone';
 export { ChatBase } from './base/ChatBase';
 export { InputPrompt, type InputPromptProps } from './prompt';
+export {
+  McpStatusIndicator,
+  type McpStatusIndicatorProps,
+  type McpServerStatus,
+  type McpAggregateStatus,
+  SandboxStatusIndicator,
+  type SandboxStatusIndicatorProps,
+  type SandboxAggregateStatus,
+  type SandboxWsStatus,
+} from './indicators';
 export { PoweredByTag, type PoweredByTagProps } from './display/PoweredByTag';
 export {
   FloatingBrandButton,

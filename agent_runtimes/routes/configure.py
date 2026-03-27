@@ -3,12 +3,21 @@
 
 """FastAPI routes for frontend configuration."""
 
+import asyncio
+import json
 import logging
 import os
 from pathlib import Path as FilePath
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Path, Query
+from fastapi import (
+    APIRouter,
+    HTTPException,
+    Path,
+    Query,
+    WebSocket,
+    WebSocketDisconnect,
+)
 from pydantic import BaseModel
 
 from agent_runtimes.config import get_frontend_config
@@ -412,7 +421,6 @@ async def export_agent_context_csv(
     from io import StringIO
 
     from ..context.session import get_agent_context_snapshot
-    from ..context.usage import get_usage_tracker
 
     snapshot = get_agent_context_snapshot(agent_id)
     if snapshot is None:
@@ -423,9 +431,8 @@ async def export_agent_context_csv(
             "csv": "",
         }
 
-    # Get session ID from the usage tracker
-    tracker = get_usage_tracker()
-    session_id = agent_id  # Use agent_id as session identifier
+    # Use agent_id as session identifier for exported usage rows.
+    session_id = agent_id
 
     output = StringIO()
     writer = csv.writer(output)
@@ -656,7 +663,7 @@ async def get_sandbox_status_endpoint() -> dict[str, Any]:
 
 
 @router.post("/sandbox/interrupt")
-async def interrupt_sandbox() -> dict[str, Any]:
+async def interrupt_sandbox(agent_id: str | None = None) -> dict[str, Any]:
     """
     Interrupt the currently running code in the sandbox.
 
@@ -668,8 +675,12 @@ async def interrupt_sandbox() -> dict[str, Any]:
             get_code_sandbox_manager,
         )
 
-        manager = get_code_sandbox_manager()
-        sandbox = manager.get_managed_sandbox()
+        sandbox = None
+        if agent_id:
+            sandbox = _get_agent_codemode_sandbox(agent_id)
+        if sandbox is None:
+            manager = get_code_sandbox_manager()
+            sandbox = manager.get_managed_sandbox()
 
         if not sandbox.is_executing:
             return {"interrupted": False, "reason": "No code is currently executing"}
@@ -783,6 +794,177 @@ def _test_jupyter_connection(
         )
     except Exception as e:
         return False, f"Connection error: {str(e)}"
+
+
+# =========================================================================
+# Sandbox Status WebSocket
+# =========================================================================
+
+
+def _get_agent_codemode_sandbox(agent_id: str) -> Any | None:
+    """Return the codemode sandbox for an agent when available."""
+    try:
+        from agent_runtimes.routes.acp import _agents as acp_agents
+
+        entry = acp_agents.get(agent_id)
+        if not entry:
+            return None
+        adapter = entry[0]
+        toolsets = getattr(adapter, "_non_mcp_toolsets", []) or []
+        for toolset in toolsets:
+            if "CodemodeToolset" not in type(toolset).__name__:
+                continue
+            sandbox = getattr(toolset, "_sandbox", None)
+            if sandbox is None:
+                sandbox = getattr(toolset, "sandbox", None)
+            return sandbox
+    except Exception:
+        return None
+    return None
+
+
+def _build_sandbox_ws_status(agent_id: str | None = None) -> dict[str, Any]:
+    """
+    Build a lightweight sandbox status dict for WebSocket streaming.
+
+    This is cheaper than calling ``_get_sandbox_status()`` because it
+    skips the Jupyter HTTP ping — for the WebSocket we already know the
+    variant and simply report execution state.
+    """
+    try:
+        from agent_runtimes.services.code_sandbox_manager import (
+            get_code_sandbox_manager,
+        )
+
+        manager = get_code_sandbox_manager()
+        status = manager.get_status()
+
+        sandbox_running = bool(status.get("sandbox_running", False))
+        is_executing = False
+        variant = status["variant"]
+        jupyter_url = status.get("jupyter_url")
+
+        # If an agent_id is provided, prefer the agent codemode sandbox state.
+        # This tracks the sandbox actually used for code execution.
+        if agent_id:
+            agent_sandbox = _get_agent_codemode_sandbox(agent_id)
+            if agent_sandbox is not None:
+                sandbox_running = True
+                is_executing = bool(getattr(agent_sandbox, "is_executing", False))
+                sandbox_cls = type(agent_sandbox).__name__.lower()
+                if "jupyter" in sandbox_cls:
+                    variant = "jupyter"
+                agent_url = getattr(agent_sandbox, "_server_url", None)
+                if agent_url:
+                    jupyter_url = str(agent_url)
+        else:
+            # Global fallback: inspect the existing sandbox instance without
+            # triggering sandbox creation on every poll tick.
+            existing = getattr(manager, "_sandbox", None)
+            if existing is not None:
+                is_executing = bool(getattr(existing, "is_executing", False))
+
+        return {
+            "variant": variant,
+            "sandbox_running": sandbox_running,
+            "is_executing": is_executing,
+            "jupyter_url": jupyter_url,
+        }
+    except ImportError:
+        return {
+            "variant": "unavailable",
+            "sandbox_running": False,
+            "is_executing": False,
+        }
+    except Exception as e:
+        logger.debug(f"Error building sandbox WS status: {e}")
+        return {
+            "variant": "error",
+            "sandbox_running": False,
+            "is_executing": False,
+            "error": str(e),
+        }
+
+
+@router.websocket("/sandbox/ws")
+async def sandbox_status_ws(websocket: WebSocket, agent_id: str | None = None) -> None:
+    """
+    WebSocket endpoint that streams sandbox status updates.
+
+    Sends a JSON message every time the status changes (or at most
+    every 500 ms).  The client can also send ``{"action": "interrupt"}``
+    to request a sandbox interrupt.
+
+    Message format (server → client)::
+
+        {
+            "variant": "local-eval" | "local-jupyter" | "jupyter" | "unavailable",
+            "sandbox_running": true/false,
+            "is_executing": true/false,
+            "jupyter_url": "..." | null
+        }
+    """
+    await websocket.accept()
+    logger.debug("Sandbox status WebSocket connected")
+
+    last_status: dict[str, Any] | None = None
+
+    async def send_status() -> None:
+        nonlocal last_status
+        status = _build_sandbox_ws_status(agent_id=agent_id)
+        # Only send when status changed.
+        if status != last_status:
+            last_status = status
+            await websocket.send_json(status)
+
+    try:
+        # Send initial status immediately.
+        await send_status()
+
+        while True:
+            # Listen for incoming messages with a short timeout so we
+            # can periodically push status updates.
+            try:
+                raw = await asyncio.wait_for(
+                    websocket.receive_text(), timeout=0.5
+                )
+                try:
+                    msg = json.loads(raw)
+                except (json.JSONDecodeError, ValueError):
+                    msg = {}
+
+                if msg.get("action") == "interrupt":
+                    logger.info("Sandbox interrupt requested via WebSocket")
+                    try:
+                        sandbox = None
+                        if agent_id:
+                            sandbox = _get_agent_codemode_sandbox(agent_id)
+                        if sandbox is None:
+                            from agent_runtimes.services.code_sandbox_manager import (
+                                get_code_sandbox_manager,
+                            )
+
+                            mgr = get_code_sandbox_manager()
+                            sandbox = mgr.get_managed_sandbox()
+                        success = sandbox.interrupt() if sandbox.is_executing else False
+                        await websocket.send_json(
+                            {"action": "interrupt", "success": success}
+                        )
+                    except Exception as exc:
+                        await websocket.send_json(
+                            {"action": "interrupt", "success": False, "error": str(exc)}
+                        )
+
+            except asyncio.TimeoutError:
+                pass  # Normal — used to drive the poll loop.
+
+            # Poll status but only emit when changed.
+            await send_status()
+
+    except WebSocketDisconnect:
+        logger.debug("Sandbox status WebSocket disconnected")
+    except Exception as exc:
+        logger.debug(f"Sandbox status WebSocket error: {exc}")
 
 
 @router.post("/codemode/toggle")

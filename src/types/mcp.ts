@@ -71,6 +71,64 @@ export interface MCPServerManagerTool {
 }
 
 /**
+ * Aggregate status of all MCP servers.
+ */
+export type McpAggregateStatus =
+  | 'none'
+  | 'not_started'
+  | 'starting'
+  | 'failed'
+  | 'started';
+
+/**
+ * Per-server status entry returned by the MCP toolsets-status endpoint.
+ */
+export interface McpServerStatus {
+  id: string;
+  status: 'none' | 'not_started' | 'starting' | 'failed' | 'started';
+  error?: string;
+  tools_count?: number;
+}
+
+/**
+ * Full response from `/api/v1/configure/mcp-toolsets-status`.
+ */
+export interface McpToolsetsStatusResponse {
+  initialized: boolean;
+  ready_count: number;
+  failed_count: number;
+  ready_servers: string[];
+  failed_servers: Record<string, string>;
+  servers: McpServerStatus[];
+}
+
+import { defaultIndicatorColors } from '@datalayer/primer-addons/lib/theme';
+
+/**
+ * Primer-addon indicator colours for each aggregate MCP status.
+ * Uses the shared indicator palette so colours stay consistent
+ * across themes and components.
+ */
+export const MCP_STATUS_COLORS: Record<McpAggregateStatus, string> = {
+  none: defaultIndicatorColors.neutral,
+  not_started: defaultIndicatorColors.muted,
+  starting: defaultIndicatorColors.warning,
+  failed: defaultIndicatorColors.danger,
+  started: defaultIndicatorColors.success,
+};
+
+/**
+ * Human-readable labels for each aggregate MCP status.
+ */
+export const MCP_STATUS_LABELS: Record<McpAggregateStatus, string> = {
+  none: 'No MCP servers',
+  not_started: 'MCP servers not started',
+  starting: 'MCP servers starting\u2026',
+  failed: 'MCP server error',
+  started: 'MCP servers ready',
+};
+
+/**
  * MCP server shape used by MCP management views and /available endpoint payloads.
  */
 export interface MCPServerManager {

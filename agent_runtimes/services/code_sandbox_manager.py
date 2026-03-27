@@ -897,3 +897,27 @@ def get_code_sandbox_manager() -> CodeSandboxManager:
         The CodeSandboxManager instance.
     """
     return CodeSandboxManager.get_instance()
+
+
+def interrupt_sandbox() -> bool:
+    """
+    Interrupt any code currently running in the managed sandbox.
+
+    This is the single entry-point that should be called whenever
+    a user-initiated stop/cancel occurs (stop button, ACP session/cancel,
+    AG-UI terminate, etc.).
+
+    Returns:
+        True if code was executing and was successfully interrupted.
+    """
+    try:
+        manager = get_code_sandbox_manager()
+        sandbox = manager.get_managed_sandbox()
+        if sandbox.is_executing:
+            success = sandbox.interrupt()
+            if success:
+                logger.info("Sandbox code execution interrupted")
+            return success
+    except Exception as exc:
+        logger.debug(f"Sandbox interrupt failed (non-critical): {exc}")
+    return False

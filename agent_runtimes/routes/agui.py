@@ -75,7 +75,7 @@ def unregister_thread(thread_id: str) -> None:
 
 def cancel_thread(thread_id: str) -> bool:
     """
-    Cancel a running thread.
+    Cancel a running thread and interrupt the sandbox.
 
     Args:
         thread_id: The thread identifier to cancel.
@@ -86,13 +86,20 @@ def cancel_thread(thread_id: str) -> bool:
     if thread_id in _running_threads:
         _running_threads[thread_id].set()
         logger.info(f"Cancelled AG-UI thread: {thread_id}")
+        # Also interrupt the sandbox so running code stops immediately.
+        try:
+            from agent_runtimes.services.code_sandbox_manager import interrupt_sandbox
+
+            interrupt_sandbox()
+        except Exception:
+            pass
         return True
     return False
 
 
 def cancel_all_threads() -> int:
     """
-    Cancel all running threads.
+    Cancel all running threads and interrupt the sandbox.
 
     Returns:
         Number of threads cancelled.
@@ -102,6 +109,13 @@ def cancel_all_threads() -> int:
         cancel_event.set()
         count += 1
         logger.info(f"Cancelled AG-UI thread: {thread_id}")
+    if count > 0:
+        try:
+            from agent_runtimes.services.code_sandbox_manager import interrupt_sandbox
+
+            interrupt_sandbox()
+        except Exception:
+            pass
     return count
 
 

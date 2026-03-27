@@ -6,7 +6,7 @@
 /**
  * AgentCodemodeExample
  *
- * Demonstrates Code Mode: tools that return structured outputs with schemas
+ * Demonstrates Codemode: tools that return structured outputs with schemas
  * rendered inline as executable code blocks, diffs, or file previews.
  *
  * - Creates a cloud agent runtime (environment: 'ai-agents-env') via the Datalayer
@@ -76,7 +76,7 @@ const AgentCodemodeInner: React.FC<{ onLogout: () => void }> = ({
     agentConfig: {
       name: AGENT_NAME,
       protocol: 'ag-ui',
-      description: 'Agent with Code Mode structured tool outputs',
+      description: 'Agent with Codemode structured tool outputs',
     },
   });
 
@@ -225,7 +225,7 @@ const AgentCodemodeInner: React.FC<{ onLogout: () => void }> = ({
       >
         <CodeIcon size={16} />
         <Heading as="h3" sx={{ fontSize: 2, flex: 1 }}>
-          Code Mode — {podName}
+          Codemode — {podName}
         </Heading>
         {pendingCount > 0 && (
           <Label variant="attention" size="small">
@@ -251,7 +251,7 @@ const AgentCodemodeInner: React.FC<{ onLogout: () => void }> = ({
             protocol="ag-ui"
             baseUrl={agentBaseUrl}
             agentId={agentId}
-            title="Code Mode Agent"
+            title="Codemode Agent"
             placeholder="Ask the agent to generate or modify code…"
             description={`${artifacts.length} code artifact${artifacts.length !== 1 ? 's' : ''}`}
             showHeader={true}
@@ -540,8 +540,8 @@ const AgentCodemodeExample: React.FC = () => {
         <SignInSimple
           onSignIn={handleSignIn}
           onApiKeySignIn={apiKey => handleSignIn(apiKey, 'api-key-user')}
-          title="Agent Code Mode"
-          description="Sign in to use Code Mode with structured tool outputs."
+          title="Agent Codemode"
+          description="Sign in to use Codemode with structured tool outputs."
           leadingIcon={<CodeIcon size={24} />}
         />
       </ThemedProvider>

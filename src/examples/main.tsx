@@ -20,10 +20,12 @@ import { INotebookContent } from '@jupyterlab/nbformat';
 import { ServiceManager } from '@jupyterlab/services';
 import {
   DatalayerThemeProvider,
+  DatalayerLogo,
+  getLogoColors,
   themeConfigs,
-  ThemeSwitcher,
   Box,
 } from '@datalayer/primer-addons';
+import { ThemeSwitcher } from '@datalayer/primer-addons/lib/components/appearance';
 import {
   coreStore,
   iamStore,
@@ -468,6 +470,7 @@ const ExampleAppThemed: React.FC<{
 }) => {
   const { colorMode, theme: themeVariant } = useExampleThemeStore();
   const cfg = themeConfigs[themeVariant];
+  const logoColors = getLogoColors(themeVariant, colorMode);
 
   return (
     <DatalayerThemeProvider
@@ -554,11 +557,10 @@ const ExampleAppThemed: React.FC<{
           {/* Right: theme picker + color mode + logo */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
             <ThemeSwitcher useStore={useExampleThemeStore} />
-
-            <img
-              src="https://assets.datalayer.tech/datalayer-25.svg"
-              alt="Datalayer"
-              style={{ height: '24px' }}
+            <DatalayerLogo
+              size={24}
+              primaryColor={logoColors.primary}
+              secondaryColor={logoColors.secondary}
             />
           </Box>
         </Box>
