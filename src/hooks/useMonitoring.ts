@@ -4,115 +4,159 @@
  */
 
 /**
- * Agent monitoring/event hooks.
+ * Agent monitoring hooks.
  *
  * @module hooks/useMonitoring
  */
 
-import { useMemo } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useCoreStore, useIAMStore } from '@datalayer/core/lib/state';
-import { DEFAULT_SERVICE_URLS } from '@datalayer/core/lib/api/constants';
-import { events } from '../api';
-import type {
-  ListAgentEventsParams,
-  CreateAgentEventRequest,
-  UpdateAgentEventRequest,
-} from '../types';
+import { useEffect, useState } from 'react';
+import { createOtelClient } from '@datalayer/core/lib/otel';
 
-// ─── Auth helpers ────────────────────────────────────────────────────
-
-function useAuthToken(): string {
-  const token = useIAMStore((s: any) => s.token);
-  return token ?? '';
+export interface OtelQueryOptions {
+  metric: string;
+  serviceName?: string;
+  runUrl?: string;
+  apiKey?: string;
+  limit?: number;
 }
 
-function useBaseUrl(): string {
-  const config = useCoreStore((s: any) => s.configuration);
-  return config?.aiagentsRunUrl ?? DEFAULT_SERVICE_URLS.AI_AGENTS;
+interface MetricValueRow {
+  value?: unknown;
+  value_double?: unknown;
+  value_int?: unknown;
 }
 
-// ─── Base hooks ──────────────────────────────────────────────────────
+export function toMetricValue(row: MetricValueRow): number {
+  const candidates = [row.value_double, row.value_int, row.value];
+  for (const candidate of candidates) {
+    if (typeof candidate === 'number' && Number.isFinite(candidate)) {
+      return candidate;
+    }
+    if (typeof candidate === 'string') {
+      const parsed = Number(candidate);
+      if (Number.isFinite(parsed)) {
+        return parsed;
+      }
+    }
+  }
+  return 0;
+}
 
-export function useAgentEvents(params?: ListAgentEventsParams) {
-  const token = useAuthToken();
-  const baseUrl = useBaseUrl();
-
-  return useQuery({
-    queryKey: ['agent-events', params],
-    queryFn: () => events.listEvents(token, params ?? {}, baseUrl),
-    enabled: !!token,
-    staleTime: 10_000,
-    refetchInterval: 15_000,
+export async function fetchOtelMetricRows({
+  metric,
+  serviceName,
+  runUrl,
+  apiKey,
+  limit = 500,
+}: OtelQueryOptions): Promise<MetricValueRow[]> {
+  const client = createOtelClient({
+    baseUrl: runUrl,
+    token: apiKey,
   });
-}
-
-export function useAgentEvent(eventId?: string) {
-  const token = useAuthToken();
-  const baseUrl = useBaseUrl();
-
-  return useQuery({
-    queryKey: ['agent-events', eventId],
-    queryFn: () => events.getEvent(token, eventId as string, baseUrl),
-    enabled: !!token && !!eventId,
-    staleTime: 10_000,
+  const filtered = await client.fetchMetrics({
+    metricName: metric,
+    serviceName,
+    limit,
   });
-}
+  if (filtered.data.length > 0 || !serviceName) {
+    return filtered.data;
+  }
 
-export function useCreateAgentEvent() {
-  const token = useAuthToken();
-  const baseUrl = useBaseUrl();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (payload: CreateAgentEventRequest) =>
-      events.createEvent(token, payload, baseUrl),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['agent-events'] });
-    },
+  const fallback = await client.fetchMetrics({
+    metricName: metric,
+    limit,
   });
+  return fallback.data;
 }
 
-export function useUpdateAgentEvent() {
-  const token = useAuthToken();
-  const baseUrl = useBaseUrl();
-  const queryClient = useQueryClient();
+export async function fetchOtelMetricTotal(
+  options: OtelQueryOptions,
+): Promise<number> {
+  const rows = await fetchOtelMetricRows(options);
+  return rows.reduce((sum, row) => sum + toMetricValue(row), 0);
+}
 
-  return useMutation({
-    mutationFn: ({
-      eventId,
-      payload,
-    }: {
-      eventId: string;
-      payload: UpdateAgentEventRequest;
-    }) => events.updateEvent(token, eventId, payload, baseUrl),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['agent-events'] });
-      queryClient.invalidateQueries({
-        queryKey: ['agent-events', variables.eventId],
-      });
-    },
+export interface OtelTotalTokensOptions {
+  serviceName?: string;
+  runUrl?: string;
+  apiKey?: string;
+  limit?: number;
+}
+
+export async function fetchOtelTotalTokens({
+  serviceName,
+  runUrl,
+  apiKey,
+  limit = 500,
+}: OtelTotalTokensOptions): Promise<number> {
+  const total = await fetchOtelMetricTotal({
+    metric: 'agent_runtimes.prompt.turn.total_tokens',
+    serviceName,
+    runUrl,
+    apiKey,
+    limit,
   });
+  if (total > 0) {
+    return total;
+  }
+
+  const prompt = await fetchOtelMetricTotal({
+    metric: 'agent_runtimes.prompt.turn.prompt_tokens',
+    serviceName,
+    runUrl,
+    apiKey,
+    limit,
+  });
+  const completion = await fetchOtelMetricTotal({
+    metric: 'agent_runtimes.prompt.turn.completion_tokens',
+    serviceName,
+    runUrl,
+    apiKey,
+    limit,
+  });
+  return prompt + completion;
 }
 
-// ─── Composite hook ──────────────────────────────────────────────────
+export function useOtelTotalTokens({
+  serviceName,
+  runUrl,
+  apiKey,
+  limit = 500,
+}: OtelTotalTokensOptions): string {
+  const [tokensLabel, setTokensLabel] = useState('-');
 
-export function useMonitoring(
-  params?: ListAgentEventsParams,
-  eventId?: string,
-) {
-  const eventsQuery = useAgentEvents(params);
-  const eventQuery = useAgentEvent(eventId);
-  const createEvent = useCreateAgentEvent();
-  const updateEvent = useUpdateAgentEvent();
+  useEffect(() => {
+    let cancelled = false;
 
-  return useMemo(
-    () => ({
-      eventsQuery,
-      eventQuery,
-      createEvent,
-      updateEvent,
-    }),
-    [eventsQuery, eventQuery, createEvent, updateEvent],
-  );
+    const load = async () => {
+      try {
+        const total = await fetchOtelTotalTokens({
+          serviceName,
+          runUrl,
+          apiKey,
+          limit,
+        });
+        if (cancelled) {
+          return;
+        }
+        if (total > 0) {
+          setTokensLabel(Math.round(total).toLocaleString());
+        } else {
+          setTokensLabel('-');
+        }
+      } catch {
+        if (!cancelled) {
+          setTokensLabel('-');
+        }
+      }
+    };
+
+    load();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [apiKey, limit, runUrl, serviceName]);
+
+  return tokensLabel;
 }

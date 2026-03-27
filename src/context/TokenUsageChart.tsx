@@ -5,7 +5,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import ReactECharts from 'echarts-for-react';
-import { fetchOtelMetricRows, toMetricValue } from './otelMetrics';
+import { fetchOtelMetricRows, toMetricValue } from '../hooks/useMonitoring';
 
 const SERIES = [
   {
@@ -75,7 +75,7 @@ function fillDayRange(sortedKeys: string[]): string[] {
   return filled;
 }
 
-export interface OtelTokenUsageChartProps {
+export interface TokenUsageChartProps {
   serviceName?: string;
   apiKey?: string;
   runUrl?: string;
@@ -132,14 +132,14 @@ function extractServiceName(row: Record<string, unknown>): string | undefined {
   return undefined;
 }
 
-export function OtelTokenUsageChart({
+export function TokenUsageChart({
   serviceName,
   apiKey,
   runUrl,
   wsRunUrl,
   height = 160,
   days = DEFAULT_DAYS,
-}: OtelTokenUsageChartProps) {
+}: TokenUsageChartProps) {
   const [dayData, setDayData] = useState<DayData>({});
 
   // Derive contiguous day keys and display labels from the data,
@@ -358,4 +358,4 @@ export function OtelTokenUsageChart({
   );
 }
 
-export default OtelTokenUsageChart;
+export default TokenUsageChart;

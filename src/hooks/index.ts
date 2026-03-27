@@ -167,17 +167,21 @@ export {
 } from './useToolApprovals';
 
 export {
-  useNotifications as useAgentsNotifications,
-  useFilteredNotifications as useNotifications,
+  useNotifications,
+  useFilteredNotifications,
   useUnreadNotificationCount,
   useMarkNotificationRead,
   useMarkAllNotificationsRead,
-} from './useNotifications';
-
-export {
-  useMonitoring,
   useAgentEvents,
   useAgentEvent,
   useCreateAgentEvent,
   useUpdateAgentEvent,
+} from './useNotifications';
+
+export {
+  useOtelTotalTokens,
+  fetchOtelTotalTokens,
+  fetchOtelMetricTotal,
+  fetchOtelMetricRows,
+  toMetricValue,
 } from './useMonitoring';
