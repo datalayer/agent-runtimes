@@ -143,18 +143,12 @@ const AgentSandboxInner: React.FC<{ onLogout: () => void }> = ({
   const [wsLog, setWsLog] = useState<WsLogEntry[]>([]);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout>>();
-  const logEndRef = useRef<HTMLDivElement>(null);
-
-  // auto-scroll to bottom of log
-  useEffect(() => {
-    logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [wsLog]);
 
   const addLog = useCallback((direction: 'recv' | 'sent', raw: string) => {
     setWsLog(prev => {
-      const next = [...prev, { id: ++_logId, ts: tsNow(), direction, raw }];
-      // Keep last 200 entries
-      return next.slice(-200);
+      const next = [{ id: ++_logId, ts: tsNow(), direction, raw }, ...prev];
+      // Keep newest 200 entries
+      return next.slice(0, 200);
     });
   }, []);
 
@@ -738,7 +732,6 @@ const AgentSandboxInner: React.FC<{ onLogout: () => void }> = ({
               </Box>
             ))
           )}
-          <div ref={logEndRef} />
         </Box>
       </Box>
     </Box>

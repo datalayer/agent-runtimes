@@ -145,6 +145,7 @@ def create_codemode_toolset(
     shared_sandbox: Any | None = None,
     mcp_proxy_url: str | None = None,
     enable_discovery_tools: bool = True,
+    status_change_callback: Any | None = None,
 ) -> Any | None:
     """
     Create a CodemodeToolset with the specified MCP servers.
@@ -254,6 +255,7 @@ def create_codemode_toolset(
             config=codemode_config,
             sandbox=shared_sandbox,
             allow_discovery_tools=enable_discovery_tools,
+            status_change_callback=status_change_callback,
         )
 
         logger.info("Created CodemodeToolset")

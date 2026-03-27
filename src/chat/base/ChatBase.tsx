@@ -1373,23 +1373,77 @@ function ChatBaseInner({
   // ---- handleStop ----
   const handleStop = useCallback(() => {
     abortControllerRef.current?.abort();
-    adapterRef.current?.disconnect();
+
+    // Best-effort cancellation without tearing down adapter/session.
+    const adapter = adapterRef.current as {
+      terminateSession?: () => Promise<void>;
+      terminateAgent?: () => Promise<void>;
+      terminateTask?: () => Promise<void>;
+      terminateRequest?: () => Promise<void>;
+    } | null;
+    if (adapter) {
+      if (typeof adapter.terminateSession === 'function') {
+        void adapter.terminateSession().catch(() => {});
+      } else if (typeof adapter.terminateAgent === 'function') {
+        void adapter.terminateAgent().catch(() => {});
+      } else if (typeof adapter.terminateTask === 'function') {
+        void adapter.terminateTask().catch(() => {});
+      } else if (typeof adapter.terminateRequest === 'function') {
+        void adapter.terminateRequest().catch(() => {});
+      }
+    }
+
+    // Mark in-flight tool calls as interrupted so UI doesn't remain "Executing".
+    for (const [toolCallId, toolCall] of toolCallsRef.current.entries()) {
+      if (toolCall.status === 'executing' || toolCall.status === 'inProgress') {
+        toolCallsRef.current.set(toolCallId, {
+          ...toolCall,
+          status: 'error',
+          error: 'Interrupted by user',
+        });
+      }
+    }
+    setDisplayItems(prev =>
+      prev.map(item => {
+        if (!isToolCallMessage(item)) return item;
+        if (item.status !== 'executing' && item.status !== 'inProgress') {
+          return item;
+        }
+        return {
+          ...item,
+          status: 'error',
+          error: 'Interrupted by user',
+        } as ToolCallMessage;
+      }),
+    );
+
     if (useStoreMode) {
       useChatStore.getState().stopStreaming();
     }
     pendingToolExecutionsRef.current = 0;
     setIsLoading(false);
     setIsStreaming(false);
+    suppressAssistantTextForToolOnlyRef.current = false;
+    currentAssistantMessageRef.current = null;
+
     // Also interrupt any code running in the sandbox (best-effort).
     if (protocol?.configEndpoint) {
-      const interruptUrl = `${getApiBaseFromConfig(protocol.configEndpoint)}/configure/sandbox/interrupt`;
+      const query = protocol.agentId
+        ? `?agent_id=${encodeURIComponent(protocol.agentId)}`
+        : '';
+      const interruptUrl = `${getApiBaseFromConfig(protocol.configEndpoint)}/configure/sandbox/interrupt${query}`;
       const headers: HeadersInit = { 'Content-Type': 'application/json' };
       if (protocol.authToken) {
         headers['Authorization'] = `Bearer ${protocol.authToken}`;
       }
       fetch(interruptUrl, { method: 'POST', headers }).catch(() => {});
     }
-  }, [useStoreMode, protocol?.configEndpoint, protocol?.authToken]);
+  }, [
+    useStoreMode,
+    protocol?.configEndpoint,
+    protocol?.authToken,
+    protocol?.agentId,
+  ]);
 
   // ---- handleNewChat ----
   const handleNewChat = useCallback(() => {

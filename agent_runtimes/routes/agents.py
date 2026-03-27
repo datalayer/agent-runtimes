@@ -215,6 +215,7 @@ def _test_jupyter_sandbox(jupyter_sandbox_url: str) -> tuple[bool, str | None]:
 def _build_codemode_toolset(
     request: "CreateAgentRequest",
     http_request: Request,
+    agent_id: str,
     sandbox: Any | None = None,
     disable_mcp_servers: bool = False,
 ) -> Any:
@@ -296,6 +297,18 @@ def _build_codemode_toolset(
         logger.info(f"Filtered to {len(servers)} selected servers: {selected_ids}")
 
     # Use factory to create codemode toolset
+    async def _notify_status_change(_is_executing: bool) -> None:
+        try:
+            from .configure import notify_sandbox_status_change
+
+            await notify_sandbox_status_change(agent_id=agent_id)
+        except Exception as exc:
+            logger.debug(
+                "Failed to notify sandbox status change for agent %s: %s",
+                agent_id,
+                exc,
+            )
+
     return create_codemode_toolset(
         mcp_servers=servers,
         workspace_path=workspace_path,
@@ -305,6 +318,7 @@ def _build_codemode_toolset(
         shared_sandbox=sandbox,
         mcp_proxy_url=mcp_proxy_url,
         enable_discovery_tools=True,
+        status_change_callback=_notify_status_change,
     )
 
 
@@ -874,6 +888,7 @@ async def create_agent(
             codemode_toolset = _build_codemode_toolset(
                 request,
                 http_request,
+                agent_id=agent_id,
                 sandbox=shared_sandbox,
                 disable_mcp_servers=disable_mcp_for_codemode,
             )
@@ -1054,6 +1069,7 @@ async def create_agent(
                     return _build_codemode_toolset(
                         temp_request,
                         http_request,
+                        agent_id=agent_id,
                         sandbox=fresh_sandbox,
                         disable_mcp_servers=disable_mcp_for_codemode,
                     )
@@ -1821,6 +1837,13 @@ async def configure_sandbox(request: ConfigureSandboxRequest) -> SandboxStatusRe
             jupyter_token=request.jupyter_token,
         )
 
+        try:
+            from .configure import notify_sandbox_status_change
+
+            await notify_sandbox_status_change()
+        except Exception as exc:
+            logger.debug("Failed to notify sandbox configure change: %s", exc)
+
         logger.info(f"Sandbox configured: variant={request.variant}")
 
         status = manager.get_status()
@@ -1857,6 +1880,13 @@ async def restart_sandbox() -> SandboxStatusResponse:
 
         manager = get_code_sandbox_manager()
         manager.restart()
+
+        try:
+            from .configure import notify_sandbox_status_change
+
+            await notify_sandbox_status_change()
+        except Exception as exc:
+            logger.debug("Failed to notify sandbox restart change: %s", exc)
 
         logger.info(f"Sandbox restarted: variant={manager.variant}")
 
