@@ -12,6 +12,7 @@ export * from './agentspecs';
 export * from './chat';
 export * from './checkpoints';
 export * from './config';
+export * from './connection';
 export * from './context';
 export * from './cost';
 export * from './envvars';

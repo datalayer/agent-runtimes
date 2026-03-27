@@ -65,11 +65,7 @@ export {
   FloatingBrandButton,
   type FloatingBrandButtonProps,
 } from './display/FloatingBrandButton';
-export {
-  ChatHeader,
-  type ChatHeaderProps,
-  type ConnectionState,
-} from './header/ChatHeader';
+export { ChatHeader, type ChatHeaderProps } from './header/ChatHeader';
 
 // Components - Message part renderers
 export {

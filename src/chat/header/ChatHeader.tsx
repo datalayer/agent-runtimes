@@ -16,15 +16,7 @@ import {
   SignOutIcon,
   SidebarCollapseIcon,
 } from '@primer/octicons-react';
-
-/**
- * Connection state enumeration
- */
-export type ConnectionState =
-  | 'connected'
-  | 'connecting'
-  | 'disconnected'
-  | 'error';
+import { ConnectionState } from '../../types';
 
 /**
  * ChatHeader props
