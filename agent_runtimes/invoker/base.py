@@ -39,13 +39,17 @@ class BaseInvoker(ABC):
     Parameters
     ----------
     agent_id : str
-        The runtime agent identifier.
+        The runtime agent identifier (used for local agent registry).
     agent_spec_id : str
         The agent spec identifier.
     token : str
         User JWT token for authenticated API calls.
     base_url : str
         Base URL for the AI Agents events API.
+    runtime_id : str | None
+        Kubernetes pod name (HOSTNAME).  Used as the ``agent_id``
+        when creating events and when terminating the runtime via
+        the platform API.  Falls back to *agent_id* when not set.
     """
 
     def __init__(
@@ -54,11 +58,13 @@ class BaseInvoker(ABC):
         agent_spec_id: str,
         token: str,
         base_url: str = "https://prod1.datalayer.run",
+        runtime_id: str | None = None,
     ) -> None:
         self.agent_id = agent_id
         self.agent_spec_id = agent_spec_id
         self.token = token
         self.base_url = base_url
+        self.runtime_id = runtime_id or agent_id
 
     @abstractmethod
     async def invoke(self, trigger_config: dict[str, Any]) -> InvokerResult:

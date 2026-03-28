@@ -32,15 +32,17 @@ class OnceInvoker(BaseInvoker):
         started_at = self._now()
 
         # ── 1. AGENT_STARTED event ───────────────────────────────
+        # Events are keyed by runtime_id (pod name) so the UI can
+        # look them up by the runtime pod name it already knows.
         try:
             create_event(
                 token=self.token,
-                agent_id=self.agent_id,
+                agent_id=self.runtime_id,
                 title="Agent started",
                 kind="agent-started",
                 status="active",
                 payload={
-                    "agent_runtime_id": self.agent_id,
+                    "agent_runtime_id": self.runtime_id,
                     "agent_spec_id": self.agent_spec_id,
                     "started_at": started_at.isoformat(),
                     "trigger_type": "once",
@@ -79,12 +81,12 @@ class OnceInvoker(BaseInvoker):
         try:
             create_event(
                 token=self.token,
-                agent_id=self.agent_id,
+                agent_id=self.runtime_id,
                 title="Agent ended",
                 kind="agent-ended",
                 status=exit_status,
                 payload={
-                    "agent_runtime_id": self.agent_id,
+                    "agent_runtime_id": self.runtime_id,
                     "agent_spec_id": self.agent_spec_id,
                     "started_at": started_at.isoformat(),
                     "ended_at": ended_at.isoformat(),
@@ -148,19 +150,46 @@ class OnceInvoker(BaseInvoker):
         return getattr(response, "content", str(response))
 
     async def _terminate_runtime(self) -> None:
-        """Ask the local agent-runtimes server to delete this agent.
+        """Terminate the runtime after a once-trigger completes.
 
-        This is a best-effort cleanup – the runtime may already be
-        shutting down.
+        1. Delete the agent registration from the local server.
+        2. Ask the Datalayer platform to delete the runtime pod
+           (uses ``runtime_id`` which is the Kubernetes pod name).
         """
         import httpx
 
+        # Step 1: delete local agent registration
         url = f"http://127.0.0.1:8765/api/v1/agents/{self.agent_id}"
         async with httpx.AsyncClient() as client:
             resp = await client.delete(url, timeout=10)
             logger.info(
-                "Runtime termination for %s: %s %s",
+                "Local agent deletion for %s: %s %s",
                 self.agent_id,
                 resp.status_code,
                 resp.text[:200],
+            )
+
+        # Step 2: delete the runtime pod via the platform runtimes API
+        runtime_url = (
+            f"{self.base_url.rstrip('/')}/api/runtimes/v1/runtimes/{self.runtime_id}"
+        )
+        headers = {}
+        if self.token:
+            headers["Authorization"] = f"Bearer {self.token}"
+        try:
+            async with httpx.AsyncClient() as client:
+                resp = await client.delete(
+                    runtime_url, headers=headers, timeout=30
+                )
+                logger.info(
+                    "Platform runtime termination for %s: %s %s",
+                    self.runtime_id,
+                    resp.status_code,
+                    resp.text[:200],
+                )
+        except Exception:
+            logger.warning(
+                "Failed to terminate runtime via platform API for %s: %s",
+                self.runtime_id,
+                traceback.format_exc(),
             )

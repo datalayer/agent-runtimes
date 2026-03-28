@@ -1625,6 +1625,11 @@ function ChatBaseInner({
     );
   }
 
+  // ---- apiBase for indicators (derived from configEndpoint) ----
+  const indicatorApiBase = protocol?.configEndpoint
+    ? getApiBaseFromConfig(protocol.configEndpoint)
+    : undefined;
+
   // ---- Compute data for InputToolbar ----
   const filteredMcpServers = (configQuery.data?.mcpServers || []).filter(
     server => !mcpServers || isServerSelected(server),
@@ -1766,6 +1771,7 @@ function ChatBaseInner({
           enabledSkills={enabledSkills}
           onToggleSkill={toggleSkill}
           onToggleAllSkills={toggleAllSkills}
+          apiBase={indicatorApiBase}
         />
       )}
 

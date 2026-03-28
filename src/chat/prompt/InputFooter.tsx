@@ -86,6 +86,10 @@ export interface InputToolbarProps {
   enabledSkills: Set<string>;
   onToggleSkill: (skillId: string) => void;
   onToggleAllSkills: (skillIds: string[], enable: boolean) => void;
+
+  // ---- Indicators ----
+  /** API base URL passed to MCP / Sandbox indicators */
+  apiBase?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -125,6 +129,7 @@ export function InputToolbar({
   enabledSkills,
   onToggleSkill,
   onToggleAllSkills,
+  apiBase,
 }: InputToolbarProps) {
   // Show token usage when we have valid context data
   const hasContext =
@@ -145,8 +150,8 @@ export function InputToolbar({
         onChange={setInput}
         footerRightContent={
           <>
-            <SandboxStatusIndicator />
-            <McpStatusIndicator />
+            <SandboxStatusIndicator apiBase={apiBase} />
+            <McpStatusIndicator apiBase={apiBase} />
           </>
         }
       />

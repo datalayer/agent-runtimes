@@ -27,6 +27,7 @@ def get_invoker(
     agent_spec_id: str,
     token: str,
     base_url: str = "https://prod1.datalayer.run",
+    runtime_id: str | None = None,
 ) -> BaseInvoker | None:
     """Look up and instantiate an invoker for the given trigger type.
 
@@ -41,6 +42,7 @@ def get_invoker(
         agent_spec_id=agent_spec_id,
         token=token,
         base_url=base_url,
+        runtime_id=runtime_id,
     )
 
 

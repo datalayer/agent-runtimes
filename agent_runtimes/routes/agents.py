@@ -2892,6 +2892,7 @@ async def trigger_run(agent_id: str, body: TriggerRunRequest, request: Request):
     token = auth_header.removeprefix("Bearer ").strip() if auth_header else ""
 
     base_url = os.environ.get("DATALAYER_RUN_URL", "https://prod1.datalayer.run")
+    runtime_id = os.environ.get("HOSTNAME")
 
     import asyncio
 
@@ -2904,6 +2905,7 @@ async def trigger_run(agent_id: str, body: TriggerRunRequest, request: Request):
         agent_spec_id=agent_spec_id,
         token=token,
         base_url=base_url,
+        runtime_id=runtime_id,
     )
 
     if invoker is None:
