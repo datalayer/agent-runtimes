@@ -25,7 +25,7 @@ import {
   themeConfigs,
   Box,
 } from '@datalayer/primer-addons';
-import { ThemeSwitcher } from '@datalayer/primer-addons/lib/components/appearance';
+import { AppearanceControlsWithStore } from '@datalayer/primer-addons/lib/components/appearance';
 import {
   coreStore,
   iamStore,
@@ -556,7 +556,7 @@ const ExampleAppThemed: React.FC<{
 
           {/* Right: theme picker + color mode + logo */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-            <ThemeSwitcher useStore={useExampleThemeStore} />
+            <AppearanceControlsWithStore useStore={useExampleThemeStore} />
             <DatalayerLogo
               size={24}
               primaryColor={logoColors.primary}
