@@ -308,6 +308,9 @@ function ChatBaseInner({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  /** Set to true by handleStop so in-flight / about-to-run tool executions
+   *  can bail out early.  Reset to false at the start of each handleSend. */
+  const stoppedRef = useRef(false);
   const connectedIdentitiesRef = useRef(connectedIdentities);
   connectedIdentitiesRef.current = connectedIdentities;
   // Keep a ref to frontendTools so the event listener closure (which is NOT
@@ -811,7 +814,7 @@ function ChatBaseInner({
           break;
 
         case 'tool-call':
-          if (event.toolCall) {
+          if (event.toolCall && !stoppedRef.current) {
             const toolCallId = event.toolCall.toolCallId || generateMessageId();
             const toolName = event.toolCall.toolName;
             const args = event.toolCall.args || {};
@@ -861,7 +864,12 @@ function ChatBaseInner({
                 t => t.name === toolName,
               );
               const toolHandler = frontendTool?.handler;
-              if (toolHandler) {
+              // Only execute when we have actual args. AG-UI emits an
+              // initial tool-call with empty args on TOOL_CALL_START;
+              // the real args arrive on TOOL_CALL_END. Skip execution
+              // here and let the update branch (above) handle it once
+              // the full args are available.
+              if (toolHandler && Object.keys(args).length > 0) {
                 pendingToolExecutionsRef.current++;
                 executeFrontendTool(toolHandler, toolCallMsg, toolCallId);
               }
@@ -1122,6 +1130,14 @@ function ChatBaseInner({
     toolCallId: string,
   ) {
     (async () => {
+      // If the user clicked Stop, skip executing this tool entirely.
+      if (stoppedRef.current) {
+        pendingToolExecutionsRef.current--;
+        if (pendingToolExecutionsRef.current < 0) {
+          pendingToolExecutionsRef.current = 0;
+        }
+        return;
+      }
       try {
         const result = await toolHandler(toolCallMsg.args);
         if (adapterRef.current) {
@@ -1185,6 +1201,7 @@ function ChatBaseInner({
       const messageContent = (messageOverride ?? input).trim();
       if (!messageContent || isLoading) return;
       if (!adapterRef.current && !onSendMessage) return;
+      stoppedRef.current = false;
       suppressAssistantTextForToolOnlyRef.current =
         isToolCallOnlyPrompt(messageContent);
 
@@ -1371,6 +1388,7 @@ function ChatBaseInner({
 
   // ---- handleStop ----
   const handleStop = useCallback(() => {
+    stoppedRef.current = true;
     abortControllerRef.current?.abort();
 
     // Best-effort cancellation without tearing down adapter/session.
@@ -1379,8 +1397,14 @@ function ChatBaseInner({
       terminateAgent?: () => Promise<void>;
       terminateTask?: () => Promise<void>;
       terminateRequest?: () => Promise<void>;
+      stopGeneration?: () => void;
     } | null;
     if (adapter) {
+      // Abort the client-side SSE / fetch stream (if the adapter exposes it).
+      if (typeof adapter.stopGeneration === 'function') {
+        adapter.stopGeneration();
+      }
+      // Also tell the backend to stop (server-side cancellation).
       if (typeof adapter.terminateSession === 'function') {
         void adapter.terminateSession().catch(() => {});
       } else if (typeof adapter.terminateAgent === 'function') {

@@ -40,7 +40,6 @@ import {
   SignOutIcon,
   GlobeIcon,
   ZapIcon,
-  MailIcon,
   EyeIcon,
   EyeClosedIcon,
   TrashIcon,
@@ -1059,34 +1058,33 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
                         </Button>
                       </Box>
                       {/* Event-type-specific fields */}
-                      {evt.payload && (
-                        <Box sx={{ fontSize: 0, color: 'fg.muted' }}>
-                          {evt.kind === 'agent-ended' &&
-                            evt.payload.outputs && (
-                              <Truncate
-                                maxWidth="100%"
-                                title={String(evt.payload.outputs)}
-                                sx={{ mb: 1, display: 'block' }}
-                              >
-                                Output: {String(evt.payload.outputs)}
-                              </Truncate>
-                            )}
-                          {evt.kind === 'agent-ended' &&
-                            evt.payload.duration_ms != null && (
-                              <Text as="p">
-                                Duration:{' '}
-                                {(
-                                  Number(evt.payload.duration_ms) / 1000
-                                ).toFixed(1)}
-                                s
-                              </Text>
-                            )}
-                          {evt.kind?.includes('guardrail') &&
-                            evt.payload.message && (
-                              <Text as="p">{String(evt.payload.message)}</Text>
-                            )}
-                        </Box>
-                      )}
+                      {evt.payload &&
+                        (() => {
+                          const p = evt.payload as Record<string, any>;
+                          return (
+                            <Box sx={{ fontSize: 0, color: 'fg.muted' }}>
+                              {evt.kind === 'agent-ended' && p.outputs && (
+                                <Truncate
+                                  maxWidth="100%"
+                                  title={String(p.outputs)}
+                                  sx={{ mb: 1, display: 'block' }}
+                                >
+                                  Output: {String(p.outputs)}
+                                </Truncate>
+                              )}
+                              {evt.kind === 'agent-ended' &&
+                                p.duration_ms != null && (
+                                  <Text as="p">
+                                    Duration:{' '}
+                                    {(Number(p.duration_ms) / 1000).toFixed(1)}s
+                                  </Text>
+                                )}
+                              {evt.kind?.includes('guardrail') && p.message && (
+                                <Text as="p">{String(p.message)}</Text>
+                              )}
+                            </Box>
+                          );
+                        })()}
                     </Box>
                   ))}
               </Box>

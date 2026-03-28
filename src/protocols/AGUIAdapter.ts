@@ -478,6 +478,15 @@ export class AGUIAdapter extends BaseProtocolAdapter {
   }
 
   /**
+   * Stop generation / abort the in-flight SSE stream without tearing down
+   * the adapter connection.
+   */
+  stopGeneration(): void {
+    this.abortController?.abort();
+    this.abortController = null;
+  }
+
+  /**
    * Check feature support
    */
   supportsFeature(feature: string): boolean {

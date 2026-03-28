@@ -67,8 +67,9 @@ import { useChatInlineToolbarItems } from '../lexical/useChatInlineToolbarItems'
 import { useLexicalTools } from '../tools/adapters/agent-runtimes/lexicalHooks';
 import { editorConfig } from './lexical/editorConfig';
 
-import '@datalayer/jupyter-lexical/style/index.css';
+import { DEFAULT_MODEL } from '../specs';
 
+import '@datalayer/jupyter-lexical/style/index.css';
 import './lexical/lexical-theme.css';
 
 // Fixed lexical document ID
@@ -78,8 +79,8 @@ const LEXICAL_ID = 'agui-lexical-example';
 const BASE_URL = 'http://localhost:8765';
 const AGENT_ID = 'lexical-agent-runtime-example';
 
-// AG-UI endpoint for lexical operations (trailing slash required for mounted Starlette apps)
-const AG_UI_ENDPOINT = `${BASE_URL}/api/v1/ag-ui/${AGENT_ID}/`;
+// Vercel AI endpoint for lexical operations
+const VERCEL_AI_ENDPOINT = `${BASE_URL}/api/v1/vercel-ai/${AGENT_ID}`;
 
 /**
  * Hook to ensure the demo-agent exists on the server.
@@ -110,8 +111,8 @@ function useEnsureAgent(
             name: agentId,
             description: 'Demo agent for lexical example',
             agent_library: 'pydantic-ai',
-            transport: 'ag-ui',
-            model: 'openai:gpt-4o-mini',
+            transport: 'vercel-ai',
+            model: DEFAULT_MODEL,
             system_prompt:
               'You are a helpful AI assistant that helps users work with documents. You can help with writing, editing, and formatting content.',
           }),
@@ -384,8 +385,8 @@ const LexicalUI = React.memo(function LexicalUI({
               {/* AI Inline Chat Plugin - controlled by useChatInlineToolbarItems */}
               <ChatInlinePlugin
                 protocol={{
-                  type: 'ag-ui',
-                  endpoint: AG_UI_ENDPOINT,
+                  type: 'vercel-ai',
+                  endpoint: VERCEL_AI_ENDPOINT,
                 }}
                 isOpen={isAiOpen}
                 onClose={closeAi}
@@ -465,8 +466,8 @@ function LexicalWithChat({
 
       {isReady && (
         <ChatFloating
-          protocol="ag-ui"
-          endpoint={AG_UI_ENDPOINT}
+          protocol="vercel-ai"
+          endpoint={VERCEL_AI_ENDPOINT}
           title="Lexical AI Agent Runtime"
           description="Hi! I can help you edit documents. Try: 'Insert a heading', 'Add a code block', or 'Create a list'"
           defaultOpen={true}
@@ -489,6 +490,11 @@ function LexicalWithChat({
             {
               title: 'Create list',
               message: 'Create a bullet list with three items about Jupyter',
+            },
+            {
+              title: 'Analyze Titanic',
+              message:
+                'Analyze the Titanic dataset and provide insights about the passengers and survival rates',
             },
           ]}
         />
