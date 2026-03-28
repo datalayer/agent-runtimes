@@ -10,7 +10,6 @@ Used by both app.py (CLI agents) and routes/agents.py (API agents).
 
 import logging
 import os
-from importlib import import_module
 from pathlib import Path
 from typing import Any, Callable
 
@@ -25,20 +24,45 @@ def create_skills_toolset(
     """
     Create an AgentSkillsToolset with the specified skills.
 
-        Supports three variants:
-    - Variant 1 (name-based): Discovered from SKILL.md files in skills_path.
-    - Variant 2 (package-based): Loaded from a Python package + method via
-      the skill catalog specs.
-        - Variant 3 (path-based): Loaded from a local path declared in the
-            skill catalog specs.
+    Skills are loaded via two complementary mechanisms, tried in order:
+
+    **Path-based** (Variant 1 + 1c): walk ``skills_path`` recursively and
+    load every sub-directory that contains a ``SKILL.md`` file.  Skill
+    scripts are read from the local filesystem, so the path must be
+    accessible at runtime.  In the Datalayer SaaS Kubernetes pod the
+    entrypoint copies ``/opt/datalayer/skills/`` to the shared emptyDir
+    volume (``/mnt/shared-agent/skills/``); the ``AGENT_RUNTIMES_SKILLS_FOLDER``
+    env var then points here so *both* the agent-runtimes container (which
+    reads the SKILL.md files) and the Jupyter kernel container (which
+    executes the script code sent to it by the SandboxExecutor) can reach
+    the same files.
+
+    **Module-based** (Variant 1b): for each skill whose catalog spec has a
+    ``module`` field, import the Python package and locate the ``SKILL.md``
+    via ``AgentSkill.from_module()``.  Works for both regular packages and
+    namespace packages (directories without ``__init__.py``).  Requires only
+    that ``agent-skills`` (or whatever provides the skills) is pip-installed
+    — no separate on-disk copy is needed.  Script code is still read from
+    the installed package path and sent as a string to the sandbox for
+    execution, so scripts run on the sandbox side regardless of which
+    loading mechanism was used.
+
+    **Package-based** (Variant 2): for catalog specs with a ``package`` +
+    ``method`` field, import the package and wrap a Python callable directly
+    (no script file needed).
 
     Args:
-        skills: List of skill names to load
-        skills_path: Path to the skills directory
-        shared_sandbox: Optional shared sandbox for state persistence
+        skills: List of skill name references to load (may include version
+            suffix, e.g. ``"crawl:0.0.1"``).
+        skills_path: Path to a local skills directory scanned for SKILL.md
+            files (path-based loading).  Set
+            ``AGENT_RUNTIMES_SKILLS_FOLDER=/mnt/shared-agent/skills`` in the
+            Kubernetes pod to point at the shared volume.
+        shared_sandbox: Optional shared sandbox for state persistence.
 
     Returns:
-        AgentSkillsToolset instance or None if skills not available
+        AgentSkillsToolset instance, or ``None`` if agent-skills is not
+        available.
     """
     try:
         from agent_skills import (
@@ -63,7 +87,11 @@ def create_skills_toolset(
         loaded_ids: set[str] = set()
         loaded_skill_names: set[str] = set()
 
-        # Variant 1: discover skills from SKILL.md files
+        # ---------------------------------------------------------------------------
+        # Path-based loading (Variant 1): scan skills_path for SKILL.md files.
+        # In K8s the AGENT_RUNTIMES_SKILLS_FOLDER env var points to the shared
+        # emptyDir volume (/mnt/shared-agent/skills) populated by entrypoint.sh.
+        # ---------------------------------------------------------------------------
         for skill_md in Path(skills_path).rglob("SKILL.md"):
             try:
                 skill = AgentSkill.from_skill_md(skill_md)
@@ -76,8 +104,11 @@ def create_skills_toolset(
                 loaded_skill_names.add(skill.name)
                 logger.info(f"Loaded skill (name-based): {skill.name}")
 
-        # Variant 2 + 3: load package-based and path-based skills from the
-        # catalog for any skills not yet found via SKILL.md discovery.
+        # ---------------------------------------------------------------------------
+        # Catalog-based loading: for skills not found in skills_path, consult
+        # the skill catalog spec to try module-based, path-based, or
+        # package-based loading.
+        # ---------------------------------------------------------------------------
         missing_ids = selected_ids - loaded_ids
         if missing_ids:
             get_skill_spec: Callable[[str], Any | None] | None
@@ -94,31 +125,29 @@ def create_skills_toolset(
                     if spec is None:
                         continue
 
-                    # Variant 1b: module-based skill from installed package
+                    # Module-based (Variant 1b): import the Python package and
+                    # locate SKILL.md via AgentSkill.from_module().  Works for
+                    # both regular and namespace packages.
                     spec_module = getattr(spec, "module", None)
                     if spec_module and skill_name not in loaded_ids:
                         try:
-                            module = import_module(spec_module)
-                            module_file = getattr(module, "__file__", None)
-                            if module_file:
-                                skill_md = Path(module_file).resolve().parent / "SKILL.md"
-                                if skill_md.exists():
-                                    skill = AgentSkill.from_skill_md(skill_md)
-                                    if skill.name not in loaded_skill_names:
-                                        selected_skills.append(skill)
-                                        loaded_ids.add(skill_name)
-                                        loaded_skill_names.add(skill.name)
-                                        logger.info(
-                                            f"Loaded skill (module-based): {skill.name} "
-                                            f"from {spec_module}"
-                                        )
+                            skill = AgentSkill.from_module(spec_module)
+                            if skill.name not in loaded_skill_names:
+                                selected_skills.append(skill)
+                                loaded_ids.add(skill_name)
+                                loaded_skill_names.add(skill.name)
+                                logger.info(
+                                    f"Loaded skill (module-based): {skill.name} "
+                                    f"from {spec_module}"
+                                )
                         except Exception as exc:
                             logger.warning(
                                 f"Failed to load module-based skill '{skill_name}' "
                                 f"from {spec_module}: {exc}"
                             )
 
-                    # Variant 3: path-based skill from catalog
+                    # Path-based from catalog (Variant 1c): the catalog spec
+                    # declares a relative path resolved under skills_path.
                     spec_path = getattr(spec, "path", None)
                     if spec_path and skill_name not in loaded_ids:
                         candidate = Path(spec_path)
@@ -150,7 +179,8 @@ def create_skills_toolset(
                                 f"Path-based skill '{skill_name}' not found at {skill_md}"
                             )
 
-                    # Variant 2: package-based skill from catalog
+                    # Package-based (Variant 2): catalog spec with package +
+                    # method; wraps a Python callable, no script file needed.
                     if spec.package and spec.method and skill_name not in loaded_ids:
                         try:
                             skill = AgentSkill.from_package(

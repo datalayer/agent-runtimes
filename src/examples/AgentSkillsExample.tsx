@@ -397,14 +397,33 @@ const AgentSkillsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
                 message: 'List all your available skills and what they can do.',
               },
               {
-                title: 'Crawl a webpage',
+                title: '🌐 Crawl a webpage',
                 message:
                   'Use the crawl skill to fetch the content of https://datalayer.ai and summarize it.',
               },
               {
-                title: 'Summarize text',
+                title: '📅 Generate an event',
+                message:
+                  'Use the events skill to create a new event named "team-sync" with status "pending" and describe it.',
+              },
+              {
+                title: '🐙 GitHub repos',
+                message:
+                  'Use the GitHub skill to list the public repositories for the "datalayer" organization.',
+              },
+              {
+                title: '📄 Read a PDF',
+                message:
+                  'Use the PDF skill to extract the text from a PDF file at /tmp/sample.pdf and show me the first 200 characters.',
+              },
+              {
+                title: '📝 Summarize text',
                 message:
                   'Use the text summarizer skill to summarize the following: "Artificial intelligence has transformed many industries. Machine learning enables computers to learn from data. Natural language processing allows machines to understand human language. Computer vision gives machines the ability to interpret images. These technologies are reshaping healthcare, finance, education, and transportation."',
+              },
+              {
+                title: '😄 Tell me a joke',
+                message: 'Use the jokes skill to tell me a random joke.',
               },
             ]}
             submitOnSuggestionClick
@@ -471,15 +490,15 @@ const AgentSkillsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
                 >
                   <BeakerIcon size={12} />
                   <Text>
-                    <strong>Name-based:</strong> Discovered from SKILL.md via
-                    module path
+                    <strong>Path-based:</strong> Discovered from a local
+                    SKILL.md directory path
                   </Text>
                 </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <PackageIcon size={12} />
                   <Text>
-                    <strong>Package-based:</strong> Python package + method with
-                    frontmatter
+                    <strong>Module-based:</strong> Python module or package +
+                    method with frontmatter
                   </Text>
                 </Box>
               </Box>
