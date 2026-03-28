@@ -41,6 +41,12 @@ from pydantic_ai.toolsets import ExternalToolset
 from ..adapters.base import BaseAgent
 from ..context.identities import IdentityContextManager
 from ..context.usage import get_usage_tracker
+from ..observability.prompt_turn_metrics import (
+    extract_identity_hints,
+    extract_jwt_token,
+    extract_user_id_from_jwt,
+    record_prompt_turn_completion,
+)
 from .base import BaseTransport
 
 logger = logging.getLogger(__name__)
@@ -304,6 +310,45 @@ class VercelAITransport(BaseTransport):
             except ImportError as e:
                 logger.error(f"Vercel AI: Could not import builtin_tools: {e}")
 
+        # Extract identity/JWT hints for OTEL metric attribution
+        metric_user_id: str | None = None
+        metric_user_provider: str | None = None
+        metric_user_jwt_token = extract_jwt_token(
+            request.headers.get("authorization"),
+            request.headers.get("x-external-token"),
+        )
+        if identities_from_request:
+            hint_user_id, hint_provider, hint_token = extract_identity_hints(
+                identities_from_request
+            )
+            metric_user_provider = hint_provider or metric_user_provider
+            metric_user_id = hint_user_id or metric_user_id
+            metric_user_jwt_token = hint_token or metric_user_jwt_token
+        if not metric_user_id:
+            metric_user_id = extract_user_id_from_jwt(metric_user_jwt_token)
+        if metric_user_id and not metric_user_provider:
+            metric_user_provider = "jwt"
+
+        # Extract the last user message for OTEL prompt recording
+        request_prompt = ""
+        if body and isinstance(body, dict):
+            prompt_candidate = body.get("prompt")
+            if isinstance(prompt_candidate, str):
+                request_prompt = prompt_candidate
+            if not request_prompt:
+                messages_candidate = body.get("messages")
+                if isinstance(messages_candidate, list):
+                    for msg in reversed(messages_candidate):
+                        if not isinstance(msg, dict):
+                            continue
+                        role = msg.get("role")
+                        if role not in ("user", "input"):
+                            continue
+                        content = msg.get("content")
+                        if isinstance(content, str):
+                            request_prompt = content
+                            break
+
         # Create on_complete callback to track usage
         agent_id = self._agent_id
         tracker = get_usage_tracker()
@@ -353,6 +398,34 @@ class VercelAITransport(BaseTransport):
                     f"Tracked usage for agent {agent_id} via on_complete: "
                     f"input={usage.input_tokens}, output={usage.output_tokens}, "
                     f"requests={usage.requests}, tools={usage.tool_calls}"
+                )
+
+                # Emit OTEL prompt-turn metrics
+                response_text = ""
+                if hasattr(result, "output") and isinstance(result.output, str):
+                    response_text = result.output
+                record_prompt_turn_completion(
+                    prompt=request_prompt,
+                    response=response_text,
+                    duration_ms=duration_ms,
+                    protocol="vercel-ai",
+                    stop_reason="end_turn",
+                    success=True,
+                    model=model if isinstance(model, str) else None,
+                    tool_call_count=usage.tool_calls or 0,
+                    input_tokens=usage.input_tokens,
+                    output_tokens=usage.output_tokens,
+                    total_tokens=(
+                        (usage.input_tokens or 0) + (usage.output_tokens or 0)
+                    ),
+                    user_id=metric_user_id,
+                    user_provider=metric_user_provider,
+                    identities_count=(
+                        len(identities_from_request)
+                        if isinstance(identities_from_request, list)
+                        else None
+                    ),
+                    user_jwt_token=metric_user_jwt_token,
                 )
             # Must be an async generator, even if it yields nothing
             return
