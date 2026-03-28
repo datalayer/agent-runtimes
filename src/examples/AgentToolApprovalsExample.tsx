@@ -374,7 +374,7 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
 
     const wsUrl = toWsUrl(
       aiAgentsBaseUrl,
-      `${AI_AGENTS_API_PREFIX}/tool-approvals/ws`,
+      `${AI_AGENTS_API_PREFIX}/ws`,
       chatAuthToken,
     );
     if (!wsUrl) {
@@ -395,7 +395,7 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
       try {
         const payload = JSON.parse(String(event.data));
         const wsEvent = payload?.event as string | undefined;
-        const approval = payload?.approval as ToolApprovalRequest | undefined;
+        const approval = payload?.data as ToolApprovalRequest | undefined;
         if (!wsEvent || !approval) {
           return;
         }

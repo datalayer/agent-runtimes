@@ -14,7 +14,7 @@
  * - Keyboard shortcuts
  *
  * To run this example, create a .env file with:
- * - VITE_DATALAYER_API_TOKEN: Get from https://datalayer.app/settings/iam/tokens
+ * - VITE_DATALAYER_API_KEY: Get from https://datalayer.app/settings/iam/tokens
  *
  * @module examples/ChatLexicalExample
  */
@@ -292,7 +292,7 @@ export function ChatLexicalExampleInner({
       apiBaseUrl:
         import.meta.env.VITE_DATALAYER_API_URL ||
         'https://oss.datalayer.run/api',
-      apiKey: import.meta.env.VITE_DATALAYER_API_TOKEN,
+      apiKey: import.meta.env.VITE_DATALAYER_API_KEY,
       defaultModel: 'claude-sonnet-4-20250514',
       enableStreaming: true,
       requireToolApproval: false,

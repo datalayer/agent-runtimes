@@ -60,7 +60,7 @@ const loadConfigurations = () => {
         !datalayerConfig.token ||
         datalayerConfig.token.startsWith('%VITE_')
       ) {
-        const envToken = import.meta.env.VITE_DATALAYER_API_TOKEN;
+        const envToken = import.meta.env.VITE_DATALAYER_API_KEY;
         if (envToken) {
           datalayerConfig.token = envToken;
         }

@@ -26,8 +26,8 @@ def _auth_headers(token: str) -> dict[str, str]:
     }
 
 
-def _events_url(base_url: str) -> str:
-    return f"{base_url.rstrip('/')}/api/ai-agents/v1/events"
+def _agent_events_url(base_url: str, agent_id: str) -> str:
+    return f"{base_url.rstrip('/')}/api/ai-agents/v1/agents/{agent_id}/events"
 
 
 def create_event(
@@ -43,7 +43,6 @@ def create_event(
 ) -> dict[str, Any]:
     """Create an event record for an AI agent."""
     body = {
-        "agent_id": agent_id,
         "title": title,
         "kind": kind,
         "status": status,
@@ -51,7 +50,7 @@ def create_event(
         "metadata": metadata or {},
     }
     response = httpx.post(
-        _events_url(base_url),
+        _agent_events_url(base_url, agent_id),
         headers=_auth_headers(token),
         json=body,
         timeout=timeout,
@@ -62,7 +61,7 @@ def create_event(
 
 def list_events(
     token: str,
-    agent_id: str | None = None,
+    agent_id: str,
     kind: str | None = None,
     status: str | None = None,
     limit: int = 50,
@@ -70,17 +69,15 @@ def list_events(
     base_url: str = DEFAULT_AI_AGENTS_BASE_URL,
     timeout: float = 30.0,
 ) -> dict[str, Any]:
-    """List event records with optional filters."""
+    """List event records for an agent."""
     params: dict[str, Any] = {"limit": limit, "offset": offset}
-    if agent_id:
-        params["agent_id"] = agent_id
     if kind:
         params["kind"] = kind
     if status:
         params["status"] = status
 
     response = httpx.get(
-        _events_url(base_url),
+        _agent_events_url(base_url, agent_id),
         headers=_auth_headers(token),
         params=params,
         timeout=timeout,
@@ -91,13 +88,14 @@ def list_events(
 
 def get_event(
     token: str,
+    agent_id: str,
     event_id: str,
     base_url: str = DEFAULT_AI_AGENTS_BASE_URL,
     timeout: float = 30.0,
 ) -> dict[str, Any]:
     """Retrieve one event by identifier."""
     response = httpx.get(
-        f"{_events_url(base_url)}/{event_id}",
+        f"{_agent_events_url(base_url, agent_id)}/{event_id}",
         headers=_auth_headers(token),
         timeout=timeout,
     )
@@ -107,6 +105,7 @@ def get_event(
 
 def update_event(
     token: str,
+    agent_id: str,
     event_id: str,
     title: str | None = None,
     kind: str | None = None,
@@ -133,7 +132,7 @@ def update_event(
         body["metadata"] = metadata
 
     response = httpx.patch(
-        f"{_events_url(base_url)}/{event_id}",
+        f"{_agent_events_url(base_url, agent_id)}/{event_id}",
         headers=_auth_headers(token),
         json=body,
         timeout=timeout,
@@ -144,13 +143,14 @@ def update_event(
 
 def delete_event(
     token: str,
+    agent_id: str,
     event_id: str,
     base_url: str = DEFAULT_AI_AGENTS_BASE_URL,
     timeout: float = 30.0,
 ) -> dict[str, Any]:
     """Delete an event record."""
     response = httpx.delete(
-        f"{_events_url(base_url)}/{event_id}",
+        f"{_agent_events_url(base_url, agent_id)}/{event_id}",
         headers=_auth_headers(token),
         timeout=timeout,
     )
@@ -160,19 +160,21 @@ def delete_event(
 
 def mark_event_read(
     token: str,
+    agent_id: str,
     event_id: str,
     base_url: str = DEFAULT_AI_AGENTS_BASE_URL,
     timeout: float = 30.0,
 ) -> dict[str, Any]:
     """Mark an event as read."""
-    return update_event(token, event_id, read=True, base_url=base_url, timeout=timeout)
+    return update_event(token, agent_id, event_id, read=True, base_url=base_url, timeout=timeout)
 
 
 def mark_event_unread(
     token: str,
+    agent_id: str,
     event_id: str,
     base_url: str = DEFAULT_AI_AGENTS_BASE_URL,
     timeout: float = 30.0,
 ) -> dict[str, Any]:
     """Mark an event as unread."""
-    return update_event(token, event_id, read=False, base_url=base_url, timeout=timeout)
+    return update_event(token, agent_id, event_id, read=False, base_url=base_url, timeout=timeout)

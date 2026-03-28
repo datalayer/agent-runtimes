@@ -46,7 +46,6 @@ export function useFilteredNotifications(filters?: NotificationFilters) {
     queryFn: () => notifications.getNotifications(token, filters, baseUrl),
     enabled: !!token,
     staleTime: 10_000,
-    refetchInterval: 15_000,
   });
 }
 
@@ -59,7 +58,6 @@ export function useUnreadNotificationCount() {
     queryFn: () => notifications.getUnreadCount(token, baseUrl),
     enabled: !!token,
     staleTime: 5_000,
-    refetchInterval: 10_000,
   });
 }
 
@@ -92,27 +90,29 @@ export function useMarkAllNotificationsRead() {
 
 // ─── Event hooks ─────────────────────────────────────────────────────
 
-export function useAgentEvents(params?: ListAgentEventsParams) {
+export function useAgentEvents(
+  agentId: string,
+  params?: Omit<ListAgentEventsParams, 'agent_id'>,
+) {
   const token = useAuthToken();
   const baseUrl = useBaseUrl();
 
   return useQuery({
-    queryKey: ['agent-events', params],
-    queryFn: () => events.listEvents(token, params ?? {}, baseUrl),
-    enabled: !!token,
+    queryKey: ['agent-events', agentId, params],
+    queryFn: () => events.listEvents(token, agentId, params ?? {}, baseUrl),
+    enabled: !!token && !!agentId,
     staleTime: 10_000,
-    refetchInterval: 15_000,
   });
 }
 
-export function useAgentEvent(eventId?: string) {
+export function useAgentEvent(agentId: string, eventId?: string) {
   const token = useAuthToken();
   const baseUrl = useBaseUrl();
 
   return useQuery({
-    queryKey: ['agent-events', eventId],
-    queryFn: () => events.getEvent(token, eventId as string, baseUrl),
-    enabled: !!token && !!eventId,
+    queryKey: ['agent-events', agentId, eventId],
+    queryFn: () => events.getEvent(token, agentId, eventId as string, baseUrl),
+    enabled: !!token && !!agentId && !!eventId,
     staleTime: 10_000,
   });
 }
@@ -131,7 +131,7 @@ export function useCreateAgentEvent() {
   });
 }
 
-export function useUpdateAgentEvent() {
+export function useUpdateAgentEvent(agentId: string) {
   const token = useAuthToken();
   const baseUrl = useBaseUrl();
   const queryClient = useQueryClient();
@@ -143,52 +143,52 @@ export function useUpdateAgentEvent() {
     }: {
       eventId: string;
       payload: UpdateAgentEventRequest;
-    }) => events.updateEvent(token, eventId, payload, baseUrl),
+    }) => events.updateEvent(token, agentId, eventId, payload, baseUrl),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['agent-events'] });
       queryClient.invalidateQueries({
-        queryKey: ['agent-events', variables.eventId],
+        queryKey: ['agent-events', agentId, variables.eventId],
       });
     },
   });
 }
 
-export function useDeleteAgentEvent() {
+export function useDeleteAgentEvent(agentId: string) {
   const token = useAuthToken();
   const baseUrl = useBaseUrl();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (eventId: string) =>
-      events.deleteEvent(token, eventId, baseUrl),
+      events.deleteEvent(token, agentId, eventId, baseUrl),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['agent-events'] });
     },
   });
 }
 
-export function useMarkEventRead() {
+export function useMarkEventRead(agentId: string) {
   const token = useAuthToken();
   const baseUrl = useBaseUrl();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (eventId: string) =>
-      events.markEventRead(token, eventId, baseUrl),
+      events.markEventRead(token, agentId, eventId, baseUrl),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['agent-events'] });
     },
   });
 }
 
-export function useMarkEventUnread() {
+export function useMarkEventUnread(agentId: string) {
   const token = useAuthToken();
   const baseUrl = useBaseUrl();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (eventId: string) =>
-      events.markEventUnread(token, eventId, baseUrl),
+      events.markEventUnread(token, agentId, eventId, baseUrl),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['agent-events'] });
     },
@@ -198,21 +198,22 @@ export function useMarkEventUnread() {
 // ─── Composite hook ──────────────────────────────────────────────────
 
 export function useNotifications(
+  agentId: string,
   filters?: NotificationFilters,
-  eventParams?: ListAgentEventsParams,
+  eventParams?: Omit<ListAgentEventsParams, 'agent_id'>,
   eventId?: string,
 ) {
   const notificationsQuery = useFilteredNotifications(filters);
   const unreadCountQuery = useUnreadNotificationCount();
   const markRead = useMarkNotificationRead();
   const markAllRead = useMarkAllNotificationsRead();
-  const eventsQuery = useAgentEvents(eventParams);
-  const eventQuery = useAgentEvent(eventId);
+  const eventsQuery = useAgentEvents(agentId, eventParams);
+  const eventQuery = useAgentEvent(agentId, eventId);
   const createEvent = useCreateAgentEvent();
-  const updateEvent = useUpdateAgentEvent();
-  const deleteEvent = useDeleteAgentEvent();
-  const markEventRead = useMarkEventRead();
-  const markEventUnread = useMarkEventUnread();
+  const updateEvent = useUpdateAgentEvent(agentId);
+  const deleteEvent = useDeleteAgentEvent(agentId);
+  const markEventRead = useMarkEventRead(agentId);
+  const markEventUnread = useMarkEventUnread(agentId);
 
   return useMemo(
     () => ({

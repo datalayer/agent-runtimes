@@ -145,40 +145,11 @@ export default defineConfig(({ mode, command }) => {
           port: 3000,
           open: '/html/examples.html',
           fs: { strict: false, allow: ['..', '../..', '../../..'] },
-          proxy: {
-            // Identity OAuth token exchange must go to local backend
-            '/api/v1/identity': {
-              target: 'http://localhost:8765',
-              changeOrigin: true,
-              secure: false,
-            },
-            '/api': {
-              target: 'https://prod1.datalayer.run',
-              changeOrigin: true,
-              secure: true,
-              configure: (proxy: any, _options: any) => {
-                proxy.on('proxyReq', (_proxyReq: any, req: any) => {
-                  console.log(
-                    'Proxying:',
-                    req.method,
-                    req.url,
-                    '->',
-                    'https://prod1.datalayer.run' + (req.url || ''),
-                  );
-                });
-              },
-            },
-          },
+
         }
       : {
           fs: { strict: false, allow: ['..', '../..', '../../..'] },
-          proxy: {
-            '/api': {
-              target: 'http://localhost:8765',
-              changeOrigin: true,
-              secure: false,
-            },
-          },
+
         };
 
   const build: any = {

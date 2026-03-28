@@ -193,6 +193,7 @@ from agent_runtimes.types import AgentSpec
             # Clean description for Python (single line)
             description = (
                 spec["description"].replace("\n", " ").replace("  ", " ").strip()
+                .replace('"', '\\"')
             )
 
             # Use triple quotes for multiline system prompts

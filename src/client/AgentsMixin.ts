@@ -234,11 +234,12 @@ export function AgentsMixin<TBase extends Constructor>(Base: TBase) {
      * @returns Paginated events response
      */
     async listEvents(
-      params: ListAgentEventsParams = {},
+      agentId: string,
+      params: Omit<ListAgentEventsParams, 'agent_id'> = {},
     ): Promise<ListAgentEventsResponse> {
       const token = (this as any).getToken();
       const baseUrl = (this as any).getIamRunUrl();
-      return events.listEvents(token, params, baseUrl);
+      return events.listEvents(token, agentId, params, baseUrl);
     }
 
     /**
@@ -246,10 +247,13 @@ export function AgentsMixin<TBase extends Constructor>(Base: TBase) {
      * @param eventId - Event identifier
      * @returns Event response
      */
-    async getEvent(eventId: string): Promise<GetAgentEventResponse> {
+    async getEvent(
+      agentId: string,
+      eventId: string,
+    ): Promise<GetAgentEventResponse> {
       const token = (this as any).getToken();
       const baseUrl = (this as any).getIamRunUrl();
-      return events.getEvent(token, eventId, baseUrl);
+      return events.getEvent(token, agentId, eventId, baseUrl);
     }
 
     /**
@@ -259,12 +263,13 @@ export function AgentsMixin<TBase extends Constructor>(Base: TBase) {
      * @returns Updated event response
      */
     async updateEvent(
+      agentId: string,
       eventId: string,
       data: UpdateAgentEventRequest,
     ): Promise<GetAgentEventResponse> {
       const token = (this as any).getToken();
       const baseUrl = (this as any).getIamRunUrl();
-      return events.updateEvent(token, eventId, data, baseUrl);
+      return events.updateEvent(token, agentId, eventId, data, baseUrl);
     }
 
     // ========================================================================

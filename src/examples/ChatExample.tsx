@@ -26,7 +26,7 @@ import { Chat } from '../chat';
 setupPrimerPortals();
 
 const BASE_URL = 'http://localhost:8765';
-const AGENT_SPEC_ID = 'codeai/simple';
+const AGENT_SPEC_ID = 'demo-simple';
 const AGENT_NAME = 'simple';
 
 const AgentRuntimeChatExample: React.FC = () => {

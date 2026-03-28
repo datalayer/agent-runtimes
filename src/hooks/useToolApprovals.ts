@@ -39,7 +39,6 @@ export function useToolApprovalsQuery(filters?: ToolApprovalFilters) {
     queryFn: () => toolApprovals.getToolApprovals(token, filters, baseUrl),
     enabled: !!token,
     staleTime: 10_000,
-    refetchInterval: 15_000,
   });
 }
 
@@ -52,7 +51,6 @@ export function usePendingApprovalCount() {
     queryFn: () => toolApprovals.getPendingApprovalCount(token, baseUrl),
     enabled: !!token,
     staleTime: 5_000,
-    refetchInterval: 10_000,
   });
 }
 

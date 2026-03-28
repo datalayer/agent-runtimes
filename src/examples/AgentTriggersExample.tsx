@@ -28,6 +28,7 @@ import {
   TextInput,
   Flash,
   Timeline,
+  Truncate,
 } from '@primer/react';
 import {
   AlertIcon,
@@ -43,6 +44,7 @@ import {
   EyeIcon,
   EyeClosedIcon,
   TrashIcon,
+  CopyIcon,
 } from '@primer/octicons-react';
 import { Box } from '@datalayer/primer-addons';
 import { ThemedProvider } from './utils/themedProvider';
@@ -55,6 +57,7 @@ import {
   useDeleteAgentEvent,
   useMarkEventRead,
   useMarkEventUnread,
+  useAIAgentsWebSocket,
 } from '../hooks';
 import type { AgentEvent } from '../types';
 
@@ -63,7 +66,7 @@ const queryClient = new QueryClient();
 // ─── Constants ─────────────────────────────────────────────────────────────
 
 const AGENT_NAME = 'trigger-demo-agent';
-const AGENT_SPEC_ID = 'monitor-sales-kpis';
+const AGENT_SPEC_ID = 'demo-one-trigger';
 const DEFAULT_LOCAL_BASE_URL =
   import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
 const DEFAULT_CRON = '0 8 * * *'; // daily at 08:00 UTC
@@ -124,11 +127,16 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
   const [eventSubscribed, setEventSubscribed] = useState(false);
 
   // Events hooks
-  const eventsQuery = useAgentEvents({ agent_id: agentId });
-  const deleteEventMutation = useDeleteAgentEvent();
-  const markReadMutation = useMarkEventRead();
-  const markUnreadMutation = useMarkEventUnread();
+  const eventsQuery = useAgentEvents(agentId);
+  const deleteEventMutation = useDeleteAgentEvent(agentId);
+  const markReadMutation = useMarkEventRead(agentId);
+  const markUnreadMutation = useMarkEventUnread(agentId);
   const agentEvents: AgentEvent[] = eventsQuery.data?.events ?? [];
+
+  // WebSocket for real-time event updates
+  useAIAgentsWebSocket({
+    channels: agentId ? [`agent:${agentId}`] : [],
+  });
 
   // Authenticated fetch helper (for sidecar endpoints)
   const authFetch = useCallback(
@@ -144,41 +152,84 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
     [token],
   );
 
-  // ── Poll trigger metadata ────────────────────────────────────────────────
+  // ── Create agent on local server ─────────────────────────────────────────
 
   useEffect(() => {
-    if (!isReady || !agentBaseUrl) return;
-    const poll = async () => {
-      try {
-        const res = await authFetch(
-          `${agentBaseUrl}/api/v1/agents/${agentId}/trigger`,
-        );
-        if (res.ok) {
-          const d = await res.json();
-          if (d.cron) setCronExpr(d.cron);
-          if (d.next_run) setNextRun(d.next_run);
-        }
-      } catch {
-        /* ok */
-      }
+    let isCancelled = false;
+
+    const createAgent = async () => {
+      setRuntimeStatus('launching');
+      setIsReady(false);
+      setHookError(null);
 
       try {
-        const res = await authFetch(
-          `${agentBaseUrl}/api/v1/agents/${agentId}/trigger/history`,
-        );
-        if (res.ok) {
-          const d = await res.json();
-          setTriggerHistory(Array.isArray(d) ? d : (d.records ?? []));
+        const response = await authFetch(`${agentBaseUrl}/api/v1/agents`, {
+          method: 'POST',
+          body: JSON.stringify({
+            name: AGENT_NAME,
+            description: 'Agent with cron, webhook, event, and manual triggers',
+            agent_library: 'pydantic-ai',
+            transport: 'ag-ui',
+            agent_spec_id: AGENT_SPEC_ID,
+            tools: [],
+          }),
+        });
+
+        let resolvedAgentId = AGENT_NAME;
+
+        if (response.ok) {
+          const data = await response.json();
+          resolvedAgentId = data?.id || AGENT_NAME;
+        } else {
+          const contentType = response.headers.get('content-type') || '';
+          let detail = '';
+
+          if (contentType.includes('application/json')) {
+            const data = await response.json().catch(() => null);
+            detail =
+              (typeof data?.detail === 'string' && data.detail) ||
+              (typeof data?.message === 'string' && data.message) ||
+              '';
+          } else {
+            detail = await response.text();
+          }
+
+          if (response.status === 409 || /already exists/i.test(detail || '')) {
+            // Agent already running — reuse it
+          } else {
+            throw new Error(
+              detail || `Failed to create agent: ${response.status}`,
+            );
+          }
         }
-      } catch {
-        /* ok */
+
+        if (!isCancelled) {
+          setAgentId(resolvedAgentId);
+          setIsReady(true);
+          setRuntimeStatus('ready');
+        }
+      } catch (error) {
+        if (!isCancelled) {
+          setHookError(
+            error instanceof Error ? error.message : 'Agent failed to start',
+          );
+          setRuntimeStatus('error');
+        }
       }
     };
 
-    poll();
-    const interval = setInterval(poll, 10_000);
-    return () => clearInterval(interval);
-  }, [isReady, agentBaseUrl, agentId, authFetch]);
+    void createAgent();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [agentBaseUrl, authFetch]);
+
+  // ── Poll trigger metadata ─────────────────────────────────────────────
+  // TODO: enable once the ai-agents service exposes /trigger and
+  //       /trigger/history endpoints on the platform API.
+  //       Currently these endpoints don't exist on either the local
+  //       agent-runtimes server or the ai-agents service.
 
   // ── Update cron ──────────────────────────────────────────────────────────
 
@@ -211,6 +262,17 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
     if (!agentBaseUrl) return;
     setIsTriggeringNow(true);
     setTriggerFlash(null);
+    const runId = `manual-${Date.now()}`;
+    const startTime = new Date().toISOString();
+    setTriggerHistory(prev => [
+      {
+        id: runId,
+        timestamp: startTime,
+        status: 'running' as const,
+        source: 'manual' as TriggerTab,
+      },
+      ...prev,
+    ]);
     try {
       const res = await authFetch(
         `${agentBaseUrl}/api/v1/agents/${agentId}/trigger/run`,
@@ -218,11 +280,32 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
       );
       if (res.ok) {
         setTriggerFlash('Trigger fired successfully');
+        setTriggerHistory(prev =>
+          prev.map(r =>
+            r.id === runId
+              ? {
+                  ...r,
+                  status: 'success' as const,
+                  duration_ms: Date.now() - new Date(startTime).getTime(),
+                }
+              : r,
+          ),
+        );
       } else {
         setTriggerFlash(`Trigger failed (${res.status})`);
+        setTriggerHistory(prev =>
+          prev.map(r =>
+            r.id === runId ? { ...r, status: 'failure' as const } : r,
+          ),
+        );
       }
     } catch {
       setTriggerFlash('Network error');
+      setTriggerHistory(prev =>
+        prev.map(r =>
+          r.id === runId ? { ...r, status: 'failure' as const } : r,
+        ),
+      );
     } finally {
       setIsTriggeringNow(false);
     }
@@ -299,6 +382,17 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
     if (!agentBaseUrl) return;
     setIsLaunchingOnce(true);
     setOnceFlash(null);
+    const runId = `once-${Date.now()}`;
+    const startTime = new Date().toISOString();
+    setTriggerHistory(prev => [
+      {
+        id: runId,
+        timestamp: startTime,
+        status: 'running' as const,
+        source: 'once' as TriggerTab,
+      },
+      ...prev,
+    ]);
     try {
       const res = await authFetch(
         `${agentBaseUrl}/api/v1/agents/${agentId}/trigger/run`,
@@ -306,11 +400,32 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
       );
       if (res.ok) {
         setOnceFlash('Once trigger launched — agent will run and terminate.');
+        setTriggerHistory(prev =>
+          prev.map(r =>
+            r.id === runId
+              ? {
+                  ...r,
+                  status: 'success' as const,
+                  duration_ms: Date.now() - new Date(startTime).getTime(),
+                }
+              : r,
+          ),
+        );
       } else {
         setOnceFlash(`Launch failed (${res.status})`);
+        setTriggerHistory(prev =>
+          prev.map(r =>
+            r.id === runId ? { ...r, status: 'failure' as const } : r,
+          ),
+        );
       }
     } catch {
       setOnceFlash('Network error');
+      setTriggerHistory(prev =>
+        prev.map(r =>
+          r.id === runId ? { ...r, status: 'failure' as const } : r,
+        ),
+      );
     } finally {
       setIsLaunchingOnce(false);
     }
@@ -383,7 +498,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
       >
         <ClockIcon size={16} />
         <Heading as="h3" sx={{ fontSize: 2, flex: 1 }}>
-          Triggers — {podName}
+          Triggers — {agentId}
         </Heading>
         {token && <UserBadge token={token} variant="small" />}
         <Button
@@ -403,13 +518,14 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
             protocol="ag-ui"
             baseUrl={agentBaseUrl}
             agentId={agentId}
+            authToken={chatAuthToken}
             title="Trigger Agent"
             placeholder="Ask about your scheduled or event-driven KPI reports…"
             description={`Cron: ${cronExpr} | Webhook: ${webhookEnabled ? 'on' : 'off'} | Event: ${eventSubscribed ? eventTopic : 'none'}`}
             showHeader={true}
             autoFocus
             height="100%"
-            runtimeId={podName}
+            runtimeId={agentId}
             historyEndpoint={`${agentBaseUrl}/api/v1/history`}
             suggestions={[
               {
@@ -864,93 +980,115 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
               </Text>
             ) : (
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                {agentEvents.map((evt: AgentEvent) => (
-                  <Box
-                    key={evt.id}
-                    sx={{
-                      p: 2,
-                      bg: evt.read ? 'canvas.subtle' : 'accent.subtle',
-                      borderRadius: 2,
-                      border: '1px solid',
-                      borderColor: evt.read ? 'border.default' : 'accent.muted',
-                    }}
-                  >
+                {[...agentEvents]
+                  .sort(
+                    (a, b) =>
+                      new Date(b.created_at).getTime() -
+                      new Date(a.created_at).getTime(),
+                  )
+                  .map((evt: AgentEvent) => (
                     <Box
+                      key={evt.id}
                       sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 1,
-                        mb: 1,
+                        p: 2,
+                        bg: evt.read ? 'canvas.subtle' : 'accent.subtle',
+                        borderRadius: 2,
+                        border: '1px solid',
+                        borderColor: evt.read
+                          ? 'border.default'
+                          : 'accent.muted',
                       }}
                     >
-                      <Label
-                        variant={
-                          evt.kind === 'agent-started'
-                            ? 'accent'
-                            : evt.kind === 'agent-ended'
-                              ? 'success'
-                              : evt.kind?.includes('alert')
-                                ? 'danger'
-                                : 'attention'
-                        }
-                        size="small"
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 1,
+                          mb: 1,
+                        }}
                       >
-                        {evt.kind}
-                      </Label>
-                      <Text sx={{ flex: 1, fontSize: 0, fontWeight: 'bold' }}>
-                        {evt.title}
-                      </Text>
-                      <Button
-                        size="small"
-                        variant="invisible"
-                        onClick={() =>
-                          evt.read
-                            ? markUnreadMutation.mutate(evt.id)
-                            : markReadMutation.mutate(evt.id)
-                        }
-                        sx={{ p: 1 }}
-                      >
-                        {evt.read ? (
-                          <EyeClosedIcon size={12} />
-                        ) : (
-                          <EyeIcon size={12} />
-                        )}
-                      </Button>
-                      <Button
-                        size="small"
-                        variant="invisible"
-                        onClick={() => deleteEventMutation.mutate(evt.id)}
-                        sx={{ p: 1, color: 'danger.fg' }}
-                      >
-                        <TrashIcon size={12} />
-                      </Button>
-                    </Box>
-                    {/* Event-type-specific fields */}
-                    {evt.payload && (
-                      <Box sx={{ fontSize: 0, color: 'fg.muted' }}>
-                        {evt.kind === 'agent-ended' && evt.payload.outputs && (
-                          <Text as="p" sx={{ mb: 1 }}>
-                            Output: {String(evt.payload.outputs).slice(0, 200)}
-                          </Text>
-                        )}
-                        {evt.kind === 'agent-ended' &&
-                          evt.payload.duration_ms != null && (
-                            <Text as="p">
-                              Duration:{' '}
-                              {(Number(evt.payload.duration_ms) / 1000).toFixed(
-                                1,
-                              )}
-                              s
-                            </Text>
+                        <Label
+                          variant={
+                            evt.kind === 'agent-started'
+                              ? 'accent'
+                              : evt.kind === 'agent-ended'
+                                ? 'success'
+                                : evt.kind?.includes('alert')
+                                  ? 'danger'
+                                  : 'attention'
+                          }
+                          size="small"
+                        >
+                          {evt.kind}
+                        </Label>
+                        <Text sx={{ flex: 1, fontSize: 0, fontWeight: 'bold' }}>
+                          {evt.title}
+                        </Text>
+                        <Text
+                          sx={{
+                            fontSize: 0,
+                            color: 'fg.muted',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {new Date(evt.created_at).toLocaleString()}
+                        </Text>
+                        <Button
+                          size="small"
+                          variant="invisible"
+                          onClick={() =>
+                            evt.read
+                              ? markUnreadMutation.mutate(evt.id)
+                              : markReadMutation.mutate(evt.id)
+                          }
+                          sx={{ p: 1 }}
+                        >
+                          {evt.read ? (
+                            <EyeClosedIcon size={12} />
+                          ) : (
+                            <EyeIcon size={12} />
                           )}
-                        {evt.kind?.includes('guardrail') &&
-                          evt.payload.message && (
-                            <Text as="p">{String(evt.payload.message)}</Text>
-                          )}
+                        </Button>
+                        <Button
+                          size="small"
+                          variant="invisible"
+                          onClick={() => deleteEventMutation.mutate(evt.id)}
+                          sx={{ p: 1, color: 'danger.fg' }}
+                        >
+                          <TrashIcon size={12} />
+                        </Button>
                       </Box>
-                    )}
-                  </Box>
-                ))}
+                      {/* Event-type-specific fields */}
+                      {evt.payload && (
+                        <Box sx={{ fontSize: 0, color: 'fg.muted' }}>
+                          {evt.kind === 'agent-ended' &&
+                            evt.payload.outputs && (
+                              <Truncate
+                                maxWidth="100%"
+                                title={String(evt.payload.outputs)}
+                                sx={{ mb: 1, display: 'block' }}
+                              >
+                                Output: {String(evt.payload.outputs)}
+                              </Truncate>
+                            )}
+                          {evt.kind === 'agent-ended' &&
+                            evt.payload.duration_ms != null && (
+                              <Text as="p">
+                                Duration:{' '}
+                                {(
+                                  Number(evt.payload.duration_ms) / 1000
+                                ).toFixed(1)}
+                                s
+                              </Text>
+                            )}
+                          {evt.kind?.includes('guardrail') &&
+                            evt.payload.message && (
+                              <Text as="p">{String(evt.payload.message)}</Text>
+                            )}
+                        </Box>
+                      )}
+                    </Box>
+                  ))}
               </Box>
             )}
           </Box>

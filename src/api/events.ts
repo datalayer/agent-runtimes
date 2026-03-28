@@ -29,7 +29,7 @@ import type {
   UpdateAgentEventRequest,
 } from '../types';
 
-const toQueryString = (params: ListAgentEventsParams): string => {
+const toQueryString = (params: Record<string, unknown>): string => {
   const searchParams = new URLSearchParams();
   Object.entries(params).forEach(([k, v]) => {
     if (v !== undefined && v !== null && v !== '') {
@@ -39,6 +39,9 @@ const toQueryString = (params: ListAgentEventsParams): string => {
   const query = searchParams.toString();
   return query ? `?${query}` : '';
 };
+
+const agentEventsPath = (agentId: string) =>
+  `${API_BASE_PATHS.AI_AGENTS}/agents/${encodeURIComponent(agentId)}/events`;
 
 export const createEvent = async (
   token: string,
@@ -50,7 +53,7 @@ export const createEvent = async (
   validateRequiredString(data.title, 'title');
 
   return requestDatalayerAPI<{ success: boolean; event: AgentEvent }>({
-    url: `${baseUrl}${API_BASE_PATHS.AI_AGENTS}/events`,
+    url: `${baseUrl}${agentEventsPath(data.agent_id)}`,
     method: 'POST',
     token,
     body: data,
@@ -59,13 +62,15 @@ export const createEvent = async (
 
 export const listEvents = async (
   token: string,
-  params: ListAgentEventsParams = {},
+  agentId: string,
+  params: Omit<ListAgentEventsParams, 'agent_id'> = {},
   baseUrl: string = DEFAULT_SERVICE_URLS.AI_AGENTS,
 ): Promise<ListAgentEventsResponse> => {
   validateToken(token);
+  validateRequiredString(agentId, 'agentId');
 
   return requestDatalayerAPI<ListAgentEventsResponse>({
-    url: `${baseUrl}${API_BASE_PATHS.AI_AGENTS}/events${toQueryString(params)}`,
+    url: `${baseUrl}${agentEventsPath(agentId)}${toQueryString(params)}`,
     method: 'GET',
     token,
   });
@@ -73,14 +78,16 @@ export const listEvents = async (
 
 export const getEvent = async (
   token: string,
+  agentId: string,
   eventId: string,
   baseUrl: string = DEFAULT_SERVICE_URLS.AI_AGENTS,
 ): Promise<GetAgentEventResponse> => {
   validateToken(token);
+  validateRequiredString(agentId, 'agentId');
   validateRequiredString(eventId, 'eventId');
 
   return requestDatalayerAPI<GetAgentEventResponse>({
-    url: `${baseUrl}${API_BASE_PATHS.AI_AGENTS}/events/${encodeURIComponent(eventId)}`,
+    url: `${baseUrl}${agentEventsPath(agentId)}/${encodeURIComponent(eventId)}`,
     method: 'GET',
     token,
   });
@@ -88,15 +95,17 @@ export const getEvent = async (
 
 export const updateEvent = async (
   token: string,
+  agentId: string,
   eventId: string,
   data: UpdateAgentEventRequest,
   baseUrl: string = DEFAULT_SERVICE_URLS.AI_AGENTS,
 ): Promise<GetAgentEventResponse> => {
   validateToken(token);
+  validateRequiredString(agentId, 'agentId');
   validateRequiredString(eventId, 'eventId');
 
   return requestDatalayerAPI<GetAgentEventResponse>({
-    url: `${baseUrl}${API_BASE_PATHS.AI_AGENTS}/events/${encodeURIComponent(eventId)}`,
+    url: `${baseUrl}${agentEventsPath(agentId)}/${encodeURIComponent(eventId)}`,
     method: 'PATCH',
     token,
     body: data,
@@ -105,14 +114,16 @@ export const updateEvent = async (
 
 export const deleteEvent = async (
   token: string,
+  agentId: string,
   eventId: string,
   baseUrl: string = DEFAULT_SERVICE_URLS.AI_AGENTS,
 ): Promise<{ success: boolean }> => {
   validateToken(token);
+  validateRequiredString(agentId, 'agentId');
   validateRequiredString(eventId, 'eventId');
 
   return requestDatalayerAPI<{ success: boolean }>({
-    url: `${baseUrl}${API_BASE_PATHS.AI_AGENTS}/events/${encodeURIComponent(eventId)}`,
+    url: `${baseUrl}${agentEventsPath(agentId)}/${encodeURIComponent(eventId)}`,
     method: 'DELETE',
     token,
   });
@@ -120,16 +131,18 @@ export const deleteEvent = async (
 
 export const markEventRead = async (
   token: string,
+  agentId: string,
   eventId: string,
   baseUrl: string = DEFAULT_SERVICE_URLS.AI_AGENTS,
 ): Promise<GetAgentEventResponse> => {
-  return updateEvent(token, eventId, { read: true }, baseUrl);
+  return updateEvent(token, agentId, eventId, { read: true }, baseUrl);
 };
 
 export const markEventUnread = async (
   token: string,
+  agentId: string,
   eventId: string,
   baseUrl: string = DEFAULT_SERVICE_URLS.AI_AGENTS,
 ): Promise<GetAgentEventResponse> => {
-  return updateEvent(token, eventId, { read: false }, baseUrl);
+  return updateEvent(token, agentId, eventId, { read: false }, baseUrl);
 };

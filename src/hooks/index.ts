@@ -182,6 +182,11 @@ export {
 } from './useNotifications';
 
 export {
+  useAIAgentsWebSocket,
+  type UseAIAgentsWebSocketOptions,
+} from './useAIAgentsWebSocket';
+
+export {
   useOtelTotalTokens,
   fetchOtelTotalTokens,
   fetchOtelMetricTotal,

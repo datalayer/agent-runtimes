@@ -466,7 +466,7 @@ async def create_agent(
     # Check if agent already exists
     if agent_id in _agents:
         raise HTTPException(
-            status_code=400, detail=f"Agent with ID '{agent_id}' already exists"
+            status_code=409, detail=f"Agent with ID '{agent_id}' already exists"
         )
 
     try:
@@ -813,11 +813,16 @@ async def create_agent(
                     e,
                 )
             except Exception as e:
-                logger.error("Failed to eager-start sandbox for '%s': %s", agent_id, e)
-                raise HTTPException(
-                    status_code=500,
-                    detail=f"Failed to initialize sandbox variant '{effective_variant}': {str(e)}",
-                )
+                if "already has a sandbox" in str(e):
+                    logger.info(
+                        "Sandbox already exists for '%s', reusing it", agent_id
+                    )
+                else:
+                    logger.error("Failed to eager-start sandbox for '%s': %s", agent_id, e)
+                    raise HTTPException(
+                        status_code=500,
+                        detail=f"Failed to initialize sandbox variant '{effective_variant}': {str(e)}",
+                    )
 
         # Create shared sandbox for codemode and/or skills toolsets
         # This ensures state persistence between execute_code and skill script executions
@@ -856,13 +861,21 @@ async def create_agent(
                     )
                     shared_sandbox = create_shared_sandbox(None)
                 except Exception as e:
-                    logger.error(
-                        f"Failed to create Jupyter sandbox for agent '{agent_id}': {e}"
-                    )
-                    raise HTTPException(
-                        status_code=500,
-                        detail=f"Failed to create Jupyter sandbox: {str(e)}",
-                    )
+                    if "already has a sandbox" in str(e):
+                        # Reuse existing sandbox from eager-start
+                        sandbox_manager = get_code_sandbox_manager()
+                        shared_sandbox = sandbox_manager.get_agent_sandbox(agent_id)
+                        logger.info(
+                            f"Reusing existing Jupyter sandbox for '{agent_id}'"
+                        )
+                    else:
+                        logger.error(
+                            f"Failed to create Jupyter sandbox for agent '{agent_id}': {e}"
+                        )
+                        raise HTTPException(
+                            status_code=500,
+                            detail=f"Failed to create Jupyter sandbox: {str(e)}",
+                        )
             else:
                 shared_sandbox = create_shared_sandbox(request.jupyter_sandbox)
 
@@ -2817,25 +2830,8 @@ async def configure_from_spec_endpoint(
                 trigger_type = getattr(trigger, "type", None)
                 trigger_config = trigger.__dict__ if hasattr(trigger, "__dict__") else {}
 
-        if trigger_type == "once" and body.user_token:
-            import asyncio
-            from agent_runtimes.invoker import get_invoker
-
-            base_url = os.environ.get(
-                "DATALAYER_RUN_URL", "https://prod1.datalayer.run"
-            )
-            invoker = get_invoker(
-                trigger_type="once",
-                agent_id=created_id,
-                agent_spec_id=body.agent_spec_id,
-                token=body.user_token,
-                base_url=base_url,
-            )
-            if invoker:
-                logger.info(
-                    "Scheduling once invoker for agent '%s'", created_id
-                )
-                asyncio.ensure_future(invoker.invoke(trigger_config))
+        # NOTE: "once" triggers are NOT auto-fired on agent creation.
+        # The user must explicitly invoke them via POST /{agent_id}/trigger/run.
 
         return {
             "success": True,
@@ -2852,3 +2848,76 @@ async def configure_from_spec_endpoint(
             status_code=500,
             detail=f"Failed to create agent from spec: {str(e)}",
         )
+
+
+# ── Trigger / Run ────────────────────────────────────────────────────────
+
+
+class TriggerRunRequest(BaseModel):
+    """Body for POST /{agent_id}/trigger/run."""
+
+    source: str = "once"
+
+
+@router.post("/{agent_id}/trigger/run")
+async def trigger_run(agent_id: str, body: TriggerRunRequest, request: Request):
+    """Manually trigger an agent run (e.g. the *once* trigger).
+
+    The endpoint looks up the agent, retrieves its spec trigger config,
+    creates the appropriate invoker, and fires it in the background.
+    """
+    from .acp import _agents as _registered_agents
+
+    pair = _registered_agents.get(agent_id)
+    if pair is None:
+        raise HTTPException(status_code=404, detail=f"Agent '{agent_id}' not found")
+
+    # Resolve trigger config from agent spec
+    _agent_adapter, agent_info = pair
+    trigger_config: dict[str, Any] = {}
+    agent_spec_id: str = agent_id  # fallback
+
+    # Try to find the spec for this agent
+    for spec_id, spec in AGENT_SPECS.items():
+        if agent_id.endswith(spec_id.replace("_", "-")) or spec_id in agent_id:
+            agent_spec_id = spec_id
+            spec_data = spec if isinstance(spec, dict) else spec.__dict__
+            trigger_raw = spec_data.get("trigger", {})
+            if isinstance(trigger_raw, dict):
+                trigger_config = trigger_raw
+            break
+
+    # Extract user token from Authorization header
+    auth_header = request.headers.get("Authorization", "")
+    token = auth_header.removeprefix("Bearer ").strip() if auth_header else ""
+
+    base_url = os.environ.get("DATALAYER_RUN_URL", "https://prod1.datalayer.run")
+
+    import asyncio
+
+    from agent_runtimes.invoker import get_invoker
+
+    trigger_type = body.source or "once"
+    invoker = get_invoker(
+        trigger_type=trigger_type,
+        agent_id=agent_id,
+        agent_spec_id=agent_spec_id,
+        token=token,
+        base_url=base_url,
+    )
+
+    if invoker is None:
+        raise HTTPException(
+            status_code=400,
+            detail=f"No invoker registered for trigger type '{trigger_type}'",
+        )
+
+    logger.info("Trigger/run: scheduling '%s' invoker for agent '%s'", trigger_type, agent_id)
+    asyncio.ensure_future(invoker.invoke(trigger_config))
+
+    return {
+        "success": True,
+        "agent_id": agent_id,
+        "trigger_type": trigger_type,
+        "message": f"Trigger '{trigger_type}' launched for agent '{agent_id}'.",
+    }

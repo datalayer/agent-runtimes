@@ -7,7 +7,7 @@
  * CopilotKit Lexical Example with CopilotKit Integration.
  *
  * To run this example, create a .env file in the core directory with:
- * - VITE_DATALAYER_API_TOKEN: Get from https://datalayer.ai/settings/iam/tokens
+ * - VITE_DATALAYER_API_KEY: Get from https://datalayer.ai/settings/iam/tokens
  * - VITE_COPILOT_KIT_API_KEY: Get from https://cloud.copilotkit.ai/dashboard
  *
  * You also will need to connect copilotkit to some sort of LLM Add LLM Provider API Key.
