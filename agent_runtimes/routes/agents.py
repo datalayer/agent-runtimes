@@ -2744,6 +2744,7 @@ class ConfigureFromSpecRequest(BaseModel):
     agent_spec_id: str
     agent_spec: dict[str, Any] | None = None
     env_vars: list[dict[str, str]] = Field(default_factory=list)
+    user_token: str | None = None
 
 
 @router.post("/configure-from-spec")
@@ -2799,6 +2800,43 @@ async def configure_from_spec_endpoint(
         logger.info("Agent '%s' created from spec and registered", body.agent_spec_id)
         created_id = getattr(created, "id", body.agent_spec_id)
         created_model = getattr(created, "model", spec.model or DEFAULT_MODEL)
+
+        # ── Trigger invoker for "once" triggers ──────────────────
+        trigger = getattr(spec, "trigger", None)
+        if trigger is None and body.agent_spec:
+            trigger_raw = body.agent_spec.get("trigger")
+            if isinstance(trigger_raw, dict):
+                trigger = trigger_raw
+        trigger_type = None
+        trigger_config: dict[str, Any] = {}
+        if trigger:
+            if isinstance(trigger, dict):
+                trigger_type = trigger.get("type")
+                trigger_config = trigger
+            else:
+                trigger_type = getattr(trigger, "type", None)
+                trigger_config = trigger.__dict__ if hasattr(trigger, "__dict__") else {}
+
+        if trigger_type == "once" and body.user_token:
+            import asyncio
+            from agent_runtimes.invoker import get_invoker
+
+            base_url = os.environ.get(
+                "DATALAYER_RUN_URL", "https://prod1.datalayer.run"
+            )
+            invoker = get_invoker(
+                trigger_type="once",
+                agent_id=created_id,
+                agent_spec_id=body.agent_spec_id,
+                token=body.user_token,
+                base_url=base_url,
+            )
+            if invoker:
+                logger.info(
+                    "Scheduling once invoker for agent '%s'", created_id
+                )
+                asyncio.ensure_future(invoker.invoke(trigger_config))
+
         return {
             "success": True,
             "agent_id": created_id,

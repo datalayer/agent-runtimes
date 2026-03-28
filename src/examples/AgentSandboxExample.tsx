@@ -10,7 +10,7 @@
  * sidebar that streams WebSocket messages to and from the
  * `/configure/sandbox/ws` endpoint.
  *
- * - Creates a local agent (spec: simple-full) with codemode enabled
+ * - Creates a local agent (spec: demo-full) with codemode enabled
  * - SegmentedControl toggles between "local-eval" and "jupyter" variants
  * - Sidebar shows live sandbox status, WebSocket event log, and an
  *   interrupt button
@@ -58,7 +58,7 @@ import type { SandboxAggregateStatus } from '../types/sandbox';
 
 const queryClient = new QueryClient();
 const AGENT_NAME = 'sandbox-demo-agent';
-const AGENT_SPEC_ID = 'simple-full';
+const AGENT_SPEC_ID = 'demo-full';
 const DEFAULT_LOCAL_BASE_URL =
   import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
 

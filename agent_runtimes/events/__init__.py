@@ -111,6 +111,7 @@ def update_event(
     title: str | None = None,
     kind: str | None = None,
     status: str | None = None,
+    read: bool | None = None,
     payload: dict[str, Any] | None = None,
     metadata: dict[str, Any] | None = None,
     base_url: str = DEFAULT_AI_AGENTS_BASE_URL,
@@ -124,6 +125,8 @@ def update_event(
         body["kind"] = kind
     if status is not None:
         body["status"] = status
+    if read is not None:
+        body["read"] = read
     if payload is not None:
         body["payload"] = payload
     if metadata is not None:
@@ -137,3 +140,39 @@ def update_event(
     )
     response.raise_for_status()
     return response.json()
+
+
+def delete_event(
+    token: str,
+    event_id: str,
+    base_url: str = DEFAULT_AI_AGENTS_BASE_URL,
+    timeout: float = 30.0,
+) -> dict[str, Any]:
+    """Delete an event record."""
+    response = httpx.delete(
+        f"{_events_url(base_url)}/{event_id}",
+        headers=_auth_headers(token),
+        timeout=timeout,
+    )
+    response.raise_for_status()
+    return response.json()
+
+
+def mark_event_read(
+    token: str,
+    event_id: str,
+    base_url: str = DEFAULT_AI_AGENTS_BASE_URL,
+    timeout: float = 30.0,
+) -> dict[str, Any]:
+    """Mark an event as read."""
+    return update_event(token, event_id, read=True, base_url=base_url, timeout=timeout)
+
+
+def mark_event_unread(
+    token: str,
+    event_id: str,
+    base_url: str = DEFAULT_AI_AGENTS_BASE_URL,
+    timeout: float = 30.0,
+) -> dict[str, Any]:
+    """Mark an event as unread."""
+    return update_event(token, event_id, read=False, base_url=base_url, timeout=timeout)

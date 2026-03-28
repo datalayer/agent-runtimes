@@ -31,7 +31,7 @@ import { Chat } from '../chat';
 
 const queryClient = new QueryClient();
 const AGENT_NAME = 'skills-demo-agent';
-const AGENT_SPEC_ID = 'simple-full';
+const AGENT_SPEC_ID = 'demo-full';
 const DEFAULT_LOCAL_BASE_URL =
   import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
 
@@ -160,7 +160,7 @@ const AgentSkillsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
       setIsReconnectedAgent(false);
 
       try {
-        // Create local agent runtime using the simple-full spec.
+        // Create local agent runtime using the demo-full spec.
         // The spec contains both code-based and path-based skills.
         const response = await authFetch(`${agentBaseUrl}/api/v1/agents`, {
           method: 'POST',

@@ -176,6 +176,9 @@ export {
   useAgentEvent,
   useCreateAgentEvent,
   useUpdateAgentEvent,
+  useDeleteAgentEvent,
+  useMarkEventRead,
+  useMarkEventUnread,
 } from './useNotifications';
 
 export {

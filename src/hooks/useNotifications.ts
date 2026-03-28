@@ -153,6 +153,48 @@ export function useUpdateAgentEvent() {
   });
 }
 
+export function useDeleteAgentEvent() {
+  const token = useAuthToken();
+  const baseUrl = useBaseUrl();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (eventId: string) =>
+      events.deleteEvent(token, eventId, baseUrl),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['agent-events'] });
+    },
+  });
+}
+
+export function useMarkEventRead() {
+  const token = useAuthToken();
+  const baseUrl = useBaseUrl();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (eventId: string) =>
+      events.markEventRead(token, eventId, baseUrl),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['agent-events'] });
+    },
+  });
+}
+
+export function useMarkEventUnread() {
+  const token = useAuthToken();
+  const baseUrl = useBaseUrl();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (eventId: string) =>
+      events.markEventUnread(token, eventId, baseUrl),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['agent-events'] });
+    },
+  });
+}
+
 // ─── Composite hook ──────────────────────────────────────────────────
 
 export function useNotifications(
@@ -168,6 +210,9 @@ export function useNotifications(
   const eventQuery = useAgentEvent(eventId);
   const createEvent = useCreateAgentEvent();
   const updateEvent = useUpdateAgentEvent();
+  const deleteEvent = useDeleteAgentEvent();
+  const markEventRead = useMarkEventRead();
+  const markEventUnread = useMarkEventUnread();
 
   return useMemo(
     () => ({
@@ -179,6 +224,9 @@ export function useNotifications(
       eventQuery,
       createEvent,
       updateEvent,
+      deleteEvent,
+      markEventRead,
+      markEventUnread,
     }),
     [
       notificationsQuery,
@@ -189,6 +237,9 @@ export function useNotifications(
       eventQuery,
       createEvent,
       updateEvent,
+      deleteEvent,
+      markEventRead,
+      markEventUnread,
     ],
   );
 }

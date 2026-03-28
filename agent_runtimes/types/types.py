@@ -455,6 +455,34 @@ class OutputSpec(BaseModel):
     )
 
 
+class EventField(BaseModel):
+    """Dynamic field definition for an event type specification."""
+
+    model_config = ConfigDict(populate_by_name=True, by_alias=True)
+
+    name: str = Field(..., description="Field key")
+    label: str = Field(..., description="Display label")
+    type: Literal["string", "boolean", "number"] = Field(..., description="Value type")
+    required: bool = Field(default=False, description="Whether field is required")
+    description: Optional[str] = Field(default=None, description="Field description")
+    placeholder: Optional[str] = Field(default=None, description="UI placeholder")
+
+
+class EventSpec(BaseModel):
+    """Event type specification for agent lifecycle and guardrail events."""
+
+    model_config = ConfigDict(populate_by_name=True, by_alias=True)
+
+    id: str = Field(..., description="Unique event type identifier")
+    version: str = Field(default="0.0.1", description="Event spec version")
+    name: str = Field(..., description="Display name")
+    description: str = Field(default="", description="Event type description")
+    kind: str = Field(..., description="Event kind constant")
+    fields: List[EventField] = Field(
+        default_factory=list, description="Event payload fields"
+    )
+
+
 class TriggerField(BaseModel):
     """Dynamic field definition for a trigger type."""
 

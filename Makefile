@@ -200,6 +200,11 @@ specs-generate: ## generate all Python and TypeScript specs from YAML
 	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/evals \
 	  --python-output agent_runtimes/specs/evals.py \
 	  --typescript-output src/specs/evals.ts
+	@echo "Generating event specifications..."
+	python scripts/codegen/generate_events.py \
+	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/events \
+	  --python-output agent_runtimes/specs/events.py \
+	  --typescript-output src/specs/events.ts
 	@echo "Generating trigger specifications..."
 	python scripts/codegen/generate_triggers.py \
 	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/triggers \

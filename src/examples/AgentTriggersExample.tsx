@@ -39,7 +39,10 @@ import {
   SignOutIcon,
   GlobeIcon,
   ZapIcon,
-  CopyIcon,
+  MailIcon,
+  EyeIcon,
+  EyeClosedIcon,
+  TrashIcon,
 } from '@primer/octicons-react';
 import { Box } from '@datalayer/primer-addons';
 import { ThemedProvider } from './utils/themedProvider';
@@ -47,7 +50,13 @@ import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { SignInSimple } from '@datalayer/core/lib/views/iam';
 import { UserBadge } from '@datalayer/core/lib/views/profile';
 import { Chat } from '../chat';
-import { useAgents } from '../hooks/useAgents';
+import {
+  useAgentEvents,
+  useDeleteAgentEvent,
+  useMarkEventRead,
+  useMarkEventUnread,
+} from '../hooks';
+import type { AgentEvent } from '../types';
 
 const queryClient = new QueryClient();
 
@@ -55,11 +64,13 @@ const queryClient = new QueryClient();
 
 const AGENT_NAME = 'trigger-demo-agent';
 const AGENT_SPEC_ID = 'monitor-sales-kpis';
+const DEFAULT_LOCAL_BASE_URL =
+  import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
 const DEFAULT_CRON = '0 8 * * *'; // daily at 08:00 UTC
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
-type TriggerTab = 'cron' | 'webhook' | 'event' | 'manual';
+type TriggerTab = 'once' | 'cron' | 'webhook' | 'event' | 'manual';
 
 interface TriggerRecord {
   id: string;
@@ -76,20 +87,15 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
 }) => {
   const { token } = useSimpleAuthStore();
 
-  const {
-    runtime,
-    status: runtimeStatus,
-    isReady,
-    error: hookError,
-  } = useAgents({
-    agentSpecId: AGENT_SPEC_ID,
-    autoStart: true,
-    agentConfig: {
-      name: AGENT_NAME,
-      protocol: 'ag-ui',
-      description: 'Agent with cron, webhook, event, and manual triggers',
-    },
-  });
+  const [runtimeStatus, setRuntimeStatus] = useState<
+    'launching' | 'ready' | 'error'
+  >('launching');
+  const [isReady, setIsReady] = useState(false);
+  const [hookError, setHookError] = useState<string | null>(null);
+  const [agentId, setAgentId] = useState<string>(AGENT_NAME);
+
+  const agentBaseUrl = DEFAULT_LOCAL_BASE_URL;
+  const chatAuthToken: string | undefined = token === null ? undefined : token;
 
   // Cron state
   const [cronExpr, setCronExpr] = useState(DEFAULT_CRON);
@@ -101,7 +107,11 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
   const [triggerFlash, setTriggerFlash] = useState<string | null>(null);
 
   // Tab state
-  const [activeTab, setActiveTab] = useState<TriggerTab>('cron');
+  const [activeTab, setActiveTab] = useState<TriggerTab>('once');
+
+  // Once trigger state
+  const [isLaunchingOnce, setIsLaunchingOnce] = useState(false);
+  const [onceFlash, setOnceFlash] = useState<string | null>(null);
 
   // Webhook state
   const [webhookUrl, setWebhookUrl] = useState<string | null>(null);
@@ -113,9 +123,12 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
   const [eventFilter, setEventFilter] = useState('');
   const [eventSubscribed, setEventSubscribed] = useState(false);
 
-  const agentBaseUrl = runtime?.agentBaseUrl || '';
-  const agentId = runtime?.agentId || AGENT_NAME;
-  const podName = runtime?.podName || '(launching…)';
+  // Events hooks
+  const eventsQuery = useAgentEvents({ agent_id: agentId });
+  const deleteEventMutation = useDeleteAgentEvent();
+  const markReadMutation = useMarkEventRead();
+  const markUnreadMutation = useMarkEventUnread();
+  const agentEvents: AgentEvent[] = eventsQuery.data?.events ?? [];
 
   // Authenticated fetch helper (for sidecar endpoints)
   const authFetch = useCallback(
@@ -280,6 +293,29 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
     }
   }, [agentBaseUrl, agentId, eventTopic, eventFilter, authFetch]);
 
+  // ── Launch once trigger ──────────────────────────────────────────────────
+
+  const handleLaunchOnce = useCallback(async () => {
+    if (!agentBaseUrl) return;
+    setIsLaunchingOnce(true);
+    setOnceFlash(null);
+    try {
+      const res = await authFetch(
+        `${agentBaseUrl}/api/v1/agents/${agentId}/trigger/run`,
+        { method: 'POST', body: JSON.stringify({ source: 'once' }) },
+      );
+      if (res.ok) {
+        setOnceFlash('Once trigger launched — agent will run and terminate.');
+      } else {
+        setOnceFlash(`Launch failed (${res.status})`);
+      }
+    } catch {
+      setOnceFlash('Network error');
+    } finally {
+      setIsLaunchingOnce(false);
+    }
+  }, [agentBaseUrl, agentId, authFetch]);
+
   // ── Loading / Error ──────────────────────────────────────────────────────
 
   if (!isReady && runtimeStatus !== 'error') {
@@ -408,6 +444,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
           >
             {(
               [
+                { key: 'once' as TriggerTab, icon: ZapIcon, label: 'Once' },
                 { key: 'cron' as TriggerTab, icon: ClockIcon, label: 'Cron' },
                 {
                   key: 'webhook' as TriggerTab,
@@ -442,6 +479,54 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
               </Button>
             ))}
           </Box>
+
+          {/* ── Once tab ──────────────────────────────────────────────── */}
+          {activeTab === 'once' && (
+            <Box
+              sx={{
+                p: 3,
+                borderBottom: '1px solid',
+                borderColor: 'border.default',
+              }}
+            >
+              <Box
+                sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}
+              >
+                <ZapIcon size={16} />
+                <Heading as="h3" sx={{ fontSize: 2 }}>
+                  Once Trigger
+                </Heading>
+              </Box>
+
+              <Text as="p" sx={{ fontSize: 0, color: 'fg.muted', mb: 3 }}>
+                Launch the agent once. It will execute its trigger prompt, emit
+                lifecycle events (AGENT_STARTED / AGENT_ENDED), and then
+                terminate the runtime automatically.
+              </Text>
+
+              <Button
+                size="small"
+                variant="primary"
+                leadingVisual={ZapIcon}
+                onClick={handleLaunchOnce}
+                disabled={isLaunchingOnce}
+                sx={{ width: '100%' }}
+              >
+                {isLaunchingOnce ? 'Launching…' : 'Launch Once'}
+              </Button>
+
+              {onceFlash && (
+                <Flash
+                  variant={
+                    onceFlash.includes('launched') ? 'success' : 'danger'
+                  }
+                  sx={{ mt: 2, fontSize: 0 }}
+                >
+                  {onceFlash}
+                </Flash>
+              )}
+            </Box>
+          )}
 
           {/* ── Cron tab ─────────────────────────────────────────────── */}
           {activeTab === 'cron' && (
@@ -766,6 +851,107 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
                   </Timeline.Item>
                 ))}
               </Timeline>
+            )}
+
+            {/* Agent Events */}
+            <Heading as="h4" sx={{ fontSize: 1, mt: 3, mb: 2 }}>
+              Agent Events
+            </Heading>
+
+            {agentEvents.length === 0 ? (
+              <Text sx={{ color: 'fg.muted', fontSize: 0 }}>
+                No agent events yet.
+              </Text>
+            ) : (
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {agentEvents.map((evt: AgentEvent) => (
+                  <Box
+                    key={evt.id}
+                    sx={{
+                      p: 2,
+                      bg: evt.read ? 'canvas.subtle' : 'accent.subtle',
+                      borderRadius: 2,
+                      border: '1px solid',
+                      borderColor: evt.read ? 'border.default' : 'accent.muted',
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1,
+                        mb: 1,
+                      }}
+                    >
+                      <Label
+                        variant={
+                          evt.kind === 'agent-started'
+                            ? 'accent'
+                            : evt.kind === 'agent-ended'
+                              ? 'success'
+                              : evt.kind?.includes('alert')
+                                ? 'danger'
+                                : 'attention'
+                        }
+                        size="small"
+                      >
+                        {evt.kind}
+                      </Label>
+                      <Text sx={{ flex: 1, fontSize: 0, fontWeight: 'bold' }}>
+                        {evt.title}
+                      </Text>
+                      <Button
+                        size="small"
+                        variant="invisible"
+                        onClick={() =>
+                          evt.read
+                            ? markUnreadMutation.mutate(evt.id)
+                            : markReadMutation.mutate(evt.id)
+                        }
+                        sx={{ p: 1 }}
+                      >
+                        {evt.read ? (
+                          <EyeClosedIcon size={12} />
+                        ) : (
+                          <EyeIcon size={12} />
+                        )}
+                      </Button>
+                      <Button
+                        size="small"
+                        variant="invisible"
+                        onClick={() => deleteEventMutation.mutate(evt.id)}
+                        sx={{ p: 1, color: 'danger.fg' }}
+                      >
+                        <TrashIcon size={12} />
+                      </Button>
+                    </Box>
+                    {/* Event-type-specific fields */}
+                    {evt.payload && (
+                      <Box sx={{ fontSize: 0, color: 'fg.muted' }}>
+                        {evt.kind === 'agent-ended' && evt.payload.outputs && (
+                          <Text as="p" sx={{ mb: 1 }}>
+                            Output: {String(evt.payload.outputs).slice(0, 200)}
+                          </Text>
+                        )}
+                        {evt.kind === 'agent-ended' &&
+                          evt.payload.duration_ms != null && (
+                            <Text as="p">
+                              Duration:{' '}
+                              {(Number(evt.payload.duration_ms) / 1000).toFixed(
+                                1,
+                              )}
+                              s
+                            </Text>
+                          )}
+                        {evt.kind?.includes('guardrail') &&
+                          evt.payload.message && (
+                            <Text as="p">{String(evt.payload.message)}</Text>
+                          )}
+                      </Box>
+                    )}
+                  </Box>
+                ))}
+              </Box>
             )}
           </Box>
         </Box>

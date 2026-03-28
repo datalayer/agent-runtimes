@@ -15,6 +15,7 @@ export interface AgentEvent {
   title: string;
   kind: string;
   status: string;
+  read: boolean;
   payload: Record<string, unknown>;
   metadata: Record<string, unknown>;
   created_at: string;
@@ -34,6 +35,7 @@ export interface UpdateAgentEventRequest {
   title?: string;
   kind?: string;
   status?: string;
+  read?: boolean;
   payload?: Record<string, unknown>;
   metadata?: Record<string, unknown>;
 }

@@ -88,7 +88,7 @@ const normalizeAiAgentsBaseUrl = (rawBaseUrl: string): string => {
 
 const queryClient = new QueryClient();
 const AGENT_NAME = 'tool-approval-demo-agent';
-const AGENT_SPEC_ID = 'simple-full';
+const AGENT_SPEC_ID = 'demo-full';
 const DEFAULT_LOCAL_BASE_URL =
   import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
 const FALLBACK_AI_AGENTS_BASE_URL =

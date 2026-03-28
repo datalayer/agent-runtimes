@@ -102,3 +102,34 @@ export const updateEvent = async (
     body: data,
   });
 };
+
+export const deleteEvent = async (
+  token: string,
+  eventId: string,
+  baseUrl: string = DEFAULT_SERVICE_URLS.AI_AGENTS,
+): Promise<{ success: boolean }> => {
+  validateToken(token);
+  validateRequiredString(eventId, 'eventId');
+
+  return requestDatalayerAPI<{ success: boolean }>({
+    url: `${baseUrl}${API_BASE_PATHS.AI_AGENTS}/events/${encodeURIComponent(eventId)}`,
+    method: 'DELETE',
+    token,
+  });
+};
+
+export const markEventRead = async (
+  token: string,
+  eventId: string,
+  baseUrl: string = DEFAULT_SERVICE_URLS.AI_AGENTS,
+): Promise<GetAgentEventResponse> => {
+  return updateEvent(token, eventId, { read: true }, baseUrl);
+};
+
+export const markEventUnread = async (
+  token: string,
+  eventId: string,
+  baseUrl: string = DEFAULT_SERVICE_URLS.AI_AGENTS,
+): Promise<GetAgentEventResponse> => {
+  return updateEvent(token, eventId, { read: false }, baseUrl);
+};
