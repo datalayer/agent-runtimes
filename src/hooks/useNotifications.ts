@@ -90,6 +90,23 @@ export function useMarkAllNotificationsRead() {
 
 // ─── Event hooks ─────────────────────────────────────────────────────
 
+/**
+ * List events across all agents for the authenticated user.
+ */
+export function useAllAgentEvents(
+  params?: Omit<ListAgentEventsParams, 'agent_id'>,
+) {
+  const token = useAuthToken();
+  const baseUrl = useBaseUrl();
+
+  return useQuery({
+    queryKey: ['agent-events', params],
+    queryFn: () => events.listAllEvents(token, params ?? {}, baseUrl),
+    enabled: !!token,
+    staleTime: 10_000,
+  });
+}
+
 export function useAgentEvents(
   agentId: string,
   params?: Omit<ListAgentEventsParams, 'agent_id'>,

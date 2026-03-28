@@ -146,3 +146,20 @@ export const markEventUnread = async (
 ): Promise<GetAgentEventResponse> => {
   return updateEvent(token, agentId, eventId, { read: false }, baseUrl);
 };
+
+/**
+ * List events across all agents for the authenticated user.
+ */
+export const listAllEvents = async (
+  token: string,
+  params: Omit<ListAgentEventsParams, 'agent_id'> = {},
+  baseUrl: string = DEFAULT_SERVICE_URLS.AI_AGENTS,
+): Promise<ListAgentEventsResponse> => {
+  validateToken(token);
+
+  return requestDatalayerAPI<ListAgentEventsResponse>({
+    url: `${baseUrl}${API_BASE_PATHS.AI_AGENTS}/events${toQueryString(params)}`,
+    method: 'GET',
+    token,
+  });
+};

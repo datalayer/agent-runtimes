@@ -172,6 +172,7 @@ export {
   useUnreadNotificationCount,
   useMarkNotificationRead,
   useMarkAllNotificationsRead,
+  useAllAgentEvents,
   useAgentEvents,
   useAgentEvent,
   useCreateAgentEvent,
