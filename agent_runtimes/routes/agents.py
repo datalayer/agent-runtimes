@@ -2800,18 +2800,38 @@ async def configure_from_spec_endpoint(
     # (which is gated on enable_codemode) respects the --codemode startup flag
     # even when the forwarded agent_spec has no explicit codemode block.
     server_codemode = os.environ.get("AGENT_RUNTIMES_CODEMODE", "").lower() == "true"
+
+    # The UI always talks to the "default" agent, so reconfigure the existing
+    # default agent rather than creating a new one with the spec ID as name.
+    # Delete the existing "default" agent first so create_agent() succeeds.
+    target_agent_name = "default"
+    if target_agent_name in _agents:
+        logger.info(
+            "Removing existing '%s' agent to reconfigure from spec '%s'",
+            target_agent_name,
+            body.agent_spec_id,
+        )
+        try:
+            await delete_agent(target_agent_name)
+        except Exception as e:
+            logger.warning("Failed to delete existing default agent: %s", e)
+
     try:
         created = await create_agent(
             CreateAgentRequest(
-                name=body.agent_spec_id,
+                name=target_agent_name,
                 agent_spec_id=body.agent_spec_id,
                 agent_spec=body.agent_spec,
                 enable_codemode=server_codemode,
             ),
             http_request,
         )
-        logger.info("Agent '%s' created from spec and registered", body.agent_spec_id)
-        created_id = getattr(created, "id", body.agent_spec_id)
+        logger.info(
+            "Agent '%s' reconfigured from spec '%s' and registered",
+            target_agent_name,
+            body.agent_spec_id,
+        )
+        created_id = getattr(created, "id", target_agent_name)
         created_model = getattr(created, "model", spec.model or DEFAULT_MODEL)
 
         # ── Trigger invoker for "once" triggers ──────────────────
@@ -2837,7 +2857,7 @@ async def configure_from_spec_endpoint(
             "success": True,
             "agent_id": created_id,
             "model": created_model,
-            "message": f"Agent '{body.agent_spec_id}' configured from spec.",
+            "message": f"Agent 'default' reconfigured from spec '{body.agent_spec_id}'.",
         }
 
     except Exception as e:

@@ -38,11 +38,13 @@ import {
 export interface SandboxStatusIndicatorProps {
   /** API base URL (e.g. "http://127.0.0.1:8765"). */
   apiBase?: string;
+  /** Optional auth token for authenticated requests (e.g. K8s ingress). */
+  authToken?: string;
 }
 
 /* ── Helpers ───────────────────────────────────────────── */
 
-function getWsUrl(apiBase?: string): string {
+function getWsUrl(apiBase?: string, authToken?: string): string {
   if (typeof window === 'undefined') return '';
   const base = apiBase
     ? apiBase
@@ -52,7 +54,13 @@ function getWsUrl(apiBase?: string): string {
       : '';
   // Convert http(s) to ws(s).
   const wsBase = base.replace(/^http/, 'ws');
-  return `${wsBase}/api/v1/configure/sandbox/ws`;
+  const wsUrl = `${wsBase}/api/v1/configure/sandbox/ws`;
+  // WebSocket API doesn't support custom headers, pass token as query param.
+  if (authToken) {
+    const sep = wsUrl.includes('?') ? '&' : '?';
+    return `${wsUrl}${sep}token=${encodeURIComponent(authToken)}`;
+  }
+  return wsUrl;
 }
 
 function deriveAggregate(
@@ -92,13 +100,17 @@ function useInjectKeyframes() {
 
 export function SandboxStatusIndicator({
   apiBase,
+  authToken,
 }: SandboxStatusIndicatorProps) {
   useInjectKeyframes();
   const [status, setStatus] = useState<SandboxWsStatus | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout>>();
 
-  const wsUrl = useMemo(() => getWsUrl(apiBase), [apiBase]);
+  const wsUrl = useMemo(
+    () => getWsUrl(apiBase, authToken),
+    [apiBase, authToken],
+  );
 
   // ---- WebSocket lifecycle ----
   useEffect(() => {

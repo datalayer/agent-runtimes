@@ -36,6 +36,8 @@ export interface McpStatusIndicatorProps {
   /** API base URL (e.g. "http://127.0.0.1:8765"). Defaults to
    *  the current host on non-localhost, or localhost:8765. */
   apiBase?: string;
+  /** Optional auth token for authenticated requests (e.g. K8s ingress). */
+  authToken?: string;
 }
 
 /* ── Helpers ───────────────────────────────────────────── */
@@ -96,14 +98,22 @@ function useInjectKeyframes() {
 
 /* ── Component ─────────────────────────────────────────── */
 
-export function McpStatusIndicator({ apiBase }: McpStatusIndicatorProps) {
+export function McpStatusIndicator({
+  apiBase,
+  authToken,
+}: McpStatusIndicatorProps) {
   useInjectKeyframes();
   const { data } = useQuery<McpToolsetsStatusResponse>({
     queryKey: ['mcp-toolsets-status', apiBase],
     queryFn: async () => {
       const base = getApiBase(apiBase);
+      const headers: Record<string, string> = {};
+      if (authToken) {
+        headers['Authorization'] = `Bearer ${authToken}`;
+      }
       const response = await fetch(
         `${base}/api/v1/configure/mcp-toolsets-status`,
+        { headers },
       );
       if (!response.ok) throw new Error('Failed to fetch MCP status');
       return response.json();

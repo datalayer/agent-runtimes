@@ -1626,8 +1626,11 @@ function ChatBaseInner({
   }
 
   // ---- apiBase for indicators (derived from configEndpoint) ----
+  // Indicators (McpStatusIndicator, SandboxStatusIndicator) prepend
+  // "/api/v1/configure/…" themselves, so we need the raw base URL
+  // (without "/api/v1") rather than getApiBaseFromConfig() which keeps it.
   const indicatorApiBase = protocol?.configEndpoint
-    ? getApiBaseFromConfig(protocol.configEndpoint)
+    ? protocol.configEndpoint.replace(/\/api\/v1\/(config|configure)\/?$/, '')
     : undefined;
 
   // ---- Compute data for InputToolbar ----
@@ -1772,6 +1775,7 @@ function ChatBaseInner({
           onToggleSkill={toggleSkill}
           onToggleAllSkills={toggleAllSkills}
           apiBase={indicatorApiBase}
+          authToken={protocol?.authToken}
         />
       )}
 

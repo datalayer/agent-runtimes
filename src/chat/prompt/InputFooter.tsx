@@ -90,6 +90,8 @@ export interface InputToolbarProps {
   // ---- Indicators ----
   /** API base URL passed to MCP / Sandbox indicators */
   apiBase?: string;
+  /** Auth token passed to MCP / Sandbox indicators */
+  authToken?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -130,6 +132,7 @@ export function InputToolbar({
   onToggleSkill,
   onToggleAllSkills,
   apiBase,
+  authToken,
 }: InputToolbarProps) {
   // Show token usage when we have valid context data
   const hasContext =
@@ -150,8 +153,8 @@ export function InputToolbar({
         onChange={setInput}
         footerRightContent={
           <>
-            <SandboxStatusIndicator apiBase={apiBase} />
-            <McpStatusIndicator apiBase={apiBase} />
+            <SandboxStatusIndicator apiBase={apiBase} authToken={authToken} />
+            <McpStatusIndicator apiBase={apiBase} authToken={authToken} />
           </>
         }
       />

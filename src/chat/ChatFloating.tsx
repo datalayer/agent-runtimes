@@ -271,6 +271,12 @@ export interface ChatFloatingProps {
   historyEndpoint?: string;
 
   /**
+   * Auth token for authenticating with the agent runtime.
+   * Used for indicator API calls (MCP status, sandbox status) and history.
+   */
+  authToken?: string;
+
+  /**
    * Auth token for the history endpoint.
    */
   historyAuthToken?: string;
@@ -368,6 +374,7 @@ export function ChatFloating({
   showTokenUsage = true,
   runtimeId,
   historyEndpoint,
+  authToken,
   historyAuthToken,
   pendingPrompt,
   showInformation = false,
@@ -458,6 +465,7 @@ export function ChatFloating({
       type: detectedType,
       endpoint,
       agentId: extractedAgentId,
+      authToken,
       // Enable config query for model/tools/skills selector or token usage
       enableConfigQuery:
         showModelSelector || showToolsMenu || showSkillsMenu || showTokenUsage,
@@ -470,6 +478,7 @@ export function ChatFloating({
   }, [
     protocolProp,
     endpoint,
+    authToken,
     showModelSelector,
     showToolsMenu,
     showSkillsMenu,
