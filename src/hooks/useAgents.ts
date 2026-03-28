@@ -29,15 +29,74 @@ import {
 } from '../stores/agentsStore';
 import { DEFAULT_AGENT_CONFIG } from '../types/config';
 import type { AgentConfig } from '../types/config';
+import type { AgentConnection } from '../types/connection';
 import type { AgentStatus, AgentRuntimeData } from '../types/agents';
 import type {
   CreateAgentRuntimeRequest,
-  UseAgentOptions,
-  UseAgentReturn,
   AgentLifecycleRecord,
   AgentLifecycleState,
-  UseAgentsRuntimesReturn,
+  CreateRuntimeApiResponse,
 } from '../types/agents-lifecycle';
+import { ServiceManager } from '@jupyterlab/services/lib/manager';
+
+/**
+ * Options for the useAgents hook.
+ */
+export interface UseAgentOptions {
+  /** Agent spec ID — when provided, enables full lifecycle management (launch, pause, resume, terminate) */
+  agentSpecId?: string;
+  /** Agent configuration */
+  agentConfig?: AgentConfig;
+  /** Auto-create agent when runtime connects (default: true) */
+  autoCreateAgent?: boolean;
+  /** Auto-start runtime on mount (default: false) */
+  autoStart?: boolean;
+  /** Full agent spec object (persisted with checkpoints) */
+  agentSpec?: Record<string, any>;
+}
+
+/**
+ * Return type for the useAgents hook.
+ */
+export interface UseAgentReturn {
+  // Runtime
+  /** Current runtime connection (null if not connected) */
+  runtime: AgentConnection | null;
+  /** Combined agent status */
+  status: AgentStatus;
+  /** Whether the runtime is launching */
+  isLaunching: boolean;
+  /** Launch a new runtime */
+  launchRuntime: (options?: IRuntimeOptions) => Promise<AgentConnection>;
+  /** Connect to an existing runtime */
+  connectToRuntime: (options: {
+    podName: string;
+    environmentName: string;
+    serviceManager?: ServiceManager.IManager;
+    jupyterBaseUrl?: string;
+    kernelId?: string;
+  }) => void;
+  /** Disconnect from the runtime */
+  disconnect: () => void;
+
+  // Agent
+  /** Agent endpoint URL (derived from runtime connection) */
+  endpoint: string | null;
+  /** ServiceManager for the runtime */
+  serviceManager: ServiceManager.IManager | null;
+  /** Create an agent on the runtime */
+  createAgent: (
+    config?: AgentConfig,
+  ) => Promise<Pick<AgentConnection, 'agentId' | 'endpoint' | 'isReady'>>;
+  /** Whether agent creation is currently in progress */
+  isCreating: boolean;
+
+  // Status
+  /** Whether everything is ready (runtime + agent) */
+  isReady: boolean;
+  /** Error if any */
+  error: string | null;
+}
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Constants
@@ -715,6 +774,19 @@ export const useAgentLifecycleStore = create<AgentLifecycleState>()(
 // ═══════════════════════════════════════════════════════════════════════════
 // Consolidated Runtime Composite
 // ═══════════════════════════════════════════════════════════════════════════
+
+export interface UseAgentsRuntimesReturn {
+  runtimes: AgentRuntimeData[];
+  isRuntimesLoading: boolean;
+  isRuntimesError: boolean;
+  runtimesError: unknown;
+  refetchRuntimes: () => Promise<{ data?: AgentRuntimeData[] }>;
+  refreshRuntimes: () => void;
+  deleteRuntimeByPod: (podName: string) => Promise<unknown>;
+  createRuntime: (
+    data: CreateAgentRuntimeRequest,
+  ) => Promise<CreateRuntimeApiResponse>;
+}
 
 /**
  * Consolidated runtime list and mutations.

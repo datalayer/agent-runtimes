@@ -22,7 +22,7 @@ import type {
   AgentStatus,
   AgentConnection,
   CheckpointRecord,
-} from '../types/agents';
+} from '../types';
 
 /**
  * Checkpoint data returned by the runtime-checkpoints API.

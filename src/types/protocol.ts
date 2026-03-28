@@ -49,6 +49,26 @@ export type ProtocolTransport = 'sse' | 'websocket' | 'http';
 export type Extension = 'mcp-ui' | 'a2ui';
 
 /**
+ * Protocol configuration for ChatBase
+ */
+export interface ProtocolConfig {
+  /** Protocol/transport type */
+  type: Protocol;
+  /** Endpoint URL */
+  endpoint: string;
+  /** Authentication token */
+  authToken?: string;
+  /** Agent ID */
+  agentId?: string;
+  /** Enable config query for models and tools */
+  enableConfigQuery?: boolean;
+  /** Config endpoint URL for non-Jupyter protocols (if not set, uses Jupyter requestAPI) */
+  configEndpoint?: string;
+  /** Additional protocol options */
+  options?: Record<string, unknown>;
+}
+
+/**
  * Transport adapter configuration
  */
 export interface ProtocolAdapterConfig {

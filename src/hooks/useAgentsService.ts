@@ -6,7 +6,7 @@
 /**
  * Agents Service REST API hook and notebook agent management.
  *
- * @deprecated Use useAgents instead
+ * @deprecated useAgents instead
  * @module hooks/useAgentsService
  */
 
@@ -14,7 +14,13 @@ import { useEffect } from 'react';
 import { useCoreStore, useDatalayer } from '@datalayer/core';
 import { URLExt } from '@jupyterlab/coreutils';
 import { useAgentStore } from '../stores/agentsStore';
-import type { RequestOptions, RoomType } from '../types/agents';
+
+export type RequestOptions = {
+  signal?: AbortSignal;
+  baseUrl?: string;
+};
+
+export type RoomType = 'notebook_persist' | 'notebook_memory' | 'doc_memory';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Agents Service REST API hook.

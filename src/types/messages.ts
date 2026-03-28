@@ -100,6 +100,31 @@ export interface ChatMessage {
 }
 
 /**
+ * Streaming options for custom message handlers.
+ * Enables streaming response support with chunk callbacks.
+ */
+export interface StreamingMessageOptions {
+  /** Callback for each chunk of streamed content */
+  onChunk?: (chunk: string) => void;
+  /** Callback when streaming is complete */
+  onComplete?: (fullResponse: string) => void;
+  /** Callback on error */
+  onError?: (error: Error) => void;
+  /** Abort signal for cancellation */
+  signal?: AbortSignal;
+}
+
+/**
+ * Custom message handler type for props-based mode.
+ * Supports both simple and streaming response patterns.
+ */
+export type MessageHandler = (
+  message: string,
+  messages: ChatMessage[],
+  options?: StreamingMessageOptions,
+) => Promise<string | void>;
+
+/**
  * Message input for sending new messages
  */
 export interface ChatMessageInput {

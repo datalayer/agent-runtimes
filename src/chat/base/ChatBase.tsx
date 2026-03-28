@@ -31,12 +31,11 @@ import {
   createUserMessage,
   createAssistantMessage,
 } from '../../types/messages';
-import type { ProtocolEvent } from '../../types/protocol';
+import type { ProtocolConfig, ProtocolEvent } from '../../types/protocol';
 import type { BaseProtocolAdapter } from '../../protocols';
 import type {
   ChatBaseProps,
   AvatarConfig,
-  ProtocolConfig,
   DisplayItem,
   ToolCallMessage,
   Suggestion,

@@ -77,7 +77,7 @@ import {
 } from '../hooks/useAgents';
 import { useDeletePausedAgentRuntime } from '../hooks/useCheckpoints';
 import { AGENT_STATUS_COLORS } from '../types/agents';
-import type { CheckpointRecord } from '../types/agents';
+import type { CheckpointRecord } from '../types/checkpoints';
 
 const queryClient = new QueryClient();
 

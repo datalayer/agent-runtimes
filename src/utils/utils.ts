@@ -12,7 +12,7 @@
 import { QueryClient } from '@tanstack/react-query';
 
 import type { ChatMessage, ContentPart } from '../types/messages';
-import type { ProtocolAdapterConfig } from '../types/protocol';
+import type { ProtocolAdapterConfig, ProtocolConfig } from '../types/protocol';
 import {
   AGUIAdapter,
   A2AAdapter,
@@ -25,7 +25,6 @@ import type {
   ToolCallMessage,
   DisplayItem,
   DisplayToolCallStatus,
-  ProtocolConfig,
 } from '../types/chat';
 
 // ---------------------------------------------------------------------------

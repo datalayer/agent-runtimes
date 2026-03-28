@@ -10,8 +10,8 @@
  */
 
 import type { ReactNode } from 'react';
-import type { ChatMessage } from './messages';
-import type { Protocol } from './protocol';
+import type { ChatMessage, MessageHandler } from './messages';
+import type { Protocol, ProtocolConfig } from './protocol';
 import type { McpServerSelection } from './inference';
 import type { MCPServerTool } from './mcp';
 import type { AgentRuntimeConfig } from './config';
@@ -178,31 +178,6 @@ export interface EmptyStateConfig {
   render?: () => ReactNode;
 }
 
-/**
- * Streaming options for custom message handler.
- * Enables streaming response support with chunk callbacks.
- */
-export interface StreamingMessageOptions {
-  /** Callback for each chunk of streamed content */
-  onChunk?: (chunk: string) => void;
-  /** Callback when streaming is complete */
-  onComplete?: (fullResponse: string) => void;
-  /** Callback on error */
-  onError?: (error: Error) => void;
-  /** Abort signal for cancellation */
-  signal?: AbortSignal;
-}
-
-/**
- * Custom message handler type for props-based mode.
- * Supports both simple and streaming response patterns.
- */
-export type MessageHandler = (
-  message: string,
-  messages: ChatMessage[],
-  options?: StreamingMessageOptions,
-) => Promise<string | void>;
-
 // ---------------------------------------------------------------------------
 // Model / Tool / MCP configuration
 // ---------------------------------------------------------------------------
@@ -234,30 +209,6 @@ export interface MCPServerConfig {
   transport?: string;
   isConfig?: boolean;
   isRunning?: boolean;
-}
-
-// ---------------------------------------------------------------------------
-// Protocol / Runtime configuration
-// ---------------------------------------------------------------------------
-
-/**
- * Protocol configuration for ChatBase
- */
-export interface ProtocolConfig {
-  /** Protocol/transport type */
-  type: Protocol;
-  /** Endpoint URL */
-  endpoint: string;
-  /** Authentication token */
-  authToken?: string;
-  /** Agent ID */
-  agentId?: string;
-  /** Enable config query for models and tools */
-  enableConfigQuery?: boolean;
-  /** Config endpoint URL for non-Jupyter protocols (if not set, uses Jupyter requestAPI) */
-  configEndpoint?: string;
-  /** Additional protocol options */
-  options?: Record<string, unknown>;
 }
 
 // ---------------------------------------------------------------------------

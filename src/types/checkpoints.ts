@@ -3,6 +3,26 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
+export type CheckpointMode = 'criu' | 'light';
+
+/**
+ * A persisted checkpoint record returned from the runtimes API.
+ */
+export interface CheckpointRecord {
+  id: string;
+  name: string;
+  description: string;
+  runtime_uid: string;
+  agent_spec_id: string;
+  agentspec: Record<string, unknown>;
+  metadata: Record<string, unknown>;
+  checkpoint_mode?: CheckpointMode;
+  messages?: string[];
+  status: string;
+  status_message?: string;
+  updated_at: string;
+}
+
 // ---- Conversation Checkpoints ----
 
 export interface ConversationCheckpoint {

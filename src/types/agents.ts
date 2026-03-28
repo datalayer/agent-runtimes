@@ -6,8 +6,8 @@
 /**
  * AI Agent model
  */
-import type { ServiceManager } from '@jupyterlab/services';
 import type { AgentSpec } from './agentspecs';
+import type { AgentConnection } from './connection';
 
 export type AgentLibrary = 'pydantic-ai' | 'langchain' | 'google-adk';
 
@@ -61,32 +61,6 @@ export const AGENT_STATUS_COLORS: Record<AgentStatus, AgentStatusColorVariant> =
   };
 
 /**
- * Information about a connected agent runtime.
- */
-export interface AgentConnection {
-  /** Runtime pod name (unique identifier). */
-  podName: string;
-  /** Environment name. */
-  environmentName: string;
-  /** Base URL for the Jupyter server. */
-  jupyterBaseUrl: string;
-  /** Base URL for the agent-runtimes server. */
-  agentBaseUrl: string;
-  /** JupyterLab ServiceManager for the runtime. */
-  serviceManager?: ServiceManager.IManager;
-  /** Runtime status. */
-  status: AgentStatus;
-  /** Kernel ID if connected. */
-  kernelId?: string;
-  /** Agent ID. */
-  agentId?: string;
-  /** Full endpoint URL for the agent. */
-  endpoint?: string;
-  /** Whether the agent is ready to use. */
-  isReady?: boolean;
-}
-
-/**
  * Complete state for an agent runtime in the Zustand store.
  */
 export interface AgentRuntimeState {
@@ -132,103 +106,6 @@ export type AgentRuntimeData = {
   // ID of the agent spec used to create this runtime
   agent_spec_id?: string;
 };
-
-/**
- * A persisted checkpoint record returned from the runtimes API.
- */
-export interface CheckpointRecord {
-  id: string;
-  name: string;
-  description: string;
-  runtime_uid: string;
-  agent_spec_id: string;
-  agentspec: Record<string, unknown>;
-  metadata: Record<string, unknown>;
-  checkpoint_mode?: 'criu' | 'light';
-  messages?: string[];
-  status: string;
-  status_message?: string;
-  updated_at: string;
-}
-
-export type CheckpointMode = 'criu' | 'light';
-
-export type IAIAgent = {
-  /**
-   * ID of the document monitored by the agent.
-   */
-  documentId: string;
-  /**
-   * ID of the runtime connected to the agent.
-   *
-   * This is not the name of the remote pod but
-   * the Simple Kernel ID of the process within it.
-   */
-  runtimeId?: string;
-};
-
-export default IAIAgent;
-
-// ═══════════════════════════════════════════════════════════════════════════
-// Request / Room types for AI Agents REST API
-// ═══════════════════════════════════════════════════════════════════════════
-
-export type RequestOptions = {
-  signal?: AbortSignal;
-  baseUrl?: string;
-};
-
-export type RoomType = 'notebook_persist' | 'notebook_memory' | 'doc_memory';
-
-// ---- Agent Events ----
-
-export interface AgentEvent {
-  id: string;
-  agent_id: string;
-  title: string;
-  kind: string;
-  status: string;
-  payload: Record<string, unknown>;
-  metadata: Record<string, unknown>;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface CreateAgentEventRequest {
-  agent_id: string;
-  title: string;
-  kind?: string;
-  status?: string;
-  payload?: Record<string, unknown>;
-  metadata?: Record<string, unknown>;
-}
-
-export interface UpdateAgentEventRequest {
-  title?: string;
-  kind?: string;
-  status?: string;
-  payload?: Record<string, unknown>;
-  metadata?: Record<string, unknown>;
-}
-
-export interface ListAgentEventsParams {
-  agent_id?: string;
-  kind?: string;
-  status?: string;
-  limit?: number;
-  offset?: number;
-}
-
-export interface GetAgentEventResponse {
-  success: boolean;
-  event: AgentEvent;
-}
-
-export interface ListAgentEventsResponse {
-  success: boolean;
-  total: number;
-  events: AgentEvent[];
-}
 
 // ---- Running Agents ----
 

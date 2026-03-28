@@ -16,6 +16,7 @@ export * from './connection';
 export * from './context';
 export * from './cost';
 export * from './envvars';
+export * from './events';
 export * from './evals';
 export * from './examples';
 export * from './execution';
