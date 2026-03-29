@@ -17,7 +17,13 @@
  */
 
 import { useContext } from 'react';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { Text, Spinner } from '@primer/react';
 import { Box, setupPrimerPortals } from '@datalayer/primer-addons';
 import { AlertIcon, PersonIcon } from '@primer/octicons-react';
@@ -57,7 +63,10 @@ import {
 import { ChatBaseHeader } from '../header/ChatHeaderBase';
 import { ChatEmptyState } from '../display/EmptyState';
 import { PoweredByTag } from '../display/PoweredByTag';
-import { ChatMessageList } from '../messages/ChatMessageList';
+import {
+  ChatMessageList,
+  type ToolApprovalConfig,
+} from '../messages/ChatMessageList';
 import { InputToolbar } from '../prompt/InputFooter';
 
 // Tracks pending prompts already auto-sent for a given conversation scope.
@@ -680,6 +689,15 @@ function ChatBaseInner({
   }, [displayItems, onMessagesChange]);
 
   const padding = compact ? 2 : 3;
+
+  // Derive approval config from protocol for built-in tool approval support
+  const approvalConfig = useMemo((): ToolApprovalConfig | undefined => {
+    if (!protocol?.configEndpoint) return undefined;
+    return {
+      apiBaseUrl: getApiBaseFromConfig(protocol.configEndpoint),
+      authToken: protocol.authToken,
+    };
+  }, [protocol?.configEndpoint, protocol?.authToken]);
 
   const defaultAvatarConfig: Required<
     Pick<
@@ -1718,6 +1736,7 @@ function ChatBaseInner({
               avatarConfig={defaultAvatarConfig}
               padding={padding}
               renderToolResult={renderToolResult}
+              approvalConfig={approvalConfig}
               messagesEndRef={messagesEndRef as React.RefObject<HTMLDivElement>}
               onRespond={handleRespond}
               emptyContent={

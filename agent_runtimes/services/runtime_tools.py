@@ -162,11 +162,11 @@ def register_agent_tools(
 
         if requires_approval and not use_deferred_tool_approval:
             manager = _build_approval_manager(
-                tool_id,
+                spec.id,
                 agent_id=agent_id,
                 pod_name=pod_name,
             )
-            tool_fn = wrap_tool_with_approval(tool_fn, tool_id, manager)
+            tool_fn = wrap_tool_with_approval(tool_fn, spec.id, manager)
 
         # Ensure function name is a valid Python identifier for pydantic_ai.
         # Use spec.id (unversioned) rather than tool_id which may contain
@@ -183,11 +183,11 @@ def register_agent_tools(
             # not support requires_approval in tool_plain.
             if requires_approval and use_deferred_tool_approval:
                 manager = _build_approval_manager(
-                    tool_id,
+                    spec.id,
                     agent_id=agent_id,
                     pod_name=pod_name,
                 )
-                tool_fn = wrap_tool_with_approval(tool_fn, tool_id, manager)
+                tool_fn = wrap_tool_with_approval(tool_fn, spec.id, manager)
                 tool_fn.__name__ = _tool_name_to_identifier(spec.id)
             tool_plain(tool_fn)
         registered.append(tool_fn.__name__)

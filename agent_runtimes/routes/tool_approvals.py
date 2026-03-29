@@ -62,6 +62,45 @@ def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
+async def mirror_approval_to_local(data: dict) -> ToolApprovalRecord:
+    """Mirror an approval record from an external backend (e.g. ai-agents)
+    into the local in-memory store so the frontend can discover it."""
+    now = _now_iso()
+    record = ToolApprovalRecord(
+        id=data.get("id", str(uuid4())),
+        agent_id=data.get("agent_id", ""),
+        pod_name=data.get("pod_name", ""),
+        tool_name=data.get("tool_name", ""),
+        tool_args=data.get("tool_args", {}),
+        status=data.get("status", "pending"),
+        created_at=data.get("created_at", now),
+        updated_at=data.get("updated_at", now),
+    )
+    async with _APPROVALS_LOCK:
+        _APPROVALS[record.id] = record
+    return record
+
+
+async def get_local_approval_status(approval_id: str) -> str | None:
+    """Check the status of an approval in the local in-memory store.
+    Returns the status string or None if not found."""
+    async with _APPROVALS_LOCK:
+        record = _APPROVALS.get(approval_id)
+    return record.status if record else None
+
+
+async def update_local_approval_status(
+    approval_id: str, status: str, note: str | None = None
+) -> None:
+    """Update the status of a local approval record."""
+    async with _APPROVALS_LOCK:
+        record = _APPROVALS.get(approval_id)
+        if record and record.status == "pending":
+            _APPROVALS[approval_id] = record.model_copy(
+                update={"status": status, "note": note, "updated_at": _now_iso()}
+            )
+
+
 async def _create_approval(body: ToolApprovalCreateRequest) -> ToolApprovalRecord:
     now = _now_iso()
     record = ToolApprovalRecord(

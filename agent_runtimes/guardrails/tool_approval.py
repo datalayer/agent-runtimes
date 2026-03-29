@@ -254,6 +254,23 @@ class ToolApprovalManager:
                 "Manual approval required, but ai-agents did not return an approval ID."
             )
 
+        # Mirror the approval record to the local in-memory store so the
+        # frontend (which polls the local /api/v1/tool-approvals endpoint)
+        # can discover it and show the approval UI.
+        try:
+            from ..routes.tool_approvals import mirror_approval_to_local
+
+            await mirror_approval_to_local(approval_data)
+            logger.debug(
+                "Mirrored approval %s to local in-memory store", approval_id
+            )
+        except Exception as mirror_exc:
+            logger.warning(
+                "Failed to mirror approval %s to local store: %s",
+                approval_id,
+                mirror_exc,
+            )
+
         logger.info(
             "Waiting for human approval of tool '%s' (approval_id=%s, timeout=%ss)",
             tool_name,
@@ -267,6 +284,34 @@ class ToolApprovalManager:
             while elapsed < self.config.timeout:
                 await asyncio.sleep(self.config.poll_interval)
                 elapsed += self.config.poll_interval
+
+                # Check the local in-memory store first — the frontend
+                # approves/rejects via the local API so the decision may
+                # appear here before the external ai-agents backend is
+                # updated.
+                try:
+                    from ..routes.tool_approvals import get_local_approval_status
+
+                    local_status = await get_local_approval_status(approval_id)
+                    if local_status and local_status != "pending":
+                        logger.info(
+                            "Tool '%s' %s via local store (approval_id=%s)",
+                            tool_name,
+                            local_status,
+                            approval_id,
+                        )
+                        if local_status == "approved":
+                            return {"status": "approved", "id": approval_id}
+                        elif local_status == "rejected":
+                            raise ToolApprovalRejectedError(tool_name)
+                        elif local_status == "expired":
+                            raise ToolApprovalTimeoutError(
+                                f"Approval for tool '{tool_name}' expired"
+                            )
+                except (ImportError, Exception) as local_exc:
+                    if isinstance(local_exc, (ToolApprovalRejectedError, ToolApprovalTimeoutError)):
+                        raise
+                    logger.debug("Could not check local store: %s", local_exc)
 
                 try:
                     resp = await poll_client.get(f"{approval_path}/{approval_id}")

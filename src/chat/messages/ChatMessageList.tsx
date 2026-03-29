@@ -10,7 +10,13 @@
  * @module chat/messages/MessageList
  */
 
-import { type ReactNode, type RefObject } from 'react';
+import {
+  type ReactNode,
+  type RefObject,
+  useState,
+  useEffect,
+  useCallback,
+} from 'react';
 import { Text } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { Streamdown } from 'streamdown';
@@ -29,6 +35,17 @@ import type {
   RespondCallback,
 } from '../../types/chat';
 import type { ChatMessage } from '../../types/messages';
+
+// ---------------------------------------------------------------------------
+// Tool Approval Config
+// ---------------------------------------------------------------------------
+
+export interface ToolApprovalConfig {
+  /** Base API URL for the agent runtime (e.g., http://localhost:8765/api/v1) */
+  apiBaseUrl: string;
+  /** Auth token for API calls */
+  authToken?: string;
+}
 
 // ---------------------------------------------------------------------------
 // Props
@@ -70,6 +87,185 @@ export interface ChatMessageListProps {
    * Called when the user responds to an 'executing' tool.
    */
   onRespond: (toolCallId: string, result: unknown) => Promise<void>;
+  /**
+   * Approval config for built-in tool approval support.
+   * When provided, the default tool call rendering detects `pending_approval`
+   * results and shows approve/deny buttons that call the agent-runtimes
+   * approval API.
+   */
+  approvalConfig?: ToolApprovalConfig;
+}
+
+// ---------------------------------------------------------------------------
+// DefaultToolCallRenderer — handles tool approval for a single tool call
+// ---------------------------------------------------------------------------
+
+function DefaultToolCallRenderer({
+  item,
+  approvalConfig,
+}: {
+  item: ToolCallMessage;
+  approvalConfig?: ToolApprovalConfig;
+}) {
+  const resultObject =
+    item.result && typeof item.result === 'object'
+      ? (item.result as Record<string, unknown>)
+      : undefined;
+
+  // Detect pending approval from tool result (pydantic-deferred mode)
+  const isPendingFromResult =
+    item.status === 'inProgress' && resultObject?.pending_approval === true;
+
+  // In ai-agents-wrapper mode, the server blocks waiting for approval and
+  // never sends a tool-result with pending_approval. The tool stays in
+  // 'executing' status. We proactively poll the approval API to detect if
+  // a pending approval record exists for this tool.
+  const isExecuting = item.status === 'executing';
+
+  const [matchedApprovalId, setMatchedApprovalId] = useState<string | null>(
+    null,
+  );
+  const [decision, setDecision] = useState<'approved' | 'denied' | undefined>();
+  const [loading, setLoading] = useState(false);
+
+  // Should we poll the approval API?
+  const shouldPoll =
+    (isPendingFromResult || isExecuting) &&
+    !!approvalConfig?.apiBaseUrl &&
+    !decision;
+
+  // Normalize tool name for matching (strip version suffix, dashes/underscores, lowercase)
+  const normalizedToolName = item.toolName
+    .replace(/:[0-9]+\.[0-9]+\.[0-9]+.*$/, '')
+    .replace(/[-_]/g, '')
+    .toLowerCase();
+
+  // Poll for matching approval record when tool is executing or pending approval
+  useEffect(() => {
+    if (!shouldPoll || !approvalConfig?.apiBaseUrl) return;
+
+    let cancelled = false;
+
+    const poll = async () => {
+      try {
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json',
+        };
+        if (approvalConfig.authToken) {
+          headers['Authorization'] = `Bearer ${approvalConfig.authToken}`;
+        }
+
+        const res = await fetch(
+          `${approvalConfig.apiBaseUrl}/tool-approvals?status=pending`,
+          { headers },
+        );
+        if (!res.ok || cancelled) return;
+
+        const data = await res.json();
+        const approvals: Array<Record<string, unknown>> = Array.isArray(data)
+          ? data
+          : (((data as Record<string, unknown>).approvals as Array<
+              Record<string, unknown>
+            >) ??
+            ((data as Record<string, unknown>).requests as Array<
+              Record<string, unknown>
+            >) ??
+            []);
+
+        // Match by normalized tool name
+        const match = approvals.find(a => {
+          const aNormalized = String(a.tool_name || '')
+            .replace(/:[0-9]+\.[0-9]+\.[0-9]+.*$/, '')
+            .replace(/[-_]/g, '')
+            .toLowerCase();
+          return aNormalized === normalizedToolName && a.status === 'pending';
+        });
+
+        if (match && !cancelled) {
+          setMatchedApprovalId(match.id as string);
+        }
+      } catch {
+        // Retry on next interval
+      }
+    };
+
+    poll();
+    const interval = setInterval(poll, 3000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [
+    shouldPoll,
+    approvalConfig?.apiBaseUrl,
+    approvalConfig?.authToken,
+    normalizedToolName,
+  ]);
+
+  const makeDecision = useCallback(
+    async (action: 'approve' | 'reject') => {
+      if (!matchedApprovalId || !approvalConfig?.apiBaseUrl) return;
+      setLoading(true);
+      try {
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json',
+        };
+        if (approvalConfig.authToken) {
+          headers['Authorization'] = `Bearer ${approvalConfig.authToken}`;
+        }
+        const res = await fetch(
+          `${approvalConfig.apiBaseUrl}/tool-approvals/${matchedApprovalId}/${action}`,
+          {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({}),
+          },
+        );
+        if (res.ok) {
+          setDecision(action === 'approve' ? 'approved' : 'denied');
+        }
+      } catch {
+        // Allow retry
+      } finally {
+        setLoading(false);
+      }
+    },
+    [matchedApprovalId, approvalConfig?.apiBaseUrl, approvalConfig?.authToken],
+  );
+
+  // Show approval UI when we have a confirmed pending approval (from result
+  // or discovered via polling) or after a decision has been made.
+  const hasApproval = isPendingFromResult || !!matchedApprovalId;
+
+  const approvalState: 'pending' | 'approved' | 'denied' | undefined =
+    decision || (hasApproval ? 'pending' : undefined);
+
+  return (
+    <ToolCallDisplay
+      toolCallId={item.toolCallId}
+      toolName={item.toolName}
+      args={item.args}
+      result={item.result}
+      status={item.status}
+      error={item.error}
+      executionError={item.executionError}
+      codeError={item.codeError}
+      exitCode={item.exitCode}
+      approvalRequired={hasApproval}
+      approvalState={approvalState}
+      onApprove={
+        matchedApprovalId && !decision
+          ? () => void makeDecision('approve')
+          : undefined
+      }
+      onDeny={
+        matchedApprovalId && !decision
+          ? () => void makeDecision('reject')
+          : undefined
+      }
+      approvalLoading={loading}
+    />
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -88,6 +284,7 @@ export function ChatMessageList({
   emptyContent,
   messagesEndRef,
   onRespond,
+  approvalConfig,
 }: ChatMessageListProps) {
   if (displayItems.length === 0) {
     return <>{emptyContent}</>;
@@ -147,16 +344,9 @@ export function ChatMessageList({
               respond,
             })
           ) : (
-            <ToolCallDisplay
-              toolCallId={item.toolCallId}
-              toolName={item.toolName}
-              args={item.args}
-              result={item.result}
-              status={item.status}
-              error={item.error}
-              executionError={item.executionError}
-              codeError={item.codeError}
-              exitCode={item.exitCode}
+            <DefaultToolCallRenderer
+              item={item}
+              approvalConfig={approvalConfig}
             />
           );
 

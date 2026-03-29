@@ -533,10 +533,13 @@ class VercelAITransport(BaseTransport):
                     "on_complete": on_complete,
                 }
 
-                # When frontend tools are present as ExternalToolset, pydantic-ai
-                # requires DeferredToolRequests in the output types so external
-                # tool calls can be returned to the client for execution.
-                if has_frontend_tools or self._has_spec_frontend_tools:
+                # Only enable DeferredToolRequests when this request actually
+                # includes frontend tools as an ExternalToolset.
+                #
+                # Using the broader has_spec_frontend_tools flag here causes
+                # output validation failures for normal backend runtime tool
+                # calls (no frontend tools in the current request).
+                if has_frontend_tools:
                     dispatch_kwargs["output_type"] = [str, DeferredToolRequests]
                     logger.info(
                         "[Vercel AI] Enabled DeferredToolRequests output_type for frontend tools"

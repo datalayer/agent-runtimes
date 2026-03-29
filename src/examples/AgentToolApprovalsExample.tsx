@@ -1021,12 +1021,12 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
               {
                 title: 'Run tool with approval',
                 message:
-                  'Call the runtime_sensitive_echo tool with text "hello" and reason "audit". Use a tool call only and do not write Python code.',
+                  "Call the runtime_sensitive_echo tool with text 'hello' and reason 'audit', then reply with the tool result.",
               },
               {
                 title: 'Run tool without approval',
                 message:
-                  'Call the runtime_echo tool with text "hello world". Use a tool call only and do not write Python code.',
+                  "Call the runtime_echo tool with text 'hello world', then reply with the tool result.",
               },
             ]}
             renderToolResult={renderToolResult}

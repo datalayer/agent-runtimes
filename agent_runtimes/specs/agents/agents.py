@@ -407,8 +407,8 @@ DATA_ACQUISITION_AGENT_SPEC_0_0_1 = AgentSpec(
 DEMO_FULL_AGENT_SPEC_0_0_1 = AgentSpec(
     id="demo-full",
     version="0.0.1",
-    name="Tool Approval Demo",
-    description="A minimal demonstration agent showcasing the human-in-the-loop tool approval flow. Includes one tool that runs automatically and one that requires explicit human approval before execution, plus Tavily web search.",
+    name="Demo with MCP, Skills, Tool Approvals...",
+    description="A full-featured demonstration agent showcasing MCP servers (Tavily web search), skills (GitHub, PDF, crawl, events, text summarizer, jokes), human-in-the-loop tool approval, and frontend tools (Jupyter notebooks, Lexical documents).",
     tags=["demo", "approval", "human-in-the-loop", "utility"],
     enabled=True,
     model="bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0",
@@ -422,14 +422,17 @@ DEMO_FULL_AGENT_SPEC_0_0_1 = AgentSpec(
     color="#6366F1",
     suggestions=[
         "list your tools",
-        "Call the runtime_sensitive_echo tool with text 'hello' and reason 'audit'. Use a tool call only and do not write Python code.",
-        "Call the runtime_echo tool with text 'hello world'. Use a tool call only and do not write Python code.",
+        "Search the web for the latest news on AI agents using Tavily.",
+        "List my public GitHub repositories and summarize the most active ones.",
+        "Call the runtime_sensitive_echo tool with text 'hello' and reason 'audit', then reply with the tool result.",
+        "Call the runtime_echo tool with text 'hello world', then reply with the tool result.",
+        "Tell me a joke using your skills.",
     ],
-    welcome_message="Hi! I'm the Tool Approval Demo agent. I have two echo tools — one runs immediately, the other requires your approval before executing. I can also search the web with Tavily. ",
+    welcome_message="Hi! I'm the Tool Approval Demo agent. I have two echo tools — one runs immediately, the other requires your approval before executing. I can also search the web with Tavily and tell jokes using my skills. ",
     welcome_notebook=None,
     welcome_document=None,
     sandbox_variant="jupyter",
-    system_prompt="""You are a helpful assistant demonstrating the tool approval workflow. You have access to two runtime tools: - runtime_echo: echoes text back immediately, no approval required. - runtime_sensitive_echo: echoes text with a reason, but requires human approval before executing. You also have access to the Tavily MCP server for web search. When asked to list your tools, briefly describe each one and ask the user which to run. Do not call list_skills, load_skill, read_skill_resource, or run_skill_script.
+    system_prompt="""You are a helpful assistant demonstrating the tool approval workflow. You have access to two runtime tools: - runtime_echo: echoes text back immediately, no approval required. - runtime_sensitive_echo: echoes text with a reason, but requires human approval before executing. You also have access to the Tavily MCP server for web search. When asked to list your tools, briefly describe each one and ask the user which to run. IMPORTANT: After every tool call, you MUST produce a final text response summarizing the result. Never end your turn with only a tool call — always follow up with a plain-text message. Do not call list_skills, load_skill, read_skill_resource, or run_skill_script.
 """,
     system_prompt_codemode_addons=None,
     goal=None,
