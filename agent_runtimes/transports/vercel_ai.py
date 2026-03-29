@@ -361,67 +361,72 @@ class VercelAITransport(BaseTransport):
             Callback to track usage after agent run completes.
             """
             usage = result.usage()
-            if usage:
-                # Extract tool names from result messages
-                tool_names: list[str] = []
-                if hasattr(result, "_messages"):
-                    for msg in result._messages:
-                        if hasattr(msg, "tool_calls"):
-                            for tc in msg.tool_calls:
-                                tool_names.append(tc.name)
+            input_tokens = int(getattr(usage, "input_tokens", 0) or 0)
+            output_tokens = int(getattr(usage, "output_tokens", 0) or 0)
+            requests_count = int(getattr(usage, "requests", 0) or 0)
+            tool_call_count = int(getattr(usage, "tool_calls", 0) or 0)
 
-                duration_ms = (time.perf_counter() - request_start) * 1000
-                tracker.update_usage(
-                    agent_id=agent_id,
-                    input_tokens=usage.input_tokens,
-                    output_tokens=usage.output_tokens,
-                    requests=usage.requests,  # Number of requests made
-                    tool_calls=usage.tool_calls,
-                    tool_names=tool_names if tool_names else None,
-                    duration_ms=duration_ms,
+            # Extract tool names from result messages
+            tool_names: list[str] = []
+            if hasattr(result, "_messages"):
+                for msg in result._messages:
+                    if hasattr(msg, "tool_calls"):
+                        for tc in msg.tool_calls:
+                            tool_names.append(tc.name)
+
+            duration_ms = (time.perf_counter() - request_start) * 1000
+            tracker.update_usage(
+                agent_id=agent_id,
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
+                requests=requests_count,  # Number of requests made
+                tool_calls=tool_call_count,
+                tool_names=tool_names if tool_names else None,
+                duration_ms=duration_ms,
+            )
+
+            # Also update message token tracking
+            stats = tracker.get_agent_stats(agent_id)
+            if stats:
+                stats.update_message_tokens(
+                    user_tokens=input_tokens,
+                    assistant_tokens=output_tokens,
                 )
 
-                # Also update message token tracking
-                stats = tracker.get_agent_stats(agent_id)
-                if stats:
-                    stats.update_message_tokens(
-                        user_tokens=usage.input_tokens,
-                        assistant_tokens=usage.output_tokens,
-                    )
+            logger.info(
+                "[Vercel AI] on_complete usage tracked: agent_id=%s input_tokens=%s output_tokens=%s requests=%s tool_calls=%s",
+                agent_id,
+                input_tokens,
+                output_tokens,
+                requests_count,
+                tool_call_count,
+            )
 
-                logger.debug(
-                    f"Tracked usage for agent {agent_id} via on_complete: "
-                    f"input={usage.input_tokens}, output={usage.output_tokens}, "
-                    f"requests={usage.requests}, tools={usage.tool_calls}"
-                )
-
-                # Emit OTEL prompt-turn metrics
-                response_text = ""
-                if hasattr(result, "output") and isinstance(result.output, str):
-                    response_text = result.output
-                record_prompt_turn_completion(
-                    prompt=request_prompt,
-                    response=response_text,
-                    duration_ms=duration_ms,
-                    protocol="vercel-ai",
-                    stop_reason="end_turn",
-                    success=True,
-                    model=model if isinstance(model, str) else None,
-                    tool_call_count=usage.tool_calls or 0,
-                    input_tokens=usage.input_tokens,
-                    output_tokens=usage.output_tokens,
-                    total_tokens=(
-                        (usage.input_tokens or 0) + (usage.output_tokens or 0)
-                    ),
-                    user_id=metric_user_id,
-                    user_provider=metric_user_provider,
-                    identities_count=(
-                        len(identities_from_request)
-                        if isinstance(identities_from_request, list)
-                        else None
-                    ),
-                    user_jwt_token=metric_user_jwt_token,
-                )
+            # Emit OTEL prompt-turn metrics for every successful completed turn.
+            response_text = ""
+            if hasattr(result, "output") and isinstance(result.output, str):
+                response_text = result.output
+            record_prompt_turn_completion(
+                prompt=request_prompt,
+                response=response_text,
+                duration_ms=duration_ms,
+                protocol="vercel-ai",
+                stop_reason="end_turn",
+                success=True,
+                model=model if isinstance(model, str) else None,
+                tool_call_count=tool_call_count,
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
+                total_tokens=(input_tokens + output_tokens),
+                user_id=metric_user_id,
+                user_provider=metric_user_provider,
+                identities_count=(
+                    len(identities_from_request)
+                    if isinstance(identities_from_request, list)
+                    else None
+                ),
+                user_jwt_token=metric_user_jwt_token,
+            )
             return
 
         # Set the identity context for this request so that skill executors
