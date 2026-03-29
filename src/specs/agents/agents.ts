@@ -943,13 +943,14 @@ export const DEMO_ONE_TRIGGER_AGENT_SPEC_0_0_1: AgentSpec = {
   sandboxVariant: 'jupyter',
   systemPrompt: undefined,
   systemPromptCodemodeAddons: undefined,
-  goal: `Run a one-shot task: list the user's public GitHub repositories and provide a brief summary of the most active ones.`,
+  goal: `Run a one-shot task: list the user's top 3 public and top 3 private GitHub repositories, ranked by recent activity, and provide a brief summary of each.`,
   protocol: undefined,
   uiExtension: undefined,
   trigger: {
     type: 'once',
     description: 'Run once and terminate',
-    prompt: "List the user's public GitHub repositories and provide a summary.",
+    prompt:
+      "List the user's top 3 public and top 3 private GitHub repositories, ranked by recent activity, and provide a brief summary of each.",
   },
   modelConfig: undefined,
   mcpServerTools: undefined,
