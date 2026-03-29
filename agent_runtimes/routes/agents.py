@@ -2816,6 +2816,14 @@ async def configure_from_spec_endpoint(
         except Exception as e:
             logger.warning("Failed to delete existing default agent: %s", e)
 
+    # Build env_vars dict for sandbox injection (skip empty entries)
+    sandbox_env_vars: dict[str, str] = {}
+    for env_var in body.env_vars:
+        name = env_var.get("name", "")
+        value = env_var.get("value", "")
+        if name and value:
+            sandbox_env_vars[name] = value
+
     try:
         created = await create_agent(
             CreateAgentRequest(
@@ -2831,6 +2839,32 @@ async def configure_from_spec_endpoint(
             target_agent_name,
             body.agent_spec_id,
         )
+
+        # Inject env vars into the agent's codemode sandbox.
+        # create_agent() creates the sandbox (Jupyter kernel) but env vars
+        # set on os.environ only live in the FastAPI process — the kernel
+        # is a separate process that doesn't inherit them.
+        if sandbox_env_vars:
+            try:
+                from ..services.code_sandbox_manager import get_code_sandbox_manager
+
+                sandbox_manager = get_code_sandbox_manager()
+                agent_sandbox = sandbox_manager.get_agent_sandbox(target_agent_name)
+                if agent_sandbox is not None:
+                    sandbox_manager._inject_env_vars_into(
+                        agent_sandbox, "jupyter", sandbox_env_vars,
+                    )
+                else:
+                    logger.debug(
+                        "[configure-from-spec] No per-agent sandbox found for '%s', "
+                        "env vars already in os.environ",
+                        target_agent_name,
+                    )
+            except Exception as e:
+                logger.warning(
+                    "[configure-from-spec] Failed to inject env vars into sandbox: %s", e
+                )
+
         created_id = getattr(created, "id", target_agent_name)
         created_model = getattr(created, "model", spec.model or DEFAULT_MODEL)
 
