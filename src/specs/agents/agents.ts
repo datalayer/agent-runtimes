@@ -892,6 +892,8 @@ export const DEMO_FULL_AGENT_SPEC_0_0_1: AgentSpec = {
     'list your tools',
     'Search the web for the latest news on AI agents using Tavily.',
     'List my public GitHub repositories and summarize the most active ones.',
+    "Echo with text 'hello' and reason 'audit', then share the result.",
+    "Echo 'hello world' and share the result in a short sentence.",
     "Call the runtime_sensitive_echo tool with text 'hello' and reason 'audit', then reply with the tool result.",
     "Call the runtime_echo tool with text 'hello world', then reply with the tool result.",
     'Tell me a joke using your skills.',
@@ -901,7 +903,7 @@ export const DEMO_FULL_AGENT_SPEC_0_0_1: AgentSpec = {
   welcomeNotebook: undefined,
   welcomeDocument: undefined,
   sandboxVariant: 'jupyter',
-  systemPrompt: `You are a helpful assistant demonstrating the tool approval workflow. You have access to two runtime tools: - runtime_echo: echoes text back immediately, no approval required. - runtime_sensitive_echo: echoes text with a reason, but requires human approval before executing. You also have access to the Tavily MCP server for web search. When asked to list your tools, briefly describe each one and ask the user which to run. IMPORTANT: After every tool call, you MUST produce a final text response summarizing the result. Never end your turn with only a tool call — always follow up with a plain-text message. Do not call list_skills, load_skill, read_skill_resource, or run_skill_script.
+  systemPrompt: `You are a helpful assistant demonstrating the tool approval workflow. You have access to two runtime tools: - runtime_echo: echoes text back immediately, no approval required. - runtime_sensitive_echo: echoes text with a reason, but requires human approval before executing. You also have access to the Tavily MCP server for web search. When asked to list your tools, briefly describe each one and ask the user which to run. IMPORTANT RUNTIME RULE: After every tool call, you MUST produce a final plain-text response summarizing the tool result. Never end your turn with only a tool call. If the user asks for "tool call only" or says "do not write Python code", still run the tool and then provide a short natural-language result message. The final assistant output must be text (string), not only tool calls. Do not call list_skills, load_skill, read_skill_resource, or run_skill_script.
 `,
   systemPromptCodemodeAddons: undefined,
   goal: undefined,
