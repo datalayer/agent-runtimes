@@ -8,6 +8,7 @@ Uses agent-skills library for proper skill discovery.
 """
 
 import logging
+import os
 from pathlib import Path
 from typing import Any
 
@@ -50,6 +51,9 @@ def _get_skills_path(request: Request) -> Path:
     """
     Get the skills path from app state or default.
     """
+    skills_folder_env = os.getenv("AGENT_RUNTIMES_SKILLS_FOLDER")
+    if skills_folder_env:
+        return Path(skills_folder_env).resolve()
     repo_root = Path(__file__).resolve().parents[2]
     skills_path = getattr(
         request.app.state,

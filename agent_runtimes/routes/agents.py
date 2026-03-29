@@ -248,11 +248,15 @@ def _build_codemode_toolset(
         str((repo_root / "generated").resolve()),
     )
     generated_path = _resolve_writable_generated_path(generated_path)
-    skills_path = getattr(
-        http_request.app.state,
-        "codemode_skills_path",
-        str((repo_root / "skills").resolve()),
-    )
+    skills_folder_env = os.getenv("AGENT_RUNTIMES_SKILLS_FOLDER")
+    if skills_folder_env:
+        skills_path = str(Path(skills_folder_env).resolve())
+    else:
+        skills_path = getattr(
+            http_request.app.state,
+            "codemode_skills_path",
+            str((repo_root / "skills").resolve()),
+        )
 
     # Get MCP proxy URL from environment or sandbox manager
     mcp_proxy_url = os.getenv("AGENT_RUNTIMES_MCP_PROXY_URL")
@@ -882,11 +886,15 @@ async def create_agent(
         # Add skills toolset if enabled
         if skills_enabled:
             repo_root = Path(__file__).resolve().parents[2]
-            skills_path = getattr(
-                http_request.app.state,
-                "codemode_skills_path",
-                str((repo_root / "skills").resolve()),
-            )
+            skills_folder_env = os.getenv("AGENT_RUNTIMES_SKILLS_FOLDER")
+            if skills_folder_env:
+                skills_path = str(Path(skills_folder_env).resolve())
+            else:
+                skills_path = getattr(
+                    http_request.app.state,
+                    "codemode_skills_path",
+                    str((repo_root / "skills").resolve()),
+                )
 
             skills_toolset = create_skills_toolset(
                 skills=request.skills,
