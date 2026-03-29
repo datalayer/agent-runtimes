@@ -89,7 +89,7 @@
     "preview": "vite preview",
     "rebuild:fresh": "npm run create:patches && npm install && npm run build && npm run clean:cache",
     "server": "python -m agent_runtimes serve",
-    "server:start": "PYTHONIOENCODING=utf-8 python -m agent_runtimes serve --port 8765 --debug",
+    "server:start": "PYTHONIOENCODING=utf-8 AGENT_RUNTIMES_DEBUG=false AGENT_RUNTIMES_LOG_LEVEL=info python -m agent_runtimes serve --port 8765 --log-level info",
     "start": "vite",
     "start:acp": "run-p server:start start:acp:vite",
     "start:acp:prod": "run-p server start:acp:vite",

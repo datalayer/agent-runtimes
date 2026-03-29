@@ -21,7 +21,7 @@ class OnceInvoker(BaseInvoker):
 
     When invoked the following steps execute:
 
-    1. Emit an ``agent-running`` event.
+    1. Emit an ``agent-started`` event.
     2. Run the agent adapter's ``run`` method with the trigger prompt.
     3. Emit an ``agent-ended`` event carrying the output summary.
     4. Request runtime termination (best-effort).
@@ -31,15 +31,15 @@ class OnceInvoker(BaseInvoker):
         prompt = trigger_config.get("prompt", "Execute the agent task.")
         started_at = self._now()
 
-        # ── 1. AGENT_RUNNING event ───────────────────────────────
+        # ── 1. AGENT_STARTED event ───────────────────────────────
         # Events are keyed by runtime_id (pod name) so the UI can
         # look them up by the runtime pod name it already knows.
         try:
             create_event(
                 token=self.token,
                 agent_id=self.runtime_id,
-                title="Agent running",
-                kind="agent-running",
+                title="Agent started",
+                kind="agent-started",
                 status="running",
                 payload={
                     "agent_runtime_id": self.runtime_id,
@@ -52,7 +52,7 @@ class OnceInvoker(BaseInvoker):
             )
         except Exception:
             logger.warning(
-                "Failed to emit agent-running event for %s: %s",
+                "Failed to emit agent-started event for %s: %s",
                 self.agent_id,
                 traceback.format_exc(),
             )

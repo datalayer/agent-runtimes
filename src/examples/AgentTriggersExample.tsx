@@ -1008,7 +1008,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
                       >
                         <Label
                           variant={
-                            evt.kind === 'agent-running'
+                            evt.kind === 'agent-started'
                               ? 'accent'
                               : evt.kind === 'agent-ended'
                                 ? 'success'
@@ -1035,11 +1035,19 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
                         <Button
                           size="small"
                           variant="invisible"
-                          onClick={() =>
-                            evt.read
-                              ? markUnreadMutation.mutate(evt.id)
-                              : markReadMutation.mutate(evt.id)
-                          }
+                          onClick={() => {
+                            const payload = {
+                              eventId: String(evt.id),
+                              eventAgentId: String(
+                                evt.agent_id || agentId || '',
+                              ),
+                            };
+                            if (evt.read) {
+                              markUnreadMutation.mutate(payload);
+                            } else {
+                              markReadMutation.mutate(payload);
+                            }
+                          }}
                           sx={{ p: 1 }}
                         >
                           {evt.read ? (
