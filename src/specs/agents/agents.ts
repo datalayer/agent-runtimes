@@ -925,7 +925,7 @@ export const DEMO_FULL_AGENT_SPEC_0_0_1: AgentSpec = {
 export const DEMO_ONE_TRIGGER_AGENT_SPEC_0_0_1: AgentSpec = {
   id: 'demo-one-trigger',
   version: '0.0.1',
-  name: 'Demo with the "Once" Trigger',
+  name: 'Demo with the Once Trigger',
   description: `A demonstration agent for the "once" trigger type. When launched, the agent executes its trigger prompt exactly once, emits AGENT_STARTED and AGENT_ENDED lifecycle events, and then terminates the runtime automatically.`,
   tags: ['demo', 'trigger', 'once', 'lifecycle'],
   enabled: true,
