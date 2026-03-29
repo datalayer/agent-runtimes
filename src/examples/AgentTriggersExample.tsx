@@ -1008,7 +1008,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
                       >
                         <Label
                           variant={
-                            evt.kind === 'agent-started'
+                            evt.kind === 'agent-running'
                               ? 'accent'
                               : evt.kind === 'agent-ended'
                                 ? 'success'

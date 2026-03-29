@@ -185,12 +185,25 @@ def _resolve_otlp_endpoint() -> str:
     )
     if explicit:
         return explicit.rstrip("/")
+    # Prefer the active runtime run URL first (cluster/environment-specific).
+    # DATALAYER_OTEL_RUN_URL may be baked into some container images.
     run_url = (
-        os.environ.get("DATALAYER_OTEL_RUN_URL")
-        or os.environ.get("DATALAYER_RUN_URL")
+        os.environ.get("DATALAYER_RUN_URL")
+        or os.environ.get("DATALAYER_OTEL_RUN_URL")
         or "https://prod1.datalayer.run"
     )
     return f"{run_url.rstrip('/')}/api/otel/v1/otlp"
+
+
+def _resolve_run_url_source() -> tuple[str, str]:
+    """Return (source, value) for the run URL used to build OTLP endpoint."""
+    run_url = os.environ.get("DATALAYER_RUN_URL")
+    if run_url:
+        return "DATALAYER_RUN_URL", run_url
+    run_url = os.environ.get("DATALAYER_OTEL_RUN_URL")
+    if run_url:
+        return "DATALAYER_OTEL_RUN_URL", run_url
+    return "default", "https://prod1.datalayer.run"
 
 
 def _resolve_otlp_metrics_endpoint() -> str | None:
@@ -364,17 +377,6 @@ class PromptTurnMetricsEmitter:
         if identities_count is not None:
             attrs["identity.count"] = int(max(0, identities_count))
 
-        logger.debug(
-            "Prompt-turn OTEL emit attrs: protocol=%s model=%s user.id=%s provider=%s identities=%s success=%s stop_reason=%s",
-            protocol,
-            model,
-            attrs.get("user.id"),
-            attrs.get("identity.provider"),
-            attrs.get("identity.count"),
-            success,
-            stop_reason,
-        )
-
         resolved_input_tokens = max(
             int(input_tokens)
             if isinstance(input_tokens, int)
@@ -392,6 +394,22 @@ class PromptTurnMetricsEmitter:
             if isinstance(total_tokens, int)
             else resolved_input_tokens + resolved_output_tokens,
             0,
+        )
+
+        logger.info(
+            "Prompt-turn OTEL payload: protocol=%s model=%s user.id=%s provider=%s identities=%s success=%s stop_reason=%s input_tokens=%s output_tokens=%s total_tokens=%s duration_ms=%.2f tool_calls=%s",
+            protocol,
+            model,
+            attrs.get("user.id"),
+            attrs.get("identity.provider"),
+            attrs.get("identity.count"),
+            success,
+            stop_reason,
+            resolved_input_tokens,
+            resolved_output_tokens,
+            resolved_total_tokens,
+            max(duration_ms, 0.0),
+            max(0, tool_call_count),
         )
 
         self.turn_completions.add(1, attrs)
@@ -451,6 +469,13 @@ def _get_emitter(user_jwt_token: str | None = None) -> PromptTurnMetricsEmitter 
         try:
             service_name = os.environ.get(
                 "DATALAYER_OTEL_SERVICE_NAME", "agent-runtimes"
+            )
+            run_url_source, run_url_value = _resolve_run_url_source()
+            logger.info(
+                "Prompt-turn OTEL emitter init: service=%s run_url_source=%s run_url=%s",
+                service_name,
+                run_url_source,
+                run_url_value,
             )
             emitter = PromptTurnMetricsEmitter(
                 service_name=service_name,

@@ -95,6 +95,7 @@ export function useMarkAllNotificationsRead() {
  */
 export function useAllAgentEvents(
   params?: Omit<ListAgentEventsParams, 'agent_id'>,
+  enabled = true,
 ) {
   const token = useAuthToken();
   const baseUrl = useBaseUrl();
@@ -102,7 +103,7 @@ export function useAllAgentEvents(
   return useQuery({
     queryKey: ['agent-events', params],
     queryFn: () => events.listAllEvents(token, params ?? {}, baseUrl),
-    enabled: !!token,
+    enabled: !!token && enabled,
     staleTime: 10_000,
   });
 }
@@ -110,6 +111,7 @@ export function useAllAgentEvents(
 export function useAgentEvents(
   agentId: string,
   params?: Omit<ListAgentEventsParams, 'agent_id'>,
+  enabled = true,
 ) {
   const token = useAuthToken();
   const baseUrl = useBaseUrl();
@@ -117,7 +119,7 @@ export function useAgentEvents(
   return useQuery({
     queryKey: ['agent-events', agentId, params],
     queryFn: () => events.listEvents(token, agentId, params ?? {}, baseUrl),
-    enabled: !!token && !!agentId,
+    enabled: !!token && !!agentId && enabled,
     staleTime: 10_000,
   });
 }
@@ -190,8 +192,16 @@ export function useMarkEventRead(agentId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (eventId: string) =>
-      events.markEventRead(token, agentId, eventId, baseUrl),
+    mutationFn: ({
+      eventId,
+      eventAgentId,
+    }: {
+      eventId: string;
+      eventAgentId?: string;
+    }) => {
+      const resolvedAgentId = eventAgentId || agentId;
+      return events.markEventRead(token, resolvedAgentId, eventId, baseUrl);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['agent-events'] });
     },
@@ -204,8 +214,16 @@ export function useMarkEventUnread(agentId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (eventId: string) =>
-      events.markEventUnread(token, agentId, eventId, baseUrl),
+    mutationFn: ({
+      eventId,
+      eventAgentId,
+    }: {
+      eventId: string;
+      eventAgentId?: string;
+    }) => {
+      const resolvedAgentId = eventAgentId || agentId;
+      return events.markEventUnread(token, resolvedAgentId, eventId, baseUrl);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['agent-events'] });
     },
