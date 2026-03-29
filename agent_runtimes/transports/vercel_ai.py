@@ -356,14 +356,9 @@ class VercelAITransport(BaseTransport):
 
         request_start = time.perf_counter()
 
-        async def on_complete(result: "AgentRunResult") -> AsyncIterator[None]:
+        async def on_complete(result: "AgentRunResult") -> None:
             """
             Callback to track usage after agent run completes.
-
-            Yields
-            ------
-            None
-                This generator yields nothing but must be a generator for API compatibility.
             """
             usage = result.usage()
             if usage:
@@ -427,9 +422,7 @@ class VercelAITransport(BaseTransport):
                     ),
                     user_jwt_token=metric_user_jwt_token,
                 )
-            # Must be an async generator, even if it yields nothing
             return
-            yield
 
         # Set the identity context for this request so that skill executors
         # can access OAuth tokens during tool execution
