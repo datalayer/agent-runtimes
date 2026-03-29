@@ -29,6 +29,7 @@ import {
   Flash,
   Timeline,
   Truncate,
+  Tooltip,
 } from '@primer/react';
 import {
   AlertIcon,
@@ -1072,13 +1073,46 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
                           return (
                             <Box sx={{ fontSize: 0, color: 'fg.muted' }}>
                               {evt.kind === 'agent-ended' && p.outputs && (
-                                <Truncate
-                                  maxWidth="100%"
-                                  title={String(p.outputs)}
-                                  sx={{ mb: 1, display: 'block' }}
-                                >
-                                  Output: {String(p.outputs)}
-                                </Truncate>
+                                <Tooltip text={String(p.outputs)} direction="n">
+                                  <button
+                                    type="button"
+                                    aria-label={String(p.outputs)}
+                                    style={{
+                                      all: 'unset',
+                                      display: 'block',
+                                      width: '100%',
+                                      cursor: 'default',
+                                    }}
+                                  >
+                                    <Box
+                                      sx={{
+                                        mb: 1,
+                                        display: 'flex',
+                                        alignItems: 'baseline',
+                                        gap: 1,
+                                        minWidth: 0,
+                                      }}
+                                    >
+                                      <Text
+                                        as="span"
+                                        sx={{
+                                          fontWeight: 'bold',
+                                          color: 'fg.default',
+                                          whiteSpace: 'nowrap',
+                                        }}
+                                      >
+                                        Output:
+                                      </Text>
+                                      <Truncate
+                                        title={String(p.outputs)}
+                                        maxWidth="100%"
+                                        sx={{ minWidth: 0, flex: 1 }}
+                                      >
+                                        {String(p.outputs)}
+                                      </Truncate>
+                                    </Box>
+                                  </button>
+                                </Tooltip>
                               )}
                               {evt.kind === 'agent-ended' &&
                                 p.duration_ms != null && (
