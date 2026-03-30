@@ -87,12 +87,49 @@ const normalizeAiAgentsBaseUrl = (rawBaseUrl: string): string => {
 };
 
 const queryClient = new QueryClient();
-const AGENT_NAME = 'tool-approval-demo-agent';
-const AGENT_SPEC_ID = 'demo-full';
+const AGENT_NAME_PREFIX = 'tool-approval-demo-agent';
+const DEFAULT_AGENT_SPEC_ID = 'demo-full';
 const DEFAULT_LOCAL_BASE_URL =
   import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
 const FALLBACK_AI_AGENTS_BASE_URL =
   import.meta.env.VITE_AI_AGENTS_URL || DEFAULT_SERVICE_URLS.AI_AGENTS;
+
+const getSelectedAgentSpecIdFromUi = (): string => {
+  const params = new URLSearchParams(window.location.search);
+
+  const directKeys = [
+    'agent_spec_id',
+    'agentSpecId',
+    'spec_id',
+    'specId',
+    'spec',
+  ];
+  for (const key of directKeys) {
+    const value = params.get(key);
+    if (value && value.trim()) {
+      return value.trim();
+    }
+  }
+
+  const selectedAgentId = params.get('selectedAgentId');
+  if (selectedAgentId?.startsWith('spec:')) {
+    const specId = selectedAgentId.slice('spec:'.length).trim();
+    if (specId) {
+      return specId;
+    }
+  }
+
+  return DEFAULT_AGENT_SPEC_ID;
+};
+
+const buildAgentNameForSpec = (specId: string): string => {
+  const slug = specId
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 48);
+  return slug ? `${AGENT_NAME_PREFIX}-${slug}` : AGENT_NAME_PREFIX;
+};
 
 type ApprovalMode = 'local' | 'server';
 
@@ -117,6 +154,13 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
   onLogout,
 }) => {
   const { token } = useSimpleAuthStore();
+  const [selectedSpecId] = useState<string>(() =>
+    getSelectedAgentSpecIdFromUi(),
+  );
+  const agentName = useMemo(
+    () => buildAgentNameForSpec(selectedSpecId),
+    [selectedSpecId],
+  );
 
   const [mode, setMode] = useState<ApprovalMode>('local');
   const [runtimeStatus, setRuntimeStatus] = useState<
@@ -124,7 +168,7 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
   >('launching');
   const [isReady, setIsReady] = useState(false);
   const [hookError, setHookError] = useState<string | null>(null);
-  const [agentId, setAgentId] = useState<string>(AGENT_NAME);
+  const [agentId, setAgentId] = useState<string>(agentName);
   const [isReconnectedAgent, setIsReconnectedAgent] = useState(false);
 
   const [approvals, setApprovals] = useState<ToolApprovalRequest[]>([]);
@@ -189,23 +233,23 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
         const response = await authFetch(`${agentBaseUrl}/api/v1/agents`, {
           method: 'POST',
           body: JSON.stringify({
-            name: AGENT_NAME,
+            name: agentName,
             description: 'Agent with runtime tool approvals',
             agent_library: 'pydantic-ai',
             transport: 'vercel-ai',
-            agent_spec_id: AGENT_SPEC_ID,
+            agent_spec_id: selectedSpecId,
             enable_skills: false,
             skills: [],
             tools: ['runtime-echo', 'runtime-sensitive-echo'],
           }),
         });
 
-        let resolvedAgentId = AGENT_NAME;
+        let resolvedAgentId = agentName;
         let isAlreadyRunning = false;
 
         if (response.ok) {
           const data = await response.json();
-          resolvedAgentId = data?.id || AGENT_NAME;
+          resolvedAgentId = data?.id || agentName;
         } else {
           const contentType = response.headers.get('content-type') || '';
           let detail = '';
@@ -250,7 +294,7 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
     return () => {
       isCancelled = true;
     };
-  }, [agentBaseUrl, authFetch]);
+  }, [agentBaseUrl, authFetch, agentName, selectedSpecId]);
 
   const pollApprovals = useCallback(async () => {
     if (!isReady) {

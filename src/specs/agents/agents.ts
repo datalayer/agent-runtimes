@@ -931,10 +931,7 @@ export const DEMO_ONE_TRIGGER_APPROVAL_AGENT_SPEC_0_0_1: AgentSpec = {
   enabled: true,
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
   mcpServers: [],
-  skills: [
-    toAgentSkillSpec(SKILL_MAP['github:0.0.1']),
-    toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
-  ],
+  skills: [],
   tools: [TOOL_MAP['runtime-sensitive-echo:0.0.1']],
   frontendTools: [FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1']],
   environmentName: 'ai-agents-env',
@@ -948,14 +945,14 @@ export const DEMO_ONE_TRIGGER_APPROVAL_AGENT_SPEC_0_0_1: AgentSpec = {
   sandboxVariant: 'jupyter',
   systemPrompt: undefined,
   systemPromptCodemodeAddons: undefined,
-  goal: `Run a one-shot task: use the runtime-sensitive-echo tool to echo a summary of the user's top 3 public GitHub repositories ranked by recent activity. The tool requires manual approval before execution.`,
+  goal: `Call runtime_sensitive_echo exactly once with message="Tool approval demo executed" and reason="audit". Do not call any other tool.`,
   protocol: undefined,
   uiExtension: undefined,
   trigger: {
     type: 'once',
     description: 'Run once with approval and terminate',
     prompt:
-      "Use the runtime-sensitive-echo tool to echo a summary of the user's top 3 public GitHub repositories ranked by recent activity.",
+      "Call runtime_sensitive_echo exactly once with message='Tool approval demo executed' and reason='audit'. Do not call any other tool.",
   },
   modelConfig: undefined,
   mcpServerTools: undefined,
