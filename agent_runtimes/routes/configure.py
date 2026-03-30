@@ -906,8 +906,8 @@ def _build_sandbox_ws_status(agent_id: str | None = None) -> dict[str, Any]:
                     is_executing = bool(runtime_exec)
                 else:
                     # Avoid forcing sandbox manager lookup via ManagedSandbox._sandbox().
-                    manager = getattr(agent_sandbox, "_manager", None)
-                    underlying = getattr(manager, "_sandbox", None) if manager else None
+                    sb_manager = getattr(agent_sandbox, "_manager", None)
+                    underlying = getattr(sb_manager, "_sandbox", None) if sb_manager else None
                     if underlying is not None:
                         is_executing = bool(getattr(underlying, "is_executing", False))
                     else:

@@ -2932,7 +2932,7 @@ class TriggerRunRequest(BaseModel):
 
 
 @router.post("/{agent_id}/trigger/run")
-async def trigger_run(agent_id: str, body: TriggerRunRequest, request: Request):
+async def trigger_run(agent_id: str, body: TriggerRunRequest, request: Request) -> dict[str, Any]:
     """Manually trigger an agent run (e.g. the *once* trigger).
 
     The endpoint looks up the agent, retrieves its spec trigger config,
