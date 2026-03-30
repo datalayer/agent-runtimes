@@ -25,6 +25,7 @@ from dataclasses import dataclass, field
 from typing import Any, Callable
 
 import httpx
+from datalayer_core.utils.urls import DatalayerURLs
 
 logger = logging.getLogger(__name__)
 
@@ -65,9 +66,10 @@ class ToolApprovalConfig:
 
     @classmethod
     def from_env(cls) -> "ToolApprovalConfig":
+        urls = DatalayerURLs.from_environment()
         return cls(
             ai_agents_url=os.environ.get(
-                "AI_AGENTS_URL", "http://datalayer-ai-agents.datalayer-api.svc.cluster.local:4400"
+                "AI_AGENTS_URL", urls.ai_agents_url
             ),
             token=os.environ.get("DATALAYER_API_KEY", ""),
             agent_id=os.environ.get("AGENT_ID", "default"),
