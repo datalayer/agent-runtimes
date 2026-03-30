@@ -154,8 +154,17 @@ class ToolApprovalManager:
         """Check whether a tool requires human approval."""
         import re
 
+        tool_name_variants = {
+            tool_name,
+            tool_name.replace("-", "_"),
+            tool_name.replace("_", "-"),
+        }
+
         for pattern in self.config.tools_requiring_approval:
-            if re.search(pattern, tool_name, re.IGNORECASE):
+            if any(
+                re.search(pattern, variant, re.IGNORECASE)
+                for variant in tool_name_variants
+            ):
                 return True
         return False
 
