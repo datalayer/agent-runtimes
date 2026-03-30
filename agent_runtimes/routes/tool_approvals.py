@@ -64,7 +64,8 @@ def _now_iso() -> str:
 
 async def mirror_approval_to_local(data: dict) -> ToolApprovalRecord:
     """Mirror an approval record from an external backend (e.g. ai-agents)
-    into the local in-memory store so the frontend can discover it."""
+    into the local in-memory store so the frontend can discover it.
+    """
     now = _now_iso()
     record = ToolApprovalRecord(
         id=data.get("id", str(uuid4())),
@@ -83,7 +84,8 @@ async def mirror_approval_to_local(data: dict) -> ToolApprovalRecord:
 
 async def get_local_approval_status(approval_id: str) -> str | None:
     """Check the status of an approval in the local in-memory store.
-    Returns the status string or None if not found."""
+    Returns the status string or None if not found.
+    """
     async with _APPROVALS_LOCK:
         record = _APPROVALS.get(approval_id)
     return record.status if record else None

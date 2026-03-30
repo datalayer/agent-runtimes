@@ -63,8 +63,16 @@ DATA_ENGINEERING_POWER_USER_GUARDRAIL_SPEC_0_0_1 = GuardrailSpec(
         pii_action="redact",
     ),
     approval_policy=ApprovalPolicySpec(
-        require_manual_approval_for=["Schema changes", "Drop or truncate operations", "Production data modifications"],
-        auto_approved=["Read queries", "Data transformations", "Pipeline orchestration"],
+        require_manual_approval_for=[
+            "Schema changes",
+            "Drop or truncate operations",
+            "Production data modifications",
+        ],
+        auto_approved=[
+            "Read queries",
+            "Data transformations",
+            "Pipeline orchestration",
+        ],
     ),
     tool_limits=ToolLimitsSpec(
         max_tool_calls=500,
@@ -177,8 +185,15 @@ GITHUB_ACTIONS_DEPLOY_GUARDRAIL_SPEC_0_0_1 = GuardrailSpec(
         pii_action="warn",
     ),
     approval_policy=ApprovalPolicySpec(
-        require_manual_approval_for=["Production environment changes", "Infrastructure scaling beyond limits"],
-        auto_approved=["Staging deployments", "Test environment operations", "Build and package operations"],
+        require_manual_approval_for=[
+            "Production environment changes",
+            "Infrastructure scaling beyond limits",
+        ],
+        auto_approved=[
+            "Staging deployments",
+            "Test environment operations",
+            "Build and package operations",
+        ],
     ),
     tool_limits=ToolLimitsSpec(
         max_tool_calls=300,
@@ -234,8 +249,15 @@ GITHUB_CI_BOT_GUARDRAIL_SPEC_0_0_1 = GuardrailSpec(
         pii_action="warn",
     ),
     approval_policy=ApprovalPolicySpec(
-        require_manual_approval_for=["Any production deployment", "Any write to protected branches"],
-        auto_approved=["Build and test operations", "Package installation", "Code analysis and linting"],
+        require_manual_approval_for=[
+            "Any production deployment",
+            "Any write to protected branches",
+        ],
+        auto_approved=[
+            "Build and test operations",
+            "Package installation",
+            "Code analysis and linting",
+        ],
     ),
     tool_limits=ToolLimitsSpec(
         max_tool_calls=200,
@@ -291,8 +313,16 @@ GOOGLE_WORKSPACE_AGENT_GUARDRAIL_SPEC_0_0_1 = GuardrailSpec(
         pii_action="warn",
     ),
     approval_policy=ApprovalPolicySpec(
-        require_manual_approval_for=["Sending external emails", "Sharing files outside organization", "Modifying calendar events for other users"],
-        auto_approved=["Reading emails and documents", "Creating drafts", "Reading calendar"],
+        require_manual_approval_for=[
+            "Sending external emails",
+            "Sharing files outside organization",
+            "Modifying calendar events for other users",
+        ],
+        auto_approved=[
+            "Reading emails and documents",
+            "Creating drafts",
+            "Reading calendar",
+        ],
     ),
     tool_limits=ToolLimitsSpec(
         max_tool_calls=100,
@@ -388,8 +418,8 @@ def get_guardrail_spec(guardrail_id: str) -> GuardrailSpec | None:
     spec = GUARDRAIL_CATALOG.get(guardrail_id)
     if spec is not None:
         return spec
-    base, _, ver = guardrail_id.rpartition(':')
-    if base and '.' in ver:
+    base, _, ver = guardrail_id.rpartition(":")
+    if base and "." in ver:
         return GUARDRAIL_CATALOG.get(base)
     return None
 

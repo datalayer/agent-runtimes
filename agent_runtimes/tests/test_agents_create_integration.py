@@ -131,10 +131,37 @@ async def test_create_agent_from_library_spec_applies_full_defaults(
         mcp_servers=[SimpleNamespace(id="filesystem")],
     )
     monkeypatch.setattr(agents_route, "get_library_agent_spec", lambda _id: spec)
+    monkeypatch.setattr(
+        agents_route, "_test_jupyter_sandbox", lambda _url: (True, None)
+    )
+
+    class _DummySandbox:
+        pass
+
+    class _DummySandboxManager:
+        variant = "local-jupyter"
+
+        def configure_from_url(self, _url: str) -> None:
+            pass
+
+        def get_sandbox(self) -> object:
+            return _DummySandbox()
+
+        def get_managed_sandbox(self) -> object:
+            return _DummySandbox()
+
+    monkeypatch.setattr(
+        "agent_runtimes.services.code_sandbox_manager.get_code_sandbox_manager",
+        lambda: _DummySandboxManager(),
+    )
+    monkeypatch.setattr(
+        agents_route, "create_shared_sandbox", lambda _url: _DummySandbox()
+    )
 
     request = CreateAgentRequest(
         name="Spec Agent",
         agent_spec_id="demo/spec",
+        jupyter_sandbox="http://localhost:8888?token=test",
     )
 
     response = await create_agent(request, _DummyRequest())

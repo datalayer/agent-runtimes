@@ -37,14 +37,14 @@ def random_joke(category: str = "any") -> str:
     """Return a random joke from the selected category."""
     if category == "any":
         pool: list[str] = [j for jokes in JOKES.values() for j in jokes]
-        return random.choice(pool)
+        return random.choice(pool)  # nosec B311
 
     key = category.lower().strip()
     if key not in JOKES:
         valid = ", ".join(sorted(["any", *JOKES.keys()]))
         raise ValueError(f"Unknown category '{category}'. Valid categories: {valid}")
 
-    return random.choice(JOKES[key])
+    return random.choice(JOKES[key])  # nosec B311
 
 
 if __name__ == "__main__":

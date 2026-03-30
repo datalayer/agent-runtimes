@@ -178,9 +178,7 @@ class OnceInvoker(BaseInvoker):
             headers["Authorization"] = f"Bearer {self.token}"
         try:
             async with httpx.AsyncClient() as client:
-                resp = await client.delete(
-                    runtime_url, headers=headers, timeout=30
-                )
+                resp = await client.delete(runtime_url, headers=headers, timeout=30)
                 logger.info(
                     "Platform runtime termination for %s: %s %s",
                     self.runtime_id,

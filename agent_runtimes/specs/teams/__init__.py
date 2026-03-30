@@ -23,8 +23,8 @@ def get_team_spec(team_id: str) -> TeamSpec | None:
     spec = TEAM_SPECS.get(team_id)
     if spec is not None:
         return spec
-    base, _, ver = team_id.rpartition(':')
-    if base and '.' in ver:
+    base, _, ver = team_id.rpartition(":")
+    if base and "." in ver:
         return TEAM_SPECS.get(base)
     return None
 
@@ -39,5 +39,6 @@ def list_team_specs(prefix: str | None = None) -> list[TeamSpec]:
     if prefix is not None:
         specs = [s for s in specs if s.id.startswith(prefix)]
     return specs
+
 
 __all__ = ["TEAM_SPECS", "get_team_spec", "list_team_specs"]

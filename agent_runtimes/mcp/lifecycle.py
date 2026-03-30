@@ -742,36 +742,44 @@ class MCPLifecycleManager:
         results: list[dict[str, Any]] = []
         for sid in sorted(all_ids):
             # Check running first
-            instance = (
-                self._config_servers.get(sid) or self._catalog_servers.get(sid)
-            )
+            instance = self._config_servers.get(sid) or self._catalog_servers.get(sid)
             if instance and instance.is_running:
-                results.append({
-                    "id": sid,
-                    "status": "started",
-                    "tools_count": len(instance.tools),
-                })
+                results.append(
+                    {
+                        "id": sid,
+                        "status": "started",
+                        "tools_count": len(instance.tools),
+                    }
+                )
             elif sid in self._starting_servers:
-                results.append({
-                    "id": sid,
-                    "status": "starting",
-                })
+                results.append(
+                    {
+                        "id": sid,
+                        "status": "starting",
+                    }
+                )
             elif sid in self._failed_servers:
-                results.append({
-                    "id": sid,
-                    "status": "failed",
-                    "error": self._failed_servers[sid],
-                })
+                results.append(
+                    {
+                        "id": sid,
+                        "status": "failed",
+                        "error": self._failed_servers[sid],
+                    }
+                )
             elif sid in self._expected_servers:
-                results.append({
-                    "id": sid,
-                    "status": "not_started",
-                })
+                results.append(
+                    {
+                        "id": sid,
+                        "status": "not_started",
+                    }
+                )
             else:
-                results.append({
-                    "id": sid,
-                    "status": "not_started",
-                })
+                results.append(
+                    {
+                        "id": sid,
+                        "status": "not_started",
+                    }
+                )
         return results
 
     def get_pydantic_toolsets(

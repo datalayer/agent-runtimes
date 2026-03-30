@@ -33,7 +33,9 @@ async def test_codemode_reranker_wiring() -> None:
         enable_codemode=True,
         enable_tool_reranker=True,
     )
-    toolset = _build_codemode_toolset(request, _DummyRequest(), agent_id="test-agent", sandbox=None)
+    toolset = _build_codemode_toolset(
+        request, _DummyRequest(), agent_id="test-agent", sandbox=None
+    )
 
     if toolset is None:
         pytest.skip("agent-codemode not available")
@@ -49,7 +51,9 @@ async def test_codemode_direct_call_override() -> None:
         enable_codemode=True,
         allow_direct_tool_calls=True,
     )
-    toolset = _build_codemode_toolset(request, _DummyRequest(), agent_id="test-agent", sandbox=None)
+    toolset = _build_codemode_toolset(
+        request, _DummyRequest(), agent_id="test-agent", sandbox=None
+    )
 
     if toolset is None:
         pytest.skip("agent-codemode not available")

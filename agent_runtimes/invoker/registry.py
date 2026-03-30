@@ -18,7 +18,9 @@ _REGISTRY: dict[str, Type[BaseInvoker]] = {}
 def register_invoker(trigger_type: str, cls: Type[BaseInvoker]) -> None:
     """Register an invoker class for a given trigger type."""
     _REGISTRY[trigger_type] = cls
-    logger.debug("Registered invoker for trigger type '%s': %s", trigger_type, cls.__name__)
+    logger.debug(
+        "Registered invoker for trigger type '%s': %s", trigger_type, cls.__name__
+    )
 
 
 def get_invoker(
@@ -48,8 +50,10 @@ def get_invoker(
 
 # ── Auto-register built-in invokers on import ────────────────────────
 
+
 def _auto_register() -> None:
     from .once import OnceInvoker  # noqa: F811
+
     register_invoker("once", OnceInvoker)
 
 

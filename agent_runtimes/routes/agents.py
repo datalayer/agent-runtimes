@@ -818,11 +818,11 @@ async def create_agent(
                 )
             except Exception as e:
                 if "already has a sandbox" in str(e):
-                    logger.info(
-                        "Sandbox already exists for '%s', reusing it", agent_id
-                    )
+                    logger.info("Sandbox already exists for '%s', reusing it", agent_id)
                 else:
-                    logger.error("Failed to eager-start sandbox for '%s': %s", agent_id, e)
+                    logger.error(
+                        "Failed to eager-start sandbox for '%s': %s", agent_id, e
+                    )
                     raise HTTPException(
                         status_code=500,
                         detail=f"Failed to initialize sandbox variant '{effective_variant}': {str(e)}",
@@ -908,8 +908,7 @@ async def create_agent(
         # Add codemode toolset if enabled
         if request.enable_codemode:
             disable_mcp_for_codemode = (
-                selected_mcp_servers_explicit
-                and len(request.selected_mcp_servers) == 0
+                selected_mcp_servers_explicit and len(request.selected_mcp_servers) == 0
             )
             # Ensure MCP servers are loaded before building codemode toolset
             mcp_manager = get_mcp_manager()
@@ -2870,7 +2869,9 @@ async def configure_from_spec_endpoint(
                 agent_sandbox = sandbox_manager.get_agent_sandbox(target_agent_name)
                 if agent_sandbox is not None:
                     sandbox_manager._inject_env_vars_into(
-                        agent_sandbox, "jupyter", sandbox_env_vars,
+                        agent_sandbox,
+                        "jupyter",
+                        sandbox_env_vars,
                     )
                 else:
                     logger.debug(
@@ -2880,7 +2881,8 @@ async def configure_from_spec_endpoint(
                     )
             except Exception as e:
                 logger.warning(
-                    "[configure-from-spec] Failed to inject env vars into sandbox: %s", e
+                    "[configure-from-spec] Failed to inject env vars into sandbox: %s",
+                    e,
                 )
 
         created_id = getattr(created, "id", target_agent_name)
@@ -2923,7 +2925,9 @@ class TriggerRunRequest(BaseModel):
 
 
 @router.post("/{agent_id}/trigger/run")
-async def trigger_run(agent_id: str, body: TriggerRunRequest, request: Request) -> dict[str, Any]:
+async def trigger_run(
+    agent_id: str, body: TriggerRunRequest, request: Request
+) -> dict[str, Any]:
     """Manually trigger an agent run (e.g. the *once* trigger).
 
     The endpoint looks up the agent, retrieves its spec trigger config,
@@ -2977,7 +2981,9 @@ async def trigger_run(agent_id: str, body: TriggerRunRequest, request: Request) 
             detail=f"No invoker registered for trigger type '{trigger_type}'",
         )
 
-    logger.info("Trigger/run: scheduling '%s' invoker for agent '%s'", trigger_type, agent_id)
+    logger.info(
+        "Trigger/run: scheduling '%s' invoker for agent '%s'", trigger_type, agent_id
+    )
     asyncio.ensure_future(invoker.invoke(trigger_config))
 
     return {

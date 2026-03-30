@@ -166,7 +166,9 @@ def mark_event_read(
     timeout: float = 30.0,
 ) -> dict[str, Any]:
     """Mark an event as read."""
-    return update_event(token, agent_id, event_id, read=True, base_url=base_url, timeout=timeout)
+    return update_event(
+        token, agent_id, event_id, read=True, base_url=base_url, timeout=timeout
+    )
 
 
 def mark_event_unread(
@@ -177,4 +179,6 @@ def mark_event_unread(
     timeout: float = 30.0,
 ) -> dict[str, Any]:
     """Mark an event as unread."""
-    return update_event(token, agent_id, event_id, read=False, base_url=base_url, timeout=timeout)
+    return update_event(
+        token, agent_id, event_id, read=False, base_url=base_url, timeout=timeout
+    )
