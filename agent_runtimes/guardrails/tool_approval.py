@@ -177,8 +177,6 @@ class ToolApprovalManager:
             If a human rejects the tool call.
         """
         client = await self._get_client()
-        poll_client = client
-        using_fallback_client = False
 
         # 1. Create the approval request
         payload = {
@@ -195,55 +193,17 @@ class ToolApprovalManager:
             resp.raise_for_status()
             approval_data = resp.json()
         except httpx.HTTPError as exc:
-            fallback_base_url = os.environ.get(
-                "AGENT_RUNTIMES_URL", "http://127.0.0.1:8765"
-            )
-            if self.config.ai_agents_url.rstrip("/") == fallback_base_url.rstrip("/"):
-                if self.config.fail_open_on_error:
-                    logger.warning(
-                        "Could not reach tool approval service, auto-approving due to fail-open policy: %s",
-                        exc,
-                    )
-                    return {"status": "auto_approved", "tool_name": tool_name}
-                raise RuntimeError(
-                    "Manual approval required, but tool-approval service is unavailable. "
-                    "Set TOOL_APPROVAL_FAIL_OPEN=true to bypass in non-production setups."
-                ) from exc
-
-            logger.warning(
-                "Primary tool approval backend unavailable at %s; falling back to local agent-runtimes endpoint %s",
-                self.config.ai_agents_url,
-                fallback_base_url,
-            )
-            fallback_headers: dict[str, str] = {}
-            if self.config.token:
-                fallback_headers["Authorization"] = f"Bearer {self.config.token}"
-
-            try:
-                poll_client = httpx.AsyncClient(
-                    base_url=fallback_base_url,
-                    headers=fallback_headers,
-                    timeout=30.0,
+            if self.config.fail_open_on_error:
+                logger.warning(
+                    "Tool approval backend unavailable at %s, auto-approving due to fail-open policy: %s",
+                    self.config.ai_agents_url,
+                    exc,
                 )
-                using_fallback_client = True
-                approval_path = "/api/v1/tool-approvals"
-                fallback_resp = await poll_client.post(
-                    approval_path,
-                    json=payload,
-                )
-                fallback_resp.raise_for_status()
-                approval_data = fallback_resp.json()
-            except httpx.HTTPError as fallback_exc:
-                if self.config.fail_open_on_error:
-                    logger.warning(
-                        "Fallback tool approval backend unavailable, auto-approving due to fail-open policy: %s",
-                        fallback_exc,
-                    )
-                    return {"status": "auto_approved", "tool_name": tool_name}
-                raise RuntimeError(
-                    "Manual approval required, but tool-approval service is unavailable. "
-                    "Set TOOL_APPROVAL_FAIL_OPEN=true to bypass in non-production setups."
-                ) from fallback_exc
+                return {"status": "auto_approved", "tool_name": tool_name}
+            raise RuntimeError(
+                "Manual approval required, but tool-approval service is unavailable. "
+                "Set TOOL_APPROVAL_FAIL_OPEN=true to bypass in non-production setups."
+            ) from exc
         approval_id = approval_data.get("id")
         if not approval_id:
             if self.config.fail_open_on_error:
@@ -256,23 +216,6 @@ class ToolApprovalManager:
                 "Manual approval required, but ai-agents did not return an approval ID."
             )
 
-        # Mirror the approval record to the local in-memory store so the
-        # frontend (which polls the local /api/v1/tool-approvals endpoint)
-        # can discover it and show the approval UI.
-        try:
-            from ..routes.tool_approvals import mirror_approval_to_local
-
-            await mirror_approval_to_local(approval_data)
-            logger.debug(
-                "Mirrored approval %s to local in-memory store", approval_id
-            )
-        except Exception as mirror_exc:
-            logger.warning(
-                "Failed to mirror approval %s to local store: %s",
-                approval_id,
-                mirror_exc,
-            )
-
         logger.info(
             "Waiting for human approval of tool '%s' (approval_id=%s, timeout=%ss)",
             tool_name,
@@ -280,75 +223,39 @@ class ToolApprovalManager:
             self.config.timeout,
         )
 
-        try:
-            # 2. Poll until resolved or timed out
-            elapsed = 0.0
-            while elapsed < self.config.timeout:
-                await asyncio.sleep(self.config.poll_interval)
-                elapsed += self.config.poll_interval
+        # 2. Poll until resolved or timed out
+        elapsed = 0.0
+        while elapsed < self.config.timeout:
+            await asyncio.sleep(self.config.poll_interval)
+            elapsed += self.config.poll_interval
 
-                # Check the local in-memory store first — the frontend
-                # approves/rejects via the local API so the decision may
-                # appear here before the external ai-agents backend is
-                # updated.
-                try:
-                    from ..routes.tool_approvals import get_local_approval_status
+            try:
+                resp = await client.get(f"{approval_path}/{approval_id}")
+                resp.raise_for_status()
+                record = resp.json()
+            except httpx.HTTPError:
+                logger.warning("Error polling approval %s, will retry", approval_id)
+                continue
 
-                    local_status = await get_local_approval_status(approval_id)
-                    if local_status and local_status != "pending":
-                        logger.info(
-                            "Tool '%s' %s via local store (approval_id=%s)",
-                            tool_name,
-                            local_status,
-                            approval_id,
-                        )
-                        if local_status == "approved":
-                            return {"status": "approved", "id": approval_id}
-                        elif local_status == "rejected":
-                            raise ToolApprovalRejectedError(tool_name)
-                        elif local_status == "expired":
-                            raise ToolApprovalTimeoutError(
-                                f"Approval for tool '{tool_name}' expired"
-                            )
-                except (ImportError, Exception) as local_exc:
-                    if isinstance(local_exc, (ToolApprovalRejectedError, ToolApprovalTimeoutError)):
-                        raise
-                    logger.debug("Could not check local store: %s", local_exc)
-
-                try:
-                    resp = await poll_client.get(f"{approval_path}/{approval_id}")
-                    resp.raise_for_status()
-                    record = resp.json()
-                except httpx.HTTPError:
-                    logger.warning("Error polling approval %s, will retry", approval_id)
-                    continue
-
-                status = record.get("status", "pending")
-                if status == "approved":
-                    logger.info(
-                        "Tool '%s' approved (approval_id=%s)", tool_name, approval_id
-                    )
-                    return record
-                elif status == "rejected":
-                    note = record.get("note")
-                    logger.info(
-                        "Tool '%s' rejected (approval_id=%s, note=%s)",
-                        tool_name,
-                        approval_id,
-                        note,
-                    )
-                    raise ToolApprovalRejectedError(tool_name, note)
-                elif status == "expired":
-                    raise ToolApprovalTimeoutError(
-                        f"Approval for tool '{tool_name}' expired server-side"
-                    )
-        finally:
-            if (
-                using_fallback_client
-                and poll_client is not client
-                and not poll_client.is_closed
-            ):
-                await poll_client.aclose()
+            status = record.get("status", "pending")
+            if status == "approved":
+                logger.info(
+                    "Tool '%s' approved (approval_id=%s)", tool_name, approval_id
+                )
+                return record
+            elif status == "rejected":
+                note = record.get("note")
+                logger.info(
+                    "Tool '%s' rejected (approval_id=%s, note=%s)",
+                    tool_name,
+                    approval_id,
+                    note,
+                )
+                raise ToolApprovalRejectedError(tool_name, note)
+            elif status == "expired":
+                raise ToolApprovalTimeoutError(
+                    f"Approval for tool '{tool_name}' expired server-side"
+                )
 
         # Timed out locally
         raise ToolApprovalTimeoutError(
