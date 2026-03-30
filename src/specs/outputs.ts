@@ -18,18 +18,6 @@ import type { OutputSpec } from '../types';
 // Output Definitions
 // ============================================================================
 
-export const API_PUSH_OUTPUT_SPEC_0_0_1: OutputSpec = {
-  id: 'api-push',
-  version: '0.0.1',
-  name: 'API Push',
-  description:
-    'Push results to an external API endpoint via HTTP POST. Useful for integrating with downstream services, data warehouses, or event-driven architectures.',
-  icon: 'upload',
-  supports_template: false,
-  supports_storage: false,
-  mime_types: ['application/json'],
-};
-
 export const CSV_OUTPUT_SPEC_0_0_1: OutputSpec = {
   id: 'csv',
   version: '0.0.1',
@@ -125,7 +113,6 @@ export const SPREADSHEET_OUTPUT_SPEC_0_0_1: OutputSpec = {
 // ============================================================================
 
 export const OUTPUT_CATALOG: Record<string, OutputSpec> = {
-  'api-push': API_PUSH_OUTPUT_SPEC_0_0_1,
   csv: CSV_OUTPUT_SPEC_0_0_1,
   dashboard: DASHBOARD_OUTPUT_SPEC_0_0_1,
   document: DOCUMENT_OUTPUT_SPEC_0_0_1,

@@ -28,7 +28,7 @@ EVENT_TRIGGER_SPEC_0_0_1 = TriggerSpec(
         TriggerField(**{"name": "event_source", "label": "Event Source URL", "type": "string", "required": False, "placeholder": "https://helpdesk.example.com/webhooks", "help": "Allowed event source URL (leave empty to allow any source)"}),
         TriggerField(**{"name": "event", "label": "Event Name", "type": "string", "required": False, "placeholder": "email_received"}),
         TriggerField(**{"name": "description", "label": "Description", "type": "string", "required": False, "placeholder": "Description (e.g. 'Triggered on incoming email')"}),
-        TriggerField(**{"name": "prompt", "label": "Trigger Prompt", "type": "string", "required": False, "placeholder": "Handle the incoming event and execute the workflow end-to-end."}),
+        TriggerField(**{"name": "prompt", "label": "Trigger Prompt", "type": "string", "required": False, "placeholder": "Handle the incoming event and execute the agent end-to-end."}),
     ],
 )
 
@@ -39,7 +39,7 @@ ONCE_TRIGGER_SPEC_0_0_1 = TriggerSpec(
     description="Execute agent immediately after deployment.",
     type="once",
     fields=[
-        TriggerField(**{"name": "prompt", "label": "Trigger Prompt", "type": "string", "required": False, "placeholder": "Start when requested by a user and complete the workflow once."}),
+        TriggerField(**{"name": "prompt", "label": "Trigger Prompt", "type": "string", "required": False, "placeholder": "Start when requested by a user and complete the agent once."}),
     ],
 )
 
@@ -52,7 +52,7 @@ SCHEDULE_TRIGGER_SPEC_0_0_1 = TriggerSpec(
     fields=[
         TriggerField(**{"name": "cron", "label": "Cron Expression", "type": "string", "required": True, "placeholder": "0 9 * * * (every day at 9 AM)", "font": "mono"}),
         TriggerField(**{"name": "description", "label": "Description", "type": "string", "required": False, "placeholder": "Description (e.g. 'Monthly sales report')"}),
-        TriggerField(**{"name": "prompt", "label": "Trigger Prompt", "type": "string", "required": False, "placeholder": "Run the scheduled workflow and produce the configured deliverable."}),
+        TriggerField(**{"name": "prompt", "label": "Trigger Prompt", "type": "string", "required": False, "placeholder": "Run the scheduled agent and produce the configured deliverable."}),
     ],
 )
 

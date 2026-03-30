@@ -54,7 +54,7 @@ export const EVENT_TRIGGER_SPEC_0_0_1: TriggerSpec = {
       type: 'string',
       required: false,
       placeholder:
-        'Handle the incoming event and execute the workflow end-to-end.',
+        'Handle the incoming event and execute the agent end-to-end.',
     },
   ],
 };
@@ -72,7 +72,7 @@ export const ONCE_TRIGGER_SPEC_0_0_1: TriggerSpec = {
       type: 'string',
       required: false,
       placeholder:
-        'Start when requested by a user and complete the workflow once.',
+        'Start when requested by a user and complete the agent once.',
     },
   ],
 };
@@ -106,7 +106,7 @@ export const SCHEDULE_TRIGGER_SPEC_0_0_1: TriggerSpec = {
       type: 'string',
       required: false,
       placeholder:
-        'Run the scheduled workflow and produce the configured deliverable.',
+        'Run the scheduled agent and produce the configured deliverable.',
     },
   ],
 };

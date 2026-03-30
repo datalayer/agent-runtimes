@@ -922,6 +922,53 @@ export const DEMO_FULL_AGENT_SPEC_0_0_1: AgentSpec = {
   memory: 'ephemeral',
 };
 
+export const DEMO_ONE_TRIGGER_APPROVAL_AGENT_SPEC_0_0_1: AgentSpec = {
+  id: 'demo-one-trigger-approval',
+  version: '0.0.1',
+  name: 'Demo with the Once Trigger and Tool Approval',
+  description: `A demonstration agent for the "once" trigger type with manual tool approval. When launched, the agent executes its trigger prompt once and invokes the runtime-sensitive-echo tool, which requires manual approval before execution. After completion, the runtime is terminated automatically.`,
+  tags: ['demo', 'trigger', 'once', 'lifecycle', 'approval'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  mcpServers: [],
+  skills: [
+    toAgentSkillSpec(SKILL_MAP['github:0.0.1']),
+    toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
+  ],
+  tools: [TOOL_MAP['runtime-sensitive-echo:0.0.1']],
+  frontendTools: [FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1']],
+  environmentName: 'ai-agents-env',
+  icon: 'shield',
+  emoji: '🛡️',
+  color: '#ef4444',
+  suggestions: [],
+  welcomeMessage: undefined,
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'jupyter',
+  systemPrompt: undefined,
+  systemPromptCodemodeAddons: undefined,
+  goal: `Run a one-shot task: use the runtime-sensitive-echo tool to echo a summary of the user's top 3 public GitHub repositories ranked by recent activity. The tool requires manual approval before execution.`,
+  protocol: undefined,
+  uiExtension: undefined,
+  trigger: {
+    type: 'once',
+    description: 'Run once with approval and terminate',
+    prompt:
+      "Use the runtime-sensitive-echo tool to echo a summary of the user's top 3 public GitHub repositories ranked by recent activity.",
+  },
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: undefined,
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+};
+
 export const DEMO_ONE_TRIGGER_AGENT_SPEC_0_0_1: AgentSpec = {
   id: 'demo-one-trigger',
   version: '0.0.1',
@@ -2652,6 +2699,7 @@ export const AGENT_SPECS: Record<string, AgentSpec> = {
   crawler: CRAWLER_AGENT_SPEC_0_0_1,
   'data-acquisition': DATA_ACQUISITION_AGENT_SPEC_0_0_1,
   'demo-full': DEMO_FULL_AGENT_SPEC_0_0_1,
+  'demo-one-trigger-approval': DEMO_ONE_TRIGGER_APPROVAL_AGENT_SPEC_0_0_1,
   'demo-one-trigger': DEMO_ONE_TRIGGER_AGENT_SPEC_0_0_1,
   'demo-simple': DEMO_SIMPLE_AGENT_SPEC_0_0_1,
   'end-of-month-sales-performance':

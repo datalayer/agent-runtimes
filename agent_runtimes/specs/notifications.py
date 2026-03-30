@@ -18,6 +18,21 @@ from agent_runtimes.types import NotificationChannelSpec, NotificationField
 # Notification Channel Definitions
 # ============================================================================
 
+API_PUSH_NOTIFICATION_SPEC_0_0_1 = NotificationChannelSpec(
+    id="api-push",
+    version="0.0.1",
+    name="API Push",
+    description="Push results to an external API endpoint via HTTP POST. Useful for integrating with downstream services, data warehouses, or event-driven architectures.",
+    icon="upload",
+    available=False,
+    coming_soon=True,
+    fields=[
+        NotificationField(**{"name": "url", "label": "Endpoint URL", "type": "string", "required": True, "placeholder": "https://api.example.com/agent-results"}),
+        NotificationField(**{"name": "secret", "label": "Signing Secret", "type": "string", "required": False, "placeholder": "Optional HMAC secret for payload signing"}),
+        NotificationField(**{"name": "include_output", "label": "Include Output", "type": "boolean", "required": False, "default": True}),
+    ],
+)
+
 EMAIL_NOTIFICATION_SPEC_0_0_1 = NotificationChannelSpec(
     id="email",
     version="0.0.1",
@@ -82,6 +97,7 @@ WEBHOOK_NOTIFICATION_SPEC_0_0_1 = NotificationChannelSpec(
 # ============================================================================
 
 NOTIFICATION_CATALOG: Dict[str, NotificationChannelSpec] = {
+    "api-push": API_PUSH_NOTIFICATION_SPEC_0_0_1,
     "email": EMAIL_NOTIFICATION_SPEC_0_0_1,
     "slack": SLACK_NOTIFICATION_SPEC_0_0_1,
     "teams": TEAMS_NOTIFICATION_SPEC_0_0_1,

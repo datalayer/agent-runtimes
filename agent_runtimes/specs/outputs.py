@@ -18,17 +18,6 @@ from agent_runtimes.types import OutputSpec
 # Output Definitions
 # ============================================================================
 
-API_PUSH_OUTPUT_SPEC_0_0_1 = OutputSpec(
-    id="api-push",
-    version="0.0.1",
-    name="API Push",
-    description="Push results to an external API endpoint via HTTP POST. Useful for integrating with downstream services, data warehouses, or event-driven architectures.",
-    icon="upload",
-    supports_template=False,
-    supports_storage=False,
-    mime_types=["application/json"],
-)
-
 CSV_OUTPUT_SPEC_0_0_1 = OutputSpec(
     id="csv",
     version="0.0.1",
@@ -111,7 +100,6 @@ SPREADSHEET_OUTPUT_SPEC_0_0_1 = OutputSpec(
 # ============================================================================
 
 OUTPUT_CATALOG: Dict[str, OutputSpec] = {
-    "api-push": API_PUSH_OUTPUT_SPEC_0_0_1,
     "csv": CSV_OUTPUT_SPEC_0_0_1,
     "dashboard": DASHBOARD_OUTPUT_SPEC_0_0_1,
     "document": DOCUMENT_OUTPUT_SPEC_0_0_1,

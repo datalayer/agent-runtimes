@@ -18,6 +18,40 @@ import type { NotificationChannelSpec } from '../types';
 // Notification Channel Definitions
 // ============================================================================
 
+export const API_PUSH_NOTIFICATION_SPEC_0_0_1: NotificationChannelSpec = {
+  id: 'api-push',
+  version: '0.0.1',
+  name: 'API Push',
+  description:
+    'Push results to an external API endpoint via HTTP POST. Useful for integrating with downstream services, data warehouses, or event-driven architectures.',
+  icon: 'upload',
+  available: false,
+  coming_soon: true,
+  fields: [
+    {
+      name: 'url',
+      label: 'Endpoint URL',
+      type: 'string',
+      required: true,
+      placeholder: 'https://api.example.com/agent-results',
+    },
+    {
+      name: 'secret',
+      label: 'Signing Secret',
+      type: 'string',
+      required: false,
+      placeholder: 'Optional HMAC secret for payload signing',
+    },
+    {
+      name: 'include_output',
+      label: 'Include Output',
+      type: 'boolean',
+      required: false,
+      default: true,
+    },
+  ],
+};
+
 export const EMAIL_NOTIFICATION_SPEC_0_0_1: NotificationChannelSpec = {
   id: 'email',
   version: '0.0.1',
@@ -152,6 +186,7 @@ export const WEBHOOK_NOTIFICATION_SPEC_0_0_1: NotificationChannelSpec = {
 // ============================================================================
 
 export const NOTIFICATION_CATALOG: Record<string, NotificationChannelSpec> = {
+  'api-push': API_PUSH_NOTIFICATION_SPEC_0_0_1,
   email: EMAIL_NOTIFICATION_SPEC_0_0_1,
   slack: SLACK_NOTIFICATION_SPEC_0_0_1,
   teams: TEAMS_NOTIFICATION_SPEC_0_0_1,
