@@ -40,11 +40,17 @@ export interface SandboxStatusIndicatorProps {
   apiBase?: string;
   /** Optional auth token for authenticated requests (e.g. K8s ingress). */
   authToken?: string;
+  /** Agent ID to scope sandbox status to a specific agent. */
+  agentId?: string;
 }
 
 /* ── Helpers ───────────────────────────────────────────── */
 
-function getWsUrl(apiBase?: string, authToken?: string): string {
+function getWsUrl(
+  apiBase?: string,
+  authToken?: string,
+  agentId?: string,
+): string {
   if (typeof window === 'undefined') return '';
   const base = apiBase
     ? apiBase
@@ -54,11 +60,18 @@ function getWsUrl(apiBase?: string, authToken?: string): string {
       : '';
   // Convert http(s) to ws(s).
   const wsBase = base.replace(/^http/, 'ws');
-  const wsUrl = `${wsBase}/api/v1/configure/sandbox/ws`;
+  let wsUrl = `${wsBase}/api/v1/configure/sandbox/ws`;
+  // Include agent_id so the backend returns agent-scoped status.
+  const params: string[] = [];
+  if (agentId) {
+    params.push(`agent_id=${encodeURIComponent(agentId)}`);
+  }
   // WebSocket API doesn't support custom headers, pass token as query param.
   if (authToken) {
-    const sep = wsUrl.includes('?') ? '&' : '?';
-    return `${wsUrl}${sep}token=${encodeURIComponent(authToken)}`;
+    params.push(`token=${encodeURIComponent(authToken)}`);
+  }
+  if (params.length > 0) {
+    wsUrl += `?${params.join('&')}`;
   }
   return wsUrl;
 }
@@ -101,6 +114,7 @@ function useInjectKeyframes() {
 export function SandboxStatusIndicator({
   apiBase,
   authToken,
+  agentId,
 }: SandboxStatusIndicatorProps) {
   useInjectKeyframes();
   const [status, setStatus] = useState<SandboxWsStatus | null>(null);
@@ -108,8 +122,8 @@ export function SandboxStatusIndicator({
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout>>();
 
   const wsUrl = useMemo(
-    () => getWsUrl(apiBase, authToken),
-    [apiBase, authToken],
+    () => getWsUrl(apiBase, authToken, agentId),
+    [apiBase, authToken, agentId],
   );
 
   // ---- WebSocket lifecycle ----

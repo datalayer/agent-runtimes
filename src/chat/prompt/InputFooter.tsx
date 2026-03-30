@@ -92,6 +92,8 @@ export interface InputToolbarProps {
   apiBase?: string;
   /** Auth token passed to MCP / Sandbox indicators */
   authToken?: string;
+  /** Agent ID passed to Sandbox indicator for agent-scoped status */
+  agentId?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -133,6 +135,7 @@ export function InputToolbar({
   onToggleAllSkills,
   apiBase,
   authToken,
+  agentId,
 }: InputToolbarProps) {
   // Show token usage when we have valid context data
   const hasContext =
@@ -153,7 +156,11 @@ export function InputToolbar({
         onChange={setInput}
         footerRightContent={
           <>
-            <SandboxStatusIndicator apiBase={apiBase} authToken={authToken} />
+            <SandboxStatusIndicator
+              apiBase={apiBase}
+              authToken={authToken}
+              agentId={agentId}
+            />
             <McpStatusIndicator apiBase={apiBase} authToken={authToken} />
           </>
         }

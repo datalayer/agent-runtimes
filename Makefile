@@ -48,6 +48,9 @@ clean: ## clean
 build: ## build
 	npm run build
 
+build-lib: ## build-lib
+	npm run build:lib
+
 test: test-js test-py ## run tests
 
 test-js: ## run js tests
@@ -64,7 +67,7 @@ kill:
 warning:
 	echo "\x1b[34m\x1b[43mEnsure you have run \x1b[1;37m\x1b[41m conda deactivate \x1b[22m\x1b[34m\x1b[43m before invoking this.\x1b[0m"
 
-publish-npm: clean build ## publish-npm
+publish-npm: clean build-lib ## publish-npm
 	npm publish
 	echo open https://www.npmjs.com/package/@datalayer/agent-runtimes
 

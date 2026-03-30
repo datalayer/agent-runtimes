@@ -1795,6 +1795,7 @@ function ChatBaseInner({
           onToggleAllSkills={toggleAllSkills}
           apiBase={indicatorApiBase}
           authToken={protocol?.authToken}
+          agentId={protocol?.agentId}
         />
       )}
 
