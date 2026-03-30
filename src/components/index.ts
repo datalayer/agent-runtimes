@@ -5,3 +5,4 @@
 
 export * from './ToolApprovalCard';
 export * from './NotificationEventCard';
+export * from './OutputCard';
