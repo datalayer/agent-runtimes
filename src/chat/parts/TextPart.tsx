@@ -15,6 +15,7 @@ import { Text, IconButton } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { CopyIcon, SyncIcon } from '@primer/octicons-react';
 import { Streamdown } from 'streamdown';
+
 import { streamdownMarkdownStyles } from '../styles/streamdownStyles';
 
 export interface TextPartProps {

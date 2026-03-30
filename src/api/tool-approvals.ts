@@ -115,6 +115,63 @@ export const rejectToolRequest = async (
 };
 
 /**
+ * Mark a tool approval as read.
+ * @param token - Authentication token
+ * @param id - Tool approval ID
+ * @param baseUrl - Base URL
+ */
+export const markToolApprovalRead = async (
+  token: string,
+  id: string,
+  baseUrl: string = DEFAULT_SERVICE_URLS.AI_AGENTS,
+): Promise<void> => {
+  validateToken(token);
+  await requestDatalayerAPI<void>({
+    url: `${baseUrl}${API_BASE_PATHS.AI_AGENTS}/tool-approvals/${encodeURIComponent(id)}/mark-read`,
+    method: 'POST',
+    token,
+  });
+};
+
+/**
+ * Mark a tool approval as unread.
+ * @param token - Authentication token
+ * @param id - Tool approval ID
+ * @param baseUrl - Base URL
+ */
+export const markToolApprovalUnread = async (
+  token: string,
+  id: string,
+  baseUrl: string = DEFAULT_SERVICE_URLS.AI_AGENTS,
+): Promise<void> => {
+  validateToken(token);
+  await requestDatalayerAPI<void>({
+    url: `${baseUrl}${API_BASE_PATHS.AI_AGENTS}/tool-approvals/${encodeURIComponent(id)}/mark-unread`,
+    method: 'POST',
+    token,
+  });
+};
+
+/**
+ * Delete a tool approval.
+ * @param token - Authentication token
+ * @param id - Tool approval ID
+ * @param baseUrl - Base URL
+ */
+export const deleteToolApproval = async (
+  token: string,
+  id: string,
+  baseUrl: string = DEFAULT_SERVICE_URLS.AI_AGENTS,
+): Promise<void> => {
+  validateToken(token);
+  await requestDatalayerAPI<void>({
+    url: `${baseUrl}${API_BASE_PATHS.AI_AGENTS}/tool-approvals/${encodeURIComponent(id)}`,
+    method: 'DELETE',
+    token,
+  });
+};
+
+/**
  * Get count of pending tool approvals.
  * @param token - Authentication token
  * @param baseUrl - Base URL

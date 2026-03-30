@@ -82,6 +82,48 @@ export function useRejectToolRequest() {
   });
 }
 
+export function useMarkToolApprovalRead() {
+  const token = useDashboardAuthToken();
+  const baseUrl = useDashboardBaseUrl();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id }: { id: string }) =>
+      toolApprovals.markToolApprovalRead(token, id, baseUrl),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tool-approvals'] });
+    },
+  });
+}
+
+export function useMarkToolApprovalUnread() {
+  const token = useDashboardAuthToken();
+  const baseUrl = useDashboardBaseUrl();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id }: { id: string }) =>
+      toolApprovals.markToolApprovalUnread(token, id, baseUrl),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tool-approvals'] });
+    },
+  });
+}
+
+export function useDeleteToolApproval() {
+  const token = useDashboardAuthToken();
+  const baseUrl = useDashboardBaseUrl();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id }: { id: string }) =>
+      toolApprovals.deleteToolApproval(token, id, baseUrl),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tool-approvals'] });
+    },
+  });
+}
+
 // ─── Composite hook ──────────────────────────────────────────────────
 
 export function useToolApprovals(filters?: ToolApprovalFilters) {
@@ -89,6 +131,9 @@ export function useToolApprovals(filters?: ToolApprovalFilters) {
   const pendingQuery = usePendingApprovalCount();
   const approve = useApproveToolRequest();
   const reject = useRejectToolRequest();
+  const markRead = useMarkToolApprovalRead();
+  const markUnread = useMarkToolApprovalUnread();
+  const remove = useDeleteToolApproval();
 
   return useMemo(
     () => ({
@@ -96,7 +141,18 @@ export function useToolApprovals(filters?: ToolApprovalFilters) {
       pendingCountQuery: pendingQuery,
       approve,
       reject,
+      markRead,
+      markUnread,
+      remove,
     }),
-    [approvalsQuery, pendingQuery, approve, reject],
+    [
+      approvalsQuery,
+      pendingQuery,
+      approve,
+      reject,
+      markRead,
+      markUnread,
+      remove,
+    ],
   );
 }

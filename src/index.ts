@@ -4,6 +4,7 @@
  */
 
 export * from './chat';
+export * from './components';
 export * from './mcp';
 export * from './stores';
 export * from './identity';

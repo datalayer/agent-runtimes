@@ -178,8 +178,20 @@ export function useDeleteAgentEvent(agentId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (eventId: string) =>
-      events.deleteEvent(token, agentId, eventId, baseUrl),
+    mutationFn: (
+      payload:
+        | string
+        | {
+            eventId: string;
+            eventAgentId?: string;
+          },
+    ) => {
+      const eventId = typeof payload === 'string' ? payload : payload.eventId;
+      const eventAgentId =
+        typeof payload === 'string' ? undefined : payload.eventAgentId;
+      const resolvedAgentId = eventAgentId || agentId;
+      return events.deleteEvent(token, resolvedAgentId, eventId, baseUrl);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['agent-events'] });
     },

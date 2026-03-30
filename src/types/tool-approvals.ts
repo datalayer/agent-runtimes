@@ -26,6 +26,8 @@ export interface ToolApproval {
   resolvedBy?: string;
   /** Optional note from the approver */
   note?: string;
+  /** Whether the approval has been marked as read */
+  read?: boolean;
   /** Time limit for the approval (ISO timestamp) */
   expiresAt?: string;
 }
@@ -35,7 +37,8 @@ export type ToolApprovalStatus =
   | 'approved'
   | 'rejected'
   | 'expired'
-  | 'auto_approved';
+  | 'auto_approved'
+  | 'deleted';
 
 export interface ToolApprovalFilters {
   /** Filter by agent ID */

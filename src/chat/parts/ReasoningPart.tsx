@@ -15,6 +15,7 @@ import { Text, Button } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { ChevronDownIcon } from '@primer/octicons-react';
 import { Streamdown } from 'streamdown';
+
 import { streamdownMarkdownStyles } from '../styles/streamdownStyles';
 
 export interface ReasoningPartProps {
