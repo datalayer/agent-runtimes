@@ -100,7 +100,9 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
     for spec in specs:
         event_id = spec["id"]
         version = spec["version"]
-        const_name = f"{event_id.upper().replace('-', '_')}_EVENT_SPEC{version_suffix(version)}"
+        const_name = (
+            f"{event_id.upper().replace('-', '_')}_EVENT_SPEC{version_suffix(version)}"
+        )
         desc = _esc_dq(spec.get("description", "").strip().replace("\n", " "))
         kind = spec.get("kind", event_id)
         fields = spec.get("fields", [])
@@ -135,7 +137,9 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
     for spec in specs:
         event_id = spec["id"]
         version = spec["version"]
-        const_name = f"{event_id.upper().replace('-', '_')}_EVENT_SPEC{version_suffix(version)}"
+        const_name = (
+            f"{event_id.upper().replace('-', '_')}_EVENT_SPEC{version_suffix(version)}"
+        )
         lines.append(f'    "{event_id}": {const_name},')
     lines.extend(
         [
@@ -201,7 +205,9 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
     for spec in specs:
         event_id = spec["id"]
         version = spec["version"]
-        const_name = f"{event_id.upper().replace('-', '_')}_EVENT_SPEC{version_suffix(version)}"
+        const_name = (
+            f"{event_id.upper().replace('-', '_')}_EVENT_SPEC{version_suffix(version)}"
+        )
         desc = _esc(spec.get("description", "").strip().replace("\n", " "))
         kind = spec.get("kind", event_id)
         fields = spec.get("fields", [])
@@ -246,7 +252,9 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
     for spec in specs:
         event_id = spec["id"]
         version = spec["version"]
-        const_name = f"{event_id.upper().replace('-', '_')}_EVENT_SPEC{version_suffix(version)}"
+        const_name = (
+            f"{event_id.upper().replace('-', '_')}_EVENT_SPEC{version_suffix(version)}"
+        )
         lines.append(f"  '{event_id}': {const_name},")
     lines.extend(
         [
