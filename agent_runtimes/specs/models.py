@@ -11,10 +11,9 @@ DO NOT EDIT MANUALLY - run 'make specs' to regenerate.
 
 import os
 from enum import Enum
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 
 from agent_runtimes.types import AIModel
-
 
 # ============================================================================
 # AIModels Enum

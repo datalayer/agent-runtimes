@@ -67,7 +67,6 @@ class DataScopeGuardrail(BaseGuardrail):
             or tool_args.get("collection")
             or ""
         )
-        query = tool_args.get("query", "")
 
         # Check system scope
         if self.allowed_systems and system and system not in self.allowed_systems:

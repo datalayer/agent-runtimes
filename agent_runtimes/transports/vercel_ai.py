@@ -197,7 +197,6 @@ class VercelAITransport(BaseTransport):
         """
         import json
         import logging
-        from collections.abc import AsyncIterator
         from typing import TYPE_CHECKING
 
         if TYPE_CHECKING:

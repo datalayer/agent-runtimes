@@ -5,12 +5,12 @@
 
 from __future__ import annotations
 
-import asyncio
 import logging
 import traceback
 from typing import Any
 
 from agent_runtimes.events import create_event
+
 from .base import BaseInvoker, InvokerResult
 
 logger = logging.getLogger(__name__)

@@ -2892,15 +2892,6 @@ async def configure_from_spec_endpoint(
             trigger_raw = body.agent_spec.get("trigger")
             if isinstance(trigger_raw, dict):
                 trigger = trigger_raw
-        trigger_type = None
-        trigger_config: dict[str, Any] = {}
-        if trigger:
-            if isinstance(trigger, dict):
-                trigger_type = trigger.get("type")
-                trigger_config = trigger
-            else:
-                trigger_type = getattr(trigger, "type", None)
-                trigger_config = trigger.__dict__ if hasattr(trigger, "__dict__") else {}
 
         # NOTE: "once" triggers are NOT auto-fired on agent creation.
         # The user must explicitly invoke them via POST /{agent_id}/trigger/run.

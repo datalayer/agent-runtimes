@@ -13,7 +13,6 @@ from typing import Dict, List
 
 from agent_runtimes.types import NotificationChannelSpec, NotificationField
 
-
 # ============================================================================
 # Notification Channel Definitions
 # ============================================================================

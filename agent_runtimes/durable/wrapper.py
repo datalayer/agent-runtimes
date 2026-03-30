@@ -53,7 +53,7 @@ def wrap_agent_durable(agent: Any, *, agent_id: str | None = None) -> Any:
         )
 
     try:
-        from pydantic_ai.agent import InstrumentedAgent
+        from pydantic_ai.agent import InstrumentedAgent  # noqa: F401
 
         # InstrumentedAgent (or DurableAgent via DBOS) wraps the agent's
         # run methods so each model request becomes a DBOS step.

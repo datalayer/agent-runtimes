@@ -8,7 +8,7 @@ THIS FILE IS AUTO-GENERATED from YAML team specifications.
 DO NOT EDIT MANUALLY - run 'make specs' to regenerate.
 """
 
-from typing import Dict, Optional
+from typing import Dict
 
 from agent_runtimes.types import (
     TeamAgentSpec,
@@ -19,7 +19,6 @@ from agent_runtimes.types import (
     TeamSupervisorSpec,
     TeamValidationSpec,
 )
-
 
 # ============================================================================
 # Team Definitions

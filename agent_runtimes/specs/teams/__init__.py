@@ -8,6 +8,7 @@ THIS FILE IS AUTO-GENERATED. DO NOT EDIT MANUALLY.
 """
 
 from typing import Dict
+
 from agent_runtimes.types import TeamSpec
 
 from .teams import TEAM_SPECS as ROOT_TEAMS

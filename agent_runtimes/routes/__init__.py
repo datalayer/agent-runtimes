@@ -3,8 +3,6 @@
 
 """Server routes for agent-runtimes."""
 
-from typing import Any
-
 from .a2a import (
     A2AAgentCard,
     get_a2a_agents,
