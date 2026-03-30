@@ -476,7 +476,7 @@ DEMO_ONE_TRIGGER_APPROVAL_AGENT_SPEC_0_0_1 = AgentSpec(
     sandbox_variant="jupyter",
     system_prompt=None,
     system_prompt_codemode_addons=None,
-    goal="Call runtime_sensitive_echo exactly once with message="Tool approval demo executed" and reason="audit". Do not call any other tool.",
+    goal='Call runtime_sensitive_echo exactly once with message="Tool approval demo executed" and reason="audit". Do not call any other tool.',
     protocol=None,
     ui_extension=None,
     trigger={'type': 'once', 'description': 'Run once with approval and terminate', 'prompt': "Call runtime_sensitive_echo exactly once with message='Tool approval demo executed' and reason='audit'. Do not call any other tool."},

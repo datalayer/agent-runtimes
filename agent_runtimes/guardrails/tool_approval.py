@@ -67,10 +67,23 @@ class ToolApprovalConfig:
     @classmethod
     def from_env(cls) -> "ToolApprovalConfig":
         urls = DatalayerURLs.from_environment()
+        # Determine the approval backend URL.
+        # When running inside agent-runtimes locally (AGENT_RUNTIMES_PORT is
+        # set by serve.py), use the local server so that approval records
+        # land in the in-memory store that the frontend also polls.
+        ai_agents_url = os.environ.get("AI_AGENTS_URL")
+        if not ai_agents_url:
+            local_port = os.environ.get("AGENT_RUNTIMES_PORT")
+            if local_port:
+                ai_agents_url = f"http://127.0.0.1:{local_port}"
+                logger.info(
+                    "Using local agent-runtimes as approval backend: %s",
+                    ai_agents_url,
+                )
+            else:
+                ai_agents_url = urls.ai_agents_url
         return cls(
-            ai_agents_url=os.environ.get(
-                "AI_AGENTS_URL", urls.ai_agents_url
-            ),
+            ai_agents_url=ai_agents_url,
             token=os.environ.get("DATALAYER_API_KEY", ""),
             agent_id=os.environ.get("AGENT_ID", "default"),
             pod_name=os.environ.get("POD_NAME", ""),
