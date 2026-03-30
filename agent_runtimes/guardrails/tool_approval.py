@@ -67,7 +67,7 @@ class ToolApprovalConfig:
     def from_env(cls) -> "ToolApprovalConfig":
         return cls(
             ai_agents_url=os.environ.get(
-                "AI_AGENTS_URL", "http://datalayer-ai-agents:9800"
+                "AI_AGENTS_URL", "http://datalayer-ai-agents.datalayer-api.svc.cluster.local:4400"
             ),
             token=os.environ.get("DATALAYER_API_KEY", ""),
             agent_id=os.environ.get("AGENT_ID", "default"),
