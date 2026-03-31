@@ -41,8 +41,12 @@ def _build_approval_manager(
     tool_id: str,
     agent_id: str | None = None,
     pod_name: str | None = None,
+    timeout: str | float | int | None = None,
 ) -> ToolApprovalManager:
-    cfg = ToolApprovalConfig.from_spec({"tools": [tool_id]})
+    cfg_payload: dict[str, object] = {"tools": [tool_id]}
+    if timeout is not None:
+        cfg_payload["timeout"] = timeout
+    cfg = ToolApprovalConfig.from_spec(cfg_payload)
     if agent_id:
         cfg.agent_id = agent_id
     if pod_name:
@@ -165,6 +169,7 @@ def register_agent_tools(
                 spec.id,
                 agent_id=agent_id,
                 pod_name=pod_name,
+                timeout=getattr(spec, "timeout", None),
             )
             tool_fn = wrap_tool_with_approval(tool_fn, spec.id, manager)
 
@@ -186,6 +191,7 @@ def register_agent_tools(
                     spec.id,
                     agent_id=agent_id,
                     pod_name=pod_name,
+                    timeout=getattr(spec, "timeout", None),
                 )
                 tool_fn = wrap_tool_with_approval(tool_fn, spec.id, manager)
                 tool_fn.__name__ = _tool_name_to_identifier(spec.id)

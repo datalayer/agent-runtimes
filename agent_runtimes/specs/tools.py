@@ -13,6 +13,7 @@ from typing import Dict, List
 
 from agent_runtimes.types import ToolRuntimeSpec, ToolSpec
 
+
 # ============================================================================
 # Tool Definitions
 # ============================================================================
@@ -25,6 +26,7 @@ RUNTIME_ECHO_TOOL_SPEC_0_0_1 = ToolSpec(
     tags=["runtime", "utility"],
     enabled=True,
     approval="auto",
+    timeout=None,
     requires_approval=False,
     runtime=ToolRuntimeSpec(
         language="python",
@@ -43,6 +45,7 @@ RUNTIME_SEND_MAIL_TOOL_SPEC_0_0_1 = ToolSpec(
     tags=["runtime", "approval", "mail"],
     enabled=True,
     approval="manual",
+    timeout=None,
     requires_approval=True,
     runtime=ToolRuntimeSpec(
         language="python",
@@ -61,6 +64,7 @@ RUNTIME_SENSITIVE_ECHO_TOOL_SPEC_0_0_1 = ToolSpec(
     tags=["runtime", "approval"],
     enabled=True,
     approval="manual",
+    timeout="5h0m0s",
     requires_approval=True,
     runtime=ToolRuntimeSpec(
         language="python",
@@ -87,8 +91,8 @@ def get_tool_spec(tool_id: str) -> ToolSpec | None:
     spec = TOOL_CATALOG.get(tool_id)
     if spec is not None:
         return spec
-    base, _, ver = tool_id.rpartition(":")
-    if base and "." in ver:
+    base, _, ver = tool_id.rpartition(':')
+    if base and '.' in ver:
         return TOOL_CATALOG.get(base)
     return None
 

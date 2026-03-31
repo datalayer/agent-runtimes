@@ -3,10 +3,12 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
+import { useState } from 'react';
 import { Button, Label, Text } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import {
   CheckCircleIcon,
+  ChevronDownIcon,
   EyeClosedIcon,
   EyeIcon,
   TrashIcon,
@@ -98,6 +100,7 @@ export function ToolApprovalCard({
   onToggleRead,
   onDelete,
 }: ToolApprovalCardProps) {
+  const [isDetailsExpanded, setIsDetailsExpanded] = useState(false);
   const statusConfig = TOOL_APPROVAL_STATUS_CONFIG[approval.status];
   const riskConfig = RISK_CONFIG[approval.riskLevel];
   const parameterCount = approval.parameters
@@ -161,11 +164,32 @@ export function ToolApprovalCard({
               bg: 'canvas.subtle',
             }}
           >
-            <details>
-              <summary style={{ cursor: 'pointer' }}>
-                <Text sx={{ fontSize: 0, fontWeight: 'semibold' }}>
-                  View details
-                </Text>
+            <details open={isDetailsExpanded}>
+              <summary
+                onClick={e => {
+                  e.preventDefault();
+                  setIsDetailsExpanded(prev => !prev);
+                }}
+                style={{ cursor: 'pointer' }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      color: 'fg.muted',
+                      transition: 'transform 0.15s ease',
+                      transform: isDetailsExpanded
+                        ? 'rotate(180deg)'
+                        : 'rotate(0deg)',
+                    }}
+                  >
+                    <ChevronDownIcon size={12} />
+                  </Box>
+                  <Text sx={{ fontSize: 0, fontWeight: 'semibold' }}>
+                    View details
+                  </Text>
+                </Box>
               </summary>
               <Box sx={{ mt: 2, display: 'grid', gap: 1 }}>
                 <Text sx={detailLineSx}>

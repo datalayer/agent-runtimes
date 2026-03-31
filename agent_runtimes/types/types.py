@@ -146,6 +146,10 @@ class ToolSpec(BaseModel):
         default="auto",
         description="Approval policy for the tool ('auto' or 'manual')",
     )
+    timeout: Optional[str] = Field(
+        default=None,
+        description="Approval timeout duration (e.g. 0h5m0s, 2d6h, 1mo2d3h4m5s)",
+    )
     runtime: ToolRuntimeSpec = Field(
         ...,
         description="Runtime binding metadata",

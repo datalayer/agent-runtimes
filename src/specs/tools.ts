@@ -23,9 +23,10 @@ export const RUNTIME_ECHO_TOOL_SPEC_0_0_1: ToolSpec = {
   version: '0.0.1',
   name: 'Runtime Echo',
   description: 'Echo text back to the caller for quick runtime verification.',
-  tags: ['runtime', 'utility'],
+  tags: ["runtime", "utility"],
   enabled: true,
   approval: 'auto',
+  timeout: undefined,
   requiresApproval: false,
   runtime: {
     language: 'python',
@@ -40,11 +41,11 @@ export const RUNTIME_SEND_MAIL_TOOL_SPEC_0_0_1: ToolSpec = {
   id: 'runtime-send-mail',
   version: '0.0.1',
   name: 'Runtime Send Mail (Fake)',
-  description:
-    'Fake mail sender for tool approval demos; returns a simulated send receipt.',
-  tags: ['runtime', 'approval', 'mail'],
+  description: 'Fake mail sender for tool approval demos; returns a simulated send receipt.',
+  tags: ["runtime", "approval", "mail"],
   enabled: true,
   approval: 'manual',
+  timeout: undefined,
   requiresApproval: true,
   runtime: {
     language: 'python',
@@ -60,9 +61,10 @@ export const RUNTIME_SENSITIVE_ECHO_TOOL_SPEC_0_0_1: ToolSpec = {
   version: '0.0.1',
   name: 'Runtime Sensitive Echo',
   description: 'Echo text with a manual approval checkpoint before execution.',
-  tags: ['runtime', 'approval'],
+  tags: ["runtime", "approval"],
   enabled: true,
   approval: 'manual',
+  timeout: '5h0m0s',
   requiresApproval: true,
   runtime: {
     language: 'python',

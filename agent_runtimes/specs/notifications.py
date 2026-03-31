@@ -13,6 +13,7 @@ from typing import Dict, List
 
 from agent_runtimes.types import NotificationChannelSpec, NotificationField
 
+
 # ============================================================================
 # Notification Channel Definitions
 # ============================================================================
@@ -26,33 +27,9 @@ API_PUSH_NOTIFICATION_SPEC_0_0_1 = NotificationChannelSpec(
     available=False,
     coming_soon=True,
     fields=[
-        NotificationField(
-            **{
-                "name": "url",
-                "label": "Endpoint URL",
-                "type": "string",
-                "required": True,
-                "placeholder": "https://api.example.com/agent-results",
-            }
-        ),
-        NotificationField(
-            **{
-                "name": "secret",
-                "label": "Signing Secret",
-                "type": "string",
-                "required": False,
-                "placeholder": "Optional HMAC secret for payload signing",
-            }
-        ),
-        NotificationField(
-            **{
-                "name": "include_output",
-                "label": "Include Output",
-                "type": "boolean",
-                "required": False,
-                "default": True,
-            }
-        ),
+        NotificationField(**{"name": "url", "label": "Endpoint URL", "type": "string", "required": True, "placeholder": "https://api.example.com/agent-results"}),
+        NotificationField(**{"name": "secret", "label": "Signing Secret", "type": "string", "required": False, "placeholder": "Optional HMAC secret for payload signing"}),
+        NotificationField(**{"name": "include_output", "label": "Include Output", "type": "boolean", "required": False, "default": True}),
     ],
 )
 
@@ -65,33 +42,9 @@ EMAIL_NOTIFICATION_SPEC_0_0_1 = NotificationChannelSpec(
     available=True,
     coming_soon=False,
     fields=[
-        NotificationField(
-            **{
-                "name": "recipients",
-                "label": "Recipients",
-                "type": "string",
-                "required": True,
-                "placeholder": "ops@company.com, team-lead@company.com",
-            }
-        ),
-        NotificationField(
-            **{
-                "name": "subject_template",
-                "label": "Subject Template",
-                "type": "string",
-                "required": False,
-                "placeholder": "[Agent] {{agent_name}} — {{event_type}}",
-            }
-        ),
-        NotificationField(
-            **{
-                "name": "include_output",
-                "label": "Include Output",
-                "type": "boolean",
-                "required": False,
-                "default": True,
-            }
-        ),
+        NotificationField(**{"name": "recipients", "label": "Recipients", "type": "string", "required": True, "placeholder": "ops@company.com, team-lead@company.com"}),
+        NotificationField(**{"name": "subject_template", "label": "Subject Template", "type": "string", "required": False, "placeholder": "[Agent] {{agent_name}} — {{event_type}}"}),
+        NotificationField(**{"name": "include_output", "label": "Include Output", "type": "boolean", "required": False, "default": True}),
     ],
 )
 
@@ -104,33 +57,9 @@ SLACK_NOTIFICATION_SPEC_0_0_1 = NotificationChannelSpec(
     available=True,
     coming_soon=False,
     fields=[
-        NotificationField(
-            **{
-                "name": "channel",
-                "label": "Channel",
-                "type": "string",
-                "required": True,
-                "placeholder": "#sales-analytics",
-            }
-        ),
-        NotificationField(
-            **{
-                "name": "mention_on_failure",
-                "label": "Mention on Failure",
-                "type": "string",
-                "required": False,
-                "placeholder": "@oncall-team",
-            }
-        ),
-        NotificationField(
-            **{
-                "name": "include_output",
-                "label": "Include Output",
-                "type": "boolean",
-                "required": False,
-                "default": False,
-            }
-        ),
+        NotificationField(**{"name": "channel", "label": "Channel", "type": "string", "required": True, "placeholder": "#sales-analytics"}),
+        NotificationField(**{"name": "mention_on_failure", "label": "Mention on Failure", "type": "string", "required": False, "placeholder": "@oncall-team"}),
+        NotificationField(**{"name": "include_output", "label": "Include Output", "type": "boolean", "required": False, "default": False}),
     ],
 )
 
@@ -143,24 +72,8 @@ TEAMS_NOTIFICATION_SPEC_0_0_1 = NotificationChannelSpec(
     available=False,
     coming_soon=True,
     fields=[
-        NotificationField(
-            **{
-                "name": "webhook_url",
-                "label": "Webhook URL",
-                "type": "string",
-                "required": True,
-                "placeholder": "https://outlook.office.com/webhook/...",
-            }
-        ),
-        NotificationField(
-            **{
-                "name": "include_output",
-                "label": "Include Output",
-                "type": "boolean",
-                "required": False,
-                "default": False,
-            }
-        ),
+        NotificationField(**{"name": "webhook_url", "label": "Webhook URL", "type": "string", "required": True, "placeholder": "https://outlook.office.com/webhook/..."}),
+        NotificationField(**{"name": "include_output", "label": "Include Output", "type": "boolean", "required": False, "default": False}),
     ],
 )
 
@@ -173,33 +86,9 @@ WEBHOOK_NOTIFICATION_SPEC_0_0_1 = NotificationChannelSpec(
     available=False,
     coming_soon=True,
     fields=[
-        NotificationField(
-            **{
-                "name": "url",
-                "label": "Webhook URL",
-                "type": "string",
-                "required": True,
-                "placeholder": "https://api.example.com/agent-events",
-            }
-        ),
-        NotificationField(
-            **{
-                "name": "secret",
-                "label": "Signing Secret",
-                "type": "string",
-                "required": False,
-                "placeholder": "Optional HMAC secret for payload signing",
-            }
-        ),
-        NotificationField(
-            **{
-                "name": "include_output",
-                "label": "Include Output",
-                "type": "boolean",
-                "required": False,
-                "default": True,
-            }
-        ),
+        NotificationField(**{"name": "url", "label": "Webhook URL", "type": "string", "required": True, "placeholder": "https://api.example.com/agent-events"}),
+        NotificationField(**{"name": "secret", "label": "Signing Secret", "type": "string", "required": False, "placeholder": "Optional HMAC secret for payload signing"}),
+        NotificationField(**{"name": "include_output", "label": "Include Output", "type": "boolean", "required": False, "default": True}),
     ],
 )
 
@@ -221,8 +110,8 @@ def get_notification_spec(channel_id: str) -> NotificationChannelSpec | None:
     spec = NOTIFICATION_CATALOG.get(channel_id)
     if spec is not None:
         return spec
-    base, _, ver = channel_id.rpartition(":")
-    if base and "." in ver:
+    base, _, ver = channel_id.rpartition(':')
+    if base and '.' in ver:
         return NOTIFICATION_CATALOG.get(base)
     return None
 

@@ -21,6 +21,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import re
 from dataclasses import dataclass, field
 from typing import Any, Callable
 
@@ -35,6 +36,54 @@ def _env_bool(name: str, default: bool = False) -> bool:
     if value is None:
         return default
     return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _parse_timeout_hms(value: Any, *, default: float) -> float:
+        """Parse timeout values from duration format into seconds.
+
+    Accepts:
+    - float/int seconds
+        - string durations with optional month/day/hour/minute/second tokens
+            (e.g. 1mo2d3h4m5s, 2d6h, 0h5m0s)
+
+        Notes:
+        - "mo" means months (treated as 30 days)
+        - "m" means minutes
+    """
+    if value is None:
+        return default
+    if isinstance(value, (int, float)):
+        return float(value)
+    if isinstance(value, str):
+        raw = value.strip()
+        if not raw:
+            return default
+        token_pattern = re.compile(r"(?i)(\d+)(mo|d|h|m|s)")
+        pos = 0
+        totals = {"mo": 0, "d": 0, "h": 0, "m": 0, "s": 0}
+        for match in token_pattern.finditer(raw):
+            if match.start() != pos:
+                break
+            amount = int(match.group(1))
+            unit = match.group(2).lower()
+            totals[unit] += amount
+            pos = match.end()
+        if pos == len(raw) and any(totals.values()):
+            months = totals["mo"]
+            days = totals["d"]
+            hours = totals["h"]
+            minutes = totals["m"]
+            seconds = totals["s"]
+            return float(
+                months * 30 * 86400
+                + days * 86400
+                + hours * 3600
+                + minutes * 60
+                + seconds
+            )
+    raise ValueError(
+        f"Invalid timeout '{value}'. Expected duration format like '0h5m0s', '2d6h', or '1mo2d3h4m5s', or numeric seconds."
+    )
 
 
 # ============================================================================
@@ -112,7 +161,7 @@ class ToolApprovalConfig:
         """
         base = cls.from_env()
         base.tools_requiring_approval = spec_config.get("tools", [])
-        base.timeout = spec_config.get("timeout", 300.0)
+        base.timeout = _parse_timeout_hms(spec_config.get("timeout"), default=300.0)
         base.poll_interval = spec_config.get("poll_interval", 2.0)
         if "fail_open_on_error" in spec_config:
             base.fail_open_on_error = bool(spec_config.get("fail_open_on_error"))

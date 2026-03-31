@@ -3,9 +3,11 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
+import { useState } from 'react';
 import { Button, Label, Text, Truncate } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import {
+  ChevronDownIcon,
   DownloadIcon,
   EyeClosedIcon,
   EyeIcon,
@@ -48,6 +50,8 @@ export function NotificationEventCard({
   onDelete,
   onOpenAgent,
 }: NotificationEventCardProps) {
+  const [isOutputExpanded, setIsOutputExpanded] = useState(false);
+  const [isDetailsExpanded, setIsDetailsExpanded] = useState(false);
   const startedAt = eventStartedAt(event);
   const endedAt = eventEndedAt(event);
   const running = isRunningEvent(event);
@@ -250,8 +254,12 @@ export function NotificationEventCard({
             >
               <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
                 <Box sx={{ flex: 1, minWidth: 0 }}>
-                  <details>
+                  <details open={isOutputExpanded}>
                     <summary
+                      onClick={e => {
+                        e.preventDefault();
+                        setIsOutputExpanded(prev => !prev);
+                      }}
                       style={{
                         cursor: 'pointer',
                         display: 'flex',
@@ -269,6 +277,20 @@ export function NotificationEventCard({
                           flexWrap: 'nowrap',
                         }}
                       >
+                        <Box
+                          sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            color: 'fg.muted',
+                            flexShrink: 0,
+                            transition: 'transform 0.15s ease',
+                            transform: isOutputExpanded
+                              ? 'rotate(180deg)'
+                              : 'rotate(0deg)',
+                          }}
+                        >
+                          <ChevronDownIcon size={12} />
+                        </Box>
                         <Text
                           sx={{
                             fontSize: 0,
@@ -328,11 +350,32 @@ export function NotificationEventCard({
               bg: 'canvas.subtle',
             }}
           >
-            <details>
-              <summary style={{ cursor: 'pointer' }}>
-                <Text sx={{ fontSize: 0, fontWeight: 'semibold' }}>
-                  View details
-                </Text>
+            <details open={isDetailsExpanded}>
+              <summary
+                onClick={e => {
+                  e.preventDefault();
+                  setIsDetailsExpanded(prev => !prev);
+                }}
+                style={{ cursor: 'pointer' }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      color: 'fg.muted',
+                      transition: 'transform 0.15s ease',
+                      transform: isDetailsExpanded
+                        ? 'rotate(180deg)'
+                        : 'rotate(0deg)',
+                    }}
+                  >
+                    <ChevronDownIcon size={12} />
+                  </Box>
+                  <Text sx={{ fontSize: 0, fontWeight: 'semibold' }}>
+                    View details
+                  </Text>
+                </Box>
               </summary>
               <Box sx={{ mt: 2, display: 'grid', gap: 1 }}>
                 {detailEntries.map(({ label, value }) => (
