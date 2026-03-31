@@ -42,7 +42,7 @@ from ..specs.agents import get_agent_spec as get_library_agent_spec
 from ..specs.agents import list_agent_specs as list_library_agents
 from ..specs.models import DEFAULT_MODEL
 from ..transports import AGUITransport, MCPUITransport, VercelAITransport
-from ..types import AgentSpec
+from ..types import AgentSpec, MCPServer
 from .a2a import A2AAgentCard, register_a2a_agent, unregister_a2a_agent
 from .acp import AgentCapabilities, AgentInfo, _agents, register_agent, unregister_agent
 from .agui import get_agui_app, register_agui_agent, unregister_agui_agent
@@ -568,6 +568,13 @@ async def create_agent(
                     McpServerSelection(id=server.id, origin="config")
                     for server in spec.mcp_servers
                 ]
+                # Register the full MCPServer configs from the spec so
+                # they are available for mcp_manager lookups (used by
+                # _build_codemode_toolset) and server startup resolution.
+                _mcp_mgr = get_mcp_manager()
+                for _srv in spec.mcp_servers:
+                    if not _mcp_mgr.get_server(_srv.id):
+                        _mcp_mgr.add_server(_srv)
             # Apply codemode defaults from spec codemode block
             if isinstance(spec.codemode, dict):
                 codemode_cfg = spec.codemode
@@ -626,6 +633,7 @@ async def create_agent(
                 raw_servers = _spec_value("mcpServers", "mcp_servers")
                 if isinstance(raw_servers, list):
                     selected_servers: list[McpServerSelection] = []
+                    _mcp_mgr = get_mcp_manager()
                     for server in raw_servers:
                         if isinstance(server, dict) and server.get("id"):
                             raw_origin = str(server.get("origin", "config"))
@@ -638,6 +646,17 @@ async def create_agent(
                                     origin=origin,
                                 )
                             )
+                            # Register full config with mcp_manager if
+                            # the dict contains enough info to start the
+                            # server (command or url).
+                            srv_id = str(server["id"])
+                            if not _mcp_mgr.get_server(srv_id) and (
+                                server.get("command") or server.get("url")
+                            ):
+                                try:
+                                    _mcp_mgr.add_server(MCPServer(**server))
+                                except Exception:
+                                    pass
                     request.selected_mcp_servers = selected_servers
             codemode_cfg = _spec_value("codemode")
             if isinstance(codemode_cfg, dict):
@@ -704,8 +723,8 @@ async def create_agent(
                                 started = True
                                 logger.info(f"Started Config MCP server '{server_id}'")
 
-                    # 2. Try Catalog Server
-                    if (is_config is None or is_config is False) and not started:
+                    # 2. Try Catalog Server (always as fallback)
+                    if not started:
                         catalog_server = MCP_SERVER_CATALOG.get(server_id)
                         if catalog_server:
                             logger.info(
@@ -2129,18 +2148,30 @@ async def _start_mcp_servers_for_agent(
             already_running.append(server_id)
             continue
 
-        # Get server config from appropriate source
+        # Get server config from appropriate source.
+        # Try all sources in order: config file → catalog → mcp_manager.
+        # Spec-originated servers (origin="config") may not exist in
+        # mcp.json but their MCPServer configs are registered in the
+        # mcp_manager by create_agent.
         config = None
         if is_config:
             config = lifecycle_manager.get_server_config_from_file(server_id)
             logger.info(
                 f"_start_mcp_servers_for_agent: Got config for '{server_id}' from config file: {config is not None}"
             )
-        else:
+        if config is None:
             config = MCP_SERVER_CATALOG.get(server_id)
-            logger.info(
-                f"_start_mcp_servers_for_agent: Got config for '{server_id}' from catalog: {config is not None}"
-            )
+            if config is not None:
+                logger.info(
+                    f"_start_mcp_servers_for_agent: Got config for '{server_id}' from catalog"
+                )
+        if config is None:
+            _mgr = get_mcp_manager()
+            config = _mgr.get_server(server_id)
+            if config is not None:
+                logger.info(
+                    f"_start_mcp_servers_for_agent: Got config for '{server_id}' from mcp_manager"
+                )
 
         if config is None:
             logger.warning(
