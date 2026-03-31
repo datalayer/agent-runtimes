@@ -11,6 +11,7 @@ Provides REST API endpoints for:
 - Deleting agents
 """
 
+import asyncio
 import logging
 import os
 import tempfile
@@ -2405,49 +2406,51 @@ async def start_all_agents_mcp_servers(
             mcp_proxy_url,
         ) = await _setup_env_and_sandbox(body, request)
 
-        all_started: list[str] = []
-        all_already_running: list[str] = []
-        all_failed: list[dict[str, str]] = []
-        any_codemode_rebuilt = False
-        agents_processed: list[str] = []
-
-        for agent_id in list(_agents.keys()):
-            (
-                started,
-                already_running,
-                failed,
-                codemode_rebuilt,
-            ) = await _start_mcp_servers_for_agent(agent_id, body.env_vars, request)
-            all_started.extend(started)
-            all_already_running.extend(already_running)
-            all_failed.extend(failed)
-            if codemode_rebuilt:
-                any_codemode_rebuilt = True
-            agents_processed.append(agent_id)
-
+        agents_processed: list[str] = list(_agents.keys())
         env_count = len(body.env_vars) if body.env_vars else 0
+
+        # Start MCP servers in a background task so this endpoint
+        # returns immediately.  The UI polls mcp-toolsets-status to
+        # reflect progress via the indicator dot.
+        async def _background_start() -> None:
+            for agent_id in agents_processed:
+                try:
+                    started, already_running, failed, codemode_rebuilt = (
+                        await _start_mcp_servers_for_agent(
+                            agent_id, body.env_vars, request
+                        )
+                    )
+                    logger.info(
+                        "[mcp-servers/start] agent '%s': started=%s, "
+                        "already_running=%s, failed=%s, codemode_rebuilt=%s",
+                        agent_id,
+                        started,
+                        already_running,
+                        failed,
+                        codemode_rebuilt,
+                    )
+                except Exception as e:
+                    logger.warning(
+                        "[mcp-servers/start] Failed for agent '%s': %s",
+                        agent_id,
+                        e,
+                    )
+
+        asyncio.create_task(_background_start())
 
         return AgentMcpServersResponse(
             agent_id=None,
             agents_processed=agents_processed,
-            started_servers=all_started,
-            already_running=all_already_running,
-            failed_servers=all_failed,
-            codemode_rebuilt=any_codemode_rebuilt,
+            started_servers=[],
+            already_running=[],
+            failed_servers=[],
+            codemode_rebuilt=False,
             sandbox_configured=sandbox_configured,
             sandbox_variant=sandbox_variant,
             mcp_proxy_url=mcp_proxy_url,
             env_vars_set=env_count,
-            message=_build_mcp_response_message(
-                agents_processed=agents_processed,
-                started=all_started,
-                already_running=all_already_running,
-                failed=all_failed,
-                sandbox_configured=sandbox_configured,
-                sandbox_variant=sandbox_variant,
-                mcp_proxy_url=mcp_proxy_url,
-                env_count=env_count,
-            ),
+            message=f"Sandbox configured ({sandbox_variant}), "
+            f"MCP servers starting in background for {len(agents_processed)} agent(s)",
         )
 
     except HTTPException:
@@ -2775,6 +2778,8 @@ class ConfigureFromSpecRequest(BaseModel):
     agent_spec: dict[str, Any] | None = None
     env_vars: list[dict[str, str]] = Field(default_factory=list)
     user_token: str | None = None
+    jupyter_sandbox: str | None = None
+    mcp_proxy_url: str | None = None
 
 
 @router.post("/configure-from-spec")
@@ -2782,16 +2787,21 @@ async def configure_from_spec_endpoint(
     http_request: Request,
     body: ConfigureFromSpecRequest,
 ) -> dict[str, Any]:
-    """Configure and create an agent from an AgentSpec ID.
+    """Configure the running default agent from an AgentSpec ID.
 
     Called by the companion during run-start-hooks when the operator
-    provides an ``agent_spec_id``. Applies env vars and reuses the
-    canonical ``POST /agents`` creation logic so all spec attributes
-    are handled consistently.
+    provides an ``agent_spec_id``.  The existing agent is updated
+    in-place (system prompt, model, MCP servers, description) — it is
+    NOT deleted and recreated, so the sandbox and any in-flight state
+    are preserved.
+
+    When ``jupyter_sandbox`` / ``mcp_proxy_url`` are provided the
+    sandbox is configured in the same request, removing the need for
+    a separate ``mcp-servers/start`` call from the companion.
     """
     logger.info("Configuring agent from spec: %s", body.agent_spec_id)
 
-    # Set env vars from companion (secrets, API keys, etc.)
+    # ── 1. Set process env vars from companion (secrets, API keys) ───
     for env_var in body.env_vars:
         name = env_var.get("name", "")
         value = env_var.get("value", "")
@@ -2802,7 +2812,7 @@ async def configure_from_spec_endpoint(
             )
             os.environ[name] = value
 
-    # Validate that the referenced library spec exists.
+    # ── 2. Validate that the referenced library spec exists ──────────
     spec = get_library_agent_spec(body.agent_spec_id)
     if spec is None:
         raise HTTPException(
@@ -2810,30 +2820,159 @@ async def configure_from_spec_endpoint(
             detail=f"AgentSpec '{body.agent_spec_id}' not found in library.",
         )
 
-    # Delegate to the canonical create flow. Defaults from the library spec
-    # and optional forwarded agent_spec are applied in create_agent().
-    #
-    # Propagate the server-level codemode flag so that sandbox creation
-    # (which is gated on enable_codemode) respects the --codemode startup flag
-    # even when the forwarded agent_spec has no explicit codemode block.
-    server_codemode = os.environ.get("AGENT_RUNTIMES_CODEMODE", "").lower() == "true"
-
-    # The UI always talks to the "default" agent, so reconfigure the existing
-    # default agent rather than creating a new one with the spec ID as name.
-    # Delete the existing "default" agent first so create_agent() succeeds.
     target_agent_name = "default"
+
+    # ── 3. Configure sandbox if jupyter_sandbox is provided ──────────
+    if body.jupyter_sandbox:
+        sandbox_body = StartAgentMcpServersRequest(
+            env_vars=[
+                EnvVar(name=ev.get("name", ""), value=ev.get("value", ""))
+                for ev in body.env_vars
+                if ev.get("name")
+            ],
+            jupyter_sandbox=body.jupyter_sandbox,
+            mcp_proxy_url=body.mcp_proxy_url,
+        )
+        await _setup_env_and_sandbox(
+            sandbox_body, http_request, agent_id=target_agent_name,
+        )
+
+    # ── 4. Resolve effective spec values ─────────────────────────────
+    forwarded_spec = body.agent_spec or {}
+
+    def _spec_value(*keys: str) -> Any:
+        for key in keys:
+            if key in forwarded_spec and forwarded_spec[key] is not None:
+                return forwarded_spec[key]
+        return None
+
+    # System prompt: spec.system_prompt → spec.goal → forwarded → default
+    effective_prompt = (
+        spec.system_prompt
+        or spec.goal
+        or _spec_value("systemPrompt", "system_prompt", "goal")
+        or "You are a helpful AI assistant."
+    )
+
+    # Codemode addons
+    server_codemode = os.environ.get("AGENT_RUNTIMES_CODEMODE", "").lower() == "true"
+    codemode_addons = (
+        spec.system_prompt_codemode_addons
+        if hasattr(spec, "system_prompt_codemode_addons") and spec.system_prompt_codemode_addons
+        else _spec_value("systemPromptCodemodeAddons", "system_prompt_codemode_addons")
+    )
+    if server_codemode and codemode_addons:
+        effective_prompt = effective_prompt + "\n\n" + codemode_addons
+
+    # Model
+    effective_model = (
+        spec.model
+        or _spec_value("model")
+        or DEFAULT_MODEL
+    )
+
+    # Description
+    effective_description = (
+        spec.description
+        or _spec_value("description")
+        or ""
+    )
+
+    # MCP servers
+    effective_mcp_servers: list[McpServerSelection] = []
+    if spec.mcp_servers:
+        effective_mcp_servers = [
+            McpServerSelection(id=server.id, origin="config")
+            for server in spec.mcp_servers
+        ]
+    else:
+        raw_servers = _spec_value("mcpServers", "mcp_servers")
+        if isinstance(raw_servers, list):
+            for server in raw_servers:
+                if isinstance(server, dict) and server.get("id"):
+                    raw_origin = str(server.get("origin", "config"))
+                    origin: McpOrigin = "catalog" if raw_origin == "catalog" else "config"
+                    effective_mcp_servers.append(
+                        McpServerSelection(id=str(server["id"]), origin=origin)
+                    )
+
+    # ── 5. Update existing agent in-place or create if missing ───────
     if target_agent_name in _agents:
+        adapter, info = _agents[target_agent_name]
+
+        # Update system prompt on the underlying PydanticAI agent
+        adapter._agent._system_prompts = (effective_prompt,)
         logger.info(
-            "Removing existing '%s' agent to reconfigure from spec '%s'",
+            "[configure-from-spec] Updated system prompt for '%s' (len=%d)",
+            target_agent_name,
+            len(effective_prompt),
+        )
+
+        # Update model
+        adapter._agent._model = effective_model
+        logger.info(
+            "[configure-from-spec] Updated model for '%s': %s",
+            target_agent_name,
+            effective_model,
+        )
+
+        # Update description
+        adapter._description = effective_description
+        info.description = effective_description
+
+        # Update MCP server selections
+        adapter.update_mcp_servers(effective_mcp_servers)
+        logger.info(
+            "[configure-from-spec] Updated MCP servers for '%s': %s",
+            target_agent_name,
+            [s.id for s in effective_mcp_servers],
+        )
+
+        # Store the spec id for later reference
+        _agent_specs[target_agent_name] = {
+            "agent_spec_id": body.agent_spec_id,
+            "system_prompt": effective_prompt,
+            "model": effective_model,
+            "description": effective_description,
+            "selected_mcp_servers": [
+                {"id": s.id, "origin": s.origin} for s in effective_mcp_servers
+            ],
+        }
+
+        logger.info(
+            "Agent '%s' updated in-place from spec '%s'",
+            target_agent_name,
+            body.agent_spec_id,
+        )
+    else:
+        # Agent doesn't exist yet — fall back to creating it
+        logger.info(
+            "No existing '%s' agent — creating from spec '%s'",
             target_agent_name,
             body.agent_spec_id,
         )
         try:
-            await delete_agent(target_agent_name)
+            await create_agent(
+                CreateAgentRequest(
+                    name=target_agent_name,
+                    agent_spec_id=body.agent_spec_id,
+                    agent_spec=body.agent_spec,
+                    enable_codemode=server_codemode,
+                ),
+                http_request,
+            )
         except Exception as e:
-            logger.warning("Failed to delete existing default agent: %s", e)
+            logger.error(
+                "Failed to create agent from spec '%s': %s",
+                body.agent_spec_id,
+                e,
+            )
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to create agent from spec: {str(e)}",
+            )
 
-    # Build env_vars dict for sandbox injection (skip empty entries)
+    # ── 6. Start MCP servers + inject sandbox env vars (async) ───────
     sandbox_env_vars: dict[str, str] = {}
     for env_var in body.env_vars:
         name = env_var.get("name", "")
@@ -2841,29 +2980,9 @@ async def configure_from_spec_endpoint(
         if name and value:
             sandbox_env_vars[name] = value
 
-    try:
-        created = await create_agent(
-            CreateAgentRequest(
-                name=target_agent_name,
-                agent_spec_id=body.agent_spec_id,
-                agent_spec=body.agent_spec,
-                enable_codemode=server_codemode,
-            ),
-            http_request,
-        )
-        logger.info(
-            "Agent '%s' reconfigured from spec '%s' and registered",
-            target_agent_name,
-            body.agent_spec_id,
-        )
-
-        # Start MCP servers that the spec selected.
-        # create_agent() registers the adapter with selected_mcp_servers but
-        # does NOT start them when config MCP servers are disabled
-        # (--no-config-mcp-servers).  The companion's earlier
-        # mcp-servers/start call ran before configure-from-spec, so the old
-        # agent had 0 selections.  We need to start them now that the new
-        # agent has the correct selections from the spec.
+    async def _background_mcp_and_sandbox() -> None:
+        """Fire-and-forget: start MCP servers + inject sandbox env vars."""
+        # ── MCP servers ──────────────────────────────────────
         if target_agent_name in _agents:
             env_var_objects = [
                 EnvVar(name=ev.get("name", ""), value=ev.get("value", ""))
@@ -2894,10 +3013,7 @@ async def configure_from_spec_endpoint(
                     e,
                 )
 
-        # Inject env vars into the agent's codemode sandbox.
-        # create_agent() creates the sandbox (Jupyter kernel) but env vars
-        # set on os.environ only live in the FastAPI process — the kernel
-        # is a separate process that doesn't inherit them.
+        # ── Sandbox env-var injection ────────────────────────
         if sandbox_env_vars:
             try:
                 from ..services.code_sandbox_manager import get_code_sandbox_manager
@@ -2922,34 +3038,14 @@ async def configure_from_spec_endpoint(
                     e,
                 )
 
-        created_id = getattr(created, "id", target_agent_name)
-        created_model = getattr(created, "model", spec.model or DEFAULT_MODEL)
+    asyncio.create_task(_background_mcp_and_sandbox())
 
-        # ── Trigger invoker for "once" triggers ──────────────────
-        trigger = getattr(spec, "trigger", None)
-        if trigger is None and body.agent_spec:
-            trigger_raw = body.agent_spec.get("trigger")
-            if isinstance(trigger_raw, dict):
-                trigger = trigger_raw
-
-        # NOTE: "once" triggers are NOT auto-fired on agent creation.
-        # The user must explicitly invoke them via POST /{agent_id}/trigger/run.
-
-        return {
-            "success": True,
-            "agent_id": created_id,
-            "model": created_model,
-            "message": f"Agent 'default' reconfigured from spec '{body.agent_spec_id}'.",
-        }
-
-    except Exception as e:
-        logger.error(
-            "Failed to configure agent from spec '%s': %s", body.agent_spec_id, e
-        )
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to create agent from spec: {str(e)}",
-        )
+    return {
+        "success": True,
+        "agent_id": target_agent_name,
+        "model": effective_model if isinstance(effective_model, str) else str(effective_model),
+        "message": f"Agent 'default' configured from spec '{body.agent_spec_id}'.",
+    }
 
 
 # ── Trigger / Run ────────────────────────────────────────────────────────
