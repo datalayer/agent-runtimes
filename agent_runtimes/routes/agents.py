@@ -2857,6 +2857,43 @@ async def configure_from_spec_endpoint(
             body.agent_spec_id,
         )
 
+        # Start MCP servers that the spec selected.
+        # create_agent() registers the adapter with selected_mcp_servers but
+        # does NOT start them when config MCP servers are disabled
+        # (--no-config-mcp-servers).  The companion's earlier
+        # mcp-servers/start call ran before configure-from-spec, so the old
+        # agent had 0 selections.  We need to start them now that the new
+        # agent has the correct selections from the spec.
+        if target_agent_name in _agents:
+            env_var_objects = [
+                EnvVar(name=ev.get("name", ""), value=ev.get("value", ""))
+                for ev in body.env_vars
+                if ev.get("name")
+            ]
+            try:
+                started, already_running, failed, codemode_rebuilt = (
+                    await _start_mcp_servers_for_agent(
+                        target_agent_name,
+                        env_var_objects,
+                        request=http_request,
+                    )
+                )
+                logger.info(
+                    "[configure-from-spec] MCP server start results for '%s': "
+                    "started=%s, already_running=%s, failed=%s, codemode_rebuilt=%s",
+                    target_agent_name,
+                    started,
+                    already_running,
+                    failed,
+                    codemode_rebuilt,
+                )
+            except Exception as e:
+                logger.warning(
+                    "[configure-from-spec] Failed to start MCP servers for '%s': %s",
+                    target_agent_name,
+                    e,
+                )
+
         # Inject env vars into the agent's codemode sandbox.
         # create_agent() creates the sandbox (Jupyter kernel) but env vars
         # set on os.environ only live in the FastAPI process — the kernel
