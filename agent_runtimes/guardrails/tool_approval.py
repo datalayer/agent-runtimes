@@ -67,24 +67,30 @@ class ToolApprovalConfig:
     @classmethod
     def from_env(cls) -> "ToolApprovalConfig":
         urls = DatalayerURLs.from_environment()
-        # Determine the approval backend URL.
-        # When running inside agent-runtimes locally (AGENT_RUNTIMES_PORT is
-        # set by serve.py), use the local server so that approval records
-        # land in the in-memory store that the frontend also polls.
-        ai_agents_url = os.environ.get("AI_AGENTS_URL")
-        if not ai_agents_url:
-            local_port = os.environ.get("AGENT_RUNTIMES_PORT")
-            if local_port:
-                ai_agents_url = f"http://127.0.0.1:{local_port}"
-                logger.info(
-                    "Using local agent-runtimes as approval backend: %s",
-                    ai_agents_url,
-                )
-            else:
-                ai_agents_url = urls.ai_agents_url
+        # Always resolve ai-agents approval backend from core URL config.
+        # Intentionally ignore AI_AGENTS_URL and local AGENT_RUNTIMES_PORT
+        # so approvals are created in the shared ai-agents backend visible to UI.
+        ai_agents_url = urls.ai_agents_url
+        if os.environ.get("AI_AGENTS_URL"):
+            logger.info(
+                "Ignoring AI_AGENTS_URL for tool approvals; using core-resolved ai-agents URL: %s",
+                ai_agents_url,
+            )
+        else:
+            logger.info(
+                "Using core-resolved ai-agents URL for tool approvals: %s",
+                ai_agents_url,
+            )
+        # Prefer the user JWT forwarded by the companion (identifies the
+        # user so ai-agents can set requester_uid correctly) over the
+        # platform-level DATALAYER_API_KEY.
+        token = (
+            os.environ.get("DATALAYER_USER_TOKEN")
+            or os.environ.get("DATALAYER_API_KEY", "")
+        )
         return cls(
             ai_agents_url=ai_agents_url,
-            token=os.environ.get("DATALAYER_API_KEY", ""),
+            token=token,
             agent_id=os.environ.get("AGENT_ID", "default"),
             pod_name=os.environ.get("POD_NAME", ""),
             fail_open_on_error=_env_bool("TOOL_APPROVAL_FAIL_OPEN", False),

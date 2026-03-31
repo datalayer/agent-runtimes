@@ -2850,6 +2850,11 @@ async def configure_from_spec_endpoint(
             )
             os.environ[name] = value
 
+    # Store the user JWT so that ToolApprovalConfig can authenticate
+    # to the ai-agents service and set the correct requester_uid.
+    if body.user_token:
+        os.environ["DATALAYER_USER_TOKEN"] = body.user_token
+
     # ── 2. Validate that the referenced library spec exists ──────────
     spec = get_library_agent_spec(body.agent_spec_id)
     if spec is None:
