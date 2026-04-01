@@ -87,9 +87,6 @@ export function NotificationEventCard({
   });
 
   Object.entries(event?.payload || {}).forEach(([key, value]) => {
-    if (key === 'outputs') {
-      return;
-    }
     if (value === undefined || value === null || value === '') {
       return;
     }
