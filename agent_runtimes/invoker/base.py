@@ -34,7 +34,7 @@ class BaseInvoker(ABC):
     """Abstract base class for agent trigger invokers.
 
     Subclasses implement ``invoke`` to execute the agent's trigger
-    logic and emit lifecycle events (AGENT_STARTED, AGENT_ENDED).
+    logic and emit lifecycle events (AGENT_STARTED, AGENT_OUTPUT).
 
     Parameters
     ----------

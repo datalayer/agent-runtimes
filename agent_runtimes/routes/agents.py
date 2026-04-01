@@ -3077,7 +3077,12 @@ async def trigger_run(
     auth_header = request.headers.get("Authorization", "")
     token = auth_header.removeprefix("Bearer ").strip() if auth_header else ""
 
-    base_url = os.environ.get("DATALAYER_RUN_URL", "https://prod1.datalayer.run")
+    base_url = (
+        os.environ.get("DATALAYER_AI_AGENTS_URL")
+        or os.environ.get("AI_AGENTS_URL")
+        or os.environ.get("DATALAYER_RUN_URL")
+        or "https://prod1.datalayer.run"
+    )
     runtime_id = os.environ.get("HOSTNAME")
 
     import asyncio

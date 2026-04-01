@@ -38,7 +38,7 @@ export function OutputCard({
 }: OutputCardProps) {
   const [isOutputExpanded, setIsOutputExpanded] = useState(false);
   const outputText =
-    event.kind === 'agent-ended' && event.payload?.outputs
+    event.kind === 'agent-output' && event.payload?.outputs
       ? String(event.payload.outputs)
       : null;
 
@@ -53,7 +53,7 @@ export function OutputCard({
   const startedAt = event?.started_at || event?.payload?.started_at || null;
   const endedAt = event?.ended_at || event?.payload?.ended_at || null;
   const durationMs =
-    event.kind === 'agent-ended' ? event.payload?.duration_ms : null;
+    event.kind === 'agent-output' ? event.payload?.duration_ms : null;
 
   return (
     <Box

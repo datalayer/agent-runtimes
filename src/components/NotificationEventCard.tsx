@@ -57,7 +57,7 @@ export function NotificationEventCard({
   const endedAt = eventEndedAt(event);
   const running = isRunningEvent(event);
   const outputText =
-    event.kind === 'agent-ended' && event.payload?.outputs
+    event.kind === 'agent-output' && event.payload?.outputs
       ? String(event.payload.outputs)
       : null;
   const runtimeId = String(
@@ -139,7 +139,7 @@ export function NotificationEventCard({
             variant={
               event.kind === 'agent-started'
                 ? 'accent'
-                : event.kind === 'agent-ended'
+                : event.kind === 'agent-output'
                   ? 'success'
                   : event.kind?.includes('alert')
                     ? 'danger'
@@ -155,7 +155,7 @@ export function NotificationEventCard({
           >
             {event.title}
           </Truncate>
-          {event.kind === 'agent-ended' && event.payload?.exit_status && (
+          {event.kind === 'agent-output' && event.payload?.exit_status && (
             <Label variant="success" sx={{ fontSize: 0, whiteSpace: 'nowrap' }}>
               Status: {String(event.payload.exit_status)}
             </Label>
@@ -215,18 +215,18 @@ export function NotificationEventCard({
         >
           {(startedAt ||
             endedAt ||
-            (event.kind === 'agent-ended' &&
+            (event.kind === 'agent-output' &&
               event.payload.duration_ms != null)) && (
             <Text as="p">
               {startedAt ? `Started: ${formatRelativeTime(startedAt)}` : ''}
               {startedAt && endedAt ? ' · ' : ''}
               {endedAt ? `Ended: ${formatRelativeTime(endedAt)}` : ''}
               {(startedAt || endedAt) &&
-              event.kind === 'agent-ended' &&
+              event.kind === 'agent-output' &&
               event.payload.duration_ms != null
                 ? ' · '
                 : ''}
-              {event.kind === 'agent-ended' && event.payload.duration_ms != null
+              {event.kind === 'agent-output' && event.payload.duration_ms != null
                 ? `Duration: ${formatDurationMs(Number(event.payload.duration_ms))}`
                 : ''}
             </Text>

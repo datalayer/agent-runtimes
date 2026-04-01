@@ -616,7 +616,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
 
               <Text as="p" sx={{ fontSize: 0, color: 'fg.muted', mb: 3 }}>
                 Launch the agent once. It will execute its trigger prompt, emit
-                lifecycle events (AGENT_STARTED / AGENT_ENDED), and then
+                lifecycle events (AGENT_STARTED / AGENT_OUTPUT), and then
                 terminate the runtime automatically.
               </Text>
 
@@ -1011,7 +1011,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
                           variant={
                             evt.kind === 'agent-started'
                               ? 'accent'
-                              : evt.kind === 'agent-ended'
+                              : evt.kind === 'agent-output'
                                 ? 'success'
                                 : evt.kind?.includes('alert')
                                   ? 'danger'
@@ -1072,7 +1072,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
                           const p = evt.payload as Record<string, any>;
                           return (
                             <Box sx={{ fontSize: 0, color: 'fg.muted' }}>
-                              {evt.kind === 'agent-ended' && p.outputs && (
+                              {evt.kind === 'agent-output' && p.outputs && (
                                 <Tooltip text={String(p.outputs)} direction="n">
                                   <button
                                     type="button"
@@ -1114,7 +1114,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
                                   </button>
                                 </Tooltip>
                               )}
-                              {evt.kind === 'agent-ended' &&
+                              {evt.kind === 'agent-output' &&
                                 p.duration_ms != null && (
                                   <Text as="p">
                                     Duration:{' '}

@@ -18,12 +18,12 @@ from agent_runtimes.types import EventField, EventSpec
 # Event Definitions
 # ============================================================================
 
-AGENT_ENDED_EVENT_SPEC_0_0_1 = EventSpec(
-    id="agent-ended",
+AGENT_OUTPUT_EVENT_SPEC_0_0_1 = EventSpec(
+    id="agent-output",
     version="0.0.1",
-    name="Agent Ended",
-    description="Emitted when an agent finishes execution. Contains timing information, exit status, optional output summary, and error details if applicable.",
-    kind="agent-ended",
+    name="Agent Output",
+    description="Emitted when an agent produces output. Contains timing information, exit status, optional output summary, and error details if applicable.",
+    kind="agent-output",
     fields=[
         EventField(**{"name": "agent_runtime_id", "label": "Agent Runtime ID", "type": "string", "required": True, "description": "Runtime pod or instance identifier."}),
         EventField(**{"name": "agent_spec_id", "label": "Agent Spec ID", "type": "string", "required": True, "description": "Identifier of the agent specification that was executed."}),
@@ -70,14 +70,14 @@ TOOL_APPROVAL_REQUESTED_EVENT_SPEC_0_0_1 = EventSpec(
 # ============================================================================
 
 EVENT_CATALOG: Dict[str, EventSpec] = {
-    "agent-ended": AGENT_ENDED_EVENT_SPEC_0_0_1,
+    "agent-output": AGENT_OUTPUT_EVENT_SPEC_0_0_1,
     "agent-started": AGENT_STARTED_EVENT_SPEC_0_0_1,
     "tool-approval-requested": TOOL_APPROVAL_REQUESTED_EVENT_SPEC_0_0_1,
 }
 
 
 # Event kind constants for programmatic use
-EVENT_KIND_AGENT_ENDED = "agent-ended"
+EVENT_KIND_AGENT_OUTPUT = "agent-output"
 EVENT_KIND_AGENT_STARTED = "agent-started"
 EVENT_KIND_TOOL_APPROVAL_REQUESTED = "tool-approval-requested"
 

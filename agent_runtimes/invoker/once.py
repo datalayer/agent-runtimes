@@ -23,7 +23,7 @@ class OnceInvoker(BaseInvoker):
 
     1. Emit an ``agent-started`` event.
     2. Run the agent adapter's ``run`` method with the trigger prompt.
-    3. Emit an ``agent-ended`` event carrying the output summary.
+    3. Emit an ``agent-output`` event carrying the output summary.
     4. Request runtime termination (best-effort).
     """
 
@@ -77,13 +77,13 @@ class OnceInvoker(BaseInvoker):
         ended_at = self._now()
         duration_ms = int((ended_at - started_at).total_seconds() * 1000)
 
-        # ── 3. AGENT_ENDED event ─────────────────────────────────
+        # ── 3. AGENT_OUTPUT event ─────────────────────────────────
         try:
             create_event(
                 token=self.token,
                 agent_id=self.runtime_id,
-                title="Agent ended",
-                kind="agent-ended",
+                title="Agent output",
+                kind="agent-output",
                 status=exit_status,
                 payload={
                     "agent_runtime_id": self.runtime_id,
@@ -99,7 +99,7 @@ class OnceInvoker(BaseInvoker):
             )
         except Exception:
             logger.warning(
-                "Failed to emit agent-ended event for %s: %s",
+                "Failed to emit agent-output event for %s: %s",
                 self.agent_id,
                 traceback.format_exc(),
             )
