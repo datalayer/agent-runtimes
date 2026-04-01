@@ -16,6 +16,7 @@ import {
 import {
   createMarkdownDownloadPayload,
   downloadTextPayload,
+  formatDurationMs,
   formatRelativeTime,
 } from '@datalayer/core/lib/utils';
 import { Streamdown } from 'streamdown';
@@ -226,7 +227,7 @@ export function NotificationEventCard({
                 ? ' · '
                 : ''}
               {event.kind === 'agent-ended' && event.payload.duration_ms != null
-                ? `Duration: ${(Number(event.payload.duration_ms) / 1000).toFixed(1)}s`
+                ? `Duration: ${formatDurationMs(Number(event.payload.duration_ms))}`
                 : ''}
             </Text>
           )}
@@ -356,7 +357,7 @@ export function NotificationEventCard({
                   e.preventDefault();
                   setIsDetailsExpanded(prev => !prev);
                 }}
-                style={{ cursor: 'pointer' }}
+                style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}
               >
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Box

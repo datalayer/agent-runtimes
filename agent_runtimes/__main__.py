@@ -40,6 +40,8 @@ from agent_runtimes.commands.agent_mcp_servers import (
     start_agent_mcp_servers,
     stop_agent_mcp_servers,
 )
+from agent_runtimes.commands.events import app as events_app
+from agent_runtimes.commands.events import events_list, events_ls
 from agent_runtimes.commands.list_agents import (
     ListAgentsError,
     OutputFormat,
@@ -82,6 +84,12 @@ app = typer.Typer(
     add_completion=False,
     no_args_is_help=True,
 )
+
+# Register events command group and root aliases.
+app.add_typer(events_app)
+app.command("events-list")(events_list)
+app.command("event-ls")(events_ls)
+app.command("events-ls")(events_ls)
 
 
 # ============================================================================

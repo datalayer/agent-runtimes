@@ -16,6 +16,7 @@ import {
 import {
   createMarkdownDownloadPayload,
   downloadTextPayload,
+  formatDurationMs,
   formatRelativeTime,
 } from '@datalayer/core/lib/utils';
 import { Streamdown } from 'streamdown';
@@ -152,7 +153,7 @@ export function OutputCard({
           {endedAt ? `Ended: ${formatRelativeTime(endedAt)}` : ''}
           {(startedAt || endedAt) && durationMs != null ? ' · ' : ''}
           {durationMs != null
-            ? `Duration: ${(Number(durationMs) / 1000).toFixed(1)}s`
+            ? `Duration: ${formatDurationMs(Number(durationMs))}`
             : ''}
         </Text>
       )}
