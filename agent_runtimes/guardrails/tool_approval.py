@@ -39,16 +39,16 @@ def _env_bool(name: str, default: bool = False) -> bool:
 
 
 def _parse_timeout_hms(value: Any, *, default: float) -> float:
-        """Parse timeout values from duration format into seconds.
+    """Parse timeout values from duration format into seconds.
 
     Accepts:
     - float/int seconds
-        - string durations with optional month/day/hour/minute/second tokens
-            (e.g. 1mo2d3h4m5s, 2d6h, 0h5m0s)
+    - string durations with optional month/day/hour/minute/second tokens
+        (e.g. 1mo2d3h4m5s, 2d6h, 0h5m0s)
 
-        Notes:
-        - "mo" means months (treated as 30 days)
-        - "m" means minutes
+    Notes:
+    - "mo" means months (treated as 30 days)
+    - "m" means minutes
     """
     if value is None:
         return default
