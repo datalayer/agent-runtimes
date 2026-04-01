@@ -64,6 +64,13 @@ class OnceInvoker(BaseInvoker):
 
         try:
             outputs = await self._run_agent(prompt)
+            logger.info(
+                "Once invoker _run_agent returned for %s: type=%s, len=%s, repr=%.500s",
+                self.agent_id,
+                type(outputs).__name__,
+                len(outputs) if outputs else 0,
+                repr(outputs),
+            )
         except Exception as exc:
             exit_status = "error"
             error_message = str(exc)
@@ -147,7 +154,10 @@ class OnceInvoker(BaseInvoker):
 
         ctx = AgentContext(session_id=f"once-trigger-{self.agent_id}")
         response = await agent.run(prompt, ctx)
-        return getattr(response, "content", str(response))
+        content = getattr(response, "content", None)
+        if content is None:
+            raise RuntimeError("Agent adapter returned no content field")
+        return content
 
     async def _terminate_runtime(self) -> None:
         """Terminate the runtime after a once-trigger completes.
