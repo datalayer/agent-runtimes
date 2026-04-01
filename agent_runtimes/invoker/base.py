@@ -65,6 +65,14 @@ class BaseInvoker(ABC):
         self.token = token
         self.base_url = base_url
         self.runtime_id = runtime_id or agent_id
+        logger.info(
+            "Invoker initialised: agent_id=%s, agent_spec_id=%s, "
+            "runtime_id=%s, base_url=%s",
+            self.agent_id,
+            self.agent_spec_id,
+            self.runtime_id,
+            self.base_url,
+        )
 
     @abstractmethod
     async def invoke(self, trigger_config: dict[str, Any]) -> InvokerResult:

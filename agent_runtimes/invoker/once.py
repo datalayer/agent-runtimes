@@ -169,9 +169,13 @@ class OnceInvoker(BaseInvoker):
                 resp.text[:200],
             )
 
-        # Step 2: delete the runtime pod via the platform runtimes API
+        # Step 2: delete the runtime pod via the platform runtimes API.
         runtime_url = (
             f"{self.base_url.rstrip('/')}/api/runtimes/v1/runtimes/{self.runtime_id}"
+        )
+        logger.info(
+            "Terminating runtime via platform API: DELETE %s",
+            runtime_url,
         )
         headers = {}
         if self.token:
