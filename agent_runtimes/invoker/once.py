@@ -86,7 +86,7 @@ class OnceInvoker(BaseInvoker):
 
         # ── 3. AGENT_OUTPUT event ─────────────────────────────────
         try:
-            create_event(
+            created = create_event(
                 token=self.token,
                 agent_id=self.runtime_id,
                 title="Agent output",
@@ -103,6 +103,19 @@ class OnceInvoker(BaseInvoker):
                     "error_message": error_message,
                 },
                 base_url=self.base_url,
+            )
+            created_event = created.get("event", created) if isinstance(created, dict) else {}
+            created_payload = (
+                created_event.get("payload", {})
+                if isinstance(created_event, dict)
+                else {}
+            )
+            logger.info(
+                "Agent-output event persisted for %s: payload_keys=%s outputs_present=%s outputs_len=%s",
+                self.runtime_id,
+                sorted(created_payload.keys()) if isinstance(created_payload, dict) else [],
+                bool(created_payload.get("outputs")) if isinstance(created_payload, dict) else False,
+                len(str(created_payload.get("outputs"))) if isinstance(created_payload, dict) and created_payload.get("outputs") is not None else 0,
             )
         except Exception:
             logger.warning(
@@ -180,9 +193,7 @@ class OnceInvoker(BaseInvoker):
             )
 
         # Step 2: delete the runtime pod via the platform runtimes API.
-        runtime_url = (
-            f"{self.base_url.rstrip('/')}/api/runtimes/v1/runtimes/{self.runtime_id}"
-        )
+        runtime_url = f"{self.runtime_base_url.rstrip('/')}/api/runtimes/v1/runtimes/{self.runtime_id}"
         logger.info(
             "Terminating runtime via platform API: DELETE %s",
             runtime_url,

@@ -3077,11 +3077,16 @@ async def trigger_run(
     auth_header = request.headers.get("Authorization", "")
     token = auth_header.removeprefix("Bearer ").strip() if auth_header else ""
 
-    base_url = (
+    events_base_url = (
         os.environ.get("DATALAYER_AI_AGENTS_URL")
         or os.environ.get("AI_AGENTS_URL")
         or os.environ.get("DATALAYER_RUN_URL")
         or "https://prod1.datalayer.run"
+    )
+    runtimes_base_url = (
+        os.environ.get("DATALAYER_RUN_URL")
+        or os.environ.get("RUNTIMES_URL")
+        or "https://r1.datalayer.run"
     )
     runtime_id = os.environ.get("HOSTNAME")
 
@@ -3095,7 +3100,8 @@ async def trigger_run(
         agent_id=agent_id,
         agent_spec_id=agent_spec_id,
         token=token,
-        base_url=base_url,
+        base_url=events_base_url,
+        runtime_base_url=runtimes_base_url,
         runtime_id=runtime_id,
     )
 
