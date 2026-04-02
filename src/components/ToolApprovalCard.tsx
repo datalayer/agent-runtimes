@@ -170,7 +170,12 @@ export function ToolApprovalCard({
                   e.preventDefault();
                   setIsDetailsExpanded(prev => !prev);
                 }}
-                style={{ cursor: 'pointer' }}
+                style={{
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  minWidth: 0,
+                }}
               >
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Box
