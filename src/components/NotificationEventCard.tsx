@@ -179,7 +179,7 @@ export function NotificationEventCard({
               variant="invisible"
               onClick={() => onOpenAgent?.(runtimeId)}
             >
-              Open agent
+              View agent
             </Button>
           )}
           {event.created_at && (

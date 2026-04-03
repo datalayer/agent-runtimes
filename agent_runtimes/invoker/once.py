@@ -35,6 +35,7 @@ class OnceInvoker(BaseInvoker):
         # Events are keyed by runtime_id (pod name) so the UI can
         # look them up by the runtime pod name it already knows.
         """
+        TODO reenable this when we've confirmed the agent state machine.
         try:
             create_event(
                 token=self.token,
