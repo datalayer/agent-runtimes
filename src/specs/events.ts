@@ -50,6 +50,20 @@ export const AGENT_START_REQUESTED_EVENT_SPEC_0_0_1: EventSpec = {
   ],
 };
 
+export const AGENT_ASSIGNED_EVENT_SPEC_0_0_1: EventSpec = {
+  id: 'agent-assigned',
+  version: '0.0.1',
+  name: 'Agent Assigned',
+  description: 'Emitted when an agent runtime is assigned/configured by the companion through the MCP servers start API.',
+  kind: 'agent-assigned',
+  fields: [
+    { name: 'agent_runtime_id', label: 'Agent Runtime ID', type: 'string', required: true, description: 'Runtime pod or instance identifier.' },
+    { name: 'assignment_source', label: 'Assignment Source', type: 'string', required: false, description: 'Source that initiated the assignment (for example companion).' },
+    { name: 'assigned_at', label: 'Assigned At', type: 'string', required: false, description: 'ISO 8601 timestamp when assignment/configuration completed.' },
+    { name: 'origin', label: 'Origin', type: 'string', required: false, description: 'Producer origin (endpoint, companion, runtime, or agent-runtime).' },
+  ],
+};
+
 export const AGENT_STARTED_EVENT_SPEC_0_0_1: EventSpec = {
   id: 'agent-started',
   version: '0.0.1',
@@ -109,6 +123,7 @@ export const TOOL_APPROVAL_REQUESTED_EVENT_SPEC_0_0_1: EventSpec = {
 
 // Event kind constants for programmatic use
 export const EVENT_KIND_AGENT_OUTPUT = 'agent-output';
+export const EVENT_KIND_AGENT_ASSIGNED = 'agent-assigned';
 export const EVENT_KIND_AGENT_START_REQUESTED = 'agent-start-requested';
 export const EVENT_KIND_AGENT_STARTED = 'agent-started';
 export const EVENT_KIND_AGENT_TERMINATED = 'agent-terminated';
@@ -121,6 +136,7 @@ export const EVENT_KIND_TOOL_APPROVAL_REQUESTED = 'tool-approval-requested';
 
 export const EVENT_CATALOG: Record<string, EventSpec> = {
   'agent-output': AGENT_OUTPUT_EVENT_SPEC_0_0_1,
+  'agent-assigned': AGENT_ASSIGNED_EVENT_SPEC_0_0_1,
   'agent-start-requested': AGENT_START_REQUESTED_EVENT_SPEC_0_0_1,
   'agent-started': AGENT_STARTED_EVENT_SPEC_0_0_1,
   'agent-terminated': AGENT_TERMINATED_EVENT_SPEC_0_0_1,

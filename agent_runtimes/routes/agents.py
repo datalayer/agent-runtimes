@@ -15,6 +15,7 @@ import asyncio
 import logging
 import os
 import tempfile
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Literal
 
@@ -27,6 +28,7 @@ from ..adapters.pydantic_ai_adapter import PydanticAIAdapter
 from ..mcp import get_mcp_manager, initialize_config_mcp_servers
 from ..mcp.catalog_mcp_servers import MCP_SERVER_CATALOG
 from ..mcp.lifecycle import get_mcp_lifecycle_manager
+from ..events import create_event
 from ..services import (
     create_codemode_toolset,
     create_shared_sandbox,
@@ -41,6 +43,7 @@ from ..specs.agents import AGENT_SPECS
 from ..specs.agents import get_agent_spec as get_library_agent_spec
 from ..specs.agents import list_agent_specs as list_library_agents
 from ..specs.models import DEFAULT_MODEL
+from ..specs.events import EVENT_KIND_AGENT_ASSIGNED
 from ..transports import AGUITransport, MCPUITransport, VercelAITransport
 from ..types import AgentSpec, MCPServer
 from .a2a import A2AAgentCard, register_a2a_agent, unregister_a2a_agent
@@ -2402,6 +2405,57 @@ def _build_mcp_response_message(
     return ", ".join(parts) if parts else "No servers to start"
 
 
+def _emit_agent_assigned_event(
+    *,
+    request: Request,
+    agent_id: str,
+    sandbox_variant: str | None,
+    mcp_proxy_url: str | None,
+    env_count: int,
+) -> None:
+    """Emit agent-assigned lifecycle event for companion runtime assignment."""
+    auth_header = request.headers.get("Authorization", "")
+    token = auth_header.removeprefix("Bearer ").strip() if auth_header else ""
+    if not token:
+        logger.debug(
+            "[mcp-servers/start] Skipping agent-assigned event for '%s': no auth token",
+            agent_id,
+        )
+        return
+
+    base_url = (
+        os.environ.get("DATALAYER_AI_AGENTS_URL")
+        or os.environ.get("AI_AGENTS_URL")
+        or os.environ.get("DATALAYER_RUN_URL")
+        or "https://prod1.datalayer.run"
+    )
+    assigned_at = datetime.now(UTC).isoformat()
+    try:
+        create_event(
+            token=token,
+            agent_id=agent_id,
+            title="Agent Assigned",
+            kind=EVENT_KIND_AGENT_ASSIGNED,
+            status="running",
+            payload={
+                "agent_runtime_id": agent_id,
+                "assignment_source": "companion",
+                "assigned_at": assigned_at,
+                "sandbox_variant": sandbox_variant,
+                "mcp_proxy_url": mcp_proxy_url,
+                "env_vars_set": env_count,
+            },
+            metadata={"origin": "agent-runtime", "source": "agent-runtime"},
+            base_url=base_url,
+        )
+    except Exception as e:
+        logger.warning(
+            "[mcp-servers/start] Failed to emit agent-assigned event for '%s': %s",
+            agent_id,
+            e,
+        )
+
+
 @router.post("/mcp-servers/start")
 async def start_all_agents_mcp_servers(
     body: StartAgentMcpServersRequest,
@@ -2443,6 +2497,15 @@ async def start_all_agents_mcp_servers(
 
         agents_processed: list[str] = list(_agents.keys())
         env_count = len(body.env_vars) if body.env_vars else 0
+
+        for current_agent_id in agents_processed:
+            _emit_agent_assigned_event(
+                request=request,
+                agent_id=current_agent_id,
+                sandbox_variant=sandbox_variant,
+                mcp_proxy_url=mcp_proxy_url,
+                env_count=env_count,
+            )
 
         # Start MCP servers in a background task so this endpoint
         # returns immediately.  The UI polls mcp-toolsets-status to
@@ -2558,6 +2621,14 @@ async def start_agent_mcp_servers(
             )
 
         env_count = len(body.env_vars) if body.env_vars else 0
+
+        _emit_agent_assigned_event(
+            request=request,
+            agent_id=agent_id,
+            sandbox_variant=sandbox_variant,
+            mcp_proxy_url=mcp_proxy_url,
+            env_count=env_count,
+        )
 
         return AgentMcpServersResponse(
             agent_id=agent_id,

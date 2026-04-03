@@ -30,6 +30,16 @@ export interface NotificationEventCardProps {
   onOpenAgent?: (agentId: string) => void;
 }
 
+const EVENT_KIND_VARIANT: Record<string, 'accent' | 'success' | 'attention' | 'danger' | 'secondary'> = {
+  'agent-start-requested': 'attention',
+  'agent-assigned': 'accent',
+  'agent-started': 'success',
+  'agent-output': 'accent',
+  'agent-termination-requested': 'attention',
+  'agent-terminated': 'danger',
+  'tool-approval-requested': 'attention',
+};
+
 const eventStartedAt = (evt: any): string | null => {
   const startedAt = evt?.started_at || evt?.payload?.started_at;
   return typeof startedAt === 'string' && startedAt ? startedAt : null;
@@ -136,13 +146,7 @@ export function NotificationEventCard({
           }}
         >
           <Label
-            variant={
-              eventKind.startsWith('agent-')
-                ? 'accent'
-                : eventKind.includes('alert')
-                    ? 'danger'
-                    : 'attention'
-            }
+            variant={EVENT_KIND_VARIANT[eventKind] ?? 'secondary'}
           >
             {eventKind}
           </Label>
