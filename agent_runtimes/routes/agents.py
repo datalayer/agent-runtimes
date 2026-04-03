@@ -2408,7 +2408,7 @@ def _build_mcp_response_message(
 def _emit_agent_assigned_event(
     *,
     user_token: str | None,
-    agent_id: str,
+    agent_name: str,
     sandbox_variant: str | None,
     mcp_proxy_url: str | None,
     env_count: int,
@@ -2416,10 +2416,17 @@ def _emit_agent_assigned_event(
 ) -> None:
     """Emit agent-assigned lifecycle event for companion runtime assignment."""
     token = (user_token or "").strip()
+    runtime_id = (os.environ.get("HOSTNAME") or "").strip()
     if not token:
         logger.debug(
             "[mcp-servers/start] Skipping agent-assigned event for '%s': no auth token",
-            agent_id,
+            agent_name,
+        )
+        return
+    if not runtime_id:
+        logger.debug(
+            "[mcp-servers/start] Skipping agent-assigned event for '%s': missing HOSTNAME runtime id",
+            agent_name,
         )
         return
 
@@ -2431,14 +2438,21 @@ def _emit_agent_assigned_event(
     )
     assigned_at = datetime.now(UTC).isoformat()
     try:
+        logger.info(
+            "[mcp-servers/start] Emitting agent-assigned event runtime_id=%s agent_name=%s source=%s",
+            runtime_id,
+            agent_name,
+            assignment_source,
+        )
         create_event(
             token=token,
-            agent_id=agent_id,
+            agent_id=runtime_id,
             title="Agent Assigned",
             kind=EVENT_KIND_AGENT_ASSIGNED,
             status="running",
             payload={
-                "agent_runtime_id": agent_id,
+                "agent_runtime_id": runtime_id,
+                "agent_name": agent_name,
                 "assignment_source": assignment_source,
                 "assigned_at": assigned_at,
                 "sandbox_variant": sandbox_variant,
@@ -2451,7 +2465,7 @@ def _emit_agent_assigned_event(
     except Exception as e:
         logger.warning(
             "[mcp-servers/start] Failed to emit agent-assigned event for '%s': %s",
-            agent_id,
+            agent_name,
             e,
         )
 
@@ -2503,7 +2517,7 @@ async def start_all_agents_mcp_servers(
         for current_agent_id in agents_processed:
             _emit_agent_assigned_event(
                 user_token=user_token,
-                agent_id=current_agent_id,
+                agent_name=current_agent_id,
                 sandbox_variant=sandbox_variant,
                 mcp_proxy_url=mcp_proxy_url,
                 env_count=env_count,
@@ -2628,7 +2642,7 @@ async def start_agent_mcp_servers(
 
         _emit_agent_assigned_event(
             user_token=user_token,
-            agent_id=agent_id,
+            agent_name=agent_id,
             sandbox_variant=sandbox_variant,
             mcp_proxy_url=mcp_proxy_url,
             env_count=env_count,
@@ -3033,7 +3047,7 @@ async def configure_from_spec_endpoint(
     # ── 6. Emit companion assignment event + start MCP servers/env setup ─────
     _emit_agent_assigned_event(
         user_token=body.user_token,
-        agent_id=target_agent_name,
+        agent_name=target_agent_name,
         sandbox_variant=sandbox_variant,
         mcp_proxy_url=mcp_proxy_url,
         env_count=len(body.env_vars),
