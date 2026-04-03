@@ -18,6 +18,20 @@ import type { EventSpec } from '../types';
 // Event Definitions
 // ============================================================================
 
+export const AGENT_ASSIGNED_EVENT_SPEC_0_0_1: EventSpec = {
+  id: 'agent-assigned',
+  version: '0.0.1',
+  name: 'Agent Assigned',
+  description: 'Emitted when an agent runtime is assigned/configured by the companion through the MCP servers start API.',
+  kind: 'agent-assigned',
+  fields: [
+    { name: 'agent_runtime_id', label: 'Agent Runtime ID', type: 'string', required: true, description: 'Runtime pod or instance identifier.' },
+    { name: 'assignment_source', label: 'Assignment Source', type: 'string', required: false, description: 'Source that initiated the assignment (for example companion).' },
+    { name: 'assigned_at', label: 'Assigned At', type: 'string', required: false, description: 'ISO 8601 timestamp when assignment/configuration completed.' },
+    { name: 'origin', label: 'Origin', type: 'string', required: false, description: 'Producer origin (endpoint, companion, runtime, or agent-runtime).' },
+  ],
+};
+
 export const AGENT_OUTPUT_EVENT_SPEC_0_0_1: EventSpec = {
   id: 'agent-output',
   version: '0.0.1',
@@ -44,22 +58,8 @@ export const AGENT_START_REQUESTED_EVENT_SPEC_0_0_1: EventSpec = {
   description: 'Emitted when the API endpoint receives a request to start an agent runtime.',
   kind: 'agent-start-requested',
   fields: [
-    { name: 'agent_runtime_id', label: 'Agent Runtime ID', type: 'string', required: true, description: 'Runtime pod or instance identifier.' },
+    { name: 'agent_runtime_id', label: 'Agent Runtime ID', type: 'string', required: false, description: 'Runtime pod or instance identifier.' },
     { name: 'started_at', label: 'Requested At', type: 'string', required: false, description: 'ISO 8601 timestamp when the start was requested.' },
-    { name: 'origin', label: 'Origin', type: 'string', required: false, description: 'Producer origin (endpoint, companion, runtime, or agent-runtime).' },
-  ],
-};
-
-export const AGENT_ASSIGNED_EVENT_SPEC_0_0_1: EventSpec = {
-  id: 'agent-assigned',
-  version: '0.0.1',
-  name: 'Agent Assigned',
-  description: 'Emitted when an agent runtime is assigned/configured by the companion through the MCP servers start API.',
-  kind: 'agent-assigned',
-  fields: [
-    { name: 'agent_runtime_id', label: 'Agent Runtime ID', type: 'string', required: true, description: 'Runtime pod or instance identifier.' },
-    { name: 'assignment_source', label: 'Assignment Source', type: 'string', required: false, description: 'Source that initiated the assignment (for example companion).' },
-    { name: 'assigned_at', label: 'Assigned At', type: 'string', required: false, description: 'ISO 8601 timestamp when assignment/configuration completed.' },
     { name: 'origin', label: 'Origin', type: 'string', required: false, description: 'Producer origin (endpoint, companion, runtime, or agent-runtime).' },
   ],
 };
@@ -122,8 +122,8 @@ export const TOOL_APPROVAL_REQUESTED_EVENT_SPEC_0_0_1: EventSpec = {
 };
 
 // Event kind constants for programmatic use
-export const EVENT_KIND_AGENT_OUTPUT = 'agent-output';
 export const EVENT_KIND_AGENT_ASSIGNED = 'agent-assigned';
+export const EVENT_KIND_AGENT_OUTPUT = 'agent-output';
 export const EVENT_KIND_AGENT_START_REQUESTED = 'agent-start-requested';
 export const EVENT_KIND_AGENT_STARTED = 'agent-started';
 export const EVENT_KIND_AGENT_TERMINATED = 'agent-terminated';
@@ -135,8 +135,8 @@ export const EVENT_KIND_TOOL_APPROVAL_REQUESTED = 'tool-approval-requested';
 // ============================================================================
 
 export const EVENT_CATALOG: Record<string, EventSpec> = {
-  'agent-output': AGENT_OUTPUT_EVENT_SPEC_0_0_1,
   'agent-assigned': AGENT_ASSIGNED_EVENT_SPEC_0_0_1,
+  'agent-output': AGENT_OUTPUT_EVENT_SPEC_0_0_1,
   'agent-start-requested': AGENT_START_REQUESTED_EVENT_SPEC_0_0_1,
   'agent-started': AGENT_STARTED_EVENT_SPEC_0_0_1,
   'agent-terminated': AGENT_TERMINATED_EVENT_SPEC_0_0_1,
@@ -148,6 +148,16 @@ export function getEventSpecs(): EventSpec[] {
   return Object.values(EVENT_CATALOG);
 }
 
+function resolveEventIdTs(eventId: string): string {
+  if (eventId in EVENT_CATALOG) return eventId;
+  const idx = eventId.lastIndexOf(':');
+  if (idx > 0) {
+    const base = eventId.slice(0, idx);
+    if (base in EVENT_CATALOG) return base;
+  }
+  return eventId;
+}
+
 export function getEventSpec(eventId: string): EventSpec | undefined {
-  return EVENT_CATALOG[eventId];
+  return EVENT_CATALOG[resolveEventIdTs(eventId)];
 }

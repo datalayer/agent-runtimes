@@ -18,6 +18,20 @@ from agent_runtimes.types import EventField, EventSpec
 # Event Definitions
 # ============================================================================
 
+AGENT_ASSIGNED_EVENT_SPEC_0_0_1 = EventSpec(
+    id="agent-assigned",
+    version="0.0.1",
+    name="Agent Assigned",
+    description="Emitted when an agent runtime is assigned/configured by the companion through the MCP servers start API.",
+    kind="agent-assigned",
+    fields=[
+        EventField(**{"name": "agent_runtime_id", "label": "Agent Runtime ID", "type": "string", "required": True, "description": "Runtime pod or instance identifier."}),
+        EventField(**{"name": "assignment_source", "label": "Assignment Source", "type": "string", "required": False, "description": "Source that initiated the assignment (for example companion)."}),
+        EventField(**{"name": "assigned_at", "label": "Assigned At", "type": "string", "required": False, "description": "ISO 8601 timestamp when assignment/configuration completed."}),
+        EventField(**{"name": "origin", "label": "Origin", "type": "string", "required": False, "description": "Producer origin (endpoint, companion, runtime, or agent-runtime)."}),
+    ],
+)
+
 AGENT_OUTPUT_EVENT_SPEC_0_0_1 = EventSpec(
     id="agent-output",
     version="0.0.1",
@@ -44,22 +58,8 @@ AGENT_START_REQUESTED_EVENT_SPEC_0_0_1 = EventSpec(
     description="Emitted when the API endpoint receives a request to start an agent runtime.",
     kind="agent-start-requested",
     fields=[
-        EventField(**{"name": "agent_runtime_id", "label": "Agent Runtime ID", "type": "string", "required": True, "description": "Runtime pod or instance identifier."}),
+        EventField(**{"name": "agent_runtime_id", "label": "Agent Runtime ID", "type": "string", "required": False, "description": "Runtime pod or instance identifier."}),
         EventField(**{"name": "started_at", "label": "Requested At", "type": "string", "required": False, "description": "ISO 8601 timestamp when the start was requested."}),
-        EventField(**{"name": "origin", "label": "Origin", "type": "string", "required": False, "description": "Producer origin (endpoint, companion, runtime, or agent-runtime)."}),
-    ],
-)
-
-AGENT_ASSIGNED_EVENT_SPEC_0_0_1 = EventSpec(
-    id="agent-assigned",
-    version="0.0.1",
-    name="Agent Assigned",
-    description="Emitted when an agent runtime is assigned/configured by the companion through the MCP servers start API.",
-    kind="agent-assigned",
-    fields=[
-        EventField(**{"name": "agent_runtime_id", "label": "Agent Runtime ID", "type": "string", "required": True, "description": "Runtime pod or instance identifier."}),
-        EventField(**{"name": "assignment_source", "label": "Assignment Source", "type": "string", "required": False, "description": "Source that initiated the assignment (for example companion)."}),
-        EventField(**{"name": "assigned_at", "label": "Assigned At", "type": "string", "required": False, "description": "ISO 8601 timestamp when assignment/configuration completed."}),
         EventField(**{"name": "origin", "label": "Origin", "type": "string", "required": False, "description": "Producer origin (endpoint, companion, runtime, or agent-runtime)."}),
     ],
 )
@@ -126,8 +126,8 @@ TOOL_APPROVAL_REQUESTED_EVENT_SPEC_0_0_1 = EventSpec(
 # ============================================================================
 
 EVENT_CATALOG: Dict[str, EventSpec] = {
-    "agent-output": AGENT_OUTPUT_EVENT_SPEC_0_0_1,
     "agent-assigned": AGENT_ASSIGNED_EVENT_SPEC_0_0_1,
+    "agent-output": AGENT_OUTPUT_EVENT_SPEC_0_0_1,
     "agent-start-requested": AGENT_START_REQUESTED_EVENT_SPEC_0_0_1,
     "agent-started": AGENT_STARTED_EVENT_SPEC_0_0_1,
     "agent-terminated": AGENT_TERMINATED_EVENT_SPEC_0_0_1,
@@ -137,8 +137,8 @@ EVENT_CATALOG: Dict[str, EventSpec] = {
 
 
 # Event kind constants for programmatic use
-EVENT_KIND_AGENT_OUTPUT = "agent-output"
 EVENT_KIND_AGENT_ASSIGNED = "agent-assigned"
+EVENT_KIND_AGENT_OUTPUT = "agent-output"
 EVENT_KIND_AGENT_START_REQUESTED = "agent-start-requested"
 EVENT_KIND_AGENT_STARTED = "agent-started"
 EVENT_KIND_AGENT_TERMINATED = "agent-terminated"
@@ -147,8 +147,14 @@ EVENT_KIND_TOOL_APPROVAL_REQUESTED = "tool-approval-requested"
 
 
 def get_event_spec(event_id: str) -> EventSpec | None:
-    """Get an event specification by exact ID."""
-    return EVENT_CATALOG.get(event_id)
+    """Get an event specification by ID (accepts both bare and versioned refs)."""
+    spec = EVENT_CATALOG.get(event_id)
+    if spec is not None:
+        return spec
+    base, _, ver = event_id.rpartition(':')
+    if base and '.' in ver:
+        return EVENT_CATALOG.get(base)
+    return None
 
 
 def list_event_specs() -> List[EventSpec]:
