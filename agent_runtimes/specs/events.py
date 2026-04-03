@@ -147,14 +147,8 @@ EVENT_KIND_TOOL_APPROVAL_REQUESTED = "tool-approval-requested"
 
 
 def get_event_spec(event_id: str) -> EventSpec | None:
-    """Get an event specification by ID (accepts both bare and versioned refs)."""
-    spec = EVENT_CATALOG.get(event_id)
-    if spec is not None:
-        return spec
-    base, _, ver = event_id.rpartition(':')
-    if base and '.' in ver:
-        return EVENT_CATALOG.get(base)
-    return None
+    """Get an event specification by exact ID."""
+    return EVENT_CATALOG.get(event_id)
 
 
 def list_event_specs() -> List[EventSpec]:

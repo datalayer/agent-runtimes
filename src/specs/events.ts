@@ -148,16 +148,6 @@ export function getEventSpecs(): EventSpec[] {
   return Object.values(EVENT_CATALOG);
 }
 
-function resolveEventIdTs(eventId: string): string {
-  if (eventId in EVENT_CATALOG) return eventId;
-  const idx = eventId.lastIndexOf(':');
-  if (idx > 0) {
-    const base = eventId.slice(0, idx);
-    if (base in EVENT_CATALOG) return base;
-  }
-  return eventId;
-}
-
 export function getEventSpec(eventId: string): EventSpec | undefined {
-  return EVENT_CATALOG[resolveEventIdTs(eventId)];
+  return EVENT_CATALOG[eventId];
 }

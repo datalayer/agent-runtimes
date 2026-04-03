@@ -2407,15 +2407,15 @@ def _build_mcp_response_message(
 
 def _emit_agent_assigned_event(
     *,
-    request: Request,
+    user_token: str | None,
     agent_id: str,
     sandbox_variant: str | None,
     mcp_proxy_url: str | None,
     env_count: int,
+    assignment_source: str = "companion",
 ) -> None:
     """Emit agent-assigned lifecycle event for companion runtime assignment."""
-    auth_header = request.headers.get("Authorization", "")
-    token = auth_header.removeprefix("Bearer ").strip() if auth_header else ""
+    token = (user_token or "").strip()
     if not token:
         logger.debug(
             "[mcp-servers/start] Skipping agent-assigned event for '%s': no auth token",
@@ -2439,7 +2439,7 @@ def _emit_agent_assigned_event(
             status="running",
             payload={
                 "agent_runtime_id": agent_id,
-                "assignment_source": "companion",
+                "assignment_source": assignment_source,
                 "assigned_at": assigned_at,
                 "sandbox_variant": sandbox_variant,
                 "mcp_proxy_url": mcp_proxy_url,
@@ -2497,10 +2497,12 @@ async def start_all_agents_mcp_servers(
 
         agents_processed: list[str] = list(_agents.keys())
         env_count = len(body.env_vars) if body.env_vars else 0
+        auth_header = request.headers.get("Authorization", "")
+        user_token = auth_header.removeprefix("Bearer ").strip() if auth_header else ""
 
         for current_agent_id in agents_processed:
             _emit_agent_assigned_event(
-                request=request,
+                user_token=user_token,
                 agent_id=current_agent_id,
                 sandbox_variant=sandbox_variant,
                 mcp_proxy_url=mcp_proxy_url,
@@ -2621,9 +2623,11 @@ async def start_agent_mcp_servers(
             )
 
         env_count = len(body.env_vars) if body.env_vars else 0
+        auth_header = request.headers.get("Authorization", "")
+        user_token = auth_header.removeprefix("Bearer ").strip() if auth_header else ""
 
         _emit_agent_assigned_event(
-            request=request,
+            user_token=user_token,
             agent_id=agent_id,
             sandbox_variant=sandbox_variant,
             mcp_proxy_url=mcp_proxy_url,
@@ -2939,6 +2943,8 @@ async def configure_from_spec_endpoint(
     # ── 3. Configure sandbox if jupyter_sandbox is provided ──────────
     #    The sandbox is managed independently of the agent — it survives
     #    agent deletion/recreation.
+    sandbox_variant: str | None = None
+    mcp_proxy_url: str | None = body.mcp_proxy_url
     if body.jupyter_sandbox:
         sandbox_body = StartAgentMcpServersRequest(
             env_vars=[
@@ -2949,7 +2955,7 @@ async def configure_from_spec_endpoint(
             jupyter_sandbox=body.jupyter_sandbox,
             mcp_proxy_url=body.mcp_proxy_url,
         )
-        await _setup_env_and_sandbox(
+        _, sandbox_variant, mcp_proxy_url = await _setup_env_and_sandbox(
             sandbox_body, http_request, agent_id=target_agent_name,
         )
 
@@ -3024,7 +3030,17 @@ async def configure_from_spec_endpoint(
             target_agent_name,
         )
 
-    # ── 6. Start MCP servers + inject sandbox env vars (async) ───────
+    # ── 6. Emit companion assignment event + start MCP servers/env setup ─────
+    _emit_agent_assigned_event(
+        user_token=body.user_token,
+        agent_id=target_agent_name,
+        sandbox_variant=sandbox_variant,
+        mcp_proxy_url=mcp_proxy_url,
+        env_count=len(body.env_vars),
+        assignment_source="companion-configure-from-spec",
+    )
+
+    # ── 7. Start MCP servers + inject sandbox env vars (async) ───────
     sandbox_env_vars: dict[str, str] = {}
     for env_var in body.env_vars:
         name = env_var.get("name", "")
