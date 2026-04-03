@@ -38,7 +38,7 @@ class OnceInvoker(BaseInvoker):
             create_event(
                 token=self.token,
                 agent_id=self.runtime_id,
-                title="Agent started",
+                title="Agent Started",
                 kind="agent-started",
                 status="running",
                 payload={
@@ -48,6 +48,7 @@ class OnceInvoker(BaseInvoker):
                     "trigger_type": "once",
                     "trigger_prompt": prompt,
                 },
+                metadata={"origin": "agent-runtime", "source": "agent-runtime"},
                 base_url=self.base_url,
             )
         except Exception:
@@ -89,7 +90,7 @@ class OnceInvoker(BaseInvoker):
             created = create_event(
                 token=self.token,
                 agent_id=self.runtime_id,
-                title="Agent output",
+                title="Agent Output",
                 kind="agent-output",
                 status=exit_status,
                 payload={
@@ -102,6 +103,7 @@ class OnceInvoker(BaseInvoker):
                     "exit_status": exit_status,
                     "error_message": error_message,
                 },
+                metadata={"origin": "agent-runtime", "source": "agent-runtime"},
                 base_url=self.base_url,
             )
             created_event = created.get("event", created) if isinstance(created, dict) else {}

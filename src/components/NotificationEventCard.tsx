@@ -42,7 +42,7 @@ const eventEndedAt = (evt: any): string | null => {
 
 const isRunningEvent = (evt: any): boolean => {
   const status = String(evt?.status ?? '').toLowerCase();
-  return evt?.kind === 'agent-started' && status === 'running';
+  return String(evt?.kind ?? '').toLowerCase() === 'agent-started' && status === 'running';
 };
 
 export function NotificationEventCard({
@@ -53,11 +53,14 @@ export function NotificationEventCard({
 }: NotificationEventCardProps) {
   const [isOutputExpanded, setIsOutputExpanded] = useState(false);
   const [isDetailsExpanded, setIsDetailsExpanded] = useState(false);
+  const eventKind = String(event?.kind ?? '').toLowerCase();
+  const eventTitle = String(event?.title ?? '');
+  const eventOrigin = String(event?.metadata?.origin || '');
   const startedAt = eventStartedAt(event);
   const endedAt = eventEndedAt(event);
   const running = isRunningEvent(event);
   const outputText =
-    event.kind === 'agent-output' && event.payload?.outputs
+    eventKind === 'agent-output' && event.payload?.outputs
       ? String(event.payload.outputs)
       : null;
   const runtimeId = String(
@@ -134,25 +137,23 @@ export function NotificationEventCard({
         >
           <Label
             variant={
-              event.kind === 'agent-started'
+              eventKind.startsWith('agent-')
                 ? 'accent'
-                : event.kind === 'agent-output'
-                  ? 'success'
-                  : event.kind?.includes('alert')
+                : eventKind.includes('alert')
                     ? 'danger'
                     : 'attention'
             }
           >
-            {event.kind}
+            {eventKind}
           </Label>
           <Truncate
             maxWidth="50%"
-            title={String(event.title || '')}
+            title={String(eventTitle || '')}
             sx={{ fontWeight: 'semibold', fontSize: 1, minWidth: 0 }}
           >
-            {event.title}
+            {eventTitle}
           </Truncate>
-          {event.kind === 'agent-output' && event.payload?.exit_status && (
+          {eventKind === 'agent-output' && event.payload?.exit_status && (
             <Label variant="success" sx={{ fontSize: 0, whiteSpace: 'nowrap' }}>
               Status: {String(event.payload.exit_status)}
             </Label>
@@ -163,6 +164,11 @@ export function NotificationEventCard({
                 {event.agent_id}
               </Label>
             </Truncate>
+          )}
+          {eventOrigin && (
+            <Label variant="secondary" sx={{ fontSize: 0, whiteSpace: 'nowrap' }}>
+              Origin: {eventOrigin}
+            </Label>
           )}
         </Box>
         <Box
@@ -212,31 +218,31 @@ export function NotificationEventCard({
         >
           {(startedAt ||
             endedAt ||
-            (event.kind === 'agent-output' &&
+          (eventKind === 'agent-output' &&
               event.payload.duration_ms != null)) && (
             <Text as="p">
               {startedAt ? `Started: ${formatRelativeTime(startedAt)}` : ''}
               {startedAt && endedAt ? ' · ' : ''}
               {endedAt ? `Ended: ${formatRelativeTime(endedAt)}` : ''}
               {(startedAt || endedAt) &&
-              event.kind === 'agent-output' &&
+              eventKind === 'agent-output' &&
               event.payload.duration_ms != null
                 ? ' · '
                 : ''}
-              {event.kind === 'agent-output' && event.payload.duration_ms != null
+              {eventKind === 'agent-output' && event.payload.duration_ms != null
                 ? `Duration: ${formatDurationMs(Number(event.payload.duration_ms))}`
                 : ''}
             </Text>
           )}
-          {event.kind?.includes('guardrail') && event.payload.message && (
+          {eventKind.includes('guardrail') && event.payload.message && (
             <Text as="p" sx={{ mb: 1 }}>
               {String(event.payload.message)}
             </Text>
           )}
-          {event.kind?.includes('guardrail') && event.payload.action_taken && (
+          {eventKind.includes('guardrail') && event.payload.action_taken && (
             <Text as="p">Action: {String(event.payload.action_taken)}</Text>
           )}
-          {event.kind === 'agent-started' && event.payload.trigger_type && (
+          {eventKind === 'agent-started' && event.payload.trigger_type && (
             <Text as="p">Trigger: {String(event.payload.trigger_type)}</Text>
           )}
           {outputText && (
