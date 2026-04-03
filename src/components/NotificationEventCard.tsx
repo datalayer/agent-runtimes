@@ -50,11 +50,6 @@ const eventEndedAt = (evt: any): string | null => {
   return typeof endedAt === 'string' && endedAt ? endedAt : null;
 };
 
-const isRunningEvent = (evt: any): boolean => {
-  const status = String(evt?.status ?? '').toLowerCase();
-  return String(evt?.kind ?? '').toLowerCase() === 'agent-started' && status === 'running';
-};
-
 export function NotificationEventCard({
   event,
   onToggleRead,
@@ -68,7 +63,6 @@ export function NotificationEventCard({
   const eventOrigin = String(event?.metadata?.origin || '');
   const startedAt = eventStartedAt(event);
   const endedAt = eventEndedAt(event);
-  const running = isRunningEvent(event);
   const outputText =
     eventKind === 'agent-output' && event.payload?.outputs
       ? String(event.payload.outputs)
@@ -80,6 +74,7 @@ export function NotificationEventCard({
       event?.payload?.agent_id ||
       'runtime',
   );
+  const hasAgentRoute = Boolean(onOpenAgent) && runtimeId !== 'runtime';
   const detailEntries: Array<{ label: string; value: string }> = [];
   const detailLineSx = { fontSize: 0, overflowWrap: 'anywhere' as const };
   const detailLabelSx = { color: 'fg.muted' };
@@ -178,11 +173,11 @@ export function NotificationEventCard({
         <Box
           sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}
         >
-          {running && event.agent_id && (
+          {hasAgentRoute && (
             <Button
               size="small"
               variant="invisible"
-              onClick={() => onOpenAgent?.(String(event.agent_id))}
+              onClick={() => onOpenAgent?.(runtimeId)}
             >
               Open agent
             </Button>

@@ -34,6 +34,7 @@ class OnceInvoker(BaseInvoker):
         # ── 1. AGENT_STARTED event ───────────────────────────────
         # Events are keyed by runtime_id (pod name) so the UI can
         # look them up by the runtime pod name it already knows.
+        """
         try:
             create_event(
                 token=self.token,
@@ -57,6 +58,7 @@ class OnceInvoker(BaseInvoker):
                 self.agent_id,
                 traceback.format_exc(),
             )
+        """
 
         # ── 2. Run agent ─────────────────────────────────────────
         outputs: str | None = None
