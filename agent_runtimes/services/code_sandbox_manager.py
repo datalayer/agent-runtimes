@@ -608,10 +608,19 @@ class CodeSandboxManager:
         For ``local-eval`` this is a no-op because the eval sandbox shares
         the agent-runtimes process, so env vars already set on
         ``os.environ`` by the route handler are visible to executed code.
+
+        In all cases the Datalayer sandbox metadata env vars are set:
+        ``DATALAYER_CODE_SANDBOX_VARIANT`` and (for jupyter variants)
+        ``DATALAYER_CODE_SANDBOX_URL``.
         """
-        env_vars = self._config.env_vars
-        if not env_vars:
-            return
+        env_vars = dict(self._config.env_vars or {})
+
+        # Always inject sandbox metadata env vars
+        env_vars["DATALAYER_CODE_SANDBOX_VARIANT"] = self._config.variant
+        if self._config.variant in ("local-jupyter", "jupyter") and self._config.jupyter_url:
+            # Strip query string (token) from the URL
+            clean_url = self._config.jupyter_url.split("?")[0]
+            env_vars["DATALAYER_CODE_SANDBOX_URL"] = clean_url
 
         if self._config.variant in ("local-jupyter", "jupyter"):
             # Build a Python snippet that sets every env var in the kernel.
@@ -634,10 +643,12 @@ class CodeSandboxManager:
             except Exception as e:
                 logger.warning(f"Error injecting env vars into sandbox: {e}")
         else:
-            # local-eval: env vars are already on os.environ
+            # local-eval: set sandbox metadata on os.environ
+            import os
+            os.environ["DATALAYER_CODE_SANDBOX_VARIANT"] = self._config.variant
             logger.debug(
-                f"Skipping env var injection for {self._config.variant} sandbox "
-                f"(process env is shared)"
+                f"Set DATALAYER_CODE_SANDBOX_VARIANT={self._config.variant} "
+                f"on process env for {self._config.variant} sandbox"
             )
 
     def _create_sandbox(self, variant: SandboxVariant | None = None) -> Sandbox:
@@ -738,9 +749,10 @@ class CodeSandboxManager:
             sandbox.start()
             logger.info(f"Started {variant} sandbox for agent '{agent_id}'")
 
-            # Inject env vars if provided
-            if env_vars:
-                self._inject_env_vars_into(sandbox, variant, env_vars)
+            # Always inject sandbox metadata env vars; include caller's
+            # env_vars when provided.
+            inject_vars = dict(env_vars or {})
+            self._inject_env_vars_into(sandbox, variant, inject_vars)
 
             self._agent_sandboxes[agent_id] = sandbox
             return sandbox
@@ -810,6 +822,13 @@ class CodeSandboxManager:
         env_vars: dict[str, str],
     ) -> None:
         """Inject environment variables into an arbitrary sandbox."""
+        # Add sandbox metadata env vars
+        env_vars = dict(env_vars)
+        env_vars["DATALAYER_CODE_SANDBOX_VARIANT"] = variant
+        if variant in ("local-jupyter", "jupyter") and self._config.jupyter_url:
+            clean_url = self._config.jupyter_url.split("?")[0]
+            env_vars["DATALAYER_CODE_SANDBOX_URL"] = clean_url
+
         if variant in ("local-jupyter", "jupyter"):
             lines = ["import os"]
             for name, value in env_vars.items():
@@ -830,9 +849,11 @@ class CodeSandboxManager:
             except Exception as e:
                 logger.warning(f"Error injecting env vars into sandbox: {e}")
         else:
+            import os
+            os.environ["DATALAYER_CODE_SANDBOX_VARIANT"] = variant
             logger.debug(
-                f"Skipping env var injection for {variant} sandbox "
-                f"(process env is shared)"
+                f"Set DATALAYER_CODE_SANDBOX_VARIANT={variant} "
+                f"on process env for {variant} sandbox"
             )
 
     def restart(self) -> Sandbox:

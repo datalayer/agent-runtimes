@@ -317,6 +317,7 @@ async def _create_and_register_cli_agent(
             shared_sandbox=shared_sandbox,
             mcp_proxy_url=mcp_proxy_url,
             enable_discovery_tools=True,
+            sandbox_variant=effective_variant,
         )
 
         if codemode_toolset:
@@ -534,6 +535,18 @@ async def _create_and_register_cli_agent(
                         pass
 
                 repo_root = Path(__file__).resolve().parents[1]
+
+                # Get sandbox variant from manager config
+                rebuild_variant = None
+                try:
+                    from .services.code_sandbox_manager import (
+                        get_code_sandbox_manager as _get_mgr,
+                    )
+
+                    rebuild_variant = _get_mgr().config.variant
+                except Exception:
+                    pass
+
                 new_config = CodeModeConfig(
                     workspace_path=str((repo_root / "workspace").resolve()),
                     generated_path=_resolve_generated_code_path(generated_folder),
@@ -544,6 +557,11 @@ async def _create_and_register_cli_agent(
                         {}
                         if mcp_proxy_url is None
                         else {"mcp_proxy_url": mcp_proxy_url}
+                    ),
+                    **(
+                        {}
+                        if rebuild_variant is None
+                        else {"sandbox_variant": rebuild_variant}
                     ),
                 )
 

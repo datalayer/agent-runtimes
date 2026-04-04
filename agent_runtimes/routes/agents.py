@@ -221,6 +221,7 @@ def _build_codemode_toolset(
     agent_id: str,
     sandbox: Any | None = None,
     disable_mcp_servers: bool = False,
+    sandbox_variant: str | None = None,
 ) -> Any:
     """
     Create a CodemodeToolset based on request flags and app configuration.
@@ -234,6 +235,7 @@ def _build_codemode_toolset(
         request: The CreateAgentRequest with configuration options.
         http_request: The FastAPI request object for accessing app state.
         sandbox: Optional pre-configured sandbox to share with other toolsets.
+        sandbox_variant: Sandbox variant to pass to CodeModeConfig.
     """
     if not request.enable_codemode:
         return None
@@ -326,6 +328,7 @@ def _build_codemode_toolset(
         mcp_proxy_url=mcp_proxy_url,
         enable_discovery_tools=True,
         status_change_callback=_notify_status_change,
+        sandbox_variant=sandbox_variant,
     )
 
 
@@ -946,6 +949,7 @@ async def create_agent(
                 agent_id=agent_id,
                 sandbox=shared_sandbox,
                 disable_mcp_servers=disable_mcp_for_codemode,
+                sandbox_variant=effective_variant,
             )
             if codemode_toolset is not None:
                 await initialize_codemode_toolset(codemode_toolset)
@@ -1124,6 +1128,7 @@ async def create_agent(
                         agent_id=agent_id,
                         sandbox=fresh_sandbox,
                         disable_mcp_servers=disable_mcp_for_codemode,
+                        sandbox_variant=effective_variant,
                     )
 
                 # Wrap to register a post-init callback for skill re-wiring
