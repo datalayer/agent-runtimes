@@ -1,19 +1,16 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""
-Async tool approval flow.
+"""Capability-native async tool approval flow.
 
-When a guardrail or AgentSpec configuration marks a tool as requiring
-human approval, this module:
+When an AgentSpec marks tools as requiring human approval, this module
+provides:
 
-1. Creates a ToolApproval record in the ai-agents service.
-2. Polls the ai-agents service until the approval is resolved
-   (approved/rejected/expired).
-3. Returns the decision to the caller so the tool can proceed or be blocked.
-
-This module also provides a PydanticAI-compatible tool wrapper that
-intercepts tool calls needing approval and injects the approval flow.
+1. ``ToolApprovalConfig`` — configuration for the approval flow.
+2. ``ToolApprovalManager`` — HTTP client that creates approval records in
+   the ai-agents service and polls until resolved.
+3. ``ToolApprovalCapability`` — a pydantic-ai ``AbstractCapability`` that
+   intercepts tool calls needing approval via ``before_tool_execute``.
 """
 
 from __future__ import annotations
@@ -23,10 +20,16 @@ import logging
 import os
 import re
 from dataclasses import dataclass, field
-from typing import Any, Callable
+from typing import Any
 
 import httpx
 from datalayer_core.utils.urls import DatalayerURLs
+from pydantic_ai import RunContext
+from pydantic_ai.capabilities import AbstractCapability
+from pydantic_ai.messages import ToolCallPart
+from pydantic_ai.tools import ToolDefinition
+
+from .guardrails import GuardrailBlockedError
 
 logger = logging.getLogger(__name__)
 
@@ -95,30 +98,18 @@ def _parse_timeout_hms(value: Any, *, default: float) -> float:
 class ToolApprovalConfig:
     """Configuration for the tool-approval flow."""
 
-    # URL of the ai-agents service
     ai_agents_url: str = ""
-    # Auth token (injected from env)
     token: str = ""
-    # Agent identifier
     agent_id: str = "default"
-    # Pod name (for tracing)
     pod_name: str = ""
-    # Tools that require approval (regex patterns)
     tools_requiring_approval: list[str] = field(default_factory=list)
-    # Polling interval in seconds
     poll_interval: float = 2.0
-    # Maximum wait time in seconds before expiring
     timeout: float = 300.0
-    # Whether to auto-approve if ai-agents is unavailable/misconfigured.
-    # Default is fail-closed for safety.
     fail_open_on_error: bool = False
 
     @classmethod
-    def from_env(cls) -> "ToolApprovalConfig":
+    def from_env(cls) -> ToolApprovalConfig:
         urls = DatalayerURLs.from_environment()
-        # Always resolve ai-agents approval backend from core URL config.
-        # Intentionally ignore AI_AGENTS_URL and local AGENT_RUNTIMES_PORT
-        # so approvals are created in the shared ai-agents backend visible to UI.
         ai_agents_url = urls.ai_agents_url
         if os.environ.get("AI_AGENTS_URL"):
             logger.info(
@@ -130,9 +121,6 @@ class ToolApprovalConfig:
                 "Using core-resolved ai-agents URL for tool approvals: %s",
                 ai_agents_url,
             )
-        # Prefer the user JWT forwarded by the companion (identifies the
-        # user so ai-agents can set requester_uid correctly) over the
-        # platform-level DATALAYER_API_KEY.
         token = (
             os.environ.get("DATALAYER_USER_TOKEN")
             or os.environ.get("DATALAYER_API_KEY", "")
@@ -146,7 +134,7 @@ class ToolApprovalConfig:
         )
 
     @classmethod
-    def from_spec(cls, spec_config: dict) -> "ToolApprovalConfig":
+    def from_spec(cls, spec_config: dict) -> ToolApprovalConfig:
         """Build from AgentSpec configuration.
 
         Expected structure::
@@ -169,17 +157,15 @@ class ToolApprovalConfig:
 
 
 # ============================================================================
-# Approval Flow
+# Exceptions
 # ============================================================================
 
 
-class ToolApprovalTimeoutError(Exception):
+class ToolApprovalTimeoutError(GuardrailBlockedError):
     """Raised when the approval request times out."""
 
-    pass
 
-
-class ToolApprovalRejectedError(Exception):
+class ToolApprovalRejectedError(GuardrailBlockedError):
     """Raised when the tool call is rejected by the human."""
 
     def __init__(self, tool_name: str, note: str | None = None):
@@ -191,16 +177,13 @@ class ToolApprovalRejectedError(Exception):
         super().__init__(msg)
 
 
+# ============================================================================
+# Approval Manager
+# ============================================================================
+
+
 class ToolApprovalManager:
-    """Manages tool approval requests against the ai-agents service.
-
-    Usage::
-
-        manager = ToolApprovalManager(config)
-        # Before running the tool, request approval
-        await manager.request_and_wait("deploy_to_production", {"env": "prod"})
-        # If we get here, approval was granted (else an exception was raised)
-    """
+    """Manages tool approval requests against the ai-agents service."""
 
     def __init__(self, config: ToolApprovalConfig):
         self.config = config
@@ -220,14 +203,11 @@ class ToolApprovalManager:
 
     def requires_approval(self, tool_name: str) -> bool:
         """Check whether a tool requires human approval."""
-        import re
-
         tool_name_variants = {
             tool_name,
             tool_name.replace("-", "_"),
             tool_name.replace("_", "-"),
         }
-
         for pattern in self.config.tools_requiring_approval:
             if any(
                 re.search(pattern, variant, re.IGNORECASE)
@@ -239,23 +219,9 @@ class ToolApprovalManager:
     async def request_and_wait(
         self, tool_name: str, tool_args: dict[str, Any]
     ) -> dict[str, Any]:
-        """Create an approval request and poll until resolved.
-
-        Returns
-        -------
-        dict
-            The resolved approval record.
-
-        Raises
-        ------
-        ToolApprovalTimeoutError
-            If the approval times out.
-        ToolApprovalRejectedError
-            If a human rejects the tool call.
-        """
+        """Create an approval request and poll until resolved."""
         client = await self._get_client()
 
-        # 1. Create the approval request
         payload = {
             "agent_id": self.config.agent_id,
             "pod_name": self.config.pod_name,
@@ -277,10 +243,11 @@ class ToolApprovalManager:
                     exc,
                 )
                 return {"status": "auto_approved", "tool_name": tool_name}
-            raise RuntimeError(
+            raise GuardrailBlockedError(
                 "Manual approval required, but tool-approval service is unavailable. "
                 "Set TOOL_APPROVAL_FAIL_OPEN=true to bypass in non-production setups."
             ) from exc
+
         approval_id = approval_data.get("id")
         if not approval_id:
             if self.config.fail_open_on_error:
@@ -289,7 +256,7 @@ class ToolApprovalManager:
                     tool_name,
                 )
                 return {"status": "auto_approved", "tool_name": tool_name}
-            raise RuntimeError(
+            raise GuardrailBlockedError(
                 "Manual approval required, but ai-agents did not return an approval ID."
             )
 
@@ -300,7 +267,6 @@ class ToolApprovalManager:
             self.config.timeout,
         )
 
-        # 2. Poll until resolved or timed out
         elapsed = 0.0
         while elapsed < self.config.timeout:
             await asyncio.sleep(self.config.poll_interval)
@@ -334,7 +300,6 @@ class ToolApprovalManager:
                     f"Approval for tool '{tool_name}' expired server-side"
                 )
 
-        # Timed out locally
         raise ToolApprovalTimeoutError(
             f"Approval for tool '{tool_name}' timed out after {self.config.timeout}s"
         )
@@ -347,40 +312,44 @@ class ToolApprovalManager:
 
 
 # ============================================================================
-# PydanticAI Tool Wrapper
+# Capability
 # ============================================================================
 
 
-def wrap_tool_with_approval(
-    tool_fn: Callable,
-    tool_name: str,
-    approval_manager: ToolApprovalManager,
-) -> Callable:
-    """Wrap a PydanticAI tool function with an approval gate.
+@dataclass
+class ToolApprovalCapability(AbstractCapability[Any]):
+    """Capability that gates tool execution behind async human approval.
 
-    Before the tool function is called, the wrapper checks if the tool
-    requires approval.  If so, it creates a request and waits for
-    the human decision before proceeding.
-
-    This is designed to be used with ``pydantic_ai.Agent.tool()``
-    or ``pydantic_ai.Tool()``.
+    Uses the ai-agents HTTP service to create approval records and polls
+    until a human approves or rejects the call.
     """
-    import functools
 
-    @functools.wraps(tool_fn)
-    async def wrapper(*args: Any, **kwargs: Any) -> Any:
-        if approval_manager.requires_approval(tool_name):
-            # Build a serializable snapshot of the arguments
-            safe_args = {}
-            for k, v in kwargs.items():
-                try:
-                    safe_args[k] = str(v)[:500]
-                except Exception:
-                    safe_args[k] = "<non-serializable>"
+    config: ToolApprovalConfig = field(default_factory=ToolApprovalConfig)
+    _manager: ToolApprovalManager | None = field(default=None, init=False, repr=False)
 
-            await approval_manager.request_and_wait(tool_name, safe_args)
+    def _get_manager(self) -> ToolApprovalManager:
+        if self._manager is None:
+            self._manager = ToolApprovalManager(self.config)
+        return self._manager
 
-        # Approval passed (or was not required)
-        return await tool_fn(*args, **kwargs)
+    async def before_tool_execute(
+        self,
+        ctx: RunContext[Any],
+        *,
+        call: ToolCallPart,
+        tool_def: ToolDefinition,
+        args: dict[str, Any],
+    ) -> dict[str, Any]:
+        manager = self._get_manager()
+        if not manager.requires_approval(call.tool_name):
+            return args
 
-    return wrapper
+        safe_args: dict[str, str] = {}
+        for k, v in args.items():
+            try:
+                safe_args[k] = str(v)[:500]
+            except Exception:
+                safe_args[k] = "<non-serializable>"
+
+        await manager.request_and_wait(call.tool_name, safe_args)
+        return args

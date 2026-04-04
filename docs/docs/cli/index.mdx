@@ -9,18 +9,18 @@ The `agent-runtimes` package provides a command-line interface for starting and 
 The package also provides an interactive assistant workflow via:
 
 ```bash
-agent-runtimes cli
+agent-runtimes chat
 ```
 
 ## Interactive Assistant
 
-The interactive assistant experience is part of Agent Runtimes and runs through `agent-runtimes cli`.
+The interactive assistant experience is part of Agent Runtimes and runs through `agent-runtimes chat`.
 
 ### Quick Start
 
 ```bash
-pip install "agent-runtimes[cli]"
-agent-runtimes cli
+pip install "agent-runtimes[chat]"
+agent-runtimes chat
 ```
 
 This starts an interactive session with a background agent-runtimes server and the default valid agent spec.
@@ -30,20 +30,20 @@ This starts an interactive session with a background agent-runtimes server and t
 Launch without arguments to start a session with the terminal UX (TUX):
 
 ```bash
-agent-runtimes cli
+agent-runtimes chat
 ```
 
 When started without `--agentspec-id`, the CLI lists available agent specs and lets you choose one interactively.
 
 ```bash
 # Pick interactively
-agent-runtimes cli
+agent-runtimes chat
 
 # Specify an agent spec
-agent-runtimes cli --agentspec-id data-acquisition
+agent-runtimes chat --agentspec-id data-acquisition
 
 # Disable codemode
-agent-runtimes cli --agentspec-id data-acquisition --no-codemode
+agent-runtimes chat --agentspec-id data-acquisition --no-codemode
 ```
 
 ### Single-Query Mode
@@ -51,8 +51,8 @@ agent-runtimes cli --agentspec-id data-acquisition --no-codemode
 Pass a query to run one request and exit:
 
 ```bash
-agent-runtimes cli "What is Python?"
-agent-runtimes cli -a crawler "Search for AI trends"
+agent-runtimes chat "What is Python?"
+agent-runtimes chat -a crawler "Search for AI trends"
 ```
 
 ### Connect to a Remote Server
@@ -61,17 +61,17 @@ Use the `connect` subcommand to attach to an existing server:
 
 ```bash
 # AG-UI (HTTP/SSE) - default
-agent-runtimes cli connect http://localhost:8000/api/v1/ag-ui/cli/
+agent-runtimes chat connect http://localhost:8000/api/v1/ag-ui/chat/
 
 # ACP (WebSocket)
-agent-runtimes cli connect ws://localhost:8000/api/v1/acp/ws/cli -t acp
+agent-runtimes chat connect ws://localhost:8000/api/v1/acp/ws/chat -t acp
 ```
 
 ### List Remote Agents
 
 ```bash
-agent-runtimes cli agents
-agent-runtimes cli agents --server https://agents.datalayer.ai
+agent-runtimes chat agents
+agent-runtimes chat agents --server https://agents.datalayer.ai
 ```
 
 ### Slash Commands
@@ -94,9 +94,9 @@ agent-runtimes cli agents --server https://agents.datalayer.ai
 ### Banner and Animations
 
 ```bash
-agent-runtimes cli --banner
-agent-runtimes cli --banner-all
-agent-runtimes cli --eggs
+agent-runtimes chat --banner
+agent-runtimes chat --banner-all
+agent-runtimes chat --eggs
 ```
 
 ### Options Reference
@@ -117,13 +117,13 @@ agent-runtimes cli --eggs
 Import and customize the embedded assistant agent directly:
 
 ```python
-from agent_runtimes.cli.cli import agent
+from agent_runtimes.chat.cli import agent
 
 @agent.tool()
 def my_custom_tool(data: str) -> str:
   return f"Processed: {data}"
 
-agent.to_cli_sync(prog_name="agent-runtimes cli")
+agent.to_cli_sync(prog_name="agent-runtimes chat")
 ```
 
 ## Interactive Implementation
@@ -165,14 +165,14 @@ The interactive CLI is built on Pydantic AI and Agent Runtimes.
 
 ### Key Components
 
-- `agent_runtimes/cli/cli.py`: Typer commands, runtime process management, and transport wiring
-- `agent_runtimes/cli/tux.py`: Rich terminal UX, slash command handling, and streaming rendering
-- `agent_runtimes/cli/commands/`: slash command modules and registry
-- `agent_runtimes/cli/banner.py`: brand output and animation helpers
+- `agent_runtimes/chat/cli.py`: Typer commands, runtime process management, and transport wiring
+- `agent_runtimes/chat/tux.py`: Rich terminal UX, slash command handling, and streaming rendering
+- `agent_runtimes/chat/commands/`: slash command modules and registry
+- `agent_runtimes/chat/banner.py`: brand output and animation helpers
 
 ### Runtime Flow
 
-1. `agent-runtimes cli` resolves an agent spec (provided or interactive picker).
+1. `agent-runtimes chat` resolves an agent spec (provided or interactive picker).
 2. It starts an embedded `agent-runtimes serve` process.
 3. It waits for `/health` then fetches `/health/startup`.
 4. Interactive mode launches TUX and streams responses over AG-UI.
@@ -181,21 +181,21 @@ The interactive CLI is built on Pydantic AI and Agent Runtimes.
 ### Transport Support
 
 - AG-UI (`HTTP/SSE`) is the default for local and remote interactive chat.
-- ACP (`WebSocket`) is supported via `agent-runtimes cli connect -t acp`.
+- ACP (`WebSocket`) is supported via `agent-runtimes chat connect -t acp`.
 
 ### Slash Command Registry
 
-Slash commands are modularized in `agent_runtimes/cli/commands/` and assembled via `build_commands(...)`. This keeps command behavior isolated and easy to evolve.
+Slash commands are modularized in `agent_runtimes/chat/commands/` and assembled via `build_commands(...)`. This keeps command behavior isolated and easy to evolve.
 
 ### Packaging
 
-CLI-specific dependencies are defined in `agent-runtimes[cli]`:
+CLI-specific dependencies are defined in `agent-runtimes[chat]`:
 
 ```bash
-pip install "agent-runtimes[cli]"
+pip install "agent-runtimes[chat]"
 ```
 
-The primary user entry point is the `agent-runtimes cli` subcommand from the main `agent-runtimes` CLI.
+The primary user entry point is the `agent-runtimes chat` subcommand from the main `agent-runtimes` CLI.
 
 ## Installation
 

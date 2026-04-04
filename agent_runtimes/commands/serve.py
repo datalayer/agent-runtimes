@@ -239,7 +239,7 @@ def serve_server(
     else:
         actual_port = port
 
-    # Store the effective port in an env var so callers (e.g. cli
+    # Store the effective port in an env var so callers (e.g. chat
     # via multiprocessing) can retrieve it before the server starts.
     os.environ["AGENT_RUNTIMES_PORT"] = str(actual_port)
 

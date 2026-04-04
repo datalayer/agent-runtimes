@@ -2,7 +2,7 @@
 #
 # BSD 3-Clause License
 
-"""Matrix rain animation for Agent Runtimes CLI TUX."""
+"""Matrix rain animation for Agent Runtimes Chat TUX."""
 
 import asyncio
 import random

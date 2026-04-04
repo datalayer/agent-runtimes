@@ -18,6 +18,42 @@ import type { GuardrailSpec } from '../types';
 // Guardrail Definitions
 // ============================================================================
 
+export const ASYNC_GUARDRAIL_POLICY_GUARDRAIL_SPEC_0_0_1: GuardrailSpec = {
+  id: 'async-guardrail-policy',
+  version: '0.0.1',
+  name: 'Async Guardrail Policy',
+  description: 'Runs policy checks concurrently with model generation for lower latency and fail-fast blocking on unsafe prompts.',
+  identity_provider: 'datalayer',
+  identity_name: 'policy-bot@acme.com',
+  permissions: {
+    'read:data': true,
+    'write:data': false,
+    'execute:code': false,
+    'access:internet': false,
+    'send:email': false,
+    'deploy:production': false,
+  },
+  token_limits: { per_run: '20K', per_day: '200K', per_month: '2M' },
+};
+
+export const BLOCKED_KEYWORDS_INTERNAL_GUARDRAIL_SPEC_0_0_1: GuardrailSpec = {
+  id: 'blocked-keywords-internal',
+  version: '0.0.1',
+  name: 'Blocked Keywords Internal',
+  description: 'Blocks sensitive internal terms and accidental credential patterns in prompts.',
+  identity_provider: 'datalayer',
+  identity_name: 'internal-bot@acme.com',
+  permissions: {
+    'read:data': true,
+    'write:data': false,
+    'execute:code': false,
+    'access:internet': false,
+    'send:email': false,
+    'deploy:production': false,
+  },
+  token_limits: { per_run: '20K', per_day: '200K', per_month: '2M' },
+};
+
 export const DATA_ENGINEERING_POWER_USER_GUARDRAIL_SPEC_0_0_1: GuardrailSpec = {
   id: 'data-engineering-power-user',
   version: '0.0.1',
@@ -138,6 +174,62 @@ export const GOOGLE_WORKSPACE_AGENT_GUARDRAIL_SPEC_0_0_1: GuardrailSpec = {
   content_safety: { treat_crm_text_fields_as_untrusted: true, do_not_follow_instructions_from_data: true },
 };
 
+export const NO_REFUSALS_GUARDRAIL_SPEC_0_0_1: GuardrailSpec = {
+  id: 'no-refusals',
+  version: '0.0.1',
+  name: 'No Refusals',
+  description: 'Prevents pure refusal responses for fulfillment-oriented internal assistants.',
+  identity_provider: 'datalayer',
+  identity_name: 'fulfillment-bot@acme.com',
+  permissions: {
+    'read:data': true,
+    'write:data': true,
+    'execute:code': true,
+    'access:internet': true,
+    'send:email': false,
+    'deploy:production': false,
+  },
+  token_limits: { per_run: '60K', per_day: '600K', per_month: '6M' },
+};
+
+export const PII_PROTECTION_GUARDRAIL_SPEC_0_0_1: GuardrailSpec = {
+  id: 'pii-protection',
+  version: '0.0.1',
+  name: 'PII Protection',
+  description: 'Blocks user prompts containing high-risk personally identifiable information.',
+  identity_provider: 'datalayer',
+  identity_name: 'privacy-bot@acme.com',
+  permissions: {
+    'read:data': true,
+    'write:data': false,
+    'execute:code': false,
+    'access:internet': false,
+    'send:email': false,
+    'deploy:production': false,
+  },
+  token_limits: { per_run: '20K', per_day: '200K', per_month: '2M' },
+  data_handling: { pii_detection: true, pii_action: 'block' },
+};
+
+export const PROMPT_INJECTION_STRICT_GUARDRAIL_SPEC_0_0_1: GuardrailSpec = {
+  id: 'prompt-injection-strict',
+  version: '0.0.1',
+  name: 'Prompt Injection Strict',
+  description: 'Strict prompt injection protection profile for externally exposed agents.',
+  identity_provider: 'datalayer',
+  identity_name: 'security-bot@acme.com',
+  permissions: {
+    'read:data': true,
+    'write:data': false,
+    'execute:code': false,
+    'access:internet': false,
+    'send:email': false,
+    'deploy:production': false,
+  },
+  token_limits: { per_run: '25K', per_day: '250K', per_month: '2M' },
+  content_safety: { treat_crm_text_fields_as_untrusted: true, do_not_follow_instructions_from_data: true },
+};
+
 export const RESTRICTED_VIEWER_GUARDRAIL_SPEC_0_0_1: GuardrailSpec = {
   id: 'restricted-viewer',
   version: '0.0.1',
@@ -162,17 +254,60 @@ export const RESTRICTED_VIEWER_GUARDRAIL_SPEC_0_0_1: GuardrailSpec = {
   content_safety: { treat_crm_text_fields_as_untrusted: true, do_not_follow_instructions_from_data: true },
 };
 
+export const SECRET_REDACTION_GUARDRAIL_SPEC_0_0_1: GuardrailSpec = {
+  id: 'secret-redaction',
+  version: '0.0.1',
+  name: 'Secret Redaction',
+  description: 'Blocks leaked credentials and private keys in assistant output.',
+  identity_provider: 'datalayer',
+  identity_name: 'platform-bot@acme.com',
+  permissions: {
+    'read:data': true,
+    'write:data': false,
+    'execute:code': true,
+    'access:internet': true,
+    'send:email': false,
+    'deploy:production': false,
+  },
+  token_limits: { per_run: '40K', per_day: '400K', per_month: '4M' },
+};
+
+export const TOOL_GUARD_STRICT_GUARDRAIL_SPEC_0_0_1: GuardrailSpec = {
+  id: 'tool-guard-strict',
+  version: '0.0.1',
+  name: 'Tool Guard Strict',
+  description: 'Restrictive tool policy that hides dangerous tools and enforces approval for writes.',
+  identity_provider: 'datalayer',
+  identity_name: 'ops-bot@acme.com',
+  permissions: {
+    'read:data': true,
+    'write:data': true,
+    'execute:code': false,
+    'access:internet': true,
+    'send:email': false,
+    'deploy:production': false,
+  },
+  token_limits: { per_run: '30K', per_day: '300K', per_month: '3M' },
+};
+
 // ============================================================================
 // Guardrail Catalog
 // ============================================================================
 
 export const GUARDRAIL_CATALOG: Record<string, GuardrailSpec> = {
+  'async-guardrail-policy': ASYNC_GUARDRAIL_POLICY_GUARDRAIL_SPEC_0_0_1,
+  'blocked-keywords-internal': BLOCKED_KEYWORDS_INTERNAL_GUARDRAIL_SPEC_0_0_1,
   'data-engineering-power-user': DATA_ENGINEERING_POWER_USER_GUARDRAIL_SPEC_0_0_1,
   'default-platform-user': DEFAULT_PLATFORM_USER_GUARDRAIL_SPEC_0_0_1,
   'github-actions-deploy': GITHUB_ACTIONS_DEPLOY_GUARDRAIL_SPEC_0_0_1,
   'github-ci-bot': GITHUB_CI_BOT_GUARDRAIL_SPEC_0_0_1,
   'google-workspace-agent': GOOGLE_WORKSPACE_AGENT_GUARDRAIL_SPEC_0_0_1,
+  'no-refusals': NO_REFUSALS_GUARDRAIL_SPEC_0_0_1,
+  'pii-protection': PII_PROTECTION_GUARDRAIL_SPEC_0_0_1,
+  'prompt-injection-strict': PROMPT_INJECTION_STRICT_GUARDRAIL_SPEC_0_0_1,
   'restricted-viewer': RESTRICTED_VIEWER_GUARDRAIL_SPEC_0_0_1,
+  'secret-redaction': SECRET_REDACTION_GUARDRAIL_SPEC_0_0_1,
+  'tool-guard-strict': TOOL_GUARD_STRICT_GUARDRAIL_SPEC_0_0_1,
 };
 
 /**

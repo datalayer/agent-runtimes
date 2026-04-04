@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Demo script showing Agent Runtimes CLI spinner behavior in realistic scenarios.
+Demo script showing Agent Runtimes Chat spinner behavior in realistic scenarios.
 This simulates different operation durations to showcase the spinner animation.
 """
 
@@ -10,7 +10,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from agent_runtimes.cli.cli import (
+from agent_runtimes.chat.cli import (
     BOLD,
     CYAN,
     GREEN,
@@ -44,7 +44,7 @@ async def demo_scenario(title: str, message: str, duration: float, style: str = 
 async def main():
     """Run all demo scenarios."""
     print(f"\n{MAGENTA}{BOLD}╔════════════════════════════════════════════════╗")
-    print(f"║  Agent Runtimes CLI Spinner Demo               ║")
+    print(f"║  Agent Runtimes Chat Spinner Demo               ║")
     print(f"╚════════════════════════════════════════════════╝{RESET}\n")
     
     # Different realistic scenarios
@@ -61,7 +61,7 @@ async def main():
     
     print(f"\n{GREEN}{BOLD}✨ Demo complete!{RESET}")
     print(f"{CYAN}The spinner provides smooth visual feedback during operations.{RESET}")
-    print(f"{YELLOW}Try it yourself: {RESET}{BOLD}agent-runtimes cli \"What is Python?\"{RESET}\n")
+    print(f"{YELLOW}Try it yourself: {RESET}{BOLD}agent-runtimes chat \"What is Python?\"{RESET}\n")
 
 
 if __name__ == "__main__":

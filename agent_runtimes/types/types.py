@@ -834,6 +834,10 @@ class AgentSpec(BaseModel):
         default=None,
         description="Guardrail configurations",
     )
+    capabilities: Optional[List[Dict[str, Any]]] = Field(
+        default=None,
+        description="Optional pydantic-ai capability configurations",
+    )
     evals: Optional[List[Dict[str, Any]]] = Field(
         default=None,
         description="Evaluation configurations",

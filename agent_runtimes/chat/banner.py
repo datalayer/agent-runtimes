@@ -2,7 +2,7 @@
 #
 # BSD 3-Clause License
 
-"""Banner and animation utilities for the Agent Runtimes CLI assistant."""
+"""Banner and animation utilities for the Agent Runtimes Chat assistant."""
 
 import io
 import random
@@ -49,15 +49,15 @@ DIM = '\033[2m'
 RESET = '\033[0m'
 
 # Goodbye message displayed on exit
-GOODBYE_MESSAGE = '✨ Thank you for using Agent Runtimes CLI. See you soon!'
+GOODBYE_MESSAGE = '✨ Thank you for using Agent Runtimes Chat. See you soon!'
 
 # ASCII Art Banner with Datalayer brand colors
 BANNER = f"""
 {GREEN_DARK}{BOLD}╔═══════════════════════════════════════════════════════════════╗
 ║                                                               ║
-║   {GREEN_LIGHT}░█▀▀░█▀█░█▀▄░█▀▀░█▀█░▀█▀  {WHITE}AI-Powered Data Assistant         {GREEN_DARK}║
-║   {GREEN_LIGHT}░█░░░█░█░█░█░█▀▀░█▀█░░█░  {WHITE}Cheaper • Faster • Collaborative  {GREEN_DARK}║
-║   {GREEN_LIGHT}░▀▀▀░▀▀▀░▀▀░░▀▀▀░▀░▀░▀▀▀  {GREEN_DARK}                                  {GREEN_DARK}║
+║   {GREEN_LIGHT}AG CHAT{WHITE}                                                       {GREEN_DARK}║
+║   {WHITE}AI-Powered Data Assistant                                   {GREEN_DARK}║
+║   {WHITE}Cheaper • Faster • Collaborative                            {GREEN_DARK}║
 ║                                                               ║
 ║   {GREEN_DARK}✨ Data Analysis  {GREEN_MEDIUM}📊 Data Science  {GREEN_LIGHT}📓 Software Development  {GREEN_DARK}║
 ║                                                               ║
@@ -283,7 +283,7 @@ BANNER_HEIGHT = BANNER.count('\n') + 2  # +2 for the "Powered by" line and extra
 
 
 def show_banner(splash: bool = False, splash_all: bool = False) -> None:
-    """Display the Agent Runtimes CLI welcome banner with optional animations.
+    """Display the Agent Runtimes Chat welcome banner with optional animations.
     
     Args:
         splash: If True, show Matrix rain animation before banner.

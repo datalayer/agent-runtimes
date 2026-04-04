@@ -179,7 +179,6 @@ async def _create_and_register_cli_agent(
         create_skills_toolset,
         initialize_codemode_toolset,
         register_agent_tools,
-        tools_require_approval,
         tools_requiring_approval_ids,
         wire_skills_into_codemode,
     )
@@ -357,6 +356,10 @@ async def _create_and_register_cli_agent(
     # Create the underlying Pydantic AI Agent
     # Use model from agent spec, environment variable override, or global default
     from agent_runtimes.specs.models import DEFAULT_MODEL
+    from .capabilities import (
+        build_capabilities_from_agent_spec,
+        build_usage_limits_from_agent_spec,
+    )
 
     env_model = os.environ.get("AGENT_RUNTIMES_MODEL")
     model = env_model or agent_spec.model or DEFAULT_MODEL.value
@@ -383,30 +386,23 @@ async def _create_and_register_cli_agent(
         system_prompt = system_prompt + "\n\n" + skills_prompt_section
 
     tool_ids = list(agent_spec.tools or [])
+    capabilities = build_capabilities_from_agent_spec(agent_spec, agent_id=agent_id)
+    usage_limits = build_usage_limits_from_agent_spec(agent_spec)
     agent_kwargs: dict[str, Any] = {
         "system_prompt": system_prompt,
         # Explicitly disable Pydantic AI built-in tools (e.g. CodeExecutionTool)
         "builtin_tools": (),
     }
+    if capabilities:
+        agent_kwargs["capabilities"] = capabilities
+    if usage_limits is not None:
+        agent_kwargs["usage_limits"] = usage_limits
     approval_tool_ids = tools_requiring_approval_ids(tool_ids)
-    # Only set DeferredToolRequests output type when using pydantic-deferred
-    # approval mode.  In the default "ai-agents-wrapper" mode the approval
-    # gate is handled by wrap_tool_with_approval and the agent output type
-    # should remain plain str to avoid output-validation failures.
-    _use_deferred = os.environ.get(
-        "AGENT_RUNTIMES_USE_PYDANTIC_DEFERRED_APPROVAL", ""
-    ).strip().lower() in {"1", "true", "yes", "on"}
-    if tools_require_approval(tool_ids) and _use_deferred:
+    if approval_tool_ids:
         agent_kwargs["output_type"] = [str, DeferredToolRequests]
         agent_kwargs["output_retries"] = 3
         logger.info(
             "Auto-enabled DeferredToolRequests for agent '%s'; tools requiring approval: %s",
-            agent_id,
-            approval_tool_ids,
-        )
-    elif approval_tool_ids:
-        logger.info(
-            "Agent '%s' has tools requiring approval (ai-agents-wrapper mode): %s",
             agent_id,
             approval_tool_ids,
         )
@@ -1057,7 +1053,7 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
                     sandbox_variant=sandbox_variant,
                 )
                 # Store startup info on app.state so the /health/startup
-                # endpoint can expose it to CLI consumers (e.g. agent-runtimes cli).
+                # endpoint can expose it to CLI consumers (e.g. agent-runtimes chat).
                 app.state.startup_info = startup_info
             else:
                 logger.warning(

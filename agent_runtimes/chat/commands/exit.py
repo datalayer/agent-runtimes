@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
 NAME = "exit"
 ALIASES = ["quit", "q"]
-DESCRIPTION = "Exit agent-runtimes cli"
+DESCRIPTION = "Exit agent-runtimes chat"
 SHORTCUT = "escape q"
 
 

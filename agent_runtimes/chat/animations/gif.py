@@ -2,7 +2,7 @@
 #
 # BSD 3-Clause License
 
-"""GIF animation (black hole) for Agent Runtimes CLI TUX."""
+"""GIF animation (black hole) for Agent Runtimes Chat TUX."""
 
 import asyncio
 import shutil

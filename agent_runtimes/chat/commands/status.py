@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 NAME = "status"
 ALIASES: list[str] = []
-DESCRIPTION = "Show agent-runtimes cli status including model, tokens, and connectivity"
+DESCRIPTION = "Show agent-runtimes chat status including model, tokens, and connectivity"
 SHORTCUT = "escape s"
 
 
@@ -24,7 +24,7 @@ async def execute(tux: "CliTux") -> Optional[str]:
     from ..tux import STYLE_PRIMARY, STYLE_MUTED
 
     tux.console.print()
-    tux.console.print("● Agent Runtimes CLI Status", style=STYLE_PRIMARY)
+    tux.console.print("● Agent Runtimes Chat Status", style=STYLE_PRIMARY)
     tux.console.print()
 
     # Version

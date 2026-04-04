@@ -3,7 +3,7 @@
 # BSD 3-Clause License
 
 """
-Agent Runtimes CLI assistant package for code analysis and data science.
+Agent Runtimes Chat assistant package for code analysis and data science.
 
 This package provides:
 - CLI interface for AI-powered code assistance
@@ -49,11 +49,11 @@ __all__ = [
 def __getattr__(name):
     """Lazily import heavy modules to avoid side effects at package import time."""
     if name in {"agent", "main"}:
-        from agent_runtimes.cli.cli import agent, main
+        from agent_runtimes.chat.cli import agent, main
 
         return {"agent": agent, "main": main}[name]
     if name in {"CliTux", "run_tux"}:
-        from agent_runtimes.cli.tux import CliTux, run_tux
+        from agent_runtimes.chat.tux import CliTux, run_tux
 
         return {"CliTux": CliTux, "run_tux": run_tux}[name]
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

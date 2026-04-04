@@ -35,7 +35,6 @@ from ..services import (
     create_skills_toolset,
     initialize_codemode_toolset,
     register_agent_tools,
-    tools_require_approval,
     tools_requiring_approval_ids,
     wire_skills_into_codemode,
 )
@@ -1030,24 +1029,11 @@ async def create_agent(
                 # Don't pass toolsets here - they'll be dynamically provided at run time
             }
             approval_tool_ids = tools_requiring_approval_ids(tool_ids)
-            # Only set DeferredToolRequests output type when using pydantic-deferred
-            # approval mode.  In the default "ai-agents-wrapper" mode the approval
-            # gate is handled by wrap_tool_with_approval and the agent output type
-            # should remain plain str to avoid output-validation failures.
-            _use_deferred = os.environ.get(
-                "AGENT_RUNTIMES_USE_PYDANTIC_DEFERRED_APPROVAL", ""
-            ).strip().lower() in {"1", "true", "yes", "on"}
-            if tools_require_approval(tool_ids) and _use_deferred:
+            if approval_tool_ids:
                 agent_kwargs["output_type"] = [str, DeferredToolRequests]
                 agent_kwargs["output_retries"] = 3
                 logger.info(
                     "Auto-enabled DeferredToolRequests for agent '%s'; tools requiring approval: %s",
-                    agent_id,
-                    approval_tool_ids,
-                )
-            elif approval_tool_ids:
-                logger.info(
-                    "Agent '%s' has tools requiring approval (ai-agents-wrapper mode): %s",
                     agent_id,
                     approval_tool_ids,
                 )

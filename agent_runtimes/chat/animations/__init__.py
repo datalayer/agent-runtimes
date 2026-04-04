@@ -2,7 +2,7 @@
 #
 # BSD 3-Clause License
 
-"""Animation modules for Agent Runtimes CLI TUX Easter eggs."""
+"""Animation modules for Agent Runtimes Chat TUX Easter eggs."""
 
 from .rain import rain_animation
 from .about import about_animation

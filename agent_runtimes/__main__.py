@@ -3,7 +3,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 """
-Agent Runtimes CLI.
+.
 
 This module provides the command-line interface for managing the agent-runtimes
 server and querying running agents.
@@ -29,10 +29,11 @@ For programmatic usage, import from agent_runtimes.commands:
 """
 
 import logging
+import asyncio
 from typing import Annotated, Optional
 
 import typer
-from agent_runtimes.cli.cli import app as interactive_cli_app
+from agent_runtimes.chat.cli import app as interactive_cli_app
 
 from agent_runtimes.commands.agent_mcp_servers import (
     AgentMcpServersError,
@@ -86,10 +87,10 @@ app = typer.Typer(
     no_args_is_help=True,
 )
 
-# Register the interactive assistant CLI under `agent-runtimes cli`.
+# Register the interactive assistant CLI under `agent-runtimes chat`.
 app.add_typer(
     interactive_cli_app,
-    name="cli",
+    name="chat",
     help="Interactive assistant CLI for agent runtimes",
 )
 
@@ -98,6 +99,20 @@ app.add_typer(events_app)
 app.command("events-list")(events_list)
 app.command("event-ls")(events_ls)
 app.command("events-ls")(events_ls)
+
+
+@app.command()
+def about() -> None:
+    """Show the AG CHAT about animation."""
+    from rich.console import Console
+
+    from agent_runtimes.chat.animations.about import about_animation
+
+    try:
+        asyncio.run(about_animation(Console()))
+    except KeyboardInterrupt:
+        # Allow clean interruption while the animation is running.
+        pass
 
 
 # ============================================================================

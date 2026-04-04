@@ -2,7 +2,7 @@
 #
 # BSD 3-Clause License
 
-"""Terminal UX (TUX) for the Agent Runtimes CLI assistant."""
+"""Terminal UX (TUX) for the Agent Runtimes Chat assistant."""
 
 import asyncio
 import getpass
@@ -150,13 +150,13 @@ class SessionStats:
 
 
 class CliTux:
-    """Terminal UX for the Agent Runtimes CLI assistant."""
+    """Terminal UX for the Agent Runtimes Chat assistant."""
     
     def __init__(
         self,
         agent_url: str,
         server_url: str = "http://127.0.0.1:8000",
-        agent_id: str = "cli",
+        agent_id: str = "chat",
         eggs: bool = False,
         jupyter_url: Optional[str] = None,
         extra_suggestions: Optional[list[str]] = None,
@@ -250,7 +250,7 @@ class CliTux:
         left_content = Text()
         left_content.append(f"\n  Welcome back {username}!\n\n", style=STYLE_WHITE)
         left_content.append(logo)
-        left_content.append(f"\n  agent-runtimes cli\n", style=STYLE_MUTED)
+        left_content.append(f"\n  agent-runtimes chat\n", style=STYLE_MUTED)
         left_content.append(f"  {cwd}\n", style=STYLE_MUTED)
         
         # Right panel content - tips
@@ -264,7 +264,7 @@ class CliTux:
         right_content.append("/context - View context usage\n", style=STYLE_MUTED)
         right_content.append("/status - Check connection status\n", style=STYLE_MUTED)
         right_content.append("/clear - Start fresh conversation\n", style=STYLE_MUTED)
-        right_content.append("/exit - Exit from agent-runtimes cli\n", style=STYLE_MUTED)
+        right_content.append("/exit - Exit from agent-runtimes chat\n", style=STYLE_MUTED)
         
         # Create side-by-side layout
         left_panel = Panel(
@@ -279,7 +279,7 @@ class CliTux:
         )
         
         # Create the main panel
-        title = f" Agent Runtimes CLI {version} "
+        title = f" Agent Runtimes Chat {version} "
         
         main_panel = Panel(
             Columns([left_panel, right_panel], equal=False, expand=True),
@@ -586,12 +586,12 @@ class CliTux:
 async def run_tux(
     agent_url: str,
     server_url: str = "http://127.0.0.1:8000",
-    agent_id: str = "cli",
+    agent_id: str = "chat",
     eggs: bool = False,
     jupyter_url: Optional[str] = None,
     extra_suggestions: Optional[list[str]] = None,
 ) -> None:
-    """Run the Agent Runtimes CLI assistant TUX.
+    """Run the Agent Runtimes Chat assistant TUX.
     
     Args:
         agent_url: URL of the AG-UI agent endpoint

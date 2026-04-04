@@ -9,7 +9,8 @@ SHELL=/bin/bash
 	help default clean build test test-js test-py start kill warning \
 	publish-npm publish-pypi publish-conda pydoc typedoc docs \
 	examples agent agent-notebook agent-lexical jupyter-server agent-serve \
-	agents list-specs specs specs-clone specs-generate specs-format
+	agents list-specs specs specs-clone specs-generate specs-format \
+	ag-chat ag-chat-simple ag-chat-data-acquisition ag-chat-financial ag-chat-demo ag-chat-demo-nocodemode
 
 AGENTSPECS_REPO ?= https://github.com/datalayer/agentspecs.git
 AGENTSPECS_DIR ?= agentspecs
@@ -130,6 +131,41 @@ agents: # agents
 	agent-runtimes list-agents \
 	  --host 0.0.0.0 \
 	  --port 8765
+
+ag-chat: # ag-chat
+	@$(BEDROCK_ENV) \
+		ag chat --eggs
+
+ag-chat-simple: # ag-chat-simple
+	@$(BEDROCK_ENV) \
+		ag chat --eggs --agentspec-id demo-simple
+
+ag-chat-data-acquisition: # ag-chat-data-acquisition KAGGLE_TOKEN and TAVILY_API_KEY must be set in env
+	@$(BEDROCK_ENV) \
+		ag chat --eggs --agentspec-id data-acquisition
+
+ag-chat-financial: # ag-chat-financial ALPHA_VANTAGE_API_KEY must be set in env
+	@$(BEDROCK_ENV) \
+		ag chat --eggs --agentspec-id financial
+
+ag-chat-demo: # ag-chat-demo
+	@$(BEDROCK_ENV) \
+	GOOGLE_OAUTH_CLIENT_ID=${OPENTEAMS_DEMO_GOOGLE_CLIENT_ID} \
+	GOOGLE_OAUTH_CLIENT_SECRET=${OPENTEAMS_DEMO_GOOGLE_CLIENT_SECRET} \
+		ag chat \
+		  --eggs \
+		  --suggestions "List files located in the sales-data folder of my Google Drive account (eric@datalayer.io),Aggregate all CSV files located in the sales-data folder of my Google Drive account (eric@datalayer.io) into a single file named sales_21-25.csv and save this aggregated file in the sales-data directory of the echarles/openteams-codemode-demo repository." \
+		  --agentspec-id information-routing
+
+ag-chat-demo-nocodemode: # ag-chat-demo-nocodemode
+	@$(BEDROCK_ENV) \
+	GOOGLE_OAUTH_CLIENT_ID=${OPENTEAMS_DEMO_GOOGLE_CLIENT_ID} \
+	GOOGLE_OAUTH_CLIENT_SECRET=${OPENTEAMS_DEMO_GOOGLE_CLIENT_SECRET} \
+		ag chat \
+		--eggs \
+		--agentspec-id information-routing \
+		--suggestions "List files located in the sales-data folder of my Google Drive account (eric@datalayer.io),Aggregate all CSV files located in the sales-data folder of my Google Drive account (eric@datalayer.io) into a single file named sales_21-25.csv and save this aggregated file in the sales-data directory of the echarles/openteams-codemode-demo repository." \
+		--no-codemode
 
 list-specs: # list specs
 	agent-runtimes list-specs

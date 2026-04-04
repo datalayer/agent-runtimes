@@ -20,7 +20,7 @@ import typer
 from pydantic_ai import Agent
 
 
-DEFAULT_RUNTIME_AGENT_NAME = "cli"
+DEFAULT_RUNTIME_AGENT_NAME = "chat"
 
 
 # Global reference to subprocess for cleanup
@@ -164,7 +164,7 @@ from agent_runtimes.specs.models import DEFAULT_MODEL
 # Define the embedded assistant agent used when no remote runtime is selected.
 agent = Agent(
     DEFAULT_MODEL.value,
-    instructions="""You are the Agent Runtimes CLI assistant, a helpful AI specialized in code analysis,
+    instructions="""You are the Agent Runtimes Chat assistant, a helpful AI specialized in code analysis,
     Jupyter notebooks, and data science workflows. You help users with:
     - Writing and debugging code
     - Analyzing Jupyter notebooks
@@ -173,7 +173,7 @@ agent = Agent(
     - Python programming and related tools
     
     Always provide clear, concise, and actionable responses.""",
-    name="Agent Runtimes CLI Assistant",
+    name="Agent Runtimes Chat Assistant",
 )
 
 
@@ -193,8 +193,8 @@ async def run_query_with_spinner(query: str) -> str:
 
 # Create Typer app
 app = typer.Typer(
-    name="cli",
-    help="Agent Runtimes CLI assistant",
+    name="chat",
+    help="Agent Runtimes Chat assistant",
     add_completion=False,
     no_args_is_help=False,
     invoke_without_command=True,
@@ -204,7 +204,7 @@ app = typer.Typer(
 def _show_version() -> None:
     """Display version information."""
     from . import __version__
-    typer.echo(f"{GREEN_LIGHT}Agent Runtimes CLI{RESET} v{__version__.__version__}")
+    typer.echo(f"{GREEN_LIGHT}Agent Runtimes Chat{RESET} v{__version__.__version__}")
     typer.echo(f"{GRAY}Powered by Datalayer • \033]8;;https://datalayer.ai\033\\https://datalayer.ai\033]8;;\033\\{RESET}")
 
 
@@ -225,11 +225,11 @@ def _run_agent_runtime_server(host: str, port: int, agent_id: str, codemode: boo
     import logging
     import sys
     import os
-    from agent_runtimes.commands import serve_server, find_random_free_port
+    from agent_runtimes.commands import LogLevel, serve_server, find_random_free_port
     from agent_runtimes.specs.agents import get_agent_spec
     
     # Only suppress logging if not in debug mode
-    debug_mode = os.environ.get('CODEAI_DEBUG') == '1'
+    debug_mode = os.environ.get('AG_CHAT_DEBUG') == '1' or os.environ.get('CODEAI_DEBUG') == '1'
     
     if not debug_mode:
         # Redirect stdout and stderr to devnull to keep terminal clean
@@ -274,6 +274,7 @@ def _run_agent_runtime_server(host: str, port: int, agent_id: str, codemode: boo
     serve_server(
         host=host,
         port=actual_port,
+        log_level=LogLevel.debug if debug_mode else LogLevel.critical,
         agent_id=agent_id,
         agent_name=DEFAULT_RUNTIME_AGENT_NAME,
         no_config_mcp_servers=True,  # Disable config MCP servers
@@ -313,7 +314,7 @@ def _start_agent_runtime_server(
     # Set debug environment variable if needed
     if debug:
         import os
-        os.environ['CODEAI_DEBUG'] = '1'
+        os.environ['AG_CHAT_DEBUG'] = '1'
     
     # Shared value so the child process can report the effective port
     port_value = multiprocessing.Value('i', 0)
@@ -608,7 +609,7 @@ def main_callback(
         help="Show version information"
     ),
 ) -> None:
-    """Agent Runtimes CLI assistant.
+    """Agent Runtimes Chat assistant.
     
     Run without arguments to start interactive chat mode with slash commands.
     Provide a query as arguments for single-shot mode.
@@ -618,13 +619,13 @@ def main_callback(
     
     Examples:
     
-        agent-runtimes cli                        # Pick agent spec interactively
+        agent-runtimes chat                        # Pick agent spec interactively
         
-        agent-runtimes cli --agentspec-id crawler # Use specific agent spec
+        agent-runtimes chat --agentspec-id crawler # Use specific agent spec
         
-        agent-runtimes cli "What is Python?"      # Single query mode
+        agent-runtimes chat "What is Python?"      # Single query mode
         
-        agent-runtimes cli -a crawler "Search for AI trends"  # Single query with specific agent
+        agent-runtimes chat -a crawler "Search for AI trends"  # Single query with specific agent
     """
     # If a subcommand was invoked, don't run the default behavior
     if ctx.invoked_subcommand is not None:
@@ -754,7 +755,7 @@ def main_callback(
                     _cleanup_subprocess()
             else:
                 # Fall back to local agent
-                agent.to_cli_sync(prog_name='agent-runtimes cli')
+                agent.to_cli_sync(prog_name='agent-runtimes chat')
                 
     except typer.Exit:
         _cleanup_subprocess()
@@ -853,7 +854,7 @@ async def _run_single_query_ag_ui(url: str, query: str) -> str:
 
 @app.command()
 def version() -> None:
-    """Show Agent Runtimes CLI assistant version information."""
+    """Show Agent Runtimes Chat assistant version information."""
     _show_version()
 
 
@@ -880,11 +881,11 @@ def connect(
     
     Examples:
     
-        agent-runtimes cli connect http://localhost:8000/api/v1/ag-ui/my-agent/
+        agent-runtimes chat connect http://localhost:8000/api/v1/ag-ui/my-agent/
         
-        agent-runtimes cli connect ws://localhost:8000/api/v1/acp/ws/my-agent -t acp
+        agent-runtimes chat connect ws://localhost:8000/api/v1/acp/ws/my-agent -t acp
         
-        agent-runtimes cli connect https://agent.datalayer.ai/api/v1/ag-ui/cli/
+        agent-runtimes chat connect https://agent.datalayer.ai/api/v1/ag-ui/chat/
     """
     try:
         from agent_runtimes.transports.clients import ACPClient, AGUIClient
@@ -1057,9 +1058,9 @@ def agents(
     
     Examples:
     
-        agent-runtimes cli agents
+        agent-runtimes chat agents
         
-        agent-runtimes cli agents --server https://agents.datalayer.ai
+        agent-runtimes chat agents --server https://agents.datalayer.ai
     """
     import httpx
     
