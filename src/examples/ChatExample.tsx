@@ -18,9 +18,9 @@
 
 import React, { useEffect, useState } from 'react';
 import { Text, Spinner } from '@primer/react';
-import { AlertIcon } from '@primer/octicons-react';
 import { Box, setupPrimerPortals } from '@datalayer/primer-addons';
 import { ThemedProvider } from './utils/themedProvider';
+import { ErrorView } from './components';
 import { Chat } from '../chat';
 
 setupPrimerPortals();
@@ -133,25 +133,10 @@ const AgentRuntimeChatExample: React.FC = () => {
   if (error || !agentId) {
     return (
       <ThemedProvider>
-        <Box
-          sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            height: '100vh',
-            gap: 3,
-            bg: 'canvas.default',
-          }}
-        >
-          <AlertIcon size={48} />
-          <Text sx={{ color: 'danger.fg', fontSize: 2 }}>
-            Failed to start agent
-          </Text>
-          <Text sx={{ color: 'fg.muted', fontSize: 1 }}>
-            {error || 'No agent ID returned'}
-          </Text>
-        </Box>
+        <ErrorView
+          error="Failed to start agent"
+          detail={error || 'No agent ID returned'}
+        />
       </ThemedProvider>
     );
   }

@@ -29,6 +29,7 @@ import {
   SignOutIcon,
 } from '@primer/octicons-react';
 import { Box } from '@datalayer/primer-addons';
+import { ErrorView } from './components';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { SignInSimple } from '@datalayer/core/lib/views/iam';
@@ -179,23 +180,7 @@ const AgentCodemodeInner: React.FC<{ onLogout: () => void }> = ({
   }
 
   if (runtimeStatus === 'error' || hookError) {
-    return (
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '100vh',
-          gap: 3,
-        }}
-      >
-        <AlertIcon size={48} />
-        <Text sx={{ color: 'danger.fg' }}>
-          {hookError || 'Agent failed to start'}
-        </Text>
-      </Box>
-    );
+    return <ErrorView error={hookError} onLogout={onLogout} />;
   }
 
   const selected =
