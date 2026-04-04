@@ -32,6 +32,7 @@ import logging
 from typing import Annotated, Optional
 
 import typer
+from agent_runtimes.codeai.cli import app as interactive_cli_app
 
 from agent_runtimes.commands.agent_mcp_servers import (
     AgentMcpServersError,
@@ -83,6 +84,13 @@ app = typer.Typer(
     help="Agent Runtimes CLI - manage servers and query agents",
     add_completion=False,
     no_args_is_help=True,
+)
+
+# Register the interactive assistant CLI under `agent-runtimes cli`.
+app.add_typer(
+    interactive_cli_app,
+    name="cli",
+    help="Interactive assistant CLI for agent runtimes",
 )
 
 # Register events command group and root aliases.

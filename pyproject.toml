@@ -85,6 +85,14 @@ examples = [
     "torch",
     "uvicorn",
 ]
+cli = [
+    "jupyter-nbmodel-client",
+    "pillow",
+    "prompt_toolkit>=3.0.0",
+    "requests",
+    "rich>=13.0.0",
+    "textual",
+]
 
 [project.scripts]
 agent-runtimes = "agent_runtimes.main:main"
