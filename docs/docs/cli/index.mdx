@@ -117,7 +117,7 @@ agent-runtimes cli --eggs
 Import and customize the embedded assistant agent directly:
 
 ```python
-from agent_runtimes.codeai.cli import agent
+from agent_runtimes.cli.cli import agent
 
 @agent.tool()
 def my_custom_tool(data: str) -> str:
@@ -165,10 +165,10 @@ The interactive CLI is built on Pydantic AI and Agent Runtimes.
 
 ### Key Components
 
-- `agent_runtimes/codeai/cli.py`: Typer commands, runtime process management, and transport wiring
-- `agent_runtimes/codeai/tux.py`: Rich terminal UX, slash command handling, and streaming rendering
-- `agent_runtimes/codeai/commands/`: slash command modules and registry
-- `agent_runtimes/codeai/banner.py`: brand output and animation helpers
+- `agent_runtimes/cli/cli.py`: Typer commands, runtime process management, and transport wiring
+- `agent_runtimes/cli/tux.py`: Rich terminal UX, slash command handling, and streaming rendering
+- `agent_runtimes/cli/commands/`: slash command modules and registry
+- `agent_runtimes/cli/banner.py`: brand output and animation helpers
 
 ### Runtime Flow
 
@@ -185,7 +185,7 @@ The interactive CLI is built on Pydantic AI and Agent Runtimes.
 
 ### Slash Command Registry
 
-Slash commands are modularized in `agent_runtimes/codeai/commands/` and assembled via `build_commands(...)`. This keeps command behavior isolated and easy to evolve.
+Slash commands are modularized in `agent_runtimes/cli/commands/` and assembled via `build_commands(...)`. This keeps command behavior isolated and easy to evolve.
 
 ### Packaging
 

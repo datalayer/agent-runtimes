@@ -11,7 +11,7 @@ from typing import Optional, TYPE_CHECKING
 import httpx
 
 if TYPE_CHECKING:
-    from ..tux import CodeAITux
+    from ..tux import CliTux
 
 NAME = "mcp-servers"
 ALIASES = ["mcp"]
@@ -19,7 +19,7 @@ DESCRIPTION = "List MCP servers and their status"
 SHORTCUT = "escape m"
 
 
-async def execute(tux: "CodeAITux") -> Optional[str]:
+async def execute(tux: "CliTux") -> Optional[str]:
     """List MCP servers and their status."""
     from ..tux import STYLE_PRIMARY, STYLE_ACCENT, STYLE_MUTED
 

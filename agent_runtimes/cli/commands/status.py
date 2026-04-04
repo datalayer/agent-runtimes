@@ -11,7 +11,7 @@ from typing import Optional, TYPE_CHECKING
 import httpx
 
 if TYPE_CHECKING:
-    from ..tux import CodeAITux
+    from ..tux import CliTux
 
 NAME = "status"
 ALIASES: list[str] = []
@@ -19,7 +19,7 @@ DESCRIPTION = "Show agent-runtimes cli status including model, tokens, and conne
 SHORTCUT = "escape s"
 
 
-async def execute(tux: "CodeAITux") -> Optional[str]:
+async def execute(tux: "CliTux") -> Optional[str]:
     """Show status information."""
     from ..tux import STYLE_PRIMARY, STYLE_MUTED
 

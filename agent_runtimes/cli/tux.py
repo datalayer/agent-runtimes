@@ -149,7 +149,7 @@ class SessionStats:
         return self.total_input_tokens + self.total_output_tokens
 
 
-class CodeAITux:
+class CliTux:
     """Terminal UX for the Agent Runtimes CLI assistant."""
     
     def __init__(
@@ -601,5 +601,5 @@ async def run_tux(
         jupyter_url: Jupyter server URL (only set when sandbox is jupyter)
         extra_suggestions: Additional suggestions provided via --suggestions flag
     """
-    tux = CodeAITux(agent_url, server_url, agent_id, eggs=eggs, jupyter_url=jupyter_url, extra_suggestions=extra_suggestions)
+    tux = CliTux(agent_url, server_url, agent_id, eggs=eggs, jupyter_url=jupyter_url, extra_suggestions=extra_suggestions)
     await tux.run()

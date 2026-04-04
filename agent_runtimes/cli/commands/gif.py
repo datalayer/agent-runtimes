@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ..tux import CodeAITux
+    from ..tux import CliTux
 
 NAME = "gif"
 ALIASES: list[str] = []
@@ -17,7 +17,7 @@ DESCRIPTION = "Black hole spinning animation"
 SHORTCUT = "escape g"
 
 
-async def execute(tux: "CodeAITux") -> Optional[str]:
+async def execute(tux: "CliTux") -> Optional[str]:
     """Display black hole spinning animation (5 seconds)."""
     from ..animations import gif_animation
     await gif_animation(tux.console)

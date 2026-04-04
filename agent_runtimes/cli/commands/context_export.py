@@ -11,7 +11,7 @@ from typing import Optional, TYPE_CHECKING
 import httpx
 
 if TYPE_CHECKING:
-    from ..tux import CodeAITux
+    from ..tux import CliTux
 
 NAME = "context-export"
 ALIASES = ["export"]
@@ -19,7 +19,7 @@ DESCRIPTION = "Export the current context to a CSV file"
 SHORTCUT = "escape e"
 
 
-async def execute(tux: "CodeAITux") -> Optional[str]:
+async def execute(tux: "CliTux") -> Optional[str]:
     """Export the current context to a CSV file."""
     from ..tux import STYLE_ACCENT, STYLE_MUTED
 

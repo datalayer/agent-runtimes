@@ -11,7 +11,7 @@ from typing import Optional, TYPE_CHECKING
 import httpx
 
 if TYPE_CHECKING:
-    from ..tux import CodeAITux
+    from ..tux import CliTux
 
 NAME = "agents"
 ALIASES: list[str] = []
@@ -19,7 +19,7 @@ DESCRIPTION = "List available agents on the server"
 SHORTCUT = "escape a"
 
 
-async def execute(tux: "CodeAITux") -> Optional[str]:
+async def execute(tux: "CliTux") -> Optional[str]:
     """List available agents with detailed information."""
     from ..tux import STYLE_PRIMARY, STYLE_ACCENT, STYLE_MUTED
 

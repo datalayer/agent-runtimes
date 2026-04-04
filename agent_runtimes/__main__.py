@@ -32,7 +32,7 @@ import logging
 from typing import Annotated, Optional
 
 import typer
-from agent_runtimes.codeai.cli import app as interactive_cli_app
+from agent_runtimes.cli.cli import app as interactive_cli_app
 
 from agent_runtimes.commands.agent_mcp_servers import (
     AgentMcpServersError,

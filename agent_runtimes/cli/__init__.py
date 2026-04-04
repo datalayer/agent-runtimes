@@ -41,7 +41,7 @@ except ImportError:
 __all__ = [
     "agent",
     "main",
-    "CodeAITux",
+    "CliTux",
     "run_tux",
 ]
 
@@ -49,13 +49,13 @@ __all__ = [
 def __getattr__(name):
     """Lazily import heavy modules to avoid side effects at package import time."""
     if name in {"agent", "main"}:
-        from agent_runtimes.codeai.cli import agent, main
+        from agent_runtimes.cli.cli import agent, main
 
         return {"agent": agent, "main": main}[name]
-    if name in {"CodeAITux", "run_tux"}:
-        from agent_runtimes.codeai.tux import CodeAITux, run_tux
+    if name in {"CliTux", "run_tux"}:
+        from agent_runtimes.cli.tux import CliTux, run_tux
 
-        return {"CodeAITux": CodeAITux, "run_tux": run_tux}[name]
+        return {"CliTux": CliTux, "run_tux": run_tux}[name]
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 if _has_acp:

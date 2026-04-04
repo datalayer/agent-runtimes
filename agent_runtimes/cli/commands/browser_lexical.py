@@ -2,7 +2,7 @@
 #
 # BSD 3-Clause License
 
-"""Slash command: /browser-notebook - Open the Agent Notebook UI in the browser."""
+"""Slash command: /browser-lexical - Open the Agent Lexical UI in the browser."""
 
 from __future__ import annotations
 
@@ -10,17 +10,17 @@ import webbrowser
 from typing import Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ..tux import CodeAITux
+    from ..tux import CliTux
 
-NAME = "browser-notebook"
+NAME = "browser-lexical"
 ALIASES: list[str] = []
-DESCRIPTION = "Open the Agent Notebook UI in your browser"
-SHORTCUT = "escape n"
+DESCRIPTION = "Open the Agent Lexical UI in your browser"
+SHORTCUT = "escape l"
 
 
-async def execute(tux: "CodeAITux") -> Optional[str]:
-    """Open the Agent Notebook web UI (notebook + chat) in the default browser."""
-    url = f"{tux.server_url}/static/agent-notebook.html?agentId={tux.agent_id}"
+async def execute(tux: "CliTux") -> Optional[str]:
+    """Open the Agent Lexical web UI (lexical editor + chat) in the default browser."""
+    url = f"{tux.server_url}/static/agent-lexical.html?agentId={tux.agent_id}"
     if tux.jupyter_url:
         # Forward Jupyter connection info so the page can reach the kernel
         import urllib.parse

@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ..tux import CodeAITux
+    from ..tux import CliTux
 
 NAME = "rain"
 ALIASES: list[str] = []
@@ -17,7 +17,7 @@ DESCRIPTION = "Matrix rain animation"
 SHORTCUT = "escape r"
 
 
-async def execute(tux: "CodeAITux") -> Optional[str]:
+async def execute(tux: "CliTux") -> Optional[str]:
     """Display Matrix rain animation (5 seconds)."""
     from ..animations import rain_animation
     await rain_animation(tux.console)

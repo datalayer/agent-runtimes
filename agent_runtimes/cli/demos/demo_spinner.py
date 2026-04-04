@@ -10,7 +10,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from agent_runtimes.codeai.cli import (
+from agent_runtimes.cli.cli import (
     BOLD,
     CYAN,
     GREEN,

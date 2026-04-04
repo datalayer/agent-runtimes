@@ -1057,7 +1057,7 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
                     sandbox_variant=sandbox_variant,
                 )
                 # Store startup info on app.state so the /health/startup
-                # endpoint can expose it to CLI consumers (e.g. codeai).
+                # endpoint can expose it to CLI consumers (e.g. agent-runtimes cli).
                 app.state.startup_info = startup_info
             else:
                 logger.warning(

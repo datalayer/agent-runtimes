@@ -11,7 +11,7 @@ from typing import Optional, TYPE_CHECKING
 import httpx
 
 if TYPE_CHECKING:
-    from ..tux import CodeAITux
+    from ..tux import CliTux
 
 NAME = "suggestions"
 ALIASES = ["suggest"]
@@ -19,7 +19,7 @@ DESCRIPTION = "List available suggestions and pick one as next prompt"
 SHORTCUT = "escape u"
 
 
-async def execute(tux: "CodeAITux") -> Optional[str]:
+async def execute(tux: "CliTux") -> Optional[str]:
     """Fetch suggestions from the running agent spec, display them numbered,
     and let the user choose one to use as the next prompt.
 

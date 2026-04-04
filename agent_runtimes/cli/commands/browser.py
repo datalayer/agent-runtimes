@@ -10,7 +10,7 @@ import webbrowser
 from typing import Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ..tux import CodeAITux
+    from ..tux import CliTux
 
 NAME = "browser"
 ALIASES: list[str] = []
@@ -18,7 +18,7 @@ DESCRIPTION = "Open the Agent chat UI in your browser"
 SHORTCUT = "escape w"
 
 
-async def execute(tux: "CodeAITux") -> Optional[str]:
+async def execute(tux: "CliTux") -> Optional[str]:
     """Open the Agent chat web UI in the default browser."""
     url = f"{tux.server_url}/static/agent.html?agentId={tux.agent_id}"
     tux.console.print(f"  Opening [bold cyan]{url}[/bold cyan]")

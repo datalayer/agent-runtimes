@@ -12,7 +12,7 @@ import httpx
 from rich.text import Text
 
 if TYPE_CHECKING:
-    from ..tux import CodeAITux
+    from ..tux import CliTux
 
 NAME = "context"
 ALIASES: list[str] = []
@@ -20,7 +20,7 @@ DESCRIPTION = "Visualize current context usage as a colored grid"
 SHORTCUT = "escape x"
 
 
-async def execute(tux: "CodeAITux") -> Optional[str]:
+async def execute(tux: "CliTux") -> Optional[str]:
     """Display context usage visualization."""
     try:
         async with httpx.AsyncClient() as client:

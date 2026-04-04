@@ -10,7 +10,7 @@ import json
 from typing import Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ..tux import CodeAITux
+    from ..tux import CliTux
 
 NAME = "tools-last"
 ALIASES = ["tl"]
@@ -18,7 +18,7 @@ DESCRIPTION = "Show details of tool calls from last response"
 SHORTCUT = "escape l"
 
 
-async def execute(tux: "CodeAITux") -> Optional[str]:
+async def execute(tux: "CliTux") -> Optional[str]:
     """Show detailed information about tool calls from the last response."""
     from ..tux import (
         STYLE_PRIMARY, STYLE_ACCENT, STYLE_MUTED,

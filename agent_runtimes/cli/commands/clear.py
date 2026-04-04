@@ -11,7 +11,7 @@ from typing import Optional, TYPE_CHECKING
 import httpx
 
 if TYPE_CHECKING:
-    from ..tux import CodeAITux
+    from ..tux import CliTux
 
 NAME = "clear"
 ALIASES = ["reset", "new"]
@@ -19,7 +19,7 @@ DESCRIPTION = "Clear conversation history and free up context"
 SHORTCUT = "escape c"
 
 
-async def execute(tux: "CodeAITux") -> Optional[str]:
+async def execute(tux: "CliTux") -> Optional[str]:
     """Clear conversation history."""
     from ..tux import STYLE_PRIMARY, SessionStats
 

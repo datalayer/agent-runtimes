@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ..tux import CodeAITux
+    from ..tux import CliTux
 
 NAME = "help"
 ALIASES = ["?"]
@@ -28,7 +28,7 @@ def _format_shortcut(shortcut: Optional[str]) -> str:
     return shortcut
 
 
-async def execute(tux: "CodeAITux") -> Optional[str]:
+async def execute(tux: "CliTux") -> Optional[str]:
     """Show available commands."""
     from ..tux import STYLE_WHITE, STYLE_PRIMARY, STYLE_MUTED, STYLE_SECONDARY
 

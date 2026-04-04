@@ -11,7 +11,7 @@ from typing import Optional, TYPE_CHECKING
 import httpx
 
 if TYPE_CHECKING:
-    from ..tux import CodeAITux
+    from ..tux import CliTux
 
 NAME = "codemode-toggle"
 ALIASES = ["codemode"]
@@ -19,7 +19,7 @@ DESCRIPTION = "Toggle codemode on/off for enhanced code capabilities"
 SHORTCUT = "escape o"
 
 
-async def execute(tux: "CodeAITux") -> Optional[str]:
+async def execute(tux: "CliTux") -> Optional[str]:
     """Toggle codemode on/off."""
     from ..tux import STYLE_ACCENT, STYLE_MUTED, STYLE_WARNING
 

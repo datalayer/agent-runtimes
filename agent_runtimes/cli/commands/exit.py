@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ..tux import CodeAITux
+    from ..tux import CliTux
 
 NAME = "exit"
 ALIASES = ["quit", "q"]
@@ -17,7 +17,7 @@ DESCRIPTION = "Exit agent-runtimes cli"
 SHORTCUT = "escape q"
 
 
-async def execute(tux: "CodeAITux") -> Optional[str]:
+async def execute(tux: "CliTux") -> Optional[str]:
     """Exit the application."""
     from ..tux import STYLE_ACCENT, STYLE_MUTED
     from ..banner import GOODBYE_MESSAGE

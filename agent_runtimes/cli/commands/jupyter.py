@@ -10,7 +10,7 @@ import webbrowser
 from typing import Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ..tux import CodeAITux
+    from ..tux import CliTux
 
 NAME = "jupyter"
 ALIASES: list[str] = []
@@ -18,7 +18,7 @@ DESCRIPTION = "Open the Jupyter server in your browser"
 SHORTCUT = "escape j"
 
 
-async def execute(tux: "CodeAITux") -> Optional[str]:
+async def execute(tux: "CliTux") -> Optional[str]:
     """Open the Jupyter server API page in the default browser."""
     if tux.jupyter_url:
         # Append /api so the browser lands on the Jupyter REST API root

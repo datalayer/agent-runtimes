@@ -18,7 +18,7 @@ from dataclasses import dataclass, field
 from typing import Callable, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ..tux import CodeAITux
+    from ..tux import CliTux
 
 
 @dataclass
@@ -32,14 +32,14 @@ class SlashCommand:
 
 
 def build_commands(
-    tux: "CodeAITux",
+    tux: "CliTux",
     eggs: bool = False,
     jupyter_url: Optional[str] = None,
 ) -> dict[str, SlashCommand]:
     """Build all slash commands, binding handlers to the tux instance.
 
     Args:
-        tux: The CodeAITux instance.
+        tux: The CliTux instance.
         eggs: Enable Easter egg commands.
         jupyter_url: Jupyter URL (enables /jupyter command when set).
 
@@ -117,7 +117,7 @@ def build_commands(
     return commands
 
 
-def _make_handler(execute_fn: Callable, tux: "CodeAITux") -> Callable:
+def _make_handler(execute_fn: Callable, tux: "CliTux") -> Callable:
     """Create a handler closure that passes tux to the execute function."""
     async def handler():
         return await execute_fn(tux)
