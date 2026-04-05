@@ -153,23 +153,23 @@ The former standalone interactive CLI experience is now integrated into Agent Ru
 pip install "agent-runtimes[cli]"
 
 # Launch interactive mode (starts an agent-runtimes server in the background)
-agent-runtimes cli
+agent-runtimes chat
 
 # Launch with a specific agent spec
-agent-runtimes cli --agentspec-id data-acquisition
+agent-runtimes chat --agentspec-id data-acquisition
 
 # Run a single-shot query
-agent-runtimes cli -a data-acquisition "Summarize this dataset"
+agent-runtimes chat -a data-acquisition "Summarize this dataset"
 
 # Connect to an already running remote agent
-agent-runtimes cli connect http://localhost:8000/api/v1/ag-ui/cli/
+agent-runtimes chat connect http://localhost:8000/api/v1/ag-ui/cli/
 ```
 
 Interactive CLI capabilities include:
 - Interactive TUX terminal UX with slash commands and keyboard shortcuts
 - Agent spec picker with environment validation
 - Runtime startup and health checks with startup metadata display
-- AG-UI and ACP connectivity (`agent-runtimes cli connect`)
+- AG-UI and ACP connectivity (`agent-runtimes chat connect`)
 - Banner and animation helpers (`--banner`, `--banner-all`, `--eggs`)
 - Context visualization and context export tools for iterative workflows
 
