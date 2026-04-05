@@ -146,6 +146,8 @@ EXAMPLE=AgentCodemodeMcpExample npm run dev
 
 The former standalone interactive CLI experience is now integrated into Agent Runtimes as the interactive assistant subcommand:
 
+<img src="https://images.datalayer.io/products/codeai/codeai_short_cut.gif"/>
+
 ```bash
 # Install runtime + interactive CLI dependencies
 pip install "agent-runtimes[cli]"
