@@ -184,3 +184,329 @@ print(result)
 - `allow_direct_tool_calls`: true
 - `enable_tool_reranker`: optional
 - `max_tool_calls`: unset or higher limit for exploration
+
+---
+
+## MCP Servers
+
+Agent Runtimes provides comprehensive support for **MCP Servers**, enabling agents to access external tools and data sources through a standardized interface.
+
+### Overview
+
+MCP servers are external processes that provide tools, resources, and prompts to AI agents. Agent Runtimes supports two types of MCP server configurations:
+
+#### MCP Config (from mcp.json)
+
+**MCP Config** servers are user-defined servers configured in `~/.datalayer/mcp.json`. These servers:
+
+- **Start automatically** when the agent runtime starts
+- **Are fully customizable** with your own commands, arguments, and environment variables
+- **Appear in the agent form** where users can select which servers to include as toolsets
+- **Support any MCP-compatible server** - if it follows the [MCP specification](https://modelcontextprotocol.io/), it will work
+- **Are stored separately** from catalog servers, allowing the same ID in both without conflict
+
+#### MCP Catalog (predefined servers)
+
+**MCP Catalog** servers are predefined server configurations included with Agent Runtimes. These servers:
+
+- **Are NOT started automatically** - users must explicitly enable them via API
+- **Can be enabled on-demand** using the `/api/v1/mcp/servers/catalog/{server_name}/enable` endpoint
+- **Provide common tools** like web search, file system access, etc.
+- **Have their own storage** separate from config servers
+
+:::tip Which to use?
+For most users, **MCP Config** is recommended. Add your servers to `~/.datalayer/mcp.json` and they'll be available automatically when the agent runtime starts.
+
+The same server ID can exist in both config and catalog - they are tracked independently.
+:::
+
+### Key Features
+
+- **Automatic Server Lifecycle** — Config servers start with the application and stop on shutdown
+- **Retry with Backoff** — Transient failures trigger automatic retries with exponential backoff
+- **Sequential Startup** — Multiple MCP servers start sequentially to avoid resource conflicts
+- **Status Monitoring** — Real-time status of all MCP toolsets via API endpoint
+- **Separate Storage** — Config and catalog servers are stored independently, allowing same IDs in both
+- **Runtime Updates** — Dynamically add/remove MCP servers from running agents via PATCH API
+
+### MCP Server Examples
+
+Agent Runtimes supports **any MCP-compatible server**—if it follows the [MCP specification](https://modelcontextprotocol.io/), it will work. The table below shows a few popular examples to get you started:
+
+| Server | URL | Type | Description |
+|--------|-------------|------|-------------|
+| Tavily | [docs](https://docs.tavily.com/documentation/mcp) | Remote | Web search and content extraction |
+| Filesystem | [modelcontextprotocol/servers](https://github.com/modelcontextprotocol/servers/tree/main/src/filesystem) | Local | File system access |
+| GitHub | [github/github-mcp-server](https://github.com/github/github-mcp-server) | Local | GitHub repository access |
+| Google Workspace | [taylorwilsdon/google_workspace_mcp](https://github.com/taylorwilsdon/google_workspace_mcp) | Local | Google Workspace (Gmail, Gdrive, etc.) access |
+| Slack | [datalayer/slack-mcp-server](https://github.com/datalayer/slack-mcp-server) | Local | Slack workspace access |
+| Kaggle | [docs](https://www.kaggle.com/mcp) | Remote | Kaggle datasets, models, competitions, notebooks |
+| AlphaVantage | [docs](https://mcp.alphavantage.co/) | Local | Financial market data |
+| Chart | [antvis/mcp-server-chart](https://github.com/antvis/mcp-server-chart) | Local | Charting and visualization |
+| Brave Search | [modelcontextprotocol/servers](https://github.com/modelcontextprotocol/servers/tree/main/src/brave-search) | Local | Web search |
+| LinkedIn | [stickerdaniel/linkedin-mcp-server](https://github.com/stickerdaniel/linkedin-mcp-server) | Local | LinkedIn profile, company, and job data |
+
+:::info Local vs Remote MCP Servers
+- **Local servers** run as child processes on your machine (started via `npx` or `uvx`)
+- **Remote servers** are hosted externally and accessed over HTTP (e.g., Kaggle MCP)
+
+Both types are configured in the same `mcp.json` file, but remote servers use `mcp-remote` as a bridge.
+:::
+
+See the [MCP Servers Directory](https://github.com/modelcontextprotocol/servers) for more options.
+
+### Quick Start
+
+#### Configuring MCP Config Servers
+
+MCP Config servers are configured in `~/.datalayer/mcp.json`. These servers start automatically when the agent runtime starts and appear in the agent creation form.
+
+```json
+{
+    "mcpServers": {
+        "tavily-remote": {
+            "command": "npx",
+            "args": [
+                "-y",
+                "mcp-remote",
+                "https://mcp.tavily.com/mcp/?tavilyApiKey=<your-api-key>"
+            ]
+        }
+    }
+}
+```
+
+Environment variables are automatically expanded using `${VAR_NAME}` syntax.
+
+#### Using MCP Tools in Agents
+
+```python
+from pydantic_ai import Agent
+from agent_runtimes.mcp import get_mcp_toolsets
+
+# Get pre-loaded MCP toolsets
+mcp_toolsets = get_mcp_toolsets()
+
+# Create agent with MCP tools
+agent = Agent(
+        "anthropic:claude-sonnet-4-20250514",
+        system_prompt="You are a helpful assistant.",
+        toolsets=mcp_toolsets,
+)
+```
+
+#### Full Configuration Example
+
+```json
+{
+    "mcpServers": {
+        "tavily-remote": {
+            "command": "npx",
+            "args": [
+                "-y",
+                "mcp-remote",
+                "https://mcp.tavily.com/mcp/?tavilyApiKey=<your-api-key>"
+            ]
+        },
+        "filesystem": {
+            "command": "npx",
+            "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/allowed/dir"]
+        },
+        "linkedin": {
+            "command": "uvx",
+            "args": [
+                "--from",
+                "git+https://github.com/stickerdaniel/linkedin-mcp-server",
+                "linkedin-mcp-server"
+            ]
+        },
+        "kaggle": {
+            "command": "npx",
+            "args": [
+                    "mcp-remote",
+                    "https://www.kaggle.com/mcp",
+                    "--header",
+                    "Authorization: Bearer <KAGGLE_TOKEN>"
+            ]
+    }
+}
+```
+
+### Server-Specific Setup
+
+#### Tavily MCP Server
+
+The [Tavily MCP Server](https://docs.tavily.com/documentation/mcp) provides web search and content extraction tools.
+
+```json
+{
+    "mcpServers": {
+        "tavily-remote": {
+            "command": "npx",
+            "args": [
+                "-y",
+                "mcp-remote",
+                "https://mcp.tavily.com/mcp/?tavilyApiKey=<your-api-key>"
+            ]
+        }
+    }
+}
+```
+
+#### Filesystem MCP Server
+
+The [Filesystem MCP Server](https://github.com/modelcontextprotocol/servers/tree/main/src/filesystem) provides tools for interacting with the local filesystem.
+
+```json
+{
+    "mcpServers": {
+        "filesystem": {
+            "command": "npx",
+            "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/allowed/dir"]
+        }
+    }
+}
+```
+
+#### GitHub MCP Server
+
+The [GitHub MCP Server](https://github.com/github/github-mcp-server) provides tools for interacting with GitHub repositories.
+
+```json
+{
+    "mcpServers": {
+        "github": {
+            "command": "docker",
+            "args": [
+                "run",
+                "-i",
+                "--rm",
+                "-e",
+                "GITHUB_TOKEN",
+                "ghcr.io/github/github-mcp-server"
+            ],
+            "env": {
+                "GITHUB_TOKEN": "<GITHUB_TOKEN>"
+            }
+        }
+    }
+}
+```
+
+#### Google Workspace MCP Server
+
+The [Google Workspace MCP Server](https://github.com/taylorwilsdon/google_workspace_mcp) provides tools for interacting with Google Workspace services like Gmail and Google Drive.
+
+```json
+{
+    "mcpServers": {
+        "google-workspace": {
+            "command": "uvx",
+            "args": ["workspace-mcp"],
+            "env": {
+                "GOOGLE_OAUTH_CLIENT_ID": "<your-client-id>",
+                "GOOGLE_OAUTH_CLIENT_SECRET": "<your-client-secret>"
+            }
+        }
+    }
+}
+```
+
+#### Slack MCP Server
+
+The [Slack MCP Server](https://github.com/zencoderai/slack-mcp-server) provides tools for interacting with Slack workspaces.
+
+```json
+{
+    "mcpServers": {
+        "slack": {
+            "command": "npx",
+            "args": ["-y", "@datalayer/slack-mcp-server"],
+            "env": {
+                "SLACK_BOT_TOKEN": "<your-slack-bot-token>",
+                "SLACK_TEAM_ID": "<your-slack-team-id>",
+                "SLACK_CHANNEL_IDS": "<your-slack-channel-ids>"
+            }
+        }
+    }
+}
+```
+
+#### Kaggle MCP Server
+
+The [Kaggle MCP Server](https://www.kaggle.com/docs/mcp) is a **remote HTTP server** that provides access to Kaggle datasets, models, competitions, notebooks, and benchmarks.
+
+**Option 1: Token Authentication (recommended for Agent Runtimes)**
+
+```json
+{
+    "mcpServers": {
+        "kaggle": {
+            "command": "npx",
+            "args": [
+                "-y",
+                "mcp-remote",
+                "https://www.kaggle.com/mcp",
+                "--header",
+                "Authorization: Bearer <KAGGLE_TOKEN>"
+            ]
+        }
+    }
+}
+```
+
+**Option 2: Browser OAuth (auto-login)**
+
+```json
+{
+    "mcpServers": {
+        "kaggle": {
+            "command": "npx",
+            "args": ["-y", "mcp-remote", "https://www.kaggle.com/mcp"]
+        }
+    }
+}
+```
+
+#### AlphaVantage MCP Server
+
+The [AlphaVantage MCP Server](https://mcp.alphavantage.co/) provides financial market data tools.
+
+```json
+{
+    "mcpServers": {
+        "alphavantage": {
+            "command": "uvx",
+            "args": ["av-mcp==0.2.1", "<YOUR_API_KEY>"],
+            "env": {"MAX_RESPONSE_TOKENS": "100000"}
+        }
+    }
+}
+```
+
+#### Chart MCP Server
+
+The [Chart MCP Server](https://github.com/antvis/mcp-server-chart) provides charting and visualization tools.
+
+```json
+{
+    "mcpServers": {
+        "chart": {
+            "command": "npx",
+            "args": ["-y", "@antv/mcp-server-chart"]
+        }
+    }
+}
+```
+
+#### LinkedIn MCP Server
+
+The LinkedIn MCP server requires browser automation via Playwright.
+
+```bash
+uvx --from playwright playwright install chromium
+```
+
+```bash
+uvx --from git+https://github.com/stickerdaniel/linkedin-mcp-server linkedin-mcp-server --get-session
+```

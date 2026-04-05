@@ -58,9 +58,9 @@ module.exports = {
         },
         {
           type: 'doc',
-          docId: 'mcp-servers/index',
+          docId: 'chat/index',
           position: 'left',
-          label: 'MCP Servers',
+          label: 'Chat',
         },
         {
           type: 'doc',

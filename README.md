@@ -30,7 +30,9 @@ Agent Runtimes solves the complexity of deploying AI agents by providing:
 
 5. **Tool Ecosystem**: Seamless integration with MCP (Model Context Protocol) tools, custom tools, and built-in utilities for Jupyter notebooks and Lexical documents.
 
-![Agent Runtimes](https://images.datalayer.io/product/agent-runtimes/agent-runtimes-example-1.gif)
+![Agent Runtimes Chat Web](https://images.datalayer.io/product/agent-runtimes/agent-runtimes-example-1.gif)
+
+![Agent Runtimes Chat CLI](https://images.datalayer.io/products/codeai/codeai_short_cut.gif)
 
 ## 🌟 Features
 
@@ -53,183 +55,13 @@ Agent Runtimes solves the complexity of deploying AI agents by providing:
 - 💾 **Persistence**: DBOS support for durable execution
 - 🔒 **Context Optimization**: LLM context management
 
-## 🏗️ Architecture
+## Documentation
 
-Agent Runtimes consists of three main components:
+The detailed guides for architecture, use cases, interactive chat, key concepts, and runtime configuration are now in Docusaurus docs:
 
-### 1. Python Server (`agent_runtimes/`)
-The backend server that hosts AI agents and handles protocol routing:
-- **Agent Adapters**: Unified interface for Pydantic AI, LangChain, and Jupyter AI
-- **Protocol Adapters**: Convert between different agent protocols (ACP, AG-UI, Vercel AI, etc.)
-- **FastAPI Server**: High-performance async server with automatic API documentation
-- **Tool Registry**: Manages and executes tools from various sources (MCP, custom, built-in)
-
-### 2. React Components (`src/components/`)
-Pre-built UI components for interacting with agents:
-- **ChatBase**: Core chat interface with customizable styling
-- **ChatSidebar**: Collapsible sidebar for agent interactions
-- **ChatFloating**: Floating chat widget for non-intrusive agent access
-- **All components support**: Frontend tool execution, markdown rendering, code highlighting, and real-time streaming
-
-### 3. Runtime Management (`src/runtime/`)
-Cloud runtime lifecycle management with Zustand store:
-- **Launch & Connect**: Create new cloud runtimes or connect to existing ones
-- **Agent Creation**: Automatically create and configure agents on runtimes
-- **State Management**: Track runtime status, agent connections, and errors
-- **Hooks**: React hooks for easy integration (`useAgentRuntime`, `useRuntimeStore`)
-
-## 🚀 Use Cases
-
-### Notebook AI Assistant
-Add an AI agent to Jupyter notebooks that can:
-- Execute cells, insert code, and modify notebook content
-- Explain code and data analysis
-- Debug errors and suggest improvements
-
-```tsx
-import { NotebookAgentsRuntime } from '@datalayer/agent-runtimes';
-
-<NotebookAgentsRuntime
-  notebookId={notebookId}
-  environmentName="python-simple"
-  runtimeName={runtimeName}
-  serviceManager={serviceManager}
-/>
-```
-
-### Document Editor AI
-Integrate AI into Lexical-based document editors:
-- Insert headings, lists, code blocks, and formatted text
-- Summarize content and proofread text
-- Generate ideas and help with writing
-
-```tsx
-import { DocumentAgentRuntime } from '@datalayer/agent-runtimes';
-
-<DocumentAgentRuntime
-  documentId={documentId}
-  environmentName="python-simple"
-  runtimeName={runtimeName}
-  serviceManager={serviceManager}
-/>
-```
-
-### Custom Agent Deployment
-Deploy your own Pydantic AI agent with custom tools:
-
-```python
-from agent_runtimes import AgentRuntimesApp
-from pydantic_ai import Agent
-
-# Create your agent
-agent = Agent(
-    model='anthropic:claude-sonnet-4-5',
-    system_prompt='You are a helpful assistant.',
-)
-
-# Launch the server
-app = AgentRuntimesApp()
-app.add_agent(agent, name='my-agent', transport='ag-ui')
-app.run(port=8000)
-```
-
-## 🧪 Run the examples
-
-Run the Codemode + MCP example UI:
-
-```bash
-cd src/ai/agent-runtimes
-EXAMPLE=AgentCodemodeMcpExample npm run dev
-```
-
-## 💻 Agent Runtimes Interactive CLI
-
-The former standalone interactive CLI experience is now integrated into Agent Runtimes as the interactive assistant subcommand:
-
-<img src="https://images.datalayer.io/products/codeai/codeai_short_cut.gif"/>
-
-```bash
-# Install runtime + interactive CLI dependencies
-pip install "agent-runtimes[cli]"
-
-# Launch interactive mode (starts an agent-runtimes server in the background)
-agent-runtimes chat
-
-# Launch with a specific agent spec
-agent-runtimes chat --agentspec-id data-acquisition
-
-# Run a single-shot query
-agent-runtimes chat -a data-acquisition "Summarize this dataset"
-
-# Connect to an already running remote agent
-agent-runtimes chat connect http://localhost:8000/api/v1/ag-ui/cli/
-```
-
-Interactive CLI capabilities include:
-- Interactive TUX terminal UX with slash commands and keyboard shortcuts
-- Agent spec picker with environment validation
-- Runtime startup and health checks with startup metadata display
-- AG-UI and ACP connectivity (`agent-runtimes chat connect`)
-- Banner and animation helpers (`--banner`, `--banner-all`, `--eggs`)
-- Context visualization and context export tools for iterative workflows
-
-Migrated from the former standalone CLI README:
-- Custom agent flows via `--agentspec-id`
-- Data analysis and notebook-oriented workflow support
-- Programmatic tool and runtime assistance built on Pydantic AI and Agent Runtimes
-
-For command details, see the CLI docs in `docs/docs/cli/`.
-
-## 🔧 Key Concepts
-
-### Protocols
-Agent Runtimes supports multiple protocols for agent communication:
-
-- **AG-UI**: Lightweight protocol for web UIs (POST-based, Pydantic AI native)
-- **ACP**: WebSocket-based Agent Client Protocol for real-time interaction
-- **Vercel AI SDK**: Compatible with Vercel's AI SDK streaming
-- **MCP-UI**: Model Context Protocol with UI resources
-- **A2A**: Agent-to-agent communication protocol
-
-### Tools
-Tools extend agent capabilities by allowing them to perform actions:
-
-- **Frontend Tools**: Execute in the browser (notebook editing, document manipulation)
-- **MCP Tools**: Tools from Model Context Protocol servers
-- **Custom Tools**: Your own Python functions decorated with tool metadata
-- **Built-in Tools**: File operations, web search, code execution
-- **Code Mode**: Tool discovery includes `output_schema` and `input_examples` for reliable calls; code execution returns `stdout`/`stderr` and a summarized `result`.
-
-### Runtime Management
-Cloud runtimes provide compute resources for agents:
-
-```typescript
-import { useAgentRuntime } from '@datalayer/agent-runtimes/lib/runtime';
-
-const { isReady, endpoint, tools, launchRuntime } = useAgentRuntime({
-  autoCreateAgent: true,
-  agentConfig: {
-    model: 'anthropic:claude-sonnet-4-5',
-    systemPrompt: 'You are a helpful AI assistant.',
-  },
-});
-
-// Launch a new runtime
-await launchRuntime({
-  environmentName: 'python-simple',
-  creditsLimit: 100,
-  type: 'notebook',
-});
-```
-
-## Environment Variables
-
-### Kubernetes / Sidecar Mode
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `DATALAYER_RUNTIME_JUPYTER_SIDECAR` | `""` | Set to `"true"` when the agent-runtimes container runs alongside a Jupyter sidecar container in the same Kubernetes pod. When enabled: (1) the `"jupyter"` sandbox variant is remapped to `"local-jupyter"` so agent-runtimes connects to the existing Jupyter server instead of starting its own, (2) the `"local-eval"` variant is also remapped to `"local-jupyter"`, and (3) codemode toolset initialization is deferred until the companion provides the Jupyter URL via `configure-from-spec`. |
-| `DATALAYER_CODE_SANDBOX_VARIANT` | `""` | Injected into sandboxes. The active sandbox variant (`local-eval`, `local-jupyter`, or `jupyter`). |
-| `DATALAYER_CODE_SANDBOX_URL` | `""` | Injected into sandboxes. The Jupyter server URL (without token) for the active sandbox. |
-| `AGENT_RUNTIMES_MCP_PROXY_URL` | `""` | HTTP proxy URL for MCP tool calls from within sandboxes (e.g. `http://127.0.0.1:8765/api/v1/mcp/proxy`). |
-| `AGENT_RUNTIMES_SKILLS_FOLDER` | `./skills` | Path to the skills folder. In K8s this is typically `/mnt/shared-agent/skills`. |
+- [Agent Runtimes Overview](https://agent-runtimes.datalayer.tech/)
+- [Integrations](https://agent-runtimes.datalayer.tech/integrations)
+- [Chat](https://agent-runtimes.datalayer.tech/chat)
+- [Transports](https://agent-runtimes.datalayer.tech/transports)
+- [Programmatic Tools](https://agent-runtimes.datalayer.tech/programmatic-tools)
+- [CLI](https://agent-runtimes.datalayer.tech/cli)

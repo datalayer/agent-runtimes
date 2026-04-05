@@ -11,6 +11,16 @@ import { useDocsSidebar } from '@docusaurus/plugin-content-docs/client';
 
 **Agent Runtimes** is a flexible framework for building and deploying AI agents with multiple transport protocols, model providers, and MCP integrations.
 
+## What is Agent Runtimes?
+
+Agent Runtimes simplifies deploying AI agents by combining five capabilities in one package:
+
+1. **Protocol abstraction** — deploy once and connect through AG-UI, Vercel AI, ACP, MCP-UI, or A2A.
+2. **Framework flexibility** — use Pydantic AI today with a clear path for additional frameworks.
+3. **Cloud runtime management** — launch and manage compute resources with runtime hooks and Zustand state.
+4. **UI components** — build chat experiences quickly with ChatBase, ChatSidebar, and ChatFloating.
+5. **Tool ecosystem** — compose MCP servers, custom tools, and built-in utilities.
+
 ## Package Scope
 
 Agent Runtimes is the **top-level orchestration layer** in the Datalayer AI stack:
@@ -87,6 +97,13 @@ pip install agent-runtimes
 python -m agent_runtimes
 ```
 
+Run the Codemode + MCP example UI:
+
+```bash
+cd src/ai/agent-runtimes
+EXAMPLE=AgentCodemodeMcpExample npm run dev
+```
+
 ## Agent Specs (agentspecs)
 
 Agent Runtimes pulls agent, MCP server, skill, and env var specs from the
@@ -150,7 +167,7 @@ MCP servers are managed with:
 - **Health monitoring** — Status endpoint for checking server readiness
 - **Graceful shutdown** — Clean resource management on exit
 
-See the [MCP Servers](/mcp-servers) documentation for configuration details.
+See the [Programmatic Tools](/programmatic-tools) documentation for MCP server configuration details.
 
 ### Extensions
 
@@ -216,6 +233,15 @@ We've chosen Pydantic AI as our initial foundation, but we're open to expanding 
 | **Extensions** | A2UI, MCP-UI, MCP Apps |
 | **Streaming** | Real-time SSE and WebSocket streaming |
 | **UI** | React components with Primer design system |
+| **Observability** | OpenTelemetry integration |
+| **Durable Execution** | DBOS support |
+| **Context Optimization** | LLM context management |
+
+## Common Use Cases
+
+- **Notebook assistant** — help users execute cells, edit notebook content, and debug analysis workflows.
+- **Document assistant** — assist Lexical-based editing with structure, summaries, and writing support.
+- **Custom deployment** — run your own Pydantic AI agents with MCP tools behind Agent Runtimes transports.
 
 ## Documentation
 

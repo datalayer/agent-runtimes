@@ -33,6 +33,72 @@ agent = Agent(
 )
 ```
 
+## UI Integration Examples
+
+### Notebook AI Assistant
+
+```tsx
+import { NotebookAgentsRuntime } from '@datalayer/agent-runtimes';
+
+<NotebookAgentsRuntime
+    notebookId={notebookId}
+    environmentName="python-simple"
+    runtimeName={runtimeName}
+    serviceManager={serviceManager}
+/>
+```
+
+### Document Editor AI
+
+```tsx
+import { DocumentAgentRuntime } from '@datalayer/agent-runtimes';
+
+<DocumentAgentRuntime
+    documentId={documentId}
+    environmentName="python-simple"
+    runtimeName={runtimeName}
+    serviceManager={serviceManager}
+/>
+```
+
+### Custom Agent Deployment
+
+```python
+from agent_runtimes import AgentRuntimesApp
+from pydantic_ai import Agent
+
+agent = Agent(
+        model='anthropic:claude-sonnet-4-5',
+        system_prompt='You are a helpful assistant.',
+)
+
+app = AgentRuntimesApp()
+app.add_agent(agent, name='my-agent', transport='ag-ui')
+app.run(port=8000)
+```
+
+## Runtime Lifecycle Management
+
+Use runtime hooks to launch or attach compute resources and auto-create agents:
+
+```typescript
+import { useAgentRuntime } from '@datalayer/agent-runtimes/lib/runtime';
+
+const { isReady, endpoint, tools, launchRuntime } = useAgentRuntime({
+    autoCreateAgent: true,
+    agentConfig: {
+        model: 'anthropic:claude-sonnet-4-5',
+        systemPrompt: 'You are a helpful AI assistant.',
+    },
+});
+
+await launchRuntime({
+    environmentName: 'python-simple',
+    creditsLimit: 100,
+    type: 'notebook',
+});
+```
+
 ## Model Providers
 
 Agents can use models from multiple providers:
