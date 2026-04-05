@@ -188,6 +188,17 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
   );
 
   const createdApprovalSignatures = useRef<Set<string>>(new Set());
+  const toolRespondersRef = useRef<
+    Map<
+      string,
+      {
+        toolCallId: string;
+        toolName: string;
+        respond?: (result: unknown) => void;
+      }
+    >
+  >(new Map());
+  const respondedToolCallsRef = useRef<Set<string>>(new Set());
   const resolveLocalRef = useRef<
     (
       toolName: string,
@@ -219,6 +230,42 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
         },
       }),
     [token],
+  );
+
+  const emitServerToolDecision = useCallback(
+    (
+      toolName: string,
+      toolArgs: Record<string, unknown>,
+      approved: boolean,
+      approvalId: string,
+      message?: string,
+    ): boolean => {
+      const signature = approvalSignature(toolName, toolArgs);
+      const responder = toolRespondersRef.current.get(signature);
+      if (!responder?.respond) {
+        return false;
+      }
+
+      if (respondedToolCallsRef.current.has(responder.toolCallId)) {
+        return false;
+      }
+
+      setToolApprovalState(prev => ({
+        ...prev,
+        [responder.toolCallId]: approved ? 'approved' : 'denied',
+      }));
+
+      respondedToolCallsRef.current.add(responder.toolCallId);
+      responder.respond({
+        type: 'tool-approval-decision',
+        approved,
+        approvalId,
+        toolName: responder.toolName || toolName,
+        ...(message ? { message } : {}),
+      });
+      return true;
+    },
+    [],
   );
 
   useEffect(() => {
@@ -476,6 +523,15 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
             wsEvent === 'tool_approval_approved' ? 'approve' : 'reject';
           void (async () => {
             try {
+              const approved = wsEvent === 'tool_approval_approved';
+              emitServerToolDecision(
+                approval.tool_name,
+                approval.tool_args ?? {},
+                approved,
+                approval.id,
+                approval.note,
+              );
+
               const localMatch = await resolveLocalRef.current(
                 approval.tool_name,
                 approval.tool_args ?? {},
@@ -523,6 +579,7 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
     chatAuthToken,
     agentId,
     pollApprovals,
+    emitServerToolDecision,
   ]);
 
   // Keep refs in sync so the WS handler always has the latest functions.
@@ -564,8 +621,9 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
           );
         }
 
-        // In server mode the WS event will remove from queue and bridge to
-        // the local runtime — don't do it here to keep flow server-driven.
+        // In server mode, UI/continuation updates are websocket-driven only.
+        // The click only sends approve to the server; local chat reacts when
+        // tool_approval_approved is received.
         if (mode !== 'server') {
           setApprovals(prev => prev.filter(a => a.id !== requestId));
           void pollApprovals();
@@ -582,7 +640,14 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
         setApprovalLoading(null);
       }
     },
-    [approvals, mode, aiAgentsBaseUrl, agentBaseUrl, authFetch, pollApprovals],
+    [
+      approvals,
+      mode,
+      aiAgentsBaseUrl,
+      agentBaseUrl,
+      authFetch,
+      pollApprovals,
+    ],
   );
 
   const reject = useCallback(
@@ -616,8 +681,9 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
           );
         }
 
-        // In server mode the WS event will remove from queue and bridge to
-        // the local runtime — don't do it here to keep flow server-driven.
+        // In server mode, UI/continuation updates are websocket-driven only.
+        // The click only sends reject to the server; local chat reacts when
+        // tool_approval_rejected is received.
         if (mode !== 'server') {
           setApprovals(prev => prev.filter(a => a.id !== requestId));
           void pollApprovals();
@@ -634,7 +700,14 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
         setApprovalLoading(null);
       }
     },
-    [approvals, mode, aiAgentsBaseUrl, agentBaseUrl, authFetch, pollApprovals],
+    [
+      approvals,
+      mode,
+      aiAgentsBaseUrl,
+      agentBaseUrl,
+      authFetch,
+      pollApprovals,
+    ],
   );
 
   const ensureServerApproval = useCallback(
@@ -745,16 +818,18 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
     ) => {
       const ok = await approve(requestId, 'Approved from tool message card');
       if (ok) {
-        setToolApprovalState(prev => ({ ...prev, [toolCallId]: 'approved' }));
-        respond?.({
-          type: 'tool-approval-decision',
-          approved: true,
-          approvalId: requestId,
-          toolName,
-        });
+        if (mode !== 'server') {
+          setToolApprovalState(prev => ({ ...prev, [toolCallId]: 'approved' }));
+          respond?.({
+            type: 'tool-approval-decision',
+            approved: true,
+            approvalId: requestId,
+            toolName,
+          });
+        }
       }
     },
-    [approve],
+    [approve, mode],
   );
 
   const handleToolLevelDeny = useCallback(
@@ -766,20 +841,33 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
     ) => {
       const ok = await reject(requestId, 'Rejected from tool message card');
       if (ok) {
-        setToolApprovalState(prev => ({ ...prev, [toolCallId]: 'denied' }));
-        respond?.({
-          type: 'tool-approval-decision',
-          approved: false,
-          approvalId: requestId,
-          toolName,
-        });
+        if (mode !== 'server') {
+          setToolApprovalState(prev => ({ ...prev, [toolCallId]: 'denied' }));
+          respond?.({
+            type: 'tool-approval-decision',
+            approved: false,
+            approvalId: requestId,
+            toolName,
+          });
+        }
       }
     },
-    [reject],
+    [reject, mode],
   );
 
   const renderToolResult: RenderToolResult = useCallback(
     ({ toolCallId, toolName, args, result, status, error, respond }) => {
+      const signature = approvalSignature(toolName, args);
+      if (respond && status === 'inProgress') {
+        toolRespondersRef.current.set(signature, {
+          toolCallId,
+          toolName,
+          respond,
+        });
+      } else if (status === 'complete' || status === 'error') {
+        toolRespondersRef.current.delete(signature);
+      }
+
       const matchedApproval = findMatchingApproval(toolName, args);
       const resultObject =
         result && typeof result === 'object'
