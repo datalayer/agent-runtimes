@@ -1109,6 +1109,23 @@ async def create_agent(
                     spec_for_runtime_controls
                 )
 
+            # Vercel AI with DeferredToolRequests handles approval decisions
+            # via continuation messages. Keeping ToolApprovalCapability enabled
+            # causes a second blocking approval wait during actual tool execution.
+            if request.transport == "vercel-ai" and capabilities:
+                filtered_capabilities = [
+                    cap
+                    for cap in capabilities
+                    if not isinstance(cap, ToolApprovalCapability)
+                ]
+                if len(filtered_capabilities) != len(capabilities):
+                    logger.info(
+                        "Disabled ToolApprovalCapability for vercel-ai agent '%s' "
+                        "to avoid duplicate approval gating.",
+                        agent_id,
+                    )
+                capabilities = filtered_capabilities
+
             agent_kwargs: dict[str, Any] = {
                 "system_prompt": final_system_prompt,
                 # Explicitly disable Pydantic AI built-in tools (e.g. CodeExecutionTool)
@@ -1130,7 +1147,7 @@ async def create_agent(
                         isinstance(cap, ToolApprovalCapability) for cap in capabilities
                     )
                 )
-                if not has_tool_approval_capability:
+                if not has_tool_approval_capability and request.transport != "vercel-ai":
                     approval_config = ToolApprovalConfig.from_env()
                     approval_config.agent_id = agent_id
                     approval_config.tools_requiring_approval = approval_patterns

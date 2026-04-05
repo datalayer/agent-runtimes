@@ -20,6 +20,9 @@ class _DummyMcpManager:
     def get_servers(self) -> list[object]:
         return []
 
+    def get_server(self, _server_id: str) -> object | None:
+        return None
+
     def load_servers(self, _servers: list[object]) -> None:
         return None
 
