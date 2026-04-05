@@ -153,6 +153,7 @@ export default defineConfig(({ mode, command }) => {
         };
 
   const build: any = {
+    target: 'esnext',
     rollupOptions: {
       external: ['keytar', '@vscode/keytar'],
       output: {
@@ -311,6 +312,10 @@ export default defineConfig(({ mode, command }) => {
       alias: [
         { find: '@', replacement: path.resolve(__dirname, './src') },
         { find: /^~(.*)$/, replacement: '$1' },
+        // json5 v2 ESM default export may not expose named exports expected by
+        // @datalayer/jupyter-react; route through a shim that re-exports
+        // parse/stringify explicitly.
+        { find: 'json5', replacement: path.resolve(__dirname, './src/shims/json5.ts') },
         // Stub out keytar for browser builds - it's a native Node.js module
         { find: 'keytar', replacement: path.resolve(__dirname, './src/stubs/keytar.ts') },
         { find: '@vscode/keytar', replacement: path.resolve(__dirname, './src/stubs/keytar.ts') },

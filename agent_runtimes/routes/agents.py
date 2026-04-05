@@ -15,7 +15,7 @@ import asyncio
 import logging
 import os
 import tempfile
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Literal
 
@@ -2542,7 +2542,7 @@ def _emit_agent_assigned_event(
         or os.environ.get("DATALAYER_RUN_URL")
         or "https://prod1.datalayer.run"
     )
-    assigned_at = datetime.now(UTC).isoformat()
+    assigned_at = datetime.now(timezone.utc).isoformat()
     try:
         logger.info(
             "[mcp-servers/start] Emitting agent-assigned event runtime_id=%s agent_name=%s source=%s",

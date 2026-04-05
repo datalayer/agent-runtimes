@@ -103,9 +103,11 @@ export interface ChatMessageListProps {
 function DefaultToolCallRenderer({
   item,
   approvalConfig,
+  onRespond,
 }: {
   item: ToolCallMessage;
   approvalConfig?: ToolApprovalConfig;
+  onRespond: (toolCallId: string, result: unknown) => Promise<void>;
 }) {
   const resultObject =
     item.result && typeof item.result === 'object'
@@ -223,6 +225,12 @@ function DefaultToolCallRenderer({
         );
         if (res.ok) {
           setDecision(action === 'approve' ? 'approved' : 'denied');
+          await onRespond(item.toolCallId, {
+            type: 'tool-approval-decision',
+            approved: action === 'approve',
+            approvalId: matchedApprovalId,
+            toolName: item.toolName,
+          });
         }
       } catch {
         // Allow retry
@@ -230,7 +238,14 @@ function DefaultToolCallRenderer({
         setLoading(false);
       }
     },
-    [matchedApprovalId, approvalConfig?.apiBaseUrl, approvalConfig?.authToken],
+    [
+      matchedApprovalId,
+      approvalConfig?.apiBaseUrl,
+      approvalConfig?.authToken,
+      onRespond,
+      item.toolCallId,
+      item.toolName,
+    ],
   );
 
   // Show approval UI when we have a confirmed pending approval (from result
@@ -347,6 +362,7 @@ export function ChatMessageList({
             <DefaultToolCallRenderer
               item={item}
               approvalConfig={approvalConfig}
+              onRespond={createRespondCallback(item.toolCallId)}
             />
           );
 
