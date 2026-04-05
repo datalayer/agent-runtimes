@@ -107,7 +107,7 @@ function DefaultToolCallRenderer({
 }: {
   item: ToolCallMessage;
   approvalConfig?: ToolApprovalConfig;
-  onRespond: (toolCallId: string, result: unknown) => Promise<void>;
+  onRespond: RespondCallback;
 }) {
   const resultObject =
     item.result && typeof item.result === 'object'
@@ -225,7 +225,7 @@ function DefaultToolCallRenderer({
         );
         if (res.ok) {
           setDecision(action === 'approve' ? 'approved' : 'denied');
-          await onRespond(item.toolCallId, {
+          onRespond({
             type: 'tool-approval-decision',
             approved: action === 'approve',
             approvalId: matchedApprovalId,
