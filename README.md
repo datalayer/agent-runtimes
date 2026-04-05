@@ -219,3 +219,15 @@ await launchRuntime({
   type: 'notebook',
 });
 ```
+
+## Environment Variables
+
+### Kubernetes / Sidecar Mode
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DATALAYER_RUNTIME_JUPYTER_SIDECAR` | `""` | Set to `"true"` when the agent-runtimes container runs alongside a Jupyter sidecar container in the same Kubernetes pod. When enabled: (1) the `"jupyter"` sandbox variant is remapped to `"local-jupyter"` so agent-runtimes connects to the existing Jupyter server instead of starting its own, (2) the `"local-eval"` variant is also remapped to `"local-jupyter"`, and (3) codemode toolset initialization is deferred until the companion provides the Jupyter URL via `configure-from-spec`. |
+| `DATALAYER_CODE_SANDBOX_VARIANT` | `""` | Injected into sandboxes. The active sandbox variant (`local-eval`, `local-jupyter`, or `jupyter`). |
+| `DATALAYER_CODE_SANDBOX_URL` | `""` | Injected into sandboxes. The Jupyter server URL (without token) for the active sandbox. |
+| `AGENT_RUNTIMES_MCP_PROXY_URL` | `""` | HTTP proxy URL for MCP tool calls from within sandboxes (e.g. `http://127.0.0.1:8765/api/v1/mcp/proxy`). |
+| `AGENT_RUNTIMES_SKILLS_FOLDER` | `./skills` | Path to the skills folder. In K8s this is typically `/mnt/shared-agent/skills`. |

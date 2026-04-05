@@ -356,9 +356,26 @@ async def _create_and_register_cli_agent(
         )
 
         if codemode_toolset:
-            await initialize_codemode_toolset(codemode_toolset)
+            # In sidecar Phase 1 (local-jupyter, no URL yet) skip eager
+            # start — the sandbox proxy would fail because the companion
+            # hasn't provided the jupyter URL yet.  The toolset will
+            # initialise lazily on first tool invocation or after
+            # rebuild_codemode is called by configure-from-spec.
+            sidecar_deferred = (
+                jupyter_sidecar
+                and effective_variant == "local-jupyter"
+                and not jupyter_sandbox_url
+            )
+            if sidecar_deferred:
+                logger.info(
+                    f"Sidecar Phase 1: deferring codemode toolset start for agent {agent_id} "
+                    f"(waiting for companion to provide jupyter URL)"
+                )
+            else:
+                await initialize_codemode_toolset(codemode_toolset)
+                logger.info(f"Initialized CodemodeToolset for agent {agent_id}")
             non_mcp_toolsets.append(codemode_toolset)
-            logger.info(f"Added and initialized CodemodeToolset for agent {agent_id}")
+            logger.info(f"Added CodemodeToolset for agent {agent_id}")
 
     # Wire skill bindings into codemode so execute_code can import
     # from generated.skills and compose skills programmatically
