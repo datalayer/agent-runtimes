@@ -14,7 +14,7 @@ import sys
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional, Any
+from typing import Any, Optional
 
 from .commands import SlashCommand, build_commands
 
@@ -68,7 +68,7 @@ class SlashCommandCompleter(Completer):
     def __init__(self, commands: dict[str, "SlashCommand"]):
         self.commands = commands
     
-    def get_completions(self, document, complete_event):
+    def get_completions(self, document: Any, complete_event: Any) -> Any:
         """Yield completions for slash commands."""
         text = document.text_before_cursor
         
@@ -304,7 +304,7 @@ class CliTux:
         
         # Map shortcuts to command names
         # Shortcuts are stored as tuples for multi-key sequences
-        shortcut_map = {}
+        shortcut_map: dict[tuple[str, ...], str] = {}
         for cmd in self.commands.values():
             if cmd.shortcut and cmd.name not in shortcut_map.values():
                 # Parse shortcut string into tuple (e.g., "escape x" -> ("escape", "x"))
@@ -312,8 +312,8 @@ class CliTux:
                 shortcut_map[keys] = cmd.name
         
         # Create a handler that returns the command string
-        def make_handler(cmd_name: str):
-            async def handler(event):
+        def make_handler(cmd_name: str) -> Any:
+            async def handler(event: Any) -> None:
                 # Set the buffer to the command and accept it
                 event.current_buffer.text = f"/{cmd_name}"
                 event.current_buffer.validate_and_handle()

@@ -29,7 +29,6 @@ import {
   Flash,
 } from '@primer/react';
 import {
-  AlertIcon,
   SearchIcon,
   DatabaseIcon,
   SignOutIcon,

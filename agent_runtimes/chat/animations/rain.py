@@ -58,14 +58,14 @@ async def rain_animation(console: Console) -> None:
                 grid = [[" " for _ in range(width)] for _ in range(height)]
                 
                 for col_idx, col in enumerate(columns):
-                    head_pos = col["pos"]
-                    trail_len = col["trail"]
+                    head_pos = int(col["pos"])
+                    col_trail_len = int(col["trail"])
                     
-                    for i in range(trail_len):
-                        row = head_pos - i
-                        if 0 <= row < height:
+                    for i in range(col_trail_len):
+                        row_pos = head_pos - i
+                        if 0 <= row_pos < height:
                             char = random.choice(chars)
-                            grid[row][col_idx] = char
+                            grid[row_pos][col_idx] = char
                     
                     # Move column down
                     col["pos"] += col["speed"]

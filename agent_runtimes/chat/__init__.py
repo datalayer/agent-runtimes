@@ -49,7 +49,7 @@ __all__ = [
 ]
 
 
-def __getattr__(name):
+def __getattr__(name: str) -> object:
     """Lazily import heavy modules to avoid side effects at package import time."""
     if name in {"agent", "main"}:
         from agent_runtimes.chat.cli import agent, main

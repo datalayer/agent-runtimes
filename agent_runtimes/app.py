@@ -410,6 +410,8 @@ async def _create_and_register_cli_agent(
     # Use model from agent spec, environment variable override, or global default
     from agent_runtimes.specs.models import DEFAULT_MODEL
     from .capabilities import (
+        ToolApprovalCapability,
+        ToolApprovalConfig,
         build_capabilities_from_agent_spec,
         build_usage_limits_from_agent_spec,
     )
@@ -452,6 +454,24 @@ async def _create_and_register_cli_agent(
         agent_kwargs["usage_limits"] = usage_limits
     approval_tool_ids = tools_requiring_approval_ids(tool_ids)
     if approval_tool_ids:
+        approval_patterns = [tool_id.split(":", 1)[0] for tool_id in approval_tool_ids]
+        has_tool_approval_capability = any(
+            isinstance(cap, ToolApprovalCapability) for cap in (capabilities or [])
+        )
+        if not has_tool_approval_capability:
+            approval_config = ToolApprovalConfig.from_env()
+            approval_config.agent_id = agent_id
+            approval_config.tools_requiring_approval = approval_patterns
+            if capabilities is None:
+                capabilities = []
+            capabilities.append(ToolApprovalCapability(config=approval_config))
+            agent_kwargs["capabilities"] = capabilities
+            logger.info(
+                "Auto-enabled ToolApprovalCapability for agent '%s' with approval tools: %s",
+                agent_id,
+                approval_patterns,
+            )
+
         agent_kwargs["output_type"] = [str, DeferredToolRequests]
         agent_kwargs["output_retries"] = 3
         logger.info(
@@ -765,6 +785,7 @@ async def _create_and_register_cli_agent(
                 agent,
                 agent_id=agent_id,
                 has_spec_frontend_tools=bool(agent_spec.frontend_tools),
+                approval_tool_ids=approval_tool_ids or [],
             )
             register_vercel_agent(agent_id, vercel_adapter)
             logger.info(f"Registered agent with Vercel AI: {agent_id}")
@@ -780,6 +801,7 @@ async def _create_and_register_cli_agent(
                 agent,
                 agent_id=agent_id,
                 has_spec_frontend_tools=bool(agent_spec.frontend_tools),
+                approval_tool_ids=approval_tool_ids or [],
             )
             register_vercel_agent(agent_id, vercel_adapter)
             logger.info(f"Registered agent with Vercel AI Jupyter: {agent_id}")

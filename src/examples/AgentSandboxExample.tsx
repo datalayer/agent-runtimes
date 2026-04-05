@@ -40,7 +40,6 @@ import {
   Text,
 } from '@primer/react';
 import {
-  AlertIcon,
   CodeIcon,
   SignOutIcon,
   StopIcon,

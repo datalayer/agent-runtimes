@@ -18,7 +18,6 @@ import {
   Token as PrimerToken,
 } from '@primer/react';
 import {
-  AlertIcon,
   BeakerIcon,
   BriefcaseIcon,
   PackageIcon,

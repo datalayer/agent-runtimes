@@ -20,7 +20,6 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { Text, Button, Spinner, Heading, Label, Flash } from '@primer/react';
 import {
-  AlertIcon,
   CodeIcon,
   DiffIcon,
   FileCodeIcon,

@@ -29,7 +29,6 @@ import {
   ProgressBar,
 } from '@primer/react';
 import {
-  AlertIcon,
   ShieldCheckIcon,
   CheckIcon,
   XIcon,

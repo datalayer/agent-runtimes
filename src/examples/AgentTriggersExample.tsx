@@ -32,7 +32,6 @@ import {
   Tooltip,
 } from '@primer/react';
 import {
-  AlertIcon,
   ClockIcon,
   SyncIcon,
   CheckCircleIcon,

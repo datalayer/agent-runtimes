@@ -68,6 +68,80 @@ async def _wrap_streaming_body(body_iterator: AsyncIterator[str]) -> AsyncIterat
         raise
 
 
+async def _wrap_streaming_body_with_approvals(
+    body_iterator: AsyncIterator[str],
+    approval_tool_ids: list[str],
+    agent_id: str,
+) -> AsyncIterator[str]:
+    """Wrap a streaming body to create local approval records for deferred tools.
+
+    When DeferredToolRequests is active, pydantic-ai never executes the tool,
+    so ToolApprovalCapability.before_tool_execute never fires.  This wrapper
+    intercepts ``tool-input-available`` SSE events and creates matching
+    approval records in the local in-memory store so the frontend can poll
+    them and enable the Approve / Deny buttons.
+    """
+    import json as json_mod
+
+    from ..routes.tool_approvals import ToolApprovalCreateRequest, _create_approval
+
+    # Build name variants for matching (underscore / hyphen normalisation)
+    approval_names: set[str] = set()
+    for tid in approval_tool_ids:
+        approval_names.add(tid)
+        approval_names.add(tid.replace("-", "_"))
+        approval_names.add(tid.replace("_", "-"))
+
+    try:
+        async for chunk in body_iterator:
+            # Fast path: skip parsing when not relevant
+            if "tool-input-available" in chunk:
+                try:
+                    for line in chunk.strip().split("\n"):
+                        if not line.startswith("data: "):
+                            continue
+                        data_str = line[6:]
+                        if data_str == "[DONE]":
+                            continue
+                        event = json_mod.loads(data_str)
+                        if event.get("type") != "tool-input-available":
+                            continue
+                        tool_name = event.get("toolName", "")
+                        # Check all normalised variants
+                        variants = {
+                            tool_name,
+                            tool_name.replace("-", "_"),
+                            tool_name.replace("_", "-"),
+                        }
+                        if not variants & approval_names:
+                            continue
+                        tool_args = event.get("input", {})
+                        req = ToolApprovalCreateRequest(
+                            agent_id=agent_id,
+                            tool_name=tool_name,
+                            tool_args=tool_args if isinstance(tool_args, dict) else {},
+                        )
+                        record = await _create_approval(req)
+                        logger.info(
+                            "[Vercel AI] Created local approval record %s "
+                            "for deferred tool '%s'",
+                            record.id,
+                            tool_name,
+                        )
+                except Exception as parse_err:
+                    logger.debug(
+                        "[Vercel AI] Error parsing SSE for approval: %s",
+                        parse_err,
+                    )
+            yield chunk
+    except Exception as e:
+        logger.error(f"[Vercel AI] STREAMING ERROR: {e}")
+        logger.error(
+            f"[Vercel AI] STREAMING ERROR traceback:\n{traceback.format_exc()}"
+        )
+        raise
+
+
 class VercelAITransport(BaseTransport):
     """
     Vercel AI SDK protocol adapter.
@@ -109,6 +183,8 @@ class VercelAITransport(BaseTransport):
         builtin_tools: list[str] | None = None,
         agent_id: str | None = None,
         has_spec_frontend_tools: bool = False,
+        has_approval_tools: bool = False,
+        approval_tool_ids: list[str] | None = None,
     ):
         """Initialize the Vercel AI adapter.
 
@@ -119,6 +195,8 @@ class VercelAITransport(BaseTransport):
             builtin_tools: List of built-in tool names to expose.
             agent_id: Agent ID for usage tracking.
             has_spec_frontend_tools: Whether the agent spec declares frontend tools.
+            has_approval_tools: Whether the agent has runtime tools requiring approval.
+            approval_tool_ids: List of tool IDs that require human approval.
         """
         super().__init__(agent)
         self._usage_limits = usage_limits or UsageLimits(
@@ -129,6 +207,8 @@ class VercelAITransport(BaseTransport):
         self._toolsets = toolsets or []
         self._builtin_tools = builtin_tools or []
         self._has_spec_frontend_tools = has_spec_frontend_tools
+        self._approval_tool_ids = approval_tool_ids or []
+        self._has_approval_tools = has_approval_tools or bool(self._approval_tool_ids)
         # Get agent_id from adapter if available
         if agent_id:
             self._agent_id = agent_id
@@ -532,16 +612,16 @@ class VercelAITransport(BaseTransport):
                     "on_complete": on_complete,
                 }
 
-                # Only enable DeferredToolRequests when this request actually
-                # includes frontend tools as an ExternalToolset.
-                #
-                # Using the broader has_spec_frontend_tools flag here causes
-                # output validation failures for normal backend runtime tool
-                # calls (no frontend tools in the current request).
-                if has_frontend_tools:
+                # Enable DeferredToolRequests when this request includes
+                # frontend tools as an ExternalToolset, OR when the agent has
+                # runtime tools that require human approval before execution.
+                if has_frontend_tools or self._has_approval_tools:
                     dispatch_kwargs["output_type"] = [str, DeferredToolRequests]
                     logger.info(
-                        "[Vercel AI] Enabled DeferredToolRequests output_type for frontend tools"
+                        "[Vercel AI] Enabled DeferredToolRequests output_type "
+                        "(frontend_tools=%s, approval_tools=%s)",
+                        has_frontend_tools,
+                        self._has_approval_tools,
                     )
 
                 # Pass sdk_version only if supported by installed pydantic-ai.
@@ -562,10 +642,22 @@ class VercelAITransport(BaseTransport):
                 # Wrap the streaming response body to catch errors during streaming
                 if isinstance(response, StreamingResponse):
                     original_body = response.body_iterator
-                    response.body_iterator = _wrap_streaming_body(original_body)
-                    logger.debug(
-                        "[Vercel AI] Wrapped StreamingResponse body_iterator for error logging"
-                    )
+                    if self._approval_tool_ids:
+                        response.body_iterator = (
+                            _wrap_streaming_body_with_approvals(
+                                original_body,
+                                self._approval_tool_ids,
+                                self._agent_id,
+                            )
+                        )
+                        logger.debug(
+                            "[Vercel AI] Wrapped StreamingResponse with approval-record creation"
+                        )
+                    else:
+                        response.body_iterator = _wrap_streaming_body(original_body)
+                        logger.debug(
+                            "[Vercel AI] Wrapped StreamingResponse body_iterator for error logging"
+                        )
 
         except Exception as e:
             logger.error(

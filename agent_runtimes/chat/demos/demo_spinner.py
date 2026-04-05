@@ -24,13 +24,13 @@ from agent_runtimes.chat.cli import (
 )
 
 
-async def simulate_ai_query(duration: float):
+async def simulate_ai_query(duration: float) -> str:
     """Simulate an AI query taking some time."""
     await asyncio.sleep(duration)
     return "✓ Query processed successfully!"
 
 
-async def demo_scenario(title: str, message: str, duration: float, style: str = "growing"):
+async def demo_scenario(title: str, message: str, duration: float, style: str = "growing") -> None:
     """Run a single demo scenario."""
     print(f"\n{CYAN}{BOLD}{title}{RESET}")
     print(f"{YELLOW}{'─' * 50}{RESET}")
@@ -44,7 +44,7 @@ async def demo_scenario(title: str, message: str, duration: float, style: str = 
     print(f"{GREEN}{result}{RESET}")
 
 
-async def main():
+async def main() -> None:
     """Run all demo scenarios."""
     print(f"\n{MAGENTA}{BOLD}╔════════════════════════════════════════════════╗")
     print(f"║  Agent Runtimes Chat Spinner Demo               ║")

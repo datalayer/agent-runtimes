@@ -20,7 +20,6 @@ import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Text, Button, Spinner, Heading, Label } from '@primer/react';
 import {
-  AlertIcon,
   CheckCircleIcon,
   GraphIcon,
   SignOutIcon,

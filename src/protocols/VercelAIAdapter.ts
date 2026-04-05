@@ -72,6 +72,7 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
   }> = [];
   private lastAssistantText = '';
   private lastTools: ToolDefinition[] = [];
+  private lastFrontendToolNames: Set<string> = new Set();
   private isContinuation = false;
 
   // Stream parsing depth — prevents premature continuations
@@ -186,6 +187,13 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
     // Store tools for potential continuation
     if (options?.tools) {
       this.lastTools = options.tools;
+      this.lastFrontendToolNames = new Set(
+        options.tools
+          .map(t => t?.name)
+          .filter((name): name is string => Boolean(name)),
+      );
+    } else {
+      this.lastFrontendToolNames = new Set();
     }
 
     // Reset assistant content tracking for fresh (non-continuation) messages
@@ -605,13 +613,9 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
                 );
 
                 if (toolName) {
-                  // Track as a pending frontend tool call for continuation
-                  this.pendingToolCalls.set(toolCallId, {
-                    toolCallId,
-                    toolName,
-                    args,
-                  });
-
+                  // Emit tool-call for all tools so UI can render a tool entry.
+                  // Only client-declared frontend tools should participate in
+                  // frontend continuation batching via pendingToolCalls.
                   this.emit({
                     type: 'tool-call',
                     toolCall: {
@@ -621,6 +625,14 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
                     },
                     timestamp: new Date(),
                   });
+
+                  if (this.lastFrontendToolNames.has(toolName)) {
+                    this.pendingToolCalls.set(toolCallId, {
+                      toolCallId,
+                      toolName,
+                      args,
+                    });
+                  }
                 }
               } else if (event.type === 'tool-output-available') {
                 const toolCallId =

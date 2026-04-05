@@ -17,7 +17,7 @@ import sys
 import threading
 import time
 from enum import Enum
-from typing import List, Optional
+from typing import Any, List, Optional
 
 import typer
 from pydantic_ai import Agent
@@ -30,7 +30,7 @@ DEFAULT_RUNTIME_AGENT_NAME = "chat"
 _subprocess_ref: Optional[multiprocessing.Process] = None
 
 
-def _cleanup_subprocess():
+def _cleanup_subprocess() -> None:
     """Clean up subprocess on exit."""
     global _subprocess_ref
     if _subprocess_ref is not None:
@@ -46,7 +46,7 @@ def _cleanup_subprocess():
         _subprocess_ref = None
 
 
-def _signal_handler(signum, frame):
+def _signal_handler(signum: int, frame: Any) -> None:
     """Handle signals by cleaning up subprocess and exiting."""
     _cleanup_subprocess()
     # Re-raise with default handler for proper exit
@@ -107,7 +107,7 @@ class Spinner:
     def __init__(self, message: str = "Thinking", style: str = "circle"):
         self.message = message
         self.spinner_active = False
-        self.spinner_thread = None
+        self.spinner_thread: threading.Thread | None = None
         
         # Select spinner style
         if style == "dots":
@@ -123,7 +123,7 @@ class Spinner:
         else:
             self.frames = SPINNER_CIRCLE
     
-    def _spin(self):
+    def _spin(self) -> None:
         """The spinning animation loop."""
         for frame in itertools.cycle(self.frames):
             if not self.spinner_active:
@@ -137,7 +137,7 @@ class Spinner:
         sys.stdout.write('\r' + ' ' * (len(self.message) + 20) + '\r')
         sys.stdout.flush()
     
-    def start(self):
+    def start(self) -> None:
         """Start the spinner animation."""
         if not sys.stdout.isatty():
             return
@@ -146,18 +146,18 @@ class Spinner:
         self.spinner_thread = threading.Thread(target=self._spin, daemon=True)
         self.spinner_thread.start()
     
-    def stop(self):
+    def stop(self) -> None:
         """Stop the spinner animation."""
         self.spinner_active = False
         if self.spinner_thread:
             self.spinner_thread.join()
     
-    def __enter__(self):
+    def __enter__(self) -> "Spinner":
         """Context manager entry."""
         self.start()
         return self
     
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         """Context manager exit."""
         self.stop()
 
@@ -211,7 +211,7 @@ def _show_version() -> None:
     typer.echo(f"{GRAY}Powered by Datalayer • \033]8;;https://datalayer.ai\033\\https://datalayer.ai\033]8;;\033\\{RESET}")
 
 
-def _run_agent_runtime_server(host: str, port: int, agent_id: str, codemode: bool, protocol, port_value=None):
+def _run_agent_runtime_server(host: str, port: int, agent_id: str, codemode: bool, protocol: "Transport", port_value: Any = None) -> None:
     """Run the agent-runtimes server (for multiprocessing).
     
     This must be a module-level function (not nested) to be picklable.
@@ -444,7 +444,7 @@ def _format_startup_info(host: str, port: int, info: dict | None) -> str:
     return "\n".join(lines)
 
 
-def _spec_has_valid_env(spec) -> bool:
+def _spec_has_valid_env(spec: Any) -> bool:
     """Return True when a spec is enabled and all its required env vars are set."""
     if not spec.enabled:
         return False

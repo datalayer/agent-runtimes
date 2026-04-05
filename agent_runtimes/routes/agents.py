@@ -25,6 +25,12 @@ from pydantic_ai import Agent as PydanticAgent
 from pydantic_ai import DeferredToolRequests
 
 from ..adapters.pydantic_ai_adapter import PydanticAIAdapter
+from ..capabilities import (
+    ToolApprovalCapability,
+    ToolApprovalConfig,
+    build_capabilities_from_agent_spec,
+    build_usage_limits_from_agent_spec,
+)
 from ..mcp import get_mcp_manager, initialize_config_mcp_servers
 from ..mcp.catalog_mcp_servers import MCP_SERVER_CATALOG
 from ..mcp.lifecycle import get_mcp_lifecycle_manager
@@ -1073,14 +1079,72 @@ async def create_agent(
             # fetched at run time by the adapter to reflect current server state.
             # Only non-MCP toolsets (codemode, skills) are passed at construction.
             tool_ids = list(request.tools or [])
+            capabilities = None
+            usage_limits = None
+
+            spec_for_runtime_controls: AgentSpec | None = None
+            if request.agent_spec_id:
+                spec_for_runtime_controls = get_library_agent_spec(request.agent_spec_id)
+
+            # Fallback: UI may send a full spec payload without a library ID.
+            if spec_for_runtime_controls is None and request.agent_spec:
+                try:
+                    spec_for_runtime_controls = AgentSpec.model_validate(
+                        request.agent_spec
+                    )
+                except Exception as exc:
+                    logger.debug(
+                        "Could not parse forwarded agent_spec for runtime controls: %s",
+                        exc,
+                    )
+
+            if spec_for_runtime_controls is not None:
+                capabilities = build_capabilities_from_agent_spec(
+                    spec_for_runtime_controls,
+                    agent_id=agent_id,
+                )
+                usage_limits = build_usage_limits_from_agent_spec(
+                    spec_for_runtime_controls
+                )
+
             agent_kwargs: dict[str, Any] = {
                 "system_prompt": final_system_prompt,
                 # Explicitly disable Pydantic AI built-in tools (e.g. CodeExecutionTool)
                 "builtin_tools": (),
                 # Don't pass toolsets here - they'll be dynamically provided at run time
             }
+            if capabilities:
+                agent_kwargs["capabilities"] = capabilities
+            if usage_limits is not None:
+                agent_kwargs["usage_limits"] = usage_limits
             approval_tool_ids = tools_requiring_approval_ids(tool_ids)
             if approval_tool_ids:
+                approval_patterns = [
+                    tool_id.split(":", 1)[0] for tool_id in approval_tool_ids
+                ]
+                has_tool_approval_capability = bool(
+                    capabilities
+                    and any(
+                        isinstance(cap, ToolApprovalCapability)
+                        for cap in capabilities
+                    )
+                )
+                if not has_tool_approval_capability:
+                    approval_config = ToolApprovalConfig.from_env()
+                    approval_config.agent_id = agent_id
+                    approval_config.tools_requiring_approval = approval_patterns
+                    if capabilities is None:
+                        capabilities = []
+                    capabilities.append(
+                        ToolApprovalCapability(config=approval_config)
+                    )
+                    agent_kwargs["capabilities"] = capabilities
+                    logger.info(
+                        "Auto-enabled ToolApprovalCapability for agent '%s' with approval tools: %s",
+                        agent_id,
+                        approval_patterns,
+                    )
+
                 agent_kwargs["output_type"] = [str, DeferredToolRequests]
                 agent_kwargs["output_retries"] = 3
                 logger.info(
@@ -1299,6 +1363,7 @@ async def create_agent(
                     agent,
                     agent_id=agent_id,
                     has_spec_frontend_tools=has_spec_frontend_tools,
+                    approval_tool_ids=approval_tool_ids or [],
                 )
                 register_vercel_agent(agent_id, vercel_adapter)
                 logger.info(f"Registered agent with Vercel AI: {agent_id}")
@@ -1696,8 +1761,11 @@ async def update_agent_transport(
             if not _has_ft and stored_spec.get("agent_spec_id"):
                 _lib = get_library_agent_spec(stored_spec["agent_spec_id"])
                 _has_ft = bool(_lib and getattr(_lib, "frontend_tools", None))
+            _stored_tools = stored_spec.get("tools") or []
+            _has_approval = bool(tools_requiring_approval_ids(_stored_tools))
             vercel_adapter = VercelAITransport(
-                agent, agent_id=agent_id, has_spec_frontend_tools=_has_ft
+                agent, agent_id=agent_id, has_spec_frontend_tools=_has_ft,
+                has_approval_tools=_has_approval,
             )
             register_vercel_agent(agent_id, vercel_adapter)
             logger.info(f"Registered agent with Vercel AI: {agent_id}")

@@ -18,7 +18,7 @@ Each command module exports:
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Callable, Optional, TYPE_CHECKING
+from typing import Any, Callable, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ..tux import CliTux
@@ -120,8 +120,8 @@ def build_commands(
     return commands
 
 
-def _make_handler(execute_fn: Callable, tux: "CliTux") -> Callable:
+def _make_handler(execute_fn: Callable[..., Any], tux: "CliTux") -> Callable[..., Any]:
     """Create a handler closure that passes tux to the execute function."""
-    async def handler():
+    async def handler() -> Any:
         return await execute_fn(tux)
     return handler

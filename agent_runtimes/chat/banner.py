@@ -11,6 +11,7 @@ import io
 import random
 import sys
 import time
+from typing import Any
 
 try:
     from PIL import Image
@@ -86,7 +87,7 @@ def matrix_rain_banner(width: int = 60, height: int = 12, duration: float = 2.0,
         return
     
     # Initialize columns with random starting positions and speeds
-    columns = []
+    columns: list[dict[str, Any]] = []
     for x in range(width):
         columns.append({
             'y': random.randint(-height, 0),

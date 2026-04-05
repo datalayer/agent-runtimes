@@ -22,7 +22,7 @@ import {
   Spinner,
   Text,
 } from '@primer/react';
-import { AlertIcon, SignOutIcon, ToolsIcon } from '@primer/octicons-react';
+import { SignOutIcon, ToolsIcon } from '@primer/octicons-react';
 import { useCoreStore } from '@datalayer/core';
 import { DEFAULT_SERVICE_URLS } from '@datalayer/core/lib/api/constants';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';

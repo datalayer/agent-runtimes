@@ -75,7 +75,7 @@ def build_usage_limits_from_agent_spec(agent_spec: Any) -> UsageLimits | None:
                 per_run = _parse_token_limit(token_limits.get("per_run"), 0)
             if request_limit is None and token_limits.get("request_limit") is not None:
                 try:
-                    request_limit = int(token_limits.get("request_limit"))
+                    request_limit = int(token_limits["request_limit"])
                 except (TypeError, ValueError):
                     request_limit = None
             if (
@@ -83,7 +83,7 @@ def build_usage_limits_from_agent_spec(agent_spec: Any) -> UsageLimits | None:
                 and token_limits.get("tool_calls_limit") is not None
             ):
                 try:
-                    tool_calls_limit = int(token_limits.get("tool_calls_limit"))
+                    tool_calls_limit = int(token_limits["tool_calls_limit"])
                 except (TypeError, ValueError):
                     tool_calls_limit = None
         if per_run is not None and request_limit is not None and tool_calls_limit is not None:

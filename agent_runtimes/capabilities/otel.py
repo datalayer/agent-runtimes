@@ -17,7 +17,7 @@ from pydantic_ai.tools import ToolDefinition
 try:
     from datalayer_core.otel.emitter import OTelEmitter
 except Exception:  # pragma: no cover - optional dependency at runtime
-    OTelEmitter = None  # type: ignore[assignment]
+    OTelEmitter = None  # type: ignore[assignment,unused-ignore]
 
 
 @dataclass
