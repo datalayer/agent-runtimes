@@ -1147,7 +1147,10 @@ async def create_agent(
                         isinstance(cap, ToolApprovalCapability) for cap in capabilities
                     )
                 )
-                if not has_tool_approval_capability and request.transport != "vercel-ai":
+                if (
+                    not has_tool_approval_capability
+                    and request.transport != "vercel-ai"
+                ):
                     approval_config = ToolApprovalConfig.from_env()
                     approval_config.agent_id = agent_id
                     approval_config.tools_requiring_approval = approval_patterns

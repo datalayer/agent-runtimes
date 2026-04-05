@@ -321,6 +321,12 @@ class ToolApprovalCapability(AbstractCapability[Any]):
 
     Uses the ai-agents HTTP service to create approval records and polls
     until a human approves or rejects the call.
+
+    Note:
+        For the Vercel-AI transport with DeferredToolRequests enabled,
+        agent creation intentionally filters this capability out to avoid
+        duplicate approval gating. In that flow, approval is handled by
+        deferred tool continuations instead of before_tool_execute polling.
     """
 
     config: ToolApprovalConfig = field(default_factory=ToolApprovalConfig)
