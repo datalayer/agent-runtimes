@@ -10,7 +10,7 @@
 from __future__ import annotations
 
 import webbrowser
-from typing import Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
     from ..tux import CliTux
@@ -27,6 +27,7 @@ async def execute(tux: "CliTux") -> Optional[str]:
     if tux.jupyter_url:
         # Forward Jupyter connection info so the page can reach the kernel
         import urllib.parse
+
         base = tux.jupyter_url.split("?")[0].rstrip("/")
         query = tux.jupyter_url.split("?")[1] if "?" in tux.jupyter_url else None
         token = ""

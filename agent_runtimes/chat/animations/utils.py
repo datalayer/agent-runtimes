@@ -7,8 +7,8 @@
 
 """Utility functions for animations."""
 
-import sys
 import select
+import sys
 import termios
 import tty
 from contextlib import contextmanager
@@ -35,6 +35,6 @@ def check_escape_pressed() -> bool:
     """
     if select.select([sys.stdin], [], [], 0)[0]:
         char = sys.stdin.read(1)
-        if char == '\x1b':  # ESCAPE character
+        if char == "\x1b":  # ESCAPE character
             return True
     return False

@@ -9,7 +9,7 @@
 
 from __future__ import annotations
 
-from typing import Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
     from ..tux import CliTux
@@ -23,5 +23,6 @@ SHORTCUT = "escape r"
 async def execute(tux: "CliTux") -> Optional[str]:
     """Display Matrix rain animation (5 seconds)."""
     from ..animations import rain_animation
+
     await rain_animation(tux.console)
     return None

@@ -9,7 +9,7 @@
 
 from __future__ import annotations
 
-from typing import Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
     from ..tux import CliTux
@@ -22,8 +22,8 @@ SHORTCUT = "escape q"
 
 async def execute(tux: "CliTux") -> Optional[str]:
     """Exit the application."""
-    from ..tux import STYLE_ACCENT, STYLE_MUTED
     from ..banner import GOODBYE_MESSAGE
+    from ..tux import STYLE_ACCENT, STYLE_MUTED
 
     tux.running = False
 
@@ -34,6 +34,8 @@ async def execute(tux: "CliTux") -> Optional[str]:
 
     tux.console.print()
     tux.console.print(GOODBYE_MESSAGE, style=STYLE_ACCENT)
-    tux.console.print("   [link=https://datalayer.ai]https://datalayer.ai[/link]", style=STYLE_MUTED)
+    tux.console.print(
+        "   [link=https://datalayer.ai]https://datalayer.ai[/link]", style=STYLE_MUTED
+    )
     tux.console.print()
     return None

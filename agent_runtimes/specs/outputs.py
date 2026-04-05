@@ -13,7 +13,6 @@ from typing import Dict, List
 
 from agent_runtimes.types import OutputSpec
 
-
 # ============================================================================
 # Output Definitions
 # ============================================================================
@@ -48,7 +47,11 @@ DOCUMENT_OUTPUT_SPEC_0_0_1 = OutputSpec(
     icon="file",
     supports_template=True,
     supports_storage=True,
-    mime_types=["application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "text/markdown"],
+    mime_types=[
+        "application/pdf",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "text/markdown",
+    ],
 )
 
 EMAIL_OUTPUT_SPEC_0_0_1 = OutputSpec(
@@ -115,8 +118,8 @@ def get_output_spec(output_id: str) -> OutputSpec | None:
     spec = OUTPUT_CATALOG.get(output_id)
     if spec is not None:
         return spec
-    base, _, ver = output_id.rpartition(':')
-    if base and '.' in ver:
+    base, _, ver = output_id.rpartition(":")
+    if base and "." in ver:
         return OUTPUT_CATALOG.get(base)
     return None
 

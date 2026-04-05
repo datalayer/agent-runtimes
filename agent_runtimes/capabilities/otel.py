@@ -29,7 +29,9 @@ class OTelHooksCapability(AbstractCapability[Any]):
     emit_prompt_preview: bool = False
     _emitter: Any = field(default=None, init=False, repr=False)
     _run_started_at: float = field(default=0.0, init=False, repr=False)
-    _tool_started_at: dict[str, float] = field(default_factory=dict, init=False, repr=False)
+    _tool_started_at: dict[str, float] = field(
+        default_factory=dict, init=False, repr=False
+    )
 
     def _get_emitter(self) -> Any:
         if not self.enabled or OTelEmitter is None:
@@ -60,7 +62,9 @@ class OTelHooksCapability(AbstractCapability[Any]):
             "agent.model": str(getattr(ctx.model, "model_id", "unknown")),
         }
         emitter.add_counter("agent_runtimes.capability.run.completed", 1, attrs)
-        emitter.add_histogram("agent_runtimes.capability.run.duration_ms", duration_ms, attrs)
+        emitter.add_histogram(
+            "agent_runtimes.capability.run.duration_ms", duration_ms, attrs
+        )
         emitter.add_counter(
             "agent_runtimes.capability.tokens.input",
             int(getattr(usage, "input_tokens", 0) or 0),

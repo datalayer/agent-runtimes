@@ -16,7 +16,7 @@ from rich.console import Console
 from rich.live import Live
 from rich.text import Text
 
-from .utils import raw_terminal, check_escape_pressed
+from .utils import check_escape_pressed, raw_terminal
 
 
 async def rain_animation(console: Console) -> None:
@@ -37,9 +37,9 @@ async def rain_animation(console: Console) -> None:
     columns = []
     for _ in range(width):
         # Random start position (negative = delayed start)
-        pos = random.randint(-height, 0)
-        speed = random.randint(1, 3)
-        trail_len = random.randint(5, 15)
+        pos = random.randint(-height, 0)  # nosec B311
+        speed = random.randint(1, 3)  # nosec B311
+        trail_len = random.randint(5, 15)  # nosec B311
         columns.append({"pos": pos, "speed": speed, "trail": trail_len})
 
     console.print()
@@ -49,7 +49,10 @@ async def rain_animation(console: Console) -> None:
     duration = 5.0
 
     try:
-        with raw_terminal(), Live(console=console, refresh_per_second=15, transient=True) as live:
+        with (
+            raw_terminal(),
+            Live(console=console, refresh_per_second=15, transient=True) as live,
+        ):
             while time.time() - start_time < duration:
                 if check_escape_pressed():
                     break
@@ -64,7 +67,7 @@ async def rain_animation(console: Console) -> None:
                     for i in range(col_trail_len):
                         row_pos = head_pos - i
                         if 0 <= row_pos < height:
-                            char = random.choice(chars)
+                            char = random.choice(chars)  # nosec B311
                             grid[row_pos][col_idx] = char
 
                     # Move column down
@@ -72,9 +75,9 @@ async def rain_animation(console: Console) -> None:
 
                     # Reset when off screen
                     if col["pos"] - col["trail"] > height:
-                        col["pos"] = random.randint(-10, 0)
-                        col["speed"] = random.randint(1, 3)
-                        col["trail"] = random.randint(5, 15)
+                        col["pos"] = random.randint(-10, 0)  # nosec B311
+                        col["speed"] = random.randint(1, 3)  # nosec B311
+                        col["trail"] = random.randint(5, 15)  # nosec B311
 
                 # Render with colors
                 text = Text()

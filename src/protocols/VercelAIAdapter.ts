@@ -278,6 +278,9 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
       const requestBody = {
         id: requestId,
         messages: vercelMessages,
+        // Required for pydantic-ai deferred tool approval continuations.
+        // sdkVersion 6 enables parsing approval-responded tool parts.
+        sdkVersion: 6 as const,
         trigger: 'submit-message' as const,
         ...(options?.tools && { tools: options.tools }),
         ...(options?.model && { model: options.model }),

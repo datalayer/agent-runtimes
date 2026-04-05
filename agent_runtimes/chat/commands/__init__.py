@@ -18,7 +18,7 @@ Each command module exports:
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Callable, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Callable, Optional
 
 if TYPE_CHECKING:
     from ..tux import CliTux
@@ -27,6 +27,7 @@ if TYPE_CHECKING:
 @dataclass
 class SlashCommand:
     """Definition of a slash command."""
+
     name: str
     aliases: list[str] = field(default_factory=list)
     description: str = ""
@@ -50,23 +51,23 @@ def build_commands(
         Dict mapping command names (including aliases) to SlashCommand instances.
     """
     from . import (
-        context,
-        clear,
-        help,
-        status,
-        exit,
         agents,
-        tools,
+        browser,
+        browser_lexical,
+        browser_notebook,
+        clear,
+        cls,
+        codemode_toggle,
+        context,
+        context_export,
+        exit,
+        help,
         mcp_servers,
         skills,
-        codemode_toggle,
-        context_export,
-        tools_last,
-        cls,
-        browser,
-        browser_notebook,
-        browser_lexical,
+        status,
         suggestions,
+        tools,
+        tools_last,
     )
 
     # Core commands always registered
@@ -92,12 +93,14 @@ def build_commands(
 
     # Conditionally add egg commands
     if eggs:
-        from . import rain, about, gif
+        from . import about, gif, rain
+
         modules.extend([rain, about, gif])
 
     # Conditionally add jupyter command
     if jupyter_url:
         from . import jupyter
+
         modules.append(jupyter)
 
     commands: dict[str, SlashCommand] = {}
@@ -122,6 +125,8 @@ def build_commands(
 
 def _make_handler(execute_fn: Callable[..., Any], tux: "CliTux") -> Callable[..., Any]:
     """Create a handler closure that passes tux to the execute function."""
+
     async def handler() -> Any:
         return await execute_fn(tux)
+
     return handler

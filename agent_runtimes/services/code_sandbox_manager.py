@@ -617,7 +617,10 @@ class CodeSandboxManager:
 
         # Always inject sandbox metadata env vars
         env_vars["DATALAYER_CODE_SANDBOX_VARIANT"] = self._config.variant
-        if self._config.variant in ("local-jupyter", "jupyter") and self._config.jupyter_url:
+        if (
+            self._config.variant in ("local-jupyter", "jupyter")
+            and self._config.jupyter_url
+        ):
             # Strip query string (token) from the URL
             clean_url = self._config.jupyter_url.split("?")[0]
             env_vars["DATALAYER_CODE_SANDBOX_URL"] = clean_url
@@ -645,6 +648,7 @@ class CodeSandboxManager:
         else:
             # local-eval: set sandbox metadata on os.environ
             import os
+
             os.environ["DATALAYER_CODE_SANDBOX_VARIANT"] = self._config.variant
             logger.debug(
                 f"Set DATALAYER_CODE_SANDBOX_VARIANT={self._config.variant} "
@@ -850,6 +854,7 @@ class CodeSandboxManager:
                 logger.warning(f"Error injecting env vars into sandbox: {e}")
         else:
             import os
+
             os.environ["DATALAYER_CODE_SANDBOX_VARIANT"] = variant
             logger.debug(
                 f"Set DATALAYER_CODE_SANDBOX_VARIANT={variant} "

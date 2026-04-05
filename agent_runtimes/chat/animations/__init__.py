@@ -7,8 +7,8 @@
 
 """Animation modules for Agent Runtimes Chat TUX Easter eggs."""
 
-from .rain import rain_animation
 from .about import about_animation
 from .gif import gif_animation
+from .rain import rain_animation
 
 __all__ = ["rain_animation", "about_animation", "gif_animation"]

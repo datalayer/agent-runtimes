@@ -53,7 +53,9 @@ def _resolve_base_url(base_url: Optional[str]) -> str:
     ).rstrip("/")
 
 
-def _list_all_events(token: str, base_url: str, kind: Optional[str] = None) -> dict[str, Any]:
+def _list_all_events(
+    token: str, base_url: str, kind: Optional[str] = None
+) -> dict[str, Any]:
     params: dict[str, Any] = {"limit": 100, "offset": 0}
     if kind:
         params["kind"] = kind
@@ -89,10 +91,16 @@ def _print_events(events: list[dict[str, Any]]) -> None:
 
 @app.command(name="list")
 def events_list(
-    agent_id: Optional[str] = typer.Option(None, "--agent-id", help="Filter events by agent runtime ID."),
+    agent_id: Optional[str] = typer.Option(
+        None, "--agent-id", help="Filter events by agent runtime ID."
+    ),
     kind: Optional[str] = typer.Option(None, "--kind", help="Filter events by kind."),
-    token: Optional[str] = typer.Option(None, "--token", help="Authentication token (Bearer token for API requests)."),
-    base_url: Optional[str] = typer.Option(None, "--base-url", help="Datalayer run base URL."),
+    token: Optional[str] = typer.Option(
+        None, "--token", help="Authentication token (Bearer token for API requests)."
+    ),
+    base_url: Optional[str] = typer.Option(
+        None, "--base-url", help="Datalayer run base URL."
+    ),
 ) -> None:
     """List agent events."""
     try:
@@ -120,10 +128,16 @@ def events_list(
 
 @app.command(name="ls")
 def events_ls(
-    agent_id: Optional[str] = typer.Option(None, "--agent-id", help="Filter events by agent runtime ID."),
+    agent_id: Optional[str] = typer.Option(
+        None, "--agent-id", help="Filter events by agent runtime ID."
+    ),
     kind: Optional[str] = typer.Option(None, "--kind", help="Filter events by kind."),
-    token: Optional[str] = typer.Option(None, "--token", help="Authentication token (Bearer token for API requests)."),
-    base_url: Optional[str] = typer.Option(None, "--base-url", help="Datalayer run base URL."),
+    token: Optional[str] = typer.Option(
+        None, "--token", help="Authentication token (Bearer token for API requests)."
+    ),
+    base_url: Optional[str] = typer.Option(
+        None, "--base-url", help="Datalayer run base URL."
+    ),
 ) -> None:
     """List agent events (alias for list)."""
     events_list(agent_id=agent_id, kind=kind, token=token, base_url=base_url)
@@ -132,9 +146,15 @@ def events_ls(
 @app.command(name="get")
 def events_get(
     event_id: str = typer.Argument(..., help="ID of the event to retrieve."),
-    agent_id: Optional[str] = typer.Option(None, "--agent-id", help="Agent runtime ID owning the event (recommended)."),
-    token: Optional[str] = typer.Option(None, "--token", help="Authentication token (Bearer token for API requests)."),
-    base_url: Optional[str] = typer.Option(None, "--base-url", help="Datalayer run base URL."),
+    agent_id: Optional[str] = typer.Option(
+        None, "--agent-id", help="Agent runtime ID owning the event (recommended)."
+    ),
+    token: Optional[str] = typer.Option(
+        None, "--token", help="Authentication token (Bearer token for API requests)."
+    ),
+    base_url: Optional[str] = typer.Option(
+        None, "--base-url", help="Datalayer run base URL."
+    ),
 ) -> None:
     """Get a single event by ID."""
     try:
@@ -163,8 +183,12 @@ def events_create(
     title: str = typer.Argument(..., help="Event title."),
     kind: str = typer.Option("generic", "--kind", help="Event kind."),
     status: str = typer.Option("pending", "--status", help="Event status."),
-    token: Optional[str] = typer.Option(None, "--token", help="Authentication token (Bearer token for API requests)."),
-    base_url: Optional[str] = typer.Option(None, "--base-url", help="Datalayer run base URL."),
+    token: Optional[str] = typer.Option(
+        None, "--token", help="Authentication token (Bearer token for API requests)."
+    ),
+    base_url: Optional[str] = typer.Option(
+        None, "--base-url", help="Datalayer run base URL."
+    ),
 ) -> None:
     """Create a new agent event."""
     try:
@@ -185,9 +209,15 @@ def events_create(
 @app.command(name="delete")
 def events_delete(
     event_id: str = typer.Argument(..., help="ID of the event to delete."),
-    agent_id: Optional[str] = typer.Option(None, "--agent-id", help="Agent runtime ID owning the event (recommended)."),
-    token: Optional[str] = typer.Option(None, "--token", help="Authentication token (Bearer token for API requests)."),
-    base_url: Optional[str] = typer.Option(None, "--base-url", help="Datalayer run base URL."),
+    agent_id: Optional[str] = typer.Option(
+        None, "--agent-id", help="Agent runtime ID owning the event (recommended)."
+    ),
+    token: Optional[str] = typer.Option(
+        None, "--token", help="Authentication token (Bearer token for API requests)."
+    ),
+    base_url: Optional[str] = typer.Option(
+        None, "--base-url", help="Datalayer run base URL."
+    ),
 ) -> None:
     """Delete an event by ID."""
     try:
@@ -213,9 +243,15 @@ def events_delete(
 @app.command(name="mark-read")
 def events_mark_read(
     event_id: str = typer.Argument(..., help="ID of the event to mark as read."),
-    agent_id: Optional[str] = typer.Option(None, "--agent-id", help="Agent runtime ID owning the event (recommended)."),
-    token: Optional[str] = typer.Option(None, "--token", help="Authentication token (Bearer token for API requests)."),
-    base_url: Optional[str] = typer.Option(None, "--base-url", help="Datalayer run base URL."),
+    agent_id: Optional[str] = typer.Option(
+        None, "--agent-id", help="Agent runtime ID owning the event (recommended)."
+    ),
+    token: Optional[str] = typer.Option(
+        None, "--token", help="Authentication token (Bearer token for API requests)."
+    ),
+    base_url: Optional[str] = typer.Option(
+        None, "--base-url", help="Datalayer run base URL."
+    ),
 ) -> None:
     """Mark an event as read."""
     try:
@@ -241,9 +277,15 @@ def events_mark_read(
 @app.command(name="mark-unread")
 def events_mark_unread(
     event_id: str = typer.Argument(..., help="ID of the event to mark as unread."),
-    agent_id: Optional[str] = typer.Option(None, "--agent-id", help="Agent runtime ID owning the event (recommended)."),
-    token: Optional[str] = typer.Option(None, "--token", help="Authentication token (Bearer token for API requests)."),
-    base_url: Optional[str] = typer.Option(None, "--base-url", help="Datalayer run base URL."),
+    agent_id: Optional[str] = typer.Option(
+        None, "--agent-id", help="Agent runtime ID owning the event (recommended)."
+    ),
+    token: Optional[str] = typer.Option(
+        None, "--token", help="Authentication token (Bearer token for API requests)."
+    ),
+    base_url: Optional[str] = typer.Option(
+        None, "--base-url", help="Datalayer run base URL."
+    ),
 ) -> None:
     """Mark an event as unread."""
     try:

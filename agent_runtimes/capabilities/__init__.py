@@ -10,7 +10,10 @@ This package provides:
 - Tool approval capability (async HTTP-based human approval)
 """
 
-from .factory import build_capabilities_from_agent_spec, build_usage_limits_from_agent_spec
+from .factory import (
+    build_capabilities_from_agent_spec,
+    build_usage_limits_from_agent_spec,
+)
 from .tool_approval import (
     ToolApprovalCapability,
     ToolApprovalConfig,

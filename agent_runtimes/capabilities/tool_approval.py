@@ -121,9 +121,8 @@ class ToolApprovalConfig:
                 "Using core-resolved ai-agents URL for tool approvals: %s",
                 ai_agents_url,
             )
-        token = (
-            os.environ.get("DATALAYER_USER_TOKEN")
-            or os.environ.get("DATALAYER_API_KEY", "")
+        token = os.environ.get("DATALAYER_USER_TOKEN") or os.environ.get(
+            "DATALAYER_API_KEY", ""
         )
         return cls(
             ai_agents_url=ai_agents_url,

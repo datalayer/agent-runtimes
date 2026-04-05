@@ -9,7 +9,7 @@
 
 from __future__ import annotations
 
-from typing import Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 import httpx
 
@@ -24,7 +24,7 @@ SHORTCUT = "escape t"
 
 async def execute(tux: "CliTux") -> Optional[str]:
     """List available tools for the current agent."""
-    from ..tux import STYLE_PRIMARY, STYLE_ACCENT, STYLE_MUTED
+    from ..tux import STYLE_ACCENT, STYLE_MUTED, STYLE_PRIMARY
 
     try:
         async with httpx.AsyncClient() as client:

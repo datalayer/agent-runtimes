@@ -31,10 +31,10 @@ from ..capabilities import (
     build_capabilities_from_agent_spec,
     build_usage_limits_from_agent_spec,
 )
+from ..events import create_event
 from ..mcp import get_mcp_manager, initialize_config_mcp_servers
 from ..mcp.catalog_mcp_servers import MCP_SERVER_CATALOG
 from ..mcp.lifecycle import get_mcp_lifecycle_manager
-from ..events import create_event
 from ..services import (
     create_codemode_toolset,
     create_shared_sandbox,
@@ -47,8 +47,8 @@ from ..services import (
 from ..specs.agents import AGENT_SPECS
 from ..specs.agents import get_agent_spec as get_library_agent_spec
 from ..specs.agents import list_agent_specs as list_library_agents
-from ..specs.models import DEFAULT_MODEL
 from ..specs.events import EVENT_KIND_AGENT_ASSIGNED
+from ..specs.models import DEFAULT_MODEL
 from ..transports import AGUITransport, MCPUITransport, VercelAITransport
 from ..types import AgentSpec, MCPServer
 from .a2a import A2AAgentCard, register_a2a_agent, unregister_a2a_agent
@@ -1084,7 +1084,9 @@ async def create_agent(
 
             spec_for_runtime_controls: AgentSpec | None = None
             if request.agent_spec_id:
-                spec_for_runtime_controls = get_library_agent_spec(request.agent_spec_id)
+                spec_for_runtime_controls = get_library_agent_spec(
+                    request.agent_spec_id
+                )
 
             # Fallback: UI may send a full spec payload without a library ID.
             if spec_for_runtime_controls is None and request.agent_spec:
@@ -1125,8 +1127,7 @@ async def create_agent(
                 has_tool_approval_capability = bool(
                     capabilities
                     and any(
-                        isinstance(cap, ToolApprovalCapability)
-                        for cap in capabilities
+                        isinstance(cap, ToolApprovalCapability) for cap in capabilities
                     )
                 )
                 if not has_tool_approval_capability:
@@ -1135,9 +1136,7 @@ async def create_agent(
                     approval_config.tools_requiring_approval = approval_patterns
                     if capabilities is None:
                         capabilities = []
-                    capabilities.append(
-                        ToolApprovalCapability(config=approval_config)
-                    )
+                    capabilities.append(ToolApprovalCapability(config=approval_config))
                     agent_kwargs["capabilities"] = capabilities
                     logger.info(
                         "Auto-enabled ToolApprovalCapability for agent '%s' with approval tools: %s",
@@ -1764,7 +1763,9 @@ async def update_agent_transport(
             _stored_tools = stored_spec.get("tools") or []
             _has_approval = bool(tools_requiring_approval_ids(_stored_tools))
             vercel_adapter = VercelAITransport(
-                agent, agent_id=agent_id, has_spec_frontend_tools=_has_ft,
+                agent,
+                agent_id=agent_id,
+                has_spec_frontend_tools=_has_ft,
                 has_approval_tools=_has_approval,
             )
             register_vercel_agent(agent_id, vercel_adapter)
@@ -2635,10 +2636,13 @@ async def start_all_agents_mcp_servers(
         async def _background_start() -> None:
             for agent_id in agents_processed:
                 try:
-                    started, already_running, failed, codemode_rebuilt = (
-                        await _start_mcp_servers_for_agent(
-                            agent_id, body.env_vars, request
-                        )
+                    (
+                        started,
+                        already_running,
+                        failed,
+                        codemode_rebuilt,
+                    ) = await _start_mcp_servers_for_agent(
+                        agent_id, body.env_vars, request
                     )
                     logger.info(
                         "[mcp-servers/start] agent '%s': started=%s, "
@@ -3076,7 +3080,9 @@ async def configure_from_spec_endpoint(
             mcp_proxy_url=body.mcp_proxy_url,
         )
         _, sandbox_variant, mcp_proxy_url = await _setup_env_and_sandbox(
-            sandbox_body, http_request, agent_id=target_agent_name,
+            sandbox_body,
+            http_request,
+            agent_id=target_agent_name,
         )
 
     # ── 4. Build the CreateAgentRequest that represents this spec ────
@@ -3122,9 +3128,7 @@ async def configure_from_spec_endpoint(
             try:
                 await delete_agent(target_agent_name)
             except Exception as e:
-                logger.warning(
-                    "Failed to delete existing default agent: %s", e
-                )
+                logger.warning("Failed to delete existing default agent: %s", e)
 
         # (Re)create the agent from the spec via the canonical flow.
         try:
@@ -3178,12 +3182,15 @@ async def configure_from_spec_endpoint(
                 if ev.get("name")
             ]
             try:
-                started, already_running, failed, codemode_rebuilt = (
-                    await _start_mcp_servers_for_agent(
-                        target_agent_name,
-                        env_var_objects,
-                        request=http_request,
-                    )
+                (
+                    started,
+                    already_running,
+                    failed,
+                    codemode_rebuilt,
+                ) = await _start_mcp_servers_for_agent(
+                    target_agent_name,
+                    env_var_objects,
+                    request=http_request,
                 )
                 logger.info(
                     "[configure-from-spec] MCP server start results for '%s': "
@@ -3232,7 +3239,9 @@ async def configure_from_spec_endpoint(
     return {
         "success": True,
         "agent_id": target_agent_name,
-        "model": effective_model if isinstance(effective_model, str) else str(effective_model),
+        "model": effective_model
+        if isinstance(effective_model, str)
+        else str(effective_model),
         "specs_changed": specs_changed,
         "message": (
             f"Agent 'default' {'(re)created' if specs_changed else 'unchanged'} "

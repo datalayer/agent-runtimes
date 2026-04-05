@@ -9,7 +9,7 @@
 
 from __future__ import annotations
 
-from typing import Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 import httpx
 
@@ -29,8 +29,8 @@ async def execute(tux: "CliTux") -> Optional[str]:
     Returns:
         The chosen suggestion text, or None if cancelled / no suggestions.
     """
-    from ..tux import STYLE_PRIMARY, STYLE_ACCENT, STYLE_MUTED, STYLE_WARNING
     from ..banner import GREEN_MEDIUM, RESET
+    from ..tux import STYLE_ACCENT, STYLE_MUTED, STYLE_PRIMARY, STYLE_WARNING
 
     # Fetch the agent spec which contains the suggestions list
     suggestions: list[str] = []
@@ -51,7 +51,9 @@ async def execute(tux: "CliTux") -> Optional[str]:
 
     if not suggestions:
         tux.console.print()
-        tux.console.print("● No suggestions available for this agent.", style=STYLE_MUTED)
+        tux.console.print(
+            "● No suggestions available for this agent.", style=STYLE_MUTED
+        )
         tux.console.print()
         return None
 

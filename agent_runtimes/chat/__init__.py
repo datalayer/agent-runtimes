@@ -17,11 +17,6 @@ This package provides:
 
 # ACP client for remote agent connections (from agent-runtimes)
 try:
-    from agent_runtimes.transports.clients import (
-        ACPClient,
-        ACPClientError,
-        connect_acp,
-    )
     # Re-export SDK types for convenience
     from acp import (
         InitializeRequest,
@@ -37,6 +32,13 @@ try:
         ClientCapabilities,
         Implementation,
     )
+
+    from agent_runtimes.transports.clients import (
+        ACPClient,
+        ACPClientError,
+        connect_acp,
+    )
+
     _has_acp = True
 except ImportError:
     _has_acp = False
@@ -61,20 +63,23 @@ def __getattr__(name: str) -> object:
         return {"CliTux": CliTux, "run_tux": run_tux}[name]
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
+
 if _has_acp:
-    __all__.extend([
-        "ACPClient",
-        "ACPClientError",
-        "connect_acp",
-        # SDK types
-        "InitializeRequest",
-        "InitializeResponse",
-        "NewSessionRequest",
-        "NewSessionResponse",
-        "PromptRequest",
-        "PromptResponse",
-        "SessionNotification",
-        "AgentCapabilities",
-        "ClientCapabilities",
-        "Implementation",
-    ])
+    __all__.extend(
+        [
+            "ACPClient",
+            "ACPClientError",
+            "connect_acp",
+            # SDK types
+            "InitializeRequest",
+            "InitializeResponse",
+            "NewSessionRequest",
+            "NewSessionResponse",
+            "PromptRequest",
+            "PromptResponse",
+            "SessionNotification",
+            "AgentCapabilities",
+            "ClientCapabilities",
+            "Implementation",
+        ]
+    )

@@ -109,7 +109,9 @@ class OnceInvoker(BaseInvoker):
                 metadata={"origin": "agent-runtime", "source": "agent-runtime"},
                 base_url=self.base_url,
             )
-            created_event = created.get("event", created) if isinstance(created, dict) else {}
+            created_event = (
+                created.get("event", created) if isinstance(created, dict) else {}
+            )
             created_payload = (
                 created_event.get("payload", {})
                 if isinstance(created_event, dict)
@@ -118,9 +120,16 @@ class OnceInvoker(BaseInvoker):
             logger.info(
                 "Agent-output event persisted for %s: payload_keys=%s outputs_present=%s outputs_len=%s",
                 self.runtime_id,
-                sorted(created_payload.keys()) if isinstance(created_payload, dict) else [],
-                bool(created_payload.get("outputs")) if isinstance(created_payload, dict) else False,
-                len(str(created_payload.get("outputs"))) if isinstance(created_payload, dict) and created_payload.get("outputs") is not None else 0,
+                sorted(created_payload.keys())
+                if isinstance(created_payload, dict)
+                else [],
+                bool(created_payload.get("outputs"))
+                if isinstance(created_payload, dict)
+                else False,
+                len(str(created_payload.get("outputs")))
+                if isinstance(created_payload, dict)
+                and created_payload.get("outputs") is not None
+                else 0,
             )
         except Exception:
             logger.warning(

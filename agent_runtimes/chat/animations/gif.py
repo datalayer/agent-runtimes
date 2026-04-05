@@ -17,8 +17,7 @@ from rich.panel import Panel
 from rich.style import Style
 from rich.text import Text
 
-from .utils import raw_terminal, check_escape_pressed
-
+from .utils import check_escape_pressed, raw_terminal
 
 # Primary accent color (matches tux.py)
 STYLE_PRIMARY = Style(color="rgb(26,188,156)")
@@ -31,11 +30,13 @@ async def gif_animation(console: Console) -> None:
         console: Rich Console instance for output.
     """
     try:
-        from PIL import Image
         import requests
+        from PIL import Image
     except ImportError:
         console.print()
-        console.print("[yellow]This animation requires PIL and requests packages.[/yellow]")
+        console.print(
+            "[yellow]This animation requires PIL and requests packages.[/yellow]"
+        )
         console.print("[dim]Install with: pip install pillow requests[/dim]")
         console.print()
         return
@@ -43,7 +44,7 @@ async def gif_animation(console: Console) -> None:
     import io
 
     # ASCII characters from dark to bright
-    ASCII_CHARS = ' .:-=+*#%@'
+    ASCII_CHARS = " .:-=+*#%@"
     GIF_URL = "https://images.steamusercontent.com/ugc/480020637383985059/4AF1AFCA793CFFD924E6F880918F0DD181593552/"
 
     console.print()
@@ -68,7 +69,7 @@ async def gif_animation(console: Console) -> None:
         try:
             while True:
                 # Convert frame to RGB
-                frame = gif.convert('RGB')
+                frame = gif.convert("RGB")
 
                 # Resize to fit terminal
                 frame = frame.resize((width, height), Image.Resampling.LANCZOS)
@@ -106,7 +107,10 @@ async def gif_animation(console: Console) -> None:
         start_time = time.time()
         duration = 5.0
 
-        with raw_terminal(), Live(console=console, refresh_per_second=12, transient=True) as live:
+        with (
+            raw_terminal(),
+            Live(console=console, refresh_per_second=12, transient=True) as live,
+        ):
             while time.time() - start_time < duration:
                 if check_escape_pressed():
                     break
@@ -115,7 +119,9 @@ async def gif_animation(console: Console) -> None:
                         break
                     if time.time() - start_time >= duration:
                         break
-                    live.update(Panel(frame, border_style=STYLE_PRIMARY, title=" Black Hole "))
+                    live.update(
+                        Panel(frame, border_style=STYLE_PRIMARY, title=" Black Hole ")
+                    )
                     await asyncio.sleep(0.083)  # ~12 fps
 
     except Exception as e:

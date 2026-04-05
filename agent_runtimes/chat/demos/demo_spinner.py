@@ -30,7 +30,9 @@ async def simulate_ai_query(duration: float) -> str:
     return "✓ Query processed successfully!"
 
 
-async def demo_scenario(title: str, message: str, duration: float, style: str = "growing") -> None:
+async def demo_scenario(
+    title: str, message: str, duration: float, style: str = "growing"
+) -> None:
     """Run a single demo scenario."""
     print(f"\n{CYAN}{BOLD}{title}{RESET}")
     print(f"{YELLOW}{'─' * 50}{RESET}")
@@ -63,8 +65,12 @@ async def main() -> None:
         await demo_scenario(title, message, duration, style)
 
     print(f"\n{GREEN}{BOLD}✨ Demo complete!{RESET}")
-    print(f"{CYAN}The spinner provides smooth visual feedback during operations.{RESET}")
-    print(f"{YELLOW}Try it yourself: {RESET}{BOLD}agent-runtimes chat \"What is Python?\"{RESET}\n")
+    print(
+        f"{CYAN}The spinner provides smooth visual feedback during operations.{RESET}"
+    )
+    print(
+        f'{YELLOW}Try it yourself: {RESET}{BOLD}agent-runtimes chat "What is Python?"{RESET}\n'
+    )
 
 
 if __name__ == "__main__":

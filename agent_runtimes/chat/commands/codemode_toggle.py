@@ -9,7 +9,7 @@
 
 from __future__ import annotations
 
-from typing import Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 import httpx
 
@@ -60,7 +60,9 @@ async def execute(tux: "CliTux") -> Optional[str]:
     tux.console.print()
     if enabled:
         tux.console.print("● Codemode enabled", style=STYLE_ACCENT)
-        tux.console.print("  Enhanced code capabilities are now active.", style=STYLE_MUTED)
+        tux.console.print(
+            "  Enhanced code capabilities are now active.", style=STYLE_MUTED
+        )
         tux.console.print("  Use /skills to see available skills.", style=STYLE_MUTED)
     else:
         tux.console.print("● Codemode disabled", style=STYLE_WARNING)

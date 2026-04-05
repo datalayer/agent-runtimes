@@ -16,8 +16,6 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional
 
-from .commands import SlashCommand, build_commands
-
 import httpx
 from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import Completer, Completion
@@ -25,17 +23,18 @@ from prompt_toolkit.cursor_shapes import CursorShape
 from prompt_toolkit.formatted_text import HTML
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.styles import Style as PTStyle
-from rich.console import Console
-from rich.panel import Panel
-from rich.text import Text
-from rich.columns import Columns
-from rich.live import Live
-from rich.style import Style
 from rich.box import ROUNDED
+from rich.columns import Columns
+from rich.console import Console
+from rich.live import Live
+from rich.panel import Panel
+from rich.style import Style
+from rich.text import Text
 
 from .banner import (
     GOODBYE_MESSAGE,
 )
+from .commands import SlashCommand, build_commands
 
 # Rich styles matching Datalayer brand
 # Brand color reference (from BRAND_MANUAL.md):
@@ -46,8 +45,12 @@ from .banner import (
 # - Gray #59595C - Supporting text, hints, metadata
 #
 # For dark terminal backgrounds, use brighter greens (#1ABC9C, #2ECC71) for visibility
-STYLE_PRIMARY = Style(color="rgb(26,188,156)")  # Green accent #1ABC9C - primary accent in dark mode
-STYLE_SECONDARY = Style(color="rgb(22,160,133)")  # Green brand #16A085 - secondary accent
+STYLE_PRIMARY = Style(
+    color="rgb(26,188,156)"
+)  # Green accent #1ABC9C - primary accent in dark mode
+STYLE_SECONDARY = Style(
+    color="rgb(22,160,133)"
+)  # Green brand #16A085 - secondary accent
 STYLE_ACCENT = Style(color="rgb(46,204,113)")  # Green bright #2ECC71 - highlights
 STYLE_MUTED = Style(color="rgb(89,89,92)")  # Gray #59595C - supporting text
 STYLE_WHITE = Style(color="white")  # Primary text in dark mode
@@ -107,6 +110,7 @@ class SlashCommandCompleter(Completer):
 @dataclass
 class ToolCallInfo:
     """Information about a tool call."""
+
     tool_call_id: str
     tool_name: str
     args_json: str = ""
@@ -127,20 +131,29 @@ class ToolCallInfo:
                 for k, v in items:
                     val_str = str(v).replace("\n", " ")
                     if len(val_str) > max_value_len:
-                        val_str = val_str[:max_value_len - 3] + "..."
+                        val_str = val_str[: max_value_len - 3] + "..."
                     parts.append(f"{k}={val_str}")
                 summary = ", ".join(parts)
                 if len(args) > 3:
                     summary += f" (+{len(args) - 3} more)"
                 return summary
-            return self.args_json[:60] + "..." if len(self.args_json) > 60 else self.args_json
+            return (
+                self.args_json[:60] + "..."
+                if len(self.args_json) > 60
+                else self.args_json
+            )
         except json.JSONDecodeError:
-            return self.args_json[:60] + "..." if len(self.args_json) > 60 else self.args_json
+            return (
+                self.args_json[:60] + "..."
+                if len(self.args_json) > 60
+                else self.args_json
+            )
 
 
 @dataclass
 class SessionStats:
     """Session statistics for token tracking."""
+
     total_input_tokens: int = 0
     total_output_tokens: int = 0
     total_requests: int = 0
@@ -186,7 +199,9 @@ class CliTux:
         self.model_name: str = "unknown"
         self.context_window: int = 128000
         self.tool_calls: list[ToolCallInfo] = []  # Track tool calls from last response
-        self._agui_client: Optional[Any] = None  # Persistent AG-UI client for conversation history
+        self._agui_client: Optional[Any] = (
+            None  # Persistent AG-UI client for conversation history
+        )
 
         # Initialize slash commands
         self.commands: dict[str, SlashCommand] = build_commands(
@@ -195,15 +210,17 @@ class CliTux:
 
         # Initialize prompt session with slash command completer
         # Style for the completion menu matching Datalayer brand colors
-        self.prompt_style = PTStyle.from_dict({
-            "prompt": "#1ABC9C bold",  # Green accent
-            "completion-menu.completion": "bg:#2d2d2d #ffffff",
-            "completion-menu.completion.current": "bg:#16A085 #ffffff bold",
-            "completion-menu.meta.completion": "bg:#2d2d2d #59595C",
-            "completion-menu.meta.completion.current": "bg:#16A085 #ffffff",
-            "scrollbar.background": "bg:#444444",
-            "scrollbar.button": "bg:#16A085",
-        })
+        self.prompt_style = PTStyle.from_dict(
+            {
+                "prompt": "#1ABC9C bold",  # Green accent
+                "completion-menu.completion": "bg:#2d2d2d #ffffff",
+                "completion-menu.completion.current": "bg:#16A085 #ffffff bold",
+                "completion-menu.meta.completion": "bg:#2d2d2d #59595C",
+                "completion-menu.meta.completion.current": "bg:#16A085 #ffffff",
+                "scrollbar.background": "bg:#444444",
+                "scrollbar.button": "bg:#16A085",
+            }
+        )
         self.prompt_session: Optional[PromptSession] = None
 
     def _format_tokens(self, tokens: int) -> str:
@@ -231,6 +248,7 @@ class CliTux:
         cwd = self._get_cwd()
 
         from . import __version__
+
         version = __version__.__version__
 
         # ASCII art logo - Datalayer inspired (3 horizontal bars + feet)
@@ -267,7 +285,9 @@ class CliTux:
         right_content.append("/context - View context usage\n", style=STYLE_MUTED)
         right_content.append("/status - Check connection status\n", style=STYLE_MUTED)
         right_content.append("/clear - Start fresh conversation\n", style=STYLE_MUTED)
-        right_content.append("/exit - Exit from agent-runtimes chat\n", style=STYLE_MUTED)
+        right_content.append(
+            "/exit - Exit from agent-runtimes chat\n", style=STYLE_MUTED
+        )
 
         # Create side-by-side layout
         left_panel = Panel(
@@ -317,6 +337,7 @@ class CliTux:
                 # Set the buffer to the command and accept it
                 event.current_buffer.text = f"/{cmd_name}"
                 event.current_buffer.validate_and_handle()
+
             return handler
 
         # Register each shortcut - unpack tuple as separate arguments
@@ -342,10 +363,12 @@ class CliTux:
 
         try:
             # Use prompt_toolkit's async prompt method
-            return (await self.prompt_session.prompt_async(
-                HTML("<ansicyan>❯ </ansicyan>"),
-                complete_while_typing=True,
-            )).strip()
+            return (
+                await self.prompt_session.prompt_async(
+                    HTML("<ansicyan>❯ </ansicyan>"),
+                    complete_while_typing=True,
+                )
+            ).strip()
         except EOFError:
             return "/exit"
         except KeyboardInterrupt:
@@ -378,13 +401,17 @@ class CliTux:
         else:
             # Unknown command - show error with hint
             self.console.print(f"Unknown command: /{cmd_name}", style=STYLE_ERROR)
-            self.console.print("Type /help to see available commands, or start typing / to see suggestions.", style=STYLE_MUTED)
+            self.console.print(
+                "Type /help to see available commands, or start typing / to see suggestions.",
+                style=STYLE_MUTED,
+            )
             return ""  # Handled (error shown)
 
     async def send_message(self, message: str) -> None:
         """Send a message to the agent and stream the response."""
-        from agent_runtimes.transports.clients import AGUIClient
         from ag_ui.core import EventType
+
+        from agent_runtimes.transports.clients import AGUIClient
 
         self.stats.messages += 1
         self.tool_calls = []  # Reset tool calls for this response
@@ -433,7 +460,9 @@ class CliTux:
                     self.stats.tool_calls += 1
                     # Show tool call indicator inline with number
                     self.console.print()
-                    self.console.print(f"  ⚙ [{tool_num}] {tool_name}", style=STYLE_SECONDARY, end="")
+                    self.console.print(
+                        f"  ⚙ [{tool_num}] {tool_name}", style=STYLE_SECONDARY, end=""
+                    )
 
                 elif event.type == EventType.TOOL_CALL_ARGS:
                     # Accumulate tool arguments
@@ -446,7 +475,9 @@ class CliTux:
                     if current_tool_call:
                         args_summary = current_tool_call.format_args(max_value_len=50)
                         if args_summary:
-                            self.console.print(f"({args_summary})", style=STYLE_MUTED, end="")
+                            self.console.print(
+                                f"({args_summary})", style=STYLE_MUTED, end=""
+                            )
                         self.console.print(" ...", style=STYLE_MUTED)
 
                 elif event.type == EventType.TOOL_CALL_RESULT:
@@ -459,9 +490,15 @@ class CliTux:
                             tc.result = str(result) if result else ""
                             tc.status = "complete"
                             # Show completion
-                            result_preview = tc.result[:80] + "..." if len(tc.result) > 80 else tc.result
+                            result_preview = (
+                                tc.result[:80] + "..."
+                                if len(tc.result) > 80
+                                else tc.result
+                            )
                             result_preview = result_preview.replace("\n", " ")
-                            self.console.print(f"    ✓ {result_preview}", style=STYLE_ACCENT)
+                            self.console.print(
+                                f"    ✓ {result_preview}", style=STYLE_ACCENT
+                            )
                             break
                     current_tool_call = None
 
@@ -489,8 +526,12 @@ class CliTux:
                         data = resp.json()
                         input_tokens = data.get("sumResponseInputTokens", 0)
                         output_tokens = data.get("sumResponseOutputTokens", 0)
-                        self.model_name = data.get("modelName", self.model_name) or self.model_name
-                        self.context_window = data.get("contextWindow", self.context_window)
+                        self.model_name = (
+                            data.get("modelName", self.model_name) or self.model_name
+                        )
+                        self.context_window = data.get(
+                            "contextWindow", self.context_window
+                        )
             except Exception:
                 pass
 
@@ -538,9 +579,12 @@ class CliTux:
         self.console.print(
             f"  ⚙ {completed}/{total} tools executed: {tools_str}  ",
             style=STYLE_MUTED,
-            end=""
+            end="",
         )
-        self.console.print("\\[/tools-last for details]", style=Style(color="rgb(89,89,92)", italic=True))
+        self.console.print(
+            "\\[/tools-last for details]",
+            style=Style(color="rgb(89,89,92)", italic=True),
+        )
 
     async def run(self) -> None:
         """Run the main TUX loop."""
@@ -580,9 +624,11 @@ class CliTux:
             except KeyboardInterrupt:
                 self.console.print()
                 from .commands import exit as _exit_cmd
+
                 await _exit_cmd.execute(self)
             except EOFError:
                 from .commands import exit as _exit_cmd
+
                 await _exit_cmd.execute(self)
 
 
@@ -604,5 +650,12 @@ async def run_tux(
         jupyter_url: Jupyter server URL (only set when sandbox is jupyter)
         extra_suggestions: Additional suggestions provided via --suggestions flag
     """
-    tux = CliTux(agent_url, server_url, agent_id, eggs=eggs, jupyter_url=jupyter_url, extra_suggestions=extra_suggestions)
+    tux = CliTux(
+        agent_url,
+        server_url,
+        agent_id,
+        eggs=eggs,
+        jupyter_url=jupyter_url,
+        extra_suggestions=extra_suggestions,
+    )
     await tux.run()

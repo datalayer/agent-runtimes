@@ -16,8 +16,7 @@ from rich.panel import Panel
 from rich.style import Style
 from rich.text import Text
 
-from .utils import raw_terminal, check_escape_pressed
-
+from .utils import check_escape_pressed, raw_terminal
 
 # Primary accent color (matches tux.py)
 STYLE_PRIMARY = Style(color="rgb(26,188,156)")
@@ -93,7 +92,10 @@ async def about_animation(console: Console) -> None:
     console.print()
 
     try:
-        with raw_terminal(), Live(console=console, refresh_per_second=8, transient=True) as live:
+        with (
+            raw_terminal(),
+            Live(console=console, refresh_per_second=8, transient=True) as live,
+        ):
             # Phase 1: Blinking for 2 seconds
             start_time = time.time()
             duration = 2.0
@@ -106,7 +108,14 @@ async def about_animation(console: Console) -> None:
                         return
                     if time.time() - start_time >= duration:
                         break
-                    live.update(Panel(frame, border_style=STYLE_PRIMARY, title=" Datalayer ", subtitle="[link=https://datalayer.ai]datalayer.ai[/link]"))
+                    live.update(
+                        Panel(
+                            frame,
+                            border_style=STYLE_PRIMARY,
+                            title=" Datalayer ",
+                            subtitle="[link=https://datalayer.ai]datalayer.ai[/link]",
+                        )
+                    )
                     await asyncio.sleep(0.15)
 
             # Phase 2: Walking animation - logo moves right
@@ -126,50 +135,78 @@ async def about_animation(console: Console) -> None:
 
                 # Sub-frame 1: Feet move first
                 frame = Text.from_markup(f"""
-{' ' * offset}[bright_green]▄▄▄▄▄▄[/bright_green]
-{' ' * offset}[bright_green]▄▄▄▄▄▄[/bright_green]
-{' ' * offset}[bright_green]▄▄▄▄▄▄[/bright_green]
-{' ' * (offset + 1)}[bright_green]▀    ▀[/bright_green]
+{" " * offset}[bright_green]▄▄▄▄▄▄[/bright_green]
+{" " * offset}[bright_green]▄▄▄▄▄▄[/bright_green]
+{" " * offset}[bright_green]▄▄▄▄▄▄[/bright_green]
+{" " * (offset + 1)}[bright_green]▀    ▀[/bright_green]
 
 {tagline}
 """)
-                live.update(Panel(frame, border_style=STYLE_PRIMARY, title=" Datalayer ", subtitle="[link=https://datalayer.ai]datalayer.ai[/link]"))
+                live.update(
+                    Panel(
+                        frame,
+                        border_style=STYLE_PRIMARY,
+                        title=" Datalayer ",
+                        subtitle="[link=https://datalayer.ai]datalayer.ai[/link]",
+                    )
+                )
                 await asyncio.sleep(0.08)
 
                 # Sub-frame 2: Layer 3 moves
                 frame = Text.from_markup(f"""
-{' ' * offset}[bright_green]▄▄▄▄▄▄[/bright_green]
-{' ' * offset}[bright_green]▄▄▄▄▄▄[/bright_green]
-{' ' * (offset + 1)}[bright_green]▄▄▄▄▄▄[/bright_green]
-{' ' * (offset + 1)}[bright_green]▀    ▀[/bright_green]
+{" " * offset}[bright_green]▄▄▄▄▄▄[/bright_green]
+{" " * offset}[bright_green]▄▄▄▄▄▄[/bright_green]
+{" " * (offset + 1)}[bright_green]▄▄▄▄▄▄[/bright_green]
+{" " * (offset + 1)}[bright_green]▀    ▀[/bright_green]
 
 {tagline}
 """)
-                live.update(Panel(frame, border_style=STYLE_PRIMARY, title=" Datalayer ", subtitle="[link=https://datalayer.ai]datalayer.ai[/link]"))
+                live.update(
+                    Panel(
+                        frame,
+                        border_style=STYLE_PRIMARY,
+                        title=" Datalayer ",
+                        subtitle="[link=https://datalayer.ai]datalayer.ai[/link]",
+                    )
+                )
                 await asyncio.sleep(0.08)
 
                 # Sub-frame 3: Layer 2 moves
                 frame = Text.from_markup(f"""
-{' ' * offset}[bright_green]▄▄▄▄▄▄[/bright_green]
-{' ' * (offset + 1)}[bright_green]▄▄▄▄▄▄[/bright_green]
-{' ' * (offset + 1)}[bright_green]▄▄▄▄▄▄[/bright_green]
-{' ' * (offset + 1)}[bright_green]▀    ▀[/bright_green]
+{" " * offset}[bright_green]▄▄▄▄▄▄[/bright_green]
+{" " * (offset + 1)}[bright_green]▄▄▄▄▄▄[/bright_green]
+{" " * (offset + 1)}[bright_green]▄▄▄▄▄▄[/bright_green]
+{" " * (offset + 1)}[bright_green]▀    ▀[/bright_green]
 
 {tagline}
 """)
-                live.update(Panel(frame, border_style=STYLE_PRIMARY, title=" Datalayer ", subtitle="[link=https://datalayer.ai]datalayer.ai[/link]"))
+                live.update(
+                    Panel(
+                        frame,
+                        border_style=STYLE_PRIMARY,
+                        title=" Datalayer ",
+                        subtitle="[link=https://datalayer.ai]datalayer.ai[/link]",
+                    )
+                )
                 await asyncio.sleep(0.08)
 
                 # Sub-frame 4: Layer 1 (top) moves - logo fully shifted
                 frame = Text.from_markup(f"""
-{' ' * (offset + 1)}[bright_green]▄▄▄▄▄▄[/bright_green]
-{' ' * (offset + 1)}[bright_green]▄▄▄▄▄▄[/bright_green]
-{' ' * (offset + 1)}[bright_green]▄▄▄▄▄▄[/bright_green]
-{' ' * (offset + 1)}[bright_green]▀    ▀[/bright_green]
+{" " * (offset + 1)}[bright_green]▄▄▄▄▄▄[/bright_green]
+{" " * (offset + 1)}[bright_green]▄▄▄▄▄▄[/bright_green]
+{" " * (offset + 1)}[bright_green]▄▄▄▄▄▄[/bright_green]
+{" " * (offset + 1)}[bright_green]▀    ▀[/bright_green]
 
 {tagline}
 """)
-                live.update(Panel(frame, border_style=STYLE_PRIMARY, title=" Datalayer ", subtitle="[link=https://datalayer.ai]datalayer.ai[/link]"))
+                live.update(
+                    Panel(
+                        frame,
+                        border_style=STYLE_PRIMARY,
+                        title=" Datalayer ",
+                        subtitle="[link=https://datalayer.ai]datalayer.ai[/link]",
+                    )
+                )
                 await asyncio.sleep(0.08)
 
             # Phase 3: Blinking for 2 seconds at final position
@@ -180,50 +217,50 @@ async def about_animation(console: Console) -> None:
             # Create frames at the final position
             final_frames = [
                 Text.from_markup(f"""
-{' ' * final_offset}[cyan]▄▄▄▄▄▄[/cyan]
-{' ' * final_offset}[cyan]▄▄▄▄▄▄[/cyan]
-{' ' * final_offset}[cyan]▄▄▄▄▄▄[/cyan]
-{' ' * final_offset}[cyan]▀    ▀[/cyan]
+{" " * final_offset}[cyan]▄▄▄▄▄▄[/cyan]
+{" " * final_offset}[cyan]▄▄▄▄▄▄[/cyan]
+{" " * final_offset}[cyan]▄▄▄▄▄▄[/cyan]
+{" " * final_offset}[cyan]▀    ▀[/cyan]
 
 {tagline}
 """),
                 Text.from_markup(f"""
-{' ' * final_offset}[green]▄▄[/green][cyan]▄▄▄▄[/cyan]
-{' ' * final_offset}[green]▄▄▄[/green][cyan]▄▄▄[/cyan]
-{' ' * final_offset}[green]▄▄▄▄[/green][cyan]▄▄[/cyan]
-{' ' * final_offset}[green]▀[/green]    [cyan]▀[/cyan]
+{" " * final_offset}[green]▄▄[/green][cyan]▄▄▄▄[/cyan]
+{" " * final_offset}[green]▄▄▄[/green][cyan]▄▄▄[/cyan]
+{" " * final_offset}[green]▄▄▄▄[/green][cyan]▄▄[/cyan]
+{" " * final_offset}[green]▀[/green]    [cyan]▀[/cyan]
 
 {tagline}
 """),
                 Text.from_markup(f"""
-{' ' * final_offset}[bright_green]▄▄[/bright_green][green]▄▄▄▄[/green]
-{' ' * final_offset}[bright_green]▄▄▄[/bright_green][green]▄▄▄[/green]
-{' ' * final_offset}[bright_green]▄▄▄▄[/bright_green][green]▄▄[/green]
-{' ' * final_offset}[bright_green]▀[/bright_green]    [green]▀[/green]
+{" " * final_offset}[bright_green]▄▄[/bright_green][green]▄▄▄▄[/green]
+{" " * final_offset}[bright_green]▄▄▄[/bright_green][green]▄▄▄[/green]
+{" " * final_offset}[bright_green]▄▄▄▄[/bright_green][green]▄▄[/green]
+{" " * final_offset}[bright_green]▀[/bright_green]    [green]▀[/green]
 
 {tagline}
 """),
                 Text.from_markup(f"""
-{' ' * final_offset}[bold bright_green]▄▄[/bold bright_green][bright_green]▄▄▄▄[/bright_green]
-{' ' * final_offset}[bold bright_green]▄▄▄[/bold bright_green][bright_green]▄▄▄[/bright_green]
-{' ' * final_offset}[bold bright_green]▄▄▄▄[/bold bright_green][bright_green]▄▄[/bright_green]
-{' ' * final_offset}[bold bright_green]▀[/bold bright_green]    [bright_green]▀[/bright_green]
+{" " * final_offset}[bold bright_green]▄▄[/bold bright_green][bright_green]▄▄▄▄[/bright_green]
+{" " * final_offset}[bold bright_green]▄▄▄[/bold bright_green][bright_green]▄▄▄[/bright_green]
+{" " * final_offset}[bold bright_green]▄▄▄▄[/bold bright_green][bright_green]▄▄[/bright_green]
+{" " * final_offset}[bold bright_green]▀[/bold bright_green]    [bright_green]▀[/bright_green]
 
 {tagline}
 """),
                 Text.from_markup(f"""
-{' ' * final_offset}[bright_green]▄▄[/bright_green][green]▄▄▄▄[/green]
-{' ' * final_offset}[bright_green]▄▄▄[/bright_green][green]▄▄▄[/green]
-{' ' * final_offset}[bright_green]▄▄▄▄[/bright_green][green]▄▄[/green]
-{' ' * final_offset}[bright_green]▀[/bright_green]    [green]▀[/green]
+{" " * final_offset}[bright_green]▄▄[/bright_green][green]▄▄▄▄[/green]
+{" " * final_offset}[bright_green]▄▄▄[/bright_green][green]▄▄▄[/green]
+{" " * final_offset}[bright_green]▄▄▄▄[/bright_green][green]▄▄[/green]
+{" " * final_offset}[bright_green]▀[/bright_green]    [green]▀[/green]
 
 {tagline}
 """),
                 Text.from_markup(f"""
-{' ' * final_offset}[green]▄▄[/green][cyan]▄▄▄▄[/cyan]
-{' ' * final_offset}[green]▄▄▄[/green][cyan]▄▄▄[/cyan]
-{' ' * final_offset}[green]▄▄▄▄[/green][cyan]▄▄[/cyan]
-{' ' * final_offset}[green]▀[/green]    [cyan]▀[/cyan]
+{" " * final_offset}[green]▄▄[/green][cyan]▄▄▄▄[/cyan]
+{" " * final_offset}[green]▄▄▄[/green][cyan]▄▄▄[/cyan]
+{" " * final_offset}[green]▄▄▄▄[/green][cyan]▄▄[/cyan]
+{" " * final_offset}[green]▀[/green]    [cyan]▀[/cyan]
 
 {tagline}
 """),
@@ -237,7 +274,14 @@ async def about_animation(console: Console) -> None:
                         return
                     if time.time() - start_time >= duration:
                         break
-                    live.update(Panel(frame, border_style=STYLE_PRIMARY, title=" Datalayer ", subtitle="[link=https://datalayer.ai]datalayer.ai[/link]"))
+                    live.update(
+                        Panel(
+                            frame,
+                            border_style=STYLE_PRIMARY,
+                            title=" Datalayer ",
+                            subtitle="[link=https://datalayer.ai]datalayer.ai[/link]",
+                        )
+                    )
                     await asyncio.sleep(0.15)
 
     except KeyboardInterrupt:

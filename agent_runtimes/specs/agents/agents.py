@@ -23,7 +23,14 @@ ANALYZE_CAMPAIGN_PERFORMANCE_AGENT_SPEC_0_0_1 = AgentSpec(
     version="0.0.1",
     name="Analyze Campaign Performance",
     description="A multi-agent team that unifies marketing data from Google Ads, Meta, TikTok, LinkedIn, GA4, CRM, and email platforms. Normalises metrics into a unified view, detects performance anomalies in real time, and generates budget reallocation recommendations to maximise ROAS.",
-    tags=["marketing", "media", "campaigns", "analytics", "advertising", "social-media"],
+    tags=[
+        "marketing",
+        "media",
+        "campaigns",
+        "analytics",
+        "advertising",
+        "social-media",
+    ],
     enabled=False,
     model="bedrock:us.anthropic.claude-3-5-haiku-20241022-v1:0",
     mcp_servers=[MCP_SERVER_CATALOG["filesystem"], MCP_SERVER_CATALOG["slack"]],
@@ -51,16 +58,70 @@ ANALYZE_CAMPAIGN_PERFORMANCE_AGENT_SPEC_0_0_1 = AgentSpec(
     goal="Unify marketing data from Google Ads, Meta, TikTok, LinkedIn, GA4, and email platforms. Normalise metrics into a single cross-channel view with unified CPA, ROAS, and CTR definitions. Detect performance anomalies in real time and generate budget reallocation recommendations to maximise ROAS.",
     protocol="vercel-ai",
     ui_extension="a2ui",
-    trigger={'type': 'schedule', 'cron': '0 */4 * * *', 'description': 'Every 4 hours for cross-platform campaign data sync and analysis', 'prompt': 'Run the scheduled workflow and produce the configured deliverable.'},
+    trigger={
+        "type": "schedule",
+        "cron": "0 */4 * * *",
+        "description": "Every 4 hours for cross-platform campaign data sync and analysis",
+        "prompt": "Run the scheduled workflow and produce the configured deliverable.",
+    },
     model_configuration=None,
     mcp_server_tools=None,
-    guardrails=[{'name': 'Marketing Analytics Agent', 'identity_provider': 'google', 'identity_name': 'marketing-bot@acme.com', 'permissions': {'read:data': True, 'write:data': False, 'execute:code': True, 'access:internet': True, 'send:email': False, 'deploy:production': False}, 'data_handling': {'pii_detection': True, 'pii_action': 'redact'}, 'approval_policy': {'require_manual_approval_for': ['Pausing campaigns with daily spend above $1,000', 'Budget reallocation above 20% of channel spend', 'Any automated bid adjustments'], 'auto_approved': ['Data collection and metric normalisation', 'Anomaly detection and alerting', 'Report generation']}, 'token_limits': {'per_run': '50K', 'per_day': '400K', 'per_month': '5M'}}],
-    evals=[{'name': 'Data Ingestion Completeness', 'category': 'coding', 'task_count': 400}, {'name': 'Anomaly Detection Precision', 'category': 'reasoning', 'task_count': 300}, {'name': 'ROAS Optimisation Impact', 'category': 'coding', 'task_count': 200}],
-    codemode={'enabled': True, 'token_reduction': '~85%', 'speedup': '~2× faster'},
-    output={'formats': ['Dashboard', 'PDF', 'Spreadsheet'], 'template': 'Campaign Performance Report', 'storage': '/outputs/campaign-analytics/'},
-    advanced={'cost_limit': '$5.00 per run', 'time_limit': '600 seconds', 'max_iterations': 40, 'validation': 'All metrics must reconcile with platform-reported figures within 2%. Budget recommendations must not exceed total allocated budget.\n'},
+    guardrails=[
+        {
+            "name": "Marketing Analytics Agent",
+            "identity_provider": "google",
+            "identity_name": "marketing-bot@acme.com",
+            "permissions": {
+                "read:data": True,
+                "write:data": False,
+                "execute:code": True,
+                "access:internet": True,
+                "send:email": False,
+                "deploy:production": False,
+            },
+            "data_handling": {"pii_detection": True, "pii_action": "redact"},
+            "approval_policy": {
+                "require_manual_approval_for": [
+                    "Pausing campaigns with daily spend above $1,000",
+                    "Budget reallocation above 20% of channel spend",
+                    "Any automated bid adjustments",
+                ],
+                "auto_approved": [
+                    "Data collection and metric normalisation",
+                    "Anomaly detection and alerting",
+                    "Report generation",
+                ],
+            },
+            "token_limits": {"per_run": "50K", "per_day": "400K", "per_month": "5M"},
+        }
+    ],
+    evals=[
+        {
+            "name": "Data Ingestion Completeness",
+            "category": "coding",
+            "task_count": 400,
+        },
+        {
+            "name": "Anomaly Detection Precision",
+            "category": "reasoning",
+            "task_count": 300,
+        },
+        {"name": "ROAS Optimisation Impact", "category": "coding", "task_count": 200},
+    ],
+    codemode={"enabled": True, "token_reduction": "~85%", "speedup": "~2× faster"},
+    output={
+        "formats": ["Dashboard", "PDF", "Spreadsheet"],
+        "template": "Campaign Performance Report",
+        "storage": "/outputs/campaign-analytics/",
+    },
+    advanced={
+        "cost_limit": "$5.00 per run",
+        "time_limit": "600 seconds",
+        "max_iterations": 40,
+        "validation": "All metrics must reconcile with platform-reported figures within 2%. Budget recommendations must not exceed total allocated budget.\n",
+    },
     authorization_policy="",
-    notifications={'email': 'marketing@company.com', 'slack': '#campaign-analytics'},
+    notifications={"email": "marketing@company.com", "slack": "#campaign-analytics"},
     memory="ephemeral",
 )
 
@@ -96,16 +157,48 @@ ANALYZE_SUPPORT_TICKETS_AGENT_SPEC_0_0_1 = AgentSpec(
     goal="Triage incoming support tickets by urgency, categorize by topic and sentiment, identify recurring patterns, and generate resolution recommendations with escalation paths for critical issues.",
     protocol="vercel-ai",
     ui_extension="a2ui",
-    trigger={'type': 'schedule', 'cron': '0 */2 * * *', 'description': 'Every 2 hours', 'prompt': 'Run the scheduled workflow and produce the configured deliverable.'},
+    trigger={
+        "type": "schedule",
+        "cron": "0 */2 * * *",
+        "description": "Every 2 hours",
+        "prompt": "Run the scheduled workflow and produce the configured deliverable.",
+    },
     model_configuration=None,
     mcp_server_tools=None,
-    guardrails=[{'name': 'Restricted Viewer', 'identity_provider': 'datalayer', 'identity_name': 'support-bot@acme.com', 'permissions': {'read:data': True, 'write:data': False, 'execute:code': True, 'access:internet': True, 'send:email': False, 'deploy:production': False}, 'token_limits': {'per_run': '40K', 'per_day': '400K', 'per_month': '4M'}}],
-    evals=[{'name': 'Triage Accuracy', 'category': 'reasoning', 'task_count': 400}, {'name': 'Pattern Detection', 'category': 'coding', 'task_count': 200}],
-    codemode={'enabled': True, 'token_reduction': '~80%', 'speedup': '~1.5× faster'},
-    output={'formats': ['JSON', 'Dashboard'], 'template': 'Support Ticket Analysis Report', 'storage': '/outputs/support-analysis/'},
-    advanced={'cost_limit': '$4.00 per run', 'time_limit': '300 seconds', 'max_iterations': 40, 'validation': 'All tickets must receive a priority classification'},
+    guardrails=[
+        {
+            "name": "Restricted Viewer",
+            "identity_provider": "datalayer",
+            "identity_name": "support-bot@acme.com",
+            "permissions": {
+                "read:data": True,
+                "write:data": False,
+                "execute:code": True,
+                "access:internet": True,
+                "send:email": False,
+                "deploy:production": False,
+            },
+            "token_limits": {"per_run": "40K", "per_day": "400K", "per_month": "4M"},
+        }
+    ],
+    evals=[
+        {"name": "Triage Accuracy", "category": "reasoning", "task_count": 400},
+        {"name": "Pattern Detection", "category": "coding", "task_count": 200},
+    ],
+    codemode={"enabled": True, "token_reduction": "~80%", "speedup": "~1.5× faster"},
+    output={
+        "formats": ["JSON", "Dashboard"],
+        "template": "Support Ticket Analysis Report",
+        "storage": "/outputs/support-analysis/",
+    },
+    advanced={
+        "cost_limit": "$4.00 per run",
+        "time_limit": "300 seconds",
+        "max_iterations": 40,
+        "validation": "All tickets must receive a priority classification",
+    },
     authorization_policy="",
-    notifications={'email': 'patricia.j@company.com', 'slack': '#support-analysis'},
+    notifications={"email": "patricia.j@company.com", "slack": "#support-analysis"},
     memory="ephemeral",
 )
 
@@ -141,16 +234,48 @@ AUDIT_INVENTORY_LEVELS_AGENT_SPEC_0_0_1 = AgentSpec(
     goal="Monitor inventory levels across all warehouses every 6 hours. Detect discrepancies between system and physical counts, forecast demand by SKU, generate reorder recommendations, and compile audit reports with findings.",
     protocol="vercel-ai",
     ui_extension="a2ui",
-    trigger={'type': 'schedule', 'cron': '0 */6 * * *', 'description': 'Every 6 hours', 'prompt': 'Run the scheduled workflow and produce the configured deliverable.'},
+    trigger={
+        "type": "schedule",
+        "cron": "0 */6 * * *",
+        "description": "Every 6 hours",
+        "prompt": "Run the scheduled workflow and produce the configured deliverable.",
+    },
     model_configuration=None,
     mcp_server_tools=None,
-    guardrails=[{'name': 'Google Workspace Agent', 'identity_provider': 'google', 'identity_name': 'inventory-bot@acme.com', 'permissions': {'read:data': True, 'write:data': True, 'execute:code': True, 'access:internet': True, 'send:email': True, 'deploy:production': False}, 'token_limits': {'per_run': '100K', 'per_day': '800K', 'per_month': '8M'}}],
-    evals=[{'name': 'Inventory Accuracy', 'category': 'coding', 'task_count': 500}, {'name': 'Forecast Precision', 'category': 'reasoning', 'task_count': 300}],
-    codemode={'enabled': True, 'token_reduction': '~90%', 'speedup': '~2× faster'},
-    output={'formats': ['PDF', 'Spreadsheet', 'Dashboard'], 'template': 'Inventory Audit Report', 'storage': '/outputs/inventory-audit/'},
-    advanced={'cost_limit': '$12.00 per run', 'time_limit': '900 seconds', 'max_iterations': 80, 'validation': 'All warehouse counts must reconcile within 2% tolerance'},
+    guardrails=[
+        {
+            "name": "Google Workspace Agent",
+            "identity_provider": "google",
+            "identity_name": "inventory-bot@acme.com",
+            "permissions": {
+                "read:data": True,
+                "write:data": True,
+                "execute:code": True,
+                "access:internet": True,
+                "send:email": True,
+                "deploy:production": False,
+            },
+            "token_limits": {"per_run": "100K", "per_day": "800K", "per_month": "8M"},
+        }
+    ],
+    evals=[
+        {"name": "Inventory Accuracy", "category": "coding", "task_count": 500},
+        {"name": "Forecast Precision", "category": "reasoning", "task_count": 300},
+    ],
+    codemode={"enabled": True, "token_reduction": "~90%", "speedup": "~2× faster"},
+    output={
+        "formats": ["PDF", "Spreadsheet", "Dashboard"],
+        "template": "Inventory Audit Report",
+        "storage": "/outputs/inventory-audit/",
+    },
+    advanced={
+        "cost_limit": "$12.00 per run",
+        "time_limit": "900 seconds",
+        "max_iterations": 80,
+        "validation": "All warehouse counts must reconcile within 2% tolerance",
+    },
     authorization_policy="",
-    notifications={'email': 'linda.m@company.com', 'slack': '#inventory-ops'},
+    notifications={"email": "linda.m@company.com", "slack": "#inventory-ops"},
     memory="ephemeral",
 )
 
@@ -187,16 +312,66 @@ AUTOMATE_REGULATORY_REPORTING_AGENT_SPEC_0_0_1 = AgentSpec(
     goal="Automate end-to-end regulatory reporting: ingest data from trading and accounting systems, compute risk-weighted assets and capital ratios, reconcile positions, validate against Basel III/IV, MiFID II, and SOX rules, and generate submission-ready compliance reports with full audit trails.",
     protocol="vercel-ai",
     ui_extension="a2ui",
-    trigger={'type': 'schedule', 'cron': '0 6 3 * *', 'description': 'Monthly on the 3rd at 06:00 for regulatory reporting deadlines', 'prompt': 'Run the scheduled workflow and produce the configured deliverable.'},
+    trigger={
+        "type": "schedule",
+        "cron": "0 6 3 * *",
+        "description": "Monthly on the 3rd at 06:00 for regulatory reporting deadlines",
+        "prompt": "Run the scheduled workflow and produce the configured deliverable.",
+    },
     model_configuration=None,
     mcp_server_tools=None,
-    guardrails=[{'name': 'Compliance Data Handler', 'identity_provider': 'datalayer', 'identity_name': 'compliance-bot@acme.com', 'permissions': {'read:data': True, 'write:data': False, 'execute:code': True, 'access:internet': False, 'send:email': False, 'deploy:production': False}, 'data_scope': {'allowed_systems': ['trading-platform', 'risk-engine', 'accounting-ledger'], 'denied_fields': ['*SSN*', '*TaxId*', '*Password*']}, 'data_handling': {'pii_detection': True, 'pii_action': 'redact'}, 'token_limits': {'per_run': '120K', 'per_day': '600K', 'per_month': '6M'}}],
-    evals=[{'name': 'Risk Metric Accuracy', 'category': 'coding', 'task_count': 500}, {'name': 'Regulatory Rule Compliance', 'category': 'reasoning', 'task_count': 300}, {'name': 'Reconciliation Break Detection', 'category': 'coding', 'task_count': 200}],
-    codemode={'enabled': True, 'token_reduction': '~90%', 'speedup': '~2× faster'},
-    output={'formats': ['PDF', 'XBRL'], 'template': 'Regulatory Compliance Report', 'storage': '/outputs/regulatory-reporting/'},
-    advanced={'cost_limit': '$15.00 per run', 'time_limit': '1200 seconds', 'max_iterations': 60, 'validation': 'All risk metrics must reconcile with source system totals within 0.01% tolerance. Capital ratios must pass Basel III/IV threshold checks.\n'},
+    guardrails=[
+        {
+            "name": "Compliance Data Handler",
+            "identity_provider": "datalayer",
+            "identity_name": "compliance-bot@acme.com",
+            "permissions": {
+                "read:data": True,
+                "write:data": False,
+                "execute:code": True,
+                "access:internet": False,
+                "send:email": False,
+                "deploy:production": False,
+            },
+            "data_scope": {
+                "allowed_systems": [
+                    "trading-platform",
+                    "risk-engine",
+                    "accounting-ledger",
+                ],
+                "denied_fields": ["*SSN*", "*TaxId*", "*Password*"],
+            },
+            "data_handling": {"pii_detection": True, "pii_action": "redact"},
+            "token_limits": {"per_run": "120K", "per_day": "600K", "per_month": "6M"},
+        }
+    ],
+    evals=[
+        {"name": "Risk Metric Accuracy", "category": "coding", "task_count": 500},
+        {
+            "name": "Regulatory Rule Compliance",
+            "category": "reasoning",
+            "task_count": 300,
+        },
+        {
+            "name": "Reconciliation Break Detection",
+            "category": "coding",
+            "task_count": 200,
+        },
+    ],
+    codemode={"enabled": True, "token_reduction": "~90%", "speedup": "~2× faster"},
+    output={
+        "formats": ["PDF", "XBRL"],
+        "template": "Regulatory Compliance Report",
+        "storage": "/outputs/regulatory-reporting/",
+    },
+    advanced={
+        "cost_limit": "$15.00 per run",
+        "time_limit": "1200 seconds",
+        "max_iterations": 60,
+        "validation": "All risk metrics must reconcile with source system totals within 0.01% tolerance. Capital ratios must pass Basel III/IV threshold checks.\n",
+    },
     authorization_policy="",
-    notifications={'email': 'compliance@company.com', 'slack': '#regulatory-reporting'},
+    notifications={"email": "compliance@company.com", "slack": "#regulatory-reporting"},
     memory="ephemeral",
 )
 
@@ -226,16 +401,62 @@ CLASSIFY_ROUTE_EMAILS_AGENT_SPEC_0_0_1 = AgentSpec(
     goal="Classify incoming emails by intent (inquiry, complaint, order, support), assign priority (critical/high/medium/low), extract key entities (sender, subject, account ID, product), and route to the correct department queue. Flag urgent items for immediate human review.",
     protocol="vercel-ai",
     ui_extension="a2ui",
-    trigger={'type': 'event', 'event': 'email_received', 'description': 'Triggered on each incoming email via webhook', 'prompt': "Handle the 'email_received' event and execute the workflow end-to-end."},
-    model_configuration={'temperature': 0.1, 'max_tokens': 2048},
-    mcp_server_tools=[{'server': 'Email Gateway', 'tools': [{'name': 'fetch_email', 'approval': 'auto'}, {'name': 'parse_headers', 'approval': 'auto'}, {'name': 'extract_attachments', 'approval': 'auto'}]}, {'server': 'Routing Engine', 'tools': [{'name': 'assign_queue', 'approval': 'auto'}, {'name': 'set_priority', 'approval': 'auto'}, {'name': 'escalate_to_human', 'approval': 'manual'}]}],
-    guardrails=[{'name': 'Default Platform User', 'identity_provider': 'datalayer', 'identity_name': 'email-router@acme.com', 'permissions': {'read:data': True, 'write:data': True, 'execute:code': False, 'access:internet': True, 'send:email': False, 'deploy:production': False}, 'token_limits': {'per_run': '10K', 'per_day': '500K', 'per_month': '5M'}}],
-    evals=[{'name': 'Classification Accuracy', 'category': 'reasoning', 'task_count': 500}, {'name': 'Priority Detection', 'category': 'reasoning', 'task_count': 300}, {'name': 'Entity Extraction', 'category': 'coding', 'task_count': 400}],
+    trigger={
+        "type": "event",
+        "event": "email_received",
+        "description": "Triggered on each incoming email via webhook",
+        "prompt": "Handle the 'email_received' event and execute the workflow end-to-end.",
+    },
+    model_configuration={"temperature": 0.1, "max_tokens": 2048},
+    mcp_server_tools=[
+        {
+            "server": "Email Gateway",
+            "tools": [
+                {"name": "fetch_email", "approval": "auto"},
+                {"name": "parse_headers", "approval": "auto"},
+                {"name": "extract_attachments", "approval": "auto"},
+            ],
+        },
+        {
+            "server": "Routing Engine",
+            "tools": [
+                {"name": "assign_queue", "approval": "auto"},
+                {"name": "set_priority", "approval": "auto"},
+                {"name": "escalate_to_human", "approval": "manual"},
+            ],
+        },
+    ],
+    guardrails=[
+        {
+            "name": "Default Platform User",
+            "identity_provider": "datalayer",
+            "identity_name": "email-router@acme.com",
+            "permissions": {
+                "read:data": True,
+                "write:data": True,
+                "execute:code": False,
+                "access:internet": True,
+                "send:email": False,
+                "deploy:production": False,
+            },
+            "token_limits": {"per_run": "10K", "per_day": "500K", "per_month": "5M"},
+        }
+    ],
+    evals=[
+        {"name": "Classification Accuracy", "category": "reasoning", "task_count": 500},
+        {"name": "Priority Detection", "category": "reasoning", "task_count": 300},
+        {"name": "Entity Extraction", "category": "coding", "task_count": 400},
+    ],
     codemode=None,
-    output={'type': 'JSON', 'formats': ['JSON'], 'template': 'email-classification-v1', 'storage': 's3://acme-email-logs/'},
+    output={
+        "type": "JSON",
+        "formats": ["JSON"],
+        "template": "email-classification-v1",
+        "storage": "s3://acme-email-logs/",
+    },
     advanced=None,
     authorization_policy=None,
-    notifications={'slack': '#email-routing', 'email': 'ops@acme.com'},
+    notifications={"slack": "#email-routing", "email": "ops@acme.com"},
     memory="ephemeral",
 )
 
@@ -268,13 +489,42 @@ COMPREHENSIVE_SALES_ANALYTICS_AGENT_SPEC_0_0_1 = AgentSpec(
     trigger=None,
     model_configuration=None,
     mcp_server_tools=None,
-    guardrails=[{'name': 'Sales Analytics Team', 'identity_provider': 'datalayer', 'identity_name': 'sales-analytics@acme.com', 'permissions': {'read:data': True, 'write:data': True, 'execute:code': True, 'access:internet': True, 'send:email': True, 'deploy:production': False}, 'token_limits': {'per_run': '100K', 'per_day': '1M', 'per_month': '10M'}}],
-    evals=[{'name': 'KPI Accuracy', 'category': 'coding', 'task_count': 500}, {'name': 'Anomaly Detection Precision', 'category': 'reasoning', 'task_count': 350}, {'name': 'Trend Forecast Accuracy', 'category': 'reasoning', 'task_count': 300}, {'name': 'Report Quality', 'category': 'reasoning', 'task_count': 200}],
+    guardrails=[
+        {
+            "name": "Sales Analytics Team",
+            "identity_provider": "datalayer",
+            "identity_name": "sales-analytics@acme.com",
+            "permissions": {
+                "read:data": True,
+                "write:data": True,
+                "execute:code": True,
+                "access:internet": True,
+                "send:email": True,
+                "deploy:production": False,
+            },
+            "token_limits": {"per_run": "100K", "per_day": "1M", "per_month": "10M"},
+        }
+    ],
+    evals=[
+        {"name": "KPI Accuracy", "category": "coding", "task_count": 500},
+        {
+            "name": "Anomaly Detection Precision",
+            "category": "reasoning",
+            "task_count": 350,
+        },
+        {"name": "Trend Forecast Accuracy", "category": "reasoning", "task_count": 300},
+        {"name": "Report Quality", "category": "reasoning", "task_count": 200},
+    ],
     codemode=None,
-    output={'type': 'PDF', 'formats': ['PDF', 'Dashboard', 'JSON'], 'template': 'executive-sales-dashboard-v2', 'storage': 's3://acme-sales-reports/'},
+    output={
+        "type": "PDF",
+        "formats": ["PDF", "Dashboard", "JSON"],
+        "template": "executive-sales-dashboard-v2",
+        "storage": "s3://acme-sales-reports/",
+    },
     advanced=None,
     authorization_policy=None,
-    notifications={'slack': '#sales-analytics', 'email': 'leadership@acme.com'},
+    notifications={"slack": "#sales-analytics", "email": "leadership@acme.com"},
     memory="ephemeral",
 )
 
@@ -349,7 +599,11 @@ DATA_ACQUISITION_AGENT_SPEC_0_0_1 = AgentSpec(
     tags=["data", "acquisition", "kaggle", "filesystem"],
     enabled=True,
     model="bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0",
-    mcp_servers=[MCP_SERVER_CATALOG["kaggle"], MCP_SERVER_CATALOG["filesystem"], MCP_SERVER_CATALOG["tavily"]],
+    mcp_servers=[
+        MCP_SERVER_CATALOG["kaggle"],
+        MCP_SERVER_CATALOG["filesystem"],
+        MCP_SERVER_CATALOG["tavily"],
+    ],
     skills=["github:0.0.1", "events:0.0.1"],
     tools=[],
     frontend_tools=["jupyter-notebook:0.0.1", "lexical-document:0.0.1"],
@@ -413,7 +667,14 @@ DEMO_FULL_AGENT_SPEC_0_0_1 = AgentSpec(
     enabled=True,
     model="bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0",
     mcp_servers=[MCP_SERVER_CATALOG["tavily"]],
-    skills=["crawl:0.0.1", "events:0.0.1", "github:0.0.1", "pdf:0.0.1", "text-summarizer:0.0.1", "jokes:0.0.1"],
+    skills=[
+        "crawl:0.0.1",
+        "events:0.0.1",
+        "github:0.0.1",
+        "pdf:0.0.1",
+        "text-summarizer:0.0.1",
+        "jokes:0.0.1",
+    ],
     tools=["runtime-echo:0.0.1", "runtime-sensitive-echo:0.0.1"],
     frontend_tools=["jupyter-notebook:0.0.1", "lexical-document:0.0.1"],
     environment_name="ai-agents-env",
@@ -457,7 +718,7 @@ DEMO_ONE_TRIGGER_APPROVAL_AGENT_SPEC_0_0_1 = AgentSpec(
     id="demo-one-trigger-approval",
     version="0.0.1",
     name="Demo with the Once Trigger and Tool Approval",
-    description="A demonstration agent for the \"once\" trigger type with manual tool approval. When launched, the agent executes its trigger prompt once and invokes the runtime-sensitive-echo tool, which requires manual approval before execution. After completion, the runtime is terminated automatically.",
+    description='A demonstration agent for the "once" trigger type with manual tool approval. When launched, the agent executes its trigger prompt once and invokes the runtime-sensitive-echo tool, which requires manual approval before execution. After completion, the runtime is terminated automatically.',
     tags=["demo", "trigger", "once", "lifecycle", "approval"],
     enabled=True,
     model="bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0",
@@ -479,7 +740,11 @@ DEMO_ONE_TRIGGER_APPROVAL_AGENT_SPEC_0_0_1 = AgentSpec(
     goal="Call runtime_sensitive_echo exactly once with message='Tool approval demo executed' and reason='audit'. Do not call any other tool.",
     protocol="vercel-ai",
     ui_extension=None,
-    trigger={'type': 'once', 'description': 'Run once with approval and terminate', 'prompt': "Call runtime_sensitive_echo exactly once with message='Tool approval demo executed' and reason='audit'. Do not call any other tool."},
+    trigger={
+        "type": "once",
+        "description": "Run once with approval and terminate",
+        "prompt": "Call runtime_sensitive_echo exactly once with message='Tool approval demo executed' and reason='audit'. Do not call any other tool.",
+    },
     model_configuration=None,
     mcp_server_tools=None,
     guardrails=None,
@@ -496,7 +761,7 @@ DEMO_ONE_TRIGGER_AGENT_SPEC_0_0_1 = AgentSpec(
     id="demo-one-trigger",
     version="0.0.1",
     name="Demo with the Once Trigger",
-    description="A demonstration agent for the \"once\" trigger type. When launched, the agent executes its trigger prompt exactly once, emits AGENT_STARTED and AGENT_ENDED lifecycle events, and then terminates the runtime automatically.",
+    description='A demonstration agent for the "once" trigger type. When launched, the agent executes its trigger prompt exactly once, emits AGENT_STARTED and AGENT_ENDED lifecycle events, and then terminates the runtime automatically.',
     tags=["demo", "trigger", "once", "lifecycle"],
     enabled=True,
     model="bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0",
@@ -518,7 +783,11 @@ DEMO_ONE_TRIGGER_AGENT_SPEC_0_0_1 = AgentSpec(
     goal="Run a one-shot task: list the user's top 3 public and top 3 private GitHub repositories, ranked by recent activity, and provide a brief summary of each.",
     protocol="vercel-ai",
     ui_extension=None,
-    trigger={'type': 'once', 'description': 'Run once and terminate', 'prompt': "List the user's top 3 public and top 3 private GitHub repositories, ranked by recent activity, and provide a brief summary of each."},
+    trigger={
+        "type": "once",
+        "description": "Run once and terminate",
+        "prompt": "List the user's top 3 public and top 3 private GitHub repositories, ranked by recent activity, and provide a brief summary of each.",
+    },
     model_configuration=None,
     mcp_server_tools=None,
     guardrails=None,
@@ -581,7 +850,16 @@ END_OF_MONTH_SALES_PERFORMANCE_AGENT_SPEC_0_0_1 = AgentSpec(
     version="0.0.1",
     name="End of Month Sales Performance",
     description="Consolidates and analyzes end-of-month retail sales data directly from Salesforce. Computes revenue performance vs targets by SKU, detects anomalies in bookings and discounting, explains variances by region/segment/product/SKU, and generates executive-ready sales performance reports with full data lineage.",
-    tags=["analytics", "sales", "revenue", "performance", "crm", "finance", "retail", "sku"],
+    tags=[
+        "analytics",
+        "sales",
+        "revenue",
+        "performance",
+        "crm",
+        "finance",
+        "retail",
+        "sku",
+    ],
     enabled=False,
     model="bedrock:us.anthropic.claude-3-5-haiku-20241022-v1:0",
     mcp_servers=[MCP_SERVER_CATALOG["salesforce"]],
@@ -612,16 +890,145 @@ END_OF_MONTH_SALES_PERFORMANCE_AGENT_SPEC_0_0_1 = AgentSpec(
     goal="Consolidate, validate, and analyze end-of-month Salesforce retail sales data. Compute revenue performance vs targets by SKU, detect anomalies in bookings and discounting, explain variances by region/segment/product/SKU, and generate an executive-ready PDF performance report with full data lineage.",
     protocol="vercel-ai",
     ui_extension="a2ui",
-    trigger={'type': 'schedule', 'cron': '0 6 1 * *', 'description': 'Monthly on the 1st at 06:00 to process prior month Salesforce sales performance.\n', 'prompt': 'Run the scheduled workflow and produce the configured deliverable.'},
-    model_configuration={'temperature': 0.1, 'max_tokens': 4096},
-    mcp_server_tools=[{'server': 'Salesforce MCP', 'tools': [{'name': 'fetch_closed_won_opportunities', 'approval': 'auto'}, {'name': 'fetch_pipeline_snapshot', 'approval': 'auto'}, {'name': 'fetch_accounts', 'approval': 'auto'}, {'name': 'fetch_sales_targets', 'approval': 'auto'}, {'name': 'compute_kpis', 'approval': 'auto'}, {'name': 'fetch_sku_performance', 'approval': 'auto'}, {'name': 'detect_revenue_anomalies', 'approval': 'auto'}, {'name': 'export_deal_level_details', 'approval': 'manual'}, {'name': 'generate_sales_report', 'approval': 'auto'}]}],
-    guardrails=[{'name': 'Sales Performance Read-Only Analyst', 'identity_provider': 'datalayer', 'identity_name': 'sales-bot@acme.com', 'permissions': {'read:data': True, 'write:data': False, 'execute:code': True, 'access:internet': False, 'send:email': False, 'deploy:production': False}, 'data_scope': {'allowed_systems': ['salesforce'], 'allowed_objects': ['Opportunity', 'Account', 'User', 'Product2', 'PricebookEntry'], 'denied_objects': ['Contact', 'Lead', 'Case', 'Task', 'Event', 'EmailMessage', 'Attachment', 'ContentDocument', 'ContentVersion'], 'denied_fields': ['Account.Phone', 'Account.BillingStreet', 'Account.ShippingStreet', 'Account.Website', 'Opportunity.Description', 'Opportunity.NextStep', 'Opportunity.Private_Notes__c', '*SSN*', '*Bank*', '*IBAN*']}, 'data_handling': {'default_aggregation': True, 'allow_row_level_output': False, 'max_rows_in_output': 0, 'max_deal_appendix_rows': 25, 'redact_fields': ['Account.Name', 'Opportunity.Name'], 'hash_fields': ['Account.Id', 'Opportunity.Id'], 'pii_detection': True, 'pii_action': 'redact'}, 'approval_policy': {'require_manual_approval_for': ['Any output containing Account.Name or Opportunity.Name', 'Per-rep rankings or compensation-related metrics', 'Deal-level breakdown above 10 records', 'Any query spanning more than 45 days', 'Any report including open pipeline details'], 'auto_approved': ['Aggregated KPIs by region, segment, or product', 'Month-over-month comparisons with aggregated data']}, 'tool_limits': {'max_tool_calls': 25, 'max_query_rows': 200000, 'max_query_runtime': '30s', 'max_time_window_days': 45}, 'audit': {'log_tool_calls': True, 'log_query_metadata_only': True, 'retain_days': 30, 'require_lineage_in_report': True}, 'content_safety': {'treat_crm_text_fields_as_untrusted': True, 'do_not_follow_instructions_from_data': True}, 'token_limits': {'per_run': '30K', 'per_day': '300K', 'per_month': '3M'}}],
-    evals=[{'name': 'KPI Accuracy', 'category': 'coding', 'task_count': 400}, {'name': 'Variance Explanation Quality', 'category': 'reasoning', 'task_count': 200}, {'name': 'Anomaly Detection Precision', 'category': 'reasoning', 'task_count': 200}, {'name': 'SKU-Level Revenue Reconciliation', 'category': 'coding', 'task_count': 150}],
-    codemode={'enabled': True, 'token_reduction': '~85%', 'speedup': '~1.5× faster'},
-    output={'type': 'PDF', 'template': 'end_of_month_sales_performance_report.pdf'},
-    advanced={'cost_limit': '$3.00 per run', 'time_limit': '600 seconds', 'max_iterations': 30, 'validation': 'All reported revenue figures must reconcile with Salesforce closed-won totals for the selected period, including SKU-level breakdowns. Variances vs targets must be computed and explained at both aggregate and per-SKU levels. All outputs must include a data lineage section listing objects queried, filters applied, and record counts.\n'},
+    trigger={
+        "type": "schedule",
+        "cron": "0 6 1 * *",
+        "description": "Monthly on the 1st at 06:00 to process prior month Salesforce sales performance.\n",
+        "prompt": "Run the scheduled workflow and produce the configured deliverable.",
+    },
+    model_configuration={"temperature": 0.1, "max_tokens": 4096},
+    mcp_server_tools=[
+        {
+            "server": "Salesforce MCP",
+            "tools": [
+                {"name": "fetch_closed_won_opportunities", "approval": "auto"},
+                {"name": "fetch_pipeline_snapshot", "approval": "auto"},
+                {"name": "fetch_accounts", "approval": "auto"},
+                {"name": "fetch_sales_targets", "approval": "auto"},
+                {"name": "compute_kpis", "approval": "auto"},
+                {"name": "fetch_sku_performance", "approval": "auto"},
+                {"name": "detect_revenue_anomalies", "approval": "auto"},
+                {"name": "export_deal_level_details", "approval": "manual"},
+                {"name": "generate_sales_report", "approval": "auto"},
+            ],
+        }
+    ],
+    guardrails=[
+        {
+            "name": "Sales Performance Read-Only Analyst",
+            "identity_provider": "datalayer",
+            "identity_name": "sales-bot@acme.com",
+            "permissions": {
+                "read:data": True,
+                "write:data": False,
+                "execute:code": True,
+                "access:internet": False,
+                "send:email": False,
+                "deploy:production": False,
+            },
+            "data_scope": {
+                "allowed_systems": ["salesforce"],
+                "allowed_objects": [
+                    "Opportunity",
+                    "Account",
+                    "User",
+                    "Product2",
+                    "PricebookEntry",
+                ],
+                "denied_objects": [
+                    "Contact",
+                    "Lead",
+                    "Case",
+                    "Task",
+                    "Event",
+                    "EmailMessage",
+                    "Attachment",
+                    "ContentDocument",
+                    "ContentVersion",
+                ],
+                "denied_fields": [
+                    "Account.Phone",
+                    "Account.BillingStreet",
+                    "Account.ShippingStreet",
+                    "Account.Website",
+                    "Opportunity.Description",
+                    "Opportunity.NextStep",
+                    "Opportunity.Private_Notes__c",
+                    "*SSN*",
+                    "*Bank*",
+                    "*IBAN*",
+                ],
+            },
+            "data_handling": {
+                "default_aggregation": True,
+                "allow_row_level_output": False,
+                "max_rows_in_output": 0,
+                "max_deal_appendix_rows": 25,
+                "redact_fields": ["Account.Name", "Opportunity.Name"],
+                "hash_fields": ["Account.Id", "Opportunity.Id"],
+                "pii_detection": True,
+                "pii_action": "redact",
+            },
+            "approval_policy": {
+                "require_manual_approval_for": [
+                    "Any output containing Account.Name or Opportunity.Name",
+                    "Per-rep rankings or compensation-related metrics",
+                    "Deal-level breakdown above 10 records",
+                    "Any query spanning more than 45 days",
+                    "Any report including open pipeline details",
+                ],
+                "auto_approved": [
+                    "Aggregated KPIs by region, segment, or product",
+                    "Month-over-month comparisons with aggregated data",
+                ],
+            },
+            "tool_limits": {
+                "max_tool_calls": 25,
+                "max_query_rows": 200000,
+                "max_query_runtime": "30s",
+                "max_time_window_days": 45,
+            },
+            "audit": {
+                "log_tool_calls": True,
+                "log_query_metadata_only": True,
+                "retain_days": 30,
+                "require_lineage_in_report": True,
+            },
+            "content_safety": {
+                "treat_crm_text_fields_as_untrusted": True,
+                "do_not_follow_instructions_from_data": True,
+            },
+            "token_limits": {"per_run": "30K", "per_day": "300K", "per_month": "3M"},
+        }
+    ],
+    evals=[
+        {"name": "KPI Accuracy", "category": "coding", "task_count": 400},
+        {
+            "name": "Variance Explanation Quality",
+            "category": "reasoning",
+            "task_count": 200,
+        },
+        {
+            "name": "Anomaly Detection Precision",
+            "category": "reasoning",
+            "task_count": 200,
+        },
+        {
+            "name": "SKU-Level Revenue Reconciliation",
+            "category": "coding",
+            "task_count": 150,
+        },
+    ],
+    codemode={"enabled": True, "token_reduction": "~85%", "speedup": "~1.5× faster"},
+    output={"type": "PDF", "template": "end_of_month_sales_performance_report.pdf"},
+    advanced={
+        "cost_limit": "$3.00 per run",
+        "time_limit": "600 seconds",
+        "max_iterations": 30,
+        "validation": "All reported revenue figures must reconcile with Salesforce closed-won totals for the selected period, including SKU-level breakdowns. Variances vs targets must be computed and explained at both aggregate and per-SKU levels. All outputs must include a data lineage section listing objects queried, filters applied, and record counts.\n",
+    },
     authorization_policy="",
-    notifications={'email': 'cro@company.com', 'slack': '#sales-performance'},
+    notifications={"email": "cro@company.com", "slack": "#sales-performance"},
     memory="ephemeral",
 )
 
@@ -651,16 +1058,62 @@ EXTRACT_DATA_FROM_FILES_AGENT_SPEC_0_0_1 = AgentSpec(
     goal="Extract structured data from unstructured files. Parse tables, key-value pairs, line items, dates, amounts, and named entities from PDFs, images, spreadsheets, and scanned documents. Output clean JSON and CSV with confidence scores for each extracted field.",
     protocol="vercel-ai",
     ui_extension="a2ui",
-    trigger={'type': 'event', 'event': 'file_uploaded', 'description': 'Triggered when new files are dropped into the extraction folder', 'prompt': "Handle the 'file_uploaded' event and execute the workflow end-to-end."},
-    model_configuration={'temperature': 0.1, 'max_tokens': 8192},
-    mcp_server_tools=[{'server': 'File Processor', 'tools': [{'name': 'read_pdf_tables', 'approval': 'auto'}, {'name': 'ocr_image', 'approval': 'auto'}, {'name': 'parse_spreadsheet', 'approval': 'auto'}]}, {'server': 'Schema Mapper', 'tools': [{'name': 'map_to_schema', 'approval': 'auto'}, {'name': 'validate_output', 'approval': 'auto'}, {'name': 'write_to_database', 'approval': 'manual'}]}],
-    guardrails=[{'name': 'Default Platform User', 'identity_provider': 'datalayer', 'identity_name': 'extraction-bot@acme.com', 'permissions': {'read:data': True, 'write:data': True, 'execute:code': True, 'access:internet': False, 'send:email': False, 'deploy:production': False}, 'token_limits': {'per_run': '40K', 'per_day': '400K', 'per_month': '4M'}}],
-    evals=[{'name': 'Table Extraction Accuracy', 'category': 'coding', 'task_count': 450}, {'name': 'Key-Value Pair Extraction', 'category': 'coding', 'task_count': 380}, {'name': 'Schema Mapping Quality', 'category': 'reasoning', 'task_count': 250}],
+    trigger={
+        "type": "event",
+        "event": "file_uploaded",
+        "description": "Triggered when new files are dropped into the extraction folder",
+        "prompt": "Handle the 'file_uploaded' event and execute the workflow end-to-end.",
+    },
+    model_configuration={"temperature": 0.1, "max_tokens": 8192},
+    mcp_server_tools=[
+        {
+            "server": "File Processor",
+            "tools": [
+                {"name": "read_pdf_tables", "approval": "auto"},
+                {"name": "ocr_image", "approval": "auto"},
+                {"name": "parse_spreadsheet", "approval": "auto"},
+            ],
+        },
+        {
+            "server": "Schema Mapper",
+            "tools": [
+                {"name": "map_to_schema", "approval": "auto"},
+                {"name": "validate_output", "approval": "auto"},
+                {"name": "write_to_database", "approval": "manual"},
+            ],
+        },
+    ],
+    guardrails=[
+        {
+            "name": "Default Platform User",
+            "identity_provider": "datalayer",
+            "identity_name": "extraction-bot@acme.com",
+            "permissions": {
+                "read:data": True,
+                "write:data": True,
+                "execute:code": True,
+                "access:internet": False,
+                "send:email": False,
+                "deploy:production": False,
+            },
+            "token_limits": {"per_run": "40K", "per_day": "400K", "per_month": "4M"},
+        }
+    ],
+    evals=[
+        {"name": "Table Extraction Accuracy", "category": "coding", "task_count": 450},
+        {"name": "Key-Value Pair Extraction", "category": "coding", "task_count": 380},
+        {"name": "Schema Mapping Quality", "category": "reasoning", "task_count": 250},
+    ],
     codemode=None,
-    output={'type': 'JSON', 'formats': ['JSON', 'CSV'], 'template': 'extraction-output-v1', 'storage': 's3://acme-extractions/'},
+    output={
+        "type": "JSON",
+        "formats": ["JSON", "CSV"],
+        "template": "extraction-output-v1",
+        "storage": "s3://acme-extractions/",
+    },
     advanced=None,
     authorization_policy=None,
-    notifications={'slack': '#data-extraction', 'email': 'data-team@acme.com'},
+    notifications={"slack": "#data-extraction", "email": "data-team@acme.com"},
     memory="ephemeral",
 )
 
@@ -822,16 +1275,67 @@ GENERATE_WEEKLY_REPORTS_AGENT_SPEC_0_0_1 = AgentSpec(
     goal="Aggregate data across marketing, sales, and operations departments every Monday. Generate a structured executive report with charts, KPI summaries, trend analysis, and the top 3 actionable takeaways for leadership.",
     protocol="vercel-ai",
     ui_extension="a2ui",
-    trigger={'type': 'schedule', 'cron': '0 6 * * 1', 'description': 'Every Monday at 6:00 AM UTC', 'prompt': 'Run the scheduled workflow and produce the configured deliverable.'},
-    model_configuration={'temperature': 0.2, 'max_tokens': 8192},
-    mcp_server_tools=[{'server': 'Data Warehouse', 'tools': [{'name': 'query_marketing_data', 'approval': 'auto'}, {'name': 'query_sales_data', 'approval': 'auto'}, {'name': 'query_operations_data', 'approval': 'auto'}]}, {'server': 'Visualization Engine', 'tools': [{'name': 'generate_charts', 'approval': 'auto'}, {'name': 'create_dashboard', 'approval': 'auto'}]}, {'server': 'Document Generator', 'tools': [{'name': 'compile_report', 'approval': 'auto'}, {'name': 'send_report', 'approval': 'manual'}]}],
-    guardrails=[{'name': 'Data Engineering Power User', 'identity_provider': 'datalayer', 'identity_name': 'reports-bot@acme.com', 'permissions': {'read:data': True, 'write:data': True, 'execute:code': True, 'access:internet': True, 'send:email': True, 'deploy:production': False}, 'token_limits': {'per_run': '80K', 'per_day': '500K', 'per_month': '5M'}}],
-    evals=[{'name': 'Report Completeness', 'category': 'coding', 'task_count': 100}, {'name': 'Data Accuracy', 'category': 'reasoning', 'task_count': 250}],
-    codemode={'enabled': True, 'token_reduction': '~90%', 'speedup': '~2× faster'},
-    output={'type': 'PDF', 'template': 'weekly_executive_report.pdf'},
-    advanced={'cost_limit': '$8.00 per run', 'time_limit': '600 seconds', 'max_iterations': 60, 'validation': 'Report must include all department KPIs and trend charts'},
+    trigger={
+        "type": "schedule",
+        "cron": "0 6 * * 1",
+        "description": "Every Monday at 6:00 AM UTC",
+        "prompt": "Run the scheduled workflow and produce the configured deliverable.",
+    },
+    model_configuration={"temperature": 0.2, "max_tokens": 8192},
+    mcp_server_tools=[
+        {
+            "server": "Data Warehouse",
+            "tools": [
+                {"name": "query_marketing_data", "approval": "auto"},
+                {"name": "query_sales_data", "approval": "auto"},
+                {"name": "query_operations_data", "approval": "auto"},
+            ],
+        },
+        {
+            "server": "Visualization Engine",
+            "tools": [
+                {"name": "generate_charts", "approval": "auto"},
+                {"name": "create_dashboard", "approval": "auto"},
+            ],
+        },
+        {
+            "server": "Document Generator",
+            "tools": [
+                {"name": "compile_report", "approval": "auto"},
+                {"name": "send_report", "approval": "manual"},
+            ],
+        },
+    ],
+    guardrails=[
+        {
+            "name": "Data Engineering Power User",
+            "identity_provider": "datalayer",
+            "identity_name": "reports-bot@acme.com",
+            "permissions": {
+                "read:data": True,
+                "write:data": True,
+                "execute:code": True,
+                "access:internet": True,
+                "send:email": True,
+                "deploy:production": False,
+            },
+            "token_limits": {"per_run": "80K", "per_day": "500K", "per_month": "5M"},
+        }
+    ],
+    evals=[
+        {"name": "Report Completeness", "category": "coding", "task_count": 100},
+        {"name": "Data Accuracy", "category": "reasoning", "task_count": 250},
+    ],
+    codemode={"enabled": True, "token_reduction": "~90%", "speedup": "~2× faster"},
+    output={"type": "PDF", "template": "weekly_executive_report.pdf"},
+    advanced={
+        "cost_limit": "$8.00 per run",
+        "time_limit": "600 seconds",
+        "max_iterations": 60,
+        "validation": "Report must include all department KPIs and trend charts",
+    },
     authorization_policy="",
-    notifications={'email': 'robert.w@company.com', 'slack': '#weekly-reports'},
+    notifications={"email": "robert.w@company.com", "slack": "#weekly-reports"},
     memory="ephemeral",
 )
 
@@ -971,7 +1475,11 @@ MONITOR_SALES_KPIS_AGENT_SPEC_0_0_1 = AgentSpec(
     model="bedrock:us.anthropic.claude-3-5-haiku-20241022-v1:0",
     mcp_servers=[MCP_SERVER_CATALOG["filesystem"]],
     skills=["github:0.0.1", "pdf:0.0.1", "events:0.0.1"],
-    tools=["runtime-echo:0.0.1", "runtime-sensitive-echo:0.0.1", "runtime-send-mail:0.0.1"],
+    tools=[
+        "runtime-echo:0.0.1",
+        "runtime-sensitive-echo:0.0.1",
+        "runtime-send-mail:0.0.1",
+    ],
     frontend_tools=["jupyter-notebook:0.0.1", "lexical-document:0.0.1"],
     environment_name="ai-agents-env",
     icon="graph",
@@ -995,16 +1503,68 @@ MONITOR_SALES_KPIS_AGENT_SPEC_0_0_1 = AgentSpec(
     goal="Monitor and analyze sales KPIs from the CRM system. Generate daily reports summarizing key performance metrics, identify trends, and flag anomalies. Send notifications when KPIs deviate more than 10% from targets.",
     protocol="vercel-ai",
     ui_extension="a2ui",
-    trigger={'type': 'schedule', 'cron': '0 8 * * *', 'description': 'Every day at 8:00 AM UTC', 'prompt': 'Run the scheduled workflow and produce the configured deliverable.'},
-    model_configuration={'temperature': 0.3, 'max_tokens': 4096},
-    mcp_server_tools=[{'server': 'CRM Data Server', 'tools': [{'name': 'get_sales_data', 'approval': 'auto'}, {'name': 'get_customer_list', 'approval': 'auto'}, {'name': 'update_records', 'approval': 'manual'}]}, {'server': 'Analytics Server', 'tools': [{'name': 'run_analysis', 'approval': 'auto'}, {'name': 'generate_charts', 'approval': 'auto'}]}],
-    guardrails=[{'name': 'Default Platform User', 'identity_provider': 'datalayer', 'identity_name': 'alice@acme.com', 'permissions': {'read:data': True, 'write:data': True, 'execute:code': True, 'access:internet': True, 'send:email': False, 'deploy:production': False}, 'token_limits': {'per_run': '50K', 'per_day': '500K', 'per_month': '5M'}}],
-    evals=[{'name': 'SWE-bench', 'category': 'coding', 'task_count': 2294}, {'name': 'HumanEval', 'category': 'coding', 'task_count': 164}, {'name': 'GPQA Diamond', 'category': 'reasoning', 'task_count': 448}, {'name': 'TruthfulQA', 'category': 'safety', 'task_count': 817}],
-    codemode={'enabled': True, 'token_reduction': '~90%', 'speedup': '~2× faster'},
-    output={'type': 'Notebook', 'template': 'kpi_report_template.ipynb'},
-    advanced={'cost_limit': '$5.00 per run', 'time_limit': '300 seconds', 'max_iterations': 50, 'validation': 'Output must contain required KPI fields', 'checkpoint_interval': 30, 'context_window': {'max_tokens': 100000, 'eviction_strategy': 'sliding_window', 'summary_threshold': 0.85}},
+    trigger={
+        "type": "schedule",
+        "cron": "0 8 * * *",
+        "description": "Every day at 8:00 AM UTC",
+        "prompt": "Run the scheduled workflow and produce the configured deliverable.",
+    },
+    model_configuration={"temperature": 0.3, "max_tokens": 4096},
+    mcp_server_tools=[
+        {
+            "server": "CRM Data Server",
+            "tools": [
+                {"name": "get_sales_data", "approval": "auto"},
+                {"name": "get_customer_list", "approval": "auto"},
+                {"name": "update_records", "approval": "manual"},
+            ],
+        },
+        {
+            "server": "Analytics Server",
+            "tools": [
+                {"name": "run_analysis", "approval": "auto"},
+                {"name": "generate_charts", "approval": "auto"},
+            ],
+        },
+    ],
+    guardrails=[
+        {
+            "name": "Default Platform User",
+            "identity_provider": "datalayer",
+            "identity_name": "alice@acme.com",
+            "permissions": {
+                "read:data": True,
+                "write:data": True,
+                "execute:code": True,
+                "access:internet": True,
+                "send:email": False,
+                "deploy:production": False,
+            },
+            "token_limits": {"per_run": "50K", "per_day": "500K", "per_month": "5M"},
+        }
+    ],
+    evals=[
+        {"name": "SWE-bench", "category": "coding", "task_count": 2294},
+        {"name": "HumanEval", "category": "coding", "task_count": 164},
+        {"name": "GPQA Diamond", "category": "reasoning", "task_count": 448},
+        {"name": "TruthfulQA", "category": "safety", "task_count": 817},
+    ],
+    codemode={"enabled": True, "token_reduction": "~90%", "speedup": "~2× faster"},
+    output={"type": "Notebook", "template": "kpi_report_template.ipynb"},
+    advanced={
+        "cost_limit": "$5.00 per run",
+        "time_limit": "300 seconds",
+        "max_iterations": 50,
+        "validation": "Output must contain required KPI fields",
+        "checkpoint_interval": 30,
+        "context_window": {
+            "max_tokens": 100000,
+            "eviction_strategy": "sliding_window",
+            "summary_threshold": 0.85,
+        },
+    },
     authorization_policy="",
-    notifications={'email': 'marcus.r@company.com', 'slack': '#sales-kpis'},
+    notifications={"email": "marcus.r@company.com", "slack": "#sales-kpis"},
     memory="mem0",
 )
 
@@ -1013,7 +1573,14 @@ OPTIMIZE_DYNAMIC_PRICING_AGENT_SPEC_0_0_1 = AgentSpec(
     version="0.0.1",
     name="Optimize Dynamic Pricing",
     description="Monitors competitor pricing across marketplaces, forecasts demand per SKU, and generates margin-optimised pricing recommendations in real time. Tracks 50K+ SKUs hourly across Amazon, Walmart, and niche channels, combining competitive intelligence with demand signals to maximise margins.",
-    tags=["retail", "e-commerce", "pricing", "analytics", "demand-forecasting", "margins"],
+    tags=[
+        "retail",
+        "e-commerce",
+        "pricing",
+        "analytics",
+        "demand-forecasting",
+        "margins",
+    ],
     enabled=False,
     model="bedrock:us.anthropic.claude-3-5-haiku-20241022-v1:0",
     mcp_servers=[MCP_SERVER_CATALOG["filesystem"]],
@@ -1041,16 +1608,78 @@ OPTIMIZE_DYNAMIC_PRICING_AGENT_SPEC_0_0_1 = AgentSpec(
     goal="Track competitor pricing across 50K+ SKUs hourly on Amazon, Walmart, and niche marketplaces. Forecast demand per SKU-location pair using historical sales, seasonality, and external signals. Generate margin-optimised pricing recommendations with confidence intervals and projected revenue impact.",
     protocol="vercel-ai",
     ui_extension="a2ui",
-    trigger={'type': 'schedule', 'cron': '0 * * * *', 'description': 'Hourly competitive price scan and demand forecast update', 'prompt': 'Run the scheduled workflow and produce the configured deliverable.'},
-    model_configuration={'temperature': 0.1, 'max_tokens': 4096},
-    mcp_server_tools=[{'server': 'Marketplace Intelligence MCP', 'tools': [{'name': 'scrape_competitor_prices', 'approval': 'auto'}, {'name': 'fetch_marketplace_listings', 'approval': 'auto'}, {'name': 'detect_new_products', 'approval': 'auto'}, {'name': 'compute_price_elasticity', 'approval': 'auto'}, {'name': 'forecast_demand', 'approval': 'auto'}, {'name': 'generate_price_recommendations', 'approval': 'manual'}, {'name': 'apply_price_changes', 'approval': 'manual'}]}],
-    guardrails=[{'name': 'Pricing Intelligence Analyst', 'identity_provider': 'datalayer', 'identity_name': 'pricing-bot@acme.com', 'permissions': {'read:data': True, 'write:data': False, 'execute:code': True, 'access:internet': True, 'send:email': False, 'deploy:production': False}, 'data_handling': {'pii_detection': False}, 'approval_policy': {'require_manual_approval_for': ['Any price change above 15% from current price', 'Bulk price updates affecting more than 100 SKUs', 'Below-cost pricing recommendations'], 'auto_approved': ['Competitive price monitoring and data collection', 'Demand forecasting and analysis', 'Price recommendations within 15% band']}, 'token_limits': {'per_run': '25K', 'per_day': '500K', 'per_month': '10M'}}],
-    evals=[{'name': 'Price Tracking Accuracy', 'category': 'coding', 'task_count': 500}, {'name': 'Demand Forecast MAPE', 'category': 'reasoning', 'task_count': 300}, {'name': 'Margin Impact', 'category': 'coding', 'task_count': 200}],
-    codemode={'enabled': True, 'token_reduction': '~90%', 'speedup': '~2× faster'},
-    output={'formats': ['Dashboard', 'JSON', 'Spreadsheet'], 'template': 'Dynamic Pricing Report', 'storage': '/outputs/dynamic-pricing/'},
-    advanced={'cost_limit': '$1.50 per run', 'time_limit': '300 seconds', 'max_iterations': 20, 'validation': 'All recommended prices must maintain minimum margin thresholds. Demand forecasts must include confidence intervals.\n'},
+    trigger={
+        "type": "schedule",
+        "cron": "0 * * * *",
+        "description": "Hourly competitive price scan and demand forecast update",
+        "prompt": "Run the scheduled workflow and produce the configured deliverable.",
+    },
+    model_configuration={"temperature": 0.1, "max_tokens": 4096},
+    mcp_server_tools=[
+        {
+            "server": "Marketplace Intelligence MCP",
+            "tools": [
+                {"name": "scrape_competitor_prices", "approval": "auto"},
+                {"name": "fetch_marketplace_listings", "approval": "auto"},
+                {"name": "detect_new_products", "approval": "auto"},
+                {"name": "compute_price_elasticity", "approval": "auto"},
+                {"name": "forecast_demand", "approval": "auto"},
+                {"name": "generate_price_recommendations", "approval": "manual"},
+                {"name": "apply_price_changes", "approval": "manual"},
+            ],
+        }
+    ],
+    guardrails=[
+        {
+            "name": "Pricing Intelligence Analyst",
+            "identity_provider": "datalayer",
+            "identity_name": "pricing-bot@acme.com",
+            "permissions": {
+                "read:data": True,
+                "write:data": False,
+                "execute:code": True,
+                "access:internet": True,
+                "send:email": False,
+                "deploy:production": False,
+            },
+            "data_handling": {"pii_detection": False},
+            "approval_policy": {
+                "require_manual_approval_for": [
+                    "Any price change above 15% from current price",
+                    "Bulk price updates affecting more than 100 SKUs",
+                    "Below-cost pricing recommendations",
+                ],
+                "auto_approved": [
+                    "Competitive price monitoring and data collection",
+                    "Demand forecasting and analysis",
+                    "Price recommendations within 15% band",
+                ],
+            },
+            "token_limits": {"per_run": "25K", "per_day": "500K", "per_month": "10M"},
+        }
+    ],
+    evals=[
+        {"name": "Price Tracking Accuracy", "category": "coding", "task_count": 500},
+        {"name": "Demand Forecast MAPE", "category": "reasoning", "task_count": 300},
+        {"name": "Margin Impact", "category": "coding", "task_count": 200},
+    ],
+    codemode={"enabled": True, "token_reduction": "~90%", "speedup": "~2× faster"},
+    output={
+        "formats": ["Dashboard", "JSON", "Spreadsheet"],
+        "template": "Dynamic Pricing Report",
+        "storage": "/outputs/dynamic-pricing/",
+    },
+    advanced={
+        "cost_limit": "$1.50 per run",
+        "time_limit": "300 seconds",
+        "max_iterations": 20,
+        "validation": "All recommended prices must maintain minimum margin thresholds. Demand forecasts must include confidence intervals.\n",
+    },
     authorization_policy="",
-    notifications={'email': 'merchandising@company.com', 'slack': '#pricing-intelligence'},
+    notifications={
+        "email": "merchandising@company.com",
+        "slack": "#pricing-intelligence",
+    },
     memory="ephemeral",
 )
 
@@ -1059,7 +1688,14 @@ OPTIMIZE_GRID_OPERATIONS_AGENT_SPEC_0_0_1 = AgentSpec(
     version="0.0.1",
     name="Optimize Grid Operations",
     description="A multi-agent team that processes millions of IoT sensor data points from smart meters, substations, and renewable generation assets. Predicts equipment failures 2–4 weeks in advance, optimises load balancing across the grid, and reduces unplanned downtime by 50%.",
-    tags=["energy", "utilities", "smart-grid", "iot", "predictive-maintenance", "sustainability"],
+    tags=[
+        "energy",
+        "utilities",
+        "smart-grid",
+        "iot",
+        "predictive-maintenance",
+        "sustainability",
+    ],
     enabled=False,
     model="bedrock:us.anthropic.claude-3-5-haiku-20241022-v1:0",
     mcp_servers=[MCP_SERVER_CATALOG["filesystem"]],
@@ -1087,16 +1723,66 @@ OPTIMIZE_GRID_OPERATIONS_AGENT_SPEC_0_0_1 = AgentSpec(
     goal="Process millions of IoT sensor data points from SCADA systems, smart meters, and renewable assets. Detect equipment anomalies in real time, predict failures 2–4 weeks in advance, and optimise grid load balancing across renewable and conventional sources to reduce unplanned downtime by 50%.",
     protocol="vercel-ai",
     ui_extension="a2ui",
-    trigger={'type': 'schedule', 'cron': '*/5 * * * *', 'description': 'Every 5 minutes for real-time grid monitoring and optimization', 'prompt': 'Run the scheduled workflow and produce the configured deliverable.'},
+    trigger={
+        "type": "schedule",
+        "cron": "*/5 * * * *",
+        "description": "Every 5 minutes for real-time grid monitoring and optimization",
+        "prompt": "Run the scheduled workflow and produce the configured deliverable.",
+    },
     model_configuration=None,
     mcp_server_tools=None,
-    guardrails=[{'name': 'Grid Operations Agent', 'identity_provider': 'datalayer', 'identity_name': 'grid-bot@acme.com', 'permissions': {'read:data': True, 'write:data': False, 'execute:code': True, 'access:internet': False, 'send:email': True, 'deploy:production': False}, 'data_handling': {'pii_detection': False}, 'approval_policy': {'require_manual_approval_for': ['Emergency load shedding recommendations', 'Equipment shutdown orders', 'Maintenance work orders above $50K'], 'auto_approved': ['Sensor data ingestion and processing', 'Anomaly detection and alerting', 'Load balancing recommendations']}, 'token_limits': {'per_run': '60K', 'per_day': '1M', 'per_month': '15M'}}],
-    evals=[{'name': 'Anomaly Detection Accuracy', 'category': 'coding', 'task_count': 600}, {'name': 'Failure Prediction Lead Time', 'category': 'reasoning', 'task_count': 300}, {'name': 'Grid Stability Score', 'category': 'coding', 'task_count': 200}],
-    codemode={'enabled': True, 'token_reduction': '~95%', 'speedup': '~3× faster'},
-    output={'formats': ['Dashboard', 'PDF', 'JSON'], 'template': 'Grid Operations Report', 'storage': '/outputs/grid-operations/'},
-    advanced={'cost_limit': '$6.00 per run', 'time_limit': '600 seconds', 'max_iterations': 40, 'validation': 'All sensor readings must be validated against equipment specifications. Failure predictions must include confidence intervals and risk scores.\n'},
+    guardrails=[
+        {
+            "name": "Grid Operations Agent",
+            "identity_provider": "datalayer",
+            "identity_name": "grid-bot@acme.com",
+            "permissions": {
+                "read:data": True,
+                "write:data": False,
+                "execute:code": True,
+                "access:internet": False,
+                "send:email": True,
+                "deploy:production": False,
+            },
+            "data_handling": {"pii_detection": False},
+            "approval_policy": {
+                "require_manual_approval_for": [
+                    "Emergency load shedding recommendations",
+                    "Equipment shutdown orders",
+                    "Maintenance work orders above $50K",
+                ],
+                "auto_approved": [
+                    "Sensor data ingestion and processing",
+                    "Anomaly detection and alerting",
+                    "Load balancing recommendations",
+                ],
+            },
+            "token_limits": {"per_run": "60K", "per_day": "1M", "per_month": "15M"},
+        }
+    ],
+    evals=[
+        {"name": "Anomaly Detection Accuracy", "category": "coding", "task_count": 600},
+        {
+            "name": "Failure Prediction Lead Time",
+            "category": "reasoning",
+            "task_count": 300,
+        },
+        {"name": "Grid Stability Score", "category": "coding", "task_count": 200},
+    ],
+    codemode={"enabled": True, "token_reduction": "~95%", "speedup": "~3× faster"},
+    output={
+        "formats": ["Dashboard", "PDF", "JSON"],
+        "template": "Grid Operations Report",
+        "storage": "/outputs/grid-operations/",
+    },
+    advanced={
+        "cost_limit": "$6.00 per run",
+        "time_limit": "600 seconds",
+        "max_iterations": 40,
+        "validation": "All sensor readings must be validated against equipment specifications. Failure predictions must include confidence intervals and risk scores.\n",
+    },
     authorization_policy="",
-    notifications={'email': 'grid-ops@company.com', 'slack': '#grid-operations'},
+    notifications={"email": "grid-ops@company.com", "slack": "#grid-operations"},
     memory="ephemeral",
 )
 
@@ -1105,7 +1791,14 @@ PROCESS_CITIZEN_REQUESTS_AGENT_SPEC_0_0_1 = AgentSpec(
     version="0.0.1",
     name="Process Citizen Requests",
     description="A multi-agent team that automates citizen request processing for government agencies. Classifies and triages permits, FOIA requests, and benefit claims from multiple channels. Models policy impacts across population datasets and ensures every automated decision is explainable, auditable, and compliant with transparency mandates.",
-    tags=["government", "public-sector", "civic", "policy", "compliance", "transparency"],
+    tags=[
+        "government",
+        "public-sector",
+        "civic",
+        "policy",
+        "compliance",
+        "transparency",
+    ],
     enabled=False,
     model="bedrock:us.anthropic.claude-3-5-haiku-20241022-v1:0",
     mcp_servers=[MCP_SERVER_CATALOG["filesystem"]],
@@ -1133,16 +1826,76 @@ PROCESS_CITIZEN_REQUESTS_AGENT_SPEC_0_0_1 = AgentSpec(
     goal="Process citizen requests from web portals, email, and scanned documents. Classify by type, urgency, and jurisdiction, route to appropriate departments, model policy impacts across population datasets with Monte Carlo simulation, and generate explainable, auditable decision documentation for public record.",
     protocol="vercel-ai",
     ui_extension="a2ui",
-    trigger={'type': 'event', 'description': 'Triggered on new citizen request submission from any channel', 'prompt': 'Handle this event trigger: Triggered on new citizen request submission from any channel'},
+    trigger={
+        "type": "event",
+        "description": "Triggered on new citizen request submission from any channel",
+        "prompt": "Handle this event trigger: Triggered on new citizen request submission from any channel",
+    },
     model_configuration=None,
     mcp_server_tools=None,
-    guardrails=[{'name': 'Government Services Agent', 'identity_provider': 'datalayer', 'identity_name': 'civic-bot@agency.gov', 'permissions': {'read:data': True, 'write:data': True, 'execute:code': True, 'access:internet': False, 'send:email': True, 'deploy:production': False}, 'data_scope': {'denied_fields': ['*SSN*', '*TaxId*', '*BankAccount*', '*CreditCard*']}, 'data_handling': {'pii_detection': True, 'pii_action': 'redact', 'default_aggregation': True}, 'approval_policy': {'require_manual_approval_for': ['Benefit denial decisions', 'Policy recommendations affecting more than 1,000 citizens', 'Any FOIA response containing redacted content', 'Escalations to elected officials'], 'auto_approved': ['Request classification and triage', 'Standard permit processing', 'Aggregated statistics and reporting']}, 'token_limits': {'per_run': '40K', 'per_day': '400K', 'per_month': '5M'}}],
-    evals=[{'name': 'Classification Accuracy', 'category': 'reasoning', 'task_count': 500}, {'name': 'Processing Time Reduction', 'category': 'coding', 'task_count': 300}, {'name': 'Transparency Compliance Score', 'category': 'safety', 'task_count': 200}],
-    codemode={'enabled': True, 'token_reduction': '~85%', 'speedup': '~2× faster'},
-    output={'formats': ['PDF', 'JSON', 'Dashboard'], 'template': 'Citizen Services Report', 'storage': '/outputs/citizen-requests/'},
-    advanced={'cost_limit': '$4.00 per run', 'time_limit': '300 seconds', 'max_iterations': 30, 'validation': 'All automated decisions must include human-readable explanations. Every action must be logged with timestamps for FOIA compliance.\n'},
+    guardrails=[
+        {
+            "name": "Government Services Agent",
+            "identity_provider": "datalayer",
+            "identity_name": "civic-bot@agency.gov",
+            "permissions": {
+                "read:data": True,
+                "write:data": True,
+                "execute:code": True,
+                "access:internet": False,
+                "send:email": True,
+                "deploy:production": False,
+            },
+            "data_scope": {
+                "denied_fields": ["*SSN*", "*TaxId*", "*BankAccount*", "*CreditCard*"]
+            },
+            "data_handling": {
+                "pii_detection": True,
+                "pii_action": "redact",
+                "default_aggregation": True,
+            },
+            "approval_policy": {
+                "require_manual_approval_for": [
+                    "Benefit denial decisions",
+                    "Policy recommendations affecting more than 1,000 citizens",
+                    "Any FOIA response containing redacted content",
+                    "Escalations to elected officials",
+                ],
+                "auto_approved": [
+                    "Request classification and triage",
+                    "Standard permit processing",
+                    "Aggregated statistics and reporting",
+                ],
+            },
+            "token_limits": {"per_run": "40K", "per_day": "400K", "per_month": "5M"},
+        }
+    ],
+    evals=[
+        {"name": "Classification Accuracy", "category": "reasoning", "task_count": 500},
+        {"name": "Processing Time Reduction", "category": "coding", "task_count": 300},
+        {
+            "name": "Transparency Compliance Score",
+            "category": "safety",
+            "task_count": 200,
+        },
+    ],
+    codemode={"enabled": True, "token_reduction": "~85%", "speedup": "~2× faster"},
+    output={
+        "formats": ["PDF", "JSON", "Dashboard"],
+        "template": "Citizen Services Report",
+        "storage": "/outputs/citizen-requests/",
+    },
+    advanced={
+        "cost_limit": "$4.00 per run",
+        "time_limit": "300 seconds",
+        "max_iterations": 30,
+        "validation": "All automated decisions must include human-readable explanations. Every action must be logged with timestamps for FOIA compliance.\n",
+    },
     authorization_policy="",
-    notifications={'email': 'citizen-services@agency.gov', 'slack': '#citizen-services'},
+    notifications={
+        "email": "citizen-services@agency.gov",
+        "slack": "#citizen-services",
+    },
     memory="ephemeral",
 )
 
@@ -1179,16 +1932,78 @@ PROCESS_CLINICAL_TRIAL_DATA_AGENT_SPEC_0_0_1 = AgentSpec(
     goal="Process clinical trial data from multiple sites: ingest patient records and lab results, harmonise to CDISC SDTM format with MedDRA coding, screen for adverse events and safety signals in real time, and prepare submission-ready datasets with full validation and audit trails.",
     protocol="vercel-ai",
     ui_extension="a2ui",
-    trigger={'type': 'event', 'description': 'Triggered on new data batch arrival from clinical sites', 'prompt': 'Handle this event trigger: Triggered on new data batch arrival from clinical sites'},
+    trigger={
+        "type": "event",
+        "description": "Triggered on new data batch arrival from clinical sites",
+        "prompt": "Handle this event trigger: Triggered on new data batch arrival from clinical sites",
+    },
     model_configuration=None,
     mcp_server_tools=None,
-    guardrails=[{'name': 'HIPAA Compliant Clinical Agent', 'identity_provider': 'datalayer', 'identity_name': 'clinical-bot@acme.com', 'permissions': {'read:data': True, 'write:data': False, 'execute:code': True, 'access:internet': False, 'send:email': False, 'deploy:production': False}, 'data_scope': {'denied_fields': ['*SSN*', '*PatientName*', '*DateOfBirth*', '*Address*', '*Phone*', '*Email*']}, 'data_handling': {'pii_detection': True, 'pii_action': 'redact', 'default_aggregation': True}, 'approval_policy': {'require_manual_approval_for': ['Any serious adverse event (SAE) escalation', 'Patient-level data exports', 'Safety signal notifications to regulators'], 'auto_approved': ['Aggregated site-level statistics', 'SDTM dataset transformations']}, 'token_limits': {'per_run': '80K', 'per_day': '500K', 'per_month': '5M'}}],
-    evals=[{'name': 'SDTM Mapping Accuracy', 'category': 'coding', 'task_count': 500}, {'name': 'Adverse Event Detection Rate', 'category': 'safety', 'task_count': 300}, {'name': 'Data Quality Score', 'category': 'reasoning', 'task_count': 200}],
-    codemode={'enabled': True, 'token_reduction': '~95%', 'speedup': '~3× faster'},
-    output={'formats': ['SDTM Dataset', 'PDF', 'Define.xml'], 'template': 'Clinical Trial Data Package', 'storage': '/outputs/clinical-trials/'},
-    advanced={'cost_limit': '$8.00 per run', 'time_limit': '900 seconds', 'max_iterations': 50, 'validation': 'All datasets must pass CDISC SDTM validation rules. PHI must never be sent through the LLM — all patient data processed via Codemode only.\n'},
+    guardrails=[
+        {
+            "name": "HIPAA Compliant Clinical Agent",
+            "identity_provider": "datalayer",
+            "identity_name": "clinical-bot@acme.com",
+            "permissions": {
+                "read:data": True,
+                "write:data": False,
+                "execute:code": True,
+                "access:internet": False,
+                "send:email": False,
+                "deploy:production": False,
+            },
+            "data_scope": {
+                "denied_fields": [
+                    "*SSN*",
+                    "*PatientName*",
+                    "*DateOfBirth*",
+                    "*Address*",
+                    "*Phone*",
+                    "*Email*",
+                ]
+            },
+            "data_handling": {
+                "pii_detection": True,
+                "pii_action": "redact",
+                "default_aggregation": True,
+            },
+            "approval_policy": {
+                "require_manual_approval_for": [
+                    "Any serious adverse event (SAE) escalation",
+                    "Patient-level data exports",
+                    "Safety signal notifications to regulators",
+                ],
+                "auto_approved": [
+                    "Aggregated site-level statistics",
+                    "SDTM dataset transformations",
+                ],
+            },
+            "token_limits": {"per_run": "80K", "per_day": "500K", "per_month": "5M"},
+        }
+    ],
+    evals=[
+        {"name": "SDTM Mapping Accuracy", "category": "coding", "task_count": 500},
+        {
+            "name": "Adverse Event Detection Rate",
+            "category": "safety",
+            "task_count": 300,
+        },
+        {"name": "Data Quality Score", "category": "reasoning", "task_count": 200},
+    ],
+    codemode={"enabled": True, "token_reduction": "~95%", "speedup": "~3× faster"},
+    output={
+        "formats": ["SDTM Dataset", "PDF", "Define.xml"],
+        "template": "Clinical Trial Data Package",
+        "storage": "/outputs/clinical-trials/",
+    },
+    advanced={
+        "cost_limit": "$8.00 per run",
+        "time_limit": "900 seconds",
+        "max_iterations": 50,
+        "validation": "All datasets must pass CDISC SDTM validation rules. PHI must never be sent through the LLM — all patient data processed via Codemode only.\n",
+    },
     authorization_policy="",
-    notifications={'email': 'clinical-ops@company.com', 'slack': '#clinical-data'},
+    notifications={"email": "clinical-ops@company.com", "slack": "#clinical-data"},
     memory="ephemeral",
 )
 
@@ -1224,16 +2039,60 @@ PROCESS_FINANCIAL_TRANSACTIONS_AGENT_SPEC_0_0_1 = AgentSpec(
     goal="Process and validate incoming financial transaction batches. Reconcile balances across accounts, run AML compliance checks, flag suspicious transactions for human review, and generate audit-ready reports.",
     protocol="vercel-ai",
     ui_extension="a2ui",
-    trigger={'type': 'event', 'description': 'Triggered on new transaction batch arrival', 'prompt': 'Handle this event trigger: Triggered on new transaction batch arrival'},
-    model_configuration={'temperature': 0.1, 'max_tokens': 4096},
-    mcp_server_tools=[{'server': 'Transaction Ledger', 'tools': [{'name': 'fetch_transactions', 'approval': 'auto'}, {'name': 'validate_transaction', 'approval': 'auto'}, {'name': 'flag_suspicious', 'approval': 'manual'}, {'name': 'reconcile_balances', 'approval': 'auto'}]}, {'server': 'Compliance Engine', 'tools': [{'name': 'check_aml_rules', 'approval': 'auto'}, {'name': 'generate_sar', 'approval': 'manual'}]}],
-    guardrails=[{'name': 'Financial Data Handler', 'identity_provider': 'datalayer', 'identity_name': 'finance-bot@acme.com', 'permissions': {'read:data': True, 'write:data': True, 'execute:code': True, 'access:internet': False, 'send:email': False, 'deploy:production': False}, 'token_limits': {'per_run': '30K', 'per_day': '300K', 'per_month': '3M'}}],
-    evals=[{'name': 'Transaction Accuracy', 'category': 'coding', 'task_count': 500}, {'name': 'AML Detection Rate', 'category': 'safety', 'task_count': 200}],
-    codemode={'enabled': True, 'token_reduction': '~85%', 'speedup': '~1.5× faster'},
-    output={'type': 'PDF', 'template': 'transaction_audit_report.pdf'},
-    advanced={'cost_limit': '$3.00 per run', 'time_limit': '600 seconds', 'max_iterations': 30, 'validation': 'All transactions must reconcile to zero net balance'},
+    trigger={
+        "type": "event",
+        "description": "Triggered on new transaction batch arrival",
+        "prompt": "Handle this event trigger: Triggered on new transaction batch arrival",
+    },
+    model_configuration={"temperature": 0.1, "max_tokens": 4096},
+    mcp_server_tools=[
+        {
+            "server": "Transaction Ledger",
+            "tools": [
+                {"name": "fetch_transactions", "approval": "auto"},
+                {"name": "validate_transaction", "approval": "auto"},
+                {"name": "flag_suspicious", "approval": "manual"},
+                {"name": "reconcile_balances", "approval": "auto"},
+            ],
+        },
+        {
+            "server": "Compliance Engine",
+            "tools": [
+                {"name": "check_aml_rules", "approval": "auto"},
+                {"name": "generate_sar", "approval": "manual"},
+            ],
+        },
+    ],
+    guardrails=[
+        {
+            "name": "Financial Data Handler",
+            "identity_provider": "datalayer",
+            "identity_name": "finance-bot@acme.com",
+            "permissions": {
+                "read:data": True,
+                "write:data": True,
+                "execute:code": True,
+                "access:internet": False,
+                "send:email": False,
+                "deploy:production": False,
+            },
+            "token_limits": {"per_run": "30K", "per_day": "300K", "per_month": "3M"},
+        }
+    ],
+    evals=[
+        {"name": "Transaction Accuracy", "category": "coding", "task_count": 500},
+        {"name": "AML Detection Rate", "category": "safety", "task_count": 200},
+    ],
+    codemode={"enabled": True, "token_reduction": "~85%", "speedup": "~1.5× faster"},
+    output={"type": "PDF", "template": "transaction_audit_report.pdf"},
+    advanced={
+        "cost_limit": "$3.00 per run",
+        "time_limit": "600 seconds",
+        "max_iterations": 30,
+        "validation": "All transactions must reconcile to zero net balance",
+    },
     authorization_policy="",
-    notifications={'email': 'david.t@company.com', 'slack': '#finance-ops'},
+    notifications={"email": "david.t@company.com", "slack": "#finance-ops"},
     memory="ephemeral",
 )
 
@@ -1245,7 +2104,11 @@ SPATIAL_DATA_ANALYSIS_AGENT_SPEC_0_0_1 = AgentSpec(
     tags=["geospatial", "climate", "earth-observation", "analytics"],
     enabled=True,
     model="bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0",
-    mcp_servers=[MCP_SERVER_CATALOG["earthdata"], MCP_SERVER_CATALOG["eurus"], MCP_SERVER_CATALOG["filesystem"]],
+    mcp_servers=[
+        MCP_SERVER_CATALOG["earthdata"],
+        MCP_SERVER_CATALOG["eurus"],
+        MCP_SERVER_CATALOG["filesystem"],
+    ],
     skills=["events:0.0.1"],
     tools=[],
     frontend_tools=["jupyter-notebook:0.0.1", "lexical-document:0.0.1"],
@@ -1311,16 +2174,61 @@ SUMMARIZE_DOCUMENTS_AGENT_SPEC_0_0_1 = AgentSpec(
     goal="Summarize uploaded documents (PDFs, Word, Markdown, text) into structured executive summaries. Extract key findings, decisions, action items, dates, and named entities. Output a concise summary (max 500 words) plus metadata in JSON format.",
     protocol="vercel-ai",
     ui_extension="a2ui",
-    trigger={'type': 'event', 'event': 'document_uploaded', 'description': 'Triggered when a new document is uploaded to the workspace', 'prompt': "Handle the 'document_uploaded' event and execute the workflow end-to-end."},
-    model_configuration={'temperature': 0.2, 'max_tokens': 4096},
-    mcp_server_tools=[{'server': 'Document Reader', 'tools': [{'name': 'read_pdf', 'approval': 'auto'}, {'name': 'read_docx', 'approval': 'auto'}, {'name': 'extract_text', 'approval': 'auto'}]}, {'server': 'Output Writer', 'tools': [{'name': 'write_summary', 'approval': 'auto'}, {'name': 'store_metadata', 'approval': 'auto'}]}],
-    guardrails=[{'name': 'Default Platform User', 'identity_provider': 'datalayer', 'identity_name': 'doc-agent@acme.com', 'permissions': {'read:data': True, 'write:data': True, 'execute:code': True, 'access:internet': False, 'send:email': False, 'deploy:production': False}, 'token_limits': {'per_run': '30K', 'per_day': '300K', 'per_month': '3M'}}],
-    evals=[{'name': 'Summarization Accuracy', 'category': 'reasoning', 'task_count': 350}, {'name': 'Key Finding Extraction', 'category': 'reasoning', 'task_count': 280}, {'name': 'Action Item Detection', 'category': 'coding', 'task_count': 200}],
+    trigger={
+        "type": "event",
+        "event": "document_uploaded",
+        "description": "Triggered when a new document is uploaded to the workspace",
+        "prompt": "Handle the 'document_uploaded' event and execute the workflow end-to-end.",
+    },
+    model_configuration={"temperature": 0.2, "max_tokens": 4096},
+    mcp_server_tools=[
+        {
+            "server": "Document Reader",
+            "tools": [
+                {"name": "read_pdf", "approval": "auto"},
+                {"name": "read_docx", "approval": "auto"},
+                {"name": "extract_text", "approval": "auto"},
+            ],
+        },
+        {
+            "server": "Output Writer",
+            "tools": [
+                {"name": "write_summary", "approval": "auto"},
+                {"name": "store_metadata", "approval": "auto"},
+            ],
+        },
+    ],
+    guardrails=[
+        {
+            "name": "Default Platform User",
+            "identity_provider": "datalayer",
+            "identity_name": "doc-agent@acme.com",
+            "permissions": {
+                "read:data": True,
+                "write:data": True,
+                "execute:code": True,
+                "access:internet": False,
+                "send:email": False,
+                "deploy:production": False,
+            },
+            "token_limits": {"per_run": "30K", "per_day": "300K", "per_month": "3M"},
+        }
+    ],
+    evals=[
+        {"name": "Summarization Accuracy", "category": "reasoning", "task_count": 350},
+        {"name": "Key Finding Extraction", "category": "reasoning", "task_count": 280},
+        {"name": "Action Item Detection", "category": "coding", "task_count": 200},
+    ],
     codemode=None,
-    output={'type': 'Markdown', 'formats': ['Markdown', 'JSON'], 'template': 'executive-summary-v1', 'storage': 's3://acme-summaries/'},
+    output={
+        "type": "Markdown",
+        "formats": ["Markdown", "JSON"],
+        "template": "executive-summary-v1",
+        "storage": "s3://acme-summaries/",
+    },
     advanced=None,
     authorization_policy=None,
-    notifications={'slack': '#document-summaries', 'email': 'team@acme.com'},
+    notifications={"slack": "#document-summaries", "email": "team@acme.com"},
     memory="ephemeral",
 )
 
@@ -1356,16 +2264,48 @@ SYNC_CRM_CONTACTS_AGENT_SPEC_0_0_1 = AgentSpec(
     goal="Collect and aggregate contact data from multiple CRM sources, analyze and deduplicate records, write cleaned data back to CRM systems, and generate sync summary reports with notifications.",
     protocol="vercel-ai",
     ui_extension="a2ui",
-    trigger={'type': 'schedule', 'cron': '0 2 * * *', 'description': 'Daily at 02:00 — sync CRM contacts across all sources during off-peak hours.\n', 'prompt': 'Run the scheduled workflow and produce the configured deliverable.'},
+    trigger={
+        "type": "schedule",
+        "cron": "0 2 * * *",
+        "description": "Daily at 02:00 — sync CRM contacts across all sources during off-peak hours.\n",
+        "prompt": "Run the scheduled workflow and produce the configured deliverable.",
+    },
     model_configuration=None,
     mcp_server_tools=None,
-    guardrails=[{'name': 'GitHub CI Bot', 'identity_provider': 'github', 'identity_name': 'ci-bot@acme.com', 'permissions': {'read:data': True, 'write:data': True, 'execute:code': True, 'access:internet': True, 'send:email': True, 'deploy:production': False}, 'token_limits': {'per_run': '60K', 'per_day': '600K', 'per_month': '6M'}}],
-    evals=[{'name': 'Data Quality', 'category': 'coding', 'task_count': 300}, {'name': 'Deduplication Accuracy', 'category': 'reasoning', 'task_count': 150}],
-    codemode={'enabled': True, 'token_reduction': '~85%', 'speedup': '~1.5× faster'},
-    output={'formats': ['JSON', 'PDF'], 'template': 'CRM Sync Report', 'storage': '/outputs/crm-sync/'},
-    advanced={'cost_limit': '$10.00 per run', 'time_limit': '600 seconds', 'max_iterations': 100, 'validation': 'All CRM records must reconcile after sync'},
+    guardrails=[
+        {
+            "name": "GitHub CI Bot",
+            "identity_provider": "github",
+            "identity_name": "ci-bot@acme.com",
+            "permissions": {
+                "read:data": True,
+                "write:data": True,
+                "execute:code": True,
+                "access:internet": True,
+                "send:email": True,
+                "deploy:production": False,
+            },
+            "token_limits": {"per_run": "60K", "per_day": "600K", "per_month": "6M"},
+        }
+    ],
+    evals=[
+        {"name": "Data Quality", "category": "coding", "task_count": 300},
+        {"name": "Deduplication Accuracy", "category": "reasoning", "task_count": 150},
+    ],
+    codemode={"enabled": True, "token_reduction": "~85%", "speedup": "~1.5× faster"},
+    output={
+        "formats": ["JSON", "PDF"],
+        "template": "CRM Sync Report",
+        "storage": "/outputs/crm-sync/",
+    },
+    advanced={
+        "cost_limit": "$10.00 per run",
+        "time_limit": "600 seconds",
+        "max_iterations": 100,
+        "validation": "All CRM records must reconcile after sync",
+    },
     authorization_policy="",
-    notifications={'email': 'jennifer.c@company.com', 'slack': '#crm-sync'},
+    notifications={"email": "jennifer.c@company.com", "slack": "#crm-sync"},
     memory="ephemeral",
 )
 
@@ -1419,8 +2359,8 @@ def get_agent_spec(agent_id: str) -> AgentSpec | None:
     spec = AGENT_SPECS.get(agent_id)
     if spec is not None:
         return spec
-    base, _, ver = agent_id.rpartition(':')
-    if base and '.' in ver:
+    base, _, ver = agent_id.rpartition(":")
+    if base and "." in ver:
         return AGENT_SPECS.get(base)
     return None
 

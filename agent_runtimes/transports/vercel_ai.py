@@ -643,12 +643,10 @@ class VercelAITransport(BaseTransport):
                 if isinstance(response, StreamingResponse):
                     original_body = response.body_iterator
                     if self._approval_tool_ids:
-                        response.body_iterator = (
-                            _wrap_streaming_body_with_approvals(
-                                original_body,
-                                self._approval_tool_ids,
-                                self._agent_id,
-                            )
+                        response.body_iterator = _wrap_streaming_body_with_approvals(
+                            original_body,
+                            self._approval_tool_ids,
+                            self._agent_id,
                         )
                         logger.debug(
                             "[Vercel AI] Wrapped StreamingResponse with approval-record creation"

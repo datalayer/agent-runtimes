@@ -168,7 +168,10 @@ class CostBudgetCapability(AbstractCapability[Any]):
         self._run_cost_usd = 0.0
         if not self._resolved_prices:
             self._resolve_prices(getattr(ctx.model, "model_id", None))
-        if self.cumulative_usd is not None and self._cumulative_cost_usd > self.cumulative_usd:
+        if (
+            self.cumulative_usd is not None
+            and self._cumulative_cost_usd > self.cumulative_usd
+        ):
             self._handle_exceeded(
                 f"Cumulative cost ${self._cumulative_cost_usd:.4f} exceeds ${self.cumulative_usd:.4f}"
             )
@@ -181,7 +184,9 @@ class CostBudgetCapability(AbstractCapability[Any]):
         try:
             from genai_prices import get_model_prices
 
-            short_name = model_name.split(":", 1)[1] if ":" in model_name else model_name
+            short_name = (
+                model_name.split(":", 1)[1] if ":" in model_name else model_name
+            )
             prices = get_model_prices(short_name)
             if prices:
                 self._price_input = prices.get("input", 0.0)
@@ -215,7 +220,10 @@ class CostBudgetCapability(AbstractCapability[Any]):
             self._handle_exceeded(
                 f"Run cost ${self._run_cost_usd:.4f} exceeds ${self.per_run_usd:.4f}"
             )
-        if self.cumulative_usd is not None and self._cumulative_cost_usd > self.cumulative_usd:
+        if (
+            self.cumulative_usd is not None
+            and self._cumulative_cost_usd > self.cumulative_usd
+        ):
             self._handle_exceeded(
                 f"Cumulative cost ${self._cumulative_cost_usd:.4f} exceeds ${self.cumulative_usd:.4f}"
             )
@@ -256,7 +264,9 @@ class ToolGuardCapability(AbstractCapability[Any]):
         if inspect.isawaitable(decision):
             decision = await decision
         if not decision:
-            raise GuardrailBlockedError(f"Tool '{call.tool_name}' denied by approval callback")
+            raise GuardrailBlockedError(
+                f"Tool '{call.tool_name}' denied by approval callback"
+            )
         return args
 
 
@@ -298,7 +308,9 @@ class PromptInjectionCapability(AbstractCapability[Any]):
     sensitivity: Literal["low", "medium", "high"] = "medium"
     categories: list[str] | None = None
     custom_patterns: list[str] | None = None
-    _compiled: list[re.Pattern[str]] = field(default_factory=list, init=False, repr=False)
+    _compiled: list[re.Pattern[str]] = field(
+        default_factory=list, init=False, repr=False
+    )
 
     def __post_init__(self) -> None:
         patterns = [
@@ -340,7 +352,9 @@ class PiiDetectorCapability(AbstractCapability[Any]):
     detect: list[str] | None = None
     action: Literal["block", "log"] = "block"
     custom_patterns: dict[str, str] | None = None
-    _compiled: dict[str, re.Pattern[str]] = field(default_factory=dict, init=False, repr=False)
+    _compiled: dict[str, re.Pattern[str]] = field(
+        default_factory=dict, init=False, repr=False
+    )
 
     def __post_init__(self) -> None:
         base = {
@@ -363,9 +377,13 @@ class PiiDetectorCapability(AbstractCapability[Any]):
         if prompt is None:
             return
         text = str(prompt) if not isinstance(prompt, str) else prompt
-        detections = [name for name, pattern in self._compiled.items() if pattern.search(text)]
+        detections = [
+            name for name, pattern in self._compiled.items() if pattern.search(text)
+        ]
         if detections and self.action == "block":
-            raise GuardrailBlockedError(f"PII detected in input: {', '.join(detections)}")
+            raise GuardrailBlockedError(
+                f"PII detected in input: {', '.join(detections)}"
+            )
 
 
 @dataclass
@@ -374,7 +392,9 @@ class SecretRedactionCapability(AbstractCapability[Any]):
 
     detect: list[str] | None = None
     custom_patterns: dict[str, str] | None = None
-    _compiled: dict[str, re.Pattern[str]] = field(default_factory=dict, init=False, repr=False)
+    _compiled: dict[str, re.Pattern[str]] = field(
+        default_factory=dict, init=False, repr=False
+    )
 
     def __post_init__(self) -> None:
         base = {
@@ -409,7 +429,9 @@ class BlockedKeywordsCapability(AbstractCapability[Any]):
     case_sensitive: bool = False
     whole_words: bool = False
     use_regex: bool = False
-    _compiled: list[re.Pattern[str]] = field(default_factory=list, init=False, repr=False)
+    _compiled: list[re.Pattern[str]] = field(
+        default_factory=list, init=False, repr=False
+    )
 
     def __post_init__(self) -> None:
         flags = 0 if self.case_sensitive else re.IGNORECASE
@@ -430,7 +452,9 @@ class BlockedKeywordsCapability(AbstractCapability[Any]):
         for pattern in self._compiled:
             match = pattern.search(text)
             if match:
-                raise GuardrailBlockedError(f"Blocked keyword detected: {match.group()}")
+                raise GuardrailBlockedError(
+                    f"Blocked keyword detected: {match.group()}"
+                )
 
 
 @dataclass
@@ -440,7 +464,9 @@ class NoRefusalsCapability(AbstractCapability[Any]):
     patterns: list[str] | None = None
     allow_partial: bool = False
     min_response_length: int = 50
-    _compiled: list[re.Pattern[str]] = field(default_factory=list, init=False, repr=False)
+    _compiled: list[re.Pattern[str]] = field(
+        default_factory=list, init=False, repr=False
+    )
 
     def __post_init__(self) -> None:
         raw = self.patterns or [
@@ -603,7 +629,9 @@ class ContentSafetyCapability(AbstractCapability[Any]):
     treat_text_as_untrusted: bool = True
     block_data_instructions: bool = True
     extra_patterns: list[str] | None = None
-    _compiled: list[re.Pattern[str]] = field(default_factory=list, init=False, repr=False)
+    _compiled: list[re.Pattern[str]] = field(
+        default_factory=list, init=False, repr=False
+    )
 
     def __post_init__(self) -> None:
         base = [

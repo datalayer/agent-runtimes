@@ -9,7 +9,7 @@
 
 from __future__ import annotations
 
-from typing import Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
     from ..tux import CliTux
@@ -33,7 +33,7 @@ def _format_shortcut(shortcut: Optional[str]) -> str:
 
 async def execute(tux: "CliTux") -> Optional[str]:
     """Show available commands."""
-    from ..tux import STYLE_WHITE, STYLE_PRIMARY, STYLE_MUTED, STYLE_SECONDARY
+    from ..tux import STYLE_MUTED, STYLE_PRIMARY, STYLE_SECONDARY, STYLE_WHITE
 
     tux.console.print()
     tux.console.print("Available Commands:", style=STYLE_WHITE)

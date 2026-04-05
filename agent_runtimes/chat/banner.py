@@ -14,8 +14,9 @@ import time
 from typing import Any
 
 try:
-    from PIL import Image
     import requests
+    from PIL import Image
+
     HAS_PIL = True
 except ImportError:
     HAS_PIL = False
@@ -34,26 +35,26 @@ except ImportError:
 # - White #FFFFFF - Primary app background
 #
 # For dark terminal backgrounds, use brighter greens (#1ABC9C, #2ECC71) for visibility
-GREEN_DARK = '\033[38;2;22;160;133m'    # #16A085 - Green brand
-GREEN_MEDIUM = '\033[38;2;26;188;156m'  # #1ABC9C - Green accent
-GREEN_LIGHT = '\033[38;2;46;204;113m'   # #2ECC71 - Green bright
-GREEN_TEXT = '\033[38;2;17;122;101m'    # #117A65 - Accessible green text
-RED = '\033[38;2;231;76;60m'            # #E74C3C - Error / missing
-GRAY = '\033[38;2;89;89;92m'            # #59595C - Secondary text
-WHITE = '\033[38;2;255;255;255m'        # #FFFFFF - Primary text (dark mode)
+GREEN_DARK = "\033[38;2;22;160;133m"  # #16A085 - Green brand
+GREEN_MEDIUM = "\033[38;2;26;188;156m"  # #1ABC9C - Green accent
+GREEN_LIGHT = "\033[38;2;46;204;113m"  # #2ECC71 - Green bright
+GREEN_TEXT = "\033[38;2;17;122;101m"  # #117A65 - Accessible green text
+RED = "\033[38;2;231;76;60m"  # #E74C3C - Error / missing
+GRAY = "\033[38;2;89;89;92m"  # #59595C - Secondary text
+WHITE = "\033[38;2;255;255;255m"  # #FFFFFF - Primary text (dark mode)
 
 # Legacy color codes for compatibility
-BLUE = '\033[0;34m'
-CYAN = '\033[0;36m'
-GREEN = '\033[0;32m'
-YELLOW = '\033[1;33m'
-MAGENTA = '\033[0;35m'
-BOLD = '\033[1m'
-DIM = '\033[2m'
-RESET = '\033[0m'
+BLUE = "\033[0;34m"
+CYAN = "\033[0;36m"
+GREEN = "\033[0;32m"
+YELLOW = "\033[1;33m"
+MAGENTA = "\033[0;35m"
+BOLD = "\033[1m"
+DIM = "\033[2m"
+RESET = "\033[0m"
 
 # Goodbye message displayed on exit
-GOODBYE_MESSAGE = '✨ Thank you for using Agent Runtimes Chat. See you soon!'
+GOODBYE_MESSAGE = "✨ Thank you for using Agent Runtimes Chat. See you soon!"
 
 # ASCII Art Banner with Datalayer brand colors
 BANNER = f"""
@@ -73,7 +74,13 @@ BANNER = f"""
 MATRIX_CHARS = "ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ0123456789@#$%&*"
 
 
-def matrix_rain_banner(width: int = 60, height: int = 12, duration: float = 2.0, fps: int = 15, start_row: int = 0) -> None:
+def matrix_rain_banner(
+    width: int = 60,
+    height: int = 12,
+    duration: float = 2.0,
+    fps: int = 15,
+    start_row: int = 0,
+) -> None:
     """Display an animated Matrix-style digital rain effect.
 
     Args:
@@ -89,16 +96,21 @@ def matrix_rain_banner(width: int = 60, height: int = 12, duration: float = 2.0,
     # Initialize columns with random starting positions and speeds
     columns: list[dict[str, Any]] = []
     for x in range(width):
-        columns.append({
-            'y': random.randint(-height, 0),
-            'speed': random.uniform(0.3, 1.0),
-            'chars': [random.choice(MATRIX_CHARS) for _ in range(height + 5)],
-            'length': random.randint(4, 10)
-        })
+        columns.append(
+            {
+                "y": random.randint(-height, 0),  # nosec B311
+                "speed": random.uniform(0.3, 1.0),  # nosec B311
+                "chars": [
+                    random.choice(MATRIX_CHARS)  # nosec B311
+                    for _ in range(height + 5)
+                ],
+                "length": random.randint(4, 10),  # nosec B311
+            }
+        )
 
     # Hide cursor, move to start position (don't clear screen to preserve banner)
-    sys.stdout.write('\033[?25l')  # Hide cursor
-    sys.stdout.write(f'\033[{start_row + 1};1H')  # Move to start row
+    sys.stdout.write("\033[?25l")  # Hide cursor
+    sys.stdout.write(f"\033[{start_row + 1};1H")  # Move to start row
     sys.stdout.flush()
 
     frame_delay = 1.0 / fps
@@ -107,43 +119,46 @@ def matrix_rain_banner(width: int = 60, height: int = 12, duration: float = 2.0,
     try:
         for frame in range(frames):
             # Build the frame
-            screen = [[' ' for _ in range(width)] for _ in range(height)]
-            colors = [['' for _ in range(width)] for _ in range(height)]
+            screen = [[" " for _ in range(width)] for _ in range(height)]
+            colors = [["" for _ in range(width)] for _ in range(height)]
 
             for x, col in enumerate(columns):
-                head_y = int(col['y'])
+                head_y = int(col["y"])
 
                 # Draw the trail
-                for i in range(col['length']):
+                for i in range(col["length"]):
                     y = head_y - i
                     if 0 <= y < height:
-                        char_idx = (y + frame) % len(col['chars'])
-                        screen[y][x] = col['chars'][char_idx]
+                        char_idx = (y + frame) % len(col["chars"])
+                        screen[y][x] = col["chars"][char_idx]
 
                         # Head is bright white-green, tail fades to dark green
                         if i == 0:
-                            colors[y][x] = '\033[1;97m'  # Bright white (head)
+                            colors[y][x] = "\033[1;97m"  # Bright white (head)
                         elif i == 1:
-                            colors[y][x] = '\033[1;92m'  # Bright green
+                            colors[y][x] = "\033[1;92m"  # Bright green
                         elif i < 4:
-                            colors[y][x] = '\033[0;32m'  # Normal green
+                            colors[y][x] = "\033[0;32m"  # Normal green
                         else:
-                            colors[y][x] = '\033[2;32m'  # Dim green
+                            colors[y][x] = "\033[2;32m"  # Dim green
 
                 # Move column down
-                col['y'] += col['speed']
+                col["y"] += col["speed"]
 
                 # Reset column when it goes off screen
-                if head_y - col['length'] > height:
-                    col['y'] = random.randint(-10, -1)
-                    col['speed'] = random.uniform(0.3, 1.0)
-                    col['length'] = random.randint(4, 10)
-                    col['chars'] = [random.choice(MATRIX_CHARS) for _ in range(height + 5)]
+                if head_y - col["length"] > height:
+                    col["y"] = random.randint(-10, -1)  # nosec B311
+                    col["speed"] = random.uniform(0.3, 1.0)  # nosec B311
+                    col["length"] = random.randint(4, 10)  # nosec B311
+                    col["chars"] = [
+                        random.choice(MATRIX_CHARS)  # nosec B311
+                        for _ in range(height + 5)
+                    ]  # nosec B311
 
             # Render frame
             output = []
             for y in range(height):
-                row = ''
+                row = ""
                 for x in range(width):
                     if colors[y][x]:
                         row += colors[y][x] + screen[y][x] + RESET
@@ -152,39 +167,41 @@ def matrix_rain_banner(width: int = 60, height: int = 12, duration: float = 2.0,
                 output.append(row)
 
             # Move cursor to start position and draw
-            sys.stdout.write(f'\033[{start_row + 1};1H')  # Move to start row
-            sys.stdout.write('\n'.join(output))
-            sys.stdout.write('\n')
+            sys.stdout.write(f"\033[{start_row + 1};1H")  # Move to start row
+            sys.stdout.write("\n".join(output))
+            sys.stdout.write("\n")
             sys.stdout.flush()
 
             time.sleep(frame_delay)
 
         # Fade out effect - gradually reduce characters
         for fade_frame in range(5):
-            sys.stdout.write(f'\033[{start_row + 1};1H')  # Move to start row
+            sys.stdout.write(f"\033[{start_row + 1};1H")  # Move to start row
             for y in range(height):
-                row = ''
+                row = ""
                 for x in range(width):
-                    if random.random() > (fade_frame + 1) / 6:
-                        row += f'\033[2;32m{random.choice(MATRIX_CHARS)}{RESET}'
+                    if random.random() > (fade_frame + 1) / 6:  # nosec B311
+                        row += f"\033[2;32m{random.choice(MATRIX_CHARS)}{RESET}"  # nosec B311
                     else:
-                        row += ' '
-                sys.stdout.write(row + '\n')
+                        row += " "
+                sys.stdout.write(row + "\n")
             sys.stdout.flush()
             time.sleep(0.05)
 
     finally:
         # Show cursor and clear just the animation area
-        sys.stdout.write('\033[?25h')  # Show cursor
+        sys.stdout.write("\033[?25h")  # Show cursor
         # Clear the animation area by writing spaces
-        sys.stdout.write(f'\033[{start_row + 1};1H')  # Move to start row
+        sys.stdout.write(f"\033[{start_row + 1};1H")  # Move to start row
         for _ in range(height + 1):
-            sys.stdout.write(' ' * width + '\n')
-        sys.stdout.write(f'\033[{start_row + 1};1H')  # Move back to start row
+            sys.stdout.write(" " * width + "\n")
+        sys.stdout.write(f"\033[{start_row + 1};1H")  # Move back to start row
         sys.stdout.flush()
 
 
-def spinning_animation(width: int = 70, height: int = 20, duration: float = 3.0, fps: int = 10) -> None:
+def spinning_animation(
+    width: int = 70, height: int = 20, duration: float = 3.0, fps: int = 10
+) -> None:
     """Display an animated black hole GIF converted to ASCII art.
 
     Downloads a spinning black hole GIF and renders it as animated ASCII art
@@ -200,7 +217,7 @@ def spinning_animation(width: int = 70, height: int = 20, duration: float = 3.0,
         return
 
     # ASCII characters from dark to bright
-    ASCII_CHARS = ' .:-=+*#%@'
+    ASCII_CHARS = " .:-=+*#%@"
 
     GIF_URL = "https://images.steamusercontent.com/ugc/480020637383985059/4AF1AFCA793CFFD924E6F880918F0DD181593552/"
 
@@ -218,7 +235,7 @@ def spinning_animation(width: int = 70, height: int = 20, duration: float = 3.0,
         try:
             while True:
                 # Convert frame to RGB then to grayscale
-                frame = gif.convert('RGB')
+                frame = gif.convert("RGB")
 
                 # Resize to fit terminal (width x height, accounting for char aspect ratio)
                 frame = frame.resize((width, height), Image.Resampling.LANCZOS)
@@ -226,11 +243,13 @@ def spinning_animation(width: int = 70, height: int = 20, duration: float = 3.0,
                 # Convert to ASCII
                 ascii_frame = []
                 for y in range(height):
-                    row = ''
+                    row = ""
                     for x in range(width):
                         pixel = frame.getpixel((x, y))
                         # Calculate brightness
-                        brightness = (pixel[0] * 0.299 + pixel[1] * 0.587 + pixel[2] * 0.114) / 255
+                        brightness = (
+                            pixel[0] * 0.299 + pixel[1] * 0.587 + pixel[2] * 0.114
+                        ) / 255
                         char_idx = int(brightness * (len(ASCII_CHARS) - 1))
                         char = ASCII_CHARS[char_idx]
 
@@ -238,10 +257,15 @@ def spinning_animation(width: int = 70, height: int = 20, duration: float = 3.0,
                         r, g, b = pixel
                         if brightness > 0.1:
                             # Use 256-color mode for better gradients
-                            color_code = 16 + (36 * min(5, r // 51)) + (6 * min(5, g // 51)) + min(5, b // 51)
-                            row += f'\033[38;5;{color_code}m{char}\033[0m'
+                            color_code = (
+                                16
+                                + (36 * min(5, r // 51))
+                                + (6 * min(5, g // 51))
+                                + min(5, b // 51)
+                            )
+                            row += f"\033[38;5;{color_code}m{char}\033[0m"
                         else:
-                            row += ' '
+                            row += " "
                     ascii_frame.append(row)
 
                 frames.append(ascii_frame)
@@ -253,9 +277,9 @@ def spinning_animation(width: int = 70, height: int = 20, duration: float = 3.0,
             return
 
         # Hide cursor and clear screen
-        sys.stdout.write('\033[?25l')
-        sys.stdout.write('\033[2J')
-        sys.stdout.write('\033[H')
+        sys.stdout.write("\033[?25l")
+        sys.stdout.write("\033[2J")
+        sys.stdout.write("\033[H")
         sys.stdout.flush()
 
         # Calculate how many times to loop
@@ -265,8 +289,8 @@ def spinning_animation(width: int = 70, height: int = 20, duration: float = 3.0,
         # Play animation
         for i in range(total_frames):
             frame_idx = i % len(frames)
-            sys.stdout.write('\033[H')
-            sys.stdout.write('\n'.join(frames[frame_idx]))
+            sys.stdout.write("\033[H")
+            sys.stdout.write("\n".join(frames[frame_idx]))
             sys.stdout.flush()
             time.sleep(frame_delay)
 
@@ -276,14 +300,14 @@ def spinning_animation(width: int = 70, height: int = 20, duration: float = 3.0,
 
     finally:
         # Show cursor and clear screen
-        sys.stdout.write('\033[?25h')
-        sys.stdout.write('\033[2J')
-        sys.stdout.write('\033[H')
+        sys.stdout.write("\033[?25h")
+        sys.stdout.write("\033[2J")
+        sys.stdout.write("\033[H")
         sys.stdout.flush()
 
 
 # Number of lines in the ASCII banner (for positioning animations below it)
-BANNER_HEIGHT = BANNER.count('\n') + 2  # +2 for the "Powered by" line and extra newline
+BANNER_HEIGHT = BANNER.count("\n") + 2  # +2 for the "Powered by" line and extra newline
 
 
 def show_banner(splash: bool = False, splash_all: bool = False) -> None:
@@ -297,11 +321,13 @@ def show_banner(splash: bool = False, splash_all: bool = False) -> None:
     if sys.stdout.isatty():
         if splash or splash_all:
             # Clear screen and show Matrix rain animation first
-            sys.stdout.write('\033[2J')  # Clear screen
-            sys.stdout.write('\033[H')   # Move to top-left
+            sys.stdout.write("\033[2J")  # Clear screen
+            sys.stdout.write("\033[H")  # Move to top-left
             sys.stdout.flush()
             try:
-                matrix_rain_banner(width=80, height=20, duration=1.5, fps=12, start_row=0)
+                matrix_rain_banner(
+                    width=80, height=20, duration=1.5, fps=12, start_row=0
+                )
             except Exception:
                 pass  # Skip animation if terminal doesn't support it
 
@@ -314,9 +340,11 @@ def show_banner(splash: bool = False, splash_all: bool = False) -> None:
 
         # Clear screen and show ASCII banner after animations
         if splash or splash_all:
-            sys.stdout.write('\033[2J')  # Clear screen
-            sys.stdout.write('\033[H')   # Move to top-left
+            sys.stdout.write("\033[2J")  # Clear screen
+            sys.stdout.write("\033[H")  # Move to top-left
             sys.stdout.flush()
 
         print(BANNER)
-        print(f"{DIM}Powered by Datalayer  •  \033]8;;https://datalayer.ai\033\\https://datalayer.ai\033]8;;\033\\{RESET}\n")
+        print(
+            f"{DIM}Powered by Datalayer  •  \033]8;;https://datalayer.ai\033\\https://datalayer.ai\033]8;;\033\\{RESET}\n"
+        )

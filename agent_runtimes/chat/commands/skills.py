@@ -9,7 +9,7 @@
 
 from __future__ import annotations
 
-from typing import Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 import httpx
 
@@ -24,7 +24,7 @@ SHORTCUT = "escape k"
 
 async def execute(tux: "CliTux") -> Optional[str]:
     """List available skills (requires codemode enabled)."""
-    from ..tux import STYLE_PRIMARY, STYLE_ACCENT, STYLE_MUTED, STYLE_WARNING
+    from ..tux import STYLE_ACCENT, STYLE_MUTED, STYLE_PRIMARY, STYLE_WARNING
 
     # First check if codemode is enabled
     try:
@@ -42,7 +42,9 @@ async def execute(tux: "CliTux") -> Optional[str]:
     if not codemode_enabled:
         tux.console.print()
         tux.console.print("● Codemode is disabled", style=STYLE_WARNING)
-        tux.console.print("  Skills are only available when codemode is enabled.", style=STYLE_MUTED)
+        tux.console.print(
+            "  Skills are only available when codemode is enabled.", style=STYLE_MUTED
+        )
         tux.console.print("  Use /codemode-toggle to enable it.", style=STYLE_MUTED)
         tux.console.print()
         return None
@@ -68,7 +70,10 @@ async def execute(tux: "CliTux") -> Optional[str]:
             skill_desc = skill_desc[:57] + "..."
         # Show active status
         status_icon = "[green]●[/green]" if is_active else "○"
-        tux.console.print(f"  {status_icon} {skill_name}", style=STYLE_ACCENT if is_active else STYLE_MUTED)
+        tux.console.print(
+            f"  {status_icon} {skill_name}",
+            style=STYLE_ACCENT if is_active else STYLE_MUTED,
+        )
         if skill_desc:
             tux.console.print(f"    {skill_desc}", style=STYLE_MUTED)
 

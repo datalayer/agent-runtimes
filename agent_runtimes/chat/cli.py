@@ -17,7 +17,7 @@ import sys
 import threading
 import time
 from enum import Enum
-from typing import Any, List, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, List, Optional
 
 import typer
 from pydantic_ai import Agent
@@ -74,34 +74,35 @@ class Transport(str, Enum):
     ag_ui = "ag-ui"
     acp = "acp"
 
+
 from .banner import (
-    # Datalayer brand colors
-    GREEN_DARK,
-    GREEN_MEDIUM,
-    GREEN_LIGHT,
-    RED,
-    GRAY,
-    WHITE,
+    BANNER,
     # Legacy colors
     BLUE,
-    CYAN,
-    GREEN,
-    YELLOW,
-    MAGENTA,
     BOLD,
+    CYAN,
     DIM,
-    RESET,
-    BANNER,
     GOODBYE_MESSAGE,
+    GRAY,
+    GREEN,
+    # Datalayer brand colors
+    GREEN_DARK,
+    GREEN_LIGHT,
+    GREEN_MEDIUM,
+    MAGENTA,
+    RED,
+    RESET,
+    WHITE,
+    YELLOW,
     show_banner,
 )
 
 # Spinner frames - various styles
-SPINNER_DOTS = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏']
-SPINNER_CIRCLE = ['◐', '◓', '◑', '◒']
-SPINNER_BOUNCE = ['⠁', '⠂', '⠄', '⡀', '⢀', '⠠', '⠐', '⠈']
-SPINNER_PULSE = ['●', '◉', '○', '◉']
-SPINNER_GROWING_CIRCLE = ['○', '◔', '◑', '◕', '●', '◕', '◑', '◔']
+SPINNER_DOTS = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
+SPINNER_CIRCLE = ["◐", "◓", "◑", "◒"]
+SPINNER_BOUNCE = ["⠁", "⠂", "⠄", "⡀", "⢀", "⠠", "⠐", "⠈"]
+SPINNER_PULSE = ["●", "◉", "○", "◉"]
+SPINNER_GROWING_CIRCLE = ["○", "◔", "◑", "◕", "●", "◕", "◑", "◔"]
 
 
 class Spinner:
@@ -132,12 +133,14 @@ class Spinner:
             if not self.spinner_active:
                 break
             # Use green color for the spinner
-            sys.stdout.write(f'\r{GREEN_MEDIUM}{frame}{RESET} {GRAY}{self.message}...{RESET}')
+            sys.stdout.write(
+                f"\r{GREEN_MEDIUM}{frame}{RESET} {GRAY}{self.message}...{RESET}"
+            )
             sys.stdout.flush()
             time.sleep(0.1)
 
         # Clear the spinner line
-        sys.stdout.write('\r' + ' ' * (len(self.message) + 20) + '\r')
+        sys.stdout.write("\r" + " " * (len(self.message) + 20) + "\r")
         sys.stdout.flush()
 
     def start(self) -> None:
@@ -210,11 +213,21 @@ app = typer.Typer(
 def _show_version() -> None:
     """Display version information."""
     from . import __version__
+
     typer.echo(f"{GREEN_LIGHT}Agent Runtimes Chat{RESET} v{__version__.__version__}")
-    typer.echo(f"{GRAY}Powered by Datalayer • \033]8;;https://datalayer.ai\033\\https://datalayer.ai\033]8;;\033\\{RESET}")
+    typer.echo(
+        f"{GRAY}Powered by Datalayer • \033]8;;https://datalayer.ai\033\\https://datalayer.ai\033]8;;\033\\{RESET}"
+    )
 
 
-def _run_agent_runtime_server(host: str, port: int, agent_id: str, codemode: bool, protocol: "Protocol", port_value: Any = None) -> None:
+def _run_agent_runtime_server(
+    host: str,
+    port: int,
+    agent_id: str,
+    codemode: bool,
+    protocol: "Protocol",
+    port_value: Any = None,
+) -> None:
     """Run the agent-runtimes server (for multiprocessing).
 
     This must be a module-level function (not nested) to be picklable.
@@ -229,17 +242,25 @@ def _run_agent_runtime_server(host: str, port: int, agent_id: str, codemode: boo
             effective port back to the parent process.
     """
     import logging
-    import sys
     import os
-    from agent_runtimes.commands import LogLevel, Protocol, serve_server, find_random_free_port
+    import sys
+
+    from agent_runtimes.commands import (
+        LogLevel,
+        Protocol,
+        find_random_free_port,
+        serve_server,
+    )
     from agent_runtimes.specs.agents import get_agent_spec
 
     # Only suppress logging if not in debug mode
-    debug_mode = os.environ.get('AG_CHAT_DEBUG') == '1' or os.environ.get('CODEAI_DEBUG') == '1'
+    debug_mode = (
+        os.environ.get("AG_CHAT_DEBUG") == "1" or os.environ.get("CODEAI_DEBUG") == "1"
+    )
 
     if not debug_mode:
         # Redirect stdout and stderr to devnull to keep terminal clean
-        devnull = open(os.devnull, 'w')
+        devnull = open(os.devnull, "w")
         sys.stdout = devnull
         sys.stderr = devnull
 
@@ -315,20 +336,23 @@ def _start_agent_runtime_server(
     from agent_runtimes.commands import Protocol
 
     # Map transport to protocol
-    protocol = Protocol.ag_ui if transport == Transport.ag_ui else Protocol.ag_ui  # ACP uses same server
+    protocol = (
+        Protocol.ag_ui if transport == Transport.ag_ui else Protocol.ag_ui
+    )  # ACP uses same server
 
     # Set debug environment variable if needed
     if debug:
         import os
-        os.environ['AG_CHAT_DEBUG'] = '1'
+
+        os.environ["AG_CHAT_DEBUG"] = "1"
 
     # Shared value so the child process can report the effective port
-    port_value = multiprocessing.Value('i', 0)
+    port_value = multiprocessing.Value("i", 0)
 
     process = multiprocessing.Process(
         target=_run_agent_runtime_server,
         args=(host, port, agent_id, codemode, protocol, port_value),
-        daemon=True
+        daemon=True,
     )
     process.start()
 
@@ -478,8 +502,12 @@ def _pick_agentspec_interactive() -> str:
         raise typer.Exit(1)
 
     # Partition into valid (enabled + all env vars) and the rest, each sorted by id
-    valid_specs = sorted([s for s in specs if _spec_has_valid_env(s)], key=lambda s: s.id)
-    other_specs = sorted([s for s in specs if not _spec_has_valid_env(s)], key=lambda s: s.id)
+    valid_specs = sorted(
+        [s for s in specs if _spec_has_valid_env(s)], key=lambda s: s.id
+    )
+    other_specs = sorted(
+        [s for s in specs if not _spec_has_valid_env(s)], key=lambda s: s.id
+    )
     ordered = valid_specs + other_specs
     valid_count = len(valid_specs)
 
@@ -490,11 +518,15 @@ def _pick_agentspec_interactive() -> str:
     for i, spec in enumerate(ordered, 1):
         is_valid = i <= valid_count
         bullet = f" {GREEN_MEDIUM}●{RESET}" if is_valid else f" {GRAY}○{RESET}"
-        default_marker = f" {GREEN_LIGHT}(default){RESET}" if (i - 1) == default_idx else ""
+        default_marker = (
+            f" {GREEN_LIGHT}(default){RESET}" if (i - 1) == default_idx else ""
+        )
         num_color = GREEN_MEDIUM if is_valid else GRAY
-        print(f"  {num_color}{i:>3}.{RESET}{bullet} {WHITE}{spec.id}{RESET}{default_marker}")
+        print(
+            f"  {num_color}{i:>3}.{RESET}{bullet} {WHITE}{spec.id}{RESET}{default_marker}"
+        )
         if spec.description:
-            desc_line = spec.description.strip().split('\n')[0]
+            desc_line = spec.description.strip().split("\n")[0]
             if len(desc_line) > 70:
                 desc_line = desc_line[:67] + "..."
             print(f"       {GRAY}{desc_line}{RESET}")
@@ -513,14 +545,18 @@ def _pick_agentspec_interactive() -> str:
 
     if valid_count == 0:
         print(f"\n{RED}No valid agent specs available.{RESET}")
-        print(f"{GRAY}Enable a spec and/or set the required environment variables.{RESET}")
+        print(
+            f"{GRAY}Enable a spec and/or set the required environment variables.{RESET}"
+        )
         raise typer.Exit(1)
 
     default_display = f" [{default_idx + 1}]" if default_idx is not None else ""
     print()
     while True:
         try:
-            choice = input(f"{GREEN_MEDIUM}Choose an agent spec [1-{valid_count}]{default_display}: {RESET}").strip()
+            choice = input(
+                f"{GREEN_MEDIUM}Choose an agent spec [1-{valid_count}]{default_display}: {RESET}"
+            ).strip()
             if not choice:
                 if default_idx is not None:
                     chosen = ordered[default_idx]
@@ -533,10 +569,16 @@ def _pick_agentspec_interactive() -> str:
                 print(f"\n{GREEN_LIGHT}Selected:{RESET} {chosen.id}\n")
                 return chosen.id
             elif 0 <= idx < len(ordered):
-                print(f"{GRAY}Agent spec #{choice} is not available (disabled or missing env vars).{RESET}")
-                print(f"{GRAY}Please enter a number between 1 and {valid_count}.{RESET}")
+                print(
+                    f"{GRAY}Agent spec #{choice} is not available (disabled or missing env vars).{RESET}"
+                )
+                print(
+                    f"{GRAY}Please enter a number between 1 and {valid_count}.{RESET}"
+                )
             else:
-                print(f"{GRAY}Please enter a number between 1 and {valid_count}.{RESET}")
+                print(
+                    f"{GRAY}Please enter a number between 1 and {valid_count}.{RESET}"
+                )
         except ValueError:
             # Allow typing the spec ID directly (only valid ones)
             matching = [s for s in valid_specs if s.id == choice]
@@ -546,9 +588,13 @@ def _pick_agentspec_interactive() -> str:
             # Check if it matches an invalid spec for a helpful message
             invalid_match = [s for s in other_specs if s.id == choice]
             if invalid_match:
-                print(f"{GRAY}Agent spec '{choice}' is not available (disabled or missing env vars).{RESET}")
+                print(
+                    f"{GRAY}Agent spec '{choice}' is not available (disabled or missing env vars).{RESET}"
+                )
             else:
-                print(f"{GRAY}Invalid input. Enter a number or a valid agent spec ID.{RESET}")
+                print(
+                    f"{GRAY}Invalid input. Enter a number or a valid agent spec ID.{RESET}"
+                )
         except (KeyboardInterrupt, EOFError):
             print()
             raise typer.Exit(0)
@@ -559,60 +605,50 @@ def main_callback(
     ctx: typer.Context,
     query: Optional[List[str]] = typer.Argument(
         None,
-        help="Query to send to the AI agent. If not provided, starts interactive mode."
+        help="Query to send to the AI agent. If not provided, starts interactive mode.",
     ),
     agentspec_id: Optional[str] = typer.Option(
         None,
         "--agentspec-id",
         "-a",
-        help="Agent spec ID to start from the agent-runtimes library"
+        help="Agent spec ID to start from the agent-runtimes library",
     ),
     port: int = typer.Option(
         0,
         "--port",
         "-p",
-        help="Port for the agent-runtimes server (0 = auto-select random free port)"
+        help="Port for the agent-runtimes server (0 = auto-select random free port)",
     ),
     banner: bool = typer.Option(
-        False,
-        "--banner",
-        "-b",
-        help="Show animated banner with Matrix rain animation"
+        False, "--banner", "-b", help="Show animated banner with Matrix rain animation"
     ),
     banner_all: bool = typer.Option(
         False,
         "--banner-all",
         "-B",
-        help="Show animated banner with Matrix rain and black hole animations"
+        help="Show animated banner with Matrix rain and black hole animations",
     ),
     debug: bool = typer.Option(
         False,
         "--debug",
         "-d",
-        help="Enable debug mode with verbose logging (shows tool execution details)"
+        help="Enable debug mode with verbose logging (shows tool execution details)",
     ),
     codemode_disabled: bool = typer.Option(
         False,
         "--codemode-disabled",
         "--no-codemode",
-        help="Disable codemode (MCP tools as programmatic tools)"
+        help="Disable codemode (MCP tools as programmatic tools)",
     ),
     suggestions: Optional[str] = typer.Option(
         None,
         "--suggestions",
         "-s",
-        help="Extra suggestions to add (comma-separated), e.g. 'Search for X,Summarize Y'"
+        help="Extra suggestions to add (comma-separated), e.g. 'Search for X,Summarize Y'",
     ),
-    eggs: bool = typer.Option(
-        False,
-        "--eggs",
-        help="Enable Easter egg commands"
-    ),
+    eggs: bool = typer.Option(False, "--eggs", help="Enable Easter egg commands"),
     show_version: bool = typer.Option(
-        False,
-        "--version",
-        "-v",
-        help="Show version information"
+        False, "--version", "-v", help="Show version information"
     ),
 ) -> None:
     """Agent Runtimes Chat assistant.
@@ -644,13 +680,17 @@ def main_callback(
     global _subprocess_ref
 
     # Show ASCII banner early (before agent selection)
-    from .banner import show_banner, BANNER, DIM, RESET as BANNER_RESET
+    from .banner import BANNER, DIM, show_banner
+    from .banner import RESET as BANNER_RESET
+
     if banner or banner_all:
         show_banner(splash=banner, splash_all=banner_all)
     else:
         if sys.stdout.isatty():
             print(BANNER)
-            print(f"{DIM}Powered by Datalayer  •  \033]8;;https://datalayer.ai\033\\https://datalayer.ai\033]8;;\033\\{BANNER_RESET}\n")
+            print(
+                f"{DIM}Powered by Datalayer  •  \033]8;;https://datalayer.ai\033\\https://datalayer.ai\033]8;;\033\\{BANNER_RESET}\n"
+            )
 
     # Resolve agent spec: use provided ID or pick interactively
     agent_id = agentspec_id
@@ -669,13 +709,20 @@ def main_callback(
             if agent_id:
                 print(f"{GRAY}Starting agent-runtimes server with {agent_id}...{RESET}")
                 process, actual_port = _start_agent_runtime_server(
-                    agent_id, port=port, transport=Transport.ag_ui, codemode=not codemode_disabled, debug=debug
+                    agent_id,
+                    port=port,
+                    transport=Transport.ag_ui,
+                    codemode=not codemode_disabled,
+                    debug=debug,
                 )
                 _subprocess_ref = process  # Register for cleanup
 
                 # Wait for server to be ready
                 if not _wait_for_server("127.0.0.1", actual_port, timeout=30.0):
-                    print(f"{GREEN_DARK}[ERROR]{RESET} Server failed to start", file=sys.stderr)
+                    print(
+                        f"{GREEN_DARK}[ERROR]{RESET} Server failed to start",
+                        file=sys.stderr,
+                    )
                     _cleanup_subprocess()
                     raise typer.Exit(1)
 
@@ -700,33 +747,56 @@ def main_callback(
             # Interactive mode: start server and launch TUX
             if agent_id:
                 from rich.console import Console
-                from rich.spinner import Spinner
                 from rich.live import Live
+                from rich.spinner import Spinner
 
                 # Show starting message with spinner
                 console = Console()
                 with Live(
-                    Spinner("dots", text=f"[bold cyan]Starting agent runtime...[/bold cyan]", style="cyan"),
+                    Spinner(
+                        "dots",
+                        text=f"[bold cyan]Starting agent runtime...[/bold cyan]",
+                        style="cyan",
+                    ),
                     console=console,
                     transient=True,
                     refresh_per_second=10,
                 ) as live:
                     process, actual_port = _start_agent_runtime_server(
-                        agent_id, port=port, transport=Transport.ag_ui, codemode=not codemode_disabled, debug=debug
+                        agent_id,
+                        port=port,
+                        transport=Transport.ag_ui,
+                        codemode=not codemode_disabled,
+                        debug=debug,
                     )
                     _subprocess_ref = process  # Register for cleanup
 
                     # Update status while waiting with more visible styling
-                    live.update(Spinner("dots", text=f"[bold cyan]Waiting for agent runtime '{agent_id}' on port {actual_port}...[/bold cyan]", style="cyan"))
+                    live.update(
+                        Spinner(
+                            "dots",
+                            text=f"[bold cyan]Waiting for agent runtime '{agent_id}' on port {actual_port}...[/bold cyan]",
+                            style="cyan",
+                        )
+                    )
 
                     # Wait for server to be ready
                     if not _wait_for_server("127.0.0.1", actual_port, timeout=60.0):
                         live.stop()
-                        print(f"{GREEN_DARK}[ERROR]{RESET} Server failed to start", file=sys.stderr)
+                        print(
+                            f"{GREEN_DARK}[ERROR]{RESET} Server failed to start",
+                            file=sys.stderr,
+                        )
                         _cleanup_subprocess()
                         raise typer.Exit(1)
 
-                    live.update(Spinner("dots", text=f"[bold green]Agent runtime ready![/bold green]", style="green"))
+                    live.update(
+                        Spinner(
+                            "dots",
+                            text=f"[bold green]Agent runtime ready![/bold green]",
+                            style="green",
+                        )
+                    )
 
                 # Display startup info
                 startup_info = _fetch_startup_info("127.0.0.1", actual_port)
@@ -755,13 +825,27 @@ def main_callback(
                 try:
                     # Use Rich-based TUX
                     from .tux import run_tux
-                    extra_suggestions = [s.strip() for s in suggestions.split(",") if s.strip()] if suggestions else []
-                    asyncio.run(run_tux(url, server_url, agent_id=DEFAULT_RUNTIME_AGENT_NAME, eggs=eggs, jupyter_url=jupyter_url, extra_suggestions=extra_suggestions))
+
+                    extra_suggestions = (
+                        [s.strip() for s in suggestions.split(",") if s.strip()]
+                        if suggestions
+                        else []
+                    )
+                    asyncio.run(
+                        run_tux(
+                            url,
+                            server_url,
+                            agent_id=DEFAULT_RUNTIME_AGENT_NAME,
+                            eggs=eggs,
+                            jupyter_url=jupyter_url,
+                            extra_suggestions=extra_suggestions,
+                        )
+                    )
                 finally:
                     _cleanup_subprocess()
             else:
                 # Fall back to local agent
-                agent.to_cli_sync(prog_name='agent-runtimes chat')
+                agent.to_cli_sync(prog_name="agent-runtimes chat")
 
     except typer.Exit:
         _cleanup_subprocess()
@@ -769,7 +853,9 @@ def main_callback(
     except KeyboardInterrupt:
         _cleanup_subprocess()
         print(f"\n{GREEN_LIGHT}{GOODBYE_MESSAGE}{RESET}")
-        print(f"   {GRAY}\033]8;;https://datalayer.ai\033\\https://datalayer.ai\033]8;;\033\\{RESET}")
+        print(
+            f"   {GRAY}\033]8;;https://datalayer.ai\033\\https://datalayer.ai\033]8;;\033\\{RESET}"
+        )
         print()
         raise typer.Exit(0)
     except Exception as e:
@@ -827,8 +913,9 @@ async def _run_single_query_ag_ui(url: str, query: str) -> str:
     Returns:
         Response text from the agent
     """
-    from agent_runtimes.transports.clients import AGUIClient
     from ag_ui.core import EventType
+
+    from agent_runtimes.transports.clients import AGUIClient
 
     spinner = Spinner("Thinking", style="growing")
 
@@ -867,20 +954,16 @@ def version() -> None:
 @app.command()
 def connect(
     url: str = typer.Argument(
-        ...,
-        help="URL of the agent server (WebSocket for ACP, HTTP for AG-UI)"
+        ..., help="URL of the agent server (WebSocket for ACP, HTTP for AG-UI)"
     ),
     transport: Transport = typer.Option(
         Transport.ag_ui,
         "--transport",
         "-t",
-        help="Transport protocol (ag-ui: HTTP/SSE, acp: WebSocket)"
+        help="Transport protocol (ag-ui: HTTP/SSE, acp: WebSocket)",
     ),
     splash: bool = typer.Option(
-        False,
-        "--splash",
-        "-s",
-        help="Show animated splash screen"
+        False, "--splash", "-s", help="Show animated splash screen"
     ),
 ) -> None:
     """Connect to a remote agent server.
@@ -896,7 +979,10 @@ def connect(
     try:
         from agent_runtimes.transports.clients import ACPClient, AGUIClient
     except ImportError as e:
-        print(f"{GREEN_DARK}[ERROR]{RESET} agent-runtimes package required: pip install agent-runtimes", file=sys.stderr)
+        print(
+            f"{GREEN_DARK}[ERROR]{RESET} agent-runtimes package required: pip install agent-runtimes",
+            file=sys.stderr,
+        )
         raise typer.Exit(1)
 
     show_banner(splash=splash)
@@ -923,7 +1009,9 @@ async def _remote_chat_loop_acp(url: str) -> None:
                 if agent_info.description:
                     print(f"{GRAY}{agent_info.description}{RESET}")
             print()
-            print(f"{GRAY}Type your message and press Enter. Type 'quit' or 'exit' to leave.{RESET}")
+            print(
+                f"{GRAY}Type your message and press Enter. Type 'quit' or 'exit' to leave.{RESET}"
+            )
             print()
 
             while True:
@@ -936,7 +1024,9 @@ async def _remote_chat_loop_acp(url: str) -> None:
 
                     if user_input.lower() in ("quit", "exit", "q"):
                         print(f"\n{GREEN_LIGHT}{GOODBYE_MESSAGE}{RESET}")
-                        print(f"   {GRAY}\033]8;;https://datalayer.ai\033\\https://datalayer.ai\033]8;;\033\\{RESET}")
+                        print(
+                            f"   {GRAY}\033]8;;https://datalayer.ai\033\\https://datalayer.ai\033]8;;\033\\{RESET}"
+                        )
                         print()
                         break
 
@@ -971,7 +1061,9 @@ async def _remote_chat_loop_acp(url: str) -> None:
 
                 except KeyboardInterrupt:
                     print(f"\n{GREEN_LIGHT}{GOODBYE_MESSAGE}{RESET}")
-                    print(f"   {GRAY}\033]8;;https://datalayer.ai\033\\https://datalayer.ai\033]8;;\033\\{RESET}")
+                    print(
+                        f"   {GRAY}\033]8;;https://datalayer.ai\033\\https://datalayer.ai\033]8;;\033\\{RESET}"
+                    )
                     print()
                     break
 
@@ -984,14 +1076,17 @@ async def _remote_chat_loop_acp(url: str) -> None:
 
 async def _remote_chat_loop_ag_ui(url: str) -> None:
     """Run the interactive chat loop with a remote AG-UI agent."""
-    from agent_runtimes.transports.clients import AGUIClient
     from ag_ui.core import EventType
+
+    from agent_runtimes.transports.clients import AGUIClient
 
     try:
         async with AGUIClient(url) as client:
             print(f"{GREEN_LIGHT}Connected to AG-UI agent{RESET}")
             print()
-            print(f"{GRAY}Type your message and press Enter. Type 'quit' or 'exit' to leave.{RESET}")
+            print(
+                f"{GRAY}Type your message and press Enter. Type 'quit' or 'exit' to leave.{RESET}"
+            )
             print()
 
             while True:
@@ -1004,7 +1099,9 @@ async def _remote_chat_loop_ag_ui(url: str) -> None:
 
                     if user_input.lower() in ("quit", "exit", "q"):
                         print(f"\n{GREEN_LIGHT}{GOODBYE_MESSAGE}{RESET}")
-                        print(f"   {GRAY}\033]8;;https://datalayer.ai\033\\https://datalayer.ai\033]8;;\033\\{RESET}")
+                        print(
+                            f"   {GRAY}\033]8;;https://datalayer.ai\033\\https://datalayer.ai\033]8;;\033\\{RESET}"
+                        )
                         print()
                         break
 
@@ -1027,7 +1124,10 @@ async def _remote_chat_loop_ag_ui(url: str) -> None:
 
                         elif event.type == EventType.RUN_ERROR:
                             spinner.stop()
-                            print(f"\n{GREEN_DARK}[ERROR]{RESET} {event.error or 'Unknown error'}", file=sys.stderr)
+                            print(
+                                f"\n{GREEN_DARK}[ERROR]{RESET} {event.error or 'Unknown error'}",
+                                file=sys.stderr,
+                            )
                             break
 
                     spinner.stop()
@@ -1040,7 +1140,9 @@ async def _remote_chat_loop_ag_ui(url: str) -> None:
 
                 except KeyboardInterrupt:
                     print(f"\n{GREEN_LIGHT}{GOODBYE_MESSAGE}{RESET}")
-                    print(f"   {GRAY}\033]8;;https://datalayer.ai\033\\https://datalayer.ai\033]8;;\033\\{RESET}")
+                    print(
+                        f"   {GRAY}\033]8;;https://datalayer.ai\033\\https://datalayer.ai\033]8;;\033\\{RESET}"
+                    )
                     print()
                     break
 
@@ -1054,10 +1156,7 @@ async def _remote_chat_loop_ag_ui(url: str) -> None:
 @app.command()
 def agents(
     server: str = typer.Option(
-        "http://localhost:8000",
-        "--server",
-        "-s",
-        help="Agent server base URL"
+        "http://localhost:8000", "--server", "-s", help="Agent server base URL"
     ),
 ) -> None:
     """List available agents on an agent-runtimes server.
@@ -1086,7 +1185,9 @@ def agents(
         print()
 
         for agent in agents_list:
-            print(f"  {GREEN_MEDIUM}•{RESET} {BOLD}{agent.get('name', 'Unknown')}{RESET}")
+            print(
+                f"  {GREEN_MEDIUM}•{RESET} {BOLD}{agent.get('name', 'Unknown')}{RESET}"
+            )
             print(f"    {GRAY}ID:{RESET} {agent.get('id', 'N/A')}")
             if agent.get("description"):
                 print(f"    {GRAY}Description:{RESET} {agent.get('description')}")
@@ -1097,9 +1198,14 @@ def agents(
             print()
 
     except httpx.ConnectError:
-        print(f"{GREEN_DARK}[ERROR]{RESET} Could not connect to {server}", file=sys.stderr)
+        print(
+            f"{GREEN_DARK}[ERROR]{RESET} Could not connect to {server}", file=sys.stderr
+        )
     except httpx.HTTPStatusError as e:
-        print(f"{GREEN_DARK}[ERROR]{RESET} Server returned {e.response.status_code}", file=sys.stderr)
+        print(
+            f"{GREEN_DARK}[ERROR]{RESET} Server returned {e.response.status_code}",
+            file=sys.stderr,
+        )
     except Exception as e:
         print(f"{GREEN_DARK}[ERROR]{RESET} {e}", file=sys.stderr)
 

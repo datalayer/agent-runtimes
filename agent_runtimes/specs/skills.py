@@ -14,7 +14,6 @@ from typing import Dict, List
 
 from agent_runtimes.types import SkillSpec
 
-
 # ============================================================================
 # Skill Definitions
 # ============================================================================
@@ -153,7 +152,7 @@ def check_env_vars_available(env_vars: List[str]) -> bool:
     """
     if not env_vars:
         return True
-    return all(os.environ.get(var.rsplit(':', 1)[0]) for var in env_vars)
+    return all(os.environ.get(var.rsplit(":", 1)[0]) for var in env_vars)
 
 
 def get_skill_spec(skill_id: str) -> SkillSpec | None:
@@ -169,8 +168,8 @@ def get_skill_spec(skill_id: str) -> SkillSpec | None:
     spec = SKILL_CATALOG.get(skill_id)
     if spec is not None:
         return spec
-    base, _, ver = skill_id.rpartition(':')
-    if base and '.' in ver:
+    base, _, ver = skill_id.rpartition(":")
+    if base and "." in ver:
         return SKILL_CATALOG.get(base)
     return None
 

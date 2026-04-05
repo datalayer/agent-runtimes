@@ -10,7 +10,7 @@
 from __future__ import annotations
 
 import json
-from typing import Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
     from ..tux import CliTux
@@ -24,8 +24,11 @@ SHORTCUT = "escape l"
 async def execute(tux: "CliTux") -> Optional[str]:
     """Show detailed information about tool calls from the last response."""
     from ..tux import (
-        STYLE_PRIMARY, STYLE_ACCENT, STYLE_MUTED,
-        STYLE_ERROR, STYLE_WARNING,
+        STYLE_ACCENT,
+        STYLE_ERROR,
+        STYLE_MUTED,
+        STYLE_PRIMARY,
+        STYLE_WARNING,
     )
 
     if not tux.tool_calls:
@@ -35,7 +38,9 @@ async def execute(tux: "CliTux") -> Optional[str]:
         return None
 
     tux.console.print()
-    tux.console.print(f"● Tool Calls from Last Response ({len(tux.tool_calls)}):", style=STYLE_PRIMARY)
+    tux.console.print(
+        f"● Tool Calls from Last Response ({len(tux.tool_calls)}):", style=STYLE_PRIMARY
+    )
     tux.console.print()
 
     for i, tc in enumerate(tux.tool_calls, 1):
@@ -63,7 +68,9 @@ async def execute(tux: "CliTux") -> Optional[str]:
                             for line in val_str.split("\n"):
                                 tux.console.print(f"       {line}", style=STYLE_MUTED)
                         else:
-                            tux.console.print(f"     {key}: {val_str}", style=STYLE_MUTED)
+                            tux.console.print(
+                                f"     {key}: {val_str}", style=STYLE_MUTED
+                            )
                 else:
                     tux.console.print(f"     args: {tc.args_json}", style=STYLE_MUTED)
             except json.JSONDecodeError:

@@ -409,6 +409,7 @@ async def _create_and_register_cli_agent(
     # Create the underlying Pydantic AI Agent
     # Use model from agent spec, environment variable override, or global default
     from agent_runtimes.specs.models import DEFAULT_MODEL
+
     from .capabilities import (
         ToolApprovalCapability,
         ToolApprovalConfig,

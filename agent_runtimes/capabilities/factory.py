@@ -86,7 +86,11 @@ def build_usage_limits_from_agent_spec(agent_spec: Any) -> UsageLimits | None:
                     tool_calls_limit = int(token_limits["tool_calls_limit"])
                 except (TypeError, ValueError):
                     tool_calls_limit = None
-        if per_run is not None and request_limit is not None and tool_calls_limit is not None:
+        if (
+            per_run is not None
+            and request_limit is not None
+            and tool_calls_limit is not None
+        ):
             break
 
     if per_run is None and request_limit is None and tool_calls_limit is None:
@@ -99,7 +103,9 @@ def build_usage_limits_from_agent_spec(agent_spec: Any) -> UsageLimits | None:
     )
 
 
-def build_capabilities_from_agent_spec(agent_spec: Any, agent_id: str | None = None) -> list[Any]:
+def build_capabilities_from_agent_spec(
+    agent_spec: Any, agent_id: str | None = None
+) -> list[Any]:
     """Convert agent-runtimes AgentSpec guardrails into pydantic-ai capabilities."""
     capabilities: list[Any] = []
     guardrails = list(getattr(agent_spec, "guardrails", None) or [])
@@ -117,7 +123,9 @@ def build_capabilities_from_agent_spec(agent_spec: Any, agent_id: str | None = N
                 TokenLimitCapability(
                     per_run=_parse_token_limit(token_limits.get("per_run"), 100_000),
                     per_day=_parse_token_limit(token_limits.get("per_day"), 500_000),
-                    per_month=_parse_token_limit(token_limits.get("per_month"), 5_000_000),
+                    per_month=_parse_token_limit(
+                        token_limits.get("per_month"), 5_000_000
+                    ),
                     request_limit=token_limits.get("request_limit"),
                     tool_calls_limit=token_limits.get("tool_calls_limit"),
                 )
@@ -155,7 +163,9 @@ def build_capabilities_from_agent_spec(agent_spec: Any, agent_id: str | None = N
                     allow_row_level_output=bool(
                         data_handling.get("allow_row_level_output", True)
                     ),
-                    max_rows_in_output=int(data_handling.get("max_rows_in_output", 1000)),
+                    max_rows_in_output=int(
+                        data_handling.get("max_rows_in_output", 1000)
+                    ),
                 )
             )
 
@@ -176,12 +186,18 @@ def build_capabilities_from_agent_spec(agent_spec: Any, agent_id: str | None = N
         if isinstance(data_handling, dict) and data_handling.get("pii_detection"):
             pii_action = str(data_handling.get("pii_action", "block")).lower()
             capabilities.append(
-                PiiDetectorCapability(action="log" if pii_action in {"warn", "redact"} else "block")
+                PiiDetectorCapability(
+                    action="log" if pii_action in {"warn", "redact"} else "block"
+                )
             )
 
         # Optional shield-style sections
         if entry.get("prompt_injection"):
-            cfg = entry["prompt_injection"] if isinstance(entry["prompt_injection"], dict) else {}
+            cfg = (
+                entry["prompt_injection"]
+                if isinstance(entry["prompt_injection"], dict)
+                else {}
+            )
             capabilities.append(
                 PromptInjectionCapability(
                     sensitivity=cfg.get("sensitivity", "medium"),
@@ -191,7 +207,11 @@ def build_capabilities_from_agent_spec(agent_spec: Any, agent_id: str | None = N
             )
 
         if entry.get("secret_redaction"):
-            cfg = entry["secret_redaction"] if isinstance(entry["secret_redaction"], dict) else {}
+            cfg = (
+                entry["secret_redaction"]
+                if isinstance(entry["secret_redaction"], dict)
+                else {}
+            )
             capabilities.append(
                 SecretRedactionCapability(
                     detect=cfg.get("detect"),
@@ -200,7 +220,11 @@ def build_capabilities_from_agent_spec(agent_spec: Any, agent_id: str | None = N
             )
 
         if entry.get("blocked_keywords"):
-            cfg = entry["blocked_keywords"] if isinstance(entry["blocked_keywords"], dict) else {}
+            cfg = (
+                entry["blocked_keywords"]
+                if isinstance(entry["blocked_keywords"], dict)
+                else {}
+            )
             capabilities.append(
                 BlockedKeywordsCapability(
                     keywords=list(cfg.get("keywords") or []),
@@ -230,7 +254,11 @@ def build_capabilities_from_agent_spec(agent_spec: Any, agent_id: str | None = N
             )
 
         if entry.get("async_guardrail"):
-            cfg = entry["async_guardrail"] if isinstance(entry["async_guardrail"], dict) else {}
+            cfg = (
+                entry["async_guardrail"]
+                if isinstance(entry["async_guardrail"], dict)
+                else {}
+            )
             nested_input = cfg.get("input_guard") or {}
             nested_guard = InputGuardCapability(guard=nested_input.get("guard"))
             capabilities.append(
@@ -243,7 +271,11 @@ def build_capabilities_from_agent_spec(agent_spec: Any, agent_id: str | None = N
             )
 
         if entry.get("tool_approval"):
-            cfg = entry["tool_approval"] if isinstance(entry["tool_approval"], dict) else {}
+            cfg = (
+                entry["tool_approval"]
+                if isinstance(entry["tool_approval"], dict)
+                else {}
+            )
             approval_config = ToolApprovalConfig.from_spec(cfg)
             if agent_id:
                 approval_config.agent_id = agent_id
