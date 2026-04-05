@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright (c) 2025-2026 Datalayer, Inc.
+# Distributed under the terms of the Modified BSD License.
+
 """
 Demo script showing Agent Runtimes Chat spinner behavior in realistic scenarios.
 This simulates different operation durations to showcase the spinner animation.
