@@ -442,8 +442,20 @@ def create_shared_sandbox(
                 f"Configured sandbox manager for Jupyter: {jupyter_sandbox_url.split('?')[0]}"
             )
         else:
-            # Use default local-eval sandbox
-            sandbox_manager.configure(variant="local-eval")
+            # In sidecar mode, default to local-jupyter (companion will
+            # provide the URL later).  Never fall back to local-eval when
+            # a jupyter sidecar is expected.
+            jupyter_sidecar = (
+                os.getenv("DATALAYER_RUNTIME_JUPYTER_SIDECAR", "").lower() == "true"
+            )
+            if jupyter_sidecar:
+                sandbox_manager.configure(variant="local-jupyter")
+                logger.info(
+                    "Sidecar mode: configured sandbox as local-jupyter "
+                    "(waiting for companion to provide jupyter URL)"
+                )
+            else:
+                sandbox_manager.configure(variant="local-eval")
 
         shared_sandbox = sandbox_manager.get_managed_sandbox()
         logger.info(

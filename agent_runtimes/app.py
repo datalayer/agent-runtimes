@@ -207,6 +207,27 @@ async def _create_and_register_cli_agent(
         or ("local-jupyter" if jupyter_sandbox_url else "local-eval")
     )
 
+    # In K8s sidecar mode (DATALAYER_RUNTIME_JUPYTER_SIDECAR=true), a Jupyter
+    # container already runs in the same pod.  The "jupyter" variant means
+    # "start your own Jupyter process" which is wrong here — remap to
+    # "local-jupyter" (connect to existing).  Never fallback to local-eval.
+    jupyter_sidecar = (
+        os.getenv("DATALAYER_RUNTIME_JUPYTER_SIDECAR", "").lower() == "true"
+    )
+    if jupyter_sidecar:
+        if effective_variant == "jupyter":
+            effective_variant = "local-jupyter"
+            logger.info(
+                "Jupyter sidecar detected (DATALAYER_RUNTIME_JUPYTER_SIDECAR=true), "
+                "remapped sandbox variant jupyter → local-jupyter"
+            )
+        elif effective_variant == "local-eval":
+            effective_variant = "local-jupyter"
+            logger.info(
+                "Jupyter sidecar detected, overriding local-eval → local-jupyter "
+                "(companion will provide jupyter URL)"
+            )
+
     # Create shared sandbox if both codemode and skills are enabled,
     # or when the jupyter variant is used with codemode.
     skills_enabled = len(skills) > 0
@@ -214,18 +235,17 @@ async def _create_and_register_cli_agent(
     need_shared_sandbox = (
         (enable_codemode and skills_enabled)
         or (enable_codemode and jupyter_sandbox_url)
-        or (enable_codemode and effective_variant == "jupyter")
+        or (enable_codemode and effective_variant in ("jupyter", "local-jupyter"))
     )
     if need_shared_sandbox:
         if effective_variant == "jupyter":
             # Delegate to code_sandboxes: create a per-agent sandbox
             # that starts its own Jupyter server on a random free port.
+            # NOTE: This branch is only reached in standalone mode (no sidecar).
             try:
                 from .services.code_sandbox_manager import get_code_sandbox_manager
 
                 sandbox_manager = get_code_sandbox_manager()
-                # Update manager config so /health/startup reports the
-                # correct variant instead of the default "local-eval".
                 sandbox_manager.configure(variant="jupyter")
                 shared_sandbox = sandbox_manager.create_agent_sandbox(
                     agent_id=agent_id,
@@ -243,6 +263,21 @@ async def _create_and_register_cli_agent(
                 raise RuntimeError(
                     f"Failed to create Jupyter sandbox for agent '{agent_id}': {e}"
                 ) from e
+        elif effective_variant == "local-jupyter" and not jupyter_sandbox_url:
+            # Sidecar/companion mode (Phase 1): the Jupyter URL is not
+            # available yet.  Configure the manager as local-jupyter and
+            # return a ManagedSandbox proxy.  The proxy defers actual
+            # sandbox creation until first use — by that time the companion
+            # will have called configure-from-spec with the real URL.
+            from .services.code_sandbox_manager import get_code_sandbox_manager
+
+            sandbox_manager = get_code_sandbox_manager()
+            sandbox_manager.configure(variant="local-jupyter")
+            shared_sandbox = sandbox_manager.get_managed_sandbox()
+            logger.info(
+                f"Deferred sandbox for agent '{agent_id}': variant=local-jupyter, "
+                f"waiting for companion to provide jupyter URL"
+            )
         else:
             shared_sandbox = create_shared_sandbox(jupyter_sandbox_url)
 
