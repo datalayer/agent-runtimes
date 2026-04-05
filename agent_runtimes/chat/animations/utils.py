@@ -29,7 +29,7 @@ def raw_terminal() -> Generator[None, None, None]:
 
 def check_escape_pressed() -> bool:
     """Check if ESCAPE key was pressed (non-blocking).
-    
+
     Returns:
         True if ESCAPE was pressed, False otherwise.
     """

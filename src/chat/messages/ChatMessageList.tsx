@@ -343,7 +343,7 @@ export function ChatMessageList({
         // ---- Tool call item ----
         if (isToolCallMessage(item)) {
           const respond =
-            item.status === 'executing'
+            item.status === 'executing' || item.status === 'inProgress'
               ? createRespondCallback(item.toolCallId)
               : undefined;
 

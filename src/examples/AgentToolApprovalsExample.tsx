@@ -737,27 +737,49 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
   );
 
   const handleToolLevelApprove = useCallback(
-    async (toolCallId: string, requestId: string) => {
+    async (
+      toolCallId: string,
+      requestId: string,
+      toolName: string,
+      respond?: (result: unknown) => void,
+    ) => {
       const ok = await approve(requestId, 'Approved from tool message card');
       if (ok) {
         setToolApprovalState(prev => ({ ...prev, [toolCallId]: 'approved' }));
+        respond?.({
+          type: 'tool-approval-decision',
+          approved: true,
+          approvalId: requestId,
+          toolName,
+        });
       }
     },
     [approve],
   );
 
   const handleToolLevelDeny = useCallback(
-    async (toolCallId: string, requestId: string) => {
+    async (
+      toolCallId: string,
+      requestId: string,
+      toolName: string,
+      respond?: (result: unknown) => void,
+    ) => {
       const ok = await reject(requestId, 'Rejected from tool message card');
       if (ok) {
         setToolApprovalState(prev => ({ ...prev, [toolCallId]: 'denied' }));
+        respond?.({
+          type: 'tool-approval-decision',
+          approved: false,
+          approvalId: requestId,
+          toolName,
+        });
       }
     },
     [reject],
   );
 
   const renderToolResult: RenderToolResult = useCallback(
-    ({ toolCallId, toolName, args, result, status, error }) => {
+    ({ toolCallId, toolName, args, result, status, error, respond }) => {
       const matchedApproval = findMatchingApproval(toolName, args);
       const resultObject =
         result && typeof result === 'object'
@@ -798,12 +820,23 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
           onApprove={
             matchedApproval
               ? () =>
-                  void handleToolLevelApprove(toolCallId, matchedApproval.id)
+                  void handleToolLevelApprove(
+                    toolCallId,
+                    matchedApproval.id,
+                    toolName,
+                    respond,
+                  )
               : undefined
           }
           onDeny={
             matchedApproval
-              ? () => void handleToolLevelDeny(toolCallId, matchedApproval.id)
+              ? () =>
+                  void handleToolLevelDeny(
+                    toolCallId,
+                    matchedApproval.id,
+                    toolName,
+                    respond,
+                  )
               : undefined
           }
         />

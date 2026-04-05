@@ -70,7 +70,7 @@ except (AttributeError, OSError):
 
 class Transport(str, Enum):
     """Transport protocol options for connecting to agent-runtimes."""
-    
+
     ag_ui = "ag-ui"
     acp = "acp"
 
@@ -106,12 +106,12 @@ SPINNER_GROWING_CIRCLE = ['○', '◔', '◑', '◕', '●', '◕', '◑', '◔'
 
 class Spinner:
     """Animated loading spinner for terminal output."""
-    
+
     def __init__(self, message: str = "Thinking", style: str = "circle"):
         self.message = message
         self.spinner_active = False
         self.spinner_thread: threading.Thread | None = None
-        
+
         # Select spinner style
         if style == "dots":
             self.frames = SPINNER_DOTS
@@ -125,7 +125,7 @@ class Spinner:
             self.frames = SPINNER_GROWING_CIRCLE
         else:
             self.frames = SPINNER_CIRCLE
-    
+
     def _spin(self) -> None:
         """The spinning animation loop."""
         for frame in itertools.cycle(self.frames):
@@ -135,31 +135,31 @@ class Spinner:
             sys.stdout.write(f'\r{GREEN_MEDIUM}{frame}{RESET} {GRAY}{self.message}...{RESET}')
             sys.stdout.flush()
             time.sleep(0.1)
-        
+
         # Clear the spinner line
         sys.stdout.write('\r' + ' ' * (len(self.message) + 20) + '\r')
         sys.stdout.flush()
-    
+
     def start(self) -> None:
         """Start the spinner animation."""
         if not sys.stdout.isatty():
             return
-        
+
         self.spinner_active = True
         self.spinner_thread = threading.Thread(target=self._spin, daemon=True)
         self.spinner_thread.start()
-    
+
     def stop(self) -> None:
         """Stop the spinner animation."""
         self.spinner_active = False
         if self.spinner_thread:
             self.spinner_thread.join()
-    
+
     def __enter__(self) -> "Spinner":
         """Context manager entry."""
         self.start()
         return self
-    
+
     def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         """Context manager exit."""
         self.stop()
@@ -177,7 +177,7 @@ agent = Agent(
     - Data science and machine learning tasks
     - Software development best practices
     - Python programming and related tools
-    
+
     Always provide clear, concise, and actionable responses.""",
     name="Agent Runtimes Chat Assistant",
 )
@@ -186,7 +186,7 @@ agent = Agent(
 async def run_query_with_spinner(query: str) -> str:
     """Run a query with a loading spinner animation."""
     spinner = Spinner("Thinking", style="growing")
-    
+
     try:
         spinner.start()
         result = await agent.run(query)
@@ -216,7 +216,7 @@ def _show_version() -> None:
 
 def _run_agent_runtime_server(host: str, port: int, agent_id: str, codemode: bool, protocol: "Protocol", port_value: Any = None) -> None:
     """Run the agent-runtimes server (for multiprocessing).
-    
+
     This must be a module-level function (not nested) to be picklable.
 
     Args:
@@ -233,23 +233,23 @@ def _run_agent_runtime_server(host: str, port: int, agent_id: str, codemode: boo
     import os
     from agent_runtimes.commands import LogLevel, Protocol, serve_server, find_random_free_port
     from agent_runtimes.specs.agents import get_agent_spec
-    
+
     # Only suppress logging if not in debug mode
     debug_mode = os.environ.get('AG_CHAT_DEBUG') == '1' or os.environ.get('CODEAI_DEBUG') == '1'
-    
+
     if not debug_mode:
         # Redirect stdout and stderr to devnull to keep terminal clean
         devnull = open(os.devnull, 'w')
         sys.stdout = devnull
         sys.stderr = devnull
-        
+
         # Suppress all logging
         logging.getLogger().setLevel(logging.CRITICAL)
         logging.getLogger("uvicorn").setLevel(logging.CRITICAL)
         logging.getLogger("uvicorn.access").setLevel(logging.CRITICAL)
         logging.getLogger("uvicorn.error").setLevel(logging.CRITICAL)
         logging.getLogger("rich").setLevel(logging.CRITICAL)
-        
+
         # Disable Rich console output
         os.environ["TERM"] = "dumb"
         os.environ["NO_COLOR"] = "1"
@@ -257,7 +257,7 @@ def _run_agent_runtime_server(host: str, port: int, agent_id: str, codemode: boo
         # Enable debug logging
         logging.basicConfig(level=logging.DEBUG)
         print(f"[DEBUG] Starting agent runtime server in debug mode")
-    
+
     # Resolve port in this process so we can communicate it back
     actual_port = port
     if port == 0:
@@ -276,7 +276,7 @@ def _run_agent_runtime_server(host: str, port: int, agent_id: str, codemode: boo
             mcp_servers_str = ",".join([server.id for server in agent_spec.mcp_servers])
         if agent_spec.sandbox_variant:
             sandbox_variant = agent_spec.sandbox_variant
-    
+
     serve_server(
         host=host,
         port=actual_port,
@@ -300,7 +300,7 @@ def _start_agent_runtime_server(
     debug: bool = False,
 ) -> tuple[multiprocessing.Process, int]:
     """Start agent-runtimes server in a background process.
-    
+
     Args:
         agent_id: Agent spec ID to start
         host: Host to bind to
@@ -308,20 +308,20 @@ def _start_agent_runtime_server(
         transport: Transport protocol to use (ag-ui or acp)
         codemode: Enable codemode (default True)
         debug: Enable debug logging (default False)
-        
+
     Returns:
         Tuple of (process, actual_port)
     """
     from agent_runtimes.commands import Protocol
-    
+
     # Map transport to protocol
     protocol = Protocol.ag_ui if transport == Transport.ag_ui else Protocol.ag_ui  # ACP uses same server
-    
+
     # Set debug environment variable if needed
     if debug:
         import os
         os.environ['AG_CHAT_DEBUG'] = '1'
-    
+
     # Shared value so the child process can report the effective port
     port_value = multiprocessing.Value('i', 0)
 
@@ -331,7 +331,7 @@ def _start_agent_runtime_server(
         daemon=True
     )
     process.start()
-    
+
     # Wait for the child to resolve the port (happens before uvicorn.run)
     timeout = 10.0
     start = time.time()
@@ -339,7 +339,7 @@ def _start_agent_runtime_server(
         if not process.is_alive():
             break
         time.sleep(0.05)
-    
+
     actual_port = port_value.value
     if actual_port == 0:
         raise RuntimeError("Agent runtime failed to resolve a port")
@@ -349,20 +349,20 @@ def _start_agent_runtime_server(
 
 def _wait_for_server(host: str, port: int, timeout: float = 30.0) -> bool:
     """Wait for the server to become available.
-    
+
     Args:
         host: Server host
         port: Server port
         timeout: Maximum time to wait in seconds
-        
+
     Returns:
         True if server is ready, False if timeout
     """
     import httpx
-    
+
     url = f"http://{host}:{port}/health"
     start_time = time.time()
-    
+
     while time.time() - start_time < timeout:
         try:
             response = httpx.get(url, timeout=1.0)
@@ -371,17 +371,17 @@ def _wait_for_server(host: str, port: int, timeout: float = 30.0) -> bool:
         except (httpx.ConnectError, httpx.TimeoutException):
             pass
         time.sleep(0.2)
-    
+
     return False
 
 
 def _fetch_startup_info(host: str, port: int) -> dict | None:
     """Fetch startup info from the running agent-runtimes server.
-    
+
     Args:
         host: Server host
         port: Server port
-        
+
     Returns:
         The startup info dict, or None on failure.
     """
@@ -399,12 +399,12 @@ def _fetch_startup_info(host: str, port: int) -> dict | None:
 
 def _format_startup_info(host: str, port: int, info: dict | None) -> str:
     """Format startup info for CLI display.
-    
+
     Args:
         host: Runtime server host
         port: Runtime server port
         info: The startup info dict from /health/startup
-        
+
     Returns:
         Formatted string ready for terminal output.
     """
@@ -616,33 +616,33 @@ def main_callback(
     ),
 ) -> None:
     """Agent Runtimes Chat assistant.
-    
+
     Run without arguments to start interactive chat mode with slash commands.
     Provide a query as arguments for single-shot mode.
-    
+
     If no --agentspec-id is given, lists available agent specs and prompts
     you to choose one interactively.
-    
+
     Examples:
-    
+
         agent-runtimes chat                        # Pick agent spec interactively
-        
+
         agent-runtimes chat --agentspec-id crawler # Use specific agent spec
-        
+
         agent-runtimes chat "What is Python?"      # Single query mode
-        
+
         agent-runtimes chat -a crawler "Search for AI trends"  # Single query with specific agent
     """
     # If a subcommand was invoked, don't run the default behavior
     if ctx.invoked_subcommand is not None:
         return
-    
+
     if show_version:
         _show_version()
         raise typer.Exit(0)
-    
+
     global _subprocess_ref
-    
+
     # Show ASCII banner early (before agent selection)
     from .banner import show_banner, BANNER, DIM, RESET as BANNER_RESET
     if banner or banner_all:
@@ -651,12 +651,12 @@ def main_callback(
         if sys.stdout.isatty():
             print(BANNER)
             print(f"{DIM}Powered by Datalayer  •  \033]8;;https://datalayer.ai\033\\https://datalayer.ai\033]8;;\033\\{BANNER_RESET}\n")
-    
+
     # Resolve agent spec: use provided ID or pick interactively
     agent_id = agentspec_id
     if agent_id is None:
         agent_id = _pick_agentspec_interactive()
-    
+
     try:
         if query:
             # Check if user typed "version" as a query - treat as version command
@@ -664,7 +664,7 @@ def main_callback(
             if query_str.strip().lower() == "version":
                 _show_version()
                 raise typer.Exit(0)
-            
+
             # Non-interactive mode: start agent-runtimes server and run query
             if agent_id:
                 print(f"{GRAY}Starting agent-runtimes server with {agent_id}...{RESET}")
@@ -672,18 +672,18 @@ def main_callback(
                     agent_id, port=port, transport=Transport.ag_ui, codemode=not codemode_disabled, debug=debug
                 )
                 _subprocess_ref = process  # Register for cleanup
-                
+
                 # Wait for server to be ready
                 if not _wait_for_server("127.0.0.1", actual_port, timeout=30.0):
                     print(f"{GREEN_DARK}[ERROR]{RESET} Server failed to start", file=sys.stderr)
                     _cleanup_subprocess()
                     raise typer.Exit(1)
-                
+
                 # Display startup info
                 startup_info = _fetch_startup_info("127.0.0.1", actual_port)
                 print(_format_startup_info("127.0.0.1", actual_port, startup_info))
                 print()
-                
+
                 # Connect to the agent and run the query
                 url = f"http://127.0.0.1:{actual_port}/api/v1/ag-ui/{DEFAULT_RUNTIME_AGENT_NAME}/"
                 try:
@@ -702,7 +702,7 @@ def main_callback(
                 from rich.console import Console
                 from rich.spinner import Spinner
                 from rich.live import Live
-                
+
                 # Show starting message with spinner
                 console = Console()
                 with Live(
@@ -715,19 +715,19 @@ def main_callback(
                         agent_id, port=port, transport=Transport.ag_ui, codemode=not codemode_disabled, debug=debug
                     )
                     _subprocess_ref = process  # Register for cleanup
-                    
+
                     # Update status while waiting with more visible styling
                     live.update(Spinner("dots", text=f"[bold cyan]Waiting for agent runtime '{agent_id}' on port {actual_port}...[/bold cyan]", style="cyan"))
-                    
+
                     # Wait for server to be ready
                     if not _wait_for_server("127.0.0.1", actual_port, timeout=60.0):
                         live.stop()
                         print(f"{GREEN_DARK}[ERROR]{RESET} Server failed to start", file=sys.stderr)
                         _cleanup_subprocess()
                         raise typer.Exit(1)
-                    
+
                     live.update(Spinner("dots", text=f"[bold green]Agent runtime ready![/bold green]", style="green"))
-                
+
                 # Display startup info
                 startup_info = _fetch_startup_info("127.0.0.1", actual_port)
                 print(_format_startup_info("127.0.0.1", actual_port, startup_info))
@@ -751,7 +751,7 @@ def main_callback(
 
                 url = f"http://127.0.0.1:{actual_port}/api/v1/ag-ui/{DEFAULT_RUNTIME_AGENT_NAME}/"
                 server_url = f"http://127.0.0.1:{actual_port}"
-                
+
                 try:
                     # Use Rich-based TUX
                     from .tux import run_tux
@@ -762,7 +762,7 @@ def main_callback(
             else:
                 # Fall back to local agent
                 agent.to_cli_sync(prog_name='agent-runtimes chat')
-                
+
     except typer.Exit:
         _cleanup_subprocess()
         raise
@@ -780,38 +780,38 @@ def main_callback(
 
 async def _run_single_query_acp(url: str, query: str) -> str:
     """Run a single query against the remote agent via ACP (WebSocket).
-    
+
     Args:
         url: WebSocket URL of the agent
         query: Query to send
-        
+
     Returns:
         Response text from the agent
     """
     from agent_runtimes.transports.clients import ACPClient
-    
+
     spinner = Spinner("Thinking", style="growing")
-    
+
     try:
         async with ACPClient(url) as client:
             spinner.start()
-            
+
             response_text = ""
             async for event in client.run(query, stream=True):
                 event_type = event.get("type", "")
-                
+
                 if event_type == "text_delta":
                     if spinner.spinner_active:
                         spinner.stop()
                     content = event.get("content", "")
                     response_text += content
-                
+
                 elif event_type == "completed":
                     break
-            
+
             spinner.stop()
             return response_text
-            
+
     except Exception as e:
         spinner.stop()
         raise e
@@ -819,23 +819,23 @@ async def _run_single_query_acp(url: str, query: str) -> str:
 
 async def _run_single_query_ag_ui(url: str, query: str) -> str:
     """Run a single query against the remote agent via AG-UI (HTTP/SSE).
-    
+
     Args:
         url: HTTP URL of the agent
         query: Query to send
-        
+
     Returns:
         Response text from the agent
     """
     from agent_runtimes.transports.clients import AGUIClient
     from ag_ui.core import EventType
-    
+
     spinner = Spinner("Thinking", style="growing")
-    
+
     try:
         async with AGUIClient(url) as client:
             spinner.start()
-            
+
             response_text = ""
             async for event in client.run(query):
                 if event.type == EventType.TEXT_MESSAGE_CONTENT:
@@ -843,16 +843,16 @@ async def _run_single_query_ag_ui(url: str, query: str) -> str:
                         spinner.stop()
                     content = event.delta or ""
                     response_text += content
-                
+
                 elif event.type == EventType.RUN_FINISHED:
                     break
-                
+
                 elif event.type == EventType.RUN_ERROR:
                     raise Exception(event.error or "Unknown error")
-            
+
             spinner.stop()
             return response_text
-            
+
     except Exception as e:
         spinner.stop()
         raise e
@@ -884,13 +884,13 @@ def connect(
     ),
 ) -> None:
     """Connect to a remote agent server.
-    
+
     Examples:
-    
+
         agent-runtimes chat connect http://localhost:8000/api/v1/ag-ui/my-agent/
-        
+
         agent-runtimes chat connect ws://localhost:8000/api/v1/acp/ws/my-agent -t acp
-        
+
         agent-runtimes chat connect https://agent.datalayer.ai/api/v1/ag-ui/chat/
     """
     try:
@@ -898,9 +898,9 @@ def connect(
     except ImportError as e:
         print(f"{GREEN_DARK}[ERROR]{RESET} agent-runtimes package required: pip install agent-runtimes", file=sys.stderr)
         raise typer.Exit(1)
-    
+
     show_banner(splash=splash)
-    
+
     if transport == Transport.acp:
         print(f"{GREEN_MEDIUM}Connecting via ACP:{RESET} {url}")
         print()
@@ -914,7 +914,7 @@ def connect(
 async def _remote_chat_loop_acp(url: str) -> None:
     """Run the interactive chat loop with a remote ACP agent."""
     from agent_runtimes.transports.clients import ACPClient
-    
+
     try:
         async with ACPClient(url) as client:
             agent_info = client.agent_info
@@ -925,56 +925,56 @@ async def _remote_chat_loop_acp(url: str) -> None:
             print()
             print(f"{GRAY}Type your message and press Enter. Type 'quit' or 'exit' to leave.{RESET}")
             print()
-            
+
             while True:
                 try:
                     # Get user input
                     user_input = input(f"{GREEN_MEDIUM}You:{RESET} ").strip()
-                    
+
                     if not user_input:
                         continue
-                    
+
                     if user_input.lower() in ("quit", "exit", "q"):
                         print(f"\n{GREEN_LIGHT}{GOODBYE_MESSAGE}{RESET}")
                         print(f"   {GRAY}\033]8;;https://datalayer.ai\033\\https://datalayer.ai\033]8;;\033\\{RESET}")
                         print()
                         break
-                    
+
                     # Show spinner while waiting
                     spinner = Spinner("Thinking", style="growing")
                     spinner.start()
-                    
+
                     # Collect response
                     response_text = ""
                     async for event in client.run(user_input, stream=True):
                         event_type = event.get("type", "")
-                        
+
                         if event_type == "text_delta":
                             if spinner.spinner_active:
                                 spinner.stop()
                             content = event.get("content", "")
                             response_text += content
                             print(content, end="", flush=True)
-                        
+
                         elif event_type == "completed":
                             break
-                    
+
                     spinner.stop()
-                    
+
                     # If we didn't get streaming text, print final output
                     if not response_text and "output" in event:
                         print(f"\n{GREEN_LIGHT}Agent:{RESET} {event.get('output', '')}")
                     else:
                         print()  # Newline after streamed response
-                    
+
                     print()
-                    
+
                 except KeyboardInterrupt:
                     print(f"\n{GREEN_LIGHT}{GOODBYE_MESSAGE}{RESET}")
                     print(f"   {GRAY}\033]8;;https://datalayer.ai\033\\https://datalayer.ai\033]8;;\033\\{RESET}")
                     print()
                     break
-                    
+
     except ConnectionRefusedError:
         print(f"{GREEN_DARK}[ERROR]{RESET} Could not connect to {url}", file=sys.stderr)
         print(f"{GRAY}Make sure the agent server is running.{RESET}", file=sys.stderr)
@@ -986,32 +986,32 @@ async def _remote_chat_loop_ag_ui(url: str) -> None:
     """Run the interactive chat loop with a remote AG-UI agent."""
     from agent_runtimes.transports.clients import AGUIClient
     from ag_ui.core import EventType
-    
+
     try:
         async with AGUIClient(url) as client:
             print(f"{GREEN_LIGHT}Connected to AG-UI agent{RESET}")
             print()
             print(f"{GRAY}Type your message and press Enter. Type 'quit' or 'exit' to leave.{RESET}")
             print()
-            
+
             while True:
                 try:
                     # Get user input
                     user_input = input(f"{GREEN_MEDIUM}You:{RESET} ").strip()
-                    
+
                     if not user_input:
                         continue
-                    
+
                     if user_input.lower() in ("quit", "exit", "q"):
                         print(f"\n{GREEN_LIGHT}{GOODBYE_MESSAGE}{RESET}")
                         print(f"   {GRAY}\033]8;;https://datalayer.ai\033\\https://datalayer.ai\033]8;;\033\\{RESET}")
                         print()
                         break
-                    
+
                     # Show spinner while waiting
                     spinner = Spinner("Thinking", style="growing")
                     spinner.start()
-                    
+
                     # Collect response
                     response_text = ""
                     async for event in client.run(user_input):
@@ -1021,29 +1021,29 @@ async def _remote_chat_loop_ag_ui(url: str) -> None:
                             content = event.delta or ""
                             response_text += content
                             print(content, end="", flush=True)
-                        
+
                         elif event.type == EventType.RUN_FINISHED:
                             break
-                        
+
                         elif event.type == EventType.RUN_ERROR:
                             spinner.stop()
                             print(f"\n{GREEN_DARK}[ERROR]{RESET} {event.error or 'Unknown error'}", file=sys.stderr)
                             break
-                    
+
                     spinner.stop()
-                    
+
                     # Add newline after streamed response
                     if response_text:
                         print()
-                    
+
                     print()
-                    
+
                 except KeyboardInterrupt:
                     print(f"\n{GREEN_LIGHT}{GOODBYE_MESSAGE}{RESET}")
                     print(f"   {GRAY}\033]8;;https://datalayer.ai\033\\https://datalayer.ai\033]8;;\033\\{RESET}")
                     print()
                     break
-                    
+
     except ConnectionRefusedError:
         print(f"{GREEN_DARK}[ERROR]{RESET} Could not connect to {url}", file=sys.stderr)
         print(f"{GRAY}Make sure the agent server is running.{RESET}", file=sys.stderr)
@@ -1061,30 +1061,30 @@ def agents(
     ),
 ) -> None:
     """List available agents on an agent-runtimes server.
-    
+
     Examples:
-    
+
         agent-runtimes chat agents
-        
+
         agent-runtimes chat agents --server https://agents.datalayer.ai
     """
     import httpx
-    
+
     try:
         url = f"{server.rstrip('/')}/api/v1/acp/agents"
         response = httpx.get(url, timeout=10.0)
         response.raise_for_status()
-        
+
         data = response.json()
         agents_list = data.get("agents", [])
-        
+
         if not agents_list:
             print(f"{GRAY}No agents available on {server}{RESET}")
             return
-        
+
         print(f"{GREEN_LIGHT}Available Agents on {server}:{RESET}")
         print()
-        
+
         for agent in agents_list:
             print(f"  {GREEN_MEDIUM}•{RESET} {BOLD}{agent.get('name', 'Unknown')}{RESET}")
             print(f"    {GRAY}ID:{RESET} {agent.get('id', 'N/A')}")
@@ -1095,7 +1095,7 @@ def agents(
             if cap_list:
                 print(f"    {GRAY}Capabilities:{RESET} {', '.join(cap_list)}")
             print()
-            
+
     except httpx.ConnectError:
         print(f"{GREEN_DARK}[ERROR]{RESET} Could not connect to {server}", file=sys.stderr)
     except httpx.HTTPStatusError as e:

@@ -1530,9 +1530,7 @@ function ChatBaseInner({
   // ---- HITL respond handler (passed to MessageList) ----
   const handleRespond = useCallback(
     async (toolCallId: string, result: unknown) => {
-      console.log('[ChatBase] handleRespond called', { toolCallId, result, hasAdapter: !!adapterRef.current });
       const existingToolCall = toolCallsRef.current.get(toolCallId);
-      console.log('[ChatBase] handleRespond existingToolCall', { found: !!existingToolCall, status: existingToolCall?.status });
       if (
         existingToolCall &&
         (existingToolCall.status === 'executing' ||
@@ -1567,8 +1565,14 @@ function ChatBaseInner({
           setIsLoading(true);
           setIsStreaming(true);
 
-          console.log('[ChatBase] About to call sendToolResult for approval', { toolCallId, approved });
           try {
+            const approvalId =
+              typeof result === 'object' &&
+              result !== null &&
+              typeof (result as Record<string, unknown>).approvalId === 'string'
+                ? ((result as Record<string, unknown>).approvalId as string)
+                : undefined;
+
             await adapterRef.current.sendToolResult(toolCallId, {
               toolCallId,
               success: approved,
@@ -1576,16 +1580,17 @@ function ChatBaseInner({
                 ? {
                     approved: true,
                     message: 'Tool call approved by user.',
+                    ...(approvalId ? { approvalId } : {}),
                   }
                 : {
                     approved: false,
                     message: 'Tool call rejected by user.',
+                    ...(approvalId ? { approvalId } : {}),
                   },
               ...(approved
                 ? {}
                 : { error: 'Tool approval rejected by user' }),
             });
-            console.log('[ChatBase] sendToolResult for approval completed successfully');
           } catch (err) {
             console.error('[ChatBase] Approval continuation error:', err);
             setError(err as Error);

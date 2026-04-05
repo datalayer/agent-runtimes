@@ -338,13 +338,6 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
         headers['Authorization'] = `token ${this.vercelConfig.authToken}`;
       }
 
-      console.log('[VercelAIAdapter] sendMessage: about to fetch', {
-        url: this.vercelConfig.baseUrl,
-        messageCount: vercelMessages.length,
-        isContinuation: !!options?._vercelMessages,
-        bodyPreview: JSON.stringify(requestBody).slice(0, 500),
-      });
-
       const response = await fetch(this.vercelConfig.baseUrl, {
         method: 'POST',
         headers,
@@ -796,16 +789,6 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
     toolCallId: string,
     result: ToolExecutionResult,
   ): Promise<void> {
-    console.log('[VercelAIAdapter] sendToolResult ENTRY', {
-      toolCallId,
-      resultSuccess: result.success,
-      pendingToolCallsSize: this.pendingToolCalls.size,
-      deferredToolMetaSize: this.deferredToolMeta.size,
-      hasDeferredMeta: this.deferredToolMeta.has(toolCallId),
-      collectedToolResultsSize: this.collectedToolResults.size,
-      streamParsingDepth: this._streamParsingDepth,
-    });
-
     // 1. Emit local event for UI updates
     this.emit({
       type: 'tool-result',
@@ -840,14 +823,7 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
       this.collectedToolResults.has(id),
     );
 
-    console.log('[VercelAIAdapter] sendToolResult allResolved check', {
-      allResolved,
-      pendingKeys: Array.from(this.pendingToolCalls.keys()),
-      collectedKeys: Array.from(this.collectedToolResults.keys()),
-    });
-
     if (!allResolved) {
-      console.log('[VercelAIAdapter] sendToolResult: NOT all resolved, returning early');
       return;
     }
 
@@ -876,20 +852,57 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
       });
     }
 
-    // Add each tool call with its result as a tool-invocation part.
-    // pydantic-ai's Vercel AI adapter expects the standard AI SDK format:
-    //   type: 'tool-invocation', state: 'result', toolInvocationId, args, result
+    // Add each tool call with its result as a dynamic-tool part.
+    // pydantic-ai parses DynamicTool* parts with output-available / output-error
+    // and approval-responded states for deferred approval continuations.
     for (const tr of this.collectedToolResults.values()) {
-      assistantParts.push({
-        type: 'tool-invocation',
-        toolInvocationId: tr.toolCallId,
-        toolName: tr.toolName,
-        args: tr.args,
-        state: 'result',
-        result: tr.result.success
-          ? tr.result.result
-          : { error: tr.result.error ?? 'Tool execution failed' },
-      });
+      const resultObj =
+        tr.result.result && typeof tr.result.result === 'object'
+          ? (tr.result.result as Record<string, unknown>)
+          : undefined;
+      const isApprovalDecision =
+        !!resultObj && typeof resultObj.approved === 'boolean';
+
+      if (isApprovalDecision) {
+        const approvalId =
+          typeof resultObj?.approvalId === 'string'
+            ? resultObj.approvalId
+            : tr.toolCallId;
+        const approved = Boolean(resultObj?.approved);
+        const reason =
+          typeof resultObj?.message === 'string' ? resultObj.message : undefined;
+
+        assistantParts.push({
+          type: 'dynamic-tool',
+          toolName: tr.toolName,
+          toolCallId: tr.toolCallId,
+          state: 'approval-responded',
+          input: tr.args,
+          approval: {
+            id: approvalId,
+            approved,
+            ...(reason ? { reason } : {}),
+          },
+        });
+      } else if (tr.result.success) {
+        assistantParts.push({
+          type: 'dynamic-tool',
+          toolName: tr.toolName,
+          toolCallId: tr.toolCallId,
+          state: 'output-available',
+          input: tr.args,
+          output: tr.result.result,
+        });
+      } else {
+        assistantParts.push({
+          type: 'dynamic-tool',
+          toolName: tr.toolName,
+          toolCallId: tr.toolCallId,
+          state: 'output-error',
+          input: tr.args,
+          errorText: tr.result.error ?? 'Tool execution failed',
+        });
+      }
     }
 
     const assistantMessage = {
@@ -909,23 +922,10 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
     // 8. Update stored message history
     this.messageHistory = continuationMessages;
 
-    console.log(
-      '[VercelAIAdapter] === CONTINUATION MESSAGES ===',
-      continuationMessages.map(
-        (m, i) => `[${i}] role=${m.role} parts=${m.parts.length}`,
-      ),
-    );
-
     // 9. Mark as continuation
     this.isContinuation = true;
 
     // 10. Send ONE continuation request with all tool results
-    console.log('[VercelAIAdapter] sendToolResult: about to send continuation', {
-      historyLength: continuationMessages.length,
-      baseUrl: this.vercelConfig.baseUrl,
-      lastToolsCount: this.lastTools.length,
-    });
-
     const dummyMessage: ChatMessage = {
       id: generateMessageId(),
       role: 'user',

@@ -25,7 +25,7 @@ STYLE_PRIMARY = Style(color="rgb(26,188,156)")
 
 async def about_animation(console: Console) -> None:
     """Display About Datalayer animation with walking logo.
-    
+
     Args:
         console: Rich Console instance for output.
     """
@@ -87,17 +87,17 @@ async def about_animation(console: Console) -> None:
 {tagline}
 """),
     ]
-    
+
     console.print()
-    
+
     console.print()
-    
+
     try:
         with raw_terminal(), Live(console=console, refresh_per_second=8, transient=True) as live:
             # Phase 1: Blinking for 2 seconds
             start_time = time.time()
             duration = 2.0
-            
+
             while time.time() - start_time < duration:
                 if check_escape_pressed():
                     return
@@ -108,7 +108,7 @@ async def about_animation(console: Console) -> None:
                         break
                     live.update(Panel(frame, border_style=STYLE_PRIMARY, title=" Datalayer ", subtitle="[link=https://datalayer.ai]datalayer.ai[/link]"))
                     await asyncio.sleep(0.15)
-            
+
             # Phase 2: Walking animation - logo moves right
             # Each step: feet move, then layer 3, then layer 2, then layer 1
             # Logo layers (from top to bottom):
@@ -116,14 +116,14 @@ async def about_animation(console: Console) -> None:
             # Line 2: ▄▄▄▄▄▄
             # Line 3: ▄▄▄▄▄▄
             # Line 4: ▀    ▀  (feet)
-            
+
             base_offset = 3  # Starting offset (spaces before logo)
-            
+
             for step in range(22):  # 22 steps to the right
                 if check_escape_pressed():
                     return
                 offset = base_offset + step
-                
+
                 # Sub-frame 1: Feet move first
                 frame = Text.from_markup(f"""
 {' ' * offset}[bright_green]▄▄▄▄▄▄[/bright_green]
@@ -135,7 +135,7 @@ async def about_animation(console: Console) -> None:
 """)
                 live.update(Panel(frame, border_style=STYLE_PRIMARY, title=" Datalayer ", subtitle="[link=https://datalayer.ai]datalayer.ai[/link]"))
                 await asyncio.sleep(0.08)
-                
+
                 # Sub-frame 2: Layer 3 moves
                 frame = Text.from_markup(f"""
 {' ' * offset}[bright_green]▄▄▄▄▄▄[/bright_green]
@@ -147,7 +147,7 @@ async def about_animation(console: Console) -> None:
 """)
                 live.update(Panel(frame, border_style=STYLE_PRIMARY, title=" Datalayer ", subtitle="[link=https://datalayer.ai]datalayer.ai[/link]"))
                 await asyncio.sleep(0.08)
-                
+
                 # Sub-frame 3: Layer 2 moves
                 frame = Text.from_markup(f"""
 {' ' * offset}[bright_green]▄▄▄▄▄▄[/bright_green]
@@ -159,7 +159,7 @@ async def about_animation(console: Console) -> None:
 """)
                 live.update(Panel(frame, border_style=STYLE_PRIMARY, title=" Datalayer ", subtitle="[link=https://datalayer.ai]datalayer.ai[/link]"))
                 await asyncio.sleep(0.08)
-                
+
                 # Sub-frame 4: Layer 1 (top) moves - logo fully shifted
                 frame = Text.from_markup(f"""
 {' ' * (offset + 1)}[bright_green]▄▄▄▄▄▄[/bright_green]
@@ -171,12 +171,12 @@ async def about_animation(console: Console) -> None:
 """)
                 live.update(Panel(frame, border_style=STYLE_PRIMARY, title=" Datalayer ", subtitle="[link=https://datalayer.ai]datalayer.ai[/link]"))
                 await asyncio.sleep(0.08)
-            
+
             # Phase 3: Blinking for 2 seconds at final position
             final_offset = base_offset + 22
             start_time = time.time()
             duration = 2.0
-            
+
             # Create frames at the final position
             final_frames = [
                 Text.from_markup(f"""
@@ -228,7 +228,7 @@ async def about_animation(console: Console) -> None:
 {tagline}
 """),
             ]
-            
+
             while time.time() - start_time < duration:
                 if check_escape_pressed():
                     return
@@ -239,8 +239,8 @@ async def about_animation(console: Console) -> None:
                         break
                     live.update(Panel(frame, border_style=STYLE_PRIMARY, title=" Datalayer ", subtitle="[link=https://datalayer.ai]datalayer.ai[/link]"))
                     await asyncio.sleep(0.15)
-                
+
     except KeyboardInterrupt:
         pass
-    
+
     console.print()

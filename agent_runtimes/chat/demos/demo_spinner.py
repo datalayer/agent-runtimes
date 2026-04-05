@@ -34,12 +34,12 @@ async def demo_scenario(title: str, message: str, duration: float, style: str = 
     """Run a single demo scenario."""
     print(f"\n{CYAN}{BOLD}{title}{RESET}")
     print(f"{YELLOW}{'─' * 50}{RESET}")
-    
+
     spinner = Spinner(message, style=style)
     spinner.start()
-    
+
     result = await simulate_ai_query(duration)
-    
+
     spinner.stop()
     print(f"{GREEN}{result}{RESET}")
 
@@ -49,7 +49,7 @@ async def main() -> None:
     print(f"\n{MAGENTA}{BOLD}╔════════════════════════════════════════════════╗")
     print(f"║  Agent Runtimes Chat Spinner Demo               ║")
     print(f"╚════════════════════════════════════════════════╝{RESET}\n")
-    
+
     # Different realistic scenarios
     scenarios = [
         ("Quick Query", "Analyzing code snippet", 1.5, "growing"),
@@ -58,10 +58,10 @@ async def main() -> None:
         ("Data Processing", "Analyzing dataset", 2.5, "pulse"),
         ("Model Inference", "Running AI model", 3.5, "circle"),
     ]
-    
+
     for title, message, duration, style in scenarios:
         await demo_scenario(title, message, duration, style)
-    
+
     print(f"\n{GREEN}{BOLD}✨ Demo complete!{RESET}")
     print(f"{CYAN}The spinner provides smooth visual feedback during operations.{RESET}")
     print(f"{YELLOW}Try it yourself: {RESET}{BOLD}agent-runtimes chat \"What is Python?\"{RESET}\n")
