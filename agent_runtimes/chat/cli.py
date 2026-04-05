@@ -17,10 +17,13 @@ import sys
 import threading
 import time
 from enum import Enum
-from typing import Any, List, Optional
+from typing import Any, List, Optional, TYPE_CHECKING
 
 import typer
 from pydantic_ai import Agent
+
+if TYPE_CHECKING:
+    from agent_runtimes.commands.serve import Protocol
 
 
 DEFAULT_RUNTIME_AGENT_NAME = "chat"
@@ -211,7 +214,7 @@ def _show_version() -> None:
     typer.echo(f"{GRAY}Powered by Datalayer • \033]8;;https://datalayer.ai\033\\https://datalayer.ai\033]8;;\033\\{RESET}")
 
 
-def _run_agent_runtime_server(host: str, port: int, agent_id: str, codemode: bool, protocol: "Transport", port_value: Any = None) -> None:
+def _run_agent_runtime_server(host: str, port: int, agent_id: str, codemode: bool, protocol: "Protocol", port_value: Any = None) -> None:
     """Run the agent-runtimes server (for multiprocessing).
     
     This must be a module-level function (not nested) to be picklable.
@@ -221,14 +224,14 @@ def _run_agent_runtime_server(host: str, port: int, agent_id: str, codemode: boo
         port: Requested port (0 = auto-select a random free port)
         agent_id: Agent spec ID
         codemode: Enable codemode
-        protocol: Transport protocol
+        protocol: Server protocol (vercel-ai, ag-ui, etc.)
         port_value: Optional multiprocessing.Value('i') to communicate the
             effective port back to the parent process.
     """
     import logging
     import sys
     import os
-    from agent_runtimes.commands import LogLevel, serve_server, find_random_free_port
+    from agent_runtimes.commands import LogLevel, Protocol, serve_server, find_random_free_port
     from agent_runtimes.specs.agents import get_agent_spec
     
     # Only suppress logging if not in debug mode
