@@ -338,6 +338,13 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
         headers['Authorization'] = `token ${this.vercelConfig.authToken}`;
       }
 
+      console.log('[VercelAIAdapter] sendMessage: about to fetch', {
+        url: this.vercelConfig.baseUrl,
+        messageCount: vercelMessages.length,
+        isContinuation: !!options?._vercelMessages,
+        bodyPreview: JSON.stringify(requestBody).slice(0, 500),
+      });
+
       const response = await fetch(this.vercelConfig.baseUrl, {
         method: 'POST',
         headers,
@@ -789,6 +796,16 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
     toolCallId: string,
     result: ToolExecutionResult,
   ): Promise<void> {
+    console.log('[VercelAIAdapter] sendToolResult ENTRY', {
+      toolCallId,
+      resultSuccess: result.success,
+      pendingToolCallsSize: this.pendingToolCalls.size,
+      deferredToolMetaSize: this.deferredToolMeta.size,
+      hasDeferredMeta: this.deferredToolMeta.has(toolCallId),
+      collectedToolResultsSize: this.collectedToolResults.size,
+      streamParsingDepth: this._streamParsingDepth,
+    });
+
     // 1. Emit local event for UI updates
     this.emit({
       type: 'tool-result',
@@ -823,7 +840,14 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
       this.collectedToolResults.has(id),
     );
 
+    console.log('[VercelAIAdapter] sendToolResult allResolved check', {
+      allResolved,
+      pendingKeys: Array.from(this.pendingToolCalls.keys()),
+      collectedKeys: Array.from(this.collectedToolResults.keys()),
+    });
+
     if (!allResolved) {
+      console.log('[VercelAIAdapter] sendToolResult: NOT all resolved, returning early');
       return;
     }
 
@@ -896,6 +920,12 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
     this.isContinuation = true;
 
     // 10. Send ONE continuation request with all tool results
+    console.log('[VercelAIAdapter] sendToolResult: about to send continuation', {
+      historyLength: continuationMessages.length,
+      baseUrl: this.vercelConfig.baseUrl,
+      lastToolsCount: this.lastTools.length,
+    });
+
     const dummyMessage: ChatMessage = {
       id: generateMessageId(),
       role: 'user',

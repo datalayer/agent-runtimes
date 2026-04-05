@@ -1530,7 +1530,9 @@ function ChatBaseInner({
   // ---- HITL respond handler (passed to MessageList) ----
   const handleRespond = useCallback(
     async (toolCallId: string, result: unknown) => {
+      console.log('[ChatBase] handleRespond called', { toolCallId, result, hasAdapter: !!adapterRef.current });
       const existingToolCall = toolCallsRef.current.get(toolCallId);
+      console.log('[ChatBase] handleRespond existingToolCall', { found: !!existingToolCall, status: existingToolCall?.status });
       if (
         existingToolCall &&
         (existingToolCall.status === 'executing' ||
@@ -1565,6 +1567,7 @@ function ChatBaseInner({
           setIsLoading(true);
           setIsStreaming(true);
 
+          console.log('[ChatBase] About to call sendToolResult for approval', { toolCallId, approved });
           try {
             await adapterRef.current.sendToolResult(toolCallId, {
               toolCallId,
@@ -1582,6 +1585,7 @@ function ChatBaseInner({
                 ? {}
                 : { error: 'Tool approval rejected by user' }),
             });
+            console.log('[ChatBase] sendToolResult for approval completed successfully');
           } catch (err) {
             console.error('[ChatBase] Approval continuation error:', err);
             setError(err as Error);
