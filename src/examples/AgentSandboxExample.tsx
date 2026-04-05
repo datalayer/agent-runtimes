@@ -29,6 +29,7 @@ import React, {
 } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Box } from '@datalayer/primer-addons';
+import { ErrorView } from './components';
 import {
   Button,
   Flash,
@@ -39,7 +40,6 @@ import {
   Text,
 } from '@primer/react';
 import {
-  AlertIcon,
   CodeIcon,
   SignOutIcon,
   StopIcon,
@@ -503,23 +503,7 @@ const AgentSandboxInner: React.FC<{ onLogout: () => void }> = ({
 
   // ── Error state ──
   if (runtimeStatus === 'error' || hookError) {
-    return (
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '100vh',
-          gap: 3,
-        }}
-      >
-        <AlertIcon size={48} />
-        <Text sx={{ color: 'danger.fg' }}>
-          {hookError || 'Agent failed to start'}
-        </Text>
-      </Box>
-    );
+    return <ErrorView error={hookError} onLogout={onLogout} />;
   }
 
   // ── Sidebar ──

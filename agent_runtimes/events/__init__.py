@@ -42,12 +42,17 @@ def create_event(
     timeout: float = 30.0,
 ) -> dict[str, Any]:
     """Create an event record for an AI agent."""
+    metadata_with_origin = {
+        **(metadata or {}),
+        "origin": "agent-runtime",
+        "source": "agent-runtime",
+    }
     body = {
         "title": title,
         "kind": kind,
         "status": status,
         "payload": payload or {},
-        "metadata": metadata or {},
+        "metadata": metadata_with_origin,
     }
     response = httpx.post(
         _agent_events_url(base_url, agent_id),

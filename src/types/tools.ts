@@ -33,6 +33,8 @@ export interface ToolSpec {
   enabled: boolean;
   /** Approval policy for this tool */
   approval: 'auto' | 'manual';
+  /** Approval timeout duration (e.g. 0h5m0s, 2d6h, 1mo2d3h4m5s) */
+  timeout?: string;
   /** Whether tool requires human approval before execution */
   requiresApproval?: boolean;
   /** Runtime binding metadata */

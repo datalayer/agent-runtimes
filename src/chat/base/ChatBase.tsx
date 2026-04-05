@@ -1531,7 +1531,73 @@ function ChatBaseInner({
   const handleRespond = useCallback(
     async (toolCallId: string, result: unknown) => {
       const existingToolCall = toolCallsRef.current.get(toolCallId);
-      if (existingToolCall && existingToolCall.status === 'executing') {
+      if (
+        existingToolCall &&
+        (existingToolCall.status === 'executing' ||
+          existingToolCall.status === 'inProgress')
+      ) {
+        const isApprovalDecision =
+          !!result &&
+          typeof result === 'object' &&
+          (result as Record<string, unknown>).type === 'tool-approval-decision' &&
+          typeof (result as Record<string, unknown>).approved === 'boolean';
+
+        if (isApprovalDecision && adapterRef.current) {
+          const approved = Boolean(
+            (result as Record<string, unknown>).approved,
+          );
+
+          const updatedToolCall: ToolCallMessage = {
+            ...existingToolCall,
+            result,
+            status: approved ? 'complete' : 'error',
+            error: approved ? undefined : 'Tool approval rejected by user',
+          };
+          toolCallsRef.current.set(toolCallId, updatedToolCall);
+          setDisplayItems(prev =>
+            prev.map(item =>
+              isToolCallMessage(item) && item.toolCallId === toolCallId
+                ? updatedToolCall
+                : item,
+            ),
+          );
+
+          setIsLoading(true);
+          setIsStreaming(true);
+
+          try {
+            const approvalId =
+              typeof result === 'object' &&
+              result !== null &&
+              typeof (result as Record<string, unknown>).approvalId === 'string'
+                ? ((result as Record<string, unknown>).approvalId as string)
+                : undefined;
+
+            await adapterRef.current.sendToolResult(toolCallId, {
+              toolCallId,
+              success: approved,
+              result: approved
+                ? {
+                    approved: true,
+                    message: 'Tool call approved by user.',
+                    ...(approvalId ? { approvalId } : {}),
+                  }
+                : {
+                    approved: false,
+                    message: 'Tool call rejected by user.',
+                    ...(approvalId ? { approvalId } : {}),
+                  },
+              ...(approved
+                ? {}
+                : { error: 'Tool approval rejected by user' }),
+            });
+          } catch (err) {
+            console.error('[ChatBase] Approval continuation error:', err);
+            setError(err as Error);
+          }
+          return;
+        }
+
         const updatedToolCall: ToolCallMessage = {
           ...existingToolCall,
           result,

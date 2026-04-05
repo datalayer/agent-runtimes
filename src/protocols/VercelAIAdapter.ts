@@ -72,7 +72,17 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
   }> = [];
   private lastAssistantText = '';
   private lastTools: ToolDefinition[] = [];
+  private lastFrontendToolNames: Set<string> = new Set();
   private isContinuation = false;
+
+  // Metadata for ALL deferred tool calls (frontend + approval), keyed by toolCallId.
+  // Unlike pendingToolCalls (which only tracks frontend tools for batching),
+  // this preserves tool name/args for approval tools so sendToolResult can
+  // build a correct continuation message.
+  private deferredToolMeta: Map<
+    string,
+    { toolCallId: string; toolName: string; args: Record<string, unknown> }
+  > = new Map();
 
   // Stream parsing depth — prevents premature continuations
   private _streamParsingDepth = 0;
@@ -186,11 +196,19 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
     // Store tools for potential continuation
     if (options?.tools) {
       this.lastTools = options.tools;
+      this.lastFrontendToolNames = new Set(
+        options.tools
+          .map(t => t?.name)
+          .filter((name): name is string => Boolean(name)),
+      );
+    } else {
+      this.lastFrontendToolNames = new Set();
     }
 
     // Reset assistant content tracking for fresh (non-continuation) messages
     if (!this.isContinuation) {
       this.lastAssistantText = '';
+      this.deferredToolMeta.clear();
     }
 
     try {
@@ -260,6 +278,9 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
       const requestBody = {
         id: requestId,
         messages: vercelMessages,
+        // Required for pydantic-ai deferred tool approval continuations.
+        // sdkVersion 6 enables parsing approval-responded tool parts.
+        sdkVersion: 6 as const,
         trigger: 'submit-message' as const,
         ...(options?.tools && { tools: options.tools }),
         ...(options?.model && { model: options.model }),
@@ -605,13 +626,9 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
                 );
 
                 if (toolName) {
-                  // Track as a pending frontend tool call for continuation
-                  this.pendingToolCalls.set(toolCallId, {
-                    toolCallId,
-                    toolName,
-                    args,
-                  });
-
+                  // Emit tool-call for all tools so UI can render a tool entry.
+                  // Only client-declared frontend tools should participate in
+                  // frontend continuation batching via pendingToolCalls.
                   this.emit({
                     type: 'tool-call',
                     toolCall: {
@@ -621,6 +638,22 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
                     },
                     timestamp: new Date(),
                   });
+
+                  // Track metadata for ALL deferred tools so sendToolResult
+                  // can build proper continuation messages (tool name + args).
+                  this.deferredToolMeta.set(toolCallId, {
+                    toolCallId,
+                    toolName,
+                    args,
+                  });
+
+                  if (this.lastFrontendToolNames.has(toolName)) {
+                    this.pendingToolCalls.set(toolCallId, {
+                      toolCallId,
+                      toolName,
+                      args,
+                    });
+                  }
                 }
               } else if (event.type === 'tool-output-available') {
                 const toolCallId =
@@ -645,6 +678,7 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
                 // Server already executed this tool — remove from pending
                 // frontend tool calls so emitDoneOnce is not blocked.
                 this.pendingToolCalls.delete(toolCallId);
+                this.deferredToolMeta.delete(toolCallId);
               } else if (
                 event.type === 'tool-output-error' ||
                 event.type === 'tool-error'
@@ -663,6 +697,7 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
                 // Server handled the error — clear from pending frontend
                 // tool calls so emitDoneOnce is not blocked.
                 this.pendingToolCalls.delete(toolCallId);
+                this.deferredToolMeta.delete(toolCallId);
 
                 this.emit({
                   type: 'tool-result',
@@ -764,8 +799,11 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
       timestamp: new Date(),
     });
 
-    // 2. Retrieve tool metadata from pending map
-    const pendingToolCall = this.pendingToolCalls.get(toolCallId);
+    // 2. Retrieve tool metadata from pending map (frontend tools) or
+    //    deferred tool meta (approval / all deferred tools).
+    const pendingToolCall =
+      this.pendingToolCalls.get(toolCallId) ??
+      this.deferredToolMeta.get(toolCallId);
     if (!pendingToolCall) {
       console.warn(
         '[VercelAIAdapter] No pending tool call found for ID:',
@@ -817,18 +855,57 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
       });
     }
 
-    // Add each tool call with its result as a DynamicToolUIPart
+    // Add each tool call with its result as a dynamic-tool part.
+    // pydantic-ai parses DynamicTool* parts with output-available / output-error
+    // and approval-responded states for deferred approval continuations.
     for (const tr of this.collectedToolResults.values()) {
-      assistantParts.push({
-        type: 'dynamic-tool',
-        toolName: tr.toolName,
-        toolCallId: tr.toolCallId,
-        state: 'output-available',
-        input: tr.args,
-        output: tr.result.success
-          ? tr.result.result
-          : { error: tr.result.error ?? 'Tool execution failed' },
-      });
+      const resultObj =
+        tr.result.result && typeof tr.result.result === 'object'
+          ? (tr.result.result as Record<string, unknown>)
+          : undefined;
+      const isApprovalDecision =
+        !!resultObj && typeof resultObj.approved === 'boolean';
+
+      if (isApprovalDecision) {
+        const approvalId =
+          typeof resultObj?.approvalId === 'string'
+            ? resultObj.approvalId
+            : tr.toolCallId;
+        const approved = Boolean(resultObj?.approved);
+        const reason =
+          typeof resultObj?.message === 'string' ? resultObj.message : undefined;
+
+        assistantParts.push({
+          type: 'dynamic-tool',
+          toolName: tr.toolName,
+          toolCallId: tr.toolCallId,
+          state: 'approval-responded',
+          input: tr.args,
+          approval: {
+            id: approvalId,
+            approved,
+            ...(reason ? { reason } : {}),
+          },
+        });
+      } else if (tr.result.success) {
+        assistantParts.push({
+          type: 'dynamic-tool',
+          toolName: tr.toolName,
+          toolCallId: tr.toolCallId,
+          state: 'output-available',
+          input: tr.args,
+          output: tr.result.result,
+        });
+      } else {
+        assistantParts.push({
+          type: 'dynamic-tool',
+          toolName: tr.toolName,
+          toolCallId: tr.toolCallId,
+          state: 'output-error',
+          input: tr.args,
+          errorText: tr.result.error ?? 'Tool execution failed',
+        });
+      }
     }
 
     const assistantMessage = {
@@ -843,16 +920,10 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
     // 7. Clear batching state BEFORE the async sendMessage call
     this.pendingToolCalls.clear();
     this.collectedToolResults.clear();
+    this.deferredToolMeta.clear();
 
     // 8. Update stored message history
     this.messageHistory = continuationMessages;
-
-    console.log(
-      '[VercelAIAdapter] === CONTINUATION MESSAGES ===',
-      continuationMessages.map(
-        (m, i) => `[${i}] role=${m.role} parts=${m.parts.length}`,
-      ),
-    );
 
     // 9. Mark as continuation
     this.isContinuation = true;

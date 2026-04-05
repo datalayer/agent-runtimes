@@ -576,7 +576,7 @@ CRAWLER_AGENT_SPEC_0_0_1 = AgentSpec(
 ## Token Efficiency When possible, chain multiple tool calls in a single execute_code block. This reduces output tokens by processing intermediate results in code rather than returning them. If you want to examine results, print subsets, preview (maximum 20 first characters) and/or counts instead of full data, this is really important.
 """,
     goal=None,
-    protocol=None,
+    protocol="vercel-ai",
     ui_extension=None,
     trigger=None,
     model_configuration=None,
@@ -643,7 +643,7 @@ DATA_ACQUISITION_AGENT_SPEC_0_0_1 = AgentSpec(
 ## Token Efficiency When possible, chain multiple tool calls in a single execute_code block. This reduces output tokens by processing intermediate results in code rather than returning them. If you want to examine results, print subsets, preview (maximum 20 first characters) and/or counts instead of full data, this is really important.
 """,
     goal=None,
-    protocol=None,
+    protocol="vercel-ai",
     ui_extension=None,
     trigger=None,
     model_configuration=None,
@@ -699,7 +699,7 @@ DEMO_FULL_AGENT_SPEC_0_0_1 = AgentSpec(
 """,
     system_prompt_codemode_addons=None,
     goal=None,
-    protocol=None,
+    protocol="vercel-ai",
     ui_extension=None,
     trigger=None,
     model_configuration=None,
@@ -737,8 +737,8 @@ DEMO_ONE_TRIGGER_APPROVAL_AGENT_SPEC_0_0_1 = AgentSpec(
     sandbox_variant="jupyter",
     system_prompt=None,
     system_prompt_codemode_addons=None,
-    goal='Call runtime_sensitive_echo exactly once with message="Tool approval demo executed" and reason="audit". Do not call any other tool.',
-    protocol=None,
+    goal="Call runtime_sensitive_echo exactly once with message='Tool approval demo executed' and reason='audit'. Do not call any other tool.",
+    protocol="vercel-ai",
     ui_extension=None,
     trigger={
         "type": "once",
@@ -781,7 +781,7 @@ DEMO_ONE_TRIGGER_AGENT_SPEC_0_0_1 = AgentSpec(
     system_prompt=None,
     system_prompt_codemode_addons=None,
     goal="Run a one-shot task: list the user's top 3 public and top 3 private GitHub repositories, ranked by recent activity, and provide a brief summary of each.",
-    protocol=None,
+    protocol="vercel-ai",
     ui_extension=None,
     trigger={
         "type": "once",
@@ -830,7 +830,7 @@ DEMO_SIMPLE_AGENT_SPEC_0_0_1 = AgentSpec(
 """,
     system_prompt_codemode_addons=None,
     goal=None,
-    protocol=None,
+    protocol="vercel-ai",
     ui_extension=None,
     trigger=None,
     model_configuration=None,
@@ -1165,7 +1165,7 @@ FINANCIAL_VIZ_AGENT_SPEC_0_0_1 = AgentSpec(
 ## Token Efficiency When possible, chain multiple tool calls in a single execute_code block. This reduces output tokens by processing intermediate results in code rather than returning them. If you want to examine results, print subsets, preview (maximum 20 first characters) and/or counts instead of full data, this is really important.
 """,
     goal=None,
-    protocol=None,
+    protocol="vercel-ai",
     ui_extension=None,
     trigger=None,
     model_configuration=None,
@@ -1228,7 +1228,7 @@ FINANCIAL_AGENT_SPEC_0_0_1 = AgentSpec(
 ## Token Efficiency When possible, chain multiple tool calls in a single execute_code block. This reduces output tokens by processing intermediate results in code rather than returning them. If you want to examine results, print subsets, preview (maximum 20 first characters) and/or counts instead of full data, this is really important.
 """,
     goal=None,
-    protocol=None,
+    protocol="vercel-ai",
     ui_extension=None,
     trigger=None,
     model_configuration=None,
@@ -1387,7 +1387,7 @@ GITHUB_AGENT_SPEC_0_0_1 = AgentSpec(
 ## Token Efficiency When possible, chain multiple tool calls in a single execute_code block. This reduces output tokens by processing intermediate results in code rather than returning them. If you want to examine results, print subsets, preview (maximum 20 first characters) and/or counts instead of full data, this is really important.
 """,
     goal=None,
-    protocol=None,
+    protocol="vercel-ai",
     ui_extension=None,
     trigger=None,
     model_configuration=None,
@@ -1450,7 +1450,7 @@ INFORMATION_ROUTING_AGENT_SPEC_0_0_1 = AgentSpec(
 ## Token Efficiency Always chain multiple tool calls in a single execute_code block. This reduces output tokens by processing intermediate results in code rather than returning them. If you want to examine results, print subsets, preview (maximum 20 first characters) and/or counts instead of full data, this is really important!!!!
 """,
     goal=None,
-    protocol=None,
+    protocol="vercel-ai",
     ui_extension=None,
     trigger=None,
     model_configuration=None,
@@ -2133,7 +2133,7 @@ SPATIAL_DATA_ANALYSIS_AGENT_SPEC_0_0_1 = AgentSpec(
 ## Workflow Guidance 1. Discover available Earthdata and Eurus tools. 2. Validate spatial/temporal parameters before execution. 3. Execute transformations in code and keep outputs concise. 4. Persist important run states as events.
 """,
     goal=None,
-    protocol=None,
+    protocol="vercel-ai",
     ui_extension=None,
     trigger=None,
     model_configuration=None,

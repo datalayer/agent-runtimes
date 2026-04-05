@@ -62,6 +62,7 @@ import {
   AgentIcon,
 } from '@primer/octicons-react';
 import { Box } from '@datalayer/primer-addons';
+import { ErrorView } from './components';
 import { coreStore } from '@datalayer/core';
 import { ThemedProvider } from './utils/themedProvider';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
@@ -423,24 +424,7 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
   // ── Error ────────────────────────────────────────────────────────────────
 
   if (runtimeStatus === 'error' && !runtime) {
-    return (
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '100vh',
-          gap: 3,
-        }}
-      >
-        <AlertIcon size={48} />
-        <Text sx={{ color: 'danger.fg', fontSize: 2 }}>
-          Agent failed to start
-        </Text>
-        <Text sx={{ color: 'fg.muted' }}>{displayError}</Text>
-      </Box>
-    );
+    return <ErrorView detail={displayError} onLogout={onLogout} />;
   }
 
   // ── Running / Paused ─────────────────────────────────────────────────────

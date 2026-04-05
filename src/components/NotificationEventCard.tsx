@@ -3,9 +3,11 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
+import { useState } from 'react';
 import { Button, Label, Text, Truncate } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import {
+  ChevronDownIcon,
   DownloadIcon,
   EyeClosedIcon,
   EyeIcon,
@@ -14,6 +16,7 @@ import {
 import {
   createMarkdownDownloadPayload,
   downloadTextPayload,
+  formatDurationMs,
   formatRelativeTime,
 } from '@datalayer/core/lib/utils';
 import { Streamdown } from 'streamdown';
@@ -27,6 +30,16 @@ export interface NotificationEventCardProps {
   onOpenAgent?: (agentId: string) => void;
 }
 
+const EVENT_KIND_VARIANT: Record<string, 'accent' | 'success' | 'attention' | 'danger' | 'secondary'> = {
+  'agent-start-requested': 'attention',
+  'agent-assigned': 'accent',
+  'agent-started': 'success',
+  'agent-output': 'accent',
+  'agent-termination-requested': 'attention',
+  'agent-terminated': 'danger',
+  'tool-approval-requested': 'attention',
+};
+
 const eventStartedAt = (evt: any): string | null => {
   const startedAt = evt?.started_at || evt?.payload?.started_at;
   return typeof startedAt === 'string' && startedAt ? startedAt : null;
@@ -37,22 +50,21 @@ const eventEndedAt = (evt: any): string | null => {
   return typeof endedAt === 'string' && endedAt ? endedAt : null;
 };
 
-const isRunningEvent = (evt: any): boolean => {
-  const status = String(evt?.status ?? '').toLowerCase();
-  return evt?.kind === 'agent-started' && status === 'running';
-};
-
 export function NotificationEventCard({
   event,
   onToggleRead,
   onDelete,
   onOpenAgent,
 }: NotificationEventCardProps) {
+  const [isOutputExpanded, setIsOutputExpanded] = useState(false);
+  const [isDetailsExpanded, setIsDetailsExpanded] = useState(false);
+  const eventKind = String(event?.kind ?? '').toLowerCase();
+  const eventTitle = String(event?.title ?? '');
+  const eventOrigin = String(event?.metadata?.origin || '');
   const startedAt = eventStartedAt(event);
   const endedAt = eventEndedAt(event);
-  const running = isRunningEvent(event);
   const outputText =
-    event.kind === 'agent-ended' && event.payload?.outputs
+    eventKind === 'agent-output' && event.payload?.outputs
       ? String(event.payload.outputs)
       : null;
   const runtimeId = String(
@@ -62,6 +74,7 @@ export function NotificationEventCard({
       event?.payload?.agent_id ||
       'runtime',
   );
+  const hasAgentRoute = Boolean(onOpenAgent) && runtimeId !== 'runtime';
   const detailEntries: Array<{ label: string; value: string }> = [];
   const detailLineSx = { fontSize: 0, overflowWrap: 'anywhere' as const };
   const detailLabelSx = { color: 'fg.muted' };
@@ -82,9 +95,6 @@ export function NotificationEventCard({
   });
 
   Object.entries(event?.payload || {}).forEach(([key, value]) => {
-    if (key === 'outputs') {
-      return;
-    }
     if (value === undefined || value === null || value === '') {
       return;
     }
@@ -131,26 +141,18 @@ export function NotificationEventCard({
           }}
         >
           <Label
-            variant={
-              event.kind === 'agent-started'
-                ? 'accent'
-                : event.kind === 'agent-ended'
-                  ? 'success'
-                  : event.kind?.includes('alert')
-                    ? 'danger'
-                    : 'attention'
-            }
+            variant={EVENT_KIND_VARIANT[eventKind] ?? 'secondary'}
           >
-            {event.kind}
+            {eventKind}
           </Label>
           <Truncate
             maxWidth="50%"
-            title={String(event.title || '')}
+            title={String(eventTitle || '')}
             sx={{ fontWeight: 'semibold', fontSize: 1, minWidth: 0 }}
           >
-            {event.title}
+            {eventTitle}
           </Truncate>
-          {event.kind === 'agent-ended' && event.payload?.exit_status && (
+          {eventKind === 'agent-output' && event.payload?.exit_status && (
             <Label variant="success" sx={{ fontSize: 0, whiteSpace: 'nowrap' }}>
               Status: {String(event.payload.exit_status)}
             </Label>
@@ -162,17 +164,22 @@ export function NotificationEventCard({
               </Label>
             </Truncate>
           )}
+          {eventOrigin && (
+            <Label variant="secondary" sx={{ fontSize: 0, whiteSpace: 'nowrap' }}>
+              Origin: {eventOrigin}
+            </Label>
+          )}
         </Box>
         <Box
           sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}
         >
-          {running && event.agent_id && (
+          {hasAgentRoute && (
             <Button
               size="small"
               variant="invisible"
-              onClick={() => onOpenAgent?.(String(event.agent_id))}
+              onClick={() => onOpenAgent?.(runtimeId)}
             >
-              Open agent
+              View agent
             </Button>
           )}
           {event.created_at && (
@@ -210,31 +217,31 @@ export function NotificationEventCard({
         >
           {(startedAt ||
             endedAt ||
-            (event.kind === 'agent-ended' &&
+          (eventKind === 'agent-output' &&
               event.payload.duration_ms != null)) && (
             <Text as="p">
               {startedAt ? `Started: ${formatRelativeTime(startedAt)}` : ''}
               {startedAt && endedAt ? ' · ' : ''}
               {endedAt ? `Ended: ${formatRelativeTime(endedAt)}` : ''}
               {(startedAt || endedAt) &&
-              event.kind === 'agent-ended' &&
+              eventKind === 'agent-output' &&
               event.payload.duration_ms != null
                 ? ' · '
                 : ''}
-              {event.kind === 'agent-ended' && event.payload.duration_ms != null
-                ? `Duration: ${(Number(event.payload.duration_ms) / 1000).toFixed(1)}s`
+              {eventKind === 'agent-output' && event.payload.duration_ms != null
+                ? `Duration: ${formatDurationMs(Number(event.payload.duration_ms))}`
                 : ''}
             </Text>
           )}
-          {event.kind?.includes('guardrail') && event.payload.message && (
+          {eventKind.includes('guardrail') && event.payload.message && (
             <Text as="p" sx={{ mb: 1 }}>
               {String(event.payload.message)}
             </Text>
           )}
-          {event.kind?.includes('guardrail') && event.payload.action_taken && (
+          {eventKind.includes('guardrail') && event.payload.action_taken && (
             <Text as="p">Action: {String(event.payload.action_taken)}</Text>
           )}
-          {event.kind === 'agent-started' && event.payload.trigger_type && (
+          {eventKind === 'agent-started' && event.payload.trigger_type && (
             <Text as="p">Trigger: {String(event.payload.trigger_type)}</Text>
           )}
           {outputText && (
@@ -250,8 +257,12 @@ export function NotificationEventCard({
             >
               <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
                 <Box sx={{ flex: 1, minWidth: 0 }}>
-                  <details>
+                  <details open={isOutputExpanded}>
                     <summary
+                      onClick={e => {
+                        e.preventDefault();
+                        setIsOutputExpanded(prev => !prev);
+                      }}
                       style={{
                         cursor: 'pointer',
                         display: 'flex',
@@ -269,6 +280,20 @@ export function NotificationEventCard({
                           flexWrap: 'nowrap',
                         }}
                       >
+                        <Box
+                          sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            color: 'fg.muted',
+                            flexShrink: 0,
+                            transition: 'transform 0.15s ease',
+                            transform: isOutputExpanded
+                              ? 'rotate(180deg)'
+                              : 'rotate(0deg)',
+                          }}
+                        >
+                          <ChevronDownIcon size={12} />
+                        </Box>
                         <Text
                           sx={{
                             fontSize: 0,
@@ -328,11 +353,32 @@ export function NotificationEventCard({
               bg: 'canvas.subtle',
             }}
           >
-            <details>
-              <summary style={{ cursor: 'pointer' }}>
-                <Text sx={{ fontSize: 0, fontWeight: 'semibold' }}>
-                  View details
-                </Text>
+            <details open={isDetailsExpanded}>
+              <summary
+                onClick={e => {
+                  e.preventDefault();
+                  setIsDetailsExpanded(prev => !prev);
+                }}
+                style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      color: 'fg.muted',
+                      transition: 'transform 0.15s ease',
+                      transform: isDetailsExpanded
+                        ? 'rotate(180deg)'
+                        : 'rotate(0deg)',
+                    }}
+                  >
+                    <ChevronDownIcon size={12} />
+                  </Box>
+                  <Text sx={{ fontSize: 0, fontWeight: 'semibold' }}>
+                    View details
+                  </Text>
+                </Box>
               </summary>
               <Box sx={{ mt: 2, display: 'grid', gap: 1 }}>
                 {detailEntries.map(({ label, value }) => (

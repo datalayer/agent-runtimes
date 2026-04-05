@@ -23,7 +23,7 @@ class OnceInvoker(BaseInvoker):
 
     1. Emit an ``agent-started`` event.
     2. Run the agent adapter's ``run`` method with the trigger prompt.
-    3. Emit an ``agent-ended`` event carrying the output summary.
+    3. Emit an ``agent-output`` event carrying the output summary.
     4. Request runtime termination (best-effort).
     """
 
@@ -34,11 +34,13 @@ class OnceInvoker(BaseInvoker):
         # ── 1. AGENT_STARTED event ───────────────────────────────
         # Events are keyed by runtime_id (pod name) so the UI can
         # look them up by the runtime pod name it already knows.
+        """
+        TODO reenable this when we've confirmed the agent state machine.
         try:
             create_event(
                 token=self.token,
                 agent_id=self.runtime_id,
-                title="Agent started",
+                title="Agent Started",
                 kind="agent-started",
                 status="running",
                 payload={
@@ -48,6 +50,7 @@ class OnceInvoker(BaseInvoker):
                     "trigger_type": "once",
                     "trigger_prompt": prompt,
                 },
+                metadata={"origin": "agent-runtime", "source": "agent-runtime"},
                 base_url=self.base_url,
             )
         except Exception:
@@ -56,6 +59,7 @@ class OnceInvoker(BaseInvoker):
                 self.agent_id,
                 traceback.format_exc(),
             )
+        """
 
         # ── 2. Run agent ─────────────────────────────────────────
         outputs: str | None = None
@@ -64,6 +68,13 @@ class OnceInvoker(BaseInvoker):
 
         try:
             outputs = await self._run_agent(prompt)
+            logger.info(
+                "Once invoker _run_agent returned for %s: type=%s, len=%s, repr=%.500s",
+                self.agent_id,
+                type(outputs).__name__,
+                len(outputs) if outputs else 0,
+                repr(outputs),
+            )
         except Exception as exc:
             exit_status = "error"
             error_message = str(exc)
@@ -77,13 +88,13 @@ class OnceInvoker(BaseInvoker):
         ended_at = self._now()
         duration_ms = int((ended_at - started_at).total_seconds() * 1000)
 
-        # ── 3. AGENT_ENDED event ─────────────────────────────────
+        # ── 3. AGENT_OUTPUT event ─────────────────────────────────
         try:
-            create_event(
+            created = create_event(
                 token=self.token,
                 agent_id=self.runtime_id,
-                title="Agent ended",
-                kind="agent-ended",
+                title="Agent Output",
+                kind="agent-output",
                 status=exit_status,
                 payload={
                     "agent_runtime_id": self.runtime_id,
@@ -95,11 +106,34 @@ class OnceInvoker(BaseInvoker):
                     "exit_status": exit_status,
                     "error_message": error_message,
                 },
+                metadata={"origin": "agent-runtime", "source": "agent-runtime"},
                 base_url=self.base_url,
+            )
+            created_event = (
+                created.get("event", created) if isinstance(created, dict) else {}
+            )
+            created_payload = (
+                created_event.get("payload", {})
+                if isinstance(created_event, dict)
+                else {}
+            )
+            logger.info(
+                "Agent-output event persisted for %s: payload_keys=%s outputs_present=%s outputs_len=%s",
+                self.runtime_id,
+                sorted(created_payload.keys())
+                if isinstance(created_payload, dict)
+                else [],
+                bool(created_payload.get("outputs"))
+                if isinstance(created_payload, dict)
+                else False,
+                len(str(created_payload.get("outputs")))
+                if isinstance(created_payload, dict)
+                and created_payload.get("outputs") is not None
+                else 0,
             )
         except Exception:
             logger.warning(
-                "Failed to emit agent-ended event for %s: %s",
+                "Failed to emit agent-output event for %s: %s",
                 self.agent_id,
                 traceback.format_exc(),
             )
@@ -147,7 +181,10 @@ class OnceInvoker(BaseInvoker):
 
         ctx = AgentContext(session_id=f"once-trigger-{self.agent_id}")
         response = await agent.run(prompt, ctx)
-        return getattr(response, "content", str(response))
+        content = getattr(response, "content", None)
+        if content is None:
+            raise RuntimeError("Agent adapter returned no content field")
+        return content
 
     async def _terminate_runtime(self) -> None:
         """Terminate the runtime after a once-trigger completes.
@@ -169,9 +206,11 @@ class OnceInvoker(BaseInvoker):
                 resp.text[:200],
             )
 
-        # Step 2: delete the runtime pod via the platform runtimes API
-        runtime_url = (
-            f"{self.base_url.rstrip('/')}/api/runtimes/v1/runtimes/{self.runtime_id}"
+        # Step 2: delete the runtime pod via the platform runtimes API.
+        runtime_url = f"{self.runtime_base_url.rstrip('/')}/api/runtimes/v1/runtimes/{self.runtime_id}"
+        logger.info(
+            "Terminating runtime via platform API: DELETE %s",
+            runtime_url,
         )
         headers = {}
         if self.token:

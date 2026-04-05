@@ -17,8 +17,19 @@ class _DummyToolset:
 
 
 class _DummyMcpManager:
+    def __init__(self) -> None:
+        self._servers: dict[str, object] = {}
+
     def get_servers(self) -> list[object]:
-        return []
+        return list(self._servers.values())
+
+    def get_server(self, _server_id: str) -> object | None:
+        return self._servers.get(_server_id)
+
+    def add_server(self, server: object) -> None:
+        server_id = getattr(server, "id", None)
+        if isinstance(server_id, str):
+            self._servers[server_id] = server
 
     def load_servers(self, _servers: list[object]) -> None:
         return None

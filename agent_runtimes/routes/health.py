@@ -74,7 +74,7 @@ async def startup_info(request: Request) -> dict[str, Any]:
     reconfiguration performed after startup (e.g. via the
     ``/api/v1/agents/mcp-servers/start`` endpoint).
 
-    This is consumed by CLI tools such as *codeai* to display runtime
+    This is consumed by CLI tools such as *agent-runtimes chat* to display runtime
     and sandbox information to the user.
 
     Returns:

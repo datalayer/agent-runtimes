@@ -17,12 +17,58 @@ from agent_runtimes.types import EventField, EventSpec
 # Event Definitions
 # ============================================================================
 
-AGENT_ENDED_EVENT_SPEC_0_0_1 = EventSpec(
-    id="agent-ended",
+AGENT_ASSIGNED_EVENT_SPEC_0_0_1 = EventSpec(
+    id="agent-assigned",
     version="0.0.1",
-    name="Agent Ended",
-    description="Emitted when an agent finishes execution. Contains timing information, exit status, optional output summary, and error details if applicable.",
-    kind="agent-ended",
+    name="Agent Assigned",
+    description="Emitted when an agent runtime is assigned/configured by the companion through the MCP servers start API.",
+    kind="agent-assigned",
+    fields=[
+        EventField(
+            **{
+                "name": "agent_runtime_id",
+                "label": "Agent Runtime ID",
+                "type": "string",
+                "required": True,
+                "description": "Runtime pod or instance identifier.",
+            }
+        ),
+        EventField(
+            **{
+                "name": "assignment_source",
+                "label": "Assignment Source",
+                "type": "string",
+                "required": False,
+                "description": "Source that initiated the assignment (for example companion).",
+            }
+        ),
+        EventField(
+            **{
+                "name": "assigned_at",
+                "label": "Assigned At",
+                "type": "string",
+                "required": False,
+                "description": "ISO 8601 timestamp when assignment/configuration completed.",
+            }
+        ),
+        EventField(
+            **{
+                "name": "origin",
+                "label": "Origin",
+                "type": "string",
+                "required": False,
+                "description": "Producer origin (endpoint, companion, runtime, or agent-runtime).",
+            }
+        ),
+    ],
+)
+
+AGENT_OUTPUT_EVENT_SPEC_0_0_1 = EventSpec(
+    id="agent-output",
+    version="0.0.1",
+    name="Agent Output",
+    description="Emitted when an agent produces output. Contains timing information, exit status, optional output summary, and error details if applicable.",
+    kind="agent-output",
     fields=[
         EventField(
             **{
@@ -96,6 +142,52 @@ AGENT_ENDED_EVENT_SPEC_0_0_1 = EventSpec(
                 "description": "Error description if the agent run failed.",
             }
         ),
+        EventField(
+            **{
+                "name": "origin",
+                "label": "Origin",
+                "type": "string",
+                "required": False,
+                "description": "Producer origin (endpoint, companion, runtime, or agent-runtime).",
+            }
+        ),
+    ],
+)
+
+AGENT_START_REQUESTED_EVENT_SPEC_0_0_1 = EventSpec(
+    id="agent-start-requested",
+    version="0.0.1",
+    name="Agent Start Requested",
+    description="Emitted when the API endpoint receives a request to start an agent runtime.",
+    kind="agent-start-requested",
+    fields=[
+        EventField(
+            **{
+                "name": "agent_runtime_id",
+                "label": "Agent Runtime ID",
+                "type": "string",
+                "required": False,
+                "description": "Runtime pod or instance identifier.",
+            }
+        ),
+        EventField(
+            **{
+                "name": "started_at",
+                "label": "Requested At",
+                "type": "string",
+                "required": False,
+                "description": "ISO 8601 timestamp when the start was requested.",
+            }
+        ),
+        EventField(
+            **{
+                "name": "origin",
+                "label": "Origin",
+                "type": "string",
+                "required": False,
+                "description": "Producer origin (endpoint, companion, runtime, or agent-runtime).",
+            }
+        ),
     ],
 )
 
@@ -151,6 +243,89 @@ AGENT_STARTED_EVENT_SPEC_0_0_1 = EventSpec(
                 "description": "The prompt passed to the agent by the trigger.",
             }
         ),
+        EventField(
+            **{
+                "name": "origin",
+                "label": "Origin",
+                "type": "string",
+                "required": False,
+                "description": "Producer origin (endpoint, companion, runtime, or agent-runtime).",
+            }
+        ),
+    ],
+)
+
+AGENT_TERMINATED_EVENT_SPEC_0_0_1 = EventSpec(
+    id="agent-terminated",
+    version="0.0.1",
+    name="Agent Terminated",
+    description="Emitted when an agent runtime is fully terminated.",
+    kind="agent-terminated",
+    fields=[
+        EventField(
+            **{
+                "name": "agent_runtime_id",
+                "label": "Agent Runtime ID",
+                "type": "string",
+                "required": True,
+                "description": "Runtime pod or instance identifier.",
+            }
+        ),
+        EventField(
+            **{
+                "name": "ended_at",
+                "label": "Ended At",
+                "type": "string",
+                "required": False,
+                "description": "ISO 8601 timestamp when the runtime termination completed.",
+            }
+        ),
+        EventField(
+            **{
+                "name": "origin",
+                "label": "Origin",
+                "type": "string",
+                "required": False,
+                "description": "Producer origin (endpoint, companion, runtime, or agent-runtime).",
+            }
+        ),
+    ],
+)
+
+AGENT_TERMINATION_REQUESTED_EVENT_SPEC_0_0_1 = EventSpec(
+    id="agent-termination-requested",
+    version="0.0.1",
+    name="Agent Termination Requested",
+    description="Emitted when the API endpoint receives a request to terminate an agent runtime.",
+    kind="agent-termination-requested",
+    fields=[
+        EventField(
+            **{
+                "name": "agent_runtime_id",
+                "label": "Agent Runtime ID",
+                "type": "string",
+                "required": True,
+                "description": "Runtime pod or instance identifier.",
+            }
+        ),
+        EventField(
+            **{
+                "name": "reason",
+                "label": "Reason",
+                "type": "string",
+                "required": False,
+                "description": "Optional reason associated with the termination request.",
+            }
+        ),
+        EventField(
+            **{
+                "name": "origin",
+                "label": "Origin",
+                "type": "string",
+                "required": False,
+                "description": "Producer origin (endpoint, companion, runtime, or agent-runtime).",
+            }
+        ),
     ],
 )
 
@@ -197,6 +372,15 @@ TOOL_APPROVAL_REQUESTED_EVENT_SPEC_0_0_1 = EventSpec(
                 "description": "JSON-serialized arguments passed to the tool.",
             }
         ),
+        EventField(
+            **{
+                "name": "origin",
+                "label": "Origin",
+                "type": "string",
+                "required": False,
+                "description": "Producer origin (endpoint, companion, runtime, or agent-runtime).",
+            }
+        ),
     ],
 )
 
@@ -205,15 +389,23 @@ TOOL_APPROVAL_REQUESTED_EVENT_SPEC_0_0_1 = EventSpec(
 # ============================================================================
 
 EVENT_CATALOG: Dict[str, EventSpec] = {
-    "agent-ended": AGENT_ENDED_EVENT_SPEC_0_0_1,
+    "agent-assigned": AGENT_ASSIGNED_EVENT_SPEC_0_0_1,
+    "agent-output": AGENT_OUTPUT_EVENT_SPEC_0_0_1,
+    "agent-start-requested": AGENT_START_REQUESTED_EVENT_SPEC_0_0_1,
     "agent-started": AGENT_STARTED_EVENT_SPEC_0_0_1,
+    "agent-terminated": AGENT_TERMINATED_EVENT_SPEC_0_0_1,
+    "agent-termination-requested": AGENT_TERMINATION_REQUESTED_EVENT_SPEC_0_0_1,
     "tool-approval-requested": TOOL_APPROVAL_REQUESTED_EVENT_SPEC_0_0_1,
 }
 
 
 # Event kind constants for programmatic use
-EVENT_KIND_AGENT_ENDED = "agent-ended"
+EVENT_KIND_AGENT_ASSIGNED = "agent-assigned"
+EVENT_KIND_AGENT_OUTPUT = "agent-output"
+EVENT_KIND_AGENT_START_REQUESTED = "agent-start-requested"
 EVENT_KIND_AGENT_STARTED = "agent-started"
+EVENT_KIND_AGENT_TERMINATED = "agent-terminated"
+EVENT_KIND_AGENT_TERMINATION_REQUESTED = "agent-termination-requested"
 EVENT_KIND_TOOL_APPROVAL_REQUESTED = "tool-approval-requested"
 
 

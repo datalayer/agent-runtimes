@@ -29,12 +29,12 @@ import {
   Flash,
 } from '@primer/react';
 import {
-  AlertIcon,
   SearchIcon,
   DatabaseIcon,
   SignOutIcon,
 } from '@primer/octicons-react';
 import { Box } from '@datalayer/primer-addons';
+import { ErrorView } from './components';
 import { ThemedProvider } from './utils/themedProvider';
 
 const queryClient = new QueryClient();
@@ -175,23 +175,7 @@ const AgentMemoryInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
   }
 
   if (runtimeStatus === 'error' || hookError) {
-    return (
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '100vh',
-          gap: 3,
-        }}
-      >
-        <AlertIcon size={48} />
-        <Text sx={{ color: 'danger.fg' }}>
-          {hookError || 'Agent failed to start'}
-        </Text>
-      </Box>
-    );
+    return <ErrorView error={hookError} onLogout={onLogout} />;
   }
 
   // ── Main layout ──────────────────────────────────────────────────────────

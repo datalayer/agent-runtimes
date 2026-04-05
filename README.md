@@ -142,6 +142,42 @@ cd src/ai/agent-runtimes
 EXAMPLE=AgentCodemodeMcpExample npm run dev
 ```
 
+## 💻 Agent Runtimes Interactive CLI
+
+The former standalone interactive CLI experience is now integrated into Agent Runtimes as the interactive assistant subcommand:
+
+```bash
+# Install runtime + interactive CLI dependencies
+pip install "agent-runtimes[cli]"
+
+# Launch interactive mode (starts an agent-runtimes server in the background)
+agent-runtimes cli
+
+# Launch with a specific agent spec
+agent-runtimes cli --agentspec-id data-acquisition
+
+# Run a single-shot query
+agent-runtimes cli -a data-acquisition "Summarize this dataset"
+
+# Connect to an already running remote agent
+agent-runtimes cli connect http://localhost:8000/api/v1/ag-ui/cli/
+```
+
+Interactive CLI capabilities include:
+- Interactive TUX terminal UX with slash commands and keyboard shortcuts
+- Agent spec picker with environment validation
+- Runtime startup and health checks with startup metadata display
+- AG-UI and ACP connectivity (`agent-runtimes cli connect`)
+- Banner and animation helpers (`--banner`, `--banner-all`, `--eggs`)
+- Context visualization and context export tools for iterative workflows
+
+Migrated from the former standalone CLI README:
+- Custom agent flows via `--agentspec-id`
+- Data analysis and notebook-oriented workflow support
+- Programmatic tool and runtime assistance built on Pydantic AI and Agent Runtimes
+
+For command details, see the CLI docs in `docs/docs/cli/`.
+
 ## 🔧 Key Concepts
 
 ### Protocols
@@ -183,3 +219,15 @@ await launchRuntime({
   type: 'notebook',
 });
 ```
+
+## Environment Variables
+
+### Kubernetes / Sidecar Mode
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DATALAYER_RUNTIME_JUPYTER_SIDECAR` | `""` | Set to `"true"` when the agent-runtimes container runs alongside a Jupyter sidecar container in the same Kubernetes pod. When enabled: (1) the `"jupyter"` sandbox variant is remapped to `"local-jupyter"` so agent-runtimes connects to the existing Jupyter server instead of starting its own, (2) the `"local-eval"` variant is also remapped to `"local-jupyter"`, and (3) codemode toolset initialization is deferred until the companion provides the Jupyter URL via `configure-from-spec`. |
+| `DATALAYER_CODE_SANDBOX_VARIANT` | `""` | Injected into sandboxes. The active sandbox variant (`local-eval`, `local-jupyter`, or `jupyter`). |
+| `DATALAYER_CODE_SANDBOX_URL` | `""` | Injected into sandboxes. The Jupyter server URL (without token) for the active sandbox. |
+| `AGENT_RUNTIMES_MCP_PROXY_URL` | `""` | HTTP proxy URL for MCP tool calls from within sandboxes (e.g. `http://127.0.0.1:8765/api/v1/mcp/proxy`). |
+| `AGENT_RUNTIMES_SKILLS_FOLDER` | `./skills` | Path to the skills folder. In K8s this is typically `/mnt/shared-agent/skills`. |

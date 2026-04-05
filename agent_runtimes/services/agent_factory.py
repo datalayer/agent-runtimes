@@ -249,6 +249,7 @@ def create_codemode_toolset(
     mcp_proxy_url: str | None = None,
     enable_discovery_tools: bool = True,
     status_change_callback: Any | None = None,
+    sandbox_variant: str | None = None,
 ) -> Any | None:
     """
     Create a CodemodeToolset with the specified MCP servers.
@@ -262,6 +263,8 @@ def create_codemode_toolset(
         shared_sandbox: Optional shared sandbox for state persistence
         mcp_proxy_url: Optional MCP proxy URL for Jupyter/remote execution
         enable_discovery_tools: Whether to enable discovery tools (default: True)
+        sandbox_variant: Sandbox variant ('local-eval', 'local-jupyter', 'jupyter').
+            If None, reads from the CodeSandboxManager's current config.
 
     Returns:
         CodemodeToolset instance or None if codemode not available
@@ -345,6 +348,18 @@ def create_codemode_toolset(
         if mcp_proxy_url:
             config_kwargs["mcp_proxy_url"] = mcp_proxy_url
 
+        # Determine sandbox_variant: explicit param > manager config > default
+        effective_variant = sandbox_variant
+        if not effective_variant:
+            try:
+                from .code_sandbox_manager import get_code_sandbox_manager
+
+                effective_variant = get_code_sandbox_manager().config.variant
+            except Exception:
+                pass
+        if effective_variant:
+            config_kwargs["sandbox_variant"] = effective_variant
+
         codemode_config = CodeModeConfig(**config_kwargs)
 
         logger.info(
@@ -427,8 +442,20 @@ def create_shared_sandbox(
                 f"Configured sandbox manager for Jupyter: {jupyter_sandbox_url.split('?')[0]}"
             )
         else:
-            # Use default local-eval sandbox
-            sandbox_manager.configure(variant="local-eval")
+            # In sidecar mode, default to local-jupyter (companion will
+            # provide the URL later).  Never fall back to local-eval when
+            # a jupyter sidecar is expected.
+            jupyter_sidecar = (
+                os.getenv("DATALAYER_RUNTIME_JUPYTER_SIDECAR", "").lower() == "true"
+            )
+            if jupyter_sidecar:
+                sandbox_manager.configure(variant="local-jupyter")
+                logger.info(
+                    "Sidecar mode: configured sandbox as local-jupyter "
+                    "(waiting for companion to provide jupyter URL)"
+                )
+            else:
+                sandbox_manager.configure(variant="local-eval")
 
         shared_sandbox = sandbox_manager.get_managed_sandbox()
         logger.info(

@@ -16,7 +16,6 @@ from .code_sandbox_manager import (
 )
 from .runtime_tools import (
     register_agent_tools,
-    tools_require_approval,
     tools_requiring_approval_ids,
 )
 
@@ -31,6 +30,5 @@ __all__ = [
     "initialize_codemode_toolset",
     "wire_skills_into_codemode",
     "register_agent_tools",
-    "tools_require_approval",
     "tools_requiring_approval_ids",
 ]

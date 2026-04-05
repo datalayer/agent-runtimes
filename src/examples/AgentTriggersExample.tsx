@@ -32,7 +32,6 @@ import {
   Tooltip,
 } from '@primer/react';
 import {
-  AlertIcon,
   ClockIcon,
   SyncIcon,
   CheckCircleIcon,
@@ -47,6 +46,7 @@ import {
   CopyIcon,
 } from '@primer/octicons-react';
 import { Box } from '@datalayer/primer-addons';
+import { ErrorView } from './components';
 import { ThemedProvider } from './utils/themedProvider';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { SignInSimple } from '@datalayer/core/lib/views/iam';
@@ -456,23 +456,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
   }
 
   if (runtimeStatus === 'error' || hookError) {
-    return (
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '100vh',
-          gap: 3,
-        }}
-      >
-        <AlertIcon size={48} />
-        <Text sx={{ color: 'danger.fg' }}>
-          {hookError || 'Agent failed to start'}
-        </Text>
-      </Box>
-    );
+    return <ErrorView error={hookError} onLogout={onLogout} />;
   }
 
   return (
@@ -616,7 +600,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
 
               <Text as="p" sx={{ fontSize: 0, color: 'fg.muted', mb: 3 }}>
                 Launch the agent once. It will execute its trigger prompt, emit
-                lifecycle events (AGENT_STARTED / AGENT_ENDED), and then
+                lifecycle events (AGENT_STARTED / AGENT_OUTPUT), and then
                 terminate the runtime automatically.
               </Text>
 
@@ -1011,7 +995,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
                           variant={
                             evt.kind === 'agent-started'
                               ? 'accent'
-                              : evt.kind === 'agent-ended'
+                              : evt.kind === 'agent-output'
                                 ? 'success'
                                 : evt.kind?.includes('alert')
                                   ? 'danger'
@@ -1072,7 +1056,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
                           const p = evt.payload as Record<string, any>;
                           return (
                             <Box sx={{ fontSize: 0, color: 'fg.muted' }}>
-                              {evt.kind === 'agent-ended' && p.outputs && (
+                              {evt.kind === 'agent-output' && p.outputs && (
                                 <Tooltip text={String(p.outputs)} direction="n">
                                   <button
                                     type="button"
@@ -1114,7 +1098,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
                                   </button>
                                 </Tooltip>
                               )}
-                              {evt.kind === 'agent-ended' &&
+                              {evt.kind === 'agent-output' &&
                                 p.duration_ms != null && (
                                   <Text as="p">
                                     Duration:{' '}

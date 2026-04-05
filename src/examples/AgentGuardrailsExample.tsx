@@ -29,13 +29,13 @@ import {
   ProgressBar,
 } from '@primer/react';
 import {
-  AlertIcon,
   ShieldCheckIcon,
   CheckIcon,
   XIcon,
   SignOutIcon,
 } from '@primer/octicons-react';
 import { Box } from '@datalayer/primer-addons';
+import { ErrorView } from './components';
 import { ThemedProvider } from './utils/themedProvider';
 
 const queryClient = new QueryClient();
@@ -214,23 +214,7 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
   }
 
   if (runtimeStatus === 'error' || hookError) {
-    return (
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '100vh',
-          gap: 3,
-        }}
-      >
-        <AlertIcon size={48} />
-        <Text sx={{ color: 'danger.fg' }}>
-          {hookError || 'Agent failed to start'}
-        </Text>
-      </Box>
-    );
+    return <ErrorView error={hookError} onLogout={onLogout} />;
   }
 
   const costPercent = Math.min((costUsd / COST_LIMIT_USD) * 100, 100);

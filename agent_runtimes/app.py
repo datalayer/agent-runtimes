@@ -179,7 +179,6 @@ async def _create_and_register_cli_agent(
         create_skills_toolset,
         initialize_codemode_toolset,
         register_agent_tools,
-        tools_require_approval,
         tools_requiring_approval_ids,
         wire_skills_into_codemode,
     )
@@ -208,6 +207,27 @@ async def _create_and_register_cli_agent(
         or ("local-jupyter" if jupyter_sandbox_url else "local-eval")
     )
 
+    # In K8s sidecar mode (DATALAYER_RUNTIME_JUPYTER_SIDECAR=true), a Jupyter
+    # container already runs in the same pod.  The "jupyter" variant means
+    # "start your own Jupyter process" which is wrong here — remap to
+    # "local-jupyter" (connect to existing).  Never fallback to local-eval.
+    jupyter_sidecar = (
+        os.getenv("DATALAYER_RUNTIME_JUPYTER_SIDECAR", "").lower() == "true"
+    )
+    if jupyter_sidecar:
+        if effective_variant == "jupyter":
+            effective_variant = "local-jupyter"
+            logger.info(
+                "Jupyter sidecar detected (DATALAYER_RUNTIME_JUPYTER_SIDECAR=true), "
+                "remapped sandbox variant jupyter → local-jupyter"
+            )
+        elif effective_variant == "local-eval":
+            effective_variant = "local-jupyter"
+            logger.info(
+                "Jupyter sidecar detected, overriding local-eval → local-jupyter "
+                "(companion will provide jupyter URL)"
+            )
+
     # Create shared sandbox if both codemode and skills are enabled,
     # or when the jupyter variant is used with codemode.
     skills_enabled = len(skills) > 0
@@ -215,18 +235,17 @@ async def _create_and_register_cli_agent(
     need_shared_sandbox = (
         (enable_codemode and skills_enabled)
         or (enable_codemode and jupyter_sandbox_url)
-        or (enable_codemode and effective_variant == "jupyter")
+        or (enable_codemode and effective_variant in ("jupyter", "local-jupyter"))
     )
     if need_shared_sandbox:
         if effective_variant == "jupyter":
             # Delegate to code_sandboxes: create a per-agent sandbox
             # that starts its own Jupyter server on a random free port.
+            # NOTE: This branch is only reached in standalone mode (no sidecar).
             try:
                 from .services.code_sandbox_manager import get_code_sandbox_manager
 
                 sandbox_manager = get_code_sandbox_manager()
-                # Update manager config so /health/startup reports the
-                # correct variant instead of the default "local-eval".
                 sandbox_manager.configure(variant="jupyter")
                 shared_sandbox = sandbox_manager.create_agent_sandbox(
                     agent_id=agent_id,
@@ -244,6 +263,21 @@ async def _create_and_register_cli_agent(
                 raise RuntimeError(
                     f"Failed to create Jupyter sandbox for agent '{agent_id}': {e}"
                 ) from e
+        elif effective_variant == "local-jupyter" and not jupyter_sandbox_url:
+            # Sidecar/companion mode (Phase 1): the Jupyter URL is not
+            # available yet.  Configure the manager as local-jupyter and
+            # return a ManagedSandbox proxy.  The proxy defers actual
+            # sandbox creation until first use — by that time the companion
+            # will have called configure-from-spec with the real URL.
+            from .services.code_sandbox_manager import get_code_sandbox_manager
+
+            sandbox_manager = get_code_sandbox_manager()
+            sandbox_manager.configure(variant="local-jupyter")
+            shared_sandbox = sandbox_manager.get_managed_sandbox()
+            logger.info(
+                f"Deferred sandbox for agent '{agent_id}': variant=local-jupyter, "
+                f"waiting for companion to provide jupyter URL"
+            )
         else:
             shared_sandbox = create_shared_sandbox(jupyter_sandbox_url)
 
@@ -318,12 +352,30 @@ async def _create_and_register_cli_agent(
             shared_sandbox=shared_sandbox,
             mcp_proxy_url=mcp_proxy_url,
             enable_discovery_tools=True,
+            sandbox_variant=effective_variant,
         )
 
         if codemode_toolset:
-            await initialize_codemode_toolset(codemode_toolset)
+            # In sidecar Phase 1 (local-jupyter, no URL yet) skip eager
+            # start — the sandbox proxy would fail because the companion
+            # hasn't provided the jupyter URL yet.  The toolset will
+            # initialise lazily on first tool invocation or after
+            # rebuild_codemode is called by configure-from-spec.
+            sidecar_deferred = (
+                jupyter_sidecar
+                and effective_variant == "local-jupyter"
+                and not jupyter_sandbox_url
+            )
+            if sidecar_deferred:
+                logger.info(
+                    f"Sidecar Phase 1: deferring codemode toolset start for agent {agent_id} "
+                    f"(waiting for companion to provide jupyter URL)"
+                )
+            else:
+                await initialize_codemode_toolset(codemode_toolset)
+                logger.info(f"Initialized CodemodeToolset for agent {agent_id}")
             non_mcp_toolsets.append(codemode_toolset)
-            logger.info(f"Added and initialized CodemodeToolset for agent {agent_id}")
+            logger.info(f"Added CodemodeToolset for agent {agent_id}")
 
     # Wire skill bindings into codemode so execute_code can import
     # from generated.skills and compose skills programmatically
@@ -358,6 +410,13 @@ async def _create_and_register_cli_agent(
     # Use model from agent spec, environment variable override, or global default
     from agent_runtimes.specs.models import DEFAULT_MODEL
 
+    from .capabilities import (
+        ToolApprovalCapability,
+        ToolApprovalConfig,
+        build_capabilities_from_agent_spec,
+        build_usage_limits_from_agent_spec,
+    )
+
     env_model = os.environ.get("AGENT_RUNTIMES_MODEL")
     model = env_model or agent_spec.model or DEFAULT_MODEL.value
 
@@ -383,30 +442,41 @@ async def _create_and_register_cli_agent(
         system_prompt = system_prompt + "\n\n" + skills_prompt_section
 
     tool_ids = list(agent_spec.tools or [])
+    capabilities = build_capabilities_from_agent_spec(agent_spec, agent_id=agent_id)
+    usage_limits = build_usage_limits_from_agent_spec(agent_spec)
     agent_kwargs: dict[str, Any] = {
         "system_prompt": system_prompt,
         # Explicitly disable Pydantic AI built-in tools (e.g. CodeExecutionTool)
         "builtin_tools": (),
     }
+    if capabilities:
+        agent_kwargs["capabilities"] = capabilities
+    if usage_limits is not None:
+        agent_kwargs["usage_limits"] = usage_limits
     approval_tool_ids = tools_requiring_approval_ids(tool_ids)
-    # Only set DeferredToolRequests output type when using pydantic-deferred
-    # approval mode.  In the default "ai-agents-wrapper" mode the approval
-    # gate is handled by wrap_tool_with_approval and the agent output type
-    # should remain plain str to avoid output-validation failures.
-    _use_deferred = os.environ.get(
-        "AGENT_RUNTIMES_USE_PYDANTIC_DEFERRED_APPROVAL", ""
-    ).strip().lower() in {"1", "true", "yes", "on"}
-    if tools_require_approval(tool_ids) and _use_deferred:
+    if approval_tool_ids:
+        approval_patterns = [tool_id.split(":", 1)[0] for tool_id in approval_tool_ids]
+        has_tool_approval_capability = any(
+            isinstance(cap, ToolApprovalCapability) for cap in (capabilities or [])
+        )
+        if not has_tool_approval_capability:
+            approval_config = ToolApprovalConfig.from_env()
+            approval_config.agent_id = agent_id
+            approval_config.tools_requiring_approval = approval_patterns
+            if capabilities is None:
+                capabilities = []
+            capabilities.append(ToolApprovalCapability(config=approval_config))
+            agent_kwargs["capabilities"] = capabilities
+            logger.info(
+                "Auto-enabled ToolApprovalCapability for agent '%s' with approval tools: %s",
+                agent_id,
+                approval_patterns,
+            )
+
         agent_kwargs["output_type"] = [str, DeferredToolRequests]
         agent_kwargs["output_retries"] = 3
         logger.info(
             "Auto-enabled DeferredToolRequests for agent '%s'; tools requiring approval: %s",
-            agent_id,
-            approval_tool_ids,
-        )
-    elif approval_tool_ids:
-        logger.info(
-            "Agent '%s' has tools requiring approval (ai-agents-wrapper mode): %s",
             agent_id,
             approval_tool_ids,
         )
@@ -538,6 +608,18 @@ async def _create_and_register_cli_agent(
                         pass
 
                 repo_root = Path(__file__).resolve().parents[1]
+
+                # Get sandbox variant from manager config
+                rebuild_variant = None
+                try:
+                    from .services.code_sandbox_manager import (
+                        get_code_sandbox_manager as _get_mgr,
+                    )
+
+                    rebuild_variant = _get_mgr().config.variant
+                except Exception:
+                    pass
+
                 new_config = CodeModeConfig(
                     workspace_path=str((repo_root / "workspace").resolve()),
                     generated_path=_resolve_generated_code_path(generated_folder),
@@ -548,6 +630,11 @@ async def _create_and_register_cli_agent(
                         {}
                         if mcp_proxy_url is None
                         else {"mcp_proxy_url": mcp_proxy_url}
+                    ),
+                    **(
+                        {}
+                        if rebuild_variant is None
+                        else {"sandbox_variant": rebuild_variant}
                     ),
                 )
 
@@ -699,6 +786,7 @@ async def _create_and_register_cli_agent(
                 agent,
                 agent_id=agent_id,
                 has_spec_frontend_tools=bool(agent_spec.frontend_tools),
+                approval_tool_ids=approval_tool_ids or [],
             )
             register_vercel_agent(agent_id, vercel_adapter)
             logger.info(f"Registered agent with Vercel AI: {agent_id}")
@@ -714,6 +802,7 @@ async def _create_and_register_cli_agent(
                 agent,
                 agent_id=agent_id,
                 has_spec_frontend_tools=bool(agent_spec.frontend_tools),
+                approval_tool_ids=approval_tool_ids or [],
             )
             register_vercel_agent(agent_id, vercel_adapter)
             logger.info(f"Registered agent with Vercel AI Jupyter: {agent_id}")
@@ -1057,7 +1146,7 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
                     sandbox_variant=sandbox_variant,
                 )
                 # Store startup info on app.state so the /health/startup
-                # endpoint can expose it to CLI consumers (e.g. codeai).
+                # endpoint can expose it to CLI consumers (e.g. agent-runtimes chat).
                 app.state.startup_info = startup_info
             else:
                 logger.warning(

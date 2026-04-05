@@ -7,6 +7,7 @@ Generate Python and TypeScript code from YAML tool specifications.
 """
 
 import argparse
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -57,6 +58,19 @@ def _requires_approval(spec: dict[str, Any]) -> bool:
     return str(spec.get("approval", "auto")).lower() == "manual"
 
 
+def _timeout_hms(spec: dict[str, Any]) -> str | None:
+    raw = spec.get("timeout")
+    if raw in (None, ""):
+        return None
+    value = str(raw).strip()
+    if not re.fullmatch(r"(?i)(?:\d+mo|\d+d|\d+h|\d+m|\d+s)+", value):
+        raise ValueError(
+            f"Tool '{spec.get('id', '<unknown>')}' has invalid timeout '{raw}'. "
+            "Expected duration format like '0h5m0s', '2d6h', or '1mo2d3h4m5s'."
+        )
+    return value
+
+
 def load_tool_specs(specs_dir: Path) -> list[dict[str, Any]]:
     specs: list[dict[str, Any]] = []
     for yaml_file in sorted(specs_dir.glob("*.yaml")):
@@ -99,8 +113,10 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         )
         runtime = _require_runtime(spec)
         requires_approval = _requires_approval(spec)
+        timeout = _timeout_hms(spec)
         icon = f'"{spec.get("icon")}"' if spec.get("icon") else "None"
         emoji = f'"{spec.get("emoji")}"' if spec.get("emoji") else "None"
+        timeout_py = f'"{timeout}"' if timeout else "None"
 
         lines.extend(
             [
@@ -112,6 +128,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
                 f"    tags={_fmt_list(spec.get('tags', []))},",
                 f"    enabled={spec.get('enabled', True)},",
                 f'    approval="{spec.get("approval", "auto")}",',
+                f"    timeout={timeout_py},",
                 f"    requires_approval={requires_approval},",
                 "    runtime=ToolRuntimeSpec(",
                 f'        language="{runtime["language"]}",',
@@ -201,9 +218,11 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
         )
         runtime = _require_runtime(spec)
         requires_approval = _requires_approval(spec)
+        timeout = _timeout_hms(spec)
         tags_json = str(spec.get("tags", [])).replace("'", '"')
         icon = f"'{spec.get('icon')}'" if spec.get("icon") else "undefined"
         emoji = f"'{spec.get('emoji')}'" if spec.get("emoji") else "undefined"
+        timeout_ts = f"'{timeout}'" if timeout else "undefined"
 
         lines.extend(
             [
@@ -215,6 +234,7 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
                 f"  tags: {tags_json},",
                 f"  enabled: {str(spec.get('enabled', True)).lower()},",
                 f"  approval: '{spec.get('approval', 'auto')}',",
+                f"  timeout: {timeout_ts},",
                 f"  requiresApproval: {str(requires_approval).lower()},",
                 "  runtime: {",
                 f"    language: '{runtime['language']}',",

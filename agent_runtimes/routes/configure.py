@@ -470,7 +470,7 @@ async def export_agent_context_csv(
             )
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"codeai_context_{timestamp}.csv"
+    filename = f"cli_context_{timestamp}.csv"
 
     return {
         "agentId": agent_id,

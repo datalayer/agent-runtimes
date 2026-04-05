@@ -3,9 +3,11 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
+import { useState } from 'react';
 import { Button, Label, Text, Truncate } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import {
+  ChevronDownIcon,
   DownloadIcon,
   EyeClosedIcon,
   EyeIcon,
@@ -14,6 +16,7 @@ import {
 import {
   createMarkdownDownloadPayload,
   downloadTextPayload,
+  formatDurationMs,
   formatRelativeTime,
 } from '@datalayer/core/lib/utils';
 import { Streamdown } from 'streamdown';
@@ -33,8 +36,9 @@ export function OutputCard({
   onDelete,
   onOpenAgent,
 }: OutputCardProps) {
+  const [isOutputExpanded, setIsOutputExpanded] = useState(false);
   const outputText =
-    event.kind === 'agent-ended' && event.payload?.outputs
+    event.kind === 'agent-output' && event.payload?.outputs
       ? String(event.payload.outputs)
       : null;
 
@@ -49,7 +53,7 @@ export function OutputCard({
   const startedAt = event?.started_at || event?.payload?.started_at || null;
   const endedAt = event?.ended_at || event?.payload?.ended_at || null;
   const durationMs =
-    event.kind === 'agent-ended' ? event.payload?.duration_ms : null;
+    event.kind === 'agent-output' ? event.payload?.duration_ms : null;
 
   return (
     <Box
@@ -149,7 +153,7 @@ export function OutputCard({
           {endedAt ? `Ended: ${formatRelativeTime(endedAt)}` : ''}
           {(startedAt || endedAt) && durationMs != null ? ' · ' : ''}
           {durationMs != null
-            ? `Duration: ${(Number(durationMs) / 1000).toFixed(1)}s`
+            ? `Duration: ${formatDurationMs(Number(durationMs))}`
             : ''}
         </Text>
       )}
@@ -167,8 +171,12 @@ export function OutputCard({
         >
           <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
             <Box sx={{ flex: 1, minWidth: 0 }}>
-              <details>
+              <details open={isOutputExpanded}>
                 <summary
+                  onClick={e => {
+                    e.preventDefault();
+                    setIsOutputExpanded(prev => !prev);
+                  }}
                   style={{
                     cursor: 'pointer',
                     display: 'flex',
@@ -186,6 +194,20 @@ export function OutputCard({
                       flexWrap: 'nowrap',
                     }}
                   >
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        color: 'fg.muted',
+                        flexShrink: 0,
+                        transition: 'transform 0.15s ease',
+                        transform: isOutputExpanded
+                          ? 'rotate(180deg)'
+                          : 'rotate(0deg)',
+                      }}
+                    >
+                      <ChevronDownIcon size={12} />
+                    </Box>
                     <Text
                       sx={{
                         fontSize: 0,

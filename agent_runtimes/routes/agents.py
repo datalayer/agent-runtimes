@@ -11,9 +11,11 @@ Provides REST API endpoints for:
 - Deleting agents
 """
 
+import asyncio
 import logging
 import os
 import tempfile
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Literal
 
@@ -23,6 +25,13 @@ from pydantic_ai import Agent as PydanticAgent
 from pydantic_ai import DeferredToolRequests
 
 from ..adapters.pydantic_ai_adapter import PydanticAIAdapter
+from ..capabilities import (
+    ToolApprovalCapability,
+    ToolApprovalConfig,
+    build_capabilities_from_agent_spec,
+    build_usage_limits_from_agent_spec,
+)
+from ..events import create_event
 from ..mcp import get_mcp_manager, initialize_config_mcp_servers
 from ..mcp.catalog_mcp_servers import MCP_SERVER_CATALOG
 from ..mcp.lifecycle import get_mcp_lifecycle_manager
@@ -32,16 +41,16 @@ from ..services import (
     create_skills_toolset,
     initialize_codemode_toolset,
     register_agent_tools,
-    tools_require_approval,
     tools_requiring_approval_ids,
     wire_skills_into_codemode,
 )
 from ..specs.agents import AGENT_SPECS
 from ..specs.agents import get_agent_spec as get_library_agent_spec
 from ..specs.agents import list_agent_specs as list_library_agents
+from ..specs.events import EVENT_KIND_AGENT_ASSIGNED
 from ..specs.models import DEFAULT_MODEL
 from ..transports import AGUITransport, MCPUITransport, VercelAITransport
-from ..types import AgentSpec
+from ..types import AgentSpec, MCPServer
 from .a2a import A2AAgentCard, register_a2a_agent, unregister_a2a_agent
 from .acp import AgentCapabilities, AgentInfo, _agents, register_agent, unregister_agent
 from .agui import get_agui_app, register_agui_agent, unregister_agui_agent
@@ -218,6 +227,7 @@ def _build_codemode_toolset(
     agent_id: str,
     sandbox: Any | None = None,
     disable_mcp_servers: bool = False,
+    sandbox_variant: str | None = None,
 ) -> Any:
     """
     Create a CodemodeToolset based on request flags and app configuration.
@@ -231,6 +241,7 @@ def _build_codemode_toolset(
         request: The CreateAgentRequest with configuration options.
         http_request: The FastAPI request object for accessing app state.
         sandbox: Optional pre-configured sandbox to share with other toolsets.
+        sandbox_variant: Sandbox variant to pass to CodeModeConfig.
     """
     if not request.enable_codemode:
         return None
@@ -323,6 +334,7 @@ def _build_codemode_toolset(
         mcp_proxy_url=mcp_proxy_url,
         enable_discovery_tools=True,
         status_change_callback=_notify_status_change,
+        sandbox_variant=sandbox_variant,
     )
 
 
@@ -567,6 +579,13 @@ async def create_agent(
                     McpServerSelection(id=server.id, origin="config")
                     for server in spec.mcp_servers
                 ]
+                # Register the full MCPServer configs from the spec so
+                # they are available for mcp_manager lookups (used by
+                # _build_codemode_toolset) and server startup resolution.
+                _mcp_mgr = get_mcp_manager()
+                for _srv in spec.mcp_servers:
+                    if not _mcp_mgr.get_server(_srv.id):
+                        _mcp_mgr.add_server(_srv)
             # Apply codemode defaults from spec codemode block
             if isinstance(spec.codemode, dict):
                 codemode_cfg = spec.codemode
@@ -625,6 +644,7 @@ async def create_agent(
                 raw_servers = _spec_value("mcpServers", "mcp_servers")
                 if isinstance(raw_servers, list):
                     selected_servers: list[McpServerSelection] = []
+                    _mcp_mgr = get_mcp_manager()
                     for server in raw_servers:
                         if isinstance(server, dict) and server.get("id"):
                             raw_origin = str(server.get("origin", "config"))
@@ -637,6 +657,17 @@ async def create_agent(
                                     origin=origin,
                                 )
                             )
+                            # Register full config with mcp_manager if
+                            # the dict contains enough info to start the
+                            # server (command or url).
+                            srv_id = str(server["id"])
+                            if not _mcp_mgr.get_server(srv_id) and (
+                                server.get("command") or server.get("url")
+                            ):
+                                try:
+                                    _mcp_mgr.add_server(MCPServer(**server))
+                                except Exception:
+                                    pass
                     request.selected_mcp_servers = selected_servers
             codemode_cfg = _spec_value("codemode")
             if isinstance(codemode_cfg, dict):
@@ -703,8 +734,8 @@ async def create_agent(
                                 started = True
                                 logger.info(f"Started Config MCP server '{server_id}'")
 
-                    # 2. Try Catalog Server
-                    if (is_config is None or is_config is False) and not started:
+                    # 2. Try Catalog Server (always as fallback)
+                    if not started:
                         catalog_server = MCP_SERVER_CATALOG.get(server_id)
                         if catalog_server:
                             logger.info(
@@ -775,6 +806,28 @@ async def create_agent(
             "local-jupyter" if request.jupyter_sandbox else "local-eval"
         )
 
+        # In K8s sidecar mode, a Jupyter container already runs in the pod.
+        # "jupyter" variant means "start your own" — remap to "local-jupyter"
+        # (connect to existing sidecar).  Never fallback to local-eval.
+        jupyter_sidecar = (
+            os.getenv("DATALAYER_RUNTIME_JUPYTER_SIDECAR", "").lower() == "true"
+        )
+        if jupyter_sidecar:
+            if effective_variant == "jupyter":
+                effective_variant = "local-jupyter"
+                logger.info(
+                    "Jupyter sidecar detected, remapped sandbox variant "
+                    "jupyter → local-jupyter for agent '%s'",
+                    agent_id,
+                )
+            elif effective_variant == "local-eval":
+                effective_variant = "local-jupyter"
+                logger.info(
+                    "Jupyter sidecar detected, overriding local-eval → local-jupyter "
+                    "for agent '%s' (companion will provide jupyter URL)",
+                    agent_id,
+                )
+
         # When a sandbox variant is explicitly requested, eagerly ensure a sandbox
         # is configured and started for that variant even if no MCP servers are
         # selected. This guarantees that sandbox status/WS reflects availability.
@@ -795,15 +848,26 @@ async def create_agent(
                     )
                 elif effective_variant == "local-jupyter":
                     if not request.jupyter_sandbox:
-                        raise HTTPException(
-                            status_code=400,
-                            detail=(
-                                "jupyter_sandbox is required when sandbox_variant is 'local-jupyter'"
-                            ),
-                        )
-                    # jupyter_sandbox URL is already applied above via configure_from_url.
-                    sandbox_manager.get_sandbox()
-                    logger.info("Eager-started local-jupyter sandbox")
+                        if jupyter_sidecar:
+                            # Sidecar mode, Phase 1: companion will configure
+                            # URL later — defer sandbox, don't fail.
+                            sandbox_manager.configure(variant="local-jupyter")
+                            logger.info(
+                                "Deferred local-jupyter sandbox for '%s': "
+                                "waiting for companion to provide jupyter URL",
+                                agent_id,
+                            )
+                        else:
+                            raise HTTPException(
+                                status_code=400,
+                                detail=(
+                                    "jupyter_sandbox is required when sandbox_variant is 'local-jupyter'"
+                                ),
+                            )
+                    else:
+                        # jupyter_sandbox URL is already applied above via configure_from_url.
+                        sandbox_manager.get_sandbox()
+                        logger.info("Eager-started local-jupyter sandbox")
                 else:
                     # local-eval
                     sandbox_manager.configure(variant="local-eval")
@@ -838,7 +902,8 @@ async def create_agent(
                 request.enable_codemode and request.jupyter_sandbox
             )  # Codemode with Jupyter
             or (
-                request.enable_codemode and effective_variant == "jupyter"
+                request.enable_codemode
+                and effective_variant in ("jupyter", "local-jupyter")
             )  # Codemode with jupyter variant
             or (
                 request.enable_codemode and bool(request.sandbox_variant)
@@ -848,6 +913,7 @@ async def create_agent(
             if effective_variant == "jupyter":
                 # Delegate to code_sandboxes: create a per-agent sandbox
                 # that starts its own Jupyter server on a random free port.
+                # NOTE: This branch is only reached in standalone mode (no sidecar).
                 try:
                     from ..services.code_sandbox_manager import get_code_sandbox_manager
 
@@ -856,17 +922,17 @@ async def create_agent(
                         agent_id=agent_id,
                         variant="jupyter",
                     )
-                    # Wrap in ManagedSandbox-like interface for compatibility
                     shared_sandbox = agent_sandbox
                     logger.info(f"Created per-agent Jupyter sandbox for '{agent_id}'")
                 except ImportError as e:
-                    logger.warning(
-                        f"code_sandboxes not installed, falling back to local-eval: {e}"
+                    raise HTTPException(
+                        status_code=500,
+                        detail=(
+                            f"code_sandboxes not installed, cannot create Jupyter sandbox: {e}"
+                        ),
                     )
-                    shared_sandbox = create_shared_sandbox(None)
                 except Exception as e:
                     if "already has a sandbox" in str(e):
-                        # Reuse existing sandbox from eager-start
                         sandbox_manager = get_code_sandbox_manager()
                         shared_sandbox = sandbox_manager.get_agent_sandbox(agent_id)
                         logger.info(
@@ -880,6 +946,18 @@ async def create_agent(
                             status_code=500,
                             detail=f"Failed to create Jupyter sandbox: {str(e)}",
                         )
+            elif effective_variant == "local-jupyter" and not request.jupyter_sandbox:
+                # Sidecar mode, Phase 1: no URL yet, companion will provide
+                # it later.  Return a deferred ManagedSandbox proxy.
+                from ..services.code_sandbox_manager import get_code_sandbox_manager
+
+                sandbox_manager = get_code_sandbox_manager()
+                sandbox_manager.configure(variant="local-jupyter")
+                shared_sandbox = sandbox_manager.get_managed_sandbox()
+                logger.info(
+                    f"Deferred sandbox for agent '{agent_id}': variant=local-jupyter, "
+                    f"waiting for companion to provide jupyter URL"
+                )
             else:
                 shared_sandbox = create_shared_sandbox(request.jupyter_sandbox)
 
@@ -924,6 +1002,7 @@ async def create_agent(
                 agent_id=agent_id,
                 sandbox=shared_sandbox,
                 disable_mcp_servers=disable_mcp_for_codemode,
+                sandbox_variant=effective_variant,
             )
             if codemode_toolset is not None:
                 await initialize_codemode_toolset(codemode_toolset)
@@ -1000,31 +1079,95 @@ async def create_agent(
             # fetched at run time by the adapter to reflect current server state.
             # Only non-MCP toolsets (codemode, skills) are passed at construction.
             tool_ids = list(request.tools or [])
+            capabilities = None
+            usage_limits = None
+
+            spec_for_runtime_controls: AgentSpec | None = None
+            if request.agent_spec_id:
+                spec_for_runtime_controls = get_library_agent_spec(
+                    request.agent_spec_id
+                )
+
+            # Fallback: UI may send a full spec payload without a library ID.
+            if spec_for_runtime_controls is None and request.agent_spec:
+                try:
+                    spec_for_runtime_controls = AgentSpec.model_validate(
+                        request.agent_spec
+                    )
+                except Exception as exc:
+                    logger.debug(
+                        "Could not parse forwarded agent_spec for runtime controls: %s",
+                        exc,
+                    )
+
+            if spec_for_runtime_controls is not None:
+                capabilities = build_capabilities_from_agent_spec(
+                    spec_for_runtime_controls,
+                    agent_id=agent_id,
+                )
+                usage_limits = build_usage_limits_from_agent_spec(
+                    spec_for_runtime_controls
+                )
+
+            # Vercel AI with DeferredToolRequests handles approval decisions
+            # via continuation messages. Keeping ToolApprovalCapability enabled
+            # causes a second blocking approval wait during actual tool execution.
+            if request.transport == "vercel-ai" and capabilities:
+                filtered_capabilities = [
+                    cap
+                    for cap in capabilities
+                    if not isinstance(cap, ToolApprovalCapability)
+                ]
+                if len(filtered_capabilities) != len(capabilities):
+                    logger.info(
+                        "Disabled ToolApprovalCapability for vercel-ai agent '%s' "
+                        "to avoid duplicate approval gating.",
+                        agent_id,
+                    )
+                capabilities = filtered_capabilities
+
             agent_kwargs: dict[str, Any] = {
                 "system_prompt": final_system_prompt,
                 # Explicitly disable Pydantic AI built-in tools (e.g. CodeExecutionTool)
                 "builtin_tools": (),
                 # Don't pass toolsets here - they'll be dynamically provided at run time
             }
+            if capabilities:
+                agent_kwargs["capabilities"] = capabilities
+            if usage_limits is not None:
+                agent_kwargs["usage_limits"] = usage_limits
             approval_tool_ids = tools_requiring_approval_ids(tool_ids)
-            # Only set DeferredToolRequests output type when using pydantic-deferred
-            # approval mode.  In the default "ai-agents-wrapper" mode the approval
-            # gate is handled by wrap_tool_with_approval and the agent output type
-            # should remain plain str to avoid output-validation failures.
-            _use_deferred = os.environ.get(
-                "AGENT_RUNTIMES_USE_PYDANTIC_DEFERRED_APPROVAL", ""
-            ).strip().lower() in {"1", "true", "yes", "on"}
-            if tools_require_approval(tool_ids) and _use_deferred:
+            if approval_tool_ids:
+                approval_patterns = [
+                    tool_id.split(":", 1)[0] for tool_id in approval_tool_ids
+                ]
+                has_tool_approval_capability = bool(
+                    capabilities
+                    and any(
+                        isinstance(cap, ToolApprovalCapability) for cap in capabilities
+                    )
+                )
+                if (
+                    not has_tool_approval_capability
+                    and request.transport != "vercel-ai"
+                ):
+                    approval_config = ToolApprovalConfig.from_env()
+                    approval_config.agent_id = agent_id
+                    approval_config.tools_requiring_approval = approval_patterns
+                    if capabilities is None:
+                        capabilities = []
+                    capabilities.append(ToolApprovalCapability(config=approval_config))
+                    agent_kwargs["capabilities"] = capabilities
+                    logger.info(
+                        "Auto-enabled ToolApprovalCapability for agent '%s' with approval tools: %s",
+                        agent_id,
+                        approval_patterns,
+                    )
+
                 agent_kwargs["output_type"] = [str, DeferredToolRequests]
                 agent_kwargs["output_retries"] = 3
                 logger.info(
                     "Auto-enabled DeferredToolRequests for agent '%s'; tools requiring approval: %s",
-                    agent_id,
-                    approval_tool_ids,
-                )
-            elif approval_tool_ids:
-                logger.info(
-                    "Agent '%s' has tools requiring approval (ai-agents-wrapper mode): %s",
                     agent_id,
                     approval_tool_ids,
                 )
@@ -1115,6 +1258,7 @@ async def create_agent(
                         agent_id=agent_id,
                         sandbox=fresh_sandbox,
                         disable_mcp_servers=disable_mcp_for_codemode,
+                        sandbox_variant=effective_variant,
                     )
 
                 # Wrap to register a post-init callback for skill re-wiring
@@ -1185,7 +1329,11 @@ async def create_agent(
         )
 
         # Store the original creation spec (preserves separated system prompts)
-        _agent_specs[agent_id] = request.model_dump()
+        # Strip jupyter_sandbox — the sandbox lifecycle is independent of
+        # the agent spec and should not cause a spec-diff restart.
+        stored = request.model_dump()
+        stored.pop("jupyter_sandbox", None)
+        _agent_specs[agent_id] = stored
         logger.info(f"Stored creation spec for agent '{agent_id}'")
 
         # Register with context session for snapshot lookups (enables usage tracking)
@@ -1234,6 +1382,7 @@ async def create_agent(
                     agent,
                     agent_id=agent_id,
                     has_spec_frontend_tools=has_spec_frontend_tools,
+                    approval_tool_ids=approval_tool_ids or [],
                 )
                 register_vercel_agent(agent_id, vercel_adapter)
                 logger.info(f"Registered agent with Vercel AI: {agent_id}")
@@ -1631,8 +1780,13 @@ async def update_agent_transport(
             if not _has_ft and stored_spec.get("agent_spec_id"):
                 _lib = get_library_agent_spec(stored_spec["agent_spec_id"])
                 _has_ft = bool(_lib and getattr(_lib, "frontend_tools", None))
+            _stored_tools = stored_spec.get("tools") or []
+            _has_approval = bool(tools_requiring_approval_ids(_stored_tools))
             vercel_adapter = VercelAITransport(
-                agent, agent_id=agent_id, has_spec_frontend_tools=_has_ft
+                agent,
+                agent_id=agent_id,
+                has_spec_frontend_tools=_has_ft,
+                has_approval_tools=_has_approval,
             )
             register_vercel_agent(agent_id, vercel_adapter)
             logger.info(f"Registered agent with Vercel AI: {agent_id}")
@@ -2124,18 +2278,30 @@ async def _start_mcp_servers_for_agent(
             already_running.append(server_id)
             continue
 
-        # Get server config from appropriate source
+        # Get server config from appropriate source.
+        # Try all sources in order: config file → catalog → mcp_manager.
+        # Spec-originated servers (origin="config") may not exist in
+        # mcp.json but their MCPServer configs are registered in the
+        # mcp_manager by create_agent.
         config = None
         if is_config:
             config = lifecycle_manager.get_server_config_from_file(server_id)
             logger.info(
                 f"_start_mcp_servers_for_agent: Got config for '{server_id}' from config file: {config is not None}"
             )
-        else:
+        if config is None:
             config = MCP_SERVER_CATALOG.get(server_id)
-            logger.info(
-                f"_start_mcp_servers_for_agent: Got config for '{server_id}' from catalog: {config is not None}"
-            )
+            if config is not None:
+                logger.info(
+                    f"_start_mcp_servers_for_agent: Got config for '{server_id}' from catalog"
+                )
+        if config is None:
+            _mgr = get_mcp_manager()
+            config = _mgr.get_server(server_id)
+            if config is not None:
+                logger.info(
+                    f"_start_mcp_servers_for_agent: Got config for '{server_id}' from mcp_manager"
+                )
 
         if config is None:
             logger.warning(
@@ -2366,6 +2532,71 @@ def _build_mcp_response_message(
     return ", ".join(parts) if parts else "No servers to start"
 
 
+def _emit_agent_assigned_event(
+    *,
+    user_token: str | None,
+    agent_name: str,
+    sandbox_variant: str | None,
+    mcp_proxy_url: str | None,
+    env_count: int,
+    assignment_source: str = "companion",
+) -> None:
+    """Emit agent-assigned lifecycle event for companion runtime assignment."""
+    token = (user_token or "").strip()
+    runtime_id = (os.environ.get("HOSTNAME") or "").strip()
+    if not token:
+        logger.debug(
+            "[mcp-servers/start] Skipping agent-assigned event for '%s': no auth token",
+            agent_name,
+        )
+        return
+    if not runtime_id:
+        logger.debug(
+            "[mcp-servers/start] Skipping agent-assigned event for '%s': missing HOSTNAME runtime id",
+            agent_name,
+        )
+        return
+
+    base_url = (
+        os.environ.get("DATALAYER_AI_AGENTS_URL")
+        or os.environ.get("AI_AGENTS_URL")
+        or os.environ.get("DATALAYER_RUN_URL")
+        or "https://prod1.datalayer.run"
+    )
+    assigned_at = datetime.now(timezone.utc).isoformat()
+    try:
+        logger.info(
+            "[mcp-servers/start] Emitting agent-assigned event runtime_id=%s agent_name=%s source=%s",
+            runtime_id,
+            agent_name,
+            assignment_source,
+        )
+        create_event(
+            token=token,
+            agent_id=runtime_id,
+            title="Agent Assigned",
+            kind=EVENT_KIND_AGENT_ASSIGNED,
+            status="running",
+            payload={
+                "agent_runtime_id": runtime_id,
+                "agent_name": agent_name,
+                "assignment_source": assignment_source,
+                "assigned_at": assigned_at,
+                "sandbox_variant": sandbox_variant,
+                "mcp_proxy_url": mcp_proxy_url,
+                "env_vars_set": env_count,
+            },
+            metadata={"origin": "agent-runtime", "source": "agent-runtime"},
+            base_url=base_url,
+        )
+    except Exception as e:
+        logger.warning(
+            "[mcp-servers/start] Failed to emit agent-assigned event for '%s': %s",
+            agent_name,
+            e,
+        )
+
+
 @router.post("/mcp-servers/start")
 async def start_all_agents_mcp_servers(
     body: StartAgentMcpServersRequest,
@@ -2405,49 +2636,65 @@ async def start_all_agents_mcp_servers(
             mcp_proxy_url,
         ) = await _setup_env_and_sandbox(body, request)
 
-        all_started: list[str] = []
-        all_already_running: list[str] = []
-        all_failed: list[dict[str, str]] = []
-        any_codemode_rebuilt = False
-        agents_processed: list[str] = []
-
-        for agent_id in list(_agents.keys()):
-            (
-                started,
-                already_running,
-                failed,
-                codemode_rebuilt,
-            ) = await _start_mcp_servers_for_agent(agent_id, body.env_vars, request)
-            all_started.extend(started)
-            all_already_running.extend(already_running)
-            all_failed.extend(failed)
-            if codemode_rebuilt:
-                any_codemode_rebuilt = True
-            agents_processed.append(agent_id)
-
+        agents_processed: list[str] = list(_agents.keys())
         env_count = len(body.env_vars) if body.env_vars else 0
+        auth_header = request.headers.get("Authorization", "")
+        user_token = auth_header.removeprefix("Bearer ").strip() if auth_header else ""
+
+        for current_agent_id in agents_processed:
+            _emit_agent_assigned_event(
+                user_token=user_token,
+                agent_name=current_agent_id,
+                sandbox_variant=sandbox_variant,
+                mcp_proxy_url=mcp_proxy_url,
+                env_count=env_count,
+            )
+
+        # Start MCP servers in a background task so this endpoint
+        # returns immediately.  The UI polls mcp-toolsets-status to
+        # reflect progress via the indicator dot.
+        async def _background_start() -> None:
+            for agent_id in agents_processed:
+                try:
+                    (
+                        started,
+                        already_running,
+                        failed,
+                        codemode_rebuilt,
+                    ) = await _start_mcp_servers_for_agent(
+                        agent_id, body.env_vars, request
+                    )
+                    logger.info(
+                        "[mcp-servers/start] agent '%s': started=%s, "
+                        "already_running=%s, failed=%s, codemode_rebuilt=%s",
+                        agent_id,
+                        started,
+                        already_running,
+                        failed,
+                        codemode_rebuilt,
+                    )
+                except Exception as e:
+                    logger.warning(
+                        "[mcp-servers/start] Failed for agent '%s': %s",
+                        agent_id,
+                        e,
+                    )
+
+        asyncio.create_task(_background_start())
 
         return AgentMcpServersResponse(
             agent_id=None,
             agents_processed=agents_processed,
-            started_servers=all_started,
-            already_running=all_already_running,
-            failed_servers=all_failed,
-            codemode_rebuilt=any_codemode_rebuilt,
+            started_servers=[],
+            already_running=[],
+            failed_servers=[],
+            codemode_rebuilt=False,
             sandbox_configured=sandbox_configured,
             sandbox_variant=sandbox_variant,
             mcp_proxy_url=mcp_proxy_url,
             env_vars_set=env_count,
-            message=_build_mcp_response_message(
-                agents_processed=agents_processed,
-                started=all_started,
-                already_running=all_already_running,
-                failed=all_failed,
-                sandbox_configured=sandbox_configured,
-                sandbox_variant=sandbox_variant,
-                mcp_proxy_url=mcp_proxy_url,
-                env_count=env_count,
-            ),
+            message=f"Sandbox configured ({sandbox_variant}), "
+            f"MCP servers starting in background for {len(agents_processed)} agent(s)",
         )
 
     except HTTPException:
@@ -2520,6 +2767,16 @@ async def start_agent_mcp_servers(
             )
 
         env_count = len(body.env_vars) if body.env_vars else 0
+        auth_header = request.headers.get("Authorization", "")
+        user_token = auth_header.removeprefix("Bearer ").strip() if auth_header else ""
+
+        _emit_agent_assigned_event(
+            user_token=user_token,
+            agent_name=agent_id,
+            sandbox_variant=sandbox_variant,
+            mcp_proxy_url=mcp_proxy_url,
+            env_count=env_count,
+        )
 
         return AgentMcpServersResponse(
             agent_id=agent_id,
@@ -2775,6 +3032,8 @@ class ConfigureFromSpecRequest(BaseModel):
     agent_spec: dict[str, Any] | None = None
     env_vars: list[dict[str, str]] = Field(default_factory=list)
     user_token: str | None = None
+    jupyter_sandbox: str | None = None
+    mcp_proxy_url: str | None = None
 
 
 @router.post("/configure-from-spec")
@@ -2782,16 +3041,24 @@ async def configure_from_spec_endpoint(
     http_request: Request,
     body: ConfigureFromSpecRequest,
 ) -> dict[str, Any]:
-    """Configure and create an agent from an AgentSpec ID.
+    """Configure the running default agent from an AgentSpec ID.
 
     Called by the companion during run-start-hooks when the operator
-    provides an ``agent_spec_id``. Applies env vars and reuses the
-    canonical ``POST /agents`` creation logic so all spec attributes
-    are handled consistently.
+    provides an ``agent_spec_id``.
+
+    The stored agentspec is kept in memory. When an update is triggered,
+    the incoming spec is compared with the stored one.  If they differ
+    the PydanticAI agent is deleted and recreated with the new spec.
+    The running sandbox is **not** restarted — ``CodeSandboxManager``
+    is a singleton whose lifecycle is independent of the agent.
+
+    When ``jupyter_sandbox`` / ``mcp_proxy_url`` are provided the
+    sandbox is configured in the same request, removing the need for
+    a separate ``mcp-servers/start`` call from the companion.
     """
     logger.info("Configuring agent from spec: %s", body.agent_spec_id)
 
-    # Set env vars from companion (secrets, API keys, etc.)
+    # ── 1. Set process env vars from companion (secrets, API keys) ───
     for env_var in body.env_vars:
         name = env_var.get("name", "")
         value = env_var.get("value", "")
@@ -2802,7 +3069,12 @@ async def configure_from_spec_endpoint(
             )
             os.environ[name] = value
 
-    # Validate that the referenced library spec exists.
+    # Store the user JWT so that ToolApprovalConfig can authenticate
+    # to the ai-agents service and set the correct requester_uid.
+    if body.user_token:
+        os.environ["DATALAYER_USER_TOKEN"] = body.user_token
+
+    # ── 2. Validate that the referenced library spec exists ──────────
     spec = get_library_agent_spec(body.agent_spec_id)
     if spec is None:
         raise HTTPException(
@@ -2810,30 +3082,109 @@ async def configure_from_spec_endpoint(
             detail=f"AgentSpec '{body.agent_spec_id}' not found in library.",
         )
 
-    # Delegate to the canonical create flow. Defaults from the library spec
-    # and optional forwarded agent_spec are applied in create_agent().
-    #
-    # Propagate the server-level codemode flag so that sandbox creation
-    # (which is gated on enable_codemode) respects the --codemode startup flag
-    # even when the forwarded agent_spec has no explicit codemode block.
+    target_agent_name = "default"
+
+    # ── 3. Configure sandbox if jupyter_sandbox is provided ──────────
+    #    The sandbox is managed independently of the agent — it survives
+    #    agent deletion/recreation.
+    sandbox_variant: str | None = None
+    mcp_proxy_url: str | None = body.mcp_proxy_url
+    if body.jupyter_sandbox:
+        sandbox_body = StartAgentMcpServersRequest(
+            env_vars=[
+                EnvVar(name=ev.get("name", ""), value=ev.get("value", ""))
+                for ev in body.env_vars
+                if ev.get("name")
+            ],
+            jupyter_sandbox=body.jupyter_sandbox,
+            mcp_proxy_url=body.mcp_proxy_url,
+        )
+        _, sandbox_variant, mcp_proxy_url = await _setup_env_and_sandbox(
+            sandbox_body,
+            http_request,
+            agent_id=target_agent_name,
+        )
+
+    # ── 4. Build the CreateAgentRequest that represents this spec ────
     server_codemode = os.environ.get("AGENT_RUNTIMES_CODEMODE", "").lower() == "true"
 
-    # The UI always talks to the "default" agent, so reconfigure the existing
-    # default agent rather than creating a new one with the spec ID as name.
-    # Delete the existing "default" agent first so create_agent() succeeds.
-    target_agent_name = "default"
-    if target_agent_name in _agents:
-        logger.info(
-            "Removing existing '%s' agent to reconfigure from spec '%s'",
-            target_agent_name,
-            body.agent_spec_id,
-        )
-        try:
-            await delete_agent(target_agent_name)
-        except Exception as e:
-            logger.warning("Failed to delete existing default agent: %s", e)
+    create_request = CreateAgentRequest(
+        name=target_agent_name,
+        agent_spec_id=body.agent_spec_id,
+        agent_spec=body.agent_spec,
+        enable_codemode=server_codemode,
+        jupyter_sandbox=body.jupyter_sandbox,
+    )
+    # Serialise to a dict for comparison (env_vars are excluded since
+    # they don't affect agent identity — only secrets/keys).
+    # jupyter_sandbox and mcp_proxy_url are also excluded: the sandbox
+    # is managed independently and should not trigger an agent restart.
+    new_spec_dict = create_request.model_dump()
+    new_spec_dict.pop("jupyter_sandbox", None)
 
-    # Build env_vars dict for sandbox injection (skip empty entries)
+    # ── 5. Compare with stored spec — restart only if changed ────────
+    stored_spec = _agent_specs.get(target_agent_name)
+    specs_changed = stored_spec != new_spec_dict
+
+    if specs_changed:
+        if stored_spec is not None:
+            logger.info(
+                "[configure-from-spec] Spec changed for '%s' — "
+                "deleting and recreating agent (sandbox preserved)",
+                target_agent_name,
+            )
+        else:
+            logger.info(
+                "[configure-from-spec] No stored spec for '%s' — "
+                "creating agent from spec '%s'",
+                target_agent_name,
+                body.agent_spec_id,
+            )
+
+        # Delete the existing agent if it is registered.
+        # The sandbox is NOT affected — it is managed by the singleton
+        # CodeSandboxManager independently of the agent lifecycle.
+        if target_agent_name in _agents:
+            try:
+                await delete_agent(target_agent_name)
+            except Exception as e:
+                logger.warning("Failed to delete existing default agent: %s", e)
+
+        # (Re)create the agent from the spec via the canonical flow.
+        try:
+            created = await create_agent(create_request, http_request)
+            logger.info(
+                "Agent '%s' (re)created from spec '%s'",
+                target_agent_name,
+                body.agent_spec_id,
+            )
+        except Exception as e:
+            logger.error(
+                "Failed to create agent from spec '%s': %s",
+                body.agent_spec_id,
+                e,
+            )
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to create agent from spec: {str(e)}",
+            )
+    else:
+        logger.info(
+            "[configure-from-spec] Spec unchanged for '%s' — skipping restart",
+            target_agent_name,
+        )
+
+    # ── 6. Emit companion assignment event + start MCP servers/env setup ─────
+    _emit_agent_assigned_event(
+        user_token=body.user_token,
+        agent_name=target_agent_name,
+        sandbox_variant=sandbox_variant,
+        mcp_proxy_url=mcp_proxy_url,
+        env_count=len(body.env_vars),
+        assignment_source="companion-configure-from-spec",
+    )
+
+    # ── 7. Start MCP servers + inject sandbox env vars (async) ───────
     sandbox_env_vars: dict[str, str] = {}
     for env_var in body.env_vars:
         name = env_var.get("name", "")
@@ -2841,26 +3192,43 @@ async def configure_from_spec_endpoint(
         if name and value:
             sandbox_env_vars[name] = value
 
-    try:
-        created = await create_agent(
-            CreateAgentRequest(
-                name=target_agent_name,
-                agent_spec_id=body.agent_spec_id,
-                agent_spec=body.agent_spec,
-                enable_codemode=server_codemode,
-            ),
-            http_request,
-        )
-        logger.info(
-            "Agent '%s' reconfigured from spec '%s' and registered",
-            target_agent_name,
-            body.agent_spec_id,
-        )
+    async def _background_mcp_and_sandbox() -> None:
+        """Fire-and-forget: start MCP servers + inject sandbox env vars."""
+        # ── MCP servers ──────────────────────────────────────
+        if target_agent_name in _agents:
+            env_var_objects = [
+                EnvVar(name=ev.get("name", ""), value=ev.get("value", ""))
+                for ev in body.env_vars
+                if ev.get("name")
+            ]
+            try:
+                (
+                    started,
+                    already_running,
+                    failed,
+                    codemode_rebuilt,
+                ) = await _start_mcp_servers_for_agent(
+                    target_agent_name,
+                    env_var_objects,
+                    request=http_request,
+                )
+                logger.info(
+                    "[configure-from-spec] MCP server start results for '%s': "
+                    "started=%s, already_running=%s, failed=%s, codemode_rebuilt=%s",
+                    target_agent_name,
+                    started,
+                    already_running,
+                    failed,
+                    codemode_rebuilt,
+                )
+            except Exception as e:
+                logger.warning(
+                    "[configure-from-spec] Failed to start MCP servers for '%s': %s",
+                    target_agent_name,
+                    e,
+                )
 
-        # Inject env vars into the agent's codemode sandbox.
-        # create_agent() creates the sandbox (Jupyter kernel) but env vars
-        # set on os.environ only live in the FastAPI process — the kernel
-        # is a separate process that doesn't inherit them.
+        # ── Sandbox env-var injection ────────────────────────
         if sandbox_env_vars:
             try:
                 from ..services.code_sandbox_manager import get_code_sandbox_manager
@@ -2885,34 +3253,21 @@ async def configure_from_spec_endpoint(
                     e,
                 )
 
-        created_id = getattr(created, "id", target_agent_name)
-        created_model = getattr(created, "model", spec.model or DEFAULT_MODEL)
+    asyncio.create_task(_background_mcp_and_sandbox())
 
-        # ── Trigger invoker for "once" triggers ──────────────────
-        trigger = getattr(spec, "trigger", None)
-        if trigger is None and body.agent_spec:
-            trigger_raw = body.agent_spec.get("trigger")
-            if isinstance(trigger_raw, dict):
-                trigger = trigger_raw
-
-        # NOTE: "once" triggers are NOT auto-fired on agent creation.
-        # The user must explicitly invoke them via POST /{agent_id}/trigger/run.
-
-        return {
-            "success": True,
-            "agent_id": created_id,
-            "model": created_model,
-            "message": f"Agent 'default' reconfigured from spec '{body.agent_spec_id}'.",
-        }
-
-    except Exception as e:
-        logger.error(
-            "Failed to configure agent from spec '%s': %s", body.agent_spec_id, e
-        )
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to create agent from spec: {str(e)}",
-        )
+    effective_model = spec.model or DEFAULT_MODEL
+    return {
+        "success": True,
+        "agent_id": target_agent_name,
+        "model": effective_model
+        if isinstance(effective_model, str)
+        else str(effective_model),
+        "specs_changed": specs_changed,
+        "message": (
+            f"Agent 'default' {'(re)created' if specs_changed else 'unchanged'} "
+            f"from spec '{body.agent_spec_id}'."
+        ),
+    }
 
 
 # ── Trigger / Run ────────────────────────────────────────────────────────
@@ -2958,7 +3313,17 @@ async def trigger_run(
     auth_header = request.headers.get("Authorization", "")
     token = auth_header.removeprefix("Bearer ").strip() if auth_header else ""
 
-    base_url = os.environ.get("DATALAYER_RUN_URL", "https://prod1.datalayer.run")
+    events_base_url = (
+        os.environ.get("DATALAYER_AI_AGENTS_URL")
+        or os.environ.get("AI_AGENTS_URL")
+        or os.environ.get("DATALAYER_RUN_URL")
+        or "https://prod1.datalayer.run"
+    )
+    runtimes_base_url = (
+        os.environ.get("DATALAYER_RUN_URL")
+        or os.environ.get("RUNTIMES_URL")
+        or "https://r1.datalayer.run"
+    )
     runtime_id = os.environ.get("HOSTNAME")
 
     import asyncio
@@ -2971,7 +3336,8 @@ async def trigger_run(
         agent_id=agent_id,
         agent_spec_id=agent_spec_id,
         token=token,
-        base_url=base_url,
+        base_url=events_base_url,
+        runtime_base_url=runtimes_base_url,
         runtime_id=runtime_id,
     )
 

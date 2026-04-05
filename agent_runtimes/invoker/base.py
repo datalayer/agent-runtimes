@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -34,7 +35,7 @@ class BaseInvoker(ABC):
     """Abstract base class for agent trigger invokers.
 
     Subclasses implement ``invoke`` to execute the agent's trigger
-    logic and emit lifecycle events (AGENT_STARTED, AGENT_ENDED).
+    logic and emit lifecycle events (AGENT_STARTED, AGENT_OUTPUT).
 
     Parameters
     ----------
@@ -46,6 +47,9 @@ class BaseInvoker(ABC):
         User JWT token for authenticated API calls.
     base_url : str
         Base URL for the AI Agents events API.
+    runtime_base_url : str | None
+        Base URL for the Runtimes API used for runtime termination.
+        Falls back to ``DATALAYER_RUN_URL`` when not set.
     runtime_id : str | None
         Kubernetes pod name (HOSTNAME).  Used as the ``agent_id``
         when creating events and when terminating the runtime via
@@ -58,13 +62,28 @@ class BaseInvoker(ABC):
         agent_spec_id: str,
         token: str,
         base_url: str = "https://prod1.datalayer.run",
+        runtime_base_url: str | None = None,
         runtime_id: str | None = None,
     ) -> None:
         self.agent_id = agent_id
         self.agent_spec_id = agent_spec_id
         self.token = token
         self.base_url = base_url
+        self.runtime_base_url = (
+            runtime_base_url
+            or os.environ.get("DATALAYER_RUN_URL")
+            or "https://r1.datalayer.run"
+        )
         self.runtime_id = runtime_id or agent_id
+        logger.info(
+            "Invoker initialised: agent_id=%s, agent_spec_id=%s, "
+            "runtime_id=%s, base_url=%s, runtime_base_url=%s",
+            self.agent_id,
+            self.agent_spec_id,
+            self.runtime_id,
+            self.base_url,
+            self.runtime_base_url,
+        )
 
     @abstractmethod
     async def invoke(self, trigger_config: dict[str, Any]) -> InvokerResult:
