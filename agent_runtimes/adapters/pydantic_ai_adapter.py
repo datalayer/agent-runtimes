@@ -470,7 +470,7 @@ class PydanticAIAdapter(BaseAgent):
 
             request_start = time.perf_counter()
 
-            current_prompt: str | None = prompt
+            current_prompt = prompt
             current_message_history = message_history if message_history else None
             deferred_tool_results: DeferredToolResults | None = None
             result = None
@@ -522,7 +522,7 @@ class PydanticAIAdapter(BaseAgent):
                         metadata=deferred_requests.metadata,
                     )
                     current_message_history = result.all_messages()
-                    current_prompt = None
+                    current_prompt = ""
                     logger.info(
                         "PydanticAIAdapter: Processed %s deferred approval(s), continuing run",
                         len(approval_results),

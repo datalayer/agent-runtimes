@@ -3312,8 +3312,6 @@ async def trigger_run(
     # Extract user token from Authorization header
     auth_header = request.headers.get("Authorization", "")
     token = auth_header.removeprefix("Bearer ").strip() if auth_header else ""
-    if token:
-        os.environ["DATALAYER_USER_TOKEN"] = token
 
     events_base_url = (
         os.environ.get("DATALAYER_AI_AGENTS_URL")
