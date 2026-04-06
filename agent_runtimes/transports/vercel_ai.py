@@ -471,6 +471,15 @@ class VercelAITransport(BaseTransport):
                     user_tokens=input_tokens,
                     assistant_tokens=output_tokens,
                 )
+                # Persist message history for refresh/history endpoint support.
+                try:
+                    stats.store_messages(result.all_messages())
+                except Exception as e:
+                    logger.warning(
+                        "[Vercel AI] Could not store message history for agent '%s': %s",
+                        agent_id,
+                        e,
+                    )
 
             logger.info(
                 "[Vercel AI] on_complete usage tracked: agent_id=%s input_tokens=%s output_tokens=%s requests=%s tool_calls=%s",

@@ -219,6 +219,11 @@ class ToolApprovalManager:
         self, tool_name: str, tool_args: dict[str, Any]
     ) -> dict[str, Any]:
         """Create an approval request and poll until resolved."""
+        from agent_runtimes.routes.tool_approvals import (
+            get_local_approval_status,
+            mirror_approval_to_local,
+        )
+
         client = await self._get_client()
 
         payload = {
@@ -259,6 +264,13 @@ class ToolApprovalManager:
                 "Manual approval required, but ai-agents did not return an approval ID."
             )
 
+        # Mirror the approval to the local in-memory store so the frontend
+        # can discover it via /api/v1/tool-approvals.
+        try:
+            await mirror_approval_to_local(approval_data)
+        except Exception:
+            logger.debug("Failed to mirror approval %s to local store", approval_id)
+
         logger.info(
             "Waiting for human approval of tool '%s' (approval_id=%s, timeout=%ss)",
             tool_name,
@@ -271,6 +283,35 @@ class ToolApprovalManager:
             await asyncio.sleep(self.config.poll_interval)
             elapsed += self.config.poll_interval
 
+            # Check the local store first — the frontend approves/rejects
+            # via the local /api/v1/tool-approvals endpoints.
+            try:
+                local_status = await get_local_approval_status(approval_id)
+                if local_status and local_status != "pending":
+                    if local_status == "approved":
+                        logger.info(
+                            "Tool '%s' approved locally (approval_id=%s)",
+                            tool_name,
+                            approval_id,
+                        )
+                        return {
+                            "status": "approved",
+                            "id": approval_id,
+                            "tool_name": tool_name,
+                        }
+                    elif local_status == "rejected":
+                        logger.info(
+                            "Tool '%s' rejected locally (approval_id=%s)",
+                            tool_name,
+                            approval_id,
+                        )
+                        raise ToolApprovalRejectedError(tool_name, None)
+            except ToolApprovalRejectedError:
+                raise
+            except Exception:
+                pass
+
+            # Fall back to polling the remote service.
             try:
                 resp = await client.get(f"{approval_path}/{approval_id}")
                 resp.raise_for_status()

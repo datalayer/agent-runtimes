@@ -5,13 +5,19 @@
 
 from __future__ import annotations
 
+import json
 import logging
+import time
 import traceback
+from datetime import datetime, timezone
 from typing import Any
 
 from agent_runtimes.events import create_event
 
 from .base import BaseInvoker, InvokerResult
+
+# Minimum interval (seconds) between progressive history flushes.
+_FLUSH_INTERVAL = 0.3
 
 logger = logging.getLogger(__name__)
 
@@ -165,8 +171,15 @@ class OnceInvoker(BaseInvoker):
     async def _run_agent(self, prompt: str) -> str | None:
         """Run the registered agent adapter with the trigger prompt.
 
+        Uses the adapter streaming API so once triggers can emit streamed output,
+        while still allowing deferred approval continuations in the adapter.
+
+        Text deltas are progressively flushed to the usage tracker so that
+        ``/api/v1/history`` returns partial content while streaming.
+
         We import here to avoid circular imports at module level.
         """
+        from agent_runtimes.context.usage import get_usage_tracker
         from agent_runtimes.routes.acp import _agents  # registered agents
 
         pair = _agents.get(self.agent_id)
@@ -181,13 +194,72 @@ class OnceInvoker(BaseInvoker):
 
         ctx = AgentContext(
             session_id=f"once-trigger-{self.agent_id}",
-            metadata={"user_token": self.token} if self.token else {},
+            metadata={
+                "user_token": self.token,
+                "force_exhaustive_end_strategy": True,
+            }
+            if self.token
+            else {"force_exhaustive_end_strategy": True},
         )
-        response = await agent.run(prompt, ctx)
-        content = getattr(response, "content", None)
-        if content is None:
-            raise RuntimeError("Agent adapter returned no content field")
-        return content
+
+        tracker = get_usage_tracker()
+        now_iso = datetime.now(timezone.utc).isoformat()
+
+        content_parts: list[str] = []
+        output_data: Any | None = None
+        last_flush = time.monotonic()
+
+        def _flush_streaming_text() -> None:
+            """Persist a synthetic assistant message so history polling sees partial text."""
+            nonlocal last_flush
+            stats = tracker.get_agent_stats(self.agent_id)
+            if stats is None:
+                stats = tracker.register_agent(self.agent_id)
+            accumulated = "".join(content_parts)
+            if not accumulated:
+                return
+            stats.message_history = [
+                {
+                    "kind": "request",
+                    "timestamp": now_iso,
+                    "parts": [{"part_kind": "user-prompt", "content": prompt}],
+                },
+                {
+                    "kind": "response",
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "parts": [{"part_kind": "text", "content": accumulated}],
+                },
+            ]
+            last_flush = time.monotonic()
+
+        async for event in agent.stream(prompt, ctx):
+            if event.type == "text":
+                if isinstance(event.data, str):
+                    content_parts.append(event.data)
+                else:
+                    content_parts.append(str(event.data))
+                # Periodically flush to make partial text visible via /api/v1/history
+                if time.monotonic() - last_flush >= _FLUSH_INTERVAL:
+                    _flush_streaming_text()
+            elif event.type == "output":
+                output_data = event.data
+            elif event.type == "error":
+                raise RuntimeError(str(event.data))
+
+        # Final flush so the last deltas are visible before the adapter
+        # stores the complete message history.
+        _flush_streaming_text()
+
+        if output_data is not None:
+            if isinstance(output_data, str):
+                return output_data.strip() or None
+            try:
+                return json.dumps(output_data, ensure_ascii=False)
+            except TypeError:
+                return str(output_data)
+
+        content = "".join(content_parts).strip()
+        return content or None
 
     async def _terminate_runtime(self) -> None:
         """Terminate the runtime after a once-trigger completes.

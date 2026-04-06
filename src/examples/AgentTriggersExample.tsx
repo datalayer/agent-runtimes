@@ -53,6 +53,11 @@ import { SignInSimple } from '@datalayer/core/lib/views/iam';
 import { UserBadge } from '@datalayer/core/lib/views/profile';
 import { Chat } from '../chat';
 import {
+  ToolApprovalBanner,
+  ToolApprovalDialog,
+  type PendingApproval,
+} from '../chat/tools';
+import {
   useAgentEvents,
   useDeleteAgentEvent,
   useMarkEventRead,
@@ -67,6 +72,8 @@ const queryClient = new QueryClient();
 
 const AGENT_NAME = 'trigger-demo-agent';
 const AGENT_SPEC_ID = 'demo-one-trigger';
+const APPROVAL_AGENT_NAME = 'trigger-approval-demo-agent';
+const APPROVAL_AGENT_SPEC_ID = 'demo-one-trigger-approval';
 const DEFAULT_LOCAL_BASE_URL =
   import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
 const DEFAULT_CRON = '0 8 * * *'; // daily at 08:00 UTC
@@ -82,6 +89,8 @@ interface TriggerRecord {
   duration_ms?: number;
   source?: TriggerTab;
 }
+
+
 
 // ─── Inner component (rendered after auth) ─────────────────────────────────
 
@@ -115,16 +124,57 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
   // Once trigger state
   const [isLaunchingOnce, setIsLaunchingOnce] = useState(false);
   const [onceFlash, setOnceFlash] = useState<string | null>(null);
+  const [lastOnceStartedAt, setLastOnceStartedAt] = useState<string | null>(null);
+  const [hasTriggeredOnce, setHasTriggeredOnce] = useState(false);
 
   // Webhook state
   const [webhookUrl, setWebhookUrl] = useState<string | null>(null);
   const [webhookSecret, setWebhookSecret] = useState<string | null>(null);
   const [webhookEnabled, setWebhookEnabled] = useState(false);
 
+  // Sidebar messages state
+  const [sidebarMessages, setSidebarMessages] = useState<Array<{
+    id: string;
+    role: string;
+    content: unknown;
+    createdAt?: string;
+  }>>([]);
+  const [sidebarMessagesError, setSidebarMessagesError] = useState<string | null>(null);
+
   // Event state
   const [eventTopic, setEventTopic] = useState('');
   const [eventFilter, setEventFilter] = useState('');
   const [eventSubscribed, setEventSubscribed] = useState(false);
+
+  // Approval agent state
+  const [approvalAgentId, setApprovalAgentId] = useState<string>(APPROVAL_AGENT_NAME);
+  const [approvalAgentReady, setApprovalAgentReady] = useState(false);
+  const [isLaunchingApproval, setIsLaunchingApproval] = useState(false);
+  const [approvalFlash, setApprovalFlash] = useState<string | null>(null);
+  const [hasTriggeredApproval, setHasTriggeredApproval] = useState(false);
+
+  // Tool approval state
+  interface ToolApprovalRequest {
+    id: string;
+    tool_name: string;
+    tool_args?: Record<string, unknown>;
+    note?: string;
+    created_at?: string;
+    status?: string;
+    agent_id?: string;
+  }
+  const [approvals, setApprovals] = useState<ToolApprovalRequest[]>([]);
+  const [approvalLoading, setApprovalLoading] = useState<string | null>(null);
+  const [approvalError, setApprovalError] = useState<string | null>(null);
+  const [activeApproval, setActiveApproval] = useState<ToolApprovalRequest | null>(null);
+
+  // Approval sidebar messages
+  const [approvalSidebarMessages, setApprovalSidebarMessages] = useState<Array<{
+    id: string;
+    role: string;
+    content: unknown;
+    createdAt?: string;
+  }>>([]);
 
   // Events hooks
   const eventsQuery = useAgentEvents(agentId);
@@ -169,7 +219,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
             name: AGENT_NAME,
             description: 'Agent with cron, webhook, event, and manual triggers',
             agent_library: 'pydantic-ai',
-            transport: 'ag-ui',
+            transport: 'vercel-ai',
             agent_spec_id: AGENT_SPEC_ID,
             tools: [],
           }),
@@ -230,6 +280,265 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
   //       /trigger/history endpoints on the platform API.
   //       Currently these endpoints don't exist on either the local
   //       agent-runtimes server or the ai-agents service.
+
+
+
+  // ── Poll chat history for sidebar messages ─────────────────────────────
+
+  useEffect(() => {
+    if (!isReady || !agentId) return;
+
+    let disposed = false;
+
+    const loadMessages = async () => {
+      if (!disposed) {
+        setSidebarMessagesError(null);
+      }
+      try {
+        const res = await authFetch(
+          `${agentBaseUrl}/api/v1/history?agent_id=${encodeURIComponent(agentId)}`,
+          { method: 'GET' },
+        );
+
+        if (!res.ok) {
+          throw new Error(`History fetch failed (${res.status})`);
+        }
+
+        const data = await res.json();
+        const messages = Array.isArray(data?.messages) ? data.messages : [];
+        if (!disposed) {
+          setSidebarMessages(messages);
+        }
+      } catch (error) {
+        if (!disposed) {
+          setSidebarMessagesError(
+            error instanceof Error ? error.message : 'Failed to load chat history',
+          );
+        }
+      } finally {
+        // no-op
+      }
+    };
+
+    void loadMessages();
+    const interval = window.setInterval(() => {
+      void loadMessages();
+    }, 2000);
+
+    return () => {
+      disposed = true;
+      window.clearInterval(interval);
+    };
+  }, [isReady, agentId, agentBaseUrl, authFetch]);
+
+  // ── Create approval agent on local server ────────────────────────────────
+
+  useEffect(() => {
+    if (!isReady) return;
+    let isCancelled = false;
+
+    const createApprovalAgent = async () => {
+      try {
+        const response = await authFetch(`${agentBaseUrl}/api/v1/agents`, {
+          method: 'POST',
+          body: JSON.stringify({
+            name: APPROVAL_AGENT_NAME,
+            description: 'Agent with once trigger and tool approval',
+            agent_library: 'pydantic-ai',
+            transport: 'vercel-ai',
+            agent_spec_id: APPROVAL_AGENT_SPEC_ID,
+            tools: ['runtime-sensitive-echo'],
+          }),
+        });
+
+        let resolvedId = APPROVAL_AGENT_NAME;
+
+        if (response.ok) {
+          const data = await response.json();
+          resolvedId = data?.id || APPROVAL_AGENT_NAME;
+        } else {
+          const contentType = response.headers.get('content-type') || '';
+          let detail = '';
+          if (contentType.includes('application/json')) {
+            const data = await response.json().catch(() => null);
+            detail = data?.detail || data?.message || '';
+          } else {
+            detail = await response.text();
+          }
+          if (response.status === 409 || /already exists/i.test(detail || '')) {
+            // Already running — reuse
+          } else {
+            console.warn('Failed to create approval agent:', detail);
+            return;
+          }
+        }
+
+        if (!isCancelled) {
+          setApprovalAgentId(resolvedId);
+          setApprovalAgentReady(true);
+        }
+      } catch (error) {
+        console.warn('Approval agent creation failed:', error);
+      }
+    };
+
+    void createApprovalAgent();
+    return () => { isCancelled = true; };
+  }, [isReady, agentBaseUrl, authFetch]);
+
+  // ── Poll tool approvals ─────────────────────────────────────────────────
+
+  const pollApprovals = useCallback(async () => {
+    if (!approvalAgentReady) return;
+    try {
+      const res = await authFetch(`${agentBaseUrl}/api/v1/tool-approvals`);
+      if (!res.ok) return;
+      const data = await res.json();
+      const all = Array.isArray(data) ? data : (data.approvals ?? data.requests ?? []);
+      const pending = all.filter(
+        (a: any) => a.status === 'pending' && (!a.agent_id || a.agent_id === approvalAgentId),
+      );
+      setApprovals(pending);
+    } catch {
+      // Non-fatal
+    }
+  }, [approvalAgentReady, agentBaseUrl, approvalAgentId, authFetch]);
+
+  useEffect(() => {
+    if (!hasTriggeredApproval) return;
+    void pollApprovals();
+    const interval = setInterval(pollApprovals, 2000);
+    return () => clearInterval(interval);
+  }, [hasTriggeredApproval, pollApprovals]);
+
+  // ── Poll approval agent history ─────────────────────────────────────────
+
+  useEffect(() => {
+    if (!hasTriggeredApproval || !approvalAgentReady) return;
+    let disposed = false;
+
+    const loadMessages = async () => {
+      try {
+        const res = await authFetch(
+          `${agentBaseUrl}/api/v1/history?agent_id=${encodeURIComponent(approvalAgentId)}`,
+          { method: 'GET' },
+        );
+        if (!res.ok) return;
+        const data = await res.json();
+        const messages = Array.isArray(data?.messages) ? data.messages : [];
+        if (!disposed) {
+          setApprovalSidebarMessages(messages);
+        }
+      } catch {
+        // Non-fatal
+      }
+    };
+
+    void loadMessages();
+    const interval = window.setInterval(() => void loadMessages(), 2000);
+    return () => { disposed = true; window.clearInterval(interval); };
+  }, [hasTriggeredApproval, approvalAgentReady, approvalAgentId, agentBaseUrl, authFetch]);
+
+  // ── Approve / Reject handlers ───────────────────────────────────────────
+
+  const handleApprove = useCallback(async (requestId: string) => {
+    setApprovalLoading(requestId);
+    setApprovalError(null);
+    try {
+      const res = await authFetch(
+        `${agentBaseUrl}/api/v1/tool-approvals/${requestId}/approve`,
+        { method: 'POST', body: JSON.stringify({}) },
+      );
+      if (!res.ok) {
+        throw new Error(`Approve failed (${res.status})`);
+      }
+      setApprovals(prev => prev.filter(a => a.id !== requestId));
+      void pollApprovals();
+    } catch (error) {
+      setApprovalError(error instanceof Error ? error.message : 'Failed to approve');
+    } finally {
+      setApprovalLoading(null);
+    }
+  }, [agentBaseUrl, authFetch, pollApprovals]);
+
+  const handleReject = useCallback(async (requestId: string, note?: string) => {
+    setApprovalLoading(requestId);
+    setApprovalError(null);
+    try {
+      const res = await authFetch(
+        `${agentBaseUrl}/api/v1/tool-approvals/${requestId}/reject`,
+        { method: 'POST', body: JSON.stringify(note ? { note } : {}) },
+      );
+      if (!res.ok) {
+        throw new Error(`Reject failed (${res.status})`);
+      }
+      setApprovals(prev => prev.filter(a => a.id !== requestId));
+      void pollApprovals();
+    } catch (error) {
+      setApprovalError(error instanceof Error ? error.message : 'Failed to reject');
+    } finally {
+      setApprovalLoading(null);
+    }
+  }, [agentBaseUrl, authFetch, pollApprovals]);
+
+  // ── Launch once trigger with approval ────────────────────────────────────
+
+  const handleLaunchOnceApproval = useCallback(async () => {
+    if (!agentBaseUrl || !approvalAgentReady) return;
+    setIsLaunchingApproval(true);
+    setApprovalFlash(null);
+    setHasTriggeredApproval(true);
+    const runId = `once-approval-${Date.now()}`;
+    const startTime = new Date().toISOString();
+    setTriggerHistory(prev => [
+      {
+        id: runId,
+        timestamp: startTime,
+        status: 'running' as const,
+        source: 'once' as TriggerTab,
+      },
+      ...prev,
+    ]);
+    try {
+      const res = await authFetch(
+        `${agentBaseUrl}/api/v1/agents/${approvalAgentId}/trigger/run`,
+        { method: 'POST', body: JSON.stringify({ source: 'once' }) },
+      );
+      if (res.ok) {
+        setApprovalFlash('Once trigger with approval launched — waiting for tool approval.');
+        setTriggerHistory(prev =>
+          prev.map(r =>
+            r.id === runId
+              ? { ...r, status: 'success' as const, duration_ms: Date.now() - new Date(startTime).getTime() }
+              : r,
+          ),
+        );
+      } else {
+        setApprovalFlash(`Launch failed (${res.status})`);
+        setTriggerHistory(prev =>
+          prev.map(r => r.id === runId ? { ...r, status: 'failure' as const } : r),
+        );
+      }
+    } catch {
+      setApprovalFlash('Network error');
+      setTriggerHistory(prev =>
+        prev.map(r => r.id === runId ? { ...r, status: 'failure' as const } : r),
+      );
+    } finally {
+      setIsLaunchingApproval(false);
+    }
+  }, [agentBaseUrl, approvalAgentReady, approvalAgentId, authFetch]);
+
+  // ── Pending approvals for banner/dialog ──────────────────────────────────
+
+  const pendingApprovals: PendingApproval[] = approvals.map(req => ({
+    id: req.id,
+    toolName: req.tool_name,
+    toolDescription: req.note,
+    args: req.tool_args ?? {},
+    agentId: approvalAgentId,
+    requestedAt: req.created_at ?? new Date().toISOString(),
+  }));
 
   // ── Update cron ──────────────────────────────────────────────────────────
 
@@ -384,6 +693,8 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
     setOnceFlash(null);
     const runId = `once-${Date.now()}`;
     const startTime = new Date().toISOString();
+    setLastOnceStartedAt(startTime);
+    setHasTriggeredOnce(true);
     setTriggerHistory(prev => [
       {
         id: runId,
@@ -459,6 +770,9 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
     return <ErrorView error={hookError} onLogout={onLogout} />;
   }
 
+  const triggerRunCurl = `curl -X POST '${agentBaseUrl}/api/v1/agents/${agentId}/trigger/run' -H 'Content-Type: application/json'${token ? " -H 'Authorization: Bearer <TOKEN>'" : ''} --data '{"source":"once"}'`;
+  const historyCurl = `curl '${agentBaseUrl}/api/v1/history?agent_id=default' -H 'Content-Type: application/json'${token ? " -H 'Authorization: Bearer <TOKEN>'" : ''}`;
+
   return (
     <Box
       sx={{
@@ -495,30 +809,67 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
           Sign out
         </Button>
       </Box>
+
+      {/* Tool Approval Banner */}
+      <ToolApprovalBanner
+        pendingApprovals={pendingApprovals}
+        onReview={approval => {
+          const req = approvals.find(a => a.id === approval.id) || null;
+          setActiveApproval(req);
+        }}
+        onApproveAll={async () => {
+          for (const a of approvals) {
+            await handleApprove(a.id);
+          }
+        }}
+      />
+
+      {/* Tool Approval Dialog */}
+      <ToolApprovalDialog
+        isOpen={!!activeApproval}
+        toolName={activeApproval?.tool_name ?? ''}
+        toolDescription={activeApproval?.note}
+        args={activeApproval?.tool_args ?? {}}
+        onApprove={async () => {
+          if (activeApproval) {
+            await handleApprove(activeApproval.id);
+            setActiveApproval(null);
+          }
+        }}
+        onDeny={async () => {
+          if (activeApproval) {
+            await handleReject(activeApproval.id, 'Rejected from dialog');
+            setActiveApproval(null);
+          }
+        }}
+        onClose={() => setActiveApproval(null)}
+      />
+
+      {approvalError && (
+        <Box sx={{ px: 3, py: 1 }}>
+          <Text sx={{ color: 'danger.fg', fontSize: 0 }}>{approvalError}</Text>
+        </Box>
+      )}
+
       <Box sx={{ flex: 1, minHeight: 0, display: 'flex' }}>
         {/* Left: Chat */}
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <Chat
-            protocol="ag-ui"
+            protocol="vercel-ai"
             baseUrl={agentBaseUrl}
             agentId={agentId}
             authToken={chatAuthToken}
             title="Trigger Agent"
-            placeholder="Ask about your scheduled or event-driven KPI reports…"
-            description={`Cron: ${cronExpr} | Webhook: ${webhookEnabled ? 'on' : 'off'} | Event: ${eventSubscribed ? eventTopic : 'none'}`}
+            description={`View-only trigger output. Cron: ${cronExpr} | Webhook: ${webhookEnabled ? 'on' : 'off'} | Event: ${eventSubscribed ? eventTopic : 'none'}`}
             showHeader={true}
-            autoFocus
+            autoFocus={false}
             height="100%"
             runtimeId={agentId}
             historyEndpoint={`${agentBaseUrl}/api/v1/history`}
-            suggestions={[
-              {
-                title: 'Last run',
-                message: 'What happened in the last scheduled run?',
-              },
-              { title: 'KPIs today', message: "Show me today's KPI summary" },
-            ]}
-            submitOnSuggestionClick
+            showInput={false}
+            showModelSelector={false}
+            showToolsMenu={false}
+            showSkillsMenu={false}
           />
         </Box>
 
@@ -604,6 +955,32 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
                 terminate the runtime automatically.
               </Text>
 
+              <Box
+                sx={{
+                  bg: 'canvas.subtle',
+                  border: '1px solid',
+                  borderColor: 'border.default',
+                  borderRadius: 2,
+                  p: 2,
+                  mb: 2,
+                  display: 'grid',
+                  gap: 1,
+                }}
+              >
+                <Text sx={{ fontSize: 0 }}>
+                  <strong>Agent ID:</strong> {agentId}
+                </Text>
+                <Text sx={{ fontSize: 0 }}>
+                  <strong>Base URL:</strong> {agentBaseUrl}
+                </Text>
+                {lastOnceStartedAt && (
+                  <Text sx={{ fontSize: 0 }}>
+                    <strong>Last once launch:</strong>{' '}
+                    {new Date(lastOnceStartedAt).toLocaleString()}
+                  </Text>
+                )}
+              </Box>
+
               <Button
                 size="small"
                 variant="primary"
@@ -613,6 +990,17 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
                 sx={{ width: '100%' }}
               >
                 {isLaunchingOnce ? 'Launching…' : 'Launch Once'}
+              </Button>
+
+              <Button
+                size="small"
+                variant="danger"
+                leadingVisual={ZapIcon}
+                onClick={handleLaunchOnceApproval}
+                disabled={isLaunchingApproval || !approvalAgentReady}
+                sx={{ width: '100%', mt: 2 }}
+              >
+                {isLaunchingApproval ? 'Launching…' : 'Launch Once with Approval'}
               </Button>
 
               {onceFlash && (
@@ -625,6 +1013,451 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
                   {onceFlash}
                 </Flash>
               )}
+
+              {approvalFlash && (
+                <Flash
+                  variant={
+                    approvalFlash.includes('launched') ? 'success' : 'danger'
+                  }
+                  sx={{ mt: 2, fontSize: 0 }}
+                >
+                  {approvalFlash}
+                </Flash>
+              )}
+
+              {/* ── Generated Output ───────────────────────────────── */}
+              {hasTriggeredOnce && (
+              <>
+              <Heading as="h4" sx={{ fontSize: 1, mt: 3, mb: 2 }}>
+                Generated Output
+              </Heading>
+
+              {(() => {
+                const outputEvent = lastOnceStartedAt
+                  ? [...agentEvents]
+                      .filter(
+                        e =>
+                          e.kind === 'agent-output' &&
+                          new Date(e.created_at).getTime() >=
+                            new Date(lastOnceStartedAt).getTime() - 5000,
+                      )
+                      .sort(
+                        (a, b) =>
+                          new Date(b.created_at).getTime() -
+                          new Date(a.created_at).getTime(),
+                      )[0]
+                  : undefined;
+
+                if (!outputEvent) {
+                  return (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                      <Spinner size="small" />
+                      <Text sx={{ color: 'fg.muted', fontSize: 0 }}>
+                        Waiting for agent output…
+                      </Text>
+                    </Box>
+                  );
+                }
+
+                const p = outputEvent.payload as Record<string, any> | undefined;
+                const outputText = p?.outputs ? String(p.outputs) : '';
+                const exitStatus = p?.exit_status;
+                const durationMs = p?.duration_ms;
+                const endedAt = p?.ended_at;
+
+                return (
+                  <Box
+                    sx={{
+                      mb: 2,
+                      border: '1px solid',
+                      borderColor:
+                        exitStatus === 'error'
+                          ? 'danger.muted'
+                          : 'success.muted',
+                      borderRadius: 2,
+                      overflow: 'hidden',
+                    }}
+                  >
+                    {/* Header bar */}
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1,
+                        px: 2,
+                        py: 1,
+                        bg:
+                          exitStatus === 'error'
+                            ? 'danger.subtle'
+                            : 'success.subtle',
+                        borderBottom: '1px solid',
+                        borderColor:
+                          exitStatus === 'error'
+                            ? 'danger.muted'
+                            : 'success.muted',
+                      }}
+                    >
+                      <Label
+                        variant={
+                          exitStatus === 'error' ? 'danger' : 'success'
+                        }
+                        size="small"
+                      >
+                        {exitStatus ?? 'completed'}
+                      </Label>
+                      {durationMs != null && (
+                        <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
+                          {(Number(durationMs) / 1000).toFixed(1)}s
+                        </Text>
+                      )}
+                      {endedAt && (
+                        <Text
+                          sx={{
+                            fontSize: 0,
+                            color: 'fg.muted',
+                            ml: 'auto',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {new Date(endedAt).toLocaleString()}
+                        </Text>
+                      )}
+                      <Button
+                        size="small"
+                        variant="invisible"
+                        sx={{ p: 1 }}
+                        onClick={() =>
+                          navigator.clipboard.writeText(outputText)
+                        }
+                      >
+                        <CopyIcon size={12} />
+                      </Button>
+                    </Box>
+                    {/* Output body */}
+                    <Box
+                      sx={{
+                        p: 2,
+                        bg: 'canvas.default',
+                        maxHeight: 300,
+                        overflow: 'auto',
+                      }}
+                    >
+                      <Text
+                        sx={{
+                          fontSize: 0,
+                          color: 'fg.default',
+                          display: 'block',
+                          whiteSpace: 'pre-wrap',
+                          wordBreak: 'break-word',
+                          fontFamily: 'mono',
+                        }}
+                      >
+                        {outputText || '(empty output)'}
+                      </Text>
+                    </Box>
+                  </Box>
+                );
+              })()}
+              </>
+              )}
+
+              {/* ── Streaming Messages ─────────────────────────────────── */}
+              {hasTriggeredOnce && (
+              <>
+              <Heading as="h4" sx={{ fontSize: 1, mt: 3, mb: 2 }}>
+                Streaming Messages
+                {isLaunchingOnce && (
+                  <Spinner size="small" sx={{ ml: 2, verticalAlign: 'middle' }} />
+                )}
+              </Heading>
+
+              {sidebarMessagesError ? (
+                <Flash variant="danger" sx={{ fontSize: 0, mb: 2 }}>
+                  {sidebarMessagesError}
+                </Flash>
+              ) : sidebarMessages.filter(msg => msg.role !== 'user').length === 0 ? (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                  <Spinner size="small" />
+                  <Text sx={{ color: 'fg.muted', fontSize: 0 }}>
+                    Waiting for streaming messages…
+                  </Text>
+                </Box>
+              ) : (
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mb: 2 }}>
+                  {sidebarMessages
+                    .slice()
+                    .filter(msg => msg.role !== 'user')
+                    .sort((a, b) => {
+                      const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+                      const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+                      return tb - ta;
+                    })
+                    .slice(0, 10)
+                    .map(msg => {
+                      const content = typeof msg.content === 'string'
+                        ? msg.content
+                        : JSON.stringify(msg.content);
+                      return (
+                        <Box
+                          key={`once-msg-${msg.id}`}
+                          sx={{
+                            p: 2,
+                            bg: 'canvas.subtle',
+                            borderRadius: 2,
+                            border: '1px solid',
+                            borderColor: 'border.default',
+                          }}
+                        >
+                          <Box
+                            sx={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 1,
+                              mb: 1,
+                            }}
+                          >
+                            <Label
+                              size="small"
+                              variant={
+                                msg.role === 'assistant'
+                                  ? 'accent'
+                                  : msg.role === 'tool'
+                                    ? 'success'
+                                    : 'secondary'
+                              }
+                            >
+                              {msg.role}
+                            </Label>
+                            {msg.createdAt && (
+                              <Text
+                                sx={{
+                                  fontSize: 0,
+                                  color: 'fg.muted',
+                                  marginLeft: 'auto',
+                                  whiteSpace: 'nowrap',
+                                }}
+                              >
+                                {new Date(msg.createdAt).toLocaleTimeString()}
+                              </Text>
+                            )}
+                          </Box>
+                          <Text
+                            sx={{
+                              fontSize: 0,
+                              color: 'fg.default',
+                              display: 'block',
+                              whiteSpace: 'pre-wrap',
+                              wordBreak: 'break-word',
+                            }}
+                          >
+                            {content.length > 320
+                              ? `${content.slice(0, 320)}…`
+                              : content}
+                          </Text>
+                        </Box>
+                      );
+                    })}
+                </Box>
+              )}
+              </>
+              )}
+
+              {/* ── Approval Pending Queue ──────────────────────────────── */}
+              {hasTriggeredApproval && approvals.length > 0 && (
+              <>
+              <Heading as="h4" sx={{ fontSize: 1, mt: 3, mb: 2 }}>
+                Pending Tool Approvals
+              </Heading>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mb: 2 }}>
+                {approvals.map(a => (
+                  <Box
+                    key={a.id}
+                    sx={{
+                      p: 2,
+                      border: '1px solid',
+                      borderColor: 'attention.muted',
+                      borderRadius: 2,
+                      bg: 'attention.subtle',
+                    }}
+                  >
+                    <Text sx={{ fontWeight: 600, fontSize: 1, display: 'block', mb: 1 }}>
+                      🛡️ {a.tool_name}
+                    </Text>
+                    {a.tool_args && (
+                      <Text sx={{ fontSize: 0, color: 'fg.muted', display: 'block', mb: 2, fontFamily: 'mono' }}>
+                        {JSON.stringify(a.tool_args)}
+                      </Text>
+                    )}
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                      <Button
+                        size="small"
+                        variant="primary"
+                        onClick={() => void handleApprove(a.id)}
+                        disabled={approvalLoading === a.id}
+                      >
+                        {approvalLoading === a.id ? 'Approving…' : 'Approve'}
+                      </Button>
+                      <Button
+                        size="small"
+                        variant="danger"
+                        onClick={() => void handleReject(a.id, 'Rejected from trigger panel')}
+                        disabled={approvalLoading === a.id}
+                      >
+                        Reject
+                      </Button>
+                    </Box>
+                  </Box>
+                ))}
+              </Box>
+              </>
+              )}
+
+              {/* ── Approval Streaming Messages ─────────────────────────── */}
+              {hasTriggeredApproval && (
+              <>
+              <Heading as="h4" sx={{ fontSize: 1, mt: 3, mb: 2 }}>
+                Approval Agent Messages
+                {isLaunchingApproval && (
+                  <Spinner size="small" sx={{ ml: 2, verticalAlign: 'middle' }} />
+                )}
+              </Heading>
+
+              {approvalSidebarMessages.filter(msg => msg.role !== 'user').length === 0 ? (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                  <Spinner size="small" />
+                  <Text sx={{ color: 'fg.muted', fontSize: 0 }}>
+                    Waiting for approval agent messages…
+                  </Text>
+                </Box>
+              ) : (
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mb: 2 }}>
+                  {approvalSidebarMessages
+                    .slice()
+                    .filter(msg => msg.role !== 'user')
+                    .sort((a, b) => {
+                      const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+                      const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+                      return tb - ta;
+                    })
+                    .slice(0, 10)
+                    .map(msg => {
+                      const content = typeof msg.content === 'string'
+                        ? msg.content
+                        : JSON.stringify(msg.content);
+                      return (
+                        <Box
+                          key={`approval-msg-${msg.id}`}
+                          sx={{
+                            p: 2,
+                            bg: 'canvas.subtle',
+                            borderRadius: 2,
+                            border: '1px solid',
+                            borderColor: 'border.default',
+                          }}
+                        >
+                          <Box
+                            sx={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 1,
+                              mb: 1,
+                            }}
+                          >
+                            <Label
+                              size="small"
+                              variant={
+                                msg.role === 'assistant'
+                                  ? 'accent'
+                                  : msg.role === 'tool'
+                                    ? 'success'
+                                    : 'secondary'
+                              }
+                            >
+                              {msg.role}
+                            </Label>
+                            {msg.createdAt && (
+                              <Text
+                                sx={{
+                                  fontSize: 0,
+                                  color: 'fg.muted',
+                                  marginLeft: 'auto',
+                                  whiteSpace: 'nowrap',
+                                }}
+                              >
+                                {new Date(msg.createdAt).toLocaleTimeString()}
+                              </Text>
+                            )}
+                          </Box>
+                          <Text
+                            sx={{
+                              fontSize: 0,
+                              color: 'fg.default',
+                              display: 'block',
+                              whiteSpace: 'pre-wrap',
+                              wordBreak: 'break-word',
+                            }}
+                          >
+                            {content.length > 320
+                              ? `${content.slice(0, 320)}…`
+                              : content}
+                          </Text>
+                        </Box>
+                      );
+                    })}
+                </Box>
+              )}
+              </>
+              )}
+
+              <Box sx={{ mt: 2, display: 'grid', gap: 2 }}>
+                <Box>
+                  <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
+                    Trigger once (local curl)
+                  </Text>
+                  <Box
+                    sx={{
+                      mt: 1,
+                      bg: 'canvas.subtle',
+                      borderRadius: 2,
+                      p: 2,
+                      fontFamily: 'mono',
+                      fontSize: 0,
+                      wordBreak: 'break-all',
+                    }}
+                  >
+                    {triggerRunCurl}
+                  </Box>
+                </Box>
+                <Box>
+                  <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
+                    Fetch history (local curl)
+                  </Text>
+                  <Box
+                    sx={{
+                      mt: 1,
+                      bg: 'canvas.subtle',
+                      borderRadius: 2,
+                      p: 2,
+                      fontFamily: 'mono',
+                      fontSize: 0,
+                      wordBreak: 'break-all',
+                    }}
+                  >
+                    {historyCurl}
+                  </Box>
+                </Box>
+                <Button
+                  size="small"
+                  leadingVisual={CopyIcon}
+                  onClick={() =>
+                    navigator.clipboard.writeText(
+                      `${triggerRunCurl}\n\n${historyCurl}`,
+                    )
+                  }
+                >
+                  Copy replication commands
+                </Button>
+              </Box>
             </Box>
           )}
 
@@ -1115,6 +1948,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
                   ))}
               </Box>
             )}
+
           </Box>
         </Box>
       </Box>
@@ -1184,3 +2018,5 @@ const AgentTriggersExample: React.FC = () => {
 };
 
 export default AgentTriggersExample;
+
+

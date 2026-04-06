@@ -184,6 +184,9 @@ export interface ChatProps {
   /** Show tools menu (fetched from /configure endpoint) */
   showToolsMenu?: boolean;
 
+  /** Show input area */
+  showInput?: boolean;
+
   /** Show skills menu (fetched from /skills endpoint) */
   showSkillsMenu?: boolean;
 
@@ -377,6 +380,7 @@ export function Chat({
   showClearButton = true,
   showModelSelector = true,
   showToolsMenu = true,
+  showInput = true,
   showSkillsMenu = false,
   codemodeEnabled = false,
   showTokenUsage = true,
@@ -698,6 +702,7 @@ export function Chat({
             headerActions={headerActions}
             showModelSelector={showModelSelector}
             showToolsMenu={showToolsMenu}
+            showInput={showInput}
             showSkillsMenu={showSkillsMenu}
             showTokenUsage={showTokenUsage}
             codemodeEnabled={codemodeEnabled}
