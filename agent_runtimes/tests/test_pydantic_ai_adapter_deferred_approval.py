@@ -8,7 +8,7 @@ from typing import Any
 
 import pytest
 from pydantic_ai import DeferredToolRequests
-from pydantic_ai.messages import ToolCallPart
+from pydantic_ai.messages import PartDeltaEvent, TextPartDelta, ToolCallPart
 
 from agent_runtimes.adapters.base import AgentContext
 from agent_runtimes.adapters.pydantic_ai_adapter import (
@@ -75,42 +75,35 @@ class _FakeAgent:
         return _FakeResult(output="approved and executed")
 
 
-class _FakeStreamResult(_FakeResult):
-    def __init__(
-        self,
-        output: str | DeferredToolRequests,
-        text_steps: list[str],
-        all_messages: list[dict[str, str]] | None = None,
-    ) -> None:
-        super().__init__(output=output, all_messages=all_messages)
-        self._text_steps = text_steps
-
-    async def stream_text(self) -> AsyncIterator[str]:
-        for text in self._text_steps:
-            yield text
-
-
-class _FakeStreamContext:
-    def __init__(self, result: _FakeStreamResult) -> None:
-        self._result = result
-
-    async def __aenter__(self) -> _FakeStreamResult:
-        return self._result
-
-    async def __aexit__(self, exc_type: Any, exc: Any, tb: Any) -> bool:
-        return False
-
-
 class _FakeStreamingAgent:
+    """Fake agent whose ``run()`` honours ``event_stream_handler``.
+
+    The adapter's ``stream()`` now calls ``agent.run()`` with an event
+    handler rather than ``agent.run_stream()``.  This fake feeds text
+    deltas through the handler and returns the appropriate result.
+    """
+
     def __init__(self) -> None:
         self.model = "test:model"
         self._tools: dict[str, Any] = {}
         self.calls: list[dict[str, Any]] = []
 
-    def run_stream(self, prompt: str, **kwargs: Any) -> _FakeStreamContext:
+    async def run(self, prompt: str, **kwargs: Any) -> _FakeResult:
+        event_handler = kwargs.pop("event_stream_handler", None)
+        # Store kwargs *without* the handler so assertions stay clean.
         self.calls.append({"prompt": prompt, "kwargs": kwargs})
 
         if len(self.calls) == 1:
+            # First call → emit preamble text, return deferred approval
+            if event_handler:
+                async def _events_1() -> AsyncIterator[PartDeltaEvent]:
+                    yield PartDeltaEvent(
+                        index=0,
+                        delta=TextPartDelta(content_delta="I'll help you with that."),
+                    )
+
+                await event_handler(None, _events_1())
+
             deferred = DeferredToolRequests(
                 approvals=[
                     ToolCallPart(
@@ -121,16 +114,12 @@ class _FakeStreamingAgent:
                 ],
                 metadata={"tool-1": {"origin": "test"}},
             )
-            return _FakeStreamContext(
-                _FakeStreamResult(
-                    output=deferred,
-                    text_steps=[
-                        "I'll help you with that.",
-                    ],
-                    all_messages=[{"role": "assistant", "content": "preamble"}],
-                )
+            return _FakeResult(
+                output=deferred,
+                all_messages=[{"role": "assistant", "content": "preamble"}],
             )
 
+        # Second call → continuation after approval
         deferred_results = kwargs.get("deferred_tool_results")
         assert deferred_results is not None
         assert deferred_results.approvals == {"tool-1": True}
@@ -138,15 +127,18 @@ class _FakeStreamingAgent:
             {"role": "assistant", "content": "preamble"}
         ]
 
-        return _FakeStreamContext(
-            _FakeStreamResult(
-                output="approved and executed",
-                text_steps=[
-                    "approved",
-                    "approved and executed",
-                ],
-                all_messages=[{"role": "assistant", "content": "approved and executed"}],
-            )
+        if event_handler:
+            async def _events_2() -> AsyncIterator[PartDeltaEvent]:
+                yield PartDeltaEvent(
+                    index=0,
+                    delta=TextPartDelta(content_delta="approved and executed"),
+                )
+
+            await event_handler(None, _events_2())
+
+        return _FakeResult(
+            output="approved and executed",
+            all_messages=[{"role": "assistant", "content": "approved and executed"}],
         )
 
 

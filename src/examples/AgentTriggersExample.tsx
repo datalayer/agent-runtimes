@@ -83,6 +83,8 @@ interface TriggerRecord {
   source?: TriggerTab;
 }
 
+
+
 // ─── Inner component (rendered after auth) ─────────────────────────────────
 
 const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
@@ -115,16 +117,28 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
   // Once trigger state
   const [isLaunchingOnce, setIsLaunchingOnce] = useState(false);
   const [onceFlash, setOnceFlash] = useState<string | null>(null);
+  const [lastOnceStartedAt, setLastOnceStartedAt] = useState<string | null>(null);
+  const [hasTriggeredOnce, setHasTriggeredOnce] = useState(false);
 
   // Webhook state
   const [webhookUrl, setWebhookUrl] = useState<string | null>(null);
   const [webhookSecret, setWebhookSecret] = useState<string | null>(null);
   const [webhookEnabled, setWebhookEnabled] = useState(false);
 
+  // Sidebar messages state
+  const [sidebarMessages, setSidebarMessages] = useState<Array<{
+    id: string;
+    role: string;
+    content: unknown;
+    createdAt?: string;
+  }>>([]);
+  const [sidebarMessagesError, setSidebarMessagesError] = useState<string | null>(null);
+
   // Event state
   const [eventTopic, setEventTopic] = useState('');
   const [eventFilter, setEventFilter] = useState('');
   const [eventSubscribed, setEventSubscribed] = useState(false);
+
 
   // Events hooks
   const eventsQuery = useAgentEvents(agentId);
@@ -169,7 +183,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
             name: AGENT_NAME,
             description: 'Agent with cron, webhook, event, and manual triggers',
             agent_library: 'pydantic-ai',
-            transport: 'ag-ui',
+            transport: 'vercel-ai',
             agent_spec_id: AGENT_SPEC_ID,
             tools: [],
           }),
@@ -230,6 +244,56 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
   //       /trigger/history endpoints on the platform API.
   //       Currently these endpoints don't exist on either the local
   //       agent-runtimes server or the ai-agents service.
+
+
+
+  // ── Poll chat history for sidebar messages ─────────────────────────────
+
+  useEffect(() => {
+    if (!isReady || !agentId) return;
+
+    let disposed = false;
+
+    const loadMessages = async () => {
+      if (!disposed) {
+        setSidebarMessagesError(null);
+      }
+      try {
+        const res = await authFetch(
+          `${agentBaseUrl}/api/v1/history?agent_id=${encodeURIComponent(agentId)}`,
+          { method: 'GET' },
+        );
+
+        if (!res.ok) {
+          throw new Error(`History fetch failed (${res.status})`);
+        }
+
+        const data = await res.json();
+        const messages = Array.isArray(data?.messages) ? data.messages : [];
+        if (!disposed) {
+          setSidebarMessages(messages);
+        }
+      } catch (error) {
+        if (!disposed) {
+          setSidebarMessagesError(
+            error instanceof Error ? error.message : 'Failed to load chat history',
+          );
+        }
+      } finally {
+        // no-op
+      }
+    };
+
+    void loadMessages();
+    const interval = window.setInterval(() => {
+      void loadMessages();
+    }, 2000);
+
+    return () => {
+      disposed = true;
+      window.clearInterval(interval);
+    };
+  }, [isReady, agentId, agentBaseUrl, authFetch]);
 
   // ── Update cron ──────────────────────────────────────────────────────────
 
@@ -384,6 +448,8 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
     setOnceFlash(null);
     const runId = `once-${Date.now()}`;
     const startTime = new Date().toISOString();
+    setLastOnceStartedAt(startTime);
+    setHasTriggeredOnce(true);
     setTriggerHistory(prev => [
       {
         id: runId,
@@ -459,6 +525,9 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
     return <ErrorView error={hookError} onLogout={onLogout} />;
   }
 
+  const triggerRunCurl = `curl -X POST '${agentBaseUrl}/api/v1/agents/${agentId}/trigger/run' -H 'Content-Type: application/json'${token ? " -H 'Authorization: Bearer <TOKEN>'" : ''} --data '{"source":"once"}'`;
+  const historyCurl = `curl '${agentBaseUrl}/api/v1/history?agent_id=default' -H 'Content-Type: application/json'${token ? " -H 'Authorization: Bearer <TOKEN>'" : ''}`;
+
   return (
     <Box
       sx={{
@@ -499,26 +568,21 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
         {/* Left: Chat */}
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <Chat
-            protocol="ag-ui"
+            protocol="vercel-ai"
             baseUrl={agentBaseUrl}
             agentId={agentId}
             authToken={chatAuthToken}
             title="Trigger Agent"
-            placeholder="Ask about your scheduled or event-driven KPI reports…"
-            description={`Cron: ${cronExpr} | Webhook: ${webhookEnabled ? 'on' : 'off'} | Event: ${eventSubscribed ? eventTopic : 'none'}`}
+            description={`View-only trigger output. Cron: ${cronExpr} | Webhook: ${webhookEnabled ? 'on' : 'off'} | Event: ${eventSubscribed ? eventTopic : 'none'}`}
             showHeader={true}
-            autoFocus
+            autoFocus={false}
             height="100%"
             runtimeId={agentId}
             historyEndpoint={`${agentBaseUrl}/api/v1/history`}
-            suggestions={[
-              {
-                title: 'Last run',
-                message: 'What happened in the last scheduled run?',
-              },
-              { title: 'KPIs today', message: "Show me today's KPI summary" },
-            ]}
-            submitOnSuggestionClick
+            showInput={false}
+            showModelSelector={false}
+            showToolsMenu={false}
+            showSkillsMenu={false}
           />
         </Box>
 
@@ -604,6 +668,32 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
                 terminate the runtime automatically.
               </Text>
 
+              <Box
+                sx={{
+                  bg: 'canvas.subtle',
+                  border: '1px solid',
+                  borderColor: 'border.default',
+                  borderRadius: 2,
+                  p: 2,
+                  mb: 2,
+                  display: 'grid',
+                  gap: 1,
+                }}
+              >
+                <Text sx={{ fontSize: 0 }}>
+                  <strong>Agent ID:</strong> {agentId}
+                </Text>
+                <Text sx={{ fontSize: 0 }}>
+                  <strong>Base URL:</strong> {agentBaseUrl}
+                </Text>
+                {lastOnceStartedAt && (
+                  <Text sx={{ fontSize: 0 }}>
+                    <strong>Last once launch:</strong>{' '}
+                    {new Date(lastOnceStartedAt).toLocaleString()}
+                  </Text>
+                )}
+              </Box>
+
               <Button
                 size="small"
                 variant="primary"
@@ -625,6 +715,293 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
                   {onceFlash}
                 </Flash>
               )}
+
+              {/* ── Generated Output ───────────────────────────────── */}
+              {hasTriggeredOnce && (
+              <>
+              <Heading as="h4" sx={{ fontSize: 1, mt: 3, mb: 2 }}>
+                Generated Output
+              </Heading>
+
+              {(() => {
+                const outputEvent = lastOnceStartedAt
+                  ? [...agentEvents]
+                      .filter(
+                        e =>
+                          e.kind === 'agent-output' &&
+                          new Date(e.created_at).getTime() >=
+                            new Date(lastOnceStartedAt).getTime() - 5000,
+                      )
+                      .sort(
+                        (a, b) =>
+                          new Date(b.created_at).getTime() -
+                          new Date(a.created_at).getTime(),
+                      )[0]
+                  : undefined;
+
+                if (!outputEvent) {
+                  return (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                      <Spinner size="small" />
+                      <Text sx={{ color: 'fg.muted', fontSize: 0 }}>
+                        Waiting for agent output…
+                      </Text>
+                    </Box>
+                  );
+                }
+
+                const p = outputEvent.payload as Record<string, any> | undefined;
+                const outputText = p?.outputs ? String(p.outputs) : '';
+                const exitStatus = p?.exit_status;
+                const durationMs = p?.duration_ms;
+                const endedAt = p?.ended_at;
+
+                return (
+                  <Box
+                    sx={{
+                      mb: 2,
+                      border: '1px solid',
+                      borderColor:
+                        exitStatus === 'error'
+                          ? 'danger.muted'
+                          : 'success.muted',
+                      borderRadius: 2,
+                      overflow: 'hidden',
+                    }}
+                  >
+                    {/* Header bar */}
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1,
+                        px: 2,
+                        py: 1,
+                        bg:
+                          exitStatus === 'error'
+                            ? 'danger.subtle'
+                            : 'success.subtle',
+                        borderBottom: '1px solid',
+                        borderColor:
+                          exitStatus === 'error'
+                            ? 'danger.muted'
+                            : 'success.muted',
+                      }}
+                    >
+                      <Label
+                        variant={
+                          exitStatus === 'error' ? 'danger' : 'success'
+                        }
+                        size="small"
+                      >
+                        {exitStatus ?? 'completed'}
+                      </Label>
+                      {durationMs != null && (
+                        <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
+                          {(Number(durationMs) / 1000).toFixed(1)}s
+                        </Text>
+                      )}
+                      {endedAt && (
+                        <Text
+                          sx={{
+                            fontSize: 0,
+                            color: 'fg.muted',
+                            ml: 'auto',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {new Date(endedAt).toLocaleString()}
+                        </Text>
+                      )}
+                      <Button
+                        size="small"
+                        variant="invisible"
+                        sx={{ p: 1 }}
+                        onClick={() =>
+                          navigator.clipboard.writeText(outputText)
+                        }
+                      >
+                        <CopyIcon size={12} />
+                      </Button>
+                    </Box>
+                    {/* Output body */}
+                    <Box
+                      sx={{
+                        p: 2,
+                        bg: 'canvas.default',
+                        maxHeight: 300,
+                        overflow: 'auto',
+                      }}
+                    >
+                      <Text
+                        sx={{
+                          fontSize: 0,
+                          color: 'fg.default',
+                          display: 'block',
+                          whiteSpace: 'pre-wrap',
+                          wordBreak: 'break-word',
+                          fontFamily: 'mono',
+                        }}
+                      >
+                        {outputText || '(empty output)'}
+                      </Text>
+                    </Box>
+                  </Box>
+                );
+              })()}
+              </>
+              )}
+
+              {/* ── Streaming Messages ─────────────────────────────────── */}
+              {hasTriggeredOnce && (
+              <>
+              <Heading as="h4" sx={{ fontSize: 1, mt: 3, mb: 2 }}>
+                Streaming Messages
+                {isLaunchingOnce && (
+                  <Spinner size="small" sx={{ ml: 2, verticalAlign: 'middle' }} />
+                )}
+              </Heading>
+
+              {sidebarMessagesError ? (
+                <Flash variant="danger" sx={{ fontSize: 0, mb: 2 }}>
+                  {sidebarMessagesError}
+                </Flash>
+              ) : sidebarMessages.filter(msg => msg.role !== 'user').length === 0 ? (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                  <Spinner size="small" />
+                  <Text sx={{ color: 'fg.muted', fontSize: 0 }}>
+                    Waiting for streaming messages…
+                  </Text>
+                </Box>
+              ) : (
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mb: 2 }}>
+                  {sidebarMessages
+                    .slice()
+                    .filter(msg => msg.role !== 'user')
+                    .sort((a, b) => {
+                      const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+                      const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+                      return tb - ta;
+                    })
+                    .slice(0, 10)
+                    .map(msg => {
+                      const content = typeof msg.content === 'string'
+                        ? msg.content
+                        : JSON.stringify(msg.content);
+                      return (
+                        <Box
+                          key={`once-msg-${msg.id}`}
+                          sx={{
+                            p: 2,
+                            bg: 'canvas.subtle',
+                            borderRadius: 2,
+                            border: '1px solid',
+                            borderColor: 'border.default',
+                          }}
+                        >
+                          <Box
+                            sx={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 1,
+                              mb: 1,
+                            }}
+                          >
+                            <Label
+                              size="small"
+                              variant={
+                                msg.role === 'assistant'
+                                  ? 'accent'
+                                  : msg.role === 'tool'
+                                    ? 'success'
+                                    : 'secondary'
+                              }
+                            >
+                              {msg.role}
+                            </Label>
+                            {msg.createdAt && (
+                              <Text
+                                sx={{
+                                  fontSize: 0,
+                                  color: 'fg.muted',
+                                  marginLeft: 'auto',
+                                  whiteSpace: 'nowrap',
+                                }}
+                              >
+                                {new Date(msg.createdAt).toLocaleTimeString()}
+                              </Text>
+                            )}
+                          </Box>
+                          <Text
+                            sx={{
+                              fontSize: 0,
+                              color: 'fg.default',
+                              display: 'block',
+                              whiteSpace: 'pre-wrap',
+                              wordBreak: 'break-word',
+                            }}
+                          >
+                            {content.length > 320
+                              ? `${content.slice(0, 320)}…`
+                              : content}
+                          </Text>
+                        </Box>
+                      );
+                    })}
+                </Box>
+              )}
+              </>
+              )}
+
+              <Box sx={{ mt: 2, display: 'grid', gap: 2 }}>
+                <Box>
+                  <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
+                    Trigger once (local curl)
+                  </Text>
+                  <Box
+                    sx={{
+                      mt: 1,
+                      bg: 'canvas.subtle',
+                      borderRadius: 2,
+                      p: 2,
+                      fontFamily: 'mono',
+                      fontSize: 0,
+                      wordBreak: 'break-all',
+                    }}
+                  >
+                    {triggerRunCurl}
+                  </Box>
+                </Box>
+                <Box>
+                  <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
+                    Fetch history (local curl)
+                  </Text>
+                  <Box
+                    sx={{
+                      mt: 1,
+                      bg: 'canvas.subtle',
+                      borderRadius: 2,
+                      p: 2,
+                      fontFamily: 'mono',
+                      fontSize: 0,
+                      wordBreak: 'break-all',
+                    }}
+                  >
+                    {historyCurl}
+                  </Box>
+                </Box>
+                <Button
+                  size="small"
+                  leadingVisual={CopyIcon}
+                  onClick={() =>
+                    navigator.clipboard.writeText(
+                      `${triggerRunCurl}\n\n${historyCurl}`,
+                    )
+                  }
+                >
+                  Copy replication commands
+                </Button>
+              </Box>
             </Box>
           )}
 
@@ -1115,6 +1492,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
                   ))}
               </Box>
             )}
+
           </Box>
         </Box>
       </Box>
@@ -1184,3 +1562,5 @@ const AgentTriggersExample: React.FC = () => {
 };
 
 export default AgentTriggersExample;
+
+

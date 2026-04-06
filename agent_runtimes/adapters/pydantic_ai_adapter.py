@@ -637,6 +637,14 @@ class PydanticAIAdapter(BaseAgent):
         """
         Run the agent with streaming output.
 
+        Uses ``agent.run()`` with an ``event_stream_handler`` so that the
+        **full** agent graph executes (multiple model→tool→model rounds)
+        while text deltas are still yielded token-by-token.
+
+        ``run_stream()`` is intentionally *not* used here because it stops
+        the graph at the first output matching the output type, which
+        prevents multi-round tool usage.
+
         Args:
             prompt: User prompt/message.
             context: Execution context.
@@ -644,20 +652,37 @@ class PydanticAIAdapter(BaseAgent):
         Yields:
             Stream events as they are produced.
         """
+        import asyncio
+        import time
+
+        from pydantic_ai.messages import PartDeltaEvent, TextPartDelta
+
         # Build message history from context
         message_history = []
         for msg in context.conversation_history:
             message_history.append(msg)
 
-        # Extract model from context metadata for per-request model override
+        # Extract per-request overrides from context metadata
         model_override = context.metadata.get("model") if context.metadata else None
         user_token_override = (
             context.metadata.get("user_token") if context.metadata else None
         )
-
-        import time
+        force_exhaustive_end_strategy = bool(
+            context.metadata.get("force_exhaustive_end_strategy")
+            if context.metadata
+            else False
+        )
+        previous_end_strategy: Any = None
 
         try:
+            if force_exhaustive_end_strategy and hasattr(self._agent, "end_strategy"):
+                previous_end_strategy = getattr(self._agent, "end_strategy")
+                if previous_end_strategy != "exhaustive":
+                    setattr(self._agent, "end_strategy", "exhaustive")
+                    logger.info(
+                        "PydanticAIAdapter: Temporarily set end_strategy to exhaustive for stream"
+                    )
+
             runtime_toolsets = self._get_runtime_toolsets()
             logger.debug(
                 f"PydanticAIAdapter: Using {len(runtime_toolsets)} runtime toolsets for stream"
@@ -667,110 +692,146 @@ class PydanticAIAdapter(BaseAgent):
             current_prompt = prompt
             current_message_history = message_history if message_history else None
             deferred_tool_results: DeferredToolResults | None = None
-            final_messages: list[Any] | None = None
+            final_output: Any | None = None
+            final_result: Any | None = None
 
             for continuation_round in range(_MAX_DEFERRED_APPROVAL_CONTINUATIONS + 1):
-                stream_kwargs: dict[str, Any] = {
+                # -- per-round queue & handler --------------------------------
+                text_queue: asyncio.Queue[str | None] = asyncio.Queue()
+                handler_called = False
+
+                async def _event_handler(_run_ctx: Any, events: Any) -> None:
+                    nonlocal handler_called
+                    handler_called = True
+                    try:
+                        async for ev in events:
+                            if isinstance(ev, PartDeltaEvent) and isinstance(
+                                ev.delta, TextPartDelta
+                            ):
+                                await text_queue.put(ev.delta.content_delta)
+                    finally:
+                        await text_queue.put(None)  # sentinel
+
+                run_kwargs: dict[str, Any] = {
                     "message_history": current_message_history,
                     "toolsets": runtime_toolsets,
+                    "event_stream_handler": _event_handler,
                 }
                 if model_override:
-                    stream_kwargs["model"] = model_override
+                    run_kwargs["model"] = model_override
                     logger.info(
                         f"PydanticAIAdapter: Using model override for stream: {model_override}"
                     )
                 if deferred_tool_results is not None:
-                    stream_kwargs["deferred_tool_results"] = deferred_tool_results
+                    run_kwargs["deferred_tool_results"] = deferred_tool_results
 
+                # -- launch agent.run() concurrently --------------------------
                 request_start = time.perf_counter()
-                async with self._agent.run_stream(current_prompt, **stream_kwargs) as result:
-                    # stream_text() yields cumulative text, we need deltas
-                    last_text = ""
-                    async for text in result.stream_text():
-                        if text and len(text) > len(last_text):
-                            delta = text[len(last_text) :]
-                            last_text = text
-                            yield StreamEvent(type="text", data=delta)
 
-                    final_messages = result.all_messages()
+                async def _safe_run() -> Any:
+                    """Wrapper that ensures the queue is unblocked on failure."""
+                    try:
+                        return await self._agent.run(current_prompt, **run_kwargs)
+                    except BaseException:
+                        if not handler_called:
+                            await text_queue.put(None)
+                        raise
 
-                    # Extract tool names from message tool calls for usage attribution
-                    tool_names: list[str] = []
-                    if hasattr(result, "_messages"):
-                        for msg in result._messages:
-                            if hasattr(msg, "tool_calls"):
-                                for tc in msg.tool_calls:
-                                    tool_names.append(tc.name)
+                run_task = asyncio.create_task(_safe_run())
 
-                    if hasattr(result, "usage"):
-                        run_usage = result.usage()
-                        duration_ms = (time.perf_counter() - request_start) * 1000
-                        tracker.update_usage(
-                            agent_id=self._agent_id,
-                            input_tokens=getattr(run_usage, "input_tokens", 0),
-                            output_tokens=getattr(run_usage, "output_tokens", 0),
-                            cache_read_tokens=getattr(run_usage, "cache_read_tokens", 0),
-                            cache_write_tokens=getattr(run_usage, "cache_write_tokens", 0),
-                            requests=getattr(run_usage, "requests", 1),
-                            tool_calls=getattr(run_usage, "tool_calls", 0),
-                            tool_names=tool_names if tool_names else None,
-                            duration_ms=duration_ms,
-                        )
-
-                        stats = tracker.get_agent_stats(self._agent_id)
-                        if stats:
-                            stats.update_message_tokens(
-                                user_tokens=getattr(run_usage, "input_tokens", 0),
-                                assistant_tokens=getattr(run_usage, "output_tokens", 0),
-                            )
-
-                    # Continue deferred approval flows for stream callers.
-                    if isinstance(result.output, DeferredToolRequests):
-                        deferred_requests = result.output
-
-                        if deferred_requests.calls:
-                            raise RuntimeError(
-                                "Deferred external tool execution is not supported in stream mode"
-                            )
-
-                        if not deferred_requests.approvals:
+                # -- yield text deltas from queue -----------------------------
+                try:
+                    while True:
+                        text_delta = await text_queue.get()
+                        if text_delta is None:
                             break
+                        yield StreamEvent(type="text", data=text_delta)
+                except BaseException:
+                    run_task.cancel()
+                    raise
 
-                        approval_config = ToolApprovalConfig.from_env()
-                        approval_config.agent_id = self._agent_id
-                        if user_token_override:
-                            approval_config.token = user_token_override
-                        approval_manager = ToolApprovalManager(approval_config)
+                # -- collect run result ---------------------------------------
+                result = await run_task
 
-                        approval_results: dict[str, bool] = {}
-                        try:
-                            for approval in deferred_requests.approvals:
-                                tool_args = (
-                                    approval.args
-                                    if isinstance(approval.args, dict)
-                                    else {"value": str(approval.args)}
-                                )
-                                await approval_manager.request_and_wait(
-                                    approval.tool_name,
-                                    tool_args,
-                                )
-                                approval_results[approval.tool_call_id] = True
-                        finally:
-                            await approval_manager.close()
+                # -- usage tracking -------------------------------------------
+                tool_names: list[str] = []
+                for msg in result.all_messages():
+                    if hasattr(msg, "parts"):
+                        for part in msg.parts:
+                            if hasattr(part, "tool_name"):
+                                tool_names.append(part.tool_name)
 
-                        deferred_tool_results = DeferredToolResults(
-                            approvals=approval_results,
-                            metadata=deferred_requests.metadata,
+                if hasattr(result, "usage"):
+                    run_usage = result.usage()
+                    duration_ms = (time.perf_counter() - request_start) * 1000
+                    tracker.update_usage(
+                        agent_id=self._agent_id,
+                        input_tokens=getattr(run_usage, "input_tokens", 0),
+                        output_tokens=getattr(run_usage, "output_tokens", 0),
+                        cache_read_tokens=getattr(run_usage, "cache_read_tokens", 0),
+                        cache_write_tokens=getattr(run_usage, "cache_write_tokens", 0),
+                        requests=getattr(run_usage, "requests", 1),
+                        tool_calls=getattr(run_usage, "tool_calls", 0),
+                        tool_names=tool_names if tool_names else None,
+                        duration_ms=duration_ms,
+                    )
+
+                    stats = tracker.get_agent_stats(self._agent_id)
+                    if stats:
+                        stats.update_message_tokens(
+                            user_tokens=getattr(run_usage, "input_tokens", 0),
+                            assistant_tokens=getattr(run_usage, "output_tokens", 0),
                         )
-                        current_message_history = final_messages
-                        current_prompt = _DEFERRED_CONTINUATION_PROMPT
-                        logger.info(
-                            "PydanticAIAdapter: Processed %s deferred approval(s), continuing stream",
-                            len(approval_results),
-                        )
-                        continue
 
-                    break
+                # -- deferred approval continuation ---------------------------
+                if isinstance(result.output, DeferredToolRequests):
+                    deferred_requests = result.output
+
+                    if deferred_requests.calls:
+                        raise RuntimeError(
+                            "Deferred external tool execution is not supported in stream mode"
+                        )
+
+                    if not deferred_requests.approvals:
+                        break
+
+                    approval_config = ToolApprovalConfig.from_env()
+                    approval_config.agent_id = self._agent_id
+                    if user_token_override:
+                        approval_config.token = user_token_override
+                    approval_manager = ToolApprovalManager(approval_config)
+
+                    approval_results: dict[str, bool] = {}
+                    try:
+                        for approval in deferred_requests.approvals:
+                            tool_args = (
+                                approval.args
+                                if isinstance(approval.args, dict)
+                                else {"value": str(approval.args)}
+                            )
+                            await approval_manager.request_and_wait(
+                                approval.tool_name,
+                                tool_args,
+                            )
+                            approval_results[approval.tool_call_id] = True
+                    finally:
+                        await approval_manager.close()
+
+                    deferred_tool_results = DeferredToolResults(
+                        approvals=approval_results,
+                        metadata=deferred_requests.metadata,
+                    )
+                    current_message_history = result.all_messages()
+                    current_prompt = _DEFERRED_CONTINUATION_PROMPT
+                    logger.info(
+                        "PydanticAIAdapter: Processed %s deferred approval(s), continuing stream",
+                        len(approval_results),
+                    )
+                    continue
+
+                final_output = result.output
+                final_result = result
+                break
             else:
                 raise RuntimeError(
                     "Exceeded maximum deferred approval continuations in stream mode"
@@ -778,13 +839,19 @@ class PydanticAIAdapter(BaseAgent):
 
             # Persist message history so /api/v1/history can serve it.
             stats = tracker.get_agent_stats(self._agent_id)
-            if stats and final_messages:
-                stats.store_messages(final_messages)
+            if stats and final_result:
+                stats.store_messages(final_result.all_messages())
+
+            if final_output is not None:
+                yield StreamEvent(type="output", data=final_output)
 
             yield StreamEvent(type="done", data=None)
 
         except Exception as e:
             yield StreamEvent(type="error", data=str(e))
+        finally:
+            if previous_end_strategy is not None:
+                setattr(self._agent, "end_strategy", previous_end_strategy)
 
     async def run_with_codemode(
         self,

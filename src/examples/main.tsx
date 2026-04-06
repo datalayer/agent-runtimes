@@ -39,6 +39,8 @@ import { ExampleWrapper } from './components/ExampleWrapper';
 
 import nbformatExample from './utils/notebooks/NotebookExample1.ipynb.json';
 
+import '../../style/primer-primitives.css';
+
 declare global {
   interface Window {
     __agentRuntimesExamplesRoot?: ReturnType<typeof createRoot>;
