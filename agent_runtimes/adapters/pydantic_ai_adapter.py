@@ -31,6 +31,7 @@ from .base import (
 logger = logging.getLogger(__name__)
 
 _MAX_DEFERRED_APPROVAL_CONTINUATIONS = 5
+_DEFERRED_CONTINUATION_PROMPT = "Continue with the approved tool results."
 
 
 class PydanticAIAdapter(BaseAgent):
@@ -522,7 +523,7 @@ class PydanticAIAdapter(BaseAgent):
                         metadata=deferred_requests.metadata,
                     )
                     current_message_history = result.all_messages()
-                    current_prompt = ""
+                    current_prompt = _DEFERRED_CONTINUATION_PROMPT
                     logger.info(
                         "PydanticAIAdapter: Processed %s deferred approval(s), continuing run",
                         len(approval_results),

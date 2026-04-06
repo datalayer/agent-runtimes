@@ -3,14 +3,15 @@
 
 """Regression tests for deferred approval continuation in non-stream adapter.run."""
 
-from types import SimpleNamespace
-
 import pytest
 from pydantic_ai import DeferredToolRequests
 from pydantic_ai.messages import ToolCallPart
 
 from agent_runtimes.adapters.base import AgentContext
-from agent_runtimes.adapters.pydantic_ai_adapter import PydanticAIAdapter
+from agent_runtimes.adapters.pydantic_ai_adapter import (
+    PydanticAIAdapter,
+    _DEFERRED_CONTINUATION_PROMPT,
+)
 
 
 class _FakeUsage:
@@ -58,7 +59,7 @@ class _FakeAgent:
             )
             return _FakeResult(output=deferred, all_messages=[{"role": "assistant"}])
 
-        # Continuation should provide deferred results and use an explicit empty prompt.
+        # Continuation should provide deferred results and use a non-empty prompt.
         deferred_results = kwargs.get("deferred_tool_results")
         assert deferred_results is not None
         assert deferred_results.approvals == {"tool-1": True}
@@ -68,7 +69,7 @@ class _FakeAgent:
 
 
 @pytest.mark.asyncio
-async def test_run_continues_deferred_approval_with_empty_prompt(
+async def test_run_continues_deferred_approval_with_non_empty_prompt(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     fake_agent = _FakeAgent()
@@ -100,7 +101,7 @@ async def test_run_continues_deferred_approval_with_empty_prompt(
     assert response.content == "approved and executed"
     assert len(fake_agent.calls) == 2
     assert fake_agent.calls[0]["prompt"] == "run once"
-    assert fake_agent.calls[1]["prompt"] == ""
+    assert fake_agent.calls[1]["prompt"] == _DEFERRED_CONTINUATION_PROMPT
     assert requests_seen == [
         ("runtime_sensitive_echo", {"text": "hello", "reason": "audit"})
     ]
