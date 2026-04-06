@@ -1112,7 +1112,13 @@ async def create_agent(
             # Vercel AI with DeferredToolRequests handles approval decisions
             # via continuation messages. Keeping ToolApprovalCapability enabled
             # causes a second blocking approval wait during actual tool execution.
-            if request.transport == "vercel-ai" and capabilities:
+            # However, once/cron triggers run autonomously without a client to
+            # handle deferred tool requests, so keep the capability for those.
+            has_trigger = (
+                spec_for_runtime_controls is not None
+                and getattr(spec_for_runtime_controls, "trigger", None)
+            )
+            if request.transport == "vercel-ai" and capabilities and not has_trigger:
                 filtered_capabilities = [
                     cap
                     for cap in capabilities
@@ -1149,7 +1155,7 @@ async def create_agent(
                 )
                 if (
                     not has_tool_approval_capability
-                    and request.transport != "vercel-ai"
+                    and (request.transport != "vercel-ai" or has_trigger)
                 ):
                     approval_config = ToolApprovalConfig.from_env()
                     approval_config.agent_id = agent_id

@@ -53,6 +53,11 @@ import { SignInSimple } from '@datalayer/core/lib/views/iam';
 import { UserBadge } from '@datalayer/core/lib/views/profile';
 import { Chat } from '../chat';
 import {
+  ToolApprovalBanner,
+  ToolApprovalDialog,
+  type PendingApproval,
+} from '../chat/tools';
+import {
   useAgentEvents,
   useDeleteAgentEvent,
   useMarkEventRead,
@@ -67,6 +72,8 @@ const queryClient = new QueryClient();
 
 const AGENT_NAME = 'trigger-demo-agent';
 const AGENT_SPEC_ID = 'demo-one-trigger';
+const APPROVAL_AGENT_NAME = 'trigger-approval-demo-agent';
+const APPROVAL_AGENT_SPEC_ID = 'demo-one-trigger-approval';
 const DEFAULT_LOCAL_BASE_URL =
   import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
 const DEFAULT_CRON = '0 8 * * *'; // daily at 08:00 UTC
@@ -139,6 +146,35 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
   const [eventFilter, setEventFilter] = useState('');
   const [eventSubscribed, setEventSubscribed] = useState(false);
 
+  // Approval agent state
+  const [approvalAgentId, setApprovalAgentId] = useState<string>(APPROVAL_AGENT_NAME);
+  const [approvalAgentReady, setApprovalAgentReady] = useState(false);
+  const [isLaunchingApproval, setIsLaunchingApproval] = useState(false);
+  const [approvalFlash, setApprovalFlash] = useState<string | null>(null);
+  const [hasTriggeredApproval, setHasTriggeredApproval] = useState(false);
+
+  // Tool approval state
+  interface ToolApprovalRequest {
+    id: string;
+    tool_name: string;
+    tool_args?: Record<string, unknown>;
+    note?: string;
+    created_at?: string;
+    status?: string;
+    agent_id?: string;
+  }
+  const [approvals, setApprovals] = useState<ToolApprovalRequest[]>([]);
+  const [approvalLoading, setApprovalLoading] = useState<string | null>(null);
+  const [approvalError, setApprovalError] = useState<string | null>(null);
+  const [activeApproval, setActiveApproval] = useState<ToolApprovalRequest | null>(null);
+
+  // Approval sidebar messages
+  const [approvalSidebarMessages, setApprovalSidebarMessages] = useState<Array<{
+    id: string;
+    role: string;
+    content: unknown;
+    createdAt?: string;
+  }>>([]);
 
   // Events hooks
   const eventsQuery = useAgentEvents(agentId);
@@ -294,6 +330,215 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
       window.clearInterval(interval);
     };
   }, [isReady, agentId, agentBaseUrl, authFetch]);
+
+  // ── Create approval agent on local server ────────────────────────────────
+
+  useEffect(() => {
+    if (!isReady) return;
+    let isCancelled = false;
+
+    const createApprovalAgent = async () => {
+      try {
+        const response = await authFetch(`${agentBaseUrl}/api/v1/agents`, {
+          method: 'POST',
+          body: JSON.stringify({
+            name: APPROVAL_AGENT_NAME,
+            description: 'Agent with once trigger and tool approval',
+            agent_library: 'pydantic-ai',
+            transport: 'vercel-ai',
+            agent_spec_id: APPROVAL_AGENT_SPEC_ID,
+            tools: ['runtime-sensitive-echo'],
+          }),
+        });
+
+        let resolvedId = APPROVAL_AGENT_NAME;
+
+        if (response.ok) {
+          const data = await response.json();
+          resolvedId = data?.id || APPROVAL_AGENT_NAME;
+        } else {
+          const contentType = response.headers.get('content-type') || '';
+          let detail = '';
+          if (contentType.includes('application/json')) {
+            const data = await response.json().catch(() => null);
+            detail = data?.detail || data?.message || '';
+          } else {
+            detail = await response.text();
+          }
+          if (response.status === 409 || /already exists/i.test(detail || '')) {
+            // Already running — reuse
+          } else {
+            console.warn('Failed to create approval agent:', detail);
+            return;
+          }
+        }
+
+        if (!isCancelled) {
+          setApprovalAgentId(resolvedId);
+          setApprovalAgentReady(true);
+        }
+      } catch (error) {
+        console.warn('Approval agent creation failed:', error);
+      }
+    };
+
+    void createApprovalAgent();
+    return () => { isCancelled = true; };
+  }, [isReady, agentBaseUrl, authFetch]);
+
+  // ── Poll tool approvals ─────────────────────────────────────────────────
+
+  const pollApprovals = useCallback(async () => {
+    if (!approvalAgentReady) return;
+    try {
+      const res = await authFetch(`${agentBaseUrl}/api/v1/tool-approvals`);
+      if (!res.ok) return;
+      const data = await res.json();
+      const all = Array.isArray(data) ? data : (data.approvals ?? data.requests ?? []);
+      const pending = all.filter(
+        (a: any) => a.status === 'pending' && (!a.agent_id || a.agent_id === approvalAgentId),
+      );
+      setApprovals(pending);
+    } catch {
+      // Non-fatal
+    }
+  }, [approvalAgentReady, agentBaseUrl, approvalAgentId, authFetch]);
+
+  useEffect(() => {
+    if (!hasTriggeredApproval) return;
+    void pollApprovals();
+    const interval = setInterval(pollApprovals, 2000);
+    return () => clearInterval(interval);
+  }, [hasTriggeredApproval, pollApprovals]);
+
+  // ── Poll approval agent history ─────────────────────────────────────────
+
+  useEffect(() => {
+    if (!hasTriggeredApproval || !approvalAgentReady) return;
+    let disposed = false;
+
+    const loadMessages = async () => {
+      try {
+        const res = await authFetch(
+          `${agentBaseUrl}/api/v1/history?agent_id=${encodeURIComponent(approvalAgentId)}`,
+          { method: 'GET' },
+        );
+        if (!res.ok) return;
+        const data = await res.json();
+        const messages = Array.isArray(data?.messages) ? data.messages : [];
+        if (!disposed) {
+          setApprovalSidebarMessages(messages);
+        }
+      } catch {
+        // Non-fatal
+      }
+    };
+
+    void loadMessages();
+    const interval = window.setInterval(() => void loadMessages(), 2000);
+    return () => { disposed = true; window.clearInterval(interval); };
+  }, [hasTriggeredApproval, approvalAgentReady, approvalAgentId, agentBaseUrl, authFetch]);
+
+  // ── Approve / Reject handlers ───────────────────────────────────────────
+
+  const handleApprove = useCallback(async (requestId: string) => {
+    setApprovalLoading(requestId);
+    setApprovalError(null);
+    try {
+      const res = await authFetch(
+        `${agentBaseUrl}/api/v1/tool-approvals/${requestId}/approve`,
+        { method: 'POST', body: JSON.stringify({}) },
+      );
+      if (!res.ok) {
+        throw new Error(`Approve failed (${res.status})`);
+      }
+      setApprovals(prev => prev.filter(a => a.id !== requestId));
+      void pollApprovals();
+    } catch (error) {
+      setApprovalError(error instanceof Error ? error.message : 'Failed to approve');
+    } finally {
+      setApprovalLoading(null);
+    }
+  }, [agentBaseUrl, authFetch, pollApprovals]);
+
+  const handleReject = useCallback(async (requestId: string, note?: string) => {
+    setApprovalLoading(requestId);
+    setApprovalError(null);
+    try {
+      const res = await authFetch(
+        `${agentBaseUrl}/api/v1/tool-approvals/${requestId}/reject`,
+        { method: 'POST', body: JSON.stringify(note ? { note } : {}) },
+      );
+      if (!res.ok) {
+        throw new Error(`Reject failed (${res.status})`);
+      }
+      setApprovals(prev => prev.filter(a => a.id !== requestId));
+      void pollApprovals();
+    } catch (error) {
+      setApprovalError(error instanceof Error ? error.message : 'Failed to reject');
+    } finally {
+      setApprovalLoading(null);
+    }
+  }, [agentBaseUrl, authFetch, pollApprovals]);
+
+  // ── Launch once trigger with approval ────────────────────────────────────
+
+  const handleLaunchOnceApproval = useCallback(async () => {
+    if (!agentBaseUrl || !approvalAgentReady) return;
+    setIsLaunchingApproval(true);
+    setApprovalFlash(null);
+    setHasTriggeredApproval(true);
+    const runId = `once-approval-${Date.now()}`;
+    const startTime = new Date().toISOString();
+    setTriggerHistory(prev => [
+      {
+        id: runId,
+        timestamp: startTime,
+        status: 'running' as const,
+        source: 'once' as TriggerTab,
+      },
+      ...prev,
+    ]);
+    try {
+      const res = await authFetch(
+        `${agentBaseUrl}/api/v1/agents/${approvalAgentId}/trigger/run`,
+        { method: 'POST', body: JSON.stringify({ source: 'once' }) },
+      );
+      if (res.ok) {
+        setApprovalFlash('Once trigger with approval launched — waiting for tool approval.');
+        setTriggerHistory(prev =>
+          prev.map(r =>
+            r.id === runId
+              ? { ...r, status: 'success' as const, duration_ms: Date.now() - new Date(startTime).getTime() }
+              : r,
+          ),
+        );
+      } else {
+        setApprovalFlash(`Launch failed (${res.status})`);
+        setTriggerHistory(prev =>
+          prev.map(r => r.id === runId ? { ...r, status: 'failure' as const } : r),
+        );
+      }
+    } catch {
+      setApprovalFlash('Network error');
+      setTriggerHistory(prev =>
+        prev.map(r => r.id === runId ? { ...r, status: 'failure' as const } : r),
+      );
+    } finally {
+      setIsLaunchingApproval(false);
+    }
+  }, [agentBaseUrl, approvalAgentReady, approvalAgentId, authFetch]);
+
+  // ── Pending approvals for banner/dialog ──────────────────────────────────
+
+  const pendingApprovals: PendingApproval[] = approvals.map(req => ({
+    id: req.id,
+    toolName: req.tool_name,
+    toolDescription: req.note,
+    args: req.tool_args ?? {},
+    agentId: approvalAgentId,
+    requestedAt: req.created_at ?? new Date().toISOString(),
+  }));
 
   // ── Update cron ──────────────────────────────────────────────────────────
 
@@ -564,6 +809,48 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
           Sign out
         </Button>
       </Box>
+
+      {/* Tool Approval Banner */}
+      <ToolApprovalBanner
+        pendingApprovals={pendingApprovals}
+        onReview={approval => {
+          const req = approvals.find(a => a.id === approval.id) || null;
+          setActiveApproval(req);
+        }}
+        onApproveAll={async () => {
+          for (const a of approvals) {
+            await handleApprove(a.id);
+          }
+        }}
+      />
+
+      {/* Tool Approval Dialog */}
+      <ToolApprovalDialog
+        isOpen={!!activeApproval}
+        toolName={activeApproval?.tool_name ?? ''}
+        toolDescription={activeApproval?.note}
+        args={activeApproval?.tool_args ?? {}}
+        onApprove={async () => {
+          if (activeApproval) {
+            await handleApprove(activeApproval.id);
+            setActiveApproval(null);
+          }
+        }}
+        onDeny={async () => {
+          if (activeApproval) {
+            await handleReject(activeApproval.id, 'Rejected from dialog');
+            setActiveApproval(null);
+          }
+        }}
+        onClose={() => setActiveApproval(null)}
+      />
+
+      {approvalError && (
+        <Box sx={{ px: 3, py: 1 }}>
+          <Text sx={{ color: 'danger.fg', fontSize: 0 }}>{approvalError}</Text>
+        </Box>
+      )}
+
       <Box sx={{ flex: 1, minHeight: 0, display: 'flex' }}>
         {/* Left: Chat */}
         <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -705,6 +992,17 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
                 {isLaunchingOnce ? 'Launching…' : 'Launch Once'}
               </Button>
 
+              <Button
+                size="small"
+                variant="danger"
+                leadingVisual={ZapIcon}
+                onClick={handleLaunchOnceApproval}
+                disabled={isLaunchingApproval || !approvalAgentReady}
+                sx={{ width: '100%', mt: 2 }}
+              >
+                {isLaunchingApproval ? 'Launching…' : 'Launch Once with Approval'}
+              </Button>
+
               {onceFlash && (
                 <Flash
                   variant={
@@ -713,6 +1011,17 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
                   sx={{ mt: 2, fontSize: 0 }}
                 >
                   {onceFlash}
+                </Flash>
+              )}
+
+              {approvalFlash && (
+                <Flash
+                  variant={
+                    approvalFlash.includes('launched') ? 'success' : 'danger'
+                  }
+                  sx={{ mt: 2, fontSize: 0 }}
+                >
+                  {approvalFlash}
                 </Flash>
               )}
 
@@ -891,6 +1200,153 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
                       return (
                         <Box
                           key={`once-msg-${msg.id}`}
+                          sx={{
+                            p: 2,
+                            bg: 'canvas.subtle',
+                            borderRadius: 2,
+                            border: '1px solid',
+                            borderColor: 'border.default',
+                          }}
+                        >
+                          <Box
+                            sx={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 1,
+                              mb: 1,
+                            }}
+                          >
+                            <Label
+                              size="small"
+                              variant={
+                                msg.role === 'assistant'
+                                  ? 'accent'
+                                  : msg.role === 'tool'
+                                    ? 'success'
+                                    : 'secondary'
+                              }
+                            >
+                              {msg.role}
+                            </Label>
+                            {msg.createdAt && (
+                              <Text
+                                sx={{
+                                  fontSize: 0,
+                                  color: 'fg.muted',
+                                  marginLeft: 'auto',
+                                  whiteSpace: 'nowrap',
+                                }}
+                              >
+                                {new Date(msg.createdAt).toLocaleTimeString()}
+                              </Text>
+                            )}
+                          </Box>
+                          <Text
+                            sx={{
+                              fontSize: 0,
+                              color: 'fg.default',
+                              display: 'block',
+                              whiteSpace: 'pre-wrap',
+                              wordBreak: 'break-word',
+                            }}
+                          >
+                            {content.length > 320
+                              ? `${content.slice(0, 320)}…`
+                              : content}
+                          </Text>
+                        </Box>
+                      );
+                    })}
+                </Box>
+              )}
+              </>
+              )}
+
+              {/* ── Approval Pending Queue ──────────────────────────────── */}
+              {hasTriggeredApproval && approvals.length > 0 && (
+              <>
+              <Heading as="h4" sx={{ fontSize: 1, mt: 3, mb: 2 }}>
+                Pending Tool Approvals
+              </Heading>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mb: 2 }}>
+                {approvals.map(a => (
+                  <Box
+                    key={a.id}
+                    sx={{
+                      p: 2,
+                      border: '1px solid',
+                      borderColor: 'attention.muted',
+                      borderRadius: 2,
+                      bg: 'attention.subtle',
+                    }}
+                  >
+                    <Text sx={{ fontWeight: 600, fontSize: 1, display: 'block', mb: 1 }}>
+                      🛡️ {a.tool_name}
+                    </Text>
+                    {a.tool_args && (
+                      <Text sx={{ fontSize: 0, color: 'fg.muted', display: 'block', mb: 2, fontFamily: 'mono' }}>
+                        {JSON.stringify(a.tool_args)}
+                      </Text>
+                    )}
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                      <Button
+                        size="small"
+                        variant="primary"
+                        onClick={() => void handleApprove(a.id)}
+                        disabled={approvalLoading === a.id}
+                      >
+                        {approvalLoading === a.id ? 'Approving…' : 'Approve'}
+                      </Button>
+                      <Button
+                        size="small"
+                        variant="danger"
+                        onClick={() => void handleReject(a.id, 'Rejected from trigger panel')}
+                        disabled={approvalLoading === a.id}
+                      >
+                        Reject
+                      </Button>
+                    </Box>
+                  </Box>
+                ))}
+              </Box>
+              </>
+              )}
+
+              {/* ── Approval Streaming Messages ─────────────────────────── */}
+              {hasTriggeredApproval && (
+              <>
+              <Heading as="h4" sx={{ fontSize: 1, mt: 3, mb: 2 }}>
+                Approval Agent Messages
+                {isLaunchingApproval && (
+                  <Spinner size="small" sx={{ ml: 2, verticalAlign: 'middle' }} />
+                )}
+              </Heading>
+
+              {approvalSidebarMessages.filter(msg => msg.role !== 'user').length === 0 ? (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                  <Spinner size="small" />
+                  <Text sx={{ color: 'fg.muted', fontSize: 0 }}>
+                    Waiting for approval agent messages…
+                  </Text>
+                </Box>
+              ) : (
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mb: 2 }}>
+                  {approvalSidebarMessages
+                    .slice()
+                    .filter(msg => msg.role !== 'user')
+                    .sort((a, b) => {
+                      const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+                      const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+                      return tb - ta;
+                    })
+                    .slice(0, 10)
+                    .map(msg => {
+                      const content = typeof msg.content === 'string'
+                        ? msg.content
+                        : JSON.stringify(msg.content);
+                      return (
+                        <Box
+                          key={`approval-msg-${msg.id}`}
                           sx={{
                             p: 2,
                             bg: 'canvas.subtle',
