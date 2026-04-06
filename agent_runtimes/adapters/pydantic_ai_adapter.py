@@ -12,8 +12,10 @@ import logging
 import uuid
 from typing import Any, AsyncIterator
 
-from pydantic_ai import Agent
+from pydantic_ai import Agent, DeferredToolRequests
+from pydantic_ai.tools import DeferredToolResults
 
+from ..capabilities.tool_approval import ToolApprovalConfig, ToolApprovalManager
 from ..context.usage import get_usage_tracker
 from ..mcp.lifecycle import get_mcp_lifecycle_manager
 from .base import (
@@ -27,6 +29,8 @@ from .base import (
 )
 
 logger = logging.getLogger(__name__)
+
+_MAX_DEFERRED_APPROVAL_CONTINUATIONS = 5
 
 
 class PydanticAIAdapter(BaseAgent):
@@ -440,32 +444,100 @@ class PydanticAIAdapter(BaseAgent):
 
         # Extract model from context metadata for per-request model override
         model_override = context.metadata.get("model") if context.metadata else None
+        user_token_override = (
+            context.metadata.get("user_token") if context.metadata else None
+        )
 
         import time
 
         try:
-            # Run the Pydantic AI agent
-            # Pass model override if provided in context metadata
-            run_kwargs = {
-                "message_history": message_history if message_history else None,
+            # Dynamically get toolsets at run time to reflect current MCP server state
+            runtime_toolsets = self._get_runtime_toolsets()
+            # Always pass toolsets to override any default toolsets on the agent.
+            # Even an empty list should be passed to ensure no tools are available.
+            run_kwargs_base: dict[str, Any] = {
+                "toolsets": runtime_toolsets,
             }
             if model_override:
-                run_kwargs["model"] = model_override
+                run_kwargs_base["model"] = model_override
                 logger.info(
                     f"PydanticAIAdapter: Using model override: {model_override}"
                 )
 
-            # Dynamically get toolsets at run time to reflect current MCP server state
-            runtime_toolsets = self._get_runtime_toolsets()
-            # Always pass toolsets to override any default toolsets on the agent
-            # Even an empty list should be passed to ensure no tools are available
-            run_kwargs["toolsets"] = runtime_toolsets
             logger.debug(
                 f"PydanticAIAdapter: Using {len(runtime_toolsets)} runtime toolsets"
             )
 
             request_start = time.perf_counter()
-            result = await self._agent.run(prompt, **run_kwargs)
+
+            current_prompt: str | None = prompt
+            current_message_history = message_history if message_history else None
+            deferred_tool_results: DeferredToolResults | None = None
+            result = None
+
+            for continuation_round in range(_MAX_DEFERRED_APPROVAL_CONTINUATIONS + 1):
+                run_kwargs = dict(run_kwargs_base)
+                run_kwargs["message_history"] = current_message_history
+                if deferred_tool_results is not None:
+                    run_kwargs["deferred_tool_results"] = deferred_tool_results
+
+                result = await self._agent.run(current_prompt, **run_kwargs)
+
+                # Continue deferred approval flows for non-stream callers (e.g. once trigger).
+                if isinstance(result.output, DeferredToolRequests):
+                    deferred_requests = result.output
+
+                    if deferred_requests.calls:
+                        raise RuntimeError(
+                            "Deferred external tool execution is not supported in non-stream run mode"
+                        )
+
+                    if not deferred_requests.approvals:
+                        break
+
+                    approval_config = ToolApprovalConfig.from_env()
+                    approval_config.agent_id = self._agent_id
+                    if user_token_override:
+                        approval_config.token = user_token_override
+                    approval_manager = ToolApprovalManager(approval_config)
+
+                    approval_results: dict[str, bool] = {}
+                    try:
+                        for approval in deferred_requests.approvals:
+                            tool_args = (
+                                approval.args
+                                if isinstance(approval.args, dict)
+                                else {"value": str(approval.args)}
+                            )
+                            await approval_manager.request_and_wait(
+                                approval.tool_name,
+                                tool_args,
+                            )
+                            approval_results[approval.tool_call_id] = True
+                    finally:
+                        await approval_manager.close()
+
+                    deferred_tool_results = DeferredToolResults(
+                        approvals=approval_results,
+                        metadata=deferred_requests.metadata,
+                    )
+                    current_message_history = result.all_messages()
+                    current_prompt = None
+                    logger.info(
+                        "PydanticAIAdapter: Processed %s deferred approval(s), continuing run",
+                        len(approval_results),
+                    )
+                    continue
+
+                break
+            else:
+                raise RuntimeError(
+                    "Exceeded maximum deferred approval continuations in non-stream run mode"
+                )
+
+            if result is None:
+                raise RuntimeError("Agent run produced no result")
+
             duration_ms = (time.perf_counter() - request_start) * 1000
 
             # Extract response content

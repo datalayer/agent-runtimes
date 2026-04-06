@@ -179,7 +179,10 @@ class OnceInvoker(BaseInvoker):
         agent, _info = pair
         from agent_runtimes.adapters.base import AgentContext
 
-        ctx = AgentContext(session_id=f"once-trigger-{self.agent_id}")
+        ctx = AgentContext(
+            session_id=f"once-trigger-{self.agent_id}",
+            metadata={"user_token": self.token} if self.token else {},
+        )
         response = await agent.run(prompt, ctx)
         content = getattr(response, "content", None)
         if content is None:
