@@ -1114,9 +1114,8 @@ async def create_agent(
             # causes a second blocking approval wait during actual tool execution.
             # However, once/cron triggers run autonomously without a client to
             # handle deferred tool requests, so keep the capability for those.
-            has_trigger = (
-                spec_for_runtime_controls is not None
-                and getattr(spec_for_runtime_controls, "trigger", None)
+            has_trigger = spec_for_runtime_controls is not None and getattr(
+                spec_for_runtime_controls, "trigger", None
             )
             if request.transport == "vercel-ai" and capabilities and not has_trigger:
                 filtered_capabilities = [
@@ -1153,9 +1152,8 @@ async def create_agent(
                         isinstance(cap, ToolApprovalCapability) for cap in capabilities
                     )
                 )
-                if (
-                    not has_tool_approval_capability
-                    and (request.transport != "vercel-ai" or has_trigger)
+                if not has_tool_approval_capability and (
+                    request.transport != "vercel-ai" or has_trigger
                 ):
                     approval_config = ToolApprovalConfig.from_env()
                     approval_config.agent_id = agent_id

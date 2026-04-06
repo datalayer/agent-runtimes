@@ -96,6 +96,7 @@ class _FakeStreamingAgent:
         if len(self.calls) == 1:
             # First call → emit preamble text, return deferred approval
             if event_handler:
+
                 async def _events_1() -> AsyncIterator[PartDeltaEvent]:
                     yield PartDeltaEvent(
                         index=0,
@@ -128,6 +129,7 @@ class _FakeStreamingAgent:
         ]
 
         if event_handler:
+
             async def _events_2() -> AsyncIterator[PartDeltaEvent]:
                 yield PartDeltaEvent(
                     index=0,

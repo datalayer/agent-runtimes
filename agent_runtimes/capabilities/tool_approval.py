@@ -294,7 +294,11 @@ class ToolApprovalManager:
                             tool_name,
                             approval_id,
                         )
-                        return {"status": "approved", "id": approval_id, "tool_name": tool_name}
+                        return {
+                            "status": "approved",
+                            "id": approval_id,
+                            "tool_name": tool_name,
+                        }
                     elif local_status == "rejected":
                         logger.info(
                             "Tool '%s' rejected locally (approval_id=%s)",
