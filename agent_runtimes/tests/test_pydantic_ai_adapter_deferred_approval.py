@@ -3,6 +3,8 @@
 
 """Regression tests for deferred approval continuation in non-stream adapter.run."""
 
+from typing import Any
+
 import pytest
 from pydantic_ai import DeferredToolRequests
 from pydantic_ai.messages import ToolCallPart
@@ -25,24 +27,28 @@ class _FakeUsage:
 
 
 class _FakeResult:
-    def __init__(self, output, all_messages=None):
+    def __init__(
+        self,
+        output: str | DeferredToolRequests,
+        all_messages: list[dict[str, str]] | None = None,
+    ) -> None:
         self.output = output
         self._all_messages = all_messages or []
 
-    def all_messages(self):
+    def all_messages(self) -> list[dict[str, str]]:
         return self._all_messages
 
-    def usage(self):
+    def usage(self) -> _FakeUsage:
         return _FakeUsage()
 
 
 class _FakeAgent:
-    def __init__(self):
+    def __init__(self) -> None:
         self.model = "test:model"
-        self._tools = {}
-        self.calls = []
+        self._tools: dict[str, Any] = {}
+        self.calls: list[dict[str, Any]] = []
 
-    async def run(self, prompt, **kwargs):
+    async def run(self, prompt: str, **kwargs: Any) -> _FakeResult:
         self.calls.append({"prompt": prompt, "kwargs": kwargs})
 
         # First run returns a deferred approval request.
@@ -78,14 +84,16 @@ async def test_run_continues_deferred_approval_with_non_empty_prompt(
     requests_seen = []
 
     class _FakeApprovalManager:
-        def __init__(self, _config):
+        def __init__(self, _config: Any) -> None:
             pass
 
-        async def request_and_wait(self, tool_name, tool_args):
+        async def request_and_wait(
+            self, tool_name: str, tool_args: dict[str, str]
+        ) -> dict[str, str]:
             requests_seen.append((tool_name, tool_args))
             return {"status": "approved"}
 
-        async def close(self):
+        async def close(self) -> None:
             return None
 
     monkeypatch.setattr(
