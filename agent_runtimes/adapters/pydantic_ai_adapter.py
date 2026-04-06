@@ -539,6 +539,12 @@ class PydanticAIAdapter(BaseAgent):
             if result is None:
                 raise RuntimeError("Agent run produced no result")
 
+            # Persist message history so /api/v1/history can serve it.
+            tracker = get_usage_tracker()
+            stats = tracker.get_agent_stats(self._agent_id)
+            if stats:
+                stats.store_messages(result.all_messages())
+
             duration_ms = (time.perf_counter() - request_start) * 1000
 
             # Extract response content
