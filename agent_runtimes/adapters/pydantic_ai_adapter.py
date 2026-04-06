@@ -730,6 +730,11 @@ class PydanticAIAdapter(BaseAgent):
                             assistant_tokens=getattr(run_usage, "output_tokens", 0),
                         )
 
+                # Persist message history so /api/v1/history can serve it.
+                stats = tracker.get_agent_stats(self._agent_id)
+                if stats:
+                    stats.store_messages(result.all_messages())
+
             yield StreamEvent(type="done", data=None)
 
         except Exception as e:

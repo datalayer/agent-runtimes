@@ -165,6 +165,10 @@ class OnceInvoker(BaseInvoker):
     async def _run_agent(self, prompt: str) -> str | None:
         """Run the registered agent adapter with the trigger prompt.
 
+        Uses ``adapter.stream()`` so that message history is persisted
+        incrementally via the usage tracker, making it available to
+        ``/api/v1/history`` as soon as the run completes.
+
         We import here to avoid circular imports at module level.
         """
         from agent_runtimes.routes.acp import _agents  # registered agents
@@ -183,11 +187,12 @@ class OnceInvoker(BaseInvoker):
             session_id=f"once-trigger-{self.agent_id}",
             metadata={"user_token": self.token} if self.token else {},
         )
-        response = await agent.run(prompt, ctx)
-        content = getattr(response, "content", None)
-        if content is None:
-            raise RuntimeError("Agent adapter returned no content field")
-        return content
+        content_parts: list[str] = []
+        async for event in agent.stream(prompt, ctx):
+            if event.type == "text":
+                content_parts.append(event.data)
+        content = "".join(content_parts)
+        return content if content else None
 
     async def _terminate_runtime(self) -> None:
         """Terminate the runtime after a once-trigger completes.

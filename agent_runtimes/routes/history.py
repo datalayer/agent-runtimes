@@ -271,6 +271,18 @@ async def get_conversation_history(
     tracker = get_usage_tracker()
     stats = tracker.get_agent_stats(agent_id)
 
+    # When the requested agent_id has no stats (e.g. frontend sends
+    # ``agent_id=default`` but the adapter registered under its spec name),
+    # resolve to the primary registered agent in this runtime.
+    if (not stats or not stats.message_history) and agent_id == "default":
+        for candidate_id in tracker.list_agents():
+            candidate_stats = tracker.get_agent_stats(candidate_id)
+            if candidate_stats and candidate_stats.message_history:
+                stats = candidate_stats
+                agent_id = candidate_id
+                logger.debug("Resolved agent_id 'default' to '%s'", candidate_id)
+                break
+
     if not stats:
         logger.debug(f"No usage stats found for agent '{agent_id}'")
         return HistoryResponse(messages=[])
