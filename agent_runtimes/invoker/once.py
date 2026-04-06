@@ -165,9 +165,8 @@ class OnceInvoker(BaseInvoker):
     async def _run_agent(self, prompt: str) -> str | None:
         """Run the registered agent adapter with the trigger prompt.
 
-        Uses ``adapter.stream()`` so that message history is persisted
-        incrementally via the usage tracker, making it available to
-        ``/api/v1/history`` as soon as the run completes.
+        Uses the adapter streaming API so once triggers can emit streamed output,
+        while still allowing deferred approval continuations in the adapter.
 
         We import here to avoid circular imports at module level.
         """
@@ -190,7 +189,12 @@ class OnceInvoker(BaseInvoker):
         content_parts: list[str] = []
         async for event in agent.stream(prompt, ctx):
             if event.type == "text":
-                content_parts.append(event.data)
+                if isinstance(event.data, str):
+                    content_parts.append(event.data)
+                else:
+                    content_parts.append(str(event.data))
+            elif event.type == "error":
+                raise RuntimeError(str(event.data))
         content = "".join(content_parts)
         return content if content else None
 
