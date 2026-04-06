@@ -11,8 +11,8 @@ from pydantic_ai.messages import ToolCallPart
 
 from agent_runtimes.adapters.base import AgentContext
 from agent_runtimes.adapters.pydantic_ai_adapter import (
-    PydanticAIAdapter,
     _DEFERRED_CONTINUATION_PROMPT,
+    PydanticAIAdapter,
 )
 
 
