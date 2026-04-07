@@ -18,6 +18,7 @@ The Vercel AI SDK protocol provides:
 
 import inspect
 import logging
+import os
 import traceback
 from typing import TYPE_CHECKING, Any, AsyncIterator
 
@@ -41,6 +42,7 @@ from pydantic_ai.toolsets import ExternalToolset
 from ..adapters.base import BaseAgent
 from ..context.identities import IdentityContextManager
 from ..context.usage import get_usage_tracker
+from ..events import create_event
 from ..observability.prompt_turn_metrics import (
     extract_identity_hints,
     extract_jwt_token,
@@ -501,6 +503,53 @@ class VercelAITransport(BaseTransport):
                 requests_count,
                 tool_call_count,
             )
+
+            # Emit agent-output event for final textual completions so
+            # trigger panels can show Generated Output consistently.
+            try:
+                output_text = ""
+                if hasattr(result, "output") and isinstance(result.output, str):
+                    output_text = result.output.strip()
+
+                if output_text:
+                    auth_header = request.headers.get("Authorization", "")
+                    token_value = ""
+                    if auth_header.startswith("Bearer "):
+                        token_value = auth_header.removeprefix("Bearer ").strip()
+                    elif auth_header.startswith("token "):
+                        token_value = auth_header.removeprefix("token ").strip()
+
+                    if token_value:
+                        events_base_url = (
+                            os.environ.get("DATALAYER_AI_AGENTS_URL")
+                            or os.environ.get("AI_AGENTS_URL")
+                            or os.environ.get("DATALAYER_RUN_URL")
+                            or "https://prod1.datalayer.run"
+                        )
+                        create_event(
+                            token=token_value,
+                            agent_id=agent_id,
+                            title="Agent Output",
+                            kind="agent-output",
+                            status="completed",
+                            payload={
+                                "agent_id": agent_id,
+                                "duration_ms": int(duration_ms),
+                                "outputs": output_text,
+                                "exit_status": "completed",
+                            },
+                            metadata={
+                                "origin": "agent-runtime",
+                                "source": "vercel-ai-on-complete",
+                            },
+                            base_url=events_base_url,
+                        )
+            except Exception as event_exc:
+                logger.debug(
+                    "[Vercel AI] Failed to emit agent-output event for agent '%s': %s",
+                    agent_id,
+                    event_exc,
+                )
 
             # Emit OTEL prompt-turn metrics for every successful completed turn.
             response_text = ""
