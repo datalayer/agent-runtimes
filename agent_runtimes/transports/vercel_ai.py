@@ -199,6 +199,7 @@ class VercelAITransport(BaseTransport):
         has_spec_frontend_tools: bool = False,
         has_approval_tools: bool = False,
         approval_tool_ids: list[str] | None = None,
+        is_triggered: bool = False,
     ):
         """Initialize the Vercel AI adapter.
 
@@ -211,6 +212,7 @@ class VercelAITransport(BaseTransport):
             has_spec_frontend_tools: Whether the agent spec declares frontend tools.
             has_approval_tools: Whether the agent has runtime tools requiring approval.
             approval_tool_ids: List of tool IDs that require human approval.
+            is_triggered: Whether the agent has a trigger config (output events are only emitted for triggered agents).
         """
         super().__init__(agent)
         self._usage_limits = usage_limits or UsageLimits(
@@ -223,6 +225,7 @@ class VercelAITransport(BaseTransport):
         self._has_spec_frontend_tools = has_spec_frontend_tools
         self._approval_tool_ids = approval_tool_ids or []
         self._has_approval_tools = has_approval_tools or bool(self._approval_tool_ids)
+        self._is_triggered = is_triggered
         # Get agent_id from adapter if available
         if agent_id:
             self._agent_id = agent_id
@@ -506,50 +509,52 @@ class VercelAITransport(BaseTransport):
 
             # Emit agent-output event for final textual completions so
             # trigger panels can show Generated Output consistently.
-            try:
-                output_text = ""
-                if hasattr(result, "output") and isinstance(result.output, str):
-                    output_text = result.output.strip()
+            # Only emit for triggered agents (agents with a trigger config).
+            if self._is_triggered:
+                try:
+                    output_text = ""
+                    if hasattr(result, "output") and isinstance(result.output, str):
+                        output_text = result.output.strip()
 
-                if output_text:
-                    auth_header = request.headers.get("Authorization", "")
-                    token_value = ""
-                    if auth_header.startswith("Bearer "):
-                        token_value = auth_header.removeprefix("Bearer ").strip()
-                    elif auth_header.startswith("token "):
-                        token_value = auth_header.removeprefix("token ").strip()
+                    if output_text:
+                        auth_header = request.headers.get("Authorization", "")
+                        token_value = ""
+                        if auth_header.startswith("Bearer "):
+                            token_value = auth_header.removeprefix("Bearer ").strip()
+                        elif auth_header.startswith("token "):
+                            token_value = auth_header.removeprefix("token ").strip()
 
-                    if token_value:
-                        events_base_url = (
-                            os.environ.get("DATALAYER_AI_AGENTS_URL")
-                            or os.environ.get("AI_AGENTS_URL")
-                            or os.environ.get("DATALAYER_RUN_URL")
-                            or "https://prod1.datalayer.run"
-                        )
-                        create_event(
-                            token=token_value,
-                            agent_id=agent_id,
-                            title="Agent Output",
-                            kind="agent-output",
-                            status="completed",
-                            payload={
-                                "agent_id": agent_id,
-                                "duration_ms": int(duration_ms),
-                                "outputs": output_text,
-                                "exit_status": "completed",
-                            },
-                            metadata={
-                                "origin": "agent-runtime",
-                                "source": "vercel-ai-on-complete",
-                            },
-                            base_url=events_base_url,
-                        )
-            except Exception as event_exc:
-                logger.debug(
-                    "[Vercel AI] Failed to emit agent-output event for agent '%s': %s",
-                    agent_id,
-                    event_exc,
-                )
+                        if token_value:
+                            events_base_url = (
+                                os.environ.get("DATALAYER_AI_AGENTS_URL")
+                                or os.environ.get("AI_AGENTS_URL")
+                                or os.environ.get("DATALAYER_RUN_URL")
+                                or "https://prod1.datalayer.run"
+                            )
+                            create_event(
+                                token=token_value,
+                                agent_id=agent_id,
+                                title="Agent Output",
+                                kind="agent-output",
+                                status="completed",
+                                payload={
+                                    "agent_id": agent_id,
+                                    "duration_ms": int(duration_ms),
+                                    "outputs": output_text,
+                                    "exit_status": "completed",
+                                },
+                                metadata={
+                                    "origin": "agent-runtime",
+                                    "source": "vercel-ai-on-complete",
+                                },
+                                base_url=events_base_url,
+                            )
+                except Exception as event_exc:
+                    logger.debug(
+                        "[Vercel AI] Failed to emit agent-output event for agent '%s': %s",
+                        agent_id,
+                        event_exc,
+                    )
 
             # Emit OTEL prompt-turn metrics for every successful completed turn.
             response_text = ""
