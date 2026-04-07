@@ -14,7 +14,6 @@ from typing import Optional
 
 from agent_runtimes.types import MemorySpec
 
-
 # ============================================================================
 # Memories Enum
 # ============================================================================
@@ -110,8 +109,8 @@ def get_memory(memory_id: str) -> Optional[MemorySpec]:
     mem = MEMORY_CATALOGUE.get(memory_id)
     if mem is not None:
         return mem
-    base, _, ver = memory_id.rpartition(':')
-    if base and '.' in ver:
+    base, _, ver = memory_id.rpartition(":")
+    if base and "." in ver:
         return MEMORY_CATALOGUE.get(base)
     return None
 
