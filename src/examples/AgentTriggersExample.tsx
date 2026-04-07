@@ -65,6 +65,8 @@ import {
   useAIAgentsWebSocket,
 } from '../hooks';
 import type { AgentEvent } from '../types';
+import { VercelAIAdapter } from '../protocols';
+import { createUserMessage } from '../types/messages';
 
 const queryClient = new QueryClient();
 
@@ -74,6 +76,10 @@ const AGENT_NAME = 'trigger-demo-agent';
 const AGENT_SPEC_ID = 'demo-one-trigger';
 const APPROVAL_AGENT_NAME = 'trigger-approval-demo-agent';
 const APPROVAL_AGENT_SPEC_ID = 'demo-one-trigger-approval';
+const ONCE_TRIGGER_PROMPT =
+  "List the user's top 3 public and top 3 private GitHub repositories, ranked by recent activity, and provide a brief summary of each.";
+const ONCE_TRIGGER_APPROVAL_PROMPT =
+  "Call runtime_sensitive_echo exactly once with message='Tool approval demo executed' and reason='audit'. Do not call any other tool.";
 const DEFAULT_LOCAL_BASE_URL =
   import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
 const DEFAULT_CRON = '0 8 * * *'; // daily at 08:00 UTC
@@ -283,53 +289,113 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
 
 
 
-  // ── Poll chat history for sidebar messages ─────────────────────────────
+  const upsertSidebarMessage = useCallback(
+    (
+      setMessages: React.Dispatch<
+        React.SetStateAction<
+          Array<{
+            id: string;
+            role: string;
+            content: unknown;
+            createdAt?: string;
+          }>
+        >
+      >,
+      message: {
+        id: string;
+        role: string;
+        content: unknown;
+        createdAt?: string;
+      },
+    ) => {
+      setMessages(prev => {
+        const idx = prev.findIndex(m => m.id === message.id);
+        if (idx >= 0) {
+          const next = [...prev];
+          next[idx] = { ...next[idx], ...message };
+          return next;
+        }
+        return [...prev, message];
+      });
+    },
+    [],
+  );
 
-  useEffect(() => {
-    if (!isReady || !agentId) return;
+  const streamRunMessages = useCallback(
+    async (
+      targetAgentId: string,
+      prompt: string,
+      setMessages: React.Dispatch<
+        React.SetStateAction<
+          Array<{
+            id: string;
+            role: string;
+            content: unknown;
+            createdAt?: string;
+          }>
+        >
+      >,
+      setError: React.Dispatch<React.SetStateAction<string | null>>,
+    ) => {
+      const endpoint = `${agentBaseUrl}/api/v1/vercel-ai/${encodeURIComponent(targetAgentId)}`;
+      const adapter = new VercelAIAdapter({
+        protocol: 'vercel-ai',
+        baseUrl: endpoint,
+        agentId: targetAgentId,
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
 
-    let disposed = false;
+      const unsubscribe = adapter.subscribe(event => {
+        if (event.type === 'message' && event.message) {
+          const msg = event.message;
+          upsertSidebarMessage(setMessages, {
+            id: msg.id,
+            role: msg.role,
+            content:
+              typeof msg.content === 'string'
+                ? msg.content
+                : JSON.stringify(msg.content),
+            createdAt: msg.createdAt?.toISOString(),
+          });
+          return;
+        }
 
-    const loadMessages = async () => {
-      if (!disposed) {
-        setSidebarMessagesError(null);
-      }
+        if (event.type === 'tool-call' && event.toolCall) {
+          upsertSidebarMessage(setMessages, {
+            id: `tool-call-${event.toolCall.toolCallId}`,
+            role: 'tool',
+            content: `${event.toolCall.toolName}(${JSON.stringify(event.toolCall.args)})`,
+            createdAt: event.timestamp.toISOString(),
+          });
+          return;
+        }
+
+        if (event.type === 'tool-result' && event.toolResult) {
+          upsertSidebarMessage(setMessages, {
+            id: `tool-result-${event.toolResult.toolCallId}`,
+            role: 'tool',
+            content: JSON.stringify(event.toolResult.result),
+            createdAt: event.timestamp.toISOString(),
+          });
+        }
+      });
+
       try {
-        const res = await authFetch(
-          `${agentBaseUrl}/api/v1/history?agent_id=${encodeURIComponent(agentId)}`,
-          { method: 'GET' },
-        );
-
-        if (!res.ok) {
-          throw new Error(`History fetch failed (${res.status})`);
-        }
-
-        const data = await res.json();
-        const messages = Array.isArray(data?.messages) ? data.messages : [];
-        if (!disposed) {
-          setSidebarMessages(messages);
-        }
+        setError(null);
+        await adapter.connect();
+        await adapter.sendMessage(createUserMessage(prompt));
       } catch (error) {
-        if (!disposed) {
-          setSidebarMessagesError(
-            error instanceof Error ? error.message : 'Failed to load chat history',
-          );
-        }
+        setError(
+          error instanceof Error ? error.message : 'Streaming request failed',
+        );
+        throw error;
       } finally {
-        // no-op
+        unsubscribe();
+        adapter.disconnect();
       }
-    };
-
-    void loadMessages();
-    const interval = window.setInterval(() => {
-      void loadMessages();
-    }, 2000);
-
-    return () => {
-      disposed = true;
-      window.clearInterval(interval);
-    };
-  }, [isReady, agentId, agentBaseUrl, authFetch]);
+    },
+    [agentBaseUrl, token, upsertSidebarMessage],
+  );
 
   // ── Create approval agent on local server ────────────────────────────────
 
@@ -411,33 +477,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
     return () => clearInterval(interval);
   }, [hasTriggeredApproval, pollApprovals]);
 
-  // ── Poll approval agent history ─────────────────────────────────────────
-
-  useEffect(() => {
-    if (!hasTriggeredApproval || !approvalAgentReady) return;
-    let disposed = false;
-
-    const loadMessages = async () => {
-      try {
-        const res = await authFetch(
-          `${agentBaseUrl}/api/v1/history?agent_id=${encodeURIComponent(approvalAgentId)}`,
-          { method: 'GET' },
-        );
-        if (!res.ok) return;
-        const data = await res.json();
-        const messages = Array.isArray(data?.messages) ? data.messages : [];
-        if (!disposed) {
-          setApprovalSidebarMessages(messages);
-        }
-      } catch {
-        // Non-fatal
-      }
-    };
-
-    void loadMessages();
-    const interval = window.setInterval(() => void loadMessages(), 2000);
-    return () => { disposed = true; window.clearInterval(interval); };
-  }, [hasTriggeredApproval, approvalAgentReady, approvalAgentId, agentBaseUrl, authFetch]);
+  // Approval sidebar messages are populated from live Vercel stream events.
 
   // ── Approve / Reject handlers ───────────────────────────────────────────
 
@@ -487,6 +527,8 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
     if (!agentBaseUrl || !approvalAgentReady) return;
     setIsLaunchingApproval(true);
     setApprovalFlash(null);
+    setApprovalSidebarMessages([]);
+    setSidebarMessagesError(null);
     setHasTriggeredApproval(true);
     const runId = `once-approval-${Date.now()}`;
     const startTime = new Date().toISOString();
@@ -500,25 +542,26 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
       ...prev,
     ]);
     try {
-      const res = await authFetch(
-        `${agentBaseUrl}/api/v1/agents/${approvalAgentId}/trigger/run`,
-        { method: 'POST', body: JSON.stringify({ source: 'once' }) },
+      setApprovalFlash(
+        'Once trigger with approval launched — waiting for tool approval.',
       );
-      if (res.ok) {
-        setApprovalFlash('Once trigger with approval launched — waiting for tool approval.');
-        setTriggerHistory(prev =>
-          prev.map(r =>
-            r.id === runId
-              ? { ...r, status: 'success' as const, duration_ms: Date.now() - new Date(startTime).getTime() }
-              : r,
-          ),
-        );
-      } else {
-        setApprovalFlash(`Launch failed (${res.status})`);
-        setTriggerHistory(prev =>
-          prev.map(r => r.id === runId ? { ...r, status: 'failure' as const } : r),
-        );
-      }
+      await streamRunMessages(
+        approvalAgentId,
+        ONCE_TRIGGER_APPROVAL_PROMPT,
+        setApprovalSidebarMessages,
+        setSidebarMessagesError,
+      );
+      setTriggerHistory(prev =>
+        prev.map(r =>
+          r.id === runId
+            ? {
+                ...r,
+                status: 'success' as const,
+                duration_ms: Date.now() - new Date(startTime).getTime(),
+              }
+            : r,
+        ),
+      );
     } catch {
       setApprovalFlash('Network error');
       setTriggerHistory(prev =>
@@ -527,7 +570,12 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
     } finally {
       setIsLaunchingApproval(false);
     }
-  }, [agentBaseUrl, approvalAgentReady, approvalAgentId, authFetch]);
+  }, [
+    agentBaseUrl,
+    approvalAgentReady,
+    approvalAgentId,
+    streamRunMessages,
+  ]);
 
   // ── Pending approvals for banner/dialog ──────────────────────────────────
 
@@ -691,6 +739,8 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
     if (!agentBaseUrl) return;
     setIsLaunchingOnce(true);
     setOnceFlash(null);
+    setSidebarMessages([]);
+    setSidebarMessagesError(null);
     const runId = `once-${Date.now()}`;
     const startTime = new Date().toISOString();
     setLastOnceStartedAt(startTime);
@@ -705,31 +755,24 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
       ...prev,
     ]);
     try {
-      const res = await authFetch(
-        `${agentBaseUrl}/api/v1/agents/${agentId}/trigger/run`,
-        { method: 'POST', body: JSON.stringify({ source: 'once' }) },
+      setOnceFlash('Once trigger launched — streaming live output.');
+      await streamRunMessages(
+        agentId,
+        ONCE_TRIGGER_PROMPT,
+        setSidebarMessages,
+        setSidebarMessagesError,
       );
-      if (res.ok) {
-        setOnceFlash('Once trigger launched — agent will run and terminate.');
-        setTriggerHistory(prev =>
-          prev.map(r =>
-            r.id === runId
-              ? {
-                  ...r,
-                  status: 'success' as const,
-                  duration_ms: Date.now() - new Date(startTime).getTime(),
-                }
-              : r,
-          ),
-        );
-      } else {
-        setOnceFlash(`Launch failed (${res.status})`);
-        setTriggerHistory(prev =>
-          prev.map(r =>
-            r.id === runId ? { ...r, status: 'failure' as const } : r,
-          ),
-        );
-      }
+      setTriggerHistory(prev =>
+        prev.map(r =>
+          r.id === runId
+            ? {
+                ...r,
+                status: 'success' as const,
+                duration_ms: Date.now() - new Date(startTime).getTime(),
+              }
+            : r,
+        ),
+      );
     } catch {
       setOnceFlash('Network error');
       setTriggerHistory(prev =>
@@ -740,7 +783,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
     } finally {
       setIsLaunchingOnce(false);
     }
-  }, [agentBaseUrl, agentId, authFetch]);
+  }, [agentBaseUrl, agentId, streamRunMessages]);
 
   // ── Loading / Error ──────────────────────────────────────────────────────
 
@@ -770,8 +813,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
     return <ErrorView error={hookError} onLogout={onLogout} />;
   }
 
-  const triggerRunCurl = `curl -X POST '${agentBaseUrl}/api/v1/agents/${agentId}/trigger/run' -H 'Content-Type: application/json'${token ? " -H 'Authorization: Bearer <TOKEN>'" : ''} --data '{"source":"once"}'`;
-  const historyCurl = `curl '${agentBaseUrl}/api/v1/history?agent_id=default' -H 'Content-Type: application/json'${token ? " -H 'Authorization: Bearer <TOKEN>'" : ''}`;
+  const triggerRunCurl = `curl -N -X POST '${agentBaseUrl}/api/v1/vercel-ai/${agentId}' -H 'Content-Type: application/json' -H 'Accept: text/event-stream'${token ? " -H 'Authorization: Bearer <TOKEN>'" : ''} --data '{"messages":[{"role":"user","parts":[{"type":"text","text":"${ONCE_TRIGGER_PROMPT.replace(/"/g, '\\"')}"}]}],"trigger":"submit-message","sdkVersion":6}'`;
 
   return (
     <Box
@@ -865,7 +907,6 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
             autoFocus={false}
             height="100%"
             runtimeId={agentId}
-            historyEndpoint={`${agentBaseUrl}/api/v1/history`}
             showInput={false}
             showModelSelector={false}
             showToolsMenu={false}
@@ -950,9 +991,9 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
               </Box>
 
               <Text as="p" sx={{ fontSize: 0, color: 'fg.muted', mb: 3 }}>
-                Launch the agent once. It will execute its trigger prompt, emit
-                lifecycle events (AGENT_STARTED / AGENT_OUTPUT), and then
-                terminate the runtime automatically.
+                Launch a single streaming run for the once-trigger prompt and
+                watch tool calls, tool results, and assistant text update in
+                real time.
               </Text>
 
               <Box
@@ -1412,7 +1453,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
               <Box sx={{ mt: 2, display: 'grid', gap: 2 }}>
                 <Box>
                   <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
-                    Trigger once (local curl)
+                    Stream once (local curl)
                   </Text>
                   <Box
                     sx={{
@@ -1428,34 +1469,12 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
                     {triggerRunCurl}
                   </Box>
                 </Box>
-                <Box>
-                  <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
-                    Fetch history (local curl)
-                  </Text>
-                  <Box
-                    sx={{
-                      mt: 1,
-                      bg: 'canvas.subtle',
-                      borderRadius: 2,
-                      p: 2,
-                      fontFamily: 'mono',
-                      fontSize: 0,
-                      wordBreak: 'break-all',
-                    }}
-                  >
-                    {historyCurl}
-                  </Box>
-                </Box>
                 <Button
                   size="small"
                   leadingVisual={CopyIcon}
-                  onClick={() =>
-                    navigator.clipboard.writeText(
-                      `${triggerRunCurl}\n\n${historyCurl}`,
-                    )
-                  }
+                  onClick={() => navigator.clipboard.writeText(triggerRunCurl)}
                 >
-                  Copy replication commands
+                  Copy streaming command
                 </Button>
               </Box>
             </Box>

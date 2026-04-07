@@ -91,6 +91,7 @@ async def _wrap_streaming_body_with_approvals(
         approval_names.add(tid)
         approval_names.add(tid.replace("-", "_"))
         approval_names.add(tid.replace("_", "-"))
+    created_tool_call_ids: set[str] = set()
 
     try:
         async for chunk in body_iterator:
@@ -106,6 +107,14 @@ async def _wrap_streaming_body_with_approvals(
                         event = json_mod.loads(data_str)
                         if event.get("type") != "tool-input-available":
                             continue
+                        tool_call_id = (
+                            event.get("toolCallId")
+                            or event.get("tool_call_id")
+                            or event.get("id")
+                            or ""
+                        )
+                        if tool_call_id and tool_call_id in created_tool_call_ids:
+                            continue
                         tool_name = event.get("toolName", "")
                         # Check all normalised variants
                         variants = {
@@ -120,8 +129,11 @@ async def _wrap_streaming_body_with_approvals(
                             agent_id=agent_id,
                             tool_name=tool_name,
                             tool_args=tool_args if isinstance(tool_args, dict) else {},
+                            tool_call_id=tool_call_id or None,
                         )
                         record = await _create_approval(req)
+                        if tool_call_id:
+                            created_tool_call_ids.add(tool_call_id)
                         logger.info(
                             "[Vercel AI] Created local approval record %s "
                             "for deferred tool '%s'",

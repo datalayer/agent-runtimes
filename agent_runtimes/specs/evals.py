@@ -13,6 +13,7 @@ from typing import Dict, List
 
 from agent_runtimes.types import EvalSpec
 
+
 # ============================================================================
 # Eval Definitions
 # ============================================================================
@@ -142,8 +143,8 @@ def get_eval_spec(eval_id: str) -> EvalSpec | None:
     spec = EVAL_CATALOG.get(eval_id)
     if spec is not None:
         return spec
-    base, _, ver = eval_id.rpartition(":")
-    if base and "." in ver:
+    base, _, ver = eval_id.rpartition(':')
+    if base and '.' in ver:
         return EVAL_CATALOG.get(base)
     return None
 

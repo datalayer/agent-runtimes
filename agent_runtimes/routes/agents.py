@@ -1109,15 +1109,9 @@ async def create_agent(
                     spec_for_runtime_controls
                 )
 
-            # Vercel AI with DeferredToolRequests handles approval decisions
-            # via continuation messages. Keeping ToolApprovalCapability enabled
-            # causes a second blocking approval wait during actual tool execution.
-            # However, once/cron triggers run autonomously without a client to
-            # handle deferred tool requests, so keep the capability for those.
-            has_trigger = spec_for_runtime_controls is not None and getattr(
-                spec_for_runtime_controls, "trigger", None
-            )
-            if request.transport == "vercel-ai" and capabilities and not has_trigger:
+            # Keep vercel-ai approval handling on the DeferredToolRequests path
+            # for consistency with normal chat streaming flow.
+            if request.transport == "vercel-ai" and capabilities:
                 filtered_capabilities = [
                     cap
                     for cap in capabilities
@@ -1152,8 +1146,9 @@ async def create_agent(
                         isinstance(cap, ToolApprovalCapability) for cap in capabilities
                     )
                 )
-                if not has_tool_approval_capability and (
-                    request.transport != "vercel-ai" or has_trigger
+                if (
+                    not has_tool_approval_capability
+                    and request.transport != "vercel-ai"
                 ):
                     approval_config = ToolApprovalConfig.from_env()
                     approval_config.agent_id = agent_id
@@ -3156,7 +3151,7 @@ async def configure_from_spec_endpoint(
 
         # (Re)create the agent from the spec via the canonical flow.
         try:
-            created = await create_agent(create_request, http_request)
+            await create_agent(create_request, http_request)
             logger.info(
                 "Agent '%s' (re)created from spec '%s'",
                 target_agent_name,
