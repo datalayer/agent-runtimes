@@ -787,6 +787,7 @@ async def _create_and_register_cli_agent(
                 agent_id=agent_id,
                 has_spec_frontend_tools=bool(agent_spec.frontend_tools),
                 approval_tool_ids=approval_tool_ids or [],
+                is_triggered=bool(getattr(agent_spec, "trigger", None)),
             )
             register_vercel_agent(agent_id, vercel_adapter)
             logger.info(f"Registered agent with Vercel AI: {agent_id}")
@@ -803,6 +804,7 @@ async def _create_and_register_cli_agent(
                 agent_id=agent_id,
                 has_spec_frontend_tools=bool(agent_spec.frontend_tools),
                 approval_tool_ids=approval_tool_ids or [],
+                is_triggered=bool(getattr(agent_spec, "trigger", None)),
             )
             register_vercel_agent(agent_id, vercel_adapter)
             logger.info(f"Registered agent with Vercel AI Jupyter: {agent_id}")
