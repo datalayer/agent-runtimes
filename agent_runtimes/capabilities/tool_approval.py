@@ -216,7 +216,10 @@ class ToolApprovalManager:
         return False
 
     async def request_and_wait(
-        self, tool_name: str, tool_args: dict[str, Any]
+        self,
+        tool_name: str,
+        tool_args: dict[str, Any],
+        tool_call_id: str | None = None,
     ) -> dict[str, Any]:
         """Create an approval request and poll until resolved."""
         from agent_runtimes.routes.tool_approvals import (
@@ -267,6 +270,9 @@ class ToolApprovalManager:
         # Mirror the approval to the local in-memory store so the frontend
         # can discover it via /api/v1/tool-approvals.
         try:
+            if tool_call_id and not approval_data.get("tool_call_id"):
+                approval_data = dict(approval_data)
+                approval_data["tool_call_id"] = tool_call_id
             await mirror_approval_to_local(approval_data)
         except Exception:
             logger.debug("Failed to mirror approval %s to local store", approval_id)
@@ -397,5 +403,9 @@ class ToolApprovalCapability(AbstractCapability[Any]):
             except Exception:
                 safe_args[k] = "<non-serializable>"
 
-        await manager.request_and_wait(call.tool_name, safe_args)
+        await manager.request_and_wait(
+            call.tool_name,
+            safe_args,
+            getattr(call, "tool_call_id", None),
+        )
         return args

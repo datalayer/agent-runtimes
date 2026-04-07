@@ -32,6 +32,7 @@ class ToolApprovalCreateRequest(BaseModel):
     pod_name: str = Field(default="")
     tool_name: str
     tool_args: dict[str, Any] = Field(default_factory=dict)
+    tool_call_id: str | None = None
 
 
 class ToolApprovalDecisionRequest(BaseModel):
@@ -48,6 +49,7 @@ class ToolApprovalRecord(BaseModel):
     pod_name: str = ""
     tool_name: str
     tool_args: dict[str, Any] = Field(default_factory=dict)
+    tool_call_id: str | None = None
     status: str = "pending"
     note: str | None = None
     created_at: str
@@ -73,6 +75,7 @@ async def mirror_approval_to_local(data: dict) -> ToolApprovalRecord:
         pod_name=data.get("pod_name", ""),
         tool_name=data.get("tool_name", ""),
         tool_args=data.get("tool_args", {}),
+        tool_call_id=data.get("tool_call_id"),
         status=data.get("status", "pending"),
         created_at=data.get("created_at", now),
         updated_at=data.get("updated_at", now),
@@ -104,6 +107,16 @@ async def update_local_approval_status(
 
 
 async def _create_approval(body: ToolApprovalCreateRequest) -> ToolApprovalRecord:
+    if body.tool_call_id:
+        async with _APPROVALS_LOCK:
+            for record in _APPROVALS.values():
+                if (
+                    record.agent_id == body.agent_id
+                    and record.tool_call_id == body.tool_call_id
+                    and record.status == "pending"
+                ):
+                    return record
+
     now = _now_iso()
     record = ToolApprovalRecord(
         id=str(uuid4()),
@@ -111,6 +124,7 @@ async def _create_approval(body: ToolApprovalCreateRequest) -> ToolApprovalRecor
         pod_name=body.pod_name,
         tool_name=body.tool_name,
         tool_args=body.tool_args or {},
+        tool_call_id=body.tool_call_id,
         status="pending",
         created_at=now,
         updated_at=now,

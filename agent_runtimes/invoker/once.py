@@ -17,7 +17,8 @@ from agent_runtimes.events import create_event
 from .base import BaseInvoker, InvokerResult
 
 # Minimum interval (seconds) between progressive history flushes.
-_FLUSH_INTERVAL = 0.3
+# Keep this low so once-trigger polling can approximate token streaming.
+_FLUSH_INTERVAL = 0.05
 
 logger = logging.getLogger(__name__)
 
@@ -246,9 +247,12 @@ class OnceInvoker(BaseInvoker):
             elif event.type == "error":
                 raise RuntimeError(str(event.data))
 
-        # Final flush so the last deltas are visible before the adapter
-        # stores the complete message history.
-        _flush_streaming_text()
+        # NOTE: No final _flush_streaming_text() here.  The adapter's
+        # stream() already called stats.store_messages(result.all_messages())
+        # before yielding the "done" sentinel, so the usage tracker already
+        # contains the *complete* message history (including tool calls,
+        # tool results, and multi-turn exchanges).  A synthetic flush would
+        # overwrite that with a lossy [request, response] pair.
 
         if output_data is not None:
             if isinstance(output_data, str):

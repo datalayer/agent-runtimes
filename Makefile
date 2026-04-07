@@ -259,6 +259,11 @@ specs-generate: ## generate all Python and TypeScript specs from YAML
 	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/notifications \
 	  --python-output agent_runtimes/specs/notifications.py \
 	  --typescript-output src/specs/notifications.ts
+	@echo "Post-processing generated Python with ruff..."
+	ruff check --select I --fix $(RUFF_TARGETS)
+	ruff format $(RUFF_TARGETS)
+	@echo "Validating generated Python syntax..."
+	python -m compileall -q agent_runtimes/specs agent_runtimes/mcp
 	@echo "✓ All specifications generated successfully"
 
 specs-format: ## format generated specs and refresh MCP catalogs

@@ -18,6 +18,7 @@ The Vercel AI SDK protocol provides:
 
 import inspect
 import logging
+import os
 import traceback
 from typing import TYPE_CHECKING, Any, AsyncIterator
 
@@ -41,6 +42,7 @@ from pydantic_ai.toolsets import ExternalToolset
 from ..adapters.base import BaseAgent
 from ..context.identities import IdentityContextManager
 from ..context.usage import get_usage_tracker
+from ..events import create_event
 from ..observability.prompt_turn_metrics import (
     extract_identity_hints,
     extract_jwt_token,
@@ -91,6 +93,7 @@ async def _wrap_streaming_body_with_approvals(
         approval_names.add(tid)
         approval_names.add(tid.replace("-", "_"))
         approval_names.add(tid.replace("_", "-"))
+    created_tool_call_ids: set[str] = set()
 
     try:
         async for chunk in body_iterator:
@@ -106,6 +109,14 @@ async def _wrap_streaming_body_with_approvals(
                         event = json_mod.loads(data_str)
                         if event.get("type") != "tool-input-available":
                             continue
+                        tool_call_id = (
+                            event.get("toolCallId")
+                            or event.get("tool_call_id")
+                            or event.get("id")
+                            or ""
+                        )
+                        if tool_call_id and tool_call_id in created_tool_call_ids:
+                            continue
                         tool_name = event.get("toolName", "")
                         # Check all normalised variants
                         variants = {
@@ -120,8 +131,11 @@ async def _wrap_streaming_body_with_approvals(
                             agent_id=agent_id,
                             tool_name=tool_name,
                             tool_args=tool_args if isinstance(tool_args, dict) else {},
+                            tool_call_id=tool_call_id or None,
                         )
                         record = await _create_approval(req)
+                        if tool_call_id:
+                            created_tool_call_ids.add(tool_call_id)
                         logger.info(
                             "[Vercel AI] Created local approval record %s "
                             "for deferred tool '%s'",
@@ -489,6 +503,53 @@ class VercelAITransport(BaseTransport):
                 requests_count,
                 tool_call_count,
             )
+
+            # Emit agent-output event for final textual completions so
+            # trigger panels can show Generated Output consistently.
+            try:
+                output_text = ""
+                if hasattr(result, "output") and isinstance(result.output, str):
+                    output_text = result.output.strip()
+
+                if output_text:
+                    auth_header = request.headers.get("Authorization", "")
+                    token_value = ""
+                    if auth_header.startswith("Bearer "):
+                        token_value = auth_header.removeprefix("Bearer ").strip()
+                    elif auth_header.startswith("token "):
+                        token_value = auth_header.removeprefix("token ").strip()
+
+                    if token_value:
+                        events_base_url = (
+                            os.environ.get("DATALAYER_AI_AGENTS_URL")
+                            or os.environ.get("AI_AGENTS_URL")
+                            or os.environ.get("DATALAYER_RUN_URL")
+                            or "https://prod1.datalayer.run"
+                        )
+                        create_event(
+                            token=token_value,
+                            agent_id=agent_id,
+                            title="Agent Output",
+                            kind="agent-output",
+                            status="completed",
+                            payload={
+                                "agent_id": agent_id,
+                                "duration_ms": int(duration_ms),
+                                "outputs": output_text,
+                                "exit_status": "completed",
+                            },
+                            metadata={
+                                "origin": "agent-runtime",
+                                "source": "vercel-ai-on-complete",
+                            },
+                            base_url=events_base_url,
+                        )
+            except Exception as event_exc:
+                logger.debug(
+                    "[Vercel AI] Failed to emit agent-output event for agent '%s': %s",
+                    agent_id,
+                    event_exc,
+                )
 
             # Emit OTEL prompt-turn metrics for every successful completed turn.
             response_text = ""
