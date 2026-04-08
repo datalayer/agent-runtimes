@@ -9,7 +9,9 @@ micromamba create -n datalayer make python=3.11 nodejs uv -c conda-forge -y && \
 micromamba activate datalayer && \
 npm cache clean --force && \
 npm install && \
-uv pip install .[docs] && \
+uv pip install . && \
+uv pip uninstall anthropic && \
+uv pip install npdoc_to_md pydoc-markdown && \
 make pydoc && \
 npm run typedoc && \
 cd docs && npm install && npm run build'''

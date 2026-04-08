@@ -24,6 +24,8 @@ import * as events from '../api/events';
 import * as output from '../api/output';
 import * as evals from '../api/evals';
 import * as context from '../api/context';
+import * as agentSpecs from '../specs/agents';
+import { requestDatalayerAPI } from '@datalayer/core/lib/api/DatalayerApi';
 import type {
   AgentEvent,
   CreateAgentEventRequest,
@@ -41,7 +43,12 @@ import type {
   RunEvalsRequest,
   ContextUsage,
   CostUsage,
+  AgentSpec,
 } from '../types';
+import type {
+  CreateAgentRuntimeRequest,
+  CreateRuntimeApiResponse,
+} from '../types/agents-lifecycle';
 import type {
   ToolApproval,
   ToolApprovalFilters,
@@ -391,6 +398,139 @@ export function AgentsMixin<TBase extends Constructor>(Base: TBase) {
       const token = (this as any).getToken();
       const baseUrl = (this as any).getIamRunUrl();
       return context.getCostUsage(token, agentId, baseUrl);
+    }
+
+    // ========================================================================
+    // Agent Specs
+    // ========================================================================
+
+    /**
+     * Get an agent specification by ID.
+     * @param agentSpecId - Agent spec identifier.
+     * @returns The agent spec, or undefined if not found.
+     */
+    getAgentSpec(agentSpecId: string): AgentSpec | undefined {
+      return agentSpecs.getAgentSpecs(agentSpecId);
+    }
+
+    /**
+     * List all available agent specifications.
+     * @param prefix - If provided, only return specs whose ID starts with this prefix.
+     * @returns Array of agent specifications.
+     */
+    listAgentSpecs(prefix?: string): AgentSpec[] {
+      return agentSpecs.listAgentSpecs(prefix);
+    }
+
+    /**
+     * Get required environment variables for an agent spec.
+     * @param spec - The agent specification.
+     * @returns Deduplicated array of required environment variable names.
+     */
+    getAgentSpecRequiredEnvVars(spec: AgentSpec): string[] {
+      return agentSpecs.getAgentSpecRequiredEnvVars(spec);
+    }
+
+    // ========================================================================
+    // Project Agent Assignment
+    // ========================================================================
+
+    /**
+     * Assign an agent runtime to a project.
+     * @param projectUid - Project UID.
+     * @param agentPodName - Agent runtime pod name.
+     * @param agentSpecId - Agent spec ID.
+     * @param agentGivenName - Human-readable runtime name.
+     * @returns Updated project.
+     */
+    async assignAgentToProject(
+      projectUid: string,
+      agentPodName: string,
+      agentSpecId?: string,
+      agentGivenName?: string,
+    ): Promise<any> {
+      // Backend requires name and description on every update
+      const project = await (this as any).getProject(projectUid);
+      return (this as any).updateProject(projectUid, {
+        name: project.name,
+        description: project.description,
+        attached_agent_pod_name_s: agentPodName,
+        attached_agent_spec_id_s: agentSpecId || '',
+        attached_agent_given_name_s: agentGivenName || '',
+      });
+    }
+
+    /**
+     * Remove the agent assignment from a project.
+     * @param projectUid - Project UID.
+     * @returns Updated project.
+     */
+    async unassignAgentFromProject(projectUid: string): Promise<any> {
+      // Backend requires name and description on every update
+      const project = await (this as any).getProject(projectUid);
+      return (this as any).updateProject(projectUid, {
+        name: project.name,
+        description: project.description,
+        attached_agent_pod_name_s: '',
+        attached_agent_spec_id_s: '',
+        attached_agent_given_name_s: '',
+      });
+    }
+
+    // ========================================================================
+    // Agent Runtime Lifecycle
+    // ========================================================================
+
+    /**
+     * Create an agent runtime.
+     * @param data - Runtime creation parameters.
+     * @returns The created runtime response.
+     */
+    async createAgentRuntime(
+      data: CreateAgentRuntimeRequest,
+    ): Promise<CreateRuntimeApiResponse> {
+      const token = (this as any).getToken();
+      const runtimesRunUrl = (this as any).getRuntimesRunUrl();
+      return requestDatalayerAPI<CreateRuntimeApiResponse>({
+        url: `${runtimesRunUrl}/api/runtimes/v1/runtimes`,
+        method: 'POST',
+        token,
+        body: {
+          environment_name: data.environmentName || 'ai-agents-env',
+          given_name: data.givenName || 'Agent',
+          credits_limit: data.creditsLimit || 10,
+          type: data.type || 'notebook',
+          editor_variant: data.editorVariant || 'none',
+          enable_codemode: data.enableCodemode ?? false,
+          agent_spec_id: data.agentSpecId || undefined,
+          agent_spec: data.agentSpec || undefined,
+        },
+      });
+    }
+
+    /**
+     * Create an agent runtime and assign it to a project.
+     * @param projectUid - The project UID to assign the agent to.
+     * @param data - Runtime creation parameters.
+     * @returns The created runtime response.
+     */
+    async createAgentRuntimeForProject(
+      projectUid: string,
+      data: CreateAgentRuntimeRequest,
+    ): Promise<CreateRuntimeApiResponse> {
+      const response = await this.createAgentRuntime(data);
+      if (response.success && response.runtime) {
+        const podName = response.runtime.pod_name;
+        const givenName =
+          response.runtime.given_name || data.givenName || data.agentSpecId;
+        await this.assignAgentToProject(
+          projectUid,
+          podName,
+          data.agentSpecId,
+          givenName,
+        );
+      }
+      return response;
     }
   };
 }
