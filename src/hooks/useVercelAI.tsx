@@ -15,7 +15,7 @@ export interface Message {
 
 export interface UseVercelAIOptions {
   /**
-   * Base URL for the Vercel AI endpoint (e.g., 'http://localhost:8000')
+   * Base URL for the Vercel AI endpoint (e.g., `http://localhost:8000`).
    */
   baseUrl?: string;
   /**

@@ -38,6 +38,11 @@ import type {
   RenderToolResult,
   Suggestion,
 } from '../types';
+import {
+  AgentRuntimesClientProvider,
+  useOptionalAgentRuntimesClient,
+} from '../client/AgentRuntimesClientContext';
+import { SdkAgentRuntimesClient } from '../client/SdkAgentRuntimesClient';
 import { ChatBase } from './base/ChatBase';
 import { AgentDetails } from '../agents/AgentDetails';
 
@@ -415,6 +420,15 @@ export function Chat({
   const [messageCount, setMessageCount] = useState(0);
   const [focusTrigger, setFocusTrigger] = useState(0);
 
+  // Check if a client is already injected (e.g. VSCode bridge).
+  // If not, create a default one for direct fetch (browser/standalone).
+  const externalClient = useOptionalAgentRuntimesClient();
+  const defaultClient = useMemo(
+    () => (externalClient ? null : new SdkAgentRuntimesClient(null)),
+    [externalClient],
+  );
+  const client = externalClient ?? defaultClient!;
+
   // Get connected identities to pass to backend for skill execution
   const connectedIdentities = useConnectedIdentities();
 
@@ -505,12 +519,12 @@ export function Chat({
         options,
         // Enable config query for all protocols to fetch models and tools
         enableConfigQuery: true,
-        // For Jupyter-based transports, use Jupyter requestAPI (configEndpoint undefined)
-        // For FastAPI-based transports, use direct fetch to the configure endpoint
-        configEndpoint:
-          transport === 'vercel-ai-jupyter'
-            ? undefined // Use Jupyter requestAPI
-            : `${baseUrl}/api/v1/configure`,
+        // For Jupyter-based transports we still set configEndpoint so
+        // indicators (SandboxStatusIndicator, McpStatusIndicator) can
+        // derive their API base URL. Without it, indicators fall back to
+        // window.location which breaks in non-browser contexts (VS Code
+        // webview, Electron, etc.).
+        configEndpoint: `${baseUrl}/api/v1/configure`,
       };
     } catch (err) {
       console.error('[Chat] Error building protocol config:', err);
@@ -544,32 +558,34 @@ export function Chat({
   if (error) {
     return (
       <QueryClientProvider client={queryClient}>
-        <Box
-          className={className}
-          sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            height,
-            p: 4,
-            bg: 'canvas.default',
-          }}
-        >
-          <AlertIcon size={48} />
-          <Text sx={{ mt: 3, color: 'danger.fg', fontSize: 2 }}>
-            Connection Error
-          </Text>
-          <Text sx={{ mt: 1, color: 'fg.muted', fontSize: 1 }}>{error}</Text>
-          <Button
-            variant="primary"
-            sx={{ mt: 3 }}
-            leadingVisual={SyncIcon}
-            onClick={handleReconnect}
+        <AgentRuntimesClientProvider client={client}>
+          <Box
+            className={className}
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              height,
+              p: 4,
+              bg: 'canvas.default',
+            }}
           >
-            Retry
-          </Button>
-        </Box>
+            <AlertIcon size={48} />
+            <Text sx={{ mt: 3, color: 'danger.fg', fontSize: 2 }}>
+              Connection Error
+            </Text>
+            <Text sx={{ mt: 1, color: 'fg.muted', fontSize: 1 }}>{error}</Text>
+            <Button
+              variant="primary"
+              sx={{ mt: 3 }}
+              leadingVisual={SyncIcon}
+              onClick={handleReconnect}
+            >
+              Retry
+            </Button>
+          </Box>
+        </AgentRuntimesClientProvider>
       </QueryClientProvider>
     );
   }
@@ -578,159 +594,163 @@ export function Chat({
   if (isInitializing || !protocolConfig) {
     return (
       <QueryClientProvider client={queryClient}>
-        <Box
-          className={className}
-          sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            height,
-            p: 4,
-            bg: 'canvas.default',
-          }}
-        >
-          <Spinner size="large" />
-          <Text sx={{ mt: 3, color: 'fg.muted' }}>
-            Connecting to {transport.toUpperCase().replace('-', ' ')} agent...
-          </Text>
-        </Box>
+        <AgentRuntimesClientProvider client={client}>
+          <Box
+            className={className}
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              height,
+              p: 4,
+              bg: 'canvas.default',
+            }}
+          >
+            <Spinner size="large" />
+            <Text sx={{ mt: 3, color: 'fg.muted' }}>
+              Connecting to {transport.toUpperCase().replace('-', ' ')} agent...
+            </Text>
+          </Box>
+        </AgentRuntimesClientProvider>
       </QueryClientProvider>
     );
   }
 
   return (
     <QueryClientProvider client={queryClient}>
-      <Box
-        className={className}
-        sx={{
-          position: 'relative',
-          height,
-          bg: 'canvas.default',
-          display: 'flex',
-          flexDirection: 'column',
-        }}
-      >
-        {/* Agent details view - shown/hidden via CSS to preserve chat state */}
+      <AgentRuntimesClientProvider client={client}>
         <Box
+          className={className}
           sx={{
-            display: showDetails ? 'flex' : 'none',
+            position: 'relative',
+            height,
+            bg: 'canvas.default',
+            display: 'flex',
             flexDirection: 'column',
-            height: '100%',
           }}
         >
-          <AgentDetails
-            name={title || 'AI Agent'}
-            icon={brandIcon}
-            protocol={transport}
-            url={protocolConfig?.endpoint || baseUrl}
-            messageCount={messageCount}
-            agentId={agentId}
-            apiBase={baseUrl}
-            identityProviders={identityProviders}
-            onIdentityConnect={onIdentityConnect}
-            onIdentityDisconnect={onIdentityDisconnect}
-            onBack={() => setShowDetails(false)}
-          />
-        </Box>
-        {/* Chat view - shown/hidden via CSS to preserve message state */}
-        <Box
-          sx={{
-            display: showDetails ? 'none' : 'flex',
-            flexDirection: 'column',
-            height: '100%',
-          }}
-        >
-          {/* Error banner for sandbox/connection issues */}
-          {errorBanner && (
-            <Box
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 2,
-                px: 3,
-                py: 2,
-                bg:
-                  errorBanner.variant === 'warning'
-                    ? 'attention.subtle'
-                    : 'danger.subtle',
-                borderBottom: '1px solid',
-                borderColor:
-                  errorBanner.variant === 'warning'
-                    ? 'attention.muted'
-                    : 'danger.muted',
-              }}
-            >
-              <AlertIcon
-                size={16}
-                fill={
-                  errorBanner.variant === 'warning'
-                    ? 'attention.fg'
-                    : 'danger.fg'
-                }
-              />
-              <Text
+          {/* Agent details view - shown/hidden via CSS to preserve chat state */}
+          <Box
+            sx={{
+              display: showDetails ? 'flex' : 'none',
+              flexDirection: 'column',
+              height: '100%',
+            }}
+          >
+            <AgentDetails
+              name={title || 'AI Agent'}
+              icon={brandIcon}
+              protocol={transport}
+              url={protocolConfig?.endpoint || baseUrl}
+              messageCount={messageCount}
+              agentId={agentId}
+              apiBase={baseUrl}
+              identityProviders={identityProviders}
+              onIdentityConnect={onIdentityConnect}
+              onIdentityDisconnect={onIdentityDisconnect}
+              onBack={() => setShowDetails(false)}
+            />
+          </Box>
+          {/* Chat view - shown/hidden via CSS to preserve message state */}
+          <Box
+            sx={{
+              display: showDetails ? 'none' : 'flex',
+              flexDirection: 'column',
+              height: '100%',
+            }}
+          >
+            {/* Error banner for sandbox/connection issues */}
+            {errorBanner && (
+              <Box
                 sx={{
-                  fontSize: 1,
-                  color:
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 2,
+                  px: 3,
+                  py: 2,
+                  bg:
                     errorBanner.variant === 'warning'
-                      ? 'attention.fg'
-                      : 'danger.fg',
-                  flex: 1,
+                      ? 'attention.subtle'
+                      : 'danger.subtle',
+                  borderBottom: '1px solid',
+                  borderColor:
+                    errorBanner.variant === 'warning'
+                      ? 'attention.muted'
+                      : 'danger.muted',
                 }}
               >
-                {errorBanner.message}
-              </Text>
-            </Box>
-          )}
-          <ChatBase
-            title={title}
-            brandIcon={brandIcon}
-            showHeader={showHeader}
-            protocol={protocolConfig}
-            placeholder={placeholder}
-            description={description}
-            suggestions={suggestions}
-            submitOnSuggestionClick={submitOnSuggestionClick}
-            autoFocus={autoFocus}
-            runtimeId={runtimeId}
-            historyEndpoint={historyEndpoint}
-            pendingPrompt={pendingPrompt}
-            showInformation={showInformation}
-            onInformationClick={() => setShowDetails(true)}
-            headerContent={headerContent}
-            headerActions={headerActions}
-            showModelSelector={showModelSelector}
-            showToolsMenu={showToolsMenu}
-            showInput={showInput}
-            showSkillsMenu={showSkillsMenu}
-            showTokenUsage={showTokenUsage}
-            codemodeEnabled={codemodeEnabled}
-            initialModel={initialModel}
-            availableModels={availableModels}
-            mcpServers={mcpServers}
-            initialSkills={initialSkills}
-            connectedIdentities={identitiesForChat}
-            onNewChat={handleNewChat}
-            onMessagesChange={messages => setMessageCount(messages.length)}
-            headerButtons={{
-              showNewChat: showNewChatButton,
-              showClear: showClearButton,
-              onNewChat: handleNewChat,
-            }}
-            avatarConfig={{
-              showAvatars: true,
-            }}
-            backgroundColor="canvas.default"
-            focusTrigger={focusTrigger}
-            chatViewMode={chatViewMode}
-            onChatViewModeChange={onChatViewModeChange}
-            frontendTools={frontendTools}
-            renderToolResult={renderToolResult}
-            hideMessagesAfterToolUI={hideMessagesAfterToolUI}
-          />
+                <AlertIcon
+                  size={16}
+                  fill={
+                    errorBanner.variant === 'warning'
+                      ? 'attention.fg'
+                      : 'danger.fg'
+                  }
+                />
+                <Text
+                  sx={{
+                    fontSize: 1,
+                    color:
+                      errorBanner.variant === 'warning'
+                        ? 'attention.fg'
+                        : 'danger.fg',
+                    flex: 1,
+                  }}
+                >
+                  {errorBanner.message}
+                </Text>
+              </Box>
+            )}
+            <ChatBase
+              title={title}
+              brandIcon={brandIcon}
+              showHeader={showHeader}
+              protocol={protocolConfig}
+              placeholder={placeholder}
+              description={description}
+              suggestions={suggestions}
+              submitOnSuggestionClick={submitOnSuggestionClick}
+              autoFocus={autoFocus}
+              runtimeId={runtimeId}
+              historyEndpoint={historyEndpoint}
+              pendingPrompt={pendingPrompt}
+              showInformation={showInformation}
+              onInformationClick={() => setShowDetails(true)}
+              headerContent={headerContent}
+              headerActions={headerActions}
+              showModelSelector={showModelSelector}
+              showToolsMenu={showToolsMenu}
+              showInput={showInput}
+              showSkillsMenu={showSkillsMenu}
+              showTokenUsage={showTokenUsage}
+              codemodeEnabled={codemodeEnabled}
+              initialModel={initialModel}
+              availableModels={availableModels}
+              mcpServers={mcpServers}
+              initialSkills={initialSkills}
+              connectedIdentities={identitiesForChat}
+              onNewChat={handleNewChat}
+              onMessagesChange={messages => setMessageCount(messages.length)}
+              headerButtons={{
+                showNewChat: showNewChatButton,
+                showClear: showClearButton,
+                onNewChat: handleNewChat,
+              }}
+              avatarConfig={{
+                showAvatars: true,
+              }}
+              backgroundColor="canvas.default"
+              focusTrigger={focusTrigger}
+              chatViewMode={chatViewMode}
+              onChatViewModeChange={onChatViewModeChange}
+              frontendTools={frontendTools}
+              renderToolResult={renderToolResult}
+              hideMessagesAfterToolUI={hideMessagesAfterToolUI}
+            />
+          </Box>
         </Box>
-      </Box>
+      </AgentRuntimesClientProvider>
     </QueryClientProvider>
   );
 }

@@ -13,7 +13,7 @@ export interface Message {
 
 export interface UseAGUIOptions {
   /**
-   * Base URL for the AG-UI endpoint (e.g., 'http://localhost:8000')
+   * Base URL for the AG-UI endpoint (e.g., `http://localhost:8000`).
    */
   baseUrl?: string;
   /**

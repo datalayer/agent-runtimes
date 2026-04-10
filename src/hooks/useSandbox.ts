@@ -5,19 +5,25 @@
 
 import { useContext } from 'react';
 import { useQuery, QueryClientContext } from '@tanstack/react-query';
-import { getApiBaseFromConfig } from '../utils';
+import { useAgentRuntimesClient } from '../client/AgentRuntimesClientContext';
 import type { SandboxStatusData } from '../types/context';
 
 /**
- * Hook to poll sandbox execution status from the backend.
- * Returns whether a sandbox is available and if code is currently executing.
+ * Hook to poll sandbox execution status via `IAgentRuntimesClient`.
+ *
+ * @param enabled - Whether the query should run.
+ * @param baseUrl - Runtime base URL (ingress).
+ * @param authToken - Optional auth token.
+ *
+ * @returns React Query result with SandboxStatusData.
  */
 export function useSandbox(
   enabled: boolean,
-  configEndpoint?: string,
+  baseUrl?: string,
   authToken?: string,
 ) {
   const queryClient = useContext(QueryClientContext);
+  const client = useAgentRuntimesClient();
 
   if (!queryClient) {
     return {
@@ -29,28 +35,16 @@ export function useSandbox(
     };
   }
 
-  const statusUrl = configEndpoint
-    ? `${getApiBaseFromConfig(configEndpoint)}/configure/sandbox-status`
-    : undefined;
-
   // eslint-disable-next-line react-hooks/rules-of-hooks
   return useQuery<SandboxStatusData>({
-    queryKey: ['sandbox-status', statusUrl],
+    queryKey: ['sandbox-status', baseUrl],
     queryFn: async () => {
-      if (!statusUrl) {
-        throw new Error('No sandbox status URL available');
+      if (!baseUrl) {
+        throw new Error('No baseUrl provided for sandbox status');
       }
-      const headers: HeadersInit = { 'Content-Type': 'application/json' };
-      if (authToken) {
-        headers['Authorization'] = `Bearer ${authToken}`;
-      }
-      const response = await fetch(statusUrl, { headers });
-      if (!response.ok) {
-        throw new Error(`Sandbox status fetch failed: ${response.statusText}`);
-      }
-      return response.json();
+      return client.getSandboxStatus(baseUrl, authToken);
     },
-    enabled: enabled && !!statusUrl,
+    enabled: enabled && !!baseUrl,
     refetchInterval: query => (query.state.status === 'error' ? false : 2_000),
     refetchOnMount: 'always',
     staleTime: 0,

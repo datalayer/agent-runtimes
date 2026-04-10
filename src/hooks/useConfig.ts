@@ -5,19 +5,25 @@
 
 import { useContext } from 'react';
 import { useQuery, QueryClientContext } from '@tanstack/react-query';
-import { requestAPI } from '../api/handler';
-import type { RemoteConfig } from '../types/config';
+import { useAgentRuntimesClient } from '../client/AgentRuntimesClientContext';
 
 /**
- * Hook to safely use query when QueryClient is available.
- * Returns a mock result if no QueryClientProvider is present.
+ * Hook to fetch chat configuration (models, tools, MCP servers)
+ * via `IAgentRuntimesClient`.
+ *
+ * @param enabled - Whether the query should run.
+ * @param baseUrl - Runtime base URL (ingress).
+ * @param authToken - Optional auth token.
+ *
+ * @returns React Query result with RemoteConfig data.
  */
 export function useConfig(
   enabled: boolean,
-  configEndpoint?: string,
+  baseUrl?: string,
   authToken?: string,
 ) {
   const queryClient = useContext(QueryClientContext);
+  const client = useAgentRuntimesClient();
 
   if (!queryClient) {
     return {
@@ -31,25 +37,13 @@ export function useConfig(
   // eslint-disable-next-line react-hooks/rules-of-hooks
   return useQuery({
     queryFn: async () => {
-      // If configEndpoint is provided, use direct fetch (for FastAPI).
-      if (configEndpoint) {
-        const headers: HeadersInit = {
-          'Content-Type': 'application/json',
-        };
-        if (authToken) {
-          headers['Authorization'] = `Bearer ${authToken}`;
-        }
-        const response = await fetch(configEndpoint, { headers });
-        if (!response.ok) {
-          throw new Error(`Config fetch failed: ${response.statusText}`);
-        }
-        return response.json() as Promise<RemoteConfig>;
+      if (!baseUrl) {
+        throw new Error('No baseUrl provided for config');
       }
-      // Otherwise use Jupyter requestAPI.
-      return requestAPI<RemoteConfig>('configure');
+      return client.getChatConfig(baseUrl, authToken);
     },
-    queryKey: ['models', configEndpoint || 'jupyter'],
-    enabled,
+    queryKey: ['models', baseUrl || 'none'],
+    enabled: enabled && !!baseUrl,
     retry: 1,
   });
 }

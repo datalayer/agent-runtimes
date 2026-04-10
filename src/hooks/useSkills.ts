@@ -5,17 +5,24 @@
 
 import { useContext } from 'react';
 import { useQuery, QueryClientContext } from '@tanstack/react-query';
-import type { SkillsResponse } from '../types/skills';
+import { useAgentRuntimesClient } from '../client/AgentRuntimesClientContext';
 
 /**
- * Hook to fetch available skills from backend.
+ * Hook to fetch available skills via `IAgentRuntimesClient`.
+ *
+ * @param enabled - Whether the query should run.
+ * @param baseUrl - Runtime base URL (ingress).
+ * @param authToken - Optional auth token.
+ *
+ * @returns React Query result with SkillsResponse.
  */
 export function useSkills(
   enabled: boolean,
-  baseEndpoint?: string,
+  baseUrl?: string,
   authToken?: string,
 ) {
   const queryClient = useContext(QueryClientContext);
+  const client = useAgentRuntimesClient();
 
   if (!queryClient) {
     return {
@@ -30,27 +37,13 @@ export function useSkills(
   // eslint-disable-next-line react-hooks/rules-of-hooks
   return useQuery({
     queryFn: async () => {
-      if (!baseEndpoint) {
+      if (!baseUrl) {
         return { skills: [], total: 0 };
       }
-
-      // Derive skills endpoint from config endpoint.
-      const skillsEndpoint = baseEndpoint.replace('/configure', '/skills');
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-      };
-      if (authToken) {
-        headers['Authorization'] = `Bearer ${authToken}`;
-      }
-
-      const response = await fetch(skillsEndpoint, { headers });
-      if (!response.ok) {
-        throw new Error(`Skills fetch failed: ${response.statusText}`);
-      }
-      return response.json() as Promise<SkillsResponse>;
+      return client.getSkills(baseUrl, authToken);
     },
-    queryKey: ['skills', baseEndpoint || 'jupyter'],
-    enabled,
+    queryKey: ['skills', baseUrl || 'none'],
+    enabled: enabled && !!baseUrl,
     staleTime: 5 * 60 * 1000,
     retry: 1,
   });

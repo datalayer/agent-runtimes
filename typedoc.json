@@ -1,6 +1,22 @@
 {
   "$schema": "https://typedoc-plugin-markdown.org/schema.json",
-  "entryPoints": ["./src/index.ts"],
+  "entryPoints": ["./src"],
+  "entryPointStrategy": "expand",
   "name": "Agent Runtimes",
-  "plugin": ["typedoc-plugin-markdown"]
+  "plugin": ["typedoc-plugin-markdown"],
+  "exclude": [
+    "**/node_modules/**",
+    "**/__tests__/**",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/test/**",
+    "**/*.stories.tsx"
+  ],
+  "excludePrivate": true,
+  "excludeInternal": true,
+  "validation": {
+    "notExported": false,
+    "invalidLink": true,
+    "notDocumented": false
+  }
 }

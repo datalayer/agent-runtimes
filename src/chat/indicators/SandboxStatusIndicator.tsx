@@ -21,9 +21,10 @@
  * @module chat/indicators/SandboxStatusIndicator
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Tooltip } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
+import { useAgentRuntimesClient } from '../../client/AgentRuntimesClientContext';
 import type {
   SandboxAggregateStatus,
   SandboxWsStatus,
@@ -45,36 +46,6 @@ export interface SandboxStatusIndicatorProps {
 }
 
 /* ── Helpers ───────────────────────────────────────────── */
-
-function getWsUrl(
-  apiBase?: string,
-  authToken?: string,
-  agentId?: string,
-): string {
-  if (typeof window === 'undefined') return '';
-  const base = apiBase
-    ? apiBase
-    : window.location.hostname === 'localhost' ||
-        window.location.hostname === '127.0.0.1'
-      ? 'http://127.0.0.1:8765'
-      : '';
-  // Convert http(s) to ws(s).
-  const wsBase = base.replace(/^http/, 'ws');
-  let wsUrl = `${wsBase}/api/v1/configure/sandbox/ws`;
-  // Include agent_id so the backend returns agent-scoped status.
-  const params: string[] = [];
-  if (agentId) {
-    params.push(`agent_id=${encodeURIComponent(agentId)}`);
-  }
-  // WebSocket API doesn't support custom headers, pass token as query param.
-  if (authToken) {
-    params.push(`token=${encodeURIComponent(authToken)}`);
-  }
-  if (params.length > 0) {
-    wsUrl += `?${params.join('&')}`;
-  }
-  return wsUrl;
-}
 
 function deriveAggregate(
   status: SandboxWsStatus | null,
@@ -117,70 +88,43 @@ export function SandboxStatusIndicator({
   agentId,
 }: SandboxStatusIndicatorProps) {
   useInjectKeyframes();
+  const client = useAgentRuntimesClient();
   const [status, setStatus] = useState<SandboxWsStatus | null>(null);
-  const wsRef = useRef<WebSocket | null>(null);
-  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout>>();
 
-  const wsUrl = useMemo(
-    () => getWsUrl(apiBase, authToken, agentId),
-    [apiBase, authToken, agentId],
-  );
-
-  // ---- WebSocket lifecycle ----
+  // ---- Polling via client ----
   useEffect(() => {
-    if (!wsUrl) return;
-
+    if (!apiBase) return;
     let disposed = false;
+    let timer: ReturnType<typeof setTimeout>;
 
-    function connect() {
+    async function poll() {
       if (disposed) return;
-      const ws = new WebSocket(wsUrl);
-
-      ws.onopen = () => {
-        wsRef.current = ws;
-      };
-
-      ws.onmessage = event => {
-        try {
-          const msg = JSON.parse(event.data);
-          // Ignore interrupt ack messages.
-          if (msg.action === 'interrupt') return;
-          setStatus(msg as SandboxWsStatus);
-        } catch {
-          // Ignore malformed messages.
-        }
-      };
-
-      ws.onclose = () => {
-        wsRef.current = null;
+      try {
+        const data = await client.getSandboxStatus(apiBase!, authToken);
         if (!disposed) {
-          // Reconnect after a short delay.
-          reconnectTimerRef.current = setTimeout(connect, 3000);
+          setStatus(data as unknown as SandboxWsStatus);
         }
-      };
-
-      ws.onerror = () => {
-        ws.close();
-      };
+      } catch {
+        // Polling is best-effort.
+      }
+      if (!disposed) {
+        timer = setTimeout(poll, 3000);
+      }
     }
-
-    connect();
+    poll();
 
     return () => {
       disposed = true;
-      clearTimeout(reconnectTimerRef.current);
-      wsRef.current?.close();
-      wsRef.current = null;
+      clearTimeout(timer);
     };
-  }, [wsUrl]);
+  }, [client, apiBase, authToken]);
 
   // ---- Interrupt helper (exposed for stop-button integration) ----
   const sendInterrupt = useCallback(() => {
-    const ws = wsRef.current;
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({ action: 'interrupt' }));
+    if (apiBase) {
+      client.interruptSandbox(apiBase, agentId, authToken).catch(() => {});
     }
-  }, []);
+  }, [client, apiBase, agentId, authToken]);
 
   // ---- Derived display values ----
   const aggregate = useMemo(() => deriveAggregate(status), [status]);

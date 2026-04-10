@@ -55,7 +55,7 @@ import type {
  */
 export interface ChatFloatingProps {
   /**
-   * AG-UI endpoint URL (e.g., http://localhost:8000/api/v1/examples/agentic_chat).
+   * AG-UI endpoint URL (e.g., `http://localhost:8000/api/v1/examples/agentic_chat`).
    * When provided with useStore=false, enables AG-UI protocol mode.
    */
   endpoint?: string;

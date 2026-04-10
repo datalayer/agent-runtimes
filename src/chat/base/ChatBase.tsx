@@ -54,6 +54,7 @@ import {
   getApiBaseFromConfig,
   sanitizeAssistantContent,
 } from '../../utils';
+import { useAgentRuntimesClient } from '../../client/AgentRuntimesClientContext';
 import {
   useConfig,
   useSkills,
@@ -279,27 +280,36 @@ function ChatBaseInner({
   // Skills state
   const [enabledSkills, setEnabledSkills] = useState<Set<string>>(new Set());
 
-  // ---- Data queries ----
+  // Client abstraction — all hooks and network calls go through this.
+  const agentClient = useAgentRuntimesClient();
+
+  // Derive the runtime base URL from configEndpoint.
+  // Strips /api/v1/configure (or /api/v1/config) to get the raw ingress URL.
+  const runtimeBaseUrl = protocol?.configEndpoint
+    ? protocol.configEndpoint.replace(/\/api\/v1\/(config|configure)\/?$/, '')
+    : undefined;
+
+  // ---- Data queries (all via client) ----
   const configQuery = useConfig(
     Boolean(protocol?.enableConfigQuery),
-    protocol?.configEndpoint,
+    runtimeBaseUrl,
     protocol?.authToken,
   );
   const skillsQuery = useSkills(
     Boolean(protocol?.enableConfigQuery) && showSkillsMenu,
-    protocol?.configEndpoint,
+    runtimeBaseUrl,
     protocol?.authToken,
   );
   const contextSnapshotQuery = useContextSnapshot(
     Boolean(protocol?.enableConfigQuery) && showTokenUsage,
-    protocol?.configEndpoint,
+    runtimeBaseUrl,
     protocol?.agentId,
     protocol?.authToken,
   );
   const agentUsage = contextSnapshotQuery.data;
   const sandboxStatusQuery = useSandbox(
     Boolean(protocol?.enableConfigQuery) && codemodeEnabled && showHeader,
-    protocol?.configEndpoint,
+    runtimeBaseUrl,
     protocol?.authToken,
   );
   const sandboxStatus = sandboxStatusQuery.data;
@@ -591,27 +601,18 @@ function ChatBaseInner({
     const fetchHistory = async () => {
       try {
         const authToken = historyAuthToken || protocol?.authToken;
-        const headers: Record<string, string> = {
-          'Content-Type': 'application/json',
-        };
-        if (authToken) {
-          headers['Authorization'] = `Bearer ${authToken}`;
+        if (!runtimeBaseUrl) {
+          store.markFetched(runtimeId);
+          setHistoryLoaded(true);
+          return;
         }
+        const rawMessages = await agentClient.getChatHistory(
+          runtimeBaseUrl,
+          protocol?.agentId,
+          authToken,
+        );
 
-        const response = await fetch(endpoint!, {
-          method: 'GET',
-          headers,
-          credentials: 'include',
-        });
-
-        if (!response.ok) {
-          throw new Error(
-            `Failed to fetch history: ${response.status} ${response.statusText}`,
-          );
-        }
-
-        const data = await response.json();
-        const messages: ChatMessage[] = (data.messages || []).map(
+        const messages: ChatMessage[] = (rawMessages as any[]).map(
           (msg: any) => {
             if (msg.toolCalls && Array.isArray(msg.toolCalls)) {
               msg.toolCalls = msg.toolCalls.map((tc: any) => {
@@ -1468,20 +1469,19 @@ function ChatBaseInner({
     currentAssistantMessageRef.current = null;
 
     // Also interrupt any code running in the sandbox (best-effort).
-    if (protocol?.configEndpoint) {
-      const query = protocol.agentId
-        ? `?agent_id=${encodeURIComponent(protocol.agentId)}`
-        : '';
-      const interruptUrl = `${getApiBaseFromConfig(protocol.configEndpoint)}/configure/sandbox/interrupt${query}`;
-      const headers: HeadersInit = { 'Content-Type': 'application/json' };
-      if (protocol.authToken) {
-        headers['Authorization'] = `Bearer ${protocol.authToken}`;
-      }
-      fetch(interruptUrl, { method: 'POST', headers }).catch(() => {});
+    if (runtimeBaseUrl) {
+      agentClient
+        .interruptSandbox(
+          runtimeBaseUrl,
+          protocol?.agentId,
+          protocol?.authToken,
+        )
+        .catch(() => {});
     }
   }, [
     useStoreMode,
-    protocol?.configEndpoint,
+    agentClient,
+    runtimeBaseUrl,
     protocol?.authToken,
     protocol?.agentId,
   ]);
@@ -1513,19 +1513,24 @@ function ChatBaseInner({
 
   // ---- handleSandboxInterrupt ----
   const handleSandboxInterrupt = useCallback(async () => {
-    if (!protocol?.configEndpoint) return;
-    const interruptUrl = `${getApiBaseFromConfig(protocol.configEndpoint)}/configure/sandbox/interrupt`;
+    if (!runtimeBaseUrl) return;
     try {
-      const headers: HeadersInit = { 'Content-Type': 'application/json' };
-      if (protocol.authToken) {
-        headers['Authorization'] = `Bearer ${protocol.authToken}`;
-      }
-      await fetch(interruptUrl, { method: 'POST', headers });
+      await agentClient.interruptSandbox(
+        runtimeBaseUrl,
+        protocol?.agentId,
+        protocol?.authToken,
+      );
       sandboxStatusQuery.refetch();
     } catch {
       // Interrupt is best-effort
     }
-  }, [protocol?.configEndpoint, protocol?.authToken, sandboxStatusQuery]);
+  }, [
+    agentClient,
+    runtimeBaseUrl,
+    protocol?.authToken,
+    protocol?.agentId,
+    sandboxStatusQuery,
+  ]);
 
   // ---- HITL respond handler (passed to MessageList) ----
   const handleRespond = useCallback(
@@ -1539,7 +1544,8 @@ function ChatBaseInner({
         const isApprovalDecision =
           !!result &&
           typeof result === 'object' &&
-          (result as Record<string, unknown>).type === 'tool-approval-decision' &&
+          (result as Record<string, unknown>).type ===
+            'tool-approval-decision' &&
           typeof (result as Record<string, unknown>).approved === 'boolean';
 
         if (isApprovalDecision && adapterRef.current) {
@@ -1587,9 +1593,7 @@ function ChatBaseInner({
                     message: 'Tool call rejected by user.',
                     ...(approvalId ? { approvalId } : {}),
                   },
-              ...(approved
-                ? {}
-                : { error: 'Tool approval rejected by user' }),
+              ...(approved ? {} : { error: 'Tool approval rejected by user' }),
             });
           } catch (err) {
             console.error('[ChatBase] Approval continuation error:', err);
