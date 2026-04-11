@@ -36,13 +36,23 @@ export function getAgentSpecs(agentId: string): AgentSpec | undefined {
 }
 
 /**
- * List all available agent specifications.
+ * List enabled agent specifications.
  *
- * @param prefix - If provided, only return specs whose ID starts with this prefix.
+ * @param prefix - Only return specs whose ID starts with this prefix.
+ * @param includeDisabled - When `true`, include disabled specs.
  */
-export function listAgentSpecs(prefix?: string): AgentSpec[] {
-  const specs = Object.values(AGENT_SPECS);
-  return prefix !== undefined ? specs.filter(s => s.id.startsWith(prefix)) : specs;
+export function listAgentSpecs(
+  prefix?: string,
+  includeDisabled = false,
+): AgentSpec[] {
+  let specs = Object.values(AGENT_SPECS);
+  if (!includeDisabled) {
+    specs = specs.filter(s => s.enabled);
+  }
+  if (prefix !== undefined) {
+    specs = specs.filter(s => s.id.startsWith(prefix));
+  }
+  return specs;
 }
 
 /**

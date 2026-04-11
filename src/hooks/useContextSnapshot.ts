@@ -5,51 +5,42 @@
 
 import { useContext } from 'react';
 import { useQuery, QueryClientContext } from '@tanstack/react-query';
-import { getApiBaseFromConfig } from '../utils';
+import { useAgentRuntimesClient } from '../client/AgentRuntimesClientContext';
 import type { ContextSnapshotData } from '../types/context';
 
 /**
- * Hook to poll agent context-snapshot from the backend.
- * Returns cumulative token usage (input/output breakdown) tracked by the agent server.
+ * Hook to poll agent context-snapshot via `IAgentRuntimesClient`.
+ *
+ * @param enabled - Whether the query should run.
+ * @param baseUrl - Runtime base URL (ingress).
+ * @param agentId - Agent identifier.
+ * @param authToken - Optional auth token.
+ *
+ * @returns React Query result with ContextSnapshotData.
  */
 export function useContextSnapshot(
   enabled: boolean,
-  configEndpoint?: string,
+  baseUrl?: string,
   agentId?: string,
   authToken?: string,
 ) {
   const queryClient = useContext(QueryClientContext);
+  const client = useAgentRuntimesClient();
 
   if (!queryClient) {
     return { data: undefined, isLoading: false, isError: false, error: null };
   }
 
-  const snapshotUrl =
-    configEndpoint && agentId
-      ? `${getApiBaseFromConfig(configEndpoint)}/configure/agents/${encodeURIComponent(agentId)}/context-snapshot`
-      : undefined;
-
   // eslint-disable-next-line react-hooks/rules-of-hooks
   return useQuery<ContextSnapshotData>({
-    queryKey: ['context-snapshot-header', agentId, snapshotUrl],
+    queryKey: ['context-snapshot-header', agentId, baseUrl],
     queryFn: async () => {
-      if (!snapshotUrl) {
-        throw new Error('No context-snapshot URL available');
+      if (!baseUrl || !agentId) {
+        throw new Error('No baseUrl or agentId for context snapshot');
       }
-      const headers: HeadersInit = { 'Content-Type': 'application/json' };
-      if (authToken) {
-        headers['Authorization'] = `Bearer ${authToken}`;
-      }
-      const response = await fetch(snapshotUrl, { headers });
-      if (!response.ok) {
-        throw new Error(
-          `Context snapshot fetch failed: ${response.statusText}`,
-        );
-      }
-      return response.json();
+      return client.getContextSnapshot(baseUrl, agentId, authToken);
     },
-    enabled: enabled && !!snapshotUrl,
-    // Poll every 10s, but stop after an error (e.g. runtime terminated).
+    enabled: enabled && !!baseUrl && !!agentId,
     refetchInterval: query => (query.state.status === 'error' ? false : 10_000),
     refetchOnMount: 'always',
     staleTime: 0,

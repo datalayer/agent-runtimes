@@ -32,7 +32,7 @@ jobs:
       - name: Install dependencies
         shell: bash -el {0}
         run: |
-          conda install boto3 python=3.13 make nodejs uv pip
+          conda install boto3 python=3.13 make "nodejs>=22,<23" uv pip
           uv pip install ".[test,examples]"
           uv pip uninstall anthropic
           uv pip install npdoc_to_md pydoc-markdown

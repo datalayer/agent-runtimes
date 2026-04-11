@@ -16,10 +16,8 @@ module.exports = {
   markdown: {
     format: 'detect',
     mermaid: true,
-    hooks: {
-      onBrokenMarkdownLinks: 'warn',
-    },
   },
+  onBrokenMarkdownLinks: 'warn',
   plugins: [
     '@docusaurus/theme-live-codeblock',
     'docusaurus-lunr-search',

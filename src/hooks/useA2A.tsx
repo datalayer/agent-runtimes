@@ -35,7 +35,7 @@ export interface Message {
 
 export interface UseA2AOptions {
   /**
-   * Base URL for the A2A endpoint (e.g., 'http://localhost:8000')
+   * Base URL for the A2A endpoint (e.g., `http://localhost:8000`).
    */
   baseUrl?: string;
   /**

@@ -5,7 +5,7 @@ source "${HOME}/.cargo/env" && \
 curl -Ls https://micro.mamba.pm/api/micromamba/linux-64/latest | tar -xvj bin/micromamba && \
 export MAMBA_ROOT_PREFIX="${HOME}/micromamba" && \
 eval "$(./bin/micromamba shell hook -s posix)" && \
-micromamba create -n datalayer make python=3.11 nodejs uv -c conda-forge -y && \
+micromamba create -n datalayer make python=3.11 "nodejs>=22,<23" uv -c conda-forge -y && \
 micromamba activate datalayer && \
 npm cache clean --force && \
 npm install && \

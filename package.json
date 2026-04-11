@@ -60,7 +60,7 @@
     "build:lib": "npm run clean:lib && gulp resources-to-lib && tsc -b",
     "build:nextjs": "npm run build --workspace=nextjs-notebook-example",
     "build:types": "npm run clean:lib && tsc -b",
-    "check": "npm run format:check && npm run lint:all && npm run type-check:all",
+    "check": "npm run format:check && npm run lint:all && npm run type-check:all && npm run typedoc",
     "check:fix": "npm run format:all && npm run lint:fix && npm run type-check:all",
     "clean": "rimraf lib dist build tsconfig.tsbuildinfo",
     "clean:cache": "rimraf node_modules/.vite",

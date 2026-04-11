@@ -213,11 +213,15 @@ export function formatTokenCount(tokens: number): string {
 }
 
 /**
- * Derive the API base URL from a configEndpoint.
- * configEndpoint may look like:
- *   "http://host:port/api/v1/config"     (from agentRuntimeConfig)
- *   "http://host:port/api/v1/configure"   (from Chat component)
- * We strip the trailing path segment to get "http://host:port/api/v1".
+ * Derives the API base URL from a config endpoint URL.
+ *
+ * The config endpoint may be `{base}/api/v1/config` (from agentRuntimeConfig)
+ * or `{base}/api/v1/configure` (from the Chat component). This function
+ * strips the trailing path segment to yield `{base}/api/v1`.
+ *
+ * @param configEndpoint - Full config endpoint URL.
+ *
+ * @returns The API base URL without the trailing config segment.
  */
 export function getApiBaseFromConfig(configEndpoint: string): string {
   return configEndpoint.replace(/\/(config|configure)\/?$/, '');

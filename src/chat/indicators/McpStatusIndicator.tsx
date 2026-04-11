@@ -23,6 +23,7 @@ import { useEffect, useMemo } from 'react';
 import { Tooltip } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { useQuery } from '@tanstack/react-query';
+import { useAgentRuntimesClient } from '../../client/AgentRuntimesClientContext';
 import type {
   McpAggregateStatus,
   McpServerStatus,
@@ -103,21 +104,17 @@ export function McpStatusIndicator({
   authToken,
 }: McpStatusIndicatorProps) {
   useInjectKeyframes();
+  const client = useAgentRuntimesClient();
+  const base = getApiBase(apiBase);
   const { data } = useQuery<McpToolsetsStatusResponse>({
     queryKey: ['mcp-toolsets-status', apiBase],
     queryFn: async () => {
-      const base = getApiBase(apiBase);
-      const headers: Record<string, string> = {};
-      if (authToken) {
-        headers['Authorization'] = `Bearer ${authToken}`;
+      if (!base) {
+        throw new Error('No apiBase for MCP status');
       }
-      const response = await fetch(
-        `${base}/api/v1/configure/mcp-toolsets-status`,
-        { headers },
-      );
-      if (!response.ok) throw new Error('Failed to fetch MCP status');
-      return response.json();
+      return client.getMcpStatus(base, authToken);
     },
+    enabled: !!base,
     refetchInterval: 5000,
   });
 
