@@ -117,7 +117,7 @@ const AGENT_SPEC = {
   description:
     'Monitor and analyze sales KPIs from the CRM system. Generate daily reports, identify trends, and flag anomalies.',
   model: 'bedrock:us.anthropic.claude-3-5-haiku-20241022-v1:0',
-  protocol: 'ag-ui',
+  protocol: 'vercel-ai',
   memory: 'mem0',
   sandbox_variant: 'jupyter',
   environment_name: 'ai-agents-env',
@@ -197,7 +197,8 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
     agentSpec: AGENT_SPEC,
     agentConfig: {
       name: DEMO_AGENT_NAME,
-      protocol: 'ag-ui',
+      model: 'bedrock:us.anthropic.claude-3-5-haiku-20241022-v1:0',
+      protocol: 'vercel-ai',
       description:
         'Monitor Sales KPI agent — exercises pause/resume checkpointing',
     },
@@ -315,7 +316,7 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
       name: rt.name,
       description: rt.environment_title || rt.environment_name,
       status: rt.status,
-      protocol: 'ag-ui',
+      protocol: 'vercel-ai',
       environmentName: rt.environment_name,
       jupyterBaseUrl: rt.url,
     }));
@@ -1040,7 +1041,7 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
           ) : (isReady || runtimeStatus === 'resumed') &&
             runtimeStatus !== 'paused' ? (
             <Chat
-              protocol="ag-ui"
+              protocol="vercel-ai"
               baseUrl={agentBaseUrl}
               agentId={agentId}
               title="Monitor Sales KPI Agent"

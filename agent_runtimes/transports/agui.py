@@ -33,7 +33,7 @@ else:
 from starlette.applications import Starlette
 
 from ..adapters.base import BaseAgent
-from ..context.identities import set_request_identities
+from ..context.identities import set_request_identities, set_request_user_jwt
 from ..context.usage import get_usage_tracker
 from ..observability.prompt_turn_metrics import (
     extract_identity_hints,
@@ -489,6 +489,7 @@ class AGUITransport(BaseTransport):
                 # tools run. Instead, we set the identities and let them persist for the
                 # entire request duration via contextvars.
                 set_request_identities(identities_from_request)
+                set_request_user_jwt(metric_user_jwt_token)
                 logger.debug("[AG-UI] Set request identities for streaming")
                 logger.info(
                     "[AG-UI] Prompt metrics identity context: user_id=%s provider=%s identities=%s",

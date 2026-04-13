@@ -16,6 +16,7 @@ export function useConfig(
   enabled: boolean,
   configEndpoint?: string,
   authToken?: string,
+  agentId?: string,
 ) {
   const queryClient = useContext(QueryClientContext);
 
@@ -39,7 +40,13 @@ export function useConfig(
         if (authToken) {
           headers['Authorization'] = `Bearer ${authToken}`;
         }
-        const response = await fetch(configEndpoint, { headers });
+        let endpoint = configEndpoint;
+        if (agentId) {
+          const url = new URL(configEndpoint, window.location.origin);
+          url.searchParams.set('agent_id', agentId);
+          endpoint = url.toString();
+        }
+        const response = await fetch(endpoint, { headers });
         if (!response.ok) {
           throw new Error(`Config fetch failed: ${response.statusText}`);
         }
@@ -48,7 +55,7 @@ export function useConfig(
       // Otherwise use Jupyter requestAPI.
       return requestAPI<RemoteConfig>('configure');
     },
-    queryKey: ['models', configEndpoint || 'jupyter'],
+    queryKey: ['models', configEndpoint || 'jupyter', agentId || 'global'],
     enabled,
     retry: 1,
   });

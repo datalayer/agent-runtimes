@@ -102,6 +102,7 @@ def setup_otel(
     token: str | None = None,
     project: str | None = None,
     url: str | None = None,
+    user_uid: str | None = None,
     instrument: bool = True,
     enable_metrics: bool = True,
     capture_prompts: bool = True,
@@ -173,12 +174,13 @@ def setup_otel(
         headers={"Authorization": token},
     )
 
-    resource = Resource.create(
-        {
-            "service.name": service_name,
-            "service.version": service_version,
-        }
-    )
+    resource_attrs: dict[str, str] = {
+        "service.name": service_name,
+        "service.version": service_version,
+    }
+    if user_uid:
+        resource_attrs["datalayer.user_uid"] = user_uid
+    resource = Resource.create(resource_attrs)
 
     span_processor = BatchSpanProcessor(trace_exporter)
     provider = TracerProvider(resource=resource)

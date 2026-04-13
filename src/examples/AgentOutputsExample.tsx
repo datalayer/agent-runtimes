@@ -74,7 +74,8 @@ const AgentOutputsInner: React.FC<{ onLogout: () => void }> = ({
     autoStart: true,
     agentConfig: {
       name: AGENT_NAME,
-      protocol: 'ag-ui',
+      model: 'bedrock:us.anthropic.claude-3-5-haiku-20241022-v1:0',
+      protocol: 'vercel-ai',
       description: 'Agent with rich output rendering and artifact management',
     },
   });
@@ -193,7 +194,7 @@ const AgentOutputsInner: React.FC<{ onLogout: () => void }> = ({
         {/* Left: Chat */}
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <Chat
-            protocol="ag-ui"
+            protocol="vercel-ai"
             baseUrl={agentBaseUrl}
             agentId={agentId}
             title="Output Agent"

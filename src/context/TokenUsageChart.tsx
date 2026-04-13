@@ -3,7 +3,7 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import ReactECharts from 'echarts-for-react';
 import { fetchOtelMetricRows, toMetricValue } from '../hooks/useMonitoring';
 
@@ -32,10 +32,20 @@ const SERIES = [
 
 type SeriesLabel = (typeof SERIES)[number]['label'];
 
-/** dayKey → metric label → accumulated total */
-type DayData = Record<string, Record<SeriesLabel, number>>;
+/** Per-turn data point with delta (non-cumulative) token values. */
+type TurnPoint = {
+  turnNumber: number;
+  timestampMs: number;
+  values: Record<SeriesLabel, number>;
+};
 
-function emptyDay(): Record<SeriesLabel, number> {
+/** Snapshot of cumulative OTEL counter values after a given turn. */
+type CumulativeSnapshot = {
+  completions: number;
+  values: Record<SeriesLabel, number>;
+};
+
+function emptyValues(): Record<SeriesLabel, number> {
   return SERIES.reduce(
     (acc, s) => {
       acc[s.label] = 0;
@@ -45,34 +55,79 @@ function emptyDay(): Record<SeriesLabel, number> {
   );
 }
 
-const DEFAULT_DAYS = 7;
+const COMPLETIONS_METRIC = 'agent_runtimes.prompt.turn.completions';
 
-/** Build a fallback list of day keys for the last N days. */
-function buildFallbackDays(days: number): string[] {
-  const result: string[] = [];
-  const now = new Date();
-  for (let i = days - 1; i >= 0; i--) {
-    const d = new Date(now);
-    d.setDate(now.getDate() - i);
-    result.push(d.toISOString().slice(0, 10));
+/** Convert nanosecond OTEL timestamp to milliseconds. */
+function nanoToMs(row: Record<string, unknown>): number {
+  const nanoTs = row.timestamp_unix_nano ?? row.observed_timestamp_unix_nano;
+  if (typeof nanoTs === 'number' && nanoTs > 0) return nanoTs / 1_000_000;
+  if (typeof nanoTs === 'string' && nanoTs.length > 0) {
+    const parsed = Number(nanoTs);
+    if (Number.isFinite(parsed) && parsed > 0) return parsed / 1_000_000;
   }
-  return result;
+  return Date.now();
 }
 
-/** Build a contiguous list of day keys between min and max (inclusive),
- *  always padding at least one day on each side so single-day data is visible. */
-function fillDayRange(sortedKeys: string[]): string[] {
-  if (sortedKeys.length === 0) return [];
-  const start = new Date(sortedKeys[0] + 'T00:00:00');
-  const end = new Date(sortedKeys[sortedKeys.length - 1] + 'T00:00:00');
-  // Pad one day before and after so a single-point line/area is visible
-  start.setDate(start.getDate() - 1);
-  end.setDate(end.getDate() + 1);
-  const filled: string[] = [];
-  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-    filled.push(d.toISOString().slice(0, 10));
+/**
+ * Group metric rows by timestamp, sort chronologically,
+ * and compute per-turn deltas by watching the completions counter.
+ */
+function extractTurnsFromRows(
+  rows: Array<Record<string, unknown>>,
+  initialState: CumulativeSnapshot,
+): { turns: TurnPoint[]; finalState: CumulativeSnapshot } {
+  const byTimestamp = new Map<string, Array<Record<string, unknown>>>();
+  for (const row of rows) {
+    const ts = String(row.timestamp_unix_nano ?? '');
+    if (!ts) continue;
+    let group = byTimestamp.get(ts);
+    if (!group) {
+      group = [];
+      byTimestamp.set(ts, group);
+    }
+    group.push(row);
   }
-  return filled;
+
+  const sortedGroups = [...byTimestamp.entries()].sort(
+    (a, b) => Number(a[0]) - Number(b[0]),
+  );
+
+  const turns: TurnPoint[] = [];
+  let prev = initialState;
+
+  for (const [, groupRows] of sortedGroups) {
+    const completionsRow = groupRows.find(
+      r => r.metric_name === COMPLETIONS_METRIC,
+    );
+    if (!completionsRow) continue;
+
+    const newCompletions = toMetricValue(completionsRow);
+    if (newCompletions <= prev.completions) continue;
+
+    const current = emptyValues();
+    for (const row of groupRows) {
+      const metricName = row.metric_name as string;
+      const seriesItem = SERIES.find(s => s.metric === metricName);
+      if (seriesItem) {
+        current[seriesItem.label] = toMetricValue(row);
+      }
+    }
+
+    const delta = emptyValues();
+    for (const s of SERIES) {
+      delta[s.label] = Math.max(0, current[s.label] - prev.values[s.label]);
+    }
+
+    turns.push({
+      turnNumber: newCompletions,
+      timestampMs: nanoToMs(completionsRow),
+      values: delta,
+    });
+
+    prev = { completions: newCompletions, values: current };
+  }
+
+  return { turns, finalState: prev };
 }
 
 export interface TokenUsageChartProps {
@@ -84,31 +139,26 @@ export interface TokenUsageChartProps {
   days?: number;
 }
 
-function toDayKey(row: Record<string, unknown>): string | undefined {
-  // Prefer nanosecond integer timestamps (OTEL schema)
-  const nanoTs = row.timestamp_unix_nano ?? row.observed_timestamp_unix_nano;
-  if (typeof nanoTs === 'number' && nanoTs > 0) {
-    return new Date(nanoTs / 1_000_000).toISOString().slice(0, 10);
+function buildOtelWsUrl(base: string, token: string): string | null {
+  try {
+    const normalized =
+      base.startsWith('ws://') || base.startsWith('wss://')
+        ? base.replace(/^ws/, 'http')
+        : base;
+    const url = new URL(normalized);
+    const wsProtocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+    const pathname = url.pathname.replace(/\/$/, '');
+    const hasApiPrefix =
+      pathname.endsWith('/api/otel/v1') || pathname.includes('/api/otel/v1/');
+
+    url.protocol = wsProtocol;
+    url.pathname = hasApiPrefix ? `${pathname}/ws` : '/api/otel/v1/ws';
+    url.search = '';
+    url.searchParams.set('token', token);
+    return url.toString();
+  } catch {
+    return null;
   }
-  if (typeof nanoTs === 'string' && nanoTs.length > 0) {
-    const parsed = Number(nanoTs);
-    if (Number.isFinite(parsed) && parsed > 0) {
-      return new Date(parsed / 1_000_000).toISOString().slice(0, 10);
-    }
-  }
-  // Fallback to ISO string timestamps
-  const candidates = [
-    row.timestamp,
-    row.observed_timestamp,
-    row.time,
-    row.created_at,
-  ];
-  for (const candidate of candidates) {
-    if (typeof candidate === 'string' && candidate.length >= 10) {
-      return candidate.slice(0, 10);
-    }
-  }
-  return undefined;
 }
 
 function extractServiceName(row: Record<string, unknown>): string | undefined {
@@ -138,58 +188,39 @@ export function TokenUsageChart({
   runUrl,
   wsRunUrl,
   height = 160,
-  days = DEFAULT_DAYS,
 }: TokenUsageChartProps) {
-  const [dayData, setDayData] = useState<DayData>({});
+  const [turns, setTurns] = useState<TurnPoint[]>([]);
+  const cumulativeRef = useRef<CumulativeSnapshot>({
+    completions: 0,
+    values: emptyValues(),
+  });
 
-  // Derive contiguous day keys and display labels from the data,
-  // falling back to the last N days when there is no data yet.
-  const { filledKeys, dayLabels } = useMemo(() => {
-    const rawKeys = Object.keys(dayData).sort();
-    const filled =
-      rawKeys.length > 0 ? fillDayRange(rawKeys) : buildFallbackDays(days);
-    const labels = filled.map(k =>
-      new Date(k + 'T00:00:00').toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-      }),
-    );
-    return { filledKeys: filled, dayLabels: labels };
-  }, [dayData, days]);
-
+  // ── Initial HTTP fetch ────────────────────────────────────────
   useEffect(() => {
     if (!serviceName) {
-      setDayData({});
+      setTurns([]);
+      cumulativeRef.current = { completions: 0, values: emptyValues() };
       return;
     }
 
     let cancelled = false;
 
     const load = async () => {
-      const result: DayData = {};
+      const allRows: Array<Record<string, unknown>> = [];
+      const metricsToFetch = [COMPLETIONS_METRIC, ...SERIES.map(s => s.metric)];
 
       await Promise.all(
-        SERIES.map(async item => {
+        metricsToFetch.map(async metric => {
           try {
             const rows = await fetchOtelMetricRows({
-              metric: item.metric,
+              metric,
               serviceName,
               runUrl,
               apiKey,
               limit: 500,
             });
-
             for (const row of rows) {
-              const typedRow = row as Record<string, unknown>;
-              const dayKey = toDayKey(typedRow);
-              if (!dayKey) {
-                continue;
-              }
-              if (!result[dayKey]) {
-                result[dayKey] = emptyDay();
-              }
-              const value = toMetricValue(typedRow);
-              result[dayKey][item.label] += value;
+              allRows.push(row as Record<string, unknown>);
             }
           } catch {
             return;
@@ -197,9 +228,14 @@ export function TokenUsageChart({
         }),
       );
 
-      if (!cancelled) {
-        setDayData(result);
-      }
+      if (cancelled) return;
+
+      const { turns: extracted, finalState } = extractTurnsFromRows(allRows, {
+        completions: 0,
+        values: emptyValues(),
+      });
+      cumulativeRef.current = finalState;
+      setTurns(extracted);
     };
 
     load();
@@ -209,96 +245,106 @@ export function TokenUsageChart({
     };
   }, [apiKey, runUrl, serviceName]);
 
+  // ── WebSocket subscription ────────────────────────────────────
   useEffect(() => {
-    if (!serviceName || !apiKey) {
-      return;
-    }
+    if (!serviceName || !apiKey) return;
 
     const rawBaseUrl =
       wsRunUrl ||
       runUrl ||
       (typeof window !== 'undefined' ? window.location.origin : '');
+    if (!rawBaseUrl) return;
 
-    if (!rawBaseUrl) {
-      return;
-    }
-
-    let wsUrl: string;
-    if (rawBaseUrl.startsWith('http://')) {
-      wsUrl = `ws://${rawBaseUrl.slice(7)}`;
-    } else if (rawBaseUrl.startsWith('https://')) {
-      wsUrl = `wss://${rawBaseUrl.slice(8)}`;
-    } else if (
+    const baseWithProtocol =
+      rawBaseUrl.startsWith('http://') ||
+      rawBaseUrl.startsWith('https://') ||
       rawBaseUrl.startsWith('ws://') ||
       rawBaseUrl.startsWith('wss://')
-    ) {
-      wsUrl = rawBaseUrl;
-    } else {
-      const proto =
-        typeof window !== 'undefined' && window.location.protocol === 'https:'
-          ? 'wss:'
-          : 'ws:';
-      wsUrl = `${proto}//${typeof window !== 'undefined' ? window.location.host : ''}${rawBaseUrl}`;
-    }
+        ? rawBaseUrl
+        : `${
+            typeof window !== 'undefined' &&
+            window.location.protocol === 'https:'
+              ? 'https:'
+              : 'http:'
+          }//${typeof window !== 'undefined' ? window.location.host : ''}${rawBaseUrl}`;
 
-    wsUrl = `${wsUrl.replace(/\/$/, '')}/api/otel/v1/ws?token=${encodeURIComponent(apiKey)}`;
+    const wsUrl = buildOtelWsUrl(baseWithProtocol, apiKey);
+    if (!wsUrl) return;
 
-    const ws = new WebSocket(wsUrl);
-    ws.onmessage = event => {
-      try {
-        const msg = JSON.parse(event.data) as {
-          signal?: string;
-          data?: Array<Record<string, unknown>>;
-        };
-        if (msg.signal !== 'metrics') {
-          return;
-        }
-        const rows = Array.isArray(msg.data) ? msg.data : [];
-        const matchingRows = rows.filter(
-          row => extractServiceName(row) === serviceName,
-        );
-        if (matchingRows.length === 0) {
-          return;
-        }
-        // Update chart directly from WS data (bypasses HTTP fetch which
-        // may fail due to CORS when the UI runs on a different origin).
-        setDayData(prev => {
-          const updated = { ...prev };
-          for (const row of matchingRows) {
-            const metricName = row.metric_name as string;
-            const seriesItem = SERIES.find(s => s.metric === metricName);
-            if (!seriesItem) {
-              continue;
-            }
-            const dayKey = toDayKey(row);
-            if (!dayKey) {
-              continue;
-            }
-            if (!updated[dayKey]) {
-              updated[dayKey] = emptyDay();
-            } else {
-              // Clone to avoid mutating prev
-              updated[dayKey] = { ...updated[dayKey] };
-            }
-            const value = toMetricValue(row);
-            updated[dayKey][seriesItem.label] += value;
+    let disposed = false;
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+    let ws: WebSocket | null = null;
+
+    const connect = () => {
+      if (disposed) return;
+
+      ws = new WebSocket(wsUrl);
+
+      ws.onopen = () => {};
+
+      ws.onmessage = event => {
+        try {
+          const msg = JSON.parse(event.data) as {
+            signal?: string;
+            data?: Array<Record<string, unknown>>;
+          };
+          if (msg.signal !== 'metrics') return;
+
+          const rows = Array.isArray(msg.data) ? msg.data : [];
+          const matchingRows = rows.filter(
+            row => extractServiceName(row) === serviceName,
+          );
+          if (matchingRows.length === 0) return;
+
+          const { turns: newTurns, finalState } = extractTurnsFromRows(
+            matchingRows,
+            cumulativeRef.current,
+          );
+
+          if (newTurns.length > 0) {
+            cumulativeRef.current = finalState;
+            setTurns(prev => [...prev, ...newTurns]);
           }
-          return updated;
-        });
-      } catch {
-        return;
-      }
+        } catch {
+          return;
+        }
+      };
+
+      ws.onerror = () => {};
+
+      ws.onclose = () => {
+        if (disposed) return;
+        reconnectTimer = setTimeout(connect, 2000);
+      };
     };
 
+    connect();
+
     return () => {
-      ws.close();
+      disposed = true;
+      if (reconnectTimer) {
+        clearTimeout(reconnectTimer);
+        reconnectTimer = null;
+      }
+      ws?.close();
     };
   }, [apiKey, runUrl, serviceName, wsRunUrl]);
 
-  const option = useMemo(
-    () => ({
+  // ── Chart options ─────────────────────────────────────────────
+  const option = useMemo(() => {
+    const xLabels = turns.map(t => {
+      const d = new Date(t.timestampMs);
+      return d.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false,
+      });
+    });
+
+    return {
       tooltip: {
-        trigger: 'axis',
+        trigger: 'axis' as const,
         textStyle: { fontSize: 10 },
         confine: true,
       },
@@ -314,38 +360,33 @@ export function TokenUsageChart({
         left: 30,
         right: 8,
         top: 24,
-        bottom: 18,
+        bottom: 20,
       },
       xAxis: {
-        type: 'category',
-        boundaryGap: false,
-        data: dayLabels,
-        axisLabel: { fontSize: 9 },
+        type: 'category' as const,
+        boundaryGap: true,
+        data: xLabels,
+        axisLabel: { fontSize: 9, rotate: turns.length > 10 ? 45 : 0 },
         axisLine: { lineStyle: { color: '#d0d7de' } },
       },
-      yAxis: SERIES.map((_, index) => ({
-        type: 'value',
-        scale: true,
+      yAxis: {
+        type: 'value' as const,
         show: false,
         splitLine: {
-          show: index === 0,
+          show: true,
           lineStyle: { color: '#f0f0f0' },
         },
-      })),
-      series: SERIES.map((item, index) => ({
+      },
+      series: SERIES.map(item => ({
         name: item.label,
-        type: 'line',
-        yAxisIndex: index,
-        data: filledKeys.map(k => dayData[k]?.[item.label] ?? 0),
-        smooth: true,
-        symbol: 'circle',
-        symbolSize: 4,
-        lineStyle: { width: 1.5 },
+        type: 'bar' as const,
+        stack: 'total',
+        data: turns.map(t => t.values[item.label]),
+        barMaxWidth: 40,
       })),
       color: ['#2da44e', '#0969da', '#8250df', '#bf8700', '#cf222e'],
-    }),
-    [dayLabels, filledKeys, dayData],
-  );
+    };
+  }, [turns]);
 
   return (
     <ReactECharts

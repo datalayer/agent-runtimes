@@ -175,6 +175,7 @@ export const TOOL_APPROVAL_REQUESTED_EVENT_SPEC_0_0_1: EventSpec = {
 export const EVENT_KIND_AGENT_ENDED = 'agent-ended';
 export const EVENT_KIND_AGENT_STARTED = 'agent-started';
 export const EVENT_KIND_TOOL_APPROVAL_REQUESTED = 'tool-approval-requested';
+export const EVENT_KIND_AGENT_ASSIGNED = 'agent-assigned';
 
 // ============================================================================
 // Event Catalog

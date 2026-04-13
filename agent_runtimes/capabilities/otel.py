@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import logging
 import time
 from dataclasses import dataclass, field
 from typing import Any
@@ -19,6 +20,8 @@ try:
 except Exception:  # pragma: no cover - optional dependency at runtime
     OTelEmitter = None  # type: ignore[assignment,unused-ignore]
 
+logger = logging.getLogger(__name__)
+
 
 @dataclass
 class OTelHooksCapability(AbstractCapability[Any]):
@@ -27,7 +30,7 @@ class OTelHooksCapability(AbstractCapability[Any]):
     service_name: str = "agent-runtimes"
     enabled: bool = True
     emit_prompt_preview: bool = False
-    _emitter: Any = field(default=None, init=False, repr=False)
+    _emitters: dict[str, Any] = field(default_factory=dict, init=False, repr=False)
     _run_started_at: float = field(default=0.0, init=False, repr=False)
     _tool_started_at: dict[str, float] = field(
         default_factory=dict, init=False, repr=False
@@ -36,9 +39,24 @@ class OTelHooksCapability(AbstractCapability[Any]):
     def _get_emitter(self) -> Any:
         if not self.enabled or OTelEmitter is None:
             return None
-        if self._emitter is None:
-            self._emitter = OTelEmitter(service_name=self.service_name)
-        return self._emitter
+        # Resolve user_uid from the request-scoped JWT set by the transport.
+        from ..context.identities import get_request_user_jwt
+        from ..observability.prompt_turn_metrics import decode_user_uid
+
+        user_jwt = get_request_user_jwt()
+        user_uid = decode_user_uid(user_jwt) if user_jwt else None
+        cache_key = user_uid or "_anon"
+        emitter = self._emitters.get(cache_key)
+        if emitter is not None:
+            return emitter
+        if not user_uid:
+            logger.debug(
+                "OTelHooksCapability: no user_uid from request JWT, skipping emitter creation"
+            )
+            return None
+        emitter = OTelEmitter(service_name=self.service_name, user_uid=user_uid)
+        self._emitters[cache_key] = emitter
+        return emitter
 
     async def before_run(self, ctx: RunContext[Any]) -> None:
         self._run_started_at = time.perf_counter()

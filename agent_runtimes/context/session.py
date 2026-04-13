@@ -698,6 +698,10 @@ class ContextSnapshot:
                 else 0,
                 "requests": self.session_usage.requests if self.session_usage else 0,
                 "toolCalls": self.session_usage.tool_calls if self.session_usage else 0,
+                "turns": self.session_usage.turns if self.session_usage else 0,
+                "durationSeconds": self.session_usage.duration_seconds
+                if self.session_usage
+                else 0,
             }
             if self.session_usage
             else None,

@@ -516,6 +516,14 @@ export function ContextPanel({
 
   const { totalTokens, contextWindow, sessionUsage, turnUsage, distribution } =
     snapshotData;
+
+  const sentMessageCount =
+    messageCount > 0
+      ? messageCount
+      : Math.max(
+          sessionUsage?.turns ?? 0,
+          snapshotData.perRequestUsage?.length > 0 ? 1 : 0,
+        );
   const hasDistributionData =
     distribution?.children && distribution.children.length > 0;
   const hasHistoryData =
@@ -541,9 +549,10 @@ export function ContextPanel({
         >
           Context Usage
         </Heading>
-        {messageCount > 0 && (
+        {sentMessageCount > 0 && (
           <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
-            {messageCount} {messageCount === 1 ? 'message' : 'messages'}
+            {sentMessageCount}{' '}
+            {sentMessageCount === 1 ? 'message sent' : 'messages sent'}
           </Text>
         )}
       </Box>

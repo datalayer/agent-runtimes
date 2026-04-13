@@ -28,11 +28,7 @@ import {
   Label,
   Flash,
 } from '@primer/react';
-import {
-  SearchIcon,
-  DatabaseIcon,
-  SignOutIcon,
-} from '@primer/octicons-react';
+import { SearchIcon, DatabaseIcon, SignOutIcon } from '@primer/octicons-react';
 import { Box } from '@datalayer/primer-addons';
 import { ErrorView } from './components';
 import { ThemedProvider } from './utils/themedProvider';
@@ -73,7 +69,8 @@ const AgentMemoryInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
     autoStart: true,
     agentConfig: {
       name: AGENT_NAME,
-      protocol: 'ag-ui',
+      model: 'bedrock:us.anthropic.claude-3-5-haiku-20241022-v1:0',
+      protocol: 'vercel-ai',
       description: 'Agent with Mem0 persistent memory',
     },
   });
@@ -227,7 +224,7 @@ const AgentMemoryInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
           }}
         >
           <Chat
-            protocol="ag-ui"
+            protocol="vercel-ai"
             baseUrl={agentBaseUrl}
             agentId={agentId}
             title="Memory Agent"

@@ -101,6 +101,10 @@ async def get_configuration(
         None,
         description="Authentication token for MCP server",
     ),
+    agent_id: str | None = Query(
+        None,
+        description="Agent ID to resolve agent-specific default model",
+    ),
 ) -> Any:
     """
     Get frontend configuration.
@@ -148,6 +152,16 @@ async def get_configuration(
             tools=available_tools,
             mcp_servers=mcp_servers,
         )
+
+        # If the caller provides an agent, prefer the model configured by that
+        # agent spec over the global model catalogue default.
+        if agent_id:
+            from .agents import get_stored_agent_spec
+
+            spec = get_stored_agent_spec(agent_id)
+            spec_model = spec.get("model") if isinstance(spec, dict) else None
+            if isinstance(spec_model, str) and spec_model.strip():
+                config.default_model = spec_model
 
         return config
 

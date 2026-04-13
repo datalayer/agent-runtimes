@@ -146,7 +146,7 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
             name: AGENT_NAME,
             description: 'Agent with cost budget and tool approval guardrails',
             agent_library: 'pydantic-ai',
-            transport: 'ag-ui',
+            transport: 'vercel-ai',
             agent_spec_id: AGENT_SPEC_ID,
             enable_skills: true,
             tools: [],
@@ -484,7 +484,7 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
       {/* Chat */}
       <Box sx={{ flex: 1, minHeight: 0 }}>
         <Chat
-          protocol="ag-ui"
+          protocol="vercel-ai"
           baseUrl={agentBaseUrl}
           agentId={agentId}
           authToken={chatAuthToken}

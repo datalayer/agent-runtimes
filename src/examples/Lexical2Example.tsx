@@ -70,6 +70,7 @@ import { editorConfig } from './lexical/editorConfig';
 import { useFrontendTool } from '../hooks';
 import { useChatStore, type ChatConfig } from '../stores';
 import { DatalayerInferenceProvider } from '../inference';
+import { AIModels } from '../specs/models';
 
 import '@datalayer/jupyter-lexical/style/index.css';
 import './lexical/lexical-theme.css';
@@ -293,7 +294,8 @@ export function ChatLexicalExampleInner({
         import.meta.env.VITE_DATALAYER_API_URL ||
         'https://oss.datalayer.run/api',
       apiKey: import.meta.env.VITE_DATALAYER_API_KEY,
-      defaultModel: 'claude-sonnet-4-20250514',
+      defaultModel:
+        AIModels.BEDROCK_US_ANTHROPIC_CLAUDE_3_5_HAIKU_20241022_V1_0,
       enableStreaming: true,
       requireToolApproval: false,
       debug: import.meta.env.DEV,

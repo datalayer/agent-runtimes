@@ -40,7 +40,7 @@ from pydantic_ai.tools import ToolDefinition
 from pydantic_ai.toolsets import ExternalToolset
 
 from ..adapters.base import BaseAgent
-from ..context.identities import IdentityContextManager
+from ..context.identities import IdentityContextManager, set_request_user_jwt
 from ..context.usage import get_usage_tracker
 from ..events import create_event
 from ..observability.prompt_turn_metrics import (
@@ -585,6 +585,7 @@ class VercelAITransport(BaseTransport):
 
         # Set the identity context for this request so that skill executors
         # can access OAuth tokens during tool execution
+        set_request_user_jwt(metric_user_jwt_token)
         try:
             async with IdentityContextManager(identities_from_request):
                 # Get runtime toolsets from the adapter (includes MCP servers)

@@ -36,6 +36,13 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+# Context variable to store the user JWT for the current request.
+# This is used by OTEL hooks to resolve ``datalayer.user_uid``.
+_request_user_jwt: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "request_user_jwt",
+    default=None,
+)
+
 # Context variable to store identities for the current request
 _request_identities: contextvars.ContextVar[list[dict[str, Any]] | None] = (
     contextvars.ContextVar(
@@ -43,6 +50,21 @@ _request_identities: contextvars.ContextVar[list[dict[str, Any]] | None] = (
         default=None,
     )
 )
+
+
+def set_request_user_jwt(token: str | None) -> None:
+    """Set the authenticated user JWT for the current request context."""
+    _request_user_jwt.set(token)
+
+
+def get_request_user_jwt() -> str | None:
+    """Get the authenticated user JWT for the current request context."""
+    return _request_user_jwt.get()
+
+
+def clear_request_user_jwt() -> None:
+    """Clear the user JWT for the current request context."""
+    _request_user_jwt.set(None)
 
 
 def set_request_identities(identities: list[dict[str, Any]] | None) -> None:

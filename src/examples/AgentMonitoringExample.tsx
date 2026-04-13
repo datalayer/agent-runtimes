@@ -97,6 +97,10 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
     DATALAYER_RUN_URL_ENV ||
     'https://prod1.datalayer.run';
   const podName = agentId;
+  // The OTEL service_name resource attribute is 'agent-runtimes' (the
+  // application name), NOT the individual agent ID.  Use the correct value
+  // so the TokenUsageChart WS filter and HTTP query match actual rows.
+  const otelServiceName = 'agent-runtimes';
   const chatAuthToken: string | undefined = token === null ? undefined : token;
 
   const authFetch = useCallback(
@@ -128,7 +132,7 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
             name: AGENT_NAME,
             description: 'Agent with monitoring telemetry demo signals',
             agent_library: 'pydantic-ai',
-            transport: 'ag-ui',
+            transport: 'vercel-ai',
             agent_spec_id: AGENT_SPEC_ID,
             enable_skills: true,
             tools: [],
@@ -336,7 +340,7 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
       <Box sx={{ flex: 1, minHeight: 0, display: 'flex' }}>
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <Chat
-            protocol="ag-ui"
+            protocol="vercel-ai"
             baseUrl={agentBaseUrl}
             agentId={agentId}
             authToken={chatAuthToken}
@@ -386,7 +390,7 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
               Token Usage (7d)
             </Heading>
             <TokenUsageChart
-              serviceName={podName}
+              serviceName={otelServiceName}
               apiKey={token ?? undefined}
               runUrl={otelBaseUrl}
               height={180}

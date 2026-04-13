@@ -642,7 +642,7 @@ const AgentRuntimeFormExample: React.FC<AgentRuntimeFormExampleProps> = ({
       setAllowDirectToolCalls(false);
       setEnableToolReranker(false);
       setUseJupyterSandbox(false);
-      setTransport('ag-ui');
+      setTransport('vercel-ai');
     } else if (isSpecSelection(agentId)) {
       // Populate form fields from the selected library spec
       const specId = getSpecId(agentId);

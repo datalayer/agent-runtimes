@@ -284,6 +284,7 @@ function ChatBaseInner({
     Boolean(protocol?.enableConfigQuery),
     protocol?.configEndpoint,
     protocol?.authToken,
+    protocol?.agentId,
   );
   const skillsQuery = useSkills(
     Boolean(protocol?.enableConfigQuery) && showSkillsMenu,
@@ -1539,7 +1540,8 @@ function ChatBaseInner({
         const isApprovalDecision =
           !!result &&
           typeof result === 'object' &&
-          (result as Record<string, unknown>).type === 'tool-approval-decision' &&
+          (result as Record<string, unknown>).type ===
+            'tool-approval-decision' &&
           typeof (result as Record<string, unknown>).approved === 'boolean';
 
         if (isApprovalDecision && adapterRef.current) {
@@ -1587,9 +1589,7 @@ function ChatBaseInner({
                     message: 'Tool call rejected by user.',
                     ...(approvalId ? { approvalId } : {}),
                   },
-              ...(approved
-                ? {}
-                : { error: 'Tool approval rejected by user' }),
+              ...(approved ? {} : { error: 'Tool approval rejected by user' }),
             });
           } catch (err) {
             console.error('[ChatBase] Approval continuation error:', err);
