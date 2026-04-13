@@ -215,6 +215,7 @@ EVENT_CATALOG: Dict[str, EventSpec] = {
 EVENT_KIND_AGENT_ENDED = "agent-ended"
 EVENT_KIND_AGENT_STARTED = "agent-started"
 EVENT_KIND_TOOL_APPROVAL_REQUESTED = "tool-approval-requested"
+EVENT_KIND_AGENT_ASSIGNED = "agent-assigned"
 
 
 def get_event_spec(event_id: str) -> EventSpec | None:

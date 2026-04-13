@@ -149,10 +149,17 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
             "# Event kind constants for programmatic use",
         ]
     )
+
+    spec_kinds = {spec.get("kind", spec["id"]) for spec in specs}
+
     for spec in specs:
         kind = spec.get("kind", spec["id"])
         const = kind.upper().replace("-", "_")
         lines.append(f'EVENT_KIND_{const} = "{kind}"')
+
+    # Backward-compat constants used by older runtime code paths.
+    if "agent-assigned" not in spec_kinds:
+        lines.append('EVENT_KIND_AGENT_ASSIGNED = "agent-assigned"')
     lines.extend(
         [
             "",
@@ -233,11 +240,14 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
         lines.extend(["};", ""])
 
     # Event kind constants
+    spec_kinds = {spec.get("kind", spec["id"]) for spec in specs}
     lines.append("// Event kind constants for programmatic use")
     for spec in specs:
         kind = spec.get("kind", spec["id"])
         const = kind.upper().replace("-", "_")
         lines.append(f"export const EVENT_KIND_{const} = '{kind}';")
+    if "agent-assigned" not in spec_kinds:
+        lines.append("export const EVENT_KIND_AGENT_ASSIGNED = 'agent-assigned';")
     lines.append("")
 
     lines.extend(

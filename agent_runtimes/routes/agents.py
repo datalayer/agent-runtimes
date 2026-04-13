@@ -47,7 +47,11 @@ from ..services import (
 from ..specs.agents import AGENT_SPECS
 from ..specs.agents import get_agent_spec as get_library_agent_spec
 from ..specs.agents import list_agent_specs as list_library_agents
-from ..specs.events import EVENT_KIND_AGENT_ASSIGNED
+
+try:
+    from ..specs.events import EVENT_KIND_AGENT_ASSIGNED
+except Exception:  # pragma: no cover - compatibility fallback during regen drift
+    EVENT_KIND_AGENT_ASSIGNED = "agent-assigned"
 from ..specs.models import DEFAULT_MODEL
 from ..transports import AGUITransport, MCPUITransport, VercelAITransport
 from ..types import AgentSpec, MCPServer
