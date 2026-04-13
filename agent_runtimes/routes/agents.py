@@ -1395,7 +1395,9 @@ async def create_agent(
                     agent_id=agent_id,
                     has_spec_frontend_tools=has_spec_frontend_tools,
                     approval_tool_ids=approval_tool_ids or [],
-                    is_triggered=bool(_lib_spec and getattr(_lib_spec, "trigger", None)),
+                    is_triggered=bool(
+                        _lib_spec and getattr(_lib_spec, "trigger", None)
+                    ),
                 )
                 register_vercel_agent(agent_id, vercel_adapter)
                 logger.info(f"Registered agent with Vercel AI: {agent_id}")

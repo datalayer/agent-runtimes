@@ -79,7 +79,9 @@ def _subscribe_stream(agent_id: str | None) -> asyncio.Queue[AgentStreamMessage]
     return queue
 
 
-def _unsubscribe_stream(agent_id: str | None, queue: asyncio.Queue[AgentStreamMessage]) -> None:
+def _unsubscribe_stream(
+    agent_id: str | None, queue: asyncio.Queue[AgentStreamMessage]
+) -> None:
     key = _stream_key(agent_id)
     subscribers = _STREAM_SUBSCRIBERS.get(key)
     if not subscribers:
@@ -146,9 +148,9 @@ async def _publish_stream_event(
     )
     _enqueue_stream_message(agent_id, message)
 
-    snapshot_payload = (
-        await _build_monitoring_snapshot_payload(agent_id)
-    ).model_dump(by_alias=True)
+    snapshot_payload = (await _build_monitoring_snapshot_payload(agent_id)).model_dump(
+        by_alias=True
+    )
     snapshot = AgentStreamMessage.create(
         type="agent.snapshot",
         payload=snapshot_payload,
@@ -300,7 +302,9 @@ async def _update_approval(
 
     await _publish_stream_event(
         event_type=(
-            "tool_approval_approved" if status == "approved" else "tool_approval_rejected"
+            "tool_approval_approved"
+            if status == "approved"
+            else "tool_approval_rejected"
         ),
         payload=updated.model_dump(),
         agent_id=updated.agent_id or None,

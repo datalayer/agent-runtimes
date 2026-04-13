@@ -307,10 +307,7 @@ def build_capabilities_from_agent_spec(
             if monitoring_per_run_budget is None:
                 monitoring_per_run_budget = cost_limit
 
-    if (
-        _env_bool("AGENT_RUNTIMES_ENABLE_CAPABILITY_COST_MONITORING", True)
-        and agent_id
-    ):
+    if _env_bool("AGENT_RUNTIMES_ENABLE_CAPABILITY_COST_MONITORING", True) and agent_id:
         capabilities.append(
             CostMonitoringCapability(
                 agent_id=agent_id,

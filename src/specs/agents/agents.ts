@@ -722,7 +722,7 @@ export const CRAWLER_AGENT_SPEC_0_0_1: AgentSpec = {
   description: `Web crawling and research agent that searches the web and GitHub repositories for information.`,
   tags: ['web', 'search', 'research', 'crawler', 'github'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-3-5-haiku-20241022-v1:0',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
   mcpServers: [MCP_SERVER_MAP['tavily:0.0.1']],
   skills: [
     toAgentSkillSpec(SKILL_MAP['github:0.0.1']),
@@ -770,7 +770,7 @@ export const CRAWLER_AGENT_SPEC_0_0_1: AgentSpec = {
 ## Token Efficiency When possible, chain multiple tool calls in a single execute_code block. This reduces output tokens by processing intermediate results in code rather than returning them. If you want to examine results, print subsets, preview (maximum 20 first characters) and/or counts instead of full data, this is really important.
 `,
   goal: undefined,
-  protocol: 'vercel-ai',
+  protocol: undefined,
   uiExtension: undefined,
   trigger: undefined,
   modelConfig: undefined,
@@ -792,7 +792,7 @@ export const DATA_ACQUISITION_AGENT_SPEC_0_0_1: AgentSpec = {
   description: `Acquires and manages data from various sources including Kaggle datasets and local filesystem operations.`,
   tags: ['data', 'acquisition', 'kaggle', 'filesystem'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-3-5-haiku-20241022-v1:0',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
   mcpServers: [
     MCP_SERVER_MAP['kaggle:0.0.1'],
     MCP_SERVER_MAP['filesystem:0.0.1'],
@@ -844,7 +844,7 @@ export const DATA_ACQUISITION_AGENT_SPEC_0_0_1: AgentSpec = {
 ## Token Efficiency When possible, chain multiple tool calls in a single execute_code block. This reduces output tokens by processing intermediate results in code rather than returning them. If you want to examine results, print subsets, preview (maximum 20 first characters) and/or counts instead of full data, this is really important.
 `,
   goal: undefined,
-  protocol: 'vercel-ai',
+  protocol: undefined,
   uiExtension: undefined,
   trigger: undefined,
   modelConfig: undefined,
@@ -866,7 +866,7 @@ export const DEMO_FULL_AGENT_SPEC_0_0_1: AgentSpec = {
   description: `A full-featured demonstration agent showcasing MCP servers (Tavily web search), skills (GitHub, PDF, crawl, events, text summarizer, jokes), human-in-the-loop tool approval, and frontend tools (Jupyter notebooks, Lexical documents).`,
   tags: ['demo', 'approval', 'human-in-the-loop', 'utility'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-3-5-haiku-20241022-v1:0',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
   mcpServers: [MCP_SERVER_MAP['tavily:0.0.1']],
   skills: [
     toAgentSkillSpec(SKILL_MAP['crawl:0.0.1']),
@@ -907,7 +907,7 @@ export const DEMO_FULL_AGENT_SPEC_0_0_1: AgentSpec = {
 `,
   systemPromptCodemodeAddons: undefined,
   goal: undefined,
-  protocol: 'vercel-ai',
+  protocol: undefined,
   uiExtension: undefined,
   trigger: undefined,
   modelConfig: undefined,
@@ -929,7 +929,7 @@ export const DEMO_ONE_TRIGGER_APPROVAL_AGENT_SPEC_0_0_1: AgentSpec = {
   description: `A demonstration agent for the "once" trigger type with manual tool approval. When launched, the agent executes its trigger prompt once and invokes the runtime-sensitive-echo tool, which requires manual approval before execution. After completion, the runtime is terminated automatically.`,
   tags: ['demo', 'trigger', 'once', 'lifecycle', 'approval'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-3-5-haiku-20241022-v1:0',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
   mcpServers: [],
   skills: [],
   tools: [TOOL_MAP['runtime-sensitive-echo:0.0.1']],
@@ -945,8 +945,8 @@ export const DEMO_ONE_TRIGGER_APPROVAL_AGENT_SPEC_0_0_1: AgentSpec = {
   sandboxVariant: 'jupyter',
   systemPrompt: undefined,
   systemPromptCodemodeAddons: undefined,
-  goal: `Call runtime_sensitive_echo exactly once with message='Tool approval demo executed' and reason='audit'. Do not call any other tool.`,
-  protocol: 'vercel-ai',
+  goal: `Call runtime_sensitive_echo exactly once with message="Tool approval demo executed" and reason="audit". Do not call any other tool.`,
+  protocol: undefined,
   uiExtension: undefined,
   trigger: {
     type: 'once',
@@ -973,7 +973,7 @@ export const DEMO_ONE_TRIGGER_AGENT_SPEC_0_0_1: AgentSpec = {
   description: `A demonstration agent for the "once" trigger type. When launched, the agent executes its trigger prompt exactly once, emits AGENT_STARTED and AGENT_ENDED lifecycle events, and then terminates the runtime automatically.`,
   tags: ['demo', 'trigger', 'once', 'lifecycle'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-3-5-haiku-20241022-v1:0',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
   mcpServers: [],
   skills: [
     toAgentSkillSpec(SKILL_MAP['github:0.0.1']),
@@ -993,7 +993,7 @@ export const DEMO_ONE_TRIGGER_AGENT_SPEC_0_0_1: AgentSpec = {
   systemPrompt: undefined,
   systemPromptCodemodeAddons: undefined,
   goal: `Run a one-shot task: list the user's top 3 public and top 3 private GitHub repositories, ranked by recent activity, and provide a brief summary of each.`,
-  protocol: 'vercel-ai',
+  protocol: undefined,
   uiExtension: undefined,
   trigger: {
     type: 'once',
@@ -1020,7 +1020,7 @@ export const DEMO_SIMPLE_AGENT_SPEC_0_0_1: AgentSpec = {
   description: `A simple conversational agent. No tools, no MCP servers, no skills — just a helpful AI assistant you can chat with.`,
   tags: ['simple', 'chat', 'assistant'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-3-5-haiku-20241022-v1:0',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
   mcpServers: [],
   skills: [toAgentSkillSpec(SKILL_MAP['events:0.0.1'])],
   tools: [TOOL_MAP['runtime-echo:0.0.1']],
@@ -1047,7 +1047,7 @@ export const DEMO_SIMPLE_AGENT_SPEC_0_0_1: AgentSpec = {
 `,
   systemPromptCodemodeAddons: undefined,
   goal: undefined,
-  protocol: 'vercel-ai',
+  protocol: undefined,
   uiExtension: undefined,
   trigger: undefined,
   modelConfig: undefined,
@@ -1363,7 +1363,7 @@ export const FINANCIAL_VIZ_AGENT_SPEC_0_0_1: AgentSpec = {
   description: `Analyzes financial market data and creates visualizations and charts.`,
   tags: ['finance', 'stocks', 'visualization', 'charts'],
   enabled: false,
-  model: 'bedrock:us.anthropic.claude-3-5-haiku-20241022-v1:0',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
   mcpServers: [
     MCP_SERVER_MAP['alphavantage:0.0.1'],
     MCP_SERVER_MAP['chart:0.0.1'],
@@ -1411,7 +1411,7 @@ export const FINANCIAL_VIZ_AGENT_SPEC_0_0_1: AgentSpec = {
 ## Token Efficiency When possible, chain multiple tool calls in a single execute_code block. This reduces output tokens by processing intermediate results in code rather than returning them. If you want to examine results, print subsets, preview (maximum 20 first characters) and/or counts instead of full data, this is really important.
 `,
   goal: undefined,
-  protocol: 'vercel-ai',
+  protocol: undefined,
   uiExtension: undefined,
   trigger: undefined,
   modelConfig: undefined,
@@ -1433,7 +1433,7 @@ export const FINANCIAL_AGENT_SPEC_0_0_1: AgentSpec = {
   description: `Analyzes financial market data and provides chart-ready insights.`,
   tags: ['finance', 'stocks', 'visualization', 'charts'],
   enabled: false,
-  model: 'bedrock:us.anthropic.claude-3-5-haiku-20241022-v1:0',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
   mcpServers: [MCP_SERVER_MAP['alphavantage:0.0.1']],
   skills: [toAgentSkillSpec(SKILL_MAP['events:0.0.1'])],
   tools: [],
@@ -1478,7 +1478,7 @@ export const FINANCIAL_AGENT_SPEC_0_0_1: AgentSpec = {
 ## Token Efficiency When possible, chain multiple tool calls in a single execute_code block. This reduces output tokens by processing intermediate results in code rather than returning them. If you want to examine results, print subsets, preview (maximum 20 first characters) and/or counts instead of full data, this is really important.
 `,
   goal: undefined,
-  protocol: 'vercel-ai',
+  protocol: undefined,
   uiExtension: undefined,
   trigger: undefined,
   modelConfig: undefined,
@@ -1607,7 +1607,7 @@ export const GITHUB_AGENT_SPEC_0_0_1: AgentSpec = {
   description: `Manages GitHub repositories, issues, and pull requests with email notification capabilities.`,
   tags: ['github', 'git', 'code', 'email'],
   enabled: false,
-  model: 'bedrock:us.anthropic.claude-3-5-haiku-20241022-v1:0',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
   mcpServers: [MCP_SERVER_MAP['google-workspace:0.0.1']],
   skills: [
     toAgentSkillSpec(SKILL_MAP['github:0.0.1']),
@@ -1655,7 +1655,7 @@ export const GITHUB_AGENT_SPEC_0_0_1: AgentSpec = {
 ## Token Efficiency When possible, chain multiple tool calls in a single execute_code block. This reduces output tokens by processing intermediate results in code rather than returning them. If you want to examine results, print subsets, preview (maximum 20 first characters) and/or counts instead of full data, this is really important.
 `,
   goal: undefined,
-  protocol: 'vercel-ai',
+  protocol: undefined,
   uiExtension: undefined,
   trigger: undefined,
   modelConfig: undefined,
@@ -1725,7 +1725,7 @@ export const INFORMATION_ROUTING_AGENT_SPEC_0_0_1: AgentSpec = {
 ## Token Efficiency Always chain multiple tool calls in a single execute_code block. This reduces output tokens by processing intermediate results in code rather than returning them. If you want to examine results, print subsets, preview (maximum 20 first characters) and/or counts instead of full data, this is really important!!!!
 `,
   goal: undefined,
-  protocol: 'vercel-ai',
+  protocol: undefined,
   uiExtension: undefined,
   trigger: undefined,
   modelConfig: undefined,
@@ -1850,89 +1850,6 @@ export const MONITOR_SALES_KPIS_AGENT_SPEC_0_0_1: AgentSpec = {
   authorizationPolicy: '',
   notifications: { email: 'marcus.r@company.com', slack: '#sales-kpis' },
   memory: 'mem0',
-};
-
-export const GUARDRAILS_COST_TRACKING_DEMO_AGENT_SPEC_0_0_1: AgentSpec = {
-  id: 'guardrails-cost-tracking-demo',
-  version: '0.0.1',
-  name: 'Guardrails Cost Tracking Demo',
-  description: `Local demo agent showcasing shield-style cost tracking guardrails, budget enforcement, and manual tool approvals.`,
-  tags: ['demo', 'guardrails', 'cost', 'monitoring'],
-  enabled: false,
-  model: 'openai:gpt-4o-mini',
-  mcpServers: [MCP_SERVER_MAP['filesystem:0.0.1']],
-  skills: [toAgentSkillSpec(SKILL_MAP['events:0.0.1'])],
-  tools: [
-    TOOL_MAP['runtime-echo:0.0.1'],
-    TOOL_MAP['runtime-sensitive-echo:0.0.1'],
-  ],
-  frontendTools: [
-    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
-    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
-  ],
-  environmentName: 'ai-agents-env',
-  icon: 'shield',
-  emoji: '🛡️',
-  color: '#1f6feb',
-  suggestions: [
-    'Give me a budget-aware summary of this conversation',
-    'Use runtime-sensitive-echo with sample confidential payload',
-    'Report current run and cumulative cost',
-  ],
-  welcomeMessage:
-    'Hello! I demonstrate guardrails with budget tracking and approval workflows. I will monitor token/cost usage and require approval for sensitive runtime tools.',
-  welcomeNotebook: undefined,
-  welcomeDocument: undefined,
-  sandboxVariant: 'local-eval',
-  systemPrompt: `You are a guardrails demonstration agent.
-Track and report token usage and cost while respecting budget limits.
-If a sensitive tool requires approval, wait for approval before continuing.
-Prefer concise outputs and include cost-awareness notes when relevant.
-`,
-  systemPromptCodemodeAddons: undefined,
-  goal: 'Demonstrate local cost tracking guardrails with budget controls and tool approvals.',
-  protocol: 'ag-ui',
-  uiExtension: undefined,
-  trigger: undefined,
-  modelConfig: { temperature: 0.2, max_tokens: 2048 },
-  mcpServerTools: undefined,
-  guardrails: [
-    {
-      name: 'Cost tracking policy',
-      identity_provider: 'datalayer',
-      identity_name: 'guardrails-demo@datalayer.ai',
-      permissions: {
-        'read:data': true,
-        'write:data': false,
-        'execute:code': true,
-        'access:internet': false,
-        'send:email': false,
-        'deploy:production': false,
-      },
-      token_limits: { per_run: '80K', per_day: '400K', per_month: '4M' },
-      cost_budget: {
-        per_run_usd: 0.25,
-        cumulative_usd: 2.0,
-        on_budget_exceeded: 'stop',
-      },
-      tool_approval: {
-        tools: ['runtime-sensitive-echo'],
-        timeout: '0h5m0s',
-        poll_interval: 2,
-      },
-    },
-  ],
-  evals: undefined,
-  codemode: { enabled: false },
-  output: undefined,
-  advanced: {
-    cost_limit: '$0.25 per run',
-    time_limit: '120 seconds',
-    max_iterations: 20,
-  },
-  authorizationPolicy: '',
-  notifications: undefined,
-  memory: 'ephemeral',
 };
 
 export const OPTIMIZE_DYNAMIC_PRICING_AGENT_SPEC_0_0_1: AgentSpec = {
@@ -2528,7 +2445,7 @@ export const SPATIAL_DATA_ANALYSIS_AGENT_SPEC_0_0_1: AgentSpec = {
   description: `Discovers, acquires, and analyzes geospatial datasets using Earthdata and Eurus tools. Produces map-ready summaries, anomaly diagnostics, and reproducible analysis artifacts for environmental and climate use cases.`,
   tags: ['geospatial', 'climate', 'earth-observation', 'analytics'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-3-5-haiku-20241022-v1:0',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
   mcpServers: [
     MCP_SERVER_MAP['earthdata:0.0.1'],
     MCP_SERVER_MAP['eurus:0.0.1'],
@@ -2562,7 +2479,7 @@ export const SPATIAL_DATA_ANALYSIS_AGENT_SPEC_0_0_1: AgentSpec = {
 ## Workflow Guidance 1. Discover available Earthdata and Eurus tools. 2. Validate spatial/temporal parameters before execution. 3. Execute transformations in code and keep outputs concise. 4. Persist important run states as events.
 `,
   goal: undefined,
-  protocol: 'vercel-ai',
+  protocol: undefined,
   uiExtension: undefined,
   trigger: undefined,
   modelConfig: undefined,
@@ -2788,8 +2705,6 @@ export const AGENT_SPECS: Record<string, AgentSpec> = {
   'financial-viz': FINANCIAL_VIZ_AGENT_SPEC_0_0_1,
   financial: FINANCIAL_AGENT_SPEC_0_0_1,
   'generate-weekly-reports': GENERATE_WEEKLY_REPORTS_AGENT_SPEC_0_0_1,
-  'guardrails-cost-tracking-demo':
-    GUARDRAILS_COST_TRACKING_DEMO_AGENT_SPEC_0_0_1,
   'github-agent': GITHUB_AGENT_SPEC_0_0_1,
   'information-routing': INFORMATION_ROUTING_AGENT_SPEC_0_0_1,
   'monitor-sales-kpis': MONITOR_SALES_KPIS_AGENT_SPEC_0_0_1,

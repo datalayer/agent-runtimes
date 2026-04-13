@@ -46,14 +46,14 @@ class CostMonitoringCapability(AbstractCapability[Any]):
     def _resolve_prices(self, model_id: Any = None) -> None:
         # Keep retrying until prices are actually resolved; model catalogs can
         # lag and may become available later in a long-lived runtime.
-        if self._prices_resolved and self._price_per_input is not None and self._price_per_output is not None:
+        if (
+            self._prices_resolved
+            and self._price_per_input is not None
+            and self._price_per_output is not None
+        ):
             return
 
-        model_name = (
-            str(model_id)
-            if model_id is not None
-            else (self.model_name or "")
-        )
+        model_name = str(model_id) if model_id is not None else (self.model_name or "")
         if not model_name:
             self._prices_resolved = True
             return
@@ -136,13 +136,18 @@ class CostMonitoringCapability(AbstractCapability[Any]):
                     return None
                 return numeric / 1_000_000.0
 
-            for model_ref in _model_ref_candidates(model_name):
+            def _safe_calc_price(model_ref: str) -> Any | None:
                 try:
-                    price_calc = calc_price(
+                    return calc_price(
                         Usage(input_tokens=1, output_tokens=1),
                         model_ref,
                     )
                 except Exception:
+                    return None
+
+            for model_ref in _model_ref_candidates(model_name):
+                price_calc = _safe_calc_price(model_ref)
+                if price_calc is None:
                     continue
 
                 model_price = price_calc.model_price
@@ -159,11 +164,14 @@ class CostMonitoringCapability(AbstractCapability[Any]):
             try:
                 from genai_prices import get_model_prices
 
-                for model_ref in _model_ref_candidates(model_name):
+                def _safe_get_model_prices(model_ref: str) -> Any | None:
                     try:
-                        prices = get_model_prices(model_ref)
+                        return get_model_prices(model_ref)
                     except Exception:
-                        continue
+                        return None
+
+                for model_ref in _model_ref_candidates(model_name):
+                    prices = _safe_get_model_prices(model_ref)
                     if prices:
                         self._price_per_input = prices.get("input", 0.0)
                         self._price_per_output = prices.get("output", 0.0)
@@ -178,9 +186,10 @@ class CostMonitoringCapability(AbstractCapability[Any]):
     def _calculate_run_cost(self, input_tokens: int, output_tokens: int) -> float:
         if self._price_per_input is None or self._price_per_output is None:
             return 0.0
-        return float(input_tokens) * self._price_per_input + float(
-            output_tokens
-        ) * self._price_per_output
+        return (
+            float(input_tokens) * self._price_per_input
+            + float(output_tokens) * self._price_per_output
+        )
 
     async def before_run(self, ctx: RunContext[Any]) -> None:
         if not self.enabled:
@@ -205,7 +214,9 @@ class CostMonitoringCapability(AbstractCapability[Any]):
         input_tokens = int(getattr(usage, "input_tokens", 0) or 0)
         output_tokens = int(getattr(usage, "output_tokens", 0) or 0)
         run_cost_usd = self._calculate_run_cost(input_tokens, output_tokens)
-        model = str(getattr(ctx.model, "model_id", None) or self.model_name or "unknown")
+        model = str(
+            getattr(ctx.model, "model_id", None) or self.model_name or "unknown"
+        )
 
         store = get_cost_store()
         tracked = store.record_run(
@@ -234,7 +245,9 @@ class CostMonitoringCapability(AbstractCapability[Any]):
             }
 
             emitter.add_counter("agent_runtimes.capability.cost.run.count", 1, attrs)
-            emitter.add_counter("agent_runtimes.capability.cost.run.usd", run_cost_usd, attrs)
+            emitter.add_counter(
+                "agent_runtimes.capability.cost.run.usd", run_cost_usd, attrs
+            )
             emitter.add_histogram(
                 "agent_runtimes.capability.cost.cumulative.usd",
                 tracked.cumulative_cost_usd,

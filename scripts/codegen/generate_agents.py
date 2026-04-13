@@ -217,11 +217,12 @@ from agent_runtimes.types import AgentSpec
 
             # New flow-level fields
             goal_raw = spec.get("goal")
-            goal_str = (
-                f'"{goal_raw.replace(chr(10), " ").replace("  ", " ").strip()}"'
+            goal_clean = (
+                goal_raw.replace(chr(10), " ").replace("  ", " ").strip()
                 if goal_raw
-                else "None"
+                else None
             )
+            goal_str = _fmt_py_literal(goal_clean)
             protocol_val = spec.get("protocol")
             protocol_str = f'"{protocol_val}"' if protocol_val else "None"
             ui_ext = spec.get("ui_extension")

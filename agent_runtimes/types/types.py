@@ -570,7 +570,8 @@ class AIModelRuntime(BaseModel):
     model_config = ConfigDict(populate_by_name=True, by_alias=True)
 
     id: str = Field(
-        ..., description="Model identifier (e.g., 'anthropic:claude-3-5-haiku-20241022')"
+        ...,
+        description="Model identifier (e.g., 'anthropic:claude-3-5-haiku-20241022')",
     )
     name: str = Field(..., description="Display name for the model")
     builtin_tools: List[str] = Field(

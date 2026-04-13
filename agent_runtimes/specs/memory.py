@@ -24,7 +24,6 @@ class Memories(str, Enum):
 
     EPHEMERAL = "ephemeral"
     MEM0 = "mem0"
-    MEMPALACE = "mempalace"
     MEMU = "memu"
     SIMPLEMEM = "simplemem"
 
@@ -55,18 +54,6 @@ MEM0_MEMORY_0_0_1 = MemorySpec(
     backend="mem0",
     icon="brain",
     emoji="🧠",
-)
-
-MEMPALACE_MEMORY_0_0_1 = MemorySpec(
-    id="mempalace",
-    version="0.0.1",
-    name="MemPalace Memory",
-    description="Highest-scoring AI memory system ever benchmarked (96.6% LongMemEval R@5 raw, 100% with Haiku rerank). Inspired by the ancient Greek method of loci, MemPalace organizes memories into a navigable palace: wings (people/projects), halls (memory types), rooms (specific topics), closets (compressed summaries), and drawers (verbatim originals). Includes AAAK lossless compression (30x token reduction), a temporal knowledge graph, specialist agents with diaries, and contradiction detection. Entirely local — no cloud, no API keys, no subscription. Works with any LLM.",
-    persistence="permanent",
-    scope="user",
-    backend="chromadb",
-    icon="castle",
-    emoji="🏰",
 )
 
 MEMU_MEMORY_0_0_1 = MemorySpec(
@@ -101,7 +88,6 @@ SIMPLEMEM_MEMORY_0_0_1 = MemorySpec(
 MEMORY_CATALOGUE: dict[str, MemorySpec] = {
     "ephemeral": EPHEMERAL_MEMORY_0_0_1,
     "mem0": MEM0_MEMORY_0_0_1,
-    "mempalace": MEMPALACE_MEMORY_0_0_1,
     "memu": MEMU_MEMORY_0_0_1,
     "simplemem": SIMPLEMEM_MEMORY_0_0_1,
 }

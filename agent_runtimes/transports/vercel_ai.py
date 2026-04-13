@@ -705,10 +705,7 @@ class VercelAITransport(BaseTransport):
                     )
 
                 # Pass sdk_version only if supported by installed pydantic-ai.
-                if (
-                    sdk_version
-                    and "sdk_version" in dispatch_params
-                ):
+                if sdk_version and "sdk_version" in dispatch_params:
                     dispatch_kwargs["sdk_version"] = sdk_version
 
                 response = await VercelAIAdapter.dispatch_request(
