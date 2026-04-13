@@ -32,7 +32,7 @@ const SERIES = [
 
 type SeriesLabel = (typeof SERIES)[number]['label'];
 
-/** Per-turn data point with delta (non-cumulative) token values. */
+/** Per-turn data point with cumulative token values. */
 type TurnPoint = {
   turnNumber: number;
   timestampMs: number;
@@ -70,7 +70,7 @@ function nanoToMs(row: Record<string, unknown>): number {
 
 /**
  * Group metric rows by timestamp, sort chronologically,
- * and compute per-turn deltas by watching the completions counter.
+ * and extract cumulative values by watching the completions counter.
  */
 function extractTurnsFromRows(
   rows: Array<Record<string, unknown>>,
@@ -113,15 +113,10 @@ function extractTurnsFromRows(
       }
     }
 
-    const delta = emptyValues();
-    for (const s of SERIES) {
-      delta[s.label] = Math.max(0, current[s.label] - prev.values[s.label]);
-    }
-
     turns.push({
       turnNumber: newCompletions,
       timestampMs: nanoToMs(completionsRow),
-      values: delta,
+      values: current,
     });
 
     prev = { completions: newCompletions, values: current };
@@ -332,16 +327,6 @@ export function TokenUsageChart({
 
   // ── Chart options ─────────────────────────────────────────────
   const option = useMemo(() => {
-    const xLabels = turns.map(t => {
-      const d = new Date(t.timestampMs);
-      return d.toLocaleTimeString('en-US', {
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: false,
-      });
-    });
-
     return {
       tooltip: {
         trigger: 'axis' as const,
@@ -357,21 +342,25 @@ export function TokenUsageChart({
         itemGap: 6,
       },
       grid: {
-        left: 30,
-        right: 8,
+        left: 45,
+        right: 15,
         top: 24,
         bottom: 20,
       },
       xAxis: {
-        type: 'category' as const,
-        boundaryGap: true,
-        data: xLabels,
-        axisLabel: { fontSize: 9, rotate: turns.length > 10 ? 45 : 0 },
+        type: 'time' as const,
+        axisLabel: { fontSize: 9 },
         axisLine: { lineStyle: { color: '#d0d7de' } },
       },
       yAxis: {
         type: 'value' as const,
-        show: false,
+        axisLabel: {
+          fontSize: 9,
+          formatter: (v: number) => {
+            if (v >= 1000) return `${(v / 1000).toFixed(1)}K`;
+            return String(v);
+          },
+        },
         splitLine: {
           show: true,
           lineStyle: { color: '#f0f0f0' },
@@ -379,10 +368,13 @@ export function TokenUsageChart({
       },
       series: SERIES.map(item => ({
         name: item.label,
-        type: 'bar' as const,
-        stack: 'total',
-        data: turns.map(t => t.values[item.label]),
-        barMaxWidth: 40,
+        type: 'line' as const,
+        smooth: true,
+        lineStyle: { width: 2 },
+        areaStyle: { opacity: 0.15 },
+        symbol: 'circle',
+        symbolSize: 4,
+        data: turns.map(t => [t.timestampMs, t.values[item.label]]),
       })),
       color: ['#2da44e', '#0969da', '#8250df', '#bf8700', '#cf222e'],
     };

@@ -32,6 +32,7 @@ import {
   type ContextSnapshotResponse,
 } from '../context/ContextPanel';
 import { CostTracker, type CostUsageResponse } from '../context/CostTracker';
+import { CostUsageChart } from '../context/CostUsageChart';
 import { TokenUsageChart } from '../context/TokenUsageChart';
 import { useAIAgentsWebSocket } from '../hooks';
 import type { AgentStreamSnapshotPayload } from '../types/stream';
@@ -390,6 +391,24 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
               Token Usage (7d)
             </Heading>
             <TokenUsageChart
+              serviceName={otelServiceName}
+              apiKey={token ?? undefined}
+              runUrl={otelBaseUrl}
+              height={180}
+            />
+          </Box>
+
+          <Box
+            sx={{
+              p: 3,
+              borderBottom: '1px solid',
+              borderColor: 'border.default',
+            }}
+          >
+            <Heading as="h4" sx={{ fontSize: 1, mb: 2 }}>
+              Cost per Turn
+            </Heading>
+            <CostUsageChart
               serviceName={otelServiceName}
               apiKey={token ?? undefined}
               runUrl={otelBaseUrl}
