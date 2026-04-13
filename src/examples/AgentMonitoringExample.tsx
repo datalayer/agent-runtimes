@@ -27,29 +27,37 @@ import {
 import { Box } from '@datalayer/primer-addons';
 import { ErrorView } from './components';
 import { ThemedProvider } from './utils/themedProvider';
+import {
+  ContextPanel,
+  type ContextSnapshotResponse,
+} from '../context/ContextPanel';
+import { CostTracker, type CostUsageResponse } from '../context/CostTracker';
+import type { AgentStreamSnapshotPayload } from '../types/stream';
+import { parseAgentStreamMessage } from '../types/stream';
 
 const queryClient = new QueryClient();
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { SignInSimple } from '@datalayer/core/lib/views/iam';
 import { UserBadge } from '@datalayer/core/lib/views/profile';
 import { Chat } from '../chat';
-import { useAgents } from '../hooks/useAgents';
 
 const AGENT_NAME = 'monitoring-demo-agent';
 const AGENT_SPEC_ID = 'monitor-sales-kpis';
+const DEFAULT_LOCAL_BASE_URL =
+  import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
 
-type MonitoringStatus = 'healthy' | 'degraded' | 'critical' | 'unknown';
+const toWsUrl = (baseUrl: string, path: string): string | null => {
+  try {
+    const url = new URL(baseUrl);
+    url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+    url.pathname = path;
+    return url.toString();
+  } catch {
+    return null;
+  }
+};
+
 type AlertSeverity = 'info' | 'warning' | 'critical';
-
-interface MonitoringSnapshot {
-  timestamp: string;
-  cpuPercent: number;
-  memoryPercent: number;
-  latencyMs: number;
-  errorRatePercent: number;
-  queueDepth: number;
-  status: MonitoringStatus;
-}
 
 interface MonitoringAlert {
   id: string;
@@ -58,193 +66,37 @@ interface MonitoringAlert {
   timestamp: string;
 }
 
-const clampPercent = (value: number) => Math.max(0, Math.min(100, value));
-
-const toNumber = (value: unknown, fallback: number) => {
-  const n = Number(value);
-  return Number.isFinite(n) ? n : fallback;
-};
-
-const randomOffset = (range: number) => (Math.random() - 0.5) * range;
-
-const createSyntheticSnapshot = (
-  previous?: MonitoringSnapshot,
-): MonitoringSnapshot => {
-  const baseCpu = previous?.cpuPercent ?? 42;
-  const baseMemory = previous?.memoryPercent ?? 57;
-  const baseLatency = previous?.latencyMs ?? 320;
-  const baseErrorRate = previous?.errorRatePercent ?? 1.6;
-  const baseQueueDepth = previous?.queueDepth ?? 12;
-
-  const cpuPercent = clampPercent(baseCpu + randomOffset(10));
-  const memoryPercent = clampPercent(baseMemory + randomOffset(8));
-  const latencyMs = Math.max(30, baseLatency + randomOffset(120));
-  const errorRatePercent = clampPercent(baseErrorRate + randomOffset(0.8));
-  const queueDepth = Math.max(0, Math.round(baseQueueDepth + randomOffset(8)));
-
-  let status: MonitoringStatus = 'healthy';
-  if (errorRatePercent > 4 || latencyMs > 1200 || cpuPercent > 90) {
-    status = 'critical';
-  } else if (errorRatePercent > 2 || latencyMs > 700 || cpuPercent > 80) {
-    status = 'degraded';
-  }
-
-  return {
-    timestamp: new Date().toISOString(),
-    cpuPercent,
-    memoryPercent,
-    latencyMs,
-    errorRatePercent,
-    queueDepth,
-    status,
-  };
-};
-
-const normalizeSnapshot = (
-  raw: unknown,
-  previous?: MonitoringSnapshot,
-): MonitoringSnapshot => {
-  if (!raw || typeof raw !== 'object') {
-    return createSyntheticSnapshot(previous);
-  }
-  const data = raw as Record<string, unknown>;
-  const snapshot = createSyntheticSnapshot(previous);
-
-  const statusValue = String(data.status ?? snapshot.status).toLowerCase();
-  const status: MonitoringStatus =
-    statusValue === 'healthy' ||
-    statusValue === 'degraded' ||
-    statusValue === 'critical'
-      ? statusValue
-      : 'unknown';
-
-  return {
-    timestamp: String(data.timestamp ?? new Date().toISOString()),
-    cpuPercent: clampPercent(
-      toNumber(data.cpuPercent ?? data.cpu, snapshot.cpuPercent),
-    ),
-    memoryPercent: clampPercent(
-      toNumber(data.memoryPercent ?? data.memory, snapshot.memoryPercent),
-    ),
-    latencyMs: Math.max(
-      0,
-      toNumber(data.latencyMs ?? data.latency, snapshot.latencyMs),
-    ),
-    errorRatePercent: clampPercent(
-      toNumber(
-        data.errorRatePercent ?? data.errorRate,
-        snapshot.errorRatePercent,
-      ),
-    ),
-    queueDepth: Math.max(
-      0,
-      Math.round(toNumber(data.queueDepth, snapshot.queueDepth)),
-    ),
-    status,
-  };
-};
-
-const normalizeAlert = (
-  raw: unknown,
-  index: number,
-): MonitoringAlert | null => {
-  if (!raw || typeof raw !== 'object') {
-    return null;
-  }
-  const data = raw as Record<string, unknown>;
-  const severityValue = String(data.severity ?? 'info').toLowerCase();
-  const severity: AlertSeverity =
-    severityValue === 'warning' || severityValue === 'critical'
-      ? severityValue
-      : 'info';
-
-  return {
-    id: String(data.id ?? `alert-${Date.now()}-${index}`),
-    title: String(data.title ?? 'Agent alert detected'),
-    severity,
-    timestamp: String(data.timestamp ?? new Date().toISOString()),
-  };
-};
-
-const statusVariant = (status: MonitoringStatus) => {
-  if (status === 'healthy') return 'success';
-  if (status === 'degraded') return 'attention';
-  if (status === 'critical') return 'danger';
-  return 'secondary';
-};
-
 const alertVariant = (severity: AlertSeverity) => {
   if (severity === 'critical') return 'danger';
   if (severity === 'warning') return 'attention';
   return 'secondary';
 };
 
-const MetricRow: React.FC<{
-  label: string;
-  value: string;
-  percent: number;
-}> = ({ label, value, percent }) => {
-  return (
-    <Box sx={{ mb: 2 }}>
-      <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          mb: 1,
-        }}
-      >
-        <Text sx={{ fontSize: 0, color: 'fg.muted' }}>{label}</Text>
-        <Text sx={{ fontSize: 0, fontWeight: 'bold' }}>{value}</Text>
-      </Box>
-      <Box
-        sx={{
-          width: '100%',
-          height: 8,
-          bg: 'canvas.subtle',
-          borderRadius: 6,
-          overflow: 'hidden',
-        }}
-      >
-        <Box
-          sx={{
-            width: `${clampPercent(percent)}%`,
-            height: '100%',
-            bg: percent >= 85 ? 'danger.emphasis' : 'accent.emphasis',
-            transition: 'width 300ms ease-out',
-          }}
-        />
-      </Box>
-    </Box>
-  );
-};
-
 const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
   onLogout,
 }) => {
   const { token } = useSimpleAuthStore();
-
-  const {
-    runtime,
-    status: runtimeStatus,
-    isReady,
-    error: hookError,
-  } = useAgents({
-    agentSpecId: AGENT_SPEC_ID,
-    autoStart: true,
-    agentConfig: {
-      name: AGENT_NAME,
-      protocol: 'ag-ui',
-      description: 'Agent with runtime and alert monitoring signals',
-    },
-  });
-
-  const [snapshots, setSnapshots] = useState<MonitoringSnapshot[]>([]);
+  const [runtimeStatus, setRuntimeStatus] = useState<
+    'launching' | 'ready' | 'error'
+  >('launching');
+  const [isReady, setIsReady] = useState(false);
+  const [hookError, setHookError] = useState<string | null>(null);
+  const [agentId, setAgentId] = useState<string>(AGENT_NAME);
+  const [isReconnectedAgent, setIsReconnectedAgent] = useState(false);
   const [alerts, setAlerts] = useState<MonitoringAlert[]>([]);
+  const [wsState, setWsState] = useState<'connecting' | 'connected' | 'closed'>(
+    'closed',
+  );
+  const [liveContext, setLiveContext] = useState<
+    ContextSnapshotResponse | undefined
+  >(undefined);
+  const [liveCost, setLiveCost] = useState<CostUsageResponse | undefined>(
+    undefined,
+  );
 
-  const agentBaseUrl = runtime?.agentBaseUrl || '';
-  const agentId = runtime?.agentId || AGENT_NAME;
-  const podName = runtime?.podName || '(launching…)';
+  const agentBaseUrl = DEFAULT_LOCAL_BASE_URL;
+  const podName = agentId;
+  const chatAuthToken: string | undefined = token === null ? undefined : token;
 
   const authFetch = useCallback(
     (url: string, opts: RequestInit = {}) =>
@@ -260,52 +112,169 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
   );
 
   useEffect(() => {
-    if (!isReady || !agentBaseUrl) return;
+    let isCancelled = false;
 
-    const poll = async () => {
-      let nextSnapshot: MonitoringSnapshot | null = null;
-      let nextAlerts: MonitoringAlert[] | null = null;
+    const createLocalAgent = async () => {
+      setRuntimeStatus('launching');
+      setIsReady(false);
+      setHookError(null);
+      setIsReconnectedAgent(false);
 
       try {
-        const res = await authFetch(
-          `${agentBaseUrl}/api/v1/agents/${agentId}/monitoring`,
-        );
-        if (res.ok) {
-          const data = await res.json();
-          const rawSnapshot = data?.snapshot ?? data?.metrics ?? data;
-          nextAlerts = Array.isArray(data?.alerts)
-            ? data.alerts
-                .map((a: unknown, i: number) => normalizeAlert(a, i))
-                .filter(
-                  (a: MonitoringAlert | null): a is MonitoringAlert => !!a,
-                )
-                .slice(0, 25)
-            : [];
-          setSnapshots(prev => {
-            nextSnapshot = normalizeSnapshot(rawSnapshot, prev[0]);
-            return [nextSnapshot, ...prev].slice(0, 40);
-          });
-          if (nextAlerts) {
-            setAlerts(nextAlerts);
-          }
-          return;
-        }
-      } catch {
-        // Keep UI responsive with synthetic values when endpoint is unavailable.
-      }
+        const response = await authFetch(`${agentBaseUrl}/api/v1/agents`, {
+          method: 'POST',
+          body: JSON.stringify({
+            name: AGENT_NAME,
+            description: 'Agent with monitoring telemetry demo signals',
+            agent_library: 'pydantic-ai',
+            transport: 'ag-ui',
+            agent_spec_id: AGENT_SPEC_ID,
+            enable_skills: true,
+            tools: [],
+          }),
+        });
 
-      setSnapshots(prev => {
-        if (prev.length > 0) {
-          return prev;
+        let resolvedAgentId = AGENT_NAME;
+        let isAlreadyRunning = false;
+
+        if (response.ok) {
+          const data = await response.json();
+          resolvedAgentId = data?.id || AGENT_NAME;
+        } else {
+          const contentType = response.headers.get('content-type') || '';
+          let detail = '';
+
+          if (contentType.includes('application/json')) {
+            const data = await response.json().catch(() => null);
+            detail =
+              (typeof data?.detail === 'string' && data.detail) ||
+              (typeof data?.message === 'string' && data.message) ||
+              '';
+          } else {
+            detail = await response.text();
+          }
+
+          if (response.status === 409 || /already exists/i.test(detail || '')) {
+            isAlreadyRunning = true;
+          } else {
+            throw new Error(
+              detail || `Failed to create local agent: ${response.status}`,
+            );
+          }
         }
-        return [createSyntheticSnapshot()];
-      });
+
+        if (!isCancelled) {
+          setAgentId(resolvedAgentId);
+          setIsReconnectedAgent(isAlreadyRunning);
+          setIsReady(true);
+          setRuntimeStatus('ready');
+        }
+      } catch (error) {
+        if (!isCancelled) {
+          setHookError(
+            error instanceof Error ? error.message : 'Agent failed to start',
+          );
+          setRuntimeStatus('error');
+        }
+      }
     };
 
-    poll();
-    const interval = window.setInterval(poll, 10_000);
-    return () => window.clearInterval(interval);
-  }, [isReady, agentBaseUrl, agentId, authFetch]);
+    void createLocalAgent();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [agentBaseUrl, authFetch]);
+
+  useEffect(() => {
+    if (!isReady || !agentBaseUrl) return;
+
+    const wsUrl = toWsUrl(
+      agentBaseUrl,
+      `/api/v1/tool-approvals/ws?agent_id=${encodeURIComponent(agentId)}`,
+    );
+    if (!wsUrl) {
+      setWsState('closed');
+      return;
+    }
+
+    let closedByCleanup = false;
+    setWsState('connecting');
+    const ws = new WebSocket(wsUrl);
+
+    const onMessage = (event: MessageEvent) => {
+      try {
+        const stream = parseAgentStreamMessage(JSON.parse(String(event.data)));
+        if (!stream || stream.type !== 'agent.snapshot') {
+          return;
+        }
+
+        const payload = stream.payload as unknown as AgentStreamSnapshotPayload;
+        if (payload.contextSnapshot) {
+          setLiveContext(payload.contextSnapshot as ContextSnapshotResponse);
+        }
+
+        const costUsage =
+          payload.contextSnapshot?.costUsage ?? payload.costUsage;
+        if (costUsage) {
+          setLiveCost({
+            agentId,
+            currentRunCostUsd: Number(costUsage.currentRunCostUsd ?? 0),
+            cumulativeCostUsd: Number(costUsage.cumulativeCostUsd ?? 0),
+            perRunBudgetUsd:
+              costUsage.perRunBudgetUsd == null
+                ? null
+                : Number(costUsage.perRunBudgetUsd),
+            cumulativeBudgetUsd:
+              costUsage.cumulativeBudgetUsd == null
+                ? null
+                : Number(costUsage.cumulativeBudgetUsd),
+            requestCount: Number(costUsage.requestCount ?? 0),
+            totalTokensUsed: Number(costUsage.totalTokensUsed ?? 0),
+            modelBreakdown: Array.isArray(costUsage.modelBreakdown)
+              ? costUsage.modelBreakdown.map(item => ({
+                  model: String(item.model ?? 'unknown'),
+                  inputTokens: Number(item.inputTokens ?? 0),
+                  outputTokens: Number(item.outputTokens ?? 0),
+                  costUsd: Number(item.costUsd ?? 0),
+                  requests: Number(item.requests ?? 0),
+                }))
+              : [],
+          });
+        }
+      } catch {
+        // Ignore malformed websocket payloads.
+      }
+    };
+
+    ws.onopen = () => {
+      setWsState('connected');
+    };
+
+    ws.onmessage = onMessage;
+
+    ws.onerror = () => {
+      setWsState('closed');
+    };
+
+    ws.onclose = () => {
+      if (!closedByCleanup) {
+        setWsState('closed');
+      }
+    };
+
+    return () => {
+      closedByCleanup = true;
+      ws.close();
+      setWsState('closed');
+    };
+  }, [isReady, agentBaseUrl, agentId]);
+
+  useEffect(() => {
+    // Monitoring alerts endpoint is optional and may return 404 in local mode.
+    // Keep the UI quiet and rely on stream snapshots for now.
+    setAlerts([]);
+  }, [isReady, agentId]);
 
   if (!isReady && runtimeStatus !== 'error') {
     return (
@@ -321,9 +290,7 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
       >
         <Spinner size="large" />
         <Text sx={{ color: 'fg.muted' }}>
-          {runtimeStatus === 'launching'
-            ? 'Launching runtime for monitoring agent…'
-            : 'Creating monitoring demo agent…'}
+          Launching local monitoring demo agent...
         </Text>
       </Box>
     );
@@ -332,8 +299,6 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
   if (runtimeStatus === 'error' || hookError) {
     return <ErrorView error={hookError} onLogout={onLogout} />;
   }
-
-  const latest = snapshots[0] ?? createSyntheticSnapshot();
 
   return (
     <Box
@@ -359,8 +324,13 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
         <Heading as="h3" sx={{ fontSize: 2, flex: 1 }}>
           Monitoring — {podName}
         </Heading>
-        <Label variant={statusVariant(latest.status)} size="small">
-          {latest.status}
+        {isReconnectedAgent && (
+          <Label variant="secondary" size="small">
+            Reconnected
+          </Label>
+        )}
+        <Label variant={wsState === 'connected' ? 'success' : 'secondary'}>
+          WS: {wsState}
         </Label>
         {token && <UserBadge token={token} variant="small" />}
         <Button
@@ -380,23 +350,26 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
             protocol="ag-ui"
             baseUrl={agentBaseUrl}
             agentId={agentId}
+            authToken={chatAuthToken}
             title="Monitoring Agent"
-            placeholder="Ask about performance, latency, and alert trends…"
+            placeholder="Ask for cost, token usage, and turn-level monitoring insights..."
             description={`${alerts.length} active alert${alerts.length !== 1 ? 's' : ''}`}
             showHeader={true}
+            showTokenUsage={true}
             autoFocus
             height="100%"
-            runtimeId={podName}
+            runtimeId={agentId}
             historyEndpoint={`${agentBaseUrl}/api/v1/history`}
             suggestions={[
               {
-                title: 'Health summary',
-                message: 'Summarize current agent health and key bottlenecks',
+                title: 'Monitoring summary',
+                message:
+                  'Summarize my current token usage, cost status, and recent turn activity.',
               },
               {
-                title: 'Alert triage',
+                title: 'Turn usage analysis',
                 message:
-                  'List critical alerts first and suggest immediate mitigations',
+                  'Analyze the last turn usage and explain which parts drove input and output tokens.',
               },
             ]}
             submitOnSuggestionClick
@@ -421,32 +394,31 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
             }}
           >
             <Heading as="h4" sx={{ fontSize: 1, mb: 2 }}>
-              Live Metrics
+              LLM Cost Monitoring
             </Heading>
-            <MetricRow
-              label="CPU"
-              value={`${latest.cpuPercent.toFixed(1)}%`}
-              percent={latest.cpuPercent}
+            <CostTracker
+              agentId={agentId}
+              compact={false}
+              liveData={liveCost}
             />
-            <MetricRow
-              label="Memory"
-              value={`${latest.memoryPercent.toFixed(1)}%`}
-              percent={latest.memoryPercent}
-            />
-            <MetricRow
-              label="Latency"
-              value={`${Math.round(latest.latencyMs)} ms`}
-              percent={(latest.latencyMs / 2000) * 100}
-            />
-            <MetricRow
-              label="Error Rate"
-              value={`${latest.errorRatePercent.toFixed(2)}%`}
-              percent={latest.errorRatePercent * 20}
-            />
-            <MetricRow
-              label="Queue Depth"
-              value={`${latest.queueDepth}`}
-              percent={latest.queueDepth}
+          </Box>
+
+          <Box
+            sx={{
+              p: 3,
+              borderBottom: '1px solid',
+              borderColor: 'border.default',
+            }}
+          >
+            <Heading as="h4" sx={{ fontSize: 1, mb: 2 }}>
+              Turn and Session Usage
+            </Heading>
+            <ContextPanel
+              agentId={agentId}
+              apiBase={agentBaseUrl}
+              liveData={liveContext}
+              defaultView="overview"
+              chartHeight="160px"
             />
           </Box>
 

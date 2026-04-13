@@ -21,6 +21,7 @@ from fastapi import (
 from pydantic import BaseModel
 
 from agent_runtimes.config import get_frontend_config
+from agent_runtimes.context.costs import get_cost_store
 from agent_runtimes.context.usage import get_usage_tracker
 from agent_runtimes.mcp import (
     get_available_tools,
@@ -262,10 +263,26 @@ async def get_agent_context_snapshot_endpoint(
         }
 
     result = snapshot.to_dict()
+    result["costUsage"] = get_cost_store().get_agent_usage_dict(agent_id)
     logger.debug(
         f"[context-snapshot] Returning snapshot: totalTokens={result.get('totalTokens', 0)}, toolTokens={result.get('toolTokens', 0)}, systemPromptTokens={result.get('systemPromptTokens', 0)}, distribution children={len(result.get('distribution', {}).get('children', []))}"
     )
     return result
+
+
+@router.get("/agents/{agent_id:path}/cost-usage")
+async def get_agent_cost_usage_endpoint(
+    agent_id: str = Path(
+        ...,
+        description="Agent ID to get cost usage for",
+    ),
+) -> dict[str, Any]:
+    """Get current cost usage for a specific agent.
+
+    Returns per-run and cumulative costs, token totals, model breakdown,
+    and recent per-run trace records.
+    """
+    return get_cost_store().get_agent_usage_dict(agent_id)
 
 
 @router.get("/agents/{agent_id:path}/context-table")

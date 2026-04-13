@@ -1171,7 +1171,20 @@ async def create_agent(
                     approval_tool_ids,
                 )
 
-            pydantic_agent = PydanticAgent(request.model, **agent_kwargs)
+            try:
+                pydantic_agent = PydanticAgent(request.model, **agent_kwargs)
+            except Exception as exc:
+                # Newer/older pydantic-ai builds can reject constructor kwargs
+                # like `usage_limits`; retry without it for compatibility.
+                if "usage_limits" in agent_kwargs and "usage_limits" in str(exc):
+                    logger.warning(
+                        "PydanticAgent constructor rejected usage_limits for agent '%s'; retrying without usage_limits.",
+                        agent_id,
+                    )
+                    agent_kwargs.pop("usage_limits", None)
+                    pydantic_agent = PydanticAgent(request.model, **agent_kwargs)
+                else:
+                    raise
 
             # Register runtime tools declared in the request/spec.
             register_agent_tools(

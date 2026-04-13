@@ -34,6 +34,7 @@ export * from './outputs';
 export * from './protocol';
 export * from './sandbox';
 export * from './skills';
+export * from './stream';
 export * from './teams';
 export * from './tool-approvals';
 export * from './tools';

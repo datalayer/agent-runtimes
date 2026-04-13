@@ -44,7 +44,7 @@ python -m agent_runtimes --port 8765 --debug
 from pydantic_ai import Agent
 from agent_runtimes.adapters.pydantic_ai_adapter import PydanticAIAdapter
 
-agent = Agent(model='anthropic:claude-sonnet-4-5', system_prompt='...')
+agent = Agent(model='anthropic:claude-3-5-haiku-20241022', system_prompt='...')
 adapter = PydanticAIAdapter(agent)
 ```
 

@@ -11,8 +11,6 @@ from agent_runtimes.models.models import create_model_with_provider
 
 def create_jupyter_chat_agent(
     model: str | None = None,
-    model_provider: str = "anthropic",
-    model_name: str = "claude-sonnet-4-5",
     timeout: float = 60.0,
     mcp_server: MCPServerStreamableHTTP | None = None,
 ) -> Agent | None:
@@ -20,10 +18,7 @@ def create_jupyter_chat_agent(
     Create the main chat agent for JupyterLab.
 
     Args:
-        model: Optional full model string (e.g., "openai:gpt-4o", "azure-openai:gpt-4o-mini").
-               If not provided, uses model_provider and model_name.
-        model_provider: Model provider name (default: "anthropic")
-        model_name: Model/deployment name (default: "claude-sonnet-4-5")
+        model: Full model string (e.g., "openai:gpt-4o", "azure-openai:gpt-4o-mini").
         timeout: HTTP timeout in seconds for API requests (default: 60.0)
         mcp_server: Optional MCP server connection for Jupyter tools
 
@@ -37,20 +32,18 @@ def create_jupyter_chat_agent(
         - AZURE_OPENAI_API_VERSION (optional, defaults to latest)
     """
     try:
-        # Determine model to use
-        if model:
-            # User provided full model string
-            if model.startswith("azure-openai:"):
-                # Special handling for Azure OpenAI format
-                deployment_name = model.split(":", 1)[1]
-                model_obj = create_model_with_provider(
-                    "azure-openai", deployment_name, timeout
-                )
-            else:
-                model_obj = model
+        if not model:
+            return None
+
+        # User provided full model string
+        if model.startswith("azure-openai:"):
+            # Special handling for Azure OpenAI format
+            deployment_name = model.split(":", 1)[1]
+            model_obj = create_model_with_provider(
+                "azure-openai", deployment_name, timeout
+            )
         else:
-            # Create model object with provider-specific configuration
-            model_obj = create_model_with_provider(model_provider, model_name, timeout)
+            model_obj = model
     except Exception:
         # Failed to create model (likely missing API keys)
         return None

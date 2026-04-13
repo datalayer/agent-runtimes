@@ -10,6 +10,7 @@ from typing import Any
 
 from pydantic_ai import UsageLimits
 
+from .cost_monitoring import CostMonitoringCapability
 from .guardrails import (
     DEFAULT_TOOL_PERMISSION_MAP,
     AsyncGuardrailCapability,
@@ -111,6 +112,8 @@ def build_capabilities_from_agent_spec(
     guardrails = list(getattr(agent_spec, "guardrails", None) or [])
     explicit_capabilities = list(getattr(agent_spec, "capabilities", None) or [])
     advanced = getattr(agent_spec, "advanced", None) or {}
+    monitoring_per_run_budget: float | None = None
+    monitoring_cumulative_budget: float | None = None
 
     for entry in [*guardrails, *explicit_capabilities]:
         if not isinstance(entry, dict):
@@ -133,6 +136,12 @@ def build_capabilities_from_agent_spec(
 
         cost_budget = entry.get("cost_budget") or {}
         if isinstance(cost_budget, dict) and cost_budget:
+            if monitoring_per_run_budget is None:
+                monitoring_per_run_budget = _parse_money(cost_budget.get("per_run_usd"))
+            if monitoring_cumulative_budget is None:
+                monitoring_cumulative_budget = _parse_money(
+                    cost_budget.get("cumulative_usd")
+                )
             capabilities.append(
                 CostBudgetCapability(
                     per_run_usd=_parse_money(cost_budget.get("per_run_usd")),
@@ -295,6 +304,26 @@ def build_capabilities_from_agent_spec(
                         model_name=getattr(agent_spec, "model", None),
                     )
                 )
+            if monitoring_per_run_budget is None:
+                monitoring_per_run_budget = cost_limit
+
+    if (
+        _env_bool("AGENT_RUNTIMES_ENABLE_CAPABILITY_COST_MONITORING", True)
+        and agent_id
+    ):
+        capabilities.append(
+            CostMonitoringCapability(
+                agent_id=agent_id,
+                model_name=getattr(agent_spec, "model", None),
+                per_run_budget_usd=monitoring_per_run_budget,
+                cumulative_budget_usd=monitoring_cumulative_budget,
+                service_name=os.environ.get(
+                    "DATALAYER_OTEL_SERVICE_NAME",
+                    "agent-runtimes",
+                ),
+                enabled=True,
+            )
+        )
 
     if _env_bool("AGENT_RUNTIMES_ENABLE_CAPABILITY_OTEL", True):
         capabilities.append(

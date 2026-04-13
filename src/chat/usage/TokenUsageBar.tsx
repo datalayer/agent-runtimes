@@ -48,6 +48,19 @@ export function TokenUsageBar({ agentUsage, padding }: TokenUsageBarProps) {
     agentUsage.sessionUsage &&
     (agentUsage.sessionUsage.inputTokens > 0 ||
       agentUsage.sessionUsage.outputTokens > 0);
+  const hasCostUsage =
+    !!agentUsage.costUsage &&
+    (agentUsage.costUsage.cumulativeCostUsd > 0 ||
+      agentUsage.costUsage.currentRunCostUsd > 0);
+  const sessionUsage = agentUsage.sessionUsage;
+  const turnUsage = agentUsage.turnUsage;
+  const costUsage = agentUsage.costUsage;
+
+  const formatUsd = (amount: number): string => {
+    if (amount < 0.01) return `$${amount.toFixed(4)}`;
+    if (amount < 1) return `$${amount.toFixed(3)}`;
+    return `$${amount.toFixed(2)}`;
+  };
 
   // Build pie chart data
   const usedTokens = agentUsage.totalTokens;
@@ -253,6 +266,32 @@ export function TokenUsageBar({ agentUsage, padding }: TokenUsageBarProps) {
               {formatTokenCount(windowTokens)}
               {' tokens'}
             </Text>
+            {agentUsage.costUsage && (
+              <Text
+                sx={{
+                  fontSize: 0,
+                  color: 'fg.muted',
+                  display: 'block',
+                  mb: 2,
+                }}
+              >
+                {'cost '}
+                <Text
+                  as="span"
+                  sx={{ fontWeight: 'semibold', color: 'fg.default' }}
+                >
+                  {formatUsd(agentUsage.costUsage.currentRunCostUsd)}
+                </Text>
+                {' run · '}
+                <Text
+                  as="span"
+                  sx={{ fontWeight: 'semibold', color: 'fg.default' }}
+                >
+                  {formatUsd(agentUsage.costUsage.cumulativeCostUsd)}
+                </Text>
+                {' total'}
+              </Text>
+            )}
             {/* Percentage */}
             <Text
               sx={{
@@ -343,15 +382,33 @@ export function TokenUsageBar({ agentUsage, padding }: TokenUsageBarProps) {
         {formatTokenCount(agentUsage.contextWindow)}
         {' ctx'}
       </Text>
+      {hasCostUsage && (
+        <Text sx={{ fontSize: 0, color: 'fg.muted', flexShrink: 0 }}>
+          {'· cost '}
+          <Text
+            as="span"
+            sx={{ fontWeight: 'semibold', color: 'fg.default', fontSize: 0 }}
+          >
+            {formatUsd(costUsage?.currentRunCostUsd ?? 0)}
+          </Text>
+          {' run / '}
+          <Text
+            as="span"
+            sx={{ fontWeight: 'semibold', color: 'fg.default', fontSize: 0 }}
+          >
+            {formatUsd(costUsage?.cumulativeCostUsd ?? 0)}
+          </Text>
+        </Text>
+      )}
       {/* Session totals */}
       {hasSession && (
         <Text sx={{ fontSize: 0, color: 'fg.muted', flexShrink: 0 }}>
           {'· '}
-          {formatTokenCount(agentUsage.sessionUsage!.inputTokens)}
+          {formatTokenCount(sessionUsage?.inputTokens ?? 0)}
           <Text as="span" sx={{ color: 'success.fg', fontSize: 0 }}>
             {'▲'}
           </Text>{' '}
-          {formatTokenCount(agentUsage.sessionUsage!.outputTokens)}
+          {formatTokenCount(sessionUsage?.outputTokens ?? 0)}
           <Text as="span" sx={{ color: 'attention.fg', fontSize: 0 }}>
             {'▼'}
           </Text>
@@ -361,11 +418,11 @@ export function TokenUsageBar({ agentUsage, padding }: TokenUsageBarProps) {
       {hasTurn && (
         <Text sx={{ fontSize: 0, color: 'fg.muted', flexShrink: 0 }}>
           {'· turn '}
-          {formatTokenCount(agentUsage.turnUsage!.inputTokens)}
+          {formatTokenCount(turnUsage?.inputTokens ?? 0)}
           <Text as="span" sx={{ color: 'success.fg', fontSize: 0 }}>
             {'▲'}
           </Text>{' '}
-          {formatTokenCount(agentUsage.turnUsage!.outputTokens)}
+          {formatTokenCount(turnUsage?.outputTokens ?? 0)}
           <Text as="span" sx={{ color: 'attention.fg', fontSize: 0 }}>
             {'▼'}
           </Text>

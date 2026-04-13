@@ -20,7 +20,7 @@ import { INotebookContent } from '@jupyterlab/nbformat';
 import { ServiceManager } from '@jupyterlab/services';
 import {
   DatalayerThemeProvider,
-  DatalayerLogo,
+  DatalayerLogoText,
   getLogoColors,
   themeConfigs,
   Box,
@@ -559,10 +559,16 @@ const ExampleAppThemed: React.FC<{
           {/* Right: theme picker + color mode + logo */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
             <AppearanceControlsWithStore useStore={useExampleThemeStore} />
-            <DatalayerLogo
+            <DatalayerLogoText
               size={24}
+              variant={themeVariant}
+              colorMode={colorMode}
               primaryColor={logoColors.primary}
               secondaryColor={logoColors.secondary}
+              textColor={logoColors.textColor}
+              primaryGradient={logoColors.primaryGradient}
+              secondaryGradient={logoColors.secondaryGradient}
+              gradient={true}
             />
           </Box>
         </Box>

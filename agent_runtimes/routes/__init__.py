@@ -53,6 +53,7 @@ from .mcp_ui import router as mcp_ui_router
 from .skills import router as skills_router
 from .tool_approvals import legacy_router as tool_approvals_legacy_router
 from .tool_approvals import router as tool_approvals_router
+from .tool_approvals import ws_router as tool_approvals_ws_router
 from .vercel_ai import register_vercel_agent, unregister_vercel_agent
 from .vercel_ai import router as vercel_ai_router
 
@@ -97,6 +98,7 @@ __all__ = [
     "stop_a2a_task_managers",
     "tool_approvals_legacy_router",
     "tool_approvals_router",
+    "tool_approvals_ws_router",
     "triggers_webhook_router",
     "unregister_a2a_agent",
     "unregister_agui_agent",

@@ -62,6 +62,33 @@ export interface ContextSnapshotData {
     turns: number;
     durationSeconds: number;
   } | null;
+  costUsage?: {
+    currentRunCostUsd: number;
+    cumulativeCostUsd: number;
+    perRunBudgetUsd: number | null;
+    cumulativeBudgetUsd: number | null;
+    requestCount: number;
+    totalTokensUsed: number;
+    modelBreakdown: Array<{
+      model: string;
+      inputTokens: number;
+      outputTokens: number;
+      costUsd: number;
+      requests: number;
+    }>;
+    runs: Array<{
+      timestamp: string;
+      model: string;
+      inputTokens: number;
+      outputTokens: number;
+      runCostUsd: number;
+      cumulativeCostUsd: number;
+      pricePerInputToken: number | null;
+      pricePerOutputToken: number | null;
+      pricingResolved: boolean;
+    }>;
+    lastUpdated: string;
+  };
   error?: string;
 }
 

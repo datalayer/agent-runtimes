@@ -61,6 +61,7 @@ from .routes import (
     stop_a2a_task_managers,
     tool_approvals_legacy_router,
     tool_approvals_router,
+    tool_approvals_ws_router,
     triggers_webhook_router,
     vercel_ai_router,
 )
@@ -481,7 +482,20 @@ async def _create_and_register_cli_agent(
             approval_tool_ids,
         )
 
-    pydantic_agent = PydanticAgent(model, **agent_kwargs)
+    try:
+        pydantic_agent = PydanticAgent(model, **agent_kwargs)
+    except Exception as exc:
+        # Keep compatibility across pydantic-ai versions where Agent()
+        # may not accept `usage_limits` as a constructor kwarg.
+        if "usage_limits" in agent_kwargs and "usage_limits" in str(exc):
+            logger.warning(
+                "PydanticAgent constructor rejected usage_limits for agent '%s'; retrying without usage_limits.",
+                agent_id,
+            )
+            agent_kwargs.pop("usage_limits", None)
+            pydantic_agent = PydanticAgent(model, **agent_kwargs)
+        else:
+            raise
 
     # Register runtime tools declared in AgentSpec.
     registered_tools = register_agent_tools(
@@ -1275,6 +1289,7 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
     app.include_router(skills_router, prefix=config.api_prefix)
     app.include_router(tool_approvals_router, prefix=config.api_prefix)
     app.include_router(tool_approvals_legacy_router)
+    app.include_router(tool_approvals_ws_router)
     app.include_router(vercel_ai_router, prefix=config.api_prefix)
     app.include_router(agui_router, prefix=config.api_prefix)
     app.include_router(mcp_ui_router, prefix=config.api_prefix)

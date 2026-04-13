@@ -580,8 +580,8 @@ def main() -> None:
     parser.add_argument(
         "--model",
         type=str,
-        default="anthropic:claude-sonnet-4-0",
-        help="Model to use (default: anthropic:claude-sonnet-4-0)",
+        default="anthropic:claude-3-5-haiku-20241022",
+        help="Model to use (default: anthropic:claude-3-5-haiku-20241022)",
     )
     parser.add_argument(
         "--codemode", action="store_true", help="Enable Agent Codemode mode"

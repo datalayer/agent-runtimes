@@ -681,11 +681,16 @@ class VercelAITransport(BaseTransport):
                     "request": request,
                     "agent": pydantic_agent,
                     "model": model,
-                    "usage_limits": self._usage_limits,
                     "toolsets": runtime_toolsets,
                     "builtin_tools": effective_builtin_tools,
                     "on_complete": on_complete,
                 }
+
+                dispatch_params = inspect.signature(
+                    VercelAIAdapter.dispatch_request
+                ).parameters
+                if "usage_limits" in dispatch_params:
+                    dispatch_kwargs["usage_limits"] = self._usage_limits
 
                 # Enable DeferredToolRequests when this request includes
                 # frontend tools as an ExternalToolset, OR when the agent has
@@ -702,8 +707,7 @@ class VercelAITransport(BaseTransport):
                 # Pass sdk_version only if supported by installed pydantic-ai.
                 if (
                     sdk_version
-                    and "sdk_version"
-                    in inspect.signature(VercelAIAdapter.dispatch_request).parameters
+                    and "sdk_version" in dispatch_params
                 ):
                     dispatch_kwargs["sdk_version"] = sdk_version
 

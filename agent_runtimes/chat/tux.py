@@ -597,8 +597,9 @@ class CliTux:
                 response = await client.get(url, timeout=5.0)
                 if response.status_code == 200:
                     data = response.json()
-                    # Try to get model name from various sources
-                    self.model_name = data.get("modelName") or "claude-sonnet-4"
+                    model_name = data.get("modelName")
+                    if model_name:
+                        self.model_name = model_name
                     self.context_window = data.get("contextWindow", 128000)
         except Exception:
             pass

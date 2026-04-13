@@ -9,7 +9,7 @@ import type { MCPServer } from './mcp';
  * Specification for an AI model from the catalog.
  */
 export interface AIModel {
-  /** Unique model identifier (e.g., 'anthropic:claude-sonnet-4-5-20250514') */
+  /** Unique model identifier (e.g., 'anthropic:claude-3-5-haiku-20241022') */
   id: string;
   /** Model spec version */
   version: string;
@@ -29,7 +29,7 @@ export interface AIModel {
  * Configuration for an AI model runtime (as returned by the server).
  */
 export interface AIModelRuntime {
-  /** Model identifier (e.g., 'anthropic:claude-sonnet-4-5') */
+  /** Model identifier (e.g., 'anthropic:claude-3-5-haiku-20241022') */
   id: string;
   /** Display name for the model */
   name: string;

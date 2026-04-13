@@ -437,7 +437,7 @@ register_a2a_agent(gpt4_agent, A2AAgentCard(
 ))
 
 # Agent 2: Claude
-claude_pydantic_agent = Agent("anthropic:claude-3-5-sonnet-latest", system_prompt="You are helpful.")
+claude_pydantic_agent = Agent("anthropic:claude-3-5-haiku-20241022", system_prompt="You are helpful.")
 claude_agent = PydanticAIAdapter(claude_pydantic_agent, name="claude-agent")
 register_a2a_agent(claude_agent, A2AAgentCard(
     id="claude-agent",

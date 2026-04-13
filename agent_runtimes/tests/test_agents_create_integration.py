@@ -223,3 +223,65 @@ async def test_create_agent_from_forwarded_agent_spec_payload(
 
     # Ensure model actually changed from request default.
     assert creation_spy["pydantic_model"] != DEFAULT_MODEL.value
+
+
+@pytest.mark.asyncio
+async def test_create_agent_retries_without_usage_limits_when_unsupported(
+    monkeypatch: pytest.MonkeyPatch,
+    creation_spy: dict[str, object],
+) -> None:
+    calls: list[dict[str, object]] = []
+
+    class _StrictPydanticAgent:
+        def __init__(self, model: str, **kwargs: object) -> None:
+            calls.append(kwargs)
+            if "usage_limits" in kwargs:
+                raise RuntimeError("Unknown keyword arguments: `usage_limits`")
+            creation_spy["pydantic_model"] = model
+            creation_spy["pydantic_kwargs"] = kwargs
+            self.model = model
+            self._function_tools: dict[str, object] = {}
+
+    monkeypatch.setattr(agents_route, "PydanticAgent", _StrictPydanticAgent)
+    monkeypatch.setattr(
+        agents_route,
+        "build_usage_limits_from_agent_spec",
+        lambda _spec: object(),
+    )
+    monkeypatch.setattr(
+        agents_route,
+        "get_library_agent_spec",
+        lambda _spec_id: SimpleNamespace(
+            description="Strict usage limits compatibility",
+            goal=None,
+            model="openai:gpt-4o-mini",
+            system_prompt="Strict prompt",
+            system_prompt_codemode_addons=None,
+            skills=[],
+            tools=["fetch_webpage"],
+            sandbox_variant="local-eval",
+            protocol="vercel-ai",
+            codemode=None,
+            mcp_servers=[],
+            guardrails=[{"token_limits": {"per_run": "10K"}}],
+            frontend_tools=[],
+            trigger=None,
+            advanced=None,
+        ),
+    )
+
+    request = CreateAgentRequest(
+        name="Strict UsageLimits Agent",
+        agent_spec_id="demo/spec",
+        model="openai:gpt-4o-mini",
+        system_prompt="Strict prompt",
+        tools=["fetch_webpage"],
+        transport="vercel-ai",
+    )
+
+    response = await create_agent(request, _DummyRequest())
+
+    assert response.id == "strict-usagelimits-agent"
+    assert len(calls) >= 2
+    assert "usage_limits" in calls[0]
+    assert "usage_limits" not in calls[-1]

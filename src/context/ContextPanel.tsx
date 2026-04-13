@@ -207,6 +207,8 @@ export interface ContextPanelProps {
   agentId: string;
   /** API base URL for fetching context data */
   apiBase?: string;
+  /** Live context snapshot pushed by websocket; skips internal polling when provided */
+  liveData?: ContextSnapshotResponse | null;
   /** Number of messages in conversation (from chat store) */
   messageCount?: number;
   /** Default view mode */
@@ -221,6 +223,7 @@ export interface ContextPanelProps {
 export function ContextPanel({
   agentId,
   apiBase,
+  liveData,
   messageCount = 0,
   defaultView = 'overview',
   chartHeight = '200px',
@@ -229,8 +232,10 @@ export function ContextPanel({
   const [showDetails, setShowDetails] = useState(false);
   const [retryCountdown, setRetryCountdown] = useState(RETRY_INTERVAL_SECONDS);
 
+  const hasLiveData = liveData !== undefined;
+
   const {
-    data: snapshotData,
+    data: queriedSnapshotData,
     isLoading,
     error,
     refetch,
@@ -246,13 +251,18 @@ export function ContextPanel({
       }
       return response.json();
     },
+    enabled: !hasLiveData,
     refetchInterval: RETRY_INTERVAL_SECONDS * 1000,
     refetchOnMount: 'always',
     staleTime: 0,
   });
 
+  const snapshotData = hasLiveData ? liveData : queriedSnapshotData;
+  const showLoading = !hasLiveData && isLoading;
+  const hasError = !hasLiveData && !!error;
+
   useEffect(() => {
-    if (!error) {
+    if (!hasError) {
       setRetryCountdown(RETRY_INTERVAL_SECONDS);
       return;
     }
@@ -263,7 +273,7 @@ export function ContextPanel({
       );
     }, 1000);
     return () => window.clearInterval(timer);
-  }, [error]);
+  }, [hasError]);
 
   // Build historic usage chart data from perRequestUsage
   const historyChartOption = useMemo(() => {
@@ -418,7 +428,7 @@ export function ContextPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [snapshotData?.distribution]);
 
-  if (isLoading) {
+  if (showLoading) {
     return (
       <Box>
         <Heading
@@ -453,7 +463,7 @@ export function ContextPanel({
     );
   }
 
-  if (error || !snapshotData) {
+  if (hasError || !snapshotData) {
     return (
       <Box>
         <Heading

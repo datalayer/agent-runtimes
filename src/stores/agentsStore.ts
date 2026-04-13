@@ -175,7 +175,17 @@ async function createAgentOnRuntime(
   agentId: string,
   config: AgentConfig = {},
 ): Promise<Pick<AgentConnection, 'agentId' | 'endpoint' | 'isReady'>> {
-  const transport = config.protocol || 'ag-ui';
+  if (!config.protocol) {
+    throw new Error(
+      'Agent protocol is required. Provide config.protocol from the selected spec/config.',
+    );
+  }
+  const transport = config.protocol;
+  if (!config.model) {
+    throw new Error(
+      'Agent model is required. Provide config.model from the selected spec/config.',
+    );
+  }
   const response = await fetch(`${agentBaseUrl}/api/v1/agents`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -184,8 +194,7 @@ async function createAgentOnRuntime(
       description: config.description || 'AI assistant',
       agent_library: config.agentLibrary || 'pydantic-ai',
       transport,
-      model:
-        config.model || 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+      model: config.model,
       system_prompt: config.systemPrompt || 'You are a helpful AI assistant.',
     }),
   });
