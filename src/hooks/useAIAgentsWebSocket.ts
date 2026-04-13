@@ -14,7 +14,7 @@
  * @module hooks/useAIAgentsWebSocket
  */
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCoreStore, useIAMStore } from '@datalayer/core/lib/state';
 import {
@@ -40,22 +40,65 @@ function useBaseUrl(): string {
 
 /** A message pushed by the server. */
 interface WSMessage {
-  channel: string;
-  event: string;
-  data: Record<string, unknown>;
+  channel?: string;
+  event?: string;
+  data?: Record<string, unknown>;
+  type?: string;
+  payload?: unknown;
+  raw: unknown;
 }
+
+export interface AIAgentsWebSocketCloseInfo {
+  code: number;
+  reason: string;
+  wasClean: boolean;
+  detail: string;
+}
+
+export type AIAgentsWebSocketConnectionState =
+  | 'connecting'
+  | 'connected'
+  | 'closed';
 
 /** Options for the WebSocket hook. */
 export interface UseAIAgentsWebSocketOptions {
+  /** Enable/disable the socket lifecycle. */
+  enabled?: boolean;
+  /** Override the service base URL (defaults to aiagentsRunUrl). */
+  baseUrl?: string;
+  /** WebSocket path (or full http/https URL) for the stream endpoint. */
+  path?: string;
+  /** Query string parameters to append to the WebSocket URL. */
+  queryParams?: Record<string, string | number | boolean | null | undefined>;
+  /** Auto-reconnect on unexpected disconnects. */
+  autoReconnect?: boolean;
+  /** Max reconnect attempts before giving up (unbounded by default). */
+  maxReconnectAttempts?: number;
+  /** Reconnect delay strategy (ms) or static delay in ms. */
+  reconnectDelayMs?: number | ((attempt: number) => number);
   /** Additional channels to subscribe to beyond the auto-subscribed user channel. */
   channels?: string[];
+  /** Called when the socket opens. */
+  onOpen?: () => void;
   /** Called for every incoming message (optional). */
   onMessage?: (msg: WSMessage) => void;
+  /** Called when the socket closes. */
+  onClose?: (info: AIAgentsWebSocketCloseInfo) => void;
+}
+
+export interface UseAIAgentsWebSocketResult {
+  connectionState: AIAgentsWebSocketConnectionState;
+  lastClose: AIAgentsWebSocketCloseInfo | null;
+  reconnectAttempt: number;
 }
 
 // ─── Hook ────────────────────────────────────────────────────────────
 
 const RECONNECT_DELAY_MS = 3_000;
+const WS_DEFAULT_PATH = `${API_BASE_PATHS.AI_AGENTS}/ws`;
+
+const isObject = (value: unknown): value is Record<string, unknown> =>
+  !!value && typeof value === 'object';
 
 /**
  * Connect to the AI Agents generic WebSocket.
@@ -71,36 +114,92 @@ const RECONNECT_DELAY_MS = 3_000;
  * useAIAgentsWebSocket({ channels: [`agent:${agentId}`] });
  * ```
  */
-export function useAIAgentsWebSocket(options?: UseAIAgentsWebSocketOptions) {
+export function useAIAgentsWebSocket(
+  options?: UseAIAgentsWebSocketOptions,
+): UseAIAgentsWebSocketResult {
   const token = useAuthToken();
   const baseUrl = useBaseUrl();
+  const configuredBaseUrl = options?.baseUrl ?? baseUrl;
+  const enabled = options?.enabled ?? true;
+  const wsPath = options?.path ?? WS_DEFAULT_PATH;
+  const queryParamsKey = JSON.stringify(options?.queryParams ?? {});
   const queryClient = useQueryClient();
+  const [connectionState, setConnectionState] =
+    useState<AIAgentsWebSocketConnectionState>('closed');
+  const [lastClose, setLastClose] = useState<AIAgentsWebSocketCloseInfo | null>(
+    null,
+  );
+  const [reconnectAttempt, setReconnectAttempt] = useState(0);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Keep a ref of channels so we can re-subscribe on reconnect without
   // tearing down the socket when the array reference changes.
   const channelsRef = useRef<string[]>(options?.channels ?? []);
   channelsRef.current = options?.channels ?? [];
+  const autoReconnectRef = useRef(options?.autoReconnect ?? true);
+  autoReconnectRef.current = options?.autoReconnect ?? true;
+  const maxReconnectAttemptsRef = useRef<number | undefined>(
+    options?.maxReconnectAttempts,
+  );
+  maxReconnectAttemptsRef.current = options?.maxReconnectAttempts;
+  const reconnectDelayRef = useRef<
+    UseAIAgentsWebSocketOptions['reconnectDelayMs']
+  >(options?.reconnectDelayMs);
+  reconnectDelayRef.current = options?.reconnectDelayMs;
+  const onOpenRef = useRef(options?.onOpen);
+  onOpenRef.current = options?.onOpen;
   const onMessageRef = useRef(options?.onMessage);
   onMessageRef.current = options?.onMessage;
+  const onCloseRef = useRef(options?.onClose);
+  onCloseRef.current = options?.onClose;
 
   useEffect(() => {
-    if (!token) return;
+    if (!enabled || !token) {
+      setConnectionState('closed');
+      return;
+    }
 
     let disposed = false;
+    let reconnectAttempts = 0;
+
+    const toWsUrl = () => {
+      const httpUrl =
+        wsPath.startsWith('http://') || wsPath.startsWith('https://')
+          ? wsPath
+          : `${configuredBaseUrl}${wsPath.startsWith('/') ? '' : '/'}${wsPath}`;
+      const url = new URL(httpUrl.replace(/^http/, 'ws'));
+      url.searchParams.set('token', token);
+
+      const queryParams = JSON.parse(queryParamsKey) as Record<
+        string,
+        string | number | boolean | null | undefined
+      >;
+      Object.entries(queryParams).forEach(([key, value]) => {
+        if (value === null || value === undefined) {
+          return;
+        }
+        url.searchParams.set(key, String(value));
+      });
+
+      return url.toString();
+    };
 
     function connect() {
       if (disposed) return;
 
-      // Build the WebSocket URL.  Replace http(s) with ws(s).
-      const httpUrl = `${baseUrl}${API_BASE_PATHS.AI_AGENTS}/ws`;
-      const wsUrl =
-        httpUrl.replace(/^http/, 'ws') + `?token=${encodeURIComponent(token)}`;
+      const wsUrl = toWsUrl();
+      setConnectionState('connecting');
 
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
 
       ws.onopen = () => {
+        reconnectAttempts = 0;
+        setReconnectAttempt(0);
+        setConnectionState('connected');
+        setLastClose(null);
+        onOpenRef.current?.();
+
         // Subscribe to extra channels.
         const channels = channelsRef.current;
         if (channels.length > 0) {
@@ -109,18 +208,36 @@ export function useAIAgentsWebSocket(options?: UseAIAgentsWebSocketOptions) {
       };
 
       ws.onmessage = ev => {
-        let msg: WSMessage;
+        let raw: unknown;
         try {
-          msg = JSON.parse(ev.data) as WSMessage;
+          raw = JSON.parse(String(ev.data));
         } catch {
           return;
         }
+
+        const msg: WSMessage = isObject(raw)
+          ? {
+              channel:
+                typeof raw.channel === 'string' ? raw.channel : undefined,
+              event: typeof raw.event === 'string' ? raw.event : undefined,
+              data: isObject(raw.data)
+                ? (raw.data as Record<string, unknown>)
+                : undefined,
+              type: typeof raw.type === 'string' ? raw.type : undefined,
+              payload: raw.payload,
+              raw,
+            }
+          : { raw };
 
         // Fire optional callback.
         onMessageRef.current?.(msg);
 
         // Invalidate React Query caches based on the event type.
         const { event } = msg;
+
+        if (typeof event !== 'string') {
+          return;
+        }
 
         if (event.startsWith('event_')) {
           queryClient.invalidateQueries({ queryKey: ['agent-events'] });
@@ -135,16 +252,53 @@ export function useAIAgentsWebSocket(options?: UseAIAgentsWebSocketOptions) {
         }
       };
 
-      ws.onclose = () => {
+      ws.onclose = event => {
         wsRef.current = null;
-        if (!disposed) {
-          reconnectTimer.current = setTimeout(connect, RECONNECT_DELAY_MS);
+        setConnectionState('closed');
+
+        const closeInfo: AIAgentsWebSocketCloseInfo = {
+          code: event.code,
+          reason: event.reason,
+          wasClean: event.wasClean,
+          detail: `code ${event.code}${event.reason ? `: ${event.reason}` : ''}${event.wasClean ? ' (clean)' : ' (unclean)'}`,
+        };
+        setLastClose(closeInfo);
+        onCloseRef.current?.(closeInfo);
+
+        if (disposed || !autoReconnectRef.current) {
+          return;
         }
+
+        reconnectAttempts += 1;
+        setReconnectAttempt(reconnectAttempts);
+
+        const maxAttempts = maxReconnectAttemptsRef.current;
+        if (
+          typeof maxAttempts === 'number' &&
+          Number.isFinite(maxAttempts) &&
+          reconnectAttempts > maxAttempts
+        ) {
+          return;
+        }
+
+        const configuredDelay = reconnectDelayRef.current;
+        const delay =
+          typeof configuredDelay === 'function'
+            ? configuredDelay(reconnectAttempts)
+            : typeof configuredDelay === 'number'
+              ? configuredDelay
+              : RECONNECT_DELAY_MS;
+        reconnectTimer.current = setTimeout(connect, Math.max(0, delay));
       };
 
       ws.onerror = () => {
         // onclose will fire after onerror; reconnect happens there.
-        ws.close();
+        if (
+          ws.readyState === WebSocket.CONNECTING ||
+          ws.readyState === WebSocket.OPEN
+        ) {
+          ws.close();
+        }
       };
     }
 
@@ -154,11 +308,13 @@ export function useAIAgentsWebSocket(options?: UseAIAgentsWebSocketOptions) {
       disposed = true;
       if (reconnectTimer.current) {
         clearTimeout(reconnectTimer.current);
+        reconnectTimer.current = null;
       }
       wsRef.current?.close();
       wsRef.current = null;
+      setConnectionState('closed');
     };
-  }, [token, baseUrl, queryClient]);
+  }, [token, configuredBaseUrl, wsPath, queryParamsKey, enabled, queryClient]);
 
   // When the channel list changes, send subscribe/unsubscribe diffs.
   const prevChannelsRef = useRef<string[]>([]);
@@ -181,4 +337,10 @@ export function useAIAgentsWebSocket(options?: UseAIAgentsWebSocketOptions) {
 
     prevChannelsRef.current = [...channelsRef.current];
   }, [options?.channels]);
+
+  return {
+    connectionState,
+    lastClose,
+    reconnectAttempt,
+  };
 }

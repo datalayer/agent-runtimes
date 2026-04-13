@@ -32,8 +32,11 @@ import {
   type ContextSnapshotResponse,
 } from '../context/ContextPanel';
 import { CostTracker, type CostUsageResponse } from '../context/CostTracker';
+import { TokenUsageChart } from '../context/TokenUsageChart';
+import { useAIAgentsWebSocket } from '../hooks';
 import type { AgentStreamSnapshotPayload } from '../types/stream';
 import { parseAgentStreamMessage } from '../types/stream';
+import { useCoreStore } from '@datalayer/core/lib/state';
 
 const queryClient = new QueryClient();
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
@@ -45,17 +48,8 @@ const AGENT_NAME = 'monitoring-demo-agent';
 const AGENT_SPEC_ID = 'monitor-sales-kpis';
 const DEFAULT_LOCAL_BASE_URL =
   import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
-
-const toWsUrl = (baseUrl: string, path: string): string | null => {
-  try {
-    const url = new URL(baseUrl);
-    url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
-    url.pathname = path;
-    return url.toString();
-  } catch {
-    return null;
-  }
-};
+const OTEL_BASE_URL_ENV = import.meta.env.VITE_OTEL_BASE_URL;
+const DATALAYER_RUN_URL_ENV = import.meta.env.DATALAYER_RUN_URL;
 
 type AlertSeverity = 'info' | 'warning' | 'critical';
 
@@ -76,6 +70,7 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
   onLogout,
 }) => {
   const { token } = useSimpleAuthStore();
+  const { configuration } = useCoreStore();
   const [runtimeStatus, setRuntimeStatus] = useState<
     'launching' | 'ready' | 'error'
   >('launching');
@@ -84,17 +79,23 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
   const [agentId, setAgentId] = useState<string>(AGENT_NAME);
   const [isReconnectedAgent, setIsReconnectedAgent] = useState(false);
   const [alerts, setAlerts] = useState<MonitoringAlert[]>([]);
-  const [wsState, setWsState] = useState<'connecting' | 'connected' | 'closed'>(
-    'closed',
-  );
   const [liveContext, setLiveContext] = useState<
     ContextSnapshotResponse | undefined
   >(undefined);
   const [liveCost, setLiveCost] = useState<CostUsageResponse | undefined>(
     undefined,
   );
+  const [monitorLastSnapshotAt, setMonitorLastSnapshotAt] = useState<
+    number | null
+  >(null);
 
   const agentBaseUrl = DEFAULT_LOCAL_BASE_URL;
+  const otelBaseUrl =
+    configuration?.otelRunUrl ||
+    configuration?.runUrl ||
+    OTEL_BASE_URL_ENV ||
+    DATALAYER_RUN_URL_ENV ||
+    'https://prod1.datalayer.run';
   const podName = agentId;
   const chatAuthToken: string | undefined = token === null ? undefined : token;
 
@@ -186,25 +187,10 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
     };
   }, [agentBaseUrl, authFetch]);
 
-  useEffect(() => {
-    if (!isReady || !agentBaseUrl) return;
-
-    const wsUrl = toWsUrl(
-      agentBaseUrl,
-      `/api/v1/tool-approvals/ws?agent_id=${encodeURIComponent(agentId)}`,
-    );
-    if (!wsUrl) {
-      setWsState('closed');
-      return;
-    }
-
-    let closedByCleanup = false;
-    setWsState('connecting');
-    const ws = new WebSocket(wsUrl);
-
-    const onMessage = (event: MessageEvent) => {
+  const handleMonitoringStreamMessage = useCallback(
+    (message: { raw?: unknown }) => {
       try {
-        const stream = parseAgentStreamMessage(JSON.parse(String(event.data)));
+        const stream = parseAgentStreamMessage(message?.raw ?? message);
         if (!stream || stream.type !== 'agent.snapshot') {
           return;
         }
@@ -212,63 +198,60 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
         const payload = stream.payload as unknown as AgentStreamSnapshotPayload;
         if (payload.contextSnapshot) {
           setLiveContext(payload.contextSnapshot as ContextSnapshotResponse);
+          setMonitorLastSnapshotAt(Date.now());
         }
 
-        const costUsage =
+        const snapshotCost =
           payload.contextSnapshot?.costUsage ?? payload.costUsage;
-        if (costUsage) {
-          setLiveCost({
-            agentId,
-            currentRunCostUsd: Number(costUsage.currentRunCostUsd ?? 0),
-            cumulativeCostUsd: Number(costUsage.cumulativeCostUsd ?? 0),
-            perRunBudgetUsd:
-              costUsage.perRunBudgetUsd == null
-                ? null
-                : Number(costUsage.perRunBudgetUsd),
-            cumulativeBudgetUsd:
-              costUsage.cumulativeBudgetUsd == null
-                ? null
-                : Number(costUsage.cumulativeBudgetUsd),
-            requestCount: Number(costUsage.requestCount ?? 0),
-            totalTokensUsed: Number(costUsage.totalTokensUsed ?? 0),
-            modelBreakdown: Array.isArray(costUsage.modelBreakdown)
-              ? costUsage.modelBreakdown.map(item => ({
-                  model: String(item.model ?? 'unknown'),
-                  inputTokens: Number(item.inputTokens ?? 0),
-                  outputTokens: Number(item.outputTokens ?? 0),
-                  costUsd: Number(item.costUsd ?? 0),
-                  requests: Number(item.requests ?? 0),
-                }))
-              : [],
-          });
+        if (!snapshotCost) {
+          return;
         }
+
+        setLiveCost({
+          agentId,
+          currentRunCostUsd: Number(snapshotCost.currentRunCostUsd ?? 0),
+          cumulativeCostUsd: Number(snapshotCost.cumulativeCostUsd ?? 0),
+          perRunBudgetUsd:
+            snapshotCost.perRunBudgetUsd == null
+              ? null
+              : Number(snapshotCost.perRunBudgetUsd),
+          cumulativeBudgetUsd:
+            snapshotCost.cumulativeBudgetUsd == null
+              ? null
+              : Number(snapshotCost.cumulativeBudgetUsd),
+          requestCount: Number(snapshotCost.requestCount ?? 0),
+          totalTokensUsed: Number(snapshotCost.totalTokensUsed ?? 0),
+          modelBreakdown: Array.isArray(snapshotCost.modelBreakdown)
+            ? snapshotCost.modelBreakdown.map(item => ({
+                model: String(item.model ?? 'unknown'),
+                inputTokens: Number(item.inputTokens ?? 0),
+                outputTokens: Number(item.outputTokens ?? 0),
+                costUsd: Number(item.costUsd ?? 0),
+                requests: Number(item.requests ?? 0),
+              }))
+            : [],
+          runs: Array.isArray(snapshotCost.runs)
+            ? snapshotCost.runs.map(item => ({
+                pricingResolved: Boolean(item.pricingResolved),
+              }))
+            : undefined,
+        });
       } catch {
-        // Ignore malformed websocket payloads.
+        // Ignore malformed stream payloads.
       }
-    };
+    },
+    [agentId],
+  );
 
-    ws.onopen = () => {
-      setWsState('connected');
-    };
-
-    ws.onmessage = onMessage;
-
-    ws.onerror = () => {
-      setWsState('closed');
-    };
-
-    ws.onclose = () => {
-      if (!closedByCleanup) {
-        setWsState('closed');
-      }
-    };
-
-    return () => {
-      closedByCleanup = true;
-      ws.close();
-      setWsState('closed');
-    };
-  }, [isReady, agentBaseUrl, agentId]);
+  const monitorSocket = useAIAgentsWebSocket({
+    enabled: isReady && Boolean(agentBaseUrl),
+    baseUrl: agentBaseUrl,
+    path: '/api/v1/tool-approvals/ws',
+    queryParams: { agent_id: agentId },
+    onMessage: handleMonitoringStreamMessage,
+    reconnectDelayMs: attempt =>
+      Math.min(1000 * 2 ** Math.max(0, attempt - 1), 10000),
+  });
 
   useEffect(() => {
     // Monitoring alerts endpoint is optional and may return 404 in local mode.
@@ -329,8 +312,14 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
             Reconnected
           </Label>
         )}
-        <Label variant={wsState === 'connected' ? 'success' : 'secondary'}>
-          WS: {wsState}
+        <Label
+          variant={
+            monitorSocket.connectionState === 'connected'
+              ? 'success'
+              : 'secondary'
+          }
+        >
+          WS: {monitorSocket.connectionState}
         </Label>
         {token && <UserBadge token={token} variant="small" />}
         <Button
@@ -394,13 +383,51 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
             }}
           >
             <Heading as="h4" sx={{ fontSize: 1, mb: 2 }}>
+              Token Usage (7d)
+            </Heading>
+            <TokenUsageChart
+              serviceName={podName}
+              apiKey={token ?? undefined}
+              runUrl={otelBaseUrl}
+              height={180}
+            />
+          </Box>
+
+          <Box
+            sx={{
+              p: 3,
+              borderBottom: '1px solid',
+              borderColor: 'border.default',
+            }}
+          >
+            <Heading as="h4" sx={{ fontSize: 1, mb: 2 }}>
               LLM Cost Monitoring
             </Heading>
-            <CostTracker
-              agentId={agentId}
-              compact={false}
-              liveData={liveCost}
-            />
+            {liveCost ? (
+              <CostTracker
+                agentId={agentId}
+                compact={false}
+                liveData={liveCost}
+              />
+            ) : (
+              <Box>
+                <Text sx={{ color: 'fg.muted', fontSize: 1 }}>
+                  Waiting for first websocket snapshot...
+                </Text>
+                {monitorSocket.lastClose?.detail && (
+                  <Text
+                    sx={{
+                      color: 'danger.fg',
+                      fontSize: 0,
+                      mt: 1,
+                      display: 'block',
+                    }}
+                  >
+                    Last close: {monitorSocket.lastClose.detail}
+                  </Text>
+                )}
+              </Box>
+            )}
           </Box>
 
           <Box
@@ -413,13 +440,29 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
             <Heading as="h4" sx={{ fontSize: 1, mb: 2 }}>
               Turn and Session Usage
             </Heading>
-            <ContextPanel
-              agentId={agentId}
-              apiBase={agentBaseUrl}
-              liveData={liveContext}
-              defaultView="overview"
-              chartHeight="160px"
-            />
+            {liveContext ? (
+              <ContextPanel
+                agentId={agentId}
+                apiBase={agentBaseUrl}
+                liveData={liveContext}
+                defaultView="overview"
+                chartHeight="160px"
+              />
+            ) : (
+              <Text sx={{ color: 'fg.muted', fontSize: 1 }}>
+                Waiting for first websocket snapshot...
+              </Text>
+            )}
+            <Text sx={{ mt: 2, color: 'fg.muted', fontSize: 0 }}>
+              Live monitoring uses websocket snapshots only.
+              {monitorLastSnapshotAt
+                ? ` Last snapshot ${new Date(monitorLastSnapshotAt).toLocaleTimeString()}.`
+                : ''}
+              {monitorSocket.connectionState !== 'connected' &&
+              monitorSocket.reconnectAttempt > 0
+                ? ` Reconnect attempt ${monitorSocket.reconnectAttempt}.`
+                : ''}
+            </Text>
           </Box>
 
           <Box sx={{ p: 3, flex: 1, overflow: 'auto' }}>

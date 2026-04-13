@@ -185,6 +185,9 @@ export {
 export {
   useAIAgentsWebSocket,
   type UseAIAgentsWebSocketOptions,
+  type UseAIAgentsWebSocketResult,
+  type AIAgentsWebSocketCloseInfo,
+  type AIAgentsWebSocketConnectionState,
 } from './useAIAgentsWebSocket';
 
 export {
