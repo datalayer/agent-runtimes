@@ -928,6 +928,7 @@ async def _handle_prompt(
             user_provider=metric_user_provider,
             identities_count=None,
             user_jwt_token=user_jwt_token,
+            agent_id=session_agent_id,
         )
 
 

@@ -11,8 +11,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Optional
 
-import httpx
-
 if TYPE_CHECKING:
     from ..tux import CliTux
 
@@ -28,11 +26,12 @@ async def execute(tux: "CliTux") -> Optional[str]:
 
     # First check if codemode is enabled
     try:
-        async with httpx.AsyncClient() as client:
-            url = f"{tux.server_url}/api/v1/configure/codemode-status"
-            response = await client.get(url, timeout=10.0)
-            response.raise_for_status()
-            status_data = response.json()
+        from agent_runtimes.streams.loop import build_codemode_status
+
+        status_data = build_codemode_status()
+        if status_data is None:
+            tux.console.print("[red]Error: could not get codemode status[/red]")
+            return None
     except Exception as e:
         tux.console.print(f"[red]Error checking codemode status: {e}[/red]")
         return None

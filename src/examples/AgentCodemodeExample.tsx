@@ -34,6 +34,7 @@ import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { SignInSimple } from '@datalayer/core/lib/views/iam';
 import { UserBadge } from '@datalayer/core/lib/views/profile';
 import { ThemedProvider } from './utils/themedProvider';
+import { uniqueAgentId } from './utils/agentId';
 import { useAgents } from '../hooks/useAgents';
 import { Chat } from '../chat';
 
@@ -64,6 +65,7 @@ const AgentCodemodeInner: React.FC<{ onLogout: () => void }> = ({
   onLogout,
 }) => {
   const { token } = useSimpleAuthStore();
+  const agentName = useRef(uniqueAgentId(AGENT_NAME)).current;
 
   const {
     runtime,
@@ -74,7 +76,7 @@ const AgentCodemodeInner: React.FC<{ onLogout: () => void }> = ({
     agentSpecId: AGENT_SPEC_ID,
     autoStart: true,
     agentConfig: {
-      name: AGENT_NAME,
+      name: agentName,
       model: 'bedrock:us.anthropic.claude-3-5-haiku-20241022-v1:0',
       protocol: 'vercel-ai',
       description: 'Agent with Codemode structured tool outputs',

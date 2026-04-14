@@ -37,6 +37,7 @@ import {
 import { Box } from '@datalayer/primer-addons';
 import { ErrorView } from './components';
 import { ThemedProvider } from './utils/themedProvider';
+import { uniqueAgentId } from './utils/agentId';
 import type {
   AgentStreamSnapshotPayload,
   AgentStreamToolApprovalPayload,
@@ -91,13 +92,14 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
   onLogout,
 }) => {
   const { token } = useSimpleAuthStore();
+  const agentName = useRef(uniqueAgentId(AGENT_NAME)).current;
 
   const [runtimeStatus, setRuntimeStatus] = useState<
     'launching' | 'ready' | 'error'
   >('launching');
   const [isReady, setIsReady] = useState(false);
   const [hookError, setHookError] = useState<string | null>(null);
-  const [agentId, setAgentId] = useState<string>(AGENT_NAME);
+  const [agentId, setAgentId] = useState<string>(agentName);
   const [isReconnectedAgent, setIsReconnectedAgent] = useState(false);
 
   // Cost tracking
@@ -143,7 +145,7 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
         const response = await authFetch(`${agentBaseUrl}/api/v1/agents`, {
           method: 'POST',
           body: JSON.stringify({
-            name: AGENT_NAME,
+            name: agentName,
             description: 'Agent with cost budget and tool approval guardrails',
             agent_library: 'pydantic-ai',
             transport: 'vercel-ai',
@@ -153,12 +155,12 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
           }),
         });
 
-        let resolvedAgentId = AGENT_NAME;
+        let resolvedAgentId = agentName;
         let isAlreadyRunning = false;
 
         if (response.ok) {
           const data = await response.json();
-          resolvedAgentId = data?.id || AGENT_NAME;
+          resolvedAgentId = data?.id || agentName;
         } else {
           const contentType = response.headers.get('content-type') || '';
           let detail = '';

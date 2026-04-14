@@ -49,6 +49,7 @@ import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { SignInSimple } from '@datalayer/core/lib/views/iam';
 import { UserBadge } from '@datalayer/core/lib/views/profile';
 import { ThemedProvider } from './utils/themedProvider';
+import { uniqueAgentId } from './utils/agentId';
 import { Chat } from '../chat';
 import type { SandboxWsStatus } from '../types/sandbox';
 import { SANDBOX_STATUS_COLORS, SANDBOX_STATUS_LABELS } from '../types/sandbox';
@@ -116,6 +117,7 @@ const AgentSandboxInner: React.FC<{ onLogout: () => void }> = ({
   onLogout,
 }) => {
   const { token } = useSimpleAuthStore();
+  const agentName = useRef(uniqueAgentId(AGENT_NAME)).current;
   const chatAuthToken: string | undefined = token === null ? undefined : token;
   const agentBaseUrl = DEFAULT_LOCAL_BASE_URL;
 
@@ -125,7 +127,7 @@ const AgentSandboxInner: React.FC<{ onLogout: () => void }> = ({
   >('launching');
   const [isReady, setIsReady] = useState(false);
   const [hookError, setHookError] = useState<string | null>(null);
-  const [agentId, setAgentId] = useState<string>(AGENT_NAME);
+  const [agentId, setAgentId] = useState<string>(agentName);
   const [isReconnectedAgent, setIsReconnectedAgent] = useState(false);
 
   // ── Sandbox variant toggle ──
@@ -179,7 +181,7 @@ const AgentSandboxInner: React.FC<{ onLogout: () => void }> = ({
       try {
         // Always delete any existing agent with this name first so we
         // recreate it with the latest configuration (system prompt, toolsets).
-        await authFetch(`${agentBaseUrl}/api/v1/agents/${AGENT_NAME}`, {
+        await authFetch(`${agentBaseUrl}/api/v1/agents/${agentName}`, {
           method: 'DELETE',
         }).catch(() => {
           /* ignore 404 / not-found */
@@ -188,7 +190,7 @@ const AgentSandboxInner: React.FC<{ onLogout: () => void }> = ({
         const response = await authFetch(`${agentBaseUrl}/api/v1/agents`, {
           method: 'POST',
           body: JSON.stringify({
-            name: AGENT_NAME,
+            name: agentName,
             description: 'Agent with sandbox code execution',
             agent_library: 'pydantic-ai',
             transport: 'vercel-ai',
@@ -207,11 +209,11 @@ const AgentSandboxInner: React.FC<{ onLogout: () => void }> = ({
           }),
         });
 
-        let resolvedAgentId = AGENT_NAME;
+        let resolvedAgentId = agentName;
 
         if (response.ok) {
           const data = await response.json();
-          resolvedAgentId = data?.id || AGENT_NAME;
+          resolvedAgentId = data?.id || agentName;
         } else {
           const contentType = response.headers.get('content-type') || '';
           let detail = '';

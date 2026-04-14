@@ -412,6 +412,7 @@ class AGUITransport(BaseTransport):
                                     else None
                                 ),
                                 user_jwt_token=metric_user_jwt_token,
+                                agent_id=agent_id,
                             )
                             metric_emitted = True
                         except Exception as e:
@@ -458,6 +459,7 @@ class AGUITransport(BaseTransport):
                                     else None
                                 ),
                                 user_jwt_token=metric_user_jwt_token,
+                                agent_id=agent_id,
                             )
                             metric_emitted = True
                     else:
@@ -572,6 +574,7 @@ class AGUITransport(BaseTransport):
                                 else None
                             ),
                             user_jwt_token=metric_user_jwt_token,
+                            agent_id=agent_id,
                         )
                         metric_emitted = True
                     raise
@@ -597,6 +600,7 @@ class AGUITransport(BaseTransport):
                                 else None
                             ),
                             user_jwt_token=metric_user_jwt_token,
+                            agent_id=agent_id,
                         )
                         metric_emitted = True
                     raise

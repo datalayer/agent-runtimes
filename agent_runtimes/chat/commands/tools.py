@@ -11,8 +11,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Optional
 
-import httpx
-
 if TYPE_CHECKING:
     from ..tux import CliTux
 
@@ -27,11 +25,13 @@ async def execute(tux: "CliTux") -> Optional[str]:
     from ..tux import STYLE_ACCENT, STYLE_MUTED, STYLE_PRIMARY
 
     try:
-        async with httpx.AsyncClient() as client:
-            url = f"{tux.server_url}/api/v1/configure/agents/{tux.agent_id}/context-snapshot"
-            response = await client.get(url, timeout=10.0)
-            response.raise_for_status()
-            data = response.json()
+        from agent_runtimes.context.session import get_agent_context_snapshot
+
+        snapshot = get_agent_context_snapshot(tux.agent_id)
+        if snapshot is None:
+            tux.console.print("No tools available (agent not found)", style=STYLE_MUTED)
+            return None
+        data = snapshot.to_dict()
     except Exception as e:
         tux.console.print(f"[red]Error fetching tools: {e}[/red]")
         return None

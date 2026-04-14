@@ -28,7 +28,7 @@ import {
 } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { AiAgentIcon } from '@datalayer/icons-react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { ContextPanel } from '../context/ContextPanel';
 import {
   ContextInspector,
@@ -72,6 +72,12 @@ export interface AgentDetailsProps {
   showBackHeader?: boolean;
   /** Whether to show context usage/history and context snapshot sections (default: true) */
   showUsage?: boolean;
+  /** Live MCP status from WS — bypasses REST polling when provided */
+  mcpStatusData?: MCPToolsetsStatus | null;
+  /** Live codemode status from WS — bypasses REST polling when provided */
+  codemodeStatusData?: CodemodeStatus | null;
+  /** Live full context from WS — bypasses REST polling when provided */
+  fullContextData?: FullContextResponse | null;
 }
 
 /**
@@ -159,16 +165,15 @@ function getApiBase(apiBase?: string): string {
  */
 async function downloadContextSnapshotAsCSV(
   agentId: string,
-  apiBase?: string,
+  _apiBase?: string,
+  preloadedData?: FullContextResponse | null,
 ): Promise<void> {
-  const base = getApiBase(apiBase);
-  const response = await fetch(
-    `${base}/api/v1/configure/agents/${encodeURIComponent(agentId)}/full-context`,
-  );
-  if (!response.ok) {
-    throw new Error('Failed to fetch context snapshot');
+  if (!preloadedData) {
+    throw new Error(
+      'No context data available for CSV export. Data is delivered via WebSocket.',
+    );
   }
-  const data: FullContextResponse = await response.json();
+  const data = preloadedData;
 
   const rows: string[][] = [];
 
@@ -330,42 +335,19 @@ export function AgentDetails({
   onBack,
   showBackHeader = true,
   showUsage = true,
+  mcpStatusData,
+  codemodeStatusData,
+  fullContextData,
 }: AgentDetailsProps) {
-  const queryClient = useQueryClient();
+  const hasMcpLiveData = mcpStatusData !== undefined;
+  const hasCodemodeLiveData = codemodeStatusData !== undefined;
 
-  // Fetch MCP toolsets status
-  const { data: mcpStatus, isLoading: mcpLoading } =
-    useQuery<MCPToolsetsStatus>({
-      queryKey: ['mcp-toolsets-status', apiBase],
-      queryFn: async () => {
-        const base = getApiBase(apiBase);
-        const response = await fetch(
-          `${base}/api/v1/configure/mcp-toolsets-status`,
-        );
-        if (!response.ok) {
-          throw new Error('Failed to fetch MCP status');
-        }
-        return response.json();
-      },
-      refetchInterval: 5000, // Refresh every 5 seconds
-    });
+  // REST polling removed — data comes exclusively via WS `agent.snapshot`.
+  const mcpStatus = mcpStatusData;
+  const mcpLoading = !hasMcpLiveData;
 
-  // Fetch Codemode status
-  const { data: codemodeStatus, isLoading: codemodeLoading } =
-    useQuery<CodemodeStatus>({
-      queryKey: ['codemode-status', apiBase],
-      queryFn: async () => {
-        const base = getApiBase(apiBase);
-        const response = await fetch(
-          `${base}/api/v1/configure/codemode-status`,
-        );
-        if (!response.ok) {
-          throw new Error('Failed to fetch Codemode status');
-        }
-        return response.json();
-      },
-      refetchInterval: 5000, // Refresh every 5 seconds
-    });
+  const codemodeStatus = codemodeStatusData;
+  const codemodeLoading = !hasCodemodeLiveData;
 
   // Mutation to toggle codemode
   const toggleCodemodeMutation = useMutation({
@@ -384,8 +366,7 @@ export function AgentDetails({
       return response.json();
     },
     onSuccess: () => {
-      // Invalidate the codemode status query to refetch
-      queryClient.invalidateQueries({ queryKey: ['codemode-status'] });
+      // Status update will arrive via WS `agent.snapshot` push
     },
   });
 
@@ -986,7 +967,7 @@ export function AgentDetails({
               borderColor: 'border.default',
             }}
           >
-            {mcpLoading ? (
+            {!hasMcpLiveData && mcpLoading ? (
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                 <Spinner size="small" />
                 <Text sx={{ fontSize: 1, color: 'fg.muted' }}>
@@ -1118,7 +1099,7 @@ export function AgentDetails({
               borderColor: 'border.default',
             }}
           >
-            {codemodeLoading ? (
+            {!hasCodemodeLiveData && codemodeLoading ? (
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                 <Spinner size="small" />
                 <Text sx={{ fontSize: 1, color: 'fg.muted' }}>
@@ -1567,7 +1548,13 @@ export function AgentDetails({
                 size="small"
                 variant="invisible"
                 leadingVisual={DownloadIcon}
-                onClick={() => downloadContextSnapshotAsCSV(agentId, apiBase)}
+                onClick={() =>
+                  downloadContextSnapshotAsCSV(
+                    agentId,
+                    apiBase,
+                    fullContextData,
+                  )
+                }
               >
                 Download
               </Button>
@@ -1581,7 +1568,11 @@ export function AgentDetails({
                 borderColor: 'border.default',
               }}
             >
-              <ContextInspector agentId={agentId} apiBase={apiBase} />
+              <ContextInspector
+                agentId={agentId}
+                apiBase={apiBase}
+                liveData={fullContextData}
+              />
             </Box>
           </Box>
         )}

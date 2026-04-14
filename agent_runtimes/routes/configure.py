@@ -170,17 +170,6 @@ async def get_configuration(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/mcp-toolsets-status")
-async def get_toolsets_status() -> dict[str, Any]:
-    """
-    Get the status of config MCP toolsets for Pydantic AI agents.
-
-    Returns:
-        Status information including ready, pending, and failed servers.
-    """
-    return get_config_mcp_toolsets_status()
-
-
 @router.get("/mcp-toolsets-info")
 async def get_toolsets_info() -> list[dict[str, Any]]:
     """
@@ -215,73 +204,6 @@ async def get_agent_context_details(
     """
     tracker = get_usage_tracker()
     return tracker.get_context_details(agent_id)
-
-
-@router.get("/agents/{agent_id:path}/context-snapshot")
-async def get_agent_context_snapshot_endpoint(
-    agent_id: str = Path(
-        ...,
-        description="Agent ID to get context snapshot for",
-    ),
-) -> dict[str, Any]:
-    """
-    Get current context snapshot for a specific agent.
-
-    Returns the current context state including:
-    - System prompts and their token counts
-    - Message distribution (user/assistant)
-    - Total context usage vs context window
-    - Distribution data for visualization
-
-    Args:
-        agent_id: The unique identifier of the agent.
-
-    Returns:
-        Context snapshot with distribution data.
-    """
-    from ..context.session import _agents, get_agent_context_snapshot
-    from ..context.usage import get_usage_tracker
-
-    # Debug logging
-    logger.debug(f"[context-snapshot] Fetching snapshot for agent_id={agent_id}")
-    logger.debug(f"[context-snapshot] Registered agents: {list(_agents.keys())}")
-    tracker = get_usage_tracker()
-    stats = tracker.get_agent_stats(agent_id)
-    if stats:
-        logger.debug(
-            f"[context-snapshot] Usage stats: input={stats.input_tokens}, output={stats.output_tokens}, user={stats.user_message_tokens}, assistant={stats.assistant_message_tokens}"
-        )
-    else:
-        logger.debug(f"[context-snapshot] No usage stats found for {agent_id}")
-
-    snapshot = get_agent_context_snapshot(agent_id)
-    if snapshot is None:
-        logger.debug(
-            f"[context-snapshot] Agent '{agent_id}' not found in session registry"
-        )
-        return {
-            "error": f"Agent '{agent_id}' not found",
-            "agentId": agent_id,
-            "systemPrompts": [],
-            "systemPromptTokens": 0,
-            "messages": [],
-            "userMessageTokens": 0,
-            "assistantMessageTokens": 0,
-            "totalTokens": 0,
-            "contextWindow": 128000,
-            "distribution": {
-                "name": "Context",
-                "value": 0,
-                "children": [],
-            },
-        }
-
-    result = snapshot.to_dict()
-    result["costUsage"] = get_cost_store().get_agent_usage_dict(agent_id)
-    logger.debug(
-        f"[context-snapshot] Returning snapshot: totalTokens={result.get('totalTokens', 0)}, toolTokens={result.get('toolTokens', 0)}, systemPromptTokens={result.get('systemPromptTokens', 0)}, distribution children={len(result.get('distribution', {}).get('children', []))}"
-    )
-    return result
 
 
 @router.get("/agents/{agent_id:path}/cost-usage")
@@ -342,67 +264,6 @@ async def get_agent_context_table_endpoint(
     )
     console.print(table)
     return {"agentId": agent_id, "table": console.export_text(styles=True)}
-
-
-@router.get("/agents/{agent_id:path}/full-context")
-async def get_agent_full_context_endpoint(
-    agent_id: str = Path(
-        ...,
-        description="Agent ID to get full context details for",
-    ),
-) -> dict[str, Any]:
-    """
-    Get full detailed context snapshot for a specific agent.
-
-    This provides complete introspection of the agent's context including:
-    - Model configuration (name, context window, settings)
-    - System prompts (complete text)
-    - Tool definitions with full JSON schemas and source code (if available)
-    - Complete message history with in_context field indicating if in window
-    - Memory blocks (if available)
-    - Tool environment variables (masked)
-    - Tool rules and constraints
-
-    Args:
-        agent_id: The unique identifier of the agent.
-
-    Returns:
-        Full context snapshot with all detailed information.
-    """
-    from ..context.session import get_agent_full_context_snapshot
-
-    snapshot = get_agent_full_context_snapshot(agent_id)
-    if snapshot is None:
-        return {
-            "error": f"Agent '{agent_id}' not found",
-            "agentId": agent_id,
-            "modelConfiguration": {
-                "modelName": None,
-                "contextWindow": 128000,
-                "settings": {},
-            },
-            "systemPrompts": [],
-            "systemPromptTokens": 0,
-            "tools": [],
-            "toolTokens": 0,
-            "messages": [],
-            "memoryBlocks": [],
-            "memoryTokens": 0,
-            "toolEnvironment": {},
-            "toolRules": [],
-            "tokenSummary": {
-                "systemPrompts": 0,
-                "tools": 0,
-                "memory": 0,
-                "history": 0,
-                "current": 0,
-                "total": 0,
-                "contextWindow": 128000,
-                "usagePercent": 0,
-            },
-        }
-
-    return snapshot.to_dict()
 
 
 @router.post("/agents/{agent_id:path}/context-details/reset")
@@ -627,56 +488,6 @@ def _get_available_skills() -> list[dict[str, Any]]:
         logger.error(f"Error scanning skills directory: {e}")
 
     return skills
-
-
-@router.get("/codemode-status", response_model=CodemodeStatus)
-async def get_codemode_status() -> CodemodeStatus:
-    """
-    Get the current codemode status.
-
-    This checks the actual agent adapters for codemode state, falling back
-    to the global state if no adapters are registered.
-
-    Returns:
-        Current codemode enabled state, active skills, available skills, and sandbox status.
-    """
-    from agent_runtimes.routes.agui import get_all_agui_adapters
-
-    available_skills = _get_available_skills()
-    active_skill_names = _codemode_state["skills"]
-
-    # Check actual adapter state - if any adapter has codemode enabled, report enabled
-    adapters = get_all_agui_adapters()
-    codemode_enabled = _codemode_state["enabled"]  # Default to global state
-
-    if adapters:
-        # Check if any adapter actually has codemode enabled
-        for agent_id, agui_transport in adapters.items():
-            try:
-                agent_adapter = agui_transport.agent
-                if hasattr(agent_adapter, "codemode_enabled"):
-                    codemode_enabled = agent_adapter.codemode_enabled
-                    break  # Use first adapter's state as the canonical state
-            except Exception as e:
-                logger.debug(
-                    f"Could not check codemode status for agent {agent_id}: {e}"
-                )
-
-    # Build active skills list with full info
-    active_skills = []
-    for skill in available_skills:
-        if skill["name"] in active_skill_names:
-            active_skills.append(skill)
-
-    # Get sandbox status
-    sandbox_status = _get_sandbox_status()
-
-    return CodemodeStatus(
-        enabled=codemode_enabled,
-        skills=active_skills,
-        available_skills=available_skills,
-        sandbox=sandbox_status,
-    )
 
 
 @router.get("/sandbox-status")

@@ -49,7 +49,13 @@ class AgentStreamMessage(BaseModel):
 
 
 class AgentMonitoringSnapshotPayload(BaseModel):
-    """Snapshot payload sent over the unified agent stream."""
+    """Snapshot payload sent over the unified agent stream.
+
+    This is the single source of truth for all client-facing state.
+    Previously, parts of this data were served by separate REST endpoints
+    that clients polled every few seconds.  Now everything is pushed
+    over the WebSocket so the REST endpoints can be removed.
+    """
 
     agent_id: str | None = Field(default=None, alias="agentId")
     approvals: list[dict[str, Any]] = Field(default_factory=list)
@@ -59,3 +65,8 @@ class AgentMonitoringSnapshotPayload(BaseModel):
         alias="contextSnapshot",
     )
     cost_usage: dict[str, Any] | None = Field(default=None, alias="costUsage")
+    mcp_status: dict[str, Any] | None = Field(default=None, alias="mcpStatus")
+    codemode_status: dict[str, Any] | None = Field(
+        default=None, alias="codemodeStatus"
+    )
+    full_context: dict[str, Any] | None = Field(default=None, alias="fullContext")

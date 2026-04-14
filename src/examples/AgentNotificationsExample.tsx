@@ -40,6 +40,7 @@ import {
 import { Box } from '@datalayer/primer-addons';
 import { ErrorView } from './components';
 import { ThemedProvider } from './utils/themedProvider';
+import { uniqueAgentId } from './utils/agentId';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { SignInSimple } from '@datalayer/core/lib/views/iam';
 import { UserBadge } from '@datalayer/core/lib/views/profile';
@@ -78,6 +79,7 @@ const AgentNotificationsInner: React.FC<{ onLogout: () => void }> = ({
   onLogout,
 }) => {
   const { token } = useSimpleAuthStore();
+  const agentName = useRef(uniqueAgentId(AGENT_NAME)).current;
 
   const {
     runtime,
@@ -88,7 +90,7 @@ const AgentNotificationsInner: React.FC<{ onLogout: () => void }> = ({
     agentSpecId: AGENT_SPEC_ID,
     autoStart: true,
     agentConfig: {
-      name: AGENT_NAME,
+      name: agentName,
       model: 'bedrock:us.anthropic.claude-3-5-haiku-20241022-v1:0',
       protocol: 'vercel-ai',
       description: 'Agent with multi-channel notification support',

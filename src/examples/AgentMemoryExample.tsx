@@ -32,6 +32,7 @@ import { SearchIcon, DatabaseIcon, SignOutIcon } from '@primer/octicons-react';
 import { Box } from '@datalayer/primer-addons';
 import { ErrorView } from './components';
 import { ThemedProvider } from './utils/themedProvider';
+import { uniqueAgentId } from './utils/agentId';
 
 const queryClient = new QueryClient();
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
@@ -58,6 +59,7 @@ interface MemoryEntry {
 
 const AgentMemoryInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
   const { token } = useSimpleAuthStore();
+  const agentName = useRef(uniqueAgentId(AGENT_NAME)).current;
 
   const {
     runtime,
@@ -68,7 +70,7 @@ const AgentMemoryInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
     agentSpecId: AGENT_SPEC_ID,
     autoStart: true,
     agentConfig: {
-      name: AGENT_NAME,
+      name: agentName,
       model: 'bedrock:us.anthropic.claude-3-5-haiku-20241022-v1:0',
       protocol: 'vercel-ai',
       description: 'Agent with Mem0 persistent memory',

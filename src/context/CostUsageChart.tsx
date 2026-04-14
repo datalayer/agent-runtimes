@@ -6,6 +6,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import ReactECharts from 'echarts-for-react';
 import { createOtelClient } from '@datalayer/core/lib/otel';
+import { subscribeOtelWs } from './otelWsPool';
 
 const COST_OPERATION = 'agent_runtimes.capability.cost.run';
 
@@ -45,7 +46,10 @@ function nanoToMs(nano: unknown): number {
 }
 
 /** Extract cost points from an array of trace/span objects. */
-function extractCostPoints(spans: Array<Record<string, unknown>>): CostPoint[] {
+function extractCostPoints(
+  spans: Array<Record<string, unknown>>,
+  agentId?: string,
+): CostPoint[] {
   const points: CostPoint[] = [];
 
   for (const span of spans) {
@@ -54,6 +58,13 @@ function extractCostPoints(spans: Array<Record<string, unknown>>): CostPoint[] {
     if (opName !== COST_OPERATION) continue;
 
     const attrs = parseAttributes(span.attributes);
+
+    // Filter by agent.id when specified.
+    if (agentId) {
+      const rowAgentId = attrs['agent.id'];
+      if (typeof rowAgentId !== 'string' || rowAgentId !== agentId) continue;
+    }
+
     const costUsd = Number(attrs['gen_ai.usage.cost_usd'] ?? 0);
     const cumulativeUsd = Number(attrs['agent.cost.cumulative_usd'] ?? 0);
 
@@ -94,6 +105,14 @@ function extractServiceName(row: Record<string, unknown>): string | undefined {
   return undefined;
 }
 
+/** Extract `agent.id` from span/trace attributes. */
+function extractAgentId(row: Record<string, unknown>): string | undefined {
+  const attrs = parseAttributes(row.attributes);
+  const aid = attrs['agent.id'];
+  if (typeof aid === 'string') return aid;
+  return undefined;
+}
+
 function buildOtelWsUrl(base: string, token: string): string | null {
   try {
     const normalized =
@@ -118,6 +137,7 @@ function buildOtelWsUrl(base: string, token: string): string | null {
 
 export interface CostUsageChartProps {
   serviceName?: string;
+  agentId?: string;
   apiKey?: string;
   runUrl?: string;
   wsRunUrl?: string;
@@ -126,6 +146,7 @@ export interface CostUsageChartProps {
 
 export function CostUsageChart({
   serviceName,
+  agentId,
   apiKey,
   runUrl,
   wsRunUrl,
@@ -157,6 +178,7 @@ export function CostUsageChart({
 
         const extracted = extractCostPoints(
           spans as unknown as Array<Record<string, unknown>>,
+          agentId,
         );
         setPoints(extracted);
       } catch {
@@ -169,9 +191,9 @@ export function CostUsageChart({
     return () => {
       cancelled = true;
     };
-  }, [apiKey, runUrl, serviceName]);
+  }, [agentId, apiKey, runUrl, serviceName]);
 
-  // ── WebSocket subscription ────────────────────────────────────
+  // ── WebSocket subscription (shared connection pool) ─────────
   useEffect(() => {
     if (!serviceName || !apiKey) return;
 
@@ -197,67 +219,39 @@ export function CostUsageChart({
     const wsUrl = buildOtelWsUrl(baseWithProtocol, apiKey);
     if (!wsUrl) return;
 
-    let disposed = false;
-    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-    let ws: WebSocket | null = null;
+    const unsubscribe = subscribeOtelWs(wsUrl, msg => {
+      if (msg.signal !== 'traces') return;
 
-    const connect = () => {
-      if (disposed) return;
-
-      ws = new WebSocket(wsUrl);
-
-      ws.onmessage = event => {
-        try {
-          const msg = JSON.parse(event.data) as {
-            signal?: string;
-            data?: Array<Record<string, unknown>>;
-          };
-          if (msg.signal !== 'traces') return;
-
-          const rows = Array.isArray(msg.data) ? msg.data : [];
-          const matchingRows = rows.filter(
-            row => extractServiceName(row) === serviceName,
-          );
-          if (matchingRows.length === 0) return;
-
-          const newPoints = extractCostPoints(matchingRows);
-          if (newPoints.length > 0) {
-            setPoints(prev => {
-              const merged = [...prev, ...newPoints];
-              merged.sort((a, b) => a.timestampMs - b.timestampMs);
-              // Deduplicate by timestamp to avoid duplicate points on reconnect
-              const seen = new Set<number>();
-              return merged.filter(p => {
-                if (seen.has(p.timestampMs)) return false;
-                seen.add(p.timestampMs);
-                return true;
-              });
-            });
-          }
-        } catch {
-          return;
-        }
-      };
-
-      ws.onerror = () => {};
-
-      ws.onclose = () => {
-        if (disposed) return;
-        reconnectTimer = setTimeout(connect, 2000);
-      };
-    };
-
-    connect();
-
-    return () => {
-      disposed = true;
-      if (reconnectTimer) {
-        clearTimeout(reconnectTimer);
-        reconnectTimer = null;
+      const rows = Array.isArray(msg.data) ? msg.data : [];
+      let matchingRows = rows.filter(
+        row => extractServiceName(row) === serviceName,
+      );
+      // Filter by agent.id when specified.
+      if (agentId) {
+        matchingRows = matchingRows.filter(
+          row => extractAgentId(row) === agentId,
+        );
       }
-      ws?.close();
-    };
-  }, [apiKey, runUrl, serviceName, wsRunUrl]);
+      if (matchingRows.length === 0) return;
+
+      const newPoints = extractCostPoints(matchingRows, agentId);
+      if (newPoints.length > 0) {
+        setPoints(prev => {
+          const merged = [...prev, ...newPoints];
+          merged.sort((a, b) => a.timestampMs - b.timestampMs);
+          // Deduplicate by timestamp to avoid duplicate points on reconnect.
+          const seen = new Set<number>();
+          return merged.filter(p => {
+            if (seen.has(p.timestampMs)) return false;
+            seen.add(p.timestampMs);
+            return true;
+          });
+        });
+      }
+    });
+
+    return unsubscribe;
+  }, [agentId, apiKey, runUrl, serviceName, wsRunUrl]);
 
   // ── Chart options ─────────────────────────────────────────────
   const option = useMemo(() => {

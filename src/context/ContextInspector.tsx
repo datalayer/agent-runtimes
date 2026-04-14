@@ -6,7 +6,7 @@
  * message history with in_context flags, and model configuration.
  */
 
-import { Text, Spinner, Button, Label, ProgressBar } from '@primer/react';
+import { Text, Button, Label, ProgressBar } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import {
   AiModelIcon,
@@ -21,10 +21,7 @@ import {
   ChevronRightIcon,
   InfoIcon,
 } from '@primer/octicons-react';
-import { useQuery } from '@tanstack/react-query';
-import React, { useState, useMemo, useEffect } from 'react';
-
-const RETRY_INTERVAL_SECONDS = 5;
+import React, { useState, useMemo } from 'react';
 
 /**
  * Tool detail from API
@@ -106,19 +103,6 @@ export interface FullContextResponse {
  * If apiBase prop is provided, use it.
  * Otherwise, fall back to localhost for local development.
  */
-function getApiBase(apiBase?: string): string {
-  if (apiBase) {
-    return apiBase;
-  }
-  if (typeof window === 'undefined') {
-    return '';
-  }
-  const host = window.location.hostname;
-  return host === 'localhost' || host === '127.0.0.1'
-    ? 'http://127.0.0.1:8765'
-    : '';
-}
-
 /**
  * Format token count for display
  */
@@ -137,6 +121,8 @@ export interface ContextInspectorProps {
   agentId: string;
   /** API base URL for fetching context data */
   apiBase?: string;
+  /** Live full-context data from WS — bypasses REST polling when provided */
+  liveData?: FullContextResponse | null;
 }
 
 /**
@@ -410,45 +396,17 @@ function MessageDetailView({ message }: { message: MessageDetail }) {
 /**
  * ContextInspector component displays full detailed context snapshot.
  */
-export function ContextInspector({ agentId, apiBase }: ContextInspectorProps) {
-  const [retryCountdown, setRetryCountdown] = useState(RETRY_INTERVAL_SECONDS);
-  const {
-    data: contextData,
-    isLoading,
-    error,
-    refetch,
-  } = useQuery<FullContextResponse>({
-    queryKey: ['full-context', agentId, apiBase],
-    queryFn: async () => {
-      const base = getApiBase(apiBase);
-      const response = await fetch(
-        `${base}/api/v1/configure/agents/${encodeURIComponent(agentId)}/full-context`,
-      );
-      if (!response.ok) {
-        throw new Error('Failed to fetch full context');
-      }
-      return response.json();
-    },
-    refetchInterval: RETRY_INTERVAL_SECONDS * 1000,
-    refetchOnMount: 'always',
-    staleTime: 0,
-  });
+export function ContextInspector({
+  agentId,
+  apiBase,
+  liveData,
+}: ContextInspectorProps) {
+  const hasLiveData = liveData !== undefined;
 
-  const hasRetryError = Boolean(error) || Boolean(contextData?.error);
+  // REST polling removed — data comes exclusively via WS `agent.snapshot`.
+  const contextData = liveData;
 
-  useEffect(() => {
-    if (!hasRetryError) {
-      setRetryCountdown(RETRY_INTERVAL_SECONDS);
-      return;
-    }
-    setRetryCountdown(RETRY_INTERVAL_SECONDS);
-    const timer = window.setInterval(() => {
-      setRetryCountdown(prev =>
-        prev <= 1 ? RETRY_INTERVAL_SECONDS : prev - 1,
-      );
-    }, 1000);
-    return () => window.clearInterval(timer);
-  }, [hasRetryError]);
+  const hasRetryError = false;
 
   // Separate messages by in_context status
   const { inContextMessages, outOfContextMessages } = useMemo(() => {
@@ -461,7 +419,7 @@ export function ContextInspector({ agentId, apiBase }: ContextInspectorProps) {
     };
   }, [contextData?.messages]);
 
-  if (isLoading) {
+  if (!hasLiveData) {
     return (
       <Box
         sx={{
@@ -471,15 +429,14 @@ export function ContextInspector({ agentId, apiBase }: ContextInspectorProps) {
           justifyContent: 'center',
         }}
       >
-        <Spinner size="small" />
-        <Text sx={{ ml: 2, color: 'fg.muted' }}>
-          Loading full context snapshot...
+        <Text sx={{ color: 'fg.muted' }}>
+          Waiting for context data from WebSocket stream...
         </Text>
       </Box>
     );
   }
 
-  if (error || !contextData) {
+  if (!contextData) {
     return (
       <Box
         sx={{
@@ -490,29 +447,7 @@ export function ContextInspector({ agentId, apiBase }: ContextInspectorProps) {
           borderColor: 'attention.muted',
         }}
       >
-        <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 2,
-          }}
-        >
-          <Text sx={{ color: 'attention.fg' }}>
-            Service not available for context snapshot. Retrying in{' '}
-            {retryCountdown} second{retryCountdown === 1 ? '' : 's'}...
-          </Text>
-          <Button
-            size="small"
-            variant="invisible"
-            onClick={() => {
-              setRetryCountdown(RETRY_INTERVAL_SECONDS);
-              void refetch();
-            }}
-          >
-            Retry now
-          </Button>
-        </Box>
+        <Text sx={{ color: 'attention.fg' }}>No context data available.</Text>
       </Box>
     );
   }
@@ -528,28 +463,7 @@ export function ContextInspector({ agentId, apiBase }: ContextInspectorProps) {
           borderColor: 'attention.muted',
         }}
       >
-        <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 2,
-          }}
-        >
-          <Text sx={{ color: 'attention.fg' }}>
-            {`${contextData.error} Retrying in ${retryCountdown} second${retryCountdown === 1 ? '' : 's'}...`}
-          </Text>
-          <Button
-            size="small"
-            variant="invisible"
-            onClick={() => {
-              setRetryCountdown(RETRY_INTERVAL_SECONDS);
-              void refetch();
-            }}
-          >
-            Retry now
-          </Button>
-        </Box>
+        <Text sx={{ color: 'attention.fg' }}>{contextData.error}</Text>
       </Box>
     );
   }

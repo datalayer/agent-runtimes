@@ -580,6 +580,7 @@ class VercelAITransport(BaseTransport):
                     else None
                 ),
                 user_jwt_token=metric_user_jwt_token,
+                agent_id=agent_id,
             )
             return
 

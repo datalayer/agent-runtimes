@@ -4,6 +4,7 @@
  */
 
 import type { ContextSnapshotData } from './context';
+import type { McpToolsetsStatusResponse } from './mcp';
 
 export type AgentStreamEventType =
   | 'agent.snapshot'
@@ -40,6 +41,21 @@ export interface AgentStreamSnapshotPayload {
   pendingApprovalCount: number;
   contextSnapshot?: ContextSnapshotData | null;
   costUsage?: ContextSnapshotData['costUsage'];
+  mcpStatus?: McpToolsetsStatusResponse | null;
+  codemodeStatus?: CodemodeStatusData | null;
+  fullContext?: Record<string, unknown> | null;
+}
+
+/** Codemode status as pushed via the monitoring WebSocket. */
+export interface CodemodeStatusData {
+  enabled: boolean;
+  skills: Array<{ name: string; description?: string; tags?: string[] }>;
+  available_skills: Array<{
+    name: string;
+    description?: string;
+    tags?: string[];
+  }>;
+  sandbox?: Record<string, unknown> | null;
 }
 
 const isObject = (value: unknown): value is Record<string, unknown> =>

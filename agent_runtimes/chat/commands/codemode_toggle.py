@@ -28,11 +28,12 @@ async def execute(tux: "CliTux") -> Optional[str]:
 
     # First get current status
     try:
-        async with httpx.AsyncClient() as client:
-            status_url = f"{tux.server_url}/api/v1/configure/codemode-status"
-            status_response = await client.get(status_url, timeout=10.0)
-            status_response.raise_for_status()
-            current_status = status_response.json()
+        from agent_runtimes.streams.loop import build_codemode_status
+
+        current_status = build_codemode_status()
+        if current_status is None:
+            tux.console.print("[red]Error: could not get codemode status[/red]")
+            return None
     except Exception as e:
         tux.console.print(f"[red]Error checking codemode status: {e}[/red]")
         return None

@@ -7,7 +7,6 @@
 
 import { Box, Text, Spinner, Button } from '@primer/react';
 import { ListUnorderedIcon } from '@primer/octicons-react';
-import { useQuery } from '@tanstack/react-query';
 import ReactECharts from 'echarts-for-react';
 import { useState } from 'react';
 
@@ -126,16 +125,6 @@ export interface ContextSnapshotResponse {
   error?: string;
 }
 
-function getLocalApiBase(): string {
-  if (typeof window === 'undefined') {
-    return '';
-  }
-  const host = window.location.hostname;
-  return host === 'localhost' || host === '127.0.0.1'
-    ? 'http://127.0.0.1:8765'
-    : '';
-}
-
 /**
  * Format token count for display
  */
@@ -154,6 +143,8 @@ export interface ContextDistributionProps {
   agentId: string;
   /** Height of the chart */
   height?: string;
+  /** Live snapshot data from WS — bypasses REST polling when provided */
+  liveData?: ContextSnapshotResponse | null;
 }
 
 /**
@@ -162,31 +153,18 @@ export interface ContextDistributionProps {
 export function ContextDistribution({
   agentId,
   height = '250px',
+  liveData,
 }: ContextDistributionProps) {
   const [showDetails, setShowDetails] = useState(false);
 
-  const {
-    data: snapshotData,
-    isLoading,
-    error,
-  } = useQuery<ContextSnapshotResponse>({
-    queryKey: ['context-snapshot', agentId],
-    queryFn: async () => {
-      const apiBase = getLocalApiBase();
-      const response = await fetch(
-        `${apiBase}/api/v1/configure/agents/${encodeURIComponent(agentId)}/context-snapshot`,
-      );
-      if (!response.ok) {
-        throw new Error('Failed to fetch context snapshot');
-      }
-      return response.json();
-    },
-    refetchInterval: 10000, // Refresh every 10 seconds
-    refetchOnMount: 'always',
-    staleTime: 0,
-  });
+  const hasLiveData = liveData !== undefined;
 
-  if (isLoading) {
+  // REST polling removed — data comes exclusively via WS `agent.snapshot`.
+  const snapshotData = liveData;
+  const showLoading = !hasLiveData;
+  const hasError = false;
+
+  if (showLoading) {
     return (
       <Box
         sx={{
@@ -205,7 +183,7 @@ export function ContextDistribution({
     );
   }
 
-  if (error || !snapshotData) {
+  if (hasError || !snapshotData) {
     return (
       <Box
         sx={{

@@ -22,7 +22,6 @@
 import { useEffect, useMemo } from 'react';
 import { Tooltip } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
-import { useQuery } from '@tanstack/react-query';
 import type {
   McpAggregateStatus,
   McpServerStatus,
@@ -33,23 +32,16 @@ import { MCP_STATUS_COLORS, MCP_STATUS_LABELS } from '../../types/mcp';
 /* ── Props ─────────────────────────────────────────────── */
 
 export interface McpStatusIndicatorProps {
-  /** API base URL (e.g. "http://127.0.0.1:8765"). Defaults to
-   *  the current host on non-localhost, or localhost:8765. */
+  /** Pre-fetched MCP status data pushed via WebSocket.  When provided the
+   *  component will NOT poll the REST endpoint. */
+  data?: McpToolsetsStatusResponse | null;
+  /** @deprecated — Only used when `data` is not provided. */
   apiBase?: string;
-  /** Optional auth token for authenticated requests (e.g. K8s ingress). */
+  /** @deprecated — Only used when `data` is not provided. */
   authToken?: string;
 }
 
 /* ── Helpers ───────────────────────────────────────────── */
-
-function getApiBase(apiBase?: string): string {
-  if (apiBase) return apiBase;
-  if (typeof window === 'undefined') return '';
-  const host = window.location.hostname;
-  return host === 'localhost' || host === '127.0.0.1'
-    ? 'http://127.0.0.1:8765'
-    : '';
-}
 
 function deriveAggregate(servers: McpServerStatus[]): McpAggregateStatus {
   if (!servers || servers.length === 0) return 'none';
@@ -63,7 +55,7 @@ function buildTooltipText(
   aggregate: McpAggregateStatus,
   servers: McpServerStatus[],
 ): string {
-  if (aggregate === 'none') return MCP_STATUS_LABELS.none;
+  if (aggregate === 'none') return 'No MCP Server defined';
   const lines = [MCP_STATUS_LABELS[aggregate]];
   for (const s of servers) {
     let detail = `• ${s.id}: ${s.status}`;
@@ -99,37 +91,23 @@ function useInjectKeyframes() {
 /* ── Component ─────────────────────────────────────────── */
 
 export function McpStatusIndicator({
+  data: wsData,
   apiBase,
   authToken,
 }: McpStatusIndicatorProps) {
   useInjectKeyframes();
-  const { data } = useQuery<McpToolsetsStatusResponse>({
-    queryKey: ['mcp-toolsets-status', apiBase],
-    queryFn: async () => {
-      const base = getApiBase(apiBase);
-      const headers: Record<string, string> = {};
-      if (authToken) {
-        headers['Authorization'] = `Bearer ${authToken}`;
-      }
-      const response = await fetch(
-        `${base}/api/v1/configure/mcp-toolsets-status`,
-        { headers },
-      );
-      if (!response.ok) throw new Error('Failed to fetch MCP status');
-      return response.json();
-    },
-    refetchInterval: 5000,
-  });
 
-  const servers = data?.servers ?? [];
+  // REST polling removed — data comes exclusively via WS `agent.snapshot`.
+  const effectiveData = wsData;
+  const servers = effectiveData?.servers ?? [];
   const aggregate = useMemo(() => deriveAggregate(servers), [servers]);
   const tooltipText = useMemo(
     () => buildTooltipText(aggregate, servers),
     [aggregate, servers],
   );
 
-  // Hide when no servers are configured at all.
-  if (aggregate === 'none') return null;
+  // Show a subtle gray dot when no MCP servers are configured.
+  // The tooltip tells the user none are defined.
 
   return (
     <Tooltip text={tooltipText} direction="n">

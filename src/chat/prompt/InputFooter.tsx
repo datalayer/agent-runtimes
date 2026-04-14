@@ -29,6 +29,7 @@ import type {
   BuiltinTool,
   ContextSnapshotData,
   MCPServerConfig,
+  McpToolsetsStatusResponse,
   ModelConfig,
   SkillInfo,
 } from '../../types';
@@ -94,6 +95,8 @@ export interface InputToolbarProps {
   authToken?: string;
   /** Agent ID passed to Sandbox indicator for agent-scoped status */
   agentId?: string;
+  /** Pre-fetched MCP status from WebSocket — bypasses REST polling */
+  mcpStatusData?: McpToolsetsStatusResponse | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -136,6 +139,7 @@ export function InputToolbar({
   apiBase,
   authToken,
   agentId,
+  mcpStatusData,
 }: InputToolbarProps) {
   // Show token usage when we have valid context data
   const hasContext =
@@ -161,7 +165,11 @@ export function InputToolbar({
               authToken={authToken}
               agentId={agentId}
             />
-            <McpStatusIndicator apiBase={apiBase} authToken={authToken} />
+            <McpStatusIndicator
+              apiBase={apiBase}
+              authToken={authToken}
+              data={mcpStatusData}
+            />
           </>
         }
       />

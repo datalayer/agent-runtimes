@@ -1483,13 +1483,14 @@ def _emit_initial_otel_baseline(agent_id: str, http_request: Request) -> None:
             output_tokens=0,
             total_tokens=0,
             user_jwt_token=user_jwt,
+            agent_id=agent_id,
         )
 
         # 0-value cost trace (establishes the baseline for cost chart)
         try:
             from datalayer_core.otel.emitter import OTelEmitter
         except Exception:
-            OTelEmitter = None  # type: ignore[assignment]
+            OTelEmitter = None
 
         if OTelEmitter is not None:
             emitter = OTelEmitter(service_name="agent-runtimes")

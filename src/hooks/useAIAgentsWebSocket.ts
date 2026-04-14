@@ -198,6 +198,7 @@ export function useAIAgentsWebSocket(
         setReconnectAttempt(0);
         setConnectionState('connected');
         setLastClose(null);
+        console.debug('[ws:connect] url=%s', wsUrl);
         onOpenRef.current?.();
 
         // Subscribe to extra channels.
@@ -230,6 +231,7 @@ export function useAIAgentsWebSocket(
           : { raw };
 
         // Fire optional callback.
+        console.debug('[ws:recv] type=%s', msg.type ?? msg.event ?? 'unknown');
         onMessageRef.current?.(msg);
 
         // Invalidate React Query caches based on the event type.
@@ -263,6 +265,11 @@ export function useAIAgentsWebSocket(
           detail: `code ${event.code}${event.reason ? `: ${event.reason}` : ''}${event.wasClean ? ' (clean)' : ' (unclean)'}`,
         };
         setLastClose(closeInfo);
+        console.debug(
+          '[ws:disconnect] code=%d reason=%s',
+          event.code,
+          event.reason || '(none)',
+        );
         onCloseRef.current?.(closeInfo);
 
         if (disposed || !autoReconnectRef.current) {

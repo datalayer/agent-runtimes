@@ -362,12 +362,15 @@ class PromptTurnMetricsEmitter:
         user_id: str | None,
         user_provider: str | None,
         identities_count: int | None,
+        agent_id: str | None = None,
     ) -> None:
         attrs: dict[str, Any] = {
             "protocol": protocol,
             "stop_reason": stop_reason,
             "success": str(success).lower(),
         }
+        if agent_id:
+            attrs["agent.id"] = agent_id
         if model:
             attrs["model"] = model
         if user_id:
@@ -505,6 +508,7 @@ def record_prompt_turn_completion(
     user_provider: str | None = None,
     identities_count: int | None = None,
     user_jwt_token: str | None = None,
+    agent_id: str | None = None,
 ) -> None:
     """Emit prompt-turn completion metrics.
 
@@ -528,6 +532,7 @@ def record_prompt_turn_completion(
             output_tokens=output_tokens,
             total_tokens=total_tokens,
             user_id=user_id,
+            agent_id=agent_id,
             user_provider=user_provider,
             identities_count=identities_count,
         )

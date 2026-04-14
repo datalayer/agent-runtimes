@@ -6,6 +6,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import ReactECharts from 'echarts-for-react';
 import { fetchOtelMetricRows, toMetricValue } from '../hooks/useMonitoring';
+import { subscribeOtelWs } from './otelWsPool';
 
 const SERIES = [
   {
@@ -119,26 +120,36 @@ function extractTurnsFromRows(
   let prev = initialState;
 
   for (const [, groupRows] of sortedGroups) {
-    const completionsRow = groupRows.find(
+    // Sum ALL completions rows in this group — each OTEL attribute combination
+    // (e.g. baseline vs vercel-ai) produces a separate counter, and we need
+    // the total across all of them to detect new turns.
+    const completionsRows = groupRows.filter(
       r => r.metric_name === COMPLETIONS_METRIC,
     );
-    if (!completionsRow) continue;
+    if (completionsRows.length === 0) continue;
 
-    const newCompletions = toMetricValue(completionsRow);
+    const newCompletions = completionsRows.reduce(
+      (sum, r) => sum + toMetricValue(r),
+      0,
+    );
     if (newCompletions <= prev.completions) continue;
 
+    // Sum values per metric across all attribute sets so that baseline (0)
+    // and real-protocol rows (non-zero) are combined correctly.
     const current = emptyValues();
-    for (const row of groupRows) {
-      const metricName = row.metric_name as string;
-      const seriesItem = SERIES.find(s => s.metric === metricName);
-      if (seriesItem) {
-        current[seriesItem.label] = toMetricValue(row);
-      }
+    for (const seriesItem of SERIES) {
+      const metricRows = groupRows.filter(
+        r => r.metric_name === seriesItem.metric,
+      );
+      current[seriesItem.label] = metricRows.reduce(
+        (sum, r) => sum + toMetricValue(r),
+        0,
+      );
     }
 
     turns.push({
       turnNumber: newCompletions,
-      timestampMs: nanoToMs(completionsRow),
+      timestampMs: nanoToMs(completionsRows[0]),
       values: current,
     });
 
@@ -150,6 +161,7 @@ function extractTurnsFromRows(
 
 export interface TokenUsageChartProps {
   serviceName?: string;
+  agentId?: string;
   apiKey?: string;
   runUrl?: string;
   wsRunUrl?: string;
@@ -200,8 +212,29 @@ function extractServiceName(row: Record<string, unknown>): string | undefined {
   return undefined;
 }
 
+/** Extract `agent.id` from the `attributes` field of a metric row. */
+function extractAgentId(row: Record<string, unknown>): string | undefined {
+  const attrs = row.attributes;
+  if (typeof attrs === 'string') {
+    try {
+      const parsed = JSON.parse(attrs);
+      if (typeof parsed === 'object' && parsed !== null) {
+        const aid = parsed['agent.id'];
+        if (typeof aid === 'string') return aid;
+      }
+    } catch {
+      // ignore
+    }
+  } else if (typeof attrs === 'object' && attrs !== null) {
+    const aid = (attrs as Record<string, unknown>)['agent.id'];
+    if (typeof aid === 'string') return aid;
+  }
+  return undefined;
+}
+
 export function TokenUsageChart({
   serviceName,
+  agentId,
   apiKey,
   runUrl,
   wsRunUrl,
@@ -248,7 +281,12 @@ export function TokenUsageChart({
 
       if (cancelled) return;
 
-      const { turns: extracted, finalState } = extractTurnsFromRows(allRows, {
+      // Filter by agent.id when specified.
+      const filtered = agentId
+        ? allRows.filter(row => extractAgentId(row) === agentId)
+        : allRows;
+
+      const { turns: extracted, finalState } = extractTurnsFromRows(filtered, {
         completions: 0,
         values: emptyValues(),
       });
@@ -261,9 +299,9 @@ export function TokenUsageChart({
     return () => {
       cancelled = true;
     };
-  }, [apiKey, runUrl, serviceName]);
+  }, [agentId, apiKey, runUrl, serviceName]);
 
-  // ── WebSocket subscription ────────────────────────────────────
+  // ── WebSocket subscription (shared connection pool) ─────────
   useEffect(() => {
     if (!serviceName || !apiKey) return;
 
@@ -289,64 +327,34 @@ export function TokenUsageChart({
     const wsUrl = buildOtelWsUrl(baseWithProtocol, apiKey);
     if (!wsUrl) return;
 
-    let disposed = false;
-    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-    let ws: WebSocket | null = null;
+    const unsubscribe = subscribeOtelWs(wsUrl, msg => {
+      if (msg.signal !== 'metrics') return;
 
-    const connect = () => {
-      if (disposed) return;
-
-      ws = new WebSocket(wsUrl);
-
-      ws.onopen = () => {};
-
-      ws.onmessage = event => {
-        try {
-          const msg = JSON.parse(event.data) as {
-            signal?: string;
-            data?: Array<Record<string, unknown>>;
-          };
-          if (msg.signal !== 'metrics') return;
-
-          const rows = Array.isArray(msg.data) ? msg.data : [];
-          const matchingRows = rows.filter(
-            row => extractServiceName(row) === serviceName,
-          );
-          if (matchingRows.length === 0) return;
-
-          const { turns: newTurns, finalState } = extractTurnsFromRows(
-            matchingRows,
-            cumulativeRef.current,
-          );
-
-          if (newTurns.length > 0) {
-            cumulativeRef.current = finalState;
-            setTurns(prev => [...prev, ...newTurns]);
-          }
-        } catch {
-          return;
-        }
-      };
-
-      ws.onerror = () => {};
-
-      ws.onclose = () => {
-        if (disposed) return;
-        reconnectTimer = setTimeout(connect, 2000);
-      };
-    };
-
-    connect();
-
-    return () => {
-      disposed = true;
-      if (reconnectTimer) {
-        clearTimeout(reconnectTimer);
-        reconnectTimer = null;
+      const rows = Array.isArray(msg.data) ? msg.data : [];
+      let matchingRows = rows.filter(
+        row => extractServiceName(row) === serviceName,
+      );
+      // Filter by agent.id when specified.
+      if (agentId) {
+        matchingRows = matchingRows.filter(
+          row => extractAgentId(row) === agentId,
+        );
       }
-      ws?.close();
-    };
-  }, [apiKey, runUrl, serviceName, wsRunUrl]);
+      if (matchingRows.length === 0) return;
+
+      const { turns: newTurns, finalState } = extractTurnsFromRows(
+        matchingRows,
+        cumulativeRef.current,
+      );
+
+      if (newTurns.length > 0) {
+        cumulativeRef.current = finalState;
+        setTurns(prev => [...prev, ...newTurns]);
+      }
+    });
+
+    return unsubscribe;
+  }, [agentId, apiKey, runUrl, serviceName, wsRunUrl]);
 
   // ── Chart options ─────────────────────────────────────────────
   const option = useMemo(() => {

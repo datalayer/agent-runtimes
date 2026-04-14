@@ -27,6 +27,7 @@ import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { SignInSimple } from '@datalayer/core/lib/views/iam';
 import { UserBadge } from '@datalayer/core/lib/views/profile';
 import { ThemedProvider } from './utils/themedProvider';
+import { uniqueAgentId } from './utils/agentId';
 import { Chat } from '../chat';
 
 const queryClient = new QueryClient();
@@ -124,13 +125,14 @@ const SkillCard: React.FC<{ skill: SkillInfo }> = ({ skill }) => (
 
 const AgentSkillsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
   const { token } = useSimpleAuthStore();
+  const agentName = useRef(uniqueAgentId(AGENT_NAME)).current;
 
   const [runtimeStatus, setRuntimeStatus] = useState<
     'launching' | 'ready' | 'error'
   >('launching');
   const [isReady, setIsReady] = useState(false);
   const [hookError, setHookError] = useState<string | null>(null);
-  const [agentId, setAgentId] = useState<string>(AGENT_NAME);
+  const [agentId, setAgentId] = useState<string>(agentName);
   const [isReconnectedAgent, setIsReconnectedAgent] = useState(false);
   const [skills, setSkills] = useState<SkillInfo[]>([]);
 
@@ -165,7 +167,7 @@ const AgentSkillsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
         const response = await authFetch(`${agentBaseUrl}/api/v1/agents`, {
           method: 'POST',
           body: JSON.stringify({
-            name: AGENT_NAME,
+            name: agentName,
             description:
               'Agent with skills demo - code-based and path-based skills',
             agent_library: 'pydantic-ai',
@@ -176,12 +178,12 @@ const AgentSkillsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
           }),
         });
 
-        let resolvedAgentId = AGENT_NAME;
+        let resolvedAgentId = agentName;
         let isAlreadyRunning = false;
 
         if (response.ok) {
           const data = await response.json();
-          resolvedAgentId = data?.id || AGENT_NAME;
+          resolvedAgentId = data?.id || agentName;
         } else {
           const contentType = response.headers.get('content-type') || '';
           let detail = '';

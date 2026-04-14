@@ -20,6 +20,7 @@ import React, { useEffect, useState } from 'react';
 import { Text, Spinner } from '@primer/react';
 import { Box, setupPrimerPortals } from '@datalayer/primer-addons';
 import { ThemedProvider } from './utils/themedProvider';
+import { uniqueAgentId } from './utils/agentId';
 import { ErrorView } from './components';
 import { Chat } from '../chat';
 
@@ -34,31 +35,19 @@ const AgentRuntimeChatExample: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(true);
 
-  // Create the agent on mount
+  // Create the agent on mount — always create a fresh instance with a random
+  // slug so that each run starts with clean OTEL data.
   useEffect(() => {
     let cancelled = false;
+    const name = uniqueAgentId(AGENT_NAME);
 
-    const ensureAgent = async () => {
+    const createAgent = async () => {
       try {
-        // First, check if the agent already exists
-        const checkResponse = await fetch(
-          `${BASE_URL}/api/v1/agents/${encodeURIComponent(AGENT_NAME)}`,
-        );
-        if (checkResponse.ok) {
-          // Agent exists — reuse it (preserves conversation history)
-          if (!cancelled) {
-            setAgentId(AGENT_NAME);
-            setIsCreating(false);
-          }
-          return;
-        }
-
-        // Agent doesn't exist — create it from the library spec
         const response = await fetch(`${BASE_URL}/api/v1/agents`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            name: AGENT_NAME,
+            name,
             agent_spec_id: AGENT_SPEC_ID,
             transport: 'ag-ui',
           }),
@@ -68,17 +57,6 @@ const AgentRuntimeChatExample: React.FC = () => {
           const data = await response
             .json()
             .catch(() => ({ detail: 'Unknown error' }));
-          // Race condition: agent was created between our check and POST
-          if (
-            response.status === 400 &&
-            data.detail?.includes('already exists')
-          ) {
-            if (!cancelled) {
-              setAgentId(AGENT_NAME);
-              setIsCreating(false);
-            }
-            return;
-          }
           throw new Error(
             data.detail || `Failed to create agent: ${response.status}`,
           );
@@ -99,7 +77,7 @@ const AgentRuntimeChatExample: React.FC = () => {
       }
     };
 
-    ensureAgent();
+    createAgent();
     return () => {
       cancelled = true;
     };

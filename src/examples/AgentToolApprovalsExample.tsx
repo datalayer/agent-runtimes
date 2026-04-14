@@ -29,6 +29,7 @@ import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { SignInSimple } from '@datalayer/core/lib/views/iam';
 import { UserBadge } from '@datalayer/core/lib/views/profile';
 import { ThemedProvider } from './utils/themedProvider';
+import { uniqueAgentId } from './utils/agentId';
 import { Chat } from '../chat';
 import type { RenderToolResult } from '../types';
 import {
@@ -129,7 +130,8 @@ const buildAgentNameForSpec = (specId: string): string => {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
     .slice(0, 48);
-  return slug ? `${AGENT_NAME_PREFIX}-${slug}` : AGENT_NAME_PREFIX;
+  const base = slug ? `${AGENT_NAME_PREFIX}-${slug}` : AGENT_NAME_PREFIX;
+  return uniqueAgentId(base);
 };
 
 type ApprovalMode = 'local' | 'server';
@@ -640,14 +642,7 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
         setApprovalLoading(null);
       }
     },
-    [
-      approvals,
-      mode,
-      aiAgentsBaseUrl,
-      agentBaseUrl,
-      authFetch,
-      pollApprovals,
-    ],
+    [approvals, mode, aiAgentsBaseUrl, agentBaseUrl, authFetch, pollApprovals],
   );
 
   const reject = useCallback(
@@ -700,14 +695,7 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
         setApprovalLoading(null);
       }
     },
-    [
-      approvals,
-      mode,
-      aiAgentsBaseUrl,
-      agentBaseUrl,
-      authFetch,
-      pollApprovals,
-    ],
+    [approvals, mode, aiAgentsBaseUrl, agentBaseUrl, authFetch, pollApprovals],
   );
 
   const ensureServerApproval = useCallback(

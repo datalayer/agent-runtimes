@@ -16,7 +16,6 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional
 
-import httpx
 from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import Completer, Completion
 from prompt_toolkit.cursor_shapes import CursorShape
@@ -519,19 +518,19 @@ class CliTux:
 
             # Fetch updated usage stats
             try:
-                async with httpx.AsyncClient() as http_client:
-                    url = f"{self.server_url}/api/v1/configure/agents/{self.agent_id}/context-snapshot"
-                    resp = await http_client.get(url, timeout=5.0)
-                    if resp.status_code == 200:
-                        data = resp.json()
-                        input_tokens = data.get("sumResponseInputTokens", 0)
-                        output_tokens = data.get("sumResponseOutputTokens", 0)
-                        self.model_name = (
-                            data.get("modelName", self.model_name) or self.model_name
-                        )
-                        self.context_window = data.get(
-                            "contextWindow", self.context_window
-                        )
+                from agent_runtimes.context.session import get_agent_context_snapshot
+
+                snapshot = get_agent_context_snapshot(self.agent_id)
+                if snapshot is not None:
+                    data = snapshot.to_dict()
+                    input_tokens = data.get("sumResponseInputTokens", 0)
+                    output_tokens = data.get("sumResponseOutputTokens", 0)
+                    self.model_name = (
+                        data.get("modelName", self.model_name) or self.model_name
+                    )
+                    self.context_window = data.get(
+                        "contextWindow", self.context_window
+                    )
             except Exception:
                 pass
 
@@ -592,15 +591,15 @@ class CliTux:
 
         # Fetch initial model info
         try:
-            async with httpx.AsyncClient() as client:
-                url = f"{self.server_url}/api/v1/configure/agents/{self.agent_id}/context-snapshot"
-                response = await client.get(url, timeout=5.0)
-                if response.status_code == 200:
-                    data = response.json()
-                    model_name = data.get("modelName")
-                    if model_name:
-                        self.model_name = model_name
-                    self.context_window = data.get("contextWindow", 128000)
+            from agent_runtimes.context.session import get_agent_context_snapshot
+
+            snapshot = get_agent_context_snapshot(self.agent_id)
+            if snapshot is not None:
+                data = snapshot.to_dict()
+                model_name = data.get("modelName")
+                if model_name:
+                    self.model_name = model_name
+                self.context_window = data.get("contextWindow", 128000)
         except Exception:
             pass
 

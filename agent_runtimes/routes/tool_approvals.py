@@ -11,15 +11,20 @@ compatibility with existing callers.
 from __future__ import annotations
 
 import asyncio
+import logging
 from datetime import datetime, timezone
 from typing import Any
 from uuid import uuid4
 
-from fastapi import APIRouter, HTTPException, Query, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, HTTPException, Query, WebSocket
 from pydantic import BaseModel, Field
 
-from agent_runtimes.context.costs import get_cost_store
-from agent_runtimes.streams import AgentMonitoringSnapshotPayload, AgentStreamMessage
+from agent_runtimes.streams.loop import (
+    publish_stream_event,
+    stream_loop,
+)
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/tool-approvals", tags=["tool-approvals"])
 legacy_router = APIRouter(
@@ -65,98 +70,21 @@ class ToolApprovalRecord(BaseModel):
 
 _APPROVALS: dict[str, ToolApprovalRecord] = {}
 _APPROVALS_LOCK = asyncio.Lock()
-_STREAM_SUBSCRIBERS: dict[str, set[asyncio.Queue[AgentStreamMessage]]] = {}
 
 
-def _stream_key(agent_id: str | None) -> str:
-    return agent_id or "__global__"
-
-
-def _subscribe_stream(agent_id: str | None) -> asyncio.Queue[AgentStreamMessage]:
-    key = _stream_key(agent_id)
-    queue: asyncio.Queue[AgentStreamMessage] = asyncio.Queue(maxsize=32)
-    _STREAM_SUBSCRIBERS.setdefault(key, set()).add(queue)
-    return queue
-
-
-def _unsubscribe_stream(
-    agent_id: str | None, queue: asyncio.Queue[AgentStreamMessage]
-) -> None:
-    key = _stream_key(agent_id)
-    subscribers = _STREAM_SUBSCRIBERS.get(key)
-    if not subscribers:
-        return
-    subscribers.discard(queue)
-    if not subscribers:
-        _STREAM_SUBSCRIBERS.pop(key, None)
-
-
-def _enqueue_stream_message(agent_id: str | None, message: AgentStreamMessage) -> None:
-    keys = [_stream_key(agent_id)]
-    if keys[0] != "__global__":
-        keys.append("__global__")
-    for key in keys:
-        subscribers = _STREAM_SUBSCRIBERS.get(key)
-        if not subscribers:
-            continue
-        for queue in list(subscribers):
-            if queue.full():
-                continue
-            queue.put_nowait(message)
-
-
-def _build_context_snapshot(agent_id: str) -> dict[str, Any] | None:
-    from agent_runtimes.context.session import get_agent_context_snapshot
-
-    snapshot = get_agent_context_snapshot(agent_id)
-    if snapshot is None:
-        return None
-    data = snapshot.to_dict()
-    data["costUsage"] = get_cost_store().get_agent_usage_dict(agent_id)
-    return data
-
-
-async def _build_monitoring_snapshot_payload(
-    agent_id: str | None,
-) -> AgentMonitoringSnapshotPayload:
-    approvals = await _list_approvals(agent_id=agent_id, status="pending")
-    context_snapshot: dict[str, Any] | None = None
-    cost_usage: dict[str, Any] | None = None
-    if agent_id:
-        context_snapshot = _build_context_snapshot(agent_id)
-        cost_usage = get_cost_store().get_agent_usage_dict(agent_id)
-
-    return AgentMonitoringSnapshotPayload(
-        agentId=agent_id,
-        approvals=[a.model_dump() for a in approvals],
-        pendingApprovalCount=len(approvals),
-        contextSnapshot=context_snapshot,
-        costUsage=cost_usage,
-    )
-
-
-async def _publish_stream_event(
+async def _publish_approval_event(
     *,
     event_type: str,
     payload: dict[str, Any],
     agent_id: str | None,
 ) -> None:
-    message = AgentStreamMessage.create(
-        type=event_type,
+    """Publish a tool-approval event through the generic stream."""
+    await publish_stream_event(
+        event_type=event_type,
         payload=payload,
         agent_id=agent_id,
+        list_approvals=_list_approvals,
     )
-    _enqueue_stream_message(agent_id, message)
-
-    snapshot_payload = (await _build_monitoring_snapshot_payload(agent_id)).model_dump(
-        by_alias=True
-    )
-    snapshot = AgentStreamMessage.create(
-        type="agent.snapshot",
-        payload=snapshot_payload,
-        agent_id=agent_id,
-    )
-    _enqueue_stream_message(agent_id, snapshot)
 
 
 def _now_iso() -> str:
@@ -181,7 +109,7 @@ async def mirror_approval_to_local(data: dict) -> ToolApprovalRecord:
     )
     async with _APPROVALS_LOCK:
         _APPROVALS[record.id] = record
-    await _publish_stream_event(
+    await _publish_approval_event(
         event_type="tool_approval_created",
         payload=record.model_dump(),
         agent_id=record.agent_id or None,
@@ -212,7 +140,7 @@ async def update_local_approval_status(
         else:
             updated = None
     if updated is not None:
-        await _publish_stream_event(
+        await _publish_approval_event(
             event_type=(
                 "tool_approval_approved"
                 if status == "approved"
@@ -248,7 +176,7 @@ async def _create_approval(body: ToolApprovalCreateRequest) -> ToolApprovalRecor
     )
     async with _APPROVALS_LOCK:
         _APPROVALS[record.id] = record
-    await _publish_stream_event(
+    await _publish_approval_event(
         event_type="tool_approval_created",
         payload=record.model_dump(),
         agent_id=record.agent_id or None,
@@ -300,7 +228,7 @@ async def _update_approval(
         )
         _APPROVALS[approval_id] = updated
 
-    await _publish_stream_event(
+    await _publish_approval_event(
         event_type=(
             "tool_approval_approved"
             if status == "approved"
@@ -310,67 +238,6 @@ async def _update_approval(
         agent_id=updated.agent_id or None,
     )
     return updated
-
-
-async def _stream_loop(websocket: WebSocket, agent_id: str | None) -> None:
-    await websocket.accept()
-    queue = _subscribe_stream(agent_id)
-    try:
-        initial_payload = (
-            await _build_monitoring_snapshot_payload(agent_id)
-        ).model_dump(by_alias=True)
-        await websocket.send_json(
-            AgentStreamMessage.create(
-                type="agent.snapshot",
-                payload=initial_payload,
-                agent_id=agent_id,
-            ).model_dump(by_alias=True)
-        )
-
-        last_snapshot = initial_payload
-        while True:
-            recv_task = asyncio.create_task(websocket.receive_text())
-            msg_task = asyncio.create_task(queue.get())
-            try:
-                done, pending = await asyncio.wait(
-                    {recv_task, msg_task},
-                    timeout=2.0,
-                    return_when=asyncio.FIRST_COMPLETED,
-                )
-                for task in pending:
-                    task.cancel()
-
-                if not done:
-                    next_snapshot = (
-                        await _build_monitoring_snapshot_payload(agent_id)
-                    ).model_dump(by_alias=True)
-                    if next_snapshot != last_snapshot:
-                        last_snapshot = next_snapshot
-                        await websocket.send_json(
-                            AgentStreamMessage.create(
-                                type="agent.snapshot",
-                                payload=next_snapshot,
-                                agent_id=agent_id,
-                            ).model_dump(by_alias=True)
-                        )
-                    continue
-
-                if recv_task in done:
-                    # Allow ping/keepalive from clients.
-                    _ = recv_task.result()
-
-                if msg_task in done:
-                    message = msg_task.result()
-                    await websocket.send_json(message.model_dump(by_alias=True))
-            finally:
-                if not recv_task.done():
-                    recv_task.cancel()
-                if not msg_task.done():
-                    msg_task.cancel()
-    except WebSocketDisconnect:
-        return
-    finally:
-        _unsubscribe_stream(agent_id, queue)
 
 
 @router.post("", response_model=ToolApprovalRecord)
@@ -417,7 +284,7 @@ async def tool_approvals_ws(
     websocket: WebSocket,
     agent_id: str | None = Query(default=None),
 ) -> None:
-    await _stream_loop(websocket, agent_id)
+    await stream_loop(websocket, agent_id, list_approvals=_list_approvals)
 
 
 @legacy_router.websocket("/ws")
@@ -425,7 +292,7 @@ async def legacy_tool_approvals_ws(
     websocket: WebSocket,
     agent_id: str | None = Query(default=None),
 ) -> None:
-    await _stream_loop(websocket, agent_id)
+    await stream_loop(websocket, agent_id, list_approvals=_list_approvals)
 
 
 @ws_router.websocket("/ws")
@@ -433,4 +300,4 @@ async def ai_agents_stream_ws(
     websocket: WebSocket,
     agent_id: str | None = Query(default=None),
 ) -> None:
-    await _stream_loop(websocket, agent_id)
+    await stream_loop(websocket, agent_id, list_approvals=_list_approvals)

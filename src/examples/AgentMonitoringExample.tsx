@@ -17,11 +17,7 @@
 /// <reference types="vite/client" />
 
 import React, { useEffect, useState, useCallback, useRef } from 'react';
-import {
-  QueryClient,
-  QueryClientProvider,
-  useQuery,
-} from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Text, Button, Spinner, Heading, Label } from '@primer/react';
 import {
   CheckCircleIcon,
@@ -32,6 +28,7 @@ import {
 import { Box } from '@datalayer/primer-addons';
 import { ErrorView } from './components';
 import { ThemedProvider } from './utils/themedProvider';
+import { uniqueAgentId } from './utils/agentId';
 import {
   ContextPanel,
   type ContextSnapshotResponse,
@@ -89,33 +86,15 @@ function deriveAggregate(servers: McpServerStatus[]): McpAggregateStatus {
 }
 
 const McpStatusPanel: React.FC<{
-  apiBase: string;
-  authToken?: string;
-}> = ({ apiBase, authToken }) => {
-  const { data, isLoading } = useQuery<McpToolsetsStatusResponse>({
-    queryKey: ['mcp-toolsets-status', apiBase],
-    queryFn: async () => {
-      const headers: Record<string, string> = {};
-      if (authToken) {
-        headers['Authorization'] = `Bearer ${authToken}`;
-      }
-      const response = await fetch(
-        `${apiBase}/api/v1/configure/mcp-toolsets-status`,
-        { headers },
-      );
-      if (!response.ok) throw new Error('Failed to fetch MCP status');
-      return response.json();
-    },
-    refetchInterval: 5000,
-  });
-
+  data?: McpToolsetsStatusResponse;
+}> = ({ data }) => {
   const servers = data?.servers ?? [];
   const aggregate = deriveAggregate(servers);
 
-  if (isLoading) {
+  if (!data) {
     return (
       <Text sx={{ color: 'fg.muted', fontSize: 1 }}>
-        Checking MCP servers...
+        Waiting for websocket snapshot...
       </Text>
     );
   }
@@ -211,13 +190,14 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
   onLogout,
 }) => {
   const { token } = useSimpleAuthStore();
+  const agentName = useRef(uniqueAgentId(AGENT_NAME)).current;
   const { configuration } = useCoreStore();
   const [runtimeStatus, setRuntimeStatus] = useState<
     'launching' | 'ready' | 'error'
   >('launching');
   const [isReady, setIsReady] = useState(false);
   const [hookError, setHookError] = useState<string | null>(null);
-  const [agentId, setAgentId] = useState<string>(AGENT_NAME);
+  const [agentId, setAgentId] = useState<string>(agentName);
   const [isReconnectedAgent, setIsReconnectedAgent] = useState(false);
   const [alerts, setAlerts] = useState<MonitoringAlert[]>([]);
   const [liveContext, setLiveContext] = useState<
@@ -226,6 +206,9 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
   const [liveCost, setLiveCost] = useState<CostUsageResponse | undefined>(
     undefined,
   );
+  const [liveMcpStatus, setLiveMcpStatus] = useState<
+    McpToolsetsStatusResponse | undefined
+  >(undefined);
   const [monitorLastSnapshotAt, setMonitorLastSnapshotAt] = useState<
     number | null
   >(null);
@@ -270,7 +253,7 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
         const response = await authFetch(`${agentBaseUrl}/api/v1/agents`, {
           method: 'POST',
           body: JSON.stringify({
-            name: AGENT_NAME,
+            name: agentName,
             description: 'Agent with monitoring telemetry demo signals',
             agent_library: 'pydantic-ai',
             transport: 'vercel-ai',
@@ -280,12 +263,12 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
           }),
         });
 
-        let resolvedAgentId = AGENT_NAME;
+        let resolvedAgentId = agentName;
         let isAlreadyRunning = false;
 
         if (response.ok) {
           const data = await response.json();
-          resolvedAgentId = data?.id || AGENT_NAME;
+          resolvedAgentId = data?.id || agentName;
         } else {
           const contentType = response.headers.get('content-type') || '';
           let detail = '';
@@ -344,6 +327,10 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
         if (payload.contextSnapshot) {
           setLiveContext(payload.contextSnapshot as ContextSnapshotResponse);
           setMonitorLastSnapshotAt(Date.now());
+        }
+
+        if (payload.mcpStatus !== undefined) {
+          setLiveMcpStatus(payload.mcpStatus ?? undefined);
         }
 
         const snapshotCost =
@@ -532,6 +519,7 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
             </Heading>
             <TokenUsageChart
               serviceName={otelServiceName}
+              agentId={agentId}
               apiKey={token ?? undefined}
               runUrl={otelBaseUrl}
               height={180}
@@ -550,6 +538,7 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
             </Heading>
             <CostUsageChart
               serviceName={otelServiceName}
+              agentId={agentId}
               apiKey={token ?? undefined}
               runUrl={otelBaseUrl}
               height={180}
@@ -603,7 +592,7 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
             <Heading as="h4" sx={{ fontSize: 1, mb: 2 }}>
               MCP Servers
             </Heading>
-            <McpStatusPanel apiBase={agentBaseUrl} authToken={chatAuthToken} />
+            <McpStatusPanel data={liveMcpStatus} />
           </Box>
 
           <Box

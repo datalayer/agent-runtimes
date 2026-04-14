@@ -3,11 +3,12 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Spinner, Text } from '@primer/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Box } from '@datalayer/primer-addons';
 import { ThemedProvider } from './utils/themedProvider';
+import { uniqueAgentId } from './utils/agentId';
 import { Chat } from '../chat';
 
 // Create a query client for React Query
@@ -30,6 +31,7 @@ const BASE_URL = 'http://localhost:8765';
  * Creates the agent if it doesn't exist
  */
 function useEnsureAgent() {
+  const agentName = useRef(uniqueAgentId(AGENT_NAME)).current;
   const [agentId, setAgentId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -42,7 +44,7 @@ function useEnsureAgent() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          name: AGENT_NAME,
+          name: agentName,
           description: 'Datalayer AI Assistant - Your helpful coding companion',
           agent_library: 'pydantic-ai',
           transport: 'ag-ui',
@@ -76,34 +78,13 @@ Be concise, helpful, and provide working code examples when appropriate.`,
       console.error('[AgentRuntimeCustomExample] Error creating agent:', err);
       throw err;
     }
-  }, []);
+  }, [agentName]);
 
-  const checkOrCreateAgent = useCallback(async () => {
+  const initAgent = useCallback(async () => {
     setIsLoading(true);
     setError(null);
 
     try {
-      // First, try to find existing agent by name
-      const listResponse = await fetch(`${BASE_URL}/api/v1/agents`);
-      if (listResponse.ok) {
-        const data = await listResponse.json();
-        // API may return { agents: [...] } or just [...]
-        const agents = Array.isArray(data) ? data : data.agents || [];
-        const existingAgent = agents.find(
-          (a: { name: string }) => a.name === AGENT_NAME,
-        );
-        if (existingAgent) {
-          console.log(
-            '[AgentRuntimeCustomExample] Found existing agent:',
-            existingAgent.id,
-          );
-          setAgentId(existingAgent.id);
-          setIsLoading(false);
-          return;
-        }
-      }
-
-      // Agent doesn't exist, create it
       console.log('[AgentRuntimeCustomExample] Creating new agent...');
       const newAgentId = await createAgent();
       if (newAgentId) {
@@ -121,10 +102,10 @@ Be concise, helpful, and provide working code examples when appropriate.`,
   }, [createAgent]);
 
   useEffect(() => {
-    checkOrCreateAgent();
-  }, [checkOrCreateAgent]);
+    initAgent();
+  }, [initAgent]);
 
-  return { agentId, isLoading, error, retry: checkOrCreateAgent };
+  return { agentId, isLoading, error, retry: initAgent };
 }
 
 /**

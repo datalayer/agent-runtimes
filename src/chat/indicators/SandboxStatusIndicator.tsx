@@ -186,14 +186,14 @@ export function SandboxStatusIndicator({
   const aggregate = useMemo(() => deriveAggregate(status), [status]);
 
   const tooltipText = useMemo(() => {
-    if (!status) return SANDBOX_STATUS_LABELS.unavailable;
+    if (!status) return 'No Sandbox defined';
     const label = SANDBOX_STATUS_LABELS[aggregate];
     const variant = status.variant;
     return `${label} (${variant})`;
   }, [aggregate, status]);
 
-  // Hide when sandbox is not available at all.
-  if (aggregate === 'unavailable') return null;
+  // Show a subtle gray dot when sandbox is unavailable.
+  // The tooltip tells the user none is configured.
 
   return (
     <Tooltip text={tooltipText} direction="n">
