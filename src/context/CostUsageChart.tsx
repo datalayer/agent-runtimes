@@ -8,6 +8,13 @@ import ReactECharts from 'echarts-for-react';
 import { buildOtelWebSocketUrl } from '@datalayer/core/lib/otel';
 import { toMetricValue } from '../hooks/useMonitoring';
 import { subscribeOtelWs } from './otelWsPool';
+import {
+  agentRuntimeStore,
+  getMonitoringCacheKey,
+  useAgentRuntimeStore,
+  type LocalCostPoint,
+  type MonitoringCacheEntry,
+} from '../stores/agentRuntimeStore';
 
 const COST_RUN_METRIC = 'agent_runtimes.capability.cost.run.usd';
 const COST_CUMULATIVE_METRIC = 'agent_runtimes.capability.cost.cumulative.usd';
@@ -18,6 +25,40 @@ interface CostPoint {
   timestampMs: number;
   costUsd: number;
   cumulativeUsd: number;
+}
+
+function resolveMonitoringEntry(
+  monitoringCache: Record<string, MonitoringCacheEntry>,
+  serviceName?: string,
+  agentId?: string,
+): MonitoringCacheEntry | undefined {
+  const direct = monitoringCache[getMonitoringCacheKey(serviceName, agentId)];
+  if (direct) return direct;
+
+  if (agentId) {
+    const byAgent = Object.entries(monitoringCache).find(([key, entry]) => {
+      return key.endsWith(`::${agentId}`) && entry.costPoints.length > 0;
+    });
+    if (byAgent) return byAgent[1];
+  }
+
+  if (serviceName) {
+    const byService = Object.entries(monitoringCache).find(([key, entry]) => {
+      return key.startsWith(`${serviceName}::`) && entry.costPoints.length > 0;
+    });
+    if (byService) return byService[1];
+  }
+
+  return undefined;
+}
+
+function localPointToCostPoint(point: LocalCostPoint): CostPoint {
+  return {
+    timestampKey: String(point.timestampMs),
+    timestampMs: point.timestampMs,
+    costUsd: 0,
+    cumulativeUsd: point.cumulativeUsd,
+  };
 }
 
 /** Parse attributes that may arrive as a JSON string (WS) or object (HTTP). */
@@ -175,6 +216,16 @@ export function CostUsageChart({
   liveTimestampMs,
   height = 160,
 }: CostUsageChartProps) {
+  const monitoringCache = useAgentRuntimeStore(s => s.monitoringCache);
+  const mergeCostPoints = useAgentRuntimeStore(s => s.mergeCostPoints);
+  const upsertLocalCostPoint = useAgentRuntimeStore(
+    s => s.upsertLocalCostPoint,
+  );
+
+  const cachedEntry = useMemo(
+    () => resolveMonitoringEntry(monitoringCache, serviceName, agentId),
+    [agentId, monitoringCache, serviceName],
+  );
   const [points, setPoints] = useState<CostPoint[]>([]);
   const initialTimestampMsRef = useRef<number>(Date.now());
 
@@ -224,9 +275,9 @@ export function CostUsageChart({
       setPoints([]);
       return;
     }
-    setPoints([]);
+    setPoints((cachedEntry?.costPoints ?? []).map(localPointToCostPoint));
     initialTimestampMsRef.current = Date.now();
-  }, [agentId, serviceName]);
+  }, [agentId, cachedEntry, serviceName]);
 
   // Apply immediate post-turn updates from the monitoring websocket snapshot.
   useEffect(() => {
@@ -250,8 +301,30 @@ export function CostUsageChart({
       cumulativeUsd: Math.max(0, liveCumulativeUsd),
     };
 
-    setPoints(prev => mergePoints(prev, [livePoint]));
-  }, [liveCumulativeUsd, liveTimestampMs, serviceName]);
+    upsertLocalCostPoint({
+      serviceName,
+      agentId,
+      timestampMs,
+      cumulativeUsd: livePoint.cumulativeUsd,
+    });
+
+    const mergedEntry = resolveMonitoringEntry(
+      agentRuntimeStore.getState().monitoringCache,
+      serviceName,
+      agentId,
+    );
+    if (mergedEntry) {
+      setPoints(mergedEntry.costPoints.map(localPointToCostPoint));
+    } else {
+      setPoints(prev => mergePoints(prev, [livePoint]));
+    }
+  }, [
+    agentId,
+    liveCumulativeUsd,
+    liveTimestampMs,
+    serviceName,
+    upsertLocalCostPoint,
+  ]);
 
   // ── WebSocket subscription (shared connection pool) ─────────
   useEffect(() => {
@@ -303,12 +376,30 @@ export function CostUsageChart({
 
       const newPoints = extractCostPoints(matchingRows, agentId);
       if (newPoints.length > 0) {
-        setPoints(prev => mergePoints(prev, newPoints));
+        mergeCostPoints({
+          serviceName,
+          agentId,
+          points: newPoints.map(point => ({
+            timestampMs: point.timestampMs,
+            cumulativeUsd: point.cumulativeUsd,
+          })),
+        });
+
+        const mergedEntry = resolveMonitoringEntry(
+          agentRuntimeStore.getState().monitoringCache,
+          serviceName,
+          agentId,
+        );
+        if (mergedEntry) {
+          setPoints(mergedEntry.costPoints.map(localPointToCostPoint));
+        } else {
+          setPoints(prev => mergePoints(prev, newPoints));
+        }
       }
     });
 
     return unsubscribe;
-  }, [agentId, apiKey, runUrl, serviceName, wsRunUrl]);
+  }, [agentId, apiKey, mergeCostPoints, runUrl, serviceName, wsRunUrl]);
 
   // ── Chart options ─────────────────────────────────────────────
   const option = useMemo(() => {
@@ -321,6 +412,9 @@ export function CostUsageChart({
         : [[initialTimestampMsRef.current, 0]];
 
     return {
+      animation: false,
+      animationDuration: 0,
+      animationDurationUpdate: 0,
       tooltip: {
         trigger: 'axis' as const,
         textStyle: { fontSize: 10 },
@@ -375,13 +469,14 @@ export function CostUsageChart({
         {
           name: 'Cumulative cost',
           type: 'line' as const,
-          smooth: true,
+          smooth: false,
           lineStyle: { width: 2 },
           areaStyle: { opacity: 0.15 },
           symbol: 'circle',
           symbolSize: 4,
           itemStyle: { color: '#cf222e' },
           data: chartData,
+          animation: false,
         },
       ],
     };

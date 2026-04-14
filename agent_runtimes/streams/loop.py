@@ -387,7 +387,7 @@ async def stream_loop(
                                 )
 
                             elif msg_type == "request_otel_flush":
-                                await _flush_otel_service(websocket_user_jwt_token)
+                                    await _flush_otel_service(websocket_user_jwt_token)
 
                     except Exception as exc:
                         logger.debug(

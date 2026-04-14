@@ -244,6 +244,7 @@ function ChatBaseInner({
   // Stabilize the protocol reference so that the adapter-init effect only
   // re-runs when the protocol *contents* actually change.
   const protocolKey = protocol ? JSON.stringify(protocol) : '';
+  const monitoringServiceName = 'agent-runtimes';
 
   // Store (optional for message persistence)
   const clearStoreMessages = useChatStore(state => state.clearMessages);
@@ -751,6 +752,45 @@ function ChatBaseInner({
     unsubscribeRef.current = adapter.subscribe((event: ProtocolEvent) => {
       switch (event.type) {
         case 'message':
+          if (event.usage) {
+            const timestampMs =
+              event.timestamp instanceof Date
+                ? event.timestamp.getTime()
+                : Date.now();
+            const promptTokens = Math.max(0, event.usage.promptTokens ?? 0);
+            const completionTokens = Math.max(
+              0,
+              event.usage.completionTokens ?? 0,
+            );
+            const totalTokens = Math.max(
+              promptTokens + completionTokens,
+              event.usage.totalTokens ?? 0,
+            );
+
+            const runtimeState = agentRuntimeStore.getState();
+            runtimeState.appendLocalTokenTurn({
+              serviceName: monitoringServiceName,
+              agentId: protocol?.agentId,
+              timestampMs,
+              promptTokens,
+              completionTokens,
+              totalTokens,
+            });
+
+            const liveCumulativeUsd = runtimeState.costUsage?.cumulativeCostUsd;
+            if (
+              typeof liveCumulativeUsd === 'number' &&
+              Number.isFinite(liveCumulativeUsd)
+            ) {
+              runtimeState.upsertLocalCostPoint({
+                serviceName: monitoringServiceName,
+                agentId: protocol?.agentId,
+                timestampMs,
+                cumulativeUsd: Math.max(0, liveCumulativeUsd),
+              });
+            }
+          }
+
           if (suppressAssistantTextForToolOnlyRef.current) {
             const suppressedMessageId = currentAssistantMessageRef.current?.id;
             if (suppressedMessageId) {

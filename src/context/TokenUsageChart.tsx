@@ -8,6 +8,13 @@ import ReactECharts from 'echarts-for-react';
 import { buildOtelWebSocketUrl } from '@datalayer/core/lib/otel';
 import { toMetricValue } from '../hooks/useMonitoring';
 import { subscribeOtelWs } from './otelWsPool';
+import {
+  agentRuntimeStore,
+  getMonitoringCacheKey,
+  useAgentRuntimeStore,
+  type LocalTokenTurn,
+  type MonitoringCacheEntry,
+} from '../stores/agentRuntimeStore';
 
 const SERIES = [
   {
@@ -46,6 +53,63 @@ type CumulativeSnapshot = {
   completions: number;
   values: Record<SeriesLabel, number>;
 };
+
+function resolveMonitoringEntry(
+  monitoringCache: Record<string, MonitoringCacheEntry>,
+  serviceName?: string,
+  agentId?: string,
+): MonitoringCacheEntry | undefined {
+  const direct = monitoringCache[getMonitoringCacheKey(serviceName, agentId)];
+  if (direct) return direct;
+
+  if (agentId) {
+    const byAgent = Object.entries(monitoringCache).find(([key, entry]) => {
+      return key.endsWith(`::${agentId}`) && entry.tokenTurns.length > 0;
+    });
+    if (byAgent) return byAgent[1];
+  }
+
+  if (serviceName) {
+    const byService = Object.entries(monitoringCache).find(([key, entry]) => {
+      return key.startsWith(`${serviceName}::`) && entry.tokenTurns.length > 0;
+    });
+    if (byService) return byService[1];
+  }
+
+  return undefined;
+}
+
+function localTokenTurnToPoint(turn: LocalTokenTurn): TurnPoint {
+  return {
+    turnNumber: turn.turnNumber,
+    timestampMs: turn.timestampMs,
+    values: {
+      'System prompt': turn.systemPromptTokens,
+      'Tools description': turn.toolsDescriptionTokens,
+      'User messages': turn.userMessageTokens,
+      'Agent messages': turn.aiMessageTokens,
+      'Tools usage': turn.toolsUsageTokens,
+    },
+  };
+}
+
+function pointToLocalTokenTurn(point: TurnPoint): LocalTokenTurn {
+  return {
+    turnNumber: point.turnNumber,
+    timestampMs: point.timestampMs,
+    systemPromptTokens: point.values['System prompt'],
+    toolsDescriptionTokens: point.values['Tools description'],
+    userMessageTokens: point.values['User messages'],
+    aiMessageTokens: point.values['Agent messages'],
+    toolsUsageTokens: point.values['Tools usage'],
+    totalTokens:
+      point.values['System prompt'] +
+      point.values['Tools description'] +
+      point.values['User messages'] +
+      point.values['Agent messages'] +
+      point.values['Tools usage'],
+  };
+}
 
 function emptyValues(): Record<SeriesLabel, number> {
   return SERIES.reduce(
@@ -219,6 +283,13 @@ export function TokenUsageChart({
   wsRunUrl,
   height = 160,
 }: TokenUsageChartProps) {
+  const monitoringCache = useAgentRuntimeStore(s => s.monitoringCache);
+  const mergeTokenTurns = useAgentRuntimeStore(s => s.mergeTokenTurns);
+
+  const cachedEntry = useMemo(
+    () => resolveMonitoringEntry(monitoringCache, serviceName, agentId),
+    [agentId, monitoringCache, serviceName],
+  );
   const [turns, setTurns] = useState<TurnPoint[]>([]);
   const cumulativeRef = useRef<CumulativeSnapshot>({
     completions: 0,
@@ -232,9 +303,17 @@ export function TokenUsageChart({
       cumulativeRef.current = { completions: 0, values: emptyValues() };
       return;
     }
-    setTurns([]);
-    cumulativeRef.current = { completions: 0, values: emptyValues() };
-  }, [agentId, serviceName]);
+
+    const hydratedTurns = (cachedEntry?.tokenTurns ?? []).map(
+      localTokenTurnToPoint,
+    );
+    setTurns(hydratedTurns);
+
+    const latestTurn = hydratedTurns[hydratedTurns.length - 1];
+    cumulativeRef.current = latestTurn
+      ? { completions: latestTurn.turnNumber, values: latestTurn.values }
+      : { completions: 0, values: emptyValues() };
+  }, [agentId, cachedEntry, serviceName]);
 
   // ── WebSocket subscription (shared connection pool) ─────────
   useEffect(() => {
@@ -291,16 +370,34 @@ export function TokenUsageChart({
 
       if (newTurns.length > 0) {
         cumulativeRef.current = finalState;
-        setTurns(prev => [...prev, ...newTurns]);
+        mergeTokenTurns({
+          serviceName,
+          agentId,
+          turns: newTurns.map(pointToLocalTokenTurn),
+        });
+
+        const mergedEntry = resolveMonitoringEntry(
+          agentRuntimeStore.getState().monitoringCache,
+          serviceName,
+          agentId,
+        );
+        if (mergedEntry) {
+          setTurns(mergedEntry.tokenTurns.map(localTokenTurnToPoint));
+        } else {
+          setTurns(prev => [...prev, ...newTurns]);
+        }
       }
     });
 
     return unsubscribe;
-  }, [agentId, apiKey, runUrl, serviceName, wsRunUrl]);
+  }, [agentId, apiKey, mergeTokenTurns, runUrl, serviceName, wsRunUrl]);
 
   // ── Chart options ─────────────────────────────────────────────
   const option = useMemo(() => {
     return {
+      animation: false,
+      animationDuration: 0,
+      animationDurationUpdate: 0,
       tooltip: {
         trigger: 'axis' as const,
         textStyle: { fontSize: 10 },
@@ -344,7 +441,8 @@ export function TokenUsageChart({
       series: SERIES.map(item => ({
         name: item.label,
         type: 'line' as const,
-        smooth: true,
+        animation: false,
+        smooth: false,
         lineStyle: { width: 2 },
         areaStyle: { opacity: 0.15 },
         symbol: 'circle',

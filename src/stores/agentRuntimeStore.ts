@@ -73,6 +73,34 @@ export interface AgentRegistryEntry {
 
 export type AgentRuntimeWsState = 'closed' | 'connecting' | 'connected';
 
+export interface LocalTokenTurn {
+  turnNumber: number;
+  timestampMs: number;
+  systemPromptTokens: number;
+  toolsDescriptionTokens: number;
+  userMessageTokens: number;
+  aiMessageTokens: number;
+  toolsUsageTokens: number;
+  totalTokens: number;
+}
+
+export interface LocalCostPoint {
+  timestampMs: number;
+  cumulativeUsd: number;
+}
+
+export interface MonitoringCacheEntry {
+  tokenTurns: LocalTokenTurn[];
+  costPoints: LocalCostPoint[];
+}
+
+export function getMonitoringCacheKey(
+  serviceName?: string,
+  agentId?: string,
+): string {
+  return `${serviceName || '__unknown_service__'}::${agentId || '__unknown_agent__'}`;
+}
+
 // ---------------------------------------------------------------------------
 // Store state & actions
 // ---------------------------------------------------------------------------
@@ -96,6 +124,7 @@ export interface AgentRuntimeStoreState {
   mcpStatus: McpToolsetsStatusResponse | null;
   codemodeStatus: CodemodeStatusData | null;
   fullContext: Record<string, unknown> | null;
+  monitoringCache: Record<string, MonitoringCacheEntry>;
 }
 
 export interface AgentRuntimeStoreActions {
@@ -149,6 +178,41 @@ export interface AgentRuntimeStoreActions {
     note?: string,
   ) => boolean;
   requestRefresh: () => boolean;
+  appendLocalTokenTurn: (params: {
+    serviceName?: string;
+    agentId?: string;
+    timestampMs: number;
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+  }) => void;
+  mergeTokenTurns: (params: {
+    serviceName?: string;
+    agentId?: string;
+    turns: LocalTokenTurn[];
+  }) => void;
+  appendLocalTokenTurnFull: (params: {
+    serviceName?: string;
+    agentId?: string;
+    timestampMs: number;
+    systemPromptTokens: number;
+    toolsDescriptionTokens: number;
+    userMessageTokens: number;
+    aiMessageTokens: number;
+    toolsUsageTokens: number;
+    totalTokens: number;
+  }) => void;
+  upsertLocalCostPoint: (params: {
+    serviceName?: string;
+    agentId?: string;
+    timestampMs: number;
+    cumulativeUsd: number;
+  }) => void;
+  mergeCostPoints: (params: {
+    serviceName?: string;
+    agentId?: string;
+    points: LocalCostPoint[];
+  }) => void;
 
   // ─── Reset ───────────────────────────────────────────────────────
   reset: () => void;
@@ -244,6 +308,7 @@ const initialWsState: Pick<
   | 'mcpStatus'
   | 'codemodeStatus'
   | 'fullContext'
+  | 'monitoringCache'
 > = {
   wsState: 'closed',
   approvals: [],
@@ -253,6 +318,7 @@ const initialWsState: Pick<
   mcpStatus: null,
   codemodeStatus: null,
   fullContext: null,
+  monitoringCache: {},
 };
 
 // ---------------------------------------------------------------------------
@@ -506,6 +572,202 @@ export const agentRuntimeStore = createStore<AgentRuntimeStore>()(
           return true;
         },
 
+        appendLocalTokenTurn: ({
+          serviceName,
+          agentId,
+          timestampMs,
+          promptTokens,
+          completionTokens,
+          totalTokens,
+        }) => {
+          set(state => {
+            const key = getMonitoringCacheKey(serviceName, agentId);
+            const existing = state.monitoringCache[key] ?? {
+              tokenTurns: [],
+              costPoints: [],
+            };
+            const tokenTurns = [...existing.tokenTurns];
+            const lastTurn = tokenTurns[tokenTurns.length - 1];
+            const turnNumber = (lastTurn?.turnNumber ?? 0) + 1;
+
+            tokenTurns.push({
+              turnNumber,
+              timestampMs,
+              systemPromptTokens: 0,
+              toolsDescriptionTokens: 0,
+              userMessageTokens: promptTokens,
+              aiMessageTokens: completionTokens,
+              toolsUsageTokens: 0,
+              totalTokens,
+            });
+
+            return {
+              monitoringCache: {
+                ...state.monitoringCache,
+                [key]: {
+                  ...existing,
+                  tokenTurns,
+                },
+              },
+            };
+          });
+        },
+
+        mergeTokenTurns: ({ serviceName, agentId, turns }) => {
+          if (turns.length === 0) return;
+          set(state => {
+            const key = getMonitoringCacheKey(serviceName, agentId);
+            const existing = state.monitoringCache[key] ?? {
+              tokenTurns: [],
+              costPoints: [],
+            };
+            const byTurn = new Map<number, LocalTokenTurn>();
+            for (const turn of existing.tokenTurns) {
+              byTurn.set(turn.turnNumber, turn);
+            }
+            for (const turn of turns) {
+              byTurn.set(turn.turnNumber, turn);
+            }
+            const tokenTurns = Array.from(byTurn.values()).sort(
+              (a, b) => a.turnNumber - b.turnNumber,
+            );
+            return {
+              monitoringCache: {
+                ...state.monitoringCache,
+                [key]: {
+                  ...existing,
+                  tokenTurns,
+                },
+              },
+            };
+          });
+        },
+
+        appendLocalTokenTurnFull: ({
+          serviceName,
+          agentId,
+          timestampMs,
+          systemPromptTokens,
+          toolsDescriptionTokens,
+          userMessageTokens,
+          aiMessageTokens,
+          toolsUsageTokens,
+          totalTokens,
+        }) => {
+          set(state => {
+            const key = getMonitoringCacheKey(serviceName, agentId);
+            const existing = state.monitoringCache[key] ?? {
+              tokenTurns: [],
+              costPoints: [],
+            };
+            const tokenTurns = [...existing.tokenTurns];
+            const lastTurn = tokenTurns[tokenTurns.length - 1];
+            const turnNumber = (lastTurn?.turnNumber ?? 0) + 1;
+
+            tokenTurns.push({
+              turnNumber,
+              timestampMs,
+              systemPromptTokens,
+              toolsDescriptionTokens,
+              userMessageTokens,
+              aiMessageTokens,
+              toolsUsageTokens,
+              totalTokens,
+            });
+
+            return {
+              monitoringCache: {
+                ...state.monitoringCache,
+                [key]: {
+                  ...existing,
+                  tokenTurns,
+                },
+              },
+            };
+          });
+        },
+
+        upsertLocalCostPoint: ({
+          serviceName,
+          agentId,
+          timestampMs,
+          cumulativeUsd,
+        }) => {
+          set(state => {
+            const key = getMonitoringCacheKey(serviceName, agentId);
+            const existing = state.monitoringCache[key] ?? {
+              tokenTurns: [],
+              costPoints: [],
+            };
+            const costPoints = [...existing.costPoints];
+            const existingIdx = costPoints.findIndex(
+              point => Math.abs(point.timestampMs - timestampMs) < 1,
+            );
+            if (existingIdx >= 0) {
+              costPoints[existingIdx] = {
+                ...costPoints[existingIdx],
+                cumulativeUsd: Math.max(
+                  costPoints[existingIdx].cumulativeUsd,
+                  cumulativeUsd,
+                ),
+              };
+            } else {
+              costPoints.push({ timestampMs, cumulativeUsd });
+            }
+            costPoints.sort((a, b) => a.timestampMs - b.timestampMs);
+            return {
+              monitoringCache: {
+                ...state.monitoringCache,
+                [key]: {
+                  ...existing,
+                  costPoints,
+                },
+              },
+            };
+          });
+        },
+
+        mergeCostPoints: ({ serviceName, agentId, points }) => {
+          if (points.length === 0) return;
+          set(state => {
+            const key = getMonitoringCacheKey(serviceName, agentId);
+            const existing = state.monitoringCache[key] ?? {
+              tokenTurns: [],
+              costPoints: [],
+            };
+            const byTs = new Map<number, LocalCostPoint>();
+            for (const point of existing.costPoints) {
+              byTs.set(point.timestampMs, point);
+            }
+            for (const point of points) {
+              const prev = byTs.get(point.timestampMs);
+              if (!prev) {
+                byTs.set(point.timestampMs, point);
+              } else {
+                byTs.set(point.timestampMs, {
+                  timestampMs: point.timestampMs,
+                  cumulativeUsd: Math.max(
+                    prev.cumulativeUsd,
+                    point.cumulativeUsd,
+                  ),
+                });
+              }
+            }
+            const costPoints = Array.from(byTs.values()).sort(
+              (a, b) => a.timestampMs - b.timestampMs,
+            );
+            return {
+              monitoringCache: {
+                ...state.monitoringCache,
+                [key]: {
+                  ...existing,
+                  costPoints,
+                },
+              },
+            };
+          });
+        },
+
         // ── Reset ─────────────────────────────────────────────────────
         reset: () => {
           _ws = null;
@@ -532,6 +794,7 @@ export const agentRuntimeStore = createStore<AgentRuntimeStore>()(
             documentId: agent.documentId,
             runtimeId: agent.runtimeId,
           })),
+          monitoringCache: state.monitoringCache,
         }),
       },
     ),
