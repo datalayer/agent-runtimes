@@ -237,6 +237,14 @@ export interface ChatBaseProps {
    */
   showTokenUsage?: boolean;
 
+  /**
+   * External context snapshot data for the token usage bar.
+   * When provided, this overrides the built-in useContextSnapshot hook
+   * (which is a no-op since the REST endpoint was removed).
+   * Pass live data received from the monitoring WebSocket.
+   */
+  contextSnapshot?: import('./context').ContextSnapshotData;
+
   /** Show loading indicator */
   showLoadingIndicator?: boolean;
 

@@ -38,6 +38,7 @@ import { CostUsageChart } from '../context/CostUsageChart';
 import { TokenUsageChart } from '../context/TokenUsageChart';
 import { useAIAgentsWebSocket } from '../hooks';
 import type { AgentStreamSnapshotPayload } from '../types/stream';
+import type { ContextSnapshotData } from '../types/context';
 import { parseAgentStreamMessage } from '../types/stream';
 import { useCoreStore } from '@datalayer/core/lib/state';
 
@@ -203,6 +204,9 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
   const [liveContext, setLiveContext] = useState<
     ContextSnapshotResponse | undefined
   >(undefined);
+  const [liveContextSnapshot, setLiveContextSnapshot] = useState<
+    ContextSnapshotData | undefined
+  >(undefined);
   const [liveCost, setLiveCost] = useState<CostUsageResponse | undefined>(
     undefined,
   );
@@ -326,6 +330,9 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
         const payload = stream.payload as unknown as AgentStreamSnapshotPayload;
         if (payload.contextSnapshot) {
           setLiveContext(payload.contextSnapshot as ContextSnapshotResponse);
+          setLiveContextSnapshot(
+            payload.contextSnapshot as ContextSnapshotData,
+          );
           setMonitorLastSnapshotAt(Date.now());
         }
 
@@ -494,6 +501,7 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
               },
             ]}
             submitOnSuggestionClick
+            contextSnapshot={liveContextSnapshot}
           />
         </Box>
 

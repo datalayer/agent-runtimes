@@ -408,6 +408,7 @@ export function Chat({
   frontendTools,
   renderToolResult,
   hideMessagesAfterToolUI = false,
+  contextSnapshot,
 }: ChatProps) {
   const [error, setError] = useState<string | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
@@ -728,6 +729,7 @@ export function Chat({
             frontendTools={frontendTools}
             renderToolResult={renderToolResult}
             hideMessagesAfterToolUI={hideMessagesAfterToolUI}
+            contextSnapshot={contextSnapshot}
           />
         </Box>
       </Box>

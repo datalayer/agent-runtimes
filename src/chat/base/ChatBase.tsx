@@ -227,6 +227,7 @@ function ChatBaseInner({
   historyAuthToken,
   // Pending prompt
   pendingPrompt,
+  contextSnapshot: externalContextSnapshot,
 }: ChatBaseProps) {
   useEffect(() => {
     setupPrimerPortals();
@@ -297,7 +298,7 @@ function ChatBaseInner({
     protocol?.agentId,
     protocol?.authToken,
   );
-  const agentUsage = contextSnapshotQuery.data;
+  const agentUsage = externalContextSnapshot ?? contextSnapshotQuery.data;
   const sandboxStatusQuery = useSandbox(
     Boolean(protocol?.enableConfigQuery) && codemodeEnabled && showHeader,
     protocol?.configEndpoint,
