@@ -5,7 +5,13 @@
 
 /// <reference types="vite/client" />
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Box } from '@datalayer/primer-addons';
 import { ErrorView } from './components';
@@ -29,12 +35,16 @@ import { UserBadge } from '@datalayer/core/lib/views/profile';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
 import { Chat } from '../chat';
+import { useAIAgentsWebSocket } from '../hooks';
+import type { AgentStreamSnapshotPayload } from '../types/stream';
+import { parseAgentStreamMessage } from '../types/stream';
 import type {
   McpAggregateStatus,
   McpServerStatus,
   McpToolsetsStatusResponse,
 } from '../types/mcp';
 import { MCP_STATUS_COLORS, MCP_STATUS_LABELS } from '../types/mcp';
+import { MCP_SERVER_LIBRARY } from '../specs/mcpServers';
 
 const queryClient = new QueryClient();
 const AGENT_NAME = 'mcp-demo-agent';
@@ -157,6 +167,14 @@ const McpServerCard: React.FC<{ server: McpServerInfo }> = ({ server }) => (
   </Box>
 );
 
+/** Tool definition from the WS fullContext.tools array. */
+interface FullContextTool {
+  name: string;
+  description?: string;
+  parametersSchema?: Record<string, unknown>;
+  sourceType?: string;
+}
+
 /* ── Main inner component ─────────────────────────────── */
 
 const AgentMCPInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
@@ -170,8 +188,13 @@ const AgentMCPInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
   const [hookError, setHookError] = useState<string | null>(null);
   const [agentId, setAgentId] = useState<string>(agentName);
   const [isReconnectedAgent, setIsReconnectedAgent] = useState(false);
-  const [mcpServers, setMcpServers] = useState<McpServerInfo[]>([]);
-  const [mcpToolsetsStatus, setMcpToolsetsStatus] = useState<
+
+  // MCP server IDs from the agent creation spec (e.g. ["tavily"])
+  const [selectedServerIds, setSelectedServerIds] = useState<string[]>([]);
+  // Per-agent tool definitions from WS fullContext.tools
+  const [agentTools, setAgentTools] = useState<FullContextTool[]>([]);
+  // WS-provided mcpStatus (global – used as fallback for indicator)
+  const [liveMcpStatus, setLiveMcpStatus] = useState<
     McpToolsetsStatusResponse | undefined
   >(undefined);
 
@@ -268,92 +291,119 @@ const AgentMCPInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
     };
   }, [agentBaseUrl, agentName, authFetch]);
 
-  // ── Poll MCP toolsets status & fetch tools ────────────
+  // ── WebSocket: receive MCP status + fullContext tools from agent.snapshot ─
+  const handleSnapshotMessage = useCallback((message: { raw?: unknown }) => {
+    try {
+      const stream = parseAgentStreamMessage(message?.raw ?? message);
+      if (!stream || stream.type !== 'agent.snapshot') return;
+      const payload = stream.payload as unknown as AgentStreamSnapshotPayload;
+      if (payload.mcpStatus !== undefined) {
+        setLiveMcpStatus(payload.mcpStatus ?? undefined);
+      }
+      // Extract per-agent tool definitions from fullContext.tools
+      const fc = payload.fullContext as Record<string, unknown> | null;
+      if (fc && Array.isArray(fc.tools) && fc.tools.length > 0) {
+        setAgentTools(fc.tools as FullContextTool[]);
+      }
+    } catch {
+      // Ignore malformed payloads.
+    }
+  }, []);
+
+  useAIAgentsWebSocket({
+    enabled: isReady && Boolean(agentBaseUrl),
+    baseUrl: agentBaseUrl,
+    path: '/api/v1/tool-approvals/ws',
+    queryParams: { agent_id: agentId },
+    onMessage: handleSnapshotMessage,
+    reconnectDelayMs: attempt =>
+      Math.min(1000 * 2 ** Math.max(0, attempt - 1), 10000),
+  });
+
+  // ── Fetch creation spec to get selected MCP server IDs ──
   useEffect(() => {
     if (!isReady) return;
 
-    let isCancelled = false;
-    let pollTimer: ReturnType<typeof setTimeout>;
-
-    const fetchMcpStatus = async () => {
+    const fetchSpec = async () => {
       try {
-        // Get the toolsets status (lightweight – has tools_count per server)
-        const statusRes = await authFetch(
-          `${agentBaseUrl}/api/v1/configure/mcp-toolsets-status`,
+        const res = await authFetch(
+          `${agentBaseUrl}/api/v1/configure/agents/${agentId}/spec`,
         );
-        if (!statusRes.ok) return;
-        const status: McpToolsetsStatusResponse = await statusRes.json();
-        if (!isCancelled) {
-          setMcpToolsetsStatus(status);
-        }
-
-        // Fetch detailed server info including tools
-        const availRes = await authFetch(
-          `${agentBaseUrl}/api/v1/mcp/servers/available`,
-        );
-        if (!availRes.ok) return;
-        const availableServers: Array<{
+        if (!res.ok) return;
+        const spec: Record<string, unknown> = await res.json();
+        const servers = (spec?.selected_mcp_servers ?? []) as Array<{
           id: string;
-          name: string;
-          description?: string;
-          emoji?: string;
-          icon?: string;
-          tools?: Array<{
-            name: string;
-            description?: string;
-            inputSchema?: Record<string, unknown>;
-          }>;
-          isRunning?: boolean;
-        }> = await availRes.json();
-
-        if (isCancelled) return;
-
-        // Build McpServerInfo+McpToolInfo from the status and available data
-        const serverMap = new Map(status.servers.map(s => [s.id, s]));
-        const infos: McpServerInfo[] = availableServers
-          .filter(s => s.isRunning)
-          .map(s => {
-            const st = serverMap.get(s.id);
-            const tools: McpToolInfo[] = (s.tools ?? []).map(t => ({
-              name: t.name,
-              description: t.description,
-              serverId: s.id,
-              serverName: s.name,
-              inputSchema: t.inputSchema,
-            }));
-            return {
-              id: s.id,
-              name: s.name,
-              description: s.description,
-              status: st?.status ?? 'started',
-              toolsCount: st?.tools_count ?? tools.length,
-              tools,
-              emoji: s.emoji,
-              icon: s.icon,
-            };
-          });
-
-        setMcpServers(infos);
+          origin?: string;
+        }>;
+        setSelectedServerIds(servers.map(s => s.id));
       } catch {
         // Non-fatal: sidebar info is informational
       }
-
-      // Re-poll until all servers are started (or component unmounts)
-      if (!isCancelled) {
-        pollTimer = setTimeout(fetchMcpStatus, 5000);
-      }
     };
 
-    void fetchMcpStatus();
-
-    return () => {
-      isCancelled = true;
-      clearTimeout(pollTimer);
-    };
+    void fetchSpec();
   }, [isReady, agentId, agentBaseUrl, authFetch]);
 
+  // ── Build McpServerInfo[] from selected servers + catalog + WS tools ──
+  const mcpServers = useMemo<McpServerInfo[]>(() => {
+    if (selectedServerIds.length === 0) return [];
+
+    return selectedServerIds.map(serverId => {
+      const catalogServer = MCP_SERVER_LIBRARY[serverId];
+      const serverName = catalogServer?.name ?? serverId;
+
+      // Match tools by prefix convention: "tavily__tavily_search" → server "tavily"
+      const serverTools: McpToolInfo[] = agentTools
+        .filter(t => t.name.startsWith(`${serverId}__`))
+        .map(t => ({
+          name: t.name,
+          description: t.description,
+          serverId,
+          serverName,
+          inputSchema: t.parametersSchema,
+        }));
+
+      return {
+        id: serverId,
+        name: serverName,
+        description: catalogServer?.description,
+        status: serverTools.length > 0 ? 'started' : 'starting',
+        toolsCount: serverTools.length,
+        tools: serverTools,
+        emoji: catalogServer?.emoji,
+        icon: catalogServer?.icon,
+      };
+    });
+  }, [selectedServerIds, agentTools]);
+
+  // ── Build synthetic McpToolsetsStatusResponse for the Chat MCP indicator ──
+  const mcpStatusData = useMemo<McpToolsetsStatusResponse | undefined>(() => {
+    // If the WS-provided global mcpStatus has actual servers, prefer it
+    if (liveMcpStatus && liveMcpStatus.servers.length > 0) {
+      return liveMcpStatus;
+    }
+    // Otherwise build from our per-agent derived info
+    if (mcpServers.length === 0) return undefined;
+    const servers: McpServerStatus[] = mcpServers.map(s => ({
+      id: s.id,
+      status: s.status as McpServerStatus['status'],
+      tools_count: s.toolsCount,
+    }));
+    const readyServers = servers
+      .filter(s => s.status === 'started')
+      .map(s => s.id);
+    return {
+      initialized: true,
+      ready_count: readyServers.length,
+      failed_count: servers.filter(s => s.status === 'failed').length,
+      ready_servers: readyServers,
+      failed_servers: {},
+      servers,
+    };
+  }, [liveMcpStatus, mcpServers]);
+
   const totalTools = mcpServers.reduce((sum, s) => sum + s.tools.length, 0);
-  const aggregate = deriveAggregate(mcpToolsetsStatus?.servers ?? []);
+  const aggregate = deriveAggregate(mcpStatusData?.servers ?? []);
 
   if (!isReady && runtimeStatus !== 'error') {
     return (
@@ -417,7 +467,7 @@ const AgentMCPInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
             height="100%"
             runtimeId={agentId}
             historyEndpoint={`${agentBaseUrl}/api/v1/history`}
-            mcpStatusData={mcpToolsetsStatus}
+            mcpStatusData={mcpStatusData}
             headerActions={
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                 <Text sx={{ color: 'fg.muted', fontSize: 1 }}>
