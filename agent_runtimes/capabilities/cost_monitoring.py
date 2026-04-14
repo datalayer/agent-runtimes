@@ -57,7 +57,9 @@ class CostMonitoringCapability(AbstractCapability[Any]):
 
         emitter = self._emitters.get(user_uid)
         if emitter is None:
-            emitter = OTelEmitter(service_name=self.service_name, user_uid=user_uid, token=user_jwt)
+            emitter = OTelEmitter(
+                service_name=self.service_name, user_uid=user_uid, token=user_jwt
+            )
             self._emitters[user_uid] = emitter
         return emitter
 
