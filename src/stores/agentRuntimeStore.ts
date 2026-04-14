@@ -148,6 +148,7 @@ export interface AgentRuntimeStoreActions {
     approved: boolean,
     note?: string,
   ) => boolean;
+  requestRefresh: () => boolean;
 
   // ─── Reset ───────────────────────────────────────────────────────
   reset: () => void;
@@ -493,6 +494,15 @@ export const agentRuntimeStore = createStore<AgentRuntimeStore>()(
               ...(note ? { note } : {}),
             }),
           );
+          return true;
+        },
+
+        requestRefresh: () => {
+          if (!_ws || _ws.readyState !== WebSocket.OPEN) {
+            return false;
+          }
+          _ws.send(JSON.stringify({ type: 'request_snapshot' }));
+          _ws.send(JSON.stringify({ type: 'request_otel_flush' }));
           return true;
         },
 

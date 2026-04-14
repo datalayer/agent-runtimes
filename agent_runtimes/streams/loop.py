@@ -16,6 +16,9 @@ import json
 import logging
 from typing import Any, Awaitable, Callable
 
+import os
+
+import httpx
 from fastapi import WebSocket, WebSocketDisconnect
 
 from agent_runtimes.context.costs import get_cost_store
@@ -230,6 +233,32 @@ async def publish_stream_event(
     enqueue_stream_message(agent_id, snapshot)
 
 
+# ─── OTEL flush helper ────────────────────────────────────────────────
+
+
+async def _flush_otel_service() -> None:
+    """Ask the OTEL service to flush its buffers so WS subscribers get fresh data."""
+    run_url = (
+        os.environ.get("DATALAYER_RUN_URL")
+        or os.environ.get("DATALAYER_OTEL_RUN_URL")
+        or "https://prod1.datalayer.run"
+    )
+    flush_url = f"{run_url.rstrip('/')}/api/otel/v1/flush"
+    token = os.environ.get("DATALAYER_TOKEN") or os.environ.get("DATALAYER_API_KEY")
+    try:
+        headers: dict[str, str] = {}
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            resp = await client.post(
+                flush_url,
+                headers=headers,
+            )
+            logger.debug("[otel:flush] status=%d url=%s", resp.status_code, flush_url)
+    except Exception as exc:
+        logger.debug("[otel:flush] failed: %s", exc)
+
+
 # ─── WebSocket stream loop ───────────────────────────────────────────
 
 
@@ -300,12 +329,14 @@ async def stream_loop(
                     logger.debug(
                         "[ws:recv] agent_id=%s raw=%s", agent_id, raw_text[:200]
                     )
-                    if decide_approval is not None:
-                        try:
-                            payload = json.loads(raw_text)
+                    try:
+                        payload = json.loads(raw_text)
+                        if isinstance(payload, dict):
+                            msg_type = payload.get("type")
+
                             if (
-                                isinstance(payload, dict)
-                                and payload.get("type") == "tool_approval_decision"
+                                msg_type == "tool_approval_decision"
+                                and decide_approval is not None
                             ):
                                 approval_id = payload.get("approvalId")
                                 approved = payload.get("approved")
@@ -318,10 +349,33 @@ async def stream_loop(
                                         approved,
                                         note if isinstance(note, str) else None,
                                     )
-                        except Exception as exc:
-                            logger.debug(
-                                "[ws:recv] ignored client message error: %s", exc
-                            )
+
+                            elif msg_type == "request_snapshot":
+                                fresh = (
+                                    await build_monitoring_snapshot_payload(
+                                        agent_id,
+                                        list_approvals=list_approvals,
+                                    )
+                                ).model_dump(by_alias=True)
+                                last_snapshot = fresh
+                                snap_msg = AgentStreamMessage.create(
+                                    type="agent.snapshot",
+                                    payload=fresh,
+                                    agent_id=agent_id,
+                                ).model_dump(by_alias=True)
+                                await websocket.send_json(snap_msg)
+                                logger.debug(
+                                    "[ws:send] type=agent.snapshot (requested) agent_id=%s",
+                                    agent_id,
+                                )
+
+                            elif msg_type == "request_otel_flush":
+                                await _flush_otel_service()
+
+                    except Exception as exc:
+                        logger.debug(
+                            "[ws:recv] ignored client message error: %s", exc
+                        )
 
                 if msg_task in done:
                     message = msg_task.result()

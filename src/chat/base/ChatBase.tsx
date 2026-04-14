@@ -61,6 +61,7 @@ import {
   useSandbox,
 } from '../../hooks';
 import { useAgentRuntimeWebSocket } from '../../hooks/useAgentRuntimes';
+import { useAgentRuntimeStore } from '../../stores/agentRuntimeStore';
 import { ChatBaseHeader } from '../header/ChatHeaderBase';
 import { ChatEmptyState } from '../display/EmptyState';
 import { PoweredByTag } from '../display/PoweredByTag';
@@ -1091,6 +1092,7 @@ function ChatBaseInner({
           pendingToolExecutionsRef.current = 0;
           setIsLoading(false);
           setIsStreaming(false);
+          useAgentRuntimeStore.getState().requestRefresh();
           break;
 
         case 'error':
@@ -1144,6 +1146,7 @@ function ChatBaseInner({
           pendingToolExecutionsRef.current = 0;
           setIsLoading(false);
           setIsStreaming(false);
+          useAgentRuntimeStore.getState().requestRefresh();
           break;
       }
     });
@@ -1377,6 +1380,7 @@ function ChatBaseInner({
         if (!adapterRef.current) {
           setIsLoading(false);
           setIsStreaming(false);
+          useAgentRuntimeStore.getState().requestRefresh();
         }
         suppressAssistantTextForToolOnlyRef.current = false;
         currentAssistantMessageRef.current = null;
@@ -1480,6 +1484,7 @@ function ChatBaseInner({
     pendingToolExecutionsRef.current = 0;
     setIsLoading(false);
     setIsStreaming(false);
+    useAgentRuntimeStore.getState().requestRefresh();
     suppressAssistantTextForToolOnlyRef.current = false;
     currentAssistantMessageRef.current = null;
 
