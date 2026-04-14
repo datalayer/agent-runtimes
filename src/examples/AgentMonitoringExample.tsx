@@ -523,7 +523,7 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
             }}
           >
             <Heading as="h4" sx={{ fontSize: 1, mb: 2 }}>
-              Token Usage (7d)
+              Token Usage
             </Heading>
             <TokenUsageChart
               serviceName={otelServiceName}

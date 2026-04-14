@@ -354,6 +354,8 @@ export function CostUsageChart({
       },
       xAxis: {
         type: 'time' as const,
+        min: 'dataMin',
+        max: 'dataMax',
         axisLabel: { fontSize: 9 },
         axisLine: { lineStyle: { color: '#d0d7de' } },
       },
