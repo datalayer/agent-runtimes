@@ -291,6 +291,7 @@ export function TokenUsageChart({
     [agentId, monitoringCache, serviceName],
   );
   const [turns, setTurns] = useState<TurnPoint[]>([]);
+  const initialTimestampMsRef = useRef<number>(Date.now());
   const cumulativeRef = useRef<CumulativeSnapshot>({
     completions: 0,
     values: emptyValues(),
@@ -300,6 +301,7 @@ export function TokenUsageChart({
   useEffect(() => {
     if (!serviceName) {
       setTurns([]);
+      initialTimestampMsRef.current = Date.now();
       cumulativeRef.current = { completions: 0, values: emptyValues() };
       return;
     }
@@ -308,6 +310,7 @@ export function TokenUsageChart({
       localTokenTurnToPoint,
     );
     setTurns(hydratedTurns);
+    initialTimestampMsRef.current = Date.now();
 
     const latestTurn = hydratedTurns[hydratedTurns.length - 1];
     cumulativeRef.current = latestTurn
@@ -447,7 +450,13 @@ export function TokenUsageChart({
         areaStyle: { opacity: 0.15 },
         symbol: 'circle',
         symbolSize: 4,
-        data: turns.map(t => [t.timestampMs, t.values[item.label]]),
+        data:
+          turns.length > 0
+            ? [
+                [turns[0].timestampMs, 0],
+                ...turns.map(t => [t.timestampMs, t.values[item.label]]),
+              ]
+            : [[initialTimestampMsRef.current, 0]],
       })),
       color: ['#2da44e', '#0969da', '#8250df', '#bf8700', '#cf222e'],
     };

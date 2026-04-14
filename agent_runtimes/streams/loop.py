@@ -14,9 +14,8 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-from typing import Any, Awaitable, Callable
-
 import os
+from typing import Any, Awaitable, Callable
 
 import httpx
 from fastapi import WebSocket, WebSocketDisconnect
@@ -387,12 +386,10 @@ async def stream_loop(
                                 )
 
                             elif msg_type == "request_otel_flush":
-                                    await _flush_otel_service(websocket_user_jwt_token)
+                                await _flush_otel_service(websocket_user_jwt_token)
 
                     except Exception as exc:
-                        logger.debug(
-                            "[ws:recv] ignored client message error: %s", exc
-                        )
+                        logger.debug("[ws:recv] ignored client message error: %s", exc)
 
                 if msg_task in done:
                     message = msg_task.result()
