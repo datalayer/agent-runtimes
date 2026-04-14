@@ -22,6 +22,7 @@ import os
 import traceback
 from typing import TYPE_CHECKING, Any, AsyncIterator
 
+import httpx
 from pydantic_ai import UsageLimits
 from starlette.requests import Request
 from starlette.responses import Response, StreamingResponse
@@ -74,6 +75,8 @@ async def _wrap_streaming_body_with_approvals(
     body_iterator: AsyncIterator[str],
     approval_tool_ids: list[str],
     agent_id: str,
+    user_jwt_token: str | None = None,
+    pod_name: str | None = None,
 ) -> AsyncIterator[str]:
     """Wrap a streaming body to create local approval records for deferred tools.
 
@@ -85,7 +88,11 @@ async def _wrap_streaming_body_with_approvals(
     """
     import json as json_mod
 
-    from ..routes.tool_approvals import ToolApprovalCreateRequest, _create_approval
+    from ..routes.tool_approvals import (
+        ToolApprovalCreateRequest,
+        _create_approval,
+        mirror_approval_to_local,
+    )
 
     # Build name variants for matching (underscore / hyphen normalisation)
     approval_names: set[str] = set()
@@ -94,11 +101,59 @@ async def _wrap_streaming_body_with_approvals(
         approval_names.add(tid.replace("-", "_"))
         approval_names.add(tid.replace("_", "-"))
     created_tool_call_ids: set[str] = set()
+    remote_created_tool_call_ids: set[str] = set()
+
+    async def create_remote_approval_if_possible(
+        *,
+        tool_name: str,
+        tool_args: dict[str, Any],
+        tool_call_id: str,
+    ) -> None:
+        if not user_jwt_token or not tool_call_id:
+            return
+        if tool_call_id in remote_created_tool_call_ids:
+            return
+        try:
+            from datalayer_core.utils.urls import DatalayerURLs
+
+            urls = DatalayerURLs.from_environment()
+            ai_agents_url = urls.ai_agents_url.rstrip("/")
+            async with httpx.AsyncClient(
+                base_url=ai_agents_url,
+                headers={"Authorization": f"Bearer {user_jwt_token}"},
+                timeout=10.0,
+            ) as client:
+                resp = await client.post(
+                    "/api/ai-agents/v1/tool-approvals",
+                    json={
+                        "agent_id": agent_id,
+                        "pod_name": pod_name or "",
+                        "tool_name": tool_name,
+                        "tool_args": tool_args,
+                        "tool_call_id": tool_call_id,
+                    },
+                )
+                resp.raise_for_status()
+            remote_created_tool_call_ids.add(tool_call_id)
+            logger.info(
+                "[Vercel AI] Created remote ai-agents approval for tool_call_id=%s tool='%s'",
+                tool_call_id,
+                tool_name,
+            )
+        except Exception as remote_err:
+            logger.debug(
+                "[Vercel AI] Could not create remote ai-agents approval for tool_call_id=%s: %s",
+                tool_call_id,
+                remote_err,
+            )
 
     try:
         async for chunk in body_iterator:
             # Fast path: skip parsing when not relevant
-            if "tool-input-available" in chunk:
+            if (
+                "tool-input-available" in chunk
+                or "tool-approval-request" in chunk
+            ):
                 try:
                     for line in chunk.strip().split("\n"):
                         if not line.startswith("data: "):
@@ -107,7 +162,11 @@ async def _wrap_streaming_body_with_approvals(
                         if data_str == "[DONE]":
                             continue
                         event = json_mod.loads(data_str)
-                        if event.get("type") != "tool-input-available":
+                        event_type = event.get("type")
+                        if event_type not in (
+                            "tool-input-available",
+                            "tool-approval-request",
+                        ):
                             continue
                         tool_call_id = (
                             event.get("toolCallId")
@@ -117,23 +176,63 @@ async def _wrap_streaming_body_with_approvals(
                         )
                         if tool_call_id and tool_call_id in created_tool_call_ids:
                             continue
-                        tool_name = event.get("toolName", "")
-                        # Check all normalised variants
-                        variants = {
-                            tool_name,
-                            tool_name.replace("-", "_"),
-                            tool_name.replace("_", "-"),
-                        }
-                        if not variants & approval_names:
-                            continue
-                        tool_args = event.get("input", {})
-                        req = ToolApprovalCreateRequest(
-                            agent_id=agent_id,
-                            tool_name=tool_name,
-                            tool_args=tool_args if isinstance(tool_args, dict) else {},
-                            tool_call_id=tool_call_id or None,
+                        tool_name = (
+                            event.get("toolName")
+                            or event.get("tool_name")
+                            or ""
                         )
-                        record = await _create_approval(req)
+                        # For legacy tool-input-available events, keep approval tool filtering.
+                        if event_type == "tool-input-available":
+                            variants = {
+                                tool_name,
+                                tool_name.replace("-", "_"),
+                                tool_name.replace("_", "-"),
+                            }
+                            if not variants & approval_names:
+                                continue
+                        tool_args = (
+                            event.get("input")
+                            or event.get("toolArgs")
+                            or event.get("tool_args")
+                            or {}
+                        )
+                        normalized_tool_args = (
+                            tool_args if isinstance(tool_args, dict) else {}
+                        )
+
+                        # Best-effort remote sync so server-mode panels backed by
+                        # ai-agents can display pending approvals.
+                        if tool_call_id:
+                            await create_remote_approval_if_possible(
+                                tool_name=tool_name,
+                                tool_args=normalized_tool_args,
+                                tool_call_id=tool_call_id,
+                            )
+
+                        # If the stream already provides an approval ID, mirror it
+                        # so local state uses the same identifier as the protocol.
+                        approval_id = (
+                            event.get("approvalId") or event.get("approval_id") or ""
+                        )
+                        if isinstance(approval_id, str) and approval_id:
+                            record = await mirror_approval_to_local(
+                                {
+                                    "id": approval_id,
+                                    "agent_id": agent_id,
+                                    "tool_name": tool_name,
+                                    "tool_args": normalized_tool_args,
+                                    "tool_call_id": tool_call_id or None,
+                                    "status": "pending",
+                                }
+                            )
+                        else:
+                            req = ToolApprovalCreateRequest(
+                                agent_id=agent_id,
+                                tool_name=tool_name,
+                                tool_args=normalized_tool_args,
+                                tool_call_id=tool_call_id or None,
+                            )
+                            record = await _create_approval(req)
                         if tool_call_id:
                             created_tool_call_ids.add(tool_call_id)
                         logger.info(
@@ -725,6 +824,8 @@ class VercelAITransport(BaseTransport):
                             original_body,
                             self._approval_tool_ids,
                             self._agent_id,
+                            metric_user_jwt_token,
+                            os.environ.get("POD_NAME"),
                         )
                         logger.debug(
                             "[Vercel AI] Wrapped StreamingResponse with approval-record creation"

@@ -1462,12 +1462,14 @@ def _emit_initial_otel_baseline(agent_id: str, http_request: Request) -> None:
     """
     try:
         from ..observability.prompt_turn_metrics import (
+            decode_user_uid,
             extract_bearer_token,
             record_prompt_turn_completion,
         )
 
         auth_header = http_request.headers.get("Authorization", "")
         user_jwt = extract_bearer_token(auth_header)
+        user_uid = decode_user_uid(user_jwt)
 
         # 0-value prompt-turn metrics (establishes the baseline for token chart)
         record_prompt_turn_completion(
@@ -1493,27 +1495,36 @@ def _emit_initial_otel_baseline(agent_id: str, http_request: Request) -> None:
             OTelEmitter = None
 
         if OTelEmitter is not None:
-            emitter = OTelEmitter(service_name="agent-runtimes")
-            if emitter.enabled:
-                attrs = {
-                    "agent.id": agent_id,
-                    "agent.model": "none",
-                    "gen_ai.usage.input_tokens": 0,
-                    "gen_ai.usage.output_tokens": 0,
-                    "gen_ai.usage.total_tokens": 0,
-                    "gen_ai.usage.cost_usd": 0.0,
-                    "agent.cost.cumulative_usd": 0.0,
-                }
-                emitter.add_counter(
-                    "agent_runtimes.capability.cost.run.count", 0, attrs
+            if not user_uid:
+                logger.debug(
+                    "Skipping initial OTEL baseline cost emission for '%s': missing user_uid",
+                    agent_id,
                 )
-                emitter.add_counter(
-                    "agent_runtimes.capability.cost.run.usd", 0.0, attrs
+            else:
+                emitter = OTelEmitter(
+                    service_name="agent-runtimes",
+                    user_uid=user_uid,
                 )
-                with emitter.span(
-                    "agent_runtimes.capability.cost.run", attributes=attrs
-                ):
-                    pass
+                if emitter.enabled:
+                    attrs = {
+                        "agent.id": agent_id,
+                        "agent.model": "none",
+                        "gen_ai.usage.input_tokens": 0,
+                        "gen_ai.usage.output_tokens": 0,
+                        "gen_ai.usage.total_tokens": 0,
+                        "gen_ai.usage.cost_usd": 0.0,
+                        "agent.cost.cumulative_usd": 0.0,
+                    }
+                    emitter.add_counter(
+                        "agent_runtimes.capability.cost.run.count", 0, attrs
+                    )
+                    emitter.add_counter(
+                        "agent_runtimes.capability.cost.run.usd", 0.0, attrs
+                    )
+                    with emitter.span(
+                        "agent_runtimes.capability.cost.run", attributes=attrs
+                    ):
+                        pass
 
         logger.info(f"Emitted initial OTEL baseline for agent '{agent_id}'")
     except Exception as exc:  # noqa: BLE001

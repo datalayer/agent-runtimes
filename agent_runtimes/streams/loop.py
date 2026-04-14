@@ -13,7 +13,8 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Any
+import json
+from typing import Any, Awaitable, Callable
 
 from fastapi import WebSocket, WebSocketDisconnect
 
@@ -236,6 +237,7 @@ async def stream_loop(
     agent_id: str | None,
     *,
     list_approvals: Any | None = None,
+    decide_approval: Callable[[str, bool, str | None], Awaitable[Any]] | None = None,
 ) -> None:
     """Run the main WebSocket stream loop.
 
@@ -297,6 +299,28 @@ async def stream_loop(
                     logger.debug(
                         "[ws:recv] agent_id=%s raw=%s", agent_id, raw_text[:200]
                     )
+                    if decide_approval is not None:
+                        try:
+                            payload = json.loads(raw_text)
+                            if (
+                                isinstance(payload, dict)
+                                and payload.get("type") == "tool_approval_decision"
+                            ):
+                                approval_id = payload.get("approvalId")
+                                approved = payload.get("approved")
+                                note = payload.get("note")
+                                if isinstance(approval_id, str) and isinstance(
+                                    approved, bool
+                                ):
+                                    await decide_approval(
+                                        approval_id,
+                                        approved,
+                                        note if isinstance(note, str) else None,
+                                    )
+                        except Exception as exc:
+                            logger.debug(
+                                "[ws:recv] ignored client message error: %s", exc
+                            )
 
                 if msg_task in done:
                     message = msg_task.result()

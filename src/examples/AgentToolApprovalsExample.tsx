@@ -38,6 +38,11 @@ import {
   ToolApprovalDialog,
   type PendingApproval,
 } from '../chat/tools';
+import {
+  parseAgentStreamMessage,
+  type AgentStreamSnapshotPayload,
+  type AgentStreamToolApprovalPayload,
+} from '../types/stream';
 
 const normalizeToolName = (value: string): string =>
   value.replace(/[-_]/g, '').toLowerCase();
@@ -140,18 +145,24 @@ interface ToolApprovalRequest {
   id: string;
   tool_name: string;
   tool_args?: Record<string, unknown>;
+  tool_call_id?: string;
   note?: string;
   created_at?: string;
   status?: string;
   agent_id?: string;
-  backendBaseUrl?: string;
-  apiPrefix?: string;
 }
 
 const approvalSignature = (
   toolName: string,
   args: Record<string, unknown>,
 ): string => `${normalizeToolName(toolName)}::${stableStringify(args ?? {})}`;
+
+type ApprovalWsDecisionMessage = {
+  type: 'tool_approval_decision';
+  approvalId: string;
+  approved: boolean;
+  note?: string;
+};
 
 const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
   onLogout,
@@ -190,6 +201,7 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
   );
 
   const createdApprovalSignatures = useRef<Set<string>>(new Set());
+  const approvalWsRef = useRef<WebSocket | null>(null);
   const toolRespondersRef = useRef<
     Map<
       string,
@@ -201,15 +213,6 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
     >
   >(new Map());
   const respondedToolCallsRef = useRef<Set<string>>(new Set());
-  const resolveLocalRef = useRef<
-    (
-      toolName: string,
-      toolArgs: Record<string, unknown>,
-    ) => Promise<ToolApprovalRequest | null>
-  >(async () => null);
-  const authFetchRef = useRef<
-    (url: string, opts?: RequestInit) => Promise<Response>
-  >((url, opts) => fetch(url, opts));
   const chatAuthToken: string | undefined = token === null ? undefined : token;
   const configuredAiAgentsBaseUrl = useCoreStore(
     (s: any) => s.configuration?.aiagentsRunUrl,
@@ -268,6 +271,38 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
       return true;
     },
     [],
+  );
+
+  const toApprovalRequest = useCallback(
+    (payload: AgentStreamToolApprovalPayload): ToolApprovalRequest => ({
+      id: payload.id,
+      tool_name: payload.tool_name,
+      tool_args: payload.tool_args,
+      tool_call_id:
+        typeof payload.tool_args?.tool_call_id === 'string'
+          ? payload.tool_args.tool_call_id
+          : undefined,
+      note: payload.note ?? undefined,
+      created_at: payload.created_at,
+      status: payload.status,
+      agent_id: payload.agent_id,
+    }),
+    [],
+  );
+
+  const isApprovalForActiveAgent = useCallback(
+    (approval: ToolApprovalRequest): boolean => {
+      if (!approval.agent_id) {
+        return true;
+      }
+      if (approval.agent_id === agentId) {
+        return true;
+      }
+      // Server mode can stream agent identifiers that do not match the local
+      // runtime id format, so do not drop pending approvals in that mode.
+      return mode === 'server';
+    },
+    [agentId, mode],
   );
 
   useEffect(() => {
@@ -346,131 +381,24 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
     };
   }, [agentBaseUrl, authFetch, agentName, selectedSpecId]);
 
-  const pollApprovals = useCallback(async () => {
+  useEffect(() => {
+    setApprovals([]);
+    setLocalApprovals([]);
+  }, [agentId, mode]);
+
+  useEffect(() => {
     if (!isReady) {
-      return;
-    }
-
-    const fetchPendingApprovals = async (
-      baseUrl: string,
-      apiPrefix: string,
-    ): Promise<ToolApprovalRequest[]> => {
-      const res = await authFetch(`${baseUrl}${apiPrefix}`);
-      if (!res.ok) {
-        return [];
-      }
-      const data = await res.json();
-      const allApprovals = Array.isArray(data)
-        ? data
-        : (data.approvals ?? data.requests ?? []);
-      return allApprovals
-        .filter(
-          (approval: ToolApprovalRequest) =>
-            approval.status === 'pending' &&
-            (approval.agent_id === agentId || !approval.agent_id),
-        )
-        .map((approval: ToolApprovalRequest) => ({
-          ...approval,
-          backendBaseUrl: baseUrl,
-          apiPrefix,
-        }));
-    };
-
-    const source =
-      mode === 'server'
-        ? {
-            baseUrl: aiAgentsBaseUrl,
-            apiPrefix: `${AI_AGENTS_API_PREFIX}/tool-approvals`,
-          }
-        : { baseUrl: agentBaseUrl, apiPrefix: '/api/v1/tool-approvals' };
-
-    try {
-      const localPending = await fetchPendingApprovals(
-        agentBaseUrl,
-        '/api/v1/tool-approvals',
-      );
-      setLocalApprovals(localPending);
-
-      const pendingForAgent = await fetchPendingApprovals(
-        source.baseUrl,
-        source.apiPrefix,
-      );
-
-      setApprovals(pendingForAgent);
-    } catch (error) {
-      if (mode === 'server') {
-        setApprovalError(
-          error instanceof Error
-            ? error.message
-            : 'Failed to fetch server approvals',
-        );
-      }
-    }
-  }, [isReady, mode, aiAgentsBaseUrl, agentBaseUrl, agentId, authFetch]);
-
-  const resolveLocalApprovalForTool = useCallback(
-    async (
-      toolName: string,
-      toolArgs: Record<string, unknown>,
-    ): Promise<ToolApprovalRequest | null> => {
-      const signature = approvalSignature(toolName, toolArgs);
-      const matchFromState = localApprovals.find(
-        approval =>
-          approvalSignature(approval.tool_name, approval.tool_args ?? {}) ===
-          signature,
-      );
-      if (matchFromState) {
-        return matchFromState;
-      }
-
-      const res = await authFetch(`${agentBaseUrl}/api/v1/tool-approvals`);
-      if (!res.ok) {
-        return null;
-      }
-      const data = await res.json();
-      const allApprovals = Array.isArray(data)
-        ? data
-        : (data.approvals ?? data.requests ?? []);
-      const pendingLocal = allApprovals
-        .filter(
-          (approval: ToolApprovalRequest) =>
-            approval.status === 'pending' &&
-            (approval.agent_id === agentId || !approval.agent_id),
-        )
-        .map((approval: ToolApprovalRequest) => ({
-          ...approval,
-          backendBaseUrl: agentBaseUrl,
-          apiPrefix: '/api/v1/tool-approvals',
-        }));
-      setLocalApprovals(pendingLocal);
-      return (
-        pendingLocal.find(
-          approval =>
-            approvalSignature(approval.tool_name, approval.tool_args ?? {}) ===
-            signature,
-        ) || null
-      );
-    },
-    [localApprovals, authFetch, agentBaseUrl, agentId],
-  );
-
-  useEffect(() => {
-    void pollApprovals();
-    const interval = setInterval(pollApprovals, 5000);
-    return () => clearInterval(interval);
-  }, [pollApprovals]);
-
-  useEffect(() => {
-    if (!isReady || mode !== 'server') {
       setWsState('closed');
       return;
     }
 
-    const wsUrl = toWsUrl(
-      aiAgentsBaseUrl,
-      `${AI_AGENTS_API_PREFIX}/ws`,
-      chatAuthToken,
-    );
+    const wsSourceBaseUrl = mode === 'server' ? aiAgentsBaseUrl : agentBaseUrl;
+    const wsPath =
+      mode === 'server'
+        ? `${AI_AGENTS_API_PREFIX}/ws`
+        : '/api/v1/tool-approvals/ws';
+
+    const wsUrl = toWsUrl(wsSourceBaseUrl, wsPath, chatAuthToken);
     if (!wsUrl) {
       setWsState('closed');
       return;
@@ -479,78 +407,75 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
     let closedByCleanup = false;
     setWsState('connecting');
     const ws = new WebSocket(wsUrl);
+    approvalWsRef.current = ws;
 
     ws.onopen = () => {
       setWsState('connected');
-      void pollApprovals();
     };
 
     ws.onmessage = event => {
       try {
-        const payload = JSON.parse(String(event.data));
-        const wsEvent = payload?.event as string | undefined;
-        const approval = payload?.data as ToolApprovalRequest | undefined;
-        if (!wsEvent || !approval) {
+        const stream = parseAgentStreamMessage(JSON.parse(String(event.data)));
+        if (!stream) {
           return;
         }
 
-        if (wsEvent === 'tool_approval_created') {
+        if (stream.type === 'agent.snapshot') {
+          const payload = stream.payload as AgentStreamSnapshotPayload;
+          const snapshotApprovals = (payload.approvals ?? [])
+            .filter(
+              approval =>
+                approval.status === 'pending' &&
+                isApprovalForActiveAgent(toApprovalRequest(approval)),
+            )
+            .map(toApprovalRequest);
+          setApprovals(snapshotApprovals);
+          setLocalApprovals(snapshotApprovals);
+          return;
+        }
+
+        if (stream.type === 'tool_approval_created') {
+          const approval = toApprovalRequest(
+            stream.payload as AgentStreamToolApprovalPayload,
+          );
           if (
             approval.status !== 'pending' ||
-            (approval.agent_id && approval.agent_id !== agentId)
+            !isApprovalForActiveAgent(approval)
           ) {
             return;
           }
           setApprovals(prev => {
             const next = prev.filter(item => item.id !== approval.id);
-            next.unshift({
-              ...approval,
-              backendBaseUrl: aiAgentsBaseUrl,
-              apiPrefix: `${AI_AGENTS_API_PREFIX}/tool-approvals`,
-            });
+            next.unshift(approval);
+            return next;
+          });
+          setLocalApprovals(prev => {
+            const next = prev.filter(item => item.id !== approval.id);
+            next.unshift(approval);
             return next;
           });
           return;
         }
 
         if (
-          wsEvent === 'tool_approval_approved' ||
-          wsEvent === 'tool_approval_rejected'
+          stream.type === 'tool_approval_approved' ||
+          stream.type === 'tool_approval_rejected'
         ) {
-          // Remove from the server approval queue.
+          const approval = toApprovalRequest(
+            stream.payload as AgentStreamToolApprovalPayload,
+          );
+
           setApprovals(prev => prev.filter(item => item.id !== approval.id));
-
-          // Bridge the decision to the local agent-runtimes approval.
-          const action =
-            wsEvent === 'tool_approval_approved' ? 'approve' : 'reject';
-          void (async () => {
-            try {
-              const approved = wsEvent === 'tool_approval_approved';
-              emitServerToolDecision(
-                approval.tool_name,
-                approval.tool_args ?? {},
-                approved,
-                approval.id,
-                approval.note,
-              );
-
-              const localMatch = await resolveLocalRef.current(
-                approval.tool_name,
-                approval.tool_args ?? {},
-              );
-              if (localMatch) {
-                const localBaseUrl = `${agentBaseUrl}/api/v1/tool-approvals/${localMatch.id}/${action}`;
-                await authFetchRef.current(localBaseUrl, {
-                  method: 'POST',
-                  body: JSON.stringify(
-                    approval.note ? { note: approval.note } : {},
-                  ),
-                });
-              }
-            } catch {
-              // Local bridge errors are non-fatal; poll will reconcile.
-            }
-          })();
+          setLocalApprovals(prev =>
+            prev.filter(item => item.id !== approval.id),
+          );
+          emitServerToolDecision(
+            approval.tool_name,
+            approval.tool_args ?? {},
+            stream.type === 'tool_approval_approved',
+            approval.id,
+            approval.note,
+          );
           return;
         }
       } catch {
@@ -570,6 +495,7 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
 
     return () => {
       closedByCleanup = true;
+      approvalWsRef.current = null;
       ws.close();
       setWsState('closed');
     };
@@ -580,56 +506,28 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
     agentBaseUrl,
     chatAuthToken,
     agentId,
-    pollApprovals,
+    isApprovalForActiveAgent,
     emitServerToolDecision,
+    toApprovalRequest,
   ]);
-
-  // Keep refs in sync so the WS handler always has the latest functions.
-  useEffect(() => {
-    resolveLocalRef.current = resolveLocalApprovalForTool;
-  }, [resolveLocalApprovalForTool]);
-  useEffect(() => {
-    authFetchRef.current = authFetch;
-  }, [authFetch]);
 
   const approve = useCallback(
     async (requestId: string, note?: string): Promise<boolean> => {
       setApprovalLoading(requestId);
       setApprovalError(null);
       try {
-        const approval = approvals.find(item => item.id === requestId);
-        const baseUrl =
-          approval?.backendBaseUrl ||
-          (mode === 'server' ? aiAgentsBaseUrl : agentBaseUrl);
-        const apiPrefix =
-          approval?.apiPrefix ||
-          (mode === 'server'
-            ? `${AI_AGENTS_API_PREFIX}/tool-approvals`
-            : '/api/v1/tool-approvals');
-
-        const response = await authFetch(
-          `${baseUrl}${apiPrefix}/${requestId}/approve`,
-          {
-            method: 'POST',
-            body: JSON.stringify(note ? { note } : {}),
-          },
-        );
-
-        if (!response.ok) {
-          const errorText = await response.text().catch(() => '');
-          throw new Error(
-            errorText ||
-              `Failed to approve request (${response.status} ${response.statusText})`,
-          );
+        const ws = approvalWsRef.current;
+        if (!ws || ws.readyState !== WebSocket.OPEN) {
+          throw new Error('Approval websocket is not connected');
         }
 
-        // In server mode, UI/continuation updates are websocket-driven only.
-        // The click only sends approve to the server; local chat reacts when
-        // tool_approval_approved is received.
-        if (mode !== 'server') {
-          setApprovals(prev => prev.filter(a => a.id !== requestId));
-          void pollApprovals();
-        }
+        const decision: ApprovalWsDecisionMessage = {
+          type: 'tool_approval_decision',
+          approvalId: requestId,
+          approved: true,
+          ...(note ? { note } : {}),
+        };
+        ws.send(JSON.stringify(decision));
         return true;
       } catch (error) {
         const message =
@@ -642,7 +540,7 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
         setApprovalLoading(null);
       }
     },
-    [approvals, mode, aiAgentsBaseUrl, agentBaseUrl, authFetch, pollApprovals],
+    [],
   );
 
   const reject = useCallback(
@@ -650,39 +548,18 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
       setApprovalLoading(requestId);
       setApprovalError(null);
       try {
-        const approval = approvals.find(item => item.id === requestId);
-        const baseUrl =
-          approval?.backendBaseUrl ||
-          (mode === 'server' ? aiAgentsBaseUrl : agentBaseUrl);
-        const apiPrefix =
-          approval?.apiPrefix ||
-          (mode === 'server'
-            ? `${AI_AGENTS_API_PREFIX}/tool-approvals`
-            : '/api/v1/tool-approvals');
-
-        const response = await authFetch(
-          `${baseUrl}${apiPrefix}/${requestId}/reject`,
-          {
-            method: 'POST',
-            body: JSON.stringify(note ? { note } : {}),
-          },
-        );
-
-        if (!response.ok) {
-          const errorText = await response.text().catch(() => '');
-          throw new Error(
-            errorText ||
-              `Failed to reject request (${response.status} ${response.statusText})`,
-          );
+        const ws = approvalWsRef.current;
+        if (!ws || ws.readyState !== WebSocket.OPEN) {
+          throw new Error('Approval websocket is not connected');
         }
 
-        // In server mode, UI/continuation updates are websocket-driven only.
-        // The click only sends reject to the server; local chat reacts when
-        // tool_approval_rejected is received.
-        if (mode !== 'server') {
-          setApprovals(prev => prev.filter(a => a.id !== requestId));
-          void pollApprovals();
-        }
+        const decision: ApprovalWsDecisionMessage = {
+          type: 'tool_approval_decision',
+          approvalId: requestId,
+          approved: false,
+          ...(note ? { note } : {}),
+        };
+        ws.send(JSON.stringify(decision));
         return true;
       } catch (error) {
         const message =
@@ -695,74 +572,7 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
         setApprovalLoading(null);
       }
     },
-    [approvals, mode, aiAgentsBaseUrl, agentBaseUrl, authFetch, pollApprovals],
-  );
-
-  const ensureServerApproval = useCallback(
-    async (toolName: string, args: Record<string, unknown>) => {
-      if (mode !== 'server' || !aiAgentsBaseUrl || !isReady) {
-        return;
-      }
-
-      const signature = approvalSignature(toolName, args);
-      if (createdApprovalSignatures.current.has(signature)) {
-        return;
-      }
-
-      const alreadyTracked = approvals.some(
-        approval =>
-          approvalSignature(approval.tool_name, approval.tool_args ?? {}) ===
-          signature,
-      );
-      if (alreadyTracked) {
-        createdApprovalSignatures.current.add(signature);
-        return;
-      }
-
-      createdApprovalSignatures.current.add(signature);
-
-      try {
-        const response = await authFetch(
-          `${aiAgentsBaseUrl}${AI_AGENTS_API_PREFIX}/tool-approvals`,
-          {
-            method: 'POST',
-            body: JSON.stringify({
-              agent_id: agentId,
-              pod_name: podName,
-              tool_name: toolName,
-              tool_args: args,
-            }),
-          },
-        );
-
-        if (!response.ok) {
-          const text = await response.text().catch(() => '');
-          throw new Error(
-            text ||
-              `Failed creating server approval (${response.status} ${response.statusText})`,
-          );
-        }
-
-        const created = (await response.json()) as ToolApprovalRequest;
-        setApprovals(prev => {
-          const next = prev.filter(item => item.id !== created.id);
-          next.unshift({
-            ...created,
-            backendBaseUrl: aiAgentsBaseUrl,
-            apiPrefix: `${AI_AGENTS_API_PREFIX}/tool-approvals`,
-          });
-          return next;
-        });
-      } catch (error) {
-        createdApprovalSignatures.current.delete(signature);
-        setApprovalError(
-          error instanceof Error
-            ? error.message
-            : 'Failed to create server approval request',
-        );
-      }
-    },
-    [mode, aiAgentsBaseUrl, isReady, approvals, authFetch, agentId, podName],
+    [],
   );
 
   const pendingApprovals: PendingApproval[] = useMemo(
@@ -863,24 +673,20 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
           : undefined;
       const pendingByResult =
         status === 'inProgress' && resultObject?.pending_approval === true;
-
-      const requiresServerApproval =
-        mode === 'server' &&
-        normalizeToolName(toolName) ===
-          normalizeToolName('runtime_sensitive_echo');
-
-      if (requiresServerApproval && !matchedApproval) {
-        void ensureServerApproval(toolName, args);
-      }
+      const approvalIdFromResult =
+        typeof resultObject?.approval_id === 'string'
+          ? resultObject.approval_id
+          : typeof resultObject?.approvalId === 'string'
+            ? resultObject.approvalId
+            : null;
+      const effectiveApprovalId = matchedApproval?.id ?? approvalIdFromResult;
 
       const toolDecision = toolApprovalState[toolCallId];
       const loadingThisApproval =
-        !!matchedApproval && approvalLoading === matchedApproval.id;
+        !!effectiveApprovalId && approvalLoading === effectiveApprovalId;
       const approvalState: 'pending' | 'approved' | 'denied' | undefined =
         toolDecision ||
-        (pendingByResult || requiresServerApproval || !!matchedApproval
-          ? 'pending'
-          : undefined);
+        (pendingByResult || !!effectiveApprovalId ? 'pending' : undefined);
 
       return (
         <ToolCallDisplay
@@ -894,22 +700,22 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
           approvalState={approvalState}
           approvalLoading={loadingThisApproval}
           onApprove={
-            matchedApproval
+            effectiveApprovalId
               ? () =>
                   void handleToolLevelApprove(
                     toolCallId,
-                    matchedApproval.id,
+                    effectiveApprovalId,
                     toolName,
                     respond,
                   )
               : undefined
           }
           onDeny={
-            matchedApproval
+            effectiveApprovalId
               ? () =>
                   void handleToolLevelDeny(
                     toolCallId,
-                    matchedApproval.id,
+                    effectiveApprovalId,
                     toolName,
                     respond,
                   )
@@ -919,9 +725,7 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
       );
     },
     [
-      mode,
       findMatchingApproval,
-      ensureServerApproval,
       toolApprovalState,
       approvalLoading,
       handleToolLevelApprove,

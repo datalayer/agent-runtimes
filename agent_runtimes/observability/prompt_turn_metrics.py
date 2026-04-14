@@ -234,103 +234,31 @@ class PromptTurnMetricsEmitter:
     """Emits prompt-turn metrics through OTLP HTTP exporter."""
 
     def __init__(self, service_name: str, user_jwt_token: str | None = None) -> None:
-        from opentelemetry import metrics
-        from opentelemetry.exporter.otlp.proto.http.metric_exporter import (
-            OTLPMetricExporter,
-        )
-        from opentelemetry.sdk.metrics import MeterProvider
-        from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
-        from opentelemetry.sdk.resources import Resource
+        from datalayer_core.otel.emitter import OTelEmitter
 
         endpoint = _resolve_otlp_endpoint()
         metrics_endpoint = _resolve_otlp_metrics_endpoint()
         self.metrics_endpoint = metrics_endpoint or _resolve_default_metrics_endpoint(
             endpoint
         )
-        headers: dict[str, str] | None = None
-        if user_jwt_token:
-            headers = {"Authorization": f"Bearer {user_jwt_token}"}
         self._log_request_response = _bool_env(
             "DATALAYER_OTEL_LOG_REQUEST_RESPONSE", default=True
         )
 
-        exporter = OTLPMetricExporter(endpoint=self.metrics_endpoint, headers=headers)
-        reader = PeriodicExportingMetricReader(
-            exporter=exporter,
-            export_interval_millis=5_000,
-        )
-
-        resource_attrs: dict[str, str] = {
-            "service.name": service_name,
-            "service.version": os.environ.get("AGENT_RUNTIMES_VERSION", "unknown"),
-        }
         user_uid = decode_user_uid(user_jwt_token) or os.environ.get(
             "DATALAYER_USER_UID"
         )
-        if user_uid:
-            resource_attrs["datalayer.user_uid"] = user_uid
-            logger.info(
-                "Prompt-turn OTEL resource attribute: datalayer.user_uid=%s", user_uid
+        if not user_uid:
+            raise ValueError(
+                "Prompt-turn OTEL emission requires datalayer.user_uid from JWT"
             )
-        else:
-            logger.warning(
-                "No user_uid resolved from JWT – metrics will not be associated with a user account."
-            )
-        resource = Resource.create(resource_attrs)
 
-        self.provider = MeterProvider(resource=resource, metric_readers=[reader])
-        metrics.set_meter_provider(self.provider)
-        meter = self.provider.get_meter("agent-runtimes.prompt-turn")
+        self._emitter = OTelEmitter(service_name=service_name, user_uid=user_uid)
+        if not self._emitter.enabled:
+            raise ValueError("Prompt-turn OTEL emitter failed to initialize")
 
-        self.turn_completions = meter.create_counter(
-            name="agent_runtimes.prompt.turn.completions",
-            description="Completed prompt turns",
-            unit="1",
-        )
-        self.prompt_tokens = meter.create_counter(
-            name="agent_runtimes.prompt.turn.prompt_tokens",
-            description="Prompt tokens on completed turns",
-            unit="1",
-        )
-        self.completion_tokens = meter.create_counter(
-            name="agent_runtimes.prompt.turn.completion_tokens",
-            description="Completion tokens on completed turns",
-            unit="1",
-        )
-        self.total_tokens = meter.create_counter(
-            name="agent_runtimes.prompt.turn.total_tokens",
-            description="Total tokens on completed turns",
-            unit="1",
-        )
-        self.user_message_tokens = meter.create_counter(
-            name="agent_runtimes.prompt.turn.user_message_tokens",
-            description="Estimated user-message tokens on completed turns",
-            unit="1",
-        )
-        self.ai_message_tokens = meter.create_counter(
-            name="agent_runtimes.prompt.turn.ai_message_tokens",
-            description="Estimated assistant-message tokens on completed turns",
-            unit="1",
-        )
-        self.system_prompt_tokens = meter.create_counter(
-            name="agent_runtimes.prompt.turn.system_prompt_tokens",
-            description="Estimated system-prompt tokens on completed turns",
-            unit="1",
-        )
-        self.tools_description_tokens = meter.create_counter(
-            name="agent_runtimes.prompt.turn.tools_description_tokens",
-            description="Estimated tool-description tokens on completed turns",
-            unit="1",
-        )
-        self.tools_usage_tokens = meter.create_counter(
-            name="agent_runtimes.prompt.turn.tools_usage_tokens",
-            description="Estimated tool-usage tokens on completed turns",
-            unit="1",
-        )
-        self.turn_duration_ms = meter.create_histogram(
-            name="agent_runtimes.prompt.turn.duration_ms",
-            description="Prompt-turn duration",
-            unit="ms",
+        logger.info(
+            "Prompt-turn OTEL resource attribute: datalayer.user_uid=%s", user_uid
         )
 
         logger.info(
@@ -415,16 +343,42 @@ class PromptTurnMetricsEmitter:
             max(0, tool_call_count),
         )
 
-        self.turn_completions.add(1, attrs)
-        self.prompt_tokens.add(resolved_input_tokens, attrs)
-        self.completion_tokens.add(resolved_output_tokens, attrs)
-        self.total_tokens.add(resolved_total_tokens, attrs)
-        self.user_message_tokens.add(resolved_input_tokens, attrs)
-        self.ai_message_tokens.add(resolved_output_tokens, attrs)
-        self.system_prompt_tokens.add(0, attrs)
-        self.tools_description_tokens.add(0, attrs)
-        self.tools_usage_tokens.add(max(0, tool_call_count), attrs)
-        self.turn_duration_ms.record(max(duration_ms, 0.0), attrs)
+        self._emitter.add_counter("agent_runtimes.prompt.turn.completions", 1, attrs)
+        self._emitter.add_counter(
+            "agent_runtimes.prompt.turn.prompt_tokens", resolved_input_tokens, attrs
+        )
+        self._emitter.add_counter(
+            "agent_runtimes.prompt.turn.completion_tokens",
+            resolved_output_tokens,
+            attrs,
+        )
+        self._emitter.add_counter(
+            "agent_runtimes.prompt.turn.total_tokens", resolved_total_tokens, attrs
+        )
+        self._emitter.add_counter(
+            "agent_runtimes.prompt.turn.user_message_tokens",
+            resolved_input_tokens,
+            attrs,
+        )
+        self._emitter.add_counter(
+            "agent_runtimes.prompt.turn.ai_message_tokens",
+            resolved_output_tokens,
+            attrs,
+        )
+        self._emitter.add_counter(
+            "agent_runtimes.prompt.turn.system_prompt_tokens", 0, attrs
+        )
+        self._emitter.add_counter(
+            "agent_runtimes.prompt.turn.tools_description_tokens", 0, attrs
+        )
+        self._emitter.add_counter(
+            "agent_runtimes.prompt.turn.tools_usage_tokens",
+            max(0, tool_call_count),
+            attrs,
+        )
+        self._emitter.add_histogram(
+            "agent_runtimes.prompt.turn.duration_ms", max(duration_ms, 0.0), attrs
+        )
 
         if self._log_request_response:
             logger.info(
@@ -442,22 +396,11 @@ class PromptTurnMetricsEmitter:
                 max(duration_ms, 0.0),
                 max(0, tool_call_count),
             )
-            try:
-                try:
-                    flushed = bool(self.provider.force_flush(timeout_millis=2_000))
-                except TypeError:
-                    flushed = bool(self.provider.force_flush())
-                logger.info(
-                    "Prompt-turn OTEL response: server=%s flush_success=%s",
-                    self.metrics_endpoint,
-                    flushed,
-                )
-            except Exception as exc:  # noqa: BLE001
-                logger.warning(
-                    "Prompt-turn OTEL response: server=%s flush_error=%s",
-                    self.metrics_endpoint,
-                    exc,
-                )
+            logger.info(
+                "Prompt-turn OTEL response: server=%s accepted_via_core_emitter=%s",
+                self.metrics_endpoint,
+                True,
+            )
 
 
 def _get_emitter(user_jwt_token: str | None = None) -> PromptTurnMetricsEmitter | None:

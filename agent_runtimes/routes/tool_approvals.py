@@ -37,6 +37,18 @@ ws_router = APIRouter(
 )
 
 
+async def _decide_approval_via_ws(
+    approval_id: str,
+    approved: bool,
+    note: str | None = None,
+) -> ToolApprovalRecord:
+    return await _update_approval(
+        approval_id,
+        status="approved" if approved else "rejected",
+        note=note,
+    )
+
+
 class ToolApprovalCreateRequest(BaseModel):
     """Payload to create a pending tool approval request."""
 
@@ -240,43 +252,8 @@ async def _update_approval(
     return updated
 
 
-@router.post("", response_model=ToolApprovalRecord)
-@legacy_router.post("", response_model=ToolApprovalRecord)
-async def create_tool_approval(body: ToolApprovalCreateRequest) -> ToolApprovalRecord:
-    return await _create_approval(body)
-
-
-@router.get("", response_model=list[ToolApprovalRecord])
-@legacy_router.get("", response_model=list[ToolApprovalRecord])
-async def list_tool_approvals(
-    agent_id: str | None = None,
-    status: str | None = None,
-) -> list[ToolApprovalRecord]:
-    return await _list_approvals(agent_id=agent_id, status=status)
-
-
-@router.get("/{approval_id}", response_model=ToolApprovalRecord)
-@legacy_router.get("/{approval_id}", response_model=ToolApprovalRecord)
-async def get_tool_approval(approval_id: str) -> ToolApprovalRecord:
-    return await _get_approval(approval_id)
-
-
-@router.post("/{approval_id}/approve", response_model=ToolApprovalRecord)
-@legacy_router.post("/{approval_id}/approve", response_model=ToolApprovalRecord)
-async def approve_tool_approval(
-    approval_id: str,
-    body: ToolApprovalDecisionRequest,
-) -> ToolApprovalRecord:
-    return await _update_approval(approval_id, status="approved", note=body.note)
-
-
-@router.post("/{approval_id}/reject", response_model=ToolApprovalRecord)
-@legacy_router.post("/{approval_id}/reject", response_model=ToolApprovalRecord)
-async def reject_tool_approval(
-    approval_id: str,
-    body: ToolApprovalDecisionRequest,
-) -> ToolApprovalRecord:
-    return await _update_approval(approval_id, status="rejected", note=body.note)
+# Public REST endpoints are intentionally removed. Tool-approval state is
+# propagated and consumed over websocket streams only.
 
 
 @router.websocket("/ws")
@@ -284,7 +261,12 @@ async def tool_approvals_ws(
     websocket: WebSocket,
     agent_id: str | None = Query(default=None),
 ) -> None:
-    await stream_loop(websocket, agent_id, list_approvals=_list_approvals)
+    await stream_loop(
+        websocket,
+        agent_id,
+        list_approvals=_list_approvals,
+        decide_approval=_decide_approval_via_ws,
+    )
 
 
 @legacy_router.websocket("/ws")
@@ -292,7 +274,12 @@ async def legacy_tool_approvals_ws(
     websocket: WebSocket,
     agent_id: str | None = Query(default=None),
 ) -> None:
-    await stream_loop(websocket, agent_id, list_approvals=_list_approvals)
+    await stream_loop(
+        websocket,
+        agent_id,
+        list_approvals=_list_approvals,
+        decide_approval=_decide_approval_via_ws,
+    )
 
 
 @ws_router.websocket("/ws")
@@ -300,4 +287,9 @@ async def ai_agents_stream_ws(
     websocket: WebSocket,
     agent_id: str | None = Query(default=None),
 ) -> None:
-    await stream_loop(websocket, agent_id, list_approvals=_list_approvals)
+    await stream_loop(
+        websocket,
+        agent_id,
+        list_approvals=_list_approvals,
+        decide_approval=_decide_approval_via_ws,
+    )

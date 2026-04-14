@@ -5,6 +5,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import ReactECharts from 'echarts-for-react';
+import { buildOtelWebSocketUrl } from '@datalayer/core/lib/otel';
 import { toMetricValue } from '../hooks/useMonitoring';
 import { subscribeOtelWs } from './otelWsPool';
 
@@ -153,28 +154,6 @@ function extractAgentId(row: Record<string, unknown>): string | undefined {
   return undefined;
 }
 
-function buildOtelWsUrl(base: string, token: string): string | null {
-  try {
-    const normalized =
-      base.startsWith('ws://') || base.startsWith('wss://')
-        ? base.replace(/^ws/, 'http')
-        : base;
-    const url = new URL(normalized);
-    const wsProtocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
-    const pathname = url.pathname.replace(/\/$/, '');
-    const hasApiPrefix =
-      pathname.endsWith('/api/otel/v1') || pathname.includes('/api/otel/v1/');
-
-    url.protocol = wsProtocol;
-    url.pathname = hasApiPrefix ? `${pathname}/ws` : '/api/otel/v1/ws';
-    url.search = '';
-    url.searchParams.set('token', token);
-    return url.toString();
-  } catch {
-    return null;
-  }
-}
-
 export interface CostUsageChartProps {
   serviceName?: string;
   agentId?: string;
@@ -297,8 +276,15 @@ export function CostUsageChart({
               : 'http:'
           }//${typeof window !== 'undefined' ? window.location.host : ''}${rawBaseUrl}`;
 
-    const wsUrl = buildOtelWsUrl(baseWithProtocol, apiKey);
-    if (!wsUrl) return;
+    let wsUrl: string;
+    try {
+      wsUrl = buildOtelWebSocketUrl({
+        baseUrl: baseWithProtocol,
+        token: apiKey,
+      });
+    } catch {
+      return;
+    }
 
     const unsubscribe = subscribeOtelWs(wsUrl, msg => {
       if (msg.signal !== 'metrics') return;

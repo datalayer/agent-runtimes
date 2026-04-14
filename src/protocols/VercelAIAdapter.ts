@@ -388,6 +388,7 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
         inputText: string;
       }
     >();
+    const pendingApprovalIds = new Map<string, string>();
     let doneEmitted = false;
 
     // Consume the continuation flag — set by sendToolResult for this call only
@@ -562,6 +563,7 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
                   // not frontend tools that will be handled by sendToolResult)
                   for (const [toolCallId] of pendingToolInputs.entries()) {
                     if (!this.pendingToolCalls.has(toolCallId)) {
+                      const approvalId = pendingApprovalIds.get(toolCallId);
                       this.emit({
                         type: 'tool-result',
                         toolResult: {
@@ -569,6 +571,7 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
                           success: true,
                           result: {
                             pending_approval: true,
+                            approval_id: approvalId,
                             message: 'Awaiting user approval',
                           },
                         },
@@ -675,6 +678,7 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
                 });
 
                 pendingToolInputs.delete(toolCallId);
+                pendingApprovalIds.delete(toolCallId);
                 // Server already executed this tool — remove from pending
                 // frontend tool calls so emitDoneOnce is not blocked.
                 this.pendingToolCalls.delete(toolCallId);
@@ -711,6 +715,7 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
                 });
 
                 pendingToolInputs.delete(toolCallId);
+                pendingApprovalIds.delete(toolCallId);
               } else if (event.type === 'error') {
                 const errorMessage =
                   event.error ||
@@ -724,10 +729,19 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
                   error: new Error(errorMessage),
                   timestamp: new Date(),
                 });
+              } else if (event.type === 'tool-approval-request') {
+                const toolCallId =
+                  event.toolCallId ||
+                  event.tool_call_id ||
+                  event.id ||
+                  generateMessageId();
+                const approvalId = event.approvalId || event.approval_id;
+                if (typeof approvalId === 'string' && approvalId.length > 0) {
+                  pendingApprovalIds.set(toolCallId, approvalId);
+                }
               } else if (
                 event.type === 'tool-call' ||
-                event.type === 'tool-call-start' ||
-                event.type === 'tool-approval-request'
+                event.type === 'tool-call-start'
               ) {
                 const toolName =
                   event.toolName ||
@@ -873,7 +887,9 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
             : tr.toolCallId;
         const approved = Boolean(resultObj?.approved);
         const reason =
-          typeof resultObj?.message === 'string' ? resultObj.message : undefined;
+          typeof resultObj?.message === 'string'
+            ? resultObj.message
+            : undefined;
 
         assistantParts.push({
           type: 'dynamic-tool',
