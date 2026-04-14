@@ -313,6 +313,12 @@ export interface ChatProps {
    * Useful to suppress raw tool-call/continuation text and show only tool cards.
    */
   hideMessagesAfterToolUI?: boolean;
+
+  /**
+   * External context snapshot data for the token usage bar.
+   * When provided, overrides the built-in (no-op) useContextSnapshot hook.
+   */
+  contextSnapshot?: import('../types/context').ContextSnapshotData;
 }
 
 /**
