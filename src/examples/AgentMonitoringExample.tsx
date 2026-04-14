@@ -17,11 +17,16 @@
 /// <reference types="vite/client" />
 
 import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import {
+  QueryClient,
+  QueryClientProvider,
+  useQuery,
+} from '@tanstack/react-query';
 import { Text, Button, Spinner, Heading, Label } from '@primer/react';
 import {
   CheckCircleIcon,
   GraphIcon,
+  ServerIcon,
   SignOutIcon,
 } from '@primer/octicons-react';
 import { Box } from '@datalayer/primer-addons';
@@ -44,6 +49,12 @@ import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { SignInSimple } from '@datalayer/core/lib/views/iam';
 import { UserBadge } from '@datalayer/core/lib/views/profile';
 import { Chat } from '../chat';
+import type {
+  McpAggregateStatus,
+  McpServerStatus,
+  McpToolsetsStatusResponse,
+} from '../types/mcp';
+import { MCP_STATUS_COLORS, MCP_STATUS_LABELS } from '../types/mcp';
 
 const AGENT_NAME = 'monitoring-demo-agent';
 const AGENT_SPEC_ID = 'monitor-sales-kpis';
@@ -65,6 +76,135 @@ const alertVariant = (severity: AlertSeverity) => {
   if (severity === 'critical') return 'danger';
   if (severity === 'warning') return 'attention';
   return 'secondary';
+};
+
+/* ── MCP status panel for the monitoring sidebar ──────── */
+
+function deriveAggregate(servers: McpServerStatus[]): McpAggregateStatus {
+  if (!servers || servers.length === 0) return 'none';
+  if (servers.some(s => s.status === 'starting')) return 'starting';
+  if (servers.some(s => s.status === 'failed')) return 'failed';
+  if (servers.every(s => s.status === 'started')) return 'started';
+  return 'not_started';
+}
+
+const McpStatusPanel: React.FC<{
+  apiBase: string;
+  authToken?: string;
+}> = ({ apiBase, authToken }) => {
+  const { data, isLoading } = useQuery<McpToolsetsStatusResponse>({
+    queryKey: ['mcp-toolsets-status', apiBase],
+    queryFn: async () => {
+      const headers: Record<string, string> = {};
+      if (authToken) {
+        headers['Authorization'] = `Bearer ${authToken}`;
+      }
+      const response = await fetch(
+        `${apiBase}/api/v1/configure/mcp-toolsets-status`,
+        { headers },
+      );
+      if (!response.ok) throw new Error('Failed to fetch MCP status');
+      return response.json();
+    },
+    refetchInterval: 5000,
+  });
+
+  const servers = data?.servers ?? [];
+  const aggregate = deriveAggregate(servers);
+
+  if (isLoading) {
+    return (
+      <Text sx={{ color: 'fg.muted', fontSize: 1 }}>
+        Checking MCP servers...
+      </Text>
+    );
+  }
+
+  if (aggregate === 'none') {
+    return (
+      <Box
+        sx={{
+          p: 2,
+          border: '1px solid',
+          borderColor: 'border.default',
+          borderRadius: 2,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 2,
+        }}
+      >
+        <ServerIcon size={16} />
+        <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
+          No MCP server is defined for this agent.
+        </Text>
+      </Box>
+    );
+  }
+
+  return (
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 2,
+        }}
+      >
+        <Box
+          as="span"
+          sx={{
+            display: 'inline-block',
+            width: 10,
+            height: 10,
+            borderRadius: '50%',
+            bg: MCP_STATUS_COLORS[aggregate],
+            flexShrink: 0,
+          }}
+        />
+        <Text sx={{ fontSize: 1 }}>{MCP_STATUS_LABELS[aggregate]}</Text>
+      </Box>
+      {servers.map(s => (
+        <Box
+          key={s.id}
+          sx={{
+            p: 2,
+            border: '1px solid',
+            borderColor: 'border.default',
+            borderRadius: 2,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 2,
+          }}
+        >
+          <Box
+            as="span"
+            sx={{
+              display: 'inline-block',
+              width: 8,
+              height: 8,
+              borderRadius: '50%',
+              bg:
+                MCP_STATUS_COLORS[s.status as McpAggregateStatus] ??
+                MCP_STATUS_COLORS.not_started,
+              flexShrink: 0,
+            }}
+          />
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Text sx={{ fontSize: 1, fontWeight: 'bold', display: 'block' }}>
+              {s.id}
+            </Text>
+            <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
+              {s.status}
+              {s.status === 'started' && s.tools_count !== undefined
+                ? ` · ${s.tools_count} tool${s.tools_count !== 1 ? 's' : ''}`
+                : ''}
+              {s.status === 'failed' && s.error ? ` — ${s.error}` : ''}
+            </Text>
+          </Box>
+        </Box>
+      ))}
+    </Box>
+  );
 };
 
 const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
@@ -451,6 +591,19 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
                 )}
               </Box>
             )}
+          </Box>
+
+          <Box
+            sx={{
+              p: 3,
+              borderBottom: '1px solid',
+              borderColor: 'border.default',
+            }}
+          >
+            <Heading as="h4" sx={{ fontSize: 1, mb: 2 }}>
+              MCP Servers
+            </Heading>
+            <McpStatusPanel apiBase={agentBaseUrl} authToken={chatAuthToken} />
           </Box>
 
           <Box

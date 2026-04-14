@@ -31,12 +31,15 @@ function parseAttributes(attrs: unknown): Record<string, unknown> {
   return {};
 }
 
-/** Convert nanosecond timestamp to milliseconds. */
+/** Convert nanosecond timestamp or ISO string to milliseconds. */
 function nanoToMs(nano: unknown): number {
   if (typeof nano === 'number' && nano > 0) return nano / 1_000_000;
   if (typeof nano === 'string' && nano.length > 0) {
     const parsed = Number(nano);
     if (Number.isFinite(parsed) && parsed > 0) return parsed / 1_000_000;
+    // ISO date string fallback
+    const ms = new Date(nano).getTime();
+    if (Number.isFinite(ms) && ms > 0) return ms;
   }
   return Date.now();
 }
@@ -59,7 +62,8 @@ function extractCostPoints(spans: Array<Record<string, unknown>>): CostPoint[] {
     const ts =
       span.start_time_unix_nano ??
       span.timestamp_unix_nano ??
-      span.startTimeUnixNano;
+      span.startTimeUnixNano ??
+      span.start_time;
     const timestampMs = nanoToMs(ts);
 
     points.push({ timestampMs, costUsd, cumulativeUsd });

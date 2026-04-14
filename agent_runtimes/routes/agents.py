@@ -1436,6 +1436,10 @@ async def create_agent(
 
         logger.info(f"Created agent: {agent_id} ({request.name})")
 
+        # Emit initial 0-value OTEL data points so timeseries charts show the
+        # full history starting from agent creation time.
+        _emit_initial_otel_baseline(agent_id, http_request)
+
         return CreateAgentResponse(
             id=agent_id,
             name=request.name,
@@ -1449,6 +1453,70 @@ async def create_agent(
     except Exception as e:
         logger.error(f"Failed to create agent: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to create agent: {str(e)}")
+
+
+def _emit_initial_otel_baseline(agent_id: str, http_request: Request) -> None:
+    """Emit 0-value OTEL metrics and cost trace so charts start at zero.
+
+    This is fire-and-forget — failures are logged but never propagated.
+    """
+    try:
+        from ..observability.prompt_turn_metrics import (
+            extract_bearer_token,
+            record_prompt_turn_completion,
+        )
+
+        auth_header = http_request.headers.get("Authorization", "")
+        user_jwt = extract_bearer_token(auth_header)
+
+        # 0-value prompt-turn metrics (establishes the baseline for token chart)
+        record_prompt_turn_completion(
+            prompt="",
+            response="",
+            duration_ms=0.0,
+            protocol="baseline",
+            stop_reason="agent_created",
+            success=True,
+            model=None,
+            tool_call_count=0,
+            input_tokens=0,
+            output_tokens=0,
+            total_tokens=0,
+            user_jwt_token=user_jwt,
+        )
+
+        # 0-value cost trace (establishes the baseline for cost chart)
+        try:
+            from datalayer_core.otel.emitter import OTelEmitter
+        except Exception:
+            OTelEmitter = None  # type: ignore[assignment]
+
+        if OTelEmitter is not None:
+            emitter = OTelEmitter(service_name="agent-runtimes")
+            if emitter.enabled:
+                attrs = {
+                    "agent.id": agent_id,
+                    "agent.model": "none",
+                    "gen_ai.usage.input_tokens": 0,
+                    "gen_ai.usage.output_tokens": 0,
+                    "gen_ai.usage.total_tokens": 0,
+                    "gen_ai.usage.cost_usd": 0.0,
+                    "agent.cost.cumulative_usd": 0.0,
+                }
+                emitter.add_counter(
+                    "agent_runtimes.capability.cost.run.count", 0, attrs
+                )
+                emitter.add_counter(
+                    "agent_runtimes.capability.cost.run.usd", 0.0, attrs
+                )
+                with emitter.span(
+                    "agent_runtimes.capability.cost.run", attributes=attrs
+                ):
+                    pass
+
+        logger.info(f"Emitted initial OTEL baseline for agent '{agent_id}'")
+    except Exception as exc:  # noqa: BLE001
+        logger.debug(f"Failed to emit initial OTEL baseline for '{agent_id}': {exc}")
 
 
 def _get_agent_toolsets_info(agent: Any) -> dict[str, Any]:

@@ -57,7 +57,8 @@ function emptyValues(): Record<SeriesLabel, number> {
 
 const COMPLETIONS_METRIC = 'agent_runtimes.prompt.turn.completions';
 
-/** Convert nanosecond OTEL timestamp to milliseconds. */
+/** Convert nanosecond OTEL timestamp to milliseconds.
+ *  Also accepts ISO date strings (from normalised OtelMetric responses). */
 function nanoToMs(row: Record<string, unknown>): number {
   const nanoTs = row.timestamp_unix_nano ?? row.observed_timestamp_unix_nano;
   if (typeof nanoTs === 'number' && nanoTs > 0) return nanoTs / 1_000_000;
@@ -65,7 +66,24 @@ function nanoToMs(row: Record<string, unknown>): number {
     const parsed = Number(nanoTs);
     if (Number.isFinite(parsed) && parsed > 0) return parsed / 1_000_000;
   }
+  // Fallback: ISO timestamp string from normalised OtelMetric
+  const isoTs = row.timestamp;
+  if (typeof isoTs === 'string' && isoTs.length > 0) {
+    const ms = new Date(isoTs).getTime();
+    if (Number.isFinite(ms) && ms > 0) return ms;
+  }
   return Date.now();
+}
+
+/** Return a stable grouping key from a metric row's timestamp. */
+function rowTimestampKey(row: Record<string, unknown>): string {
+  const nano = row.timestamp_unix_nano;
+  if (typeof nano === 'number' && nano > 0) return String(nano);
+  if (typeof nano === 'string' && nano.length > 0) return nano;
+  // Normalised OtelMetric: use the ISO timestamp
+  const iso = row.timestamp;
+  if (typeof iso === 'string' && iso.length > 0) return iso;
+  return '';
 }
 
 /**
@@ -78,7 +96,7 @@ function extractTurnsFromRows(
 ): { turns: TurnPoint[]; finalState: CumulativeSnapshot } {
   const byTimestamp = new Map<string, Array<Record<string, unknown>>>();
   for (const row of rows) {
-    const ts = String(row.timestamp_unix_nano ?? '');
+    const ts = rowTimestampKey(row);
     if (!ts) continue;
     let group = byTimestamp.get(ts);
     if (!group) {
@@ -88,9 +106,14 @@ function extractTurnsFromRows(
     group.push(row);
   }
 
-  const sortedGroups = [...byTimestamp.entries()].sort(
-    (a, b) => Number(a[0]) - Number(b[0]),
-  );
+  const sortedGroups = [...byTimestamp.entries()].sort((a, b) => {
+    const na = Number(a[0]);
+    const nb = Number(b[0]);
+    // Both numeric (nanosecond timestamps)
+    if (Number.isFinite(na) && Number.isFinite(nb)) return na - nb;
+    // ISO strings: lexicographic comparison works for ISO 8601
+    return a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0;
+  });
 
   const turns: TurnPoint[] = [];
   let prev = initialState;
