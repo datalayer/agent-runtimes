@@ -10,9 +10,8 @@
 import asyncio
 import getpass
 import json
-import sys
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional
 
@@ -25,14 +24,10 @@ from prompt_toolkit.styles import Style as PTStyle
 from rich.box import ROUNDED
 from rich.columns import Columns
 from rich.console import Console
-from rich.live import Live
 from rich.panel import Panel
 from rich.style import Style
 from rich.text import Text
 
-from .banner import (
-    GOODBYE_MESSAGE,
-)
 from .commands import SlashCommand, build_commands
 
 # Rich styles matching Datalayer brand
@@ -270,7 +265,7 @@ class CliTux:
         left_content = Text()
         left_content.append(f"\n  Welcome back {username}!\n\n", style=STYLE_WHITE)
         left_content.append(logo)
-        left_content.append(f"\n  agent-runtimes chat\n", style=STYLE_MUTED)
+        left_content.append("\n  agent-runtimes chat\n", style=STYLE_MUTED)
         left_content.append(f"  {cwd}\n", style=STYLE_MUTED)
 
         # Right panel content - tips
@@ -528,9 +523,7 @@ class CliTux:
                     self.model_name = (
                         data.get("modelName", self.model_name) or self.model_name
                     )
-                    self.context_window = data.get(
-                        "contextWindow", self.context_window
-                    )
+                    self.context_window = data.get("contextWindow", self.context_window)
             except Exception:
                 pass
 

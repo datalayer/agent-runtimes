@@ -30,7 +30,7 @@ async def execute(tux: "CliTux") -> Optional[str]:
         The chosen suggestion text, or None if cancelled / no suggestions.
     """
     from ..banner import GREEN_MEDIUM, RESET
-    from ..tux import STYLE_ACCENT, STYLE_MUTED, STYLE_PRIMARY, STYLE_WARNING
+    from ..tux import STYLE_ACCENT, STYLE_MUTED, STYLE_PRIMARY
 
     # Fetch the agent spec which contains the suggestions list
     suggestions: list[str] = []

@@ -70,7 +70,7 @@ async def execute(tux: "CliTux") -> Optional[str]:
         codemode = toolsets.get("codemode", False)
         codemode_text = "enabled" if codemode else "disabled"
         codemode_style = STYLE_ACCENT if codemode else STYLE_MUTED
-        tux.console.print(f"    Codemode: ", style=STYLE_MUTED, end="")
+        tux.console.print("    Codemode: ", style=STYLE_MUTED, end="")
         tux.console.print(codemode_text, style=codemode_style)
 
         # MCP Servers

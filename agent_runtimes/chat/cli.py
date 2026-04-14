@@ -78,22 +78,16 @@ class Transport(str, Enum):
 from .banner import (
     BANNER,
     # Legacy colors
-    BLUE,
     BOLD,
-    CYAN,
     DIM,
     GOODBYE_MESSAGE,
     GRAY,
-    GREEN,
-    # Datalayer brand colors
     GREEN_DARK,
     GREEN_LIGHT,
     GREEN_MEDIUM,
-    MAGENTA,
     RED,
     RESET,
     WHITE,
-    YELLOW,
     show_banner,
 )
 
@@ -247,7 +241,6 @@ def _run_agent_runtime_server(
 
     from agent_runtimes.commands import (
         LogLevel,
-        Protocol,
         find_random_free_port,
         serve_server,
     )
@@ -277,7 +270,7 @@ def _run_agent_runtime_server(
     else:
         # Enable debug logging
         logging.basicConfig(level=logging.DEBUG)
-        print(f"[DEBUG] Starting agent runtime server in debug mode")
+        print("[DEBUG] Starting agent runtime server in debug mode")
 
     # Resolve port in this process so we can communicate it back
     actual_port = port
@@ -680,8 +673,8 @@ def main_callback(
     global _subprocess_ref
 
     # Show ASCII banner early (before agent selection)
-    from .banner import BANNER, DIM, show_banner
     from .banner import RESET as BANNER_RESET
+    from .banner import show_banner
 
     if banner or banner_all:
         show_banner(splash=banner, splash_all=banner_all)
@@ -755,7 +748,7 @@ def main_callback(
                 with Live(
                     Spinner(
                         "dots",
-                        text=f"[bold cyan]Starting agent runtime...[/bold cyan]",
+                        text="[bold cyan]Starting agent runtime...[/bold cyan]",
                         style="cyan",
                     ),
                     console=console,
@@ -793,7 +786,7 @@ def main_callback(
                     live.update(
                         Spinner(
                             "dots",
-                            text=f"[bold green]Agent runtime ready![/bold green]",
+                            text="[bold green]Agent runtime ready![/bold green]",
                             style="green",
                         )
                     )
@@ -978,7 +971,7 @@ def connect(
     """
     try:
         from agent_runtimes.transports.clients import ACPClient, AGUIClient
-    except ImportError as e:
+    except ImportError:
         print(
             f"{GREEN_DARK}[ERROR]{RESET} agent-runtimes package required: pip install agent-runtimes",
             file=sys.stderr,

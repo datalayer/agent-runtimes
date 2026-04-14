@@ -66,7 +66,5 @@ class AgentMonitoringSnapshotPayload(BaseModel):
     )
     cost_usage: dict[str, Any] | None = Field(default=None, alias="costUsage")
     mcp_status: dict[str, Any] | None = Field(default=None, alias="mcpStatus")
-    codemode_status: dict[str, Any] | None = Field(
-        default=None, alias="codemodeStatus"
-    )
+    codemode_status: dict[str, Any] | None = Field(default=None, alias="codemodeStatus")
     full_context: dict[str, Any] | None = Field(default=None, alias="fullContext")

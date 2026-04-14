@@ -49,7 +49,7 @@ async def demo_scenario(
 async def main() -> None:
     """Run all demo scenarios."""
     print(f"\n{MAGENTA}{BOLD}╔════════════════════════════════════════════════╗")
-    print(f"║  Agent Runtimes Chat Spinner Demo               ║")
+    print("║  Agent Runtimes Chat Spinner Demo               ║")
     print(f"╚════════════════════════════════════════════════╝{RESET}\n")
 
     # Different realistic scenarios

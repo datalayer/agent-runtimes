@@ -150,10 +150,7 @@ async def _wrap_streaming_body_with_approvals(
     try:
         async for chunk in body_iterator:
             # Fast path: skip parsing when not relevant
-            if (
-                "tool-input-available" in chunk
-                or "tool-approval-request" in chunk
-            ):
+            if "tool-input-available" in chunk or "tool-approval-request" in chunk:
                 try:
                     for line in chunk.strip().split("\n"):
                         if not line.startswith("data: "):
@@ -177,9 +174,7 @@ async def _wrap_streaming_body_with_approvals(
                         if tool_call_id and tool_call_id in created_tool_call_ids:
                             continue
                         tool_name = (
-                            event.get("toolName")
-                            or event.get("tool_name")
-                            or ""
+                            event.get("toolName") or event.get("tool_name") or ""
                         )
                         # For legacy tool-input-available events, keep approval tool filtering.
                         if event_type == "tool-input-available":

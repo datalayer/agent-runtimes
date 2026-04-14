@@ -24,11 +24,8 @@ SHORTCUT = "escape l"
 async def execute(tux: "CliTux") -> Optional[str]:
     """Show detailed information about tool calls from the last response."""
     from ..tux import (
-        STYLE_ACCENT,
-        STYLE_ERROR,
         STYLE_MUTED,
         STYLE_PRIMARY,
-        STYLE_WARNING,
     )
 
     if not tux.tool_calls:

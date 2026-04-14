@@ -12,14 +12,17 @@ decoupled from the tool-approval CRUD routes.
 from __future__ import annotations
 
 import asyncio
-import logging
 import json
+import logging
 from typing import Any, Awaitable, Callable
 
 from fastapi import WebSocket, WebSocketDisconnect
 
 from agent_runtimes.context.costs import get_cost_store
-from agent_runtimes.streams.messages import AgentMonitoringSnapshotPayload, AgentStreamMessage
+from agent_runtimes.streams.messages import (
+    AgentMonitoringSnapshotPayload,
+    AgentStreamMessage,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -142,9 +145,7 @@ def build_codemode_status() -> dict[str, Any] | None:
                 except Exception:
                     pass
 
-        active_skills = [
-            s for s in available_skills if s["name"] in active_skill_names
-        ]
+        active_skills = [s for s in available_skills if s["name"] in active_skill_names]
         sandbox_status = _get_sandbox_status()
 
         return {
@@ -169,7 +170,7 @@ async def build_monitoring_snapshot_payload(
 
     Parameters
     ----------
-    list_approvals:
+    list_approvals : callable, optional
         An async callable ``(agent_id, status) -> list[Record]`` that returns
         the current pending tool approvals.  When ``None`` the approval fields
         are left empty (useful when the caller does not have access to the
