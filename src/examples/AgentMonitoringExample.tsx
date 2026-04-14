@@ -55,7 +55,7 @@ import type {
 import { MCP_STATUS_COLORS, MCP_STATUS_LABELS } from '../types/mcp';
 
 const AGENT_NAME = 'monitoring-demo-agent';
-const AGENT_SPEC_ID = 'monitor-sales-kpis';
+const AGENT_SPEC_ID = 'crawler';
 const DEFAULT_LOCAL_BASE_URL =
   import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
 const OTEL_BASE_URL_ENV = import.meta.env.VITE_OTEL_BASE_URL;
@@ -258,7 +258,8 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
           method: 'POST',
           body: JSON.stringify({
             name: agentName,
-            description: 'Agent with monitoring telemetry demo signals',
+            description:
+              'MCP monitoring demo – web crawling via Tavily with live cost/token metrics',
             agent_library: 'pydantic-ai',
             transport: 'vercel-ai',
             agent_spec_id: AGENT_SPEC_ID,

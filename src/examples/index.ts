@@ -27,6 +27,7 @@ export { default as AgentGuardrailsExample } from './AgentGuardrailsExample';
 export { default as AgentToolApprovalsExample } from './AgentToolApprovalsExample';
 export { default as AgentMemoryExample } from './AgentMemoryExample';
 export { default as AgentOtelExample } from './AgentOtelExample';
+export { default as AgentMCPExample } from './AgentMCPExample';
 export { default as AgentMonitoringExample } from './AgentMonitoringExample';
 export { default as AgentNotificationsExample } from './AgentNotificationsExample';
 export { default as AgentOutputsExample } from './AgentOutputsExample';
