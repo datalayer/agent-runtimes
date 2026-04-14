@@ -175,6 +175,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
     useState<string>(approvalAgentName);
   const [approvalAgentReady, setApprovalAgentReady] = useState(false);
   const [isLaunchingApproval, setIsLaunchingApproval] = useState(false);
+  const [hasTriggeredApproval, setHasTriggeredApproval] = useState(false);
   const [approvalFlash, setApprovalFlash] = useState<string | null>(null);
 
   // Tool approval state
@@ -246,7 +247,8 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
         }
 
         if (stream.type === 'agent.snapshot') {
-          const payload = stream.payload as AgentStreamSnapshotPayload;
+          const payload =
+            stream.payload as unknown as AgentStreamSnapshotPayload;
           const nextApprovals = (payload.approvals ?? [])
             .filter(
               approval =>
@@ -259,7 +261,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
 
         if (stream.type === 'tool_approval_created') {
           const approval = toApprovalRequest(
-            stream.payload as AgentStreamToolApprovalPayload,
+            stream.payload as unknown as AgentStreamToolApprovalPayload,
           );
           if (approval.agent_id && approval.agent_id !== approvalAgentId) {
             return;
@@ -276,7 +278,8 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
           stream.type === 'tool_approval_approved' ||
           stream.type === 'tool_approval_rejected'
         ) {
-          const approval = stream.payload as AgentStreamToolApprovalPayload;
+          const approval =
+            stream.payload as unknown as AgentStreamToolApprovalPayload;
           setApprovals(prev => prev.filter(item => item.id !== approval.id));
         }
       } catch {
@@ -675,6 +678,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
   const handleLaunchOnceApproval = useCallback(async () => {
     if (!agentBaseUrl || !approvalAgentReady) return;
     setIsLaunchingApproval(true);
+    setHasTriggeredApproval(true);
     setApprovalFlash(null);
     setApprovalSidebarMessages([]);
     setSidebarMessagesError(null);

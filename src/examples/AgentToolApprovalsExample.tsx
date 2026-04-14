@@ -186,7 +186,7 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
   const [isReconnectedAgent, setIsReconnectedAgent] = useState(false);
 
   const [approvals, setApprovals] = useState<ToolApprovalRequest[]>([]);
-  const [localApprovals, setLocalApprovals] = useState<ToolApprovalRequest[]>(
+  const [_localApprovals, setLocalApprovals] = useState<ToolApprovalRequest[]>(
     [],
   );
   const [activeApproval, setActiveApproval] =
@@ -200,7 +200,6 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
     'closed',
   );
 
-  const createdApprovalSignatures = useRef<Set<string>>(new Set());
   const approvalWsRef = useRef<WebSocket | null>(null);
   const toolRespondersRef = useRef<
     Map<
@@ -421,7 +420,8 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
         }
 
         if (stream.type === 'agent.snapshot') {
-          const payload = stream.payload as AgentStreamSnapshotPayload;
+          const payload =
+            stream.payload as unknown as AgentStreamSnapshotPayload;
           const snapshotApprovals = (payload.approvals ?? [])
             .filter(
               approval =>
@@ -436,7 +436,7 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
 
         if (stream.type === 'tool_approval_created') {
           const approval = toApprovalRequest(
-            stream.payload as AgentStreamToolApprovalPayload,
+            stream.payload as unknown as AgentStreamToolApprovalPayload,
           );
           if (
             approval.status !== 'pending' ||
@@ -462,7 +462,7 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
           stream.type === 'tool_approval_rejected'
         ) {
           const approval = toApprovalRequest(
-            stream.payload as AgentStreamToolApprovalPayload,
+            stream.payload as unknown as AgentStreamToolApprovalPayload,
           );
 
           setApprovals(prev => prev.filter(item => item.id !== approval.id));
