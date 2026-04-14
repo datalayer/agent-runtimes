@@ -66,6 +66,11 @@ import {
   useAIAgentsWebSocket,
 } from '../hooks';
 import type { AgentEvent } from '../types';
+import {
+  parseAgentStreamMessage,
+  type AgentStreamSnapshotPayload,
+  type AgentStreamToolApprovalPayload,
+} from '../types/stream';
 import { VercelAIAdapter } from '../protocols';
 import { createUserMessage } from '../types/messages';
 
@@ -171,7 +176,6 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
   const [approvalAgentReady, setApprovalAgentReady] = useState(false);
   const [isLaunchingApproval, setIsLaunchingApproval] = useState(false);
   const [approvalFlash, setApprovalFlash] = useState<string | null>(null);
-  const [hasTriggeredApproval, setHasTriggeredApproval] = useState(false);
 
   // Tool approval state
   interface ToolApprovalRequest {
@@ -184,6 +188,23 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
     status?: string;
     agent_id?: string;
   }
+
+  const toApprovalRequest = useCallback(
+    (payload: AgentStreamToolApprovalPayload): ToolApprovalRequest => ({
+      id: payload.id,
+      tool_name: payload.tool_name,
+      tool_args: payload.tool_args,
+      tool_call_id:
+        typeof payload.tool_args?.tool_call_id === 'string'
+          ? payload.tool_args.tool_call_id
+          : undefined,
+      note: payload.note ?? undefined,
+      created_at: payload.created_at,
+      status: payload.status,
+      agent_id: payload.agent_id,
+    }),
+    [],
+  );
   const [approvals, setApprovals] = useState<ToolApprovalRequest[]>([]);
   const [approvalLoading, setApprovalLoading] = useState<string | null>(null);
   const [approvalError, setApprovalError] = useState<string | null>(null);
@@ -214,6 +235,65 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
   // WebSocket for real-time event updates
   useAIAgentsWebSocket({
     channels: agentId ? [`agent:${agentId}`] : [],
+  });
+
+  const handleApprovalStreamMessage = useCallback(
+    (message: { raw?: unknown }) => {
+      try {
+        const stream = parseAgentStreamMessage(message?.raw ?? message);
+        if (!stream) {
+          return;
+        }
+
+        if (stream.type === 'agent.snapshot') {
+          const payload = stream.payload as AgentStreamSnapshotPayload;
+          const nextApprovals = (payload.approvals ?? [])
+            .filter(
+              approval =>
+                !approval.agent_id || approval.agent_id === approvalAgentId,
+            )
+            .map(toApprovalRequest);
+          setApprovals(nextApprovals);
+          return;
+        }
+
+        if (stream.type === 'tool_approval_created') {
+          const approval = toApprovalRequest(
+            stream.payload as AgentStreamToolApprovalPayload,
+          );
+          if (approval.agent_id && approval.agent_id !== approvalAgentId) {
+            return;
+          }
+          setApprovals(prev => {
+            const next = prev.filter(item => item.id !== approval.id);
+            next.unshift(approval);
+            return next;
+          });
+          return;
+        }
+
+        if (
+          stream.type === 'tool_approval_approved' ||
+          stream.type === 'tool_approval_rejected'
+        ) {
+          const approval = stream.payload as AgentStreamToolApprovalPayload;
+          setApprovals(prev => prev.filter(item => item.id !== approval.id));
+        }
+      } catch {
+        // Ignore malformed stream payloads.
+      }
+    },
+    [approvalAgentId, toApprovalRequest],
+  );
+
+  const approvalSocket = useAIAgentsWebSocket({
+    enabled: isReady && approvalAgentReady && Boolean(agentBaseUrl),
+    baseUrl: agentBaseUrl,
+    path: '/api/v1/tool-approvals/ws',
+    queryParams: { agent_id: approvalAgentId },
+    onMessage: handleApprovalStreamMessage,
+    reconnectDelayMs: attempt =>
+      Math.min(1000 * 2 ** Math.max(0, attempt - 1), 10000),
   });
 
   // Authenticated fetch helper (for sidecar endpoints)
@@ -512,35 +592,6 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
     };
   }, [isReady, agentBaseUrl, authFetch]);
 
-  // ── Poll tool approvals ─────────────────────────────────────────────────
-
-  const pollApprovals = useCallback(async () => {
-    if (!approvalAgentReady) return;
-    try {
-      const res = await authFetch(`${agentBaseUrl}/api/v1/tool-approvals`);
-      if (!res.ok) return;
-      const data = await res.json();
-      const all = Array.isArray(data)
-        ? data
-        : (data.approvals ?? data.requests ?? []);
-      const pending = all.filter(
-        (a: any) =>
-          a.status === 'pending' &&
-          (!a.agent_id || a.agent_id === approvalAgentId),
-      );
-      setApprovals(pending);
-    } catch {
-      // Non-fatal
-    }
-  }, [approvalAgentReady, agentBaseUrl, approvalAgentId, authFetch]);
-
-  useEffect(() => {
-    if (!hasTriggeredApproval) return;
-    void pollApprovals();
-    const interval = setInterval(pollApprovals, 2000);
-    return () => clearInterval(interval);
-  }, [hasTriggeredApproval, pollApprovals]);
-
   // Approval sidebar messages are populated from live Vercel stream events.
 
   // ── Approve / Reject handlers ───────────────────────────────────────────
@@ -551,32 +602,26 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
       setApprovalError(null);
       try {
         const approval = approvals.find(a => a.id === requestId);
-        const res = await authFetch(
-          `${agentBaseUrl}/api/v1/tool-approvals/${requestId}/approve`,
-          { method: 'POST', body: JSON.stringify({}) },
-        );
-        if (!res.ok) {
-          throw new Error(`Approve failed (${res.status})`);
+        if (!approval?.tool_call_id || !approvalStreamRef.current) {
+          throw new Error('Approval stream is not active for this request');
         }
-        if (approval?.tool_call_id && approvalStreamRef.current) {
-          await approvalStreamRef.current.adapter.sendToolResult(
-            approval.tool_call_id,
-            {
-              toolCallId: approval.tool_call_id,
-              success: true,
-              result: {
-                approved: true,
-                approvalId: requestId,
-                message: 'Approved from trigger panel',
-              },
+
+        await approvalStreamRef.current.adapter.sendToolResult(
+          approval.tool_call_id,
+          {
+            toolCallId: approval.tool_call_id,
+            success: true,
+            result: {
+              approved: true,
+              approvalId: requestId,
+              message: 'Approved from trigger panel',
             },
-          );
-          approvalStreamRef.current.unsubscribe();
-          approvalStreamRef.current.adapter.disconnect();
-          approvalStreamRef.current = null;
-        }
+          },
+        );
+        approvalStreamRef.current.unsubscribe();
+        approvalStreamRef.current.adapter.disconnect();
+        approvalStreamRef.current = null;
         setApprovals(prev => prev.filter(a => a.id !== requestId));
-        void pollApprovals();
       } catch (error) {
         setApprovalError(
           error instanceof Error ? error.message : 'Failed to approve',
@@ -585,7 +630,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
         setApprovalLoading(null);
       }
     },
-    [agentBaseUrl, authFetch, pollApprovals, approvals],
+    [approvals],
   );
 
   const handleReject = useCallback(
@@ -594,32 +639,26 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
       setApprovalError(null);
       try {
         const approval = approvals.find(a => a.id === requestId);
-        const res = await authFetch(
-          `${agentBaseUrl}/api/v1/tool-approvals/${requestId}/reject`,
-          { method: 'POST', body: JSON.stringify(note ? { note } : {}) },
-        );
-        if (!res.ok) {
-          throw new Error(`Reject failed (${res.status})`);
+        if (!approval?.tool_call_id || !approvalStreamRef.current) {
+          throw new Error('Approval stream is not active for this request');
         }
-        if (approval?.tool_call_id && approvalStreamRef.current) {
-          await approvalStreamRef.current.adapter.sendToolResult(
-            approval.tool_call_id,
-            {
-              toolCallId: approval.tool_call_id,
-              success: true,
-              result: {
-                approved: false,
-                approvalId: requestId,
-                message: note || 'Rejected from trigger panel',
-              },
+
+        await approvalStreamRef.current.adapter.sendToolResult(
+          approval.tool_call_id,
+          {
+            toolCallId: approval.tool_call_id,
+            success: true,
+            result: {
+              approved: false,
+              approvalId: requestId,
+              message: note || 'Rejected from trigger panel',
             },
-          );
-          approvalStreamRef.current.unsubscribe();
-          approvalStreamRef.current.adapter.disconnect();
-          approvalStreamRef.current = null;
-        }
+          },
+        );
+        approvalStreamRef.current.unsubscribe();
+        approvalStreamRef.current.adapter.disconnect();
+        approvalStreamRef.current = null;
         setApprovals(prev => prev.filter(a => a.id !== requestId));
-        void pollApprovals();
       } catch (error) {
         setApprovalError(
           error instanceof Error ? error.message : 'Failed to reject',
@@ -628,7 +667,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
         setApprovalLoading(null);
       }
     },
-    [agentBaseUrl, authFetch, pollApprovals, approvals],
+    [approvals],
   );
 
   // ── Launch once trigger with approval ────────────────────────────────────
@@ -639,7 +678,6 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
     setApprovalFlash(null);
     setApprovalSidebarMessages([]);
     setSidebarMessagesError(null);
-    setHasTriggeredApproval(true);
     const runId = `once-approval-${Date.now()}`;
     const startTime = new Date().toISOString();
     setTriggerHistory(prev => [
@@ -957,6 +995,15 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
         <Heading as="h3" sx={{ fontSize: 2, flex: 1 }}>
           Triggers — {agentId}
         </Heading>
+        <Label
+          variant={
+            approvalSocket.connectionState === 'connected'
+              ? 'success'
+              : 'secondary'
+          }
+        >
+          Approvals WS: {approvalSocket.connectionState}
+        </Label>
         {token && <UserBadge token={token} variant="small" />}
         <Button
           size="small"

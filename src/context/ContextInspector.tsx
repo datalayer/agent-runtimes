@@ -406,8 +406,6 @@ export function ContextInspector({
   // REST polling removed — data comes exclusively via WS `agent.snapshot`.
   const contextData = liveData;
 
-  const hasRetryError = false;
-
   // Separate messages by in_context status
   const { inContextMessages, outOfContextMessages } = useMemo(() => {
     if (!contextData?.messages) {

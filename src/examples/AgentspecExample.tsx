@@ -79,8 +79,6 @@ function useJupyterSandboxStatus(
   useJupyterSandbox: boolean,
   codemodeStatusData?: CodemodeStatusResponse | null,
 ): { message: string; variant: 'danger' | 'warning' } | undefined {
-  const hasLiveData = codemodeStatusData !== undefined;
-
   // REST polling removed — data comes exclusively via WS `agent.snapshot`.
   const codemodeStatus = codemodeStatusData;
 

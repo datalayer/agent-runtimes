@@ -3,15 +3,17 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import ReactECharts from 'echarts-for-react';
-import { createOtelClient } from '@datalayer/core/lib/otel';
+import { toMetricValue } from '../hooks/useMonitoring';
 import { subscribeOtelWs } from './otelWsPool';
 
-const COST_OPERATION = 'agent_runtimes.capability.cost.run';
+const COST_RUN_METRIC = 'agent_runtimes.capability.cost.run.usd';
+const COST_CUMULATIVE_METRIC = 'agent_runtimes.capability.cost.cumulative.usd';
 
 /** A single cost data point representing one agent turn. */
 interface CostPoint {
+  timestampKey: string;
   timestampMs: number;
   costUsd: number;
   cumulativeUsd: number;
@@ -32,52 +34,90 @@ function parseAttributes(attrs: unknown): Record<string, unknown> {
   return {};
 }
 
-/** Convert nanosecond timestamp or ISO string to milliseconds. */
-function nanoToMs(nano: unknown): number {
-  if (typeof nano === 'number' && nano > 0) return nano / 1_000_000;
-  if (typeof nano === 'string' && nano.length > 0) {
-    const parsed = Number(nano);
+/** Convert metric row timestamp to milliseconds. */
+function rowTimestampMs(row: Record<string, unknown>): number {
+  const nanoTs = row.timestamp_unix_nano ?? row.observed_timestamp_unix_nano;
+  if (typeof nanoTs === 'number' && nanoTs > 0) return nanoTs / 1_000_000;
+  if (typeof nanoTs === 'string' && nanoTs.length > 0) {
+    const parsed = Number(nanoTs);
     if (Number.isFinite(parsed) && parsed > 0) return parsed / 1_000_000;
-    // ISO date string fallback
-    const ms = new Date(nano).getTime();
+  }
+  const isoTs = row.timestamp;
+  if (typeof isoTs === 'string' && isoTs.length > 0) {
+    const ms = new Date(isoTs).getTime();
     if (Number.isFinite(ms) && ms > 0) return ms;
   }
   return Date.now();
 }
 
-/** Extract cost points from an array of trace/span objects. */
+function rowTimestampKey(row: Record<string, unknown>): string {
+  const nano = row.timestamp_unix_nano;
+  if (typeof nano === 'number' && nano > 0) return String(nano);
+  if (typeof nano === 'string' && nano.length > 0) return nano;
+  const iso = row.timestamp;
+  if (typeof iso === 'string' && iso.length > 0) return iso;
+  return '';
+}
+
+/** Extract cost points from cost metrics rows. */
 function extractCostPoints(
-  spans: Array<Record<string, unknown>>,
+  rows: Array<Record<string, unknown>>,
   agentId?: string,
 ): CostPoint[] {
+  let filtered = rows.filter(row => {
+    const metricName = row.metric_name;
+    return (
+      metricName === COST_CUMULATIVE_METRIC || metricName === COST_RUN_METRIC
+    );
+  });
+
+  if (agentId) {
+    filtered = filtered.filter(row => extractAgentId(row) === agentId);
+  }
+
+  const byTimestamp = new Map<string, Array<Record<string, unknown>>>();
+  for (const row of filtered) {
+    const ts = rowTimestampKey(row);
+    if (!ts) continue;
+    const group = byTimestamp.get(ts) ?? [];
+    group.push(row);
+    byTimestamp.set(ts, group);
+  }
+
   const points: CostPoint[] = [];
+  const sorted = [...byTimestamp.entries()].sort((a, b) => {
+    const na = Number(a[0]);
+    const nb = Number(b[0]);
+    if (Number.isFinite(na) && Number.isFinite(nb)) return na - nb;
+    return a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0;
+  });
 
-  for (const span of spans) {
-    const opName =
-      span.operation_name ?? span.span_name ?? span.operationName ?? '';
-    if (opName !== COST_OPERATION) continue;
+  for (const [, groupRows] of sorted) {
+    const cumulativeRows = groupRows.filter(
+      r => r.metric_name === COST_CUMULATIVE_METRIC,
+    );
+    if (cumulativeRows.length === 0) continue;
+    const runRows = groupRows.filter(r => r.metric_name === COST_RUN_METRIC);
 
-    const attrs = parseAttributes(span.attributes);
+    // Cumulative metric values represent the running total. Repeated snapshot
+    // rows for the same timestamp should not be summed; keep the highest value.
+    const cumulativeUsd = cumulativeRows.reduce(
+      (max, row) => Math.max(max, toMetricValue(row)),
+      0,
+    );
+    const costUsd = runRows.reduce((sum, row) => sum + toMetricValue(row), 0);
 
-    // Filter by agent.id when specified.
-    if (agentId) {
-      const rowAgentId = attrs['agent.id'];
-      if (typeof rowAgentId !== 'string' || rowAgentId !== agentId) continue;
-    }
+    if (!Number.isFinite(cumulativeUsd) || !Number.isFinite(costUsd)) continue;
 
-    const costUsd = Number(attrs['gen_ai.usage.cost_usd'] ?? 0);
-    const cumulativeUsd = Number(attrs['agent.cost.cumulative_usd'] ?? 0);
+    const timestampKey = rowTimestampKey(cumulativeRows[0]);
+    if (!timestampKey) continue;
 
-    if (!Number.isFinite(costUsd) || !Number.isFinite(cumulativeUsd)) continue;
-
-    const ts =
-      span.start_time_unix_nano ??
-      span.timestamp_unix_nano ??
-      span.startTimeUnixNano ??
-      span.start_time;
-    const timestampMs = nanoToMs(ts);
-
-    points.push({ timestampMs, costUsd, cumulativeUsd });
+    points.push({
+      timestampKey,
+      timestampMs: rowTimestampMs(cumulativeRows[0]),
+      costUsd,
+      cumulativeUsd,
+    });
   }
 
   points.sort((a, b) => a.timestampMs - b.timestampMs);
@@ -141,6 +181,8 @@ export interface CostUsageChartProps {
   apiKey?: string;
   runUrl?: string;
   wsRunUrl?: string;
+  liveCumulativeUsd?: number;
+  liveTimestampMs?: number | null;
   height?: number;
 }
 
@@ -150,48 +192,87 @@ export function CostUsageChart({
   apiKey,
   runUrl,
   wsRunUrl,
+  liveCumulativeUsd,
+  liveTimestampMs,
   height = 160,
 }: CostUsageChartProps) {
   const [points, setPoints] = useState<CostPoint[]>([]);
+  const initialTimestampMsRef = useRef<number>(Date.now());
 
-  // ── Initial HTTP fetch ────────────────────────────────────────
+  const mergePoints = (
+    existing: CostPoint[],
+    incoming: CostPoint[],
+  ): CostPoint[] => {
+    const byTimestamp = new Map<string, CostPoint>();
+
+    for (const point of existing) {
+      byTimestamp.set(point.timestampKey, point);
+    }
+
+    for (const point of incoming) {
+      const prev = byTimestamp.get(point.timestampKey);
+      if (!prev) {
+        byTimestamp.set(point.timestampKey, point);
+        continue;
+      }
+      byTimestamp.set(point.timestampKey, {
+        ...prev,
+        timestampMs: Math.max(prev.timestampMs, point.timestampMs),
+        costUsd: Math.max(prev.costUsd, point.costUsd),
+        cumulativeUsd: Math.max(prev.cumulativeUsd, point.cumulativeUsd),
+      });
+    }
+
+    const merged = Array.from(byTimestamp.values()).sort(
+      (a, b) => a.timestampMs - b.timestampMs,
+    );
+
+    // Cumulative cost should never decrease; guard against out-of-order or
+    // duplicate snapshots by enforcing a monotonic series.
+    let runningMax = 0;
+    return merged.map(point => {
+      runningMax = Math.max(runningMax, point.cumulativeUsd);
+      return {
+        ...point,
+        cumulativeUsd: runningMax,
+      };
+    });
+  };
+
+  // ── Reset state on source switch ──────────────────────────────
   useEffect(() => {
     if (!serviceName) {
       setPoints([]);
       return;
     }
+    setPoints([]);
+    initialTimestampMsRef.current = Date.now();
+  }, [agentId, serviceName]);
 
-    let cancelled = false;
+  // Apply immediate post-turn updates from the monitoring websocket snapshot.
+  useEffect(() => {
+    if (!serviceName) return;
+    if (
+      typeof liveCumulativeUsd !== 'number' ||
+      !Number.isFinite(liveCumulativeUsd)
+    ) {
+      return;
+    }
 
-    const load = async () => {
-      try {
-        const client = createOtelClient({
-          token: apiKey,
-          ...(runUrl ? { baseUrl: runUrl } : {}),
-        });
-        const { data: spans } = await client.fetchTraces({
-          serviceName,
-          limit: 500,
-        });
+    const timestampMs =
+      typeof liveTimestampMs === 'number' && Number.isFinite(liveTimestampMs)
+        ? liveTimestampMs
+        : Date.now();
 
-        if (cancelled) return;
-
-        const extracted = extractCostPoints(
-          spans as unknown as Array<Record<string, unknown>>,
-          agentId,
-        );
-        setPoints(extracted);
-      } catch {
-        return;
-      }
+    const livePoint: CostPoint = {
+      timestampKey: `live-${timestampMs}`,
+      timestampMs,
+      costUsd: 0,
+      cumulativeUsd: Math.max(0, liveCumulativeUsd),
     };
 
-    load();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [agentId, apiKey, runUrl, serviceName]);
+    setPoints(prev => mergePoints(prev, [livePoint]));
+  }, [liveCumulativeUsd, liveTimestampMs, serviceName]);
 
   // ── WebSocket subscription (shared connection pool) ─────────
   useEffect(() => {
@@ -220,7 +301,7 @@ export function CostUsageChart({
     if (!wsUrl) return;
 
     const unsubscribe = subscribeOtelWs(wsUrl, msg => {
-      if (msg.signal !== 'traces') return;
+      if (msg.signal !== 'metrics') return;
 
       const rows = Array.isArray(msg.data) ? msg.data : [];
       let matchingRows = rows.filter(
@@ -236,17 +317,7 @@ export function CostUsageChart({
 
       const newPoints = extractCostPoints(matchingRows, agentId);
       if (newPoints.length > 0) {
-        setPoints(prev => {
-          const merged = [...prev, ...newPoints];
-          merged.sort((a, b) => a.timestampMs - b.timestampMs);
-          // Deduplicate by timestamp to avoid duplicate points on reconnect.
-          const seen = new Set<number>();
-          return merged.filter(p => {
-            if (seen.has(p.timestampMs)) return false;
-            seen.add(p.timestampMs);
-            return true;
-          });
-        });
+        setPoints(prev => mergePoints(prev, newPoints));
       }
     });
 
@@ -255,6 +326,14 @@ export function CostUsageChart({
 
   // ── Chart options ─────────────────────────────────────────────
   const option = useMemo(() => {
+    const chartData =
+      points.length > 0
+        ? [
+            [points[0].timestampMs, 0],
+            ...points.map(p => [p.timestampMs, p.cumulativeUsd]),
+          ]
+        : [[initialTimestampMsRef.current, 0]];
+
     return {
       tooltip: {
         trigger: 'axis' as const,
@@ -294,6 +373,7 @@ export function CostUsageChart({
       },
       yAxis: {
         type: 'value' as const,
+        min: 0,
         axisLabel: {
           fontSize: 9,
           formatter: (v: number) => `$${v.toFixed(4)}`,
@@ -313,7 +393,7 @@ export function CostUsageChart({
           symbol: 'circle',
           symbolSize: 4,
           itemStyle: { color: '#cf222e' },
-          data: points.map(p => [p.timestampMs, p.cumulativeUsd]),
+          data: chartData,
         },
       ],
     };

@@ -12,17 +12,8 @@
  * @module components/context/CostTracker
  */
 
-import {
-  Box,
-  Heading,
-  Text,
-  ProgressBar,
-  Spinner,
-  Flash,
-  Label,
-} from '@primer/react';
+import { Box, Heading, Text, ProgressBar, Flash, Label } from '@primer/react';
 import { CreditCardIcon, AlertIcon } from '@primer/octicons-react';
-import { useQuery } from '@tanstack/react-query';
 
 /**
  * Cost usage response from the agent-runtimes API.
@@ -55,14 +46,6 @@ export interface CostUsageResponse {
   }>;
 }
 
-function getLocalApiBase(): string {
-  if (typeof window === 'undefined') return '';
-  const host = window.location.hostname;
-  return host === 'localhost' || host === '127.0.0.1'
-    ? 'http://127.0.0.1:8765'
-    : '';
-}
-
 function formatUsd(amount: number): string {
   if (amount < 0.01) return `$${amount.toFixed(4)}`;
   if (amount < 1) return `$${amount.toFixed(3)}`;
@@ -80,7 +63,7 @@ export interface CostTrackerProps {
   agentId: string;
   /** Compact mode — show only the summary bar */
   compact?: boolean;
-  /** Live cost data pushed by websocket; skips internal polling when provided */
+  /** Live cost data pushed by websocket (single source of truth). */
   liveData?: CostUsageResponse | null;
 }
 
@@ -88,55 +71,17 @@ export interface CostTrackerProps {
  * Displays running cost and budget utilization for an agent.
  */
 export function CostTracker({
-  agentId,
+  agentId: _agentId,
   compact = false,
   liveData,
 }: CostTrackerProps) {
-  const hasLiveData = liveData !== undefined;
-  const {
-    data: queriedCostData,
-    isLoading,
-    error,
-  } = useQuery<CostUsageResponse>({
-    queryKey: ['cost-usage', agentId],
-    queryFn: async () => {
-      const apiBase = getLocalApiBase();
-      const response = await fetch(
-        `${apiBase}/api/v1/configure/agents/${encodeURIComponent(agentId)}/cost-usage`,
-      );
-      if (!response.ok) throw new Error('Failed to fetch cost data');
-      return response.json();
-    },
-    enabled: !hasLiveData,
-    refetchInterval: 5000,
-    staleTime: 0,
-  });
+  const costData = liveData;
 
-  const costData = hasLiveData ? liveData : queriedCostData;
-  const showLoading = !hasLiveData && isLoading;
-  const hasError = !hasLiveData && !!error;
-
-  if (showLoading) {
-    return (
-      <Box
-        sx={{
-          p: 2,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 2,
-        }}
-      >
-        <Spinner size="small" />
-        <Text sx={{ fontSize: 1, color: 'fg.muted' }}>Loading cost…</Text>
-      </Box>
-    );
-  }
-
-  if (hasError || !costData) {
+  if (!costData) {
     return (
       <Box sx={{ p: 2 }}>
         <Text sx={{ fontSize: 1, color: 'fg.muted' }}>
-          Cost data unavailable
+          Waiting for websocket snapshot...
         </Text>
       </Box>
     );

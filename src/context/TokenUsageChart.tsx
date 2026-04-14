@@ -5,7 +5,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import ReactECharts from 'echarts-for-react';
-import { fetchOtelMetricRows, toMetricValue } from '../hooks/useMonitoring';
+import { toMetricValue } from '../hooks/useMonitoring';
 import { subscribeOtelWs } from './otelWsPool';
 
 const SERIES = [
@@ -22,7 +22,7 @@ const SERIES = [
     metric: 'agent_runtimes.prompt.turn.user_message_tokens',
   },
   {
-    label: 'AI messages',
+    label: 'Agent messages',
     metric: 'agent_runtimes.prompt.turn.ai_message_tokens',
   },
   {
@@ -246,60 +246,16 @@ export function TokenUsageChart({
     values: emptyValues(),
   });
 
-  // ── Initial HTTP fetch ────────────────────────────────────────
+  // ── Reset state on source switch ──────────────────────────────
   useEffect(() => {
     if (!serviceName) {
       setTurns([]);
       cumulativeRef.current = { completions: 0, values: emptyValues() };
       return;
     }
-
-    let cancelled = false;
-
-    const load = async () => {
-      const allRows: Array<Record<string, unknown>> = [];
-      const metricsToFetch = [COMPLETIONS_METRIC, ...SERIES.map(s => s.metric)];
-
-      await Promise.all(
-        metricsToFetch.map(async metric => {
-          try {
-            const rows = await fetchOtelMetricRows({
-              metric,
-              serviceName,
-              runUrl,
-              apiKey,
-              limit: 500,
-            });
-            for (const row of rows) {
-              allRows.push(row as Record<string, unknown>);
-            }
-          } catch {
-            return;
-          }
-        }),
-      );
-
-      if (cancelled) return;
-
-      // Filter by agent.id when specified.
-      const filtered = agentId
-        ? allRows.filter(row => extractAgentId(row) === agentId)
-        : allRows;
-
-      const { turns: extracted, finalState } = extractTurnsFromRows(filtered, {
-        completions: 0,
-        values: emptyValues(),
-      });
-      cumulativeRef.current = finalState;
-      setTurns(extracted);
-    };
-
-    load();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [agentId, apiKey, runUrl, serviceName]);
+    setTurns([]);
+    cumulativeRef.current = { completions: 0, values: emptyValues() };
+  }, [agentId, serviceName]);
 
   // ── WebSocket subscription (shared connection pool) ─────────
   useEffect(() => {
