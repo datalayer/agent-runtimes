@@ -253,7 +253,7 @@ class PromptTurnMetricsEmitter:
                 "Prompt-turn OTEL emission requires datalayer.user_uid from JWT"
             )
 
-        self._emitter = OTelEmitter(service_name=service_name, user_uid=user_uid)
+        self._emitter = OTelEmitter(service_name=service_name, user_uid=user_uid, token=user_jwt_token)
         if not self._emitter.enabled:
             raise ValueError("Prompt-turn OTEL emitter failed to initialize")
 

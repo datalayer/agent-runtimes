@@ -1504,6 +1504,7 @@ def _emit_initial_otel_baseline(agent_id: str, http_request: Request) -> None:
                 emitter = OTelEmitter(
                     service_name="agent-runtimes",
                     user_uid=user_uid,
+                    token=user_jwt,
                 )
                 if emitter.enabled:
                     attrs = {

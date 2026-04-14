@@ -54,7 +54,7 @@ class OTelHooksCapability(AbstractCapability[Any]):
                 "OTelHooksCapability: no user_uid from request JWT, skipping emitter creation"
             )
             return None
-        emitter = OTelEmitter(service_name=self.service_name, user_uid=user_uid)
+        emitter = OTelEmitter(service_name=self.service_name, user_uid=user_uid, token=user_jwt)
         self._emitters[cache_key] = emitter
         return emitter
 
