@@ -532,6 +532,13 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
               agentId={agentId}
               apiKey={token ?? undefined}
               runUrl={otelBaseUrl}
+              liveSystemPromptTokens={liveContextSnapshot?.systemPromptTokens}
+              liveUserMessageTokens={liveContextSnapshot?.userMessageTokens}
+              liveAgentMessageTokens={
+                liveContextSnapshot?.assistantMessageTokens
+              }
+              liveToolsUsageTokens={liveContextSnapshot?.toolTokens}
+              liveTimestampMs={monitorLastSnapshotAt}
               height={180}
             />
           </Box>

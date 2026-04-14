@@ -588,6 +588,32 @@ export const agentRuntimeStore = createStore<AgentRuntimeStore>()(
             };
             const tokenTurns = [...existing.tokenTurns];
             const lastTurn = tokenTurns[tokenTurns.length - 1];
+
+            if (
+              lastTurn &&
+              lastTurn.userMessageTokens === promptTokens &&
+              lastTurn.aiMessageTokens === completionTokens &&
+              lastTurn.systemPromptTokens === 0 &&
+              lastTurn.toolsDescriptionTokens === 0 &&
+              lastTurn.toolsUsageTokens === 0 &&
+              lastTurn.totalTokens === totalTokens
+            ) {
+              tokenTurns[tokenTurns.length - 1] = {
+                ...lastTurn,
+                timestampMs: Math.max(lastTurn.timestampMs, timestampMs),
+              };
+
+              return {
+                monitoringCache: {
+                  ...state.monitoringCache,
+                  [key]: {
+                    ...existing,
+                    tokenTurns,
+                  },
+                },
+              };
+            }
+
             const turnNumber = (lastTurn?.turnNumber ?? 0) + 1;
 
             tokenTurns.push({
@@ -662,6 +688,32 @@ export const agentRuntimeStore = createStore<AgentRuntimeStore>()(
             };
             const tokenTurns = [...existing.tokenTurns];
             const lastTurn = tokenTurns[tokenTurns.length - 1];
+
+            if (
+              lastTurn &&
+              lastTurn.systemPromptTokens === systemPromptTokens &&
+              lastTurn.toolsDescriptionTokens === toolsDescriptionTokens &&
+              lastTurn.userMessageTokens === userMessageTokens &&
+              lastTurn.aiMessageTokens === aiMessageTokens &&
+              lastTurn.toolsUsageTokens === toolsUsageTokens &&
+              lastTurn.totalTokens === totalTokens
+            ) {
+              tokenTurns[tokenTurns.length - 1] = {
+                ...lastTurn,
+                timestampMs: Math.max(lastTurn.timestampMs, timestampMs),
+              };
+
+              return {
+                monitoringCache: {
+                  ...state.monitoringCache,
+                  [key]: {
+                    ...existing,
+                    tokenTurns,
+                  },
+                },
+              };
+            }
+
             const turnNumber = (lastTurn?.turnNumber ?? 0) + 1;
 
             tokenTurns.push({

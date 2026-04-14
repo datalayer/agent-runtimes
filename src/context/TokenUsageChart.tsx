@@ -230,6 +230,12 @@ export interface TokenUsageChartProps {
   apiKey?: string;
   runUrl?: string;
   wsRunUrl?: string;
+  liveSystemPromptTokens?: number;
+  liveToolsDescriptionTokens?: number;
+  liveUserMessageTokens?: number;
+  liveAgentMessageTokens?: number;
+  liveToolsUsageTokens?: number;
+  liveTimestampMs?: number | null;
   height?: number;
   days?: number;
 }
@@ -281,10 +287,19 @@ export function TokenUsageChart({
   apiKey,
   runUrl,
   wsRunUrl,
+  liveSystemPromptTokens,
+  liveToolsDescriptionTokens,
+  liveUserMessageTokens,
+  liveAgentMessageTokens,
+  liveToolsUsageTokens,
+  liveTimestampMs,
   height = 160,
 }: TokenUsageChartProps) {
   const monitoringCache = useAgentRuntimeStore(s => s.monitoringCache);
   const mergeTokenTurns = useAgentRuntimeStore(s => s.mergeTokenTurns);
+  const appendLocalTokenTurnFull = useAgentRuntimeStore(
+    s => s.appendLocalTokenTurnFull,
+  );
 
   const cachedEntry = useMemo(
     () => resolveMonitoringEntry(monitoringCache, serviceName, agentId),
@@ -317,6 +332,71 @@ export function TokenUsageChart({
       ? { completions: latestTurn.turnNumber, values: latestTurn.values }
       : { completions: 0, values: emptyValues() };
   }, [agentId, cachedEntry, serviceName]);
+
+  // Apply immediate post-turn token totals from monitoring snapshots.
+  useEffect(() => {
+    if (!serviceName) return;
+
+    const rawValues = [
+      liveSystemPromptTokens,
+      liveToolsDescriptionTokens,
+      liveUserMessageTokens,
+      liveAgentMessageTokens,
+      liveToolsUsageTokens,
+    ];
+
+    if (!rawValues.some(v => typeof v === 'number' && Number.isFinite(v))) {
+      return;
+    }
+
+    const systemPromptTokens = Math.max(0, liveSystemPromptTokens ?? 0);
+    const toolsDescriptionTokens = Math.max(0, liveToolsDescriptionTokens ?? 0);
+    const userMessageTokens = Math.max(0, liveUserMessageTokens ?? 0);
+    const aiMessageTokens = Math.max(0, liveAgentMessageTokens ?? 0);
+    const toolsUsageTokens = Math.max(0, liveToolsUsageTokens ?? 0);
+    const totalTokens =
+      systemPromptTokens +
+      toolsDescriptionTokens +
+      userMessageTokens +
+      aiMessageTokens +
+      toolsUsageTokens;
+
+    const timestampMs =
+      typeof liveTimestampMs === 'number' && Number.isFinite(liveTimestampMs)
+        ? liveTimestampMs
+        : Date.now();
+
+    appendLocalTokenTurnFull({
+      serviceName,
+      agentId,
+      timestampMs,
+      systemPromptTokens,
+      toolsDescriptionTokens,
+      userMessageTokens,
+      aiMessageTokens,
+      toolsUsageTokens,
+      totalTokens,
+    });
+
+    const mergedEntry = resolveMonitoringEntry(
+      agentRuntimeStore.getState().monitoringCache,
+      serviceName,
+      agentId,
+    );
+    if (mergedEntry) {
+      setTurns(mergedEntry.tokenTurns.map(localTokenTurnToPoint));
+    }
+  }, [
+    agentId,
+    appendLocalTokenTurnFull,
+    liveAgentMessageTokens,
+    liveSystemPromptTokens,
+    liveTimestampMs,
+    liveToolsDescriptionTokens,
+    liveToolsUsageTokens,
+    liveUserMessageTokens,
+    serviceName,
+  ]);
 
   // ── WebSocket subscription (shared connection pool) ─────────
   useEffect(() => {
@@ -397,6 +477,15 @@ export function TokenUsageChart({
 
   // ── Chart options ─────────────────────────────────────────────
   const option = useMemo(() => {
+    const legendLabels = Array.from(new Set(SERIES.map(item => item.label)));
+    const baselineTimestampMs =
+      turns.length > 0
+        ? Math.max(
+            0,
+            Math.min(initialTimestampMsRef.current, turns[0].timestampMs - 1),
+          )
+        : initialTimestampMsRef.current;
+
     return {
       animation: false,
       animationDuration: 0,
@@ -407,7 +496,7 @@ export function TokenUsageChart({
         confine: true,
       },
       legend: {
-        data: SERIES.map(item => item.label),
+        data: legendLabels,
         top: 0,
         textStyle: { fontSize: 9 },
         itemWidth: 10,
@@ -453,7 +542,7 @@ export function TokenUsageChart({
         data:
           turns.length > 0
             ? [
-                [turns[0].timestampMs, 0],
+                [baselineTimestampMs, 0],
                 ...turns.map(t => [t.timestampMs, t.values[item.label]]),
               ]
             : [[initialTimestampMsRef.current, 0]],
