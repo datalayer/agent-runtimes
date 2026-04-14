@@ -22,6 +22,7 @@ import httpx
 from fastapi import WebSocket, WebSocketDisconnect
 
 from agent_runtimes.context.costs import get_cost_store
+from agent_runtimes.observability.prompt_turn_metrics import extract_jwt_token
 from agent_runtimes.streams.messages import (
     AgentMonitoringSnapshotPayload,
     AgentStreamMessage,
@@ -236,7 +237,7 @@ async def publish_stream_event(
 # ─── OTEL flush helper ────────────────────────────────────────────────
 
 
-async def _flush_otel_service() -> None:
+async def _flush_otel_service(auth_token: str | None = None) -> None:
     """Ask the OTEL service to flush its buffers so WS subscribers get fresh data."""
     run_url = (
         os.environ.get("DATALAYER_RUN_URL")
@@ -244,7 +245,11 @@ async def _flush_otel_service() -> None:
         or "https://prod1.datalayer.run"
     )
     flush_url = f"{run_url.rstrip('/')}/api/otel/v1/flush"
-    token = os.environ.get("DATALAYER_TOKEN") or os.environ.get("DATALAYER_API_KEY")
+    token = (
+        auth_token
+        or os.environ.get("DATALAYER_TOKEN")
+        or os.environ.get("DATALAYER_API_KEY")
+    )
     try:
         headers: dict[str, str] = {}
         if token:
@@ -255,6 +260,13 @@ async def _flush_otel_service() -> None:
                 headers=headers,
             )
             logger.debug("[otel:flush] status=%d url=%s", resp.status_code, flush_url)
+            if not resp.is_success:
+                logger.warning(
+                    "[otel:flush] failed status=%d url=%s body=%s",
+                    resp.status_code,
+                    flush_url,
+                    (resp.text or "")[:300],
+                )
     except Exception as exc:
         logger.debug("[otel:flush] failed: %s", exc)
 
@@ -276,6 +288,11 @@ async def stream_loop(
     """
     await websocket.accept()
     logger.info("[ws:connect] agent_id=%s", agent_id)
+    websocket_user_jwt_token = extract_jwt_token(
+        websocket.headers.get("authorization"),
+        websocket.headers.get("x-external-token"),
+        websocket.query_params.get("token"),
+    )
     queue = subscribe_stream(agent_id)
     try:
         initial_payload = (
@@ -370,7 +387,7 @@ async def stream_loop(
                                 )
 
                             elif msg_type == "request_otel_flush":
-                                await _flush_otel_service()
+                                await _flush_otel_service(websocket_user_jwt_token)
 
                     except Exception as exc:
                         logger.debug(
