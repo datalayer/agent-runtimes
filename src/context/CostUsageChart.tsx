@@ -68,7 +68,7 @@ function extractCostPoints(
     const costUsd = Number(attrs['gen_ai.usage.cost_usd'] ?? 0);
     const cumulativeUsd = Number(attrs['agent.cost.cumulative_usd'] ?? 0);
 
-    if (costUsd <= 0 && cumulativeUsd <= 0) continue;
+    if (!Number.isFinite(costUsd) || !Number.isFinite(cumulativeUsd)) continue;
 
     const ts =
       span.start_time_unix_nano ??

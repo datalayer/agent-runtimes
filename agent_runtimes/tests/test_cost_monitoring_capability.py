@@ -36,7 +36,7 @@ def test_cost_store_records_run() -> None:
     data = store.get_agent_usage_dict("agent-1")
     assert data["requestCount"] == 1
     assert data["totalTokensUsed"] == 150
-    assert data["currentRunCostUsd"] == 0.0123
+    assert data["lastTurnCostUsd"] == 0.0123
     assert data["cumulativeCostUsd"] == 0.0123
     assert data["perRunBudgetUsd"] == 0.5
     assert data["cumulativeBudgetUsd"] == 2.0

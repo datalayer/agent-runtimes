@@ -90,7 +90,7 @@ class AgentCostUsage:
     def to_dict(self) -> dict[str, Any]:
         return {
             "agentId": self.agent_id,
-            "currentRunCostUsd": self.current_run_cost_usd,
+            "lastTurnCostUsd": self.current_run_cost_usd,
             "cumulativeCostUsd": self.cumulative_cost_usd,
             "perRunBudgetUsd": self.per_run_budget_usd,
             "cumulativeBudgetUsd": self.cumulative_budget_usd,
@@ -146,7 +146,7 @@ class AgentCostStore:
         if usage is None:
             return {
                 "agentId": agent_id,
-                "currentRunCostUsd": 0.0,
+                "lastTurnCostUsd": 0.0,
                 "cumulativeCostUsd": 0.0,
                 "perRunBudgetUsd": None,
                 "cumulativeBudgetUsd": None,

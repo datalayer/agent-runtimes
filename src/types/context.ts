@@ -63,7 +63,7 @@ export interface ContextSnapshotData {
     durationSeconds: number;
   } | null;
   costUsage?: {
-    currentRunCostUsd: number;
+    lastTurnCostUsd: number;
     cumulativeCostUsd: number;
     perRunBudgetUsd: number | null;
     cumulativeBudgetUsd: number | null;

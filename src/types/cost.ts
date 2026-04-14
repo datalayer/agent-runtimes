@@ -25,8 +25,8 @@ export interface ContextUsage {
 // ---- Cost Tracking ----
 
 export interface CostUsage {
-  /** Current run cost in USD */
-  currentRunCostUsd: number;
+  /** Last turn cost in USD */
+  lastTurnCostUsd: number;
   /** Cumulative cost in USD */
   cumulativeCostUsd: number;
   /** Budget limit per run (from agentspec) */

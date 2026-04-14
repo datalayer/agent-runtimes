@@ -29,8 +29,8 @@ import { useQuery } from '@tanstack/react-query';
  */
 export interface CostUsageResponse {
   agentId: string;
-  /** Cost for the current run in USD */
-  currentRunCostUsd: number;
+  /** Cost for the last completed turn in USD */
+  lastTurnCostUsd: number;
   /** Total cumulative cost in USD */
   cumulativeCostUsd: number;
   /** Per-run budget limit (from guardrails) */
@@ -147,9 +147,10 @@ export function CostTracker({
       ? (costData.cumulativeCostUsd / costData.cumulativeBudgetUsd) * 100
       : null;
 
-  const runPercent =
+  const lastTurnCostUsd = costData.lastTurnCostUsd;
+  const lastTurnPercent =
     costData.perRunBudgetUsd != null && costData.perRunBudgetUsd > 0
-      ? (costData.currentRunCostUsd / costData.perRunBudgetUsd) * 100
+      ? (lastTurnCostUsd / costData.perRunBudgetUsd) * 100
       : null;
 
   const isOverBudget = cumulativePercent != null && cumulativePercent > 100;
@@ -174,7 +175,7 @@ export function CostTracker({
       >
         <CreditCardIcon size={14} />
         <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
-          Run: {displayUsd(costData.currentRunCostUsd)}
+          Last turn: {displayUsd(lastTurnCostUsd)}
           {costData.perRunBudgetUsd != null &&
             ` (budget ${formatUsd(costData.perRunBudgetUsd)})`}
           {' | '}Total: {displayUsd(costData.cumulativeCostUsd)}
@@ -230,7 +231,7 @@ export function CostTracker({
           borderColor: 'border.default',
         }}
       >
-        {/* Current run cost */}
+        {/* Last turn cost */}
         <Box sx={{ mb: 3 }}>
           <Box
             sx={{
@@ -239,20 +240,18 @@ export function CostTracker({
               mb: 1,
             }}
           >
-            <Text sx={{ fontSize: 1, fontWeight: 'semibold' }}>
-              Current run
-            </Text>
+            <Text sx={{ fontSize: 1, fontWeight: 'semibold' }}>Last turn</Text>
             <Text sx={{ fontSize: 1 }}>
-              {displayUsd(costData.currentRunCostUsd)}
+              {displayUsd(lastTurnCostUsd)}
               {costData.perRunBudgetUsd != null &&
                 ` (budget ${formatUsd(costData.perRunBudgetUsd)})`}
             </Text>
           </Box>
-          {runPercent != null && (
+          {lastTurnPercent != null && (
             <ProgressBar
-              progress={Math.min(runPercent, 100)}
+              progress={Math.min(lastTurnPercent, 100)}
               sx={{ height: 6 }}
-              bg={runPercent > 80 ? 'danger.emphasis' : 'accent.emphasis'}
+              bg={lastTurnPercent > 80 ? 'danger.emphasis' : 'accent.emphasis'}
             />
           )}
         </Box>

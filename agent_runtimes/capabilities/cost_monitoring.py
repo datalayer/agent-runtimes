@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from decimal import Decimal
 from typing import Any
@@ -18,6 +19,9 @@ try:
     from datalayer_core.otel.emitter import OTelEmitter
 except Exception:  # pragma: no cover - optional dependency at runtime
     OTelEmitter = None  # type: ignore[assignment,unused-ignore]
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -34,14 +38,28 @@ class CostMonitoringCapability(AbstractCapability[Any]):
     _price_per_input: float | None = field(default=None, init=False, repr=False)
     _price_per_output: float | None = field(default=None, init=False, repr=False)
     _prices_resolved: bool = field(default=False, init=False, repr=False)
-    _emitter: Any = field(default=None, init=False, repr=False)
+    _emitters: dict[str, Any] = field(default_factory=dict, init=False, repr=False)
 
     def _get_emitter(self) -> Any:
         if not self.enabled or OTelEmitter is None:
             return None
-        if self._emitter is None:
-            self._emitter = OTelEmitter(service_name=self.service_name)
-        return self._emitter
+        # OTEL storage requires datalayer.user_uid; resolve it from request JWT.
+        from ..context.identities import get_request_user_jwt
+        from ..observability.prompt_turn_metrics import decode_user_uid
+
+        user_jwt = get_request_user_jwt()
+        user_uid = decode_user_uid(user_jwt) if user_jwt else None
+        if not user_uid:
+            logger.debug(
+                "CostMonitoringCapability: no user_uid from request JWT, skipping OTEL emission"
+            )
+            return None
+
+        emitter = self._emitters.get(user_uid)
+        if emitter is None:
+            emitter = OTelEmitter(service_name=self.service_name, user_uid=user_uid)
+            self._emitters[user_uid] = emitter
+        return emitter
 
     def _resolve_prices(self, model_id: Any = None) -> None:
         # Keep retrying until prices are actually resolved; model catalogs can

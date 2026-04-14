@@ -341,7 +341,7 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
 
         setLiveCost({
           agentId,
-          currentRunCostUsd: Number(snapshotCost.currentRunCostUsd ?? 0),
+          lastTurnCostUsd: Number(snapshotCost.lastTurnCostUsd ?? 0),
           cumulativeCostUsd: Number(snapshotCost.cumulativeCostUsd ?? 0),
           perRunBudgetUsd:
             snapshotCost.perRunBudgetUsd == null

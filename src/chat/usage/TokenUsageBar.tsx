@@ -51,7 +51,7 @@ export function TokenUsageBar({ agentUsage, padding }: TokenUsageBarProps) {
   const hasCostUsage =
     !!agentUsage.costUsage &&
     (agentUsage.costUsage.cumulativeCostUsd > 0 ||
-      agentUsage.costUsage.currentRunCostUsd > 0);
+      agentUsage.costUsage.lastTurnCostUsd > 0);
   const sessionUsage = agentUsage.sessionUsage;
   const turnUsage = agentUsage.turnUsage;
   const costUsage = agentUsage.costUsage;
@@ -280,9 +280,9 @@ export function TokenUsageBar({ agentUsage, padding }: TokenUsageBarProps) {
                   as="span"
                   sx={{ fontWeight: 'semibold', color: 'fg.default' }}
                 >
-                  {formatUsd(agentUsage.costUsage.currentRunCostUsd)}
+                  {formatUsd(agentUsage.costUsage.lastTurnCostUsd)}
                 </Text>
-                {' run · '}
+                {' turn · '}
                 <Text
                   as="span"
                   sx={{ fontWeight: 'semibold', color: 'fg.default' }}
@@ -389,9 +389,9 @@ export function TokenUsageBar({ agentUsage, padding }: TokenUsageBarProps) {
             as="span"
             sx={{ fontWeight: 'semibold', color: 'fg.default', fontSize: 0 }}
           >
-            {formatUsd(costUsage?.currentRunCostUsd ?? 0)}
+            {formatUsd(costUsage?.lastTurnCostUsd ?? 0)}
           </Text>
-          {' run / '}
+          {' turn / '}
           <Text
             as="span"
             sx={{ fontWeight: 'semibold', color: 'fg.default', fontSize: 0 }}
