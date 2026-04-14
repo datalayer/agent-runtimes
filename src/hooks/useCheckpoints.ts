@@ -16,7 +16,7 @@ import { useMemo, useState, useCallback } from 'react';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { useIAMStore } from '@datalayer/core/lib/state';
 import { useCoreStore, useDatalayer } from '@datalayer/core';
-import { agentQueryKeys, AGENT_QUERY_OPTIONS } from './useAgents';
+import { agentQueryKeys, AGENT_QUERY_OPTIONS } from './useAgentRuntimes';
 import type {
   CheckpointMode,
   AgentStatus,

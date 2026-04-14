@@ -18,20 +18,3 @@ export {
   createToolExecutor,
   type ToolExecutionContext,
 } from './ToolExecutor';
-
-// Re-export tool types
-export type {
-  ToolDefinition,
-  FrontendToolDefinition,
-  BackendToolDefinition,
-  ToolLocation,
-  ToolParameter,
-  ToolRenderStatus,
-  ToolRenderProps,
-  ToolRenderAndWaitProps,
-  ToolCallRequest,
-  ToolExecutionResult,
-  ToolRegistryEntry,
-} from '../types/tools';
-
-export { isFrontendTool, isBackendTool, hasHitlRender } from '../types/tools';

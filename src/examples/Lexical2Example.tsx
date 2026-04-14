@@ -62,10 +62,8 @@ import {
   TablePlugin,
 } from '@datalayer/jupyter-lexical';
 import { ChatFloating } from '../chat';
-import {
-  useLexicalToolActions,
-  ActionRegistrar,
-} from '../tools/adapters/copilotkit/lexicalHooks';
+import { useLexicalToolActions } from '../tools/adapters/copilotkit/lexicalHooks';
+import { ActionRegistrar } from '../tools/adapters/copilotkit/CopilotKitToolAdapter';
 import { editorConfig } from './lexical/editorConfig';
 import { useFrontendTool } from '../hooks';
 import { useChatStore, type ChatConfig } from '../stores';

@@ -18,11 +18,7 @@ import {
   lexicalToolDefinitions,
   lexicalToolOperations,
 } from '@datalayer/jupyter-lexical';
-import {
-  createAllCopilotKitActions,
-  ActionRegistrar,
-  type UseFrontendToolFn,
-} from './CopilotKitToolAdapter';
+import { createAllCopilotKitActions } from './CopilotKitToolAdapter';
 
 /**
  * Hook that creates CopilotKit actions for lexical tools.
@@ -91,6 +87,3 @@ export function useLexicalToolActions(
 
   return actions;
 }
-
-// Re-export shared types and components for convenience
-export { ActionRegistrar, type UseFrontendToolFn };

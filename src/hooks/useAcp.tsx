@@ -35,20 +35,10 @@ import {
   type StopReason,
   type SessionUpdate,
   type AgentCapabilities,
-  type ClientCapabilities,
   type RequestPermissionRequest,
   type PermissionOption,
   type ToolCallUpdate,
 } from '@agentclientprotocol/sdk';
-
-// Re-export SDK types for convenience
-export type {
-  StopReason,
-  AgentCapabilities,
-  ClientCapabilities,
-  ToolCallUpdate,
-  PermissionOption,
-};
 
 // Connection state for UI
 export type ConnectionState =

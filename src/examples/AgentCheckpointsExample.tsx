@@ -69,13 +69,13 @@ import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { SignInSimple } from '@datalayer/core/lib/views/iam';
 import { UserBadge } from '@datalayer/core/lib/views/profile';
 import { Chat } from '../chat';
-import { useAgents } from '../hooks/useAgents';
-import { useAgentLifecycle } from '../hooks/useCheckpoints';
 import {
   useAgentRuntimes,
+  useAgentRuntimesQuery,
   useRefreshAgentRuntimes,
   useDeleteAgentRuntime,
-} from '../hooks/useAgents';
+} from '../hooks/useAgentRuntimes';
+import { useAgentLifecycle } from '../hooks/useCheckpoints';
 import { useDeletePausedAgentRuntime } from '../hooks/useCheckpoints';
 import { AGENT_STATUS_COLORS } from '../types/agents';
 import type { CheckpointRecord } from '../types/checkpoints';
@@ -191,7 +191,7 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
     launchRuntime,
     connectToRuntime,
     disconnect,
-  } = useAgents({
+  } = useAgentRuntimes({
     agentSpecId: AGENT_SPEC_ID,
     autoStart: false,
     agentSpec: AGENT_SPEC,
@@ -215,7 +215,7 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
     });
 
   // Agent runtimes from the focused hook
-  const { data: agentRuntimes } = useAgentRuntimes();
+  const { data: agentRuntimes } = useAgentRuntimesQuery();
   const refetchRuntimes = useRefreshAgentRuntimes();
   const deleteRuntimeMutation = useDeleteAgentRuntime();
   const deletePausedRuntimeMutation = useDeletePausedAgentRuntime();

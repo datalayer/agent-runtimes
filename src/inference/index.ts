@@ -18,16 +18,3 @@ export {
   SelfHostedInferenceProvider,
   type SelfHostedInferenceConfig,
 } from './SelfHostedInferenceProvider';
-
-// Re-export inference types
-export type {
-  InferenceProvider,
-  InferenceProviderConfig,
-  InferenceProviderFactory,
-  InferenceProviderType,
-  InferenceRequestOptions,
-  InferenceResponse,
-  StreamEvent,
-  StreamEventType,
-  StreamEventHandler,
-} from '../types/inference';

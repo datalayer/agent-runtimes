@@ -12,12 +12,12 @@
  * @module hooks/useAgentsRegistry
  */
 
-import { useAgentStore } from '../stores/agentsStore';
+import { useAgentRuntimeStore } from '../stores/agentRuntimeStore';
 
 export function useAgentRegistry() {
-  const agents = useAgentStore(state => state.agents);
-  const upsertAgent = useAgentStore(state => state.upsertAgent);
-  const deleteAgent = useAgentStore(state => state.deleteAgent);
-  const getAgentById = useAgentStore(state => state.getAgentById);
+  const agents = useAgentRuntimeStore(state => state.agents);
+  const upsertAgent = useAgentRuntimeStore(state => state.upsertAgent);
+  const deleteAgent = useAgentRuntimeStore(state => state.deleteAgent);
+  const getAgentById = useAgentRuntimeStore(state => state.getAgentById);
   return { agents, upsertAgent, deleteAgent, getAgentById };
 }

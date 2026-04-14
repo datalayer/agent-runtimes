@@ -256,6 +256,9 @@ async def _update_approval(
 # propagated and consumed over websocket streams only.
 
 
+# ─── WebSocket endpoints ─────────────────────────────────────────────
+
+
 @router.websocket("/ws")
 async def tool_approvals_ws(
     websocket: WebSocket,

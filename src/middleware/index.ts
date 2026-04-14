@@ -17,6 +17,3 @@ export {
   type RequestContext,
   type ResponseContext,
 } from './MiddlewarePipeline';
-
-// Re-export middleware types
-export type { ChatMiddleware, MiddlewareContext } from '../types/middleware';

@@ -45,7 +45,7 @@ import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { SignInSimple } from '@datalayer/core/lib/views/iam';
 import { UserBadge } from '@datalayer/core/lib/views/profile';
 import { Chat } from '../chat';
-import { useAgents } from '../hooks/useAgents';
+import { useAgentRuntimes } from '../hooks/useAgentRuntimes';
 
 const queryClient = new QueryClient();
 
@@ -86,7 +86,7 @@ const AgentNotificationsInner: React.FC<{ onLogout: () => void }> = ({
     status: runtimeStatus,
     isReady,
     error: hookError,
-  } = useAgents({
+  } = useAgentRuntimes({
     agentSpecId: AGENT_SPEC_ID,
     autoStart: true,
     agentConfig: {

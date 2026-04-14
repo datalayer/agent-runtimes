@@ -25,7 +25,7 @@ export const EXAMPLES: Record<
   AgUiHumanInTheLoopExample: () => import('./AgUiHumanInTheLoopExample'),
   AgUiSharedStateExample: () => import('./AgUiSharedStateExample'),
   AgUiToolsBasedGenUiExample: () => import('./AgUiToolsBasedGenUiExample'),
-  AgentspecExample: () => import('./AgentspecExample'),
+  AgentSpecExample: () => import('./AgentSpecExample'),
   CellSimpleExample: () => import('./CellSimpleExample'),
   ChatCustomExample: () => import('./ChatCustomExample'),
   ChatExample: () => import('./ChatExample'),

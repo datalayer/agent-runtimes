@@ -60,6 +60,7 @@ import {
   useContextSnapshot,
   useSandbox,
 } from '../../hooks';
+import { useAgentRuntimeWebSocket } from '../../hooks/useAgentRuntimes';
 import { ChatBaseHeader } from '../header/ChatHeaderBase';
 import { ChatEmptyState } from '../display/EmptyState';
 import { PoweredByTag } from '../display/PoweredByTag';
@@ -306,6 +307,18 @@ function ChatBaseInner({
     protocol?.authToken,
   );
   const sandboxStatus = sandboxStatusQuery.data;
+
+  // ---- Agent-runtime WebSocket (monitoring stream) ----
+  // Derive the bare base URL from configEndpoint or protocol.endpoint.
+  const wsBaseUrl = protocol?.configEndpoint
+    ? protocol.configEndpoint.replace(/\/api\/v1\/(config|configure)\/?$/, '')
+    : (protocol?.endpoint?.replace(/\/api\/v1\/.*$/, '') ?? '');
+  useAgentRuntimeWebSocket({
+    enabled: !!protocol && !!wsBaseUrl,
+    baseUrl: wsBaseUrl,
+    authToken: protocol?.authToken,
+    agentId: protocol?.agentId,
+  });
 
   // ---- Refs ----
   const adapterRef = useRef<BaseProtocolAdapter | null>(null);

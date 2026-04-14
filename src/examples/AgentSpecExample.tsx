@@ -12,16 +12,16 @@ import { AiAgentIcon } from '@datalayer/icons-react';
 import { Blankslate } from '@primer/react/experimental';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Box } from '@datalayer/primer-addons';
-import { ThemedProvider } from './utils/themedProvider';
+import { AgentConfiguration } from '../config';
 import { Chat } from '../chat';
 import { DEFAULT_MODEL } from '../specs';
 import type { LibraryAgentSpec } from '../config/AgentConfiguration';
 import type { OAuthProvider, Identity } from '../identity';
-import { useAgentsStore } from './utils/examplesStore';
 import { useIdentity } from '../identity';
+import { useAgentsStore } from './utils/examplesStore';
+import { ThemedProvider } from './utils/themedProvider';
 import { isSpecSelection, getSpecId } from '../config/AgentConfiguration';
 import { MockFileBrowser, MainContent, Header } from './components';
-import { AgentConfiguration } from '../config';
 import { useChatStore } from '../stores';
 import type {
   AgentLibrary,

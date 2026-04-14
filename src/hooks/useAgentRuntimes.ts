@@ -4,13 +4,13 @@
  */
 
 /**
- * Unified hook for managing agents.
+ * Unified hook for managing agent runtimes.
  *
  * Combines agent lifecycle management (ephemeral/durable),
  * runtime catalog (React Query CRUD), lifecycle/catalog stores,
- * and the AI Agents REST API.
+ * the AI Agents REST API, and the agent-runtime WebSocket stream.
  *
- * @module hooks/useAgents
+ * @module hooks/useAgentRuntimes
  */
 
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
@@ -21,12 +21,18 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { useCoreStore, useDatalayer } from '@datalayer/core';
 import { useIAMStore } from '@datalayer/core/lib/state';
 import {
-  useAgentStore,
-  useAgentRuntime,
-  useAgentStatus,
-  useAgentError,
-  useIsLaunching,
-} from '../stores/agentsStore';
+  agentRuntimeStore,
+  useAgentRuntimeStore,
+  useAgentRuntimeConnection,
+  useAgentRuntimeStatus,
+  useAgentRuntimeError,
+  useAgentRuntimeIsLaunching,
+} from '../stores/agentRuntimeStore';
+import {
+  parseAgentStreamMessage,
+  type AgentStreamSnapshotPayload,
+  type AgentStreamToolApprovalPayload,
+} from '../types/stream';
 import { DEFAULT_AGENT_CONFIG } from '../types/config';
 import type { AgentConfig } from '../types/config';
 import type { AgentConnection } from '../types/connection';
@@ -191,7 +197,9 @@ function toAgentRuntimeData(raw: Record<string, any>): AgentRuntimeData {
  * });
  * ```
  */
-export function useAgents(options: UseAgentOptions = {}): UseAgentReturn {
+export function useAgentRuntimes(
+  options: UseAgentOptions = {},
+): UseAgentReturn {
   const {
     agentSpecId,
     agentConfig,
@@ -201,16 +209,16 @@ export function useAgents(options: UseAgentOptions = {}): UseAgentReturn {
   } = options;
 
   // Base store state
-  const runtime = useAgentRuntime();
-  const baseStatus = useAgentStatus();
-  const storeError = useAgentError();
-  const isLaunching = useIsLaunching();
+  const runtime = useAgentRuntimeConnection();
+  const baseStatus = useAgentRuntimeStatus();
+  const storeError = useAgentRuntimeError();
+  const isLaunching = useAgentRuntimeIsLaunching();
 
   // Store actions
-  const storeLaunchAgent = useAgentStore(state => state.launchAgent);
-  const storeConnectAgent = useAgentStore(state => state.connectAgent);
-  const storeCreateAgent = useAgentStore(state => state.createAgent);
-  const storeDisconnect = useAgentStore(state => state.disconnect);
+  const storeLaunchAgent = useAgentRuntimeStore(state => state.launchAgent);
+  const storeConnectAgent = useAgentRuntimeStore(state => state.connectAgent);
+  const storeCreateAgent = useAgentRuntimeStore(state => state.createAgent);
+  const storeDisconnect = useAgentRuntimeStore(state => state.disconnect);
 
   // Lifecycle local state
   const [lifecycleStatus, setLifecycleStatus] = useState<AgentStatus>('idle');
@@ -552,7 +560,7 @@ export function useAgents(options: UseAgentOptions = {}): UseAgentReturn {
  * The backend returns active runtimes from the operator **plus** paused
  * runtimes synthesised from Solr checkpoint records (with ``status="paused"``).
  */
-export function useAgentRuntimes() {
+export function useAgentRuntimesQuery() {
   const { configuration } = useCoreStore();
   const { requestDatalayer } = useDatalayer({ notifyOnError: false });
   const { user } = useIAMStore();
@@ -792,7 +800,7 @@ export interface UseAgentsRuntimesReturn {
  * Consolidated runtime list and mutations.
  */
 export function useAgentsRuntimes(): UseAgentsRuntimesReturn {
-  const runtimesQuery = useAgentRuntimes();
+  const runtimesQuery = useAgentRuntimesQuery();
   const createRuntimeMutation = useCreateAgentRuntime();
   const deleteRuntimeMutation = useDeleteAgentRuntime();
   const refreshRuntimes = useRefreshAgentRuntimes();
@@ -821,4 +829,192 @@ export function useAgentsRuntimes(): UseAgentsRuntimesReturn {
       deleteRuntimeMutation,
     ],
   );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Agent-Runtime WebSocket Hook
+// ═══════════════════════════════════════════════════════════════════════════
+
+export interface UseAgentRuntimeWebSocketOptions {
+  /** Enable/disable the connection. Defaults to `true`. */
+  enabled?: boolean;
+  /**
+   * Base URL of the agent-runtime server
+   * (e.g. `http://localhost:8765`). The WS path is appended automatically.
+   */
+  baseUrl: string;
+  /** Auth token passed as `?token=` query parameter. */
+  authToken?: string;
+  /** Optional `agent_id` query parameter to scope the stream. */
+  agentId?: string;
+  /** Auto-reconnect on unexpected disconnects. Defaults to `true`. */
+  autoReconnect?: boolean;
+  /** Delay between reconnection attempts (ms). Defaults to 3 000. */
+  reconnectDelayMs?: number | ((attempt: number) => number);
+  /** Maximum reconnect attempts. Unbounded by default. */
+  maxReconnectAttempts?: number;
+  /** Additional callback fired for every incoming WS message. */
+  onMessage?: (msg: { type?: string; payload?: unknown; raw: unknown }) => void;
+}
+
+const DEFAULT_WS_PATH = '/api/v1/tool-approvals/ws';
+const DEFAULT_RECONNECT_DELAY_MS = 3_000;
+
+/**
+ * Connect to the agent-runtime monitoring WebSocket.
+ *
+ * The hook writes all incoming data into the `useAgentRuntimeStore` Zustand
+ * store. Components that need approvals, MCP status, context snapshots, or
+ * full-context data simply read from the store.
+ *
+ * Mount this hook **once** near the top of your component tree (e.g. in
+ * the example root or in `ChatBase`). All other components read from the
+ * store — no extra WebSocket connections needed.
+ */
+export function useAgentRuntimeWebSocket(
+  options: UseAgentRuntimeWebSocketOptions,
+): void {
+  const {
+    enabled = true,
+    baseUrl,
+    authToken,
+    agentId,
+    autoReconnect = true,
+    reconnectDelayMs = DEFAULT_RECONNECT_DELAY_MS,
+    maxReconnectAttempts,
+  } = options;
+
+  const onMessageRef = useRef(options.onMessage);
+  onMessageRef.current = options.onMessage;
+
+  useEffect(() => {
+    if (!enabled || !baseUrl) {
+      agentRuntimeStore.getState().setWsState('closed');
+      return;
+    }
+
+    let disposed = false;
+    let reconnectAttempts = 0;
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+
+    function buildWsUrl(): string {
+      const httpUrl = `${baseUrl}${DEFAULT_WS_PATH}`;
+      const url = new URL(httpUrl.replace(/^http/, 'ws'));
+      if (authToken) {
+        url.searchParams.set('token', authToken);
+      }
+      if (agentId) {
+        url.searchParams.set('agent_id', agentId);
+      }
+      return url.toString();
+    }
+
+    function connect() {
+      if (disposed) return;
+
+      const wsUrl = buildWsUrl();
+      agentRuntimeStore.getState().setWsState('connecting');
+
+      const ws = new WebSocket(wsUrl);
+      agentRuntimeStore.getState().setWs(ws);
+
+      ws.onopen = () => {
+        reconnectAttempts = 0;
+        agentRuntimeStore.getState().setWsState('connected');
+      };
+
+      ws.onmessage = (ev: MessageEvent) => {
+        let raw: unknown;
+        try {
+          raw = JSON.parse(String(ev.data));
+        } catch {
+          return;
+        }
+
+        const parsed = parseAgentStreamMessage(raw);
+        onMessageRef.current?.({
+          type: parsed?.type,
+          payload: parsed?.payload,
+          raw,
+        });
+
+        if (!parsed) return;
+
+        const state = agentRuntimeStore.getState();
+
+        if (parsed.type === 'agent.snapshot') {
+          state.applySnapshot(
+            parsed.payload as unknown as AgentStreamSnapshotPayload,
+          );
+          return;
+        }
+
+        if (parsed.type === 'tool_approval_created') {
+          const approval =
+            parsed.payload as unknown as AgentStreamToolApprovalPayload;
+          if (approval.status === 'pending') {
+            state.upsertApproval(approval);
+          }
+          return;
+        }
+
+        if (
+          parsed.type === 'tool_approval_approved' ||
+          parsed.type === 'tool_approval_rejected'
+        ) {
+          const approval =
+            parsed.payload as unknown as AgentStreamToolApprovalPayload;
+          state.removeApproval(approval.id);
+          return;
+        }
+      };
+
+      ws.onclose = () => {
+        agentRuntimeStore.getState().setWs(null);
+        agentRuntimeStore.getState().setWsState('closed');
+
+        if (disposed || !autoReconnect) return;
+
+        reconnectAttempts += 1;
+        if (
+          typeof maxReconnectAttempts === 'number' &&
+          reconnectAttempts > maxReconnectAttempts
+        ) {
+          return;
+        }
+
+        const delay =
+          typeof reconnectDelayMs === 'function'
+            ? reconnectDelayMs(reconnectAttempts)
+            : reconnectDelayMs;
+        reconnectTimer = setTimeout(connect, Math.max(0, delay));
+      };
+
+      ws.onerror = () => {
+        if (
+          ws.readyState === WebSocket.CONNECTING ||
+          ws.readyState === WebSocket.OPEN
+        ) {
+          ws.close();
+        }
+      };
+    }
+
+    connect();
+
+    return () => {
+      disposed = true;
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      agentRuntimeStore.getState().setWs(null);
+      agentRuntimeStore.getState().resetWs();
+    };
+  }, [
+    enabled,
+    baseUrl,
+    authToken,
+    agentId,
+    autoReconnect,
+    reconnectDelayMs,
+    maxReconnectAttempts,
+  ]);
 }

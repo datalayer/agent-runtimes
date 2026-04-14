@@ -13,7 +13,7 @@
 import { useEffect } from 'react';
 import { useCoreStore, useDatalayer } from '@datalayer/core';
 import { URLExt } from '@jupyterlab/coreutils';
-import { useAgentStore } from '../stores/agentsStore';
+import { useAgentRuntimeStore } from '../stores/agentRuntimeStore';
 
 export type RequestOptions = {
   signal?: AbortSignal;
@@ -27,7 +27,7 @@ export type RoomType = 'notebook_persist' | 'notebook_memory' | 'doc_memory';
 // ═══════════════════════════════════════════════════════════════════════════
 
 /**
- * @deprecated Use useAgents instead
+ * @deprecated Use useAgentRuntimes instead
  */
 export const useAgentsService = (baseUrlOverride = 'api/ai-agents/v1') => {
   const { configuration } = useCoreStore();
@@ -136,14 +136,14 @@ export const useAgentsService = (baseUrlOverride = 'api/ai-agents/v1') => {
  * Get the notebook AI agent if any.
  *
  * This performs a periodic liveness check and keeps the local store in sync.
- * @deprecated Use useAgents instead
+ * @deprecated Use useAgentRuntimes instead
  */
 export function useNotebookAgents(notebookId: string) {
   const { getAgent } = useAgentsService();
-  const agents = useAgentStore(state => state.agents);
-  const upsertAgent = useAgentStore(state => state.upsertAgent);
-  const deleteAgent = useAgentStore(state => state.deleteAgent);
-  const getAgentById = useAgentStore(state => state.getAgentById);
+  const agents = useAgentRuntimeStore(state => state.agents);
+  const upsertAgent = useAgentRuntimeStore(state => state.upsertAgent);
+  const deleteAgent = useAgentRuntimeStore(state => state.deleteAgent);
+  const getAgentById = useAgentRuntimeStore(state => state.getAgentById);
 
   useEffect(() => {
     let abortController: AbortController;

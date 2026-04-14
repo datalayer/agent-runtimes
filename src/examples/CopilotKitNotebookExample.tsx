@@ -25,10 +25,8 @@ import { CopilotSidebar } from '@copilotkit/react-ui';
 import '@copilotkit/react-ui/styles.css';
 
 // Import CopilotKit components and hooks
-import {
-  ActionRegistrar,
-  useNotebookToolActions,
-} from '../tools/adapters/copilotkit/notebookHooks';
+import { useNotebookToolActions } from '../tools/adapters/copilotkit/notebookHooks';
+import { ActionRegistrar } from '../tools/adapters/copilotkit/CopilotKitToolAdapter';
 
 // Import Matplotlib notebook
 import MatplotlibNotebook from './utils/notebooks/Matplotlib.ipynb.json';

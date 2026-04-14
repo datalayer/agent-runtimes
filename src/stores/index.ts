@@ -10,22 +10,28 @@
  */
 
 export {
-  useAgentStore,
-  useAgentRuntime,
-  useAgentFromStore,
-  useAgentStatus,
-  useAgentError,
-  useIsLaunching,
-  getAgentState,
-  subscribeToAgent,
-  agentStore,
+  agentRuntimeStore,
+  useAgentRuntimeStore,
+  useAgentRuntimeConnection,
+  useAgentRuntimeStatus,
+  useAgentRuntimeError,
+  useAgentRuntimeIsLaunching,
+  useAgentRuntimeApprovals,
+  useAgentRuntimePendingCount,
+  useAgentRuntimeMcpStatus,
+  useAgentRuntimeFullContext,
+  useAgentRuntimeContextSnapshot,
+  useAgentRuntimeCostUsage,
+  useAgentRuntimeCodemodeStatus,
+  useAgentRuntimeWsState,
+  getAgentRuntimeState,
+  subscribeToAgentRuntime,
   type AgentRegistryEntry,
-  type agentsStoreState,
-  type agentsStoreActions,
-  type agentsStore,
-  type AgentRegistryState,
-  type AgentState,
-} from './agentsStore';
+  type AgentRuntimeWsState,
+  type AgentRuntimeStoreState,
+  type AgentRuntimeStoreActions,
+  type AgentRuntimeStore,
+} from './agentRuntimeStore';
 
 export {
   useChatStore,

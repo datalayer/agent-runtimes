@@ -99,14 +99,14 @@ export { useVercelAI } from './useVercelAI';
 /**
  * Unified hook for managing agents — both ephemeral and durable.
  */
-export { useAgents } from './useAgents';
+export { useAgentRuntimes } from './useAgentRuntimes';
 
 /**
  * Runtime query and mutation hooks.
  */
 export {
   useAgentsRuntimes,
-  useAgentRuntimes,
+  useAgentRuntimesQuery,
   useAgentRuntimeByPodName,
   useCreateAgentRuntime,
   useDeleteAgentRuntime,
@@ -115,7 +115,15 @@ export {
   AGENT_QUERY_OPTIONS,
   useAgentLifecycleStore,
   getAgentLifecycleKey,
-} from './useAgents';
+} from './useAgentRuntimes';
+
+/**
+ * Agent-runtime WebSocket stream hook.
+ */
+export {
+  useAgentRuntimeWebSocket,
+  type UseAgentRuntimeWebSocketOptions,
+} from './useAgentRuntimes';
 
 /**
  * Agent catalog store, AI Agents REST API, and registry hooks.

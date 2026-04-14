@@ -18,11 +18,7 @@ import {
   notebookToolDefinitions,
   notebookToolOperations,
 } from '@datalayer/jupyter-react';
-import {
-  createAllCopilotKitActions,
-  ActionRegistrar,
-  type UseFrontendToolFn,
-} from './CopilotKitToolAdapter';
+import { createAllCopilotKitActions } from './CopilotKitToolAdapter';
 
 // Hook wrapper to get notebook store state
 const useNotebookStore = () => notebookStore.getState();
@@ -97,6 +93,3 @@ export function useNotebookToolActions(
     [context],
   );
 }
-
-// Re-export shared types and components for convenience
-export { ActionRegistrar, type UseFrontendToolFn };

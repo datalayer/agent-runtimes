@@ -35,7 +35,7 @@ import { SignInSimple } from '@datalayer/core/lib/views/iam';
 import { UserBadge } from '@datalayer/core/lib/views/profile';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
-import { useAgents } from '../hooks/useAgents';
+import { useAgentRuntimes } from '../hooks/useAgentRuntimes';
 import { Chat } from '../chat';
 
 const queryClient = new QueryClient();
@@ -72,7 +72,7 @@ const AgentCodemodeInner: React.FC<{ onLogout: () => void }> = ({
     status: runtimeStatus,
     isReady,
     error: hookError,
-  } = useAgents({
+  } = useAgentRuntimes({
     agentSpecId: AGENT_SPEC_ID,
     autoStart: true,
     agentConfig: {

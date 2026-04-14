@@ -20,10 +20,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { AgentCard, Task, TextPart, TaskState } from '@a2a-js/sdk';
-
-// Re-export types for convenience
-export type { AgentCard, Task, TaskState };
+import type { AgentCard, Task, TextPart } from '@a2a-js/sdk';
 
 export interface Message {
   role: 'user' | 'assistant' | 'system';

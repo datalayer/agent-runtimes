@@ -62,10 +62,8 @@ import {
   TableCellResizerPlugin,
   TablePlugin,
 } from '@datalayer/jupyter-lexical';
-import {
-  ActionRegistrar,
-  useLexicalToolActions,
-} from '../tools/adapters/copilotkit/lexicalHooks';
+import { useLexicalToolActions } from '../tools/adapters/copilotkit/lexicalHooks';
+import { ActionRegistrar } from '../tools/adapters/copilotkit/CopilotKitToolAdapter';
 import { editorConfig } from './lexical/editorConfig';
 
 import '@datalayer/jupyter-lexical/style/index.css';
