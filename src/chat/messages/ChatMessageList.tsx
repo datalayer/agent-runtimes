@@ -130,6 +130,15 @@ function DefaultToolCallRenderer({
   const isPendingFromResult =
     item.status === 'inProgress' && resultObject?.pending_approval === true;
 
+  // Extract the approval_id carried in the tool result by the adapter.
+  // This is always available when the SSE stream contained a
+  // `tool-approval-request` event, even when the Zustand store has not been
+  // populated (e.g. no monitoring WS open).
+  const resultApprovalId =
+    typeof resultObject?.approval_id === 'string'
+      ? resultObject.approval_id
+      : undefined;
+
   // In ai-agents-wrapper mode, the server blocks waiting for approval and
   // never sends a tool-result with pending_approval. The tool stays in
   // 'executing' status.
@@ -165,29 +174,33 @@ function DefaultToolCallRenderer({
     decision,
   ]);
 
-  const matchedApprovalId = matchedApproval?.id ?? null;
+  // Prefer the store-matched approval id, fall back to the id from the tool
+  // result (SSE path). This ensures the approve/deny buttons work even when
+  // the monitoring WS is not connected.
+  const effectiveApprovalId = matchedApproval?.id ?? resultApprovalId ?? null;
 
   const makeDecision = useCallback(
     (action: 'approve' | 'reject') => {
-      if (!matchedApprovalId) return;
+      if (!effectiveApprovalId) return;
       const approved = action === 'approve';
-      const sent = sendDecision(matchedApprovalId, approved);
-      if (sent) {
-        setDecision(approved ? 'approved' : 'denied');
-        onRespond({
-          type: 'tool-approval-decision',
-          approved,
-          approvalId: matchedApprovalId,
-          toolName: item.toolName,
-        });
-      }
+      // Try the store WS path (monitoring WS) — best-effort.
+      sendDecision(effectiveApprovalId, approved);
+      // Always send via the adapter continuation path (SSE/POST) which is the
+      // primary channel for the chat sidebar flow.
+      setDecision(approved ? 'approved' : 'denied');
+      onRespond({
+        type: 'tool-approval-decision',
+        approved,
+        approvalId: effectiveApprovalId,
+        toolName: item.toolName,
+      });
     },
-    [matchedApprovalId, sendDecision, onRespond, item.toolName],
+    [effectiveApprovalId, sendDecision, onRespond, item.toolName],
   );
 
   // Show approval UI when we have a confirmed pending approval (from result
   // or discovered via the store) or after a decision has been made.
-  const hasApproval = isPendingFromResult || !!matchedApprovalId;
+  const hasApproval = isPendingFromResult || !!effectiveApprovalId;
 
   const approvalState: 'pending' | 'approved' | 'denied' | undefined =
     decision || (hasApproval ? 'pending' : undefined);
@@ -206,12 +219,12 @@ function DefaultToolCallRenderer({
       approvalRequired={hasApproval}
       approvalState={approvalState}
       onApprove={
-        matchedApprovalId && !decision
+        effectiveApprovalId && !decision
           ? () => makeDecision('approve')
           : undefined
       }
       onDeny={
-        matchedApprovalId && !decision
+        effectiveApprovalId && !decision
           ? () => makeDecision('reject')
           : undefined
       }
