@@ -228,6 +228,7 @@ function ChatBaseInner({
   // Pending prompt
   pendingPrompt,
   contextSnapshot: externalContextSnapshot,
+  mcpStatusData,
 }: ChatBaseProps) {
   useEffect(() => {
     setupPrimerPortals();
@@ -1863,6 +1864,7 @@ function ChatBaseInner({
           apiBase={indicatorApiBase}
           authToken={protocol?.authToken}
           agentId={protocol?.agentId}
+          mcpStatusData={mcpStatusData}
         />
       )}
 

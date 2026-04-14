@@ -245,6 +245,13 @@ export interface ChatBaseProps {
    */
   contextSnapshot?: import('./context').ContextSnapshotData;
 
+  /**
+   * External MCP toolsets status data for the MCP indicator.
+   * When provided, the data is forwarded to the McpStatusIndicator
+   * so it shows live status instead of "No MCP Server defined".
+   */
+  mcpStatusData?: import('./mcp').McpToolsetsStatusResponse | null;
+
   /** Show loading indicator */
   showLoadingIndicator?: boolean;
 

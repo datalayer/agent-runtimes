@@ -502,6 +502,7 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
             ]}
             submitOnSuggestionClick
             contextSnapshot={liveContextSnapshot}
+            mcpStatusData={liveMcpStatus}
           />
         </Box>
 

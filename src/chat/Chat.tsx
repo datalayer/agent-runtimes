@@ -319,6 +319,12 @@ export interface ChatProps {
    * When provided, overrides the built-in (no-op) useContextSnapshot hook.
    */
   contextSnapshot?: import('../types/context').ContextSnapshotData;
+
+  /**
+   * External MCP toolsets status data for the MCP indicator.
+   * When provided, the data is forwarded to the McpStatusIndicator.
+   */
+  mcpStatusData?: import('../types/mcp').McpToolsetsStatusResponse | null;
 }
 
 /**
@@ -415,6 +421,7 @@ export function Chat({
   renderToolResult,
   hideMessagesAfterToolUI = false,
   contextSnapshot,
+  mcpStatusData,
 }: ChatProps) {
   const [error, setError] = useState<string | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
@@ -736,6 +743,7 @@ export function Chat({
             renderToolResult={renderToolResult}
             hideMessagesAfterToolUI={hideMessagesAfterToolUI}
             contextSnapshot={contextSnapshot}
+            mcpStatusData={mcpStatusData}
           />
         </Box>
       </Box>
