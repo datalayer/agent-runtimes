@@ -6,16 +6,18 @@
 from __future__ import annotations
 
 import asyncio
-from types import SimpleNamespace
+from typing import cast
 
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from agent_runtimes.context.identities import get_request_identities
+from agent_runtimes.routes.acp import AgentInfo
 from agent_runtimes.routes import acp as acp_route
 from agent_runtimes.routes import agents as agents_route
 from agent_runtimes.routes.agents import OAuthIdentity, TriggerRunRequest, trigger_run
+from agent_runtimes.adapters.base import BaseAgent
 
 
 class _DummyRequest:
@@ -52,7 +54,10 @@ async def test_trigger_run_applies_identity_context_for_invoke(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     agent_id = "trigger-agent"
-    acp_route._agents[agent_id] = (object(), SimpleNamespace())
+    acp_route._agents[agent_id] = (
+        cast(BaseAgent, object()),
+        AgentInfo(id=agent_id, name="Trigger Agent"),
+    )
 
     captured: dict[str, object] = {}
 
@@ -61,7 +66,9 @@ async def test_trigger_run_applies_identity_context_for_invoke(
             captured["identities"] = get_request_identities()
 
     fake_invoker = _FakeInvoker()
-    monkeypatch.setattr("agent_runtimes.invoker.get_invoker", lambda **_kwargs: fake_invoker)
+    monkeypatch.setattr(
+        "agent_runtimes.invoker.get_invoker", lambda **_kwargs: fake_invoker
+    )
 
     body = TriggerRunRequest(
         source="once",
@@ -74,9 +81,7 @@ async def test_trigger_run_applies_identity_context_for_invoke(
     # Let the background task execute.
     await asyncio.sleep(0)
 
-    assert captured["identities"] == [
-        {"provider": "github", "accessToken": "gho_123"}
-    ]
+    assert captured["identities"] == [{"provider": "github", "accessToken": "gho_123"}]
     # Identity context should not leak to caller context.
     assert get_request_identities() is None
 
@@ -86,7 +91,10 @@ async def test_trigger_run_logs_background_invoke_failures(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     agent_id = "trigger-agent-fail"
-    acp_route._agents[agent_id] = (object(), SimpleNamespace())
+    acp_route._agents[agent_id] = (
+        cast(BaseAgent, object()),
+        AgentInfo(id=agent_id, name="Trigger Agent Fail"),
+    )
 
     class _FailingInvoker:
         async def invoke(self, _trigger_config: dict[str, object]) -> None:
