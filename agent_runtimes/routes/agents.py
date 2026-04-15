@@ -115,6 +115,21 @@ def set_api_prefix(prefix: str) -> None:
     _api_prefix = prefix
 
 
+def _extract_trigger_config(spec_obj: Any) -> dict[str, Any]:
+    """Extract a trigger config dict from a spec-like object."""
+    trigger_raw: Any | None = None
+    if isinstance(spec_obj, dict):
+        trigger_raw = spec_obj.get("trigger")
+    elif hasattr(spec_obj, "model_dump"):
+        try:
+            trigger_raw = spec_obj.model_dump(by_alias=True).get("trigger")
+        except Exception:
+            trigger_raw = None
+    if trigger_raw is None:
+        trigger_raw = getattr(spec_obj, "trigger", None)
+    return trigger_raw if isinstance(trigger_raw, dict) else {}
+
+
 # ============================================================================
 # Agent Spec Library Routes
 # ============================================================================
@@ -3431,15 +3446,29 @@ async def trigger_run(
     trigger_config: dict[str, Any] = {}
     agent_spec_id: str = agent_id  # fallback
 
-    # Try to find the spec for this agent
-    for spec_id, spec in AGENT_SPECS.items():
-        if agent_id.endswith(spec_id.replace("_", "-")) or spec_id in agent_id:
-            agent_spec_id = spec_id
-            spec_data = spec if isinstance(spec, dict) else spec.__dict__
-            trigger_raw = spec_data.get("trigger", {})
-            if isinstance(trigger_raw, dict):
-                trigger_config = trigger_raw
-            break
+    # Preferred source: stored creation spec for this concrete agent.
+    stored_spec = get_stored_agent_spec(agent_id) or {}
+    if stored_spec:
+        trigger_config = _extract_trigger_config(stored_spec)
+        agent_spec_id = str(
+            stored_spec.get("agent_spec_id")
+            or stored_spec.get("agentSpecId")
+            or agent_spec_id
+        )
+
+    # If stored spec has only an agent_spec_id (common in SaaS), load library spec.
+    if not trigger_config and agent_spec_id and agent_spec_id != agent_id:
+        lib_spec = get_library_agent_spec(agent_spec_id)
+        if lib_spec is not None:
+            trigger_config = _extract_trigger_config(lib_spec)
+
+    # Legacy fallback: derive by fuzzy-matching spec id from runtime-generated agent_id.
+    if not trigger_config:
+        for spec_id, spec in AGENT_SPECS.items():
+            if agent_id.endswith(spec_id.replace("_", "-")) or spec_id in agent_id:
+                agent_spec_id = spec_id
+                trigger_config = _extract_trigger_config(spec)
+                break
 
     # Extract user token from Authorization header
     auth_header = request.headers.get("Authorization", "")

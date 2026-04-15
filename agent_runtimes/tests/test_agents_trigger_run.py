@@ -12,12 +12,12 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from agent_runtimes.adapters.base import BaseAgent
 from agent_runtimes.context.identities import get_request_identities
-from agent_runtimes.routes.acp import AgentInfo
 from agent_runtimes.routes import acp as acp_route
 from agent_runtimes.routes import agents as agents_route
+from agent_runtimes.routes.acp import AgentInfo
 from agent_runtimes.routes.agents import OAuthIdentity, TriggerRunRequest, trigger_run
-from agent_runtimes.adapters.base import BaseAgent
 
 
 class _DummyRequest:
@@ -29,6 +29,7 @@ class _DummyRequest:
 @pytest.fixture(autouse=True)
 def _clean_agents_registry() -> None:
     acp_route._agents.clear()
+    agents_route._agent_specs.clear()
 
 
 def test_trigger_run_rejects_malformed_identity_payload_with_422() -> None:
@@ -125,3 +126,86 @@ async def test_trigger_run_logs_background_invoke_failures(
 
     assert len(logger_calls) == 1
     assert "invoker failed" in str(logger_calls[0][0][0]).lower()
+
+
+@pytest.mark.asyncio
+async def test_trigger_run_uses_trigger_from_stored_spec(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    agent_id = "saas-random-agent-id"
+    acp_route._agents[agent_id] = (
+        cast(BaseAgent, object()),
+        AgentInfo(id=agent_id, name="SaaS Agent"),
+    )
+    agents_route._agent_specs[agent_id] = {
+        "agent_spec_id": "demo-one-trigger",
+        "trigger": {
+            "type": "once",
+            "prompt": "stored-prompt",
+            "description": "stored-description",
+        },
+    }
+
+    captured: dict[str, object] = {}
+
+    class _FakeInvoker:
+        async def invoke(self, trigger_config: dict[str, object]) -> None:
+            captured["trigger_config"] = trigger_config
+
+    monkeypatch.setattr(
+        "agent_runtimes.invoker.get_invoker", lambda **_kwargs: _FakeInvoker()
+    )
+
+    response = await trigger_run(agent_id, TriggerRunRequest(), _DummyRequest())
+    assert response["success"] is True
+
+    await asyncio.sleep(0)
+    assert captured["trigger_config"] == {
+        "type": "once",
+        "prompt": "stored-prompt",
+        "description": "stored-description",
+    }
+
+
+@pytest.mark.asyncio
+async def test_trigger_run_falls_back_to_library_spec_by_agent_spec_id(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    agent_id = "saas-random-agent-id-2"
+    acp_route._agents[agent_id] = (
+        cast(BaseAgent, object()),
+        AgentInfo(id=agent_id, name="SaaS Agent 2"),
+    )
+    agents_route._agent_specs[agent_id] = {
+        "agent_spec_id": "demo-one-trigger",
+    }
+
+    class _SpecObj:
+        def __init__(self) -> None:
+            self.trigger = {
+                "type": "once",
+                "prompt": "library-prompt",
+                "description": "library-description",
+            }
+
+    monkeypatch.setattr(agents_route, "get_library_agent_spec", lambda _id: _SpecObj())
+
+    captured: dict[str, object] = {}
+
+    class _FakeInvoker:
+        async def invoke(self, trigger_config: dict[str, object]) -> None:
+            captured["trigger_config"] = trigger_config
+
+    monkeypatch.setattr(
+        "agent_runtimes.invoker.get_invoker", lambda **_kwargs: _FakeInvoker()
+    )
+
+    response = await trigger_run(agent_id, TriggerRunRequest(), _DummyRequest())
+    assert response["success"] is True
+
+    await asyncio.sleep(0)
+    assert captured["trigger_config"] == {
+        "type": "once",
+        "prompt": "library-prompt",
+        "description": "library-description",
+    }
