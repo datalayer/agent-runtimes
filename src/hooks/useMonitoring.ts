@@ -49,6 +49,10 @@ export async function fetchOtelMetricRows({
   apiKey,
   limit = 500,
 }: OtelQueryOptions): Promise<MetricValueRow[]> {
+  if (!runUrl || !apiKey) {
+    return [];
+  }
+
   const client = createOtelClient({
     baseUrl: runUrl,
     token: apiKey,

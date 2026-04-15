@@ -34,6 +34,7 @@ import {
   ContextInspector,
   type FullContextResponse,
 } from '../context/ContextInspector';
+import type { ContextSnapshotResponse } from '../context/ContextPanel';
 import { AgentIdentity } from '../identity/AgentIdentity';
 import type { OAuthProvider, OAuthProviderConfig, Identity } from '../identity';
 
@@ -76,6 +77,8 @@ export interface AgentDetailsProps {
   mcpStatusData?: MCPToolsetsStatus | null;
   /** Live codemode status from WS — bypasses REST polling when provided */
   codemodeStatusData?: CodemodeStatus | null;
+  /** Live context usage snapshot from WS — bypasses REST polling when provided */
+  contextSnapshotData?: ContextSnapshotResponse | null;
   /** Live full context from WS — bypasses REST polling when provided */
   fullContextData?: FullContextResponse | null;
 }
@@ -337,6 +340,7 @@ export function AgentDetails({
   showUsage = true,
   mcpStatusData,
   codemodeStatusData,
+  contextSnapshotData,
   fullContextData,
 }: AgentDetailsProps) {
   const hasMcpLiveData = mcpStatusData !== undefined;
@@ -1069,6 +1073,10 @@ export function AgentDetails({
                   </Box>
                 )}
               </Box>
+            ) : hasMcpLiveData ? (
+              <Text sx={{ fontSize: 1, color: 'fg.muted' }}>
+                Waiting for MCP status from WebSocket stream...
+              </Text>
             ) : (
               <Text sx={{ fontSize: 1, color: 'fg.muted' }}>
                 Failed to load MCP status
@@ -1505,6 +1513,10 @@ export function AgentDetails({
                   </Text>
                 )}
               </Box>
+            ) : hasCodemodeLiveData ? (
+              <Text sx={{ fontSize: 1, color: 'fg.muted' }}>
+                Waiting for Codemode status from WebSocket stream...
+              </Text>
             ) : (
               <Text sx={{ fontSize: 1, color: 'fg.muted' }}>
                 Failed to load Codemode status
@@ -1518,6 +1530,7 @@ export function AgentDetails({
           <ContextPanel
             agentId={agentId}
             apiBase={apiBase}
+            liveData={contextSnapshotData}
             messageCount={messageCount}
             chartHeight="200px"
           />

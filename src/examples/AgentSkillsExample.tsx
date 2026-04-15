@@ -29,6 +29,8 @@ import { UserBadge } from '@datalayer/core/lib/views/profile';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
 import { Chat } from '../chat';
+import { useAgentLoadedSkills } from '../hooks';
+import type { LoadedSkillInfo } from '../types';
 
 const queryClient = new QueryClient();
 const AGENT_NAME = 'skills-demo-agent';
@@ -36,23 +38,7 @@ const AGENT_SPEC_ID = 'demo-full';
 const DEFAULT_LOCAL_BASE_URL =
   import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
 
-interface SkillInfo {
-  name: string;
-  description: string;
-  variant: 'module' | 'package' | 'path';
-  module?: string;
-  package?: string;
-  method?: string;
-  path?: string;
-  license?: string;
-  compatibility?: string;
-  allowedTools?: string[];
-  skillMetadata?: Record<string, string>;
-  tags?: string[];
-  emoji?: string;
-}
-
-const SkillCard: React.FC<{ skill: SkillInfo }> = ({ skill }) => (
+const SkillCard: React.FC<{ skill: LoadedSkillInfo }> = ({ skill }) => (
   <Box
     sx={{
       border: '1px solid',
@@ -74,7 +60,9 @@ const SkillCard: React.FC<{ skill: SkillInfo }> = ({ skill }) => (
           ? 'package-based'
           : skill.variant === 'path'
             ? 'path-based'
-            : 'name-based'}
+            : skill.variant === 'module'
+              ? 'name-based'
+              : 'resolved'}
       </Label>
     </Box>
     <Text as="p" sx={{ fontSize: 0, color: 'fg.muted', mb: 1, mt: 0 }}>
@@ -134,10 +122,15 @@ const AgentSkillsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
   const [hookError, setHookError] = useState<string | null>(null);
   const [agentId, setAgentId] = useState<string>(agentName);
   const [isReconnectedAgent, setIsReconnectedAgent] = useState(false);
-  const [skills, setSkills] = useState<SkillInfo[]>([]);
 
   const agentBaseUrl = DEFAULT_LOCAL_BASE_URL;
   const chatAuthToken: string | undefined = token === null ? undefined : token;
+  const { skills } = useAgentLoadedSkills(
+    isReady,
+    agentBaseUrl,
+    agentId,
+    chatAuthToken,
+  );
 
   const authFetch = useCallback(
     (url: string, opts: RequestInit = {}) =>
@@ -228,75 +221,7 @@ const AgentSkillsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
     return () => {
       isCancelled = true;
     };
-  }, [agentBaseUrl, authFetch]);
-
-  // Fetch skill information from the agent's spec endpoint
-  useEffect(() => {
-    if (!isReady) return;
-
-    const fetchSkills = async () => {
-      try {
-        const res = await authFetch(
-          `${agentBaseUrl}/api/v1/agents/${agentId}/spec`,
-        );
-        if (!res.ok) return;
-        const spec = await res.json();
-        const skillNames: string[] = spec?.skills ?? [];
-
-        // For each skill name, build a SkillInfo from the catalog when possible.
-        const { getSkillSpec } = await import('../specs/skills');
-        const infos: SkillInfo[] = skillNames.map((name: string) => {
-          const baseName = name.includes(':') ? name.split(':')[0] : name;
-          const catalogSpec = getSkillSpec(baseName);
-
-          if (catalogSpec?.path) {
-            // Variant 3: path-based skill
-            return {
-              name: catalogSpec.name,
-              description: catalogSpec.description || `Skill: ${baseName}`,
-              variant: 'path' as const,
-              path: catalogSpec.path,
-              tags: catalogSpec.tags ? [...catalogSpec.tags] : [],
-              emoji: catalogSpec.emoji,
-            };
-          }
-
-          if (catalogSpec?.package && catalogSpec?.method) {
-            // Variant 2: package-based skill
-            return {
-              name: catalogSpec.name,
-              description: catalogSpec.description || `Skill: ${baseName}`,
-              variant: 'package' as const,
-              package: catalogSpec.package,
-              method: catalogSpec.method,
-              license: catalogSpec.license,
-              compatibility: catalogSpec.compatibility,
-              allowedTools: catalogSpec.allowedTools,
-              skillMetadata: catalogSpec.skillMetadata,
-              tags: catalogSpec.tags ? [...catalogSpec.tags] : [],
-              emoji: catalogSpec.emoji,
-            };
-          }
-
-          // Variant 1: name-based (module discovery)
-          return {
-            name: catalogSpec?.name ?? baseName,
-            description: catalogSpec?.description ?? `Skill: ${baseName}`,
-            variant: 'module' as const,
-            module: catalogSpec?.module ?? `agent_skills.skills.${baseName}`,
-            tags: catalogSpec?.tags ? [...catalogSpec.tags] : [],
-            emoji: catalogSpec?.emoji,
-          };
-        });
-
-        setSkills(infos);
-      } catch {
-        // Non-fatal: skill display is informational
-      }
-    };
-
-    void fetchSkills();
-  }, [isReady, agentId, agentBaseUrl, authFetch]);
+  }, [agentBaseUrl, agentName, authFetch]);
 
   if (!isReady && runtimeStatus !== 'error') {
     return (

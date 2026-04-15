@@ -24,6 +24,7 @@ export {
   useAgentRuntimeCostUsage,
   useAgentRuntimeCodemodeStatus,
   useAgentRuntimeWsState,
+  useAgentRuntimeLoadedSkills,
   getAgentRuntimeState,
   subscribeToAgentRuntime,
   type AgentRegistryEntry,

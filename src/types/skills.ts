@@ -17,6 +17,29 @@ export interface SkillInfo {
 }
 
 /**
+ * Loaded skill normalized for UI/state consumption.
+ *
+ * This representation is resolved from an agent's active spec and optional
+ * catalog enrichment, then persisted per-agent in the runtime store.
+ */
+export interface LoadedSkillInfo {
+  id: string;
+  name: string;
+  description: string;
+  variant: 'module' | 'package' | 'path' | 'unknown';
+  module?: string;
+  package?: string;
+  method?: string;
+  path?: string;
+  license?: string;
+  compatibility?: string;
+  allowedTools?: string[];
+  skillMetadata?: Record<string, string>;
+  tags?: string[];
+  emoji?: string;
+}
+
+/**
  * Skills response from backend
  */
 export interface SkillsResponse {

@@ -43,6 +43,7 @@ import type {
 } from '../types/stream';
 import type { ContextSnapshotData } from '../types/context';
 import type { McpToolsetsStatusResponse } from '../types/mcp';
+import type { LoadedSkillInfo } from '../types/skills';
 
 // ---------------------------------------------------------------------------
 // Agent Registry types
@@ -125,6 +126,7 @@ export interface AgentRuntimeStoreState {
   codemodeStatus: CodemodeStatusData | null;
   fullContext: Record<string, unknown> | null;
   monitoringCache: Record<string, MonitoringCacheEntry>;
+  loadedSkillsByAgentId: Record<string, LoadedSkillInfo[]>;
 }
 
 export interface AgentRuntimeStoreActions {
@@ -149,6 +151,9 @@ export interface AgentRuntimeStoreActions {
   toggleAgentStatus: (id: string) => void;
   deleteAgent: (id: string) => void;
   clearAgents: () => void;
+  setLoadedSkillsForAgent: (agentId: string, skills: LoadedSkillInfo[]) => void;
+  getLoadedSkillsForAgent: (agentId: string) => LoadedSkillInfo[];
+  clearLoadedSkillsForAgent: (agentId: string) => void;
 
   // ─── Runtime connection ──────────────────────────────────────────
   launchAgent: (options: IRuntimeOptions) => Promise<AgentConnection>;
@@ -309,6 +314,7 @@ const initialWsState: Pick<
   | 'codemodeStatus'
   | 'fullContext'
   | 'monitoringCache'
+  | 'loadedSkillsByAgentId'
 > = {
   wsState: 'closed',
   approvals: [],
@@ -319,6 +325,7 @@ const initialWsState: Pick<
   codemodeStatus: null,
   fullContext: null,
   monitoringCache: {},
+  loadedSkillsByAgentId: {},
 };
 
 // ---------------------------------------------------------------------------
@@ -403,11 +410,41 @@ export const agentRuntimeStore = createStore<AgentRuntimeStore>()(
         },
 
         deleteAgent: (id: string) => {
-          set(state => ({ agents: state.agents.filter(a => a.id !== id) }));
+          set(state => {
+            const { [id]: _removed, ...remainingLoadedSkills } =
+              state.loadedSkillsByAgentId;
+            return {
+              agents: state.agents.filter(a => a.id !== id),
+              loadedSkillsByAgentId: remainingLoadedSkills,
+            };
+          });
         },
 
         clearAgents: () => {
           set({ agents: [] });
+        },
+
+        setLoadedSkillsForAgent: (agentId, skills) => {
+          set(state => ({
+            loadedSkillsByAgentId: {
+              ...state.loadedSkillsByAgentId,
+              [agentId]: skills,
+            },
+          }));
+        },
+
+        getLoadedSkillsForAgent: agentId =>
+          get().loadedSkillsByAgentId[agentId] ?? [],
+
+        clearLoadedSkillsForAgent: agentId => {
+          set(state => {
+            if (!(agentId in state.loadedSkillsByAgentId)) {
+              return {};
+            }
+            const { [agentId]: _removed, ...remaining } =
+              state.loadedSkillsByAgentId;
+            return { loadedSkillsByAgentId: remaining };
+          });
         },
 
         // ── Runtime connection ────────────────────────────────────────
@@ -847,6 +884,7 @@ export const agentRuntimeStore = createStore<AgentRuntimeStore>()(
             runtimeId: agent.runtimeId,
           })),
           monitoringCache: state.monitoringCache,
+          loadedSkillsByAgentId: state.loadedSkillsByAgentId,
         }),
       },
     ),
@@ -864,12 +902,22 @@ export function useAgentRuntimeStore<T>(
 export function useAgentRuntimeStore<T>(
   selector?: (state: AgentRuntimeStore) => T,
 ) {
-  return useStore(agentRuntimeStore, selector!);
+  const resolvedSelector = selector
+    ? selector
+    : (state: AgentRuntimeStore) => state as unknown as T;
+  return useStore(agentRuntimeStore, resolvedSelector);
 }
 
 // Attach getState / subscribe for non-React consumers
-(useAgentRuntimeStore as any).getState = agentRuntimeStore.getState;
-(useAgentRuntimeStore as any).subscribe = agentRuntimeStore.subscribe;
+type AgentRuntimeStoreHook = typeof useAgentRuntimeStore & {
+  getState: typeof agentRuntimeStore.getState;
+  subscribe: typeof agentRuntimeStore.subscribe;
+};
+
+const useAgentRuntimeStoreWithStatics =
+  useAgentRuntimeStore as AgentRuntimeStoreHook;
+useAgentRuntimeStoreWithStatics.getState = agentRuntimeStore.getState;
+useAgentRuntimeStoreWithStatics.subscribe = agentRuntimeStore.subscribe;
 
 // ---------------------------------------------------------------------------
 // Selector hooks — Registry
@@ -912,6 +960,11 @@ export const useAgentRuntimeCodemodeStatus = () =>
 
 export const useAgentRuntimeWsState = () =>
   useAgentRuntimeStore(s => s.wsState);
+
+export const useAgentRuntimeLoadedSkills = (agentId?: string) =>
+  useAgentRuntimeStore(s =>
+    agentId ? (s.loadedSkillsByAgentId[agentId] ?? []) : [],
+  );
 
 // ---------------------------------------------------------------------------
 // Non-React access

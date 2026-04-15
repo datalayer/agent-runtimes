@@ -5,7 +5,7 @@
 
 /// <reference types="vite/client" />
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
   loadJupyterConfig,
@@ -25,6 +25,7 @@ import {
   themeConfigs,
   Box,
 } from '@datalayer/primer-addons';
+import { HomeIcon } from '@primer/octicons-react';
 import { AppearanceControlsWithStore } from '@datalayer/primer-addons/lib/components/appearance';
 import {
   coreStore,
@@ -33,7 +34,11 @@ import {
 } from '@datalayer/core';
 import { useChatStore } from '../stores';
 import { OAuthCallback } from '../identity';
-import { EXAMPLES } from './example-selector';
+import {
+  EXAMPLES,
+  getExampleEntries,
+  type ExampleEntry,
+} from './example-selector';
 import { useExampleThemeStore } from './utils/themeStore';
 import { ExampleWrapper } from './components/ExampleWrapper';
 
@@ -97,7 +102,7 @@ const loadConfigurations = () => {
                   CLI: 0,
                   VSCode: 0,
                 },
-                position: {} as any,
+                position: {} as Record<string, unknown>,
                 tours: {},
               },
               events: [],
@@ -131,14 +136,17 @@ const loadConfigurations = () => {
   }
 };
 
-const getExampleNames = () => Object.keys(EXAMPLES);
+const getExampleEntriesList = () => getExampleEntries();
+
+const getInitialSearchQuery = (): string => {
+  const params = new URLSearchParams(window.location.search);
+  return (params.get('q') || '').trim();
+};
 
 // Check if we're on the notebook-only route
 const isNotebookOnlyRoute = () => {
   const path = window.location.pathname;
-  console.log('Current pathname:', path);
   const isNotebookRoute = path === '/datalayer/notebook';
-  console.log('Is notebook-only route:', isNotebookRoute);
   return isNotebookRoute;
 };
 
@@ -189,10 +197,6 @@ const NotebookOnlyApp: React.FC = () => {
               runUrl: configuration.runUrl,
               token: configuration.token,
             });
-            console.log(
-              '[NotebookOnlyApp] Created collaboration provider:',
-              provider,
-            );
             setCollaborationProvider(provider);
           } catch (error) {
             console.error(
@@ -273,12 +277,6 @@ const NotebookOnlyApp: React.FC = () => {
 
   const NOTEBOOK_ID = '01JZQRQ35GG871QQCZW9TB1A8J';
 
-  console.log('[NotebookOnlyApp] Rendering with:', {
-    hasServiceManager: !!serviceManager,
-    hasCollaborationProvider: !!collaborationProvider,
-    notebookId: NOTEBOOK_ID,
-  });
-
   return (
     <JupyterReactTheme>
       <div style={{ width: '100vw', height: '100vh' }}>
@@ -308,7 +306,27 @@ export const ExampleApp: React.FC = () => {
   const [selectedExample, setSelectedExample] = useState<string>(
     getDefaultExampleName(),
   );
+  const [searchQuery, setSearchQuery] = useState(getInitialSearchQuery());
   const [isChangingExample, setIsChangingExample] = useState(false);
+
+  const filteredExampleEntries = useMemo(() => {
+    const normalized = searchQuery.trim().toLowerCase();
+    const all = getExampleEntriesList();
+    if (!normalized) {
+      return all;
+    }
+    return all.filter(entry => {
+      const haystack = [
+        entry.id,
+        entry.title,
+        entry.description,
+        entry.tags.join(' '),
+      ]
+        .join(' ')
+        .toLowerCase();
+      return haystack.includes(normalized);
+    });
+  }, [searchQuery]);
 
   const loadExample = async (
     exampleName: string,
@@ -438,6 +456,14 @@ export const ExampleApp: React.FC = () => {
   if (serviceManager) {
     exampleProps.serviceManager = serviceManager;
   }
+  exampleProps.examples = filteredExampleEntries.filter(
+    entry => entry.id !== 'HomeExample',
+  );
+  exampleProps.searchQuery = searchQuery;
+  exampleProps.onSearchChange = (value: string) => setSearchQuery(value);
+  exampleProps.onSelectExample = (name: string) => {
+    void handleExampleChange(name);
+  };
 
   return (
     <ExampleAppThemed
@@ -447,6 +473,7 @@ export const ExampleApp: React.FC = () => {
       ExampleComponent={ExampleComponent}
       exampleProps={exampleProps}
       onExampleChange={handleExampleChange}
+      availableExamples={getExampleEntriesList()}
     />
   );
 };
@@ -462,6 +489,7 @@ const ExampleAppThemed: React.FC<{
   ExampleComponent: React.ComponentType<Record<string, unknown>> | null;
   exampleProps: Record<string, unknown>;
   onExampleChange: (name: string) => Promise<void>;
+  availableExamples: ExampleEntry[];
 }> = ({
   selectedExample,
   isChangingExample,
@@ -469,6 +497,7 @@ const ExampleAppThemed: React.FC<{
   ExampleComponent,
   exampleProps,
   onExampleChange,
+  availableExamples,
 }) => {
   const { colorMode, theme: themeVariant } = useExampleThemeStore();
   const cfg = themeConfigs[themeVariant];
@@ -508,8 +537,30 @@ const ExampleAppThemed: React.FC<{
             borderColor: 'border.default',
           }}
         >
-          {/* Left: example selector */}
+          {/* Left: home button + example selector */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Box
+              as="button"
+              onClick={() => void onExampleChange('HomeExample')}
+              title="Home"
+              aria-label="Go to examples home"
+              sx={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '32px',
+                height: '32px',
+                border: '1px solid',
+                borderColor: 'border.default',
+                borderRadius: 2,
+                bg: 'canvas.default',
+                color: 'fg.default',
+                cursor: isChangingExample ? 'not-allowed' : 'pointer',
+              }}
+              disabled={isChangingExample}
+            >
+              <HomeIcon size={16} />
+            </Box>
             <Box
               as="select"
               value={selectedExample}
@@ -536,11 +587,12 @@ const ExampleAppThemed: React.FC<{
                 },
               }}
             >
-              {getExampleNames()
-                .sort()
-                .map(name => (
-                  <option key={name} value={name}>
-                    {name}
+              {availableExamples
+                .slice()
+                .sort((a, b) => a.title.localeCompare(b.title))
+                .map(example => (
+                  <option key={example.id} value={example.id}>
+                    {example.title}
                   </option>
                 ))}
             </Box>
@@ -559,17 +611,26 @@ const ExampleAppThemed: React.FC<{
           {/* Right: theme picker + color mode + logo */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
             <AppearanceControlsWithStore useStore={useExampleThemeStore} />
-            <DatalayerLogoText
-              size={24}
-              variant={themeVariant}
-              colorMode={colorMode}
-              primaryColor={logoColors.primary}
-              secondaryColor={logoColors.secondary}
-              textColor={logoColors.textColor}
-              primaryGradient={logoColors.primaryGradient}
-              secondaryGradient={logoColors.secondaryGradient}
-              gradient={true}
-            />
+            <Box
+              as="a"
+              href="https://datalayer.ai"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Open Datalayer website"
+              sx={{ display: 'inline-flex', alignItems: 'center' }}
+            >
+              <DatalayerLogoText
+                size={24}
+                variant={themeVariant}
+                colorMode={colorMode}
+                primaryColor={logoColors.primary}
+                secondaryColor={logoColors.secondary}
+                textColor={logoColors.textColor}
+                primaryGradient={logoColors.primaryGradient}
+                secondaryGradient={logoColors.secondaryGradient}
+                gradient={true}
+              />
+            </Box>
           </Box>
         </Box>
 
@@ -606,17 +667,14 @@ if (root) {
 
   if (isOAuthCallback()) {
     // Handle OAuth callback - render OAuthCallback component
-    console.log('Rendering OAuthCallback (popup flow)');
     appRoot.render(
       <JupyterReactTheme>
         <OAuthCallback autoClose={true} autoCloseDelay={1000} />
       </JupyterReactTheme>,
     );
   } else if (isNotebookOnlyRoute()) {
-    console.log('Rendering NotebookOnlyApp');
     appRoot.render(<NotebookOnlyApp />);
   } else {
-    console.log('Rendering ExampleApp');
     appRoot.render(<ExampleApp />);
   }
 } else {
