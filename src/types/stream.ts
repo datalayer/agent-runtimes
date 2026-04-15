@@ -58,6 +58,7 @@ export interface CodemodeStatusData {
     has_scripts?: boolean;
     has_resources?: boolean;
     status?: SkillStatus;
+    skill_definition?: string | null;
   }>;
   available_skills: Array<{
     id?: string;
@@ -67,6 +68,7 @@ export interface CodemodeStatusData {
     has_scripts?: boolean;
     has_resources?: boolean;
     status?: SkillStatus;
+    skill_definition?: string | null;
   }>;
   sandbox?: Record<string, unknown> | null;
 }
