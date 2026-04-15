@@ -84,7 +84,7 @@ const AGENT_SPEC_ID = 'demo-one-trigger';
 const APPROVAL_AGENT_NAME = 'trigger-approval-demo-agent';
 const APPROVAL_AGENT_SPEC_ID = 'demo-one-trigger-approval';
 const ONCE_TRIGGER_PROMPT =
-  "List the user's top 3 public and top 3 private GitHub repositories, ranked by recent activity, and provide a brief summary of each. Use available skills/tools as needed. If a tool call fails, report the concrete failure reason from failure_reason/error/stderr. If root_error_code is 2, load the skill docs, correct arguments, retry once, then continue.";
+  "List the user's top 3 public and top 3 private GitHub repositories, ranked by recent activity, and provide a brief summary of each. Execute exactly two tool calls: run_skill_script(skill_name='github', script_name='list_repos', kwargs={visibility:'public', sort:'updated', limit:3, format:'json'}) and run_skill_script(skill_name='github', script_name='list_repos', kwargs={visibility:'private', sort:'updated', limit:3, format:'json'}). Do not call list_skills/load_skill/read_skill_resource. Do not retry. If a tool call fails, report failure_reason/error/stderr exactly as returned.";
 const ONCE_TRIGGER_APPROVAL_PROMPT =
   "Call runtime_sensitive_echo exactly once with message='Tool approval demo executed' and reason='audit'. Do not call any other tool.";
 const DEFAULT_LOCAL_BASE_URL =

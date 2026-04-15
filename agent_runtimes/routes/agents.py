@@ -3391,11 +3391,18 @@ async def configure_from_spec_endpoint(
 # ── Trigger / Run ────────────────────────────────────────────────────────
 
 
+class OAuthIdentity(BaseModel):
+    """Validated OAuth identity payload for trigger run scoping."""
+
+    provider: str = Field(min_length=1)
+    accessToken: str = Field(min_length=1)
+
+
 class TriggerRunRequest(BaseModel):
     """Body for POST /{agent_id}/trigger/run."""
 
     source: str = "once"
-    identities: list[dict[str, Any]] = Field(
+    identities: list[OAuthIdentity] = Field(
         default_factory=list,
         description=(
             "Optional OAuth identities to scope this trigger run. "
@@ -3477,13 +3484,24 @@ async def trigger_run(
         "Trigger/run: scheduling '%s' invoker for agent '%s'", trigger_type, agent_id
     )
 
-    identities = body.identities or []
+    identities = [identity.model_dump() for identity in (body.identities or [])]
 
     async def _invoke_with_identity_context() -> None:
         async with IdentityContextManager(identities):
             await invoker.invoke(trigger_config)
 
-    asyncio.ensure_future(_invoke_with_identity_context())
+    def _log_invoke_task_result(task: asyncio.Task[None]) -> None:
+        try:
+            task.result()
+        except Exception:
+            logger.exception(
+                "Trigger/run: '%s' invoker failed for agent '%s'",
+                trigger_type,
+                agent_id,
+            )
+
+    task = asyncio.create_task(_invoke_with_identity_context())
+    task.add_done_callback(_log_invoke_task_result)
 
     return {
         "success": True,
