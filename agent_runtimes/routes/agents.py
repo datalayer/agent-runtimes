@@ -3395,6 +3395,13 @@ class TriggerRunRequest(BaseModel):
     """Body for POST /{agent_id}/trigger/run."""
 
     source: str = "once"
+    identities: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description=(
+            "Optional OAuth identities to scope this trigger run. "
+            "Each entry should include provider and accessToken."
+        ),
+    )
 
 
 @router.post("/{agent_id}/trigger/run")
@@ -3446,6 +3453,7 @@ async def trigger_run(
 
     import asyncio
 
+    from agent_runtimes.context.identities import IdentityContextManager
     from agent_runtimes.invoker import get_invoker
 
     trigger_type = body.source or "once"
@@ -3468,7 +3476,14 @@ async def trigger_run(
     logger.info(
         "Trigger/run: scheduling '%s' invoker for agent '%s'", trigger_type, agent_id
     )
-    asyncio.ensure_future(invoker.invoke(trigger_config))
+
+    identities = body.identities or []
+
+    async def _invoke_with_identity_context() -> None:
+        async with IdentityContextManager(identities):
+            await invoker.invoke(trigger_config)
+
+    asyncio.ensure_future(_invoke_with_identity_context())
 
     return {
         "success": True,

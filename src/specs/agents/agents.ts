@@ -992,14 +992,14 @@ export const DEMO_ONE_TRIGGER_AGENT_SPEC_0_0_1: AgentSpec = {
   sandboxVariant: 'jupyter',
   systemPrompt: undefined,
   systemPromptCodemodeAddons: undefined,
-  goal: `Run a one-shot task: list the user's top 3 public and top 3 private GitHub repositories, ranked by recent activity, and provide a brief summary of each.`,
+  goal: `Run a one-shot task to summarize top 3 public and top 3 private GitHub repos by recent activity, with robust tool-failure interpretation and one retry on argument errors.`,
   protocol: undefined,
   uiExtension: undefined,
   trigger: {
     type: 'once',
     description: 'Run once and terminate',
     prompt:
-      "List the user's top 3 public and top 3 private GitHub repositories, ranked by recent activity, and provide a brief summary of each.",
+      "List the user's top 3 public and top 3 private GitHub repositories, ranked by recent activity, and provide a brief summary of each. Use available skills/tools as needed. If a tool call fails, report the concrete failure reason from failure_reason/error/stderr. If root_error_code is 2, load the skill docs, correct arguments, retry once, then continue.",
   },
   modelConfig: undefined,
   mcpServerTools: undefined,

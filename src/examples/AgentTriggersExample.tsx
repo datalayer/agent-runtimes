@@ -84,7 +84,7 @@ const AGENT_SPEC_ID = 'demo-one-trigger';
 const APPROVAL_AGENT_NAME = 'trigger-approval-demo-agent';
 const APPROVAL_AGENT_SPEC_ID = 'demo-one-trigger-approval';
 const ONCE_TRIGGER_PROMPT =
-  "List the user's top 3 public and top 3 private GitHub repositories, ranked by recent activity, and provide a brief summary of each.";
+  "List the user's top 3 public and top 3 private GitHub repositories, ranked by recent activity, and provide a brief summary of each. Use available skills/tools as needed. If a tool call fails, report the concrete failure reason from failure_reason/error/stderr. If root_error_code is 2, load the skill docs, correct arguments, retry once, then continue.";
 const ONCE_TRIGGER_APPROVAL_PROMPT =
   "Call runtime_sensitive_echo exactly once with message='Tool approval demo executed' and reason='audit'. Do not call any other tool.";
 const DEFAULT_LOCAL_BASE_URL =
@@ -801,7 +801,13 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
     try {
       const res = await authFetch(
         `${agentBaseUrl}/api/v1/agents/${agentId}/trigger/run`,
-        { method: 'POST', body: JSON.stringify({ source: 'manual' }) },
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            source: 'manual',
+            identities: identitiesForRuns,
+          }),
+        },
       );
       if (res.ok) {
         setTriggerFlash('Trigger fired successfully');
@@ -834,7 +840,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
     } finally {
       setIsTriggeringNow(false);
     }
-  }, [agentBaseUrl, agentId, authFetch]);
+  }, [agentBaseUrl, agentId, authFetch, identitiesForRuns]);
 
   // ── Webhook management ─────────────────────────────────────────────────
 
