@@ -49,10 +49,13 @@ class SkillEntry(BaseModel):
 
 class SkillsArea:
     """
-    Manages the per-agent skills lifecycle.
+    Manages the runtime-global skills lifecycle used by monitoring and prompt
+    composition.
 
-    Thread-safe: all mutations happen through methods that replace the
-    internal dict atomically (dict assignment is atomic in CPython).
+    Notes
+    -----
+    This object is process-global in the current implementation (singleton).
+    It does not provide explicit cross-thread synchronization.
     """
 
     def __init__(self) -> None:
@@ -86,11 +89,16 @@ class SkillsArea:
         return self._skills.get(self.strip_version(skill_id))
 
     def get_skills_for_prompt(self) -> list[SkillEntry]:
-        """Return only loaded skills (SKILL.md loaded, in system prompt)."""
-        return [
-            s for s in self._skills.values()
-            if s.status == "loaded"
-        ]
+        """Return only loaded skills (SKILL.md loaded, in system prompt).
+
+        Lazily triggers loading of any enabled-but-not-yet-loaded skills
+        so the first inference call promotes them to ``loaded``.
+        """
+        # Auto-load enabled skills that haven't been loaded yet.
+        has_enabled = any(s.status == "enabled" for s in self._skills.values())
+        if has_enabled:
+            self.load_all_enabled()
+        return [s for s in self._skills.values() if s.status == "loaded"]
 
     # ------------------------------------------------------------------
     # Mutations
@@ -255,7 +263,9 @@ class SkillsArea:
                     prompt = self._build_single_skill_prompt(skill)
                     self.mark_loaded(
                         skill_id=skill.name,
-                        skill_definition=skill.content if hasattr(skill, "content") else "",
+                        skill_definition=skill.content
+                        if hasattr(skill, "content")
+                        else "",
                         prompt_section=prompt,
                         name=skill.name,
                         description=skill.description,
@@ -316,7 +326,9 @@ class SkillsArea:
                 if hasattr(s, "parameters") and s.parameters:
                     for p in s.parameters:
                         req = " (required)" if getattr(p, "required", False) else ""
-                        lines.append(f"  - `--{p.name}` ({getattr(p, 'type', 'str')}{req})")
+                        lines.append(
+                            f"  - `--{p.name}` ({getattr(p, 'type', 'str')}{req})"
+                        )
                 if hasattr(s, "returns") and s.returns:
                     lines.append(f"  Returns: {s.returns}")
                 if hasattr(s, "env_vars") and s.env_vars:

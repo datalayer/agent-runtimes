@@ -107,6 +107,8 @@ export function ChatSidebar({
   brandIcon,
   onSendMessage,
   enableStreaming = true,
+  onToolCallStart,
+  onToolCallComplete,
   placeholder = 'Ask a question...',
   description,
   pendingPrompt,
@@ -417,6 +419,8 @@ export function ChatSidebar({
           description={description}
           onSendMessage={onSendMessage}
           enableStreaming={enableStreaming}
+          onToolCallStart={onToolCallStart}
+          onToolCallComplete={onToolCallComplete}
           pendingPrompt={pendingPrompt}
           {...panelProps}
         >

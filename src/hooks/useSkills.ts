@@ -7,6 +7,13 @@ import { useCallback, useMemo } from 'react';
 import type { SkillInfo, SkillStatus } from '../types/skills';
 import { agentRuntimeStore, useAgentRuntimeCodemodeStatus } from '../stores';
 
+function parseSkillStatus(value: unknown): SkillStatus {
+  if (value === 'available' || value === 'enabled' || value === 'loaded') {
+    return value;
+  }
+  return 'available';
+}
+
 // ---------------------------------------------------------------------------
 // Skills from WS snapshot
 // ---------------------------------------------------------------------------
@@ -37,7 +44,7 @@ export function useSkills(
       tags: s.tags,
       has_scripts: s.has_scripts,
       has_resources: s.has_resources,
-      status: (s.status as SkillStatus) ?? 'available',
+      status: parseSkillStatus(s.status),
       skill_definition: s.skill_definition ?? null,
     }));
     return { skills, total: skills.length };
@@ -58,15 +65,27 @@ export function useSkills(
 
 export function useSkillActions() {
   const enableSkill = useCallback((skillId: string) => {
-    agentRuntimeStore
+    const ok = agentRuntimeStore
       .getState()
       .sendRawMessage({ type: 'skill_enable', skillId });
+    if (!ok) {
+      console.warn(
+        '[useSkillActions] skill_enable dropped: websocket not ready',
+      );
+    }
+    return ok;
   }, []);
 
   const disableSkill = useCallback((skillId: string) => {
-    agentRuntimeStore
+    const ok = agentRuntimeStore
       .getState()
       .sendRawMessage({ type: 'skill_disable', skillId });
+    if (!ok) {
+      console.warn(
+        '[useSkillActions] skill_disable dropped: websocket not ready',
+      );
+    }
+    return ok;
   }, []);
 
   return { enableSkill, disableSkill };

@@ -183,6 +183,8 @@ export function ChatPopupStandalone({
   enableStreaming = true,
   emptyStateMessage = 'Start a conversation',
   renderToolResult,
+  onToolCallStart,
+  onToolCallComplete,
   panelProps,
 }: ChatPopupStandaloneProps) {
   // Use Zustand store for state management
@@ -656,6 +658,8 @@ export function ChatPopupStandalone({
             }}
             headerActions={closeButton}
             renderToolResult={renderToolResult}
+            onToolCallStart={onToolCallStart}
+            onToolCallComplete={onToolCallComplete}
             description={description}
             emptyState={{
               title: emptyStateMessage,

@@ -147,6 +147,8 @@ export function ChatStandalone({
   enableStreaming = true,
   emptyStateMessage = 'Start a conversation',
   renderToolResult,
+  onToolCallStart,
+  onToolCallComplete,
   pendingPrompt,
   panelProps,
 }: ChatStandaloneProps) {
@@ -525,6 +527,8 @@ export function ChatStandalone({
             }}
             headerActions={closeButton}
             renderToolResult={renderToolResult}
+            onToolCallStart={onToolCallStart}
+            onToolCallComplete={onToolCallComplete}
             description={description}
             placeholder={placeholder}
             emptyState={{

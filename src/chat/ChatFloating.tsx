@@ -201,6 +201,8 @@ export function ChatFloating({
   pendingPrompt,
   showInformation = false,
   onInformationClick,
+  onToolCallStart,
+  onToolCallComplete,
   panelProps,
 }: ChatFloatingProps) {
   // Store-based state
@@ -773,6 +775,8 @@ export function ChatFloating({
           pendingPrompt={pendingPrompt}
           showInformation={showInformation}
           onInformationClick={onInformationClick}
+          onToolCallStart={onToolCallStart}
+          onToolCallComplete={onToolCallComplete}
           {...panelProps}
         >
           {children}
