@@ -220,6 +220,9 @@ function ChatBaseInner({
   hideMessagesAfterToolUI = false,
   focusTrigger,
   frontendTools,
+  // Tool invocation hooks
+  onToolCallStart,
+  onToolCallComplete,
   // Identity/Authorization props
   onAuthorizationRequired,
   connectedIdentities,
@@ -344,6 +347,11 @@ function ChatBaseInner({
   // re-created when frontendTools changes) always accesses the latest value.
   const frontendToolsRef = useRef(frontendTools);
   frontendToolsRef.current = frontendTools;
+  // Stable refs for tool invocation hooks (pre/post)
+  const onToolCallStartRef = useRef(onToolCallStart);
+  onToolCallStartRef.current = onToolCallStart;
+  const onToolCallCompleteRef = useRef(onToolCallComplete);
+  onToolCallCompleteRef.current = onToolCallComplete;
 
   // ---- Helpers ----
   const isServerSelected = useCallback(
@@ -935,6 +943,13 @@ function ChatBaseInner({
               toolCallsRef.current.set(toolCallId, toolCallMsg);
               setDisplayItems(prev => [...prev, toolCallMsg]);
 
+              // Fire pre-hook for new tool calls
+              onToolCallStartRef.current?.({
+                toolName,
+                toolCallId,
+                args,
+              });
+
               const frontendTool = frontendToolsRef.current?.find(
                 t => t.name === toolName,
               );
@@ -1034,6 +1049,16 @@ function ChatBaseInner({
                       : item,
                   ),
                 );
+
+                // Fire post-hook for tool results
+                onToolCallCompleteRef.current?.({
+                  toolName: existingToolCall.toolName,
+                  toolCallId,
+                  args: existingToolCall.args,
+                  result: event.toolResult.result,
+                  status: updatedToolCall.status,
+                  error: event.toolResult.error,
+                });
               }
             }
           }

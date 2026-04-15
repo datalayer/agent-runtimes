@@ -35,7 +35,7 @@ import {
   getShortcutDisplay,
 } from '@datalayer/core/lib/hooks';
 import { ChatBase } from './base/ChatBase';
-import { PoweredByTag, type PoweredByTagProps } from './display/PoweredByTag';
+import { PoweredByTag } from './display/PoweredByTag';
 import {
   useChatOpen,
   useChatMessages,
@@ -48,10 +48,12 @@ import {
   createUserMessage,
   createAssistantMessage,
 } from '../types/messages';
-import { ChatBaseProps, RenderToolResult } from '../types';
+import type { ChatCommonProps } from '../types';
 
 /**
- * Simple message handler type for standalone usage
+ * Simple message handler type for standalone usage.
+ * Note: This differs from the shared MessageHandler — it does not receive
+ * the full message history.
  */
 export type MessageHandler = (
   message: string,
@@ -64,20 +66,18 @@ export type MessageHandler = (
 ) => Promise<string>;
 
 /**
- * ChatPopupStandalone props
+ * ChatPopupStandalone props — extends ChatCommonProps with popup-specific configuration.
+ * Uses its own `onSendMessage` signature (no message history array).
  */
-export interface ChatPopupStandaloneProps {
+export interface ChatPopupStandaloneProps extends Omit<
+  ChatCommonProps,
+  'onSendMessage'
+> {
   /**
    * Handler for sending messages - REQUIRED.
    * This function will be called when the user sends a message.
    */
   onSendMessage: MessageHandler;
-
-  /** Popup title */
-  title?: string;
-
-  /** Description shown in empty state */
-  description?: string;
 
   /** Position of the popup */
   position?: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
@@ -91,20 +91,8 @@ export interface ChatPopupStandaloneProps {
   /** Popup height */
   height?: number | string;
 
-  /** Show header */
-  showHeader?: boolean;
-
   /** Show the floating button when closed */
   showButton?: boolean;
-
-  /** Show new chat button */
-  showNewChatButton?: boolean;
-
-  /** Show clear button */
-  showClearButton?: boolean;
-
-  /** Show settings button */
-  showSettingsButton?: boolean;
 
   /** Enable keyboard shortcuts */
   enableKeyboardShortcuts?: boolean;
@@ -112,41 +100,11 @@ export interface ChatPopupStandaloneProps {
   /** Toggle shortcut key */
   toggleShortcut?: string;
 
-  /** Show powered by tag */
-  showPoweredBy?: boolean;
-
-  /** Powered by tag props */
-  poweredByProps?: Partial<PoweredByTagProps>;
-
   /** Enable click outside to close */
   clickOutsideToClose?: boolean;
 
   /** Enable escape key to close */
   escapeToClose?: boolean;
-
-  /** Custom class name */
-  className?: string;
-
-  /** Input placeholder */
-  placeholder?: string;
-
-  /** Callback when settings clicked */
-  onSettingsClick?: () => void;
-
-  /** Callback when new chat clicked */
-  onNewChat?: () => void;
-
-  /** Callback when popup opens */
-  onOpen?: () => void;
-
-  /** Callback when popup closes */
-  onClose?: () => void;
-
-  /** Children to render in popup body (custom content) */
-  children?: React.ReactNode;
-
-  /** Custom brand icon */
-  brandIcon?: React.ReactNode;
 
   /** Custom button icon when closed */
   buttonIcon?: React.ReactNode;
@@ -163,20 +121,8 @@ export interface ChatPopupStandaloneProps {
   /** Animation duration (in ms) */
   animationDuration?: number;
 
-  /** Enable streaming mode */
-  enableStreaming?: boolean;
-
   /** Empty state message */
   emptyStateMessage?: string;
-
-  /**
-   * Custom render function for tool results.
-   * When provided, tool calls will be rendered inline in the chat.
-   */
-  renderToolResult?: RenderToolResult;
-
-  /** Additional ChatBase props */
-  panelProps?: Partial<ChatBaseProps>;
 }
 
 /**

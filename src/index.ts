@@ -13,6 +13,7 @@ export * from './specs';
 export type {
   AgentRuntimeData,
   AgentSpec,
+  ChatCommonProps,
   TeamSpec,
   GuardrailSpec,
   EvalSpec,
@@ -22,4 +23,6 @@ export type {
   MCPServer,
   SkillSpec,
   EnvvarSpec,
+  ToolCallStartContext,
+  ToolCallCompleteContext,
 } from './types';

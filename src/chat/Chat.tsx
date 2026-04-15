@@ -20,7 +20,6 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
-import type { ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Text, Button, Spinner } from '@primer/react';
 import { AlertIcon, SyncIcon } from '@primer/octicons-react';
@@ -28,15 +27,10 @@ import { Box } from '@datalayer/primer-addons';
 import type { OAuthProvider, OAuthProviderConfig, Identity } from '../identity';
 import { useConnectedIdentities } from '../identity';
 import type {
+  ChatCommonProps,
   Extension,
-  FrontendToolDefinition,
-  McpServerSelection,
   Protocol,
-  ChatViewMode,
-  ModelConfig,
   ProtocolConfig,
-  RenderToolResult,
-  Suggestion,
 } from '../types';
 import { ChatBase } from './base/ChatBase';
 import { AgentDetails } from '../agents/AgentDetails';
@@ -112,10 +106,10 @@ function getProtocolType(
 }
 
 /**
- * Chat props
+ * Chat props — extends ChatCommonProps with transport-specific configuration.
  */
-export interface ChatProps {
-  /** Transport to use */
+export interface ChatProps extends ChatCommonProps {
+  /** Transport to use — REQUIRED (narrows protocol to string enum) */
   protocol: Protocol;
 
   /** Extensions for chat features */
@@ -129,18 +123,6 @@ export interface ChatProps {
 
   /** Agent ID */
   agentId?: string;
-
-  /** Authentication token (JWT) to send as Authorization Bearer header */
-  authToken?: string;
-
-  /** Custom placeholder text */
-  placeholder?: string;
-
-  /** Custom title */
-  title?: string;
-
-  /** Brand icon shown in chat header/empty state and details title */
-  brandIcon?: ReactNode;
 
   /** Whether to auto-connect on mount */
   autoConnect?: boolean;
@@ -163,78 +145,11 @@ export interface ChatProps {
   /** Callback when collapse panel is clicked */
   onCollapsePanel?: () => void;
 
-  /** Custom styles */
-  className?: string;
-
   /** Height of the chat container */
   height?: string | number;
 
-  /** Show header with connection status */
-  showHeader?: boolean;
-
-  /** Show the new chat (+) button in the header */
-  showNewChatButton?: boolean;
-
-  /** Show the clear chat button in the header */
-  showClearButton?: boolean;
-
-  /** Show model selector (fetched from /configure endpoint) */
-  showModelSelector?: boolean;
-
-  /** Show tools menu (fetched from /configure endpoint) */
-  showToolsMenu?: boolean;
-
-  /** Show input area */
-  showInput?: boolean;
-
-  /** Show skills menu (fetched from /skills endpoint) */
-  showSkillsMenu?: boolean;
-
-  /** Indicate tools are accessed via Codemode meta-tools */
-  codemodeEnabled?: boolean;
-
-  /**
-   * Show token usage bar between input and selectors.
-   * @default true
-   */
-  showTokenUsage?: boolean;
-
-  /** Initial model ID to select (e.g., 'openai:gpt-4o-mini') */
-  initialModel?: string;
-
-  /**
-   * Override the list of available models.
-   * When provided, this list replaces the models returned by the config endpoint.
-   * Use this to restrict the model selector to a specific subset of models.
-   */
-  availableModels?: ModelConfig[];
-
-  /** MCP server selections to enable (others will be disabled) */
-  mcpServers?: McpServerSelection[];
-
-  /** Initial skill IDs to enable */
-  initialSkills?: string[];
-
   /** Clear messages when component mounts or agentId changes */
   clearOnMount?: boolean;
-
-  /** Suggestions to show in empty state */
-  suggestions?: Suggestion[];
-
-  /** Whether to automatically submit the message when a suggestion is clicked */
-  submitOnSuggestionClick?: boolean;
-
-  /** Description shown in empty state */
-  description?: string;
-
-  /** Custom content to render in the chat header title row (left side). */
-  headerContent?: ReactNode;
-
-  /** Custom actions to render in the chat header title row (right side). */
-  headerActions?: ReactNode;
-
-  /** Auto-focus the input on mount */
-  autoFocus?: boolean;
 
   /** Identity providers configuration for OAuth */
   identityProviders?: {
@@ -252,27 +167,6 @@ export interface ChatProps {
   onIdentityDisconnect?: (provider: OAuthProvider) => void;
 
   /**
-   * Runtime ID for conversation persistence.
-   * When provided, messages are fetched from the server API on page reload
-   * and prevents message mixing between different agent runtimes.
-   */
-  runtimeId?: string;
-
-  /**
-   * Endpoint URL for fetching conversation history.
-   * When runtimeId is provided, this endpoint is called to fetch
-   * the conversation history on mount.
-   * If not provided, defaults to `{protocol.endpoint}/api/v1/history`.
-   */
-  historyEndpoint?: string;
-
-  /**
-   * A prompt to append and send after the conversation history is loaded.
-   * The message is shown in the chat and sent to the agent exactly once.
-   */
-  pendingPrompt?: string;
-
-  /**
    * Error banner to display at the top of the chat.
    * Use this to show sandbox connection errors or other warnings.
    */
@@ -280,51 +174,6 @@ export interface ChatProps {
     message: string;
     variant?: 'danger' | 'warning';
   };
-
-  /**
-   * Show the information icon in the header.
-   * When clicked, it opens the agent details panel.
-   * @default false
-   */
-  showInformation?: boolean;
-
-  /**
-   * Current chat view mode for the header segmented toggle.
-   * When provided, a view-mode toggle is rendered in the header.
-   */
-  chatViewMode?: ChatViewMode;
-
-  /**
-   * Callback when the user switches chat view mode via the header toggle.
-   */
-  onChatViewModeChange?: (mode: ChatViewMode) => void;
-
-  /**
-   * Frontend tool definitions to register with the chat.
-   * Pass an empty array to explicitly disable all frontend tools.
-   */
-  frontendTools?: FrontendToolDefinition[];
-
-  /** Optional custom renderer for tool-call message cards. */
-  renderToolResult?: RenderToolResult;
-
-  /**
-   * Hide assistant messages that follow a rendered tool call UI.
-   * Useful to suppress raw tool-call/continuation text and show only tool cards.
-   */
-  hideMessagesAfterToolUI?: boolean;
-
-  /**
-   * External context snapshot data for the token usage bar.
-   * When provided, overrides the built-in (no-op) useContextSnapshot hook.
-   */
-  contextSnapshot?: import('../types/context').ContextSnapshotData;
-
-  /**
-   * External MCP toolsets status data for the MCP indicator.
-   * When provided, the data is forwarded to the McpStatusIndicator.
-   */
-  mcpStatusData?: import('../types/mcp').McpToolsetsStatusResponse | null;
 }
 
 /**
@@ -418,6 +267,8 @@ export function Chat({
   chatViewMode,
   onChatViewModeChange,
   frontendTools,
+  onToolCallStart,
+  onToolCallComplete,
   renderToolResult,
   hideMessagesAfterToolUI = false,
   contextSnapshot,
@@ -740,6 +591,8 @@ export function Chat({
             chatViewMode={chatViewMode}
             onChatViewModeChange={onChatViewModeChange}
             frontendTools={frontendTools}
+            onToolCallStart={onToolCallStart}
+            onToolCallComplete={onToolCallComplete}
             renderToolResult={renderToolResult}
             hideMessagesAfterToolUI={hideMessagesAfterToolUI}
             contextSnapshot={contextSnapshot}

@@ -30,7 +30,8 @@ import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
 import { Chat } from '../chat';
 import { useAgentLoadedSkills } from '../hooks';
-import type { LoadedSkillInfo } from '../types';
+import { agentRuntimeStore, useAgentRuntimeStore } from '../stores';
+import type { LoadedSkillInfo, ToolCallCompleteContext } from '../types';
 
 const queryClient = new QueryClient();
 const AGENT_NAME = 'skills-demo-agent';
@@ -130,6 +131,56 @@ const AgentSkillsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
     agentBaseUrl,
     agentId,
     chatAuthToken,
+  );
+
+  const setLoadedSkillsForAgent = useAgentRuntimeStore(
+    state => state.setLoadedSkillsForAgent,
+  );
+
+  /**
+   * Post-hook: when the LLM invokes `load_skill` and the result arrives,
+   * parse the skill metadata from the result string and upsert it into
+   * the persisted loaded-skills store so the sidebar updates reactively.
+   */
+  const handleToolCallComplete = useCallback(
+    (ctx: ToolCallCompleteContext) => {
+      if (ctx.toolName !== 'load_skill' || ctx.status !== 'complete') {
+        return;
+      }
+      const skillName = (ctx.args.skill_name as string) ?? '';
+      if (!skillName || !agentId) {
+        return;
+      }
+      // Parse description from the load_skill result text.
+      const resultText =
+        typeof ctx.result === 'string'
+          ? ctx.result
+          : typeof (ctx.result as Record<string, unknown>)?.output === 'string'
+            ? ((ctx.result as Record<string, unknown>).output as string)
+            : '';
+      const descMatch = resultText.match(
+        /\*\*Description:\*\*\s*(.+?)(?:\n|$)/,
+      );
+      const description = descMatch?.[1]?.trim() ?? `Skill: ${skillName}`;
+      const hasScripts = /\*\*Available Scripts:\*\*/.test(resultText);
+
+      const newSkill: LoadedSkillInfo = {
+        id: skillName,
+        name: skillName,
+        description,
+        variant: hasScripts ? 'path' : 'unknown',
+      };
+
+      // Upsert: merge with existing skills, replacing if already present.
+      const current =
+        agentRuntimeStore.getState().loadedSkillsByAgentId[agentId] ?? [];
+      const exists = current.some(s => s.id === skillName);
+      const updated = exists
+        ? current.map(s => (s.id === skillName ? { ...s, ...newSkill } : s))
+        : [...current, newSkill];
+      setLoadedSkillsForAgent(agentId, updated);
+    },
+    [agentId, setLoadedSkillsForAgent],
   );
 
   const authFetch = useCallback(
@@ -285,6 +336,7 @@ const AgentSkillsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
             height="100%"
             runtimeId={agentId}
             historyEndpoint={`${agentBaseUrl}/api/v1/history`}
+            onToolCallComplete={handleToolCallComplete}
             headerActions={
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                 <Text sx={{ color: 'fg.muted', fontSize: 1 }}>

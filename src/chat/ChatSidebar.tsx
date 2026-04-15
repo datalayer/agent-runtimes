@@ -12,7 +12,7 @@
  * @module chat/ChatSidebar
  */
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { IconButton, Text } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import {
@@ -26,13 +26,7 @@ import {
   getShortcutDisplay,
 } from '@datalayer/core/lib/hooks';
 import { ChatBase } from './base/ChatBase';
-import type { PoweredByTagProps } from './display/PoweredByTag';
-import type {
-  ChatBaseProps,
-  MessageHandler,
-  Protocol,
-  ProtocolConfig,
-} from '../types';
+import type { ChatCommonProps } from '../types';
 import {
   useChatStore,
   useChatOpen,
@@ -40,23 +34,11 @@ import {
 } from '../stores/chatStore';
 
 /**
- * ChatSidebar props
+ * ChatSidebar props — extends ChatCommonProps with sidebar-specific configuration.
  */
-export interface ChatSidebarProps {
+export interface ChatSidebarProps extends ChatCommonProps {
   /** Sidebar title */
   title?: string;
-
-  /**
-   * Protocol type or full configuration.
-   *
-   * When a `Protocol` string is provided (e.g. `'vercel-ai'`), it is forwarded
-   * to ChatBase. When a full `ProtocolConfig` object is provided, it is passed
-   * directly via `panelProps`.
-   *
-   * @default 'vercel-ai'
-   */
-  protocol?: Protocol | ProtocolConfig;
-
   /** Initial open state */
   defaultOpen?: boolean;
 
@@ -66,81 +48,17 @@ export interface ChatSidebarProps {
   /** Sidebar width when open */
   width?: number | string;
 
-  /** Show header */
-  showHeader?: boolean;
-
-  /** Show new chat button */
-  showNewChatButton?: boolean;
-
-  /** Show clear button */
-  showClearButton?: boolean;
-
-  /** Show settings button */
-  showSettingsButton?: boolean;
-
   /** Enable keyboard shortcuts */
   enableKeyboardShortcuts?: boolean;
 
   /** Keyboard shortcut to toggle (default: 'k') */
   toggleShortcut?: string;
 
-  /** Show powered by tag */
-  showPoweredBy?: boolean;
-
-  /** Powered by tag props */
-  poweredByProps?: Partial<PoweredByTagProps>;
-
   /** Enable click outside to close */
   clickOutsideToClose?: boolean;
 
   /** Enable escape key to close */
   escapeToClose?: boolean;
-
-  /** Custom class name */
-  className?: string;
-
-  /** Callback when settings clicked */
-  onSettingsClick?: () => void;
-
-  /** Callback when new chat clicked */
-  onNewChat?: () => void;
-
-  /** Callback when sidebar opens */
-  onOpen?: () => void;
-
-  /** Callback when sidebar closes */
-  onClose?: () => void;
-
-  /** Children to render in sidebar body (custom content) */
-  children?: React.ReactNode;
-
-  /** Custom brand icon */
-  brandIcon?: React.ReactNode;
-
-  /**
-   * Handler for sending messages.
-   * When provided, this is used instead of protocol mode.
-   * Signature: `(message, messages, options?) => Promise<string | void>`
-   */
-  onSendMessage?: MessageHandler;
-
-  /** Enable streaming mode (default: true) */
-  enableStreaming?: boolean;
-
-  /** Input placeholder */
-  placeholder?: string;
-
-  /** Description shown in empty state */
-  description?: string;
-
-  /**
-   * A prompt to append and send after the conversation history is loaded.
-   * The message is shown in the chat and sent to the agent exactly once.
-   */
-  pendingPrompt?: string;
-
-  /** Additional ChatBase props */
-  panelProps?: Partial<ChatBaseProps>;
 }
 
 /**

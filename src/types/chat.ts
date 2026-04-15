@@ -19,6 +19,42 @@ import type { FrontendToolDefinition } from './tools';
 import type { PoweredByTagProps } from '../chat/display/PoweredByTag';
 
 // ---------------------------------------------------------------------------
+// Tool invocation hooks
+// ---------------------------------------------------------------------------
+
+/**
+ * Context passed to tool-call pre-hooks.
+ * Fires when a tool call starts executing (backend or frontend).
+ */
+export interface ToolCallStartContext {
+  /** The tool name as declared by the agent */
+  toolName: string;
+  /** Unique identifier for this tool invocation */
+  toolCallId: string;
+  /** Arguments passed to the tool */
+  args: Record<string, unknown>;
+}
+
+/**
+ * Context passed to tool-call post-hooks.
+ * Fires when a tool result is received.
+ */
+export interface ToolCallCompleteContext {
+  /** The tool name as declared by the agent */
+  toolName: string;
+  /** Unique identifier for this tool invocation */
+  toolCallId: string;
+  /** Arguments that were passed to the tool */
+  args: Record<string, unknown>;
+  /** The tool result (may be a string, object, or undefined on error) */
+  result: unknown;
+  /** Final status of the tool invocation */
+  status: DisplayToolCallStatus;
+  /** Error message, if the tool call failed */
+  error?: string;
+}
+
+// ---------------------------------------------------------------------------
 // View mode
 // ---------------------------------------------------------------------------
 
@@ -214,6 +250,252 @@ export interface MCPServerConfig {
 // ---------------------------------------------------------------------------
 // Data types
 // ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// ChatCommonProps — shared base for all Chat* wrapper components
+// ---------------------------------------------------------------------------
+
+/**
+ * Common props shared by all Chat wrapper components
+ * (Chat, ChatFloating, ChatSidebar, ChatStandalone, ChatPopupStandalone).
+ *
+ * These props represent the public API surface that consumers interact with.
+ * Wrapper components forward most of them to ChatBase and translate others
+ * (e.g. `showNewChatButton` → `headerButtons.showNewChat`).
+ *
+ * Each wrapper extends this interface with component-specific props
+ * (e.g. `position`, `defaultOpen`, `width` for floating variants).
+ *
+ * Use `panelProps` as an escape hatch to pass any ChatBase prop not
+ * directly surfaced in this interface.
+ */
+export interface ChatCommonProps {
+  // ============ Protocol / Connection ============
+
+  /**
+   * Protocol type or full configuration.
+   *
+   * When a `Protocol` string is provided (e.g. `'vercel-ai'`), it is forwarded
+   * to ChatBase. When a full `ProtocolConfig` object is provided, it is used
+   * directly.
+   *
+   * @default 'vercel-ai'
+   */
+  protocol?: Protocol | ProtocolConfig;
+
+  /**
+   * Use Zustand store for state management instead of protocol endpoint.
+   * @default true
+   */
+  useStore?: boolean;
+
+  // ============ Display ============
+
+  /** Chat title */
+  title?: string;
+
+  /** Description shown in empty state */
+  description?: string;
+
+  /** Show header */
+  showHeader?: boolean;
+
+  /** Show input area */
+  showInput?: boolean;
+
+  /** Custom class name */
+  className?: string;
+
+  /** Children to render in the messages area */
+  children?: ReactNode;
+
+  /** Custom brand icon for header / empty state */
+  brandIcon?: ReactNode;
+
+  /** Input placeholder */
+  placeholder?: string;
+
+  // ============ Header Buttons ============
+
+  /** Show new chat button in header */
+  showNewChatButton?: boolean;
+
+  /** Show clear button in header */
+  showClearButton?: boolean;
+
+  /** Show settings button in header */
+  showSettingsButton?: boolean;
+
+  // ============ Powered By ============
+
+  /** Show powered by tag */
+  showPoweredBy?: boolean;
+
+  /** Powered by tag props */
+  poweredByProps?: Partial<PoweredByTagProps>;
+
+  // ============ Callbacks ============
+
+  /** Callback when settings is clicked */
+  onSettingsClick?: () => void;
+
+  /** Callback when new chat is triggered */
+  onNewChat?: () => void;
+
+  /** Callback when the component opens */
+  onOpen?: () => void;
+
+  /** Callback when the component closes */
+  onClose?: () => void;
+
+  // ============ Message Handling ============
+
+  /**
+   * Custom message handler.
+   * When provided, uses this handler instead of protocol mode.
+   */
+  onSendMessage?: MessageHandler;
+
+  /**
+   * Enable streaming mode for custom message handler.
+   * @default false
+   */
+  enableStreaming?: boolean;
+
+  // ============ Model / Tool / Skill Selectors ============
+
+  /** Show model selector */
+  showModelSelector?: boolean;
+
+  /** Show tools menu */
+  showToolsMenu?: boolean;
+
+  /** Show skills menu */
+  showSkillsMenu?: boolean;
+
+  /**
+   * Show token usage bar.
+   * @default true
+   */
+  showTokenUsage?: boolean;
+
+  /** Indicate tools are accessed via Codemode meta-tools */
+  codemodeEnabled?: boolean;
+
+  /** Initial model ID to select (e.g., 'openai:gpt-4o-mini') */
+  initialModel?: string;
+
+  /**
+   * Override the list of available models.
+   * When provided, replaces models returned by the config endpoint.
+   */
+  availableModels?: ModelConfig[];
+
+  /** MCP server selections to enable (others disabled) */
+  mcpServers?: McpServerSelection[];
+
+  /** Initial skill IDs to enable */
+  initialSkills?: string[];
+
+  // ============ Tool Rendering & Hooks ============
+
+  /** Custom render function for tool results */
+  renderToolResult?: RenderToolResult;
+
+  /** Frontend tool definitions to register with the chat */
+  frontendTools?: FrontendToolDefinition[];
+
+  /** Pre-hook: fires when a tool call starts executing */
+  onToolCallStart?: (context: ToolCallStartContext) => void;
+
+  /** Post-hook: fires when a tool result is received */
+  onToolCallComplete?: (context: ToolCallCompleteContext) => void;
+
+  // ============ Suggestions ============
+
+  /** Suggestions to show in empty state */
+  suggestions?: Suggestion[];
+
+  /**
+   * Whether to auto-submit when a suggestion is clicked.
+   * @default true
+   */
+  submitOnSuggestionClick?: boolean;
+
+  /**
+   * Hide assistant messages that follow a rendered tool call UI.
+   * @default false
+   */
+  hideMessagesAfterToolUI?: boolean;
+
+  // ============ History / Persistence ============
+
+  /** Runtime ID for conversation persistence */
+  runtimeId?: string;
+
+  /** Endpoint URL for fetching conversation history */
+  historyEndpoint?: string;
+
+  /** Auth token for the agent runtime */
+  authToken?: string;
+
+  /** Auth token specifically for the history endpoint */
+  historyAuthToken?: string;
+
+  /**
+   * A prompt to send after conversation history is loaded (sent once).
+   */
+  pendingPrompt?: string;
+
+  // ============ Information ============
+
+  /**
+   * Show the information icon in the header.
+   * @default false
+   */
+  showInformation?: boolean;
+
+  /** Callback when the information icon is clicked */
+  onInformationClick?: () => void;
+
+  // ============ View Mode ============
+
+  /** Current chat view mode for header segmented toggle */
+  chatViewMode?: ChatViewMode;
+
+  /** Callback when user switches chat view mode */
+  onChatViewModeChange?: (mode: ChatViewMode) => void;
+
+  // ============ External Data ============
+
+  /** External context snapshot data for the token usage bar */
+  contextSnapshot?: import('./context').ContextSnapshotData;
+
+  /** External MCP toolsets status data */
+  mcpStatusData?: import('./mcp').McpToolsetsStatusResponse | null;
+
+  // ============ Header Content ============
+
+  /** Custom header content (rendered below title row) */
+  headerContent?: ReactNode;
+
+  /** Custom header actions (rendered in title row, right side) */
+  headerActions?: ReactNode;
+
+  // ============ Misc ============
+
+  /** Auto-focus the input on mount */
+  autoFocus?: boolean;
+
+  /** Callback for state updates */
+  onStateUpdate?: (state: unknown) => void;
+
+  /**
+   * Additional ChatBase props (escape hatch).
+   * Props set here are spread onto ChatBase as overrides.
+   */
+  panelProps?: Partial<ChatBaseProps>;
+}
 
 // ---------------------------------------------------------------------------
 // ChatBase props
@@ -545,4 +827,41 @@ export interface ChatBaseProps {
    * The message is shown in the chat and sent to the agent exactly once.
    */
   pendingPrompt?: string;
+
+  // ============ Tool Invocation Hooks ============
+
+  /**
+   * Pre-hook: fires when a tool call starts executing.
+   * Called for both backend and frontend tools.
+   *
+   * @example
+   * ```tsx
+   * <Chat
+   *   onToolCallStart={({ toolName, args }) => {
+   *     console.log(`Tool ${toolName} started`, args);
+   *   }}
+   * />
+   * ```
+   */
+  onToolCallStart?: (context: ToolCallStartContext) => void;
+
+  /**
+   * Post-hook: fires when a tool result is received.
+   * Called for both backend and frontend tools.
+   * Use this to react to specific tool outcomes (e.g. update UI state
+   * when a `load_skill` tool completes).
+   *
+   * @example
+   * ```tsx
+   * <Chat
+   *   onToolCallComplete={({ toolName, result, status }) => {
+   *     if (toolName === 'load_skill' && status === 'complete') {
+   *       // Update skills sidebar from load_skill result
+   *       updateSkillsFromResult(result);
+   *     }
+   *   }}
+   * />
+   * ```
+   */
+  onToolCallComplete?: (context: ToolCallCompleteContext) => void;
 }

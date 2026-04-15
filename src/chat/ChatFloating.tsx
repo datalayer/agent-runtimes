@@ -29,7 +29,6 @@ import { Box } from '@datalayer/primer-addons';
 import { XIcon, CommentDiscussionIcon } from '@primer/octicons-react';
 import { AiAgentIcon } from '@datalayer/icons-react';
 import { ChatBase } from './base/ChatBase';
-import type { PoweredByTagProps } from './display/PoweredByTag';
 import {
   useChatOpen,
   useChatMessages,
@@ -39,49 +38,17 @@ import {
   useChatKeyboardShortcuts,
   getShortcutDisplay,
 } from '@datalayer/core/lib/hooks';
-import type {
-  ChatBaseProps,
-  ChatViewMode,
-  FrontendToolDefinition,
-  ModelConfig,
-  Protocol,
-  ProtocolConfig,
-  RenderToolResult,
-  Suggestion,
-} from '../types';
+import type { ChatCommonProps, ChatViewMode, ProtocolConfig } from '../types';
 
 /**
- * ChatFloating props
+ * ChatFloating props — extends ChatCommonProps with floating/popup-specific configuration.
  */
-export interface ChatFloatingProps {
+export interface ChatFloatingProps extends ChatCommonProps {
   /**
    * AG-UI endpoint URL (e.g., http://localhost:8000/api/v1/examples/agentic_chat).
    * When provided with useStore=false, enables AG-UI protocol mode.
    */
   endpoint?: string;
-
-  /**
-   * Protocol type or full configuration.
-   *
-   * When a `Protocol` string is provided (e.g. `'vercel-ai'`), it overrides the
-   * auto-detected protocol from the endpoint URL. When a full `ProtocolConfig`
-   * object is provided, it is used directly and takes precedence over endpoint.
-   *
-   * @default 'vercel-ai'
-   */
-  protocol?: Protocol | ProtocolConfig;
-
-  /**
-   * Use Zustand store for state management instead of protocol endpoint.
-   * @default false
-   */
-  useStore?: boolean;
-
-  /** title */
-  title?: string;
-
-  /** Description shown in empty state */
-  description?: string;
 
   /** Position of the popup */
   position?: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
@@ -95,20 +62,8 @@ export interface ChatFloatingProps {
   /** height */
   height?: number | string;
 
-  /** Show header */
-  showHeader?: boolean;
-
   /** Show the floating button when closed */
   showButton?: boolean;
-
-  /** Show new chat button */
-  showNewChatButton?: boolean;
-
-  /** Show clear button */
-  showClearButton?: boolean;
-
-  /** Show settings button */
-  showSettingsButton?: boolean;
 
   /** Enable keyboard shortcuts */
   enableKeyboardShortcuts?: boolean;
@@ -116,43 +71,14 @@ export interface ChatFloatingProps {
   /** Toggle shortcut key */
   toggleShortcut?: string;
 
-  /** Show powered by tag */
-  showPoweredBy?: boolean;
-
-  /** Powered by tag props */
-  poweredByProps?: Partial<PoweredByTagProps>;
-
-  /** Enable click outside to close
+  /**
+   * Enable click outside to close
    * @default false
    */
   clickOutsideToClose?: boolean;
 
   /** Enable escape key to close */
   escapeToClose?: boolean;
-
-  /** Custom class name */
-  className?: string;
-
-  /** Callback when settings clicked */
-  onSettingsClick?: () => void;
-
-  /** Callback when new chat clicked */
-  onNewChat?: () => void;
-
-  /** Callback when popup opens */
-  onOpen?: () => void;
-
-  /** Callback when popup closes */
-  onClose?: () => void;
-
-  /** Callback for state updates (for shared state example) */
-  onStateUpdate?: (state: unknown) => void;
-
-  /** Children to render in popup body (custom content) */
-  children?: React.ReactNode;
-
-  /** Custom brand icon */
-  brandIcon?: React.ReactNode;
 
   /** Custom button icon when closed */
   buttonIcon?: React.ReactNode;
@@ -169,39 +95,8 @@ export interface ChatFloatingProps {
   /** Animation duration (in ms) */
   animationDuration?: number;
 
-  /**
-   * Custom render function for tool results.
-   * When provided, tool calls will be rendered inline in the chat
-   * using this function instead of being hidden.
-   */
-  renderToolResult?: RenderToolResult;
-
-  /**
-   * Frontend tool definitions to register with the chat.
-   * Consistent with Chat and ChatBase.
-   */
-  frontendTools?: FrontendToolDefinition[];
-
   /** Initial state (for shared state example) */
   initialState?: Record<string, unknown>;
-
-  /**
-   * Suggestions to show in empty state.
-   * When clicked, the suggestion message is populated in the input.
-   */
-  suggestions?: Suggestion[];
-
-  /**
-   * Whether to automatically submit the message when a suggestion is clicked.
-   * @default true
-   */
-  submitOnSuggestionClick?: boolean;
-
-  /**
-   * Whether to hide assistant messages that follow a rendered tool call UI.
-   * @default false
-   */
-  hideMessagesAfterToolUI?: boolean;
 
   /**
    * Default view mode.
@@ -226,79 +121,6 @@ export interface ChatFloatingProps {
    * @default false
    */
   showPanelBackdrop?: boolean;
-
-  /**
-   * Override the list of available models.
-   * When provided, this list replaces the models returned by the config endpoint.
-   * Use this to restrict the model selector to a specific subset of models.
-   */
-  availableModels?: ModelConfig[];
-
-  /**
-   * Show model selector in footer.
-   * @default false
-   */
-  showModelSelector?: boolean;
-
-  /**
-   * Show tools menu in footer.
-   * @default false
-   */
-  showToolsMenu?: boolean;
-
-  /**
-   * Show skills menu in footer.
-   * @default false
-   */
-  showSkillsMenu?: boolean;
-
-  /**
-   * Show token usage bar between input and selectors.
-   * @default true
-   */
-  showTokenUsage?: boolean;
-
-  /**
-   * Runtime ID used to scope and persist conversation history.
-   * When provided, history is fetched on mount from the historyEndpoint.
-   */
-  runtimeId?: string;
-
-  /**
-   * Endpoint URL for fetching conversation history.
-   * Defaults to `{protocol.endpoint}/api/v1/history` when runtimeId is set.
-   */
-  historyEndpoint?: string;
-
-  /**
-   * Auth token for authenticating with the agent runtime.
-   * Used for indicator API calls (MCP status, sandbox status) and history.
-   */
-  authToken?: string;
-
-  /**
-   * Auth token for the history endpoint.
-   */
-  historyAuthToken?: string;
-
-  /**
-   * A prompt to append and send after the conversation history is loaded.
-   * The message is shown in the chat and sent to the agent exactly once.
-   */
-  pendingPrompt?: string;
-
-  /**
-   * Show the information icon in the header.
-   * When clicked, fires onInformationClick.
-   * @default false
-   */
-  showInformation?: boolean;
-
-  /** Callback when the information icon is clicked */
-  onInformationClick?: () => void;
-
-  /** Additional ChatBase props */
-  panelProps?: Partial<ChatBaseProps>;
 }
 
 /**

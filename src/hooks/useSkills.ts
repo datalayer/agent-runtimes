@@ -10,33 +10,10 @@ import {
   useQuery,
 } from '@tanstack/react-query';
 import { useEffect } from 'react';
-import type {
-  LoadedSkillInfo,
-  SkillSpec,
-  SkillsResponse,
-} from '../types/skills';
-import { getSkillSpec } from '../specs/skills';
+import type { LoadedSkillInfo, SkillsResponse } from '../types/skills';
 import { useAgentRuntimeLoadedSkills, useAgentRuntimeStore } from '../stores';
 
 const FALLBACK_QUERY_CLIENT = new QueryClient();
-
-type AgentSpecSkillLike =
-  | string
-  | {
-      id?: string;
-      name?: string;
-      description?: string;
-      module?: string;
-      package?: string;
-      method?: string;
-      path?: string;
-      tags?: string[];
-      emoji?: string;
-      license?: string;
-      compatibility?: string;
-      allowedTools?: string[];
-      skillMetadata?: Record<string, string>;
-    };
 
 function resolveSkillsEndpoint(baseEndpoint: string): string {
   if (baseEndpoint.includes('/api/v1/skills')) {
@@ -49,77 +26,6 @@ function resolveSkillsEndpoint(baseEndpoint: string): string {
     return baseEndpoint.replace('/api/v1/config', '/api/v1/skills');
   }
   return baseEndpoint.replace(/\/$/, '') + '/api/v1/skills';
-}
-
-function resolveSkillId(skill: AgentSpecSkillLike): string | null {
-  if (typeof skill === 'string') {
-    return skill;
-  }
-  if (skill.id) {
-    return skill.id;
-  }
-  if (skill.name) {
-    return skill.name;
-  }
-  return null;
-}
-
-function variantFromSpec(
-  catalogSpec: SkillSpec | undefined,
-  raw: Exclude<AgentSpecSkillLike, string> | null,
-): LoadedSkillInfo['variant'] {
-  if (catalogSpec?.path || raw?.path) return 'path';
-  if (
-    (catalogSpec?.package && catalogSpec?.method) ||
-    (raw?.package && raw?.method)
-  ) {
-    return 'package';
-  }
-  if (catalogSpec?.module || raw?.module) return 'module';
-  return 'unknown';
-}
-
-function normalizeLoadedSkills(
-  skills: AgentSpecSkillLike[],
-): LoadedSkillInfo[] {
-  return skills.reduce<LoadedSkillInfo[]>((acc, skill) => {
-    const raw = typeof skill === 'string' ? null : skill;
-    const resolvedId = resolveSkillId(skill);
-    if (!resolvedId) {
-      return acc;
-    }
-
-    const baseId = resolvedId.includes(':')
-      ? resolvedId.split(':')[0]
-      : resolvedId;
-    const catalogSpec = getSkillSpec(baseId);
-    const variant = variantFromSpec(catalogSpec, raw);
-
-    const normalized: LoadedSkillInfo = {
-      id: baseId,
-      name: catalogSpec?.name ?? raw?.name ?? baseId,
-      description:
-        catalogSpec?.description ?? raw?.description ?? `Skill: ${baseId}`,
-      variant,
-      module: catalogSpec?.module ?? raw?.module,
-      package: catalogSpec?.package ?? raw?.package,
-      method: catalogSpec?.method ?? raw?.method,
-      path: catalogSpec?.path ?? raw?.path,
-      license: catalogSpec?.license ?? raw?.license,
-      compatibility: catalogSpec?.compatibility ?? raw?.compatibility,
-      allowedTools: catalogSpec?.allowedTools ?? raw?.allowedTools,
-      skillMetadata: catalogSpec?.skillMetadata ?? raw?.skillMetadata,
-      tags: catalogSpec?.tags
-        ? [...catalogSpec.tags]
-        : raw?.tags
-          ? [...raw.tags]
-          : [],
-      emoji: catalogSpec?.emoji ?? raw?.emoji,
-    };
-
-    acc.push(normalized);
-    return acc;
-  }, []);
 }
 
 /**
@@ -176,6 +82,11 @@ export function useSkills(
 
 /**
  * Hook to fetch and persist loaded skills for a given agent.
+ *
+ * Seeds the store from the `/api/v1/skills` REST endpoint on mount.
+ * Subsequent updates are expected via the `onToolCallComplete` hook
+ * on the Chat component, which reacts to `load_skill` tool results
+ * and calls `setLoadedSkillsForAgent` directly.
  */
 export function useAgentLoadedSkills(
   enabled: boolean,
@@ -202,18 +113,23 @@ export function useAgentLoadedSkills(
           headers['Authorization'] = `Bearer ${authToken}`;
         }
 
-        const response = await fetch(
-          `${agentBaseUrl}/api/v1/agents/${agentId}/spec`,
-          { headers },
-        );
+        // Seed from the skills list endpoint (always available).
+        const response = await fetch(`${agentBaseUrl}/api/v1/skills`, {
+          headers,
+        });
         if (!response.ok) {
-          throw new Error(`Agent spec fetch failed: ${response.statusText}`);
+          throw new Error(`Skills fetch failed: ${response.statusText}`);
         }
 
-        const spec = (await response.json()) as {
-          skills?: AgentSpecSkillLike[];
-        };
-        return normalizeLoadedSkills(spec.skills ?? []);
+        const data = (await response.json()) as SkillsResponse;
+        // Map SkillInfo[] → LoadedSkillInfo[] for the store.
+        return (data.skills ?? []).map<LoadedSkillInfo>(s => ({
+          id: s.id ?? s.name,
+          name: s.name,
+          description: s.description ?? `Skill: ${s.name}`,
+          variant: s.has_scripts ? 'path' : 'unknown',
+          tags: s.tags,
+        }));
       },
       queryKey: ['agent-loaded-skills', agentBaseUrl || '', agentId || ''],
       enabled:

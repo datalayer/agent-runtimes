@@ -102,7 +102,7 @@ const loadConfigurations = () => {
                   CLI: 0,
                   VSCode: 0,
                 },
-                position: {} as Record<string, unknown>,
+                position: 'top' as const,
                 tours: {},
               },
               events: [],
