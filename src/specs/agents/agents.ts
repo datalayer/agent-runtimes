@@ -572,8 +572,7 @@ export const CLASSIFY_ROUTE_EMAILS_AGENT_SPEC_0_0_1: AgentSpec = {
   welcomeNotebook: undefined,
   welcomeDocument: undefined,
   sandboxVariant: 'jupyter',
-  systemPrompt:
-    'You are running in a once trigger. Execute the task directly using run_skill_script. Do not call list_skills, load_skill, or read_skill_resource unless a prior run_skill_script failed with root_error_code=2. On any tool failure, read failure_reason/error/stderr and report the concrete reason. If root_error_code=2, fix arguments, retry exactly once, then continue or fail clearly.',
+  systemPrompt: undefined,
   systemPromptCodemodeAddons: undefined,
   goal: `Classify incoming emails by intent (inquiry, complaint, order, support), assign priority (critical/high/medium/low), extract key entities (sender, subject, account ID, product), and route to the correct department queue. Flag urgent items for immediate human review.`,
   protocol: 'vercel-ai',
@@ -930,7 +929,7 @@ export const DEMO_ONE_TRIGGER_APPROVAL_AGENT_SPEC_0_0_1: AgentSpec = {
   description: `A demonstration agent for the "once" trigger type with manual tool approval. When launched, the agent executes its trigger prompt once and invokes the runtime-sensitive-echo tool, which requires manual approval before execution. After completion, the runtime is terminated automatically.`,
   tags: ['demo', 'trigger', 'once', 'lifecycle', 'approval'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-3-5-haiku-20241022-v1:0',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
   mcpServers: [],
   skills: [],
   tools: [TOOL_MAP['runtime-sensitive-echo:0.0.1']],
@@ -974,7 +973,7 @@ export const DEMO_ONE_TRIGGER_AGENT_SPEC_0_0_1: AgentSpec = {
   description: `A demonstration agent for the "once" trigger type. When launched, the agent executes its trigger prompt exactly once, emits AGENT_STARTED and AGENT_ENDED lifecycle events, and then terminates the runtime automatically.`,
   tags: ['demo', 'trigger', 'once', 'lifecycle'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-3-5-haiku-20241022-v1:0',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
   mcpServers: [],
   skills: [
     toAgentSkillSpec(SKILL_MAP['github:0.0.1']),
@@ -991,17 +990,16 @@ export const DEMO_ONE_TRIGGER_AGENT_SPEC_0_0_1: AgentSpec = {
   welcomeNotebook: undefined,
   welcomeDocument: undefined,
   sandboxVariant: 'jupyter',
-  systemPrompt:
-    'You are running in a once trigger. Complete the task on the first attempt. Use run_skill_script directly. Do not call list_skills, load_skill, or read_skill_resource. Do not retry failed tool calls. If a tool fails, report failure_reason/error/stderr verbatim and stop.',
+  systemPrompt: undefined,
   systemPromptCodemodeAddons: undefined,
-  goal: `Run a one-shot task to summarize top 3 public and top 3 private GitHub repos by recent activity on first attempt (no retries).`,
+  goal: `Run a one-shot task: list the user's top 3 public and top 3 private GitHub repositories, ranked by recent activity, and provide a brief summary of each.`,
   protocol: undefined,
   uiExtension: undefined,
   trigger: {
     type: 'once',
     description: 'Run once and terminate',
     prompt:
-      "List the user's top 3 public and top 3 private GitHub repositories, ranked by recent activity, and provide a brief summary of each. Execute exactly two tool calls: run_skill_script(skill_name='github', script_name='list_repos', kwargs={visibility:'public', sort:'updated', limit:3, format:'json'}) and run_skill_script(skill_name='github', script_name='list_repos', kwargs={visibility:'private', sort:'updated', limit:3, format:'json'}). Do not call list_skills/load_skill/read_skill_resource. Do not retry. If a tool call fails, report failure_reason/error/stderr exactly as returned.",
+      "List the user's top 3 public and top 3 private GitHub repositories, ranked by recent activity, and provide a brief summary of each.",
   },
   modelConfig: undefined,
   mcpServerTools: undefined,

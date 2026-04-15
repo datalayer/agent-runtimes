@@ -127,7 +127,7 @@ TEXT_SUMMARIZER_SKILL_SPEC_0_0_1 = SkillSpec(
 )
 
 # ============================================================================
-# Skills Catalog
+# Skill Catalog
 # ============================================================================
 
 SKILLS_CATALOG: Dict[str, SkillSpec] = {
