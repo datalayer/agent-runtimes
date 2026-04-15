@@ -60,7 +60,11 @@ export {
  * ChatBase infrastructure hooks.
  */
 export { useConfig } from './useConfig';
-export { useSkills, useAgentLoadedSkills } from './useSkills';
+export {
+  useSkills,
+  useSkillActions,
+  useAgentRuntimeLoadedSkills as useAgentLoadedSkills,
+} from './useSkills';
 export { useContextSnapshot } from './useContextSnapshot';
 export { useSandbox } from './useSandbox';
 

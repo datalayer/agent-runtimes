@@ -5,6 +5,7 @@
 
 import type { ContextSnapshotData } from './context';
 import type { McpToolsetsStatusResponse } from './mcp';
+import type { SkillStatus } from './skills';
 
 export type AgentStreamEventType =
   | 'agent.snapshot'
@@ -49,11 +50,23 @@ export interface AgentStreamSnapshotPayload {
 /** Codemode status as pushed via the monitoring WebSocket. */
 export interface CodemodeStatusData {
   enabled: boolean;
-  skills: Array<{ name: string; description?: string; tags?: string[] }>;
-  available_skills: Array<{
+  skills: Array<{
+    id?: string;
     name: string;
     description?: string;
     tags?: string[];
+    has_scripts?: boolean;
+    has_resources?: boolean;
+    status?: SkillStatus;
+  }>;
+  available_skills: Array<{
+    id?: string;
+    name: string;
+    description?: string;
+    tags?: string[];
+    has_scripts?: boolean;
+    has_resources?: boolean;
+    status?: SkillStatus;
   }>;
   sandbox?: Record<string, unknown> | null;
 }

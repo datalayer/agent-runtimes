@@ -17,21 +17,15 @@ import {
   Text,
   Token as PrimerToken,
 } from '@primer/react';
-import {
-  BeakerIcon,
-  BriefcaseIcon,
-  PackageIcon,
-  SignOutIcon,
-} from '@primer/octicons-react';
+import { BriefcaseIcon, SignOutIcon } from '@primer/octicons-react';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { SignInSimple } from '@datalayer/core/lib/views/iam';
 import { UserBadge } from '@datalayer/core/lib/views/profile';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
 import { Chat } from '../chat';
-import { useAgentLoadedSkills } from '../hooks';
-import { agentRuntimeStore, useAgentRuntimeStore } from '../stores';
-import type { LoadedSkillInfo, ToolCallCompleteContext } from '../types';
+import { useSkills, useSkillActions } from '../hooks';
+import type { SkillInfo } from '../types';
 
 const queryClient = new QueryClient();
 const AGENT_NAME = 'skills-demo-agent';
@@ -39,7 +33,10 @@ const AGENT_SPEC_ID = 'demo-full';
 const DEFAULT_LOCAL_BASE_URL =
   import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
 
-const SkillCard: React.FC<{ skill: LoadedSkillInfo }> = ({ skill }) => (
+const SkillCard: React.FC<{
+  skill: SkillInfo;
+  onToggle: (id: string) => void;
+}> = ({ skill, onToggle }) => (
   <Box
     sx={{
       border: '1px solid',
@@ -51,56 +48,34 @@ const SkillCard: React.FC<{ skill: LoadedSkillInfo }> = ({ skill }) => (
     }}
   >
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-      {skill.emoji && <Text sx={{ fontSize: 2 }}>{skill.emoji}</Text>}
       <Text sx={{ fontWeight: 600, fontSize: 1 }}>{skill.name}</Text>
-      <Label
+      {skill.status && (
+        <Label
+          size="small"
+          variant={
+            skill.status === 'discovered'
+              ? 'success'
+              : skill.status === 'enabled'
+                ? 'attention'
+                : 'secondary'
+          }
+        >
+          {skill.status}
+        </Label>
+      )}
+      <Button
         size="small"
-        variant={skill.variant === 'package' ? 'accent' : 'primary'}
+        variant="invisible"
+        onClick={() => onToggle(skill.id)}
+        sx={{ ml: 'auto', fontSize: 0 }}
       >
-        {skill.variant === 'package'
-          ? 'package-based'
-          : skill.variant === 'path'
-            ? 'path-based'
-            : skill.variant === 'module'
-              ? 'name-based'
-              : 'resolved'}
-      </Label>
+        {skill.status === 'available' ? 'Enable' : 'Disable'}
+      </Button>
     </Box>
-    <Text as="p" sx={{ fontSize: 0, color: 'fg.muted', mb: 1, mt: 0 }}>
-      {skill.description}
-    </Text>
-    {skill.variant === 'module' && skill.module && (
-      <Text sx={{ fontSize: 0, fontFamily: 'mono', color: 'fg.muted' }}>
-        module: {skill.module}
+    {skill.description && (
+      <Text as="p" sx={{ fontSize: 0, color: 'fg.muted', mb: 1, mt: 0 }}>
+        {skill.description}
       </Text>
-    )}
-    {skill.variant === 'package' && (
-      <Box sx={{ fontSize: 0, fontFamily: 'mono', color: 'fg.muted' }}>
-        <Text sx={{ display: 'block' }}>package: {skill.package}</Text>
-        <Text sx={{ display: 'block' }}>method: {skill.method}</Text>
-      </Box>
-    )}
-    {skill.variant === 'path' && skill.path && (
-      <Text sx={{ fontSize: 0, fontFamily: 'mono', color: 'fg.muted' }}>
-        path: {skill.path}
-      </Text>
-    )}
-    {skill.license && (
-      <Text sx={{ fontSize: 0, color: 'fg.muted', display: 'block', mt: 1 }}>
-        License: {skill.license}
-      </Text>
-    )}
-    {skill.compatibility && (
-      <Text sx={{ fontSize: 0, color: 'fg.muted', display: 'block' }}>
-        Compat: {skill.compatibility}
-      </Text>
-    )}
-    {skill.allowedTools && skill.allowedTools.length > 0 && (
-      <Box sx={{ mt: 1, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-        {skill.allowedTools.map(tool => (
-          <PrimerToken key={tool} text={tool} size="small" />
-        ))}
-      </Box>
     )}
     {skill.tags && skill.tags.length > 0 && (
       <Box sx={{ mt: 1, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
@@ -126,61 +101,22 @@ const AgentSkillsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
 
   const agentBaseUrl = DEFAULT_LOCAL_BASE_URL;
   const chatAuthToken: string | undefined = token === null ? undefined : token;
-  const { skills } = useAgentLoadedSkills(
-    isReady,
-    agentBaseUrl,
-    agentId,
-    chatAuthToken,
-  );
 
-  const setLoadedSkillsForAgent = useAgentRuntimeStore(
-    state => state.setLoadedSkillsForAgent,
-  );
+  // WS-sourced skills (reads from codemodeStatus pushed via monitoring WS)
+  const skillsQuery = useSkills(isReady);
+  const skills = skillsQuery.data?.skills ?? [];
+  const { enableSkill, disableSkill } = useSkillActions();
 
-  /**
-   * Post-hook: when the LLM invokes `load_skill` and the result arrives,
-   * parse the skill metadata from the result string and upsert it into
-   * the persisted loaded-skills store so the sidebar updates reactively.
-   */
-  const handleToolCallComplete = useCallback(
-    (ctx: ToolCallCompleteContext) => {
-      if (ctx.toolName !== 'load_skill' || ctx.status !== 'complete') {
-        return;
+  const toggleSkill = useCallback(
+    (skillId: string) => {
+      const skill = skills.find(s => s.id === skillId);
+      if (skill?.status === 'available') {
+        enableSkill(skillId);
+      } else {
+        disableSkill(skillId);
       }
-      const skillName = (ctx.args.skill_name as string) ?? '';
-      if (!skillName || !agentId) {
-        return;
-      }
-      // Parse description from the load_skill result text.
-      const resultText =
-        typeof ctx.result === 'string'
-          ? ctx.result
-          : typeof (ctx.result as Record<string, unknown>)?.output === 'string'
-            ? ((ctx.result as Record<string, unknown>).output as string)
-            : '';
-      const descMatch = resultText.match(
-        /\*\*Description:\*\*\s*(.+?)(?:\n|$)/,
-      );
-      const description = descMatch?.[1]?.trim() ?? `Skill: ${skillName}`;
-      const hasScripts = /\*\*Available Scripts:\*\*/.test(resultText);
-
-      const newSkill: LoadedSkillInfo = {
-        id: skillName,
-        name: skillName,
-        description,
-        variant: hasScripts ? 'path' : 'unknown',
-      };
-
-      // Upsert: merge with existing skills, replacing if already present.
-      const current =
-        agentRuntimeStore.getState().loadedSkillsByAgentId[agentId] ?? [];
-      const exists = current.some(s => s.id === skillName);
-      const updated = exists
-        ? current.map(s => (s.id === skillName ? { ...s, ...newSkill } : s))
-        : [...current, newSkill];
-      setLoadedSkillsForAgent(agentId, updated);
     },
-    [agentId, setLoadedSkillsForAgent],
+    [skills, enableSkill, disableSkill],
   );
 
   const authFetch = useCallback(
@@ -336,7 +272,6 @@ const AgentSkillsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
             height="100%"
             runtimeId={agentId}
             historyEndpoint={`${agentBaseUrl}/api/v1/history`}
-            onToolCallComplete={handleToolCallComplete}
             headerActions={
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                 <Text sx={{ color: 'fg.muted', fontSize: 1 }}>
@@ -422,16 +357,25 @@ const AgentSkillsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
               </Box>
             </Heading>
             <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
-              Loaded: {skills.length} skill{skills.length !== 1 ? 's' : ''}
+              {skills.length} skill{skills.length !== 1 ? 's' : ''} &middot;{' '}
+              {skills.filter(s => s.status === 'discovered').length} discovered
+              &middot; {skills.filter(s => s.status === 'enabled').length}{' '}
+              pending
             </Text>
           </Box>
           <Box sx={{ p: 2, overflow: 'auto', flex: 1 }}>
             {skills.length === 0 ? (
               <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
-                No skills loaded.
+                Waiting for skills snapshot...
               </Text>
             ) : (
-              skills.map(skill => <SkillCard key={skill.name} skill={skill} />)
+              skills.map(skill => (
+                <SkillCard
+                  key={skill.id}
+                  skill={skill}
+                  onToggle={toggleSkill}
+                />
+              ))
             )}
 
             <Box
@@ -445,24 +389,30 @@ const AgentSkillsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
               }}
             >
               <Heading as="h5" sx={{ fontSize: 0, mb: 1 }}>
-                Skill Spec Variants
+                Skill Statuses
               </Heading>
               <Box sx={{ fontSize: 0, color: 'fg.muted' }}>
                 <Box
                   sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}
                 >
-                  <BeakerIcon size={12} />
-                  <Text>
-                    <strong>Path-based:</strong> Discovered from a local
-                    SKILL.md directory path
-                  </Text>
+                  <Label size="small" variant="secondary">
+                    available
+                  </Label>
+                  <Text>In catalog, not yet enabled</Text>
+                </Box>
+                <Box
+                  sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}
+                >
+                  <Label size="small" variant="attention">
+                    enabled
+                  </Label>
+                  <Text>Enabled, discovery pending</Text>
                 </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <PackageIcon size={12} />
-                  <Text>
-                    <strong>Module-based:</strong> Python module or package +
-                    method with frontmatter
-                  </Text>
+                  <Label size="small" variant="success">
+                    discovered
+                  </Label>
+                  <Text>SKILL.md loaded, in system prompt</Text>
                 </Box>
               </Box>
             </Box>

@@ -3,167 +3,76 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
-import { useContext } from 'react';
-import {
-  QueryClient,
-  QueryClientContext,
-  useQuery,
-} from '@tanstack/react-query';
-import { useEffect } from 'react';
-import type { LoadedSkillInfo, SkillsResponse } from '../types/skills';
-import { useAgentRuntimeLoadedSkills, useAgentRuntimeStore } from '../stores';
+import { useCallback, useMemo } from 'react';
+import type { SkillInfo, SkillStatus } from '../types/skills';
+import { agentRuntimeStore, useAgentRuntimeCodemodeStatus } from '../stores';
 
-const FALLBACK_QUERY_CLIENT = new QueryClient();
-
-function resolveSkillsEndpoint(baseEndpoint: string): string {
-  if (baseEndpoint.includes('/api/v1/skills')) {
-    return baseEndpoint;
-  }
-  if (baseEndpoint.includes('/api/v1/configure')) {
-    return baseEndpoint.replace('/api/v1/configure', '/api/v1/skills');
-  }
-  if (baseEndpoint.includes('/api/v1/config')) {
-    return baseEndpoint.replace('/api/v1/config', '/api/v1/skills');
-  }
-  return baseEndpoint.replace(/\/$/, '') + '/api/v1/skills';
-}
+// ---------------------------------------------------------------------------
+// Skills from WS snapshot
+// ---------------------------------------------------------------------------
 
 /**
- * Hook to fetch available skills from backend.
+ * Derive the list of skills from the WS-pushed `codemodeStatus`.
+ *
+ * The server-side SkillsArea pushes per-skill status (`available`,
+ * `enabled`, `discovered`) via the monitoring WebSocket inside the
+ * `codemodeStatus.skills` array.  This hook reads from the Zustand
+ * store — no REST call is made.
  */
 export function useSkills(
-  enabled: boolean,
-  baseEndpoint?: string,
-  authToken?: string,
+  _enabled: boolean,
+  _baseEndpoint?: string,
+  _authToken?: string,
 ) {
-  const queryClient = useContext(QueryClientContext);
+  const codemodeStatus = useAgentRuntimeCodemodeStatus();
 
-  const query = useQuery(
-    {
-      queryFn: async () => {
-        if (!baseEndpoint) {
-          return { skills: [], total: 0 };
-        }
-
-        const skillsEndpoint = resolveSkillsEndpoint(baseEndpoint);
-        const headers: HeadersInit = {
-          'Content-Type': 'application/json',
-        };
-        if (authToken) {
-          headers['Authorization'] = `Bearer ${authToken}`;
-        }
-
-        const response = await fetch(skillsEndpoint, { headers });
-        if (!response.ok) {
-          throw new Error(`Skills fetch failed: ${response.statusText}`);
-        }
-        return response.json() as Promise<SkillsResponse>;
-      },
-      queryKey: ['skills', baseEndpoint || 'jupyter'],
-      enabled: Boolean(queryClient) && enabled,
-      staleTime: 5 * 60 * 1000,
-      retry: 1,
-    },
-    queryClient ?? FALLBACK_QUERY_CLIENT,
-  );
-
-  if (!queryClient) {
-    return {
-      data: undefined,
-      isLoading: false,
-      isError: false,
-      error: null,
-      refetch: () => Promise.resolve({ data: undefined }),
-    };
-  }
-
-  return query;
-}
-
-/**
- * Hook to fetch and persist loaded skills for a given agent.
- *
- * Seeds the store from the `/api/v1/skills` REST endpoint on mount.
- * Subsequent updates are expected via the `onToolCallComplete` hook
- * on the Chat component, which reacts to `load_skill` tool results
- * and calls `setLoadedSkillsForAgent` directly.
- */
-export function useAgentLoadedSkills(
-  enabled: boolean,
-  agentBaseUrl?: string,
-  agentId?: string,
-  authToken?: string,
-) {
-  const queryClient = useContext(QueryClientContext);
-  const persistedSkills = useAgentRuntimeLoadedSkills(agentId);
-  const setLoadedSkillsForAgent = useAgentRuntimeStore(
-    state => state.setLoadedSkillsForAgent,
-  );
-
-  const query = useQuery(
-    {
-      queryFn: async () => {
-        if (!agentBaseUrl || !agentId) {
-          return [] as LoadedSkillInfo[];
-        }
-        const headers: HeadersInit = {
-          'Content-Type': 'application/json',
-        };
-        if (authToken) {
-          headers['Authorization'] = `Bearer ${authToken}`;
-        }
-
-        // Seed from the skills list endpoint (always available).
-        const response = await fetch(`${agentBaseUrl}/api/v1/skills`, {
-          headers,
-        });
-        if (!response.ok) {
-          throw new Error(`Skills fetch failed: ${response.statusText}`);
-        }
-
-        const data = (await response.json()) as SkillsResponse;
-        // Map SkillInfo[] → LoadedSkillInfo[] for the store.
-        return (data.skills ?? []).map<LoadedSkillInfo>(s => ({
-          id: s.id ?? s.name,
-          name: s.name,
-          description: s.description ?? `Skill: ${s.name}`,
-          variant: s.has_scripts ? 'path' : 'unknown',
-          tags: s.tags,
-        }));
-      },
-      queryKey: ['agent-loaded-skills', agentBaseUrl || '', agentId || ''],
-      enabled:
-        Boolean(queryClient) &&
-        enabled &&
-        Boolean(agentBaseUrl) &&
-        Boolean(agentId),
-      staleTime: 5 * 60 * 1000,
-      retry: 1,
-    },
-    queryClient ?? FALLBACK_QUERY_CLIENT,
-  );
-
-  useEffect(() => {
-    if (!queryClient || !agentId || !query.data) {
-      return;
+  const data = useMemo(() => {
+    if (!codemodeStatus) {
+      return undefined;
     }
-    setLoadedSkillsForAgent(agentId, query.data);
-  }, [queryClient, agentId, query.data, setLoadedSkillsForAgent]);
-
-  if (!queryClient) {
-    return {
-      skills: persistedSkills,
-      data: persistedSkills,
-      isLoading: false,
-      isError: false,
-      error: null,
-      refetch: () => Promise.resolve({ data: persistedSkills }),
-    };
-  }
+    const skills: SkillInfo[] = (codemodeStatus.skills ?? []).map(s => ({
+      id: s.id ?? s.name,
+      name: s.name,
+      description: s.description,
+      tags: s.tags,
+      has_scripts: s.has_scripts,
+      has_resources: s.has_resources,
+      status: (s.status as SkillStatus) ?? 'available',
+    }));
+    return { skills, total: skills.length };
+  }, [codemodeStatus]);
 
   return {
-    ...query,
-    skills: query.data ?? persistedSkills,
-    data: query.data ?? persistedSkills,
+    data,
+    isLoading: false,
+    isError: false,
+    error: null,
+    refetch: () => Promise.resolve({ data }),
   };
 }
+
+// ---------------------------------------------------------------------------
+// Skill enable / disable via WebSocket
+// ---------------------------------------------------------------------------
+
+export function useSkillActions() {
+  const enableSkill = useCallback((skillId: string) => {
+    agentRuntimeStore
+      .getState()
+      .sendRawMessage({ type: 'skill_enable', skillId });
+  }, []);
+
+  const disableSkill = useCallback((skillId: string) => {
+    agentRuntimeStore
+      .getState()
+      .sendRawMessage({ type: 'skill_disable', skillId });
+  }, []);
+
+  return { enableSkill, disableSkill };
+}
+
+// ---------------------------------------------------------------------------
+// Loaded skills (kept for backward compat with AgentSkillsExample sidebar)
+// ---------------------------------------------------------------------------
+
+export { useAgentRuntimeLoadedSkills } from '../stores';

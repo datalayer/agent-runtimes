@@ -4,7 +4,16 @@
  */
 
 /**
- * Skill information from backend
+ * Skill status as tracked by the server-side skills area.
+ *
+ * - `available`: found in catalog/folder but not enabled
+ * - `enabled`: user toggled on; discovery may still be pending
+ * - `discovered`: SKILL.md loaded and included in the LLM system prompt
+ */
+export type SkillStatus = 'available' | 'enabled' | 'discovered';
+
+/**
+ * Skill information from the WebSocket snapshot.
  */
 export interface SkillInfo {
   id: string;
@@ -14,6 +23,8 @@ export interface SkillInfo {
   tags?: string[];
   has_scripts?: boolean;
   has_resources?: boolean;
+  /** Lifecycle status from the server-side skills area */
+  status?: SkillStatus;
 }
 
 /**

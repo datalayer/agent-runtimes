@@ -57,6 +57,7 @@ import {
 import {
   useConfig,
   useSkills,
+  useSkillActions,
   useContextSnapshot,
   useSandbox,
 } from '../../hooks';
@@ -284,8 +285,6 @@ function ChatBaseInner({
   >(new Map());
   // Note: legacy _enabledTools for backend-defined tools from config query
   const [_enabledTools, setEnabledTools] = useState<string[]>([]);
-  // Skills state
-  const [enabledSkills, setEnabledSkills] = useState<Set<string>>(new Set());
 
   // ---- Data queries ----
   const configQuery = useConfig(
@@ -299,6 +298,19 @@ function ChatBaseInner({
     protocol?.configEndpoint,
     protocol?.authToken,
   );
+  const { enableSkill: wsEnableSkill, disableSkill: wsDisableSkill } =
+    useSkillActions();
+
+  // Derive enabledSkills from the WS-pushed skill statuses.
+  const enabledSkills = useMemo(() => {
+    const set = new Set<string>();
+    for (const s of skillsQuery.data?.skills ?? []) {
+      if (s.status === 'enabled' || s.status === 'discovered') {
+        set.add(s.id);
+      }
+    }
+    return set;
+  }, [skillsQuery.data]);
   const contextSnapshotQuery = useContextSnapshot(
     Boolean(protocol?.enableConfigQuery) && showTokenUsage,
     protocol?.configEndpoint,
@@ -489,12 +501,7 @@ function ChatBaseInner({
     });
   }, [mcpServers, configQuery.data?.mcpServers, isServerSelected]);
 
-  // Initialize enabled skills from initialSkills prop
-  useEffect(() => {
-    if (initialSkills && initialSkills.length > 0) {
-      setEnabledSkills(new Set(initialSkills));
-    }
-  }, [initialSkills]);
+  // initialSkills are now handled server-side during agent creation.
 
   // ---- Toggle helpers ----
   const toggleMcpTool = useCallback((serverId: string, toolName: string) => {
@@ -526,23 +533,28 @@ function ChatBaseInner({
     [],
   );
 
-  const toggleSkill = useCallback((skillId: string) => {
-    setEnabledSkills(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(skillId)) {
-        newSet.delete(skillId);
+  const toggleSkill = useCallback(
+    (skillId: string) => {
+      if (enabledSkills.has(skillId)) {
+        wsDisableSkill(skillId);
       } else {
-        newSet.add(skillId);
+        wsEnableSkill(skillId);
       }
-      return newSet;
-    });
-  }, []);
+    },
+    [enabledSkills, wsEnableSkill, wsDisableSkill],
+  );
 
   const toggleAllSkills = useCallback(
     (allSkillIds: string[], enable: boolean) => {
-      setEnabledSkills(enable ? new Set(allSkillIds) : new Set());
+      for (const id of allSkillIds) {
+        if (enable) {
+          wsEnableSkill(id);
+        } else {
+          wsDisableSkill(id);
+        }
+      }
     },
-    [],
+    [wsEnableSkill, wsDisableSkill],
   );
 
   const getEnabledMcpToolNames = useCallback((): string[] => {

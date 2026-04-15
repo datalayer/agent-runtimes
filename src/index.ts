@@ -22,6 +22,8 @@ export type {
   NotificationChannelSpec,
   MCPServer,
   SkillSpec,
+  SkillInfo,
+  SkillStatus,
   EnvvarSpec,
   ToolCallStartContext,
   ToolCallCompleteContext,

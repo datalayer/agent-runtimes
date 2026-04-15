@@ -56,7 +56,6 @@ from .routes import (
     mcp_router,
     mcp_ui_router,
     set_a2a_app,
-    skills_router,
     start_a2a_task_managers,
     stop_a2a_task_managers,
     tool_approvals_legacy_router,
@@ -300,6 +299,27 @@ async def _create_and_register_cli_agent(
         if skills_toolset:
             non_mcp_toolsets.append(skills_toolset)
             logger.info(f"Added AgentSkillsToolset for agent {agent_id}")
+
+        # Seed the skills area: discover available skills from the directory,
+        # enable the requested ones, and auto-discover their definitions.
+        from .services.skills_area import get_skills_area
+
+        skills_area = get_skills_area()
+        # Seed all available skills from the directory
+        from .routes.configure import _get_available_skills
+
+        available = _get_available_skills()
+        skills_area.seed_available(available)
+        # Enable the requested skills
+        for skill_name in skills:
+            skills_area.enable_skill(skill_name)
+        # Auto-discover all enabled skills so their definitions
+        # are available for the system prompt immediately.
+        skills_area.discover_all_enabled(skills_path)
+        logger.info(
+            f"Skills area: {len(skills_area.list_skills())} tracked, "
+            f"{len(skills_area.get_skills_for_prompt())} discovered+enabled"
+        )
 
     # Add codemode toolset if enabled
     codemode_toolset = None
@@ -1286,7 +1306,6 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
     app.include_router(configure_router, prefix=config.api_prefix)
     app.include_router(mcp_router, prefix=config.api_prefix)
     app.include_router(mcp_proxy_router, prefix=config.api_prefix)
-    app.include_router(skills_router, prefix=config.api_prefix)
     app.include_router(tool_approvals_router, prefix=config.api_prefix)
     app.include_router(tool_approvals_legacy_router)
     app.include_router(tool_approvals_ws_router)

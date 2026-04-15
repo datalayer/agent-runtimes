@@ -183,6 +183,7 @@ export interface AgentRuntimeStoreActions {
     note?: string,
   ) => boolean;
   requestRefresh: () => boolean;
+  sendRawMessage: (payload: Record<string, unknown>) => boolean;
   appendLocalTokenTurn: (params: {
     serviceName?: string;
     agentId?: string;
@@ -606,6 +607,14 @@ export const agentRuntimeStore = createStore<AgentRuntimeStore>()(
           }
           _ws.send(JSON.stringify({ type: 'request_snapshot' }));
           _ws.send(JSON.stringify({ type: 'request_otel_flush' }));
+          return true;
+        },
+
+        sendRawMessage: (payload: Record<string, unknown>) => {
+          if (!_ws || _ws.readyState !== WebSocket.OPEN) {
+            return false;
+          }
+          _ws.send(JSON.stringify(payload));
           return true;
         },
 
