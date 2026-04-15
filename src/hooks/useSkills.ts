@@ -15,7 +15,7 @@ import { agentRuntimeStore, useAgentRuntimeCodemodeStatus } from '../stores';
  * Derive the list of skills from the WS-pushed `codemodeStatus`.
  *
  * The server-side SkillsArea pushes per-skill status (`available`,
- * `enabled`, `discovered`) via the monitoring WebSocket inside the
+ * `enabled`, `loaded`) via the monitoring WebSocket inside the
  * `codemodeStatus.skills` array.  This hook reads from the Zustand
  * store — no REST call is made.
  */
@@ -38,6 +38,7 @@ export function useSkills(
       has_scripts: s.has_scripts,
       has_resources: s.has_resources,
       status: (s.status as SkillStatus) ?? 'available',
+      skill_definition: s.skill_definition ?? null,
     }));
     return { skills, total: skills.length };
   }, [codemodeStatus]);

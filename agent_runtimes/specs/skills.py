@@ -127,10 +127,10 @@ TEXT_SUMMARIZER_SKILL_SPEC_0_0_1 = SkillSpec(
 )
 
 # ============================================================================
-# Skill Catalog
+# Skills Catalog
 # ============================================================================
 
-SKILL_CATALOG: Dict[str, SkillSpec] = {
+SKILLS_CATALOG: Dict[str, SkillSpec] = {
     "crawl": CRAWL_SKILL_SPEC_0_0_1,
     "events": EVENTS_SKILL_SPEC_0_0_1,
     "github": GITHUB_SKILL_SPEC_0_0_1,
@@ -165,12 +165,12 @@ def get_skill_spec(skill_id: str) -> SkillSpec | None:
     Returns:
         The SkillSpec, or None if not found.
     """
-    spec = SKILL_CATALOG.get(skill_id)
+    spec = SKILLS_CATALOG.get(skill_id)
     if spec is not None:
         return spec
     base, _, ver = skill_id.rpartition(":")
     if base and "." in ver:
-        return SKILL_CATALOG.get(base)
+        return SKILLS_CATALOG.get(base)
     return None
 
 
@@ -181,4 +181,4 @@ def list_skill_specs() -> List[SkillSpec]:
     Returns:
         List of all SkillSpec configurations.
     """
-    return list(SKILL_CATALOG.values())
+    return list(SKILLS_CATALOG.values())

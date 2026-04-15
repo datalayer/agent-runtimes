@@ -11,13 +11,14 @@ import { Box } from '@datalayer/primer-addons';
 import { ErrorView } from './components';
 import {
   Button,
+  Dialog,
   Heading,
   Label,
   Spinner,
   Text,
   Token as PrimerToken,
 } from '@primer/react';
-import { BriefcaseIcon, SignOutIcon } from '@primer/octicons-react';
+import { BriefcaseIcon, FileIcon, SignOutIcon } from '@primer/octicons-react';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { SignInSimple } from '@datalayer/core/lib/views/iam';
 import { UserBadge } from '@datalayer/core/lib/views/profile';
@@ -36,56 +37,102 @@ const DEFAULT_LOCAL_BASE_URL =
 const SkillCard: React.FC<{
   skill: SkillInfo;
   onToggle: (id: string) => void;
-}> = ({ skill, onToggle }) => (
-  <Box
-    sx={{
-      border: '1px solid',
-      borderColor: 'border.default',
-      borderRadius: 2,
-      p: 2,
-      mb: 2,
-      bg: 'canvas.default',
-    }}
-  >
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-      <Text sx={{ fontWeight: 600, fontSize: 1 }}>{skill.name}</Text>
-      {skill.status && (
-        <Label
-          size="small"
-          variant={
-            skill.status === 'discovered'
-              ? 'success'
-              : skill.status === 'enabled'
-                ? 'attention'
-                : 'secondary'
-          }
-        >
-          {skill.status}
-        </Label>
-      )}
-      <Button
-        size="small"
-        variant="invisible"
-        onClick={() => onToggle(skill.id)}
-        sx={{ ml: 'auto', fontSize: 0 }}
+}> = ({ skill, onToggle }) => {
+  const [showDefinition, setShowDefinition] = useState(false);
+
+  return (
+    <>
+      <Box
+        sx={{
+          border: '1px solid',
+          borderColor: 'border.default',
+          borderRadius: 2,
+          p: 2,
+          mb: 2,
+          bg: 'canvas.default',
+        }}
       >
-        {skill.status === 'available' ? 'Enable' : 'Disable'}
-      </Button>
-    </Box>
-    {skill.description && (
-      <Text as="p" sx={{ fontSize: 0, color: 'fg.muted', mb: 1, mt: 0 }}>
-        {skill.description}
-      </Text>
-    )}
-    {skill.tags && skill.tags.length > 0 && (
-      <Box sx={{ mt: 1, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-        {skill.tags.map(tag => (
-          <PrimerToken key={tag} text={tag} size="small" />
-        ))}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+          <Text sx={{ fontWeight: 600, fontSize: 1 }}>{skill.name}</Text>
+          {skill.status && (
+            <Label
+              size="small"
+              variant={
+                skill.status === 'loaded'
+                  ? 'success'
+                  : skill.status === 'enabled'
+                    ? 'attention'
+                    : 'secondary'
+              }
+            >
+              {skill.status}
+            </Label>
+          )}
+          {skill.status === 'loaded' && skill.skill_definition && (
+            <Button
+              size="small"
+              variant="invisible"
+              onClick={() => setShowDefinition(true)}
+              leadingVisual={FileIcon}
+              sx={{ fontSize: 0, p: 0, color: 'fg.muted' }}
+              aria-label="View SKILL.md"
+            >
+              SKILL.md
+            </Button>
+          )}
+          <Button
+            size="small"
+            variant="invisible"
+            onClick={() => onToggle(skill.id)}
+            sx={{ ml: 'auto', fontSize: 0 }}
+          >
+            {skill.status === 'available' ? 'Enable' : 'Disable'}
+          </Button>
+        </Box>
+        {skill.description && (
+          <Text as="p" sx={{ fontSize: 0, color: 'fg.muted', mb: 1, mt: 0 }}>
+            {skill.description}
+          </Text>
+        )}
+        {skill.tags && skill.tags.length > 0 && (
+          <Box sx={{ mt: 1, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+            {skill.tags.map(tag => (
+              <PrimerToken key={tag} text={tag} size="small" />
+            ))}
+          </Box>
+        )}
       </Box>
-    )}
-  </Box>
-);
+
+      {showDefinition && skill.skill_definition && (
+        <Dialog
+          title={`${skill.name} — SKILL.md`}
+          onClose={() => setShowDefinition(false)}
+          width="xlarge"
+        >
+          <Box sx={{ p: 3, maxHeight: '70vh', overflow: 'auto' }}>
+            <Box
+              as="pre"
+              sx={{
+                fontFamily: 'mono',
+                fontSize: 0,
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
+                m: 0,
+                p: 3,
+                bg: 'canvas.inset',
+                borderRadius: 2,
+                border: '1px solid',
+                borderColor: 'border.muted',
+              }}
+            >
+              {skill.skill_definition}
+            </Box>
+          </Box>
+        </Dialog>
+      )}
+    </>
+  );
+};
 
 const AgentSkillsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
   const { token } = useSimpleAuthStore();
@@ -268,6 +315,7 @@ const AgentSkillsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
             showNewChatButton={true}
             showClearButton={false}
             showTokenUsage={true}
+            showSkillsMenu={true}
             autoFocus
             height="100%"
             runtimeId={agentId}
@@ -358,9 +406,8 @@ const AgentSkillsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
             </Heading>
             <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
               {skills.length} skill{skills.length !== 1 ? 's' : ''} &middot;{' '}
-              {skills.filter(s => s.status === 'discovered').length} discovered
-              &middot; {skills.filter(s => s.status === 'enabled').length}{' '}
-              pending
+              {skills.filter(s => s.status === 'loaded').length} loaded &middot;{' '}
+              {skills.filter(s => s.status === 'enabled').length} pending
             </Text>
           </Box>
           <Box sx={{ p: 2, overflow: 'auto', flex: 1 }}>
@@ -406,11 +453,11 @@ const AgentSkillsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
                   <Label size="small" variant="attention">
                     enabled
                   </Label>
-                  <Text>Enabled, discovery pending</Text>
+                  <Text>Enabled, loading pending</Text>
                 </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Label size="small" variant="success">
-                    discovered
+                    loaded
                   </Label>
                   <Text>SKILL.md loaded, in system prompt</Text>
                 </Box>

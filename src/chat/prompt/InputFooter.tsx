@@ -546,13 +546,13 @@ function SkillsMenu({
                               px: 1,
                               borderRadius: 2,
                               bg:
-                                skill.status === 'discovered'
+                                skill.status === 'loaded'
                                   ? 'success.subtle'
                                   : skill.status === 'enabled'
                                     ? 'attention.subtle'
                                     : 'neutral.subtle',
                               color:
-                                skill.status === 'discovered'
+                                skill.status === 'loaded'
                                   ? 'success.fg'
                                   : skill.status === 'enabled'
                                     ? 'attention.fg'

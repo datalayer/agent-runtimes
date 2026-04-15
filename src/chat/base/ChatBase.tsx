@@ -305,7 +305,7 @@ function ChatBaseInner({
   const enabledSkills = useMemo(() => {
     const set = new Set<string>();
     for (const s of skillsQuery.data?.skills ?? []) {
-      if (s.status === 'enabled' || s.status === 'discovered') {
+      if (s.status === 'enabled' || s.status === 'loaded') {
         set.add(s.id);
       }
     }

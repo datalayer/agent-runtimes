@@ -301,7 +301,9 @@ async def _create_and_register_cli_agent(
             logger.info(f"Added AgentSkillsToolset for agent {agent_id}")
 
         # Seed the skills area: discover available skills from the directory,
-        # enable the requested ones, and auto-discover their definitions.
+        # enable the requested ones.  Loading of SKILL.md definitions is
+        # deferred to the WS monitoring loop so the frontend first sees skills
+        # in "enabled" state before they transition to "loaded".
         from .services.skills_area import get_skills_area
 
         skills_area = get_skills_area()
@@ -313,12 +315,9 @@ async def _create_and_register_cli_agent(
         # Enable the requested skills
         for skill_name in skills:
             skills_area.enable_skill(skill_name)
-        # Auto-discover all enabled skills so their definitions
-        # are available for the system prompt immediately.
-        skills_area.discover_all_enabled(skills_path)
         logger.info(
             f"Skills area: {len(skills_area.list_skills())} tracked, "
-            f"{len(skills_area.get_skills_for_prompt())} discovered+enabled"
+            f"{len([s for s in skills_area.list_skills() if s.status == 'enabled'])} enabled (loading deferred)"
         )
 
     # Add codemode toolset if enabled

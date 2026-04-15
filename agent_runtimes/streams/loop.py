@@ -284,7 +284,7 @@ async def _handle_skill_enable(
 ) -> None:
     """Handle a skill_enable WS message.
 
-    Enables the skill and if it is not yet discovered, triggers discovery
+    Enables the skill and if it is not yet loaded, triggers loading
     so its definition is loaded and added to the system prompt.
     """
     from agent_runtimes.services.skills_area import get_skills_area
@@ -292,8 +292,8 @@ async def _handle_skill_enable(
     skills_area = get_skills_area()
     entry = skills_area.enable_skill(skill_id)
     if entry is not None and entry.status == "enabled":
-        # Not yet discovered — trigger discovery
-        skills_area.discover_skill(skill_id)
+        # Not yet loaded — trigger loading
+        skills_area.load_skill(skill_id)
     logger.info("[ws:skill_enable] skill_id=%s agent_id=%s", skill_id, agent_id)
     # Push an immediate snapshot so the frontend sees the change
     await _push_fresh_snapshot(agent_id, websocket, list_approvals)
@@ -371,7 +371,24 @@ async def stream_loop(
         await websocket.send_json(msg)
         logger.debug("[ws:send] type=agent.snapshot (initial) agent_id=%s", agent_id)
 
-        last_snapshot = initial_payload
+        # Deferred skill loading: after the initial snapshot (showing skills
+        # in "enabled" state), load SKILL.md definitions so the frontend sees
+        # the enabled → loaded transition.
+        from agent_runtimes.services.skills_area import get_skills_area
+
+        _sa = get_skills_area()
+        _loaded_count = _sa.load_all_enabled()
+        if _loaded_count > 0:
+            logger.info(
+                "[ws:skills] loaded %d skill(s) after initial snapshot", _loaded_count
+            )
+            await _push_fresh_snapshot(agent_id, websocket, list_approvals)
+
+        last_snapshot = (
+            await build_monitoring_snapshot_payload(
+                agent_id, list_approvals=list_approvals
+            )
+        ).model_dump(by_alias=True)
         while True:
             recv_task = asyncio.create_task(websocket.receive_text())
             msg_task = asyncio.create_task(queue.get())

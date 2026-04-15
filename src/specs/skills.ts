@@ -27,10 +27,10 @@ export const CRAWL_SKILL_SPEC_0_0_1: SkillSpec = {
   package: undefined,
   method: undefined,
   path: undefined,
-  requiredEnvVars: ["TAVILY_API_KEY:0.0.1"],
+  requiredEnvVars: ['TAVILY_API_KEY:0.0.1'],
   optionalEnvVars: [],
-  dependencies: ["requests>=2.31.0", "beautifulsoup4>=4.12.0"],
-  tags: ["web", "crawl", "scraping"],
+  dependencies: ['requests>=2.31.0', 'beautifulsoup4>=4.12.0'],
+  tags: ['web', 'crawl', 'scraping'],
   icon: 'globe',
   emoji: '🌐',
   enabled: true,
@@ -47,8 +47,8 @@ export const EVENTS_SKILL_SPEC_0_0_1: SkillSpec = {
   path: undefined,
   requiredEnvVars: [],
   optionalEnvVars: [],
-  dependencies: ["httpx>=0.27.0"],
-  tags: ["events", "orchestration", "automation"],
+  dependencies: ['httpx>=0.27.0'],
+  tags: ['events', 'orchestration', 'automation'],
   icon: 'bell',
   emoji: '📅',
   enabled: true,
@@ -63,10 +63,10 @@ export const GITHUB_SKILL_SPEC_0_0_1: SkillSpec = {
   package: undefined,
   method: undefined,
   path: undefined,
-  requiredEnvVars: ["GITHUB_TOKEN:0.0.1"],
+  requiredEnvVars: ['GITHUB_TOKEN:0.0.1'],
   optionalEnvVars: [],
-  dependencies: ["PyGithub>=2.1.0"],
-  tags: ["github", "git", "code"],
+  dependencies: ['PyGithub>=2.1.0'],
+  tags: ['github', 'git', 'code'],
   icon: 'mark-github',
   emoji: '🐙',
   enabled: true,
@@ -84,7 +84,7 @@ export const JOKES_SKILL_SPEC_0_0_1: SkillSpec = {
   requiredEnvVars: [],
   optionalEnvVars: [],
   dependencies: [],
-  tags: ["fun", "humor", "demo"],
+  tags: ['fun', 'humor', 'demo'],
   icon: 'smiley',
   emoji: '😄',
   enabled: true,
@@ -101,8 +101,8 @@ export const PDF_SKILL_SPEC_0_0_1: SkillSpec = {
   path: undefined,
   requiredEnvVars: [],
   optionalEnvVars: [],
-  dependencies: ["PyPDF2>=3.0.0", "pdfplumber>=0.10.0"],
-  tags: ["pdf", "documents", "extraction"],
+  dependencies: ['PyPDF2>=3.0.0', 'pdfplumber>=0.10.0'],
+  tags: ['pdf', 'documents', 'extraction'],
   icon: 'file',
   emoji: '📄',
   enabled: true,
@@ -112,15 +112,16 @@ export const TEXT_SUMMARIZER_SKILL_SPEC_0_0_1: SkillSpec = {
   id: 'text-summarizer',
   version: '0.0.1',
   name: 'Text Summarizer Skill',
-  description: 'Summarize text content using extractive and abstractive techniques. Use when the user asks for summaries, key points, or condensed versions of documents.',
+  description:
+    'Summarize text content using extractive and abstractive techniques. Use when the user asks for summaries, key points, or condensed versions of documents.',
   module: undefined,
   package: 'agent_skills.skills.text_summarizer',
   method: 'summarize_text',
   path: undefined,
   requiredEnvVars: [],
   optionalEnvVars: [],
-  dependencies: ["agent-skills>=0.0.1"],
-  tags: ["nlp", "summarization", "text-processing"],
+  dependencies: ['agent-skills>=0.0.1'],
+  tags: ['nlp', 'summarization', 'text-processing'],
   icon: 'note',
   emoji: '📝',
   enabled: true,
@@ -130,29 +131,29 @@ export const TEXT_SUMMARIZER_SKILL_SPEC_0_0_1: SkillSpec = {
 // Skill Catalog
 // ============================================================================
 
-export const SKILL_CATALOG: Record<string, SkillSpec> = {
-  'crawl': CRAWL_SKILL_SPEC_0_0_1,
-  'events': EVENTS_SKILL_SPEC_0_0_1,
-  'github': GITHUB_SKILL_SPEC_0_0_1,
-  'jokes': JOKES_SKILL_SPEC_0_0_1,
-  'pdf': PDF_SKILL_SPEC_0_0_1,
+export const SKILLS_CATALOG: Record<string, SkillSpec> = {
+  crawl: CRAWL_SKILL_SPEC_0_0_1,
+  events: EVENTS_SKILL_SPEC_0_0_1,
+  github: GITHUB_SKILL_SPEC_0_0_1,
+  jokes: JOKES_SKILL_SPEC_0_0_1,
+  pdf: PDF_SKILL_SPEC_0_0_1,
   'text-summarizer': TEXT_SUMMARIZER_SKILL_SPEC_0_0_1,
 };
 
 export function getSkillSpecs(): SkillSpec[] {
-  return Object.values(SKILL_CATALOG);
+  return Object.values(SKILLS_CATALOG);
 }
 
 function resolveSkillId(skillId: string): string {
-  if (skillId in SKILL_CATALOG) return skillId;
+  if (skillId in SKILLS_CATALOG) return skillId;
   const idx = skillId.lastIndexOf(':');
   if (idx > 0) {
     const base = skillId.slice(0, idx);
-    if (base in SKILL_CATALOG) return base;
+    if (base in SKILLS_CATALOG) return base;
   }
   return skillId;
 }
 
 export function getSkillSpec(skillId: string): SkillSpec | undefined {
-  return SKILL_CATALOG[resolveSkillId(skillId)];
+  return SKILLS_CATALOG[resolveSkillId(skillId)];
 }

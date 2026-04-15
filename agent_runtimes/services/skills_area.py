@@ -7,15 +7,14 @@ Server-side skills area.
 Maintains the lifecycle state for each skill known to the agent runtime.
 Skills go through three states:
 
-- **available**: discovered in the skills folder or catalog, but not enabled.
-- **enabled**: user toggled it on; if not yet discovered the runtime will
-  trigger discovery automatically.
-- **discovered**: the full SKILL.md definition has been loaded and the skill
+- **available**: in catalog, not yet enabled.
+- **enabled**: user toggled it on; SKILL.md loading still pending.
+- **loaded**: the full SKILL.md definition has been loaded and the skill
   is included in the LLM system prompt.
 
-Only skills that are both *enabled* and *discovered* are injected into the
-system prompt.  The WS ``agent.snapshot`` pushes the full skills list with
-per-skill status so the frontend never needs a REST endpoint.
+Only *loaded* skills are injected into the system prompt.  The WS
+``agent.snapshot`` pushes the full skills list with per-skill status so the
+frontend never needs a REST endpoint.
 """
 
 from __future__ import annotations
@@ -29,7 +28,7 @@ from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
 
-SkillStatus = Literal["available", "enabled", "discovered"]
+SkillStatus = Literal["available", "enabled", "loaded"]
 
 
 class SkillEntry(BaseModel):
@@ -42,7 +41,7 @@ class SkillEntry(BaseModel):
     has_scripts: bool = False
     has_resources: bool = False
     status: SkillStatus = "available"
-    # Full SKILL.md content, populated after discovery.
+    # Full SKILL.md content, populated after loading.
     skill_definition: str | None = None
     # Prompt section generated from the skill definition.
     prompt_section: str | None = None
@@ -60,6 +59,22 @@ class SkillsArea:
         self._skills: dict[str, SkillEntry] = {}
 
     # ------------------------------------------------------------------
+    # Helpers
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def strip_version(skill_ref: str) -> str:
+        """Strip an optional version suffix like ``crawl:0.0.1`` → ``crawl``.
+
+        The agent spec and frontend may use version-qualified references
+        (``<name>:<semver>``) while the filesystem skills use plain names.
+        """
+        base, _, ver = skill_ref.rpartition(":")
+        if base and "." in ver:
+            return base
+        return skill_ref
+
+    # ------------------------------------------------------------------
     # Queries
     # ------------------------------------------------------------------
 
@@ -68,13 +83,13 @@ class SkillsArea:
         return list(self._skills.values())
 
     def get_skill(self, skill_id: str) -> SkillEntry | None:
-        return self._skills.get(skill_id)
+        return self._skills.get(self.strip_version(skill_id))
 
     def get_skills_for_prompt(self) -> list[SkillEntry]:
-        """Return only skills that are discovered AND enabled."""
+        """Return only loaded skills (SKILL.md loaded, in system prompt)."""
         return [
             s for s in self._skills.values()
-            if s.status == "discovered"
+            if s.status == "loaded"
         ]
 
     # ------------------------------------------------------------------
@@ -85,7 +100,7 @@ class SkillsArea:
         """Seed skills from discovery (folder scan / catalog).
 
         Only adds skills that are not already tracked, preserving existing
-        status for skills that were already enabled/discovered.
+        status for skills that were already enabled/loaded.
         """
         for info in skills_info:
             sid = info.get("id") or info.get("name", "")
@@ -106,11 +121,12 @@ class SkillsArea:
         """Enable a skill.  If not yet tracked, creates an entry.
 
         Returns the updated entry, or None if the skill was already
-        discovered (no state change needed).
+        loaded (no state change needed).
         """
+        skill_id = self.strip_version(skill_id)
         entry = self._skills.get(skill_id)
         if entry is None:
-            # Not yet in the area — create as enabled so discovery kicks in.
+            # Not yet in the area — create as enabled so loading kicks in.
             entry = SkillEntry(
                 id=skill_id,
                 name=skill_id,
@@ -118,13 +134,14 @@ class SkillsArea:
             )
             self._skills[skill_id] = entry
             return entry
-        if entry.status == "discovered":
+        if entry.status == "loaded":
             return None  # already at the terminal state
         entry.status = "enabled"
         return entry
 
     def disable_skill(self, skill_id: str) -> SkillEntry | None:
         """Disable a skill (move back to available)."""
+        skill_id = self.strip_version(skill_id)
         entry = self._skills.get(skill_id)
         if entry is None:
             return None
@@ -133,7 +150,7 @@ class SkillsArea:
         entry.prompt_section = None
         return entry
 
-    def mark_discovered(
+    def mark_loaded(
         self,
         skill_id: str,
         skill_definition: str,
@@ -145,12 +162,13 @@ class SkillsArea:
         has_scripts: bool | None = None,
         has_resources: bool | None = None,
     ) -> SkillEntry:
-        """Mark a skill as discovered and store its definition."""
+        """Mark a skill as loaded (SKILL.md loaded, in system prompt)."""
+        skill_id = self.strip_version(skill_id)
         entry = self._skills.get(skill_id)
         if entry is None:
             entry = SkillEntry(id=skill_id, name=name or skill_id)
             self._skills[skill_id] = entry
-        entry.status = "discovered"
+        entry.status = "loaded"
         entry.skill_definition = skill_definition
         entry.prompt_section = prompt_section
         if name is not None:
@@ -194,30 +212,32 @@ class SkillsArea:
                 "has_scripts": s.has_scripts,
                 "has_resources": s.has_resources,
                 "status": s.status,
+                "skill_definition": s.skill_definition,
             }
             for s in self._skills.values()
         ]
 
     # ------------------------------------------------------------------
-    # Discovery
+    # Loading (SKILL.md)
     # ------------------------------------------------------------------
 
-    def discover_skill(self, skill_id: str, skills_path: str | None = None) -> bool:
+    def load_skill(self, skill_id: str, skills_path: str | None = None) -> bool:
         """
-        Discover a skill via agent-skills and mark it as discovered.
+        Load a skill via agent-skills and mark it as loaded.
 
-        Returns True if the skill was successfully discovered, False otherwise.
+        Returns True if the skill was successfully loaded, False otherwise.
         """
+        skill_id = self.strip_version(skill_id)
         resolved_path = self._resolve_skills_path(skills_path)
         if resolved_path is None:
-            logger.warning(f"Cannot discover skill '{skill_id}': no skills path")
+            logger.warning(f"Cannot load skill '{skill_id}': no skills path")
             return False
 
         try:
             from agent_skills import AgentSkill
         except ImportError:
             logger.warning(
-                f"Cannot discover skill '{skill_id}': agent-skills package not installed"
+                f"Cannot load skill '{skill_id}': agent-skills package not installed"
             )
             return False
 
@@ -233,7 +253,7 @@ class SkillsArea:
                 if skill.name == skill_id:
                     # Build prompt section for this skill
                     prompt = self._build_single_skill_prompt(skill)
-                    self.mark_discovered(
+                    self.mark_loaded(
                         skill_id=skill.name,
                         skill_definition=skill.content if hasattr(skill, "content") else "",
                         prompt_section=prompt,
@@ -243,24 +263,24 @@ class SkillsArea:
                         has_scripts=len(skill.scripts) > 0,
                         has_resources=len(skill.resources) > 0,
                     )
-                    logger.info(f"Discovered skill '{skill_id}' from {skill_md}")
+                    logger.info(f"Loaded skill '{skill_id}' from {skill_md}")
                     return True
             except Exception as e:
                 logger.debug(f"Failed to check skill at {skill_md}: {e}")
                 continue
 
         # Also try catalog/module-based skills
-        return self._discover_from_catalog(skill_id)
+        return self._load_from_catalog(skill_id)
 
-    def discover_all_enabled(self, skills_path: str | None = None) -> int:
-        """Discover all enabled-but-not-discovered skills.
+    def load_all_enabled(self, skills_path: str | None = None) -> int:
+        """Load all enabled-but-not-yet-loaded skills.
 
-        Returns the number of skills that were successfully discovered.
+        Returns the number of skills that were successfully loaded.
         """
         count = 0
         for entry in list(self._skills.values()):
             if entry.status == "enabled":
-                if self.discover_skill(entry.id, skills_path):
+                if self.load_skill(entry.id, skills_path):
                     count += 1
         return count
 
@@ -308,20 +328,20 @@ class SkillsArea:
                 lines.append(f"- `{r.name}`{desc}")
         return "\n".join(lines)
 
-    def _discover_from_catalog(self, skill_id: str) -> bool:
-        """Try to discover a skill from the Python catalog (module/package specs)."""
+    def _load_from_catalog(self, skill_id: str) -> bool:
+        """Try to load a skill from the Python catalog (module/package specs)."""
         try:
-            from agent_runtimes.specs.skills import SKILLS_CATALOG
+            from agent_runtimes.specs.skills import get_skill_spec
 
-            for spec in SKILLS_CATALOG:
-                if spec.id == skill_id:
-                    return self._discover_catalog_skill(spec)
+            spec = get_skill_spec(skill_id)
+            if spec is not None:
+                return self._load_catalog_skill(spec)
         except ImportError:
             pass
         return False
 
-    def _discover_catalog_skill(self, spec: Any) -> bool:
-        """Discover a skill from its catalog spec."""
+    def _load_catalog_skill(self, spec: Any) -> bool:
+        """Load a skill from its catalog spec."""
         try:
             from agent_skills import AgentSkill
 
@@ -333,15 +353,15 @@ class SkillsArea:
                 skill = AgentSkill.from_package(
                     spec.package,
                     method or "",
-                    spec.name,
-                    spec.description,
-                    getattr(spec, "version", "1.0.0"),
-                    getattr(spec, "tags", []),
+                    name=spec.name,
+                    description=spec.description,
+                    version=getattr(spec, "version", "1.0.0"),
+                    tags=getattr(spec, "tags", []),
                 )
 
             if skill:
                 prompt = self._build_single_skill_prompt(skill)
-                self.mark_discovered(
+                self.mark_loaded(
                     skill_id=spec.id,
                     skill_definition=skill.content if hasattr(skill, "content") else "",
                     prompt_section=prompt,
@@ -351,10 +371,10 @@ class SkillsArea:
                     has_scripts=len(skill.scripts) > 0,
                     has_resources=len(skill.resources) > 0,
                 )
-                logger.info(f"Discovered catalog skill '{spec.id}'")
+                logger.info(f"Loaded catalog skill '{spec.id}'")
                 return True
         except Exception as e:
-            logger.warning(f"Failed to discover catalog skill '{spec.id}': {e}")
+            logger.warning(f"Failed to load catalog skill '{spec.id}': {e}")
         return False
 
 

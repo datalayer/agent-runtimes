@@ -987,6 +987,23 @@ async def create_agent(
                 non_mcp_toolsets.append(skills_toolset)
                 logger.info(f"Added AgentSkillsToolset for agent {agent_id}")
 
+            # Seed the server-side SkillsArea so the WS monitoring snapshot
+            # includes per-skill status.  Loading of SKILL.md definitions is
+            # deferred to the WS monitoring loop so the frontend first sees
+            # skills in "enabled" state before they transition to "loaded".
+            from ..services.skills_area import get_skills_area
+            from .configure import _get_available_skills
+
+            _skills_area = get_skills_area()
+            _skills_area.seed_available(_get_available_skills())
+            for _skill_name in request.skills:
+                _skills_area.enable_skill(_skill_name)
+            logger.info(
+                f"Skills area seeded for agent '{agent_id}': "
+                f"{len(_skills_area.list_skills())} tracked, "
+                f"{len([s for s in _skills_area.list_skills() if s.status == 'enabled'])} enabled (loading deferred)"
+            )
+
         # Add codemode toolset if enabled
         if request.enable_codemode:
             disable_mcp_for_codemode = (
