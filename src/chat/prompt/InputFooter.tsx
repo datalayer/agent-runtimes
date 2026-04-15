@@ -43,6 +43,7 @@ export interface InputToolbarProps {
   input: string;
   setInput: (value: string) => void;
   isLoading: boolean;
+  connectionConfirmed: boolean;
   placeholder?: string;
   autoFocus: boolean;
   focusTrigger?: number;
@@ -107,6 +108,7 @@ export function InputToolbar({
   input,
   setInput,
   isLoading,
+  connectionConfirmed,
   placeholder,
   autoFocus,
   focusTrigger,
@@ -151,6 +153,7 @@ export function InputToolbar({
       <InputPrompt
         placeholder={placeholder || 'Type a message...'}
         isLoading={isLoading}
+        readOnly={!connectionConfirmed}
         onSend={onSend}
         onStop={onStop}
         autoFocus={autoFocus}

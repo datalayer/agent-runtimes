@@ -154,7 +154,7 @@ class AgentCostStore:
                 "totalTokensUsed": 0,
                 "modelBreakdown": [],
                 "runs": [],
-                "lastUpdated": _utc_now_iso(),
+                "lastUpdated": None,
             }
         return usage.to_dict()
 

@@ -395,7 +395,7 @@ const AgentSkillsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
               {
                 title: '🐙 GitHub repos',
                 message:
-                  'Use the GitHub skill to list the public repositories for the "datalayer" organization.',
+                  'Use the GitHub skill to show two sections: first, the top 3 recently updated public repositories from the datalayer organization; second, my top 3 recently updated private repositories. Keep the output clear and concise.',
               },
               {
                 title: '📄 Read a PDF',

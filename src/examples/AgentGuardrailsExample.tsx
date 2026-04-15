@@ -248,7 +248,13 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
           const snapshotCost =
             payload.contextSnapshot?.costUsage ?? payload.costUsage;
           if (snapshotCost) {
-            setCostUsd(Number(snapshotCost.cumulativeCostUsd ?? 0));
+            setCostUsd(
+              Number(
+                snapshotCost.lastTurnCostUsd ??
+                  snapshotCost.cumulativeCostUsd ??
+                  0,
+              ),
+            );
             setRunBudgetUsd(
               snapshotCost.perRunBudgetUsd == null
                 ? null

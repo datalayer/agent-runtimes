@@ -29,6 +29,8 @@ export interface InputPromptTextProps {
   placeholder?: string;
   /** Whether the input is disabled */
   disabled?: boolean;
+  /** Whether the input is read-only */
+  readOnly?: boolean;
   /** Callback when the user presses Enter (without Shift) */
   onSubmit?: () => void;
   /** Ref forwarded to the underlying textarea */
@@ -40,6 +42,7 @@ export function InputPromptText({
   onChange,
   placeholder = 'Ask anything…',
   disabled = false,
+  readOnly = false,
   onSubmit,
   inputRef,
 }: InputPromptTextProps) {
@@ -87,6 +90,7 @@ export function InputPromptText({
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
         disabled={disabled}
+        readOnly={readOnly}
         sx={{
           width: '100%',
           resize: 'none',

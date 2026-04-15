@@ -53,6 +53,7 @@ import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { SignInSimple } from '@datalayer/core/lib/views/iam';
 import { UserBadge } from '@datalayer/core/lib/views/profile';
 import { Chat } from '../chat';
+import { useConnectedIdentities } from '../identity';
 import {
   ToolApprovalBanner,
   ToolApprovalDialog,
@@ -108,8 +109,18 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
   onLogout,
 }) => {
   const { token } = useSimpleAuthStore();
+  const connectedIdentities = useConnectedIdentities();
   const agentName = useRef(uniqueAgentId(AGENT_NAME)).current;
   const approvalAgentName = useRef(uniqueAgentId(APPROVAL_AGENT_NAME)).current;
+
+  const identitiesForRuns = React.useMemo(() => {
+    return connectedIdentities
+      .filter(identity => identity.token?.accessToken)
+      .map(identity => ({
+        provider: identity.provider,
+        accessToken: identity.token!.accessToken,
+      }));
+  }, [connectedIdentities]);
 
   const [runtimeStatus, setRuntimeStatus] = useState<
     'launching' | 'ready' | 'error'
@@ -509,7 +520,9 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
       try {
         setError(null);
         await adapter.connect();
-        await adapter.sendMessage(createUserMessage(prompt));
+        await adapter.sendMessage(createUserMessage(prompt), {
+          identities: identitiesForRuns,
+        });
         return { finalAssistantText: latestAssistantText, pendingApproval };
       } catch (error) {
         setError(
@@ -525,7 +538,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
         }
       }
     },
-    [agentBaseUrl, token, upsertSidebarMessage],
+    [agentBaseUrl, token, identitiesForRuns, upsertSidebarMessage],
   );
 
   useEffect(() => {

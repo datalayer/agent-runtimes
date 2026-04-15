@@ -4,7 +4,7 @@
  */
 
 /**
- * Agent catalog hooks.
+ * Agents catalog hooks.
  *
  * Includes the Zustand catalog store and the agent registry hook.
  *

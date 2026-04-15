@@ -55,6 +55,8 @@ export interface InputPromptProps {
   padding?: number;
   /** Whether the prompt is disabled */
   disabled?: boolean;
+  /** Whether the prompt is read-only */
+  readOnly?: boolean;
   /** Additional sx props for the outer container */
   sx?: Record<string, unknown>;
   /** Controlled input value (external state) */
@@ -84,6 +86,7 @@ export function InputPrompt({
   showBackground = true,
   padding = 3,
   disabled = false,
+  readOnly = false,
   sx,
   value: controlledValue,
   onChange: controlledOnChange,
@@ -138,13 +141,13 @@ export function InputPrompt({
 
   // ---- Send / Stop handlers ----------------------------------------------
   const handleSend = useCallback(() => {
-    if (!input.trim() || isLoading || disabled) return;
+    if (!input.trim() || isLoading || disabled || readOnly) return;
     const message = input.trim();
     if (controlledValue === undefined) {
       setInput('');
     }
     onSend(message);
-  }, [input, isLoading, disabled, onSend, setInput, controlledValue]);
+  }, [input, isLoading, disabled, readOnly, onSend, setInput, controlledValue]);
 
   const handleStop = useCallback(() => {
     onStop?.();
@@ -190,6 +193,7 @@ export function InputPrompt({
               onChange={setInput}
               placeholder={placeholder}
               disabled={isLoading || disabled}
+              readOnly={readOnly}
               onSubmit={handleSend}
               autoFocus={autoFocus}
             />
@@ -199,6 +203,7 @@ export function InputPrompt({
               onChange={setInput}
               placeholder={placeholder}
               disabled={isLoading || disabled}
+              readOnly={readOnly}
               onSubmit={handleSend}
               inputRef={inputRef}
             />
@@ -207,7 +212,7 @@ export function InputPrompt({
           {/* Footer */}
           <InputPromptFooter
             isLoading={isLoading}
-            sendDisabled={!input.trim() || disabled}
+            sendDisabled={!input.trim() || disabled || readOnly}
             onSend={handleSend}
             onStop={handleStop}
             rightContent={footerRightContent}

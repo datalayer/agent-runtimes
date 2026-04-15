@@ -87,7 +87,7 @@ export interface ContextSnapshotData {
       pricePerOutputToken: number | null;
       pricingResolved: boolean;
     }>;
-    lastUpdated: string;
+    lastUpdated: string | null;
   };
   error?: string;
 }

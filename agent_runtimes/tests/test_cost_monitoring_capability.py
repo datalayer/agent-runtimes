@@ -44,6 +44,15 @@ def test_cost_store_records_run() -> None:
     assert len(data["runs"]) == 1
 
 
+def test_cost_store_default_usage_is_stable() -> None:
+    store = AgentCostStore()
+
+    data = store.get_agent_usage_dict("missing-agent")
+
+    assert data["requestCount"] == 0
+    assert data["lastUpdated"] is None
+
+
 def test_factory_adds_cost_monitoring_capability() -> None:
     spec = _Spec(
         guardrails=[

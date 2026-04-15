@@ -52,9 +52,11 @@ const EDITOR_CONFIG = {
 function EnterSubmitPlugin({
   onSubmit,
   disabled,
+  readOnly,
 }: {
   onSubmit?: () => void;
   disabled?: boolean;
+  readOnly?: boolean;
 }) {
   const [editor] = useLexicalComposerContext();
 
@@ -62,14 +64,14 @@ function EnterSubmitPlugin({
     return editor.registerCommand(
       KEY_ENTER_COMMAND,
       (event: KeyboardEvent | null) => {
-        if (event?.shiftKey || disabled) return false;
+        if (event?.shiftKey || disabled || readOnly) return false;
         event?.preventDefault();
         onSubmit?.();
         return true;
       },
       COMMAND_PRIORITY_HIGH,
     );
-  }, [editor, onSubmit, disabled]);
+  }, [editor, onSubmit, disabled, readOnly]);
 
   return null;
 }
@@ -131,6 +133,16 @@ function AutoFocusPlugin({ autoFocus }: { autoFocus?: boolean }) {
   return null;
 }
 
+function ReadOnlyPlugin({ readOnly }: { readOnly?: boolean }) {
+  const [editor] = useLexicalComposerContext();
+
+  useEffect(() => {
+    editor.setEditable(!readOnly);
+  }, [editor, readOnly]);
+
+  return null;
+}
+
 // ---- Public component ---------------------------------------------------
 
 export interface InputPromptLexicalProps {
@@ -142,6 +154,8 @@ export interface InputPromptLexicalProps {
   placeholder?: string;
   /** Whether the input is disabled */
   disabled?: boolean;
+  /** Whether the input is read-only */
+  readOnly?: boolean;
   /** Callback when the user presses Enter (without Shift) */
   onSubmit?: () => void;
   /** Auto-focus the editor on mount */
@@ -153,6 +167,7 @@ export function InputPromptLexical({
   onChange,
   placeholder = 'Ask anything…',
   disabled = false,
+  readOnly = false,
   onSubmit,
   autoFocus = false,
 }: InputPromptLexicalProps) {
@@ -202,7 +217,12 @@ export function InputPromptLexical({
         />
         <HistoryPlugin />
         <SyncPlugin value={value} onChange={onChange} />
-        <EnterSubmitPlugin onSubmit={onSubmit} disabled={disabled} />
+        <ReadOnlyPlugin readOnly={readOnly || disabled} />
+        <EnterSubmitPlugin
+          onSubmit={onSubmit}
+          disabled={disabled}
+          readOnly={readOnly}
+        />
         <AutoFocusPlugin autoFocus={autoFocus} />
       </LexicalComposer>
     </Box>

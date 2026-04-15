@@ -1781,6 +1781,11 @@ function ChatBaseInner({
   const filteredMcpServers = (configQuery.data?.mcpServers || []).filter(
     server => !mcpServers || isServerSelected(server),
   );
+  const connectionConfirmed =
+    !protocol ||
+    protocol.enableConfigQuery === false ||
+    !!configQuery.data ||
+    !!skillsQuery.data;
 
   // ========================================================================
   // Render
@@ -1890,6 +1895,7 @@ function ChatBaseInner({
           input={input}
           setInput={setInput}
           isLoading={isLoading}
+          connectionConfirmed={connectionConfirmed}
           placeholder={placeholder}
           autoFocus={autoFocus}
           focusTrigger={focusTrigger}
