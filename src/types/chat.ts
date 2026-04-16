@@ -433,13 +433,13 @@ export interface ChatCommonProps {
   /** Runtime ID for conversation persistence */
   runtimeId?: string;
 
-  /** Endpoint URL for fetching conversation history */
+  /** Optional legacy endpoint URL for fetching conversation history */
   historyEndpoint?: string;
 
   /** Auth token for the agent runtime */
   authToken?: string;
 
-  /** Auth token specifically for the history endpoint */
+  /** Optional auth token for the legacy history endpoint */
   historyAuthToken?: string;
 
   /**
@@ -803,22 +803,20 @@ export interface ChatBaseProps {
 
   /**
    * Runtime ID for conversation persistence.
-   * When provided, messages are fetched from the server API on page reload
-   * and prevents message mixing between different agent runtimes.
+   * When provided, messages are restored from websocket snapshot data on
+   * reload and prevents message mixing between different agent runtimes.
    */
   runtimeId?: string;
 
   /**
-   * Endpoint URL for fetching conversation history.
-   * When runtimeId is provided, this endpoint is called to fetch
-   * the conversation history on mount.
-   * If not provided, defaults to `{protocol.endpoint}/api/v1/history`.
+   * Optional legacy endpoint URL for history backfill.
+   * History loading is websocket-first; this field is kept for
+   * compatibility with custom integrations.
    */
   historyEndpoint?: string;
 
   /**
-   * Auth token for the history endpoint.
-   * If not provided, uses the protocol's authToken.
+   * Optional auth token for the legacy history endpoint.
    */
   historyAuthToken?: string;
 

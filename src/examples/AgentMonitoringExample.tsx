@@ -609,19 +609,6 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
             }}
           >
             <Heading as="h4" sx={{ fontSize: 1, mb: 2 }}>
-              MCP Servers
-            </Heading>
-            <McpStatusPanel data={liveMcpStatus} />
-          </Box>
-
-          <Box
-            sx={{
-              p: 3,
-              borderBottom: '1px solid',
-              borderColor: 'border.default',
-            }}
-          >
-            <Heading as="h4" sx={{ fontSize: 1, mb: 2 }}>
               Turn and Session Usage
             </Heading>
             {liveContext ? (

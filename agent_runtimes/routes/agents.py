@@ -856,7 +856,19 @@ async def create_agent(
 
                 sandbox_manager = get_code_sandbox_manager()
 
-                if effective_variant == "jupyter":
+                if (
+                    effective_variant == "jupyter"
+                    and not request.jupyter_sandbox
+                    and jupyter_sidecar
+                ):
+                    # Sidecar mode, Phase 1: companion will configure URL later.
+                    sandbox_manager.configure(variant="jupyter")
+                    logger.info(
+                        "Deferred jupyter sandbox for '%s': "
+                        "waiting for companion to provide jupyter URL",
+                        agent_id,
+                    )
+                elif effective_variant == "jupyter":
                     # Prefer per-agent sandbox creation when available.
                     if hasattr(sandbox_manager, "create_agent_sandbox"):
                         sandbox_manager.create_agent_sandbox(
@@ -870,27 +882,10 @@ async def create_agent(
                     else:
                         # Backward-compatible fallback for simple/dummy managers
                         # used in tests that only expose configure/get_sandbox.
-                        if not request.jupyter_sandbox:
-                            if jupyter_sidecar:
-                                # Sidecar mode, Phase 1: companion will configure
-                                # URL later — defer sandbox, don't fail.
-                                sandbox_manager.configure(variant="jupyter")
-                                logger.info(
-                                    "Deferred jupyter sandbox for '%s': "
-                                    "waiting for companion to provide jupyter URL",
-                                    agent_id,
-                                )
-                            else:
-                                raise HTTPException(
-                                    status_code=400,
-                                    detail=(
-                                        "jupyter_sandbox is required when sandbox_variant is 'jupyter'"
-                                    ),
-                                )
-                        else:
-                            # jupyter_sandbox URL is already applied above via configure_from_url.
-                            sandbox_manager.get_sandbox()
-                            logger.info("Eager-started jupyter sandbox")
+                        # jupyter_sandbox URL is already applied above when provided;
+                        # without URL, manager may start local jupyter (standalone).
+                        sandbox_manager.get_sandbox()
+                        logger.info("Eager-started jupyter sandbox")
                 else:
                     # eval
                     sandbox_manager.configure(variant="eval")
@@ -926,17 +921,33 @@ async def create_agent(
             )  # Codemode with Jupyter
             or (
                 request.enable_codemode
-                and effective_variant in ("jupyter", "jupyter")
+                and effective_variant == "jupyter"
             )  # Codemode with jupyter variant
             or (
                 request.enable_codemode and bool(request.sandbox_variant)
             )  # Codemode with any explicit sandbox variant
         )
         if need_shared_sandbox:
-            if effective_variant == "jupyter":
+            if (
+                effective_variant == "jupyter"
+                and not request.jupyter_sandbox
+                and jupyter_sidecar
+            ):
+                # Sidecar mode, Phase 1: no URL yet, companion will provide
+                # it later. Return a deferred ManagedSandbox proxy.
+                from ..services.code_sandbox_manager import get_code_sandbox_manager
+
+                sandbox_manager = get_code_sandbox_manager()
+                sandbox_manager.configure(variant="jupyter")
+                shared_sandbox = sandbox_manager.get_managed_sandbox()
+                logger.info(
+                    f"Deferred sandbox for agent '{agent_id}': variant=jupyter, "
+                    f"waiting for companion to provide jupyter URL"
+                )
+            elif effective_variant == "jupyter":
                 # Delegate to code_sandboxes: create a per-agent sandbox
                 # that starts its own Jupyter server on a random free port.
-                # NOTE: This branch is only reached in standalone mode (no sidecar).
+                # NOTE: This branch is reached in standalone mode.
                 try:
                     from ..services.code_sandbox_manager import get_code_sandbox_manager
 
@@ -980,18 +991,6 @@ async def create_agent(
                             status_code=500,
                             detail=f"Failed to create Jupyter sandbox: {str(e)}",
                         )
-            elif effective_variant == "jupyter" and not request.jupyter_sandbox:
-                # Sidecar mode, Phase 1: no URL yet, companion will provide
-                # it later.  Return a deferred ManagedSandbox proxy.
-                from ..services.code_sandbox_manager import get_code_sandbox_manager
-
-                sandbox_manager = get_code_sandbox_manager()
-                sandbox_manager.configure(variant="jupyter")
-                shared_sandbox = sandbox_manager.get_managed_sandbox()
-                logger.info(
-                    f"Deferred sandbox for agent '{agent_id}': variant=jupyter, "
-                    f"waiting for companion to provide jupyter URL"
-                )
             else:
                 shared_sandbox = create_shared_sandbox(request.jupyter_sandbox)
 
@@ -2087,18 +2086,20 @@ async def update_agent_mcp_servers(
 class ConfigureSandboxRequest(BaseModel):
     """Request to configure the code sandbox manager."""
 
-    variant: Literal["eval", "jupyter", "jupyter"] = Field(
+    variant: Literal["eval", "jupyter"] = Field(
         default="eval",
         description=(
             "Sandbox variant to use: 'eval' (Python exec), "
-            "'jupyter' (managed Jupyter sandbox), or "
-            "'jupyter' (existing Jupyter server URL)"
+            "or 'jupyter' (Jupyter sandbox: managed local or existing URL)"
         ),
     )
     jupyter_url: str | None = Field(
         default=None,
-        description="Jupyter server URL (required for jupyter variant). "
-        "Can include token as query param: http://localhost:8888?token=xxx",
+        description=(
+            "Optional Jupyter server URL for existing server mode. "
+            "If omitted with variant='jupyter', a managed local Jupyter sandbox is used. "
+            "Can include token as query param: http://localhost:8888?token=xxx"
+        ),
     )
     jupyter_token: str | None = Field(
         default=None,
@@ -2168,13 +2169,6 @@ async def configure_sandbox(request: ConfigureSandboxRequest) -> SandboxStatusRe
         from ..services.code_sandbox_manager import get_code_sandbox_manager
 
         manager = get_code_sandbox_manager()
-
-        # Configure the sandbox
-        if request.variant == "jupyter" and not request.jupyter_url:
-            raise HTTPException(
-                status_code=400,
-                detail="jupyter_url is required when variant is 'jupyter'",
-            )
 
         manager.configure(
             variant=request.variant,

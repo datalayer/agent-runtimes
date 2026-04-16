@@ -54,7 +54,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-SandboxVariant = Literal["eval", "jupyter", "jupyter"]
+SandboxVariant = Literal["eval", "jupyter"]
 
 
 @dataclass
@@ -617,15 +617,12 @@ class CodeSandboxManager:
 
         # Always inject sandbox metadata env vars
         env_vars["DATALAYER_CODE_SANDBOX_VARIANT"] = self._config.variant
-        if (
-            self._config.variant in ("jupyter", "jupyter")
-            and self._config.jupyter_url
-        ):
+        if self._config.variant == "jupyter" and self._config.jupyter_url:
             # Strip query string (token) from the URL
             clean_url = self._config.jupyter_url.split("?")[0]
             env_vars["DATALAYER_CODE_SANDBOX_URL"] = clean_url
 
-        if self._config.variant in ("jupyter", "jupyter"):
+        if self._config.variant == "jupyter":
             # Build a Python snippet that sets every env var in the kernel.
             lines = ["import os"]
             for name, value in env_vars.items():
@@ -681,21 +678,14 @@ class CodeSandboxManager:
         elif effective_variant == "jupyter":
             from code_sandboxes.jupyter_sandbox import LocalJupyterSandbox
 
-            if not self._config.jupyter_url:
-                raise ValueError(
-                    "Jupyter URL is required for jupyter sandbox variant"
+            if self._config.jupyter_url:
+                return LocalJupyterSandbox(
+                    server_url=self._config.jupyter_url,
+                    token=self._config.jupyter_token,
                 )
 
-            return LocalJupyterSandbox(
-                server_url=self._config.jupyter_url,
-                token=self._config.jupyter_token,
-            )
-
-        elif effective_variant == "jupyter":
-            # Delegate to code_sandboxes to create AND start its own
-            # Jupyter server on a random free port.  No external URL needed.
-            from code_sandboxes.jupyter_sandbox import LocalJupyterSandbox
-
+            # No external URL configured: let code_sandboxes start its own
+            # local Jupyter server on a free port.
             return LocalJupyterSandbox()
 
         else:
@@ -829,11 +819,11 @@ class CodeSandboxManager:
         # Add sandbox metadata env vars
         env_vars = dict(env_vars)
         env_vars["DATALAYER_CODE_SANDBOX_VARIANT"] = variant
-        if variant in ("jupyter", "jupyter") and self._config.jupyter_url:
+        if variant == "jupyter" and self._config.jupyter_url:
             clean_url = self._config.jupyter_url.split("?")[0]
             env_vars["DATALAYER_CODE_SANDBOX_URL"] = clean_url
 
-        if variant in ("jupyter", "jupyter"):
+        if variant == "jupyter":
             lines = ["import os"]
             for name, value in env_vars.items():
                 lines.append(f"os.environ[{name!r}] = {value!r}")
@@ -895,7 +885,7 @@ class CodeSandboxManager:
         # Compute python_path (what gets added to sys.path)
         # For Jupyter/remote sandboxes, it's /tmp
         # For eval, it's the parent of generated_path
-        if self._config.variant in ("jupyter", "jupyter", "datalayer-runtime"):
+        if self._config.variant in ("jupyter", "datalayer-runtime"):
             python_path = "/tmp"  # nosec B108
         else:
             python_path = str(Path(generated_path).resolve().parent)

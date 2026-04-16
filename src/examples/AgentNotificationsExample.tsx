@@ -67,11 +67,26 @@ interface NotificationRecord {
   read: boolean;
 }
 
+type AlertSeverity = 'info' | 'warning' | 'critical';
+
+interface AlertRecord {
+  id: string;
+  title: string;
+  severity: AlertSeverity;
+  timestamp: string;
+}
+
 interface ChannelConfig {
   channel: NotificationChannel;
   enabled: boolean;
   target?: string; // e.g. email address or Slack webhook URL
 }
+
+const alertVariant = (severity: AlertSeverity) => {
+  if (severity === 'critical') return 'danger';
+  if (severity === 'warning') return 'attention';
+  return 'secondary';
+};
 
 // ─── Inner component (rendered after auth) ─────────────────────────────────
 
@@ -250,6 +265,12 @@ const AgentNotificationsInner: React.FC<{ onLogout: () => void }> = ({
   }
 
   const unreadCount = notifications.filter(n => !n.read).length;
+  const recentAlerts: AlertRecord[] = notifications.slice(0, 10).map(n => ({
+    id: n.id,
+    title: n.title,
+    severity: n.read ? 'info' : 'warning',
+    timestamp: n.timestamp,
+  }));
 
   const channelIcon = (ch: NotificationChannel) => {
     switch (ch) {
@@ -434,6 +455,70 @@ const AgentNotificationsInner: React.FC<{ onLogout: () => void }> = ({
               >
                 {flash}
               </Flash>
+            )}
+          </Box>
+
+          {/* Notification history */}
+          <Box
+            sx={{
+              p: 3,
+              borderBottom: '1px solid',
+              borderColor: 'border.default',
+            }}
+          >
+            <Heading as="h4" sx={{ fontSize: 1, mb: 2 }}>
+              Recent Alerts
+            </Heading>
+
+            {recentAlerts.length === 0 ? (
+              <Box
+                sx={{
+                  p: 2,
+                  border: '1px solid',
+                  borderColor: 'border.default',
+                  borderRadius: 2,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 2,
+                }}
+              >
+                <CheckCircleIcon size={16} />
+                <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
+                  No active alerts.
+                </Text>
+              </Box>
+            ) : (
+              recentAlerts.map(alert => (
+                <Box
+                  key={alert.id}
+                  sx={{
+                    p: 2,
+                    mb: 2,
+                    border: '1px solid',
+                    borderColor: 'border.default',
+                    borderRadius: 2,
+                  }}
+                >
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      mb: 1,
+                    }}
+                  >
+                    <Text sx={{ fontSize: 1, fontWeight: 'bold' }}>
+                      {alert.title}
+                    </Text>
+                    <Label size="small" variant={alertVariant(alert.severity)}>
+                      {alert.severity}
+                    </Label>
+                  </Box>
+                  <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
+                    {new Date(alert.timestamp).toLocaleString()}
+                  </Text>
+                </Box>
+              ))
             )}
           </Box>
 

@@ -25,7 +25,9 @@ import {
 } from '@primer/react';
 import {
   GlobeIcon,
+  CheckCircleIcon,
   ServerIcon,
+  XCircleIcon,
   SignOutIcon,
   ToolsIcon,
 } from '@primer/octicons-react';
@@ -166,6 +168,112 @@ const McpServerCard: React.FC<{ server: McpServerInfo }> = ({ server }) => (
     </Text>
   </Box>
 );
+
+const McpStatusPanel: React.FC<{
+  data?: McpToolsetsStatusResponse;
+}> = ({ data }) => {
+  const servers = data?.servers ?? [];
+  const aggregate = deriveAggregate(servers);
+
+  if (!data) {
+    return (
+      <Text sx={{ color: 'fg.muted', fontSize: 1 }}>
+        Waiting for websocket snapshot...
+      </Text>
+    );
+  }
+
+  if (aggregate === 'none') {
+    return (
+      <Box
+        sx={{
+          p: 2,
+          border: '1px solid',
+          borderColor: 'border.default',
+          borderRadius: 2,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 2,
+        }}
+      >
+        <ServerIcon size={16} />
+        <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
+          No MCP server is defined for this agent.
+        </Text>
+      </Box>
+    );
+  }
+
+  return (
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 2,
+        }}
+      >
+        <Box
+          as="span"
+          sx={{
+            display: 'inline-block',
+            width: 10,
+            height: 10,
+            borderRadius: '50%',
+            bg: MCP_STATUS_COLORS[aggregate],
+            flexShrink: 0,
+          }}
+        />
+        <Text sx={{ fontSize: 1 }}>{MCP_STATUS_LABELS[aggregate]}</Text>
+      </Box>
+      {servers.map(s => (
+        <Box
+          key={s.id}
+          sx={{
+            p: 2,
+            border: '1px solid',
+            borderColor: 'border.default',
+            borderRadius: 2,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 2,
+          }}
+        >
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              {s.status === 'started' ? (
+                <CheckCircleIcon size={14} fill="success.fg" />
+              ) : s.status === 'failed' ? (
+                <XCircleIcon size={14} fill="danger.fg" />
+              ) : (
+                <Box
+                  as="span"
+                  sx={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    bg:
+                      MCP_STATUS_COLORS[s.status as McpAggregateStatus] ??
+                      MCP_STATUS_COLORS.not_started,
+                    display: 'inline-block',
+                  }}
+                />
+              )}
+              <Text sx={{ fontSize: 1, fontWeight: 'bold' }}>{s.id}</Text>
+            </Box>
+            <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
+              {s.status}
+              {s.status === 'started' && s.tools_count !== undefined
+                ? ` · ${s.tools_count} tool${s.tools_count !== 1 ? 's' : ''}`
+                : ''}
+              {s.status === 'failed' && s.error ? ` — ${s.error}` : ''}
+            </Text>
+          </Box>
+        </Box>
+      ))}
+    </Box>
+  );
+};
 
 /** Tool definition from the WS fullContext.tools array. */
 interface FullContextTool {
@@ -558,6 +666,13 @@ const AgentMCPInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
 
           {/* Body */}
           <Box sx={{ p: 2, overflow: 'auto', flex: 1 }}>
+            <Box sx={{ mb: 3 }}>
+              <Heading as="h5" sx={{ fontSize: 1, mb: 2 }}>
+                MCP Servers
+              </Heading>
+              <McpStatusPanel data={mcpStatusData} />
+            </Box>
+
             {mcpServers.length === 0 ? (
               <Box
                 sx={{

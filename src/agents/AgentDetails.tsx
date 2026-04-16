@@ -37,6 +37,13 @@ import {
 import type { ContextSnapshotResponse } from '../context/ContextPanel';
 import { AgentIdentity } from '../identity/AgentIdentity';
 import type { OAuthProvider, OAuthProviderConfig, Identity } from '../identity';
+import {
+  useAgentRuntimeCodemodeStatus,
+  useAgentRuntimeContextSnapshot,
+  useAgentRuntimeFullContext,
+  useAgentRuntimeMcpStatus,
+  useAgentRuntimeWsState,
+} from '../stores';
 
 export interface AgentDetailsProps {
   /** Agent name/title */
@@ -343,15 +350,31 @@ export function AgentDetails({
   contextSnapshotData,
   fullContextData,
 }: AgentDetailsProps) {
-  const hasMcpLiveData = mcpStatusData !== undefined;
-  const hasCodemodeLiveData = codemodeStatusData !== undefined;
+  const wsMcpStatus = useAgentRuntimeMcpStatus();
+  const wsCodemodeStatus = useAgentRuntimeCodemodeStatus();
+  const wsContextSnapshot = useAgentRuntimeContextSnapshot();
+  const wsFullContext = useAgentRuntimeFullContext();
+  const wsState = useAgentRuntimeWsState();
+
+  const mcpStatus =
+    mcpStatusData ?? (wsMcpStatus as unknown as MCPToolsetsStatus | null);
+  const codemodeStatus =
+    codemodeStatusData ??
+    (wsCodemodeStatus as unknown as CodemodeStatus | null);
+  const resolvedContextSnapshot =
+    contextSnapshotData ??
+    (wsContextSnapshot as unknown as ContextSnapshotResponse | null);
+  const resolvedFullContext =
+    fullContextData ?? (wsFullContext as unknown as FullContextResponse | null);
+
+  const hasMcpLiveData = mcpStatusData !== undefined || wsState !== 'closed';
+  const hasCodemodeLiveData =
+    codemodeStatusData !== undefined || wsState !== 'closed';
 
   // REST polling removed — data comes exclusively via WS `agent.snapshot`.
-  const mcpStatus = mcpStatusData;
-  const mcpLoading = !hasMcpLiveData;
+  const mcpLoading = wsState === 'connecting' && !mcpStatus;
 
-  const codemodeStatus = codemodeStatusData;
-  const codemodeLoading = !hasCodemodeLiveData;
+  const codemodeLoading = wsState === 'connecting' && !codemodeStatus;
 
   // Mutation to toggle codemode
   const toggleCodemodeMutation = useMutation({
@@ -1530,7 +1553,7 @@ export function AgentDetails({
           <ContextPanel
             agentId={agentId}
             apiBase={apiBase}
-            liveData={contextSnapshotData}
+            liveData={resolvedContextSnapshot}
             messageCount={messageCount}
             chartHeight="200px"
           />
@@ -1565,7 +1588,7 @@ export function AgentDetails({
                   downloadContextSnapshotAsCSV(
                     agentId,
                     apiBase,
-                    fullContextData,
+                    resolvedFullContext,
                   )
                 }
               >
@@ -1584,7 +1607,7 @@ export function AgentDetails({
               <ContextInspector
                 agentId={agentId}
                 apiBase={apiBase}
-                liveData={fullContextData}
+                liveData={resolvedFullContext}
               />
             </Box>
           </Box>

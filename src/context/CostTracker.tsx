@@ -120,12 +120,12 @@ export function CostTracker({
       >
         <CreditCardIcon size={14} />
         <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
-          Last turn: {displayUsd(lastTurnCostUsd)}
-          {costData.perRunBudgetUsd != null &&
-            ` (budget ${formatUsd(costData.perRunBudgetUsd)})`}
-          {' | '}Total: {displayUsd(costData.cumulativeCostUsd)}
+          Cumulative: {displayUsd(costData.cumulativeCostUsd)}
           {costData.cumulativeBudgetUsd != null &&
             ` (budget ${formatUsd(costData.cumulativeBudgetUsd)})`}
+          {' | '}Last turn: {displayUsd(lastTurnCostUsd)}
+          {costData.perRunBudgetUsd != null &&
+            ` (budget ${formatUsd(costData.perRunBudgetUsd)})`}
         </Text>
         {isOverBudget && (
           <Label variant="danger" size="small">
@@ -176,31 +176,6 @@ export function CostTracker({
           borderColor: 'border.default',
         }}
       >
-        {/* Last turn cost */}
-        <Box sx={{ mb: 3 }}>
-          <Box
-            sx={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              mb: 1,
-            }}
-          >
-            <Text sx={{ fontSize: 1, fontWeight: 'semibold' }}>Last turn</Text>
-            <Text sx={{ fontSize: 1 }}>
-              {displayUsd(lastTurnCostUsd)}
-              {costData.perRunBudgetUsd != null &&
-                ` (budget ${formatUsd(costData.perRunBudgetUsd)})`}
-            </Text>
-          </Box>
-          {lastTurnPercent != null && (
-            <ProgressBar
-              progress={Math.min(lastTurnPercent, 100)}
-              sx={{ height: 6 }}
-              bg={lastTurnPercent > 80 ? 'danger.emphasis' : 'accent.emphasis'}
-            />
-          )}
-        </Box>
-
         {/* Cumulative cost */}
         <Box sx={{ mb: 3 }}>
           <Box
@@ -228,6 +203,31 @@ export function CostTracker({
                     ? 'attention.emphasis'
                     : 'accent.emphasis'
               }
+            />
+          )}
+        </Box>
+
+        {/* Last turn cost */}
+        <Box sx={{ mb: 3 }}>
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              mb: 1,
+            }}
+          >
+            <Text sx={{ fontSize: 1, fontWeight: 'semibold' }}>Last turn</Text>
+            <Text sx={{ fontSize: 1 }}>
+              {displayUsd(lastTurnCostUsd)}
+              {costData.perRunBudgetUsd != null &&
+                ` (budget ${formatUsd(costData.perRunBudgetUsd)})`}
+            </Text>
+          </Box>
+          {lastTurnPercent != null && (
+            <ProgressBar
+              progress={Math.min(lastTurnPercent, 100)}
+              sx={{ height: 6 }}
+              bg={lastTurnPercent > 80 ? 'danger.emphasis' : 'accent.emphasis'}
             />
           )}
         </Box>

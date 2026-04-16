@@ -105,6 +105,49 @@ function formatToolResultFallback(result: unknown): string {
   }
 }
 
+function extractChatMessagesFromFullContext(
+  fullContext: Record<string, unknown> | null,
+): ChatMessage[] {
+  if (!fullContext) {
+    return [];
+  }
+
+  const rawMessages = Array.isArray(fullContext.messages)
+    ? (fullContext.messages as Array<Record<string, unknown>>)
+    : [];
+
+  return rawMessages
+    .map((msg, index) => {
+      const role = String(msg.role || '').toLowerCase();
+      if (
+        role !== 'user' &&
+        role !== 'assistant' &&
+        role !== 'system' &&
+        role !== 'tool'
+      ) {
+        return null;
+      }
+
+      const timestampValue =
+        typeof msg.timestamp === 'string' && msg.timestamp.length > 0
+          ? msg.timestamp
+          : new Date().toISOString();
+      const createdAt = new Date(timestampValue);
+      const content =
+        typeof msg.content === 'string'
+          ? msg.content
+          : JSON.stringify(msg.content ?? '');
+
+      return {
+        id: `history-${role}-${index}-${timestampValue}`,
+        role,
+        content,
+        createdAt: Number.isNaN(createdAt.getTime()) ? new Date() : createdAt,
+      } as ChatMessage;
+    })
+    .filter((m): m is ChatMessage => m !== null);
+}
+
 // ---------------------------------------------------------------------------
 // ChatBase (outer wrapper — ensures QueryClient is available)
 // ---------------------------------------------------------------------------
@@ -607,97 +650,63 @@ function ChatBaseInner({
 
     store.setFetching(runtimeId, true);
 
-    let endpoint =
-      historyEndpoint ||
-      (protocol?.endpoint ? `${protocol.endpoint}/api/v1/history` : null);
-
-    if (!endpoint) {
-      console.warn(
-        '[ChatBase] No history endpoint available for runtimeId:',
-        runtimeId,
+    const fullContextToMessages = () =>
+      extractChatMessagesFromFullContext(
+        agentRuntimeStore.getState().fullContext as Record<
+          string,
+          unknown
+        > | null,
       );
+
+    const applyMessages = (messages: ChatMessage[]) => {
+      if (messages.length > 0) {
+        store.setMessages(runtimeId, messages);
+        setDisplayItems(convertHistoryToDisplayItems(messages));
+      }
       store.markFetched(runtimeId);
       setHistoryLoaded(true);
+    };
+
+    const existingMessages = fullContextToMessages();
+    if (existingMessages.length > 0) {
+      applyMessages(existingMessages);
       return;
     }
 
-    if (protocol?.agentId && !endpoint.includes('agent_id=')) {
-      const separator = endpoint.includes('?') ? '&' : '?';
-      endpoint = `${endpoint}${separator}agent_id=${encodeURIComponent(protocol.agentId)}`;
-    }
+    // Ask the monitoring websocket for a fresh snapshot and wait briefly
+    // for `fullContext.messages` to arrive.
+    agentRuntimeStore.getState().requestRefresh();
 
-    const fetchHistory = async () => {
-      try {
-        const authToken = historyAuthToken || protocol?.authToken;
-        const headers: Record<string, string> = {
-          'Content-Type': 'application/json',
-        };
-        if (authToken) {
-          headers['Authorization'] = `Bearer ${authToken}`;
+    let resolved = false;
+    const unsubscribe = agentRuntimeStore.subscribe(
+      state => state.fullContext,
+      nextFullContext => {
+        if (resolved || !nextFullContext) {
+          return;
         }
-
-        const response = await fetch(endpoint!, {
-          method: 'GET',
-          headers,
-          credentials: 'include',
-        });
-
-        if (!response.ok) {
-          throw new Error(
-            `Failed to fetch history: ${response.status} ${response.statusText}`,
-          );
-        }
-
-        const data = await response.json();
-        const messages: ChatMessage[] = (data.messages || []).map(
-          (msg: any) => {
-            if (msg.toolCalls && Array.isArray(msg.toolCalls)) {
-              msg.toolCalls = msg.toolCalls.map((tc: any) => {
-                if (tc.toolCallId && tc.toolName) return tc;
-                let parsedArgs = tc.args ?? tc.arguments ?? {};
-                if (typeof parsedArgs === 'string') {
-                  try {
-                    parsedArgs = JSON.parse(parsedArgs);
-                  } catch {
-                    parsedArgs = {};
-                  }
-                }
-                return {
-                  type: 'tool-call' as const,
-                  toolCallId: tc.toolCallId ?? tc.id ?? tc.tool_call_id ?? '',
-                  toolName: tc.toolName ?? tc.name ?? tc.tool_name ?? '',
-                  args: parsedArgs,
-                  status: tc.status ?? 'completed',
-                };
-              });
-            }
-            return msg as ChatMessage;
-          },
+        resolved = true;
+        unsubscribe();
+        const messages = extractChatMessagesFromFullContext(
+          nextFullContext as Record<string, unknown>,
         );
+        applyMessages(messages);
+      },
+    );
 
-        if (messages.length > 0) {
-          store.setMessages(runtimeId, messages);
-          const items = convertHistoryToDisplayItems(messages);
-          setDisplayItems(items);
-        }
-
-        store.markFetched(runtimeId);
-        setHistoryLoaded(true);
-      } catch (err) {
-        console.error('[ChatBase] Failed to fetch conversation history:', err);
-        store.markFetched(runtimeId);
-        setHistoryLoaded(true);
+    const timeout = window.setTimeout(() => {
+      if (resolved) {
+        return;
       }
-    };
+      resolved = true;
+      unsubscribe();
+      applyMessages([]);
+    }, 2000);
 
-    fetchHistory();
-  }, [
-    runtimeId,
-    historyEndpoint,
-    historyAuthToken,
-    protocol?.endpoint,
-    protocol?.authToken,
-  ]);
+    return () => {
+      window.clearTimeout(timeout);
+      unsubscribe();
+    };
+  }, [runtimeId, historyEndpoint, protocol?.agentId]);
 
   // Keep in-memory store in sync with displayItems
   useEffect(() => {

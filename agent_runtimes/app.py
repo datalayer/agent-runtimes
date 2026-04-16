@@ -50,7 +50,6 @@ from .routes import (
     get_agui_mounts,
     get_example_mounts,
     health_router,
-    history_router,
     identity_router,
     mcp_proxy_router,
     mcp_router,
@@ -208,18 +207,16 @@ async def _create_and_register_cli_agent(
     )
 
     # In K8s sidecar mode (DATALAYER_RUNTIME_JUPYTER_SIDECAR=true), a Jupyter
-    # container already runs in the same pod.  The "jupyter" variant means
-    # "start your own Jupyter process" which is wrong here — remap to
-    # "jupyter" (connect to existing).  Never fallback to eval.
+    # container already runs in the same pod. Keep the effective variant as
+    # "jupyter" and defer sandbox creation until companion provides URL.
     jupyter_sidecar = (
         os.getenv("DATALAYER_RUNTIME_JUPYTER_SIDECAR", "").lower() == "true"
     )
     if jupyter_sidecar:
         if effective_variant == "jupyter":
-            effective_variant = "jupyter"
             logger.info(
                 "Jupyter sidecar detected (DATALAYER_RUNTIME_JUPYTER_SIDECAR=true), "
-                "remapped sandbox variant jupyter → jupyter"
+                "using jupyter variant with deferred URL configuration"
             )
         elif effective_variant == "eval":
             effective_variant = "jupyter"
@@ -235,13 +232,28 @@ async def _create_and_register_cli_agent(
     need_shared_sandbox = (
         (enable_codemode and skills_enabled)
         or (enable_codemode and jupyter_sandbox_url)
-        or (enable_codemode and effective_variant in ("jupyter", "jupyter"))
+        or (enable_codemode and effective_variant == "jupyter")
     )
     if need_shared_sandbox:
-        if effective_variant == "jupyter":
+        if (
+            effective_variant == "jupyter"
+            and jupyter_sidecar
+            and not jupyter_sandbox_url
+        ):
+            # Sidecar/companion mode (Phase 1): URL not available yet.
+            from .services.code_sandbox_manager import get_code_sandbox_manager
+
+            sandbox_manager = get_code_sandbox_manager()
+            sandbox_manager.configure(variant="jupyter")
+            shared_sandbox = sandbox_manager.get_managed_sandbox()
+            logger.info(
+                f"Deferred sandbox for agent '{agent_id}': variant=jupyter, "
+                f"waiting for companion to provide jupyter URL"
+            )
+        elif effective_variant == "jupyter":
             # Delegate to code_sandboxes: create a per-agent sandbox
             # that starts its own Jupyter server on a random free port.
-            # NOTE: This branch is only reached in standalone mode (no sidecar).
+            # NOTE: This branch is reached in standalone mode (no sidecar URL handoff).
             try:
                 from .services.code_sandbox_manager import get_code_sandbox_manager
 
@@ -263,21 +275,6 @@ async def _create_and_register_cli_agent(
                 raise RuntimeError(
                     f"Failed to create Jupyter sandbox for agent '{agent_id}': {e}"
                 ) from e
-        elif effective_variant == "jupyter" and not jupyter_sandbox_url:
-            # Sidecar/companion mode (Phase 1): the Jupyter URL is not
-            # available yet.  Configure the manager as jupyter and
-            # return a ManagedSandbox proxy.  The proxy defers actual
-            # sandbox creation until first use — by that time the companion
-            # will have called configure-from-spec with the real URL.
-            from .services.code_sandbox_manager import get_code_sandbox_manager
-
-            sandbox_manager = get_code_sandbox_manager()
-            sandbox_manager.configure(variant="jupyter")
-            shared_sandbox = sandbox_manager.get_managed_sandbox()
-            logger.info(
-                f"Deferred sandbox for agent '{agent_id}': variant=jupyter, "
-                f"waiting for companion to provide jupyter URL"
-            )
         else:
             shared_sandbox = create_shared_sandbox(jupyter_sandbox_url)
 
@@ -1298,7 +1295,6 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
 
     # Include routers
     app.include_router(health_router)
-    app.include_router(history_router, prefix=config.api_prefix)
     app.include_router(identity_router)  # No prefix - uses /api/v1/identity internally
     app.include_router(agents_router, prefix=config.api_prefix)
     app.include_router(acp_router, prefix=config.api_prefix)
