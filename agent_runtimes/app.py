@@ -155,8 +155,8 @@ async def _create_and_register_cli_agent(
         all_mcp_servers: All MCP servers (agent spec + CLI servers)
         api_prefix: API prefix for routes
         protocol: Transport protocol (ag-ui, vercel-ai, vercel-ai-jupyter, a2a)
-        sandbox_variant: Code sandbox variant ('local-eval', 'jupyter', or
-            'local-jupyter'). When 'jupyter', a per-agent Jupyter server is
+        sandbox_variant: Code sandbox variant ('eval', 'jupyter', or
+            'jupyter'). When 'jupyter', a per-agent Jupyter server is
             started via code_sandboxes.
 
     Returns:
@@ -204,27 +204,27 @@ async def _create_and_register_cli_agent(
     effective_variant = (
         sandbox_variant
         or agent_spec.sandbox_variant
-        or ("local-jupyter" if jupyter_sandbox_url else "local-eval")
+        or ("jupyter" if jupyter_sandbox_url else "eval")
     )
 
     # In K8s sidecar mode (DATALAYER_RUNTIME_JUPYTER_SIDECAR=true), a Jupyter
     # container already runs in the same pod.  The "jupyter" variant means
     # "start your own Jupyter process" which is wrong here — remap to
-    # "local-jupyter" (connect to existing).  Never fallback to local-eval.
+    # "jupyter" (connect to existing).  Never fallback to eval.
     jupyter_sidecar = (
         os.getenv("DATALAYER_RUNTIME_JUPYTER_SIDECAR", "").lower() == "true"
     )
     if jupyter_sidecar:
         if effective_variant == "jupyter":
-            effective_variant = "local-jupyter"
+            effective_variant = "jupyter"
             logger.info(
                 "Jupyter sidecar detected (DATALAYER_RUNTIME_JUPYTER_SIDECAR=true), "
-                "remapped sandbox variant jupyter → local-jupyter"
+                "remapped sandbox variant jupyter → jupyter"
             )
-        elif effective_variant == "local-eval":
-            effective_variant = "local-jupyter"
+        elif effective_variant == "eval":
+            effective_variant = "jupyter"
             logger.info(
-                "Jupyter sidecar detected, overriding local-eval → local-jupyter "
+                "Jupyter sidecar detected, overriding eval → jupyter "
                 "(companion will provide jupyter URL)"
             )
 
@@ -235,7 +235,7 @@ async def _create_and_register_cli_agent(
     need_shared_sandbox = (
         (enable_codemode and skills_enabled)
         or (enable_codemode and jupyter_sandbox_url)
-        or (enable_codemode and effective_variant in ("jupyter", "local-jupyter"))
+        or (enable_codemode and effective_variant in ("jupyter", "jupyter"))
     )
     if need_shared_sandbox:
         if effective_variant == "jupyter":
@@ -263,19 +263,19 @@ async def _create_and_register_cli_agent(
                 raise RuntimeError(
                     f"Failed to create Jupyter sandbox for agent '{agent_id}': {e}"
                 ) from e
-        elif effective_variant == "local-jupyter" and not jupyter_sandbox_url:
+        elif effective_variant == "jupyter" and not jupyter_sandbox_url:
             # Sidecar/companion mode (Phase 1): the Jupyter URL is not
-            # available yet.  Configure the manager as local-jupyter and
+            # available yet.  Configure the manager as jupyter and
             # return a ManagedSandbox proxy.  The proxy defers actual
             # sandbox creation until first use — by that time the companion
             # will have called configure-from-spec with the real URL.
             from .services.code_sandbox_manager import get_code_sandbox_manager
 
             sandbox_manager = get_code_sandbox_manager()
-            sandbox_manager.configure(variant="local-jupyter")
+            sandbox_manager.configure(variant="jupyter")
             shared_sandbox = sandbox_manager.get_managed_sandbox()
             logger.info(
-                f"Deferred sandbox for agent '{agent_id}': variant=local-jupyter, "
+                f"Deferred sandbox for agent '{agent_id}': variant=jupyter, "
                 f"waiting for companion to provide jupyter URL"
             )
         else:
@@ -376,14 +376,14 @@ async def _create_and_register_cli_agent(
         )
 
         if codemode_toolset:
-            # In sidecar Phase 1 (local-jupyter, no URL yet) skip eager
+            # In sidecar Phase 1 (jupyter, no URL yet) skip eager
             # start — the sandbox proxy would fail because the companion
             # hasn't provided the jupyter URL yet.  The toolset will
             # initialise lazily on first tool invocation or after
             # rebuild_codemode is called by configure-from-spec.
             sidecar_deferred = (
                 jupyter_sidecar
-                and effective_variant == "local-jupyter"
+                and effective_variant == "jupyter"
                 and not jupyter_sandbox_url
             )
             if sidecar_deferred:
@@ -904,7 +904,7 @@ async def _create_and_register_cli_agent(
         startup_info["sandbox"]["jupyter_port"] = jupyter_port
         startup_info["sandbox"]["jupyter_url"] = jupyter_server_url
         startup_info["sandbox"]["jupyter_token"] = jupyter_token
-    elif effective_variant == "local-jupyter" and jupyter_sandbox_url:
+    elif effective_variant == "jupyter" and jupyter_sandbox_url:
         startup_info["sandbox"]["jupyter_url"] = jupyter_sandbox_url
 
     return startup_info

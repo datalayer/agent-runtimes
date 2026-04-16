@@ -41,7 +41,7 @@ Setup code:
     # Create the integration
     integration = CodemodeIntegration(
         skills_path="./skills",
-        sandbox_variant="local-eval",  # or "datalayer" for cloud
+        sandbox_variant="eval",  # or "datalayer" for cloud
     )
 
     # Set up (discovers tools and skills)
@@ -67,7 +67,7 @@ async def example_code_execution():
     # Create the integration
     integration = CodemodeIntegration(
         skills_path="./integration_skills",
-        sandbox_variant="local-eval",
+        sandbox_variant="eval",
     )
 
     try:

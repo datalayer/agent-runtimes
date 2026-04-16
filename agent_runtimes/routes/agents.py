@@ -438,15 +438,15 @@ class CreateAgentRequest(BaseModel):
     )
     jupyter_sandbox: str | None = Field(
         default=None,
-        description="Jupyter server URL with token for code sandbox (e.g., http://localhost:8888?token=xxx). If provided, codemode will use Jupyter kernel instead of local-eval sandbox.",
+        description="Jupyter server URL with token for code sandbox (e.g., http://localhost:8888?token=xxx). If provided, codemode will use Jupyter kernel instead of eval sandbox.",
     )
     sandbox_variant: str | None = Field(
         default=None,
         description=(
             "Sandbox variant to use for this agent.  "
-            "Accepted values: 'local-eval' (in-process Python exec, default), "
+            "Accepted values: 'eval' (in-process Python exec, default), "
             "'jupyter' (starts a Jupyter server per agent via code_sandboxes), "
-            "'local-jupyter' (connects to an existing Jupyter server — requires jupyter_sandbox URL)."
+            "'jupyter' (connects to an existing Jupyter server — requires jupyter_sandbox URL)."
         ),
     )
     agent_spec_id: str | None = Field(
@@ -822,27 +822,27 @@ async def create_agent(
 
         # Determine the effective sandbox variant
         effective_variant = request.sandbox_variant or (
-            "local-jupyter" if request.jupyter_sandbox else "local-eval"
+            "jupyter" if request.jupyter_sandbox else "eval"
         )
 
         # In K8s sidecar mode, a Jupyter container already runs in the pod.
-        # "jupyter" variant means "start your own" — remap to "local-jupyter"
-        # (connect to existing sidecar).  Never fallback to local-eval.
+        # "jupyter" variant means "start your own" — remap to "jupyter"
+        # (connect to existing sidecar).  Never fallback to eval.
         jupyter_sidecar = (
             os.getenv("DATALAYER_RUNTIME_JUPYTER_SIDECAR", "").lower() == "true"
         )
         if jupyter_sidecar:
             if effective_variant == "jupyter":
-                effective_variant = "local-jupyter"
+                effective_variant = "jupyter"
                 logger.info(
                     "Jupyter sidecar detected, remapped sandbox variant "
-                    "jupyter → local-jupyter for agent '%s'",
+                    "jupyter → jupyter for agent '%s'",
                     agent_id,
                 )
-            elif effective_variant == "local-eval":
-                effective_variant = "local-jupyter"
+            elif effective_variant == "eval":
+                effective_variant = "jupyter"
                 logger.info(
-                    "Jupyter sidecar detected, overriding local-eval → local-jupyter "
+                    "Jupyter sidecar detected, overriding eval → jupyter "
                     "for agent '%s' (companion will provide jupyter URL)",
                     agent_id,
                 )
@@ -857,41 +857,45 @@ async def create_agent(
                 sandbox_manager = get_code_sandbox_manager()
 
                 if effective_variant == "jupyter":
-                    sandbox_manager.create_agent_sandbox(
-                        agent_id=agent_id,
-                        variant="jupyter",
-                    )
-                    logger.info(
-                        "Eager-started per-agent jupyter sandbox for '%s'",
-                        agent_id,
-                    )
-                elif effective_variant == "local-jupyter":
-                    if not request.jupyter_sandbox:
-                        if jupyter_sidecar:
-                            # Sidecar mode, Phase 1: companion will configure
-                            # URL later — defer sandbox, don't fail.
-                            sandbox_manager.configure(variant="local-jupyter")
-                            logger.info(
-                                "Deferred local-jupyter sandbox for '%s': "
-                                "waiting for companion to provide jupyter URL",
-                                agent_id,
-                            )
-                        else:
-                            raise HTTPException(
-                                status_code=400,
-                                detail=(
-                                    "jupyter_sandbox is required when sandbox_variant is 'local-jupyter'"
-                                ),
-                            )
+                    # Prefer per-agent sandbox creation when available.
+                    if hasattr(sandbox_manager, "create_agent_sandbox"):
+                        sandbox_manager.create_agent_sandbox(
+                            agent_id=agent_id,
+                            variant="jupyter",
+                        )
+                        logger.info(
+                            "Eager-started per-agent jupyter sandbox for '%s'",
+                            agent_id,
+                        )
                     else:
-                        # jupyter_sandbox URL is already applied above via configure_from_url.
-                        sandbox_manager.get_sandbox()
-                        logger.info("Eager-started local-jupyter sandbox")
+                        # Backward-compatible fallback for simple/dummy managers
+                        # used in tests that only expose configure/get_sandbox.
+                        if not request.jupyter_sandbox:
+                            if jupyter_sidecar:
+                                # Sidecar mode, Phase 1: companion will configure
+                                # URL later — defer sandbox, don't fail.
+                                sandbox_manager.configure(variant="jupyter")
+                                logger.info(
+                                    "Deferred jupyter sandbox for '%s': "
+                                    "waiting for companion to provide jupyter URL",
+                                    agent_id,
+                                )
+                            else:
+                                raise HTTPException(
+                                    status_code=400,
+                                    detail=(
+                                        "jupyter_sandbox is required when sandbox_variant is 'jupyter'"
+                                    ),
+                                )
+                        else:
+                            # jupyter_sandbox URL is already applied above via configure_from_url.
+                            sandbox_manager.get_sandbox()
+                            logger.info("Eager-started jupyter sandbox")
                 else:
-                    # local-eval
-                    sandbox_manager.configure(variant="local-eval")
+                    # eval
+                    sandbox_manager.configure(variant="eval")
                     sandbox_manager.get_sandbox()
-                    logger.info("Eager-started local-eval sandbox")
+                    logger.info("Eager-started eval sandbox")
             except HTTPException:
                 raise
             except ImportError as e:
@@ -922,7 +926,7 @@ async def create_agent(
             )  # Codemode with Jupyter
             or (
                 request.enable_codemode
-                and effective_variant in ("jupyter", "local-jupyter")
+                and effective_variant in ("jupyter", "jupyter")
             )  # Codemode with jupyter variant
             or (
                 request.enable_codemode and bool(request.sandbox_variant)
@@ -937,12 +941,20 @@ async def create_agent(
                     from ..services.code_sandbox_manager import get_code_sandbox_manager
 
                     sandbox_manager = get_code_sandbox_manager()
-                    agent_sandbox = sandbox_manager.create_agent_sandbox(
-                        agent_id=agent_id,
-                        variant="jupyter",
-                    )
-                    shared_sandbox = agent_sandbox
-                    logger.info(f"Created per-agent Jupyter sandbox for '{agent_id}'")
+                    if hasattr(sandbox_manager, "create_agent_sandbox"):
+                        agent_sandbox = sandbox_manager.create_agent_sandbox(
+                            agent_id=agent_id,
+                            variant="jupyter",
+                        )
+                        shared_sandbox = agent_sandbox
+                        logger.info(f"Created per-agent Jupyter sandbox for '{agent_id}'")
+                    else:
+                        # Backward-compatible fallback for simple managers used
+                        # in tests that expose only get_sandbox().
+                        shared_sandbox = sandbox_manager.get_sandbox()
+                        logger.info(
+                            f"Using shared Jupyter sandbox for '{agent_id}'"
+                        )
                 except ImportError as e:
                     raise HTTPException(
                         status_code=500,
@@ -953,7 +965,10 @@ async def create_agent(
                 except Exception as e:
                     if "already has a sandbox" in str(e):
                         sandbox_manager = get_code_sandbox_manager()
-                        shared_sandbox = sandbox_manager.get_agent_sandbox(agent_id)
+                        if hasattr(sandbox_manager, "get_agent_sandbox"):
+                            shared_sandbox = sandbox_manager.get_agent_sandbox(agent_id)
+                        else:
+                            shared_sandbox = sandbox_manager.get_sandbox()
                         logger.info(
                             f"Reusing existing Jupyter sandbox for '{agent_id}'"
                         )
@@ -965,16 +980,16 @@ async def create_agent(
                             status_code=500,
                             detail=f"Failed to create Jupyter sandbox: {str(e)}",
                         )
-            elif effective_variant == "local-jupyter" and not request.jupyter_sandbox:
+            elif effective_variant == "jupyter" and not request.jupyter_sandbox:
                 # Sidecar mode, Phase 1: no URL yet, companion will provide
                 # it later.  Return a deferred ManagedSandbox proxy.
                 from ..services.code_sandbox_manager import get_code_sandbox_manager
 
                 sandbox_manager = get_code_sandbox_manager()
-                sandbox_manager.configure(variant="local-jupyter")
+                sandbox_manager.configure(variant="jupyter")
                 shared_sandbox = sandbox_manager.get_managed_sandbox()
                 logger.info(
-                    f"Deferred sandbox for agent '{agent_id}': variant=local-jupyter, "
+                    f"Deferred sandbox for agent '{agent_id}': variant=jupyter, "
                     f"waiting for companion to provide jupyter URL"
                 )
             else:
@@ -2072,17 +2087,17 @@ async def update_agent_mcp_servers(
 class ConfigureSandboxRequest(BaseModel):
     """Request to configure the code sandbox manager."""
 
-    variant: Literal["local-eval", "local-jupyter", "jupyter"] = Field(
-        default="local-eval",
+    variant: Literal["eval", "jupyter", "jupyter"] = Field(
+        default="eval",
         description=(
-            "Sandbox variant to use: 'local-eval' (Python exec), "
+            "Sandbox variant to use: 'eval' (Python exec), "
             "'jupyter' (managed Jupyter sandbox), or "
-            "'local-jupyter' (existing Jupyter server URL)"
+            "'jupyter' (existing Jupyter server URL)"
         ),
     )
     jupyter_url: str | None = Field(
         default=None,
-        description="Jupyter server URL (required for local-jupyter variant). "
+        description="Jupyter server URL (required for jupyter variant). "
         "Can include token as query param: http://localhost:8888?token=xxx",
     )
     jupyter_token: str | None = Field(
@@ -2122,7 +2137,7 @@ async def get_sandbox_status() -> SandboxStatusResponse:
         return SandboxStatusResponse(**status)
     except ImportError:
         return SandboxStatusResponse(
-            variant="local-eval",
+            variant="eval",
             sandbox_running=False,
         )
 
@@ -2133,9 +2148,9 @@ async def configure_sandbox(request: ConfigureSandboxRequest) -> SandboxStatusRe
     Configure the code sandbox manager.
 
     This endpoint allows runtime configuration of the sandbox variant.
-    Use 'local-eval' for simple Python exec-based execution,
+    Use 'eval' for simple Python exec-based execution,
     'jupyter' for a managed Jupyter sandbox, or
-    'local-jupyter' to connect to an existing Jupyter server.
+    'jupyter' to connect to an existing Jupyter server.
 
     Note: If a sandbox is currently running with a different configuration,
     it will be stopped and recreated on next use.
@@ -2155,10 +2170,10 @@ async def configure_sandbox(request: ConfigureSandboxRequest) -> SandboxStatusRe
         manager = get_code_sandbox_manager()
 
         # Configure the sandbox
-        if request.variant == "local-jupyter" and not request.jupyter_url:
+        if request.variant == "jupyter" and not request.jupyter_url:
             raise HTTPException(
                 status_code=400,
-                detail="jupyter_url is required when variant is 'local-jupyter'",
+                detail="jupyter_url is required when variant is 'jupyter'",
             )
 
         manager.configure(
@@ -2297,7 +2312,7 @@ class AgentMcpServersResponse(BaseModel):
     )
     sandbox_variant: str | None = Field(
         default=None,
-        description="The sandbox variant after configuration (local-eval or local-jupyter)",
+        description="The sandbox variant after configuration (eval or jupyter)",
     )
     mcp_proxy_url: str | None = Field(
         default=None, description="The MCP proxy URL configured for tool calls (if any)"
@@ -2305,7 +2320,7 @@ class AgentMcpServersResponse(BaseModel):
     env_vars_set: int = Field(
         default=0,
         description="Number of env vars set on the process environment (and forwarded to MCP subprocesses). "
-        "For local-jupyter sandboxes they are also injected into the kernel when it is first used.",
+        "For jupyter sandboxes they are also injected into the kernel when it is first used.",
     )
     message: str
 

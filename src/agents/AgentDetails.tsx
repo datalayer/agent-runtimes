@@ -724,7 +724,7 @@ export function AgentDetails({
                   </Text>
                   <Label
                     variant={
-                      agentSpec.sandbox.variant === 'local-jupyter'
+                      agentSpec.sandbox.variant === 'jupyter'
                         ? 'accent'
                         : 'secondary'
                     }
@@ -766,8 +766,8 @@ export function AgentDetails({
                   )}
                 </Box>
 
-                {/* Jupyter details (for local-jupyter variant) */}
-                {agentSpec.sandbox.variant === 'local-jupyter' && (
+                {/* Jupyter details (for jupyter variant) */}
+                {agentSpec.sandbox.variant === 'jupyter' && (
                   <>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                       <Text
@@ -1195,7 +1195,7 @@ export function AgentDetails({
                         </Text>
                         <Label
                           variant={
-                            codemodeStatus.sandbox.variant === 'local-jupyter'
+                            codemodeStatus.sandbox.variant === 'jupyter'
                               ? 'accent'
                               : 'secondary'
                           }
@@ -1204,7 +1204,7 @@ export function AgentDetails({
                           {codemodeStatus.sandbox.variant}
                         </Label>
                       </Box>
-                      {codemodeStatus.sandbox.variant === 'local-jupyter' && (
+                      {codemodeStatus.sandbox.variant === 'jupyter' && (
                         <>
                           <Box
                             sx={{

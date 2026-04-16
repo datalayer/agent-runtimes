@@ -85,7 +85,7 @@ async def startup_info(request: Request) -> dict[str, Any]:
     info: dict[str, Any] = dict(getattr(request.app.state, "startup_info", None) or {})
 
     # Dynamically enrich sandbox info from the sandbox manager so that
-    # any reconfiguration (e.g. local-eval → local-jupyter) is reflected.
+    # any reconfiguration (e.g. eval → jupyter) is reflected.
     try:
         from agent_runtimes.services.code_sandbox_manager import (
             get_code_sandbox_manager,

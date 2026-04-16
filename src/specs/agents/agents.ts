@@ -1388,7 +1388,7 @@ export const FINANCIAL_VIZ_AGENT_SPEC_0_0_1: AgentSpec = {
     "Welcome! I'm the Financial Visualization Agent. I can help you analyze stock market data, track financial instruments, and create charts to visualize market trends.\n",
   welcomeNotebook: undefined,
   welcomeDocument: undefined,
-  sandboxVariant: 'local-eval',
+  sandboxVariant: 'eval',
   systemPrompt: `You are a financial market analyst with access to Alpha Vantage market data and chart generation tools. You can fetch stock prices, analyze trading volumes, create visualizations, and track market trends. Provide clear insights with relevant data points and generate charts to illustrate patterns.
 `,
   systemPromptCodemodeAddons: `## IMPORTANT: Be Honest About Your Capabilities NEVER claim to have tools or capabilities you haven't verified.
@@ -1702,7 +1702,7 @@ export const INFORMATION_ROUTING_AGENT_SPEC_0_0_1: AgentSpec = {
     "Hi there! I'm the Information Routing Agent. I can help you manage documents in Google Drive and route information where it needs to go.\n",
   welcomeNotebook: undefined,
   welcomeDocument: undefined,
-  sandboxVariant: 'local-eval',
+  sandboxVariant: 'eval',
   systemPrompt: `You are an information routing specialist with access to Google Drive tools. You can find and manage documents in Drive and automate document workflows. Help users with document management efficiently. Do not use file extension when referring to Google Drive documents. Always use search_drive_files tool before using get_drive_file_content to find parent folder (using only name and mimeType in the query, no other fields!!!).
 `,
   systemPromptCodemodeAddons: `## IMPORTANT: Be Honest About Your Capabilities NEVER claim to have tools or capabilities you haven't verified.

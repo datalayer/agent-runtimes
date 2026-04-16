@@ -132,7 +132,7 @@ async def test_create_agent_from_library_spec_applies_full_defaults(
         tools=["fetch_webpage", "run_in_terminal"],
         description="Spec description",
         model="openai:gpt-4.1",
-        sandbox_variant="local-jupyter",
+        sandbox_variant="jupyter",
         protocol="a2a",
         codemode={
             "enabled": True,
@@ -150,7 +150,7 @@ async def test_create_agent_from_library_spec_applies_full_defaults(
         pass
 
     class _DummySandboxManager:
-        variant = "local-jupyter"
+        variant = "jupyter"
 
         def configure_from_url(self, _url: str) -> None:
             pass
@@ -259,7 +259,7 @@ async def test_create_agent_retries_without_usage_limits_when_unsupported(
             system_prompt_codemode_addons=None,
             skills=[],
             tools=["fetch_webpage"],
-            sandbox_variant="local-eval",
+            sandbox_variant="eval",
             protocol="vercel-ai",
             codemode=None,
             mcp_servers=[],

@@ -93,7 +93,7 @@ function useJupyterSandboxStatus(
     }
 
     // Check if Jupyter variant is selected but not connected
-    if (sandbox.variant === 'local-jupyter' && !sandbox.jupyter_connected) {
+    if (sandbox.variant === 'jupyter' && !sandbox.jupyter_connected) {
       return {
         message: sandbox.jupyter_error
           ? `Jupyter Sandbox Error: ${sandbox.jupyter_error}`
@@ -683,7 +683,7 @@ const AgentRuntimeFormExample: React.FC<AgentRuntimeFormExampleProps> = ({
           ),
         );
         setUseJupyterSandbox(
-          spec.sandboxVariant === 'local-jupyter' ||
+          spec.sandboxVariant === 'jupyter' ||
             spec.sandboxVariant === 'jupyter',
         );
       } else {

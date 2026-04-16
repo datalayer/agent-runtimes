@@ -789,8 +789,8 @@ class AgentSpec(BaseModel):
         default=None,
         description=(
             "Sandbox variant to use for this agent. "
-            "Accepted values: 'local-eval' (default), 'jupyter' (per-agent Jupyter server), "
-            "'local-jupyter' (existing Jupyter server)."
+            "Accepted values: 'eval' (default), 'jupyter' (per-agent Jupyter server), "
+            "'jupyter' (existing Jupyter server)."
         ),
         alias="sandboxVariant",
     )

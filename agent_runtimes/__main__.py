@@ -261,9 +261,9 @@ def serve(
         typer.Option(
             "--sandbox-variant",
             envvar="AGENT_RUNTIMES_SANDBOX_VARIANT",
-            help="Sandbox variant: 'local-eval' (default in-process exec), "
+            help="Sandbox variant: 'eval' (default in-process exec), "
             "'jupyter' (starts a Jupyter server per agent via code_sandboxes), "
-            "or 'local-jupyter' (connects to existing Jupyter server, requires --jupyter-sandbox).",
+            "or 'jupyter' (connects to existing Jupyter server, requires --jupyter-sandbox).",
         ),
     ] = None,
     protocol: Annotated[

@@ -18,7 +18,7 @@ class DummySandbox:
         self._started = True
         self._executing = executing
         self.interrupt_called = False
-        self._namespaces: dict[str, dict[str, object]] = {}  # marks as local-eval-like
+        self._namespaces: dict[str, dict[str, object]] = {}  # marks as eval-like
 
     @property
     def is_executing(self) -> bool:
@@ -87,7 +87,7 @@ class TestSandboxStatusEndpoint:
         from agent_runtimes.routes.configure import SandboxStatus
 
         status = SandboxStatus(
-            variant="local-eval",
+            variant="eval",
             sandbox_running=True,
             is_executing=True,
         )
@@ -96,5 +96,5 @@ class TestSandboxStatusEndpoint:
     def test_sandbox_status_model_default_not_executing(self) -> None:
         from agent_runtimes.routes.configure import SandboxStatus
 
-        status = SandboxStatus(variant="local-eval")
+        status = SandboxStatus(variant="eval")
         assert status.is_executing is False

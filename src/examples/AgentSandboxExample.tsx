@@ -6,12 +6,12 @@
 /**
  * AgentSandboxExample
  *
- * Demonstrates sandbox variant switching (local-eval / jupyter) with a live
+ * Demonstrates sandbox variant switching (eval / jupyter) with a live
  * sidebar that streams WebSocket messages to and from the
  * `/configure/sandbox/ws` endpoint.
  *
  * - Creates a local agent (spec: demo-full) with codemode enabled
- * - SegmentedControl toggles between "local-eval" and "jupyter" variants
+ * - SegmentedControl toggles between "eval" and "jupyter" variants
  * - Sidebar shows live sandbox status, WebSocket event log, and an
  *   interrupt button
  *
@@ -63,7 +63,7 @@ const AGENT_SPEC_ID = 'demo-full';
 const DEFAULT_LOCAL_BASE_URL =
   import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
 
-type SandboxVariant = 'local-eval' | 'jupyter';
+type SandboxVariant = 'eval' | 'jupyter';
 
 // ─── WebSocket log entry ───────────────────────────────────────────────────
 
@@ -107,7 +107,7 @@ function deriveAggregate(
   return 'idle';
 }
 
-function apiVariantFromUi(variant: SandboxVariant): 'local-eval' | 'jupyter' {
+function apiVariantFromUi(variant: SandboxVariant): 'eval' | 'jupyter' {
   return variant;
 }
 
@@ -131,7 +131,7 @@ const AgentSandboxInner: React.FC<{ onLogout: () => void }> = ({
   const [isReconnectedAgent, setIsReconnectedAgent] = useState(false);
 
   // ── Sandbox variant toggle ──
-  const [variant, setVariant] = useState<SandboxVariant>('local-eval');
+  const [variant, setVariant] = useState<SandboxVariant>('eval');
   const [variantSwitching, setVariantSwitching] = useState(false);
   const [lastSwitch, setLastSwitch] = useState<LastSwitchInfo | null>(null);
 
@@ -205,7 +205,7 @@ const AgentSandboxInner: React.FC<{ onLogout: () => void }> = ({
             tools: [],
             selected_mcp_servers: [],
             enable_codemode: true,
-            sandbox_variant: 'local-eval',
+            sandbox_variant: 'eval',
           }),
         });
 
@@ -256,13 +256,13 @@ const AgentSandboxInner: React.FC<{ onLogout: () => void }> = ({
             );
           }
 
-          addLog('sent', 'POST /agents/sandbox/configure {variant:local-eval}');
+          addLog('sent', 'POST /agents/sandbox/configure {variant:eval}');
           const configureResp = await authFetch(
             `${agentBaseUrl}/api/v1/agents/sandbox/configure`,
             {
               method: 'POST',
               body: JSON.stringify({
-                variant: 'local-eval',
+                variant: 'eval',
               }),
             },
           );
@@ -296,7 +296,7 @@ const AgentSandboxInner: React.FC<{ onLogout: () => void }> = ({
           await restartResp.json().catch(() => null);
 
           setLastSwitch({
-            variant: String(configureData?.variant || 'local-eval'),
+            variant: String(configureData?.variant || 'eval'),
             switchedAt: new Date().toISOString(),
           });
 
@@ -777,14 +777,14 @@ const AgentSandboxInner: React.FC<{ onLogout: () => void }> = ({
                   aria-label="Sandbox variant"
                   size="small"
                   onChange={index =>
-                    void switchVariant(index === 0 ? 'local-eval' : 'jupyter')
+                    void switchVariant(index === 0 ? 'eval' : 'jupyter')
                   }
                 >
                   <SegmentedControl.Button
-                    selected={variant === 'local-eval'}
+                    selected={variant === 'eval'}
                     leadingIcon={TerminalIcon}
                   >
-                    local-eval
+                    eval
                   </SegmentedControl.Button>
                   <SegmentedControl.Button
                     selected={variant === 'jupyter'}

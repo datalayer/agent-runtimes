@@ -54,7 +54,7 @@ class CodemodeIntegration:
         self,
         mcp_manager: Optional[MCPManager] = None,
         skills_path: str = "./skills",
-        sandbox_variant: str = "local-eval",
+        sandbox_variant: str = "eval",
     ):
         """
         Initialize the integration.

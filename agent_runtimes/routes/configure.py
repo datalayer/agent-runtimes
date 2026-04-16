@@ -48,7 +48,7 @@ class SandboxStatus(BaseModel):
     the Jupyter kernel to call MCP tools via HTTP to the agent-runtimes container.
     """
 
-    variant: str  # "local-eval" or "local-jupyter"
+    variant: str  # "eval" or "jupyter"
     jupyter_url: str | None = None
     jupyter_connected: bool = False
     jupyter_error: str | None = None
@@ -576,7 +576,7 @@ def _get_sandbox_status() -> SandboxStatus | None:
             pass
 
         # If Jupyter variant, test the connection
-        if status["variant"] == "local-jupyter" and status.get("jupyter_url"):
+        if status["variant"] == "jupyter" and status.get("jupyter_url"):
             jupyter_connected, jupyter_error = _test_jupyter_connection(
                 status["jupyter_url"], status.get("jupyter_token")
             )
@@ -806,7 +806,7 @@ async def sandbox_status_ws(websocket: WebSocket, agent_id: str | None = None) -
     Message format (server → client)::
 
         {
-            "variant": "local-eval" | "local-jupyter" | "jupyter" | "unavailable",
+            "variant": "eval" | "jupyter" | "jupyter" | "unavailable",
             "sandbox_running": true/false,
             "is_executing": true/false,
             "jupyter_url": "..." | null

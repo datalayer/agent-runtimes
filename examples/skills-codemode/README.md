@@ -36,7 +36,7 @@ from agent_runtimes.integrations import CodemodeIntegration
 # Create the integration
 integration = CodemodeIntegration(
     skills_path="./skills",
-    sandbox_variant="local-eval",  # or "datalayer" for cloud
+    sandbox_variant="eval",  # or "datalayer" for cloud
 )
 
 # Set up (discovers tools and skills)
