@@ -438,6 +438,10 @@ Content-Type: application/json
 
 Configure the code sandbox manager at runtime. If a sandbox is running with a different configuration, it will be stopped and recreated on next use.
 
+When `variant` is `jupyter`:
+- If `jupyter_url` is provided, agent-runtimes connects to that existing Jupyter server.
+- If `jupyter_url` is omitted, agent-runtimes uses a managed local Jupyter sandbox.
+
 **Request Body:**
 
 ```json
@@ -450,13 +454,18 @@ Configure the code sandbox manager at runtime. If a sandbox is running with a di
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `variant` | string | No | Sandbox variant: `eval` (default) or `jupyter` |
-| `jupyter_url` | string | Required for `jupyter` | Jupyter server URL (can include token as query param) |
+| `jupyter_url` | string | No | Optional Jupyter server URL (can include token as query param). If omitted with `variant=jupyter`, a managed local Jupyter sandbox is used. |
 | `jupyter_token` | string | No | Jupyter token (overrides token in URL if provided) |
 
 **Example Requests:**
 
 ```bash
-# Configure for Jupyter sandbox
+# Configure for managed local Jupyter sandbox
+curl -X POST http://localhost:8000/api/v1/agents/sandbox/configure \
+  -H "Content-Type: application/json" \
+  -d '{"variant": "jupyter"}'
+
+# Configure for external Jupyter server
 curl -X POST http://localhost:8000/api/v1/agents/sandbox/configure \
   -H "Content-Type: application/json" \
   -d '{"variant": "jupyter", "jupyter_url": "http://localhost:8888?token=my-token"}'
@@ -472,8 +481,8 @@ curl -X POST http://localhost:8000/api/v1/agents/sandbox/configure \
 ```json
 {
   "variant": "jupyter",
-  "jupyter_url": "http://localhost:8888",
-  "jupyter_token_set": true,
+  "jupyter_url": null,
+  "jupyter_token_set": false,
   "sandbox_running": false
 }
 ```
@@ -482,7 +491,6 @@ curl -X POST http://localhost:8000/api/v1/agents/sandbox/configure \
 
 | Code | Description |
 |------|-------------|
-| `400` | `jupyter_url` is required when variant is `jupyter` |
 | `500` | Failed to configure sandbox |
 
 #### Restart Sandbox
