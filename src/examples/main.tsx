@@ -32,7 +32,11 @@ import {
   iamStore,
   createDatalayerServiceManager,
 } from '@datalayer/core';
-import { useChatStore } from '../stores';
+import {
+  useChatStore,
+  useConversationStore,
+  useAgentRuntimeStore,
+} from '../stores';
 import { OAuthCallback } from '../identity';
 import {
   EXAMPLES,
@@ -415,8 +419,12 @@ export const ExampleApp: React.FC = () => {
   const handleExampleChange = async (newExample: string) => {
     if (newExample === selectedExample || !serviceManager) return;
 
-    // Clear chat store when changing examples to start fresh
+    // Clear all chat/history caches when changing examples to start fresh.
+    // Messages can be sourced from the chat store, conversation store, and
+    // runtime WS snapshot (fullContext) state.
     useChatStore.getState().clearMessages();
+    useConversationStore.getState().clearAll();
+    useAgentRuntimeStore.getState().resetWs();
 
     setSelectedExample(newExample);
     localStorage.setItem('selectedExample', newExample);
