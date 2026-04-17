@@ -33,9 +33,9 @@ import {
   createDatalayerServiceManager,
 } from '@datalayer/core';
 import {
+  agentRuntimeStore,
   useChatStore,
   useConversationStore,
-  useAgentRuntimeStore,
 } from '../stores';
 import { OAuthCallback } from '../identity';
 import {
@@ -424,7 +424,7 @@ export const ExampleApp: React.FC = () => {
     // runtime WS snapshot (fullContext) state.
     useChatStore.getState().clearMessages();
     useConversationStore.getState().clearAll();
-    useAgentRuntimeStore.getState().resetWs();
+    agentRuntimeStore.getState().resetWs();
 
     setSelectedExample(newExample);
     localStorage.setItem('selectedExample', newExample);
