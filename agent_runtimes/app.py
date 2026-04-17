@@ -251,14 +251,18 @@ async def _create_and_register_cli_agent(
                 f"waiting for companion to provide jupyter URL"
             )
         elif effective_variant == "jupyter":
-            # Delegate to code_sandboxes: create a per-agent sandbox
-            # that starts its own Jupyter server on a random free port.
-            # NOTE: This branch is reached in standalone mode (no sidecar URL handoff).
+            # Delegate to code_sandboxes: create a per-agent sandbox.
+            # When jupyter_sandbox_url is set (e.g. sidecar with env var),
+            # pass it to configure() so _create_sandbox() can connect to the
+            # existing Jupyter server instead of trying to start a new one.
             try:
                 from .services.code_sandbox_manager import get_code_sandbox_manager
 
                 sandbox_manager = get_code_sandbox_manager()
-                sandbox_manager.configure(variant="jupyter")
+                sandbox_manager.configure(
+                    variant="jupyter",
+                    jupyter_url=jupyter_sandbox_url,
+                )
                 shared_sandbox = sandbox_manager.create_agent_sandbox(
                     agent_id=agent_id,
                     variant="jupyter",
