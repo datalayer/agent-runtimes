@@ -681,8 +681,7 @@ class CodeSandboxManager:
             # Never start a local fallback server in this mode.
             if (
                 not self._config.jupyter_url
-                and os.getenv("DATALAYER_RUNTIME_JUPYTER_SIDECAR", "").lower()
-                == "true"
+                and os.getenv("DATALAYER_RUNTIME_JUPYTER_SIDECAR", "").lower() == "true"
             ):
                 raise ValueError(
                     "Jupyter sidecar mode requires jupyter_url before sandbox start"

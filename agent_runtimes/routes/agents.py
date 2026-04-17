@@ -920,8 +920,7 @@ async def create_agent(
                 request.enable_codemode and request.jupyter_sandbox
             )  # Codemode with Jupyter
             or (
-                request.enable_codemode
-                and effective_variant == "jupyter"
+                request.enable_codemode and effective_variant == "jupyter"
             )  # Codemode with jupyter variant
             or (
                 request.enable_codemode and bool(request.sandbox_variant)
@@ -958,14 +957,14 @@ async def create_agent(
                             variant="jupyter",
                         )
                         shared_sandbox = agent_sandbox
-                        logger.info(f"Created per-agent Jupyter sandbox for '{agent_id}'")
+                        logger.info(
+                            f"Created per-agent Jupyter sandbox for '{agent_id}'"
+                        )
                     else:
                         # Backward-compatible fallback for simple managers used
                         # in tests that expose only get_sandbox().
                         shared_sandbox = sandbox_manager.get_sandbox()
-                        logger.info(
-                            f"Using shared Jupyter sandbox for '{agent_id}'"
-                        )
+                        logger.info(f"Using shared Jupyter sandbox for '{agent_id}'")
                 except ImportError as e:
                     raise HTTPException(
                         status_code=500,
