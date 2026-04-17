@@ -682,10 +682,7 @@ const AgentRuntimeFormExample: React.FC<AgentRuntimeFormExampleProps> = ({
             codemodeConfig?.enable_tool_reranker,
           ),
         );
-        setUseJupyterSandbox(
-          spec.sandboxVariant === 'jupyter' ||
-            spec.sandboxVariant === 'jupyter',
-        );
+        setUseJupyterSandbox(spec.sandboxVariant === 'jupyter');
       } else {
         setSelectedLibrarySpec(null);
       }

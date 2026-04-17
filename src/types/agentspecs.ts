@@ -63,7 +63,7 @@ export interface AgentSpec {
   welcomeNotebook?: string;
   /** Path to Lexical document to show on agent creation */
   welcomeDocument?: string;
-  /** Sandbox variant to use for this agent ('eval', 'jupyter', 'jupyter') */
+  /** Sandbox variant to use for this agent ('eval', 'jupyter') */
   sandboxVariant?: string;
   /** User-facing objective for the agent */
   goal?: string;

@@ -42,6 +42,7 @@ Usage:
 from __future__ import annotations
 
 import logging
+import os
 from collections.abc import AsyncIterator, Iterator
 from dataclasses import dataclass
 from threading import Lock
@@ -671,22 +672,33 @@ class CodeSandboxManager:
         effective_variant = variant or self._config.variant
 
         if effective_variant == "eval":
-            from code_sandboxes.eval_sandbox import LocalEvalSandbox
+            from code_sandboxes.eval_sandbox import EvalSandbox
 
-            return LocalEvalSandbox()
+            return EvalSandbox()
 
         elif effective_variant == "jupyter":
-            from code_sandboxes.jupyter_sandbox import LocalJupyterSandbox
+            # In sidecar mode, companion must provide a concrete Jupyter URL.
+            # Never start a local fallback server in this mode.
+            if (
+                not self._config.jupyter_url
+                and os.getenv("DATALAYER_RUNTIME_JUPYTER_SIDECAR", "").lower()
+                == "true"
+            ):
+                raise ValueError(
+                    "Jupyter sidecar mode requires jupyter_url before sandbox start"
+                )
+
+            from code_sandboxes.jupyter_sandbox import JupyterSandbox
 
             if self._config.jupyter_url:
-                return LocalJupyterSandbox(
+                return JupyterSandbox(
                     server_url=self._config.jupyter_url,
                     token=self._config.jupyter_token,
                 )
 
             # No external URL configured: let code_sandboxes start its own
             # local Jupyter server on a free port.
-            return LocalJupyterSandbox()
+            return JupyterSandbox()
 
         else:
             raise ValueError(f"Unknown sandbox variant: {effective_variant}")
@@ -715,13 +727,12 @@ class CodeSandboxManager:
         Create a dedicated sandbox for a specific agent.
 
         Each agent gets its own isolated sandbox instance.  For the
-        ``"jupyter"`` variant, ``code_sandboxes.LocalJupyterSandbox``
+        ``"jupyter"`` variant, ``code_sandboxes.JupyterSandbox``
         starts its own Jupyter server on a random free port.
 
         Args:
             agent_id: Unique agent identifier.
-            variant: The sandbox variant (``"eval"``, ``"jupyter"``,
-                or ``"jupyter"``).
+            variant: The sandbox variant (``"eval"`` or ``"jupyter"``).
             env_vars: Environment variables to inject into the sandbox
                 after it starts.
 

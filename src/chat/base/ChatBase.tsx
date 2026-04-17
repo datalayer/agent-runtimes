@@ -62,7 +62,10 @@ import {
   useSandbox,
 } from '../../hooks';
 import { useAgentRuntimeWebSocket } from '../../hooks/useAgentRuntimes';
-import { agentRuntimeStore } from '../../stores/agentRuntimeStore';
+import {
+  agentRuntimeStore,
+  useAgentRuntimeWsState,
+} from '../../stores/agentRuntimeStore';
 import { ChatBaseHeader } from '../header/ChatHeaderBase';
 import { ChatEmptyState } from '../display/EmptyState';
 import { PoweredByTag } from '../display/PoweredByTag';
@@ -328,6 +331,7 @@ function ChatBaseInner({
   >(new Map());
   // Note: legacy _enabledTools for backend-defined tools from config query
   const [_enabledTools, setEnabledTools] = useState<string[]>([]);
+  const wsState = useAgentRuntimeWsState();
 
   // ---- Data queries ----
   const configQuery = useConfig(
@@ -633,13 +637,17 @@ function ChatBaseInner({
       setDisplayItems([]);
       toolCallsRef.current.clear();
       if (!runtimeId) return;
-    } else {
-      return;
     }
 
+    if (!runtimeId) return;
+
     const store = useConversationStore.getState();
+    const currentlyFetching = store.isFetching(runtimeId);
 
     if (!store.needsFetch(runtimeId)) {
+      if (currentlyFetching) {
+        return;
+      }
       const storedMessages = store.getMessages(runtimeId);
       if (storedMessages.length > 0) {
         setDisplayItems(storedMessages);
@@ -675,7 +683,13 @@ function ChatBaseInner({
 
     // Ask the monitoring websocket for a fresh snapshot and wait briefly
     // for `fullContext.messages` to arrive.
-    agentRuntimeStore.getState().requestRefresh();
+    const refreshRequested = agentRuntimeStore.getState().requestRefresh();
+    if (!refreshRequested) {
+      // Socket not ready yet; allow a later retry (e.g. when wsState changes).
+      store.setFetching(runtimeId, false);
+      setHistoryLoaded(true);
+      return;
+    }
 
     let resolved = false;
     const unsubscribe = agentRuntimeStore.subscribe(
@@ -699,14 +713,16 @@ function ChatBaseInner({
       }
       resolved = true;
       unsubscribe();
-      applyMessages([]);
+      // Do not mark as fetched on timeout; keep it retryable for late WS snapshots.
+      store.setFetching(runtimeId, false);
+      setHistoryLoaded(true);
     }, 2000);
 
     return () => {
       window.clearTimeout(timeout);
       unsubscribe();
     };
-  }, [runtimeId, historyEndpoint, protocol?.agentId]);
+  }, [runtimeId, historyEndpoint, protocol?.agentId, wsState]);
 
   // Keep in-memory store in sync with displayItems
   useEffect(() => {

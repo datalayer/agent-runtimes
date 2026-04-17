@@ -263,7 +263,7 @@ def create_codemode_toolset(
         shared_sandbox: Optional shared sandbox for state persistence
         mcp_proxy_url: Optional MCP proxy URL for Jupyter/remote execution
         enable_discovery_tools: Whether to enable discovery tools (default: True)
-        sandbox_variant: Sandbox variant ('eval', 'jupyter', 'jupyter').
+        sandbox_variant: Sandbox variant ('eval', 'jupyter').
             If None, reads from the CodeSandboxManager's current config.
 
     Returns:

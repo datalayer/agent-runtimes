@@ -1102,7 +1102,6 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
             <Select.Option value="">Default</Select.Option>
             <Select.Option value="eval">eval</Select.Option>
             <Select.Option value="jupyter">jupyter</Select.Option>
-            <Select.Option value="jupyter">jupyter</Select.Option>
           </Select>
         </FormControl>
       </Box>

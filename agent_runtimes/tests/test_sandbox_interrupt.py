@@ -3,7 +3,11 @@
 
 """Tests for sandbox interrupt and execution status features."""
 
+import sys
+import types
 from typing import Any
+
+import pytest
 
 from agent_runtimes.services.code_sandbox_manager import (
     CodeSandboxManager,
@@ -98,3 +102,43 @@ class TestSandboxStatusEndpoint:
 
         status = SandboxStatus(variant="eval")
         assert status.is_executing is False
+
+
+class TestCodeSandboxManagerSidecarGuard:
+    """Tests for sidecar-specific sandbox safety behavior."""
+
+    def test_jupyter_without_url_raises_in_sidecar(self, monkeypatch: Any) -> None:
+        manager = CodeSandboxManager()
+        manager.configure(variant="jupyter", jupyter_url=None)
+        monkeypatch.setenv("DATALAYER_RUNTIME_JUPYTER_SIDECAR", "true")
+
+        with pytest.raises(
+            ValueError,
+            match="requires jupyter_url",
+        ):
+            manager._create_sandbox()
+
+    def test_jupyter_without_url_allowed_outside_sidecar(
+        self, monkeypatch: Any
+    ) -> None:
+        manager = CodeSandboxManager()
+        manager.configure(variant="jupyter", jupyter_url=None)
+        monkeypatch.delenv("DATALAYER_RUNTIME_JUPYTER_SIDECAR", raising=False)
+
+        fake_package = types.ModuleType("code_sandboxes")
+        fake_package.__path__ = []
+        fake_module = types.ModuleType("code_sandboxes.jupyter_sandbox")
+
+        class DummyJupyterSandbox:
+            pass
+
+        fake_module.JupyterSandbox = DummyJupyterSandbox
+        monkeypatch.setitem(sys.modules, "code_sandboxes", fake_package)
+        monkeypatch.setitem(
+            sys.modules,
+            "code_sandboxes.jupyter_sandbox",
+            fake_module,
+        )
+
+        sandbox = manager._create_sandbox()
+        assert isinstance(sandbox, DummyJupyterSandbox)

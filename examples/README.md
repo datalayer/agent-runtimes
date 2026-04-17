@@ -9,7 +9,7 @@ This directory contains practical examples demonstrating how to use the Agent Ru
 On the main page, you’ll find an example gallery (cards) that break things down into practical building blocks:
 
 • UX patterns (aka GenUI) with protocols like A2UI and AG-UI
-• Interactive or triggerd workflows
+• Interactive or triggered workflows
 • Agent Identity and Controls with guardrails, monitoring, tool approvals
 • Programmatic tooling with Sandbox and Codemode for MCP and Skills
 • Outputs and Notifications

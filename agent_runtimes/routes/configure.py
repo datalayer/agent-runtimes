@@ -806,7 +806,7 @@ async def sandbox_status_ws(websocket: WebSocket, agent_id: str | None = None) -
     Message format (server → client)::
 
         {
-            "variant": "eval" | "jupyter" | "jupyter" | "unavailable",
+            "variant": "eval" | "jupyter" | "unavailable",
             "sandbox_running": true/false,
             "is_executing": true/false,
             "jupyter_url": "..." | null

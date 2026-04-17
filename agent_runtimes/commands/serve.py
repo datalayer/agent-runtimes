@@ -210,8 +210,7 @@ def serve_server(
                               with a shared volume, set to a path accessible by both containers.
         skills_folder: Folder for agent skills. When using Jupyter sandbox with a shared
                       volume, set to a path accessible by both containers.
-        sandbox_variant: Code sandbox variant to use ('eval', 'jupyter', or
-                           'jupyter'). When 'jupyter', a Jupyter server is started
+        sandbox_variant: Code sandbox variant to use ('eval' or 'jupyter'). When 'jupyter', a Jupyter server is started
                            per agent via code_sandboxes.
         protocol: Transport protocol to use (ag-ui, vercel-ai, vercel-ai-jupyter, a2a)
         find_free_port_flag: If True, find a free port starting from the given port

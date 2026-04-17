@@ -1168,10 +1168,10 @@ All executors automatically check the identity context and inject tokens:
 
 ```python
 from agent_skills import SandboxExecutor
-from code_sandboxes.eval_sandbox import LocalEvalSandbox
+from code_sandboxes.eval_sandbox import EvalSandbox
 
 # Create and start the sandbox
-sandbox = LocalEvalSandbox()
+sandbox = EvalSandbox()
 sandbox.start()
 
 # Create executor - identity context is automatically used
