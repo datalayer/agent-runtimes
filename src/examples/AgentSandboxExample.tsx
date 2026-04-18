@@ -132,6 +132,9 @@ const AgentSandboxInner: React.FC<{ onLogout: () => void }> = ({
 
   // ── Sandbox variant toggle ──
   const [variant, setVariant] = useState<SandboxVariant>('eval');
+  const [pendingVariant, setPendingVariant] = useState<SandboxVariant | null>(
+    null,
+  );
   const [variantSwitching, setVariantSwitching] = useState(false);
   const [lastSwitch, setLastSwitch] = useState<LastSwitchInfo | null>(null);
 
@@ -327,6 +330,7 @@ const AgentSandboxInner: React.FC<{ onLogout: () => void }> = ({
     async (newVariant: SandboxVariant) => {
       if (newVariant === variant) return;
       setVariantSwitching(true);
+      setPendingVariant(newVariant);
       try {
         // Keep codemode active, then reconfigure sandbox manager variant.
         addLog('sent', 'POST /configure/codemode/toggle {enabled:true}');
@@ -400,6 +404,7 @@ const AgentSandboxInner: React.FC<{ onLogout: () => void }> = ({
           error instanceof Error ? error.message : 'Failed to switch variant',
         );
       } finally {
+        setPendingVariant(null);
         setVariantSwitching(false);
       }
     },
@@ -481,6 +486,25 @@ const AgentSandboxInner: React.FC<{ onLogout: () => void }> = ({
     () => deriveAggregate(sandboxStatus),
     [sandboxStatus],
   );
+  const displayedVariant = pendingVariant ?? variant;
+  const isTransitionLocked = variantSwitching;
+  // Always use the example's authoritative variant (pending or confirmed)
+  // merged with the live WebSocket execution data.  The WS status may lag
+  // behind after a configure+restart, so we never rely on its `variant` field.
+  const chatSandboxStatus = useMemo<SandboxWsStatus | null>(() => {
+    if (sandboxStatus) {
+      return {
+        ...sandboxStatus,
+        variant: displayedVariant,
+      };
+    }
+    // No WS status yet — construct an optimistic placeholder.
+    return {
+      variant: displayedVariant,
+      sandbox_running: true,
+      is_executing: false,
+    };
+  }, [displayedVariant, sandboxStatus]);
   const statusColor = SANDBOX_STATUS_COLORS[aggregate];
   const statusLabel = SANDBOX_STATUS_LABELS[aggregate];
 
@@ -566,6 +590,10 @@ const AgentSandboxInner: React.FC<{ onLogout: () => void }> = ({
           <Text sx={{ fontSize: 0, color: 'fg.muted' }}>{statusLabel}</Text>
         </Box>
         <Text sx={{ fontSize: 0, color: 'fg.muted', mt: 1, display: 'block' }}>
+          Active variant: {displayedVariant}
+          {pendingVariant ? ' (switching...)' : ''}
+        </Text>
+        <Text sx={{ fontSize: 0, color: 'fg.muted', mt: 1, display: 'block' }}>
           Last switch:{' '}
           {lastSwitch
             ? `${lastSwitch.variant} at ${formatSwitchTime(lastSwitch.switchedAt)}`
@@ -590,7 +618,9 @@ const AgentSandboxInner: React.FC<{ onLogout: () => void }> = ({
         >
           <Box sx={{ mb: 1 }}>
             <Text sx={{ fontWeight: 600 }}>variant: </Text>
-            <Text>{sandboxStatus.variant}</Text>
+            <Text>
+              {pendingVariant ? displayedVariant : sandboxStatus.variant}
+            </Text>
           </Box>
           <Box sx={{ mb: 1 }}>
             <Text sx={{ fontWeight: 600 }}>sandbox_running: </Text>
@@ -625,7 +655,7 @@ const AgentSandboxInner: React.FC<{ onLogout: () => void }> = ({
         <Button
           size="small"
           variant="danger"
-          disabled={aggregate !== 'executing'}
+          disabled={aggregate !== 'executing' || isTransitionLocked}
           onClick={sendInterrupt}
           leadingVisual={StopIcon}
           block
@@ -667,6 +697,7 @@ const AgentSandboxInner: React.FC<{ onLogout: () => void }> = ({
           <Button
             size="small"
             variant="invisible"
+            disabled={isTransitionLocked}
             onClick={() => setWsLog([])}
             sx={{ fontSize: 0, px: 1 }}
           >
@@ -756,75 +787,95 @@ const AgentSandboxInner: React.FC<{ onLogout: () => void }> = ({
 
       <Box sx={{ flex: 1, minHeight: 0, display: 'flex' }}>
         <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Chat
-            protocol="vercel-ai"
-            baseUrl={agentBaseUrl}
-            agentId={agentId}
-            authToken={chatAuthToken}
-            title="Sandbox Agent"
-            placeholder="Ask the agent to write and run code…"
-            showHeader={true}
-            showNewChatButton={true}
-            showClearButton={false}
-            showTokenUsage={true}
-            autoFocus
-            height="100%"
-            runtimeId={agentId}
-            historyEndpoint={`${agentBaseUrl}/api/v1/history`}
-            headerActions={
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <SegmentedControl
-                  aria-label="Sandbox variant"
-                  size="small"
-                  onChange={index =>
-                    void switchVariant(index === 0 ? 'eval' : 'jupyter')
-                  }
-                >
-                  <SegmentedControl.Button
-                    selected={variant === 'eval'}
-                    leadingIcon={TerminalIcon}
+          <Box sx={{ position: 'relative', height: '100%' }}>
+            <Chat
+              protocol="vercel-ai"
+              baseUrl={agentBaseUrl}
+              agentId={agentId}
+              authToken={chatAuthToken}
+              title="Sandbox Agent"
+              placeholder="Ask the agent to write and run code…"
+              showHeader={true}
+              showNewChatButton={true}
+              showClearButton={false}
+              showTokenUsage={true}
+              autoFocus
+              height="100%"
+              runtimeId={agentId}
+              historyEndpoint={`${agentBaseUrl}/api/v1/history`}
+              headerActions={
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <SegmentedControl
+                    aria-label="Sandbox variant"
+                    size="small"
+                    onChange={index => {
+                      if (isTransitionLocked) return;
+                      void switchVariant(index === 0 ? 'eval' : 'jupyter');
+                    }}
                   >
-                    eval
-                  </SegmentedControl.Button>
-                  <SegmentedControl.Button
-                    selected={variant === 'jupyter'}
-                    leadingIcon={CodeIcon}
+                    <SegmentedControl.Button
+                      selected={displayedVariant === 'eval'}
+                      leadingIcon={TerminalIcon}
+                      disabled={isTransitionLocked}
+                    >
+                      eval
+                    </SegmentedControl.Button>
+                    <SegmentedControl.Button
+                      selected={displayedVariant === 'jupyter'}
+                      leadingIcon={CodeIcon}
+                      disabled={isTransitionLocked}
+                    >
+                      jupyter
+                    </SegmentedControl.Button>
+                  </SegmentedControl>
+                  {variantSwitching && <Spinner size="small" />}
+                  {token && <UserBadge token={token} variant="small" />}
+                  <Button
+                    size="small"
+                    variant="invisible"
+                    onClick={onLogout}
+                    leadingVisual={SignOutIcon}
+                    sx={{ color: 'fg.muted' }}
+                    disabled={isTransitionLocked}
                   >
-                    jupyter
-                  </SegmentedControl.Button>
-                </SegmentedControl>
-                {variantSwitching && <Spinner size="small" />}
-                {token && <UserBadge token={token} variant="small" />}
-                <Button
-                  size="small"
-                  variant="invisible"
-                  onClick={onLogout}
-                  leadingVisual={SignOutIcon}
-                  sx={{ color: 'fg.muted' }}
-                >
-                  Sign out
-                </Button>
-              </Box>
-            }
-            suggestions={[
-              {
-                title: 'Run some Python',
-                message:
-                  'Write a Python script that computes the first 20 Fibonacci numbers and prints them.',
-              },
-              {
-                title: 'Generate a plot',
-                message:
-                  'Write Python code to generate a matplotlib bar chart of the top 5 programming languages by popularity, and save it to chart.png.',
-              },
-              {
-                title: 'Long-running task',
-                message:
-                  'Write Python code that counts from 1 to 30 with a 1-second sleep between each number, printing each one.',
-              },
-            ]}
-            submitOnSuggestionClick
-          />
+                    Sign out
+                  </Button>
+                </Box>
+              }
+              suggestions={[
+                {
+                  title: 'Run some Python',
+                  message:
+                    'Write a Python script that computes the first 20 Fibonacci numbers and prints them.',
+                },
+                {
+                  title: 'Generate a plot',
+                  message:
+                    'Write Python code to generate a matplotlib bar chart of the top 5 programming languages by popularity, and save it to chart.png.',
+                },
+                {
+                  title: 'Long-running task',
+                  message:
+                    'Write Python code that counts from 1 to 30 with a 1-second sleep between each number, printing each one.',
+                },
+              ]}
+              submitOnSuggestionClick
+              sandboxStatusData={chatSandboxStatus}
+            />
+
+            {isTransitionLocked && (
+              <Box
+                sx={{
+                  position: 'absolute',
+                  inset: 0,
+                  bg: 'canvas.default',
+                  opacity: 0.35,
+                  zIndex: 2,
+                  cursor: 'wait',
+                }}
+              />
+            )}
+          </Box>
         </Box>
 
         {sidebar}

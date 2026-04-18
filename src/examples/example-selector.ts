@@ -15,12 +15,26 @@ export interface ExampleEntry {
   loader: ExampleLoader;
 }
 
+const DISPLAY_NAME_EXCEPTIONS: [RegExp, string][] = [
+  [/\bAg Ui\b/g, 'AG-UI'],
+  [/\bA2 Ui\b/g, 'A2UI'],
+  [/\bCopilot Kit\b/g, 'CopilotKit'],
+  [/\bGen Ui\b/g, 'Gen UI'],
+  [/\bM C P\b/g, 'MCP'],
+  [/\bOtel\b/g, 'OTEL'],
+  [/\bAgent Specs\b/g, 'Agentspecs'],
+];
+
 function humanizeExampleName(name: string): string {
-  return name
+  let result = name
     .replace(/Example$/, '')
     .replace(/([A-Z])/g, ' $1')
     .replace(/^\s+/, '')
     .trim();
+  for (const [pattern, replacement] of DISPLAY_NAME_EXCEPTIONS) {
+    result = result.replace(pattern, replacement);
+  }
+  return result;
 }
 
 function inferTags(id: string): string[] {
@@ -116,8 +130,8 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
     'AG-UI tool-based generative UI example.',
   ),
   makeEntry(
-    'AgentSpecExample',
-    () => import('./AgentSpecExample'),
+    'AgentSpecsExample',
+    () => import('./AgentSpecsExample'),
     'Configure and run agents from specs and transports.',
   ),
   makeEntry(

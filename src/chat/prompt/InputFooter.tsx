@@ -31,6 +31,7 @@ import type {
   MCPServerConfig,
   McpToolsetsStatusResponse,
   ModelConfig,
+  SandboxWsStatus,
   SkillInfo,
 } from '../../types';
 
@@ -98,6 +99,8 @@ export interface InputToolbarProps {
   agentId?: string;
   /** Pre-fetched MCP status from WebSocket — bypasses REST polling */
   mcpStatusData?: McpToolsetsStatusResponse | null;
+  /** Optional sandbox status override for immediate indicator updates */
+  sandboxStatusData?: SandboxWsStatus | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -142,6 +145,7 @@ export function InputToolbar({
   authToken,
   agentId,
   mcpStatusData,
+  sandboxStatusData,
 }: InputToolbarProps) {
   // Show token usage when we have valid context data
   const hasContext =
@@ -167,6 +171,7 @@ export function InputToolbar({
               apiBase={apiBase}
               authToken={authToken}
               agentId={agentId}
+              statusOverride={sandboxStatusData}
             />
             <McpStatusIndicator
               apiBase={apiBase}

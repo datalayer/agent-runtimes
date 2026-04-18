@@ -273,6 +273,7 @@ export function Chat({
   hideMessagesAfterToolUI = false,
   contextSnapshot,
   mcpStatusData,
+  sandboxStatusData,
 }: ChatProps) {
   const [error, setError] = useState<string | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
@@ -597,6 +598,7 @@ export function Chat({
             hideMessagesAfterToolUI={hideMessagesAfterToolUI}
             contextSnapshot={contextSnapshot}
             mcpStatusData={mcpStatusData}
+            sandboxStatusData={sandboxStatusData}
           />
         </Box>
       </Box>

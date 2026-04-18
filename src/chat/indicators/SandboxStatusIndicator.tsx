@@ -42,6 +42,8 @@ export interface SandboxStatusIndicatorProps {
   authToken?: string;
   /** Agent ID to scope sandbox status to a specific agent. */
   agentId?: string;
+  /** Optional status override to update indicator immediately from parent UI. */
+  statusOverride?: SandboxWsStatus | null;
 }
 
 /* ── Helpers ───────────────────────────────────────────── */
@@ -115,6 +117,7 @@ export function SandboxStatusIndicator({
   apiBase,
   authToken,
   agentId,
+  statusOverride,
 }: SandboxStatusIndicatorProps) {
   useInjectKeyframes();
   const [status, setStatus] = useState<SandboxWsStatus | null>(null);
@@ -183,14 +186,18 @@ export function SandboxStatusIndicator({
   }, []);
 
   // ---- Derived display values ----
-  const aggregate = useMemo(() => deriveAggregate(status), [status]);
+  const effectiveStatus = statusOverride ?? status;
+  const aggregate = useMemo(
+    () => deriveAggregate(effectiveStatus),
+    [effectiveStatus],
+  );
 
   const tooltipText = useMemo(() => {
-    if (!status) return 'No Sandbox defined';
+    if (!effectiveStatus) return 'No Sandbox defined';
     const label = SANDBOX_STATUS_LABELS[aggregate];
-    const variant = status.variant;
+    const variant = effectiveStatus.variant;
     return `${label} (${variant})`;
-  }, [aggregate, status]);
+  }, [aggregate, effectiveStatus]);
 
   // Show a subtle gray dot when sandbox is unavailable.
   // The tooltip tells the user none is configured.
