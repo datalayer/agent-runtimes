@@ -758,14 +758,26 @@ DEMO_HOOKS_AGENT_SPEC_0_0_1 = AgentSpec(
     emoji="🪝",
     color="#0E7490",
     suggestions=[
-        "Describe what lifecycle hooks were executed for this runtime.",
-        "Call runtime_echo with text 'hooks-ready'.",
+        "Read the pre-hook marker file at /tmp/agent_runtimes_pre_hook_demo.txt using execute_code.",
+        "Print the hook_ran_at and hook_name variables that the pre-hook set in the sandbox.",
+        "Run execute_code to verify that the 'rich' package was installed by the pre-hook.",
+        "Show me all variables that the pre-hook defined in the sandbox namespace.",
     ],
-    welcome_message="I run pre and post lifecycle hooks in the sandbox. Ask me what happened during startup. ",
+    welcome_message="I ran a pre-hook before starting up. It installed the 'rich' package, wrote a marker file, and set several sandbox variables (hook_name, hook_ran_at, hook_env). Ask me to read the file or inspect those variables. ",
     welcome_notebook=None,
     welcome_document=None,
     sandbox_variant="eval",
-    system_prompt="""You are a demo assistant for lifecycle hooks. A startup hook wrote a marker file in /tmp. Explain what pre-hooks and post-hooks are and when they run.
+    system_prompt="""You are a demo assistant for lifecycle hooks.
+The sandbox pre-hook ran before this agent started and did three things:
+1. Installed the Python package 'rich' (pip install). 2. Wrote a UTF-8 marker file to /tmp/agent_runtimes_pre_hook_demo.txt
+   with the content: "pre-hook executed for demo-hooks at <timestamp>".
+3. Defined these Python variables in the sandbox namespace:
+   - hook_name    (str) - "demo-hooks:pre"
+   - hook_ran_at  (str) - ISO-8601 timestamp of when the pre-hook ran
+   - hook_env     (dict) - subset of os.environ captured at hook time
+
+A post-hook is also configured — it will write /tmp/agent_runtimes_post_hook_demo.txt when the agent shuts down.
+When the user asks about hooks, use execute_code to show concrete evidence: read the marker file, print the variables, or import rich to confirm it was installed.
 """,
     system_prompt_codemode_addons=None,
     goal=None,
@@ -785,12 +797,12 @@ DEMO_HOOKS_AGENT_SPEC_0_0_1 = AgentSpec(
     pre_hooks={
         "packages": ["rich"],
         "sandbox": [
-            "from pathlib import Path\nPath('/tmp/agent_runtimes_pre_hook_demo.txt').write_text(\n    'pre-hook executed for demo-hooks\\n',\n    encoding='utf-8',\n)\n"
+            'import datetime\nimport os\nfrom pathlib import Path\n\nhook_name = "demo-hooks:pre"\nhook_ran_at = datetime.datetime.now().isoformat()\nhook_env = {\n    k: os.environ[k]\n    for k in ("PATH", "HOME", "DATALAYER_CODE_SANDBOX_VARIANT")\n    if k in os.environ\n}\n\nPath(\'/tmp/agent_runtimes_pre_hook_demo.txt\').write_text(\n    f\'pre-hook executed for demo-hooks at {hook_ran_at}\\n\',\n    encoding=\'utf-8\',\n)\nprint(f"[demo-hooks] pre-hook done: hook_ran_at={hook_ran_at!r}")\n'
         ],
     },
     post_hooks={
         "sandbox": [
-            "from pathlib import Path\nPath('/tmp/agent_runtimes_post_hook_demo.txt').write_text(\n    'post-hook executed for demo-hooks\\n',\n    encoding='utf-8',\n)\n"
+            "import datetime\nfrom pathlib import Path\n\npost_ran_at = datetime.datetime.now().isoformat()\nPath('/tmp/agent_runtimes_post_hook_demo.txt').write_text(\n    f'post-hook executed for demo-hooks at {post_ran_at}\\n',\n    encoding='utf-8',\n)\nprint(f\"[demo-hooks] post-hook done: post_ran_at={post_ran_at!r}\")\n"
         ]
     },
     parameters=None,

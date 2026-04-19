@@ -15,6 +15,55 @@ Agent Runtimes provides a comprehensive set of React hooks for building AI agent
 | **Datalayer Platform** | `useAIAgents`, `useNotebookAgents` | Datalayer platform integration |
 | **Identity** | `useIdentity` | OAuth identity management |
 
+## Lifecycle Hooks (Agent Specs)
+
+In addition to React hooks, Agent Runtimes also supports **agent lifecycle hooks**
+defined in an Agent Spec (`pre_hooks`, `post_hooks`). These run in the sandbox
+runtime lifecycle, not in the browser.
+
+### What lifecycle hooks do
+
+- `pre_hooks.packages`: Install Python packages before the agent starts.
+- `pre_hooks.sandbox`: Run Python setup code before first prompt handling.
+- `post_hooks.sandbox`: Run Python teardown/finalization code when the agent stops.
+
+### Example
+
+```yaml
+id: demo-hooks
+sandbox_variant: eval
+
+pre_hooks:
+  packages:
+    - rich
+  sandbox:
+    - |
+      import datetime
+      hook_name = "demo-hooks:pre"
+      hook_ran_at = datetime.datetime.now().isoformat()
+
+post_hooks:
+  sandbox:
+    - |
+      from pathlib import Path
+      Path('/tmp/post_hook_done.txt').write_text('done\n', encoding='utf-8')
+```
+
+### Execution order
+
+1. Sandbox is created (`eval` or `jupyter`).
+2. `pre_hooks.packages` are installed.
+3. `pre_hooks.sandbox` scripts run.
+4. Agent is registered and begins serving requests.
+5. On shutdown, `post_hooks.sandbox` scripts run.
+
+### Sandbox vs Codemode
+
+- `sandbox_variant` enables sandbox-backed execution and lifecycle hooks.
+- `enable_codemode` enables MCP discovery/programmatic composition tools.
+- `execute_code` is available with sandbox-backed execution, even when codemode
+  discovery tools are not enabled.
+
 ---
 
 ## Chat Component System Hooks

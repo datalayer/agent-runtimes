@@ -12,6 +12,14 @@ Agent Runtimes exposes a comprehensive REST API for managing agents, executing p
 http://localhost:8765/api/v1
 ```
 
+## WebSocket Base URL
+
+For WebSocket endpoints, switch from `http://` to `ws://` (or `wss://` in TLS environments).
+
+```text
+ws://localhost:8765/api/v1
+```
+
 :::note URL Convention - Trailing Slashes
 Most API endpoints should be called **without trailing slashes**. However, **mounted protocol endpoints require trailing slashes**:
 
@@ -429,6 +437,59 @@ curl http://localhost:8000/api/v1/agents/sandbox/status
 | `jupyter_token_set` | boolean | Whether a Jupyter token is configured |
 | `sandbox_running` | boolean | Whether a sandbox instance is currently active |
 
+#### Sandbox Status WebSocket
+
+```http
+GET /api/v1/configure/sandbox/ws?agent_id={agent_id}
+```
+
+Streams sandbox execution state and accepts interrupt requests.
+
+**Server -> Client status message:**
+
+```json
+{
+  "variant": "eval",
+  "sandbox_running": true,
+  "is_executing": false,
+  "jupyter_url": null
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `variant` | string | `eval`, `jupyter`, `unavailable`, or `error` |
+| `sandbox_running` | boolean | Whether sandbox exists and is ready |
+| `is_executing` | boolean | Whether sandbox is currently executing code |
+| `jupyter_url` | string/null | Effective Jupyter URL when applicable |
+
+**Client -> Server interrupt request:**
+
+```json
+{
+  "action": "interrupt"
+}
+```
+
+**Server -> Client interrupt response:**
+
+```json
+{
+  "action": "interrupt",
+  "success": true
+}
+```
+
+On error:
+
+```json
+{
+  "action": "interrupt",
+  "success": false,
+  "error": "<reason>"
+}
+```
+
 #### Configure Sandbox
 
 ```http
@@ -648,6 +709,85 @@ Get detailed information about running MCP toolsets.
   }
 ]
 ```
+
+### Tool Approvals / Monitoring Stream (WebSocket)
+
+```http
+GET /api/v1/tool-approvals/ws?agent_id={agent_id}
+```
+
+Compatibility aliases are also available:
+
+- `/api/ai-agents/v1/tool-approvals/ws`
+- `/api/ai-agents/v1/ws`
+
+This stream sends a versioned envelope. The first message is always an
+`agent.snapshot`, followed by incremental events and refreshed snapshots.
+
+**Server -> Client envelope:**
+
+```json
+{
+  "version": "1.0",
+  "type": "agent.snapshot",
+  "agentId": "my-agent",
+  "timestamp": "2026-04-19T19:00:00Z",
+  "payload": {
+    "agentId": "my-agent",
+    "approvals": [],
+    "pendingApprovalCount": 0,
+    "contextSnapshot": null,
+    "costUsage": null,
+    "mcpStatus": null,
+    "codemodeStatus": null,
+    "fullContext": null
+  },
+  "event": "agent.snapshot",
+  "data": {
+    "agentId": "my-agent"
+  }
+}
+```
+
+**Client -> Server control messages:**
+
+```json
+{ "type": "request_snapshot" }
+```
+
+```json
+{ "type": "request_otel_flush" }
+```
+
+```json
+{
+  "type": "tool_approval_decision",
+  "approvalId": "approval-123",
+  "approved": true,
+  "note": "Looks safe"
+}
+```
+
+```json
+{ "type": "skill_enable", "skillId": "github" }
+```
+
+```json
+{ "type": "skill_disable", "skillId": "github" }
+```
+
+### ACP Protocol WebSocket
+
+```http
+GET /api/v1/acp/ws/{agent_id}
+```
+
+Bidirectional ACP transport over WebSocket. This endpoint expects ACP message
+objects (for example `initialize`, `session/new`, `session/prompt`, etc.) and
+returns ACP-compliant responses/events.
+
+If `{agent_id}` is unknown, the server sends an ACP error payload and closes
+the socket.
 
 ## MCP Servers
 
