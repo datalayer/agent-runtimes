@@ -45,3 +45,76 @@ The generated catalogs are written to:
 - src/config/skills.ts
 - src/config/envvars.ts
 - src/config/mcpServers.ts
+
+## What You Can Define in an Agent Spec
+
+Agent specs are not just static prompts. They define runtime behavior across UX,
+workflows, controls, programmatic tooling, and delivery.
+
+### UX Patterns and Protocol-Oriented Agents
+
+Use transport and UI configuration in specs to power GenUI experiences and
+protocol-targeted agents (AG-UI, A2UI, ACP, Vercel AI, A2A).
+
+### Interactive and Triggered Workflows
+
+Specs can run interactively (chat-driven) or as event/schedule-driven workflows.
+
+- `trigger`: Defines schedule/event execution and startup prompt behavior.
+- `pre_hooks` / `post_hooks`: Lifecycle setup/teardown in sandbox.
+
+### Identity and Controls
+
+Specs can include controls such as tool approval workflows, guardrail-oriented
+runtime behavior, and monitoring-friendly metadata (used by snapshots/streams).
+
+### Programmatic Tooling (Sandbox, Codemode, Skills)
+
+- `sandbox_variant`: Selects execution sandbox (`eval` or `jupyter`).
+- `enable_codemode` and codemode config: Enables MCP-discovery + programmatic composition.
+- `skills` / `enable_skills`: Enables reusable skill execution.
+
+### Outputs and Notifications
+
+For triggered workflows, specs can define delivery behavior:
+
+- `notifications`: Email/slack/webhook style delivery channels and recipients.
+- output-oriented fields in workflow specs to control the shape/destination of generated artifacts.
+
+### Real-Time Collaboration and Multi-Agent Teams
+
+Specs can represent single agents or orchestrated teams.
+
+- Team/orchestrator specs coordinate specialized workers.
+- Collaboration is surfaced through runtime transports (especially ACP/A2A).
+
+## Minimal Example Fragments
+
+```yaml
+id: generate-weekly-reports
+trigger:
+	type: schedule
+	cron: "0 8 * * MON"
+	prompt: "Run the scheduled workflow and produce the configured deliverable."
+
+sandbox_variant: jupyter
+
+skills:
+	- report-generation
+
+notifications:
+	email: "team@acme.com"
+```
+
+```yaml
+id: comprehensive-sales-analytics
+description: Multi-agent team with orchestrator + specialists
+
+mcp_servers:
+	- postgres
+	- slack
+
+skills:
+	- data-quality
+	- forecasting
+```

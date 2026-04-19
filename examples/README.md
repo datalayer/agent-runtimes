@@ -4,21 +4,6 @@
 
 # Agent Runtimes Examples
 
-This directory contains practical examples demonstrating how to use the Agent Runtimes functionality in various scenarios and frameworks.
-
-On the main page, you’ll find an example gallery (cards) that break things down into practical building blocks:
-
-• UX patterns (aka GenUI) with protocols like A2UI and AG-UI
-• Interactive or triggered workflows
-• Agent Identity and Controls with guardrails, monitoring, tool approvals
-• Programmatic tooling with Sandbox and Codemode for MCP and Skills
-• Outputs and Notifications
-• Real-time collaboration with users, subagents, and multi-agent teams
-• Custom agents built from Agentspecs
-• ...
-
-Each of these concerns deserves more than a one-off solution—they need deep, composable, and pluggable implementations.
-
 ## Integration Example
 
 ### Integration Example (`skill_codemode_example.py`)

@@ -55,6 +55,27 @@ Agent Runtimes solves the complexity of deploying AI agents by providing:
 - 💾 **Persistence**: DBOS support for durable execution
 - 🔒 **Context Optimization**: LLM context management
 
+## Example
+
+The examples will demonstrate how to use the Agent Runtimes functionality in various scenarios and frameworks.
+
+```bash
+make examples
+```
+
+On the main page, you’ll find an example gallery (cards) that break things down into practical building blocks:
+
+• UX patterns (aka GenUI) with protocols like A2UI and AG-UI
+• Interactive or triggered workflows
+• Agent Identity and Controls with guardrails, monitoring, tool approvals
+• Programmatic tooling with Sandbox and Codemode for MCP and Skills
+• Outputs and Notifications
+• Real-time collaboration with users, subagents, and multi-agent teams
+• Custom agents built from Agentspecs
+• ...
+
+Each of these concerns deserves more than a one-off solution—they need deep, composable, and pluggable implementations.
+
 ## Documentation
 
 The detailed guides for architecture, use cases, interactive chat, key concepts, and runtime configuration are now in Docusaurus docs:
