@@ -251,6 +251,9 @@ export const ANALYZE_CAMPAIGN_PERFORMANCE_AGENT_SPEC_0_0_1: AgentSpec = {
     slack: '#campaign-analytics',
   },
   memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  parameters: undefined,
 };
 
 export const ANALYZE_SUPPORT_TICKETS_AGENT_SPEC_0_0_1: AgentSpec = {
@@ -343,6 +346,9 @@ export const ANALYZE_SUPPORT_TICKETS_AGENT_SPEC_0_0_1: AgentSpec = {
     slack: '#support-analysis',
   },
   memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  parameters: undefined,
 };
 
 export const AUDIT_INVENTORY_LEVELS_AGENT_SPEC_0_0_1: AgentSpec = {
@@ -431,6 +437,9 @@ export const AUDIT_INVENTORY_LEVELS_AGENT_SPEC_0_0_1: AgentSpec = {
   authorizationPolicy: '',
   notifications: { email: 'linda.m@company.com', slack: '#inventory-ops' },
   memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  parameters: undefined,
 };
 
 export const AUTOMATE_REGULATORY_REPORTING_AGENT_SPEC_0_0_1: AgentSpec = {
@@ -543,6 +552,9 @@ export const AUTOMATE_REGULATORY_REPORTING_AGENT_SPEC_0_0_1: AgentSpec = {
     slack: '#regulatory-reporting',
   },
   memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  parameters: undefined,
 };
 
 export const CLASSIFY_ROUTE_EMAILS_AGENT_SPEC_0_0_1: AgentSpec = {
@@ -635,6 +647,9 @@ export const CLASSIFY_ROUTE_EMAILS_AGENT_SPEC_0_0_1: AgentSpec = {
   authorizationPolicy: undefined,
   notifications: { slack: '#email-routing', email: 'ops@acme.com' },
   memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  parameters: undefined,
 };
 
 export const COMPREHENSIVE_SALES_ANALYTICS_AGENT_SPEC_0_0_1: AgentSpec = {
@@ -713,6 +728,9 @@ export const COMPREHENSIVE_SALES_ANALYTICS_AGENT_SPEC_0_0_1: AgentSpec = {
   authorizationPolicy: undefined,
   notifications: { slack: '#sales-analytics', email: 'leadership@acme.com' },
   memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  parameters: undefined,
 };
 
 export const CRAWLER_AGENT_SPEC_0_0_1: AgentSpec = {
@@ -783,6 +801,9 @@ export const CRAWLER_AGENT_SPEC_0_0_1: AgentSpec = {
   authorizationPolicy: undefined,
   notifications: undefined,
   memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  parameters: undefined,
 };
 
 export const DATA_ACQUISITION_AGENT_SPEC_0_0_1: AgentSpec = {
@@ -857,6 +878,9 @@ export const DATA_ACQUISITION_AGENT_SPEC_0_0_1: AgentSpec = {
   authorizationPolicy: undefined,
   notifications: undefined,
   memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  parameters: undefined,
 };
 
 export const DEMO_FULL_AGENT_SPEC_0_0_1: AgentSpec = {
@@ -920,6 +944,65 @@ export const DEMO_FULL_AGENT_SPEC_0_0_1: AgentSpec = {
   authorizationPolicy: undefined,
   notifications: undefined,
   memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  parameters: undefined,
+};
+
+export const DEMO_HOOKS_AGENT_SPEC_0_0_1: AgentSpec = {
+  id: 'demo-hooks',
+  version: '0.0.1',
+  name: 'Demo Hooks Agent',
+  description: `Demonstrates pre-hooks and post-hooks executed in the sandbox lifecycle.`,
+  tags: ['demo', 'hooks', 'lifecycle'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-3-5-haiku-20241022-v1:0',
+  mcpServers: [],
+  skills: [],
+  tools: [TOOL_MAP['runtime-echo:0.0.1']],
+  frontendTools: [],
+  environmentName: 'ai-agents-env',
+  icon: 'zap',
+  emoji: '🪝',
+  color: '#0E7490',
+  suggestions: [
+    'Describe what lifecycle hooks were executed for this runtime.',
+    "Call runtime_echo with text 'hooks-ready'.",
+  ],
+  welcomeMessage:
+    'I run pre and post lifecycle hooks in the sandbox. Ask me what happened during startup.\n',
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'eval',
+  systemPrompt: `You are a demo assistant for lifecycle hooks. A startup hook wrote a marker file in /tmp. Explain what pre-hooks and post-hooks are and when they run.
+`,
+  systemPromptCodemodeAddons: undefined,
+  goal: undefined,
+  protocol: undefined,
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: undefined,
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: {
+    packages: ['rich'],
+    sandbox: [
+      "from pathlib import Path\nPath('/tmp/agent_runtimes_pre_hook_demo.txt').write_text(\n    'pre-hook executed for demo-hooks\\n',\n    encoding='utf-8',\n)\n",
+    ],
+  },
+  postHooks: {
+    sandbox: [
+      "from pathlib import Path\nPath('/tmp/agent_runtimes_post_hook_demo.txt').write_text(\n    'post-hook executed for demo-hooks\\n',\n    encoding='utf-8',\n)\n",
+    ],
+  },
+  parameters: undefined,
 };
 
 export const DEMO_ONE_TRIGGER_APPROVAL_AGENT_SPEC_0_0_1: AgentSpec = {
@@ -964,6 +1047,9 @@ export const DEMO_ONE_TRIGGER_APPROVAL_AGENT_SPEC_0_0_1: AgentSpec = {
   authorizationPolicy: undefined,
   notifications: undefined,
   memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  parameters: undefined,
 };
 
 export const DEMO_ONE_TRIGGER_AGENT_SPEC_0_0_1: AgentSpec = {
@@ -1011,6 +1097,79 @@ export const DEMO_ONE_TRIGGER_AGENT_SPEC_0_0_1: AgentSpec = {
   authorizationPolicy: undefined,
   notifications: undefined,
   memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  parameters: undefined,
+};
+
+export const DEMO_PARAMETERS_AGENT_SPEC_0_0_1: AgentSpec = {
+  id: 'demo-parameters',
+  version: '0.0.1',
+  name: 'Demo Parameters Agent',
+  description: `Demonstrates launch-time parameterization with JSON schema validation.`,
+  tags: ['demo', 'parameters', 'schema'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  mcpServers: [],
+  skills: [],
+  tools: [TOOL_MAP['runtime-echo:0.0.1']],
+  frontendTools: [],
+  environmentName: 'ai-agents-env',
+  icon: 'sliders',
+  emoji: '🎛️',
+  color: '#0F766E',
+  suggestions: [
+    'Use execute_code to print(demo_params) from the sandbox, then explain the value.',
+    "Use execute_code to print('demo_params =', demo_params).",
+  ],
+  welcomeMessage:
+    'This runtime was launched for project {{project}} and role {{role}}.\n',
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'jupyter',
+  systemPrompt: `You are an assistant dedicated to {{project}}. Assume the user is a {{role}} and answer in a {{tone}} style. A sandbox pre-hook set a Python variable named demo_params with value {{demo_params}}.
+`,
+  systemPromptCodemodeAddons: undefined,
+  goal: undefined,
+  protocol: undefined,
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: undefined,
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: {
+    sandbox: [
+      'demo_params = """{{demo_params}}"""\nprint(f"[demo-parameters] demo_params initialized: {demo_params!r}")\n',
+    ],
+  },
+  postHooks: undefined,
+  parameters: {
+    type: 'object',
+    properties: {
+      demo_params: { type: 'string', title: 'Demo Params', default: 'hello' },
+      project: { type: 'string', title: 'Project', default: 'Orbit' },
+      role: {
+        type: 'string',
+        title: 'Role',
+        enum: ['product analyst', 'engineering lead', 'support specialist'],
+        default: 'product analyst',
+      },
+      tone: {
+        type: 'string',
+        title: 'Tone',
+        enum: ['concise', 'detailed'],
+        default: 'concise',
+      },
+    },
+    required: ['project'],
+  },
 };
 
 export const DEMO_SIMPLE_AGENT_SPEC_0_0_1: AgentSpec = {
@@ -1060,6 +1219,9 @@ export const DEMO_SIMPLE_AGENT_SPEC_0_0_1: AgentSpec = {
   authorizationPolicy: undefined,
   notifications: undefined,
   memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  parameters: undefined,
 };
 
 export const END_OF_MONTH_SALES_PERFORMANCE_AGENT_SPEC_0_0_1: AgentSpec = {
@@ -1260,6 +1422,9 @@ export const END_OF_MONTH_SALES_PERFORMANCE_AGENT_SPEC_0_0_1: AgentSpec = {
   authorizationPolicy: '',
   notifications: { email: 'cro@company.com', slack: '#sales-performance' },
   memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  parameters: undefined,
 };
 
 export const EXTRACT_DATA_FROM_FILES_AGENT_SPEC_0_0_1: AgentSpec = {
@@ -1354,6 +1519,9 @@ export const EXTRACT_DATA_FROM_FILES_AGENT_SPEC_0_0_1: AgentSpec = {
   authorizationPolicy: undefined,
   notifications: { slack: '#data-extraction', email: 'data-team@acme.com' },
   memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  parameters: undefined,
 };
 
 export const FINANCIAL_VIZ_AGENT_SPEC_0_0_1: AgentSpec = {
@@ -1388,7 +1556,7 @@ export const FINANCIAL_VIZ_AGENT_SPEC_0_0_1: AgentSpec = {
     "Welcome! I'm the Financial Visualization Agent. I can help you analyze stock market data, track financial instruments, and create charts to visualize market trends.\n",
   welcomeNotebook: undefined,
   welcomeDocument: undefined,
-  sandboxVariant: 'eval',
+  sandboxVariant: 'local-eval',
   systemPrompt: `You are a financial market analyst with access to Alpha Vantage market data and chart generation tools. You can fetch stock prices, analyze trading volumes, create visualizations, and track market trends. Provide clear insights with relevant data points and generate charts to illustrate patterns.
 `,
   systemPromptCodemodeAddons: `## IMPORTANT: Be Honest About Your Capabilities NEVER claim to have tools or capabilities you haven't verified.
@@ -1424,6 +1592,9 @@ export const FINANCIAL_VIZ_AGENT_SPEC_0_0_1: AgentSpec = {
   authorizationPolicy: undefined,
   notifications: undefined,
   memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  parameters: undefined,
 };
 
 export const FINANCIAL_AGENT_SPEC_0_0_1: AgentSpec = {
@@ -1491,6 +1662,9 @@ export const FINANCIAL_AGENT_SPEC_0_0_1: AgentSpec = {
   authorizationPolicy: undefined,
   notifications: undefined,
   memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  parameters: undefined,
 };
 
 export const GENERATE_WEEKLY_REPORTS_AGENT_SPEC_0_0_1: AgentSpec = {
@@ -1598,6 +1772,9 @@ export const GENERATE_WEEKLY_REPORTS_AGENT_SPEC_0_0_1: AgentSpec = {
   authorizationPolicy: '',
   notifications: { email: 'robert.w@company.com', slack: '#weekly-reports' },
   memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  parameters: undefined,
 };
 
 export const GITHUB_AGENT_SPEC_0_0_1: AgentSpec = {
@@ -1668,6 +1845,9 @@ export const GITHUB_AGENT_SPEC_0_0_1: AgentSpec = {
   authorizationPolicy: undefined,
   notifications: undefined,
   memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  parameters: undefined,
 };
 
 export const INFORMATION_ROUTING_AGENT_SPEC_0_0_1: AgentSpec = {
@@ -1702,7 +1882,7 @@ export const INFORMATION_ROUTING_AGENT_SPEC_0_0_1: AgentSpec = {
     "Hi there! I'm the Information Routing Agent. I can help you manage documents in Google Drive and route information where it needs to go.\n",
   welcomeNotebook: undefined,
   welcomeDocument: undefined,
-  sandboxVariant: 'eval',
+  sandboxVariant: 'local-eval',
   systemPrompt: `You are an information routing specialist with access to Google Drive tools. You can find and manage documents in Drive and automate document workflows. Help users with document management efficiently. Do not use file extension when referring to Google Drive documents. Always use search_drive_files tool before using get_drive_file_content to find parent folder (using only name and mimeType in the query, no other fields!!!).
 `,
   systemPromptCodemodeAddons: `## IMPORTANT: Be Honest About Your Capabilities NEVER claim to have tools or capabilities you haven't verified.
@@ -1738,6 +1918,9 @@ export const INFORMATION_ROUTING_AGENT_SPEC_0_0_1: AgentSpec = {
   authorizationPolicy: undefined,
   notifications: undefined,
   memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  parameters: undefined,
 };
 
 export const MONITOR_SALES_KPIS_AGENT_SPEC_0_0_1: AgentSpec = {
@@ -1850,6 +2033,9 @@ export const MONITOR_SALES_KPIS_AGENT_SPEC_0_0_1: AgentSpec = {
   authorizationPolicy: '',
   notifications: { email: 'marcus.r@company.com', slack: '#sales-kpis' },
   memory: 'mem0',
+  preHooks: undefined,
+  postHooks: undefined,
+  parameters: undefined,
 };
 
 export const OPTIMIZE_DYNAMIC_PRICING_AGENT_SPEC_0_0_1: AgentSpec = {
@@ -1975,6 +2161,9 @@ export const OPTIMIZE_DYNAMIC_PRICING_AGENT_SPEC_0_0_1: AgentSpec = {
     slack: '#pricing-intelligence',
   },
   memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  parameters: undefined,
 };
 
 export const OPTIMIZE_GRID_OPERATIONS_AGENT_SPEC_0_0_1: AgentSpec = {
@@ -2088,6 +2277,9 @@ export const OPTIMIZE_GRID_OPERATIONS_AGENT_SPEC_0_0_1: AgentSpec = {
   authorizationPolicy: '',
   notifications: { email: 'grid-ops@company.com', slack: '#grid-operations' },
   memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  parameters: undefined,
 };
 
 export const PROCESS_CITIZEN_REQUESTS_AGENT_SPEC_0_0_1: AgentSpec = {
@@ -2210,6 +2402,9 @@ export const PROCESS_CITIZEN_REQUESTS_AGENT_SPEC_0_0_1: AgentSpec = {
     slack: '#citizen-services',
   },
   memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  parameters: undefined,
 };
 
 export const PROCESS_CLINICAL_TRIAL_DATA_AGENT_SPEC_0_0_1: AgentSpec = {
@@ -2333,6 +2528,9 @@ export const PROCESS_CLINICAL_TRIAL_DATA_AGENT_SPEC_0_0_1: AgentSpec = {
   authorizationPolicy: '',
   notifications: { email: 'clinical-ops@company.com', slack: '#clinical-data' },
   memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  parameters: undefined,
 };
 
 export const PROCESS_FINANCIAL_TRANSACTIONS_AGENT_SPEC_0_0_1: AgentSpec = {
@@ -2436,6 +2634,9 @@ export const PROCESS_FINANCIAL_TRANSACTIONS_AGENT_SPEC_0_0_1: AgentSpec = {
   authorizationPolicy: '',
   notifications: { email: 'david.t@company.com', slack: '#finance-ops' },
   memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  parameters: undefined,
 };
 
 export const SPATIAL_DATA_ANALYSIS_AGENT_SPEC_0_0_1: AgentSpec = {
@@ -2492,6 +2693,9 @@ export const SPATIAL_DATA_ANALYSIS_AGENT_SPEC_0_0_1: AgentSpec = {
   authorizationPolicy: undefined,
   notifications: undefined,
   memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  parameters: undefined,
 };
 
 export const SUMMARIZE_DOCUMENTS_AGENT_SPEC_0_0_1: AgentSpec = {
@@ -2589,6 +2793,9 @@ export const SUMMARIZE_DOCUMENTS_AGENT_SPEC_0_0_1: AgentSpec = {
   authorizationPolicy: undefined,
   notifications: { slack: '#document-summaries', email: 'team@acme.com' },
   memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  parameters: undefined,
 };
 
 export const SYNC_CRM_CONTACTS_AGENT_SPEC_0_0_1: AgentSpec = {
@@ -2678,6 +2885,9 @@ export const SYNC_CRM_CONTACTS_AGENT_SPEC_0_0_1: AgentSpec = {
   authorizationPolicy: '',
   notifications: { email: 'jennifer.c@company.com', slack: '#crm-sync' },
   memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  parameters: undefined,
 };
 
 // ============================================================================
@@ -2696,8 +2906,10 @@ export const AGENT_SPECS: Record<string, AgentSpec> = {
   crawler: CRAWLER_AGENT_SPEC_0_0_1,
   'data-acquisition': DATA_ACQUISITION_AGENT_SPEC_0_0_1,
   'demo-full': DEMO_FULL_AGENT_SPEC_0_0_1,
+  'demo-hooks': DEMO_HOOKS_AGENT_SPEC_0_0_1,
   'demo-one-trigger-approval': DEMO_ONE_TRIGGER_APPROVAL_AGENT_SPEC_0_0_1,
   'demo-one-trigger': DEMO_ONE_TRIGGER_AGENT_SPEC_0_0_1,
+  'demo-parameters': DEMO_PARAMETERS_AGENT_SPEC_0_0_1,
   'demo-simple': DEMO_SIMPLE_AGENT_SPEC_0_0_1,
   'end-of-month-sales-performance':
     END_OF_MONTH_SALES_PERFORMANCE_AGENT_SPEC_0_0_1,

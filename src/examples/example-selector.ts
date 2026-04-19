@@ -190,6 +190,11 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
     'Guardrails and safety checks for agent runs.',
   ),
   makeEntry(
+    'AgentHooksExample',
+    () => import('./AgentHooksExample'),
+    'Pre-hooks and post-hooks lifecycle execution example.',
+  ),
+  makeEntry(
     'AgentToolApprovalsExample',
     () => import('./AgentToolApprovalsExample'),
     'Tool approval workflows and manual decisions.',
@@ -233,6 +238,11 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
     'AgentOutputsExample',
     () => import('./AgentOutputsExample'),
     'Structured outputs and rendering patterns.',
+  ),
+  makeEntry(
+    'AgentParametersExample',
+    () => import('./AgentParametersExample'),
+    'Launch-time parameterized agent creation with JSON schema.',
   ),
   makeEntry(
     'AgentTriggersExample',

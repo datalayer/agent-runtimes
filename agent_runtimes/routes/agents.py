@@ -14,6 +14,7 @@ Provides REST API endpoints for:
 import asyncio
 import logging
 import os
+import re
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
@@ -72,6 +73,239 @@ _api_prefix = "/api/v1"
 # This preserves the separated system_prompt and system_prompt_codemode_addons
 # which are merged at agent creation time and lost in the running agent.
 _agent_specs: dict[str, dict[str, Any]] = {}
+
+_PARAM_TOKEN_PATTERNS = [
+    re.compile(r"\{\{\s*([a-zA-Z0-9_.-]+)\s*\}\}"),
+    re.compile(r"\$\{([a-zA-Z0-9_.-]+)\}"),
+]
+
+
+def _get_parameter_value(parameters: dict[str, Any], key: str) -> Any:
+    """Resolve a dot-delimited parameter key from launch parameters."""
+    current: Any = parameters
+    for part in key.split("."):
+        if not isinstance(current, dict) or part not in current:
+            return None
+        current = current[part]
+    return current
+
+
+def _render_value_with_parameters(value: Any, parameters: dict[str, Any]) -> Any:
+    """Recursively render string templates in values with launch parameters."""
+    if not parameters:
+        return value
+
+    if isinstance(value, str):
+        rendered = value
+        for pattern in _PARAM_TOKEN_PATTERNS:
+
+            def _replace(match: re.Match[str]) -> str:
+                key = match.group(1)
+                param_value = _get_parameter_value(parameters, key)
+                if param_value is None:
+                    return match.group(0)
+                if isinstance(param_value, (dict, list)):
+                    import json
+
+                    return json.dumps(param_value)
+                return str(param_value)
+
+            rendered = pattern.sub(_replace, rendered)
+        return rendered
+
+    if isinstance(value, list):
+        return [_render_value_with_parameters(v, parameters) for v in value]
+
+    if isinstance(value, dict):
+        return {
+            k: _render_value_with_parameters(v, parameters) for k, v in value.items()
+        }
+
+    return value
+
+
+def _apply_parameter_defaults(
+    schema: dict[str, Any], launch_parameters: dict[str, Any]
+) -> dict[str, Any]:
+    """Apply top-level JSON schema defaults to launch parameter values."""
+    if not isinstance(schema, dict):
+        return launch_parameters
+    if schema.get("type", "object") != "object":
+        return launch_parameters
+
+    properties = schema.get("properties")
+    if not isinstance(properties, dict):
+        return launch_parameters
+
+    merged = dict(launch_parameters)
+    for key, prop in properties.items():
+        if key in merged:
+            continue
+        if isinstance(prop, dict) and "default" in prop:
+            merged[key] = prop["default"]
+    return merged
+
+
+def _validate_parameters_against_schema(
+    schema: dict[str, Any],
+    value: Any,
+    path: str = "parameters",
+) -> None:
+    """Validate a subset of JSON schema keywords for launch parameters."""
+    if not isinstance(schema, dict):
+        return
+
+    expected_type = schema.get("type")
+    if isinstance(expected_type, list):
+        valid = False
+        last_error: Exception | None = None
+        for candidate in expected_type:
+            try:
+                _validate_parameters_against_schema(
+                    {**schema, "type": candidate}, value, path
+                )
+                valid = True
+                break
+            except ValueError as e:
+                last_error = e
+        if not valid and last_error is not None:
+            raise last_error
+        return
+
+    if expected_type == "object":
+        if not isinstance(value, dict):
+            raise ValueError(f"{path} must be an object")
+        properties = schema.get("properties", {})
+        required = schema.get("required", [])
+        if isinstance(required, list):
+            for key in required:
+                if key not in value:
+                    raise ValueError(f"{path}.{key} is required")
+        if isinstance(properties, dict):
+            for key, prop_schema in properties.items():
+                if key in value and isinstance(prop_schema, dict):
+                    _validate_parameters_against_schema(
+                        prop_schema,
+                        value[key],
+                        f"{path}.{key}",
+                    )
+
+    elif expected_type == "array":
+        if not isinstance(value, list):
+            raise ValueError(f"{path} must be an array")
+        item_schema = schema.get("items")
+        if isinstance(item_schema, dict):
+            for i, item in enumerate(value):
+                _validate_parameters_against_schema(
+                    item_schema,
+                    item,
+                    f"{path}[{i}]",
+                )
+
+    elif expected_type == "string":
+        if not isinstance(value, str):
+            raise ValueError(f"{path} must be a string")
+
+    elif expected_type == "boolean":
+        if not isinstance(value, bool):
+            raise ValueError(f"{path} must be a boolean")
+
+    elif expected_type == "integer":
+        if not isinstance(value, int) or isinstance(value, bool):
+            raise ValueError(f"{path} must be an integer")
+
+    elif expected_type == "number":
+        if not isinstance(value, (int, float)) or isinstance(value, bool):
+            raise ValueError(f"{path} must be a number")
+
+    enum_values = schema.get("enum")
+    if isinstance(enum_values, list) and enum_values and value not in enum_values:
+        raise ValueError(f"{path} must be one of: {enum_values}")
+
+
+def _normalize_hook_scripts(raw: Any) -> list[str]:
+    """Normalize hook script payloads to a list of Python code strings."""
+    if raw is None:
+        return []
+    if isinstance(raw, str):
+        return [raw]
+    if isinstance(raw, list):
+        return [str(item) for item in raw if str(item).strip()]
+    return []
+
+
+def _normalize_hook_packages(raw: Any) -> list[str]:
+    """Normalize hook package payloads to a list of pip package names."""
+    if raw is None:
+        return []
+    if isinstance(raw, str):
+        return [raw]
+    if isinstance(raw, list):
+        return [str(item) for item in raw if str(item).strip()]
+    return []
+
+
+async def _run_agent_hooks(
+    *,
+    agent_id: str,
+    phase: Literal["pre", "post"],
+    hooks: dict[str, Any] | None,
+    effective_variant: str,
+    preferred_sandbox: Any | None = None,
+    fail_on_error: bool,
+) -> None:
+    """Execute lifecycle hooks for an agent in its configured sandbox."""
+    if not isinstance(hooks, dict):
+        return
+
+    packages = _normalize_hook_packages(hooks.get("packages"))
+    sandbox_scripts = _normalize_hook_scripts(hooks.get("sandbox"))
+    if not packages and not sandbox_scripts:
+        return
+
+    try:
+        sandbox = preferred_sandbox
+        if sandbox is None:
+            from ..services.code_sandbox_manager import get_code_sandbox_manager
+
+            sandbox_manager = get_code_sandbox_manager()
+            if hasattr(sandbox_manager, "get_agent_sandbox"):
+                sandbox = sandbox_manager.get_agent_sandbox(agent_id)
+            if sandbox is None:
+                if effective_variant in {"eval", "jupyter"}:
+                    sandbox_manager.configure(variant=effective_variant)
+                sandbox = sandbox_manager.get_sandbox()
+
+        loop = asyncio.get_running_loop()
+
+        if packages:
+            logger.info(
+                "Running %s-hooks package install for '%s': %s",
+                phase,
+                agent_id,
+                packages,
+            )
+            await loop.run_in_executor(
+                None,
+                lambda: sandbox.install_packages(packages),
+            )
+
+        for script in sandbox_scripts:
+            logger.info("Running %s-hooks sandbox code for '%s'", phase, agent_id)
+            result = await loop.run_in_executor(
+                None,
+                lambda code=script: sandbox.run_code(code),
+            )
+            execution_ok = getattr(result, "execution_ok", True)
+            if not execution_ok:
+                execution_error = getattr(result, "execution_error", "Unknown error")
+                raise RuntimeError(str(execution_error))
+
+    except Exception as e:
+        message = f"Failed to run {phase}-hooks for agent '{agent_id}': {e}"
+        if fail_on_error:
+            raise HTTPException(status_code=500, detail=message) from e
+        logger.warning(message)
 
 
 def _resolve_writable_generated_path(path: str) -> str:
@@ -240,6 +474,78 @@ def _test_jupyter_sandbox(jupyter_sandbox_url: str) -> tuple[bool, str | None]:
         return False, f"Connection error: {str(e)}"
 
 
+def _build_sandbox_only_system_prompt(variant: str) -> str:
+    """
+    Build a system-prompt section that tells the LLM it has a sandbox available
+    *without* codemode (i.e. no ``execute_code`` tool).
+
+    Injected automatically when ``sandbox_variant`` is set but ``enable_codemode``
+    is not.  The sandbox can be used by skills (``run_skill_script``) and
+    pre-launch hooks, but the agent itself cannot call ``execute_code`` directly.
+
+    Args:
+        variant: The effective sandbox variant ('eval' or 'jupyter').
+
+    Returns:
+        A Markdown string suitable for appending to the system prompt.
+    """
+    variant_note = (
+        "The sandbox is a full Jupyter kernel — variables, imports, and installed "
+        "packages persist across calls."
+        if variant == "jupyter"
+        else "The sandbox executes Python in-process — state persists within the "
+             "same session."
+    )
+    return (
+        "## Sandbox\n"
+        "\n"
+        f"A persistent code sandbox ({variant!r} variant) is available. "
+        f"{variant_note}\n"
+        "\n"
+        "The sandbox is used automatically by skills — you do not call it directly.\n"
+        "- Variables set by pre-launch hooks are already defined in the sandbox.\n"
+        "- Skills can read, transform, and return results from sandbox state.\n"
+    )
+
+
+def _build_codemode_system_prompt(variant: str) -> str:
+    """
+    Build a system-prompt section that tells the LLM it has codemode tools
+    including ``execute_code``.
+
+    Injected automatically when ``enable_codemode`` is set but no explicit
+    ``system_prompt_codemode_addons`` was provided in the spec.
+
+    Args:
+        variant: The effective sandbox variant ('eval' or 'jupyter').
+
+    Returns:
+        A Markdown string suitable for appending to the system prompt.
+    """
+    variant_note = (
+        "The sandbox is a full Jupyter kernel — variables, imports, and installed "
+        "packages persist across calls."
+        if variant == "jupyter"
+        else "The sandbox executes Python in-process — state persists within the "
+             "same session."
+    )
+    return (
+        "## Sandbox Access (Codemode)\n"
+        "\n"
+        f"You have a persistent code sandbox ({variant!r} variant). "
+        f"{variant_note}\n"
+        "\n"
+        "Use **execute_code** to run Python directly in the sandbox. Key points:\n"
+        "- Variables set by pre-launch hooks are already defined — read them directly.\n"
+        "- Use `import os; print(dict(os.environ))` to inspect environment variables.\n"
+        "- Chain multiple operations in a single `execute_code` call to reduce round-trips.\n"
+        "- Print subsets/previews of large values rather than dumping everything.\n"
+        "\n"
+        "Available codemode tools: **list_servers**, **search_tools**, "
+        "**get_tool_details**, **execute_code**."
+    )
+
+
 def _build_codemode_toolset(
     request: "CreateAgentRequest",
     http_request: Request,
@@ -247,24 +553,23 @@ def _build_codemode_toolset(
     sandbox: Any | None = None,
     disable_mcp_servers: bool = False,
     sandbox_variant: str | None = None,
+    enable_discovery_tools: bool = True,
 ) -> Any:
     """
     Create a CodemodeToolset based on request flags and app configuration.
 
-    Follows the pattern from agent-codemode/examples/agent/agent_cli.py:
-    - Configures workspace, generated, and skills paths
-    - Disables discovery tools by default to reduce LLM calls
-    - Sets up proper CodeModeConfig with all required paths
+    When ``enable_discovery_tools=False`` the toolset exposes only
+    ``execute_code`` (sandbox-direct access) without the MCP discovery tools
+    (``list_servers``, ``search_tools``, ``get_tool_details``).  This is the
+    correct mode when a sandbox is configured but codemode is not enabled.
 
     Args:
         request: The CreateAgentRequest with configuration options.
         http_request: The FastAPI request object for accessing app state.
         sandbox: Optional pre-configured sandbox to share with other toolsets.
         sandbox_variant: Sandbox variant to pass to CodeModeConfig.
+        enable_discovery_tools: If False, only execute_code is exposed (no MCP tools).
     """
-    if not request.enable_codemode:
-        return None
-
     # Configure paths for codemode environment
     repo_root = Path(__file__).resolve().parents[2]
     workspace_path = getattr(
@@ -351,7 +656,7 @@ def _build_codemode_toolset(
         allow_direct_tool_calls=allow_direct,
         shared_sandbox=sandbox,
         mcp_proxy_url=mcp_proxy_url,
-        enable_discovery_tools=True,
+        enable_discovery_tools=enable_discovery_tools,
         status_change_callback=_notify_status_change,
         sandbox_variant=sandbox_variant,
     )
@@ -384,6 +689,8 @@ class McpServerSelection(BaseModel):
 
 class CreateAgentRequest(BaseModel):
     """Request body for creating a new agent."""
+
+    model_config = {"populate_by_name": True}
 
     name: str = Field(..., description="Agent name")
     description: str = Field(default="", description="Agent description")
@@ -457,6 +764,25 @@ class CreateAgentRequest(BaseModel):
         default=None,
         description="Optional complete agent spec payload forwarded by the UI. Used to prefill fields when creating from a library spec.",
     )
+    pre_hooks: dict[str, Any] | None = Field(
+        default=None,
+        alias="preHooks",
+        description="Optional pre-launch hooks override.",
+    )
+    post_hooks: dict[str, Any] | None = Field(
+        default=None,
+        alias="postHooks",
+        description="Optional post-stop hooks override.",
+    )
+    parameters: dict[str, Any] | None = Field(
+        default=None,
+        description="Optional JSON schema for launch parameters.",
+    )
+    agent_parameters: dict[str, Any] = Field(
+        default_factory=dict,
+        alias="agentParameters",
+        description="Launch-time parameter values validated against parameters JSON schema.",
+    )
 
 
 class CreateAgentResponse(BaseModel):
@@ -505,6 +831,7 @@ async def create_agent(
         )
 
     try:
+        library_spec: AgentSpec | None = None
         selected_mcp_servers_explicit = (
             "selected_mcp_servers" in request.model_fields_set
         )
@@ -532,8 +859,8 @@ async def create_agent(
         # If an agent_spec_id is provided, load the library spec and apply
         # its fields as defaults (request fields take precedence for overrides).
         if request.agent_spec_id:
-            spec = get_library_agent_spec(request.agent_spec_id)
-            if not spec:
+            library_spec = get_library_agent_spec(request.agent_spec_id)
+            if not library_spec:
                 raise HTTPException(
                     status_code=404,
                     detail=f"Agent spec '{request.agent_spec_id}' not found in library.",
@@ -544,70 +871,85 @@ async def create_agent(
             # Apply spec defaults — only override fields the caller did not set.
             if (
                 request.system_prompt == "You are a helpful AI assistant."
-                and spec.system_prompt
+                and library_spec.system_prompt
             ):
-                request.system_prompt = spec.system_prompt
+                request.system_prompt = library_spec.system_prompt
             # Goal/system_prompt consolidation: if no explicit system_prompt
             # was set and the spec has a goal, use goal as system_prompt.
             if (
                 request.system_prompt == "You are a helpful AI assistant."
-                and not spec.system_prompt
-                and spec.goal
+                and not library_spec.system_prompt
+                and library_spec.goal
             ):
-                request.system_prompt = spec.goal
-            if request.goal is None and spec.goal:
-                request.goal = spec.goal
+                request.system_prompt = library_spec.goal
+            if request.goal is None and library_spec.goal:
+                request.goal = library_spec.goal
             if (
                 request.system_prompt_codemode_addons is None
-                and spec.system_prompt_codemode_addons
+                and library_spec.system_prompt_codemode_addons
             ):
                 request.system_prompt_codemode_addons = (
-                    spec.system_prompt_codemode_addons
+                    library_spec.system_prompt_codemode_addons
                 )
-            if not request.skills and spec.skills and not caller_disabled_skills:
-                request.skills = spec.skills
-            if not request.tools and spec.tools and not caller_disabled_tools:
-                request.tools = spec.tools
-            if spec.system_prompt_codemode_addons and not request.enable_codemode:
+            if (
+                not request.skills
+                and library_spec.skills
+                and not caller_disabled_skills
+            ):
+                request.skills = library_spec.skills
+            if (
+                not request.tools
+                and library_spec.tools
+                and not caller_disabled_tools
+            ):
+                request.tools = library_spec.tools
+            if (
+                library_spec.system_prompt_codemode_addons
+                and not request.enable_codemode
+            ):
                 request.enable_codemode = True
-            if spec.skills and not request.enable_skills and not caller_disabled_skills:
+            if (
+                library_spec.skills
+                and not request.enable_skills
+                and not caller_disabled_skills
+            ):
                 request.enable_skills = True
-            if not request.description and spec.description:
-                request.description = spec.description
+            if not request.description and library_spec.description:
+                request.description = library_spec.description
             # Use the model from the spec if the request still has the default
-            if request.model == DEFAULT_MODEL.value and spec.model:
-                request.model = spec.model
+            if request.model == DEFAULT_MODEL.value and library_spec.model:
+                request.model = library_spec.model
             # Use the sandbox_variant from the spec if not set in the request
-            if not request.sandbox_variant and spec.sandbox_variant:
-                request.sandbox_variant = spec.sandbox_variant
+            if not request.sandbox_variant and library_spec.sandbox_variant:
+                request.sandbox_variant = library_spec.sandbox_variant
             # Apply protocol/transport from spec when request keeps default
-            if request.transport == "vercel-ai" and spec.protocol in {
+            if request.transport == "vercel-ai" and library_spec.protocol in {
                 "ag-ui",
                 "vercel-ai",
                 "acp",
                 "a2a",
             }:
-                request.transport = spec.protocol  # type: ignore[assignment]
+                request.transport = library_spec.protocol  # type: ignore[assignment]
             # Apply MCP servers from spec when not explicitly selected
             if (
                 not selected_mcp_servers_explicit
                 and not request.selected_mcp_servers
-                and spec.mcp_servers
+                and library_spec.mcp_servers
             ):
                 request.selected_mcp_servers = [
                     McpServerSelection(id=server.id, origin="config")
-                    for server in spec.mcp_servers
+                    for server in library_spec.mcp_servers
                 ]
                 # Register the full MCPServer configs from the spec so
                 # they are available for mcp_manager lookups (used by
                 # _build_codemode_toolset) and server startup resolution.
                 _mcp_mgr = get_mcp_manager()
-                for _srv in spec.mcp_servers:
+                for _srv in library_spec.mcp_servers:
                     if not _mcp_mgr.get_server(_srv.id):
                         _mcp_mgr.add_server(_srv)
             # Apply codemode defaults from spec codemode block
-            if isinstance(spec.codemode, dict):
-                codemode_cfg = spec.codemode
+            if isinstance(library_spec.codemode, dict):
+                codemode_cfg = library_spec.codemode
                 if not request.enable_codemode and bool(codemode_cfg.get("enabled")):
                     request.enable_codemode = True
                 if request.allow_direct_tool_calls is None:
@@ -624,6 +966,12 @@ async def create_agent(
                     )
                     if isinstance(reranker, bool):
                         request.enable_tool_reranker = reranker
+
+        resolved_pre_hooks = library_spec.pre_hooks if library_spec else None
+        resolved_post_hooks = library_spec.post_hooks if library_spec else None
+        parameter_schema: dict[str, Any] | None = (
+            library_spec.parameters if library_spec else None
+        )
 
         # Apply defaults from forwarded full spec payload when request fields
         # are still unset/defaulted.
@@ -706,6 +1054,57 @@ async def create_agent(
                     )
                     if isinstance(reranker, bool):
                         request.enable_tool_reranker = reranker
+
+            forwarded_pre_hooks = _spec_value("preHooks", "pre_hooks")
+            if isinstance(forwarded_pre_hooks, dict):
+                resolved_pre_hooks = forwarded_pre_hooks
+
+            forwarded_post_hooks = _spec_value("postHooks", "post_hooks")
+            if isinstance(forwarded_post_hooks, dict):
+                resolved_post_hooks = forwarded_post_hooks
+
+            forwarded_parameters = _spec_value("parameters")
+            if isinstance(forwarded_parameters, dict):
+                parameter_schema = forwarded_parameters
+
+        if isinstance(request.pre_hooks, dict):
+            resolved_pre_hooks = request.pre_hooks
+        if isinstance(request.post_hooks, dict):
+            resolved_post_hooks = request.post_hooks
+        if isinstance(request.parameters, dict):
+            parameter_schema = request.parameters
+
+        launch_parameters = dict(request.agent_parameters or {})
+        if parameter_schema:
+            launch_parameters = _apply_parameter_defaults(parameter_schema, launch_parameters)
+            try:
+                _validate_parameters_against_schema(parameter_schema, launch_parameters)
+            except ValueError as e:
+                raise HTTPException(status_code=422, detail=str(e)) from e
+
+        if launch_parameters:
+            request.description = _render_value_with_parameters(
+                request.description, launch_parameters
+            )
+            request.system_prompt = _render_value_with_parameters(
+                request.system_prompt, launch_parameters
+            )
+            request.system_prompt_codemode_addons = _render_value_with_parameters(
+                request.system_prompt_codemode_addons,
+                launch_parameters,
+            )
+            request.goal = _render_value_with_parameters(
+                request.goal,
+                launch_parameters,
+            )
+            resolved_pre_hooks = _render_value_with_parameters(
+                resolved_pre_hooks,
+                launch_parameters,
+            )
+            resolved_post_hooks = _render_value_with_parameters(
+                resolved_post_hooks,
+                launch_parameters,
+            )
 
         # Build list of non-MCP toolsets (skills, codemode, etc.)
         # MCP toolsets will be dynamically fetched at run time by the adapter
@@ -847,6 +1246,19 @@ async def create_agent(
                     agent_id,
                 )
 
+        # When codemode is enabled but no custom addons were provided, inject a
+        # standard system-prompt section so the LLM knows about execute_code and
+        # the other codemode tools.
+        if request.enable_codemode and request.system_prompt_codemode_addons is None:
+            request.system_prompt_codemode_addons = _build_codemode_system_prompt(
+                effective_variant
+            )
+            logger.info(
+                "Auto-injected codemode system prompt for agent '%s' (variant=%s)",
+                agent_id,
+                effective_variant,
+            )
+
         # When a sandbox variant is explicitly requested, eagerly ensure a sandbox
         # is configured and started for that variant even if no MCP servers are
         # selected. This guarantees that sandbox status/WS reflects availability.
@@ -910,22 +1322,27 @@ async def create_agent(
                         detail=f"Failed to initialize sandbox variant '{effective_variant}': {str(e)}",
                     )
 
-        # Create shared sandbox for codemode and/or skills toolsets
-        # This ensures state persistence between execute_code and skill script executions
+        # Create shared sandbox for codemode and/or skills toolsets.
+        # This ensures state persistence between execute_code and skill script executions.
+        #
+        # RULE: Sandbox, Codemode, and Skills are three distinct concepts:
+        #   - A sandbox is an isolated code-execution environment (eval or jupyter).
+        #     It can exist independently of codemode and skills (e.g. for pre-hooks,
+        #     WebSocket status monitoring, or standalone code runs).
+        #   - Codemode composes MCP tools as programmatic Python in a sandbox.
+        #     It REQUIRES a sandbox — without one, execute_code cannot run.
+        #   - Skills run reusable workflow scripts in a sandbox.
+        #     They REQUIRE a sandbox — without one, run_skill_script cannot execute.
+        #
+        # Therefore a shared sandbox must be created whenever codemode OR skills
+        # is enabled, defaulting to eval when no explicit sandbox_variant was given.
         shared_sandbox = None
         skills_enabled = request.enable_skills or len(request.skills) > 0
-        need_shared_sandbox = (
-            (request.enable_codemode and skills_enabled)  # Both codemode and skills
-            or (
-                request.enable_codemode and request.jupyter_sandbox
-            )  # Codemode with Jupyter
-            or (
-                request.enable_codemode and effective_variant == "jupyter"
-            )  # Codemode with jupyter variant
-            or (
-                request.enable_codemode and bool(request.sandbox_variant)
-            )  # Codemode with any explicit sandbox variant
-        )
+        # A shared sandbox is needed whenever:
+        # - codemode is enabled (execute_code + MCP discovery)
+        # - skills are enabled (run_skill_script)
+        # - sandbox_variant is set without codemode (execute_code only)
+        need_shared_sandbox = request.enable_codemode or skills_enabled or bool(request.sandbox_variant)
         if need_shared_sandbox:
             if (
                 effective_variant == "jupyter"
@@ -944,27 +1361,39 @@ async def create_agent(
                     f"waiting for companion to provide jupyter URL"
                 )
             elif effective_variant == "jupyter":
-                # Delegate to code_sandboxes: create a per-agent sandbox
-                # that starts its own Jupyter server on a random free port.
-                # NOTE: This branch is reached in standalone mode.
+                # Use the per-agent Jupyter sandbox for codemode/skills execution.
+                # The eager-start block above may have already created it (when
+                # sandbox_variant is explicitly set), so always check before creating
+                # to avoid a duplicate-sandbox error.
                 try:
                     from ..services.code_sandbox_manager import get_code_sandbox_manager
 
                     sandbox_manager = get_code_sandbox_manager()
-                    if hasattr(sandbox_manager, "create_agent_sandbox"):
-                        agent_sandbox = sandbox_manager.create_agent_sandbox(
-                            agent_id=agent_id,
-                            variant="jupyter",
-                        )
-                        shared_sandbox = agent_sandbox
-                        logger.info(
-                            f"Created per-agent Jupyter sandbox for '{agent_id}'"
-                        )
+
+                    # Reuse sandbox already created by the eager-start block.
+                    if hasattr(sandbox_manager, "get_agent_sandbox"):
+                        shared_sandbox = sandbox_manager.get_agent_sandbox(agent_id)
+
+                    if shared_sandbox is None:
+                        if hasattr(sandbox_manager, "create_agent_sandbox"):
+                            shared_sandbox = sandbox_manager.create_agent_sandbox(
+                                agent_id=agent_id,
+                                variant="jupyter",
+                            )
+                            logger.info(
+                                f"Created per-agent Jupyter sandbox for '{agent_id}'"
+                            )
+                        else:
+                            # Backward-compatible fallback for simple managers used
+                            # in tests that expose only get_sandbox().
+                            shared_sandbox = sandbox_manager.get_sandbox()
+                            logger.info(
+                                f"Using shared Jupyter sandbox for '{agent_id}'"
+                            )
                     else:
-                        # Backward-compatible fallback for simple managers used
-                        # in tests that expose only get_sandbox().
-                        shared_sandbox = sandbox_manager.get_sandbox()
-                        logger.info(f"Using shared Jupyter sandbox for '{agent_id}'")
+                        logger.info(
+                            f"Reusing existing Jupyter sandbox for '{agent_id}'"
+                        )
                 except ImportError as e:
                     raise HTTPException(
                         status_code=500,
@@ -973,25 +1402,24 @@ async def create_agent(
                         ),
                     )
                 except Exception as e:
-                    if "already has a sandbox" in str(e):
-                        sandbox_manager = get_code_sandbox_manager()
-                        if hasattr(sandbox_manager, "get_agent_sandbox"):
-                            shared_sandbox = sandbox_manager.get_agent_sandbox(agent_id)
-                        else:
-                            shared_sandbox = sandbox_manager.get_sandbox()
-                        logger.info(
-                            f"Reusing existing Jupyter sandbox for '{agent_id}'"
-                        )
-                    else:
-                        logger.error(
-                            f"Failed to create Jupyter sandbox for agent '{agent_id}': {e}"
-                        )
-                        raise HTTPException(
-                            status_code=500,
-                            detail=f"Failed to create Jupyter sandbox: {str(e)}",
-                        )
+                    logger.error(
+                        f"Failed to create Jupyter sandbox for agent '{agent_id}': {e}"
+                    )
+                    raise HTTPException(
+                        status_code=500,
+                        detail=f"Failed to create Jupyter sandbox: {str(e)}",
+                    )
             else:
                 shared_sandbox = create_shared_sandbox(request.jupyter_sandbox)
+
+        await _run_agent_hooks(
+            agent_id=agent_id,
+            phase="pre",
+            hooks=resolved_pre_hooks,
+            effective_variant=effective_variant,
+            preferred_sandbox=shared_sandbox,
+            fail_on_error=True,
+        )
 
         # Add skills toolset if enabled
         if skills_enabled:
@@ -1032,19 +1460,23 @@ async def create_agent(
                 f"{len([s for s in _skills_area.list_skills() if s.status == 'enabled'])} enabled (loading deferred)"
             )
 
-        # Add codemode toolset if enabled
-        if request.enable_codemode:
+        # Add codemode/sandbox toolset.
+        # - enable_codemode=True  → full toolset: execute_code + MCP discovery tools
+        # - sandbox_variant set only → sandbox-only toolset: execute_code only
+        if request.enable_codemode or request.sandbox_variant:
             disable_mcp_for_codemode = (
-                selected_mcp_servers_explicit and len(request.selected_mcp_servers) == 0
+                not request.enable_codemode
+                or (selected_mcp_servers_explicit and len(request.selected_mcp_servers) == 0)
             )
-            # Ensure MCP servers are loaded before building codemode toolset
-            mcp_manager = get_mcp_manager()
-            if not disable_mcp_for_codemode and not mcp_manager.get_servers():
-                mcp_servers = await initialize_config_mcp_servers(discover_tools=True)
-                mcp_manager.load_servers(mcp_servers)
-                logger.info(
-                    f"Loaded {len(mcp_servers)} MCP servers for codemode agent {agent_id}"
-                )
+            # Only load MCP servers when codemode discovery is active.
+            if request.enable_codemode:
+                mcp_manager = get_mcp_manager()
+                if not disable_mcp_for_codemode and not mcp_manager.get_servers():
+                    mcp_servers = await initialize_config_mcp_servers(discover_tools=True)
+                    mcp_manager.load_servers(mcp_servers)
+                    logger.info(
+                        f"Loaded {len(mcp_servers)} MCP servers for codemode agent {agent_id}"
+                    )
             codemode_toolset = _build_codemode_toolset(
                 request,
                 http_request,
@@ -1052,6 +1484,7 @@ async def create_agent(
                 sandbox=shared_sandbox,
                 disable_mcp_servers=disable_mcp_for_codemode,
                 sandbox_variant=effective_variant,
+                enable_discovery_tools=request.enable_codemode,
             )
             if codemode_toolset is not None:
                 await initialize_codemode_toolset(codemode_toolset)
@@ -1110,8 +1543,15 @@ async def create_agent(
         )
 
         # Build the system prompt
-        # If codemode is enabled, append codemode instructions to the base prompt
         final_system_prompt = request.system_prompt
+        # Sandbox without codemode: let the LLM know a sandbox exists for skills.
+        if request.sandbox_variant and not request.enable_codemode:
+            final_system_prompt = (
+                final_system_prompt
+                + "\n\n"
+                + _build_sandbox_only_system_prompt(effective_variant)
+            )
+        # Codemode: append execute_code / codemode tool instructions.
         if request.enable_codemode and request.system_prompt_codemode_addons:
             final_system_prompt = (
                 request.system_prompt + "\n\n" + request.system_prompt_codemode_addons
@@ -1394,6 +1834,13 @@ async def create_agent(
         # the agent spec and should not cause a spec-diff restart.
         stored = request.model_dump()
         stored.pop("jupyter_sandbox", None)
+        if isinstance(resolved_pre_hooks, dict):
+            stored["pre_hooks"] = resolved_pre_hooks
+        if isinstance(resolved_post_hooks, dict):
+            stored["post_hooks"] = resolved_post_hooks
+        if isinstance(parameter_schema, dict):
+            stored["parameters"] = parameter_schema
+        stored["agent_parameters"] = launch_parameters
         _agent_specs[agent_id] = stored
         logger.info(f"Stored creation spec for agent '{agent_id}'")
 
@@ -1406,11 +1853,7 @@ async def create_agent(
         logger.info(f"Registered agent '{agent_id}' for context snapshots")
 
         # Determine whether the agent spec declares frontend tools
-        _lib_spec = (
-            get_library_agent_spec(request.agent_spec_id)
-            if request.agent_spec_id
-            else None
-        )
+        _lib_spec = library_spec
         has_spec_frontend_tools = bool(
             (_lib_spec and getattr(_lib_spec, "frontend_tools", None))
             or _spec_value("frontendTools", "frontend_tools")
@@ -1786,6 +2229,15 @@ async def delete_agent(agent_id: str) -> dict[str, str]:
     """
     if agent_id not in _agents:
         raise HTTPException(status_code=404, detail=f"Agent not found: {agent_id}")
+
+    stored_spec = _agent_specs.get(agent_id) or {}
+    await _run_agent_hooks(
+        agent_id=agent_id,
+        phase="post",
+        hooks=stored_spec.get("post_hooks") or stored_spec.get("postHooks"),
+        effective_variant=str(stored_spec.get("sandbox_variant") or "eval"),
+        fail_on_error=False,
+    )
 
     # Remove the stored creation spec
     _agent_specs.pop(agent_id, None)

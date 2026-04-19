@@ -7,9 +7,60 @@ title: Programmatic Tools
 ## What this page covers
 
 - Why we offer two capabilities: programmatic [Codemode](https://agent-codemode.datalayer.tech) and reusable [Skills](https://agent-skills.datalayer.tech/)
+- How sandbox, codemode, and skills relate to each other
 - How the toggles behave in the UI/backend
 - When to use each mode, and when to combine them
 - Configuration levers (`allow_direct_tool_calls`, reranker hook) and their tradeoffs
+
+## Three distinct concepts
+
+**Sandbox**, **Codemode**, and **Skills** are separate concepts with a clear dependency hierarchy.
+
+### Sandbox
+
+A sandbox is an isolated code-execution environment. It runs independently of Codemode and Skills and can be used on its own for:
+- **Pre-hooks** — running setup code before an agent starts (e.g. injecting variables)
+- **WebSocket status monitoring** — the `/configure/sandbox/ws` endpoint reports sandbox availability
+- **Standalone code runs** — any toolset or hook that needs to execute Python
+
+Two variants are supported:
+- **`eval`** — in-process Python execution (fast, default)
+- **`jupyter`** — dedicated Jupyter kernel per agent (isolated, full kernel state)
+
+Set `sandbox_variant` in an agent spec to choose the variant. A sandbox is created eagerly at agent-creation time when `sandbox_variant` is specified, regardless of whether Codemode or Skills are enabled.
+
+### Codemode
+
+Codemode lets the agent write Python to compose MCP tools programmatically (control flow, parallelism, error handling). Internally it builds tool bindings from the MCP registry and runs generated code via `execute_code`.
+
+**Codemode requires a sandbox.** Without a sandbox there is nowhere to execute code. If no `sandbox_variant` is specified but Codemode is enabled, an `eval` sandbox is created automatically.
+
+### Skills
+
+Skills are reusable workflows packaged with instructions, resources, and executable scripts. The `AgentSkillsToolset` exposes `list_skills`, `load_skill`, `read_skill_resource`, and `run_skill_script`.
+
+**Skills require a sandbox.** Script execution (`run_skill_script`) runs inside a sandbox. If no `sandbox_variant` is specified but Skills are enabled, an `eval` sandbox is created automatically.
+
+### Dependency summary
+
+```
+Sandbox   ───────────────────► exists independently
+               ▲
+               │  requires
+        ┌──────┴──────┐
+     Codemode       Skills
+```
+
+| Scenario | Sandbox | Codemode | Skills |
+|---|---|---|---|
+| Pre-hook only | ✅ required | — | — |
+| Status monitoring | ✅ required | — | — |
+| Codemode only | ✅ auto-created (`eval`) | ✅ | — |
+| Skills only | ✅ auto-created (`eval`) | — | ✅ |
+| Codemode + Skills | ✅ shared | ✅ | ✅ |
+| Sandbox only (jupyter) | ✅ explicit | — | — |
+
+When both Codemode and Skills are enabled they share the **same** sandbox instance so variables and installed packages are visible across both.
 
 ## Goals
 - **Codemode:** let the agent write Python to compose tools directly, reducing LLM tool-call overhead and enabling control flow, parallelism, and error handling.
@@ -56,9 +107,10 @@ title: Programmatic Tools
 ## UI & backend flow
 - UI checkboxes toggle Skills/Codemode. If Codemode is enabled, MCP server selection is still available and is used to scope Codemode discovery.
 - Backend route `/api/v1/agents` builds toolsets accordingly:
-	- Skills enabled → add `AgentSkillsToolset`.
-	- Codemode enabled → add `CodemodeToolset` with `allow_direct_tool_calls=False` by default.
-	- **Both enabled** → add both toolsets, then wire skills into Codemode via `wire_skills_into_codemode()`.
+	- `sandbox_variant` set → sandbox is created eagerly, independent of Codemode/Skills status.
+	- Skills enabled → `eval` sandbox auto-created (if no `sandbox_variant`); `AgentSkillsToolset` added.
+	- Codemode enabled → `eval` sandbox auto-created (if no `sandbox_variant`); `CodemodeToolset` added with `allow_direct_tool_calls=False` by default.
+	- **Both enabled** → both toolsets share the **same** sandbox, then skills are wired into Codemode via `wire_skills_into_codemode()`.
 
 ## Skills-in-Codemode wiring
 

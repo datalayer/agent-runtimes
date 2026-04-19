@@ -867,6 +867,26 @@ class AgentSpec(BaseModel):
         default=None,
         description="Memory backend identifier (e.g., 'ephemeral', 'mem0', 'memu', 'simplemem')",
     )
+    pre_hooks: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description=(
+            "Pre-launch hooks. Supported keys: 'packages' (pip packages) and "
+            "'sandbox' (Python code string or list of strings)."
+        ),
+        alias="preHooks",
+    )
+    post_hooks: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description=(
+            "Post-stop hooks. Supported keys: 'sandbox' (Python code string or "
+            "list of strings)."
+        ),
+        alias="postHooks",
+    )
+    parameters: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="JSON schema describing agent launch parameters.",
+    )
 
 
 class TeamAgentSpec(BaseModel):

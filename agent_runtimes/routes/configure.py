@@ -741,6 +741,11 @@ def _build_sandbox_ws_status(agent_id: str | None = None) -> dict[str, Any]:
                 if agent_sandbox is None:
                     agent_sandbox = getattr(codemode_toolset, "sandbox", None)
 
+            # Fall back to the per-agent sandbox created via create_agent_sandbox
+            # (used when codemode is not enabled but sandbox_variant is set).
+            if agent_sandbox is None and hasattr(manager, "get_agent_sandbox"):
+                agent_sandbox = manager.get_agent_sandbox(agent_id)
+
             if agent_sandbox is not None:
                 sandbox_running = True
                 # Prefer event-driven runtime execution state (set by codemode toolset).

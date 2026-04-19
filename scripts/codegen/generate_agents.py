@@ -240,6 +240,9 @@ from agent_runtimes.types import AgentSpec
             notifs = spec.get("notifications")
             memory_val = spec.get("memory")
             memory_str = f'"{memory_val}"' if memory_val else "None"
+            pre_hooks_val = spec.get("pre_hooks")
+            post_hooks_val = spec.get("post_hooks")
+            parameters_val = spec.get("parameters")
 
             code += f'''{const_name} = AgentSpec(
     id="{full_agent_id}",
@@ -278,6 +281,9 @@ from agent_runtimes.types import AgentSpec
     authorization_policy={auth_policy_str},
     notifications={_fmt_py_literal(notifs)},
     memory={memory_str},
+    pre_hooks={_fmt_py_literal(pre_hooks_val)},
+    post_hooks={_fmt_py_literal(post_hooks_val)},
+    parameters={_fmt_py_literal(parameters_val)},
 )
 
 '''
@@ -765,6 +771,9 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
             notifs = spec.get("notifications")
             memory_val = spec.get("memory")
             memory_ts = f"'{memory_val}'" if memory_val else "undefined"
+            pre_hooks_val = spec.get("pre_hooks")
+            post_hooks_val = spec.get("post_hooks")
+            parameters_val = spec.get("parameters")
 
             code += f"""export const {const_name}: AgentSpec = {{
   id: '{full_agent_id}',
@@ -803,6 +812,9 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
   authorizationPolicy: {auth_policy_ts},
   notifications: {_fmt_ts_literal(notifs)},
   memory: {memory_ts},
+    preHooks: {_fmt_ts_literal(pre_hooks_val)},
+    postHooks: {_fmt_ts_literal(post_hooks_val)},
+    parameters: {_fmt_ts_literal(parameters_val)},
 }};
 
 """

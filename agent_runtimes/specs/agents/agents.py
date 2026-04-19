@@ -123,6 +123,9 @@ ANALYZE_CAMPAIGN_PERFORMANCE_AGENT_SPEC_0_0_1 = AgentSpec(
     authorization_policy="",
     notifications={"email": "marketing@company.com", "slack": "#campaign-analytics"},
     memory="ephemeral",
+    pre_hooks=None,
+    post_hooks=None,
+    parameters=None,
 )
 
 ANALYZE_SUPPORT_TICKETS_AGENT_SPEC_0_0_1 = AgentSpec(
@@ -200,6 +203,9 @@ ANALYZE_SUPPORT_TICKETS_AGENT_SPEC_0_0_1 = AgentSpec(
     authorization_policy="",
     notifications={"email": "patricia.j@company.com", "slack": "#support-analysis"},
     memory="ephemeral",
+    pre_hooks=None,
+    post_hooks=None,
+    parameters=None,
 )
 
 AUDIT_INVENTORY_LEVELS_AGENT_SPEC_0_0_1 = AgentSpec(
@@ -277,6 +283,9 @@ AUDIT_INVENTORY_LEVELS_AGENT_SPEC_0_0_1 = AgentSpec(
     authorization_policy="",
     notifications={"email": "linda.m@company.com", "slack": "#inventory-ops"},
     memory="ephemeral",
+    pre_hooks=None,
+    post_hooks=None,
+    parameters=None,
 )
 
 AUTOMATE_REGULATORY_REPORTING_AGENT_SPEC_0_0_1 = AgentSpec(
@@ -373,6 +382,9 @@ AUTOMATE_REGULATORY_REPORTING_AGENT_SPEC_0_0_1 = AgentSpec(
     authorization_policy="",
     notifications={"email": "compliance@company.com", "slack": "#regulatory-reporting"},
     memory="ephemeral",
+    pre_hooks=None,
+    post_hooks=None,
+    parameters=None,
 )
 
 CLASSIFY_ROUTE_EMAILS_AGENT_SPEC_0_0_1 = AgentSpec(
@@ -458,6 +470,9 @@ CLASSIFY_ROUTE_EMAILS_AGENT_SPEC_0_0_1 = AgentSpec(
     authorization_policy=None,
     notifications={"slack": "#email-routing", "email": "ops@acme.com"},
     memory="ephemeral",
+    pre_hooks=None,
+    post_hooks=None,
+    parameters=None,
 )
 
 COMPREHENSIVE_SALES_ANALYTICS_AGENT_SPEC_0_0_1 = AgentSpec(
@@ -526,6 +541,9 @@ COMPREHENSIVE_SALES_ANALYTICS_AGENT_SPEC_0_0_1 = AgentSpec(
     authorization_policy=None,
     notifications={"slack": "#sales-analytics", "email": "leadership@acme.com"},
     memory="ephemeral",
+    pre_hooks=None,
+    post_hooks=None,
+    parameters=None,
 )
 
 CRAWLER_AGENT_SPEC_0_0_1 = AgentSpec(
@@ -589,6 +607,9 @@ CRAWLER_AGENT_SPEC_0_0_1 = AgentSpec(
     authorization_policy=None,
     notifications=None,
     memory="ephemeral",
+    pre_hooks=None,
+    post_hooks=None,
+    parameters=None,
 )
 
 DATA_ACQUISITION_AGENT_SPEC_0_0_1 = AgentSpec(
@@ -656,6 +677,9 @@ DATA_ACQUISITION_AGENT_SPEC_0_0_1 = AgentSpec(
     authorization_policy=None,
     notifications=None,
     memory="ephemeral",
+    pre_hooks=None,
+    post_hooks=None,
+    parameters=None,
 )
 
 DEMO_FULL_AGENT_SPEC_0_0_1 = AgentSpec(
@@ -712,6 +736,64 @@ DEMO_FULL_AGENT_SPEC_0_0_1 = AgentSpec(
     authorization_policy=None,
     notifications=None,
     memory="ephemeral",
+    pre_hooks=None,
+    post_hooks=None,
+    parameters=None,
+)
+
+DEMO_HOOKS_AGENT_SPEC_0_0_1 = AgentSpec(
+    id="demo-hooks",
+    version="0.0.1",
+    name="Demo Hooks Agent",
+    description="Demonstrates pre-hooks and post-hooks executed in the sandbox lifecycle.",
+    tags=["demo", "hooks", "lifecycle"],
+    enabled=True,
+    model="bedrock:us.anthropic.claude-3-5-haiku-20241022-v1:0",
+    mcp_servers=[],
+    skills=[],
+    tools=["runtime-echo:0.0.1"],
+    frontend_tools=[],
+    environment_name="ai-agents-env",
+    icon="zap",
+    emoji="🪝",
+    color="#0E7490",
+    suggestions=[
+        "Describe what lifecycle hooks were executed for this runtime.",
+        "Call runtime_echo with text 'hooks-ready'.",
+    ],
+    welcome_message="I run pre and post lifecycle hooks in the sandbox. Ask me what happened during startup. ",
+    welcome_notebook=None,
+    welcome_document=None,
+    sandbox_variant="eval",
+    system_prompt="""You are a demo assistant for lifecycle hooks. A startup hook wrote a marker file in /tmp. Explain what pre-hooks and post-hooks are and when they run.
+""",
+    system_prompt_codemode_addons=None,
+    goal=None,
+    protocol=None,
+    ui_extension=None,
+    trigger=None,
+    model_configuration=None,
+    mcp_server_tools=None,
+    guardrails=None,
+    evals=None,
+    codemode=None,
+    output=None,
+    advanced=None,
+    authorization_policy=None,
+    notifications=None,
+    memory="ephemeral",
+    pre_hooks={
+        "packages": ["rich"],
+        "sandbox": [
+            "from pathlib import Path\nPath('/tmp/agent_runtimes_pre_hook_demo.txt').write_text(\n    'pre-hook executed for demo-hooks\\n',\n    encoding='utf-8',\n)\n"
+        ],
+    },
+    post_hooks={
+        "sandbox": [
+            "from pathlib import Path\nPath('/tmp/agent_runtimes_post_hook_demo.txt').write_text(\n    'post-hook executed for demo-hooks\\n',\n    encoding='utf-8',\n)\n"
+        ]
+    },
+    parameters=None,
 )
 
 DEMO_ONE_TRIGGER_APPROVAL_AGENT_SPEC_0_0_1 = AgentSpec(
@@ -755,6 +837,9 @@ DEMO_ONE_TRIGGER_APPROVAL_AGENT_SPEC_0_0_1 = AgentSpec(
     authorization_policy=None,
     notifications=None,
     memory="ephemeral",
+    pre_hooks=None,
+    post_hooks=None,
+    parameters=None,
 )
 
 DEMO_ONE_TRIGGER_AGENT_SPEC_0_0_1 = AgentSpec(
@@ -798,6 +883,82 @@ DEMO_ONE_TRIGGER_AGENT_SPEC_0_0_1 = AgentSpec(
     authorization_policy=None,
     notifications=None,
     memory="ephemeral",
+    pre_hooks=None,
+    post_hooks=None,
+    parameters=None,
+)
+
+DEMO_PARAMETERS_AGENT_SPEC_0_0_1 = AgentSpec(
+    id="demo-parameters",
+    version="0.0.1",
+    name="Demo Parameters Agent",
+    description="Demonstrates launch-time parameterization with JSON schema validation.",
+    tags=["demo", "parameters", "schema"],
+    enabled=True,
+    model="bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0",
+    mcp_servers=[],
+    skills=[],
+    tools=["runtime-echo:0.0.1"],
+    frontend_tools=[],
+    environment_name="ai-agents-env",
+    icon="sliders",
+    emoji="🎛️",
+    color="#0F766E",
+    suggestions=[
+        "Use execute_code to print(demo_params) from the sandbox, then explain the value.",
+        "Use execute_code to print('demo_params =', demo_params).",
+    ],
+    welcome_message="This runtime was launched for project {{project}} and role {{role}}. ",
+    welcome_notebook=None,
+    welcome_document=None,
+    sandbox_variant="jupyter",
+    system_prompt="""You are an assistant dedicated to {{project}}. Assume the user is a {{role}} and answer in a {{tone}} style. A sandbox pre-hook set a Python variable named demo_params with value {{demo_params}}.
+""",
+    system_prompt_codemode_addons=None,
+    goal=None,
+    protocol=None,
+    ui_extension=None,
+    trigger=None,
+    model_configuration=None,
+    mcp_server_tools=None,
+    guardrails=None,
+    evals=None,
+    codemode=None,
+    output=None,
+    advanced=None,
+    authorization_policy=None,
+    notifications=None,
+    memory="ephemeral",
+    pre_hooks={
+        "sandbox": [
+            'demo_params = """{{demo_params}}"""\nprint(f"[demo-parameters] demo_params initialized: {demo_params!r}")\n'
+        ]
+    },
+    post_hooks=None,
+    parameters={
+        "type": "object",
+        "properties": {
+            "demo_params": {
+                "type": "string",
+                "title": "Demo Params",
+                "default": "hello",
+            },
+            "project": {"type": "string", "title": "Project", "default": "Orbit"},
+            "role": {
+                "type": "string",
+                "title": "Role",
+                "enum": ["product analyst", "engineering lead", "support specialist"],
+                "default": "product analyst",
+            },
+            "tone": {
+                "type": "string",
+                "title": "Tone",
+                "enum": ["concise", "detailed"],
+                "default": "concise",
+            },
+        },
+        "required": ["project"],
+    },
 )
 
 DEMO_SIMPLE_AGENT_SPEC_0_0_1 = AgentSpec(
@@ -843,6 +1004,9 @@ DEMO_SIMPLE_AGENT_SPEC_0_0_1 = AgentSpec(
     authorization_policy=None,
     notifications=None,
     memory="ephemeral",
+    pre_hooks=None,
+    post_hooks=None,
+    parameters=None,
 )
 
 END_OF_MONTH_SALES_PERFORMANCE_AGENT_SPEC_0_0_1 = AgentSpec(
@@ -1030,6 +1194,9 @@ END_OF_MONTH_SALES_PERFORMANCE_AGENT_SPEC_0_0_1 = AgentSpec(
     authorization_policy="",
     notifications={"email": "cro@company.com", "slack": "#sales-performance"},
     memory="ephemeral",
+    pre_hooks=None,
+    post_hooks=None,
+    parameters=None,
 )
 
 EXTRACT_DATA_FROM_FILES_AGENT_SPEC_0_0_1 = AgentSpec(
@@ -1115,6 +1282,9 @@ EXTRACT_DATA_FROM_FILES_AGENT_SPEC_0_0_1 = AgentSpec(
     authorization_policy=None,
     notifications={"slack": "#data-extraction", "email": "data-team@acme.com"},
     memory="ephemeral",
+    pre_hooks=None,
+    post_hooks=None,
+    parameters=None,
 )
 
 FINANCIAL_VIZ_AGENT_SPEC_0_0_1 = AgentSpec(
@@ -1142,7 +1312,7 @@ FINANCIAL_VIZ_AGENT_SPEC_0_0_1 = AgentSpec(
     welcome_message="Welcome! I'm the Financial Visualization Agent. I can help you analyze stock market data, track financial instruments, and create charts to visualize market trends. ",
     welcome_notebook=None,
     welcome_document=None,
-    sandbox_variant="eval",
+    sandbox_variant="local-eval",
     system_prompt="""You are a financial market analyst with access to Alpha Vantage market data and chart generation tools. You can fetch stock prices, analyze trading volumes, create visualizations, and track market trends. Provide clear insights with relevant data points and generate charts to illustrate patterns.
 """,
     system_prompt_codemode_addons="""## IMPORTANT: Be Honest About Your Capabilities NEVER claim to have tools or capabilities you haven't verified.
@@ -1178,6 +1348,9 @@ FINANCIAL_VIZ_AGENT_SPEC_0_0_1 = AgentSpec(
     authorization_policy=None,
     notifications=None,
     memory="ephemeral",
+    pre_hooks=None,
+    post_hooks=None,
+    parameters=None,
 )
 
 FINANCIAL_AGENT_SPEC_0_0_1 = AgentSpec(
@@ -1241,6 +1414,9 @@ FINANCIAL_AGENT_SPEC_0_0_1 = AgentSpec(
     authorization_policy=None,
     notifications=None,
     memory="ephemeral",
+    pre_hooks=None,
+    post_hooks=None,
+    parameters=None,
 )
 
 GENERATE_WEEKLY_REPORTS_AGENT_SPEC_0_0_1 = AgentSpec(
@@ -1337,6 +1513,9 @@ GENERATE_WEEKLY_REPORTS_AGENT_SPEC_0_0_1 = AgentSpec(
     authorization_policy="",
     notifications={"email": "robert.w@company.com", "slack": "#weekly-reports"},
     memory="ephemeral",
+    pre_hooks=None,
+    post_hooks=None,
+    parameters=None,
 )
 
 GITHUB_AGENT_SPEC_0_0_1 = AgentSpec(
@@ -1400,6 +1579,9 @@ GITHUB_AGENT_SPEC_0_0_1 = AgentSpec(
     authorization_policy=None,
     notifications=None,
     memory="ephemeral",
+    pre_hooks=None,
+    post_hooks=None,
+    parameters=None,
 )
 
 INFORMATION_ROUTING_AGENT_SPEC_0_0_1 = AgentSpec(
@@ -1427,7 +1609,7 @@ INFORMATION_ROUTING_AGENT_SPEC_0_0_1 = AgentSpec(
     welcome_message="Hi there! I'm the Information Routing Agent. I can help you manage documents in Google Drive and route information where it needs to go. ",
     welcome_notebook=None,
     welcome_document=None,
-    sandbox_variant="eval",
+    sandbox_variant="local-eval",
     system_prompt="""You are an information routing specialist with access to Google Drive tools. You can find and manage documents in Drive and automate document workflows. Help users with document management efficiently. Do not use file extension when referring to Google Drive documents. Always use search_drive_files tool before using get_drive_file_content to find parent folder (using only name and mimeType in the query, no other fields!!!).
 """,
     system_prompt_codemode_addons="""## IMPORTANT: Be Honest About Your Capabilities NEVER claim to have tools or capabilities you haven't verified.
@@ -1463,6 +1645,9 @@ INFORMATION_ROUTING_AGENT_SPEC_0_0_1 = AgentSpec(
     authorization_policy=None,
     notifications=None,
     memory="ephemeral",
+    pre_hooks=None,
+    post_hooks=None,
+    parameters=None,
 )
 
 MONITOR_SALES_KPIS_AGENT_SPEC_0_0_1 = AgentSpec(
@@ -1566,6 +1751,9 @@ MONITOR_SALES_KPIS_AGENT_SPEC_0_0_1 = AgentSpec(
     authorization_policy="",
     notifications={"email": "marcus.r@company.com", "slack": "#sales-kpis"},
     memory="mem0",
+    pre_hooks=None,
+    post_hooks=None,
+    parameters=None,
 )
 
 OPTIMIZE_DYNAMIC_PRICING_AGENT_SPEC_0_0_1 = AgentSpec(
@@ -1681,6 +1869,9 @@ OPTIMIZE_DYNAMIC_PRICING_AGENT_SPEC_0_0_1 = AgentSpec(
         "slack": "#pricing-intelligence",
     },
     memory="ephemeral",
+    pre_hooks=None,
+    post_hooks=None,
+    parameters=None,
 )
 
 OPTIMIZE_GRID_OPERATIONS_AGENT_SPEC_0_0_1 = AgentSpec(
@@ -1784,6 +1975,9 @@ OPTIMIZE_GRID_OPERATIONS_AGENT_SPEC_0_0_1 = AgentSpec(
     authorization_policy="",
     notifications={"email": "grid-ops@company.com", "slack": "#grid-operations"},
     memory="ephemeral",
+    pre_hooks=None,
+    post_hooks=None,
+    parameters=None,
 )
 
 PROCESS_CITIZEN_REQUESTS_AGENT_SPEC_0_0_1 = AgentSpec(
@@ -1897,6 +2091,9 @@ PROCESS_CITIZEN_REQUESTS_AGENT_SPEC_0_0_1 = AgentSpec(
         "slack": "#citizen-services",
     },
     memory="ephemeral",
+    pre_hooks=None,
+    post_hooks=None,
+    parameters=None,
 )
 
 PROCESS_CLINICAL_TRIAL_DATA_AGENT_SPEC_0_0_1 = AgentSpec(
@@ -2005,6 +2202,9 @@ PROCESS_CLINICAL_TRIAL_DATA_AGENT_SPEC_0_0_1 = AgentSpec(
     authorization_policy="",
     notifications={"email": "clinical-ops@company.com", "slack": "#clinical-data"},
     memory="ephemeral",
+    pre_hooks=None,
+    post_hooks=None,
+    parameters=None,
 )
 
 PROCESS_FINANCIAL_TRANSACTIONS_AGENT_SPEC_0_0_1 = AgentSpec(
@@ -2094,6 +2294,9 @@ PROCESS_FINANCIAL_TRANSACTIONS_AGENT_SPEC_0_0_1 = AgentSpec(
     authorization_policy="",
     notifications={"email": "david.t@company.com", "slack": "#finance-ops"},
     memory="ephemeral",
+    pre_hooks=None,
+    post_hooks=None,
+    parameters=None,
 )
 
 SPATIAL_DATA_ANALYSIS_AGENT_SPEC_0_0_1 = AgentSpec(
@@ -2146,6 +2349,9 @@ SPATIAL_DATA_ANALYSIS_AGENT_SPEC_0_0_1 = AgentSpec(
     authorization_policy=None,
     notifications=None,
     memory="ephemeral",
+    pre_hooks=None,
+    post_hooks=None,
+    parameters=None,
 )
 
 SUMMARIZE_DOCUMENTS_AGENT_SPEC_0_0_1 = AgentSpec(
@@ -2230,6 +2436,9 @@ SUMMARIZE_DOCUMENTS_AGENT_SPEC_0_0_1 = AgentSpec(
     authorization_policy=None,
     notifications={"slack": "#document-summaries", "email": "team@acme.com"},
     memory="ephemeral",
+    pre_hooks=None,
+    post_hooks=None,
+    parameters=None,
 )
 
 SYNC_CRM_CONTACTS_AGENT_SPEC_0_0_1 = AgentSpec(
@@ -2307,6 +2516,9 @@ SYNC_CRM_CONTACTS_AGENT_SPEC_0_0_1 = AgentSpec(
     authorization_policy="",
     notifications={"email": "jennifer.c@company.com", "slack": "#crm-sync"},
     memory="ephemeral",
+    pre_hooks=None,
+    post_hooks=None,
+    parameters=None,
 )
 
 
@@ -2324,8 +2536,10 @@ AGENT_SPECS: Dict[str, AgentSpec] = {
     "crawler": CRAWLER_AGENT_SPEC_0_0_1,
     "data-acquisition": DATA_ACQUISITION_AGENT_SPEC_0_0_1,
     "demo-full": DEMO_FULL_AGENT_SPEC_0_0_1,
+    "demo-hooks": DEMO_HOOKS_AGENT_SPEC_0_0_1,
     "demo-one-trigger-approval": DEMO_ONE_TRIGGER_APPROVAL_AGENT_SPEC_0_0_1,
     "demo-one-trigger": DEMO_ONE_TRIGGER_AGENT_SPEC_0_0_1,
+    "demo-parameters": DEMO_PARAMETERS_AGENT_SPEC_0_0_1,
     "demo-simple": DEMO_SIMPLE_AGENT_SPEC_0_0_1,
     "end-of-month-sales-performance": END_OF_MONTH_SALES_PERFORMANCE_AGENT_SPEC_0_0_1,
     "extract-data-from-files": EXTRACT_DATA_FROM_FILES_AGENT_SPEC_0_0_1,

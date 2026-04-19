@@ -93,4 +93,15 @@ export interface AgentSpec {
   notifications?: AgentNotificationConfig;
   /** Memory backend identifier (e.g., 'ephemeral', 'mem0', 'memu', 'simplemem') */
   memory?: string;
+  /** Pre-launch hooks (package installs and sandbox code). */
+  preHooks?: {
+    packages?: string[];
+    sandbox?: string | string[];
+  };
+  /** Post-stop hooks (sandbox cleanup code). */
+  postHooks?: {
+    sandbox?: string | string[];
+  };
+  /** JSON schema for launch-time parameter values. */
+  parameters?: Record<string, any>;
 }
