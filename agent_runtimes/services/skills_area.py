@@ -45,6 +45,12 @@ class SkillEntry(BaseModel):
     skill_definition: str | None = None
     # Prompt section generated from the skill definition.
     prompt_section: str | None = None
+    # Discovery/source metadata for UI and debugging.
+    source_variant: str | None = None
+    module: str | None = None
+    package: str | None = None
+    method: str | None = None
+    path: str | None = None
 
 
 class SkillsArea:
@@ -114,6 +120,21 @@ class SkillsArea:
             sid = info.get("id") or info.get("name", "")
             if not sid:
                 continue
+            source_variant = info.get("source_variant")
+            module = info.get("module")
+            package = info.get("package")
+            method = info.get("method")
+            path = info.get("path")
+            if source_variant is None or (
+                module is None and package is None and path is None
+            ):
+                source = self._resolve_catalog_source(sid)
+                if source_variant is None:
+                    source_variant = source.get("source_variant")
+                module = module or source.get("module")
+                package = package or source.get("package")
+                method = method or source.get("method")
+                path = path or source.get("path")
             if sid not in self._skills:
                 self._skills[sid] = SkillEntry(
                     id=sid,
@@ -123,7 +144,19 @@ class SkillsArea:
                     has_scripts=info.get("has_scripts", False),
                     has_resources=info.get("has_resources", False),
                     status="available",
+                    source_variant=source_variant,
+                    module=module,
+                    package=package,
+                    method=method,
+                    path=path,
                 )
+            else:
+                entry = self._skills[sid]
+                entry.source_variant = entry.source_variant or source_variant
+                entry.module = entry.module or module
+                entry.package = entry.package or package
+                entry.method = entry.method or method
+                entry.path = entry.path or path
 
     def enable_skill(self, skill_id: str) -> SkillEntry | None:
         """Enable a skill.  If not yet tracked, creates an entry.
@@ -169,6 +202,11 @@ class SkillsArea:
         tags: list[str] | None = None,
         has_scripts: bool | None = None,
         has_resources: bool | None = None,
+        source_variant: str | None = None,
+        module: str | None = None,
+        package: str | None = None,
+        method: str | None = None,
+        path: str | None = None,
     ) -> SkillEntry:
         """Mark a skill as loaded (SKILL.md loaded, in system prompt)."""
         skill_id = self.strip_version(skill_id)
@@ -189,6 +227,16 @@ class SkillsArea:
             entry.has_scripts = has_scripts
         if has_resources is not None:
             entry.has_resources = has_resources
+        if source_variant is not None:
+            entry.source_variant = source_variant
+        if module is not None:
+            entry.module = module
+        if package is not None:
+            entry.package = package
+        if method is not None:
+            entry.method = method
+        if path is not None:
+            entry.path = path
         return entry
 
     # ------------------------------------------------------------------
@@ -221,6 +269,11 @@ class SkillsArea:
                 "has_resources": s.has_resources,
                 "status": s.status,
                 "skill_definition": s.skill_definition,
+                "source_variant": s.source_variant,
+                "module": s.module,
+                "package": s.package,
+                "method": s.method,
+                "path": s.path,
             }
             for s in self._skills.values()
         ]
@@ -382,6 +435,11 @@ class SkillsArea:
                     tags=skill.tags if hasattr(skill, "tags") else [],
                     has_scripts=len(skill.scripts) > 0,
                     has_resources=len(skill.resources) > 0,
+                    source_variant=self._infer_spec_source_variant(spec),
+                    module=getattr(spec, "module", None),
+                    package=getattr(spec, "package", None),
+                    method=getattr(spec, "method", None),
+                    path=getattr(spec, "path", None),
                 )
                 logger.info(f"Loaded catalog skill '{spec.id}'")
                 return True
@@ -389,17 +447,40 @@ class SkillsArea:
             logger.warning(f"Failed to load catalog skill '{spec.id}': {e}")
         return False
 
+    @staticmethod
+    def _infer_spec_source_variant(spec: Any) -> str:
+        """Infer source variant from a skill spec fields."""
+        if getattr(spec, "package", None):
+            return "package"
+        if getattr(spec, "module", None):
+            return "module"
+        if getattr(spec, "path", None):
+            return "path"
+        return "unknown"
+
+    def _resolve_catalog_source(self, skill_id: str) -> dict[str, Any]:
+        """Resolve source metadata from skill catalog when available."""
+        try:
+            from agent_runtimes.specs.skills import get_skill_spec
+
+            spec = get_skill_spec(skill_id)
+            if spec is None:
+                return {}
+            return {
+                "source_variant": self._infer_spec_source_variant(spec),
+                "module": getattr(spec, "module", None),
+                "package": getattr(spec, "package", None),
+                "method": getattr(spec, "method", None),
+                "path": getattr(spec, "path", None),
+            }
+        except Exception:
+            return {}
+
 
 # ---------------------------------------------------------------------------
-# Singleton
+# NOTE
 # ---------------------------------------------------------------------------
-
-_skills_area: SkillsArea | None = None
-
-
-def get_skills_area() -> SkillsArea:
-    """Get or create the global skills area singleton."""
-    global _skills_area
-    if _skills_area is None:
-        _skills_area = SkillsArea()
-    return _skills_area
+#
+# Agent-scoped skill state is now managed in ``agent_runtimes.streams.loop``.
+# This module retains the ``SkillsArea`` class as a reusable utility, but the
+# global singleton store has been removed to avoid multiple state backends.

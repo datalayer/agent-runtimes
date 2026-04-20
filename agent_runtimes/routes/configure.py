@@ -445,9 +445,12 @@ def _get_available_skills() -> list[dict[str, Any]]:
                         if skill.name not in seen_names:
                             skills.append(
                                 {
+                                    "id": skill.name,
                                     "name": skill.name,
                                     "description": skill.description,
                                     "tags": skill.tags if hasattr(skill, "tags") else [],
+                                    "source_variant": "path",
+                                    "path": str(skill_md.parent.name),
                                 }
                             )
                             seen_names.add(skill.name)
@@ -477,9 +480,12 @@ def _get_available_skills() -> list[dict[str, Any]]:
                             if name not in seen_names:
                                 skills.append(
                                     {
+                                        "id": name,
                                         "name": name,
                                         "description": description,
                                         "tags": [],
+                                        "source_variant": "path",
+                                        "path": str(skill_dir.name),
                                     }
                                 )
                                 seen_names.add(name)
@@ -493,11 +499,26 @@ def _get_available_skills() -> list[dict[str, Any]]:
 
             for ep_skill in discover_entrypoint_skills():
                 if ep_skill.name not in seen_names:
+                    module = getattr(ep_skill, "module", None)
+                    package = getattr(ep_skill, "package", None)
+                    method = getattr(ep_skill, "method", None)
+                    path = getattr(ep_skill, "path", None)
+                    source_variant = "module"
+                    if package:
+                        source_variant = "package"
+                    elif path:
+                        source_variant = "path"
                     skills.append(
                         {
+                            "id": ep_skill.name,
                             "name": ep_skill.name,
                             "description": ep_skill.description,
                             "tags": ep_skill.tags if hasattr(ep_skill, "tags") else [],
+                            "source_variant": source_variant,
+                            "module": module,
+                            "package": package,
+                            "method": method,
+                            "path": path,
                         }
                     )
                     seen_names.add(ep_skill.name)

@@ -21,7 +21,14 @@ export const ANALYZE_CAMPAIGN_PERFORMANCE_TEAM_SPEC_0_0_1: TeamSpec = {
   version: '0.0.1',
   name: 'Analyze Campaign Performance',
   description: `A multi-agent team that unifies marketing data from Google Ads, Meta, TikTok, LinkedIn, GA4, CRM, and email platforms. Normalises metrics into a unified view, detects performance anomalies in real time, and generates budget reallocation recommendations to maximise ROAS.`,
-  tags: ["marketing", "media", "campaigns", "analytics", "advertising", "social-media"],
+  tags: [
+    'marketing',
+    'media',
+    'campaigns',
+    'analytics',
+    'advertising',
+    'social-media',
+  ],
   enabled: true,
   icon: 'megaphone',
   emoji: '📢',
@@ -29,7 +36,10 @@ export const ANALYZE_CAMPAIGN_PERFORMANCE_TEAM_SPEC_0_0_1: TeamSpec = {
   agentSpecId: 'analyze-campaign-performance:0.0.1',
   orchestrationProtocol: 'datalayer',
   executionMode: 'sequential',
-  supervisor: { name: 'Campaign Analytics Orchestrator Agent', model: 'openai-gpt-4-1' },
+  supervisor: {
+    name: 'Campaign Analytics Orchestrator Agent',
+    model: 'openai-gpt-4-1',
+  },
   routingInstructions: `Start with Platform Connector to pull data from all ad platforms, then Metrics Normaliser for unified KPIs, then Anomaly Detector for real-time performance monitoring, then Budget Optimiser for reallocation recommendations. Escalate CPA spikes above 50% immediately.`,
   validation: { timeout: '300s', retryOnFailure: true, maxRetries: 2 },
   agents: [
@@ -40,7 +50,13 @@ export const ANALYZE_CAMPAIGN_PERFORMANCE_TEAM_SPEC_0_0_1: TeamSpec = {
       goal: `Pull campaign data from Google Ads, Meta, TikTok, LinkedIn, GA4, and email platforms`,
       model: 'openai-gpt-4-1',
       mcpServer: 'Ad Platforms MCP',
-      tools: ["Google Ads Connector", "Meta Ads Connector", "TikTok Ads Connector", "LinkedIn Ads Connector", "GA4 Connector"],
+      tools: [
+        'Google Ads Connector',
+        'Meta Ads Connector',
+        'TikTok Ads Connector',
+        'LinkedIn Ads Connector',
+        'GA4 Connector',
+      ],
       trigger: 'Schedule: Every 4 hours',
       approval: 'auto',
     },
@@ -51,7 +67,12 @@ export const ANALYZE_CAMPAIGN_PERFORMANCE_TEAM_SPEC_0_0_1: TeamSpec = {
       goal: `Normalise CPA, ROAS, CTR, and attribution across all platforms into unified view`,
       model: 'openai-gpt-4-1',
       mcpServer: 'Analytics MCP',
-      tools: ["Metric Unifier", "Currency Converter", "Attribution Mapper", "Naming Convention Resolver"],
+      tools: [
+        'Metric Unifier',
+        'Currency Converter',
+        'Attribution Mapper',
+        'Naming Convention Resolver',
+      ],
       trigger: 'On completion of Platform Connector Agent',
       approval: 'auto',
     },
@@ -62,7 +83,12 @@ export const ANALYZE_CAMPAIGN_PERFORMANCE_TEAM_SPEC_0_0_1: TeamSpec = {
       goal: `Monitor all KPIs for CTR drops, CPA spikes, and budget pacing issues`,
       model: 'anthropic-claude-sonnet-4',
       mcpServer: 'Monitoring MCP',
-      tools: ["Anomaly Scanner", "Budget Pacer", "Alert Generator", "Campaign Pauser"],
+      tools: [
+        'Anomaly Scanner',
+        'Budget Pacer',
+        'Alert Generator',
+        'Campaign Pauser',
+      ],
       trigger: 'On completion of Metrics Normaliser Agent',
       approval: 'manual',
     },
@@ -73,53 +99,54 @@ export const ANALYZE_CAMPAIGN_PERFORMANCE_TEAM_SPEC_0_0_1: TeamSpec = {
       goal: `Generate budget reallocation recommendations to maximise ROAS across channels`,
       model: 'openai-gpt-4-1',
       mcpServer: 'Optimisation MCP',
-      tools: ["ROAS Calculator", "Budget Allocator", "Scenario Modeller", "Report Generator"],
+      tools: [
+        'ROAS Calculator',
+        'Budget Allocator',
+        'Scenario Modeller',
+        'Report Generator',
+      ],
       trigger: 'On completion of Anomaly Detector Agent',
       approval: 'manual',
     },
   ],
   reactionRules: [
-  {
-    "id": "rr-camp-1",
-    "trigger": "budget_threshold_exceeded",
-    "action": "pause_and_notify",
-    "auto": true,
-    "maxRetries": 1,
-    "escalateAfterRetries": 1,
-    "priority": "high"
-  },
-  {
-    "id": "rr-camp-2",
-    "trigger": "data_quality_low",
-    "action": "retry_collection",
-    "auto": true,
-    "maxRetries": 3,
-    "escalateAfterRetries": 3,
-    "priority": "medium"
-  }
-],
-  healthMonitoring: {
-  "heartbeatInterval": "30s",
-  "staleThreshold": "120s",
-  "unresponsiveThreshold": "300s",
-  "stuckThreshold": "600s",
-  "maxRestartAttempts": 3
-},
-  notifications: {
-  "on_start": true,
-  "on_completion": true,
-  "on_failure": true,
-  "on_escalation": true
-},
-  output: {
-  "formats": [
-    "pdf",
-    "csv",
-    "json"
+    {
+      id: 'rr-camp-1',
+      trigger: 'budget_threshold_exceeded',
+      action: 'pause_and_notify',
+      auto: true,
+      maxRetries: 1,
+      escalateAfterRetries: 1,
+      priority: 'high',
+    },
+    {
+      id: 'rr-camp-2',
+      trigger: 'data_quality_low',
+      action: 'retry_collection',
+      auto: true,
+      maxRetries: 3,
+      escalateAfterRetries: 3,
+      priority: 'medium',
+    },
   ],
-  "template": "Campaign Performance Report",
-  "storage": "s3://reports/campaign-analytics/"
-},
+  healthMonitoring: {
+    heartbeatInterval: '30s',
+    staleThreshold: '120s',
+    unresponsiveThreshold: '300s',
+    stuckThreshold: '600s',
+    maxRestartAttempts: 3,
+  },
+  notifications: {
+    on_start: true,
+    on_completion: true,
+    on_failure: true,
+    on_escalation: true,
+  },
+  output: {
+    formats: ['pdf', 'csv', 'json'],
+    template: 'Campaign Performance Report',
+    storage: 's3://reports/campaign-analytics/',
+  },
 };
 
 export const ANALYZE_SUPPORT_TICKETS_TEAM_SPEC_0_0_1: TeamSpec = {
@@ -127,7 +154,7 @@ export const ANALYZE_SUPPORT_TICKETS_TEAM_SPEC_0_0_1: TeamSpec = {
   version: '0.0.1',
   name: 'Analyze Support Tickets',
   description: `A multi-agent team that triages incoming support tickets, categorizes by urgency and topic, identifies recurring patterns, and generates resolution recommendations with escalation paths.`,
-  tags: ["analytics", "data", "support", "tickets"],
+  tags: ['analytics', 'data', 'support', 'tickets'],
   enabled: true,
   icon: 'issue-opened',
   emoji: '🎫',
@@ -146,7 +173,7 @@ export const ANALYZE_SUPPORT_TICKETS_TEAM_SPEC_0_0_1: TeamSpec = {
       goal: `Ingest new support tickets and assess urgency level (P1-P4)`,
       model: 'openai-gpt-4-1',
       mcpServer: 'Helpdesk MCP',
-      tools: ["Ticket Reader", "Priority Classifier"],
+      tools: ['Ticket Reader', 'Priority Classifier'],
       trigger: 'Event: new ticket received',
       approval: 'auto',
     },
@@ -157,7 +184,7 @@ export const ANALYZE_SUPPORT_TICKETS_TEAM_SPEC_0_0_1: TeamSpec = {
       goal: `Categorize tickets by topic, product area, and sentiment`,
       model: 'openai-gpt-4-1',
       mcpServer: 'NLP Pipeline MCP',
-      tools: ["Topic Classifier", "Sentiment Analyzer", "Product Tagger"],
+      tools: ['Topic Classifier', 'Sentiment Analyzer', 'Product Tagger'],
       trigger: 'On completion of Triage Agent',
       approval: 'auto',
     },
@@ -168,52 +195,53 @@ export const ANALYZE_SUPPORT_TICKETS_TEAM_SPEC_0_0_1: TeamSpec = {
       goal: `Identify recurring issues and generate resolution recommendations`,
       model: 'anthropic-claude-sonnet-4',
       mcpServer: 'Analytics MCP',
-      tools: ["Pattern Detector", "Knowledge Base Search", "Resolution Generator"],
+      tools: [
+        'Pattern Detector',
+        'Knowledge Base Search',
+        'Resolution Generator',
+      ],
       trigger: 'On completion of Categorizer Agent',
       approval: 'manual',
     },
   ],
   reactionRules: [
-  {
-    "id": "rr-supp-1",
-    "trigger": "ticket_surge_detected",
-    "action": "escalate_to_supervisor",
-    "auto": true,
-    "maxRetries": 2,
-    "escalateAfterRetries": 2,
-    "priority": "high"
-  },
-  {
-    "id": "rr-supp-2",
-    "trigger": "classification_confidence_low",
-    "action": "request_human_review",
-    "auto": false,
-    "maxRetries": 1,
-    "escalateAfterRetries": 1,
-    "priority": "medium"
-  }
-],
-  healthMonitoring: {
-  "heartbeatInterval": "15s",
-  "staleThreshold": "60s",
-  "unresponsiveThreshold": "180s",
-  "stuckThreshold": "300s",
-  "maxRestartAttempts": 3
-},
-  notifications: {
-  "on_start": false,
-  "on_completion": true,
-  "on_failure": true,
-  "on_escalation": true
-},
-  output: {
-  "formats": [
-    "pdf",
-    "json"
+    {
+      id: 'rr-supp-1',
+      trigger: 'ticket_surge_detected',
+      action: 'escalate_to_supervisor',
+      auto: true,
+      maxRetries: 2,
+      escalateAfterRetries: 2,
+      priority: 'high',
+    },
+    {
+      id: 'rr-supp-2',
+      trigger: 'classification_confidence_low',
+      action: 'request_human_review',
+      auto: false,
+      maxRetries: 1,
+      escalateAfterRetries: 1,
+      priority: 'medium',
+    },
   ],
-  "template": "Support Ticket Analysis",
-  "storage": "s3://reports/support-analytics/"
-},
+  healthMonitoring: {
+    heartbeatInterval: '15s',
+    staleThreshold: '60s',
+    unresponsiveThreshold: '180s',
+    stuckThreshold: '300s',
+    maxRestartAttempts: 3,
+  },
+  notifications: {
+    on_start: false,
+    on_completion: true,
+    on_failure: true,
+    on_escalation: true,
+  },
+  output: {
+    formats: ['pdf', 'json'],
+    template: 'Support Ticket Analysis',
+    storage: 's3://reports/support-analytics/',
+  },
 };
 
 export const AUDIT_INVENTORY_LEVELS_TEAM_SPEC_0_0_1: TeamSpec = {
@@ -221,7 +249,7 @@ export const AUDIT_INVENTORY_LEVELS_TEAM_SPEC_0_0_1: TeamSpec = {
   version: '0.0.1',
   name: 'Audit Inventory Levels',
   description: `A multi-agent team that monitors inventory levels across warehouses, detects discrepancies between physical and system counts, forecasts demand by SKU, and generates automated reorder recommendations.`,
-  tags: ["finance", "automation", "inventory", "supply-chain"],
+  tags: ['finance', 'automation', 'inventory', 'supply-chain'],
   enabled: true,
   icon: 'package',
   emoji: '📦',
@@ -240,7 +268,7 @@ export const AUDIT_INVENTORY_LEVELS_TEAM_SPEC_0_0_1: TeamSpec = {
       goal: `Pull current inventory levels from all warehouse management systems`,
       model: 'openai-gpt-4-1',
       mcpServer: 'Warehouse MCP',
-      tools: ["WMS Connector", "Barcode Scanner API"],
+      tools: ['WMS Connector', 'Barcode Scanner API'],
       trigger: 'Schedule: Every 6 hours',
       approval: 'auto',
     },
@@ -251,7 +279,7 @@ export const AUDIT_INVENTORY_LEVELS_TEAM_SPEC_0_0_1: TeamSpec = {
       goal: `Compare system counts vs physical counts and flag discrepancies`,
       model: 'openai-gpt-4-1',
       mcpServer: 'Audit MCP',
-      tools: ["Count Comparator", "Discrepancy Logger", "Shrinkage Calculator"],
+      tools: ['Count Comparator', 'Discrepancy Logger', 'Shrinkage Calculator'],
       trigger: 'On completion of Inventory Scanner',
       approval: 'auto',
     },
@@ -262,7 +290,11 @@ export const AUDIT_INVENTORY_LEVELS_TEAM_SPEC_0_0_1: TeamSpec = {
       goal: `Forecast demand by SKU using historical sales and seasonal patterns`,
       model: 'anthropic-claude-sonnet-4',
       mcpServer: 'Analytics MCP',
-      tools: ["Time Series Model", "Seasonal Analyzer", "External Signals Fetcher"],
+      tools: [
+        'Time Series Model',
+        'Seasonal Analyzer',
+        'External Signals Fetcher',
+      ],
       trigger: 'On completion of Discrepancy Auditor',
       approval: 'auto',
     },
@@ -273,7 +305,7 @@ export const AUDIT_INVENTORY_LEVELS_TEAM_SPEC_0_0_1: TeamSpec = {
       goal: `Calculate optimal reorder points and generate purchase order recommendations`,
       model: 'openai-gpt-4-1',
       mcpServer: 'Procurement MCP',
-      tools: ["EOQ Calculator", "Supplier Catalog", "PO Generator"],
+      tools: ['EOQ Calculator', 'Supplier Catalog', 'PO Generator'],
       trigger: 'On completion of Demand Forecaster',
       approval: 'manual',
     },
@@ -284,53 +316,49 @@ export const AUDIT_INVENTORY_LEVELS_TEAM_SPEC_0_0_1: TeamSpec = {
       goal: `Compile inventory audit report with discrepancies, forecasts, and reorder plan`,
       model: 'openai-gpt-4-1',
       mcpServer: 'Document Generation MCP',
-      tools: ["PDF Generator", "Chart Builder", "Email Sender"],
+      tools: ['PDF Generator', 'Chart Builder', 'Email Sender'],
       trigger: 'On completion of Reorder Planner',
       approval: 'auto',
     },
   ],
   reactionRules: [
-  {
-    "id": "rr-inv-1",
-    "trigger": "stockout_risk_detected",
-    "action": "escalate_to_supervisor",
-    "auto": true,
-    "maxRetries": 1,
-    "escalateAfterRetries": 1,
-    "priority": "high"
-  },
-  {
-    "id": "rr-inv-2",
-    "trigger": "discrepancy_threshold_exceeded",
-    "action": "flag_for_manual_audit",
-    "auto": false,
-    "maxRetries": 2,
-    "escalateAfterRetries": 2,
-    "priority": "high"
-  }
-],
-  healthMonitoring: {
-  "heartbeatInterval": "30s",
-  "staleThreshold": "120s",
-  "unresponsiveThreshold": "300s",
-  "stuckThreshold": "600s",
-  "maxRestartAttempts": 3
-},
-  notifications: {
-  "on_start": true,
-  "on_completion": true,
-  "on_failure": true,
-  "on_escalation": true
-},
-  output: {
-  "formats": [
-    "pdf",
-    "xlsx",
-    "csv"
+    {
+      id: 'rr-inv-1',
+      trigger: 'stockout_risk_detected',
+      action: 'escalate_to_supervisor',
+      auto: true,
+      maxRetries: 1,
+      escalateAfterRetries: 1,
+      priority: 'high',
+    },
+    {
+      id: 'rr-inv-2',
+      trigger: 'discrepancy_threshold_exceeded',
+      action: 'flag_for_manual_audit',
+      auto: false,
+      maxRetries: 2,
+      escalateAfterRetries: 2,
+      priority: 'high',
+    },
   ],
-  "template": "Inventory Audit Report",
-  "storage": "s3://reports/inventory-audits/"
-},
+  healthMonitoring: {
+    heartbeatInterval: '30s',
+    staleThreshold: '120s',
+    unresponsiveThreshold: '300s',
+    stuckThreshold: '600s',
+    maxRestartAttempts: 3,
+  },
+  notifications: {
+    on_start: true,
+    on_completion: true,
+    on_failure: true,
+    on_escalation: true,
+  },
+  output: {
+    formats: ['pdf', 'xlsx', 'csv'],
+    template: 'Inventory Audit Report',
+    storage: 's3://reports/inventory-audits/',
+  },
 };
 
 export const AUTOMATE_REGULATORY_REPORTING_TEAM_SPEC_0_0_1: TeamSpec = {
@@ -338,7 +366,7 @@ export const AUTOMATE_REGULATORY_REPORTING_TEAM_SPEC_0_0_1: TeamSpec = {
   version: '0.0.1',
   name: 'Automate Regulatory Reporting',
   description: `A multi-agent team that automates end-to-end regulatory reporting for financial institutions. Ingests data from trading systems, risk engines, and accounting platforms, reconciles positions, computes risk metrics, validates against regulatory rules (Basel III/IV, MiFID II, SOX), and generates submission-ready compliance reports with full audit trails.`,
-  tags: ["finance", "compliance", "regulatory", "risk", "banking", "audit"],
+  tags: ['finance', 'compliance', 'regulatory', 'risk', 'banking', 'audit'],
   enabled: true,
   icon: 'shield-check',
   emoji: '🏦',
@@ -346,7 +374,10 @@ export const AUTOMATE_REGULATORY_REPORTING_TEAM_SPEC_0_0_1: TeamSpec = {
   agentSpecId: 'automate-regulatory-reporting:0.0.1',
   orchestrationProtocol: 'datalayer',
   executionMode: 'sequential',
-  supervisor: { name: 'Compliance Orchestrator Agent', model: 'openai-gpt-4-1' },
+  supervisor: {
+    name: 'Compliance Orchestrator Agent',
+    model: 'openai-gpt-4-1',
+  },
   routingInstructions: `Start with Data Ingestion to pull positions and transactions, then Risk Calculator for metric computation, then Reconciliation Agent to cross-check figures, then Validation Agent for regulatory rule checks, then Report Generator for submission-ready output. Escalate any reconciliation breaks above $10K immediately to the compliance team.`,
   validation: { timeout: '900s', retryOnFailure: true, maxRetries: 2 },
   agents: [
@@ -357,7 +388,7 @@ export const AUTOMATE_REGULATORY_REPORTING_TEAM_SPEC_0_0_1: TeamSpec = {
       goal: `Extract positions, transactions, and P&L from trading and accounting systems`,
       model: 'openai-gpt-4-1',
       mcpServer: 'Trading Systems MCP',
-      tools: ["Position Reader", "Transaction Fetcher", "P&L Extractor"],
+      tools: ['Position Reader', 'Transaction Fetcher', 'P&L Extractor'],
       trigger: 'Schedule: Monthly on the 3rd business day',
       approval: 'auto',
     },
@@ -368,7 +399,12 @@ export const AUTOMATE_REGULATORY_REPORTING_TEAM_SPEC_0_0_1: TeamSpec = {
       goal: `Compute Basel III/IV risk-weighted assets, capital ratios, and VaR metrics`,
       model: 'anthropic-claude-sonnet-4',
       mcpServer: 'Risk Engine MCP',
-      tools: ["RWA Calculator", "VaR Engine", "Capital Ratio Computer", "Stress Test Runner"],
+      tools: [
+        'RWA Calculator',
+        'VaR Engine',
+        'Capital Ratio Computer',
+        'Stress Test Runner',
+      ],
       trigger: 'On completion of Data Ingestion Agent',
       approval: 'auto',
     },
@@ -379,7 +415,7 @@ export const AUTOMATE_REGULATORY_REPORTING_TEAM_SPEC_0_0_1: TeamSpec = {
       goal: `Cross-check computed figures against source systems and flag discrepancies`,
       model: 'openai-gpt-4-1',
       mcpServer: 'Reconciliation MCP',
-      tools: ["Position Reconciler", "Break Detector", "Audit Logger"],
+      tools: ['Position Reconciler', 'Break Detector', 'Audit Logger'],
       trigger: 'On completion of Risk Calculator Agent',
       approval: 'auto',
     },
@@ -390,7 +426,11 @@ export const AUTOMATE_REGULATORY_REPORTING_TEAM_SPEC_0_0_1: TeamSpec = {
       goal: `Validate all metrics against Basel III/IV, MiFID II, and SOX regulatory rules`,
       model: 'openai-gpt-4-1',
       mcpServer: 'Compliance Rules MCP',
-      tools: ["Basel Rule Validator", "MiFID II Checker", "SOX Control Verifier"],
+      tools: [
+        'Basel Rule Validator',
+        'MiFID II Checker',
+        'SOX Control Verifier',
+      ],
       trigger: 'On completion of Reconciliation Agent',
       approval: 'manual',
     },
@@ -401,53 +441,49 @@ export const AUTOMATE_REGULATORY_REPORTING_TEAM_SPEC_0_0_1: TeamSpec = {
       goal: `Generate submission-ready regulatory reports with full data lineage and audit trail`,
       model: 'openai-gpt-4-1',
       mcpServer: 'Document Generation MCP',
-      tools: ["PDF Generator", "XBRL Formatter", "Email Sender"],
+      tools: ['PDF Generator', 'XBRL Formatter', 'Email Sender'],
       trigger: 'On completion of Validation Agent',
       approval: 'auto',
     },
   ],
   reactionRules: [
-  {
-    "id": "rr-reg-1",
-    "trigger": "compliance_violation_detected",
-    "action": "halt_and_escalate",
-    "auto": true,
-    "maxRetries": 0,
-    "escalateAfterRetries": 0,
-    "priority": "critical"
-  },
-  {
-    "id": "rr-reg-2",
-    "trigger": "data_validation_failure",
-    "action": "retry_with_fallback",
-    "auto": true,
-    "maxRetries": 3,
-    "escalateAfterRetries": 3,
-    "priority": "high"
-  }
-],
-  healthMonitoring: {
-  "heartbeatInterval": "15s",
-  "staleThreshold": "60s",
-  "unresponsiveThreshold": "120s",
-  "stuckThreshold": "300s",
-  "maxRestartAttempts": 2
-},
-  notifications: {
-  "on_start": true,
-  "on_completion": true,
-  "on_failure": true,
-  "on_escalation": true
-},
-  output: {
-  "formats": [
-    "pdf",
-    "xbrl",
-    "json"
+    {
+      id: 'rr-reg-1',
+      trigger: 'compliance_violation_detected',
+      action: 'halt_and_escalate',
+      auto: true,
+      maxRetries: 0,
+      escalateAfterRetries: 0,
+      priority: 'critical',
+    },
+    {
+      id: 'rr-reg-2',
+      trigger: 'data_validation_failure',
+      action: 'retry_with_fallback',
+      auto: true,
+      maxRetries: 3,
+      escalateAfterRetries: 3,
+      priority: 'high',
+    },
   ],
-  "template": "Regulatory Submission Report",
-  "storage": "s3://reports/regulatory-submissions/"
-},
+  healthMonitoring: {
+    heartbeatInterval: '15s',
+    staleThreshold: '60s',
+    unresponsiveThreshold: '120s',
+    stuckThreshold: '300s',
+    maxRestartAttempts: 2,
+  },
+  notifications: {
+    on_start: true,
+    on_completion: true,
+    on_failure: true,
+    on_escalation: true,
+  },
+  output: {
+    formats: ['pdf', 'xbrl', 'json'],
+    template: 'Regulatory Submission Report',
+    storage: 's3://reports/regulatory-submissions/',
+  },
 };
 
 export const COMPREHENSIVE_SALES_ANALYTICS_TEAM_SPEC_0_0_1: TeamSpec = {
@@ -455,7 +491,7 @@ export const COMPREHENSIVE_SALES_ANALYTICS_TEAM_SPEC_0_0_1: TeamSpec = {
   version: '0.0.1',
   name: 'Comprehensive Sales Analytics',
   description: `A multi-agent team that replaces a single KPI monitor with four specialized agents: a Data Collector that pulls real-time CRM metrics, an Anomaly Detector that flags statistical outliers, a Trend Analyzer that identifies patterns and forecasts, and a Report Generator that compiles executive dashboards and sends alerts. Together they deliver deeper insights, faster detection, and richer reporting than any single agent could.`,
-  tags: ["sales", "analytics", "kpi", "monitoring", "horizontal"],
+  tags: ['sales', 'analytics', 'kpi', 'monitoring', 'horizontal'],
   enabled: true,
   icon: 'graph',
   emoji: '📈',
@@ -463,7 +499,10 @@ export const COMPREHENSIVE_SALES_ANALYTICS_TEAM_SPEC_0_0_1: TeamSpec = {
   agentSpecId: 'comprehensive-sales-analytics:0.0.1',
   orchestrationProtocol: 'datalayer',
   executionMode: 'sequential',
-  supervisor: { name: 'Sales Analytics Supervisor', model: 'anthropic-claude-opus-4' },
+  supervisor: {
+    name: 'Sales Analytics Supervisor',
+    model: 'anthropic-claude-opus-4',
+  },
   routingInstructions: `Route data collection to KPI Collector first, then pass raw metrics to Anomaly Detector and Trend Analyzer in parallel, then aggregate all outputs into the Report Generator. Escalate if anomalies exceed the critical threshold (>25% deviation from target).`,
   validation: { timeout: '300s', retryOnFailure: true, maxRetries: 3 },
   agents: [
@@ -474,7 +513,7 @@ export const COMPREHENSIVE_SALES_ANALYTICS_TEAM_SPEC_0_0_1: TeamSpec = {
       goal: `Pull real-time sales metrics from CRM, ERP, and marketing platforms. Normalize data into a unified schema with timestamps, dimensions (region, product line, rep), and measures (revenue, pipeline, conversion).`,
       model: 'openai-gpt-4-1',
       mcpServer: 'CRM Data Server',
-      tools: ["get_sales_data", "get_customer_list", "API Connector"],
+      tools: ['get_sales_data', 'get_customer_list', 'API Connector'],
       trigger: 'Schedule: Daily at 7:30 AM',
       approval: 'auto',
     },
@@ -485,7 +524,7 @@ export const COMPREHENSIVE_SALES_ANALYTICS_TEAM_SPEC_0_0_1: TeamSpec = {
       goal: `Apply statistical anomaly detection (Z-score, IQR, moving average) to the collected KPIs. Flag any metric deviating more than 10% from its rolling 30-day average. Classify anomalies as info, warning, or critical.`,
       model: 'anthropic-claude-sonnet-4',
       mcpServer: 'Analytics Server',
-      tools: ["run_analysis", "Statistical Analysis", "ML Predictor"],
+      tools: ['run_analysis', 'Statistical Analysis', 'ML Predictor'],
       trigger: 'On completion of KPI Data Collector',
       approval: 'auto',
     },
@@ -496,7 +535,7 @@ export const COMPREHENSIVE_SALES_ANALYTICS_TEAM_SPEC_0_0_1: TeamSpec = {
       goal: `Identify week-over-week, month-over-month, and quarter-over-quarter trends. Generate 30-day forecasts for each KPI using time-series models. Highlight the top 3 improving and top 3 declining metrics.`,
       model: 'anthropic-claude-sonnet-4',
       mcpServer: 'Analytics Server',
-      tools: ["run_analysis", "generate_charts", "Forecaster"],
+      tools: ['run_analysis', 'generate_charts', 'Forecaster'],
       trigger: 'On completion of KPI Data Collector',
       approval: 'auto',
     },
@@ -507,53 +546,54 @@ export const COMPREHENSIVE_SALES_ANALYTICS_TEAM_SPEC_0_0_1: TeamSpec = {
       goal: `Compile all insights — raw KPIs, anomalies, trends, and forecasts — into a polished executive dashboard with charts, tables, and narrative commentary. Send the report via Slack and email. Highlight critical anomalies with a red-flag summary at the top.`,
       model: 'openai-gpt-4-1',
       mcpServer: 'Document Generation MCP',
-      tools: ["PDF Generator", "Chart Builder", "Email Sender", "Slack Notifier"],
+      tools: [
+        'PDF Generator',
+        'Chart Builder',
+        'Email Sender',
+        'Slack Notifier',
+      ],
       trigger: 'On completion of Anomaly Detector & Trend Analyzer',
       approval: 'manual',
     },
   ],
   reactionRules: [
-  {
-    "id": "rr-sales-1",
-    "trigger": "anomaly_critical",
-    "action": "escalate_to_supervisor",
-    "auto": true,
-    "maxRetries": 2,
-    "escalateAfterRetries": 2,
-    "priority": "high"
-  },
-  {
-    "id": "rr-sales-2",
-    "trigger": "data_stale",
-    "action": "retry_collection",
-    "auto": true,
-    "maxRetries": 3,
-    "escalateAfterRetries": 3,
-    "priority": "medium"
-  }
-],
-  healthMonitoring: {
-  "heartbeatInterval": "30s",
-  "staleThreshold": "120s",
-  "unresponsiveThreshold": "300s",
-  "stuckThreshold": "600s",
-  "maxRestartAttempts": 3
-},
-  notifications: {
-  "on_start": true,
-  "on_completion": true,
-  "on_failure": true,
-  "on_escalation": true
-},
-  output: {
-  "formats": [
-    "pdf",
-    "xlsx",
-    "json"
+    {
+      id: 'rr-sales-1',
+      trigger: 'anomaly_critical',
+      action: 'escalate_to_supervisor',
+      auto: true,
+      maxRetries: 2,
+      escalateAfterRetries: 2,
+      priority: 'high',
+    },
+    {
+      id: 'rr-sales-2',
+      trigger: 'data_stale',
+      action: 'retry_collection',
+      auto: true,
+      maxRetries: 3,
+      escalateAfterRetries: 3,
+      priority: 'medium',
+    },
   ],
-  "template": "Executive Sales Dashboard",
-  "storage": "s3://reports/sales-analytics/"
-},
+  healthMonitoring: {
+    heartbeatInterval: '30s',
+    staleThreshold: '120s',
+    unresponsiveThreshold: '300s',
+    stuckThreshold: '600s',
+    maxRestartAttempts: 3,
+  },
+  notifications: {
+    on_start: true,
+    on_completion: true,
+    on_failure: true,
+    on_escalation: true,
+  },
+  output: {
+    formats: ['pdf', 'xlsx', 'json'],
+    template: 'Executive Sales Dashboard',
+    storage: 's3://reports/sales-analytics/',
+  },
 };
 
 export const OPTIMIZE_GRID_OPERATIONS_TEAM_SPEC_0_0_1: TeamSpec = {
@@ -561,7 +601,14 @@ export const OPTIMIZE_GRID_OPERATIONS_TEAM_SPEC_0_0_1: TeamSpec = {
   version: '0.0.1',
   name: 'Optimize Grid Operations',
   description: `A multi-agent team that processes millions of IoT sensor data points from smart meters, substations, and renewable generation assets. Predicts equipment failures 2–4 weeks in advance, optimises load balancing across the grid, and reduces unplanned downtime by 50%.`,
-  tags: ["energy", "utilities", "smart-grid", "iot", "predictive-maintenance", "sustainability"],
+  tags: [
+    'energy',
+    'utilities',
+    'smart-grid',
+    'iot',
+    'predictive-maintenance',
+    'sustainability',
+  ],
   enabled: true,
   icon: 'zap',
   emoji: '⚡',
@@ -569,7 +616,10 @@ export const OPTIMIZE_GRID_OPERATIONS_TEAM_SPEC_0_0_1: TeamSpec = {
   agentSpecId: 'optimize-grid-operations:0.0.1',
   orchestrationProtocol: 'datalayer',
   executionMode: 'sequential',
-  supervisor: { name: 'Grid Operations Orchestrator Agent', model: 'openai-gpt-4-1' },
+  supervisor: {
+    name: 'Grid Operations Orchestrator Agent',
+    model: 'openai-gpt-4-1',
+  },
   routingInstructions: `Start with Sensor Ingestion to process real-time telemetry, then Anomaly Detector for pattern identification, then Failure Predictor for maintenance forecasting, then Grid Balancer for load optimisation. Escalate critical failure predictions (< 48h) immediately to operations dispatch.`,
   validation: { timeout: '600s', retryOnFailure: true, maxRetries: 3 },
   agents: [
@@ -580,7 +630,12 @@ export const OPTIMIZE_GRID_OPERATIONS_TEAM_SPEC_0_0_1: TeamSpec = {
       goal: `Ingest and process real-time telemetry from SCADA, smart meters, and IoT gateways`,
       model: 'openai-gpt-4-1',
       mcpServer: 'SCADA MCP',
-      tools: ["SCADA Connector", "Smart Meter Reader", "IoT Gateway Adapter", "Time Series Processor"],
+      tools: [
+        'SCADA Connector',
+        'Smart Meter Reader',
+        'IoT Gateway Adapter',
+        'Time Series Processor',
+      ],
       trigger: 'Schedule: Every 5 minutes',
       approval: 'auto',
     },
@@ -591,7 +646,12 @@ export const OPTIMIZE_GRID_OPERATIONS_TEAM_SPEC_0_0_1: TeamSpec = {
       goal: `Detect vibration, temperature, and voltage anomalies across all grid assets`,
       model: 'openai-gpt-4-1',
       mcpServer: 'Monitoring MCP',
-      tools: ["Vibration Analyzer", "Temperature Anomaly Detector", "Voltage Pattern Scanner", "Historical Comparator"],
+      tools: [
+        'Vibration Analyzer',
+        'Temperature Anomaly Detector',
+        'Voltage Pattern Scanner',
+        'Historical Comparator',
+      ],
       trigger: 'On completion of Sensor Ingestion Agent',
       approval: 'auto',
     },
@@ -602,7 +662,12 @@ export const OPTIMIZE_GRID_OPERATIONS_TEAM_SPEC_0_0_1: TeamSpec = {
       goal: `Predict equipment failures 2–4 weeks in advance using anomaly patterns and failure history`,
       model: 'anthropic-claude-sonnet-4',
       mcpServer: 'Predictive Analytics MCP',
-      tools: ["Failure Correlation Engine", "Risk Scorer", "Maintenance Scheduler", "Work Order Generator"],
+      tools: [
+        'Failure Correlation Engine',
+        'Risk Scorer',
+        'Maintenance Scheduler',
+        'Work Order Generator',
+      ],
       trigger: 'On completion of Anomaly Detector Agent',
       approval: 'manual',
     },
@@ -613,53 +678,54 @@ export const OPTIMIZE_GRID_OPERATIONS_TEAM_SPEC_0_0_1: TeamSpec = {
       goal: `Optimise real-time load balancing across renewable and conventional generation sources`,
       model: 'openai-gpt-4-1',
       mcpServer: 'Grid Control MCP',
-      tools: ["Load Forecaster", "Renewable Integration Model", "Dispatch Optimiser", "Grid Stability Checker"],
+      tools: [
+        'Load Forecaster',
+        'Renewable Integration Model',
+        'Dispatch Optimiser',
+        'Grid Stability Checker',
+      ],
       trigger: 'On completion of Failure Predictor Agent',
       approval: 'auto',
     },
   ],
   reactionRules: [
-  {
-    "id": "rr-grid-1",
-    "trigger": "grid_instability_detected",
-    "action": "emergency_rebalance",
-    "auto": true,
-    "maxRetries": 1,
-    "escalateAfterRetries": 1,
-    "priority": "critical"
-  },
-  {
-    "id": "rr-grid-2",
-    "trigger": "forecast_deviation_high",
-    "action": "recalibrate_model",
-    "auto": true,
-    "maxRetries": 2,
-    "escalateAfterRetries": 2,
-    "priority": "medium"
-  }
-],
-  healthMonitoring: {
-  "heartbeatInterval": "10s",
-  "staleThreshold": "30s",
-  "unresponsiveThreshold": "60s",
-  "stuckThreshold": "120s",
-  "maxRestartAttempts": 5
-},
-  notifications: {
-  "on_start": true,
-  "on_completion": true,
-  "on_failure": true,
-  "on_escalation": true
-},
-  output: {
-  "formats": [
-    "json",
-    "csv",
-    "pdf"
+    {
+      id: 'rr-grid-1',
+      trigger: 'grid_instability_detected',
+      action: 'emergency_rebalance',
+      auto: true,
+      maxRetries: 1,
+      escalateAfterRetries: 1,
+      priority: 'critical',
+    },
+    {
+      id: 'rr-grid-2',
+      trigger: 'forecast_deviation_high',
+      action: 'recalibrate_model',
+      auto: true,
+      maxRetries: 2,
+      escalateAfterRetries: 2,
+      priority: 'medium',
+    },
   ],
-  "template": "Grid Operations Dashboard",
-  "storage": "s3://reports/grid-operations/"
-},
+  healthMonitoring: {
+    heartbeatInterval: '10s',
+    staleThreshold: '30s',
+    unresponsiveThreshold: '60s',
+    stuckThreshold: '120s',
+    maxRestartAttempts: 5,
+  },
+  notifications: {
+    on_start: true,
+    on_completion: true,
+    on_failure: true,
+    on_escalation: true,
+  },
+  output: {
+    formats: ['json', 'csv', 'pdf'],
+    template: 'Grid Operations Dashboard',
+    storage: 's3://reports/grid-operations/',
+  },
 };
 
 export const PROCESS_CITIZEN_REQUESTS_TEAM_SPEC_0_0_1: TeamSpec = {
@@ -667,7 +733,14 @@ export const PROCESS_CITIZEN_REQUESTS_TEAM_SPEC_0_0_1: TeamSpec = {
   version: '0.0.1',
   name: 'Process Citizen Requests',
   description: `A multi-agent team that automates citizen request processing for government agencies. Classifies and triages permits, FOIA requests, and benefit claims from multiple channels. Models policy impacts across population datasets and ensures every automated decision is explainable, auditable, and compliant with transparency mandates.`,
-  tags: ["government", "public-sector", "civic", "policy", "compliance", "transparency"],
+  tags: [
+    'government',
+    'public-sector',
+    'civic',
+    'policy',
+    'compliance',
+    'transparency',
+  ],
   enabled: true,
   icon: 'organization',
   emoji: '🏛️',
@@ -675,7 +748,10 @@ export const PROCESS_CITIZEN_REQUESTS_TEAM_SPEC_0_0_1: TeamSpec = {
   agentSpecId: 'process-citizen-requests:0.0.1',
   orchestrationProtocol: 'datalayer',
   executionMode: 'sequential',
-  supervisor: { name: 'Citizen Services Orchestrator Agent', model: 'openai-gpt-4-1' },
+  supervisor: {
+    name: 'Citizen Services Orchestrator Agent',
+    model: 'openai-gpt-4-1',
+  },
   routingInstructions: `Route incoming citizen requests to the Intake Agent for classification and triage, then to the Case Processor for handling and routing, then to the Policy Analyst for impact assessment on relevant items, then to the Transparency Agent for audit trail and public documentation. Escalate urgent citizen safety issues immediately to supervisors.`,
   validation: { timeout: '300s', retryOnFailure: true, maxRetries: 2 },
   agents: [
@@ -686,7 +762,12 @@ export const PROCESS_CITIZEN_REQUESTS_TEAM_SPEC_0_0_1: TeamSpec = {
       goal: `Classify, triage, and route citizen submissions from web portals, email, and documents`,
       model: 'openai-gpt-4-1',
       mcpServer: 'Citizen Portal MCP',
-      tools: ["Request Classifier", "Urgency Assessor", "Jurisdiction Router", "OCR Scanner"],
+      tools: [
+        'Request Classifier',
+        'Urgency Assessor',
+        'Jurisdiction Router',
+        'OCR Scanner',
+      ],
       trigger: 'Event: new citizen request received',
       approval: 'auto',
     },
@@ -697,7 +778,12 @@ export const PROCESS_CITIZEN_REQUESTS_TEAM_SPEC_0_0_1: TeamSpec = {
       goal: `Process and route requests to appropriate departments with required documentation`,
       model: 'openai-gpt-4-1',
       mcpServer: 'Case Management MCP',
-      tools: ["Case Creator", "Document Assembler", "Department Router", "Status Tracker"],
+      tools: [
+        'Case Creator',
+        'Document Assembler',
+        'Department Router',
+        'Status Tracker',
+      ],
       trigger: 'On completion of Intake Agent',
       approval: 'auto',
     },
@@ -708,7 +794,12 @@ export const PROCESS_CITIZEN_REQUESTS_TEAM_SPEC_0_0_1: TeamSpec = {
       goal: `Model policy outcomes across population datasets with scenario simulation`,
       model: 'anthropic-claude-sonnet-4',
       mcpServer: 'Policy Analytics MCP',
-      tools: ["Monte Carlo Simulator", "Demographic Analyzer", "Budget Impact Model", "Scenario Comparator"],
+      tools: [
+        'Monte Carlo Simulator',
+        'Demographic Analyzer',
+        'Budget Impact Model',
+        'Scenario Comparator',
+      ],
       trigger: 'On completion of Case Processor Agent',
       approval: 'manual',
     },
@@ -719,52 +810,54 @@ export const PROCESS_CITIZEN_REQUESTS_TEAM_SPEC_0_0_1: TeamSpec = {
       goal: `Generate explainable decision documentation with full audit trail for public record`,
       model: 'openai-gpt-4-1',
       mcpServer: 'Compliance MCP',
-      tools: ["Decision Explainer", "Audit Trail Builder", "FOIA Compliance Checker", "Public Record Generator"],
+      tools: [
+        'Decision Explainer',
+        'Audit Trail Builder',
+        'FOIA Compliance Checker',
+        'Public Record Generator',
+      ],
       trigger: 'On completion of Policy Impact Analyst Agent',
       approval: 'auto',
     },
   ],
   reactionRules: [
-  {
-    "id": "rr-cit-1",
-    "trigger": "priority_request_detected",
-    "action": "fast_track_processing",
-    "auto": true,
-    "maxRetries": 2,
-    "escalateAfterRetries": 2,
-    "priority": "high"
-  },
-  {
-    "id": "rr-cit-2",
-    "trigger": "policy_ambiguity_detected",
-    "action": "request_human_review",
-    "auto": false,
-    "maxRetries": 1,
-    "escalateAfterRetries": 1,
-    "priority": "medium"
-  }
-],
-  healthMonitoring: {
-  "heartbeatInterval": "30s",
-  "staleThreshold": "120s",
-  "unresponsiveThreshold": "300s",
-  "stuckThreshold": "600s",
-  "maxRestartAttempts": 3
-},
-  notifications: {
-  "on_start": false,
-  "on_completion": true,
-  "on_failure": true,
-  "on_escalation": true
-},
-  output: {
-  "formats": [
-    "pdf",
-    "json"
+    {
+      id: 'rr-cit-1',
+      trigger: 'priority_request_detected',
+      action: 'fast_track_processing',
+      auto: true,
+      maxRetries: 2,
+      escalateAfterRetries: 2,
+      priority: 'high',
+    },
+    {
+      id: 'rr-cit-2',
+      trigger: 'policy_ambiguity_detected',
+      action: 'request_human_review',
+      auto: false,
+      maxRetries: 1,
+      escalateAfterRetries: 1,
+      priority: 'medium',
+    },
   ],
-  "template": "Citizen Request Processing Report",
-  "storage": "s3://reports/citizen-requests/"
-},
+  healthMonitoring: {
+    heartbeatInterval: '30s',
+    staleThreshold: '120s',
+    unresponsiveThreshold: '300s',
+    stuckThreshold: '600s',
+    maxRestartAttempts: 3,
+  },
+  notifications: {
+    on_start: false,
+    on_completion: true,
+    on_failure: true,
+    on_escalation: true,
+  },
+  output: {
+    formats: ['pdf', 'json'],
+    template: 'Citizen Request Processing Report',
+    storage: 's3://reports/citizen-requests/',
+  },
 };
 
 export const PROCESS_CLINICAL_TRIAL_DATA_TEAM_SPEC_0_0_1: TeamSpec = {
@@ -772,7 +865,13 @@ export const PROCESS_CLINICAL_TRIAL_DATA_TEAM_SPEC_0_0_1: TeamSpec = {
   version: '0.0.1',
   name: 'Process Clinical Trial Data',
   description: `A multi-agent team that automates clinical trial data processing across dozens of trial sites. Harmonises patient records and lab results to CDISC SDTM format, detects safety signals and adverse events in real time, and prepares submission-ready datasets — all with strict HIPAA and GxP compliance guardrails.`,
-  tags: ["healthcare", "pharma", "clinical-trials", "patient-data", "compliance"],
+  tags: [
+    'healthcare',
+    'pharma',
+    'clinical-trials',
+    'patient-data',
+    'compliance',
+  ],
   enabled: true,
   icon: 'heart',
   emoji: '🏥',
@@ -780,7 +879,10 @@ export const PROCESS_CLINICAL_TRIAL_DATA_TEAM_SPEC_0_0_1: TeamSpec = {
   agentSpecId: 'process-clinical-trial-data:0.0.1',
   orchestrationProtocol: 'datalayer',
   executionMode: 'sequential',
-  supervisor: { name: 'Clinical Data Orchestrator Agent', model: 'anthropic-claude-sonnet-4' },
+  supervisor: {
+    name: 'Clinical Data Orchestrator Agent',
+    model: 'anthropic-claude-sonnet-4',
+  },
   routingInstructions: `Route incoming data through the Ingestion Agent first for format detection and parsing, then to Harmonisation Agent for CDISC SDTM standardisation, then Safety Monitor for adverse event screening, then Submission Preparer for final dataset assembly. Escalate serious adverse events (SAEs) immediately to the medical officer.`,
   validation: { timeout: '600s', retryOnFailure: true, maxRetries: 2 },
   agents: [
@@ -791,7 +893,12 @@ export const PROCESS_CLINICAL_TRIAL_DATA_TEAM_SPEC_0_0_1: TeamSpec = {
       goal: `Ingest patient records, lab results, and CRFs from clinical sites`,
       model: 'openai-gpt-4-1',
       mcpServer: 'Clinical EDC MCP',
-      tools: ["Medidata Connector", "Veeva Vault Reader", "Oracle Clinical Adapter", "Format Detector"],
+      tools: [
+        'Medidata Connector',
+        'Veeva Vault Reader',
+        'Oracle Clinical Adapter',
+        'Format Detector',
+      ],
       trigger: 'Event: new data batch received from site',
       approval: 'auto',
     },
@@ -802,7 +909,12 @@ export const PROCESS_CLINICAL_TRIAL_DATA_TEAM_SPEC_0_0_1: TeamSpec = {
       goal: `Standardise all data to CDISC SDTM format with MedDRA coding`,
       model: 'openai-gpt-4-1',
       mcpServer: 'Data Standards MCP',
-      tools: ["SDTM Mapper", "MedDRA Coder", "Unit Converter", "Site Normaliser"],
+      tools: [
+        'SDTM Mapper',
+        'MedDRA Coder',
+        'Unit Converter',
+        'Site Normaliser',
+      ],
       trigger: 'On completion of Data Ingestion Agent',
       approval: 'auto',
     },
@@ -813,7 +925,12 @@ export const PROCESS_CLINICAL_TRIAL_DATA_TEAM_SPEC_0_0_1: TeamSpec = {
       goal: `Screen every data point for adverse events and safety signals`,
       model: 'anthropic-claude-sonnet-4',
       mcpServer: 'Safety Database MCP',
-      tools: ["AE Classifier", "Signal Detector", "SAE Escalator", "Evidence Trail Builder"],
+      tools: [
+        'AE Classifier',
+        'Signal Detector',
+        'SAE Escalator',
+        'Evidence Trail Builder',
+      ],
       trigger: 'On completion of Harmonisation Agent',
       approval: 'manual',
     },
@@ -824,53 +941,54 @@ export const PROCESS_CLINICAL_TRIAL_DATA_TEAM_SPEC_0_0_1: TeamSpec = {
       goal: `Assemble submission-ready SDTM datasets with validation and define.xml`,
       model: 'openai-gpt-4-1',
       mcpServer: 'Submission MCP',
-      tools: ["Dataset Validator", "Define.xml Generator", "PDF Report Builder", "Compliance Checker"],
+      tools: [
+        'Dataset Validator',
+        'Define.xml Generator',
+        'PDF Report Builder',
+        'Compliance Checker',
+      ],
       trigger: 'On completion of Safety Monitor Agent',
       approval: 'auto',
     },
   ],
   reactionRules: [
-  {
-    "id": "rr-clin-1",
-    "trigger": "safety_signal_detected",
-    "action": "halt_and_escalate",
-    "auto": true,
-    "maxRetries": 0,
-    "escalateAfterRetries": 0,
-    "priority": "critical"
-  },
-  {
-    "id": "rr-clin-2",
-    "trigger": "data_integrity_violation",
-    "action": "quarantine_and_notify",
-    "auto": true,
-    "maxRetries": 1,
-    "escalateAfterRetries": 1,
-    "priority": "critical"
-  }
-],
-  healthMonitoring: {
-  "heartbeatInterval": "10s",
-  "staleThreshold": "45s",
-  "unresponsiveThreshold": "90s",
-  "stuckThreshold": "180s",
-  "maxRestartAttempts": 2
-},
-  notifications: {
-  "on_start": true,
-  "on_completion": true,
-  "on_failure": true,
-  "on_escalation": true
-},
-  output: {
-  "formats": [
-    "pdf",
-    "json",
-    "xml"
+    {
+      id: 'rr-clin-1',
+      trigger: 'safety_signal_detected',
+      action: 'halt_and_escalate',
+      auto: true,
+      maxRetries: 0,
+      escalateAfterRetries: 0,
+      priority: 'critical',
+    },
+    {
+      id: 'rr-clin-2',
+      trigger: 'data_integrity_violation',
+      action: 'quarantine_and_notify',
+      auto: true,
+      maxRetries: 1,
+      escalateAfterRetries: 1,
+      priority: 'critical',
+    },
   ],
-  "template": "Clinical Trial Data Report",
-  "storage": "s3://reports/clinical-trials/"
-},
+  healthMonitoring: {
+    heartbeatInterval: '10s',
+    staleThreshold: '45s',
+    unresponsiveThreshold: '90s',
+    stuckThreshold: '180s',
+    maxRestartAttempts: 2,
+  },
+  notifications: {
+    on_start: true,
+    on_completion: true,
+    on_failure: true,
+    on_escalation: true,
+  },
+  output: {
+    formats: ['pdf', 'json', 'xml'],
+    template: 'Clinical Trial Data Report',
+    storage: 's3://reports/clinical-trials/',
+  },
 };
 
 export const SYNC_CRM_CONTACTS_TEAM_SPEC_0_0_1: TeamSpec = {
@@ -878,7 +996,7 @@ export const SYNC_CRM_CONTACTS_TEAM_SPEC_0_0_1: TeamSpec = {
   version: '0.0.1',
   name: 'Sync CRM Contacts',
   description: `A multi-agent team that collects and aggregates contact data from multiple CRM sources, analyzes and deduplicates records, writes cleaned data back, and generates sync summary reports.`,
-  tags: ["sales", "crm", "data-sync", "deduplication"],
+  tags: ['sales', 'crm', 'data-sync', 'deduplication'],
   enabled: true,
   icon: 'people',
   emoji: '🔄',
@@ -886,7 +1004,10 @@ export const SYNC_CRM_CONTACTS_TEAM_SPEC_0_0_1: TeamSpec = {
   agentSpecId: 'sync-crm-contacts:0.0.1',
   orchestrationProtocol: 'datalayer',
   executionMode: 'sequential',
-  supervisor: { name: 'CRM Orchestrator Agent', model: 'anthropic-claude-opus-4' },
+  supervisor: {
+    name: 'CRM Orchestrator Agent',
+    model: 'anthropic-claude-opus-4',
+  },
   routingInstructions: `Route data collection tasks to the Data Collector first, then analysis, then sync, then reporting. Escalate to human if sync fails 3 times.`,
   validation: { timeout: '300s', retryOnFailure: true, maxRetries: 3 },
   agents: [
@@ -897,7 +1018,7 @@ export const SYNC_CRM_CONTACTS_TEAM_SPEC_0_0_1: TeamSpec = {
       goal: `Collect and aggregate contact data from multiple CRM sources`,
       model: 'openai-gpt-4-1',
       mcpServer: 'Data Processing MCP',
-      tools: ["API Connector", "Data Parser"],
+      tools: ['API Connector', 'Data Parser'],
       trigger: 'Schedule: Daily at 2:00 AM',
       approval: 'auto',
     },
@@ -908,7 +1029,7 @@ export const SYNC_CRM_CONTACTS_TEAM_SPEC_0_0_1: TeamSpec = {
       goal: `Analyze collected data and identify patterns and duplicates`,
       model: 'anthropic-claude-opus-4',
       mcpServer: 'Analytics MCP',
-      tools: ["Statistical Analysis", "ML Predictor", "Deduplicator"],
+      tools: ['Statistical Analysis', 'ML Predictor', 'Deduplicator'],
       trigger: 'On completion of Data Collector',
       approval: 'manual',
     },
@@ -919,7 +1040,7 @@ export const SYNC_CRM_CONTACTS_TEAM_SPEC_0_0_1: TeamSpec = {
       goal: `Write cleaned and merged contacts back to the CRM systems`,
       model: 'openai-gpt-4-1',
       mcpServer: 'CRM Write MCP',
-      tools: ["Salesforce Connector", "HubSpot Connector"],
+      tools: ['Salesforce Connector', 'HubSpot Connector'],
       trigger: 'On completion of Analyzer',
       approval: 'manual',
     },
@@ -930,52 +1051,49 @@ export const SYNC_CRM_CONTACTS_TEAM_SPEC_0_0_1: TeamSpec = {
       goal: `Generate sync summary reports and send notifications`,
       model: 'openai-gpt-4-1',
       mcpServer: 'Document Generation MCP',
-      tools: ["PDF Generator", "Chart Builder", "Email Sender"],
+      tools: ['PDF Generator', 'Chart Builder', 'Email Sender'],
       trigger: 'On completion of Sync Writer',
       approval: 'auto',
     },
   ],
   reactionRules: [
-  {
-    "id": "rr-crm-1",
-    "trigger": "sync_conflict_detected",
-    "action": "log_and_skip",
-    "auto": true,
-    "maxRetries": 3,
-    "escalateAfterRetries": 3,
-    "priority": "medium"
-  },
-  {
-    "id": "rr-crm-2",
-    "trigger": "api_rate_limit_hit",
-    "action": "backoff_and_retry",
-    "auto": true,
-    "maxRetries": 5,
-    "escalateAfterRetries": 5,
-    "priority": "low"
-  }
-],
-  healthMonitoring: {
-  "heartbeatInterval": "30s",
-  "staleThreshold": "120s",
-  "unresponsiveThreshold": "300s",
-  "stuckThreshold": "600s",
-  "maxRestartAttempts": 3
-},
-  notifications: {
-  "on_start": false,
-  "on_completion": true,
-  "on_failure": true,
-  "on_escalation": false
-},
-  output: {
-  "formats": [
-    "json",
-    "csv"
+    {
+      id: 'rr-crm-1',
+      trigger: 'sync_conflict_detected',
+      action: 'log_and_skip',
+      auto: true,
+      maxRetries: 3,
+      escalateAfterRetries: 3,
+      priority: 'medium',
+    },
+    {
+      id: 'rr-crm-2',
+      trigger: 'api_rate_limit_hit',
+      action: 'backoff_and_retry',
+      auto: true,
+      maxRetries: 5,
+      escalateAfterRetries: 5,
+      priority: 'low',
+    },
   ],
-  "template": "CRM Sync Summary",
-  "storage": "s3://reports/crm-sync/"
-},
+  healthMonitoring: {
+    heartbeatInterval: '30s',
+    staleThreshold: '120s',
+    unresponsiveThreshold: '300s',
+    stuckThreshold: '600s',
+    maxRestartAttempts: 3,
+  },
+  notifications: {
+    on_start: false,
+    on_completion: true,
+    on_failure: true,
+    on_escalation: false,
+  },
+  output: {
+    formats: ['json', 'csv'],
+    template: 'CRM Sync Summary',
+    storage: 's3://reports/crm-sync/',
+  },
 };
 
 // ============================================================================
@@ -986,8 +1104,10 @@ export const TEAM_SPECS: Record<string, TeamSpec> = {
   'analyze-campaign-performance': ANALYZE_CAMPAIGN_PERFORMANCE_TEAM_SPEC_0_0_1,
   'analyze-support-tickets': ANALYZE_SUPPORT_TICKETS_TEAM_SPEC_0_0_1,
   'audit-inventory-levels': AUDIT_INVENTORY_LEVELS_TEAM_SPEC_0_0_1,
-  'automate-regulatory-reporting': AUTOMATE_REGULATORY_REPORTING_TEAM_SPEC_0_0_1,
-  'comprehensive-sales-analytics': COMPREHENSIVE_SALES_ANALYTICS_TEAM_SPEC_0_0_1,
+  'automate-regulatory-reporting':
+    AUTOMATE_REGULATORY_REPORTING_TEAM_SPEC_0_0_1,
+  'comprehensive-sales-analytics':
+    COMPREHENSIVE_SALES_ANALYTICS_TEAM_SPEC_0_0_1,
   'optimize-grid-operations': OPTIMIZE_GRID_OPERATIONS_TEAM_SPEC_0_0_1,
   'process-citizen-requests': PROCESS_CITIZEN_REQUESTS_TEAM_SPEC_0_0_1,
   'process-clinical-trial-data': PROCESS_CLINICAL_TRIAL_DATA_TEAM_SPEC_0_0_1,
@@ -1018,5 +1138,7 @@ export function getTeamSpec(teamId: string): TeamSpec | undefined {
  */
 export function listTeamSpecs(prefix?: string): TeamSpec[] {
   const specs = Object.values(TEAM_SPECS);
-  return prefix !== undefined ? specs.filter(s => s.id.startsWith(prefix)) : specs;
+  return prefix !== undefined
+    ? specs.filter(s => s.id.startsWith(prefix))
+    : specs;
 }

@@ -6,93 +6,101 @@
 /**
  * AgentCodemodeExample
  *
- * Demonstrates Codemode: tools that return structured outputs with schemas
- * rendered inline as executable code blocks, diffs, or file previews.
+ * Compares two Tavily-based agents side-by-side:
+ * - Tavily MCP without codemode conversion
+ * - Tavily MCP with codemode conversion
  *
- * - Creates a cloud agent runtime (environment: 'ai-agents-env') via the Datalayer
- *   Runtimes API and deploys an agent on its sidecar
- * - Shows a code panel alongside the chat displaying tool outputs with
- *   syntax highlighting, diff views, and the ability to accept/reject changes
+ * A sidebar gauge tracks consumed tokens for each agent in real time.
  */
 
 /// <reference types="vite/client" />
 
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, {
+  useEffect,
+  useState,
+  useCallback,
+  useRef,
+  useMemo,
+} from 'react';
 import { Text, Button, Spinner, Heading, Label, Flash } from '@primer/react';
-import {
-  CodeIcon,
-  DiffIcon,
-  FileCodeIcon,
-  CheckIcon,
-  XIcon,
-  SignOutIcon,
-} from '@primer/octicons-react';
+import { CodeIcon, SignOutIcon } from '@primer/octicons-react';
 import { Box } from '@datalayer/primer-addons';
-import { ErrorView } from './components';
+import ReactECharts from 'echarts-for-react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { SignInSimple } from '@datalayer/core/lib/views/iam';
 import { UserBadge } from '@datalayer/core/lib/views/profile';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
-import { useAgentRuntimes } from '../hooks/useAgentRuntimes';
+import { useAIAgentsWebSocket } from '../hooks';
 import { Chat } from '../chat';
+import {
+  parseAgentStreamMessage,
+  type AgentStreamSnapshotPayload,
+} from '../types/stream';
 
 const queryClient = new QueryClient();
 
-// ─── Constants ─────────────────────────────────────────────────────────────
+const DEFAULT_LOCAL_BASE_URL =
+  import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
 
-const AGENT_NAME = 'codemode-demo-agent';
-const AGENT_SPEC_ID = 'monitor-sales-kpis';
+const SHARED_SUGGESTION_MESSAGE =
+  'Extract information from the https://datalayer.ai website and use your sandbox to create a variable "about_datalayer" with that information';
 
-// ─── Types ─────────────────────────────────────────────────────────────────
+type RuntimeStatus = 'launching' | 'ready' | 'error';
 
-type CodeView = 'output' | 'diff';
-
-interface CodeArtifact {
-  id: string;
-  tool_name: string;
-  language: string;
-  content: string;
-  diff?: string;
-  timestamp: string;
-  status: 'pending' | 'accepted' | 'rejected';
+interface DemoAgentConfig {
+  key: string;
+  title: string;
+  subtitle: string;
+  specId: string;
+  color: string;
 }
 
-// ─── Inner component (rendered after auth) ─────────────────────────────────
+const DEMO_AGENT_CONFIGS: DemoAgentConfig[] = [
+  {
+    key: 'no-codemode',
+    title: 'Tavily MCP (No Codemode)',
+    subtitle: 'Raw MCP tools without codemode conversion',
+    specId: 'demo-tavily-no-codemode',
+    color: '#0969DA',
+  },
+  {
+    key: 'codemode',
+    title: 'Tavily MCP (Codemode)',
+    subtitle: 'MCP tools converted into programmatic tools',
+    specId: 'demo-tavily-codemode',
+    color: '#8250DF',
+  },
+];
 
-const AgentCodemodeInner: React.FC<{ onLogout: () => void }> = ({
-  onLogout,
+interface AgentRuntimePaneProps {
+  config: DemoAgentConfig;
+  token: string;
+  onTokenConsumed: (agentKey: string, tokens: number) => void;
+}
+
+function extractConsumedTokens(payload: AgentStreamSnapshotPayload): number {
+  const snapshotCost = payload.contextSnapshot?.costUsage ?? payload.costUsage;
+  const totalFromCost = Number(snapshotCost?.totalTokensUsed ?? 0);
+  if (totalFromCost > 0) {
+    return totalFromCost;
+  }
+  return Number(payload.contextSnapshot?.totalTokens ?? 0);
+}
+
+const AgentRuntimePane: React.FC<AgentRuntimePaneProps> = ({
+  config,
+  token,
+  onTokenConsumed,
 }) => {
-  const { token } = useSimpleAuthStore();
-  const agentName = useRef(uniqueAgentId(AGENT_NAME)).current;
+  const runtimeName = useRef(uniqueAgentId(`codemode-${config.key}`)).current;
+  const [runtimeStatus, setRuntimeStatus] =
+    useState<RuntimeStatus>('launching');
+  const [hookError, setHookError] = useState<string | null>(null);
+  const [agentId, setAgentId] = useState<string>(runtimeName);
+  const [isReconnectedAgent, setIsReconnectedAgent] = useState(false);
 
-  const {
-    runtime,
-    status: runtimeStatus,
-    isReady,
-    error: hookError,
-  } = useAgentRuntimes({
-    agentSpecId: AGENT_SPEC_ID,
-    autoStart: true,
-    agentConfig: {
-      name: agentName,
-      model: 'bedrock:us.anthropic.claude-3-5-haiku-20241022-v1:0',
-      protocol: 'vercel-ai',
-      description: 'Agent with Codemode structured tool outputs',
-    },
-  });
-
-  const [codeView, setCodeView] = useState<CodeView>('output');
-  const [artifacts, setArtifacts] = useState<CodeArtifact[]>([]);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [flash, setFlash] = useState<string | null>(null);
-
-  const agentBaseUrl = runtime?.agentBaseUrl || '';
-  const agentId = runtime?.agentId || AGENT_NAME;
-  const podName = runtime?.podName || '(launching…)';
-
-  // Authenticated fetch helper
   const authFetch = useCallback(
     (url: string, opts: RequestInit = {}) =>
       fetch(url, {
@@ -106,88 +114,311 @@ const AgentCodemodeInner: React.FC<{ onLogout: () => void }> = ({
     [token],
   );
 
-  // ── Poll code artifacts ───────────────────────────────────────────────
-
   useEffect(() => {
-    if (!isReady || !agentBaseUrl) return;
-    const poll = async () => {
-      try {
-        const res = await authFetch(
-          `${agentBaseUrl}/api/v1/agents/${agentId}/codemode/artifacts`,
-        );
-        if (res.ok) {
-          const d = await res.json();
-          setArtifacts(Array.isArray(d) ? d : (d.artifacts ?? []));
-        }
-      } catch {
-        /* ok */
-      }
-    };
-    poll();
-    const interval = setInterval(poll, 5_000);
-    return () => clearInterval(interval);
-  }, [isReady, agentBaseUrl, agentId, authFetch]);
+    let cancelled = false;
 
-  // ── Accept / Reject ───────────────────────────────────────────────────
+    const createLocalAgent = async () => {
+      setRuntimeStatus('launching');
+      setHookError(null);
+      setIsReconnectedAgent(false);
 
-  const handleDecision = useCallback(
-    async (artifactId: string, decision: 'accepted' | 'rejected') => {
-      if (!agentBaseUrl) return;
-      setFlash(null);
       try {
-        const res = await authFetch(
-          `${agentBaseUrl}/api/v1/agents/${agentId}/codemode/artifacts/${artifactId}`,
+        const response = await authFetch(
+          `${DEFAULT_LOCAL_BASE_URL}/api/v1/agents`,
           {
-            method: 'PATCH',
-            body: JSON.stringify({ status: decision }),
+            method: 'POST',
+            body: JSON.stringify({
+              name: runtimeName,
+              description: config.subtitle,
+              agent_library: 'pydantic-ai',
+              transport: 'vercel-ai',
+              agent_spec_id: config.specId,
+              enable_skills: true,
+              tools: [],
+            }),
           },
         );
-        if (res.ok) {
-          setArtifacts(prev =>
-            prev.map(a =>
-              a.id === artifactId ? { ...a, status: decision } : a,
-            ),
+
+        let resolvedAgentId = runtimeName;
+        let alreadyRunning = false;
+
+        if (response.ok) {
+          const data = await response.json();
+          resolvedAgentId = data?.id || runtimeName;
+        } else {
+          const contentType = response.headers.get('content-type') || '';
+          let detail = '';
+
+          if (contentType.includes('application/json')) {
+            const data = await response.json().catch(() => null);
+            detail =
+              (typeof data?.detail === 'string' && data.detail) ||
+              (typeof data?.message === 'string' && data.message) ||
+              '';
+          } else {
+            detail = await response.text();
+          }
+
+          if (response.status === 409 || /already exists/i.test(detail || '')) {
+            alreadyRunning = true;
+          } else {
+            throw new Error(
+              detail || `Failed to create local agent: ${response.status}`,
+            );
+          }
+        }
+
+        if (!cancelled) {
+          setAgentId(resolvedAgentId);
+          setIsReconnectedAgent(alreadyRunning);
+          setRuntimeStatus('ready');
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setHookError(
+            error instanceof Error ? error.message : 'Agent failed to start',
           );
-          setFlash(`Change ${decision}`);
+          setRuntimeStatus('error');
+        }
+      }
+    };
+
+    void createLocalAgent();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authFetch, config.specId, config.subtitle, runtimeName]);
+
+  const handleStreamMessage = useCallback(
+    (message: { raw?: unknown }) => {
+      try {
+        const stream = parseAgentStreamMessage(message?.raw ?? message);
+        if (!stream || stream.type !== 'agent.snapshot') {
+          return;
+        }
+
+        const payload = stream.payload as unknown as AgentStreamSnapshotPayload;
+        const consumed = extractConsumedTokens(payload);
+        if (consumed >= 0) {
+          onTokenConsumed(config.key, consumed);
         }
       } catch {
-        setFlash('Network error');
+        // Ignore malformed stream payloads.
       }
     },
-    [agentBaseUrl, agentId, authFetch],
+    [config.key, onTokenConsumed],
   );
 
-  // ── Loading / Error ───────────────────────────────────────────────────
+  useAIAgentsWebSocket({
+    enabled: runtimeStatus === 'ready',
+    baseUrl: DEFAULT_LOCAL_BASE_URL,
+    path: '/api/v1/tool-approvals/ws',
+    queryParams: { agent_id: agentId },
+    onMessage: handleStreamMessage,
+    reconnectDelayMs: attempt =>
+      Math.min(1000 * 2 ** Math.max(0, attempt - 1), 10000),
+  });
 
-  if (!isReady && runtimeStatus !== 'error') {
+  if (runtimeStatus === 'launching') {
     return (
       <Box
         sx={{
+          border: '1px solid',
+          borderColor: 'border.default',
+          borderRadius: 2,
+          p: 3,
+          minHeight: 220,
           display: 'flex',
-          flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          height: '100vh',
-          gap: 3,
+          flexDirection: 'column',
+          gap: 2,
         }}
       >
-        <Spinner size="large" />
-        <Text sx={{ color: 'fg.muted' }}>
-          {runtimeStatus === 'launching'
-            ? 'Launching runtime for codemode agent…'
-            : 'Creating codemode demo agent…'}
+        <Spinner size="small" />
+        <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
+          Launching {config.title}...
         </Text>
       </Box>
     );
   }
 
   if (runtimeStatus === 'error' || hookError) {
-    return <ErrorView error={hookError} onLogout={onLogout} />;
+    return (
+      <Flash variant="danger" sx={{ borderRadius: 2 }}>
+        {config.title}: {hookError || 'Failed to start'}
+      </Flash>
+    );
   }
 
-  const selected =
-    artifacts.find(a => a.id === selectedId) ?? artifacts[0] ?? null;
-  const pendingCount = artifacts.filter(a => a.status === 'pending').length;
+  return (
+    <Box
+      sx={{
+        border: '1px solid',
+        borderColor: 'border.default',
+        borderRadius: 2,
+        overflow: 'hidden',
+        minHeight: 560,
+        display: 'flex',
+        flexDirection: 'column',
+      }}
+    >
+      <Box
+        sx={{
+          px: 3,
+          py: 2,
+          borderBottom: '1px solid',
+          borderColor: 'border.default',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 2,
+        }}
+      >
+        <Box>
+          <Text sx={{ fontWeight: 'bold', display: 'block' }}>
+            {config.title}
+          </Text>
+          <Text sx={{ fontSize: 0, color: 'fg.muted' }}>{config.subtitle}</Text>
+        </Box>
+        {isReconnectedAgent && (
+          <Label size="small" variant="attention">
+            Reconnected
+          </Label>
+        )}
+      </Box>
+      <Box sx={{ flex: 1, minHeight: 0 }}>
+        <Chat
+          protocol="vercel-ai"
+          baseUrl={DEFAULT_LOCAL_BASE_URL}
+          agentId={agentId}
+          title={config.title}
+          placeholder="Ask both agents the same request to compare behavior..."
+          description={config.subtitle}
+          showHeader={false}
+          autoFocus={false}
+          height="100%"
+          runtimeId={agentId}
+          historyEndpoint={`${DEFAULT_LOCAL_BASE_URL}/api/v1/history`}
+          suggestions={[
+            {
+              title: 'Datalayer extraction',
+              message: SHARED_SUGGESTION_MESSAGE,
+            },
+          ]}
+          submitOnSuggestionClick
+        />
+      </Box>
+    </Box>
+  );
+};
+
+const AgentCodemodeInner: React.FC<{ onLogout: () => void }> = ({
+  onLogout,
+}) => {
+  const { token } = useSimpleAuthStore();
+  const [consumedByAgent, setConsumedByAgent] = useState<
+    Record<string, number>
+  >({
+    'no-codemode': 0,
+    codemode: 0,
+  });
+
+  const handleTokenConsumed = useCallback(
+    (agentKey: string, tokens: number) => {
+      setConsumedByAgent(prev => ({
+        ...prev,
+        [agentKey]: Math.max(prev[agentKey] ?? 0, tokens),
+      }));
+    },
+    [],
+  );
+
+  const maxGaugeValue = useMemo(() => {
+    const values = Object.values(consumedByAgent);
+    const currentMax = values.length > 0 ? Math.max(...values) : 0;
+    if (currentMax <= 2000) {
+      return 2000;
+    }
+    const magnitude = 10 ** Math.floor(Math.log10(currentMax));
+    return Math.ceil((currentMax * 1.2) / magnitude) * magnitude;
+  }, [consumedByAgent]);
+
+  const gaugeOption = useMemo(() => {
+    return {
+      series: DEMO_AGENT_CONFIGS.map((config, index) => ({
+        type: 'gauge',
+        center: ['50%', index === 0 ? '30%' : '74%'],
+        radius: '45%',
+        min: 0,
+        max: maxGaugeValue,
+        splitNumber: 5,
+        progress: {
+          show: true,
+          width: 12,
+          itemStyle: {
+            color: config.color,
+          },
+        },
+        axisLine: {
+          lineStyle: {
+            width: 12,
+            color: [[1, '#d1d9e0']],
+          },
+        },
+        axisTick: { show: false },
+        splitLine: { length: 8, lineStyle: { color: '#8c959f', width: 1 } },
+        axisLabel: {
+          distance: 12,
+          color: '#57606a',
+          fontSize: 10,
+        },
+        pointer: {
+          width: 3,
+          length: '60%',
+        },
+        anchor: {
+          show: true,
+          size: 8,
+          itemStyle: {
+            color: config.color,
+          },
+        },
+        title: {
+          show: true,
+          offsetCenter: [0, '95%'],
+          color: '#24292f',
+          fontSize: 11,
+          fontWeight: 'bold',
+        },
+        detail: {
+          valueAnimation: true,
+          offsetCenter: [0, '64%'],
+          color: '#24292f',
+          fontSize: 14,
+          fontWeight: 'bold',
+          formatter: (value: number) =>
+            `${Math.round(value).toLocaleString()} tok`,
+        },
+        data: [
+          {
+            value: consumedByAgent[config.key] ?? 0,
+            name: config.title,
+          },
+        ],
+      })),
+      tooltip: {
+        trigger: 'item',
+        formatter: (params: { seriesName?: string; value?: number }) =>
+          `${params.seriesName || 'Agent'}<br/>${Math.round(params.value || 0).toLocaleString()} tokens`,
+      },
+    };
+  }, [consumedByAgent, maxGaugeValue]);
+
+  if (!token) {
+    return null;
+  }
 
   return (
     <Box
@@ -197,7 +428,6 @@ const AgentCodemodeInner: React.FC<{ onLogout: () => void }> = ({
         flexDirection: 'column',
       }}
     >
-      {/* Toolbar */}
       <Box
         sx={{
           display: 'flex',
@@ -212,13 +442,8 @@ const AgentCodemodeInner: React.FC<{ onLogout: () => void }> = ({
       >
         <CodeIcon size={16} />
         <Heading as="h3" sx={{ fontSize: 2, flex: 1 }}>
-          Codemode — {podName}
+          Codemode Comparison: Tavily MCP vs Tavily Codemode
         </Heading>
-        {pendingCount > 0 && (
-          <Label variant="attention" size="small">
-            {pendingCount} pending
-          </Label>
-        )}
         {token && <UserBadge token={token} variant="small" />}
         <Button
           size="small"
@@ -232,266 +457,82 @@ const AgentCodemodeInner: React.FC<{ onLogout: () => void }> = ({
       </Box>
 
       <Box sx={{ flex: 1, minHeight: 0, display: 'flex' }}>
-        {/* Left: Chat */}
-        <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Chat
-            protocol="vercel-ai"
-            baseUrl={agentBaseUrl}
-            agentId={agentId}
-            title="Codemode Agent"
-            placeholder="Ask the agent to generate or modify code…"
-            description={`${artifacts.length} code artifact${artifacts.length !== 1 ? 's' : ''}`}
-            showHeader={true}
-            autoFocus
-            height="100%"
-            runtimeId={podName}
-            historyEndpoint={`${agentBaseUrl}/api/v1/history`}
-            suggestions={[
-              {
-                title: 'Generate script',
-                message: 'Write a Python script to analyze the KPI data',
-              },
-              {
-                title: 'Refactor',
-                message: 'Refactor the last code block for readability',
-              },
-            ]}
-            submitOnSuggestionClick
-          />
-        </Box>
-
-        {/* Right: Code panel */}
         <Box
           sx={{
-            width: 480,
-            borderLeft: '1px solid',
+            width: 340,
+            borderRight: '1px solid',
             borderColor: 'border.default',
+            p: 3,
             display: 'flex',
             flexDirection: 'column',
+            gap: 3,
           }}
         >
-          {/* View tabs */}
-          <Box
-            sx={{
-              display: 'flex',
-              borderBottom: '1px solid',
-              borderColor: 'border.default',
-              flexShrink: 0,
-            }}
-          >
-            {(
-              [
-                {
-                  key: 'output' as CodeView,
-                  icon: FileCodeIcon,
-                  label: 'Output',
-                },
-                { key: 'diff' as CodeView, icon: DiffIcon, label: 'Diff' },
-              ] as const
-            ).map(t => (
-              <Button
-                key={t.key}
-                size="small"
-                variant="invisible"
-                leadingVisual={t.icon}
-                onClick={() => setCodeView(t.key)}
+          <Box>
+            <Heading as="h4" sx={{ fontSize: 1, mb: 1 }}>
+              Consumed Tokens
+            </Heading>
+            <Text sx={{ color: 'fg.muted', fontSize: 0 }}>
+              Live comparison of token consumption for both agents.
+            </Text>
+          </Box>
+
+          <ReactECharts
+            option={gaugeOption}
+            style={{ height: 360, width: '100%' }}
+          />
+
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+            {DEMO_AGENT_CONFIGS.map(config => (
+              <Box
+                key={config.key}
                 sx={{
-                  flex: 1,
-                  borderRadius: 0,
-                  borderBottom:
-                    codeView === t.key ? '2px solid' : '2px solid transparent',
-                  borderColor: codeView === t.key ? 'accent.fg' : 'transparent',
-                  fontWeight: codeView === t.key ? 'bold' : 'normal',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  gap: 2,
                 }}
               >
-                {t.label}
-              </Button>
+                <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
+                  {config.title}
+                </Text>
+                <Text sx={{ fontSize: 0, fontWeight: 'bold' }}>
+                  {(consumedByAgent[config.key] ?? 0).toLocaleString()} tokens
+                </Text>
+              </Box>
             ))}
           </Box>
+        </Box>
 
-          {/* Artifact list sidebar */}
-          <Box sx={{ display: 'flex', flex: 1, minHeight: 0 }}>
-            <Box
-              sx={{
-                width: 140,
-                borderRight: '1px solid',
-                borderColor: 'border.default',
-                overflow: 'auto',
-              }}
-            >
-              {artifacts.length === 0 ? (
-                <Text
-                  sx={{
-                    p: 2,
-                    color: 'fg.muted',
-                    fontSize: 0,
-                    display: 'block',
-                  }}
-                >
-                  No artifacts yet.
-                </Text>
-              ) : (
-                artifacts.map(a => (
-                  <Box
-                    key={a.id}
-                    onClick={() => setSelectedId(a.id)}
-                    sx={{
-                      p: 2,
-                      borderBottom: '1px solid',
-                      borderColor: 'border.muted',
-                      bg:
-                        selected?.id === a.id ? 'accent.subtle' : 'transparent',
-                      cursor: 'pointer',
-                      ':hover': { bg: 'canvas.subtle' },
-                    }}
-                  >
-                    <Text
-                      sx={{ fontSize: 0, fontWeight: 'bold', display: 'block' }}
-                    >
-                      {a.tool_name}
-                    </Text>
-                    <Label
-                      size="small"
-                      variant={
-                        a.status === 'accepted'
-                          ? 'success'
-                          : a.status === 'rejected'
-                            ? 'danger'
-                            : 'attention'
-                      }
-                    >
-                      {a.status}
-                    </Label>
-                  </Box>
-                ))
-              )}
-            </Box>
-
-            {/* Code viewer */}
-            <Box
-              sx={{
-                flex: 1,
-                display: 'flex',
-                flexDirection: 'column',
-                overflow: 'auto',
-              }}
-            >
-              {selected ? (
-                <>
-                  <Box
-                    sx={{
-                      p: 2,
-                      borderBottom: '1px solid',
-                      borderColor: 'border.default',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      flexShrink: 0,
-                    }}
-                  >
-                    <Box>
-                      <Text sx={{ fontWeight: 'bold', fontSize: 1 }}>
-                        {selected.tool_name}
-                      </Text>
-                      <Label size="small" variant="secondary" sx={{ ml: 1 }}>
-                        {selected.language}
-                      </Label>
-                    </Box>
-                    {selected.status === 'pending' && (
-                      <Box sx={{ display: 'flex', gap: 1 }}>
-                        <Button
-                          size="small"
-                          variant="primary"
-                          leadingVisual={CheckIcon}
-                          onClick={() =>
-                            handleDecision(selected.id, 'accepted')
-                          }
-                        >
-                          Accept
-                        </Button>
-                        <Button
-                          size="small"
-                          variant="danger"
-                          leadingVisual={XIcon}
-                          onClick={() =>
-                            handleDecision(selected.id, 'rejected')
-                          }
-                        >
-                          Reject
-                        </Button>
-                      </Box>
-                    )}
-                  </Box>
-                  <Box
-                    sx={{
-                      flex: 1,
-                      overflow: 'auto',
-                      bg: 'canvas.subtle',
-                      p: 3,
-                    }}
-                  >
-                    <Box
-                      as="pre"
-                      sx={{
-                        fontFamily: 'mono',
-                        fontSize: 0,
-                        m: 0,
-                        whiteSpace: 'pre-wrap',
-                        wordBreak: 'break-word',
-                      }}
-                    >
-                      {codeView === 'diff' && selected.diff
-                        ? selected.diff
-                        : selected.content}
-                    </Box>
-                  </Box>
-                </>
-              ) : (
-                <Box
-                  sx={{
-                    flex: 1,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Text sx={{ color: 'fg.muted', fontSize: 0 }}>
-                    Ask the agent to generate code to see it here.
-                  </Text>
-                </Box>
-              )}
-            </Box>
-          </Box>
-
-          {flash && (
-            <Flash
-              variant={
-                flash.includes('accepted')
-                  ? 'success'
-                  : flash.includes('rejected')
-                    ? 'warning'
-                    : 'danger'
-              }
-              sx={{ m: 2, fontSize: 0 }}
-            >
-              {flash}
-            </Flash>
-          )}
+        <Box
+          sx={{
+            flex: 1,
+            minWidth: 0,
+            p: 3,
+            display: 'grid',
+            gridTemplateColumns: ['1fr', null, '1fr 1fr'],
+            gap: 3,
+            overflow: 'auto',
+          }}
+        >
+          {DEMO_AGENT_CONFIGS.map(config => (
+            <AgentRuntimePane
+              key={config.key}
+              config={config}
+              token={token}
+              onTokenConsumed={handleTokenConsumed}
+            />
+          ))}
         </Box>
       </Box>
     </Box>
   );
 };
 
-// ─── Sync token to core IAM store ──────────────────────────────────────────
-
 const syncTokenToIamStore = (token: string) => {
   import('@datalayer/core/lib/state').then(({ iamStore }) => {
     iamStore.setState({ token });
   });
 };
-
-// ─── Main component with auth gate ─────────────────────────────────────────
 
 const AgentCodemodeExample: React.FC = () => {
   const { token, setAuth, clearAuth } = useSimpleAuthStore();
@@ -528,7 +569,7 @@ const AgentCodemodeExample: React.FC = () => {
           onSignIn={handleSignIn}
           onApiKeySignIn={apiKey => handleSignIn(apiKey, 'api-key-user')}
           title="Agent Codemode"
-          description="Sign in to use Codemode with structured tool outputs."
+          description="Sign in to compare Tavily MCP with and without codemode conversion."
           leadingIcon={<CodeIcon size={24} />}
         />
       </ThemedProvider>

@@ -23,7 +23,7 @@ export const JUPYTER_NOTEBOOK_FRONTEND_TOOL_SPEC_0_0_1: FrontendToolSpec = {
   version: '0.0.1',
   name: 'Jupyter Notebook',
   description: 'Frontend tools for interacting with Jupyter notebooks.',
-  tags: ["frontend", "notebook", "jupyter"],
+  tags: ['frontend', 'notebook', 'jupyter'],
   enabled: true,
   toolset: 'all',
   icon: 'notebook',
@@ -35,7 +35,7 @@ export const LEXICAL_DOCUMENT_FRONTEND_TOOL_SPEC_0_0_1: FrontendToolSpec = {
   version: '0.0.1',
   name: 'Lexical Document',
   description: 'Frontend tools for interacting with Lexical documents.',
-  tags: ["frontend", "document", "lexical"],
+  tags: ['frontend', 'document', 'lexical'],
   enabled: true,
   toolset: 'all',
   icon: 'file',
@@ -65,6 +65,8 @@ function resolveFrontendToolId(toolId: string): string {
   return toolId;
 }
 
-export function getFrontendToolSpec(toolId: string): FrontendToolSpec | undefined {
+export function getFrontendToolSpec(
+  toolId: string,
+): FrontendToolSpec | undefined {
   return FRONTEND_TOOL_CATALOG[resolveFrontendToolId(toolId)];
 }

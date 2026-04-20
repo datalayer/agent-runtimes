@@ -668,6 +668,189 @@ class ContentSafetyCapability(AbstractCapability[Any]):
         return result
 
 
+@dataclass
+class SkillsGuardrailCapability(AbstractCapability[Any]):
+    """Ensure disabled skills cannot be used even when prompted.
+
+    Enforcement points:
+    - Skill-native tools (run/load/read) are checked against agent-scoped skill state.
+    - ``execute_code`` payload is scanned for generated skills imports/calls.
+    """
+
+    agent_id: str | None = None
+
+    def _enabled_skill_ids(self) -> set[str]:
+        try:
+            from agent_runtimes.streams.loop import get_agent_enabled_skill_ids
+
+            return get_agent_enabled_skill_ids(self.agent_id)
+        except Exception:
+            return set()
+
+    def _extract_skill_name(self, args: dict[str, Any]) -> str | None:
+        for key in ("skill_name", "skill", "name", "skill_id", "id"):
+            value = args.get(key)
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+        return None
+
+    def _is_skill_enabled(self, skill_name: str) -> bool:
+        skill_id = skill_name.split(":", 1)[0]
+        return skill_id in self._enabled_skill_ids()
+
+    def _enforce_execute_code_payload(self, args: dict[str, Any]) -> None:
+        code = args.get("code")
+        if not isinstance(code, str) or not code.strip():
+            return
+
+        enabled_skill_ids = self._enabled_skill_ids()
+        imported_skills = set(
+            re.findall(r"generated\.skills\.([A-Za-z0-9_\-]+)", code)
+        )
+
+        # Also catch helper invocation patterns like run_skill_script("name", ...).
+        inline_skill_refs = set(
+            re.findall(r"run_skill_script\s*\(\s*['\"]([^'\"]+)['\"]", code)
+        )
+
+        referenced = imported_skills | inline_skill_refs
+        if not referenced:
+            return
+
+        disabled = [
+            skill
+            for skill in sorted(referenced)
+            if not self._is_skill_enabled(skill)
+            and skill.split(":", 1)[0] not in enabled_skill_ids
+        ]
+        if disabled:
+            raise GuardrailBlockedError(
+                "Disabled skills cannot be used: " + ", ".join(disabled)
+            )
+
+    async def before_tool_execute(
+        self,
+        ctx: RunContext[Any],
+        *,
+        call: ToolCallPart,
+        tool_def: ToolDefinition,
+        args: dict[str, Any],
+    ) -> dict[str, Any]:
+        tool_name = call.tool_name
+
+        if tool_name in {"run_skill_script", "load_skill", "read_skill_resource"}:
+            skill_name = self._extract_skill_name(args)
+            if skill_name and not self._is_skill_enabled(skill_name):
+                raise GuardrailBlockedError(
+                    f"Skill '{skill_name}' is disabled and cannot be executed"
+                )
+
+        if tool_name == "execute_code":
+            self._enforce_execute_code_payload(args)
+
+        return args
+
+
+@dataclass
+class MCPToolsGuardrailCapability(AbstractCapability[Any]):
+    """Ensure disabled MCP tools cannot be invoked even when prompted."""
+
+    agent_id: str | None = None
+
+    def _enabled_tool_names(self) -> set[str]:
+        try:
+            from agent_runtimes.streams.loop import get_agent_enabled_mcp_tool_names
+
+            return get_agent_enabled_mcp_tool_names(self.agent_id)
+        except Exception:
+            return set()
+
+    def _known_mcp_tool_names(self) -> set[str]:
+        try:
+            from agent_runtimes.streams.loop import get_known_mcp_tool_names
+
+            return get_known_mcp_tool_names()
+        except Exception:
+            return set()
+
+    @staticmethod
+    def _normalize_mcp_tool_name(name: str) -> str:
+        # codemode-style fully qualified name: "server__tool"
+        if "__" in name:
+            return name.split("__", 1)[1]
+        return name
+
+    def _is_mcp_tool_name(self, tool_name: str) -> bool:
+        known = self._known_mcp_tool_names()
+        normalized = self._normalize_mcp_tool_name(tool_name)
+        return tool_name in known or normalized in known
+
+    def _assert_allowed_mcp_tool(self, raw_tool_name: str) -> None:
+        enabled = self._enabled_tool_names()
+        normalized = self._normalize_mcp_tool_name(raw_tool_name)
+        if normalized not in enabled:
+            raise GuardrailBlockedError(
+                f"MCP tool '{raw_tool_name}' is disabled by user selection"
+            )
+
+    def _enforce_execute_code_payload(self, args: dict[str, Any]) -> None:
+        code = args.get("code")
+        if not isinstance(code, str) or not code.strip():
+            return
+
+        # generated.mcp.<server> imports, and codemode call_tool("server__tool", ...)
+        imported_tools = set(
+            re.findall(
+                r"generated\.mcp\.[A-Za-z0-9_\-]+\s+import\s+([A-Za-z0-9_\-,\s]+)",
+                code,
+            )
+        )
+        extracted: set[str] = set()
+        for chunk in imported_tools:
+            for part in chunk.split(","):
+                name = part.strip()
+                if name:
+                    extracted.add(name)
+
+        call_tool_refs = set(
+            re.findall(r"call_tool\s*\(\s*['\"]([^'\"]+)['\"]", code)
+        )
+        extracted |= call_tool_refs
+
+        for tool_name in sorted(extracted):
+            # Only enforce on names that resolve to known MCP tools.
+            if self._is_mcp_tool_name(tool_name):
+                self._assert_allowed_mcp_tool(tool_name)
+
+    async def before_tool_execute(
+        self,
+        ctx: RunContext[Any],
+        *,
+        call: ToolCallPart,
+        tool_def: ToolDefinition,
+        args: dict[str, Any],
+    ) -> dict[str, Any]:
+        tool_name = call.tool_name
+
+        # Codemode proxy tool invocation path.
+        if tool_name == "call_tool":
+            requested = args.get("tool_name") or args.get("tool")
+            if isinstance(requested, str) and requested.strip():
+                self._assert_allowed_mcp_tool(requested.strip())
+            return args
+
+        # Direct MCP tool call path.
+        if self._is_mcp_tool_name(tool_name):
+            self._assert_allowed_mcp_tool(tool_name)
+            return args
+
+        # Codemode code path.
+        if tool_name == "execute_code":
+            self._enforce_execute_code_payload(args)
+
+        return args
+
+
 DEFAULT_TOOL_PERMISSION_MAP: dict[str, list[str]] = {
     "read_file": ["read:data"],
     "write_file": ["write:data"],

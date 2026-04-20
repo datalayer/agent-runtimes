@@ -151,6 +151,39 @@ function extractChatMessagesFromFullContext(
     .filter((m): m is ChatMessage => m !== null);
 }
 
+function parseEnabledMcpToolsByServer(
+  mcpStatusData: unknown,
+): Map<string, Set<string>> | null {
+  if (!mcpStatusData || typeof mcpStatusData !== 'object') {
+    return null;
+  }
+
+  const raw = (
+    mcpStatusData as {
+      enabled_tools_by_server?: unknown;
+    }
+  ).enabled_tools_by_server;
+
+  if (!raw || typeof raw !== 'object') {
+    return null;
+  }
+
+  const parsed = new Map<string, Set<string>>();
+  for (const [serverId, toolNames] of Object.entries(
+    raw as Record<string, unknown>,
+  )) {
+    if (!Array.isArray(toolNames)) {
+      continue;
+    }
+    const validToolNames = toolNames.filter(
+      (name): name is string => typeof name === 'string' && name.length > 0,
+    );
+    parsed.set(serverId, new Set(validToolNames));
+  }
+
+  return parsed;
+}
+
 // ---------------------------------------------------------------------------
 // ChatBase (outer wrapper — ensures QueryClient is available)
 // ---------------------------------------------------------------------------
@@ -549,6 +582,26 @@ function ChatBaseInner({
     });
   }, [mcpServers, configQuery.data?.mcpServers, isServerSelected]);
 
+  // Keep MCP tool selection synchronized with backend WS snapshots.
+  useEffect(() => {
+    const wsEnabledMcpTools = parseEnabledMcpToolsByServer(mcpStatusData);
+    if (!wsEnabledMcpTools) {
+      return;
+    }
+
+    setEnabledMcpTools(() => {
+      const next = new Map<string, Set<string>>();
+      wsEnabledMcpTools.forEach((toolNames, serverId) => {
+        const selectedInProps =
+          !mcpServers || mcpServers.some(server => server.id === serverId);
+        if (selectedInProps) {
+          next.set(serverId, new Set(toolNames));
+        }
+      });
+      return next;
+    });
+  }, [mcpStatusData, mcpServers]);
+
   // initialSkills are now handled server-side during agent creation.
 
   // ---- Toggle helpers ----
@@ -562,6 +615,18 @@ function ChatBaseInner({
         serverTools.add(toolName);
       }
       newMap.set(serverId, serverTools);
+
+      const ok = agentRuntimeStore.getState().sendRawMessage({
+        type: 'mcp_server_tools_set',
+        serverId,
+        enabledToolNames: Array.from(serverTools),
+      });
+      if (!ok) {
+        console.warn(
+          '[ChatBase] mcp_server_tools_set dropped: websocket not ready',
+        );
+      }
+
       return newMap;
     });
   }, []);
@@ -570,11 +635,24 @@ function ChatBaseInner({
     (serverId: string, allToolNames: string[], enable: boolean) => {
       setEnabledMcpTools(prev => {
         const newMap = new Map(prev);
+        const nextTools = enable ? new Set(allToolNames) : new Set<string>();
         if (enable) {
-          newMap.set(serverId, new Set(allToolNames));
+          newMap.set(serverId, nextTools);
         } else {
-          newMap.set(serverId, new Set());
+          newMap.set(serverId, nextTools);
         }
+
+        const ok = agentRuntimeStore.getState().sendRawMessage({
+          type: 'mcp_server_tools_set',
+          serverId,
+          enabledToolNames: Array.from(nextTools),
+        });
+        if (!ok) {
+          console.warn(
+            '[ChatBase] mcp_server_tools_set dropped: websocket not ready',
+          );
+        }
+
         return newMap;
       });
     },

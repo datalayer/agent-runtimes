@@ -46,6 +46,11 @@ export function useSkills(
       has_resources: s.has_resources,
       status: parseSkillStatus(s.status),
       skill_definition: s.skill_definition ?? null,
+      source_variant: s.source_variant,
+      module: s.module,
+      package: s.package,
+      method: s.method,
+      path: s.path,
     }));
     return { skills, total: skills.length };
   }, [codemodeStatus]);

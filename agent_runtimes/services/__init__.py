@@ -18,18 +18,12 @@ from .runtime_tools import (
     register_agent_tools,
     tools_requiring_approval_ids,
 )
-from .skills_area import (
-    SkillsArea,
-    get_skills_area,
-)
 
 __all__ = [
     "CodeSandboxManager",
     "SandboxConfig",
     "SandboxVariant",
-    "SkillsArea",
     "get_code_sandbox_manager",
-    "get_skills_area",
     "create_codemode_toolset",
     "create_shared_sandbox",
     "create_skills_toolset",

@@ -22,13 +22,40 @@ export const EVENT_TRIGGER_SPEC_0_0_1: TriggerSpec = {
   id: 'event',
   version: '0.0.1',
   name: 'Event-Based',
-  description: 'Trigger on specific events such as a webhook call, API request, database change, file upload, or email arrival.',
+  description:
+    'Trigger on specific events such as a webhook call, API request, database change, file upload, or email arrival.',
   type: 'event',
   fields: [
-    { name: 'event_source', label: 'Event Source URL', type: 'string', required: false, placeholder: 'https://helpdesk.example.com/webhooks', help: 'Allowed event source URL (leave empty to allow any source)' },
-    { name: 'event', label: 'Event Name', type: 'string', required: false, placeholder: 'email_received' },
-    { name: 'description', label: 'Description', type: 'string', required: false, placeholder: 'Description (e.g. \'Triggered on incoming email\')' },
-    { name: 'prompt', label: 'Trigger Prompt', type: 'string', required: false, placeholder: 'Handle the incoming event and execute the agent end-to-end.' },
+    {
+      name: 'event_source',
+      label: 'Event Source URL',
+      type: 'string',
+      required: false,
+      placeholder: 'https://helpdesk.example.com/webhooks',
+      help: 'Allowed event source URL (leave empty to allow any source)',
+    },
+    {
+      name: 'event',
+      label: 'Event Name',
+      type: 'string',
+      required: false,
+      placeholder: 'email_received',
+    },
+    {
+      name: 'description',
+      label: 'Description',
+      type: 'string',
+      required: false,
+      placeholder: "Description (e.g. 'Triggered on incoming email')",
+    },
+    {
+      name: 'prompt',
+      label: 'Trigger Prompt',
+      type: 'string',
+      required: false,
+      placeholder:
+        'Handle the incoming event and execute the agent end-to-end.',
+    },
   ],
 };
 
@@ -39,7 +66,14 @@ export const ONCE_TRIGGER_SPEC_0_0_1: TriggerSpec = {
   description: 'Execute agent immediately after deployment.',
   type: 'once',
   fields: [
-    { name: 'prompt', label: 'Trigger Prompt', type: 'string', required: false, placeholder: 'Start when requested by a user and complete the agent once.' },
+    {
+      name: 'prompt',
+      label: 'Trigger Prompt',
+      type: 'string',
+      required: false,
+      placeholder:
+        'Start when requested by a user and complete the agent once.',
+    },
   ],
 };
 
@@ -47,12 +81,33 @@ export const SCHEDULE_TRIGGER_SPEC_0_0_1: TriggerSpec = {
   id: 'schedule',
   version: '0.0.1',
   name: 'Schedule',
-  description: 'Run on a recurring schedule using a cron expression (e.g. daily at 9 AM, every Monday, monthly on the 1st).',
+  description:
+    'Run on a recurring schedule using a cron expression (e.g. daily at 9 AM, every Monday, monthly on the 1st).',
   type: 'schedule',
   fields: [
-    { name: 'cron', label: 'Cron Expression', type: 'string', required: true, placeholder: '0 9 * * * (every day at 9 AM)', font: 'mono' },
-    { name: 'description', label: 'Description', type: 'string', required: false, placeholder: 'Description (e.g. \'Monthly sales report\')' },
-    { name: 'prompt', label: 'Trigger Prompt', type: 'string', required: false, placeholder: 'Run the scheduled agent and produce the configured deliverable.' },
+    {
+      name: 'cron',
+      label: 'Cron Expression',
+      type: 'string',
+      required: true,
+      placeholder: '0 9 * * * (every day at 9 AM)',
+      font: 'mono',
+    },
+    {
+      name: 'description',
+      label: 'Description',
+      type: 'string',
+      required: false,
+      placeholder: "Description (e.g. 'Monthly sales report')",
+    },
+    {
+      name: 'prompt',
+      label: 'Trigger Prompt',
+      type: 'string',
+      required: false,
+      placeholder:
+        'Run the scheduled agent and produce the configured deliverable.',
+    },
   ],
 };
 
@@ -61,9 +116,9 @@ export const SCHEDULE_TRIGGER_SPEC_0_0_1: TriggerSpec = {
 // ============================================================================
 
 export const TRIGGER_CATALOG: Record<string, TriggerSpec> = {
-  'event': EVENT_TRIGGER_SPEC_0_0_1,
-  'once': ONCE_TRIGGER_SPEC_0_0_1,
-  'schedule': SCHEDULE_TRIGGER_SPEC_0_0_1,
+  event: EVENT_TRIGGER_SPEC_0_0_1,
+  once: ONCE_TRIGGER_SPEC_0_0_1,
+  schedule: SCHEDULE_TRIGGER_SPEC_0_0_1,
 };
 
 export function getTriggerSpecs(): TriggerSpec[] {

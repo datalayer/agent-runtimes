@@ -30,7 +30,10 @@ export interface NotificationEventCardProps {
   onOpenAgent?: (agentId: string) => void;
 }
 
-const EVENT_KIND_VARIANT: Record<string, 'accent' | 'success' | 'attention' | 'danger' | 'secondary'> = {
+const EVENT_KIND_VARIANT: Record<
+  string,
+  'accent' | 'success' | 'attention' | 'danger' | 'secondary'
+> = {
   'agent-start-requested': 'attention',
   'agent-assigned': 'accent',
   'agent-started': 'success',
@@ -140,9 +143,7 @@ export function NotificationEventCard({
             flex: 1,
           }}
         >
-          <Label
-            variant={EVENT_KIND_VARIANT[eventKind] ?? 'secondary'}
-          >
+          <Label variant={EVENT_KIND_VARIANT[eventKind] ?? 'secondary'}>
             {eventKind}
           </Label>
           <Truncate
@@ -165,7 +166,10 @@ export function NotificationEventCard({
             </Truncate>
           )}
           {eventOrigin && (
-            <Label variant="secondary" sx={{ fontSize: 0, whiteSpace: 'nowrap' }}>
+            <Label
+              variant="secondary"
+              sx={{ fontSize: 0, whiteSpace: 'nowrap' }}
+            >
               Origin: {eventOrigin}
             </Label>
           )}
@@ -217,7 +221,7 @@ export function NotificationEventCard({
         >
           {(startedAt ||
             endedAt ||
-          (eventKind === 'agent-output' &&
+            (eventKind === 'agent-output' &&
               event.payload.duration_ms != null)) && (
             <Text as="p">
               {startedAt ? `Started: ${formatRelativeTime(startedAt)}` : ''}
@@ -359,7 +363,11 @@ export function NotificationEventCard({
                   e.preventDefault();
                   setIsDetailsExpanded(prev => !prev);
                 }}
-                style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                style={{
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                }}
               >
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Box

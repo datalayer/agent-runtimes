@@ -33,6 +33,8 @@ logger = logging.getLogger(__name__)
 # ─── Pub/Sub ──────────────────────────────────────────────────────────
 
 _STREAM_SUBSCRIBERS: dict[str, set[asyncio.Queue[AgentStreamMessage]]] = {}
+_MCP_ENABLED_TOOLS_BY_AGENT: dict[str, dict[str, set[str]]] = {}
+_SKILLS_BY_AGENT: dict[str, dict[str, dict[str, Any]]] = {}
 
 
 def _stream_key(agent_id: str | None) -> str:
@@ -121,11 +123,231 @@ def build_mcp_status() -> dict[str, Any] | None:
         return None
 
 
-def build_codemode_status() -> dict[str, Any] | None:
+def _build_default_mcp_enabled_tools_by_server() -> dict[str, list[str]]:
+    """Build default enabled MCP tools per server from lifecycle state."""
+    result: dict[str, list[str]] = {}
+    try:
+        from agent_runtimes.mcp.lifecycle import get_mcp_lifecycle_manager
+
+        manager = get_mcp_lifecycle_manager()
+        for instance in manager.get_all_running_servers():
+            enabled_tool_names = [
+                t.name for t in instance.config.tools if getattr(t, "enabled", True)
+            ]
+            if not enabled_tool_names:
+                enabled_tool_names = [t.name for t in instance.tools]
+            result[instance.server_id] = sorted(set(enabled_tool_names))
+    except Exception:
+        return {}
+    return result
+
+
+def _get_agent_mcp_enabled_tools_by_server(
+    agent_id: str | None,
+) -> dict[str, list[str]]:
+    """Get effective enabled MCP tools per server for an agent."""
+    key = _stream_key(agent_id)
+    defaults = _build_default_mcp_enabled_tools_by_server()
+    overrides = _MCP_ENABLED_TOOLS_BY_AGENT.get(key, {})
+    for server_id, tool_names in overrides.items():
+        defaults[server_id] = sorted(set(tool_names))
+    return defaults
+
+
+def get_agent_mcp_enabled_tools_by_server(
+    agent_id: str | None,
+) -> dict[str, list[str]]:
+    """Public accessor for effective MCP enabled tools by server."""
+    return _get_agent_mcp_enabled_tools_by_server(agent_id)
+
+
+def get_agent_enabled_mcp_tool_names(agent_id: str | None) -> set[str]:
+    """Return the set of enabled MCP tool names for an agent."""
+    by_server = _get_agent_mcp_enabled_tools_by_server(agent_id)
+    names: set[str] = set()
+    for tool_names in by_server.values():
+        for tool_name in tool_names:
+            if isinstance(tool_name, str) and tool_name.strip():
+                names.add(tool_name.strip())
+    return names
+
+
+def get_known_mcp_tool_names() -> set[str]:
+    """Return all known MCP tool names currently discovered by lifecycle manager."""
+    names: set[str] = set()
+    try:
+        from agent_runtimes.mcp.lifecycle import get_mcp_lifecycle_manager
+
+        manager = get_mcp_lifecycle_manager()
+        for instance in manager.get_all_running_servers():
+            for tool in instance.tools:
+                tool_name = getattr(tool, "name", None)
+                if isinstance(tool_name, str) and tool_name.strip():
+                    names.add(tool_name.strip())
+            for tool in getattr(instance.config, "tools", []):
+                tool_name = getattr(tool, "name", None)
+                if isinstance(tool_name, str) and tool_name.strip():
+                    names.add(tool_name.strip())
+    except Exception:
+        return set()
+    return names
+
+
+def _normalize_skill_ref(skill_ref: str) -> str:
+    """Normalize version-qualified skill references to base skill IDs."""
+    if not isinstance(skill_ref, str):
+        return ""
+    base, _, ver = skill_ref.rpartition(":")
+    if base and "." in ver:
+        return base.strip()
+    return skill_ref.strip()
+
+
+def _seed_agent_skills(agent_id: str | None) -> None:
+    """Ensure a per-agent skills map exists and is seeded from discovery."""
+    key = _stream_key(agent_id)
+    if key in _SKILLS_BY_AGENT:
+        return
+
+    seeded: dict[str, dict[str, Any]] = {}
+    try:
+        from agent_runtimes.routes.configure import _get_available_skills
+
+        for skill in _get_available_skills():
+            skill_id = _normalize_skill_ref(
+                str(skill.get("id") or skill.get("name") or "")
+            )
+            if not skill_id:
+                continue
+            seeded[skill_id] = {
+                "id": skill_id,
+                "name": str(skill.get("name") or skill_id),
+                "description": str(skill.get("description") or ""),
+                "tags": list(skill.get("tags") or []),
+                "has_scripts": bool(skill.get("has_scripts", False)),
+                "has_resources": bool(skill.get("has_resources", False)),
+                "status": "available",
+                "skill_definition": skill.get("skill_definition"),
+                "source_variant": skill.get("source_variant"),
+                "module": skill.get("module"),
+                "package": skill.get("package"),
+                "method": skill.get("method"),
+                "path": skill.get("path"),
+            }
+    except Exception as exc:
+        logger.debug("[skills:seed] failed for agent %s: %s", agent_id, exc)
+
+    _SKILLS_BY_AGENT[key] = seeded
+
+
+def get_agent_skills_snapshot(agent_id: str | None) -> list[dict[str, Any]]:
+    """Return serialized skills state for an agent."""
+    _seed_agent_skills(agent_id)
+    key = _stream_key(agent_id)
+    skills = _SKILLS_BY_AGENT.get(key, {})
+    return [dict(v) for v in skills.values()]
+
+
+def get_agent_enabled_skill_ids(agent_id: str | None) -> set[str]:
+    """Return enabled (enabled/loaded) skill IDs for an agent."""
+    _seed_agent_skills(agent_id)
+    enabled: set[str] = set()
+    for skill_id, entry in _SKILLS_BY_AGENT.get(_stream_key(agent_id), {}).items():
+        if entry.get("status") in {"enabled", "loaded"}:
+            enabled.add(skill_id)
+    return enabled
+
+
+def set_agent_enabled_skills(
+    agent_id: str | None,
+    skill_refs: list[str],
+) -> list[dict[str, Any]]:
+    """Set enabled skills for an agent (single source of truth)."""
+    _seed_agent_skills(agent_id)
+    key = _stream_key(agent_id)
+    enabled_ids = {_normalize_skill_ref(ref) for ref in skill_refs if ref}
+
+    # Ensure all requested skills exist, even when discovery missed them.
+    for skill_id in enabled_ids:
+        if not skill_id:
+            continue
+        if skill_id not in _SKILLS_BY_AGENT[key]:
+            _SKILLS_BY_AGENT[key][skill_id] = {
+                "id": skill_id,
+                "name": skill_id,
+                "description": "",
+                "tags": [],
+                "has_scripts": False,
+                "has_resources": False,
+                "status": "available",
+                "skill_definition": None,
+                "source_variant": "unknown",
+                "module": None,
+                "package": None,
+                "method": None,
+                "path": None,
+            }
+
+    for skill_id, entry in _SKILLS_BY_AGENT[key].items():
+        entry["status"] = "enabled" if skill_id in enabled_ids else "available"
+        if entry["status"] == "available":
+            entry["skill_definition"] = None
+
+    return get_agent_skills_snapshot(agent_id)
+
+
+def enable_agent_skill(agent_id: str | None, skill_ref: str) -> None:
+    """Enable one skill for an agent."""
+    _seed_agent_skills(agent_id)
+    key = _stream_key(agent_id)
+    skill_id = _normalize_skill_ref(skill_ref)
+    if not skill_id:
+        return
+    entry = _SKILLS_BY_AGENT[key].get(skill_id)
+    if entry is None:
+        entry = {
+            "id": skill_id,
+            "name": skill_id,
+            "description": "",
+            "tags": [],
+            "has_scripts": False,
+            "has_resources": False,
+            "status": "available",
+            "skill_definition": None,
+            "source_variant": "unknown",
+            "module": None,
+            "package": None,
+            "method": None,
+            "path": None,
+        }
+        _SKILLS_BY_AGENT[key][skill_id] = entry
+    entry["status"] = "enabled"
+
+
+def disable_agent_skill(agent_id: str | None, skill_ref: str) -> None:
+    """Disable one skill for an agent."""
+    _seed_agent_skills(agent_id)
+    key = _stream_key(agent_id)
+    skill_id = _normalize_skill_ref(skill_ref)
+    entry = _SKILLS_BY_AGENT.get(key, {}).get(skill_id)
+    if entry is None:
+        return
+    entry["status"] = "available"
+    entry["skill_definition"] = None
+
+
+def purge_agent_stream_state(agent_id: str | None) -> None:
+    """Purge per-agent in-memory stream state for skills/MCP/subscribers."""
+    key = _stream_key(agent_id)
+    _SKILLS_BY_AGENT.pop(key, None)
+    _MCP_ENABLED_TOOLS_BY_AGENT.pop(key, None)
+    _STREAM_SUBSCRIBERS.pop(key, None)
+
+
+def build_codemode_status(agent_id: str | None = None) -> dict[str, Any] | None:
     """Build codemode status dict (sync — safe to call from async context).
 
-    Uses the server-side SkillsArea for per-skill status instead of the
-    legacy list-based approach.  Each skill in the ``skills`` list carries
+    Uses the stream-layer per-agent skills state. Each skill in the ``skills`` list carries
     a ``status`` field (``available`` | ``enabled`` | ``loaded``).
     """
     from agent_runtimes.routes.configure import (
@@ -135,10 +357,6 @@ def build_codemode_status() -> dict[str, Any] | None:
 
     try:
         from agent_runtimes.routes.agui import get_all_agui_adapters
-        from agent_runtimes.services.skills_area import get_skills_area
-
-        skills_area = get_skills_area()
-        _ensure_skills_area_seeded(skills_area)
 
         adapters = get_all_agui_adapters()
         codemode_enabled = _codemode_state["enabled"]
@@ -154,27 +372,16 @@ def build_codemode_status() -> dict[str, Any] | None:
                     pass
 
         sandbox_status = _get_sandbox_status()
+        skills_snapshot = get_agent_skills_snapshot(agent_id)
 
         return {
             "enabled": codemode_enabled,
-            "skills": skills_area.to_snapshot_list(),
-            "available_skills": skills_area.to_snapshot_list(),
+            "skills": skills_snapshot,
+            "available_skills": skills_snapshot,
             "sandbox": sandbox_status.model_dump() if sandbox_status else None,
         }
     except Exception:
         return None
-
-
-def _ensure_skills_area_seeded(skills_area: Any) -> None:
-    """Seed SkillsArea from configured catalog when currently empty."""
-    if skills_area.list_skills():
-        return
-    try:
-        from agent_runtimes.routes.configure import _get_available_skills
-
-        skills_area.seed_available(_get_available_skills())
-    except Exception as exc:
-        logger.debug("[skills:seed] failed to seed SkillsArea: %s", exc)
 
 
 # ─── Monitoring payload assembly ──────────────────────────────────────
@@ -209,7 +416,13 @@ async def build_monitoring_snapshot_payload(
         full_context = build_full_context(agent_id)
 
     mcp_status = build_mcp_status()
-    codemode_status = build_codemode_status()
+    if mcp_status is not None:
+        enabled_tools_by_server = _get_agent_mcp_enabled_tools_by_server(agent_id)
+        mcp_status["enabled_tools_by_server"] = enabled_tools_by_server
+        mcp_status["enabled_tools_count"] = sum(
+            len(tool_names) for tool_names in enabled_tools_by_server.values()
+        )
+    codemode_status = build_codemode_status(agent_id)
 
     return AgentMonitoringSnapshotPayload(
         agentId=agent_id,
@@ -300,11 +513,7 @@ async def _handle_skill_enable(
     Enables the skill. Loading happens lazily when building the prompt,
     so the UI can reflect the intermediate ``enabled`` state.
     """
-    from agent_runtimes.services.skills_area import get_skills_area
-
-    skills_area = get_skills_area()
-    _ensure_skills_area_seeded(skills_area)
-    skills_area.enable_skill(skill_id)
+    enable_agent_skill(agent_id, skill_id)
     logger.info("[ws:skill_enable] skill_id=%s agent_id=%s", skill_id, agent_id)
     # Push an immediate snapshot so the frontend sees the change
     await _push_fresh_snapshot(agent_id, websocket, list_approvals)
@@ -317,12 +526,35 @@ async def _handle_skill_disable(
     list_approvals: Any | None,
 ) -> None:
     """Handle a skill_disable WS message."""
-    from agent_runtimes.services.skills_area import get_skills_area
-
-    skills_area = get_skills_area()
-    _ensure_skills_area_seeded(skills_area)
-    skills_area.disable_skill(skill_id)
+    disable_agent_skill(agent_id, skill_id)
     logger.info("[ws:skill_disable] skill_id=%s agent_id=%s", skill_id, agent_id)
+    await _push_fresh_snapshot(agent_id, websocket, list_approvals)
+
+
+async def _handle_mcp_server_tools_set(
+    server_id: str,
+    enabled_tool_names: list[str],
+    agent_id: str | None,
+    websocket: Any,
+    list_approvals: Any | None,
+) -> None:
+    """Handle an MCP tools selection update for a specific server."""
+    key = _stream_key(agent_id)
+    agent_map = _MCP_ENABLED_TOOLS_BY_AGENT.setdefault(key, {})
+    normalized = sorted(
+        {
+            name.strip()
+            for name in enabled_tool_names
+            if isinstance(name, str) and name.strip()
+        }
+    )
+    agent_map[server_id] = set(normalized)
+    logger.info(
+        "[ws:mcp_server_tools_set] agent_id=%s server_id=%s enabled_count=%d",
+        agent_id,
+        server_id,
+        len(normalized),
+    )
     await _push_fresh_snapshot(agent_id, websocket, list_approvals)
 
 
@@ -474,6 +706,24 @@ async def stream_loop(
                                 if isinstance(skill_id, str):
                                     await _handle_skill_disable(
                                         skill_id, agent_id, websocket, list_approvals
+                                    )
+
+                            elif msg_type == "mcp_server_tools_set":
+                                server_id = payload.get("serverId")
+                                enabled_tool_names = payload.get("enabledToolNames")
+                                if isinstance(server_id, str) and isinstance(
+                                    enabled_tool_names, list
+                                ):
+                                    await _handle_mcp_server_tools_set(
+                                        server_id,
+                                        [
+                                            n
+                                            for n in enabled_tool_names
+                                            if isinstance(n, str)
+                                        ],
+                                        agent_id,
+                                        websocket,
+                                        list_approvals,
                                     )
 
                     except Exception as exc:

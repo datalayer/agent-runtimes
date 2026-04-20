@@ -27,6 +27,12 @@ export interface SkillInfo {
   status?: SkillStatus;
   /** Raw SKILL.md content (populated once status is 'loaded') */
   skill_definition?: string | null;
+  /** Discovery/source variant for this skill */
+  source_variant?: 'module' | 'package' | 'path' | 'unknown';
+  module?: string;
+  package?: string;
+  method?: string;
+  path?: string;
 }
 
 /**

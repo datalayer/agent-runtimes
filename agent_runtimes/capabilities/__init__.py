@@ -12,6 +12,7 @@ This package provides:
 
 from .factory import (
     build_capabilities_from_agent_spec,
+    build_default_choice_guardrails,
     build_usage_limits_from_agent_spec,
 )
 from .tool_approval import (
@@ -29,5 +30,6 @@ __all__ = [
     "ToolApprovalRejectedError",
     "ToolApprovalTimeoutError",
     "build_capabilities_from_agent_spec",
+    "build_default_choice_guardrails",
     "build_usage_limits_from_agent_spec",
 ]

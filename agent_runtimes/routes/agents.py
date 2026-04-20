@@ -12,6 +12,7 @@ Provides REST API endpoints for:
 """
 
 import asyncio
+import importlib.metadata
 import logging
 import os
 import re
@@ -30,6 +31,7 @@ from ..capabilities import (
     ToolApprovalCapability,
     ToolApprovalConfig,
     build_capabilities_from_agent_spec,
+    build_default_choice_guardrails,
     build_usage_limits_from_agent_spec,
 )
 from ..events import create_event
@@ -245,6 +247,72 @@ def _normalize_hook_packages(raw: Any) -> list[str]:
     return []
 
 
+def _parse_requirement_name(requirement: str) -> tuple[str, str | None]:
+    """Parse package requirement into distribution name and optional specifier.
+
+    Returns a tuple of (name, specifier_text).  Best effort parsing is used to
+    avoid making package pre-hooks fail on unusual requirement syntax.
+    """
+    req = requirement.strip()
+    if not req:
+        return "", None
+
+    try:
+        from packaging.requirements import Requirement  # type: ignore
+
+        parsed = Requirement(req)
+        spec = str(parsed.specifier) if str(parsed.specifier) else None
+        return parsed.name, spec
+    except Exception:
+        # Fallback parser for environments where packaging is unavailable.
+        name = req.split(";", 1)[0].strip()
+        name = name.split("[", 1)[0].strip()
+        for op in ["===", "==", "~=", ">=", "<=", "!=", ">", "<"]:
+            if op in name:
+                name = name.split(op, 1)[0].strip()
+                break
+        return name, None
+
+
+def _is_requirement_satisfied(requirement: str) -> bool:
+    """Return True if a pip requirement is already satisfied."""
+    dist_name, specifier = _parse_requirement_name(requirement)
+    if not dist_name:
+        return False
+
+    try:
+        version = importlib.metadata.version(dist_name)
+    except importlib.metadata.PackageNotFoundError:
+        return False
+    except Exception:
+        return False
+
+    if not specifier:
+        return True
+
+    try:
+        from packaging.specifiers import SpecifierSet  # type: ignore
+
+        return version in SpecifierSet(specifier)
+    except Exception:
+        # If specifier parsing fails, be conservative and install.
+        return False
+
+
+def _guard_hook_packages(packages: list[str]) -> tuple[list[str], list[str]]:
+    """Split packages into missing and already-satisfied lists."""
+    missing: list[str] = []
+    satisfied: list[str] = []
+
+    for package in packages:
+        if _is_requirement_satisfied(package):
+            satisfied.append(package)
+        else:
+            missing.append(package)
+
+    return missing, satisfied
+
+
 async def _run_agent_hooks(
     *,
     agent_id: str,
@@ -279,16 +347,26 @@ async def _run_agent_hooks(
         loop = asyncio.get_running_loop()
 
         if packages:
-            logger.info(
-                "Running %s-hooks package install for '%s': %s",
-                phase,
-                agent_id,
-                packages,
-            )
-            await loop.run_in_executor(
-                None,
-                lambda: sandbox.install_packages(packages),
-            )
+            packages_to_install, satisfied_packages = _guard_hook_packages(packages)
+            if satisfied_packages:
+                logger.info(
+                    "Skipping %s-hooks package install for '%s'; already satisfied: %s",
+                    phase,
+                    agent_id,
+                    satisfied_packages,
+                )
+
+            if packages_to_install:
+                logger.info(
+                    "Running %s-hooks package install for '%s': %s",
+                    phase,
+                    agent_id,
+                    packages_to_install,
+                )
+                await loop.run_in_executor(
+                    None,
+                    lambda: sandbox.install_packages(packages_to_install),
+                )
 
         for script in sandbox_scripts:
             logger.info("Running %s-hooks sandbox code for '%s'", phase, agent_id)
@@ -1443,21 +1521,19 @@ async def create_agent(
                 non_mcp_toolsets.append(skills_toolset)
                 logger.info(f"Added AgentSkillsToolset for agent {agent_id}")
 
-            # Seed the server-side SkillsArea so the WS monitoring snapshot
-            # includes per-skill status.  Loading of SKILL.md definitions is
-            # deferred to the WS monitoring loop so the frontend first sees
-            # skills in "enabled" state before they transition to "loaded".
-            from ..services.skills_area import get_skills_area
-            from .configure import _get_available_skills
+            # Initialize per-agent skills state in stream layer (single source of truth).
+            from ..streams.loop import (
+                get_agent_enabled_skill_ids,
+                get_agent_skills_snapshot,
+                set_agent_enabled_skills,
+            )
 
-            _skills_area = get_skills_area()
-            _skills_area.seed_available(_get_available_skills())
-            for _skill_name in request.skills:
-                _skills_area.enable_skill(_skill_name)
+            set_agent_enabled_skills(agent_id, request.skills)
             logger.info(
-                f"Skills area seeded for agent '{agent_id}': "
-                f"{len(_skills_area.list_skills())} tracked, "
-                f"{len([s for s in _skills_area.list_skills() if s.status == 'enabled'])} enabled (loading deferred)"
+                "Agent skills state initialized for '%s': %d tracked, %d enabled",
+                agent_id,
+                len(get_agent_skills_snapshot(agent_id)),
+                len(get_agent_enabled_skill_ids(agent_id)),
             )
 
         # Add codemode/sandbox toolset.
@@ -1597,6 +1673,11 @@ async def create_agent(
                 usage_limits = build_usage_limits_from_agent_spec(
                     spec_for_runtime_controls
                 )
+
+            # Always apply runtime selection guardrails, even when no spec is provided.
+            if capabilities is None:
+                capabilities = []
+            capabilities.extend(build_default_choice_guardrails(agent_id=agent_id))
 
             # Keep vercel-ai approval handling on the DeferredToolRequests path
             # for consistency with normal chat streaming flow.
@@ -2278,6 +2359,14 @@ async def delete_agent(agent_id: str) -> dict[str, str]:
         unregister_agent_for_context(agent_id)
     except Exception as e:
         logger.warning(f"Could not unregister from context session: {e}")
+
+    # Fallback cleanup in case any protocol-specific unregister step failed.
+    try:
+        from ..streams.loop import purge_agent_stream_state
+
+        purge_agent_stream_state(agent_id)
+    except Exception as e:
+        logger.warning(f"Could not purge stream state: {e}")
 
     logger.info(f"Deleted agent: {agent_id}")
 

@@ -86,6 +86,12 @@ def unregister_mcp_ui_agent(agent_id: str) -> bool:
     """
     if agent_id in _mcp_ui_adapters:
         del _mcp_ui_adapters[agent_id]
+        try:
+            from ..streams.loop import purge_agent_stream_state
+
+            purge_agent_stream_state(agent_id)
+        except Exception as e:
+            logger.debug("Could not purge stream state for %s: %s", agent_id, e)
         logger.info(f"Unregistered MCP-UI agent: {agent_id}")
         return True
     return False

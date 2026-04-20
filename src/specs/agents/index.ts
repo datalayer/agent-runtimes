@@ -42,7 +42,9 @@ export function getAgentSpecs(agentId: string): AgentSpec | undefined {
  */
 export function listAgentSpecs(prefix?: string): AgentSpec[] {
   const specs = Object.values(AGENT_SPECS);
-  return prefix !== undefined ? specs.filter(s => s.id.startsWith(prefix)) : specs;
+  return prefix !== undefined
+    ? specs.filter(s => s.id.startsWith(prefix))
+    : specs;
 }
 
 /**

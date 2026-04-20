@@ -39,6 +39,23 @@ const SkillCard: React.FC<{
   onToggle: (id: string) => void;
 }> = ({ skill, onToggle }) => {
   const [showDefinition, setShowDefinition] = useState(false);
+  const sourceVariant = skill.source_variant ?? 'unknown';
+  const sourceLabel =
+    sourceVariant === 'path'
+      ? 'file-based'
+      : sourceVariant === 'package'
+        ? 'package-based'
+        : sourceVariant === 'module'
+          ? 'module-based'
+          : 'unknown';
+  const sourceDetail =
+    sourceVariant === 'package'
+      ? [skill.package, skill.method].filter(Boolean).join('#')
+      : sourceVariant === 'module'
+        ? skill.module
+        : sourceVariant === 'path'
+          ? skill.path
+          : undefined;
 
   return (
     <>
@@ -94,6 +111,14 @@ const SkillCard: React.FC<{
             {skill.description}
           </Text>
         )}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+          <Label size="small" variant="secondary">
+            {sourceLabel}
+          </Label>
+          {sourceDetail && (
+            <Text sx={{ fontSize: 0, color: 'fg.muted' }}>{sourceDetail}</Text>
+          )}
+        </Box>
         {skill.tags && skill.tags.length > 0 && (
           <Box sx={{ mt: 1, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
             {skill.tags.map(tag => (
@@ -166,6 +191,10 @@ const AgentSkillsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
     [skills, enableSkill, disableSkill],
   );
 
+  const fileBasedSkills = skills.filter(s => s.source_variant === 'path');
+  const packageBasedSkills = skills.filter(s => s.source_variant === 'package');
+  const moduleBasedSkills = skills.filter(s => s.source_variant === 'module');
+
   const authFetch = useCallback(
     (url: string, opts: RequestInit = {}) =>
       fetch(url, {
@@ -190,13 +219,13 @@ const AgentSkillsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
 
       try {
         // Create local agent runtime using the demo-full spec.
-        // The spec contains both code-based and path-based skills.
+        // The spec contains module-based, package-based and file-based skills.
         const response = await authFetch(`${agentBaseUrl}/api/v1/agents`, {
           method: 'POST',
           body: JSON.stringify({
             name: agentName,
             description:
-              'Agent with skills demo - code-based and path-based skills',
+              'Agent with skills demo - module, package and file based skills',
             agent_library: 'pydantic-ai',
             transport: 'vercel-ai',
             agent_spec_id: AGENT_SPEC_ID,
@@ -409,6 +438,13 @@ const AgentSkillsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
               {skills.filter(s => s.status === 'loaded').length} loaded &middot;{' '}
               {skills.filter(s => s.status === 'enabled').length} pending
             </Text>
+            <Text
+              sx={{ fontSize: 0, color: 'fg.muted', mt: 1, display: 'block' }}
+            >
+              {fileBasedSkills.length} file-based &middot;{' '}
+              {packageBasedSkills.length} package-based &middot;{' '}
+              {moduleBasedSkills.length} module-based
+            </Text>
           </Box>
           <Box sx={{ p: 2, overflow: 'auto', flex: 1 }}>
             {skills.length === 0 ? (
@@ -511,7 +547,7 @@ const AgentSkillsExample: React.FC = () => {
           onSignIn={handleSignIn}
           onApiKeySignIn={apiKey => handleSignIn(apiKey, 'api-key-user')}
           title="Agent Skills Demo"
-          description="Sign in to test code-based and path-based agent skills."
+          description="Sign in to test module, package, and file-based agent skills."
           leadingIcon={<BriefcaseIcon size={24} />}
         />
       </ThemedProvider>

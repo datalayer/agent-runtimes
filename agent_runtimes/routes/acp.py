@@ -233,7 +233,13 @@ def unregister_agent(agent_id: str) -> None:
     """
     if agent_id in _agents:
         del _agents[agent_id]
-        logger.info(f"Unregistered agent: {agent_id}")
+    try:
+        from ..streams.loop import purge_agent_stream_state
+
+        purge_agent_stream_state(agent_id)
+    except Exception as e:
+        logger.debug("Could not purge stream state for %s: %s", agent_id, e)
+    logger.info(f"Unregistered agent: {agent_id}")
 
 
 # REST Endpoints for ACP

@@ -59,6 +59,11 @@ export interface CodemodeStatusData {
     has_resources?: boolean;
     status?: SkillStatus;
     skill_definition?: string | null;
+    source_variant?: 'module' | 'package' | 'path' | 'unknown';
+    module?: string;
+    package?: string;
+    method?: string;
+    path?: string;
   }>;
   available_skills: Array<{
     id?: string;
@@ -69,6 +74,11 @@ export interface CodemodeStatusData {
     has_resources?: boolean;
     status?: SkillStatus;
     skill_definition?: string | null;
+    source_variant?: 'module' | 'package' | 'path' | 'unknown';
+    module?: string;
+    package?: string;
+    method?: string;
+    path?: string;
   }>;
   sandbox?: Record<string, unknown> | null;
 }

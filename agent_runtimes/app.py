@@ -301,24 +301,20 @@ async def _create_and_register_cli_agent(
             non_mcp_toolsets.append(skills_toolset)
             logger.info(f"Added AgentSkillsToolset for agent {agent_id}")
 
-        # Seed the skills area: discover available skills from the directory,
-        # enable the requested ones.  Loading of SKILL.md definitions is
-        # deferred to the WS monitoring loop so the frontend first sees skills
-        # in "enabled" state before they transition to "loaded".
-        from .services.skills_area import get_skills_area
+        # Initialize per-agent skills state in stream layer as the single
+        # source of truth for skill enable/disable lifecycle.
+        from .streams.loop import (
+            get_agent_enabled_skill_ids,
+            get_agent_skills_snapshot,
+            set_agent_enabled_skills,
+        )
 
-        skills_area = get_skills_area()
-        # Seed all available skills from the directory
-        from .routes.configure import _get_available_skills
-
-        available = _get_available_skills()
-        skills_area.seed_available(available)
-        # Enable the requested skills
-        for skill_name in skills:
-            skills_area.enable_skill(skill_name)
+        set_agent_enabled_skills(agent_id, list(skills))
         logger.info(
-            f"Skills area: {len(skills_area.list_skills())} tracked, "
-            f"{len([s for s in skills_area.list_skills() if s.status == 'enabled'])} enabled (loading deferred)"
+            "Agent skills state initialized for '%s': %d tracked, %d enabled",
+            agent_id,
+            len(get_agent_skills_snapshot(agent_id)),
+            len(get_agent_enabled_skill_ids(agent_id)),
         )
 
     # Add codemode toolset if enabled

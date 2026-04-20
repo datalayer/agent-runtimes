@@ -112,7 +112,14 @@ export const GITHUB_MCP_SERVER_0_0_1: MCPServer = {
   emoji: '🐙 - git - collaboration',
   url: '',
   command: 'docker',
-  args: ['run', '-i', '--rm', '-e', 'GITHUB_PERSONAL_ACCESS_TOKEN', 'ghcr.io/github/github-mcp-server'],
+  args: [
+    'run',
+    '-i',
+    '--rm',
+    '-e',
+    'GITHUB_PERSONAL_ACCESS_TOKEN',
+    'ghcr.io/github/github-mcp-server',
+  ],
   transport: 'stdio',
   enabled: true,
   isAvailable: false,
@@ -134,7 +141,10 @@ export const GOOGLE_WORKSPACE_MCP_SERVER_0_0_1: MCPServer = {
   enabled: true,
   isAvailable: false,
   tools: [],
-  requiredEnvVars: ['GOOGLE_OAUTH_CLIENT_ID:0.0.1', 'GOOGLE_OAUTH_CLIENT_SECRET:0.0.1'],
+  requiredEnvVars: [
+    'GOOGLE_OAUTH_CLIENT_ID:0.0.1',
+    'GOOGLE_OAUTH_CLIENT_SECRET:0.0.1',
+  ],
 };
 
 export const HUGGINGFACE_MCP_SERVER_0_0_1: MCPServer = {
@@ -146,7 +156,13 @@ export const HUGGINGFACE_MCP_SERVER_0_0_1: MCPServer = {
   emoji: '🤗',
   url: '',
   command: 'npx',
-  args: ['-y', 'mcp-remote', 'https://huggingface.co/mcp', '--header', 'Authorization: Bearer ${HF_TOKEN}'],
+  args: [
+    '-y',
+    'mcp-remote',
+    'https://huggingface.co/mcp',
+    '--header',
+    'Authorization: Bearer ${HF_TOKEN}',
+  ],
   transport: 'stdio',
   enabled: true,
   isAvailable: false,
@@ -163,7 +179,13 @@ export const KAGGLE_MCP_SERVER_0_0_1: MCPServer = {
   emoji: '📊',
   url: '',
   command: 'npx',
-  args: ['-y', 'mcp-remote', 'https://www.kaggle.com/mcp', '--header', 'Authorization: Bearer ${KAGGLE_TOKEN}'],
+  args: [
+    '-y',
+    'mcp-remote',
+    'https://www.kaggle.com/mcp',
+    '--header',
+    'Authorization: Bearer ${KAGGLE_TOKEN}',
+  ],
   transport: 'stdio',
   enabled: true,
   isAvailable: false,
@@ -185,7 +207,10 @@ export const SALESFORCE_MCP_SERVER_0_0_1: MCPServer = {
   enabled: true,
   isAvailable: false,
   tools: [],
-  requiredEnvVars: ['SALESFORCE_ACCESS_TOKEN:0.0.1', 'SALESFORCE_INSTANCE_URL:0.0.1'],
+  requiredEnvVars: [
+    'SALESFORCE_ACCESS_TOKEN:0.0.1',
+    'SALESFORCE_INSTANCE_URL:0.0.1',
+  ],
 };
 
 export const SLACK_MCP_SERVER_0_0_1: MCPServer = {
@@ -202,7 +227,11 @@ export const SLACK_MCP_SERVER_0_0_1: MCPServer = {
   enabled: true,
   isAvailable: false,
   tools: [],
-  requiredEnvVars: ['SLACK_BOT_TOKEN:0.0.1', 'SLACK_TEAM_ID:0.0.1', 'SLACK_CHANNEL_IDS:0.0.1'],
+  requiredEnvVars: [
+    'SLACK_BOT_TOKEN:0.0.1',
+    'SLACK_TEAM_ID:0.0.1',
+    'SLACK_CHANNEL_IDS:0.0.1',
+  ],
 };
 
 export const TAVILY_MCP_SERVER_0_0_1: MCPServer = {

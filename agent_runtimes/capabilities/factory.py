@@ -19,11 +19,13 @@ from .guardrails import (
     CostBudgetCapability,
     DataScopeCapability,
     InputGuardCapability,
+    MCPToolsGuardrailCapability,
     NoRefusalsCapability,
     PermissionCapability,
     PiiDetectorCapability,
     PromptInjectionCapability,
     SecretRedactionCapability,
+    SkillsGuardrailCapability,
     TokenLimitCapability,
     ToolGuardCapability,
     _parse_token_limit,
@@ -337,4 +339,15 @@ def build_capabilities_from_agent_spec(
             )
         )
 
+    # Always enforce user-selected skills and MCP tool toggles.
+    capabilities.extend(build_default_choice_guardrails(agent_id=agent_id))
+
     return capabilities
+
+
+def build_default_choice_guardrails(agent_id: str | None = None) -> list[Any]:
+    """Build default guardrails that honor runtime user tool/skill selections."""
+    return [
+        SkillsGuardrailCapability(agent_id=agent_id),
+        MCPToolsGuardrailCapability(agent_id=agent_id),
+    ]

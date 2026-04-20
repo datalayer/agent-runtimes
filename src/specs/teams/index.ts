@@ -42,5 +42,7 @@ export function getTeamSpec(teamId: string): TeamSpec | undefined {
  */
 export function listTeamSpecs(prefix?: string): TeamSpec[] {
   const specs = Object.values(TEAM_SPECS);
-  return prefix !== undefined ? specs.filter(s => s.id.startsWith(prefix)) : specs;
+  return prefix !== undefined
+    ? specs.filter(s => s.id.startsWith(prefix))
+    : specs;
 }

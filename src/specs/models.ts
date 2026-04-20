@@ -28,11 +28,16 @@ export const AIModels = {
   AZURE_OPENAI_GPT_4_1: 'azure-openai:gpt-4.1',
   AZURE_OPENAI_GPT_4O_MINI: 'azure-openai:gpt-4o-mini',
   AZURE_OPENAI_GPT_4O: 'azure-openai:gpt-4o',
-  BEDROCK_US_ANTHROPIC_CLAUDE_3_5_HAIKU_20241022_V1_0: 'bedrock:us.anthropic.claude-3-5-haiku-20241022-v1:0',
-  BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_6_V1: 'bedrock:us.anthropic.claude-opus-4-6-v1',
-  BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_20250514_V1_0: 'bedrock:us.anthropic.claude-opus-4-20250514-v1:0',
-  BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_5_20250929_V1_0: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-  BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_20250514_V1_0: 'bedrock:us.anthropic.claude-sonnet-4-20250514-v1:0',
+  BEDROCK_US_ANTHROPIC_CLAUDE_3_5_HAIKU_20241022_V1_0:
+    'bedrock:us.anthropic.claude-3-5-haiku-20241022-v1:0',
+  BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_6_V1:
+    'bedrock:us.anthropic.claude-opus-4-6-v1',
+  BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_20250514_V1_0:
+    'bedrock:us.anthropic.claude-opus-4-20250514-v1:0',
+  BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_5_20250929_V1_0:
+    'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_20250514_V1_0:
+    'bedrock:us.anthropic.claude-sonnet-4-20250514-v1:0',
   OPENAI_GPT_4_1_MINI: 'openai:gpt-4.1-mini',
   OPENAI_GPT_4_1_NANO: 'openai:gpt-4.1-nano',
   OPENAI_GPT_4_1: 'openai:gpt-4.1',
@@ -71,7 +76,8 @@ export const ANTHROPIC_CLAUDE_SONNET_4_5_20250514_0_0_1: AIModel = {
   id: 'anthropic:claude-sonnet-4-5-20250514',
   version: '0.0.1',
   name: 'Anthropic Claude Sonnet 4.5',
-  description: 'Claude Sonnet 4.5 by Anthropic - balanced performance and speed',
+  description:
+    'Claude Sonnet 4.5 by Anthropic - balanced performance and speed',
   provider: 'anthropic',
   default: false,
   requiredEnvVars: ['ANTHROPIC_API_KEY'],
@@ -137,15 +143,20 @@ export const AZURE_OPENAI_GPT_4O_0_0_1: AIModel = {
   requiredEnvVars: ['AZURE_OPENAI_API_KEY', 'AZURE_OPENAI_ENDPOINT'],
 };
 
-export const BEDROCK_US_ANTHROPIC_CLAUDE_3_5_HAIKU_20241022_V1_0_0_0_1: AIModel = {
-  id: 'bedrock:us.anthropic.claude-3-5-haiku-20241022-v1:0',
-  version: '0.0.1',
-  name: 'Bedrock Claude Haiku 3.5',
-  description: 'Claude Haiku 3.5 via AWS Bedrock - fast and efficient',
-  provider: 'bedrock',
-  default: false,
-  requiredEnvVars: ['AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'AWS_DEFAULT_REGION'],
-};
+export const BEDROCK_US_ANTHROPIC_CLAUDE_3_5_HAIKU_20241022_V1_0_0_0_1: AIModel =
+  {
+    id: 'bedrock:us.anthropic.claude-3-5-haiku-20241022-v1:0',
+    version: '0.0.1',
+    name: 'Bedrock Claude Haiku 3.5',
+    description: 'Claude Haiku 3.5 via AWS Bedrock - fast and efficient',
+    provider: 'bedrock',
+    default: false,
+    requiredEnvVars: [
+      'AWS_ACCESS_KEY_ID',
+      'AWS_SECRET_ACCESS_KEY',
+      'AWS_DEFAULT_REGION',
+    ],
+  };
 
 export const BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_6_V1_0_0_1: AIModel = {
   id: 'bedrock:us.anthropic.claude-opus-4-6-v1',
@@ -154,7 +165,11 @@ export const BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_6_V1_0_0_1: AIModel = {
   description: 'Claude Opus 4.6 via AWS Bedrock',
   provider: 'bedrock',
   default: false,
-  requiredEnvVars: ['AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'AWS_DEFAULT_REGION'],
+  requiredEnvVars: [
+    'AWS_ACCESS_KEY_ID',
+    'AWS_SECRET_ACCESS_KEY',
+    'AWS_DEFAULT_REGION',
+  ],
 };
 
 export const BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_20250514_V1_0_0_0_1: AIModel = {
@@ -164,28 +179,42 @@ export const BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_20250514_V1_0_0_0_1: AIModel = {
   description: 'Claude Opus 4 via AWS Bedrock - highest capability',
   provider: 'bedrock',
   default: false,
-  requiredEnvVars: ['AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'AWS_DEFAULT_REGION'],
+  requiredEnvVars: [
+    'AWS_ACCESS_KEY_ID',
+    'AWS_SECRET_ACCESS_KEY',
+    'AWS_DEFAULT_REGION',
+  ],
 };
 
-export const BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_5_20250929_V1_0_0_0_1: AIModel = {
-  id: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-  version: '0.0.1',
-  name: 'Bedrock Claude Sonnet 4.5',
-  description: 'Claude Sonnet 4.5 via AWS Bedrock - balanced performance',
-  provider: 'bedrock',
-  default: true,
-  requiredEnvVars: ['AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'AWS_DEFAULT_REGION'],
-};
+export const BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_5_20250929_V1_0_0_0_1: AIModel =
+  {
+    id: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+    version: '0.0.1',
+    name: 'Bedrock Claude Sonnet 4.5',
+    description: 'Claude Sonnet 4.5 via AWS Bedrock - balanced performance',
+    provider: 'bedrock',
+    default: true,
+    requiredEnvVars: [
+      'AWS_ACCESS_KEY_ID',
+      'AWS_SECRET_ACCESS_KEY',
+      'AWS_DEFAULT_REGION',
+    ],
+  };
 
-export const BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_20250514_V1_0_0_0_1: AIModel = {
-  id: 'bedrock:us.anthropic.claude-sonnet-4-20250514-v1:0',
-  version: '0.0.1',
-  name: 'Bedrock Claude Sonnet 4',
-  description: 'Claude Sonnet 4 via AWS Bedrock - strong reasoning',
-  provider: 'bedrock',
-  default: false,
-  requiredEnvVars: ['AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'AWS_DEFAULT_REGION'],
-};
+export const BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_20250514_V1_0_0_0_1: AIModel =
+  {
+    id: 'bedrock:us.anthropic.claude-sonnet-4-20250514-v1:0',
+    version: '0.0.1',
+    name: 'Bedrock Claude Sonnet 4',
+    description: 'Claude Sonnet 4 via AWS Bedrock - strong reasoning',
+    provider: 'bedrock',
+    default: false,
+    requiredEnvVars: [
+      'AWS_ACCESS_KEY_ID',
+      'AWS_SECRET_ACCESS_KEY',
+      'AWS_DEFAULT_REGION',
+    ],
+  };
 
 export const OPENAI_GPT_4_1_MINI_0_0_1: AIModel = {
   id: 'openai:gpt-4.1-mini',
@@ -252,20 +281,28 @@ export const OPENAI_O3_MINI_0_0_1: AIModel = {
 // ============================================================================
 
 export const AI_MODEL_CATALOGUE: Record<string, AIModel> = {
-  'anthropic:claude-3-5-haiku-20241022': ANTHROPIC_CLAUDE_3_5_HAIKU_20241022_0_0_1,
+  'anthropic:claude-3-5-haiku-20241022':
+    ANTHROPIC_CLAUDE_3_5_HAIKU_20241022_0_0_1,
   'anthropic:claude-opus-4-20250514': ANTHROPIC_CLAUDE_OPUS_4_20250514_0_0_1,
-  'anthropic:claude-sonnet-4-5-20250514': ANTHROPIC_CLAUDE_SONNET_4_5_20250514_0_0_1,
-  'anthropic:claude-sonnet-4-20250514': ANTHROPIC_CLAUDE_SONNET_4_20250514_0_0_1,
+  'anthropic:claude-sonnet-4-5-20250514':
+    ANTHROPIC_CLAUDE_SONNET_4_5_20250514_0_0_1,
+  'anthropic:claude-sonnet-4-20250514':
+    ANTHROPIC_CLAUDE_SONNET_4_20250514_0_0_1,
   'azure-openai:gpt-4.1-mini': AZURE_OPENAI_GPT_4_1_MINI_0_0_1,
   'azure-openai:gpt-4.1-nano': AZURE_OPENAI_GPT_4_1_NANO_0_0_1,
   'azure-openai:gpt-4.1': AZURE_OPENAI_GPT_4_1_0_0_1,
   'azure-openai:gpt-4o-mini': AZURE_OPENAI_GPT_4O_MINI_0_0_1,
   'azure-openai:gpt-4o': AZURE_OPENAI_GPT_4O_0_0_1,
-  'bedrock:us.anthropic.claude-3-5-haiku-20241022-v1:0': BEDROCK_US_ANTHROPIC_CLAUDE_3_5_HAIKU_20241022_V1_0_0_0_1,
-  'bedrock:us.anthropic.claude-opus-4-6-v1': BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_6_V1_0_0_1,
-  'bedrock:us.anthropic.claude-opus-4-20250514-v1:0': BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_20250514_V1_0_0_0_1,
-  'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0': BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_5_20250929_V1_0_0_0_1,
-  'bedrock:us.anthropic.claude-sonnet-4-20250514-v1:0': BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_20250514_V1_0_0_0_1,
+  'bedrock:us.anthropic.claude-3-5-haiku-20241022-v1:0':
+    BEDROCK_US_ANTHROPIC_CLAUDE_3_5_HAIKU_20241022_V1_0_0_0_1,
+  'bedrock:us.anthropic.claude-opus-4-6-v1':
+    BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_6_V1_0_0_1,
+  'bedrock:us.anthropic.claude-opus-4-20250514-v1:0':
+    BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_20250514_V1_0_0_0_1,
+  'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0':
+    BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_5_20250929_V1_0_0_0_1,
+  'bedrock:us.anthropic.claude-sonnet-4-20250514-v1:0':
+    BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_20250514_V1_0_0_0_1,
   'openai:gpt-4.1-mini': OPENAI_GPT_4_1_MINI_0_0_1,
   'openai:gpt-4.1-nano': OPENAI_GPT_4_1_NANO_0_0_1,
   'openai:gpt-4.1': OPENAI_GPT_4_1_0_0_1,
@@ -274,5 +311,7 @@ export const AI_MODEL_CATALOGUE: Record<string, AIModel> = {
   'openai:o3-mini': OPENAI_O3_MINI_0_0_1,
 };
 
-export const DEFAULT_MODEL: AIModelId = AIModels.BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_5_20250929_V1_0;
-export const DEFAULT_MODEL_SPEC: AIModel = BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_5_20250929_V1_0_0_0_1;
+export const DEFAULT_MODEL: AIModelId =
+  AIModels.BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_5_20250929_V1_0;
+export const DEFAULT_MODEL_SPEC: AIModel =
+  BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_5_20250929_V1_0_0_0_1;
