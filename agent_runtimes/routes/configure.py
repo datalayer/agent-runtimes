@@ -502,7 +502,8 @@ def _get_available_skills() -> list[dict[str, Any]]:
                     module = getattr(ep_skill, "module", None)
                     package = getattr(ep_skill, "package", None)
                     method = getattr(ep_skill, "method", None)
-                    path = getattr(ep_skill, "path", None)
+                    _raw_path = getattr(ep_skill, "path", None)
+                    path = str(_raw_path) if _raw_path is not None else None
                     source_variant = "module"
                     if package:
                         source_variant = "package"

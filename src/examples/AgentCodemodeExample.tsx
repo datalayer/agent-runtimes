@@ -459,8 +459,29 @@ const AgentCodemodeInner: React.FC<{ onLogout: () => void }> = ({
       <Box sx={{ flex: 1, minHeight: 0, display: 'flex' }}>
         <Box
           sx={{
+            flex: 1,
+            minWidth: 0,
+            p: 3,
+            display: 'grid',
+            gridTemplateColumns: ['1fr', null, '1fr 1fr'],
+            gap: 3,
+            overflow: 'auto',
+          }}
+        >
+          {DEMO_AGENT_CONFIGS.map(config => (
+            <AgentRuntimePane
+              key={config.key}
+              config={config}
+              token={token}
+              onTokenConsumed={handleTokenConsumed}
+            />
+          ))}
+        </Box>
+
+        <Box
+          sx={{
             width: 340,
-            borderRight: '1px solid',
+            borderLeft: '1px solid',
             borderColor: 'border.default',
             p: 3,
             display: 'flex',
@@ -501,27 +522,6 @@ const AgentCodemodeInner: React.FC<{ onLogout: () => void }> = ({
               </Box>
             ))}
           </Box>
-        </Box>
-
-        <Box
-          sx={{
-            flex: 1,
-            minWidth: 0,
-            p: 3,
-            display: 'grid',
-            gridTemplateColumns: ['1fr', null, '1fr 1fr'],
-            gap: 3,
-            overflow: 'auto',
-          }}
-        >
-          {DEMO_AGENT_CONFIGS.map(config => (
-            <AgentRuntimePane
-              key={config.key}
-              config={config}
-              token={token}
-              onTokenConsumed={handleTokenConsumed}
-            />
-          ))}
         </Box>
       </Box>
     </Box>

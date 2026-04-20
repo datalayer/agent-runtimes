@@ -232,7 +232,7 @@ def _seed_agent_skills(agent_id: str | None) -> None:
                 "module": skill.get("module"),
                 "package": skill.get("package"),
                 "method": skill.get("method"),
-                "path": skill.get("path"),
+                "path": str(skill["path"]) if skill.get("path") is not None else None,
             }
     except Exception as exc:
         logger.debug("[skills:seed] failed for agent %s: %s", agent_id, exc)

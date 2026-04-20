@@ -27,7 +27,7 @@ def _fmt_list(items: list[str]) -> str:
     """Format a list of strings with double quotes for ruff compliance."""
     if not items:
         return "[]"
-    return "[" + ", ".join(f'"{item}"' for item in items) + "]"
+    return "[" + ", ".join(_fmt_py_literal(item) for item in items) + "]"
 
 
 def _fmt_py_literal(value: Any) -> str:
@@ -166,7 +166,7 @@ from agent_runtimes.types import AgentSpec
             suggestions = spec.get("suggestions", [])
             suggestions_str = (
                 "[\n        "
-                + ",\n        ".join(f'"{s}"' for s in suggestions)
+                + ",\n        ".join(_fmt_py_literal(s) for s in suggestions)
                 + ",\n    ]"
                 if suggestions
                 else "[]"
