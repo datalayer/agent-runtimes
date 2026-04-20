@@ -1919,9 +1919,18 @@ function ChatBaseInner({
     : undefined;
 
   // ---- Compute data for InputToolbar ----
-  const filteredMcpServers = (configQuery.data?.mcpServers || []).filter(
-    server => !mcpServers || isServerSelected(server),
-  );
+  // Merge real-time WebSocket MCP status into the cached config data so the
+  // dropdown reflects live availability even when the config query was cached
+  // before the MCP servers finished starting.
+  const filteredMcpServers = (configQuery.data?.mcpServers || [])
+    .filter(server => !mcpServers || isServerSelected(server))
+    .map(server => {
+      const wsServer = mcpStatusData?.servers?.find(s => s.id === server.id);
+      if (wsServer && wsServer.status === 'started' && !server.isAvailable) {
+        return { ...server, isAvailable: true };
+      }
+      return server;
+    });
   const connectionConfirmed =
     !protocol ||
     protocol.enableConfigQuery === false ||

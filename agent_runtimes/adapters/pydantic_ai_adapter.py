@@ -539,12 +539,6 @@ class PydanticAIAdapter(BaseAgent):
             if result is None:
                 raise RuntimeError("Agent run produced no result")
 
-            # Persist message history so /api/v1/history can serve it.
-            tracker = get_usage_tracker()
-            stats = tracker.get_agent_stats(self._agent_id)
-            if stats:
-                stats.store_messages(result.all_messages())
-
             duration_ms = (time.perf_counter() - request_start) * 1000
 
             # Extract response content
@@ -578,11 +572,9 @@ class PydanticAIAdapter(BaseAgent):
 
             logger.info(f"[PydanticAI] Extracted tool_names: {tool_names}")
 
-            # Extract usage information and track it
+            # Extract usage information for the response envelope.
+            # Detailed tracking is handled by LLMContextUsageCapability.
             usage = {}
-            tracker = get_usage_tracker()
-
-            # Pydantic AI uses result.usage() method which returns RunUsage
             if hasattr(result, "usage"):
                 run_usage = result.usage()
                 usage = {
@@ -590,31 +582,6 @@ class PydanticAIAdapter(BaseAgent):
                     "completion_tokens": getattr(run_usage, "output_tokens", 0),
                     "total_tokens": getattr(run_usage, "total_tokens", 0),
                 }
-
-                # Update the usage tracker with real data
-                logger.info(
-                    f"[PydanticAI] Calling tracker.update_usage with tool_names={tool_names if tool_names else None}"
-                )
-                tracker.update_usage(
-                    agent_id=self._agent_id,
-                    input_tokens=getattr(run_usage, "input_tokens", 0),
-                    output_tokens=getattr(run_usage, "output_tokens", 0),
-                    cache_read_tokens=getattr(run_usage, "cache_read_tokens", 0),
-                    cache_write_tokens=getattr(run_usage, "cache_write_tokens", 0),
-                    requests=getattr(run_usage, "requests", 1),
-                    tool_calls=getattr(run_usage, "tool_calls", len(tool_calls)),
-                    tool_names=tool_names if tool_names else None,
-                    duration_ms=duration_ms,
-                )
-
-                # Update message token tracking
-                stats = tracker.get_agent_stats(self._agent_id)
-                if stats:
-                    # Estimate: user tokens ~= input tokens, assistant tokens ~= output tokens
-                    stats.update_message_tokens(
-                        user_tokens=getattr(run_usage, "input_tokens", 0),
-                        assistant_tokens=getattr(run_usage, "output_tokens", 0),
-                    )
 
             return AgentResponse(
                 content=content,
@@ -688,7 +655,6 @@ class PydanticAIAdapter(BaseAgent):
                 f"PydanticAIAdapter: Using {len(runtime_toolsets)} runtime toolsets for stream"
             )
 
-            tracker = get_usage_tracker()
             current_prompt = prompt
             current_message_history = message_history if message_history else None
             deferred_tool_results: DeferredToolResults | None = None
@@ -753,36 +719,6 @@ class PydanticAIAdapter(BaseAgent):
                 # -- collect run result ---------------------------------------
                 result = await run_task
 
-                # -- usage tracking -------------------------------------------
-                tool_names: list[str] = []
-                for msg in result.all_messages():
-                    if hasattr(msg, "parts"):
-                        for part in msg.parts:
-                            if hasattr(part, "tool_name"):
-                                tool_names.append(part.tool_name)
-
-                if hasattr(result, "usage"):
-                    run_usage = result.usage()
-                    duration_ms = (time.perf_counter() - request_start) * 1000
-                    tracker.update_usage(
-                        agent_id=self._agent_id,
-                        input_tokens=getattr(run_usage, "input_tokens", 0),
-                        output_tokens=getattr(run_usage, "output_tokens", 0),
-                        cache_read_tokens=getattr(run_usage, "cache_read_tokens", 0),
-                        cache_write_tokens=getattr(run_usage, "cache_write_tokens", 0),
-                        requests=getattr(run_usage, "requests", 1),
-                        tool_calls=getattr(run_usage, "tool_calls", 0),
-                        tool_names=tool_names if tool_names else None,
-                        duration_ms=duration_ms,
-                    )
-
-                    stats = tracker.get_agent_stats(self._agent_id)
-                    if stats:
-                        stats.update_message_tokens(
-                            user_tokens=getattr(run_usage, "input_tokens", 0),
-                            assistant_tokens=getattr(run_usage, "output_tokens", 0),
-                        )
-
                 # -- deferred approval continuation ---------------------------
                 if isinstance(result.output, DeferredToolRequests):
                     deferred_requests = result.output
@@ -836,11 +772,6 @@ class PydanticAIAdapter(BaseAgent):
                 raise RuntimeError(
                     "Exceeded maximum deferred approval continuations in stream mode"
                 )
-
-            # Persist message history so /api/v1/history can serve it.
-            stats = tracker.get_agent_stats(self._agent_id)
-            if stats and final_result:
-                stats.store_messages(final_result.all_messages())
 
             if final_output is not None:
                 yield StreamEvent(type="output", data=final_output)

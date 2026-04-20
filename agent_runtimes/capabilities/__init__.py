@@ -15,6 +15,8 @@ from .factory import (
     build_default_choice_guardrails,
     build_usage_limits_from_agent_spec,
 )
+from .llm_context_usage import LLMContextUsageCapability
+from .monitoring import MonitoringCapability
 from .tool_approval import (
     ToolApprovalCapability,
     ToolApprovalConfig,
@@ -24,6 +26,8 @@ from .tool_approval import (
 )
 
 __all__ = [
+    "LLMContextUsageCapability",
+    "MonitoringCapability",
     "ToolApprovalCapability",
     "ToolApprovalConfig",
     "ToolApprovalManager",

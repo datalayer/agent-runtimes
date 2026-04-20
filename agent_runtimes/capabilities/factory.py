@@ -11,6 +11,8 @@ from typing import Any
 from pydantic_ai import UsageLimits
 
 from .cost_monitoring import CostMonitoringCapability
+from .llm_context_usage import LLMContextUsageCapability
+from .monitoring import MonitoringCapability
 from .guardrails import (
     DEFAULT_TOOL_PERMISSION_MAP,
     AsyncGuardrailCapability,
@@ -336,6 +338,24 @@ def build_capabilities_from_agent_spec(
                     "AGENT_RUNTIMES_OTEL_PROMPT_PREVIEW",
                     False,
                 ),
+            )
+        )
+
+    # LLM context usage tracking (centralises per-run token recording).
+    if _env_bool("AGENT_RUNTIMES_ENABLE_CAPABILITY_LLM_CONTEXT_USAGE", True) and agent_id:
+        capabilities.append(
+            LLMContextUsageCapability(
+                agent_id=agent_id,
+                enabled=True,
+            )
+        )
+
+    # Monitoring snapshot broadcast (pushes to WebSocket after each run).
+    if _env_bool("AGENT_RUNTIMES_ENABLE_CAPABILITY_MONITORING", True) and agent_id:
+        capabilities.append(
+            MonitoringCapability(
+                agent_id=agent_id,
+                enabled=True,
             )
         )
 
