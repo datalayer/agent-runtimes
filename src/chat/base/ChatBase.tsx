@@ -1926,8 +1926,26 @@ function ChatBaseInner({
     .filter(server => !mcpServers || isServerSelected(server))
     .map(server => {
       const wsServer = mcpStatusData?.servers?.find(s => s.id === server.id);
-      if (wsServer && wsServer.status === 'started' && !server.isAvailable) {
-        return { ...server, isAvailable: true };
+      if (wsServer && wsServer.status === 'started') {
+        const updates: Partial<typeof server> = {};
+        if (!server.isAvailable) {
+          updates.isAvailable = true;
+        }
+        // Merge discovered tools from WS when the cached config has none
+        if (
+          server.tools.length === 0 &&
+          wsServer.tools &&
+          wsServer.tools.length > 0
+        ) {
+          updates.tools = wsServer.tools.map(t => ({
+            name: t.name,
+            description: t.description || '',
+            enabled: t.enabled ?? true,
+          }));
+        }
+        if (Object.keys(updates).length > 0) {
+          return { ...server, ...updates };
+        }
       }
       return server;
     });

@@ -42,7 +42,6 @@ from pydantic_ai.toolsets import ExternalToolset
 
 from ..adapters.base import BaseAgent
 from ..context.identities import IdentityContextManager, set_request_user_jwt
-from ..context.usage import get_usage_tracker
 from ..events import create_event
 from ..observability.prompt_turn_metrics import (
     extract_identity_hints,
@@ -541,63 +540,27 @@ class VercelAITransport(BaseTransport):
 
         # Create on_complete callback to track usage
         agent_id = self._agent_id
-        tracker = get_usage_tracker()
         import time
 
         request_start = time.perf_counter()
 
         async def on_complete(result: "AgentRunResult") -> None:
             """
-            Callback to track usage after agent run completes.
+            Callback invoked after agent run completes.
+            Usage tracking is handled by LLMContextUsageCapability.
             """
             usage = result.usage()
             input_tokens = int(getattr(usage, "input_tokens", 0) or 0)
             output_tokens = int(getattr(usage, "output_tokens", 0) or 0)
-            requests_count = int(getattr(usage, "requests", 0) or 0)
             tool_call_count = int(getattr(usage, "tool_calls", 0) or 0)
 
-            # Extract tool names from result messages
-            tool_names: list[str] = []
-            if hasattr(result, "_messages"):
-                for msg in result._messages:
-                    if hasattr(msg, "tool_calls"):
-                        for tc in msg.tool_calls:
-                            tool_names.append(tc.name)
-
             duration_ms = (time.perf_counter() - request_start) * 1000
-            tracker.update_usage(
-                agent_id=agent_id,
-                input_tokens=input_tokens,
-                output_tokens=output_tokens,
-                requests=requests_count,  # Number of requests made
-                tool_calls=tool_call_count,
-                tool_names=tool_names if tool_names else None,
-                duration_ms=duration_ms,
-            )
-
-            # Also update message token tracking
-            stats = tracker.get_agent_stats(agent_id)
-            if stats:
-                stats.update_message_tokens(
-                    user_tokens=input_tokens,
-                    assistant_tokens=output_tokens,
-                )
-                # Persist message history for refresh/history endpoint support.
-                try:
-                    stats.store_messages(result.all_messages())
-                except Exception as e:
-                    logger.warning(
-                        "[Vercel AI] Could not store message history for agent '%s': %s",
-                        agent_id,
-                        e,
-                    )
 
             logger.info(
-                "[Vercel AI] on_complete usage tracked: agent_id=%s input_tokens=%s output_tokens=%s requests=%s tool_calls=%s",
+                "[Vercel AI] on_complete: agent_id=%s input_tokens=%s output_tokens=%s tool_calls=%s",
                 agent_id,
                 input_tokens,
                 output_tokens,
-                requests_count,
                 tool_call_count,
             )
 

@@ -88,6 +88,7 @@ export interface McpServerStatus {
   status: 'none' | 'not_started' | 'starting' | 'failed' | 'started';
   error?: string;
   tools_count?: number;
+  tools?: Array<{ name: string; description?: string; enabled?: boolean }>;
 }
 
 /**

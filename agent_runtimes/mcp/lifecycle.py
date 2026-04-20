@@ -749,6 +749,14 @@ class MCPLifecycleManager:
                         "id": sid,
                         "status": "started",
                         "tools_count": len(instance.tools),
+                        "tools": [
+                            {
+                                "name": t.name,
+                                "description": t.description or "",
+                                "enabled": t.enabled,
+                            }
+                            for t in instance.tools
+                        ],
                     }
                 )
             elif sid in self._starting_servers:
