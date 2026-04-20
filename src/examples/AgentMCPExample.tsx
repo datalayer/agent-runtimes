@@ -496,10 +496,22 @@ const AgentMCPInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
       id: s.id,
       status: s.status as McpServerStatus['status'],
       tools_count: s.toolsCount,
+      tools: s.tools.map(t => ({
+        name: t.name,
+        description: t.description,
+        enabled: true,
+      })),
     }));
     const readyServers = servers
       .filter(s => s.status === 'started')
       .map(s => s.id);
+    // Build enabled_tools_by_server so the InputFooter ToolsMenu can render them
+    const enabledToolsByServer: Record<string, string[]> = {};
+    for (const s of mcpServers) {
+      if (s.tools.length > 0) {
+        enabledToolsByServer[s.id] = s.tools.map(t => t.name);
+      }
+    }
     return {
       initialized: true,
       ready_count: readyServers.length,
@@ -507,6 +519,11 @@ const AgentMCPInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
       ready_servers: readyServers,
       failed_servers: {},
       servers,
+      enabled_tools_by_server: enabledToolsByServer,
+      enabled_tools_count: mcpServers.reduce(
+        (sum, s) => sum + s.tools.length,
+        0,
+      ),
     };
   }, [liveMcpStatus, mcpServers]);
 

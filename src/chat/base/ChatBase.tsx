@@ -259,7 +259,7 @@ function ChatBaseInner({
   initialModel,
   availableModels,
   mcpServers,
-  initialSkills,
+  initialSkills: _initialSkills,
   className,
   loadingState,
   headerActions,
@@ -304,12 +304,12 @@ function ChatBaseInner({
   onToolCallStart,
   onToolCallComplete,
   // Identity/Authorization props
-  onAuthorizationRequired,
+  onAuthorizationRequired: _onAuthorizationRequired,
   connectedIdentities,
   // Conversation persistence
   runtimeId,
   historyEndpoint,
-  historyAuthToken,
+  historyAuthToken: _historyAuthToken,
   // Pending prompt
   pendingPrompt,
   contextSnapshot: externalContextSnapshot,
@@ -566,7 +566,8 @@ function ChatBaseInner({
       const newMap = new Map<string, Set<string>>();
       for (const server of configQuery.data?.mcpServers ?? []) {
         if (isServerSelected(server) && prev.has(server.id)) {
-          newMap.set(server.id, prev.get(server.id)!);
+          const existing = prev.get(server.id);
+          if (existing) newMap.set(server.id, existing);
         } else if (
           isServerSelected(server) &&
           server.isAvailable &&
@@ -858,7 +859,7 @@ function ChatBaseInner({
       prevMessageCountRef.current = currentCount;
       onMessagesChange?.(messages);
     }
-  }, [displayItems, onMessagesChange]);
+  }, [displayItems, messages, onMessagesChange]);
 
   const padding = compact ? 2 : 3;
 
@@ -1554,7 +1555,8 @@ function ChatBaseInner({
             description: tool.description,
             parameters: tool.parameters || { type: 'object', properties: {} },
           }));
-          console.log(
+
+          console.warn(
             '[ChatBase] frontendTools count:',
             frontendTools?.length ?? 0,
             'toolsForRequest:',
@@ -1912,6 +1914,76 @@ function ChatBaseInner({
     setTimeout(() => inputRef.current?.focus(), 0);
   }, []);
 
+  // ---- Compute data for InputToolbar ----
+  // Merge real-time WebSocket MCP status into the cached config data so the
+  // dropdown reflects live availability even when the config query was cached
+  // before the MCP servers finished starting.
+  const configMcpServers = (configQuery.data?.mcpServers || []).filter(
+    server => !mcpServers || isServerSelected(server),
+  );
+  const filteredMcpServers = useMemo(() => {
+    const merged = configMcpServers.map(server => {
+      const wsServer = mcpStatusData?.servers?.find(s => s.id === server.id);
+      if (wsServer && wsServer.status === 'started') {
+        const updates: Partial<typeof server> = {};
+        if (!server.isAvailable) {
+          updates.isAvailable = true;
+        }
+        // Always prefer WS-discovered tools over cached config data.
+        // The config query may have been fetched before MCP servers
+        // finished starting, leaving tools empty or stale.
+        if (wsServer.tools && wsServer.tools.length > 0) {
+          updates.tools = wsServer.tools.map(t => ({
+            name: t.name,
+            description: t.description || '',
+            enabled: t.enabled ?? true,
+          }));
+        }
+        if (Object.keys(updates).length > 0) {
+          return { ...server, ...updates };
+        }
+      }
+      return server;
+    });
+
+    // Include WS-only servers that are started but missing from the config
+    // query (e.g. config was fetched before the MCP server finished starting).
+    const configIds = new Set(configMcpServers.map(s => s.id));
+    for (const wsServer of mcpStatusData?.servers ?? []) {
+      if (
+        wsServer.status === 'started' &&
+        !configIds.has(wsServer.id) &&
+        wsServer.tools &&
+        wsServer.tools.length > 0
+      ) {
+        const selected =
+          !mcpServers || mcpServers.some(s => s.id === wsServer.id);
+        if (selected) {
+          merged.push({
+            id: wsServer.id,
+            name: wsServer.id,
+            description: '',
+            url: '',
+            enabled: true,
+            tools: wsServer.tools.map(t => ({
+              name: t.name,
+              description: t.description || '',
+              enabled: t.enabled ?? true,
+            })),
+            args: [],
+            requiredEnvVars: [],
+            isAvailable: true,
+            transport: 'stdio',
+            isConfig: false,
+            isRunning: true,
+          });
+        }
+      }
+    }
+
+    return merged;
+  }, [configMcpServers, mcpStatusData, mcpServers]);
+
   // ---- Not ready ----
   if (!ready) {
     return (
@@ -1948,37 +2020,6 @@ function ChatBaseInner({
     ? protocol.configEndpoint.replace(/\/api\/v1\/(config|configure)\/?$/, '')
     : undefined;
 
-  // ---- Compute data for InputToolbar ----
-  // Merge real-time WebSocket MCP status into the cached config data so the
-  // dropdown reflects live availability even when the config query was cached
-  // before the MCP servers finished starting.
-  const filteredMcpServers = (configQuery.data?.mcpServers || [])
-    .filter(server => !mcpServers || isServerSelected(server))
-    .map(server => {
-      const wsServer = mcpStatusData?.servers?.find(s => s.id === server.id);
-      if (wsServer && wsServer.status === 'started') {
-        const updates: Partial<typeof server> = {};
-        if (!server.isAvailable) {
-          updates.isAvailable = true;
-        }
-        // Merge discovered tools from WS when the cached config has none
-        if (
-          server.tools.length === 0 &&
-          wsServer.tools &&
-          wsServer.tools.length > 0
-        ) {
-          updates.tools = wsServer.tools.map(t => ({
-            name: t.name,
-            description: t.description || '',
-            enabled: t.enabled ?? true,
-          }));
-        }
-        if (Object.keys(updates).length > 0) {
-          return { ...server, ...updates };
-        }
-      }
-      return server;
-    });
   const connectionConfirmed =
     !protocol ||
     protocol.enableConfigQuery === false ||
