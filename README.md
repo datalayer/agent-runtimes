@@ -55,7 +55,7 @@ Agent Runtimes solves the complexity of deploying AI agents by providing:
 - 💾 **Persistence**: DBOS support for durable execution
 - 🔒 **Context Optimization**: LLM context management
 
-## Example
+## Examples
 
 The examples will demonstrate how to use the Agent Runtimes functionality in various scenarios and frameworks.
 
@@ -86,3 +86,16 @@ The detailed guides for architecture, use cases, interactive chat, key concepts,
 - [Transports](https://agent-runtimes.datalayer.tech/transports)
 - [Programmatic Tools](https://agent-runtimes.datalayer.tech/programmatic-tools)
 - [CLI](https://agent-runtimes.datalayer.tech/cli)
+
+## Agentspecs
+
+Generated catalogs are produced via:
+
+```bash
+make specs
+```
+
+Generation scripts are under [scripts/codegen](../scripts/codegen), and outputs are written to:
+
+- Python: [agent_runtimes/specs](../agent_runtimes/specs)
+- TypeScript: [src/specs](../src/specs)
