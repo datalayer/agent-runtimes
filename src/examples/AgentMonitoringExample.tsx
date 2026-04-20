@@ -35,6 +35,8 @@ import {
 import { CostTracker, type CostUsageResponse } from '../context/CostTracker';
 import { CostUsageChart } from '../context/CostUsageChart';
 import { TokenUsageChart } from '../context/TokenUsageChart';
+import { GraphFlowChart } from '../context/GraphFlowChart';
+import type { GraphTelemetryData } from '../types/stream';
 import { useAIAgentsWebSocket } from '../hooks';
 import type { AgentStreamSnapshotPayload } from '../types/stream';
 import type { ContextSnapshotData } from '../types/context';
@@ -99,6 +101,9 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
   const [monitorLastSnapshotAt, setMonitorLastSnapshotAt] = useState<
     number | null
   >(null);
+  const [liveGraphTelemetry, setLiveGraphTelemetry] = useState<
+    GraphTelemetryData | undefined
+  >(undefined);
 
   const agentBaseUrl = DEFAULT_LOCAL_BASE_URL;
   const otelBaseUrl =
@@ -222,6 +227,10 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
 
         if (payload.mcpStatus !== undefined) {
           setLiveMcpStatus(payload.mcpStatus ?? undefined);
+        }
+
+        if (payload.graphTelemetry) {
+          setLiveGraphTelemetry(payload.graphTelemetry);
         }
 
         const snapshotCost =
@@ -518,6 +527,28 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
                 : ''}
             </Text>
           </Box>
+
+          {liveGraphTelemetry && (
+            <Box
+              sx={{
+                p: 3,
+                borderBottom: '1px solid',
+                borderColor: 'border.default',
+              }}
+            >
+              <Heading as="h4" sx={{ fontSize: 1, mb: 2 }}>
+                Graph Execution
+              </Heading>
+              <GraphFlowChart data={liveGraphTelemetry} height={240} />
+              <Text sx={{ mt: 1, color: 'fg.muted', fontSize: 0 }}>
+                {liveGraphTelemetry.totalNodesExecuted} node(s) executed across{' '}
+                {liveGraphTelemetry.runCount} run(s)
+                {liveGraphTelemetry.totalDurationMs
+                  ? ` — ${(liveGraphTelemetry.totalDurationMs / 1000).toFixed(2)}s total`
+                  : ''}
+              </Text>
+            </Box>
+          )}
 
           <Box sx={{ p: 3, flex: 1, overflow: 'auto' }}>
             <Heading as="h4" sx={{ fontSize: 1, mb: 2 }}>

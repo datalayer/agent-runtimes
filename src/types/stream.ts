@@ -45,6 +45,47 @@ export interface AgentStreamSnapshotPayload {
   mcpStatus?: McpToolsetsStatusResponse | null;
   codemodeStatus?: CodemodeStatusData | null;
   fullContext?: Record<string, unknown> | null;
+  graphTelemetry?: GraphTelemetryData | null;
+}
+
+/** Graph-level telemetry data from pydantic-graph execution. */
+export interface GraphTelemetryData {
+  agentId?: string;
+  graphName?: string | null;
+  /** Static topology: graph node definitions. */
+  nodes: GraphTelemetryNode[];
+  /** Static topology: edges between nodes. */
+  edges: GraphTelemetryEdge[];
+  /** Dynamic execution trace: per-node events. */
+  events: GraphNodeEvent[];
+  totalNodesExecuted: number;
+  totalDurationMs: number;
+  lastRunStartMs: number;
+  lastRunEndMs: number;
+  runCount: number;
+}
+
+export interface GraphTelemetryNode {
+  id: string;
+  name: string;
+  category: string; // "step" | "end" | "start" | "join" | "decision" | "end_or_continue"
+}
+
+export interface GraphTelemetryEdge {
+  source: string;
+  target: string;
+  label?: string | null;
+  edgeType: string; // "normal" | "parallel" | "decision" | "join"
+}
+
+export interface GraphNodeEvent {
+  nodeId: string;
+  nodeType: string; // "step" | "end" | "join" | "decision" | "parallel" | "error"
+  status: string; // "started" | "completed" | "error"
+  timestampMs: number;
+  durationMs?: number | null;
+  parentNodeId?: string | null;
+  error?: string | null;
 }
 
 /** Codemode status as pushed via the monitoring WebSocket. */

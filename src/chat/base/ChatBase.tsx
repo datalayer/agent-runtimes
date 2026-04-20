@@ -602,6 +602,36 @@ function ChatBaseInner({
     });
   }, [mcpStatusData, mcpServers]);
 
+  // Refetch configQuery when WS reports MCP servers as started but the
+  // cached config response has missing servers or empty tools.
+  const lastConfigMcpKeyRef = useRef('');
+  useEffect(() => {
+    const wsServers = mcpStatusData?.servers;
+    if (!wsServers || wsServers.length === 0) return;
+    const startedIds = wsServers
+      .filter(s => s.status === 'started')
+      .map(s => s.id)
+      .sort();
+    if (startedIds.length === 0) return;
+
+    const configServers = configQuery.data?.mcpServers || [];
+    const needsRefetch = startedIds.some(id => {
+      const cs = configServers.find(s => s.id === id);
+      return !cs || cs.tools.length === 0;
+    });
+
+    // Only refetch once per unique set of started server IDs
+    const key = startedIds.join(',');
+    if (
+      needsRefetch &&
+      key !== lastConfigMcpKeyRef.current &&
+      configQuery.refetch
+    ) {
+      lastConfigMcpKeyRef.current = key;
+      configQuery.refetch();
+    }
+  }, [mcpStatusData, configQuery]);
+
   // initialSkills are now handled server-side during agent creation.
 
   // ---- Toggle helpers ----

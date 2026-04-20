@@ -424,6 +424,12 @@ async def build_monitoring_snapshot_payload(
         )
     codemode_status = build_codemode_status(agent_id)
 
+    graph_telemetry: dict[str, Any] | None = None
+    if agent_id:
+        from ..capabilities.graph_telemetry import get_graph_telemetry_dict
+
+        graph_telemetry = get_graph_telemetry_dict(agent_id)
+
     return AgentMonitoringSnapshotPayload(
         agentId=agent_id,
         approvals=approvals,
@@ -433,6 +439,7 @@ async def build_monitoring_snapshot_payload(
         mcpStatus=mcp_status,
         codemodeStatus=codemode_status,
         fullContext=full_context,
+        graphTelemetry=graph_telemetry,
     )
 
 

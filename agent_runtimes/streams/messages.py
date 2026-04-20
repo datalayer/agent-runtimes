@@ -68,3 +68,4 @@ class AgentMonitoringSnapshotPayload(BaseModel):
     mcp_status: dict[str, Any] | None = Field(default=None, alias="mcpStatus")
     codemode_status: dict[str, Any] | None = Field(default=None, alias="codemodeStatus")
     full_context: dict[str, Any] | None = Field(default=None, alias="fullContext")
+    graph_telemetry: dict[str, Any] | None = Field(default=None, alias="graphTelemetry")
