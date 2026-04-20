@@ -36,6 +36,24 @@ CRAWL_SKILL_SPEC_0_0_1 = SkillSpec(
     enabled=True,
 )
 
+DATALAYER_WHOAMI_SKILL_SPEC_0_0_1 = SkillSpec(
+    id="datalayer-whoami",
+    version="0.0.1",
+    name="Datalayer Whoami Skill",
+    description="Retrieve the authenticated Datalayer user profile using the datalayer-skills package.",
+    module="datalayer_skills.skills.whoami",
+    package=None,
+    method=None,
+    path=None,
+    envvars=["DATALAYER_API_KEY:0.0.1"],
+    optional_env_vars=[],
+    dependencies=["datalayer_skills>=0.1.0"],
+    tags=["datalayer", "iam", "identity", "profile"],
+    icon="person",
+    emoji="👤",
+    enabled=True,
+)
+
 EVENTS_SKILL_SPEC_0_0_1 = SkillSpec(
     id="events",
     version="0.0.1",
@@ -132,6 +150,7 @@ TEXT_SUMMARIZER_SKILL_SPEC_0_0_1 = SkillSpec(
 
 SKILLS_CATALOG: Dict[str, SkillSpec] = {
     "crawl": CRAWL_SKILL_SPEC_0_0_1,
+    "datalayer-whoami": DATALAYER_WHOAMI_SKILL_SPEC_0_0_1,
     "events": EVENTS_SKILL_SPEC_0_0_1,
     "github": GITHUB_SKILL_SPEC_0_0_1,
     "jokes": JOKES_SKILL_SPEC_0_0_1,

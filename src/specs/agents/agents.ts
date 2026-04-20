@@ -27,6 +27,7 @@ import {
 } from '../mcpServers';
 import {
   CRAWL_SKILL_SPEC_0_0_1,
+  DATALAYER_WHOAMI_SKILL_SPEC_0_0_1,
   EVENTS_SKILL_SPEC_0_0_1,
   GITHUB_SKILL_SPEC_0_0_1,
   JOKES_SKILL_SPEC_0_0_1,
@@ -79,6 +80,8 @@ const MCP_SERVER_MAP: Record<string, any> = {
 const SKILL_MAP: Record<string, any> = {
   'crawl:0.0.1': CRAWL_SKILL_SPEC_0_0_1,
   crawl: CRAWL_SKILL_SPEC_0_0_1,
+  'datalayer-whoami:0.0.1': DATALAYER_WHOAMI_SKILL_SPEC_0_0_1,
+  'datalayer-whoami': DATALAYER_WHOAMI_SKILL_SPEC_0_0_1,
   'events:0.0.1': EVENTS_SKILL_SPEC_0_0_1,
   events: EVENTS_SKILL_SPEC_0_0_1,
   'github:0.0.1': GITHUB_SKILL_SPEC_0_0_1,
@@ -864,6 +867,57 @@ export const DATA_ACQUISITION_AGENT_SPEC_0_0_1: AgentSpec = {
 ## Recommended Workflow 1. **Discover**: Use list_servers and search_tools to find relevant tools 2. **Understand**: Use get_tool_details to check parameters 3. **Execute**: Use execute_code to perform multi-step tasks, calling tools as needed
 ## Token Efficiency When possible, chain multiple tool calls in a single execute_code block. This reduces output tokens by processing intermediate results in code rather than returning them. If you want to examine results, print subsets, preview (maximum 20 first characters) and/or counts instead of full data, this is really important.
 `,
+  goal: undefined,
+  protocol: undefined,
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: undefined,
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  parameters: undefined,
+};
+
+export const DATALAYER_AGENT_SPEC_0_0_1: AgentSpec = {
+  id: 'datalayer-agent',
+  version: '0.0.1',
+  name: 'Datalayer Agent',
+  description: `Datalayer-focused assistant that can inspect the authenticated user profile using datalayer-skills.`,
+  tags: ['datalayer', 'iam', 'profile', 'identity'],
+  enabled: false,
+  model: 'bedrock:us.anthropic.claude-3-5-haiku-20241022-v1:0',
+  mcpServers: [],
+  skills: [toAgentSkillSpec(SKILL_MAP['datalayer-whoami:0.0.1'])],
+  tools: [],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
+  environmentName: 'ai-agents-env',
+  icon: 'person',
+  emoji: '👤',
+  color: '#14B8A6',
+  suggestions: [
+    'Who am I on Datalayer?',
+    'Show my Datalayer profile details',
+    'What roles do I currently have in Datalayer?',
+  ],
+  welcomeMessage:
+    "Hi! I'm the Datalayer Agent. I can help you retrieve and summarize your authenticated Datalayer profile.\n",
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'jupyter',
+  systemPrompt: `You are a Datalayer assistant with access to the datalayer-whoami skill. Use it to retrieve the authenticated user's profile when requested. If DATALAYER_API_KEY is missing, clearly ask the user to configure it.
+`,
+  systemPromptCodemodeAddons: undefined,
   goal: undefined,
   protocol: undefined,
   uiExtension: undefined,
@@ -2917,6 +2971,7 @@ export const AGENT_SPECS: Record<string, AgentSpec> = {
     COMPREHENSIVE_SALES_ANALYTICS_AGENT_SPEC_0_0_1,
   crawler: CRAWLER_AGENT_SPEC_0_0_1,
   'data-acquisition': DATA_ACQUISITION_AGENT_SPEC_0_0_1,
+  'datalayer-agent': DATALAYER_AGENT_SPEC_0_0_1,
   'demo-full': DEMO_FULL_AGENT_SPEC_0_0_1,
   'demo-hooks': DEMO_HOOKS_AGENT_SPEC_0_0_1,
   'demo-one-trigger-approval': DEMO_ONE_TRIGGER_APPROVAL_AGENT_SPEC_0_0_1,
