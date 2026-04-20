@@ -711,6 +711,74 @@ class FrontendConfig(BaseModel):
     )
 
 
+class SubAgentSpecConfig(BaseModel):
+    """Configuration for a subagent within an agent specification.
+
+    Maps to ``subagents_pydantic_ai.SubAgentConfig`` at runtime.
+    """
+
+    model_config = ConfigDict(populate_by_name=True, by_alias=True)
+
+    name: str = Field(..., description="Unique identifier for the subagent")
+    description: str = Field(..., description="Brief description shown to the parent agent")
+    instructions: str = Field(..., description="System prompt for the subagent")
+    model: Optional[str] = Field(
+        default=None,
+        description="LLM model to use (defaults to parent agent's model)",
+    )
+    can_ask_questions: Optional[bool] = Field(
+        default=None,
+        description="Whether the subagent can ask the parent for clarification",
+        alias="canAskQuestions",
+    )
+    max_questions: Optional[int] = Field(
+        default=None,
+        description="Maximum questions the subagent may ask per task",
+        alias="maxQuestions",
+    )
+    preferred_mode: Optional[Literal["sync", "async", "auto"]] = Field(
+        default=None,
+        description="Default execution mode preference: sync, async, or auto",
+        alias="preferredMode",
+    )
+    typical_complexity: Optional[Literal["simple", "moderate", "complex"]] = Field(
+        default=None,
+        description="Typical task complexity hint for auto-mode selection",
+        alias="typicalComplexity",
+    )
+    typically_needs_context: Optional[bool] = Field(
+        default=None,
+        description="Whether this subagent typically needs user context",
+        alias="typicallyNeedsContext",
+    )
+
+
+class SubAgentsConfig(BaseModel):
+    """Top-level subagents configuration for an agent specification."""
+
+    model_config = ConfigDict(populate_by_name=True, by_alias=True)
+
+    subagents: List[SubAgentSpecConfig] = Field(
+        default_factory=list,
+        description="List of subagent configurations",
+    )
+    default_model: Optional[str] = Field(
+        default=None,
+        description="Default model for subagents that don't specify one",
+        alias="defaultModel",
+    )
+    include_general_purpose: bool = Field(
+        default=True,
+        description="Include a general-purpose fallback subagent",
+        alias="includeGeneralPurpose",
+    )
+    max_nesting_depth: int = Field(
+        default=0,
+        description="Maximum depth for nested subagent delegation (0 = no nesting)",
+        alias="maxNestingDepth",
+    )
+
+
 class AgentSpec(BaseModel):
     """
     Specification for an AI agent.
@@ -886,6 +954,14 @@ class AgentSpec(BaseModel):
     parameters: Optional[Dict[str, Any]] = Field(
         default=None,
         description="JSON schema describing agent launch parameters.",
+    )
+    subagents: Optional[SubAgentsConfig] = Field(
+        default=None,
+        description=(
+            "Subagent delegation configuration. When set, the agent can "
+            "delegate tasks to specialised child agents via the "
+            "subagents-pydantic-ai SubAgentCapability."
+        ),
     )
 
 

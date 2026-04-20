@@ -12,7 +12,7 @@ Generated from YAML specifications in specs/agents/
 from typing import Dict
 
 from agent_runtimes.mcp.catalog_mcp_servers import MCP_SERVER_CATALOG
-from agent_runtimes.types import AgentSpec
+from agent_runtimes.types import AgentSpec, SubAgentsConfig, SubAgentSpecConfig
 
 # ============================================================================
 # Agent Specs
@@ -126,6 +126,7 @@ ANALYZE_CAMPAIGN_PERFORMANCE_AGENT_SPEC_0_0_1 = AgentSpec(
     pre_hooks=None,
     post_hooks=None,
     parameters=None,
+    subagents=None,
 )
 
 ANALYZE_SUPPORT_TICKETS_AGENT_SPEC_0_0_1 = AgentSpec(
@@ -206,6 +207,7 @@ ANALYZE_SUPPORT_TICKETS_AGENT_SPEC_0_0_1 = AgentSpec(
     pre_hooks=None,
     post_hooks=None,
     parameters=None,
+    subagents=None,
 )
 
 AUDIT_INVENTORY_LEVELS_AGENT_SPEC_0_0_1 = AgentSpec(
@@ -286,6 +288,7 @@ AUDIT_INVENTORY_LEVELS_AGENT_SPEC_0_0_1 = AgentSpec(
     pre_hooks=None,
     post_hooks=None,
     parameters=None,
+    subagents=None,
 )
 
 AUTOMATE_REGULATORY_REPORTING_AGENT_SPEC_0_0_1 = AgentSpec(
@@ -385,6 +388,7 @@ AUTOMATE_REGULATORY_REPORTING_AGENT_SPEC_0_0_1 = AgentSpec(
     pre_hooks=None,
     post_hooks=None,
     parameters=None,
+    subagents=None,
 )
 
 CLASSIFY_ROUTE_EMAILS_AGENT_SPEC_0_0_1 = AgentSpec(
@@ -473,6 +477,7 @@ CLASSIFY_ROUTE_EMAILS_AGENT_SPEC_0_0_1 = AgentSpec(
     pre_hooks=None,
     post_hooks=None,
     parameters=None,
+    subagents=None,
 )
 
 COMPREHENSIVE_SALES_ANALYTICS_AGENT_SPEC_0_0_1 = AgentSpec(
@@ -544,6 +549,7 @@ COMPREHENSIVE_SALES_ANALYTICS_AGENT_SPEC_0_0_1 = AgentSpec(
     pre_hooks=None,
     post_hooks=None,
     parameters=None,
+    subagents=None,
 )
 
 CRAWLER_AGENT_SPEC_0_0_1 = AgentSpec(
@@ -610,6 +616,7 @@ CRAWLER_AGENT_SPEC_0_0_1 = AgentSpec(
     pre_hooks=None,
     post_hooks=None,
     parameters=None,
+    subagents=None,
 )
 
 DATA_ACQUISITION_AGENT_SPEC_0_0_1 = AgentSpec(
@@ -680,6 +687,7 @@ DATA_ACQUISITION_AGENT_SPEC_0_0_1 = AgentSpec(
     pre_hooks=None,
     post_hooks=None,
     parameters=None,
+    subagents=None,
 )
 
 DATALAYER_AGENT_SPEC_0_0_1 = AgentSpec(
@@ -727,6 +735,7 @@ DATALAYER_AGENT_SPEC_0_0_1 = AgentSpec(
     pre_hooks={"packages": ["datalayer_skills>=0.1.0"]},
     post_hooks=None,
     parameters=None,
+    subagents=None,
 )
 
 DEMO_FULL_AGENT_SPEC_0_0_1 = AgentSpec(
@@ -788,6 +797,7 @@ DEMO_FULL_AGENT_SPEC_0_0_1 = AgentSpec(
     pre_hooks={"packages": ["datalayer_skills>=0.1.0"]},
     post_hooks=None,
     parameters=None,
+    subagents=None,
 )
 
 DEMO_HOOKS_AGENT_SPEC_0_0_1 = AgentSpec(
@@ -855,6 +865,7 @@ When the user asks about hooks, use execute_code to show concrete evidence: read
         ]
     },
     parameters=None,
+    subagents=None,
 )
 
 DEMO_ONE_TRIGGER_APPROVAL_AGENT_SPEC_0_0_1 = AgentSpec(
@@ -901,6 +912,7 @@ DEMO_ONE_TRIGGER_APPROVAL_AGENT_SPEC_0_0_1 = AgentSpec(
     pre_hooks=None,
     post_hooks=None,
     parameters=None,
+    subagents=None,
 )
 
 DEMO_ONE_TRIGGER_AGENT_SPEC_0_0_1 = AgentSpec(
@@ -947,6 +959,7 @@ DEMO_ONE_TRIGGER_AGENT_SPEC_0_0_1 = AgentSpec(
     pre_hooks=None,
     post_hooks=None,
     parameters=None,
+    subagents=None,
 )
 
 DEMO_PARAMETERS_AGENT_SPEC_0_0_1 = AgentSpec(
@@ -1020,6 +1033,7 @@ DEMO_PARAMETERS_AGENT_SPEC_0_0_1 = AgentSpec(
         },
         "required": ["project"],
     },
+    subagents=None,
 )
 
 DEMO_SIMPLE_AGENT_SPEC_0_0_1 = AgentSpec(
@@ -1068,6 +1082,79 @@ DEMO_SIMPLE_AGENT_SPEC_0_0_1 = AgentSpec(
     pre_hooks=None,
     post_hooks=None,
     parameters=None,
+    subagents=None,
+)
+
+DEMO_SUBAGENTS_AGENT_SPEC_0_0_1 = AgentSpec(
+    id="demo-subagents",
+    version="0.0.1",
+    name="Subagents Demo",
+    description="A demonstration agent that delegates tasks to specialised subagents. It has a researcher subagent for gathering information and a writer subagent for composing clear, structured responses.",
+    tags=["demo", "subagents", "multi-agent", "delegation"],
+    enabled=True,
+    model="bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0",
+    mcp_servers=[],
+    skills=["events:0.0.1"],
+    tools=[],
+    frontend_tools=["jupyter-notebook:0.0.1", "lexical-document:0.0.1"],
+    environment_name="ai-agents-env",
+    icon="people",
+    emoji="👥",
+    color="#8B5CF6",
+    suggestions=[
+        "Research the pros and cons of Python async patterns and write a summary.",
+        "Find recent advances in LLM fine-tuning and create a brief report.",
+        "Investigate best practices for REST API design and draft a style guide.",
+        "Analyze the current state of WebAssembly and produce an executive summary.",
+    ],
+    welcome_message="Hi! I'm the Subagents Demo agent. I coordinate a team of specialised helpers: a **Researcher** who gathers information and a **Writer** who turns findings into polished prose. Ask me anything and I'll delegate to the right expert! ",
+    welcome_notebook=None,
+    welcome_document=None,
+    sandbox_variant="jupyter",
+    system_prompt="""You are a helpful orchestrator agent. You have access to specialised subagents that you can delegate tasks to. Use the 'task' tool to assign work: - Use the 'researcher' subagent for gathering facts, searching for information, and analysis. - Use the 'writer' subagent for composing text, formatting documents, and editing prose. You can run tasks synchronously (wait for result) or asynchronously (fire and forget, check later). Always summarise the delegated results for the user in a clear, helpful way.
+""",
+    system_prompt_codemode_addons=None,
+    goal=None,
+    protocol=None,
+    ui_extension=None,
+    trigger=None,
+    model_configuration=None,
+    mcp_server_tools=None,
+    guardrails=None,
+    evals=None,
+    codemode=None,
+    output=None,
+    advanced=None,
+    authorization_policy=None,
+    notifications=None,
+    memory="ephemeral",
+    pre_hooks=None,
+    post_hooks=None,
+    parameters=None,
+    subagents=SubAgentsConfig(
+        subagents=[
+            SubAgentSpecConfig(
+                name="researcher",
+                description="Researches topics, gathers facts, and provides detailed analysis",
+                instructions="You are a thorough research assistant. When given a topic: 1. Break it down into key questions 2. Provide well-structured findings with evidence 3. Cite sources or reasoning for each claim 4. Highlight areas of uncertainty or debate Format your response with clear sections and bullet points.\n",
+                can_ask_questions=True,
+                max_questions=3,
+                preferred_mode="sync",
+                typical_complexity="moderate",
+            ),
+            SubAgentSpecConfig(
+                name="writer",
+                description="Writes clear, structured content based on research or instructions",
+                instructions="You are a skilled technical writer. When given content to write: 1. Organise information into a logical structure 2. Use clear, concise language appropriate for the audience 3. Include headings, bullet points, and formatting for readability 4. Maintain a professional yet approachable tone Always produce complete, publication-ready text.\n",
+                can_ask_questions=False,
+                preferred_mode="sync",
+                typical_complexity="moderate",
+            ),
+        ],
+        default_model="bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0",
+        include_general_purpose=True,
+        max_nesting_depth=0,
+    ),
 )
 
 DEMO_TAVILY_CODEMODE_AGENT_SPEC_0_0_1 = AgentSpec(
@@ -1113,6 +1200,7 @@ DEMO_TAVILY_CODEMODE_AGENT_SPEC_0_0_1 = AgentSpec(
     pre_hooks=None,
     post_hooks=None,
     parameters=None,
+    subagents=None,
 )
 
 DEMO_TAVILY_NO_CODEMODE_AGENT_SPEC_0_0_1 = AgentSpec(
@@ -1158,6 +1246,7 @@ DEMO_TAVILY_NO_CODEMODE_AGENT_SPEC_0_0_1 = AgentSpec(
     pre_hooks=None,
     post_hooks=None,
     parameters=None,
+    subagents=None,
 )
 
 END_OF_MONTH_SALES_PERFORMANCE_AGENT_SPEC_0_0_1 = AgentSpec(
@@ -1348,6 +1437,7 @@ END_OF_MONTH_SALES_PERFORMANCE_AGENT_SPEC_0_0_1 = AgentSpec(
     pre_hooks=None,
     post_hooks=None,
     parameters=None,
+    subagents=None,
 )
 
 EXTRACT_DATA_FROM_FILES_AGENT_SPEC_0_0_1 = AgentSpec(
@@ -1436,6 +1526,7 @@ EXTRACT_DATA_FROM_FILES_AGENT_SPEC_0_0_1 = AgentSpec(
     pre_hooks=None,
     post_hooks=None,
     parameters=None,
+    subagents=None,
 )
 
 FINANCIAL_VIZ_AGENT_SPEC_0_0_1 = AgentSpec(
@@ -1502,6 +1593,7 @@ FINANCIAL_VIZ_AGENT_SPEC_0_0_1 = AgentSpec(
     pre_hooks=None,
     post_hooks=None,
     parameters=None,
+    subagents=None,
 )
 
 FINANCIAL_AGENT_SPEC_0_0_1 = AgentSpec(
@@ -1568,6 +1660,7 @@ FINANCIAL_AGENT_SPEC_0_0_1 = AgentSpec(
     pre_hooks=None,
     post_hooks=None,
     parameters=None,
+    subagents=None,
 )
 
 GENERATE_WEEKLY_REPORTS_AGENT_SPEC_0_0_1 = AgentSpec(
@@ -1667,6 +1760,7 @@ GENERATE_WEEKLY_REPORTS_AGENT_SPEC_0_0_1 = AgentSpec(
     pre_hooks=None,
     post_hooks=None,
     parameters=None,
+    subagents=None,
 )
 
 GITHUB_AGENT_SPEC_0_0_1 = AgentSpec(
@@ -1733,6 +1827,7 @@ GITHUB_AGENT_SPEC_0_0_1 = AgentSpec(
     pre_hooks=None,
     post_hooks=None,
     parameters=None,
+    subagents=None,
 )
 
 INFORMATION_ROUTING_AGENT_SPEC_0_0_1 = AgentSpec(
@@ -1799,6 +1894,7 @@ INFORMATION_ROUTING_AGENT_SPEC_0_0_1 = AgentSpec(
     pre_hooks=None,
     post_hooks=None,
     parameters=None,
+    subagents=None,
 )
 
 MONITOR_SALES_KPIS_AGENT_SPEC_0_0_1 = AgentSpec(
@@ -1905,6 +2001,7 @@ MONITOR_SALES_KPIS_AGENT_SPEC_0_0_1 = AgentSpec(
     pre_hooks=None,
     post_hooks=None,
     parameters=None,
+    subagents=None,
 )
 
 OPTIMIZE_DYNAMIC_PRICING_AGENT_SPEC_0_0_1 = AgentSpec(
@@ -2023,6 +2120,7 @@ OPTIMIZE_DYNAMIC_PRICING_AGENT_SPEC_0_0_1 = AgentSpec(
     pre_hooks=None,
     post_hooks=None,
     parameters=None,
+    subagents=None,
 )
 
 OPTIMIZE_GRID_OPERATIONS_AGENT_SPEC_0_0_1 = AgentSpec(
@@ -2129,6 +2227,7 @@ OPTIMIZE_GRID_OPERATIONS_AGENT_SPEC_0_0_1 = AgentSpec(
     pre_hooks=None,
     post_hooks=None,
     parameters=None,
+    subagents=None,
 )
 
 PROCESS_CITIZEN_REQUESTS_AGENT_SPEC_0_0_1 = AgentSpec(
@@ -2245,6 +2344,7 @@ PROCESS_CITIZEN_REQUESTS_AGENT_SPEC_0_0_1 = AgentSpec(
     pre_hooks=None,
     post_hooks=None,
     parameters=None,
+    subagents=None,
 )
 
 PROCESS_CLINICAL_TRIAL_DATA_AGENT_SPEC_0_0_1 = AgentSpec(
@@ -2356,6 +2456,7 @@ PROCESS_CLINICAL_TRIAL_DATA_AGENT_SPEC_0_0_1 = AgentSpec(
     pre_hooks=None,
     post_hooks=None,
     parameters=None,
+    subagents=None,
 )
 
 PROCESS_FINANCIAL_TRANSACTIONS_AGENT_SPEC_0_0_1 = AgentSpec(
@@ -2448,6 +2549,7 @@ PROCESS_FINANCIAL_TRANSACTIONS_AGENT_SPEC_0_0_1 = AgentSpec(
     pre_hooks=None,
     post_hooks=None,
     parameters=None,
+    subagents=None,
 )
 
 SPATIAL_DATA_ANALYSIS_AGENT_SPEC_0_0_1 = AgentSpec(
@@ -2503,6 +2605,7 @@ SPATIAL_DATA_ANALYSIS_AGENT_SPEC_0_0_1 = AgentSpec(
     pre_hooks=None,
     post_hooks=None,
     parameters=None,
+    subagents=None,
 )
 
 SUMMARIZE_DOCUMENTS_AGENT_SPEC_0_0_1 = AgentSpec(
@@ -2590,6 +2693,7 @@ SUMMARIZE_DOCUMENTS_AGENT_SPEC_0_0_1 = AgentSpec(
     pre_hooks=None,
     post_hooks=None,
     parameters=None,
+    subagents=None,
 )
 
 SYNC_CRM_CONTACTS_AGENT_SPEC_0_0_1 = AgentSpec(
@@ -2670,6 +2774,7 @@ SYNC_CRM_CONTACTS_AGENT_SPEC_0_0_1 = AgentSpec(
     pre_hooks=None,
     post_hooks=None,
     parameters=None,
+    subagents=None,
 )
 
 
@@ -2693,6 +2798,7 @@ AGENT_SPECS: Dict[str, AgentSpec] = {
     "demo-one-trigger": DEMO_ONE_TRIGGER_AGENT_SPEC_0_0_1,
     "demo-parameters": DEMO_PARAMETERS_AGENT_SPEC_0_0_1,
     "demo-simple": DEMO_SIMPLE_AGENT_SPEC_0_0_1,
+    "demo-subagents": DEMO_SUBAGENTS_AGENT_SPEC_0_0_1,
     "demo-tavily-codemode": DEMO_TAVILY_CODEMODE_AGENT_SPEC_0_0_1,
     "demo-tavily-no-codemode": DEMO_TAVILY_NO_CODEMODE_AGENT_SPEC_0_0_1,
     "end-of-month-sales-performance": END_OF_MONTH_SALES_PERFORMANCE_AGENT_SPEC_0_0_1,

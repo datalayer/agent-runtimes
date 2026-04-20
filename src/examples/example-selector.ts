@@ -49,6 +49,7 @@ function inferTags(id: string): string[] {
   if (id.includes('Monitoring') || id.includes('Otel'))
     tags.add('observability');
   if (id.includes('Skills')) tags.add('skills');
+  if (id.includes('Subagent')) tags.add('subagents');
   if (id.includes('MCP')) tags.add('mcp');
   return Array.from(tags);
 }
@@ -228,6 +229,11 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
     'AgentMonitoringExample',
     () => import('./AgentMonitoringExample'),
     'Runtime monitoring and live metrics example.',
+  ),
+  makeEntry(
+    'AgentSubagentsExample',
+    () => import('./AgentSubagentsExample'),
+    'Multi-agent delegation with subagents-pydantic-ai.',
   ),
   makeEntry(
     'AgentNotificationsExample',

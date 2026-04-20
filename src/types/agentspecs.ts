@@ -104,4 +104,44 @@ export interface AgentSpec {
   };
   /** JSON schema for launch-time parameter values. */
   parameters?: Record<string, any>;
+  /** Subagent delegation configuration. */
+  subagents?: SubAgentsConfig;
+}
+
+/**
+ * Configuration for a subagent within an agent specification.
+ */
+export interface SubAgentSpecConfig {
+  /** Unique identifier for the subagent */
+  name: string;
+  /** Brief description shown to the parent agent */
+  description: string;
+  /** System prompt for the subagent */
+  instructions: string;
+  /** LLM model to use (defaults to parent agent's model) */
+  model?: string;
+  /** Whether the subagent can ask the parent for clarification */
+  canAskQuestions?: boolean;
+  /** Maximum questions the subagent may ask per task */
+  maxQuestions?: number;
+  /** Default execution mode preference */
+  preferredMode?: 'sync' | 'async' | 'auto';
+  /** Typical task complexity hint for auto-mode selection */
+  typicalComplexity?: 'simple' | 'moderate' | 'complex';
+  /** Whether this subagent typically needs user context */
+  typicallyNeedsContext?: boolean;
+}
+
+/**
+ * Top-level subagents configuration for an agent specification.
+ */
+export interface SubAgentsConfig {
+  /** List of subagent configurations */
+  subagents: SubAgentSpecConfig[];
+  /** Default model for subagents that don't specify one */
+  defaultModel?: string;
+  /** Include a general-purpose fallback subagent */
+  includeGeneralPurpose?: boolean;
+  /** Maximum depth for nested subagent delegation (0 = no nesting) */
+  maxNestingDepth?: number;
 }

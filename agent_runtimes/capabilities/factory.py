@@ -311,6 +311,53 @@ def build_capabilities_from_agent_spec(
             if monitoring_per_run_budget is None:
                 monitoring_per_run_budget = cost_limit
 
+    # Subagent delegation via subagents-pydantic-ai
+    subagents_config = getattr(agent_spec, "subagents", None)
+    if subagents_config is not None:
+        try:
+            from subagents_pydantic_ai import SubAgentCapability, SubAgentConfig
+
+            sa_cfgs: list[SubAgentConfig] = []
+            for sa in getattr(subagents_config, "subagents", []):
+                cfg: SubAgentConfig = {
+                    "name": sa.name,
+                    "description": sa.description,
+                    "instructions": sa.instructions,
+                }
+                if sa.model is not None:
+                    cfg["model"] = sa.model
+                if sa.can_ask_questions is not None:
+                    cfg["can_ask_questions"] = sa.can_ask_questions
+                if sa.max_questions is not None:
+                    cfg["max_questions"] = sa.max_questions
+                if sa.preferred_mode is not None:
+                    cfg["preferred_mode"] = sa.preferred_mode
+                if sa.typical_complexity is not None:
+                    cfg["typical_complexity"] = sa.typical_complexity
+                if sa.typically_needs_context is not None:
+                    cfg["typically_needs_context"] = sa.typically_needs_context
+                sa_cfgs.append(cfg)
+
+            default_model = getattr(subagents_config, "default_model", None) or getattr(
+                agent_spec, "model", "openai:gpt-4.1"
+            )
+            capabilities.append(
+                SubAgentCapability(
+                    subagents=sa_cfgs,
+                    default_model=default_model,
+                    include_general_purpose=getattr(
+                        subagents_config, "include_general_purpose", True
+                    ),
+                    max_nesting_depth=getattr(subagents_config, "max_nesting_depth", 0),
+                )
+            )
+        except ImportError:
+            import logging
+
+            logging.getLogger(__name__).warning(
+                "subagents-pydantic-ai not installed — skipping SubAgentCapability"
+            )
+
     if _env_bool("AGENT_RUNTIMES_ENABLE_CAPABILITY_COST_MONITORING", True) and agent_id:
         capabilities.append(
             CostMonitoringCapability(

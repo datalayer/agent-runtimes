@@ -257,6 +257,7 @@ export const ANALYZE_CAMPAIGN_PERFORMANCE_AGENT_SPEC_0_0_1: AgentSpec = {
   preHooks: undefined,
   postHooks: undefined,
   parameters: undefined,
+  subagents: undefined,
 };
 
 export const ANALYZE_SUPPORT_TICKETS_AGENT_SPEC_0_0_1: AgentSpec = {
@@ -352,6 +353,7 @@ export const ANALYZE_SUPPORT_TICKETS_AGENT_SPEC_0_0_1: AgentSpec = {
   preHooks: undefined,
   postHooks: undefined,
   parameters: undefined,
+  subagents: undefined,
 };
 
 export const AUDIT_INVENTORY_LEVELS_AGENT_SPEC_0_0_1: AgentSpec = {
@@ -443,6 +445,7 @@ export const AUDIT_INVENTORY_LEVELS_AGENT_SPEC_0_0_1: AgentSpec = {
   preHooks: undefined,
   postHooks: undefined,
   parameters: undefined,
+  subagents: undefined,
 };
 
 export const AUTOMATE_REGULATORY_REPORTING_AGENT_SPEC_0_0_1: AgentSpec = {
@@ -558,6 +561,7 @@ export const AUTOMATE_REGULATORY_REPORTING_AGENT_SPEC_0_0_1: AgentSpec = {
   preHooks: undefined,
   postHooks: undefined,
   parameters: undefined,
+  subagents: undefined,
 };
 
 export const CLASSIFY_ROUTE_EMAILS_AGENT_SPEC_0_0_1: AgentSpec = {
@@ -653,6 +657,7 @@ export const CLASSIFY_ROUTE_EMAILS_AGENT_SPEC_0_0_1: AgentSpec = {
   preHooks: undefined,
   postHooks: undefined,
   parameters: undefined,
+  subagents: undefined,
 };
 
 export const COMPREHENSIVE_SALES_ANALYTICS_AGENT_SPEC_0_0_1: AgentSpec = {
@@ -734,6 +739,7 @@ export const COMPREHENSIVE_SALES_ANALYTICS_AGENT_SPEC_0_0_1: AgentSpec = {
   preHooks: undefined,
   postHooks: undefined,
   parameters: undefined,
+  subagents: undefined,
 };
 
 export const CRAWLER_AGENT_SPEC_0_0_1: AgentSpec = {
@@ -807,6 +813,7 @@ export const CRAWLER_AGENT_SPEC_0_0_1: AgentSpec = {
   preHooks: undefined,
   postHooks: undefined,
   parameters: undefined,
+  subagents: undefined,
 };
 
 export const DATA_ACQUISITION_AGENT_SPEC_0_0_1: AgentSpec = {
@@ -884,6 +891,7 @@ export const DATA_ACQUISITION_AGENT_SPEC_0_0_1: AgentSpec = {
   preHooks: undefined,
   postHooks: undefined,
   parameters: undefined,
+  subagents: undefined,
 };
 
 export const DATALAYER_AGENT_SPEC_0_0_1: AgentSpec = {
@@ -935,6 +943,7 @@ export const DATALAYER_AGENT_SPEC_0_0_1: AgentSpec = {
   preHooks: { packages: ['datalayer_skills>=0.1.0'] },
   postHooks: undefined,
   parameters: undefined,
+  subagents: undefined,
 };
 
 export const DEMO_FULL_AGENT_SPEC_0_0_1: AgentSpec = {
@@ -1003,6 +1012,7 @@ export const DEMO_FULL_AGENT_SPEC_0_0_1: AgentSpec = {
   preHooks: { packages: ['datalayer_skills>=0.1.0'] },
   postHooks: undefined,
   parameters: undefined,
+  subagents: undefined,
 };
 
 export const DEMO_HOOKS_AGENT_SPEC_0_0_1: AgentSpec = {
@@ -1071,6 +1081,7 @@ When the user asks about hooks, use execute_code to show concrete evidence: read
     ],
   },
   parameters: undefined,
+  subagents: undefined,
 };
 
 export const DEMO_ONE_TRIGGER_APPROVAL_AGENT_SPEC_0_0_1: AgentSpec = {
@@ -1118,6 +1129,7 @@ export const DEMO_ONE_TRIGGER_APPROVAL_AGENT_SPEC_0_0_1: AgentSpec = {
   preHooks: undefined,
   postHooks: undefined,
   parameters: undefined,
+  subagents: undefined,
 };
 
 export const DEMO_ONE_TRIGGER_AGENT_SPEC_0_0_1: AgentSpec = {
@@ -1168,6 +1180,7 @@ export const DEMO_ONE_TRIGGER_AGENT_SPEC_0_0_1: AgentSpec = {
   preHooks: undefined,
   postHooks: undefined,
   parameters: undefined,
+  subagents: undefined,
 };
 
 export const DEMO_PARAMETERS_AGENT_SPEC_0_0_1: AgentSpec = {
@@ -1238,6 +1251,7 @@ export const DEMO_PARAMETERS_AGENT_SPEC_0_0_1: AgentSpec = {
     },
     required: ['project'],
   },
+  subagents: undefined,
 };
 
 export const DEMO_SIMPLE_AGENT_SPEC_0_0_1: AgentSpec = {
@@ -1290,6 +1304,87 @@ export const DEMO_SIMPLE_AGENT_SPEC_0_0_1: AgentSpec = {
   preHooks: undefined,
   postHooks: undefined,
   parameters: undefined,
+  subagents: undefined,
+};
+
+export const DEMO_SUBAGENTS_AGENT_SPEC_0_0_1: AgentSpec = {
+  id: 'demo-subagents',
+  version: '0.0.1',
+  name: 'Subagents Demo',
+  description: `A demonstration agent that delegates tasks to specialised subagents. It has a researcher subagent for gathering information and a writer subagent for composing clear, structured responses.`,
+  tags: ['demo', 'subagents', 'multi-agent', 'delegation'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  mcpServers: [],
+  skills: [toAgentSkillSpec(SKILL_MAP['events:0.0.1'])],
+  tools: [],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
+  environmentName: 'ai-agents-env',
+  icon: 'people',
+  emoji: '👥',
+  color: '#8B5CF6',
+  suggestions: [
+    'Research the pros and cons of Python async patterns and write a summary.',
+    'Find recent advances in LLM fine-tuning and create a brief report.',
+    'Investigate best practices for REST API design and draft a style guide.',
+    'Analyze the current state of WebAssembly and produce an executive summary.',
+  ],
+  welcomeMessage:
+    "Hi! I'm the Subagents Demo agent. I coordinate a team of specialised helpers: a **Researcher** who gathers information and a **Writer** who turns findings into polished prose. Ask me anything and I'll delegate to the right expert!\n",
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'jupyter',
+  systemPrompt: `You are a helpful orchestrator agent. You have access to specialised subagents that you can delegate tasks to. Use the 'task' tool to assign work: - Use the 'researcher' subagent for gathering facts, searching for information, and analysis. - Use the 'writer' subagent for composing text, formatting documents, and editing prose. You can run tasks synchronously (wait for result) or asynchronously (fire and forget, check later). Always summarise the delegated results for the user in a clear, helpful way.
+`,
+  systemPromptCodemodeAddons: undefined,
+  goal: undefined,
+  protocol: undefined,
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: undefined,
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  parameters: undefined,
+  subagents: {
+    default_model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+    include_general_purpose: true,
+    max_nesting_depth: 0,
+    subagents: [
+      {
+        name: 'researcher',
+        description:
+          'Researches topics, gathers facts, and provides detailed analysis',
+        instructions:
+          'You are a thorough research assistant. When given a topic: 1. Break it down into key questions 2. Provide well-structured findings with evidence 3. Cite sources or reasoning for each claim 4. Highlight areas of uncertainty or debate Format your response with clear sections and bullet points.\n',
+        preferred_mode: 'sync',
+        typical_complexity: 'moderate',
+        can_ask_questions: true,
+        max_questions: 3,
+      },
+      {
+        name: 'writer',
+        description:
+          'Writes clear, structured content based on research or instructions',
+        instructions:
+          'You are a skilled technical writer. When given content to write: 1. Organise information into a logical structure 2. Use clear, concise language appropriate for the audience 3. Include headings, bullet points, and formatting for readability 4. Maintain a professional yet approachable tone Always produce complete, publication-ready text.\n',
+        preferred_mode: 'sync',
+        typical_complexity: 'moderate',
+        can_ask_questions: false,
+      },
+    ],
+  },
 };
 
 export const DEMO_TAVILY_CODEMODE_AGENT_SPEC_0_0_1: AgentSpec = {
@@ -1339,6 +1434,7 @@ export const DEMO_TAVILY_CODEMODE_AGENT_SPEC_0_0_1: AgentSpec = {
   preHooks: undefined,
   postHooks: undefined,
   parameters: undefined,
+  subagents: undefined,
 };
 
 export const DEMO_TAVILY_NO_CODEMODE_AGENT_SPEC_0_0_1: AgentSpec = {
@@ -1388,6 +1484,7 @@ export const DEMO_TAVILY_NO_CODEMODE_AGENT_SPEC_0_0_1: AgentSpec = {
   preHooks: undefined,
   postHooks: undefined,
   parameters: undefined,
+  subagents: undefined,
 };
 
 export const END_OF_MONTH_SALES_PERFORMANCE_AGENT_SPEC_0_0_1: AgentSpec = {
@@ -1591,6 +1688,7 @@ export const END_OF_MONTH_SALES_PERFORMANCE_AGENT_SPEC_0_0_1: AgentSpec = {
   preHooks: undefined,
   postHooks: undefined,
   parameters: undefined,
+  subagents: undefined,
 };
 
 export const EXTRACT_DATA_FROM_FILES_AGENT_SPEC_0_0_1: AgentSpec = {
@@ -1688,6 +1786,7 @@ export const EXTRACT_DATA_FROM_FILES_AGENT_SPEC_0_0_1: AgentSpec = {
   preHooks: undefined,
   postHooks: undefined,
   parameters: undefined,
+  subagents: undefined,
 };
 
 export const FINANCIAL_VIZ_AGENT_SPEC_0_0_1: AgentSpec = {
@@ -1761,6 +1860,7 @@ export const FINANCIAL_VIZ_AGENT_SPEC_0_0_1: AgentSpec = {
   preHooks: undefined,
   postHooks: undefined,
   parameters: undefined,
+  subagents: undefined,
 };
 
 export const FINANCIAL_AGENT_SPEC_0_0_1: AgentSpec = {
@@ -1831,6 +1931,7 @@ export const FINANCIAL_AGENT_SPEC_0_0_1: AgentSpec = {
   preHooks: undefined,
   postHooks: undefined,
   parameters: undefined,
+  subagents: undefined,
 };
 
 export const GENERATE_WEEKLY_REPORTS_AGENT_SPEC_0_0_1: AgentSpec = {
@@ -1941,6 +2042,7 @@ export const GENERATE_WEEKLY_REPORTS_AGENT_SPEC_0_0_1: AgentSpec = {
   preHooks: undefined,
   postHooks: undefined,
   parameters: undefined,
+  subagents: undefined,
 };
 
 export const GITHUB_AGENT_SPEC_0_0_1: AgentSpec = {
@@ -2014,6 +2116,7 @@ export const GITHUB_AGENT_SPEC_0_0_1: AgentSpec = {
   preHooks: undefined,
   postHooks: undefined,
   parameters: undefined,
+  subagents: undefined,
 };
 
 export const INFORMATION_ROUTING_AGENT_SPEC_0_0_1: AgentSpec = {
@@ -2087,6 +2190,7 @@ export const INFORMATION_ROUTING_AGENT_SPEC_0_0_1: AgentSpec = {
   preHooks: undefined,
   postHooks: undefined,
   parameters: undefined,
+  subagents: undefined,
 };
 
 export const MONITOR_SALES_KPIS_AGENT_SPEC_0_0_1: AgentSpec = {
@@ -2202,6 +2306,7 @@ export const MONITOR_SALES_KPIS_AGENT_SPEC_0_0_1: AgentSpec = {
   preHooks: undefined,
   postHooks: undefined,
   parameters: undefined,
+  subagents: undefined,
 };
 
 export const OPTIMIZE_DYNAMIC_PRICING_AGENT_SPEC_0_0_1: AgentSpec = {
@@ -2330,6 +2435,7 @@ export const OPTIMIZE_DYNAMIC_PRICING_AGENT_SPEC_0_0_1: AgentSpec = {
   preHooks: undefined,
   postHooks: undefined,
   parameters: undefined,
+  subagents: undefined,
 };
 
 export const OPTIMIZE_GRID_OPERATIONS_AGENT_SPEC_0_0_1: AgentSpec = {
@@ -2446,6 +2552,7 @@ export const OPTIMIZE_GRID_OPERATIONS_AGENT_SPEC_0_0_1: AgentSpec = {
   preHooks: undefined,
   postHooks: undefined,
   parameters: undefined,
+  subagents: undefined,
 };
 
 export const PROCESS_CITIZEN_REQUESTS_AGENT_SPEC_0_0_1: AgentSpec = {
@@ -2571,6 +2678,7 @@ export const PROCESS_CITIZEN_REQUESTS_AGENT_SPEC_0_0_1: AgentSpec = {
   preHooks: undefined,
   postHooks: undefined,
   parameters: undefined,
+  subagents: undefined,
 };
 
 export const PROCESS_CLINICAL_TRIAL_DATA_AGENT_SPEC_0_0_1: AgentSpec = {
@@ -2697,6 +2805,7 @@ export const PROCESS_CLINICAL_TRIAL_DATA_AGENT_SPEC_0_0_1: AgentSpec = {
   preHooks: undefined,
   postHooks: undefined,
   parameters: undefined,
+  subagents: undefined,
 };
 
 export const PROCESS_FINANCIAL_TRANSACTIONS_AGENT_SPEC_0_0_1: AgentSpec = {
@@ -2803,6 +2912,7 @@ export const PROCESS_FINANCIAL_TRANSACTIONS_AGENT_SPEC_0_0_1: AgentSpec = {
   preHooks: undefined,
   postHooks: undefined,
   parameters: undefined,
+  subagents: undefined,
 };
 
 export const SPATIAL_DATA_ANALYSIS_AGENT_SPEC_0_0_1: AgentSpec = {
@@ -2862,6 +2972,7 @@ export const SPATIAL_DATA_ANALYSIS_AGENT_SPEC_0_0_1: AgentSpec = {
   preHooks: undefined,
   postHooks: undefined,
   parameters: undefined,
+  subagents: undefined,
 };
 
 export const SUMMARIZE_DOCUMENTS_AGENT_SPEC_0_0_1: AgentSpec = {
@@ -2962,6 +3073,7 @@ export const SUMMARIZE_DOCUMENTS_AGENT_SPEC_0_0_1: AgentSpec = {
   preHooks: undefined,
   postHooks: undefined,
   parameters: undefined,
+  subagents: undefined,
 };
 
 export const SYNC_CRM_CONTACTS_AGENT_SPEC_0_0_1: AgentSpec = {
@@ -3054,6 +3166,7 @@ export const SYNC_CRM_CONTACTS_AGENT_SPEC_0_0_1: AgentSpec = {
   preHooks: undefined,
   postHooks: undefined,
   parameters: undefined,
+  subagents: undefined,
 };
 
 // ============================================================================
@@ -3078,6 +3191,7 @@ export const AGENT_SPECS: Record<string, AgentSpec> = {
   'demo-one-trigger': DEMO_ONE_TRIGGER_AGENT_SPEC_0_0_1,
   'demo-parameters': DEMO_PARAMETERS_AGENT_SPEC_0_0_1,
   'demo-simple': DEMO_SIMPLE_AGENT_SPEC_0_0_1,
+  'demo-subagents': DEMO_SUBAGENTS_AGENT_SPEC_0_0_1,
   'demo-tavily-codemode': DEMO_TAVILY_CODEMODE_AGENT_SPEC_0_0_1,
   'demo-tavily-no-codemode': DEMO_TAVILY_NO_CODEMODE_AGENT_SPEC_0_0_1,
   'end-of-month-sales-performance':

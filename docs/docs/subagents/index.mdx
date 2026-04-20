@@ -1,0 +1,158 @@
+---
+sidebar_position: 1
+title: Subagents
+---
+
+# Subagents
+
+Agent Runtimes supports multi-agent delegation via the [subagents-pydantic-ai](https://github.com/datalayer/pydantic-ai-subagents) library. An orchestrator agent can delegate tasks to specialised subagents, each running independently with its own model, instructions, and context.
+
+## How It Works
+
+1. **Agent spec** declares a `subagents` block listing the available subagents
+2. **Code generation** (`make specs`) compiles the YAML into Python/TypeScript catalogs
+3. **Agent creation** reads the spec and builds a `SubAgentCapability` via `factory.py`
+4. **Runtime** — the orchestrator agent receives delegation tools and a dynamic system prompt
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────────────┐
+│                 Orchestrator Agent                   │
+│  (receives task, check_task, list_active_tasks, …)  │
+│                                                     │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐ │
+│  │  Researcher  │  │   Writer    │  │  General    │ │
+│  │  subagent    │  │  subagent   │  │  Purpose    │ │
+│  └─────────────┘  └─────────────┘  └─────────────┘ │
+└─────────────────────────────────────────────────────┘
+```
+
+## Agent Spec Configuration
+
+Add a `subagents` block to any agent YAML spec:
+
+```yaml
+subagents:
+  default_model: "bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0"
+  include_general_purpose: true
+  max_nesting_depth: 0
+  subagents:
+    - name: researcher
+      description: "Researches topics and provides analysis"
+      instructions: >
+        You are a thorough research assistant...
+      preferred_mode: sync
+      typical_complexity: moderate
+      can_ask_questions: true
+      max_questions: 3
+
+    - name: writer
+      description: "Writes clear, structured content"
+      instructions: >
+        You are a skilled technical writer...
+      preferred_mode: sync
+      typical_complexity: moderate
+      can_ask_questions: false
+```
+
+See the [agentspecs subagents documentation](https://agentspecs.datalayer.tech/subagents) for the full YAML schema reference.
+
+## Runtime Integration
+
+### Capability Factory
+
+When an agent is created from a spec containing `subagents`, the capability factory in `agent_runtimes/capabilities/factory.py` automatically:
+
+1. Converts each `SubAgentSpecConfig` into a `SubAgentConfig` TypedDict
+2. Creates a `SubAgentCapability` with the full configuration
+3. Adds it to the agent's capability list
+
+```python
+from subagents_pydantic_ai import SubAgentCapability, SubAgentConfig
+
+capability = SubAgentCapability(
+    subagents=[
+        SubAgentConfig(
+            name="researcher",
+            description="Researches topics...",
+            instructions="You are a thorough research assistant...",
+            preferred_mode="sync",
+            typical_complexity="moderate",
+            can_ask_questions=True,
+            max_questions=3,
+        ),
+    ],
+    default_model="bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0",
+    include_general_purpose=True,
+    max_nesting_depth=0,
+)
+```
+
+### Delegation Tools
+
+The orchestrator agent receives these tools at runtime:
+
+| Tool | Description |
+|------|-------------|
+| `task` | Assign a task to a named subagent (sync or async) |
+| `check_task` | Check the status/result of an async task |
+| `answer_subagent` | Answer a question from a subagent |
+| `list_active_tasks` | List all currently active delegated tasks |
+| `soft_cancel_task` | Gracefully cancel a running task |
+| `hard_cancel_task` | Immediately cancel a running task |
+
+### Dynamic System Prompt
+
+The `SubAgentCapability` generates a system prompt section listing all available subagents with their names, descriptions, and capabilities. This is automatically appended to the orchestrator's system prompt.
+
+## TypeScript Types
+
+The TypeScript types for subagents are available in the `@datalayer/agent-runtimes` package:
+
+```typescript
+import type { SubAgentSpecConfig, SubAgentsConfig } from '@datalayer/agent-runtimes';
+
+const config: SubAgentsConfig = {
+  subagents: [
+    {
+      name: 'researcher',
+      description: 'Researches topics...',
+      instructions: 'You are a thorough research assistant...',
+      preferredMode: 'sync',
+      typicalComplexity: 'moderate',
+      canAskQuestions: true,
+      maxQuestions: 3,
+    },
+  ],
+  defaultModel: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  includeGeneralPurpose: true,
+  maxNestingDepth: 0,
+};
+```
+
+## Example
+
+The `AgentSubagentsExample` demonstrates the full workflow:
+
+```bash
+EXAMPLE=AgentSubagentsExample npm run dev
+```
+
+This creates an orchestrator agent from the `demo-subagents` spec with a researcher
+and writer subagent. The sidebar shows available subagents and delegation tools.
+
+### Suggestions to Try
+
+- "Research the pros and cons of Python async patterns and write a summary."
+- "Find recent advances in LLM fine-tuning and create a brief report."
+- "Investigate best practices for REST API design and draft a style guide."
+
+## Demo Spec
+
+The built-in `demo-subagents` spec is available in `agentspecs/agentspecs/agents/demo-subagents.yaml` and demonstrates:
+
+- Two subagents (researcher and writer) with distinct roles
+- Sync execution mode for both
+- Question-asking enabled for the researcher
+- General-purpose subagent included as fallback
