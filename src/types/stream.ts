@@ -100,6 +100,7 @@ export interface CodemodeStatusData {
     has_scripts?: boolean;
     has_resources?: boolean;
     status?: SkillStatus;
+    approved?: boolean;
     skill_definition?: string | null;
     source_variant?: 'module' | 'package' | 'path' | 'unknown';
     module?: string;
@@ -115,6 +116,7 @@ export interface CodemodeStatusData {
     has_scripts?: boolean;
     has_resources?: boolean;
     status?: SkillStatus;
+    approved?: boolean;
     skill_definition?: string | null;
     source_variant?: 'module' | 'package' | 'path' | 'unknown';
     module?: string;

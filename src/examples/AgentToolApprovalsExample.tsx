@@ -22,7 +22,12 @@ import {
   Spinner,
   Text,
 } from '@primer/react';
-import { SignOutIcon, ToolsIcon } from '@primer/octicons-react';
+import {
+  CheckCircleIcon,
+  SignOutIcon,
+  ToolsIcon,
+  XCircleIcon,
+} from '@primer/octicons-react';
 import { useCoreStore } from '@datalayer/core';
 import { DEFAULT_SERVICE_URLS } from '@datalayer/core/lib/api/constants';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
@@ -147,6 +152,14 @@ interface ToolApprovalRequest {
   agent_id?: string;
 }
 
+type ApprovalUiStatus = 'pending' | 'approved' | 'rejected';
+
+interface ApprovalActionBanner {
+  id: string;
+  toolName: string;
+  status: Exclude<ApprovalUiStatus, 'pending'>;
+}
+
 const normalizeAgentId = (value?: string): string =>
   (value ?? '').trim().toLowerCase();
 
@@ -189,6 +202,8 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
   const [toolApprovalState, setToolApprovalState] = useState<
     Record<string, 'approved' | 'denied'>
   >({});
+  const [approvalActionBanner, setApprovalActionBanner] =
+    useState<ApprovalActionBanner | null>(null);
   const [wsState, setWsState] = useState<'connecting' | 'connected' | 'closed'>(
     'closed',
   );
@@ -306,6 +321,23 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
         [responder.toolCallId]: approved ? 'approved' : 'denied',
       }));
 
+      setApprovals(prev =>
+        prev.map(item =>
+          item.id === approvalId
+            ? {
+                ...item,
+                status: approved ? 'approved' : 'rejected',
+                note: message ?? item.note,
+              }
+            : item,
+        ),
+      );
+      setApprovalActionBanner({
+        id: approvalId,
+        toolName: responder.toolName || toolName,
+        status: approved ? 'approved' : 'rejected',
+      });
+
       respondedToolCallsRef.current.add(responder.toolCallId);
       console.info(
         '[AgentToolApprovalsExample] Applying server decision via responder',
@@ -330,6 +362,18 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
   useEffect(() => {
     approvalsRef.current = approvals;
   }, [approvals]);
+
+  useEffect(() => {
+    if (!approvalActionBanner) {
+      return;
+    }
+    const timeoutId = window.setTimeout(() => {
+      setApprovalActionBanner(current =>
+        current?.id === approvalActionBanner.id ? null : current,
+      );
+    }, 4000);
+    return () => window.clearTimeout(timeoutId);
+  }, [approvalActionBanner]);
 
   const scheduleLocalDecisionFallback = useCallback(
     (
@@ -589,12 +633,8 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
           const payload =
             stream.payload as unknown as AgentStreamSnapshotPayload;
           const snapshotApprovals = (payload.approvals ?? [])
-            .filter(
-              approval =>
-                approval.status === 'pending' &&
-                isApprovalForActiveAgent(toApprovalRequest(approval)),
-            )
-            .map(toApprovalRequest);
+            .map(toApprovalRequest)
+            .filter(approval => isApprovalForActiveAgent(approval));
           pendingSnapshotRequestedRef.current.clear();
           setApprovals(snapshotApprovals);
           return;
@@ -604,10 +644,7 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
           const approval = toApprovalRequest(
             stream.payload as unknown as AgentStreamToolApprovalPayload,
           );
-          if (
-            approval.status !== 'pending' ||
-            !isApprovalForActiveAgent(approval)
-          ) {
+          if (!isApprovalForActiveAgent(approval)) {
             return;
           }
           pendingSnapshotRequestedRef.current.delete(
@@ -629,7 +666,20 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
             stream.payload as unknown as AgentStreamToolApprovalPayload,
           );
 
-          setApprovals(prev => prev.filter(item => item.id !== approval.id));
+          setApprovals(prev =>
+            prev.map(item =>
+              item.id === approval.id
+                ? {
+                    ...item,
+                    status:
+                      stream.type === 'tool_approval_approved'
+                        ? 'approved'
+                        : 'rejected',
+                    note: approval.note ?? item.note,
+                  }
+                : item,
+            ),
+          );
           emitServerToolDecision(
             approval.tool_call_id,
             approval.tool_name,
@@ -681,7 +731,11 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
     ): Promise<boolean> => {
       setApprovalLoading(requestId);
       setApprovalError(null);
-      setApprovals(prev => prev.filter(item => item.id !== requestId));
+      setApprovals(prev =>
+        prev.map(item =>
+          item.id === requestId ? { ...item, status: 'approved' } : item,
+        ),
+      );
       try {
         const ws = approvalWsRef.current;
         if (!ws || ws.readyState !== WebSocket.OPEN) {
@@ -719,7 +773,11 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
     ): Promise<boolean> => {
       setApprovalLoading(requestId);
       setApprovalError(null);
-      setApprovals(prev => prev.filter(item => item.id !== requestId));
+      setApprovals(prev =>
+        prev.map(item =>
+          item.id === requestId ? { ...item, status: 'rejected' } : item,
+        ),
+      );
       try {
         const ws = approvalWsRef.current;
         if (!ws || ws.readyState !== WebSocket.OPEN) {
@@ -751,14 +809,16 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
 
   const pendingApprovals: PendingApproval[] = useMemo(
     () =>
-      approvals.map(req => ({
-        id: req.id,
-        toolName: req.tool_name,
-        toolDescription: req.note,
-        args: req.tool_args ?? {},
-        agentId,
-        requestedAt: req.created_at ?? new Date().toISOString(),
-      })),
+      approvals
+        .filter(req => (req.status ?? 'pending') === 'pending')
+        .map(req => ({
+          id: req.id,
+          toolName: req.tool_name,
+          toolDescription: req.note,
+          args: req.tool_args ?? {},
+          agentId,
+          requestedAt: req.created_at ?? new Date().toISOString(),
+        })),
     [approvals, agentId],
   );
 
@@ -865,9 +925,11 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
           : typeof resultObject?.approvalId === 'string'
             ? resultObject.approvalId
             : null;
+      const resultHasDecision =
+        !!resultObject && typeof resultObject?.approved === 'boolean';
       const effectiveApprovalId = matchedApproval?.id ?? approvalIdFromResult;
 
-      if (approvalIdFromResult && !matchedApproval?.id) {
+      if (approvalIdFromResult && !matchedApproval?.id && !resultHasDecision) {
         enqueueResultBackedApproval({
           id: approvalIdFromResult,
           tool_name: toolName,
@@ -1041,13 +1103,19 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
                   {approval.tool_name}
                 </Text>
                 <Text sx={{ fontSize: 0, color: 'fg.muted', mb: 2 }}>
-                  {approval.id}
+                  Status:{' '}
+                  {(approval.status ?? 'pending') === 'approved'
+                    ? 'Approved'
+                    : (approval.status ?? 'pending') === 'rejected'
+                      ? 'Rejected'
+                      : 'Waiting for approval'}
                 </Text>
                 <Box sx={{ display: 'flex', gap: 1 }}>
                   <Button
                     size="small"
                     variant="primary"
                     onClick={() => void approve(approval.id)}
+                    disabled={(approval.status ?? 'pending') !== 'pending'}
                   >
                     Approve
                   </Button>
@@ -1057,6 +1125,7 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
                     onClick={() =>
                       void reject(approval.id, 'Rejected from queue')
                     }
+                    disabled={(approval.status ?? 'pending') !== 'pending'}
                   >
                     Reject
                   </Button>
@@ -1102,6 +1171,40 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
           <Text sx={{ color: 'fg.muted', fontSize: 0 }}>
             Processing approval request...
           </Text>
+        </Box>
+      )}
+
+      {approvalActionBanner && (
+        <Box sx={{ px: 3, py: 1 }}>
+          <Box
+            sx={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 2,
+              color:
+                approvalActionBanner.status === 'approved'
+                  ? 'success.fg'
+                  : 'danger.fg',
+            }}
+          >
+            {approvalActionBanner.status === 'approved' ? (
+              <CheckCircleIcon size={14} />
+            ) : (
+              <XCircleIcon size={14} />
+            )}
+            <Text
+              sx={{
+                color: 'inherit',
+                fontSize: 0,
+                fontWeight: 600,
+              }}
+            >
+              {approvalActionBanner.status === 'approved'
+                ? 'Approved'
+                : 'Rejected'}{' '}
+              {approvalActionBanner.toolName}.
+            </Text>
+          </Box>
         </Box>
       )}
 

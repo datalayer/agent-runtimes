@@ -44,6 +44,44 @@ def _fmt_ts_literal(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False)
 
 
+def _normalize_subagents_for_typescript(value: Any) -> Any:
+    """Convert subagents config keys from YAML snake_case to TS camelCase."""
+    if not isinstance(value, dict):
+        return value
+
+    top_level_map = {
+        "default_model": "defaultModel",
+        "include_general_purpose": "includeGeneralPurpose",
+        "max_nesting_depth": "maxNestingDepth",
+    }
+    subagent_map = {
+        "can_ask_questions": "canAskQuestions",
+        "max_questions": "maxQuestions",
+        "preferred_mode": "preferredMode",
+        "typical_complexity": "typicalComplexity",
+        "typically_needs_context": "typicallyNeedsContext",
+    }
+
+    normalized: dict[str, Any] = {}
+    for key, raw_val in value.items():
+        mapped_key = top_level_map.get(key, key)
+        if mapped_key == "subagents" and isinstance(raw_val, list):
+            normalized_subagents: list[Any] = []
+            for subagent in raw_val:
+                if isinstance(subagent, dict):
+                    normalized_subagent: dict[str, Any] = {}
+                    for sa_key, sa_val in subagent.items():
+                        normalized_subagent[subagent_map.get(sa_key, sa_key)] = sa_val
+                    normalized_subagents.append(normalized_subagent)
+                else:
+                    normalized_subagents.append(subagent)
+            normalized[mapped_key] = normalized_subagents
+        else:
+            normalized[mapped_key] = raw_val
+
+    return normalized
+
+
 def load_yaml_specs(specs_dir: Path) -> List[tuple[str, Dict[str, Any]]]:
     """
     Load all YAML agent specifications from directory and subdirectories.
@@ -815,7 +853,9 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
             post_hooks_val = spec.get("post_hooks")
             parameters_val = spec.get("parameters")
             subagents_val = spec.get("subagents")
-            subagents_ts = _fmt_ts_literal(subagents_val)
+            subagents_ts = _fmt_ts_literal(
+                _normalize_subagents_for_typescript(subagents_val)
+            )
 
             code += f"""export const {const_name}: AgentSpec = {{
   id: '{full_agent_id}',

@@ -26,6 +26,7 @@ export function useConfig(
       isLoading: false,
       isError: false,
       error: null,
+      refetch: () => Promise.resolve({ data: undefined }),
     };
   }
 

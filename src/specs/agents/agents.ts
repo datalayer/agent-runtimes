@@ -1358,9 +1358,9 @@ export const DEMO_SUBAGENTS_AGENT_SPEC_0_0_1: AgentSpec = {
   postHooks: undefined,
   parameters: undefined,
   subagents: {
-    default_model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-    include_general_purpose: true,
-    max_nesting_depth: 0,
+    defaultModel: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+    includeGeneralPurpose: true,
+    maxNestingDepth: 0,
     subagents: [
       {
         name: 'researcher',
@@ -1368,10 +1368,10 @@ export const DEMO_SUBAGENTS_AGENT_SPEC_0_0_1: AgentSpec = {
           'Researches topics, gathers facts, and provides detailed analysis',
         instructions:
           'You are a thorough research assistant. When given a topic: 1. Break it down into key questions 2. Provide well-structured findings with evidence 3. Cite sources or reasoning for each claim 4. Highlight areas of uncertainty or debate Format your response with clear sections and bullet points.\n',
-        preferred_mode: 'sync',
-        typical_complexity: 'moderate',
-        can_ask_questions: true,
-        max_questions: 3,
+        preferredMode: 'sync',
+        typicalComplexity: 'moderate',
+        canAskQuestions: true,
+        maxQuestions: 3,
       },
       {
         name: 'writer',
@@ -1379,9 +1379,9 @@ export const DEMO_SUBAGENTS_AGENT_SPEC_0_0_1: AgentSpec = {
           'Writes clear, structured content based on research or instructions',
         instructions:
           'You are a skilled technical writer. When given content to write: 1. Organise information into a logical structure 2. Use clear, concise language appropriate for the audience 3. Include headings, bullet points, and formatting for readability 4. Maintain a professional yet approachable tone Always produce complete, publication-ready text.\n',
-        preferred_mode: 'sync',
-        typical_complexity: 'moderate',
-        can_ask_questions: false,
+        preferredMode: 'sync',
+        typicalComplexity: 'moderate',
+        canAskQuestions: false,
       },
     ],
   },
@@ -1821,7 +1821,7 @@ export const FINANCIAL_VIZ_AGENT_SPEC_0_0_1: AgentSpec = {
     "Welcome! I'm the Financial Visualization Agent. I can help you analyze stock market data, track financial instruments, and create charts to visualize market trends.\n",
   welcomeNotebook: undefined,
   welcomeDocument: undefined,
-  sandboxVariant: 'eval',
+  sandboxVariant: 'local-eval',
   systemPrompt: `You are a financial market analyst with access to Alpha Vantage market data and chart generation tools. You can fetch stock prices, analyze trading volumes, create visualizations, and track market trends. Provide clear insights with relevant data points and generate charts to illustrate patterns.
 `,
   systemPromptCodemodeAddons: `## IMPORTANT: Be Honest About Your Capabilities NEVER claim to have tools or capabilities you haven't verified.

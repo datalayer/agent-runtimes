@@ -458,6 +458,7 @@ function ToolsMenu({
                                       tool.name,
                                     )
                                   }
+                                  aria-labelledby={`toggle-tool-${server.id}-${tool.name}`}
                                 />
                               </Box>
                             </Box>
@@ -690,6 +691,7 @@ function SkillsMenu({
                           size="small"
                           checked={approvedSkills.has(skill.id)}
                           onClick={() => onToggleSkillApproval(skill.id)}
+                          aria-labelledby={`toggle-skill-${skill.id}`}
                         />
                       </Box>
                     </Box>
