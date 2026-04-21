@@ -737,7 +737,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
     ]);
     try {
       setApprovalFlash('Once trigger launched.');
-      const streamResult = await streamRunMessages(
+      await streamRunMessages(
         approvalAgentId,
         ONCE_TRIGGER_APPROVAL_PROMPT,
         setApprovalSidebarMessages,
@@ -1039,8 +1039,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
 
   const triggerRunCurl = `curl -N -X POST '${agentBaseUrl}/api/v1/vercel-ai/${agentId}' -H 'Content-Type: application/json' -H 'Accept: text/event-stream'${token ? " -H 'Authorization: Bearer <TOKEN>'" : ''} --data '{"messages":[{"role":"user","parts":[{"type":"text","text":"${ONCE_TRIGGER_PROMPT.replace(/"/g, '\\"')}"}]}],"trigger":"submit-message","sdkVersion":6}'`;
 
-  const isAgentLaunching =
-    runtimeStatus === 'launching' || isLaunchingOnce || isLaunchingApproval;
+  const isAgentLaunching = isLaunchingOnce || isLaunchingApproval;
 
   return (
     <fieldset

@@ -58,6 +58,8 @@ export interface ToolCallDisplayProps {
   approvalRequired?: boolean;
   /** Approval state for this tool call */
   approvalState?: 'pending' | 'approved' | 'denied';
+  /** Where the approval decision originated */
+  approvalDecisionSource?: 'inline' | 'external';
   /** Called when user approves this tool call */
   onApprove?: () => void;
   /** Called when user denies this tool call */
@@ -201,6 +203,7 @@ export function ToolCallDisplay({
   executionError,
   approvalRequired = false,
   approvalState,
+  approvalDecisionSource,
   onApprove,
   onDeny,
   approvalLoading = false,
@@ -462,13 +465,35 @@ export function ToolCallDisplay({
               sx={{ mt: status === 'complete' && result !== undefined ? 3 : 0 }}
             >
               {approvalState === 'approved' ? (
-                <Text sx={{ color: 'success.fg', fontSize: 1 }}>
-                  Approved. Executing tool.
-                </Text>
+                <Box>
+                  <Text
+                    sx={{ color: 'success.fg', fontSize: 1, display: 'block' }}
+                  >
+                    Approved. Executing tool.
+                  </Text>
+                  {approvalDecisionSource === 'external' && (
+                    <Text
+                      sx={{ color: 'fg.muted', fontSize: 0, display: 'block' }}
+                    >
+                      Approved from sidebar.
+                    </Text>
+                  )}
+                </Box>
               ) : approvalState === 'denied' ? (
-                <Text sx={{ color: 'danger.fg', fontSize: 1 }}>
-                  Denied. Tool will not run.
-                </Text>
+                <Box>
+                  <Text
+                    sx={{ color: 'danger.fg', fontSize: 1, display: 'block' }}
+                  >
+                    Denied. Tool will not run.
+                  </Text>
+                  {approvalDecisionSource === 'external' && (
+                    <Text
+                      sx={{ color: 'fg.muted', fontSize: 0, display: 'block' }}
+                    >
+                      Decision came from sidebar.
+                    </Text>
+                  )}
+                </Box>
               ) : (
                 <>
                   <Text sx={{ fontSize: 1, color: 'fg.default' }}>

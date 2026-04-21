@@ -155,29 +155,36 @@ function DefaultToolCallRenderer({
   const approvals = useAgentRuntimeStore(s => s.approvals);
   const sendDecision = useAgentRuntimeStore(s => s.sendDecision);
 
-  // Match this tool call to a pending approval record by normalised name.
-  const matchedApproval = useMemo(() => {
-    if (decision) return null; // Already decided
+  // Prefer an exact match by approval id (when present in SSE tool result).
+  const matchedByResultId = useMemo(() => {
+    if (!resultApprovalId) return null;
+    return approvals.find(a => a.id === resultApprovalId) ?? null;
+  }, [approvals, resultApprovalId]);
+
+  // Fallback to matching by tool name for inline approval flows that don't
+  // always provide approval_id in the tool result payload.
+  const matchedByName = useMemo(() => {
     if (!isPendingFromResult && !isExecuting) return null;
     return (
-      approvals.find(
-        a =>
-          a.status === 'pending' &&
-          normalizeName(a.tool_name) === normalizedToolName,
-      ) ?? null
+      approvals.find(a => normalizeName(a.tool_name) === normalizedToolName) ??
+      null
     );
-  }, [
-    approvals,
-    normalizedToolName,
-    isPendingFromResult,
-    isExecuting,
-    decision,
-  ]);
+  }, [approvals, normalizedToolName, isPendingFromResult, isExecuting]);
+
+  const matchedApproval = matchedByResultId ?? matchedByName;
 
   // Prefer the store-matched approval id, fall back to the id from the tool
   // result (SSE path). This ensures the approve/deny buttons work even when
   // the monitoring WS is not connected.
   const effectiveApprovalId = matchedApproval?.id ?? resultApprovalId ?? null;
+
+  // Reflect approval decisions that happened outside this card (e.g. sidebar).
+  const externalDecision: 'approved' | 'denied' | undefined =
+    matchedApproval?.status === 'approved'
+      ? 'approved'
+      : matchedApproval?.status === 'rejected'
+        ? 'denied'
+        : undefined;
 
   const makeDecision = useCallback(
     (action: 'approve' | 'reject') => {
@@ -200,10 +207,17 @@ function DefaultToolCallRenderer({
 
   // Show approval UI when we have a confirmed pending approval (from result
   // or discovered via the store) or after a decision has been made.
-  const hasApproval = isPendingFromResult || !!effectiveApprovalId;
+  const hasApproval =
+    isPendingFromResult || !!effectiveApprovalId || !!externalDecision;
 
   const approvalState: 'pending' | 'approved' | 'denied' | undefined =
-    decision || (hasApproval ? 'pending' : undefined);
+    decision || externalDecision || (hasApproval ? 'pending' : undefined);
+
+  const approvalDecisionSource: 'inline' | 'external' | undefined = decision
+    ? 'inline'
+    : externalDecision
+      ? 'external'
+      : undefined;
 
   return (
     <ToolCallDisplay
@@ -218,13 +232,14 @@ function DefaultToolCallRenderer({
       exitCode={item.exitCode}
       approvalRequired={hasApproval}
       approvalState={approvalState}
+      approvalDecisionSource={approvalDecisionSource}
       onApprove={
-        effectiveApprovalId && !decision
+        effectiveApprovalId && !decision && !externalDecision
           ? () => makeDecision('approve')
           : undefined
       }
       onDeny={
-        effectiveApprovalId && !decision
+        effectiveApprovalId && !decision && !externalDecision
           ? () => makeDecision('reject')
           : undefined
       }

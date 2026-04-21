@@ -187,7 +187,7 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
     [selectedSpecId],
   );
 
-  const [mode, setMode] = useState<ApprovalMode>('local');
+  const [mode, setMode] = useState<ApprovalMode>('server');
   const [runtimeStatus, setRuntimeStatus] = useState<
     'launching' | 'ready' | 'error'
   >('launching');
@@ -1099,10 +1099,17 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
                   bg: 'canvas.default',
                 }}
               >
-                <Text sx={{ fontWeight: 600, fontSize: 1 }}>
+                <Text sx={{ fontWeight: 600, fontSize: 1, display: 'block' }}>
                   {approval.tool_name}
                 </Text>
-                <Text sx={{ fontSize: 0, color: 'fg.muted', mb: 2 }}>
+                <Text
+                  sx={{
+                    fontSize: 0,
+                    color: 'fg.muted',
+                    mb: 2,
+                    display: 'block',
+                  }}
+                >
                   Status:{' '}
                   {(approval.status ?? 'pending') === 'approved'
                     ? 'Approved'
