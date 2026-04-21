@@ -1060,21 +1060,9 @@ async def create_agent(
         resolved_post_hooks = None
         parameter_schema: dict[str, Any] | None = None
         if library_spec is not None:
-            resolved_pre_hooks = getattr(
-                library_spec,
-                "pre_hooks",
-                getattr(library_spec, "preHooks", None),
-            )
-            resolved_post_hooks = getattr(
-                library_spec,
-                "post_hooks",
-                getattr(library_spec, "postHooks", None),
-            )
-            parameter_schema = getattr(
-                library_spec,
-                "parameters",
-                getattr(library_spec, "agent_parameters", None),
-            )
+            resolved_pre_hooks = getattr(library_spec, "pre_hooks", None)
+            resolved_post_hooks = getattr(library_spec, "post_hooks", None)
+            parameter_schema = getattr(library_spec, "parameters", None)
 
         # Apply defaults from forwarded full spec payload when request fields
         # are still unset/defaulted.
