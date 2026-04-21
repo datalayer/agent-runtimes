@@ -165,12 +165,18 @@ async def _wrap_streaming_body_with_approvals(
         mirror_approval_to_local,
     )
 
-    # Build name variants for matching (underscore / hyphen normalisation)
+    # Build name variants for matching (underscore / hyphen normalisation).
+    # Include both versioned IDs (e.g. "runtime-sensitive-echo:0.0.1") and
+    # base names without version suffix (e.g. "runtime_sensitive_echo") so
+    # pydantic-ai's tool-input-available events (which carry the registered
+    # function name without a version suffix) are not skipped.
     approval_names: set[str] = set()
     for tid in approval_tool_ids:
-        approval_names.add(tid)
-        approval_names.add(tid.replace("-", "_"))
-        approval_names.add(tid.replace("_", "-"))
+        base_name = tid.split(":", 1)[0]
+        for name in (tid, base_name):
+            approval_names.add(name)
+            approval_names.add(name.replace("-", "_"))
+            approval_names.add(name.replace("_", "-"))
     created_tool_call_ids: set[str] = set()
     remote_created_tool_call_ids: set[str] = set()
 

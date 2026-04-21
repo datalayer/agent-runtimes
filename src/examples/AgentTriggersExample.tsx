@@ -86,7 +86,7 @@ const APPROVAL_AGENT_SPEC_ID = 'demo-one-trigger-approval';
 const ONCE_TRIGGER_PROMPT =
   "List the user's top 3 public and top 3 private GitHub repositories, ranked by recent activity, and provide a brief summary of each. Execute exactly two tool calls: run_skill_script(skill_name='github', script_name='list_repos', kwargs={visibility:'public', sort:'updated', limit:3, format:'json'}) and run_skill_script(skill_name='github', script_name='list_repos', kwargs={visibility:'private', sort:'updated', limit:3, format:'json'}). Do not call list_skills/load_skill/read_skill_resource. Do not retry. If a tool call fails, report failure_reason/error/stderr exactly as returned.";
 const ONCE_TRIGGER_APPROVAL_PROMPT =
-  "Call runtime_sensitive_echo exactly once with message='Tool approval demo executed' and reason='audit'. Do not call any other tool.";
+  'Use the runtime_sensitive_echo tool once.';
 const DEFAULT_LOCAL_BASE_URL =
   import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
 const DEFAULT_CRON = '0 8 * * *'; // daily at 08:00 UTC
@@ -123,8 +123,8 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
   }, [connectedIdentities]);
 
   const [runtimeStatus, setRuntimeStatus] = useState<
-    'launching' | 'ready' | 'error'
-  >('launching');
+    'idle' | 'launching' | 'ready' | 'error'
+  >('idle');
   const [isReady, setIsReady] = useState(false);
   const [hookError, setHookError] = useState<string | null>(null);
   const [agentId, setAgentId] = useState<string>(agentName);
@@ -206,10 +206,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
       id: payload.id,
       tool_name: payload.tool_name,
       tool_args: payload.tool_args,
-      tool_call_id:
-        typeof payload.tool_args?.tool_call_id === 'string'
-          ? payload.tool_args.tool_call_id
-          : undefined,
+      tool_call_id: payload.tool_call_id ?? undefined,
       note: payload.note ?? undefined,
       created_at: payload.created_at,
       status: payload.status,
@@ -324,78 +321,72 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
     [token],
   );
 
-  // ── Create agent on local server ─────────────────────────────────────────
+  // ── Create agent on demand (no startup on initial page load) ────────────
 
-  useEffect(() => {
-    let isCancelled = false;
+  const createAgent = useCallback(async (): Promise<boolean> => {
+    setRuntimeStatus('launching');
+    setIsReady(false);
+    setHookError(null);
 
-    const createAgent = async () => {
-      setRuntimeStatus('launching');
-      setIsReady(false);
-      setHookError(null);
+    try {
+      const response = await authFetch(`${agentBaseUrl}/api/v1/agents`, {
+        method: 'POST',
+        body: JSON.stringify({
+          name: agentName,
+          description: 'Agent with cron, webhook, event, and manual triggers',
+          agent_library: 'pydantic-ai',
+          transport: 'vercel-ai',
+          agent_spec_id: AGENT_SPEC_ID,
+        }),
+      });
 
-      try {
-        const response = await authFetch(`${agentBaseUrl}/api/v1/agents`, {
-          method: 'POST',
-          body: JSON.stringify({
-            name: agentName,
-            description: 'Agent with cron, webhook, event, and manual triggers',
-            agent_library: 'pydantic-ai',
-            transport: 'vercel-ai',
-            agent_spec_id: AGENT_SPEC_ID,
-            tools: [],
-          }),
-        });
+      let resolvedAgentId = agentName;
 
-        let resolvedAgentId = agentName;
+      if (response.ok) {
+        const data = await response.json();
+        resolvedAgentId = data?.id || agentName;
+      } else {
+        const contentType = response.headers.get('content-type') || '';
+        let detail = '';
 
-        if (response.ok) {
-          const data = await response.json();
-          resolvedAgentId = data?.id || agentName;
+        if (contentType.includes('application/json')) {
+          const data = await response.json().catch(() => null);
+          detail =
+            (typeof data?.detail === 'string' && data.detail) ||
+            (typeof data?.message === 'string' && data.message) ||
+            '';
         } else {
-          const contentType = response.headers.get('content-type') || '';
-          let detail = '';
-
-          if (contentType.includes('application/json')) {
-            const data = await response.json().catch(() => null);
-            detail =
-              (typeof data?.detail === 'string' && data.detail) ||
-              (typeof data?.message === 'string' && data.message) ||
-              '';
-          } else {
-            detail = await response.text();
-          }
-
-          if (response.status === 409 || /already exists/i.test(detail || '')) {
-            // Agent already running — reuse it
-          } else {
-            throw new Error(
-              detail || `Failed to create agent: ${response.status}`,
-            );
-          }
+          detail = await response.text();
         }
 
-        if (!isCancelled) {
-          setAgentId(resolvedAgentId);
-          setIsReady(true);
-          setRuntimeStatus('ready');
-        }
-      } catch (error) {
-        if (!isCancelled) {
-          setHookError(
-            error instanceof Error ? error.message : 'Agent failed to start',
+        if (response.status === 409 || /already exists/i.test(detail || '')) {
+          // Agent already running — reuse it
+        } else {
+          throw new Error(
+            detail || `Failed to create agent: ${response.status}`,
           );
-          setRuntimeStatus('error');
         }
       }
-    };
 
-    void createAgent();
+      setAgentId(resolvedAgentId);
+      setIsReady(true);
+      setRuntimeStatus('ready');
+      return true;
+    } catch (error) {
+      setHookError(
+        error instanceof Error ? error.message : 'Agent failed to start',
+      );
+      setRuntimeStatus('error');
+      return false;
+    }
+  }, [agentBaseUrl, authFetch, agentName]);
 
-    return () => {
-      isCancelled = true;
-    };
-  }, [agentBaseUrl, authFetch]);
+  const ensureRuntimeReady = useCallback(async (): Promise<boolean> => {
+    if (isReady) {
+      return true;
+    }
+    return createAgent();
+  }, [isReady, createAgent]);
 
   // ── Poll trigger metadata ─────────────────────────────────────────────
   // TODO: enable once the ai-agents service exposes /trigger and
@@ -530,7 +521,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
         );
         throw error;
       } finally {
-        if (options?.keepAliveForApproval && pendingApproval) {
+        if (options?.keepAliveForApproval) {
           approvalStreamRef.current = { adapter, unsubscribe };
         } else {
           unsubscribe();
@@ -551,62 +542,72 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
     };
   }, []);
 
-  // ── Create approval agent on local server ────────────────────────────────
+  // ── Create approval agent on demand ─────────────────────────────────────
 
-  useEffect(() => {
-    if (!isReady) return;
-    let isCancelled = false;
+  const createApprovalAgent = useCallback(async (): Promise<boolean> => {
+    const createRequest = () =>
+      authFetch(`${agentBaseUrl}/api/v1/agents`, {
+        method: 'POST',
+        body: JSON.stringify({
+          name: approvalAgentName,
+          description: 'Agent with once trigger and tool approval',
+          agent_library: 'pydantic-ai',
+          transport: 'vercel-ai',
+          agent_spec_id: APPROVAL_AGENT_SPEC_ID,
+          enable_codemode: false,
+        }),
+      });
 
-    const createApprovalAgent = async () => {
-      try {
-        const response = await authFetch(`${agentBaseUrl}/api/v1/agents`, {
-          method: 'POST',
-          body: JSON.stringify({
-            name: approvalAgentName,
-            description: 'Agent with once trigger and tool approval',
-            agent_library: 'pydantic-ai',
-            transport: 'vercel-ai',
-            agent_spec_id: APPROVAL_AGENT_SPEC_ID,
-            tools: ['runtime-sensitive-echo'],
-          }),
-        });
+    try {
+      let response = await createRequest();
 
-        let resolvedId = approvalAgentName;
+      let resolvedId = approvalAgentName;
 
-        if (response.ok) {
-          const data = await response.json();
-          resolvedId = data?.id || approvalAgentName;
+      if (response.ok) {
+        const data = await response.json();
+        resolvedId = data?.id || approvalAgentName;
+      } else {
+        const contentType = response.headers.get('content-type') || '';
+        let detail = '';
+        if (contentType.includes('application/json')) {
+          const data = await response.json().catch(() => null);
+          detail = data?.detail || data?.message || '';
         } else {
-          const contentType = response.headers.get('content-type') || '';
-          let detail = '';
-          if (contentType.includes('application/json')) {
-            const data = await response.json().catch(() => null);
-            detail = data?.detail || data?.message || '';
-          } else {
-            detail = await response.text();
-          }
-          if (response.status === 409 || /already exists/i.test(detail || '')) {
-            // Already running — reuse
-          } else {
-            console.warn('Failed to create approval agent:', detail);
-            return;
-          }
+          detail = await response.text();
         }
 
-        if (!isCancelled) {
-          setApprovalAgentId(resolvedId);
-          setApprovalAgentReady(true);
+        const alreadyExists =
+          response.status === 409 || /already exists/i.test(detail || '');
+        if (!alreadyExists) {
+          console.warn('Failed to create approval agent:', detail);
+          return false;
         }
-      } catch (error) {
-        console.warn('Approval agent creation failed:', error);
+
+        // Ensure latest spec/config is applied instead of reusing stale agent state.
+        await authFetch(
+          `${agentBaseUrl}/api/v1/agents/${encodeURIComponent(approvalAgentName)}`,
+          {
+            method: 'DELETE',
+          },
+        ).catch(() => undefined);
+
+        response = await createRequest();
+        if (!response.ok) {
+          console.warn('Failed to recreate approval agent after conflict');
+          return false;
+        }
+        const recreated = await response.json().catch(() => null);
+        resolvedId = recreated?.id || approvalAgentName;
       }
-    };
 
-    void createApprovalAgent();
-    return () => {
-      isCancelled = true;
-    };
-  }, [isReady, agentBaseUrl, authFetch]);
+      setApprovalAgentId(resolvedId);
+      setApprovalAgentReady(true);
+      return true;
+    } catch (error) {
+      console.warn('Approval agent creation failed:', error);
+      return false;
+    }
+  }, [agentBaseUrl, authFetch, approvalAgentName]);
 
   // Approval sidebar messages are populated from live Vercel stream events.
 
@@ -618,25 +619,35 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
       setApprovalError(null);
       try {
         const approval = approvals.find(a => a.id === requestId);
-        if (!approval?.tool_call_id || !approvalStreamRef.current) {
-          throw new Error('Approval stream is not active for this request');
+
+        const sentDecision = approvalSocket.send({
+          type: 'tool_approval_decision',
+          approvalId: requestId,
+          approved: true,
+        });
+        if (!sentDecision) {
+          throw new Error('Approval websocket is not connected');
         }
 
-        await approvalStreamRef.current.adapter.sendToolResult(
-          approval.tool_call_id,
-          {
-            toolCallId: approval.tool_call_id,
-            success: true,
-            result: {
-              approved: true,
-              approvalId: requestId,
-              message: 'Approved from trigger panel',
+        // Best-effort continuation for deferred tool-result streams.
+        if (approval?.tool_call_id && approvalStreamRef.current) {
+          await approvalStreamRef.current.adapter.sendToolResult(
+            approval.tool_call_id,
+            {
+              toolCallId: approval.tool_call_id,
+              success: true,
+              result: {
+                approved: true,
+                approvalId: requestId,
+                message: 'Approved from trigger panel',
+              },
             },
-          },
-        );
-        approvalStreamRef.current.unsubscribe();
-        approvalStreamRef.current.adapter.disconnect();
-        approvalStreamRef.current = null;
+          );
+          approvalStreamRef.current.unsubscribe();
+          approvalStreamRef.current.adapter.disconnect();
+          approvalStreamRef.current = null;
+        }
+
         setApprovals(prev => prev.filter(a => a.id !== requestId));
       } catch (error) {
         setApprovalError(
@@ -646,7 +657,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
         setApprovalLoading(null);
       }
     },
-    [approvals],
+    [approvals, approvalSocket],
   );
 
   const handleReject = useCallback(
@@ -655,25 +666,36 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
       setApprovalError(null);
       try {
         const approval = approvals.find(a => a.id === requestId);
-        if (!approval?.tool_call_id || !approvalStreamRef.current) {
-          throw new Error('Approval stream is not active for this request');
+
+        const sentDecision = approvalSocket.send({
+          type: 'tool_approval_decision',
+          approvalId: requestId,
+          approved: false,
+          ...(note ? { note } : {}),
+        });
+        if (!sentDecision) {
+          throw new Error('Approval websocket is not connected');
         }
 
-        await approvalStreamRef.current.adapter.sendToolResult(
-          approval.tool_call_id,
-          {
-            toolCallId: approval.tool_call_id,
-            success: true,
-            result: {
-              approved: false,
-              approvalId: requestId,
-              message: note || 'Rejected from trigger panel',
+        // Best-effort continuation for deferred tool-result streams.
+        if (approval?.tool_call_id && approvalStreamRef.current) {
+          await approvalStreamRef.current.adapter.sendToolResult(
+            approval.tool_call_id,
+            {
+              toolCallId: approval.tool_call_id,
+              success: true,
+              result: {
+                approved: false,
+                approvalId: requestId,
+                message: note || 'Rejected from trigger panel',
+              },
             },
-          },
-        );
-        approvalStreamRef.current.unsubscribe();
-        approvalStreamRef.current.adapter.disconnect();
-        approvalStreamRef.current = null;
+          );
+          approvalStreamRef.current.unsubscribe();
+          approvalStreamRef.current.adapter.disconnect();
+          approvalStreamRef.current = null;
+        }
+
         setApprovals(prev => prev.filter(a => a.id !== requestId));
       } catch (error) {
         setApprovalError(
@@ -683,13 +705,20 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
         setApprovalLoading(null);
       }
     },
-    [approvals],
+    [approvals, approvalSocket],
   );
 
   // ── Launch once trigger with approval ────────────────────────────────────
 
   const handleLaunchOnceApproval = useCallback(async () => {
-    if (!agentBaseUrl || !approvalAgentReady) return;
+    if (!agentBaseUrl) return;
+    const ready = await ensureRuntimeReady();
+    if (!ready) return;
+    let approvalReady = approvalAgentReady;
+    if (!approvalReady) {
+      approvalReady = await createApprovalAgent();
+    }
+    if (!approvalReady) return;
     setIsLaunchingApproval(true);
     setHasTriggeredApproval(true);
     setApprovalFlash(null);
@@ -707,9 +736,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
       ...prev,
     ]);
     try {
-      setApprovalFlash(
-        'Once trigger with approval launched — waiting for tool approval.',
-      );
+      setApprovalFlash('Once trigger launched.');
       const streamResult = await streamRunMessages(
         approvalAgentId,
         ONCE_TRIGGER_APPROVAL_PROMPT,
@@ -717,11 +744,6 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
         setSidebarMessagesError,
         { keepAliveForApproval: true },
       );
-      if (!streamResult.pendingApproval && approvalStreamRef.current) {
-        approvalStreamRef.current.unsubscribe();
-        approvalStreamRef.current.adapter.disconnect();
-        approvalStreamRef.current = null;
-      }
       setTriggerHistory(prev =>
         prev.map(r =>
           r.id === runId
@@ -743,7 +765,14 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
     } finally {
       setIsLaunchingApproval(false);
     }
-  }, [agentBaseUrl, approvalAgentReady, approvalAgentId, streamRunMessages]);
+  }, [
+    agentBaseUrl,
+    approvalAgentReady,
+    createApprovalAgent,
+    approvalAgentId,
+    streamRunMessages,
+    ensureRuntimeReady,
+  ]);
 
   // ── Pending approvals for banner/dialog ──────────────────────────────────
 
@@ -760,6 +789,8 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
 
   const handleUpdateCron = useCallback(async () => {
     if (!agentBaseUrl || !editCron.trim()) return;
+    const ready = await ensureRuntimeReady();
+    if (!ready) return;
     setIsUpdating(true);
     try {
       const res = await authFetch(
@@ -779,12 +810,14 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
     } finally {
       setIsUpdating(false);
     }
-  }, [agentBaseUrl, agentId, editCron, authFetch]);
+  }, [agentBaseUrl, agentId, editCron, authFetch, ensureRuntimeReady]);
 
   // ── Manual trigger ───────────────────────────────────────────────────────
 
   const handleTriggerNow = useCallback(async () => {
     if (!agentBaseUrl) return;
+    const ready = await ensureRuntimeReady();
+    if (!ready) return;
     setIsTriggeringNow(true);
     setTriggerFlash(null);
     const runId = `manual-${Date.now()}`;
@@ -840,12 +873,14 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
     } finally {
       setIsTriggeringNow(false);
     }
-  }, [agentBaseUrl, agentId, authFetch, identitiesForRuns]);
+  }, [agentBaseUrl, agentId, authFetch, identitiesForRuns, ensureRuntimeReady]);
 
   // ── Webhook management ─────────────────────────────────────────────────
 
   const handleGenerateWebhook = useCallback(async () => {
     if (!agentBaseUrl) return;
+    const ready = await ensureRuntimeReady();
+    if (!ready) return;
     setIsUpdating(true);
     try {
       const res = await authFetch(
@@ -863,10 +898,12 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
     } finally {
       setIsUpdating(false);
     }
-  }, [agentBaseUrl, agentId, authFetch]);
+  }, [agentBaseUrl, agentId, authFetch, ensureRuntimeReady]);
 
   const handleToggleWebhook = useCallback(async () => {
     if (!agentBaseUrl) return;
+    const ready = await ensureRuntimeReady();
+    if (!ready) return;
     try {
       await authFetch(
         `${agentBaseUrl}/api/v1/agents/${agentId}/trigger/webhook`,
@@ -879,12 +916,14 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
     } catch {
       /* ok */
     }
-  }, [agentBaseUrl, agentId, webhookEnabled, authFetch]);
+  }, [agentBaseUrl, agentId, webhookEnabled, authFetch, ensureRuntimeReady]);
 
   // ── Event subscription ─────────────────────────────────────────────────
 
   const handleSubscribeEvent = useCallback(async () => {
     if (!agentBaseUrl || !eventTopic.trim()) return;
+    const ready = await ensureRuntimeReady();
+    if (!ready) return;
     setIsUpdating(true);
     try {
       const res = await authFetch(
@@ -905,12 +944,21 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
     } finally {
       setIsUpdating(false);
     }
-  }, [agentBaseUrl, agentId, eventTopic, eventFilter, authFetch]);
+  }, [
+    agentBaseUrl,
+    agentId,
+    eventTopic,
+    eventFilter,
+    authFetch,
+    ensureRuntimeReady,
+  ]);
 
   // ── Launch once trigger ──────────────────────────────────────────────────
 
   const handleLaunchOnce = useCallback(async () => {
     if (!agentBaseUrl) return;
+    const ready = await ensureRuntimeReady();
+    if (!ready) return;
     setIsLaunchingOnce(true);
     setOnceFlash(null);
     setStreamedOnceOutput(null);
@@ -961,11 +1009,11 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
     } finally {
       setIsLaunchingOnce(false);
     }
-  }, [agentBaseUrl, agentId, streamRunMessages]);
+  }, [agentBaseUrl, agentId, streamRunMessages, ensureRuntimeReady]);
 
   // ── Loading / Error ──────────────────────────────────────────────────────
 
-  if (!isReady && runtimeStatus !== 'error') {
+  if (runtimeStatus === 'launching') {
     return (
       <Box
         sx={{
@@ -979,9 +1027,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
       >
         <Spinner size="large" />
         <Text sx={{ color: 'fg.muted' }}>
-          {runtimeStatus === 'launching'
-            ? 'Launching runtime for trigger agent…'
-            : 'Creating trigger demo agent…'}
+          Launching runtime for trigger agent...
         </Text>
       </Box>
     );
@@ -993,681 +1039,532 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
 
   const triggerRunCurl = `curl -N -X POST '${agentBaseUrl}/api/v1/vercel-ai/${agentId}' -H 'Content-Type: application/json' -H 'Accept: text/event-stream'${token ? " -H 'Authorization: Bearer <TOKEN>'" : ''} --data '{"messages":[{"role":"user","parts":[{"type":"text","text":"${ONCE_TRIGGER_PROMPT.replace(/"/g, '\\"')}"}]}],"trigger":"submit-message","sdkVersion":6}'`;
 
+  const isAgentLaunching =
+    runtimeStatus === 'launching' || isLaunchingOnce || isLaunchingApproval;
+
   return (
-    <Box
-      sx={{
-        height: 'calc(100vh - 60px)',
-        display: 'flex',
-        flexDirection: 'column',
+    <fieldset
+      disabled={isAgentLaunching}
+      style={{
+        border: 0,
+        margin: 0,
+        padding: 0,
+        minWidth: 0,
       }}
     >
-      {/* Toolbar */}
       <Box
         sx={{
+          height: 'calc(100vh - 60px)',
           display: 'flex',
-          alignItems: 'center',
-          gap: 2,
-          px: 3,
-          py: 2,
-          borderBottom: '1px solid',
-          borderColor: 'border.default',
-          flexShrink: 0,
+          flexDirection: 'column',
         }}
       >
-        <ClockIcon size={16} />
-        <Heading as="h3" sx={{ fontSize: 2, flex: 1 }}>
-          Triggers — {agentId}
-        </Heading>
-        <Label
-          variant={
-            approvalSocket.connectionState === 'connected'
-              ? 'success'
-              : 'secondary'
-          }
-        >
-          Approvals WS: {approvalSocket.connectionState}
-        </Label>
-        {token && <UserBadge token={token} variant="small" />}
-        <Button
-          size="small"
-          variant="invisible"
-          onClick={onLogout}
-          leadingVisual={SignOutIcon}
-          sx={{ color: 'fg.muted' }}
-        >
-          Sign out
-        </Button>
-      </Box>
-
-      {/* Tool Approval Banner */}
-      <ToolApprovalBanner
-        pendingApprovals={pendingApprovals}
-        onReview={approval => {
-          const req = approvals.find(a => a.id === approval.id) || null;
-          setActiveApproval(req);
-        }}
-        onApproveAll={async () => {
-          for (const a of approvals) {
-            await handleApprove(a.id);
-          }
-        }}
-      />
-
-      {/* Tool Approval Dialog */}
-      <ToolApprovalDialog
-        isOpen={!!activeApproval}
-        toolName={activeApproval?.tool_name ?? ''}
-        toolDescription={activeApproval?.note}
-        args={activeApproval?.tool_args ?? {}}
-        onApprove={async () => {
-          if (activeApproval) {
-            await handleApprove(activeApproval.id);
-            setActiveApproval(null);
-          }
-        }}
-        onDeny={async () => {
-          if (activeApproval) {
-            await handleReject(activeApproval.id, 'Rejected from dialog');
-            setActiveApproval(null);
-          }
-        }}
-        onClose={() => setActiveApproval(null)}
-      />
-
-      {approvalError && (
-        <Box sx={{ px: 3, py: 1 }}>
-          <Text sx={{ color: 'danger.fg', fontSize: 0 }}>{approvalError}</Text>
-        </Box>
-      )}
-
-      <Box sx={{ flex: 1, minHeight: 0, display: 'flex' }}>
-        {/* Left: Chat */}
-        <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Chat
-            protocol="vercel-ai"
-            baseUrl={agentBaseUrl}
-            agentId={agentId}
-            authToken={chatAuthToken}
-            title="Trigger Agent"
-            description={`View-only trigger output. Cron: ${cronExpr} | Webhook: ${webhookEnabled ? 'on' : 'off'} | Event: ${eventSubscribed ? eventTopic : 'none'}`}
-            showHeader={true}
-            autoFocus={false}
-            height="100%"
-            runtimeId={agentId}
-            showInput={false}
-            showModelSelector={false}
-            showToolsMenu={false}
-            showSkillsMenu={false}
-          />
-        </Box>
-
-        {/* Right: Trigger panel */}
+        {/* Toolbar */}
         <Box
           sx={{
-            width: 380,
-            borderLeft: '1px solid',
-            borderColor: 'border.default',
             display: 'flex',
-            flexDirection: 'column',
-            overflow: 'auto',
+            alignItems: 'center',
+            gap: 2,
+            px: 3,
+            py: 2,
+            borderBottom: '1px solid',
+            borderColor: 'border.default',
+            flexShrink: 0,
           }}
         >
-          {/* Trigger type tabs */}
-          <Box
-            sx={{
-              display: 'flex',
-              borderBottom: '1px solid',
-              borderColor: 'border.default',
-              flexShrink: 0,
-            }}
+          <ClockIcon size={16} />
+          <Heading as="h3" sx={{ fontSize: 2, flex: 1 }}>
+            Triggers — {agentId}
+          </Heading>
+          {!isReady && (
+            <Button
+              size="small"
+              variant="primary"
+              onClick={() => void createAgent()}
+            >
+              Start Runtime
+            </Button>
+          )}
+          <Label
+            variant={
+              approvalSocket.connectionState === 'connected'
+                ? 'success'
+                : 'secondary'
+            }
           >
-            {(
-              [
-                { key: 'once' as TriggerTab, icon: ZapIcon, label: 'Once' },
-                { key: 'cron' as TriggerTab, icon: ClockIcon, label: 'Cron' },
-                {
-                  key: 'webhook' as TriggerTab,
-                  icon: GlobeIcon,
-                  label: 'Webhook',
-                },
-                { key: 'event' as TriggerTab, icon: ZapIcon, label: 'Event' },
-                {
-                  key: 'manual' as TriggerTab,
-                  icon: PlayIcon,
-                  label: 'Manual',
-                },
-              ] as const
-            ).map(t => (
-              <Button
-                key={t.key}
-                size="small"
-                variant="invisible"
-                leadingVisual={t.icon}
-                onClick={() => setActiveTab(t.key)}
+            Approvals WS: {approvalSocket.connectionState}
+          </Label>
+          {token && <UserBadge token={token} variant="small" />}
+          <Button
+            size="small"
+            variant="invisible"
+            onClick={onLogout}
+            leadingVisual={SignOutIcon}
+            sx={{ color: 'fg.muted' }}
+          >
+            Sign out
+          </Button>
+        </Box>
+
+        {/* Tool Approval Banner */}
+        <ToolApprovalBanner
+          pendingApprovals={pendingApprovals}
+          onReview={approval => {
+            const req = approvals.find(a => a.id === approval.id) || null;
+            setActiveApproval(req);
+          }}
+          onApproveAll={async () => {
+            for (const a of approvals) {
+              await handleApprove(a.id);
+            }
+          }}
+        />
+
+        {/* Tool Approval Dialog */}
+        <ToolApprovalDialog
+          isOpen={!!activeApproval}
+          toolName={activeApproval?.tool_name ?? ''}
+          toolDescription={activeApproval?.note}
+          args={activeApproval?.tool_args ?? {}}
+          onApprove={async () => {
+            if (activeApproval) {
+              await handleApprove(activeApproval.id);
+              setActiveApproval(null);
+            }
+          }}
+          onDeny={async () => {
+            if (activeApproval) {
+              await handleReject(activeApproval.id, 'Rejected from dialog');
+              setActiveApproval(null);
+            }
+          }}
+          onClose={() => setActiveApproval(null)}
+        />
+
+        {approvalError && (
+          <Box sx={{ px: 3, py: 1 }}>
+            <Text sx={{ color: 'danger.fg', fontSize: 0 }}>
+              {approvalError}
+            </Text>
+          </Box>
+        )}
+
+        <Box sx={{ flex: 1, minHeight: 0, display: 'flex' }}>
+          {/* Left: Chat */}
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            {isReady ? (
+              <Chat
+                protocol="vercel-ai"
+                baseUrl={agentBaseUrl}
+                agentId={agentId}
+                authToken={chatAuthToken}
+                title="Trigger Agent"
+                description={`View-only trigger output. Cron: ${cronExpr} | Webhook: ${webhookEnabled ? 'on' : 'off'} | Event: ${eventSubscribed ? eventTopic : 'none'}`}
+                showHeader={true}
+                autoFocus={false}
+                height="100%"
+                runtimeId={agentId}
+                showInput={false}
+                showModelSelector={false}
+                showToolsMenu={false}
+                showSkillsMenu={false}
+              />
+            ) : (
+              <Box
                 sx={{
-                  flex: 1,
-                  borderRadius: 0,
-                  borderBottom:
-                    activeTab === t.key ? '2px solid' : '2px solid transparent',
-                  borderColor:
-                    activeTab === t.key ? 'accent.fg' : 'transparent',
-                  fontWeight: activeTab === t.key ? 'bold' : 'normal',
+                  height: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  p: 4,
                 }}
               >
-                {t.label}
-              </Button>
-            ))}
+                <Text sx={{ color: 'fg.muted' }}>
+                  Runtime is not started yet. Use Start Runtime or launch a
+                  trigger to start it.
+                </Text>
+              </Box>
+            )}
           </Box>
 
-          {/* ── Once tab ──────────────────────────────────────────────── */}
-          {activeTab === 'once' && (
+          {/* Right: Trigger panel */}
+          <Box
+            sx={{
+              width: 380,
+              borderLeft: '1px solid',
+              borderColor: 'border.default',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'auto',
+            }}
+          >
+            {/* Trigger type tabs */}
             <Box
               sx={{
-                p: 3,
+                display: 'flex',
                 borderBottom: '1px solid',
                 borderColor: 'border.default',
+                flexShrink: 0,
               }}
             >
-              <Box
-                sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}
-              >
-                <ZapIcon size={16} />
-                <Heading as="h3" sx={{ fontSize: 2 }}>
-                  Once Trigger
-                </Heading>
-              </Box>
+              {(
+                [
+                  { key: 'once' as TriggerTab, icon: ZapIcon, label: 'Once' },
+                  { key: 'cron' as TriggerTab, icon: ClockIcon, label: 'Cron' },
+                  {
+                    key: 'webhook' as TriggerTab,
+                    icon: GlobeIcon,
+                    label: 'Webhook',
+                  },
+                  { key: 'event' as TriggerTab, icon: ZapIcon, label: 'Event' },
+                  {
+                    key: 'manual' as TriggerTab,
+                    icon: PlayIcon,
+                    label: 'Manual',
+                  },
+                ] as const
+              ).map(t => (
+                <Button
+                  key={t.key}
+                  size="small"
+                  variant="invisible"
+                  leadingVisual={t.icon}
+                  onClick={() => setActiveTab(t.key)}
+                  sx={{
+                    flex: 1,
+                    borderRadius: 0,
+                    borderBottom:
+                      activeTab === t.key
+                        ? '2px solid'
+                        : '2px solid transparent',
+                    borderColor:
+                      activeTab === t.key ? 'accent.fg' : 'transparent',
+                    fontWeight: activeTab === t.key ? 'bold' : 'normal',
+                  }}
+                >
+                  {t.label}
+                </Button>
+              ))}
+            </Box>
 
-              <Text as="p" sx={{ fontSize: 0, color: 'fg.muted', mb: 3 }}>
-                Launch a single streaming run for the once-trigger prompt and
-                watch tool calls, tool results, and assistant text update in
-                real time.
-              </Text>
-
+            {/* ── Once tab ──────────────────────────────────────────────── */}
+            {activeTab === 'once' && (
               <Box
                 sx={{
-                  bg: 'canvas.subtle',
-                  border: '1px solid',
+                  p: 3,
+                  borderBottom: '1px solid',
                   borderColor: 'border.default',
-                  borderRadius: 2,
-                  p: 2,
-                  mb: 2,
-                  display: 'grid',
-                  gap: 1,
                 }}
               >
-                <Text sx={{ fontSize: 0 }}>
-                  <strong>Agent ID:</strong> {agentId}
-                </Text>
-                <Text sx={{ fontSize: 0 }}>
-                  <strong>Base URL:</strong> {agentBaseUrl}
-                </Text>
-                {lastOnceStartedAt && (
-                  <Text sx={{ fontSize: 0 }}>
-                    <strong>Last once launch:</strong>{' '}
-                    {new Date(lastOnceStartedAt).toLocaleString()}
-                  </Text>
-                )}
-              </Box>
-
-              <Button
-                size="small"
-                variant="primary"
-                leadingVisual={ZapIcon}
-                onClick={handleLaunchOnce}
-                disabled={isLaunchingOnce}
-                sx={{ width: '100%' }}
-              >
-                {isLaunchingOnce ? 'Launching…' : 'Launch Once'}
-              </Button>
-
-              <Button
-                size="small"
-                variant="danger"
-                leadingVisual={ZapIcon}
-                onClick={handleLaunchOnceApproval}
-                disabled={isLaunchingApproval || !approvalAgentReady}
-                sx={{ width: '100%', mt: 2 }}
-              >
-                {isLaunchingApproval
-                  ? 'Launching…'
-                  : 'Launch Once with Approval'}
-              </Button>
-
-              {onceFlash && (
-                <Flash
-                  variant={
-                    onceFlash.includes('launched') ? 'success' : 'danger'
-                  }
-                  sx={{ mt: 2, fontSize: 0 }}
+                <Box
+                  sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}
                 >
-                  {onceFlash}
-                </Flash>
-              )}
-
-              {approvalFlash && (
-                <Flash
-                  variant={
-                    approvalFlash.includes('launched') ? 'success' : 'danger'
-                  }
-                  sx={{ mt: 2, fontSize: 0 }}
-                >
-                  {approvalFlash}
-                </Flash>
-              )}
-
-              {/* ── Generated Output ───────────────────────────────── */}
-              {hasTriggeredOnce && (
-                <>
-                  <Heading as="h4" sx={{ fontSize: 1, mt: 3, mb: 2 }}>
-                    Generated Output
+                  <ZapIcon size={16} />
+                  <Heading as="h3" sx={{ fontSize: 2 }}>
+                    Once Trigger
                   </Heading>
+                </Box>
 
-                  {(() => {
-                    const outputEvent = lastOnceStartedAt
-                      ? [...agentEvents]
-                          .filter(
-                            e =>
-                              e.kind === 'agent-output' &&
-                              new Date(e.created_at).getTime() >=
-                                new Date(lastOnceStartedAt).getTime() - 5000,
-                          )
-                          .sort(
-                            (a, b) =>
-                              new Date(b.created_at).getTime() -
-                              new Date(a.created_at).getTime(),
-                          )[0]
-                      : undefined;
+                <Text as="p" sx={{ fontSize: 0, color: 'fg.muted', mb: 3 }}>
+                  Launch a single streaming run for the once-trigger prompt and
+                  watch tool calls, tool results, and assistant text update in
+                  real time.
+                </Text>
 
-                    const hasStreamFallback =
-                      !outputEvent &&
-                      !isLaunchingOnce &&
-                      streamedOnceOutput !== null;
+                <Box
+                  sx={{
+                    bg: 'canvas.subtle',
+                    border: '1px solid',
+                    borderColor: 'border.default',
+                    borderRadius: 2,
+                    p: 2,
+                    mb: 2,
+                    display: 'grid',
+                    gap: 1,
+                  }}
+                >
+                  <Text sx={{ fontSize: 0 }}>
+                    <strong>Agent ID:</strong> {agentId}
+                  </Text>
+                  <Text sx={{ fontSize: 0 }}>
+                    <strong>Base URL:</strong> {agentBaseUrl}
+                  </Text>
+                  {lastOnceStartedAt && (
+                    <Text sx={{ fontSize: 0 }}>
+                      <strong>Last once launch:</strong>{' '}
+                      {new Date(lastOnceStartedAt).toLocaleString()}
+                    </Text>
+                  )}
+                </Box>
 
-                    if (!outputEvent && !hasStreamFallback) {
+                <Button
+                  size="small"
+                  variant="primary"
+                  leadingVisual={ZapIcon}
+                  onClick={handleLaunchOnce}
+                  disabled={isLaunchingOnce}
+                  sx={{ width: '100%' }}
+                >
+                  {isLaunchingOnce ? 'Launching…' : 'Launch Once'}
+                </Button>
+
+                <Button
+                  size="small"
+                  variant="danger"
+                  leadingVisual={ZapIcon}
+                  onClick={handleLaunchOnceApproval}
+                  disabled={isLaunchingApproval}
+                  sx={{ width: '100%', mt: 2 }}
+                >
+                  {isLaunchingApproval
+                    ? 'Launching…'
+                    : 'Launch Once with Approval'}
+                </Button>
+
+                {onceFlash && (
+                  <Flash
+                    variant={
+                      onceFlash.includes('launched') ? 'success' : 'danger'
+                    }
+                    sx={{ mt: 2, fontSize: 0 }}
+                  >
+                    {onceFlash}
+                  </Flash>
+                )}
+
+                {approvalFlash && (
+                  <Flash
+                    variant={
+                      approvalFlash.includes('launched') ? 'success' : 'danger'
+                    }
+                    sx={{ mt: 2, fontSize: 0 }}
+                  >
+                    {approvalFlash}
+                  </Flash>
+                )}
+
+                {/* ── Generated Output ───────────────────────────────── */}
+                {hasTriggeredOnce && (
+                  <>
+                    <Heading as="h4" sx={{ fontSize: 1, mt: 3, mb: 2 }}>
+                      Generated Output
+                    </Heading>
+
+                    {(() => {
+                      const outputEvent = lastOnceStartedAt
+                        ? [...agentEvents]
+                            .filter(
+                              e =>
+                                e.kind === 'agent-output' &&
+                                new Date(e.created_at).getTime() >=
+                                  new Date(lastOnceStartedAt).getTime() - 5000,
+                            )
+                            .sort(
+                              (a, b) =>
+                                new Date(b.created_at).getTime() -
+                                new Date(a.created_at).getTime(),
+                            )[0]
+                        : undefined;
+
+                      const hasStreamFallback =
+                        !outputEvent &&
+                        !isLaunchingOnce &&
+                        streamedOnceOutput !== null;
+
+                      if (!outputEvent && !hasStreamFallback) {
+                        return (
+                          <Box
+                            sx={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 2,
+                              mb: 2,
+                            }}
+                          >
+                            <Spinner size="small" />
+                            <Text sx={{ color: 'fg.muted', fontSize: 0 }}>
+                              Waiting for agent output…
+                            </Text>
+                          </Box>
+                        );
+                      }
+
+                      const p = outputEvent?.payload as
+                        | Record<string, any>
+                        | undefined;
+                      const outputText = outputEvent
+                        ? p?.outputs
+                          ? String(p.outputs)
+                          : ''
+                        : (streamedOnceOutput ?? '');
+                      const exitStatus = outputEvent
+                        ? p?.exit_status
+                        : 'completed';
+                      const durationMs = outputEvent
+                        ? p?.duration_ms
+                        : lastOnceStartedAt && streamedOnceEndedAt
+                          ? new Date(streamedOnceEndedAt).getTime() -
+                            new Date(lastOnceStartedAt).getTime()
+                          : undefined;
+                      const endedAt = outputEvent
+                        ? p?.ended_at
+                        : streamedOnceEndedAt;
+
                       return (
                         <Box
                           sx={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 2,
                             mb: 2,
-                          }}
-                        >
-                          <Spinner size="small" />
-                          <Text sx={{ color: 'fg.muted', fontSize: 0 }}>
-                            Waiting for agent output…
-                          </Text>
-                        </Box>
-                      );
-                    }
-
-                    const p = outputEvent?.payload as
-                      | Record<string, any>
-                      | undefined;
-                    const outputText = outputEvent
-                      ? p?.outputs
-                        ? String(p.outputs)
-                        : ''
-                      : (streamedOnceOutput ?? '');
-                    const exitStatus = outputEvent
-                      ? p?.exit_status
-                      : 'completed';
-                    const durationMs = outputEvent
-                      ? p?.duration_ms
-                      : lastOnceStartedAt && streamedOnceEndedAt
-                        ? new Date(streamedOnceEndedAt).getTime() -
-                          new Date(lastOnceStartedAt).getTime()
-                        : undefined;
-                    const endedAt = outputEvent
-                      ? p?.ended_at
-                      : streamedOnceEndedAt;
-
-                    return (
-                      <Box
-                        sx={{
-                          mb: 2,
-                          border: '1px solid',
-                          borderColor:
-                            exitStatus === 'error'
-                              ? 'danger.muted'
-                              : 'success.muted',
-                          borderRadius: 2,
-                          overflow: 'hidden',
-                        }}
-                      >
-                        {/* Header bar */}
-                        <Box
-                          sx={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 1,
-                            px: 2,
-                            py: 1,
-                            bg:
-                              exitStatus === 'error'
-                                ? 'danger.subtle'
-                                : 'success.subtle',
-                            borderBottom: '1px solid',
+                            border: '1px solid',
                             borderColor:
                               exitStatus === 'error'
                                 ? 'danger.muted'
                                 : 'success.muted',
+                            borderRadius: 2,
+                            overflow: 'hidden',
                           }}
                         >
-                          <Label
-                            variant={
-                              exitStatus === 'error' ? 'danger' : 'success'
-                            }
-                            size="small"
-                          >
-                            {exitStatus ?? 'completed'}
-                          </Label>
-                          {durationMs != null && (
-                            <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
-                              {(Number(durationMs) / 1000).toFixed(1)}s
-                            </Text>
-                          )}
-                          {endedAt && (
-                            <Text
-                              sx={{
-                                fontSize: 0,
-                                color: 'fg.muted',
-                                ml: 'auto',
-                                whiteSpace: 'nowrap',
-                              }}
-                            >
-                              {new Date(endedAt).toLocaleString()}
-                            </Text>
-                          )}
-                          <Button
-                            size="small"
-                            variant="invisible"
-                            sx={{ p: 1 }}
-                            onClick={() =>
-                              navigator.clipboard.writeText(outputText)
-                            }
-                          >
-                            <CopyIcon size={12} />
-                          </Button>
-                        </Box>
-                        {/* Output body */}
-                        <Box
-                          sx={{
-                            p: 2,
-                            bg: 'canvas.default',
-                            maxHeight: 300,
-                            overflow: 'auto',
-                          }}
-                        >
-                          <Text
+                          {/* Header bar */}
+                          <Box
                             sx={{
-                              fontSize: 0,
-                              color: 'fg.default',
-                              display: 'block',
-                              whiteSpace: 'pre-wrap',
-                              wordBreak: 'break-word',
-                              fontFamily: 'mono',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 1,
+                              px: 2,
+                              py: 1,
+                              bg:
+                                exitStatus === 'error'
+                                  ? 'danger.subtle'
+                                  : 'success.subtle',
+                              borderBottom: '1px solid',
+                              borderColor:
+                                exitStatus === 'error'
+                                  ? 'danger.muted'
+                                  : 'success.muted',
                             }}
                           >
-                            {outputText || '(empty output)'}
-                          </Text>
-                        </Box>
-                      </Box>
-                    );
-                  })()}
-                </>
-              )}
-
-              {/* ── Streaming Messages ─────────────────────────────────── */}
-              {hasTriggeredOnce && (
-                <>
-                  <Heading as="h4" sx={{ fontSize: 1, mt: 3, mb: 2 }}>
-                    Streaming Messages
-                    {isLaunchingOnce && (
-                      <Spinner
-                        size="small"
-                        sx={{
-                          ml: 2,
-                          verticalAlign: 'middle',
-                          width: 14,
-                          height: 14,
-                          minWidth: 14,
-                          minHeight: 14,
-                        }}
-                      />
-                    )}
-                  </Heading>
-
-                  {sidebarMessagesError ? (
-                    <Flash variant="danger" sx={{ fontSize: 0, mb: 2 }}>
-                      {sidebarMessagesError}
-                    </Flash>
-                  ) : sidebarMessages.filter(msg => msg.role !== 'user')
-                      .length === 0 ? (
-                    <Box
-                      sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 2,
-                        mb: 2,
-                      }}
-                    >
-                      <Spinner
-                        size="small"
-                        sx={{
-                          width: 16,
-                          height: 16,
-                          minWidth: 16,
-                          minHeight: 16,
-                        }}
-                      />
-                      <Text sx={{ color: 'fg.muted', fontSize: 0 }}>
-                        Waiting for streaming messages…
-                      </Text>
-                    </Box>
-                  ) : (
-                    <Box
-                      sx={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: 2,
-                        mb: 2,
-                      }}
-                    >
-                      {sidebarMessages
-                        .slice()
-                        .filter(msg => msg.role !== 'user')
-                        .sort((a, b) => {
-                          const ta = a.createdAt
-                            ? new Date(a.createdAt).getTime()
-                            : 0;
-                          const tb = b.createdAt
-                            ? new Date(b.createdAt).getTime()
-                            : 0;
-                          return tb - ta;
-                        })
-                        .slice(0, 10)
-                        .map(msg => {
-                          const content =
-                            typeof msg.content === 'string'
-                              ? msg.content
-                              : JSON.stringify(msg.content);
-                          return (
-                            <Box
-                              key={`once-msg-${msg.id}`}
-                              sx={{
-                                p: 2,
-                                bg: 'canvas.subtle',
-                                borderRadius: 2,
-                                border: '1px solid',
-                                borderColor: 'border.default',
-                              }}
+                            <Label
+                              variant={
+                                exitStatus === 'error' ? 'danger' : 'success'
+                              }
+                              size="small"
                             >
-                              <Box
-                                sx={{
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: 1,
-                                  mb: 1,
-                                }}
-                              >
-                                <Label
-                                  size="small"
-                                  variant={
-                                    msg.role === 'assistant'
-                                      ? 'accent'
-                                      : msg.role === 'tool'
-                                        ? 'success'
-                                        : 'secondary'
-                                  }
-                                >
-                                  {msg.role}
-                                </Label>
-                                {msg.createdAt && (
-                                  <Text
-                                    sx={{
-                                      fontSize: 0,
-                                      color: 'fg.muted',
-                                      marginLeft: 'auto',
-                                      whiteSpace: 'nowrap',
-                                    }}
-                                  >
-                                    {new Date(
-                                      msg.createdAt,
-                                    ).toLocaleTimeString()}
-                                  </Text>
-                                )}
-                              </Box>
+                              {exitStatus ?? 'completed'}
+                            </Label>
+                            {durationMs != null && (
+                              <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
+                                {(Number(durationMs) / 1000).toFixed(1)}s
+                              </Text>
+                            )}
+                            {endedAt && (
                               <Text
                                 sx={{
                                   fontSize: 0,
-                                  color: 'fg.default',
-                                  display: 'block',
-                                  whiteSpace: 'pre-wrap',
-                                  wordBreak: 'break-word',
+                                  color: 'fg.muted',
+                                  ml: 'auto',
+                                  whiteSpace: 'nowrap',
                                 }}
                               >
-                                {content.length > 320
-                                  ? `${content.slice(0, 320)}…`
-                                  : content}
+                                {new Date(endedAt).toLocaleString()}
                               </Text>
-                            </Box>
-                          );
-                        })}
-                    </Box>
-                  )}
-                </>
-              )}
-
-              {/* ── Approval Pending Queue ──────────────────────────────── */}
-              {hasTriggeredApproval && approvals.length > 0 && (
-                <>
-                  <Heading as="h4" sx={{ fontSize: 1, mt: 3, mb: 2 }}>
-                    Pending Tool Approvals
-                  </Heading>
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: 2,
-                      mb: 2,
-                    }}
-                  >
-                    {approvals.map(a => (
-                      <Box
-                        key={a.id}
-                        sx={{
-                          p: 2,
-                          border: '1px solid',
-                          borderColor: 'attention.muted',
-                          borderRadius: 2,
-                          bg: 'attention.subtle',
-                        }}
-                      >
-                        <Text
-                          sx={{
-                            fontWeight: 600,
-                            fontSize: 1,
-                            display: 'block',
-                            mb: 1,
-                          }}
-                        >
-                          🛡️ {a.tool_name}
-                        </Text>
-                        {a.tool_args && (
-                          <Text
+                            )}
+                            <Button
+                              size="small"
+                              variant="invisible"
+                              sx={{ p: 1 }}
+                              onClick={() =>
+                                navigator.clipboard.writeText(outputText)
+                              }
+                            >
+                              <CopyIcon size={12} />
+                            </Button>
+                          </Box>
+                          {/* Output body */}
+                          <Box
                             sx={{
-                              fontSize: 0,
-                              color: 'fg.muted',
-                              display: 'block',
-                              mb: 2,
-                              fontFamily: 'mono',
+                              p: 2,
+                              bg: 'canvas.default',
+                              maxHeight: 300,
+                              overflow: 'auto',
                             }}
                           >
-                            {JSON.stringify(a.tool_args)}
-                          </Text>
-                        )}
-                        <Box sx={{ display: 'flex', gap: 1 }}>
-                          <Button
-                            size="small"
-                            variant="primary"
-                            onClick={() => void handleApprove(a.id)}
-                            disabled={approvalLoading === a.id}
-                          >
-                            {approvalLoading === a.id
-                              ? 'Approving…'
-                              : 'Approve'}
-                          </Button>
-                          <Button
-                            size="small"
-                            variant="danger"
-                            onClick={() =>
-                              void handleReject(
-                                a.id,
-                                'Rejected from trigger panel',
-                              )
-                            }
-                            disabled={approvalLoading === a.id}
-                          >
-                            Reject
-                          </Button>
+                            <Text
+                              sx={{
+                                fontSize: 0,
+                                color: 'fg.default',
+                                display: 'block',
+                                whiteSpace: 'pre-wrap',
+                                wordBreak: 'break-word',
+                                fontFamily: 'mono',
+                              }}
+                            >
+                              {outputText || '(empty output)'}
+                            </Text>
+                          </Box>
                         </Box>
-                      </Box>
-                    ))}
-                  </Box>
-                </>
-              )}
+                      );
+                    })()}
+                  </>
+                )}
 
-              {/* ── Approval Streaming Messages ─────────────────────────── */}
-              {hasTriggeredApproval && (
-                <>
-                  <Heading as="h4" sx={{ fontSize: 1, mt: 3, mb: 2 }}>
-                    Approval Agent Messages
-                    {isLaunchingApproval && (
-                      <Spinner
-                        size="small"
+                {/* ── Streaming Messages ─────────────────────────────────── */}
+                {hasTriggeredOnce && (
+                  <>
+                    <Heading as="h4" sx={{ fontSize: 1, mt: 3, mb: 2 }}>
+                      Streaming Messages
+                      {isLaunchingOnce && (
+                        <Spinner
+                          size="small"
+                          sx={{
+                            ml: 2,
+                            verticalAlign: 'middle',
+                            width: 14,
+                            height: 14,
+                            minWidth: 14,
+                            minHeight: 14,
+                          }}
+                        />
+                      )}
+                    </Heading>
+
+                    {sidebarMessagesError ? (
+                      <Flash variant="danger" sx={{ fontSize: 0, mb: 2 }}>
+                        {sidebarMessagesError}
+                      </Flash>
+                    ) : sidebarMessages.filter(msg => msg.role !== 'user')
+                        .length === 0 ? (
+                      <Box
                         sx={{
-                          ml: 2,
-                          verticalAlign: 'middle',
-                          width: 14,
-                          height: 14,
-                          minWidth: 14,
-                          minHeight: 14,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 2,
+                          mb: 2,
                         }}
-                      />
-                    )}
-                  </Heading>
-
-                  {/* ── Approval Generated Output ───────────────────────── */}
-                  {hasTriggeredApproval && (
-                    <>
-                      <Heading as="h4" sx={{ fontSize: 1, mt: 3, mb: 2 }}>
-                        Generated Output
-                      </Heading>
-
-                      {(() => {
-                        const latestAssistantOutput = approvalSidebarMessages
-                          .filter(msg => msg.role === 'assistant')
+                      >
+                        <Spinner
+                          size="small"
+                          sx={{
+                            width: 16,
+                            height: 16,
+                            minWidth: 16,
+                            minHeight: 16,
+                          }}
+                        />
+                        <Text sx={{ color: 'fg.muted', fontSize: 0 }}>
+                          Waiting for streaming messages…
+                        </Text>
+                      </Box>
+                    ) : (
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: 2,
+                          mb: 2,
+                        }}
+                      >
+                        {sidebarMessages
+                          .slice()
+                          .filter(msg => msg.role !== 'user')
                           .sort((a, b) => {
                             const ta = a.createdAt
                               ? new Date(a.createdAt).getTime()
@@ -1676,140 +1573,86 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
                               ? new Date(b.createdAt).getTime()
                               : 0;
                             return tb - ta;
-                          })[0];
-
-                        if (!latestAssistantOutput) {
-                          return (
-                            <Box
-                              sx={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 2,
-                                mb: 2,
-                              }}
-                            >
-                              <Spinner
-                                size="small"
+                          })
+                          .slice(0, 10)
+                          .map(msg => {
+                            const content =
+                              typeof msg.content === 'string'
+                                ? msg.content
+                                : JSON.stringify(msg.content);
+                            return (
+                              <Box
+                                key={`once-msg-${msg.id}`}
                                 sx={{
-                                  width: 16,
-                                  height: 16,
-                                  minWidth: 16,
-                                  minHeight: 16,
+                                  p: 2,
+                                  bg: 'canvas.subtle',
+                                  borderRadius: 2,
+                                  border: '1px solid',
+                                  borderColor: 'border.default',
                                 }}
-                              />
-                              <Text sx={{ color: 'fg.muted', fontSize: 0 }}>
-                                Waiting for agent output…
-                              </Text>
-                            </Box>
-                          );
-                        }
-
-                        const outputText =
-                          typeof latestAssistantOutput.content === 'string'
-                            ? latestAssistantOutput.content
-                            : JSON.stringify(latestAssistantOutput.content);
-
-                        return (
-                          <Box
-                            sx={{
-                              mb: 2,
-                              border: '1px solid',
-                              borderColor: 'success.muted',
-                              borderRadius: 2,
-                              overflow: 'hidden',
-                            }}
-                          >
-                            <Box
-                              sx={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 1,
-                                px: 2,
-                                py: 1,
-                                bg: 'success.subtle',
-                                borderBottom: '1px solid',
-                                borderColor: 'success.muted',
-                              }}
-                            >
-                              <Label variant="success" size="small">
-                                completed
-                              </Label>
-                              {latestAssistantOutput.createdAt && (
+                              >
+                                <Box
+                                  sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 1,
+                                    mb: 1,
+                                  }}
+                                >
+                                  <Label
+                                    size="small"
+                                    variant={
+                                      msg.role === 'assistant'
+                                        ? 'accent'
+                                        : msg.role === 'tool'
+                                          ? 'success'
+                                          : 'secondary'
+                                    }
+                                  >
+                                    {msg.role}
+                                  </Label>
+                                  {msg.createdAt && (
+                                    <Text
+                                      sx={{
+                                        fontSize: 0,
+                                        color: 'fg.muted',
+                                        marginLeft: 'auto',
+                                        whiteSpace: 'nowrap',
+                                      }}
+                                    >
+                                      {new Date(
+                                        msg.createdAt,
+                                      ).toLocaleTimeString()}
+                                    </Text>
+                                  )}
+                                </Box>
                                 <Text
                                   sx={{
                                     fontSize: 0,
-                                    color: 'fg.muted',
-                                    ml: 'auto',
-                                    whiteSpace: 'nowrap',
+                                    color: 'fg.default',
+                                    display: 'block',
+                                    whiteSpace: 'pre-wrap',
+                                    wordBreak: 'break-word',
                                   }}
                                 >
-                                  {new Date(
-                                    latestAssistantOutput.createdAt,
-                                  ).toLocaleString()}
+                                  {content.length > 320
+                                    ? `${content.slice(0, 320)}…`
+                                    : content}
                                 </Text>
-                              )}
-                              <Button
-                                size="small"
-                                variant="invisible"
-                                sx={{ p: 1 }}
-                                onClick={() =>
-                                  navigator.clipboard.writeText(outputText)
-                                }
-                              >
-                                <CopyIcon size={12} />
-                              </Button>
-                            </Box>
-                            <Box
-                              sx={{
-                                p: 2,
-                                bg: 'canvas.default',
-                                maxHeight: 300,
-                                overflow: 'auto',
-                              }}
-                            >
-                              <Text
-                                sx={{
-                                  fontSize: 0,
-                                  color: 'fg.default',
-                                  display: 'block',
-                                  whiteSpace: 'pre-wrap',
-                                  wordBreak: 'break-word',
-                                  fontFamily: 'mono',
-                                }}
-                              >
-                                {outputText || '(empty output)'}
-                              </Text>
-                            </Box>
-                          </Box>
-                        );
-                      })()}
-                    </>
-                  )}
+                              </Box>
+                            );
+                          })}
+                      </Box>
+                    )}
+                  </>
+                )}
 
-                  {approvalSidebarMessages.filter(msg => msg.role !== 'user')
-                    .length === 0 ? (
-                    <Box
-                      sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 2,
-                        mb: 2,
-                      }}
-                    >
-                      <Spinner
-                        size="small"
-                        sx={{
-                          width: 16,
-                          height: 16,
-                          minWidth: 16,
-                          minHeight: 16,
-                        }}
-                      />
-                      <Text sx={{ color: 'fg.muted', fontSize: 0 }}>
-                        Waiting for approval agent messages…
-                      </Text>
-                    </Box>
-                  ) : (
+                {/* ── Approval Pending Queue ──────────────────────────────── */}
+                {hasTriggeredApproval && approvals.length > 0 && (
+                  <>
+                    <Heading as="h4" sx={{ fontSize: 1, mt: 3, mb: 2 }}>
+                      Pending Tool Approvals
+                    </Heading>
                     <Box
                       sx={{
                         display: 'flex',
@@ -1818,33 +1661,150 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
                         mb: 2,
                       }}
                     >
-                      {approvalSidebarMessages
-                        .slice()
-                        .filter(msg => msg.role !== 'user')
-                        .sort((a, b) => {
-                          const ta = a.createdAt
-                            ? new Date(a.createdAt).getTime()
-                            : 0;
-                          const tb = b.createdAt
-                            ? new Date(b.createdAt).getTime()
-                            : 0;
-                          return tb - ta;
-                        })
-                        .slice(0, 10)
-                        .map(msg => {
-                          const content =
-                            typeof msg.content === 'string'
-                              ? msg.content
-                              : JSON.stringify(msg.content);
+                      {approvals.map(a => (
+                        <Box
+                          key={a.id}
+                          sx={{
+                            p: 2,
+                            border: '1px solid',
+                            borderColor: 'attention.muted',
+                            borderRadius: 2,
+                            bg: 'attention.subtle',
+                          }}
+                        >
+                          <Text
+                            sx={{
+                              fontWeight: 600,
+                              fontSize: 1,
+                              display: 'block',
+                              mb: 1,
+                            }}
+                          >
+                            🛡️ {a.tool_name}
+                          </Text>
+                          {a.tool_args && (
+                            <Text
+                              sx={{
+                                fontSize: 0,
+                                color: 'fg.muted',
+                                display: 'block',
+                                mb: 2,
+                                fontFamily: 'mono',
+                              }}
+                            >
+                              {JSON.stringify(a.tool_args)}
+                            </Text>
+                          )}
+                          <Box sx={{ display: 'flex', gap: 1 }}>
+                            <Button
+                              size="small"
+                              variant="primary"
+                              onClick={() => void handleApprove(a.id)}
+                              disabled={approvalLoading === a.id}
+                            >
+                              {approvalLoading === a.id
+                                ? 'Approving…'
+                                : 'Approve'}
+                            </Button>
+                            <Button
+                              size="small"
+                              variant="danger"
+                              onClick={() =>
+                                void handleReject(
+                                  a.id,
+                                  'Rejected from trigger panel',
+                                )
+                              }
+                              disabled={approvalLoading === a.id}
+                            >
+                              Reject
+                            </Button>
+                          </Box>
+                        </Box>
+                      ))}
+                    </Box>
+                  </>
+                )}
+
+                {/* ── Approval Streaming Messages ─────────────────────────── */}
+                {hasTriggeredApproval && (
+                  <>
+                    <Heading as="h4" sx={{ fontSize: 1, mt: 3, mb: 2 }}>
+                      Approval Agent Messages
+                      {isLaunchingApproval && (
+                        <Spinner
+                          size="small"
+                          sx={{
+                            ml: 2,
+                            verticalAlign: 'middle',
+                            width: 14,
+                            height: 14,
+                            minWidth: 14,
+                            minHeight: 14,
+                          }}
+                        />
+                      )}
+                    </Heading>
+
+                    {/* ── Approval Generated Output ───────────────────────── */}
+                    {hasTriggeredApproval && (
+                      <>
+                        <Heading as="h4" sx={{ fontSize: 1, mt: 3, mb: 2 }}>
+                          Generated Output
+                        </Heading>
+
+                        {(() => {
+                          const latestAssistantOutput = approvalSidebarMessages
+                            .filter(msg => msg.role === 'assistant')
+                            .sort((a, b) => {
+                              const ta = a.createdAt
+                                ? new Date(a.createdAt).getTime()
+                                : 0;
+                              const tb = b.createdAt
+                                ? new Date(b.createdAt).getTime()
+                                : 0;
+                              return tb - ta;
+                            })[0];
+
+                          if (!latestAssistantOutput) {
+                            return (
+                              <Box
+                                sx={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: 2,
+                                  mb: 2,
+                                }}
+                              >
+                                <Spinner
+                                  size="small"
+                                  sx={{
+                                    width: 16,
+                                    height: 16,
+                                    minWidth: 16,
+                                    minHeight: 16,
+                                  }}
+                                />
+                                <Text sx={{ color: 'fg.muted', fontSize: 0 }}>
+                                  Waiting for agent output…
+                                </Text>
+                              </Box>
+                            );
+                          }
+
+                          const outputText =
+                            typeof latestAssistantOutput.content === 'string'
+                              ? latestAssistantOutput.content
+                              : JSON.stringify(latestAssistantOutput.content);
+
                           return (
                             <Box
-                              key={`approval-msg-${msg.id}`}
                               sx={{
-                                p: 2,
-                                bg: 'canvas.subtle',
-                                borderRadius: 2,
+                                mb: 2,
                                 border: '1px solid',
-                                borderColor: 'border.default',
+                                borderColor: 'success.muted',
+                                borderRadius: 2,
+                                overflow: 'hidden',
                               }}
                             >
                               <Box
@@ -1852,578 +1812,726 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
                                   display: 'flex',
                                   alignItems: 'center',
                                   gap: 1,
-                                  mb: 1,
+                                  px: 2,
+                                  py: 1,
+                                  bg: 'success.subtle',
+                                  borderBottom: '1px solid',
+                                  borderColor: 'success.muted',
                                 }}
                               >
-                                <Label
-                                  size="small"
-                                  variant={
-                                    msg.role === 'assistant'
-                                      ? 'accent'
-                                      : msg.role === 'tool'
-                                        ? 'success'
-                                        : 'secondary'
-                                  }
-                                >
-                                  {msg.role}
+                                <Label variant="success" size="small">
+                                  completed
                                 </Label>
-                                {msg.createdAt && (
+                                {latestAssistantOutput.createdAt && (
                                   <Text
                                     sx={{
                                       fontSize: 0,
                                       color: 'fg.muted',
-                                      marginLeft: 'auto',
+                                      ml: 'auto',
                                       whiteSpace: 'nowrap',
                                     }}
                                   >
                                     {new Date(
-                                      msg.createdAt,
-                                    ).toLocaleTimeString()}
+                                      latestAssistantOutput.createdAt,
+                                    ).toLocaleString()}
                                   </Text>
                                 )}
+                                <Button
+                                  size="small"
+                                  variant="invisible"
+                                  sx={{ p: 1 }}
+                                  onClick={() =>
+                                    navigator.clipboard.writeText(outputText)
+                                  }
+                                >
+                                  <CopyIcon size={12} />
+                                </Button>
                               </Box>
-                              <Text
+                              <Box
                                 sx={{
-                                  fontSize: 0,
-                                  color: 'fg.default',
-                                  display: 'block',
-                                  whiteSpace: 'pre-wrap',
-                                  wordBreak: 'break-word',
+                                  p: 2,
+                                  bg: 'canvas.default',
+                                  maxHeight: 300,
+                                  overflow: 'auto',
                                 }}
                               >
-                                {content.length > 320
-                                  ? `${content.slice(0, 320)}…`
-                                  : content}
-                              </Text>
+                                <Text
+                                  sx={{
+                                    fontSize: 0,
+                                    color: 'fg.default',
+                                    display: 'block',
+                                    whiteSpace: 'pre-wrap',
+                                    wordBreak: 'break-word',
+                                    fontFamily: 'mono',
+                                  }}
+                                >
+                                  {outputText || '(empty output)'}
+                                </Text>
+                              </Box>
                             </Box>
                           );
-                        })}
-                    </Box>
-                  )}
-                </>
-              )}
+                        })()}
+                      </>
+                    )}
 
-              <Box sx={{ mt: 2, display: 'grid', gap: 2 }}>
-                <Box>
-                  <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
-                    Stream once (local curl)
-                  </Text>
-                  <Box
-                    sx={{
-                      mt: 1,
-                      bg: 'canvas.subtle',
-                      borderRadius: 2,
-                      p: 2,
-                      fontFamily: 'mono',
-                      fontSize: 0,
-                      wordBreak: 'break-all',
-                    }}
-                  >
-                    {triggerRunCurl}
-                  </Box>
-                </Box>
-                <Button
-                  size="small"
-                  leadingVisual={CopyIcon}
-                  onClick={() => navigator.clipboard.writeText(triggerRunCurl)}
-                >
-                  Copy streaming command
-                </Button>
-              </Box>
-            </Box>
-          )}
-
-          {/* ── Cron tab ─────────────────────────────────────────────── */}
-          {activeTab === 'cron' && (
-            <Box
-              sx={{
-                p: 3,
-                borderBottom: '1px solid',
-                borderColor: 'border.default',
-              }}
-            >
-              <Box
-                sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}
-              >
-                <ClockIcon size={16} />
-                <Heading as="h3" sx={{ fontSize: 2 }}>
-                  Cron Schedule
-                </Heading>
-              </Box>
-
-              <Label variant="primary" sx={{ mb: 2, display: 'inline-block' }}>
-                Current: {cronExpr}
-              </Label>
-
-              {nextRun && (
-                <Text as="p" sx={{ fontSize: 0, color: 'fg.muted', mb: 2 }}>
-                  Next run: {new Date(nextRun).toLocaleString()}
-                </Text>
-              )}
-
-              <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-                <TextInput
-                  value={editCron}
-                  onChange={e => setEditCron(e.target.value)}
-                  placeholder="* * * * *"
-                  sx={{ flex: 1 }}
-                  size="small"
-                />
-                <Button
-                  size="small"
-                  variant="primary"
-                  leadingVisual={SyncIcon}
-                  onClick={handleUpdateCron}
-                  disabled={isUpdating}
-                >
-                  {isUpdating ? 'Saving…' : 'Update'}
-                </Button>
-              </Box>
-
-              <Text as="p" sx={{ fontSize: 0, color: 'fg.muted' }}>
-                Standard cron syntax: minute hour day month weekday
-              </Text>
-            </Box>
-          )}
-
-          {/* ── Webhook tab ──────────────────────────────────────────── */}
-          {activeTab === 'webhook' && (
-            <Box
-              sx={{
-                p: 3,
-                borderBottom: '1px solid',
-                borderColor: 'border.default',
-              }}
-            >
-              <Box
-                sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}
-              >
-                <GlobeIcon size={16} />
-                <Heading as="h3" sx={{ fontSize: 2 }}>
-                  Webhook Trigger
-                </Heading>
-              </Box>
-
-              <Text as="p" sx={{ fontSize: 0, color: 'fg.muted', mb: 3 }}>
-                Generate a unique URL that triggers this agent on incoming HTTP
-                POST requests. Useful for CI/CD pipelines, external services, or
-                custom integrations.
-              </Text>
-
-              {webhookUrl ? (
-                <>
-                  <Label
-                    variant={webhookEnabled ? 'success' : 'secondary'}
-                    sx={{ mb: 2, display: 'inline-block' }}
-                  >
-                    {webhookEnabled ? 'Active' : 'Disabled'}
-                  </Label>
-
-                  <Box
-                    sx={{
-                      bg: 'canvas.subtle',
-                      p: 2,
-                      borderRadius: 2,
-                      mb: 2,
-                      fontFamily: 'mono',
-                      fontSize: 0,
-                      wordBreak: 'break-all',
-                    }}
-                  >
-                    {webhookUrl}
-                  </Box>
-
-                  {webhookSecret && (
-                    <Box sx={{ mb: 2 }}>
-                      <Text sx={{ fontSize: 0, fontWeight: 'bold' }}>
-                        Secret:
-                      </Text>
+                    {approvalSidebarMessages.filter(msg => msg.role !== 'user')
+                      .length === 0 ? (
                       <Box
                         sx={{
-                          bg: 'canvas.subtle',
-                          p: 2,
-                          borderRadius: 2,
-                          mt: 1,
-                          fontFamily: 'mono',
-                          fontSize: 0,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 2,
+                          mb: 2,
                         }}
                       >
-                        {webhookSecret}
+                        <Spinner
+                          size="small"
+                          sx={{
+                            width: 16,
+                            height: 16,
+                            minWidth: 16,
+                            minHeight: 16,
+                          }}
+                        />
+                        <Text sx={{ color: 'fg.muted', fontSize: 0 }}>
+                          Waiting for approval agent messages…
+                        </Text>
                       </Box>
-                    </Box>
-                  )}
+                    ) : (
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: 2,
+                          mb: 2,
+                        }}
+                      >
+                        {approvalSidebarMessages
+                          .slice()
+                          .filter(msg => msg.role !== 'user')
+                          .sort((a, b) => {
+                            const ta = a.createdAt
+                              ? new Date(a.createdAt).getTime()
+                              : 0;
+                            const tb = b.createdAt
+                              ? new Date(b.createdAt).getTime()
+                              : 0;
+                            return tb - ta;
+                          })
+                          .slice(0, 10)
+                          .map(msg => {
+                            const content =
+                              typeof msg.content === 'string'
+                                ? msg.content
+                                : JSON.stringify(msg.content);
+                            return (
+                              <Box
+                                key={`approval-msg-${msg.id}`}
+                                sx={{
+                                  p: 2,
+                                  bg: 'canvas.subtle',
+                                  borderRadius: 2,
+                                  border: '1px solid',
+                                  borderColor: 'border.default',
+                                }}
+                              >
+                                <Box
+                                  sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 1,
+                                    mb: 1,
+                                  }}
+                                >
+                                  <Label
+                                    size="small"
+                                    variant={
+                                      msg.role === 'assistant'
+                                        ? 'accent'
+                                        : msg.role === 'tool'
+                                          ? 'success'
+                                          : 'secondary'
+                                    }
+                                  >
+                                    {msg.role}
+                                  </Label>
+                                  {msg.createdAt && (
+                                    <Text
+                                      sx={{
+                                        fontSize: 0,
+                                        color: 'fg.muted',
+                                        marginLeft: 'auto',
+                                        whiteSpace: 'nowrap',
+                                      }}
+                                    >
+                                      {new Date(
+                                        msg.createdAt,
+                                      ).toLocaleTimeString()}
+                                    </Text>
+                                  )}
+                                </Box>
+                                <Text
+                                  sx={{
+                                    fontSize: 0,
+                                    color: 'fg.default',
+                                    display: 'block',
+                                    whiteSpace: 'pre-wrap',
+                                    wordBreak: 'break-word',
+                                  }}
+                                >
+                                  {content.length > 320
+                                    ? `${content.slice(0, 320)}…`
+                                    : content}
+                                </Text>
+                              </Box>
+                            );
+                          })}
+                      </Box>
+                    )}
+                  </>
+                )}
 
-                  <Box sx={{ display: 'flex', gap: 2 }}>
-                    <Button
-                      size="small"
-                      leadingVisual={CopyIcon}
-                      onClick={() => navigator.clipboard.writeText(webhookUrl)}
-                    >
-                      Copy URL
-                    </Button>
-                    <Button
-                      size="small"
-                      variant={webhookEnabled ? 'danger' : 'primary'}
-                      onClick={handleToggleWebhook}
-                    >
-                      {webhookEnabled ? 'Disable' : 'Enable'}
-                    </Button>
-                  </Box>
-                </>
-              ) : (
-                <Button
-                  size="small"
-                  variant="primary"
-                  leadingVisual={GlobeIcon}
-                  onClick={handleGenerateWebhook}
-                  disabled={isUpdating}
-                  sx={{ width: '100%' }}
-                >
-                  {isUpdating ? 'Generating…' : 'Generate Webhook URL'}
-                </Button>
-              )}
-            </Box>
-          )}
-
-          {/* ── Event tab ────────────────────────────────────────────── */}
-          {activeTab === 'event' && (
-            <Box
-              sx={{
-                p: 3,
-                borderBottom: '1px solid',
-                borderColor: 'border.default',
-              }}
-            >
-              <Box
-                sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}
-              >
-                <ZapIcon size={16} />
-                <Heading as="h3" sx={{ fontSize: 2 }}>
-                  Event Trigger
-                </Heading>
-              </Box>
-
-              <Text as="p" sx={{ fontSize: 0, color: 'fg.muted', mb: 3 }}>
-                Subscribe to a Kafka topic or internal event stream. The agent
-                triggers on matching messages.
-              </Text>
-
-              {eventSubscribed ? (
-                <>
-                  <Label
-                    variant="success"
-                    sx={{ mb: 2, display: 'inline-block' }}
-                  >
-                    Subscribed to: {eventTopic}
-                  </Label>
-                  {eventFilter && (
-                    <Text as="p" sx={{ fontSize: 0, color: 'fg.muted', mb: 2 }}>
-                      Filter: {eventFilter}
+                <Box sx={{ mt: 2, display: 'grid', gap: 2 }}>
+                  <Box>
+                    <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
+                      Stream once (local curl)
                     </Text>
-                  )}
+                    <Box
+                      sx={{
+                        mt: 1,
+                        bg: 'canvas.subtle',
+                        borderRadius: 2,
+                        p: 2,
+                        fontFamily: 'mono',
+                        fontSize: 0,
+                        wordBreak: 'break-all',
+                      }}
+                    >
+                      {triggerRunCurl}
+                    </Box>
+                  </Box>
                   <Button
                     size="small"
-                    variant="danger"
-                    onClick={() => setEventSubscribed(false)}
-                    sx={{ width: '100%' }}
+                    leadingVisual={CopyIcon}
+                    onClick={() =>
+                      navigator.clipboard.writeText(triggerRunCurl)
+                    }
                   >
-                    Unsubscribe
+                    Copy streaming command
                   </Button>
-                </>
-              ) : (
-                <>
+                </Box>
+              </Box>
+            )}
+
+            {/* ── Cron tab ─────────────────────────────────────────────── */}
+            {activeTab === 'cron' && (
+              <Box
+                sx={{
+                  p: 3,
+                  borderBottom: '1px solid',
+                  borderColor: 'border.default',
+                }}
+              >
+                <Box
+                  sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}
+                >
+                  <ClockIcon size={16} />
+                  <Heading as="h3" sx={{ fontSize: 2 }}>
+                    Cron Schedule
+                  </Heading>
+                </Box>
+
+                <Label
+                  variant="primary"
+                  sx={{ mb: 2, display: 'inline-block' }}
+                >
+                  Current: {cronExpr}
+                </Label>
+
+                {nextRun && (
+                  <Text as="p" sx={{ fontSize: 0, color: 'fg.muted', mb: 2 }}>
+                    Next run: {new Date(nextRun).toLocaleString()}
+                  </Text>
+                )}
+
+                <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
                   <TextInput
-                    value={eventTopic}
-                    onChange={e => setEventTopic(e.target.value)}
-                    placeholder="e.g. kpi.daily-report"
-                    sx={{ width: '100%', mb: 2 }}
-                    size="small"
-                  />
-                  <TextInput
-                    value={eventFilter}
-                    onChange={e => setEventFilter(e.target.value)}
-                    placeholder="Optional JSONPath filter"
-                    sx={{ width: '100%', mb: 2 }}
+                    value={editCron}
+                    onChange={e => setEditCron(e.target.value)}
+                    placeholder="* * * * *"
+                    sx={{ flex: 1 }}
                     size="small"
                   />
                   <Button
                     size="small"
                     variant="primary"
-                    leadingVisual={ZapIcon}
-                    onClick={handleSubscribeEvent}
-                    disabled={isUpdating || !eventTopic.trim()}
-                    sx={{ width: '100%' }}
+                    leadingVisual={SyncIcon}
+                    onClick={handleUpdateCron}
+                    disabled={isUpdating}
                   >
-                    {isUpdating ? 'Subscribing…' : 'Subscribe'}
+                    {isUpdating ? 'Saving…' : 'Update'}
                   </Button>
-                </>
-              )}
-            </Box>
-          )}
+                </Box>
 
-          {/* ── Manual tab ───────────────────────────────────────────── */}
-          {activeTab === 'manual' && (
-            <Box
-              sx={{
-                p: 3,
-                borderBottom: '1px solid',
-                borderColor: 'border.default',
-              }}
-            >
-              <Box
-                sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}
-              >
-                <PlayIcon size={16} />
-                <Heading as="h3" sx={{ fontSize: 2 }}>
-                  Manual Trigger
-                </Heading>
+                <Text as="p" sx={{ fontSize: 0, color: 'fg.muted' }}>
+                  Standard cron syntax: minute hour day month weekday
+                </Text>
               </Box>
-
-              <Text as="p" sx={{ fontSize: 0, color: 'fg.muted', mb: 3 }}>
-                Fire the agent immediately. This is equivalent to the cron job
-                executing but bypasses the schedule.
-              </Text>
-
-              <Button
-                size="small"
-                leadingVisual={PlayIcon}
-                onClick={handleTriggerNow}
-                disabled={isTriggeringNow}
-                sx={{ width: '100%' }}
-              >
-                {isTriggeringNow ? 'Triggering…' : 'Trigger Now'}
-              </Button>
-
-              {triggerFlash && (
-                <Flash
-                  variant={
-                    triggerFlash.includes('success') ? 'success' : 'danger'
-                  }
-                  sx={{ mt: 2, fontSize: 0 }}
-                >
-                  {triggerFlash}
-                </Flash>
-              )}
-            </Box>
-          )}
-
-          {/* Trigger history */}
-          <Box sx={{ p: 3, flex: 1, overflow: 'auto' }}>
-            <Heading as="h4" sx={{ fontSize: 1, mb: 2 }}>
-              Trigger History
-            </Heading>
-
-            {triggerHistory.length === 0 ? (
-              <Text sx={{ color: 'fg.muted', fontSize: 0 }}>
-                No trigger runs recorded yet.
-              </Text>
-            ) : (
-              <Timeline>
-                {triggerHistory.slice(0, 20).map(rec => (
-                  <Timeline.Item key={rec.id}>
-                    <Timeline.Badge>
-                      {rec.status === 'success' ? (
-                        <CheckCircleIcon />
-                      ) : rec.status === 'failure' ? (
-                        <XCircleIcon />
-                      ) : (
-                        <Spinner size="small" />
-                      )}
-                    </Timeline.Badge>
-                    <Timeline.Body>
-                      <Text sx={{ fontSize: 0 }}>
-                        {new Date(rec.timestamp).toLocaleString()}
-                        {' — '}
-                        <Label
-                          variant={
-                            rec.status === 'success'
-                              ? 'success'
-                              : rec.status === 'failure'
-                                ? 'danger'
-                                : 'accent'
-                          }
-                          size="small"
-                        >
-                          {rec.status}
-                        </Label>
-                        {rec.duration_ms != null && (
-                          <Text sx={{ ml: 1, color: 'fg.muted' }}>
-                            ({(rec.duration_ms / 1000).toFixed(1)}s)
-                          </Text>
-                        )}
-                      </Text>
-                    </Timeline.Body>
-                  </Timeline.Item>
-                ))}
-              </Timeline>
             )}
 
-            {/* Agent Events */}
-            <Heading as="h4" sx={{ fontSize: 1, mt: 3, mb: 2 }}>
-              Agent Events
-            </Heading>
+            {/* ── Webhook tab ──────────────────────────────────────────── */}
+            {activeTab === 'webhook' && (
+              <Box
+                sx={{
+                  p: 3,
+                  borderBottom: '1px solid',
+                  borderColor: 'border.default',
+                }}
+              >
+                <Box
+                  sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}
+                >
+                  <GlobeIcon size={16} />
+                  <Heading as="h3" sx={{ fontSize: 2 }}>
+                    Webhook Trigger
+                  </Heading>
+                </Box>
 
-            {agentEvents.length === 0 ? (
-              <Text sx={{ color: 'fg.muted', fontSize: 0 }}>
-                No agent events yet.
-              </Text>
-            ) : (
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                {[...agentEvents]
-                  .sort(
-                    (a, b) =>
-                      new Date(b.created_at).getTime() -
-                      new Date(a.created_at).getTime(),
-                  )
-                  .map((evt: AgentEvent) => (
+                <Text as="p" sx={{ fontSize: 0, color: 'fg.muted', mb: 3 }}>
+                  Generate a unique URL that triggers this agent on incoming
+                  HTTP POST requests. Useful for CI/CD pipelines, external
+                  services, or custom integrations.
+                </Text>
+
+                {webhookUrl ? (
+                  <>
+                    <Label
+                      variant={webhookEnabled ? 'success' : 'secondary'}
+                      sx={{ mb: 2, display: 'inline-block' }}
+                    >
+                      {webhookEnabled ? 'Active' : 'Disabled'}
+                    </Label>
+
                     <Box
-                      key={evt.id}
                       sx={{
+                        bg: 'canvas.subtle',
                         p: 2,
-                        bg: evt.read ? 'canvas.subtle' : 'accent.subtle',
                         borderRadius: 2,
-                        border: '1px solid',
-                        borderColor: evt.read
-                          ? 'border.default'
-                          : 'accent.muted',
+                        mb: 2,
+                        fontFamily: 'mono',
+                        fontSize: 0,
+                        wordBreak: 'break-all',
                       }}
                     >
-                      <Box
-                        sx={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 1,
-                          mb: 1,
-                        }}
-                      >
-                        <Label
-                          variant={
-                            evt.kind === 'agent-started'
-                              ? 'accent'
-                              : evt.kind === 'agent-output'
-                                ? 'success'
-                                : evt.kind?.includes('alert')
-                                  ? 'danger'
-                                  : 'attention'
-                          }
-                          size="small"
-                        >
-                          {evt.kind}
-                        </Label>
-                        <Text sx={{ flex: 1, fontSize: 0, fontWeight: 'bold' }}>
-                          {evt.title}
-                        </Text>
-                        <Text
-                          sx={{
-                            fontSize: 0,
-                            color: 'fg.muted',
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          {new Date(evt.created_at).toLocaleString()}
-                        </Text>
-                        <Button
-                          size="small"
-                          variant="invisible"
-                          onClick={() => {
-                            const payload = {
-                              eventId: String(evt.id),
-                              eventAgentId: String(
-                                evt.agent_id || agentId || '',
-                              ),
-                            };
-                            if (evt.read) {
-                              markUnreadMutation.mutate(payload);
-                            } else {
-                              markReadMutation.mutate(payload);
-                            }
-                          }}
-                          sx={{ p: 1 }}
-                        >
-                          {evt.read ? (
-                            <EyeClosedIcon size={12} />
-                          ) : (
-                            <EyeIcon size={12} />
-                          )}
-                        </Button>
-                        <Button
-                          size="small"
-                          variant="invisible"
-                          onClick={() => deleteEventMutation.mutate(evt.id)}
-                          sx={{ p: 1, color: 'danger.fg' }}
-                        >
-                          <TrashIcon size={12} />
-                        </Button>
-                      </Box>
-                      {/* Event-type-specific fields */}
-                      {evt.payload &&
-                        (() => {
-                          const p = evt.payload as Record<string, any>;
-                          return (
-                            <Box sx={{ fontSize: 0, color: 'fg.muted' }}>
-                              {evt.kind === 'agent-output' && p.outputs && (
-                                <Tooltip text={String(p.outputs)} direction="n">
-                                  <button
-                                    type="button"
-                                    aria-label={String(p.outputs)}
-                                    style={{
-                                      all: 'unset',
-                                      display: 'block',
-                                      width: '100%',
-                                      cursor: 'default',
-                                    }}
-                                  >
-                                    <Box
-                                      sx={{
-                                        mb: 1,
-                                        display: 'flex',
-                                        alignItems: 'baseline',
-                                        gap: 1,
-                                        minWidth: 0,
-                                      }}
-                                    >
-                                      <Text
-                                        as="span"
-                                        sx={{
-                                          fontWeight: 'bold',
-                                          color: 'fg.default',
-                                          whiteSpace: 'nowrap',
-                                        }}
-                                      >
-                                        Output:
-                                      </Text>
-                                      <Truncate
-                                        title={String(p.outputs)}
-                                        maxWidth="100%"
-                                        sx={{ minWidth: 0, flex: 1 }}
-                                      >
-                                        {String(p.outputs)}
-                                      </Truncate>
-                                    </Box>
-                                  </button>
-                                </Tooltip>
-                              )}
-                              {evt.kind === 'agent-output' &&
-                                p.duration_ms != null && (
-                                  <Text as="p">
-                                    Duration:{' '}
-                                    {(Number(p.duration_ms) / 1000).toFixed(1)}s
-                                  </Text>
-                                )}
-                              {evt.kind?.includes('guardrail') && p.message && (
-                                <Text as="p">{String(p.message)}</Text>
-                              )}
-                            </Box>
-                          );
-                        })()}
+                      {webhookUrl}
                     </Box>
-                  ))}
+
+                    {webhookSecret && (
+                      <Box sx={{ mb: 2 }}>
+                        <Text sx={{ fontSize: 0, fontWeight: 'bold' }}>
+                          Secret:
+                        </Text>
+                        <Box
+                          sx={{
+                            bg: 'canvas.subtle',
+                            p: 2,
+                            borderRadius: 2,
+                            mt: 1,
+                            fontFamily: 'mono',
+                            fontSize: 0,
+                          }}
+                        >
+                          {webhookSecret}
+                        </Box>
+                      </Box>
+                    )}
+
+                    <Box sx={{ display: 'flex', gap: 2 }}>
+                      <Button
+                        size="small"
+                        leadingVisual={CopyIcon}
+                        onClick={() =>
+                          navigator.clipboard.writeText(webhookUrl)
+                        }
+                      >
+                        Copy URL
+                      </Button>
+                      <Button
+                        size="small"
+                        variant={webhookEnabled ? 'danger' : 'primary'}
+                        onClick={handleToggleWebhook}
+                      >
+                        {webhookEnabled ? 'Disable' : 'Enable'}
+                      </Button>
+                    </Box>
+                  </>
+                ) : (
+                  <Button
+                    size="small"
+                    variant="primary"
+                    leadingVisual={GlobeIcon}
+                    onClick={handleGenerateWebhook}
+                    disabled={isUpdating}
+                    sx={{ width: '100%' }}
+                  >
+                    {isUpdating ? 'Generating…' : 'Generate Webhook URL'}
+                  </Button>
+                )}
               </Box>
             )}
+
+            {/* ── Event tab ────────────────────────────────────────────── */}
+            {activeTab === 'event' && (
+              <Box
+                sx={{
+                  p: 3,
+                  borderBottom: '1px solid',
+                  borderColor: 'border.default',
+                }}
+              >
+                <Box
+                  sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}
+                >
+                  <ZapIcon size={16} />
+                  <Heading as="h3" sx={{ fontSize: 2 }}>
+                    Event Trigger
+                  </Heading>
+                </Box>
+
+                <Text as="p" sx={{ fontSize: 0, color: 'fg.muted', mb: 3 }}>
+                  Subscribe to a Kafka topic or internal event stream. The agent
+                  triggers on matching messages.
+                </Text>
+
+                {eventSubscribed ? (
+                  <>
+                    <Label
+                      variant="success"
+                      sx={{ mb: 2, display: 'inline-block' }}
+                    >
+                      Subscribed to: {eventTopic}
+                    </Label>
+                    {eventFilter && (
+                      <Text
+                        as="p"
+                        sx={{ fontSize: 0, color: 'fg.muted', mb: 2 }}
+                      >
+                        Filter: {eventFilter}
+                      </Text>
+                    )}
+                    <Button
+                      size="small"
+                      variant="danger"
+                      onClick={() => setEventSubscribed(false)}
+                      sx={{ width: '100%' }}
+                    >
+                      Unsubscribe
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <TextInput
+                      value={eventTopic}
+                      onChange={e => setEventTopic(e.target.value)}
+                      placeholder="e.g. kpi.daily-report"
+                      sx={{ width: '100%', mb: 2 }}
+                      size="small"
+                    />
+                    <TextInput
+                      value={eventFilter}
+                      onChange={e => setEventFilter(e.target.value)}
+                      placeholder="Optional JSONPath filter"
+                      sx={{ width: '100%', mb: 2 }}
+                      size="small"
+                    />
+                    <Button
+                      size="small"
+                      variant="primary"
+                      leadingVisual={ZapIcon}
+                      onClick={handleSubscribeEvent}
+                      disabled={isUpdating || !eventTopic.trim()}
+                      sx={{ width: '100%' }}
+                    >
+                      {isUpdating ? 'Subscribing…' : 'Subscribe'}
+                    </Button>
+                  </>
+                )}
+              </Box>
+            )}
+
+            {/* ── Manual tab ───────────────────────────────────────────── */}
+            {activeTab === 'manual' && (
+              <Box
+                sx={{
+                  p: 3,
+                  borderBottom: '1px solid',
+                  borderColor: 'border.default',
+                }}
+              >
+                <Box
+                  sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}
+                >
+                  <PlayIcon size={16} />
+                  <Heading as="h3" sx={{ fontSize: 2 }}>
+                    Manual Trigger
+                  </Heading>
+                </Box>
+
+                <Text as="p" sx={{ fontSize: 0, color: 'fg.muted', mb: 3 }}>
+                  Fire the agent immediately. This is equivalent to the cron job
+                  executing but bypasses the schedule.
+                </Text>
+
+                <Button
+                  size="small"
+                  leadingVisual={PlayIcon}
+                  onClick={handleTriggerNow}
+                  disabled={isTriggeringNow}
+                  sx={{ width: '100%' }}
+                >
+                  {isTriggeringNow ? 'Triggering…' : 'Trigger Now'}
+                </Button>
+
+                {triggerFlash && (
+                  <Flash
+                    variant={
+                      triggerFlash.includes('success') ? 'success' : 'danger'
+                    }
+                    sx={{ mt: 2, fontSize: 0 }}
+                  >
+                    {triggerFlash}
+                  </Flash>
+                )}
+              </Box>
+            )}
+
+            {/* Trigger history */}
+            <Box sx={{ p: 3, flex: 1, overflow: 'auto' }}>
+              <Heading as="h4" sx={{ fontSize: 1, mb: 2 }}>
+                Trigger History
+              </Heading>
+
+              {triggerHistory.length === 0 ? (
+                <Text sx={{ color: 'fg.muted', fontSize: 0 }}>
+                  No trigger runs recorded yet.
+                </Text>
+              ) : (
+                <Timeline>
+                  {triggerHistory.slice(0, 20).map(rec => (
+                    <Timeline.Item key={rec.id}>
+                      <Timeline.Badge>
+                        {rec.status === 'success' ? (
+                          <CheckCircleIcon />
+                        ) : rec.status === 'failure' ? (
+                          <XCircleIcon />
+                        ) : (
+                          <Spinner size="small" />
+                        )}
+                      </Timeline.Badge>
+                      <Timeline.Body>
+                        <Text sx={{ fontSize: 0 }}>
+                          {new Date(rec.timestamp).toLocaleString()}
+                          {' — '}
+                          <Label
+                            variant={
+                              rec.status === 'success'
+                                ? 'success'
+                                : rec.status === 'failure'
+                                  ? 'danger'
+                                  : 'accent'
+                            }
+                            size="small"
+                          >
+                            {rec.status}
+                          </Label>
+                          {rec.duration_ms != null && (
+                            <Text sx={{ ml: 1, color: 'fg.muted' }}>
+                              ({(rec.duration_ms / 1000).toFixed(1)}s)
+                            </Text>
+                          )}
+                        </Text>
+                      </Timeline.Body>
+                    </Timeline.Item>
+                  ))}
+                </Timeline>
+              )}
+
+              {/* Agent Events */}
+              <Heading as="h4" sx={{ fontSize: 1, mt: 3, mb: 2 }}>
+                Agent Events
+              </Heading>
+
+              {agentEvents.length === 0 ? (
+                <Text sx={{ color: 'fg.muted', fontSize: 0 }}>
+                  No agent events yet.
+                </Text>
+              ) : (
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  {[...agentEvents]
+                    .sort(
+                      (a, b) =>
+                        new Date(b.created_at).getTime() -
+                        new Date(a.created_at).getTime(),
+                    )
+                    .map((evt: AgentEvent) => (
+                      <Box
+                        key={evt.id}
+                        sx={{
+                          p: 2,
+                          bg: evt.read ? 'canvas.subtle' : 'accent.subtle',
+                          borderRadius: 2,
+                          border: '1px solid',
+                          borderColor: evt.read
+                            ? 'border.default'
+                            : 'accent.muted',
+                        }}
+                      >
+                        <Box
+                          sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1,
+                            mb: 1,
+                          }}
+                        >
+                          <Label
+                            variant={
+                              evt.kind === 'agent-started'
+                                ? 'accent'
+                                : evt.kind === 'agent-output'
+                                  ? 'success'
+                                  : evt.kind?.includes('alert')
+                                    ? 'danger'
+                                    : 'attention'
+                            }
+                            size="small"
+                          >
+                            {evt.kind}
+                          </Label>
+                          <Text
+                            sx={{ flex: 1, fontSize: 0, fontWeight: 'bold' }}
+                          >
+                            {evt.title}
+                          </Text>
+                          <Text
+                            sx={{
+                              fontSize: 0,
+                              color: 'fg.muted',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {new Date(evt.created_at).toLocaleString()}
+                          </Text>
+                          <Button
+                            size="small"
+                            variant="invisible"
+                            onClick={() => {
+                              const payload = {
+                                eventId: String(evt.id),
+                                eventAgentId: String(
+                                  evt.agent_id || agentId || '',
+                                ),
+                              };
+                              if (evt.read) {
+                                markUnreadMutation.mutate(payload);
+                              } else {
+                                markReadMutation.mutate(payload);
+                              }
+                            }}
+                            sx={{ p: 1 }}
+                          >
+                            {evt.read ? (
+                              <EyeClosedIcon size={12} />
+                            ) : (
+                              <EyeIcon size={12} />
+                            )}
+                          </Button>
+                          <Button
+                            size="small"
+                            variant="invisible"
+                            onClick={() => deleteEventMutation.mutate(evt.id)}
+                            sx={{ p: 1, color: 'danger.fg' }}
+                          >
+                            <TrashIcon size={12} />
+                          </Button>
+                        </Box>
+                        {/* Event-type-specific fields */}
+                        {evt.payload &&
+                          (() => {
+                            const p = evt.payload as Record<string, any>;
+                            return (
+                              <Box sx={{ fontSize: 0, color: 'fg.muted' }}>
+                                {evt.kind === 'agent-output' && p.outputs && (
+                                  <Tooltip
+                                    text={String(p.outputs)}
+                                    direction="n"
+                                  >
+                                    <button
+                                      type="button"
+                                      aria-label={String(p.outputs)}
+                                      style={{
+                                        all: 'unset',
+                                        display: 'block',
+                                        width: '100%',
+                                        cursor: 'default',
+                                      }}
+                                    >
+                                      <Box
+                                        sx={{
+                                          mb: 1,
+                                          display: 'flex',
+                                          alignItems: 'baseline',
+                                          gap: 1,
+                                          minWidth: 0,
+                                        }}
+                                      >
+                                        <Text
+                                          as="span"
+                                          sx={{
+                                            fontWeight: 'bold',
+                                            color: 'fg.default',
+                                            whiteSpace: 'nowrap',
+                                          }}
+                                        >
+                                          Output:
+                                        </Text>
+                                        <Truncate
+                                          title={String(p.outputs)}
+                                          maxWidth="100%"
+                                          sx={{ minWidth: 0, flex: 1 }}
+                                        >
+                                          {String(p.outputs)}
+                                        </Truncate>
+                                      </Box>
+                                    </button>
+                                  </Tooltip>
+                                )}
+                                {evt.kind === 'agent-output' &&
+                                  p.duration_ms != null && (
+                                    <Text as="p">
+                                      Duration:{' '}
+                                      {(Number(p.duration_ms) / 1000).toFixed(
+                                        1,
+                                      )}
+                                      s
+                                    </Text>
+                                  )}
+                                {evt.kind?.includes('guardrail') &&
+                                  p.message && (
+                                    <Text as="p">{String(p.message)}</Text>
+                                  )}
+                              </Box>
+                            );
+                          })()}
+                      </Box>
+                    ))}
+                </Box>
+              )}
+            </Box>
           </Box>
         </Box>
       </Box>
-    </Box>
+    </fieldset>
   );
 };
 
