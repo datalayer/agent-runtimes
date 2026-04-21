@@ -20,7 +20,7 @@ import inspect
 import logging
 import os
 import traceback
-from typing import TYPE_CHECKING, Any, AsyncIterator
+from typing import TYPE_CHECKING, Any, AsyncIterator, Callable
 
 import httpx
 from pydantic_ai import UsageLimits
@@ -663,7 +663,7 @@ class VercelAITransport(BaseTransport):
 
                     def _make_mcp_filter(
                         enabled: set[str], known: set[str]
-                    ):
+                    ) -> Callable[[Any, ToolDefinition], bool]:
                         def _filter(_ctx: Any, tool_def: ToolDefinition) -> bool:
                             return (
                                 tool_def.name not in known

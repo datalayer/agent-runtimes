@@ -319,24 +319,24 @@ def build_capabilities_from_agent_spec(
 
             sa_cfgs: list[SubAgentConfig] = []
             for sa in getattr(subagents_config, "subagents", []):
-                cfg: SubAgentConfig = {
+                sa_cfg: SubAgentConfig = {
                     "name": sa.name,
                     "description": sa.description,
                     "instructions": sa.instructions,
                 }
                 if sa.model is not None:
-                    cfg["model"] = sa.model
+                    sa_cfg["model"] = sa.model
                 if sa.can_ask_questions is not None:
-                    cfg["can_ask_questions"] = sa.can_ask_questions
+                    sa_cfg["can_ask_questions"] = sa.can_ask_questions
                 if sa.max_questions is not None:
-                    cfg["max_questions"] = sa.max_questions
+                    sa_cfg["max_questions"] = sa.max_questions
                 if sa.preferred_mode is not None:
-                    cfg["preferred_mode"] = sa.preferred_mode
+                    sa_cfg["preferred_mode"] = sa.preferred_mode
                 if sa.typical_complexity is not None:
-                    cfg["typical_complexity"] = sa.typical_complexity
+                    sa_cfg["typical_complexity"] = sa.typical_complexity
                 if sa.typically_needs_context is not None:
-                    cfg["typically_needs_context"] = sa.typically_needs_context
-                sa_cfgs.append(cfg)
+                    sa_cfg["typically_needs_context"] = sa.typically_needs_context
+                sa_cfgs.append(sa_cfg)
 
             default_model = getattr(subagents_config, "default_model", None) or getattr(
                 agent_spec, "model", "openai:gpt-4.1"

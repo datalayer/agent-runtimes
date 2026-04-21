@@ -19,7 +19,7 @@ import re
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
@@ -262,7 +262,7 @@ def _parse_requirement_name(requirement: str) -> tuple[str, str | None]:
         return "", None
 
     try:
-        from packaging.requirements import Requirement  # type: ignore
+        from packaging.requirements import Requirement
 
         parsed = Requirement(req)
         spec = str(parsed.specifier) if str(parsed.specifier) else None
@@ -295,7 +295,7 @@ def _is_requirement_satisfied(requirement: str) -> bool:
         return True
 
     try:
-        from packaging.specifiers import SpecifierSet  # type: ignore
+        from packaging.specifiers import SpecifierSet
 
         return version in SpecifierSet(specifier)
     except Exception:
@@ -345,7 +345,10 @@ async def _run_agent_hooks(
                 sandbox = sandbox_manager.get_agent_sandbox(agent_id)
             if sandbox is None:
                 if effective_variant in {"eval", "jupyter"}:
-                    sandbox_manager.configure(variant=effective_variant)
+                    sandbox_variant = cast(
+                        Literal["eval", "jupyter"], effective_variant
+                    )
+                    sandbox_manager.configure(variant=sandbox_variant)
                 sandbox = sandbox_manager.get_sandbox()
 
         loop = asyncio.get_running_loop()
@@ -374,9 +377,13 @@ async def _run_agent_hooks(
 
         for script in sandbox_scripts:
             logger.info("Running %s-hooks sandbox code for '%s'", phase, agent_id)
+            def _run_script(script_code: str) -> Any:
+                return sandbox.run_code(script_code)
+
             result = await loop.run_in_executor(
                 None,
-                lambda code=script: sandbox.run_code(code),
+                _run_script,
+                script,
             )
             execution_ok = getattr(result, "execution_ok", True)
             if not execution_ok:
