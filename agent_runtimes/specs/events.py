@@ -13,7 +13,6 @@ from typing import Dict, List
 
 from agent_runtimes.types import EventField, EventSpec
 
-
 # ============================================================================
 # Event Definitions
 # ============================================================================
@@ -190,8 +189,8 @@ def get_event_spec(event_id: str) -> EventSpec | None:
     spec = EVENT_CATALOG.get(event_id)
     if spec is not None:
         return spec
-    base, _, ver = event_id.rpartition(':')
-    if base and '.' in ver:
+    base, _, ver = event_id.rpartition(":")
+    if base and "." in ver:
         return EVENT_CATALOG.get(base)
     return None
 

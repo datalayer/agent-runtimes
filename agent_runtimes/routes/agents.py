@@ -377,6 +377,7 @@ async def _run_agent_hooks(
 
         for script in sandbox_scripts:
             logger.info("Running %s-hooks sandbox code for '%s'", phase, agent_id)
+
             def _run_script(script_code: str) -> Any:
                 return sandbox.run_code(script_code)
 
@@ -584,7 +585,7 @@ def _build_sandbox_only_system_prompt(variant: str) -> str:
         "packages persist across calls."
         if variant == "jupyter"
         else "The sandbox executes Python in-process — state persists within the "
-             "same session."
+        "same session."
     )
     return (
         "## Sandbox\n"
@@ -619,7 +620,7 @@ def _build_codemode_system_prompt(variant: str) -> str:
         "packages persist across calls."
         if variant == "jupyter"
         else "The sandbox executes Python in-process — state persists within the "
-             "same session."
+        "same session."
     )
     return (
         "## Sandbox Access (Codemode)\n"
@@ -989,11 +990,7 @@ async def create_agent(
                 and not caller_disabled_skills
             ):
                 request.skills = library_spec.skills
-            if (
-                not request.tools
-                and library_spec.tools
-                and not caller_disabled_tools
-            ):
+            if not request.tools and library_spec.tools and not caller_disabled_tools:
                 request.tools = library_spec.tools
             if (
                 library_spec.system_prompt_codemode_addons
@@ -1168,7 +1165,9 @@ async def create_agent(
 
         launch_parameters = dict(request.agent_parameters or {})
         if parameter_schema:
-            launch_parameters = _apply_parameter_defaults(parameter_schema, launch_parameters)
+            launch_parameters = _apply_parameter_defaults(
+                parameter_schema, launch_parameters
+            )
             try:
                 _validate_parameters_against_schema(parameter_schema, launch_parameters)
             except ValueError as e:
@@ -1434,7 +1433,9 @@ async def create_agent(
         # - codemode is enabled (execute_code + MCP discovery)
         # - skills are enabled (run_skill_script)
         # - sandbox_variant is set without codemode (execute_code only)
-        need_shared_sandbox = request.enable_codemode or skills_enabled or bool(request.sandbox_variant)
+        need_shared_sandbox = (
+            request.enable_codemode or skills_enabled or bool(request.sandbox_variant)
+        )
         if need_shared_sandbox:
             if (
                 effective_variant == "jupyter"
@@ -1554,15 +1555,16 @@ async def create_agent(
         # - enable_codemode=True  → full toolset: execute_code + MCP discovery tools
         # - sandbox_variant set only → sandbox-only toolset: execute_code only
         if request.enable_codemode or request.sandbox_variant:
-            disable_mcp_for_codemode = (
-                not request.enable_codemode
-                or (selected_mcp_servers_explicit and len(request.selected_mcp_servers) == 0)
+            disable_mcp_for_codemode = not request.enable_codemode or (
+                selected_mcp_servers_explicit and len(request.selected_mcp_servers) == 0
             )
             # Only load MCP servers when codemode discovery is active.
             if request.enable_codemode:
                 mcp_manager = get_mcp_manager()
                 if not disable_mcp_for_codemode and not mcp_manager.get_servers():
-                    mcp_servers = await initialize_config_mcp_servers(discover_tools=True)
+                    mcp_servers = await initialize_config_mcp_servers(
+                        discover_tools=True
+                    )
                     mcp_manager.load_servers(mcp_servers)
                     logger.info(
                         f"Loaded {len(mcp_servers)} MCP servers for codemode agent {agent_id}"

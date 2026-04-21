@@ -448,7 +448,9 @@ def _get_available_skills() -> list[dict[str, Any]]:
                                     "id": skill.name,
                                     "name": skill.name,
                                     "description": skill.description,
-                                    "tags": skill.tags if hasattr(skill, "tags") else [],
+                                    "tags": skill.tags
+                                    if hasattr(skill, "tags")
+                                    else [],
                                     "source_variant": "path",
                                     "path": str(skill_md.parent.name),
                                 }

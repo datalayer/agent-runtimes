@@ -11,8 +11,6 @@ from typing import Any
 from pydantic_ai import UsageLimits
 
 from .cost_monitoring import CostMonitoringCapability
-from .llm_context_usage import LLMContextUsageCapability
-from .monitoring import MonitoringCapability
 from .guardrails import (
     DEFAULT_TOOL_PERMISSION_MAP,
     AsyncGuardrailCapability,
@@ -32,6 +30,8 @@ from .guardrails import (
     ToolGuardCapability,
     _parse_token_limit,
 )
+from .llm_context_usage import LLMContextUsageCapability
+from .monitoring import MonitoringCapability
 from .otel import OTelHooksCapability
 from .tool_approval import ToolApprovalCapability, ToolApprovalConfig
 
@@ -389,7 +389,10 @@ def build_capabilities_from_agent_spec(
         )
 
     # LLM context usage tracking (centralises per-run token recording).
-    if _env_bool("AGENT_RUNTIMES_ENABLE_CAPABILITY_LLM_CONTEXT_USAGE", True) and agent_id:
+    if (
+        _env_bool("AGENT_RUNTIMES_ENABLE_CAPABILITY_LLM_CONTEXT_USAGE", True)
+        and agent_id
+    ):
         capabilities.append(
             LLMContextUsageCapability(
                 agent_id=agent_id,

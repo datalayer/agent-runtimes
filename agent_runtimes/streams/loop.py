@@ -467,7 +467,9 @@ async def build_monitoring_snapshot_payload(
         mcp_status["enabled_tools_count"] = sum(
             len(tool_names) for tool_names in enabled_tools_by_server.values()
         )
-        mcp_status["approved_tools_by_server"] = _get_agent_mcp_approved_tools_by_server(agent_id)
+        mcp_status["approved_tools_by_server"] = (
+            _get_agent_mcp_approved_tools_by_server(agent_id)
+        )
     codemode_status = build_codemode_status(agent_id)
 
     graph_telemetry: dict[str, Any] | None = None
@@ -645,8 +647,8 @@ async def _handle_mcp_server_tool_approve(
 ) -> None:
     """Handle a per-tool approval toggle for a specific MCP server."""
     key = _stream_key(agent_id)
-    server_unapproved = (
-        _MCP_UNAPPROVED_TOOLS_BY_AGENT.setdefault(key, {}).setdefault(server_id, set())
+    server_unapproved = _MCP_UNAPPROVED_TOOLS_BY_AGENT.setdefault(key, {}).setdefault(
+        server_id, set()
     )
     if approved:
         server_unapproved.discard(tool_name)

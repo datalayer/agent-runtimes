@@ -221,9 +221,7 @@ class ToolApprovalManager:
             remove_pending_approval_event(approval_id)
 
         if result.get("approved"):
-            logger.info(
-                "Tool '%s' approved (approval_id=%s)", tool_name, approval_id
-            )
+            logger.info("Tool '%s' approved (approval_id=%s)", tool_name, approval_id)
             return {"status": "approved", "id": approval_id, "tool_name": tool_name}
 
         note = result.get("note")

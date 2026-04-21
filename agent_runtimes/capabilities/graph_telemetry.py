@@ -17,8 +17,8 @@ It produces:
 The trace is stored in a process-global registry keyed by ``agent_id`` so the
 monitoring snapshot builder can include it in WebSocket payloads.
 
-Usage
------
+Examples
+--------
 Wrap your graph execution with :func:`run_graph_with_telemetry`::
 
     from agent_runtimes.capabilities.graph_telemetry import run_graph_with_telemetry
@@ -141,9 +141,7 @@ def _get_otel_emitter(service_name: str = "agent-runtimes") -> Any | None:
         user_uid = decode_user_uid(user_jwt) if user_jwt else None
         if not user_uid:
             return None
-        return OTelEmitter(
-            service_name=service_name, user_uid=user_uid, token=user_jwt
-        )
+        return OTelEmitter(service_name=service_name, user_uid=user_uid, token=user_jwt)
     except Exception:
         return None
 
@@ -183,9 +181,7 @@ def _extract_topology_classic(graph: Any) -> tuple[list[dict], list[dict]]:
     nodes: list[dict[str, Any]] = []
     edges: list[dict[str, Any]] = []
 
-    node_classes = getattr(graph, "_node_types", None) or getattr(
-        graph, "nodes", []
-    )
+    node_classes = getattr(graph, "_node_types", None) or getattr(graph, "nodes", [])
     if not node_classes:
         return nodes, edges
 
@@ -284,7 +280,13 @@ def _extract_topology_beta(graph: Any) -> tuple[list[dict], list[dict]]:
                 for nid in (source, target):
                     if nid not in seen_node_ids:
                         seen_node_ids.add(nid)
-                        cat = "start" if nid == "__start__" else "end" if nid == "__end__" else "step"
+                        cat = (
+                            "start"
+                            if nid == "__start__"
+                            else "end"
+                            if nid == "__end__"
+                            else "step"
+                        )
                         nodes.append({"id": nid, "name": nid, "category": cat})
 
     return nodes, edges

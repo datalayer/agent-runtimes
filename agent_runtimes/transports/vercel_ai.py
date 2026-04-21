@@ -71,6 +71,77 @@ async def _wrap_streaming_body(body_iterator: AsyncIterator[str]) -> AsyncIterat
         raise
 
 
+async def _presignal_deferred_approvals(
+    body: dict[str, Any],
+    agent_id: str,
+) -> None:
+    """Mark pending local approval records 'approved' before a DeferredToolResults
+    continuation runs.
+
+    In **server mode** the human-approval decision travels via the ai-agents
+    WebSocket and updates ai-agents' store, but never calls
+    ``signal_approval_event()`` on the local asyncio.Event that
+    ``ToolApprovalCapability.before_tool_execute`` waits on.  Without this
+    pre-signal, ``before_tool_execute`` would call ``request_and_wait()`` again
+    on the continuation turn and block forever.
+
+    This function inspects the continuation body for ``approval-responded``
+    ``dynamic-tool`` parts and pre-approves the matching local records so the
+    capability hook's skip-check succeeds immediately.
+    """
+    from datetime import datetime, timezone
+
+    from ..routes.tool_approvals import (
+        _APPROVALS,
+        _APPROVALS_LOCK,
+        signal_approval_event,
+    )
+
+    messages: list[Any] = body.get("messages") or []
+    tool_call_ids: list[str] = []
+    for msg in messages:
+        if not isinstance(msg, dict) or msg.get("role") != "assistant":
+            continue
+        parts: list[Any] = msg.get("parts") or []
+        if not isinstance(parts, list):
+            continue
+        for part in parts:
+            if not isinstance(part, dict):
+                continue
+            if (
+                part.get("type") == "dynamic-tool"
+                and part.get("state") == "approval-responded"
+            ):
+                approval_info = part.get("approval") or {}
+                if approval_info.get("approved") is True:
+                    tool_call_id = part.get("toolCallId")
+                    if isinstance(tool_call_id, str) and tool_call_id:
+                        tool_call_ids.append(tool_call_id)
+
+    if not tool_call_ids:
+        return
+
+    now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    updated: list[tuple[str, str]] = []
+    async with _APPROVALS_LOCK:
+        for record_id, record in list(_APPROVALS.items()):
+            if record.tool_call_id in tool_call_ids and record.status == "pending":
+                _APPROVALS[record_id] = record.model_copy(
+                    update={"status": "approved", "updated_at": now}
+                )
+                updated.append((record_id, record.tool_call_id or ""))
+
+    for record_id, tool_call_id in updated:
+        signal_approval_event(record_id, approved=True, note=None)
+        logger.info(
+            "[Vercel AI] Pre-approved local record %s (tool_call_id=%s) "
+            "for DeferredToolResults continuation in agent %s",
+            record_id,
+            tool_call_id,
+            agent_id,
+        )
+
+
 async def _wrap_streaming_body_with_approvals(
     body_iterator: AsyncIterator[str],
     approval_tool_ids: list[str],
@@ -657,17 +728,14 @@ class VercelAITransport(BaseTransport):
                 # always passed through.
                 known_mcp_tool_names = get_known_mcp_tool_names()
                 if known_mcp_tool_names:
-                    enabled_mcp_tool_names = get_agent_enabled_mcp_tool_names(
-                        agent_id
-                    )
+                    enabled_mcp_tool_names = get_agent_enabled_mcp_tool_names(agent_id)
 
                     def _make_mcp_filter(
                         enabled: set[str], known: set[str]
                     ) -> Callable[[Any, ToolDefinition], bool]:
                         def _filter(_ctx: Any, tool_def: ToolDefinition) -> bool:
                             return (
-                                tool_def.name not in known
-                                or tool_def.name in enabled
+                                tool_def.name not in known or tool_def.name in enabled
                             )
 
                         return _filter
@@ -806,6 +874,14 @@ class VercelAITransport(BaseTransport):
                 # Pass sdk_version only if supported by installed pydantic-ai.
                 if sdk_version and "sdk_version" in dispatch_params:
                     dispatch_kwargs["sdk_version"] = sdk_version
+
+                # Before the continuation run, pre-approve any pending local
+                # approval records for tools approved via ai-agents WebSocket.
+                # In server mode the approval decision updates ai-agents' store
+                # but never signals the local asyncio.Event that
+                # ToolApprovalCapability.before_tool_execute waits on.
+                if self._has_approval_tools and body:
+                    await _presignal_deferred_approvals(body, agent_id)
 
                 response = await VercelAIAdapter.dispatch_request(
                     **dispatch_kwargs,

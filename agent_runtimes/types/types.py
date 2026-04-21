@@ -720,7 +720,9 @@ class SubAgentSpecConfig(BaseModel):
     model_config = ConfigDict(populate_by_name=True, by_alias=True)
 
     name: str = Field(..., description="Unique identifier for the subagent")
-    description: str = Field(..., description="Brief description shown to the parent agent")
+    description: str = Field(
+        ..., description="Brief description shown to the parent agent"
+    )
     instructions: str = Field(..., description="System prompt for the subagent")
     model: Optional[str] = Field(
         default=None,

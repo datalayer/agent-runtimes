@@ -251,9 +251,9 @@ from agent_runtimes.types import AgentSpec, SubAgentSpecConfig, SubAgentsConfig
                 sa_items = []
                 for sa in subagents_val["subagents"]:
                     sa_fields = [
-                        f'name={_fmt_py_literal(sa["name"])}',
-                        f'description={_fmt_py_literal(sa["description"])}',
-                        f'instructions={_fmt_py_literal(sa["instructions"])}',
+                        f"name={_fmt_py_literal(sa['name'])}",
+                        f"description={_fmt_py_literal(sa['description'])}",
+                        f"instructions={_fmt_py_literal(sa['instructions'])}",
                     ]
                     for opt_key in (
                         "model",
@@ -266,22 +266,20 @@ from agent_runtimes.types import AgentSpec, SubAgentSpecConfig, SubAgentsConfig
                         opt_val = sa.get(opt_key)
                         if opt_val is not None:
                             sa_fields.append(f"{opt_key}={_fmt_py_literal(opt_val)}")
-                    sa_items.append(
-                        "SubAgentSpecConfig(" + ", ".join(sa_fields) + ")"
-                    )
+                    sa_items.append("SubAgentSpecConfig(" + ", ".join(sa_fields) + ")")
                 sa_list_str = "[" + ", ".join(sa_items) + "]"
                 cfg_parts = [f"subagents={sa_list_str}"]
                 if subagents_val.get("default_model") is not None:
                     cfg_parts.append(
-                        f'default_model={_fmt_py_literal(subagents_val["default_model"])}'
+                        f"default_model={_fmt_py_literal(subagents_val['default_model'])}"
                     )
                 if subagents_val.get("include_general_purpose") is not None:
                     cfg_parts.append(
-                        f'include_general_purpose={_fmt_py_literal(subagents_val["include_general_purpose"])}'
+                        f"include_general_purpose={_fmt_py_literal(subagents_val['include_general_purpose'])}"
                     )
                 if subagents_val.get("max_nesting_depth") is not None:
                     cfg_parts.append(
-                        f'max_nesting_depth={_fmt_py_literal(subagents_val["max_nesting_depth"])}'
+                        f"max_nesting_depth={_fmt_py_literal(subagents_val['max_nesting_depth'])}"
                     )
                 subagents_str = "SubAgentsConfig(" + ", ".join(cfg_parts) + ")"
 

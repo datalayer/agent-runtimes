@@ -704,9 +704,7 @@ class SkillsGuardrailCapability(AbstractCapability[Any]):
             return
 
         enabled_skill_ids = self._enabled_skill_ids()
-        imported_skills = set(
-            re.findall(r"generated\.skills\.([A-Za-z0-9_\-]+)", code)
-        )
+        imported_skills = set(re.findall(r"generated\.skills\.([A-Za-z0-9_\-]+)", code))
 
         # Also catch helper invocation patterns like run_skill_script("name", ...).
         inline_skill_refs = set(
@@ -812,9 +810,7 @@ class MCPToolsGuardrailCapability(AbstractCapability[Any]):
                 if name:
                     extracted.add(name)
 
-        call_tool_refs = set(
-            re.findall(r"call_tool\s*\(\s*['\"]([^'\"]+)['\"]", code)
-        )
+        call_tool_refs = set(re.findall(r"call_tool\s*\(\s*['\"]([^'\"]+)['\"]", code))
         extracted |= call_tool_refs
 
         for tool_name in sorted(extracted):

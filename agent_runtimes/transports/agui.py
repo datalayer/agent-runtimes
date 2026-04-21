@@ -294,9 +294,7 @@ class AGUITransport(BaseTransport):
                                                     text_content = part.get(
                                                         "content"
                                                     ) or part.get("text")
-                                                    if isinstance(
-                                                        text_content, str
-                                                    ):
+                                                    if isinstance(text_content, str):
                                                         response_text_chunks.append(
                                                             text_content
                                                         )
