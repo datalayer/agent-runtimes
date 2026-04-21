@@ -98,6 +98,8 @@ def _render_value_with_parameters(value: Any, parameters: dict[str, Any]) -> Any
         return value
 
     if isinstance(value, str):
+        import json
+
         rendered = value
         for pattern in _PARAM_TOKEN_PATTERNS:
 
@@ -107,9 +109,11 @@ def _render_value_with_parameters(value: Any, parameters: dict[str, Any]) -> Any
                 if param_value is None:
                     return match.group(0)
                 if isinstance(param_value, (dict, list)):
-                    import json
-
                     return json.dumps(param_value)
+                # JSON-encode strings to prevent quote/newline injection into
+                # contexts such as hook scripts that execute the substituted value.
+                if isinstance(param_value, str):
+                    return json.dumps(param_value)[1:-1]  # strip surrounding quotes
                 return str(param_value)
 
             rendered = pattern.sub(_replace, rendered)
@@ -555,11 +559,12 @@ def _test_jupyter_sandbox(jupyter_sandbox_url: str) -> tuple[bool, str | None]:
 def _build_sandbox_only_system_prompt(variant: str) -> str:
     """
     Build a system-prompt section that tells the LLM it has a sandbox available
-    *without* codemode (i.e. no ``execute_code`` tool).
+    with ``execute_code`` but without MCP discovery tools (list_servers,
+    search_tools, get_tool_details).
 
     Injected automatically when ``sandbox_variant`` is set but ``enable_codemode``
-    is not.  The sandbox can be used by skills (``run_skill_script``) and
-    pre-launch hooks, but the agent itself cannot call ``execute_code`` directly.
+    is not.  The agent can call ``execute_code`` directly; MCP server discovery
+    tools are disabled.
 
     Args:
         variant: The effective sandbox variant ('eval' or 'jupyter').
@@ -580,9 +585,11 @@ def _build_sandbox_only_system_prompt(variant: str) -> str:
         f"A persistent code sandbox ({variant!r} variant) is available. "
         f"{variant_note}\n"
         "\n"
-        "The sandbox is used automatically by skills — you do not call it directly.\n"
-        "- Variables set by pre-launch hooks are already defined in the sandbox.\n"
+        "Use **execute_code** to run Python directly in the sandbox. Key points:\n"
+        "- Variables set by pre-launch hooks are already defined — read them directly.\n"
         "- Skills can read, transform, and return results from sandbox state.\n"
+        "- MCP server discovery tools (list_servers, search_tools) are not available "
+        "in this mode.\n"
     )
 
 

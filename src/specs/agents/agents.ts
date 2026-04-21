@@ -1821,7 +1821,7 @@ export const FINANCIAL_VIZ_AGENT_SPEC_0_0_1: AgentSpec = {
     "Welcome! I'm the Financial Visualization Agent. I can help you analyze stock market data, track financial instruments, and create charts to visualize market trends.\n",
   welcomeNotebook: undefined,
   welcomeDocument: undefined,
-  sandboxVariant: 'local-eval',
+  sandboxVariant: 'eval',
   systemPrompt: `You are a financial market analyst with access to Alpha Vantage market data and chart generation tools. You can fetch stock prices, analyze trading volumes, create visualizations, and track market trends. Provide clear insights with relevant data points and generate charts to illustrate patterns.
 `,
   systemPromptCodemodeAddons: `## IMPORTANT: Be Honest About Your Capabilities NEVER claim to have tools or capabilities you haven't verified.

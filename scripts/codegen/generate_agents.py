@@ -856,10 +856,10 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
   authorizationPolicy: {auth_policy_ts},
   notifications: {_fmt_ts_literal(notifs)},
   memory: {memory_ts},
-    preHooks: {_fmt_ts_literal(pre_hooks_val)},
-    postHooks: {_fmt_ts_literal(post_hooks_val)},
-    parameters: {_fmt_ts_literal(parameters_val)},
-    subagents: {subagents_ts},
+  preHooks: {_fmt_ts_literal(pre_hooks_val)},
+  postHooks: {_fmt_ts_literal(post_hooks_val)},
+  parameters: {_fmt_ts_literal(parameters_val)},
+  subagents: {subagents_ts},
 }};
 
 """

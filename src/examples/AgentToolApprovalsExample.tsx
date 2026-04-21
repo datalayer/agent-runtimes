@@ -184,9 +184,6 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
   const [isReconnectedAgent, setIsReconnectedAgent] = useState(false);
 
   const [approvals, setApprovals] = useState<ToolApprovalRequest[]>([]);
-  const [_localApprovals, setLocalApprovals] = useState<ToolApprovalRequest[]>(
-    [],
-  );
   const [approvalLoading, setApprovalLoading] = useState<string | null>(null);
   const [approvalError, setApprovalError] = useState<string | null>(null);
   const [toolApprovalState, setToolApprovalState] = useState<
@@ -464,12 +461,6 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
           }
           return [approval, ...prev];
         });
-        setLocalApprovals(prev => {
-          if (prev.some(item => item.id === approval.id)) {
-            return prev;
-          }
-          return [approval, ...prev];
-        });
       });
     },
     [isApprovalForActiveAgent],
@@ -553,7 +544,6 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
 
   useEffect(() => {
     setApprovals([]);
-    setLocalApprovals([]);
   }, [agentId, mode]);
 
   useEffect(() => {
@@ -607,7 +597,6 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
             .map(toApprovalRequest);
           pendingSnapshotRequestedRef.current.clear();
           setApprovals(snapshotApprovals);
-          setLocalApprovals(snapshotApprovals);
           return;
         }
 
@@ -629,11 +618,6 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
             next.unshift(approval);
             return next;
           });
-          setLocalApprovals(prev => {
-            const next = prev.filter(item => item.id !== approval.id);
-            next.unshift(approval);
-            return next;
-          });
           return;
         }
 
@@ -646,9 +630,6 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
           );
 
           setApprovals(prev => prev.filter(item => item.id !== approval.id));
-          setLocalApprovals(prev =>
-            prev.filter(item => item.id !== approval.id),
-          );
           emitServerToolDecision(
             approval.tool_call_id,
             approval.tool_name,
@@ -701,7 +682,6 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
       setApprovalLoading(requestId);
       setApprovalError(null);
       setApprovals(prev => prev.filter(item => item.id !== requestId));
-      setLocalApprovals(prev => prev.filter(item => item.id !== requestId));
       try {
         const ws = approvalWsRef.current;
         if (!ws || ws.readyState !== WebSocket.OPEN) {
@@ -740,7 +720,6 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
       setApprovalLoading(requestId);
       setApprovalError(null);
       setApprovals(prev => prev.filter(item => item.id !== requestId));
-      setLocalApprovals(prev => prev.filter(item => item.id !== requestId));
       try {
         const ws = approvalWsRef.current;
         if (!ws || ws.readyState !== WebSocket.OPEN) {

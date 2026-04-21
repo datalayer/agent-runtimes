@@ -69,6 +69,19 @@ const AgentHooksExample: React.FC = () => {
     };
   }, []);
 
+  useEffect(() => {
+    return () => {
+      if (!agentId) {
+        return;
+      }
+      void fetch(`${BASE_URL}/api/v1/agents/${encodeURIComponent(agentId)}`, {
+        method: 'DELETE',
+      }).catch(() => {
+        // Ignore teardown failures in example mode.
+      });
+    };
+  }, [agentId]);
+
   if (isCreating) {
     return (
       <ThemedProvider>
