@@ -150,6 +150,10 @@ export function ChatStandalone({
   onToolCallStart,
   onToolCallComplete,
   pendingPrompt,
+  showToolApprovalBanner,
+  pendingApprovals,
+  onApproveApproval,
+  onRejectApproval,
   panelProps,
 }: ChatStandaloneProps) {
   // Use Zustand store for state management
@@ -540,6 +544,10 @@ export function ChatStandalone({
             backgroundColor="canvas.subtle"
             focusTrigger={focusTrigger}
             pendingPrompt={pendingPrompt}
+            showToolApprovalBanner={showToolApprovalBanner}
+            pendingApprovals={pendingApprovals}
+            onApproveApproval={onApproveApproval}
+            onRejectApproval={onRejectApproval}
             {...panelProps}
           >
             {children}

@@ -806,6 +806,17 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
     toolCallId: string,
     result: ToolExecutionResult,
   ): Promise<void> {
+    console.info('[VercelAIAdapter] sendToolResult called', {
+      toolCallId,
+      success: result?.success,
+      hasApprovalDecision:
+        !!result?.result &&
+        typeof result.result === 'object' &&
+        typeof (result.result as Record<string, unknown>).approved ===
+          'boolean',
+      knownDeferredToolCallIds: Array.from(this.deferredToolMeta.keys()),
+      pendingToolCallIds: Array.from(this.pendingToolCalls.keys()),
+    });
     // 1. Emit local event for UI updates
     this.emit({
       type: 'tool-result',
@@ -951,6 +962,15 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
       content: '',
       createdAt: new Date(),
     };
+
+    console.info('[VercelAIAdapter] Sending continuation request', {
+      messageCount: continuationMessages.length,
+      assistantParts: assistantParts.map(p => ({
+        type: p.type,
+        state: p.state,
+        toolName: p.toolName,
+      })),
+    });
 
     await this.sendMessage(dummyMessage, {
       _vercelMessages: continuationMessages,

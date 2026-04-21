@@ -12,11 +12,13 @@
  * @module api
  */
 
-// Agents Service API (agents, tool-approvals, notifications, etc.)
+// Agents Service API (agents, notifications, etc.)
+// Tool approvals are intentionally NOT exposed over REST here — all
+// approval interactions flow over the websocket stream; see
+// `hooks/useToolApprovals` and `components/ToolApprovalBanner`.
 export * as agents from './agents';
 export * as context from './context';
 export * as evals from './evals';
 export * as events from './events';
 export * as notifications from './notifications';
 export * as output from './output';
-export * as toolApprovals from './tool-approvals';

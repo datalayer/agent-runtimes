@@ -18,7 +18,6 @@
 
 import type { Constructor } from '@datalayer/core/lib/client/utils/mixins';
 import * as agents from '../api/agents';
-import * as toolApprovals from '../api/tool-approvals';
 import * as notifications from '../api/notifications';
 import * as events from '../api/events';
 import * as output from '../api/output';
@@ -49,10 +48,6 @@ import type {
   CreateAgentRuntimeRequest,
   CreateRuntimeApiResponse,
 } from '../types/agents-lifecycle';
-import type {
-  ToolApproval,
-  ToolApprovalFilters,
-} from '../types/tool-approvals';
 
 /** Agents mixin providing durable agent management. */
 export function AgentsMixin<TBase extends Constructor>(Base: TBase) {
@@ -139,48 +134,12 @@ export function AgentsMixin<TBase extends Constructor>(Base: TBase) {
     // ========================================================================
     // Tool Approvals
     // ========================================================================
-
-    /**
-     * List tool approval requests, optionally filtered.
-     * @param filters - Optional filters (status, agentId)
-     * @returns Array of tool approval records
-     */
-    async getToolApprovals(
-      filters?: ToolApprovalFilters,
-    ): Promise<ToolApproval[]> {
-      const token = (this as any).getToken();
-      const baseUrl = (this as any).getIamRunUrl();
-      return toolApprovals.getToolApprovals(token, filters, baseUrl);
-    }
-
-    /**
-     * Approve a tool execution request.
-     * @param approvalId - ID of the approval to approve
-     */
-    async approveToolRequest(approvalId: string): Promise<void> {
-      const token = (this as any).getToken();
-      const baseUrl = (this as any).getIamRunUrl();
-      return toolApprovals.approveToolRequest(token, approvalId, baseUrl);
-    }
-
-    /**
-     * Reject a tool execution request.
-     * @param approvalId - ID of the approval to reject
-     * @param reason - Optional rejection reason
-     */
-    async rejectToolRequest(
-      approvalId: string,
-      reason?: string,
-    ): Promise<void> {
-      const token = (this as any).getToken();
-      const baseUrl = (this as any).getIamRunUrl();
-      return toolApprovals.rejectToolRequest(
-        token,
-        approvalId,
-        reason,
-        baseUrl,
-      );
-    }
+    //
+    // Tool approval interactions have been removed from the REST mixin.
+    // All approval flows (list / approve / reject / realtime updates) now
+    // travel exclusively over the AI Agents websocket stream. Use the
+    // `useToolApprovals` React hook (or send `tool_approval_decision`
+    // messages directly on the stream) instead.
 
     // ========================================================================
     // Notifications

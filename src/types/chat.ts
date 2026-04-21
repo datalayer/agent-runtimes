@@ -478,6 +478,29 @@ export interface ChatCommonProps {
   /** Optional sandbox status override for immediate UI updates. */
   sandboxStatusData?: SandboxWsStatus | null;
 
+  // ============ Tool Approval Banner ============
+
+  /**
+   * Whether to render the top-of-chat tool approval banner when there are
+   * pending approvals. @default true
+   */
+  showToolApprovalBanner?: boolean;
+
+  /** Pending tool approval requests to render in the top banner. */
+  pendingApprovals?: import('../chat/tools').PendingApproval[];
+
+  /** Called when the user approves a pending request. */
+  onApproveApproval?: (
+    approvalId: string,
+    note?: string,
+  ) => void | Promise<boolean | void>;
+
+  /** Called when the user rejects a pending request. */
+  onRejectApproval?: (
+    approvalId: string,
+    note?: string,
+  ) => void | Promise<boolean | void>;
+
   // ============ Header Content ============
 
   /** Custom header content (rendered below title row) */
@@ -873,4 +896,38 @@ export interface ChatBaseProps {
    * ```
    */
   onToolCallComplete?: (context: ToolCallCompleteContext) => void;
+
+  // ============ Tool Approval Banner ============
+
+  /**
+   * Whether to render the top-of-chat tool approval banner (and its review
+   * dialog) when `pendingApprovals` is non-empty. The banner/dialog render
+   * only when approvals are actually pending; this flag lets integrators opt
+   * out entirely.
+   * @default true
+   */
+  showToolApprovalBanner?: boolean;
+
+  /**
+   * Pending tool approval requests to render in the built-in banner.
+   * Typically sourced from the approvals websocket in the hosting app.
+   */
+  pendingApprovals?: import('../chat/tools').PendingApproval[];
+
+  /**
+   * Called when the user approves a pending request (from banner "Approve All"
+   * or from the review dialog).
+   */
+  onApproveApproval?: (
+    approvalId: string,
+    note?: string,
+  ) => void | Promise<boolean | void>;
+
+  /**
+   * Called when the user rejects a pending request from the review dialog.
+   */
+  onRejectApproval?: (
+    approvalId: string,
+    note?: string,
+  ) => void | Promise<boolean | void>;
 }

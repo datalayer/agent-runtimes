@@ -83,6 +83,44 @@ class ToolApprovalRecord(BaseModel):
 _APPROVALS: dict[str, ToolApprovalRecord] = {}
 _APPROVALS_LOCK = asyncio.Lock()
 
+# ─── Inline approval event registry (asyncio.Event-based) ────────────────────
+
+_PENDING_APPROVAL_EVENTS: dict[str, tuple[asyncio.Event, dict[str, Any]]] = {}
+
+
+def register_pending_approval_event(
+    approval_id: str,
+) -> tuple[asyncio.Event, dict[str, Any]]:
+    """Register an asyncio.Event for inline approval blocking.
+
+    Returns (event, result_dict).  The caller should ``await event.wait()`` and
+    then read ``result_dict["approved"]`` (bool) and optionally ``result_dict["note"]``
+    after the event is set.
+    """
+    event = asyncio.Event()
+    result: dict[str, Any] = {}
+    _PENDING_APPROVAL_EVENTS[approval_id] = (event, result)
+    return event, result
+
+
+def signal_approval_event(
+    approval_id: str, approved: bool, note: str | None = None
+) -> bool:
+    """Signal the asyncio.Event for *approval_id*, returning True if found."""
+    entry = _PENDING_APPROVAL_EVENTS.get(approval_id)
+    if not entry:
+        return False
+    event, result = entry
+    result["approved"] = approved
+    result["note"] = note
+    event.set()
+    return True
+
+
+def remove_pending_approval_event(approval_id: str) -> None:
+    """Remove the asyncio.Event entry for *approval_id* (cleanup after wait)."""
+    _PENDING_APPROVAL_EVENTS.pop(approval_id, None)
+
 
 async def _publish_approval_event(
     *,
@@ -239,6 +277,10 @@ async def _update_approval(
             }
         )
         _APPROVALS[approval_id] = updated
+
+    # Signal any in-process coroutine waiting on this approval (e.g.
+    # ToolApprovalCapability.before_tool_execute using asyncio.Event).
+    signal_approval_event(approval_id, status == "approved", note)
 
     await _publish_approval_event(
         event_type=(

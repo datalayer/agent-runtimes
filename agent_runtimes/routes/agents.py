@@ -1679,22 +1679,6 @@ async def create_agent(
                 capabilities = []
             capabilities.extend(build_default_choice_guardrails(agent_id=agent_id))
 
-            # Keep vercel-ai approval handling on the DeferredToolRequests path
-            # for consistency with normal chat streaming flow.
-            if request.transport == "vercel-ai" and capabilities:
-                filtered_capabilities = [
-                    cap
-                    for cap in capabilities
-                    if not isinstance(cap, ToolApprovalCapability)
-                ]
-                if len(filtered_capabilities) != len(capabilities):
-                    logger.info(
-                        "Disabled ToolApprovalCapability for vercel-ai agent '%s' "
-                        "to avoid duplicate approval gating.",
-                        agent_id,
-                    )
-                capabilities = filtered_capabilities
-
             agent_kwargs: dict[str, Any] = {
                 "system_prompt": final_system_prompt,
                 # Explicitly disable Pydantic AI built-in tools (e.g. CodeExecutionTool)
@@ -1710,16 +1694,16 @@ async def create_agent(
                 approval_patterns = [
                     tool_id.split(":", 1)[0] for tool_id in approval_tool_ids
                 ]
+                # pydantic-ai requires DeferredToolRequests in output_type when
+                # any registered tool has requires_approval=True.
+                agent_kwargs["output_type"] = [str, DeferredToolRequests]
                 has_tool_approval_capability = bool(
                     capabilities
                     and any(
                         isinstance(cap, ToolApprovalCapability) for cap in capabilities
                     )
                 )
-                if (
-                    not has_tool_approval_capability
-                    and request.transport != "vercel-ai"
-                ):
+                if not has_tool_approval_capability:
                     approval_config = ToolApprovalConfig.from_env()
                     approval_config.agent_id = agent_id
                     approval_config.tools_requiring_approval = approval_patterns
@@ -1732,14 +1716,6 @@ async def create_agent(
                         agent_id,
                         approval_patterns,
                     )
-
-                agent_kwargs["output_type"] = [str, DeferredToolRequests]
-                agent_kwargs["output_retries"] = 3
-                logger.info(
-                    "Auto-enabled DeferredToolRequests for agent '%s'; tools requiring approval: %s",
-                    agent_id,
-                    approval_tool_ids,
-                )
 
             try:
                 pydantic_agent = PydanticAgent(request.model, **agent_kwargs)

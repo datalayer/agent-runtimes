@@ -82,6 +82,9 @@ export interface InputToolbarProps {
     toolNames: string[],
     enable: boolean,
   ) => void;
+  /** Approved MCP tools per server (default: all tools approved) */
+  approvedMcpTools: Map<string, Set<string>>;
+  onToggleMcpToolApproval: (serverId: string, toolName: string) => void;
 
   // ---- Skills ----
   skills: SkillInfo[];
@@ -89,6 +92,9 @@ export interface InputToolbarProps {
   enabledSkills: Set<string>;
   onToggleSkill: (skillId: string) => void;
   onToggleAllSkills: (skillIds: string[], enable: boolean) => void;
+  /** Approved skills set (default: all skills approved) */
+  approvedSkills: Set<string>;
+  onToggleSkillApproval: (skillId: string) => void;
 
   // ---- Indicators ----
   /** API base URL passed to MCP / Sandbox indicators */
@@ -136,11 +142,15 @@ export function InputToolbar({
   enabledMcpToolCount,
   onToggleMcpTool,
   onToggleAllMcpServerTools,
+  approvedMcpTools,
+  onToggleMcpToolApproval,
   skills,
   skillsLoading,
   enabledSkills,
   onToggleSkill,
   onToggleAllSkills,
+  approvedSkills,
+  onToggleSkillApproval,
   apiBase,
   authToken,
   agentId,
@@ -211,6 +221,8 @@ export function InputToolbar({
                 enabledMcpToolCount={enabledMcpToolCount}
                 onToggleMcpTool={onToggleMcpTool}
                 onToggleAllMcpServerTools={onToggleAllMcpServerTools}
+                approvedMcpTools={approvedMcpTools}
+                onToggleMcpToolApproval={onToggleMcpToolApproval}
                 availableTools={availableTools}
               />
             )}
@@ -223,6 +235,8 @@ export function InputToolbar({
                 enabledSkills={enabledSkills}
                 onToggleSkill={onToggleSkill}
                 onToggleAllSkills={onToggleAllSkills}
+                approvedSkills={approvedSkills}
+                onToggleSkillApproval={onToggleSkillApproval}
               />
             )}
 
@@ -252,6 +266,8 @@ function ToolsMenu({
   enabledMcpToolCount,
   onToggleMcpTool,
   onToggleAllMcpServerTools,
+  approvedMcpTools,
+  onToggleMcpToolApproval,
   availableTools,
 }: {
   codemodeEnabled: boolean;
@@ -264,6 +280,8 @@ function ToolsMenu({
     toolNames: string[],
     enable: boolean,
   ) => void;
+  approvedMcpTools: Map<string, Set<string>>;
+  onToggleMcpToolApproval: (serverId: string, toolName: string) => void;
   availableTools: BuiltinTool[];
 }) {
   return (
@@ -348,6 +366,11 @@ function ToolsMenu({
                     {server.isAvailable && server.tools.length > 0 ? (
                       server.tools.map(tool => {
                         const isEnabled = serverTools?.has(tool.name) ?? false;
+                        const serverApproved = approvedMcpTools.get(server.id);
+                        // When no approved entry for a server, all tools are approved by default.
+                        const isApproved =
+                          serverApproved === undefined ||
+                          serverApproved.has(tool.name);
                         return (
                           <Box
                             key={`${server.id}-${tool.name}`}
@@ -384,14 +407,60 @@ function ToolsMenu({
                                 </Text>
                               )}
                             </Box>
-                            <ToggleSwitch
-                              size="small"
-                              checked={isEnabled}
-                              onClick={() =>
-                                onToggleMcpTool(server.id, tool.name)
-                              }
-                              aria-labelledby={`toggle-tool-${server.id}-${tool.name}`}
-                            />
+                            <Box
+                              sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 3,
+                              }}
+                            >
+                              <Box
+                                sx={{
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  alignItems: 'center',
+                                  gap: '2px',
+                                }}
+                              >
+                                <Text
+                                  sx={{ fontSize: '10px', color: 'fg.muted' }}
+                                >
+                                  Enabled
+                                </Text>
+                                <ToggleSwitch
+                                  size="small"
+                                  checked={isEnabled}
+                                  onClick={() =>
+                                    onToggleMcpTool(server.id, tool.name)
+                                  }
+                                  aria-labelledby={`toggle-tool-${server.id}-${tool.name}`}
+                                />
+                              </Box>
+                              <Box
+                                sx={{
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  alignItems: 'center',
+                                  gap: '2px',
+                                }}
+                              >
+                                <Text
+                                  sx={{ fontSize: '10px', color: 'fg.muted' }}
+                                >
+                                  Approved
+                                </Text>
+                                <ToggleSwitch
+                                  size="small"
+                                  checked={isApproved}
+                                  onClick={() =>
+                                    onToggleMcpToolApproval(
+                                      server.id,
+                                      tool.name,
+                                    )
+                                  }
+                                />
+                              </Box>
+                            </Box>
                           </Box>
                         );
                       })
@@ -455,12 +524,16 @@ function SkillsMenu({
   enabledSkills,
   onToggleSkill,
   onToggleAllSkills,
+  approvedSkills,
+  onToggleSkillApproval,
 }: {
   skills: SkillInfo[];
   skillsLoading: boolean;
   enabledSkills: Set<string>;
   onToggleSkill: (skillId: string) => void;
   onToggleAllSkills: (skillIds: string[], enable: boolean) => void;
+  approvedSkills: Set<string>;
+  onToggleSkillApproval: (skillId: string) => void;
 }) {
   return (
     <ActionMenu>
@@ -583,12 +656,43 @@ function SkillsMenu({
                         </Text>
                       )}
                     </Box>
-                    <ToggleSwitch
-                      size="small"
-                      checked={enabledSkills.has(skill.id)}
-                      onClick={() => onToggleSkill(skill.id)}
-                      aria-labelledby={`toggle-skill-${skill.id}`}
-                    />
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          gap: '2px',
+                        }}
+                      >
+                        <Text sx={{ fontSize: '10px', color: 'fg.muted' }}>
+                          Enabled
+                        </Text>
+                        <ToggleSwitch
+                          size="small"
+                          checked={enabledSkills.has(skill.id)}
+                          onClick={() => onToggleSkill(skill.id)}
+                          aria-labelledby={`toggle-skill-${skill.id}`}
+                        />
+                      </Box>
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          gap: '2px',
+                        }}
+                      >
+                        <Text sx={{ fontSize: '10px', color: 'fg.muted' }}>
+                          Approved
+                        </Text>
+                        <ToggleSwitch
+                          size="small"
+                          checked={approvedSkills.has(skill.id)}
+                          onClick={() => onToggleSkillApproval(skill.id)}
+                        />
+                      </Box>
+                    </Box>
                   </Box>
                 ))}
               </>

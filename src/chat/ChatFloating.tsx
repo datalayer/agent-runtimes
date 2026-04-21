@@ -203,6 +203,10 @@ export function ChatFloating({
   onInformationClick,
   onToolCallStart,
   onToolCallComplete,
+  showToolApprovalBanner,
+  pendingApprovals,
+  onApproveApproval,
+  onRejectApproval,
   panelProps,
 }: ChatFloatingProps) {
   // Store-based state
@@ -777,6 +781,10 @@ export function ChatFloating({
           onInformationClick={onInformationClick}
           onToolCallStart={onToolCallStart}
           onToolCallComplete={onToolCallComplete}
+          showToolApprovalBanner={showToolApprovalBanner}
+          pendingApprovals={pendingApprovals}
+          onApproveApproval={onApproveApproval}
+          onRejectApproval={onRejectApproval}
           {...panelProps}
         >
           {children}

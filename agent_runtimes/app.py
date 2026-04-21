@@ -473,6 +473,9 @@ async def _create_and_register_cli_agent(
     approval_tool_ids = tools_requiring_approval_ids(tool_ids)
     if approval_tool_ids:
         approval_patterns = [tool_id.split(":", 1)[0] for tool_id in approval_tool_ids]
+        # pydantic-ai requires DeferredToolRequests in output_type whenever
+        # any registered tool is marked requires_approval=True.
+        agent_kwargs["output_type"] = [str, DeferredToolRequests]
         has_tool_approval_capability = any(
             isinstance(cap, ToolApprovalCapability) for cap in (capabilities or [])
         )
@@ -489,14 +492,6 @@ async def _create_and_register_cli_agent(
                 agent_id,
                 approval_patterns,
             )
-
-        agent_kwargs["output_type"] = [str, DeferredToolRequests]
-        agent_kwargs["output_retries"] = 3
-        logger.info(
-            "Auto-enabled DeferredToolRequests for agent '%s'; tools requiring approval: %s",
-            agent_id,
-            approval_tool_ids,
-        )
 
     try:
         pydantic_agent = PydanticAgent(model, **agent_kwargs)

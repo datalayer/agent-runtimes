@@ -112,6 +112,10 @@ export function ChatSidebar({
   placeholder = 'Ask a question...',
   description,
   pendingPrompt,
+  showToolApprovalBanner,
+  pendingApprovals,
+  onApproveApproval,
+  onRejectApproval,
   panelProps,
 }: ChatSidebarProps) {
   const isOpen = useChatOpen();
@@ -422,6 +426,10 @@ export function ChatSidebar({
           onToolCallStart={onToolCallStart}
           onToolCallComplete={onToolCallComplete}
           pendingPrompt={pendingPrompt}
+          showToolApprovalBanner={showToolApprovalBanner}
+          pendingApprovals={pendingApprovals}
+          onApproveApproval={onApproveApproval}
+          onRejectApproval={onRejectApproval}
           {...panelProps}
         >
           {children}

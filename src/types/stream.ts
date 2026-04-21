@@ -29,6 +29,7 @@ export interface AgentStreamToolApprovalPayload {
   agent_id?: string;
   pod_name?: string;
   tool_name: string;
+  tool_call_id?: string;
   tool_args?: Record<string, unknown>;
   status?: string;
   note?: string | null;

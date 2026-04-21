@@ -274,6 +274,10 @@ export function Chat({
   contextSnapshot,
   mcpStatusData,
   sandboxStatusData,
+  showToolApprovalBanner,
+  pendingApprovals,
+  onApproveApproval,
+  onRejectApproval,
 }: ChatProps) {
   const [error, setError] = useState<string | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
@@ -599,6 +603,10 @@ export function Chat({
             contextSnapshot={contextSnapshot}
             mcpStatusData={mcpStatusData}
             sandboxStatusData={sandboxStatusData}
+            showToolApprovalBanner={showToolApprovalBanner}
+            pendingApprovals={pendingApprovals}
+            onApproveApproval={onApproveApproval}
+            onRejectApproval={onRejectApproval}
           />
         </Box>
       </Box>

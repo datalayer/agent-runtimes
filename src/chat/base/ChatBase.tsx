@@ -74,6 +74,11 @@ import {
   type ToolApprovalConfig,
 } from '../messages/ChatMessageList';
 import { InputToolbar } from '../prompt/InputFooter';
+import {
+  ToolApprovalBanner,
+  ToolApprovalDialog,
+  type PendingApproval,
+} from '../tools';
 
 // Tracks pending prompts already auto-sent for a given conversation scope.
 // This prevents layout-driven unmount/remount cycles from re-sending prompts.
@@ -163,6 +168,39 @@ function parseEnabledMcpToolsByServer(
       enabled_tools_by_server?: unknown;
     }
   ).enabled_tools_by_server;
+
+  if (!raw || typeof raw !== 'object') {
+    return null;
+  }
+
+  const parsed = new Map<string, Set<string>>();
+  for (const [serverId, toolNames] of Object.entries(
+    raw as Record<string, unknown>,
+  )) {
+    if (!Array.isArray(toolNames)) {
+      continue;
+    }
+    const validToolNames = toolNames.filter(
+      (name): name is string => typeof name === 'string' && name.length > 0,
+    );
+    parsed.set(serverId, new Set(validToolNames));
+  }
+
+  return parsed;
+}
+
+function parseApprovedMcpToolsByServer(
+  mcpStatusData: unknown,
+): Map<string, Set<string>> | null {
+  if (!mcpStatusData || typeof mcpStatusData !== 'object') {
+    return null;
+  }
+
+  const raw = (
+    mcpStatusData as {
+      approved_tools_by_server?: unknown;
+    }
+  ).approved_tools_by_server;
 
   if (!raw || typeof raw !== 'object') {
     return null;
@@ -315,6 +353,11 @@ function ChatBaseInner({
   contextSnapshot: externalContextSnapshot,
   mcpStatusData,
   sandboxStatusData,
+  // Tool approval banner
+  showToolApprovalBanner = true,
+  pendingApprovals,
+  onApproveApproval,
+  onRejectApproval,
 }: ChatBaseProps) {
   useEffect(() => {
     setupPrimerPortals();
@@ -363,6 +406,11 @@ function ChatBaseInner({
   const [enabledMcpTools, setEnabledMcpTools] = useState<
     Map<string, Set<string>>
   >(new Map());
+  // approvedMcpTools tracks which MCP server tools are approved per server.
+  // Default: all tools approved (empty map = all approved).
+  const [approvedMcpTools, setApprovedMcpTools] = useState<
+    Map<string, Set<string>>
+  >(new Map());
   // Note: legacy _enabledTools for backend-defined tools from config query
   const [_enabledTools, setEnabledTools] = useState<string[]>([]);
   const wsState = useAgentRuntimeWsState();
@@ -379,14 +427,29 @@ function ChatBaseInner({
     protocol?.configEndpoint,
     protocol?.authToken,
   );
-  const { enableSkill: wsEnableSkill, disableSkill: wsDisableSkill } =
-    useSkillActions();
+  const {
+    enableSkill: wsEnableSkill,
+    disableSkill: wsDisableSkill,
+    approveSkill: wsApproveSkill,
+    unapproveSkill: wsUnapproveSkill,
+  } = useSkillActions();
 
   // Derive enabledSkills from the WS-pushed skill statuses.
   const enabledSkills = useMemo(() => {
     const set = new Set<string>();
     for (const s of skillsQuery.data?.skills ?? []) {
       if (s.status === 'enabled' || s.status === 'loaded') {
+        set.add(s.id);
+      }
+    }
+    return set;
+  }, [skillsQuery.data]);
+
+  // Derive approvedSkills from the WS-pushed skill statuses (default: approved).
+  const approvedSkills = useMemo(() => {
+    const set = new Set<string>();
+    for (const s of skillsQuery.data?.skills ?? []) {
+      if (s.approved !== false) {
         set.add(s.id);
       }
     }
@@ -584,6 +647,13 @@ function ChatBaseInner({
   }, [mcpServers, configQuery.data?.mcpServers, isServerSelected]);
 
   // Keep MCP tool selection synchronized with backend WS snapshots.
+  // Intentionally exclude `mcpServers` from the dependency array: the effect
+  // should only re-run when the backend snapshot (`mcpStatusData`) changes, not
+  // when the `mcpServers` prop reference changes (e.g. due to parent re-renders).
+  // We read the latest `mcpServers` through a ref so the filter logic is always
+  // current without causing the effect to fire.
+  const mcpServersRef = useRef(mcpServers);
+  mcpServersRef.current = mcpServers;
   useEffect(() => {
     const wsEnabledMcpTools = parseEnabledMcpToolsByServer(mcpStatusData);
     if (!wsEnabledMcpTools) {
@@ -594,14 +664,35 @@ function ChatBaseInner({
       const next = new Map<string, Set<string>>();
       wsEnabledMcpTools.forEach((toolNames, serverId) => {
         const selectedInProps =
-          !mcpServers || mcpServers.some(server => server.id === serverId);
+          !mcpServersRef.current ||
+          mcpServersRef.current.some(server => server.id === serverId);
         if (selectedInProps) {
           next.set(serverId, new Set(toolNames));
         }
       });
       return next;
     });
-  }, [mcpStatusData, mcpServers]);
+  }, [mcpStatusData]);
+
+  // Keep MCP tool *approval* synchronized with backend WS snapshots.
+  useEffect(() => {
+    const wsApprovedMcpTools = parseApprovedMcpToolsByServer(mcpStatusData);
+    if (!wsApprovedMcpTools) {
+      return;
+    }
+    setApprovedMcpTools(() => {
+      const next = new Map<string, Set<string>>();
+      wsApprovedMcpTools.forEach((toolNames, serverId) => {
+        const selectedInProps =
+          !mcpServersRef.current ||
+          mcpServersRef.current.some(server => server.id === serverId);
+        if (selectedInProps) {
+          next.set(serverId, new Set(toolNames));
+        }
+      });
+      return next;
+    });
+  }, [mcpStatusData]);
 
   // Refetch configQuery when WS reports MCP servers as started but the
   // cached config response has missing servers or empty tools.
@@ -712,6 +803,49 @@ function ChatBaseInner({
       }
     },
     [wsEnableSkill, wsDisableSkill],
+  );
+
+  const toggleMcpToolApproval = useCallback(
+    (serverId: string, toolName: string) => {
+      setApprovedMcpTools(prev => {
+        const newMap = new Map(prev);
+        // Default: if no entry for this server, all tools are approved.
+        const serverTools = new Set(prev.get(serverId) ?? []);
+        const currentlyApproved = serverTools.has(toolName);
+        if (currentlyApproved) {
+          serverTools.delete(toolName);
+        } else {
+          serverTools.add(toolName);
+        }
+        newMap.set(serverId, serverTools);
+
+        const ok = agentRuntimeStore.getState().sendRawMessage({
+          type: 'mcp_server_tool_approve',
+          serverId,
+          toolName,
+          approved: !currentlyApproved,
+        });
+        if (!ok) {
+          console.warn(
+            '[ChatBase] mcp_server_tool_approve dropped: websocket not ready',
+          );
+        }
+
+        return newMap;
+      });
+    },
+    [],
+  );
+
+  const toggleSkillApproval = useCallback(
+    (skillId: string) => {
+      if (approvedSkills.has(skillId)) {
+        wsUnapproveSkill(skillId);
+      } else {
+        wsApproveSkill(skillId);
+      }
+    },
+    [approvedSkills, wsApproveSkill, wsUnapproveSkill],
   );
 
   const getEnabledMcpToolNames = useCallback((): string[] => {
@@ -2064,6 +2198,17 @@ function ChatBaseInner({
         />
       )}
 
+      {/* Tool approval banner (top-of-chat) */}
+      {showToolApprovalBanner &&
+        pendingApprovals &&
+        pendingApprovals.length > 0 && (
+          <ToolApprovalBannerSection
+            pendingApprovals={pendingApprovals}
+            onApprove={onApproveApproval}
+            onReject={onRejectApproval}
+          />
+        )}
+
       {/* Error banner */}
       {showErrors && error && (
         <Box
@@ -2159,11 +2304,15 @@ function ChatBaseInner({
           enabledMcpToolCount={getEnabledMcpToolNames().length}
           onToggleMcpTool={toggleMcpTool}
           onToggleAllMcpServerTools={toggleAllMcpServerTools}
+          approvedMcpTools={approvedMcpTools}
+          onToggleMcpToolApproval={toggleMcpToolApproval}
           skills={skillsQuery.data?.skills || []}
           skillsLoading={!!skillsQuery.isLoading}
           enabledSkills={enabledSkills}
           onToggleSkill={toggleSkill}
           onToggleAllSkills={toggleAllSkills}
+          approvedSkills={approvedSkills}
+          onToggleSkillApproval={toggleSkillApproval}
           apiBase={indicatorApiBase}
           authToken={protocol?.authToken}
           agentId={protocol?.agentId}
@@ -2175,6 +2324,88 @@ function ChatBaseInner({
       {/* Powered by tag */}
       {showPoweredBy && <PoweredByTag {...poweredByProps} />}
     </Box>
+  );
+}
+
+/**
+ * Internal component rendering the top-of-chat approval banner + review dialog.
+ * Extracted so we can keep `ChatBase` focused on chat flow while still owning
+ * the banner UX via the `showToolApprovalBanner` prop.
+ */
+function ToolApprovalBannerSection({
+  pendingApprovals,
+  onApprove,
+  onReject,
+}: {
+  pendingApprovals: PendingApproval[];
+  onApprove?: (
+    approvalId: string,
+    note?: string,
+  ) => void | Promise<boolean | void>;
+  onReject?: (
+    approvalId: string,
+    note?: string,
+  ) => void | Promise<boolean | void>;
+}) {
+  const [activeApproval, setActiveApproval] = useState<PendingApproval | null>(
+    null,
+  );
+
+  // Keep the active approval in sync with the incoming list; if the active
+  // one is no longer pending (resolved), dismiss the dialog.
+  useEffect(() => {
+    if (!activeApproval) {
+      return;
+    }
+    if (!pendingApprovals.some(a => a.id === activeApproval.id)) {
+      setActiveApproval(null);
+    }
+  }, [pendingApprovals, activeApproval]);
+
+  return (
+    <>
+      <ToolApprovalBanner
+        pendingApprovals={pendingApprovals}
+        onReview={approval => setActiveApproval(approval)}
+        onApproveAll={async () => {
+          if (!onApprove) return;
+          for (const approval of pendingApprovals) {
+            await onApprove(approval.id);
+          }
+        }}
+      />
+
+      <ToolApprovalDialog
+        isOpen={!!activeApproval}
+        toolName={activeApproval?.toolName ?? ''}
+        toolDescription={activeApproval?.toolDescription}
+        args={activeApproval?.args ?? {}}
+        onApprove={async () => {
+          if (!activeApproval || !onApprove) {
+            setActiveApproval(null);
+            return;
+          }
+          const result = await onApprove(activeApproval.id);
+          if (result !== false) {
+            setActiveApproval(null);
+          }
+        }}
+        onDeny={async () => {
+          if (!activeApproval || !onReject) {
+            setActiveApproval(null);
+            return;
+          }
+          const result = await onReject(
+            activeApproval.id,
+            'Rejected from tool approval dialog',
+          );
+          if (result !== false) {
+            setActiveApproval(null);
+          }
+        }}
+        onClose={() => setActiveApproval(null)}
+      />
+    </>
   );
 }
 

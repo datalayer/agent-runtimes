@@ -185,6 +185,10 @@ export function ChatPopupStandalone({
   renderToolResult,
   onToolCallStart,
   onToolCallComplete,
+  showToolApprovalBanner,
+  pendingApprovals,
+  onApproveApproval,
+  onRejectApproval,
   panelProps,
 }: ChatPopupStandaloneProps) {
   // Use Zustand store for state management
@@ -668,6 +672,10 @@ export function ChatPopupStandalone({
               showAvatars: true,
             }}
             backgroundColor="canvas.subtle"
+            showToolApprovalBanner={showToolApprovalBanner}
+            pendingApprovals={pendingApprovals}
+            onApproveApproval={onApproveApproval}
+            onRejectApproval={onRejectApproval}
             {...panelProps}
           >
             {children}

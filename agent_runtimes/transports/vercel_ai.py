@@ -38,7 +38,7 @@ else:
 
 from pydantic_ai import DeferredToolRequests
 from pydantic_ai.tools import ToolDefinition
-from pydantic_ai.toolsets import ExternalToolset
+from pydantic_ai.toolsets import ExternalToolset, FilteredToolset
 
 from ..adapters.base import BaseAgent
 from ..context.identities import IdentityContextManager, set_request_user_jwt
@@ -49,6 +49,7 @@ from ..observability.prompt_turn_metrics import (
     extract_user_id_from_jwt,
     record_prompt_turn_completion,
 )
+from ..streams.loop import get_agent_enabled_mcp_tool_names, get_known_mcp_tool_names
 from .base import BaseTransport
 
 logger = logging.getLogger(__name__)
@@ -649,6 +650,41 @@ class VercelAITransport(BaseTransport):
                 # Get runtime toolsets from the adapter (includes MCP servers)
                 runtime_toolsets = self._get_runtime_toolsets()
 
+                # Filter MCP toolsets to only expose tools the user has enabled.
+                # We check if each tool's name is in the known MCP tool inventory;
+                # if it is, it must also be in the per-agent enabled set.  Tools
+                # that are not MCP tools (e.g. skill tools, frontend tools) are
+                # always passed through.
+                known_mcp_tool_names = get_known_mcp_tool_names()
+                if known_mcp_tool_names:
+                    enabled_mcp_tool_names = get_agent_enabled_mcp_tool_names(
+                        agent_id
+                    )
+
+                    def _make_mcp_filter(
+                        enabled: set[str], known: set[str]
+                    ):
+                        def _filter(_ctx: Any, tool_def: ToolDefinition) -> bool:
+                            return (
+                                tool_def.name not in known
+                                or tool_def.name in enabled
+                            )
+
+                        return _filter
+
+                    mcp_filter = _make_mcp_filter(
+                        enabled_mcp_tool_names, known_mcp_tool_names
+                    )
+                    runtime_toolsets = [
+                        FilteredToolset(wrapped=ts, filter_func=mcp_filter)
+                        for ts in runtime_toolsets
+                    ]
+                    logger.debug(
+                        "[Vercel AI] Filtering MCP tools: %d enabled out of %d known",
+                        len(enabled_mcp_tool_names),
+                        len(known_mcp_tool_names),
+                    )
+
                 # Add frontend tools as an ExternalToolset if provided in the request
                 has_frontend_tools = False
                 if frontend_tools_from_request:
@@ -751,9 +787,13 @@ class VercelAITransport(BaseTransport):
                 if "usage_limits" in dispatch_params:
                     dispatch_kwargs["usage_limits"] = self._usage_limits
 
-                # Enable DeferredToolRequests when this request includes
-                # frontend tools as an ExternalToolset, OR when the agent has
-                # runtime tools that require human approval before execution.
+                # Enable DeferredToolRequests for either:
+                # 1) frontend tools (client-side tool execution), or
+                # 2) approval-capable agents (approval-responded continuations).
+                #
+                # Without DeferredToolRequests on continuation turns, an
+                # approval-responded part can be treated as a fresh tool call,
+                # causing the same approval to be requested again.
                 if has_frontend_tools or self._has_approval_tools:
                     dispatch_kwargs["output_type"] = [str, DeferredToolRequests]
                     logger.info(
@@ -775,24 +815,20 @@ class VercelAITransport(BaseTransport):
                 )
 
                 # Wrap the streaming response body to catch errors during streaming
+                # AND to create local approval records for any tool-approval-request
+                # events pydantic-ai emits (so WS approve/reject can resolve them).
                 if isinstance(response, StreamingResponse):
                     original_body = response.body_iterator
-                    if self._approval_tool_ids:
-                        response.body_iterator = _wrap_streaming_body_with_approvals(
-                            original_body,
-                            self._approval_tool_ids,
-                            self._agent_id,
-                            metric_user_jwt_token,
-                            os.environ.get("POD_NAME"),
-                        )
-                        logger.debug(
-                            "[Vercel AI] Wrapped StreamingResponse with approval-record creation"
-                        )
-                    else:
-                        response.body_iterator = _wrap_streaming_body(original_body)
-                        logger.debug(
-                            "[Vercel AI] Wrapped StreamingResponse body_iterator for error logging"
-                        )
+                    response.body_iterator = _wrap_streaming_body_with_approvals(
+                        original_body,
+                        approval_tool_ids=self._approval_tool_ids,
+                        agent_id=agent_id,
+                        user_jwt_token=metric_user_jwt_token,
+                        pod_name=None,
+                    )
+                    logger.debug(
+                        "[Vercel AI] Wrapped StreamingResponse body_iterator with approvals"
+                    )
 
         except Exception as e:
             logger.error(

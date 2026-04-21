@@ -90,6 +90,12 @@ export interface UseAIAgentsWebSocketResult {
   connectionState: AIAgentsWebSocketConnectionState;
   lastClose: AIAgentsWebSocketCloseInfo | null;
   reconnectAttempt: number;
+  /**
+   * Send a JSON payload on the underlying WebSocket.
+   * Returns `true` when the message was sent, `false` when the socket
+   * isn't open (the caller can retry once `connectionState === 'connected'`).
+   */
+  send: (payload: unknown) => boolean;
 }
 
 // ─── Hook ────────────────────────────────────────────────────────────
@@ -349,5 +355,19 @@ export function useAIAgentsWebSocket(
     connectionState,
     lastClose,
     reconnectAttempt,
+    send: (payload: unknown) => {
+      const ws = wsRef.current;
+      if (!ws || ws.readyState !== WebSocket.OPEN) {
+        return false;
+      }
+      try {
+        ws.send(
+          typeof payload === 'string' ? payload : JSON.stringify(payload),
+        );
+        return true;
+      } catch {
+        return false;
+      }
+    },
   };
 }

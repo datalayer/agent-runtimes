@@ -34,6 +34,8 @@ logger = logging.getLogger(__name__)
 
 _STREAM_SUBSCRIBERS: dict[str, set[asyncio.Queue[AgentStreamMessage]]] = {}
 _MCP_ENABLED_TOOLS_BY_AGENT: dict[str, dict[str, set[str]]] = {}
+# Tracks explicitly unapproved tools per agent per server (blocklist; default = all approved).
+_MCP_UNAPPROVED_TOOLS_BY_AGENT: dict[str, dict[str, set[str]]] = {}
 _SKILLS_BY_AGENT: dict[str, dict[str, dict[str, Any]]] = {}
 
 
@@ -161,6 +163,25 @@ def get_agent_mcp_enabled_tools_by_server(
     return _get_agent_mcp_enabled_tools_by_server(agent_id)
 
 
+def _get_agent_mcp_approved_tools_by_server(
+    agent_id: str | None,
+) -> dict[str, list[str]]:
+    """Get approved MCP tools per server for an agent.
+
+    The universe of tools for each server is the set of currently *enabled*
+    tools.  By default every enabled tool is approved; the agent-level
+    blocklist in ``_MCP_UNAPPROVED_TOOLS_BY_AGENT`` records any exceptions.
+    """
+    key = _stream_key(agent_id)
+    unapproved_by_server = _MCP_UNAPPROVED_TOOLS_BY_AGENT.get(key, {})
+    enabled_by_server = _get_agent_mcp_enabled_tools_by_server(agent_id)
+    result: dict[str, list[str]] = {}
+    for server_id, enabled_tool_names in enabled_by_server.items():
+        unapproved = unapproved_by_server.get(server_id, set())
+        result[server_id] = sorted(set(enabled_tool_names) - unapproved)
+    return result
+
+
 def get_agent_enabled_mcp_tool_names(agent_id: str | None) -> set[str]:
     """Return the set of enabled MCP tool names for an agent."""
     by_server = _get_agent_mcp_enabled_tools_by_server(agent_id)
@@ -227,6 +248,7 @@ def _seed_agent_skills(agent_id: str | None) -> None:
                 "has_scripts": bool(skill.get("has_scripts", False)),
                 "has_resources": bool(skill.get("has_resources", False)),
                 "status": "available",
+                "approved": True,
                 "skill_definition": skill.get("skill_definition"),
                 "source_variant": skill.get("source_variant"),
                 "module": skill.get("module"),
@@ -280,6 +302,7 @@ def set_agent_enabled_skills(
                 "has_scripts": False,
                 "has_resources": False,
                 "status": "available",
+                "approved": True,
                 "skill_definition": None,
                 "source_variant": "unknown",
                 "module": None,
@@ -313,6 +336,7 @@ def enable_agent_skill(agent_id: str | None, skill_ref: str) -> None:
             "has_scripts": False,
             "has_resources": False,
             "status": "available",
+            "approved": True,
             "skill_definition": None,
             "source_variant": "unknown",
             "module": None,
@@ -336,11 +360,32 @@ def disable_agent_skill(agent_id: str | None, skill_ref: str) -> None:
     entry["skill_definition"] = None
 
 
+def approve_agent_skill(agent_id: str | None, skill_ref: str) -> None:
+    """Mark one skill as approved for an agent."""
+    _seed_agent_skills(agent_id)
+    key = _stream_key(agent_id)
+    skill_id = _normalize_skill_ref(skill_ref)
+    entry = _SKILLS_BY_AGENT.get(key, {}).get(skill_id)
+    if entry is not None:
+        entry["approved"] = True
+
+
+def unapprove_agent_skill(agent_id: str | None, skill_ref: str) -> None:
+    """Mark one skill as unapproved for an agent."""
+    _seed_agent_skills(agent_id)
+    key = _stream_key(agent_id)
+    skill_id = _normalize_skill_ref(skill_ref)
+    entry = _SKILLS_BY_AGENT.get(key, {}).get(skill_id)
+    if entry is not None:
+        entry["approved"] = False
+
+
 def purge_agent_stream_state(agent_id: str | None) -> None:
     """Purge per-agent in-memory stream state for skills/MCP/subscribers."""
     key = _stream_key(agent_id)
     _SKILLS_BY_AGENT.pop(key, None)
     _MCP_ENABLED_TOOLS_BY_AGENT.pop(key, None)
+    _MCP_UNAPPROVED_TOOLS_BY_AGENT.pop(key, None)
     _STREAM_SUBSCRIBERS.pop(key, None)
 
 
@@ -422,6 +467,7 @@ async def build_monitoring_snapshot_payload(
         mcp_status["enabled_tools_count"] = sum(
             len(tool_names) for tool_names in enabled_tools_by_server.values()
         )
+        mcp_status["approved_tools_by_server"] = _get_agent_mcp_approved_tools_by_server(agent_id)
     codemode_status = build_codemode_status(agent_id)
 
     graph_telemetry: dict[str, Any] | None = None
@@ -538,6 +584,30 @@ async def _handle_skill_disable(
     await _push_fresh_snapshot(agent_id, websocket, list_approvals)
 
 
+async def _handle_skill_approve(
+    skill_id: str,
+    agent_id: str | None,
+    websocket: Any,
+    list_approvals: Any | None,
+) -> None:
+    """Handle a skill_approve WS message."""
+    approve_agent_skill(agent_id, skill_id)
+    logger.info("[ws:skill_approve] skill_id=%s agent_id=%s", skill_id, agent_id)
+    await _push_fresh_snapshot(agent_id, websocket, list_approvals)
+
+
+async def _handle_skill_unapprove(
+    skill_id: str,
+    agent_id: str | None,
+    websocket: Any,
+    list_approvals: Any | None,
+) -> None:
+    """Handle a skill_unapprove WS message."""
+    unapprove_agent_skill(agent_id, skill_id)
+    logger.info("[ws:skill_unapprove] skill_id=%s agent_id=%s", skill_id, agent_id)
+    await _push_fresh_snapshot(agent_id, websocket, list_approvals)
+
+
 async def _handle_mcp_server_tools_set(
     server_id: str,
     enabled_tool_names: list[str],
@@ -561,6 +631,33 @@ async def _handle_mcp_server_tools_set(
         agent_id,
         server_id,
         len(normalized),
+    )
+    await _push_fresh_snapshot(agent_id, websocket, list_approvals)
+
+
+async def _handle_mcp_server_tool_approve(
+    server_id: str,
+    tool_name: str,
+    approved: bool,
+    agent_id: str | None,
+    websocket: Any,
+    list_approvals: Any | None,
+) -> None:
+    """Handle a per-tool approval toggle for a specific MCP server."""
+    key = _stream_key(agent_id)
+    server_unapproved = (
+        _MCP_UNAPPROVED_TOOLS_BY_AGENT.setdefault(key, {}).setdefault(server_id, set())
+    )
+    if approved:
+        server_unapproved.discard(tool_name)
+    else:
+        server_unapproved.add(tool_name)
+    logger.info(
+        "[ws:mcp_server_tool_approve] agent_id=%s server_id=%s tool=%s approved=%s",
+        agent_id,
+        server_id,
+        tool_name,
+        approved,
     )
     await _push_fresh_snapshot(agent_id, websocket, list_approvals)
 
@@ -715,6 +812,20 @@ async def stream_loop(
                                         skill_id, agent_id, websocket, list_approvals
                                     )
 
+                            elif msg_type == "skill_approve":
+                                skill_id = payload.get("skillId")
+                                if isinstance(skill_id, str):
+                                    await _handle_skill_approve(
+                                        skill_id, agent_id, websocket, list_approvals
+                                    )
+
+                            elif msg_type == "skill_unapprove":
+                                skill_id = payload.get("skillId")
+                                if isinstance(skill_id, str):
+                                    await _handle_skill_unapprove(
+                                        skill_id, agent_id, websocket, list_approvals
+                                    )
+
                             elif msg_type == "mcp_server_tools_set":
                                 server_id = payload.get("serverId")
                                 enabled_tool_names = payload.get("enabledToolNames")
@@ -728,6 +839,24 @@ async def stream_loop(
                                             for n in enabled_tool_names
                                             if isinstance(n, str)
                                         ],
+                                        agent_id,
+                                        websocket,
+                                        list_approvals,
+                                    )
+
+                            elif msg_type == "mcp_server_tool_approve":
+                                server_id = payload.get("serverId")
+                                tool_name = payload.get("toolName")
+                                approved = payload.get("approved")
+                                if (
+                                    isinstance(server_id, str)
+                                    and isinstance(tool_name, str)
+                                    and isinstance(approved, bool)
+                                ):
+                                    await _handle_mcp_server_tool_approve(
+                                        server_id,
+                                        tool_name,
+                                        approved,
                                         agent_id,
                                         websocket,
                                         list_approvals,

@@ -7,8 +7,8 @@ When an AgentSpec marks tools as requiring human approval, this module
 provides:
 
 1. ``ToolApprovalConfig`` — configuration for the approval flow.
-2. ``ToolApprovalManager`` — HTTP client that creates approval records in
-   the ai-agents service and polls until resolved.
+2. ``ToolApprovalManager`` — manages approval records locally and waits for
+   human decisions via asyncio.Event (in-process signaling over WebSocket).
 3. ``ToolApprovalCapability`` — a pydantic-ai ``AbstractCapability`` that
    intercepts tool calls needing approval via ``before_tool_execute``.
 """
@@ -17,13 +17,10 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import os
 import re
 from dataclasses import dataclass, field
 from typing import Any
 
-import httpx
-from datalayer_core.utils.urls import DatalayerURLs
 from pydantic_ai import RunContext
 from pydantic_ai.capabilities import AbstractCapability
 from pydantic_ai.messages import ToolCallPart
@@ -32,13 +29,6 @@ from pydantic_ai.tools import ToolDefinition
 from .guardrails import GuardrailBlockedError
 
 logger = logging.getLogger(__name__)
-
-
-def _env_bool(name: str, default: bool = False) -> bool:
-    value = os.environ.get(name)
-    if value is None:
-        return default
-    return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
 def _parse_timeout_hms(value: Any, *, default: float) -> float:
@@ -98,38 +88,18 @@ def _parse_timeout_hms(value: Any, *, default: float) -> float:
 class ToolApprovalConfig:
     """Configuration for the tool-approval flow."""
 
-    ai_agents_url: str = ""
-    token: str = ""
     agent_id: str = "default"
     pod_name: str = ""
     tools_requiring_approval: list[str] = field(default_factory=list)
-    poll_interval: float = 2.0
     timeout: float = 300.0
-    fail_open_on_error: bool = False
 
     @classmethod
     def from_env(cls) -> ToolApprovalConfig:
-        urls = DatalayerURLs.from_environment()
-        ai_agents_url = urls.ai_agents_url
-        if os.environ.get("AI_AGENTS_URL"):
-            logger.info(
-                "Ignoring AI_AGENTS_URL for tool approvals; using core-resolved ai-agents URL: %s",
-                ai_agents_url,
-            )
-        else:
-            logger.info(
-                "Using core-resolved ai-agents URL for tool approvals: %s",
-                ai_agents_url,
-            )
-        token = os.environ.get("DATALAYER_USER_TOKEN") or os.environ.get(
-            "DATALAYER_API_KEY", ""
-        )
+        import os
+
         return cls(
-            ai_agents_url=ai_agents_url,
-            token=token,
             agent_id=os.environ.get("AGENT_ID", "default"),
             pod_name=os.environ.get("POD_NAME", ""),
-            fail_open_on_error=_env_bool("TOOL_APPROVAL_FAIL_OPEN", False),
         )
 
     @classmethod
@@ -144,14 +114,10 @@ class ToolApprovalConfig:
                 - "send_email"
                 - "write_file"
               timeout: 300
-              poll_interval: 2
         """
         base = cls.from_env()
         base.tools_requiring_approval = spec_config.get("tools", [])
         base.timeout = _parse_timeout_hms(spec_config.get("timeout"), default=300.0)
-        base.poll_interval = spec_config.get("poll_interval", 2.0)
-        if "fail_open_on_error" in spec_config:
-            base.fail_open_on_error = bool(spec_config.get("fail_open_on_error"))
         return base
 
 
@@ -182,23 +148,17 @@ class ToolApprovalRejectedError(GuardrailBlockedError):
 
 
 class ToolApprovalManager:
-    """Manages tool approval requests against the ai-agents service."""
+    """Manages tool approval requests using in-process asyncio.Event signaling.
+
+    When a tool call needs approval, an approval record is created in the
+    local in-memory store (visible to WebSocket clients via snapshots).
+    The manager then blocks on an asyncio.Event until a WebSocket
+    ``tool_approval_decision`` message signals a decision.  No HTTP polling
+    is required — the event is signaled entirely in-process.
+    """
 
     def __init__(self, config: ToolApprovalConfig):
         self.config = config
-        self._client: httpx.AsyncClient | None = None
-
-    async def _get_client(self) -> httpx.AsyncClient:
-        if self._client is None or self._client.is_closed:
-            headers: dict[str, str] = {}
-            if self.config.token:
-                headers["Authorization"] = f"Bearer {self.config.token}"
-            self._client = httpx.AsyncClient(
-                base_url=self.config.ai_agents_url,
-                headers=headers,
-                timeout=30.0,
-            )
-        return self._client
 
     def requires_approval(self, tool_name: str) -> bool:
         """Check whether a tool requires human approval."""
@@ -221,140 +181,59 @@ class ToolApprovalManager:
         tool_args: dict[str, Any],
         tool_call_id: str | None = None,
     ) -> dict[str, Any]:
-        """Create an approval request and poll until resolved."""
+        """Create a local approval record and block until a decision arrives.
+
+        The decision is delivered by ``signal_approval_event`` which is called
+        from the WebSocket stream loop when a ``tool_approval_decision`` message
+        is received from the frontend.
+        """
         from agent_runtimes.routes.tool_approvals import (
-            get_local_approval_status,
-            mirror_approval_to_local,
+            ToolApprovalCreateRequest,
+            _create_approval,
+            register_pending_approval_event,
+            remove_pending_approval_event,
         )
 
-        client = await self._get_client()
+        req = ToolApprovalCreateRequest(
+            agent_id=self.config.agent_id,
+            pod_name=self.config.pod_name,
+            tool_name=tool_name,
+            tool_args=tool_args,
+            tool_call_id=tool_call_id,
+        )
+        record = await _create_approval(req)
+        approval_id = record.id
 
-        payload = {
-            "agent_id": self.config.agent_id,
-            "pod_name": self.config.pod_name,
-            "tool_name": tool_name,
-            "tool_args": tool_args,
-        }
-
-        approval_path = "/api/ai-agents/v1/tool-approvals"
-
-        try:
-            resp = await client.post(approval_path, json=payload)
-            resp.raise_for_status()
-            approval_data = resp.json()
-        except httpx.HTTPError as exc:
-            if self.config.fail_open_on_error:
-                logger.warning(
-                    "Tool approval backend unavailable at %s, auto-approving due to fail-open policy: %s",
-                    self.config.ai_agents_url,
-                    exc,
-                )
-                return {"status": "auto_approved", "tool_name": tool_name}
-            raise GuardrailBlockedError(
-                "Manual approval required, but tool-approval service is unavailable. "
-                "Set TOOL_APPROVAL_FAIL_OPEN=true to bypass in non-production setups."
-            ) from exc
-
-        approval_id = approval_data.get("id")
-        if not approval_id:
-            if self.config.fail_open_on_error:
-                logger.warning(
-                    "No approval ID returned for tool '%s', auto-approving due to fail-open policy",
-                    tool_name,
-                )
-                return {"status": "auto_approved", "tool_name": tool_name}
-            raise GuardrailBlockedError(
-                "Manual approval required, but ai-agents did not return an approval ID."
-            )
-
-        # Mirror the approval to the local in-memory store so the frontend
-        # can discover it via /api/v1/tool-approvals.
-        try:
-            if tool_call_id and not approval_data.get("tool_call_id"):
-                approval_data = dict(approval_data)
-                approval_data["tool_call_id"] = tool_call_id
-            await mirror_approval_to_local(approval_data)
-        except Exception:
-            logger.debug("Failed to mirror approval %s to local store", approval_id)
-
+        event, result = register_pending_approval_event(approval_id)
         logger.info(
             "Waiting for human approval of tool '%s' (approval_id=%s, timeout=%ss)",
             tool_name,
             approval_id,
             self.config.timeout,
         )
+        try:
+            await asyncio.wait_for(event.wait(), timeout=self.config.timeout)
+        except asyncio.TimeoutError:
+            raise ToolApprovalTimeoutError(
+                f"Approval for tool '{tool_name}' timed out after {self.config.timeout}s"
+            )
+        finally:
+            remove_pending_approval_event(approval_id)
 
-        elapsed = 0.0
-        while elapsed < self.config.timeout:
-            await asyncio.sleep(self.config.poll_interval)
-            elapsed += self.config.poll_interval
+        if result.get("approved"):
+            logger.info(
+                "Tool '%s' approved (approval_id=%s)", tool_name, approval_id
+            )
+            return {"status": "approved", "id": approval_id, "tool_name": tool_name}
 
-            # Check the local store first — the frontend approves/rejects
-            # via the local /api/v1/tool-approvals endpoints.
-            try:
-                local_status = await get_local_approval_status(approval_id)
-                if local_status and local_status != "pending":
-                    if local_status == "approved":
-                        logger.info(
-                            "Tool '%s' approved locally (approval_id=%s)",
-                            tool_name,
-                            approval_id,
-                        )
-                        return {
-                            "status": "approved",
-                            "id": approval_id,
-                            "tool_name": tool_name,
-                        }
-                    elif local_status == "rejected":
-                        logger.info(
-                            "Tool '%s' rejected locally (approval_id=%s)",
-                            tool_name,
-                            approval_id,
-                        )
-                        raise ToolApprovalRejectedError(tool_name, None)
-            except ToolApprovalRejectedError:
-                raise
-            except Exception:
-                pass
-
-            # Fall back to polling the remote service.
-            try:
-                resp = await client.get(f"{approval_path}/{approval_id}")
-                resp.raise_for_status()
-                record = resp.json()
-            except httpx.HTTPError:
-                logger.warning("Error polling approval %s, will retry", approval_id)
-                continue
-
-            status = record.get("status", "pending")
-            if status == "approved":
-                logger.info(
-                    "Tool '%s' approved (approval_id=%s)", tool_name, approval_id
-                )
-                return record
-            elif status == "rejected":
-                note = record.get("note")
-                logger.info(
-                    "Tool '%s' rejected (approval_id=%s, note=%s)",
-                    tool_name,
-                    approval_id,
-                    note,
-                )
-                raise ToolApprovalRejectedError(tool_name, note)
-            elif status == "expired":
-                raise ToolApprovalTimeoutError(
-                    f"Approval for tool '{tool_name}' expired server-side"
-                )
-
-        raise ToolApprovalTimeoutError(
-            f"Approval for tool '{tool_name}' timed out after {self.config.timeout}s"
+        note = result.get("note")
+        logger.info(
+            "Tool '%s' rejected (approval_id=%s, note=%s)",
+            tool_name,
+            approval_id,
+            note,
         )
-
-    async def close(self) -> None:
-        """Shutdown the HTTP client."""
-        if self._client and not self._client.is_closed:
-            await self._client.aclose()
-            self._client = None
+        raise ToolApprovalRejectedError(tool_name, note)
 
 
 # ============================================================================
@@ -366,14 +245,10 @@ class ToolApprovalManager:
 class ToolApprovalCapability(AbstractCapability[Any]):
     """Capability that gates tool execution behind async human approval.
 
-    Uses the ai-agents HTTP service to create approval records and polls
-    until a human approves or rejects the call.
-
-    Note:
-        For the Vercel-AI transport with DeferredToolRequests enabled,
-        agent creation intentionally filters this capability out to avoid
-        duplicate approval gating. In that flow, approval is handled by
-        deferred tool continuations instead of before_tool_execute polling.
+    When a tool requires approval, an in-memory approval record is created and
+    broadcast to WebSocket clients via snapshot.  Execution is suspended on an
+    asyncio.Event until the frontend sends a ``tool_approval_decision`` message,
+    which signals the event and resumes (or rejects) the tool call.
     """
 
     config: ToolApprovalConfig = field(default_factory=ToolApprovalConfig)
@@ -396,6 +271,30 @@ class ToolApprovalCapability(AbstractCapability[Any]):
         if not manager.requires_approval(call.tool_name):
             return args
 
+        # If this tool call was already approved (DeferredToolRequests continuation),
+        # skip the approval gate so the tool executes without creating a new record.
+        tool_call_id = getattr(call, "tool_call_id", None)
+        if tool_call_id:
+            from agent_runtimes.routes.tool_approvals import (
+                _APPROVALS,
+                _APPROVALS_LOCK,
+            )
+
+            async with _APPROVALS_LOCK:
+                for approval in _APPROVALS.values():
+                    if (
+                        approval.tool_call_id == tool_call_id
+                        and approval.status == "approved"
+                    ):
+                        logger.info(
+                            "Tool '%s' already approved via deferred continuation "
+                            "(approval_id=%s, tool_call_id=%s) — skipping re-approval",
+                            call.tool_name,
+                            approval.id,
+                            tool_call_id,
+                        )
+                        return args
+
         safe_args: dict[str, str] = {}
         for k, v in args.items():
             try:
@@ -406,6 +305,6 @@ class ToolApprovalCapability(AbstractCapability[Any]):
         await manager.request_and_wait(
             call.tool_name,
             safe_args,
-            getattr(call, "tool_call_id", None),
+            tool_call_id,
         )
         return args

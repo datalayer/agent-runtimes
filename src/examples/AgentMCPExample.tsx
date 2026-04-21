@@ -30,6 +30,7 @@ import {
   XCircleIcon,
   SignOutIcon,
   ToolsIcon,
+  AlertIcon,
 } from '@primer/octicons-react';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { SignInSimple } from '@datalayer/core/lib/views/iam';
@@ -38,7 +39,11 @@ import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
 import { Chat } from '../chat';
 import { useAIAgentsWebSocket } from '../hooks';
-import type { AgentStreamSnapshotPayload } from '../types/stream';
+import { agentRuntimeStore } from '../stores/agentRuntimeStore';
+import type {
+  AgentStreamSnapshotPayload,
+  AgentStreamToolApprovalPayload,
+} from '../types/stream';
 import { parseAgentStreamMessage } from '../types/stream';
 import type {
   McpAggregateStatus,
@@ -131,6 +136,80 @@ const McpToolCard: React.FC<{ tool: McpToolInfo }> = ({ tool }) => {
           ))}
         </Box>
       )}
+    </Box>
+  );
+};
+
+/* ── Pending tool approval panel ─────────────────────── */
+
+const ApprovalPanel: React.FC<{
+  approvals: AgentStreamToolApprovalPayload[];
+}> = ({ approvals }) => {
+  if (approvals.length === 0) return null;
+
+  const handleDecision = (approvalId: string, approved: boolean) => {
+    agentRuntimeStore.getState().sendDecision(approvalId, approved);
+  };
+
+  return (
+    <Box sx={{ mb: 3 }}>
+      <Heading as="h5" sx={{ fontSize: 1, mb: 2 }}>
+        <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1 }}>
+          <AlertIcon size={14} />
+          Pending Approvals ({approvals.length})
+        </Box>
+      </Heading>
+      {approvals.map(approval => (
+        <Box
+          key={approval.id}
+          sx={{
+            border: '1px solid',
+            borderColor: 'attention.muted',
+            borderRadius: 2,
+            p: 2,
+            mb: 2,
+            bg: 'attention.subtle',
+          }}
+        >
+          <Text sx={{ fontWeight: 600, fontSize: 1, display: 'block', mb: 1 }}>
+            {approval.tool_name}
+          </Text>
+          {approval.tool_args && Object.keys(approval.tool_args).length > 0 && (
+            <Box
+              sx={{
+                fontSize: 0,
+                fontFamily: 'mono',
+                color: 'fg.muted',
+                mb: 2,
+                maxHeight: 80,
+                overflow: 'auto',
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-all',
+              }}
+            >
+              {JSON.stringify(approval.tool_args, null, 2)}
+            </Box>
+          )}
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <Button
+              size="small"
+              variant="primary"
+              onClick={() => handleDecision(approval.id, true)}
+              leadingVisual={CheckCircleIcon}
+            >
+              Approve
+            </Button>
+            <Button
+              size="small"
+              variant="danger"
+              onClick={() => handleDecision(approval.id, false)}
+              leadingVisual={XCircleIcon}
+            >
+              Deny
+            </Button>
+          </Box>
+        </Box>
+      ))}
     </Box>
   );
 };
@@ -305,6 +384,10 @@ const AgentMCPInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
   const [liveMcpStatus, setLiveMcpStatus] = useState<
     McpToolsetsStatusResponse | undefined
   >(undefined);
+  // Pending tool approvals from WS snapshot
+  const [pendingApprovals, setPendingApprovals] = useState<
+    AgentStreamToolApprovalPayload[]
+  >([]);
 
   const agentBaseUrl = DEFAULT_LOCAL_BASE_URL;
   const chatAuthToken: string | undefined = token === null ? undefined : token;
@@ -412,6 +495,12 @@ const AgentMCPInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
       const fc = payload.fullContext as Record<string, unknown> | null;
       if (fc && Array.isArray(fc.tools) && fc.tools.length > 0) {
         setAgentTools(fc.tools as FullContextTool[]);
+      }
+      // Extract pending approvals
+      if (Array.isArray(payload.approvals)) {
+        setPendingApprovals(
+          payload.approvals.filter(a => a.status === 'pending'),
+        );
       }
     } catch {
       // Ignore malformed payloads.
@@ -683,6 +772,9 @@ const AgentMCPInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
 
           {/* Body */}
           <Box sx={{ p: 2, overflow: 'auto', flex: 1 }}>
+            {/* Pending approvals */}
+            <ApprovalPanel approvals={pendingApprovals} />
+
             <Box sx={{ mb: 3 }}>
               <Heading as="h5" sx={{ fontSize: 1, mb: 2 }}>
                 MCP Servers

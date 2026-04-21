@@ -103,6 +103,7 @@ export interface McpToolsetsStatusResponse {
   servers: McpServerStatus[];
   enabled_tools_by_server?: Record<string, string[]>;
   enabled_tools_count?: number;
+  approved_tools_by_server?: Record<string, string[]>;
 }
 
 import { defaultIndicatorColors } from '@datalayer/primer-addons/lib/theme';
