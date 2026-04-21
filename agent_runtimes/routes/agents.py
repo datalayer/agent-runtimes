@@ -1056,11 +1056,25 @@ async def create_agent(
                     if isinstance(reranker, bool):
                         request.enable_tool_reranker = reranker
 
-        resolved_pre_hooks = library_spec.pre_hooks if library_spec else None
-        resolved_post_hooks = library_spec.post_hooks if library_spec else None
-        parameter_schema: dict[str, Any] | None = (
-            library_spec.parameters if library_spec else None
-        )
+        resolved_pre_hooks = None
+        resolved_post_hooks = None
+        parameter_schema: dict[str, Any] | None = None
+        if library_spec is not None:
+            resolved_pre_hooks = getattr(
+                library_spec,
+                "pre_hooks",
+                getattr(library_spec, "preHooks", None),
+            )
+            resolved_post_hooks = getattr(
+                library_spec,
+                "post_hooks",
+                getattr(library_spec, "postHooks", None),
+            )
+            parameter_schema = getattr(
+                library_spec,
+                "parameters",
+                getattr(library_spec, "agent_parameters", None),
+            )
 
         # Apply defaults from forwarded full spec payload when request fields
         # are still unset/defaulted.
