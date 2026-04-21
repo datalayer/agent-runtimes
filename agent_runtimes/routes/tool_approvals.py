@@ -201,6 +201,55 @@ async def update_local_approval_status(
         )
 
 
+async def forward_approval_to_ai_agents(
+    record: "ToolApprovalRecord",
+    user_jwt_token: str | None,
+) -> None:
+    """Best-effort forward a pending approval to the datalayer-ai-agents backend.
+
+    Called from ``ToolApprovalManager.request_and_wait`` so that approvals
+    created via the inline ``ToolApprovalCapability`` path are visible in
+    remote UI panels (e.g. the ToolApprovals view in datalayer/ui) that poll
+    the ai-agents service rather than the local agent-runtimes endpoints.
+    """
+    if not user_jwt_token:
+        return
+    try:
+        import httpx
+        from datalayer_core.utils.urls import DatalayerURLs
+
+        urls = DatalayerURLs.from_environment()
+        ai_agents_url = getattr(urls, "ai_agents_url", None)
+        if not ai_agents_url:
+            return
+        ai_agents_url = ai_agents_url.rstrip("/")
+        async with httpx.AsyncClient(
+            timeout=10.0,
+            headers={"Authorization": f"Bearer {user_jwt_token}"},
+        ) as client:
+            resp = await client.post(
+                f"{ai_agents_url}/api/ai-agents/v1/tool-approvals",
+                json={
+                    "agent_id": record.agent_id,
+                    "pod_name": record.pod_name or "",
+                    "tool_name": record.tool_name,
+                    "tool_args": record.tool_args or {},
+                },
+            )
+            resp.raise_for_status()
+        logger.info(
+            "[tool-approval:forward] Synced approval %s (tool=%s) to ai-agents backend",
+            record.id,
+            record.tool_name,
+        )
+    except Exception as exc:
+        logger.debug(
+            "[tool-approval:forward] Could not sync approval %s to ai-agents: %s",
+            getattr(record, "id", "?"),
+            exc,
+        )
+
+
 async def _create_approval(body: ToolApprovalCreateRequest) -> ToolApprovalRecord:
     if body.tool_call_id:
         async with _APPROVALS_LOCK:

@@ -1725,6 +1725,14 @@ async def create_agent(
                     approval_config = ToolApprovalConfig.from_env()
                     approval_config.agent_id = agent_id
                     approval_config.tools_requiring_approval = approval_patterns
+                    # Override/supplement env-var token with the per-request Bearer
+                    # token so the approval manager can authenticate against the
+                    # datalayer-ai-agents backend when forwarding pending approvals.
+                    _auth_hdr = http_request.headers.get("Authorization", "")
+                    if _auth_hdr.lower().startswith("bearer "):
+                        _request_jwt = _auth_hdr[7:].strip()
+                        if _request_jwt:
+                            approval_config.user_jwt_token = _request_jwt
                     if capabilities is None:
                         capabilities = []
                     capabilities.append(ToolApprovalCapability(config=approval_config))

@@ -92,6 +92,9 @@ class ToolApprovalConfig:
     pod_name: str = ""
     tools_requiring_approval: list[str] = field(default_factory=list)
     timeout: float = 300.0
+    # JWT token used to authenticate requests to the datalayer-ai-agents backend
+    # so that newly-created approvals are broadcast to remote UI panels.
+    user_jwt_token: str | None = field(default=None)
 
     @classmethod
     def from_env(cls) -> ToolApprovalConfig:
@@ -100,6 +103,9 @@ class ToolApprovalConfig:
         return cls(
             agent_id=os.environ.get("AGENT_ID", "default"),
             pod_name=os.environ.get("POD_NAME", ""),
+            # DATALAYER_USER_TOKEN is populated by the configure-from-spec endpoint
+            # so that the approval manager can authenticate against ai-agents.
+            user_jwt_token=os.environ.get("DATALAYER_USER_TOKEN") or None,
         )
 
     @classmethod
@@ -190,6 +196,7 @@ class ToolApprovalManager:
         from agent_runtimes.routes.tool_approvals import (
             ToolApprovalCreateRequest,
             _create_approval,
+            forward_approval_to_ai_agents,
             register_pending_approval_event,
             remove_pending_approval_event,
         )
@@ -203,6 +210,12 @@ class ToolApprovalManager:
         )
         record = await _create_approval(req)
         approval_id = record.id
+
+        # Broadcast to the datalayer-ai-agents backend so remote UI panels
+        # (e.g. ToolApprovals view) can see this pending approval.
+        asyncio.ensure_future(
+            forward_approval_to_ai_agents(record, self.config.user_jwt_token)
+        )
 
         event, result = register_pending_approval_event(approval_id)
         logger.info(
