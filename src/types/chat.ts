@@ -304,6 +304,9 @@ export interface ChatCommonProps {
   /** Show input area */
   showInput?: boolean;
 
+  /** Keep input visible but disabled */
+  disableInputPrompt?: boolean;
+
   /** Custom class name */
   className?: string;
 
@@ -576,6 +579,9 @@ export interface ChatBaseProps {
 
   /** Show input area */
   showInput?: boolean;
+
+  /** Keep input visible but disabled */
+  disableInputPrompt?: boolean;
 
   /** Show model selector (for protocols that support it) */
   showModelSelector?: boolean;

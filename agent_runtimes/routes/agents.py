@@ -3798,6 +3798,7 @@ async def configure_from_spec_endpoint(
         agent_spec=body.agent_spec,
         enable_codemode=server_codemode,
         jupyter_sandbox=body.jupyter_sandbox,
+        tools=list(spec.tools or []),
     )
     # Serialise to a dict for comparison (env_vars are excluded since
     # they don't affect agent identity — only secrets/keys).

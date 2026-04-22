@@ -16,6 +16,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Box } from '@datalayer/primer-addons';
 import { ErrorView } from './components';
 import { Button, Spinner, Text } from '@primer/react';
+import { useCoreStore } from '@datalayer/core';
+import { DEFAULT_SERVICE_URLS } from '@datalayer/core/lib/api/constants';
 import {
   CheckCircleIcon,
   SignOutIcon,
@@ -55,6 +57,16 @@ const stableStringify = (value: unknown): string => {
   return `{${entries.join(',')}}`;
 };
 
+const AI_AGENTS_API_PREFIX = '/api/ai-agents/v1';
+
+const normalizeAiAgentsBaseUrl = (rawBaseUrl: string): string => {
+  const trimmed = rawBaseUrl.replace(/\/$/, '');
+  if (trimmed.endsWith(AI_AGENTS_API_PREFIX)) {
+    return trimmed.slice(0, -AI_AGENTS_API_PREFIX.length);
+  }
+  return trimmed;
+};
+
 const toWsUrl = (
   baseUrl: string,
   path: string,
@@ -80,6 +92,8 @@ const AGENT_NAME_PREFIX = 'tool-approval-demo-agent';
 const DEFAULT_AGENT_SPEC_ID = 'demo-full';
 const DEFAULT_LOCAL_BASE_URL =
   import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
+const FALLBACK_AI_AGENTS_BASE_URL =
+  import.meta.env.VITE_AI_AGENTS_URL || DEFAULT_SERVICE_URLS.AI_AGENTS;
 
 const getSelectedAgentSpecIdFromUi = (): string => {
   const params = new URLSearchParams(window.location.search);
@@ -198,13 +212,18 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
     >
   >(new Map());
   const respondedToolCallsRef = useRef<Set<string>>(new Set());
-  const approvalsRef = useRef<ToolApprovalRequest[]>([]);
   const pendingWithoutApprovalRef = useRef<Set<string>>(new Set());
   const pendingSnapshotRequestedRef = useRef<Set<string>>(new Set());
   const queuedResultBackedApprovalsRef = useRef<Set<string>>(new Set());
   const chatAuthToken: string | undefined = token === null ? undefined : token;
+  const configuredAiAgentsBaseUrl = useCoreStore(
+    (s: any) => s.configuration?.aiagentsRunUrl,
+  );
 
   const agentBaseUrl = DEFAULT_LOCAL_BASE_URL;
+  const aiAgentsBaseUrl = normalizeAiAgentsBaseUrl(
+    configuredAiAgentsBaseUrl || FALLBACK_AI_AGENTS_BASE_URL,
+  );
   const podName = 'localhost';
 
   const authFetch = useCallback(
@@ -225,7 +244,7 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
     if (!ws || ws.readyState !== WebSocket.OPEN) {
       return;
     }
-    ws.send(JSON.stringify({ type: 'request_snapshot' }));
+    ws.send(JSON.stringify({ type: 'tool-approvals-history' }));
     console.info('[AgentToolApprovalsExample] Requested approval snapshot', {
       reason,
     });
@@ -331,10 +350,6 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
   );
 
   useEffect(() => {
-    approvalsRef.current = approvals;
-  }, [approvals]);
-
-  useEffect(() => {
     if (!approvalActionBanner) {
       return;
     }
@@ -345,52 +360,6 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
     }, 4000);
     return () => window.clearTimeout(timeoutId);
   }, [approvalActionBanner]);
-
-  const scheduleLocalDecisionFallback = useCallback(
-    (
-      requestId: string,
-      approved: boolean,
-      note?: string,
-      source: 'inline' | 'banner' = 'banner',
-    ) => {
-      const approval = approvalsRef.current.find(item => item.id === requestId);
-      if (!approval) {
-        return;
-      }
-
-      window.setTimeout(() => {
-        // If a server event already applied the decision, skip local fallback.
-        const knownToolCallId = approval.tool_call_id;
-        if (
-          knownToolCallId &&
-          respondedToolCallsRef.current.has(knownToolCallId)
-        ) {
-          return;
-        }
-
-        const applied = emitServerToolDecision(
-          approval.tool_call_id,
-          approval.tool_name,
-          approval.tool_args ?? {},
-          approved,
-          approval.id,
-          note,
-        );
-
-        if (applied) {
-          console.info(
-            '[AgentToolApprovalsExample] Applied local decision fallback',
-            {
-              requestId,
-              source,
-              approved,
-            },
-          );
-        }
-      }, 300);
-    },
-    [emitServerToolDecision],
-  );
 
   const toApprovalRequest = useCallback(
     (payload: AgentStreamToolApprovalPayload): ToolApprovalRequest => {
@@ -566,8 +535,8 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
     }
 
     const wsUrl = toWsUrl(
-      agentBaseUrl,
-      '/api/v1/tool-approvals/ws',
+      aiAgentsBaseUrl,
+      `${AI_AGENTS_API_PREFIX}/ws`,
       chatAuthToken,
     );
     if (!wsUrl) {
@@ -582,11 +551,32 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
 
     ws.onopen = () => {
       setWsState('connected');
+      ws.send(JSON.stringify({ type: 'tool-approvals-history' }));
     };
 
     ws.onmessage = event => {
       try {
-        const stream = parseAgentStreamMessage(JSON.parse(String(event.data)));
+        const raw = JSON.parse(String(event.data));
+
+        if (
+          raw &&
+          typeof raw === 'object' &&
+          (raw as Record<string, unknown>).type === 'tool-approvals-history'
+        ) {
+          const data = (raw as { data?: { approvals?: unknown[] } }).data;
+          const list = Array.isArray(data?.approvals)
+            ? data.approvals
+                .map(item =>
+                  toApprovalRequest(item as AgentStreamToolApprovalPayload),
+                )
+                .filter(approval => isApprovalForActiveAgent(approval))
+            : [];
+          pendingSnapshotRequestedRef.current.clear();
+          setApprovals(list);
+          return;
+        }
+
+        const stream = parseAgentStreamMessage(raw);
         if (!stream) {
           return;
         }
@@ -680,6 +670,7 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
     };
   }, [
     isReady,
+    aiAgentsBaseUrl,
     agentBaseUrl,
     chatAuthToken,
     agentId,
@@ -692,15 +683,10 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
     async (
       requestId: string,
       note?: string,
-      source: 'inline' | 'banner' = 'banner',
+      _source: 'inline' | 'banner' = 'banner',
     ): Promise<boolean> => {
       setApprovalLoading(requestId);
       setApprovalError(null);
-      setApprovals(prev =>
-        prev.map(item =>
-          item.id === requestId ? { ...item, status: 'approved' } : item,
-        ),
-      );
       try {
         const ws = approvalWsRef.current;
         if (!ws || ws.readyState !== WebSocket.OPEN) {
@@ -714,7 +700,6 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
           ...(note ? { note } : {}),
         };
         ws.send(JSON.stringify(decision));
-        scheduleLocalDecisionFallback(requestId, true, note, source);
         return true;
       } catch (error) {
         const message =
@@ -727,22 +712,17 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
         setApprovalLoading(null);
       }
     },
-    [scheduleLocalDecisionFallback],
+    [],
   );
 
   const reject = useCallback(
     async (
       requestId: string,
       note?: string,
-      source: 'inline' | 'banner' = 'banner',
+      _source: 'inline' | 'banner' = 'banner',
     ): Promise<boolean> => {
       setApprovalLoading(requestId);
       setApprovalError(null);
-      setApprovals(prev =>
-        prev.map(item =>
-          item.id === requestId ? { ...item, status: 'rejected' } : item,
-        ),
-      );
       try {
         const ws = approvalWsRef.current;
         if (!ws || ws.readyState !== WebSocket.OPEN) {
@@ -756,7 +736,6 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
           ...(note ? { note } : {}),
         };
         ws.send(JSON.stringify(decision));
-        scheduleLocalDecisionFallback(requestId, false, note, source);
         return true;
       } catch (error) {
         const message =
@@ -769,7 +748,7 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
         setApprovalLoading(null);
       }
     },
-    [scheduleLocalDecisionFallback],
+    [],
   );
 
   const pendingApprovals: PendingApproval[] = useMemo(

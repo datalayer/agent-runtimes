@@ -293,6 +293,7 @@ function ChatBaseInner({
   showModelSelector = false,
   showToolsMenu = false,
   showSkillsMenu = false,
+  disableInputPrompt = false,
   codemodeEnabled = false,
   initialModel,
   availableModels,
@@ -2286,6 +2287,7 @@ function ChatBaseInner({
           padding={padding}
           onSend={() => handleSend()}
           onStop={handleStop}
+          disableInputPrompt={disableInputPrompt}
           showTokenUsage={showTokenUsage}
           agentUsage={agentUsage}
           showModelSelector={showModelSelector}

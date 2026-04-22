@@ -51,6 +51,7 @@ export interface InputToolbarProps {
   padding: number;
   onSend: () => void;
   onStop: () => void;
+  disableInputPrompt?: boolean;
 
   // ---- Token usage ----
   showTokenUsage: boolean;
@@ -124,6 +125,7 @@ export function InputToolbar({
   padding,
   onSend,
   onStop,
+  disableInputPrompt = false,
   showTokenUsage,
   agentUsage,
   showModelSelector,
@@ -167,6 +169,7 @@ export function InputToolbar({
       <InputPrompt
         placeholder={placeholder || 'Type a message...'}
         isLoading={isLoading}
+        disabled={disableInputPrompt}
         readOnly={!connectionConfirmed}
         onSend={onSend}
         onStop={onStop}

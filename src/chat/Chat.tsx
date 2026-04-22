@@ -242,6 +242,7 @@ export function Chat({
   showModelSelector = true,
   showToolsMenu = true,
   showInput = true,
+  disableInputPrompt = false,
   showSkillsMenu = false,
   codemodeEnabled = false,
   showTokenUsage = true,
@@ -573,6 +574,7 @@ export function Chat({
             showModelSelector={showModelSelector}
             showToolsMenu={showToolsMenu}
             showInput={showInput}
+            disableInputPrompt={disableInputPrompt}
             showSkillsMenu={showSkillsMenu}
             showTokenUsage={showTokenUsage}
             codemodeEnabled={codemodeEnabled}
