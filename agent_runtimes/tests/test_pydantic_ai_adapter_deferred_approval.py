@@ -158,9 +158,12 @@ async def test_run_continues_deferred_approval_with_non_empty_prompt(
             pass
 
         async def request_and_wait(
-            self, tool_name: str, tool_args: dict[str, str]
+            self,
+            tool_name: str,
+            tool_args: dict[str, str],
+            tool_call_id: str | None = None,
         ) -> dict[str, str]:
-            requests_seen.append((tool_name, tool_args))
+            requests_seen.append((tool_name, tool_args, tool_call_id))
             return {"status": "approved"}
 
         async def close(self) -> None:
@@ -181,7 +184,7 @@ async def test_run_continues_deferred_approval_with_non_empty_prompt(
     assert fake_agent.calls[0]["prompt"] == "run once"
     assert fake_agent.calls[1]["prompt"] == _DEFERRED_CONTINUATION_PROMPT
     assert requests_seen == [
-        ("runtime_sensitive_echo", {"text": "hello", "reason": "audit"})
+        ("runtime_sensitive_echo", {"text": "hello", "reason": "audit"}, "tool-1")
     ]
 
 
@@ -199,9 +202,12 @@ async def test_stream_continues_deferred_approval_with_non_empty_prompt(
             pass
 
         async def request_and_wait(
-            self, tool_name: str, tool_args: dict[str, str]
+            self,
+            tool_name: str,
+            tool_args: dict[str, str],
+            tool_call_id: str | None = None,
         ) -> dict[str, str]:
-            requests_seen.append((tool_name, tool_args))
+            requests_seen.append((tool_name, tool_args, tool_call_id))
             return {"status": "approved"}
 
         async def close(self) -> None:
@@ -227,5 +233,5 @@ async def test_stream_continues_deferred_approval_with_non_empty_prompt(
     assert fake_agent.calls[0]["prompt"] == "run once"
     assert fake_agent.calls[1]["prompt"] == _DEFERRED_CONTINUATION_PROMPT
     assert requests_seen == [
-        ("runtime_sensitive_echo", {"text": "hello", "reason": "audit"})
+        ("runtime_sensitive_echo", {"text": "hello", "reason": "audit"}, "tool-1")
     ]
