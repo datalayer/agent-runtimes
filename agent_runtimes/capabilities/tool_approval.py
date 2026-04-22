@@ -166,6 +166,15 @@ class ToolApprovalManager:
     def __init__(self, config: ToolApprovalConfig):
         self.config = config
 
+    async def close(self) -> None:
+        """Compatibility no-op for adapter cleanup paths.
+
+        Some adapter flows call ``await approval_manager.close()`` after
+        approval rounds. This manager currently owns no external resources,
+        so shutdown is intentionally a no-op.
+        """
+        return None
+
     def requires_approval(self, tool_name: str) -> bool:
         """Check whether a tool requires human approval."""
         tool_name_variants = {

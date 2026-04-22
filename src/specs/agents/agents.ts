@@ -1119,7 +1119,7 @@ export const DEMO_ONE_TRIGGER_APPROVAL_AGENT_SPEC_0_0_1: AgentSpec = {
   mcpServerTools: undefined,
   guardrails: undefined,
   evals: undefined,
-  codemode: undefined,
+  codemode: { enabled: false },
   output: undefined,
   advanced: undefined,
   authorizationPolicy: undefined,
