@@ -43,18 +43,22 @@ def load_specs(specs_dir: Path) -> list[dict[str, Any]]:
 
 
 def _py_field(f: dict[str, Any]) -> str:
-    """Format an EventField as a Python dict literal."""
+    """Format an EventField dict body.
+
+    Returns the lines inside ``EventField(\n    **{\n        ...\n    }\n)``
+    so that the generated output matches ``ruff format`` exactly.
+    """
     parts = [
-        f'"name": "{f["name"]}"',
-        f'"label": "{f["label"]}"',
-        f'"type": "{f["type"]}"',
-        f'"required": {str(f["required"])}',
+        f'                "name": "{f["name"]}"',
+        f'                "label": "{f["label"]}"',
+        f'                "type": "{f["type"]}"',
+        f'                "required": {str(f["required"])}',
     ]
     if "description" in f:
-        parts.append(f'"description": "{_esc_dq(f["description"])}"')
+        parts.append(f'                "description": "{_esc_dq(f["description"])}"')
     if "placeholder" in f:
-        parts.append(f'"placeholder": "{_esc_dq(f["placeholder"])}"')
-    return "{" + ", ".join(parts) + "}"
+        parts.append(f'                "placeholder": "{_esc_dq(f["placeholder"])}"')
+    return ",\n".join(parts)
 
 
 def _ts_field(f: dict[str, Any]) -> str:
@@ -118,10 +122,18 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
             ]
         )
         if fields:
-            field_strs = [_py_field(f) for f in fields]
             lines.append("    fields=[")
-            for fs in field_strs:
-                lines.append(f"        EventField(**{fs}),")
+            for f in fields:
+                field_body = _py_field(f)
+                lines.extend(
+                    [
+                        "        EventField(",
+                        "            **{",
+                        field_body + ",",
+                        "            }",
+                        "        ),",
+                    ]
+                )
             lines.append("    ],")
         lines.extend([")", ""])
 
@@ -169,8 +181,8 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
             "    spec = EVENT_CATALOG.get(event_id)",
             "    if spec is not None:",
             "        return spec",
-            "    base, _, ver = event_id.rpartition(':')",
-            "    if base and '.' in ver:",
+            "    base, _, ver = event_id.rpartition(\":\")",
+            "    if base and \".\" in ver:",
             "        return EVENT_CATALOG.get(base)",
             "    return None",
             "",

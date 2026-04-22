@@ -234,6 +234,7 @@ async def forward_approval_to_ai_agents(
                     "pod_name": record.pod_name or "",
                     "tool_name": record.tool_name,
                     "tool_args": record.tool_args or {},
+                    "tool_call_id": record.tool_call_id,
                 },
             )
             resp.raise_for_status()

@@ -67,11 +67,7 @@ import {
   useAIAgentsWebSocket,
 } from '../hooks';
 import type { AgentEvent } from '../types';
-import {
-  parseAgentStreamMessage,
-  type AgentStreamSnapshotPayload,
-  type AgentStreamToolApprovalPayload,
-} from '../types/stream';
+import { type AgentStreamToolApprovalPayload } from '../types/stream';
 import { VercelAIAdapter } from '../protocols';
 import { createUserMessage } from '../types/messages';
 
@@ -241,71 +237,122 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
   const markUnreadMutation = useMarkEventUnread(agentId);
   const agentEvents: AgentEvent[] = eventsQuery.data?.events ?? [];
 
-  // WebSocket for real-time event updates
-  useAIAgentsWebSocket({
-    channels: agentId ? [`agent:${agentId}`] : [],
-  });
+  // ── WebSocket to datalayer-ai-agents: agent events + tool approvals ─────
+  // Single connection handles both agent:{agentId} channel events and the
+  // user's own channel (auto-subscribed) for tool_approval_* events.
+  // This mirrors the approval flow used by the /agents/tool-approvals UI page
+  // so that approving from either surface produces identical behaviour.
+  const handleAIAgentsMessage = useCallback(
+    (msg: {
+      channel?: string;
+      event?: string;
+      data?: Record<string, unknown>;
+      type?: string;
+      raw?: unknown;
+    }) => {
+      const event = msg.event;
+      const data = msg.data;
 
-  const handleApprovalStreamMessage = useCallback(
-    (message: { raw?: unknown }) => {
-      try {
-        const stream = parseAgentStreamMessage(message?.raw ?? message);
-        if (!stream) {
-          return;
-        }
+      // Handle tool-approvals-history response (seeds initial pending list).
+      if (msg.type === 'tool-approvals-history') {
+        const rawList = Array.isArray(data?.approvals) ? data!.approvals : [];
+        const pending = (rawList as AgentStreamToolApprovalPayload[]).filter(
+          a =>
+            (!a.agent_id || a.agent_id === approvalAgentId) &&
+            a.status === 'pending',
+        );
+        setApprovals(pending.map(toApprovalRequest));
+        return;
+      }
 
-        if (stream.type === 'agent.snapshot') {
-          const payload =
-            stream.payload as unknown as AgentStreamSnapshotPayload;
-          const nextApprovals = (payload.approvals ?? [])
-            .filter(
-              approval =>
-                !approval.agent_id || approval.agent_id === approvalAgentId,
-            )
-            .map(toApprovalRequest);
-          setApprovals(nextApprovals);
-          return;
-        }
+      if (!event) return;
 
-        if (stream.type === 'tool_approval_created') {
-          const approval = toApprovalRequest(
-            stream.payload as unknown as AgentStreamToolApprovalPayload,
-          );
-          if (approval.agent_id && approval.agent_id !== approvalAgentId) {
-            return;
+      if (event === 'tool_approval_created') {
+        const approval = toApprovalRequest(
+          data as unknown as AgentStreamToolApprovalPayload,
+        );
+        if (approval.agent_id && approval.agent_id !== approvalAgentId) return;
+        setApprovals(prev => [
+          approval,
+          ...prev.filter(a => a.id !== approval.id),
+        ]);
+        return;
+      }
+
+      if (
+        event === 'tool_approval_approved' ||
+        event === 'tool_approval_rejected'
+      ) {
+        const record = data as unknown as AgentStreamToolApprovalPayload;
+        if (record?.agent_id && record.agent_id !== approvalAgentId) return;
+        setApprovals(prev => prev.filter(a => a.id !== record?.id));
+
+        // When approved and we have a live deferred-tool stream, send the
+        // continuation so the agent can execute the tool and produce output.
+        // This path fires when the user approves from a DIFFERENT UI surface
+        // (e.g. /agents/tool-approvals page) rather than this panel.
+        // handleApprove() clears approvalStreamRef before reaching here, so
+        // this block only runs for external approvals (no double-send).
+        if (event === 'tool_approval_approved') {
+          const stream = approvalStreamRef.current;
+          if (stream) {
+            approvalStreamRef.current = null;
+            const toolCallId = stream.adapter.getDeferredToolCallId(
+              record?.tool_name ?? '',
+            );
+            if (toolCallId) {
+              void stream.adapter
+                .sendToolResult(toolCallId, {
+                  toolCallId,
+                  success: true,
+                  result: {
+                    approved: true,
+                    approvalId: record?.id,
+                    message: 'Approved from external UI',
+                  },
+                })
+                .finally(() => {
+                  stream.unsubscribe();
+                  stream.adapter.disconnect();
+                });
+            } else {
+              stream.unsubscribe();
+              stream.adapter.disconnect();
+            }
           }
-          setApprovals(prev => {
-            const next = prev.filter(item => item.id !== approval.id);
-            next.unshift(approval);
-            return next;
-          });
-          return;
         }
-
-        if (
-          stream.type === 'tool_approval_approved' ||
-          stream.type === 'tool_approval_rejected'
-        ) {
-          const approval =
-            stream.payload as unknown as AgentStreamToolApprovalPayload;
-          setApprovals(prev => prev.filter(item => item.id !== approval.id));
-        }
-      } catch {
-        // Ignore malformed stream payloads.
       }
     },
     [approvalAgentId, toApprovalRequest],
   );
 
-  const approvalSocket = useAIAgentsWebSocket({
-    enabled: isReady && approvalAgentReady && Boolean(agentBaseUrl),
-    baseUrl: agentBaseUrl,
-    path: '/api/v1/tool-approvals/ws',
-    queryParams: { agent_id: approvalAgentId },
-    onMessage: handleApprovalStreamMessage,
-    reconnectDelayMs: attempt =>
-      Math.min(1000 * 2 ** Math.max(0, attempt - 1), 10000),
-  });
+  const { send: sendToAIAgents, connectionState: aiAgentsConnectionState } =
+    useAIAgentsWebSocket({
+      channels: agentId ? [`agent:${agentId}`] : [],
+      onMessage: handleAIAgentsMessage,
+    });
+
+  // Request pending approvals for the active approval agent once connected.
+  const approvalHistoryAskedRef = useRef(false);
+  useEffect(() => {
+    if (
+      aiAgentsConnectionState !== 'connected' ||
+      !hasTriggeredApproval ||
+      !approvalAgentId
+    ) {
+      approvalHistoryAskedRef.current = false;
+      return;
+    }
+    if (approvalHistoryAskedRef.current) return;
+    approvalHistoryAskedRef.current = sendToAIAgents({
+      type: 'tool-approvals-history',
+    });
+  }, [
+    aiAgentsConnectionState,
+    hasTriggeredApproval,
+    approvalAgentId,
+    sendToAIAgents,
+  ]);
 
   // Authenticated fetch helper (for sidecar endpoints)
   const authFetch = useCallback(
@@ -614,98 +661,120 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
   // ── Approve / Reject handlers ───────────────────────────────────────────
 
   const handleApprove = useCallback(
-    async (requestId: string) => {
+    async (requestId: string): Promise<boolean> => {
       setApprovalLoading(requestId);
       setApprovalError(null);
       try {
         const approval = approvals.find(a => a.id === requestId);
+        const stream = approvalStreamRef.current;
 
-        const sentDecision = approvalSocket.send({
+        // Send the decision via the datalayer-ai-agents WS (same path as the
+        // /agents/tool-approvals UI page).
+        const sentDecision = sendToAIAgents({
           type: 'tool_approval_decision',
           approvalId: requestId,
           approved: true,
         });
-        if (!sentDecision) {
-          throw new Error('Approval websocket is not connected');
+        if (!sentDecision && !stream) {
+          throw new Error(
+            'AI Agents WebSocket is not connected and no local approval stream is active',
+          );
         }
 
-        // Best-effort continuation for deferred tool-result streams.
-        if (approval?.tool_call_id && approvalStreamRef.current) {
-          await approvalStreamRef.current.adapter.sendToolResult(
-            approval.tool_call_id,
-            {
-              toolCallId: approval.tool_call_id,
+        // Send the Vercel AI continuation so the agent can execute the tool.
+        // Clear approvalStreamRef FIRST so the incoming tool_approval_approved
+        // WS event doesn't trigger a duplicate sendToolResult.
+        if (stream) {
+          approvalStreamRef.current = null;
+          const toolCallId =
+            approval?.tool_call_id ??
+            stream.adapter.getDeferredToolCallId(approval?.tool_name ?? '');
+          if (toolCallId) {
+            await stream.adapter.sendToolResult(toolCallId, {
+              toolCallId,
               success: true,
               result: {
                 approved: true,
                 approvalId: requestId,
                 message: 'Approved from trigger panel',
               },
-            },
-          );
-          approvalStreamRef.current.unsubscribe();
-          approvalStreamRef.current.adapter.disconnect();
-          approvalStreamRef.current = null;
+            });
+          }
+          stream.unsubscribe();
+          stream.adapter.disconnect();
         }
 
         setApprovals(prev => prev.filter(a => a.id !== requestId));
+        return true;
       } catch (error) {
         setApprovalError(
           error instanceof Error ? error.message : 'Failed to approve',
         );
+        return false;
       } finally {
         setApprovalLoading(null);
       }
     },
-    [approvals, approvalSocket],
+    [approvals, sendToAIAgents],
   );
 
   const handleReject = useCallback(
-    async (requestId: string, note?: string) => {
+    async (requestId: string, note?: string): Promise<boolean> => {
       setApprovalLoading(requestId);
       setApprovalError(null);
       try {
         const approval = approvals.find(a => a.id === requestId);
+        const stream = approvalStreamRef.current;
 
-        const sentDecision = approvalSocket.send({
+        // Send the decision via the datalayer-ai-agents WS (same path as the
+        // /agents/tool-approvals UI page).
+        const sentDecision = sendToAIAgents({
           type: 'tool_approval_decision',
           approvalId: requestId,
           approved: false,
           ...(note ? { note } : {}),
         });
-        if (!sentDecision) {
-          throw new Error('Approval websocket is not connected');
+        if (!sentDecision && !stream) {
+          throw new Error(
+            'AI Agents WebSocket is not connected and no local approval stream is active',
+          );
         }
 
-        // Best-effort continuation for deferred tool-result streams.
-        if (approval?.tool_call_id && approvalStreamRef.current) {
-          await approvalStreamRef.current.adapter.sendToolResult(
-            approval.tool_call_id,
-            {
-              toolCallId: approval.tool_call_id,
+        // Send the Vercel AI continuation so the agent can record the rejection.
+        // Clear approvalStreamRef FIRST to prevent a duplicate call from the
+        // incoming tool_approval_rejected WS event.
+        if (stream) {
+          approvalStreamRef.current = null;
+          const toolCallId =
+            approval?.tool_call_id ??
+            stream.adapter.getDeferredToolCallId(approval?.tool_name ?? '');
+          if (toolCallId) {
+            await stream.adapter.sendToolResult(toolCallId, {
+              toolCallId,
               success: true,
               result: {
                 approved: false,
                 approvalId: requestId,
                 message: note || 'Rejected from trigger panel',
               },
-            },
-          );
-          approvalStreamRef.current.unsubscribe();
-          approvalStreamRef.current.adapter.disconnect();
-          approvalStreamRef.current = null;
+            });
+          }
+          stream.unsubscribe();
+          stream.adapter.disconnect();
         }
 
         setApprovals(prev => prev.filter(a => a.id !== requestId));
+        return true;
       } catch (error) {
         setApprovalError(
           error instanceof Error ? error.message : 'Failed to reject',
         );
+        return false;
       } finally {
         setApprovalLoading(null);
       }
     },
-    [approvals, approvalSocket],
+    [approvals, sendToAIAgents],
   );
 
   // ── Launch once trigger with approval ────────────────────────────────────
@@ -1086,12 +1155,10 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
           )}
           <Label
             variant={
-              approvalSocket.connectionState === 'connected'
-                ? 'success'
-                : 'secondary'
+              aiAgentsConnectionState === 'connected' ? 'success' : 'secondary'
             }
           >
-            Approvals WS: {approvalSocket.connectionState}
+            Approvals WS: {aiAgentsConnectionState}
           </Label>
           {token && <UserBadge token={token} variant="small" />}
           <Button
@@ -1127,14 +1194,21 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
           args={activeApproval?.tool_args ?? {}}
           onApprove={async () => {
             if (activeApproval) {
-              await handleApprove(activeApproval.id);
-              setActiveApproval(null);
+              const ok = await handleApprove(activeApproval.id);
+              if (ok) {
+                setActiveApproval(null);
+              }
             }
           }}
           onDeny={async () => {
             if (activeApproval) {
-              await handleReject(activeApproval.id, 'Rejected from dialog');
-              setActiveApproval(null);
+              const ok = await handleReject(
+                activeApproval.id,
+                'Rejected from dialog',
+              );
+              if (ok) {
+                setActiveApproval(null);
+              }
             }
           }}
           onClose={() => setActiveApproval(null)}

@@ -250,18 +250,21 @@ function useApprovalsSocket(): {
       const type = (msg.type ?? msg.event) as string | undefined;
       if (!type) return;
 
-      if (type === 'agent.snapshot') {
-        const payload = msg.payload as { approvals?: unknown[] } | undefined;
-        const rawList = Array.isArray(payload?.approvals)
-          ? payload!.approvals
-          : [];
+      // Response to our { type: 'tool-approvals-history' } request.
+      // Shape: { type: "tool-approvals-history", data: { approvals: [...] } }
+      if (type === 'tool-approvals-history') {
+        const data = msg.data as Record<string, unknown> | undefined;
+        const rawList = Array.isArray(data?.approvals) ? data!.approvals : [];
         const list = rawList
           .map(normalizeApproval)
-          .filter((a): a is ApprovalRecord => a !== null);
+          .filter((a): a is ApprovalRecord => a !== null)
+          .filter(a => a.status !== 'deleted');
         writeSnapshot(queryClient, list);
         return;
       }
 
+      // Incremental broadcast events from datalayer-ai-agents.
+      // Shape: { channel: "user:<uid>", event: "tool_approval_*", data: record }
       if (type.startsWith('tool_approval_')) {
         const rawPayload =
           (msg.payload as Record<string, unknown> | undefined) ??
@@ -278,16 +281,16 @@ function useApprovalsSocket(): {
     },
   });
 
-  // Ask for a snapshot as soon as the socket is connected so consumers that
-  // mount after the initial server push still render live data.
-  const snapshotAskedRef = useRef(false);
+  // Request the full approval history once connected so the sidebar badge
+  // and any pending-count consumers always show the correct count.
+  const historyAskedRef = useRef(false);
   useEffect(() => {
     if (connectionState !== 'connected') {
-      snapshotAskedRef.current = false;
+      historyAskedRef.current = false;
       return;
     }
-    if (snapshotAskedRef.current) return;
-    snapshotAskedRef.current = send({ type: 'request_snapshot' });
+    if (historyAskedRef.current) return;
+    historyAskedRef.current = send({ type: 'tool-approvals-history' });
   }, [connectionState, send]);
 
   return { send, connectionState };

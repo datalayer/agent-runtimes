@@ -89,6 +89,29 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
   private _streamDonePromise: Promise<void> | null = null;
   private _streamDoneResolve: (() => void) | null = null;
 
+  /**
+   * Return the toolCallId for the first deferred tool whose name matches
+   * toolName, or the first deferred tool if toolName is empty/unmatched.
+   * Used by external callers (e.g. approval handlers) that need to send a
+   * continuation without access to the original tool-call-id.
+   */
+  getDeferredToolCallId(toolName: string): string | undefined {
+    if (!toolName) {
+      return this.deferredToolMeta.keys().next().value;
+    }
+    for (const [id, meta] of this.deferredToolMeta) {
+      if (
+        meta.toolName === toolName ||
+        meta.toolName === toolName.replace(/-/g, '_') ||
+        meta.toolName === toolName.replace(/_/g, '-')
+      ) {
+        return id;
+      }
+    }
+    // Fall back to first entry if name didn't match (handles name normalisation edge cases)
+    return this.deferredToolMeta.keys().next().value;
+  }
+
   constructor(config: VercelAIAdapterConfig) {
     super(config);
     this.vercelConfig = config;
