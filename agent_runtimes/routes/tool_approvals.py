@@ -215,7 +215,7 @@ async def update_local_approval_status(
 async def forward_approval_to_ai_agents(
     record: "ToolApprovalRecord",
     user_jwt_token: str | None,
-) -> None:
+) -> str | None:
     """Best-effort forward a pending approval to the datalayer-ai-agents backend.
 
     Called from ``ToolApprovalManager.request_and_wait`` so that approvals
@@ -224,7 +224,7 @@ async def forward_approval_to_ai_agents(
     the ai-agents service rather than the local agent-runtimes endpoints.
     """
     if not user_jwt_token:
-        return
+        return None
     try:
         import httpx
         from datalayer_core.utils.urls import DatalayerURLs
@@ -232,8 +232,9 @@ async def forward_approval_to_ai_agents(
         urls = DatalayerURLs.from_environment()
         ai_agents_url = getattr(urls, "ai_agents_url", None)
         if not ai_agents_url:
-            return
+            return None
         ai_agents_url = ai_agents_url.rstrip("/")
+        remote_approval_id: str | None = None
         async with httpx.AsyncClient(
             timeout=10.0,
             headers={"Authorization": f"Bearer {user_jwt_token}"},
@@ -249,17 +250,36 @@ async def forward_approval_to_ai_agents(
                 },
             )
             resp.raise_for_status()
+            try:
+                payload = resp.json()
+            except Exception:
+                payload = None
+
+            if isinstance(payload, dict):
+                # ai-agents may return either top-level id/uid or nested data object.
+                candidate = (
+                    payload.get("id")
+                    or payload.get("uid")
+                    or (payload.get("data") or {}).get("id")
+                    or (payload.get("data") or {}).get("uid")
+                )
+                if isinstance(candidate, str) and candidate:
+                    remote_approval_id = candidate
         logger.info(
-            "[tool-approval:forward] Synced approval %s (tool=%s) to ai-agents backend",
+            "[tool-approval:forward] Synced approval %s (tool=%s) to ai-agents backend"
+            " (remote_id=%s)",
             record.id,
             record.tool_name,
+            remote_approval_id,
         )
+        return remote_approval_id
     except Exception as exc:
         logger.debug(
             "[tool-approval:forward] Could not sync approval %s to ai-agents: %s",
             getattr(record, "id", "?"),
             exc,
         )
+        return None
 
 
 async def _create_approval(body: ToolApprovalCreateRequest) -> ToolApprovalRecord:

@@ -199,6 +199,7 @@ class ToolApprovalManager:
         self,
         *,
         approval_id: str,
+        remote_approval_id: str | None,
         tool_call_id: str | None,
     ) -> None:
         """Listen for remote approval decisions and mirror them locally.
@@ -224,8 +225,10 @@ class ToolApprovalManager:
                 str(ai_agents_url), self.config.user_jwt_token
             )
             logger.info(
-                "[tool-approval:bridge] Connecting to ai-agents WS for approval_id=%s tool_call_id=%s",
+                "[tool-approval:bridge] Connecting to ai-agents WS for approval_id=%s "
+                "remote_approval_id=%s tool_call_id=%s",
                 approval_id,
+                remote_approval_id,
                 tool_call_id,
             )
             async with ws_connect(ws_url, close_timeout=10.0) as websocket:
@@ -274,14 +277,26 @@ class ToolApprovalManager:
                         note = record.get("note")
                         note_value = note if isinstance(note, str) else None
 
-                        matched_by_id = isinstance(record_id, str) and record_id == approval_id
+                        matched_by_local_id = (
+                            isinstance(record_id, str) and record_id == approval_id
+                        )
+                        matched_by_remote_id = (
+                            isinstance(record_id, str)
+                            and isinstance(remote_approval_id, str)
+                            and remote_approval_id
+                            and record_id == remote_approval_id
+                        )
                         matched_by_tool_call = (
                             isinstance(record_tool_call_id, str)
                             and isinstance(tool_call_id, str)
                             and tool_call_id
                             and record_tool_call_id == tool_call_id
                         )
-                        if not (matched_by_id or matched_by_tool_call):
+                        if not (
+                            matched_by_local_id
+                            or matched_by_remote_id
+                            or matched_by_tool_call
+                        ):
                             continue
 
                         if status == "approved":
@@ -292,8 +307,9 @@ class ToolApprovalManager:
                             )
                             logger.info(
                                 "[tool-approval:bridge] Mirrored remote APPROVED decision "
-                                "for approval_id=%s tool_call_id=%s",
+                                "for approval_id=%s remote_approval_id=%s tool_call_id=%s",
                                 approval_id,
+                                remote_approval_id,
                                 tool_call_id,
                             )
                             return
@@ -306,8 +322,9 @@ class ToolApprovalManager:
                             )
                             logger.info(
                                 "[tool-approval:bridge] Mirrored remote REJECTED decision "
-                                "for approval_id=%s tool_call_id=%s",
+                                "for approval_id=%s remote_approval_id=%s tool_call_id=%s",
                                 approval_id,
+                                remote_approval_id,
                                 tool_call_id,
                             )
                             return
@@ -374,22 +391,26 @@ class ToolApprovalManager:
         record = await _create_approval(req)
         approval_id = record.id
 
+        # Register waiter first so any mirrored decision can immediately unblock.
+        event, result = register_pending_approval_event(approval_id)
+
+        remote_approval_id: str | None = None
+        if self.config.user_jwt_token:
+            # Sync creation to ai-agents first so we can correlate future decisions
+            # by its remote approval id even when tool_call_id is missing.
+            remote_approval_id = await forward_approval_to_ai_agents(
+                record, self.config.user_jwt_token
+            )
+
         remote_bridge_task: asyncio.Task[None] | None = None
         if self.config.user_jwt_token:
             remote_bridge_task = asyncio.create_task(
                 self._bridge_remote_decision_from_ai_agents(
                     approval_id=approval_id,
+                    remote_approval_id=remote_approval_id,
                     tool_call_id=tool_call_id,
                 )
             )
-
-        # Broadcast to the datalayer-ai-agents backend so remote UI panels
-        # (e.g. ToolApprovals view) can see this pending approval.
-        asyncio.ensure_future(
-            forward_approval_to_ai_agents(record, self.config.user_jwt_token)
-        )
-
-        event, result = register_pending_approval_event(approval_id)
         logger.info(
             "Waiting for human approval of tool '%s' (approval_id=%s, timeout=%ss)",
             tool_name,
