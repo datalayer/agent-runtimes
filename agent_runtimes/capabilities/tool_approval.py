@@ -223,7 +223,16 @@ class ToolApprovalManager:
             ws_url = self._resolve_ai_agents_ws_url(
                 str(ai_agents_url), self.config.user_jwt_token
             )
+            logger.info(
+                "[tool-approval:bridge] Connecting to ai-agents WS for approval_id=%s tool_call_id=%s",
+                approval_id,
+                tool_call_id,
+            )
             async with ws_connect(ws_url, close_timeout=10.0) as websocket:
+                logger.info(
+                    "[tool-approval:bridge] Connected to ai-agents WS, waiting for decision on approval_id=%s",
+                    approval_id,
+                )
                 # Prime with a full snapshot in case approval already happened.
                 await websocket.send(json.dumps({"type": "tool-approvals-history"}))
 
@@ -305,7 +314,7 @@ class ToolApprovalManager:
         except asyncio.CancelledError:
             raise
         except Exception as exc:
-            logger.debug(
+            logger.warning(
                 "[tool-approval:bridge] Remote ai-agents bridge stopped for approval_id=%s: %s",
                 approval_id,
                 exc,

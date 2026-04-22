@@ -183,7 +183,12 @@ async def get_local_approval_status(approval_id: str) -> str | None:
 async def update_local_approval_status(
     approval_id: str, status: str, note: str | None = None
 ) -> None:
-    """Update the status of a local approval record."""
+    """Update the status of a local approval record and unblock any waiter.
+
+    Called by the remote-bridge after it mirrors a decision from the
+    datalayer-ai-agents backend.  Must signal the asyncio.Event so that
+    ``ToolApprovalManager.request_and_wait`` is unblocked.
+    """
     async with _APPROVALS_LOCK:
         record = _APPROVALS.get(approval_id)
         if record and record.status == "pending":
@@ -194,6 +199,8 @@ async def update_local_approval_status(
         else:
             updated = None
     if updated is not None:
+        # Unblock any in-process coroutine waiting on this approval.
+        signal_approval_event(approval_id, status == "approved", note)
         await _publish_approval_event(
             event_type=(
                 "tool_approval_approved"
