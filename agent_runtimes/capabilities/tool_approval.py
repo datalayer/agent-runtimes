@@ -102,9 +102,16 @@ class ToolApprovalConfig:
     def from_env(cls) -> ToolApprovalConfig:
         import os
 
+        pod_name = (
+            os.environ.get("POD_NAME")
+            or os.environ.get("DATALAYER_RUNTIME_ID")
+            or os.environ.get("HOSTNAME")
+            or ""
+        )
+
         return cls(
             agent_id=os.environ.get("AGENT_ID", "default"),
-            pod_name=os.environ.get("POD_NAME", ""),
+            pod_name=pod_name,
             # DATALAYER_USER_TOKEN is populated by the configure-from-spec endpoint
             # so that the approval manager can authenticate against ai-agents.
             user_jwt_token=os.environ.get("DATALAYER_USER_TOKEN") or None,

@@ -419,12 +419,12 @@ export const ExampleApp: React.FC = () => {
   const handleExampleChange = async (newExample: string) => {
     if (newExample === selectedExample || !serviceManager) return;
 
-    // Clear all chat/history caches when changing examples to start fresh.
-    // Messages can be sourced from the chat store, conversation store, and
-    // runtime WS snapshot (fullContext) state.
-    useChatStore.getState().clearMessages();
+    // Start a fully fresh session when switching examples.
+    // Chat state can survive in multiple store branches (messages, threads,
+    // pending tool calls, runtime snapshots), so use full store resets.
+    useChatStore.getState().reset();
     useConversationStore.getState().clearAll();
-    agentRuntimeStore.getState().resetWs();
+    agentRuntimeStore.getState().reset();
 
     setSelectedExample(newExample);
     localStorage.setItem('selectedExample', newExample);

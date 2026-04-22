@@ -513,6 +513,7 @@ class PydanticAIAdapter(BaseAgent):
                             await approval_manager.request_and_wait(
                                 approval.tool_name,
                                 tool_args,
+                                tool_call_id=approval.tool_call_id,
                             )
                             approval_results[approval.tool_call_id] = True
                     finally:
@@ -748,6 +749,7 @@ class PydanticAIAdapter(BaseAgent):
                             await approval_manager.request_and_wait(
                                 approval.tool_name,
                                 tool_args,
+                                tool_call_id=approval.tool_call_id,
                             )
                             approval_results[approval.tool_call_id] = True
                     finally:
