@@ -394,6 +394,7 @@ class ToolApprovalManager:
             _create_approval,
             forward_approval_to_ai_agents,
             register_pending_approval_event,
+            register_remote_approval_mapping,
             remove_pending_approval_event,
         )
 
@@ -417,6 +418,13 @@ class ToolApprovalManager:
             remote_approval_id = await forward_approval_to_ai_agents(
                 record, self.config.user_jwt_token
             )
+            if remote_approval_id:
+                # Store the local→remote mapping so that a WS decision arriving
+                # on the runtime-local socket is relayed back to the ai-agents
+                # backend and becomes visible in the main UI tool-approvals view.
+                register_remote_approval_mapping(
+                    approval_id, remote_approval_id, self.config.user_jwt_token
+                )
 
         remote_bridge_task: asyncio.Task[None] | None = None
         if self.config.user_jwt_token:

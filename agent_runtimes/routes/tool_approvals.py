@@ -87,6 +87,88 @@ class ToolApprovalRecord(BaseModel):
 _APPROVALS: dict[str, ToolApprovalRecord] = {}
 _APPROVALS_LOCK = asyncio.Lock()
 
+# ─── Remote approval ID registry ─────────────────────────────────────────────
+# Maps local approval_id → (remote_approval_id, user_jwt_token) so that a
+# decision received via the runtime-local WS can be relayed to the
+# datalayer-ai-agents backend's WS and become visible in the main UI.
+
+_REMOTE_APPROVAL_REGISTRY: dict[str, tuple[str, str]] = {}
+
+
+def register_remote_approval_mapping(
+    local_id: str,
+    remote_id: str,
+    user_jwt_token: str,
+) -> None:
+    """Associate a local approval record with its counterpart on ai-agents."""
+    _REMOTE_APPROVAL_REGISTRY[local_id] = (remote_id, user_jwt_token)
+
+
+def remove_remote_approval_mapping(local_id: str) -> None:
+    """Remove the remote mapping for a local approval (cleanup after decision)."""
+    _REMOTE_APPROVAL_REGISTRY.pop(local_id, None)
+
+
+async def _relay_decision_to_ai_agents_ws(
+    remote_id: str,
+    approved: bool,
+    note: str | None,
+    user_jwt_token: str,
+) -> None:
+    """Open a short-lived WS connection to the ai-agents backend and send the
+    ``tool_approval_decision`` message so the main UI can react to it.
+
+    This keeps the approval decision flow entirely within the WS layer —
+    no HTTP round-trips.
+    """
+    import json as _json
+
+    try:
+        from datalayer_core.utils.urls import DatalayerURLs
+        from websockets.asyncio.client import connect as ws_connect
+
+        urls = DatalayerURLs.from_environment()
+        ai_agents_url = getattr(urls, "ai_agents_url", None)
+        if not ai_agents_url:
+            logger.debug(
+                "[tool-approval:relay] ai_agents_url not configured; skipping relay"
+            )
+            return
+
+        ws_base = str(ai_agents_url).rstrip("/")
+        stripped = ws_base.replace("https://", "").replace("http://", "")
+        scheme = "wss" if ai_agents_url.startswith("https") else "ws"
+        ws_url = f"{scheme}://{stripped}/api/ai-agents/v1/ws"
+
+        msg = _json.dumps(
+            {
+                "type": "tool_approval_decision",
+                "approvalId": remote_id,
+                "approved": approved,
+                **({
+                    "note": note
+                } if note else {}),
+            }
+        )
+        async with ws_connect(
+            ws_url,
+            additional_headers={"Authorization": f"Bearer {user_jwt_token}"},
+            close_timeout=5.0,
+        ) as ws:
+            await ws.send(msg)
+        logger.info(
+            "[tool-approval:relay] Relayed %s decision for remote_id=%s to ai-agents WS",
+            "approve" if approved else "reject",
+            remote_id,
+        )
+    except Exception as exc:
+        logger.debug(
+            "[tool-approval:relay] Could not relay decision for remote_id=%s: %s",
+            remote_id,
+            exc,
+        )
+
+
 # ─── Inline approval event registry (asyncio.Event-based) ────────────────────
 
 _PENDING_APPROVAL_EVENTS: dict[str, tuple[asyncio.Event, dict[str, Any]]] = {}
@@ -372,6 +454,23 @@ async def _update_approval(
         payload=updated.model_dump(),
         agent_id=updated.agent_id or None,
     )
+
+    # Relay the decision to the global ai-agents backend via WS so the main
+    # UI tool-approvals view is updated in real time.
+    entry = _REMOTE_APPROVAL_REGISTRY.pop(approval_id, None)
+    if entry is not None:
+        remote_id, user_jwt_token = entry
+        import asyncio as _asyncio
+
+        _asyncio.create_task(
+            _relay_decision_to_ai_agents_ws(
+                remote_id=remote_id,
+                approved=status == "approved",
+                note=note,
+                user_jwt_token=user_jwt_token,
+            )
+        )
+
     return updated
 
 
