@@ -23,8 +23,24 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { QueryClient } from '@tanstack/react-query';
+import { useCoreStore, useIAMStore } from '@datalayer/core/lib/state';
+import { DEFAULT_SERVICE_URLS } from '@datalayer/core/lib/api/constants';
 import type { ToolApprovalFilters } from '../types/tool-approvals';
 import { useAIAgentsWebSocket } from './useAIAgentsWebSocket';
+
+// ─── Auth / URL helpers ──────────────────────────────────────────────
+
+function useAuthToken(): string {
+  const token = useIAMStore((s: { token?: string | null }) => s.token);
+  return token ?? '';
+}
+
+function useAIAgentsBaseUrl(): string {
+  const config = useCoreStore(
+    (s: { configuration?: { aiagentsRunUrl?: string } }) => s.configuration,
+  );
+  return config?.aiagentsRunUrl ?? DEFAULT_SERVICE_URLS.AI_AGENTS;
+}
 
 // ─── Types ───────────────────────────────────────────────────────────
 
@@ -429,41 +445,48 @@ export function useMarkToolApprovalUnread(): MutationResult {
 }
 
 /**
- * Delete a tool approval from the local view.
+ * Delete a tool approval.
  *
- * There is no WS `tool_approval_delete` action today; this removes the
- * approval from the React Query cache only. The deletion survives until
- * the next snapshot replaces the list.
+ * Calls ``DELETE /api/ai-agents/v1/tool-approvals/{id}`` on the
+ * datalayer-ai-agents service to soft-delete the record from Solr.
+ * The cache is only updated **after** a successful response (2xx or 404),
+ * so the UI card remains visible while the request is in-flight.
+ * The server also broadcasts a ``tool_approval_deleted`` WS event which
+ * confirms the removal via the shared socket bridge.
  */
 export function useDeleteToolApproval(): MutationResult {
   const queryClient = useQueryClient();
+  const token = useAuthToken();
+  const baseUrl = useAIAgentsBaseUrl();
   const [isPending, setIsPending] = useState(false);
 
   const mutateAsync = useCallback(
     async ({ id }: { id: string; note?: string }) => {
       setIsPending(true);
       try {
-        const queries = queryClient
-          .getQueryCache()
-          .findAll({ queryKey: APPROVALS_ROOT_KEY });
-        for (const q of queries) {
-          const [, second] = q.queryKey as readonly unknown[];
-          if (second === 'pending-count') continue;
-          const current = queryClient.getQueryData<ApprovalsQueryData>(
-            q.queryKey,
+        // Call the server first — only remove from the cache on success.
+        const url = `${baseUrl.replace(/\/$/, '')}/api/ai-agents/v1/tool-approvals/${encodeURIComponent(id)}`;
+        const resp = await fetch(url, {
+          method: 'DELETE',
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        if (!resp.ok && resp.status !== 404) {
+          // 404 is acceptable — the record may have already been cleaned up.
+          throw new Error(
+            `Failed to delete tool approval ${id}: HTTP ${resp.status}`,
           );
-          if (!current?.approvals) continue;
-          const next = removeApproval(current.approvals, id);
-          queryClient.setQueryData<ApprovalsQueryData>(q.queryKey, {
-            approvals: next,
-            total: next.length,
-          });
+        }
+
+        // Server confirmed — remove the card from the local cache.
+        const removed = normalizeApproval({ id, status: 'deleted' });
+        if (removed) {
+          patchApproval(queryClient, removed, 'remove');
         }
       } finally {
         setIsPending(false);
       }
     },
-    [queryClient],
+    [queryClient, token, baseUrl],
   );
 
   const mutate = useCallback(
