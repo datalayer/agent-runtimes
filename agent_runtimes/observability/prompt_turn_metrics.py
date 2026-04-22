@@ -22,6 +22,7 @@ import json
 import logging
 import os
 import threading
+import time
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -382,6 +383,18 @@ class PromptTurnMetricsEmitter:
             "agent_runtimes.prompt.turn.duration_ms", max(duration_ms, 0.0), attrs
         )
 
+        # Emit graph-compatible spans so the turn graph UI can render even when
+        # execution is not using pydantic-graph wrappers.
+        self._emit_turn_graph_spans(
+            duration_ms=max(duration_ms, 0.0),
+            success=success,
+            stop_reason=stop_reason,
+            tool_call_count=max(0, tool_call_count),
+            protocol=protocol,
+            model=model,
+            agent_id=agent_id,
+        )
+
         if self._log_request_response:
             logger.info(
                 "Prompt-turn OTEL request: server=%s metric=agent_runtimes.prompt.turn.* attrs=%s duration_ms=%.2f tool_calls=%s",
@@ -403,6 +416,160 @@ class PromptTurnMetricsEmitter:
                 self.metrics_endpoint,
                 True,
             )
+
+    def _emit_turn_graph_spans(
+        self,
+        *,
+        duration_ms: float,
+        success: bool,
+        stop_reason: str,
+        tool_call_count: int,
+        protocol: str,
+        model: str | None,
+        agent_id: str | None,
+    ) -> None:
+        """Emit graph-compatible spans for a completed prompt turn.
+
+        Creates one root ``agent.graph.run`` span and one or more child
+        ``graph.node.*`` spans so frontend graph visualizations can render a
+        turn-level graph even without pydantic-graph instrumentation.
+        """
+        tracer = getattr(self._emitter, "_tracer", None)
+        if tracer is None:
+            return
+
+        try:
+            from opentelemetry import trace as otel_trace
+
+            # Ensure enough timeline budget for a readable start->...->end chain
+            # with at least 1ms per node segment.
+            has_tools = tool_call_count > 0
+            chain_node_count = 4 if has_tools else 3  # start, model, (tools), end
+            min_total_ns = chain_node_count * 1_000_000
+            total_ns = max(int(max(duration_ms, 0.0) * 1_000_000), min_total_ns)
+            end_ns = time.time_ns()
+            start_ns = end_ns - total_ns
+
+            # Split the total duration into contiguous sequential node segments.
+            if has_tools:
+                # start + model + tools + end (end kept short as completion marker)
+                remainder = total_ns - 4_000_000
+                start_dur_ns = 1_000_000 + int(remainder * 0.10)
+                model_dur_ns = 1_000_000 + int(remainder * 0.60)
+                tools_dur_ns = (
+                    total_ns - start_dur_ns - model_dur_ns - 1_000_000
+                )
+                end_dur_ns = 1_000_000
+            else:
+                # start + model + end
+                remainder = total_ns - 3_000_000
+                start_dur_ns = 1_000_000 + int(remainder * 0.15)
+                model_dur_ns = total_ns - start_dur_ns - 1_000_000
+                tools_dur_ns = 0
+                end_dur_ns = 1_000_000
+
+            root_attrs: dict[str, Any] = {
+                "graph.name": "prompt-turn",
+                "graph.node.count": chain_node_count,
+                "graph.turn.protocol": protocol,
+                "graph.turn.stop_reason": stop_reason,
+                "graph.turn.success": str(success).lower(),
+            }
+            if agent_id:
+                root_attrs["agent.id"] = agent_id
+            if model:
+                root_attrs["model"] = model
+
+            root_span = tracer.start_span(
+                "agent.graph.run",
+                start_time=start_ns,
+                attributes=root_attrs,
+            )
+            root_ctx = otel_trace.set_span_in_context(root_span)
+
+            # Node 1: explicit start marker.
+            start_node_start = start_ns
+            start_node_end = start_node_start + start_dur_ns
+            start_span = tracer.start_span(
+                "graph.node.turn_start",
+                context=root_ctx,
+                start_time=start_node_start,
+                attributes={
+                    "graph.node.id": "turn_start",
+                    "graph.node.type": "start",
+                    "graph.node.status": "completed",
+                    **({"agent.id": agent_id} if agent_id else {}),
+                },
+            )
+            start_ctx = otel_trace.set_span_in_context(start_span, root_ctx)
+
+            # Node 2: model generation phase (child of start).
+            model_node_start = start_node_end
+            model_node_end = model_node_start + model_dur_ns
+            model_span = tracer.start_span(
+                "graph.node.turn_model",
+                context=start_ctx,
+                start_time=model_node_start,
+                attributes={
+                    "graph.node.id": "turn_model",
+                    "graph.node.type": "step",
+                    "graph.node.status": "completed" if success else "error",
+                    "graph.node.tool_calls": tool_call_count,
+                    "graph.turn.stop_reason": stop_reason,
+                    **({"agent.id": agent_id} if agent_id else {}),
+                },
+            )
+            model_ctx = otel_trace.set_span_in_context(model_span, start_ctx)
+
+            current_parent_ctx = model_ctx
+            current_time_ns = model_node_end
+
+            # Optional Node 3: tool phase when tools were called (child of model).
+            if has_tools:
+                tools_start = current_time_ns
+                tools_end = tools_start + tools_dur_ns
+                tools_span = tracer.start_span(
+                    "graph.node.turn_tools",
+                    context=model_ctx,
+                    start_time=tools_start,
+                    attributes={
+                        "graph.node.id": "turn_tools",
+                        "graph.node.type": "parallel",
+                        "graph.node.status": "completed" if success else "error",
+                        "graph.node.tool_calls": tool_call_count,
+                        **({"agent.id": agent_id} if agent_id else {}),
+                    },
+                )
+                tools_ctx = otel_trace.set_span_in_context(tools_span, model_ctx)
+                current_parent_ctx = tools_ctx
+                current_time_ns = tools_end
+
+            # Final node: completion marker (child of last execution node).
+            end_node_start = current_time_ns
+            end_node_end = end_node_start + end_dur_ns
+            end_span = tracer.start_span(
+                "graph.node.turn_end",
+                context=current_parent_ctx,
+                start_time=end_node_start,
+                attributes={
+                    "graph.node.id": "turn_end",
+                    "graph.node.type": "end",
+                    "graph.node.status": "completed" if success else "error",
+                    "graph.turn.stop_reason": stop_reason,
+                    **({"agent.id": agent_id} if agent_id else {}),
+                },
+            )
+
+            # End spans in child->parent order.
+            end_span.end(end_time=end_node_end)
+            if has_tools:
+                tools_span.end(end_time=current_time_ns)
+            model_span.end(end_time=model_node_end)
+            start_span.end(end_time=start_node_end)
+
+            root_span.end(end_time=end_ns)
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("Failed to emit prompt-turn graph spans: %s", exc)
 
 
 def _get_emitter(user_jwt_token: str | None = None) -> PromptTurnMetricsEmitter | None:

@@ -147,8 +147,11 @@ function formatTokens(tokens: number): string {
  * Format duration
  */
 function formatDuration(seconds: number): string {
+  if (!Number.isFinite(seconds) || Number.isNaN(seconds) || seconds < 0) {
+    return '0ms';
+  }
   if (seconds < 1) {
-    return `${Math.round(seconds * 1000)}ms`;
+    return `${Math.max(0, Math.round(seconds * 1000))}ms`;
   }
   if (seconds < 60) {
     return `${seconds.toFixed(1)}s`;
@@ -448,8 +451,6 @@ export function ContextPanel({
         );
   const hasDistributionData =
     distribution?.children && distribution.children.length > 0;
-  const hasHistoryData =
-    snapshotData.perRequestUsage && snapshotData.perRequestUsage.length > 0;
 
   return (
     <Box>
@@ -591,7 +592,6 @@ export function ContextPanel({
             <SegmentedControl.Button
               selected={viewMode === 'history'}
               leadingIcon={ClockIcon}
-              disabled={!hasHistoryData}
             >
               History
             </SegmentedControl.Button>
@@ -818,6 +818,12 @@ export function ContextPanel({
                   ))}
               </Box>
             )}
+          </Box>
+        )}
+
+        {viewMode === 'history' && !historyChartOption && (
+          <Box sx={{ py: 3 }}>
+            <Text sx={{ color: 'fg.muted', fontSize: 1 }}>No history</Text>
           </Box>
         )}
       </Box>

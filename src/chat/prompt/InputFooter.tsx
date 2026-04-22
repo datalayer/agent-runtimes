@@ -25,6 +25,7 @@ import { InputPrompt } from './InputPrompt';
 import { TokenUsageBar } from '../usage/TokenUsageBar';
 import { McpStatusIndicator } from '../indicators/McpStatusIndicator';
 import { SandboxStatusIndicator } from '../indicators/SandboxStatusIndicator';
+import { SkillsStatusIndicator } from '../indicators/SkillsStatusIndicator';
 import type {
   BuiltinTool,
   ContextSnapshotData,
@@ -191,6 +192,11 @@ export function InputToolbar({
               authToken={authToken}
               data={mcpStatusData}
             />
+            <SkillsStatusIndicator
+              skillsCount={skills.length}
+              enabledCount={enabledSkills.size}
+              loading={skillsLoading}
+            />
           </>
         }
       />
@@ -287,6 +293,8 @@ function ToolsMenu({
   onToggleMcpToolApproval: (serverId: string, toolName: string) => void;
   availableTools: BuiltinTool[];
 }) {
+  const hasUsableMcpServers = mcpServers.some(server => server.isAvailable);
+
   return (
     <ActionMenu>
       <ActionMenu.Anchor>
@@ -316,7 +324,7 @@ function ToolsMenu({
               </ActionList.Group>
             )}
             {/* MCP Server Tools */}
-            {mcpServers.length > 0 ? (
+            {mcpServers.length > 0 && hasUsableMcpServers ? (
               mcpServers.map(server => {
                 const serverTools = enabledMcpTools.get(server.id);
                 const allToolNames = server.tools.map(t => t.name);
@@ -485,30 +493,12 @@ function ToolsMenu({
                 );
               })
             ) : (
-              <ActionList.Group title="Available Tools">
-                {availableTools.length > 0 ? (
-                  availableTools.map(tool => (
-                    <ActionList.Item key={tool.id} disabled>
-                      <ActionList.LeadingVisual>
-                        <Box
-                          sx={{
-                            width: 8,
-                            height: 8,
-                            borderRadius: '50%',
-                            backgroundColor: 'success.emphasis',
-                          }}
-                        />
-                      </ActionList.LeadingVisual>
-                      {tool.name}
-                    </ActionList.Item>
-                  ))
-                ) : (
-                  <ActionList.Item disabled>
-                    <Text sx={{ color: 'fg.muted', fontStyle: 'italic' }}>
-                      No tools available
-                    </Text>
-                  </ActionList.Item>
-                )}
+              <ActionList.Group title="No MCP Servers">
+                <ActionList.Item disabled>
+                  <Text sx={{ color: 'fg.muted', fontStyle: 'italic' }}>
+                    No MCP Servers
+                  </Text>
+                </ActionList.Item>
               </ActionList.Group>
             )}
           </ActionList>

@@ -19,11 +19,7 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Text, Button, Spinner, Heading, Label } from '@primer/react';
-import {
-  CheckCircleIcon,
-  GraphIcon,
-  SignOutIcon,
-} from '@primer/octicons-react';
+import { GraphIcon, SignOutIcon } from '@primer/octicons-react';
 import { Box } from '@datalayer/primer-addons';
 import { ErrorView } from './components';
 import { ThemedProvider } from './utils/themedProvider';
@@ -36,6 +32,7 @@ import { CostTracker, type CostUsageResponse } from '../context/CostTracker';
 import { CostUsageChart } from '../context/CostUsageChart';
 import { TokenUsageChart } from '../context/TokenUsageChart';
 import { GraphFlowChart } from '../context/GraphFlowChart';
+import { TurnGraphChart } from '../context/TurnGraphChart';
 import type { GraphTelemetryData } from '../types/stream';
 import { useAIAgentsWebSocket } from '../hooks';
 import type { AgentStreamSnapshotPayload } from '../types/stream';
@@ -51,7 +48,7 @@ import { Chat } from '../chat';
 import type { McpToolsetsStatusResponse } from '../types/mcp';
 
 const AGENT_NAME = 'monitoring-demo-agent';
-const AGENT_SPEC_ID = 'crawler';
+const AGENT_SPEC_ID = 'demo-monitoring';
 const DEFAULT_LOCAL_BASE_URL =
   import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
 const OTEL_BASE_URL_ENV = import.meta.env.VITE_OTEL_BASE_URL;
@@ -65,12 +62,6 @@ interface MonitoringAlert {
   severity: AlertSeverity;
   timestamp: string;
 }
-
-const alertVariant = (severity: AlertSeverity) => {
-  if (severity === 'critical') return 'danger';
-  if (severity === 'warning') return 'attention';
-  return 'secondary';
-};
 
 const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
   onLogout,
@@ -366,47 +357,22 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
       </Box>
 
       <Box sx={{ flex: 1, minHeight: 0, display: 'flex' }}>
-        <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Chat
-            protocol="vercel-ai"
-            baseUrl={agentBaseUrl}
-            agentId={agentId}
-            authToken={chatAuthToken}
-            title="Monitoring Agent"
-            placeholder="Ask for cost, token usage, and turn-level monitoring insights..."
-            description={`${alerts.length} active alert${alerts.length !== 1 ? 's' : ''}`}
-            showHeader={true}
-            showTokenUsage={true}
-            autoFocus
-            height="100%"
-            runtimeId={agentId}
-            historyEndpoint={`${agentBaseUrl}/api/v1/history`}
-            suggestions={[
-              {
-                title: 'Monitoring summary',
-                message:
-                  'Summarize my current token usage, cost status, and recent turn activity.',
-              },
-              {
-                title: 'Turn usage analysis',
-                message:
-                  'Analyze the last turn usage and explain which parts drove input and output tokens.',
-              },
-            ]}
-            submitOnSuggestionClick
-            contextSnapshot={liveContextSnapshot}
-            mcpStatusData={liveMcpStatus}
-          />
-        </Box>
-
         <Box
           sx={{
-            width: 380,
-            borderLeft: '1px solid',
+            width: 320,
+            minWidth: 280,
+            borderRight: '1px solid',
             borderColor: 'border.default',
             display: 'flex',
             flexDirection: 'column',
             overflow: 'auto',
+            '@media (max-width: 1680px)': {
+              width: 300,
+              minWidth: 260,
+            },
+            '@media (max-width: 1400px)': {
+              display: 'none',
+            },
           }}
         >
           <Box
@@ -492,7 +458,62 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
               </Box>
             )}
           </Box>
+        </Box>
 
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Chat
+            protocol="vercel-ai"
+            baseUrl={agentBaseUrl}
+            agentId={agentId}
+            authToken={chatAuthToken}
+            title="Monitoring Agent"
+            placeholder="Ask for cost, token usage, and turn-level monitoring insights..."
+            description={`${alerts.length} active alert${alerts.length !== 1 ? 's' : ''}`}
+            showHeader={true}
+            showTokenUsage={true}
+            showToolsMenu={true}
+            showSkillsMenu={true}
+            autoFocus
+            height="100%"
+            runtimeId={agentId}
+            historyEndpoint={`${agentBaseUrl}/api/v1/history`}
+            suggestions={[
+              {
+                title: 'Monitoring summary',
+                message:
+                  'Summarize my current token usage, cost status, and recent turn activity.',
+              },
+              {
+                title: 'Turn usage analysis',
+                message:
+                  'Analyze the last turn usage and explain which parts drove input and output tokens.',
+              },
+            ]}
+            submitOnSuggestionClick
+            contextSnapshot={liveContextSnapshot}
+            mcpStatusData={liveMcpStatus}
+          />
+        </Box>
+
+        <Box
+          sx={{
+            width: 360,
+            minWidth: 320,
+            borderLeft: '1px solid',
+            borderColor: 'border.default',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'auto',
+            '@media (max-width: 1680px)': {
+              width: 340,
+              minWidth: 300,
+            },
+            '@media (max-width: 1100px)': {
+              width: 300,
+              minWidth: 260,
+            },
+          }}
+        >
           <Box
             sx={{
               p: 3,
@@ -537,7 +558,7 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
               }}
             >
               <Heading as="h4" sx={{ fontSize: 1, mb: 2 }}>
-                Graph Execution
+                Graph Execution (live)
               </Heading>
               <GraphFlowChart data={liveGraphTelemetry} height={240} />
               <Text sx={{ mt: 1, color: 'fg.muted', fontSize: 0 }}>
@@ -550,61 +571,24 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
             </Box>
           )}
 
-          <Box sx={{ p: 3, flex: 1, overflow: 'auto' }}>
+          <Box
+            sx={{
+              p: 3,
+              borderBottom: '1px solid',
+              borderColor: 'border.default',
+            }}
+          >
             <Heading as="h4" sx={{ fontSize: 1, mb: 2 }}>
-              Recent Alerts
+              Turn Execution Graph (OTEL traces)
             </Heading>
-
-            {alerts.length === 0 ? (
-              <Box
-                sx={{
-                  p: 2,
-                  border: '1px solid',
-                  borderColor: 'border.default',
-                  borderRadius: 2,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 2,
-                }}
-              >
-                <CheckCircleIcon size={16} />
-                <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
-                  No active alerts.
-                </Text>
-              </Box>
-            ) : (
-              alerts.map(alert => (
-                <Box
-                  key={alert.id}
-                  sx={{
-                    p: 2,
-                    mb: 2,
-                    border: '1px solid',
-                    borderColor: 'border.default',
-                    borderRadius: 2,
-                  }}
-                >
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      mb: 1,
-                    }}
-                  >
-                    <Text sx={{ fontSize: 1, fontWeight: 'bold' }}>
-                      {alert.title}
-                    </Text>
-                    <Label size="small" variant={alertVariant(alert.severity)}>
-                      {alert.severity}
-                    </Label>
-                  </Box>
-                  <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
-                    {new Date(alert.timestamp).toLocaleString()}
-                  </Text>
-                </Box>
-              ))
-            )}
+            <TurnGraphChart
+              serviceName={otelServiceName}
+              agentId={agentId}
+              runUrl={otelBaseUrl}
+              apiKey={token ?? undefined}
+              autoRefreshMs={10_000}
+              height={280}
+            />
           </Box>
         </Box>
       </Box>

@@ -171,6 +171,100 @@ def _emit_node_metrics(
         logger.debug("Failed to emit graph OTEL metric for node %s", node_id)
 
 
+def _emit_run_spans(
+    emitter: Any,
+    agent_id: str,
+    events: list[dict[str, Any]],
+    run_start_ms: float,
+    run_end_ms: float,
+    graph_name: str | None = None,
+) -> None:
+    """Emit OTEL spans for a completed graph run using datalayer_core OTelEmitter.
+
+    Creates one root span (``agent.graph.run``) covering the entire run and one
+    child span per node event (``graph.node.<id>``).  Parent-child relationships
+    mirror the ``parentNodeId`` chain recorded during execution so the full
+    trace tree is queryable via ``OtelClient.list_traces()`` / ``fetchTraces()``.
+
+    Timestamps are derived from the millisecond values collected during
+    execution and converted to OTEL's nanosecond epoch format.
+
+    This is the Python-side OTEL emission — uses ``datalayer_core.otel.OTelEmitter``
+    (``emitter._tracer``) directly so no modifications to core are required.
+    """
+    if not (emitter and getattr(emitter, "enabled", False)):
+        return
+    tracer = getattr(emitter, "_tracer", None)
+    if tracer is None:
+        return
+
+    try:
+        from opentelemetry import trace as otel_trace
+
+        run_start_ns = int(run_start_ms * 1_000_000)
+        run_end_ns = int(run_end_ms * 1_000_000)
+
+        # Root span for the whole graph run.
+        root_attrs: dict[str, Any] = {
+            "agent.id": agent_id,
+            "graph.name": graph_name or agent_id,
+            "graph.node.count": len(events),
+        }
+        root_span = tracer.start_span(
+            "agent.graph.run",
+            start_time=run_start_ns,
+            attributes=root_attrs,
+        )
+        root_ctx = otel_trace.set_span_in_context(root_span)
+
+        # Per-node child spans — preserve the execution parent chain.
+        node_ctx_map: dict[str, Any] = {}
+        for event in events:
+            node_id = str(event.get("nodeId") or "unknown")
+            ts_ms = float(event.get("timestampMs") or run_start_ms)
+            dur_ms = float(event.get("durationMs") or 1.0)
+            start_ns = int(ts_ms * 1_000_000)
+            end_ns = int((ts_ms + max(dur_ms, 0.001)) * 1_000_000)
+
+            parent_node_id = event.get("parentNodeId")
+            parent_ctx = (
+                node_ctx_map.get(parent_node_id, root_ctx)
+                if parent_node_id
+                else root_ctx
+            )
+
+            node_attrs: dict[str, Any] = {
+                "graph.node.id": node_id,
+                "graph.node.type": str(event.get("nodeType") or "step"),
+                "graph.node.status": str(event.get("status") or "completed"),
+                "agent.id": agent_id,
+            }
+            if event.get("error"):
+                node_attrs["error.message"] = str(event["error"])
+
+            node_span = tracer.start_span(
+                f"graph.node.{node_id}",
+                context=parent_ctx,
+                start_time=start_ns,
+                attributes=node_attrs,
+            )
+            node_span.end(end_time=end_ns)
+            node_ctx_map[node_id] = otel_trace.set_span_in_context(node_span)
+
+        root_span.end(end_time=run_end_ns)
+        logger.debug(
+            "[GraphTelemetry] Emitted %d node spans for agent_id=%s",
+            len(events),
+            agent_id,
+        )
+    except Exception as exc:
+        logger.debug(
+            "[GraphTelemetry] Failed to emit run spans for agent_id=%s: %s",
+            agent_id,
+            exc,
+        )
+
+
 # ---------------------------------------------------------------------------
 # Topology extraction helpers
 # ---------------------------------------------------------------------------
@@ -437,6 +531,17 @@ async def run_graph_with_telemetry(
         telemetry.last_run_end_ms = time.time() * 1000
         telemetry.run_count += 1
 
+        # Emit OTEL spans (traces) — one root span + per-node child spans.
+        # This makes the execution tree queryable via OtelClient.fetchTraces().
+        _emit_run_spans(
+            emitter,
+            agent_id,
+            events,
+            telemetry.last_run_start_ms,
+            telemetry.last_run_end_ms,
+            graph_name=telemetry.graph_name,
+        )
+
         # Push monitoring snapshot if possible
         _try_push_snapshot(agent_id)
 
@@ -553,6 +658,16 @@ async def run_beta_graph_with_telemetry(
         telemetry.total_duration_ms += (run_end - run_start) * 1000
         telemetry.last_run_end_ms = time.time() * 1000
         telemetry.run_count += 1
+
+        # Emit OTEL spans (traces) — one root span + per-node child spans.
+        _emit_run_spans(
+            emitter,
+            agent_id,
+            events,
+            telemetry.last_run_start_ms,
+            telemetry.last_run_end_ms,
+            graph_name=telemetry.graph_name,
+        )
 
         _try_push_snapshot(agent_id)
 

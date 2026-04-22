@@ -31,3 +31,8 @@ export type {
   SandboxAggregateStatus,
   SandboxWsStatus,
 } from '../../types/sandbox';
+
+export {
+  SkillsStatusIndicator,
+  type SkillsStatusIndicatorProps,
+} from './SkillsStatusIndicator';
