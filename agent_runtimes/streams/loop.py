@@ -16,8 +16,8 @@ import json
 import logging
 import os
 from typing import Any, Awaitable, Callable
+from urllib.parse import urlencode
 
-import httpx
 from fastapi import WebSocket, WebSocketDisconnect
 
 from agent_runtimes.context.costs import get_cost_store
@@ -521,35 +521,48 @@ async def publish_stream_event(
 
 
 async def _flush_otel_service(auth_token: str | None = None) -> None:
-    """Ask the OTEL service to flush its buffers so WS subscribers get fresh data."""
+    """Nudge the OTEL websocket stream to deliver fresh telemetry.
+
+    The OTEL service contract for live delivery is websocket-based
+    (``/api/otel/v1/ws``).  We intentionally avoid a REST flush call here.
+    """
     run_url = (
         os.environ.get("DATALAYER_RUN_URL")
         or os.environ.get("DATALAYER_OTEL_RUN_URL")
         or "https://prod1.datalayer.run"
     )
-    flush_url = f"{run_url.rstrip('/')}/api/otel/v1/flush"
     token = (
         auth_token
         or os.environ.get("DATALAYER_TOKEN")
         or os.environ.get("DATALAYER_API_KEY")
     )
+
+    run_url = run_url.strip().rstrip("/")
+    if run_url.startswith("https://"):
+        ws_base = "wss://" + run_url[len("https://") :]
+    elif run_url.startswith("http://"):
+        ws_base = "ws://" + run_url[len("http://") :]
+    elif run_url.startswith("ws://") or run_url.startswith("wss://"):
+        ws_base = run_url
+    else:
+        ws_base = "wss://" + run_url
+
+    params: dict[str, str] = {}
+    if token:
+        params["token"] = token
+    query = f"?{urlencode(params)}" if params else ""
+    ws_url = f"{ws_base}/api/otel/v1/ws{query}"
+
     try:
-        headers: dict[str, str] = {}
-        if token:
-            headers["Authorization"] = f"Bearer {token}"
-        async with httpx.AsyncClient(timeout=5.0) as client:
-            resp = await client.post(
-                flush_url,
-                headers=headers,
-            )
-            logger.debug("[otel:flush] status=%d url=%s", resp.status_code, flush_url)
-            if not resp.is_success:
-                logger.warning(
-                    "[otel:flush] failed status=%d url=%s body=%s",
-                    resp.status_code,
-                    flush_url,
-                    (resp.text or "")[:300],
-                )
+        from websockets.asyncio.client import connect as ws_connect
+
+        async with ws_connect(ws_url, open_timeout=5.0, close_timeout=3.0) as websocket:
+            # Wait briefly for one event/keepalive. This keeps the flow websocket-only
+            # and avoids emitting REST 404 warnings when /flush is unavailable.
+            try:
+                await asyncio.wait_for(websocket.recv(), timeout=1.5)
+            except asyncio.TimeoutError:
+                pass
     except Exception as exc:
         logger.debug("[otel:flush] failed: %s", exc)
 

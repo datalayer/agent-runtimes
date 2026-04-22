@@ -168,9 +168,7 @@ class ToolApprovalManager:
     def __init__(self, config: ToolApprovalConfig):
         self.config = config
 
-    def _resolve_ai_agents_ws_url(
-        self, base_url: str, token: str | None = None
-    ) -> str:
+    def _resolve_ai_agents_ws_url(self, base_url: str, token: str | None = None) -> str:
         """Resolve ai-agents websocket URL from an HTTP(S) base URL."""
         stripped = base_url.rstrip("/")
         suffix = "/api/ai-agents/v1"
@@ -214,7 +212,9 @@ class ToolApprovalManager:
             from datalayer_core.utils.urls import DatalayerURLs
             from websockets.asyncio.client import connect as ws_connect
 
-            from agent_runtimes.routes.tool_approvals import update_local_approval_status
+            from agent_runtimes.routes.tool_approvals import (
+                update_local_approval_status,
+            )
 
             urls = DatalayerURLs.from_environment()
             ai_agents_url = getattr(urls, "ai_agents_url", None)
@@ -244,9 +244,18 @@ class ToolApprovalManager:
                     if not isinstance(raw_message, str):
                         continue
 
+                    payload: dict[str, Any] | None = None
                     try:
-                        payload = json.loads(raw_message)
-                    except Exception:
+                        parsed_payload = json.loads(raw_message)
+                    except json.JSONDecodeError:
+                        logger.debug(
+                            "[tool-approval:bridge] Ignoring non-JSON websocket message"
+                        )
+                    else:
+                        if isinstance(parsed_payload, dict):
+                            payload = parsed_payload
+
+                    if payload is None:
                         continue
 
                     msg_type = payload.get("type")
