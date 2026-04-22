@@ -49,6 +49,10 @@ async def _decide_approval_via_ws(
     )
 
 
+async def _delete_approval_via_ws(approval_id: str) -> ToolApprovalRecord:
+    return await _delete_approval(approval_id)
+
+
 class ToolApprovalCreateRequest(BaseModel):
     """Payload to create a pending tool approval request."""
 
@@ -344,6 +348,28 @@ async def _update_approval(
     return updated
 
 
+async def _delete_approval(approval_id: str) -> ToolApprovalRecord:
+    async with _APPROVALS_LOCK:
+        record = _APPROVALS.get(approval_id)
+        if record is None:
+            raise HTTPException(status_code=404, detail="Tool approval not found")
+
+        updated = record.model_copy(
+            update={
+                "status": "deleted",
+                "updated_at": _now_iso(),
+            }
+        )
+        _APPROVALS[approval_id] = updated
+
+    await _publish_approval_event(
+        event_type="tool_approval_deleted",
+        payload=updated.model_dump(),
+        agent_id=updated.agent_id or None,
+    )
+    return updated
+
+
 # Public REST endpoints are intentionally removed. Tool-approval state is
 # propagated and consumed over websocket streams only.
 
@@ -361,6 +387,7 @@ async def tool_approvals_ws(
         agent_id,
         list_approvals=_list_approvals,
         decide_approval=_decide_approval_via_ws,
+        delete_approval=_delete_approval_via_ws,
     )
 
 
@@ -374,6 +401,7 @@ async def legacy_tool_approvals_ws(
         agent_id,
         list_approvals=_list_approvals,
         decide_approval=_decide_approval_via_ws,
+        delete_approval=_delete_approval_via_ws,
     )
 
 
@@ -387,4 +415,5 @@ async def ai_agents_stream_ws(
         agent_id,
         list_approvals=_list_approvals,
         decide_approval=_decide_approval_via_ws,
+        delete_approval=_delete_approval_via_ws,
     )

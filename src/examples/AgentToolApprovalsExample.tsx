@@ -15,21 +15,13 @@ import React, {
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Box } from '@datalayer/primer-addons';
 import { ErrorView } from './components';
-import {
-  Button,
-  Heading,
-  SegmentedControl,
-  Spinner,
-  Text,
-} from '@primer/react';
+import { Button, Spinner, Text } from '@primer/react';
 import {
   CheckCircleIcon,
   SignOutIcon,
   ToolsIcon,
   XCircleIcon,
 } from '@primer/octicons-react';
-import { useCoreStore } from '@datalayer/core';
-import { DEFAULT_SERVICE_URLS } from '@datalayer/core/lib/api/constants';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { SignInSimple } from '@datalayer/core/lib/views/iam';
 import { UserBadge } from '@datalayer/core/lib/views/profile';
@@ -46,8 +38,6 @@ import {
 
 const normalizeToolName = (value: string): string =>
   value.replace(/[-_]/g, '').toLowerCase();
-
-const AI_AGENTS_API_PREFIX = '/api/ai-agents/v1';
 
 const stableStringify = (value: unknown): string => {
   if (value === null || typeof value !== 'object') {
@@ -85,21 +75,11 @@ const toWsUrl = (
   }
 };
 
-const normalizeAiAgentsBaseUrl = (rawBaseUrl: string): string => {
-  const trimmed = rawBaseUrl.replace(/\/$/, '');
-  if (trimmed.endsWith(AI_AGENTS_API_PREFIX)) {
-    return trimmed.slice(0, -AI_AGENTS_API_PREFIX.length);
-  }
-  return trimmed;
-};
-
 const queryClient = new QueryClient();
 const AGENT_NAME_PREFIX = 'tool-approval-demo-agent';
 const DEFAULT_AGENT_SPEC_ID = 'demo-full';
 const DEFAULT_LOCAL_BASE_URL =
   import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
-const FALLBACK_AI_AGENTS_BASE_URL =
-  import.meta.env.VITE_AI_AGENTS_URL || DEFAULT_SERVICE_URLS.AI_AGENTS;
 
 const getSelectedAgentSpecIdFromUi = (): string => {
   const params = new URLSearchParams(window.location.search);
@@ -138,8 +118,6 @@ const buildAgentNameForSpec = (specId: string): string => {
   const base = slug ? `${AGENT_NAME_PREFIX}-${slug}` : AGENT_NAME_PREFIX;
   return uniqueAgentId(base);
 };
-
-type ApprovalMode = 'local' | 'server';
 
 interface ToolApprovalRequest {
   id: string;
@@ -187,7 +165,6 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
     [selectedSpecId],
   );
 
-  const [mode, setMode] = useState<ApprovalMode>('server');
   const [runtimeStatus, setRuntimeStatus] = useState<
     'launching' | 'ready' | 'error'
   >('launching');
@@ -226,14 +203,8 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
   const pendingSnapshotRequestedRef = useRef<Set<string>>(new Set());
   const queuedResultBackedApprovalsRef = useRef<Set<string>>(new Set());
   const chatAuthToken: string | undefined = token === null ? undefined : token;
-  const configuredAiAgentsBaseUrl = useCoreStore(
-    (s: any) => s.configuration?.aiagentsRunUrl,
-  );
 
   const agentBaseUrl = DEFAULT_LOCAL_BASE_URL;
-  const aiAgentsBaseUrl = normalizeAiAgentsBaseUrl(
-    configuredAiAgentsBaseUrl || FALLBACK_AI_AGENTS_BASE_URL,
-  );
   const podName = 'localhost';
 
   const authFetch = useCallback(
@@ -478,11 +449,9 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
       ) {
         return true;
       }
-      // Server mode can stream agent identifiers that do not match the local
-      // runtime id format, so do not drop pending approvals in that mode.
-      return mode === 'server';
+      return false;
     },
-    [agentId, mode],
+    [agentId],
   );
 
   const enqueueResultBackedApproval = useCallback(
@@ -588,7 +557,7 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
 
   useEffect(() => {
     setApprovals([]);
-  }, [agentId, mode]);
+  }, [agentId]);
 
   useEffect(() => {
     if (!isReady) {
@@ -596,13 +565,11 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
       return;
     }
 
-    const wsSourceBaseUrl = mode === 'server' ? aiAgentsBaseUrl : agentBaseUrl;
-    const wsPath =
-      mode === 'server'
-        ? `${AI_AGENTS_API_PREFIX}/ws`
-        : '/api/v1/tool-approvals/ws';
-
-    const wsUrl = toWsUrl(wsSourceBaseUrl, wsPath, chatAuthToken);
+    const wsUrl = toWsUrl(
+      agentBaseUrl,
+      '/api/v1/tool-approvals/ws',
+      chatAuthToken,
+    );
     if (!wsUrl) {
       setWsState('closed');
       return;
@@ -713,8 +680,6 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
     };
   }, [
     isReady,
-    mode,
-    aiAgentsBaseUrl,
     agentBaseUrl,
     chatAuthToken,
     agentId,
@@ -1053,97 +1018,6 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
     return <ErrorView error={hookError} onLogout={onLogout} />;
   }
 
-  const serverPanel =
-    mode === 'server' ? (
-      <Box
-        sx={{
-          width: 320,
-          minWidth: 280,
-          borderLeft: '1px solid',
-          borderColor: 'border.default',
-          display: 'flex',
-          flexDirection: 'column',
-          minHeight: 0,
-          bg: 'canvas.subtle',
-        }}
-      >
-        <Box
-          sx={{
-            p: 2,
-            borderBottom: '1px solid',
-            borderColor: 'border.default',
-          }}
-        >
-          <Heading as="h4" sx={{ fontSize: 1, mb: 1 }}>
-            Server Approval Queue
-          </Heading>
-          <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
-            WebSocket: {wsState} • Pending: {approvals.length}
-          </Text>
-        </Box>
-        <Box sx={{ p: 2, overflow: 'auto', flex: 1 }}>
-          {approvals.length === 0 ? (
-            <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
-              No pending approvals.
-            </Text>
-          ) : (
-            approvals.map(approval => (
-              <Box
-                key={approval.id}
-                sx={{
-                  border: '1px solid',
-                  borderColor: 'border.default',
-                  borderRadius: 2,
-                  p: 2,
-                  mb: 2,
-                  bg: 'canvas.default',
-                }}
-              >
-                <Text sx={{ fontWeight: 600, fontSize: 1, display: 'block' }}>
-                  {approval.tool_name}
-                </Text>
-                <Text
-                  sx={{
-                    fontSize: 0,
-                    color: 'fg.muted',
-                    mb: 2,
-                    display: 'block',
-                  }}
-                >
-                  Status:{' '}
-                  {(approval.status ?? 'pending') === 'approved'
-                    ? 'Approved'
-                    : (approval.status ?? 'pending') === 'rejected'
-                      ? 'Rejected'
-                      : 'Waiting for approval'}
-                </Text>
-                <Box sx={{ display: 'flex', gap: 1 }}>
-                  <Button
-                    size="small"
-                    variant="primary"
-                    onClick={() => void approve(approval.id)}
-                    disabled={(approval.status ?? 'pending') !== 'pending'}
-                  >
-                    Approve
-                  </Button>
-                  <Button
-                    size="small"
-                    variant="danger"
-                    onClick={() =>
-                      void reject(approval.id, 'Rejected from queue')
-                    }
-                    disabled={(approval.status ?? 'pending') !== 'pending'}
-                  >
-                    Reject
-                  </Button>
-                </Box>
-              </Box>
-            ))
-          )}
-        </Box>
-      </Box>
-    ) : null;
-
   return (
     <Box
       sx={{
@@ -1234,18 +1108,6 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
             historyEndpoint={`${agentBaseUrl}/api/v1/history`}
             headerActions={
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <SegmentedControl
-                  aria-label="Approval mode"
-                  size="small"
-                  onChange={index => setMode(index === 0 ? 'local' : 'server')}
-                >
-                  <SegmentedControl.Button selected={mode === 'local'}>
-                    Local
-                  </SegmentedControl.Button>
-                  <SegmentedControl.Button selected={mode === 'server'}>
-                    Server
-                  </SegmentedControl.Button>
-                </SegmentedControl>
                 <Text sx={{ color: 'fg.muted', fontSize: 1 }}>
                   Pending: {pendingApprovals.length}
                 </Text>
@@ -1284,8 +1146,6 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
             onRejectApproval={reject}
           />
         </Box>
-
-        {serverPanel}
       </Box>
     </Box>
   );
@@ -1332,7 +1192,7 @@ const AgentToolApprovalsExample: React.FC = () => {
           onSignIn={handleSignIn}
           onApiKeySignIn={apiKey => handleSignIn(apiKey, 'api-key-user')}
           title="Tool Approval Agent"
-          description="Sign in to test local and server-backed tool approvals."
+          description="Sign in to test runtime-backed tool approvals."
           leadingIcon={<ToolsIcon size={24} />}
         />
       </ThemedProvider>

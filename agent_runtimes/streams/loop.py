@@ -691,6 +691,7 @@ async def stream_loop(
     *,
     list_approvals: Any | None = None,
     decide_approval: Callable[[str, bool, str | None], Awaitable[Any]] | None = None,
+    delete_approval: Callable[[str], Awaitable[Any]] | None = None,
 ) -> None:
     """Run the main WebSocket stream loop.
 
@@ -777,6 +778,14 @@ async def stream_loop(
                                         approved,
                                         note if isinstance(note, str) else None,
                                     )
+
+                            elif (
+                                msg_type == "tool_approval_delete"
+                                and delete_approval is not None
+                            ):
+                                approval_id = payload.get("approvalId")
+                                if isinstance(approval_id, str):
+                                    await delete_approval(approval_id)
 
                             elif msg_type == "request_snapshot":
                                 fresh = (
