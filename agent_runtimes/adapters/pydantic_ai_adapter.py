@@ -15,7 +15,7 @@ from typing import Any, AsyncIterator
 from pydantic_ai import Agent, DeferredToolRequests
 from pydantic_ai.tools import DeferredToolResults
 
-from ..capabilities.tool_approval import ToolApprovalConfig, ToolApprovalManager
+from ..guardrails.tools import ToolApprovalConfig, ToolApprovalManager
 from ..context.usage import get_usage_tracker
 from ..mcp.lifecycle import get_mcp_lifecycle_manager
 from .base import (

@@ -29,6 +29,8 @@ import { Box, setupPrimerPortals } from '@datalayer/primer-addons';
 import { AlertIcon, PersonIcon } from '@primer/octicons-react';
 import { AiAgentIcon } from '@datalayer/icons-react';
 import { QueryClientProvider, QueryClientContext } from '@tanstack/react-query';
+import { useCoreStore } from '@datalayer/core';
+import { DEFAULT_SERVICE_URLS } from '@datalayer/core/lib/api/constants';
 import { useChatStore } from '../../stores/chatStore';
 import { useConversationStore } from '../../stores/conversationStore';
 import type { ChatMessage } from '../../types/messages';
@@ -80,10 +82,137 @@ import {
   ToolApprovalDialog,
   type PendingApproval,
 } from '../tools';
+import type { AgentStreamToolApprovalPayload } from '../../types/stream';
 
 // Tracks pending prompts already auto-sent for a given conversation scope.
 // This prevents layout-driven unmount/remount cycles from re-sending prompts.
 const sentPendingPromptKeys = new Set<string>();
+const AI_AGENTS_API_PREFIX = '/api/ai-agents/v1';
+
+const normalizeAgentId = (value?: string): string =>
+  (value ?? '').trim().toLowerCase();
+const normalizeToolName = (value: string): string =>
+  value.replace(/[-_]/g, '').toLowerCase();
+
+const stableStringify = (value: unknown): string => {
+  if (value === null || typeof value !== 'object') {
+    return JSON.stringify(value);
+  }
+  if (Array.isArray(value)) {
+    return `[${value.map(item => stableStringify(item)).join(',')}]`;
+  }
+  const entries = Object.entries(value as Record<string, unknown>)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(
+      ([key, itemValue]) =>
+        `${JSON.stringify(key)}:${stableStringify(itemValue)}`,
+    );
+  return `{${entries.join(',')}}`;
+};
+
+const approvalSignature = (
+  toolName: string,
+  args: Record<string, unknown>,
+): string => `${normalizeToolName(toolName)}::${stableStringify(args ?? {})}`;
+
+const normalizeAiAgentsBaseUrl = (rawBaseUrl: string): string => {
+  const trimmed = rawBaseUrl.replace(/\/$/, '');
+  if (trimmed.endsWith(AI_AGENTS_API_PREFIX)) {
+    return trimmed.slice(0, -AI_AGENTS_API_PREFIX.length);
+  }
+  return trimmed;
+};
+
+const toWsUrl = (
+  baseUrl: string,
+  path: string,
+  token?: string,
+): string | null => {
+  try {
+    const url = new URL(baseUrl);
+    url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+    url.pathname = path;
+    if (token) {
+      url.searchParams.set('token', token);
+    } else {
+      url.search = '';
+    }
+    return url.toString();
+  } catch {
+    return null;
+  }
+};
+
+const normalizeApprovalPayload = (
+  input: Record<string, unknown>,
+): AgentStreamToolApprovalPayload | null => {
+  const id =
+    (typeof input.id === 'string' && input.id) ||
+    (typeof input.approval_id === 'string' && input.approval_id) ||
+    (typeof input.approvalId === 'string' && input.approvalId) ||
+    '';
+  const toolName =
+    (typeof input.tool_name === 'string' && input.tool_name) ||
+    (typeof input.toolName === 'string' && input.toolName) ||
+    '';
+  if (!id || !toolName) {
+    return null;
+  }
+  const toolArgs =
+    (input.tool_args && typeof input.tool_args === 'object'
+      ? (input.tool_args as Record<string, unknown>)
+      : input.toolArgs && typeof input.toolArgs === 'object'
+        ? (input.toolArgs as Record<string, unknown>)
+        : undefined) ?? {};
+
+  return {
+    id,
+    tool_name: toolName,
+    tool_args: toolArgs,
+    tool_call_id:
+      (typeof input.tool_call_id === 'string' && input.tool_call_id) ||
+      (typeof input.toolCallId === 'string' && input.toolCallId) ||
+      undefined,
+    note:
+      (typeof input.note === 'string' && input.note) ||
+      (typeof input.message === 'string' && input.message) ||
+      undefined,
+    status: (typeof input.status === 'string' && input.status) || 'pending',
+    agent_id:
+      (typeof input.agent_id === 'string' && input.agent_id) ||
+      (typeof input.agentId === 'string' && input.agentId) ||
+      undefined,
+    created_at:
+      (typeof input.created_at === 'string' && input.created_at) ||
+      (typeof input.createdAt === 'string' && input.createdAt) ||
+      undefined,
+    updated_at:
+      (typeof input.updated_at === 'string' && input.updated_at) ||
+      (typeof input.updatedAt === 'string' && input.updatedAt) ||
+      undefined,
+  };
+};
+
+const isApprovalForAgent = (
+  approval: AgentStreamToolApprovalPayload,
+  activeAgentId?: string,
+): boolean => {
+  if (!activeAgentId) {
+    return true;
+  }
+  if (!approval.agent_id) {
+    return true;
+  }
+  if (approval.agent_id === activeAgentId) {
+    return true;
+  }
+  const normalizedApprovalAgentId = normalizeAgentId(approval.agent_id);
+  const normalizedActiveAgentId = normalizeAgentId(activeAgentId);
+  return (
+    normalizedApprovalAgentId.includes(normalizedActiveAgentId) ||
+    normalizedActiveAgentId.includes(normalizedApprovalAgentId)
+  );
+};
 
 function isToolCallOnlyPrompt(content: string): boolean {
   const normalized = content.toLowerCase();
@@ -369,6 +498,23 @@ function ChatBaseInner({
   // When the parent doesn't supply the `pendingApprovals` prop, derive them
   // from the shared store so the banner works out-of-the-box.
   const storeApprovals = useAgentRuntimeStore(s => s.approvals);
+  const protocolConfig =
+    typeof protocolRaw === 'object'
+      ? (protocolRaw as ProtocolConfig)
+      : undefined;
+  const configuredAiAgentsBaseUrl = useCoreStore(
+    (s: any) => s.configuration?.aiagentsRunUrl,
+  );
+  const activeAgentId = protocolConfig?.agentId || runtimeId;
+  const aiAgentsAuthToken = protocolConfig?.authToken;
+  const aiAgentsBaseUrl = useMemo(
+    () =>
+      normalizeAiAgentsBaseUrl(
+        configuredAiAgentsBaseUrl || DEFAULT_SERVICE_URLS.AI_AGENTS,
+      ),
+    [configuredAiAgentsBaseUrl],
+  );
+  const aiAgentsApprovalWsRef = useRef<WebSocket | null>(null);
   const storePendingApprovals: PendingApproval[] = useMemo(() => {
     if (pendingApprovalsProp) return pendingApprovalsProp;
     return storeApprovals
@@ -389,6 +535,17 @@ function ChatBaseInner({
   const onApproveApproval = useCallback(
     async (approvalId: string, note?: string) => {
       agentRuntimeStore.getState().sendDecision(approvalId, true, note);
+      const aiWs = aiAgentsApprovalWsRef.current;
+      if (aiWs && aiWs.readyState === WebSocket.OPEN) {
+        aiWs.send(
+          JSON.stringify({
+            type: 'tool_approval_decision',
+            approvalId,
+            approved: true,
+            ...(note ? { note } : {}),
+          }),
+        );
+      }
       agentRuntimeStore.getState().removeApproval(approvalId);
       await onApproveApprovalProp?.(approvalId, note);
     },
@@ -397,11 +554,125 @@ function ChatBaseInner({
   const onRejectApproval = useCallback(
     async (approvalId: string, note?: string) => {
       agentRuntimeStore.getState().sendDecision(approvalId, false, note);
+      const aiWs = aiAgentsApprovalWsRef.current;
+      if (aiWs && aiWs.readyState === WebSocket.OPEN) {
+        aiWs.send(
+          JSON.stringify({
+            type: 'tool_approval_decision',
+            approvalId,
+            approved: false,
+            ...(note ? { note } : {}),
+          }),
+        );
+      }
       agentRuntimeStore.getState().removeApproval(approvalId);
       await onRejectApprovalProp?.(approvalId, note);
     },
     [onRejectApprovalProp],
   );
+
+  // Optional ai-agents bridge for server-mode visibility.
+  // This keeps approval synchronization in ChatBase so examples do not need
+  // their own approval websocket plumbing.
+  useEffect(() => {
+    if (!showToolApprovalBanner || pendingApprovalsProp) {
+      return;
+    }
+    if (!aiAgentsAuthToken) {
+      return;
+    }
+
+    const wsUrl = toWsUrl(
+      aiAgentsBaseUrl,
+      `${AI_AGENTS_API_PREFIX}/ws`,
+      aiAgentsAuthToken,
+    );
+    if (!wsUrl) {
+      return;
+    }
+
+    let closedByCleanup = false;
+    const ws = new WebSocket(wsUrl);
+    aiAgentsApprovalWsRef.current = ws;
+
+    ws.onopen = () => {
+      ws.send(JSON.stringify({ type: 'tool-approvals-history' }));
+    };
+
+    ws.onmessage = (event: MessageEvent) => {
+      try {
+        const raw = JSON.parse(String(event.data)) as Record<string, unknown>;
+        const records: Record<string, unknown>[] = [];
+        const msgType = typeof raw.type === 'string' ? raw.type : undefined;
+        const msgEvent = typeof raw.event === 'string' ? raw.event : undefined;
+
+        if (msgType === 'tool-approvals-history') {
+          const data =
+            raw.data && typeof raw.data === 'object'
+              ? (raw.data as Record<string, unknown>)
+              : {};
+          const approvals = data.approvals;
+          if (Array.isArray(approvals)) {
+            for (const item of approvals) {
+              if (item && typeof item === 'object') {
+                records.push(item as Record<string, unknown>);
+              }
+            }
+          }
+        } else if (msgEvent?.startsWith('tool_approval_')) {
+          const data =
+            raw.data && typeof raw.data === 'object'
+              ? (raw.data as Record<string, unknown>)
+              : raw.payload && typeof raw.payload === 'object'
+                ? (raw.payload as Record<string, unknown>)
+                : null;
+          if (data) {
+            records.push(data);
+          }
+        }
+
+        if (records.length === 0) {
+          return;
+        }
+
+        const state = agentRuntimeStore.getState();
+        for (const record of records) {
+          const approval = normalizeApprovalPayload(record);
+          if (!approval || !isApprovalForAgent(approval, activeAgentId)) {
+            continue;
+          }
+          if (approval.status === 'pending') {
+            state.upsertApproval(approval);
+          } else {
+            state.removeApproval(approval.id);
+          }
+        }
+      } catch {
+        // Ignore malformed payloads.
+      }
+    };
+
+    ws.onclose = () => {
+      if (!closedByCleanup) {
+        aiAgentsApprovalWsRef.current = null;
+      }
+    };
+    ws.onerror = () => {
+      aiAgentsApprovalWsRef.current = null;
+    };
+
+    return () => {
+      closedByCleanup = true;
+      aiAgentsApprovalWsRef.current = null;
+      ws.close();
+    };
+  }, [
+    showToolApprovalBanner,
+    pendingApprovalsProp,
+    aiAgentsBaseUrl,
+    aiAgentsAuthToken,
+    activeAgentId,
+  ]);
 
   // The outer ChatBase wrapper always resolves a string Protocol to a full
   // ProtocolConfig (or undefined).  Narrow the type for internal use.
@@ -509,24 +780,13 @@ function ChatBaseInner({
   );
   const sandboxStatus = sandboxStatusQuery.data;
 
-  // ---- Agent-runtime WebSocket (monitoring stream) ----
-  // Derive the bare base URL from configEndpoint or protocol.endpoint.
-  const wsBaseUrl = protocol?.configEndpoint
-    ? protocol.configEndpoint.replace(/\/api\/v1\/(config|configure)\/?$/, '')
-    : (protocol?.endpoint?.replace(/\/api\/v1\/.*$/, '') ?? '');
-  useAgentRuntimeWebSocket({
-    enabled: !!protocol && !!wsBaseUrl,
-    baseUrl: wsBaseUrl,
-    authToken: protocol?.authToken,
-    agentId: protocol?.agentId,
-  });
-
   // ---- Refs ----
   const adapterRef = useRef<BaseProtocolAdapter | null>(null);
   const unsubscribeRef = useRef<(() => void) | null>(null);
   const toolCallsRef = useRef<Map<string, ToolCallMessage>>(new Map());
   const pendingToolExecutionsRef = useRef(0);
   const currentAssistantMessageRef = useRef<ChatMessage | null>(null);
+  const respondedApprovalIdsRef = useRef<Set<string>>(new Set());
   const suppressAssistantTextForToolOnlyRef = useRef(false);
   const hideMessagesAfterToolUIRef = useRef(hideMessagesAfterToolUI);
   hideMessagesAfterToolUIRef.current = hideMessagesAfterToolUI;
@@ -548,6 +808,96 @@ function ChatBaseInner({
   onToolCallStartRef.current = onToolCallStart;
   const onToolCallCompleteRef = useRef(onToolCallComplete);
   onToolCallCompleteRef.current = onToolCallComplete;
+  const handleRespondRef = useRef<
+    ((toolCallId: string, result: unknown) => Promise<void>) | null
+  >(null);
+
+  const applyServerApprovalDecision = useCallback(
+    (
+      approval: AgentStreamToolApprovalPayload,
+      approved: boolean,
+      note?: string,
+    ): boolean => {
+      if (!approval?.id) {
+        return false;
+      }
+      if (respondedApprovalIdsRef.current.has(approval.id)) {
+        return false;
+      }
+
+      let targetToolCallId = approval.tool_call_id;
+      if (!targetToolCallId) {
+        for (const [tcId, tc] of toolCallsRef.current.entries()) {
+          if (tc.status !== 'inProgress' && tc.status !== 'executing') {
+            continue;
+          }
+          const tcSig = approvalSignature(tc.toolName, tc.args ?? {});
+          const approvalSig = approvalSignature(
+            approval.tool_name,
+            approval.tool_args ?? {},
+          );
+          if (tcSig === approvalSig) {
+            targetToolCallId = tcId;
+            break;
+          }
+        }
+      }
+
+      if (!targetToolCallId) {
+        return false;
+      }
+
+      const target = toolCallsRef.current.get(targetToolCallId);
+      if (!target) {
+        return false;
+      }
+      if (target.status !== 'inProgress' && target.status !== 'executing') {
+        return false;
+      }
+
+      respondedApprovalIdsRef.current.add(approval.id);
+      void handleRespondRef.current?.(targetToolCallId, {
+        type: 'tool-approval-decision',
+        approved,
+        approvalId: approval.id,
+        toolName: approval.tool_name || target.toolName,
+        _fromServerEcho: true,
+        _alreadyDispatched: true,
+        ...(note ? { message: note } : {}),
+      });
+      return true;
+    },
+    [],
+  );
+
+  // ---- Agent-runtime WebSocket (monitoring stream) ----
+  // Derive the bare base URL from configEndpoint or protocol.endpoint.
+  const wsBaseUrl = protocol?.configEndpoint
+    ? protocol.configEndpoint.replace(/\/api\/v1\/(config|configure)\/?$/, '')
+    : (protocol?.endpoint?.replace(/\/api\/v1\/.*$/, '') ?? '');
+  useAgentRuntimeWebSocket({
+    enabled: !!protocol && !!wsBaseUrl,
+    baseUrl: wsBaseUrl,
+    authToken: protocol?.authToken,
+    agentId: protocol?.agentId,
+    onMessage: msg => {
+      if (
+        msg.type !== 'tool_approval_approved' &&
+        msg.type !== 'tool_approval_rejected'
+      ) {
+        return;
+      }
+      const payload = msg.payload as AgentStreamToolApprovalPayload | undefined;
+      if (!payload) {
+        return;
+      }
+      applyServerApprovalDecision(
+        payload,
+        msg.type === 'tool_approval_approved',
+        payload.note ?? undefined,
+      );
+    },
+  });
 
   // ---- Helpers ----
   const isServerSelected = useCallback(
@@ -1814,6 +2164,7 @@ function ChatBaseInner({
     adapterReady,
     handleSend,
     onSendMessage,
+    applyServerApprovalDecision,
   ]);
 
   // ---- handleStop ----
@@ -1957,19 +2308,21 @@ function ChatBaseInner({
           typeof (result as Record<string, unknown>).approved === 'boolean';
 
         if (isApprovalDecision && adapterRef.current) {
-          const approved = Boolean(
-            (result as Record<string, unknown>).approved,
-          );
+          const resultRecord = result as Record<string, unknown>;
+          const approved = Boolean(resultRecord.approved);
+          const fromServerEcho = resultRecord._fromServerEcho === true;
+          const alreadyDispatched = resultRecord._alreadyDispatched === true;
+          const rawToolName =
+            typeof resultRecord.toolName === 'string'
+              ? (resultRecord.toolName as string)
+              : existingToolCall.toolName;
+          const isMcpApprovalTool = rawToolName.includes('__');
 
           // When the user approves a tool call inline, immediately reflect that
           // approval in the tools dropdown so the toggle switches to "On".
           // Tool names follow the convention "serverId__toolName" (MCP) or are
           // bare skill names. We extract the server prefix for MCP tools.
           if (approved) {
-            const rawToolName =
-              typeof (result as Record<string, unknown>).toolName === 'string'
-                ? ((result as Record<string, unknown>).toolName as string)
-                : existingToolCall.toolName;
             const sep = rawToolName.indexOf('__');
             if (sep !== -1) {
               const serverId = rawToolName.slice(0, sep);
@@ -1984,24 +2337,6 @@ function ChatBaseInner({
             }
           }
 
-          const updatedToolCall: ToolCallMessage = {
-            ...existingToolCall,
-            result,
-            status: approved ? 'complete' : 'error',
-            error: approved ? undefined : 'Tool approval rejected by user',
-          };
-          toolCallsRef.current.set(toolCallId, updatedToolCall);
-          setDisplayItems(prev =>
-            prev.map(item =>
-              isToolCallMessage(item) && item.toolCallId === toolCallId
-                ? updatedToolCall
-                : item,
-            ),
-          );
-
-          setIsLoading(true);
-          setIsStreaming(true);
-
           try {
             const approvalId =
               typeof result === 'object' &&
@@ -2010,15 +2345,51 @@ function ChatBaseInner({
                 ? ((result as Record<string, unknown>).approvalId as string)
                 : undefined;
 
-            // Notify the parent so the top banner clears immediately when
-            // inline approve fires (the banner is driven by a parent prop).
-            if (approvalId) {
+            // Match AgentToolApprovalsExample semantics: first click sends only
+            // a websocket decision; continuation waits for server echo.
+            if (!fromServerEcho) {
+              if (approvalId) {
+                if (approved) {
+                  await onApproveApproval?.(approvalId);
+                } else {
+                  await onRejectApproval?.(approvalId);
+                }
+              }
+              return;
+            }
+
+            if (approvalId && !alreadyDispatched) {
               if (approved) {
-                onApproveApproval?.(approvalId);
+                await onApproveApproval?.(approvalId);
               } else {
-                onRejectApproval?.(approvalId);
+                await onRejectApproval?.(approvalId);
               }
             }
+
+            // MCP approvals are unblocked server-side by the websocket decision
+            // and continue on the same stream. Avoid sending an extra
+            // sendToolResult continuation, which can trigger duplicate approvals.
+            if (isMcpApprovalTool) {
+              return;
+            }
+
+            const updatedToolCall: ToolCallMessage = {
+              ...existingToolCall,
+              result,
+              status: approved ? 'complete' : 'error',
+              error: approved ? undefined : 'Tool approval rejected by user',
+            };
+            toolCallsRef.current.set(toolCallId, updatedToolCall);
+            setDisplayItems(prev =>
+              prev.map(item =>
+                isToolCallMessage(item) && item.toolCallId === toolCallId
+                  ? updatedToolCall
+                  : item,
+              ),
+            );
+
+            setIsLoading(true);
+            setIsStreaming(true);
 
             await adapterRef.current.sendToolResult(toolCallId, {
               toolCallId,
@@ -2112,6 +2483,7 @@ function ChatBaseInner({
     },
     [displayItems],
   );
+  handleRespondRef.current = handleRespond;
 
   // ---- Suggestion handlers (for EmptyState) ----
   const handleSuggestionSubmit = useCallback(
@@ -2126,60 +2498,22 @@ function ChatBaseInner({
     setTimeout(() => inputRef.current?.focus(), 0);
   }, []);
 
-  // Route banner/external approvals through the SSE adapter continuation so
-  // the agent is actually unblocked (same as the inline approve button).
-  // The external callback (onApproveApproval) is still called first for
-  // optimistic UI updates on the parent side.
+  // Banner approvals dispatch the decision immediately; the continuation is
+  // resumed when the runtime websocket echoes approved/rejected.
   const handleBannerApprove = useCallback(
     async (approvalId: string, note?: string) => {
-      // Let the parent clean up its own pending list.
+      // Decision dispatch happens here; continuation is resumed on server echo.
       await onApproveApproval?.(approvalId, note);
-
-      // Find the tool call that is waiting on this approval and drive the
-      // SSE continuation so the agent is unblocked.
-      for (const [tcId, tc] of toolCallsRef.current.entries()) {
-        if (tc.status !== 'inProgress' && tc.status !== 'executing') continue;
-        const res = tc.result as Record<string, unknown> | undefined;
-        const matchesId = res?.approval_id === approvalId;
-        const matchesName =
-          !matchesId &&
-          tc.toolName
-            .replace(/[-_]/g, '')
-            .toLowerCase()
-            .includes(approvalId.replace(/[-_]/g, '').toLowerCase());
-        if (matchesId || (res?.pending_approval === true && matchesName)) {
-          await handleRespond(tcId, {
-            type: 'tool-approval-decision',
-            approved: true,
-            approvalId,
-            toolName: tc.toolName,
-          });
-          break;
-        }
-      }
     },
-    [onApproveApproval, handleRespond],
+    [onApproveApproval],
   );
 
   const handleBannerReject = useCallback(
     async (approvalId: string, note?: string) => {
+      // Decision dispatch happens here; continuation is resumed on server echo.
       await onRejectApproval?.(approvalId, note);
-
-      for (const [tcId, tc] of toolCallsRef.current.entries()) {
-        if (tc.status !== 'inProgress' && tc.status !== 'executing') continue;
-        const res = tc.result as Record<string, unknown> | undefined;
-        if (res?.approval_id === approvalId || res?.pending_approval === true) {
-          await handleRespond(tcId, {
-            type: 'tool-approval-decision',
-            approved: false,
-            approvalId,
-            toolName: tc.toolName,
-          });
-          break;
-        }
-      }
     },
-    [onRejectApproval, handleRespond],
+    [onRejectApproval],
   );
 
   // ---- Compute data for InputToolbar ----

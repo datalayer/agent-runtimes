@@ -5,8 +5,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from agent_runtimes.capabilities.cost_monitoring import CostMonitoringCapability
 from agent_runtimes.capabilities.factory import build_capabilities_from_agent_spec
+from agent_runtimes.monitoring.cost_monitoring import CostMonitoringCapability
 from agent_runtimes.context.costs import AgentCostStore
 
 

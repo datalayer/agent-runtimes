@@ -21,7 +21,7 @@ Examples
 --------
 Wrap your graph execution with :func:`run_graph_with_telemetry`::
 
-    from agent_runtimes.capabilities.graph_telemetry import run_graph_with_telemetry
+    from agent_runtimes.monitoring.graph_telemetry import run_graph_with_telemetry
 
     result = await run_graph_with_telemetry(
         graph=my_graph,
@@ -135,7 +135,7 @@ def _get_otel_emitter(service_name: str = "agent-runtimes") -> Any | None:
         return None
     try:
         from ..context.identities import get_request_user_jwt
-        from ..observability.prompt_turn_metrics import decode_user_uid
+        from ..otel.prompt_turn_metrics import decode_user_uid
 
         user_jwt = get_request_user_jwt()
         user_uid = decode_user_uid(user_jwt) if user_jwt else None

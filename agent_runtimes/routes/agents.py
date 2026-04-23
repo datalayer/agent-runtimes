@@ -28,8 +28,8 @@ from pydantic_ai import DeferredToolRequests
 
 from ..adapters.pydantic_ai_adapter import PydanticAIAdapter
 from ..capabilities import (
-    ToolApprovalCapability,
     ToolApprovalConfig,
+    ToolsGuardrailCapability,
     build_capabilities_from_agent_spec,
     build_default_choice_guardrails,
     build_usage_limits_from_agent_spec,
@@ -1718,7 +1718,7 @@ async def create_agent(
                 has_tool_approval_capability = bool(
                     capabilities
                     and any(
-                        isinstance(cap, ToolApprovalCapability) for cap in capabilities
+                        isinstance(cap, ToolsGuardrailCapability) for cap in capabilities
                     )
                 )
                 if not has_tool_approval_capability:
@@ -1735,10 +1735,10 @@ async def create_agent(
                             approval_config.user_jwt_token = _request_jwt
                     if capabilities is None:
                         capabilities = []
-                    capabilities.append(ToolApprovalCapability(config=approval_config))
+                    capabilities.append(ToolsGuardrailCapability(config=approval_config))
                     agent_kwargs["capabilities"] = capabilities
                     logger.info(
-                        "Auto-enabled ToolApprovalCapability for agent '%s' with approval tools: %s",
+                        "Auto-enabled ToolsGuardrailCapability for agent '%s' with approval tools: %s",
                         agent_id,
                         approval_patterns,
                     )
@@ -2041,7 +2041,7 @@ def _emit_initial_otel_baseline(agent_id: str, http_request: Request) -> None:
     This is fire-and-forget — failures are logged but never propagated.
     """
     try:
-        from ..observability.prompt_turn_metrics import (
+        from ..otel.prompt_turn_metrics import (
             decode_user_uid,
             extract_bearer_token,
             record_prompt_turn_completion,
@@ -3806,7 +3806,7 @@ async def configure_from_spec_endpoint(
     1. ``spec.tools`` is forwarded to ``CreateAgentRequest.tools``.
     2. ``tools_requiring_approval_ids(tool_ids)`` detects tools whose
        ToolSpec has ``requires_approval=True`` or ``approval='manual'``.
-    3. When approval tools are found, a ``ToolApprovalCapability`` is
+    3. When approval tools are found, a ``ToolsGuardrailCapability`` is
        auto-added; ``ToolApprovalConfig.from_env()`` reads
        ``DATALAYER_USER_TOKEN`` to populate ``user_jwt_token``.
     4. On first tool call ``request_and_wait()``:
@@ -3837,7 +3837,7 @@ async def configure_from_spec_endpoint(
             os.environ[name] = value
 
     # Store the user JWT so that ToolApprovalConfig.from_env() can later
-    # populate user_jwt_token — used by ToolApprovalCapability to:
+    # populate user_jwt_token — used by ToolsGuardrailCapability to:
     #   • forward pending approval records to the ai-agents backend
     #   • authenticate the bridge WS connection that mirrors remote decisions
     # Must be set before create_agent() is called (step 4 below).
@@ -3886,7 +3886,7 @@ async def configure_from_spec_endpoint(
         jupyter_sandbox=body.jupyter_sandbox,
         # Forward spec tools so create_agent can identify tools that require
         # manual approval (requires_approval=True / approval='manual' in
-        # ToolSpec) and auto-add ToolApprovalCapability.  Without this field
+        # ToolSpec) and auto-add ToolsGuardrailCapability.  Without this field
         # tool_ids would be empty, no approval capability would be registered,
         # and tools would execute without waiting for human sign-off.
         tools=list(spec.tools or []),

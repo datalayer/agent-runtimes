@@ -41,7 +41,7 @@ class OTelHooksCapability(AbstractCapability[Any]):
             return None
         # Resolve user_uid from the request-scoped JWT set by the transport.
         from ..context.identities import get_request_user_jwt
-        from ..observability.prompt_turn_metrics import decode_user_uid
+        from ..otel.prompt_turn_metrics import decode_user_uid
 
         user_jwt = get_request_user_jwt()
         user_uid = decode_user_uid(user_jwt) if user_jwt else None

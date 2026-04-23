@@ -13,6 +13,15 @@ Provides:
 """
 
 from .config import ObservabilityConfig, configure_observability
+from .instrumentation import (
+    AgentRuntimesMetrics,
+    create_otel_middleware,
+    get_meter,
+    get_tracer,
+    instrument_agent_runtimes,
+    setup_otel,
+    uninstrument_agent_runtimes,
+)
 from .storage import SQLiteTraceStorage, TraceStorage
 from .tracer import AgentTracer, trace_agent_run, trace_tool_call
 
@@ -27,4 +36,12 @@ __all__ = [
     "AgentTracer",
     "trace_agent_run",
     "trace_tool_call",
+    # OTEL instrumentation
+    "AgentRuntimesMetrics",
+    "create_otel_middleware",
+    "get_meter",
+    "get_tracer",
+    "instrument_agent_runtimes",
+    "setup_otel",
+    "uninstrument_agent_runtimes",
 ]

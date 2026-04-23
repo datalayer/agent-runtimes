@@ -30,19 +30,12 @@ import {
   ToolsIcon,
 } from '@primer/octicons-react';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
-import { useCoreStore } from '@datalayer/core';
-import { DEFAULT_SERVICE_URLS } from '@datalayer/core/lib/api/constants';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
 import { Chat } from '../chat';
 import { useAIAgentsWebSocket } from '../hooks';
-import type {
-  AgentStreamSnapshotPayload,
-  AgentStreamToolApprovalPayload,
-} from '../types/stream';
+import type { AgentStreamSnapshotPayload } from '../types/stream';
 import { parseAgentStreamMessage } from '../types/stream';
-import type { RenderToolResult } from '../types';
-import { ToolCallDisplay, type PendingApproval } from '../chat/tools';
 import type {
   McpAggregateStatus,
   McpServerStatus,
@@ -56,78 +49,6 @@ const AGENT_NAME = 'mcp-demo-agent';
 const AGENT_SPEC_ID = 'demo-mcp';
 const DEFAULT_LOCAL_BASE_URL =
   import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
-const AI_AGENTS_API_PREFIX = '/api/ai-agents/v1';
-const FALLBACK_AI_AGENTS_BASE_URL =
-  import.meta.env.VITE_AI_AGENTS_URL || DEFAULT_SERVICE_URLS.AI_AGENTS;
-
-const normalizeToolName = (value: string): string =>
-  value.replace(/[-_]/g, '').toLowerCase();
-
-const stableStringify = (value: unknown): string => {
-  if (value === null || typeof value !== 'object') {
-    return JSON.stringify(value);
-  }
-  if (Array.isArray(value)) {
-    return `[${value.map(item => stableStringify(item)).join(',')}]`;
-  }
-  const entries = Object.entries(value as Record<string, unknown>)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(
-      ([key, itemValue]) =>
-        `${JSON.stringify(key)}:${stableStringify(itemValue)}`,
-    );
-  return `{${entries.join(',')}}`;
-};
-
-const approvalSignature = (
-  toolName: string,
-  args: Record<string, unknown>,
-): string => `${normalizeToolName(toolName)}::${stableStringify(args ?? {})}`;
-
-const normalizeAgentId = (value?: string): string =>
-  (value ?? '').trim().toLowerCase();
-
-interface ToolApprovalRequest {
-  id: string;
-  tool_name: string;
-  tool_args?: Record<string, unknown>;
-  tool_call_id?: string;
-  note?: string;
-  created_at?: string;
-  status?: string;
-  agent_id?: string;
-}
-
-type ApprovalWsDecisionMessage = {
-  type: 'tool_approval_decision';
-  approvalId: string;
-  approved: boolean;
-  note?: string;
-};
-
-const normalizeAiAgentsBaseUrl = (raw: string): string => {
-  const trimmed = raw.replace(/\/$/, '');
-  return trimmed.endsWith(AI_AGENTS_API_PREFIX)
-    ? trimmed.slice(0, -AI_AGENTS_API_PREFIX.length)
-    : trimmed;
-};
-
-const toWsUrl = (
-  baseUrl: string,
-  path: string,
-  token?: string,
-): string | null => {
-  try {
-    const url = new URL(baseUrl);
-    url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
-    url.pathname = path;
-    if (token) url.searchParams.set('token', token);
-    else url.search = '';
-    return url.toString();
-  } catch {
-    return null;
-  }
-};
 
 /** A tool discovered from a running MCP server. */
 interface McpToolInfo {
@@ -385,13 +306,6 @@ const AgentMCPInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
 
   const agentBaseUrl = DEFAULT_LOCAL_BASE_URL;
   const chatAuthToken: string | undefined = token === null ? undefined : token;
-  const configuredAiAgentsBaseUrl = useCoreStore(
-    (s: any) => s.configuration?.aiagentsRunUrl,
-  );
-  const aiAgentsBaseUrl = normalizeAiAgentsBaseUrl(
-    configuredAiAgentsBaseUrl || FALLBACK_AI_AGENTS_BASE_URL,
-  );
-  const approvalWsRef = useRef<WebSocket | null>(null);
 
   const authFetch = useCallback(
     (url: string, opts: RequestInit = {}) =>
@@ -513,98 +427,6 @@ const AgentMCPInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
     reconnectDelayMs: attempt =>
       Math.min(1000 * 2 ** Math.max(0, attempt - 1), 10000),
   });
-
-  // ── ai-agents WebSocket: bridge tool approval decisions to remote backend ──
-  useEffect(() => {
-    if (!isReady) return;
-
-    const wsUrl = toWsUrl(
-      aiAgentsBaseUrl,
-      `${AI_AGENTS_API_PREFIX}/ws`,
-      chatAuthToken,
-    );
-    if (!wsUrl) return;
-
-    let closedByCleanup = false;
-    const ws = new WebSocket(wsUrl);
-    approvalWsRef.current = ws;
-
-    ws.onopen = () => {
-      // Request any existing approvals so they appear immediately.
-      ws.send(JSON.stringify({ type: 'tool-approvals-history' }));
-    };
-
-    ws.onmessage = (event: MessageEvent) => {
-      try {
-        const msg = JSON.parse(event.data as string) as Record<string, unknown>;
-        const msgType = msg?.type as string | undefined;
-        const msgEvent = msg?.event as string | undefined;
-        const records: Array<Record<string, unknown>> = [];
-
-        if (msgType === 'tool-approvals-history') {
-          const data = (msg?.data ?? {}) as Record<string, unknown>;
-          const approvals = data?.approvals;
-          if (Array.isArray(approvals)) {
-            for (const a of approvals) {
-              if (a && typeof a === 'object')
-                records.push(a as Record<string, unknown>);
-            }
-          }
-        } else if (
-          typeof msgEvent === 'string' &&
-          (msgEvent === 'tool_approval_created' ||
-            msgEvent === 'tool_approval_updated')
-        ) {
-          const data = (msg?.data ?? msg?.payload) as
-            | Record<string, unknown>
-            | undefined;
-          if (data) records.push(data);
-        }
-
-        for (const record of records) {
-          if (record?.status === 'pending') {
-            agentRuntimeStore
-              .getState()
-              .upsertApproval(
-                record as unknown as AgentStreamToolApprovalPayload,
-              );
-          }
-        }
-      } catch {
-        // Ignore malformed messages.
-      }
-    };
-
-    ws.onclose = () => {
-      if (!closedByCleanup) approvalWsRef.current = null;
-    };
-    ws.onerror = () => {
-      approvalWsRef.current = null;
-    };
-
-    return () => {
-      closedByCleanup = true;
-      approvalWsRef.current = null;
-      ws.close();
-    };
-  }, [isReady, aiAgentsBaseUrl, chatAuthToken]);
-
-  /** Send a tool_approval_decision over the ai-agents WS. */
-  const sendApprovalDecisionToAiAgents = useCallback(
-    (approvalId: string, approved: boolean, note?: string) => {
-      const ws = approvalWsRef.current;
-      if (!ws || ws.readyState !== WebSocket.OPEN) return;
-      ws.send(
-        JSON.stringify({
-          type: 'tool_approval_decision',
-          approvalId,
-          approved,
-          ...(note ? { note } : {}),
-        }),
-      );
-    },
-    [],
-  );
 
   // ── Fetch creation spec to get selected MCP server IDs ──
   useEffect(() => {
@@ -834,12 +656,6 @@ const AgentMCPInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
             historyEndpoint={`${agentBaseUrl}/api/v1/history`}
             mcpStatusData={mcpStatusData}
             showToolApprovalBanner={true}
-            onApproveApproval={(id, note) =>
-              sendApprovalDecisionToAiAgents(id, true, note)
-            }
-            onRejectApproval={(id, note) =>
-              sendApprovalDecisionToAiAgents(id, false, note)
-            }
             headerActions={
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                 <Text sx={{ color: 'fg.muted', fontSize: 1 }}>

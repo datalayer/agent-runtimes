@@ -35,7 +35,7 @@ from starlette.applications import Starlette
 from ..adapters.base import BaseAgent
 from ..context.identities import set_request_identities, set_request_user_jwt
 from ..context.usage import get_usage_tracker
-from ..observability.prompt_turn_metrics import (
+from ..otel.prompt_turn_metrics import (
     extract_identity_hints,
     extract_jwt_token,
     extract_user_id_from_jwt,

@@ -43,7 +43,7 @@ from pydantic_ai.toolsets import ExternalToolset, FilteredToolset
 from ..adapters.base import BaseAgent
 from ..context.identities import IdentityContextManager, set_request_user_jwt
 from ..events import create_event
-from ..observability.prompt_turn_metrics import (
+from ..otel.prompt_turn_metrics import (
     extract_identity_hints,
     extract_jwt_token,
     extract_user_id_from_jwt,
@@ -81,7 +81,7 @@ async def _presignal_deferred_approvals(
     In **server mode** the human-approval decision travels via the ai-agents
     WebSocket and updates ai-agents' store, but never calls
     ``signal_approval_event()`` on the local asyncio.Event that
-    ``ToolApprovalCapability.before_tool_execute`` waits on.  Without this
+    ``ToolsGuardrailCapability.before_tool_execute`` waits on.  Without this
     pre-signal, ``before_tool_execute`` would call ``request_and_wait()`` again
     on the continuation turn and block forever.
 
@@ -167,7 +167,7 @@ async def _wrap_streaming_body_with_approvals(
     """Wrap a streaming body to create local approval records for deferred tools.
 
     When DeferredToolRequests is active, pydantic-ai never executes the tool,
-    so ToolApprovalCapability.before_tool_execute never fires.  This wrapper
+    so ToolsGuardrailCapability.before_tool_execute never fires.  This wrapper
     intercepts ``tool-input-available`` SSE events and creates matching
     approval records in the local in-memory store so the frontend can poll
     them and enable the Approve / Deny buttons.
@@ -900,7 +900,7 @@ class VercelAITransport(BaseTransport):
                 # approval records for tools approved via ai-agents WebSocket.
                 # In server mode the approval decision updates ai-agents' store
                 # but never signals the local asyncio.Event that
-                # ToolApprovalCapability.before_tool_execute waits on.
+                # ToolsGuardrailCapability.before_tool_execute waits on.
                 if self._has_approval_tools and body:
                     await _presignal_deferred_approvals(body, agent_id)
 

@@ -82,7 +82,7 @@ def register_agent_tools(
     """Register runtime tools on a pydantic_ai.Agent instance.
 
     Tool approval is handled at the capability layer via
-    ``ToolApprovalCapability`` — this function only registers the raw
+    ``ToolsGuardrailCapability`` — this function only registers the raw
     tool implementations.
 
     Args:

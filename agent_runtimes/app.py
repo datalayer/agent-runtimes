@@ -428,8 +428,8 @@ async def _create_and_register_cli_agent(
     from agent_runtimes.specs.models import DEFAULT_MODEL
 
     from .capabilities import (
-        ToolApprovalCapability,
         ToolApprovalConfig,
+        ToolsGuardrailCapability,
         build_capabilities_from_agent_spec,
         build_usage_limits_from_agent_spec,
     )
@@ -477,7 +477,7 @@ async def _create_and_register_cli_agent(
         # any registered tool is marked requires_approval=True.
         agent_kwargs["output_type"] = [str, DeferredToolRequests]
         has_tool_approval_capability = any(
-            isinstance(cap, ToolApprovalCapability) for cap in (capabilities or [])
+            isinstance(cap, ToolsGuardrailCapability) for cap in (capabilities or [])
         )
         if not has_tool_approval_capability:
             approval_config = ToolApprovalConfig.from_env()
@@ -485,10 +485,10 @@ async def _create_and_register_cli_agent(
             approval_config.tools_requiring_approval = approval_patterns
             if capabilities is None:
                 capabilities = []
-            capabilities.append(ToolApprovalCapability(config=approval_config))
+            capabilities.append(ToolsGuardrailCapability(config=approval_config))
             agent_kwargs["capabilities"] = capabilities
             logger.info(
-                "Auto-enabled ToolApprovalCapability for agent '%s' with approval tools: %s",
+                "Auto-enabled ToolsGuardrailCapability for agent '%s' with approval tools: %s",
                 agent_id,
                 approval_patterns,
             )

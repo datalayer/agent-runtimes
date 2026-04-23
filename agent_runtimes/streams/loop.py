@@ -21,7 +21,7 @@ from urllib.parse import urlencode
 from fastapi import WebSocket, WebSocketDisconnect
 
 from agent_runtimes.context.costs import get_cost_store
-from agent_runtimes.observability.prompt_turn_metrics import extract_jwt_token
+from agent_runtimes.otel.prompt_turn_metrics import extract_jwt_token
 from agent_runtimes.streams.messages import (
     AgentMonitoringSnapshotPayload,
     AgentStreamMessage,
@@ -495,7 +495,7 @@ async def build_monitoring_snapshot_payload(
 
     graph_telemetry: dict[str, Any] | None = None
     if agent_id:
-        from ..capabilities.graph_telemetry import get_graph_telemetry_dict
+        from ..monitoring.graph_telemetry import get_graph_telemetry_dict
 
         graph_telemetry = get_graph_telemetry_dict(agent_id)
 

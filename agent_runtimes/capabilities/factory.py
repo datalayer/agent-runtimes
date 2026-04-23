@@ -10,8 +10,7 @@ from typing import Any
 
 from pydantic_ai import UsageLimits
 
-from .cost_monitoring import CostMonitoringCapability
-from .guardrails import (
+from ..guardrails import (
     DEFAULT_TOOL_PERMISSION_MAP,
     AsyncGuardrailCapability,
     BlockedKeywordsCapability,
@@ -30,10 +29,13 @@ from .guardrails import (
     ToolGuardCapability,
     _parse_token_limit,
 )
-from .llm_context_usage import LLMContextUsageCapability
-from .monitoring import MonitoringCapability
-from .otel import OTelHooksCapability
-from .tool_approval import ToolApprovalCapability, ToolApprovalConfig
+from ..guardrails.tools import ToolApprovalConfig, ToolsGuardrailCapability
+from ..monitoring import (
+    CostMonitoringCapability,
+    LLMContextUsageCapability,
+    MonitoringCapability,
+    OTelHooksCapability,
+)
 
 
 def _env_bool(name: str, default: bool = False) -> bool:
@@ -292,7 +294,7 @@ def build_capabilities_from_agent_spec(
             approval_config = ToolApprovalConfig.from_spec(cfg)
             if agent_id:
                 approval_config.agent_id = agent_id
-            capabilities.append(ToolApprovalCapability(config=approval_config))
+            capabilities.append(ToolsGuardrailCapability(config=approval_config))
 
     # Advanced fallback for cost budget
     if isinstance(advanced, dict) and advanced.get("cost_limit"):

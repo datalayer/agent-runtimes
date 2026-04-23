@@ -301,7 +301,7 @@ async def forward_approval_to_ai_agents(
     """Best-effort forward a pending approval to the datalayer-ai-agents backend.
 
     Called from ``ToolApprovalManager.request_and_wait`` so that approvals
-    created via the inline ``ToolApprovalCapability`` path are visible in
+    created via the inline ``ToolsGuardrailCapability`` path are visible in
     remote UI panels (e.g. the ToolApprovals view in datalayer/ui) that poll
     the ai-agents service rather than the local agent-runtimes endpoints.
     """
@@ -445,7 +445,7 @@ async def _update_approval(
         _APPROVALS[approval_id] = updated
 
     # Signal any in-process coroutine waiting on this approval (e.g.
-    # ToolApprovalCapability.before_tool_execute using asyncio.Event).
+    # ToolsGuardrailCapability.before_tool_execute using asyncio.Event).
     signal_approval_event(approval_id, status == "approved", note)
 
     await _publish_approval_event(

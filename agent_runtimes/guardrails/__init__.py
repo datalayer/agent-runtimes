@@ -713,7 +713,7 @@ class SkillsGuardrailCapability(AbstractCapability[Any]):
 
     def _get_approval_manager(self) -> Any:
         if self._approval_manager is None:
-            from .tool_approval import ToolApprovalConfig, ToolApprovalManager
+            from .tools import ToolApprovalConfig, ToolApprovalManager
 
             config = ToolApprovalConfig.from_env()
             config.agent_id = self.agent_id or config.agent_id
@@ -858,7 +858,7 @@ class MCPToolsGuardrailCapability(AbstractCapability[Any]):
 
     def _get_approval_manager(self) -> Any:
         if self._approval_manager is None:
-            from .tool_approval import ToolApprovalConfig, ToolApprovalManager
+            from .tools import ToolApprovalConfig, ToolApprovalManager
 
             config = ToolApprovalConfig.from_env()
             config.agent_id = self.agent_id or config.agent_id
@@ -951,3 +951,15 @@ DEFAULT_TOOL_PERMISSION_MAP: dict[str, list[str]] = {
     "email": ["send:email"],
     "deploy": ["deploy:production"],
 }
+
+
+# Re-export tool-approval guardrail symbols so callers can use a single
+# ``agent_runtimes.guardrails`` import path.
+from .tools import (  # noqa: E402,F401
+    ToolApprovalConfig,
+    ToolApprovalManager,
+    ToolApprovalRejectedError,
+    ToolApprovalTimeoutError,
+    ToolsGuardrailCapability,
+)
+
