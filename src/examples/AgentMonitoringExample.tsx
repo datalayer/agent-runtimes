@@ -18,8 +18,8 @@
 
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Text, Button, Spinner, Heading, Label } from '@primer/react';
-import { GraphIcon, SignOutIcon } from '@primer/octicons-react';
+import { Text, Spinner, Heading, Label } from '@primer/react';
+import { GraphIcon } from '@primer/octicons-react';
 import { Box } from '@datalayer/primer-addons';
 import { ErrorView } from './components';
 import { ThemedProvider } from './utils/themedProvider';
@@ -42,8 +42,6 @@ import { useCoreStore } from '@datalayer/core/lib/state';
 
 const queryClient = new QueryClient();
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
-import { SignInSimple } from '@datalayer/core/lib/views/iam';
-import { UserBadge } from '@datalayer/core/lib/views/profile';
 import { Chat } from '../chat';
 import type { McpToolsetsStatusResponse } from '../types/mcp';
 
@@ -344,16 +342,6 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
         >
           WS: {monitorSocket.connectionState}
         </Label>
-        {token && <UserBadge token={token} variant="small" />}
-        <Button
-          size="small"
-          variant="invisible"
-          onClick={onLogout}
-          leadingVisual={SignOutIcon}
-          sx={{ color: 'fg.muted' }}
-        >
-          Sign out
-        </Button>
       </Box>
 
       <Box sx={{ flex: 1, minHeight: 0, display: 'flex' }}>
@@ -603,7 +591,7 @@ const syncTokenToIamStore = (token: string) => {
 };
 
 const AgentMonitoringExample: React.FC = () => {
-  const { token, setAuth, clearAuth } = useSimpleAuthStore();
+  const { token, clearAuth } = useSimpleAuthStore();
   const hasSynced = useRef(false);
 
   useEffect(() => {
@@ -612,15 +600,6 @@ const AgentMonitoringExample: React.FC = () => {
       syncTokenToIamStore(token);
     }
   }, [token]);
-
-  const handleSignIn = useCallback(
-    (newToken: string, handle: string) => {
-      setAuth(newToken, handle);
-      hasSynced.current = true;
-      syncTokenToIamStore(newToken);
-    },
-    [setAuth],
-  );
 
   const handleLogout = useCallback(() => {
     clearAuth();
@@ -633,13 +612,9 @@ const AgentMonitoringExample: React.FC = () => {
   if (!token) {
     return (
       <ThemedProvider>
-        <SignInSimple
-          onSignIn={handleSignIn}
-          onApiKeySignIn={apiKey => handleSignIn(apiKey, 'api-key-user')}
-          title="Agent Monitoring"
-          description="Sign in to monitor runtime health and alerts."
-          leadingIcon={<GraphIcon size={24} />}
-        />
+        <Box sx={{ p: 4, textAlign: 'center', color: 'fg.muted' }}>
+          Sign in from the top header to run this example.
+        </Box>
       </ThemedProvider>
     );
   }

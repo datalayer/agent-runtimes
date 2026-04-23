@@ -678,6 +678,7 @@ class SkillsGuardrailCapability(AbstractCapability[Any]):
     """
 
     agent_id: str | None = None
+    _approval_manager: Any = field(default=None, init=False, repr=False)
 
     def _enabled_skill_ids(self) -> set[str]:
         try:
@@ -694,11 +695,52 @@ class SkillsGuardrailCapability(AbstractCapability[Any]):
                 return value.strip()
         return None
 
+    def _approved_skill_ids(self) -> set[str]:
+        try:
+            from agent_runtimes.streams.loop import get_agent_approved_skill_ids
+
+            return get_agent_approved_skill_ids(self.agent_id)
+        except Exception:
+            return set()
+
     def _is_skill_enabled(self, skill_name: str) -> bool:
         skill_id = skill_name.split(":", 1)[0]
         return skill_id in self._enabled_skill_ids()
 
-    def _enforce_execute_code_payload(self, args: dict[str, Any]) -> None:
+    def _is_skill_approved(self, skill_name: str) -> bool:
+        skill_id = skill_name.split(":", 1)[0]
+        return skill_id in self._approved_skill_ids()
+
+    def _get_approval_manager(self) -> Any:
+        if self._approval_manager is None:
+            from .tool_approval import ToolApprovalConfig, ToolApprovalManager
+
+            config = ToolApprovalConfig.from_env()
+            config.agent_id = self.agent_id or config.agent_id
+            self._approval_manager = ToolApprovalManager(config)
+        return self._approval_manager
+
+    async def _request_skill_approval(
+        self,
+        skill_name: str,
+        *,
+        source_tool: str,
+        args: dict[str, Any],
+    ) -> None:
+        if self._is_skill_approved(skill_name):
+            return
+
+        manager = self._get_approval_manager()
+        await manager.request_and_wait(
+            tool_name=f"skill:{skill_name.split(':', 1)[0]}",
+            tool_args={
+                "skill": skill_name,
+                "source_tool": source_tool,
+                "args": {k: str(v)[:500] for k, v in args.items()},
+            },
+        )
+
+    async def _enforce_execute_code_payload(self, args: dict[str, Any]) -> None:
         code = args.get("code")
         if not isinstance(code, str) or not code.strip():
             return
@@ -726,6 +768,14 @@ class SkillsGuardrailCapability(AbstractCapability[Any]):
                 "Disabled skills cannot be used: " + ", ".join(disabled)
             )
 
+        for skill in sorted(referenced):
+            if self._is_skill_enabled(skill):
+                await self._request_skill_approval(
+                    skill,
+                    source_tool="execute_code",
+                    args={"code": code[:1000]},
+                )
+
     async def before_tool_execute(
         self,
         ctx: RunContext[Any],
@@ -742,9 +792,15 @@ class SkillsGuardrailCapability(AbstractCapability[Any]):
                 raise GuardrailBlockedError(
                     f"Skill '{skill_name}' is disabled and cannot be executed"
                 )
+            if skill_name:
+                await self._request_skill_approval(
+                    skill_name,
+                    source_tool=tool_name,
+                    args=args,
+                )
 
         if tool_name == "execute_code":
-            self._enforce_execute_code_payload(args)
+            await self._enforce_execute_code_payload(args)
 
         return args
 
@@ -754,12 +810,21 @@ class MCPToolsGuardrailCapability(AbstractCapability[Any]):
     """Ensure disabled MCP tools cannot be invoked even when prompted."""
 
     agent_id: str | None = None
+    _approval_manager: Any = field(default=None, init=False, repr=False)
 
     def _enabled_tool_names(self) -> set[str]:
         try:
             from agent_runtimes.streams.loop import get_agent_enabled_mcp_tool_names
 
             return get_agent_enabled_mcp_tool_names(self.agent_id)
+        except Exception:
+            return set()
+
+    def _approved_tool_names(self) -> set[str]:
+        try:
+            from agent_runtimes.streams.loop import get_agent_approved_mcp_tool_names
+
+            return get_agent_approved_mcp_tool_names(self.agent_id)
         except Exception:
             return set()
 
@@ -791,7 +856,30 @@ class MCPToolsGuardrailCapability(AbstractCapability[Any]):
                 f"MCP tool '{raw_tool_name}' is disabled by user selection"
             )
 
-    def _enforce_execute_code_payload(self, args: dict[str, Any]) -> None:
+    def _get_approval_manager(self) -> Any:
+        if self._approval_manager is None:
+            from .tool_approval import ToolApprovalConfig, ToolApprovalManager
+
+            config = ToolApprovalConfig.from_env()
+            config.agent_id = self.agent_id or config.agent_id
+            self._approval_manager = ToolApprovalManager(config)
+        return self._approval_manager
+
+    async def _request_tool_approval(
+        self,
+        raw_tool_name: str,
+        args: dict[str, Any],
+    ) -> None:
+        normalized = self._normalize_mcp_tool_name(raw_tool_name)
+        if normalized in self._approved_tool_names():
+            return
+        manager = self._get_approval_manager()
+        await manager.request_and_wait(
+            tool_name=raw_tool_name,
+            tool_args={k: str(v)[:500] for k, v in args.items()},
+        )
+
+    async def _enforce_execute_code_payload(self, args: dict[str, Any]) -> None:
         code = args.get("code")
         if not isinstance(code, str) or not code.strip():
             return
@@ -817,6 +905,10 @@ class MCPToolsGuardrailCapability(AbstractCapability[Any]):
             # Only enforce on names that resolve to known MCP tools.
             if self._is_mcp_tool_name(tool_name):
                 self._assert_allowed_mcp_tool(tool_name)
+                await self._request_tool_approval(
+                    tool_name,
+                    {"source_tool": "execute_code", "tool_name": tool_name},
+                )
 
     async def before_tool_execute(
         self,
@@ -832,17 +924,20 @@ class MCPToolsGuardrailCapability(AbstractCapability[Any]):
         if tool_name == "call_tool":
             requested = args.get("tool_name") or args.get("tool")
             if isinstance(requested, str) and requested.strip():
-                self._assert_allowed_mcp_tool(requested.strip())
+                raw_tool_name = requested.strip()
+                self._assert_allowed_mcp_tool(raw_tool_name)
+                await self._request_tool_approval(raw_tool_name, args)
             return args
 
         # Direct MCP tool call path.
         if self._is_mcp_tool_name(tool_name):
             self._assert_allowed_mcp_tool(tool_name)
+            await self._request_tool_approval(tool_name, args)
             return args
 
         # Codemode code path.
         if tool_name == "execute_code":
-            self._enforce_execute_code_payload(args)
+            await self._enforce_execute_code_payload(args)
 
         return args
 

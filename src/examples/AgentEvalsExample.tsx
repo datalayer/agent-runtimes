@@ -33,15 +33,12 @@ import {
   CheckCircleIcon,
   XCircleIcon,
   PlayIcon,
-  SignOutIcon,
 } from '@primer/octicons-react';
 import { Box } from '@datalayer/primer-addons';
 import { ErrorView } from './components';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
-import { SignInSimple } from '@datalayer/core/lib/views/iam';
-import { UserBadge } from '@datalayer/core/lib/views/profile';
 import { Chat } from '../chat';
 import { useAgentRuntimes } from '../hooks/useAgentRuntimes';
 
@@ -207,16 +204,6 @@ const AgentEvalsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
         <Heading as="h3" sx={{ fontSize: 2, flex: 1 }}>
           Evaluation — {podName}
         </Heading>
-        {token && <UserBadge token={token} variant="small" />}
-        <Button
-          size="small"
-          variant="invisible"
-          onClick={onLogout}
-          leadingVisual={SignOutIcon}
-          sx={{ color: 'fg.muted' }}
-        >
-          Sign out
-        </Button>
       </Box>
 
       <Box sx={{ flex: 1, minHeight: 0, display: 'flex' }}>
@@ -388,7 +375,7 @@ const syncTokenToIamStore = (token: string) => {
 // ─── Main component with auth gate ─────────────────────────────────────────
 
 const AgentEvalsExample: React.FC = () => {
-  const { token, setAuth, clearAuth } = useSimpleAuthStore();
+  const { token, clearAuth } = useSimpleAuthStore();
   const hasSynced = useRef(false);
 
   useEffect(() => {
@@ -397,15 +384,6 @@ const AgentEvalsExample: React.FC = () => {
       syncTokenToIamStore(token);
     }
   }, [token]);
-
-  const handleSignIn = useCallback(
-    (newToken: string, handle: string) => {
-      setAuth(newToken, handle);
-      hasSynced.current = true;
-      syncTokenToIamStore(newToken);
-    },
-    [setAuth],
-  );
 
   const handleLogout = useCallback(() => {
     clearAuth();
@@ -418,13 +396,9 @@ const AgentEvalsExample: React.FC = () => {
   if (!token) {
     return (
       <ThemedProvider>
-        <SignInSimple
-          onSignIn={handleSignIn}
-          onApiKeySignIn={apiKey => handleSignIn(apiKey, 'api-key-user')}
-          title="Agent Evaluation"
-          description="Sign in to evaluate agent quality and review scores."
-          leadingIcon={<BeakerIcon size={24} />}
-        />
+        <Box sx={{ p: 4, textAlign: 'center', color: 'fg.muted' }}>
+          Sign in from the top header to run this example.
+        </Box>
       </ThemedProvider>
     );
   }

@@ -18,10 +18,8 @@ import {
   Text,
   Token as PrimerToken,
 } from '@primer/react';
-import { BriefcaseIcon, FileIcon, SignOutIcon } from '@primer/octicons-react';
+import { BriefcaseIcon, FileIcon } from '@primer/octicons-react';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
-import { SignInSimple } from '@datalayer/core/lib/views/iam';
-import { UserBadge } from '@datalayer/core/lib/views/profile';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
 import { Chat } from '../chat';
@@ -354,16 +352,6 @@ const AgentSkillsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
                 <Text sx={{ color: 'fg.muted', fontSize: 1 }}>
                   Skills: {skills.length}
                 </Text>
-                {token && <UserBadge token={token} variant="small" />}
-                <Button
-                  size="small"
-                  variant="invisible"
-                  onClick={onLogout}
-                  leadingVisual={SignOutIcon}
-                  sx={{ color: 'fg.muted' }}
-                >
-                  Sign out
-                </Button>
               </Box>
             }
             suggestions={[
@@ -513,7 +501,7 @@ const syncTokenToIamStore = (token: string) => {
 };
 
 const AgentSkillsExample: React.FC = () => {
-  const { token, setAuth, clearAuth } = useSimpleAuthStore();
+  const { token, clearAuth } = useSimpleAuthStore();
   const hasSynced = useRef(false);
 
   useEffect(() => {
@@ -522,15 +510,6 @@ const AgentSkillsExample: React.FC = () => {
       syncTokenToIamStore(token);
     }
   }, [token]);
-
-  const handleSignIn = useCallback(
-    (newToken: string, handle: string) => {
-      setAuth(newToken, handle);
-      hasSynced.current = true;
-      syncTokenToIamStore(newToken);
-    },
-    [setAuth],
-  );
 
   const handleLogout = useCallback(() => {
     clearAuth();
@@ -543,13 +522,9 @@ const AgentSkillsExample: React.FC = () => {
   if (!token) {
     return (
       <ThemedProvider>
-        <SignInSimple
-          onSignIn={handleSignIn}
-          onApiKeySignIn={apiKey => handleSignIn(apiKey, 'api-key-user')}
-          title="Agent Skills Demo"
-          description="Sign in to test module, package, and file-based agent skills."
-          leadingIcon={<BriefcaseIcon size={24} />}
-        />
+        <Box sx={{ p: 4, textAlign: 'center', color: 'fg.muted' }}>
+          Sign in from the top header to run this example.
+        </Box>
       </ThemedProvider>
     );
   }

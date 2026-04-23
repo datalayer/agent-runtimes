@@ -153,7 +153,6 @@ function DefaultToolCallRenderer({
 
   // Read pending approvals from the Zustand store (fed by the agent-runtime WS).
   const approvals = useAgentRuntimeStore(s => s.approvals);
-  const sendDecision = useAgentRuntimeStore(s => s.sendDecision);
 
   // Prefer an exact match by approval id (when present in SSE tool result).
   const matchedByResultId = useMemo(() => {
@@ -190,10 +189,8 @@ function DefaultToolCallRenderer({
     (action: 'approve' | 'reject') => {
       if (!effectiveApprovalId) return;
       const approved = action === 'approve';
-      // Try the store WS path (monitoring WS) — best-effort.
-      sendDecision(effectiveApprovalId, approved);
-      // Always send via the adapter continuation path (SSE/POST) which is the
-      // primary channel for the chat sidebar flow.
+      // Use ONLY the adapter continuation path (SSE/POST). Sending both WS and
+      // continuation decisions can trigger duplicate approval cycles.
       setDecision(approved ? 'approved' : 'denied');
       onRespond({
         type: 'tool-approval-decision',
@@ -202,7 +199,7 @@ function DefaultToolCallRenderer({
         toolName: item.toolName,
       });
     },
-    [effectiveApprovalId, sendDecision, onRespond, item.toolName],
+    [effectiveApprovalId, onRespond, item.toolName],
   );
 
   // Show approval UI when we have a confirmed pending approval (from result

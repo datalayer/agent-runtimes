@@ -35,15 +35,12 @@ import {
   MailIcon,
   CheckCircleIcon,
   MuteIcon,
-  SignOutIcon,
 } from '@primer/octicons-react';
 import { Box } from '@datalayer/primer-addons';
 import { ErrorView } from './components';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
-import { SignInSimple } from '@datalayer/core/lib/views/iam';
-import { UserBadge } from '@datalayer/core/lib/views/profile';
 import { Chat } from '../chat';
 import { useAgentRuntimes } from '../hooks/useAgentRuntimes';
 
@@ -313,16 +310,6 @@ const AgentNotificationsInner: React.FC<{ onLogout: () => void }> = ({
             {unreadCount} unread
           </Label>
         )}
-        {token && <UserBadge token={token} variant="small" />}
-        <Button
-          size="small"
-          variant="invisible"
-          onClick={onLogout}
-          leadingVisual={SignOutIcon}
-          sx={{ color: 'fg.muted' }}
-        >
-          Sign out
-        </Button>
       </Box>
 
       <Box sx={{ flex: 1, minHeight: 0, display: 'flex' }}>
@@ -583,7 +570,7 @@ const syncTokenToIamStore = (token: string) => {
 // ─── Main component with auth gate ─────────────────────────────────────────
 
 const AgentNotificationsExample: React.FC = () => {
-  const { token, setAuth, clearAuth } = useSimpleAuthStore();
+  const { token, clearAuth } = useSimpleAuthStore();
   const hasSynced = useRef(false);
 
   useEffect(() => {
@@ -592,15 +579,6 @@ const AgentNotificationsExample: React.FC = () => {
       syncTokenToIamStore(token);
     }
   }, [token]);
-
-  const handleSignIn = useCallback(
-    (newToken: string, handle: string) => {
-      setAuth(newToken, handle);
-      hasSynced.current = true;
-      syncTokenToIamStore(newToken);
-    },
-    [setAuth],
-  );
 
   const handleLogout = useCallback(() => {
     clearAuth();
@@ -613,13 +591,9 @@ const AgentNotificationsExample: React.FC = () => {
   if (!token) {
     return (
       <ThemedProvider>
-        <SignInSimple
-          onSignIn={handleSignIn}
-          onApiKeySignIn={apiKey => handleSignIn(apiKey, 'api-key-user')}
-          title="Agent Notifications"
-          description="Sign in to configure and monitor agent notifications."
-          leadingIcon={<BellIcon size={24} />}
-        />
+        <Box sx={{ p: 4, textAlign: 'center', color: 'fg.muted' }}>
+          Sign in from the top header to run this example.
+        </Box>
       </ThemedProvider>
     );
   }

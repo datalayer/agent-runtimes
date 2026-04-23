@@ -5,7 +5,7 @@
 
 /// <reference types="vite/client" />
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
   loadJupyterConfig,
@@ -25,13 +25,17 @@ import {
   themeConfigs,
   Box,
 } from '@datalayer/primer-addons';
-import { HomeIcon } from '@primer/octicons-react';
+import { HomeIcon, SignOutIcon } from '@primer/octicons-react';
+import { Button } from '@primer/react';
 import { AppearanceControlsWithStore } from '@datalayer/primer-addons/lib/components/appearance';
 import {
   coreStore,
   iamStore,
   createDatalayerServiceManager,
 } from '@datalayer/core';
+import { SignInSimple } from '@datalayer/core/lib/views/iam';
+import { UserBadge } from '@datalayer/core/lib/views/profile';
+import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import {
   agentRuntimeStore,
   useChatStore,
@@ -510,6 +514,33 @@ const ExampleAppThemed: React.FC<{
   const { colorMode, theme: themeVariant } = useExampleThemeStore();
   const cfg = themeConfigs[themeVariant];
   const logoColors = getLogoColors(themeVariant, colorMode);
+  const { token, setAuth, clearAuth } = useSimpleAuthStore();
+  const [showSignIn, setShowSignIn] = useState(false);
+
+  const syncTokenToIamStore = useCallback((newToken: string | undefined) => {
+    import('@datalayer/core/lib/state').then(({ iamStore: coreIamStore }) => {
+      coreIamStore.setState({ token: newToken });
+    });
+  }, []);
+
+  useEffect(() => {
+    // Keep iamStore aligned with persisted auth token on app load/refresh.
+    syncTokenToIamStore(token || undefined);
+  }, [token, syncTokenToIamStore]);
+
+  const handleHeaderSignIn = useCallback(
+    (newToken: string, handle: string) => {
+      setAuth(newToken, handle);
+      syncTokenToIamStore(newToken);
+      setShowSignIn(false);
+    },
+    [setAuth, syncTokenToIamStore],
+  );
+
+  const handleHeaderLogout = useCallback(() => {
+    clearAuth();
+    syncTokenToIamStore(undefined);
+  }, [clearAuth, syncTokenToIamStore]);
 
   return (
     <DatalayerThemeProvider
@@ -619,6 +650,30 @@ const ExampleAppThemed: React.FC<{
           {/* Right: theme picker + color mode + logo */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
             <AppearanceControlsWithStore useStore={useExampleThemeStore} />
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              {token ? (
+                <>
+                  <UserBadge token={token} variant="small" />
+                  <Button
+                    size="small"
+                    variant="invisible"
+                    onClick={handleHeaderLogout}
+                    leadingVisual={SignOutIcon}
+                    sx={{ color: 'fg.muted' }}
+                  >
+                    Sign out
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  size="small"
+                  variant="default"
+                  onClick={() => setShowSignIn(true)}
+                >
+                  Sign in
+                </Button>
+              )}
+            </Box>
             <Box
               as="a"
               href="https://datalayer.ai"
@@ -641,6 +696,43 @@ const ExampleAppThemed: React.FC<{
             </Box>
           </Box>
         </Box>
+
+        {showSignIn && !token && (
+          <Box
+            sx={{
+              position: 'fixed',
+              top: 60,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              zIndex: 150,
+              bg: 'canvas.backdrop',
+              p: 3,
+              overflow: 'auto',
+            }}
+          >
+            <Box sx={{ maxWidth: 640, mx: 'auto' }}>
+              <SignInSimple
+                onSignIn={handleHeaderSignIn}
+                onApiKeySignIn={apiKey =>
+                  handleHeaderSignIn(apiKey, 'api-key-user')
+                }
+                title="Agent Runtimes Examples"
+                description="Sign in to run authenticated examples and tools."
+                leadingIcon={<HomeIcon size={24} />}
+              />
+              <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center' }}>
+                <Button
+                  size="small"
+                  variant="invisible"
+                  onClick={() => setShowSignIn(false)}
+                >
+                  Cancel
+                </Button>
+              </Box>
+            </Box>
+          </Box>
+        )}
 
         {/* ── Content area ───────────────────────────────── */}
         <Box

@@ -28,12 +28,7 @@ import {
   Flash,
   ProgressBar,
 } from '@primer/react';
-import {
-  ShieldCheckIcon,
-  CheckIcon,
-  XIcon,
-  SignOutIcon,
-} from '@primer/octicons-react';
+import { ShieldCheckIcon, CheckIcon, XIcon } from '@primer/octicons-react';
 import { Box } from '@datalayer/primer-addons';
 import { ErrorView } from './components';
 import { ThemedProvider } from './utils/themedProvider';
@@ -46,8 +41,6 @@ import { parseAgentStreamMessage } from '../types/stream';
 
 const queryClient = new QueryClient();
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
-import { SignInSimple } from '@datalayer/core/lib/views/iam';
-import { UserBadge } from '@datalayer/core/lib/views/profile';
 import { Chat } from '../chat';
 
 // ─── Constants ─────────────────────────────────────────────────────────────
@@ -445,16 +438,6 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
 
         {/* Token counter */}
         <Label variant="secondary">{totalTokens.toLocaleString()} tokens</Label>
-        {token && <UserBadge token={token} variant="small" />}
-        <Button
-          size="small"
-          variant="invisible"
-          onClick={onLogout}
-          leadingVisual={SignOutIcon}
-          sx={{ color: 'fg.muted' }}
-        >
-          Sign out
-        </Button>
       </Box>
 
       {/* Tool approval banners */}
@@ -527,7 +510,7 @@ const syncTokenToIamStore = (token: string) => {
 // ─── Main component with auth gate ─────────────────────────────────────────
 
 const AgentGuardrailsExample: React.FC = () => {
-  const { token, setAuth, clearAuth } = useSimpleAuthStore();
+  const { token, clearAuth } = useSimpleAuthStore();
   const hasSynced = useRef(false);
 
   useEffect(() => {
@@ -536,15 +519,6 @@ const AgentGuardrailsExample: React.FC = () => {
       syncTokenToIamStore(token);
     }
   }, [token]);
-
-  const handleSignIn = useCallback(
-    (newToken: string, handle: string) => {
-      setAuth(newToken, handle);
-      hasSynced.current = true;
-      syncTokenToIamStore(newToken);
-    },
-    [setAuth],
-  );
 
   const handleLogout = useCallback(() => {
     clearAuth();
@@ -557,13 +531,9 @@ const AgentGuardrailsExample: React.FC = () => {
   if (!token) {
     return (
       <ThemedProvider>
-        <SignInSimple
-          onSignIn={handleSignIn}
-          onApiKeySignIn={apiKey => handleSignIn(apiKey, 'api-key-user')}
-          title="Guardrails Agent"
-          description="Sign in to use agents with cost and tool guardrails."
-          leadingIcon={<ShieldCheckIcon size={24} />}
-        />
+        <Box sx={{ p: 4, textAlign: 'center', color: 'fg.muted' }}>
+          Sign in from the top header to run this example.
+        </Box>
       </ThemedProvider>
     );
   }

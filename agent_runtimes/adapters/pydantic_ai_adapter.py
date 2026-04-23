@@ -305,9 +305,38 @@ class PydanticAIAdapter(BaseAgent):
         """
         return self._agent
 
+    async def _get_runtime_toolsets_async(self) -> list[Any]:
+        """
+        Async version of ``_get_runtime_toolsets`` that waits for any MCP
+        servers that are still starting up before building the toolset list.
+
+        This is called at the start of every ``run()`` and ``stream()`` so that
+        the first user prompt can always see the MCP tools even when servers
+        are launched as a background task after agent creation.
+        """
+        # For non-codemode agents, wait for any selected servers that are
+        # still in the "starting" state before building the toolset list.
+        codemode_enabled = self._codemode_toolset_index is not None
+        if self._selected_mcp_servers and not codemode_enabled:
+            lifecycle_manager = get_mcp_lifecycle_manager()
+            for selection in self._selected_mcp_servers:
+                server_id = getattr(selection, "id", None)
+                if not server_id:
+                    continue
+                if server_id in lifecycle_manager._starting_servers:
+                    logger.info(
+                        f"PydanticAIAdapter [{self._name}]: MCP server '{server_id}' is starting, waiting..."
+                    )
+                    ready = await lifecycle_manager.wait_until_ready(server_id, timeout=30.0)
+                    logger.info(
+                        f"PydanticAIAdapter [{self._name}]: '{server_id}' wait complete, ready={ready}"
+                    )
+
+        return self._get_runtime_toolsets()
+
     def _get_runtime_toolsets(self) -> list[Any]:
         """
-        Get the list of toolsets to use at run time.
+        Get the list of toolsets to use at run time (sync, no waiting).
 
         This dynamically fetches MCP toolsets based on selected_mcp_servers,
         ensuring only currently running servers are included.
@@ -344,9 +373,16 @@ class PydanticAIAdapter(BaseAgent):
                 if not server_id or origin not in {"config", "catalog"}:
                     continue
 
-                is_config = origin == "config"
+                # Don't restrict the lookup to a single storage dict: the
+                # MCPServer.is_config flag (which drives which dict the server
+                # is stored in) is determined by how the server was registered,
+                # not by the McpServerSelection.origin field.  A catalog server
+                # (is_config=False → _catalog_servers) can legitimately carry
+                # origin="config" when it was selected via a library spec, so
+                # passing is_config=True would miss it.  Passing None checks
+                # both dicts.
                 instance = lifecycle_manager.get_running_server(
-                    server_id, is_config=is_config
+                    server_id, is_config=None
                 )
                 if instance and instance.is_running:
                     pydantic_server = instance.pydantic_server
@@ -453,7 +489,7 @@ class PydanticAIAdapter(BaseAgent):
 
         try:
             # Dynamically get toolsets at run time to reflect current MCP server state
-            runtime_toolsets = self._get_runtime_toolsets()
+            runtime_toolsets = await self._get_runtime_toolsets_async()
             # Always pass toolsets to override any default toolsets on the agent.
             # Even an empty list should be passed to ensure no tools are available.
             run_kwargs_base: dict[str, Any] = {
@@ -651,7 +687,7 @@ class PydanticAIAdapter(BaseAgent):
                         "PydanticAIAdapter: Temporarily set end_strategy to exhaustive for stream"
                     )
 
-            runtime_toolsets = self._get_runtime_toolsets()
+            runtime_toolsets = await self._get_runtime_toolsets_async()
             logger.debug(
                 f"PydanticAIAdapter: Using {len(runtime_toolsets)} runtime toolsets for stream"
             )

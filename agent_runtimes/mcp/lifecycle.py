@@ -628,6 +628,56 @@ class MCPLifecycleManager:
                 server_id
             )
 
+    async def wait_until_ready(self, server_id: str, timeout: float = 30.0) -> bool:
+        """
+        Wait asynchronously until *server_id* is running or known-failed.
+
+        Called by ``PydanticAIAdapter._get_runtime_toolsets_async()`` so the
+        first agent run can include tools from a server that is still starting
+        in the background.
+
+        Args:
+            server_id: The server identifier to wait for.
+            timeout: Maximum seconds to wait before giving up.
+
+        Returns:
+            True if the server is now running, False if it failed or timed out.
+        """
+        deadline = asyncio.get_event_loop().time() + timeout
+        poll_interval = 0.1
+
+        while True:
+            # Already running?
+            if self.get_running_server(server_id):
+                logger.info(
+                    f"wait_until_ready: '{server_id}' is now running"
+                )
+                return True
+
+            # Known failure?
+            if server_id in self._failed_servers:
+                logger.warning(
+                    f"wait_until_ready: '{server_id}' failed to start: {self._failed_servers[server_id]}"
+                )
+                return False
+
+            # Not starting and not running — nothing will ever arrive.
+            if server_id not in self._starting_servers:
+                logger.debug(
+                    f"wait_until_ready: '{server_id}' is not in _starting_servers, giving up"
+                )
+                return False
+
+            # Timeout?
+            remaining = deadline - asyncio.get_event_loop().time()
+            if remaining <= 0:
+                logger.warning(
+                    f"wait_until_ready: timed out waiting for '{server_id}' after {timeout}s"
+                )
+                return False
+
+            await asyncio.sleep(min(poll_interval, remaining))
+
     def get_config_servers(self) -> list[MCPServerInstance]:
         """
         Get all running config server instances (from mcp.json).

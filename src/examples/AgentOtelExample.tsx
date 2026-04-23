@@ -42,7 +42,6 @@ import {
   SystemView,
   useSimpleAuthStore,
 } from '@datalayer/core/lib/views/otel';
-import { SignInSimple } from '@datalayer/core/lib/views/iam';
 import { useCoreStore } from '@datalayer/core';
 import { ThemedProvider } from './utils/themedProvider';
 import { ChatSidebar } from '../chat';
@@ -510,19 +509,14 @@ const AgentOtelExampleInner: React.FC<{
  */
 const AgentOtelExample: React.FC = () => {
   const token = useSimpleAuthStore(s => s.token);
-  const setAuth = useSimpleAuthStore(s => s.setAuth);
   const clearAuth = useSimpleAuthStore(s => s.clearAuth);
 
   return (
     <ThemedProvider>
       {!token ? (
-        <SignInSimple
-          onSignIn={setAuth}
-          onApiKeySignIn={apiKey => setAuth(apiKey, 'api-key-user')}
-          title="Datalayer OTEL"
-          description="Sign in to access the observability dashboard."
-          leadingIcon={<TelescopeIcon size={24} />}
-        />
+        <Box sx={{ p: 4, textAlign: 'center', color: 'fg.muted' }}>
+          Sign in from the top header to run this example.
+        </Box>
       ) : (
         <AgentOtelExampleInner token={token} onSignOut={clearAuth} />
       )}

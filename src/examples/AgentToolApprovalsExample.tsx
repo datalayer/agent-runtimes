@@ -15,18 +15,11 @@ import React, {
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Box } from '@datalayer/primer-addons';
 import { ErrorView } from './components';
-import { Button, Spinner, Text } from '@primer/react';
+import { Spinner, Text } from '@primer/react';
 import { useCoreStore } from '@datalayer/core';
 import { DEFAULT_SERVICE_URLS } from '@datalayer/core/lib/api/constants';
-import {
-  CheckCircleIcon,
-  SignOutIcon,
-  ToolsIcon,
-  XCircleIcon,
-} from '@primer/octicons-react';
+import { CheckCircleIcon, XCircleIcon } from '@primer/octicons-react';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
-import { SignInSimple } from '@datalayer/core/lib/views/iam';
-import { UserBadge } from '@datalayer/core/lib/views/profile';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
 import { Chat } from '../chat';
@@ -1090,16 +1083,6 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
                 <Text sx={{ color: 'fg.muted', fontSize: 1 }}>
                   Pending: {pendingApprovals.length}
                 </Text>
-                {token && <UserBadge token={token} variant="small" />}
-                <Button
-                  size="small"
-                  variant="invisible"
-                  onClick={onLogout}
-                  leadingVisual={SignOutIcon}
-                  sx={{ color: 'fg.muted' }}
-                >
-                  Sign out
-                </Button>
               </Box>
             }
             suggestions={[
@@ -1137,7 +1120,7 @@ const syncTokenToIamStore = (token: string) => {
 };
 
 const AgentToolApprovalsExample: React.FC = () => {
-  const { token, setAuth, clearAuth } = useSimpleAuthStore();
+  const { token, clearAuth } = useSimpleAuthStore();
   const hasSynced = useRef(false);
 
   useEffect(() => {
@@ -1146,15 +1129,6 @@ const AgentToolApprovalsExample: React.FC = () => {
       syncTokenToIamStore(token);
     }
   }, [token]);
-
-  const handleSignIn = useCallback(
-    (newToken: string, handle: string) => {
-      setAuth(newToken, handle);
-      hasSynced.current = true;
-      syncTokenToIamStore(newToken);
-    },
-    [setAuth],
-  );
 
   const handleLogout = useCallback(() => {
     clearAuth();
@@ -1167,13 +1141,9 @@ const AgentToolApprovalsExample: React.FC = () => {
   if (!token) {
     return (
       <ThemedProvider>
-        <SignInSimple
-          onSignIn={handleSignIn}
-          onApiKeySignIn={apiKey => handleSignIn(apiKey, 'api-key-user')}
-          title="Tool Approval Agent"
-          description="Sign in to test runtime-backed tool approvals."
-          leadingIcon={<ToolsIcon size={24} />}
-        />
+        <Box sx={{ p: 4, textAlign: 'center', color: 'fg.muted' }}>
+          Sign in from the top header to run this example.
+        </Box>
       </ThemedProvider>
     );
   }

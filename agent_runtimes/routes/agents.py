@@ -2011,6 +2011,15 @@ async def create_agent(
         # full history starting from agent creation time.
         _emit_initial_otel_baseline(agent_id, http_request)
 
+        # Generic MCP startup path for non-codemode agents:
+        # Start MCP servers as a background task. The adapter's
+        # _get_runtime_toolsets() will wait for them to become ready when
+        # the first user prompt arrives (via wait_until_ready).
+        if selected_mcp_servers and not request.enable_codemode:
+            asyncio.create_task(
+                _start_mcp_servers_background(agent_id, http_request)
+            )
+
         return CreateAgentResponse(
             id=agent_id,
             name=request.name,
@@ -2859,6 +2868,54 @@ class AgentMcpServersResponse(BaseModel):
         "For jupyter sandboxes they are also injected into the kernel when it is first used.",
     )
     message: str
+
+
+async def _start_mcp_servers_background(
+    agent_id: str,
+    request: Request | None = None,
+) -> None:
+    """
+    Fire-and-forget background task that starts MCP servers for *agent_id*
+    and then broadcasts a monitoring snapshot so the frontend sees the updated
+    MCP status (tools discovered, indicator turns green).
+
+    The adapter's ``_get_runtime_toolsets_async()`` will wait for these servers
+    to become ready via ``MCPLifecycleManager.wait_until_ready()`` before
+    including them in a model run.
+    """
+    try:
+        started, already_running, failed, _codemode_rebuilt = (
+            await _start_mcp_servers_for_agent(agent_id, [], request)
+        )
+        logger.info(
+            "Background MCP startup for '%s': started=%s already_running=%s failed=%s",
+            agent_id,
+            started,
+            already_running,
+            failed,
+        )
+    except Exception as exc:
+        logger.warning(
+            "Background MCP startup failed for '%s': %s",
+            agent_id,
+            exc,
+        )
+    finally:
+        # Always broadcast a snapshot so the frontend MCP indicator updates.
+        try:
+            from ..streams.loop import publish_stream_event
+
+            await publish_stream_event(
+                event_type="agent.mcp.ready",
+                payload={"agentId": agent_id},
+                agent_id=agent_id,
+            )
+        except Exception as broadcast_exc:
+            logger.debug(
+                "Could not broadcast MCP-ready snapshot for '%s': %s",
+                agent_id,
+                broadcast_exc,
+            )
 
 
 async def _start_mcp_servers_for_agent(

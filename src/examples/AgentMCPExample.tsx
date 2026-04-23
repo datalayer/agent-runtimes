@@ -16,7 +16,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Box } from '@datalayer/primer-addons';
 import { ErrorView } from './components';
 import {
-  Button,
   Heading,
   Label,
   Spinner,
@@ -28,23 +27,22 @@ import {
   CheckCircleIcon,
   ServerIcon,
   XCircleIcon,
-  SignOutIcon,
   ToolsIcon,
-  AlertIcon,
 } from '@primer/octicons-react';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
-import { SignInSimple } from '@datalayer/core/lib/views/iam';
-import { UserBadge } from '@datalayer/core/lib/views/profile';
+import { useCoreStore } from '@datalayer/core';
+import { DEFAULT_SERVICE_URLS } from '@datalayer/core/lib/api/constants';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
 import { Chat } from '../chat';
 import { useAIAgentsWebSocket } from '../hooks';
-import { agentRuntimeStore } from '../stores/agentRuntimeStore';
 import type {
   AgentStreamSnapshotPayload,
   AgentStreamToolApprovalPayload,
 } from '../types/stream';
 import { parseAgentStreamMessage } from '../types/stream';
+import type { RenderToolResult } from '../types';
+import { ToolCallDisplay, type PendingApproval } from '../chat/tools';
 import type {
   McpAggregateStatus,
   McpServerStatus,
@@ -55,9 +53,81 @@ import { MCP_SERVER_LIBRARY } from '../specs/mcpServers';
 
 const queryClient = new QueryClient();
 const AGENT_NAME = 'mcp-demo-agent';
-const AGENT_SPEC_ID = 'crawler';
+const AGENT_SPEC_ID = 'demo-mcp';
 const DEFAULT_LOCAL_BASE_URL =
   import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
+const AI_AGENTS_API_PREFIX = '/api/ai-agents/v1';
+const FALLBACK_AI_AGENTS_BASE_URL =
+  import.meta.env.VITE_AI_AGENTS_URL || DEFAULT_SERVICE_URLS.AI_AGENTS;
+
+const normalizeToolName = (value: string): string =>
+  value.replace(/[-_]/g, '').toLowerCase();
+
+const stableStringify = (value: unknown): string => {
+  if (value === null || typeof value !== 'object') {
+    return JSON.stringify(value);
+  }
+  if (Array.isArray(value)) {
+    return `[${value.map(item => stableStringify(item)).join(',')}]`;
+  }
+  const entries = Object.entries(value as Record<string, unknown>)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(
+      ([key, itemValue]) =>
+        `${JSON.stringify(key)}:${stableStringify(itemValue)}`,
+    );
+  return `{${entries.join(',')}}`;
+};
+
+const approvalSignature = (
+  toolName: string,
+  args: Record<string, unknown>,
+): string => `${normalizeToolName(toolName)}::${stableStringify(args ?? {})}`;
+
+const normalizeAgentId = (value?: string): string =>
+  (value ?? '').trim().toLowerCase();
+
+interface ToolApprovalRequest {
+  id: string;
+  tool_name: string;
+  tool_args?: Record<string, unknown>;
+  tool_call_id?: string;
+  note?: string;
+  created_at?: string;
+  status?: string;
+  agent_id?: string;
+}
+
+type ApprovalWsDecisionMessage = {
+  type: 'tool_approval_decision';
+  approvalId: string;
+  approved: boolean;
+  note?: string;
+};
+
+const normalizeAiAgentsBaseUrl = (raw: string): string => {
+  const trimmed = raw.replace(/\/$/, '');
+  return trimmed.endsWith(AI_AGENTS_API_PREFIX)
+    ? trimmed.slice(0, -AI_AGENTS_API_PREFIX.length)
+    : trimmed;
+};
+
+const toWsUrl = (
+  baseUrl: string,
+  path: string,
+  token?: string,
+): string | null => {
+  try {
+    const url = new URL(baseUrl);
+    url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+    url.pathname = path;
+    if (token) url.searchParams.set('token', token);
+    else url.search = '';
+    return url.toString();
+  } catch {
+    return null;
+  }
+};
 
 /** A tool discovered from a running MCP server. */
 interface McpToolInfo {
@@ -136,80 +206,6 @@ const McpToolCard: React.FC<{ tool: McpToolInfo }> = ({ tool }) => {
           ))}
         </Box>
       )}
-    </Box>
-  );
-};
-
-/* ── Pending tool approval panel ─────────────────────── */
-
-const ApprovalPanel: React.FC<{
-  approvals: AgentStreamToolApprovalPayload[];
-}> = ({ approvals }) => {
-  if (approvals.length === 0) return null;
-
-  const handleDecision = (approvalId: string, approved: boolean) => {
-    agentRuntimeStore.getState().sendDecision(approvalId, approved);
-  };
-
-  return (
-    <Box sx={{ mb: 3 }}>
-      <Heading as="h5" sx={{ fontSize: 1, mb: 2 }}>
-        <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1 }}>
-          <AlertIcon size={14} />
-          Pending Approvals ({approvals.length})
-        </Box>
-      </Heading>
-      {approvals.map(approval => (
-        <Box
-          key={approval.id}
-          sx={{
-            border: '1px solid',
-            borderColor: 'attention.muted',
-            borderRadius: 2,
-            p: 2,
-            mb: 2,
-            bg: 'attention.subtle',
-          }}
-        >
-          <Text sx={{ fontWeight: 600, fontSize: 1, display: 'block', mb: 1 }}>
-            {approval.tool_name}
-          </Text>
-          {approval.tool_args && Object.keys(approval.tool_args).length > 0 && (
-            <Box
-              sx={{
-                fontSize: 0,
-                fontFamily: 'mono',
-                color: 'fg.muted',
-                mb: 2,
-                maxHeight: 80,
-                overflow: 'auto',
-                whiteSpace: 'pre-wrap',
-                wordBreak: 'break-all',
-              }}
-            >
-              {JSON.stringify(approval.tool_args, null, 2)}
-            </Box>
-          )}
-          <Box sx={{ display: 'flex', gap: 2 }}>
-            <Button
-              size="small"
-              variant="primary"
-              onClick={() => handleDecision(approval.id, true)}
-              leadingVisual={CheckCircleIcon}
-            >
-              Approve
-            </Button>
-            <Button
-              size="small"
-              variant="danger"
-              onClick={() => handleDecision(approval.id, false)}
-              leadingVisual={XCircleIcon}
-            >
-              Deny
-            </Button>
-          </Box>
-        </Box>
-      ))}
     </Box>
   );
 };
@@ -384,13 +380,18 @@ const AgentMCPInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
   const [liveMcpStatus, setLiveMcpStatus] = useState<
     McpToolsetsStatusResponse | undefined
   >(undefined);
-  // Pending tool approvals from WS snapshot
-  const [pendingApprovals, setPendingApprovals] = useState<
-    AgentStreamToolApprovalPayload[]
-  >([]);
+  // Pending approvals are now managed internally by ChatBase via the Zustand
+  // agent-runtime store — no local state needed.
 
   const agentBaseUrl = DEFAULT_LOCAL_BASE_URL;
   const chatAuthToken: string | undefined = token === null ? undefined : token;
+  const configuredAiAgentsBaseUrl = useCoreStore(
+    (s: any) => s.configuration?.aiagentsRunUrl,
+  );
+  const aiAgentsBaseUrl = normalizeAiAgentsBaseUrl(
+    configuredAiAgentsBaseUrl || FALLBACK_AI_AGENTS_BASE_URL,
+  );
+  const approvalWsRef = useRef<WebSocket | null>(null);
 
   const authFetch = useCallback(
     (url: string, opts: RequestInit = {}) =>
@@ -425,6 +426,7 @@ const AgentMCPInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
             agent_library: 'pydantic-ai',
             transport: 'vercel-ai',
             agent_spec_id: AGENT_SPEC_ID,
+            enable_codemode: false,
             enable_skills: true,
             tools: [],
           }),
@@ -462,6 +464,7 @@ const AgentMCPInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
         if (!isCancelled) {
           setAgentId(resolvedAgentId);
           setIsReconnectedAgent(isAlreadyRunning);
+
           setIsReady(true);
           setRuntimeStatus('ready');
         }
@@ -496,12 +499,6 @@ const AgentMCPInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
       if (fc && Array.isArray(fc.tools) && fc.tools.length > 0) {
         setAgentTools(fc.tools as FullContextTool[]);
       }
-      // Extract pending approvals
-      if (Array.isArray(payload.approvals)) {
-        setPendingApprovals(
-          payload.approvals.filter(a => a.status === 'pending'),
-        );
-      }
     } catch {
       // Ignore malformed payloads.
     }
@@ -516,6 +513,98 @@ const AgentMCPInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
     reconnectDelayMs: attempt =>
       Math.min(1000 * 2 ** Math.max(0, attempt - 1), 10000),
   });
+
+  // ── ai-agents WebSocket: bridge tool approval decisions to remote backend ──
+  useEffect(() => {
+    if (!isReady) return;
+
+    const wsUrl = toWsUrl(
+      aiAgentsBaseUrl,
+      `${AI_AGENTS_API_PREFIX}/ws`,
+      chatAuthToken,
+    );
+    if (!wsUrl) return;
+
+    let closedByCleanup = false;
+    const ws = new WebSocket(wsUrl);
+    approvalWsRef.current = ws;
+
+    ws.onopen = () => {
+      // Request any existing approvals so they appear immediately.
+      ws.send(JSON.stringify({ type: 'tool-approvals-history' }));
+    };
+
+    ws.onmessage = (event: MessageEvent) => {
+      try {
+        const msg = JSON.parse(event.data as string) as Record<string, unknown>;
+        const msgType = msg?.type as string | undefined;
+        const msgEvent = msg?.event as string | undefined;
+        const records: Array<Record<string, unknown>> = [];
+
+        if (msgType === 'tool-approvals-history') {
+          const data = (msg?.data ?? {}) as Record<string, unknown>;
+          const approvals = data?.approvals;
+          if (Array.isArray(approvals)) {
+            for (const a of approvals) {
+              if (a && typeof a === 'object')
+                records.push(a as Record<string, unknown>);
+            }
+          }
+        } else if (
+          typeof msgEvent === 'string' &&
+          (msgEvent === 'tool_approval_created' ||
+            msgEvent === 'tool_approval_updated')
+        ) {
+          const data = (msg?.data ?? msg?.payload) as
+            | Record<string, unknown>
+            | undefined;
+          if (data) records.push(data);
+        }
+
+        for (const record of records) {
+          if (record?.status === 'pending') {
+            agentRuntimeStore
+              .getState()
+              .upsertApproval(
+                record as unknown as AgentStreamToolApprovalPayload,
+              );
+          }
+        }
+      } catch {
+        // Ignore malformed messages.
+      }
+    };
+
+    ws.onclose = () => {
+      if (!closedByCleanup) approvalWsRef.current = null;
+    };
+    ws.onerror = () => {
+      approvalWsRef.current = null;
+    };
+
+    return () => {
+      closedByCleanup = true;
+      approvalWsRef.current = null;
+      ws.close();
+    };
+  }, [isReady, aiAgentsBaseUrl, chatAuthToken]);
+
+  /** Send a tool_approval_decision over the ai-agents WS. */
+  const sendApprovalDecisionToAiAgents = useCallback(
+    (approvalId: string, approved: boolean, note?: string) => {
+      const ws = approvalWsRef.current;
+      if (!ws || ws.readyState !== WebSocket.OPEN) return;
+      ws.send(
+        JSON.stringify({
+          type: 'tool_approval_decision',
+          approvalId,
+          approved,
+          ...(note ? { note } : {}),
+        }),
+      );
+    },
+    [],
+  );
 
   // ── Fetch creation spec to get selected MCP server IDs ──
   useEffect(() => {
@@ -549,7 +638,11 @@ const AgentMCPInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
       const catalogServer = MCP_SERVER_LIBRARY[serverId];
       const serverName = catalogServer?.name ?? serverId;
 
+      // Live status from WS snapshot — the most reliable source of truth.
+      const liveServer = liveMcpStatus?.servers?.find(s => s.id === serverId);
+
       // Match tools by prefix convention: "tavily__tavily_search" → server "tavily"
+      // (fallback when live data is not yet available)
       const serverTools: McpToolInfo[] = agentTools
         .filter(t => t.name.startsWith(`${serverId}__`))
         .map(t => ({
@@ -560,24 +653,82 @@ const AgentMCPInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
           inputSchema: t.parametersSchema,
         }));
 
+      // Prefer live tools from WS snapshot; fall back to agentTools-derived tools.
+      const toolsFromLive: McpToolInfo[] = (liveServer?.tools ?? []).map(t => ({
+        name: t.name,
+        description: t.description ?? '',
+        serverId,
+        serverName,
+        inputSchema: undefined,
+      }));
+      const tools = toolsFromLive.length > 0 ? toolsFromLive : serverTools;
+
+      const status =
+        liveServer?.status ?? (serverTools.length > 0 ? 'started' : 'starting');
+      const toolsCount = liveServer?.tools_count ?? tools.length;
+
       return {
         id: serverId,
         name: serverName,
         description: catalogServer?.description,
-        status: serverTools.length > 0 ? 'started' : 'starting',
-        toolsCount: serverTools.length,
-        tools: serverTools,
+        status,
+        toolsCount,
+        tools,
         emoji: catalogServer?.emoji,
         icon: catalogServer?.icon,
       };
     });
-  }, [selectedServerIds, agentTools]);
+  }, [selectedServerIds, agentTools, liveMcpStatus]);
 
   // ── Build synthetic McpToolsetsStatusResponse for the Chat MCP indicator ──
   const mcpStatusData = useMemo<McpToolsetsStatusResponse | undefined>(() => {
+    const derivedEnabledToolsByServer: Record<string, string[]> = {};
+    const derivedApprovedToolsByServer: Record<string, string[]> = {};
+    for (const s of mcpServers) {
+      if (s.tools.length > 0) {
+        derivedEnabledToolsByServer[s.id] = s.tools.map(t => t.name);
+        // Keep approval default explicit: enabled but not approved.
+        derivedApprovedToolsByServer[s.id] = [];
+      }
+    }
+
     // If the WS-provided global mcpStatus has actual servers, prefer it
     if (liveMcpStatus && liveMcpStatus.servers.length > 0) {
-      return liveMcpStatus;
+      const live = liveMcpStatus as McpToolsetsStatusResponse & {
+        enabled_tools_by_server?: Record<string, string[]>;
+        approved_tools_by_server?: Record<string, string[]>;
+      };
+
+      const enabledToolsByServer = {
+        ...(live.enabled_tools_by_server ?? {}),
+      };
+      for (const [serverId, tools] of Object.entries(
+        derivedEnabledToolsByServer,
+      )) {
+        if (
+          !enabledToolsByServer[serverId] ||
+          enabledToolsByServer[serverId].length === 0
+        ) {
+          enabledToolsByServer[serverId] = tools;
+        }
+      }
+
+      const approvedToolsByServer = {
+        ...(live.approved_tools_by_server ?? {}),
+      };
+      for (const [serverId, tools] of Object.entries(
+        derivedApprovedToolsByServer,
+      )) {
+        if (!approvedToolsByServer[serverId]) {
+          approvedToolsByServer[serverId] = tools;
+        }
+      }
+
+      return {
+        ...live,
+        enabled_tools_by_server: enabledToolsByServer,
+        approved_tools_by_server: approvedToolsByServer,
+      };
     }
     // Otherwise build from our per-agent derived info
     if (mcpServers.length === 0) return undefined;
@@ -594,13 +745,10 @@ const AgentMCPInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
     const readyServers = servers
       .filter(s => s.status === 'started')
       .map(s => s.id);
-    // Build enabled_tools_by_server so the InputFooter ToolsMenu can render them
-    const enabledToolsByServer: Record<string, string[]> = {};
-    for (const s of mcpServers) {
-      if (s.tools.length > 0) {
-        enabledToolsByServer[s.id] = s.tools.map(t => t.name);
-      }
-    }
+    // Build enabled_tools_by_server so the InputFooter ToolsMenu can render
+    // tools as enabled immediately on first open.
+    const enabledToolsByServer = derivedEnabledToolsByServer;
+    const approvedToolsByServer = derivedApprovedToolsByServer;
     return {
       initialized: true,
       ready_count: readyServers.length,
@@ -609,6 +757,7 @@ const AgentMCPInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
       failed_servers: {},
       servers,
       enabled_tools_by_server: enabledToolsByServer,
+      approved_tools_by_server: approvedToolsByServer,
       enabled_tools_count: mcpServers.reduce(
         (sum, s) => sum + s.tools.length,
         0,
@@ -616,7 +765,7 @@ const AgentMCPInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
     };
   }, [liveMcpStatus, mcpServers]);
 
-  const totalTools = mcpServers.reduce((sum, s) => sum + s.tools.length, 0);
+  const totalTools = mcpServers.reduce((sum, s) => sum + s.toolsCount, 0);
   const aggregate = deriveAggregate(mcpStatusData?.servers ?? []);
 
   if (!isReady && runtimeStatus !== 'error') {
@@ -676,27 +825,26 @@ const AgentMCPInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
             showHeader={true}
             showNewChatButton={true}
             showClearButton={false}
+            showToolsMenu={true}
+            showSkillsMenu={true}
             showTokenUsage={true}
             autoFocus
             height="100%"
             runtimeId={agentId}
             historyEndpoint={`${agentBaseUrl}/api/v1/history`}
             mcpStatusData={mcpStatusData}
+            showToolApprovalBanner={true}
+            onApproveApproval={(id, note) =>
+              sendApprovalDecisionToAiAgents(id, true, note)
+            }
+            onRejectApproval={(id, note) =>
+              sendApprovalDecisionToAiAgents(id, false, note)
+            }
             headerActions={
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                 <Text sx={{ color: 'fg.muted', fontSize: 1 }}>
                   MCP Tools: {totalTools}
                 </Text>
-                {token && <UserBadge token={token} variant="small" />}
-                <Button
-                  size="small"
-                  variant="invisible"
-                  onClick={onLogout}
-                  leadingVisual={SignOutIcon}
-                  sx={{ color: 'fg.muted' }}
-                >
-                  Sign out
-                </Button>
               </Box>
             }
             suggestions={[
@@ -725,8 +873,8 @@ const AgentMCPInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
         {/* MCP tools panel */}
         <Box
           sx={{
-            width: 340,
-            minWidth: 280,
+            width: 320,
+            minWidth: 260,
             borderLeft: '1px solid',
             borderColor: 'border.default',
             display: 'flex',
@@ -772,9 +920,6 @@ const AgentMCPInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
 
           {/* Body */}
           <Box sx={{ p: 2, overflow: 'auto', flex: 1 }}>
-            {/* Pending approvals */}
-            <ApprovalPanel approvals={pendingApprovals} />
-
             <Box sx={{ mb: 3 }}>
               <Heading as="h5" sx={{ fontSize: 1, mb: 2 }}>
                 MCP Servers
@@ -875,7 +1020,7 @@ const syncTokenToIamStore = (token: string) => {
 };
 
 const AgentMCPExample: React.FC = () => {
-  const { token, setAuth, clearAuth } = useSimpleAuthStore();
+  const { token, clearAuth } = useSimpleAuthStore();
   const hasSynced = useRef(false);
 
   useEffect(() => {
@@ -884,15 +1029,6 @@ const AgentMCPExample: React.FC = () => {
       syncTokenToIamStore(token);
     }
   }, [token]);
-
-  const handleSignIn = useCallback(
-    (newToken: string, handle: string) => {
-      setAuth(newToken, handle);
-      hasSynced.current = true;
-      syncTokenToIamStore(newToken);
-    },
-    [setAuth],
-  );
 
   const handleLogout = useCallback(() => {
     clearAuth();
@@ -905,13 +1041,9 @@ const AgentMCPExample: React.FC = () => {
   if (!token) {
     return (
       <ThemedProvider>
-        <SignInSimple
-          onSignIn={handleSignIn}
-          onApiKeySignIn={apiKey => handleSignIn(apiKey, 'api-key-user')}
-          title="Agent MCP Demo"
-          description="Sign in to explore MCP server tools used by the Crawler Agent."
-          leadingIcon={<GlobeIcon size={24} />}
-        />
+        <Box sx={{ p: 4, textAlign: 'center', color: 'fg.muted' }}>
+          Sign in from the top header to run this example.
+        </Box>
       </ThemedProvider>
     );
   }

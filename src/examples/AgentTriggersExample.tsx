@@ -37,7 +37,6 @@ import {
   CheckCircleIcon,
   XCircleIcon,
   PlayIcon,
-  SignOutIcon,
   GlobeIcon,
   ZapIcon,
   EyeIcon,
@@ -50,8 +49,6 @@ import { ErrorView } from './components';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
-import { SignInSimple } from '@datalayer/core/lib/views/iam';
-import { UserBadge } from '@datalayer/core/lib/views/profile';
 import { Chat } from '../chat';
 import { useConnectedIdentities } from '../identity';
 import {
@@ -1160,16 +1157,6 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
           >
             Approvals WS: {aiAgentsConnectionState}
           </Label>
-          {token && <UserBadge token={token} variant="small" />}
-          <Button
-            size="small"
-            variant="invisible"
-            onClick={onLogout}
-            leadingVisual={SignOutIcon}
-            sx={{ color: 'fg.muted' }}
-          >
-            Sign out
-          </Button>
         </Box>
 
         {/* Tool Approval Banner */}
@@ -2619,7 +2606,7 @@ const syncTokenToIamStore = (token: string) => {
 // ─── Main component with auth gate ─────────────────────────────────────────
 
 const AgentTriggersExample: React.FC = () => {
-  const { token, setAuth, clearAuth } = useSimpleAuthStore();
+  const { token, clearAuth } = useSimpleAuthStore();
   const hasSynced = useRef(false);
 
   useEffect(() => {
@@ -2628,15 +2615,6 @@ const AgentTriggersExample: React.FC = () => {
       syncTokenToIamStore(token);
     }
   }, [token]);
-
-  const handleSignIn = useCallback(
-    (newToken: string, handle: string) => {
-      setAuth(newToken, handle);
-      hasSynced.current = true;
-      syncTokenToIamStore(newToken);
-    },
-    [setAuth],
-  );
 
   const handleLogout = useCallback(() => {
     clearAuth();
@@ -2649,13 +2627,9 @@ const AgentTriggersExample: React.FC = () => {
   if (!token) {
     return (
       <ThemedProvider>
-        <SignInSimple
-          onSignIn={handleSignIn}
-          onApiKeySignIn={apiKey => handleSignIn(apiKey, 'api-key-user')}
-          title="Agent Triggers"
-          description="Sign in to configure cron, webhook, event, and manual triggers."
-          leadingIcon={<ClockIcon size={24} />}
-        />
+        <Box sx={{ p: 4, textAlign: 'center', color: 'fg.muted' }}>
+          Sign in from the top header to run this example.
+        </Box>
       </ThemedProvider>
     );
   }

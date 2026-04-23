@@ -98,7 +98,8 @@ async def _presignal_deferred_approvals(
     )
 
     messages: list[Any] = body.get("messages") or []
-    tool_call_ids: list[str] = []
+    tool_call_ids: set[str] = set()
+    approval_ids: set[str] = set()
     for msg in messages:
         if not isinstance(msg, dict) or msg.get("role") != "assistant":
             continue
@@ -113,28 +114,42 @@ async def _presignal_deferred_approvals(
                 and part.get("state") == "approval-responded"
             ):
                 approval_info = part.get("approval") or {}
+                approval_id = approval_info.get("id")
+                if isinstance(approval_id, str) and approval_id:
+                    approval_ids.add(approval_id)
                 if approval_info.get("approved") is True:
                     tool_call_id = part.get("toolCallId")
                     if isinstance(tool_call_id, str) and tool_call_id:
-                        tool_call_ids.append(tool_call_id)
+                        tool_call_ids.add(tool_call_id)
 
-    if not tool_call_ids:
+    if not tool_call_ids and not approval_ids:
         return
 
     now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
-    updated: list[tuple[str, str]] = []
+    to_signal: list[tuple[str, str]] = []
     async with _APPROVALS_LOCK:
         for record_id, record in list(_APPROVALS.items()):
-            if record.tool_call_id in tool_call_ids and record.status == "pending":
-                _APPROVALS[record_id] = record.model_copy(
-                    update={"status": "approved", "updated_at": now}
-                )
-                updated.append((record_id, record.tool_call_id or ""))
+            by_id = record_id in approval_ids
+            by_tool_call_id = (
+                bool(record.tool_call_id) and record.tool_call_id in tool_call_ids
+            )
+            if not (by_id or by_tool_call_id):
+                continue
 
-    for record_id, tool_call_id in updated:
+            # Always refresh updated_at so the time-window dedupe check in
+            # before_tool_execute succeeds even when the record was already
+            # approved (e.g. by an earlier WS decision that raced ahead).
+            _APPROVALS[record_id] = record.model_copy(
+                update={"status": "approved", "updated_at": now}
+            )
+            # Always signal matching records so any waiter bound to this
+            # approval_id can resume, even if status was already "approved".
+            to_signal.append((record_id, record.tool_call_id or ""))
+
+    for record_id, tool_call_id in to_signal:
         signal_approval_event(record_id, approved=True, note=None)
         logger.info(
-            "[Vercel AI] Pre-approved local record %s (tool_call_id=%s) "
+            "[Vercel AI] Pre-signaled local record %s (tool_call_id=%s) "
             "for DeferredToolResults continuation in agent %s",
             record_id,
             tool_call_id,

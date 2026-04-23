@@ -371,8 +371,11 @@ async def _create_approval(body: ToolApprovalCreateRequest) -> ToolApprovalRecor
                 if (
                     record.agent_id == body.agent_id
                     and record.tool_call_id == body.tool_call_id
-                    and record.status == "pending"
+                    and record.status != "deleted"
                 ):
+                    # Return any non-deleted record so that continuation turns
+                    # don't create a brand-new pending approval for a tool call
+                    # that was already approved/rejected on an earlier turn.
                     return record
 
     now = _now_iso()

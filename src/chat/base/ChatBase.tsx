@@ -64,6 +64,7 @@ import {
 import { useAgentRuntimeWebSocket } from '../../hooks/useAgentRuntimes';
 import {
   agentRuntimeStore,
+  useAgentRuntimeStore,
   useAgentRuntimeWsState,
 } from '../../stores/agentRuntimeStore';
 import { ChatBaseHeader } from '../header/ChatHeaderBase';
@@ -356,13 +357,51 @@ function ChatBaseInner({
   sandboxStatusData,
   // Tool approval banner
   showToolApprovalBanner = true,
-  pendingApprovals,
-  onApproveApproval,
-  onRejectApproval,
+  pendingApprovals: pendingApprovalsProp,
+  onApproveApproval: onApproveApprovalProp,
+  onRejectApproval: onRejectApprovalProp,
 }: ChatBaseProps) {
   useEffect(() => {
     setupPrimerPortals();
   }, []);
+
+  // ── Built-in pending approvals from the agent-runtime Zustand store ──
+  // When the parent doesn't supply the `pendingApprovals` prop, derive them
+  // from the shared store so the banner works out-of-the-box.
+  const storeApprovals = useAgentRuntimeStore(s => s.approvals);
+  const storePendingApprovals: PendingApproval[] = useMemo(() => {
+    if (pendingApprovalsProp) return pendingApprovalsProp;
+    return storeApprovals
+      .filter(a => a.status === 'pending')
+      .map(a => ({
+        id: a.id,
+        toolName: a.tool_name,
+        toolDescription: a.note ?? undefined,
+        args: a.tool_args ?? {},
+        agentId: a.agent_id ?? '',
+        requestedAt: a.created_at ?? new Date().toISOString(),
+      }));
+  }, [pendingApprovalsProp, storeApprovals]);
+  const pendingApprovals = storePendingApprovals;
+
+  // Built-in approve/reject: use store sendDecision + removeApproval, then
+  // forward to the parent callback (if provided) for ai-agents WS bridging.
+  const onApproveApproval = useCallback(
+    async (approvalId: string, note?: string) => {
+      agentRuntimeStore.getState().sendDecision(approvalId, true, note);
+      agentRuntimeStore.getState().removeApproval(approvalId);
+      await onApproveApprovalProp?.(approvalId, note);
+    },
+    [onApproveApprovalProp],
+  );
+  const onRejectApproval = useCallback(
+    async (approvalId: string, note?: string) => {
+      agentRuntimeStore.getState().sendDecision(approvalId, false, note);
+      agentRuntimeStore.getState().removeApproval(approvalId);
+      await onRejectApprovalProp?.(approvalId, note);
+    },
+    [onRejectApprovalProp],
+  );
 
   // The outer ChatBase wrapper always resolves a string Protocol to a full
   // ProtocolConfig (or undefined).  Narrow the type for internal use.
@@ -681,14 +720,19 @@ function ChatBaseInner({
     if (!wsApprovedMcpTools) {
       return;
     }
-    setApprovedMcpTools(() => {
+    setApprovedMcpTools(prev => {
       const next = new Map<string, Set<string>>();
       wsApprovedMcpTools.forEach((toolNames, serverId) => {
         const selectedInProps =
           !mcpServersRef.current ||
           mcpServersRef.current.some(server => server.id === serverId);
         if (selectedInProps) {
-          next.set(serverId, new Set(toolNames));
+          // Merge WS-approved tools with any locally approved tools so that
+          // optimistic approvals (from inline approve) survive until the
+          // backend snapshot catches up.
+          const merged = new Set(toolNames);
+          prev.get(serverId)?.forEach(t => merged.add(t));
+          next.set(serverId, merged);
         }
       });
       return next;
@@ -1917,6 +1961,29 @@ function ChatBaseInner({
             (result as Record<string, unknown>).approved,
           );
 
+          // When the user approves a tool call inline, immediately reflect that
+          // approval in the tools dropdown so the toggle switches to "On".
+          // Tool names follow the convention "serverId__toolName" (MCP) or are
+          // bare skill names. We extract the server prefix for MCP tools.
+          if (approved) {
+            const rawToolName =
+              typeof (result as Record<string, unknown>).toolName === 'string'
+                ? ((result as Record<string, unknown>).toolName as string)
+                : existingToolCall.toolName;
+            const sep = rawToolName.indexOf('__');
+            if (sep !== -1) {
+              const serverId = rawToolName.slice(0, sep);
+              const toolName = rawToolName.slice(sep + 2);
+              setApprovedMcpTools(prev => {
+                const newMap = new Map(prev);
+                const tools = new Set(prev.get(serverId) ?? []);
+                tools.add(toolName);
+                newMap.set(serverId, tools);
+                return newMap;
+              });
+            }
+          }
+
           const updatedToolCall: ToolCallMessage = {
             ...existingToolCall,
             result,
@@ -1942,6 +2009,16 @@ function ChatBaseInner({
               typeof (result as Record<string, unknown>).approvalId === 'string'
                 ? ((result as Record<string, unknown>).approvalId as string)
                 : undefined;
+
+            // Notify the parent so the top banner clears immediately when
+            // inline approve fires (the banner is driven by a parent prop).
+            if (approvalId) {
+              if (approved) {
+                onApproveApproval?.(approvalId);
+              } else {
+                onRejectApproval?.(approvalId);
+              }
+            }
 
             await adapterRef.current.sendToolResult(toolCallId, {
               toolCallId,
@@ -2048,6 +2125,62 @@ function ChatBaseInner({
     setInput(message);
     setTimeout(() => inputRef.current?.focus(), 0);
   }, []);
+
+  // Route banner/external approvals through the SSE adapter continuation so
+  // the agent is actually unblocked (same as the inline approve button).
+  // The external callback (onApproveApproval) is still called first for
+  // optimistic UI updates on the parent side.
+  const handleBannerApprove = useCallback(
+    async (approvalId: string, note?: string) => {
+      // Let the parent clean up its own pending list.
+      await onApproveApproval?.(approvalId, note);
+
+      // Find the tool call that is waiting on this approval and drive the
+      // SSE continuation so the agent is unblocked.
+      for (const [tcId, tc] of toolCallsRef.current.entries()) {
+        if (tc.status !== 'inProgress' && tc.status !== 'executing') continue;
+        const res = tc.result as Record<string, unknown> | undefined;
+        const matchesId = res?.approval_id === approvalId;
+        const matchesName =
+          !matchesId &&
+          tc.toolName
+            .replace(/[-_]/g, '')
+            .toLowerCase()
+            .includes(approvalId.replace(/[-_]/g, '').toLowerCase());
+        if (matchesId || (res?.pending_approval === true && matchesName)) {
+          await handleRespond(tcId, {
+            type: 'tool-approval-decision',
+            approved: true,
+            approvalId,
+            toolName: tc.toolName,
+          });
+          break;
+        }
+      }
+    },
+    [onApproveApproval, handleRespond],
+  );
+
+  const handleBannerReject = useCallback(
+    async (approvalId: string, note?: string) => {
+      await onRejectApproval?.(approvalId, note);
+
+      for (const [tcId, tc] of toolCallsRef.current.entries()) {
+        if (tc.status !== 'inProgress' && tc.status !== 'executing') continue;
+        const res = tc.result as Record<string, unknown> | undefined;
+        if (res?.approval_id === approvalId || res?.pending_approval === true) {
+          await handleRespond(tcId, {
+            type: 'tool-approval-decision',
+            approved: false,
+            approvalId,
+            toolName: tc.toolName,
+          });
+          break;
+        }
+      }
+    },
+    [onRejectApproval, handleRespond],
+  );
 
   // ---- Compute data for InputToolbar ----
   // Merge real-time WebSocket MCP status into the cached config data so the
@@ -2205,8 +2338,8 @@ function ChatBaseInner({
         pendingApprovals.length > 0 && (
           <ToolApprovalBannerSection
             pendingApprovals={pendingApprovals}
-            onApprove={onApproveApproval}
-            onReject={onRejectApproval}
+            onApprove={handleBannerApprove}
+            onReject={handleBannerReject}
           />
         )}
 

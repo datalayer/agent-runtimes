@@ -34,8 +34,8 @@ logger = logging.getLogger(__name__)
 
 _STREAM_SUBSCRIBERS: dict[str, set[asyncio.Queue[AgentStreamMessage]]] = {}
 _MCP_ENABLED_TOOLS_BY_AGENT: dict[str, dict[str, set[str]]] = {}
-# Tracks explicitly unapproved tools per agent per server (blocklist; default = all approved).
-_MCP_UNAPPROVED_TOOLS_BY_AGENT: dict[str, dict[str, set[str]]] = {}
+# Tracks approved tools per agent per server (allowlist; default = none approved).
+_MCP_APPROVED_TOOLS_BY_AGENT: dict[str, dict[str, set[str]]] = {}
 _SKILLS_BY_AGENT: dict[str, dict[str, dict[str, Any]]] = {}
 
 
@@ -169,17 +169,27 @@ def _get_agent_mcp_approved_tools_by_server(
     """Get approved MCP tools per server for an agent.
 
     The universe of tools for each server is the set of currently *enabled*
-    tools.  By default every enabled tool is approved; the agent-level
-    blocklist in ``_MCP_UNAPPROVED_TOOLS_BY_AGENT`` records any exceptions.
+    tools. By default none are approved until explicitly toggled.
     """
     key = _stream_key(agent_id)
-    unapproved_by_server = _MCP_UNAPPROVED_TOOLS_BY_AGENT.get(key, {})
+    approved_by_server = _MCP_APPROVED_TOOLS_BY_AGENT.get(key, {})
     enabled_by_server = _get_agent_mcp_enabled_tools_by_server(agent_id)
     result: dict[str, list[str]] = {}
     for server_id, enabled_tool_names in enabled_by_server.items():
-        unapproved = unapproved_by_server.get(server_id, set())
-        result[server_id] = sorted(set(enabled_tool_names) - unapproved)
+        approved = approved_by_server.get(server_id, set())
+        result[server_id] = sorted(set(enabled_tool_names) & approved)
     return result
+
+
+def get_agent_approved_mcp_tool_names(agent_id: str | None) -> set[str]:
+    """Return the set of approved MCP tool names for an agent."""
+    by_server = _get_agent_mcp_approved_tools_by_server(agent_id)
+    names: set[str] = set()
+    for tool_names in by_server.values():
+        for tool_name in tool_names:
+            if isinstance(tool_name, str) and tool_name.strip():
+                names.add(tool_name.strip())
+    return names
 
 
 def get_agent_enabled_mcp_tool_names(agent_id: str | None) -> set[str]:
@@ -247,8 +257,8 @@ def _seed_agent_skills(agent_id: str | None) -> None:
                 "tags": list(skill.get("tags") or []),
                 "has_scripts": bool(skill.get("has_scripts", False)),
                 "has_resources": bool(skill.get("has_resources", False)),
-                "status": "available",
-                "approved": True,
+                "status": "enabled",
+                "approved": False,
                 "skill_definition": skill.get("skill_definition"),
                 "source_variant": skill.get("source_variant"),
                 "module": skill.get("module"),
@@ -301,8 +311,8 @@ def set_agent_enabled_skills(
                 "tags": [],
                 "has_scripts": False,
                 "has_resources": False,
-                "status": "available",
-                "approved": True,
+                "status": "enabled",
+                "approved": False,
                 "skill_definition": None,
                 "source_variant": "unknown",
                 "module": None,
@@ -311,12 +321,23 @@ def set_agent_enabled_skills(
                 "path": None,
             }
 
+    # Keep all discovered skills enabled by default; callers can disable
+    # individual skills via the dedicated websocket toggle handlers.
     for skill_id, entry in _SKILLS_BY_AGENT[key].items():
-        entry["status"] = "enabled" if skill_id in enabled_ids else "available"
-        if entry["status"] == "available":
-            entry["skill_definition"] = None
+        if skill_id in enabled_ids or entry.get("status") in {"available", "enabled"}:
+            entry["status"] = "enabled"
 
     return get_agent_skills_snapshot(agent_id)
+
+
+def get_agent_approved_skill_ids(agent_id: str | None) -> set[str]:
+    """Return approved skill IDs for an agent."""
+    _seed_agent_skills(agent_id)
+    approved: set[str] = set()
+    for skill_id, entry in _SKILLS_BY_AGENT.get(_stream_key(agent_id), {}).items():
+        if bool(entry.get("approved", False)):
+            approved.add(skill_id)
+    return approved
 
 
 def enable_agent_skill(agent_id: str | None, skill_ref: str) -> None:
@@ -335,8 +356,8 @@ def enable_agent_skill(agent_id: str | None, skill_ref: str) -> None:
             "tags": [],
             "has_scripts": False,
             "has_resources": False,
-            "status": "available",
-            "approved": True,
+            "status": "enabled",
+            "approved": False,
             "skill_definition": None,
             "source_variant": "unknown",
             "module": None,
@@ -385,7 +406,7 @@ def purge_agent_stream_state(agent_id: str | None) -> None:
     key = _stream_key(agent_id)
     _SKILLS_BY_AGENT.pop(key, None)
     _MCP_ENABLED_TOOLS_BY_AGENT.pop(key, None)
-    _MCP_UNAPPROVED_TOOLS_BY_AGENT.pop(key, None)
+    _MCP_APPROVED_TOOLS_BY_AGENT.pop(key, None)
     _STREAM_SUBSCRIBERS.pop(key, None)
 
 
@@ -641,6 +662,8 @@ async def _handle_mcp_server_tools_set(
         }
     )
     agent_map[server_id] = set(normalized)
+    approved_map = _MCP_APPROVED_TOOLS_BY_AGENT.setdefault(key, {})
+    approved_map[server_id] = approved_map.get(server_id, set()) & set(normalized)
     logger.info(
         "[ws:mcp_server_tools_set] agent_id=%s server_id=%s enabled_count=%d",
         agent_id,
@@ -660,13 +683,13 @@ async def _handle_mcp_server_tool_approve(
 ) -> None:
     """Handle a per-tool approval toggle for a specific MCP server."""
     key = _stream_key(agent_id)
-    server_unapproved = _MCP_UNAPPROVED_TOOLS_BY_AGENT.setdefault(key, {}).setdefault(
+    server_approved = _MCP_APPROVED_TOOLS_BY_AGENT.setdefault(key, {}).setdefault(
         server_id, set()
     )
     if approved:
-        server_unapproved.discard(tool_name)
+        server_approved.add(tool_name)
     else:
-        server_unapproved.add(tool_name)
+        server_approved.discard(tool_name)
     logger.info(
         "[ws:mcp_server_tool_approve] agent_id=%s server_id=%s tool=%s approved=%s",
         agent_id,
