@@ -44,6 +44,7 @@ import {
 } from '@datalayer/core/lib/views/otel';
 import { useCoreStore } from '@datalayer/core';
 import { ThemedProvider } from './utils/themedProvider';
+import { AuthRequiredView } from './components';
 import { ChatSidebar } from '../chat';
 import { DEFAULT_MODEL } from '../specs';
 import type { AgentLibrary, ProtocolConfig } from '../types';
@@ -514,9 +515,7 @@ const AgentOtelExample: React.FC = () => {
   return (
     <ThemedProvider>
       {!token ? (
-        <Box sx={{ p: 4, textAlign: 'center', color: 'fg.muted' }}>
-          Sign in from the top header to run this example.
-        </Box>
+        <AuthRequiredView />
       ) : (
         <AgentOtelExampleInner token={token} onSignOut={clearAuth} />
       )}

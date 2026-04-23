@@ -74,6 +74,7 @@ class CodemodeToggleRequest(BaseModel):
 
     enabled: bool
     skills: list[str] | None = None
+    agent_id: str | None = None
 
 
 # =========================================================================
@@ -970,20 +971,67 @@ async def toggle_codemode(request: CodemodeToggleRequest) -> dict[str, Any]:
     """
     from agent_runtimes.routes.agui import get_all_agui_adapters
 
-    _codemode_state["enabled"] = request.enabled
+    # When a specific agent_id is provided, scope the toggle to that agent
+    # only and avoid mutating the global _codemode_state / environment flags,
+    # so concurrent agents (e.g. codemode vs. no-codemode panes) remain
+    # independent.
+    scoped_agent_id = request.agent_id
 
-    if request.skills is not None:
-        _codemode_state["skills"] = request.skills
+    if scoped_agent_id is None:
+        _codemode_state["enabled"] = request.enabled
 
-    # Update environment variables for consistency
-    os.environ["AGENT_RUNTIMES_CODEMODE"] = "true" if request.enabled else "false"
-    if request.skills is not None:
-        os.environ["AGENT_RUNTIMES_SKILLS"] = ",".join(request.skills)
+        if request.skills is not None:
+            _codemode_state["skills"] = request.skills
 
-    # Update all registered AG-UI adapters
+        # Update environment variables for consistency
+        os.environ["AGENT_RUNTIMES_CODEMODE"] = "true" if request.enabled else "false"
+        if request.skills is not None:
+            os.environ["AGENT_RUNTIMES_SKILLS"] = ",".join(request.skills)
+
+    # Update registered AG-UI adapters (all or one, depending on scope)
     adapters_updated = 0
     adapters_failed = 0
-    for agent_id, agui_transport in get_all_agui_adapters().items():
+    all_adapters = get_all_agui_adapters()
+
+    # Scoped path: prefer the per-agent pydantic-ai adapter from the acp
+    # registry — this works for non-AG-UI transports (e.g. vercel-ai) where
+    # the AG-UI registry does not contain the agent.
+    if scoped_agent_id is not None:
+        applied_via_registry = False
+        try:
+            from .acp import _agents as _agent_registry
+
+            entry = _agent_registry.get(scoped_agent_id)
+            if entry is not None:
+                adapter_obj = entry[0]
+                if hasattr(adapter_obj, "set_codemode_enabled"):
+                    if adapter_obj.set_codemode_enabled(request.enabled):
+                        adapters_updated += 1
+                        applied_via_registry = True
+                        logger.info(
+                            f"Codemode {'enabled' if request.enabled else 'disabled'} for agent: {scoped_agent_id}"
+                        )
+                    else:
+                        adapters_failed += 1
+                        logger.warning(
+                            f"Failed to toggle codemode for agent: {scoped_agent_id}"
+                        )
+        except Exception as e:
+            logger.error(
+                f"Error toggling codemode via agent registry for {scoped_agent_id}: {e}",
+                exc_info=True,
+            )
+
+        if applied_via_registry:
+            target_adapters: dict[str, Any] = {}
+        elif scoped_agent_id in all_adapters:
+            target_adapters = {scoped_agent_id: all_adapters[scoped_agent_id]}
+        else:
+            target_adapters = {}
+    else:
+        target_adapters = dict(all_adapters)
+
+    for agent_id, agui_transport in target_adapters.items():
         try:
             # Get the underlying agent adapter (PydanticAIAdapter)
             agent_adapter = agui_transport.agent
@@ -1011,8 +1059,9 @@ async def toggle_codemode(request: CodemodeToggleRequest) -> dict[str, Any]:
 
     return {
         "status": "ok",
-        "enabled": _codemode_state["enabled"],
+        "enabled": request.enabled if scoped_agent_id is not None else _codemode_state["enabled"],
         "skills": _codemode_state["skills"],
+        "agent_id": scoped_agent_id,
         "adapters_updated": adapters_updated,
         "adapters_failed": adapters_failed,
         "message": f"Codemode {'enabled' if request.enabled else 'disabled'} for {adapters_updated} agent(s).",

@@ -386,6 +386,12 @@ export interface ChatCommonProps {
   /** Indicate tools are accessed via Codemode meta-tools */
   codemodeEnabled?: boolean;
 
+  /**
+   * Callback fired when the user toggles codemode from the Tools menu.
+   * When omitted, the toggle renders in read-only mode.
+   */
+  onToggleCodemode?: (enabled: boolean) => void | Promise<void>;
+
   /** Initial model ID to select (e.g., 'openai:gpt-4o-mini') */
   initialModel?: string;
 
@@ -594,6 +600,12 @@ export interface ChatBaseProps {
 
   /** Indicate tools are accessed via Codemode meta-tools */
   codemodeEnabled?: boolean;
+
+  /**
+   * Callback fired when the user toggles codemode from the Tools menu.
+   * When omitted, the toggle renders in read-only mode.
+   */
+  onToggleCodemode?: (enabled: boolean) => void | Promise<void>;
 
   /** Initial model ID to select (e.g., 'openai:gpt-4o-mini') */
   initialModel?: string;

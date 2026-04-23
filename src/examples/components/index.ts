@@ -6,6 +6,7 @@
 // Example/layout components
 export { ErrorView } from './ErrorView';
 export type { ErrorViewProps } from './ErrorView';
+export { AuthRequiredView } from './AuthRequiredView';
 export { MockFileBrowser } from './MockFileBrowser';
 export type { MockFileBrowserProps } from './MockFileBrowser';
 export { MainContent } from './MainContent';

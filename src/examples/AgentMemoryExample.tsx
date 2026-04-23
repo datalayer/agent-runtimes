@@ -30,7 +30,7 @@ import {
 } from '@primer/react';
 import { SearchIcon, DatabaseIcon } from '@primer/octicons-react';
 import { Box } from '@datalayer/primer-addons';
-import { ErrorView } from './components';
+import { AuthRequiredView, ErrorView } from './components';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
 
@@ -412,9 +412,7 @@ const AgentMemoryExample: React.FC = () => {
   if (!token) {
     return (
       <ThemedProvider>
-        <Box sx={{ p: 4, textAlign: 'center', color: 'fg.muted' }}>
-          Sign in from the top header to run this example.
-        </Box>
+        <AuthRequiredView />
       </ThemedProvider>
     );
   }

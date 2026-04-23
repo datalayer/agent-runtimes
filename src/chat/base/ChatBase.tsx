@@ -425,6 +425,7 @@ function ChatBaseInner({
   showSkillsMenu = true,
   disableInputPrompt = false,
   codemodeEnabled = false,
+  onToggleCodemode,
   initialModel,
   availableModels,
   mcpServers,
@@ -2824,6 +2825,7 @@ function ChatBaseInner({
           showToolsMenu={showToolsMenu}
           showSkillsMenu={showSkillsMenu}
           codemodeEnabled={codemodeEnabled}
+          onToggleCodemode={onToggleCodemode}
           isA2AProtocol={isA2AProtocol}
           hasConfigData={!!configQuery.data}
           hasSkillsData={!!skillsQuery.data}

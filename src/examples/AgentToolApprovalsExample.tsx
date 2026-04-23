@@ -14,7 +14,7 @@ import React, {
 } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Box } from '@datalayer/primer-addons';
-import { ErrorView } from './components';
+import { AuthRequiredView, ErrorView } from './components';
 import { Spinner, Text } from '@primer/react';
 import { useCoreStore } from '@datalayer/core';
 import { DEFAULT_SERVICE_URLS } from '@datalayer/core/lib/api/constants';
@@ -1141,9 +1141,7 @@ const AgentToolApprovalsExample: React.FC = () => {
   if (!token) {
     return (
       <ThemedProvider>
-        <Box sx={{ p: 4, textAlign: 'center', color: 'fg.muted' }}>
-          Sign in from the top header to run this example.
-        </Box>
+        <AuthRequiredView />
       </ThemedProvider>
     );
   }

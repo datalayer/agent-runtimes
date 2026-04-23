@@ -63,6 +63,11 @@ export interface InputToolbarProps {
   showToolsMenu: boolean;
   showSkillsMenu: boolean;
   codemodeEnabled: boolean;
+  /**
+   * Optional callback invoked when the user toggles codemode from the Tools
+   * menu. When omitted the toggle renders as read-only.
+   */
+  onToggleCodemode?: (enabled: boolean) => void | Promise<void>;
   isA2AProtocol: boolean;
   hasConfigData: boolean;
   hasSkillsData: boolean;
@@ -133,6 +138,7 @@ export function InputToolbar({
   showToolsMenu,
   showSkillsMenu,
   codemodeEnabled,
+  onToggleCodemode,
   isA2AProtocol,
   hasConfigData,
   hasSkillsData,
@@ -226,6 +232,7 @@ export function InputToolbar({
             {showToolsMenu && (
               <ToolsMenu
                 codemodeEnabled={codemodeEnabled}
+                onToggleCodemode={onToggleCodemode}
                 mcpServers={mcpServers}
                 enabledMcpTools={enabledMcpTools}
                 enabledMcpToolCount={enabledMcpToolCount}
@@ -271,6 +278,7 @@ export function InputToolbar({
 
 function ToolsMenu({
   codemodeEnabled,
+  onToggleCodemode,
   mcpServers,
   enabledMcpTools,
   enabledMcpToolCount,
@@ -281,6 +289,7 @@ function ToolsMenu({
   availableTools: _availableTools,
 }: {
   codemodeEnabled: boolean;
+  onToggleCodemode?: (enabled: boolean) => void | Promise<void>;
   mcpServers: MCPServerConfig[];
   enabledMcpTools: Map<string, Set<string>>;
   enabledMcpToolCount: number;
@@ -314,16 +323,46 @@ function ToolsMenu({
       <ActionMenu.Overlay side="outside-top" align="start" width="large">
         <Box sx={{ maxHeight: '60vh', overflowY: 'auto' }}>
           <ActionList>
-            {codemodeEnabled && (
-              <ActionList.Group title="Codemode">
-                <ActionList.Item disabled>
-                  <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
-                    MCP tools are accessible via Codemode meta-tools
-                    (search_tools, list_tool_names, execute_code).
+            {/* Codemode toggle — always visible at the top */}
+            <ActionList.Group title="Codemode">
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  px: 3,
+                  py: 2,
+                  borderBottom: '1px solid',
+                  borderColor: 'border.muted',
+                  gap: 2,
+                }}
+              >
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <Text
+                    id="toggle-codemode"
+                    sx={{ fontWeight: 'semibold', display: 'block' }}
+                  >
+                    Enable Codemode
                   </Text>
-                </ActionList.Item>
-              </ActionList.Group>
-            )}
+                  <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
+                    {codemodeEnabled
+                      ? 'MCP tools accessible via meta-tools (search_tools, execute_code).'
+                      : 'Expose MCP tools directly to the model.'}
+                  </Text>
+                </Box>
+                <ToggleSwitch
+                  size="small"
+                  checked={codemodeEnabled}
+                  disabled={!onToggleCodemode}
+                  onClick={() => {
+                    if (onToggleCodemode) {
+                      void onToggleCodemode(!codemodeEnabled);
+                    }
+                  }}
+                  aria-labelledby="toggle-codemode"
+                />
+              </Box>
+            </ActionList.Group>
             {/* MCP Server Tools */}
             {mcpServers.length > 0 && hasUsableMcpServers ? (
               mcpServers.map(server => {

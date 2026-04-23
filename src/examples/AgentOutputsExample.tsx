@@ -39,11 +39,10 @@ import {
   DownloadIcon,
 } from '@primer/octicons-react';
 import { Box } from '@datalayer/primer-addons';
-import { ErrorView } from './components';
+import { AuthRequiredView, ErrorView } from './components';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
-import { useAgentRuntimes } from '../hooks/useAgentRuntimes';
 import { Chat } from '../chat';
 import { useChatStore } from '../stores/chatStore';
 import type { ChatMessage } from '../types';
@@ -54,6 +53,8 @@ const queryClient = new QueryClient();
 
 const AGENT_NAME = 'outputs-demo-agent';
 const AGENT_SPEC_ID = 'demo-outputs';
+const DEFAULT_LOCAL_BASE_URL =
+  import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -339,24 +340,108 @@ const ChartView: React.FC<{ source: string }> = ({ source }) => {
 const AgentOutputsInner: React.FC<{ onLogout: () => void }> = ({
   onLogout,
 }) => {
-  useSimpleAuthStore();
+  const { token } = useSimpleAuthStore();
   const agentName = useRef(uniqueAgentId(AGENT_NAME)).current;
 
-  const {
-    runtime,
-    status: runtimeStatus,
-    isReady,
-    error: hookError,
-  } = useAgentRuntimes({
-    agentSpecId: AGENT_SPEC_ID,
-    autoStart: true,
-    agentConfig: {
-      name: agentName,
-      model: 'bedrock:us.anthropic.claude-3-5-haiku-20241022-v1:0',
-      protocol: 'vercel-ai',
-      description: 'Agent with rich output rendering (table/JSON/chart/file)',
-    },
-  });
+  const [runtimeStatus, setRuntimeStatus] = useState<
+    'launching' | 'ready' | 'error'
+  >('launching');
+  const [isReady, setIsReady] = useState(false);
+  const [hookError, setHookError] = useState<string | null>(null);
+  const [agentId, setAgentId] = useState<string>(agentName);
+  const [isReconnectedAgent, setIsReconnectedAgent] = useState(false);
+
+  const agentBaseUrl = DEFAULT_LOCAL_BASE_URL;
+  const chatAuthToken: string | undefined = token === null ? undefined : token;
+
+  const authFetch = useCallback(
+    (url: string, opts: RequestInit = {}) =>
+      fetch(url, {
+        ...opts,
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...(opts.headers ?? {}),
+        },
+      }),
+    [token],
+  );
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    const createAgent = async () => {
+      setRuntimeStatus('launching');
+      setIsReady(false);
+      setHookError(null);
+      setIsReconnectedAgent(false);
+
+      try {
+        const response = await authFetch(`${agentBaseUrl}/api/v1/agents`, {
+          method: 'POST',
+          body: JSON.stringify({
+            name: agentName,
+            description:
+              'Agent with rich output rendering (table/JSON/chart/file)',
+            agent_library: 'pydantic-ai',
+            transport: 'vercel-ai',
+            agent_spec_id: AGENT_SPEC_ID,
+            enable_skills: true,
+            tools: [],
+          }),
+        });
+
+        let resolvedAgentId = agentName;
+        let isAlreadyRunning = false;
+
+        if (response.ok) {
+          const data = await response.json();
+          resolvedAgentId = data?.id || agentName;
+        } else {
+          const contentType = response.headers.get('content-type') || '';
+          let detail = '';
+
+          if (contentType.includes('application/json')) {
+            const data = await response.json().catch(() => null);
+            detail =
+              (typeof data?.detail === 'string' && data.detail) ||
+              (typeof data?.message === 'string' && data.message) ||
+              '';
+          } else {
+            detail = await response.text();
+          }
+
+          if (response.status === 409 || /already exists/i.test(detail || '')) {
+            isAlreadyRunning = true;
+          } else {
+            throw new Error(
+              detail || `Failed to create agent: ${response.status}`,
+            );
+          }
+        }
+
+        if (!isCancelled) {
+          setAgentId(resolvedAgentId);
+          setIsReconnectedAgent(isAlreadyRunning);
+          setIsReady(true);
+          setRuntimeStatus('ready');
+        }
+      } catch (error) {
+        if (!isCancelled) {
+          setHookError(
+            error instanceof Error ? error.message : 'Agent failed to start',
+          );
+          setRuntimeStatus('error');
+        }
+      }
+    };
+
+    void createAgent();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [agentBaseUrl, agentName, authFetch]);
 
   const [activeTab, setActiveTab] = useState<OutputTab>('table');
   const [detected, setDetected] = useState<DetectedOutput[]>([]);
@@ -384,10 +469,6 @@ const AgentOutputsInner: React.FC<{ onLogout: () => void }> = ({
     return unsub;
   }, []);
 
-  const agentBaseUrl = runtime?.agentBaseUrl || '';
-  const agentId = runtime?.agentId || AGENT_NAME;
-  const podName = runtime?.podName || '(launching…)';
-
   // ── Loading / Error ───────────────────────────────────────────────────
 
   if (!isReady && runtimeStatus !== 'error') {
@@ -405,8 +486,8 @@ const AgentOutputsInner: React.FC<{ onLogout: () => void }> = ({
         <Spinner size="large" />
         <Text sx={{ color: 'fg.muted' }}>
           {runtimeStatus === 'launching'
-            ? 'Launching runtime for outputs agent…'
-            : 'Creating outputs demo agent…'}
+            ? 'Launching outputs demo agent...'
+            : 'Creating outputs demo agent...'}
         </Text>
       </Box>
     );
@@ -440,6 +521,21 @@ const AgentOutputsInner: React.FC<{ onLogout: () => void }> = ({
         flexDirection: 'column',
       }}
     >
+      {isReconnectedAgent && (
+        <Box
+          sx={{
+            px: 3,
+            py: 1,
+            borderBottom: '1px solid',
+            borderColor: 'border.default',
+          }}
+        >
+          <Text sx={{ color: 'fg.muted', fontSize: 0 }}>
+            Agent already running - reconnected.
+          </Text>
+        </Box>
+      )}
+
       {/* Toolbar */}
       <Box
         sx={{
@@ -455,7 +551,7 @@ const AgentOutputsInner: React.FC<{ onLogout: () => void }> = ({
       >
         <TableIcon size={16} />
         <Heading as="h3" sx={{ fontSize: 2, flex: 1 }}>
-          Agent Outputs — {podName}
+          Agent Outputs — Local Runtime
         </Heading>
       </Box>
 
@@ -466,13 +562,16 @@ const AgentOutputsInner: React.FC<{ onLogout: () => void }> = ({
             protocol="vercel-ai"
             baseUrl={agentBaseUrl}
             agentId={agentId}
+            authToken={chatAuthToken}
             title="Outputs Demo Agent"
             placeholder="Ask for a Table, JSON, Chart, or File…"
             description={`${detected.length} detected output${detected.length !== 1 ? 's' : ''}`}
             showHeader={true}
+            showToolsMenu={true}
+            showSkillsMenu={true}
             autoFocus
             height="100%"
-            runtimeId={podName}
+            runtimeId={agentId}
             historyEndpoint={`${agentBaseUrl}/api/v1/history`}
             suggestions={[
               {
@@ -692,9 +791,7 @@ const AgentOutputsExample: React.FC = () => {
   if (!token) {
     return (
       <ThemedProvider>
-        <Box sx={{ p: 4, textAlign: 'center', color: 'fg.muted' }}>
-          Sign in from the top header to run this example.
-        </Box>
+        <AuthRequiredView />
       </ThemedProvider>
     );
   }

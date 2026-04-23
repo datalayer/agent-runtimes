@@ -448,8 +448,36 @@ def build_codemode_status(agent_id: str | None = None) -> dict[str, Any] | None:
 
         adapters = get_all_agui_adapters()
         codemode_enabled = _codemode_state["enabled"]
+        resolved = False
 
-        if adapters:
+        # 1. Prefer the per-agent pydantic-ai adapter from the acp registry.
+        #    This works for all transports (vercel-ai, ag-ui, acp, ...).
+        if agent_id:
+            try:
+                from agent_runtimes.routes.acp import _agents as _agent_registry
+
+                entry = _agent_registry.get(agent_id)
+                if entry is not None:
+                    adapter_obj = entry[0]
+                    if hasattr(adapter_obj, "codemode_enabled"):
+                        codemode_enabled = adapter_obj.codemode_enabled
+                        resolved = True
+            except Exception:
+                pass
+
+        # 2. Fallback: look up the AG-UI adapter by agent_id.
+        if not resolved and agent_id and adapters and agent_id in adapters:
+            try:
+                agent_adapter = adapters[agent_id].agent
+                if hasattr(agent_adapter, "codemode_enabled"):
+                    codemode_enabled = agent_adapter.codemode_enabled
+                    resolved = True
+            except Exception:
+                pass
+
+        # 3. Last resort: pick the first available AG-UI adapter. Only used
+        #    when no agent_id is provided (legacy behaviour).
+        if not resolved and not agent_id and adapters:
             for _agent_id, agui_transport in adapters.items():
                 try:
                     agent_adapter = agui_transport.agent
@@ -458,8 +486,6 @@ def build_codemode_status(agent_id: str | None = None) -> dict[str, Any] | None:
                         break
                 except Exception:
                     pass
-
-        sandbox_status = _get_sandbox_status()
         skills_snapshot = get_agent_skills_snapshot(agent_id)
 
         return {

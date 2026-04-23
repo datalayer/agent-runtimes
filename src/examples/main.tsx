@@ -25,7 +25,7 @@ import {
   themeConfigs,
   Box,
 } from '@datalayer/primer-addons';
-import { HomeIcon, SignOutIcon } from '@primer/octicons-react';
+import { HomeIcon, SignInIcon, SignOutIcon } from '@primer/octicons-react';
 import { Button } from '@primer/react';
 import { AppearanceControlsWithStore } from '@datalayer/primer-addons/lib/components/appearance';
 import {
@@ -733,8 +733,10 @@ const ExampleAppThemed: React.FC<{
               ) : (
                 <Button
                   size="small"
-                  variant="default"
+                  variant="invisible"
                   onClick={() => setShowSignIn(true)}
+                  leadingVisual={SignInIcon}
+                  sx={{ color: 'fg.muted' }}
                 >
                   Sign in
                 </Button>

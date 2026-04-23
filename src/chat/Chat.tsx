@@ -243,8 +243,9 @@ export function Chat({
   showToolsMenu = true,
   showInput = true,
   disableInputPrompt = false,
-  showSkillsMenu = false,
+  showSkillsMenu = true,
   codemodeEnabled = false,
+  onToggleCodemode,
   showTokenUsage = true,
   initialModel,
   availableModels,
@@ -578,6 +579,7 @@ export function Chat({
             showSkillsMenu={showSkillsMenu}
             showTokenUsage={showTokenUsage}
             codemodeEnabled={codemodeEnabled}
+            onToggleCodemode={onToggleCodemode}
             initialModel={initialModel}
             availableModels={availableModels}
             mcpServers={mcpServers}
