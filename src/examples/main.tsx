@@ -423,13 +423,32 @@ export const ExampleApp: React.FC = () => {
   const handleExampleChange = async (newExample: string) => {
     if (newExample === selectedExample || !serviceManager) return;
 
-    // Start a fully fresh session when switching examples.
-    // Chat state can survive in multiple store branches (messages, threads,
-    // pending tool calls, runtime snapshots), so use full store resets.
+    // 1) Unmount the current example FIRST so its useEffect cleanup hooks
+    //    (e.g. AGUIAdapter.disconnect → /ag-ui/terminate, abort fetches,
+    //    close runtime sandboxes) run against a still-valid store state.
+    setIsChangingExample(true);
+    setExampleComponent(null);
+    // Yield to React so the unmount actually commits before we wipe stores.
+    await new Promise<void>(resolve => {
+      requestAnimationFrame(() => resolve());
+    });
+
+    // 2) Wipe every piece of in-process agent state so the next example boots
+    //    with a clean slate (no leftover messages, threads, pending tool
+    //    calls, runtime snapshots, monitoring caches, or sockets).
     useChatStore.getState().reset();
     useConversationStore.getState().clearAll();
     agentRuntimeStore.getState().reset();
 
+    // 3) Drop the persisted slice from localStorage so a fresh example never
+    //    rehydrates a previous example's agents / monitoring cache.
+    try {
+      localStorage.removeItem('agent-runtimes-storage');
+    } catch {
+      // Ignore storage failures (e.g. private mode).
+    }
+
+    // 4) Load and mount the new example.
     setSelectedExample(newExample);
     localStorage.setItem('selectedExample', newExample);
     await loadExample(newExample, serviceManager);
@@ -749,7 +768,7 @@ const ExampleAppThemed: React.FC<{
             </Box>
           ) : ExampleComponent ? (
             <ExampleWrapper>
-              <ExampleComponent {...exampleProps} />
+              <ExampleComponent key={selectedExample} {...exampleProps} />
             </ExampleWrapper>
           ) : null}
         </Box>

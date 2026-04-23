@@ -868,11 +868,28 @@ export const agentRuntimeStore = createStore<AgentRuntimeStore>()(
 
         // ── Reset ─────────────────────────────────────────────────────
         reset: () => {
+          // Close any live WebSocket so the backend tears down its
+          // per-connection state (subscriptions, approvals, monitoring).
+          if (_ws) {
+            try {
+              _ws.close(1000, 'reset');
+            } catch {
+              // Ignore close errors — socket may already be in a closing
+              // state or the runtime may have been killed.
+            }
+          }
           _ws = null;
           set({ ...initialRuntimeState, ...initialWsState });
         },
 
         resetWs: () => {
+          if (_ws) {
+            try {
+              _ws.close(1000, 'reset');
+            } catch {
+              // Ignore.
+            }
+          }
           _ws = null;
           set(initialWsState);
         },

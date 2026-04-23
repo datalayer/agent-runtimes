@@ -321,11 +321,20 @@ def set_agent_enabled_skills(
                 "path": None,
             }
 
-    # Keep all discovered skills enabled by default; callers can disable
-    # individual skills via the dedicated websocket toggle handlers.
-    for skill_id, entry in _SKILLS_BY_AGENT[key].items():
-        if skill_id in enabled_ids or entry.get("status") in {"available", "enabled"}:
+    # Prune the per-agent snapshot to the skills this agent's spec declares.
+    # This ensures the UI skills dropdown reflects exactly the skills available
+    # to this agent, not the global catalog of all discoverable skills.
+    if enabled_ids:
+        _SKILLS_BY_AGENT[key] = {
+            skill_id: entry
+            for skill_id, entry in _SKILLS_BY_AGENT[key].items()
+            if skill_id in enabled_ids
+        }
+        for entry in _SKILLS_BY_AGENT[key].values():
             entry["status"] = "enabled"
+    else:
+        # Spec declares no skills: clear the snapshot entirely.
+        _SKILLS_BY_AGENT[key] = {}
 
     return get_agent_skills_snapshot(agent_id)
 

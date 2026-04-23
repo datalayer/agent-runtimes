@@ -467,6 +467,36 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
             historyEndpoint={`${agentBaseUrl}/api/v1/history`}
             suggestions={[
               {
+                title: '▶ No-tool turn',
+                message:
+                  'Briefly introduce yourself without calling any tool or skill — produces a linear Start → Model → Decision → End graph.',
+              },
+              {
+                title: '🔍 Single tool call',
+                message:
+                  'Use the Tavily web search tool to find the latest news about pydantic-graph. Make a single search call.',
+              },
+              {
+                title: '🌀 Parallel tool fan-out',
+                message:
+                  'Use Tavily to search the web in parallel for these three topics in the same turn: (1) OpenTelemetry traces, (2) agent observability, (3) LLM cost monitoring. Issue all three searches together so the turn graph fans out (Broadcast → Spread → Join).',
+              },
+              {
+                title: '🧩 Skill call',
+                message:
+                  'Use the datalayer-whoami skill to identify my profile, then summarize it.',
+              },
+              {
+                title: '😄 Joke skill',
+                message:
+                  'Use the jokes skill to tell me a random dad joke, then wrap it in one-sentence commentary.',
+              },
+              {
+                title: '🧪 Mixed tools + skills',
+                message:
+                  'In one turn: (a) use Tavily to search for "OTEL traces best practices", (b) call the datalayer-whoami skill, (c) call the jokes skill. Summarize all three results together. This should produce a Broadcast → three Spread nodes → Join in the Turn Execution Graph.',
+              },
+              {
                 title: 'Monitoring summary',
                 message:
                   'Summarize my current token usage, cost status, and recent turn activity.',

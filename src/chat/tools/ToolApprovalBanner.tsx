@@ -121,7 +121,7 @@ export function ToolApprovalBanner({
           </Text>
         </Box>
         <Box sx={{ display: 'flex', gap: 1 }}>
-          {onApproveAll && pendingApprovals.length > 1 && (
+          {onApproveAll && pendingApprovals.length >= 1 && (
             <Button
               size="small"
               variant="primary"

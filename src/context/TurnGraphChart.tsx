@@ -51,6 +51,17 @@ interface TraceRun {
 }
 
 // ── Colour palette ─────────────────────────────────────────────────────────
+//
+// Colours and symbols mirror the pydantic-graph beta node vocabulary
+// (https://pydantic.dev/docs/ai/graph/beta):
+//
+//   - step       → executes an async function
+//   - decision   → conditional branching
+//   - spread     → parallel processing of iterables
+//   - broadcast  → send the same data to multiple parallel paths
+//   - join       → aggregate results from parallel execution (reducer)
+//   - reducer    → alias for the reducer half of a join
+//   - start/end  → graph entry / exit markers
 
 const NODE_COLORS: Record<string, string> = {
   root: '#58a6ff',
@@ -59,11 +70,58 @@ const NODE_COLORS: Record<string, string> = {
   end: '#f85149',
   end_or_continue: '#d29922',
   join: '#bc8cff',
+  reducer: '#a371f7',
   decision: '#f0883e',
+  broadcast: '#2dd4bf',
+  spread: '#79c0ff',
   error: '#da3633',
   parallel: '#79c0ff',
   default: '#8b949e',
 };
+
+/** Mapping of node type → ECharts symbol shape, for at-a-glance recognition. */
+const NODE_SYMBOLS: Record<string, string> = {
+  root: 'circle',
+  start: 'circle',
+  step: 'roundRect',
+  decision: 'diamond',
+  broadcast: 'triangle',
+  spread: 'arrow',
+  join: 'pin',
+  reducer: 'pin',
+  end: 'circle',
+  end_or_continue: 'diamond',
+  parallel: 'arrow',
+  error: 'circle',
+  default: 'roundRect',
+};
+
+/** Human-readable legend entries used by the UI. */
+const LEGEND_ENTRIES: Array<{
+  type: string;
+  label: string;
+  description: string;
+}> = [
+  { type: 'start', label: 'Start', description: 'Graph entry point' },
+  { type: 'step', label: 'Step', description: 'Async function execution' },
+  { type: 'decision', label: 'Decision', description: 'Conditional branching' },
+  {
+    type: 'broadcast',
+    label: 'Broadcast',
+    description: 'Send data to multiple parallel paths',
+  },
+  {
+    type: 'spread',
+    label: 'Spread',
+    description: 'Parallel processing of iterables',
+  },
+  {
+    type: 'join',
+    label: 'Join',
+    description: 'Aggregate parallel results (reducer)',
+  },
+  { type: 'end', label: 'End', description: 'Graph exit point' },
+];
 
 function spanColor(span: OtelSpan): string {
   if (span.status_code === 'ERROR') return NODE_COLORS.error;
@@ -175,10 +233,14 @@ function buildOption(run: TraceRun) {
       s.status_code === 'ERROR' ||
       status === 'error' ||
       !!s.attributes?.['error.message'];
+    const symbol =
+      NODE_SYMBOLS[nodeType.toLowerCase()] ??
+      (isRoot ? 'circle' : NODE_SYMBOLS.default);
 
     return {
       id: s.span_id,
       name: label,
+      symbol,
       symbolSize: isRoot ? 44 : 20 + Math.round((dur / maxDur) * 28),
       itemStyle: {
         color: hasError ? NODE_COLORS.error : spanColor(s),
@@ -483,6 +545,46 @@ export const TurnGraphChart: React.FC<TurnGraphChartProps> = ({
           ))}
         </Box>
       )}
+
+      {/* Legend — mirrors the pydantic-graph beta node vocabulary. */}
+      <Box
+        sx={{
+          display: 'flex',
+          gap: 2,
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          fontSize: 0,
+          color: 'fg.muted',
+          px: 1,
+          py: '2px',
+        }}
+        aria-label="Graph node legend"
+      >
+        {LEGEND_ENTRIES.map(entry => (
+          <Box
+            key={entry.type}
+            sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+            title={entry.description}
+          >
+            <Box
+              aria-hidden
+              sx={{
+                width: 10,
+                height: 10,
+                borderRadius:
+                  entry.type === 'decision'
+                    ? 0
+                    : entry.type === 'broadcast' || entry.type === 'spread'
+                      ? '2px'
+                      : '50%',
+                transform: entry.type === 'decision' ? 'rotate(45deg)' : 'none',
+                bg: NODE_COLORS[entry.type] ?? NODE_COLORS.default,
+              }}
+            />
+            <Text sx={{ fontSize: 0 }}>{entry.label}</Text>
+          </Box>
+        ))}
+      </Box>
 
       {/* Graph */}
       <ReactECharts

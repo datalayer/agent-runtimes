@@ -530,10 +530,65 @@ function ChatBaseInner({
   }, [pendingApprovalsProp, storeApprovals]);
   const pendingApprovals = storePendingApprovals;
 
+  // Persist a one-off approval decision into the tools/skills dropdown state
+  // on the agent-runtime so the "Approved" toggle moves Off→On across
+  // sessions and reloads.  For MCP tool approvals (``<server>__<tool>``) this
+  // sends ``mcp_server_tool_approve``.  For skill approvals
+  // (``skill:<skill_id>``) this sends ``skill_approve`` /
+  // ``skill_unapprove``.
+  const persistApprovalDecision = useCallback(
+    (approvalId: string, approved: boolean): void => {
+      const approval = agentRuntimeStore
+        .getState()
+        .approvals.find(a => a.id === approvalId);
+      const toolName = approval?.tool_name;
+      if (!toolName) return;
+
+      // Skill approvals: tool_name is of the form ``skill:<skill_id>`` where
+      // ``skill_id`` itself may include a ``:<version>`` suffix.
+      if (toolName.startsWith('skill:')) {
+        const skillRef = toolName.slice('skill:'.length);
+        if (!skillRef) return;
+        const ok = agentRuntimeStore.getState().sendRawMessage({
+          type: approved ? 'skill_approve' : 'skill_unapprove',
+          skillId: skillRef,
+        });
+        if (!ok) {
+          console.warn(
+            '[ChatBase] skill_approve persistence dropped: websocket not ready',
+          );
+        }
+        return;
+      }
+
+      // MCP tool approvals: tool_name is ``<serverId>__<toolName>``.
+      const sep = toolName.indexOf('__');
+      if (sep !== -1) {
+        const serverId = toolName.slice(0, sep);
+        const toolOnly = toolName.slice(sep + 2);
+        const ok = agentRuntimeStore.getState().sendRawMessage({
+          type: 'mcp_server_tool_approve',
+          serverId,
+          toolName: toolOnly,
+          approved,
+        });
+        if (!ok) {
+          console.warn(
+            '[ChatBase] mcp_server_tool_approve persistence dropped: websocket not ready',
+          );
+        }
+      }
+    },
+    [],
+  );
+
   // Built-in approve/reject: use store sendDecision + removeApproval, then
   // forward to the parent callback (if provided) for ai-agents WS bridging.
   const onApproveApproval = useCallback(
     async (approvalId: string, note?: string) => {
+      // Persist the decision in the tools/skills dropdown BEFORE removing
+      // the approval from the store (we need ``tool_name`` to route it).
+      persistApprovalDecision(approvalId, true);
       agentRuntimeStore.getState().sendDecision(approvalId, true, note);
       const aiWs = aiAgentsApprovalWsRef.current;
       if (aiWs && aiWs.readyState === WebSocket.OPEN) {
@@ -549,7 +604,7 @@ function ChatBaseInner({
       agentRuntimeStore.getState().removeApproval(approvalId);
       await onApproveApprovalProp?.(approvalId, note);
     },
-    [onApproveApprovalProp],
+    [onApproveApprovalProp, persistApprovalDecision],
   );
   const onRejectApproval = useCallback(
     async (approvalId: string, note?: string) => {

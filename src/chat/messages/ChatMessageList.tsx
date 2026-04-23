@@ -151,6 +151,26 @@ function DefaultToolCallRenderer({
     [item.toolName],
   );
 
+  // Skill tools (`run_skill_script`, `load_skill`, `read_skill_resource`) are
+  // gated by the server under a synthetic approval ``tool_name`` of the form
+  // ``skill:<skill_id>`` (see ``SkillsGuardrailCapability._request_skill_approval``).
+  // Capture the skill id carried in the tool-call arguments so we can match
+  // the inline approval button against that synthetic approval entry.
+  const skillApprovalKey = useMemo(() => {
+    const SKILL_TOOLS = new Set([
+      'run_skill_script',
+      'load_skill',
+      'read_skill_resource',
+    ]);
+    if (!SKILL_TOOLS.has(item.toolName)) return null;
+    const a = (item.args ?? {}) as Record<string, unknown>;
+    const raw = a.skill_name ?? a.skill ?? a.name;
+    if (typeof raw !== 'string' || raw.length === 0) return null;
+    // Strip optional ``<name>:<version>`` suffix to the base skill id.
+    const base = raw.split(':', 1)[0] || raw;
+    return `skill:${base}`.toLowerCase();
+  }, [item.toolName, item.args]);
+
   // Read pending approvals from the Zustand store (fed by the agent-runtime WS).
   const approvals = useAgentRuntimeStore(s => s.approvals);
 
@@ -159,6 +179,19 @@ function DefaultToolCallRenderer({
     if (!resultApprovalId) return null;
     return approvals.find(a => a.id === resultApprovalId) ?? null;
   }, [approvals, resultApprovalId]);
+
+  // Match the synthetic ``skill:<id>`` approval for skill tool calls.  This
+  // runs whenever the tool call is a skill tool so the inline Approve/Deny
+  // buttons surface even when the server is blocked in
+  // ``ToolApprovalManager.request_and_wait`` (status stays ``executing`` and
+  // no ``pending_approval=True`` result is ever emitted).
+  const matchedBySkill = useMemo(() => {
+    if (!skillApprovalKey) return null;
+    return (
+      approvals.find(a => a.tool_name?.toLowerCase() === skillApprovalKey) ??
+      null
+    );
+  }, [approvals, skillApprovalKey]);
 
   // Fallback to matching by tool name for inline approval flows that don't
   // always provide approval_id in the tool result payload.
@@ -170,7 +203,7 @@ function DefaultToolCallRenderer({
     );
   }, [approvals, normalizedToolName, isPendingFromResult, isExecuting]);
 
-  const matchedApproval = matchedByResultId ?? matchedByName;
+  const matchedApproval = matchedByResultId ?? matchedBySkill ?? matchedByName;
 
   // Prefer the store-matched approval id, fall back to the id from the tool
   // result (SSE path). This ensures the approve/deny buttons work even when

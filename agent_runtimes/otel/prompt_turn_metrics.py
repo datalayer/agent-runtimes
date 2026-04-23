@@ -430,9 +430,24 @@ class PromptTurnMetricsEmitter:
     ) -> None:
         """Emit graph-compatible spans for a completed prompt turn.
 
-        Creates one root ``agent.graph.run`` span and one or more child
-        ``graph.node.*`` spans so frontend graph visualizations can render a
-        turn-level graph even without pydantic-graph instrumentation.
+        Produces a beta-graph-style topology (steps, decision, broadcast,
+        spread, join/reducer, end) so the frontend ``TurnGraphChart`` can
+        render the rich pydantic-graph beta node vocabulary even when the
+        underlying pydantic-ai turn was driven by the classic graph runner.
+
+        Shape with tool calls (N = ``tool_call_count``, capped at 6)::
+
+            turn_start (start)
+              → turn_model (step)
+                → turn_decision (decision: tools?)
+                  → turn_broadcast (broadcast: fan-out)
+                    → turn_tool_0..N-1 (spread, parallel)
+                      → turn_join (join + reduce_list_append)
+                        → turn_end (end)
+
+        Shape without tool calls::
+
+            turn_start → turn_model → turn_decision → turn_end
         """
         tracer = getattr(self._emitter, "_tracer", None)
         if tracer is None:
@@ -441,39 +456,51 @@ class PromptTurnMetricsEmitter:
         try:
             from opentelemetry import trace as otel_trace
 
-            # Ensure enough timeline budget for a readable start->...->end chain
-            # with at least 1ms per node segment.
             has_tools = tool_call_count > 0
-            chain_node_count = 4 if has_tools else 3  # start, model, (tools), end
-            min_total_ns = chain_node_count * 1_000_000
+            # Cap visible spread fan-out for readability.
+            spread_count = min(max(tool_call_count, 0), 6)
+
+            # Node-count budget for timeline: start + model + decision + end,
+            # plus (broadcast + spread*N + join) when tools fired.
+            linear_count = 4 + (2 + spread_count if has_tools else 0)
+            min_total_ns = linear_count * 1_000_000
             total_ns = max(int(max(duration_ms, 0.0) * 1_000_000), min_total_ns)
             end_ns = time.time_ns()
             start_ns = end_ns - total_ns
 
-            # Split the total duration into contiguous sequential node segments.
+            # Segment durations.
+            marker_ns = 1_000_000  # 1ms floor for "marker" nodes.
+            start_dur_ns = marker_ns
+            decision_dur_ns = marker_ns
+            broadcast_dur_ns = marker_ns if has_tools else 0
+            join_dur_ns = marker_ns if has_tools else 0
+            end_dur_ns = marker_ns
+
+            fixed_ns = (
+                start_dur_ns
+                + decision_dur_ns
+                + broadcast_dur_ns
+                + join_dur_ns
+                + end_dur_ns
+            )
+            work_ns = max(total_ns - fixed_ns, linear_count * 1_000_000)
             if has_tools:
-                # start + model + tools + end (end kept short as completion marker)
-                remainder = total_ns - 4_000_000
-                start_dur_ns = 1_000_000 + int(remainder * 0.10)
-                model_dur_ns = 1_000_000 + int(remainder * 0.60)
-                tools_dur_ns = (
-                    total_ns - start_dur_ns - model_dur_ns - 1_000_000
+                model_dur_ns = max(int(work_ns * 0.45), marker_ns)
+                spread_each_ns = max(
+                    int(work_ns * 0.55 / max(spread_count, 1)), marker_ns
                 )
-                end_dur_ns = 1_000_000
             else:
-                # start + model + end
-                remainder = total_ns - 3_000_000
-                start_dur_ns = 1_000_000 + int(remainder * 0.15)
-                model_dur_ns = total_ns - start_dur_ns - 1_000_000
-                tools_dur_ns = 0
-                end_dur_ns = 1_000_000
+                model_dur_ns = work_ns
+                spread_each_ns = 0
 
             root_attrs: dict[str, Any] = {
                 "graph.name": "prompt-turn",
-                "graph.node.count": chain_node_count,
+                "graph.api": "beta",
+                "graph.node.count": linear_count,
                 "graph.turn.protocol": protocol,
                 "graph.turn.stop_reason": stop_reason,
                 "graph.turn.success": str(success).lower(),
+                "graph.turn.tool_calls": tool_call_count,
             }
             if agent_id:
                 root_attrs["agent.id"] = agent_id
@@ -487,85 +514,133 @@ class PromptTurnMetricsEmitter:
             )
             root_ctx = otel_trace.set_span_in_context(root_span)
 
-            # Node 1: explicit start marker.
-            start_node_start = start_ns
-            start_node_end = start_node_start + start_dur_ns
-            start_span = tracer.start_span(
-                "graph.node.turn_start",
-                context=root_ctx,
-                start_time=start_node_start,
-                attributes={
-                    "graph.node.id": "turn_start",
-                    "graph.node.type": "start",
-                    "graph.node.status": "completed",
-                    **({"agent.id": agent_id} if agent_id else {}),
-                },
-            )
-            start_ctx = otel_trace.set_span_in_context(start_span, root_ctx)
-
-            # Node 2: model generation phase (child of start).
-            model_node_start = start_node_end
-            model_node_end = model_node_start + model_dur_ns
-            model_span = tracer.start_span(
-                "graph.node.turn_model",
-                context=start_ctx,
-                start_time=model_node_start,
-                attributes={
-                    "graph.node.id": "turn_model",
-                    "graph.node.type": "step",
+            def _child(
+                parent_ctx: Any,
+                *,
+                node_id: str,
+                node_type: str,
+                node_start: int,
+                node_end: int,
+                extra_attrs: dict[str, Any] | None = None,
+            ) -> tuple[Any, Any]:
+                attrs: dict[str, Any] = {
+                    "graph.node.id": node_id,
+                    "graph.node.type": node_type,
                     "graph.node.status": "completed" if success else "error",
+                }
+                if agent_id:
+                    attrs["agent.id"] = agent_id
+                if extra_attrs:
+                    attrs.update(extra_attrs)
+                span = tracer.start_span(
+                    f"graph.node.{node_id}",
+                    context=parent_ctx,
+                    start_time=node_start,
+                    attributes=attrs,
+                )
+                span.end(end_time=node_end)
+                return span, otel_trace.set_span_in_context(span, parent_ctx)
+
+            cursor = start_ns
+
+            # 1. start
+            s0, start_ctx = _child(
+                root_ctx,
+                node_id="turn_start",
+                node_type="start",
+                node_start=cursor,
+                node_end=cursor + start_dur_ns,
+            )
+            cursor += start_dur_ns
+
+            # 2. model (step)
+            _m, model_ctx = _child(
+                start_ctx,
+                node_id="turn_model",
+                node_type="step",
+                node_start=cursor,
+                node_end=cursor + model_dur_ns,
+                extra_attrs={
                     "graph.node.tool_calls": tool_call_count,
                     "graph.turn.stop_reason": stop_reason,
-                    **({"agent.id": agent_id} if agent_id else {}),
+                    **({"model": model} if model else {}),
                 },
             )
-            model_ctx = otel_trace.set_span_in_context(model_span, start_ctx)
+            cursor += model_dur_ns
 
-            current_parent_ctx = model_ctx
-            current_time_ns = model_node_end
+            # 3. decision: did the model request tool calls?
+            _d, decision_ctx = _child(
+                model_ctx,
+                node_id="turn_decision",
+                node_type="decision",
+                node_start=cursor,
+                node_end=cursor + decision_dur_ns,
+                extra_attrs={
+                    "graph.decision.branch": "tools" if has_tools else "answer",
+                    "graph.decision.tool_calls": tool_call_count,
+                },
+            )
+            cursor += decision_dur_ns
 
-            # Optional Node 3: tool phase when tools were called (child of model).
+            last_ctx = decision_ctx
+
             if has_tools:
-                tools_start = current_time_ns
-                tools_end = tools_start + tools_dur_ns
-                tools_span = tracer.start_span(
-                    "graph.node.turn_tools",
-                    context=model_ctx,
-                    start_time=tools_start,
-                    attributes={
-                        "graph.node.id": "turn_tools",
-                        "graph.node.type": "parallel",
-                        "graph.node.status": "completed" if success else "error",
-                        "graph.node.tool_calls": tool_call_count,
-                        **({"agent.id": agent_id} if agent_id else {}),
+                # 4. broadcast: fan-out the tool call bundle to N parallel spreads.
+                _b, broadcast_ctx = _child(
+                    decision_ctx,
+                    node_id="turn_broadcast",
+                    node_type="broadcast",
+                    node_start=cursor,
+                    node_end=cursor + broadcast_dur_ns,
+                    extra_attrs={
+                        "graph.broadcast.fanout": spread_count,
                     },
                 )
-                tools_ctx = otel_trace.set_span_in_context(tools_span, model_ctx)
-                current_parent_ctx = tools_ctx
-                current_time_ns = tools_end
+                cursor += broadcast_dur_ns
 
-            # Final node: completion marker (child of last execution node).
-            end_node_start = current_time_ns
-            end_node_end = end_node_start + end_dur_ns
-            end_span = tracer.start_span(
-                "graph.node.turn_end",
-                context=current_parent_ctx,
-                start_time=end_node_start,
-                attributes={
-                    "graph.node.id": "turn_end",
-                    "graph.node.type": "end",
-                    "graph.node.status": "completed" if success else "error",
-                    "graph.turn.stop_reason": stop_reason,
-                    **({"agent.id": agent_id} if agent_id else {}),
-                },
+                # 5. spread: one parallel tool invocation per call.
+                # All spread nodes start at the same cursor (parallel) and end
+                # after ``spread_each_ns``; cursor advances once past them all.
+                spread_start = cursor
+                spread_end = spread_start + spread_each_ns
+                for i in range(spread_count):
+                    _child(
+                        broadcast_ctx,
+                        node_id=f"turn_tool_{i}",
+                        node_type="spread",
+                        node_start=spread_start,
+                        node_end=spread_end,
+                        extra_attrs={
+                            "graph.spread.index": i,
+                            "graph.spread.total": spread_count,
+                        },
+                    )
+                cursor = spread_end
+
+                # 6. join: collect parallel tool outputs via reduce_list_append.
+                _j, join_ctx = _child(
+                    broadcast_ctx,
+                    node_id="turn_join",
+                    node_type="join",
+                    node_start=cursor,
+                    node_end=cursor + join_dur_ns,
+                    extra_attrs={
+                        "graph.join.reducer": "reduce_list_append",
+                        "graph.join.inputs": spread_count,
+                    },
+                )
+                cursor += join_dur_ns
+                last_ctx = join_ctx
+
+            # 7. end
+            _e, _end_ctx = _child(
+                last_ctx,
+                node_id="turn_end",
+                node_type="end",
+                node_start=cursor,
+                node_end=cursor + end_dur_ns,
+                extra_attrs={"graph.turn.stop_reason": stop_reason},
             )
-
-            # End spans in child->parent order.
-            end_span.end(end_time=end_node_end)
-            if has_tools:
-                tools_span.end(end_time=current_time_ns)
-            model_span.end(end_time=model_node_end)
-            start_span.end(end_time=start_node_end)
 
             root_span.end(end_time=end_ns)
         except Exception as exc:  # noqa: BLE001

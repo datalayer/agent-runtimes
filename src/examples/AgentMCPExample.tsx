@@ -681,6 +681,10 @@ const AgentMCPInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
                 title: '⚡ Compare frameworks',
                 message: 'Compare popular JavaScript frameworks in 2024.',
               },
+              {
+                title: '😄 Tell me a joke',
+                message: 'Use your jokes skill to tell me a random joke.',
+              },
             ]}
             submitOnSuggestionClick
           />

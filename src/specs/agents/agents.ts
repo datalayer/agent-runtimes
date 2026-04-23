@@ -1093,7 +1093,7 @@ export const DEMO_MCP_AGENT_SPEC_0_0_1: AgentSpec = {
   enabled: true,
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
   mcpServers: [MCP_SERVER_MAP['tavily:0.0.1']],
-  skills: [],
+  skills: [toAgentSkillSpec(SKILL_MAP['jokes:0.0.1'])],
   tools: [],
   frontendTools: [
     FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
@@ -1143,7 +1143,10 @@ export const DEMO_MONITORING_AGENT_SPEC_0_0_1: AgentSpec = {
   enabled: true,
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
   mcpServers: [MCP_SERVER_MAP['tavily:0.0.1']],
-  skills: [toAgentSkillSpec(SKILL_MAP['datalayer-whoami:0.0.1'])],
+  skills: [
+    toAgentSkillSpec(SKILL_MAP['datalayer-whoami:0.0.1']),
+    toAgentSkillSpec(SKILL_MAP['jokes:0.0.1']),
+  ],
   tools: [],
   frontendTools: [
     FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
