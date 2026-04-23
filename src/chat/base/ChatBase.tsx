@@ -420,9 +420,9 @@ function ChatBaseInner({
   showLoadingIndicator = true,
   showErrors = true,
   showInput = true,
-  showModelSelector = false,
-  showToolsMenu = false,
-  showSkillsMenu = false,
+  showModelSelector = true,
+  showToolsMenu = true,
+  showSkillsMenu = true,
   disableInputPrompt = false,
   codemodeEnabled = false,
   initialModel,
@@ -503,7 +503,8 @@ function ChatBaseInner({
       ? (protocolRaw as ProtocolConfig)
       : undefined;
   const configuredAiAgentsBaseUrl = useCoreStore(
-    (s: any) => s.configuration?.aiagentsRunUrl,
+    (s: { configuration?: { aiagentsRunUrl?: string } }) =>
+      s.configuration?.aiagentsRunUrl,
   );
   const activeAgentId = protocolConfig?.agentId || runtimeId;
   const aiAgentsAuthToken = protocolConfig?.authToken;
@@ -811,11 +812,11 @@ function ChatBaseInner({
     return set;
   }, [skillsQuery.data]);
 
-  // Derive approvedSkills from the WS-pushed skill statuses (default: approved).
+  // Derive approvedSkills from the WS-pushed skill statuses (default: not approved).
   const approvedSkills = useMemo(() => {
     const set = new Set<string>();
     for (const s of skillsQuery.data?.skills ?? []) {
-      if (s.approved !== false) {
+      if (s.approved === true) {
         set.add(s.id);
       }
     }
@@ -1313,14 +1314,21 @@ function ChatBaseInner({
   }, [enabledSkills]);
 
   // ---- Load messages from store on mount ----
+  // Only hydrate from the shared ``useChatStore`` when there is no
+  // ``runtimeId`` (pure store mode without server-backed history).  When a
+  // ``runtimeId`` is provided the "Conversation history loading" effect
+  // below is the single source of truth — reading from the shared store
+  // here would otherwise leak messages from a previously-mounted
+  // ``ChatBase`` (e.g. after switching examples) before the store reset
+  // or history fetch completes.
   useEffect(() => {
-    if (useStoreMode) {
+    if (useStoreMode && !runtimeId) {
       const storeMessages = useChatStore.getState().messages;
       if (storeMessages.length > 0) {
         setDisplayItems(storeMessages);
       }
     }
-  }, [useStoreMode]);
+  }, [useStoreMode, runtimeId]);
 
   // ---- Conversation history loading ----
   const prevRuntimeIdRef = useRef<string | undefined>(undefined);
@@ -2536,7 +2544,7 @@ function ChatBaseInner({
         }
       }
     },
-    [displayItems],
+    [displayItems, onApproveApproval, onRejectApproval],
   );
   handleRespondRef.current = handleRespond;
 

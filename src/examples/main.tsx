@@ -433,14 +433,61 @@ export const ExampleApp: React.FC = () => {
       requestAnimationFrame(() => resolve());
     });
 
-    // 2) Wipe every piece of in-process agent state so the next example boots
+    // 2) Tear down any server-side agents created by the previous example.
+    //    Each example caches its agent id in sessionStorage via
+    //    `uniqueAgentId(baseName)` under key `agent-runtimes:agentId:<base>`.
+    //    Delete those agents on the server and drop the cached ids so the
+    //    next example (and a future re-entry into this one) boots fresh.
+    const agentBaseUrl =
+      import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
+    const token = useSimpleAuthStore.getState().token;
+    const agentIdKeys: string[] = [];
+    try {
+      for (let i = 0; i < sessionStorage.length; i++) {
+        const key = sessionStorage.key(i);
+        if (key && key.startsWith('agent-runtimes:agentId:')) {
+          agentIdKeys.push(key);
+        }
+      }
+    } catch {
+      // sessionStorage unavailable; skip teardown.
+    }
+    await Promise.all(
+      agentIdKeys.map(async key => {
+        let agentId: string | null = null;
+        try {
+          agentId = sessionStorage.getItem(key);
+        } catch {
+          /* ignore */
+        }
+        if (!agentId) return;
+        try {
+          await fetch(
+            `${agentBaseUrl}/api/v1/agents/${encodeURIComponent(agentId)}`,
+            {
+              method: 'DELETE',
+              headers: token ? { Authorization: `Bearer ${token}` } : {},
+            },
+          );
+        } catch {
+          // Best-effort teardown: ignore network / 404 errors.
+        }
+        try {
+          sessionStorage.removeItem(key);
+        } catch {
+          /* ignore */
+        }
+      }),
+    );
+
+    // 3) Wipe every piece of in-process agent state so the next example boots
     //    with a clean slate (no leftover messages, threads, pending tool
     //    calls, runtime snapshots, monitoring caches, or sockets).
     useChatStore.getState().reset();
     useConversationStore.getState().clearAll();
     agentRuntimeStore.getState().reset();
 
-    // 3) Drop the persisted slice from localStorage so a fresh example never
+    // 4) Drop the persisted slice from localStorage so a fresh example never
     //    rehydrates a previous example's agents / monitoring cache.
     try {
       localStorage.removeItem('agent-runtimes-storage');
@@ -448,7 +495,7 @@ export const ExampleApp: React.FC = () => {
       // Ignore storage failures (e.g. private mode).
     }
 
-    // 4) Load and mount the new example.
+    // 5) Load and mount the new example.
     setSelectedExample(newExample);
     localStorage.setItem('selectedExample', newExample);
     await loadExample(newExample, serviceManager);
@@ -767,7 +814,7 @@ const ExampleAppThemed: React.FC<{
               <p>Please wait while the example loads.</p>
             </Box>
           ) : ExampleComponent ? (
-            <ExampleWrapper>
+            <ExampleWrapper key={selectedExample}>
               <ExampleComponent key={selectedExample} {...exampleProps} />
             </ExampleWrapper>
           ) : null}

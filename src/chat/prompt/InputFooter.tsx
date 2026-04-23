@@ -161,8 +161,9 @@ export function InputToolbar({
   sandboxStatusData,
 }: InputToolbarProps) {
   // Show token usage when we have valid context data
-  const hasContext =
-    agentUsage && !agentUsage.error && agentUsage.totalTokens > 0;
+  const hasContext = Boolean(
+    agentUsage && !agentUsage.error && agentUsage.totalTokens > 0,
+  );
 
   return (
     <Box>
@@ -202,8 +203,8 @@ export function InputToolbar({
       />
 
       {/* Token usage bar — between input and selectors */}
-      {showTokenUsage && hasContext && (
-        <TokenUsageBar agentUsage={agentUsage!} padding={padding} />
+      {showTokenUsage && hasContext && agentUsage && (
+        <TokenUsageBar agentUsage={agentUsage} padding={padding} />
       )}
 
       {/* Model, Skills, and Tools Footer — Below Input */}
@@ -277,7 +278,7 @@ function ToolsMenu({
   onToggleAllMcpServerTools,
   approvedMcpTools,
   onToggleMcpToolApproval,
-  availableTools,
+  availableTools: _availableTools,
 }: {
   codemodeEnabled: boolean;
   mcpServers: MCPServerConfig[];
@@ -378,10 +379,10 @@ function ToolsMenu({
                       server.tools.map(tool => {
                         const isEnabled = serverTools?.has(tool.name) ?? false;
                         const serverApproved = approvedMcpTools.get(server.id);
-                        // When no approved entry for a server, all tools are approved by default.
+                        // Tools default to NOT approved — user must explicitly
+                        // approve each one (matches the Skills approval UX).
                         const isApproved =
-                          serverApproved === undefined ||
-                          serverApproved.has(tool.name);
+                          serverApproved?.has(tool.name) ?? false;
                         return (
                           <Box
                             key={`${server.id}-${tool.name}`}
@@ -540,7 +541,7 @@ function SkillsMenu({
         >
           <Text sx={{ fontSize: 0 }}>
             Skills
-            {enabledSkills.size > 0 && ` (${enabledSkills.size})`}
+            {skills.length > 0 && ` (${skills.length})`}
           </Text>
         </Button>
       </ActionMenu.Anchor>

@@ -257,7 +257,7 @@ def _seed_agent_skills(agent_id: str | None) -> None:
                 "tags": list(skill.get("tags") or []),
                 "has_scripts": bool(skill.get("has_scripts", False)),
                 "has_resources": bool(skill.get("has_resources", False)),
-                "status": "enabled",
+                "status": "available",
                 "approved": False,
                 "skill_definition": skill.get("skill_definition"),
                 "source_variant": skill.get("source_variant"),
@@ -290,6 +290,17 @@ def get_agent_enabled_skill_ids(agent_id: str | None) -> set[str]:
     return enabled
 
 
+def get_agent_tracked_skill_ids(agent_id: str | None) -> set[str]:
+    """Return all skill IDs tracked for an agent (available + enabled + loaded).
+
+    These are the skills declared by the agent's spec. The guardrail uses
+    this as the "in-scope" set — anything in it is allowed to run pending
+    user approval; anything outside is rejected as unknown.
+    """
+    _seed_agent_skills(agent_id)
+    return set(_SKILLS_BY_AGENT.get(_stream_key(agent_id), {}).keys())
+
+
 def set_agent_enabled_skills(
     agent_id: str | None,
     skill_refs: list[str],
@@ -311,7 +322,7 @@ def set_agent_enabled_skills(
                 "tags": [],
                 "has_scripts": False,
                 "has_resources": False,
-                "status": "enabled",
+                "status": "available",
                 "approved": False,
                 "skill_definition": None,
                 "source_variant": "unknown",
@@ -324,6 +335,8 @@ def set_agent_enabled_skills(
     # Prune the per-agent snapshot to the skills this agent's spec declares.
     # This ensures the UI skills dropdown reflects exactly the skills available
     # to this agent, not the global catalog of all discoverable skills.
+    # Spec-declared skills start as "available" (not enabled) — the user must
+    # explicitly enable each skill from the UI, matching MCP tool behavior.
     if enabled_ids:
         _SKILLS_BY_AGENT[key] = {
             skill_id: entry
@@ -331,7 +344,7 @@ def set_agent_enabled_skills(
             if skill_id in enabled_ids
         }
         for entry in _SKILLS_BY_AGENT[key].values():
-            entry["status"] = "enabled"
+            entry["status"] = "available"
     else:
         # Spec declares no skills: clear the snapshot entirely.
         _SKILLS_BY_AGENT[key] = {}

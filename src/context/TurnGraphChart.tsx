@@ -128,7 +128,11 @@ function spanColor(span: OtelSpan): string {
   const rawType =
     (span.attributes?.['graph.node.type'] as string | undefined) ?? '';
   const nodeType = rawType.toLowerCase();
-  if (nodeType in NODE_COLORS) return NODE_COLORS[nodeType]!;
+  if (nodeType in NODE_COLORS) {
+    return (
+      NODE_COLORS[nodeType as keyof typeof NODE_COLORS] ?? NODE_COLORS.step
+    );
+  }
   if (span.span_name === 'agent.graph.run') return NODE_COLORS.root;
   return NODE_COLORS.step;
 }
@@ -211,10 +215,104 @@ function isGraphSpan(span: OtelSpan): boolean {
 
 // ── ECharts option builder ─────────────────────────────────────────────────
 
+/**
+ * Compute a left-to-right layered DAG layout for the spans.
+ *
+ * Execution traces are strictly hierarchical (parent → child spans), so a
+ * fixed layered layout produces a far cleaner visual than force-directed
+ * relaxation — matching the "Layout: none + manual positions" pattern used
+ * by several ECharts graph examples for DAGs.
+ *
+ * Each span is placed at:
+ *   x = depth * columnWidth
+ *   y = indexWithinLayer * rowHeight - verticalCentre
+ *
+ * Root spans (no parent or parent missing from trace) anchor depth 0.
+ */
+function computeLayout(
+  spans: OtelSpan[],
+): Map<string, { x: number; y: number }> {
+  const spanById = new Map(spans.map(s => [s.span_id, s]));
+  const childrenByParent = new Map<string, string[]>();
+  const roots: string[] = [];
+
+  for (const s of spans) {
+    if (s.parent_span_id && spanById.has(s.parent_span_id)) {
+      const list = childrenByParent.get(s.parent_span_id) ?? [];
+      list.push(s.span_id);
+      childrenByParent.set(s.parent_span_id, list);
+    } else {
+      roots.push(s.span_id);
+    }
+  }
+
+  // Preserve execution order within a layer by sorting children by start time.
+  for (const [parent, kids] of childrenByParent) {
+    kids.sort((a, b) => {
+      const sa = spanById.get(a)?.start_time ?? '';
+      const sb = spanById.get(b)?.start_time ?? '';
+      return sa.localeCompare(sb);
+    });
+    childrenByParent.set(parent, kids);
+  }
+
+  // BFS depth assignment from every root.
+  const depthById = new Map<string, number>();
+  const queue: Array<[string, number]> = roots.map(r => [r, 0]);
+  while (queue.length > 0) {
+    const next = queue.shift();
+    if (!next) break;
+    const [spanId, depth] = next;
+    if (depthById.has(spanId)) continue;
+    depthById.set(spanId, depth);
+    for (const child of childrenByParent.get(spanId) ?? []) {
+      queue.push([child, depth + 1]);
+    }
+  }
+  // Defensive: any span we never reached (orphan) → depth 0.
+  for (const s of spans) {
+    if (!depthById.has(s.span_id)) depthById.set(s.span_id, 0);
+  }
+
+  // Bucket spans by depth.
+  const byDepth = new Map<number, string[]>();
+  for (const [spanId, depth] of depthById) {
+    const list = byDepth.get(depth) ?? [];
+    list.push(spanId);
+    byDepth.set(depth, list);
+  }
+  // Preserve start-time order within each depth layer.
+  for (const [depth, ids] of byDepth) {
+    ids.sort((a, b) => {
+      const sa = spanById.get(a)?.start_time ?? '';
+      const sb = spanById.get(b)?.start_time ?? '';
+      return sa.localeCompare(sb);
+    });
+    byDepth.set(depth, ids);
+  }
+
+  const columnWidth = 180;
+  const rowHeight = 90;
+  const positions = new Map<string, { x: number; y: number }>();
+  for (const [depth, ids] of byDepth) {
+    const count = ids.length;
+    const totalHeight = (count - 1) * rowHeight;
+    const yStart = -totalHeight / 2;
+    ids.forEach((spanId, idx) => {
+      positions.set(spanId, {
+        x: depth * columnWidth,
+        y: yStart + idx * rowHeight,
+      });
+    });
+  }
+  return positions;
+}
+
 function buildOption(run: TraceRun) {
   const { spans } = run;
   const spanById = new Map(spans.map(s => [s.span_id, s]));
   const maxDur = Math.max(...spans.map(s => s.duration_ms ?? 1), 1);
+  const positions = computeLayout(spans);
 
   const nodes = spans.map(s => {
     const isRoot = s.span_name === 'agent.graph.run';
@@ -236,22 +334,32 @@ function buildOption(run: TraceRun) {
     const symbol =
       NODE_SYMBOLS[nodeType.toLowerCase()] ??
       (isRoot ? 'circle' : NODE_SYMBOLS.default);
+    const pos = positions.get(s.span_id) ?? { x: 0, y: 0 };
 
     return {
       id: s.span_id,
       name: label,
+      x: pos.x,
+      y: pos.y,
       symbol,
-      symbolSize: isRoot ? 44 : 20 + Math.round((dur / maxDur) * 28),
+      symbolSize: isRoot ? 44 : 22 + Math.round((dur / maxDur) * 26),
       itemStyle: {
         color: hasError ? NODE_COLORS.error : spanColor(s),
-        borderWidth: isRoot ? 3 : dur > maxDur * 0.5 ? 2 : 0,
-        borderColor: '#e3b341',
+        borderWidth: isRoot ? 3 : dur > maxDur * 0.5 ? 2 : 1,
+        borderColor: hasError ? NODE_COLORS.error : 'rgba(240,246,252,0.25)',
+        shadowBlur: isRoot ? 12 : 4,
+        shadowColor: 'rgba(0,0,0,0.35)',
       },
       label: {
         show: true,
-        fontSize: isRoot ? 12 : 10,
+        position: 'bottom' as const,
+        distance: 8,
+        fontSize: isRoot ? 12 : 11,
         color: '#c9d1d9',
         formatter: label,
+        backgroundColor: 'rgba(13,17,23,0.7)',
+        padding: [2, 6],
+        borderRadius: 3,
       },
       value: dur,
       // Custom tooltip via series-level formatter below.
@@ -273,13 +381,15 @@ function buildOption(run: TraceRun) {
   }> = [];
   for (const s of spans) {
     if (s.parent_span_id && spanById.has(s.parent_span_id)) {
+      const isError = s.status_code === 'ERROR';
       links.push({
         source: s.parent_span_id,
         target: s.span_id,
         lineStyle: {
-          color: s.status_code === 'ERROR' ? NODE_COLORS.error : '#484f58',
-          width: 1.5,
-          curveness: 0.2,
+          color: isError ? NODE_COLORS.error : '#6e7681',
+          width: isError ? 2 : 1.4,
+          curveness: 0.15,
+          opacity: 0.9,
         },
       });
     }
@@ -312,28 +422,28 @@ function buildOption(run: TraceRun) {
     series: [
       {
         type: 'graph',
-        layout: 'force',
+        // Layered DAG: positions are precomputed per-node, so 'none' gives
+        // us a stable, non-jittery layout (mirrors the static DAG samples
+        // in https://echarts.apache.org/examples/en/index.html#chart-type-graph).
+        layout: 'none',
         roam: true,
         draggable: true,
         data: nodes,
         links,
-        force: {
-          repulsion: 200,
-          edgeLength: [70, 150],
-          gravity: 0.12,
-          layoutAnimation: true,
-        },
         edgeSymbol: ['none', 'arrow'] as const,
-        edgeSymbolSize: [0, 8],
-        lineStyle: { opacity: 0.75 },
+        edgeSymbolSize: [0, 9],
+        lineStyle: { opacity: 0.9, curveness: 0.15 },
         emphasis: {
           focus: 'adjacency' as const,
           lineStyle: { width: 3, opacity: 1 },
           label: { show: true },
         },
+        labelLayout: { hideOverlap: true },
+        autoCurveness: true,
+        zoom: 1,
         animation: true,
-        animationDuration: 600,
-        animationEasingUpdate: 'quinticInOut' as const,
+        animationDuration: 400,
+        animationEasingUpdate: 'cubicOut' as const,
       },
     ],
   };

@@ -688,6 +688,14 @@ class SkillsGuardrailCapability(AbstractCapability[Any]):
         except Exception:
             return set()
 
+    def _tracked_skill_ids(self) -> set[str]:
+        try:
+            from agent_runtimes.streams.loop import get_agent_tracked_skill_ids
+
+            return get_agent_tracked_skill_ids(self.agent_id)
+        except Exception:
+            return set()
+
     def _extract_skill_name(self, args: dict[str, Any]) -> str | None:
         for key in ("skill_name", "skill", "name", "skill_id", "id"):
             value = args.get(key)
@@ -706,6 +714,10 @@ class SkillsGuardrailCapability(AbstractCapability[Any]):
     def _is_skill_enabled(self, skill_name: str) -> bool:
         skill_id = skill_name.split(":", 1)[0]
         return skill_id in self._enabled_skill_ids()
+
+    def _is_skill_tracked(self, skill_name: str) -> bool:
+        skill_id = skill_name.split(":", 1)[0]
+        return skill_id in self._tracked_skill_ids()
 
     def _is_skill_approved(self, skill_name: str) -> bool:
         skill_id = skill_name.split(":", 1)[0]
@@ -745,7 +757,6 @@ class SkillsGuardrailCapability(AbstractCapability[Any]):
         if not isinstance(code, str) or not code.strip():
             return
 
-        enabled_skill_ids = self._enabled_skill_ids()
         imported_skills = set(re.findall(r"generated\.skills\.([A-Za-z0-9_\-]+)", code))
 
         # Also catch helper invocation patterns like run_skill_script("name", ...).
@@ -757,24 +768,22 @@ class SkillsGuardrailCapability(AbstractCapability[Any]):
         if not referenced:
             return
 
-        disabled = [
+        unknown = [
             skill
             for skill in sorted(referenced)
-            if not self._is_skill_enabled(skill)
-            and skill.split(":", 1)[0] not in enabled_skill_ids
+            if not self._is_skill_tracked(skill)
         ]
-        if disabled:
+        if unknown:
             raise GuardrailBlockedError(
-                "Disabled skills cannot be used: " + ", ".join(disabled)
+                "Unknown skills cannot be used: " + ", ".join(unknown)
             )
 
         for skill in sorted(referenced):
-            if self._is_skill_enabled(skill):
-                await self._request_skill_approval(
-                    skill,
-                    source_tool="execute_code",
-                    args={"code": code[:1000]},
-                )
+            await self._request_skill_approval(
+                skill,
+                source_tool="execute_code",
+                args={"code": code[:1000]},
+            )
 
     async def before_tool_execute(
         self,
@@ -788,9 +797,9 @@ class SkillsGuardrailCapability(AbstractCapability[Any]):
 
         if tool_name in {"run_skill_script", "load_skill", "read_skill_resource"}:
             skill_name = self._extract_skill_name(args)
-            if skill_name and not self._is_skill_enabled(skill_name):
+            if skill_name and not self._is_skill_tracked(skill_name):
                 raise GuardrailBlockedError(
-                    f"Skill '{skill_name}' is disabled and cannot be executed"
+                    f"Skill '{skill_name}' is not available for this agent"
                 )
             if skill_name:
                 await self._request_skill_approval(

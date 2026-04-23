@@ -777,6 +777,67 @@ DEMO_ONE_TRIGGER_AGENT_SPEC_0_0_1 = AgentSpec(
     subagents=None,
 )
 
+DEMO_OUTPUTS_AGENT_SPEC_0_0_1 = AgentSpec(
+    id="demo-outputs",
+    version="0.0.1",
+    name="Outputs Demo Agent",
+    description="Demonstrates rich output rendering. Ask it to produce a Markdown table, a JSON payload, an ASCII/ECharts chart spec, or a downloadable file — the Outputs panel will auto-switch to the matching tab.",
+    tags=['demo', 'outputs', 'rendering'],
+    enabled=True,
+    model="bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0",
+    mcp_servers=[],
+    skills=['events:0.0.1'],
+    tools=['runtime-echo:0.0.1'],
+    frontend_tools=['jupyter-notebook:0.0.1', 'lexical-document:0.0.1'],
+    environment_name="ai-agents-env",
+    icon="graph",
+    emoji="📤",
+    color="#8B5CF6",
+    suggestions=[
+        'Generate a Markdown table of the top 5 US cities by population, with columns City, State, Population.',
+        'Return a JSON object describing a fictitious product catalog with 3 items (id, name, price, tags).',
+        'Produce a bar chart ECharts spec (JSON) showing monthly sales for Jan–Jun.',
+        'Create a downloadable CSV file with sample sales data for the last 7 days and output it inside a ```csv fenced block named sales.csv.',
+    ],
+    welcome_message="Hi! I render rich outputs. Try one of the suggestions to produce a Markdown table, JSON, a chart spec, or a downloadable file — the side panel will switch to the matching tab automatically. ",
+    welcome_notebook=None,
+    welcome_document=None,
+    sandbox_variant="jupyter",
+    system_prompt="""You are an Outputs Demo Agent. Your job is to showcase rich output rendering. For every user request, pick exactly ONE of the following output formats and produce the content inside a single fenced code block so the UI can detect and render it:
+
+  1. TABLE  — a GitHub-flavored Markdown table (pipe syntax). No fences.
+  2. JSON   — a valid JSON object inside a ```json fenced block.
+  3. CHART  — an ECharts `option` JSON spec inside a ```json fenced
+              block whose first line is `// chart`. Must include
+              `xAxis`, `yAxis`, and `series`.
+  4. FILE   — a downloadable text artifact inside a fenced block whose
+              info string is the file extension (e.g. ```csv,
+              ```md, ```txt). Start the block with a comment line
+              `# filename: <name.ext>` so the UI can label the file.
+
+Always add a 1–2 sentence natural-language preamble before the fenced block (or before the Markdown table). Never mix two output types in a single response. Keep the payloads small (≤ 30 rows / ≤ 2 KB).
+""",
+    system_prompt_codemode_addons=None,
+    goal=None,
+    protocol=None,
+    ui_extension=None,
+    trigger=None,
+    model_configuration=None,
+    mcp_server_tools=None,
+    guardrails=None,
+    evals=None,
+    codemode=None,
+    output=None,
+    advanced=None,
+    authorization_policy=None,
+    notifications=None,
+    memory="ephemeral",
+    pre_hooks=None,
+    post_hooks=None,
+    parameters=None,
+    subagents=None,
+)
+
 DEMO_PARAMETERS_AGENT_SPEC_0_0_1 = AgentSpec(
     id="demo-parameters",
     version="0.0.1",
@@ -1892,6 +1953,7 @@ AGENT_SPECS: Dict[str, AgentSpec] = {
     "demo-monitoring": DEMO_MONITORING_AGENT_SPEC_0_0_1,
     "demo-one-trigger-approval": DEMO_ONE_TRIGGER_APPROVAL_AGENT_SPEC_0_0_1,
     "demo-one-trigger": DEMO_ONE_TRIGGER_AGENT_SPEC_0_0_1,
+    "demo-outputs": DEMO_OUTPUTS_AGENT_SPEC_0_0_1,
     "demo-parameters": DEMO_PARAMETERS_AGENT_SPEC_0_0_1,
     "demo-simple": DEMO_SIMPLE_AGENT_SPEC_0_0_1,
     "demo-subagents": DEMO_SUBAGENTS_AGENT_SPEC_0_0_1,
