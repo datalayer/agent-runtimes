@@ -201,7 +201,7 @@ const isApprovalForAgent = (
     return true;
   }
   if (!approval.agent_id) {
-    return true;
+    return false;
   }
   if (approval.agent_id === activeAgentId) {
     return true;
@@ -521,7 +521,9 @@ function ChatBaseInner({
   const storePendingApprovals: PendingApproval[] = useMemo(() => {
     if (pendingApprovalsProp) return pendingApprovalsProp;
     return storeApprovals
-      .filter(a => a.status === 'pending')
+      .filter(
+        a => a.status === 'pending' && isApprovalForAgent(a, activeAgentId),
+      )
       .map(a => ({
         id: a.id,
         toolName: a.tool_name,
@@ -552,10 +554,13 @@ function ChatBaseInner({
       if (toolName.startsWith('skill:')) {
         const skillRef = toolName.slice('skill:'.length);
         if (!skillRef) return;
-        const ok = agentRuntimeStore.getState().sendRawMessage({
-          type: approved ? 'skill_approve' : 'skill_unapprove',
-          skillId: skillRef,
-        });
+        const ok = agentRuntimeStore.getState().sendRawMessage(
+          {
+            type: approved ? 'skill_approve' : 'skill_unapprove',
+            skillId: skillRef,
+          },
+          activeAgentId,
+        );
         if (!ok) {
           console.warn(
             '[ChatBase] skill_approve persistence dropped: websocket not ready',
@@ -569,12 +574,15 @@ function ChatBaseInner({
       if (sep !== -1) {
         const serverId = toolName.slice(0, sep);
         const toolOnly = toolName.slice(sep + 2);
-        const ok = agentRuntimeStore.getState().sendRawMessage({
-          type: 'mcp_server_tool_approve',
-          serverId,
-          toolName: toolOnly,
-          approved,
-        });
+        const ok = agentRuntimeStore.getState().sendRawMessage(
+          {
+            type: 'mcp_server_tool_approve',
+            serverId,
+            toolName: toolOnly,
+            approved,
+          },
+          activeAgentId,
+        );
         if (!ok) {
           console.warn(
             '[ChatBase] mcp_server_tool_approve persistence dropped: websocket not ready',
@@ -588,31 +596,59 @@ function ChatBaseInner({
   // Built-in approve/reject: send decisions to the runtime WS only.
   // Approval state updates are sourced from the ai-agents WS listener.
   const onApproveApproval = useCallback(
-    async (approvalId: string, note?: string) => {
+    async (approvalId: string, note?: string, toolCallId?: string) => {
       const approval = agentRuntimeStore
         .getState()
         .approvals.find(a => a.id === approvalId);
       // Persist the decision in the tools/skills dropdown BEFORE removing
       // the approval from the store (we need ``tool_name`` to route it).
       persistApprovalDecision(approvalId, true);
-      agentRuntimeStore
+      // Optimistically clear the local pending badge/banner; the backend echo
+      // will reconcile status if needed.
+      agentRuntimeStore.getState().removeApproval(approvalId);
+      const ok = agentRuntimeStore
         .getState()
-        .sendDecision(approvalId, true, note, approval?.tool_call_id);
+        .sendDecision(
+          approvalId,
+          true,
+          note,
+          approval?.tool_call_id ?? toolCallId,
+          activeAgentId,
+        );
+      if (!ok) {
+        console.warn(
+          '[ChatBase] tool_approval_decision dropped: websocket not ready',
+        );
+      }
       await onApproveApprovalProp?.(approvalId, note);
     },
-    [onApproveApprovalProp, persistApprovalDecision],
+    [activeAgentId, onApproveApprovalProp, persistApprovalDecision],
   );
   const onRejectApproval = useCallback(
-    async (approvalId: string, note?: string) => {
+    async (approvalId: string, note?: string, toolCallId?: string) => {
       const approval = agentRuntimeStore
         .getState()
         .approvals.find(a => a.id === approvalId);
-      agentRuntimeStore
+      // Optimistically clear the local pending badge/banner; the backend echo
+      // will reconcile status if needed.
+      agentRuntimeStore.getState().removeApproval(approvalId);
+      const ok = agentRuntimeStore
         .getState()
-        .sendDecision(approvalId, false, note, approval?.tool_call_id);
+        .sendDecision(
+          approvalId,
+          false,
+          note,
+          approval?.tool_call_id ?? toolCallId,
+          activeAgentId,
+        );
+      if (!ok) {
+        console.warn(
+          '[ChatBase] tool_approval_decision dropped: websocket not ready',
+        );
+      }
       await onRejectApprovalProp?.(approvalId, note);
     },
-    [onRejectApprovalProp],
+    [activeAgentId, onRejectApprovalProp],
   );
 
   // Optional ai-agents bridge for server-mode visibility.
@@ -682,13 +718,20 @@ function ChatBaseInner({
         const state = agentRuntimeStore.getState();
         for (const record of records) {
           const approval = normalizeApprovalPayload(record);
-          if (!approval || !isApprovalForAgent(approval, activeAgentId)) {
+          if (!approval) {
             continue;
           }
-          if (approval.status === 'pending') {
-            state.upsertApproval(approval);
+          const scopedApproval: AgentStreamToolApprovalPayload =
+            approval.agent_id || !activeAgentId
+              ? approval
+              : { ...approval, agent_id: activeAgentId };
+          if (!isApprovalForAgent(scopedApproval, activeAgentId)) {
+            continue;
+          }
+          if (scopedApproval.status === 'pending') {
+            state.upsertApproval(scopedApproval);
           } else {
-            state.removeApproval(approval.id);
+            state.removeApproval(scopedApproval.id);
           }
         }
       } catch {
@@ -911,7 +954,7 @@ function ChatBaseInner({
       });
       return true;
     },
-    [],
+    [activeAgentId],
   );
 
   // ---- Agent-runtime WebSocket (monitoring stream) ----
@@ -2337,6 +2380,8 @@ function ChatBaseInner({
           const approved = Boolean(resultRecord.approved);
           const fromServerEcho = resultRecord._fromServerEcho === true;
           const alreadyDispatched = resultRecord._alreadyDispatched === true;
+          const requiresClientContinuation =
+            existingToolCall.status === 'inProgress';
           const rawToolName =
             typeof resultRecord.toolName === 'string'
               ? (resultRecord.toolName as string)
@@ -2372,12 +2417,15 @@ function ChatBaseInner({
 
             // Match AgentToolApprovalsExample semantics: first click sends only
             // a websocket decision; continuation waits for server echo.
-            if (!fromServerEcho) {
+            // Deferred pending-approval calls (`status === 'inProgress'`) still
+            // require an explicit sendToolResult continuation from the client,
+            // so do not return early in that mode.
+            if (!fromServerEcho && !requiresClientContinuation) {
               if (approvalId) {
                 if (approved) {
-                  await onApproveApproval?.(approvalId);
+                  await onApproveApproval?.(approvalId, undefined, toolCallId);
                 } else {
-                  await onRejectApproval?.(approvalId);
+                  await onRejectApproval?.(approvalId, undefined, toolCallId);
                 }
               }
               return;
@@ -2385,16 +2433,16 @@ function ChatBaseInner({
 
             if (approvalId && !alreadyDispatched) {
               if (approved) {
-                await onApproveApproval?.(approvalId);
+                await onApproveApproval?.(approvalId, undefined, toolCallId);
               } else {
-                await onRejectApproval?.(approvalId);
+                await onRejectApproval?.(approvalId, undefined, toolCallId);
               }
             }
 
             // MCP approvals are unblocked server-side by the websocket decision
             // and continue on the same stream. Avoid sending an extra
             // sendToolResult continuation, which can trigger duplicate approvals.
-            if (isMcpApprovalTool) {
+            if (isMcpApprovalTool && !requiresClientContinuation) {
               return;
             }
 

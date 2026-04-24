@@ -915,7 +915,7 @@ export function useAgentRuntimeWebSocket(
       agentRuntimeStore.getState().setWsState('connecting');
 
       const ws = new WebSocket(wsUrl);
-      agentRuntimeStore.getState().setWs(ws);
+      agentRuntimeStore.getState().setWs(ws, agentId);
 
       ws.onopen = () => {
         reconnectAttempts = 0;
@@ -950,7 +950,7 @@ export function useAgentRuntimeWebSocket(
       };
 
       ws.onclose = () => {
-        agentRuntimeStore.getState().setWs(null);
+        agentRuntimeStore.getState().setWs(null, agentId);
         agentRuntimeStore.getState().setWsState('closed');
 
         if (disposed || !autoReconnect) return;
@@ -985,7 +985,7 @@ export function useAgentRuntimeWebSocket(
     return () => {
       disposed = true;
       if (reconnectTimer) clearTimeout(reconnectTimer);
-      agentRuntimeStore.getState().setWs(null);
+      agentRuntimeStore.getState().setWs(null, agentId);
       agentRuntimeStore.getState().resetWs();
     };
   }, [

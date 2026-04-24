@@ -173,7 +173,7 @@ export interface AgentRuntimeStoreActions {
 
   // ─── WebSocket stream ────────────────────────────────────────────
   setWsState: (state: AgentRuntimeWsState) => void;
-  setWs: (ws: WebSocket | null) => void;
+  setWs: (ws: WebSocket | null, agentId?: string) => void;
   applySnapshot: (payload: AgentStreamSnapshotPayload) => void;
   upsertApproval: (approval: AgentStreamToolApprovalPayload) => void;
   removeApproval: (approvalId: string) => void;
@@ -182,9 +182,13 @@ export interface AgentRuntimeStoreActions {
     approved: boolean,
     note?: string,
     toolCallId?: string,
+    agentId?: string,
   ) => boolean;
-  requestRefresh: () => boolean;
-  sendRawMessage: (payload: Record<string, unknown>) => boolean;
+  requestRefresh: (agentId?: string) => boolean;
+  sendRawMessage: (
+    payload: Record<string, unknown>,
+    agentId?: string,
+  ) => boolean;
   appendLocalTokenTurn: (params: {
     serviceName?: string;
     agentId?: string;
@@ -336,6 +340,20 @@ const initialWsState: Pick<
 
 /** Internal ref kept outside React to avoid re-renders on WS assignment. */
 let _ws: WebSocket | null = null;
+const _wsByAgentId = new Map<string, WebSocket>();
+
+function _resolveWs(agentId?: string): WebSocket | null {
+  if (agentId) {
+    const wsForAgent = _wsByAgentId.get(agentId);
+    if (wsForAgent && wsForAgent.readyState === WebSocket.OPEN) {
+      return wsForAgent;
+    }
+  }
+  if (_ws && _ws.readyState === WebSocket.OPEN) {
+    return _ws;
+  }
+  return null;
+}
 
 export const agentRuntimeStore = createStore<AgentRuntimeStore>()(
   subscribeWithSelector(
@@ -559,8 +577,15 @@ export const agentRuntimeStore = createStore<AgentRuntimeStore>()(
 
         setWsState: wsState => set({ wsState }),
 
-        setWs: ws => {
+        setWs: (ws, agentId) => {
           _ws = ws;
+          if (agentId) {
+            if (ws) {
+              _wsByAgentId.set(agentId, ws);
+            } else {
+              _wsByAgentId.delete(agentId);
+            }
+          }
         },
 
         applySnapshot: payload =>
@@ -588,11 +613,12 @@ export const agentRuntimeStore = createStore<AgentRuntimeStore>()(
             return { approvals, pendingApprovalCount: approvals.length };
           }),
 
-        sendDecision: (approvalId, approved, note, toolCallId) => {
-          if (!_ws || _ws.readyState !== WebSocket.OPEN) {
+        sendDecision: (approvalId, approved, note, toolCallId, agentId) => {
+          const targetWs = _resolveWs(agentId);
+          if (!targetWs) {
             return false;
           }
-          _ws.send(
+          targetWs.send(
             JSON.stringify({
               type: 'tool_approval_decision',
               approvalId,
@@ -604,20 +630,25 @@ export const agentRuntimeStore = createStore<AgentRuntimeStore>()(
           return true;
         },
 
-        requestRefresh: () => {
-          if (!_ws || _ws.readyState !== WebSocket.OPEN) {
+        requestRefresh: agentId => {
+          const targetWs = _resolveWs(agentId);
+          if (!targetWs) {
             return false;
           }
-          _ws.send(JSON.stringify({ type: 'request_snapshot' }));
-          _ws.send(JSON.stringify({ type: 'request_otel_flush' }));
+          targetWs.send(JSON.stringify({ type: 'request_snapshot' }));
+          targetWs.send(JSON.stringify({ type: 'request_otel_flush' }));
           return true;
         },
 
-        sendRawMessage: (payload: Record<string, unknown>) => {
-          if (!_ws || _ws.readyState !== WebSocket.OPEN) {
+        sendRawMessage: (
+          payload: Record<string, unknown>,
+          agentId?: string,
+        ) => {
+          const targetWs = _resolveWs(agentId);
+          if (!targetWs) {
             return false;
           }
-          _ws.send(JSON.stringify(payload));
+          targetWs.send(JSON.stringify(payload));
           return true;
         },
 
@@ -882,6 +913,7 @@ export const agentRuntimeStore = createStore<AgentRuntimeStore>()(
             }
           }
           _ws = null;
+          _wsByAgentId.clear();
           set({ ...initialRuntimeState, ...initialWsState });
         },
 
@@ -894,6 +926,7 @@ export const agentRuntimeStore = createStore<AgentRuntimeStore>()(
             }
           }
           _ws = null;
+          _wsByAgentId.clear();
           set(initialWsState);
         },
       }),

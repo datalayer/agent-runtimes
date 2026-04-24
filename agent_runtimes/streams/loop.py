@@ -862,6 +862,15 @@ async def stream_loop(
                                 if isinstance(approval_id, str) and isinstance(
                                     approved, bool
                                 ):
+                                    logger.info(
+                                        "[ws:tool_approval_decision] agent_id=%s approval_id=%s approved=%s tool_call_id=%s",
+                                        agent_id,
+                                        approval_id,
+                                        approved,
+                                        tool_call_id
+                                        if isinstance(tool_call_id, str)
+                                        else None,
+                                    )
                                     await decide_approval(
                                         approval_id,
                                         approved,
@@ -869,6 +878,13 @@ async def stream_loop(
                                         tool_call_id
                                         if isinstance(tool_call_id, str)
                                         else None,
+                                    )
+                                else:
+                                    logger.warning(
+                                        "[ws:tool_approval_decision] dropped invalid payload agent_id=%s approval_id=%r approved=%r",
+                                        agent_id,
+                                        approval_id,
+                                        approved,
                                     )
 
                             elif (
@@ -966,7 +982,12 @@ async def stream_loop(
                                     )
 
                     except Exception as exc:
-                        logger.debug("[ws:recv] ignored client message error: %s", exc)
+                        logger.warning(
+                            "[ws:recv] client message handling error agent_id=%s: %s",
+                            agent_id,
+                            exc,
+                            exc_info=True,
+                        )
 
                 if msg_task in done:
                     message = msg_task.result()
