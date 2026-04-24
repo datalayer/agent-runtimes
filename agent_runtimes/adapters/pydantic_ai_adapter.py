@@ -323,14 +323,15 @@ class PydanticAIAdapter(BaseAgent):
                 server_id = getattr(selection, "id", None)
                 if not server_id:
                     continue
-                if server_id in lifecycle_manager._starting_servers:
-                    logger.info(
-                        f"PydanticAIAdapter [{self._name}]: MCP server '{server_id}' is starting, waiting..."
-                    )
-                    ready = await lifecycle_manager.wait_until_ready(server_id, timeout=30.0)
-                    logger.info(
-                        f"PydanticAIAdapter [{self._name}]: '{server_id}' wait complete, ready={ready}"
-                    )
+                logger.info(
+                    f"PydanticAIAdapter [{self._name}]: ensuring MCP server '{server_id}' readiness"
+                )
+                ready = await lifecycle_manager.wait_until_ready(
+                    server_id, timeout=30.0
+                )
+                logger.info(
+                    f"PydanticAIAdapter [{self._name}]: '{server_id}' readiness check complete, ready={ready}"
+                )
 
         return self._get_runtime_toolsets()
 

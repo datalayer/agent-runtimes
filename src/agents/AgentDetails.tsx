@@ -1533,8 +1533,8 @@ export function AgentDetails({
                 {/* No skills available message */}
                 {codemodeStatus.available_skills.length === 0 && (
                   <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
-                    Codemode is disabled. You can still use the MCP Tools
-                    defining MCP Servers
+                    No CodeMode skills are available for this agent. You can
+                    still use MCP tools by selecting MCP servers.
                   </Text>
                 )}
               </Box>

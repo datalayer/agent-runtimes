@@ -643,7 +643,8 @@ class MCPLifecycleManager:
         Returns:
             True if the server is now running, False if it failed or timed out.
         """
-        deadline = asyncio.get_event_loop().time() + timeout
+        loop = asyncio.get_running_loop()
+        deadline = loop.time() + timeout
         poll_interval = 0.1
 
         while True:
@@ -669,7 +670,7 @@ class MCPLifecycleManager:
                 return False
 
             # Timeout?
-            remaining = deadline - asyncio.get_event_loop().time()
+            remaining = deadline - loop.time()
             if remaining <= 0:
                 logger.warning(
                     f"wait_until_ready: timed out waiting for '{server_id}' after {timeout}s"

@@ -26,6 +26,7 @@ Lifecycle:
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import logging
 from typing import Any
@@ -40,6 +41,11 @@ _REFCOUNTS: dict[str, int] = {}
 # Reverse map: remote (ai-agents) approval id → local approval id.
 # Populated by ``register_remote_approval_mapping``.
 _REMOTE_TO_LOCAL: dict[str, str] = {}
+
+
+def _jwt_fingerprint(jwt: str) -> str:
+    """Return a stable, non-reversible key for indexing listener state."""
+    return hashlib.sha256(jwt.encode("utf-8")).hexdigest()
 
 
 def register_remote_to_local(remote_id: str, local_id: str) -> None:
@@ -251,15 +257,17 @@ async def ensure_listener(jwt: str) -> None:
     """Increment refcount for *jwt* and start a listener task if absent."""
     if not jwt:
         return
+    key = _jwt_fingerprint(jwt)
     async with _LOCK:
-        _REFCOUNTS[jwt] = _REFCOUNTS.get(jwt, 0) + 1
-        if jwt not in _TASKS or _TASKS[jwt].done():
+        _REFCOUNTS[key] = _REFCOUNTS.get(key, 0) + 1
+        if key not in _TASKS or _TASKS[key].done():
             loop = asyncio.get_running_loop()
-            _TASKS[jwt] = loop.create_task(_run_listener(jwt))
+            _TASKS[key] = loop.create_task(_run_listener(jwt))
             logger.info(
                 "[tool-approval:listener] Started persistent listener task "
-                "(refcount=%d)",
-                _REFCOUNTS[jwt],
+                "(key=%s, refcount=%d)",
+                key[:12],
+                _REFCOUNTS[key],
             )
 
 
@@ -267,13 +275,14 @@ async def release_listener(jwt: str) -> None:
     """Decrement refcount; cancel the listener when no approvals remain."""
     if not jwt:
         return
+    key = _jwt_fingerprint(jwt)
     async with _LOCK:
-        count = _REFCOUNTS.get(jwt, 0) - 1
+        count = _REFCOUNTS.get(key, 0) - 1
         if count > 0:
-            _REFCOUNTS[jwt] = count
+            _REFCOUNTS[key] = count
             return
-        _REFCOUNTS.pop(jwt, None)
-        task = _TASKS.pop(jwt, None)
+        _REFCOUNTS.pop(key, None)
+        task = _TASKS.pop(key, None)
     if task is not None and not task.done():
         task.cancel()
         try:

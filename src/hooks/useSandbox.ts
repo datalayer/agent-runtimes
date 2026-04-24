@@ -7,6 +7,15 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { getApiBaseFromConfig } from '../utils';
 import type { SandboxStatusData } from '../types/context';
 
+const RECONNECT_BASE_MS = 1000;
+const RECONNECT_MAX_MS = 30000;
+
+function isRetryableCloseCode(code: number): boolean {
+  // Avoid reconnect loops for policy/auth/protocol closures.
+  const nonRetryable = new Set([1002, 1003, 1007, 1008, 4401, 4403]);
+  return !nonRetryable.has(code);
+}
+
 /**
  * Subscribe to the sandbox execution status via the
  * `/api/v1/configure/sandbox/ws` WebSocket.
@@ -58,11 +67,26 @@ export function useSandbox(
 
     let disposed = false;
     let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
+    let reconnectAttempts = 0;
+
+    const scheduleReconnect = (code: number) => {
+      if (disposed || !isRetryableCloseCode(code)) return;
+      const delay = Math.min(
+        RECONNECT_BASE_MS * 2 ** reconnectAttempts,
+        RECONNECT_MAX_MS,
+      );
+      reconnectAttempts += 1;
+      reconnectTimer = setTimeout(connect, delay);
+    };
 
     const connect = () => {
       if (disposed) return;
       const ws = new WebSocket(url);
       wsRef.current = ws;
+
+      ws.onopen = () => {
+        reconnectAttempts = 0;
+      };
 
       ws.onmessage = event => {
         try {
@@ -80,11 +104,9 @@ export function useSandbox(
         }
       };
 
-      ws.onclose = () => {
+      ws.onclose = event => {
         wsRef.current = null;
-        if (!disposed) {
-          reconnectTimer = setTimeout(connect, 3000);
-        }
+        scheduleReconnect(event.code);
       };
 
       ws.onerror = () => {

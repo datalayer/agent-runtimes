@@ -12,6 +12,7 @@ executes it with a configurable input message.
 from __future__ import annotations
 
 import asyncio
+import importlib
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -164,7 +165,8 @@ class CronTrigger:
     async def _run_fallback_schedule(self) -> None:
         """Fallback: simple asyncio loop with croniter for scheduling."""
         try:
-            from croniter import croniter  # type: ignore[import-untyped]
+            croniter_module = importlib.import_module("croniter")
+            croniter = getattr(croniter_module, "croniter")
         except ImportError:
             logger.error(
                 "Neither DBOS nor croniter is available. "

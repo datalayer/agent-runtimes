@@ -486,6 +486,7 @@ def build_codemode_status(agent_id: str | None = None) -> dict[str, Any] | None:
                         break
                 except Exception:
                     pass
+        sandbox_status = _get_sandbox_status()
         skills_snapshot = get_agent_skills_snapshot(agent_id)
 
         return {
