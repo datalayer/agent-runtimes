@@ -360,6 +360,12 @@ def create_codemode_toolset(
         if effective_variant:
             config_kwargs["sandbox_variant"] = effective_variant
 
+        # When discovery tools are disabled, treat this as sandbox-only mode
+        # and prevent the executor from materializing ``generated/`` bindings
+        # or extending the sandbox ``sys.path``.
+        if not enable_discovery_tools:
+            config_kwargs["setup_generated_modules"] = False
+
         codemode_config = CodeModeConfig(**config_kwargs)
 
         logger.info(

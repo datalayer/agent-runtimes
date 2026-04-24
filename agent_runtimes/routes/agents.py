@@ -1553,24 +1553,27 @@ async def create_agent(
                 len(get_agent_enabled_skill_ids(agent_id)),
             )
 
-        # Add codemode/sandbox toolset.
-        # - enable_codemode=True  → full toolset: execute_code + MCP discovery tools
-        # - sandbox_variant set only → sandbox-only toolset: execute_code only
-        if request.enable_codemode or request.sandbox_variant:
-            disable_mcp_for_codemode = not request.enable_codemode or (
+        # Add codemode toolset ONLY when codemode is explicitly enabled.
+        # When only ``sandbox_variant`` is set (no codemode), the shared
+        # sandbox still exists for lifecycle/status purposes, but we do NOT
+        # attach any CodemodeToolset — the agent gets zero sandbox-related
+        # tools (no ``execute_code``, no ``list_tool_names``, no
+        # ``search_tools``, no ``get_tool_details``, no ``list_servers``,
+        # no ``call_tool``). The agent must use only the raw MCP tools
+        # exposed by its configured MCP servers.
+        if request.enable_codemode:
+            disable_mcp_for_codemode = (
                 selected_mcp_servers_explicit and len(request.selected_mcp_servers) == 0
             )
-            # Only load MCP servers when codemode discovery is active.
-            if request.enable_codemode:
-                mcp_manager = get_mcp_manager()
-                if not disable_mcp_for_codemode and not mcp_manager.get_servers():
-                    mcp_servers = await initialize_config_mcp_servers(
-                        discover_tools=True
-                    )
-                    mcp_manager.load_servers(mcp_servers)
-                    logger.info(
-                        f"Loaded {len(mcp_servers)} MCP servers for codemode agent {agent_id}"
-                    )
+            mcp_manager = get_mcp_manager()
+            if not disable_mcp_for_codemode and not mcp_manager.get_servers():
+                mcp_servers = await initialize_config_mcp_servers(
+                    discover_tools=True
+                )
+                mcp_manager.load_servers(mcp_servers)
+                logger.info(
+                    f"Loaded {len(mcp_servers)} MCP servers for codemode agent {agent_id}"
+                )
             codemode_toolset = _build_codemode_toolset(
                 request,
                 http_request,
@@ -1578,7 +1581,7 @@ async def create_agent(
                 sandbox=shared_sandbox,
                 disable_mcp_servers=disable_mcp_for_codemode,
                 sandbox_variant=effective_variant,
-                enable_discovery_tools=request.enable_codemode,
+                enable_discovery_tools=True,
             )
             if codemode_toolset is not None:
                 await initialize_codemode_toolset(codemode_toolset)
