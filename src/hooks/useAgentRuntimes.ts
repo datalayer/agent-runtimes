@@ -31,7 +31,6 @@ import {
 import {
   parseAgentStreamMessage,
   type AgentStreamSnapshotPayload,
-  type AgentStreamToolApprovalPayload,
 } from '../types/stream';
 import { DEFAULT_AGENT_CONFIG } from '../types/config';
 import type { AgentConfig } from '../types/config';
@@ -946,25 +945,6 @@ export function useAgentRuntimeWebSocket(
           state.applySnapshot(
             parsed.payload as unknown as AgentStreamSnapshotPayload,
           );
-          return;
-        }
-
-        if (parsed.type === 'tool_approval_created') {
-          const approval =
-            parsed.payload as unknown as AgentStreamToolApprovalPayload;
-          if (approval.status === 'pending') {
-            state.upsertApproval(approval);
-          }
-          return;
-        }
-
-        if (
-          parsed.type === 'tool_approval_approved' ||
-          parsed.type === 'tool_approval_rejected'
-        ) {
-          const approval =
-            parsed.payload as unknown as AgentStreamToolApprovalPayload;
-          state.removeApproval(approval.id);
           return;
         }
       };

@@ -585,26 +585,14 @@ function ChatBaseInner({
     [],
   );
 
-  // Built-in approve/reject: use store sendDecision + removeApproval, then
-  // forward to the parent callback (if provided) for ai-agents WS bridging.
+  // Built-in approve/reject: send decisions to the runtime WS only.
+  // Approval state updates are sourced from the ai-agents WS listener.
   const onApproveApproval = useCallback(
     async (approvalId: string, note?: string) => {
       // Persist the decision in the tools/skills dropdown BEFORE removing
       // the approval from the store (we need ``tool_name`` to route it).
       persistApprovalDecision(approvalId, true);
       agentRuntimeStore.getState().sendDecision(approvalId, true, note);
-      const aiWs = aiAgentsApprovalWsRef.current;
-      if (aiWs && aiWs.readyState === WebSocket.OPEN) {
-        aiWs.send(
-          JSON.stringify({
-            type: 'tool_approval_decision',
-            approvalId,
-            approved: true,
-            ...(note ? { note } : {}),
-          }),
-        );
-      }
-      agentRuntimeStore.getState().removeApproval(approvalId);
       await onApproveApprovalProp?.(approvalId, note);
     },
     [onApproveApprovalProp, persistApprovalDecision],
@@ -612,18 +600,6 @@ function ChatBaseInner({
   const onRejectApproval = useCallback(
     async (approvalId: string, note?: string) => {
       agentRuntimeStore.getState().sendDecision(approvalId, false, note);
-      const aiWs = aiAgentsApprovalWsRef.current;
-      if (aiWs && aiWs.readyState === WebSocket.OPEN) {
-        aiWs.send(
-          JSON.stringify({
-            type: 'tool_approval_decision',
-            approvalId,
-            approved: false,
-            ...(note ? { note } : {}),
-          }),
-        );
-      }
-      agentRuntimeStore.getState().removeApproval(approvalId);
       await onRejectApprovalProp?.(approvalId, note);
     },
     [onRejectApprovalProp],

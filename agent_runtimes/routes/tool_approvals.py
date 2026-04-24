@@ -42,15 +42,17 @@ async def _decide_approval_via_ws(
     approved: bool,
     note: str | None = None,
 ) -> ToolApprovalRecord:
+    resolved_approval_id = _resolve_local_approval_id(approval_id)
     return await _update_approval(
-        approval_id,
+        resolved_approval_id,
         status="approved" if approved else "rejected",
         note=note,
     )
 
 
 async def _delete_approval_via_ws(approval_id: str) -> ToolApprovalRecord:
-    return await _delete_approval(approval_id)
+    resolved_approval_id = _resolve_local_approval_id(approval_id)
+    return await _delete_approval(resolved_approval_id)
 
 
 class ToolApprovalCreateRequest(BaseModel):
@@ -100,6 +102,21 @@ _REMOTE_APPROVAL_REGISTRY: dict[str, tuple[str, str]] = {}
 # (SaaS UI, other participants) always see the outcome, regardless of
 # which surface made the decision.
 _APPROVAL_CREDENTIALS: dict[str, str] = {}
+
+
+def _resolve_local_approval_id(approval_id: str) -> str:
+    """Resolve a decision/delete id to the local approval id.
+
+    The frontend may send either the local runtime approval id or the
+    ai-agents remote id (when approval state is sourced from ai-agents WS).
+    """
+    if approval_id in _APPROVALS:
+        return approval_id
+    for local_id, entry in _REMOTE_APPROVAL_REGISTRY.items():
+        remote_id = entry[0]
+        if remote_id == approval_id:
+            return local_id
+    return approval_id
 
 
 def register_remote_approval_mapping(

@@ -178,6 +178,8 @@ async def _wrap_streaming_body_with_approvals(
         ToolApprovalCreateRequest,
         _create_approval,
         mirror_approval_to_local,
+        register_approval_credentials,
+        register_remote_approval_mapping,
     )
 
     # Build name variants for matching (underscore / hyphen normalisation).
@@ -194,17 +196,18 @@ async def _wrap_streaming_body_with_approvals(
             approval_names.add(name.replace("_", "-"))
     created_tool_call_ids: set[str] = set()
     remote_created_tool_call_ids: set[str] = set()
+    remote_approval_ids_by_tool_call_id: dict[str, str] = {}
 
     async def create_remote_approval_if_possible(
         *,
         tool_name: str,
         tool_args: dict[str, Any],
         tool_call_id: str,
-    ) -> None:
+    ) -> str | None:
         if not user_jwt_token or not tool_call_id:
-            return
+            return None
         if tool_call_id in remote_created_tool_call_ids:
-            return
+            return remote_approval_ids_by_tool_call_id.get(tool_call_id)
         try:
             from datalayer_core.utils.urls import DatalayerURLs
 
@@ -226,18 +229,36 @@ async def _wrap_streaming_body_with_approvals(
                     },
                 )
                 resp.raise_for_status()
+                payload = resp.json() if resp.content else None
+
+            remote_approval_id: str | None = None
+            if isinstance(payload, dict):
+                candidate = (
+                    payload.get("id")
+                    or payload.get("uid")
+                    or (payload.get("data") or {}).get("id")
+                    or (payload.get("data") or {}).get("uid")
+                )
+                if isinstance(candidate, str) and candidate:
+                    remote_approval_id = candidate
+
             remote_created_tool_call_ids.add(tool_call_id)
+            if remote_approval_id:
+                remote_approval_ids_by_tool_call_id[tool_call_id] = remote_approval_id
             logger.info(
-                "[Vercel AI] Created remote ai-agents approval for tool_call_id=%s tool='%s'",
+                "[Vercel AI] Created remote ai-agents approval for tool_call_id=%s tool='%s' remote_id=%s",
                 tool_call_id,
                 tool_name,
+                remote_approval_id,
             )
+            return remote_approval_id
         except Exception as remote_err:
             logger.debug(
                 "[Vercel AI] Could not create remote ai-agents approval for tool_call_id=%s: %s",
                 tool_call_id,
                 remote_err,
             )
+            return None
 
     try:
         async for chunk in body_iterator:
@@ -289,8 +310,9 @@ async def _wrap_streaming_body_with_approvals(
 
                         # Best-effort remote sync so server-mode panels backed by
                         # ai-agents can display pending approvals.
+                        remote_approval_id: str | None = None
                         if tool_call_id:
-                            await create_remote_approval_if_possible(
+                            remote_approval_id = await create_remote_approval_if_possible(
                                 tool_name=tool_name,
                                 tool_args=normalized_tool_args,
                                 tool_call_id=tool_call_id,
@@ -301,6 +323,11 @@ async def _wrap_streaming_body_with_approvals(
                         approval_id = (
                             event.get("approvalId") or event.get("approval_id") or ""
                         )
+                        if (
+                            (not isinstance(approval_id, str) or not approval_id)
+                            and remote_approval_id
+                        ):
+                            approval_id = remote_approval_id
                         if isinstance(approval_id, str) and approval_id:
                             record = await mirror_approval_to_local(
                                 {
@@ -320,6 +347,22 @@ async def _wrap_streaming_body_with_approvals(
                                 tool_call_id=tool_call_id or None,
                             )
                             record = await _create_approval(req)
+
+                        # Keep JWT + mapping registrations aligned across all
+                        # approval creation paths so runtime decisions can
+                        # always be relayed and mirrored with ai-agents.
+                        if user_jwt_token:
+                            register_approval_credentials(record.id, user_jwt_token)
+                        if (
+                            remote_approval_id
+                            and user_jwt_token
+                            and remote_approval_id != record.id
+                        ):
+                            register_remote_approval_mapping(
+                                record.id,
+                                remote_approval_id,
+                                user_jwt_token,
+                            )
                         if tool_call_id:
                             created_tool_call_ids.add(tool_call_id)
                         logger.info(

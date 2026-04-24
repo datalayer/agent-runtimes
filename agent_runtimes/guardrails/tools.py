@@ -16,13 +16,11 @@ provides:
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 import re
 from datetime import datetime, timezone
 from dataclasses import dataclass, field
 from typing import Any
-from urllib.parse import urlencode
 
 from pydantic_ai import RunContext
 from pydantic_ai.capabilities import AbstractCapability
@@ -175,186 +173,6 @@ class ToolApprovalManager:
 
     def __init__(self, config: ToolApprovalConfig):
         self.config = config
-
-    def _resolve_ai_agents_ws_url(self, base_url: str, token: str | None = None) -> str:
-        """Resolve ai-agents websocket URL from an HTTP(S) base URL."""
-        stripped = base_url.rstrip("/")
-        suffix = "/api/ai-agents/v1"
-        if stripped.endswith(suffix):
-            stripped = stripped[: -len(suffix)]
-
-        if stripped.startswith("https://"):
-            ws_base = "wss://" + stripped[len("https://") :]
-        elif stripped.startswith("http://"):
-            ws_base = "ws://" + stripped[len("http://") :]
-        elif stripped.startswith("wss://") or stripped.startswith("ws://"):
-            ws_base = stripped
-        else:
-            ws_base = "wss://" + stripped
-
-        params = {}
-        if token:
-            params["token"] = token
-        if self_agent_id := (self.config.agent_id or "").strip():
-            params["agent_id"] = self_agent_id
-
-        query = f"?{urlencode(params)}" if params else ""
-        return f"{ws_base}/api/ai-agents/v1/ws{query}"
-
-    async def _bridge_remote_decision_from_ai_agents(
-        self,
-        *,
-        approval_id: str,
-        remote_approval_id: str | None,
-        tool_call_id: str | None,
-        user_jwt_token: str | None = None,
-    ) -> None:
-        """Listen for remote approval decisions and mirror them locally.
-
-        This allows request_and_wait() to resume when approvals are actioned
-        from the datalayer-ai-agents UI rather than the local runtime socket.
-        """
-        token = user_jwt_token or self.config.user_jwt_token
-        if not token:
-            return
-
-        try:
-            from datalayer_core.utils.urls import DatalayerURLs
-            from websockets.asyncio.client import connect as ws_connect
-
-            from agent_runtimes.routes.tool_approvals import (
-                update_local_approval_status,
-            )
-
-            urls = DatalayerURLs.from_environment()
-            ai_agents_url = getattr(urls, "ai_agents_url", None)
-            if not ai_agents_url:
-                return
-
-            ws_url = self._resolve_ai_agents_ws_url(
-                str(ai_agents_url), token
-            )
-            logger.info(
-                "[tool-approval:bridge] Connecting to ai-agents WS for approval_id=%s "
-                "remote_approval_id=%s tool_call_id=%s",
-                approval_id,
-                remote_approval_id,
-                tool_call_id,
-            )
-            async with ws_connect(ws_url, close_timeout=10.0) as websocket:
-                logger.info(
-                    "[tool-approval:bridge] Connected to ai-agents WS, waiting for decision on approval_id=%s",
-                    approval_id,
-                )
-                # Prime with a full snapshot in case approval already happened.
-                await websocket.send(json.dumps({"type": "tool-approvals-history"}))
-
-                while True:
-                    raw_message = await websocket.recv()
-                    if not isinstance(raw_message, str):
-                        continue
-
-                    payload: dict[str, Any] | None = None
-                    try:
-                        parsed_payload = json.loads(raw_message)
-                    except json.JSONDecodeError:
-                        logger.debug(
-                            "[tool-approval:bridge] Ignoring non-JSON websocket message"
-                        )
-                    else:
-                        if isinstance(parsed_payload, dict):
-                            payload = parsed_payload
-
-                    if payload is None:
-                        continue
-
-                    msg_type = payload.get("type")
-                    msg_event = payload.get("event")
-
-                    records: list[dict[str, Any]] = []
-                    if msg_type == "tool-approvals-history":
-                        data = payload.get("data") or {}
-                        approvals = data.get("approvals")
-                        if isinstance(approvals, list):
-                            records = [r for r in approvals if isinstance(r, dict)]
-                    elif isinstance(msg_event, str) and msg_event.startswith(
-                        "tool_approval_"
-                    ):
-                        data = payload.get("data") or payload.get("payload")
-                        if isinstance(data, dict):
-                            records = [data]
-
-                    if not records:
-                        continue
-
-                    for record in records:
-                        record_id = record.get("id")
-                        record_tool_call_id = record.get("tool_call_id") or record.get(
-                            "toolCallId"
-                        )
-                        status = str(record.get("status") or "").lower()
-                        note = record.get("note")
-                        note_value = note if isinstance(note, str) else None
-
-                        matched_by_local_id = (
-                            isinstance(record_id, str) and record_id == approval_id
-                        )
-                        matched_by_remote_id = (
-                            isinstance(record_id, str)
-                            and isinstance(remote_approval_id, str)
-                            and remote_approval_id
-                            and record_id == remote_approval_id
-                        )
-                        matched_by_tool_call = (
-                            isinstance(record_tool_call_id, str)
-                            and isinstance(tool_call_id, str)
-                            and tool_call_id
-                            and record_tool_call_id == tool_call_id
-                        )
-                        if not (
-                            matched_by_local_id
-                            or matched_by_remote_id
-                            or matched_by_tool_call
-                        ):
-                            continue
-
-                        if status == "approved":
-                            await update_local_approval_status(
-                                approval_id,
-                                status="approved",
-                                note=note_value,
-                            )
-                            logger.info(
-                                "[tool-approval:bridge] Mirrored remote APPROVED decision "
-                                "for approval_id=%s remote_approval_id=%s tool_call_id=%s",
-                                approval_id,
-                                remote_approval_id,
-                                tool_call_id,
-                            )
-                            return
-
-                        if status == "rejected":
-                            await update_local_approval_status(
-                                approval_id,
-                                status="rejected",
-                                note=note_value,
-                            )
-                            logger.info(
-                                "[tool-approval:bridge] Mirrored remote REJECTED decision "
-                                "for approval_id=%s remote_approval_id=%s tool_call_id=%s",
-                                approval_id,
-                                remote_approval_id,
-                                tool_call_id,
-                            )
-                            return
-        except asyncio.CancelledError:
-            raise
-        except Exception as exc:
-            logger.warning(
-                "[tool-approval:bridge] Remote ai-agents bridge stopped for approval_id=%s: %s",
-                approval_id,
-                exc,
-            )
 
     async def close(self) -> None:
         """Compatibility no-op for adapter cleanup paths.
@@ -515,16 +333,6 @@ class ToolApprovalManager:
                     approval_id, remote_approval_id, effective_user_jwt
                 )
 
-        remote_bridge_task: asyncio.Task[None] | None = None
-        if effective_user_jwt:
-            remote_bridge_task = asyncio.create_task(
-                self._bridge_remote_decision_from_ai_agents(
-                    approval_id=approval_id,
-                    remote_approval_id=remote_approval_id,
-                    tool_call_id=tool_call_id,
-                    user_jwt_token=effective_user_jwt,
-                )
-            )
         logger.info(
             "Waiting for human approval of tool '%s' (approval_id=%s, timeout=%ss)",
             tool_name,
@@ -538,12 +346,6 @@ class ToolApprovalManager:
                 f"Approval for tool '{tool_name}' timed out after {self.config.timeout}s"
             )
         finally:
-            if remote_bridge_task is not None:
-                remote_bridge_task.cancel()
-                try:
-                    await remote_bridge_task
-                except asyncio.CancelledError:
-                    pass
             remove_pending_approval_event(approval_id)
 
         if result.get("approved"):

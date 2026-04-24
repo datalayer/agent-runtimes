@@ -563,15 +563,16 @@ export const agentRuntimeStore = createStore<AgentRuntimeStore>()(
         },
 
         applySnapshot: payload =>
-          set({
-            approvals: payload.approvals ?? [],
-            pendingApprovalCount: payload.pendingApprovalCount ?? 0,
+          set(state => ({
+            // Tool-approval list/count are sourced from ai-agents WS only.
+            approvals: state.approvals,
+            pendingApprovalCount: state.pendingApprovalCount,
             contextSnapshot: payload.contextSnapshot ?? null,
             costUsage: payload.costUsage ?? null,
             mcpStatus: payload.mcpStatus ?? null,
             codemodeStatus: payload.codemodeStatus ?? null,
             fullContext: payload.fullContext ?? null,
-          }),
+          })),
 
         upsertApproval: approval =>
           set(state => {
