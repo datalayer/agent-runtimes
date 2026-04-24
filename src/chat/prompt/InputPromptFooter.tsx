@@ -65,6 +65,7 @@ export function InputPromptFooter({
             aria-label="Stop"
             onClick={onStop}
             size="small"
+            variant="invisible"
           />
         ) : (
           <IconButton
@@ -73,6 +74,7 @@ export function InputPromptFooter({
             onClick={onSend}
             disabled={sendDisabled}
             size="small"
+            variant="invisible"
           />
         )}
       </Box>

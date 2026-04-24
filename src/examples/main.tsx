@@ -692,14 +692,84 @@ const ExampleAppThemed: React.FC<{
                 },
               }}
             >
-              {availableExamples
-                .slice()
-                .sort((a, b) => a.title.localeCompare(b.title))
-                .map(example => (
-                  <option key={example.id} value={example.id}>
-                    {example.title}
-                  </option>
-                ))}
+              {(() => {
+                const home = availableExamples.find(
+                  e => e.id === 'HomeExample',
+                );
+                const rest = availableExamples.filter(
+                  e => e.id !== 'HomeExample',
+                );
+
+                // Classify each example into a named group.
+                const groupOf = (id: string): string => {
+                  if (id.startsWith('A2Ui')) return 'A2UI';
+                  if (id.startsWith('AgUi')) return 'AG-UI';
+                  if (id.startsWith('CopilotKit')) return 'CopilotKit';
+                  if (id.startsWith('Agent')) return 'Agent';
+                  if (id.startsWith('Chat')) return 'Chat';
+                  if (id.startsWith('Lexical')) return 'Lexical';
+                  if (
+                    id.startsWith('Notebook') ||
+                    id === 'DatalayerNotebookExample'
+                  )
+                    return 'Notebook';
+                  return 'Cell';
+                };
+
+                const groupOrder = [
+                  'A2UI',
+                  'AG-UI',
+                  'Agent',
+                  'Chat',
+                  'CopilotKit',
+                  'Lexical',
+                  'Notebook',
+                  'Cell',
+                ];
+
+                const grouped = new Map<string, typeof rest>();
+                for (const ex of rest) {
+                  const g = groupOf(ex.id);
+                  if (!grouped.has(g)) grouped.set(g, []);
+                  grouped.get(g)!.push(ex);
+                }
+                for (const list of grouped.values()) {
+                  list.sort((a, b) => a.title.localeCompare(b.title));
+                }
+
+                const nodes: React.ReactNode[] = [];
+                if (home) {
+                  nodes.push(
+                    <option key={home.id} value={home.id}>
+                      {home.title}
+                    </option>,
+                  );
+                }
+
+                let sepIndex = 0;
+                for (const g of groupOrder) {
+                  const items = grouped.get(g);
+                  if (!items || items.length === 0) continue;
+                  nodes.push(
+                    <option
+                      key={`__sep_${sepIndex++}`}
+                      disabled
+                      value={`__sep_${sepIndex}`}
+                    >
+                      ────── {g} ──────
+                    </option>,
+                  );
+                  for (const example of items) {
+                    nodes.push(
+                      <option key={example.id} value={example.id}>
+                        {example.title}
+                      </option>,
+                    );
+                  }
+                }
+
+                return <>{nodes}</>;
+              })()}
             </Box>
             {isChangingExample && (
               <Box as="span" sx={{ color: 'fg.muted', fontSize: 0 }}>
