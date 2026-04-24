@@ -181,6 +181,7 @@ export interface AgentRuntimeStoreActions {
     approvalId: string,
     approved: boolean,
     note?: string,
+    toolCallId?: string,
   ) => boolean;
   requestRefresh: () => boolean;
   sendRawMessage: (payload: Record<string, unknown>) => boolean;
@@ -587,7 +588,7 @@ export const agentRuntimeStore = createStore<AgentRuntimeStore>()(
             return { approvals, pendingApprovalCount: approvals.length };
           }),
 
-        sendDecision: (approvalId, approved, note) => {
+        sendDecision: (approvalId, approved, note, toolCallId) => {
           if (!_ws || _ws.readyState !== WebSocket.OPEN) {
             return false;
           }
@@ -597,6 +598,7 @@ export const agentRuntimeStore = createStore<AgentRuntimeStore>()(
               approvalId,
               approved,
               ...(note ? { note } : {}),
+              ...(toolCallId ? { toolCallId } : {}),
             }),
           );
           return true;

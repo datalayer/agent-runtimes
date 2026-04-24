@@ -41,8 +41,9 @@ async def _decide_approval_via_ws(
     approval_id: str,
     approved: bool,
     note: str | None = None,
+    tool_call_id: str | None = None,
 ) -> ToolApprovalRecord:
-    resolved_approval_id = _resolve_local_approval_id(approval_id)
+    resolved_approval_id = _resolve_local_approval_id(approval_id, tool_call_id)
     return await _update_approval(
         resolved_approval_id,
         status="approved" if approved else "rejected",
@@ -104,7 +105,10 @@ _REMOTE_APPROVAL_REGISTRY: dict[str, tuple[str, str]] = {}
 _APPROVAL_CREDENTIALS: dict[str, str] = {}
 
 
-def _resolve_local_approval_id(approval_id: str) -> str:
+def _resolve_local_approval_id(
+    approval_id: str,
+    tool_call_id: str | None = None,
+) -> str:
     """Resolve a decision/delete id to the local approval id.
 
     The frontend may send either the local runtime approval id or the
@@ -116,6 +120,10 @@ def _resolve_local_approval_id(approval_id: str) -> str:
         remote_id = entry[0]
         if remote_id == approval_id:
             return local_id
+    if tool_call_id:
+        for local_id, record in _APPROVALS.items():
+            if record.tool_call_id == tool_call_id:
+                return local_id
     return approval_id
 
 

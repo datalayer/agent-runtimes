@@ -775,7 +775,8 @@ async def stream_loop(
     agent_id: str | None,
     *,
     list_approvals: Any | None = None,
-    decide_approval: Callable[[str, bool, str | None], Awaitable[Any]] | None = None,
+    decide_approval: Callable[[str, bool, str | None, str | None], Awaitable[Any]]
+    | None = None,
     delete_approval: Callable[[str], Awaitable[Any]] | None = None,
 ) -> None:
     """Run the main WebSocket stream loop.
@@ -855,6 +856,9 @@ async def stream_loop(
                                 approval_id = payload.get("approvalId")
                                 approved = payload.get("approved")
                                 note = payload.get("note")
+                                tool_call_id = payload.get("toolCallId") or payload.get(
+                                    "tool_call_id"
+                                )
                                 if isinstance(approval_id, str) and isinstance(
                                     approved, bool
                                 ):
@@ -862,6 +866,9 @@ async def stream_loop(
                                         approval_id,
                                         approved,
                                         note if isinstance(note, str) else None,
+                                        tool_call_id
+                                        if isinstance(tool_call_id, str)
+                                        else None,
                                     )
 
                             elif (

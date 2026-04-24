@@ -88,7 +88,7 @@ const NO_CODEMODE_SUGGESTION_MESSAGE =
   'Use the Tavily Extract tool to extract information from https://datalayer.ai, then use your sandbox to persist that information in a variable named "about_datalayer".';
 
 const CODEMODE_SUGGESTION_MESSAGE =
-  'Extract information from the https://datalayer.ai website and use your sandbox to create a variable "about_datalayer" with that information';
+  'Extract information from the https://datalayer.ai website and assign it to the variable "about_datalayer", all in one step using the sandbox';
 
 type RuntimeStatus = 'launching' | 'ready' | 'error';
 
@@ -529,6 +529,7 @@ const AgentRuntimePane: React.FC<AgentRuntimePaneProps> = ({
           protocol="vercel-ai"
           baseUrl={config.baseUrl}
           agentId={agentId}
+          authToken={token}
           title={config.title}
           subtitle={config.subtitle}
           placeholder="Ask both agents the same request to compare behavior..."

@@ -589,17 +589,27 @@ function ChatBaseInner({
   // Approval state updates are sourced from the ai-agents WS listener.
   const onApproveApproval = useCallback(
     async (approvalId: string, note?: string) => {
+      const approval = agentRuntimeStore
+        .getState()
+        .approvals.find(a => a.id === approvalId);
       // Persist the decision in the tools/skills dropdown BEFORE removing
       // the approval from the store (we need ``tool_name`` to route it).
       persistApprovalDecision(approvalId, true);
-      agentRuntimeStore.getState().sendDecision(approvalId, true, note);
+      agentRuntimeStore
+        .getState()
+        .sendDecision(approvalId, true, note, approval?.tool_call_id);
       await onApproveApprovalProp?.(approvalId, note);
     },
     [onApproveApprovalProp, persistApprovalDecision],
   );
   const onRejectApproval = useCallback(
     async (approvalId: string, note?: string) => {
-      agentRuntimeStore.getState().sendDecision(approvalId, false, note);
+      const approval = agentRuntimeStore
+        .getState()
+        .approvals.find(a => a.id === approvalId);
+      agentRuntimeStore
+        .getState()
+        .sendDecision(approvalId, false, note, approval?.tool_call_id);
       await onRejectApprovalProp?.(approvalId, note);
     },
     [onRejectApprovalProp],
