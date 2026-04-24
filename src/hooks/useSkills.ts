@@ -69,54 +69,66 @@ export function useSkills(
 // Skill enable / disable via WebSocket
 // ---------------------------------------------------------------------------
 
-export function useSkillActions() {
-  const enableSkill = useCallback((skillId: string) => {
-    const ok = agentRuntimeStore
-      .getState()
-      .sendRawMessage({ type: 'skill_enable', skillId });
-    if (!ok) {
-      console.warn(
-        '[useSkillActions] skill_enable dropped: websocket not ready',
-      );
-    }
-    return ok;
-  }, []);
+export function useSkillActions(agentId?: string) {
+  const enableSkill = useCallback(
+    (skillId: string) => {
+      const ok = agentRuntimeStore
+        .getState()
+        .sendRawMessage({ type: 'skill_enable', skillId }, agentId);
+      if (!ok) {
+        console.warn(
+          '[useSkillActions] skill_enable dropped: websocket not ready',
+        );
+      }
+      return ok;
+    },
+    [agentId],
+  );
 
-  const disableSkill = useCallback((skillId: string) => {
-    const ok = agentRuntimeStore
-      .getState()
-      .sendRawMessage({ type: 'skill_disable', skillId });
-    if (!ok) {
-      console.warn(
-        '[useSkillActions] skill_disable dropped: websocket not ready',
-      );
-    }
-    return ok;
-  }, []);
+  const disableSkill = useCallback(
+    (skillId: string) => {
+      const ok = agentRuntimeStore
+        .getState()
+        .sendRawMessage({ type: 'skill_disable', skillId }, agentId);
+      if (!ok) {
+        console.warn(
+          '[useSkillActions] skill_disable dropped: websocket not ready',
+        );
+      }
+      return ok;
+    },
+    [agentId],
+  );
 
-  const approveSkill = useCallback((skillId: string) => {
-    const ok = agentRuntimeStore
-      .getState()
-      .sendRawMessage({ type: 'skill_approve', skillId });
-    if (!ok) {
-      console.warn(
-        '[useSkillActions] skill_approve dropped: websocket not ready',
-      );
-    }
-    return ok;
-  }, []);
+  const approveSkill = useCallback(
+    (skillId: string) => {
+      const ok = agentRuntimeStore
+        .getState()
+        .sendRawMessage({ type: 'skill_approve', skillId }, agentId);
+      if (!ok) {
+        console.warn(
+          '[useSkillActions] skill_approve dropped: websocket not ready',
+        );
+      }
+      return ok;
+    },
+    [agentId],
+  );
 
-  const unapproveSkill = useCallback((skillId: string) => {
-    const ok = agentRuntimeStore
-      .getState()
-      .sendRawMessage({ type: 'skill_unapprove', skillId });
-    if (!ok) {
-      console.warn(
-        '[useSkillActions] skill_unapprove dropped: websocket not ready',
-      );
-    }
-    return ok;
-  }, []);
+  const unapproveSkill = useCallback(
+    (skillId: string) => {
+      const ok = agentRuntimeStore
+        .getState()
+        .sendRawMessage({ type: 'skill_unapprove', skillId }, agentId);
+      if (!ok) {
+        console.warn(
+          '[useSkillActions] skill_unapprove dropped: websocket not ready',
+        );
+      }
+      return ok;
+    },
+    [agentId],
+  );
 
   return { enableSkill, disableSkill, approveSkill, unapproveSkill };
 }

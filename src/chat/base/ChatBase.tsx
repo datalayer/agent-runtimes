@@ -93,6 +93,11 @@ const normalizeAgentId = (value?: string): string =>
   (value ?? '').trim().toLowerCase();
 const normalizeToolName = (value: string): string =>
   value.replace(/[-_]/g, '').toLowerCase();
+const normalizeSkillApprovalId = (value: string): string => {
+  const idx = value.indexOf(':');
+  if (idx <= 0) return value;
+  return value.slice(0, idx);
+};
 
 const stableStringify = (value: unknown): string => {
   if (value === null || typeof value !== 'object') {
@@ -547,17 +552,53 @@ function ChatBaseInner({
         .getState()
         .approvals.find(a => a.id === approvalId);
       const toolName = approval?.tool_name;
+      console.warn('[ChatBase.persistApprovalDecision]', {
+        approvalId,
+        approved,
+        toolName,
+        toolArgs: approval?.tool_args,
+      });
       if (!toolName) return;
 
-      // Skill approvals: tool_name is of the form ``skill:<skill_id>`` where
-      // ``skill_id`` itself may include a ``:<version>`` suffix.
-      if (toolName.startsWith('skill:')) {
-        const skillRef = toolName.slice('skill:'.length);
-        if (!skillRef) return;
+      // Derive the skill id either from a synthetic ``skill:<id>`` tool_name
+      // OR from a skill-tool call (``run_skill_script`` / ``load_skill`` /
+      // ``read_skill_resource``) carrying ``skill`` / ``skill_name`` / ``name``
+      // in its args.  This belt-and-suspenders approach makes sure the
+      // Approved toggle flips even if the server emits a bare approval
+      // request without the ``skill:`` prefix.
+      const deriveSkillId = (): string | null => {
+        if (toolName.startsWith('skill:')) {
+          const skillRef = toolName.slice('skill:'.length);
+          if (!skillRef) return null;
+          return normalizeSkillApprovalId(skillRef);
+        }
+        const SKILL_TOOLS = new Set([
+          'run_skill_script',
+          'load_skill',
+          'read_skill_resource',
+        ]);
+        if (!SKILL_TOOLS.has(toolName)) return null;
+        const a = (approval?.tool_args ?? {}) as Record<string, unknown>;
+        const raw = a.skill_name ?? a.skill ?? a.name;
+        if (typeof raw !== 'string' || !raw) return null;
+        return normalizeSkillApprovalId(raw);
+      };
+
+      const skillId = deriveSkillId();
+      if (skillId) {
+        console.warn(
+          '[ChatBase.persistApprovalDecision] flipping skill approval',
+          { skillId, approved },
+        );
+        setLocalSkillApproval(prev => {
+          const next = new Map(prev);
+          next.set(skillId, approved);
+          return next;
+        });
         const ok = agentRuntimeStore.getState().sendRawMessage(
           {
             type: approved ? 'skill_approve' : 'skill_unapprove',
-            skillId: skillRef,
+            skillId,
           },
           activeAgentId,
         );
@@ -590,7 +631,7 @@ function ChatBaseInner({
         }
       }
     },
-    [],
+    [activeAgentId],
   );
 
   // Built-in approve/reject: send decisions to the runtime WS only.
@@ -830,7 +871,13 @@ function ChatBaseInner({
     disableSkill: wsDisableSkill,
     approveSkill: wsApproveSkill,
     unapproveSkill: wsUnapproveSkill,
-  } = useSkillActions();
+  } = useSkillActions(activeAgentId);
+
+  // Optimistic skill-approval overrides so inline approval updates the
+  // Skills selector immediately before the next WS snapshot lands.
+  const [localSkillApproval, setLocalSkillApproval] = useState<
+    Map<string, boolean>
+  >(new Map());
 
   // Derive enabledSkills from the WS-pushed skill statuses.
   const enabledSkills = useMemo(() => {
@@ -851,8 +898,23 @@ function ChatBaseInner({
         set.add(s.id);
       }
     }
+    localSkillApproval.forEach((approved, skillId) => {
+      if (approved) {
+        set.add(skillId);
+      } else {
+        set.delete(skillId);
+      }
+    });
+    console.warn('[ChatBase.approvedSkills]', {
+      wsSkills: (skillsQuery.data?.skills ?? []).map(s => ({
+        id: s.id,
+        approved: s.approved,
+      })),
+      local: Array.from(localSkillApproval.entries()),
+      merged: Array.from(set),
+    });
     return set;
-  }, [skillsQuery.data]);
+  }, [localSkillApproval, skillsQuery.data]);
   const contextSnapshotQuery = useContextSnapshot(
     Boolean(protocol?.enableConfigQuery) && showTokenUsage,
     protocol?.configEndpoint,
@@ -1322,8 +1384,18 @@ function ChatBaseInner({
   const toggleSkillApproval = useCallback(
     (skillId: string) => {
       if (approvedSkills.has(skillId)) {
+        setLocalSkillApproval(prev => {
+          const next = new Map(prev);
+          next.set(skillId, false);
+          return next;
+        });
         wsUnapproveSkill(skillId);
       } else {
+        setLocalSkillApproval(prev => {
+          const next = new Map(prev);
+          next.set(skillId, true);
+          return next;
+        });
         wsApproveSkill(skillId);
       }
     },

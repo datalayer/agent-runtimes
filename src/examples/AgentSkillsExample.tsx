@@ -175,7 +175,27 @@ const AgentSkillsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
   // WS-sourced skills (reads from codemodeStatus pushed via monitoring WS)
   const skillsQuery = useSkills(isReady);
   const skills = skillsQuery.data?.skills ?? [];
-  const { enableSkill, disableSkill } = useSkillActions();
+  const { enableSkill, disableSkill } = useSkillActions(agentId);
+  const autoEnabledSkillIdsRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    autoEnabledSkillIdsRef.current.clear();
+  }, [agentId]);
+
+  useEffect(() => {
+    if (!isReady || skills.length === 0) {
+      return;
+    }
+    for (const skill of skills) {
+      if (
+        skill.status === 'available' &&
+        !autoEnabledSkillIdsRef.current.has(skill.id)
+      ) {
+        autoEnabledSkillIdsRef.current.add(skill.id);
+        enableSkill(skill.id);
+      }
+    }
+  }, [enableSkill, isReady, skills]);
 
   const toggleSkill = useCallback(
     (skillId: string) => {
@@ -358,6 +378,11 @@ const AgentSkillsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
               {
                 title: 'List available skills',
                 message: 'List all your available skills and what they can do.',
+              },
+              {
+                title: '👤 Who am I',
+                message:
+                  'Use the datalayer-whoami skill to tell me who I am, including my user identity and available context.',
               },
               {
                 title: '🌐 Crawl a webpage',
