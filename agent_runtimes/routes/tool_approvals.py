@@ -14,7 +14,7 @@ import asyncio
 import logging
 from datetime import datetime, timezone
 from typing import Any
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from fastapi import APIRouter, HTTPException, Query, WebSocket
 from pydantic import BaseModel, Field
@@ -117,6 +117,22 @@ def _resolve_local_approval_id(approval_id: str) -> str:
         if remote_id == approval_id:
             return local_id
     return approval_id
+
+
+def _looks_like_uuid(value: str) -> bool:
+    """Best-effort check for local runtime approval ids.
+
+    Runtime-local records created by this module use UUID4 strings, while
+    ai-agents records are typically ULID-like ids. This helps choose between
+    lazy-forwarding and direct relay when no explicit remote mapping exists.
+    """
+    if not isinstance(value, str) or not value:
+        return False
+    try:
+        UUID(value)
+        return True
+    except Exception:
+        return False
 
 
 def register_remote_approval_mapping(
@@ -647,22 +663,41 @@ async def _update_approval(
             )
         )
     elif jwt_token:
-        # No remote mapping yet — lazily forward the approval to ai-agents
-        # first (so it has a record to update), then relay the decision.
-        logger.info(
-            "[tool-approval] No remote mapping for local_id=%s — lazily "
-            "forwarding to ai-agents before relaying %s decision",
-            approval_id,
-            status,
-        )
-        _asyncio.create_task(
-            _lazy_forward_and_relay(
-                record=updated,
-                approved=status == "approved",
-                note=note,
-                user_jwt_token=jwt_token,
+        # No explicit mapping. If this id is non-UUID, it is likely already
+        # an ai-agents id (e.g. mirrored from tool-approval-request / ULID).
+        # Relay directly to avoid creating a second remote approval record.
+        if not _looks_like_uuid(approval_id):
+            logger.info(
+                "[tool-approval] No remote mapping for local_id=%s — "
+                "relaying directly using approval_id as remote_id (%s)",
+                approval_id,
+                status,
             )
-        )
+            _asyncio.create_task(
+                _relay_decision_to_ai_agents_ws(
+                    remote_id=approval_id,
+                    approved=status == "approved",
+                    note=note,
+                    user_jwt_token=jwt_token,
+                )
+            )
+        else:
+            # UUID local id with no remote mapping: create remote record first,
+            # then relay the decision.
+            logger.info(
+                "[tool-approval] No remote mapping for local_id=%s — lazily "
+                "forwarding to ai-agents before relaying %s decision",
+                approval_id,
+                status,
+            )
+            _asyncio.create_task(
+                _lazy_forward_and_relay(
+                    record=updated,
+                    approved=status == "approved",
+                    note=note,
+                    user_jwt_token=jwt_token,
+                )
+            )
     else:
         logger.warning(
             "[tool-approval] No JWT credentials for local_id=%s — cannot "

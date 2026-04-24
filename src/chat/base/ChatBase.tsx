@@ -813,7 +813,6 @@ function ChatBaseInner({
     protocol?.authToken,
     protocol?.agentId,
   );
-  const sandboxStatus = sandboxStatusQuery.data;
 
   // ---- Refs ----
   const adapterRef = useRef<BaseProtocolAdapter | null>(null);
@@ -2306,11 +2305,6 @@ function ChatBaseInner({
       headerButtons?.onClear?.();
     }
   }, [clearStoreMessages, onClear, headerButtons, useStoreMode, runtimeId]);
-
-  // ---- handleSandboxInterrupt ----
-  const handleSandboxInterrupt = useCallback(() => {
-    sandboxStatusQuery.interrupt();
-  }, [sandboxStatusQuery]);
 
   // ---- HITL respond handler (passed to MessageList) ----
   const handleRespond = useCallback(
