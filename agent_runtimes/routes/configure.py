@@ -537,20 +537,6 @@ def _get_available_skills() -> list[dict[str, Any]]:
     return skills
 
 
-@router.get("/sandbox-status")
-async def get_sandbox_status_endpoint() -> dict[str, Any]:
-    """
-    Get the current sandbox execution status.
-
-    Returns:
-        Sandbox status including whether code is executing.
-    """
-    status = _get_sandbox_status()
-    if status is None:
-        return {"available": False}
-    return {"available": True, **status.model_dump()}
-
-
 @router.post("/sandbox/interrupt")
 async def interrupt_sandbox(agent_id: str | None = None) -> dict[str, Any]:
     """

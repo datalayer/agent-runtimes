@@ -90,20 +90,22 @@ function getCategoryIcon(name: string) {
 export interface ContextUsageProps {
   /** Agent ID for fetching context details (required) */
   agentId: string;
+  /** Optional base URL override (defaults to local 8765 or same-origin) */
+  baseUrl?: string;
 }
 
 /**
  * ContextUsage component displays token usage breakdown by category.
  */
-export function ContextUsage({ agentId }: ContextUsageProps) {
+export function ContextUsage({ agentId, baseUrl }: ContextUsageProps) {
   const {
     data: contextData,
     isLoading,
     error,
   } = useQuery<ContextDetailsResponse>({
-    queryKey: ['context-details', agentId],
+    queryKey: ['context-details', agentId, baseUrl],
     queryFn: async () => {
-      const apiBase = getLocalApiBase();
+      const apiBase = baseUrl || getLocalApiBase();
       const response = await fetch(
         `${apiBase}/api/v1/configure/agents/${encodeURIComponent(agentId)}/context-details`,
       );

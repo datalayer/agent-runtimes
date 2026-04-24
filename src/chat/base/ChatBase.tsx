@@ -415,6 +415,7 @@ export function ChatBase(props: ChatBaseProps) {
 
 function ChatBaseInner({
   title,
+  subtitle,
   showHeader = false,
   showTokenUsage = true,
   showLoadingIndicator = true,
@@ -831,9 +832,10 @@ function ChatBaseInner({
   );
   const agentUsage = externalContextSnapshot ?? contextSnapshotQuery.data;
   const sandboxStatusQuery = useSandbox(
-    Boolean(protocol?.enableConfigQuery) && codemodeEnabled && showHeader,
+    Boolean(protocol?.enableConfigQuery) && showHeader,
     protocol?.configEndpoint,
     protocol?.authToken,
+    protocol?.agentId,
   );
   const sandboxStatus = sandboxStatusQuery.data;
 
@@ -2296,17 +2298,7 @@ function ChatBaseInner({
     currentAssistantMessageRef.current = null;
 
     // Also interrupt any code running in the sandbox (best-effort).
-    if (protocol?.configEndpoint) {
-      const query = protocol.agentId
-        ? `?agent_id=${encodeURIComponent(protocol.agentId)}`
-        : '';
-      const interruptUrl = `${getApiBaseFromConfig(protocol.configEndpoint)}/configure/sandbox/interrupt${query}`;
-      const headers: HeadersInit = { 'Content-Type': 'application/json' };
-      if (protocol.authToken) {
-        headers['Authorization'] = `Bearer ${protocol.authToken}`;
-      }
-      fetch(interruptUrl, { method: 'POST', headers }).catch(() => {});
-    }
+    sandboxStatusQuery.interrupt();
   }, [
     useStoreMode,
     protocol?.configEndpoint,
@@ -2340,20 +2332,9 @@ function ChatBaseInner({
   }, [clearStoreMessages, onClear, headerButtons, useStoreMode, runtimeId]);
 
   // ---- handleSandboxInterrupt ----
-  const handleSandboxInterrupt = useCallback(async () => {
-    if (!protocol?.configEndpoint) return;
-    const interruptUrl = `${getApiBaseFromConfig(protocol.configEndpoint)}/configure/sandbox/interrupt`;
-    try {
-      const headers: HeadersInit = { 'Content-Type': 'application/json' };
-      if (protocol.authToken) {
-        headers['Authorization'] = `Bearer ${protocol.authToken}`;
-      }
-      await fetch(interruptUrl, { method: 'POST', headers });
-      sandboxStatusQuery.refetch();
-    } catch {
-      // Interrupt is best-effort
-    }
-  }, [protocol?.configEndpoint, protocol?.authToken, sandboxStatusQuery]);
+  const handleSandboxInterrupt = useCallback(() => {
+    sandboxStatusQuery.interrupt();
+  }, [sandboxStatusQuery]);
 
   // ---- HITL respond handler (passed to MessageList) ----
   const handleRespond = useCallback(
@@ -2713,6 +2694,7 @@ function ChatBaseInner({
       {showHeader && (
         <ChatBaseHeader
           title={title}
+          subtitle={subtitle}
           brandIcon={brandIcon}
           headerContent={headerContent}
           headerActions={headerActions}

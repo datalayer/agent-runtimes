@@ -417,6 +417,16 @@ export function ContextInspector({
     };
   }, [contextData?.messages]);
 
+  const messageHistoryTokens = useMemo(() => {
+    if (!contextData?.messages) {
+      return 0;
+    }
+    return contextData.messages.reduce(
+      (sum, message) => sum + (message.estimatedTokens || 0),
+      0,
+    );
+  }, [contextData?.messages]);
+
   if (!hasLiveData) {
     return (
       <Box
@@ -606,7 +616,7 @@ export function ContextInspector({
 
       {/* Tools */}
       <CollapsibleSection
-        title="Tools"
+        title="Tool Definitions"
         icon={TerminalIcon}
         count={contextData.tools.length}
         tokens={contextData.toolTokens}
@@ -627,6 +637,7 @@ export function ContextInspector({
         title="Message History"
         icon={CommentDiscussionIcon}
         count={contextData.messages.length}
+        tokens={messageHistoryTokens}
       >
         {contextData.messages.length === 0 ? (
           <Text sx={{ color: 'fg.muted', fontSize: 1 }}>No messages yet</Text>

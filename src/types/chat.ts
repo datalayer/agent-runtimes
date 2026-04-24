@@ -295,6 +295,9 @@ export interface ChatCommonProps {
   /** Chat title */
   title?: string;
 
+  /** Chat subtitle (rendered under the title in the header) */
+  subtitle?: string;
+
   /** Description shown in empty state */
   description?: string;
 
@@ -484,6 +487,9 @@ export interface ChatCommonProps {
   /** External MCP toolsets status data */
   mcpStatusData?: import('./mcp').McpToolsetsStatusResponse | null;
 
+  /** External codemode status data (e.g. from WebSocket stream). */
+  codemodeStatusData?: import('./stream').CodemodeStatusData | null;
+
   /** Optional sandbox status override for immediate UI updates. */
   sandboxStatusData?: SandboxWsStatus | null;
 
@@ -544,6 +550,9 @@ export interface ChatBaseProps {
   /** Chat title */
   title?: string;
 
+  /** Chat subtitle (rendered under the title in the header) */
+  subtitle?: string;
+
   /** Show header */
   showHeader?: boolean;
 
@@ -569,6 +578,13 @@ export interface ChatBaseProps {
    * so it shows live status instead of "No MCP Server defined".
    */
   mcpStatusData?: import('./mcp').McpToolsetsStatusResponse | null;
+
+  /**
+   * External codemode status data. When provided, it is forwarded to
+   * AgentDetails so the info panel can render a live codemode status
+   * without waiting for the global WebSocket stream.
+   */
+  codemodeStatusData?: import('./stream').CodemodeStatusData | null;
 
   /**
    * External sandbox status data for the sandbox indicator.

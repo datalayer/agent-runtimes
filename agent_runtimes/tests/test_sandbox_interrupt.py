@@ -85,7 +85,7 @@ class TestManagedSandboxInterrupt:
 
 
 class TestSandboxStatusEndpoint:
-    """Tests for the /sandbox-status and /sandbox/interrupt configure endpoints."""
+    """Tests for the /sandbox/interrupt configure endpoint and SandboxStatus model."""
 
     def test_sandbox_status_model_has_is_executing(self) -> None:
         from agent_runtimes.routes.configure import SandboxStatus

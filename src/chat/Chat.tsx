@@ -226,6 +226,7 @@ export function Chat({
   authToken: authTokenProp,
   placeholder = 'Type your message...',
   title,
+  subtitle,
   brandIcon,
   autoConnect: _autoConnect = true,
   streaming: _streaming = true,
@@ -275,6 +276,7 @@ export function Chat({
   hideMessagesAfterToolUI = false,
   contextSnapshot,
   mcpStatusData,
+  codemodeStatusData,
   sandboxStatusData,
   showToolApprovalBanner,
   pendingApprovals,
@@ -503,6 +505,8 @@ export function Chat({
             onIdentityConnect={onIdentityConnect}
             onIdentityDisconnect={onIdentityDisconnect}
             onBack={() => setShowDetails(false)}
+            mcpStatusData={mcpStatusData}
+            codemodeStatusData={codemodeStatusData}
           />
         </Box>
         {/* Chat view - shown/hidden via CSS to preserve message state */}
@@ -557,6 +561,7 @@ export function Chat({
           )}
           <ChatBase
             title={title}
+            subtitle={subtitle}
             brandIcon={brandIcon}
             showHeader={showHeader}
             protocol={protocolConfig}

@@ -34,6 +34,10 @@ import { uniqueAgentId } from './utils/agentId';
 import { useAIAgentsWebSocket } from '../hooks';
 import { Chat } from '../chat';
 import {
+  ContextPanel,
+  type ContextSnapshotResponse,
+} from '../context/ContextPanel';
+import {
   parseAgentStreamMessage,
   type AgentStreamSnapshotPayload,
 } from '../types/stream';
@@ -117,6 +121,11 @@ interface AgentRuntimePaneProps {
   config: DemoAgentConfig;
   token: string;
   onTokenConsumed: (agentKey: string, tokens: number) => void;
+  onAgentIdChange?: (agentKey: string, agentId: string) => void;
+  onContextSnapshot?: (
+    agentKey: string,
+    snapshot: ContextSnapshotResponse,
+  ) => void;
 }
 
 function extractConsumedTokens(payload: AgentStreamSnapshotPayload): number {
@@ -132,6 +141,8 @@ const AgentRuntimePane: React.FC<AgentRuntimePaneProps> = ({
   config,
   token,
   onTokenConsumed,
+  onAgentIdChange,
+  onContextSnapshot,
 }) => {
   const runtimeName = useRef(uniqueAgentId(`codemode-${config.key}`)).current;
   const [runtimeStatus, setRuntimeStatus] =
@@ -214,6 +225,7 @@ const AgentRuntimePane: React.FC<AgentRuntimePaneProps> = ({
 
         if (!cancelled) {
           setAgentId(resolvedAgentId);
+          onAgentIdChange?.(config.key, resolvedAgentId);
           setIsReconnectedAgent(alreadyRunning);
           setRuntimeStatus('ready');
         }
@@ -251,6 +263,12 @@ const AgentRuntimePane: React.FC<AgentRuntimePaneProps> = ({
         if (payload.mcpStatus !== undefined) {
           setLiveMcpStatus(payload.mcpStatus ?? undefined);
         }
+        if (payload.contextSnapshot) {
+          onContextSnapshot?.(
+            config.key,
+            payload.contextSnapshot as ContextSnapshotResponse,
+          );
+        }
         const fc = payload.fullContext as Record<string, unknown> | null;
         if (fc && Array.isArray(fc.tools) && fc.tools.length > 0) {
           setAgentTools(fc.tools as FullContextTool[]);
@@ -265,7 +283,7 @@ const AgentRuntimePane: React.FC<AgentRuntimePaneProps> = ({
         // Ignore malformed stream payloads.
       }
     },
-    [config.key, onTokenConsumed],
+    [config.key, onTokenConsumed, onContextSnapshot],
   );
 
   useAIAgentsWebSocket({
@@ -420,6 +438,19 @@ const AgentRuntimePane: React.FC<AgentRuntimePaneProps> = ({
     };
   }, [liveMcpStatus, mcpServers]);
 
+  // Synthetic codemode status so the Info panel never shows
+  // "Waiting for Codemode status from WebSocket stream...".
+  // This is configuration, so it's known locally from the spec/toggle state.
+  const codemodeStatusData = useMemo(
+    () => ({
+      enabled: codemodeEnabled,
+      skills: [],
+      available_skills: [],
+      sandbox: null,
+    }),
+    [codemodeEnabled],
+  );
+
   const handleToggleCodemode = useCallback(
     async (enabled: boolean) => {
       // Optimistic update; WS snapshot will reconcile.
@@ -487,47 +518,29 @@ const AgentRuntimePane: React.FC<AgentRuntimePaneProps> = ({
         flexDirection: 'column',
       }}
     >
-      <Box
-        sx={{
-          px: 3,
-          py: 2,
-          borderBottom: '1px solid',
-          borderColor: 'border.default',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 2,
-        }}
-      >
-        <Box>
-          <Text sx={{ fontWeight: 'bold', display: 'block' }}>
-            {config.title}
-          </Text>
-          <Text sx={{ fontSize: 0, color: 'fg.muted' }}>{config.subtitle}</Text>
-          <Text sx={{ fontSize: 0, color: 'fg.muted', fontFamily: 'mono' }}>
-            {config.baseUrl}
-          </Text>
-        </Box>
-        {isReconnectedAgent && (
-          <Label size="small" variant="attention">
-            Reconnected
-          </Label>
-        )}
-      </Box>
       <Box sx={{ flex: 1, minHeight: 0 }}>
         <Chat
           protocol="vercel-ai"
           baseUrl={config.baseUrl}
           agentId={agentId}
           title={config.title}
+          subtitle={config.subtitle}
           placeholder="Ask both agents the same request to compare behavior..."
           description={config.subtitle}
           showHeader={true}
+          headerActions={
+            isReconnectedAgent ? (
+              <Label size="small" variant="attention">
+                Reconnected
+              </Label>
+            ) : undefined
+          }
           autoFocus={false}
           height="100%"
           runtimeId={agentId}
           historyEndpoint={`${config.baseUrl}/api/v1/history`}
           mcpStatusData={mcpStatusData}
+          codemodeStatusData={codemodeStatusData}
           codemodeEnabled={codemodeEnabled}
           onToggleCodemode={handleToggleCodemode}
           suggestions={[
@@ -553,6 +566,26 @@ const AgentCodemodeInner: React.FC<{ onLogout: () => void }> = ({
     'no-codemode': 0,
     codemode: 0,
   });
+  const [agentIdByKey, setAgentIdByKey] = useState<Record<string, string>>({});
+  const [contextSnapshotByKey, setContextSnapshotByKey] = useState<
+    Record<string, ContextSnapshotResponse>
+  >({});
+
+  const handleAgentIdChange = useCallback(
+    (agentKey: string, agentId: string) => {
+      setAgentIdByKey(prev =>
+        prev[agentKey] === agentId ? prev : { ...prev, [agentKey]: agentId },
+      );
+    },
+    [],
+  );
+
+  const handleContextSnapshot = useCallback(
+    (agentKey: string, snapshot: ContextSnapshotResponse) => {
+      setContextSnapshotByKey(prev => ({ ...prev, [agentKey]: snapshot }));
+    },
+    [],
+  );
 
   const handleTokenConsumed = useCallback(
     (agentKey: string, tokens: number) => {
@@ -680,7 +713,7 @@ const AgentCodemodeInner: React.FC<{ onLogout: () => void }> = ({
           <Box
             key={config.key}
             sx={{
-              width: 280,
+              width: 320,
               borderRight: '1px solid',
               borderColor: 'border.default',
               p: 3,
@@ -688,14 +721,38 @@ const AgentCodemodeInner: React.FC<{ onLogout: () => void }> = ({
               flexDirection: 'column',
               gap: 3,
               flexShrink: 0,
+              overflow: 'auto',
             }}
           >
             <Box>
               <Heading as="h4" sx={{ fontSize: 1, mb: 1 }}>
                 {config.title}
               </Heading>
-              <Text sx={{ color: 'fg.muted', fontSize: 0 }}>
+              <Text sx={{ color: 'fg.muted', fontSize: 0, display: 'block' }}>
                 Tokens consumed (no codemode).
+              </Text>
+              <Text
+                sx={{
+                  color: 'fg.muted',
+                  fontSize: 0,
+                  fontFamily: 'mono',
+                  display: 'block',
+                  mt: 1,
+                }}
+              >
+                {config.baseUrl}
+              </Text>
+              <Text
+                sx={{
+                  color: 'fg.muted',
+                  fontSize: 0,
+                  fontFamily: 'mono',
+                  display: 'block',
+                  mt: 1,
+                  wordBreak: 'break-all',
+                }}
+              >
+                {agentIdByKey[config.key] || 'launching…'}
               </Text>
             </Box>
             <ReactECharts
@@ -714,6 +771,14 @@ const AgentCodemodeInner: React.FC<{ onLogout: () => void }> = ({
                 {(consumedByAgent[config.key] ?? 0).toLocaleString()} tokens
               </Text>
             </Box>
+            {agentIdByKey[config.key] && (
+              <ContextPanel
+                agentId={agentIdByKey[config.key]}
+                apiBase={config.baseUrl}
+                liveData={contextSnapshotByKey[config.key] ?? null}
+                chartHeight="180px"
+              />
+            )}
           </Box>
         ))}
 
@@ -734,6 +799,8 @@ const AgentCodemodeInner: React.FC<{ onLogout: () => void }> = ({
               config={config}
               token={token}
               onTokenConsumed={handleTokenConsumed}
+              onAgentIdChange={handleAgentIdChange}
+              onContextSnapshot={handleContextSnapshot}
             />
           ))}
         </Box>
@@ -742,7 +809,7 @@ const AgentCodemodeInner: React.FC<{ onLogout: () => void }> = ({
           <Box
             key={config.key}
             sx={{
-              width: 280,
+              width: 320,
               borderLeft: '1px solid',
               borderColor: 'border.default',
               p: 3,
@@ -750,14 +817,38 @@ const AgentCodemodeInner: React.FC<{ onLogout: () => void }> = ({
               flexDirection: 'column',
               gap: 3,
               flexShrink: 0,
+              overflow: 'auto',
             }}
           >
             <Box>
               <Heading as="h4" sx={{ fontSize: 1, mb: 1 }}>
                 {config.title}
               </Heading>
-              <Text sx={{ color: 'fg.muted', fontSize: 0 }}>
+              <Text sx={{ color: 'fg.muted', fontSize: 0, display: 'block' }}>
                 Tokens consumed (codemode).
+              </Text>
+              <Text
+                sx={{
+                  color: 'fg.muted',
+                  fontSize: 0,
+                  fontFamily: 'mono',
+                  display: 'block',
+                  mt: 1,
+                }}
+              >
+                {config.baseUrl}
+              </Text>
+              <Text
+                sx={{
+                  color: 'fg.muted',
+                  fontSize: 0,
+                  fontFamily: 'mono',
+                  display: 'block',
+                  mt: 1,
+                  wordBreak: 'break-all',
+                }}
+              >
+                {agentIdByKey[config.key] || 'launching…'}
               </Text>
             </Box>
             <ReactECharts
@@ -776,6 +867,14 @@ const AgentCodemodeInner: React.FC<{ onLogout: () => void }> = ({
                 {(consumedByAgent[config.key] ?? 0).toLocaleString()} tokens
               </Text>
             </Box>
+            {agentIdByKey[config.key] && (
+              <ContextPanel
+                agentId={agentIdByKey[config.key]}
+                apiBase={config.baseUrl}
+                liveData={contextSnapshotByKey[config.key] ?? null}
+                chartHeight="180px"
+              />
+            )}
           </Box>
         ))}
       </Box>

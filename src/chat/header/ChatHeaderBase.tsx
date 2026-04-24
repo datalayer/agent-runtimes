@@ -14,7 +14,7 @@
  */
 
 import { type ReactNode } from 'react';
-import { Heading, IconButton, Truncate } from '@primer/react';
+import { Heading, IconButton, Text, Truncate } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import {
   PlusIcon,
@@ -38,6 +38,7 @@ import type { SandboxStatusData } from '../../types/context';
 
 export interface ChatBaseHeaderProps {
   title?: string;
+  subtitle?: string;
   brandIcon?: ReactNode;
   headerContent?: ReactNode;
   headerActions?: ReactNode;
@@ -68,6 +69,7 @@ export interface ChatBaseHeaderProps {
 
 export function ChatBaseHeader({
   title,
+  subtitle,
   brandIcon,
   headerContent,
   headerActions,
@@ -111,20 +113,45 @@ export function ChatBaseHeader({
           }}
         >
           {brandIcon || <AiAgentIcon colored size={20} />}
-          {title && (
-            <Heading
-              as="h3"
+          {(title || subtitle) && (
+            <Box
               sx={{
-                fontSize: 2,
-                fontWeight: 'semibold',
+                display: 'flex',
+                flexDirection: 'column',
                 minWidth: 0,
                 maxWidth: '100%',
               }}
             >
-              <Truncate title={title} maxWidth="28ch">
-                {title}
-              </Truncate>
-            </Heading>
+              {title && (
+                <Heading
+                  as="h3"
+                  sx={{
+                    fontSize: 2,
+                    fontWeight: 'semibold',
+                    minWidth: 0,
+                    maxWidth: '100%',
+                  }}
+                >
+                  <Truncate title={title} maxWidth="28ch">
+                    {title}
+                  </Truncate>
+                </Heading>
+              )}
+              {subtitle && (
+                <Text
+                  sx={{
+                    fontSize: 0,
+                    color: 'fg.muted',
+                    minWidth: 0,
+                    maxWidth: '100%',
+                  }}
+                >
+                  <Truncate title={subtitle} maxWidth="40ch">
+                    {subtitle}
+                  </Truncate>
+                </Text>
+              )}
+            </Box>
           )}
           {/* Inline header content (e.g., protocol label) */}
           {headerContent}
