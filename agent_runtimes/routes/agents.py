@@ -1567,9 +1567,7 @@ async def create_agent(
             )
             mcp_manager = get_mcp_manager()
             if not disable_mcp_for_codemode and not mcp_manager.get_servers():
-                mcp_servers = await initialize_config_mcp_servers(
-                    discover_tools=True
-                )
+                mcp_servers = await initialize_config_mcp_servers(discover_tools=True)
                 mcp_manager.load_servers(mcp_servers)
                 logger.info(
                     f"Loaded {len(mcp_servers)} MCP servers for codemode agent {agent_id}"
@@ -1721,7 +1719,8 @@ async def create_agent(
                 has_tool_approval_capability = bool(
                     capabilities
                     and any(
-                        isinstance(cap, ToolsGuardrailCapability) for cap in capabilities
+                        isinstance(cap, ToolsGuardrailCapability)
+                        for cap in capabilities
                     )
                 )
                 if not has_tool_approval_capability:
@@ -1738,7 +1737,9 @@ async def create_agent(
                             approval_config.user_jwt_token = _request_jwt
                     if capabilities is None:
                         capabilities = []
-                    capabilities.append(ToolsGuardrailCapability(config=approval_config))
+                    capabilities.append(
+                        ToolsGuardrailCapability(config=approval_config)
+                    )
                     agent_kwargs["capabilities"] = capabilities
                     logger.info(
                         "Auto-enabled ToolsGuardrailCapability for agent '%s' with approval tools: %s",
@@ -2019,9 +2020,7 @@ async def create_agent(
         # _get_runtime_toolsets() will wait for them to become ready when
         # the first user prompt arrives (via wait_until_ready).
         if selected_mcp_servers and not request.enable_codemode:
-            asyncio.create_task(
-                _start_mcp_servers_background(agent_id, http_request)
-            )
+            asyncio.create_task(_start_mcp_servers_background(agent_id, http_request))
 
         return CreateAgentResponse(
             id=agent_id,
@@ -2887,9 +2886,12 @@ async def _start_mcp_servers_background(
     including them in a model run.
     """
     try:
-        started, already_running, failed, _codemode_rebuilt = (
-            await _start_mcp_servers_for_agent(agent_id, [], request)
-        )
+        (
+            started,
+            already_running,
+            failed,
+            _codemode_rebuilt,
+        ) = await _start_mcp_servers_for_agent(agent_id, [], request)
         logger.info(
             "Background MCP startup for '%s': started=%s already_running=%s failed=%s",
             agent_id,

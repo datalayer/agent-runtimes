@@ -312,10 +312,12 @@ async def _wrap_streaming_body_with_approvals(
                         # ai-agents can display pending approvals.
                         remote_approval_id: str | None = None
                         if tool_call_id:
-                            remote_approval_id = await create_remote_approval_if_possible(
-                                tool_name=tool_name,
-                                tool_args=normalized_tool_args,
-                                tool_call_id=tool_call_id,
+                            remote_approval_id = (
+                                await create_remote_approval_if_possible(
+                                    tool_name=tool_name,
+                                    tool_args=normalized_tool_args,
+                                    tool_call_id=tool_call_id,
+                                )
                             )
 
                         # If the stream already provides an approval ID, mirror it
@@ -324,9 +326,8 @@ async def _wrap_streaming_body_with_approvals(
                             event.get("approvalId") or event.get("approval_id") or ""
                         )
                         if (
-                            (not isinstance(approval_id, str) or not approval_id)
-                            and remote_approval_id
-                        ):
+                            not isinstance(approval_id, str) or not approval_id
+                        ) and remote_approval_id:
                             approval_id = remote_approval_id
                         if isinstance(approval_id, str) and approval_id:
                             record = await mirror_approval_to_local(

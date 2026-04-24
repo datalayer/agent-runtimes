@@ -18,8 +18,8 @@ from __future__ import annotations
 import asyncio
 import logging
 import re
-from datetime import datetime, timezone
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from typing import Any
 
 from pydantic_ai import RunContext
@@ -211,9 +211,9 @@ class ToolApprovalManager:
         is received from the frontend.
         """
         from agent_runtimes.routes.tool_approvals import (
-            ToolApprovalCreateRequest,
             _APPROVALS,
             _APPROVALS_LOCK,
+            ToolApprovalCreateRequest,
             _create_approval,
             forward_approval_to_ai_agents,
             register_approval_credentials,

@@ -650,9 +650,7 @@ class MCPLifecycleManager:
         while True:
             # Already running?
             if self.get_running_server(server_id):
-                logger.info(
-                    f"wait_until_ready: '{server_id}' is now running"
-                )
+                logger.info(f"wait_until_ready: '{server_id}' is now running")
                 return True
 
             # Known failure?

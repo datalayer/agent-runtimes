@@ -8,6 +8,7 @@ THIS FILE IS AUTO-GENERATED. DO NOT EDIT MANUALLY.
 """
 
 from typing import Dict
+
 from agent_runtimes.types import AgentSpec
 
 from .agents import AGENT_SPECS as ROOT_AGENTS
@@ -22,8 +23,8 @@ def get_agent_spec(agent_id: str) -> AgentSpec | None:
     spec = AGENT_SPECS.get(agent_id)
     if spec is not None:
         return spec
-    base, _, ver = agent_id.rpartition(':')
-    if base and '.' in ver:
+    base, _, ver = agent_id.rpartition(":")
+    if base and "." in ver:
         return AGENT_SPECS.get(base)
     return None
 
@@ -38,5 +39,6 @@ def list_agent_specs(prefix: str | None = None) -> list[AgentSpec]:
     if prefix is not None:
         specs = [s for s in specs if s.id.startswith(prefix)]
     return specs
+
 
 __all__ = ["AGENT_SPECS", "get_agent_spec", "list_agent_specs"]

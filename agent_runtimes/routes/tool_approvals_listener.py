@@ -105,10 +105,7 @@ async def _handle_record(record: dict[str, Any]) -> None:
     if local_id is None and tool_call_id:
         async with _APPROVALS_LOCK:
             for rec in _APPROVALS.values():
-                if (
-                    rec.status == "pending"
-                    and rec.tool_call_id == tool_call_id
-                ):
+                if rec.status == "pending" and rec.tool_call_id == tool_call_id:
                     local_id = rec.id
                     break
 
@@ -186,16 +183,12 @@ async def _run_listener(jwt: str) -> None:
                 ping_interval=20.0,
                 ping_timeout=20.0,
             ) as websocket:
-                logger.info(
-                    "[tool-approval:listener] Connected to ai-agents WS"
-                )
+                logger.info("[tool-approval:listener] Connected to ai-agents WS")
                 backoff = 1.0
 
                 # Prime with full history so decisions that arrived between
                 # reconnects are still mirrored locally.
-                await websocket.send(
-                    json.dumps({"type": "tool-approvals-history"})
-                )
+                await websocket.send(json.dumps({"type": "tool-approvals-history"}))
 
                 while True:
                     raw = await websocket.recv()
@@ -216,12 +209,9 @@ async def _run_listener(jwt: str) -> None:
                         data = msg.get("data") or {}
                         approvals = data.get("approvals")
                         if isinstance(approvals, list):
-                            records = [
-                                r for r in approvals if isinstance(r, dict)
-                            ]
-                    elif (
-                        isinstance(msg_event, str)
-                        and msg_event.startswith("tool_approval_")
+                            records = [r for r in approvals if isinstance(r, dict)]
+                    elif isinstance(msg_event, str) and msg_event.startswith(
+                        "tool_approval_"
                     ):
                         data = msg.get("data") or msg.get("payload")
                         if isinstance(data, dict):

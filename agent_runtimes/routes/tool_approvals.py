@@ -184,9 +184,7 @@ def register_approval_credentials(local_id: str, user_jwt_token: str) -> None:
         asyncio.create_task(ensure_listener(user_jwt_token))
     except RuntimeError:
         # No running loop (unlikely in FastAPI context) — skip.
-        logger.debug(
-            "[tool-approval] No running loop; skipping listener start"
-        )
+        logger.debug("[tool-approval] No running loop; skipping listener start")
 
 
 def remove_approval_credentials(local_id: str) -> None:
@@ -303,21 +301,21 @@ async def _relay_decision_to_ai_agents_ws(
             try:
                 while True:
                     raw = await _asyncio.wait_for(ws.recv(), timeout=deadline)
+                    parsed: dict[str, Any] | None = None
                     try:
-                        parsed = _json.loads(raw)
-                    except Exception:
+                        maybe_parsed = _json.loads(raw)
+                        if isinstance(maybe_parsed, dict):
+                            parsed = maybe_parsed
+                    except _json.JSONDecodeError:
+                        parsed = None
+                    if parsed is None:
                         continue
-                    event = parsed.get("event") if isinstance(parsed, dict) else None
-                    data = parsed.get("data") if isinstance(parsed, dict) else None
-                    rid = (
-                        data.get("id")
-                        if isinstance(data, dict)
-                        else None
-                    )
+                    event = parsed.get("event")
+                    data = parsed.get("data")
+                    rid = data.get("id") if isinstance(data, dict) else None
                     if event == expected_event and rid == remote_id:
                         logger.info(
-                            "[tool-approval:relay] Got server echo %s for "
-                            "remote_id=%s",
+                            "[tool-approval:relay] Got server echo %s for remote_id=%s",
                             event,
                             remote_id,
                         )
@@ -717,8 +715,11 @@ async def _lazy_forward_and_relay(
     user_jwt_token: str,
 ) -> None:
     """Create the approval on ai-agents (if it doesn't exist yet) then relay
-    the decision. Used when the initial forward at creation time was skipped
-    or failed — ensures observers always see the outcome."""
+    the decision.
+
+    Used when the initial forward at creation time was skipped or failed,
+    ensuring observers always see the outcome.
+    """
     try:
         remote_id = await forward_approval_to_ai_agents(record, user_jwt_token)
     except Exception as exc:

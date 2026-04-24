@@ -769,9 +769,7 @@ class SkillsGuardrailCapability(AbstractCapability[Any]):
             return
 
         unknown = [
-            skill
-            for skill in sorted(referenced)
-            if not self._is_skill_tracked(skill)
+            skill for skill in sorted(referenced) if not self._is_skill_tracked(skill)
         ]
         if unknown:
             raise GuardrailBlockedError(
@@ -971,4 +969,3 @@ from .tools import (  # noqa: E402,F401
     ToolApprovalTimeoutError,
     ToolsGuardrailCapability,
 )
-

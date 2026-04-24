@@ -1045,7 +1045,9 @@ async def toggle_codemode(request: CodemodeToggleRequest) -> dict[str, Any]:
 
     return {
         "status": "ok",
-        "enabled": request.enabled if scoped_agent_id is not None else _codemode_state["enabled"],
+        "enabled": request.enabled
+        if scoped_agent_id is not None
+        else _codemode_state["enabled"],
         "skills": _codemode_state["skills"],
         "agent_id": scoped_agent_id,
         "adapters_updated": adapters_updated,
