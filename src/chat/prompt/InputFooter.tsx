@@ -24,7 +24,6 @@ import { ToolsIcon, BriefcaseIcon, AiModelIcon } from '@primer/octicons-react';
 import { InputPrompt } from './InputPrompt';
 import { TokenUsageBar } from '../usage/TokenUsageBar';
 import { McpStatusIndicator } from '../indicators/McpStatusIndicator';
-import { SandboxStatusIndicator } from '../indicators/SandboxStatusIndicator';
 import { SkillsStatusIndicator } from '../indicators/SkillsStatusIndicator';
 import type {
   BuiltinTool,
@@ -32,7 +31,6 @@ import type {
   MCPServerConfig,
   McpToolsetsStatusResponse,
   ModelConfig,
-  SandboxWsStatus,
   SkillInfo,
 } from '../../types';
 
@@ -104,16 +102,12 @@ export interface InputToolbarProps {
   onToggleSkillApproval: (skillId: string) => void;
 
   // ---- Indicators ----
-  /** API base URL passed to MCP / Sandbox indicators */
+  /** API base URL passed to MCP indicator */
   apiBase?: string;
-  /** Auth token passed to MCP / Sandbox indicators */
+  /** Auth token passed to MCP indicator */
   authToken?: string;
-  /** Agent ID passed to Sandbox indicator for agent-scoped status */
-  agentId?: string;
   /** Pre-fetched MCP status from WebSocket — bypasses REST polling */
   mcpStatusData?: McpToolsetsStatusResponse | null;
-  /** Optional sandbox status override for immediate indicator updates */
-  sandboxStatusData?: SandboxWsStatus | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -162,9 +156,7 @@ export function InputToolbar({
   onToggleSkillApproval,
   apiBase,
   authToken,
-  agentId,
   mcpStatusData,
-  sandboxStatusData,
 }: InputToolbarProps) {
   // Show token usage when we have valid context data
   const hasContext = Boolean(
@@ -188,12 +180,6 @@ export function InputToolbar({
         onChange={setInput}
         footerRightContent={
           <>
-            <SandboxStatusIndicator
-              apiBase={apiBase}
-              authToken={authToken}
-              agentId={agentId}
-              statusOverride={sandboxStatusData}
-            />
             <McpStatusIndicator
               apiBase={apiBase}
               authToken={authToken}

@@ -2701,8 +2701,10 @@ function ChatBaseInner({
           showInformation={showInformation}
           onInformationClick={onInformationClick}
           padding={padding}
-          sandboxStatus={sandboxStatus}
-          onSandboxInterrupt={handleSandboxInterrupt}
+          sandboxApiBase={indicatorApiBase}
+          sandboxAuthToken={protocol?.authToken}
+          sandboxAgentId={protocol?.agentId}
+          sandboxStatusData={sandboxStatusData}
           headerButtons={headerButtons}
           messageCount={messages.length}
           onNewChat={handleNewChat}
@@ -2831,9 +2833,7 @@ function ChatBaseInner({
           onToggleSkillApproval={toggleSkillApproval}
           apiBase={indicatorApiBase}
           authToken={protocol?.authToken}
-          agentId={protocol?.agentId}
           mcpStatusData={mcpStatusData}
-          sandboxStatusData={sandboxStatusData}
         />
       )}
 
