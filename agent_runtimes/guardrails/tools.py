@@ -398,6 +398,7 @@ class ToolApprovalManager:
             _APPROVALS_LOCK,
             _create_approval,
             forward_approval_to_ai_agents,
+            register_approval_credentials,
             register_pending_approval_event,
             register_remote_approval_mapping,
             remove_pending_approval_event,
@@ -496,6 +497,11 @@ class ToolApprovalManager:
 
         remote_approval_id: str | None = None
         if effective_user_jwt:
+            # Always remember the JWT so that even if the upfront forward
+            # fails or ai-agents is momentarily unavailable, the eventual
+            # decision can still be relayed (lazily forwarding on decision
+            # if needed) so all observers see the outcome.
+            register_approval_credentials(approval_id, effective_user_jwt)
             # Sync creation to ai-agents first so we can correlate future decisions
             # by its remote approval id even when tool_call_id is missing.
             remote_approval_id = await forward_approval_to_ai_agents(
