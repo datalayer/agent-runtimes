@@ -217,7 +217,15 @@ async def _relay_decision_to_ai_agents_ws(
                 break
         stripped = ws_base.replace("https://", "").replace("http://", "")
         scheme = "wss" if ai_agents_url.startswith("https") else "ws"
-        ws_url = f"{scheme}://{stripped}/api/ai-agents/v1/ws"
+        # The ai-agents WS server authenticates via the ``?token=`` query
+        # parameter (the browser WebSocket API cannot set an Authorization
+        # header), so we pass the JWT both as a query param AND as a header
+        # to match what the SaaS UI does and maximise compatibility.
+        from urllib.parse import urlencode as _urlencode
+
+        query = _urlencode({"token": user_jwt_token}) if user_jwt_token else ""
+        sep = "?" if query else ""
+        ws_url = f"{scheme}://{stripped}/api/ai-agents/v1/ws{sep}{query}"
 
         msg = _json.dumps(
             {
@@ -234,7 +242,7 @@ async def _relay_decision_to_ai_agents_ws(
         logger.info(
             "[tool-approval:relay] Connecting to ai-agents WS %s to relay "
             "%s decision for remote_id=%s",
-            ws_url,
+            ws_url.split("?", 1)[0],
             "approve" if approved else "reject",
             remote_id,
         )

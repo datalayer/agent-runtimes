@@ -75,6 +75,10 @@ async def _handle_record(record: dict[str, Any]) -> None:
 
     raw_status = record.get("status")
     status = str(raw_status or "").lower()
+    # Normalise ``approved_with_changes`` to ``approved`` for local mirroring
+    # — the local store only distinguishes approved/rejected.
+    if status == "approved_with_changes":
+        status = "approved"
     if status not in {"approved", "rejected"}:
         return
 
@@ -250,8 +254,13 @@ async def ensure_listener(jwt: str) -> None:
     async with _LOCK:
         _REFCOUNTS[jwt] = _REFCOUNTS.get(jwt, 0) + 1
         if jwt not in _TASKS or _TASKS[jwt].done():
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_running_loop()
             _TASKS[jwt] = loop.create_task(_run_listener(jwt))
+            logger.info(
+                "[tool-approval:listener] Started persistent listener task "
+                "(refcount=%d)",
+                _REFCOUNTS[jwt],
+            )
 
 
 async def release_listener(jwt: str) -> None:
