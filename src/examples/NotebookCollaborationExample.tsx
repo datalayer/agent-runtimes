@@ -25,17 +25,19 @@ const NOTEBOOK_ID = '01JZQRQ35GG871QQCZW9TB1A8J';
  * Example demonstrating how to use Datalayer services with Notebook
  *
  * This example shows:
- * 1. How to create and use DatalayerServiceManager for kernel management
+ * 1. How to create and use DatalayerServiceManager for runtime management
  * 2. How to create and use DatalayerCollaborationProvider for real-time collaboration
  * 3. How to enable/disable Datalayer collaboration
  * 4. How to pass these to the base Notebook component
  * 5. Graceful fallback when Datalayer credentials are not available
  */
-type IDatalayerNotebookExampleProps = {
+type INotebookCollaborationExampleProps = {
   serviceManager?: ServiceManager.IManager;
 };
 
-const DatalayerNotebookExample = (props: IDatalayerNotebookExampleProps) => {
+const NotebookCollaborationExample = (
+  props: INotebookCollaborationExampleProps,
+) => {
   // Load config on component mount
   loadJupyterConfig();
 
@@ -274,4 +276,4 @@ const DatalayerNotebookExample = (props: IDatalayerNotebookExampleProps) => {
   );
 };
 
-export default DatalayerNotebookExample;
+export default NotebookCollaborationExample;

@@ -14,7 +14,6 @@ from typing import Optional
 
 from agent_runtimes.types import PersonaSpec
 
-
 # ============================================================================
 # Personas Enum
 # ============================================================================
@@ -187,8 +186,8 @@ def get_persona(persona_id: str) -> Optional[PersonaSpec]:
     persona = PERSONA_CATALOGUE.get(persona_id)
     if persona is not None:
         return persona
-    base, _, ver = persona_id.rpartition(':')
-    if base and '.' in ver:
+    base, _, ver = persona_id.rpartition(":")
+    if base and "." in ver:
         return PERSONA_CATALOGUE.get(base)
     return None
 

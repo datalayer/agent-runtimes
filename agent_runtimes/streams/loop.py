@@ -982,7 +982,7 @@ async def stream_loop(
                                     )
 
                     except Exception as exc:
-                        logger.warning(
+                        logger.debug(
                             "[ws:recv] client message handling error agent_id=%s: %s",
                             agent_id,
                             exc,

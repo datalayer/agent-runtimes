@@ -343,12 +343,24 @@ let _ws: WebSocket | null = null;
 const _wsByAgentId = new Map<string, WebSocket>();
 
 function _resolveWs(agentId?: string): WebSocket | null {
+  const hasAgentScopedSockets = _wsByAgentId.size > 0;
+
   if (agentId) {
     const wsForAgent = _wsByAgentId.get(agentId);
     if (wsForAgent && wsForAgent.readyState === WebSocket.OPEN) {
       return wsForAgent;
     }
+    // In multi-agent mode, avoid falling back to an arbitrary global socket.
+    if (hasAgentScopedSockets) {
+      return null;
+    }
   }
+
+  // When any agent-scoped sockets are registered, require explicit routing.
+  if (hasAgentScopedSockets) {
+    return null;
+  }
+
   if (_ws && _ws.readyState === WebSocket.OPEN) {
     return _ws;
   }

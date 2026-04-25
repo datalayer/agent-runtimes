@@ -537,7 +537,7 @@ function ChatBaseInner({
         agentId: a.agent_id ?? '',
         requestedAt: a.created_at ?? new Date().toISOString(),
       }));
-  }, [pendingApprovalsProp, storeApprovals]);
+  }, [pendingApprovalsProp, storeApprovals, activeAgentId]);
   const pendingApprovals = storePendingApprovals;
 
   // Persist a one-off approval decision into the tools/skills dropdown state
@@ -552,12 +552,6 @@ function ChatBaseInner({
         .getState()
         .approvals.find(a => a.id === approvalId);
       const toolName = approval?.tool_name;
-      console.warn('[ChatBase.persistApprovalDecision]', {
-        approvalId,
-        approved,
-        toolName,
-        toolArgs: approval?.tool_args,
-      });
       if (!toolName) return;
 
       // Derive the skill id either from a synthetic ``skill:<id>`` tool_name
@@ -586,10 +580,6 @@ function ChatBaseInner({
 
       const skillId = deriveSkillId();
       if (skillId) {
-        console.warn(
-          '[ChatBase.persistApprovalDecision] flipping skill approval',
-          { skillId, approved },
-        );
         setLocalSkillApproval(prev => {
           const next = new Map(prev);
           next.set(skillId, approved);
@@ -641,12 +631,6 @@ function ChatBaseInner({
       const approval = agentRuntimeStore
         .getState()
         .approvals.find(a => a.id === approvalId);
-      // Persist the decision in the tools/skills dropdown BEFORE removing
-      // the approval from the store (we need ``tool_name`` to route it).
-      persistApprovalDecision(approvalId, true);
-      // Optimistically clear the local pending badge/banner; the backend echo
-      // will reconcile status if needed.
-      agentRuntimeStore.getState().removeApproval(approvalId);
       const ok = agentRuntimeStore
         .getState()
         .sendDecision(
@@ -656,7 +640,12 @@ function ChatBaseInner({
           approval?.tool_call_id ?? toolCallId,
           activeAgentId,
         );
-      if (!ok) {
+      if (ok) {
+        // Persist decision and clear pending approval only after a successful
+        // WS send so failed sends keep the retryable pending UI visible.
+        persistApprovalDecision(approvalId, true);
+        agentRuntimeStore.getState().removeApproval(approvalId);
+      } else {
         console.warn(
           '[ChatBase] tool_approval_decision dropped: websocket not ready',
         );
@@ -670,9 +659,6 @@ function ChatBaseInner({
       const approval = agentRuntimeStore
         .getState()
         .approvals.find(a => a.id === approvalId);
-      // Optimistically clear the local pending badge/banner; the backend echo
-      // will reconcile status if needed.
-      agentRuntimeStore.getState().removeApproval(approvalId);
       const ok = agentRuntimeStore
         .getState()
         .sendDecision(
@@ -682,7 +668,10 @@ function ChatBaseInner({
           approval?.tool_call_id ?? toolCallId,
           activeAgentId,
         );
-      if (!ok) {
+      if (ok) {
+        // Keep pending approval visible when send fails, so the user can retry.
+        agentRuntimeStore.getState().removeApproval(approvalId);
+      } else {
         console.warn(
           '[ChatBase] tool_approval_decision dropped: websocket not ready',
         );
@@ -879,6 +868,10 @@ function ChatBaseInner({
     Map<string, boolean>
   >(new Map());
 
+  useEffect(() => {
+    setLocalSkillApproval(new Map());
+  }, [activeAgentId]);
+
   // Derive enabledSkills from the WS-pushed skill statuses.
   const enabledSkills = useMemo(() => {
     const set = new Set<string>();
@@ -904,14 +897,6 @@ function ChatBaseInner({
       } else {
         set.delete(skillId);
       }
-    });
-    console.warn('[ChatBase.approvedSkills]', {
-      wsSkills: (skillsQuery.data?.skills ?? []).map(s => ({
-        id: s.id,
-        approved: s.approved,
-      })),
-      local: Array.from(localSkillApproval.entries()),
-      merged: Array.from(set),
     });
     return set;
   }, [localSkillApproval, skillsQuery.data]);

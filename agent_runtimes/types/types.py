@@ -418,9 +418,7 @@ class PersonaSpec(BaseModel):
     version: str = Field(default="0.0.1", description="Persona spec version")
     name: str = Field(..., description="Display name of the persona")
     description: str = Field(default="", description="Short persona description")
-    tags: List[str] = Field(
-        default_factory=list, description="Categorization tags"
-    )
+    tags: List[str] = Field(default_factory=list, description="Categorization tags")
     icon: Optional[str] = Field(default=None, description="Icon identifier")
     emoji: Optional[str] = Field(default=None, description="Emoji representation")
     agent: Optional[str] = Field(

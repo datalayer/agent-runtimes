@@ -19,7 +19,7 @@ export { default as ChatStandaloneExample } from './ChatStandaloneExample';
 export { default as CopilotKitLexicalExample } from './CopilotKitLexicalExample';
 export { default as CopilotKitNotebookExample } from './CopilotKitNotebookExample';
 export { default as CustomExample } from './ChatCustomExample';
-export { default as DatalayerNotebookExample } from './DatalayerNotebookExample';
+export { default as NotebookCollaborationExample } from './NotebookCollaborationExample';
 export { default as AgentCheckpointsExample } from './AgentCheckpointsExample';
 export { default as AgentCodemodeExample } from './AgentCodemodeExample';
 export { default as AgentEvalsExample } from './AgentEvalsExample';

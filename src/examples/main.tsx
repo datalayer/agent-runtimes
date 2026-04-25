@@ -711,7 +711,7 @@ const ExampleAppThemed: React.FC<{
                   if (id.startsWith('Lexical')) return 'Lexical';
                   if (
                     id.startsWith('Notebook') ||
-                    id === 'DatalayerNotebookExample'
+                    id === 'NotebookCollaborationExample'
                   )
                     return 'Notebook';
                   return 'Cell';

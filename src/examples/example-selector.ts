@@ -166,9 +166,9 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
     'CopilotKit integration with notebook workflows.',
   ),
   makeEntry(
-    'DatalayerNotebookExample',
-    () => import('./DatalayerNotebookExample'),
-    'Datalayer notebook runtime integration example.',
+    'NotebookCollaborationExample',
+    () => import('./NotebookCollaborationExample'),
+    'Notebook collaboration runtime integration example.',
   ),
   makeEntry(
     'AgentCheckpointsExample',
