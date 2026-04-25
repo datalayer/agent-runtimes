@@ -13,12 +13,18 @@
  * 1. Start the agent-runtimes server: `npm run start:server`
  * 2. Start the frontend: `npm run dev`
  *
- * @module examples/AgentRuntimeLexicalExample
+ * @module examples/LexicalAgentExample
  */
 
 import '@datalayer/jupyter-react/lib/css/PrismCss';
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { $getRoot, $createParagraphNode, EditorState } from 'lexical';
 import { LexicalComposer } from '@lexical/react/LexicalComposer';
 import { RichTextPlugin } from '@lexical/react/LexicalRichTextPlugin';
@@ -82,6 +88,32 @@ const AGENT_ID = 'lexical-agent-runtime-example';
 // Vercel AI endpoint for lexical operations
 const VERCEL_AI_ENDPOINT = `${BASE_URL}/api/v1/vercel-ai/${AGENT_ID}`;
 
+function getJupyterSandboxUrl(
+  serviceManager?: ServiceManager.IManager,
+): string | undefined {
+  const envUrl = import.meta.env.VITE_JUPYTER_SANDBOX_URL;
+  if (envUrl) {
+    return envUrl;
+  }
+
+  const baseUrl = serviceManager?.serverSettings?.baseUrl?.replace(/\/$/, '');
+  if (!baseUrl) {
+    return undefined;
+  }
+
+  if (baseUrl.includes('token=')) {
+    return baseUrl;
+  }
+
+  const token = serviceManager?.serverSettings?.token;
+  if (!token) {
+    return baseUrl;
+  }
+
+  const separator = baseUrl.includes('?') ? '&' : '?';
+  return `${baseUrl}${separator}token=${encodeURIComponent(token)}`;
+}
+
 /**
  * Hook to ensure the demo-agent exists on the server.
  * Creates it if it doesn't exist.
@@ -89,6 +121,7 @@ const VERCEL_AI_ENDPOINT = `${BASE_URL}/api/v1/vercel-ai/${AGENT_ID}`;
 function useEnsureAgent(
   agentId: string,
   baseUrl: string,
+  jupyterSandboxUrl?: string,
 ): {
   isReady: boolean;
   error: string | null;
@@ -101,6 +134,16 @@ function useEnsureAgent(
 
     async function ensureAgent() {
       try {
+        if (!jupyterSandboxUrl) {
+          if (mounted) {
+            setError(
+              'Could not detect Jupyter server URL from Lexical service manager.',
+            );
+            setIsReady(false);
+          }
+          return;
+        }
+
         // Try to create the agent (will fail if already exists, which is fine)
         const response = await fetch(`${baseUrl}/api/v1/agents`, {
           method: 'POST',
@@ -115,37 +158,61 @@ function useEnsureAgent(
             model: DEFAULT_MODEL,
             system_prompt:
               'You are a helpful AI assistant that helps users work with documents. You can help with writing, editing, and formatting content.',
+            enable_codemode: false,
+            sandbox_variant: 'jupyter',
+            jupyter_sandbox: jupyterSandboxUrl,
           }),
         });
 
         if (mounted) {
           if (response.ok) {
             console.log(
-              `[AgentRuntimeLexicalExample] Created agent: ${agentId}`,
+              `[AgentRuntimeLexicalAgentExample] Created agent: ${agentId}`,
             );
-            setIsReady(true);
-          } else if (response.status === 400) {
-            // Agent already exists, which is fine
-            console.log(
-              `[AgentRuntimeLexicalExample] Agent already exists: ${agentId}`,
-            );
+            setError(null);
             setIsReady(true);
           } else {
-            const errorData = await response.json().catch(() => ({}));
-            setError(
-              errorData.detail || `Failed to create agent: ${response.status}`,
-            );
+            const rawBody = await response.text().catch(() => '');
+            let detail = rawBody;
+            try {
+              const parsed = rawBody ? JSON.parse(rawBody) : {};
+              if (
+                typeof parsed.detail === 'string' &&
+                parsed.detail.length > 0
+              ) {
+                detail = parsed.detail;
+              }
+            } catch {
+              // Keep raw body as fallback detail.
+            }
+
+            const alreadyExists =
+              response.status === 409 ||
+              response.status === 400 ||
+              /already exists/i.test(detail || '');
+
+            if (alreadyExists) {
+              console.log(
+                `[AgentRuntimeLexicalAgentExample] Reusing existing agent: ${agentId}`,
+              );
+              setError(null);
+              setIsReady(true);
+            } else {
+              setError(detail || `Failed to create agent: ${response.status}`);
+              setIsReady(false);
+            }
           }
         }
       } catch (err) {
         if (mounted) {
           console.error(
-            '[AgentRuntimeLexicalExample] Error creating agent:',
+            '[AgentRuntimeLexicalAgentExample] Error creating agent:',
             err,
           );
           setError(
             err instanceof Error ? err.message : 'Failed to connect to server',
           );
+          setIsReady(false);
         }
       }
     }
@@ -155,7 +222,7 @@ function useEnsureAgent(
     return () => {
       mounted = false;
     };
-  }, [agentId, baseUrl]);
+  }, [agentId, baseUrl, jupyterSandboxUrl]);
 
   return { isReady, error };
 }
@@ -413,8 +480,17 @@ function LexicalWithChat({
   content,
   serviceManager,
 }: LexicalWithChatProps): JSX.Element {
+  const jupyterSandboxUrl = useMemo(
+    () => getJupyterSandboxUrl(serviceManager),
+    [serviceManager],
+  );
+
   // Ensure the agent exists before rendering chat
-  const { isReady, error } = useEnsureAgent(AGENT_ID, BASE_URL);
+  const { isReady, error } = useEnsureAgent(
+    AGENT_ID,
+    BASE_URL,
+    jupyterSandboxUrl,
+  );
 
   // State to hold tools - populated by LexicalToolsPlugin inside the context
   const [tools, setTools] = useState<ReturnType<typeof useLexicalTools>>([]);
@@ -506,16 +582,16 @@ function LexicalWithChat({
 /**
  * Main Agent Runtime lexical example component
  */
-interface AgentRuntimeLexicalExampleProps {
+interface AgentRuntimeLexicalAgentExampleProps {
   content?: string;
   serviceManager?: ServiceManager.IManager;
 }
 
-function AgentRuntimeLexicalExample({
+function AgentRuntimeLexicalAgentExample({
   content,
   serviceManager,
-}: AgentRuntimeLexicalExampleProps): JSX.Element {
+}: AgentRuntimeLexicalAgentExampleProps): JSX.Element {
   return <LexicalWithChat content={content} serviceManager={serviceManager} />;
 }
 
-export default AgentRuntimeLexicalExample;
+export default AgentRuntimeLexicalAgentExample;

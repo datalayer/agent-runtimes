@@ -256,28 +256,28 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
     'Scheduled and one-shot trigger flows.',
   ),
   makeEntry(
-    'LexicalExample',
-    () => import('./LexicalExample'),
+    'LexicalAgentExample',
+    () => import('./LexicalAgentExample'),
     'Lexical document integration example.',
   ),
   makeEntry(
-    'LexicalSidebarExample',
-    () => import('./LexicalSidebarExample'),
+    'LexicalAgentSidebarExample',
+    () => import('./LexicalAgentSidebarExample'),
     'Lexical with sidebar orchestration example.',
+  ),
+  makeEntry(
+    'NotebookAgentExample',
+    () => import('./NotebookAgentExample'),
+    'Notebook orchestration and runtime example.',
+  ),
+  makeEntry(
+    'NotebookAgentSidebarExample',
+    () => import('./NotebookAgentSidebarExample'),
+    'Notebook plus sidebar controls example.',
   ),
   makeEntry(
     'NotebookExample',
     () => import('./NotebookExample'),
-    'Notebook orchestration and runtime example.',
-  ),
-  makeEntry(
-    'NotebookSidebarExample',
-    () => import('./NotebookSidebarExample'),
-    'Notebook plus sidebar controls example.',
-  ),
-  makeEntry(
-    'NotebookSimpleExample',
-    () => import('./NotebookSimpleExample'),
     'Minimal notebook integration example.',
   ),
 ];

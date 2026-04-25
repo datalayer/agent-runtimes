@@ -723,10 +723,10 @@ const ExampleAppThemed: React.FC<{
                   'AG-UI',
                   'Agent',
                   'Chat',
-                  'CopilotKit',
                   'Lexical',
                   'Notebook',
                   'Cell',
+                  'CopilotKit',
                 ];
 
                 const grouped = new Map<string, typeof rest>();

@@ -5,7 +5,7 @@
 
 import { useJupyter, JupyterReactTheme } from '@datalayer/jupyter-react';
 import { JupyterCellExample } from './examples/CellSimpleExample';
-import { JupyterNotebookExample } from './examples/NotebookSimpleExample';
+import { JupyterNotebookExample } from './examples/NotebookExample';
 
 import './App.css';
 

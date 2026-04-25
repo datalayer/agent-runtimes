@@ -16,7 +16,7 @@
  * 1. Start the agent-runtimes server: `npm run start:ag-ui`
  * 2. Create a .env file with VITE_BASE_URL if not using defaults
  *
- * @module examples/ChatJupyterNotebookExample
+ * @module examples/NotebookAgentSidebarExample
  */
 
 import { useEffect, useMemo, useState } from 'react';
@@ -117,12 +117,14 @@ function useEnsureAgent(
 
         if (mounted) {
           if (response.ok) {
-            console.warn(`[NotebookSidebarExample] Created agent: ${agentId}`);
+            console.warn(
+              `[NotebookAgentSidebarExample] Created agent: ${agentId}`,
+            );
             setError(null);
             setIsReady(true);
           } else if (response.status === 409 || response.status === 400) {
             console.warn(
-              `[NotebookSidebarExample] Reusing existing agent: ${agentId}`,
+              `[NotebookAgentSidebarExample] Reusing existing agent: ${agentId}`,
             );
             setError(null);
             setIsReady(true);
@@ -136,7 +138,10 @@ function useEnsureAgent(
         }
       } catch (err) {
         if (mounted) {
-          console.error('[NotebookSidebarExample] Error creating agent:', err);
+          console.error(
+            '[NotebookAgentSidebarExample] Error creating agent:',
+            err,
+          );
           setError(
             err instanceof Error ? err.message : 'Failed to connect to server',
           );
@@ -351,7 +356,7 @@ export function AgentRuntimeNotebookExampleInner({
 /**
  * Main example component with Simple wrapper
  */
-export function AgentRuntimeNotebookSidebarExample() {
+export function AgentRuntimeNotebookAgentSidebarExample() {
   return (
     <ThemedJupyterProvider>
       <SimpleWrapper />
@@ -364,4 +369,4 @@ function SimpleWrapper() {
   return <AgentRuntimeNotebookExampleInner serviceManager={serviceManager} />;
 }
 
-export default AgentRuntimeNotebookSidebarExample;
+export default AgentRuntimeNotebookAgentSidebarExample;

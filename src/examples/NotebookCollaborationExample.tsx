@@ -111,7 +111,7 @@ const NotebookCollaborationExample = (
     <ThemedJupyterProvider>
       <Box p={3}>
         <Heading as="h2" sx={{ mb: 3 }}>
-          Datalayer Notebook Collaboration Example
+          Notebook Collaboration Example
         </Heading>
 
         <Box sx={{ mb: 3 }}>
