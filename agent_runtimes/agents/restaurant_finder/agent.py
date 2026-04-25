@@ -32,130 +32,148 @@ class RestaurantDeps:
         self.last_restaurants: list[dict[str, Any]] = []
 
 
+A2UI_BASIC_CATALOG_ID = "https://a2ui.org/specification/v0_9/basic_catalog.json"
+
+
+def _create_surface_message(surface_id: str, primary_color: str) -> dict[str, Any]:
+    """Build a native A2UI v0.9 createSurface message."""
+    return {
+        "version": "v0.9",
+        "createSurface": {
+            "surfaceId": surface_id,
+            "catalogId": A2UI_BASIC_CATALOG_ID,
+            "theme": {"primaryColor": primary_color, "font": "Roboto"},
+            "sendDataModel": True,
+        },
+    }
+
+
 def _build_restaurant_list_a2ui(
     restaurants: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
-    """Build A2UI messages for a restaurant list."""
-    # Build the data model items
-    items = []
-    for i, restaurant in enumerate(restaurants):
-        items.append(
-            {
-                "key": f"item{i + 1}",
-                "valueMap": [
-                    {"key": "name", "valueString": restaurant.get("name", "")},
-                    {"key": "rating", "valueString": restaurant.get("rating", "")},
-                    {"key": "detail", "valueString": restaurant.get("detail", "")},
-                    {"key": "imageUrl", "valueString": restaurant.get("imageUrl", "")},
-                    {"key": "address", "valueString": restaurant.get("address", "")},
-                ],
-            }
-        )
+    """Build native A2UI v0.9 messages for a restaurant list."""
+    items = [
+        {
+            "name": restaurant.get("name", ""),
+            "rating": str(restaurant.get("rating", "")),
+            "detail": restaurant.get("detail", ""),
+            "imageUrl": restaurant.get("imageUrl", ""),
+            "address": restaurant.get("address", ""),
+        }
+        for restaurant in restaurants
+    ]
 
     return [
+        _create_surface_message("default", "#FF5722"),
         {
-            "beginRendering": {
-                "surfaceId": "default",
-                "root": "root-column",
-                "styles": {"primaryColor": "#FF5722", "font": "Roboto"},
-            }
-        },
-        {
-            "surfaceUpdate": {
+            "version": "v0.9",
+            "updateComponents": {
                 "surfaceId": "default",
                 "components": [
                     {
-                        "id": "root-column",
-                        "component": {
-                            "Column": {
-                                "children": {
-                                    "explicitList": ["title-heading", "item-list"]
-                                }
-                            }
-                        },
+                        "id": "root",
+                        "component": "Column",
+                        "children": ["title-heading", "item-list"],
                     },
                     {
                         "id": "title-heading",
-                        "component": {
-                            "Text": {
-                                "usageHint": "h1",
-                                "text": {
-                                    "literalString": f"Top {len(restaurants)} Restaurants"
-                                },
-                            }
-                        },
+                        "component": "Text",
+                        "variant": "h1",
+                        "text": {"path": "/title"},
                     },
                     {
                         "id": "item-list",
-                        "component": {
-                            "List": {
-                                "direction": "vertical",
-                                "children": {
-                                    "template": {
-                                        "componentId": "item-card-template",
-                                        "dataBinding": "/items",
-                                    }
-                                },
-                            }
+                        "component": "List",
+                        "direction": "vertical",
+                        "children": {
+                            "componentId": "item-card-template",
+                            "path": "/items",
                         },
                     },
                     {
                         "id": "item-card-template",
-                        "component": {"Card": {"child": "card-layout"}},
+                        "component": "Card",
+                        "child": "card-layout",
                     },
                     {
                         "id": "card-layout",
-                        "component": {
-                            "Row": {
-                                "children": {
-                                    "explicitList": ["template-image", "card-details"]
-                                }
-                            }
-                        },
+                        "component": "Row",
+                        "children": ["template-image", "card-details"],
                     },
                     {
                         "id": "template-image",
+                        "component": "Image",
                         "weight": 1,
-                        "component": {"Image": {"url": {"path": "imageUrl"}}},
+                        "url": {"path": "imageUrl"},
                     },
                     {
                         "id": "card-details",
+                        "component": "Column",
                         "weight": 2,
-                        "component": {
-                            "Column": {
-                                "children": {
-                                    "explicitList": [
-                                        "template-name",
-                                        "template-rating",
-                                        "template-detail",
-                                    ]
-                                }
-                            }
-                        },
+                        "children": [
+                            "template-name",
+                            "template-rating",
+                            "template-detail",
+                            "template-address",
+                            "template-book-button",
+                        ],
                     },
                     {
                         "id": "template-name",
-                        "component": {
-                            "Text": {"usageHint": "h3", "text": {"path": "name"}}
-                        },
+                        "component": "Text",
+                        "variant": "h3",
+                        "text": {"path": "name"},
                     },
                     {
                         "id": "template-rating",
-                        "component": {"Text": {"text": {"path": "rating"}}},
+                        "component": "Text",
+                        "text": {"path": "rating"},
                     },
                     {
                         "id": "template-detail",
-                        "component": {"Text": {"text": {"path": "detail"}}},
+                        "component": "Text",
+                        "text": {"path": "detail"},
+                    },
+                    {
+                        "id": "template-address",
+                        "component": "Text",
+                        "variant": "caption",
+                        "text": {"path": "address"},
+                    },
+                    {
+                        "id": "template-book-button-label",
+                        "component": "Text",
+                        "text": "Book Now",
+                    },
+                    {
+                        "id": "template-book-button",
+                        "component": "Button",
+                        "variant": "primary",
+                        "child": "template-book-button-label",
+                        "action": {
+                            "event": {
+                                "name": "book_restaurant",
+                                "context": {
+                                    "restaurantName": {"path": "name"},
+                                    "imageUrl": {"path": "imageUrl"},
+                                    "address": {"path": "address"},
+                                },
+                            }
+                        },
                     },
                 ],
-            }
+            },
         },
         {
-            "dataModelUpdate": {
+            "version": "v0.9",
+            "updateDataModel": {
                 "surfaceId": "default",
                 "path": "/",
-                "contents": [{"key": "items", "valueMap": items}],
-            }
+                "value": {
+                    "title": f"Top {len(restaurants)} Restaurants",
+                    "items": items,
+                },
+            },
         },
     ]
 
@@ -163,154 +181,119 @@ def _build_restaurant_list_a2ui(
 def _build_booking_form_a2ui(
     restaurant_name: str, address: str, image_url: str
 ) -> list[dict[str, Any]]:
-    """Build A2UI messages for a booking form."""
+    """Build native A2UI v0.9 messages for a booking form."""
     return [
+        _create_surface_message("booking-form", "#4CAF50"),
         {
-            "beginRendering": {
-                "surfaceId": "booking-form",
-                "root": "form-root",
-                "styles": {"primaryColor": "#4CAF50", "font": "Roboto"},
-            }
-        },
-        {
-            "surfaceUpdate": {
+            "version": "v0.9",
+            "updateComponents": {
                 "surfaceId": "booking-form",
                 "components": [
                     {
-                        "id": "form-root",
-                        "component": {
-                            "Column": {
-                                "children": {
-                                    "explicitList": [
-                                        "form-title",
-                                        "restaurant-info",
-                                        "form-fields",
-                                        "submit-btn",
-                                    ]
-                                }
-                            }
-                        },
+                        "id": "root",
+                        "component": "Column",
+                        "children": [
+                            "form-title",
+                            "restaurant-info",
+                            "party-size-field",
+                            "time-field",
+                            "dietary-field",
+                            "submit-btn",
+                        ],
                     },
                     {
                         "id": "form-title",
-                        "component": {
-                            "Text": {
-                                "usageHint": "h2",
-                                "text": {"literalString": "Book a Table"},
-                            }
-                        },
+                        "component": "Text",
+                        "variant": "h2",
+                        "text": "Book a Table",
                     },
                     {
                         "id": "restaurant-info",
-                        "component": {
-                            "Row": {
-                                "children": {
-                                    "explicitList": [
-                                        "restaurant-image",
-                                        "restaurant-details",
-                                    ]
-                                }
-                            }
-                        },
+                        "component": "Row",
+                        "children": ["restaurant-image", "restaurant-details"],
                     },
                     {
                         "id": "restaurant-image",
+                        "component": "Image",
                         "weight": 1,
-                        "component": {"Image": {"url": {"path": "imageUrl"}}},
+                        "url": {"path": "/imageUrl"},
                     },
                     {
                         "id": "restaurant-details",
+                        "component": "Column",
                         "weight": 2,
-                        "component": {
-                            "Column": {
-                                "children": {
-                                    "explicitList": [
-                                        "restaurant-name",
-                                        "restaurant-address",
-                                    ]
-                                }
-                            }
-                        },
+                        "children": ["restaurant-name", "restaurant-address"],
                     },
                     {
                         "id": "restaurant-name",
-                        "component": {
-                            "Text": {
-                                "usageHint": "h3",
-                                "text": {"path": "restaurantName"},
-                            }
-                        },
+                        "component": "Text",
+                        "variant": "h3",
+                        "text": {"path": "/restaurantName"},
                     },
                     {
                         "id": "restaurant-address",
-                        "component": {"Text": {"text": {"path": "address"}}},
-                    },
-                    {
-                        "id": "form-fields",
-                        "component": {
-                            "Column": {
-                                "children": {
-                                    "explicitList": [
-                                        "party-size-field",
-                                        "time-field",
-                                        "dietary-field",
-                                    ]
-                                }
-                            }
-                        },
+                        "component": "Text",
+                        "text": {"path": "/address"},
                     },
                     {
                         "id": "party-size-field",
-                        "component": {
-                            "TextField": {
-                                "label": "Party Size",
-                                "dataBinding": "/partySize",
-                            }
-                        },
+                        "component": "TextField",
+                        "label": "Party Size",
+                        "value": {"path": "/partySize"},
                     },
                     {
                         "id": "time-field",
-                        "component": {
-                            "TextField": {
-                                "label": "Reservation Time",
-                                "dataBinding": "/reservationTime",
-                            }
-                        },
+                        "component": "DateTimeInput",
+                        "label": "Reservation Time",
+                        "value": {"path": "/reservationTime"},
                     },
                     {
                         "id": "dietary-field",
-                        "component": {
-                            "TextField": {
-                                "label": "Dietary Requirements",
-                                "dataBinding": "/dietary",
-                            }
-                        },
+                        "component": "TextField",
+                        "label": "Dietary Requirements",
+                        "value": {"path": "/dietary"},
+                    },
+                    {
+                        "id": "submit-btn-label",
+                        "component": "Text",
+                        "text": "Confirm Booking",
                     },
                     {
                         "id": "submit-btn",
-                        "component": {
-                            "Button": {
-                                "label": "Confirm Booking",
-                                "actionId": "submit_booking",
+                        "component": "Button",
+                        "variant": "primary",
+                        "child": "submit-btn-label",
+                        "action": {
+                            "event": {
+                                "name": "submit_booking",
+                                "context": {
+                                    "restaurantName": {"path": "/restaurantName"},
+                                    "partySize": {"path": "/partySize"},
+                                    "reservationTime": {
+                                        "path": "/reservationTime"
+                                    },
+                                    "dietary": {"path": "/dietary"},
+                                },
                             }
                         },
                     },
                 ],
-            }
+            },
         },
         {
-            "dataModelUpdate": {
+            "version": "v0.9",
+            "updateDataModel": {
                 "surfaceId": "booking-form",
                 "path": "/",
-                "contents": [
-                    {"key": "restaurantName", "valueString": restaurant_name},
-                    {"key": "address", "valueString": address},
-                    {"key": "imageUrl", "valueString": image_url},
-                    {"key": "partySize", "valueString": "2"},
-                    {"key": "reservationTime", "valueString": ""},
-                    {"key": "dietary", "valueString": ""},
-                ],
-            }
+                "value": {
+                    "restaurantName": restaurant_name,
+                    "address": address,
+                    "imageUrl": image_url,
+                    "partySize": "2",
+                    "reservationTime": "",
+                    "dietary": "",
+                },
+            },
         },
     ]
 
@@ -321,99 +304,89 @@ def _build_confirmation_a2ui(
     reservation_time: str,
     dietary: str,
 ) -> list[dict[str, Any]]:
-    """Build A2UI messages for a booking confirmation."""
+    """Build native A2UI v0.9 messages for a booking confirmation."""
     return [
+        _create_surface_message("confirmation", "#2196F3"),
         {
-            "beginRendering": {
-                "surfaceId": "confirmation",
-                "root": "confirm-root",
-                "styles": {"primaryColor": "#2196F3", "font": "Roboto"},
-            }
-        },
-        {
-            "surfaceUpdate": {
+            "version": "v0.9",
+            "updateComponents": {
                 "surfaceId": "confirmation",
                 "components": [
                     {
-                        "id": "confirm-root",
-                        "component": {
-                            "Column": {
-                                "children": {
-                                    "explicitList": [
-                                        "confirm-icon",
-                                        "confirm-title",
-                                        "confirm-details",
-                                    ]
-                                }
-                            }
-                        },
+                        "id": "root",
+                        "component": "Card",
+                        "child": "confirm-column",
+                    },
+                    {
+                        "id": "confirm-column",
+                        "component": "Column",
+                        "children": [
+                            "confirm-icon",
+                            "confirm-title",
+                            "divider-1",
+                            "detail-restaurant",
+                            "detail-party",
+                            "detail-time",
+                            "detail-dietary",
+                            "divider-2",
+                            "confirm-text",
+                        ],
                     },
                     {
                         "id": "confirm-icon",
-                        "component": {
-                            "Text": {"usageHint": "h1", "text": {"literalString": "✓"}}
-                        },
+                        "component": "Text",
+                        "variant": "h1",
+                        "text": "✓",
                     },
                     {
                         "id": "confirm-title",
-                        "component": {
-                            "Text": {
-                                "usageHint": "h2",
-                                "text": {"literalString": "Booking Confirmed!"},
-                            }
-                        },
+                        "component": "Text",
+                        "variant": "h2",
+                        "text": "Booking Confirmed!",
                     },
-                    {
-                        "id": "confirm-details",
-                        "component": {
-                            "Column": {
-                                "children": {
-                                    "explicitList": [
-                                        "detail-restaurant",
-                                        "detail-party",
-                                        "detail-time",
-                                        "detail-dietary",
-                                    ]
-                                }
-                            }
-                        },
-                    },
+                    {"id": "divider-1", "component": "Divider"},
                     {
                         "id": "detail-restaurant",
-                        "component": {"Text": {"text": {"path": "restaurantText"}}},
+                        "component": "Text",
+                        "text": {"path": "/restaurantText"},
                     },
                     {
                         "id": "detail-party",
-                        "component": {"Text": {"text": {"path": "partyText"}}},
+                        "component": "Text",
+                        "text": {"path": "/partyText"},
                     },
                     {
                         "id": "detail-time",
-                        "component": {"Text": {"text": {"path": "timeText"}}},
+                        "component": "Text",
+                        "text": {"path": "/timeText"},
                     },
                     {
                         "id": "detail-dietary",
-                        "component": {"Text": {"text": {"path": "dietaryText"}}},
+                        "component": "Text",
+                        "text": {"path": "/dietaryText"},
+                    },
+                    {"id": "divider-2", "component": "Divider"},
+                    {
+                        "id": "confirm-text",
+                        "component": "Text",
+                        "variant": "h5",
+                        "text": "We look forward to seeing you!",
                     },
                 ],
-            }
+            },
         },
         {
-            "dataModelUpdate": {
+            "version": "v0.9",
+            "updateDataModel": {
                 "surfaceId": "confirmation",
                 "path": "/",
-                "contents": [
-                    {
-                        "key": "restaurantText",
-                        "valueString": f"Restaurant: {restaurant_name}",
-                    },
-                    {"key": "partyText", "valueString": f"Party Size: {party_size}"},
-                    {"key": "timeText", "valueString": f"Time: {reservation_time}"},
-                    {
-                        "key": "dietaryText",
-                        "valueString": f"Dietary: {dietary or 'None specified'}",
-                    },
-                ],
-            }
+                "value": {
+                    "restaurantText": f"Restaurant: {restaurant_name}",
+                    "partyText": f"Party Size: {party_size}",
+                    "timeText": f"Time: {reservation_time}",
+                    "dietaryText": f"Dietary: {dietary or 'None specified'}",
+                },
+            },
         },
     ]
 

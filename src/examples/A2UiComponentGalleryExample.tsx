@@ -3,783 +3,467 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
-/**
- * A2UiComponentGalleryExample
- *
- * Showcases the full catalog of A2UI components rendered via @a2ui/react.
- * Uses static A2UI JSON messages (no backend required) to demonstrate:
- * - Text, Button, CheckBox, Slider, TextField, DateTimeInput
- * - MultipleChoice (default, chips, filterable)
- * - Row, Column, Card, List, Tabs, Divider, Modal
- * - Icon, Image, Video, AudioPlayer
- *
- * All messages follow the A2UI three-step pattern:
- *   beginRendering → surfaceUpdate → dataModelUpdate
- */
-
-import React, { useState, useCallback } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Box } from '@datalayer/primer-addons';
+import { Button, SegmentedControl, Text } from '@primer/react';
+import { A2uiSurface } from '@a2ui/react/v0_9';
+import type { A2uiClientAction } from '@a2ui/web_core/v0_9';
 import { ThemedProvider } from './utils/themedProvider';
-import { Text, Button as PrimerButton } from '@primer/react';
-import {
-  A2UIProvider,
-  A2UIRenderer,
-  useA2UIActions,
-  initializeDefaultCatalog,
-} from '@a2ui/react';
-import type { Types } from '@a2ui/react';
+import { A2uiMarkdownProvider } from './utils/a2uiMarkdownProvider';
+import { createSceneMessages, useA2uiProcessor } from './utils/a2ui';
 
-initializeDefaultCatalog();
+type GalleryScene = {
+  id: string;
+  label: string;
+  description: string;
+  messages: ReturnType<typeof createSceneMessages>;
+};
 
-// ---------------------------------------------------------------------------
-// Static A2UI messages for each gallery section
-// ---------------------------------------------------------------------------
-
-/** Helper: single-component surface (begin + update + data) */
-function singleComponentSurface(
-  surfaceId: string,
-  rootId: string,
-  componentDef: Record<string, unknown>,
-  data?: Types.ServerToClientMessage,
-): Types.ServerToClientMessage[] {
-  const msgs: Types.ServerToClientMessage[] = [
-    {
-      beginRendering: { surfaceId, root: rootId },
-    } as unknown as Types.ServerToClientMessage,
-    {
-      surfaceUpdate: {
-        surfaceId,
-        components: [{ id: rootId, component: componentDef }],
-      },
-    } as unknown as Types.ServerToClientMessage,
-  ];
-  if (data) msgs.push(data);
-  return msgs;
-}
-
-/** Helper: multi-component surface */
-function multiComponentSurface(
-  surfaceId: string,
-  rootId: string,
-  components: Array<{
-    id: string;
-    component?: Record<string, unknown>;
-    weight?: number;
-  }>,
-  data?: Types.ServerToClientMessage,
-): Types.ServerToClientMessage[] {
-  const msgs: Types.ServerToClientMessage[] = [
-    {
-      beginRendering: { surfaceId, root: rootId },
-    } as unknown as Types.ServerToClientMessage,
-    {
-      surfaceUpdate: { surfaceId, components },
-    } as unknown as Types.ServerToClientMessage,
-  ];
-  if (data) msgs.push(data);
-  return msgs;
-}
-
-function dataModelMsg(
-  surfaceId: string,
-  contents: Array<{
-    key: string;
-    valueString?: string;
-    valueBoolean?: boolean;
-    valueNumber?: number;
-    valueMap?: unknown[];
-  }>,
-): Types.ServerToClientMessage {
-  return {
-    dataModelUpdate: { surfaceId, path: '/', contents },
-  } as unknown as Types.ServerToClientMessage;
-}
-
-// --- Gallery sections ---
-
-function textFieldMessages(): Types.ServerToClientMessage[] {
-  return singleComponentSurface(
-    'gallery-text',
-    'gallery-text-root',
-    {
-      TextField: {
-        label: { literalString: 'Enter some text' },
-        text: { path: 'galleryData/textField' },
-      },
-    },
-    dataModelMsg('gallery-text', [
-      {
-        key: 'galleryData',
-        valueMap: [{ key: 'textField', valueString: 'Hello World' }],
-      },
-    ]),
-  );
-}
-
-function textMessages(): Types.ServerToClientMessage[] {
-  return singleComponentSurface(
-    'gallery-text-block',
-    'gallery-text-block-root',
-    {
-      Text: {
-        usageHint: 'h3',
-        text: { literalString: 'Hello from A2UI Text component' },
-      },
-    },
-  );
-}
-
-function imageMessages(): Types.ServerToClientMessage[] {
-  return singleComponentSurface(
-    'gallery-image',
-    'gallery-image-root',
-    {
-      Image: {
-        url: { path: 'galleryData/imageUrl' },
-        altText: { literalString: 'A2UI demo landscape' },
-        fit: 'cover',
-      },
-    },
-    dataModelMsg('gallery-image', [
-      {
-        key: 'galleryData',
-        valueMap: [
-          {
-            key: 'imageUrl',
-            valueString:
-              'https://images.unsplash.com/photo-1511884642898-4c92249e20b6?w=900&h=450&fit=crop',
-          },
-        ],
-      },
-    ]),
-  );
-}
-
-function videoMessages(): Types.ServerToClientMessage[] {
-  return singleComponentSurface('gallery-video', 'gallery-video-root', {
-    Video: {
-      sourceUrl: {
-        literalString:
-          'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4',
-      },
-    },
-  });
-}
-
-function audioMessages(): Types.ServerToClientMessage[] {
-  return singleComponentSurface('gallery-audio', 'gallery-audio-root', {
-    AudioPlayer: {
-      sourceUrl: {
-        literalString:
-          'https://interactive-examples.mdn.mozilla.net/media/cc0-audio/t-rex-roar.mp3',
-      },
-    },
-  });
-}
-
-function layoutMessages(): Types.ServerToClientMessage[] {
-  return multiComponentSurface('gallery-layout', 'gallery-layout-root', [
-    {
-      id: 'gallery-layout-root',
-      component: {
-        Column: {
-          children: { explicitList: ['layout-title', 'layout-row'] },
-          gap: 'small',
+const SCENES: GalleryScene[] = [
+  {
+    id: 'typography',
+    label: 'Typography',
+    description:
+      'Text, Icon, Row, and Button components bound to data-model values.',
+    messages: createSceneMessages({
+      surfaceId: 'gallery-typography',
+      components: [
+        { id: 'root', component: 'Card', child: 'main' },
+        {
+          id: 'main',
+          component: 'Column',
+          children: ['title', 'subtitle', 'meta-row', 'cta-label', 'cta'],
         },
-      },
-    },
-    {
-      id: 'layout-title',
-      component: {
-        Text: {
-          usageHint: 'caption',
-          text: {
-            literalString: 'Row and Column layout composition',
-          },
+        {
+          id: 'title',
+          component: 'Text',
+          variant: 'h2',
+          text: { path: '/title' },
         },
-      },
-    },
-    {
-      id: 'layout-row',
-      component: {
-        Row: {
-          children: { explicitList: ['layout-card-1', 'layout-card-2'] },
-          gap: 'small',
+        { id: 'subtitle', component: 'Text', text: { path: '/subtitle' } },
+        {
+          id: 'meta-row',
+          component: 'Row',
+          align: 'center',
+          children: ['meta-icon', 'meta-text'],
         },
-      },
-    },
-    {
-      id: 'layout-card-1',
-      component: {
-        Card: { child: 'layout-card-1-text' },
-      },
-    },
-    {
-      id: 'layout-card-1-text',
-      component: {
-        Text: { text: { literalString: 'Column -> Row -> Card #1' } },
-      },
-    },
-    {
-      id: 'layout-card-2',
-      component: {
-        Card: { child: 'layout-card-2-text' },
-      },
-    },
-    {
-      id: 'layout-card-2-text',
-      component: {
-        Text: { text: { literalString: 'Column -> Row -> Card #2' } },
-      },
-    },
-  ]);
-}
-
-function checkboxMessages(): Types.ServerToClientMessage[] {
-  return singleComponentSurface(
-    'gallery-checkbox',
-    'gallery-checkbox-root',
-    {
-      CheckBox: {
-        label: { literalString: 'Toggle me' },
-        value: { path: 'galleryData/checkbox' },
-      },
-    },
-    dataModelMsg('gallery-checkbox', [
-      {
-        key: 'galleryData',
-        valueMap: [{ key: 'checkbox', valueBoolean: false }],
-      },
-    ]),
-  );
-}
-
-function sliderMessages(): Types.ServerToClientMessage[] {
-  return singleComponentSurface(
-    'gallery-slider',
-    'gallery-slider-root',
-    {
-      Slider: {
-        value: { path: 'galleryData/slider' },
-        minValue: 0,
-        maxValue: 100,
-      },
-    },
-    dataModelMsg('gallery-slider', [
-      { key: 'galleryData', valueMap: [{ key: 'slider', valueNumber: 30 }] },
-    ]),
-  );
-}
-
-function dateTimeMessages(): Types.ServerToClientMessage[] {
-  return singleComponentSurface(
-    'gallery-date',
-    'gallery-date-root',
-    {
-      DateTimeInput: {
-        value: { path: 'galleryData/date' },
-        enableDate: true,
-      },
-    },
-    dataModelMsg('gallery-date', [
-      {
-        key: 'galleryData',
-        valueMap: [{ key: 'date', valueString: '2025-10-26' }],
-      },
-    ]),
-  );
-}
-
-function multipleChoiceMessages(): Types.ServerToClientMessage[] {
-  return singleComponentSurface(
-    'gallery-mc',
-    'gallery-mc-root',
-    {
-      MultipleChoice: {
-        selections: { path: 'galleryData/favorites' },
-        options: [
-          { label: { literalString: 'Apple' }, value: 'A' },
-          { label: { literalString: 'Banana' }, value: 'B' },
-          { label: { literalString: 'Cherry' }, value: 'C' },
-        ],
-      },
-    },
-    dataModelMsg('gallery-mc', [
-      {
-        key: 'galleryData',
-        valueMap: [
-          { key: 'favorites', valueMap: [{ key: '0', valueString: 'A' }] },
-        ],
-      },
-    ]),
-  );
-}
-
-function buttonMessages(): Types.ServerToClientMessage[] {
-  return multiComponentSurface('gallery-button', 'gallery-button-root', [
-    {
-      id: 'gallery-button-text',
-      component: { Text: { text: { literalString: 'Trigger Action' } } },
-    },
-    {
-      id: 'gallery-button-root',
-      component: {
-        Button: {
-          child: 'gallery-button-text',
-          primary: true,
+        { id: 'meta-icon', component: 'Icon', name: 'star' },
+        {
+          id: 'meta-text',
+          component: 'Text',
+          variant: 'caption',
+          text: { path: '/meta' },
+        },
+        { id: 'cta-label', component: 'Text', text: 'Trigger Action' },
+        {
+          id: 'cta',
+          component: 'Button',
+          child: 'cta-label',
+          variant: 'primary',
           action: {
-            name: 'custom_action',
-            context: [
-              { key: 'info', value: { literalString: 'Button Clicked!' } },
-            ],
+            event: {
+              name: 'gallery_typography_cta',
+              context: { section: 'typography', title: { path: '/title' } },
+            },
           },
         },
+      ],
+      value: {
+        title: 'A2UI Gallery',
+        subtitle:
+          'Protocol-native renderer with typed schemas and dynamic bindings.',
+        meta: 'createSurface · updateComponents · updateDataModel',
       },
-    },
-  ]);
-}
-
-function tabsMessages(): Types.ServerToClientMessage[] {
-  return multiComponentSurface('gallery-tabs', 'gallery-tabs-root', [
-    {
-      id: 'tab-1-content',
-      component: {
-        Text: {
-          text: {
-            literalString:
-              'First Tab Content — TextField, CheckBox, and Slider are in other sections.',
-          },
-        },
-      },
-    },
-    {
-      id: 'tab-2-content',
-      component: {
-        Text: {
-          text: {
-            literalString: 'Second Tab Content — Cards, Lists, and Modals too!',
-          },
-        },
-      },
-    },
-    {
-      id: 'gallery-tabs-root',
-      component: {
-        Tabs: {
-          tabItems: [
-            { title: { literalString: 'View One' }, child: 'tab-1-content' },
-            { title: { literalString: 'View Two' }, child: 'tab-2-content' },
+    }),
+  },
+  {
+    id: 'contact-card',
+    label: 'Contact',
+    description: 'Card layout with icons and data-bound profile information.',
+    messages: createSceneMessages({
+      surfaceId: 'gallery-contact-card',
+      components: [
+        { id: 'root', component: 'Card', child: 'main-column' },
+        {
+          id: 'main-column',
+          component: 'Column',
+          align: 'center',
+          children: [
+            'avatar-image',
+            'name',
+            'title',
+            'divider',
+            'contact-info',
           ],
         },
-      },
-    },
-  ]);
-}
-
-function iconRowMessages(): Types.ServerToClientMessage[] {
-  return multiComponentSurface('gallery-icons', 'gallery-icons-root', [
-    {
-      id: 'gallery-icons-root',
-      component: {
-        Row: {
-          children: { explicitList: ['icon-1', 'icon-2', 'icon-3', 'icon-4'] },
-          distribution: 'spaceEvenly',
-          alignment: 'center',
+        {
+          id: 'avatar-image',
+          component: 'Image',
+          url: { path: '/avatar' },
+          fit: 'cover',
+          variant: 'avatar',
         },
+        {
+          id: 'name',
+          component: 'Text',
+          variant: 'h2',
+          text: { path: '/name' },
+        },
+        { id: 'title', component: 'Text', text: { path: '/title' } },
+        { id: 'divider', component: 'Divider' },
+        {
+          id: 'contact-info',
+          component: 'Column',
+          children: ['phone-row', 'email-row', 'location-row'],
+        },
+        {
+          id: 'phone-row',
+          component: 'Row',
+          align: 'center',
+          children: ['phone-icon', 'phone-text'],
+        },
+        { id: 'phone-icon', component: 'Icon', name: 'phone' },
+        { id: 'phone-text', component: 'Text', text: { path: '/phone' } },
+        {
+          id: 'email-row',
+          component: 'Row',
+          align: 'center',
+          children: ['email-icon', 'email-text'],
+        },
+        { id: 'email-icon', component: 'Icon', name: 'mail' },
+        { id: 'email-text', component: 'Text', text: { path: '/email' } },
+        {
+          id: 'location-row',
+          component: 'Row',
+          align: 'center',
+          children: ['location-icon', 'location-text'],
+        },
+        { id: 'location-icon', component: 'Icon', name: 'locationOn' },
+        { id: 'location-text', component: 'Text', text: { path: '/location' } },
+      ],
+      value: {
+        avatar:
+          'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop',
+        name: 'David Park',
+        title: 'Engineering Manager',
+        phone: '+1 (555) 234-5678',
+        email: 'david.park@company.com',
+        location: 'San Francisco, CA',
       },
-    },
-    { id: 'icon-1', component: { Icon: { name: { literalString: 'star' } } } },
-    { id: 'icon-2', component: { Icon: { name: { literalString: 'home' } } } },
-    {
-      id: 'icon-3',
-      component: { Icon: { name: { literalString: 'settings' } } },
-    },
-    {
-      id: 'icon-4',
-      component: { Icon: { name: { literalString: 'search' } } },
-    },
-  ]);
-}
-
-function cardMessages(): Types.ServerToClientMessage[] {
-  return multiComponentSurface('gallery-card', 'gallery-card-root', [
-    { id: 'gallery-card-root', component: { Card: { child: 'card-inner' } } },
-    {
-      id: 'card-inner',
-      component: {
-        Column: {
-          children: {
-            explicitList: ['card-title', 'card-divider', 'card-body'],
+    }),
+  },
+  {
+    id: 'controls',
+    label: 'Controls',
+    description:
+      'Interactive inputs: TextField, ChoicePicker, CheckBox, Slider, DateTimeInput.',
+    messages: createSceneMessages({
+      surfaceId: 'gallery-controls',
+      components: [
+        { id: 'root', component: 'Card', child: 'controls-column' },
+        {
+          id: 'controls-column',
+          component: 'Column',
+          children: [
+            'title',
+            'name-field',
+            'plan-picker',
+            'alerts-checkbox',
+            'volume-slider',
+            'when-field',
+            'submit-label',
+            'submit',
+          ],
+        },
+        {
+          id: 'title',
+          component: 'Text',
+          variant: 'h3',
+          text: 'Interactive Inputs',
+        },
+        {
+          id: 'name-field',
+          component: 'TextField',
+          label: 'Name',
+          value: { path: '/name' },
+        },
+        {
+          id: 'plan-picker',
+          component: 'ChoicePicker',
+          label: 'Plan',
+          value: { path: '/plan' },
+          options: [
+            { label: 'Starter', value: 'starter' },
+            { label: 'Pro', value: 'pro' },
+            { label: 'Enterprise', value: 'enterprise' },
+          ],
+        },
+        {
+          id: 'alerts-checkbox',
+          component: 'CheckBox',
+          label: 'Enable alerts',
+          value: { path: '/alerts' },
+        },
+        {
+          id: 'volume-slider',
+          component: 'Slider',
+          label: 'Volume',
+          value: { path: '/volume' },
+          min: 0,
+          max: 100,
+        },
+        {
+          id: 'when-field',
+          component: 'DateTimeInput',
+          label: 'Reminder time',
+          value: { path: '/when' },
+        },
+        { id: 'submit-label', component: 'Text', text: 'Submit' },
+        {
+          id: 'submit',
+          component: 'Button',
+          variant: 'primary',
+          child: 'submit-label',
+          action: {
+            event: {
+              name: 'submit_controls',
+              context: {
+                name: { path: '/name' },
+                plan: { path: '/plan' },
+                alerts: { path: '/alerts' },
+                volume: { path: '/volume' },
+                when: { path: '/when' },
+              },
+            },
           },
-          alignment: 'stretch',
         },
+      ],
+      value: {
+        name: 'Morgan',
+        plan: 'pro',
+        alerts: true,
+        volume: 64,
+        when: '2026-05-01T18:30:00Z',
       },
-    },
-    {
-      id: 'card-title',
-      component: {
-        Text: { text: { literalString: 'Card Title' }, usageHint: 'h3' },
-      },
-    },
-    { id: 'card-divider', component: { Divider: { axis: 'horizontal' } } },
-    {
-      id: 'card-body',
-      component: {
-        Text: {
-          text: {
-            literalString:
-              'This is the card body content. Cards wrap any child component.',
-          },
+    }),
+  },
+  {
+    id: 'tabs-modal',
+    label: 'Tabs + Modal',
+    description:
+      'Tabs with nested content and a modal trigger using event actions.',
+    messages: createSceneMessages({
+      surfaceId: 'gallery-tabs-modal',
+      components: [
+        { id: 'root', component: 'Column', children: ['tabs', 'modal'] },
+        {
+          id: 'tabs',
+          component: 'Tabs',
+          tabs: [
+            { title: 'Overview', child: 'tab-overview' },
+            { title: 'Details', child: 'tab-details' },
+          ],
         },
-      },
-    },
-  ]);
-}
-
-function listMessages(): Types.ServerToClientMessage[] {
-  return multiComponentSurface('gallery-list', 'gallery-list-root', [
-    {
-      id: 'gallery-list-root',
-      component: {
-        List: {
-          children: {
-            explicitList: ['list-item-1', 'list-item-2', 'list-item-3'],
-          },
-          direction: 'vertical',
-          alignment: 'stretch',
+        {
+          id: 'tab-overview',
+          component: 'Card',
+          child: 'tab-overview-text',
         },
-      },
-    },
-    {
-      id: 'list-item-1',
-      component: { Text: { text: { literalString: '📄 Item 1 — Documents' } } },
-    },
-    {
-      id: 'list-item-2',
-      component: { Text: { text: { literalString: '📊 Item 2 — Analytics' } } },
-    },
-    {
-      id: 'list-item-3',
-      component: { Text: { text: { literalString: '⚙️ Item 3 — Settings' } } },
-    },
-  ]);
-}
-
-function modalMessages(): Types.ServerToClientMessage[] {
-  return multiComponentSurface('gallery-modal', 'gallery-modal-root', [
-    {
-      id: 'gallery-modal-root',
-      component: {
-        Modal: {
-          entryPointChild: 'modal-trigger-btn',
-          contentChild: 'modal-body',
+        {
+          id: 'tab-overview-text',
+          component: 'Text',
+          text: 'Overview tab uses static component composition.',
         },
-      },
-    },
-    {
-      id: 'modal-trigger-btn',
-      component: {
-        Button: {
-          child: 'modal-btn-text',
-          primary: false,
-          action: { name: 'noop' },
+        {
+          id: 'tab-details',
+          component: 'Card',
+          child: 'tab-details-text',
         },
-      },
-    },
-    {
-      id: 'modal-btn-text',
-      component: { Text: { text: { literalString: 'Open Modal' } } },
-    },
-    {
-      id: 'modal-body',
-      component: {
-        Text: {
-          text: {
-            literalString: 'This is modal content! Click outside to close.',
-          },
+        {
+          id: 'tab-details-text',
+          component: 'Text',
+          text: 'Details tab includes modal interaction below.',
         },
-      },
-    },
-  ]);
-}
-
-/** Collect all gallery messages */
-function getAllGalleryMessages(): Types.ServerToClientMessage[] {
-  return [
-    ...textMessages(),
-    ...imageMessages(),
-    ...videoMessages(),
-    ...audioMessages(),
-    ...layoutMessages(),
-    ...textFieldMessages(),
-    ...checkboxMessages(),
-    ...sliderMessages(),
-    ...dateTimeMessages(),
-    ...multipleChoiceMessages(),
-    ...buttonMessages(),
-    ...tabsMessages(),
-    ...iconRowMessages(),
-    ...cardMessages(),
-    ...listMessages(),
-    ...modalMessages(),
-  ];
-}
-
-// ---------------------------------------------------------------------------
-// Gallery section metadata
-// ---------------------------------------------------------------------------
-
-interface GallerySection {
-  label: string;
-  surfaceId: string;
-  messages: () => Types.ServerToClientMessage[];
-}
-
-const SECTIONS: GallerySection[] = [
-  {
-    label: 'Text',
-    surfaceId: 'gallery-text-block',
-    messages: textMessages,
+        { id: 'modal-trigger-label', component: 'Text', text: 'Open Modal' },
+        {
+          id: 'modal-content-text',
+          component: 'Text',
+          text: 'This content is rendered inside a modal.',
+        },
+        {
+          id: 'modal-content',
+          component: 'Card',
+          child: 'modal-content-text',
+        },
+        {
+          id: 'modal-trigger',
+          component: 'Button',
+          child: 'modal-trigger-label',
+          action: { event: { name: 'open_modal' } },
+        },
+        {
+          id: 'modal',
+          component: 'Modal',
+          trigger: 'modal-trigger',
+          content: 'modal-content',
+        },
+      ],
+    }),
   },
-  { label: 'Image', surfaceId: 'gallery-image', messages: imageMessages },
-  { label: 'Video', surfaceId: 'gallery-video', messages: videoMessages },
-  {
-    label: 'AudioPlayer',
-    surfaceId: 'gallery-audio',
-    messages: audioMessages,
-  },
-  {
-    label: 'Row + Column',
-    surfaceId: 'gallery-layout',
-    messages: layoutMessages,
-  },
-  {
-    label: 'TextField',
-    surfaceId: 'gallery-text',
-    messages: textFieldMessages,
-  },
-  {
-    label: 'CheckBox',
-    surfaceId: 'gallery-checkbox',
-    messages: checkboxMessages,
-  },
-  { label: 'Slider', surfaceId: 'gallery-slider', messages: sliderMessages },
-  {
-    label: 'DateTimeInput',
-    surfaceId: 'gallery-date',
-    messages: dateTimeMessages,
-  },
-  {
-    label: 'MultipleChoice',
-    surfaceId: 'gallery-mc',
-    messages: multipleChoiceMessages,
-  },
-  { label: 'Button', surfaceId: 'gallery-button', messages: buttonMessages },
-  { label: 'Tabs', surfaceId: 'gallery-tabs', messages: tabsMessages },
-  { label: 'Icons', surfaceId: 'gallery-icons', messages: iconRowMessages },
-  {
-    label: 'Card + Divider',
-    surfaceId: 'gallery-card',
-    messages: cardMessages,
-  },
-  { label: 'List', surfaceId: 'gallery-list', messages: listMessages },
-  { label: 'Modal', surfaceId: 'gallery-modal', messages: modalMessages },
 ];
 
-// ---------------------------------------------------------------------------
-// Components
-// ---------------------------------------------------------------------------
+function GalleryContent({
+  onAction,
+}: {
+  onAction: (action: A2uiClientAction) => void;
+}) {
+  const { surfaces, processMessages, resetSurfaces } =
+    useA2uiProcessor(onAction);
+  const [selectedScene, setSelectedScene] = useState<string>(SCENES[0].id);
 
-function GalleryContent() {
-  const { processMessages, clearSurfaces, getSurfaces } = useA2UIActions();
-  const [loaded, setLoaded] = useState(false);
-  const [selectedSection, setSelectedSection] = useState<string | null>(null);
-
-  const loadAll = useCallback(() => {
-    clearSurfaces();
-    processMessages(getAllGalleryMessages());
-    setLoaded(true);
-    setSelectedSection(null);
-  }, [processMessages, clearSurfaces]);
-
-  const loadSection = useCallback(
-    (section: GallerySection) => {
-      clearSurfaces();
-      processMessages(section.messages());
-      setLoaded(true);
-      setSelectedSection(section.surfaceId);
-    },
-    [processMessages, clearSurfaces],
+  const currentScene = useMemo(
+    () => SCENES.find(scene => scene.id === selectedScene) ?? SCENES[0],
+    [selectedScene],
   );
 
-  const surfaces = getSurfaces();
-  const surfaceEntries = Array.from(surfaces.entries());
+  const showScene = useCallback(
+    (scene: GalleryScene) => {
+      resetSurfaces();
+      processMessages(scene.messages);
+    },
+    [processMessages, resetSurfaces],
+  );
+
+  const showAllScenes = useCallback(() => {
+    resetSurfaces();
+    SCENES.forEach(scene => {
+      processMessages(scene.messages);
+    });
+  }, [processMessages, resetSurfaces]);
+
+  useEffect(() => {
+    showScene(currentScene);
+  }, [currentScene, showScene]);
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh' }}>
-      {/* Sidebar */}
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, p: 3 }}>
       <Box
         sx={{
-          width: '240px',
-          borderRight: '1px solid',
+          width: '100%',
+          border: '1px solid',
           borderColor: 'border.default',
+          borderRadius: 2,
+          p: 3,
           backgroundColor: 'canvas.subtle',
-          padding: 3,
           display: 'flex',
           flexDirection: 'column',
-          gap: 1,
-          overflowY: 'auto',
+          gap: 3,
         }}
       >
-        <Text
-          as="h3"
-          sx={{ fontSize: '1rem', fontWeight: 'bold', marginBottom: 2 }}
-        >
-          Components
+        <Text sx={{ fontSize: 2, fontWeight: 'bold' }}>Scenes</Text>
+        <SegmentedControl aria-label="A2UI gallery scene picker" fullWidth>
+          {SCENES.map(scene => (
+            <SegmentedControl.Button
+              key={scene.id}
+              selected={scene.id === selectedScene}
+              onClick={() => setSelectedScene(scene.id)}
+            >
+              {scene.label}
+            </SegmentedControl.Button>
+          ))}
+        </SegmentedControl>
+        <Text sx={{ color: 'fg.muted', fontSize: 1 }}>
+          {currentScene.description}
         </Text>
-
-        <PrimerButton
-          variant={selectedSection === null && loaded ? 'primary' : 'default'}
-          onClick={loadAll}
-          sx={{ width: '100%', justifyContent: 'flex-start', marginBottom: 2 }}
-        >
-          Show All
-        </PrimerButton>
-
-        {SECTIONS.map(section => (
-          <PrimerButton
-            key={section.surfaceId}
-            variant={
-              selectedSection === section.surfaceId ? 'primary' : 'invisible'
-            }
-            onClick={() => loadSection(section)}
-            sx={{ width: '100%', justifyContent: 'flex-start' }}
+        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+          <Button
+            size="small"
+            variant="primary"
+            onClick={() => showScene(currentScene)}
           >
-            {section.label}
-          </PrimerButton>
-        ))}
+            Reload
+          </Button>
+          <Button size="small" variant="default" onClick={showAllScenes}>
+            Show All
+          </Button>
+          <Button size="small" variant="invisible" onClick={resetSurfaces}>
+            Clear
+          </Button>
+        </Box>
       </Box>
 
-      {/* Content area */}
-      <Box sx={{ flex: 1, padding: 4, overflowY: 'auto' }}>
-        {!loaded ? (
-          <Box
-            sx={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              height: '100%',
-              gap: 3,
-            }}
-          >
-            <Text sx={{ fontSize: '3rem' }}>🎨</Text>
-            <Text as="h2" sx={{ fontSize: '1.5rem', fontWeight: 'bold' }}>
-              A2UI Component Gallery
-            </Text>
-            <Text
-              sx={{ color: 'fg.muted', textAlign: 'center', maxWidth: '400px' }}
-            >
-              Browse the full catalog of A2UI components rendered via
-              @a2ui/react. Click "Show All" or pick a component from the
-              sidebar.
-            </Text>
-            <PrimerButton variant="primary" onClick={loadAll}>
-              Show All Components
-            </PrimerButton>
+      <Box
+        sx={{
+          width: '100%',
+          minWidth: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 4,
+        }}
+      >
+        {surfaces.map(surface => (
+          <Box key={surface.id} sx={{ width: '100%' }}>
+            <A2uiSurface surface={surface} />
           </Box>
-        ) : (
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            {surfaceEntries.map(([surfaceId]) => (
-              <Box key={surfaceId}>
-                <Text
-                  as="h4"
-                  sx={{
-                    fontSize: '0.75rem',
-                    fontWeight: 'bold',
-                    color: 'fg.muted',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em',
-                    marginBottom: 2,
-                  }}
-                >
-                  {surfaceId}
-                </Text>
-                <Box
-                  sx={{
-                    border: '1px solid',
-                    borderColor: 'border.default',
-                    borderRadius: 2,
-                    padding: 3,
-                    backgroundColor: 'canvas.default',
-                  }}
-                >
-                  <A2UIRenderer surfaceId={surfaceId} />
-                </Box>
-              </Box>
-            ))}
-          </Box>
-        )}
+        ))}
       </Box>
     </Box>
   );
 }
 
-/**
- * A2UiComponentGalleryExample — Kitchen sink of all A2UI components.
- * No backend required — uses static A2UI JSON messages rendered client-side.
- */
 const A2UiComponentGalleryExample: React.FC = () => {
-  const handleAction = useCallback(
-    (actionMessage: Types.A2UIClientEventMessage) => {
-      console.log('Gallery action:', actionMessage);
-      // In a real app this would be sent back to the agent
-      alert(`Action: ${JSON.stringify(actionMessage, null, 2)}`);
-    },
-    [],
-  );
+  const [lastAction, setLastAction] = useState<A2uiClientAction | null>(null);
+
+  const handleAction = useCallback((action: A2uiClientAction) => {
+    console.log('A2UI Gallery Action:', action);
+    setLastAction(action);
+  }, []);
 
   return (
     <ThemedProvider>
-      <A2UIProvider onAction={handleAction}>
+      <A2uiMarkdownProvider>
         <Box
-          sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            minHeight: '100vh',
-            backgroundColor: 'canvas.default',
-          }}
+          sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}
         >
-          {/* Header */}
           <Box
             sx={{
-              padding: 3,
+              px: 3,
+              py: 3,
               borderBottom: '1px solid',
               borderColor: 'border.default',
               backgroundColor: 'canvas.subtle',
             }}
           >
-            <Text
-              as="h1"
-              sx={{
-                fontSize: '1.25rem',
-                fontWeight: 'bold',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 2,
-              }}
-            >
+            <Text as="h1" sx={{ fontSize: 3, fontWeight: 'bold' }}>
               🎨 A2UI Component Gallery
             </Text>
-            <Text sx={{ fontSize: '0.875rem', color: 'fg.muted' }}>
-              Static A2UI messages rendered via @a2ui/react — no backend needed
+            <Text sx={{ color: 'fg.muted' }}>
+              Showcases the A2UI basic catalog rendered live via
+              MessageProcessor and A2uiSurface.
             </Text>
           </Box>
 
-          {/* Gallery */}
-          <GalleryContent />
+          <GalleryContent onAction={handleAction} />
+
+          <Box
+            sx={{
+              borderTop: '1px solid',
+              borderColor: 'border.default',
+              p: 3,
+              fontFamily: 'mono',
+              fontSize: 0,
+              backgroundColor: 'canvas.subtle',
+              whiteSpace: 'pre-wrap',
+              maxHeight: 220,
+              overflow: 'auto',
+            }}
+          >
+            {lastAction
+              ? JSON.stringify(lastAction, null, 2)
+              : 'No action triggered yet.'}
+          </Box>
         </Box>
-      </A2UIProvider>
+      </A2uiMarkdownProvider>
     </ThemedProvider>
   );
 };

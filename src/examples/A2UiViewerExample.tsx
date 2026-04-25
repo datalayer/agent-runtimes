@@ -3,718 +3,397 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
-/**
- * A2UiViewerExample
- *
- * Demonstrates the standalone A2UIViewer component from @a2ui/react.
- * Unlike A2UIProvider + A2UIRenderer (which require context), A2UIViewer
- * is a self-contained component that takes component definitions directly.
- *
- * Features:
- * - Standalone rendering — no A2UIProvider needed
- * - Multiple pre-built A2UI scenes (recipe card, booking form, dashboard)
- * - Shows how to use A2UIViewer for embedding A2UI in any React context
- *
- * No backend required — uses static ComponentInstance[] arrays.
- */
-
-import React, { useState, useCallback } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Box } from '@datalayer/primer-addons';
+import { SegmentedControl, Text } from '@primer/react';
+import { A2uiSurface } from '@a2ui/react/v0_9';
+import type { A2uiClientAction } from '@a2ui/web_core/v0_9';
 import { ThemedProvider } from './utils/themedProvider';
-import { Text, Button as PrimerButton, SegmentedControl } from '@primer/react';
-import { A2UIViewer, initializeDefaultCatalog } from '@a2ui/react';
-import type { ComponentInstance, A2UIActionEvent } from '@a2ui/react';
+import { A2uiMarkdownProvider } from './utils/a2uiMarkdownProvider';
+import { createSceneMessages, useA2uiProcessor } from './utils/a2ui';
 
-initializeDefaultCatalog();
-
-// ---------------------------------------------------------------------------
-// Scene definitions — each is a standalone ComponentInstance[] + data
-// ---------------------------------------------------------------------------
-
-interface A2UIScene {
+interface ViewerScene {
+  id: string;
   label: string;
   emoji: string;
   description: string;
-  root: string;
-  components: ComponentInstance[];
-  data?: Record<string, unknown>;
+  messages: ReturnType<typeof createSceneMessages>;
 }
 
-const SCENES: A2UIScene[] = [
-  // --- Recipe Card ---
+const SCENES: ViewerScene[] = [
   {
+    id: 'recipe',
     label: 'Recipe Card',
     emoji: '🍲',
-    description:
-      'A rich recipe card with image, rating, and timing info (from A2UI MCP sample).',
-    root: 'root-column',
-    components: [
-      { id: 'root-column', component: { Card: { child: 'main-column' } } },
-      {
-        id: 'main-column',
-        component: {
-          Column: {
-            children: { explicitList: ['recipe-image', 'content'] },
-            gap: 'small',
-          },
+    description: 'Rich recipe card with image and metadata.',
+    messages: createSceneMessages({
+      surfaceId: 'viewer-recipe',
+      components: [
+        { id: 'root', component: 'Card', child: 'main' },
+        {
+          id: 'main',
+          component: 'Column',
+          children: [
+            'recipe-image',
+            'title',
+            'rating-row',
+            'timing-row',
+            'servings',
+          ],
         },
-      },
-      {
-        id: 'recipe-image',
-        component: {
-          Image: {
-            url: { path: '/image' },
-            altText: { path: '/title' },
-            fit: 'cover',
-          },
+        {
+          id: 'recipe-image',
+          component: 'Image',
+          url: { path: '/image' },
+          fit: 'cover',
+          variant: 'largeFeature',
         },
-      },
-      {
-        id: 'content',
-        component: {
-          Column: {
-            children: {
-              explicitList: ['title', 'rating-row', 'times-row', 'servings'],
-            },
-            gap: 'small',
-          },
+        {
+          id: 'title',
+          component: 'Text',
+          variant: 'h3',
+          text: { path: '/title' },
         },
-      },
-      {
-        id: 'title',
-        component: { Text: { text: { path: '/title' }, usageHint: 'h3' } },
-      },
-      {
-        id: 'rating-row',
-        component: {
-          Row: {
-            children: { explicitList: ['star-icon', 'rating', 'review-count'] },
-            gap: 'small',
-            alignment: 'center',
-          },
+        {
+          id: 'rating-row',
+          component: 'Row',
+          align: 'center',
+          children: ['star', 'rating', 'reviews'],
         },
-      },
-      {
-        id: 'star-icon',
-        component: { Icon: { name: { literalString: 'star' } } },
-      },
-      {
-        id: 'rating',
-        component: { Text: { text: { path: '/rating' }, usageHint: 'body' } },
-      },
-      {
-        id: 'review-count',
-        component: {
-          Text: { text: { path: '/reviewCount' }, usageHint: 'caption' },
+        { id: 'star', component: 'Icon', name: 'star' },
+        { id: 'rating', component: 'Text', text: { path: '/rating' } },
+        {
+          id: 'reviews',
+          component: 'Text',
+          variant: 'caption',
+          text: { path: '/reviewCount' },
         },
-      },
-      {
-        id: 'times-row',
-        component: {
-          Row: {
-            children: { explicitList: ['prep-time', 'cook-time'] },
-            gap: 'medium',
-          },
+        { id: 'timing-row', component: 'Row', children: ['prep', 'cook'] },
+        {
+          id: 'prep',
+          component: 'Text',
+          variant: 'caption',
+          text: { path: '/prepTime' },
         },
-      },
-      {
-        id: 'prep-time',
-        component: {
-          Row: {
-            children: { explicitList: ['prep-icon', 'prep-text'] },
-            gap: 'small',
-            alignment: 'center',
-          },
+        {
+          id: 'cook',
+          component: 'Text',
+          variant: 'caption',
+          text: { path: '/cookTime' },
         },
-      },
-      {
-        id: 'prep-icon',
-        component: { Icon: { name: { literalString: 'timer' } } },
-      },
-      {
-        id: 'prep-text',
-        component: {
-          Text: { text: { path: '/prepTime' }, usageHint: 'caption' },
+        {
+          id: 'servings',
+          component: 'Text',
+          variant: 'caption',
+          text: { path: '/servings' },
         },
+      ],
+      value: {
+        image:
+          'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=300&h=180&fit=crop',
+        title: 'Mediterranean Quinoa Bowl',
+        rating: '4.9',
+        reviewCount: '(1,247 reviews)',
+        prepTime: '15 min prep',
+        cookTime: '20 min cook',
+        servings: 'Serves 4',
       },
-      {
-        id: 'cook-time',
-        component: {
-          Row: {
-            children: { explicitList: ['cook-icon', 'cook-text'] },
-            gap: 'small',
-            alignment: 'center',
-          },
-        },
-      },
-      {
-        id: 'cook-icon',
-        component: { Icon: { name: { literalString: 'shoppingCart' } } },
-      },
-      {
-        id: 'cook-text',
-        component: {
-          Text: { text: { path: '/cookTime' }, usageHint: 'caption' },
-        },
-      },
-      {
-        id: 'servings',
-        component: {
-          Text: { text: { path: '/servings' }, usageHint: 'caption' },
-        },
-      },
-    ],
-    data: {
-      image:
-        'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=300&h=180&fit=crop',
-      title: 'Mediterranean Quinoa Bowl',
-      rating: 4.9,
-      reviewCount: '(1,247 reviews)',
-      prepTime: '15 min prep',
-      cookTime: '20 min cook',
-      servings: 'Serves 4',
-    },
+    }),
   },
-
-  // --- Booking Form ---
   {
+    id: 'booking',
     label: 'Booking Form',
     emoji: '📅',
-    description:
-      'A restaurant booking form with text fields, date picker, and submit button.',
-    root: 'booking-form-column',
-    components: [
-      {
-        id: 'booking-form-column',
-        component: {
-          Column: {
-            children: {
-              explicitList: [
-                'booking-title',
-                'party-size-field',
-                'datetime-field',
-                'dietary-field',
-                'submit-button',
-              ],
-            },
-          },
+    description: 'Form controls and a submit action payload.',
+    messages: createSceneMessages({
+      surfaceId: 'viewer-booking',
+      components: [
+        {
+          id: 'root',
+          component: 'Column',
+          children: [
+            'title',
+            'party-size',
+            'date-time',
+            'dietary',
+            'submit-label',
+            'submit-button',
+          ],
         },
-      },
-      {
-        id: 'booking-title',
-        component: { Text: { usageHint: 'h2', text: { path: '/title' } } },
-      },
-      {
-        id: 'party-size-field',
-        component: {
-          TextField: {
-            label: { literalString: 'Party Size' },
-            text: { path: '/partySize' },
-          },
+        {
+          id: 'title',
+          component: 'Text',
+          variant: 'h2',
+          text: { path: '/title' },
         },
-      },
-      {
-        id: 'datetime-field',
-        component: {
-          DateTimeInput: {
-            label: { literalString: 'Date & Time' },
-            value: { path: '/reservationTime' },
-            enableDate: true,
-            enableTime: true,
-          },
+        {
+          id: 'party-size',
+          component: 'TextField',
+          label: 'Party Size',
+          value: { path: '/partySize' },
         },
-      },
-      {
-        id: 'dietary-field',
-        component: {
-          TextField: {
-            label: { literalString: 'Dietary Requirements' },
-            text: { path: '/dietary' },
-          },
+        {
+          id: 'date-time',
+          component: 'DateTimeInput',
+          label: 'Date & Time',
+          value: { path: '/dateTime' },
         },
-      },
-      {
-        id: 'submit-button',
-        component: {
-          Button: {
-            child: 'submit-text',
-            action: {
+        {
+          id: 'dietary',
+          component: 'TextField',
+          label: 'Dietary Requirements',
+          value: { path: '/dietary' },
+          variant: 'longText',
+        },
+        { id: 'submit-label', component: 'Text', text: 'Submit Reservation' },
+        {
+          id: 'submit-button',
+          component: 'Button',
+          variant: 'primary',
+          child: 'submit-label',
+          action: {
+            event: {
               name: 'submit_booking',
-              context: [
-                { key: 'partySize', value: { path: '/partySize' } },
-                { key: 'reservationTime', value: { path: '/reservationTime' } },
-                { key: 'dietary', value: { path: '/dietary' } },
-              ],
+              context: {
+                partySize: { path: '/partySize' },
+                dateTime: { path: '/dateTime' },
+                dietary: { path: '/dietary' },
+              },
             },
           },
         },
+      ],
+      value: {
+        title: 'Book Your Table',
+        partySize: '4',
+        dateTime: '2026-05-15T19:30:00Z',
+        dietary: 'No peanuts',
       },
-      {
-        id: 'submit-text',
-        component: { Text: { text: { literalString: 'Submit Reservation' } } },
-      },
-    ],
-    data: {
-      title: 'Book a Table at The Fancy Place',
-      partySize: '2',
-      reservationTime: '',
-      dietary: '',
-    },
+    }),
   },
-
-  // --- Sales Dashboard ---
   {
-    label: 'Sales Dashboard',
-    emoji: '📊',
-    description:
-      'A simple data dashboard with cards showing sales by category.',
-    root: 'root-column',
-    components: [
-      {
-        id: 'root-column',
-        component: {
-          Column: {
-            children: {
-              explicitList: ['dash-title', 'dash-row-1', 'dash-row-2'],
-            },
-          },
+    id: 'dashboard',
+    label: 'Sales Snapshot',
+    emoji: '📈',
+    description: 'Nested cards and list-like KPI tiles.',
+    messages: createSceneMessages({
+      surfaceId: 'viewer-dashboard',
+      components: [
+        {
+          id: 'root',
+          component: 'Column',
+          children: ['headline', 'subtitle', 'tiles'],
         },
-      },
-      {
-        id: 'dash-title',
-        component: {
-          Text: {
-            text: { literalString: 'Sales by Category' },
-            usageHint: 'h2',
-          },
+        {
+          id: 'headline',
+          component: 'Text',
+          variant: 'h2',
+          text: 'Sales by Category',
         },
-      },
-      // Row 1
-      {
-        id: 'dash-row-1',
-        component: {
-          Row: {
-            children: { explicitList: ['card-apparel', 'card-electronics'] },
-            distribution: 'spaceEvenly',
-          },
+        { id: 'subtitle', component: 'Text', text: 'Q2 performance snapshot' },
+        {
+          id: 'tiles',
+          component: 'Column',
+          children: ['tile-1', 'tile-2', 'tile-3', 'tile-4'],
         },
-      },
-      { id: 'card-apparel', component: { Card: { child: 'apparel-col' } } },
-      {
-        id: 'apparel-col',
-        component: {
-          Column: {
-            children: { explicitList: ['apparel-label', 'apparel-value'] },
-          },
+        { id: 'tile-1', component: 'Card', child: 'tile-1-row' },
+        {
+          id: 'tile-1-row',
+          component: 'Row',
+          justify: 'spaceBetween',
+          children: ['tile-1-label', 'tile-1-value'],
         },
-      },
-      {
-        id: 'apparel-label',
-        component: {
-          Text: { text: { literalString: 'Apparel' }, usageHint: 'caption' },
+        {
+          id: 'tile-1-label',
+          component: 'Text',
+          variant: 'caption',
+          text: 'Apparel',
         },
-      },
-      {
-        id: 'apparel-value',
-        component: {
-          Text: { text: { literalString: '$41,200' }, usageHint: 'h3' },
+        {
+          id: 'tile-1-value',
+          component: 'Text',
+          variant: 'h3',
+          text: '$41,200',
         },
-      },
-      {
-        id: 'card-electronics',
-        component: { Card: { child: 'electronics-col' } },
-      },
-      {
-        id: 'electronics-col',
-        component: {
-          Column: {
-            children: {
-              explicitList: ['electronics-label', 'electronics-value'],
-            },
-          },
+        { id: 'tile-2', component: 'Card', child: 'tile-2-row' },
+        {
+          id: 'tile-2-row',
+          component: 'Row',
+          justify: 'spaceBetween',
+          children: ['tile-2-label', 'tile-2-value'],
         },
-      },
-      {
-        id: 'electronics-label',
-        component: {
-          Text: {
-            text: { literalString: 'Electronics' },
-            usageHint: 'caption',
-          },
+        {
+          id: 'tile-2-label',
+          component: 'Text',
+          variant: 'caption',
+          text: 'Electronics',
         },
-      },
-      {
-        id: 'electronics-value',
-        component: {
-          Text: { text: { literalString: '$28,900' }, usageHint: 'h3' },
+        {
+          id: 'tile-2-value',
+          component: 'Text',
+          variant: 'h3',
+          text: '$28,900',
         },
-      },
-      // Row 2
-      {
-        id: 'dash-row-2',
-        component: {
-          Row: {
-            children: { explicitList: ['card-home', 'card-health'] },
-            distribution: 'spaceEvenly',
-          },
+        { id: 'tile-3', component: 'Card', child: 'tile-3-row' },
+        {
+          id: 'tile-3-row',
+          component: 'Row',
+          justify: 'spaceBetween',
+          children: ['tile-3-label', 'tile-3-value'],
         },
-      },
-      { id: 'card-home', component: { Card: { child: 'home-col' } } },
-      {
-        id: 'home-col',
-        component: {
-          Column: { children: { explicitList: ['home-label', 'home-value'] } },
+        {
+          id: 'tile-3-label',
+          component: 'Text',
+          variant: 'caption',
+          text: 'Home Goods',
         },
-      },
-      {
-        id: 'home-label',
-        component: {
-          Text: { text: { literalString: 'Home Goods' }, usageHint: 'caption' },
+        {
+          id: 'tile-3-value',
+          component: 'Text',
+          variant: 'h3',
+          text: '$15,600',
         },
-      },
-      {
-        id: 'home-value',
-        component: {
-          Text: { text: { literalString: '$15,600' }, usageHint: 'h3' },
+        { id: 'tile-4', component: 'Card', child: 'tile-4-row' },
+        {
+          id: 'tile-4-row',
+          component: 'Row',
+          justify: 'spaceBetween',
+          children: ['tile-4-label', 'tile-4-value'],
         },
-      },
-      { id: 'card-health', component: { Card: { child: 'health-col' } } },
-      {
-        id: 'health-col',
-        component: {
-          Column: {
-            children: { explicitList: ['health-label', 'health-value'] },
-          },
+        {
+          id: 'tile-4-label',
+          component: 'Text',
+          variant: 'caption',
+          text: 'Health & Beauty',
         },
-      },
-      {
-        id: 'health-label',
-        component: {
-          Text: {
-            text: { literalString: 'Health & Beauty' },
-            usageHint: 'caption',
-          },
+        {
+          id: 'tile-4-value',
+          component: 'Text',
+          variant: 'h3',
+          text: '$10,300',
         },
-      },
-      {
-        id: 'health-value',
-        component: {
-          Text: { text: { literalString: '$10,300' }, usageHint: 'h3' },
-        },
-      },
-    ],
-  },
-
-  // --- Confirmation ---
-  {
-    label: 'Confirmation',
-    emoji: '✅',
-    description: 'A booking confirmation card with details and action buttons.',
-    root: 'confirmation-card',
-    components: [
-      {
-        id: 'confirmation-card',
-        component: { Card: { child: 'confirmation-column' } },
-      },
-      {
-        id: 'confirmation-column',
-        component: {
-          Column: {
-            children: {
-              explicitList: [
-                'confirm-title',
-                'divider1',
-                'confirm-details',
-                'confirm-dietary',
-                'divider2',
-                'confirm-text',
-                'divider3',
-                'confirm-buttons',
-              ],
-            },
-            alignment: 'stretch',
-          },
-        },
-      },
-      {
-        id: 'confirm-title',
-        component: { Text: { usageHint: 'h2', text: { path: '/title' } } },
-      },
-      { id: 'divider1', component: { Divider: {} } },
-      {
-        id: 'confirm-details',
-        component: { Text: { text: { path: '/bookingDetails' } } },
-      },
-      {
-        id: 'confirm-dietary',
-        component: { Text: { text: { path: '/dietaryRequirements' } } },
-      },
-      { id: 'divider2', component: { Divider: {} } },
-      {
-        id: 'confirm-text',
-        component: {
-          Text: {
-            usageHint: 'h5',
-            text: { literalString: 'We look forward to seeing you!' },
-          },
-        },
-      },
-      { id: 'divider3', component: { Divider: {} } },
-      {
-        id: 'confirm-buttons',
-        component: {
-          Row: {
-            children: { explicitList: ['modify-btn', 'cancel-btn'] },
-            distribution: 'center',
-          },
-        },
-      },
-      {
-        id: 'modify-btn',
-        component: {
-          Button: {
-            child: 'modify-text',
-            primary: true,
-            action: { name: 'modify_booking' },
-          },
-        },
-      },
-      {
-        id: 'modify-text',
-        component: { Text: { text: { literalString: 'Modify Booking' } } },
-      },
-      {
-        id: 'cancel-btn',
-        component: {
-          Button: {
-            child: 'cancel-text',
-            primary: false,
-            action: { name: 'cancel_booking' },
-          },
-        },
-      },
-      {
-        id: 'cancel-text',
-        component: { Text: { text: { literalString: 'Cancel' } } },
-      },
-    ],
-    data: {
-      title: 'Booking Confirmed — The Fancy Place',
-      bookingDetails: '4 people at 7:30 PM, Friday March 14',
-      dietaryRequirements: 'Dietary: Vegetarian option requested',
-    },
+      ],
+    }),
   },
 ];
 
-// ---------------------------------------------------------------------------
-// Components
-// ---------------------------------------------------------------------------
+function ViewerContent({
+  onAction,
+}: {
+  onAction: (action: A2uiClientAction) => void;
+}) {
+  const { surfaces, processMessages, resetSurfaces } =
+    useA2uiProcessor(onAction);
+  const [selectedSceneId, setSelectedSceneId] = useState(SCENES[0].id);
 
-/**
- * A2UiViewerExample — Standalone A2UIViewer with multiple scenes.
- * Demonstrates embedding A2UI components without a Provider context.
- */
+  const selectedScene = useMemo(
+    () => SCENES.find(scene => scene.id === selectedSceneId) ?? SCENES[0],
+    [selectedSceneId],
+  );
+
+  useEffect(() => {
+    resetSurfaces();
+    processMessages(selectedScene.messages);
+  }, [selectedScene, processMessages, resetSurfaces]);
+
+  return (
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, p: 3 }}>
+      <Box
+        sx={{
+          width: '100%',
+          border: '1px solid',
+          borderColor: 'border.default',
+          borderRadius: 2,
+          p: 3,
+          backgroundColor: 'canvas.subtle',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 3,
+        }}
+      >
+        <Text sx={{ fontSize: 2, fontWeight: 'bold' }}>Select Scene</Text>
+        <SegmentedControl aria-label="A2UI viewer scene picker" fullWidth>
+          {SCENES.map(scene => (
+            <SegmentedControl.Button
+              key={scene.id}
+              selected={scene.id === selectedSceneId}
+              onClick={() => setSelectedSceneId(scene.id)}
+            >
+              {scene.emoji} {scene.label}
+            </SegmentedControl.Button>
+          ))}
+        </SegmentedControl>
+        <Text sx={{ color: 'fg.muted', fontSize: 1 }}>
+          {selectedScene.description}
+        </Text>
+      </Box>
+
+      <Box
+        sx={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 3 }}
+      >
+        {surfaces.map(surface => (
+          <Box key={surface.id} sx={{ width: '100%' }}>
+            <A2uiSurface surface={surface} />
+          </Box>
+        ))}
+      </Box>
+    </Box>
+  );
+}
+
 const A2UiViewerExample: React.FC = () => {
-  const [sceneIdx, setSceneIdx] = useState(0);
-  const [lastAction, setLastAction] = useState<A2UIActionEvent | null>(null);
+  const [lastAction, setLastAction] = useState<A2uiClientAction | null>(null);
 
-  const scene = SCENES[sceneIdx];
-
-  const handleAction = useCallback((action: A2UIActionEvent) => {
-    console.log('Viewer action:', action);
+  const handleAction = useCallback((action: A2uiClientAction) => {
+    console.log('A2UI Viewer Action:', action);
     setLastAction(action);
   }, []);
 
   return (
     <ThemedProvider>
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          minHeight: '100vh',
-          backgroundColor: 'canvas.default',
-        }}
-      >
-        {/* Header */}
+      <A2uiMarkdownProvider>
         <Box
-          sx={{
-            padding: 3,
-            borderBottom: '1px solid',
-            borderColor: 'border.default',
-            backgroundColor: 'canvas.subtle',
-          }}
+          sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}
         >
-          <Text
-            as="h1"
-            sx={{
-              fontSize: '1.25rem',
-              fontWeight: 'bold',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 2,
-            }}
-          >
-            🔍 A2UI Viewer Example
-          </Text>
-          <Text sx={{ fontSize: '0.875rem', color: 'fg.muted' }}>
-            Standalone A2UIViewer — no Provider needed, just pass components
-            directly
-          </Text>
-        </Box>
-
-        {/* Scene selector */}
-        <Box
-          sx={{
-            padding: 3,
-            borderBottom: '1px solid',
-            borderColor: 'border.default',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 3,
-          }}
-        >
-          <Text sx={{ fontWeight: 'bold', fontSize: '0.875rem' }}>Scene:</Text>
-          <SegmentedControl aria-label="Scene selector" onChange={setSceneIdx}>
-            {SCENES.map((s, idx) => (
-              <SegmentedControl.Button
-                key={s.label}
-                selected={idx === sceneIdx}
-              >
-                {`${s.emoji} ${s.label}`}
-              </SegmentedControl.Button>
-            ))}
-          </SegmentedControl>
-        </Box>
-
-        {/* Content */}
-        <Box sx={{ flex: 1, display: 'flex', padding: 4, gap: 4 }}>
-          {/* Viewer */}
-          <Box
-            sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 3 }}
-          >
-            <Text sx={{ color: 'fg.muted', fontSize: '0.875rem' }}>
-              {scene.description}
-            </Text>
-
-            <Box
-              sx={{
-                border: '1px solid',
-                borderColor: 'border.default',
-                borderRadius: 2,
-                padding: 3,
-                backgroundColor: 'canvas.default',
-                maxWidth: '500px',
-              }}
-            >
-              <A2UIViewer
-                root={scene.root}
-                components={scene.components}
-                data={scene.data}
-                onAction={handleAction}
-              />
-            </Box>
-          </Box>
-
-          {/* Action log */}
           <Box
             sx={{
-              width: '300px',
-              borderLeft: '1px solid',
+              px: 3,
+              py: 3,
+              borderBottom: '1px solid',
               borderColor: 'border.default',
-              paddingLeft: 3,
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 2,
+              backgroundColor: 'canvas.subtle',
             }}
           >
-            <Text as="h4" sx={{ fontWeight: 'bold', fontSize: '0.875rem' }}>
-              Last Action
+            <Text as="h1" sx={{ fontSize: 3, fontWeight: 'bold' }}>
+              🔍 A2UI Viewer
             </Text>
-            {lastAction ? (
-              <Box
-                as="pre"
-                sx={{
-                  fontSize: '0.75rem',
-                  backgroundColor: 'canvas.subtle',
-                  padding: 2,
-                  borderRadius: 2,
-                  overflow: 'auto',
-                  whiteSpace: 'pre-wrap',
-                  wordBreak: 'break-word',
-                }}
-              >
-                {JSON.stringify(lastAction, null, 2)}
-              </Box>
-            ) : (
-              <Text sx={{ color: 'fg.muted', fontSize: '0.8rem' }}>
-                Interact with a button to see actions here.
-              </Text>
-            )}
+            <Text sx={{ color: 'fg.muted' }}>
+              Standalone viewer scenes powered by MessageProcessor and
+              A2uiSurface.
+            </Text>
+          </Box>
 
-            <Box sx={{ marginTop: 3 }}>
-              <Text
-                as="h4"
-                sx={{
-                  fontWeight: 'bold',
-                  fontSize: '0.875rem',
-                  marginBottom: 2,
-                }}
-              >
-                Component Tree
-              </Text>
-              <Text sx={{ color: 'fg.muted', fontSize: '0.75rem' }}>
-                {scene.components.length} components, root: "{scene.root}"
-              </Text>
-              <Box
-                as="ul"
-                sx={{
-                  fontSize: '0.7rem',
-                  color: 'fg.muted',
-                  paddingLeft: 3,
-                  marginTop: 1,
-                }}
-              >
-                {scene.components.slice(0, 10).map(c => (
-                  <li key={c.id}>
-                    <Text sx={{ fontFamily: 'mono', fontSize: '0.7rem' }}>
-                      {c.id}: {Object.keys(c.component)[0]}
-                    </Text>
-                  </li>
-                ))}
-                {scene.components.length > 10 && (
-                  <li>
-                    <Text sx={{ fontSize: '0.7rem', fontStyle: 'italic' }}>
-                      ...and {scene.components.length - 10} more
-                    </Text>
-                  </li>
-                )}
-              </Box>
-            </Box>
+          <ViewerContent onAction={handleAction} />
 
-            <PrimerButton
-              variant="invisible"
-              onClick={() => {
-                console.log(
-                  'Scene JSON:',
-                  JSON.stringify(
-                    {
-                      root: scene.root,
-                      components: scene.components,
-                      data: scene.data,
-                    },
-                    null,
-                    2,
-                  ),
-                );
-                alert('Scene JSON logged to console');
-              }}
-              sx={{ marginTop: 2, fontSize: '0.8rem' }}
-            >
-              Log Scene JSON
-            </PrimerButton>
+          <Box
+            sx={{
+              borderTop: '1px solid',
+              borderColor: 'border.default',
+              p: 3,
+              fontFamily: 'mono',
+              fontSize: 0,
+              backgroundColor: 'canvas.subtle',
+              whiteSpace: 'pre-wrap',
+              maxHeight: 180,
+              overflow: 'auto',
+            }}
+          >
+            {lastAction
+              ? JSON.stringify(lastAction, null, 2)
+              : 'No action triggered yet.'}
           </Box>
         </Box>
-      </Box>
+      </A2uiMarkdownProvider>
     </ThemedProvider>
   );
 };

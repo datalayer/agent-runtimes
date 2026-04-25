@@ -22,7 +22,7 @@ const DISPLAY_NAME_EXCEPTIONS: [RegExp, string][] = [
   [/\bGen Ui\b/g, 'Gen UI'],
   [/\bM C P\b/g, 'MCP'],
   [/\bOtel\b/g, 'OTEL'],
-  [/\bAgent Specs\b/g, 'Agentspecs'],
+  [/\bAgent Specs\b/g, 'Agent Specifications'],
 ];
 
 function humanizeExampleName(name: string): string {
@@ -166,11 +166,6 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
     'CopilotKit integration with notebook workflows.',
   ),
   makeEntry(
-    'NotebookCollaborationExample',
-    () => import('./NotebookCollaborationExample'),
-    'Notebook collaboration runtime integration example.',
-  ),
-  makeEntry(
     'AgentCheckpointsExample',
     () => import('./AgentCheckpointsExample'),
     'Checkpoint and resume lifecycle for agents.',
@@ -279,6 +274,11 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
     'NotebookExample',
     () => import('./NotebookExample'),
     'Minimal notebook integration example.',
+  ),
+  makeEntry(
+    'NotebookCollaborationExample',
+    () => import('./NotebookCollaborationExample'),
+    'Notebook collaboration runtime integration example.',
   ),
 ];
 

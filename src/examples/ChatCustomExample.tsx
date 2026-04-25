@@ -49,7 +49,7 @@ function useEnsureAgent() {
           agent_library: 'pydantic-ai',
           transport: 'ag-ui',
           model: 'openai:gpt-4o-mini',
-          system_prompt: `You are Datalayer Assistant, a helpful AI assistant specialized in data science, Python programming, and Jupyter notebooks.
+          system_prompt: `You are custom chat assistant, a helpful AI assistant specialized in data science, Python programming, and Jupyter notebooks.
 
 You can help users with:
 - Writing and debugging Python code
@@ -146,7 +146,7 @@ const AgentRuntimeCustomExample: React.FC = () => {
                 marginBottom: 1,
               }}
             >
-              Datalayer Assistant
+              Custom Chat Example
             </Text>
             <Text sx={{ fontSize: 1, color: 'fg.muted' }}>
               Interactive chat interface with AI assistance

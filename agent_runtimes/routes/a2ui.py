@@ -38,8 +38,7 @@ def _format_a2a_response(
     """
     Format A2UI messages as A2A-style response parts.
 
-    This wraps A2UI messages in the A2A DataPart format for
-    compatibility with the existing A2UI renderer.
+    This wraps native A2UI v0.9 messages in the A2A DataPart format.
     """
     parts = []
 
