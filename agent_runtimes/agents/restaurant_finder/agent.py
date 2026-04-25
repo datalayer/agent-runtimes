@@ -269,9 +269,7 @@ def _build_booking_form_a2ui(
                                 "context": {
                                     "restaurantName": {"path": "/restaurantName"},
                                     "partySize": {"path": "/partySize"},
-                                    "reservationTime": {
-                                        "path": "/reservationTime"
-                                    },
+                                    "reservationTime": {"path": "/reservationTime"},
                                     "dietary": {"path": "/dietary"},
                                 },
                             }
