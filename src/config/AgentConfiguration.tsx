@@ -896,7 +896,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
             })}
           {agents.map(agent => (
             <Select.Option key={agent.id} value={agent.id}>
-              [Example] {agent.status === 'running' && '● '}
+              [Persona] {agent.status === 'running' && '● '}
               {agent.name}
             </Select.Option>
           ))}

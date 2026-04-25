@@ -16,7 +16,7 @@
  * @module examples/NotebookExample
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Box } from '@datalayer/primer-addons';
 import { ServiceManager } from '@jupyterlab/services';
 import { Notebook } from '@datalayer/jupyter-react';
@@ -44,13 +44,40 @@ const AGENT_ID = 'notebook-agent-runtime-example';
 // Vercel AI endpoint
 const VERCEL_AI_ENDPOINT = `${BASE_URL}/api/v1/vercel-ai/${AGENT_ID}`;
 
+function getJupyterSandboxUrl(
+  serviceManager?: ServiceManager.IManager,
+): string | undefined {
+  const envUrl = import.meta.env.VITE_JUPYTER_SANDBOX_URL;
+  if (envUrl) {
+    return envUrl;
+  }
+
+  const baseUrl = serviceManager?.serverSettings?.baseUrl?.replace(/\/$/, '');
+  if (!baseUrl) {
+    return undefined;
+  }
+
+  if (baseUrl.includes('token=')) {
+    return baseUrl;
+  }
+
+  const token = serviceManager?.serverSettings?.token;
+  if (!token) {
+    return baseUrl;
+  }
+
+  const separator = baseUrl.includes('?') ? '&' : '?';
+  return `${baseUrl}${separator}token=${encodeURIComponent(token)}`;
+}
+
 /**
- * Hook to ensure the demo-agent exists on the server.
- * Creates it if it doesn't exist.
+ * Hook to ensure the demo-agent is aligned with the active notebook runtime.
+ * Recreates the agent with jupyter sandbox settings from the Notebook UI.
  */
 function useEnsureAgent(
   agentId: string,
   baseUrl: string,
+  jupyterSandboxUrl?: string,
 ): {
   isReady: boolean;
   error: string | null;
@@ -63,7 +90,16 @@ function useEnsureAgent(
 
     async function ensureAgent() {
       try {
-        // Try to create the agent (will fail if already exists, which is fine)
+        if (!jupyterSandboxUrl) {
+          if (mounted) {
+            setError(
+              'Could not detect Jupyter server URL from Notebook service manager.',
+            );
+            setIsReady(false);
+          }
+          return;
+        }
+
         const response = await fetch(`${baseUrl}/api/v1/agents`, {
           method: 'POST',
           headers: {
@@ -76,19 +112,24 @@ function useEnsureAgent(
             transport: 'vercel-ai',
             model: DEFAULT_MODEL,
             system_prompt:
-              'You are a helpful AI assistant that helps users work with Jupyter notebooks. You can help with code, explanations, and data analysis.',
+              'You are a helpful AI assistant that helps users work with Jupyter notebooks. For notebook operations, always use the notebook frontend tools (runCell, readAllCells, readCell, insertCell, updateCell, deleteCells) so actions happen in the live notebook UI. Use executeCode only for temporary inspection code that should not modify notebook cells.',
+            enable_codemode: false,
+            sandbox_variant: 'jupyter',
+            jupyter_sandbox: jupyterSandboxUrl,
           }),
         });
 
         if (mounted) {
           if (response.ok) {
-            console.log(`[AgentRuntimeExample] Created agent: ${agentId}`);
+            console.warn(`[AgentRuntimeExample] Created agent: ${agentId}`);
+            setError(null);
             setIsReady(true);
-          } else if (response.status === 400) {
-            // Agent already exists, which is fine
-            console.log(
-              `[AgentRuntimeExample] Agent already exists: ${agentId}`,
+          } else if (response.status === 409 || response.status === 400) {
+            // Agent already exists; reuse it and continue.
+            console.warn(
+              `[AgentRuntimeExample] Reusing existing agent: ${agentId}`,
             );
+            setError(null);
             setIsReady(true);
           } else {
             const errorData = await response.json().catch(() => ({}));
@@ -112,7 +153,7 @@ function useEnsureAgent(
     return () => {
       mounted = false;
     };
-  }, [agentId, baseUrl]);
+  }, [agentId, baseUrl, jupyterSandboxUrl]);
 
   return { isReady, error };
 }
@@ -194,8 +235,28 @@ interface NotebookWithChatProps {
 function NotebookWithChat({
   serviceManager,
 }: NotebookWithChatProps): JSX.Element {
+  const jupyterSandboxUrl = useMemo(
+    () => getJupyterSandboxUrl(serviceManager),
+    [serviceManager],
+  );
+
   // Ensure the agent exists before rendering chat
-  const { isReady, error } = useEnsureAgent(AGENT_ID, BASE_URL);
+  const { isReady, error } = useEnsureAgent(
+    AGENT_ID,
+    BASE_URL,
+    jupyterSandboxUrl,
+  );
+
+  const protocolConfig = useMemo(
+    () => ({
+      type: 'vercel-ai' as const,
+      endpoint: VERCEL_AI_ENDPOINT,
+      agentId: AGENT_ID,
+      enableConfigQuery: true,
+      configEndpoint: `${BASE_URL}/api/v1/configure`,
+    }),
+    [],
+  );
 
   // Get notebook tools for ChatFloating
   const frontendTools = useNotebookTools(NOTEBOOK_ID);
@@ -230,8 +291,7 @@ function NotebookWithChat({
 
       {isReady && (
         <ChatFloating
-          protocol="vercel-ai"
-          endpoint={VERCEL_AI_ENDPOINT}
+          protocol={protocolConfig}
           title="Notebook AI Agent Runtime"
           description="Hi! I can help you edit notebook cells. Try: 'Add a new code cell', 'Run cell 1', or 'Delete the last cell'"
           defaultOpen={true}
