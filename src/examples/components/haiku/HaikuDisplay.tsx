@@ -9,7 +9,7 @@
  * This component displays a collection of haikus in a carousel format
  * for the main view area. Inspired by the AG-UI Dojo implementation.
  *
- * @module examples/ag-ui/haiku/HaikuDisplay
+ * @module examples/components/haiku/HaikuDisplay
  */
 
 import { useState } from 'react';

@@ -22,7 +22,7 @@ import { Box } from '@datalayer/primer-addons';
 import { ThemedProvider, useThemeBrandColor } from './utils/themedProvider';
 import { ChatFloating } from '../chat';
 import type { ToolCallRenderContext } from '../types';
-import { InlineWeatherCard, type WeatherResult } from './ag-ui/weather';
+import { InlineWeatherCard, type WeatherResult } from './components/weather';
 
 // AG-UI endpoint for backend tool rendering example
 const BACKEND_TOOL_RENDERING_ENDPOINT =

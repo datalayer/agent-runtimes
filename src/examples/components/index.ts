@@ -24,3 +24,17 @@ export type { TimeTravelProps } from './TimeTravel';
 export { LexicalEditor } from './LexicalEditor';
 export type { LexicalEditorProps } from './LexicalEditor';
 export { ExampleWrapper } from './ExampleWrapper';
+
+// AG-UI example components
+export {
+  InlineWeatherCard,
+  type InlineWeatherCardProps,
+  type WeatherResult,
+} from './weather';
+export {
+  InlineHaikuCard,
+  HaikuDisplay,
+  type InlineHaikuCardProps,
+  type HaikuDisplayProps,
+  type HaikuResult,
+} from './haiku';

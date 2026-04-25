@@ -9,7 +9,7 @@
  * This folder contains weather-specific components that demonstrate
  * inline tool rendering similar to CopilotKit's useCopilotAction pattern.
  *
- * @module examples/ag-ui/weather
+ * @module examples/components/weather
  */
 
 export {

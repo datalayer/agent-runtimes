@@ -10,7 +10,7 @@
  * tool-based generative UI where the backend generates haiku content
  * that is rendered both inline in chat and in a main display area.
  *
- * @module examples/ag-ui/haiku
+ * @module examples/components/haiku
  */
 
 export {

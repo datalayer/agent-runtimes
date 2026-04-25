@@ -9,7 +9,7 @@
  * Inspired by the AG-UI Dojo implementation, this component renders haiku
  * poetry with gradient backgrounds and Japanese/English text.
  *
- * @module examples/ag-ui/haiku/InlineHaikuCard
+ * @module examples/components/haiku/InlineHaikuCard
  */
 
 import { Spinner } from '@primer/react';
