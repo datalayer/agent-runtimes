@@ -31,6 +31,7 @@ export * from './middleware';
 export * from './models';
 export * from './notifications';
 export * from './outputs';
+export * from './personas';
 export * from './protocol';
 export * from './sandbox';
 export * from './skills';

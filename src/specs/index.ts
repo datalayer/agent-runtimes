@@ -19,6 +19,7 @@ export * from './memory';
 export * from './models';
 export * from './notifications';
 export * from './outputs';
+export * from './personas';
 export * from './skills';
 export * from './tools';
 export * from './triggers';

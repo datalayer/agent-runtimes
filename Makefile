@@ -259,6 +259,11 @@ specs-generate: ## generate all Python and TypeScript specs from YAML
 	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/notifications \
 	  --python-output agent_runtimes/specs/notifications.py \
 	  --typescript-output src/specs/notifications.ts
+	@echo "Generating persona specifications..."
+	python scripts/codegen/generate_personas.py \
+	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/personas \
+	  --python-output agent_runtimes/specs/personas.py \
+	  --typescript-output src/specs/personas.ts
 	@echo "Post-processing generated Python with ruff..."
 	ruff check --select I --fix $(RUFF_TARGETS)
 	ruff format $(RUFF_TARGETS)

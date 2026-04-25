@@ -11,53 +11,113 @@ import type {
   ExampleAgentsState,
   Protocol,
 } from '../../types';
+import { listPersonas } from '../../specs/personas';
 
-// Import agent examples data files.
-import earthquakeDetectorData from './agents/earthquake-detector.json';
-import stocksWatcherData from './agents/stock-market.json';
-import salesForecasterData from './agents/sales-forecaster.json';
-import socialPostGeneratorData from './agents/social-post-generator.json';
+// Per-persona presentation metadata used by the example dropdown.
+// The four migrated personas (sentinel, marketing, forecaster, trader)
+// keep links to the notebook/lexical seed files in `./agents/`.
+interface PersonaPresentation {
+  author: string;
+  lastEdited: string;
+  screenshot: string;
+  status: ExampleAgentStatus;
+  protocol: Protocol;
+  avatarUrl: string;
+  notebookFile: string;
+  lexicalFile: string;
+  stars: number;
+  notifications: number;
+}
 
-// Helper function to transform JSON data to Agent format
-const transformAgentData = (
-  data: any,
-  notebookSuffix: string,
-  lexicalSuffix: string,
-): ExampleAgent => ({
-  id: data.id,
-  name: data.title,
-  description: data.description,
-  author: data.author,
-  lastEdited: data.editTimestamp,
-  screenshot: data.image,
-  status: data.status as ExampleAgentStatus | undefined,
-  protocol: data.transport as Protocol,
-  avatarUrl: data.avatarUrl,
-  notebookFile: `${notebookSuffix}.ipynb.json`,
-  lexicalFile: `${lexicalSuffix}.lexical.json`,
-  stars: data.stars || 0,
-  notifications: data.notifications || 0,
+const DEFAULT_PRESENTATION: PersonaPresentation = {
+  author: 'Datalayer',
+  lastEdited: 'just now',
+  screenshot:
+    'https://images.unsplash.com/photo-1531297484001-80022131f5a1?w=300&h=150&fit=crop',
+  status: 'paused',
+  protocol: 'vercel-ai',
+  avatarUrl: 'https://avatars.githubusercontent.com/datalayer',
+  notebookFile: '',
+  lexicalFile: '',
+  stars: 0,
+  notifications: 0,
+};
+
+const PERSONA_PRESENTATIONS: Record<string, Partial<PersonaPresentation>> = {
+  sentinel: {
+    author: 'Eric Charles',
+    lastEdited: '53 minutes ago',
+    screenshot:
+      'https://images.unsplash.com/photo-1589519160732-57fc498494f8?w=300&h=150&fit=crop',
+    status: 'paused',
+    protocol: 'ag-ui',
+    avatarUrl: 'https://avatars.githubusercontent.com/atom',
+    notebookFile: 'earthquake-detector.ipynb.json',
+    lexicalFile: 'earthquake-detector.lexical.json',
+    stars: 4,
+  },
+  trader: {
+    author: 'Gonzalo Peña-Castellanos',
+    lastEdited: '3 days ago',
+    screenshot:
+      'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=300&h=150&fit=crop',
+    status: 'paused',
+    protocol: 'acp',
+    avatarUrl: 'https://avatars.githubusercontent.com/desktop',
+    notebookFile: 'stock-market.ipynb.json',
+    lexicalFile: 'stock-market.lexical.json',
+    stars: 1,
+  },
+  forecaster: {
+    author: 'Eric Charles',
+    lastEdited: '1 hour ago',
+    screenshot:
+      'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=300&h=150&fit=crop',
+    status: 'running',
+    protocol: 'vercel-ai',
+    avatarUrl: 'https://avatars.githubusercontent.com/github',
+    notebookFile: 'sales-forecaster.ipynb.json',
+    lexicalFile: 'sales-forecaster.lexical.json',
+    stars: 5,
+    notifications: 2,
+  },
+  marketing: {
+    author: 'Eric Charles',
+    lastEdited: '2 hours ago',
+    screenshot:
+      'https://images.unsplash.com/photo-1611926653458-09294b3142bf?w=300&h=150&fit=crop',
+    status: 'paused',
+    protocol: 'ag-ui',
+    avatarUrl: 'https://avatars.githubusercontent.com/primer',
+    notebookFile: 'social-post-generator.ipynb.json',
+    lexicalFile: 'social-post-generator.lexical.json',
+    stars: 3,
+    notifications: 1,
+  },
+};
+
+// Build the agent list from the generated personas catalogue.
+const initialAgents: ExampleAgent[] = listPersonas().map(persona => {
+  const presentation: PersonaPresentation = {
+    ...DEFAULT_PRESENTATION,
+    ...(PERSONA_PRESENTATIONS[persona.id] ?? {}),
+  };
+  return {
+    id: persona.id,
+    name: persona.name,
+    description: persona.description,
+    author: presentation.author,
+    lastEdited: presentation.lastEdited,
+    screenshot: presentation.screenshot,
+    status: presentation.status,
+    protocol: presentation.protocol,
+    avatarUrl: presentation.avatarUrl,
+    notebookFile: presentation.notebookFile,
+    lexicalFile: presentation.lexicalFile,
+    stars: presentation.stars,
+    notifications: presentation.notifications,
+  };
 });
-
-// Initialize agents from the agents folder
-const initialAgents: ExampleAgent[] = [
-  transformAgentData(
-    earthquakeDetectorData,
-    'earthquake-detector',
-    'earthquake-detector',
-  ),
-  transformAgentData(stocksWatcherData, 'stock-market', 'stock-market'),
-  transformAgentData(
-    salesForecasterData,
-    'sales-forecaster',
-    'sales-forecaster',
-  ),
-  transformAgentData(
-    socialPostGeneratorData,
-    'social-post-generator',
-    'social-post-generator',
-  ),
-];
 
 export const agentsStore = createStore<ExampleAgentsState>(set => ({
   agents: initialAgents,
