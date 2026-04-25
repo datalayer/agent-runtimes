@@ -319,7 +319,7 @@ function ViewerContent({
               selected={scene.id === selectedSceneId}
               onClick={() => setSelectedSceneId(scene.id)}
             >
-              {scene.emoji} {scene.label}
+              {`${scene.emoji} ${scene.label}`}
             </SegmentedControl.Button>
           ))}
         </SegmentedControl>
