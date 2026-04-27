@@ -92,8 +92,8 @@ class PydanticAIAdapter(BaseAgent):
         self._selected_mcp_servers = selected_mcp_servers or []
         self._non_mcp_toolsets = non_mcp_toolsets or []
         self._codemode_builder = codemode_builder
-        self._codemode_toolset_index = None
-        self._sandbox_only_toolset_index = None
+        self._codemode_toolset_index: int | None = None
+        self._sandbox_only_toolset_index: int | None = None
         self._refresh_codemode_indexes()
         self._extract_tools()
 

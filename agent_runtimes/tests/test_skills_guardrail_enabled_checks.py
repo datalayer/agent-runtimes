@@ -22,13 +22,13 @@ async def test_blocks_direct_skill_tool_when_skill_disabled(
 
     with pytest.raises(GuardrailBlockedError, match="disabled by user selection"):
         await capability.before_tool_execute(
-            None,  # type: ignore[arg-type]
+            None,
             call=ToolCallPart(
                 tool_name="run_skill_script",
                 args={"skill_name": "alpha"},
                 tool_call_id="tool-1",
             ),
-            tool_def=None,  # type: ignore[arg-type]
+            tool_def=None,
             args={"skill_name": "alpha"},
         )
 
@@ -44,13 +44,13 @@ async def test_blocks_execute_code_when_referencing_disabled_skill(
 
     with pytest.raises(GuardrailBlockedError, match="Disabled skills cannot be used"):
         await capability.before_tool_execute(
-            None,  # type: ignore[arg-type]
+            None,
             call=ToolCallPart(
                 tool_name="execute_code",
                 args={"code": "from generated.skills.alpha import run"},
                 tool_call_id="tool-2",
             ),
-            tool_def=None,  # type: ignore[arg-type]
+            tool_def=None,
             args={"code": "from generated.skills.alpha import run"},
         )
 
@@ -78,13 +78,13 @@ async def test_requests_approval_for_enabled_skill(
     monkeypatch.setattr(capability, "_request_skill_approval", _fake_request_skill_approval)
 
     await capability.before_tool_execute(
-        None,  # type: ignore[arg-type]
+        None,
         call=ToolCallPart(
             tool_name="run_skill_script",
             args={"skill_name": "alpha"},
             tool_call_id="tool-3",
         ),
-        tool_def=None,  # type: ignore[arg-type]
+        tool_def=None,
         args={"skill_name": "alpha"},
     )
 
@@ -119,13 +119,13 @@ async def test_display_name_resolves_to_skill_id_and_requests_approval(
     monkeypatch.setattr(capability, "_request_skill_approval", _fake_request_skill_approval)
 
     await capability.before_tool_execute(
-        None,  # type: ignore[arg-type]
+        None,
         call=ToolCallPart(
             tool_name="run_skill_script",
             args={"skill_name": "Text Summarizer Skill"},
             tool_call_id="tool-4",
         ),
-        tool_def=None,  # type: ignore[arg-type]
+        tool_def=None,
         args={"skill_name": "Text Summarizer Skill"},
     )
 
@@ -160,7 +160,7 @@ async def test_execute_code_display_name_resolves_to_skill_id(
     monkeypatch.setattr(capability, "_request_skill_approval", _fake_request_skill_approval)
 
     await capability.before_tool_execute(
-        None,  # type: ignore[arg-type]
+        None,
         call=ToolCallPart(
             tool_name="execute_code",
             args={
@@ -168,7 +168,7 @@ async def test_execute_code_display_name_resolves_to_skill_id(
             },
             tool_call_id="tool-5",
         ),
-        tool_def=None,  # type: ignore[arg-type]
+        tool_def=None,
         args={
             "code": 'run_skill_script("Text Summarizer Skill", "summarize_text", [])',
         },
@@ -201,13 +201,13 @@ async def test_display_name_with_skill_suffix_resolves_without_snapshot_name(
     monkeypatch.setattr(capability, "_request_skill_approval", _fake_request_skill_approval)
 
     await capability.before_tool_execute(
-        None,  # type: ignore[arg-type]
+        None,
         call=ToolCallPart(
             tool_name="run_skill_script",
             args={"skill_name": "Text Summarizer Skill"},
             tool_call_id="tool-6",
         ),
-        tool_def=None,  # type: ignore[arg-type]
+        tool_def=None,
         args={"skill_name": "Text Summarizer Skill"},
     )
 

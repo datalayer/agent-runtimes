@@ -5,6 +5,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from agent_runtimes.streams import loop
 
 
@@ -56,7 +58,7 @@ class TestStreamSkillsState:
 class TestStreamMCPState:
     def test_set_agent_enabled_mcp_tool_names_projects_by_server(
         self,
-        monkeypatch,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         agent_id = "mcp-turn-enablement"
         loop.purge_agent_stream_state(agent_id)

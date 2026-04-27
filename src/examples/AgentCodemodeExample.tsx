@@ -614,6 +614,73 @@ const AgentCodemodeInner: React.FC<{ onLogout: () => void }> = ({
     return Math.ceil((currentMax * 1.2) / magnitude) * magnitude;
   }, [consumedByAgent]);
 
+  const tokenComparison = useMemo(() => {
+    const noCodemodeTokens = consumedByAgent['no-codemode'] ?? 0;
+    const codemodeTokens = consumedByAgent.codemode ?? 0;
+
+    if (noCodemodeTokens === codemodeTokens) {
+      return {
+        tie: true,
+        winnerKey: null as DemoAgentConfig['key'] | null,
+        loserKey: null as DemoAgentConfig['key'] | null,
+      };
+    }
+
+    const winnerKey =
+      noCodemodeTokens < codemodeTokens ? 'no-codemode' : 'codemode';
+
+    return {
+      tie: false,
+      winnerKey,
+      loserKey:
+        winnerKey === 'codemode'
+          ? ('no-codemode' as const)
+          : ('codemode' as const),
+    };
+  }, [consumedByAgent]);
+
+  const displayNameFor = useCallback(
+    (agentKey: DemoAgentConfig['key']) =>
+      agentKey === 'codemode' ? 'Codemode' : 'No codemode',
+    [],
+  );
+
+  const outcomeFor = useCallback(
+    (agentKey: DemoAgentConfig['key']) => {
+      if (tokenComparison.tie) {
+        return {
+          emoji: '🤝',
+          title: 'Tie',
+          message: 'Both agents are tied on token usage.',
+          bg: 'canvas.subtle',
+          borderColor: 'border.default',
+          color: 'fg.default',
+        };
+      }
+
+      if (tokenComparison.winnerKey === agentKey) {
+        return {
+          emoji: '🏆',
+          title: 'Winner',
+          message: `${displayNameFor(agentKey)} is the winner.`,
+          bg: 'success.subtle',
+          borderColor: 'success.muted',
+          color: 'success.fg',
+        };
+      }
+
+      return {
+        emoji: '😓',
+        title: 'Loser',
+        message: `${displayNameFor(agentKey)} is the loser.`,
+        bg: 'attention.subtle',
+        borderColor: 'attention.muted',
+        color: 'attention.fg',
+      };
+    },
+    [displayNameFor, tokenComparison],
+  );
+
   const gaugeOptionFor = useCallback(
     (config: DemoAgentConfig) => ({
       series: [
@@ -716,78 +783,127 @@ const AgentCodemodeInner: React.FC<{ onLogout: () => void }> = ({
       </Box>
 
       <Box sx={{ flex: 1, minHeight: 0, display: 'flex' }}>
-        {DEMO_AGENT_CONFIGS.filter(c => c.key === 'no-codemode').map(config => (
-          <Box
-            key={config.key}
-            sx={{
-              width: 320,
-              borderRight: '1px solid',
-              borderColor: 'border.default',
-              p: 3,
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 3,
-              flexShrink: 0,
-              overflow: 'auto',
-            }}
-          >
-            <Box>
-              <Heading as="h4" sx={{ fontSize: 1, mb: 1 }}>
-                {config.title}
-              </Heading>
-              <Text sx={{ color: 'fg.muted', fontSize: 0, display: 'block' }}>
-                Tokens consumed (no codemode).
-              </Text>
-              <Text
+        {DEMO_AGENT_CONFIGS.filter(c => c.key === 'no-codemode').map(config =>
+          (() => {
+            const outcome = outcomeFor(config.key);
+            return (
+              <Box
+                key={config.key}
                 sx={{
-                  color: 'fg.muted',
-                  fontSize: 0,
-                  fontFamily: 'mono',
-                  display: 'block',
-                  mt: 1,
+                  width: 320,
+                  borderRight: '1px solid',
+                  borderColor: 'border.default',
+                  p: 3,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 3,
+                  flexShrink: 0,
+                  overflow: 'auto',
                 }}
               >
-                {config.baseUrl}
-              </Text>
-              <Text
-                sx={{
-                  color: 'fg.muted',
-                  fontSize: 0,
-                  fontFamily: 'mono',
-                  display: 'block',
-                  mt: 1,
-                  wordBreak: 'break-all',
-                }}
-              >
-                {agentIdByKey[config.key] || 'launching…'}
-              </Text>
-            </Box>
-            <ReactECharts
-              option={gaugeOptionFor(config)}
-              style={{ height: 240, width: '100%' }}
-            />
-            <Box
-              sx={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                gap: 2,
-              }}
-            >
-              <Text sx={{ fontSize: 0, color: 'fg.muted' }}>Consumed</Text>
-              <Text sx={{ fontSize: 0, fontWeight: 'bold' }}>
-                {(consumedByAgent[config.key] ?? 0).toLocaleString()} tokens
-              </Text>
-            </Box>
-            {agentIdByKey[config.key] && (
-              <ContextPanel
-                agentId={agentIdByKey[config.key]}
-                apiBase={config.baseUrl}
-                liveData={contextSnapshotByKey[config.key] ?? null}
-                chartHeight="180px"
-              />
-            )}
-          </Box>
-        ))}
+                <Box>
+                  <Heading as="h4" sx={{ fontSize: 1, mb: 1 }}>
+                    {config.title}
+                  </Heading>
+                  <Text
+                    sx={{ color: 'fg.muted', fontSize: 0, display: 'block' }}
+                  >
+                    Tokens consumed (no codemode).
+                  </Text>
+                  <Text
+                    sx={{
+                      color: 'fg.muted',
+                      fontSize: 0,
+                      fontFamily: 'mono',
+                      display: 'block',
+                      mt: 1,
+                    }}
+                  >
+                    {config.baseUrl}
+                  </Text>
+                  <Text
+                    sx={{
+                      color: 'fg.muted',
+                      fontSize: 0,
+                      fontFamily: 'mono',
+                      display: 'block',
+                      mt: 1,
+                      wordBreak: 'break-all',
+                    }}
+                  >
+                    {agentIdByKey[config.key] || 'launching…'}
+                  </Text>
+                </Box>
+                <ReactECharts
+                  option={gaugeOptionFor(config)}
+                  style={{
+                    height: 240,
+                    minHeight: 240,
+                    maxHeight: 240,
+                    width: '100%',
+                    flexShrink: 0,
+                  }}
+                />
+                <Box
+                  sx={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    gap: 2,
+                  }}
+                >
+                  <Text sx={{ fontSize: 0, color: 'fg.muted' }}>Consumed</Text>
+                  <Text sx={{ fontSize: 0, fontWeight: 'bold' }}>
+                    {(consumedByAgent[config.key] ?? 0).toLocaleString()} tokens
+                  </Text>
+                </Box>
+                <Box
+                  sx={{
+                    p: 2,
+                    borderRadius: 2,
+                    border: '1px solid',
+                    bg: outcome.bg,
+                    borderColor: outcome.borderColor,
+                    textAlign: 'center',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                  }}
+                >
+                  <Text sx={{ fontSize: 4, lineHeight: 1, mb: 1 }}>
+                    {outcome.emoji}
+                  </Text>
+                  <Text
+                    sx={{
+                      fontSize: 0,
+                      color: outcome.color,
+                      fontWeight: 'bold',
+                    }}
+                  >
+                    {outcome.title}
+                  </Text>
+                  <Text
+                    sx={{
+                      fontSize: 0,
+                      color: 'fg.muted',
+                      display: 'block',
+                      mt: 1,
+                    }}
+                  >
+                    {outcome.message}
+                  </Text>
+                </Box>
+                {agentIdByKey[config.key] && (
+                  <ContextPanel
+                    agentId={agentIdByKey[config.key]}
+                    apiBase={config.baseUrl}
+                    liveData={contextSnapshotByKey[config.key] ?? null}
+                    chartHeight="180px"
+                  />
+                )}
+              </Box>
+            );
+          })(),
+        )}
 
         <Box
           sx={{
@@ -812,78 +928,127 @@ const AgentCodemodeInner: React.FC<{ onLogout: () => void }> = ({
           ))}
         </Box>
 
-        {DEMO_AGENT_CONFIGS.filter(c => c.key === 'codemode').map(config => (
-          <Box
-            key={config.key}
-            sx={{
-              width: 320,
-              borderLeft: '1px solid',
-              borderColor: 'border.default',
-              p: 3,
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 3,
-              flexShrink: 0,
-              overflow: 'auto',
-            }}
-          >
-            <Box>
-              <Heading as="h4" sx={{ fontSize: 1, mb: 1 }}>
-                {config.title}
-              </Heading>
-              <Text sx={{ color: 'fg.muted', fontSize: 0, display: 'block' }}>
-                Tokens consumed (codemode).
-              </Text>
-              <Text
+        {DEMO_AGENT_CONFIGS.filter(c => c.key === 'codemode').map(config =>
+          (() => {
+            const outcome = outcomeFor(config.key);
+            return (
+              <Box
+                key={config.key}
                 sx={{
-                  color: 'fg.muted',
-                  fontSize: 0,
-                  fontFamily: 'mono',
-                  display: 'block',
-                  mt: 1,
+                  width: 320,
+                  borderLeft: '1px solid',
+                  borderColor: 'border.default',
+                  p: 3,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 3,
+                  flexShrink: 0,
+                  overflow: 'auto',
                 }}
               >
-                {config.baseUrl}
-              </Text>
-              <Text
-                sx={{
-                  color: 'fg.muted',
-                  fontSize: 0,
-                  fontFamily: 'mono',
-                  display: 'block',
-                  mt: 1,
-                  wordBreak: 'break-all',
-                }}
-              >
-                {agentIdByKey[config.key] || 'launching…'}
-              </Text>
-            </Box>
-            <ReactECharts
-              option={gaugeOptionFor(config)}
-              style={{ height: 240, width: '100%' }}
-            />
-            <Box
-              sx={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                gap: 2,
-              }}
-            >
-              <Text sx={{ fontSize: 0, color: 'fg.muted' }}>Consumed</Text>
-              <Text sx={{ fontSize: 0, fontWeight: 'bold' }}>
-                {(consumedByAgent[config.key] ?? 0).toLocaleString()} tokens
-              </Text>
-            </Box>
-            {agentIdByKey[config.key] && (
-              <ContextPanel
-                agentId={agentIdByKey[config.key]}
-                apiBase={config.baseUrl}
-                liveData={contextSnapshotByKey[config.key] ?? null}
-                chartHeight="180px"
-              />
-            )}
-          </Box>
-        ))}
+                <Box>
+                  <Heading as="h4" sx={{ fontSize: 1, mb: 1 }}>
+                    {config.title}
+                  </Heading>
+                  <Text
+                    sx={{ color: 'fg.muted', fontSize: 0, display: 'block' }}
+                  >
+                    Tokens consumed (codemode).
+                  </Text>
+                  <Text
+                    sx={{
+                      color: 'fg.muted',
+                      fontSize: 0,
+                      fontFamily: 'mono',
+                      display: 'block',
+                      mt: 1,
+                    }}
+                  >
+                    {config.baseUrl}
+                  </Text>
+                  <Text
+                    sx={{
+                      color: 'fg.muted',
+                      fontSize: 0,
+                      fontFamily: 'mono',
+                      display: 'block',
+                      mt: 1,
+                      wordBreak: 'break-all',
+                    }}
+                  >
+                    {agentIdByKey[config.key] || 'launching…'}
+                  </Text>
+                </Box>
+                <ReactECharts
+                  option={gaugeOptionFor(config)}
+                  style={{
+                    height: 240,
+                    minHeight: 240,
+                    maxHeight: 240,
+                    width: '100%',
+                    flexShrink: 0,
+                  }}
+                />
+                <Box
+                  sx={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    gap: 2,
+                  }}
+                >
+                  <Text sx={{ fontSize: 0, color: 'fg.muted' }}>Consumed</Text>
+                  <Text sx={{ fontSize: 0, fontWeight: 'bold' }}>
+                    {(consumedByAgent[config.key] ?? 0).toLocaleString()} tokens
+                  </Text>
+                </Box>
+                <Box
+                  sx={{
+                    p: 2,
+                    borderRadius: 2,
+                    border: '1px solid',
+                    bg: outcome.bg,
+                    borderColor: outcome.borderColor,
+                    textAlign: 'center',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                  }}
+                >
+                  <Text sx={{ fontSize: 4, lineHeight: 1, mb: 1 }}>
+                    {outcome.emoji}
+                  </Text>
+                  <Text
+                    sx={{
+                      fontSize: 0,
+                      color: outcome.color,
+                      fontWeight: 'bold',
+                    }}
+                  >
+                    {outcome.title}
+                  </Text>
+                  <Text
+                    sx={{
+                      fontSize: 0,
+                      color: 'fg.muted',
+                      display: 'block',
+                      mt: 1,
+                    }}
+                  >
+                    {outcome.message}
+                  </Text>
+                </Box>
+                {agentIdByKey[config.key] && (
+                  <ContextPanel
+                    agentId={agentIdByKey[config.key]}
+                    apiBase={config.baseUrl}
+                    liveData={contextSnapshotByKey[config.key] ?? null}
+                    chartHeight="180px"
+                  />
+                )}
+              </Box>
+            );
+          })(),
+        )}
       </Box>
     </Box>
   );

@@ -77,7 +77,7 @@ async def test_inline_handle_uses_existing_approved_decision() -> None:
         )
 
         result = await capability.handle_deferred_tool_calls(
-            None,  # type: ignore[arg-type]
+            None,
             requests=requests,
         )
 
@@ -118,7 +118,7 @@ async def test_inline_handle_uses_existing_rejected_decision() -> None:
         )
 
         result = await capability.handle_deferred_tool_calls(
-            None,  # type: ignore[arg-type]
+            None,
             requests=requests,
         )
 
@@ -145,7 +145,7 @@ async def test_inline_handle_leaves_unresolved_requests_to_caller() -> None:
     )
 
     result = await capability.handle_deferred_tool_calls(
-        None,  # type: ignore[arg-type]
+        None,
         requests=requests,
     )
 
@@ -183,7 +183,7 @@ async def test_inline_handle_accepts_json_string_args() -> None:
         )
 
         result = await capability.handle_deferred_tool_calls(
-            None,  # type: ignore[arg-type]
+            None,
             requests=requests,
         )
 
@@ -208,7 +208,7 @@ async def test_inline_handle_json_string_args_without_match_returns_none() -> No
     )
 
     result = await capability.handle_deferred_tool_calls(
-        None,  # type: ignore[arg-type]
+        None,
         requests=requests,
     )
 
