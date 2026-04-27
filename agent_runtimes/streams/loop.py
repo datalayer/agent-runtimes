@@ -152,6 +152,10 @@ def _get_agent_mcp_enabled_tools_by_server(
     defaults = _build_default_mcp_enabled_tools_by_server()
     overrides = _MCP_ENABLED_TOOLS_BY_AGENT.get(key, {})
     for server_id, tool_names in overrides.items():
+        # An empty override means "no explicit user selection yet" — keep
+        # lifecycle-derived defaults rather than wiping the server's tools.
+        if not tool_names:
+            continue
         defaults[server_id] = sorted(set(tool_names))
     return defaults
 
@@ -422,6 +426,41 @@ def _build_all_mcp_tools_by_server() -> dict[str, set[str]]:
     return result
 
 
+def mark_agent_mcp_tool_approved(
+    agent_id: str | None,
+    tool_name: str,
+) -> bool:
+    """Mark an MCP tool as approved for an agent.
+
+    Looks up which MCP server hosts the tool and adds it to the agent's
+    approved set so the dropdown reflects the new state. Returns True if the
+    tool was matched to a known MCP server.
+
+    Accepts both bare tool names (``tavily_extract``) and qualified names
+    (``tavily__tavily_extract``).
+    """
+    if not isinstance(tool_name, str):
+        return False
+    raw = tool_name.strip()
+    if not raw:
+        return False
+    normalized = raw.split("__", 1)[1] if "__" in raw else raw
+
+    all_by_server = _build_all_mcp_tools_by_server()
+    matched_server: str | None = None
+    for server_id, server_tools in all_by_server.items():
+        if normalized in server_tools or raw in server_tools:
+            matched_server = server_id
+            break
+    if matched_server is None:
+        return False
+
+    key = _stream_key(agent_id)
+    approved_map = _MCP_APPROVED_TOOLS_BY_AGENT.setdefault(key, {})
+    approved_map.setdefault(matched_server, set()).add(normalized)
+    return True
+
+
 def set_agent_enabled_mcp_tool_names(
     agent_id: str | None,
     tool_names: list[str],
@@ -433,14 +472,41 @@ def set_agent_enabled_mcp_tool_names(
     projected back to per-server enabled tool sets.
     """
     key = _stream_key(agent_id)
+
+    def _normalize_tool_name(name: str) -> str:
+        stripped = name.strip()
+        if "__" in stripped:
+            return stripped.split("__", 1)[1]
+        return stripped
+
     selected = {
         name.strip() for name in tool_names if isinstance(name, str) and name.strip()
     }
+    selected_normalized = {_normalize_tool_name(name) for name in selected}
+
     all_by_server = _build_all_mcp_tools_by_server()
+
+    # If the request does not carry any MCP tool names (e.g. empty list,
+    # or only unrelated builtins), keep existing server-side MCP selection.
+    # This avoids accidentally disabling all MCP tools at startup before the
+    # dropdown state has synchronized.
+    known_aliases: set[str] = set()
+    for names in all_by_server.values():
+        for name in names:
+            known_aliases.add(name)
+            known_aliases.add(_normalize_tool_name(name))
+
+    if not (selected & known_aliases or selected_normalized & known_aliases):
+        return _get_agent_mcp_enabled_tools_by_server(agent_id)
+
     enabled_map: dict[str, set[str]] = {}
 
     for server_id, all_names in all_by_server.items():
-        enabled_map[server_id] = {name for name in all_names if name in selected}
+        enabled_map[server_id] = {
+            name
+            for name in all_names
+            if name in selected or _normalize_tool_name(name) in selected_normalized
+        }
 
     _MCP_ENABLED_TOOLS_BY_AGENT[key] = enabled_map
 

@@ -2038,11 +2038,18 @@ async def create_agent(
         # full history starting from agent creation time.
         _emit_initial_otel_baseline(agent_id, http_request)
 
-        # Generic MCP startup path for non-codemode agents:
-        # Start MCP servers as a background task. The adapter's
-        # _get_runtime_toolsets() will wait for them to become ready when
-        # the first user prompt arrives (via wait_until_ready).
-        if selected_mcp_servers and not request.enable_codemode:
+        # Start selected MCP servers via the lifecycle manager as a
+        # background task. The adapter's _get_runtime_toolsets() will wait
+        # for them to become ready when the first user prompt arrives.
+        #
+        # We also do this when codemode is enabled. Codemode launches its
+        # own internal copies of the MCP servers for sandbox execution, but
+        # the rest of the system (status snapshots, the tools dropdown,
+        # default-enabled state, and the MCP guardrail) reads from the
+        # lifecycle manager. Starting them here keeps that surface in sync
+        # for codemode agents too. ``start_server`` is idempotent, so this
+        # is safe.
+        if selected_mcp_servers:
             asyncio.create_task(_start_mcp_servers_background(agent_id, http_request))
 
         return CreateAgentResponse(

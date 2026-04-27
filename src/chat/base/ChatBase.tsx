@@ -304,8 +304,12 @@ function parseEnabledMcpToolsByServer(
     }
   ).enabled_tools_by_server;
 
-  if (!raw || typeof raw !== 'object') {
-    return null;
+  if (raw == null) {
+    return new Map<string, Set<string>>();
+  }
+
+  if (typeof raw !== 'object') {
+    return new Map<string, Set<string>>();
   }
 
   const parsed = new Map<string, Set<string>>();
@@ -318,7 +322,11 @@ function parseEnabledMcpToolsByServer(
     const validToolNames = toolNames.filter(
       (name): name is string => typeof name === 'string' && name.length > 0,
     );
-    parsed.set(serverId, new Set(validToolNames));
+    const normalizedToolNames = validToolNames.map(name => {
+      const sep = name.indexOf('__');
+      return sep >= 0 ? name.slice(sep + 2) : name;
+    });
+    parsed.set(serverId, new Set(normalizedToolNames));
   }
 
   return parsed;
@@ -355,7 +363,11 @@ function parseApprovedMcpToolsByServer(
     const validToolNames = toolNames.filter(
       (name): name is string => typeof name === 'string' && name.length > 0,
     );
-    parsed.set(serverId, new Set(validToolNames));
+    const normalizedToolNames = validToolNames.map(name => {
+      const sep = name.indexOf('__');
+      return sep >= 0 ? name.slice(sep + 2) : name;
+    });
+    parsed.set(serverId, new Set(normalizedToolNames));
   }
 
   return parsed;
@@ -966,6 +978,7 @@ function ChatBaseInner({
   const currentAssistantMessageRef = useRef<ChatMessage | null>(null);
   const respondedApprovalIdsRef = useRef<Set<string>>(new Set());
   const defaultSkillsBootstrapRef = useRef<Set<string>>(new Set());
+  const defaultMcpToolsBootstrapRef = useRef<Set<string>>(new Set());
   const suppressAssistantTextForToolOnlyRef = useRef(false);
   const hideMessagesAfterToolUIRef = useRef(hideMessagesAfterToolUI);
   hideMessagesAfterToolUIRef.current = hideMessagesAfterToolUI;
@@ -1172,8 +1185,14 @@ function ChatBaseInner({
           if (server.isAvailable && server.enabled) {
             const shouldEnableServer = isServerSelected(server);
             if (shouldEnableServer) {
+              // Default to "all tools enabled" so the dropdown reflects an
+              // immediately-usable state. The WS sync effect will reconcile
+              // with server-side state once it arrives, and user toggles
+              // win after that.
               const enabledToolNames = new Set<string>(
-                server.tools.filter(t => t.enabled).map(t => t.name),
+                server.tools
+                  .map(t => t.name)
+                  .filter((name): name is string => Boolean(name)),
               );
               newEnabledMcpTools.set(server.id, enabledToolNames);
             }
@@ -1206,7 +1225,9 @@ function ChatBaseInner({
           server.enabled
         ) {
           const enabledToolNames = new Set<string>(
-            server.tools.filter(t => t.enabled).map(t => t.name),
+            server.tools
+              .map(t => t.name)
+              .filter((name): name is string => Boolean(name)),
           );
           newMap.set(server.id, enabledToolNames);
         }
@@ -1216,11 +1237,9 @@ function ChatBaseInner({
   }, [mcpServers, configQuery.data?.mcpServers, isServerSelected]);
 
   // Keep MCP tool selection synchronized with backend WS snapshots.
-  // Intentionally exclude `mcpServers` from the dependency array: the effect
-  // should only re-run when the backend snapshot (`mcpStatusData`) changes, not
-  // when the `mcpServers` prop reference changes (e.g. due to parent re-renders).
-  // We read the latest `mcpServers` through a ref so the filter logic is always
-  // current without causing the effect to fire.
+  // On first load per agent, if server state reports no enabled tools,
+  // bootstrap to "all enabled" from config so codemode starts usable by
+  // default. Later user toggles still win because bootstrap runs once.
   const mcpServersRef = useRef(mcpServers);
   mcpServersRef.current = mcpServers;
   useEffect(() => {
@@ -1229,19 +1248,90 @@ function ChatBaseInner({
       return;
     }
 
-    setEnabledMcpTools(() => {
-      const next = new Map<string, Set<string>>();
+    const bootstrapAgentKey = activeAgentId || '__global__';
+    const shouldBootstrap =
+      !defaultMcpToolsBootstrapRef.current.has(bootstrapAgentKey) &&
+      wsState === 'connected';
+
+    setEnabledMcpTools(prev => {
+      const next = new Map<string, Set<string>>(prev);
+
+      // Apply WS state per server, but only when it carries an authoritative,
+      // non-empty list. An empty list from WS is treated as "no information"
+      // (likely a transient snapshot before backend defaults are projected)
+      // so we keep whatever the user / bootstrap already set, preventing
+      // the dropdown from flickering between enabled and disabled states.
       wsEnabledMcpTools.forEach((toolNames, serverId) => {
         const selectedInProps =
           !mcpServersRef.current ||
           mcpServersRef.current.some(server => server.id === serverId);
-        if (selectedInProps) {
-          next.set(serverId, new Set(toolNames));
+        if (!selectedInProps) {
+          return;
         }
+        if (toolNames.size === 0) {
+          return;
+        }
+        next.set(serverId, new Set(toolNames));
       });
+
+      if (shouldBootstrap) {
+        const bootstrapMessages: Array<{
+          serverId: string;
+          enabledToolNames: string[];
+        }> = [];
+
+        for (const server of configQuery.data?.mcpServers ?? []) {
+          const selectedInProps =
+            !mcpServersRef.current ||
+            mcpServersRef.current.some(s => s.id === server.id);
+          if (!selectedInProps || !server.isAvailable || !server.enabled) {
+            continue;
+          }
+
+          const allToolNames = server.tools
+            .map(t => t.name)
+            .filter((name): name is string => Boolean(name));
+
+          if (allToolNames.length === 0) {
+            continue;
+          }
+
+          const current = next.get(server.id);
+          if (!current || current.size === 0) {
+            next.set(server.id, new Set(allToolNames));
+            bootstrapMessages.push({
+              serverId: server.id,
+              enabledToolNames: allToolNames,
+            });
+          }
+        }
+
+        let allMessagesSent = true;
+        for (const msg of bootstrapMessages) {
+          const ok = agentRuntimeStore.getState().sendRawMessage(
+            {
+              type: 'mcp_server_tools_set',
+              serverId: msg.serverId,
+              enabledToolNames: msg.enabledToolNames,
+            },
+            activeAgentId,
+          );
+          if (!ok) {
+            allMessagesSent = false;
+            console.warn(
+              '[ChatBase] initial mcp_server_tools_set dropped: websocket not ready',
+            );
+          }
+        }
+
+        if (allMessagesSent) {
+          defaultMcpToolsBootstrapRef.current.add(bootstrapAgentKey);
+        }
+      }
+
       return next;
     });
-  }, [mcpStatusData]);
+  }, [mcpStatusData, activeAgentId, configQuery.data?.mcpServers, wsState]);
 
   // Keep MCP tool *approval* synchronized with backend WS snapshots.
   useEffect(() => {
@@ -1296,31 +1386,37 @@ function ChatBaseInner({
   // initialSkills are now handled server-side during agent creation.
 
   // ---- Toggle helpers ----
-  const toggleMcpTool = useCallback((serverId: string, toolName: string) => {
-    setEnabledMcpTools(prev => {
-      const newMap = new Map(prev);
-      const serverTools = new Set(prev.get(serverId) || []);
-      if (serverTools.has(toolName)) {
-        serverTools.delete(toolName);
-      } else {
-        serverTools.add(toolName);
-      }
-      newMap.set(serverId, serverTools);
+  const toggleMcpTool = useCallback(
+    (serverId: string, toolName: string) => {
+      setEnabledMcpTools(prev => {
+        const newMap = new Map(prev);
+        const serverTools = new Set(prev.get(serverId) || []);
+        if (serverTools.has(toolName)) {
+          serverTools.delete(toolName);
+        } else {
+          serverTools.add(toolName);
+        }
+        newMap.set(serverId, serverTools);
 
-      const ok = agentRuntimeStore.getState().sendRawMessage({
-        type: 'mcp_server_tools_set',
-        serverId,
-        enabledToolNames: Array.from(serverTools),
-      });
-      if (!ok) {
-        console.warn(
-          '[ChatBase] mcp_server_tools_set dropped: websocket not ready',
+        const ok = agentRuntimeStore.getState().sendRawMessage(
+          {
+            type: 'mcp_server_tools_set',
+            serverId,
+            enabledToolNames: Array.from(serverTools),
+          },
+          activeAgentId,
         );
-      }
+        if (!ok) {
+          console.warn(
+            '[ChatBase] mcp_server_tools_set dropped: websocket not ready',
+          );
+        }
 
-      return newMap;
-    });
-  }, []);
+        return newMap;
+      });
+    },
+    [activeAgentId],
+  );
 
   const toggleAllMcpServerTools = useCallback(
     (serverId: string, allToolNames: string[], enable: boolean) => {
@@ -1333,11 +1429,14 @@ function ChatBaseInner({
           newMap.set(serverId, nextTools);
         }
 
-        const ok = agentRuntimeStore.getState().sendRawMessage({
-          type: 'mcp_server_tools_set',
-          serverId,
-          enabledToolNames: Array.from(nextTools),
-        });
+        const ok = agentRuntimeStore.getState().sendRawMessage(
+          {
+            type: 'mcp_server_tools_set',
+            serverId,
+            enabledToolNames: Array.from(nextTools),
+          },
+          activeAgentId,
+        );
         if (!ok) {
           console.warn(
             '[ChatBase] mcp_server_tools_set dropped: websocket not ready',
@@ -1347,7 +1446,7 @@ function ChatBaseInner({
         return newMap;
       });
     },
-    [],
+    [activeAgentId],
   );
 
   const toggleSkill = useCallback(
@@ -1388,12 +1487,15 @@ function ChatBaseInner({
         }
         newMap.set(serverId, serverTools);
 
-        const ok = agentRuntimeStore.getState().sendRawMessage({
-          type: 'mcp_server_tool_approve',
-          serverId,
-          toolName,
-          approved: !currentlyApproved,
-        });
+        const ok = agentRuntimeStore.getState().sendRawMessage(
+          {
+            type: 'mcp_server_tool_approve',
+            serverId,
+            toolName,
+            approved: !currentlyApproved,
+          },
+          activeAgentId,
+        );
         if (!ok) {
           console.warn(
             '[ChatBase] mcp_server_tool_approve dropped: websocket not ready',
@@ -1403,7 +1505,7 @@ function ChatBaseInner({
         return newMap;
       });
     },
-    [],
+    [activeAgentId],
   );
 
   const toggleSkillApproval = useCallback(

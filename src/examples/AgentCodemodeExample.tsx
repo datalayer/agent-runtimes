@@ -834,28 +834,6 @@ const AgentCodemodeInner: React.FC<{ onLogout: () => void }> = ({
                     {agentIdByKey[config.key] || 'launching…'}
                   </Text>
                 </Box>
-                <ReactECharts
-                  option={gaugeOptionFor(config)}
-                  style={{
-                    height: 240,
-                    minHeight: 240,
-                    maxHeight: 240,
-                    width: '100%',
-                    flexShrink: 0,
-                  }}
-                />
-                <Box
-                  sx={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    gap: 2,
-                  }}
-                >
-                  <Text sx={{ fontSize: 0, color: 'fg.muted' }}>Consumed</Text>
-                  <Text sx={{ fontSize: 0, fontWeight: 'bold' }}>
-                    {(consumedByAgent[config.key] ?? 0).toLocaleString()} tokens
-                  </Text>
-                </Box>
                 <Box
                   sx={{
                     p: 2,
@@ -890,6 +868,28 @@ const AgentCodemodeInner: React.FC<{ onLogout: () => void }> = ({
                     }}
                   >
                     {outcome.message}
+                  </Text>
+                </Box>
+                <ReactECharts
+                  option={gaugeOptionFor(config)}
+                  style={{
+                    height: 240,
+                    minHeight: 240,
+                    maxHeight: 240,
+                    width: '100%',
+                    flexShrink: 0,
+                  }}
+                />
+                <Box
+                  sx={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    gap: 2,
+                  }}
+                >
+                  <Text sx={{ fontSize: 0, color: 'fg.muted' }}>Consumed</Text>
+                  <Text sx={{ fontSize: 0, fontWeight: 'bold' }}>
+                    {(consumedByAgent[config.key] ?? 0).toLocaleString()} tokens
                   </Text>
                 </Box>
                 {agentIdByKey[config.key] && (
@@ -979,28 +979,6 @@ const AgentCodemodeInner: React.FC<{ onLogout: () => void }> = ({
                     {agentIdByKey[config.key] || 'launching…'}
                   </Text>
                 </Box>
-                <ReactECharts
-                  option={gaugeOptionFor(config)}
-                  style={{
-                    height: 240,
-                    minHeight: 240,
-                    maxHeight: 240,
-                    width: '100%',
-                    flexShrink: 0,
-                  }}
-                />
-                <Box
-                  sx={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    gap: 2,
-                  }}
-                >
-                  <Text sx={{ fontSize: 0, color: 'fg.muted' }}>Consumed</Text>
-                  <Text sx={{ fontSize: 0, fontWeight: 'bold' }}>
-                    {(consumedByAgent[config.key] ?? 0).toLocaleString()} tokens
-                  </Text>
-                </Box>
                 <Box
                   sx={{
                     p: 2,
@@ -1035,6 +1013,28 @@ const AgentCodemodeInner: React.FC<{ onLogout: () => void }> = ({
                     }}
                   >
                     {outcome.message}
+                  </Text>
+                </Box>
+                <ReactECharts
+                  option={gaugeOptionFor(config)}
+                  style={{
+                    height: 240,
+                    minHeight: 240,
+                    maxHeight: 240,
+                    width: '100%',
+                    flexShrink: 0,
+                  }}
+                />
+                <Box
+                  sx={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    gap: 2,
+                  }}
+                >
+                  <Text sx={{ fontSize: 0, color: 'fg.muted' }}>Consumed</Text>
+                  <Text sx={{ fontSize: 0, fontWeight: 'bold' }}>
+                    {(consumedByAgent[config.key] ?? 0).toLocaleString()} tokens
                   </Text>
                 </Box>
                 {agentIdByKey[config.key] && (

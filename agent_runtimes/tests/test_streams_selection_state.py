@@ -87,3 +87,64 @@ class TestStreamMCPState:
             }
         finally:
             loop.purge_agent_stream_state(agent_id)
+
+    def test_set_agent_enabled_mcp_tool_names_matches_normalized_aliases(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        agent_id = "mcp-normalized-aliases"
+        loop.purge_agent_stream_state(agent_id)
+        try:
+            monkeypatch.setattr(
+                loop,
+                "_build_all_mcp_tools_by_server",
+                lambda: {
+                    "tavily": {"tavily__tavily_extract", "tavily__tavily_search"},
+                },
+            )
+
+            result = loop.set_agent_enabled_mcp_tool_names(
+                agent_id,
+                ["tavily_extract"],
+            )
+
+            assert result == {
+                "tavily": ["tavily__tavily_extract"],
+            }
+            assert loop.get_agent_enabled_mcp_tool_names(agent_id) == {
+                "tavily__tavily_extract",
+            }
+        finally:
+            loop.purge_agent_stream_state(agent_id)
+
+    def test_set_agent_enabled_mcp_tool_names_ignores_non_mcp_selection(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        agent_id = "mcp-ignore-non-mcp"
+        loop.purge_agent_stream_state(agent_id)
+        try:
+            monkeypatch.setattr(
+                loop,
+                "_build_all_mcp_tools_by_server",
+                lambda: {
+                    "server-a": {"search_docs", "list_docs"},
+                },
+            )
+
+            # Establish explicit prior state.
+            loop.set_agent_enabled_mcp_tool_names(agent_id, ["search_docs"])
+
+            result = loop.set_agent_enabled_mcp_tool_names(
+                agent_id,
+                ["web_search_preview"],
+            )
+
+            assert result == {
+                "server-a": ["search_docs"],
+            }
+            assert loop.get_agent_enabled_mcp_tool_names(agent_id) == {
+                "search_docs",
+            }
+        finally:
+            loop.purge_agent_stream_state(agent_id)

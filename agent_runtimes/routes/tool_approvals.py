@@ -459,6 +459,20 @@ async def update_local_approval_status(
     if updated is not None:
         # Unblock any in-process coroutine waiting on this approval.
         signal_approval_event(approval_id, status == "approved", note)
+        if status == "approved":
+            try:
+                from agent_runtimes.streams.loop import (
+                    mark_agent_mcp_tool_approved,
+                )
+
+                mark_agent_mcp_tool_approved(
+                    updated.agent_id or None, updated.tool_name
+                )
+            except Exception:
+                logger.debug(
+                    "[tool-approval] mark_agent_mcp_tool_approved failed",
+                    exc_info=True,
+                )
         await _publish_approval_event(
             event_type=(
                 "tool_approval_approved"
@@ -627,6 +641,19 @@ async def _update_approval(
     # Signal any in-process coroutine waiting on this approval (e.g.
     # ToolsGuardrailCapability.before_tool_execute using asyncio.Event).
     signal_approval_event(approval_id, status == "approved", note)
+
+    if status == "approved":
+        try:
+            from agent_runtimes.streams.loop import mark_agent_mcp_tool_approved
+
+            mark_agent_mcp_tool_approved(
+                updated.agent_id or None, updated.tool_name
+            )
+        except Exception:
+            logger.debug(
+                "[tool-approval] mark_agent_mcp_tool_approved failed",
+                exc_info=True,
+            )
 
     await _publish_approval_event(
         event_type=(
