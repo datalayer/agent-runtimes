@@ -646,9 +646,7 @@ async def _update_approval(
         try:
             from agent_runtimes.streams.loop import mark_agent_mcp_tool_approved
 
-            mark_agent_mcp_tool_approved(
-                updated.agent_id or None, updated.tool_name
-            )
+            mark_agent_mcp_tool_approved(updated.agent_id or None, updated.tool_name)
         except Exception:
             logger.debug(
                 "[tool-approval] mark_agent_mcp_tool_approved failed",

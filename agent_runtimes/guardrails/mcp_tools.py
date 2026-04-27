@@ -222,9 +222,7 @@ class MCPToolsGuardrailCapability(AbstractCapability[Any]):
             # MCP tool references in codemode, even if the known-tools cache
             # is temporarily empty.
             from_generated_import = server_hint is not None
-            if not from_generated_import and not self._is_mcp_tool_name(
-                resolved_name
-            ):
+            if not from_generated_import and not self._is_mcp_tool_name(resolved_name):
                 continue
             self._assert_allowed_mcp_tool(resolved_name)
             requested.add(resolved_name)
