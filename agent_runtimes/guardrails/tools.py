@@ -28,7 +28,7 @@ from pydantic_ai.capabilities import AbstractCapability
 from pydantic_ai.messages import ToolCallPart
 from pydantic_ai.tools import DeferredToolResults, ToolDefinition, ToolDenied
 
-from . import GuardrailBlockedError
+from .common import GuardrailBlockedError
 
 logger = logging.getLogger(__name__)
 

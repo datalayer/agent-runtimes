@@ -887,6 +887,46 @@ function ChatBaseInner({
     return set;
   }, [skillsQuery.data]);
 
+  // Backward-compatibility bootstrap: if a running agent reports skills as
+  // available-only, enable them once. This is gated per agent so explicit
+  // user disable actions are not overridden later.
+  useEffect(() => {
+    if (!activeAgentId) {
+      return;
+    }
+    if (defaultSkillsBootstrapRef.current.has(activeAgentId)) {
+      return;
+    }
+
+    const skills = skillsQuery.data?.skills ?? [];
+    if (skills.length === 0) {
+      return;
+    }
+
+    const hasAnyEnabled = skills.some(
+      s => s.status === 'enabled' || s.status === 'loaded',
+    );
+    if (hasAnyEnabled) {
+      defaultSkillsBootstrapRef.current.add(activeAgentId);
+      return;
+    }
+
+    const availableSkillIds = skills
+      .filter(s => s.status === 'available')
+      .map(s => s.id)
+      .filter(Boolean);
+
+    if (availableSkillIds.length === 0) {
+      defaultSkillsBootstrapRef.current.add(activeAgentId);
+      return;
+    }
+
+    const allSent = availableSkillIds.every(skillId => wsEnableSkill(skillId));
+    if (allSent) {
+      defaultSkillsBootstrapRef.current.add(activeAgentId);
+    }
+  }, [activeAgentId, skillsQuery.data, wsEnableSkill]);
+
   // Derive approvedSkills from the WS-pushed skill statuses (default: not approved).
   const approvedSkills = useMemo(() => {
     const set = new Set<string>();
@@ -925,6 +965,7 @@ function ChatBaseInner({
   const pendingToolExecutionsRef = useRef(0);
   const currentAssistantMessageRef = useRef<ChatMessage | null>(null);
   const respondedApprovalIdsRef = useRef<Set<string>>(new Set());
+  const defaultSkillsBootstrapRef = useRef<Set<string>>(new Set());
   const suppressAssistantTextForToolOnlyRef = useRef(false);
   const hideMessagesAfterToolUIRef = useRef(hideMessagesAfterToolUI);
   hideMessagesAfterToolUIRef.current = hideMessagesAfterToolUI;

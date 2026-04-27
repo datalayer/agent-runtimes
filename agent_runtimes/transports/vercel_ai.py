@@ -534,6 +534,7 @@ class VercelAITransport(BaseTransport):
 
         # Extract model, builtinTools, identities, and frontend tools from request body if not provided
         builtin_tools_from_request: list[str] | None = None
+        skills_from_request: list[str] | None = None
         identities_from_request: list[dict[str, Any]] | None = None
         frontend_tools_from_request: list[dict[str, Any]] | None = None
         sdk_version: str | None = None
@@ -556,9 +557,16 @@ class VercelAITransport(BaseTransport):
 
             # Extract builtinTools from request
             builtin_tools_from_request = body.get("builtinTools")
-            if builtin_tools_from_request:
+            if builtin_tools_from_request is not None:
                 logger.info(
                     f"Vercel AI: Using builtinTools from request: {builtin_tools_from_request}"
+                )
+
+            # Extract skills from request
+            skills_from_request = body.get("skills")
+            if skills_from_request is not None:
+                logger.info(
+                    f"Vercel AI: Using skills from request: {skills_from_request}"
                 )
 
             # Extract identities from request (OAuth tokens from frontend)
@@ -598,6 +606,22 @@ class VercelAITransport(BaseTransport):
             if builtin_tools_from_request is not None
             else self._builtin_tools
         )
+
+        # Apply per-turn enablement to backend guardrail state.
+        try:
+            from agent_runtimes.streams.loop import (
+                set_agent_enabled_mcp_tool_names,
+                set_agent_turn_enabled_skills,
+            )
+
+            if isinstance(builtin_tools_from_request, list):
+                set_agent_enabled_mcp_tool_names(self._agent_id, builtin_tools_from_request)
+            if isinstance(skills_from_request, list):
+                set_agent_turn_enabled_skills(self._agent_id, skills_from_request)
+        except Exception as exc:
+            logger.debug(
+                "Vercel AI: Could not apply per-turn tool/skill state: %s", exc
+            )
 
         # Convert string tool IDs to actual AbstractBuiltinTool instances
         # pydantic-ai expects Sequence[AbstractBuiltinTool], not list[str]

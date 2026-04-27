@@ -234,6 +234,38 @@ def _normalize_skill_ref(skill_ref: str) -> str:
     return skill_ref.strip()
 
 
+def _build_unknown_skill_entry(skill_id: str) -> dict[str, Any]:
+    """Build a skill entry when discovery did not provide metadata."""
+    name = skill_id
+    description = ""
+    try:
+        from agent_runtimes.specs.skills import get_skill_spec
+
+        spec = get_skill_spec(skill_id)
+        if spec is not None:
+            name = str(spec.name or skill_id)
+            description = str(spec.description or "")
+    except Exception:
+        pass
+
+    return {
+        "id": skill_id,
+        "name": name,
+        "description": description,
+        "tags": [],
+        "has_scripts": False,
+        "has_resources": False,
+        "status": "available",
+        "approved": False,
+        "skill_definition": None,
+        "source_variant": "unknown",
+        "module": None,
+        "package": None,
+        "method": None,
+        "path": None,
+    }
+
+
 def _seed_agent_skills(agent_id: str | None) -> None:
     """Ensure a per-agent skills map exists and is seeded from discovery."""
     key = _stream_key(agent_id)
@@ -315,28 +347,12 @@ def set_agent_enabled_skills(
         if not skill_id:
             continue
         if skill_id not in _SKILLS_BY_AGENT[key]:
-            _SKILLS_BY_AGENT[key][skill_id] = {
-                "id": skill_id,
-                "name": skill_id,
-                "description": "",
-                "tags": [],
-                "has_scripts": False,
-                "has_resources": False,
-                "status": "available",
-                "approved": False,
-                "skill_definition": None,
-                "source_variant": "unknown",
-                "module": None,
-                "package": None,
-                "method": None,
-                "path": None,
-            }
+            _SKILLS_BY_AGENT[key][skill_id] = _build_unknown_skill_entry(skill_id)
 
     # Prune the per-agent snapshot to the skills this agent's spec declares.
     # This ensures the UI skills dropdown reflects exactly the skills available
     # to this agent, not the global catalog of all discoverable skills.
-    # Spec-declared skills start as "available" (not enabled) — the user must
-    # explicitly enable each skill from the UI, matching MCP tool behavior.
+    # Spec-declared skills start as enabled by default.
     if enabled_ids:
         _SKILLS_BY_AGENT[key] = {
             skill_id: entry
@@ -344,10 +360,31 @@ def set_agent_enabled_skills(
             if skill_id in enabled_ids
         }
         for entry in _SKILLS_BY_AGENT[key].values():
-            entry["status"] = "available"
+            entry["status"] = "enabled"
     else:
         # Spec declares no skills: clear the snapshot entirely.
         _SKILLS_BY_AGENT[key] = {}
+
+    return get_agent_skills_snapshot(agent_id)
+
+
+def set_agent_turn_enabled_skills(
+    agent_id: str | None,
+    skill_refs: list[str],
+) -> list[dict[str, Any]]:
+    """Apply per-turn skill enablement without changing tracked skill scope."""
+    _seed_agent_skills(agent_id)
+    key = _stream_key(agent_id)
+    enabled_ids = {_normalize_skill_ref(ref) for ref in skill_refs if ref}
+
+    for skill_id in enabled_ids:
+        if not skill_id:
+            continue
+        if skill_id not in _SKILLS_BY_AGENT[key]:
+            _SKILLS_BY_AGENT[key][skill_id] = _build_unknown_skill_entry(skill_id)
+
+    for skill_id, entry in _SKILLS_BY_AGENT[key].items():
+        entry["status"] = "enabled" if skill_id in enabled_ids else "available"
 
     return get_agent_skills_snapshot(agent_id)
 
@@ -362,6 +399,59 @@ def get_agent_approved_skill_ids(agent_id: str | None) -> set[str]:
     return approved
 
 
+def _build_all_mcp_tools_by_server() -> dict[str, set[str]]:
+    """Build all known MCP tool names per running server."""
+    result: dict[str, set[str]] = {}
+    try:
+        from agent_runtimes.mcp.lifecycle import get_mcp_lifecycle_manager
+
+        manager = get_mcp_lifecycle_manager()
+        for instance in manager.get_all_running_servers():
+            names: set[str] = set()
+            for tool in instance.tools:
+                tool_name = getattr(tool, "name", None)
+                if isinstance(tool_name, str) and tool_name.strip():
+                    names.add(tool_name.strip())
+            for tool in getattr(instance.config, "tools", []):
+                tool_name = getattr(tool, "name", None)
+                if isinstance(tool_name, str) and tool_name.strip():
+                    names.add(tool_name.strip())
+            result[instance.server_id] = names
+    except Exception:
+        return {}
+    return result
+
+
+def set_agent_enabled_mcp_tool_names(
+    agent_id: str | None,
+    tool_names: list[str],
+) -> dict[str, list[str]]:
+    """Set enabled MCP tools from a flat per-turn tool-name list.
+
+    This is used by request transports that only receive a flat list of tool
+    names for a turn (e.g. ``builtinTools`` in chat payloads). The mapping is
+    projected back to per-server enabled tool sets.
+    """
+    key = _stream_key(agent_id)
+    selected = {
+        name.strip() for name in tool_names if isinstance(name, str) and name.strip()
+    }
+    all_by_server = _build_all_mcp_tools_by_server()
+    enabled_map: dict[str, set[str]] = {}
+
+    for server_id, all_names in all_by_server.items():
+        enabled_map[server_id] = {name for name in all_names if name in selected}
+
+    _MCP_ENABLED_TOOLS_BY_AGENT[key] = enabled_map
+
+    # Keep approvals consistent with enabled state.
+    approved_map = _MCP_APPROVED_TOOLS_BY_AGENT.setdefault(key, {})
+    for server_id, approved in list(approved_map.items()):
+        approved_map[server_id] = approved & enabled_map.get(server_id, set())
+
+    return _get_agent_mcp_enabled_tools_by_server(agent_id)
+
+
 def enable_agent_skill(agent_id: str | None, skill_ref: str) -> None:
     """Enable one skill for an agent."""
     _seed_agent_skills(agent_id)
@@ -371,22 +461,7 @@ def enable_agent_skill(agent_id: str | None, skill_ref: str) -> None:
         return
     entry = _SKILLS_BY_AGENT[key].get(skill_id)
     if entry is None:
-        entry = {
-            "id": skill_id,
-            "name": skill_id,
-            "description": "",
-            "tags": [],
-            "has_scripts": False,
-            "has_resources": False,
-            "status": "enabled",
-            "approved": False,
-            "skill_definition": None,
-            "source_variant": "unknown",
-            "module": None,
-            "package": None,
-            "method": None,
-            "path": None,
-        }
+        entry = _build_unknown_skill_entry(skill_id)
         _SKILLS_BY_AGENT[key][skill_id] = entry
     entry["status"] = "enabled"
 

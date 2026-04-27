@@ -180,6 +180,8 @@ class AGUITransport(BaseTransport):
                 metric_emitted = False
                 # Extract model and identities from request body if provided
                 model: str | None = None
+                builtin_tools_from_request: list[str] | None = None
+                skills_from_request: list[str] | None = None
                 identities_from_request: list[dict[str, Any]] | None = None
                 metric_user_id: str | None = None
                 metric_user_provider: str | None = None
@@ -194,6 +196,20 @@ class AGUITransport(BaseTransport):
                     model = body.get("model")
                     if model:
                         logger.info(f"AG-UI using model from request body: {model}")
+
+                    builtin_tools_from_request = body.get("builtinTools")
+                    if builtin_tools_from_request is not None:
+                        logger.info(
+                            "AG-UI using builtinTools from request body: %s",
+                            builtin_tools_from_request,
+                        )
+
+                    skills_from_request = body.get("skills")
+                    if skills_from_request is not None:
+                        logger.info(
+                            "AG-UI using skills from request body: %s",
+                            skills_from_request,
+                        )
 
                     prompt_candidate = body.get("prompt")
                     if isinstance(prompt_candidate, str):
@@ -257,6 +273,29 @@ class AGUITransport(BaseTransport):
                 except (json.JSONDecodeError, Exception) as e:
                     logger.debug(
                         f"Could not extract model/identities from AG-UI request body: {e}"
+                    )
+
+                # Apply per-turn enablement to backend guardrail state.
+                try:
+                    from agent_runtimes.streams.loop import (
+                        set_agent_enabled_mcp_tool_names,
+                        set_agent_turn_enabled_skills,
+                    )
+
+                    if isinstance(builtin_tools_from_request, list):
+                        set_agent_enabled_mcp_tool_names(
+                            transport_self._agent_id,
+                            builtin_tools_from_request,
+                        )
+                    if isinstance(skills_from_request, list):
+                        set_agent_turn_enabled_skills(
+                            transport_self._agent_id,
+                            skills_from_request,
+                        )
+                except Exception as exc:
+                    logger.debug(
+                        "AG-UI could not apply per-turn tool/skill state: %s",
+                        exc,
                     )
 
                 # Create on_complete callback to track usage

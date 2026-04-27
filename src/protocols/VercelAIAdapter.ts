@@ -307,14 +307,12 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
         trigger: 'submit-message' as const,
         ...(options?.tools && { tools: options.tools }),
         ...(options?.model && { model: options.model }),
-        ...(options?.builtinTools &&
-          options.builtinTools.length > 0 && {
-            builtinTools: options.builtinTools,
-          }),
-        ...(options?.skills &&
-          options.skills.length > 0 && {
-            skills: options.skills,
-          }),
+        ...(options?.builtinTools !== undefined && {
+          builtinTools: options.builtinTools,
+        }),
+        ...(options?.skills !== undefined && {
+          skills: options.skills,
+        }),
         ...(options?.identities &&
           options.identities.length > 0 && {
             identities: options.identities,

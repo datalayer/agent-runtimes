@@ -256,12 +256,21 @@ export class AGUIAdapter extends BaseProtocolAdapter {
       return baseMessage;
     });
 
-    const runAgentInput: AGUI.RunAgentInput = {
+    const runAgentInput: AGUI.RunAgentInput & {
+      builtinTools?: string[];
+      skills?: string[];
+    } = {
       threadId,
       runId: generateMessageId(),
       messages: aguiMessages as ChatMessage[],
       state: null,
       tools: options?.tools || [],
+      ...(options?.builtinTools !== undefined && {
+        builtinTools: options.builtinTools,
+      }),
+      ...(options?.skills !== undefined && {
+        skills: options.skills,
+      }),
       context: [],
       forwardedProps: null,
       // Include model for per-request model override
