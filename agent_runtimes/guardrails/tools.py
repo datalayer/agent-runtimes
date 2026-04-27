@@ -16,6 +16,7 @@ provides:
 from __future__ import annotations
 
 import asyncio
+import json as json_mod
 import logging
 import re
 from dataclasses import dataclass, field
@@ -30,6 +31,31 @@ from pydantic_ai.tools import DeferredToolResults, ToolDefinition, ToolDenied
 from . import GuardrailBlockedError
 
 logger = logging.getLogger(__name__)
+
+
+def _normalize_tool_args_for_match(raw_args: Any) -> dict[str, str]:
+    """Normalize tool arguments into a stable dict[str, str] shape.
+
+    Deferred tool call args can arrive as a dict or as a JSON string depending
+    on transport/protocol framing. This helper keeps matching logic resilient.
+    """
+    parsed_args = raw_args
+    if isinstance(raw_args, str):
+        try:
+            parsed_args = json_mod.loads(raw_args)
+        except Exception:
+            parsed_args = {}
+
+    if not isinstance(parsed_args, dict):
+        return {}
+
+    normalized: dict[str, str] = {}
+    for k, v in parsed_args.items():
+        try:
+            normalized[str(k)] = str(v)[:500]
+        except Exception:
+            normalized[str(k)] = "<non-serializable>"
+    return normalized
 
 
 def _parse_timeout_hms(value: Any, *, default: float) -> float:
@@ -419,12 +445,9 @@ class ToolsGuardrailCapability(AbstractCapability[Any]):
                 continue
 
             call_tool_id = getattr(call, "tool_call_id", None)
-            call_safe_args: dict[str, str] = {}
-            for k, v in call.args.items():
-                try:
-                    call_safe_args[k] = str(v)[:500]
-                except Exception:
-                    call_safe_args[k] = "<non-serializable>"
+            call_safe_args = _normalize_tool_args_for_match(
+                getattr(call, "args", {})
+            )
 
             matched = None
 

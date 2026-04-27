@@ -147,3 +147,66 @@ async def test_inline_handle_leaves_unresolved_requests_to_caller() -> None:
     )
 
     assert result is None
+
+
+@pytest.mark.asyncio
+async def test_inline_handle_accepts_json_string_args() -> None:
+    await _reset_approvals()
+    try:
+        await _put_record(
+            ToolApprovalRecord(
+                id="approval-4",
+                agent_id="agent-1",
+                pod_name="",
+                tool_name="runtime_sensitive_echo",
+                tool_args={"text": "hello", "reason": "audit"},
+                tool_call_id="tool-4",
+                status="approved",
+                note=None,
+                created_at=_now_iso(),
+                updated_at=_now_iso(),
+            )
+        )
+
+        capability = _capability()
+        requests = DeferredToolRequests(
+            approvals=[
+                ToolCallPart(
+                    tool_name="runtime_sensitive_echo",
+                    args='{"text":"hello","reason":"audit"}',
+                    tool_call_id="tool-4",
+                )
+            ]
+        )
+
+        result = await capability.handle_deferred_tool_calls(
+            None,  # type: ignore[arg-type]
+            requests=requests,
+        )
+
+        assert result is not None
+        assert result.approvals == {"tool-4": True}
+    finally:
+        await _reset_approvals()
+
+
+@pytest.mark.asyncio
+async def test_inline_handle_json_string_args_without_match_returns_none() -> None:
+    await _reset_approvals()
+    capability = _capability()
+    requests = DeferredToolRequests(
+        approvals=[
+            ToolCallPart(
+                tool_name="runtime_sensitive_echo",
+                args='{"text":"hello","reason":"audit"}',
+                tool_call_id="tool-5",
+            )
+        ]
+    )
+
+    result = await capability.handle_deferred_tool_calls(
+        None,  # type: ignore[arg-type]
+        requests=requests,
+    )
+
+    assert result is None
