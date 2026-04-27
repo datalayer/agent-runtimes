@@ -1553,14 +1553,11 @@ async def create_agent(
                 len(get_agent_enabled_skill_ids(agent_id)),
             )
 
-        # Add codemode toolset ONLY when codemode is explicitly enabled.
-        # When only ``sandbox_variant`` is set (no codemode), the shared
-        # sandbox still exists for lifecycle/status purposes, but we do NOT
-        # attach any CodemodeToolset — the agent gets zero sandbox-related
-        # tools (no ``execute_code``, no ``list_tool_names``, no
-        # ``search_tools``, no ``get_tool_details``, no ``list_servers``,
-        # no ``call_tool``). The agent must use only the raw MCP tools
-        # exposed by its configured MCP servers.
+        # Attach codemode toolset in two modes:
+        # - Full codemode (enable_codemode=True): MCP server conversion +
+        #   discovery tools + execute_code.
+        # - Sandbox-only mode (sandbox_variant set, codemode disabled):
+        #   execute_code only, with MCP conversion/discovery disabled.
         if request.enable_codemode:
             disable_mcp_for_codemode = (
                 selected_mcp_servers_explicit and len(request.selected_mcp_servers) == 0
@@ -1610,6 +1607,24 @@ async def create_agent(
                 non_mcp_toolsets.append(codemode_toolset)
                 logger.info(
                     f"Added and initialized CodemodeToolset for agent {agent_id}"
+                )
+        elif request.sandbox_variant:
+            sandbox_only_toolset = _build_codemode_toolset(
+                request,
+                http_request,
+                agent_id=agent_id,
+                sandbox=shared_sandbox,
+                disable_mcp_servers=True,
+                sandbox_variant=effective_variant,
+                enable_discovery_tools=False,
+            )
+            if sandbox_only_toolset is not None:
+                await initialize_codemode_toolset(sandbox_only_toolset)
+                non_mcp_toolsets.append(sandbox_only_toolset)
+                logger.info(
+                    "Added sandbox-only CodemodeToolset (execute_code only) "
+                    "for agent %s",
+                    agent_id,
                 )
 
         # Wire skill bindings into codemode so execute_code can import
@@ -1804,16 +1819,20 @@ async def create_agent(
                 f"Creating PydanticAIAdapter for '{agent_id}' with MCP servers: {selected_mcp_servers}"
             )
 
-            # Create a codemode builder function if codemode is enabled
-            # This allows rebuilding the codemode toolset when MCP servers change
+            # Create a codemode builder function when codemode or sandbox mode
+            # is configured. This supports live toggle between full codemode
+            # and execute_code-only sandbox mode.
             codemode_builder = None
-            if request.enable_codemode:
+            if request.enable_codemode or request.sandbox_variant:
                 disable_mcp_for_codemode = (
                     selected_mcp_servers_explicit
                     and len(request.selected_mcp_servers) == 0
                 )
 
-                def rebuild_codemode(new_servers: list[str | dict[str, str]]) -> Any:
+                def rebuild_codemode(
+                    new_servers: list[str | dict[str, str]],
+                    enable_discovery_tools: bool = True,
+                ) -> Any:
                     """Rebuild codemode toolset with new MCP server selection.
 
                     Uses a ManagedSandbox proxy so the rebuilt toolset
@@ -1846,8 +1865,13 @@ async def create_agent(
                         http_request,
                         agent_id=agent_id,
                         sandbox=fresh_sandbox,
-                        disable_mcp_servers=disable_mcp_for_codemode,
+                        disable_mcp_servers=(
+                            disable_mcp_for_codemode
+                            if enable_discovery_tools
+                            else True
+                        ),
                         sandbox_variant=effective_variant,
+                        enable_discovery_tools=enable_discovery_tools,
                     )
 
                 # Wrap to register a post-init callback for skill re-wiring

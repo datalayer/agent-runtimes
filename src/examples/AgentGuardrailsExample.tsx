@@ -28,7 +28,12 @@ import {
   Flash,
   ProgressBar,
 } from '@primer/react';
-import { ShieldCheckIcon, CheckIcon, XIcon } from '@primer/octicons-react';
+import {
+  ShieldCheckIcon,
+  CheckIcon,
+  XIcon,
+  DotFillIcon,
+} from '@primer/octicons-react';
 import { Box } from '@datalayer/primer-addons';
 import { buildOtelWebSocketUrl } from '@datalayer/core/lib/otel';
 import { useCoreStore } from '@datalayer/core/lib/state';
@@ -420,8 +425,8 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
           if (snapshotCost) {
             setSnapshotRunCostUsd(
               Number(
-                snapshotCost.lastTurnCostUsd ??
-                  snapshotCost.cumulativeCostUsd ??
+                snapshotCost.cumulativeCostUsd ??
+                  snapshotCost.lastTurnCostUsd ??
                   0,
               ),
             );
@@ -579,7 +584,7 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
     return <ErrorView error={hookError} onLogout={onLogout} />;
   }
 
-  const runCostUsd = otelRunCostUsd ?? snapshotRunCostUsd;
+  const runCostUsd = Math.max(snapshotRunCostUsd, otelRunCostUsd ?? 0);
   const cumulativeCostUsd = otelCumulativeCostUsd;
   const isOverRunBudget =
     runBudgetUsd != null && runBudgetUsd > 0 && runCostUsd > runBudgetUsd;
@@ -592,7 +597,16 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
       }
     : undefined;
   const budgetForProgress = runBudgetUsd && runBudgetUsd > 0 ? runBudgetUsd : 1;
-  const costPercent = Math.min((runCostUsd / budgetForProgress) * 100, 100);
+  const usagePercentRaw = (runCostUsd / budgetForProgress) * 100;
+  const costPercent = Math.min(usagePercentRaw, 100);
+  const usageSafePercent = Math.min(costPercent, 50);
+  const usageWatchPercent = Math.min(Math.max(costPercent - 50, 0), 30);
+  const usageDangerPercent = Math.min(Math.max(costPercent - 80, 0), 20);
+  const overBudgetPercent = Math.max(usagePercentRaw - 100, 0);
+  const overBudgetAmountUsd =
+    runBudgetUsd != null && runBudgetUsd > 0
+      ? Math.max(runCostUsd - runBudgetUsd, 0)
+      : 0;
   const costColor =
     costPercent > 80
       ? 'danger.fg'
@@ -655,7 +669,55 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
                 : ' / no run budget'}
             </Text>
           </Box>
-          <ProgressBar progress={costPercent} sx={{ height: 6 }} />
+          <ProgressBar
+            aria-label="Run budget usage"
+            aria-valuenow={Math.max(0, costPercent)}
+            sx={{ height: 6 }}
+          >
+            <ProgressBar.Item
+              progress={usageSafePercent}
+              style={{ backgroundColor: 'var(--bgColor-success-emphasis)' }}
+              aria-label={`Healthy usage ${usageSafePercent.toFixed(1)}%`}
+            />
+            <ProgressBar.Item
+              progress={usageWatchPercent}
+              style={{ backgroundColor: 'var(--bgColor-accent-emphasis)' }}
+              aria-label={`Watch usage ${usageWatchPercent.toFixed(1)}%`}
+            />
+            <ProgressBar.Item
+              progress={usageDangerPercent}
+              style={{ backgroundColor: 'var(--bgColor-danger-emphasis)' }}
+              aria-label={`Critical usage ${usageDangerPercent.toFixed(1)}%`}
+            />
+          </ProgressBar>
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 2,
+              flexWrap: 'wrap',
+              mt: 1,
+            }}
+            role="presentation"
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <DotFillIcon size={12} fill="var(--bgColor-success-emphasis)" />
+              <Text sx={{ fontSize: 0, color: 'fg.muted' }}>0-50%</Text>
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <DotFillIcon size={12} fill="var(--bgColor-accent-emphasis)" />
+              <Text sx={{ fontSize: 0, color: 'fg.muted' }}>50-80%</Text>
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <DotFillIcon size={12} fill="var(--bgColor-danger-emphasis)" />
+              <Text sx={{ fontSize: 0, color: 'fg.muted' }}>80-100%</Text>
+            </Box>
+            {overBudgetPercent > 0 && (
+              <Label variant="danger" size="small">
+                +{overBudgetPercent.toFixed(1)}% over
+              </Label>
+            )}
+          </Box>
         </Box>
 
         <Label variant={otelSampleTimestamp == null ? 'secondary' : 'success'}>
@@ -671,6 +733,19 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
         {/* Token counter */}
         <Label variant="secondary">{totalTokens.toLocaleString()} tokens</Label>
       </Box>
+
+      {isOverRunBudget && (
+        <Flash variant="danger" sx={{ mx: 3, mt: 2 }}>
+          <Text sx={{ fontSize: 1 }}>
+            <strong>Run budget exceeded.</strong> Current run cost is $
+            {runCostUsd.toFixed(4)} against a budget of ${runBudgetDisplayUsd}
+            {overBudgetAmountUsd > 0
+              ? ` (over by $${overBudgetAmountUsd.toFixed(4)}).`
+              : '.'}{' '}
+            Start a new run or increase the run budget before continuing.
+          </Text>
+        </Flash>
+      )}
 
       {/* Tool approval banners */}
       {approvals.map(req => (

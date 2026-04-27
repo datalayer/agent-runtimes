@@ -93,17 +93,8 @@ class PydanticAIAdapter(BaseAgent):
         self._non_mcp_toolsets = non_mcp_toolsets or []
         self._codemode_builder = codemode_builder
         self._codemode_toolset_index = None
-        # Find codemode toolset in non_mcp_toolsets if it exists
-        for i, toolset in enumerate(self._non_mcp_toolsets):
-            if (
-                hasattr(toolset, "__class__")
-                and "CodemodeToolset" in toolset.__class__.__name__
-            ):
-                self._codemode_toolset_index = i
-                logger.info(
-                    f"PydanticAIAdapter [{self._name}]: Found CodemodeToolset at index {i}"
-                )
-                break
+        self._sandbox_only_toolset_index = None
+        self._refresh_codemode_indexes()
         self._extract_tools()
 
         # Register with usage tracker
@@ -112,6 +103,43 @@ class PydanticAIAdapter(BaseAgent):
         model = getattr(agent, "model", None)
         model_str = str(model) if model else None
         tracker.register_agent(self._agent_id, model=model_str)
+
+    def _refresh_codemode_indexes(self) -> None:
+        """Refresh indexes of codemode and sandbox-only toolsets."""
+        self._codemode_toolset_index = None
+        self._sandbox_only_toolset_index = None
+        for i, toolset in enumerate(self._non_mcp_toolsets):
+            if not (
+                hasattr(toolset, "__class__")
+                and "CodemodeToolset" in toolset.__class__.__name__
+            ):
+                continue
+            discovery_enabled = bool(
+                getattr(toolset, "_agent_runtimes_discovery_enabled", True)
+            )
+            if discovery_enabled and self._codemode_toolset_index is None:
+                self._codemode_toolset_index = i
+            elif not discovery_enabled and self._sandbox_only_toolset_index is None:
+                self._sandbox_only_toolset_index = i
+
+    def _build_codemode_toolset(self, enable_discovery_tools: bool) -> Any:
+        """Build a codemode toolset from the configured builder."""
+        if not self._codemode_builder:
+            return None
+        try:
+            return self._codemode_builder(
+                self._selected_mcp_servers,
+                enable_discovery_tools,
+            )
+        except TypeError:
+            # Backward compatibility: older builders only accept servers.
+            if enable_discovery_tools:
+                return self._codemode_builder(self._selected_mcp_servers)
+            logger.warning(
+                "PydanticAIAdapter [%s]: codemode builder does not support sandbox-only rebuild",
+                self._name,
+            )
+            return None
 
     def _extract_tools(self) -> None:
         """
@@ -197,7 +225,8 @@ class PydanticAIAdapter(BaseAgent):
         Enable or disable codemode at runtime.
 
         When enabling, builds a new CodemodeToolset using the codemode_builder.
-        When disabling, removes the existing CodemodeToolset.
+        When disabling, removes discovery tools but keeps sandbox execution
+        available via an execute_code-only CodemodeToolset.
 
         Args:
             enabled: Whether to enable (True) or disable (False) codemode.
@@ -205,6 +234,7 @@ class PydanticAIAdapter(BaseAgent):
         Returns:
             True if the operation succeeded, False otherwise.
         """
+        self._refresh_codemode_indexes()
         current_enabled = self._codemode_toolset_index is not None
 
         if enabled == current_enabled:
@@ -223,10 +253,16 @@ class PydanticAIAdapter(BaseAgent):
 
             try:
                 logger.info(f"PydanticAIAdapter [{self._name}]: Enabling codemode")
-                new_codemode = self._codemode_builder(self._selected_mcp_servers)
+                if self._sandbox_only_toolset_index is not None:
+                    self._non_mcp_toolsets.pop(self._sandbox_only_toolset_index)
+                    self._refresh_codemode_indexes()
+
+                new_codemode = self._build_codemode_toolset(
+                    enable_discovery_tools=True
+                )
                 if new_codemode:
                     self._non_mcp_toolsets.append(new_codemode)
-                    self._codemode_toolset_index = len(self._non_mcp_toolsets) - 1
+                    self._refresh_codemode_indexes()
                     logger.info(
                         f"PydanticAIAdapter [{self._name}]: Codemode enabled at index {self._codemode_toolset_index}"
                     )
@@ -248,8 +284,19 @@ class PydanticAIAdapter(BaseAgent):
                 try:
                     logger.info(f"PydanticAIAdapter [{self._name}]: Disabling codemode")
                     self._non_mcp_toolsets.pop(self._codemode_toolset_index)
-                    self._codemode_toolset_index = None
-                    logger.info(f"PydanticAIAdapter [{self._name}]: Codemode disabled")
+                    self._refresh_codemode_indexes()
+
+                    sandbox_only = self._build_codemode_toolset(
+                        enable_discovery_tools=False
+                    )
+                    if sandbox_only is not None:
+                        self._non_mcp_toolsets.append(sandbox_only)
+                        self._refresh_codemode_indexes()
+
+                    logger.info(
+                        "PydanticAIAdapter [%s]: Codemode disabled; sandbox execute_code remains available",
+                        self._name,
+                    )
                     return True
                 except Exception as e:
                     logger.error(
@@ -276,6 +323,7 @@ class PydanticAIAdapter(BaseAgent):
         logger.info(
             f"PydanticAIAdapter [{self._name}]: Updated MCP servers from {old_servers} to {self._selected_mcp_servers}"
         )
+        self._refresh_codemode_indexes()
 
         # Rebuild Codemode toolset if builder is available and we have a codemode toolset
         if self._codemode_builder and self._codemode_toolset_index is not None:
@@ -283,9 +331,12 @@ class PydanticAIAdapter(BaseAgent):
                 logger.info(
                     f"PydanticAIAdapter [{self._name}]: Rebuilding CodemodeToolset with new MCP servers"
                 )
-                new_codemode = self._codemode_builder(servers)
+                new_codemode = self._build_codemode_toolset(
+                    enable_discovery_tools=True
+                )
                 if new_codemode:
                     self._non_mcp_toolsets[self._codemode_toolset_index] = new_codemode
+                    self._refresh_codemode_indexes()
                     logger.info(
                         f"PydanticAIAdapter [{self._name}]: Successfully rebuilt CodemodeToolset"
                     )
@@ -295,10 +346,27 @@ class PydanticAIAdapter(BaseAgent):
                         f"PydanticAIAdapter [{self._name}]: No MCP servers, removing CodemodeToolset"
                     )
                     self._non_mcp_toolsets.pop(self._codemode_toolset_index)
-                    self._codemode_toolset_index = None
+                    self._refresh_codemode_indexes()
             except Exception as e:
                 logger.error(
                     f"PydanticAIAdapter [{self._name}]: Failed to rebuild CodemodeToolset: {e}",
+                    exc_info=True,
+                )
+        elif self._codemode_builder and self._sandbox_only_toolset_index is not None:
+            try:
+                rebuilt_sandbox_only = self._build_codemode_toolset(
+                    enable_discovery_tools=False
+                )
+                if rebuilt_sandbox_only:
+                    self._non_mcp_toolsets[self._sandbox_only_toolset_index] = (
+                        rebuilt_sandbox_only
+                    )
+                    self._refresh_codemode_indexes()
+            except Exception as e:
+                logger.error(
+                    "PydanticAIAdapter [%s]: Failed to rebuild sandbox-only toolset: %s",
+                    self._name,
+                    e,
                     exc_info=True,
                 )
 

@@ -381,6 +381,13 @@ def create_codemode_toolset(
             allow_discovery_tools=enable_discovery_tools,
             status_change_callback=status_change_callback,
         )
+        # Track whether this CodemodeToolset is full codemode (discovery on)
+        # or sandbox-only execute_code mode (discovery off).
+        setattr(
+            codemode_toolset,
+            "_agent_runtimes_discovery_enabled",
+            enable_discovery_tools,
+        )
 
         logger.info("Created CodemodeToolset")
         return codemode_toolset

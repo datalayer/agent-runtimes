@@ -285,3 +285,54 @@ async def test_create_agent_retries_without_usage_limits_when_unsupported(
     assert len(calls) >= 2
     assert "usage_limits" in calls[0]
     assert "usage_limits" not in calls[-1]
+
+
+@pytest.mark.asyncio
+async def test_sandbox_without_codemode_keeps_execute_code_enabled(
+    monkeypatch: pytest.MonkeyPatch,
+    creation_spy: dict[str, object],
+) -> None:
+    captured_build_args: dict[str, object] = {}
+
+    def _capture_build_codemode_toolset(
+        *_args: object,
+        disable_mcp_servers: bool,
+        enable_discovery_tools: bool,
+        **_kwargs: object,
+    ) -> object:
+        captured_build_args["disable_mcp_servers"] = disable_mcp_servers
+        captured_build_args["enable_discovery_tools"] = enable_discovery_tools
+        return _DummyToolset()
+
+    async def _capture_initialize(_toolset: object) -> None:
+        captured_build_args["initialized"] = True
+
+    monkeypatch.setattr(
+        agents_route,
+        "_build_codemode_toolset",
+        _capture_build_codemode_toolset,
+    )
+    monkeypatch.setattr(
+        agents_route,
+        "initialize_codemode_toolset",
+        _capture_initialize,
+    )
+
+    request = CreateAgentRequest(
+        name="Sandbox Only Agent",
+        sandbox_variant="eval",
+        enable_codemode=False,
+    )
+
+    response = await create_agent(request, _DummyRequest())
+
+    assert response.id == "sandbox-only-agent"
+    assert captured_build_args["enable_discovery_tools"] is False
+    assert captured_build_args["disable_mcp_servers"] is True
+    assert captured_build_args.get("initialized") is True
+
+    adapter_kwargs = creation_spy["adapter_kwargs"]
+    assert isinstance(adapter_kwargs, dict)
+    non_mcp_toolsets = adapter_kwargs.get("non_mcp_toolsets")
+    assert isinstance(non_mcp_toolsets, list)
+    assert len(non_mcp_toolsets) >= 1
