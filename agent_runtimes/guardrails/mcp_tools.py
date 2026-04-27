@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import ast
 import re
 from dataclasses import dataclass, field
 from typing import Any
@@ -55,15 +56,67 @@ class MCPToolsGuardrailCapability(AbstractCapability[Any]):
             return name.split("__", 1)[1]
         return name
 
-    def _is_mcp_tool_name(self, tool_name: str) -> bool:
+    def _tool_name_candidates(self, raw_tool_name: str) -> set[str]:
+        stripped = raw_tool_name.strip()
+        if not stripped:
+            return set()
+        normalized = self._normalize_mcp_tool_name(stripped)
+        candidates = {stripped, normalized}
+
+        # Expand with known aliases (e.g. prefixed ``server__tool`` names)
+        # so codemode imports such as ``from generated.mcp.tavily import
+        # tavily_extract`` can be matched reliably.
+        for known in self._known_mcp_tool_names():
+            if self._normalize_mcp_tool_name(known) == normalized:
+                candidates.add(known)
+
+        return {name for name in candidates if name}
+
+    def _resolve_mcp_tool_name(
+        self,
+        raw_tool_name: str,
+        *,
+        server_hint: str | None = None,
+    ) -> str:
+        stripped = raw_tool_name.strip()
+        if not stripped:
+            return raw_tool_name
+
         known = self._known_mcp_tool_names()
-        normalized = self._normalize_mcp_tool_name(tool_name)
-        return tool_name in known or normalized in known
+        if stripped in known:
+            return stripped
+
+        normalized = self._normalize_mcp_tool_name(stripped)
+        if server_hint:
+            hinted = f"{server_hint}__{normalized}"
+            if hinted in known:
+                return hinted
+
+        aliases = {
+            name
+            for name in known
+            if self._normalize_mcp_tool_name(name) == normalized
+        }
+        if len(aliases) == 1:
+            return next(iter(aliases))
+        if normalized in known:
+            return normalized
+        return stripped
+
+    def _is_mcp_tool_name(self, tool_name: str) -> bool:
+        known_aliases: set[str] = set()
+        for name in self._known_mcp_tool_names():
+            known_aliases.add(name)
+            known_aliases.add(self._normalize_mcp_tool_name(name))
+        return bool(self._tool_name_candidates(tool_name) & known_aliases)
 
     def _assert_allowed_mcp_tool(self, raw_tool_name: str) -> None:
-        enabled = self._enabled_tool_names()
-        normalized = self._normalize_mcp_tool_name(raw_tool_name)
-        if normalized not in enabled:
+        enabled_aliases: set[str] = set()
+        for name in self._enabled_tool_names():
+            enabled_aliases.add(name)
+            enabled_aliases.add(self._normalize_mcp_tool_name(name))
+
+        if not (self._tool_name_candidates(raw_tool_name) & enabled_aliases):
             raise GuardrailBlockedError(
                 f"MCP tool '{raw_tool_name}' is disabled by user selection"
             )
@@ -82,8 +135,12 @@ class MCPToolsGuardrailCapability(AbstractCapability[Any]):
         raw_tool_name: str,
         args: dict[str, Any],
     ) -> None:
-        normalized = self._normalize_mcp_tool_name(raw_tool_name)
-        if normalized in self._approved_tool_names():
+        approved_aliases: set[str] = set()
+        for name in self._approved_tool_names():
+            approved_aliases.add(name)
+            approved_aliases.add(self._normalize_mcp_tool_name(name))
+
+        if self._tool_name_candidates(raw_tool_name) & approved_aliases:
             return
         manager = self._get_approval_manager()
         await manager.request_and_wait(
@@ -91,34 +148,85 @@ class MCPToolsGuardrailCapability(AbstractCapability[Any]):
             tool_args={k: str(v)[:500] for k, v in args.items()},
         )
 
+    @staticmethod
+    def _extract_mcp_references_from_code(code: str) -> set[tuple[str, str | None]]:
+        """Extract MCP tool references from execute_code payload.
+
+        Returns tuples of ``(tool_name, server_hint)`` where ``server_hint`` is
+        available for ``generated.mcp.<server>`` imports.
+        """
+        extracted: set[tuple[str, str | None]] = set()
+
+        try:
+            tree = ast.parse(code)
+        except SyntaxError:
+            tree = None
+
+        if tree is not None:
+            for node in ast.walk(tree):
+                if (
+                    isinstance(node, ast.ImportFrom)
+                    and isinstance(node.module, str)
+                    and node.module.startswith("generated.mcp.")
+                ):
+                    parts = node.module.split(".")
+                    server_hint = parts[2] if len(parts) >= 3 else None
+                    for alias in node.names:
+                        imported_name = alias.name.strip()
+                        if imported_name and imported_name != "*":
+                            extracted.add((imported_name, server_hint))
+
+                if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
+                    if node.func.id != "call_tool" or not node.args:
+                        continue
+                    first = node.args[0]
+                    if isinstance(first, ast.Constant) and isinstance(first.value, str):
+                        raw = first.value.strip()
+                        if raw:
+                            extracted.add((raw, None))
+
+            return extracted
+
+        # Regex fallback for syntactically incomplete snippets.
+        for match in re.finditer(
+            r"from\s+generated\.mcp\.([A-Za-z0-9_\-]+)\s+import\s+([A-Za-z0-9_\-,\s]+)",
+            code,
+        ):
+            server_hint = match.group(1)
+            chunk = match.group(2)
+            for part in chunk.split(","):
+                name = part.strip()
+                if name:
+                    extracted.add((name, server_hint))
+
+        for raw in re.findall(r"call_tool\s*\(\s*['\"]([^'\"]+)['\"]", code):
+            stripped = raw.strip()
+            if stripped:
+                extracted.add((stripped, None))
+
+        return extracted
+
     async def _enforce_execute_code_payload(self, args: dict[str, Any]) -> None:
         code = args.get("code")
         if not isinstance(code, str) or not code.strip():
             return
 
-        imported_tools = set(
-            re.findall(
-                r"generated\.mcp\.[A-Za-z0-9_\-]+\s+import\s+([A-Za-z0-9_\-,\s]+)",
-                code,
+        requested: set[str] = set()
+        for raw_name, server_hint in sorted(self._extract_mcp_references_from_code(code)):
+            resolved_name = self._resolve_mcp_tool_name(
+                raw_name,
+                server_hint=server_hint,
             )
-        )
-        extracted: set[str] = set()
-        for chunk in imported_tools:
-            for part in chunk.split(","):
-                name = part.strip()
-                if name:
-                    extracted.add(name)
+            if not self._is_mcp_tool_name(resolved_name):
+                continue
+            self._assert_allowed_mcp_tool(resolved_name)
+            requested.add(resolved_name)
 
-        call_tool_refs = set(re.findall(r"call_tool\s*\(\s*['\"]([^'\"]+)['\"]", code))
-        extracted |= call_tool_refs
-
-        for tool_name in sorted(extracted):
-            if self._is_mcp_tool_name(tool_name):
-                self._assert_allowed_mcp_tool(tool_name)
-                await self._request_tool_approval(
-                    tool_name,
-                    {"source_tool": "execute_code", "tool_name": tool_name},
-                )
+        for tool_name in sorted(requested):
+            await self._request_tool_approval(
+                tool_name,
+                {"source_tool": "execute_code", "tool_name": tool_name},
+            )
 
     async def before_tool_execute(
         self,
