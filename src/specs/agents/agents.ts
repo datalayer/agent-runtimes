@@ -1018,6 +1018,91 @@ export const DEMO_FULL_AGENT_SPEC_0_0_1: AgentSpec = {
   subagents: undefined,
 };
 
+export const DEMO_GUARDRAILS_AGENT_SPEC_0_0_1: AgentSpec = {
+  id: 'demo-guardrails',
+  version: '0.0.1',
+  name: 'Demo Guardrails (Cost + Approval)',
+  description: `Demonstration agent for guardrails with a strict per-run cost budget and human-in-the-loop approval on sensitive runtime tools.`,
+  tags: ['demo', 'guardrails', 'cost', 'approval'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  mcpServers: [],
+  skills: [
+    toAgentSkillSpec(SKILL_MAP['jokes:0.0.1']),
+    toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
+  ],
+  tools: [
+    TOOL_MAP['runtime-echo:0.0.1'],
+    TOOL_MAP['runtime-sensitive-echo:0.0.1'],
+  ],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
+  environmentName: 'ai-agents-env',
+  icon: 'shield-check',
+  emoji: '🛡️',
+  color: '#1F883D',
+  suggestions: [
+    "Call runtime_echo with text 'hello world' and summarize the result.",
+    "Call runtime_sensitive_echo with text 'audit me' and reason 'governance check'.",
+    'Tell me a joke and keep the answer under 2 sentences.',
+  ],
+  welcomeMessage:
+    'Hi! I am the Guardrails demo agent. I enforce a strict per-run cost budget and require manual approval for sensitive tool calls.\n',
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'jupyter',
+  systemPrompt:
+    'You are a guardrails demonstration assistant. You can call runtime_echo directly. You must request human approval before running runtime_sensitive_echo. Always provide a concise plain-text summary after each tool execution.\n',
+  systemPromptCodemodeAddons: undefined,
+  goal: undefined,
+  protocol: undefined,
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: [
+    {
+      name: 'Guardrails Demo User',
+      identity_provider: 'datalayer',
+      identity_name: 'guardrails-demo@acme.com',
+      permissions: {
+        'read:data': true,
+        'write:data': false,
+        'execute:code': true,
+        'access:internet': false,
+        'send:email': false,
+        'deploy:production': false,
+      },
+      token_limits: {
+        per_run: '25K',
+        per_day: '150K',
+        per_month: '1M',
+      },
+      cost_budget: {
+        per_run_usd: 0.01,
+        on_budget_exceeded: 'stop',
+      },
+      tool_approval: {
+        tools: ['runtime[-_]sensitive[-_]echo'],
+        timeout: '0h5m0s',
+      },
+    },
+  ],
+  evals: undefined,
+  codemode: undefined,
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+};
+
 export const DEMO_HOOKS_AGENT_SPEC_0_0_1: AgentSpec = {
   id: 'demo-hooks',
   version: '0.0.1',
@@ -3358,6 +3443,7 @@ export const AGENT_SPECS: Record<string, AgentSpec> = {
   'data-acquisition': DATA_ACQUISITION_AGENT_SPEC_0_0_1,
   'datalayer-agent': DATALAYER_AGENT_SPEC_0_0_1,
   'demo-full': DEMO_FULL_AGENT_SPEC_0_0_1,
+  'demo-guardrails': DEMO_GUARDRAILS_AGENT_SPEC_0_0_1,
   'demo-hooks': DEMO_HOOKS_AGENT_SPEC_0_0_1,
   'demo-mcp': DEMO_MCP_AGENT_SPEC_0_0_1,
   'demo-monitoring': DEMO_MONITORING_AGENT_SPEC_0_0_1,

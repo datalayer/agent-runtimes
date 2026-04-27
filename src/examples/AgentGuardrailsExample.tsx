@@ -30,6 +30,8 @@ import {
 } from '@primer/react';
 import { ShieldCheckIcon, CheckIcon, XIcon } from '@primer/octicons-react';
 import { Box } from '@datalayer/primer-addons';
+import { buildOtelWebSocketUrl } from '@datalayer/core/lib/otel';
+import { useCoreStore } from '@datalayer/core/lib/state';
 import { AuthRequiredView, ErrorView } from './components';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
@@ -38,6 +40,10 @@ import type {
   AgentStreamToolApprovalPayload,
 } from '../types/stream';
 import { parseAgentStreamMessage } from '../types/stream';
+import { getAgentSpecs } from '../specs/agents';
+import { subscribeOtelWs } from '../context/otelWsPool';
+import { toMetricValue } from '../hooks/useMonitoring';
+import { useAIAgentsWebSocket } from '../hooks';
 
 const queryClient = new QueryClient();
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
@@ -46,9 +52,54 @@ import { Chat } from '../chat';
 // ─── Constants ─────────────────────────────────────────────────────────────
 
 const AGENT_NAME = 'guardrails-demo-agent';
-const AGENT_SPEC_ID = 'demo-full';
+const AGENT_SPEC_ID = 'demo-guardrails';
 const DEFAULT_LOCAL_BASE_URL =
   import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
+const OTEL_BASE_URL_ENV = import.meta.env.VITE_OTEL_BASE_URL;
+const DATALAYER_RUN_URL_ENV = import.meta.env.DATALAYER_RUN_URL;
+const OTEL_SERVICE_NAME = 'agent-runtimes';
+const COST_RUN_METRIC = 'agent_runtimes.capability.cost.run.usd';
+const COST_CUMULATIVE_METRIC = 'agent_runtimes.capability.cost.cumulative.usd';
+
+const toNumberOrNull = (value: unknown): number | null => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === 'string' && value.trim().length > 0) {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) {
+      return parsed;
+    }
+  }
+  return null;
+};
+
+const resolvePerRunBudgetFromSpec = (agentSpecId: string): number | null => {
+  const spec = getAgentSpecs(agentSpecId);
+  if (!spec?.guardrails?.length) {
+    return null;
+  }
+
+  for (const guardrail of spec.guardrails) {
+    if (!guardrail || typeof guardrail !== 'object') {
+      continue;
+    }
+    const costBudget = (guardrail as Record<string, unknown>).cost_budget;
+    if (!costBudget || typeof costBudget !== 'object') {
+      continue;
+    }
+    const perRunUsd = toNumberOrNull(
+      (costBudget as Record<string, unknown>).per_run_usd,
+    );
+    if (perRunUsd != null) {
+      return perRunUsd;
+    }
+  }
+
+  return null;
+};
+
+const DEFAULT_RUN_BUDGET_USD = resolvePerRunBudgetFromSpec(AGENT_SPEC_ID);
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -59,16 +110,11 @@ interface ToolApprovalRequest {
   created_at: string;
 }
 
-const toWsUrl = (baseUrl: string, path: string): string | null => {
-  try {
-    const url = new URL(baseUrl);
-    url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
-    url.pathname = path;
-    return url.toString();
-  } catch {
-    return null;
-  }
-};
+interface OtelCostSample {
+  timestampMs: number;
+  runUsd: number;
+  cumulativeUsd: number;
+}
 
 const toApprovalRequest = (
   payload: AgentStreamToolApprovalPayload,
@@ -79,12 +125,156 @@ const toApprovalRequest = (
   created_at: payload.created_at ?? new Date().toISOString(),
 });
 
+const normalizeBaseUrl = (rawBaseUrl: string): string => {
+  if (
+    rawBaseUrl.startsWith('http://') ||
+    rawBaseUrl.startsWith('https://') ||
+    rawBaseUrl.startsWith('ws://') ||
+    rawBaseUrl.startsWith('wss://')
+  ) {
+    return rawBaseUrl;
+  }
+
+  const protocol =
+    typeof window !== 'undefined' && window.location.protocol === 'https:'
+      ? 'https:'
+      : 'http:';
+  const host = typeof window !== 'undefined' ? window.location.host : '';
+  return `${protocol}//${host}${rawBaseUrl}`;
+};
+
+const parseAttributes = (attrs: unknown): Record<string, unknown> => {
+  if (attrs && typeof attrs === 'object' && !Array.isArray(attrs)) {
+    return attrs as Record<string, unknown>;
+  }
+  if (typeof attrs === 'string') {
+    try {
+      return JSON.parse(attrs) as Record<string, unknown>;
+    } catch {
+      return {};
+    }
+  }
+  return {};
+};
+
+const extractServiceName = (
+  row: Record<string, unknown>,
+): string | undefined => {
+  const directCandidates = [row.service_name, row.service, row.serviceName];
+  for (const candidate of directCandidates) {
+    if (typeof candidate === 'string' && candidate.length > 0) {
+      return candidate;
+    }
+  }
+
+  const resourceAttributes = row.resource_attributes;
+  if (resourceAttributes && typeof resourceAttributes === 'object') {
+    const nested = (resourceAttributes as Record<string, unknown>)[
+      'service.name'
+    ];
+    if (typeof nested === 'string' && nested.length > 0) {
+      return nested;
+    }
+  }
+
+  return undefined;
+};
+
+const extractAgentId = (row: Record<string, unknown>): string | undefined => {
+  const attrs = parseAttributes(row.attributes);
+  const aid = attrs['agent.id'];
+  return typeof aid === 'string' ? aid : undefined;
+};
+
+const rowTimestampMs = (row: Record<string, unknown>): number => {
+  const nanoTs = row.timestamp_unix_nano ?? row.observed_timestamp_unix_nano;
+  if (typeof nanoTs === 'number' && nanoTs > 0) {
+    return nanoTs / 1_000_000;
+  }
+  if (typeof nanoTs === 'string' && nanoTs.length > 0) {
+    const parsed = Number(nanoTs);
+    if (Number.isFinite(parsed) && parsed > 0) {
+      return parsed / 1_000_000;
+    }
+  }
+  const isoTs = row.timestamp;
+  if (typeof isoTs === 'string' && isoTs.length > 0) {
+    const ms = new Date(isoTs).getTime();
+    if (Number.isFinite(ms) && ms > 0) {
+      return ms;
+    }
+  }
+  return 0;
+};
+
+const selectLatestOtelCost = (
+  rows: Array<Record<string, unknown>>,
+  agentId: string,
+): OtelCostSample | null => {
+  const filtered = rows.filter(row => {
+    const metricName = row.metric_name;
+    if (
+      metricName !== COST_RUN_METRIC &&
+      metricName !== COST_CUMULATIVE_METRIC
+    ) {
+      return false;
+    }
+    if (extractServiceName(row) !== OTEL_SERVICE_NAME) {
+      return false;
+    }
+    return extractAgentId(row) === agentId;
+  });
+
+  if (filtered.length === 0) {
+    return null;
+  }
+
+  let latestTimestampMs = 0;
+  let runUsd = 0;
+  let cumulativeUsd = 0;
+
+  for (const row of filtered) {
+    const ts = rowTimestampMs(row);
+    if (!Number.isFinite(ts) || ts <= 0) {
+      continue;
+    }
+
+    if (ts > latestTimestampMs) {
+      latestTimestampMs = ts;
+      runUsd = 0;
+      cumulativeUsd = 0;
+    }
+
+    if (ts !== latestTimestampMs) {
+      continue;
+    }
+
+    const value = Math.max(0, toMetricValue(row));
+    if (row.metric_name === COST_RUN_METRIC) {
+      runUsd += value;
+    } else if (row.metric_name === COST_CUMULATIVE_METRIC) {
+      cumulativeUsd = Math.max(cumulativeUsd, value);
+    }
+  }
+
+  if (latestTimestampMs <= 0) {
+    return null;
+  }
+
+  return {
+    timestampMs: latestTimestampMs,
+    runUsd,
+    cumulativeUsd,
+  };
+};
+
 // ─── Inner component (rendered after auth) ─────────────────────────────────
 
 const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
   onLogout,
 }) => {
   const { token } = useSimpleAuthStore();
+  const { configuration } = useCoreStore();
   const agentName = useRef(uniqueAgentId(AGENT_NAME)).current;
 
   const [runtimeStatus, setRuntimeStatus] = useState<
@@ -96,18 +286,30 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
   const [isReconnectedAgent, setIsReconnectedAgent] = useState(false);
 
   // Cost tracking
-  const [costUsd, setCostUsd] = useState(0);
-  const [runBudgetUsd, setRunBudgetUsd] = useState<number | null>(null);
+  const [snapshotRunCostUsd, setSnapshotRunCostUsd] = useState(0);
+  const [runBudgetUsd, setRunBudgetUsd] = useState<number | null>(
+    DEFAULT_RUN_BUDGET_USD,
+  );
   const [totalTokens, setTotalTokens] = useState(0);
+  const [otelRunCostUsd, setOtelRunCostUsd] = useState<number | null>(null);
+  const [otelCumulativeCostUsd, setOtelCumulativeCostUsd] = useState<
+    number | null
+  >(null);
+  const [otelSampleTimestamp, setOtelSampleTimestamp] = useState<number | null>(
+    null,
+  );
 
   // Tool approval queue
   const [approvals, setApprovals] = useState<ToolApprovalRequest[]>([]);
   const [approvalLoading, setApprovalLoading] = useState<string | null>(null);
-  const [wsState, setWsState] = useState<'connecting' | 'connected' | 'closed'>(
-    'closed',
-  );
 
   const agentBaseUrl = DEFAULT_LOCAL_BASE_URL;
+  const otelBaseUrl =
+    configuration?.otelRunUrl ||
+    configuration?.runUrl ||
+    OTEL_BASE_URL_ENV ||
+    DATALAYER_RUN_URL_ENV ||
+    'https://prod1.datalayer.run';
   const podName = agentId;
   const chatAuthToken: string | undefined = token === null ? undefined : token;
 
@@ -198,34 +400,12 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
     return () => {
       isCancelled = true;
     };
-  }, [agentBaseUrl, authFetch]);
+  }, [agentBaseUrl, agentName, authFetch]);
 
-  useEffect(() => {
-    if (!isReady) {
-      setWsState('closed');
-      return;
-    }
-
-    const wsUrl = toWsUrl(
-      agentBaseUrl,
-      `/api/v1/tool-approvals/ws?agent_id=${encodeURIComponent(agentId)}`,
-    );
-    if (!wsUrl) {
-      setWsState('closed');
-      return;
-    }
-
-    let closedByCleanup = false;
-    setWsState('connecting');
-    const ws = new WebSocket(wsUrl);
-
-    ws.onopen = () => {
-      setWsState('connected');
-    };
-
-    ws.onmessage = event => {
+  const handleGuardrailsStreamMessage = useCallback(
+    (message: { raw?: unknown }) => {
       try {
-        const stream = parseAgentStreamMessage(JSON.parse(String(event.data)));
+        const stream = parseAgentStreamMessage(message?.raw ?? message);
         if (!stream) {
           return;
         }
@@ -233,24 +413,21 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
         if (stream.type === 'agent.snapshot') {
           const payload =
             stream.payload as unknown as AgentStreamSnapshotPayload;
-          const nextApprovals = (payload.approvals ?? []).map(
-            toApprovalRequest,
-          );
-          setApprovals(nextApprovals);
+          setApprovals((payload.approvals ?? []).map(toApprovalRequest));
 
           const snapshotCost =
             payload.contextSnapshot?.costUsage ?? payload.costUsage;
           if (snapshotCost) {
-            setCostUsd(
+            setSnapshotRunCostUsd(
               Number(
                 snapshotCost.lastTurnCostUsd ??
                   snapshotCost.cumulativeCostUsd ??
                   0,
               ),
             );
-            setRunBudgetUsd(
+            setRunBudgetUsd(prev =>
               snapshotCost.perRunBudgetUsd == null
-                ? null
+                ? (prev ?? DEFAULT_RUN_BUDGET_USD)
                 : Number(snapshotCost.perRunBudgetUsd),
             );
             setTotalTokens(Number(snapshotCost.totalTokensUsed ?? 0));
@@ -279,26 +456,59 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
           setApprovals(prev => prev.filter(item => item.id !== approval.id));
         }
       } catch {
-        // Ignore malformed websocket payloads.
+        // Ignore malformed stream payloads.
       }
-    };
+    },
+    [],
+  );
 
-    ws.onclose = () => {
-      if (!closedByCleanup) {
-        setWsState('closed');
+  const approvalSocket = useAIAgentsWebSocket({
+    enabled: isReady && Boolean(agentBaseUrl),
+    baseUrl: agentBaseUrl,
+    path: '/api/v1/tool-approvals/ws',
+    queryParams: { agent_id: agentId },
+    onMessage: handleGuardrailsStreamMessage,
+    reconnectDelayMs: attempt =>
+      Math.min(1000 * 2 ** Math.max(0, attempt - 1), 10000),
+  });
+  const wsState = approvalSocket.connectionState;
+
+  useEffect(() => {
+    setOtelRunCostUsd(null);
+    setOtelCumulativeCostUsd(null);
+    setOtelSampleTimestamp(null);
+
+    if (!isReady || !token) {
+      return;
+    }
+
+    let wsUrl: string;
+    try {
+      wsUrl = buildOtelWebSocketUrl({
+        baseUrl: normalizeBaseUrl(otelBaseUrl),
+        token,
+      });
+    } catch {
+      return;
+    }
+
+    const unsubscribe = subscribeOtelWs(wsUrl, msg => {
+      if (msg.signal !== 'metrics' || !Array.isArray(msg.data)) {
+        return;
       }
-    };
 
-    ws.onerror = () => {
-      setWsState('closed');
-    };
+      const sample = selectLatestOtelCost(msg.data, agentId);
+      if (!sample) {
+        return;
+      }
 
-    return () => {
-      closedByCleanup = true;
-      ws.close();
-      setWsState('closed');
-    };
-  }, [isReady, agentBaseUrl, agentId]);
+      setOtelRunCostUsd(sample.runUsd);
+      setOtelCumulativeCostUsd(sample.cumulativeUsd);
+      setOtelSampleTimestamp(sample.timestampMs);
+    });
+
+    return unsubscribe;
+  }, [agentId, isReady, otelBaseUrl, token]);
 
   // ── Approve / Reject ─────────────────────────────────────────────────────
 
@@ -318,7 +528,7 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
         setApprovalLoading(null);
       }
     },
-    [agentBaseUrl, agentId, authFetch],
+    [agentBaseUrl, authFetch],
   );
 
   const handleReject = useCallback(
@@ -340,7 +550,7 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
         setApprovalLoading(null);
       }
     },
-    [agentBaseUrl, agentId, authFetch],
+    [agentBaseUrl, authFetch],
   );
 
   // ── Loading / Error ──────────────────────────────────────────────────────
@@ -369,8 +579,20 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
     return <ErrorView error={hookError} onLogout={onLogout} />;
   }
 
+  const runCostUsd = otelRunCostUsd ?? snapshotRunCostUsd;
+  const cumulativeCostUsd = otelCumulativeCostUsd;
+  const isOverRunBudget =
+    runBudgetUsd != null && runBudgetUsd > 0 && runCostUsd > runBudgetUsd;
+  const runBudgetDisplayUsd =
+    runBudgetUsd != null ? runBudgetUsd.toFixed(2) : '0.00';
+  const overBudgetBanner = isOverRunBudget
+    ? {
+        variant: 'danger' as const,
+        message: `Run budget exceeded: $${runCostUsd.toFixed(4)} / $${runBudgetDisplayUsd}. Start a new run or adjust the budget before sending more messages.`,
+      }
+    : undefined;
   const budgetForProgress = runBudgetUsd && runBudgetUsd > 0 ? runBudgetUsd : 1;
-  const costPercent = Math.min((costUsd / budgetForProgress) * 100, 100);
+  const costPercent = Math.min((runCostUsd / budgetForProgress) * 100, 100);
   const costColor =
     costPercent > 80
       ? 'danger.fg'
@@ -425,7 +647,7 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
             }}
           >
             <Text sx={{ color: costColor, fontWeight: 'semibold' }}>
-              ${costUsd.toFixed(4)}
+              ${runCostUsd.toFixed(4)}
             </Text>
             <Text sx={{ color: 'fg.muted' }}>
               {runBudgetUsd != null
@@ -435,6 +657,16 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
           </Box>
           <ProgressBar progress={costPercent} sx={{ height: 6 }} />
         </Box>
+
+        <Label variant={otelSampleTimestamp == null ? 'secondary' : 'success'}>
+          OTEL {otelSampleTimestamp == null ? 'waiting' : 'live'}
+        </Label>
+
+        {cumulativeCostUsd != null && (
+          <Label variant="secondary">
+            Total ${cumulativeCostUsd.toFixed(4)}
+          </Label>
+        )}
 
         {/* Token counter */}
         <Label variant="secondary">{totalTokens.toLocaleString()} tokens</Label>
@@ -481,9 +713,11 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
           authToken={chatAuthToken}
           title="Guardrails Agent"
           placeholder="Ask something that triggers tools…"
-          description="CostTracking-style guardrail with budget limits and tool approval gates"
+          description="Cost guardrail with OTEL-backed gauge and manual tool approval gates"
           showHeader={false}
           showTokenUsage={true}
+          errorBanner={overBudgetBanner}
+          disableInputPrompt={isOverRunBudget}
           autoFocus
           height="100%"
           runtimeId={agentId}
