@@ -12,7 +12,10 @@ from pydantic_ai import DeferredToolRequests
 from pydantic_ai.messages import ToolCallPart
 from pydantic_ai.tools import ToolDenied
 
-from agent_runtimes.guardrails.tools import ToolApprovalConfig, ToolsGuardrailCapability
+from agent_runtimes.guardrails.tool_approvals import (
+    ToolApprovalConfig,
+    ToolsGuardrailCapability,
+)
 from agent_runtimes.routes.tool_approvals import (
     _APPROVALS,
     _APPROVALS_LOCK,

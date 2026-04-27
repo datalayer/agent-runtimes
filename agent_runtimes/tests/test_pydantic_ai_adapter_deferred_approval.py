@@ -16,7 +16,7 @@ from agent_runtimes.adapters.pydantic_ai_adapter import (
     _DEFERRED_CONTINUATION_PROMPT,
     PydanticAIAdapter,
 )
-from agent_runtimes.guardrails.tools import ToolApprovalRejectedError
+from agent_runtimes.guardrails.tool_approvals import ToolApprovalRejectedError
 
 
 class _FakeUsage:

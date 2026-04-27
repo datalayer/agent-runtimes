@@ -29,7 +29,7 @@ from ..guardrails import (
     ToolGuardCapability,
     _parse_token_limit,
 )
-from ..guardrails.tools import ToolApprovalConfig, ToolsGuardrailCapability
+from ..guardrails.tool_approvals import ToolApprovalConfig, ToolsGuardrailCapability
 from ..monitoring import (
     CostMonitoringCapability,
     LLMContextUsageCapability,

@@ -10,7 +10,7 @@ This package provides:
 - Tool approval capability (async HTTP-based human approval)
 """
 
-from ..guardrails.tools import (
+from ..guardrails.tool_approvals import (
     ToolApprovalConfig,
     ToolApprovalManager,
     ToolApprovalRejectedError,

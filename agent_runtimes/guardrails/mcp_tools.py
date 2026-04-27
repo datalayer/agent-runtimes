@@ -70,7 +70,7 @@ class MCPToolsGuardrailCapability(AbstractCapability[Any]):
 
     def _get_approval_manager(self) -> Any:
         if self._approval_manager is None:
-            from .tools import ToolApprovalConfig, ToolApprovalManager
+            from .tool_approvals import ToolApprovalConfig, ToolApprovalManager
 
             config = ToolApprovalConfig.from_env()
             config.agent_id = self.agent_id or config.agent_id

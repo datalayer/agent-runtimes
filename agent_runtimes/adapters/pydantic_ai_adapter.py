@@ -16,7 +16,7 @@ from pydantic_ai import Agent, DeferredToolRequests
 from pydantic_ai.tools import DeferredToolResults, ToolDenied
 
 from ..context.usage import get_usage_tracker
-from ..guardrails.tools import (
+from ..guardrails.tool_approvals import (
     ToolApprovalConfig,
     ToolApprovalManager,
     ToolApprovalRejectedError,
