@@ -41,21 +41,9 @@ module.exports = {
       items: [
         {
           type: 'doc',
-          docId: 'transports/index',
+          docId: 'features/index',
           position: 'left',
-          label: 'Transports',
-        },
-        {
-          type: 'doc',
-          docId: 'identity/index',
-          position: 'left',
-          label: 'Identity',
-        },
-        {
-          type: 'doc',
-          docId: 'models/index',
-          position: 'left',
-          label: 'Models',
+          label: 'Features',
         },
         {
           type: 'doc',
@@ -68,6 +56,18 @@ module.exports = {
           docId: 'programmatic-tools/index',
           position: 'left',
           label: 'Programmatic Tools',
+        },
+        {
+          type: 'doc',
+          docId: 'transports/index',
+          position: 'left',
+          label: 'Transports',
+        },
+        {
+          type: 'doc',
+          docId: 'identity/index',
+          position: 'left',
+          label: 'Identity',
         },
         {
           type: 'doc',

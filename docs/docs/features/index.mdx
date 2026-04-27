@@ -1,0 +1,280 @@
+---
+title: Features
+---
+
+# Features
+
+This page gives a high-level map of the main Agent Runtimes capabilities.
+
+## Looking for model/provider setup?
+
+Model/provider and agent specification details now live in Agentspecs docs:
+
+- [agentspecs.datalayer.tech](https://agentspecs.datalayer.tech)
+- [Agentspecs section in this documentation](/agentspecs)
+
+## Core feature areas
+
+### UX patterns (GenUI) with A2UI and AG-UI
+
+Agent Runtimes supports protocol-driven UX patterns so interfaces can be rendered and updated from agent events:
+
+- **A2UI** for agent-to-UI messaging patterns.
+- **AG-UI** for rich chat and tool interaction flows.
+- Consistent transport behavior so the same agent logic can power different frontends.
+
+See [Transports](/transports) for protocol details.
+
+### Interactive and triggered workflows
+
+Agents can run in interactive chat loops and in event-driven flows:
+
+- Human-in-the-loop conversations.
+- Triggered execution from external events and integrations.
+- Stateful, resumable runtime behavior across turns.
+
+### Agent identity and controls
+
+Identity and control features provide safe operation in production:
+
+- Guardrails for policy enforcement and runtime checks.
+- Monitoring and observability snapshots for live state and health.
+- Tool approval workflows for high-risk tool calls and explicit reviewer decisions.
+
+See [Identity](/identity) and [Programmatic Tools](/programmatic-tools).
+
+### Programmatic tooling with Sandbox and Codemode for MCP and Skills
+
+For advanced orchestration, agents can run code and compose tools programmatically:
+
+- Sandbox-backed code execution (`eval` or `jupyter`).
+- Codemode for controlled Python-based orchestration.
+- Unified access to MCP servers and reusable Skills.
+
+See [Programmatic Tools](/programmatic-tools).
+
+### Outputs and notifications
+
+Agent Runtimes supports structured outputs and user-facing notifications:
+
+- Typed/structured responses for downstream consumers.
+- Evented status updates and lifecycle notifications.
+- Streaming updates for responsive UIs.
+
+### Real-time collaboration
+
+Collaboration primitives support multi-party agent experiences:
+
+- Live user-agent interaction.
+- Subagent delegation and orchestration.
+- Multi-agent team patterns for complex task execution.
+
+See [Subagents](/subagents).
+
+### Custom agents built from Agentspecs
+
+Custom agents are defined and evolved through Agentspecs:
+
+- Standardized specs for identity, tools, prompts, and behavior.
+- Portable configuration that can be reused across runtimes.
+- Clear separation between agent definition and runtime execution.
+
+Start with [agentspecs.datalayer.tech](https://agentspecs.datalayer.tech).
+
+## Overview
+
+Agent Runtimes provides:
+
+- 🔌 **Multiple Transport Protocols** — Connect via AG-UI, Vercel AI, ACP (WebSocket), or A2A for agent-to-agent communication
+- 🧠 **Protocol-Driven UX (GenUI)** — Build rich A2UI and AG-UI interaction patterns
+- 🛠️ **MCP Integration** — Connect to Model Context Protocol servers for extended capabilities
+- 🧩 **Programmatic Tools** — Use Sandbox + Codemode with MCP and Skills
+- 🛡️ **Identity & Controls** — Run with guardrails, monitoring, and tool approvals
+- 📡 **Streaming Responses** — Real-time streaming for responsive chat experiences
+- 🤝 **Real-Time Collaboration** — Coordinate users, subagents, and multi-agent teams
+- 🎨 **Ready-to-Use UI Components** — React components for building chat interfaces
+- 🧩 **Extensions** — A2UI, MCP-UI, and MCP Apps support for rich UI experiences
+
+## Integration with Other Packages
+
+Agent Runtimes provides an integration layer for the other packages:
+
+```python
+from agent_runtimes.integrations.codemode import CodemodeIntegration
+
+# Initialize with agent-runtimes MCP infrastructure
+integration = CodemodeIntegration()
+await integration.setup()
+
+# Access agent-codemode features
+result = await integration.execute_code('''
+    from generated.mcp.filesystem import read_file
+    content = await read_file({"path": "/data.txt"})
+    print(content)
+''')
+
+# Access agent-skills features
+skills = integration.list_skills()
+result = await integration.execute_skill("data-analyzer", {"path": "/data.csv"})
+```
+
+## Quick Start
+
+```bash
+# Install
+pip install agent-runtimes
+
+# Start the server
+python -m agent_runtimes
+```
+
+Run the Codemode + MCP example UI:
+
+```bash
+cd src/ai/agent-runtimes
+EXAMPLE=AgentCodemodeMcpExample npm run dev
+```
+
+## Agent Specs (agentspecs)
+
+Agent Runtimes pulls agent, MCP server, skill, and env var specs from the
+[agentspecs](https://github.com/datalayer/agentspecs) repository. The specs are
+cloned locally and used to generate the runtime catalogs.
+
+See the [Agent Specs](/agentspecs/) guide and [agentspecs.datalayer.tech](https://agentspecs.datalayer.tech) for details on cloning, generation, and specification authoring.
+
+```bash
+# Clone or update agentspecs and regenerate catalogs
+make specs
+```
+
+This command:
+- Clones the agentspecs repository into ./agentspecs (or pulls updates)
+- Generates Python and TypeScript catalogs for agents, MCP servers, skills, and env vars
+
+If you already have agentspecs checked out elsewhere, copy or symlink it to
+./agentspecs before running make specs.
+
+## Key Components
+
+### API Endpoints
+
+Agent Runtimes exposes a comprehensive REST API:
+
+| Endpoint | Description |
+|----------|-------------|
+| `POST /api/v1/agents/{id}/prompt` | Send prompts with streaming response |
+| `GET /api/v1/agents` | List all available agents |
+| `GET /api/v1/configure/mcp-toolsets-status` | Check MCP server status |
+| `GET /api/v1/configure/config` | Get system configuration |
+
+See the [API Endpoints](/api-endpoints) documentation for the full API reference.
+
+WebSocket-specific references:
+
+- [Sandbox Status WebSocket](/api-endpoints#sandbox-status-websocket)
+- [Tool Approvals / Monitoring Stream](/api-endpoints#tool-approvals--monitoring-stream-websocket)
+- [ACP Protocol WebSocket](/api-endpoints#acp-protocol-websocket)
+
+### MCP Integration
+
+Connect to MCP servers for tools like web search, file access, and more:
+
+```yaml
+mcp_servers:
+  - name: tavily
+    command: uvx
+    args: ["mcp-server-tavily"]
+    env:
+      TAVILY_API_KEY: "${TAVILY_API_KEY}"
+```
+
+MCP servers are managed with:
+- **Automatic retry** — 3 attempts with exponential backoff
+- **Health monitoring** — Status endpoint for checking server readiness
+- **Graceful shutdown** — Clean resource management on exit
+
+See the [Programmatic Tools](/programmatic-tools) documentation for MCP server configuration details.
+
+### Extensions
+
+| Extension | Purpose |
+|-----------|---------|
+| **A2UI** | Agent-to-UI bidirectional communication |
+| **MCP-UI** | Browse and execute MCP tools |
+| **MCP Apps** | Full application experiences via MCP |
+
+See the [Extensions](/extensions) documentation for integration guides.
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     Frontend (React)                         │
+│        ChatBase, Protocol Adapters, UI Components           │
+└─────────────────────────────────────────────────────────────┘
+															│
+				┌─────────────────────┼─────────────────────┐
+				↓                     ↓                     ↓
+┌───────────────┐   ┌───────────────┐   ┌───────────────┐
+│    AG-UI      │   │   Vercel AI   │   │     ACP       │
+│ UX Transport  │   │ UX Transport  │   │ UX Transport  │
+└───────────────┘   └───────────────┘   └───────────────┘
+				│                     │                     │
+				└─────────────────────┼─────────────────────┘
+															↓
+┌─────────────────────────────────────────────────────────────┐
+│                  Agent Runtime Engine                         │
+│             Pydantic AI + runtime orchestration              │
+└─────────────────────────────────────────────────────────────┘
+															│
+	┌────────────────────┼────────────────────┬────────────────────┐
+	↓                    ↓                    ↓                    ↓
+┌──────────────────┐ ┌──────────────────┐ ┌──────────────────┐ ┌──────────────────┐
+│ Identity &       │ │ Programmatic     │ │ Tool Ecosystem   │ │ Collaboration &  │
+│ Controls         │ │ Tooling          │ │                  │ │ Outputs          │
+│ Guardrails       │ │ Sandbox +        │ │ MCP + Skills     │ │ Subagents +      │
+│ Monitoring       │ │ Codemode         │ │                  │ │ Streaming +      │
+│ Approvals        │ │                  │ │                  │ │ Notifications    │
+└──────────────────┘ └──────────────────┘ └──────────────────┘ └──────────────────┘
+```
+
+## Built on Pydantic AI
+
+Agent Runtimes is currently built on top of [Pydantic AI](https://ai.pydantic.dev), a powerful Python agent framework that provides:
+
+- **Type-safe agents** — Full type checking with Pydantic models
+- **Structured outputs** — Reliable JSON responses from LLMs
+- **Tool calling** — First-class support for function tools and MCP
+- **Multi-model support** — Anthropic, OpenAI, Google, and more
+
+:::note Community-Driven Expansion
+We've chosen Pydantic AI as our initial foundation, but we're open to expanding support for other agent frameworks based on community feedback. If you'd like to see support for **Google ADK**, **LangChain**, **CrewAI**, or other frameworks, please [open a discussion](https://github.com/datalayer/agent-runtimes/discussions) or contribute!
+:::
+
+## Features at a Glance
+
+| Feature | Description |
+|---------|-------------|
+| **Transports** | AG-UI, Vercel AI, ACP (WebSocket), A2A |
+| **UX Patterns (GenUI)** | A2UI and AG-UI patterns for agent-driven interfaces |
+| **Workflows** | Interactive and triggered execution paths |
+| **Identity & Controls** | Guardrails, monitoring, and tool approvals |
+| **Programmatic Tooling** | Sandbox + Codemode with MCP and Skills |
+| **Outputs & Notifications** | Streaming, events, and structured outputs |
+| **Real-Time Collaboration** | Users, subagents, and multi-agent teams |
+| **Agentspecs** | Custom agents built from standardized specifications |
+| **Agent Framework** | Pydantic AI (more frameworks based on community feedback) |
+| **MCP Servers** | Tavily, Fetch, custom servers |
+| **Extensions** | A2UI, MCP-UI, MCP Apps |
+| **Streaming** | Real-time SSE and WebSocket streaming |
+| **UI** | React components with Primer design system |
+| **Observability** | OpenTelemetry integration |
+| **Durable Execution** | DBOS support |
+| **Context Optimization** | LLM context management |
+
+## Common Use Cases
+
+- **Notebook assistant** — help users execute cells, edit notebook content, and debug analysis workflows.
+- **Document assistant** — assist Lexical-based editing with structure, summaries, and writing support.
+- **Custom deployment** — run your own Pydantic AI agents with MCP tools behind Agent Runtimes transports.

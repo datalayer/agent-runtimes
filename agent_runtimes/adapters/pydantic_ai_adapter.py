@@ -13,10 +13,14 @@ import uuid
 from typing import Any, AsyncIterator
 
 from pydantic_ai import Agent, DeferredToolRequests
-from pydantic_ai.tools import DeferredToolResults
+from pydantic_ai.tools import DeferredToolResults, ToolDenied
 
 from ..context.usage import get_usage_tracker
-from ..guardrails.tools import ToolApprovalConfig, ToolApprovalManager
+from ..guardrails.tools import (
+    ToolApprovalConfig,
+    ToolApprovalManager,
+    ToolApprovalRejectedError,
+)
 from ..mcp.lifecycle import get_mcp_lifecycle_manager
 from .base import (
     AgentContext,
@@ -460,6 +464,56 @@ class PydanticAIAdapter(BaseAgent):
         """
         return self._tools.copy()
 
+    async def _build_deferred_approval_results(
+        self,
+        deferred_requests: DeferredToolRequests,
+        user_token_override: str | None,
+    ) -> DeferredToolResults:
+        """Resolve deferred approval requests into continuation results."""
+        if deferred_requests.calls:
+            raise RuntimeError(
+                "Deferred external tool execution is not supported in this mode"
+            )
+
+        approval_config = ToolApprovalConfig.from_env()
+        approval_config.agent_id = self._agent_id
+        if user_token_override:
+            approval_config.user_jwt_token = user_token_override
+        approval_manager = ToolApprovalManager(approval_config)
+
+        approval_results: dict[str, bool | ToolDenied] = {}
+        try:
+            for approval in deferred_requests.approvals:
+                tool_args = (
+                    approval.args
+                    if isinstance(approval.args, dict)
+                    else {"value": str(approval.args)}
+                )
+                try:
+                    await approval_manager.request_and_wait(
+                        approval.tool_name,
+                        tool_args,
+                        tool_call_id=approval.tool_call_id,
+                    )
+                    approval_results[approval.tool_call_id] = True
+                except ToolApprovalRejectedError as exc:
+                    approval_results[approval.tool_call_id] = ToolDenied(
+                        exc.note or "Tool call denied by reviewer"
+                    )
+        finally:
+            await approval_manager.close()
+
+        if hasattr(deferred_requests, "build_results"):
+            return deferred_requests.build_results(
+                approvals=approval_results,
+                metadata=deferred_requests.metadata,
+            )
+
+        return DeferredToolResults(
+            approvals=approval_results,
+            metadata=deferred_requests.metadata,
+        )
+
     async def run(
         self,
         prompt: str,
@@ -525,46 +579,18 @@ class PydanticAIAdapter(BaseAgent):
                 if isinstance(result.output, DeferredToolRequests):
                     deferred_requests = result.output
 
-                    if deferred_requests.calls:
-                        raise RuntimeError(
-                            "Deferred external tool execution is not supported in non-stream run mode"
-                        )
-
                     if not deferred_requests.approvals:
                         break
 
-                    approval_config = ToolApprovalConfig.from_env()
-                    approval_config.agent_id = self._agent_id
-                    if user_token_override:
-                        approval_config.token = user_token_override
-                    approval_manager = ToolApprovalManager(approval_config)
-
-                    approval_results: dict[str, bool] = {}
-                    try:
-                        for approval in deferred_requests.approvals:
-                            tool_args = (
-                                approval.args
-                                if isinstance(approval.args, dict)
-                                else {"value": str(approval.args)}
-                            )
-                            await approval_manager.request_and_wait(
-                                approval.tool_name,
-                                tool_args,
-                                tool_call_id=approval.tool_call_id,
-                            )
-                            approval_results[approval.tool_call_id] = True
-                    finally:
-                        await approval_manager.close()
-
-                    deferred_tool_results = DeferredToolResults(
-                        approvals=approval_results,
-                        metadata=deferred_requests.metadata,
+                    deferred_tool_results = await self._build_deferred_approval_results(
+                        deferred_requests,
+                        user_token_override,
                     )
                     current_message_history = result.all_messages()
                     current_prompt = _DEFERRED_CONTINUATION_PROMPT
                     logger.info(
-                        "PydanticAIAdapter: Processed %s deferred approval(s), continuing run",
-                        len(approval_results),
+                        "PydanticAIAdapter: Processed %s deferred approval decision(s), continuing run",
+                        len(deferred_tool_results.approvals),
                     )
                     continue
 
@@ -761,46 +787,18 @@ class PydanticAIAdapter(BaseAgent):
                 if isinstance(result.output, DeferredToolRequests):
                     deferred_requests = result.output
 
-                    if deferred_requests.calls:
-                        raise RuntimeError(
-                            "Deferred external tool execution is not supported in stream mode"
-                        )
-
                     if not deferred_requests.approvals:
                         break
 
-                    approval_config = ToolApprovalConfig.from_env()
-                    approval_config.agent_id = self._agent_id
-                    if user_token_override:
-                        approval_config.token = user_token_override
-                    approval_manager = ToolApprovalManager(approval_config)
-
-                    approval_results: dict[str, bool] = {}
-                    try:
-                        for approval in deferred_requests.approvals:
-                            tool_args = (
-                                approval.args
-                                if isinstance(approval.args, dict)
-                                else {"value": str(approval.args)}
-                            )
-                            await approval_manager.request_and_wait(
-                                approval.tool_name,
-                                tool_args,
-                                tool_call_id=approval.tool_call_id,
-                            )
-                            approval_results[approval.tool_call_id] = True
-                    finally:
-                        await approval_manager.close()
-
-                    deferred_tool_results = DeferredToolResults(
-                        approvals=approval_results,
-                        metadata=deferred_requests.metadata,
+                    deferred_tool_results = await self._build_deferred_approval_results(
+                        deferred_requests,
+                        user_token_override,
                     )
                     current_message_history = result.all_messages()
                     current_prompt = _DEFERRED_CONTINUATION_PROMPT
                     logger.info(
-                        "PydanticAIAdapter: Processed %s deferred approval(s), continuing stream",
-                        len(approval_results),
+                        "PydanticAIAdapter: Processed %s deferred approval decision(s), continuing stream",
+                        len(deferred_tool_results.approvals),
                     )
                     continue
 

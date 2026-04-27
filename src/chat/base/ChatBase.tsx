@@ -337,8 +337,12 @@ function parseApprovedMcpToolsByServer(
     }
   ).approved_tools_by_server;
 
-  if (!raw || typeof raw !== 'object') {
-    return null;
+  if (raw == null) {
+    return new Map<string, Set<string>>();
+  }
+
+  if (typeof raw !== 'object') {
+    return new Map<string, Set<string>>();
   }
 
   const parsed = new Map<string, Set<string>>();
@@ -835,7 +839,7 @@ function ChatBaseInner({
     Map<string, Set<string>>
   >(new Map());
   // approvedMcpTools tracks which MCP server tools are approved per server.
-  // Default: all tools approved (empty map = all approved).
+  // Default: no tools approved until explicitly toggled.
   const [approvedMcpTools, setApprovedMcpTools] = useState<
     Map<string, Set<string>>
   >(new Map());
@@ -1204,19 +1208,14 @@ function ChatBaseInner({
     if (!wsApprovedMcpTools) {
       return;
     }
-    setApprovedMcpTools(prev => {
+    setApprovedMcpTools(() => {
       const next = new Map<string, Set<string>>();
       wsApprovedMcpTools.forEach((toolNames, serverId) => {
         const selectedInProps =
           !mcpServersRef.current ||
           mcpServersRef.current.some(server => server.id === serverId);
         if (selectedInProps) {
-          // Merge WS-approved tools with any locally approved tools so that
-          // optimistic approvals (from inline approve) survive until the
-          // backend snapshot catches up.
-          const merged = new Set(toolNames);
-          prev.get(serverId)?.forEach(t => merged.add(t));
-          next.set(serverId, merged);
+          next.set(serverId, new Set(toolNames));
         }
       });
       return next;
@@ -1338,7 +1337,7 @@ function ChatBaseInner({
     (serverId: string, toolName: string) => {
       setApprovedMcpTools(prev => {
         const newMap = new Map(prev);
-        // Default: if no entry for this server, all tools are approved.
+        // Default: if no entry for this server, no tool is approved.
         const serverTools = new Set(prev.get(serverId) ?? []);
         const currentlyApproved = serverTools.has(toolName);
         if (currentlyApproved) {

@@ -5,7 +5,13 @@
 
 /// <reference types="vite/client" />
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Box } from '@datalayer/primer-addons';
 import { AuthRequiredView, ErrorView } from './components';
@@ -35,7 +41,8 @@ const DEFAULT_LOCAL_BASE_URL =
 const SkillCard: React.FC<{
   skill: SkillInfo;
   onToggle: (id: string) => void;
-}> = ({ skill, onToggle }) => {
+  onToggleApproval: (id: string) => void;
+}> = ({ skill, onToggle, onToggleApproval }) => {
   const [showDefinition, setShowDefinition] = useState(false);
   const sourceVariant = skill.source_variant ?? 'unknown';
   const sourceLabel =
@@ -83,6 +90,11 @@ const SkillCard: React.FC<{
               {skill.status}
             </Label>
           )}
+          {skill.approved && (
+            <Label size="small" variant="success">
+              approved
+            </Label>
+          )}
           {skill.status === 'loaded' && skill.skill_definition && (
             <Button
               size="small"
@@ -95,14 +107,26 @@ const SkillCard: React.FC<{
               SKILL.md
             </Button>
           )}
-          <Button
-            size="small"
-            variant="invisible"
-            onClick={() => onToggle(skill.id)}
-            sx={{ ml: 'auto', fontSize: 0 }}
+          <Box
+            sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: 1 }}
           >
-            {skill.status === 'available' ? 'Enable' : 'Disable'}
-          </Button>
+            <Button
+              size="small"
+              variant="invisible"
+              onClick={() => onToggleApproval(skill.id)}
+              sx={{ fontSize: 0 }}
+            >
+              {skill.approved ? 'Unapprove' : 'Approve'}
+            </Button>
+            <Button
+              size="small"
+              variant="invisible"
+              onClick={() => onToggle(skill.id)}
+              sx={{ fontSize: 0 }}
+            >
+              {skill.status === 'available' ? 'Enable' : 'Disable'}
+            </Button>
+          </Box>
         </Box>
         {skill.description && (
           <Text as="p" sx={{ fontSize: 0, color: 'fg.muted', mb: 1, mt: 0 }}>
@@ -174,28 +198,12 @@ const AgentSkillsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
 
   // WS-sourced skills (reads from codemodeStatus pushed via monitoring WS)
   const skillsQuery = useSkills(isReady);
-  const skills = skillsQuery.data?.skills ?? [];
-  const { enableSkill, disableSkill } = useSkillActions(agentId);
-  const autoEnabledSkillIdsRef = useRef<Set<string>>(new Set());
-
-  useEffect(() => {
-    autoEnabledSkillIdsRef.current.clear();
-  }, [agentId]);
-
-  useEffect(() => {
-    if (!isReady || skills.length === 0) {
-      return;
-    }
-    for (const skill of skills) {
-      if (
-        skill.status === 'available' &&
-        !autoEnabledSkillIdsRef.current.has(skill.id)
-      ) {
-        autoEnabledSkillIdsRef.current.add(skill.id);
-        enableSkill(skill.id);
-      }
-    }
-  }, [enableSkill, isReady, skills]);
+  const skills = useMemo(
+    () => skillsQuery.data?.skills ?? [],
+    [skillsQuery.data],
+  );
+  const { enableSkill, disableSkill, approveSkill, unapproveSkill } =
+    useSkillActions(agentId);
 
   const toggleSkill = useCallback(
     (skillId: string) => {
@@ -207,6 +215,18 @@ const AgentSkillsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
       }
     },
     [skills, enableSkill, disableSkill],
+  );
+
+  const toggleSkillApproval = useCallback(
+    (skillId: string) => {
+      const skill = skills.find(s => s.id === skillId);
+      if (skill?.approved) {
+        unapproveSkill(skillId);
+      } else {
+        approveSkill(skillId);
+      }
+    },
+    [skills, approveSkill, unapproveSkill],
   );
 
   const fileBasedSkills = skills.filter(s => s.source_variant === 'path');
@@ -449,7 +469,7 @@ const AgentSkillsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
             <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
               {skills.length} skill{skills.length !== 1 ? 's' : ''} &middot;{' '}
               {skills.filter(s => s.status === 'loaded').length} loaded &middot;{' '}
-              {skills.filter(s => s.status === 'enabled').length} pending
+              {skills.filter(s => s.approved).length} approved
             </Text>
             <Text
               sx={{ fontSize: 0, color: 'fg.muted', mt: 1, display: 'block' }}
@@ -470,6 +490,7 @@ const AgentSkillsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
                   key={skill.id}
                   skill={skill}
                   onToggle={toggleSkill}
+                  onToggleApproval={toggleSkillApproval}
                 />
               ))
             )}

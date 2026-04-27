@@ -112,6 +112,49 @@ When both Codemode and Skills are enabled they share the **same** sandbox instan
 	- Codemode enabled → `eval` sandbox auto-created (if no `sandbox_variant`); `CodemodeToolset` added with `allow_direct_tool_calls=False` by default.
 	- **Both enabled** → both toolsets share the **same** sandbox, then skills are wired into Codemode via `wire_skills_into_codemode()`.
 
+## Tool approvals mechanism
+
+Tool approvals have two complementary paths:
+
+1. **Per-tool policy approvals** for MCP/Skills (server + tool allowlists reflected in WebSocket snapshots).
+2. **Per-call deferred approvals** for tools marked `requires_approval=True` (runtime stop-the-world approval/continue).
+
+Both are designed to keep WebSocket state as the source of truth while minimizing unnecessary round-trips.
+
+### 1) Policy approvals (MCP/Skills)
+
+- The UI tracks approved MCP/Skill tools via explicit allowlists (no implicit auto-approval).
+- Backend approval state is synced through snapshots/events and reflected in store fields such as `approved_tools_by_server`.
+- During execution, guardrails check these allowlists before requesting any new approval.
+
+### 2) Deferred per-call approvals (`DeferredToolRequests`)
+
+When a call requires runtime approval, pydantic-ai emits `DeferredToolRequests` with one or more `ToolCallPart` entries.
+
+Agent-runtimes resolves these in two stages:
+
+1. **Inline fast path (second-pass behavior)**
+    - `ToolsGuardrailCapability.handle_deferred_tool_calls()` inspects local approval records first.
+    - If a matching decision already exists (approved/rejected), it builds `DeferredToolResults` inline (using `build_results()` when available).
+    - Already-approved calls continue immediately in the same run; already-rejected calls map to `ToolDenied`.
+
+2. **Stop-the-world WebSocket path (unresolved only)**
+    - Any unresolved approvals bubble out as `DeferredToolRequests`.
+    - The adapter requests approval via `ToolApprovalManager`, emits approval events, and waits for the user/reviewer decision.
+    - On decision, the adapter resumes the run with `deferred_tool_results` so only the unresolved subset is continued.
+
+### Event and state flow
+
+- Approval records are created/updated in the local approval store.
+- If AI-agents integration is enabled, decisions can be mirrored/relayed and then synced back.
+- WebSocket snapshots/events update frontend state (`codemodeStatus` / `mcpStatus` / `fullContext`) and drive the UI badges/toggles.
+
+### Why this hybrid model
+
+- **Fast for known decisions:** avoids repeated stop/resume cycles for calls that are already approved.
+- **Safe for unknown decisions:** unresolved calls still require explicit approval through the WebSocket workflow.
+- **Consistent UX:** frontend always reflects authoritative snapshot state rather than optimistic local merges.
+
 ## Skills-in-Codemode wiring
 
 When both Skills and Codemode are enabled, agent-runtimes automatically **wires skills into Codemode** so that skill operations are available as generated bindings inside `execute_code`. This is handled by `wire_skills_into_codemode()` in `agent_factory.py`.

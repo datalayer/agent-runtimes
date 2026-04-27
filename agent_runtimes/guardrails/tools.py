@@ -22,10 +22,10 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any
 
-from pydantic_ai import RunContext
+from pydantic_ai import DeferredToolRequests, RunContext
 from pydantic_ai.capabilities import AbstractCapability
 from pydantic_ai.messages import ToolCallPart
-from pydantic_ai.tools import ToolDefinition
+from pydantic_ai.tools import DeferredToolResults, ToolDefinition, ToolDenied
 
 from . import GuardrailBlockedError
 
@@ -384,6 +384,103 @@ class ToolsGuardrailCapability(AbstractCapability[Any]):
         if self._manager is None:
             self._manager = ToolApprovalManager(self.config)
         return self._manager
+
+    async def handle_deferred_tool_calls(
+        self,
+        ctx: RunContext[Any],
+        *,
+        requests: DeferredToolRequests,
+    ) -> DeferredToolResults | None:
+        """Inline-handle deferred approvals that already have a local decision.
+
+        This lets pydantic-ai continue the run in a single call when the
+        corresponding approval was already approved/rejected (e.g. from a recent
+        turn or a mirrored WS decision), while unresolved approvals still bubble
+        out as DeferredToolRequests for the stop-the-world flow.
+        """
+        if not requests.approvals:
+            return None
+
+        manager = self._get_manager()
+        approvals: dict[str, bool | ToolDenied] = {}
+        now = datetime.now(timezone.utc)
+        recent_window_seconds = 120.0
+
+        from agent_runtimes.routes.tool_approvals import (
+            _APPROVALS,
+            _APPROVALS_LOCK,
+        )
+
+        async with _APPROVALS_LOCK:
+            records = list(_APPROVALS.values())
+
+        for call in requests.approvals:
+            if not manager.requires_approval(call.tool_name):
+                continue
+
+            call_tool_id = getattr(call, "tool_call_id", None)
+            call_safe_args: dict[str, str] = {}
+            for k, v in call.args.items():
+                try:
+                    call_safe_args[k] = str(v)[:500]
+                except Exception:
+                    call_safe_args[k] = "<non-serializable>"
+
+            matched = None
+
+            # Strong match: same tool_call_id (+ same tool name when present).
+            if call_tool_id:
+                for approval in records:
+                    if approval.status in {"deleted", "pending"}:
+                        continue
+                    if approval.tool_call_id != call_tool_id:
+                        continue
+                    if approval.tool_name != call.tool_name:
+                        continue
+                    matched = approval
+                    break
+
+            # Fallback: recent approved/rejected decision for same tool name.
+            if matched is None:
+                for approval in records:
+                    if approval.status not in {"approved", "rejected"}:
+                        continue
+                    if approval.tool_name != call.tool_name:
+                        continue
+                    if approval.tool_args != call_safe_args:
+                        continue
+                    try:
+                        ts = datetime.fromisoformat(
+                            approval.updated_at.replace("Z", "+00:00")
+                        )
+                        age_seconds = (now - ts).total_seconds()
+                    except Exception:
+                        age_seconds = 0.0
+                    if 0 <= age_seconds <= recent_window_seconds:
+                        matched = approval
+                        break
+
+            if matched is None:
+                continue
+
+            # pydantic-ai result maps are keyed by tool_call_id.
+            if not call_tool_id:
+                continue
+
+            if matched.status == "approved":
+                approvals[call_tool_id] = True
+            elif matched.status == "rejected":
+                approvals[call_tool_id] = ToolDenied(
+                    matched.note or "Tool call denied by reviewer"
+                )
+
+        if not approvals:
+            return None
+
+        if hasattr(requests, "build_results"):
+            return requests.build_results(approvals=approvals)
+
+        return DeferredToolResults(approvals=approvals)
 
     async def before_tool_execute(
         self,

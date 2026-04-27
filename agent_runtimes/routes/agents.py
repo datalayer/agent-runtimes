@@ -1713,8 +1713,9 @@ async def create_agent(
                 approval_patterns = [
                     tool_id.split(":", 1)[0] for tool_id in approval_tool_ids
                 ]
-                # pydantic-ai requires DeferredToolRequests in output_type when
-                # any registered tool has requires_approval=True.
+                # Keep DeferredToolRequests in output_type for our websocket-
+                # driven stop-the-world approval flow (UI/SaaS per-tool
+                # decisions continue the run with DeferredToolResults).
                 agent_kwargs["output_type"] = [str, DeferredToolRequests]
                 has_tool_approval_capability = bool(
                     capabilities

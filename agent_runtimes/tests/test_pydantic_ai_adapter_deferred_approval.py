@@ -9,12 +9,14 @@ from typing import Any
 import pytest
 from pydantic_ai import DeferredToolRequests
 from pydantic_ai.messages import PartDeltaEvent, TextPartDelta, ToolCallPart
+from pydantic_ai.tools import ToolDenied
 
 from agent_runtimes.adapters.base import AgentContext
 from agent_runtimes.adapters.pydantic_ai_adapter import (
     _DEFERRED_CONTINUATION_PROMPT,
     PydanticAIAdapter,
 )
+from agent_runtimes.guardrails.tools import ToolApprovalRejectedError
 
 
 class _FakeUsage:
@@ -144,6 +146,35 @@ class _FakeStreamingAgent:
         )
 
 
+class _FakeAgentRejecting:
+    def __init__(self) -> None:
+        self.model = "test:model"
+        self._tools: dict[str, Any] = {}
+        self.calls: list[dict[str, Any]] = []
+
+    async def run(self, prompt: str, **kwargs: Any) -> _FakeResult:
+        self.calls.append({"prompt": prompt, "kwargs": kwargs})
+
+        if len(self.calls) == 1:
+            deferred = DeferredToolRequests(
+                approvals=[
+                    ToolCallPart(
+                        tool_name="runtime_sensitive_echo",
+                        args={"text": "hello", "reason": "audit"},
+                        tool_call_id="tool-1",
+                    )
+                ],
+                metadata={"tool-1": {"origin": "test"}},
+            )
+            return _FakeResult(output=deferred, all_messages=[{"role": "assistant"}])
+
+        deferred_results = kwargs.get("deferred_tool_results")
+        assert deferred_results is not None
+        denied = deferred_results.approvals.get("tool-1")
+        assert isinstance(denied, ToolDenied)
+        return _FakeResult(output="denied and continued")
+
+
 @pytest.mark.asyncio
 async def test_run_continues_deferred_approval_with_non_empty_prompt(
     monkeypatch: pytest.MonkeyPatch,
@@ -235,3 +266,40 @@ async def test_stream_continues_deferred_approval_with_non_empty_prompt(
     assert requests_seen == [
         ("runtime_sensitive_echo", {"text": "hello", "reason": "audit"}, "tool-1")
     ]
+
+
+@pytest.mark.asyncio
+async def test_run_continues_deferred_approval_with_denial(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fake_agent = _FakeAgentRejecting()
+    adapter = PydanticAIAdapter(fake_agent, name="test-adapter", agent_id="agent-1")
+
+    class _FakeApprovalManager:
+        def __init__(self, _config: Any) -> None:
+            pass
+
+        async def request_and_wait(
+            self,
+            tool_name: str,
+            tool_args: dict[str, str],
+            tool_call_id: str | None = None,
+        ) -> dict[str, str]:
+            raise ToolApprovalRejectedError(tool_name, "Not allowed")
+
+        async def close(self) -> None:
+            return None
+
+    monkeypatch.setattr(
+        "agent_runtimes.adapters.pydantic_ai_adapter.ToolApprovalManager",
+        _FakeApprovalManager,
+    )
+
+    response = await adapter.run(
+        "run once",
+        AgentContext(session_id="s1", metadata={"user_token": "token-123"}),
+    )
+
+    assert response.content == "denied and continued"
+    assert len(fake_agent.calls) == 2
+    assert fake_agent.calls[1]["prompt"] == _DEFERRED_CONTINUATION_PROMPT
