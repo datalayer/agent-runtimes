@@ -257,9 +257,7 @@ class PydanticAIAdapter(BaseAgent):
                     self._non_mcp_toolsets.pop(self._sandbox_only_toolset_index)
                     self._refresh_codemode_indexes()
 
-                new_codemode = self._build_codemode_toolset(
-                    enable_discovery_tools=True
-                )
+                new_codemode = self._build_codemode_toolset(enable_discovery_tools=True)
                 if new_codemode:
                     self._non_mcp_toolsets.append(new_codemode)
                     self._refresh_codemode_indexes()
@@ -331,9 +329,7 @@ class PydanticAIAdapter(BaseAgent):
                 logger.info(
                     f"PydanticAIAdapter [{self._name}]: Rebuilding CodemodeToolset with new MCP servers"
                 )
-                new_codemode = self._build_codemode_toolset(
-                    enable_discovery_tools=True
-                )
+                new_codemode = self._build_codemode_toolset(enable_discovery_tools=True)
                 if new_codemode:
                     self._non_mcp_toolsets[self._codemode_toolset_index] = new_codemode
                     self._refresh_codemode_indexes()

@@ -445,9 +445,7 @@ class ToolsGuardrailCapability(AbstractCapability[Any]):
                 continue
 
             call_tool_id = getattr(call, "tool_call_id", None)
-            call_safe_args = _normalize_tool_args_for_match(
-                getattr(call, "args", {})
-            )
+            call_safe_args = _normalize_tool_args_for_match(getattr(call, "args", {}))
 
             matched = None
 

@@ -75,7 +75,9 @@ async def test_requests_approval_for_enabled_skill(
     ) -> None:
         called.append(f"{skill_name}:{source_tool}")
 
-    monkeypatch.setattr(capability, "_request_skill_approval", _fake_request_skill_approval)
+    monkeypatch.setattr(
+        capability, "_request_skill_approval", _fake_request_skill_approval
+    )
 
     await capability.before_tool_execute(
         None,
@@ -116,7 +118,9 @@ async def test_display_name_resolves_to_skill_id_and_requests_approval(
     ) -> None:
         called.append(f"{skill_id}:{source_tool}:{requested_skill_name}")
 
-    monkeypatch.setattr(capability, "_request_skill_approval", _fake_request_skill_approval)
+    monkeypatch.setattr(
+        capability, "_request_skill_approval", _fake_request_skill_approval
+    )
 
     await capability.before_tool_execute(
         None,
@@ -157,7 +161,9 @@ async def test_execute_code_display_name_resolves_to_skill_id(
     ) -> None:
         called.append(f"{skill_id}:{source_tool}")
 
-    monkeypatch.setattr(capability, "_request_skill_approval", _fake_request_skill_approval)
+    monkeypatch.setattr(
+        capability, "_request_skill_approval", _fake_request_skill_approval
+    )
 
     await capability.before_tool_execute(
         None,
@@ -198,7 +204,9 @@ async def test_display_name_with_skill_suffix_resolves_without_snapshot_name(
     ) -> None:
         called.append(f"{skill_id}:{source_tool}:{requested_skill_name}")
 
-    monkeypatch.setattr(capability, "_request_skill_approval", _fake_request_skill_approval)
+    monkeypatch.setattr(
+        capability, "_request_skill_approval", _fake_request_skill_approval
+    )
 
     await capability.before_tool_execute(
         None,

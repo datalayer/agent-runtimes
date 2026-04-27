@@ -93,9 +93,7 @@ class MCPToolsGuardrailCapability(AbstractCapability[Any]):
                 return hinted
 
         aliases = {
-            name
-            for name in known
-            if self._normalize_mcp_tool_name(name) == normalized
+            name for name in known if self._normalize_mcp_tool_name(name) == normalized
         }
         if len(aliases) == 1:
             return next(iter(aliases))
@@ -212,7 +210,9 @@ class MCPToolsGuardrailCapability(AbstractCapability[Any]):
             return
 
         requested: set[str] = set()
-        for raw_name, server_hint in sorted(self._extract_mcp_references_from_code(code)):
+        for raw_name, server_hint in sorted(
+            self._extract_mcp_references_from_code(code)
+        ):
             resolved_name = self._resolve_mcp_tool_name(
                 raw_name,
                 server_hint=server_hint,

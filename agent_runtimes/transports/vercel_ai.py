@@ -615,7 +615,9 @@ class VercelAITransport(BaseTransport):
             )
 
             if isinstance(builtin_tools_from_request, list):
-                set_agent_enabled_mcp_tool_names(self._agent_id, builtin_tools_from_request)
+                set_agent_enabled_mcp_tool_names(
+                    self._agent_id, builtin_tools_from_request
+                )
             if isinstance(skills_from_request, list):
                 set_agent_turn_enabled_skills(self._agent_id, skills_from_request)
         except Exception as exc:

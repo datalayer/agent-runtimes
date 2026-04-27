@@ -40,9 +40,7 @@ def test_disable_codemode_keeps_execute_code_toolset() -> None:
     assert adapter.codemode_enabled is False
 
     codemode_toolsets = [
-        ts
-        for ts in adapter._non_mcp_toolsets
-        if "CodemodeToolset" in type(ts).__name__
+        ts for ts in adapter._non_mcp_toolsets if "CodemodeToolset" in type(ts).__name__
     ]
     assert len(codemode_toolsets) == 1
     assert (
@@ -73,9 +71,7 @@ def test_enable_codemode_replaces_sandbox_only_toolset() -> None:
     assert adapter.codemode_enabled is True
 
     codemode_toolsets = [
-        ts
-        for ts in adapter._non_mcp_toolsets
-        if "CodemodeToolset" in type(ts).__name__
+        ts for ts in adapter._non_mcp_toolsets if "CodemodeToolset" in type(ts).__name__
     ]
     assert len(codemode_toolsets) == 1
     assert (

@@ -1866,9 +1866,7 @@ async def create_agent(
                         agent_id=agent_id,
                         sandbox=fresh_sandbox,
                         disable_mcp_servers=(
-                            disable_mcp_for_codemode
-                            if enable_discovery_tools
-                            else True
+                            disable_mcp_for_codemode if enable_discovery_tools else True
                         ),
                         sandbox_variant=effective_variant,
                         enable_discovery_tools=enable_discovery_tools,

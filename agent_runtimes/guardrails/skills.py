@@ -143,9 +143,7 @@ class SkillsGuardrailCapability(AbstractCapability[Any]):
                 continue
             if skill_name.lower() == lowered:
                 return skill_id
-            if (
-                self._canonical_skill_variants(skill_name) & canonical_variants
-            ):
+            if self._canonical_skill_variants(skill_name) & canonical_variants:
                 return skill_id
 
         return None
