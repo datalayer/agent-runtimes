@@ -310,9 +310,9 @@ class PromptTurnMetricsEmitter:
             attrs["identity.provider"] = user_provider
         if identities_count is not None:
             attrs["identity.count"] = int(max(0, identities_count))
-        cost_charged_uid = os.environ.get("DATALAYER_COST_CHARGED_UID")
-        if cost_charged_uid:
-            attrs["cost_charged_uid"] = cost_charged_uid
+        billing_account_uid = os.environ.get("DATALAYER_BILLING_ACCOUNT_UID")
+        if billing_account_uid:
+            attrs["billing_account_uid"] = billing_account_uid
 
         resolved_input_tokens = max(
             int(input_tokens)

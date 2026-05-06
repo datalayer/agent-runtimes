@@ -30,7 +30,7 @@ export type CreateAgentRuntimeRequest = {
   /** Full agent spec payload to propagate to backend services */
   agentSpec?: Record<string, any>;
   /** Account UID (user or organization) charged for runtime costs */
-  costChargedUid?: string;
+  billingAccountUid?: string;
 };
 
 export type CreateRuntimeApiResponse = {

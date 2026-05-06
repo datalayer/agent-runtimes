@@ -643,7 +643,7 @@ export function useCreateAgentRuntime() {
           enable_codemode: data.enableCodemode ?? false,
           agent_spec_id: data.agentSpecId || undefined,
           agent_spec: data.agentSpec || undefined,
-          cost_charged_uid: data.costChargedUid || undefined,
+          billing_account_uid: data.billingAccountUid || undefined,
         },
       });
     },
