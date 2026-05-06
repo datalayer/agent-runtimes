@@ -29,6 +29,8 @@ export type CreateAgentRuntimeRequest = {
   agentSpecId?: string;
   /** Full agent spec payload to propagate to backend services */
   agentSpec?: Record<string, any>;
+  /** Account UID (user or organization) charged for runtime costs */
+  costChargedUid?: string;
 };
 
 export type CreateRuntimeApiResponse = {
