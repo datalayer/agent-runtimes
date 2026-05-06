@@ -49,7 +49,7 @@ import {
 // MCP Server Lookup
 // ============================================================================
 
-const MCP_SERVER_MAP: Record<string, AgentSpec['mcpServers'][number]> = {
+const MCP_SERVER_MAP: Record<string, any> = {
   'alphavantage:0.0.1': ALPHAVANTAGE_MCP_SERVER_0_0_1,
   alphavantage: ALPHAVANTAGE_MCP_SERVER_0_0_1,
   'chart:0.0.1': CHART_MCP_SERVER_0_0_1,
@@ -77,7 +77,7 @@ const MCP_SERVER_MAP: Record<string, AgentSpec['mcpServers'][number]> = {
 /**
  * Map skill IDs to SkillSpec objects, converting to AgentSkillSpec shape.
  */
-const SKILL_MAP: Record<string, SkillSpec> = {
+const SKILL_MAP: Record<string, any> = {
   'crawl:0.0.1': CRAWL_SKILL_SPEC_0_0_1,
   crawl: CRAWL_SKILL_SPEC_0_0_1,
   'datalayer-whoami:0.0.1': DATALAYER_WHOAMI_SKILL_SPEC_0_0_1,
@@ -109,7 +109,7 @@ function toAgentSkillSpec(skill: SkillSpec) {
 /**
  * Map tool IDs to ToolSpec objects.
  */
-const TOOL_MAP: Record<string, NonNullable<AgentSpec['tools']>[number]> = {
+const TOOL_MAP: Record<string, any> = {
   'runtime-echo:0.0.1': RUNTIME_ECHO_TOOL_SPEC_0_0_1,
   'runtime-echo': RUNTIME_ECHO_TOOL_SPEC_0_0_1,
   'runtime-send-mail:0.0.1': RUNTIME_SEND_MAIL_TOOL_SPEC_0_0_1,
@@ -121,10 +121,7 @@ const TOOL_MAP: Record<string, NonNullable<AgentSpec['tools']>[number]> = {
 /**
  * Map frontend tool IDs to FrontendToolSpec objects.
  */
-const FRONTEND_TOOL_MAP: Record<
-  string,
-  NonNullable<AgentSpec['frontendTools']>[number]
-> = {
+const FRONTEND_TOOL_MAP: Record<string, any> = {
   'jupyter-notebook:0.0.1': JUPYTER_NOTEBOOK_FRONTEND_TOOL_SPEC_0_0_1,
   'jupyter-notebook': JUPYTER_NOTEBOOK_FRONTEND_TOOL_SPEC_0_0_1,
   'lexical-document:0.0.1': LEXICAL_DOCUMENT_FRONTEND_TOOL_SPEC_0_0_1,
@@ -1053,8 +1050,8 @@ export const DEMO_GUARDRAILS_AGENT_SPEC_0_0_1: AgentSpec = {
   welcomeNotebook: undefined,
   welcomeDocument: undefined,
   sandboxVariant: 'jupyter',
-  systemPrompt:
-    'You are a guardrails demonstration assistant. You can call runtime_echo directly. You must request human approval before running runtime_sensitive_echo. Always provide a concise plain-text summary after each tool execution.\n',
+  systemPrompt: `You are a guardrails demonstration assistant. You can call runtime_echo directly. You must request human approval before running runtime_sensitive_echo. Always provide a concise plain-text summary after each tool execution.
+`,
   systemPromptCodemodeAddons: undefined,
   goal: undefined,
   protocol: undefined,
@@ -1075,15 +1072,8 @@ export const DEMO_GUARDRAILS_AGENT_SPEC_0_0_1: AgentSpec = {
         'send:email': false,
         'deploy:production': false,
       },
-      token_limits: {
-        per_run: '25K',
-        per_day: '150K',
-        per_month: '1M',
-      },
-      cost_budget: {
-        per_run_usd: 0.01,
-        on_budget_exceeded: 'stop',
-      },
+      token_limits: { per_run: '25K', per_day: '150K', per_month: '1M' },
+      cost_budget: { per_run_usd: 0.01, on_budget_exceeded: 'stop' },
       tool_approval: {
         tools: ['runtime[-_]sensitive[-_]echo'],
         timeout: '0h5m0s',

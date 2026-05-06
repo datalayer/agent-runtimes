@@ -28,6 +28,14 @@ AGENTBENCH_EVAL_SPEC_0_0_1 = EvalSpec(
     source="https://github.com/THUDM/AgentBench",
     difficulty="hard",
     languages=["python", "sql", "bash"],
+    dataset_source="local",
+    supports_live_monitoring=True,
+    supports_experiment_comparison=True,
+    evaluator_shapes=["pass_rate"],
+    recommended_windows=["1h", "6h", "24h", "7d", "30d"],
+    trace_integration=True,
+    dataset_editability="read-only",
+    sdk_support="experimental",
 )
 
 GPQA_DIAMOND_EVAL_SPEC_0_0_1 = EvalSpec(
@@ -41,6 +49,14 @@ GPQA_DIAMOND_EVAL_SPEC_0_0_1 = EvalSpec(
     source="https://github.com/idavidrein/gpqa",
     difficulty="expert",
     languages=["english"],
+    dataset_source="local",
+    supports_live_monitoring=False,
+    supports_experiment_comparison=True,
+    evaluator_shapes=["pass_rate"],
+    recommended_windows=["24h", "7d", "30d"],
+    trace_integration=True,
+    dataset_editability="read-only",
+    sdk_support="experimental",
 )
 
 HUMANEVAL_EVAL_SPEC_0_0_1 = EvalSpec(
@@ -54,6 +70,14 @@ HUMANEVAL_EVAL_SPEC_0_0_1 = EvalSpec(
     source="https://github.com/openai/human-eval",
     difficulty="medium",
     languages=["python"],
+    dataset_source="local",
+    supports_live_monitoring=False,
+    supports_experiment_comparison=True,
+    evaluator_shapes=["pass_rate"],
+    recommended_windows=["24h", "7d", "30d"],
+    trace_integration=True,
+    dataset_editability="read-only",
+    sdk_support="stable",
 )
 
 MMLU_EVAL_SPEC_0_0_1 = EvalSpec(
@@ -67,6 +91,14 @@ MMLU_EVAL_SPEC_0_0_1 = EvalSpec(
     source="https://github.com/hendrycks/test",
     difficulty="medium",
     languages=["english"],
+    dataset_source="local",
+    supports_live_monitoring=False,
+    supports_experiment_comparison=True,
+    evaluator_shapes=["pass_rate"],
+    recommended_windows=["24h", "7d", "30d"],
+    trace_integration=True,
+    dataset_editability="read-only",
+    sdk_support="stable",
 )
 
 SWE_BENCH_VERIFIED_EVAL_SPEC_0_0_1 = EvalSpec(
@@ -80,6 +112,14 @@ SWE_BENCH_VERIFIED_EVAL_SPEC_0_0_1 = EvalSpec(
     source="https://www.swebench.com/",
     difficulty="hard",
     languages=["python"],
+    dataset_source="local",
+    supports_live_monitoring=False,
+    supports_experiment_comparison=True,
+    evaluator_shapes=["pass_rate"],
+    recommended_windows=["24h", "7d", "30d"],
+    trace_integration=True,
+    dataset_editability="read-only",
+    sdk_support="experimental",
 )
 
 SWE_BENCH_EVAL_SPEC_0_0_1 = EvalSpec(
@@ -93,6 +133,14 @@ SWE_BENCH_EVAL_SPEC_0_0_1 = EvalSpec(
     source="https://www.swebench.com/",
     difficulty="hard",
     languages=["python"],
+    dataset_source="local",
+    supports_live_monitoring=False,
+    supports_experiment_comparison=True,
+    evaluator_shapes=["pass_rate"],
+    recommended_windows=["24h", "7d", "30d"],
+    trace_integration=True,
+    dataset_editability="read-only",
+    sdk_support="experimental",
 )
 
 TOOLBENCH_EVAL_SPEC_0_0_1 = EvalSpec(
@@ -106,6 +154,14 @@ TOOLBENCH_EVAL_SPEC_0_0_1 = EvalSpec(
     source="https://github.com/OpenBMB/ToolBench",
     difficulty="hard",
     languages=["python", "json"],
+    dataset_source="local",
+    supports_live_monitoring=True,
+    supports_experiment_comparison=True,
+    evaluator_shapes=["pass_rate"],
+    recommended_windows=["1h", "6h", "24h", "7d", "30d"],
+    trace_integration=True,
+    dataset_editability="read-only",
+    sdk_support="experimental",
 )
 
 TRUTHFULQA_EVAL_SPEC_0_0_1 = EvalSpec(
@@ -119,6 +175,14 @@ TRUTHFULQA_EVAL_SPEC_0_0_1 = EvalSpec(
     source="https://github.com/sylinrl/TruthfulQA",
     difficulty="medium",
     languages=["english"],
+    dataset_source="local",
+    supports_live_monitoring=True,
+    supports_experiment_comparison=True,
+    evaluator_shapes=["pass_rate", "categorical"],
+    recommended_windows=["1h", "6h", "24h", "7d", "30d"],
+    trace_integration=True,
+    dataset_editability="read-only",
+    sdk_support="experimental",
 )
 
 # ============================================================================

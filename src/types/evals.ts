@@ -27,6 +27,24 @@ export interface EvalSpec {
   difficulty: 'easy' | 'medium' | 'hard' | 'expert';
   /** Relevant languages */
   languages: string[];
+  /** Dataset source mode used by this benchmark */
+  dataset_source?: 'hosted' | 'local' | 'hybrid';
+  /** Whether this benchmark can be tracked in live monitoring */
+  supports_live_monitoring?: boolean;
+  /** Whether this benchmark supports side-by-side run comparison */
+  supports_experiment_comparison?: boolean;
+  /** Shapes emitted by evaluators (pass_rate, numeric, categorical, error_only) */
+  evaluator_shapes?: Array<
+    'pass_rate' | 'numeric' | 'categorical' | 'error_only'
+  >;
+  /** Suggested time windows for monitoring UIs */
+  recommended_windows?: string[];
+  /** Whether traces include links from results to execution spans */
+  trace_integration?: boolean;
+  /** Whether cases are editable in hosted UI */
+  dataset_editability?: 'read-only' | 'editable';
+  /** SDK maturity level for this benchmark */
+  sdk_support?: 'none' | 'experimental' | 'stable';
 }
 
 /**

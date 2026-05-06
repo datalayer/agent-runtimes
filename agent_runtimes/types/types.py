@@ -242,6 +242,33 @@ class EvalSpec(BaseModel):
         default="medium", description="Benchmark difficulty"
     )
     languages: List[str] = Field(default_factory=list, description="Target languages")
+    dataset_source: Literal["hosted", "local", "hybrid"] = Field(
+        default="local", description="Dataset source mode"
+    )
+    supports_live_monitoring: bool = Field(
+        default=False, description="Whether benchmark supports live monitoring"
+    )
+    supports_experiment_comparison: bool = Field(
+        default=True,
+        description="Whether benchmark supports side-by-side experiment comparisons",
+    )
+    evaluator_shapes: List[
+        Literal["pass_rate", "numeric", "categorical", "error_only"]
+    ] = Field(default_factory=list, description="Evaluator output shape(s)")
+    recommended_windows: List[str] = Field(
+        default_factory=lambda: ["1h", "6h", "24h", "7d", "30d"],
+        description="Suggested monitoring windows",
+    )
+    trace_integration: bool = Field(
+        default=True,
+        description="Whether runs can link to traces",
+    )
+    dataset_editability: Literal["read-only", "editable"] = Field(
+        default="read-only", description="Whether cases are editable in UI"
+    )
+    sdk_support: Literal["none", "experimental", "stable"] = Field(
+        default="experimental", description="SDK support level"
+    )
 
 
 class GuardrailPermissions(BaseModel):
