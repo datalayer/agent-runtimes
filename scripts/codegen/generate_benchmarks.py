@@ -3,17 +3,16 @@
 # Distributed under the terms of the Modified BSD License.
 
 """
-Generate Python and TypeScript code from YAML eval specifications.
+Generate Python and TypeScript code from YAML benchmark specifications.
 
 Usage:
-    python generate_evals.py \
-      --specs-dir specs/evals \
-      --python-output agent_runtimes/specs/evals.py \
-      --typescript-output src/specs/evals.ts
+    python generate_benchmarks.py \
+      --specs-dir specs/benchmarks \
+      --python-output agent_runtimes/specs/benchmarks.py \
+      --typescript-output src/specs/benchmarks.ts
 """
 
 import argparse
-import json
 import sys
 from pathlib import Path
 from typing import Any
@@ -58,14 +57,14 @@ def load_specs(specs_dir: Path) -> list[dict[str, Any]]:
 
 
 def generate_python_code(specs: list[dict[str, Any]]) -> str:
-    """Generate Python code from eval specifications."""
+    """Generate Python code from benchmark specifications."""
     lines = [
         "# Copyright (c) 2025-2026 Datalayer, Inc.",
         "# Distributed under the terms of the Modified BSD License.",
         '"""',
-        "Eval Catalog.",
+        "Benchmark Catalog.",
         "",
-        "Predefined built-in evaluator configurations.",
+        "Predefined evaluation benchmark configurations.",
         "",
         "This file is AUTO-GENERATED from YAML specifications.",
         "DO NOT EDIT MANUALLY - run 'make specs' to regenerate.",
@@ -73,40 +72,44 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         "",
         "from typing import Dict, List",
         "",
-        "from agent_runtimes.types import EvalSpec",
+        "from agent_runtimes.types import BenchmarkSpec",
         "",
         "",
         "# " + "=" * 76,
-        "# Eval Definitions",
+        "# Benchmark Definitions",
         "# " + "=" * 76,
         "",
     ]
 
     for spec in specs:
-        eval_id = spec["id"]
+        benchmark_id = spec["id"]
         version = spec["version"]
         const_name = (
-            f"{eval_id.upper().replace('-', '_')}_EVAL_SPEC{version_suffix(version)}"
+            f"{benchmark_id.upper().replace('-', '_')}_BENCHMARK_SPEC{version_suffix(version)}"
         )
         desc = _esc_dq(spec.get("description", "").strip().replace("\n", " "))
-        default_config = repr(spec.get("default_config", {}))
 
         lines.extend(
             [
-                f"{const_name} = EvalSpec(",
-                f'    id="{eval_id}",',
+                f"{const_name} = BenchmarkSpec(",
+                f'    id="{benchmark_id}",',
                 f'    version="{version}",',
-                f'    name="{_esc_dq(spec["name"])}",',
+                f'    name="{spec["name"]}",',
                 f'    description="{desc}",',
                 f'    category="{spec["category"]}",',
-                f'    evaluator_type="{spec["evaluator_type"]}",',
-                f'    pydantic_class="{spec["pydantic_class"]}",',
-                f'    output_kind="{spec["output_kind"]}",',
-                f'    cost_tier="{spec.get("cost_tier", "free")}",',
-                f'    latency="{spec.get("latency", "instant")}",',
-                f"    requires={_fmt_list(spec.get('requires', []))},",
+                f"    task_count={spec['task_count']},",
+                f'    metric="{spec["metric"]}",',
                 f'    source="{spec.get("source", "")}",',
-                f"    default_config={default_config},",
+                f'    difficulty="{spec.get("difficulty", "medium")}",',
+                f"    languages={_fmt_list(spec.get('languages', []))},",
+                f'    dataset_source="{spec.get("dataset_source", "local")}",',
+                f"    supports_live_monitoring={str(spec.get('supports_live_monitoring', False))},",
+                f"    supports_experiment_comparison={str(spec.get('supports_experiment_comparison', True))},",
+                f"    evaluator_shapes={_fmt_list(spec.get('evaluator_shapes', []))},",
+                f"    recommended_windows={_fmt_list(spec.get('recommended_windows', ['1h', '6h', '24h', '7d', '30d']))},",
+                f"    trace_integration={str(spec.get('trace_integration', True))},",
+                f'    dataset_editability="{spec.get("dataset_editability", "read-only")}",',
+                f'    sdk_support="{spec.get("sdk_support", "experimental")}",',
                 ")",
                 "",
             ]
@@ -115,38 +118,38 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
     lines.extend(
         [
             "# " + "=" * 76,
-            "# Eval Catalog",
+            "# Benchmark Catalog",
             "# " + "=" * 76,
             "",
-            "EVAL_CATALOG: Dict[str, EvalSpec] = {",
+            "BENCHMARK_CATALOG: Dict[str, BenchmarkSpec] = {",
         ]
     )
     for spec in specs:
-        eval_id = spec["id"]
+        benchmark_id = spec["id"]
         version = spec["version"]
         const_name = (
-            f"{eval_id.upper().replace('-', '_')}_EVAL_SPEC{version_suffix(version)}"
+            f"{benchmark_id.upper().replace('-', '_')}_BENCHMARK_SPEC{version_suffix(version)}"
         )
-        lines.append(f'    "{eval_id}": {const_name},')
+        lines.append(f'    "{benchmark_id}": {const_name},')
     lines.extend(
         [
             "}",
             "",
             "",
-            "def get_eval_spec(eval_id: str) -> EvalSpec | None:",
-            '    """Get an eval specification by ID (accepts both bare and versioned refs)."""',
-            "    spec = EVAL_CATALOG.get(eval_id)",
+            "def get_benchmark_spec(benchmark_id: str) -> BenchmarkSpec | None:",
+            '    """Get a benchmark specification by ID (accepts both bare and versioned refs)."""',
+            "    spec = BENCHMARK_CATALOG.get(benchmark_id)",
             "    if spec is not None:",
             "        return spec",
-            "    base, _, ver = eval_id.rpartition(':')",
+            "    base, _, ver = benchmark_id.rpartition(':')",
             "    if base and '.' in ver:",
-            "        return EVAL_CATALOG.get(base)",
+            "        return BENCHMARK_CATALOG.get(base)",
             "    return None",
             "",
             "",
-            "def list_eval_specs() -> List[EvalSpec]:",
-            '    """List all eval specifications."""',
-            "    return list(EVAL_CATALOG.values())",
+            "def list_benchmark_specs() -> List[BenchmarkSpec]:",
+            '    """List all benchmark specifications."""',
+            "    return list(BENCHMARK_CATALOG.values())",
             "",
         ]
     )
@@ -154,7 +157,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
 
 
 def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
-    """Generate TypeScript code from eval specifications."""
+    """Generate TypeScript code from benchmark specifications."""
     lines = [
         "/*",
         " * Copyright (c) 2025-2026 Datalayer, Inc.",
@@ -162,47 +165,51 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
         " */",
         "",
         "/**",
-        " * Eval Catalog",
+        " * Benchmark Catalog",
         " *",
-        " * Predefined built-in evaluator configurations.",
+        " * Predefined evaluation benchmark configurations.",
         " *",
         " * This file is AUTO-GENERATED from YAML specifications.",
         " * DO NOT EDIT MANUALLY - run 'make specs' to regenerate.",
         " */",
         "",
-        "import type { EvalSpec } from '../types';",
+        "import type { BenchmarkSpec } from '../types';",
         "",
         "// " + "=" * 76,
-        "// Eval Definitions",
+        "// Benchmark Definitions",
         "// " + "=" * 76,
         "",
     ]
 
     for spec in specs:
-        eval_id = spec["id"]
+        benchmark_id = spec["id"]
         version = spec["version"]
         const_name = (
-            f"{eval_id.upper().replace('-', '_')}_EVAL_SPEC{version_suffix(version)}"
+            f"{benchmark_id.upper().replace('-', '_')}_BENCHMARK_SPEC{version_suffix(version)}"
         )
         desc = _esc(spec.get("description", "").strip().replace("\n", " "))
-        default_config = json.dumps(spec.get("default_config", {}), ensure_ascii=True)
 
         lines.extend(
             [
-                f"export const {const_name}: EvalSpec = {{",
-                f"  id: '{eval_id}',",
+                f"export const {const_name}: BenchmarkSpec = {{",
+                f"  id: '{benchmark_id}',",
                 f"  version: '{version}',",
                 f"  name: '{_esc(spec['name'])}',",
                 f"  description: '{desc}',",
                 f"  category: '{spec['category']}',",
-                f"  evaluator_type: '{spec['evaluator_type']}',",
-                f"  pydantic_class: '{spec['pydantic_class']}',",
-                f"  output_kind: '{spec['output_kind']}',",
-                f"  cost_tier: '{spec.get('cost_tier', 'free')}',",
-                f"  latency: '{spec.get('latency', 'instant')}',",
-                f"  requires: {_ts_list(spec.get('requires', []))},",
+                f"  task_count: {spec['task_count']},",
+                f"  metric: '{spec['metric']}',",
                 f"  source: '{spec.get('source', '')}',",
-                f"  default_config: {default_config},",
+                f"  difficulty: '{spec.get('difficulty', 'medium')}',",
+                f"  languages: {_ts_list(spec.get('languages', []))},",
+                f"  dataset_source: '{spec.get('dataset_source', 'local')}',",
+                f"  supports_live_monitoring: {str(spec.get('supports_live_monitoring', False)).lower()},",
+                f"  supports_experiment_comparison: {str(spec.get('supports_experiment_comparison', True)).lower()},",
+                f"  evaluator_shapes: {_ts_list(spec.get('evaluator_shapes', []))},",
+                f"  recommended_windows: {_ts_list(spec.get('recommended_windows', ['1h', '6h', '24h', '7d', '30d']))},",
+                f"  trace_integration: {str(spec.get('trace_integration', True)).lower()},",
+                f"  dataset_editability: '{spec.get('dataset_editability', 'read-only')}',",
+                f"  sdk_support: '{spec.get('sdk_support', 'experimental')}',",
                 "};",
                 "",
             ]
@@ -211,39 +218,39 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
     lines.extend(
         [
             "// " + "=" * 76,
-            "// Eval Catalog",
+            "// Benchmark Catalog",
             "// " + "=" * 76,
             "",
-            "export const EVAL_CATALOG: Record<string, EvalSpec> = {",
+            "export const BENCHMARK_CATALOG: Record<string, BenchmarkSpec> = {",
         ]
     )
     for spec in specs:
-        eval_id = spec["id"]
+        benchmark_id = spec["id"]
         version = spec["version"]
         const_name = (
-            f"{eval_id.upper().replace('-', '_')}_EVAL_SPEC{version_suffix(version)}"
+            f"{benchmark_id.upper().replace('-', '_')}_BENCHMARK_SPEC{version_suffix(version)}"
         )
-        lines.append(f"  '{eval_id}': {const_name},")
+        lines.append(f"  '{benchmark_id}': {const_name},")
     lines.extend(
         [
             "};",
             "",
-            "export function getEvalSpecs(): EvalSpec[] {",
-            "  return Object.values(EVAL_CATALOG);",
+            "export function getBenchmarkSpecs(): BenchmarkSpec[] {",
+            "  return Object.values(BENCHMARK_CATALOG);",
             "}",
             "",
-            "function resolveEvalId(evalId: string): string {",
-            "  if (evalId in EVAL_CATALOG) return evalId;",
-            "  const idx = evalId.lastIndexOf(':');",
+            "function resolveBenchmarkId(benchmarkId: string): string {",
+            "  if (benchmarkId in BENCHMARK_CATALOG) return benchmarkId;",
+            "  const idx = benchmarkId.lastIndexOf(':');",
             "  if (idx > 0) {",
-            "    const base = evalId.slice(0, idx);",
-            "    if (base in EVAL_CATALOG) return base;",
+            "    const base = benchmarkId.slice(0, idx);",
+            "    if (base in BENCHMARK_CATALOG) return base;",
             "  }",
-            "  return evalId;",
+            "  return benchmarkId;",
             "}",
             "",
-            "export function getEvalSpec(evalId: string): EvalSpec | undefined {",
-            "  return EVAL_CATALOG[resolveEvalId(evalId)];",
+            "export function getBenchmarkSpec(benchmarkId: string): BenchmarkSpec | undefined {",
+            "  return BENCHMARK_CATALOG[resolveBenchmarkId(benchmarkId)];",
             "}",
             "",
         ]
@@ -254,7 +261,7 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
 def main():
     """Main entry point."""
     parser = argparse.ArgumentParser(
-        description="Generate Python and TypeScript code from YAML eval specifications"
+        description="Generate Python and TypeScript code from YAML benchmark specifications"
     )
     parser.add_argument("--specs-dir", type=Path, required=True)
     parser.add_argument("--python-output", type=Path, required=True)
@@ -265,9 +272,9 @@ def main():
         print(f"Error: Specs directory does not exist: {args.specs_dir}")
         sys.exit(1)
 
-    print(f"Loading eval specs from {args.specs_dir}...")
+    print(f"Loading benchmark specs from {args.specs_dir}...")
     specs = load_specs(args.specs_dir)
-    print(f"Loaded {len(specs)} eval specifications")
+    print(f"Loaded {len(specs)} benchmark specifications")
 
     print("Generating Python code...")
     python_code = generate_python_code(specs)
@@ -281,7 +288,7 @@ def main():
     args.typescript_output.write_text(typescript_code)
     print(f"✓ Generated {args.typescript_output}")
 
-    print(f"\n✓ Successfully generated code from {len(specs)} eval specs")
+    print(f"\n✓ Successfully generated code from {len(specs)} benchmark specs")
 
 
 if __name__ == "__main__":

@@ -4,7 +4,7 @@
  */
 
 /**
- * Evaluation benchmark specification.
+ * Built-in evaluator specification.
  */
 export interface EvalSpec {
   /** Unique eval identifier */
@@ -13,38 +13,38 @@ export interface EvalSpec {
   version?: string;
   /** Display name */
   name: string;
-  /** Description of the evaluation */
+  /** Description of the evaluator */
   description: string;
-  /** Category: Coding, Knowledge, Reasoning, Agentic, or Safety */
-  category: 'Coding' | 'Knowledge' | 'Reasoning' | 'Agentic' | 'Safety';
-  /** Number of tasks in the benchmark */
-  task_count: number;
-  /** Primary metric (e.g., 'pass@1', 'accuracy', 'success_rate') */
-  metric: string;
-  /** Source URL or repository */
+  /** Evaluator family */
+  category:
+    | 'Comparison'
+    | 'Type Validation'
+    | 'Performance'
+    | 'LLM-as-a-Judge'
+    | 'Span-Based'
+    | 'Report';
+  /** Case-level or report-level evaluator */
+  evaluator_type: 'case' | 'report';
+  /** Pydantic evaluator class name */
+  pydantic_class: string;
+  /** Primary output shape */
+  output_kind:
+    | 'boolean'
+    | 'boolean_with_reason'
+    | 'score'
+    | 'score_and_assertion'
+    | 'report_table'
+    | 'report_curve';
+  /** Cost tier for running this evaluator */
+  cost_tier: 'free' | 'llm';
+  /** Expected latency profile */
+  latency: 'instant' | 'fast' | 'slow';
+  /** Runtime requirements (e.g. expected_output, logfire, model) */
+  requires?: string[];
+  /** Source documentation URL */
   source: string;
-  /** Difficulty level */
-  difficulty: 'easy' | 'medium' | 'hard' | 'expert';
-  /** Relevant languages */
-  languages: string[];
-  /** Dataset source mode used by this benchmark */
-  dataset_source?: 'hosted' | 'local' | 'hybrid';
-  /** Whether this benchmark can be tracked in live monitoring */
-  supports_live_monitoring?: boolean;
-  /** Whether this benchmark supports side-by-side run comparison */
-  supports_experiment_comparison?: boolean;
-  /** Shapes emitted by evaluators (pass_rate, numeric, categorical, error_only) */
-  evaluator_shapes?: Array<
-    'pass_rate' | 'numeric' | 'categorical' | 'error_only'
-  >;
-  /** Suggested time windows for monitoring UIs */
-  recommended_windows?: string[];
-  /** Whether traces include links from results to execution spans */
-  trace_integration?: boolean;
-  /** Whether cases are editable in hosted UI */
-  dataset_editability?: 'read-only' | 'editable';
-  /** SDK maturity level for this benchmark */
-  sdk_support?: 'none' | 'experimental' | 'stable';
+  /** Suggested baseline configuration */
+  default_config?: Record<string, unknown>;
 }
 
 /**
@@ -55,11 +55,14 @@ export interface AgentEvalConfig {
   name?: string;
   description?: string;
   category?: string;
-  task_count?: number;
-  metric?: string;
+  evaluator_type?: string;
+  pydantic_class?: string;
+  output_kind?: string;
+  cost_tier?: string;
+  latency?: string;
+  requires?: string[];
   source?: string;
-  difficulty?: string;
-  languages?: string[];
+  default_config?: Record<string, unknown>;
   [key: string]: unknown;
 }
 

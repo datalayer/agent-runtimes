@@ -31,6 +31,7 @@ RUFF_TARGETS = \
 	agent_runtimes/specs/models.py \
 	agent_runtimes/specs/memory.py \
 	agent_runtimes/specs/guardrails.py \
+	agent_runtimes/specs/benchmarks.py \
 	agent_runtimes/specs/evals.py \
 	agent_runtimes/specs/triggers.py \
 	agent_runtimes/specs/outputs.py \
@@ -239,6 +240,11 @@ specs-generate: ## generate all Python and TypeScript specs from YAML
 	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/evals \
 	  --python-output agent_runtimes/specs/evals.py \
 	  --typescript-output src/specs/evals.ts
+	@echo "Generating benchmark specifications..."
+	python scripts/codegen/generate_benchmarks.py \
+	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/benchmarks \
+	  --python-output agent_runtimes/specs/benchmarks.py \
+	  --typescript-output src/specs/benchmarks.ts
 	@echo "Generating event specifications..."
 	python scripts/codegen/generate_events.py \
 	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/events \

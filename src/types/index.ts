@@ -9,6 +9,7 @@ export * from './ag-ui';
 export * from './agents';
 export * from './agents-lifecycle';
 export * from './agentspecs';
+export * from './benchmarks';
 export * from './chat';
 export * from './checkpoints';
 export * from './config';
