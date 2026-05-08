@@ -125,6 +125,49 @@ export function ChatSidebar({
   const sidebarRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const isMobile = useIsMobile();
+  const [desktopViewportHeight, setDesktopViewportHeight] = useState<
+    number | null
+  >(null);
+
+  // Compute available desktop height from the element's top position so the
+  // sidebar always fits within the visible viewport.
+  useEffect(() => {
+    if (isMobile) {
+      setDesktopViewportHeight(null);
+      return;
+    }
+
+    const updateHeight = () => {
+      const el = sidebarRef.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      const viewportHeight =
+        window.visualViewport?.height || window.innerHeight || 0;
+      const bottomPadding = 4; // keep a small breathing space from viewport edge
+      const available = Math.max(
+        220,
+        Math.floor(viewportHeight - rect.top - bottomPadding),
+      );
+      setDesktopViewportHeight(prev =>
+        prev !== null && Math.abs(prev - available) < 2 ? prev : available,
+      );
+    };
+
+    updateHeight();
+    window.addEventListener('resize', updateHeight);
+    window.addEventListener('scroll', updateHeight, true);
+
+    const observer = new ResizeObserver(() => updateHeight());
+    if (sidebarRef.current) {
+      observer.observe(sidebarRef.current);
+    }
+
+    return () => {
+      window.removeEventListener('resize', updateHeight);
+      window.removeEventListener('scroll', updateHeight, true);
+      observer.disconnect();
+    };
+  }, [isMobile]);
 
   // Initialize open state from defaultOpen
   useEffect(() => {
@@ -364,10 +407,19 @@ export function ChatSidebar({
             : typeof width === 'number'
               ? `${width}px`
               : width,
-          height: 'min(100%, calc(100dvh - 48px))',
-          maxHeight: 'calc(100dvh - 48px)',
-          marginBlock: '24px',
+          height: isMobile
+            ? '100%'
+            : desktopViewportHeight
+              ? `${desktopViewportHeight}px`
+              : 'calc(100dvh - 8px)',
           minHeight: 0,
+          maxHeight: isMobile
+            ? '100%'
+            : desktopViewportHeight
+              ? `${desktopViewportHeight}px`
+              : 'calc(100dvh - 8px)',
+          marginBlock: isMobile ? 0 : '4px',
+          flex: isMobile ? '1 1 auto' : '0 0 auto',
           bg: 'canvas.default',
           borderLeft: !isMobile && position === 'right' ? '1px solid' : 'none',
           borderRight: !isMobile && position === 'left' ? '1px solid' : 'none',

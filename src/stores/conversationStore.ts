@@ -9,8 +9,8 @@
  *
  * Key features:
  * - Messages are stored per runtime ID in memory
- * - On page reload, messages are fetched from the server API
- * - No browser storage persistence - server is the source of truth
+ * - On page reload, messages are synchronized from the runtime via websocket
+ * - No browser storage persistence - runtime is the source of truth
  *
  * @module store/conversationStore
  */

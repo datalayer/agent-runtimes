@@ -533,6 +533,7 @@ function ChatBaseInner({
       s.configuration?.aiagentsRunUrl,
   );
   const activeAgentId = protocolConfig?.agentId || runtimeId;
+  const historyScopeId = runtimeId || activeAgentId;
   const aiAgentsAuthToken = protocolConfig?.authToken;
   const aiAgentsBaseUrl = useMemo(
     () =>
@@ -858,7 +859,9 @@ function ChatBaseInner({
   }, [kernel]);
 
   // History-loaded flag — true immediately when there is nothing to fetch
-  const [historyLoaded, setHistoryLoaded] = useState(!runtimeId);
+  const [historyLoaded, setHistoryLoaded] = useState(!historyScopeId);
+  const [historyRefreshTick, setHistoryRefreshTick] = useState(0);
+  const historyRetryAttemptsRef = useRef<Map<string, number>>(new Map());
   // Adapter-ready flag — flipped to true once the protocol adapter is initialised
   const [adapterReady, setAdapterReady] = useState(false);
   // Guard so the pending prompt is sent at most once
@@ -1010,6 +1013,7 @@ function ChatBaseInner({
   const hideMessagesAfterToolUIRef = useRef(hideMessagesAfterToolUI);
   hideMessagesAfterToolUIRef.current = hideMessagesAfterToolUI;
   const threadIdRef = useRef<string>(generateMessageId());
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -1588,34 +1592,45 @@ function ChatBaseInner({
   }, [useStoreMode, runtimeId]);
 
   // ---- Conversation history loading ----
-  const prevRuntimeIdRef = useRef<string | undefined>(undefined);
+  const prevHistoryScopeRef = useRef<string | undefined>(undefined);
 
   useEffect(() => {
-    if (runtimeId !== prevRuntimeIdRef.current) {
-      prevRuntimeIdRef.current = runtimeId;
+    if (historyScopeId !== prevHistoryScopeRef.current) {
+      if (historyScopeId) {
+        historyRetryAttemptsRef.current.set(historyScopeId, 0);
+      }
+      prevHistoryScopeRef.current = historyScopeId;
       setDisplayItems([]);
       toolCallsRef.current.clear();
-      if (!runtimeId) return;
+      if (!historyScopeId) return;
     }
 
-    if (!runtimeId) return;
+    if (!historyScopeId) return;
 
     const store = useConversationStore.getState();
-    const currentlyFetching = store.isFetching(runtimeId);
+    const currentlyFetching = store.isFetching(historyScopeId);
+    const storedMessages = store.getMessages(historyScopeId);
 
-    if (!store.needsFetch(runtimeId)) {
-      if (currentlyFetching) {
-        return;
-      }
-      const storedMessages = store.getMessages(runtimeId);
-      if (storedMessages.length > 0) {
-        setDisplayItems(storedMessages);
-      }
+    // 1) Fast local hydration for view switches in the same browser session.
+    if (storedMessages.length > 0) {
+      setDisplayItems(storedMessages);
       setHistoryLoaded(true);
+    }
+
+    if (currentlyFetching) {
       return;
     }
 
-    store.setFetching(runtimeId, true);
+    // 2) On refresh/mount, prefer websocket refresh from the runtime.
+    // If the socket is not connected yet, keep retryable fetch state and wait.
+    if (wsState !== 'connected') {
+      if (storedMessages.length === 0) {
+        setHistoryLoaded(false);
+      }
+      return;
+    }
+
+    store.setFetching(historyScopeId, true);
 
     const fullContextToMessages = () =>
       extractChatMessagesFromFullContext(
@@ -1627,10 +1642,11 @@ function ChatBaseInner({
 
     const applyMessages = (messages: ChatMessage[]) => {
       if (messages.length > 0) {
-        store.setMessages(runtimeId, messages);
+        store.setMessages(historyScopeId, messages);
         setDisplayItems(convertHistoryToDisplayItems(messages));
+        historyRetryAttemptsRef.current.set(historyScopeId, 0);
       }
-      store.markFetched(runtimeId);
+      store.markFetched(historyScopeId);
       setHistoryLoaded(true);
     };
 
@@ -1640,28 +1656,65 @@ function ChatBaseInner({
       return;
     }
 
+    const requestSnapshotRefresh = (): boolean => {
+      const candidates = [
+        activeAgentId,
+        protocolConfig?.agentId,
+        runtimeId,
+        historyScopeId,
+        'default',
+        undefined,
+      ];
+      const tried = new Set<string>();
+      for (const candidate of candidates) {
+        const normalized =
+          typeof candidate === 'string' ? candidate.trim() : undefined;
+        const key = normalized || '__global__';
+        if (tried.has(key)) {
+          continue;
+        }
+        tried.add(key);
+        const ok = agentRuntimeStore.getState().requestRefresh(normalized);
+        if (ok) {
+          return true;
+        }
+      }
+      return false;
+    };
+
     // Ask the monitoring websocket for a fresh snapshot and wait briefly
     // for `fullContext.messages` to arrive.
-    const refreshRequested = agentRuntimeStore.getState().requestRefresh();
+    const refreshRequested = requestSnapshotRefresh();
     if (!refreshRequested) {
       // Socket not ready yet; allow a later retry (e.g. when wsState changes).
-      store.setFetching(runtimeId, false);
-      setHistoryLoaded(true);
+      store.setFetching(historyScopeId, false);
+      if (storedMessages.length === 0) {
+        setHistoryLoaded(false);
+      }
       return;
     }
 
     let resolved = false;
+    const retryRefreshTimeout = window.setTimeout(() => {
+      if (!resolved) {
+        requestSnapshotRefresh();
+      }
+    }, 500);
+
     const unsubscribe = agentRuntimeStore.subscribe(
       state => state.fullContext,
       nextFullContext => {
         if (resolved || !nextFullContext) {
           return;
         }
-        resolved = true;
-        unsubscribe();
         const messages = extractChatMessagesFromFullContext(
           nextFullContext as Record<string, unknown>,
         );
+        if (messages.length === 0) {
+          return;
+        }
+        resolved = true;
+        unsubscribe();
         applyMessages(messages);
       },
     );
@@ -1673,27 +1726,45 @@ function ChatBaseInner({
       resolved = true;
       unsubscribe();
       // Do not mark as fetched on timeout; keep it retryable for late WS snapshots.
-      store.setFetching(runtimeId, false);
-      setHistoryLoaded(true);
+      store.setFetching(historyScopeId, false);
+      setHistoryLoaded(storedMessages.length > 0);
+
+      const attempts = historyRetryAttemptsRef.current.get(historyScopeId) ?? 0;
+      const canRetry = wsState === 'connected' && attempts < 3;
+      if (canRetry) {
+        historyRetryAttemptsRef.current.set(historyScopeId, attempts + 1);
+        requestSnapshotRefresh();
+        setHistoryRefreshTick(tick => tick + 1);
+      }
     }, 2000);
 
     return () => {
+      window.clearTimeout(retryRefreshTimeout);
       window.clearTimeout(timeout);
       unsubscribe();
     };
-  }, [runtimeId, historyEndpoint, protocol?.agentId, wsState]);
+  }, [
+    historyScopeId,
+    historyEndpoint,
+    protocol?.agentId,
+    wsState,
+    activeAgentId,
+    historyRefreshTick,
+  ]);
 
   // Keep in-memory store in sync with displayItems
   useEffect(() => {
-    if (runtimeId && displayItems.length > 0) {
+    if (historyScopeId && displayItems.length > 0) {
       const messagesToSave = displayItems.filter(
         (item): item is ChatMessage => !isToolCallMessage(item),
       );
       if (messagesToSave.length > 0) {
-        useConversationStore.getState().setMessages(runtimeId, messagesToSave);
+        useConversationStore
+          .getState()
+          .setMessages(historyScopeId, messagesToSave);
       }
     }
-  }, [runtimeId, displayItems]);
+  }, [historyScopeId, displayItems]);
 
   // ---- Derived state ----
   const messages = displayItems.filter(
@@ -2153,7 +2224,7 @@ function ChatBaseInner({
           pendingToolExecutionsRef.current = 0;
           setIsLoading(false);
           setIsStreaming(false);
-          agentRuntimeStore.getState().requestRefresh();
+          agentRuntimeStore.getState().requestRefresh(activeAgentId);
           break;
 
         case 'error':
@@ -2207,7 +2278,7 @@ function ChatBaseInner({
           pendingToolExecutionsRef.current = 0;
           setIsLoading(false);
           setIsStreaming(false);
-          agentRuntimeStore.getState().requestRefresh();
+          agentRuntimeStore.getState().requestRefresh(activeAgentId);
           break;
       }
     });
@@ -2288,6 +2359,14 @@ function ChatBaseInner({
 
   // ---- Auto-scroll to bottom ----
   useEffect(() => {
+    const container = messagesContainerRef.current;
+    if (container) {
+      container.scrollTo({
+        top: container.scrollHeight,
+        behavior: 'smooth',
+      });
+      return;
+    }
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [displayItems]);
 
@@ -2442,7 +2521,7 @@ function ChatBaseInner({
         if (!adapterRef.current) {
           setIsLoading(false);
           setIsStreaming(false);
-          agentRuntimeStore.getState().requestRefresh();
+          agentRuntimeStore.getState().requestRefresh(activeAgentId);
         }
         suppressAssistantTextForToolOnlyRef.current = false;
         currentAssistantMessageRef.current = null;
@@ -2547,7 +2626,7 @@ function ChatBaseInner({
     pendingToolExecutionsRef.current = 0;
     setIsLoading(false);
     setIsStreaming(false);
-    agentRuntimeStore.getState().requestRefresh();
+    agentRuntimeStore.getState().requestRefresh(activeAgentId);
     suppressAssistantTextForToolOnlyRef.current = false;
     currentAssistantMessageRef.current = null;
 
@@ -2575,7 +2654,8 @@ function ChatBaseInner({
     setInput('');
     threadIdRef.current = generateMessageId();
     if (useStoreMode) clearStoreMessages();
-    if (runtimeId) useConversationStore.getState().clearMessages(runtimeId);
+    if (historyScopeId)
+      useConversationStore.getState().clearMessages(historyScopeId);
     onNewChat?.();
     headerButtons?.onNewChat?.();
   }, [clearStoreMessages, onNewChat, headerButtons, useStoreMode, runtimeId]);
@@ -2586,7 +2666,8 @@ function ChatBaseInner({
       setDisplayItems([]);
       toolCallsRef.current.clear();
       if (useStoreMode) clearStoreMessages();
-      if (runtimeId) useConversationStore.getState().clearMessages(runtimeId);
+      if (historyScopeId)
+        useConversationStore.getState().clearMessages(historyScopeId);
       onClear?.();
       headerButtons?.onClear?.();
     }
@@ -3006,6 +3087,7 @@ function ChatBaseInner({
 
       {/* Messages area */}
       <Box
+        ref={messagesContainerRef}
         sx={{
           flex: 1,
           flexGrow: 1,
