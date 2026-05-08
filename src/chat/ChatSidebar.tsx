@@ -14,14 +14,13 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { IconButton, Text } from '@primer/react';
+import { IconButton } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import {
   SidebarCollapseIcon,
   SidebarExpandIcon,
   XIcon,
 } from '@primer/octicons-react';
-import { AiAgentIcon } from '@datalayer/icons-react';
 import {
   useChatKeyboardShortcuts,
   getShortcutDisplay,
@@ -267,7 +266,10 @@ export function ChatSidebar({
             icon={
               position === 'right' ? SidebarExpandIcon : SidebarCollapseIcon
             }
-            aria-label={`Open chat${shortcutHint ? ` (${shortcutHint})` : ''}`}
+            aria-label="Open chat"
+            description={
+              shortcutHint ? `Open chat (${shortcutHint})` : 'Open chat'
+            }
             onClick={handleToggle}
             variant="default"
             size="small"
@@ -303,44 +305,6 @@ export function ChatSidebar({
             </Box>
           )}
         </Box>
-
-        <Box
-          sx={{
-            width: 32,
-            height: 32,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            bg: 'canvas.default',
-            border: '1px solid',
-            borderColor: 'border.default',
-            borderRadius: 2,
-            boxShadow: 'shadow.small',
-          }}
-        >
-          {brandIcon || <AiAgentIcon colored size={20} />}
-        </Box>
-
-        {/* Keyboard shortcut hint */}
-        {shortcutHint && (
-          <Box
-            sx={{
-              px: 1,
-              py: '2px',
-              bg: 'canvas.default',
-              border: '1px solid',
-              borderColor: 'border.default',
-              color: 'fg.muted',
-              borderRadius: 1,
-              fontSize: 0,
-              boxShadow: 'shadow.small',
-            }}
-          >
-            <Text sx={{ fontSize: '10px', fontFamily: 'mono' }}>
-              {shortcutHint}
-            </Text>
-          </Box>
-        )}
       </Box>
     );
 
@@ -400,9 +364,9 @@ export function ChatSidebar({
             : typeof width === 'number'
               ? `${width}px`
               : width,
-          height: 'min(100%, calc(100dvh - 12px))',
-          maxHeight: 'calc(100dvh - 12px)',
-          marginBlock: '6px',
+          height: 'min(100%, calc(100dvh - 48px))',
+          maxHeight: 'calc(100dvh - 48px)',
+          marginBlock: '24px',
           minHeight: 0,
           bg: 'canvas.default',
           borderLeft: !isMobile && position === 'right' ? '1px solid' : 'none',
@@ -420,7 +384,7 @@ export function ChatSidebar({
           headerButtons={{
             showNewChat: showNewChatButton,
             showClear: showClearButton && messages.length > 0,
-            showSettings: showSettingsButton,
+            showSettings: showSettingsButton && !!onSettingsClick,
             onNewChat: handleNewChat,
             onClear: handleClear,
             onSettings: onSettingsClick,

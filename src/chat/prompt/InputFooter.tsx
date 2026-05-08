@@ -162,6 +162,8 @@ export function InputToolbar({
   mcpStatusData,
 }: InputToolbarProps) {
   const isKernelBusy = kernelStatus === 'busy';
+  const showSelectorsBar = showModelSelector || showToolsMenu || showSkillsMenu;
+  const hasSelectorsContent = hasConfigData || hasSkillsData;
 
   // Show token usage when we have valid context data
   const hasContext = Boolean(
@@ -200,66 +202,78 @@ export function InputToolbar({
         }
       />
 
-      {/* Token usage bar — between input and selectors */}
-      {showTokenUsage && hasContext && agentUsage && (
-        <TokenUsageBar agentUsage={agentUsage} padding={padding} />
+      {/* Token usage slot — keep rendered to prevent async layout jumps */}
+      {showTokenUsage && (
+        <Box sx={{ minHeight: hasContext && agentUsage ? 28 : 8 }}>
+          {hasContext && agentUsage ? (
+            <TokenUsageBar agentUsage={agentUsage} padding={padding} />
+          ) : null}
+        </Box>
       )}
 
       {/* Model, Skills, and Tools Footer — Below Input */}
-      {(showModelSelector || showToolsMenu || showSkillsMenu) &&
-        (hasConfigData || hasSkillsData) && (
-          <Box
-            sx={{
-              display: 'flex',
-              gap: 2,
-              px: padding,
-              py: 1,
-              borderTop: '1px solid',
-              borderColor: 'border.default',
-              alignItems: 'center',
-              bg: 'canvas.subtle',
-            }}
-          >
-            {/* Tools Menu */}
-            {showToolsMenu && (
-              <ToolsMenu
-                codemodeEnabled={codemodeEnabled}
-                onToggleCodemode={onToggleCodemode}
-                mcpServers={mcpServers}
-                enabledMcpTools={enabledMcpTools}
-                enabledMcpToolCount={enabledMcpToolCount}
-                onToggleMcpTool={onToggleMcpTool}
-                onToggleAllMcpServerTools={onToggleAllMcpServerTools}
-                approvedMcpTools={approvedMcpTools}
-                onToggleMcpToolApproval={onToggleMcpToolApproval}
-                availableTools={availableTools}
-              />
-            )}
+      {showSelectorsBar && (
+        <Box
+          sx={{
+            display: 'flex',
+            gap: 2,
+            px: padding,
+            py: 1,
+            minHeight: 40,
+            borderTop: '1px solid',
+            borderColor: 'border.default',
+            alignItems: 'center',
+            bg: 'canvas.subtle',
+          }}
+        >
+          {hasSelectorsContent ? (
+            <>
+              {/* Tools Menu */}
+              {showToolsMenu && (
+                <ToolsMenu
+                  codemodeEnabled={codemodeEnabled}
+                  onToggleCodemode={onToggleCodemode}
+                  mcpServers={mcpServers}
+                  enabledMcpTools={enabledMcpTools}
+                  enabledMcpToolCount={enabledMcpToolCount}
+                  onToggleMcpTool={onToggleMcpTool}
+                  onToggleAllMcpServerTools={onToggleAllMcpServerTools}
+                  approvedMcpTools={approvedMcpTools}
+                  onToggleMcpToolApproval={onToggleMcpToolApproval}
+                  availableTools={availableTools}
+                />
+              )}
 
-            {/* Skills Menu */}
-            {showSkillsMenu && (
-              <SkillsMenu
-                skills={skills}
-                skillsLoading={skillsLoading}
-                enabledSkills={enabledSkills}
-                onToggleSkill={onToggleSkill}
-                onToggleAllSkills={onToggleAllSkills}
-                approvedSkills={approvedSkills}
-                onToggleSkillApproval={onToggleSkillApproval}
-              />
-            )}
+              {/* Skills Menu */}
+              {showSkillsMenu && (
+                <SkillsMenu
+                  skills={skills}
+                  skillsLoading={skillsLoading}
+                  enabledSkills={enabledSkills}
+                  onToggleSkill={onToggleSkill}
+                  onToggleAllSkills={onToggleAllSkills}
+                  approvedSkills={approvedSkills}
+                  onToggleSkillApproval={onToggleSkillApproval}
+                />
+              )}
 
-            {/* Model Selector */}
-            {showModelSelector && models.length > 0 && selectedModel && (
-              <ModelSelector
-                models={models}
-                selectedModel={selectedModel}
-                onModelSelect={onModelSelect}
-                isA2AProtocol={isA2AProtocol}
-              />
-            )}
-          </Box>
-        )}
+              {/* Model Selector */}
+              {showModelSelector && models.length > 0 && selectedModel && (
+                <ModelSelector
+                  models={models}
+                  selectedModel={selectedModel}
+                  onModelSelect={onModelSelect}
+                  isA2AProtocol={isA2AProtocol}
+                />
+              )}
+            </>
+          ) : (
+            <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
+              Loading controls...
+            </Text>
+          )}
+        </Box>
+      )}
     </Box>
   );
 }

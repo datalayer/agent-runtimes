@@ -2944,6 +2944,7 @@ function ChatBaseInner({
         display: 'flex',
         flexDirection: 'column',
         height: '100%',
+        maxHeight: '100%',
         minHeight: 0,
         bg: backgroundColor || 'canvas.default',
         borderRadius,
@@ -3020,7 +3021,7 @@ function ChatBaseInner({
             sx={{
               display: 'flex',
               flexDirection: 'column',
-              minHeight: '100%',
+              minHeight: 0,
               bg: 'canvas.default',
             }}
           >
