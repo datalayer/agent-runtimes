@@ -263,12 +263,9 @@ function extractChatMessagesFromFullContext(
   return rawMessages
     .map((msg, index) => {
       const role = String(msg.role || '').toLowerCase();
-      if (
-        role !== 'user' &&
-        role !== 'assistant' &&
-        role !== 'system' &&
-        role !== 'tool'
-      ) {
+      // Only hydrate conversational turns in the visible history.
+      // System/tool messages may contain internal prompts and metadata.
+      if (role !== 'user' && role !== 'assistant') {
         return null;
       }
 
