@@ -15,7 +15,11 @@
 import type { ReactNode } from 'react';
 import { IconButton } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
-import { PaperAirplaneIcon, SquareCircleIcon } from '@primer/octicons-react';
+import {
+  PaperAirplaneIcon,
+  SquareCircleIcon,
+  PauseIcon,
+} from '@primer/octicons-react';
 
 export interface InputPromptFooterProps {
   /** Content to render on the left side (dropdowns, indicators, etc.) */
@@ -26,6 +30,8 @@ export interface InputPromptFooterProps {
   isLoading?: boolean;
   /** Whether the send button should be disabled */
   sendDisabled?: boolean;
+  /** Whether the connected kernel is currently busy */
+  isKernelBusy?: boolean;
   /** Callback when the send button is clicked */
   onSend: () => void;
   /** Callback when the stop button is clicked */
@@ -37,6 +43,7 @@ export function InputPromptFooter({
   rightContent,
   isLoading = false,
   sendDisabled = false,
+  isKernelBusy = false,
   onSend,
   onStop,
 }: InputPromptFooterProps) {
@@ -66,6 +73,15 @@ export function InputPromptFooter({
             onClick={onStop}
             size="small"
             variant="invisible"
+          />
+        ) : isKernelBusy ? (
+          <IconButton
+            icon={PauseIcon}
+            aria-label="Pause (kernel busy)"
+            onClick={onStop}
+            size="small"
+            variant="invisible"
+            disabled={!onStop}
           />
         ) : (
           <IconButton

@@ -30,8 +30,6 @@ import {
 import { AiAgentIcon } from '@datalayer/icons-react';
 
 import type { ChatViewMode, HeaderButtonsConfig } from '../../types/chat';
-import type { SandboxWsStatus } from '../../types/sandbox';
-import { SandboxStatusIndicator } from '../indicators/SandboxStatusIndicator';
 
 // ---------------------------------------------------------------------------
 // Props
@@ -46,18 +44,8 @@ export interface ChatBaseHeaderProps {
   showInformation?: boolean;
   onInformationClick?: () => void;
   padding: number;
-  /** API base URL passed to SandboxStatusIndicator */
-  sandboxApiBase?: string;
-  /** Auth token passed to SandboxStatusIndicator */
-  sandboxAuthToken?: string;
-  /** Agent ID passed to SandboxStatusIndicator for agent-scoped status */
-  sandboxAgentId?: string;
-  /** Optional sandbox status override for immediate indicator updates */
-  sandboxStatusData?: SandboxWsStatus | null;
   /** Optional kernel indicator state override from notebook runtime. */
   kernelIndicatorState?: ExecutionState;
-  /** Optional kernel indicator tooltip override from notebook runtime. */
-  kernelIndicatorTooltip?: string;
   /**
    * Live kernel connection from the notebook runtime. When provided,
    * the chat header renders the same `<KernelIndicator>` as the notebook
@@ -92,12 +80,7 @@ export function ChatBaseHeader({
   showInformation,
   onInformationClick,
   padding,
-  sandboxApiBase,
-  sandboxAuthToken,
-  sandboxAgentId,
-  sandboxStatusData,
   kernelIndicatorState,
-  kernelIndicatorTooltip,
   kernel,
   headerButtons,
   messageCount,
@@ -190,23 +173,11 @@ export function ChatBaseHeader({
         <Box
           sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}
         >
-          {/* Runtime status indicator: live kernel connection takes
-              precedence (matches the notebook toolbar exactly), then a
-              static state override, otherwise the sandbox indicator. */}
+          {/* Runtime status indicator: always use shared KernelIndicator. */}
           {kernel ? (
-            <KernelIndicator kernel={kernel} tooltip={kernelIndicatorTooltip} />
-          ) : kernelIndicatorState ? (
-            <KernelIndicator
-              state={kernelIndicatorState}
-              tooltip={kernelIndicatorTooltip}
-            />
+            <KernelIndicator kernel={kernel} />
           ) : (
-            <SandboxStatusIndicator
-              apiBase={sandboxApiBase}
-              authToken={sandboxAuthToken}
-              agentId={sandboxAgentId}
-              statusOverride={sandboxStatusData}
-            />
+            <KernelIndicator state={kernelIndicatorState ?? 'undefined'} />
           )}
           {/* Header buttons */}
           {headerButtons?.showNewChat && (

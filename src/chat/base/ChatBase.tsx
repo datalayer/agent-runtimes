@@ -25,6 +25,7 @@ import React, {
   useState,
 } from 'react';
 import { Text, Spinner } from '@primer/react';
+import type { KernelMessage } from '@jupyterlab/services';
 import { Box, setupPrimerPortals } from '@datalayer/primer-addons';
 import { AlertIcon, PersonIcon } from '@primer/octicons-react';
 import { AiAgentIcon } from '@datalayer/icons-react';
@@ -456,7 +457,6 @@ function ChatBaseInner({
   loadingState,
   headerActions,
   kernelIndicatorState,
-  kernelIndicatorTooltip,
   kernel,
   chatViewMode,
   onChatViewModeChange,
@@ -829,9 +829,33 @@ function ChatBaseInner({
   // ---- Component state ----
   const [displayItems, setDisplayItems] = useState<DisplayItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [liveKernelStatus, setLiveKernelStatus] =
+    useState<KernelMessage.Status>();
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const [input, setInput] = useState('');
+
+  useEffect(() => {
+    if (!kernel) {
+      setLiveKernelStatus(undefined);
+      return;
+    }
+
+    setLiveKernelStatus(kernel.status);
+
+    const handleStatusChange = (
+      _: unknown,
+      nextStatus: KernelMessage.Status,
+    ) => {
+      setLiveKernelStatus(nextStatus);
+    };
+
+    kernel.statusChanged.connect(handleStatusChange);
+
+    return () => {
+      kernel.statusChanged.disconnect(handleStatusChange);
+    };
+  }, [kernel]);
 
   // History-loaded flag — true immediately when there is nothing to fetch
   const [historyLoaded, setHistoryLoaded] = useState(!runtimeId);
@@ -2529,7 +2553,14 @@ function ChatBaseInner({
 
     // Also interrupt any code running in the sandbox (best-effort).
     sandboxStatusQuery.interrupt();
+
+    // Interrupt the connected notebook kernel as well (best-effort),
+    // matching the toolbar's stop/interrupt behavior.
+    if (kernel && kernel.status === 'busy') {
+      void kernel.interrupt().catch(() => {});
+    }
   }, [
+    kernel,
     useStoreMode,
     protocol?.configEndpoint,
     protocol?.authToken,
@@ -2932,12 +2963,7 @@ function ChatBaseInner({
           showInformation={showInformation}
           onInformationClick={onInformationClick}
           padding={padding}
-          sandboxApiBase={indicatorApiBase}
-          sandboxAuthToken={protocol?.authToken}
-          sandboxAgentId={protocol?.agentId}
-          sandboxStatusData={sandboxStatusData}
           kernelIndicatorState={kernelIndicatorState}
-          kernelIndicatorTooltip={kernelIndicatorTooltip}
           kernel={kernel}
           headerButtons={headerButtons}
           messageCount={messages.length}
@@ -3035,6 +3061,7 @@ function ChatBaseInner({
           input={input}
           setInput={setInput}
           isLoading={isLoading}
+          kernelStatus={liveKernelStatus}
           connectionConfirmed={connectionConfirmed}
           placeholder={placeholder}
           autoFocus={autoFocus}

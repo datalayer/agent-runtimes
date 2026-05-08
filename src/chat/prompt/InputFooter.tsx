@@ -21,6 +21,7 @@ import {
 } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { ToolsIcon, BriefcaseIcon, AiModelIcon } from '@primer/octicons-react';
+import type { KernelMessage } from '@jupyterlab/services';
 import { InputPrompt } from './InputPrompt';
 import { TokenUsageBar } from '../usage/TokenUsageBar';
 import { McpStatusIndicator } from '../indicators/McpStatusIndicator';
@@ -43,6 +44,7 @@ export interface InputToolbarProps {
   input: string;
   setInput: (value: string) => void;
   isLoading: boolean;
+  kernelStatus?: KernelMessage.Status;
   connectionConfirmed: boolean;
   placeholder?: string;
   autoFocus: boolean;
@@ -118,6 +120,7 @@ export function InputToolbar({
   input,
   setInput,
   isLoading,
+  kernelStatus,
   connectionConfirmed,
   placeholder,
   autoFocus,
@@ -158,6 +161,8 @@ export function InputToolbar({
   authToken,
   mcpStatusData,
 }: InputToolbarProps) {
+  const isKernelBusy = kernelStatus === 'busy';
+
   // Show token usage when we have valid context data
   const hasContext = Boolean(
     agentUsage && !agentUsage.error && agentUsage.totalTokens > 0,
@@ -169,6 +174,7 @@ export function InputToolbar({
       <InputPrompt
         placeholder={placeholder || 'Type a message...'}
         isLoading={isLoading}
+        isKernelBusy={isKernelBusy}
         disabled={disableInputPrompt}
         readOnly={!connectionConfirmed}
         onSend={onSend}

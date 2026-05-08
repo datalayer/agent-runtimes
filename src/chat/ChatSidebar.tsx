@@ -394,13 +394,15 @@ export function ChatSidebar({
           position: 'relative',
           display: 'flex',
           flexDirection: 'column',
+          alignSelf: 'stretch',
           width: isMobile
             ? '100%'
             : typeof width === 'number'
               ? `${width}px`
               : width,
-          height: '100%',
-          maxHeight: '100%',
+          height: 'min(100%, calc(100dvh - 12px))',
+          maxHeight: 'calc(100dvh - 12px)',
+          marginBlock: '6px',
           minHeight: 0,
           bg: 'canvas.default',
           borderLeft: !isMobile && position === 'right' ? '1px solid' : 'none',

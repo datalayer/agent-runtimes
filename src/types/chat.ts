@@ -651,9 +651,6 @@ export interface ChatBaseProps {
   /** Notebook kernel indicator state override for the chat header. */
   kernelIndicatorState?: import('@datalayer/jupyter-react').ExecutionState;
 
-  /** Notebook kernel indicator tooltip override for the chat header. */
-  kernelIndicatorTooltip?: string;
-
   /**
    * Live notebook kernel connection. When provided, the chat header
    * renders the same `<KernelIndicator>` as the notebook toolbar so
