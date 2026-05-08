@@ -455,6 +455,9 @@ function ChatBaseInner({
   className,
   loadingState,
   headerActions,
+  kernelIndicatorState,
+  kernelIndicatorTooltip,
+  kernel,
   chatViewMode,
   onChatViewModeChange,
   // Mode selection
@@ -2910,6 +2913,7 @@ function ChatBaseInner({
         display: 'flex',
         flexDirection: 'column',
         height: '100%',
+        minHeight: 0,
         bg: backgroundColor || 'canvas.default',
         borderRadius,
         border,
@@ -2932,6 +2936,9 @@ function ChatBaseInner({
           sandboxAuthToken={protocol?.authToken}
           sandboxAgentId={protocol?.agentId}
           sandboxStatusData={sandboxStatusData}
+          kernelIndicatorState={kernelIndicatorState}
+          kernelIndicatorTooltip={kernelIndicatorTooltip}
+          kernel={kernel}
           headerButtons={headerButtons}
           messageCount={messages.length}
           onNewChat={handleNewChat}
@@ -2972,7 +2979,13 @@ function ChatBaseInner({
 
       {/* Messages area */}
       <Box
-        sx={{ flex: 1, flexGrow: 1, overflow: 'auto', bg: 'canvas.default' }}
+        sx={{
+          flex: 1,
+          flexGrow: 1,
+          minHeight: 0,
+          overflow: 'auto',
+          bg: 'canvas.default',
+        }}
       >
         {children ? (
           children

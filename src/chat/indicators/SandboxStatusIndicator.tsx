@@ -7,12 +7,12 @@
  * SandboxStatusIndicator — Round coloured dot that shows the
  * real-time sandbox execution status via a WebSocket connection.
  *
- * Aggregate logic
+ * Aggregate logic (mapped to jupyter-react KernelIndicator states)
  * ───────────────
- * - variant === "unavailable" → hidden
- * - sandbox_running === false → "stopped"  (gray)
- * - is_executing === false    → "idle"     (green)
- * - is_executing === true     → "executing" (blue, pulsing)
+ * - variant === "unavailable" → connected-unknown
+ * - sandbox_running === false → disconnected
+ * - is_executing === false    → connected-idle
+ * - is_executing === true     → connected-busy (themed fade animation)
  *
  * The component connects to the `/configure/sandbox/ws` WebSocket
  * and receives status updates in real time.  It can also send
@@ -28,10 +28,14 @@ import type {
   SandboxAggregateStatus,
   SandboxWsStatus,
 } from '../../types/sandbox';
-import {
-  SANDBOX_STATUS_COLORS,
-  SANDBOX_STATUS_LABELS,
-} from '../../types/sandbox';
+import { SANDBOX_STATUS_LABELS } from '../../types/sandbox';
+
+const SANDBOX_INDICATOR_COLORS: Record<SandboxAggregateStatus, string> = {
+  unavailable: 'fg.muted',
+  stopped: 'fg.muted',
+  idle: 'success.fg',
+  executing: 'attention.fg',
+};
 
 /* ── Props ─────────────────────────────────────────────── */
 
@@ -93,22 +97,42 @@ function deriveAggregate(
   return 'idle';
 }
 
-const SANDBOX_PULSE_KEYFRAMES = `
-@keyframes sandbox-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
-}
-`;
-
-function useInjectKeyframes() {
-  useEffect(() => {
-    const id = '__sandbox-pulse-keyframes__';
-    if (document.getElementById(id)) return;
-    const style = document.createElement('style');
-    style.id = id;
-    style.textContent = SANDBOX_PULSE_KEYFRAMES;
-    document.head.appendChild(style);
-  }, []);
+function renderSandboxGlyph(aggregate: SandboxAggregateStatus) {
+  return (
+    <Box
+      as="span"
+      sx={{
+        display: 'inline-block',
+        width: 10,
+        height: 10,
+        borderRadius: '50%',
+        bg: SANDBOX_INDICATOR_COLORS[aggregate],
+        borderStyle: 'solid',
+        borderWidth: 1,
+        borderColor: SANDBOX_INDICATOR_COLORS[aggregate],
+        ...(aggregate === 'executing' && {
+          animation: 'sandbox-busy-fade 1.2s ease-in-out infinite',
+          '@keyframes sandbox-busy-fade': {
+            '0%': {
+              opacity: 1,
+              transform: 'scale(1)',
+              filter: 'saturate(1)',
+            },
+            '50%': {
+              opacity: 0.45,
+              transform: 'scale(0.92)',
+              filter: 'saturate(0.75)',
+            },
+            '100%': {
+              opacity: 1,
+              transform: 'scale(1)',
+              filter: 'saturate(1)',
+            },
+          },
+        }),
+      }}
+    />
+  );
 }
 
 /* ── Component ─────────────────────────────────────────── */
@@ -119,7 +143,6 @@ export function SandboxStatusIndicator({
   agentId,
   statusOverride,
 }: SandboxStatusIndicatorProps) {
-  useInjectKeyframes();
   const [status, setStatus] = useState<SandboxWsStatus | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout>>();
@@ -223,18 +246,10 @@ export function SandboxStatusIndicator({
       >
         <Box
           as="span"
-          sx={{
-            display: 'inline-block',
-            width: 12,
-            height: 12,
-            borderRadius: '50%',
-            bg: SANDBOX_STATUS_COLORS[aggregate],
-            flexShrink: 0,
-            ...(aggregate === 'executing' && {
-              animation: 'sandbox-pulse 1.5s ease-in-out infinite',
-            }),
-          }}
-        />
+          sx={{ display: 'inline-flex', alignItems: 'center', flexShrink: 0 }}
+        >
+          {renderSandboxGlyph(aggregate)}
+        </Box>
       </button>
     </Tooltip>
   );

@@ -13,6 +13,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { IconButton, Text } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import {
@@ -244,14 +245,16 @@ export function ChatSidebar({
 
   // Collapsed state
   if (!isOpen) {
-    return (
+    const collapsedLauncher = (
       <Box
         ref={sidebarRef}
         className={className}
         sx={{
           position: 'fixed',
           top: 12,
-          ...(position === 'right' ? { right: 12 } : { left: 12 }),
+          ...(position === 'right'
+            ? { right: 'env(safe-area-inset-right)' }
+            : { left: 'env(safe-area-inset-left)' }),
           zIndex: 1001,
           display: 'flex',
           flexDirection: 'column',
@@ -340,6 +343,14 @@ export function ChatSidebar({
         )}
       </Box>
     );
+
+    // Render the collapsed launcher in a body portal so it stays pinned to the
+    // viewport edge even when ancestors use transforms/positioning contexts.
+    if (typeof document !== 'undefined' && document.body) {
+      return createPortal(collapsedLauncher, document.body);
+    }
+
+    return collapsedLauncher;
   }
 
   // Mobile full-screen overlay
@@ -389,10 +400,13 @@ export function ChatSidebar({
               ? `${width}px`
               : width,
           height: '100%',
+          maxHeight: '100%',
+          minHeight: 0,
           bg: 'canvas.default',
           borderLeft: !isMobile && position === 'right' ? '1px solid' : 'none',
           borderRight: !isMobile && position === 'left' ? '1px solid' : 'none',
           borderColor: 'border.default',
+          overflow: 'hidden',
           ...mobileStyles,
         }}
       >

@@ -648,6 +648,21 @@ export interface ChatBaseProps {
   /** Header actions */
   headerActions?: React.ReactNode;
 
+  /** Notebook kernel indicator state override for the chat header. */
+  kernelIndicatorState?: import('@datalayer/jupyter-react').ExecutionState;
+
+  /** Notebook kernel indicator tooltip override for the chat header. */
+  kernelIndicatorTooltip?: string;
+
+  /**
+   * Live notebook kernel connection. When provided, the chat header
+   * renders the same `<KernelIndicator>` as the notebook toolbar so
+   * the colour and tooltip remain in sync with the notebook runtime.
+   */
+  kernel?:
+    | import('@jupyterlab/services/lib/kernel/kernel').IKernelConnection
+    | null;
+
   /**
    * Current chat view mode.
    * When provided, a segmented view-mode toggle is rendered in the header

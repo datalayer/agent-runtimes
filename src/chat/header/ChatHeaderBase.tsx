@@ -16,6 +16,8 @@
 import { type ReactNode } from 'react';
 import { Heading, IconButton, Text, Truncate } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
+import { KernelIndicator, type ExecutionState } from '@datalayer/jupyter-react';
+import type { IKernelConnection } from '@jupyterlab/services/lib/kernel/kernel';
 import {
   PlusIcon,
   TrashIcon,
@@ -52,6 +54,17 @@ export interface ChatBaseHeaderProps {
   sandboxAgentId?: string;
   /** Optional sandbox status override for immediate indicator updates */
   sandboxStatusData?: SandboxWsStatus | null;
+  /** Optional kernel indicator state override from notebook runtime. */
+  kernelIndicatorState?: ExecutionState;
+  /** Optional kernel indicator tooltip override from notebook runtime. */
+  kernelIndicatorTooltip?: string;
+  /**
+   * Live kernel connection from the notebook runtime. When provided,
+   * the chat header renders the same `<KernelIndicator>` as the notebook
+   * toolbar — subscribing to the kernel's live signals so the colour and
+   * tooltip stay in sync with the notebook indicator.
+   */
+  kernel?: IKernelConnection | null;
   /** Header button configuration */
   headerButtons?: HeaderButtonsConfig;
   /** Current count of messages (used to conditionally show clear button) */
@@ -83,6 +96,9 @@ export function ChatBaseHeader({
   sandboxAuthToken,
   sandboxAgentId,
   sandboxStatusData,
+  kernelIndicatorState,
+  kernelIndicatorTooltip,
+  kernel,
   headerButtons,
   messageCount,
   onNewChat,
@@ -174,13 +190,24 @@ export function ChatBaseHeader({
         <Box
           sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}
         >
-          {/* Sandbox execution status indicator */}
-          <SandboxStatusIndicator
-            apiBase={sandboxApiBase}
-            authToken={sandboxAuthToken}
-            agentId={sandboxAgentId}
-            statusOverride={sandboxStatusData}
-          />
+          {/* Runtime status indicator: live kernel connection takes
+              precedence (matches the notebook toolbar exactly), then a
+              static state override, otherwise the sandbox indicator. */}
+          {kernel ? (
+            <KernelIndicator kernel={kernel} tooltip={kernelIndicatorTooltip} />
+          ) : kernelIndicatorState ? (
+            <KernelIndicator
+              state={kernelIndicatorState}
+              tooltip={kernelIndicatorTooltip}
+            />
+          ) : (
+            <SandboxStatusIndicator
+              apiBase={sandboxApiBase}
+              authToken={sandboxAuthToken}
+              agentId={sandboxAgentId}
+              statusOverride={sandboxStatusData}
+            />
+          )}
           {/* Header buttons */}
           {headerButtons?.showNewChat && (
             <IconButton
