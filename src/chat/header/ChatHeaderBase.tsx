@@ -53,6 +53,14 @@ export interface ChatBaseHeaderProps {
    * tooltip stay in sync with the notebook indicator.
    */
   kernel?: IKernelConnection | null;
+  /** Optional environment name shown in indicator details. */
+  kernelEnvironmentName?: string;
+  /** Optional CPU info shown in indicator details. */
+  kernelCpu?: string;
+  /** Optional memory info shown in indicator details. */
+  kernelMemory?: string;
+  /** Optional GPU info shown in indicator details. */
+  kernelGpu?: string;
   /** Header button configuration */
   headerButtons?: HeaderButtonsConfig;
   /** Current count of messages (used to conditionally show clear button) */
@@ -82,6 +90,10 @@ export function ChatBaseHeader({
   padding,
   kernelIndicatorState,
   kernel,
+  kernelEnvironmentName,
+  kernelCpu,
+  kernelMemory,
+  kernelGpu,
   headerButtons,
   messageCount,
   onNewChat,
@@ -175,9 +187,21 @@ export function ChatBaseHeader({
         >
           {/* Runtime status indicator: always use shared KernelIndicator. */}
           {kernel ? (
-            <KernelIndicator kernel={kernel} />
+            <KernelIndicator
+              kernel={kernel}
+              environmentName={kernelEnvironmentName}
+              cpu={kernelCpu}
+              memory={kernelMemory}
+              gpu={kernelGpu}
+            />
           ) : (
-            <KernelIndicator state={kernelIndicatorState ?? 'undefined'} />
+            <KernelIndicator
+              state={kernelIndicatorState ?? 'undefined'}
+              environmentName={kernelEnvironmentName}
+              cpu={kernelCpu}
+              memory={kernelMemory}
+              gpu={kernelGpu}
+            />
           )}
           {/* Header buttons */}
           {headerButtons?.showNewChat && (

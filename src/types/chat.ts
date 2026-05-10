@@ -660,6 +660,18 @@ export interface ChatBaseProps {
     | import('@jupyterlab/services/lib/kernel/kernel').IKernelConnection
     | null;
 
+  /** Optional environment name displayed in kernel indicator details. */
+  kernelEnvironmentName?: string;
+
+  /** Optional CPU info displayed in kernel indicator details. */
+  kernelCpu?: string;
+
+  /** Optional memory info displayed in kernel indicator details. */
+  kernelMemory?: string;
+
+  /** Optional GPU info displayed in kernel indicator details. */
+  kernelGpu?: string;
+
   /**
    * Current chat view mode.
    * When provided, a segmented view-mode toggle is rendered in the header

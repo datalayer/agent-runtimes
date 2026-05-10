@@ -455,6 +455,10 @@ function ChatBaseInner({
   headerActions,
   kernelIndicatorState,
   kernel,
+  kernelEnvironmentName,
+  kernelCpu,
+  kernelMemory,
+  kernelGpu,
   chatViewMode,
   onChatViewModeChange,
   // Mode selection
@@ -3044,6 +3048,10 @@ function ChatBaseInner({
           padding={padding}
           kernelIndicatorState={kernelIndicatorState}
           kernel={kernel}
+          kernelEnvironmentName={kernelEnvironmentName}
+          kernelCpu={kernelCpu}
+          kernelMemory={kernelMemory}
+          kernelGpu={kernelGpu}
           headerButtons={headerButtons}
           messageCount={messages.length}
           onNewChat={handleNewChat}
