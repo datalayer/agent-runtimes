@@ -26,7 +26,12 @@ import React, {
 } from 'react';
 import { Text, Spinner } from '@primer/react';
 import type { KernelMessage } from '@jupyterlab/services';
-import { Box, setupPrimerPortals } from '@datalayer/primer-addons';
+import {
+  Box,
+  setupPrimerPortals,
+  useThemeStore,
+  getColorPalette,
+} from '@datalayer/primer-addons';
 import { AlertIcon, PersonIcon } from '@primer/octicons-react';
 import { AiAgentIcon } from '@datalayer/icons-react';
 import { QueryClientProvider, QueryClientContext } from '@tanstack/react-query';
@@ -520,6 +525,9 @@ function ChatBaseInner({
   useEffect(() => {
     setupPrimerPortals();
   }, []);
+
+  const { theme } = useThemeStore();
+  const assistantIconColor = getColorPalette(theme, 'dark').textLight;
 
   // ── Built-in pending approvals from the agent-runtime Zustand store ──
   // When the parent doesn't supply the `pendingApprovals` prop, derive them
@@ -1805,7 +1813,7 @@ function ChatBaseInner({
     >
   > = {
     userAvatar: <PersonIcon size={16} />,
-    assistantAvatar: <AiAgentIcon size={16} />,
+    assistantAvatar: <AiAgentIcon size={16} color={assistantIconColor} />,
     showAvatars: true,
     avatarSize: 32,
     userAvatarBg: 'neutral.muted',
