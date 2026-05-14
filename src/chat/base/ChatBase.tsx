@@ -37,7 +37,6 @@ import { AiAgentIcon } from '@datalayer/icons-react';
 import { QueryClientProvider, QueryClientContext } from '@tanstack/react-query';
 import { useCoreStore } from '@datalayer/core';
 import { DEFAULT_SERVICE_URLS } from '@datalayer/core/lib/api/constants';
-import type { ExecutionState } from '@datalayer/jupyter-react';
 import { useChatStore } from '../../stores/chatStore';
 import { useConversationStore } from '../../stores/conversationStore';
 import type { ChatMessage } from '../../types/messages';
@@ -133,30 +132,6 @@ const normalizeAiAgentsBaseUrl = (rawBaseUrl: string): string => {
     return trimmed.slice(0, -AI_AGENTS_API_PREFIX.length);
   }
   return trimmed;
-};
-
-const toKernelIndicatorState = (
-  sandboxStatus?: {
-    available?: boolean;
-    sandbox_running?: boolean;
-    is_executing?: boolean;
-    variant?: string;
-  } | null,
-): ExecutionState | undefined => {
-  if (!sandboxStatus) {
-    return undefined;
-  }
-  if (
-    sandboxStatus.available === false ||
-    sandboxStatus.variant === 'unavailable' ||
-    sandboxStatus.variant === 'error'
-  ) {
-    return undefined;
-  }
-  if (sandboxStatus.sandbox_running === false) {
-    return 'disconnected';
-  }
-  return sandboxStatus.is_executing ? 'connected-busy' : 'connected-idle';
 };
 
 const toWsUrl = (
@@ -1033,12 +1008,6 @@ function ChatBaseInner({
     protocol?.authToken,
     protocol?.agentId,
   );
-  const effectiveKernelIndicatorState = useMemo(() => {
-    if (kernelIndicatorState) {
-      return kernelIndicatorState;
-    }
-    return toKernelIndicatorState(sandboxStatusData ?? sandboxStatusQuery.data);
-  }, [kernelIndicatorState, sandboxStatusData, sandboxStatusQuery.data]);
 
   // ---- Refs ----
   const adapterRef = useRef<BaseProtocolAdapter | null>(null);
@@ -3086,7 +3055,8 @@ function ChatBaseInner({
           showInformation={showInformation}
           onInformationClick={onInformationClick}
           padding={padding}
-          kernelIndicatorState={effectiveKernelIndicatorState}
+          kernelIndicatorState={kernelIndicatorState}
+          runtimeStatus={sandboxStatusData ?? sandboxStatusQuery.data}
           kernel={kernel}
           kernelEnvironmentName={kernelEnvironmentName}
           kernelCpu={kernelCpu}

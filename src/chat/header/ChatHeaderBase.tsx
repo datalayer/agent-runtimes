@@ -30,6 +30,43 @@ import {
 import { AiAgentIcon } from '@datalayer/icons-react';
 
 import type { ChatViewMode, HeaderButtonsConfig } from '../../types/chat';
+import type { SandboxStatusData } from '../../types/context';
+import type { SandboxWsStatus } from '../../types/sandbox';
+
+type RuntimeStatus = SandboxStatusData | SandboxWsStatus;
+
+function toRuntimeExecutionState(
+  runtimeStatus?: RuntimeStatus | null,
+): ExecutionState | undefined {
+  if (!runtimeStatus) {
+    return undefined;
+  }
+
+  if ('available' in runtimeStatus && runtimeStatus.available === false) {
+    return undefined;
+  }
+
+  if (
+    runtimeStatus.variant === 'unavailable' ||
+    runtimeStatus.variant === 'error'
+  ) {
+    return undefined;
+  }
+
+  if (runtimeStatus.sandbox_running === false) {
+    return 'disconnected';
+  }
+
+  if (runtimeStatus.is_executing === true) {
+    return 'connected-busy';
+  }
+
+  if (runtimeStatus.sandbox_running === true) {
+    return 'connected-idle';
+  }
+
+  return undefined;
+}
 
 // ---------------------------------------------------------------------------
 // Props
@@ -46,6 +83,11 @@ export interface ChatBaseHeaderProps {
   padding: number;
   /** Optional kernel indicator state override from notebook runtime. */
   kernelIndicatorState?: ExecutionState;
+  /**
+   * Runtime status from agent-runtimes sandbox status stream.
+   * Uses the same execution-state model as KernelIndicator.
+   */
+  runtimeStatus?: RuntimeStatus | null;
   /**
    * Live kernel connection from the notebook runtime. When provided,
    * the chat header renders the same `<KernelIndicator>` as the notebook
@@ -89,6 +131,7 @@ export function ChatBaseHeader({
   onInformationClick,
   padding,
   kernelIndicatorState,
+  runtimeStatus,
   kernel,
   kernelEnvironmentName,
   kernelCpu,
@@ -101,6 +144,9 @@ export function ChatBaseHeader({
   chatViewMode,
   onChatViewModeChange,
 }: ChatBaseHeaderProps) {
+  const effectiveIndicatorState =
+    kernelIndicatorState ?? toRuntimeExecutionState(runtimeStatus);
+
   return (
     <Box
       sx={{
@@ -196,7 +242,7 @@ export function ChatBaseHeader({
             />
           ) : (
             <KernelIndicator
-              state={kernelIndicatorState ?? 'undefined'}
+              state={effectiveIndicatorState ?? 'undefined'}
               environmentName={kernelEnvironmentName}
               cpu={kernelCpu}
               memory={kernelMemory}
