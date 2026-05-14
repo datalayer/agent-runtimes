@@ -644,6 +644,8 @@ export function useCreateAgentRuntime() {
           agent_spec_id: data.agentSpecId || undefined,
           agent_spec: data.agentSpec || undefined,
           usage_account_uid: data.usageAccountUid || undefined,
+          usage_account_type: data.usageAccountType || undefined,
+          usage_account_handle: data.usageAccountHandle || undefined,
         },
       });
     },

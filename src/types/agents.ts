@@ -105,6 +105,10 @@ export type AgentRuntimeData = {
   agentSpec?: AgentSpec;
   // ID of the agent spec used to create this runtime
   agent_spec_id?: string;
+  // Account metadata charged for runtime usage
+  usage_account_uid?: string;
+  usage_account_type?: 'user' | 'organization';
+  usage_account_handle?: string;
 };
 
 // ---- Running Agents ----
