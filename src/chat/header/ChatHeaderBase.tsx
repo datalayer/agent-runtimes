@@ -35,7 +35,7 @@ import type { SandboxWsStatus } from '../../types/sandbox';
 
 type RuntimeStatus = SandboxStatusData | SandboxWsStatus;
 
-function toRuntimeExecutionState(
+export function toRuntimeExecutionState(
   runtimeStatus?: RuntimeStatus | null,
 ): ExecutionState | undefined {
   if (!runtimeStatus) {
