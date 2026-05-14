@@ -741,7 +741,7 @@ export function ChatFloating({
           headerButtons={{
             showNewChat: showNewChatButton,
             showClear: showClearButton && messages.length > 0,
-            showSettings: showSettingsButton,
+            showSettings: showSettingsButton && !!onSettingsClick,
             onNewChat: handleNewChat,
             onClear: handleClear,
             onSettings: onSettingsClick,

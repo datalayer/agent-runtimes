@@ -12,7 +12,7 @@
 
 import React, { useRef, useEffect } from 'react';
 import { Text, RelativeTime } from '@primer/react';
-import { Box } from '@datalayer/primer-addons';
+import { Box, useThemeStore, getColorPalette } from '@datalayer/primer-addons';
 import { PersonIcon, ToolsIcon } from '@primer/octicons-react';
 import { AiAgentIcon } from '@datalayer/icons-react';
 import type { ChatMessage, ContentPart } from '../../types/messages';
@@ -68,6 +68,11 @@ export function ChatMessages({
   const extensionRegistry = extensionRegistryProp ?? storeExtensionRegistry;
   const containerRef = useRef<HTMLDivElement>(null);
   const lastMessageRef = useRef<HTMLDivElement>(null);
+
+  // Resolve a light color from the current user theme palette so the
+  // assistant icon contrasts the saturated `accent.emphasis` avatar bg.
+  const { theme, colorMode } = useThemeStore();
+  const assistantIconColor = getColorPalette(theme, colorMode).primary;
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
@@ -140,7 +145,7 @@ export function ChatMessages({
               {message.role === 'user' ? (
                 <PersonIcon size={16} />
               ) : message.role === 'assistant' ? (
-                <AiAgentIcon size={16} />
+                <AiAgentIcon size={16} color={assistantIconColor} />
               ) : (
                 <ToolsIcon size={16} />
               )}

@@ -223,17 +223,17 @@ class AIModels(str, Enum):
     pass
 
 
-class EvalSpec(BaseModel):
+class BenchmarkSpec(BaseModel):
     """Evaluation benchmark specification."""
 
     model_config = ConfigDict(populate_by_name=True, by_alias=True)
 
-    id: str = Field(..., description="Unique eval identifier")
-    version: str = Field(default="0.0.1", description="Eval version")
+    id: str = Field(..., description="Unique benchmark identifier")
+    version: str = Field(default="0.0.1", description="Benchmark version")
     name: str = Field(..., description="Display name")
-    description: str = Field(default="", description="Eval description")
+    description: str = Field(default="", description="Benchmark description")
     category: Literal["Coding", "Knowledge", "Reasoning", "Agentic", "Safety"] = Field(
-        ..., description="Eval category"
+        ..., description="Benchmark category"
     )
     task_count: int = Field(..., ge=0, description="Number of benchmark tasks")
     metric: str = Field(..., description="Primary evaluation metric")
@@ -242,6 +242,79 @@ class EvalSpec(BaseModel):
         default="medium", description="Benchmark difficulty"
     )
     languages: List[str] = Field(default_factory=list, description="Target languages")
+    dataset_source: Literal["hosted", "local", "hybrid"] = Field(
+        default="local", description="Dataset source mode"
+    )
+    supports_live_monitoring: bool = Field(
+        default=False, description="Whether benchmark supports live monitoring"
+    )
+    supports_experiment_comparison: bool = Field(
+        default=True,
+        description="Whether benchmark supports side-by-side experiment comparisons",
+    )
+    evaluator_shapes: List[
+        Literal["pass_rate", "numeric", "categorical", "error_only"]
+    ] = Field(default_factory=list, description="Evaluator output shape(s)")
+    recommended_windows: List[str] = Field(
+        default_factory=lambda: ["1h", "6h", "24h", "7d", "30d"],
+        description="Suggested monitoring windows",
+    )
+    trace_integration: bool = Field(
+        default=True,
+        description="Whether runs can link to traces",
+    )
+    dataset_editability: Literal["read-only", "editable"] = Field(
+        default="read-only", description="Whether cases are editable in UI"
+    )
+    sdk_support: Literal["none", "experimental", "stable"] = Field(
+        default="experimental", description="SDK support level"
+    )
+
+
+class EvalSpec(BaseModel):
+    """Built-in evaluator specification."""
+
+    model_config = ConfigDict(populate_by_name=True, by_alias=True)
+
+    id: str = Field(..., description="Unique eval identifier")
+    version: str = Field(default="0.0.1", description="Eval version")
+    name: str = Field(..., description="Display name")
+    description: str = Field(default="", description="Evaluator description")
+    category: Literal[
+        "Comparison",
+        "Type Validation",
+        "Performance",
+        "LLM-as-a-Judge",
+        "Span-Based",
+        "Report",
+    ] = Field(..., description="Evaluator family")
+    evaluator_type: Literal["case", "report"] = Field(
+        ..., description="Case-level or report-level evaluator"
+    )
+    pydantic_class: str = Field(..., description="Pydantic evaluator class name")
+    output_kind: Literal[
+        "boolean",
+        "boolean_with_reason",
+        "score",
+        "score_and_assertion",
+        "report_table",
+        "report_curve",
+    ] = Field(..., description="Primary output shape")
+    cost_tier: Literal["free", "llm"] = Field(
+        default="free", description="Cost tier for this evaluator"
+    )
+    latency: Literal["instant", "fast", "slow"] = Field(
+        default="instant", description="Expected latency profile"
+    )
+    requires: List[str] = Field(
+        default_factory=list,
+        description="Runtime requirements (e.g. expected_output, model, logfire)",
+    )
+    source: str = Field(default="", description="Source documentation URL")
+    default_config: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Suggested baseline evaluator configuration",
+    )
 
 
 class GuardrailPermissions(BaseModel):

@@ -12,6 +12,11 @@
 import { Text, IconButton, Button } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import {
+  KernelIndicator,
+  KERNEL_STATE_VISUALS,
+  type ExecutionState,
+} from '@datalayer/jupyter-react';
+import {
   SyncIcon,
   SignOutIcon,
   SidebarCollapseIcon,
@@ -28,6 +33,8 @@ export interface ChatHeaderProps {
   description?: string;
   /** Current connection state */
   connectionState: ConnectionState;
+  /** Marks the runtime as actively executing for busy-state animation. */
+  runtimeBusy?: boolean;
   /** Callback when reconnect is clicked */
   onReconnect?: () => void;
   /** Callback when disconnect is clicked */
@@ -60,17 +67,24 @@ export function ChatHeader({
   title,
   description,
   connectionState,
+  runtimeBusy = false,
   onReconnect,
   onDisconnect,
   onLogout,
   onCollapsePanel,
 }: ChatHeaderProps) {
-  const colors: Record<ConnectionState, string> = {
-    connected: 'success.fg',
-    connecting: 'attention.fg',
-    disconnected: 'neutral.fg',
-    error: 'danger.fg',
-  };
+  const indicatorState: ExecutionState =
+    connectionState === 'connected'
+      ? runtimeBusy
+        ? 'connected-busy'
+        : 'connected-idle'
+      : connectionState === 'connecting'
+        ? 'connecting'
+        : connectionState === 'error'
+          ? 'connected-dead'
+          : 'disconnected';
+
+  const statusColor = KERNEL_STATE_VISUALS[indicatorState].color;
 
   const labels: Record<ConnectionState, string> = {
     connected: 'Connected',
@@ -103,15 +117,13 @@ export function ChatHeader({
         >
           <Box
             sx={{
-              width: 8,
-              height: 8,
-              borderRadius: '50%',
-              backgroundColor: colors[connectionState],
+              display: 'inline-flex',
+              alignItems: 'center',
             }}
-          />
-          <Text sx={{ color: colors[connectionState] }}>
-            {labels[connectionState]}
-          </Text>
+          >
+            <KernelIndicator state={indicatorState} />
+          </Box>
+          <Text sx={{ color: statusColor }}>{labels[connectionState]}</Text>
           {(connectionState === 'disconnected' ||
             connectionState === 'error') &&
             onReconnect && (

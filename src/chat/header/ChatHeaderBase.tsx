@@ -16,6 +16,8 @@
 import { type ReactNode } from 'react';
 import { Heading, IconButton, Text, Truncate } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
+import { KernelIndicator, type ExecutionState } from '@datalayer/jupyter-react';
+import type { IKernelConnection } from '@jupyterlab/services/lib/kernel/kernel';
 import {
   PlusIcon,
   TrashIcon,
@@ -28,8 +30,43 @@ import {
 import { AiAgentIcon } from '@datalayer/icons-react';
 
 import type { ChatViewMode, HeaderButtonsConfig } from '../../types/chat';
+import type { SandboxStatusData } from '../../types/context';
 import type { SandboxWsStatus } from '../../types/sandbox';
-import { SandboxStatusIndicator } from '../indicators/SandboxStatusIndicator';
+
+type RuntimeStatus = SandboxStatusData | SandboxWsStatus;
+
+export function toRuntimeExecutionState(
+  runtimeStatus?: RuntimeStatus | null,
+): ExecutionState | undefined {
+  if (!runtimeStatus) {
+    return undefined;
+  }
+
+  if ('available' in runtimeStatus && runtimeStatus.available === false) {
+    return undefined;
+  }
+
+  if (
+    runtimeStatus.variant === 'unavailable' ||
+    runtimeStatus.variant === 'error'
+  ) {
+    return undefined;
+  }
+
+  if (runtimeStatus.sandbox_running === false) {
+    return 'disconnected';
+  }
+
+  if (runtimeStatus.is_executing === true) {
+    return 'connected-busy';
+  }
+
+  if (runtimeStatus.sandbox_running === true) {
+    return 'connected-idle';
+  }
+
+  return undefined;
+}
 
 // ---------------------------------------------------------------------------
 // Props
@@ -44,14 +81,28 @@ export interface ChatBaseHeaderProps {
   showInformation?: boolean;
   onInformationClick?: () => void;
   padding: number;
-  /** API base URL passed to SandboxStatusIndicator */
-  sandboxApiBase?: string;
-  /** Auth token passed to SandboxStatusIndicator */
-  sandboxAuthToken?: string;
-  /** Agent ID passed to SandboxStatusIndicator for agent-scoped status */
-  sandboxAgentId?: string;
-  /** Optional sandbox status override for immediate indicator updates */
-  sandboxStatusData?: SandboxWsStatus | null;
+  /** Optional kernel indicator state override from notebook runtime. */
+  kernelIndicatorState?: ExecutionState;
+  /**
+   * Runtime status from agent-runtimes sandbox status stream.
+   * Uses the same execution-state model as KernelIndicator.
+   */
+  runtimeStatus?: RuntimeStatus | null;
+  /**
+   * Live kernel connection from the notebook runtime. When provided,
+   * the chat header renders the same `<KernelIndicator>` as the notebook
+   * toolbar — subscribing to the kernel's live signals so the colour and
+   * tooltip stay in sync with the notebook indicator.
+   */
+  kernel?: IKernelConnection | null;
+  /** Optional environment name shown in indicator details. */
+  kernelEnvironmentName?: string;
+  /** Optional CPU info shown in indicator details. */
+  kernelCpu?: string;
+  /** Optional memory info shown in indicator details. */
+  kernelMemory?: string;
+  /** Optional GPU info shown in indicator details. */
+  kernelGpu?: string;
   /** Header button configuration */
   headerButtons?: HeaderButtonsConfig;
   /** Current count of messages (used to conditionally show clear button) */
@@ -79,10 +130,13 @@ export function ChatBaseHeader({
   showInformation,
   onInformationClick,
   padding,
-  sandboxApiBase,
-  sandboxAuthToken,
-  sandboxAgentId,
-  sandboxStatusData,
+  kernelIndicatorState,
+  runtimeStatus,
+  kernel,
+  kernelEnvironmentName,
+  kernelCpu,
+  kernelMemory,
+  kernelGpu,
   headerButtons,
   messageCount,
   onNewChat,
@@ -90,6 +144,9 @@ export function ChatBaseHeader({
   chatViewMode,
   onChatViewModeChange,
 }: ChatBaseHeaderProps) {
+  const effectiveIndicatorState =
+    kernelIndicatorState ?? toRuntimeExecutionState(runtimeStatus);
+
   return (
     <Box
       sx={{
@@ -174,13 +231,24 @@ export function ChatBaseHeader({
         <Box
           sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}
         >
-          {/* Sandbox execution status indicator */}
-          <SandboxStatusIndicator
-            apiBase={sandboxApiBase}
-            authToken={sandboxAuthToken}
-            agentId={sandboxAgentId}
-            statusOverride={sandboxStatusData}
-          />
+          {/* Runtime status indicator: always use shared KernelIndicator. */}
+          {kernel ? (
+            <KernelIndicator
+              kernel={kernel}
+              environmentName={kernelEnvironmentName}
+              cpu={kernelCpu}
+              memory={kernelMemory}
+              gpu={kernelGpu}
+            />
+          ) : (
+            <KernelIndicator
+              state={effectiveIndicatorState ?? 'undefined'}
+              environmentName={kernelEnvironmentName}
+              cpu={kernelCpu}
+              memory={kernelMemory}
+              gpu={kernelGpu}
+            />
+          )}
           {/* Header buttons */}
           {headerButtons?.showNewChat && (
             <IconButton

@@ -25,7 +25,13 @@ import React, {
   useState,
 } from 'react';
 import { Text, Spinner } from '@primer/react';
-import { Box, setupPrimerPortals } from '@datalayer/primer-addons';
+import type { KernelMessage } from '@jupyterlab/services';
+import {
+  Box,
+  setupPrimerPortals,
+  useThemeStore,
+  getColorPalette,
+} from '@datalayer/primer-addons';
 import { AlertIcon, PersonIcon } from '@primer/octicons-react';
 import { AiAgentIcon } from '@datalayer/icons-react';
 import { QueryClientProvider, QueryClientContext } from '@tanstack/react-query';
@@ -262,12 +268,9 @@ function extractChatMessagesFromFullContext(
   return rawMessages
     .map((msg, index) => {
       const role = String(msg.role || '').toLowerCase();
-      if (
-        role !== 'user' &&
-        role !== 'assistant' &&
-        role !== 'system' &&
-        role !== 'tool'
-      ) {
+      // Only hydrate conversational turns in the visible history.
+      // System/tool messages may contain internal prompts and metadata.
+      if (role !== 'user' && role !== 'assistant') {
         return null;
       }
 
@@ -455,6 +458,12 @@ function ChatBaseInner({
   className,
   loadingState,
   headerActions,
+  kernelIndicatorState,
+  kernel,
+  kernelEnvironmentName,
+  kernelCpu,
+  kernelMemory,
+  kernelGpu,
   chatViewMode,
   onChatViewModeChange,
   // Mode selection
@@ -517,6 +526,9 @@ function ChatBaseInner({
     setupPrimerPortals();
   }, []);
 
+  const { theme } = useThemeStore();
+  const assistantIconColor = getColorPalette(theme, 'dark').textLight;
+
   // ── Built-in pending approvals from the agent-runtime Zustand store ──
   // When the parent doesn't supply the `pendingApprovals` prop, derive them
   // from the shared store so the banner works out-of-the-box.
@@ -530,6 +542,7 @@ function ChatBaseInner({
       s.configuration?.aiagentsRunUrl,
   );
   const activeAgentId = protocolConfig?.agentId || runtimeId;
+  const historyScopeId = runtimeId || activeAgentId;
   const aiAgentsAuthToken = protocolConfig?.authToken;
   const aiAgentsBaseUrl = useMemo(
     () =>
@@ -826,12 +839,38 @@ function ChatBaseInner({
   // ---- Component state ----
   const [displayItems, setDisplayItems] = useState<DisplayItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [liveKernelStatus, setLiveKernelStatus] =
+    useState<KernelMessage.Status>();
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const [input, setInput] = useState('');
 
+  useEffect(() => {
+    if (!kernel) {
+      setLiveKernelStatus(undefined);
+      return;
+    }
+
+    setLiveKernelStatus(kernel.status);
+
+    const handleStatusChange = (
+      _: unknown,
+      nextStatus: KernelMessage.Status,
+    ) => {
+      setLiveKernelStatus(nextStatus);
+    };
+
+    kernel.statusChanged.connect(handleStatusChange);
+
+    return () => {
+      kernel.statusChanged.disconnect(handleStatusChange);
+    };
+  }, [kernel]);
+
   // History-loaded flag — true immediately when there is nothing to fetch
-  const [historyLoaded, setHistoryLoaded] = useState(!runtimeId);
+  const [historyLoaded, setHistoryLoaded] = useState(!historyScopeId);
+  const [historyRefreshTick, setHistoryRefreshTick] = useState(0);
+  const historyRetryAttemptsRef = useRef<Map<string, number>>(new Map());
   // Adapter-ready flag — flipped to true once the protocol adapter is initialised
   const [adapterReady, setAdapterReady] = useState(false);
   // Guard so the pending prompt is sent at most once
@@ -983,6 +1022,7 @@ function ChatBaseInner({
   const hideMessagesAfterToolUIRef = useRef(hideMessagesAfterToolUI);
   hideMessagesAfterToolUIRef.current = hideMessagesAfterToolUI;
   const threadIdRef = useRef<string>(generateMessageId());
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -1561,34 +1601,45 @@ function ChatBaseInner({
   }, [useStoreMode, runtimeId]);
 
   // ---- Conversation history loading ----
-  const prevRuntimeIdRef = useRef<string | undefined>(undefined);
+  const prevHistoryScopeRef = useRef<string | undefined>(undefined);
 
   useEffect(() => {
-    if (runtimeId !== prevRuntimeIdRef.current) {
-      prevRuntimeIdRef.current = runtimeId;
+    if (historyScopeId !== prevHistoryScopeRef.current) {
+      if (historyScopeId) {
+        historyRetryAttemptsRef.current.set(historyScopeId, 0);
+      }
+      prevHistoryScopeRef.current = historyScopeId;
       setDisplayItems([]);
       toolCallsRef.current.clear();
-      if (!runtimeId) return;
+      if (!historyScopeId) return;
     }
 
-    if (!runtimeId) return;
+    if (!historyScopeId) return;
 
     const store = useConversationStore.getState();
-    const currentlyFetching = store.isFetching(runtimeId);
+    const currentlyFetching = store.isFetching(historyScopeId);
+    const storedMessages = store.getMessages(historyScopeId);
 
-    if (!store.needsFetch(runtimeId)) {
-      if (currentlyFetching) {
-        return;
-      }
-      const storedMessages = store.getMessages(runtimeId);
-      if (storedMessages.length > 0) {
-        setDisplayItems(storedMessages);
-      }
+    // 1) Fast local hydration for view switches in the same browser session.
+    if (storedMessages.length > 0) {
+      setDisplayItems(storedMessages);
       setHistoryLoaded(true);
+    }
+
+    if (currentlyFetching) {
       return;
     }
 
-    store.setFetching(runtimeId, true);
+    // 2) On refresh/mount, prefer websocket refresh from the runtime.
+    // If the socket is not connected yet, keep retryable fetch state and wait.
+    if (wsState !== 'connected') {
+      if (storedMessages.length === 0) {
+        setHistoryLoaded(false);
+      }
+      return;
+    }
+
+    store.setFetching(historyScopeId, true);
 
     const fullContextToMessages = () =>
       extractChatMessagesFromFullContext(
@@ -1599,11 +1650,10 @@ function ChatBaseInner({
       );
 
     const applyMessages = (messages: ChatMessage[]) => {
-      if (messages.length > 0) {
-        store.setMessages(runtimeId, messages);
-        setDisplayItems(convertHistoryToDisplayItems(messages));
-      }
-      store.markFetched(runtimeId);
+      store.setMessages(historyScopeId, messages);
+      setDisplayItems(convertHistoryToDisplayItems(messages));
+      historyRetryAttemptsRef.current.set(historyScopeId, 0);
+      store.markFetched(historyScopeId);
       setHistoryLoaded(true);
     };
 
@@ -1613,28 +1663,62 @@ function ChatBaseInner({
       return;
     }
 
+    const requestSnapshotRefresh = (): boolean => {
+      const candidates = [
+        activeAgentId,
+        protocolConfig?.agentId,
+        runtimeId,
+        historyScopeId,
+        'default',
+        undefined,
+      ];
+      const tried = new Set<string>();
+      for (const candidate of candidates) {
+        const normalized =
+          typeof candidate === 'string' ? candidate.trim() : undefined;
+        const key = normalized || '__global__';
+        if (tried.has(key)) {
+          continue;
+        }
+        tried.add(key);
+        const ok = agentRuntimeStore.getState().requestRefresh(normalized);
+        if (ok) {
+          return true;
+        }
+      }
+      return false;
+    };
+
     // Ask the monitoring websocket for a fresh snapshot and wait briefly
     // for `fullContext.messages` to arrive.
-    const refreshRequested = agentRuntimeStore.getState().requestRefresh();
+    const refreshRequested = requestSnapshotRefresh();
     if (!refreshRequested) {
       // Socket not ready yet; allow a later retry (e.g. when wsState changes).
-      store.setFetching(runtimeId, false);
-      setHistoryLoaded(true);
+      store.setFetching(historyScopeId, false);
+      if (storedMessages.length === 0) {
+        setHistoryLoaded(false);
+      }
       return;
     }
 
     let resolved = false;
+    const retryRefreshTimeout = window.setTimeout(() => {
+      if (!resolved) {
+        requestSnapshotRefresh();
+      }
+    }, 500);
+
     const unsubscribe = agentRuntimeStore.subscribe(
       state => state.fullContext,
       nextFullContext => {
         if (resolved || !nextFullContext) {
           return;
         }
-        resolved = true;
-        unsubscribe();
         const messages = extractChatMessagesFromFullContext(
           nextFullContext as Record<string, unknown>,
         );
+        resolved = true;
+        unsubscribe();
         applyMessages(messages);
       },
     );
@@ -1646,27 +1730,49 @@ function ChatBaseInner({
       resolved = true;
       unsubscribe();
       // Do not mark as fetched on timeout; keep it retryable for late WS snapshots.
-      store.setFetching(runtimeId, false);
-      setHistoryLoaded(true);
+      store.setFetching(historyScopeId, false);
+      setHistoryLoaded(storedMessages.length > 0);
+
+      const attempts = historyRetryAttemptsRef.current.get(historyScopeId) ?? 0;
+      const canRetry = wsState === 'connected' && attempts < 3;
+      if (canRetry) {
+        historyRetryAttemptsRef.current.set(historyScopeId, attempts + 1);
+        requestSnapshotRefresh();
+        setHistoryRefreshTick(tick => tick + 1);
+      } else {
+        // After retries are exhausted, treat the conversation as loaded-empty
+        // so pending prompts are not blocked forever on fresh runtimes.
+        setHistoryLoaded(true);
+      }
     }, 2000);
 
     return () => {
+      window.clearTimeout(retryRefreshTimeout);
       window.clearTimeout(timeout);
       unsubscribe();
     };
-  }, [runtimeId, historyEndpoint, protocol?.agentId, wsState]);
+  }, [
+    historyScopeId,
+    historyEndpoint,
+    protocol?.agentId,
+    wsState,
+    activeAgentId,
+    historyRefreshTick,
+  ]);
 
   // Keep in-memory store in sync with displayItems
   useEffect(() => {
-    if (runtimeId && displayItems.length > 0) {
+    if (historyScopeId && displayItems.length > 0) {
       const messagesToSave = displayItems.filter(
         (item): item is ChatMessage => !isToolCallMessage(item),
       );
       if (messagesToSave.length > 0) {
-        useConversationStore.getState().setMessages(runtimeId, messagesToSave);
+        useConversationStore
+          .getState()
+          .setMessages(historyScopeId, messagesToSave);
       }
     }
-  }, [runtimeId, displayItems]);
+  }, [historyScopeId, displayItems]);
 
   // ---- Derived state ----
   const messages = displayItems.filter(
@@ -1706,7 +1812,7 @@ function ChatBaseInner({
     >
   > = {
     userAvatar: <PersonIcon size={16} />,
-    assistantAvatar: <AiAgentIcon size={16} />,
+    assistantAvatar: <AiAgentIcon size={16} color={assistantIconColor} />,
     showAvatars: true,
     avatarSize: 32,
     userAvatarBg: 'neutral.muted',
@@ -2126,7 +2232,7 @@ function ChatBaseInner({
           pendingToolExecutionsRef.current = 0;
           setIsLoading(false);
           setIsStreaming(false);
-          agentRuntimeStore.getState().requestRefresh();
+          agentRuntimeStore.getState().requestRefresh(activeAgentId);
           break;
 
         case 'error':
@@ -2180,7 +2286,7 @@ function ChatBaseInner({
           pendingToolExecutionsRef.current = 0;
           setIsLoading(false);
           setIsStreaming(false);
-          agentRuntimeStore.getState().requestRefresh();
+          agentRuntimeStore.getState().requestRefresh(activeAgentId);
           break;
       }
     });
@@ -2261,6 +2367,14 @@ function ChatBaseInner({
 
   // ---- Auto-scroll to bottom ----
   useEffect(() => {
+    const container = messagesContainerRef.current;
+    if (container) {
+      container.scrollTo({
+        top: container.scrollHeight,
+        behavior: 'smooth',
+      });
+      return;
+    }
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [displayItems]);
 
@@ -2415,7 +2529,7 @@ function ChatBaseInner({
         if (!adapterRef.current) {
           setIsLoading(false);
           setIsStreaming(false);
-          agentRuntimeStore.getState().requestRefresh();
+          agentRuntimeStore.getState().requestRefresh(activeAgentId);
         }
         suppressAssistantTextForToolOnlyRef.current = false;
         currentAssistantMessageRef.current = null;
@@ -2430,6 +2544,7 @@ function ChatBaseInner({
       frontendTools,
       useStoreMode,
       onSendMessage,
+      activeAgentId,
       enableStreaming,
       getEnabledMcpToolNames,
       getEnabledSkillIds,
@@ -2520,14 +2635,22 @@ function ChatBaseInner({
     pendingToolExecutionsRef.current = 0;
     setIsLoading(false);
     setIsStreaming(false);
-    agentRuntimeStore.getState().requestRefresh();
+    agentRuntimeStore.getState().requestRefresh(activeAgentId);
     suppressAssistantTextForToolOnlyRef.current = false;
     currentAssistantMessageRef.current = null;
 
     // Also interrupt any code running in the sandbox (best-effort).
     sandboxStatusQuery.interrupt();
+
+    // Interrupt the connected notebook kernel as well (best-effort),
+    // matching the toolbar's stop/interrupt behavior.
+    if (kernel && kernel.status === 'busy') {
+      void kernel.interrupt().catch(() => {});
+    }
   }, [
+    kernel,
     useStoreMode,
+    activeAgentId,
     protocol?.configEndpoint,
     protocol?.authToken,
     protocol?.agentId,
@@ -2541,7 +2664,8 @@ function ChatBaseInner({
     setInput('');
     threadIdRef.current = generateMessageId();
     if (useStoreMode) clearStoreMessages();
-    if (runtimeId) useConversationStore.getState().clearMessages(runtimeId);
+    if (historyScopeId)
+      useConversationStore.getState().clearMessages(historyScopeId);
     onNewChat?.();
     headerButtons?.onNewChat?.();
   }, [clearStoreMessages, onNewChat, headerButtons, useStoreMode, runtimeId]);
@@ -2552,7 +2676,8 @@ function ChatBaseInner({
       setDisplayItems([]);
       toolCallsRef.current.clear();
       if (useStoreMode) clearStoreMessages();
-      if (runtimeId) useConversationStore.getState().clearMessages(runtimeId);
+      if (historyScopeId)
+        useConversationStore.getState().clearMessages(historyScopeId);
       onClear?.();
       headerButtons?.onClear?.();
     }
@@ -2910,6 +3035,8 @@ function ChatBaseInner({
         display: 'flex',
         flexDirection: 'column',
         height: '100%',
+        maxHeight: '100%',
+        minHeight: 0,
         bg: backgroundColor || 'canvas.default',
         borderRadius,
         border,
@@ -2928,10 +3055,13 @@ function ChatBaseInner({
           showInformation={showInformation}
           onInformationClick={onInformationClick}
           padding={padding}
-          sandboxApiBase={indicatorApiBase}
-          sandboxAuthToken={protocol?.authToken}
-          sandboxAgentId={protocol?.agentId}
-          sandboxStatusData={sandboxStatusData}
+          kernelIndicatorState={kernelIndicatorState}
+          runtimeStatus={sandboxStatusData ?? sandboxStatusQuery.data}
+          kernel={kernel}
+          kernelEnvironmentName={kernelEnvironmentName}
+          kernelCpu={kernelCpu}
+          kernelMemory={kernelMemory}
+          kernelGpu={kernelGpu}
           headerButtons={headerButtons}
           messageCount={messages.length}
           onNewChat={handleNewChat}
@@ -2972,7 +3102,14 @@ function ChatBaseInner({
 
       {/* Messages area */}
       <Box
-        sx={{ flex: 1, flexGrow: 1, overflow: 'auto', bg: 'canvas.default' }}
+        ref={messagesContainerRef}
+        sx={{
+          flex: 1,
+          flexGrow: 1,
+          minHeight: 0,
+          overflow: 'auto',
+          bg: 'canvas.default',
+        }}
       >
         {children ? (
           children
@@ -2981,7 +3118,7 @@ function ChatBaseInner({
             sx={{
               display: 'flex',
               flexDirection: 'column',
-              minHeight: '100%',
+              minHeight: 0,
               bg: 'canvas.default',
             }}
           >
@@ -3022,6 +3159,7 @@ function ChatBaseInner({
           input={input}
           setInput={setInput}
           isLoading={isLoading}
+          kernelStatus={liveKernelStatus}
           connectionConfirmed={connectionConfirmed}
           placeholder={placeholder}
           autoFocus={autoFocus}

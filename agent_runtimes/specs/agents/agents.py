@@ -847,15 +847,8 @@ DEMO_GUARDRAILS_AGENT_SPEC_0_0_1 = AgentSpec(
                 "send:email": False,
                 "deploy:production": False,
             },
-            "token_limits": {
-                "per_run": "25K",
-                "per_day": "150K",
-                "per_month": "1M",
-            },
-            "cost_budget": {
-                "per_run_usd": 0.01,
-                "on_budget_exceeded": "stop",
-            },
+            "token_limits": {"per_run": "25K", "per_day": "150K", "per_month": "1M"},
+            "cost_budget": {"per_run_usd": 0.01, "on_budget_exceeded": "stop"},
             "tool_approval": {
                 "tools": ["runtime[-_]sensitive[-_]echo"],
                 "timeout": "0h5m0s",

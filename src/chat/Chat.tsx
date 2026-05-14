@@ -72,22 +72,27 @@ const queryClient = new QueryClient();
  * Get transport endpoint path
  */
 function getEndpointPath(protocol: Protocol, agentId?: string): string {
+  const resolvedAgentId =
+    typeof agentId === 'string' && agentId.trim().length > 0
+      ? agentId.trim()
+      : 'default';
+
   switch (protocol) {
     case 'vercel-ai':
-      return `/api/v1/vercel-ai/${agentId}`;
+      return `/api/v1/vercel-ai/${resolvedAgentId}`;
     case 'vercel-ai-jupyter':
       // Jupyter server endpoint - same protocol as vercel-ai
       // Note: no leading slash - will be joined with baseUrl that may have trailing slash
       return 'agent_runtimes/chat';
     case 'ag-ui':
-      return `/api/v1/ag-ui/${agentId}/`;
+      return `/api/v1/ag-ui/${resolvedAgentId}/`;
     case 'a2a':
       // A2A requires trailing slash for FastA2A compatibility
-      return `/api/v1/a2a/agents/${agentId}/`;
+      return `/api/v1/a2a/agents/${resolvedAgentId}/`;
     case 'acp':
-      return `/api/v1/acp/ws/${agentId}`;
+      return `/api/v1/acp/ws/${resolvedAgentId}`;
     default:
-      return `/api/v1/agents/${agentId}/chat`;
+      return `/api/v1/agents/${resolvedAgentId}/chat`;
   }
 }
 
@@ -283,6 +288,11 @@ export function Chat({
   onApproveApproval,
   onRejectApproval,
 }: ChatProps) {
+  const resolvedAgentId =
+    typeof agentId === 'string' && agentId.trim().length > 0
+      ? agentId.trim()
+      : 'default';
+
   const [error, setError] = useState<string | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
   const [showDetails, setShowDetails] = useState(false);
@@ -357,16 +367,16 @@ export function Chat({
         }
 
         case 'acp': {
-          endpoint = `${baseUrl}${getEndpointPath(transport, agentId)}`;
+          endpoint = `${baseUrl}${getEndpointPath(transport, resolvedAgentId)}`;
           const acpWsUrl =
             wsUrl ||
-            `${baseUrl.replace('http', 'ws')}/api/v1/acp/ws/${agentId}`;
+            `${baseUrl.replace('http', 'ws')}/api/v1/acp/ws/${resolvedAgentId}`;
           options = { wsUrl: acpWsUrl };
           break;
         }
 
         default: {
-          endpoint = `${baseUrl}${getEndpointPath(transport, agentId)}`;
+          endpoint = `${baseUrl}${getEndpointPath(transport, resolvedAgentId)}`;
           break;
         }
       }
@@ -374,7 +384,7 @@ export function Chat({
       return {
         type: getProtocolType(transport),
         endpoint,
-        agentId,
+        agentId: resolvedAgentId,
         authToken,
         options,
         // Enable config query for all protocols to fetch models and tools
@@ -391,7 +401,7 @@ export function Chat({
       setError(err instanceof Error ? err.message : 'Failed to configure');
       return undefined;
     }
-  }, [transport, baseUrl, wsUrl, agentId, authTokenProp]);
+  }, [transport, baseUrl, wsUrl, resolvedAgentId, authTokenProp]);
 
   // Set initialized once protocol config is built
   useEffect(() => {

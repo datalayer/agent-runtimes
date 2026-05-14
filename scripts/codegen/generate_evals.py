@@ -6,13 +6,14 @@
 Generate Python and TypeScript code from YAML eval specifications.
 
 Usage:
-    python generate_evals.py \\
-      --specs-dir specs/evals \\
-      --python-output agent_runtimes/specs/evals.py \\
+    python generate_evals.py \
+      --specs-dir specs/evals \
+      --python-output agent_runtimes/specs/evals.py \
       --typescript-output src/specs/evals.ts
 """
 
 import argparse
+import json
 import sys
 from pathlib import Path
 from typing import Any
@@ -64,7 +65,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         '"""',
         "Eval Catalog.",
         "",
-        "Predefined evaluation benchmark configurations.",
+        "Predefined built-in evaluator configurations.",
         "",
         "This file is AUTO-GENERATED from YAML specifications.",
         "DO NOT EDIT MANUALLY - run 'make specs' to regenerate.",
@@ -88,20 +89,24 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
             f"{eval_id.upper().replace('-', '_')}_EVAL_SPEC{version_suffix(version)}"
         )
         desc = _esc_dq(spec.get("description", "").strip().replace("\n", " "))
+        default_config = repr(spec.get("default_config", {}))
 
         lines.extend(
             [
                 f"{const_name} = EvalSpec(",
                 f'    id="{eval_id}",',
                 f'    version="{version}",',
-                f'    name="{spec["name"]}",',
+                f'    name="{_esc_dq(spec["name"])}",',
                 f'    description="{desc}",',
                 f'    category="{spec["category"]}",',
-                f"    task_count={spec['task_count']},",
-                f'    metric="{spec["metric"]}",',
+                f'    evaluator_type="{spec["evaluator_type"]}",',
+                f'    pydantic_class="{spec["pydantic_class"]}",',
+                f'    output_kind="{spec["output_kind"]}",',
+                f'    cost_tier="{spec.get("cost_tier", "free")}",',
+                f'    latency="{spec.get("latency", "instant")}",',
+                f"    requires={_fmt_list(spec.get('requires', []))},",
                 f'    source="{spec.get("source", "")}",',
-                f'    difficulty="{spec.get("difficulty", "medium")}",',
-                f"    languages={_fmt_list(spec.get('languages', []))},",
+                f"    default_config={default_config},",
                 ")",
                 "",
             ]
@@ -159,7 +164,7 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
         "/**",
         " * Eval Catalog",
         " *",
-        " * Predefined evaluation benchmark configurations.",
+        " * Predefined built-in evaluator configurations.",
         " *",
         " * This file is AUTO-GENERATED from YAML specifications.",
         " * DO NOT EDIT MANUALLY - run 'make specs' to regenerate.",
@@ -180,6 +185,7 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
             f"{eval_id.upper().replace('-', '_')}_EVAL_SPEC{version_suffix(version)}"
         )
         desc = _esc(spec.get("description", "").strip().replace("\n", " "))
+        default_config = json.dumps(spec.get("default_config", {}), ensure_ascii=True)
 
         lines.extend(
             [
@@ -189,11 +195,14 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
                 f"  name: '{_esc(spec['name'])}',",
                 f"  description: '{desc}',",
                 f"  category: '{spec['category']}',",
-                f"  task_count: {spec['task_count']},",
-                f"  metric: '{spec['metric']}',",
+                f"  evaluator_type: '{spec['evaluator_type']}',",
+                f"  pydantic_class: '{spec['pydantic_class']}',",
+                f"  output_kind: '{spec['output_kind']}',",
+                f"  cost_tier: '{spec.get('cost_tier', 'free')}',",
+                f"  latency: '{spec.get('latency', 'instant')}',",
+                f"  requires: {_ts_list(spec.get('requires', []))},",
                 f"  source: '{spec.get('source', '')}',",
-                f"  difficulty: '{spec.get('difficulty', 'medium')}',",
-                f"  languages: {_ts_list(spec.get('languages', []))},",
+                f"  default_config: {default_config},",
                 "};",
                 "",
             ]

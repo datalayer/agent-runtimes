@@ -310,6 +310,9 @@ class PromptTurnMetricsEmitter:
             attrs["identity.provider"] = user_provider
         if identities_count is not None:
             attrs["identity.count"] = int(max(0, identities_count))
+        usage_account_uid = os.environ.get("DATALAYER_USAGE_ACCOUNT_UID")
+        if usage_account_uid:
+            attrs["usage_account_uid"] = usage_account_uid
 
         resolved_input_tokens = max(
             int(input_tokens)

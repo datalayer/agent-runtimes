@@ -11,6 +11,7 @@
  */
 
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Box, IconButton, Tooltip, Text } from '@primer/react';
 import { CommentDiscussionIcon, XIcon } from '@primer/octicons-react';
 
@@ -69,7 +70,7 @@ export function FloatingBrandButton({
 
   const posStyle = positionStyles[position];
 
-  return (
+  const floatingButton = (
     <Box
       className={className}
       sx={{
@@ -168,6 +169,14 @@ export function FloatingBrandButton({
       </Box>
     </Box>
   );
+
+  // Render in a body portal so fixed positioning stays anchored to the
+  // actual viewport edge even inside transformed containers.
+  if (typeof document !== 'undefined' && document.body) {
+    return createPortal(floatingButton, document.body);
+  }
+
+  return floatingButton;
 }
 
 export default FloatingBrandButton;

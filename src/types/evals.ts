@@ -4,7 +4,7 @@
  */
 
 /**
- * Evaluation benchmark specification.
+ * Built-in evaluator specification.
  */
 export interface EvalSpec {
   /** Unique eval identifier */
@@ -13,20 +13,38 @@ export interface EvalSpec {
   version?: string;
   /** Display name */
   name: string;
-  /** Description of the evaluation */
+  /** Description of the evaluator */
   description: string;
-  /** Category: Coding, Knowledge, Reasoning, Agentic, or Safety */
-  category: 'Coding' | 'Knowledge' | 'Reasoning' | 'Agentic' | 'Safety';
-  /** Number of tasks in the benchmark */
-  task_count: number;
-  /** Primary metric (e.g., 'pass@1', 'accuracy', 'success_rate') */
-  metric: string;
-  /** Source URL or repository */
+  /** Evaluator family */
+  category:
+    | 'Comparison'
+    | 'Type Validation'
+    | 'Performance'
+    | 'LLM-as-a-Judge'
+    | 'Span-Based'
+    | 'Report';
+  /** Case-level or report-level evaluator */
+  evaluator_type: 'case' | 'report';
+  /** Pydantic evaluator class name */
+  pydantic_class: string;
+  /** Primary output shape */
+  output_kind:
+    | 'boolean'
+    | 'boolean_with_reason'
+    | 'score'
+    | 'score_and_assertion'
+    | 'report_table'
+    | 'report_curve';
+  /** Cost tier for running this evaluator */
+  cost_tier: 'free' | 'llm';
+  /** Expected latency profile */
+  latency: 'instant' | 'fast' | 'slow';
+  /** Runtime requirements (e.g. expected_output, logfire, model) */
+  requires?: string[];
+  /** Source documentation URL */
   source: string;
-  /** Difficulty level */
-  difficulty: 'easy' | 'medium' | 'hard' | 'expert';
-  /** Relevant languages */
-  languages: string[];
+  /** Suggested baseline configuration */
+  default_config?: Record<string, unknown>;
 }
 
 /**
@@ -37,11 +55,14 @@ export interface AgentEvalConfig {
   name?: string;
   description?: string;
   category?: string;
-  task_count?: number;
-  metric?: string;
+  evaluator_type?: string;
+  pydantic_class?: string;
+  output_kind?: string;
+  cost_tier?: string;
+  latency?: string;
+  requires?: string[];
   source?: string;
-  difficulty?: string;
-  languages?: string[];
+  default_config?: Record<string, unknown>;
   [key: string]: unknown;
 }
 

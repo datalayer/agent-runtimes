@@ -13,14 +13,14 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { IconButton, Text } from '@primer/react';
+import { createPortal } from 'react-dom';
+import { IconButton } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import {
   SidebarCollapseIcon,
   SidebarExpandIcon,
   XIcon,
 } from '@primer/octicons-react';
-import { AiAgentIcon } from '@datalayer/icons-react';
 import {
   useChatKeyboardShortcuts,
   getShortcutDisplay,
@@ -125,6 +125,49 @@ export function ChatSidebar({
   const sidebarRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const isMobile = useIsMobile();
+  const [desktopViewportHeight, setDesktopViewportHeight] = useState<
+    number | null
+  >(null);
+
+  // Compute available desktop height from the element's top position so the
+  // sidebar always fits within the visible viewport.
+  useEffect(() => {
+    if (isMobile) {
+      setDesktopViewportHeight(null);
+      return;
+    }
+
+    const updateHeight = () => {
+      const el = sidebarRef.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      const viewportHeight =
+        window.visualViewport?.height || window.innerHeight || 0;
+      const bottomPadding = 4; // keep a small breathing space from viewport edge
+      const available = Math.max(
+        220,
+        Math.floor(viewportHeight - rect.top - bottomPadding),
+      );
+      setDesktopViewportHeight(prev =>
+        prev !== null && Math.abs(prev - available) < 2 ? prev : available,
+      );
+    };
+
+    updateHeight();
+    window.addEventListener('resize', updateHeight);
+    window.addEventListener('scroll', updateHeight, true);
+
+    const observer = new ResizeObserver(() => updateHeight());
+    if (sidebarRef.current) {
+      observer.observe(sidebarRef.current);
+    }
+
+    return () => {
+      window.removeEventListener('resize', updateHeight);
+      window.removeEventListener('scroll', updateHeight, true);
+      observer.disconnect();
+    };
+  }, [isMobile]);
 
   // Initialize open state from defaultOpen
   useEffect(() => {
@@ -244,14 +287,16 @@ export function ChatSidebar({
 
   // Collapsed state
   if (!isOpen) {
-    return (
+    const collapsedLauncher = (
       <Box
         ref={sidebarRef}
         className={className}
         sx={{
           position: 'fixed',
           top: 12,
-          ...(position === 'right' ? { right: 12 } : { left: 12 }),
+          ...(position === 'right'
+            ? { right: 'env(safe-area-inset-right)' }
+            : { left: 'env(safe-area-inset-left)' }),
           zIndex: 1001,
           display: 'flex',
           flexDirection: 'column',
@@ -264,7 +309,10 @@ export function ChatSidebar({
             icon={
               position === 'right' ? SidebarExpandIcon : SidebarCollapseIcon
             }
-            aria-label={`Open chat${shortcutHint ? ` (${shortcutHint})` : ''}`}
+            aria-label="Open chat"
+            description={
+              shortcutHint ? `Open chat (${shortcutHint})` : 'Open chat'
+            }
             onClick={handleToggle}
             variant="default"
             size="small"
@@ -300,46 +348,16 @@ export function ChatSidebar({
             </Box>
           )}
         </Box>
-
-        <Box
-          sx={{
-            width: 32,
-            height: 32,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            bg: 'canvas.default',
-            border: '1px solid',
-            borderColor: 'border.default',
-            borderRadius: 2,
-            boxShadow: 'shadow.small',
-          }}
-        >
-          {brandIcon || <AiAgentIcon colored size={20} />}
-        </Box>
-
-        {/* Keyboard shortcut hint */}
-        {shortcutHint && (
-          <Box
-            sx={{
-              px: 1,
-              py: '2px',
-              bg: 'canvas.default',
-              border: '1px solid',
-              borderColor: 'border.default',
-              color: 'fg.muted',
-              borderRadius: 1,
-              fontSize: 0,
-              boxShadow: 'shadow.small',
-            }}
-          >
-            <Text sx={{ fontSize: '10px', fontFamily: 'mono' }}>
-              {shortcutHint}
-            </Text>
-          </Box>
-        )}
       </Box>
     );
+
+    // Render the collapsed launcher in a body portal so it stays pinned to the
+    // viewport edge even when ancestors use transforms/positioning contexts.
+    if (typeof document !== 'undefined' && document.body) {
+      return createPortal(collapsedLauncher, document.body);
+    }
+
+    return collapsedLauncher;
   }
 
   // Mobile full-screen overlay
@@ -383,16 +401,30 @@ export function ChatSidebar({
           position: 'relative',
           display: 'flex',
           flexDirection: 'column',
+          alignSelf: 'stretch',
           width: isMobile
             ? '100%'
             : typeof width === 'number'
               ? `${width}px`
               : width,
-          height: '100%',
+          height: isMobile
+            ? '100%'
+            : desktopViewportHeight
+              ? `${desktopViewportHeight}px`
+              : 'calc(100dvh - 8px)',
+          minHeight: 0,
+          maxHeight: isMobile
+            ? '100%'
+            : desktopViewportHeight
+              ? `${desktopViewportHeight}px`
+              : 'calc(100dvh - 8px)',
+          marginBlock: isMobile ? 0 : '4px',
+          flex: isMobile ? '1 1 auto' : '0 0 auto',
           bg: 'canvas.default',
           borderLeft: !isMobile && position === 'right' ? '1px solid' : 'none',
           borderRight: !isMobile && position === 'left' ? '1px solid' : 'none',
           borderColor: 'border.default',
+          overflow: 'hidden',
           ...mobileStyles,
         }}
       >
@@ -404,7 +436,7 @@ export function ChatSidebar({
           headerButtons={{
             showNewChat: showNewChatButton,
             showClear: showClearButton && messages.length > 0,
-            showSettings: showSettingsButton,
+            showSettings: showSettingsButton && !!onSettingsClick,
             onNewChat: handleNewChat,
             onClear: handleClear,
             onSettings: onSettingsClick,

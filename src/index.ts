@@ -14,6 +14,7 @@ export * from './specs';
 export type {
   AgentRuntimeData,
   AgentSpec,
+  BenchmarkSpec,
   ChatCommonProps,
   TeamSpec,
   GuardrailSpec,

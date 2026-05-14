@@ -3,7 +3,7 @@
 """
 Eval Catalog.
 
-Predefined evaluation benchmark configurations.
+Predefined built-in evaluator configurations.
 
 This file is AUTO-GENERATED from YAML specifications.
 DO NOT EDIT MANUALLY - run 'make specs' to regenerate.
@@ -17,108 +17,156 @@ from agent_runtimes.types import EvalSpec
 # Eval Definitions
 # ============================================================================
 
-AGENTBENCH_EVAL_SPEC_0_0_1 = EvalSpec(
-    id="agentbench",
+CONFUSION_MATRIX_EVALUATOR_EVAL_SPEC_0_0_1 = EvalSpec(
+    id="confusion-matrix-evaluator",
     version="0.0.1",
-    name="AgentBench",
-    description="Multi-dimensional LLM-as-agent evaluation across 8 diverse environments including web browsing, operating system interaction, database queries, digital card games, lateral thinking, and household tasks.",
-    category="Agentic",
-    task_count=4080,
-    metric="success_rate",
-    source="https://github.com/THUDM/AgentBench",
-    difficulty="hard",
-    languages=["python", "sql", "bash"],
+    name="ConfusionMatrixEvaluator",
+    description="Computes classification confusion matrix across the full experiment report.",
+    category="Report",
+    evaluator_type="report",
+    pydantic_class="ConfusionMatrixEvaluator",
+    output_kind="report_table",
+    cost_tier="free",
+    latency="instant",
+    requires=["classification_labels"],
+    source="https://pydantic.dev/docs/ai/evals/evaluators/built-in/#built-in-report-evaluators",
+    default_config={},
 )
 
-GPQA_DIAMOND_EVAL_SPEC_0_0_1 = EvalSpec(
-    id="gpqa-diamond",
+CONTAINS_EVAL_SPEC_0_0_1 = EvalSpec(
+    id="contains",
     version="0.0.1",
-    name="GPQA Diamond",
-    description="Graduate-level science questions crafted by domain experts. Tests advanced reasoning in physics, chemistry, and biology with questions that require PhD-level understanding to answer correctly.",
-    category="Reasoning",
-    task_count=448,
-    metric="accuracy",
-    source="https://github.com/idavidrein/gpqa",
-    difficulty="expert",
-    languages=["english"],
+    name="Contains",
+    description="Checks whether output contains a required value, substring, or key-value pair.",
+    category="Comparison",
+    evaluator_type="case",
+    pydantic_class="Contains",
+    output_kind="boolean_with_reason",
+    cost_tier="free",
+    latency="instant",
+    requires=[],
+    source="https://pydantic.dev/docs/ai/evals/evaluators/built-in/#contains",
+    default_config={
+        "value": "required_term",
+        "case_sensitive": False,
+        "as_strings": True,
+    },
 )
 
-HUMANEVAL_EVAL_SPEC_0_0_1 = EvalSpec(
-    id="humaneval",
+EQUALS_EXPECTED_EVAL_SPEC_0_0_1 = EvalSpec(
+    id="equals-expected",
     version="0.0.1",
-    name="HumanEval",
-    description="Python function implementation from docstrings. Measures functional correctness of code generation by testing against hand-written test cases. Widely used as a baseline for code generation benchmarks.",
-    category="Coding",
-    task_count=164,
-    metric="pass@k",
-    source="https://github.com/openai/human-eval",
-    difficulty="medium",
-    languages=["python"],
+    name="EqualsExpected",
+    description="Exact equality check between output and expected output for each case.",
+    category="Comparison",
+    evaluator_type="case",
+    pydantic_class="EqualsExpected",
+    output_kind="boolean",
+    cost_tier="free",
+    latency="instant",
+    requires=["expected_output"],
+    source="https://pydantic.dev/docs/ai/evals/evaluators/built-in/#equalsexpected",
+    default_config={},
 )
 
-MMLU_EVAL_SPEC_0_0_1 = EvalSpec(
-    id="mmlu",
+EQUALS_EVAL_SPEC_0_0_1 = EvalSpec(
+    id="equals",
     version="0.0.1",
-    name="MMLU",
-    description="Massive Multitask Language Understanding: 57-subject knowledge benchmark spanning STEM, humanities, social sciences, and more. Tests broad knowledge and reasoning across diverse academic domains.",
-    category="Knowledge",
-    task_count=15908,
-    metric="accuracy",
-    source="https://github.com/hendrycks/test",
-    difficulty="medium",
-    languages=["english"],
+    name="Equals",
+    description="Checks whether output equals a fixed expected value.",
+    category="Comparison",
+    evaluator_type="case",
+    pydantic_class="Equals",
+    output_kind="boolean",
+    cost_tier="free",
+    latency="instant",
+    requires=[],
+    source="https://pydantic.dev/docs/ai/evals/evaluators/built-in/#equals",
+    default_config={"value": "expected_result"},
 )
 
-SWE_BENCH_VERIFIED_EVAL_SPEC_0_0_1 = EvalSpec(
-    id="swe-bench-verified",
+HAS_MATCHING_SPAN_EVAL_SPEC_0_0_1 = EvalSpec(
+    id="has-matching-span",
     version="0.0.1",
-    name="SWE-bench Verified",
-    description="Human-validated subset of SWE-bench with verified ground-truth patches. Provides higher confidence evaluation of software engineering capabilities by eliminating ambiguous or flawed test cases from the full benchmark.",
-    category="Coding",
-    task_count=500,
-    metric="pass@1",
-    source="https://www.swebench.com/",
-    difficulty="hard",
-    languages=["python"],
+    name="HasMatchingSpan",
+    description="Verifies that traces include at least one OpenTelemetry span matching a query.",
+    category="Span-Based",
+    evaluator_type="case",
+    pydantic_class="HasMatchingSpan",
+    output_kind="boolean",
+    cost_tier="free",
+    latency="fast",
+    requires=["logfire"],
+    source="https://pydantic.dev/docs/ai/evals/evaluators/built-in/#hasmatchingspan",
+    default_config={"query": {"name_contains": "tool_call"}},
 )
 
-SWE_BENCH_EVAL_SPEC_0_0_1 = EvalSpec(
-    id="swe-bench",
+IS_INSTANCE_EVAL_SPEC_0_0_1 = EvalSpec(
+    id="is-instance",
     version="0.0.1",
-    name="SWE-bench",
-    description="Real-world software engineering tasks from GitHub issues. Tests an agent's ability to understand bug reports and feature requests, then produce working code patches that pass existing test suites.",
-    category="Coding",
-    task_count=2294,
-    metric="pass@1",
-    source="https://www.swebench.com/",
-    difficulty="hard",
-    languages=["python"],
+    name="IsInstance",
+    description="Validates that the output type matches the expected runtime type name.",
+    category="Type Validation",
+    evaluator_type="case",
+    pydantic_class="IsInstance",
+    output_kind="boolean_with_reason",
+    cost_tier="free",
+    latency="instant",
+    requires=[],
+    source="https://pydantic.dev/docs/ai/evals/evaluators/built-in/#isinstance",
+    default_config={"type_name": "str"},
 )
 
-TOOLBENCH_EVAL_SPEC_0_0_1 = EvalSpec(
-    id="toolbench",
+LLM_JUDGE_EVAL_SPEC_0_0_1 = EvalSpec(
+    id="llm-judge",
     version="0.0.1",
-    name="ToolBench",
-    description="Large-scale benchmark for tool-augmented LLMs covering 16000+ real-world APIs across 49 categories. Evaluates multi-step tool usage, API selection, argument generation, and response parsing in complex, chained workflows.",
-    category="Agentic",
-    task_count=12657,
-    metric="pass_rate",
-    source="https://github.com/OpenBMB/ToolBench",
-    difficulty="hard",
-    languages=["python", "json"],
+    name="LLMJudge",
+    description="Uses an LLM rubric to score and/or assert subjective response quality.",
+    category="LLM-as-a-Judge",
+    evaluator_type="case",
+    pydantic_class="LLMJudge",
+    output_kind="score_and_assertion",
+    cost_tier="llm",
+    latency="slow",
+    requires=["model", "rubric"],
+    source="https://pydantic.dev/docs/ai/evals/evaluators/built-in/#llmjudge",
+    default_config={
+        "rubric": "Response is accurate and helpful.",
+        "include_input": True,
+        "include_expected_output": False,
+    },
 )
 
-TRUTHFULQA_EVAL_SPEC_0_0_1 = EvalSpec(
-    id="truthfulqa",
+MAX_DURATION_EVAL_SPEC_0_0_1 = EvalSpec(
+    id="max-duration",
     version="0.0.1",
-    name="TruthfulQA",
-    description="Benchmark measuring whether a language model generates truthful answers to questions spanning 38 categories including health, law, finance, and politics. Designed to test resilience against common human misconceptions and falsehoods that models may have learned from training data.",
-    category="Safety",
-    task_count=817,
-    metric="truthful_informative",
-    source="https://github.com/sylinrl/TruthfulQA",
-    difficulty="medium",
-    languages=["english"],
+    name="MaxDuration",
+    description="Enforces a maximum allowed execution duration per case.",
+    category="Performance",
+    evaluator_type="case",
+    pydantic_class="MaxDuration",
+    output_kind="boolean",
+    cost_tier="free",
+    latency="instant",
+    requires=["duration"],
+    source="https://pydantic.dev/docs/ai/evals/evaluators/built-in/#maxduration",
+    default_config={"seconds": 2.0},
+)
+
+PRECISION_RECALL_EVALUATOR_EVAL_SPEC_0_0_1 = EvalSpec(
+    id="precision-recall-evaluator",
+    version="0.0.1",
+    name="PrecisionRecallEvaluator",
+    description="Computes precision-recall curve and AUC metrics at report level.",
+    category="Report",
+    evaluator_type="report",
+    pydantic_class="PrecisionRecallEvaluator",
+    output_kind="report_curve",
+    cost_tier="free",
+    latency="instant",
+    requires=["binary_labels"],
+    source="https://pydantic.dev/docs/ai/evals/evaluators/built-in/#built-in-report-evaluators",
+    default_config={},
 )
 
 # ============================================================================
@@ -126,14 +174,15 @@ TRUTHFULQA_EVAL_SPEC_0_0_1 = EvalSpec(
 # ============================================================================
 
 EVAL_CATALOG: Dict[str, EvalSpec] = {
-    "agentbench": AGENTBENCH_EVAL_SPEC_0_0_1,
-    "gpqa-diamond": GPQA_DIAMOND_EVAL_SPEC_0_0_1,
-    "humaneval": HUMANEVAL_EVAL_SPEC_0_0_1,
-    "mmlu": MMLU_EVAL_SPEC_0_0_1,
-    "swe-bench-verified": SWE_BENCH_VERIFIED_EVAL_SPEC_0_0_1,
-    "swe-bench": SWE_BENCH_EVAL_SPEC_0_0_1,
-    "toolbench": TOOLBENCH_EVAL_SPEC_0_0_1,
-    "truthfulqa": TRUTHFULQA_EVAL_SPEC_0_0_1,
+    "confusion-matrix-evaluator": CONFUSION_MATRIX_EVALUATOR_EVAL_SPEC_0_0_1,
+    "contains": CONTAINS_EVAL_SPEC_0_0_1,
+    "equals-expected": EQUALS_EXPECTED_EVAL_SPEC_0_0_1,
+    "equals": EQUALS_EVAL_SPEC_0_0_1,
+    "has-matching-span": HAS_MATCHING_SPAN_EVAL_SPEC_0_0_1,
+    "is-instance": IS_INSTANCE_EVAL_SPEC_0_0_1,
+    "llm-judge": LLM_JUDGE_EVAL_SPEC_0_0_1,
+    "max-duration": MAX_DURATION_EVAL_SPEC_0_0_1,
+    "precision-recall-evaluator": PRECISION_RECALL_EVALUATOR_EVAL_SPEC_0_0_1,
 }
 
 

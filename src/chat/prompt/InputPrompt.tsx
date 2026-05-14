@@ -39,6 +39,8 @@ export interface InputPromptProps {
   placeholder?: string;
   /** Whether the agent is loading / streaming */
   isLoading?: boolean;
+  /** Whether the connected kernel is currently busy */
+  isKernelBusy?: boolean;
   /** Callback when a message is submitted */
   onSend: (message: string) => void;
   /** Callback when the stop button is clicked */
@@ -78,6 +80,7 @@ export function InputPrompt({
   variant = 'text',
   placeholder = 'Ask anything…',
   isLoading = false,
+  isKernelBusy = false,
   onSend,
   onStop,
   autoFocus = false,
@@ -212,6 +215,7 @@ export function InputPrompt({
           {/* Footer */}
           <InputPromptFooter
             isLoading={isLoading}
+            isKernelBusy={isKernelBusy}
             sendDisabled={!input.trim() || disabled || readOnly}
             onSend={handleSend}
             onStop={handleStop}
