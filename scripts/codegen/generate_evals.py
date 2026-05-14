@@ -26,7 +26,7 @@ def _fmt_list(items: list[str]) -> str:
     """Format a list of strings with double quotes for ruff compliance."""
     if not items:
         return "[]"
-    return "[" + ", ".join(f'\"{item}\"' for item in items) + "]"
+    return "[" + ", ".join(f'"{item}"' for item in items) + "]"
 
 
 def _ts_list(items: list[str]) -> str:

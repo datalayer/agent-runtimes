@@ -14,6 +14,8 @@ from __future__ import annotations
 import logging
 import os
 import tempfile
+from importlib import import_module
+from typing import Any, Callable, cast
 
 import httpx
 
@@ -139,9 +141,10 @@ class PDFOutputGenerator(BaseOutputGenerator):
     def _markdown_to_html(self, markdown_text: str) -> str:
         """Best-effort Markdown → HTML conversion."""
         try:
-            import markdown  # type: ignore[import-untyped]
+            markdown_module: Any = import_module("markdown")
+            markdown_render = cast(Callable[..., str], markdown_module.markdown)
 
-            return markdown.markdown(
+            return markdown_render(
                 markdown_text,
                 extensions=["tables", "fenced_code", "codehilite"],
             )

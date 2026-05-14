@@ -232,8 +232,8 @@ class BenchmarkSpec(BaseModel):
     version: str = Field(default="0.0.1", description="Benchmark version")
     name: str = Field(..., description="Display name")
     description: str = Field(default="", description="Benchmark description")
-    category: Literal["Coding", "Knowledge", "Reasoning", "Agentic", "Safety"] = (
-        Field(..., description="Benchmark category")
+    category: Literal["Coding", "Knowledge", "Reasoning", "Agentic", "Safety"] = Field(
+        ..., description="Benchmark category"
     )
     task_count: int = Field(..., ge=0, description="Number of benchmark tasks")
     metric: str = Field(..., description="Primary evaluation metric")

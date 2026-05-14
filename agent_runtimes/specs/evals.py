@@ -13,7 +13,6 @@ from typing import Dict, List
 
 from agent_runtimes.types import EvalSpec
 
-
 # ============================================================================
 # Eval Definitions
 # ============================================================================
@@ -47,7 +46,11 @@ CONTAINS_EVAL_SPEC_0_0_1 = EvalSpec(
     latency="instant",
     requires=[],
     source="https://pydantic.dev/docs/ai/evals/evaluators/built-in/#contains",
-    default_config={'value': 'required_term', 'case_sensitive': False, 'as_strings': True},
+    default_config={
+        "value": "required_term",
+        "case_sensitive": False,
+        "as_strings": True,
+    },
 )
 
 EQUALS_EXPECTED_EVAL_SPEC_0_0_1 = EvalSpec(
@@ -79,7 +82,7 @@ EQUALS_EVAL_SPEC_0_0_1 = EvalSpec(
     latency="instant",
     requires=[],
     source="https://pydantic.dev/docs/ai/evals/evaluators/built-in/#equals",
-    default_config={'value': 'expected_result'},
+    default_config={"value": "expected_result"},
 )
 
 HAS_MATCHING_SPAN_EVAL_SPEC_0_0_1 = EvalSpec(
@@ -95,7 +98,7 @@ HAS_MATCHING_SPAN_EVAL_SPEC_0_0_1 = EvalSpec(
     latency="fast",
     requires=["logfire"],
     source="https://pydantic.dev/docs/ai/evals/evaluators/built-in/#hasmatchingspan",
-    default_config={'query': {'name_contains': 'tool_call'}},
+    default_config={"query": {"name_contains": "tool_call"}},
 )
 
 IS_INSTANCE_EVAL_SPEC_0_0_1 = EvalSpec(
@@ -111,7 +114,7 @@ IS_INSTANCE_EVAL_SPEC_0_0_1 = EvalSpec(
     latency="instant",
     requires=[],
     source="https://pydantic.dev/docs/ai/evals/evaluators/built-in/#isinstance",
-    default_config={'type_name': 'str'},
+    default_config={"type_name": "str"},
 )
 
 LLM_JUDGE_EVAL_SPEC_0_0_1 = EvalSpec(
@@ -127,7 +130,11 @@ LLM_JUDGE_EVAL_SPEC_0_0_1 = EvalSpec(
     latency="slow",
     requires=["model", "rubric"],
     source="https://pydantic.dev/docs/ai/evals/evaluators/built-in/#llmjudge",
-    default_config={'rubric': 'Response is accurate and helpful.', 'include_input': True, 'include_expected_output': False},
+    default_config={
+        "rubric": "Response is accurate and helpful.",
+        "include_input": True,
+        "include_expected_output": False,
+    },
 )
 
 MAX_DURATION_EVAL_SPEC_0_0_1 = EvalSpec(
@@ -143,7 +150,7 @@ MAX_DURATION_EVAL_SPEC_0_0_1 = EvalSpec(
     latency="instant",
     requires=["duration"],
     source="https://pydantic.dev/docs/ai/evals/evaluators/built-in/#maxduration",
-    default_config={'seconds': 2.0},
+    default_config={"seconds": 2.0},
 )
 
 PRECISION_RECALL_EVALUATOR_EVAL_SPEC_0_0_1 = EvalSpec(
@@ -184,8 +191,8 @@ def get_eval_spec(eval_id: str) -> EvalSpec | None:
     spec = EVAL_CATALOG.get(eval_id)
     if spec is not None:
         return spec
-    base, _, ver = eval_id.rpartition(':')
-    if base and '.' in ver:
+    base, _, ver = eval_id.rpartition(":")
+    if base and "." in ver:
         return EVAL_CATALOG.get(base)
     return None
 

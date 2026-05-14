@@ -13,7 +13,6 @@ from typing import Dict, List
 
 from agent_runtimes.types import BenchmarkSpec
 
-
 # ============================================================================
 # Benchmark Definitions
 # ============================================================================
@@ -207,8 +206,8 @@ def get_benchmark_spec(benchmark_id: str) -> BenchmarkSpec | None:
     spec = BENCHMARK_CATALOG.get(benchmark_id)
     if spec is not None:
         return spec
-    base, _, ver = benchmark_id.rpartition(':')
-    if base and '.' in ver:
+    base, _, ver = benchmark_id.rpartition(":")
+    if base and "." in ver:
         return BENCHMARK_CATALOG.get(base)
     return None
 

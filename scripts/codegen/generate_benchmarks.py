@@ -25,7 +25,7 @@ def _fmt_list(items: list[str]) -> str:
     """Format a list of strings with double quotes for ruff compliance."""
     if not items:
         return "[]"
-    return "[" + ", ".join(f'\"{item}\"' for item in items) + "]"
+    return "[" + ", ".join(f'"{item}"' for item in items) + "]"
 
 
 def _ts_list(items: list[str]) -> str:
@@ -84,9 +84,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
     for spec in specs:
         benchmark_id = spec["id"]
         version = spec["version"]
-        const_name = (
-            f"{benchmark_id.upper().replace('-', '_')}_BENCHMARK_SPEC{version_suffix(version)}"
-        )
+        const_name = f"{benchmark_id.upper().replace('-', '_')}_BENCHMARK_SPEC{version_suffix(version)}"
         desc = _esc_dq(spec.get("description", "").strip().replace("\n", " "))
 
         lines.extend(
@@ -127,9 +125,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
     for spec in specs:
         benchmark_id = spec["id"]
         version = spec["version"]
-        const_name = (
-            f"{benchmark_id.upper().replace('-', '_')}_BENCHMARK_SPEC{version_suffix(version)}"
-        )
+        const_name = f"{benchmark_id.upper().replace('-', '_')}_BENCHMARK_SPEC{version_suffix(version)}"
         lines.append(f'    "{benchmark_id}": {const_name},')
     lines.extend(
         [
@@ -184,9 +180,7 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
     for spec in specs:
         benchmark_id = spec["id"]
         version = spec["version"]
-        const_name = (
-            f"{benchmark_id.upper().replace('-', '_')}_BENCHMARK_SPEC{version_suffix(version)}"
-        )
+        const_name = f"{benchmark_id.upper().replace('-', '_')}_BENCHMARK_SPEC{version_suffix(version)}"
         desc = _esc(spec.get("description", "").strip().replace("\n", " "))
 
         lines.extend(
@@ -227,9 +221,7 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
     for spec in specs:
         benchmark_id = spec["id"]
         version = spec["version"]
-        const_name = (
-            f"{benchmark_id.upper().replace('-', '_')}_BENCHMARK_SPEC{version_suffix(version)}"
-        )
+        const_name = f"{benchmark_id.upper().replace('-', '_')}_BENCHMARK_SPEC{version_suffix(version)}"
         lines.append(f"  '{benchmark_id}': {const_name},")
     lines.extend(
         [
