@@ -164,6 +164,9 @@ class AGUITransport(BaseTransport):
 
             pydantic_agent = self._get_pydantic_agent()
             agui_kwargs = self._agui_kwargs
+            if agui_kwargs.get("builtin_tools") is None:
+                agui_kwargs = dict(agui_kwargs)
+                agui_kwargs.pop("builtin_tools", None)
             agent_id = self._agent_id
             tracker = get_usage_tracker()
             # Store reference to self for accessing runtime toolsets in the closure

@@ -936,9 +936,10 @@ class VercelAITransport(BaseTransport):
                     "agent": pydantic_agent,
                     "model": model,
                     "toolsets": runtime_toolsets,
-                    "builtin_tools": effective_builtin_tools,
                     "on_complete": on_complete,
                 }
+                if effective_builtin_tools is not None:
+                    dispatch_kwargs["builtin_tools"] = effective_builtin_tools
 
                 dispatch_params = inspect.signature(
                     VercelAIAdapter.dispatch_request
