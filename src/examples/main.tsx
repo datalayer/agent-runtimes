@@ -482,7 +482,7 @@ export const ExampleApp: React.FC = () => {
 
     // 3) Wipe every piece of in-process agent state so the next example boots
     //    with a clean slate (no leftover messages, threads, pending tool
-    //    calls, runtime snapshots, monitoring caches, or sockets).
+    //    calls, code sandbox snapshots, monitoring caches, or sockets).
     useChatStore.getState().reset();
     useConversationStore.getState().clearAll();
     agentRuntimeStore.getState().reset();
