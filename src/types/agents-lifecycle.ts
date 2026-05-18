@@ -30,11 +30,15 @@ export type CreateAgentRuntimeRequest = {
   /** Full agent spec payload to propagate to backend services */
   agentSpec?: Record<string, any>;
   /** Account UID (user or organization) charged for runtime costs */
-  usageAccountUid?: string;
+  billableAccountUid?: string;
   /** Account kind charged for runtime costs. */
-  usageAccountType?: 'user' | 'organization';
+  billableAccountType?: 'user' | 'organization' | 'team';
   /** Account handle charged for runtime costs. */
-  usageAccountHandle?: string;
+  billableAccountHandle?: string;
+  /** Mount account home folder into runtime. */
+  mountHomeFolder?: boolean;
+  /** Optional volume UID to mount into runtime. */
+  volumeUid?: string;
 };
 
 export type CreateRuntimeApiResponse = {

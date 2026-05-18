@@ -463,6 +463,11 @@ export function AgentsMixin<TBase extends Constructor>(Base: TBase) {
           enable_codemode: data.enableCodemode ?? false,
           agent_spec_id: data.agentSpecId || undefined,
           agent_spec: data.agentSpec || undefined,
+          billable_account_uid: data.billableAccountUid || undefined,
+          billable_account_type: data.billableAccountType || undefined,
+          billable_account_handle: data.billableAccountHandle || undefined,
+          mount_home_folder: data.mountHomeFolder ?? false,
+          volume_uid: data.volumeUid || undefined,
         },
       });
     }
