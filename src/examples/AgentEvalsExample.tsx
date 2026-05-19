@@ -85,7 +85,7 @@ const AgentEvalsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
   const [evalRuns, setEvalRuns] = useState<EvalRun[]>([]);
   const [isRunning, setIsRunning] = useState(false);
   const [flash, setFlash] = useState<string | null>(null);
-  const [datasetId, setDatasetId] = useState<string | null>(null);
+  const [evalId, setEvalId] = useState<string | null>(null);
   const [experimentId, setExperimentId] = useState<string | null>(null);
   const [isBootstrapping, setIsBootstrapping] = useState(true);
 
@@ -160,21 +160,21 @@ const AgentEvalsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
     const bootstrap = async () => {
       setIsBootstrapping(true);
       try {
-        const datasetName = `agent-evals-${agentId}`;
-        const datasetsRes = await evalApiFetch(
-          `/evals/datasets?source=hosted&q=${encodeURIComponent(datasetName)}&limit=50`,
+        const evalName = `agent-evals-${agentId}`;
+        const evalsRes = await evalApiFetch(
+          `/evals/evals?source=hosted&q=${encodeURIComponent(evalName)}&limit=50`,
         );
-        const datasets = Array.isArray((datasetsRes as any)?.datasets)
-          ? (datasetsRes as any).datasets
+        const evals = Array.isArray((evalsRes as any)?.evals)
+          ? (evalsRes as any).evals
           : [];
-        let dataset = datasets.find((d: any) => d?.name === datasetName);
+        let evalRecord = evals.find((d: any) => d?.name === evalName);
 
-        if (!dataset) {
-          const createdDatasetRes = await evalApiFetch('/evals/datasets', {
+        if (!evalRecord) {
+          const createdEvalRes = await evalApiFetch('/evals/evals', {
             method: 'POST',
             body: JSON.stringify({
-              name: datasetName,
-              description: `Hosted eval dataset for ${agentId}`,
+              name: evalName,
+              description: `Hosted eval for ${agentId}`,
               source: 'hosted',
               kind: 'agent-quality',
               schema: {},
@@ -183,16 +183,16 @@ const AgentEvalsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
               cases: [],
             }),
           });
-          dataset = (createdDatasetRes as any)?.dataset;
+          evalRecord = (createdEvalRes as any)?.eval;
         }
 
-        if (!dataset?.id) {
-          throw new Error('Failed to initialize eval dataset.');
+        if (!evalRecord?.id) {
+          throw new Error('Failed to initialize eval.');
         }
-        setDatasetId(dataset.id);
+        setEvalId(evalRecord.id);
 
         const experimentsRes = await evalApiFetch(
-          `/evals/experiments?dataset_id=${encodeURIComponent(dataset.id)}&limit=50`,
+          `/evals/experiments?eval_id=${encodeURIComponent(evalRecord.id)}&limit=50`,
         );
         const experiments = Array.isArray((experimentsRes as any)?.experiments)
           ? (experimentsRes as any).experiments
@@ -207,7 +207,7 @@ const AgentEvalsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
             {
               method: 'POST',
               body: JSON.stringify({
-                dataset_id: dataset.id,
+                eval_id: evalRecord.id,
                 name: 'default-suite',
                 description: 'Default evaluation suite for AgentEvalsExample.',
                 status: 'ready',
@@ -289,7 +289,7 @@ const AgentEvalsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
             },
             report: {
               source: 'AgentEvalsExample',
-              dataset_id: datasetId,
+              eval_id: evalId,
               experiment_id: experimentId,
               agent_id: agentId,
             },
@@ -316,7 +316,7 @@ const AgentEvalsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
     evalApiFetch,
     mapRuns,
     podName,
-    datasetId,
+    evalId,
     agentId,
   ]);
 
@@ -362,7 +362,7 @@ const AgentEvalsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
       >
         <Spinner size="large" />
         <Text sx={{ color: 'fg.muted' }}>
-          Preparing hosted eval dataset and experiment...
+          Preparing hosted eval and experiment...
         </Text>
       </Box>
     );

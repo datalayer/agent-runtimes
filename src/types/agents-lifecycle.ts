@@ -31,6 +31,8 @@ export type CreateAgentRuntimeRequest = {
   agentSpec?: Record<string, any>;
   /** Account UID (user or organization) charged for runtime costs */
   billableAccountUid?: string;
+  /** User account handle used for user home mount path. */
+  userAccountHandle?: string;
   /** Account kind charged for runtime costs. */
   billableAccountType?: 'user' | 'organization' | 'team';
   /** Account handle charged for runtime costs. */
@@ -39,6 +41,8 @@ export type CreateAgentRuntimeRequest = {
   mountHomeFolder?: boolean;
   /** Optional volume UID to mount into runtime. */
   volumeUid?: string;
+  /** Optional volume UIDs to mount into runtime. */
+  volumeUids?: string[];
 };
 
 export type CreateRuntimeApiResponse = {

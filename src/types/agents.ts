@@ -111,6 +111,7 @@ export type AgentRuntimeData = {
   billable_account_handle?: string;
   mount_home_folder?: boolean;
   volume_uid?: string;
+  volume_uids?: string[];
 };
 
 // ---- Running Agents ----
