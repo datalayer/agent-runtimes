@@ -37,6 +37,10 @@ export type CreateAgentRuntimeRequest = {
   billableAccountType?: 'user' | 'organization' | 'team';
   /** Account handle charged for runtime costs. */
   billableAccountHandle?: string;
+  /** Source organization UID for team-billed runtimes. */
+  billableSourceOrganizationUid?: string;
+  /** Source organization handle for team-billed runtimes. */
+  billableSourceOrganizationHandle?: string;
   /** Mount account home folder into runtime. */
   mountHomeFolder?: boolean;
   /** Optional volume UID to mount into runtime. */

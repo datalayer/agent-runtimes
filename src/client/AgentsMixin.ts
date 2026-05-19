@@ -472,6 +472,10 @@ export function AgentsMixin<TBase extends Constructor>(Base: TBase) {
           billable_account_uid: data.billableAccountUid || undefined,
           billable_account_type: data.billableAccountType || undefined,
           billable_account_handle: data.billableAccountHandle || undefined,
+          billable_source_organization_uid:
+            data.billableSourceOrganizationUid || undefined,
+          billable_source_organization_handle:
+            data.billableSourceOrganizationHandle || undefined,
           mount_home_folder: data.mountHomeFolder ?? false,
           volume_uids:
             normalizedVolumeUids.length > 0 ? normalizedVolumeUids : undefined,
