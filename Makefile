@@ -16,6 +16,10 @@ AGENTSPECS_REPO ?= https://github.com/datalayer/agentspecs.git
 AGENTSPECS_DIR ?= agentspecs
 AGENTSPECS_BRANCH ?= "feat/new"
 
+AGENT_SERVE_ID ?= data-acquisition
+AGENT_SERVE_NAME ?= dla-1
+AGENT_SERVE_PROTOCOL ?= vercel-ai
+
 BEDROCK_ENV = \
 	AWS_ACCESS_KEY_ID=${DATALAYER_BEDROCK_AWS_ACCESS_KEY_ID} \
 	AWS_SECRET_ACCESS_KEY=${DATALAYER_BEDROCK_AWS_SECRET_ACCESS_KEY} \
@@ -117,9 +121,9 @@ jupyter-server: # jupyter-server
 
 agent-serve: # agent-server
 	@$(BEDROCK_ENV) agent-runtimes serve \
-	  --agent-id data-acquisition \
-	  --agent-name dla-1 \
-	  --protocol ag-ui \
+	  --agent-id $(AGENT_SERVE_ID) \
+	  --agent-name $(AGENT_SERVE_NAME) \
+	  --protocol $(AGENT_SERVE_PROTOCOL) \
 	  --mcp-servers tavily \
 	  --codemode \
 	  --skills github,pdf \
