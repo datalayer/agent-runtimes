@@ -569,17 +569,42 @@ export function useAgentRuntimes(
  * The backend returns active runtimes from the operator **plus** paused
  * runtimes synthesised from Solr checkpoint records (with ``status="paused"``).
  */
-export function useAgentRuntimesQuery() {
+export function useAgentRuntimesQuery(scope?: {
+  selectedUserUid?: string;
+  selectedOrganizationUid?: string;
+  selectedTeamUid?: string;
+  selectedAgentUid?: string;
+}) {
   const { configuration } = useCoreStore();
   const { requestDatalayer } = useDatalayer({ notifyOnError: false });
   const { user } = useIAMStore();
   const queryClient = useQueryClient();
 
   return useQuery({
-    queryKey: agentQueryKeys.agentRuntimes.lists(),
+    queryKey: [
+      ...agentQueryKeys.agentRuntimes.lists(),
+      scope?.selectedUserUid || '',
+      scope?.selectedOrganizationUid || '',
+      scope?.selectedTeamUid || '',
+      scope?.selectedAgentUid || '',
+    ],
     queryFn: async () => {
+      const params = new URLSearchParams();
+      if (scope?.selectedUserUid) {
+        params.set('selected_user_uid', scope.selectedUserUid);
+      }
+      if (scope?.selectedOrganizationUid) {
+        params.set('selected_organization_uid', scope.selectedOrganizationUid);
+      }
+      if (scope?.selectedTeamUid) {
+        params.set('selected_team_uid', scope.selectedTeamUid);
+      }
+      if (scope?.selectedAgentUid) {
+        params.set('selected_agent_uid', scope.selectedAgentUid);
+      }
+      const query = params.toString();
       const resp = await requestDatalayer({
-        url: `${configuration.runtimesRunUrl}/api/runtimes/v1/runtimes`,
+        url: `${configuration.runtimesRunUrl}/api/runtimes/v1/runtimes${query ? `?${query}` : ''}`,
         method: 'GET',
       });
       if (resp.success && resp.runtimes) {
@@ -825,8 +850,13 @@ export interface UseAgentsRuntimesReturn {
 /**
  * Consolidated runtime list and mutations.
  */
-export function useAgentsRuntimes(): UseAgentsRuntimesReturn {
-  const runtimesQuery = useAgentRuntimesQuery();
+export function useAgentsRuntimes(scope?: {
+  selectedUserUid?: string;
+  selectedOrganizationUid?: string;
+  selectedTeamUid?: string;
+  selectedAgentUid?: string;
+}): UseAgentsRuntimesReturn {
+  const runtimesQuery = useAgentRuntimesQuery(scope);
   const createRuntimeMutation = useCreateAgentRuntime();
   const deleteRuntimeMutation = useDeleteAgentRuntime();
   const refreshRuntimes = useRefreshAgentRuntimes();
