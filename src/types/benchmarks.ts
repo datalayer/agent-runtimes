@@ -37,6 +37,8 @@ export interface BenchmarkSpec {
   evaluator_shapes?: Array<
     'pass_rate' | 'numeric' | 'categorical' | 'error_only'
   >;
+  /** Evaluator IDs (optionally versioned) used to score this benchmark */
+  evaluators: string[];
   /** Suggested time windows for monitoring UIs */
   recommended_windows?: string[];
   /** Whether traces include links from results to execution spans */

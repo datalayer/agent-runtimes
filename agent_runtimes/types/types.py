@@ -255,6 +255,10 @@ class BenchmarkSpec(BaseModel):
     evaluator_shapes: List[
         Literal["pass_rate", "numeric", "categorical", "error_only"]
     ] = Field(default_factory=list, description="Evaluator output shape(s)")
+    evaluators: List[str] = Field(
+        ...,
+        description="Evaluator IDs or id:version references used by this benchmark",
+    )
     recommended_windows: List[str] = Field(
         default_factory=lambda: ["1h", "6h", "24h", "7d", "30d"],
         description="Suggested monitoring windows",

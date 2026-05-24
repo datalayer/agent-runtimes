@@ -247,6 +247,7 @@ specs-generate: ## generate all Python and TypeScript specs from YAML
 	@echo "Generating benchmark specifications..."
 	python scripts/codegen/generate_benchmarks.py \
 	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/benchmarks \
+	  --eval-specs-dir $(AGENTSPECS_DIR)/agentspecs/evals \
 	  --python-output agent_runtimes/specs/benchmarks.py \
 	  --typescript-output src/specs/benchmarks.ts
 	@echo "Generating event specifications..."
@@ -270,10 +271,14 @@ specs-generate: ## generate all Python and TypeScript specs from YAML
 	  --python-output agent_runtimes/specs/notifications.py \
 	  --typescript-output src/specs/notifications.ts
 	@echo "Generating persona specifications..."
-	python scripts/codegen/generate_personas.py \
-	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/personas \
-	  --python-output agent_runtimes/specs/personas.py \
-	  --typescript-output src/specs/personas.ts
+	@if [ -d "$(AGENTSPECS_DIR)/agentspecs/personas" ]; then \
+	  python scripts/codegen/generate_personas.py \
+	    --specs-dir $(AGENTSPECS_DIR)/agentspecs/personas \
+	    --python-output agent_runtimes/specs/personas.py \
+	    --typescript-output src/specs/personas.ts; \
+	else \
+	  echo "Skipping persona specifications: $(AGENTSPECS_DIR)/agentspecs/personas not found"; \
+	fi
 	@echo "Post-processing generated Python with ruff..."
 	ruff check --select I --fix $(RUFF_TARGETS)
 	ruff format $(RUFF_TARGETS)

@@ -22,6 +22,66 @@ import yaml
 from versioning import ensure_spec_version, version_suffix
 
 
+ALLOWED_EVAL_CATEGORIES = {
+    "Comparison",
+    "Type Validation",
+    "Performance",
+    "LLM-as-a-Judge",
+    "Span-Based",
+    "Report",
+}
+
+ALLOWED_EVALUATOR_TYPES = {"case", "report"}
+
+ALLOWED_OUTPUT_KINDS = {
+    "boolean",
+    "boolean_with_reason",
+    "score",
+    "score_and_assertion",
+    "report_table",
+    "report_curve",
+}
+
+
+def _required_str(spec: dict[str, Any], key: str) -> str:
+    """Return required non-empty string key or raise with actionable context."""
+    value = spec.get(key)
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(
+            f"Invalid eval spec '{spec.get('id', '<unknown>')}': missing required field '{key}'"
+        )
+    return value.strip()
+
+
+def _validate_eval_spec(spec: dict[str, Any]) -> dict[str, str]:
+    """Validate required eval fields and return normalized values."""
+    spec_id = str(spec.get("id") or "<unknown>")
+    category = _required_str(spec, "category")
+    evaluator_type = _required_str(spec, "evaluator_type").lower()
+    pydantic_class = _required_str(spec, "pydantic_class")
+    output_kind = _required_str(spec, "output_kind")
+
+    if category not in ALLOWED_EVAL_CATEGORIES:
+        raise ValueError(
+            f"Invalid eval spec '{spec_id}': category '{category}' not in {sorted(ALLOWED_EVAL_CATEGORIES)}"
+        )
+    if evaluator_type not in ALLOWED_EVALUATOR_TYPES:
+        raise ValueError(
+            f"Invalid eval spec '{spec_id}': evaluator_type '{evaluator_type}' not in {sorted(ALLOWED_EVALUATOR_TYPES)}"
+        )
+    if output_kind not in ALLOWED_OUTPUT_KINDS:
+        raise ValueError(
+            f"Invalid eval spec '{spec_id}': output_kind '{output_kind}' not in {sorted(ALLOWED_OUTPUT_KINDS)}"
+        )
+
+    return {
+        "category": category,
+        "evaluator_type": evaluator_type,
+        "pydantic_class": pydantic_class,
+        "output_kind": output_kind,
+    }
+
+
 def _fmt_list(items: list[str]) -> str:
     """Format a list of strings with double quotes for ruff compliance."""
     if not items:
@@ -85,6 +145,11 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
     for spec in specs:
         eval_id = spec["id"]
         version = spec["version"]
+        validated = _validate_eval_spec(spec)
+        evaluator_type = validated["evaluator_type"]
+        output_kind = validated["output_kind"]
+        pydantic_class = validated["pydantic_class"]
+        category = validated["category"]
         const_name = (
             f"{eval_id.upper().replace('-', '_')}_EVAL_SPEC{version_suffix(version)}"
         )
@@ -98,10 +163,10 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
                 f'    version="{version}",',
                 f'    name="{_esc_dq(spec["name"])}",',
                 f'    description="{desc}",',
-                f'    category="{spec["category"]}",',
-                f'    evaluator_type="{spec["evaluator_type"]}",',
-                f'    pydantic_class="{spec["pydantic_class"]}",',
-                f'    output_kind="{spec["output_kind"]}",',
+                f'    category="{category}",',
+                f'    evaluator_type="{evaluator_type}",',
+                f'    pydantic_class="{pydantic_class}",',
+                f'    output_kind="{output_kind}",',
                 f'    cost_tier="{spec.get("cost_tier", "free")}",',
                 f'    latency="{spec.get("latency", "instant")}",',
                 f"    requires={_fmt_list(spec.get('requires', []))},",
@@ -181,6 +246,11 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
     for spec in specs:
         eval_id = spec["id"]
         version = spec["version"]
+        validated = _validate_eval_spec(spec)
+        evaluator_type = validated["evaluator_type"]
+        output_kind = validated["output_kind"]
+        pydantic_class = validated["pydantic_class"]
+        category = validated["category"]
         const_name = (
             f"{eval_id.upper().replace('-', '_')}_EVAL_SPEC{version_suffix(version)}"
         )
@@ -194,10 +264,10 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
                 f"  version: '{version}',",
                 f"  name: '{_esc(spec['name'])}',",
                 f"  description: '{desc}',",
-                f"  category: '{spec['category']}',",
-                f"  evaluator_type: '{spec['evaluator_type']}',",
-                f"  pydantic_class: '{spec['pydantic_class']}',",
-                f"  output_kind: '{spec['output_kind']}',",
+                f"  category: '{category}',",
+                f"  evaluator_type: '{evaluator_type}',",
+                f"  pydantic_class: '{pydantic_class}',",
+                f"  output_kind: '{output_kind}',",
                 f"  cost_tier: '{spec.get('cost_tier', 'free')}',",
                 f"  latency: '{spec.get('latency', 'instant')}',",
                 f"  requires: {_ts_list(spec.get('requires', []))},",
