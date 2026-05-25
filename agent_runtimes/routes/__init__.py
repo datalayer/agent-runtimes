@@ -43,6 +43,7 @@ from .agui import (
 from .configure import router as configure_router
 from .examples import get_example_mounts
 from .examples import router as examples_router
+from ..evals.routes import router as evals_router
 from .health import router as health_router
 from .history import router as history_router
 from .identity import router as identity_router
@@ -75,6 +76,7 @@ __all__ = [
     "cancel_agui_threads",
     "configure_router",
     "examples_router",
+    "evals_router",
     "get_a2a_agents",
     "get_a2a_mounts",
     "get_agui_app",

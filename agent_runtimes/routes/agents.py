@@ -3810,6 +3810,8 @@ class ConfigureFromSpecRequest(BaseModel):
     user_token: str | None = None
     jupyter_sandbox: str | None = None
     mcp_proxy_url: str | None = None
+    evals_mode: str | None = None
+    emit_live_events: bool | None = None
 
 
 @router.post("/configure-from-spec")
@@ -3878,6 +3880,13 @@ async def configure_from_spec_endpoint(
     # Must be set before create_agent() is called (step 4 below).
     if body.user_token:
         os.environ["DATALAYER_USER_TOKEN"] = body.user_token
+
+    if body.evals_mode:
+        os.environ["DATALAYER_EVALS_MODE"] = body.evals_mode
+    if body.emit_live_events is not None:
+        os.environ["DATALAYER_EVALS_EMIT_LIVE_EVENTS"] = (
+            "true" if body.emit_live_events else "false"
+        )
 
     # ── 2. Validate that the referenced library spec exists ──────────
     spec = get_library_agent_spec(body.agent_spec_id)
@@ -4074,6 +4083,8 @@ async def configure_from_spec_endpoint(
         if isinstance(effective_model, str)
         else str(effective_model),
         "specs_changed": specs_changed,
+        "evals_mode": body.evals_mode,
+        "emit_live_events": body.emit_live_events,
         "message": (
             f"Agent 'default' {'(re)created' if specs_changed else 'unchanged'} "
             f"from spec '{body.agent_spec_id}'."

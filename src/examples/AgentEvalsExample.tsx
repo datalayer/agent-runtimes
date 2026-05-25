@@ -27,6 +27,8 @@ import {
   Label,
   Flash,
   ProgressBar,
+  Select,
+  FormControl,
 } from '@primer/react';
 import {
   BeakerIcon,
@@ -39,6 +41,7 @@ import { AuthRequiredView, ErrorView } from './components';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
+import { useCoreStore } from '@datalayer/core';
 import { Chat } from '../chat';
 import { useAgentRuntimes } from '../hooks/useAgentRuntimes';
 
@@ -48,6 +51,17 @@ const queryClient = new QueryClient();
 
 const AGENT_NAME = 'eval-demo-agent';
 const AGENT_SPEC_ID = 'monitor-sales-kpis';
+const DEFAULT_LOCAL_BASE_URL =
+  (import.meta.env.VITE_BASE_URL as string | undefined) ||
+  'http://localhost:8765';
+const DEFAULT_EXECUTION_TARGET: ExecutionTarget =
+  (
+    (import.meta.env.VITE_AGENT_EVALS_TARGET as string | undefined) || 'cloud'
+  ).toLowerCase() === 'local'
+    ? 'local'
+    : 'cloud';
+
+type ExecutionTarget = 'cloud' | 'local';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -62,8 +76,13 @@ interface EvalRun {
 
 // ─── Inner component (rendered after auth) ─────────────────────────────────
 
-const AgentEvalsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
+const AgentEvalsInner: React.FC<{
+  onLogout: () => void;
+  executionTarget: ExecutionTarget;
+  onExecutionTargetChange: (target: ExecutionTarget) => void;
+}> = ({ onLogout, executionTarget, onExecutionTargetChange }) => {
   const { token } = useSimpleAuthStore();
+  const { configuration } = useCoreStore();
   const agentName = useRef(uniqueAgentId(AGENT_NAME)).current;
 
   const {
@@ -73,7 +92,7 @@ const AgentEvalsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
     error: hookError,
   } = useAgentRuntimes({
     agentSpecId: AGENT_SPEC_ID,
-    autoStart: true,
+    autoStart: executionTarget === 'cloud',
     agentConfig: {
       name: agentName,
       model: 'bedrock:us.anthropic.claude-3-5-haiku-20241022-v1:0',
@@ -82,6 +101,12 @@ const AgentEvalsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
     },
   });
 
+  const [localAgentId, setLocalAgentId] = useState<string | null>(null);
+  const [localStatus, setLocalStatus] = useState<
+    'launching' | 'ready' | 'error'
+  >('launching');
+  const [localError, setLocalError] = useState<string | null>(null);
+
   const [evalRuns, setEvalRuns] = useState<EvalRun[]>([]);
   const [isRunning, setIsRunning] = useState(false);
   const [flash, setFlash] = useState<string | null>(null);
@@ -89,12 +114,26 @@ const AgentEvalsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
   const [experimentId, setExperimentId] = useState<string | null>(null);
   const [isBootstrapping, setIsBootstrapping] = useState(true);
 
-  const agentBaseUrl = runtime?.agentBaseUrl || '';
-  const agentId = runtime?.agentId || AGENT_NAME;
-  const podName = runtime?.podName || '(launching…)';
+  const cloudAgentBaseUrl = runtime?.agentBaseUrl || '';
+  const localAgentBaseUrl = DEFAULT_LOCAL_BASE_URL;
+  const agentBaseUrl =
+    executionTarget === 'local' ? localAgentBaseUrl : cloudAgentBaseUrl;
+  const agentId =
+    executionTarget === 'local'
+      ? localAgentId || agentName
+      : runtime?.agentId || AGENT_NAME;
+  const podName =
+    executionTarget === 'local'
+      ? `local:${agentId}`
+      : runtime?.podName || '(launching…)';
   const controlPlaneBaseUrl =
     (import.meta.env.VITE_RUN_URL as string | undefined) ||
-    (agentBaseUrl ? new URL(agentBaseUrl).origin : '');
+    configuration?.runUrl ||
+    (cloudAgentBaseUrl ? new URL(cloudAgentBaseUrl).origin : '');
+  const isAgentReady =
+    executionTarget === 'local' ? localStatus === 'ready' : isReady;
+  const agentStatus = executionTarget === 'local' ? localStatus : runtimeStatus;
+  const effectiveError = executionTarget === 'local' ? localError : hookError;
 
   // Authenticated fetch helper
   const authFetch = useCallback(
@@ -155,7 +194,79 @@ const AgentEvalsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
   }, []);
 
   useEffect(() => {
-    if (!isReady || !controlPlaneBaseUrl) return;
+    if (executionTarget !== 'local' || !agentBaseUrl) {
+      return;
+    }
+
+    let isCancelled = false;
+
+    const createLocalAgent = async () => {
+      setLocalStatus('launching');
+      setLocalError(null);
+
+      try {
+        const response = await authFetch(`${agentBaseUrl}/api/v1/agents`, {
+          method: 'POST',
+          body: JSON.stringify({
+            name: agentName,
+            description: 'Agent with evaluation and quality scoring',
+            agent_library: 'pydantic-ai',
+            transport: 'vercel-ai',
+            agent_spec_id: AGENT_SPEC_ID,
+            enable_skills: true,
+            tools: [],
+          }),
+        });
+
+        let resolvedAgentId = agentName;
+        if (response.ok) {
+          const payload = await response.json().catch(() => ({}));
+          resolvedAgentId = payload?.id || agentName;
+        } else {
+          const contentType = response.headers.get('content-type') || '';
+          let detail = '';
+          if (contentType.includes('application/json')) {
+            const payload = await response.json().catch(() => null);
+            detail =
+              (typeof payload?.detail === 'string' && payload.detail) ||
+              (typeof payload?.message === 'string' && payload.message) ||
+              '';
+          } else {
+            detail = await response.text();
+          }
+          if (
+            response.status !== 409 &&
+            !/already exists/i.test(detail || '')
+          ) {
+            throw new Error(
+              detail || `Failed to create local agent: ${response.status}`,
+            );
+          }
+        }
+
+        if (!isCancelled) {
+          setLocalAgentId(resolvedAgentId);
+          setLocalStatus('ready');
+        }
+      } catch (error) {
+        if (!isCancelled) {
+          setLocalError(
+            error instanceof Error ? error.message : 'Agent failed to start',
+          );
+          setLocalStatus('error');
+        }
+      }
+    };
+
+    void createLocalAgent();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [executionTarget, agentBaseUrl, agentName, authFetch]);
+
+  useEffect(() => {
+    if (!isAgentReady || !controlPlaneBaseUrl) return;
 
     const bootstrap = async () => {
       setIsBootstrapping(true);
@@ -238,12 +349,12 @@ const AgentEvalsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
     };
 
     void bootstrap();
-  }, [isReady, controlPlaneBaseUrl, agentId, podName, evalApiFetch]);
+  }, [isAgentReady, controlPlaneBaseUrl, agentId, podName, evalApiFetch]);
 
   // ── Poll eval results ─────────────────────────────────────────────────
 
   useEffect(() => {
-    if (!isReady || !controlPlaneBaseUrl || !experimentId) return;
+    if (!isAgentReady || !controlPlaneBaseUrl || !experimentId) return;
     const poll = async () => {
       try {
         const res = await evalApiFetch(
@@ -258,7 +369,7 @@ const AgentEvalsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
     void poll();
     const interval = setInterval(poll, 15_000);
     return () => clearInterval(interval);
-  }, [isReady, controlPlaneBaseUrl, experimentId, evalApiFetch, mapRuns]);
+  }, [isAgentReady, controlPlaneBaseUrl, experimentId, evalApiFetch, mapRuns]);
 
   // ── Run eval suite ────────────────────────────────────────────────────
 
@@ -322,7 +433,7 @@ const AgentEvalsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
 
   // ── Loading / Error ───────────────────────────────────────────────────
 
-  if (!isReady && runtimeStatus !== 'error') {
+  if (!isAgentReady && agentStatus !== 'error') {
     return (
       <Box
         sx={{
@@ -336,16 +447,18 @@ const AgentEvalsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
       >
         <Spinner size="large" />
         <Text sx={{ color: 'fg.muted' }}>
-          {runtimeStatus === 'launching'
-            ? 'Launching runtime for eval agent…'
+          {agentStatus === 'launching'
+            ? executionTarget === 'local'
+              ? 'Launching local eval demo agent…'
+              : 'Launching runtime for eval agent…'
             : 'Creating eval demo agent…'}
         </Text>
       </Box>
     );
   }
 
-  if (runtimeStatus === 'error' || hookError) {
-    return <ErrorView error={hookError} onLogout={onLogout} />;
+  if (agentStatus === 'error' || effectiveError) {
+    return <ErrorView error={effectiveError} onLogout={onLogout} />;
   }
 
   if (isBootstrapping) {
@@ -395,6 +508,22 @@ const AgentEvalsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
         <Heading as="h3" sx={{ fontSize: 2, flex: 1 }}>
           Evaluation — {podName}
         </Heading>
+        <FormControl sx={{ minWidth: 160 }}>
+          <FormControl.Label sx={{ fontSize: 0, mb: 1 }}>
+            Target
+          </FormControl.Label>
+          <Select
+            size="small"
+            value={executionTarget}
+            onChange={e =>
+              onExecutionTargetChange(e.target.value as ExecutionTarget)
+            }
+            disabled={isRunning}
+          >
+            <Select.Option value="cloud">Cloud</Select.Option>
+            <Select.Option value="local">Local</Select.Option>
+          </Select>
+        </FormControl>
       </Box>
 
       <Box sx={{ flex: 1, minHeight: 0, display: 'flex' }}>
@@ -474,7 +603,9 @@ const AgentEvalsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
 
             {flash && (
               <Flash
-                variant={flash.includes('started') ? 'success' : 'danger'}
+                variant={
+                  flash.toLowerCase().includes('failed') ? 'danger' : 'success'
+                }
                 sx={{ mt: 2, fontSize: 0 }}
               >
                 {flash}
@@ -568,6 +699,9 @@ const syncTokenToIamStore = (token: string) => {
 const AgentEvalsExample: React.FC = () => {
   const { token, clearAuth } = useSimpleAuthStore();
   const hasSynced = useRef(false);
+  const [executionTarget, setExecutionTarget] = useState<ExecutionTarget>(
+    DEFAULT_EXECUTION_TARGET,
+  );
 
   useEffect(() => {
     if (token && !hasSynced.current) {
@@ -595,7 +729,12 @@ const AgentEvalsExample: React.FC = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemedProvider>
-        <AgentEvalsInner onLogout={handleLogout} />
+        <AgentEvalsInner
+          key={executionTarget}
+          onLogout={handleLogout}
+          executionTarget={executionTarget}
+          onExecutionTargetChange={setExecutionTarget}
+        />
       </ThemedProvider>
     </QueryClientProvider>
   );
