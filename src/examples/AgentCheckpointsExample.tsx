@@ -111,7 +111,7 @@ const AGENT_SPEC = {
   name: 'Monitor Sales KPIs',
   description:
     'Monitor and analyze sales KPIs from the CRM system. Generate daily reports, identify trends, and flag anomalies.',
-  model: 'bedrock:us.anthropic.claude-3-5-haiku-20241022-v1:0',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
   protocol: 'vercel-ai',
   memory: 'mem0',
   sandbox_variant: 'jupyter',
@@ -191,7 +191,7 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
     agentSpec: AGENT_SPEC,
     agentConfig: {
       name: DEMO_AGENT_NAME,
-      model: 'bedrock:us.anthropic.claude-3-5-haiku-20241022-v1:0',
+      model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
       protocol: 'vercel-ai',
       description:
         'Monitor Sales KPI agent — exercises pause/resume checkpointing',

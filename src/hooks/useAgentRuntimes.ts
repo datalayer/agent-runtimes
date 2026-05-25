@@ -195,7 +195,7 @@ function toAgentRuntimeData(raw: Record<string, any>): AgentRuntimeData {
  * // Connect mode — attach to an existing runtime
  * const { isReady, endpoint, connectToRuntime } = useAgents({
  *   autoCreateAgent: true,
- *   agentConfig: { model: 'bedrock:us.anthropic.claude-3-5-haiku-20241022-v1:0' },
+ *   agentConfig: { model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0' },
  * });
  *
  * // Lifecycle mode — full lifecycle with agentSpecId

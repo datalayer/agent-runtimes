@@ -910,7 +910,7 @@ class AgentSpec(BaseModel):
     enabled: bool = Field(default=True, description="Whether the agent is enabled")
     model: Optional[str] = Field(
         default=None,
-        description="AI model identifier to use for this agent (e.g., 'bedrock:us.anthropic.claude-3-5-haiku-20241022-v1:0')",
+        description="AI model identifier to use for this agent (e.g., 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0')",
     )
     mcp_servers: List[MCPServer] = Field(
         default_factory=list,

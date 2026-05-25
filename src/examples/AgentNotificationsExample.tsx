@@ -103,7 +103,7 @@ const AgentNotificationsInner: React.FC<{ onLogout: () => void }> = ({
     autoStart: true,
     agentConfig: {
       name: agentName,
-      model: 'bedrock:us.anthropic.claude-3-5-haiku-20241022-v1:0',
+      model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
       protocol: 'vercel-ai',
       description: 'Agent with multi-channel notification support',
     },
