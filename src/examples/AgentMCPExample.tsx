@@ -336,7 +336,7 @@ const AgentMCPInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
           body: JSON.stringify({
             name: agentName,
             description:
-              'MCP demo agent – web crawling and research via Tavily',
+              'MCP example agent – web crawling and research via Tavily',
             agent_library: 'pydantic-ai',
             transport: 'vercel-ai',
             agent_spec_id: AGENT_SPEC_ID,
@@ -603,7 +603,7 @@ const AgentMCPInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
         }}
       >
         <Spinner size="large" />
-        <Text sx={{ color: 'fg.muted' }}>Launching MCP demo agent...</Text>
+        <Text sx={{ color: 'fg.muted' }}>Launching MCP example agent...</Text>
       </Box>
     );
   }

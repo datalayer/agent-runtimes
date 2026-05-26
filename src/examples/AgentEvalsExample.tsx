@@ -449,9 +449,9 @@ const AgentEvalsInner: React.FC<{
         <Text sx={{ color: 'fg.muted' }}>
           {agentStatus === 'launching'
             ? executionTarget === 'local'
-              ? 'Launching local eval demo agent…'
+              ? 'Launching local eval example agent…'
               : 'Launching runtime for eval agent…'
-            : 'Creating eval demo agent…'}
+            : 'Creating eval example agent…'}
         </Text>
       </Box>
     );

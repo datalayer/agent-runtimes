@@ -131,8 +131,8 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
     'AG-UI tool-based generative UI example.',
   ),
   makeEntry(
-    'AgentSpecsExample',
-    () => import('./AgentSpecsExample'),
+    'AgentspecsExample',
+    () => import('./AgentspecsExample'),
     'Configure and run agents from specs and transports.',
   ),
   makeEntry(

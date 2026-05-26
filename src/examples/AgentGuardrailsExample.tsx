@@ -57,7 +57,7 @@ import { Chat } from '../chat';
 // ─── Constants ─────────────────────────────────────────────────────────────
 
 const AGENT_NAME = 'guardrails-demo-agent';
-const AGENT_SPEC_ID = 'demo-guardrails';
+const AGENT_SPEC_ID = 'example-guardrails';
 const DEFAULT_LOCAL_BASE_URL =
   import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
 const OTEL_BASE_URL_ENV = import.meta.env.VITE_OTEL_BASE_URL;
@@ -574,7 +574,7 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
       >
         <Spinner size="large" />
         <Text sx={{ color: 'fg.muted' }}>
-          Launching guardrails demo agent...
+          Launching guardrails example agent...
         </Text>
       </Box>
     );

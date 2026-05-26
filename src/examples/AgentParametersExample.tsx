@@ -17,7 +17,7 @@ import { Chat } from '../chat';
 setupPrimerPortals();
 
 const BASE_URL = 'http://localhost:8765';
-const AGENT_SPEC_ID = 'demo-parameters';
+const AGENT_SPEC_ID = 'example-parameters';
 const AGENT_NAME = 'parameters-demo';
 
 type LibrarySpecResponse = {
@@ -263,7 +263,7 @@ const AgentParametersExample: React.FC = () => {
             Launch Parameterized Agent
           </Heading>
           <Text sx={{ color: 'fg.muted', fontSize: 1, maxWidth: 620 }}>
-            Load the runtime schema directly from demo-parameters, fill the
+            Load the runtime schema directly from example-parameters, fill the
             generated form, then launch with validated parameters.
           </Text>
 

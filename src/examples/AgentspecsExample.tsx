@@ -277,7 +277,7 @@ const DEFAULT_IDENTITY_PROVIDERS: IdentityProvidersInput = {
     : {}),
 };
 
-const AgentRuntimeFormExample: React.FC<AgentRuntimeFormExampleProps> = ({
+const AgentspecsExample: React.FC<AgentRuntimeFormExampleProps> = ({
   initialWsUrl = DEFAULT_WS_URL,
   initialBaseUrl = DEFAULT_BASE_URL,
   initialAgentName = DEFAULT_AGENT_ID,
@@ -1183,4 +1183,4 @@ const AgentRuntimeFormExample: React.FC<AgentRuntimeFormExampleProps> = ({
   );
 };
 
-export default AgentRuntimeFormExample;
+export default AgentspecsExample;

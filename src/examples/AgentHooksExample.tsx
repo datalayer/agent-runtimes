@@ -14,7 +14,7 @@ import { Chat } from '../chat';
 setupPrimerPortals();
 
 const BASE_URL = 'http://localhost:8765';
-const AGENT_SPEC_ID = 'demo-hooks';
+const AGENT_SPEC_ID = 'example-hooks';
 const AGENT_NAME = 'hooks-demo';
 
 const AgentHooksExample: React.FC = () => {
@@ -143,7 +143,7 @@ const AgentHooksExample: React.FC = () => {
         {
           title: 'Verify hook variables',
           message:
-            'Use execute_code to run this verification:\n```python\nassert isinstance(hook_name, str) and hook_name == "demo-hooks:pre", f"❌ hook_name wrong: {hook_name!r}"\nassert isinstance(hook_ran_at, str) and len(hook_ran_at) > 0, f"❌ hook_ran_at wrong: {hook_ran_at!r}"\nassert isinstance(hook_env, dict) and len(hook_env) > 0, f"❌ hook_env wrong: {hook_env!r}"\nprint("✅ hook_name =", hook_name)\nprint("✅ hook_ran_at =", hook_ran_at)\nprint("✅ hook_env =", hook_env)\n```\nThrow an exception with a ❌ message if any variable is missing or has the wrong type, print ✅ lines if all pass.',
+            'Use execute_code to run this verification:\n```python\nassert isinstance(hook_name, str) and hook_name == "example-hooks:pre", f"❌ hook_name wrong: {hook_name!r}"\nassert isinstance(hook_ran_at, str) and len(hook_ran_at) > 0, f"❌ hook_ran_at wrong: {hook_ran_at!r}"\nassert isinstance(hook_env, dict) and len(hook_env) > 0, f"❌ hook_env wrong: {hook_env!r}"\nprint("✅ hook_name =", hook_name)\nprint("✅ hook_ran_at =", hook_ran_at)\nprint("✅ hook_env =", hook_env)\n```\nThrow an exception with a ❌ message if any variable is missing or has the wrong type, print ✅ lines if all pass.',
         },
         {
           title: "Verify 'rich' was installed",

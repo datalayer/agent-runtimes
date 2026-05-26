@@ -702,7 +702,7 @@ const ExampleAppThemed: React.FC<{
 
                 // Classify each example into a named group.
                 const groupOf = (id: string): string => {
-                  if (id === 'AgentSpecsExample') return 'Personas';
+                  if (id === 'AgentspecsExample') return 'Personas';
                   if (id.startsWith('A2Ui')) return 'A2UI';
                   if (id.startsWith('AgUi')) return 'AG-UI';
                   if (id.startsWith('CopilotKit')) return 'CopilotKit';

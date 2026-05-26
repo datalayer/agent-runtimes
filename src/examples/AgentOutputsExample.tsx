@@ -486,8 +486,8 @@ const AgentOutputsInner: React.FC<{ onLogout: () => void }> = ({
         <Spinner size="large" />
         <Text sx={{ color: 'fg.muted' }}>
           {runtimeStatus === 'launching'
-            ? 'Launching outputs demo agent...'
-            : 'Creating outputs demo agent...'}
+            ? 'Launching outputs example agent...'
+            : 'Creating outputs example agent...'}
         </Text>
       </Box>
     );

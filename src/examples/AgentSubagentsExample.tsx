@@ -10,7 +10,7 @@
  * The parent agent orchestrates a researcher and a writer subagent,
  * delegating tasks and combining results for the user.
  *
- * - Creates a local agent from the 'demo-subagents' spec
+ * - Creates a local agent from the 'example-subagents' spec
  * - Shows a Chat component for interacting with the orchestrator
  * - Sidebar displays subagent info and active task status
  */
@@ -34,7 +34,7 @@ import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { Chat } from '../chat';
 
 const AGENT_NAME = 'subagents-demo-agent';
-const AGENT_SPEC_ID = 'demo-subagents';
+const AGENT_SPEC_ID = 'example-subagents';
 const DEFAULT_LOCAL_BASE_URL =
   import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
 
@@ -109,7 +109,7 @@ const AgentSubagentsInner: React.FC<{ onLogout: () => void }> = ({
           body: JSON.stringify({
             name: agentName,
             description:
-              'Subagents demo – multi-agent delegation with researcher and writer',
+              'Subagents example – multi-agent delegation with researcher and writer',
             agent_library: 'pydantic-ai',
             transport: 'vercel-ai',
             agent_spec_id: AGENT_SPEC_ID,
@@ -184,7 +184,7 @@ const AgentSubagentsInner: React.FC<{ onLogout: () => void }> = ({
       >
         <Spinner size="large" />
         <Text sx={{ color: 'fg.muted' }}>
-          Launching subagents demo agent...
+          Launching subagents example agent...
         </Text>
       </Box>
     );

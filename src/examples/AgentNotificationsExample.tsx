@@ -251,7 +251,7 @@ const AgentNotificationsInner: React.FC<{ onLogout: () => void }> = ({
         <Text sx={{ color: 'fg.muted' }}>
           {runtimeStatus === 'launching'
             ? 'Launching runtime for notification agent…'
-            : 'Creating notification demo agent…'}
+            : 'Creating notification example agent…'}
         </Text>
       </Box>
     );

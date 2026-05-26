@@ -24,7 +24,7 @@ import { useAgentRuntimePendingCount } from '../stores/agentRuntimeStore';
 
 const queryClient = new QueryClient();
 const AGENT_NAME_PREFIX = 'tool-approval-demo-agent';
-const DEFAULT_AGENT_SPEC_ID = 'demo-full';
+const DEFAULT_AGENT_SPEC_ID = 'example-full';
 const DEFAULT_LOCAL_BASE_URL =
   import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
 
@@ -198,7 +198,9 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
         }}
       >
         <Spinner size="large" />
-        <Text sx={{ color: 'fg.muted' }}>Launching tool approvals demo...</Text>
+        <Text sx={{ color: 'fg.muted' }}>
+          Launching tool approvals example agent...
+        </Text>
       </Box>
     );
   }
