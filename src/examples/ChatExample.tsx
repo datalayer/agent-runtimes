@@ -21,16 +21,17 @@ import { Text, Spinner } from '@primer/react';
 import { Box, setupPrimerPortals } from '@datalayer/primer-addons';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
+import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 import { ErrorView } from './components';
 import { Chat } from '../chat';
 
 setupPrimerPortals();
 
-const BASE_URL = 'http://localhost:8765';
 const AGENT_SPEC_ID = 'example-simple';
 const AGENT_NAME = 'simple';
 
 const AgentRuntimeChatExample: React.FC = () => {
+  const baseUrl = useExampleAgentRuntimesUrl();
   const [agentId, setAgentId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(true);
@@ -43,7 +44,7 @@ const AgentRuntimeChatExample: React.FC = () => {
 
     const createAgent = async () => {
       try {
-        const response = await fetch(`${BASE_URL}/api/v1/agents`, {
+        const response = await fetch(`${baseUrl}/api/v1/agents`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -81,7 +82,7 @@ const AgentRuntimeChatExample: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [baseUrl]);
 
   // Loading state while agent is being created
   if (isCreating) {
@@ -123,7 +124,7 @@ const AgentRuntimeChatExample: React.FC = () => {
   return (
     <Chat
       protocol="ag-ui"
-      baseUrl={BASE_URL}
+      baseUrl={baseUrl}
       agentId={agentId}
       title="Simple Agent"
       placeholder="Send a message..."
@@ -137,7 +138,7 @@ const AgentRuntimeChatExample: React.FC = () => {
       autoFocus
       height="100vh"
       runtimeId={agentId}
-      historyEndpoint={`${BASE_URL}/api/v1/history`}
+      historyEndpoint={`${baseUrl}/api/v1/history`}
       suggestions={[
         {
           title: 'Hello',

@@ -156,7 +156,7 @@ export interface AgentRuntimeStoreActions {
   clearLoadedSkillsForAgent: (agentId: string) => void;
 
   // ─── Runtime connection ──────────────────────────────────────────
-  launchAgent: (options: IRuntimeOptions) => Promise<AgentConnection>;
+  launchAgent: (options: LaunchAgentOptions) => Promise<AgentConnection>;
   connectAgent: (connection: {
     podName: string;
     environmentName: string;
@@ -232,6 +232,11 @@ export interface AgentRuntimeStoreActions {
 
 export type AgentRuntimeStore = AgentRuntimeStoreState &
   AgentRuntimeStoreActions;
+
+export interface LaunchAgentOptions extends IRuntimeOptions {
+  /** Optional runtimes API base URL override for runtime creation. */
+  runtimesRunUrl?: string;
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -514,13 +519,22 @@ export const agentRuntimeStore = createStore<AgentRuntimeStore>()(
           set({ status: 'launching', error: null, isLaunching: true });
           try {
             const { createRuntime } = await import('@datalayer/core/lib/api');
+            const { runtimesStore } = await import('@datalayer/core/lib/state');
+            if (config.runtimesRunUrl) {
+              runtimesStore.setState({
+                runtimesRunUrl: config.runtimesRunUrl,
+              });
+            }
+
+            const { runtimesRunUrl: _runtimesRunUrl, ...runtimeOptions } =
+              config;
             const runtimePod = await createRuntime({
-              environmentName: config.environmentName,
-              creditsLimit: config.creditsLimit,
-              type: config.type || 'notebook',
-              givenName: config.givenName,
-              capabilities: config.capabilities,
-              snapshot: config.snapshot,
+              environmentName: runtimeOptions.environmentName,
+              creditsLimit: runtimeOptions.creditsLimit,
+              type: runtimeOptions.type || 'notebook',
+              givenName: runtimeOptions.givenName,
+              capabilities: runtimeOptions.capabilities,
+              snapshot: runtimeOptions.snapshot,
             });
             set({ status: 'connecting' });
             const jupyterBaseUrl = runtimePod.ingress;

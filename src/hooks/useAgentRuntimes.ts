@@ -44,6 +44,8 @@ import type {
 } from '../types/agents-lifecycle';
 import { ServiceManager } from '@jupyterlab/services/lib/manager';
 
+export type RuntimeCreationTarget = 'backend-services' | 'local-agent-runtimes';
+
 /**
  * Options for the useAgents hook.
  */
@@ -58,6 +60,14 @@ export interface UseAgentOptions {
   autoStart?: boolean;
   /** Full agent spec object (persisted with checkpoints) */
   agentSpec?: Record<string, any>;
+  /**
+   * Where runtime create/list operations should be sent.
+   * - `backend-services`: use backend runtimes service URL
+   * - `local-agent-runtimes`: use local agent-runtimes URL
+   */
+  runtimeCreationTarget?: RuntimeCreationTarget;
+  /** Explicit base URL for runtime create/list operations. */
+  runtimeCreationBaseUrl?: string;
 }
 
 /**
@@ -101,6 +111,10 @@ export interface UseAgentReturn {
   isReady: boolean;
   /** Error if any */
   error: string | null;
+  /** Effective runtime creation target mode. */
+  runtimeCreationTarget: RuntimeCreationTarget;
+  /** Effective base URL used for runtime create/list operations. */
+  runtimeCreationBaseUrl: string;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -215,7 +229,11 @@ export function useAgentRuntimes(
     autoCreateAgent = true,
     autoStart = false,
     agentSpec,
+    runtimeCreationTarget = 'backend-services',
+    runtimeCreationBaseUrl,
   } = options;
+
+  const { configuration } = useCoreStore();
 
   // Base store state
   const runtime = useAgentRuntimeConnection();
@@ -243,6 +261,28 @@ export function useAgentRuntimes(
   // Whether we're managing a full agent lifecycle (agentSpecId provided)
   const hasSpec = !!agentSpecId;
 
+  const resolvedRuntimeCreationBaseUrl = useMemo(() => {
+    if (runtimeCreationBaseUrl) {
+      return runtimeCreationBaseUrl;
+    }
+    if (runtimeCreationTarget === 'local-agent-runtimes') {
+      return (
+        import.meta.env.VITE_DATALAYER_AGENT_RUNTIMES_URL ||
+        import.meta.env.VITE_BASE_URL ||
+        'http://localhost:8765'
+      );
+    }
+    return (
+      configuration?.runtimesRunUrl ||
+      import.meta.env.VITE_DATALAYER_AGENT_RUNTIMES_URL ||
+      'https://r1.datalayer.run'
+    );
+  }, [
+    configuration?.runtimesRunUrl,
+    runtimeCreationBaseUrl,
+    runtimeCreationTarget,
+  ]);
+
   // ─── Auth helpers ─────────────────────────────────────────────────
 
   const getAuthHeaders = useCallback(async () => {
@@ -251,12 +291,12 @@ export function useAgentRuntimes(
       const token = iamStore.getState().token || '';
       const config = coreStore.getState().configuration;
       const runUrl = config?.aiagentsRunUrl || '';
-      const runtimesRunUrl = config?.runtimesRunUrl || '';
+      const runtimesRunUrl = resolvedRuntimeCreationBaseUrl;
       return { token, runUrl, runtimesRunUrl };
     } catch {
       return { token: '', runUrl: '', runtimesRunUrl: '' };
     }
-  }, []);
+  }, [resolvedRuntimeCreationBaseUrl]);
 
   // ─── Launch Runtime ─────────────────────────────────────────────────
 
@@ -274,11 +314,17 @@ export function useAgentRuntimes(
             .slice(0, 63);
 
           const conn = await storeLaunchAgent(
-            runtimeOptions || {
-              environmentName: 'ai-agents-env',
-              creditsLimit: 10,
-              givenName: safeName,
-            },
+            runtimeOptions
+              ? {
+                  ...runtimeOptions,
+                  runtimesRunUrl: resolvedRuntimeCreationBaseUrl,
+                }
+              : {
+                  environmentName: 'ai-agents-env',
+                  creditsLimit: 10,
+                  givenName: safeName,
+                  runtimesRunUrl: resolvedRuntimeCreationBaseUrl,
+                },
           );
           setLifecycleStatus('ready');
           return conn;
@@ -292,10 +338,13 @@ export function useAgentRuntimes(
         if (!runtimeOptions) {
           throw new Error('Runtime options are required in connect mode');
         }
-        return storeLaunchAgent(runtimeOptions);
+        return storeLaunchAgent({
+          ...runtimeOptions,
+          runtimesRunUrl: resolvedRuntimeCreationBaseUrl,
+        });
       }
     },
-    [agentSpecId, hasSpec, storeLaunchAgent],
+    [agentSpecId, hasSpec, resolvedRuntimeCreationBaseUrl, storeLaunchAgent],
   );
 
   // ─── Create Agent ───────────────────────────────────────────────────
@@ -556,6 +605,8 @@ export function useAgentRuntimes(
     // Status
     isReady,
     error,
+    runtimeCreationTarget,
+    runtimeCreationBaseUrl: resolvedRuntimeCreationBaseUrl,
   };
 }
 

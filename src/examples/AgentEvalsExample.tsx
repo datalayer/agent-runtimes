@@ -40,6 +40,7 @@ import { Box } from '@datalayer/primer-addons';
 import { AuthRequiredView, ErrorView } from './components';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
+import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { useCoreStore } from '@datalayer/core';
 import { Chat } from '../chat';
@@ -51,9 +52,6 @@ const queryClient = new QueryClient();
 
 const AGENT_NAME = 'eval-example-agent';
 const AGENT_SPEC_ID = 'monitor-sales-kpis';
-const DEFAULT_LOCAL_BASE_URL =
-  (import.meta.env.VITE_BASE_URL as string | undefined) ||
-  'http://localhost:8765';
 const DEFAULT_EXECUTION_TARGET: ExecutionTarget =
   (
     (import.meta.env.VITE_AGENT_EVALS_TARGET as string | undefined) || 'cloud'
@@ -84,15 +82,21 @@ const AgentEvalsInner: React.FC<{
   const { token } = useSimpleAuthStore();
   const { configuration } = useCoreStore();
   const agentName = useRef(uniqueAgentId(AGENT_NAME)).current;
+  const localRuntimeBaseUrl = useExampleAgentRuntimesUrl();
 
   const {
     runtime,
     status: runtimeStatus,
     isReady,
     error: hookError,
+    runtimeCreationBaseUrl,
   } = useAgentRuntimes({
     agentSpecId: AGENT_SPEC_ID,
     autoStart: executionTarget === 'cloud',
+    runtimeCreationTarget:
+      executionTarget === 'local' ? 'local-agent-runtimes' : 'backend-services',
+    runtimeCreationBaseUrl:
+      executionTarget === 'local' ? localRuntimeBaseUrl : undefined,
     agentConfig: {
       name: agentName,
       model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
@@ -115,7 +119,7 @@ const AgentEvalsInner: React.FC<{
   const [isBootstrapping, setIsBootstrapping] = useState(true);
 
   const cloudAgentBaseUrl = runtime?.agentBaseUrl || '';
-  const localAgentBaseUrl = DEFAULT_LOCAL_BASE_URL;
+  const localAgentBaseUrl = runtimeCreationBaseUrl;
   const agentBaseUrl =
     executionTarget === 'local' ? localAgentBaseUrl : cloudAgentBaseUrl;
   const agentId =

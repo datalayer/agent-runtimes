@@ -239,6 +239,8 @@ export function ChatBaseHeader({
               cpu={kernelCpu}
               memory={kernelMemory}
               gpu={kernelGpu}
+              position="sw"
+              bordered={false}
             />
           ) : (
             <KernelIndicator
@@ -247,6 +249,8 @@ export function ChatBaseHeader({
               cpu={kernelCpu}
               memory={kernelMemory}
               gpu={kernelGpu}
+              position="sw"
+              bordered={false}
             />
           )}
           {/* Header buttons */}

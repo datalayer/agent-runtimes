@@ -127,6 +127,11 @@ export default defineConfig(({ mode, command }) => {
             env.VITE_DATALAYER_RUN_URL || 'https://prod1.datalayer.run',
           )
           .replaceAll(
+            '%VITE_DATALAYER_AGENT_RUNTIMES_URL%',
+            env.VITE_DATALAYER_AGENT_RUNTIMES_URL ||
+              'https://r1.datalayer.run',
+          )
+          .replaceAll(
             '%VITE_DATALAYER_RUN_URL_WS%',
             (env.VITE_DATALAYER_RUN_URL || 'https://prod1.datalayer.run').replace('http', 'ws'),
           );

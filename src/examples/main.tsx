@@ -742,7 +742,11 @@ const ExampleAppThemed: React.FC<{
                 const nodes: React.ReactNode[] = [];
                 if (home) {
                   nodes.push(
-                    <option key={home.id} value={home.id}>
+                    <option
+                      key={home.id}
+                      value={home.id}
+                      disabled={home.id === selectedExample}
+                    >
                       {home.title}
                     </option>,
                   );
@@ -763,7 +767,11 @@ const ExampleAppThemed: React.FC<{
                   );
                   for (const example of items) {
                     nodes.push(
-                      <option key={example.id} value={example.id}>
+                      <option
+                        key={example.id}
+                        value={example.id}
+                        disabled={example.id === selectedExample}
+                      >
                         {example.title}
                       </option>,
                     );
@@ -791,7 +799,14 @@ const ExampleAppThemed: React.FC<{
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
               {token ? (
                 <>
-                  <UserBadge token={token} variant="small" />
+                  <UserBadge
+                    token={token}
+                    variant="small"
+                    onTokenExpired={() => {
+                      handleHeaderLogout();
+                      setShowSignIn(true);
+                    }}
+                  />
                   <Button
                     size="small"
                     variant="invisible"

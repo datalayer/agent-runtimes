@@ -8,16 +8,17 @@ import { Text, Spinner } from '@primer/react';
 import { Box, setupPrimerPortals } from '@datalayer/primer-addons';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
+import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 import { ErrorView } from './components';
 import { Chat } from '../chat';
 
 setupPrimerPortals();
 
-const BASE_URL = 'http://localhost:8765';
 const AGENT_SPEC_ID = 'example-hooks';
-const AGENT_NAME = 'hooks-demo';
+const AGENT_NAME = 'hooks-example-agent';
 
 const AgentHooksExample: React.FC = () => {
+  const baseUrl = useExampleAgentRuntimesUrl();
   const [agentId, setAgentId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(true);
@@ -28,7 +29,7 @@ const AgentHooksExample: React.FC = () => {
 
     const createAgent = async () => {
       try {
-        const response = await fetch(`${BASE_URL}/api/v1/agents`, {
+        const response = await fetch(`${baseUrl}/api/v1/agents`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -67,20 +68,20 @@ const AgentHooksExample: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [baseUrl]);
 
   useEffect(() => {
     return () => {
       if (!agentId) {
         return;
       }
-      void fetch(`${BASE_URL}/api/v1/agents/${encodeURIComponent(agentId)}`, {
+      void fetch(`${baseUrl}/api/v1/agents/${encodeURIComponent(agentId)}`, {
         method: 'DELETE',
       }).catch(() => {
         // Ignore teardown failures in example mode.
       });
     };
-  }, [agentId]);
+  }, [agentId, baseUrl]);
 
   if (isCreating) {
     return (
@@ -119,7 +120,7 @@ const AgentHooksExample: React.FC = () => {
   return (
     <Chat
       protocol="vercel-ai"
-      baseUrl={BASE_URL}
+      baseUrl={baseUrl}
       agentId={agentId}
       title="Hooks Agent"
       placeholder="Ask about lifecycle hooks..."
@@ -133,7 +134,7 @@ const AgentHooksExample: React.FC = () => {
       autoFocus
       height="100vh"
       runtimeId={agentId}
-      historyEndpoint={`${BASE_URL}/api/v1/history`}
+      historyEndpoint={`${baseUrl}/api/v1/history`}
       suggestions={[
         {
           title: 'Read the pre-hook marker file',

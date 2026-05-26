@@ -22,7 +22,6 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Tooltip } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import type {
   SandboxAggregateStatus,
@@ -107,9 +106,6 @@ function renderSandboxGlyph(aggregate: SandboxAggregateStatus) {
         height: 10,
         borderRadius: '50%',
         bg: SANDBOX_INDICATOR_COLORS[aggregate],
-        borderStyle: 'solid',
-        borderWidth: 1,
-        borderColor: SANDBOX_INDICATOR_COLORS[aggregate],
         ...(aggregate === 'executing' && {
           animation: 'sandbox-busy-fade 1.2s ease-in-out infinite',
           '@keyframes sandbox-busy-fade': {
@@ -144,6 +140,7 @@ export function SandboxStatusIndicator({
   statusOverride,
 }: SandboxStatusIndicatorProps) {
   const [status, setStatus] = useState<SandboxWsStatus | null>(null);
+  const [isOverlayOpen, setIsOverlayOpen] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout>>();
 
@@ -226,11 +223,23 @@ export function SandboxStatusIndicator({
   // The tooltip tells the user none is configured.
 
   return (
-    <Tooltip text={tooltipText} direction="n">
+    <Box
+      as="span"
+      sx={{
+        position: 'relative',
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+      onMouseEnter={() => setIsOverlayOpen(true)}
+      onMouseLeave={() => setIsOverlayOpen(false)}
+    >
       <button
         type="button"
         aria-label={tooltipText}
         onClick={aggregate === 'executing' ? sendInterrupt : undefined}
+        onFocus={() => setIsOverlayOpen(true)}
+        onBlur={() => setIsOverlayOpen(false)}
         style={{
           display: 'inline-flex',
           alignItems: 'center',
@@ -240,6 +249,11 @@ export function SandboxStatusIndicator({
           padding: 0,
           border: 'none',
           background: 'none',
+          outline: 'none',
+          boxShadow: 'none',
+          borderRadius: 0,
+          WebkitAppearance: 'none',
+          appearance: 'none',
           cursor: aggregate === 'executing' ? 'pointer' : 'default',
           lineHeight: 0,
         }}
@@ -251,7 +265,80 @@ export function SandboxStatusIndicator({
           {renderSandboxGlyph(aggregate)}
         </Box>
       </button>
-    </Tooltip>
+
+      {isOverlayOpen && (
+        <Box
+          role="tooltip"
+          sx={{
+            position: 'absolute',
+            right: 0,
+            top: 'calc(100% + 6px)',
+            minWidth: 220,
+            px: 2,
+            py: 2,
+            borderRadius: 2,
+            bg: 'canvas.overlay',
+            color: 'fg.default',
+            fontSize: 0,
+            lineHeight: 1.5,
+            boxShadow: 'shadow.medium',
+            border: '1px solid',
+            borderColor: 'border.default',
+            zIndex: 1000,
+            fontFamily: 'mono',
+            pointerEvents: 'none',
+          }}
+        >
+          <Box sx={{ mb: 1, fontWeight: 600, fontFamily: 'normal' }}>
+            {tooltipText}
+          </Box>
+          {effectiveStatus ? (
+            <>
+              <Box>
+                <Box as="span" sx={{ fontWeight: 600 }}>
+                  variant:{' '}
+                </Box>
+                <Box as="span">{effectiveStatus.variant}</Box>
+              </Box>
+              <Box>
+                <Box as="span" sx={{ fontWeight: 600 }}>
+                  sandbox_running:{' '}
+                </Box>
+                <Box as="span">{String(effectiveStatus.sandbox_running)}</Box>
+              </Box>
+              <Box>
+                <Box as="span" sx={{ fontWeight: 600 }}>
+                  is_executing:{' '}
+                </Box>
+                <Box as="span">{String(effectiveStatus.is_executing)}</Box>
+              </Box>
+              {effectiveStatus.jupyter_url && (
+                <Box sx={{ wordBreak: 'break-all' }}>
+                  <Box as="span" sx={{ fontWeight: 600 }}>
+                    jupyter_url:{' '}
+                  </Box>
+                  <Box as="span">{effectiveStatus.jupyter_url}</Box>
+                </Box>
+              )}
+              {effectiveStatus.error && (
+                <Box sx={{ mt: 1, color: 'danger.fg' }}>
+                  {effectiveStatus.error}
+                </Box>
+              )}
+              {aggregate === 'executing' && (
+                <Box sx={{ mt: 1, fontFamily: 'normal', color: 'fg.muted' }}>
+                  Click to interrupt execution
+                </Box>
+              )}
+            </>
+          ) : (
+            <Box sx={{ fontFamily: 'normal', color: 'fg.muted' }}>
+              No sandbox configured for this agent.
+            </Box>
+          )}
+        </Box>
+      )}
+    </Box>
   );
 }
 
