@@ -51,7 +51,7 @@ import type { SandboxAggregateStatus } from '../types/sandbox';
 // ─── Constants ─────────────────────────────────────────────────────────────
 
 const queryClient = new QueryClient();
-const AGENT_NAME = 'sandbox-demo-agent';
+const AGENT_NAME = 'sandbox-example-agent';
 const AGENT_SPEC_ID = 'example-full';
 const DEFAULT_LOCAL_BASE_URL =
   import.meta.env.VITE_BASE_URL || 'http://localhost:8765';

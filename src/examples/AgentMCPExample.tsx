@@ -45,8 +45,9 @@ import { MCP_STATUS_COLORS, MCP_STATUS_LABELS } from '../types/mcp';
 import { MCP_SERVER_LIBRARY } from '../specs/mcpServers';
 
 const queryClient = new QueryClient();
-const AGENT_NAME = 'mcp-demo-agent';
-const AGENT_SPEC_ID = 'demo-mcp';
+const AGENT_NAME = 'mcp-example-agent';
+// Must match agentspecs/agentspecs/agents/example-mcp.yaml `id`.
+const AGENT_SPEC_ID = 'example-mcp';
 const DEFAULT_LOCAL_BASE_URL =
   import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
 

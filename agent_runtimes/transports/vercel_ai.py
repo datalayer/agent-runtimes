@@ -309,6 +309,8 @@ async def _wrap_streaming_body_with_approvals(
     import json as json_mod
 
     from ..routes.tool_approvals import (
+        _APPROVALS,
+        _APPROVALS_LOCK,
         ToolApprovalCreateRequest,
         _create_approval,
         mirror_approval_to_local,
@@ -441,6 +443,33 @@ async def _wrap_streaming_body_with_approvals(
                         normalized_tool_args = (
                             tool_args if isinstance(tool_args, dict) else {}
                         )
+
+                        # Continuation requests can replay approval tool events
+                        # for the same tool call id. Reuse existing local state
+                        # instead of creating a duplicate remote pending record.
+                        existing_record = None
+                        if tool_call_id:
+                            async with _APPROVALS_LOCK:
+                                for candidate in _APPROVALS.values():
+                                    if (
+                                        candidate.agent_id == agent_id
+                                        and candidate.tool_call_id == tool_call_id
+                                        and candidate.status != "deleted"
+                                    ):
+                                        existing_record = candidate
+                                        break
+
+                        if existing_record is not None:
+                            created_tool_call_ids.add(tool_call_id)
+                            logger.info(
+                                "[Vercel AI] Reusing existing local approval %s "
+                                "for deferred tool '%s' (tool_call_id=%s, status=%s)",
+                                existing_record.id,
+                                tool_name,
+                                tool_call_id,
+                                existing_record.status,
+                            )
+                            continue
 
                         # Best-effort remote sync so server-mode panels backed by
                         # ai-agents can display pending approvals.

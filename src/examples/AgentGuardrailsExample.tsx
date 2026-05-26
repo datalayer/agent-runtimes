@@ -56,7 +56,7 @@ import { Chat } from '../chat';
 
 // ─── Constants ─────────────────────────────────────────────────────────────
 
-const AGENT_NAME = 'guardrails-demo-agent';
+const AGENT_NAME = 'guardrails-example-agent';
 const AGENT_SPEC_ID = 'example-guardrails';
 const DEFAULT_LOCAL_BASE_URL =
   import.meta.env.VITE_BASE_URL || 'http://localhost:8765';

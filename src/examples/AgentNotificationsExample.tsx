@@ -48,7 +48,7 @@ const queryClient = new QueryClient();
 
 // ─── Constants ─────────────────────────────────────────────────────────────
 
-const AGENT_NAME = 'notification-demo-agent';
+const AGENT_NAME = 'notification-example-agent';
 const AGENT_SPEC_ID = 'monitor-sales-kpis';
 
 // ─── Types ─────────────────────────────────────────────────────────────────

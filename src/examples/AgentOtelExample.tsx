@@ -266,8 +266,7 @@ const TAB_SX = (active: boolean) => ({
 
 const AgentOtelExampleInner: React.FC<{
   token: string;
-  onSignOut: () => void;
-}> = ({ token, onSignOut }) => {
+}> = ({ token }) => {
   const { configuration } = useCoreStore();
   const resolvedRunUrl =
     configuration?.otelRunUrl ||
@@ -371,9 +370,7 @@ const AgentOtelExampleInner: React.FC<{
       {/* ── Header ── */}
       <OtelHeader
         baseUrl={otelBaseUrl}
-        token={token}
         onNavigate={handleNavigate}
-        onSignOut={onSignOut}
         showGenerateButtons
         trailing={
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -510,15 +507,10 @@ const AgentOtelExampleInner: React.FC<{
  */
 const AgentOtelExample: React.FC = () => {
   const token = useSimpleAuthStore(s => s.token);
-  const clearAuth = useSimpleAuthStore(s => s.clearAuth);
 
   return (
     <ThemedProvider>
-      {!token ? (
-        <AuthRequiredView />
-      ) : (
-        <AgentOtelExampleInner token={token} onSignOut={clearAuth} />
-      )}
+      {!token ? <AuthRequiredView /> : <AgentOtelExampleInner token={token} />}
     </ThemedProvider>
   );
 };

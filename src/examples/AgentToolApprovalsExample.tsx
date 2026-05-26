@@ -20,10 +20,10 @@ import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
 import { Chat } from '../chat';
-import { useAgentRuntimePendingCount } from '../stores/agentRuntimeStore';
+import { useAgentRuntimeApprovals } from '../stores/agentRuntimeStore';
 
 const queryClient = new QueryClient();
-const AGENT_NAME_PREFIX = 'tool-approval-demo-agent';
+const AGENT_NAME_PREFIX = 'tool-approval-example-agent';
 const DEFAULT_AGENT_SPEC_ID = 'example-full';
 const DEFAULT_LOCAL_BASE_URL =
   import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
@@ -89,7 +89,16 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
   const chatAuthToken: string | undefined = token === null ? undefined : token;
   const agentBaseUrl = DEFAULT_LOCAL_BASE_URL;
   const podName = 'localhost';
-  const pendingApprovalCount = useAgentRuntimePendingCount();
+  const approvals = useAgentRuntimeApprovals();
+  const pendingApprovalCount = useMemo(
+    () =>
+      approvals.filter(
+        approval =>
+          approval.status === 'pending' &&
+          (!agentId || approval.agent_id === agentId),
+      ).length,
+    [approvals, agentId],
+  );
   const createAttemptedRef = useRef(false);
 
   const authFetch = useCallback(

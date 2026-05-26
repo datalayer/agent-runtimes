@@ -45,7 +45,7 @@ import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { Chat } from '../chat';
 import type { McpToolsetsStatusResponse } from '../types/mcp';
 
-const AGENT_NAME = 'monitoring-demo-agent';
+const AGENT_NAME = 'monitoring-example-agent';
 const AGENT_SPEC_ID = 'example-monitoring';
 const DEFAULT_LOCAL_BASE_URL =
   import.meta.env.VITE_BASE_URL || 'http://localhost:8765';

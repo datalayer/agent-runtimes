@@ -694,41 +694,23 @@ async def _update_approval(
             )
         )
     elif jwt_token:
-        # No explicit mapping. If this id is non-UUID, it is likely already
-        # an ai-agents id (e.g. mirrored from tool-approval-request / ULID).
-        # Relay directly to avoid creating a second remote approval record.
-        if not _looks_like_uuid(approval_id):
-            logger.info(
-                "[tool-approval] No remote mapping for local_id=%s — "
-                "relaying directly using approval_id as remote_id (%s)",
-                approval_id,
-                status,
+        # No explicit mapping. Local approval IDs can be ULID-like as well,
+        # so ID shape is not a reliable signal for remote identity.
+        # Always create/resolve a remote record first, then relay decision.
+        logger.info(
+            "[tool-approval] No remote mapping for local_id=%s — lazily "
+            "forwarding to ai-agents before relaying %s decision",
+            approval_id,
+            status,
+        )
+        _asyncio.create_task(
+            _lazy_forward_and_relay(
+                record=updated,
+                approved=status == "approved",
+                note=note,
+                user_jwt_token=jwt_token,
             )
-            _asyncio.create_task(
-                _relay_decision_to_ai_agents_ws(
-                    remote_id=approval_id,
-                    approved=status == "approved",
-                    note=note,
-                    user_jwt_token=jwt_token,
-                )
-            )
-        else:
-            # UUID local id with no remote mapping: create remote record first,
-            # then relay the decision.
-            logger.info(
-                "[tool-approval] No remote mapping for local_id=%s — lazily "
-                "forwarding to ai-agents before relaying %s decision",
-                approval_id,
-                status,
-            )
-            _asyncio.create_task(
-                _lazy_forward_and_relay(
-                    record=updated,
-                    approved=status == "approved",
-                    note=note,
-                    user_jwt_token=jwt_token,
-                )
-            )
+        )
     else:
         logger.warning(
             "[tool-approval] No JWT credentials for local_id=%s — cannot "

@@ -41,7 +41,7 @@ import { useAgentRuntimes } from '../hooks/useAgentRuntimes';
 
 // ─── Constants ─────────────────────────────────────────────────────────────
 
-const AGENT_NAME = 'memory-demo-agent';
+const AGENT_NAME = 'memory-example-agent';
 const AGENT_SPEC_ID = 'monitor-sales-kpis'; // uses mem0 memory
 
 // ─── Types ─────────────────────────────────────────────────────────────────

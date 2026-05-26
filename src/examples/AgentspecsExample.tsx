@@ -141,7 +141,7 @@ const DEFAULT_WS_URL =
   import.meta.env.VITE_ACP_WS_URL || 'ws://localhost:8765/api/v1/acp/ws';
 const DEFAULT_BASE_URL =
   import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
-const DEFAULT_AGENT_ID = 'demo-agent';
+const DEFAULT_AGENT_ID = 'example-agent';
 const DEFAULT_SYSTEM_PROMPT = 'You are a helpful AI assistant.';
 const RIGHT_PANE_WIDTH = {
   min: '420px',
@@ -153,7 +153,7 @@ const RIGHT_PANE_WIDTH = {
 // For development, you can create a GitHub OAuth App at:
 // https://github.com/settings/developers
 const GITHUB_CLIENT_ID =
-  import.meta.env.VITE_GITHUB_CLIENT_ID || 'demo-client-id';
+  import.meta.env.VITE_GITHUB_CLIENT_ID || 'example-client-id';
 
 // Kaggle API token - set via environment variable
 // Get your token at: https://www.kaggle.com/settings/account (API section)

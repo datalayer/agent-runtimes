@@ -49,7 +49,7 @@ const queryClient = new QueryClient();
 
 // ─── Constants ─────────────────────────────────────────────────────────────
 
-const AGENT_NAME = 'eval-demo-agent';
+const AGENT_NAME = 'eval-example-agent';
 const AGENT_SPEC_ID = 'monitor-sales-kpis';
 const DEFAULT_LOCAL_BASE_URL =
   (import.meta.env.VITE_BASE_URL as string | undefined) ||
