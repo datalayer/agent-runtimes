@@ -34,7 +34,7 @@ import type { SkillInfo } from '../types';
 
 const queryClient = new QueryClient();
 const AGENT_NAME = 'skills-example-agent';
-const AGENT_SPEC_ID = 'example-full';
+const AGENT_SPEC_ID = 'example-skills';
 const DEFAULT_LOCAL_BASE_URL =
   import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
 

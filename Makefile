@@ -425,4 +425,5 @@ specs-format: ## format generated specs and refresh MCP catalogs
 	npm run format
 	$(call step,Refreshing MCP catalog)
 	agent-runtimes mcp-servers-catalog
+	$(call step,Refreshing MCP config servers)
 	agent-runtimes mcp-servers-config

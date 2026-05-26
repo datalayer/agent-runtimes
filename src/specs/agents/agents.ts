@@ -149,10 +149,16 @@ export const ANALYZE_CAMPAIGN_PERFORMANCE_AGENT_SPEC_0_0_1: AgentSpec = {
     MCP_SERVER_MAP['slack:0.0.1'],
   ],
   skills: [
-    toAgentSkillSpec(SKILL_MAP['pdf:0.0.1']),
-    toAgentSkillSpec(SKILL_MAP['crawl:0.0.1']),
-    toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
-  ],
+    SKILL_MAP['pdf:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['pdf:0.0.1'])
+      : undefined,
+    SKILL_MAP['crawl:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['crawl:0.0.1'])
+      : undefined,
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
   tools: [],
   frontendTools: [
     FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
@@ -270,10 +276,16 @@ export const ANALYZE_SUPPORT_TICKETS_AGENT_SPEC_0_0_1: AgentSpec = {
     MCP_SERVER_MAP['slack:0.0.1'],
   ],
   skills: [
-    toAgentSkillSpec(SKILL_MAP['pdf:0.0.1']),
-    toAgentSkillSpec(SKILL_MAP['crawl:0.0.1']),
-    toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
-  ],
+    SKILL_MAP['pdf:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['pdf:0.0.1'])
+      : undefined,
+    SKILL_MAP['crawl:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['crawl:0.0.1'])
+      : undefined,
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
   tools: [],
   frontendTools: [
     FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
@@ -366,9 +378,13 @@ export const AUDIT_INVENTORY_LEVELS_AGENT_SPEC_0_0_1: AgentSpec = {
     MCP_SERVER_MAP['slack:0.0.1'],
   ],
   skills: [
-    toAgentSkillSpec(SKILL_MAP['pdf:0.0.1']),
-    toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
-  ],
+    SKILL_MAP['pdf:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['pdf:0.0.1'])
+      : undefined,
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
   tools: [],
   frontendTools: [
     FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
@@ -458,9 +474,13 @@ export const AUTOMATE_REGULATORY_REPORTING_AGENT_SPEC_0_0_1: AgentSpec = {
     MCP_SERVER_MAP['slack:0.0.1'],
   ],
   skills: [
-    toAgentSkillSpec(SKILL_MAP['pdf:0.0.1']),
-    toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
-  ],
+    SKILL_MAP['pdf:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['pdf:0.0.1'])
+      : undefined,
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
   tools: [],
   frontendTools: [
     FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
@@ -571,9 +591,13 @@ export const CLASSIFY_ROUTE_EMAILS_AGENT_SPEC_0_0_1: AgentSpec = {
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
   mcpServers: [MCP_SERVER_MAP['slack:0.0.1']],
   skills: [
-    toAgentSkillSpec(SKILL_MAP['github:0.0.1']),
-    toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
-  ],
+    SKILL_MAP['github:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['github:0.0.1'])
+      : undefined,
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
   tools: [],
   frontendTools: [
     FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
@@ -670,10 +694,16 @@ export const COMPREHENSIVE_SALES_ANALYTICS_AGENT_SPEC_0_0_1: AgentSpec = {
     MCP_SERVER_MAP['slack:0.0.1'],
   ],
   skills: [
-    toAgentSkillSpec(SKILL_MAP['pdf:0.0.1']),
-    toAgentSkillSpec(SKILL_MAP['github:0.0.1']),
-    toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
-  ],
+    SKILL_MAP['pdf:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['pdf:0.0.1'])
+      : undefined,
+    SKILL_MAP['github:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['github:0.0.1'])
+      : undefined,
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
   tools: [],
   frontendTools: [
     FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
@@ -749,9 +779,13 @@ export const CRAWLER_AGENT_SPEC_0_0_1: AgentSpec = {
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
   mcpServers: [MCP_SERVER_MAP['tavily:0.0.1']],
   skills: [
-    toAgentSkillSpec(SKILL_MAP['github:0.0.1']),
-    toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
-  ],
+    SKILL_MAP['github:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['github:0.0.1'])
+      : undefined,
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
   tools: [],
   frontendTools: [
     FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
@@ -827,9 +861,13 @@ export const DATA_ACQUISITION_AGENT_SPEC_0_0_1: AgentSpec = {
     MCP_SERVER_MAP['tavily:0.0.1'],
   ],
   skills: [
-    toAgentSkillSpec(SKILL_MAP['github:0.0.1']),
-    toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
-  ],
+    SKILL_MAP['github:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['github:0.0.1'])
+      : undefined,
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
   tools: [],
   frontendTools: [
     FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
@@ -900,7 +938,11 @@ export const DEMO_OUTPUTS_AGENT_SPEC_0_0_1: AgentSpec = {
   enabled: true,
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
   mcpServers: [],
-  skills: [toAgentSkillSpec(SKILL_MAP['events:0.0.1'])],
+  skills: [
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
   tools: [TOOL_MAP['runtime-echo:0.0.1']],
   frontendTools: [
     FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
@@ -969,9 +1011,13 @@ export const END_OF_MONTH_SALES_PERFORMANCE_AGENT_SPEC_0_0_1: AgentSpec = {
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
   mcpServers: [MCP_SERVER_MAP['salesforce:0.0.1']],
   skills: [
-    toAgentSkillSpec(SKILL_MAP['pdf:0.0.1']),
-    toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
-  ],
+    SKILL_MAP['pdf:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['pdf:0.0.1'])
+      : undefined,
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
   tools: [],
   frontendTools: [
     FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
@@ -1163,7 +1209,11 @@ export const EVAL_EXPERIMENT_RUNNER_AGENT_SPEC_0_0_1: AgentSpec = {
   enabled: true,
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
   mcpServers: [],
-  skills: [toAgentSkillSpec(SKILL_MAP['events:0.0.1'])],
+  skills: [
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
   tools: [TOOL_MAP['runtime-echo:0.0.1']],
   frontendTools: [
     FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
@@ -1214,7 +1264,11 @@ export const EXAMPLE_EVALS_AGENT_SPEC_0_0_1: AgentSpec = {
   enabled: true,
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
   mcpServers: [],
-  skills: [toAgentSkillSpec(SKILL_MAP['events:0.0.1'])],
+  skills: [
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
   tools: [TOOL_MAP['runtime-echo:0.0.1']],
   frontendTools: [
     FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
@@ -1266,13 +1320,28 @@ export const EXAMPLE_FULL_AGENT_SPEC_0_0_1: AgentSpec = {
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
   mcpServers: [MCP_SERVER_MAP['tavily:0.0.1']],
   skills: [
-    toAgentSkillSpec(SKILL_MAP['crawl:0.0.1']),
-    toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
-    toAgentSkillSpec(SKILL_MAP['github:0.0.1']),
-    toAgentSkillSpec(SKILL_MAP['pdf:0.0.1']),
-    toAgentSkillSpec(SKILL_MAP['text-summarizer:0.0.1']),
-    toAgentSkillSpec(SKILL_MAP['jokes:0.0.1']),
-  ],
+    SKILL_MAP['crawl:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['crawl:0.0.1'])
+      : undefined,
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+    SKILL_MAP['github:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['github:0.0.1'])
+      : undefined,
+    SKILL_MAP['pdf:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['pdf:0.0.1'])
+      : undefined,
+    SKILL_MAP['text-summarizer:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['text-summarizer:0.0.1'])
+      : undefined,
+    SKILL_MAP['jokes:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['jokes:0.0.1'])
+      : undefined,
+    SKILL_MAP['datalayer-whoami:1.0.0']
+      ? toAgentSkillSpec(SKILL_MAP['datalayer-whoami:1.0.0'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
   tools: [
     TOOL_MAP['runtime-echo:0.0.1'],
     TOOL_MAP['runtime-sensitive-echo:0.0.1'],
@@ -1332,7 +1401,11 @@ export const EXAMPLE_GUARDRAILS_AGENT_SPEC_0_0_1: AgentSpec = {
   enabled: true,
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
   mcpServers: [],
-  skills: [toAgentSkillSpec(SKILL_MAP['events:0.0.1'])],
+  skills: [
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
   tools: [
     TOOL_MAP['runtime-echo:0.0.1'],
     TOOL_MAP['runtime-sensitive-echo:0.0.1'],
@@ -1391,7 +1464,7 @@ export const EXAMPLE_HOOKS_AGENT_SPEC_0_0_1: AgentSpec = {
   enabled: true,
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
   mcpServers: [],
-  skills: [],
+  skills: [].filter(Boolean) as SkillSpec[],
   tools: [TOOL_MAP['runtime-echo:0.0.1']],
   frontendTools: [],
   environmentName: 'ai-agents-env',
@@ -1461,9 +1534,13 @@ export const EXAMPLE_MCP_AGENT_SPEC_0_0_1: AgentSpec = {
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
   mcpServers: [MCP_SERVER_MAP['tavily:0.0.1']],
   skills: [
-    toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
-    toAgentSkillSpec(SKILL_MAP['jokes:0.0.1']),
-  ],
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+    SKILL_MAP['jokes:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['jokes:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
   tools: [TOOL_MAP['runtime-echo:0.0.1']],
   frontendTools: [
     FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
@@ -1515,7 +1592,11 @@ export const EXAMPLE_MONITORING_AGENT_SPEC_0_0_1: AgentSpec = {
   enabled: true,
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
   mcpServers: [],
-  skills: [toAgentSkillSpec(SKILL_MAP['events:0.0.1'])],
+  skills: [
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
   tools: [TOOL_MAP['runtime-echo:0.0.1']],
   frontendTools: [
     FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
@@ -1566,7 +1647,7 @@ export const EXAMPLE_ONE_TRIGGER_APPROVAL_AGENT_SPEC_0_0_1: AgentSpec = {
   enabled: true,
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
   mcpServers: [],
-  skills: [],
+  skills: [].filter(Boolean) as SkillSpec[],
   tools: [TOOL_MAP['runtime-sensitive-echo:0.0.1']],
   frontendTools: [FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1']],
   environmentName: 'ai-agents-env',
@@ -1615,9 +1696,13 @@ export const EXAMPLE_ONE_TRIGGER_AGENT_SPEC_0_0_1: AgentSpec = {
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
   mcpServers: [],
   skills: [
-    toAgentSkillSpec(SKILL_MAP['github:0.0.1']),
-    toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
-  ],
+    SKILL_MAP['github:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['github:0.0.1'])
+      : undefined,
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
   tools: [TOOL_MAP['runtime-echo:0.0.1']],
   frontendTools: [FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1']],
   environmentName: 'ai-agents-env',
@@ -1665,7 +1750,11 @@ export const EXAMPLE_OTEL_AGENT_SPEC_0_0_1: AgentSpec = {
   enabled: true,
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
   mcpServers: [],
-  skills: [toAgentSkillSpec(SKILL_MAP['events:0.0.1'])],
+  skills: [
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
   tools: [TOOL_MAP['runtime-echo:0.0.1']],
   frontendTools: [
     FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
@@ -1717,7 +1806,7 @@ export const EXAMPLE_PARAMETERS_AGENT_SPEC_0_0_1: AgentSpec = {
   enabled: true,
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
   mcpServers: [],
-  skills: [],
+  skills: [].filter(Boolean) as SkillSpec[],
   tools: [TOOL_MAP['runtime-echo:0.0.1']],
   frontendTools: [],
   environmentName: 'ai-agents-env',
@@ -1788,7 +1877,11 @@ export const EXAMPLE_SIMPLE_AGENT_SPEC_0_0_1: AgentSpec = {
   enabled: true,
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
   mcpServers: [],
-  skills: [toAgentSkillSpec(SKILL_MAP['events:0.0.1'])],
+  skills: [
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
   tools: [TOOL_MAP['runtime-echo:0.0.1']],
   frontendTools: [
     FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
@@ -1832,6 +1925,80 @@ export const EXAMPLE_SIMPLE_AGENT_SPEC_0_0_1: AgentSpec = {
   subagents: undefined,
 };
 
+export const EXAMPLE_SKILLS_AGENT_SPEC_0_0_1: AgentSpec = {
+  id: 'example-skills',
+  version: '0.0.1',
+  name: 'Skills Demo Agent',
+  description: `Demo agent for skills usage with mixed discovery sources, including built-in file skills and package-registered skills like datalayer-whoami.`,
+  tags: ['demo', 'skills', 'discovery'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  mcpServers: [],
+  skills: [
+    SKILL_MAP['crawl:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['crawl:0.0.1'])
+      : undefined,
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+    SKILL_MAP['github:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['github:0.0.1'])
+      : undefined,
+    SKILL_MAP['pdf:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['pdf:0.0.1'])
+      : undefined,
+    SKILL_MAP['text-summarizer:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['text-summarizer:0.0.1'])
+      : undefined,
+    SKILL_MAP['jokes:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['jokes:0.0.1'])
+      : undefined,
+    SKILL_MAP['datalayer-whoami:1.0.0']
+      ? toAgentSkillSpec(SKILL_MAP['datalayer-whoami:1.0.0'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
+  tools: [],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
+  environmentName: 'ai-agents-env',
+  icon: 'briefcase',
+  emoji: '🧰',
+  color: '#0D9488',
+  suggestions: [
+    'List all your available skills and group them by source type',
+    'Use datalayer-whoami to return my user identity context',
+    'Use crawl to summarize https://datalayer.ai',
+    'Use github to list public repositories for an account',
+  ],
+  welcomeMessage:
+    'Hi! I am the Skills Demo Agent. I can use built-in file skills and package-registered skills such as datalayer-whoami.',
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'jupyter',
+  systemPrompt: `You are a skills-focused assistant. Use skills when they are relevant to user intent, and summarize tool outputs clearly in natural language.`,
+  systemPromptCodemodeAddons: undefined,
+  goal: undefined,
+  protocol: undefined,
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: undefined,
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+};
+
 export const EXAMPLE_SUBAGENTS_AGENT_SPEC_0_0_1: AgentSpec = {
   id: 'example-subagents',
   version: '0.0.1',
@@ -1841,7 +2008,11 @@ export const EXAMPLE_SUBAGENTS_AGENT_SPEC_0_0_1: AgentSpec = {
   enabled: true,
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
   mcpServers: [],
-  skills: [toAgentSkillSpec(SKILL_MAP['events:0.0.1'])],
+  skills: [
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
   tools: [TOOL_MAP['runtime-echo:0.0.1']],
   frontendTools: [
     FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
@@ -1893,10 +2064,16 @@ export const EXTRACT_DATA_FROM_FILES_AGENT_SPEC_0_0_1: AgentSpec = {
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
   mcpServers: [MCP_SERVER_MAP['filesystem:0.0.1']],
   skills: [
-    toAgentSkillSpec(SKILL_MAP['pdf:0.0.1']),
-    toAgentSkillSpec(SKILL_MAP['github:0.0.1']),
-    toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
-  ],
+    SKILL_MAP['pdf:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['pdf:0.0.1'])
+      : undefined,
+    SKILL_MAP['github:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['github:0.0.1'])
+      : undefined,
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
   tools: [],
   frontendTools: [
     FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
@@ -1993,7 +2170,11 @@ export const FINANCIAL_VIZ_AGENT_SPEC_0_0_1: AgentSpec = {
     MCP_SERVER_MAP['alphavantage:0.0.1'],
     MCP_SERVER_MAP['chart:0.0.1'],
   ],
-  skills: [toAgentSkillSpec(SKILL_MAP['events:0.0.1'])],
+  skills: [
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
   tools: [],
   frontendTools: [
     FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
@@ -2064,7 +2245,11 @@ export const FINANCIAL_AGENT_SPEC_0_0_1: AgentSpec = {
   enabled: false,
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
   mcpServers: [MCP_SERVER_MAP['alphavantage:0.0.1']],
-  skills: [toAgentSkillSpec(SKILL_MAP['events:0.0.1'])],
+  skills: [
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
   tools: [],
   frontendTools: [
     FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
@@ -2139,9 +2324,13 @@ export const GENERATE_WEEKLY_REPORTS_AGENT_SPEC_0_0_1: AgentSpec = {
     MCP_SERVER_MAP['slack:0.0.1'],
   ],
   skills: [
-    toAgentSkillSpec(SKILL_MAP['pdf:0.0.1']),
-    toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
-  ],
+    SKILL_MAP['pdf:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['pdf:0.0.1'])
+      : undefined,
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
   tools: [],
   frontendTools: [
     FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
@@ -2247,9 +2436,13 @@ export const GITHUB_AGENT_SPEC_0_0_1: AgentSpec = {
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
   mcpServers: [MCP_SERVER_MAP['google-workspace:0.0.1']],
   skills: [
-    toAgentSkillSpec(SKILL_MAP['github:0.0.1']),
-    toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
-  ],
+    SKILL_MAP['github:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['github:0.0.1'])
+      : undefined,
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
   tools: [],
   frontendTools: [
     FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
@@ -2323,7 +2516,11 @@ export const INFORMATION_ROUTING_AGENT_SPEC_0_0_1: AgentSpec = {
     MCP_SERVER_MAP['google-workspace:0.0.1'],
     MCP_SERVER_MAP['github:0.0.1'],
   ],
-  skills: [toAgentSkillSpec(SKILL_MAP['events:0.0.1'])],
+  skills: [
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
   tools: [],
   frontendTools: [
     FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
@@ -2395,10 +2592,16 @@ export const MONITOR_SALES_KPIS_AGENT_SPEC_0_0_1: AgentSpec = {
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
   mcpServers: [MCP_SERVER_MAP['filesystem:0.0.1']],
   skills: [
-    toAgentSkillSpec(SKILL_MAP['github:0.0.1']),
-    toAgentSkillSpec(SKILL_MAP['pdf:0.0.1']),
-    toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
-  ],
+    SKILL_MAP['github:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['github:0.0.1'])
+      : undefined,
+    SKILL_MAP['pdf:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['pdf:0.0.1'])
+      : undefined,
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
   tools: [
     TOOL_MAP['runtime-echo:0.0.1'],
     TOOL_MAP['runtime-sensitive-echo:0.0.1'],
@@ -2518,10 +2721,16 @@ export const OPTIMIZE_DYNAMIC_PRICING_AGENT_SPEC_0_0_1: AgentSpec = {
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
   mcpServers: [MCP_SERVER_MAP['filesystem:0.0.1']],
   skills: [
-    toAgentSkillSpec(SKILL_MAP['pdf:0.0.1']),
-    toAgentSkillSpec(SKILL_MAP['crawl:0.0.1']),
-    toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
-  ],
+    SKILL_MAP['pdf:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['pdf:0.0.1'])
+      : undefined,
+    SKILL_MAP['crawl:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['crawl:0.0.1'])
+      : undefined,
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
   tools: [],
   frontendTools: [
     FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
@@ -2647,9 +2856,13 @@ export const OPTIMIZE_GRID_OPERATIONS_AGENT_SPEC_0_0_1: AgentSpec = {
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
   mcpServers: [MCP_SERVER_MAP['filesystem:0.0.1']],
   skills: [
-    toAgentSkillSpec(SKILL_MAP['pdf:0.0.1']),
-    toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
-  ],
+    SKILL_MAP['pdf:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['pdf:0.0.1'])
+      : undefined,
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
   tools: [],
   frontendTools: [
     FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
@@ -2764,9 +2977,13 @@ export const PROCESS_CITIZEN_REQUESTS_AGENT_SPEC_0_0_1: AgentSpec = {
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
   mcpServers: [MCP_SERVER_MAP['filesystem:0.0.1']],
   skills: [
-    toAgentSkillSpec(SKILL_MAP['pdf:0.0.1']),
-    toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
-  ],
+    SKILL_MAP['pdf:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['pdf:0.0.1'])
+      : undefined,
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
   tools: [],
   frontendTools: [
     FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
@@ -2889,9 +3106,13 @@ export const PROCESS_CLINICAL_TRIAL_DATA_AGENT_SPEC_0_0_1: AgentSpec = {
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
   mcpServers: [MCP_SERVER_MAP['filesystem:0.0.1']],
   skills: [
-    toAgentSkillSpec(SKILL_MAP['pdf:0.0.1']),
-    toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
-  ],
+    SKILL_MAP['pdf:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['pdf:0.0.1'])
+      : undefined,
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
   tools: [],
   frontendTools: [
     FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
@@ -3016,9 +3237,13 @@ export const PROCESS_FINANCIAL_TRANSACTIONS_AGENT_SPEC_0_0_1: AgentSpec = {
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
   mcpServers: [MCP_SERVER_MAP['filesystem:0.0.1']],
   skills: [
-    toAgentSkillSpec(SKILL_MAP['pdf:0.0.1']),
-    toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
-  ],
+    SKILL_MAP['pdf:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['pdf:0.0.1'])
+      : undefined,
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
   tools: [],
   frontendTools: [
     FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
@@ -3120,7 +3345,11 @@ export const SPATIAL_DATA_ANALYSIS_AGENT_SPEC_0_0_1: AgentSpec = {
     MCP_SERVER_MAP['eurus:0.0.1'],
     MCP_SERVER_MAP['filesystem:0.0.1'],
   ],
-  skills: [toAgentSkillSpec(SKILL_MAP['events:0.0.1'])],
+  skills: [
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
   tools: [],
   frontendTools: [
     FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
@@ -3183,9 +3412,13 @@ export const SUMMARIZE_DOCUMENTS_AGENT_SPEC_0_0_1: AgentSpec = {
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
   mcpServers: [MCP_SERVER_MAP['filesystem:0.0.1']],
   skills: [
-    toAgentSkillSpec(SKILL_MAP['pdf:0.0.1']),
-    toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
-  ],
+    SKILL_MAP['pdf:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['pdf:0.0.1'])
+      : undefined,
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
   tools: [],
   frontendTools: [
     FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
@@ -3281,9 +3514,13 @@ export const SYNC_CRM_CONTACTS_AGENT_SPEC_0_0_1: AgentSpec = {
     MCP_SERVER_MAP['slack:0.0.1'],
   ],
   skills: [
-    toAgentSkillSpec(SKILL_MAP['pdf:0.0.1']),
-    toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
-  ],
+    SKILL_MAP['pdf:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['pdf:0.0.1'])
+      : undefined,
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
   tools: [],
   frontendTools: [
     FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
@@ -3391,6 +3628,7 @@ export const AGENT_SPECS: Record<string, AgentSpec> = {
   'example-otel': EXAMPLE_OTEL_AGENT_SPEC_0_0_1,
   'example-parameters': EXAMPLE_PARAMETERS_AGENT_SPEC_0_0_1,
   'example-simple': EXAMPLE_SIMPLE_AGENT_SPEC_0_0_1,
+  'example-skills': EXAMPLE_SKILLS_AGENT_SPEC_0_0_1,
   'example-subagents': EXAMPLE_SUBAGENTS_AGENT_SPEC_0_0_1,
   'extract-data-from-files': EXTRACT_DATA_FROM_FILES_AGENT_SPEC_0_0_1,
   'financial-viz': FINANCIAL_VIZ_AGENT_SPEC_0_0_1,

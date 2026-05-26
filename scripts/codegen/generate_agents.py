@@ -649,15 +649,15 @@ const SKILL_MAP: Record<string, any> = {
         code += "};\n"
         code += """
 function toAgentSkillSpec(skill: SkillSpec) {
-  return {
-    id: skill.id,
-    name: skill.name,
-    description: skill.description,
+    return {
+        id: skill.id,
+        name: skill.name,
+        description: skill.description,
         version: skill.version ?? '0.0.1',
-    tags: skill.tags,
-    enabled: skill.enabled,
-    requiredEnvVars: skill.requiredEnvVars,
-  };
+        tags: skill.tags,
+        enabled: skill.enabled,
+        requiredEnvVars: skill.requiredEnvVars,
+    };
 }
 """
 
@@ -748,7 +748,8 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
             ]
             if has_skills and skill_ids_list:
                 skills_str = ", ".join(
-                    f"toAgentSkillSpec(SKILL_MAP['{sid}'])" for sid in skill_ids_list
+                    f"(SKILL_MAP['{sid}'] ? toAgentSkillSpec(SKILL_MAP['{sid}']) : undefined)"
+                    for sid in skill_ids_list
                 )
             else:
                 skills_str = ""
@@ -866,7 +867,7 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
   enabled: {str(spec.get("enabled", True)).lower()},
   model: {model_ts},
   mcpServers: [{mcp_servers_str}],
-  skills: [{skills_str}],
+    skills: [{skills_str}].filter(Boolean) as SkillSpec[],
     tools: [{tools_str}],
     frontendTools: [{frontend_tools_str}],
   environmentName: '{spec.get("environment_name", "ai-agents-env")}',
