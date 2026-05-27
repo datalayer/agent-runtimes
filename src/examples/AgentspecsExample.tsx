@@ -5,13 +5,25 @@
 
 /// <reference types="vite/client" />
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { PageLayout, IconButton } from '@primer/react';
-import { SidebarCollapseIcon, SidebarExpandIcon } from '@primer/octicons-react';
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef,
+} from 'react';
+import { PageLayout, IconButton, Button, Text } from '@primer/react';
+import {
+  SidebarCollapseIcon,
+  SidebarExpandIcon,
+  XIcon,
+} from '@primer/octicons-react';
 import { AiAgentIcon } from '@datalayer/icons-react';
 import { Blankslate } from '@primer/react/experimental';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Box } from '@datalayer/primer-addons';
+import { useCoreStore } from '@datalayer/core';
+import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { AgentConfiguration } from '../config';
 import { Chat } from '../chat';
 import { DEFAULT_MODEL } from '../specs';
@@ -20,9 +32,15 @@ import type { OAuthProvider, Identity } from '../identity';
 import { useIdentity } from '../identity';
 import { useAgentsStore } from './utils/examplesStore';
 import { ThemedProvider } from './utils/themedProvider';
-import { isSpecSelection, getSpecId } from '../config/AgentConfiguration';
+import {
+  isSpecSelection,
+  getSpecId,
+  isCloudSpecSelection,
+  getCloudSpecId,
+} from '../config/AgentConfiguration';
 import { MockFileBrowser, MainContent, Header } from './components';
 import { useChatStore } from '../stores';
+import { useAgentRuntimes } from '../hooks/useAgentRuntimes';
 import type {
   AgentLibrary,
   McpServerSelection,
@@ -159,6 +177,58 @@ const GITHUB_CLIENT_ID =
 // Get your token at: https://www.kaggle.com/settings/account (API section)
 // Download kaggle.json and use the "key" value
 const KAGGLE_TOKEN = import.meta.env.VITE_KAGGLE_TOKEN || '';
+
+const isPlainObject = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const yamlScalar = (value: unknown): string => {
+  if (value === null || value === undefined) {
+    return 'null';
+  }
+  if (typeof value === 'number' || typeof value === 'boolean') {
+    return String(value);
+  }
+  const str = String(value);
+  if (str === '') {
+    return "''";
+  }
+  if (/^[a-zA-Z0-9._/-]+$/.test(str)) {
+    return str;
+  }
+  return JSON.stringify(str);
+};
+
+const toYaml = (value: unknown, indent = 0): string => {
+  const pad = '  '.repeat(indent);
+  if (Array.isArray(value)) {
+    if (value.length === 0) {
+      return '[]';
+    }
+    return value
+      .map(item => {
+        if (isPlainObject(item) || Array.isArray(item)) {
+          return `${pad}-\n${toYaml(item, indent + 1)}`;
+        }
+        return `${pad}- ${yamlScalar(item)}`;
+      })
+      .join('\n');
+  }
+  if (isPlainObject(value)) {
+    const entries = Object.entries(value).filter(([, v]) => v !== undefined);
+    if (entries.length === 0) {
+      return '{}';
+    }
+    return entries
+      .map(([key, val]) => {
+        if (isPlainObject(val) || Array.isArray(val)) {
+          return `${pad}${key}:\n${toYaml(val, indent + 1)}`;
+        }
+        return `${pad}${key}: ${yamlScalar(val)}`;
+      })
+      .join('\n');
+  }
+  return `${pad}${yamlScalar(value)}`;
+};
 
 /**
  * Agent Runtime Example Component
@@ -312,6 +382,16 @@ const AgentspecsExample: React.FC<AgentRuntimeFormExampleProps> = ({
   const [sandboxVariant, setSandboxVariant] = useState('');
   const [selectedLibrarySpec, setSelectedLibrarySpec] =
     useState<LibraryAgentSpec | null>(null);
+  const [selectedCloudSpec, setSelectedCloudSpec] =
+    useState<LibraryAgentSpec | null>(null);
+  const [cloudLibrarySpecs, setCloudLibrarySpecs] = useState<
+    LibraryAgentSpec[]
+  >([]);
+  const [cloudLibraryLoading, setCloudLibraryLoading] = useState(false);
+  const [cloudLibraryError, setCloudLibraryError] = useState<string | null>(
+    null,
+  );
+  const [showSpecOverlay, setShowSpecOverlay] = useState(false);
   const [isConfigured, setIsConfigured] = useState(false);
 
   // Agent capabilities state (moved from Header toggles)
@@ -329,6 +409,19 @@ const AgentspecsExample: React.FC<AgentRuntimeFormExampleProps> = ({
   >(initialSelectedMcpServers);
   const autoSelectRef = useRef(false);
   const enableSkills = selectedSkills.length > 0;
+  const { configuration } = useCoreStore();
+  const { token } = useSimpleAuthStore();
+
+  const cloudCatalogBaseUrl = useMemo(
+    () =>
+      configuration?.runtimesRunUrl ||
+      import.meta.env.VITE_DATALAYER_AGENT_RUNTIMES_URL ||
+      'https://r1.datalayer.run',
+    [configuration?.runtimesRunUrl],
+  );
+
+  const isCloudMode = isCloudSpecSelection(selectedAgentId);
+  const selectedSpec = selectedCloudSpec || selectedLibrarySpec;
 
   // =====================================================================
   // Two-Container Codemode Architecture
@@ -608,6 +701,197 @@ const AgentspecsExample: React.FC<AgentRuntimeFormExampleProps> = ({
     }
   }, [baseUrl]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchCloudLibrarySpecs = async () => {
+      if (!cloudCatalogBaseUrl) {
+        setCloudLibrarySpecs([]);
+        setCloudLibraryError(null);
+        return;
+      }
+      setCloudLibraryLoading(true);
+      setCloudLibraryError(null);
+      try {
+        const response = await fetch(
+          `${cloudCatalogBaseUrl}/api/v1/agents/library`,
+          {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+          },
+        );
+        if (!response.ok) {
+          throw new Error(`Cloud library fetch failed (${response.status})`);
+        }
+        const payload = (await response.json()) as LibraryAgentSpec[];
+        if (!cancelled) {
+          setCloudLibrarySpecs(payload || []);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setCloudLibrarySpecs([]);
+          setCloudLibraryError(
+            error instanceof Error
+              ? error.message
+              : 'Failed to fetch cloud agent specs',
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setCloudLibraryLoading(false);
+        }
+      }
+    };
+
+    void fetchCloudLibrarySpecs();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [cloudCatalogBaseUrl, token]);
+
+  const applySpecToForm = useCallback((spec: LibraryAgentSpec) => {
+    setAgentName(spec.id);
+    setDescription(spec.description || '');
+    setGoal(spec.goal || '');
+    setSystemPrompt(spec.systemPrompt || spec.goal || DEFAULT_SYSTEM_PROMPT);
+    setSystemPromptCodemodeAddons(spec.systemPromptCodemodeAddons || '');
+    setTools(spec.tools || []);
+    setSandboxVariant(spec.sandboxVariant || '');
+    if (spec.model) {
+      setModel(spec.model);
+    }
+    if (
+      spec.protocol === 'ag-ui' ||
+      spec.protocol === 'acp' ||
+      spec.protocol === 'vercel-ai' ||
+      spec.protocol === 'a2a'
+    ) {
+      setTransport(spec.protocol);
+    }
+    setSelectedMcpServers(
+      (spec.mcpServers || []).map(server => ({
+        id: server.id,
+        origin: 'config' as const,
+      })),
+    );
+    setSelectedSkills(spec.skills || []);
+
+    const codemodeConfig =
+      spec.codemode && typeof spec.codemode === 'object'
+        ? (spec.codemode as Record<string, unknown>)
+        : null;
+    const codemodeEnabled =
+      !!spec.systemPromptCodemodeAddons || !!codemodeConfig?.enabled;
+    setEnableCodemode(codemodeEnabled);
+    setAllowDirectToolCalls(
+      Boolean(
+        codemodeConfig?.allowDirectToolCalls ??
+        codemodeConfig?.allow_direct_tool_calls,
+      ),
+    );
+    setEnableToolReranker(
+      Boolean(
+        codemodeConfig?.enableToolReranker ??
+        codemodeConfig?.enable_tool_reranker,
+      ),
+    );
+    setUseJupyterSandbox(spec.sandboxVariant === 'jupyter');
+  }, []);
+
+  const mergedSpecForLaunch = useMemo(() => {
+    const normalizedProtocol =
+      transport === 'vercel-ai-jupyter' ? 'vercel-ai' : transport;
+    const baseSpec = selectedSpec
+      ? ({ ...selectedSpec } as Record<string, unknown>)
+      : ({} as Record<string, unknown>);
+
+    const codemode =
+      isPlainObject(baseSpec.codemode) && baseSpec.codemode
+        ? ({ ...baseSpec.codemode } as Record<string, unknown>)
+        : {};
+
+    codemode.enabled = enableCodemode;
+    codemode.allowDirectToolCalls = allowDirectToolCalls;
+    codemode.enableToolReranker = enableToolReranker;
+
+    return {
+      ...baseSpec,
+      id: selectedSpec?.id || agentName,
+      name: agentName,
+      description: description || undefined,
+      goal: goal || undefined,
+      model: model || undefined,
+      protocol: normalizedProtocol,
+      systemPrompt: systemPrompt || undefined,
+      systemPromptCodemodeAddons: systemPromptCodemodeAddons || undefined,
+      tools,
+      sandboxVariant: sandboxVariant || undefined,
+      skills: selectedSkills,
+      mcpServers: selectedMcpServers.map(server => ({
+        id: server.id,
+        origin: server.origin,
+      })),
+      codemode,
+    } as Record<string, unknown>;
+  }, [
+    transport,
+    selectedSpec,
+    agentName,
+    description,
+    goal,
+    model,
+    systemPrompt,
+    systemPromptCodemodeAddons,
+    tools,
+    sandboxVariant,
+    selectedSkills,
+    selectedMcpServers,
+    enableCodemode,
+    allowDirectToolCalls,
+    enableToolReranker,
+  ]);
+
+  const specYamlPreview = useMemo(
+    () => toYaml(mergedSpecForLaunch),
+    [mergedSpecForLaunch],
+  );
+
+  useEffect(() => {
+    if (!showSpecOverlay) {
+      return;
+    }
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setShowSpecOverlay(false);
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [showSpecOverlay]);
+
+  const {
+    runtime: cloudRuntime,
+    status: cloudRuntimeStatus,
+    error: cloudRuntimeError,
+    launchRuntime: launchCloudRuntime,
+    disconnect: disconnectCloudRuntime,
+  } = useAgentRuntimes({
+    agentSpecId: isCloudMode ? getCloudSpecId(selectedAgentId) : undefined,
+    autoStart: false,
+    runtimeCreationTarget: 'backend-services',
+    agentSpec: isCloudMode ? mergedSpecForLaunch : undefined,
+    agentConfig: {
+      name: agentName,
+      model,
+      protocol: transport === 'vercel-ai-jupyter' ? 'vercel-ai' : transport,
+      description: description || `Cloud agent launch for ${agentName}`,
+    },
+  });
+
   const handleAgentSelect = async (agentId: string) => {
     setSelectedAgentId(agentId);
     setCreateError(null);
@@ -623,71 +907,36 @@ const AgentspecsExample: React.FC<AgentRuntimeFormExampleProps> = ({
       setSelectedSkills([]);
       setSelectedMcpServers([]);
       setSelectedLibrarySpec(null);
+      setSelectedCloudSpec(null);
       setEnableCodemode(false);
       setAllowDirectToolCalls(false);
       setEnableToolReranker(false);
       setUseJupyterSandbox(false);
       setTransport('vercel-ai');
     } else if (isSpecSelection(agentId)) {
-      // Populate form fields from the selected library spec
+      setSelectedCloudSpec(null);
       const specId = getSpecId(agentId);
       const specs = await fetchLibrarySpecs();
       const spec = specs.find(s => s.id === specId);
       if (spec) {
         setSelectedLibrarySpec(spec);
-        setAgentName(spec.id);
-        setDescription(spec.description || '');
-        setGoal(spec.goal || '');
-        setSystemPrompt(
-          spec.systemPrompt || spec.goal || DEFAULT_SYSTEM_PROMPT,
-        );
-        setSystemPromptCodemodeAddons(spec.systemPromptCodemodeAddons || '');
-        setTools(spec.tools || []);
-        setSandboxVariant(spec.sandboxVariant || '');
-        if (spec.model) {
-          setModel(spec.model);
-        }
-        if (
-          spec.protocol === 'ag-ui' ||
-          spec.protocol === 'acp' ||
-          spec.protocol === 'vercel-ai' ||
-          spec.protocol === 'a2a'
-        ) {
-          setTransport(spec.protocol);
-        }
-        setSelectedMcpServers(
-          (spec.mcpServers || []).map(server => ({
-            id: server.id,
-            origin: 'config' as const,
-          })),
-        );
-        setSelectedSkills(spec.skills || []);
-
-        const codemodeConfig =
-          spec.codemode && typeof spec.codemode === 'object'
-            ? (spec.codemode as Record<string, unknown>)
-            : null;
-        const codemodeEnabled =
-          !!spec.systemPromptCodemodeAddons || !!codemodeConfig?.enabled;
-        setEnableCodemode(codemodeEnabled);
-        setAllowDirectToolCalls(
-          Boolean(
-            codemodeConfig?.allowDirectToolCalls ??
-            codemodeConfig?.allow_direct_tool_calls,
-          ),
-        );
-        setEnableToolReranker(
-          Boolean(
-            codemodeConfig?.enableToolReranker ??
-            codemodeConfig?.enable_tool_reranker,
-          ),
-        );
-        setUseJupyterSandbox(spec.sandboxVariant === 'jupyter');
+        applySpecToForm(spec);
       } else {
         setSelectedLibrarySpec(null);
       }
+    } else if (isCloudSpecSelection(agentId)) {
+      setSelectedLibrarySpec(null);
+      const specId = getCloudSpecId(agentId);
+      const spec = cloudLibrarySpecs.find(s => s.id === specId) || null;
+      if (spec) {
+        setSelectedCloudSpec(spec);
+        applySpecToForm(spec);
+      } else {
+        setSelectedCloudSpec(null);
+      }
     } else {
       setSelectedLibrarySpec(null);
+      setSelectedCloudSpec(null);
       const agent = agents.find(a => a.id === agentId);
       if (agent) {
         setAgentName(agent.id);
@@ -695,6 +944,12 @@ const AgentspecsExample: React.FC<AgentRuntimeFormExampleProps> = ({
       }
     }
   };
+
+  useEffect(() => {
+    if (isCloudMode && cloudRuntimeStatus === 'error' && cloudRuntimeError) {
+      setCreateError(cloudRuntimeError);
+    }
+  }, [isCloudMode, cloudRuntimeStatus, cloudRuntimeError]);
 
   /**
    * Create a new agent via the API
@@ -704,7 +959,7 @@ const AgentspecsExample: React.FC<AgentRuntimeFormExampleProps> = ({
     setCreateError(null);
 
     try {
-      // Resolve spec ID if creating from a library spec
+      // Resolve local spec ID when creating from local library specs.
       const specId = isSpecSelection(selectedAgentId)
         ? getSpecId(selectedAgentId)
         : undefined;
@@ -733,7 +988,7 @@ const AgentspecsExample: React.FC<AgentRuntimeFormExampleProps> = ({
           selected_mcp_servers: selectedMcpServers,
           skills: selectedSkills,
           jupyter_sandbox: useJupyterSandbox ? jupyterSandboxUrl : undefined,
-          agent_spec: selectedLibrarySpec || undefined,
+          agent_spec: mergedSpecForLaunch,
           ...(specId ? { agent_spec_id: specId } : {}),
         }),
       });
@@ -783,7 +1038,7 @@ const AgentspecsExample: React.FC<AgentRuntimeFormExampleProps> = ({
     useJupyterSandbox,
     jupyterSandboxUrl,
     selectedAgentId,
-    selectedLibrarySpec,
+    mergedSpecForLaunch,
   ]);
 
   /**
@@ -821,7 +1076,37 @@ const AgentspecsExample: React.FC<AgentRuntimeFormExampleProps> = ({
 
   // True when creating a new agent (blank or from a library spec)
   const isNewMode =
-    selectedAgentId === 'new-agent' || isSpecSelection(selectedAgentId);
+    selectedAgentId === 'new-agent' ||
+    isSpecSelection(selectedAgentId) ||
+    isCloudSpecSelection(selectedAgentId);
+
+  const effectiveBaseUrl =
+    isCloudMode && cloudRuntime?.agentBaseUrl
+      ? cloudRuntime.agentBaseUrl
+      : baseUrl;
+  const effectiveAgentId =
+    isCloudMode && cloudRuntime?.agentId
+      ? cloudRuntime.agentId
+      : currentAgent?.id || agentName;
+  const effectiveProtocol = currentAgent?.protocol || transport;
+  const launchStatus = useMemo(() => {
+    if (createError) {
+      return 'error';
+    }
+    if (isCloudMode) {
+      return cloudRuntimeStatus || 'idle';
+    }
+    if (isCreatingAgent) {
+      return 'launching';
+    }
+    return isConfigured ? 'ready' : 'idle';
+  }, [
+    createError,
+    isCloudMode,
+    cloudRuntimeStatus,
+    isCreatingAgent,
+    isConfigured,
+  ]);
 
   const handleConnect = async () => {
     // For existing agents (not new-agent or spec), ensure transport and agentName are set
@@ -832,6 +1117,24 @@ const AgentspecsExample: React.FC<AgentRuntimeFormExampleProps> = ({
         setAgentName(agent.id);
       }
       setIsConfigured(true);
+      return;
+    }
+
+    if (isCloudMode) {
+      try {
+        const connection = await launchCloudRuntime();
+        setAgentName(connection.agentId || agentName);
+        if (connection.agentBaseUrl) {
+          setBaseUrl(connection.agentBaseUrl);
+        }
+        setIsConfigured(true);
+      } catch (error) {
+        setCreateError(
+          error instanceof Error
+            ? error.message
+            : 'Failed to launch cloud agent',
+        );
+      }
       return;
     }
 
@@ -865,6 +1168,11 @@ const AgentspecsExample: React.FC<AgentRuntimeFormExampleProps> = ({
   };
 
   const handleReset = async () => {
+    if (isCloudMode) {
+      disconnectCloudRuntime();
+      setIsConfigured(false);
+      return;
+    }
     // Delete the agent from the server if we created it
     if (
       (selectedAgentId === 'new-agent' || isSpecSelection(selectedAgentId)) &&
@@ -978,8 +1286,8 @@ const AgentspecsExample: React.FC<AgentRuntimeFormExampleProps> = ({
             <MainContent
               showWelcomeMessage={true}
               isConfigured={isConfigured}
-              baseUrl={baseUrl}
-              agentId={currentAgent?.id || agentName}
+              baseUrl={effectiveBaseUrl}
+              agentId={effectiveAgentId}
               enableCodemode={enableCodemode}
               selectedMcpServers={selectedMcpServers}
               onSelectedMcpServersChange={handleSelectedServersChange}
@@ -1034,6 +1342,21 @@ const AgentspecsExample: React.FC<AgentRuntimeFormExampleProps> = ({
                     p: 2,
                   }}
                 >
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      justifyContent: 'flex-end',
+                      mb: 2,
+                      gap: 2,
+                    }}
+                  >
+                    <Button
+                      size="small"
+                      onClick={() => setShowSpecOverlay(true)}
+                    >
+                      View Full Spec (YAML)
+                    </Button>
+                  </Box>
                   {!isConfigured ? (
                     <AgentConfiguration
                       agentLibrary={agentLibrary}
@@ -1060,6 +1383,11 @@ const AgentspecsExample: React.FC<AgentRuntimeFormExampleProps> = ({
                       availableSkills={MOCK_SKILLS}
                       selectedSkills={selectedSkills}
                       selectedMcpServers={selectedMcpServers}
+                      cloudLibrarySpecs={cloudLibrarySpecs}
+                      cloudLibraryLoading={cloudLibraryLoading}
+                      cloudLibraryError={cloudLibraryError}
+                      launchTarget={isCloudMode ? 'cloud' : 'local'}
+                      launchStatus={launchStatus}
                       identityProviders={oauthProvidersConfig}
                       onIdentityConnect={handleIdentityConnect}
                       onIdentityDisconnect={handleIdentityDisconnect}
@@ -1091,16 +1419,16 @@ const AgentspecsExample: React.FC<AgentRuntimeFormExampleProps> = ({
                     /* Chat Interface */
                     <Box sx={{ flex: 1, minHeight: 0 }}>
                       <ChatWithJupyterStatus
-                        baseUrl={baseUrl}
+                        baseUrl={effectiveBaseUrl}
                         isConfigured={isConfigured}
                         enableCodemode={enableCodemode}
                         useJupyterSandbox={useJupyterSandbox}
                         chatProps={{
-                          protocol: currentAgent?.protocol || transport,
+                          protocol: effectiveProtocol,
                           extensions: extensions,
                           wsUrl: wsUrl,
-                          baseUrl: baseUrl,
-                          agentId: currentAgent?.id || agentName,
+                          baseUrl: effectiveBaseUrl,
+                          agentId: effectiveAgentId,
                           title:
                             currentAgent?.name || agentName || 'AI Assistant',
                           autoConnect: true,
@@ -1178,6 +1506,60 @@ const AgentspecsExample: React.FC<AgentRuntimeFormExampleProps> = ({
             </Box>
           )}
         </PageLayout>
+
+        {showSpecOverlay && (
+          <Box
+            sx={{
+              position: 'fixed',
+              inset: 24,
+              zIndex: 300,
+              bg: 'canvas.default',
+              border: '1px solid',
+              borderColor: 'border.default',
+              borderRadius: 1,
+              boxShadow: 'shadow.large',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                px: 3,
+                py: 2,
+                borderBottom: '1px solid',
+                borderColor: 'border.default',
+              }}
+            >
+              <Text sx={{ fontWeight: 'bold' }}>
+                Spec Payload Preview (YAML)
+              </Text>
+              <IconButton
+                icon={XIcon}
+                aria-label="Close spec preview"
+                size="small"
+                variant="invisible"
+                onClick={() => setShowSpecOverlay(false)}
+              />
+            </Box>
+            <Box sx={{ p: 3, overflow: 'auto', flex: 1 }}>
+              <Box
+                as="pre"
+                sx={{
+                  m: 0,
+                  whiteSpace: 'pre',
+                  fontFamily: 'monospace',
+                  fontSize: 0,
+                  lineHeight: '20px',
+                }}
+              >
+                {specYamlPreview}
+              </Box>
+            </Box>
+          </Box>
+        )}
       </ThemedProvider>
     </QueryClientProvider>
   );

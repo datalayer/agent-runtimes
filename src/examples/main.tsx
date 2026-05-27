@@ -176,6 +176,35 @@ const getDefaultExampleName = (): string => {
   return 'NotebookExample';
 };
 
+const parseJwtPayload = (token: string): Record<string, unknown> | null => {
+  const parts = token.split('.');
+  if (parts.length !== 3 || !parts[1]) {
+    return null;
+  }
+  try {
+    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, '=');
+    const decoded = atob(padded);
+    return JSON.parse(decoded) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+};
+
+const isExpiredJwt = (token: string): boolean => {
+  const payload = parseJwtPayload(token);
+  if (!payload) {
+    // Non-JWT tokens (for example API keys) should not be treated as expired.
+    return false;
+  }
+  const exp = payload.exp;
+  if (typeof exp !== 'number') {
+    return false;
+  }
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  return nowSeconds >= exp;
+};
+
 // Notebook-only component for iframe display - renders ONLY the notebook without any UI chrome
 const NotebookOnlyApp: React.FC = () => {
   const [serviceManager, setServiceManager] =
@@ -582,6 +611,7 @@ const ExampleAppThemed: React.FC<{
   const logoColors = getLogoColors(themeVariant, colorMode);
   const { token, setAuth, clearAuth } = useSimpleAuthStore();
   const [showSignIn, setShowSignIn] = useState(false);
+  const shouldShowAuthScreen = showSignIn && !token;
 
   const syncTokenToIamStore = useCallback((newToken: string | undefined) => {
     import('@datalayer/core/lib/state').then(({ iamStore: coreIamStore }) => {
@@ -593,6 +623,18 @@ const ExampleAppThemed: React.FC<{
     // Keep iamStore aligned with persisted auth token on app load/refresh.
     syncTokenToIamStore(token || undefined);
   }, [token, syncTokenToIamStore]);
+
+  useEffect(() => {
+    if (!token) {
+      setShowSignIn(true);
+      return;
+    }
+    if (isExpiredJwt(token)) {
+      clearAuth();
+      syncTokenToIamStore(undefined);
+      setShowSignIn(true);
+    }
+  }, [token, clearAuth, syncTokenToIamStore]);
 
   const handleHeaderSignIn = useCallback(
     (newToken: string, handle: string) => {
@@ -606,6 +648,7 @@ const ExampleAppThemed: React.FC<{
   const handleHeaderLogout = useCallback(() => {
     clearAuth();
     syncTokenToIamStore(undefined);
+    setShowSignIn(true);
   }, [clearAuth, syncTokenToIamStore]);
 
   return (
@@ -852,43 +895,6 @@ const ExampleAppThemed: React.FC<{
           </Box>
         </Box>
 
-        {showSignIn && !token && (
-          <Box
-            sx={{
-              position: 'fixed',
-              top: 60,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              zIndex: 150,
-              bg: 'canvas.backdrop',
-              p: 3,
-              overflow: 'auto',
-            }}
-          >
-            <Box sx={{ maxWidth: 640, mx: 'auto' }}>
-              <SignInSimple
-                onSignIn={handleHeaderSignIn}
-                onApiKeySignIn={apiKey =>
-                  handleHeaderSignIn(apiKey, 'api-key-user')
-                }
-                title="Agent Runtimes Examples"
-                description="Sign in to run authenticated examples and tools."
-                leadingIcon={<HomeIcon size={24} />}
-              />
-              <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center' }}>
-                <Button
-                  size="small"
-                  variant="invisible"
-                  onClick={() => setShowSignIn(false)}
-                >
-                  Cancel
-                </Button>
-              </Box>
-            </Box>
-          </Box>
-        )}
-
         {/* ── Content area ───────────────────────────────── */}
         <Box
           sx={{
@@ -897,7 +903,29 @@ const ExampleAppThemed: React.FC<{
             overflow: 'hidden',
           }}
         >
-          {isChangingExample ? (
+          {shouldShowAuthScreen ? (
+            <Box
+              sx={{
+                width: '100%',
+                height: '100%',
+                bg: 'canvas.backdrop',
+                p: 3,
+                overflow: 'auto',
+              }}
+            >
+              <Box sx={{ maxWidth: 640, mx: 'auto' }}>
+                <SignInSimple
+                  onSignIn={handleHeaderSignIn}
+                  onApiKeySignIn={apiKey =>
+                    handleHeaderSignIn(apiKey, 'api-key-user')
+                  }
+                  title="Agent Runtimes Examples"
+                  description="Sign in to run authenticated examples and tools."
+                  leadingIcon={<HomeIcon size={24} />}
+                />
+              </Box>
+            </Box>
+          ) : isChangingExample ? (
             <Box sx={{ p: 5, textAlign: 'center', color: 'fg.muted' }}>
               <h3>Loading {selectedExample}…</h3>
               <p>Please wait while the example loads.</p>

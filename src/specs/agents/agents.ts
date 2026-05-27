@@ -932,7 +932,7 @@ export const DATA_ACQUISITION_AGENT_SPEC_0_0_1: AgentSpec = {
 export const DEMO_OUTPUTS_AGENT_SPEC_0_0_1: AgentSpec = {
   id: 'demo-outputs',
   version: '0.0.1',
-  name: 'Demo Outputs',
+  name: 'Example Outputs Agent',
   description: `Demonstrates structured response rendering (table, json, chart, and file) for the AgentOutputsExample sidebar output parser.`,
   tags: ['demo', 'outputs', 'rendering'],
   enabled: true,
@@ -1258,7 +1258,7 @@ export const EVAL_EXPERIMENT_RUNNER_AGENT_SPEC_0_0_1: AgentSpec = {
 export const EXAMPLE_EVALS_AGENT_SPEC_0_0_1: AgentSpec = {
   id: 'example-evals',
   version: '0.0.1',
-  name: 'Demo Evals',
+  name: 'Example Evals Agent',
   description: `Default eval runner for local and cloud execution in SDK eval examples. Includes baseline tooling for reproducible eval runs.`,
   tags: ['evals', 'demo', 'runner'],
   enabled: true,
@@ -1313,7 +1313,7 @@ export const EXAMPLE_EVALS_AGENT_SPEC_0_0_1: AgentSpec = {
 export const EXAMPLE_FULL_AGENT_SPEC_0_0_1: AgentSpec = {
   id: 'example-full',
   version: '0.0.1',
-  name: 'Demo with MCP, Skills, Tool Approvals...',
+  name: 'Example MCP, Skills, Tool Approvals... Agent',
   description: `A full-featured demonstration agent showcasing MCP servers (Tavily web search), skills (GitHub, PDF, crawl, events, text summarizer, jokes), human-in-the-loop tool approval, and frontend tools (Jupyter notebooks, Lexical documents).`,
   tags: ['demo', 'approval', 'human-in-the-loop', 'utility'],
   enabled: true,
@@ -1395,7 +1395,7 @@ export const EXAMPLE_FULL_AGENT_SPEC_0_0_1: AgentSpec = {
 export const EXAMPLE_GUARDRAILS_AGENT_SPEC_0_0_1: AgentSpec = {
   id: 'example-guardrails',
   version: '0.0.1',
-  name: 'Demo Guardrails',
+  name: 'Example Guardrails Agent',
   description: `Guardrails-focused example agent for AgentGuardrailsExample. Includes budget limits and a sensitive tool requiring manual approval.`,
   tags: ['demo', 'guardrails', 'approval'],
   enabled: true,
@@ -1438,7 +1438,7 @@ export const EXAMPLE_GUARDRAILS_AGENT_SPEC_0_0_1: AgentSpec = {
   mcpServerTools: undefined,
   guardrails: [
     {
-      name: 'Demo Cost Budget',
+      name: 'Example Cost Budget',
       cost_budget: { per_run_usd: 0.05, cumulative_usd: 5.0 },
     },
   ],
@@ -1458,7 +1458,7 @@ export const EXAMPLE_GUARDRAILS_AGENT_SPEC_0_0_1: AgentSpec = {
 export const EXAMPLE_HOOKS_AGENT_SPEC_0_0_1: AgentSpec = {
   id: 'example-hooks',
   version: '0.0.1',
-  name: 'Demo Hooks Agent',
+  name: 'Example Hooks Agent',
   description: `Demonstrates pre-hooks and post-hooks executed in the sandbox lifecycle.`,
   tags: ['demo', 'hooks', 'lifecycle'],
   enabled: true,
@@ -1527,7 +1527,7 @@ When the user asks about hooks, use execute_code to show concrete evidence: read
 export const EXAMPLE_MCP_AGENT_SPEC_0_0_1: AgentSpec = {
   id: 'example-mcp',
   version: '0.0.1',
-  name: 'Demo MCP',
+  name: 'Example MCP Agent',
   description: `MCP-focused example agent for AgentMCPExample. It connects to the Tavily MCP server and demonstrates search/research style tool usage from the chat panel.`,
   tags: ['demo', 'mcp', 'tools', 'research'],
   enabled: true,
@@ -1586,7 +1586,7 @@ export const EXAMPLE_MCP_AGENT_SPEC_0_0_1: AgentSpec = {
 export const EXAMPLE_MONITORING_AGENT_SPEC_0_0_1: AgentSpec = {
   id: 'example-monitoring',
   version: '0.0.1',
-  name: 'Demo Monitoring',
+  name: 'Example Monitoring Agent',
   description: `Monitoring-focused example agent for AgentMonitoringExample. It is intentionally lightweight so it starts reliably in local example runs.`,
   tags: ['demo', 'monitoring', 'observability'],
   enabled: true,
@@ -1641,7 +1641,7 @@ export const EXAMPLE_MONITORING_AGENT_SPEC_0_0_1: AgentSpec = {
 export const EXAMPLE_ONE_TRIGGER_APPROVAL_AGENT_SPEC_0_0_1: AgentSpec = {
   id: 'example-one-trigger-approval',
   version: '0.0.1',
-  name: 'Demo with the Once Trigger and Tool Approval',
+  name: 'Example Once Trigger and Tool Approval Agent',
   description: `A demonstration agent for the "once" trigger type with manual tool approval. When launched, the agent executes its trigger prompt once and invokes the runtime-sensitive-echo tool, which requires manual approval before execution. After completion, the runtime is terminated automatically.`,
   tags: ['demo', 'trigger', 'once', 'lifecycle', 'approval'],
   enabled: true,
@@ -1689,7 +1689,7 @@ export const EXAMPLE_ONE_TRIGGER_APPROVAL_AGENT_SPEC_0_0_1: AgentSpec = {
 export const EXAMPLE_ONE_TRIGGER_AGENT_SPEC_0_0_1: AgentSpec = {
   id: 'example-one-trigger',
   version: '0.0.1',
-  name: 'Demo with the Once Trigger',
+  name: 'Example Once Trigger Agent',
   description: `A demonstration agent for the "once" trigger type. When launched, the agent executes its trigger prompt exactly once, emits AGENT_STARTED and AGENT_ENDED lifecycle events, and then terminates the runtime automatically.`,
   tags: ['demo', 'trigger', 'once', 'lifecycle'],
   enabled: true,
@@ -1744,7 +1744,7 @@ export const EXAMPLE_ONE_TRIGGER_AGENT_SPEC_0_0_1: AgentSpec = {
 export const EXAMPLE_OTEL_AGENT_SPEC_0_0_1: AgentSpec = {
   id: 'example-otel',
   version: '0.0.1',
-  name: 'Demo OTEL',
+  name: 'Example OTEL Agent',
   description: `OTEL observability example agent for AgentOtelExample. It assists the user in exploring traces, logs and metrics surfaced by the OTEL dashboard.`,
   tags: ['demo', 'otel', 'observability', 'telemetry'],
   enabled: true,
@@ -1800,7 +1800,7 @@ export const EXAMPLE_OTEL_AGENT_SPEC_0_0_1: AgentSpec = {
 export const EXAMPLE_PARAMETERS_AGENT_SPEC_0_0_1: AgentSpec = {
   id: 'example-parameters',
   version: '0.0.1',
-  name: 'Demo Parameters Agent',
+  name: 'Example Parameters Agent',
   description: `Demonstrates launch-time parameterization with JSON schema validation.`,
   tags: ['demo', 'parameters', 'schema'],
   enabled: true,
@@ -1928,7 +1928,7 @@ export const EXAMPLE_SIMPLE_AGENT_SPEC_0_0_1: AgentSpec = {
 export const EXAMPLE_SKILLS_AGENT_SPEC_0_0_1: AgentSpec = {
   id: 'example-skills',
   version: '0.0.1',
-  name: 'Skills Demo Agent',
+  name: 'Example Skills Agent',
   description: `Demo agent for skills usage with mixed discovery sources, including built-in file skills and package-registered skills like datalayer-whoami.`,
   tags: ['demo', 'skills', 'discovery'],
   enabled: true,
@@ -2002,7 +2002,7 @@ export const EXAMPLE_SKILLS_AGENT_SPEC_0_0_1: AgentSpec = {
 export const EXAMPLE_SUBAGENTS_AGENT_SPEC_0_0_1: AgentSpec = {
   id: 'example-subagents',
   version: '0.0.1',
-  name: 'Demo Subagents',
+  name: 'Example Subagents Agent',
   description: `Demonstrates multi-agent delegation with a parent orchestrator that can split work between a researcher and a writer subagent.`,
   tags: ['demo', 'subagents', 'orchestration'],
   enabled: true,
