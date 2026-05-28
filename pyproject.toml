@@ -227,3 +227,6 @@ skips = [
     "B606",  # Process execution without shell is safer and intentional
     "B607",  # Partial path execution is acceptable for known binaries
 ]
+
+[tool.interrogate]
+fail-under = 79.0
