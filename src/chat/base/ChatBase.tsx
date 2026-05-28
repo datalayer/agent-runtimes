@@ -838,6 +838,11 @@ function ChatBaseInner({
           '[ChatBase] tool_approval_decision dropped: websocket not ready',
         );
       }
+      if (persistedViaBackend || runtimeOk) {
+        // Optimistically clear local pending UI so completed tool calls do not
+        // stay pinned when websocket reconciliation is delayed.
+        agentRuntimeStore.getState().removeApproval(approvalId);
+      }
       requestAiAgentsApprovalHistory();
       queueApprovalDecisionRetry(approvalId, true, note);
       await onApproveApprovalProp?.(approvalId, note);
@@ -885,6 +890,11 @@ function ChatBaseInner({
         console.warn(
           '[ChatBase] tool_approval_decision dropped: websocket not ready',
         );
+      }
+      if (persistedViaBackend || runtimeOk) {
+        // Optimistically clear local pending UI so completed tool calls do not
+        // stay pinned when websocket reconciliation is delayed.
+        agentRuntimeStore.getState().removeApproval(approvalId);
       }
       requestAiAgentsApprovalHistory();
       queueApprovalDecisionRetry(approvalId, false, note);

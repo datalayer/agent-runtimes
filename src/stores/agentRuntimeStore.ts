@@ -339,6 +339,10 @@ const initialWsState: Pick<
   loadedSkillsByAgentId: {},
 };
 
+const countPendingApprovals = (
+  approvals: AgentStreamToolApprovalPayload[],
+): number => approvals.filter(approval => approval.status === 'pending').length;
+
 // ---------------------------------------------------------------------------
 // Store
 // ---------------------------------------------------------------------------
@@ -630,13 +634,19 @@ export const agentRuntimeStore = createStore<AgentRuntimeStore>()(
           set(state => {
             const filtered = state.approvals.filter(a => a.id !== approval.id);
             const approvals = [approval, ...filtered];
-            return { approvals, pendingApprovalCount: approvals.length };
+            return {
+              approvals,
+              pendingApprovalCount: countPendingApprovals(approvals),
+            };
           }),
 
         removeApproval: approvalId =>
           set(state => {
             const approvals = state.approvals.filter(a => a.id !== approvalId);
-            return { approvals, pendingApprovalCount: approvals.length };
+            return {
+              approvals,
+              pendingApprovalCount: countPendingApprovals(approvals),
+            };
           }),
 
         sendDecision: (approvalId, approved, note, toolCallId, agentId) => {

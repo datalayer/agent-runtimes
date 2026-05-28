@@ -108,7 +108,7 @@ const DEMO_AGENT_CONFIGS: DemoAgentConfig[] = [
     title: 'Tavily MCP (No Codemode)',
     subtitle: 'Raw MCP tools without codemode conversion',
     suggestionMessage: NO_CODEMODE_SUGGESTION_MESSAGE,
-    specId: 'example-tavily-no-codemode',
+    specId: 'example-no-codemode',
     color: '#0969DA',
     baseUrl: NO_CODEMODE_BASE_URL,
   },
@@ -117,7 +117,7 @@ const DEMO_AGENT_CONFIGS: DemoAgentConfig[] = [
     title: 'Tavily MCP (Codemode)',
     subtitle: 'MCP tools converted into programmatic tools',
     suggestionMessage: CODEMODE_SUGGESTION_MESSAGE,
-    specId: 'example-tavily-codemode',
+    specId: 'example-codemode',
     color: '#8250DF',
     baseUrl: CODEMODE_BASE_URL,
   },
@@ -180,6 +180,7 @@ const AgentRuntimePane: React.FC<AgentRuntimePaneProps> = ({
 
   useEffect(() => {
     let cancelled = false;
+    const launchTimeoutMs = 20_000;
 
     const createLocalAgent = async () => {
       setRuntimeStatus('launching');
@@ -187,8 +188,14 @@ const AgentRuntimePane: React.FC<AgentRuntimePaneProps> = ({
       setIsReconnectedAgent(false);
 
       try {
+        const controller = new AbortController();
+        const timeoutId = window.setTimeout(() => {
+          controller.abort();
+        }, launchTimeoutMs);
+
         const response = await authFetch(`${config.baseUrl}/api/v1/agents`, {
           method: 'POST',
+          signal: controller.signal,
           body: JSON.stringify({
             name: runtimeName,
             description: config.subtitle,
@@ -199,6 +206,7 @@ const AgentRuntimePane: React.FC<AgentRuntimePaneProps> = ({
             tools: [],
           }),
         });
+        window.clearTimeout(timeoutId);
 
         let resolvedAgentId = runtimeName;
         let alreadyRunning = false;
@@ -237,8 +245,14 @@ const AgentRuntimePane: React.FC<AgentRuntimePaneProps> = ({
         }
       } catch (error) {
         if (!cancelled) {
+          const isAbortError =
+            error instanceof DOMException && error.name === 'AbortError';
           setHookError(
-            error instanceof Error ? error.message : 'Agent failed to start',
+            isAbortError
+              ? `Timed out after ${Math.round(launchTimeoutMs / 1000)}s while creating '${config.specId}' at ${config.baseUrl}. Ensure the no-codemode endpoint is reachable.`
+              : error instanceof Error
+                ? `${error.message} (endpoint: ${config.baseUrl}, spec: ${config.specId})`
+                : `Agent failed to start (endpoint: ${config.baseUrl}, spec: ${config.specId})`,
           );
           setRuntimeStatus('error');
         }
@@ -500,6 +514,7 @@ const AgentRuntimePane: React.FC<AgentRuntimePaneProps> = ({
         <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
           Launching {config.title}...
         </Text>
+        <Text sx={{ fontSize: 0, color: 'fg.subtle' }}>{config.baseUrl}</Text>
       </Box>
     );
   }
