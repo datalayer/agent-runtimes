@@ -51,6 +51,11 @@ def create_skills_toolset(
     ``method`` field, import the package and wrap a Python callable directly
     (no script file needed).
 
+    **Entrypoint-based** (Variant 2b): for installed Python packages that
+    register skills via the ``agent_skills.skills`` entrypoint group,
+    dynamically discover and load those skills without requiring a local YAML
+    skill spec in agentspecs.
+
     Args:
         skills: List of skill name references to load (may include version
             suffix, e.g. ``"crawl:0.0.1"``).
@@ -86,6 +91,8 @@ def create_skills_toolset(
         selected_skills: list[AgentSkill] = []
         loaded_ids: set[str] = set()
         loaded_skill_names: set[str] = set()
+        loaded_static_ids: set[str] = set()
+        loaded_entrypoint_ids: set[str] = set()
 
         # ---------------------------------------------------------------------------
         # Path-based loading (Variant 1): scan skills_path for SKILL.md files.
@@ -102,6 +109,7 @@ def create_skills_toolset(
                 selected_skills.append(skill)
                 loaded_ids.add(skill.name)
                 loaded_skill_names.add(skill.name)
+                loaded_static_ids.add(skill.name)
                 logger.info(f"Loaded skill (name-based): {skill.name}")
 
         # ---------------------------------------------------------------------------
@@ -136,6 +144,7 @@ def create_skills_toolset(
                                 selected_skills.append(skill)
                                 loaded_ids.add(skill_name)
                                 loaded_skill_names.add(skill.name)
+                                loaded_static_ids.add(skill_name)
                                 logger.info(
                                     f"Loaded skill (module-based): {skill.name} "
                                     f"from {spec_module}"
@@ -165,6 +174,7 @@ def create_skills_toolset(
                                     selected_skills.append(skill)
                                     loaded_ids.add(skill_name)
                                     loaded_skill_names.add(skill.name)
+                                    loaded_static_ids.add(skill_name)
                                     logger.info(
                                         f"Loaded skill (path-based): {skill.name} "
                                         f"from {skill_md}"
@@ -194,6 +204,7 @@ def create_skills_toolset(
                             selected_skills.append(skill)
                             loaded_ids.add(skill_name)
                             loaded_skill_names.add(skill.name)
+                            loaded_static_ids.add(skill_name)
                             logger.info(
                                 f"Loaded skill (package-based): {skill_name} "
                                 f"from {spec.package}.{spec.method}"
@@ -202,6 +213,46 @@ def create_skills_toolset(
                             logger.warning(
                                 f"Failed to load package-based skill '{skill_name}': {exc}"
                             )
+
+            # Entrypoint-based dynamic loading (Variant 2b): load skills from
+            # installed Python packages exposing the agent_skills.skills
+            # entrypoint group. This supports package-shipped skills without
+            # requiring YAML specs in agentspecs.
+            missing_ids = selected_ids - loaded_ids
+            if missing_ids:
+                try:
+                    from agent_skills import discover_entrypoint_skills
+
+                    for ep_skill in discover_entrypoint_skills():
+                        skill_name = str(getattr(ep_skill, "name", "") or "").strip()
+                        if not skill_name:
+                            continue
+                        if skill_name not in missing_ids:
+                            continue
+                        if skill_name in loaded_skill_names:
+                            continue
+                        selected_skills.append(ep_skill)
+                        loaded_ids.add(skill_name)
+                        loaded_skill_names.add(skill_name)
+                        loaded_entrypoint_ids.add(skill_name)
+                        logger.info(f"Loaded skill (entrypoint-based): {skill_name}")
+                except ImportError:
+                    logger.debug("agent-skills entrypoint discovery unavailable")
+                except Exception as exc:
+                    logger.warning(f"Entrypoint skill discovery failed: {exc}")
+
+            if loaded_static_ids:
+                logger.info(
+                    "Skills resolved from static specs/path (%d): %s",
+                    len(loaded_static_ids),
+                    sorted(loaded_static_ids),
+                )
+            if loaded_entrypoint_ids:
+                logger.info(
+                    "Skills resolved from entrypoints (%d): %s",
+                    len(loaded_entrypoint_ids),
+                    sorted(loaded_entrypoint_ids),
+                )
 
             still_missing = selected_ids - loaded_ids
             if still_missing:

@@ -16,15 +16,16 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Box } from '@datalayer/primer-addons';
 import { AuthRequiredView, ErrorView } from './components';
 import { Spinner, Text } from '@primer/react';
+import { CheckCircleIcon } from '@primer/octicons-react';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
 import { Chat } from '../chat';
-import { useAgentRuntimePendingCount } from '../stores/agentRuntimeStore';
+import { useAgentRuntimeApprovals } from '../stores/agentRuntimeStore';
 
 const queryClient = new QueryClient();
-const AGENT_NAME_PREFIX = 'tool-approval-demo-agent';
-const DEFAULT_AGENT_SPEC_ID = 'demo-full';
+const AGENT_NAME_PREFIX = 'tool-approval-example-agent';
+const DEFAULT_AGENT_SPEC_ID = 'example-tool-approvals';
 const DEFAULT_LOCAL_BASE_URL =
   import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
 
@@ -89,7 +90,16 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
   const chatAuthToken: string | undefined = token === null ? undefined : token;
   const agentBaseUrl = DEFAULT_LOCAL_BASE_URL;
   const podName = 'localhost';
-  const pendingApprovalCount = useAgentRuntimePendingCount();
+  const approvals = useAgentRuntimeApprovals();
+  const pendingApprovalCount = useMemo(
+    () =>
+      approvals.filter(
+        approval =>
+          approval.status === 'pending' &&
+          (!agentId || approval.agent_id === agentId),
+      ).length,
+    [approvals, agentId],
+  );
   const createAttemptedRef = useRef(false);
 
   const authFetch = useCallback(
@@ -198,7 +208,9 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
         }}
       >
         <Spinner size="large" />
-        <Text sx={{ color: 'fg.muted' }}>Launching tool approvals demo...</Text>
+        <Text sx={{ color: 'fg.muted' }}>
+          Launching tool approvals example agent...
+        </Text>
       </Box>
     );
   }
@@ -238,6 +250,7 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
             agentId={agentId}
             authToken={chatAuthToken}
             title={`Tool Approval Agent - ${podName}`}
+            brandIcon={<CheckCircleIcon size={16} />}
             placeholder="Ask for actions that require approval..."
             showHeader={true}
             showNewChatButton={true}
@@ -260,14 +273,29 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
                 message: 'list your tools',
               },
               {
-                title: 'Run tool with approval',
+                title: 'Sensitive tool with delegated allow',
                 message:
-                  "Call the runtime_sensitive_echo tool with text 'hello' and reason 'audit', then reply with the tool result.",
+                  "Call the runtime_sensitive_echo tool with text 'hello' and reason 'audit', then explain the before_tool_execute decision and reply with the tool result.",
               },
               {
-                title: 'Run tool without approval',
+                title: 'Sensitive tool denied by Python hook',
+                message:
+                  "Call the runtime_sensitive_echo tool with text 'danger' and reason 'delete project', then explain why it was denied.",
+              },
+              {
+                title: 'Non-sensitive tool baseline',
                 message:
                   "Call the runtime_echo tool with text 'hello world', then reply with the tool result.",
+              },
+              {
+                title: 'Inspect audit entries',
+                message:
+                  'Use execute_code to print the latest entries from /tmp/agent_runtimes_tool_approvals_audit.jsonl and summarize decision + execution status.',
+              },
+              {
+                title: 'Explain deferred approvals hook',
+                message:
+                  'Explain how deferred_tool_calls resolves approval-required tool requests inline when a decision is already available.',
               },
             ]}
             submitOnSuggestionClick

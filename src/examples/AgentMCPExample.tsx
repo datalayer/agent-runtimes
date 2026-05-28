@@ -45,8 +45,9 @@ import { MCP_STATUS_COLORS, MCP_STATUS_LABELS } from '../types/mcp';
 import { MCP_SERVER_LIBRARY } from '../specs/mcpServers';
 
 const queryClient = new QueryClient();
-const AGENT_NAME = 'mcp-demo-agent';
-const AGENT_SPEC_ID = 'demo-mcp';
+const AGENT_NAME = 'mcp-example-agent';
+// Must match agentspecs/agentspecs/agents/example-mcp.yaml `id`.
+const AGENT_SPEC_ID = 'example-mcp';
 const DEFAULT_LOCAL_BASE_URL =
   import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
 
@@ -336,7 +337,7 @@ const AgentMCPInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
           body: JSON.stringify({
             name: agentName,
             description:
-              'MCP demo agent – web crawling and research via Tavily',
+              'MCP example agent – web crawling and research via Tavily',
             agent_library: 'pydantic-ai',
             transport: 'vercel-ai',
             agent_spec_id: AGENT_SPEC_ID,
@@ -603,7 +604,7 @@ const AgentMCPInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
         }}
       >
         <Spinner size="large" />
-        <Text sx={{ color: 'fg.muted' }}>Launching MCP demo agent...</Text>
+        <Text sx={{ color: 'fg.muted' }}>Launching MCP example agent...</Text>
       </Box>
     );
   }
@@ -643,6 +644,7 @@ const AgentMCPInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
             agentId={agentId}
             authToken={chatAuthToken}
             title="MCP Demo Agent"
+            brandIcon={<GlobeIcon size={16} />}
             placeholder="Ask the agent to search the web or explore GitHub..."
             showHeader={true}
             showNewChatButton={true}

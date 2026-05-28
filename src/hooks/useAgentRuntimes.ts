@@ -44,6 +44,8 @@ import type {
 } from '../types/agents-lifecycle';
 import { ServiceManager } from '@jupyterlab/services/lib/manager';
 
+export type RuntimeCreationTarget = 'backend-services' | 'local-agent-runtimes';
+
 /**
  * Options for the useAgents hook.
  */
@@ -58,6 +60,14 @@ export interface UseAgentOptions {
   autoStart?: boolean;
   /** Full agent spec object (persisted with checkpoints) */
   agentSpec?: Record<string, any>;
+  /**
+   * Where runtime create/list operations should be sent.
+   * - `backend-services`: use backend runtimes service URL
+   * - `local-agent-runtimes`: use local agent-runtimes URL
+   */
+  runtimeCreationTarget?: RuntimeCreationTarget;
+  /** Explicit base URL for runtime create/list operations. */
+  runtimeCreationBaseUrl?: string;
 }
 
 /**
@@ -101,6 +111,10 @@ export interface UseAgentReturn {
   isReady: boolean;
   /** Error if any */
   error: string | null;
+  /** Effective runtime creation target mode. */
+  runtimeCreationTarget: RuntimeCreationTarget;
+  /** Effective base URL used for runtime create/list operations. */
+  runtimeCreationBaseUrl: string;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -155,6 +169,14 @@ const RUNTIME_STATUS_MAP: Record<string, AgentStatus> = {
 function toAgentRuntimeData(raw: Record<string, any>): AgentRuntimeData {
   const status = typeof raw.status === 'string' ? raw.status.toLowerCase() : '';
   const normalizedStatus: AgentStatus = RUNTIME_STATUS_MAP[status] ?? 'running';
+  const rawVolumeUids = Array.isArray(raw.volume_uids)
+    ? raw.volume_uids
+    : raw.volume_uid
+      ? [raw.volume_uid]
+      : [];
+  const volume_uids = rawVolumeUids
+    .map((uid: unknown) => String(uid || '').trim())
+    .filter(Boolean);
   return {
     ...raw,
     status: normalizedStatus,
@@ -163,6 +185,8 @@ function toAgentRuntimeData(raw: Record<string, any>): AgentRuntimeData {
     url: raw.ingress,
     messageCount: 0,
     agent_spec_id: raw.agent_spec_id || undefined,
+    volume_uids,
+    volume_uid: raw.volume_uid || volume_uids[0] || undefined,
   } as AgentRuntimeData;
 }
 
@@ -185,7 +209,7 @@ function toAgentRuntimeData(raw: Record<string, any>): AgentRuntimeData {
  * // Connect mode — attach to an existing runtime
  * const { isReady, endpoint, connectToRuntime } = useAgents({
  *   autoCreateAgent: true,
- *   agentConfig: { model: 'bedrock:us.anthropic.claude-3-5-haiku-20241022-v1:0' },
+ *   agentConfig: { model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0' },
  * });
  *
  * // Lifecycle mode — full lifecycle with agentSpecId
@@ -205,7 +229,11 @@ export function useAgentRuntimes(
     autoCreateAgent = true,
     autoStart = false,
     agentSpec,
+    runtimeCreationTarget = 'backend-services',
+    runtimeCreationBaseUrl,
   } = options;
+
+  const { configuration } = useCoreStore();
 
   // Base store state
   const runtime = useAgentRuntimeConnection();
@@ -233,6 +261,28 @@ export function useAgentRuntimes(
   // Whether we're managing a full agent lifecycle (agentSpecId provided)
   const hasSpec = !!agentSpecId;
 
+  const resolvedRuntimeCreationBaseUrl = useMemo(() => {
+    if (runtimeCreationBaseUrl) {
+      return runtimeCreationBaseUrl;
+    }
+    if (runtimeCreationTarget === 'local-agent-runtimes') {
+      return (
+        import.meta.env.VITE_DATALAYER_AGENT_RUNTIMES_URL ||
+        import.meta.env.VITE_BASE_URL ||
+        'http://localhost:8765'
+      );
+    }
+    return (
+      configuration?.runtimesRunUrl ||
+      import.meta.env.VITE_DATALAYER_AGENT_RUNTIMES_URL ||
+      'https://r1.datalayer.run'
+    );
+  }, [
+    configuration?.runtimesRunUrl,
+    runtimeCreationBaseUrl,
+    runtimeCreationTarget,
+  ]);
+
   // ─── Auth helpers ─────────────────────────────────────────────────
 
   const getAuthHeaders = useCallback(async () => {
@@ -241,12 +291,12 @@ export function useAgentRuntimes(
       const token = iamStore.getState().token || '';
       const config = coreStore.getState().configuration;
       const runUrl = config?.aiagentsRunUrl || '';
-      const runtimesRunUrl = config?.runtimesRunUrl || '';
+      const runtimesRunUrl = resolvedRuntimeCreationBaseUrl;
       return { token, runUrl, runtimesRunUrl };
     } catch {
       return { token: '', runUrl: '', runtimesRunUrl: '' };
     }
-  }, []);
+  }, [resolvedRuntimeCreationBaseUrl]);
 
   // ─── Launch Runtime ─────────────────────────────────────────────────
 
@@ -256,7 +306,12 @@ export function useAgentRuntimes(
         setLifecycleStatus('launching');
         setLifecycleError(null);
         try {
-          const safeName = `${agentSpecId}`
+          const preferredRuntimeName =
+            (typeof agentConfig?.name === 'string' && agentConfig.name) ||
+            (typeof agentSpec?.name === 'string' && agentSpec.name) ||
+            `${agentSpecId}`;
+
+          const safeName = preferredRuntimeName
             .replace(/\//g, '-')
             .replace(/[^a-z0-9-]/g, '-')
             .replace(/-+/g, '-')
@@ -264,11 +319,17 @@ export function useAgentRuntimes(
             .slice(0, 63);
 
           const conn = await storeLaunchAgent(
-            runtimeOptions || {
-              environmentName: 'ai-agents-env',
-              creditsLimit: 10,
-              givenName: safeName,
-            },
+            runtimeOptions
+              ? {
+                  ...runtimeOptions,
+                  runtimesRunUrl: resolvedRuntimeCreationBaseUrl,
+                }
+              : {
+                  environmentName: 'ai-agents-env',
+                  creditsLimit: 10,
+                  givenName: safeName,
+                  runtimesRunUrl: resolvedRuntimeCreationBaseUrl,
+                },
           );
           setLifecycleStatus('ready');
           return conn;
@@ -282,10 +343,20 @@ export function useAgentRuntimes(
         if (!runtimeOptions) {
           throw new Error('Runtime options are required in connect mode');
         }
-        return storeLaunchAgent(runtimeOptions);
+        return storeLaunchAgent({
+          ...runtimeOptions,
+          runtimesRunUrl: resolvedRuntimeCreationBaseUrl,
+        });
       }
     },
-    [agentSpecId, hasSpec, storeLaunchAgent],
+    [
+      agentConfig?.name,
+      agentSpec?.name,
+      agentSpecId,
+      hasSpec,
+      resolvedRuntimeCreationBaseUrl,
+      storeLaunchAgent,
+    ],
   );
 
   // ─── Create Agent ───────────────────────────────────────────────────
@@ -546,6 +617,8 @@ export function useAgentRuntimes(
     // Status
     isReady,
     error,
+    runtimeCreationTarget,
+    runtimeCreationBaseUrl: resolvedRuntimeCreationBaseUrl,
   };
 }
 
@@ -559,17 +632,42 @@ export function useAgentRuntimes(
  * The backend returns active runtimes from the operator **plus** paused
  * runtimes synthesised from Solr checkpoint records (with ``status="paused"``).
  */
-export function useAgentRuntimesQuery() {
+export function useAgentRuntimesQuery(scope?: {
+  selectedUserUid?: string;
+  selectedOrganizationUid?: string;
+  selectedTeamUid?: string;
+  selectedAgentUid?: string;
+}) {
   const { configuration } = useCoreStore();
   const { requestDatalayer } = useDatalayer({ notifyOnError: false });
   const { user } = useIAMStore();
   const queryClient = useQueryClient();
 
   return useQuery({
-    queryKey: agentQueryKeys.agentRuntimes.lists(),
+    queryKey: [
+      ...agentQueryKeys.agentRuntimes.lists(),
+      scope?.selectedUserUid || '',
+      scope?.selectedOrganizationUid || '',
+      scope?.selectedTeamUid || '',
+      scope?.selectedAgentUid || '',
+    ],
     queryFn: async () => {
+      const params = new URLSearchParams();
+      if (scope?.selectedUserUid) {
+        params.set('selected_user_uid', scope.selectedUserUid);
+      }
+      if (scope?.selectedOrganizationUid) {
+        params.set('selected_organization_uid', scope.selectedOrganizationUid);
+      }
+      if (scope?.selectedTeamUid) {
+        params.set('selected_team_uid', scope.selectedTeamUid);
+      }
+      if (scope?.selectedAgentUid) {
+        params.set('selected_agent_uid', scope.selectedAgentUid);
+      }
+      const query = params.toString();
       const resp = await requestDatalayer({
-        url: `${configuration.runtimesRunUrl}/api/runtimes/v1/runtimes`,
+        url: `${configuration.runtimesRunUrl}/api/runtimes/v1/runtimes${query ? `?${query}` : ''}`,
         method: 'GET',
       });
       if (resp.success && resp.runtimes) {
@@ -631,6 +729,11 @@ export function useCreateAgentRuntime() {
 
   return useMutation({
     mutationFn: async (data: CreateAgentRuntimeRequest) => {
+      const normalizedVolumeUids = Array.isArray(data.volumeUids)
+        ? data.volumeUids.map(uid => String(uid || '').trim()).filter(Boolean)
+        : data.volumeUid
+          ? [String(data.volumeUid).trim()]
+          : [];
       return requestDatalayer({
         url: `${configuration.runtimesRunUrl}/api/runtimes/v1/runtimes`,
         method: 'POST',
@@ -643,9 +746,18 @@ export function useCreateAgentRuntime() {
           enable_codemode: data.enableCodemode ?? false,
           agent_spec_id: data.agentSpecId || undefined,
           agent_spec: data.agentSpec || undefined,
-          usage_account_uid: data.usageAccountUid || undefined,
-          usage_account_type: data.usageAccountType || undefined,
-          usage_account_handle: data.usageAccountHandle || undefined,
+          user_account_handle: data.userAccountHandle || undefined,
+          billable_account_uid: data.billableAccountUid || undefined,
+          billable_account_type: data.billableAccountType || undefined,
+          billable_account_handle: data.billableAccountHandle || undefined,
+          billable_source_organization_uid:
+            data.billableSourceOrganizationUid || undefined,
+          billable_source_organization_handle:
+            data.billableSourceOrganizationHandle || undefined,
+          mount_home_folder: data.mountHomeFolder ?? false,
+          volume_uids:
+            normalizedVolumeUids.length > 0 ? normalizedVolumeUids : undefined,
+          volume_uid: normalizedVolumeUids[0] || data.volumeUid || undefined,
         },
       });
     },
@@ -801,8 +913,13 @@ export interface UseAgentsRuntimesReturn {
 /**
  * Consolidated runtime list and mutations.
  */
-export function useAgentsRuntimes(): UseAgentsRuntimesReturn {
-  const runtimesQuery = useAgentRuntimesQuery();
+export function useAgentsRuntimes(scope?: {
+  selectedUserUid?: string;
+  selectedOrganizationUid?: string;
+  selectedTeamUid?: string;
+  selectedAgentUid?: string;
+}): UseAgentsRuntimesReturn {
+  const runtimesQuery = useAgentRuntimesQuery(scope);
   const createRuntimeMutation = useCreateAgentRuntime();
   const deleteRuntimeMutation = useDeleteAgentRuntime();
   const refreshRuntimes = useRefreshAgentRuntimes();

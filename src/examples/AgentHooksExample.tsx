@@ -5,19 +5,21 @@
 
 import React, { useEffect, useState } from 'react';
 import { Text, Spinner } from '@primer/react';
+import { SyncIcon } from '@primer/octicons-react';
 import { Box, setupPrimerPortals } from '@datalayer/primer-addons';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
+import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 import { ErrorView } from './components';
 import { Chat } from '../chat';
 
 setupPrimerPortals();
 
-const BASE_URL = 'http://localhost:8765';
-const AGENT_SPEC_ID = 'demo-hooks';
-const AGENT_NAME = 'hooks-demo';
+const AGENT_SPEC_ID = 'example-hooks';
+const AGENT_NAME = 'hooks-example-agent';
 
 const AgentHooksExample: React.FC = () => {
+  const baseUrl = useExampleAgentRuntimesUrl();
   const [agentId, setAgentId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(true);
@@ -28,7 +30,7 @@ const AgentHooksExample: React.FC = () => {
 
     const createAgent = async () => {
       try {
-        const response = await fetch(`${BASE_URL}/api/v1/agents`, {
+        const response = await fetch(`${baseUrl}/api/v1/agents`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -67,20 +69,20 @@ const AgentHooksExample: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [baseUrl]);
 
   useEffect(() => {
     return () => {
       if (!agentId) {
         return;
       }
-      void fetch(`${BASE_URL}/api/v1/agents/${encodeURIComponent(agentId)}`, {
+      void fetch(`${baseUrl}/api/v1/agents/${encodeURIComponent(agentId)}`, {
         method: 'DELETE',
       }).catch(() => {
         // Ignore teardown failures in example mode.
       });
     };
-  }, [agentId]);
+  }, [agentId, baseUrl]);
 
   if (isCreating) {
     return (
@@ -119,11 +121,12 @@ const AgentHooksExample: React.FC = () => {
   return (
     <Chat
       protocol="vercel-ai"
-      baseUrl={BASE_URL}
+      baseUrl={baseUrl}
       agentId={agentId}
       title="Hooks Agent"
+      brandIcon={<SyncIcon size={16} />}
       placeholder="Ask about lifecycle hooks..."
-      description="Pre-hook installed 'rich', wrote a marker file, and set hook_name / hook_ran_at / hook_env variables in the sandbox"
+      description="Demonstrates lifecycle hooks and pydantic-style tool hooks: before_tool_execute, after_tool_execute, on_tool_execute_error, deferred_tool_calls"
       showHeader={true}
       showModelSelector={true}
       showToolsMenu={true}
@@ -133,7 +136,7 @@ const AgentHooksExample: React.FC = () => {
       autoFocus
       height="100vh"
       runtimeId={agentId}
-      historyEndpoint={`${BASE_URL}/api/v1/history`}
+      historyEndpoint={`${baseUrl}/api/v1/history`}
       suggestions={[
         {
           title: 'Read the pre-hook marker file',
@@ -143,7 +146,7 @@ const AgentHooksExample: React.FC = () => {
         {
           title: 'Verify hook variables',
           message:
-            'Use execute_code to run this verification:\n```python\nassert isinstance(hook_name, str) and hook_name == "demo-hooks:pre", f"❌ hook_name wrong: {hook_name!r}"\nassert isinstance(hook_ran_at, str) and len(hook_ran_at) > 0, f"❌ hook_ran_at wrong: {hook_ran_at!r}"\nassert isinstance(hook_env, dict) and len(hook_env) > 0, f"❌ hook_env wrong: {hook_env!r}"\nprint("✅ hook_name =", hook_name)\nprint("✅ hook_ran_at =", hook_ran_at)\nprint("✅ hook_env =", hook_env)\n```\nThrow an exception with a ❌ message if any variable is missing or has the wrong type, print ✅ lines if all pass.',
+            'Use execute_code to run this verification:\n```python\nassert isinstance(hook_name, str) and hook_name == "example-hooks:pre", f"❌ hook_name wrong: {hook_name!r}"\nassert isinstance(hook_ran_at, str) and len(hook_ran_at) > 0, f"❌ hook_ran_at wrong: {hook_ran_at!r}"\nassert isinstance(hook_env, dict) and len(hook_env) > 0, f"❌ hook_env wrong: {hook_env!r}"\nprint("✅ hook_name =", hook_name)\nprint("✅ hook_ran_at =", hook_ran_at)\nprint("✅ hook_env =", hook_env)\n```\nThrow an exception with a ❌ message if any variable is missing or has the wrong type, print ✅ lines if all pass.',
         },
         {
           title: "Verify 'rich' was installed",
@@ -154,6 +157,26 @@ const AgentHooksExample: React.FC = () => {
           title: 'Explain the hook lifecycle',
           message:
             'What pre-hooks and post-hooks are configured for this agent, and when does each run?',
+        },
+        {
+          title: 'Trigger function + python tool hooks',
+          message:
+            "Call runtime_sensitive_echo with text 'hello' and reason 'audit', then explain which before_tool_execute hooks ran (function and python).",
+        },
+        {
+          title: 'Trigger deny in python hook',
+          message:
+            "Call runtime_sensitive_echo with text 'danger' and reason 'delete notebook', then explain why local Python policy denied it.",
+        },
+        {
+          title: 'Read tool approval audit log',
+          message:
+            'Use execute_code to show the latest entries from /tmp/agent_runtimes_tool_approvals_audit.jsonl and summarize decision and execution status.',
+        },
+        {
+          title: 'Explain deferred hook handling',
+          message:
+            'Explain how deferred_tool_calls works with approval-required tools and when inline resolution is used in this run.',
         },
       ]}
       submitOnSuggestionClick

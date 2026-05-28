@@ -71,7 +71,7 @@ function getJupyterSandboxUrl(
 }
 
 /**
- * Hook to ensure the demo-agent is aligned with the active notebook runtime.
+ * Hook to ensure the example-agent is aligned with the active notebook runtime.
  * Recreates the agent with jupyter sandbox settings from the Notebook UI.
  */
 function useEnsureAgent(

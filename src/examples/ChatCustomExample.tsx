@@ -9,6 +9,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Box } from '@datalayer/primer-addons';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
+import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 import { Chat } from '../chat';
 
 // Create a query client for React Query
@@ -24,13 +25,12 @@ const queryClient = new QueryClient({
 });
 
 const AGENT_NAME = 'datalayer-assistant';
-const BASE_URL = 'http://localhost:8765';
 
 /**
  * Hook to ensure the agent exists on the server
  * Creates the agent if it doesn't exist
  */
-function useEnsureAgent() {
+function useEnsureAgent(baseUrl: string) {
   const agentName = useRef(uniqueAgentId(AGENT_NAME)).current;
   const [agentId, setAgentId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -38,7 +38,7 @@ function useEnsureAgent() {
 
   const createAgent = useCallback(async (): Promise<string | null> => {
     try {
-      const response = await fetch(`${BASE_URL}/api/v1/agents`, {
+      const response = await fetch(`${baseUrl}/api/v1/agents`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -78,7 +78,7 @@ Be concise, helpful, and provide working code examples when appropriate.`,
       console.error('[AgentRuntimeCustomExample] Error creating agent:', err);
       throw err;
     }
-  }, [agentName]);
+  }, [agentName, baseUrl]);
 
   const initAgent = useCallback(async () => {
     setIsLoading(true);
@@ -117,7 +117,8 @@ Be concise, helpful, and provide working code examples when appropriate.`,
  * - Auto-creates agent on the server if it doesn't exist
  */
 const AgentRuntimeCustomExample: React.FC = () => {
-  const { agentId, isLoading, error, retry } = useEnsureAgent();
+  const baseUrl = useExampleAgentRuntimesUrl();
+  const { agentId, isLoading, error, retry } = useEnsureAgent(baseUrl);
 
   return (
     <QueryClientProvider client={queryClient}>

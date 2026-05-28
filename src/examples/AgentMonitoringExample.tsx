@@ -45,8 +45,8 @@ import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { Chat } from '../chat';
 import type { McpToolsetsStatusResponse } from '../types/mcp';
 
-const AGENT_NAME = 'monitoring-demo-agent';
-const AGENT_SPEC_ID = 'demo-monitoring';
+const AGENT_NAME = 'monitoring-example-agent';
+const AGENT_SPEC_ID = 'example-monitoring';
 const DEFAULT_LOCAL_BASE_URL =
   import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
 const OTEL_BASE_URL_ENV = import.meta.env.VITE_OTEL_BASE_URL;
@@ -136,7 +136,7 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
           body: JSON.stringify({
             name: agentName,
             description:
-              'MCP monitoring demo – web crawling via Tavily with live cost/token metrics',
+              'MCP monitoring example – web crawling via Tavily with live cost/token metrics',
             agent_library: 'pydantic-ai',
             transport: 'vercel-ai',
             agent_spec_id: AGENT_SPEC_ID,
@@ -294,7 +294,7 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
       >
         <Spinner size="large" />
         <Text sx={{ color: 'fg.muted' }}>
-          Launching local monitoring demo agent...
+          Launching local monitoring example agent...
         </Text>
       </Box>
     );
@@ -455,6 +455,7 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
             agentId={agentId}
             authToken={chatAuthToken}
             title="Monitoring Agent"
+            brandIcon={<GraphIcon size={16} />}
             placeholder="Ask for cost, token usage, and turn-level monitoring insights..."
             description={`${alerts.length} active alert${alerts.length !== 1 ? 's' : ''}`}
             showHeader={true}

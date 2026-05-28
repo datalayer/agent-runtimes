@@ -95,6 +95,24 @@ import type { AgentStreamToolApprovalPayload } from '../../types/stream';
 const sentPendingPromptKeys = new Set<string>();
 const AI_AGENTS_API_PREFIX = '/api/ai-agents/v1';
 
+const isDevTraceEnabled = (): boolean => {
+  try {
+    return Boolean(import.meta.env?.DEV);
+  } catch {
+    return false;
+  }
+};
+
+const logApprovalTrace = (
+  label: string,
+  details: Record<string, unknown>,
+): void => {
+  if (!isDevTraceEnabled()) {
+    return;
+  }
+  console.debug(`[approval-trace] ${label}`, details);
+};
+
 const normalizeAgentId = (value?: string): string =>
   (value ?? '').trim().toLowerCase();
 const normalizeToolName = (value: string): string =>
@@ -203,6 +221,26 @@ const normalizeApprovalPayload = (
       undefined,
   };
 };
+
+const statusFromApprovalEvent = (
+  eventName?: string,
+): 'pending' | 'approved' | 'rejected' | 'deleted' | undefined => {
+  if (eventName === 'tool_approval_created') {
+    return 'pending';
+  }
+  if (eventName === 'tool_approval_approved') {
+    return 'approved';
+  }
+  if (eventName === 'tool_approval_rejected') {
+    return 'rejected';
+  }
+  if (eventName === 'tool_approval_deleted') {
+    return 'deleted';
+  }
+  return undefined;
+};
+
+const RESOLVED_TOOL_CALL_SUPPRESSION_MS = 15_000;
 
 const isApprovalForAgent = (
   approval: AgentStreamToolApprovalPayload,
@@ -533,6 +571,8 @@ function ChatBaseInner({
   // When the parent doesn't supply the `pendingApprovals` prop, derive them
   // from the shared store so the banner works out-of-the-box.
   const storeApprovals = useAgentRuntimeStore(s => s.approvals);
+  const storeMcpStatus = useAgentRuntimeStore(s => s.mcpStatus);
+  const effectiveMcpStatusData = mcpStatusData ?? storeMcpStatus;
   const protocolConfig =
     typeof protocolRaw === 'object'
       ? (protocolRaw as ProtocolConfig)
@@ -552,6 +592,110 @@ function ChatBaseInner({
     [configuredAiAgentsBaseUrl],
   );
   const aiAgentsApprovalWsRef = useRef<WebSocket | null>(null);
+  const resolvedToolCallSuppressionsRef = useRef<Map<string, number>>(
+    new Map(),
+  );
+  const sendAiAgentsApprovalDecision = useCallback(
+    (approvalId: string, approved: boolean, note?: string): boolean => {
+      const ws = aiAgentsApprovalWsRef.current;
+      if (!ws || ws.readyState !== WebSocket.OPEN) {
+        logApprovalTrace('send_decision_skipped_ws_not_ready', {
+          approvalId,
+          approved,
+          wsReadyState: ws?.readyState,
+        });
+        return false;
+      }
+      try {
+        logApprovalTrace('send_decision', {
+          approvalId,
+          approved,
+          hasNote: Boolean(note),
+        });
+        ws.send(
+          JSON.stringify({
+            type: 'tool_approval_decision',
+            approvalId,
+            approved,
+            ...(note ? { note } : {}),
+          }),
+        );
+        return true;
+      } catch {
+        logApprovalTrace('send_decision_failed', {
+          approvalId,
+          approved,
+        });
+        return false;
+      }
+    },
+    [],
+  );
+  const requestAiAgentsApprovalHistory = useCallback((): boolean => {
+    const ws = aiAgentsApprovalWsRef.current;
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+      return false;
+    }
+    try {
+      ws.send(JSON.stringify({ type: 'tool-approvals-history' }));
+      logApprovalTrace('request_history', {});
+      return true;
+    } catch {
+      return false;
+    }
+  }, []);
+  const rememberResolvedToolCall = useCallback((toolCallId?: string): void => {
+    if (!toolCallId) {
+      return;
+    }
+    resolvedToolCallSuppressionsRef.current.set(
+      toolCallId,
+      Date.now() + RESOLVED_TOOL_CALL_SUPPRESSION_MS,
+    );
+    logApprovalTrace('suppress_pending_for_tool_call', {
+      toolCallId,
+      windowMs: RESOLVED_TOOL_CALL_SUPPRESSION_MS,
+    });
+  }, []);
+  const isSuppressedPending = useCallback((toolCallId?: string): boolean => {
+    if (!toolCallId) {
+      return false;
+    }
+    const expiresAt = resolvedToolCallSuppressionsRef.current.get(toolCallId);
+    if (!expiresAt) {
+      return false;
+    }
+    if (expiresAt < Date.now()) {
+      resolvedToolCallSuppressionsRef.current.delete(toolCallId);
+      return false;
+    }
+    return true;
+  }, []);
+  const queueApprovalDecisionRetry = useCallback(
+    (approvalId: string, approved: boolean, note?: string): void => {
+      window.setTimeout(() => {
+        const stillPending = agentRuntimeStore
+          .getState()
+          .approvals.some(
+            approval =>
+              approval.id === approvalId && approval.status === 'pending',
+          );
+        if (!stillPending) {
+          return;
+        }
+        const resent = sendAiAgentsApprovalDecision(approvalId, approved, note);
+        logApprovalTrace('retry_send_decision', {
+          approvalId,
+          approved,
+          sent: resent,
+        });
+        if (resent) {
+          requestAiAgentsApprovalHistory();
+        }
+      }, 500);
+    },
+    [requestAiAgentsApprovalHistory, sendAiAgentsApprovalDecision],
+  );
   const storePendingApprovals: PendingApproval[] = useMemo(() => {
     if (pendingApprovalsProp) return pendingApprovalsProp;
     return storeApprovals
@@ -660,54 +804,110 @@ function ChatBaseInner({
       const approval = agentRuntimeStore
         .getState()
         .approvals.find(a => a.id === approvalId);
-      const ok = agentRuntimeStore
+      const resolvedToolCallId = approval?.tool_call_id ?? toolCallId;
+      rememberResolvedToolCall(resolvedToolCallId);
+      // Persist approval decision to the ai-agents backend WS (single source
+      // of truth). This drives SaaS Tool Approvals state and broadcast events.
+      const persistedViaBackend = sendAiAgentsApprovalDecision(
+        approvalId,
+        true,
+        note,
+      );
+      if (!persistedViaBackend) {
+        console.warn(
+          '[ChatBase] ai-agents tool_approval_decision not sent: websocket not ready',
+        );
+      }
+
+      // Keep the runtime decision path so the in-flight tool call can resume.
+      const runtimeOk = agentRuntimeStore
         .getState()
         .sendDecision(
           approvalId,
           true,
           note,
-          approval?.tool_call_id ?? toolCallId,
+          resolvedToolCallId,
           activeAgentId,
         );
-      if (ok) {
-        // Persist decision and clear pending approval only after a successful
-        // WS send so failed sends keep the retryable pending UI visible.
+      if (runtimeOk) {
+        // Persist non-approval decisions locally; tool approvals are reconciled
+        // from ai-agents WS events/history to keep a single source of truth.
         persistApprovalDecision(approvalId, true);
-        agentRuntimeStore.getState().removeApproval(approvalId);
       } else {
         console.warn(
           '[ChatBase] tool_approval_decision dropped: websocket not ready',
         );
       }
+      if (persistedViaBackend || runtimeOk) {
+        // Optimistically clear local pending UI so completed tool calls do not
+        // stay pinned when websocket reconciliation is delayed.
+        agentRuntimeStore.getState().removeApproval(approvalId);
+      }
+      requestAiAgentsApprovalHistory();
+      queueApprovalDecisionRetry(approvalId, true, note);
       await onApproveApprovalProp?.(approvalId, note);
     },
-    [activeAgentId, onApproveApprovalProp, persistApprovalDecision],
+    [
+      activeAgentId,
+      rememberResolvedToolCall,
+      onApproveApprovalProp,
+      persistApprovalDecision,
+      queueApprovalDecisionRetry,
+      requestAiAgentsApprovalHistory,
+      sendAiAgentsApprovalDecision,
+    ],
   );
   const onRejectApproval = useCallback(
     async (approvalId: string, note?: string, toolCallId?: string) => {
       const approval = agentRuntimeStore
         .getState()
         .approvals.find(a => a.id === approvalId);
-      const ok = agentRuntimeStore
+      const resolvedToolCallId = approval?.tool_call_id ?? toolCallId;
+      rememberResolvedToolCall(resolvedToolCallId);
+      const persistedViaBackend = sendAiAgentsApprovalDecision(
+        approvalId,
+        false,
+        note,
+      );
+      if (!persistedViaBackend) {
+        console.warn(
+          '[ChatBase] ai-agents tool_approval_decision not sent: websocket not ready',
+        );
+      }
+
+      const runtimeOk = agentRuntimeStore
         .getState()
         .sendDecision(
           approvalId,
           false,
           note,
-          approval?.tool_call_id ?? toolCallId,
+          resolvedToolCallId,
           activeAgentId,
         );
-      if (ok) {
-        // Keep pending approval visible when send fails, so the user can retry.
-        agentRuntimeStore.getState().removeApproval(approvalId);
+      if (runtimeOk) {
+        // Tool approval list is reconciled from ai-agents WS updates/history.
       } else {
         console.warn(
           '[ChatBase] tool_approval_decision dropped: websocket not ready',
         );
       }
+      if (persistedViaBackend || runtimeOk) {
+        // Optimistically clear local pending UI so completed tool calls do not
+        // stay pinned when websocket reconciliation is delayed.
+        agentRuntimeStore.getState().removeApproval(approvalId);
+      }
+      requestAiAgentsApprovalHistory();
+      queueApprovalDecisionRetry(approvalId, false, note);
       await onRejectApprovalProp?.(approvalId, note);
     },
-    [activeAgentId, onRejectApprovalProp],
+    [
+      activeAgentId,
+      rememberResolvedToolCall,
+      onRejectApprovalProp,
+      queueApprovalDecisionRetry,
+      requestAiAgentsApprovalHistory,
+      sendAiAgentsApprovalDecision,
+    ],
   );
 
   // Optional ai-agents bridge for server-mode visibility.
@@ -735,6 +935,9 @@ function ChatBaseInner({
     aiAgentsApprovalWsRef.current = ws;
 
     ws.onopen = () => {
+      logApprovalTrace('ws_open_request_history', {
+        activeAgentId,
+      });
       ws.send(JSON.stringify({ type: 'tool-approvals-history' }));
     };
 
@@ -766,7 +969,23 @@ function ChatBaseInner({
                 ? (raw.payload as Record<string, unknown>)
                 : null;
           if (data) {
-            records.push(data);
+            const eventStatus = statusFromApprovalEvent(msgEvent);
+            logApprovalTrace('recv_tool_approval_event', {
+              event: msgEvent,
+              approvalId:
+                typeof data.id === 'string'
+                  ? data.id
+                  : typeof data.approval_id === 'string'
+                    ? data.approval_id
+                    : undefined,
+              status:
+                typeof data.status === 'string' ? data.status : eventStatus,
+            });
+            records.push(
+              eventStatus && typeof data.status !== 'string'
+                ? { ...data, status: eventStatus }
+                : data,
+            );
           }
         }
 
@@ -787,6 +1006,23 @@ function ChatBaseInner({
           if (!isApprovalForAgent(scopedApproval, activeAgentId)) {
             continue;
           }
+          if (
+            scopedApproval.status === 'pending' &&
+            isSuppressedPending(scopedApproval.tool_call_id)
+          ) {
+            logApprovalTrace('drop_transient_pending', {
+              approvalId: scopedApproval.id,
+              toolCallId: scopedApproval.tool_call_id,
+              status: scopedApproval.status,
+            });
+            continue;
+          }
+          logApprovalTrace('apply_tool_approval_update', {
+            approvalId: scopedApproval.id,
+            status: scopedApproval.status,
+            agentId: scopedApproval.agent_id,
+            activeAgentId,
+          });
           if (scopedApproval.status === 'pending') {
             state.upsertApproval(scopedApproval);
           } else {
@@ -818,6 +1054,7 @@ function ChatBaseInner({
     aiAgentsBaseUrl,
     aiAgentsAuthToken,
     activeAgentId,
+    isSuppressedPending,
   ]);
 
   // The outer ChatBase wrapper always resolves a string Protocol to a full
@@ -1114,6 +1351,7 @@ function ChatBaseInner({
     agentId: protocol?.agentId,
     onMessage: msg => {
       if (
+        msg.type !== 'tool_approval_created' &&
         msg.type !== 'tool_approval_approved' &&
         msg.type !== 'tool_approval_rejected'
       ) {
@@ -1123,6 +1361,16 @@ function ChatBaseInner({
       if (!payload) {
         return;
       }
+
+      // Keep the top approval banner populated in local/no-token flows by
+      // ingesting pending approval events from the runtime stream.
+      if (msg.type === 'tool_approval_created') {
+        if (isApprovalForAgent(payload, activeAgentId)) {
+          agentRuntimeStore.getState().upsertApproval(payload);
+        }
+        return;
+      }
+
       applyServerApprovalDecision(
         payload,
         msg.type === 'tool_approval_approved',
@@ -1283,7 +1531,9 @@ function ChatBaseInner({
   const mcpServersRef = useRef(mcpServers);
   mcpServersRef.current = mcpServers;
   useEffect(() => {
-    const wsEnabledMcpTools = parseEnabledMcpToolsByServer(mcpStatusData);
+    const wsEnabledMcpTools = parseEnabledMcpToolsByServer(
+      effectiveMcpStatusData,
+    );
     if (!wsEnabledMcpTools) {
       return;
     }
@@ -1371,11 +1621,18 @@ function ChatBaseInner({
 
       return next;
     });
-  }, [mcpStatusData, activeAgentId, configQuery.data?.mcpServers, wsState]);
+  }, [
+    effectiveMcpStatusData,
+    activeAgentId,
+    configQuery.data?.mcpServers,
+    wsState,
+  ]);
 
   // Keep MCP tool *approval* synchronized with backend WS snapshots.
   useEffect(() => {
-    const wsApprovedMcpTools = parseApprovedMcpToolsByServer(mcpStatusData);
+    const wsApprovedMcpTools = parseApprovedMcpToolsByServer(
+      effectiveMcpStatusData,
+    );
     if (!wsApprovedMcpTools) {
       return;
     }
@@ -1391,13 +1648,13 @@ function ChatBaseInner({
       });
       return next;
     });
-  }, [mcpStatusData]);
+  }, [effectiveMcpStatusData]);
 
   // Refetch configQuery when WS reports MCP servers as started but the
   // cached config response has missing servers or empty tools.
   const lastConfigMcpKeyRef = useRef('');
   useEffect(() => {
-    const wsServers = mcpStatusData?.servers;
+    const wsServers = effectiveMcpStatusData?.servers;
     if (!wsServers || wsServers.length === 0) return;
     const startedIds = wsServers
       .filter(s => s.status === 'started')
@@ -1421,7 +1678,7 @@ function ChatBaseInner({
       lastConfigMcpKeyRef.current = key;
       configQuery.refetch();
     }
-  }, [mcpStatusData, configQuery]);
+  }, [effectiveMcpStatusData, configQuery]);
 
   // initialSkills are now handled server-side during agent creation.
 
@@ -2922,7 +3179,9 @@ function ChatBaseInner({
   );
   const filteredMcpServers = useMemo(() => {
     const merged = configMcpServers.map(server => {
-      const wsServer = mcpStatusData?.servers?.find(s => s.id === server.id);
+      const wsServer = effectiveMcpStatusData?.servers?.find(
+        s => s.id === server.id,
+      );
       if (wsServer && wsServer.status === 'started') {
         const updates: Partial<typeof server> = {};
         if (!server.isAvailable) {
@@ -2948,7 +3207,7 @@ function ChatBaseInner({
     // Include WS-only servers that are started but missing from the config
     // query (e.g. config was fetched before the MCP server finished starting).
     const configIds = new Set(configMcpServers.map(s => s.id));
-    for (const wsServer of mcpStatusData?.servers ?? []) {
+    for (const wsServer of effectiveMcpStatusData?.servers ?? []) {
       if (
         wsServer.status === 'started' &&
         !configIds.has(wsServer.id) &&
@@ -2981,7 +3240,7 @@ function ChatBaseInner({
     }
 
     return merged;
-  }, [configMcpServers, mcpStatusData, mcpServers]);
+  }, [configMcpServers, effectiveMcpStatusData, mcpServers]);
 
   // ---- Not ready ----
   if (!ready) {
@@ -3198,7 +3457,7 @@ function ChatBaseInner({
           onToggleSkillApproval={toggleSkillApproval}
           apiBase={indicatorApiBase}
           authToken={protocol?.authToken}
-          mcpStatusData={mcpStatusData}
+          mcpStatusData={effectiveMcpStatusData}
         />
       )}
 

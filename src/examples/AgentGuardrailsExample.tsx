@@ -56,8 +56,8 @@ import { Chat } from '../chat';
 
 // ─── Constants ─────────────────────────────────────────────────────────────
 
-const AGENT_NAME = 'guardrails-demo-agent';
-const AGENT_SPEC_ID = 'demo-guardrails';
+const AGENT_NAME = 'guardrails-example-agent';
+const AGENT_SPEC_ID = 'example-guardrails';
 const DEFAULT_LOCAL_BASE_URL =
   import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
 const OTEL_BASE_URL_ENV = import.meta.env.VITE_OTEL_BASE_URL;
@@ -574,7 +574,7 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
       >
         <Spinner size="large" />
         <Text sx={{ color: 'fg.muted' }}>
-          Launching guardrails demo agent...
+          Launching guardrails example agent...
         </Text>
       </Box>
     );
@@ -787,8 +787,9 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
           agentId={agentId}
           authToken={chatAuthToken}
           title="Guardrails Agent"
+          brandIcon={<ShieldCheckIcon size={16} />}
           placeholder="Ask something that triggers tools…"
-          description="Cost guardrail with OTEL-backed gauge and manual tool approval gates"
+          description="Cost guardrail with OTEL-backed gauge and hook-aware approvals (before_tool_execute, after_tool_execute, on_tool_execute_error, deferred_tool_calls)"
           showHeader={false}
           showTokenUsage={true}
           errorBanner={overBudgetBanner}
@@ -799,7 +800,21 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
           historyEndpoint={`${agentBaseUrl}/api/v1/history`}
           suggestions={[
             { title: 'Update CRM', message: 'Update the CRM records for Q3' },
-            { title: 'Report', message: 'Generate the weekly KPI report' },
+            {
+              title: 'Trigger before_tool_execute',
+              message:
+                "Call runtime_sensitive_echo with text 'hello' and reason 'audit', then explain the before_tool_execute authorization decision.",
+            },
+            {
+              title: 'Trigger deny policy',
+              message:
+                "Call runtime_sensitive_echo with text 'danger' and reason 'delete CRM rows', then explain why policy denied it.",
+            },
+            {
+              title: 'Explain deferred flow',
+              message:
+                'Explain how deferred_tool_calls and manual approvals interact in this guardrails run.',
+            },
           ]}
           submitOnSuggestionClick
         />

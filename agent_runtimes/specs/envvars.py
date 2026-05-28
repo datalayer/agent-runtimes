@@ -28,17 +28,6 @@ ALPHAVANTAGE_API_KEY_SPEC_0_0_1 = EnvvarSpec(
     emoji="🔑",
 )
 
-DATALAYER_API_KEY_SPEC_0_0_1 = EnvvarSpec(
-    id="DATALAYER_API_KEY",
-    version="0.0.1",
-    name="Datalayer API Key",
-    description="API key for authenticating with Datalayer services, including datalayer-skills such as datalayer-whoami.",
-    registrationUrl="https://datalayer.app",
-    tags=["authentication", "api-key", "datalayer", "skill"],
-    icon="key",
-    emoji="🔑",
-)
-
 GITHUB_TOKEN_SPEC_0_0_1 = EnvvarSpec(
     id="GITHUB_TOKEN",
     version="0.0.1",
@@ -151,7 +140,6 @@ TAVILY_API_KEY_SPEC_0_0_1 = EnvvarSpec(
 
 ENVVAR_CATALOG: Dict[str, EnvvarSpec] = {
     "ALPHAVANTAGE_API_KEY": ALPHAVANTAGE_API_KEY_SPEC_0_0_1,
-    "DATALAYER_API_KEY": DATALAYER_API_KEY_SPEC_0_0_1,
     "GITHUB_TOKEN": GITHUB_TOKEN_SPEC_0_0_1,
     "GOOGLE_OAUTH_CLIENT_ID": GOOGLE_OAUTH_CLIENT_ID_SPEC_0_0_1,
     "GOOGLE_OAUTH_CLIENT_SECRET": GOOGLE_OAUTH_CLIENT_SECRET_SPEC_0_0_1,

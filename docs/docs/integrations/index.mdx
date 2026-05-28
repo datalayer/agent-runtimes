@@ -6,6 +6,8 @@ title: Integrations
 
 Agent Runtimes provides a flexible agent architecture built on top of [Pydantic AI](https://ai.pydantic.dev).
 
+For the full Agentspecs reference and platform documentation, see [datalayer.ai/docs](https://datalayer.ai/docs).
+
 ## Why Pydantic AI?
 
 We chose Pydantic AI as our foundation because it provides:
@@ -97,6 +99,47 @@ await launchRuntime({
     creditsLimit: 100,
     type: 'notebook',
 });
+```
+
+## Hooks Integration (Pydantic AI)
+
+Agent Runtimes reuses Pydantic AI capability hook methods directly for tool approval and guardrail flows.
+
+Common hook points:
+
+- `before_tool_execute`
+- `after_tool_execute`
+- `on_tool_execute_error`
+- `deferred_tool_calls`
+
+### AgentSpec Hook Example
+
+```yaml
+tool_hooks:
+    actor: "${USER}"
+    audit_log_path: "/tmp/agent_runtimes_tool_approvals_audit.jsonl"
+    before_tool_execute:
+        - function: agent_runtimes.integrations.tool_policy:evaluate_tool_request
+    after_tool_execute:
+        - python: |
+                print("success", payload.get("tool"), payload.get("status"))
+    on_tool_execute_error:
+        - python: |
+                print("error", payload.get("tool"), payload.get("error_type"))
+```
+
+### Agent_Sudo Example
+
+If you want external policy evaluation, `Agent_Sudo` can be called from `before_tool_execute` via function hook.
+
+- Project: [ram9199/agent_sudo](https://github.com/ram9199/agent_sudo)
+
+```yaml
+tool_hooks:
+    before_tool_execute:
+        - function: agent_runtimes.integrations.agent_sudo:authorize_tool_call
+            kwargs:
+                fallback_decision: approval_required
 ```
 
 ## Model Providers

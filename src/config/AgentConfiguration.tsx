@@ -27,6 +27,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Box } from '@datalayer/primer-addons';
 import type { ExampleAgent, MCPServerConfig } from '../types';
+import { getSkillSpec, getSkillSpecs } from '../specs/skills';
 import type { OAuthProvider, OAuthProviderConfig, Identity } from '../identity';
 import { IdentityCard, IdentityConnect, useIdentity } from '../identity';
 import type {
@@ -86,6 +87,18 @@ export const isSpecSelection = (id: string): boolean => id.startsWith('spec:');
  * Helper: extract the spec id from a spec selection value.
  */
 export const getSpecId = (id: string): string => id.replace(/^spec:/, '');
+
+/**
+ * Helper: is the selected agent id a cloud library spec?
+ */
+export const isCloudSpecSelection = (id: string): boolean =>
+  id.startsWith('cloud-spec:');
+
+/**
+ * Helper: extract the cloud spec id from a cloud selection value.
+ */
+export const getCloudSpecId = (id: string): string =>
+  id.replace(/^cloud-spec:/, '');
 
 /**
  * Props for IdentityConnectWithStatus component
@@ -392,7 +405,52 @@ export interface SkillOption {
   id: string;
   name: string;
   description?: string;
+  requiredEnvVars?: string[];
+  isAvailable?: boolean;
 }
+
+const normalizeEnvVarRef = (ref: string): string =>
+  ref.replace(/:\d+\.\d+\.\d+$/, '');
+
+const normalizeMcpServerId = (id: string): string =>
+  id.replace(/:\d+\.\d+\.\d+$/, '');
+
+const normalizeToolLabel = (tool: unknown): string | null => {
+  if (typeof tool === 'string') {
+    return tool;
+  }
+
+  if (typeof tool === 'object' && tool !== null) {
+    const toolObj = tool as {
+      id?: unknown;
+      name?: unknown;
+      tool?: unknown;
+    };
+    const fromName =
+      typeof toolObj.name === 'string' && toolObj.name.trim().length > 0
+        ? toolObj.name.trim()
+        : null;
+    if (fromName) {
+      return fromName;
+    }
+    const fromId =
+      typeof toolObj.id === 'string' && toolObj.id.trim().length > 0
+        ? toolObj.id.trim()
+        : null;
+    if (fromId) {
+      return fromId;
+    }
+    const fromTool =
+      typeof toolObj.tool === 'string' && toolObj.tool.trim().length > 0
+        ? toolObj.tool.trim()
+        : null;
+    if (fromTool) {
+      return fromTool;
+    }
+  }
+
+  return null;
+};
 
 const AGENT_LIBRARIES: {
   value: AgentLibrary;
@@ -506,6 +564,18 @@ export interface AgentConfigurationProps {
   selectedSkills?: string[];
   /** Selected MCP servers */
   selectedMcpServers?: McpServerSelection[];
+  /** Cloud-discovered specs fetched from a remote runtime catalog. */
+  cloudLibrarySpecs?: LibraryAgentSpec[];
+  /** Loading state for cloud library specs. */
+  cloudLibraryLoading?: boolean;
+  /** Optional cloud library fetch error message. */
+  cloudLibraryError?: string | null;
+  /** Current runtime target mode label. */
+  launchTarget?: 'local' | 'cloud';
+  /** Current launch/runtime status label. */
+  launchStatus?: string;
+  /** Effective service URL that will be used when launching. */
+  launchBaseUrl?: string;
   // Identity configuration
   identityProviders?: {
     [K in OAuthProvider]?: {
@@ -577,6 +647,12 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
   availableSkills = [],
   selectedSkills = [],
   selectedMcpServers = [],
+  cloudLibrarySpecs = [],
+  cloudLibraryLoading = false,
+  cloudLibraryError = null,
+  launchTarget = 'local',
+  launchStatus = 'idle',
+  launchBaseUrl,
   identityProviders,
   onIdentityConnect,
   onIdentityDisconnect,
@@ -649,26 +725,28 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
 
   const librarySpecs = libraryQuery.data || [];
 
-  // The currently selected library spec (if any)
+  // The currently selected local library spec (if any)
   const selectedSpec = useMemo(() => {
     if (!isSpecSelection(selectedAgentId)) return null;
     const specId = getSpecId(selectedAgentId);
     return librarySpecs.find(s => s.id === specId) || null;
   }, [selectedAgentId, librarySpecs]);
 
-  const selectedSpecEntries = useMemo(() => {
-    if (!selectedSpec) return [] as Array<[string, unknown]>;
-    return Object.entries(selectedSpec).filter(
-      ([, value]) => value !== undefined,
-    );
-  }, [selectedSpec]);
+  const selectedCloudSpec = useMemo(() => {
+    if (!isCloudSpecSelection(selectedAgentId)) return null;
+    const specId = getCloudSpecId(selectedAgentId);
+    return cloudLibrarySpecs.find(s => s.id === specId) || null;
+  }, [selectedAgentId, cloudLibrarySpecs]);
 
   // When a spec is selected, form behaves like new-agent but with pre-filled values
   const isNewAgentMode =
-    selectedAgentId === 'new-agent' || isSpecSelection(selectedAgentId);
+    selectedAgentId === 'new-agent' ||
+    isSpecSelection(selectedAgentId) ||
+    isCloudSpecSelection(selectedAgentId);
 
   // True when a library spec is selected (fields locked down except Name, URL, Library, Model, Transport, Extensions)
-  const isSpecMode = isSpecSelection(selectedAgentId);
+  const isSpecMode =
+    isSpecSelection(selectedAgentId) || isCloudSpecSelection(selectedAgentId);
 
   // Entire form is read-only for existing agents and library spec selections.
   const isFormReadOnly = !isNewAgentMode || isSpecMode;
@@ -733,18 +811,201 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
     mcpServersQuery.data || configQuery.data?.mcpServers || [];
   const catalogServers = catalogServersQuery.data || [];
   const models = configQuery.data?.models || [];
-  // Use fetched skills when available, otherwise use passed availableSkills (which may be empty)
-  const fetchedSkills = skillsQuery.data?.skills || [];
-  const displaySkills =
-    fetchedSkills.length > 0 ? fetchedSkills : availableSkills;
+  const activeSpec = selectedSpec || selectedCloudSpec;
+
+  const availableEnvVars = useMemo(() => {
+    const vars = new Set<string>();
+
+    for (const model of models) {
+      if (model.isAvailable !== false) {
+        for (const envVar of model.requiredEnvVars || []) {
+          vars.add(normalizeEnvVarRef(envVar));
+        }
+      }
+    }
+
+    for (const server of [...configServers, ...catalogServers]) {
+      const serverAvailable =
+        server.isAvailable === true || server.isRunning === true;
+      if (!serverAvailable) {
+        continue;
+      }
+      for (const envVar of server.requiredEnvVars || []) {
+        vars.add(normalizeEnvVarRef(envVar));
+      }
+    }
+
+    return vars;
+  }, [models, configServers, catalogServers]);
+
+  const skillsFromSelectedSpec = useMemo(() => {
+    if (!activeSpec || !Array.isArray(activeSpec.skills)) {
+      return [] as SkillOption[];
+    }
+
+    return activeSpec.skills
+      .map(skillRef => {
+        if (typeof skillRef === 'string') {
+          const catalog = getSkillSpec(skillRef);
+          return {
+            id: skillRef,
+            name: catalog?.name || skillRef,
+            description: catalog?.description,
+            requiredEnvVars: catalog?.requiredEnvVars || [],
+          } as SkillOption;
+        }
+
+        if (typeof skillRef === 'object' && skillRef !== null) {
+          const skillObj = skillRef as {
+            id?: string;
+            name?: string;
+            description?: string;
+            requiredEnvVars?: string[];
+          };
+          const rawId = skillObj.id || skillObj.name || '';
+          if (!rawId) {
+            return null;
+          }
+          const catalog = getSkillSpec(rawId);
+          return {
+            id: rawId,
+            name: skillObj.name || catalog?.name || rawId,
+            description: skillObj.description || catalog?.description,
+            requiredEnvVars:
+              skillObj.requiredEnvVars || catalog?.requiredEnvVars || [],
+          } as SkillOption;
+        }
+
+        return null;
+      })
+      .filter((skill): skill is SkillOption => skill !== null);
+  }, [activeSpec]);
+
+  const skillsFromCatalog = useMemo(() => {
+    return getSkillSpecs().map(skill => ({
+      id: skill.id,
+      name: skill.name,
+      description: skill.description,
+      requiredEnvVars: skill.requiredEnvVars || [],
+    }));
+  }, []);
+
+  const baseSkills = useMemo(() => {
+    if (skillsFromSelectedSpec.length > 0) {
+      return skillsFromSelectedSpec;
+    }
+
+    return skillsFromCatalog;
+  }, [skillsFromSelectedSpec, skillsFromCatalog]);
+
+  const displaySkills = useMemo(() => {
+    return baseSkills.map(skill => {
+      const required = (skill.requiredEnvVars || []).map(normalizeEnvVarRef);
+      const envVarsAvailable =
+        required.length === 0 ||
+        required.every(envVar => availableEnvVars.has(envVar));
+      return {
+        ...skill,
+        requiredEnvVars: required,
+        isAvailable: envVarsAvailable,
+      } as SkillOption;
+    });
+  }, [baseSkills, availableEnvVars]);
+
+  const usingSpecSkills = skillsFromSelectedSpec.length > 0;
+  const usingCatalogFallback = !usingSpecSkills;
+
   const skillsEnabled = selectedSkills.length > 0;
 
-  const selectedConfigServers = selectedMcpServers
-    .filter(s => s.origin === 'config')
-    .map(s => s.id);
-  const selectedCatalogServers = selectedMcpServers
-    .filter(s => s.origin === 'catalog')
-    .map(s => s.id);
+  const configServerIdSet = useMemo(
+    () => new Set(configServers.map(server => normalizeMcpServerId(server.id))),
+    [configServers],
+  );
+  const catalogServerIdSet = useMemo(
+    () =>
+      new Set(catalogServers.map(server => normalizeMcpServerId(server.id))),
+    [catalogServers],
+  );
+
+  const selectedConfigServers = useMemo(() => {
+    return selectedMcpServers
+      .filter(selection => {
+        const normalizedId = normalizeMcpServerId(selection.id);
+        if (selection.origin === 'config') {
+          return configServerIdSet.has(normalizedId);
+        }
+        if (selection.origin === 'catalog') {
+          return (
+            !catalogServerIdSet.has(normalizedId) &&
+            configServerIdSet.has(normalizedId)
+          );
+        }
+        return false;
+      })
+      .map(selection => normalizeMcpServerId(selection.id));
+  }, [selectedMcpServers, configServerIdSet]);
+
+  const selectedCatalogServers = useMemo(() => {
+    return selectedMcpServers
+      .filter(selection => {
+        const normalizedId = normalizeMcpServerId(selection.id);
+        if (selection.origin === 'catalog') {
+          return catalogServerIdSet.has(normalizedId);
+        }
+        if (selection.origin === 'config') {
+          return (
+            !configServerIdSet.has(normalizedId) &&
+            catalogServerIdSet.has(normalizedId)
+          );
+        }
+        return false;
+      })
+      .map(selection => normalizeMcpServerId(selection.id));
+  }, [selectedMcpServers, catalogServerIdSet]);
+
+  const resolvedSpecTools = useMemo(() => {
+    if (!activeSpec || !Array.isArray(activeSpec.tools)) {
+      return [] as string[];
+    }
+
+    return activeSpec.tools
+      .map(tool => normalizeToolLabel(tool))
+      .filter((tool): tool is string => !!tool);
+  }, [activeSpec]);
+
+  const toolsInputValue =
+    isSpecMode && resolvedSpecTools.length > 0
+      ? resolvedSpecTools.join(', ')
+      : tools.join(', ');
+
+  const toolsInputPlaceholder = isSpecMode
+    ? 'No tools defined by selected spec'
+    : 'runtime-echo, runtime-send-mail';
+
+  const unresolvedSelectedMcpServers = useMemo(() => {
+    return selectedMcpServers
+      .map(selection => normalizeMcpServerId(selection.id))
+      .filter(id => !configServerIdSet.has(id) && !catalogServerIdSet.has(id))
+      .filter((id, index, arr) => arr.indexOf(id) === index);
+  }, [selectedMcpServers, configServerIdSet, catalogServerIdSet]);
+
+  const enabledLocalSpecs = [...librarySpecs]
+    .filter(s => s.enabled)
+    .sort((a, b) => {
+      const pkgA = a.id.includes('/') ? a.id.split('/')[0] : '';
+      const pkgB = b.id.includes('/') ? b.id.split('/')[0] : '';
+      const cmp = pkgA.localeCompare(pkgB);
+      return cmp !== 0 ? cmp : a.name.localeCompare(b.name);
+    });
+
+  const enabledCloudSpecs = [...cloudLibrarySpecs]
+    .filter(s => s.enabled)
+    .sort((a, b) => {
+      const pkgA = a.id.includes('/') ? a.id.split('/')[0] : '';
+      const pkgB = b.id.includes('/') ? b.id.split('/')[0] : '';
+      const cmp = pkgA.localeCompare(pkgB);
+      return cmp !== 0 ? cmp : a.name.localeCompare(b.name);
+    });
 
   // Preview servers combines both config and catalog selections
   const previewConfigServers = selectedConfigServers.length
@@ -759,21 +1020,30 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
   // Handle MCP Config server checkbox change
   const handleConfigServerChange = (serverId: string, checked: boolean) => {
     if (!onSelectedMcpServersChange) return;
+    const normalizedServerId = normalizeMcpServerId(serverId);
     if (checked) {
       if (
         !selectedMcpServers.some(
-          s => s.id === serverId && s.origin === 'config',
+          s =>
+            normalizeMcpServerId(s.id) === normalizedServerId &&
+            s.origin === 'config',
         )
       ) {
         onSelectedMcpServersChange([
-          ...selectedMcpServers,
-          { id: serverId, origin: 'config' },
+          ...selectedMcpServers.filter(
+            s => normalizeMcpServerId(s.id) !== normalizedServerId,
+          ),
+          { id: normalizedServerId, origin: 'config' },
         ]);
       }
     } else {
       onSelectedMcpServersChange(
         selectedMcpServers.filter(
-          s => !(s.id === serverId && s.origin === 'config'),
+          s =>
+            !(
+              normalizeMcpServerId(s.id) === normalizedServerId &&
+              s.origin === 'config'
+            ),
         ),
       );
     }
@@ -787,6 +1057,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
     isRunning: boolean,
   ) => {
     if (!onSelectedMcpServersChange) return;
+    const normalizedServerId = normalizeMcpServerId(serverId);
     if (checked) {
       // If not running, start the server first
       if (!isRunning) {
@@ -799,18 +1070,26 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
       }
       if (
         !selectedMcpServers.some(
-          s => s.id === serverId && s.origin === 'catalog',
+          s =>
+            normalizeMcpServerId(s.id) === normalizedServerId &&
+            s.origin === 'catalog',
         )
       ) {
         onSelectedMcpServersChange([
-          ...selectedMcpServers,
-          { id: serverId, origin: 'catalog' },
+          ...selectedMcpServers.filter(
+            s => normalizeMcpServerId(s.id) !== normalizedServerId,
+          ),
+          { id: normalizedServerId, origin: 'catalog' },
         ]);
       }
     } else {
       onSelectedMcpServersChange(
         selectedMcpServers.filter(
-          s => !(s.id === serverId && s.origin === 'catalog'),
+          s =>
+            !(
+              normalizeMcpServerId(s.id) === normalizedServerId &&
+              s.origin === 'catalog'
+            ),
         ),
       );
     }
@@ -867,26 +1146,60 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
 
       <FormControl sx={{ marginBottom: 3 }}>
         <FormControl.Label>Available Agents</FormControl.Label>
+        <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+          <Label variant={launchTarget === 'cloud' ? 'accent' : 'secondary'}>
+            Target: {launchTarget === 'cloud' ? 'Cloud' : 'Local'}
+          </Label>
+          <Label variant={launchStatus === 'error' ? 'danger' : 'attention'}>
+            Launch: {launchStatus}
+          </Label>
+        </Box>
+        {launchBaseUrl ? (
+          <Box
+            sx={{
+              mb: 2,
+              p: 2,
+              border: '1px solid',
+              borderColor: 'border.default',
+              borderRadius: 2,
+              bg: 'canvas.default',
+            }}
+          >
+            <Text sx={{ display: 'block', fontSize: 0, color: 'fg.muted' }}>
+              Launch URL
+            </Text>
+            <Text
+              sx={{
+                display: 'block',
+                fontSize: 1,
+                fontFamily: 'mono',
+                wordBreak: 'break-all',
+              }}
+            >
+              {launchBaseUrl}
+            </Text>
+          </Box>
+        ) : null}
         <Select
           value={selectedAgentId}
           onChange={e => onAgentSelect(e.target.value)}
           sx={{ width: '100%' }}
         >
-          <Select.Option value="new-agent">+ New Agent...</Select.Option>
-          {[...librarySpecs]
-            .filter(s => s.enabled)
-            .sort((a, b) => {
-              const pkgA = a.id.includes('/') ? a.id.split('/')[0] : '';
-              const pkgB = b.id.includes('/') ? b.id.split('/')[0] : '';
-              const cmp = pkgA.localeCompare(pkgB);
-              return cmp !== 0 ? cmp : a.name.localeCompare(b.name);
-            })
-            .map(spec => {
+          <optgroup label="Local Agents">
+            <Select.Option
+              value="new-agent"
+              disabled={selectedAgentId === 'new-agent'}
+            >
+              + New Agent...
+            </Select.Option>
+            {enabledLocalSpecs.map(spec => {
               const pkg = spec.id.includes('/') ? spec.id.split('/')[0] : '';
+              const optionValue = `spec:${spec.id}`;
               return (
                 <Select.Option
-                  key={`spec:${spec.id}`}
-                  value={`spec:${spec.id}`}
+                  key={optionValue}
+                  value={optionValue}
+                  disabled={selectedAgentId === optionValue}
                 >
                   {spec.emoji ? `${spec.emoji} ` : ''}
                   {pkg ? `[${pkg}] ` : ''}
@@ -894,19 +1207,49 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
                 </Select.Option>
               );
             })}
-          {agents.map(agent => (
-            <Select.Option key={agent.id} value={agent.id}>
-              [Persona] {agent.status === 'running' && '● '}
-              {agent.name}
-            </Select.Option>
-          ))}
+            {agents.map(agent => (
+              <Select.Option key={agent.id} value={agent.id} disabled>
+                [Persona] {agent.status === 'running' && '● '}
+                {agent.name}
+              </Select.Option>
+            ))}
+          </optgroup>
+          <optgroup label="Cloud Agents">
+            {cloudLibraryLoading && (
+              <Select.Option value="__cloud_loading" disabled>
+                Loading cloud agents...
+              </Select.Option>
+            )}
+            {!cloudLibraryLoading && enabledCloudSpecs.length === 0 && (
+              <Select.Option value="__cloud_empty" disabled>
+                No cloud agents available
+              </Select.Option>
+            )}
+            {!cloudLibraryLoading &&
+              enabledCloudSpecs.map(spec => {
+                const pkg = spec.id.includes('/') ? spec.id.split('/')[0] : '';
+                const optionValue = `cloud-spec:${spec.id}`;
+                return (
+                  <Select.Option
+                    key={optionValue}
+                    value={optionValue}
+                    disabled={selectedAgentId === optionValue}
+                  >
+                    {spec.emoji ? `${spec.emoji} ` : ''}
+                    {pkg ? `[${pkg}] ` : ''}
+                    {spec.name}
+                  </Select.Option>
+                );
+              })}
+          </optgroup>
         </Select>
         <FormControl.Caption>
           {isNewAgentMode
-            ? selectedSpec
-              ? `Creating from spec: ${selectedSpec.name} — capabilities are locked`
+            ? selectedSpec || selectedCloudSpec
+              ? `Creating from spec: ${(selectedSpec || selectedCloudSpec)?.name} — capabilities are locked`
               : 'Configure a new custom agent'
             : 'Selected agent - form fields below are disabled'}
+          {cloudLibraryError ? ` Cloud fetch error: ${cloudLibraryError}` : ''}
         </FormControl.Caption>
       </FormControl>
 
@@ -925,21 +1268,59 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
 
       <FormControl sx={{ marginBottom: 3 }} disabled={isFormReadOnly}>
         <FormControl.Label>Description</FormControl.Label>
-        <TextInput
+        <Box
+          as="textarea"
           value={description}
-          onChange={e => onDescriptionChange(e.target.value)}
+          onChange={e =>
+            onDescriptionChange((e.target as HTMLTextAreaElement).value)
+          }
           placeholder="Short agent description"
-          sx={{ width: '100%' }}
+          disabled={isFormReadOnly}
+          readOnly={isFormReadOnly}
+          rows={3}
+          sx={{
+            width: '100%',
+            maxWidth: '100%',
+            minHeight: '88px',
+            resize: 'vertical',
+            border: '1px solid',
+            borderColor: 'border.default',
+            borderRadius: 2,
+            p: 2,
+            fontSize: 1,
+            whiteSpace: 'pre-wrap',
+            overflowWrap: 'anywhere',
+            bg: isFormReadOnly ? 'canvas.subtle' : 'canvas.default',
+            color: isFormReadOnly ? 'fg.muted' : 'fg.default',
+          }}
         />
       </FormControl>
 
       <FormControl sx={{ marginBottom: 3 }} disabled={isFormReadOnly}>
         <FormControl.Label>Goal</FormControl.Label>
-        <TextInput
+        <Box
+          as="textarea"
           value={goal}
-          onChange={e => onGoalChange(e.target.value)}
+          onChange={e => onGoalChange((e.target as HTMLTextAreaElement).value)}
           placeholder="User-facing objective"
-          sx={{ width: '100%' }}
+          disabled={isFormReadOnly}
+          readOnly={isFormReadOnly}
+          rows={3}
+          sx={{
+            width: '100%',
+            maxWidth: '100%',
+            minHeight: '88px',
+            resize: 'vertical',
+            border: '1px solid',
+            borderColor: 'border.default',
+            borderRadius: 2,
+            p: 2,
+            fontSize: 1,
+            whiteSpace: 'pre-wrap',
+            overflowWrap: 'anywhere',
+            bg: isFormReadOnly ? 'canvas.subtle' : 'canvas.default',
+            color: isFormReadOnly ? 'fg.muted' : 'fg.default',
+          }}
         />
       </FormControl>
 
@@ -1056,21 +1437,69 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
 
       <FormControl sx={{ marginBottom: 3 }} disabled={isFormReadOnly}>
         <FormControl.Label>System Prompt</FormControl.Label>
-        <TextInput
+        <Box
+          as="textarea"
           value={systemPrompt}
-          onChange={e => onSystemPromptChange(e.target.value)}
+          onChange={e =>
+            onSystemPromptChange((e.target as HTMLTextAreaElement).value)
+          }
           placeholder="You are a helpful AI assistant."
-          sx={{ width: '100%' }}
+          disabled={isFormReadOnly}
+          readOnly={isFormReadOnly}
+          rows={5}
+          sx={{
+            width: '100%',
+            maxWidth: '100%',
+            minHeight: '120px',
+            resize: 'vertical',
+            border: '1px solid',
+            borderColor: 'border.default',
+            borderRadius: 2,
+            p: 2,
+            fontFamily: 'mono',
+            fontSize: 1,
+            whiteSpace: 'pre-wrap',
+            overflowWrap: 'anywhere',
+            bg: isFormReadOnly ? 'canvas.subtle' : 'canvas.default',
+            color: isFormReadOnly ? 'fg.muted' : 'fg.default',
+            userSelect: isFormReadOnly ? 'none' : 'text',
+            cursor: isFormReadOnly ? 'not-allowed' : 'text',
+          }}
         />
       </FormControl>
 
       <FormControl sx={{ marginBottom: 3 }} disabled={isFormReadOnly}>
         <FormControl.Label>System Prompt Codemode Addons</FormControl.Label>
-        <TextInput
+        <Box
+          as="textarea"
           value={systemPromptCodemodeAddons}
-          onChange={e => onSystemPromptCodemodeAddonsChange(e.target.value)}
+          onChange={e =>
+            onSystemPromptCodemodeAddonsChange(
+              (e.target as HTMLTextAreaElement).value,
+            )
+          }
           placeholder="Additional codemode instructions"
-          sx={{ width: '100%' }}
+          disabled={isFormReadOnly}
+          readOnly={isFormReadOnly}
+          rows={4}
+          sx={{
+            width: '100%',
+            maxWidth: '100%',
+            minHeight: '110px',
+            resize: 'vertical',
+            border: '1px solid',
+            borderColor: 'border.default',
+            borderRadius: 2,
+            p: 2,
+            fontFamily: 'mono',
+            fontSize: 1,
+            whiteSpace: 'pre-wrap',
+            overflowWrap: 'anywhere',
+            bg: isFormReadOnly ? 'canvas.subtle' : 'canvas.default',
+            color: isFormReadOnly ? 'fg.muted' : 'fg.default',
+            userSelect: isFormReadOnly ? 'none' : 'text',
+            cursor: isFormReadOnly ? 'not-allowed' : 'text',
+          }}
         />
       </FormControl>
 
@@ -1078,7 +1507,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
         <FormControl sx={{ flex: 1 }} disabled={isFormReadOnly}>
           <FormControl.Label>Tools (comma-separated)</FormControl.Label>
           <TextInput
-            value={tools.join(', ')}
+            value={toolsInputValue}
             onChange={e =>
               onToolsChange(
                 e.target.value
@@ -1087,7 +1516,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
                   .filter(Boolean),
               )
             }
-            placeholder="tool_a, tool_b"
+            placeholder={toolsInputPlaceholder}
             sx={{ width: '100%' }}
           />
         </FormControl>
@@ -1191,8 +1620,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
         {skillsEnabled && enableCodemode && (
           <Flash variant="default" sx={{ mt: 3 }}>
             <Text sx={{ fontSize: 0 }}>
-              Skills provide curated capabilities; Codemode composes tools with
-              Python for multi-step execution.
+              Codemode composes tools with Python for multi-step execution.
             </Text>
           </Flash>
         )}
@@ -1298,13 +1726,29 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
           )}
         </Box>
 
-        {skillsQuery.isError ? (
+        {skillsQuery.isError && !usingSpecSkills && (
           <Flash variant="warning" sx={{ marginBottom: 2 }}>
             <Text sx={{ fontSize: 0 }}>
-              Unable to fetch skills. Check that the server is running.
+              Unable to fetch runtime skills. Using built-in skill specs
+              catalog.
             </Text>
           </Flash>
-        ) : displaySkills.length === 0 && !skillsQuery.isLoading ? (
+        )}
+        {usingSpecSkills && (
+          <Flash variant="default" sx={{ marginBottom: 2 }}>
+            <Text sx={{ fontSize: 0 }}>
+              Skills are sourced from the selected agent spec.
+            </Text>
+          </Flash>
+        )}
+        {usingCatalogFallback && !skillsQuery.isLoading && (
+          <Flash variant="default" sx={{ marginBottom: 2 }}>
+            <Text sx={{ fontSize: 0 }}>
+              Skills are sourced from the local skill specs catalog.
+            </Text>
+          </Flash>
+        )}
+        {displaySkills.length === 0 && !skillsQuery.isLoading ? (
           <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
             No skills available.
           </Text>
@@ -1335,6 +1779,26 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
                       {skill.description}
                     </Text>
                   )}
+                  {skill.requiredEnvVars &&
+                    skill.requiredEnvVars.length > 0 && (
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                        {skill.requiredEnvVars.map(envVar => (
+                          <Label
+                            key={`${skill.id}-${envVar}`}
+                            size="small"
+                            variant={skill.isAvailable ? 'success' : 'danger'}
+                          >
+                            {envVar}
+                          </Label>
+                        ))}
+                      </Box>
+                    )}
+                  {(!skill.requiredEnvVars ||
+                    skill.requiredEnvVars.length === 0) && (
+                    <Label size="small" variant="success">
+                      No env vars required
+                    </Label>
+                  )}
                 </Box>
               </Box>
             ))}
@@ -1351,6 +1815,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
           borderColor: 'border.default',
           borderRadius: 2,
           backgroundColor: 'canvas.default',
+          opacity: isSpecMode ? 0.6 : 1,
         }}
       >
         <Box
@@ -1384,6 +1849,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
               variant="invisible"
               size="small"
               onClick={() => mcpServersQuery.refetch()}
+              disabled={mcpServersDisabled}
               sx={{ padding: 1 }}
               aria-label="Refresh MCP config servers"
             >
@@ -1412,6 +1878,15 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
               No MCP config servers found. Add servers to ~/.datalayer/mcp.json
             </Text>
           )}
+
+        {unresolvedSelectedMcpServers.length > 0 && (
+          <Flash variant="warning" sx={{ marginTop: 2, marginBottom: 2 }}>
+            <Text sx={{ fontSize: 0 }}>
+              Selected in spec but not available in this environment:{' '}
+              {unresolvedSelectedMcpServers.join(', ')}
+            </Text>
+          </Flash>
+        )}
 
         {enableCodemode && (
           <Flash variant="default" sx={{ marginBottom: 2 }}>
@@ -1450,12 +1925,18 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                 {previewConfigServers.map(server => (
                   <Text key={server.id} sx={{ fontSize: 0 }}>
-                    {server.name} — {server.tools.length} tools (config)
+                    {server.name} —
+                    {server.tools.length > 0
+                      ? ` ${server.tools.length} tools (config)`
+                      : ' tools discovered when launched (config)'}
                   </Text>
                 ))}
                 {previewCatalogServers.map(server => (
                   <Text key={server.id} sx={{ fontSize: 0 }}>
-                    {server.name} — {server.tools?.length || 0} tools (catalog)
+                    {server.name} —
+                    {(server.tools?.length || 0) > 0
+                      ? ` ${server.tools?.length || 0} tools (catalog)`
+                      : ' tools discovered when launched (catalog)'}
                   </Text>
                 ))}
               </Box>
@@ -1530,6 +2011,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
             borderColor: 'border.default',
             borderRadius: 2,
             backgroundColor: 'canvas.default',
+            opacity: isSpecMode ? 0.6 : 1,
           }}
         >
           <Box
@@ -1662,46 +2144,6 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
         <Flash variant="danger" sx={{ marginBottom: 3 }}>
           {createError}
         </Flash>
-      )}
-
-      {selectedSpec && (
-        <Box
-          sx={{
-            marginBottom: 3,
-            padding: 3,
-            border: '1px solid',
-            borderColor: 'border.default',
-            borderRadius: 2,
-            backgroundColor: 'canvas.default',
-          }}
-        >
-          <Text
-            sx={{ fontSize: 1, fontWeight: 'bold', display: 'block', mb: 2 }}
-          >
-            Agent Spec Attributes
-          </Text>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {selectedSpecEntries.map(([key, value]) => (
-              <Box
-                key={key}
-                sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}
-              >
-                <Text sx={{ fontSize: 0, fontWeight: 'semibold' }}>{key}</Text>
-                <Text
-                  sx={{
-                    fontSize: 0,
-                    color: 'fg.muted',
-                    whiteSpace: 'pre-wrap',
-                  }}
-                >
-                  {typeof value === 'string'
-                    ? value
-                    : JSON.stringify(value, null, 2)}
-                </Text>
-              </Box>
-            ))}
-          </Box>
-        </Box>
       )}
 
       <Button

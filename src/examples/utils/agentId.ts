@@ -34,7 +34,7 @@ function randomSlug(length = 6): string {
  *
  * @example
  *   uniqueAgentId('simple')           // → "simple-a3f7b2" (cached)
- *   uniqueAgentId('codemode-demo')    // → "codemode-demo-k9x2m1" (cached)
+ *   uniqueAgentId('codemode-demo')    // → "codemode-example-k9x2m1" (cached)
  */
 export function uniqueAgentId(baseName: string): string {
   const storageKey = `agent-runtimes:agentId:${baseName}`;

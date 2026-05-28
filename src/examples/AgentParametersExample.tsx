@@ -6,18 +6,19 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Box, setupPrimerPortals } from '@datalayer/primer-addons';
 import { Button, Heading, Label, Spinner, Text } from '@primer/react';
+import { FileIcon } from '@primer/octicons-react';
 import { RJSFSchema } from '@rjsf/utils';
 import validator from '@rjsf/validator-ajv8';
 import { Form, yamlSchemaToJsonSchema } from '@datalayer/primer-rjsf';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
+import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 import { ErrorView } from './components';
 import { Chat } from '../chat';
 
 setupPrimerPortals();
 
-const BASE_URL = 'http://localhost:8765';
-const AGENT_SPEC_ID = 'demo-parameters';
+const AGENT_SPEC_ID = 'example-parameters';
 const AGENT_NAME = 'parameters-demo';
 
 type LibrarySpecResponse = {
@@ -137,6 +138,7 @@ function hasRequiredValues(
 }
 
 const AgentParametersExample: React.FC = () => {
+  const baseUrl = useExampleAgentRuntimesUrl();
   const [showSchemaForm, setShowSchemaForm] = useState(false);
   const [isSchemaLoading, setIsSchemaLoading] = useState(false);
   const [schema, setSchema] = useState<RJSFSchema | null>(null);
@@ -166,7 +168,7 @@ const AgentParametersExample: React.FC = () => {
 
     try {
       const response = await fetch(
-        `${BASE_URL}/api/v1/agents/library/${AGENT_SPEC_ID}`,
+        `${baseUrl}/api/v1/agents/library/${AGENT_SPEC_ID}`,
       );
       if (!response.ok) {
         throw new Error(`Failed to load schema: ${response.status}`);
@@ -194,7 +196,7 @@ const AgentParametersExample: React.FC = () => {
 
     try {
       const name = uniqueAgentId(AGENT_NAME);
-      const response = await fetch(`${BASE_URL}/api/v1/agents`, {
+      const response = await fetch(`${baseUrl}/api/v1/agents`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -228,13 +230,13 @@ const AgentParametersExample: React.FC = () => {
       if (!agentId) {
         return;
       }
-      void fetch(`${BASE_URL}/api/v1/agents/${encodeURIComponent(agentId)}`, {
+      void fetch(`${baseUrl}/api/v1/agents/${encodeURIComponent(agentId)}`, {
         method: 'DELETE',
       }).catch(() => {
         // Ignore teardown failures in example mode.
       });
     };
-  }, [agentId]);
+  }, [agentId, baseUrl]);
 
   if (!agentId) {
     return (
@@ -263,7 +265,7 @@ const AgentParametersExample: React.FC = () => {
             Launch Parameterized Agent
           </Heading>
           <Text sx={{ color: 'fg.muted', fontSize: 1, maxWidth: 620 }}>
-            Load the runtime schema directly from demo-parameters, fill the
+            Load the runtime schema directly from example-parameters, fill the
             generated form, then launch with validated parameters.
           </Text>
 
@@ -396,9 +398,10 @@ const AgentParametersExample: React.FC = () => {
   return (
     <Chat
       protocol="vercel-ai"
-      baseUrl={BASE_URL}
+      baseUrl={baseUrl}
       agentId={agentId}
       title={`Parameterized Agent: ${String(formData.project ?? 'Project')}`}
+      brandIcon={<FileIcon size={16} />}
       placeholder="Ask something about your configured project..."
       description={`Role: ${String(formData.role ?? 'n/a')} · Tone: ${String(formData.tone ?? 'n/a')}`}
       showHeader={true}
@@ -410,7 +413,7 @@ const AgentParametersExample: React.FC = () => {
       autoFocus
       height="100vh"
       runtimeId={agentId}
-      historyEndpoint={`${BASE_URL}/api/v1/history`}
+      historyEndpoint={`${baseUrl}/api/v1/history`}
       suggestions={[
         {
           title: 'Print demo_params',

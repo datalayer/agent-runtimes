@@ -10,7 +10,7 @@
  * sidebar that streams WebSocket messages to and from the
  * `/configure/sandbox/ws` endpoint.
  *
- * - Creates a local agent (spec: demo-full) with codemode enabled
+ * - Creates a local agent (spec: example-full) with codemode enabled
  * - SegmentedControl toggles between "eval" and "jupyter" variants
  * - Sidebar shows live sandbox status, WebSocket event log, and an
  *   interrupt button
@@ -51,8 +51,8 @@ import type { SandboxAggregateStatus } from '../types/sandbox';
 // ─── Constants ─────────────────────────────────────────────────────────────
 
 const queryClient = new QueryClient();
-const AGENT_NAME = 'sandbox-demo-agent';
-const AGENT_SPEC_ID = 'demo-full';
+const AGENT_NAME = 'sandbox-example-agent';
+const AGENT_SPEC_ID = 'example-full';
 const DEFAULT_LOCAL_BASE_URL =
   import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
 
@@ -787,6 +787,7 @@ const AgentSandboxInner: React.FC<{ onLogout: () => void }> = ({
               agentId={agentId}
               authToken={chatAuthToken}
               title="Sandbox Agent"
+              brandIcon={<TerminalIcon size={16} />}
               placeholder="Ask the agent to write and run code…"
               showHeader={true}
               showNewChatButton={true}

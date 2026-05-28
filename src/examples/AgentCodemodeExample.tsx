@@ -6,9 +6,9 @@
 /**
  * AgentCodemodeExample
  *
- * Compares two Tavily-based agents side-by-side:
- * - Tavily MCP without codemode conversion
- * - Tavily MCP with codemode conversion
+ * Compares two tooling modes side-by-side:
+ * - MCP tools without codemode conversion
+ * - MCP tools with codemode conversion
  *
  * A sidebar gauge tracks consumed tokens for each agent in real time.
  */
@@ -85,7 +85,7 @@ const CODEMODE_BASE_URL =
   import.meta.env.VITE_BASE_URL_CODEMODE || 'http://localhost:8766';
 
 const NO_CODEMODE_SUGGESTION_MESSAGE =
-  'Use the Tavily Extract tool to extract information from https://datalayer.ai, then use your sandbox to persist that information in a variable named "about_datalayer".';
+  'Use the MCP extract tool to extract information from https://datalayer.ai, then use your sandbox to persist that information in a variable named "about_datalayer".';
 
 const CODEMODE_SUGGESTION_MESSAGE =
   'Extract information from the https://datalayer.ai website and assign it to the variable "about_datalayer", all in one step using the sandbox';
@@ -105,19 +105,19 @@ interface DemoAgentConfig {
 const DEMO_AGENT_CONFIGS: DemoAgentConfig[] = [
   {
     key: 'no-codemode',
-    title: 'Tavily MCP (No Codemode)',
+    title: 'MCP Tools (No Codemode)',
     subtitle: 'Raw MCP tools without codemode conversion',
     suggestionMessage: NO_CODEMODE_SUGGESTION_MESSAGE,
-    specId: 'demo-tavily-no-codemode',
+    specId: 'example-no-codemode',
     color: '#0969DA',
     baseUrl: NO_CODEMODE_BASE_URL,
   },
   {
     key: 'codemode',
-    title: 'Tavily MCP (Codemode)',
+    title: 'Codemode Tools',
     subtitle: 'MCP tools converted into programmatic tools',
     suggestionMessage: CODEMODE_SUGGESTION_MESSAGE,
-    specId: 'demo-tavily-codemode',
+    specId: 'example-codemode',
     color: '#8250DF',
     baseUrl: CODEMODE_BASE_URL,
   },
@@ -180,6 +180,7 @@ const AgentRuntimePane: React.FC<AgentRuntimePaneProps> = ({
 
   useEffect(() => {
     let cancelled = false;
+    const launchTimeoutMs = 20_000;
 
     const createLocalAgent = async () => {
       setRuntimeStatus('launching');
@@ -187,8 +188,14 @@ const AgentRuntimePane: React.FC<AgentRuntimePaneProps> = ({
       setIsReconnectedAgent(false);
 
       try {
+        const controller = new AbortController();
+        const timeoutId = window.setTimeout(() => {
+          controller.abort();
+        }, launchTimeoutMs);
+
         const response = await authFetch(`${config.baseUrl}/api/v1/agents`, {
           method: 'POST',
+          signal: controller.signal,
           body: JSON.stringify({
             name: runtimeName,
             description: config.subtitle,
@@ -199,6 +206,7 @@ const AgentRuntimePane: React.FC<AgentRuntimePaneProps> = ({
             tools: [],
           }),
         });
+        window.clearTimeout(timeoutId);
 
         let resolvedAgentId = runtimeName;
         let alreadyRunning = false;
@@ -237,8 +245,14 @@ const AgentRuntimePane: React.FC<AgentRuntimePaneProps> = ({
         }
       } catch (error) {
         if (!cancelled) {
+          const isAbortError =
+            error instanceof DOMException && error.name === 'AbortError';
           setHookError(
-            error instanceof Error ? error.message : 'Agent failed to start',
+            isAbortError
+              ? `Timed out after ${Math.round(launchTimeoutMs / 1000)}s while creating '${config.specId}' at ${config.baseUrl}. Ensure the no-codemode endpoint is reachable.`
+              : error instanceof Error
+                ? `${error.message} (endpoint: ${config.baseUrl}, spec: ${config.specId})`
+                : `Agent failed to start (endpoint: ${config.baseUrl}, spec: ${config.specId})`,
           );
           setRuntimeStatus('error');
         }
@@ -500,6 +514,7 @@ const AgentRuntimePane: React.FC<AgentRuntimePaneProps> = ({
         <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
           Launching {config.title}...
         </Text>
+        <Text sx={{ fontSize: 0, color: 'fg.subtle' }}>{config.baseUrl}</Text>
       </Box>
     );
   }
@@ -531,6 +546,7 @@ const AgentRuntimePane: React.FC<AgentRuntimePaneProps> = ({
           agentId={agentId}
           authToken={token}
           title={config.title}
+          brandIcon={<CodeIcon size={16} />}
           subtitle={config.subtitle}
           placeholder="Ask both agents the same request to compare behavior..."
           description={config.subtitle}
@@ -778,7 +794,7 @@ const AgentCodemodeInner: React.FC<{ onLogout: () => void }> = ({
       >
         <CodeIcon size={16} />
         <Heading as="h3" sx={{ fontSize: 2, flex: 1 }}>
-          Codemode — Tavily MCP vs Tavily Codemode
+          Codemode — MCP Tools vs Codemode Tools
         </Heading>
       </Box>
 

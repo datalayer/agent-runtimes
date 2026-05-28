@@ -31,10 +31,12 @@ dependencies = [
     "agent-client-protocol>=0.7.1",
     "agent-codemode>=0.1.0",
     "agent-skills>=0.1.1",
-    "anthropic",
-    "code-sandboxes>=0.0.11",
+    "anthropic>=0.97.0,<0.103.0",
+    "boto3>=1.42.96,<1.43.0",
+    "code-sandboxes>=0.0.11,<0.0.14",
     "croniter>=6.0.0",
-    "datalayer-core>=1.1.18 ",
+    "datalayer-core>=1.1.22,<1.2.0",
+    "dbos>=2.10.0,<2.23.0",
     "fasta2a @ git+https://github.com/datalayer-externals/fasta2a.git@feat/extensions#egg=fasta2a",
     "fastapi",
     "filelock>=3.20.3",
@@ -44,17 +46,19 @@ dependencies = [
     "jupyter-kernel-client>=0.0.9",
     "jupyter-server>=2.10,<3",
     "logfire>=4.32.1",
-    "logfire-api>=4.32.1",
-    "mcp-ui-server>=1.0.0",
-    "mem0ai>=0.1.40",
+    "logfire-api>=4.33.0",
+    "mcp-ui-server>=1.0.0,<1.1.0",
+    "mcp>=1.26.0,<2.0.0",
+    "mem0ai>=2.0.1,<2.1.0",
+    "openai>=2.29.0,<2.38.0",
     "opentelemetry-api>=1.39.0,<1.41.0",
     "opentelemetry-sdk>=1.39.0,<1.41.0",
     "opentelemetry-semantic-conventions>=0.60b0,<0.62b0",
     "opentelemetry-exporter-otlp-proto-http>=1.39.0,<1.41.0",
     "opentelemetry-exporter-otlp-proto-grpc>=1.39.0,<1.41.0",
     "opentelemetry-instrumentation>=0.60b0,<0.62b0",
-    "pydantic-ai-slim[openai,anthropic,google,mcp,dbos,bedrock]>=1.94.0",
-    "pydantic-graph>=1.94.0",
+    "pydantic-ai-slim[openai,anthropic,google,dbos,bedrock]>=1.97.0",
+    "pydantic-graph>=1.97.0",
     "pydantic-settings>=2.14.0",
     "pydantic[email]>=2.13.3",
     "subagents-pydantic-ai @ git+https://github.com/datalayer-externals/pydantic-ai-subagents.git@main#egg=subagents-pydantic-ai",
@@ -223,3 +227,6 @@ skips = [
     "B606",  # Process execution without shell is safer and intentional
     "B607",  # Partial path execution is acceptable for known binaries
 ]
+
+[tool.interrogate]
+fail-under = 79.0

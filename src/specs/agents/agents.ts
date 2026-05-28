@@ -27,7 +27,6 @@ import {
 } from '../mcpServers';
 import {
   CRAWL_SKILL_SPEC_0_0_1,
-  DATALAYER_WHOAMI_SKILL_SPEC_0_0_1,
   EVENTS_SKILL_SPEC_0_0_1,
   GITHUB_SKILL_SPEC_0_0_1,
   JOKES_SKILL_SPEC_0_0_1,
@@ -80,8 +79,6 @@ const MCP_SERVER_MAP: Record<string, any> = {
 const SKILL_MAP: Record<string, any> = {
   'crawl:0.0.1': CRAWL_SKILL_SPEC_0_0_1,
   crawl: CRAWL_SKILL_SPEC_0_0_1,
-  'datalayer-whoami:0.0.1': DATALAYER_WHOAMI_SKILL_SPEC_0_0_1,
-  'datalayer-whoami': DATALAYER_WHOAMI_SKILL_SPEC_0_0_1,
   'events:0.0.1': EVENTS_SKILL_SPEC_0_0_1,
   events: EVENTS_SKILL_SPEC_0_0_1,
   'github:0.0.1': GITHUB_SKILL_SPEC_0_0_1,
@@ -152,10 +149,16 @@ export const ANALYZE_CAMPAIGN_PERFORMANCE_AGENT_SPEC_0_0_1: AgentSpec = {
     MCP_SERVER_MAP['slack:0.0.1'],
   ],
   skills: [
-    toAgentSkillSpec(SKILL_MAP['pdf:0.0.1']),
-    toAgentSkillSpec(SKILL_MAP['crawl:0.0.1']),
-    toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
-  ],
+    SKILL_MAP['pdf:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['pdf:0.0.1'])
+      : undefined,
+    SKILL_MAP['crawl:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['crawl:0.0.1'])
+      : undefined,
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
   tools: [],
   frontendTools: [
     FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
@@ -256,6 +259,7 @@ export const ANALYZE_CAMPAIGN_PERFORMANCE_AGENT_SPEC_0_0_1: AgentSpec = {
   memory: 'ephemeral',
   preHooks: undefined,
   postHooks: undefined,
+  toolHooks: undefined,
   parameters: undefined,
   subagents: undefined,
 };
@@ -273,10 +277,16 @@ export const ANALYZE_SUPPORT_TICKETS_AGENT_SPEC_0_0_1: AgentSpec = {
     MCP_SERVER_MAP['slack:0.0.1'],
   ],
   skills: [
-    toAgentSkillSpec(SKILL_MAP['pdf:0.0.1']),
-    toAgentSkillSpec(SKILL_MAP['crawl:0.0.1']),
-    toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
-  ],
+    SKILL_MAP['pdf:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['pdf:0.0.1'])
+      : undefined,
+    SKILL_MAP['crawl:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['crawl:0.0.1'])
+      : undefined,
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
   tools: [],
   frontendTools: [
     FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
@@ -352,6 +362,7 @@ export const ANALYZE_SUPPORT_TICKETS_AGENT_SPEC_0_0_1: AgentSpec = {
   memory: 'ephemeral',
   preHooks: undefined,
   postHooks: undefined,
+  toolHooks: undefined,
   parameters: undefined,
   subagents: undefined,
 };
@@ -369,9 +380,13 @@ export const AUDIT_INVENTORY_LEVELS_AGENT_SPEC_0_0_1: AgentSpec = {
     MCP_SERVER_MAP['slack:0.0.1'],
   ],
   skills: [
-    toAgentSkillSpec(SKILL_MAP['pdf:0.0.1']),
-    toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
-  ],
+    SKILL_MAP['pdf:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['pdf:0.0.1'])
+      : undefined,
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
   tools: [],
   frontendTools: [
     FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
@@ -444,6 +459,7 @@ export const AUDIT_INVENTORY_LEVELS_AGENT_SPEC_0_0_1: AgentSpec = {
   memory: 'ephemeral',
   preHooks: undefined,
   postHooks: undefined,
+  toolHooks: undefined,
   parameters: undefined,
   subagents: undefined,
 };
@@ -461,9 +477,13 @@ export const AUTOMATE_REGULATORY_REPORTING_AGENT_SPEC_0_0_1: AgentSpec = {
     MCP_SERVER_MAP['slack:0.0.1'],
   ],
   skills: [
-    toAgentSkillSpec(SKILL_MAP['pdf:0.0.1']),
-    toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
-  ],
+    SKILL_MAP['pdf:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['pdf:0.0.1'])
+      : undefined,
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
   tools: [],
   frontendTools: [
     FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
@@ -560,6 +580,7 @@ export const AUTOMATE_REGULATORY_REPORTING_AGENT_SPEC_0_0_1: AgentSpec = {
   memory: 'ephemeral',
   preHooks: undefined,
   postHooks: undefined,
+  toolHooks: undefined,
   parameters: undefined,
   subagents: undefined,
 };
@@ -574,9 +595,13 @@ export const CLASSIFY_ROUTE_EMAILS_AGENT_SPEC_0_0_1: AgentSpec = {
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
   mcpServers: [MCP_SERVER_MAP['slack:0.0.1']],
   skills: [
-    toAgentSkillSpec(SKILL_MAP['github:0.0.1']),
-    toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
-  ],
+    SKILL_MAP['github:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['github:0.0.1'])
+      : undefined,
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
   tools: [],
   frontendTools: [
     FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
@@ -656,6 +681,7 @@ export const CLASSIFY_ROUTE_EMAILS_AGENT_SPEC_0_0_1: AgentSpec = {
   memory: 'ephemeral',
   preHooks: undefined,
   postHooks: undefined,
+  toolHooks: undefined,
   parameters: undefined,
   subagents: undefined,
 };
@@ -673,10 +699,16 @@ export const COMPREHENSIVE_SALES_ANALYTICS_AGENT_SPEC_0_0_1: AgentSpec = {
     MCP_SERVER_MAP['slack:0.0.1'],
   ],
   skills: [
-    toAgentSkillSpec(SKILL_MAP['pdf:0.0.1']),
-    toAgentSkillSpec(SKILL_MAP['github:0.0.1']),
-    toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
-  ],
+    SKILL_MAP['pdf:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['pdf:0.0.1'])
+      : undefined,
+    SKILL_MAP['github:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['github:0.0.1'])
+      : undefined,
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
   tools: [],
   frontendTools: [
     FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
@@ -738,6 +770,7 @@ export const COMPREHENSIVE_SALES_ANALYTICS_AGENT_SPEC_0_0_1: AgentSpec = {
   memory: 'ephemeral',
   preHooks: undefined,
   postHooks: undefined,
+  toolHooks: undefined,
   parameters: undefined,
   subagents: undefined,
 };
@@ -752,9 +785,13 @@ export const CRAWLER_AGENT_SPEC_0_0_1: AgentSpec = {
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
   mcpServers: [MCP_SERVER_MAP['tavily:0.0.1']],
   skills: [
-    toAgentSkillSpec(SKILL_MAP['github:0.0.1']),
-    toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
-  ],
+    SKILL_MAP['github:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['github:0.0.1'])
+      : undefined,
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
   tools: [],
   frontendTools: [
     FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
@@ -812,6 +849,7 @@ export const CRAWLER_AGENT_SPEC_0_0_1: AgentSpec = {
   memory: 'ephemeral',
   preHooks: undefined,
   postHooks: undefined,
+  toolHooks: undefined,
   parameters: undefined,
   subagents: undefined,
 };
@@ -830,9 +868,13 @@ export const DATA_ACQUISITION_AGENT_SPEC_0_0_1: AgentSpec = {
     MCP_SERVER_MAP['tavily:0.0.1'],
   ],
   skills: [
-    toAgentSkillSpec(SKILL_MAP['github:0.0.1']),
-    toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
-  ],
+    SKILL_MAP['github:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['github:0.0.1'])
+      : undefined,
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
   tools: [],
   frontendTools: [
     FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
@@ -890,477 +932,7 @@ export const DATA_ACQUISITION_AGENT_SPEC_0_0_1: AgentSpec = {
   memory: 'ephemeral',
   preHooks: undefined,
   postHooks: undefined,
-  parameters: undefined,
-  subagents: undefined,
-};
-
-export const DATALAYER_AGENT_SPEC_0_0_1: AgentSpec = {
-  id: 'datalayer-agent',
-  version: '0.0.1',
-  name: 'Datalayer Agent',
-  description: `Datalayer-focused assistant that can inspect the authenticated user profile using datalayer-skills.`,
-  tags: ['datalayer', 'iam', 'profile', 'identity'],
-  enabled: false,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-  mcpServers: [],
-  skills: [toAgentSkillSpec(SKILL_MAP['datalayer-whoami:0.0.1'])],
-  tools: [],
-  frontendTools: [
-    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
-    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
-  ],
-  environmentName: 'ai-agents-env',
-  icon: 'person',
-  emoji: '👤',
-  color: '#14B8A6',
-  suggestions: [
-    'Who am I on Datalayer?',
-    'Show my Datalayer profile details',
-    'What roles do I currently have in Datalayer?',
-  ],
-  welcomeMessage:
-    "Hi! I'm the Datalayer Agent. I can help you retrieve and summarize your authenticated Datalayer profile.\n",
-  welcomeNotebook: undefined,
-  welcomeDocument: undefined,
-  sandboxVariant: 'jupyter',
-  systemPrompt: `You are a Datalayer assistant with access to the datalayer-whoami skill. Use it to retrieve the authenticated user's profile when requested. If DATALAYER_API_KEY is missing, clearly ask the user to configure it.
-`,
-  systemPromptCodemodeAddons: undefined,
-  goal: undefined,
-  protocol: undefined,
-  uiExtension: undefined,
-  trigger: undefined,
-  modelConfig: undefined,
-  mcpServerTools: undefined,
-  guardrails: undefined,
-  evals: undefined,
-  codemode: undefined,
-  output: undefined,
-  advanced: undefined,
-  authorizationPolicy: undefined,
-  notifications: undefined,
-  memory: 'ephemeral',
-  preHooks: { packages: ['datalayer_skills>=0.1.0'] },
-  postHooks: undefined,
-  parameters: undefined,
-  subagents: undefined,
-};
-
-export const DEMO_FULL_AGENT_SPEC_0_0_1: AgentSpec = {
-  id: 'demo-full',
-  version: '0.0.1',
-  name: 'Demo with MCP, Skills, Tool Approvals...',
-  description: `A full-featured demonstration agent showcasing MCP servers (Tavily web search), skills (GitHub, PDF, crawl, events, text summarizer, jokes, datalayer whoami), human-in-the-loop tool approval, and frontend tools (Jupyter notebooks, Lexical documents).`,
-  tags: ['demo', 'approval', 'human-in-the-loop', 'utility'],
-  enabled: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-  mcpServers: [MCP_SERVER_MAP['tavily:0.0.1']],
-  skills: [
-    toAgentSkillSpec(SKILL_MAP['crawl:0.0.1']),
-    toAgentSkillSpec(SKILL_MAP['datalayer-whoami:0.0.1']),
-    toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
-    toAgentSkillSpec(SKILL_MAP['github:0.0.1']),
-    toAgentSkillSpec(SKILL_MAP['pdf:0.0.1']),
-    toAgentSkillSpec(SKILL_MAP['text-summarizer:0.0.1']),
-    toAgentSkillSpec(SKILL_MAP['jokes:0.0.1']),
-  ],
-  tools: [
-    TOOL_MAP['runtime-echo:0.0.1'],
-    TOOL_MAP['runtime-sensitive-echo:0.0.1'],
-  ],
-  frontendTools: [
-    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
-    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
-  ],
-  environmentName: 'ai-agents-env',
-  icon: 'shield',
-  emoji: '🛡️',
-  color: '#6366F1',
-  suggestions: [
-    'list your tools',
-    'Search the web for the latest news on AI agents using Tavily.',
-    'List my public GitHub repositories and summarize the most active ones.',
-    'Who am I on Datalayer? Summarize my profile.',
-    "Echo with text 'hello' and reason 'audit', then share the result.",
-    "Echo 'hello world' and share the result in a short sentence.",
-    "Call the runtime_sensitive_echo tool with text 'hello' and reason 'audit', then reply with the tool result.",
-    "Call the runtime_echo tool with text 'hello world', then reply with the tool result.",
-    'Tell me a joke using your skills.',
-  ],
-  welcomeMessage:
-    "Hi! I'm the Tool Approval Demo agent. I have two echo tools — one runs immediately, the other requires your approval before executing. I can also search the web with Tavily, tell jokes, and retrieve your Datalayer profile.\n",
-  welcomeNotebook: undefined,
-  welcomeDocument: undefined,
-  sandboxVariant: 'jupyter',
-  systemPrompt: `You are a helpful assistant demonstrating the tool approval workflow. You have access to two runtime tools: - runtime_echo: echoes text back immediately, no approval required. - runtime_sensitive_echo: echoes text with a reason, but requires human approval before executing. You also have access to the Tavily MCP server for web search. When asked to list your tools, briefly describe each one and ask the user which to run. IMPORTANT RUNTIME RULE: After every tool call, you MUST produce a final plain-text response summarizing the tool result. Never end your turn with only a tool call. If the user asks for "tool call only" or says "do not write Python code", still run the tool and then provide a short natural-language result message. The final assistant output must be text (string), not only tool calls. Do not call list_skills, load_skill, read_skill_resource, or run_skill_script.
-`,
-  systemPromptCodemodeAddons: undefined,
-  goal: undefined,
-  protocol: undefined,
-  uiExtension: undefined,
-  trigger: undefined,
-  modelConfig: undefined,
-  mcpServerTools: undefined,
-  guardrails: undefined,
-  evals: undefined,
-  codemode: undefined,
-  output: undefined,
-  advanced: undefined,
-  authorizationPolicy: undefined,
-  notifications: undefined,
-  memory: 'ephemeral',
-  preHooks: { packages: ['datalayer_skills>=0.1.0'] },
-  postHooks: undefined,
-  parameters: undefined,
-  subagents: undefined,
-};
-
-export const DEMO_GUARDRAILS_AGENT_SPEC_0_0_1: AgentSpec = {
-  id: 'demo-guardrails',
-  version: '0.0.1',
-  name: 'Demo Guardrails (Cost + Approval)',
-  description: `Demonstration agent for guardrails with a strict per-run cost budget and human-in-the-loop approval on sensitive runtime tools.`,
-  tags: ['demo', 'guardrails', 'cost', 'approval'],
-  enabled: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-  mcpServers: [],
-  skills: [
-    toAgentSkillSpec(SKILL_MAP['jokes:0.0.1']),
-    toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
-  ],
-  tools: [
-    TOOL_MAP['runtime-echo:0.0.1'],
-    TOOL_MAP['runtime-sensitive-echo:0.0.1'],
-  ],
-  frontendTools: [
-    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
-    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
-  ],
-  environmentName: 'ai-agents-env',
-  icon: 'shield-check',
-  emoji: '🛡️',
-  color: '#1F883D',
-  suggestions: [
-    "Call runtime_echo with text 'hello world' and summarize the result.",
-    "Call runtime_sensitive_echo with text 'audit me' and reason 'governance check'.",
-    'Tell me a joke and keep the answer under 2 sentences.',
-  ],
-  welcomeMessage:
-    'Hi! I am the Guardrails demo agent. I enforce a strict per-run cost budget and require manual approval for sensitive tool calls.\n',
-  welcomeNotebook: undefined,
-  welcomeDocument: undefined,
-  sandboxVariant: 'jupyter',
-  systemPrompt: `You are a guardrails demonstration assistant. You can call runtime_echo directly. You must request human approval before running runtime_sensitive_echo. Always provide a concise plain-text summary after each tool execution.
-`,
-  systemPromptCodemodeAddons: undefined,
-  goal: undefined,
-  protocol: undefined,
-  uiExtension: undefined,
-  trigger: undefined,
-  modelConfig: undefined,
-  mcpServerTools: undefined,
-  guardrails: [
-    {
-      name: 'Guardrails Demo User',
-      identity_provider: 'datalayer',
-      identity_name: 'guardrails-demo@acme.com',
-      permissions: {
-        'read:data': true,
-        'write:data': false,
-        'execute:code': true,
-        'access:internet': false,
-        'send:email': false,
-        'deploy:production': false,
-      },
-      token_limits: { per_run: '25K', per_day: '150K', per_month: '1M' },
-      cost_budget: { per_run_usd: 0.01, on_budget_exceeded: 'stop' },
-      tool_approval: {
-        tools: ['runtime[-_]sensitive[-_]echo'],
-        timeout: '0h5m0s',
-      },
-    },
-  ],
-  evals: undefined,
-  codemode: undefined,
-  output: undefined,
-  advanced: undefined,
-  authorizationPolicy: undefined,
-  notifications: undefined,
-  memory: 'ephemeral',
-  preHooks: undefined,
-  postHooks: undefined,
-  parameters: undefined,
-  subagents: undefined,
-};
-
-export const DEMO_HOOKS_AGENT_SPEC_0_0_1: AgentSpec = {
-  id: 'demo-hooks',
-  version: '0.0.1',
-  name: 'Demo Hooks Agent',
-  description: `Demonstrates pre-hooks and post-hooks executed in the sandbox lifecycle.`,
-  tags: ['demo', 'hooks', 'lifecycle'],
-  enabled: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-  mcpServers: [],
-  skills: [],
-  tools: [TOOL_MAP['runtime-echo:0.0.1']],
-  frontendTools: [],
-  environmentName: 'ai-agents-env',
-  icon: 'zap',
-  emoji: '🪝',
-  color: '#0E7490',
-  suggestions: [
-    'Read the pre-hook marker file at /tmp/agent_runtimes_pre_hook_demo.txt using execute_code.',
-    'Print the hook_ran_at and hook_name variables that the pre-hook set in the sandbox.',
-    "Run execute_code to verify that the 'rich' package was installed by the pre-hook.",
-    'Show me all variables that the pre-hook defined in the sandbox namespace.',
-  ],
-  welcomeMessage:
-    "I ran a pre-hook before starting up. It installed the 'rich' package, wrote a marker file, and set several sandbox variables (hook_name, hook_ran_at, hook_env). Ask me to read the file or inspect those variables.\n",
-  welcomeNotebook: undefined,
-  welcomeDocument: undefined,
-  sandboxVariant: 'eval',
-  systemPrompt: `You are a demo assistant for lifecycle hooks.
-The sandbox pre-hook ran before this agent started and did three things:
-1. Installed the Python package 'rich' (pip install). 2. Wrote a UTF-8 marker file to /tmp/agent_runtimes_pre_hook_demo.txt
-   with the content: "pre-hook executed for demo-hooks at <timestamp>".
-3. Defined these Python variables in the sandbox namespace:
-   - hook_name    (str) - "demo-hooks:pre"
-   - hook_ran_at  (str) - ISO-8601 timestamp of when the pre-hook ran
-   - hook_env     (dict) - subset of os.environ captured at hook time
-
-A post-hook is also configured — it will write /tmp/agent_runtimes_post_hook_demo.txt when the agent shuts down.
-When the user asks about hooks, use execute_code to show concrete evidence: read the marker file, print the variables, or import rich to confirm it was installed.
-`,
-  systemPromptCodemodeAddons: undefined,
-  goal: undefined,
-  protocol: undefined,
-  uiExtension: undefined,
-  trigger: undefined,
-  modelConfig: undefined,
-  mcpServerTools: undefined,
-  guardrails: undefined,
-  evals: undefined,
-  codemode: undefined,
-  output: undefined,
-  advanced: undefined,
-  authorizationPolicy: undefined,
-  notifications: undefined,
-  memory: 'ephemeral',
-  preHooks: {
-    packages: ['rich'],
-    sandbox: [
-      'import datetime\nimport os\nfrom pathlib import Path\n\nhook_name = "demo-hooks:pre"\nhook_ran_at = datetime.datetime.now().isoformat()\nhook_env = {\n    k: os.environ[k]\n    for k in ("PATH", "HOME", "DATALAYER_CODE_SANDBOX_VARIANT")\n    if k in os.environ\n}\n\nPath(\'/tmp/agent_runtimes_pre_hook_demo.txt\').write_text(\n    f\'pre-hook executed for demo-hooks at {hook_ran_at}\\n\',\n    encoding=\'utf-8\',\n)\nprint(f"[demo-hooks] pre-hook done: hook_ran_at={hook_ran_at!r}")\n',
-    ],
-  },
-  postHooks: {
-    sandbox: [
-      "import datetime\nfrom pathlib import Path\n\npost_ran_at = datetime.datetime.now().isoformat()\nPath('/tmp/agent_runtimes_post_hook_demo.txt').write_text(\n    f'post-hook executed for demo-hooks at {post_ran_at}\\n',\n    encoding='utf-8',\n)\nprint(f\"[demo-hooks] post-hook done: post_ran_at={post_ran_at!r}\")\n",
-    ],
-  },
-  parameters: undefined,
-  subagents: undefined,
-};
-
-export const DEMO_MCP_AGENT_SPEC_0_0_1: AgentSpec = {
-  id: 'demo-mcp',
-  version: '0.0.1',
-  name: 'Demo MCP',
-  description: `Demo agent using MCP servers directly (without codemode conversion).`,
-  tags: ['demo', 'mcp', 'tavily'],
-  enabled: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-  mcpServers: [MCP_SERVER_MAP['tavily:0.0.1']],
-  skills: [toAgentSkillSpec(SKILL_MAP['jokes:0.0.1'])],
-  tools: [],
-  frontendTools: [
-    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
-    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
-  ],
-  environmentName: 'ai-agents-env',
-  icon: 'search',
-  emoji: '🔍',
-  color: '#0969DA',
-  suggestions: [
-    'Search the web for recent updates about MCP and summarize key findings',
-  ],
-  welcomeMessage:
-    "Hi! I'm the MCP demo agent. I use MCP tools directly without codemode.\n",
-  welcomeNotebook: undefined,
-  welcomeDocument: undefined,
-  sandboxVariant: undefined,
-  systemPrompt: `You are a helpful assistant with access to MCP tools. Use Tavily MCP tools to retrieve web information when needed. Do not claim codemode capabilities.
-`,
-  systemPromptCodemodeAddons: undefined,
-  goal: undefined,
-  protocol: 'vercel-ai',
-  uiExtension: 'a2ui',
-  trigger: undefined,
-  modelConfig: undefined,
-  mcpServerTools: undefined,
-  guardrails: undefined,
-  evals: undefined,
-  codemode: { enabled: false },
-  output: undefined,
-  advanced: undefined,
-  authorizationPolicy: undefined,
-  notifications: undefined,
-  memory: 'ephemeral',
-  preHooks: undefined,
-  postHooks: undefined,
-  parameters: undefined,
-  subagents: undefined,
-};
-
-export const DEMO_MONITORING_AGENT_SPEC_0_0_1: AgentSpec = {
-  id: 'demo-monitoring',
-  version: '0.0.1',
-  name: 'Demo Monitoring Agent',
-  description: `Monitoring-focused demo agent with Tavily MCP tools and the datalayer-skills whoami capability for profile-aware assistance.`,
-  tags: ['demo', 'monitoring', 'mcp', 'tavily', 'datalayer-skills'],
-  enabled: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-  mcpServers: [MCP_SERVER_MAP['tavily:0.0.1']],
-  skills: [
-    toAgentSkillSpec(SKILL_MAP['datalayer-whoami:0.0.1']),
-    toAgentSkillSpec(SKILL_MAP['jokes:0.0.1']),
-  ],
-  tools: [],
-  frontendTools: [
-    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
-    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
-  ],
-  environmentName: 'ai-agents-env',
-  icon: 'graph',
-  emoji: '📈',
-  color: '#0EA5E9',
-  suggestions: [
-    'Search the web for recent AI observability updates using Tavily and summarize the highlights.',
-    'Who am I on Datalayer and what can I monitor in this session?',
-    'Explain my last turn token and cost behavior in a concise summary.',
-  ],
-  welcomeMessage:
-    "Hi! I'm the Monitoring Demo agent. I can use Tavily for web context and datalayer-skills to inspect your authenticated Datalayer identity.\n",
-  welcomeNotebook: undefined,
-  welcomeDocument: undefined,
-  sandboxVariant: 'jupyter',
-  systemPrompt: `You are a monitoring-oriented assistant. Use Tavily MCP tools for current web information when useful. Use the datalayer-whoami skill when the user asks about identity, profile, or account context. Keep explanations concise and practical.
-`,
-  systemPromptCodemodeAddons: undefined,
-  goal: undefined,
-  protocol: undefined,
-  uiExtension: undefined,
-  trigger: undefined,
-  modelConfig: undefined,
-  mcpServerTools: undefined,
-  guardrails: undefined,
-  evals: undefined,
-  codemode: undefined,
-  output: undefined,
-  advanced: undefined,
-  authorizationPolicy: undefined,
-  notifications: undefined,
-  memory: 'ephemeral',
-  preHooks: { packages: ['datalayer_skills>=0.1.0'] },
-  postHooks: undefined,
-  parameters: undefined,
-  subagents: undefined,
-};
-
-export const DEMO_ONE_TRIGGER_APPROVAL_AGENT_SPEC_0_0_1: AgentSpec = {
-  id: 'demo-one-trigger-approval',
-  version: '0.0.1',
-  name: 'Demo with the Once Trigger and Tool Approval',
-  description: `A demonstration agent for the "once" trigger type with manual tool approval. When launched, the agent executes its trigger prompt once and invokes the runtime-sensitive-echo tool, which requires manual approval before execution. After completion, the runtime is terminated automatically.`,
-  tags: ['demo', 'trigger', 'once', 'lifecycle', 'approval'],
-  enabled: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-  mcpServers: [],
-  skills: [],
-  tools: [TOOL_MAP['runtime-sensitive-echo:0.0.1']],
-  frontendTools: [FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1']],
-  environmentName: 'ai-agents-env',
-  icon: 'shield',
-  emoji: '🛡️',
-  color: '#ef4444',
-  suggestions: [],
-  welcomeMessage: undefined,
-  welcomeNotebook: undefined,
-  welcomeDocument: undefined,
-  sandboxVariant: undefined,
-  systemPrompt: undefined,
-  systemPromptCodemodeAddons: undefined,
-  goal: `Use the runtime_sensitive_echo tool once.`,
-  protocol: undefined,
-  uiExtension: undefined,
-  trigger: {
-    type: 'once',
-    description: 'Run once with approval and terminate',
-    prompt: 'Use the runtime_sensitive_echo tool once.',
-  },
-  modelConfig: undefined,
-  mcpServerTools: undefined,
-  guardrails: undefined,
-  evals: undefined,
-  codemode: { enabled: false },
-  output: undefined,
-  advanced: undefined,
-  authorizationPolicy: undefined,
-  notifications: undefined,
-  memory: 'ephemeral',
-  preHooks: undefined,
-  postHooks: undefined,
-  parameters: undefined,
-  subagents: undefined,
-};
-
-export const DEMO_ONE_TRIGGER_AGENT_SPEC_0_0_1: AgentSpec = {
-  id: 'demo-one-trigger',
-  version: '0.0.1',
-  name: 'Demo with the Once Trigger',
-  description: `A demonstration agent for the "once" trigger type. When launched, the agent executes its trigger prompt exactly once, emits AGENT_STARTED and AGENT_ENDED lifecycle events, and then terminates the runtime automatically.`,
-  tags: ['demo', 'trigger', 'once', 'lifecycle'],
-  enabled: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-  mcpServers: [],
-  skills: [
-    toAgentSkillSpec(SKILL_MAP['github:0.0.1']),
-    toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
-  ],
-  tools: [TOOL_MAP['runtime-echo:0.0.1']],
-  frontendTools: [FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1']],
-  environmentName: 'ai-agents-env',
-  icon: 'zap',
-  emoji: '⚡',
-  color: '#f59e0b',
-  suggestions: [],
-  welcomeMessage: undefined,
-  welcomeNotebook: undefined,
-  welcomeDocument: undefined,
-  sandboxVariant: 'jupyter',
-  systemPrompt: undefined,
-  systemPromptCodemodeAddons: undefined,
-  goal: `Run a one-shot task: list the user's top 3 public and top 3 private GitHub repositories, ranked by recent activity, and provide a brief summary of each.`,
-  protocol: undefined,
-  uiExtension: undefined,
-  trigger: {
-    type: 'once',
-    description: 'Run once and terminate',
-    prompt:
-      "List the user's top 3 public and top 3 private GitHub repositories, ranked by recent activity, and provide a brief summary of each.",
-  },
-  modelConfig: undefined,
-  mcpServerTools: undefined,
-  guardrails: undefined,
-  evals: undefined,
-  codemode: undefined,
-  output: undefined,
-  advanced: undefined,
-  authorizationPolicy: undefined,
-  notifications: undefined,
-  memory: 'ephemeral',
-  preHooks: undefined,
-  postHooks: undefined,
+  toolHooks: undefined,
   parameters: undefined,
   subagents: undefined,
 };
@@ -1368,47 +940,45 @@ export const DEMO_ONE_TRIGGER_AGENT_SPEC_0_0_1: AgentSpec = {
 export const DEMO_OUTPUTS_AGENT_SPEC_0_0_1: AgentSpec = {
   id: 'demo-outputs',
   version: '0.0.1',
-  name: 'Outputs Demo Agent',
-  description: `Demonstrates rich output rendering. Ask it to produce a Markdown table, a JSON payload, an ASCII/ECharts chart spec, or a downloadable file — the Outputs panel will auto-switch to the matching tab.`,
+  name: 'Example Outputs Agent',
+  description: `Demonstrates structured response rendering (table, json, chart, and file) for the AgentOutputsExample sidebar output parser.`,
   tags: ['demo', 'outputs', 'rendering'],
   enabled: true,
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
   mcpServers: [],
-  skills: [toAgentSkillSpec(SKILL_MAP['events:0.0.1'])],
+  skills: [
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
   tools: [TOOL_MAP['runtime-echo:0.0.1']],
   frontendTools: [
     FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
     FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
   ],
   environmentName: 'ai-agents-env',
-  icon: 'graph',
-  emoji: '📤',
-  color: '#8B5CF6',
+  icon: 'table',
+  emoji: '📦',
+  color: '#7C3AED',
   suggestions: [
-    'Generate a Markdown table of the top 5 US cities by population, with columns City, State, Population.',
-    'Return a JSON object describing a fictitious product catalog with 3 items (id, name, price, tags).',
-    'Produce a bar chart ECharts spec (JSON) showing monthly sales for Jan–Jun.',
-    'Create a downloadable CSV file with sample sales data for the last 7 days and output it inside a ```csv fenced block named sales.csv.',
+    'Return a TABLE of quarterly revenue by region',
+    'Return JSON for a KPI summary object',
+    'Return a CHART payload for monthly conversions',
+    'Return a FILE named report.md with highlights',
   ],
   welcomeMessage:
-    'Hi! I render rich outputs. Try one of the suggestions to produce a Markdown table, JSON, a chart spec, or a downloadable file — the side panel will switch to the matching tab automatically.\n',
+    'Outputs demo agent ready. Ask for TABLE, JSON, CHART, or FILE formats and I will respond with exactly one structured output block.',
   welcomeNotebook: undefined,
   welcomeDocument: undefined,
   sandboxVariant: 'jupyter',
-  systemPrompt: `You are an Outputs Demo Agent. Your job is to showcase rich output rendering. For every user request, pick exactly ONE of the following output formats and produce the content inside a single fenced code block so the UI can detect and render it:
+  systemPrompt: `You are the Demo Outputs Agent.
+The user may request one of exactly four output modes: TABLE, JSON, CHART, or FILE. For each response, emit exactly one mode and no extra prose.
+Formatting rules: - TABLE: Return one GitHub-flavored markdown table. - JSON: Return exactly one fenced \`\`\`json code block. - CHART: Return exactly one fenced \`\`\`json code block whose first line is
+  "// chart" and whose remaining body is valid ECharts option JSON.
+- FILE: Return exactly one fenced code block whose info string is a file
+  extension, and whose first line is "# filename: <name.ext>".
 
-  1. TABLE  — a GitHub-flavored Markdown table (pipe syntax). No fences.
-  2. JSON   — a valid JSON object inside a \`\`\`json fenced block.
-  3. CHART  — an ECharts \`option\` JSON spec inside a \`\`\`json fenced
-              block whose first line is \`// chart\`. Must include
-              \`xAxis\`, \`yAxis\`, and \`series\`.
-  4. FILE   — a downloadable text artifact inside a fenced block whose
-              info string is the file extension (e.g. \`\`\`csv,
-              \`\`\`md, \`\`\`txt). Start the block with a comment line
-              \`# filename: <name.ext>\` so the UI can label the file.
-
-Always add a 1–2 sentence natural-language preamble before the fenced block (or before the Markdown table). Never mix two output types in a single response. Keep the payloads small (≤ 30 rows / ≤ 2 KB).
-`,
+If mode is ambiguous, default to JSON.`,
   systemPromptCodemodeAddons: undefined,
   goal: undefined,
   protocol: undefined,
@@ -1426,310 +996,7 @@ Always add a 1–2 sentence natural-language preamble before the fenced block (o
   memory: 'ephemeral',
   preHooks: undefined,
   postHooks: undefined,
-  parameters: undefined,
-  subagents: undefined,
-};
-
-export const DEMO_PARAMETERS_AGENT_SPEC_0_0_1: AgentSpec = {
-  id: 'demo-parameters',
-  version: '0.0.1',
-  name: 'Demo Parameters Agent',
-  description: `Demonstrates launch-time parameterization with JSON schema validation.`,
-  tags: ['demo', 'parameters', 'schema'],
-  enabled: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-  mcpServers: [],
-  skills: [],
-  tools: [TOOL_MAP['runtime-echo:0.0.1']],
-  frontendTools: [],
-  environmentName: 'ai-agents-env',
-  icon: 'sliders',
-  emoji: '🎛️',
-  color: '#0F766E',
-  suggestions: [
-    'Use execute_code to print(demo_params) from the sandbox, then explain the value.',
-    "Use execute_code to print('demo_params =', demo_params).",
-  ],
-  welcomeMessage:
-    'This runtime was launched for project {{project}} and role {{role}}.\n',
-  welcomeNotebook: undefined,
-  welcomeDocument: undefined,
-  sandboxVariant: 'jupyter',
-  systemPrompt: `You are an assistant dedicated to {{project}}. Assume the user is a {{role}} and answer in a {{tone}} style. A sandbox pre-hook set a Python variable named demo_params with value {{demo_params}}.
-`,
-  systemPromptCodemodeAddons: undefined,
-  goal: undefined,
-  protocol: undefined,
-  uiExtension: undefined,
-  trigger: undefined,
-  modelConfig: undefined,
-  mcpServerTools: undefined,
-  guardrails: undefined,
-  evals: undefined,
-  codemode: undefined,
-  output: undefined,
-  advanced: undefined,
-  authorizationPolicy: undefined,
-  notifications: undefined,
-  memory: 'ephemeral',
-  preHooks: {
-    sandbox: [
-      'demo_params = """{{demo_params}}"""\nprint(f"[demo-parameters] demo_params initialized: {demo_params!r}")\n',
-    ],
-  },
-  postHooks: undefined,
-  parameters: {
-    type: 'object',
-    properties: {
-      demo_params: { type: 'string', title: 'Demo Params', default: 'hello' },
-      project: { type: 'string', title: 'Project', default: 'Orbit' },
-      role: {
-        type: 'string',
-        title: 'Role',
-        enum: ['product analyst', 'engineering lead', 'support specialist'],
-        default: 'product analyst',
-      },
-      tone: {
-        type: 'string',
-        title: 'Tone',
-        enum: ['concise', 'detailed'],
-        default: 'concise',
-      },
-    },
-    required: ['project'],
-  },
-  subagents: undefined,
-};
-
-export const DEMO_SIMPLE_AGENT_SPEC_0_0_1: AgentSpec = {
-  id: 'demo-simple',
-  version: '0.0.1',
-  name: 'A Simple Agent',
-  description: `A simple conversational agent. No tools, no MCP servers, no skills — just a helpful AI assistant you can chat with.`,
-  tags: ['simple', 'chat', 'assistant'],
-  enabled: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-  mcpServers: [],
-  skills: [toAgentSkillSpec(SKILL_MAP['events:0.0.1'])],
-  tools: [TOOL_MAP['runtime-echo:0.0.1']],
-  frontendTools: [
-    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
-    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
-  ],
-  environmentName: 'ai-agents-env',
-  icon: 'agent',
-  emoji: '🤖',
-  color: '#6366F1',
-  suggestions: [
-    'Tell me a joke',
-    'Explain quantum computing in simple terms',
-    'Help me brainstorm ideas for a weekend project',
-    'Summarize the key points of a topic I describe',
-  ],
-  welcomeMessage:
-    "Hi! I'm a simple assistant. I don't have any special tools, but I'm happy to chat, answer questions, and help you think through ideas.\n",
-  welcomeNotebook: undefined,
-  welcomeDocument: undefined,
-  sandboxVariant: 'jupyter',
-  systemPrompt: `You are a helpful, friendly AI assistant. You do not have access to any external tools, MCP servers, or skills. Answer questions using your training knowledge, be concise, and let the user know if a question is outside your knowledge.
-`,
-  systemPromptCodemodeAddons: undefined,
-  goal: undefined,
-  protocol: undefined,
-  uiExtension: undefined,
-  trigger: undefined,
-  modelConfig: undefined,
-  mcpServerTools: undefined,
-  guardrails: undefined,
-  evals: undefined,
-  codemode: undefined,
-  output: undefined,
-  advanced: undefined,
-  authorizationPolicy: undefined,
-  notifications: undefined,
-  memory: 'ephemeral',
-  preHooks: undefined,
-  postHooks: undefined,
-  parameters: undefined,
-  subagents: undefined,
-};
-
-export const DEMO_SUBAGENTS_AGENT_SPEC_0_0_1: AgentSpec = {
-  id: 'demo-subagents',
-  version: '0.0.1',
-  name: 'Subagents Demo',
-  description: `A demonstration agent that delegates tasks to specialised subagents. It has a researcher subagent for gathering information and a writer subagent for composing clear, structured responses.`,
-  tags: ['demo', 'subagents', 'multi-agent', 'delegation'],
-  enabled: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-  mcpServers: [],
-  skills: [toAgentSkillSpec(SKILL_MAP['events:0.0.1'])],
-  tools: [],
-  frontendTools: [
-    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
-    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
-  ],
-  environmentName: 'ai-agents-env',
-  icon: 'people',
-  emoji: '👥',
-  color: '#8B5CF6',
-  suggestions: [
-    'Research the pros and cons of Python async patterns and write a summary.',
-    'Find recent advances in LLM fine-tuning and create a brief report.',
-    'Investigate best practices for REST API design and draft a style guide.',
-    'Analyze the current state of WebAssembly and produce an executive summary.',
-  ],
-  welcomeMessage:
-    "Hi! I'm the Subagents Demo agent. I coordinate a team of specialised helpers: a **Researcher** who gathers information and a **Writer** who turns findings into polished prose. Ask me anything and I'll delegate to the right expert!\n",
-  welcomeNotebook: undefined,
-  welcomeDocument: undefined,
-  sandboxVariant: 'jupyter',
-  systemPrompt: `You are a helpful orchestrator agent. You have access to specialised subagents that you can delegate tasks to. Use the 'task' tool to assign work: - Use the 'researcher' subagent for gathering facts, searching for information, and analysis. - Use the 'writer' subagent for composing text, formatting documents, and editing prose. You can run tasks synchronously (wait for result) or asynchronously (fire and forget, check later). Always summarise the delegated results for the user in a clear, helpful way.
-`,
-  systemPromptCodemodeAddons: undefined,
-  goal: undefined,
-  protocol: undefined,
-  uiExtension: undefined,
-  trigger: undefined,
-  modelConfig: undefined,
-  mcpServerTools: undefined,
-  guardrails: undefined,
-  evals: undefined,
-  codemode: undefined,
-  output: undefined,
-  advanced: undefined,
-  authorizationPolicy: undefined,
-  notifications: undefined,
-  memory: 'ephemeral',
-  preHooks: undefined,
-  postHooks: undefined,
-  parameters: undefined,
-  subagents: {
-    defaultModel: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-    includeGeneralPurpose: true,
-    maxNestingDepth: 0,
-    subagents: [
-      {
-        name: 'researcher',
-        description:
-          'Researches topics, gathers facts, and provides detailed analysis',
-        instructions:
-          'You are a thorough research assistant. When given a topic: 1. Break it down into key questions 2. Provide well-structured findings with evidence 3. Cite sources or reasoning for each claim 4. Highlight areas of uncertainty or debate Format your response with clear sections and bullet points.\n',
-        preferredMode: 'sync',
-        typicalComplexity: 'moderate',
-        canAskQuestions: true,
-        maxQuestions: 3,
-      },
-      {
-        name: 'writer',
-        description:
-          'Writes clear, structured content based on research or instructions',
-        instructions:
-          'You are a skilled technical writer. When given content to write: 1. Organise information into a logical structure 2. Use clear, concise language appropriate for the audience 3. Include headings, bullet points, and formatting for readability 4. Maintain a professional yet approachable tone Always produce complete, publication-ready text.\n',
-        preferredMode: 'sync',
-        typicalComplexity: 'moderate',
-        canAskQuestions: false,
-      },
-    ],
-  },
-};
-
-export const DEMO_TAVILY_CODEMODE_AGENT_SPEC_0_0_1: AgentSpec = {
-  id: 'demo-tavily-codemode',
-  version: '0.0.1',
-  name: 'Demo Tavily MCP (Codemode)',
-  description: `Demo agent using the Tavily MCP server with codemode conversion enabled.`,
-  tags: ['demo', 'mcp', 'tavily', 'codemode'],
-  enabled: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-  mcpServers: [MCP_SERVER_MAP['tavily:0.0.1']],
-  skills: [],
-  tools: [],
-  frontendTools: [
-    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
-    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
-  ],
-  environmentName: 'ai-agents-env',
-  icon: 'code',
-  emoji: '⚙️',
-  color: '#8250DF',
-  suggestions: [
-    'Extract information from the https://datalayer.ai website and use your sandbox to create a variable "about_datalayer" with that information',
-  ],
-  welcomeMessage:
-    "Hi! I'm the Tavily MCP demo agent with codemode enabled. I can use programmatic MCP-converted tools and use the sandbox for follow-up processing.\n",
-  welcomeNotebook: undefined,
-  welcomeDocument: undefined,
-  sandboxVariant: 'jupyter',
-  systemPrompt: `You are a helpful assistant with access to Tavily web search tools converted to programmatic codemode tools. You MUST use the available Tavily tools (tavily_search, tavily_extract) to retrieve information from websites. NEVER try to use Python requests, urllib, or selenium to fetch web pages — always use your Tavily tools. After retrieving information with Tavily, use the sandbox (execute_code) to store results in variables.
-`,
-  systemPromptCodemodeAddons: undefined,
-  goal: undefined,
-  protocol: 'vercel-ai',
-  uiExtension: 'a2ui',
-  trigger: undefined,
-  modelConfig: undefined,
-  mcpServerTools: undefined,
-  guardrails: undefined,
-  evals: undefined,
-  codemode: { enabled: true, token_reduction: '~90%', speedup: '~2x faster' },
-  output: undefined,
-  advanced: undefined,
-  authorizationPolicy: undefined,
-  notifications: undefined,
-  memory: 'ephemeral',
-  preHooks: undefined,
-  postHooks: undefined,
-  parameters: undefined,
-  subagents: undefined,
-};
-
-export const DEMO_TAVILY_NO_CODEMODE_AGENT_SPEC_0_0_1: AgentSpec = {
-  id: 'demo-tavily-no-codemode',
-  version: '0.0.1',
-  name: 'Demo Tavily MCP (No Codemode)',
-  description: `Demo agent using the Tavily MCP server directly without codemode conversion.`,
-  tags: ['demo', 'mcp', 'tavily', 'codemode'],
-  enabled: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-  mcpServers: [MCP_SERVER_MAP['tavily:0.0.1']],
-  skills: [],
-  tools: [],
-  frontendTools: [
-    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
-    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
-  ],
-  environmentName: 'ai-agents-env',
-  icon: 'globe',
-  emoji: '🌐',
-  color: '#0969DA',
-  suggestions: [
-    'Extract information from the https://datalayer.ai website and use your sandbox to create a variable "about_datalayer" with that information',
-  ],
-  welcomeMessage:
-    "Hi! I'm the Tavily MCP demo agent without codemode. I can use Tavily tools directly and use the sandbox for follow-up processing.\n",
-  welcomeNotebook: undefined,
-  welcomeDocument: undefined,
-  sandboxVariant: 'jupyter',
-  systemPrompt: `You are a helpful assistant with access to Tavily web search tools. You MUST use the tavily_search or tavily_extract MCP tools to retrieve information from websites. NEVER try to use Python requests, urllib, or selenium to fetch web pages — always use your Tavily tools. After retrieving information with Tavily, use the sandbox (execute_code) to store results in variables.
-`,
-  systemPromptCodemodeAddons: undefined,
-  goal: undefined,
-  protocol: 'vercel-ai',
-  uiExtension: 'a2ui',
-  trigger: undefined,
-  modelConfig: undefined,
-  mcpServerTools: undefined,
-  guardrails: undefined,
-  evals: undefined,
-  codemode: { enabled: false },
-  output: undefined,
-  advanced: undefined,
-  authorizationPolicy: undefined,
-  notifications: undefined,
-  memory: 'ephemeral',
-  preHooks: undefined,
-  postHooks: undefined,
+  toolHooks: undefined,
   parameters: undefined,
   subagents: undefined,
 };
@@ -1753,9 +1020,13 @@ export const END_OF_MONTH_SALES_PERFORMANCE_AGENT_SPEC_0_0_1: AgentSpec = {
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
   mcpServers: [MCP_SERVER_MAP['salesforce:0.0.1']],
   skills: [
-    toAgentSkillSpec(SKILL_MAP['pdf:0.0.1']),
-    toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
-  ],
+    SKILL_MAP['pdf:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['pdf:0.0.1'])
+      : undefined,
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
   tools: [],
   frontendTools: [
     FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
@@ -1934,6 +1205,1262 @@ export const END_OF_MONTH_SALES_PERFORMANCE_AGENT_SPEC_0_0_1: AgentSpec = {
   memory: 'ephemeral',
   preHooks: undefined,
   postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+};
+
+export const EVAL_EXPERIMENT_RUNNER_AGENT_SPEC_0_0_1: AgentSpec = {
+  id: 'eval-experiment-runner',
+  version: '0.0.1',
+  name: 'Eval Experiment Runner',
+  description: `Dedicated agent spec for launching and running evaluation experiments from the Evals interface. Includes baseline tooling for reproducible eval runs.`,
+  tags: ['evals', 'experiments', 'runner'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  mcpServers: [],
+  skills: [
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
+  tools: [TOOL_MAP['runtime-echo:0.0.1']],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
+  environmentName: 'ai-agents-env',
+  icon: 'pulse',
+  emoji: '🧪',
+  color: '#0EA5E9',
+  suggestions: [
+    'Run the selected evaluation experiment on the configured dataset',
+    'Validate experiment configuration and report missing fields',
+    'Summarize run results with pass rate and latency highlights',
+  ],
+  welcomeMessage:
+    'Ready to run eval experiments. Configure your benchmark and evaluator setup, then launch a run.',
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'jupyter',
+  systemPrompt: `You are the Eval Experiment Runner. Execute evaluation workflows reliably, validate inputs before execution, and summarize outcomes clearly.`,
+  systemPromptCodemodeAddons: undefined,
+  goal: undefined,
+  protocol: undefined,
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: undefined,
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+};
+
+export const EXAMPLE_CODEMODE_AGENT_SPEC_0_0_1: AgentSpec = {
+  id: 'example-codemode',
+  version: '0.0.1',
+  name: 'Example Tavily Codemode Agent',
+  description: `Tavily MCP demo agent with codemode enabled. MCP tools can be composed through codemode execution flows.`,
+  tags: ['demo', 'mcp', 'tavily', 'codemode'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  mcpServers: [MCP_SERVER_MAP['tavily:0.0.1']],
+  skills: [
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
+  tools: [TOOL_MAP['runtime-echo:0.0.1']],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
+  environmentName: 'ai-agents-env',
+  icon: 'code',
+  emoji: '⚙️',
+  color: '#8250DF',
+  suggestions: [
+    'Search and extract key points about Datalayer in one step',
+    'Research AI agent best practices and return a concise report',
+    'Compare two web sources and summarize differences',
+  ],
+  welcomeMessage:
+    'Tavily MCP codemode agent ready. I can compose MCP-powered workflows.',
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'jupyter',
+  systemPrompt: `You are a Tavily MCP demo assistant with codemode enabled. Prefer concise, practical responses and use MCP tools when web search or extraction is needed.`,
+  systemPromptCodemodeAddons: `When helpful, compose MCP capabilities in a single run while keeping responses concise and grounded in retrieved evidence.`,
+  goal: undefined,
+  protocol: undefined,
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: { enabled: true, token_reduction: '~80%', speedup: '~1.5x' },
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+};
+
+export const EXAMPLE_EVALS_AGENT_SPEC_0_0_1: AgentSpec = {
+  id: 'example-evals',
+  version: '0.0.1',
+  name: 'Example Evals Agent',
+  description: `Default eval runner for local and cloud execution in SDK eval examples. Includes baseline tooling for reproducible eval runs.`,
+  tags: ['evals', 'demo', 'runner'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  mcpServers: [],
+  skills: [
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
+  tools: [TOOL_MAP['runtime-echo:0.0.1']],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
+  environmentName: 'ai-agents-env',
+  icon: 'pulse',
+  emoji: '🧪',
+  color: '#0EA5E9',
+  suggestions: [
+    'Run the selected evaluation experiment on the configured dataset',
+    'Validate experiment configuration and report missing fields',
+    'Summarize run results with pass rate and latency highlights',
+  ],
+  welcomeMessage:
+    'Ready to run eval experiments. Configure your benchmark and evaluator setup, then launch a run.',
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'jupyter',
+  systemPrompt: `You are the Demo Evals Runner. Execute evaluation workflows reliably, validate inputs before execution, and summarize outcomes clearly.`,
+  systemPromptCodemodeAddons: undefined,
+  goal: undefined,
+  protocol: undefined,
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: undefined,
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+};
+
+export const EXAMPLE_FULL_AGENT_SPEC_0_0_1: AgentSpec = {
+  id: 'example-full',
+  version: '0.0.1',
+  name: 'Example MCP, Skills, Tool Approvals... Agent',
+  description: `A full-featured demonstration agent showcasing MCP servers (Tavily web search), skills (GitHub, PDF, crawl, events, text summarizer, jokes), human-in-the-loop tool approval, and frontend tools (Jupyter notebooks, Lexical documents).`,
+  tags: ['demo', 'approval', 'human-in-the-loop', 'utility'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  mcpServers: [MCP_SERVER_MAP['tavily:0.0.1']],
+  skills: [
+    SKILL_MAP['crawl:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['crawl:0.0.1'])
+      : undefined,
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+    SKILL_MAP['github:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['github:0.0.1'])
+      : undefined,
+    SKILL_MAP['pdf:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['pdf:0.0.1'])
+      : undefined,
+    SKILL_MAP['text-summarizer:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['text-summarizer:0.0.1'])
+      : undefined,
+    SKILL_MAP['jokes:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['jokes:0.0.1'])
+      : undefined,
+    SKILL_MAP['datalayer-whoami:1.0.0']
+      ? toAgentSkillSpec(SKILL_MAP['datalayer-whoami:1.0.0'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
+  tools: [
+    TOOL_MAP['runtime-echo:0.0.1'],
+    TOOL_MAP['runtime-sensitive-echo:0.0.1'],
+  ],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
+  environmentName: 'ai-agents-env',
+  icon: 'shield',
+  emoji: '🛡️',
+  color: '#6366F1',
+  suggestions: [
+    'list your tools',
+    'Search the web for the latest news on AI agents using Tavily.',
+    'List my public GitHub repositories and summarize the most active ones.',
+    "Echo with text 'hello' and reason 'audit', then share the result.",
+    "Echo 'hello world' and share the result in a short sentence.",
+    "Call the runtime_sensitive_echo tool with text 'hello' and reason 'audit', then reply with the tool result.",
+    "Call the runtime_echo tool with text 'hello world', then reply with the tool result.",
+    'Tell me a joke using your skills.',
+  ],
+  welcomeMessage:
+    "Hi! I'm the Tool Approval Demo agent. I have two echo tools — one runs immediately, the other requires your approval before executing. I can also search the web with Tavily and tell jokes using my skills.\n",
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'jupyter',
+  systemPrompt: `You are a helpful assistant demonstrating the tool approval workflow. You have access to two runtime tools: - runtime_echo: echoes text back immediately, no approval required. - runtime_sensitive_echo: echoes text with a reason, but requires human approval before executing. You also have access to the Tavily MCP server for web search. When asked to list your tools, briefly describe each one and ask the user which to run. IMPORTANT RUNTIME RULE: After every tool call, you MUST produce a final plain-text response summarizing the tool result. Never end your turn with only a tool call. If the user asks for "tool call only" or says "do not write Python code", still run the tool and then provide a short natural-language result message. The final assistant output must be text (string), not only tool calls. Do not call list_skills, load_skill, read_skill_resource, or run_skill_script.
+`,
+  systemPromptCodemodeAddons: undefined,
+  goal: undefined,
+  protocol: undefined,
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: undefined,
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+};
+
+export const EXAMPLE_GUARDRAILS_AGENT_SPEC_0_0_1: AgentSpec = {
+  id: 'example-guardrails',
+  version: '0.0.1',
+  name: 'Example Guardrails Agent',
+  description: `Guardrails-focused example agent for AgentGuardrailsExample. Includes budget limits and a sensitive tool requiring manual approval.`,
+  tags: ['demo', 'guardrails', 'approval'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  mcpServers: [],
+  skills: [
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
+  tools: [
+    TOOL_MAP['runtime-echo:0.0.1'],
+    TOOL_MAP['runtime-sensitive-echo:0.0.1'],
+  ],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
+  environmentName: 'ai-agents-env',
+  icon: 'shield',
+  emoji: '🛡️',
+  color: '#EF4444',
+  suggestions: [
+    'Use runtime_echo to confirm basic tool execution',
+    'Call runtime_sensitive_echo and approve/reject the request',
+    'Summarize current cost usage vs configured run budget',
+    'Trigger before_tool_execute by calling runtime_sensitive_echo with reason audit',
+    'Trigger local deny policy with reason delete and explain the block',
+    'Explain how deferred_tool_calls and approval queue interact for this run',
+  ],
+  welcomeMessage:
+    'Guardrails example agent ready. Try a sensitive tool call to exercise approvals, and monitor run-cost budget consumption in real time.',
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'jupyter',
+  systemPrompt: `You are the Demo Guardrails Agent. Prefer safe defaults, explain budget usage, and clearly report whether tool approval is required.
+This agent also demonstrates pydantic-ai tool execution hook naming: before_tool_execute, after_tool_execute, on_tool_execute_error, and deferred_tool_calls.`,
+  systemPromptCodemodeAddons: undefined,
+  goal: undefined,
+  protocol: undefined,
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: [
+    {
+      name: 'Example Cost Budget',
+      cost_budget: { per_run_usd: 0.05, cumulative_usd: 5.0 },
+    },
+  ],
+  evals: undefined,
+  codemode: undefined,
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: {
+    actor: '${USER}',
+    audit_log_path: 'agent_runtimes_tool_approvals_audit.jsonl',
+    current_delegations: ['delegate:guardrails-low-risk'],
+    before_tool_execute: [
+      {
+        function:
+          'agent_runtimes.integrations.tool_policy:evaluate_tool_request',
+      },
+      {
+        python:
+          'reason = str(request.get("arguments", {}).get("reason", "")).lower()\nif "delete" in reason:\n    hook_result = {\n        "decision": "deny",\n        "reason": "guardrails_local_delete_policy"\n    }\n',
+      },
+    ],
+    after_tool_execute: [
+      {
+        python:
+          'print(\n    "[example-guardrails] after_tool_execute",\n    payload.get("tool"),\n    payload.get("status"),\n    payload.get("decision"),\n)\n',
+      },
+    ],
+    on_tool_execute_error: [
+      {
+        python:
+          'print(\n    "[example-guardrails] on_tool_execute_error",\n    payload.get("tool"),\n    payload.get("error_type"),\n    payload.get("decision"),\n)\n',
+      },
+    ],
+    deferred_tool_calls: [
+      { python: 'print("[example-guardrails] deferred_tool_calls invoked")\n' },
+    ],
+  },
+  parameters: undefined,
+  subagents: undefined,
+};
+
+export const EXAMPLE_HOOKS_AGENT_SPEC_0_0_1: AgentSpec = {
+  id: 'example-hooks',
+  version: '0.0.1',
+  name: 'Example Hooks Agent',
+  description: `Demonstrates pre-hooks and post-hooks executed in the sandbox lifecycle.`,
+  tags: ['demo', 'hooks', 'lifecycle'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  mcpServers: [],
+  skills: [].filter(Boolean) as SkillSpec[],
+  tools: [
+    TOOL_MAP['runtime-echo:0.0.1'],
+    TOOL_MAP['runtime-sensitive-echo:0.0.1'],
+  ],
+  frontendTools: [],
+  environmentName: 'ai-agents-env',
+  icon: 'zap',
+  emoji: '🪝',
+  color: '#0E7490',
+  suggestions: [
+    'Read the pre-hook marker file at /tmp/agent_runtimes_pre_hook_demo.txt using execute_code.',
+    'Print the hook_ran_at and hook_name variables that the pre-hook set in the sandbox.',
+    "Run execute_code to verify that the 'rich' package was installed by the pre-hook.",
+    'Show me all variables that the pre-hook defined in the sandbox namespace.',
+    "Call runtime_sensitive_echo with reason 'audit' to trigger per-tool authorization hooks.",
+    'Use execute_code to read /tmp/agent_runtimes_tool_approvals_audit.jsonl and summarize the latest authorization + execution entries.',
+  ],
+  welcomeMessage:
+    "I ran a pre-hook before starting up. It installed the 'rich' package, wrote a marker file, and set several sandbox variables (hook_name, hook_ran_at, hook_env). Ask me to read the file or inspect those variables.\n",
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'eval',
+  systemPrompt: `You are a demo assistant for lifecycle hooks.
+The sandbox pre-hook ran before this agent started and did three things:
+1. Installed the Python package 'rich' (pip install). 2. Wrote a UTF-8 marker file to /tmp/agent_runtimes_pre_hook_demo.txt
+   with the content: "pre-hook executed for example-hooks at <timestamp>".
+3. Defined these Python variables in the sandbox namespace:
+   - hook_name    (str) - "example-hooks:pre"
+   - hook_ran_at  (str) - ISO-8601 timestamp of when the pre-hook ran
+   - hook_env     (dict) - subset of os.environ captured at hook time
+
+A post-hook is also configured — it will write /tmp/agent_runtimes_post_hook_demo.txt when the agent shuts down.
+This agent also demonstrates per-tool hooks for runtime-sensitive tool calls. Each proposed tool call is converted into an authorization request with actor, tool, arguments, resource, current delegations, and risk class. Hook decisions can be allow, deny, approval_needed, or delegated_allow. Decisions and execution results are logged.
+Hook names align with pydantic-ai capability hooks: - before_tool_execute - after_tool_execute - on_tool_execute_error - deferred_tool_calls
+When the user asks about hooks, use execute_code to show concrete evidence: read the marker file, print the variables, or import rich to confirm it was installed.
+`,
+  systemPromptCodemodeAddons: undefined,
+  goal: undefined,
+  protocol: undefined,
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: undefined,
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: {
+    packages: ['rich'],
+    sandbox: [
+      'import datetime\nimport os\nfrom pathlib import Path\n\nhook_name = "example-hooks:pre"\nhook_ran_at = datetime.datetime.now().isoformat()\nhook_env = {\n    k: os.environ[k]\n    for k in ("PATH", "HOME", "DATALAYER_CODE_SANDBOX_VARIANT")\n    if k in os.environ\n}\n\nPath(\'/tmp/agent_runtimes_pre_hook_demo.txt\').write_text(\n    f\'pre-hook executed for example-hooks at {hook_ran_at}\\n\',\n    encoding=\'utf-8\',\n)\nprint(f"[example-hooks] pre-hook done: hook_ran_at={hook_ran_at!r}")\n',
+    ],
+  },
+  postHooks: {
+    sandbox: [
+      "import datetime\nfrom pathlib import Path\n\npost_ran_at = datetime.datetime.now().isoformat()\nPath('/tmp/agent_runtimes_post_hook_demo.txt').write_text(\n    f'post-hook executed for example-hooks at {post_ran_at}\\n',\n    encoding='utf-8',\n)\nprint(f\"[example-hooks] post-hook done: post_ran_at={post_ran_at!r}\")\n",
+    ],
+  },
+  toolHooks: {
+    actor: '${USER}',
+    audit_log_path: 'agent_runtimes_tool_approvals_audit.jsonl',
+    current_delegations: ['delegate:read-only-low-risk'],
+    before_tool_execute: [
+      {
+        function:
+          'agent_runtimes.integrations.tool_policy:evaluate_tool_request',
+      },
+      {
+        python:
+          '# Plain Python hook variant. It can enforce extra local policy.\nreason = str(request.get("arguments", {}).get("reason", "")).lower()\nif "delete" in reason or "drop" in reason:\n    hook_result = {\n        "decision": "deny",\n        "reason": "blocked_by_local_python_hook_reason_policy"\n    }\n',
+      },
+    ],
+    after_tool_execute: [
+      {
+        python:
+          '# Post hook receives execution result payload in `payload`.\nprint(\n"[example-hooks] after_tool_execute",\n    payload.get("tool"),\n    payload.get("status"),\n    payload.get("decision"),\n)\n',
+      },
+    ],
+    on_tool_execute_error: [
+      {
+        python:
+          'print(\n    "[example-hooks] on_tool_execute_error",\n    payload.get("tool"),\n    payload.get("error_type"),\n    payload.get("decision"),\n)\n',
+      },
+    ],
+    deferred_tool_calls: [
+      {
+        python:
+          '# Demonstrates the deferred hook key in spec config.\nprint("[example-hooks] deferred_tool_calls invoked")\n',
+      },
+    ],
+  },
+  parameters: undefined,
+  subagents: undefined,
+};
+
+export const EXAMPLE_MCP_AGENT_SPEC_0_0_1: AgentSpec = {
+  id: 'example-mcp',
+  version: '0.0.1',
+  name: 'Example MCP Agent',
+  description: `MCP-focused example agent for AgentMCPExample. It connects to the Tavily MCP server and demonstrates search/research style tool usage from the chat panel.`,
+  tags: ['demo', 'mcp', 'tools', 'research'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  mcpServers: [MCP_SERVER_MAP['tavily:0.0.1']],
+  skills: [
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+    SKILL_MAP['jokes:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['jokes:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
+  tools: [TOOL_MAP['runtime-echo:0.0.1']],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
+  environmentName: 'ai-agents-env',
+  icon: 'globe',
+  emoji: '🌐',
+  color: '#0EA5E9',
+  suggestions: [
+    'Search the web for recent news about AI agents',
+    'Find trending open-source Python projects on GitHub',
+    'Research best practices for building RAG applications',
+    'Compare popular JavaScript frameworks in 2024',
+  ],
+  welcomeMessage:
+    'MCP example agent ready. Ask me to search, extract, crawl, and research via Tavily MCP tools.',
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'jupyter',
+  systemPrompt: `You are the Demo MCP Agent. Use Tavily MCP tools for web search and research requests, cite concise findings, and keep responses practical and clear.`,
+  systemPromptCodemodeAddons: undefined,
+  goal: undefined,
+  protocol: undefined,
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: undefined,
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+};
+
+export const EXAMPLE_MEMORY_AGENT_SPEC_0_0_1: AgentSpec = {
+  id: 'example-memory',
+  version: '0.0.1',
+  name: 'Example Memory Agent',
+  description: `Demonstrates durable conversational memory with the Mem0 backend. Persists user preferences and supports memory inspection/search.`,
+  tags: ['memory', 'mem0', 'demo'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  mcpServers: [],
+  skills: [
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
+  tools: [TOOL_MAP['runtime-echo:0.0.1']],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
+  environmentName: 'ai-agents-env',
+  icon: 'database',
+  emoji: '🧠',
+  color: '#0D9488',
+  suggestions: [
+    'Remember a user preference and confirm it was stored',
+    'Recall previously stored preferences from memory',
+    'Search memory for key facts from earlier turns',
+  ],
+  welcomeMessage:
+    'Ready to demonstrate durable memory. Tell me a preference and I can recall it across turns.',
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'jupyter',
+  systemPrompt: `You are the Example Memory Agent. Capture durable user preferences and key facts, recall them accurately when asked, and summarize memory context clearly.`,
+  systemPromptCodemodeAddons: undefined,
+  goal: undefined,
+  protocol: undefined,
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: undefined,
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'mem0',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+};
+
+export const EXAMPLE_MONITORING_AGENT_SPEC_0_0_1: AgentSpec = {
+  id: 'example-monitoring',
+  version: '0.0.1',
+  name: 'Example Monitoring Agent',
+  description: `Monitoring-focused example agent for AgentMonitoringExample. It is intentionally lightweight so it starts reliably in local example runs.`,
+  tags: ['demo', 'monitoring', 'observability'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  mcpServers: [],
+  skills: [
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
+  tools: [TOOL_MAP['runtime-echo:0.0.1']],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
+  environmentName: 'ai-agents-env',
+  icon: 'pulse',
+  emoji: '📊',
+  color: '#0EA5E9',
+  suggestions: [
+    'Show my current monitoring context summary',
+    'Explain the last turn cost and total token usage',
+    'Summarize recent activity and potential anomalies',
+  ],
+  welcomeMessage:
+    'Monitoring example agent ready. Ask for runtime activity, cost trends, and token usage summaries.',
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'jupyter',
+  systemPrompt: `You are the Demo Monitoring Agent. Prioritize concise operational summaries, highlight anomalies, and provide clear next-step recommendations.`,
+  systemPromptCodemodeAddons: undefined,
+  goal: undefined,
+  protocol: undefined,
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: undefined,
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+};
+
+export const EXAMPLE_NO_CODEMODE_AGENT_SPEC_0_0_1: AgentSpec = {
+  id: 'example-no-codemode',
+  version: '0.0.1',
+  name: 'Example Tavily No Codemode Agent',
+  description: `Tavily MCP demo agent without codemode conversion. MCP tools are used directly without codemode orchestration.`,
+  tags: ['demo', 'mcp', 'tavily', 'no-codemode'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  mcpServers: [MCP_SERVER_MAP['tavily:0.0.1']],
+  skills: [
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
+  tools: [TOOL_MAP['runtime-echo:0.0.1']],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
+  environmentName: 'ai-agents-env',
+  icon: 'globe',
+  emoji: '🌐',
+  color: '#0969DA',
+  suggestions: [
+    'Search for the latest updates about Datalayer',
+    'Extract key points from the top result',
+    'Summarize recent AI agent tooling trends',
+  ],
+  welcomeMessage:
+    'Tavily MCP no-codemode agent ready. I use MCP tools directly.',
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'jupyter',
+  systemPrompt: `You are a Tavily MCP demo assistant without codemode. Use available MCP tools directly for search and research requests, and provide concise summaries.`,
+  systemPromptCodemodeAddons: undefined,
+  goal: undefined,
+  protocol: undefined,
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: { enabled: false },
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+};
+
+export const EXAMPLE_NOTIFICATIONS_AGENT_SPEC_0_0_1: AgentSpec = {
+  id: 'example-notifications',
+  version: '0.0.1',
+  name: 'Example Notifications Agent',
+  description: `Demonstrates multi-channel notifications including in-app, email, and Slack style destinations with preference management.`,
+  tags: ['notifications', 'alerts', 'demo'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  mcpServers: [],
+  skills: [
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
+  tools: [TOOL_MAP['runtime-echo:0.0.1']],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
+  environmentName: 'ai-agents-env',
+  icon: 'bell',
+  emoji: '🔔',
+  color: '#F59E0B',
+  suggestions: [
+    'Configure notification channels for in-app, email, and Slack',
+    'Trigger a test notification and verify delivery status',
+    'Summarize unread notifications and recent alert activity',
+  ],
+  welcomeMessage:
+    'Ready to demonstrate notifications. Configure your channels and send a test alert to validate delivery.',
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'jupyter',
+  systemPrompt: `You are the Example Notifications Agent. Help users configure notification channels, test delivery paths, and summarize recent notification activity.`,
+  systemPromptCodemodeAddons: undefined,
+  goal: undefined,
+  protocol: undefined,
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: undefined,
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+};
+
+export const EXAMPLE_ONE_TRIGGER_APPROVAL_AGENT_SPEC_0_0_1: AgentSpec = {
+  id: 'example-one-trigger-approval',
+  version: '0.0.1',
+  name: 'Example Once Trigger and Tool Approval Agent',
+  description: `A demonstration agent for the "once" trigger type with manual tool approval. When launched, the agent executes its trigger prompt once and invokes the runtime-sensitive-echo tool, which requires manual approval before execution. After completion, the runtime is terminated automatically.`,
+  tags: ['demo', 'trigger', 'once', 'lifecycle', 'approval'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  mcpServers: [],
+  skills: [].filter(Boolean) as SkillSpec[],
+  tools: [TOOL_MAP['runtime-sensitive-echo:0.0.1']],
+  frontendTools: [FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1']],
+  environmentName: 'ai-agents-env',
+  icon: 'shield',
+  emoji: '🛡️',
+  color: '#ef4444',
+  suggestions: [],
+  welcomeMessage: undefined,
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'jupyter',
+  systemPrompt: undefined,
+  systemPromptCodemodeAddons: undefined,
+  goal: `Call runtime_sensitive_echo exactly once with message="Tool approval demo executed" and reason="audit". Do not call any other tool.`,
+  protocol: undefined,
+  uiExtension: undefined,
+  trigger: {
+    type: 'once',
+    description: 'Run once with approval and terminate',
+    prompt:
+      "Call runtime_sensitive_echo exactly once with message='Tool approval demo executed' and reason='audit'. Do not call any other tool.",
+  },
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: undefined,
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+};
+
+export const EXAMPLE_ONE_TRIGGER_AGENT_SPEC_0_0_1: AgentSpec = {
+  id: 'example-one-trigger',
+  version: '0.0.1',
+  name: 'Example Once Trigger Agent',
+  description: `A demonstration agent for the "once" trigger type. When launched, the agent executes its trigger prompt exactly once, emits AGENT_STARTED and AGENT_ENDED lifecycle events, and then terminates the runtime automatically.`,
+  tags: ['demo', 'trigger', 'once', 'lifecycle'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  mcpServers: [],
+  skills: [
+    SKILL_MAP['github:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['github:0.0.1'])
+      : undefined,
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
+  tools: [TOOL_MAP['runtime-echo:0.0.1']],
+  frontendTools: [FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1']],
+  environmentName: 'ai-agents-env',
+  icon: 'zap',
+  emoji: '⚡',
+  color: '#f59e0b',
+  suggestions: [],
+  welcomeMessage: undefined,
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'jupyter',
+  systemPrompt: undefined,
+  systemPromptCodemodeAddons: undefined,
+  goal: `Run a one-shot task: list the user's top 3 public and top 3 private GitHub repositories, ranked by recent activity, and provide a brief summary of each.`,
+  protocol: undefined,
+  uiExtension: undefined,
+  trigger: {
+    type: 'once',
+    description: 'Run once and terminate',
+    prompt:
+      "List the user's top 3 public and top 3 private GitHub repositories, ranked by recent activity, and provide a brief summary of each.",
+  },
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: undefined,
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+};
+
+export const EXAMPLE_OTEL_AGENT_SPEC_0_0_1: AgentSpec = {
+  id: 'example-otel',
+  version: '0.0.1',
+  name: 'Example OTEL Agent',
+  description: `OTEL observability example agent for AgentOtelExample. It assists the user in exploring traces, logs and metrics surfaced by the OTEL dashboard.`,
+  tags: ['demo', 'otel', 'observability', 'telemetry'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  mcpServers: [],
+  skills: [
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
+  tools: [TOOL_MAP['runtime-echo:0.0.1']],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
+  environmentName: 'ai-agents-env',
+  icon: 'telescope',
+  emoji: '🔭',
+  color: '#7C3AED',
+  suggestions: [
+    'What do the most recent traces show?',
+    'Are there any errors or anomalies in the telemetry?',
+    'Give me a summary of the current metrics.',
+    'Help me find the root cause of slow requests.',
+  ],
+  welcomeMessage:
+    'OTEL example agent ready. Ask me about your traces, logs, and metrics — I can help summarize activity, spot anomalies, and investigate root causes.',
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'jupyter',
+  systemPrompt: `You are the Demo OTEL Agent. You observe OpenTelemetry telemetry data (traces, logs, metrics) and help the user reason about service behavior. Prioritize concise, evidence-grounded summaries, highlight anomalies, and recommend concrete next investigation steps.`,
+  systemPromptCodemodeAddons: undefined,
+  goal: undefined,
+  protocol: undefined,
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: undefined,
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+};
+
+export const EXAMPLE_PARAMETERS_AGENT_SPEC_0_0_1: AgentSpec = {
+  id: 'example-parameters',
+  version: '0.0.1',
+  name: 'Example Parameters Agent',
+  description: `Demonstrates launch-time parameterization with JSON schema validation.`,
+  tags: ['demo', 'parameters', 'schema'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  mcpServers: [],
+  skills: [].filter(Boolean) as SkillSpec[],
+  tools: [TOOL_MAP['runtime-echo:0.0.1']],
+  frontendTools: [],
+  environmentName: 'ai-agents-env',
+  icon: 'sliders',
+  emoji: '🎛️',
+  color: '#0F766E',
+  suggestions: [
+    'Use execute_code to print(demo_params) from the sandbox, then explain the value.',
+    "Use execute_code to print('demo_params =', demo_params).",
+  ],
+  welcomeMessage:
+    'This runtime was launched for project {{project}} and role {{role}}.\n',
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'jupyter',
+  systemPrompt: `You are an assistant dedicated to {{project}}. Assume the user is a {{role}} and answer in a {{tone}} style. A sandbox pre-hook set a Python variable named demo_params with value {{demo_params}}.
+`,
+  systemPromptCodemodeAddons: undefined,
+  goal: undefined,
+  protocol: undefined,
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: undefined,
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: {
+    sandbox: [
+      'demo_params = """{{demo_params}}"""\nprint(f"[demo-parameters] demo_params initialized: {demo_params!r}")\n',
+    ],
+  },
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: {
+    type: 'object',
+    properties: {
+      demo_params: { type: 'string', title: 'Demo Params', default: 'hello' },
+      project: { type: 'string', title: 'Project', default: 'Orbit' },
+      role: {
+        type: 'string',
+        title: 'Role',
+        enum: ['product analyst', 'engineering lead', 'support specialist'],
+        default: 'product analyst',
+      },
+      tone: {
+        type: 'string',
+        title: 'Tone',
+        enum: ['concise', 'detailed'],
+        default: 'concise',
+      },
+    },
+    required: ['project'],
+  },
+  subagents: undefined,
+};
+
+export const EXAMPLE_SIMPLE_AGENT_SPEC_0_0_1: AgentSpec = {
+  id: 'example-simple',
+  version: '0.0.1',
+  name: 'A Simple Agent',
+  description: `A simple conversational agent. No tools, no MCP servers, no skills — just a helpful AI assistant you can chat with.`,
+  tags: ['simple', 'chat', 'assistant'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  mcpServers: [],
+  skills: [
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
+  tools: [TOOL_MAP['runtime-echo:0.0.1']],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
+  environmentName: 'ai-agents-env',
+  icon: 'agent',
+  emoji: '🤖',
+  color: '#6366F1',
+  suggestions: [
+    'Tell me a joke',
+    'Explain quantum computing in simple terms',
+    'Help me brainstorm ideas for a weekend project',
+    'Summarize the key points of a topic I describe',
+  ],
+  welcomeMessage:
+    "Hi! I'm a simple assistant. I don't have any special tools, but I'm happy to chat, answer questions, and help you think through ideas.\n",
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'jupyter',
+  systemPrompt: `You are a helpful, friendly AI assistant. You do not have access to any external tools, MCP servers, or skills. Answer questions using your training knowledge, be concise, and let the user know if a question is outside your knowledge.
+`,
+  systemPromptCodemodeAddons: undefined,
+  goal: undefined,
+  protocol: undefined,
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: undefined,
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+};
+
+export const EXAMPLE_SKILLS_AGENT_SPEC_0_0_1: AgentSpec = {
+  id: 'example-skills',
+  version: '0.0.1',
+  name: 'Example Skills Agent',
+  description: `Demo agent for skills usage with mixed discovery sources, including built-in file skills and package-registered skills like datalayer-whoami.`,
+  tags: ['demo', 'skills', 'discovery'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  mcpServers: [],
+  skills: [
+    SKILL_MAP['crawl:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['crawl:0.0.1'])
+      : undefined,
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+    SKILL_MAP['github:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['github:0.0.1'])
+      : undefined,
+    SKILL_MAP['pdf:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['pdf:0.0.1'])
+      : undefined,
+    SKILL_MAP['text-summarizer:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['text-summarizer:0.0.1'])
+      : undefined,
+    SKILL_MAP['jokes:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['jokes:0.0.1'])
+      : undefined,
+    SKILL_MAP['datalayer-whoami:1.0.0']
+      ? toAgentSkillSpec(SKILL_MAP['datalayer-whoami:1.0.0'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
+  tools: [],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
+  environmentName: 'ai-agents-env',
+  icon: 'briefcase',
+  emoji: '🧰',
+  color: '#0D9488',
+  suggestions: [
+    'List all your available skills and group them by source type',
+    'Use datalayer-whoami to return my user identity context',
+    'Use crawl to summarize https://datalayer.ai',
+    'Use github to list public repositories for an account',
+  ],
+  welcomeMessage:
+    'Hi! I am the Skills Demo Agent. I can use built-in file skills and package-registered skills such as datalayer-whoami.',
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'jupyter',
+  systemPrompt: `You are a skills-focused assistant. Use skills when they are relevant to user intent, and summarize tool outputs clearly in natural language.`,
+  systemPromptCodemodeAddons: undefined,
+  goal: undefined,
+  protocol: undefined,
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: undefined,
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+};
+
+export const EXAMPLE_SUBAGENTS_AGENT_SPEC_0_0_1: AgentSpec = {
+  id: 'example-subagents',
+  version: '0.0.1',
+  name: 'Example Subagents Agent',
+  description: `Demonstrates multi-agent delegation with a parent orchestrator that can split work between a researcher and a writer subagent.`,
+  tags: ['demo', 'subagents', 'orchestration'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  mcpServers: [],
+  skills: [
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
+  tools: [TOOL_MAP['runtime-echo:0.0.1']],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
+  environmentName: 'ai-agents-env',
+  icon: 'people',
+  emoji: '👥',
+  color: '#2563EB',
+  suggestions: [
+    'Research a topic and provide source-backed notes',
+    'Write a concise summary from the research findings',
+    'Split work between researcher and writer, then merge output',
+  ],
+  welcomeMessage:
+    'Subagents example agent ready. Ask me to delegate research and writing tasks across specialist subagents.',
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'jupyter',
+  systemPrompt: `You are the Demo Subagents Orchestrator. Decompose user requests into specialist tasks, delegate effectively, and synthesize a coherent final response.`,
+  systemPromptCodemodeAddons: undefined,
+  goal: undefined,
+  protocol: undefined,
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: undefined,
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+};
+
+export const EXAMPLE_TOOL_APPROVALS_AGENT_SPEC_0_0_1: AgentSpec = {
+  id: 'example-tool-approvals',
+  version: '0.0.1',
+  name: 'Example Tool Approvals',
+  description: `Demonstrates per-tool approval hooks with policy requests and decision/audit logging.`,
+  tags: ['approvals', 'hooks', 'policy'],
+  enabled: true,
+  model: 'openai:gpt-4o-mini',
+  mcpServers: [],
+  skills: [].filter(Boolean) as SkillSpec[],
+  tools: [
+    TOOL_MAP['runtime-sensitive-echo:0.0.1'],
+    TOOL_MAP['runtime-echo:0.0.1'],
+  ],
+  frontendTools: [],
+  environmentName: 'ai-agents-env',
+  icon: 'pi pi-shield',
+  emoji: undefined,
+  color: undefined,
+  suggestions: [
+    "Call runtime_sensitive_echo with reason 'read logs' and message 'hello approvals'.",
+    "Call runtime_sensitive_echo with reason 'delete project' and observe deny behavior from Python policy hook.",
+    'Call runtime_echo with any message to compare a non-sensitive tool path.',
+    'Use execute_code to print the latest lines from /tmp/agent_runtimes_tool_approvals_audit.jsonl.',
+    'Explain how deferred_tool_calls resolves approval-required tool calls inline when decisions already exist.',
+  ],
+  welcomeMessage:
+    'Welcome to the Tool Approvals example.\n\nThis agent demonstrates authorization hooks where each\nsensitive tool call is evaluated against policy and logged for audit.\n',
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: undefined,
+  systemPrompt: `You are a demo assistant for tool approvals.
+Sensitive tool calls should go through the authorization flow.
+Explain decisions clearly: allow, deny, approval_needed, or delegated_allow.
+Keep responses concise and focused on what was authorized and executed.
+Hook names align with pydantic-ai capability hooks: before_tool_execute, after_tool_execute, on_tool_execute_error, and deferred_tool_calls.
+`,
+  systemPromptCodemodeAddons: undefined,
+  goal: undefined,
+  protocol: undefined,
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: undefined,
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: undefined,
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: {
+    actor: '${USER}',
+    audit_log_path: 'agent_runtimes_tool_approvals_audit.jsonl',
+    current_delegations: ['delegate:read-only-low-risk'],
+    before_tool_execute: [
+      {
+        function:
+          'agent_runtimes.integrations.tool_policy:evaluate_tool_request',
+      },
+      {
+        python:
+          'reason = str(request.get("arguments", {}).get("reason", "")).lower()\nif "delete" in reason or "drop" in reason:\n    hook_result = {\n        "decision": "deny",\n        "reason": "blocked_by_local_python_reason_policy"\n    }\nelif request.get("risk_class") == "low":\n    hook_result = {\n        "decision": "delegated_allow",\n        "reason": "delegated_low_risk_auto_allow"\n    }\n',
+      },
+    ],
+    after_tool_execute: [
+      {
+        python:
+          'print(\n    "[example-tool-approvals]",\n    payload.get("tool"),\n    payload.get("status"),\n    payload.get("decision"),\n)\n',
+      },
+    ],
+    on_tool_execute_error: [
+      {
+        python:
+          'print(\n    "[example-tool-approvals:error]",\n    payload.get("tool"),\n    payload.get("error_type"),\n    payload.get("decision"),\n)\n',
+      },
+    ],
+    deferred_tool_calls: [
+      {
+        python:
+          'print("[example-tool-approvals] deferred_tool_calls invoked")\n',
+      },
+    ],
+  },
   parameters: undefined,
   subagents: undefined,
 };
@@ -1948,10 +2475,16 @@ export const EXTRACT_DATA_FROM_FILES_AGENT_SPEC_0_0_1: AgentSpec = {
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
   mcpServers: [MCP_SERVER_MAP['filesystem:0.0.1']],
   skills: [
-    toAgentSkillSpec(SKILL_MAP['pdf:0.0.1']),
-    toAgentSkillSpec(SKILL_MAP['github:0.0.1']),
-    toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
-  ],
+    SKILL_MAP['pdf:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['pdf:0.0.1'])
+      : undefined,
+    SKILL_MAP['github:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['github:0.0.1'])
+      : undefined,
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
   tools: [],
   frontendTools: [
     FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
@@ -2032,6 +2565,7 @@ export const EXTRACT_DATA_FROM_FILES_AGENT_SPEC_0_0_1: AgentSpec = {
   memory: 'ephemeral',
   preHooks: undefined,
   postHooks: undefined,
+  toolHooks: undefined,
   parameters: undefined,
   subagents: undefined,
 };
@@ -2048,7 +2582,11 @@ export const FINANCIAL_VIZ_AGENT_SPEC_0_0_1: AgentSpec = {
     MCP_SERVER_MAP['alphavantage:0.0.1'],
     MCP_SERVER_MAP['chart:0.0.1'],
   ],
-  skills: [toAgentSkillSpec(SKILL_MAP['events:0.0.1'])],
+  skills: [
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
   tools: [],
   frontendTools: [
     FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
@@ -2106,6 +2644,7 @@ export const FINANCIAL_VIZ_AGENT_SPEC_0_0_1: AgentSpec = {
   memory: 'ephemeral',
   preHooks: undefined,
   postHooks: undefined,
+  toolHooks: undefined,
   parameters: undefined,
   subagents: undefined,
 };
@@ -2119,7 +2658,11 @@ export const FINANCIAL_AGENT_SPEC_0_0_1: AgentSpec = {
   enabled: false,
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
   mcpServers: [MCP_SERVER_MAP['alphavantage:0.0.1']],
-  skills: [toAgentSkillSpec(SKILL_MAP['events:0.0.1'])],
+  skills: [
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
   tools: [],
   frontendTools: [
     FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
@@ -2177,6 +2720,7 @@ export const FINANCIAL_AGENT_SPEC_0_0_1: AgentSpec = {
   memory: 'ephemeral',
   preHooks: undefined,
   postHooks: undefined,
+  toolHooks: undefined,
   parameters: undefined,
   subagents: undefined,
 };
@@ -2194,9 +2738,13 @@ export const GENERATE_WEEKLY_REPORTS_AGENT_SPEC_0_0_1: AgentSpec = {
     MCP_SERVER_MAP['slack:0.0.1'],
   ],
   skills: [
-    toAgentSkillSpec(SKILL_MAP['pdf:0.0.1']),
-    toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
-  ],
+    SKILL_MAP['pdf:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['pdf:0.0.1'])
+      : undefined,
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
   tools: [],
   frontendTools: [
     FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
@@ -2288,6 +2836,7 @@ export const GENERATE_WEEKLY_REPORTS_AGENT_SPEC_0_0_1: AgentSpec = {
   memory: 'ephemeral',
   preHooks: undefined,
   postHooks: undefined,
+  toolHooks: undefined,
   parameters: undefined,
   subagents: undefined,
 };
@@ -2302,9 +2851,13 @@ export const GITHUB_AGENT_SPEC_0_0_1: AgentSpec = {
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
   mcpServers: [MCP_SERVER_MAP['google-workspace:0.0.1']],
   skills: [
-    toAgentSkillSpec(SKILL_MAP['github:0.0.1']),
-    toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
-  ],
+    SKILL_MAP['github:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['github:0.0.1'])
+      : undefined,
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
   tools: [],
   frontendTools: [
     FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
@@ -2362,6 +2915,7 @@ export const GITHUB_AGENT_SPEC_0_0_1: AgentSpec = {
   memory: 'ephemeral',
   preHooks: undefined,
   postHooks: undefined,
+  toolHooks: undefined,
   parameters: undefined,
   subagents: undefined,
 };
@@ -2378,7 +2932,11 @@ export const INFORMATION_ROUTING_AGENT_SPEC_0_0_1: AgentSpec = {
     MCP_SERVER_MAP['google-workspace:0.0.1'],
     MCP_SERVER_MAP['github:0.0.1'],
   ],
-  skills: [toAgentSkillSpec(SKILL_MAP['events:0.0.1'])],
+  skills: [
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
   tools: [],
   frontendTools: [
     FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
@@ -2436,6 +2994,7 @@ export const INFORMATION_ROUTING_AGENT_SPEC_0_0_1: AgentSpec = {
   memory: 'ephemeral',
   preHooks: undefined,
   postHooks: undefined,
+  toolHooks: undefined,
   parameters: undefined,
   subagents: undefined,
 };
@@ -2450,10 +3009,16 @@ export const MONITOR_SALES_KPIS_AGENT_SPEC_0_0_1: AgentSpec = {
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
   mcpServers: [MCP_SERVER_MAP['filesystem:0.0.1']],
   skills: [
-    toAgentSkillSpec(SKILL_MAP['github:0.0.1']),
-    toAgentSkillSpec(SKILL_MAP['pdf:0.0.1']),
-    toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
-  ],
+    SKILL_MAP['github:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['github:0.0.1'])
+      : undefined,
+    SKILL_MAP['pdf:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['pdf:0.0.1'])
+      : undefined,
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
   tools: [
     TOOL_MAP['runtime-echo:0.0.1'],
     TOOL_MAP['runtime-sensitive-echo:0.0.1'],
@@ -2552,6 +3117,7 @@ export const MONITOR_SALES_KPIS_AGENT_SPEC_0_0_1: AgentSpec = {
   memory: 'mem0',
   preHooks: undefined,
   postHooks: undefined,
+  toolHooks: undefined,
   parameters: undefined,
   subagents: undefined,
 };
@@ -2573,10 +3139,16 @@ export const OPTIMIZE_DYNAMIC_PRICING_AGENT_SPEC_0_0_1: AgentSpec = {
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
   mcpServers: [MCP_SERVER_MAP['filesystem:0.0.1']],
   skills: [
-    toAgentSkillSpec(SKILL_MAP['pdf:0.0.1']),
-    toAgentSkillSpec(SKILL_MAP['crawl:0.0.1']),
-    toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
-  ],
+    SKILL_MAP['pdf:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['pdf:0.0.1'])
+      : undefined,
+    SKILL_MAP['crawl:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['crawl:0.0.1'])
+      : undefined,
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
   tools: [],
   frontendTools: [
     FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
@@ -2681,6 +3253,7 @@ export const OPTIMIZE_DYNAMIC_PRICING_AGENT_SPEC_0_0_1: AgentSpec = {
   memory: 'ephemeral',
   preHooks: undefined,
   postHooks: undefined,
+  toolHooks: undefined,
   parameters: undefined,
   subagents: undefined,
 };
@@ -2702,9 +3275,13 @@ export const OPTIMIZE_GRID_OPERATIONS_AGENT_SPEC_0_0_1: AgentSpec = {
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
   mcpServers: [MCP_SERVER_MAP['filesystem:0.0.1']],
   skills: [
-    toAgentSkillSpec(SKILL_MAP['pdf:0.0.1']),
-    toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
-  ],
+    SKILL_MAP['pdf:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['pdf:0.0.1'])
+      : undefined,
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
   tools: [],
   frontendTools: [
     FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
@@ -2798,6 +3375,7 @@ export const OPTIMIZE_GRID_OPERATIONS_AGENT_SPEC_0_0_1: AgentSpec = {
   memory: 'ephemeral',
   preHooks: undefined,
   postHooks: undefined,
+  toolHooks: undefined,
   parameters: undefined,
   subagents: undefined,
 };
@@ -2819,9 +3397,13 @@ export const PROCESS_CITIZEN_REQUESTS_AGENT_SPEC_0_0_1: AgentSpec = {
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
   mcpServers: [MCP_SERVER_MAP['filesystem:0.0.1']],
   skills: [
-    toAgentSkillSpec(SKILL_MAP['pdf:0.0.1']),
-    toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
-  ],
+    SKILL_MAP['pdf:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['pdf:0.0.1'])
+      : undefined,
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
   tools: [],
   frontendTools: [
     FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
@@ -2924,6 +3506,7 @@ export const PROCESS_CITIZEN_REQUESTS_AGENT_SPEC_0_0_1: AgentSpec = {
   memory: 'ephemeral',
   preHooks: undefined,
   postHooks: undefined,
+  toolHooks: undefined,
   parameters: undefined,
   subagents: undefined,
 };
@@ -2944,9 +3527,13 @@ export const PROCESS_CLINICAL_TRIAL_DATA_AGENT_SPEC_0_0_1: AgentSpec = {
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
   mcpServers: [MCP_SERVER_MAP['filesystem:0.0.1']],
   skills: [
-    toAgentSkillSpec(SKILL_MAP['pdf:0.0.1']),
-    toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
-  ],
+    SKILL_MAP['pdf:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['pdf:0.0.1'])
+      : undefined,
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
   tools: [],
   frontendTools: [
     FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
@@ -3051,6 +3638,7 @@ export const PROCESS_CLINICAL_TRIAL_DATA_AGENT_SPEC_0_0_1: AgentSpec = {
   memory: 'ephemeral',
   preHooks: undefined,
   postHooks: undefined,
+  toolHooks: undefined,
   parameters: undefined,
   subagents: undefined,
 };
@@ -3071,9 +3659,13 @@ export const PROCESS_FINANCIAL_TRANSACTIONS_AGENT_SPEC_0_0_1: AgentSpec = {
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
   mcpServers: [MCP_SERVER_MAP['filesystem:0.0.1']],
   skills: [
-    toAgentSkillSpec(SKILL_MAP['pdf:0.0.1']),
-    toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
-  ],
+    SKILL_MAP['pdf:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['pdf:0.0.1'])
+      : undefined,
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
   tools: [],
   frontendTools: [
     FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
@@ -3158,6 +3750,7 @@ export const PROCESS_FINANCIAL_TRANSACTIONS_AGENT_SPEC_0_0_1: AgentSpec = {
   memory: 'ephemeral',
   preHooks: undefined,
   postHooks: undefined,
+  toolHooks: undefined,
   parameters: undefined,
   subagents: undefined,
 };
@@ -3175,7 +3768,11 @@ export const SPATIAL_DATA_ANALYSIS_AGENT_SPEC_0_0_1: AgentSpec = {
     MCP_SERVER_MAP['eurus:0.0.1'],
     MCP_SERVER_MAP['filesystem:0.0.1'],
   ],
-  skills: [toAgentSkillSpec(SKILL_MAP['events:0.0.1'])],
+  skills: [
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
   tools: [],
   frontendTools: [
     FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
@@ -3218,6 +3815,7 @@ export const SPATIAL_DATA_ANALYSIS_AGENT_SPEC_0_0_1: AgentSpec = {
   memory: 'ephemeral',
   preHooks: undefined,
   postHooks: undefined,
+  toolHooks: undefined,
   parameters: undefined,
   subagents: undefined,
 };
@@ -3238,9 +3836,13 @@ export const SUMMARIZE_DOCUMENTS_AGENT_SPEC_0_0_1: AgentSpec = {
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
   mcpServers: [MCP_SERVER_MAP['filesystem:0.0.1']],
   skills: [
-    toAgentSkillSpec(SKILL_MAP['pdf:0.0.1']),
-    toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
-  ],
+    SKILL_MAP['pdf:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['pdf:0.0.1'])
+      : undefined,
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
   tools: [],
   frontendTools: [
     FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
@@ -3319,6 +3921,7 @@ export const SUMMARIZE_DOCUMENTS_AGENT_SPEC_0_0_1: AgentSpec = {
   memory: 'ephemeral',
   preHooks: undefined,
   postHooks: undefined,
+  toolHooks: undefined,
   parameters: undefined,
   subagents: undefined,
 };
@@ -3336,9 +3939,13 @@ export const SYNC_CRM_CONTACTS_AGENT_SPEC_0_0_1: AgentSpec = {
     MCP_SERVER_MAP['slack:0.0.1'],
   ],
   skills: [
-    toAgentSkillSpec(SKILL_MAP['pdf:0.0.1']),
-    toAgentSkillSpec(SKILL_MAP['events:0.0.1']),
-  ],
+    SKILL_MAP['pdf:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['pdf:0.0.1'])
+      : undefined,
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
   tools: [],
   frontendTools: [
     FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
@@ -3412,6 +4019,7 @@ export const SYNC_CRM_CONTACTS_AGENT_SPEC_0_0_1: AgentSpec = {
   memory: 'ephemeral',
   preHooks: undefined,
   postHooks: undefined,
+  toolHooks: undefined,
   parameters: undefined,
   subagents: undefined,
 };
@@ -3431,22 +4039,28 @@ export const AGENT_SPECS: Record<string, AgentSpec> = {
     COMPREHENSIVE_SALES_ANALYTICS_AGENT_SPEC_0_0_1,
   crawler: CRAWLER_AGENT_SPEC_0_0_1,
   'data-acquisition': DATA_ACQUISITION_AGENT_SPEC_0_0_1,
-  'datalayer-agent': DATALAYER_AGENT_SPEC_0_0_1,
-  'demo-full': DEMO_FULL_AGENT_SPEC_0_0_1,
-  'demo-guardrails': DEMO_GUARDRAILS_AGENT_SPEC_0_0_1,
-  'demo-hooks': DEMO_HOOKS_AGENT_SPEC_0_0_1,
-  'demo-mcp': DEMO_MCP_AGENT_SPEC_0_0_1,
-  'demo-monitoring': DEMO_MONITORING_AGENT_SPEC_0_0_1,
-  'demo-one-trigger-approval': DEMO_ONE_TRIGGER_APPROVAL_AGENT_SPEC_0_0_1,
-  'demo-one-trigger': DEMO_ONE_TRIGGER_AGENT_SPEC_0_0_1,
   'demo-outputs': DEMO_OUTPUTS_AGENT_SPEC_0_0_1,
-  'demo-parameters': DEMO_PARAMETERS_AGENT_SPEC_0_0_1,
-  'demo-simple': DEMO_SIMPLE_AGENT_SPEC_0_0_1,
-  'demo-subagents': DEMO_SUBAGENTS_AGENT_SPEC_0_0_1,
-  'demo-tavily-codemode': DEMO_TAVILY_CODEMODE_AGENT_SPEC_0_0_1,
-  'demo-tavily-no-codemode': DEMO_TAVILY_NO_CODEMODE_AGENT_SPEC_0_0_1,
   'end-of-month-sales-performance':
     END_OF_MONTH_SALES_PERFORMANCE_AGENT_SPEC_0_0_1,
+  'eval-experiment-runner': EVAL_EXPERIMENT_RUNNER_AGENT_SPEC_0_0_1,
+  'example-codemode': EXAMPLE_CODEMODE_AGENT_SPEC_0_0_1,
+  'example-evals': EXAMPLE_EVALS_AGENT_SPEC_0_0_1,
+  'example-full': EXAMPLE_FULL_AGENT_SPEC_0_0_1,
+  'example-guardrails': EXAMPLE_GUARDRAILS_AGENT_SPEC_0_0_1,
+  'example-hooks': EXAMPLE_HOOKS_AGENT_SPEC_0_0_1,
+  'example-mcp': EXAMPLE_MCP_AGENT_SPEC_0_0_1,
+  'example-memory': EXAMPLE_MEMORY_AGENT_SPEC_0_0_1,
+  'example-monitoring': EXAMPLE_MONITORING_AGENT_SPEC_0_0_1,
+  'example-no-codemode': EXAMPLE_NO_CODEMODE_AGENT_SPEC_0_0_1,
+  'example-notifications': EXAMPLE_NOTIFICATIONS_AGENT_SPEC_0_0_1,
+  'example-one-trigger-approval': EXAMPLE_ONE_TRIGGER_APPROVAL_AGENT_SPEC_0_0_1,
+  'example-one-trigger': EXAMPLE_ONE_TRIGGER_AGENT_SPEC_0_0_1,
+  'example-otel': EXAMPLE_OTEL_AGENT_SPEC_0_0_1,
+  'example-parameters': EXAMPLE_PARAMETERS_AGENT_SPEC_0_0_1,
+  'example-simple': EXAMPLE_SIMPLE_AGENT_SPEC_0_0_1,
+  'example-skills': EXAMPLE_SKILLS_AGENT_SPEC_0_0_1,
+  'example-subagents': EXAMPLE_SUBAGENTS_AGENT_SPEC_0_0_1,
+  'example-tool-approvals': EXAMPLE_TOOL_APPROVALS_AGENT_SPEC_0_0_1,
   'extract-data-from-files': EXTRACT_DATA_FROM_FILES_AGENT_SPEC_0_0_1,
   'financial-viz': FINANCIAL_VIZ_AGENT_SPEC_0_0_1,
   financial: FINANCIAL_AGENT_SPEC_0_0_1,

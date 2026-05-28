@@ -32,7 +32,7 @@ import React, {
   useRef,
   useMemo,
 } from 'react';
-import { Text, Button, Select, FormControl } from '@primer/react';
+import { Text, Button, Spinner } from '@primer/react';
 import { TelescopeIcon, PlugIcon, XIcon } from '@primer/octicons-react';
 import { Box } from '@datalayer/primer-addons';
 import {
@@ -46,7 +46,6 @@ import { useCoreStore } from '@datalayer/core';
 import { ThemedProvider } from './utils/themedProvider';
 import { AuthRequiredView } from './components';
 import { ChatSidebar } from '../chat';
-import { DEFAULT_MODEL } from '../specs';
 import type { AgentLibrary, ProtocolConfig } from '../types';
 import { Protocol } from '../types';
 
@@ -65,19 +64,12 @@ const AGENT_BASE_URL_ENV: string = import.meta.env.VITE_BASE_URL || '';
 const DEFAULT_AGENT_PROTOCOL: Protocol = 'vercel-ai';
 const DEFAULT_AGENT_LIBRARY: AgentLibrary = 'pydantic-ai';
 
-// ─── Types ─────────────────────────────────────────────────────────────────
+/** Spec id this example always launches. */
+const AGENT_SPEC_ID = 'example-otel';
 
-/** A minimal representation of a spec from /api/v1/agents/library. */
-interface LibrarySpec {
-  id: string;
-  name?: string;
-  description?: string;
-  transport?: string;
-}
+// ─── AgentLaunchPanel ──────────────────────────────────────────────────────
 
-// ─── AgentSelectorPanel ────────────────────────────────────────────────────
-
-interface AgentSelectorPanelProps {
+interface AgentLaunchPanelProps {
   baseUrl: string;
   onConnected: (agentId: string, protocol: Protocol) => void;
   onDisconnected: () => void;
@@ -89,72 +81,70 @@ interface AgentSelectorPanelProps {
  * Small form for picking an agent spec and launching it.
  * Renders as the `children` of the ChatSidebar so it appears above the chat.
  */
-const AgentSelectorPanel: React.FC<AgentSelectorPanelProps> = ({
+const AgentLaunchPanel: React.FC<AgentLaunchPanelProps> = ({
   baseUrl,
   onConnected,
   onDisconnected,
   isConnected,
   connectedAgentName,
 }) => {
-  const [specs, setSpecs] = useState<LibrarySpec[]>([]);
-  const [selectedSpecId, setSelectedSpecId] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Fetch library specs on mount
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const res = await fetch(`${baseUrl}/api/v1/agents/library`);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data: LibrarySpec[] = await res.json();
-        setSpecs(data);
-        if (data.length > 0) setSelectedSpecId(data[0].id);
-      } catch (e) {
-        setError('Could not load agent specs from the backend.');
-        console.warn('[AgentOtelExample] Failed to load library specs:', e);
-      }
-    };
-    void load();
-  }, [baseUrl]);
+  const launchedRef = useRef(false);
 
   const handleLaunch = useCallback(async () => {
-    if (!selectedSpecId) return;
     setLoading(true);
     setError(null);
 
     try {
-      const spec = specs.find(s => s.id === selectedSpecId);
-      const transport = (spec?.transport as Protocol) ?? DEFAULT_AGENT_PROTOCOL;
+      const transport: Protocol = DEFAULT_AGENT_PROTOCOL;
 
       const res = await fetch(`${baseUrl}/api/v1/agents`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: selectedSpecId,
+          name: AGENT_SPEC_ID,
           description: `Launched from AgentOtelExample`,
           agent_library: DEFAULT_AGENT_LIBRARY,
           transport,
-          model: DEFAULT_MODEL,
-          system_prompt:
-            'You are a helpful AI assistant observing OTEL telemetry data.',
-          agent_spec_id: selectedSpecId,
+          agent_spec_id: AGENT_SPEC_ID,
         }),
       });
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({ detail: 'Unknown error' }));
-        throw new Error(err.detail || `Failed to create agent: ${res.status}`);
+        const detail =
+          typeof err?.detail === 'string' ? err.detail : 'Unknown error';
+
+        // Reuse existing agent when backend reports duplicate creation.
+        if (res.status === 409 || /already exists/i.test(detail)) {
+          const idMatch = detail.match(
+            /Agent with ID '([^']+)' already exists/i,
+          );
+          const existingId = idMatch?.[1] || AGENT_SPEC_ID;
+          onConnected(existingId, transport);
+          return;
+        }
+
+        throw new Error(detail || `Failed to create agent: ${res.status}`);
       }
 
       const data = await res.json();
       onConnected(data.id, transport);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to launch agent');
+      console.warn('[AgentOtelExample] Failed to launch agent:', e);
     } finally {
       setLoading(false);
     }
-  }, [selectedSpecId, specs, baseUrl, onConnected]);
+  }, [baseUrl, onConnected]);
+
+  // Auto-launch the example-otel agent on mount.
+  useEffect(() => {
+    if (launchedRef.current || isConnected) return;
+    launchedRef.current = true;
+    void handleLaunch();
+  }, [handleLaunch, isConnected]);
 
   if (isConnected) {
     return (
@@ -203,46 +193,33 @@ const AgentSelectorPanel: React.FC<AgentSelectorPanelProps> = ({
       }}
     >
       <Text sx={{ fontSize: 0, fontWeight: 'bold', color: 'fg.muted' }}>
-        SELECT AGENT
+        AGENT
       </Text>
 
-      {specs.length > 0 ? (
+      {loading ? (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Spinner size="small" />
+          <Text sx={{ fontSize: 1, color: 'fg.muted' }}>
+            Launching {AGENT_SPEC_ID}…
+          </Text>
+        </Box>
+      ) : error ? (
         <>
-          <FormControl>
-            <FormControl.Label visuallyHidden>Agent spec</FormControl.Label>
-            <Select
-              value={selectedSpecId}
-              onChange={e => setSelectedSpecId(e.target.value)}
-              block
-              size="small"
-              disabled={loading}
-            >
-              {specs.map(s => (
-                <Select.Option key={s.id} value={s.id}>
-                  {s.name ?? s.id}
-                </Select.Option>
-              ))}
-            </Select>
-          </FormControl>
+          <Text sx={{ fontSize: 1, color: 'danger.fg' }}>{error}</Text>
           <Button
             variant="primary"
             size="small"
             onClick={handleLaunch}
-            disabled={loading || !selectedSpecId}
             leadingVisual={PlugIcon}
             sx={{ width: '100%' }}
           >
-            {loading ? 'Launching…' : 'Launch Agent'}
+            Retry
           </Button>
         </>
-      ) : error ? (
-        <Text sx={{ fontSize: 1, color: 'danger.fg' }}>{error}</Text>
       ) : (
-        <Text sx={{ fontSize: 1, color: 'fg.muted' }}>Loading specs…</Text>
-      )}
-
-      {error && specs.length > 0 && (
-        <Text sx={{ fontSize: 1, color: 'danger.fg' }}>{error}</Text>
+        <Text sx={{ fontSize: 1, color: 'fg.muted' }}>
+          Launching {AGENT_SPEC_ID}…
+        </Text>
       )}
     </Box>
   );
@@ -266,8 +243,7 @@ const TAB_SX = (active: boolean) => ({
 
 const AgentOtelExampleInner: React.FC<{
   token: string;
-  onSignOut: () => void;
-}> = ({ token, onSignOut }) => {
+}> = ({ token }) => {
   const { configuration } = useCoreStore();
   const resolvedRunUrl =
     configuration?.otelRunUrl ||
@@ -373,8 +349,8 @@ const AgentOtelExampleInner: React.FC<{
         baseUrl={otelBaseUrl}
         token={token}
         onNavigate={handleNavigate}
-        onSignOut={onSignOut}
         showGenerateButtons
+        showAccountControls={false}
         trailing={
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <TelescopeIcon size={16} />
@@ -491,8 +467,8 @@ const AgentOtelExampleInner: React.FC<{
               : { useStore: true }
           }
         >
-          {/* Agent selector rendered above the chat area */}
-          <AgentSelectorPanel
+          {/* Agent launcher rendered above the chat area */}
+          <AgentLaunchPanel
             baseUrl={agentBaseUrl}
             onConnected={handleAgentConnected}
             onDisconnected={handleAgentDisconnected}
@@ -510,15 +486,10 @@ const AgentOtelExampleInner: React.FC<{
  */
 const AgentOtelExample: React.FC = () => {
   const token = useSimpleAuthStore(s => s.token);
-  const clearAuth = useSimpleAuthStore(s => s.clearAuth);
 
   return (
     <ThemedProvider>
-      {!token ? (
-        <AuthRequiredView />
-      ) : (
-        <AgentOtelExampleInner token={token} onSignOut={clearAuth} />
-      )}
+      {!token ? <AuthRequiredView /> : <AgentOtelExampleInner token={token} />}
     </ThemedProvider>
   );
 };

@@ -7,7 +7,7 @@
  * AgentOutputsExample
  *
  * Demonstrates rich output rendering for agent responses. The agent (spec
- * `demo-outputs`) is prompted to return exactly one of four output types per
+ * `example-outputs`) is prompted to return exactly one of four output types per
  * response:
  *   - TABLE  → GitHub-flavored Markdown table
  *   - JSON   → ```json fenced block
@@ -51,7 +51,7 @@ const queryClient = new QueryClient();
 
 // ─── Constants ─────────────────────────────────────────────────────────────
 
-const AGENT_NAME = 'outputs-demo-agent';
+const AGENT_NAME = 'outputs-example-agent';
 const AGENT_SPEC_ID = 'demo-outputs';
 const DEFAULT_LOCAL_BASE_URL =
   import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
@@ -73,6 +73,19 @@ interface DetectedOutput {
 const FENCE_RE = /```([a-zA-Z0-9_+-]*)\n([\s\S]*?)```/g;
 const MD_TABLE_RE =
   /(^|\n)\s*\|[^\n]+\|\s*\n\s*\|[\s:|-]+\|\s*\n(\s*\|[^\n]+\|\s*\n?)+/;
+
+/**
+ * Some agents emit a markdown table compressed onto a single logical line by
+ * joining row separators with `||`. Expand that form back to one row per line
+ * so the markdown table renderer can parse it. Idempotent: any pre-existing
+ * `|\n|` boundaries are unaffected.
+ */
+const expandCompactMarkdownTable = (text: string): string => {
+  if (!text) return text;
+  if (!/\|\s*[-:| ]{3,}\|/.test(text)) return text;
+  if (!text.includes('||')) return text;
+  return text.replace(/\|\|/g, '|\n|');
+};
 
 const EXT_LIKE_INFOS = new Set([
   'csv',
@@ -106,8 +119,32 @@ const detectOutput = (m: ChatMessage): DetectedOutput | null => {
   const match = FENCE_RE.exec(text);
   if (match) {
     const info = (match[1] || '').toLowerCase();
-    const body = match[2] ?? '';
+    const rawBody = match[2] ?? '';
+    const body = expandCompactMarkdownTable(rawBody);
     const firstLine = body.split('\n', 1)[0]?.trim() ?? '';
+
+    // Markdown fenced table should render in the table panel, not as a file.
+    if ((info === 'markdown' || info === 'md') && MD_TABLE_RE.test(body)) {
+      const tableMatch = body.match(MD_TABLE_RE);
+      return {
+        tab: 'table',
+        payload: tableMatch ? tableMatch[0].trim() : body.trim(),
+        messageId: m.id,
+      };
+    }
+
+    // Bare/unlabeled fence around a markdown table — route to Table tab too.
+    if (
+      (!info || info === 'text' || info === 'plain') &&
+      MD_TABLE_RE.test(body)
+    ) {
+      const tableMatch = body.match(MD_TABLE_RE);
+      return {
+        tab: 'table',
+        payload: tableMatch ? tableMatch[0].trim() : body.trim(),
+        messageId: m.id,
+      };
+    }
 
     // Chart: ```json with `// chart` marker on first line.
     if (info === 'json' && /^\/\/\s*chart\b/i.test(firstLine)) {
@@ -177,11 +214,12 @@ const detectOutput = (m: ChatMessage): DetectedOutput | null => {
   }
 
   // 2) Markdown table (no fences).
-  if (MD_TABLE_RE.test(text)) {
-    const tableMatch = text.match(MD_TABLE_RE);
+  const expandedText = expandCompactMarkdownTable(text.trim());
+  if (MD_TABLE_RE.test(expandedText)) {
+    const tableMatch = expandedText.match(MD_TABLE_RE);
     return {
       tab: 'table',
-      payload: tableMatch ? tableMatch[0].trim() : text,
+      payload: tableMatch ? tableMatch[0].trim() : expandedText,
       messageId: m.id,
     };
   }
@@ -193,7 +231,11 @@ const detectOutput = (m: ChatMessage): DetectedOutput | null => {
 
 const MarkdownTable: React.FC<{ source: string }> = ({ source }) => {
   const { headers, rows } = useMemo(() => {
-    const lines = source
+    // Some model responses compress table rows into one line using `||`.
+    // Normalize that form back to one table row per line.
+    const normalized = expandCompactMarkdownTable(source).trim();
+
+    const lines = normalized
       .split('\n')
       .map(l => l.trim())
       .filter(l => l.startsWith('|'));
@@ -231,6 +273,7 @@ const MarkdownTable: React.FC<{ source: string }> = ({ source }) => {
         as="table"
         sx={{
           width: '100%',
+          tableLayout: 'auto',
           borderCollapse: 'collapse',
           fontSize: 0,
           'th, td': {
@@ -240,6 +283,8 @@ const MarkdownTable: React.FC<{ source: string }> = ({ source }) => {
             py: 1,
             textAlign: 'left',
             verticalAlign: 'top',
+            whiteSpace: 'normal',
+            wordBreak: 'break-word',
           },
           th: { bg: 'canvas.subtle', fontWeight: 'bold' },
         }}
@@ -445,21 +490,30 @@ const AgentOutputsInner: React.FC<{ onLogout: () => void }> = ({
 
   const [activeTab, setActiveTab] = useState<OutputTab>('table');
   const [detected, setDetected] = useState<DetectedOutput[]>([]);
-  const lastProcessedIdRef = useRef<string | null>(null);
+  const lastTextByIdRef = useRef<Map<string, string>>(new Map());
 
   // Subscribe to chat store messages and detect outputs in assistant replies.
+  // We re-detect on every change because messages stream incrementally — the
+  // first chunk may only contain a header + one row, and later chunks add the
+  // remaining rows; we always want to keep the latest, most complete output.
   useEffect(() => {
     const process = (messages: ChatMessage[]) => {
       const assistants = messages.filter(m => m.role === 'assistant');
       if (assistants.length === 0) return;
       const last = assistants[assistants.length - 1];
-      if (last.id === lastProcessedIdRef.current) return;
+      const currentText = messageText(last);
+      if (lastTextByIdRef.current.get(last.id) === currentText) return;
+      lastTextByIdRef.current.set(last.id, currentText);
       const out = detectOutput(last);
       if (!out) return;
-      lastProcessedIdRef.current = last.id;
       setDetected(prev => {
-        if (prev.some(d => d.messageId === out.messageId)) return prev;
-        return [out, ...prev].slice(0, 20);
+        const idx = prev.findIndex(d => d.messageId === out.messageId);
+        if (idx === -1) return [out, ...prev].slice(0, 20);
+        // Replace the existing detection in place so the panel keeps up with
+        // streaming content.
+        const next = prev.slice();
+        next[idx] = out;
+        return next;
       });
       setActiveTab(out.tab);
     };
@@ -486,8 +540,8 @@ const AgentOutputsInner: React.FC<{ onLogout: () => void }> = ({
         <Spinner size="large" />
         <Text sx={{ color: 'fg.muted' }}>
           {runtimeStatus === 'launching'
-            ? 'Launching outputs demo agent...'
-            : 'Creating outputs demo agent...'}
+            ? 'Launching outputs example agent...'
+            : 'Creating outputs example agent...'}
         </Text>
       </Box>
     );
@@ -564,6 +618,7 @@ const AgentOutputsInner: React.FC<{ onLogout: () => void }> = ({
             agentId={agentId}
             authToken={chatAuthToken}
             title="Outputs Demo Agent"
+            brandIcon={<FileIcon size={16} />}
             placeholder="Ask for a Table, JSON, Chart, or File…"
             description={`${detected.length} detected output${detected.length !== 1 ? 's' : ''}`}
             showHeader={true}

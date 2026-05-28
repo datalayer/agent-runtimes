@@ -293,7 +293,7 @@ export function ChatLexicalExampleInner({
         'https://oss.datalayer.run/api',
       apiKey: import.meta.env.VITE_DATALAYER_API_KEY,
       defaultModel:
-        AIModels.BEDROCK_US_ANTHROPIC_CLAUDE_3_5_HAIKU_20241022_V1_0,
+        AIModels.BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_5_20250929_V1_0,
       enableStreaming: true,
       requireToolApproval: false,
       debug: import.meta.env.DEV,

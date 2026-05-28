@@ -5,16 +5,123 @@ SHELL=/bin/bash
 
 .DEFAULT_GOAL := default
 
+
 .PHONY: \
-	help default clean build test test-js test-py start kill warning \
+	help default clean build test test-js test-py kill warning \
 	publish-npm publish-pypi publish-conda pydoc typedoc docs \
-	examples agent agent-notebook agent-lexical jupyter-server agent-serve \
+	examples examples\:prod examples\:proxy examples-proxy agent agent-notebook agent-lexical jupyter-server agent-serve \
 	agents list-specs specs specs-clone specs-generate specs-format \
 	ag-chat ag-chat-simple ag-chat-data-acquisition ag-chat-financial ag-chat-demo ag-chat-demo-nocodemode
 
 AGENTSPECS_REPO ?= https://github.com/datalayer/agentspecs.git
 AGENTSPECS_DIR ?= agentspecs
 AGENTSPECS_BRANCH ?= "feat/new"
+
+AGENT_SERVE_ID ?= data-acquisition
+AGENT_SERVE_NAME ?= dla-1
+AGENT_SERVE_PROTOCOL ?= vercel-ai
+
+# ─── Examples URL configuration ───────────────────────────────────────────
+# These variables mirror the env vars consumed by `datalayer-core`
+# (see `datalayer_core/utils/urls.py`), so the Python agent-runtimes server
+# and any code that uses `DatalayerURLs.from_environment(...)` pick them up
+# automatically.
+#
+# `make examples`        → local-first dev mode (local agent-runtimes + local
+#                          jupyter-server). No remote URLs are injected.
+# `make examples:prod`   → explicit remote mode using DATALAYER_* defaults.
+# `make examples:proxy`  → local Plane stack started via `plane local`. Ports
+#                          match `services/plane/datalayer_plane/sbin/local.sh`.
+#                          Override any individual URL on the command line.
+
+# Production defaults (see DEFAULT_DATALAYER_* in datalayer_core/utils/urls.py).
+DATALAYER_RUN_URL          ?= https://prod1.datalayer.run
+DATALAYER_IAM_URL          ?= $(DATALAYER_RUN_URL)
+DATALAYER_RUNTIMES_URL     ?= https://r1.datalayer.run
+DATALAYER_AGENT_RUNTIMES_URL ?= $(DATALAYER_RUNTIMES_URL)
+DATALAYER_SPACER_URL       ?= $(DATALAYER_RUN_URL)
+DATALAYER_LIBRARY_URL      ?= $(DATALAYER_RUN_URL)
+DATALAYER_MANAGER_URL      ?= $(DATALAYER_RUN_URL)
+DATALAYER_AI_AGENTS_URL    ?= $(DATALAYER_RUN_URL)
+DATALAYER_AI_INFERENCE_URL ?= $(DATALAYER_RUN_URL)
+DATALAYER_MCP_SERVERS_URL  ?= $(DATALAYER_RUN_URL)
+DATALAYER_OTEL_URL         ?= $(DATALAYER_RUN_URL)
+DATALAYER_GROWTH_URL       ?= $(DATALAYER_RUN_URL)
+DATALAYER_SUCCESS_URL      ?= $(DATALAYER_RUN_URL)
+DATALAYER_STATUS_URL       ?= $(DATALAYER_RUN_URL)
+DATALAYER_SUPPORT_URL      ?= $(DATALAYER_RUN_URL)
+
+# Local Plane ports (see services/plane/datalayer_plane/sbin/local.sh).
+PLANE_LOCAL_IAM_URL          ?= http://localhost:9700
+PLANE_LOCAL_RUNTIMES_URL     ?= http://localhost:9500
+PLANE_LOCAL_AGENT_RUNTIMES_URL ?= $(PLANE_LOCAL_RUNTIMES_URL)
+PLANE_LOCAL_SPACER_URL       ?= http://localhost:9900
+PLANE_LOCAL_LIBRARY_URL      ?= http://localhost:9800
+PLANE_LOCAL_MANAGER_URL      ?= http://localhost:2100
+PLANE_LOCAL_AI_AGENTS_URL    ?= http://localhost:4400
+PLANE_LOCAL_AI_INFERENCE_URL ?= http://localhost:4450
+PLANE_LOCAL_MCP_SERVERS_URL  ?= http://localhost:4111
+PLANE_LOCAL_GROWTH_URL       ?= http://localhost:6660
+PLANE_LOCAL_SUCCESS_URL      ?= http://localhost:3300
+PLANE_LOCAL_STATUS_URL       ?= http://localhost:4785
+PLANE_LOCAL_SUPPORT_URL      ?= http://localhost:2200
+# Plane local has no single umbrella URL; we point RUN_URL at IAM by convention.
+PLANE_LOCAL_RUN_URL          ?= $(PLANE_LOCAL_IAM_URL)
+PLANE_LOCAL_OTEL_URL         ?= $(PLANE_LOCAL_IAM_URL)
+
+# Env var block exported to both Python (agent-runtimes server) and Vite UI.
+EXAMPLES_PROD_ENV = \
+	DATALAYER_RUN_URL=$(DATALAYER_RUN_URL) \
+	DATALAYER_IAM_URL=$(DATALAYER_IAM_URL) \
+	DATALAYER_RUNTIMES_URL=$(DATALAYER_RUNTIMES_URL) \
+	DATALAYER_AGENT_RUNTIMES_URL=$(DATALAYER_AGENT_RUNTIMES_URL) \
+	DATALAYER_SPACER_URL=$(DATALAYER_SPACER_URL) \
+	DATALAYER_LIBRARY_URL=$(DATALAYER_LIBRARY_URL) \
+	DATALAYER_MANAGER_URL=$(DATALAYER_MANAGER_URL) \
+	DATALAYER_AI_AGENTS_URL=$(DATALAYER_AI_AGENTS_URL) \
+	DATALAYER_AI_INFERENCE_URL=$(DATALAYER_AI_INFERENCE_URL) \
+	DATALAYER_MCP_SERVERS_URL=$(DATALAYER_MCP_SERVERS_URL) \
+	DATALAYER_OTEL_URL=$(DATALAYER_OTEL_URL) \
+	DATALAYER_GROWTH_URL=$(DATALAYER_GROWTH_URL) \
+	DATALAYER_SUCCESS_URL=$(DATALAYER_SUCCESS_URL) \
+	DATALAYER_STATUS_URL=$(DATALAYER_STATUS_URL) \
+	DATALAYER_SUPPORT_URL=$(DATALAYER_SUPPORT_URL) \
+	VITE_DATALAYER_RUN_URL=$(DATALAYER_IAM_URL) \
+	VITE_DATALAYER_AGENT_RUNTIMES_URL=$(DATALAYER_AGENT_RUNTIMES_URL) \
+	VITE_BASE_URL=$(DATALAYER_AGENT_RUNTIMES_URL) \
+	VITE_OTEL_BASE_URL=$(DATALAYER_OTEL_URL)
+
+EXAMPLES_PROXY_ENV = \
+	DATALAYER_RUN_URL=$(PLANE_LOCAL_RUN_URL) \
+	DATALAYER_IAM_URL=$(PLANE_LOCAL_IAM_URL) \
+	DATALAYER_RUNTIMES_URL=$(PLANE_LOCAL_RUNTIMES_URL) \
+	DATALAYER_AGENT_RUNTIMES_URL=$(PLANE_LOCAL_AGENT_RUNTIMES_URL) \
+	DATALAYER_SPACER_URL=$(PLANE_LOCAL_SPACER_URL) \
+	DATALAYER_LIBRARY_URL=$(PLANE_LOCAL_LIBRARY_URL) \
+	DATALAYER_MANAGER_URL=$(PLANE_LOCAL_MANAGER_URL) \
+	DATALAYER_AI_AGENTS_URL=$(PLANE_LOCAL_AI_AGENTS_URL) \
+	DATALAYER_AI_INFERENCE_URL=$(PLANE_LOCAL_AI_INFERENCE_URL) \
+	DATALAYER_MCP_SERVERS_URL=$(PLANE_LOCAL_MCP_SERVERS_URL) \
+	DATALAYER_OTEL_URL=$(PLANE_LOCAL_OTEL_URL) \
+	DATALAYER_GROWTH_URL=$(PLANE_LOCAL_GROWTH_URL) \
+	DATALAYER_SUCCESS_URL=$(PLANE_LOCAL_SUCCESS_URL) \
+	DATALAYER_STATUS_URL=$(PLANE_LOCAL_STATUS_URL) \
+	DATALAYER_SUPPORT_URL=$(PLANE_LOCAL_SUPPORT_URL) \
+	VITE_DATALAYER_RUN_URL=$(PLANE_LOCAL_IAM_URL) \
+	VITE_DATALAYER_AGENT_RUNTIMES_URL=$(PLANE_LOCAL_AGENT_RUNTIMES_URL) \
+	VITE_BASE_URL=$(PLANE_LOCAL_AGENT_RUNTIMES_URL) \
+	VITE_OTEL_BASE_URL=$(PLANE_LOCAL_OTEL_URL)
+
+# Local-first defaults used by `make examples`.
+# Keep agent routes pointed to the locally launched agent-runtimes server,
+# regardless of any DATALAYER_* environment variables exported in the shell.
+EXAMPLES_LOCAL_ENV = \
+	VITE_DATALAYER_RUN_URL=https://prod1.datalayer.run \
+	DATALAYER_AGENT_RUNTIMES_URL=http://localhost:8765 \
+	VITE_DATALAYER_AGENT_RUNTIMES_URL=http://localhost:8765 \
+	VITE_BASE_URL=http://localhost:8765 \
+	VITE_BASE_URL_NO_CODEMODE=http://localhost:8765 \
+	VITE_BASE_URL_CODEMODE=http://localhost:8766
 
 BEDROCK_ENV = \
 	AWS_ACCESS_KEY_ID=${DATALAYER_BEDROCK_AWS_ACCESS_KEY_ID} \
@@ -39,6 +146,22 @@ RUFF_TARGETS = \
 	agent_runtimes/mcp/catalog_mcp_servers.py \
 	agent_runtimes/mcp/__init__.py
 
+# ─── Colored step banners ─────────────────────────────────────────────────
+# Used by `make specs` (and related targets) to make each generation step
+# visible in long logs.
+CYAN   := \033[1;36m
+GREEN  := \033[1;32m
+YELLOW := \033[1;33m
+BOLD   := \033[1m
+RESET  := \033[0m
+
+# Usage: $(call step,Title)
+define step
+	@printf '\n$(CYAN)━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(RESET)\n'
+	@printf '$(CYAN)▶ $(BOLD)%s$(RESET)\n' "$(1)"
+	@printf '$(CYAN)━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(RESET)\n'
+endef
+
 help: ## display this help
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
@@ -61,10 +184,8 @@ test-js: ## run js tests
 test-py: ## run python tests
 	python -m pytest
 
-start: examples
-
 kill:
-	./dev/sh/kill.sh
+	npm run kill
 
 warning:
 	echo "\x1b[34m\x1b[43mEnsure you have run \x1b[1;37m\x1b[41m conda deactivate \x1b[22m\x1b[34m\x1b[43m before invoking this.\x1b[0m"
@@ -100,8 +221,22 @@ typedoc: # typedoc
 docs: pydoc typedoc ## build the api docs and serve the docs
 	cd docs && npm run start
 
-examples: # examples
-	$(BEDROCK_ENV) npm run examples
+examples: ## examples – local-first (local agent-runtimes + local jupyter-server)
+	$(BEDROCK_ENV) \
+	$(EXAMPLES_LOCAL_ENV) \
+		npm run examples
+
+examples\:prod: ## examples – dev server pointed at prod1.datalayer.run (and r1 for datalayer-runtimes)
+	$(BEDROCK_ENV) \
+	$(EXAMPLES_PROD_ENV) \
+		npm run examples
+
+examples\:proxy: ## examples – dev server pointed at a local `plane local` stack (override per-service URLs via PLANE_LOCAL_*_URL)
+	$(BEDROCK_ENV) \
+	$(EXAMPLES_PROXY_ENV) \
+		npm run examples
+
+examples-proxy: examples\:proxy ## alias for examples:proxy
 
 agent: # agent - open agent.html with vite dev server
 	$(BEDROCK_ENV) npm run start:agent
@@ -117,9 +252,9 @@ jupyter-server: # jupyter-server
 
 agent-serve: # agent-server
 	@$(BEDROCK_ENV) agent-runtimes serve \
-	  --agent-id data-acquisition \
-	  --agent-name dla-1 \
-	  --protocol ag-ui \
+	  --agent-id $(AGENT_SERVE_ID) \
+	  --agent-name $(AGENT_SERVE_NAME) \
+	  --protocol $(AGENT_SERVE_PROTOCOL) \
 	  --mcp-servers tavily \
 	  --codemode \
 	  --skills github,pdf \
@@ -174,7 +309,7 @@ list-specs: # list specs
 specs: specs-clone specs-generate specs-format ## generate Python and TypeScript code from YAML specifications (agents, teams, MCP servers, skills, envvars)
 
 specs-clone: ## clone/update agentspecs repository
-	@echo "Cloning agentspecs repository..."
+	$(call step,Cloning agentspecs repository ($(AGENTSPECS_BRANCH)))
 	@if [ ! -d "$(AGENTSPECS_DIR)" ]; then \
 		git clone $(AGENTSPECS_REPO) $(AGENTSPECS_DIR); \
 	else \
@@ -183,105 +318,112 @@ specs-clone: ## clone/update agentspecs repository
 	@cd $(AGENTSPECS_DIR) && git checkout $(AGENTSPECS_BRANCH)
 
 specs-generate: ## generate all Python and TypeScript specs from YAML
-	@echo "Generating agent specifications..."
+	$(call step,Generating agent specifications)
 	python scripts/codegen/generate_agents.py \
 	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/agents \
 	  --python-output agent_runtimes/specs/agents.py \
 	  --typescript-output src/specs/agents.ts \
 	  --subfolder-structure
-	@echo "Generating team specifications..."
+	$(call step,Generating team specifications)
 	python scripts/codegen/generate_teams.py \
 	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/teams \
 	  --python-output agent_runtimes/specs/teams.py \
 	  --typescript-output src/specs/teams.ts \
 	  --subfolder-structure
-	@echo "Generating MCP server specifications..."
+	$(call step,Generating MCP server specifications)
 	python scripts/codegen/generate_mcp_servers.py \
 	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/mcp-servers \
 	  --python-output agent_runtimes/mcp/catalog_mcp_servers.py \
 	  --typescript-output src/specs/mcpServers.ts
-	@echo "Generating skill specifications..."
+	$(call step,Generating skill specifications)
 	python scripts/codegen/generate_skills.py \
 	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/skills \
 	  --python-output agent_runtimes/specs/skills.py \
 	  --typescript-output src/specs/skills.ts
-	@echo "Generating tool specifications..."
+	$(call step,Generating tool specifications)
 	python scripts/codegen/generate_tools.py \
 	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/tools \
 	  --python-output agent_runtimes/specs/tools.py \
 	  --typescript-output src/specs/tools.ts
-	@echo "Generating frontend tool specifications..."
+	$(call step,Generating frontend tool specifications)
 	python scripts/codegen/generate_frontend_tools.py \
 	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/frontend-tools \
 	  --python-output agent_runtimes/specs/frontend_tools.py \
 	  --typescript-output src/specs/frontendTools.ts
-	@echo "Generating environment variable specifications..."
+	$(call step,Generating environment variable specifications)
 	python scripts/codegen/generate_envvars.py \
 	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/envvars \
 	  --python-output agent_runtimes/specs/envvars.py \
 	  --typescript-output src/specs/envvars.ts
-	@echo "Generating AI model specifications..."
+	$(call step,Generating AI model specifications)
 	python scripts/codegen/generate_models.py \
 	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/models \
 	  --python-output agent_runtimes/specs/models.py \
 	  --typescript-output src/specs/models.ts
-	@echo "Generating memory specifications..."
+	$(call step,Generating memory specifications)
 	python scripts/codegen/generate_memory.py \
 	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/memory \
 	  --python-output agent_runtimes/specs/memory.py \
 	  --typescript-output src/specs/memory.ts
-	@echo "Generating guardrail specifications..."
+	$(call step,Generating guardrail specifications)
 	python scripts/codegen/generate_guardrails.py \
 	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/guardrails \
 	  --python-output agent_runtimes/specs/guardrails.py \
 	  --typescript-output src/specs/guardrails.ts
-	@echo "Generating eval specifications..."
+	$(call step,Generating eval specifications)
 	python scripts/codegen/generate_evals.py \
 	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/evals \
 	  --python-output agent_runtimes/specs/evals.py \
 	  --typescript-output src/specs/evals.ts
-	@echo "Generating benchmark specifications..."
+	$(call step,Generating benchmark specifications)
 	python scripts/codegen/generate_benchmarks.py \
 	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/benchmarks \
+	  --eval-specs-dir $(AGENTSPECS_DIR)/agentspecs/evals \
 	  --python-output agent_runtimes/specs/benchmarks.py \
 	  --typescript-output src/specs/benchmarks.ts
-	@echo "Generating event specifications..."
+	$(call step,Generating event specifications)
 	python scripts/codegen/generate_events.py \
 	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/events \
 	  --python-output agent_runtimes/specs/events.py \
 	  --typescript-output src/specs/events.ts
-	@echo "Generating trigger specifications..."
+	$(call step,Generating trigger specifications)
 	python scripts/codegen/generate_triggers.py \
 	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/triggers \
 	  --python-output agent_runtimes/specs/triggers.py \
 	  --typescript-output src/specs/triggers.ts
-	@echo "Generating output specifications..."
+	$(call step,Generating output specifications)
 	python scripts/codegen/generate_outputs.py \
 	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/outputs \
 	  --python-output agent_runtimes/specs/outputs.py \
 	  --typescript-output src/specs/outputs.ts
-	@echo "Generating notification specifications..."
+	$(call step,Generating notification specifications)
 	python scripts/codegen/generate_notifications.py \
 	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/notifications \
 	  --python-output agent_runtimes/specs/notifications.py \
 	  --typescript-output src/specs/notifications.ts
-	@echo "Generating persona specifications..."
-	python scripts/codegen/generate_personas.py \
-	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/personas \
-	  --python-output agent_runtimes/specs/personas.py \
-	  --typescript-output src/specs/personas.ts
-	@echo "Post-processing generated Python with ruff..."
+	$(call step,Generating persona specifications)
+	@if [ -d "$(AGENTSPECS_DIR)/agentspecs/personas" ]; then \
+	  python scripts/codegen/generate_personas.py \
+	    --specs-dir $(AGENTSPECS_DIR)/agentspecs/personas \
+	    --python-output agent_runtimes/specs/personas.py \
+	    --typescript-output src/specs/personas.ts; \
+	else \
+	  echo "Skipping persona specifications: $(AGENTSPECS_DIR)/agentspecs/personas not found"; \
+	fi
+	$(call step,Post-processing generated Python with ruff)
 	ruff check --select I --fix $(RUFF_TARGETS)
 	ruff format $(RUFF_TARGETS)
-	@echo "Validating generated Python syntax..."
+	$(call step,Validating generated Python syntax)
 	python -m compileall -q agent_runtimes/specs agent_runtimes/mcp
-	@echo "✓ All specifications generated successfully"
+	@printf '\n$(GREEN)✓ All specifications generated successfully$(RESET)\n'
 
 specs-format: ## format generated specs and refresh MCP catalogs
-	@echo "Formatting generated files with ruff..."
+	$(call step,Formatting generated Python with ruff)
 	ruff check --select I --fix $(RUFF_TARGETS)
 	ruff format $(RUFF_TARGETS)
-	@echo "Formatting generated files with prettier..."
+	$(call step,Formatting generated TypeScript with prettier)
 	npm run format
+	$(call step,Refreshing MCP catalog)
 	agent-runtimes mcp-servers-catalog
+	$(call step,Refreshing MCP config servers)
 	agent-runtimes mcp-servers-config

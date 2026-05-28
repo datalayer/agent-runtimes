@@ -102,6 +102,8 @@ export interface AgentSpec {
   postHooks?: {
     sandbox?: string | string[];
   };
+  /** Per-tool-call hooks (authorization/audit integration). */
+  toolHooks?: Record<string, any>;
   /** JSON schema for launch-time parameter values. */
   parameters?: Record<string, any>;
   /** Subagent delegation configuration. */

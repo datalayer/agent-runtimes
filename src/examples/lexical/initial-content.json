@@ -1605,7 +1605,7 @@
                 "type": "jupyter-input",
                 "version": 1,
                 "language": "python",
-                "jupyterInputNodeUuid": "collapsible-demo-uuid"
+                "jupyterInputNodeUuid": "collapsible-example-uuid"
               },
               {
                 "format": "",
@@ -1619,8 +1619,8 @@
                     "output_type": "stream"
                   }
                 ],
-                "jupyterInputNodeUuid": "collapsible-demo-uuid",
-                "jupyterOutputNodeUuid": "collapsible-demo-output-uuid"
+                "jupyterInputNodeUuid": "collapsible-example-uuid",
+                "jupyterOutputNodeUuid": "collapsible-example-output-uuid"
               }
             ],
             "direction": "ltr",
@@ -2074,7 +2074,7 @@
         "type": "jupyter-input",
         "version": 1,
         "language": "python",
-        "jupyterInputNodeUuid": "plot-demo-uuid"
+        "jupyterInputNodeUuid": "plot-example-uuid"
       },
       {
         "format": "",
@@ -2091,8 +2091,8 @@
             "output_type": "execute_result"
           }
         ],
-        "jupyterInputNodeUuid": "plot-demo-uuid",
-        "jupyterOutputNodeUuid": "plot-demo-output-uuid"
+        "jupyterInputNodeUuid": "plot-example-uuid",
+        "jupyterOutputNodeUuid": "plot-example-output-uuid"
       },
       {
         "type": "horizontalrule",

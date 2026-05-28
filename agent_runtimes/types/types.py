@@ -255,6 +255,10 @@ class BenchmarkSpec(BaseModel):
     evaluator_shapes: List[
         Literal["pass_rate", "numeric", "categorical", "error_only"]
     ] = Field(default_factory=list, description="Evaluator output shape(s)")
+    evaluators: List[str] = Field(
+        ...,
+        description="Evaluator IDs or id:version references used by this benchmark",
+    )
     recommended_windows: List[str] = Field(
         default_factory=lambda: ["1h", "6h", "24h", "7d", "30d"],
         description="Suggested monitoring windows",
@@ -906,7 +910,7 @@ class AgentSpec(BaseModel):
     enabled: bool = Field(default=True, description="Whether the agent is enabled")
     model: Optional[str] = Field(
         default=None,
-        description="AI model identifier to use for this agent (e.g., 'bedrock:us.anthropic.claude-3-5-haiku-20241022-v1:0')",
+        description="AI model identifier to use for this agent (e.g., 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0')",
     )
     mcp_servers: List[MCPServer] = Field(
         default_factory=list,
@@ -1059,6 +1063,16 @@ class AgentSpec(BaseModel):
             "list of strings)."
         ),
         alias="postHooks",
+    )
+    tool_hooks: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description=(
+            "Per-tool-call hooks. Supported keys: 'before_tool_execute', "
+            "'after_tool_execute', 'on_tool_execute_error', and "
+            "'deferred_tool_calls'. Hook steps can be plain Python (python) or "
+            "module function references (function)."
+        ),
+        alias="toolHooks",
     )
     parameters: Optional[Dict[str, Any]] = Field(
         default=None,

@@ -4,9 +4,17 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import cast
+
+import pytest
+from pydantic_ai.messages import ToolCallPart
 
 from agent_runtimes.capabilities.factory import build_capabilities_from_agent_spec
 from agent_runtimes.context.costs import AgentCostStore
+from agent_runtimes.guardrails.tool_approvals import (
+    ToolApprovalManager,
+    ToolsGuardrailCapability,
+)
 from agent_runtimes.monitoring.cost_monitoring import CostMonitoringCapability
 
 
@@ -16,6 +24,26 @@ class _Spec:
     guardrails: list[dict] | None = None
     capabilities: list[dict] | None = None
     advanced: dict | None = None
+
+
+def _mock_factory_pre_allow_hook(payload: dict, **kwargs: object) -> dict:
+    return {"decision": "allow", "reason": "allowed by factory test hook"}
+
+
+class _FactoryFakeApprovalManager:
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, dict[str, str], str | None]] = []
+
+    def requires_approval(self, tool_name: str) -> bool:
+        return tool_name == "runtime_sensitive_echo"
+
+    async def request_and_wait(
+        self,
+        tool_name: str,
+        safe_args: dict[str, str],
+        tool_call_id: str | None,
+    ) -> None:
+        self.calls.append((tool_name, safe_args, tool_call_id))
 
 
 def test_cost_store_records_run() -> None:
@@ -72,3 +100,54 @@ def test_factory_adds_cost_monitoring_capability() -> None:
     assert monitors[0].agent_id == "agent-xyz"
     assert monitors[0].per_run_budget_usd == 0.25
     assert monitors[0].cumulative_budget_usd == 1.5
+
+
+@pytest.mark.asyncio
+async def test_factory_wires_tool_hooks_and_capability_executes_local_hook() -> None:
+    spec = _Spec(
+        guardrails=[
+            {
+                "tool_approval": {
+                    "enabled": True,
+                    "tools_requiring_approval": ["runtime-sensitive-echo"],
+                    "tool_hooks": {
+                        "before_tool_execute": [
+                            {
+                                "function": (
+                                    "agent_runtimes.tests.test_cost_monitoring_capability:"
+                                    "_mock_factory_pre_allow_hook"
+                                )
+                            }
+                        ]
+                    },
+                }
+            }
+        ]
+    )
+
+    capabilities = build_capabilities_from_agent_spec(spec, agent_id="agent-xyz")
+    tool_caps = [c for c in capabilities if isinstance(c, ToolsGuardrailCapability)]
+
+    assert len(tool_caps) == 1
+    capability = tool_caps[0]
+    assert capability.config.agent_id == "agent-xyz"
+    assert isinstance(capability.config.tool_hooks, dict)
+    assert isinstance(capability.config.tool_hooks.get("before_tool_execute"), list)
+
+    fake_manager = _FactoryFakeApprovalManager()
+    capability._manager = cast(ToolApprovalManager, fake_manager)
+    args = {"text": "hello", "reason": "audit"}
+
+    result = await capability.before_tool_execute(
+        None,
+        call=ToolCallPart(
+            tool_name="runtime_sensitive_echo",
+            args=args,
+            tool_call_id="factory-tool-1",
+        ),
+        tool_def=None,
+        args=args,
+    )
+
+    assert result == args
+    assert fake_manager.calls == []

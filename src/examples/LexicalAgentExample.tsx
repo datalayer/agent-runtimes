@@ -115,7 +115,7 @@ function getJupyterSandboxUrl(
 }
 
 /**
- * Hook to ensure the demo-agent exists on the server.
+ * Hook to ensure the example-agent exists on the server.
  * Creates it if it doesn't exist.
  */
 function useEnsureAgent(

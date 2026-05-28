@@ -17,6 +17,7 @@ The Vercel AI SDK protocol provides:
 """
 
 import inspect
+import json
 import logging
 import os
 import traceback
@@ -53,6 +54,143 @@ from ..streams.loop import get_agent_enabled_mcp_tool_names, get_known_mcp_tool_
 from .base import BaseTransport
 
 logger = logging.getLogger(__name__)
+
+
+def _is_live_eval_emission_enabled() -> bool:
+    mode = str(os.environ.get("DATALAYER_EVALS_MODE") or "").strip().lower()
+    emit_flag = (
+        str(os.environ.get("DATALAYER_EVALS_EMIT_LIVE_EVENTS") or "").strip().lower()
+    )
+    if emit_flag in {"0", "false", "no", "off"}:
+        return False
+    if emit_flag in {"1", "true", "yes", "on"}:
+        return True
+    return mode == "interactive"
+
+
+def _extract_eval_identifiers(prompt: str) -> tuple[str | None, str | None]:
+    experiment_id: str | None = None
+    evalset_id: str | None = None
+    for raw_line in str(prompt or "").splitlines():
+        line = raw_line.strip()
+        if line.startswith("experiment_id="):
+            value = line.partition("=")[2].strip()
+            experiment_id = value or None
+        elif line.startswith("evalset_id="):
+            value = line.partition("=")[2].strip()
+            evalset_id = value or None
+    return experiment_id, evalset_id
+
+
+def _extract_first_json_object(text: str) -> dict[str, Any] | None:
+    if not text:
+        return None
+    start = text.find("{")
+    end = text.rfind("}")
+    if start < 0 or end <= start:
+        return None
+    try:
+        parsed = json.loads(text[start : end + 1])
+    except Exception:
+        return None
+    return parsed if isinstance(parsed, dict) else None
+
+
+def _safe_float(value: Any) -> float | None:
+    try:
+        if value is None:
+            return None
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+async def _emit_interactive_live_eval_event(
+    *,
+    request: Request,
+    agent_id: str,
+    prompt: str,
+    output_text: str,
+    status: str,
+) -> None:
+    if not _is_live_eval_emission_enabled():
+        return
+
+    experiment_id, evalset_id = _extract_eval_identifiers(prompt)
+    if not experiment_id:
+        return
+
+    auth_header = request.headers.get("Authorization", "")
+    token = ""
+    if auth_header.startswith("Bearer "):
+        token = auth_header.removeprefix("Bearer ").strip()
+    elif auth_header.startswith("token "):
+        token = auth_header.removeprefix("token ").strip()
+    if not token:
+        token = str(os.environ.get("DATALAYER_USER_TOKEN") or "").strip()
+    if not token:
+        logger.debug("[Vercel AI] Skip live eval event: no user token available")
+        return
+
+    parsed_output = _extract_first_json_object(output_text) or {}
+    pass_rate = _safe_float(parsed_output.get("pass_rate"))
+    if pass_rate is None and str(status).lower() == "completed":
+        pass_rate = 1.0
+
+    base_url = (
+        os.environ.get("DATALAYER_AI_AGENTS_URL")
+        or os.environ.get("AI_AGENTS_URL")
+        or os.environ.get("DATALAYER_RUN_URL")
+        or "https://prod1.datalayer.run"
+    ).rstrip("/")
+    url = f"{base_url}/api/ai-agents/v1/evals/live/events"
+    params: dict[str, Any] = {}
+    billable_account_uid = str(
+        os.environ.get("DATALAYER_BILLABLE_ACCOUNT_UID") or ""
+    ).strip()
+    if billable_account_uid:
+        params["account_uid"] = billable_account_uid
+
+    attributes: dict[str, Any] = {
+        "runtime_agent_id": agent_id,
+        "run_mode": "interactive",
+        "execution_target": "cloud",
+        "evaluator_input": prompt,
+        "evaluator_output": parsed_output if parsed_output else output_text,
+        "submitted_prompt": prompt,
+        "received_output": parsed_output if parsed_output else output_text,
+        "gen_ai.evaluation.name": "interactive-pass-rate",
+        "gen_ai.evaluation.input": prompt,
+        "gen_ai.evaluation.output": parsed_output if parsed_output else output_text,
+        "gen_ai.evaluation.status": status,
+    }
+    if evalset_id:
+        attributes["evalset_id"] = evalset_id
+    if pass_rate is not None:
+        attributes["gen_ai.evaluation.score"] = pass_rate
+
+    payload: dict[str, Any] = {
+        "target_id": experiment_id,
+        "target_type": "experiment",
+        "evaluator_name": "interactive-pass-rate",
+        "metric_name": "pass_rate",
+        "value_num": pass_rate,
+        "label": "pass" if (pass_rate is None or pass_rate >= 0.5) else "fail",
+        "passed": (pass_rate is None or pass_rate >= 0.5),
+        "attributes": attributes,
+    }
+
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        response = await client.post(
+            url,
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Content-Type": "application/json",
+            },
+            params=params,
+            json=payload,
+        )
+        response.raise_for_status()
 
 
 async def _wrap_streaming_body(body_iterator: AsyncIterator[str]) -> AsyncIterator[str]:
@@ -175,6 +313,8 @@ async def _wrap_streaming_body_with_approvals(
     import json as json_mod
 
     from ..routes.tool_approvals import (
+        _APPROVALS,
+        _APPROVALS_LOCK,
         ToolApprovalCreateRequest,
         _create_approval,
         mirror_approval_to_local,
@@ -307,6 +447,33 @@ async def _wrap_streaming_body_with_approvals(
                         normalized_tool_args = (
                             tool_args if isinstance(tool_args, dict) else {}
                         )
+
+                        # Continuation requests can replay approval tool events
+                        # for the same tool call id. Reuse existing local state
+                        # instead of creating a duplicate remote pending record.
+                        existing_record = None
+                        if tool_call_id:
+                            async with _APPROVALS_LOCK:
+                                for candidate in _APPROVALS.values():
+                                    if (
+                                        candidate.agent_id == agent_id
+                                        and candidate.tool_call_id == tool_call_id
+                                        and candidate.status != "deleted"
+                                    ):
+                                        existing_record = candidate
+                                        break
+
+                        if existing_record is not None:
+                            created_tool_call_ids.add(tool_call_id)
+                            logger.info(
+                                "[Vercel AI] Reusing existing local approval %s "
+                                "for deferred tool '%s' (tool_call_id=%s, status=%s)",
+                                existing_record.id,
+                                tool_name,
+                                tool_call_id,
+                                existing_record.status,
+                            )
+                            continue
 
                         # Best-effort remote sync so server-mode panels backed by
                         # ai-agents can display pending approvals.
@@ -780,6 +947,21 @@ class VercelAITransport(BaseTransport):
             response_text = ""
             if hasattr(result, "output") and isinstance(result.output, str):
                 response_text = result.output
+
+            try:
+                await _emit_interactive_live_eval_event(
+                    request=request,
+                    agent_id=agent_id,
+                    prompt=request_prompt,
+                    output_text=response_text,
+                    status="completed",
+                )
+            except Exception as eval_event_exc:
+                logger.debug(
+                    "[Vercel AI] Failed to emit interactive live eval event for agent '%s': %s",
+                    agent_id,
+                    eval_event_exc,
+                )
             record_prompt_turn_completion(
                 prompt=request_prompt,
                 response=response_text,
@@ -936,9 +1118,10 @@ class VercelAITransport(BaseTransport):
                     "agent": pydantic_agent,
                     "model": model,
                     "toolsets": runtime_toolsets,
-                    "builtin_tools": effective_builtin_tools,
                     "on_complete": on_complete,
                 }
+                if effective_builtin_tools is not None:
+                    dispatch_kwargs["builtin_tools"] = effective_builtin_tools
 
                 dispatch_params = inspect.signature(
                     VercelAIAdapter.dispatch_request

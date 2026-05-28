@@ -3,6 +3,7 @@
 
 """Server routes for agent-runtimes."""
 
+from ..evals.routes import router as evals_router
 from .a2a import (
     A2AAgentCard,
     get_a2a_agents,
@@ -75,6 +76,7 @@ __all__ = [
     "cancel_agui_threads",
     "configure_router",
     "examples_router",
+    "evals_router",
     "get_a2a_agents",
     "get_a2a_mounts",
     "get_agui_app",

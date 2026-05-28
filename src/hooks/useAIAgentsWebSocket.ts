@@ -103,6 +103,24 @@ export interface UseAIAgentsWebSocketResult {
 const RECONNECT_DELAY_MS = 3_000;
 const WS_DEFAULT_PATH = `${API_BASE_PATHS.AI_AGENTS}/ws`;
 
+const isDevTraceEnabled = (): boolean => {
+  try {
+    return Boolean(import.meta.env?.DEV);
+  } catch {
+    return false;
+  }
+};
+
+const logApprovalTrace = (
+  label: string,
+  details: Record<string, unknown>,
+): void => {
+  if (!isDevTraceEnabled()) {
+    return;
+  }
+  console.debug(`[approval-trace] ${label}`, details);
+};
+
 const isObject = (value: unknown): value is Record<string, unknown> =>
   !!value && typeof value === 'object';
 
@@ -252,6 +270,18 @@ export function useAIAgentsWebSocket(
         }
 
         if (event.startsWith('tool_approval_')) {
+          const data = msg.data;
+          logApprovalTrace('recv_tool_approval_event', {
+            event,
+            channel: msg.channel,
+            approvalId:
+              typeof data?.id === 'string'
+                ? data.id
+                : typeof data?.approval_id === 'string'
+                  ? data.approval_id
+                  : undefined,
+            status: typeof data?.status === 'string' ? data.status : undefined,
+          });
           queryClient.invalidateQueries({ queryKey: ['tool-approvals'] });
         }
 
@@ -361,6 +391,18 @@ export function useAIAgentsWebSocket(
         return false;
       }
       try {
+        if (isObject(payload) && payload.type === 'tool_approval_decision') {
+          logApprovalTrace('send_tool_approval_decision', {
+            approvalId:
+              typeof payload.approvalId === 'string'
+                ? payload.approvalId
+                : undefined,
+            approved:
+              typeof payload.approved === 'boolean'
+                ? payload.approved
+                : undefined,
+          });
+        }
         ws.send(
           typeof payload === 'string' ? payload : JSON.stringify(payload),
         );

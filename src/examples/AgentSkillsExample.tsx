@@ -33,8 +33,8 @@ import { useSkills, useSkillActions } from '../hooks';
 import type { SkillInfo } from '../types';
 
 const queryClient = new QueryClient();
-const AGENT_NAME = 'skills-demo-agent';
-const AGENT_SPEC_ID = 'demo-full';
+const AGENT_NAME = 'skills-example-agent';
+const AGENT_SPEC_ID = 'example-skills';
 const DEFAULT_LOCAL_BASE_URL =
   import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
 
@@ -256,14 +256,14 @@ const AgentSkillsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
       setIsReconnectedAgent(false);
 
       try {
-        // Create local agent runtime using the demo-full spec.
+        // Create local agent runtime using the example-full spec.
         // The spec contains module-based, package-based and file-based skills.
         const response = await authFetch(`${agentBaseUrl}/api/v1/agents`, {
           method: 'POST',
           body: JSON.stringify({
             name: agentName,
             description:
-              'Agent with skills demo - module, package and file based skills',
+              'Agent with skills example - module, package and file based skills',
             agent_library: 'pydantic-ai',
             transport: 'vercel-ai',
             agent_spec_id: AGENT_SPEC_ID,
@@ -337,7 +337,9 @@ const AgentSkillsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
         }}
       >
         <Spinner size="large" />
-        <Text sx={{ color: 'fg.muted' }}>Launching skills demo agent...</Text>
+        <Text sx={{ color: 'fg.muted' }}>
+          Launching skills example agent...
+        </Text>
       </Box>
     );
   }
@@ -377,6 +379,7 @@ const AgentSkillsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
             agentId={agentId}
             authToken={chatAuthToken}
             title={`Skills Demo Agent`}
+            brandIcon={<BriefcaseIcon size={16} />}
             placeholder="Ask the agent to use its skills..."
             showHeader={true}
             showNewChatButton={true}

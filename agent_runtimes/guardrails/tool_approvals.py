@@ -16,11 +16,16 @@ provides:
 from __future__ import annotations
 
 import asyncio
+import importlib
+import inspect
 import json as json_mod
 import logging
+import os
 import re
+import tempfile
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 
 from pydantic_ai import DeferredToolRequests, RunContext
@@ -31,6 +36,124 @@ from pydantic_ai.tools import DeferredToolResults, ToolDefinition, ToolDenied
 from .common import GuardrailBlockedError
 
 logger = logging.getLogger(__name__)
+
+_HOOK_DECISION_ALIASES = {
+    "allow": "allow",
+    "allowed": "allow",
+    "deny": "deny",
+    "denied": "deny",
+    "approval_required": "approval-needed",
+    "approval-needed": "approval-needed",
+    "approval_needed": "approval-needed",
+    "approvalneeded": "approval-needed",
+    "delegated_allow": "delegated-allow",
+    "delegated-allow": "delegated-allow",
+    "delegatedallow": "delegated-allow",
+}
+
+
+def _now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def _normalize_decision(value: Any) -> str:
+    if not isinstance(value, str):
+        return "approval-needed"
+    key = value.strip().lower()
+    return _HOOK_DECISION_ALIASES.get(key, "approval-needed")
+
+
+def _extract_resource(tool_name: str, args: dict[str, Any]) -> str:
+    candidate_keys = (
+        "resource",
+        "path",
+        "file",
+        "url",
+        "uri",
+        "domain",
+        "table",
+        "dataset",
+    )
+    for key in candidate_keys:
+        value = args.get(key)
+        if value is None:
+            continue
+        text = str(value).strip()
+        if text:
+            return text
+    return f"tool://{tool_name}"
+
+
+def _risk_class_for_tool(tool_name: str, args: dict[str, Any]) -> str:
+    lowered = tool_name.lower()
+    if any(token in lowered for token in ("sudo", "shell", "exec", "delete")):
+        return "high"
+    if any(token in lowered for token in ("write", "mail", "sensitive", "approve")):
+        return "medium"
+    if any(token in args for token in ("path", "file", "url", "uri")):
+        return "medium"
+    return "low"
+
+
+def _append_audit_log(path: str, payload: dict[str, Any]) -> None:
+    try:
+        target = Path(path)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        with target.open("a", encoding="utf-8") as fp:
+            fp.write(json_mod.dumps(payload, ensure_ascii=False) + "\n")
+    except Exception:
+        logger.debug("[tool-hooks] Failed to append audit log", exc_info=True)
+
+
+def _default_audit_log_path() -> str:
+    return str(
+        Path(tempfile.gettempdir()) / "agent_runtimes_tool_approvals_audit.jsonl"
+    )
+
+
+def _normalize_hook_steps(raw: Any) -> list[dict[str, Any]]:
+    if raw is None:
+        return []
+
+    if isinstance(raw, str):
+        text = raw.strip()
+        if not text:
+            return []
+        return [{"python": text}]
+
+    if isinstance(raw, dict):
+        return [raw]
+
+    if isinstance(raw, list):
+        normalized: list[dict[str, Any]] = []
+        for item in raw:
+            if isinstance(item, str):
+                text = item.strip()
+                if text:
+                    normalized.append({"python": text})
+            elif isinstance(item, dict):
+                normalized.append(item)
+        return normalized
+
+    return []
+
+
+def _normalize_hook_tool_filter(raw: Any) -> list[str] | None:
+    if raw is None:
+        return None
+    if isinstance(raw, str):
+        value = raw.strip()
+        return [value] if value else None
+    if isinstance(raw, list):
+        values: list[str] = []
+        for item in raw:
+            if not isinstance(item, str):
+                continue
+            value = item.strip()
+            if value:
+                values.append(value)
+        return values or None
+    return None
 
 
 def _normalize_tool_args_for_match(raw_args: Any) -> dict[str, str]:
@@ -119,6 +242,10 @@ class ToolApprovalConfig:
     pod_name: str = ""
     tools_requiring_approval: list[str] = field(default_factory=list)
     timeout: float = 300.0
+    tool_hooks: dict[str, Any] = field(default_factory=dict)
+    audit_log_path: str = field(default_factory=_default_audit_log_path)
+    actor: str | None = field(default=None)
+    current_delegations: list[str] = field(default_factory=list)
     # JWT token used to authenticate requests to the datalayer-ai-agents backend
     # so that newly-created approvals are broadcast to remote UI panels.
     user_jwt_token: str | None = field(default=None)
@@ -137,6 +264,11 @@ class ToolApprovalConfig:
         return cls(
             agent_id=os.environ.get("AGENT_ID", "default"),
             pod_name=pod_name,
+            actor=os.environ.get("DATALAYER_ACTOR") or os.environ.get("USER") or None,
+            audit_log_path=os.environ.get(
+                "DATALAYER_TOOL_APPROVAL_AUDIT_LOG",
+                _default_audit_log_path(),
+            ),
             # DATALAYER_USER_TOKEN is populated by the configure-from-spec endpoint
             # so that the approval manager can authenticate against ai-agents.
             user_jwt_token=os.environ.get("DATALAYER_USER_TOKEN") or None,
@@ -158,6 +290,25 @@ class ToolApprovalConfig:
         base = cls.from_env()
         base.tools_requiring_approval = spec_config.get("tools", [])
         base.timeout = _parse_timeout_hms(spec_config.get("timeout"), default=300.0)
+        if isinstance(spec_config.get("tool_hooks"), dict):
+            base.tool_hooks = spec_config.get("tool_hooks") or {}
+        if isinstance(spec_config.get("toolHooks"), dict):
+            base.tool_hooks = spec_config.get("toolHooks") or {}
+        audit_log_path = spec_config.get("audit_log_path")
+        if isinstance(audit_log_path, str):
+            base.audit_log_path = audit_log_path
+        audit_log_path_camel = spec_config.get("auditLogPath")
+        if isinstance(audit_log_path_camel, str):
+            base.audit_log_path = audit_log_path_camel
+        actor = spec_config.get("actor")
+        if isinstance(actor, str):
+            base.actor = actor
+        current_delegations = spec_config.get("current_delegations")
+        if isinstance(current_delegations, list):
+            base.current_delegations = [str(item) for item in current_delegations]
+        current_delegations_camel = spec_config.get("currentDelegations")
+        if isinstance(current_delegations_camel, list):
+            base.current_delegations = [str(item) for item in current_delegations_camel]
         return base
 
 
@@ -405,11 +556,194 @@ class ToolsGuardrailCapability(AbstractCapability[Any]):
 
     config: ToolApprovalConfig = field(default_factory=ToolApprovalConfig)
     _manager: ToolApprovalManager | None = field(default=None, init=False, repr=False)
+    _decision_by_tool_call: dict[str, dict[str, Any]] = field(
+        default_factory=dict, init=False, repr=False
+    )
 
     def _get_manager(self) -> ToolApprovalManager:
         if self._manager is None:
             self._manager = ToolApprovalManager(self.config)
         return self._manager
+
+    def _build_authorization_request(
+        self,
+        *,
+        ctx: RunContext[Any],
+        call: ToolCallPart,
+        args: dict[str, Any],
+    ) -> dict[str, Any]:
+        actor = self.config.actor or os.environ.get("USER") or "unknown"
+        run_id = (
+            getattr(ctx, "run_id", None)
+            or getattr(ctx, "conversation_id", None)
+            or getattr(call, "tool_call_id", None)
+        )
+        resource = _extract_resource(call.tool_name, args)
+        risk_class = _risk_class_for_tool(call.tool_name, args)
+        current_delegations = list(self.config.current_delegations or [])
+
+        return {
+            "actor": actor,
+            "tool": call.tool_name,
+            "arguments": args,
+            "resource": resource,
+            "current_delegations": current_delegations,
+            "risk_class": risk_class,
+            "run_id": run_id,
+            "tool_call_id": getattr(call, "tool_call_id", None),
+            "agent_id": self.config.agent_id,
+            "pod_name": self.config.pod_name,
+        }
+
+    def _get_steps_for_phase(
+        self,
+        *,
+        phase: str,
+    ) -> list[dict[str, Any]]:
+        hooks = self.config.tool_hooks or {}
+        return _normalize_hook_steps(hooks.get(phase))
+
+    async def _run_function_hook(
+        self,
+        function_ref: str,
+        payload: dict[str, Any],
+        step: dict[str, Any],
+    ) -> Any:
+        module_name, sep, attr_name = function_ref.partition(":")
+        if not sep or not module_name or not attr_name:
+            raise ValueError(
+                "Hook function must be formatted as 'module.path:function_name'"
+            )
+        module = importlib.import_module(module_name)
+        fn = getattr(module, attr_name)
+        raw_kwargs = step.get("kwargs")
+        kwargs: dict[str, Any] = raw_kwargs if isinstance(raw_kwargs, dict) else {}
+        result = fn(payload, **kwargs)
+        if inspect.isawaitable(result):
+            result = await result
+        return result
+
+    async def _run_python_hook(
+        self,
+        script: str,
+        payload: dict[str, Any],
+        step: dict[str, Any],
+    ) -> Any:
+        local_vars: dict[str, Any] = {
+            "payload": payload,
+            "request": payload,
+            "decision": None,
+            "hook_result": None,
+            "step": step,
+        }
+        # Hook scripts come from trusted spec/tool hook config and run with an isolated local scope.
+        exec(script, {}, local_vars)  # nosec B102
+        if local_vars.get("hook_result") is not None:
+            return local_vars.get("hook_result")
+        if local_vars.get("decision") is not None:
+            return {"decision": local_vars.get("decision")}
+        return None
+
+    async def _run_tool_hooks(
+        self,
+        *,
+        phase: str,
+        payload: dict[str, Any],
+    ) -> list[Any]:
+        steps = self._get_steps_for_phase(phase=phase)
+        outputs: list[Any] = []
+        tool_name = str(payload.get("tool") or "")
+
+        for step in steps:
+            step_tools = _normalize_hook_tool_filter(step.get("tools"))
+            if step_tools is not None and tool_name not in set(step_tools):
+                continue
+
+            timeout_seconds = _parse_timeout_hms(step.get("timeout"), default=5.0)
+
+            try:
+                function_ref = step.get("function")
+                python_script = step.get("python")
+                if isinstance(function_ref, str):
+                    out = await asyncio.wait_for(
+                        self._run_function_hook(function_ref, payload, step),
+                        timeout=timeout_seconds,
+                    )
+                elif isinstance(python_script, str):
+                    out = await asyncio.wait_for(
+                        self._run_python_hook(python_script, payload, step),
+                        timeout=timeout_seconds,
+                    )
+                else:
+                    continue
+                outputs.append(out)
+            except Exception as exc:
+                logger.warning(
+                    "[tool-hooks] %s hook step failed for tool '%s': %s",
+                    phase,
+                    payload.get("tool"),
+                    exc,
+                )
+                _append_audit_log(
+                    self.config.audit_log_path,
+                    {
+                        "ts": _now_iso(),
+                        "event": "hook-error",
+                        "phase": phase,
+                        "tool": payload.get("tool"),
+                        "tool_call_id": payload.get("tool_call_id"),
+                        "error": str(exc),
+                    },
+                )
+
+        return outputs
+
+    def _extract_decision(self, outputs: list[Any]) -> tuple[str, str | None]:
+        for output in outputs:
+            if isinstance(output, str):
+                return _normalize_decision(output), None
+            if isinstance(output, dict):
+                decision = _normalize_decision(output.get("decision"))
+                note = output.get("reason") or output.get("note")
+                return decision, str(note) if note else None
+        return "approval-needed", None
+
+    def _remember_decision(
+        self,
+        *,
+        tool_call_id: str | None,
+        decision: str,
+        note: str | None,
+        request_payload: dict[str, Any],
+    ) -> None:
+        if not tool_call_id:
+            return
+        self._decision_by_tool_call[tool_call_id] = {
+            "decision": decision,
+            "note": note,
+            "request": request_payload,
+            "ts": _now_iso(),
+        }
+
+    def _log_decision(self, payload: dict[str, Any]) -> None:
+        _append_audit_log(
+            self.config.audit_log_path,
+            {
+                "ts": _now_iso(),
+                "event": "tool-authorization-decision",
+                **payload,
+            },
+        )
+
+    def _log_execution_result(self, payload: dict[str, Any]) -> None:
+        _append_audit_log(
+            self.config.audit_log_path,
+            {
+                "ts": _now_iso(),
+                "event": "tool-execution-result",
+                **payload,
+            },
+        )
 
     async def handle_deferred_tool_calls(
         self,
@@ -535,6 +869,53 @@ class ToolsGuardrailCapability(AbstractCapability[Any]):
             except Exception:
                 safe_args[k] = "<non-serializable>"
 
+        auth_request = self._build_authorization_request(
+            ctx=ctx,
+            call=call,
+            args=safe_args,
+        )
+        hook_outputs = await self._run_tool_hooks(
+            phase="before_tool_execute",
+            payload=auth_request,
+        )
+        hook_decision, hook_note = self._extract_decision(hook_outputs)
+
+        self._log_decision(
+            {
+                "agent_id": self.config.agent_id,
+                "tool": call.tool_name,
+                "tool_call_id": getattr(call, "tool_call_id", None),
+                "decision": hook_decision,
+                "note": hook_note,
+                "actor": auth_request.get("actor"),
+                "resource": auth_request.get("resource"),
+                "risk_class": auth_request.get("risk_class"),
+                "current_delegations": auth_request.get("current_delegations"),
+                "arguments": safe_args,
+            }
+        )
+
+        if hook_decision in {"allow", "delegated-allow"}:
+            self._remember_decision(
+                tool_call_id=getattr(call, "tool_call_id", None),
+                decision=hook_decision,
+                note=hook_note,
+                request_payload=auth_request,
+            )
+            return args
+
+        if hook_decision == "deny":
+            self._remember_decision(
+                tool_call_id=getattr(call, "tool_call_id", None),
+                decision=hook_decision,
+                note=hook_note,
+                request_payload=auth_request,
+            )
+            raise ToolApprovalRejectedError(
+                call.tool_name,
+                hook_note or "Denied by tool authorization policy hook",
+            )
+
         recent_window_seconds = 120.0
         now = datetime.now(timezone.utc)
 
@@ -648,4 +1029,117 @@ class ToolsGuardrailCapability(AbstractCapability[Any]):
             safe_args,
             tool_call_id,
         )
+
+        self._remember_decision(
+            tool_call_id=tool_call_id,
+            decision="approval-needed",
+            note="approved",
+            request_payload=auth_request,
+        )
+
+        self._log_decision(
+            {
+                "agent_id": self.config.agent_id,
+                "tool": call.tool_name,
+                "tool_call_id": tool_call_id,
+                "decision": "approval-needed",
+                "final": "approved",
+                "actor": auth_request.get("actor"),
+                "resource": auth_request.get("resource"),
+                "risk_class": auth_request.get("risk_class"),
+                "current_delegations": auth_request.get("current_delegations"),
+                "arguments": safe_args,
+            }
+        )
         return args
+
+    async def after_tool_execute(
+        self,
+        ctx: RunContext[Any],
+        *,
+        call: ToolCallPart,
+        tool_def: ToolDefinition,
+        args: dict[str, Any],
+        result: Any,
+    ) -> Any:
+        tool_call_id = getattr(call, "tool_call_id", None)
+        decision_entry = (
+            self._decision_by_tool_call.get(tool_call_id) if tool_call_id else None
+        )
+        request_payload = (
+            decision_entry.get("request")
+            if isinstance(decision_entry, dict)
+            else self._build_authorization_request(
+                ctx=ctx,
+                call=call,
+                args=_normalize_tool_args_for_match(args),
+            )
+        )
+
+        result_payload = {
+            "agent_id": self.config.agent_id,
+            "tool": call.tool_name,
+            "tool_call_id": tool_call_id,
+            "decision": (
+                decision_entry.get("decision")
+                if isinstance(decision_entry, dict)
+                else "approval-needed"
+            ),
+            "status": "success",
+            "result": str(result)[:4000],
+            "request": request_payload,
+        }
+        self._log_execution_result(result_payload)
+        await self._run_tool_hooks(
+            phase="after_tool_execute",
+            payload=result_payload,
+        )
+        if tool_call_id:
+            self._decision_by_tool_call.pop(tool_call_id, None)
+        return result
+
+    async def on_tool_execute_error(
+        self,
+        ctx: RunContext[Any],
+        *,
+        call: ToolCallPart,
+        tool_def: ToolDefinition,
+        args: dict[str, Any],
+        error: Exception,
+    ) -> Exception:
+        tool_call_id = getattr(call, "tool_call_id", None)
+        decision_entry = (
+            self._decision_by_tool_call.get(tool_call_id) if tool_call_id else None
+        )
+        request_payload = (
+            decision_entry.get("request")
+            if isinstance(decision_entry, dict)
+            else self._build_authorization_request(
+                ctx=ctx,
+                call=call,
+                args=_normalize_tool_args_for_match(args),
+            )
+        )
+
+        error_payload = {
+            "agent_id": self.config.agent_id,
+            "tool": call.tool_name,
+            "tool_call_id": tool_call_id,
+            "decision": (
+                decision_entry.get("decision")
+                if isinstance(decision_entry, dict)
+                else "approval-needed"
+            ),
+            "status": "error",
+            "error": str(error),
+            "error_type": type(error).__name__,
+            "request": request_payload,
+        }
+        self._log_execution_result(error_payload)
+        await self._run_tool_hooks(
+            phase="on_tool_execute_error",
+            payload=error_payload,
+        )
+        if tool_call_id:
+            self._decision_by_tool_call.pop(tool_call_id, None)
+        return error

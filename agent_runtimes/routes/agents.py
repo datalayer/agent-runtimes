@@ -867,6 +867,11 @@ class CreateAgentRequest(BaseModel):
         alias="postHooks",
         description="Optional post-stop hooks override.",
     )
+    tool_hooks: dict[str, Any] | None = Field(
+        default=None,
+        alias="toolHooks",
+        description="Optional per-tool-call hooks override.",
+    )
     parameters: dict[str, Any] | None = Field(
         default=None,
         description="Optional JSON schema for launch parameters.",
@@ -1058,10 +1063,12 @@ async def create_agent(
 
         resolved_pre_hooks = None
         resolved_post_hooks = None
+        resolved_tool_hooks = None
         parameter_schema: dict[str, Any] | None = None
         if library_spec is not None:
             resolved_pre_hooks = getattr(library_spec, "pre_hooks", None)
             resolved_post_hooks = getattr(library_spec, "post_hooks", None)
+            resolved_tool_hooks = getattr(library_spec, "tool_hooks", None)
             parameter_schema = getattr(library_spec, "parameters", None)
 
         # Apply defaults from forwarded full spec payload when request fields
@@ -1154,6 +1161,10 @@ async def create_agent(
             if isinstance(forwarded_post_hooks, dict):
                 resolved_post_hooks = forwarded_post_hooks
 
+            forwarded_tool_hooks = _spec_value("toolHooks", "tool_hooks")
+            if isinstance(forwarded_tool_hooks, dict):
+                resolved_tool_hooks = forwarded_tool_hooks
+
             forwarded_parameters = _spec_value("parameters")
             if isinstance(forwarded_parameters, dict):
                 parameter_schema = forwarded_parameters
@@ -1162,6 +1173,8 @@ async def create_agent(
             resolved_pre_hooks = request.pre_hooks
         if isinstance(request.post_hooks, dict):
             resolved_post_hooks = request.post_hooks
+        if isinstance(request.tool_hooks, dict):
+            resolved_tool_hooks = request.tool_hooks
         if isinstance(request.parameters, dict):
             parameter_schema = request.parameters
 
@@ -1196,6 +1209,10 @@ async def create_agent(
             )
             resolved_post_hooks = _render_value_with_parameters(
                 resolved_post_hooks,
+                launch_parameters,
+            )
+            resolved_tool_hooks = _render_value_with_parameters(
+                resolved_tool_hooks,
                 launch_parameters,
             )
 
@@ -1739,10 +1756,18 @@ async def create_agent(
                         for cap in capabilities
                     )
                 )
+                if has_tool_approval_capability and isinstance(
+                    resolved_tool_hooks, dict
+                ):
+                    for cap in capabilities or []:
+                        if isinstance(cap, ToolsGuardrailCapability):
+                            cap.config.tool_hooks = resolved_tool_hooks
                 if not has_tool_approval_capability:
                     approval_config = ToolApprovalConfig.from_env()
                     approval_config.agent_id = agent_id
                     approval_config.tools_requiring_approval = approval_patterns
+                    if isinstance(resolved_tool_hooks, dict):
+                        approval_config.tool_hooks = resolved_tool_hooks
                     # Override/supplement env-var token with the per-request Bearer
                     # token so the approval manager can authenticate against the
                     # datalayer-ai-agents backend when forwarding pending approvals.
@@ -1948,6 +1973,8 @@ async def create_agent(
             stored["pre_hooks"] = resolved_pre_hooks
         if isinstance(resolved_post_hooks, dict):
             stored["post_hooks"] = resolved_post_hooks
+        if isinstance(resolved_tool_hooks, dict):
+            stored["tool_hooks"] = resolved_tool_hooks
         if isinstance(parameter_schema, dict):
             stored["parameters"] = parameter_schema
         stored["agent_parameters"] = launch_parameters
@@ -3810,6 +3837,8 @@ class ConfigureFromSpecRequest(BaseModel):
     user_token: str | None = None
     jupyter_sandbox: str | None = None
     mcp_proxy_url: str | None = None
+    evals_mode: str | None = None
+    emit_live_events: bool | None = None
 
 
 @router.post("/configure-from-spec")
@@ -3878,6 +3907,13 @@ async def configure_from_spec_endpoint(
     # Must be set before create_agent() is called (step 4 below).
     if body.user_token:
         os.environ["DATALAYER_USER_TOKEN"] = body.user_token
+
+    if body.evals_mode:
+        os.environ["DATALAYER_EVALS_MODE"] = body.evals_mode
+    if body.emit_live_events is not None:
+        os.environ["DATALAYER_EVALS_EMIT_LIVE_EVENTS"] = (
+            "true" if body.emit_live_events else "false"
+        )
 
     # ── 2. Validate that the referenced library spec exists ──────────
     spec = get_library_agent_spec(body.agent_spec_id)
@@ -4074,6 +4110,8 @@ async def configure_from_spec_endpoint(
         if isinstance(effective_model, str)
         else str(effective_model),
         "specs_changed": specs_changed,
+        "evals_mode": body.evals_mode,
+        "emit_live_events": body.emit_live_events,
         "message": (
             f"Agent 'default' {'(re)created' if specs_changed else 'unchanged'} "
             f"from spec '{body.agent_spec_id}'."

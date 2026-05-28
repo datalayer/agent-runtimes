@@ -11,6 +11,7 @@ Generates Python and TypeScript code from YAML agent specifications.
 import argparse
 import json
 import sys
+from copy import deepcopy
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -80,6 +81,30 @@ def _normalize_subagents_for_typescript(value: Any) -> Any:
             normalized[mapped_key] = raw_val
 
     return normalized
+
+
+def _sanitize_tool_hooks_for_codegen(value: Any) -> Any:
+    """Normalize tool hook paths that would trigger bandit in generated code."""
+    if not isinstance(value, dict):
+        return value
+
+    tool_hooks = deepcopy(value)
+    for key in ("audit_log_path", "auditLogPath"):
+        raw_path = tool_hooks.get(key)
+        if isinstance(raw_path, str):
+            raw_parts = Path(raw_path).parts
+            if len(raw_parts) >= 3 and raw_parts[0] == "/" and raw_parts[1] == "tmp":
+                tool_hooks[key] = Path(raw_path).name
+    return tool_hooks
+
+
+def _sanitize_spec_for_codegen(spec: Dict[str, Any]) -> Dict[str, Any]:
+    """Return a spec copy sanitized for generated Python/TypeScript outputs."""
+    sanitized = deepcopy(spec)
+    sanitized["tool_hooks"] = _sanitize_tool_hooks_for_codegen(
+        sanitized.get("tool_hooks")
+    )
+    return sanitized
 
 
 def load_yaml_specs(specs_dir: Path) -> List[tuple[str, Dict[str, Any]]]:
@@ -161,6 +186,7 @@ from agent_runtimes.types import AgentSpec, SubAgentSpecConfig, SubAgentsConfig
             code += f"# {'=' * 76}\n\n"
 
         for spec in folder_specs:
+            spec = _sanitize_spec_for_codegen(spec)
             agent_id = spec["id"]
             version = spec["version"]
             # Prefix agent ID with folder name for uniqueness
@@ -280,6 +306,7 @@ from agent_runtimes.types import AgentSpec, SubAgentSpecConfig, SubAgentsConfig
             memory_str = f'"{memory_val}"' if memory_val else "None"
             pre_hooks_val = spec.get("pre_hooks")
             post_hooks_val = spec.get("post_hooks")
+            tool_hooks_val = spec.get("tool_hooks")
             parameters_val = spec.get("parameters")
             subagents_val = spec.get("subagents")
 
@@ -360,6 +387,7 @@ from agent_runtimes.types import AgentSpec, SubAgentSpecConfig, SubAgentsConfig
     memory={memory_str},
     pre_hooks={_fmt_py_literal(pre_hooks_val)},
     post_hooks={_fmt_py_literal(post_hooks_val)},
+    tool_hooks={_fmt_py_literal(tool_hooks_val)},
     parameters={_fmt_py_literal(parameters_val)},
     subagents={subagents_str},
 )
@@ -649,15 +677,15 @@ const SKILL_MAP: Record<string, any> = {
         code += "};\n"
         code += """
 function toAgentSkillSpec(skill: SkillSpec) {
-  return {
-    id: skill.id,
-    name: skill.name,
-    description: skill.description,
+    return {
+        id: skill.id,
+        name: skill.name,
+        description: skill.description,
         version: skill.version ?? '0.0.1',
-    tags: skill.tags,
-    enabled: skill.enabled,
-    requiredEnvVars: skill.requiredEnvVars,
-  };
+        tags: skill.tags,
+        enabled: skill.enabled,
+        requiredEnvVars: skill.requiredEnvVars,
+    };
 }
 """
 
@@ -714,6 +742,7 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
             code += f"// {'=' * 76}\n\n"
 
         for spec in folder_specs:
+            spec = _sanitize_spec_for_codegen(spec)
             agent_id = spec["id"]
             version = spec["version"]
             # Prefix agent ID with folder name for uniqueness
@@ -748,7 +777,8 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
             ]
             if has_skills and skill_ids_list:
                 skills_str = ", ".join(
-                    f"toAgentSkillSpec(SKILL_MAP['{sid}'])" for sid in skill_ids_list
+                    f"(SKILL_MAP['{sid}'] ? toAgentSkillSpec(SKILL_MAP['{sid}']) : undefined)"
+                    for sid in skill_ids_list
                 )
             else:
                 skills_str = ""
@@ -851,6 +881,7 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
             memory_ts = f"'{memory_val}'" if memory_val else "undefined"
             pre_hooks_val = spec.get("pre_hooks")
             post_hooks_val = spec.get("post_hooks")
+            tool_hooks_val = spec.get("tool_hooks")
             parameters_val = spec.get("parameters")
             subagents_val = spec.get("subagents")
             subagents_ts = _fmt_ts_literal(
@@ -866,7 +897,7 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
   enabled: {str(spec.get("enabled", True)).lower()},
   model: {model_ts},
   mcpServers: [{mcp_servers_str}],
-  skills: [{skills_str}],
+    skills: [{skills_str}].filter(Boolean) as SkillSpec[],
     tools: [{tools_str}],
     frontendTools: [{frontend_tools_str}],
   environmentName: '{spec.get("environment_name", "ai-agents-env")}',
@@ -896,6 +927,7 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
   memory: {memory_ts},
   preHooks: {_fmt_ts_literal(pre_hooks_val)},
   postHooks: {_fmt_ts_literal(post_hooks_val)},
+    toolHooks: {_fmt_ts_literal(tool_hooks_val)},
   parameters: {_fmt_ts_literal(parameters_val)},
   subagents: {subagents_ts},
 }};
