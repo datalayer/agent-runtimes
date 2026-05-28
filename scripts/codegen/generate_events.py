@@ -94,7 +94,6 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         "",
         "from agent_runtimes.types import EventField, EventSpec",
         "",
-        "",
         "# " + "=" * 76,
         "# Event Definitions",
         "# " + "=" * 76,
