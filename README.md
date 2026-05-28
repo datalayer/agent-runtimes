@@ -57,7 +57,33 @@ Agent Runtimes solves the complexity of deploying AI agents by providing:
 
 ## Examples
 
-The examples will demonstrate how to use the Agent Runtimes functionality in various scenarios and frameworks.
+The examples demonstrate how to use the Agent Runtimes functionality in various scenarios and frameworks.
+
+### Install
+
+`make examples` starts both the Python agent server and the Vite dev server,
+so you need both stacks installed once:
+
+```bash
+# 1. Node dependencies for the React examples + Vite dev server.
+npm install
+
+# 2. Python package (editable) for the local agent-runtimes server.
+#    Use a virtualenv or conda env of your choice.
+pip install -e .
+```
+
+Optional extras (declared in `pyproject.toml`):
+
+```bash
+pip install -e ".[examples]"   # extra agent framework deps used by examples
+pip install -e ".[test]"       # pytest and test utilities
+pip install -e ".[cli]"        # CLI dependencies
+pip install -e ".[chat]"       # chat-related extras
+pip install -e ".[docs]"       # docs build dependencies
+```
+
+### Run
 
 ```bash
 make examples
@@ -128,14 +154,14 @@ PLANE_LOCAL_IAM_URL=http://localhost:9701 make examples:proxy
 
 On the main page, you’ll find an example gallery (cards) that break things down into practical building blocks:
 
-• UX patterns (aka GenUI) with protocols like A2UI and AG-UI
-• Interactive or triggered workflows
-• Agent Identity and Controls with guardrails, monitoring, tool approvals
-• Programmatic tooling with Sandbox and Codemode for MCP and Skills
-• Outputs and Notifications
-• Real-time collaboration with users, subagents, and multi-agent teams
-• Custom agents built from Agentspecs
-• ...
+- UX patterns (aka GenUI) with protocols like A2UI and AG-UI
+- Interactive or triggered workflows
+- Agent Identity and Controls with guardrails, monitoring, tool approvals
+- Programmatic tooling with Sandbox and Codemode for MCP and Skills
+- Outputs and Notifications
+- Real-time collaboration with users, subagents, and multi-agent teams
+- Custom agents built from Agentspecs
+- ...
 
 Each of these concerns deserves more than a one-off solution—they need deep, composable, and pluggable implementations.
 
