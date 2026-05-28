@@ -52,7 +52,7 @@ const queryClient = new QueryClient();
 // ─── Constants ─────────────────────────────────────────────────────────────
 
 const AGENT_NAME = 'outputs-example-agent';
-const AGENT_SPEC_ID = 'example-outputs';
+const AGENT_SPEC_ID = 'demo-outputs';
 const DEFAULT_LOCAL_BASE_URL =
   import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
 
@@ -564,6 +564,7 @@ const AgentOutputsInner: React.FC<{ onLogout: () => void }> = ({
             agentId={agentId}
             authToken={chatAuthToken}
             title="Outputs Demo Agent"
+            brandIcon={<FileIcon size={16} />}
             placeholder="Ask for a Table, JSON, Chart, or File…"
             description={`${detected.length} detected output${detected.length !== 1 ? 's' : ''}`}
             showHeader={true}

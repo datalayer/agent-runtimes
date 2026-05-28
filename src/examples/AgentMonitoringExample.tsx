@@ -455,6 +455,7 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
             agentId={agentId}
             authToken={chatAuthToken}
             title="Monitoring Agent"
+            brandIcon={<GraphIcon size={16} />}
             placeholder="Ask for cost, token usage, and turn-level monitoring insights..."
             description={`${alerts.length} active alert${alerts.length !== 1 ? 's' : ''}`}
             showHeader={true}

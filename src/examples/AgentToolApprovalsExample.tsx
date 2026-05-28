@@ -16,6 +16,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Box } from '@datalayer/primer-addons';
 import { AuthRequiredView, ErrorView } from './components';
 import { Spinner, Text } from '@primer/react';
+import { CheckCircleIcon } from '@primer/octicons-react';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
@@ -249,6 +250,7 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
             agentId={agentId}
             authToken={chatAuthToken}
             title={`Tool Approval Agent - ${podName}`}
+            brandIcon={<CheckCircleIcon size={16} />}
             placeholder="Ask for actions that require approval..."
             showHeader={true}
             showNewChatButton={true}

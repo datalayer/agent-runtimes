@@ -379,6 +379,7 @@ const AgentSkillsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
             agentId={agentId}
             authToken={chatAuthToken}
             title={`Skills Demo Agent`}
+            brandIcon={<BriefcaseIcon size={16} />}
             placeholder="Ask the agent to use its skills..."
             showHeader={true}
             showNewChatButton={true}

@@ -6,6 +6,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Box, setupPrimerPortals } from '@datalayer/primer-addons';
 import { Button, Heading, Label, Spinner, Text } from '@primer/react';
+import { FileIcon } from '@primer/octicons-react';
 import { RJSFSchema } from '@rjsf/utils';
 import validator from '@rjsf/validator-ajv8';
 import { Form, yamlSchemaToJsonSchema } from '@datalayer/primer-rjsf';
@@ -400,6 +401,7 @@ const AgentParametersExample: React.FC = () => {
       baseUrl={baseUrl}
       agentId={agentId}
       title={`Parameterized Agent: ${String(formData.project ?? 'Project')}`}
+      brandIcon={<FileIcon size={16} />}
       placeholder="Ask something about your configured project..."
       description={`Role: ${String(formData.role ?? 'n/a')} · Tone: ${String(formData.tone ?? 'n/a')}`}
       showHeader={true}

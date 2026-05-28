@@ -5,6 +5,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Text, Spinner } from '@primer/react';
+import { SyncIcon } from '@primer/octicons-react';
 import { Box, setupPrimerPortals } from '@datalayer/primer-addons';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
@@ -123,6 +124,7 @@ const AgentHooksExample: React.FC = () => {
       baseUrl={baseUrl}
       agentId={agentId}
       title="Hooks Agent"
+      brandIcon={<SyncIcon size={16} />}
       placeholder="Ask about lifecycle hooks..."
       description="Demonstrates lifecycle hooks and pydantic-style tool hooks: before_tool_execute, after_tool_execute, on_tool_execute_error, deferred_tool_calls"
       showHeader={true}

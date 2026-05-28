@@ -17,6 +17,7 @@ import {
   SidebarCollapseIcon,
   SidebarExpandIcon,
   XIcon,
+  AgentIcon,
 } from '@primer/octicons-react';
 import { AiAgentIcon } from '@datalayer/icons-react';
 import { Blankslate } from '@primer/react/experimental';
@@ -1572,6 +1573,7 @@ const AgentspecsExample: React.FC<AgentRuntimeFormExampleProps> = ({
                           agentId: effectiveAgentId,
                           title:
                             currentAgent?.name || agentName || 'AI Assistant',
+                          brandIcon: <AgentIcon size={16} />,
                           autoConnect: true,
                           autoFocus: true,
                           placeholder: 'Type your message to the agent...',

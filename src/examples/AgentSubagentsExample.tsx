@@ -234,6 +234,7 @@ const AgentSubagentsInner: React.FC<{ onLogout: () => void }> = ({
             agentId={agentId}
             authToken={chatAuthToken}
             title="Subagents Orchestrator"
+            brandIcon={<PeopleIcon size={16} />}
             placeholder="Ask me to research a topic, write content, or both..."
             description="Multi-agent delegation with researcher & writer"
             showHeader={true}

@@ -644,6 +644,7 @@ const AgentMCPInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
             agentId={agentId}
             authToken={chatAuthToken}
             title="MCP Demo Agent"
+            brandIcon={<GlobeIcon size={16} />}
             placeholder="Ask the agent to search the web or explore GitHub..."
             showHeader={true}
             showNewChatButton={true}

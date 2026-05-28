@@ -306,7 +306,12 @@ export function useAgentRuntimes(
         setLifecycleStatus('launching');
         setLifecycleError(null);
         try {
-          const safeName = `${agentSpecId}`
+          const preferredRuntimeName =
+            (typeof agentConfig?.name === 'string' && agentConfig.name) ||
+            (typeof agentSpec?.name === 'string' && agentSpec.name) ||
+            `${agentSpecId}`;
+
+          const safeName = preferredRuntimeName
             .replace(/\//g, '-')
             .replace(/[^a-z0-9-]/g, '-')
             .replace(/-+/g, '-')
@@ -344,7 +349,14 @@ export function useAgentRuntimes(
         });
       }
     },
-    [agentSpecId, hasSpec, resolvedRuntimeCreationBaseUrl, storeLaunchAgent],
+    [
+      agentConfig?.name,
+      agentSpec?.name,
+      agentSpecId,
+      hasSpec,
+      resolvedRuntimeCreationBaseUrl,
+      storeLaunchAgent,
+    ],
   );
 
   // ─── Create Agent ───────────────────────────────────────────────────

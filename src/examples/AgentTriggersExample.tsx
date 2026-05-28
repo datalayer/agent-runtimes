@@ -1219,6 +1219,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
                 agentId={agentId}
                 authToken={chatAuthToken}
                 title="Trigger Agent"
+                brandIcon={<ZapIcon size={16} />}
                 description={`View-only trigger output. Cron: ${cronExpr} | Webhook: ${webhookEnabled ? 'on' : 'off'} | Event: ${eventSubscribed ? eventTopic : 'none'}`}
                 showHeader={true}
                 autoFocus={false}

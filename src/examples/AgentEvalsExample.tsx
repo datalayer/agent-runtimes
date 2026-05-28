@@ -17,7 +17,13 @@
 
 /// <reference types="vite/client" />
 
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, {
+  useEffect,
+  useState,
+  useCallback,
+  useRef,
+  useMemo,
+} from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   Text,
@@ -51,7 +57,7 @@ const queryClient = new QueryClient();
 // ─── Constants ─────────────────────────────────────────────────────────────
 
 const AGENT_NAME = 'eval-example-agent';
-const AGENT_SPEC_ID = 'monitor-sales-kpis';
+const AGENT_SPEC_ID = 'example-evals';
 const DEFAULT_EXECUTION_TARGET: ExecutionTarget =
   (
     (import.meta.env.VITE_AGENT_EVALS_TARGET as string | undefined) || 'cloud'
@@ -60,6 +66,44 @@ const DEFAULT_EXECUTION_TARGET: ExecutionTarget =
     : 'cloud';
 
 type ExecutionTarget = 'cloud' | 'local';
+
+const normalizeHttpUrl = (value: unknown): string | null => {
+  if (typeof value !== 'string') {
+    return null;
+  }
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+  try {
+    const url = new URL(trimmed);
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+      return null;
+    }
+    url.pathname = '';
+    url.search = '';
+    url.hash = '';
+    return url.toString().replace(/\/$/, '');
+  } catch {
+    return null;
+  }
+};
+
+const isLocalhostUrl = (value: string | null | undefined): boolean => {
+  if (!value) {
+    return false;
+  }
+  try {
+    const url = new URL(value);
+    return (
+      url.hostname === 'localhost' ||
+      url.hostname === '127.0.0.1' ||
+      url.hostname === '0.0.0.0'
+    );
+  } catch {
+    return false;
+  }
+};
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -83,6 +127,28 @@ const AgentEvalsInner: React.FC<{
   const { configuration } = useCoreStore();
   const agentName = useRef(uniqueAgentId(AGENT_NAME)).current;
   const localRuntimeBaseUrl = useExampleAgentRuntimesUrl();
+  const cloudRuntimeBaseUrl = useMemo(() => {
+    const envRuntimesUrl = normalizeHttpUrl(
+      import.meta.env.VITE_DATALAYER_RUNTIMES_URL,
+    );
+    const envAgentRuntimesUrl = normalizeHttpUrl(
+      import.meta.env.VITE_DATALAYER_AGENT_RUNTIMES_URL,
+    );
+    const configuredRuntimesUrl = normalizeHttpUrl(
+      configuration?.runtimesRunUrl,
+    );
+
+    if (envRuntimesUrl && !isLocalhostUrl(envRuntimesUrl)) {
+      return envRuntimesUrl;
+    }
+    if (configuredRuntimesUrl && !isLocalhostUrl(configuredRuntimesUrl)) {
+      return configuredRuntimesUrl;
+    }
+    if (envAgentRuntimesUrl && !isLocalhostUrl(envAgentRuntimesUrl)) {
+      return envAgentRuntimesUrl;
+    }
+    return 'https://r1.datalayer.run';
+  }, [configuration?.runtimesRunUrl]);
 
   const {
     runtime,
@@ -96,7 +162,7 @@ const AgentEvalsInner: React.FC<{
     runtimeCreationTarget:
       executionTarget === 'local' ? 'local-agent-runtimes' : 'backend-services',
     runtimeCreationBaseUrl:
-      executionTarget === 'local' ? localRuntimeBaseUrl : undefined,
+      executionTarget === 'local' ? localRuntimeBaseUrl : cloudRuntimeBaseUrl,
     agentConfig: {
       name: agentName,
       model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
@@ -509,9 +575,23 @@ const AgentEvalsInner: React.FC<{
         }}
       >
         <BeakerIcon size={16} />
-        <Heading as="h3" sx={{ fontSize: 2, flex: 1 }}>
-          Evaluation — {podName}
-        </Heading>
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Heading as="h3" sx={{ fontSize: 2 }}>
+            Evaluation — {podName}
+          </Heading>
+          <Text
+            sx={{
+              fontSize: 0,
+              color: 'fg.muted',
+              display: 'block',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            Runtime API: {runtimeCreationBaseUrl}/api/runtimes/v1/runtimes
+          </Text>
+        </Box>
         <FormControl sx={{ minWidth: 160 }}>
           <FormControl.Label sx={{ fontSize: 0, mb: 1 }}>
             Target
@@ -538,6 +618,7 @@ const AgentEvalsInner: React.FC<{
             baseUrl={agentBaseUrl}
             agentId={agentId}
             title="Eval Agent"
+            brandIcon={<BeakerIcon size={16} />}
             placeholder="Chat with the agent, then run evaluations…"
             description={
               latestScore != null

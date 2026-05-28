@@ -7,8 +7,7 @@
  * AgentMemoryExample
  *
  * Demonstrates the Mem0 memory backend for durable agents.
- * Creates a cloud agent runtime (environment: 'ai-agents-env') via the Datalayer
- * Runtimes API, then deploys an agent with persistent memory on its sidecar.
+ * Creates a local agent-runtimes agent using the `example-memory` spec.
  *
  * The left panel shows a standard Chat. The right panel shows the
  * agent's memory contents (fetched from the runtime sidecar) and lets
@@ -37,12 +36,12 @@ import { uniqueAgentId } from './utils/agentId';
 const queryClient = new QueryClient();
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { Chat } from '../chat';
-import { useAgentRuntimes } from '../hooks/useAgentRuntimes';
+import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 
 // ─── Constants ─────────────────────────────────────────────────────────────
 
 const AGENT_NAME = 'memory-example-agent';
-const AGENT_SPEC_ID = 'monitor-sales-kpis'; // uses mem0 memory
+const AGENT_SPEC_ID = 'example-memory';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -58,31 +57,20 @@ interface MemoryEntry {
 const AgentMemoryInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
   const { token } = useSimpleAuthStore();
   const agentName = useRef(uniqueAgentId(AGENT_NAME)).current;
-
-  const {
-    runtime,
-    status: runtimeStatus,
-    isReady,
-    error: hookError,
-  } = useAgentRuntimes({
-    agentSpecId: AGENT_SPEC_ID,
-    autoStart: true,
-    agentConfig: {
-      name: agentName,
-      model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-      protocol: 'vercel-ai',
-      description: 'Agent with Mem0 persistent memory',
-    },
-  });
+  const agentBaseUrl = useExampleAgentRuntimesUrl();
+  const [runtimeStatus, setRuntimeStatus] = useState<
+    'launching' | 'ready' | 'error'
+  >('launching');
+  const [isReady, setIsReady] = useState(false);
+  const [hookError, setHookError] = useState<string | null>(null);
+  const [agentId, setAgentId] = useState<string>(agentName);
 
   const [memories, setMemories] = useState<MemoryEntry[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<MemoryEntry[]>([]);
   const [searching, setSearching] = useState(false);
 
-  const agentBaseUrl = runtime?.agentBaseUrl || '';
-  const agentId = runtime?.agentId || AGENT_NAME;
-  const podName = runtime?.podName || '(launching…)';
+  const podName = isReady ? `local:${agentId}` : '(launching…)';
 
   // Authenticated fetch helper (for sidecar endpoints)
   const authFetch = useCallback(
@@ -97,6 +85,76 @@ const AgentMemoryInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
       }),
     [token],
   );
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    const createLocalAgent = async () => {
+      setRuntimeStatus('launching');
+      setIsReady(false);
+      setHookError(null);
+
+      try {
+        const response = await authFetch(`${agentBaseUrl}/api/v1/agents`, {
+          method: 'POST',
+          body: JSON.stringify({
+            name: agentName,
+            description: 'Agent with Mem0 persistent memory',
+            agent_library: 'pydantic-ai',
+            transport: 'vercel-ai',
+            agent_spec_id: AGENT_SPEC_ID,
+            enable_skills: true,
+            tools: [],
+          }),
+        });
+
+        let resolvedAgentId = agentName;
+
+        if (response.ok) {
+          const data = await response.json();
+          resolvedAgentId = data?.id || agentName;
+        } else {
+          const contentType = response.headers.get('content-type') || '';
+          let detail = '';
+
+          if (contentType.includes('application/json')) {
+            const data = await response.json().catch(() => null);
+            detail =
+              (typeof data?.detail === 'string' && data.detail) ||
+              (typeof data?.message === 'string' && data.message) ||
+              '';
+          } else {
+            detail = await response.text();
+          }
+
+          if (!(response.status === 409 || /already exists/i.test(detail))) {
+            throw new Error(
+              detail || `Failed to create local agent: ${response.status}`,
+            );
+          }
+        }
+
+        if (!isCancelled) {
+          setAgentId(resolvedAgentId);
+          setIsReady(true);
+          setRuntimeStatus('ready');
+        }
+      } catch (error) {
+        if (!isCancelled) {
+          setHookError(
+            error instanceof Error ? error.message : 'Agent failed to start',
+          );
+          setRuntimeStatus('error');
+        }
+      }
+    };
+
+    void createLocalAgent();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [agentBaseUrl, agentName, authFetch]);
 
   // ── Fetch memory list ────────────────────────────────────────────────────
 
@@ -163,9 +221,7 @@ const AgentMemoryInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
       >
         <Spinner size="large" />
         <Text sx={{ color: 'fg.muted' }}>
-          {runtimeStatus === 'launching'
-            ? 'Launching runtime for memory agent…'
-            : 'Creating memory-enabled agent…'}
+          Launching local memory-enabled agent…
         </Text>
       </Box>
     );
@@ -218,6 +274,7 @@ const AgentMemoryInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
             baseUrl={agentBaseUrl}
             agentId={agentId}
             title="Memory Agent"
+            brandIcon={<DatabaseIcon size={16} />}
             placeholder="Chat — the agent remembers you across sessions…"
             description="Agent with Mem0 persistent memory"
             showHeader={true}

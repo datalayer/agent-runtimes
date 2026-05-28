@@ -1029,6 +1029,7 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
               baseUrl={agentBaseUrl}
               agentId={agentId}
               title="Monitor Sales KPI Agent"
+              brandIcon={<AgentIcon size={16} />}
               placeholder="Ask about sales KPIs…"
               description="Monitor Sales KPI agent with pause/resume checkpointing"
               showHeader={false}

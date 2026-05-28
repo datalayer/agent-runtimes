@@ -787,6 +787,7 @@ const AgentSandboxInner: React.FC<{ onLogout: () => void }> = ({
               agentId={agentId}
               authToken={chatAuthToken}
               title="Sandbox Agent"
+              brandIcon={<TerminalIcon size={16} />}
               placeholder="Ask the agent to write and run code…"
               showHeader={true}
               showNewChatButton={true}
