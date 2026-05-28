@@ -574,6 +574,8 @@ export interface AgentConfigurationProps {
   launchTarget?: 'local' | 'cloud';
   /** Current launch/runtime status label. */
   launchStatus?: string;
+  /** Effective service URL that will be used when launching. */
+  launchBaseUrl?: string;
   // Identity configuration
   identityProviders?: {
     [K in OAuthProvider]?: {
@@ -650,6 +652,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
   cloudLibraryError = null,
   launchTarget = 'local',
   launchStatus = 'idle',
+  launchBaseUrl,
   identityProviders,
   onIdentityConnect,
   onIdentityDisconnect,
@@ -1151,6 +1154,32 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
             Launch: {launchStatus}
           </Label>
         </Box>
+        {launchBaseUrl ? (
+          <Box
+            sx={{
+              mb: 2,
+              p: 2,
+              border: '1px solid',
+              borderColor: 'border.default',
+              borderRadius: 2,
+              bg: 'canvas.default',
+            }}
+          >
+            <Text sx={{ display: 'block', fontSize: 0, color: 'fg.muted' }}>
+              Launch URL
+            </Text>
+            <Text
+              sx={{
+                display: 'block',
+                fontSize: 1,
+                fontFamily: 'mono',
+                wordBreak: 'break-all',
+              }}
+            >
+              {launchBaseUrl}
+            </Text>
+          </Box>
+        ) : null}
         <Select
           value={selectedAgentId}
           onChange={e => onAgentSelect(e.target.value)}

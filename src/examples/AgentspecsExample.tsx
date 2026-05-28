@@ -230,6 +230,129 @@ const toYaml = (value: unknown, indent = 0): string => {
   return `${pad}${yamlScalar(value)}`;
 };
 
+const normalizeHttpUrl = (value: unknown): string | null => {
+  if (typeof value !== 'string') {
+    return null;
+  }
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+  if (!/^https?:\/\//i.test(trimmed)) {
+    return null;
+  }
+  try {
+    const url = new URL(trimmed);
+    url.pathname = url.pathname.replace(/\/$/, '');
+    return url.toString().replace(/\/$/, '');
+  } catch {
+    return null;
+  }
+};
+
+const isLocalhostUrl = (value: string | null | undefined): boolean => {
+  if (!value) {
+    return false;
+  }
+  try {
+    const url = new URL(value);
+    return (
+      url.hostname === 'localhost' ||
+      url.hostname === '127.0.0.1' ||
+      url.hostname === '0.0.0.0'
+    );
+  } catch {
+    return false;
+  }
+};
+
+const collectUrlCandidates = (
+  value: unknown,
+  out: string[] = [],
+  visited = new Set<unknown>(),
+): string[] => {
+  if (value == null || visited.has(value)) {
+    return out;
+  }
+  if (typeof value === 'string') {
+    const normalized = normalizeHttpUrl(value);
+    if (normalized) {
+      out.push(normalized);
+    }
+    return out;
+  }
+  if (typeof value !== 'object') {
+    return out;
+  }
+  visited.add(value);
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      collectUrlCandidates(item, out, visited);
+    }
+    return out;
+  }
+  const record = value as Record<string, unknown>;
+  for (const [key, nested] of Object.entries(record)) {
+    const lower = key.toLowerCase();
+    if (
+      lower.includes('url') ||
+      lower.includes('endpoint') ||
+      lower.includes('host')
+    ) {
+      collectUrlCandidates(nested, out, visited);
+      continue;
+    }
+    if (
+      lower.includes('service') ||
+      lower.includes('run') ||
+      lower.includes('cloud') ||
+      lower.includes('runtime') ||
+      lower.includes('agent')
+    ) {
+      collectUrlCandidates(nested, out, visited);
+    }
+  }
+  return out;
+};
+
+const resolveCloudRuntimeBaseUrlFromSpec = (
+  spec: LibraryAgentSpec | null,
+): string | null => {
+  if (!spec) {
+    return null;
+  }
+
+  const preferredKeys = [
+    'runtimesRunUrl',
+    'runtimeRunUrl',
+    'runtimes_url',
+    'runtime_url',
+    'runUrl',
+    'baseUrl',
+    'endpoint',
+  ];
+
+  for (const key of preferredKeys) {
+    const candidate = normalizeHttpUrl((spec as Record<string, unknown>)[key]);
+    if (candidate && !isLocalhostUrl(candidate)) {
+      return candidate;
+    }
+  }
+
+  const serviceRoots = [
+    (spec as Record<string, unknown>).services,
+    (spec as Record<string, unknown>).cloud,
+    (spec as Record<string, unknown>).runtime,
+    (spec as Record<string, unknown>).agent,
+    (spec as Record<string, unknown>).metadata,
+    spec,
+  ];
+
+  const candidates = serviceRoots.flatMap(root => collectUrlCandidates(root));
+  const nonLocal = candidates.find(url => !isLocalhostUrl(url));
+  return nonLocal || null;
+};
+
 /**
  * Agent Runtime Example Component
  *
@@ -412,16 +535,31 @@ const AgentspecsExample: React.FC<AgentRuntimeFormExampleProps> = ({
   const { configuration } = useCoreStore();
   const { token } = useSimpleAuthStore();
 
-  const cloudCatalogBaseUrl = useMemo(
-    () =>
-      configuration?.runtimesRunUrl ||
-      import.meta.env.VITE_DATALAYER_AGENT_RUNTIMES_URL ||
-      'https://r1.datalayer.run',
-    [configuration?.runtimesRunUrl],
-  );
+  const cloudCatalogBaseUrl = useMemo(() => {
+    const configured = normalizeHttpUrl(configuration?.runtimesRunUrl);
+    const envConfigured = normalizeHttpUrl(
+      import.meta.env.VITE_DATALAYER_AGENT_RUNTIMES_URL,
+    );
+    if (configured && !isLocalhostUrl(configured)) {
+      return configured;
+    }
+    return envConfigured || 'https://r1.datalayer.run';
+  }, [configuration?.runtimesRunUrl]);
 
   const isCloudMode = isCloudSpecSelection(selectedAgentId);
   const selectedSpec = selectedCloudSpec || selectedLibrarySpec;
+  const cloudRuntimeCreationBaseUrl = useMemo(() => {
+    if (!isCloudMode) {
+      return cloudCatalogBaseUrl;
+    }
+    return (
+      resolveCloudRuntimeBaseUrlFromSpec(selectedCloudSpec) ||
+      cloudCatalogBaseUrl
+    );
+  }, [isCloudMode, selectedCloudSpec, cloudCatalogBaseUrl]);
+  const serviceBaseUrlForSelection = isCloudMode
+    ? cloudRuntimeCreationBaseUrl
+    : baseUrl;
 
   // =====================================================================
   // Two-Container Codemode Architecture
@@ -659,11 +797,16 @@ const AgentspecsExample: React.FC<AgentRuntimeFormExampleProps> = ({
     if (!autoSelectMcpServers || autoSelectRef.current) return;
     if (!enableCodemode) return;
     if (selectedMcpServers.length > 0) return;
-    if (!baseUrl) return;
+    if (!serviceBaseUrlForSelection) return;
 
     const loadServers = async () => {
       try {
-        const response = await fetch(`${baseUrl}/api/v1/configure`);
+        const response = await fetch(
+          `${serviceBaseUrlForSelection}/api/v1/configure`,
+          {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+          },
+        );
         if (!response.ok) return;
         const data = await response.json();
         const servers = data?.mcpServers || [];
@@ -678,7 +821,13 @@ const AgentspecsExample: React.FC<AgentRuntimeFormExampleProps> = ({
     };
 
     void loadServers();
-  }, [autoSelectMcpServers, enableCodemode, selectedMcpServers, baseUrl]);
+  }, [
+    autoSelectMcpServers,
+    enableCodemode,
+    selectedMcpServers,
+    serviceBaseUrlForSelection,
+    token,
+  ]);
 
   // Track previous MCP servers to detect changes
   const prevMcpServersRef = useRef<McpServerSelection[]>(selectedMcpServers);
@@ -883,6 +1032,7 @@ const AgentspecsExample: React.FC<AgentRuntimeFormExampleProps> = ({
     agentSpecId: isCloudMode ? getCloudSpecId(selectedAgentId) : undefined,
     autoStart: false,
     runtimeCreationTarget: 'backend-services',
+    runtimeCreationBaseUrl: cloudRuntimeCreationBaseUrl,
     agentSpec: isCloudMode ? mergedSpecForLaunch : undefined,
     agentConfig: {
       name: agentName,
@@ -1347,7 +1497,7 @@ const AgentspecsExample: React.FC<AgentRuntimeFormExampleProps> = ({
                       protocol={currentAgent?.protocol || transport}
                       extensions={extensions}
                       wsUrl={wsUrl}
-                      baseUrl={baseUrl}
+                      baseUrl={serviceBaseUrlForSelection}
                       agentName={agentName}
                       description={description}
                       goal={goal}
@@ -1372,6 +1522,7 @@ const AgentspecsExample: React.FC<AgentRuntimeFormExampleProps> = ({
                       cloudLibraryError={cloudLibraryError}
                       launchTarget={isCloudMode ? 'cloud' : 'local'}
                       launchStatus={launchStatus}
+                      launchBaseUrl={serviceBaseUrlForSelection}
                       identityProviders={oauthProvidersConfig}
                       onIdentityConnect={handleIdentityConnect}
                       onIdentityDisconnect={handleIdentityDisconnect}
@@ -1379,7 +1530,13 @@ const AgentspecsExample: React.FC<AgentRuntimeFormExampleProps> = ({
                       onTransportChange={setTransport}
                       onExtensionsChange={setExtensions}
                       onWsUrlChange={setWsUrl}
-                      onBaseUrlChange={setBaseUrl}
+                      onBaseUrlChange={
+                        isCloudMode
+                          ? (_: string) => {
+                              /* Cloud mode uses cloud service URLs from spec/config. */
+                            }
+                          : setBaseUrl
+                      }
                       onAgentNameChange={setAgentName}
                       onDescriptionChange={setDescription}
                       onGoalChange={setGoal}
