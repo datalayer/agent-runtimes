@@ -308,9 +308,7 @@ class ToolApprovalConfig:
             base.current_delegations = [str(item) for item in current_delegations]
         current_delegations_camel = spec_config.get("currentDelegations")
         if isinstance(current_delegations_camel, list):
-            base.current_delegations = [
-                str(item) for item in current_delegations_camel
-            ]
+            base.current_delegations = [str(item) for item in current_delegations_camel]
         return base
 
 
