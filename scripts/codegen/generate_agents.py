@@ -11,6 +11,7 @@ Generates Python and TypeScript code from YAML agent specifications.
 import argparse
 import json
 import sys
+from copy import deepcopy
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -80,6 +81,30 @@ def _normalize_subagents_for_typescript(value: Any) -> Any:
             normalized[mapped_key] = raw_val
 
     return normalized
+
+
+def _sanitize_tool_hooks_for_codegen(value: Any) -> Any:
+    """Normalize tool hook paths that would trigger bandit in generated code."""
+    if not isinstance(value, dict):
+        return value
+
+    tool_hooks = deepcopy(value)
+    for key in ("audit_log_path", "auditLogPath"):
+        raw_path = tool_hooks.get(key)
+        if isinstance(raw_path, str):
+            raw_parts = Path(raw_path).parts
+            if len(raw_parts) >= 3 and raw_parts[0] == "/" and raw_parts[1] == "tmp":
+                tool_hooks[key] = Path(raw_path).name
+    return tool_hooks
+
+
+def _sanitize_spec_for_codegen(spec: Dict[str, Any]) -> Dict[str, Any]:
+    """Return a spec copy sanitized for generated Python/TypeScript outputs."""
+    sanitized = deepcopy(spec)
+    sanitized["tool_hooks"] = _sanitize_tool_hooks_for_codegen(
+        sanitized.get("tool_hooks")
+    )
+    return sanitized
 
 
 def load_yaml_specs(specs_dir: Path) -> List[tuple[str, Dict[str, Any]]]:
@@ -161,6 +186,7 @@ from agent_runtimes.types import AgentSpec, SubAgentSpecConfig, SubAgentsConfig
             code += f"# {'=' * 76}\n\n"
 
         for spec in folder_specs:
+            spec = _sanitize_spec_for_codegen(spec)
             agent_id = spec["id"]
             version = spec["version"]
             # Prefix agent ID with folder name for uniqueness
@@ -716,6 +742,7 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
             code += f"// {'=' * 76}\n\n"
 
         for spec in folder_specs:
+            spec = _sanitize_spec_for_codegen(spec)
             agent_id = spec["id"]
             version = spec["version"]
             # Prefix agent ID with folder name for uniqueness

@@ -1526,7 +1526,7 @@ This agent also demonstrates pydantic-ai tool execution hook naming: before_tool
   postHooks: undefined,
   toolHooks: {
     actor: '${USER}',
-    audit_log_path: '/tmp/agent_runtimes_tool_approvals_audit.jsonl',
+    audit_log_path: 'agent_runtimes_tool_approvals_audit.jsonl',
     current_delegations: ['delegate:guardrails-low-risk'],
     before_tool_execute: [
       {
@@ -1632,7 +1632,7 @@ When the user asks about hooks, use execute_code to show concrete evidence: read
   },
   toolHooks: {
     actor: '${USER}',
-    audit_log_path: '/tmp/agent_runtimes_tool_approvals_audit.jsonl',
+    audit_log_path: 'agent_runtimes_tool_approvals_audit.jsonl',
     current_delegations: ['delegate:read-only-low-risk'],
     before_tool_execute: [
       {
@@ -2318,7 +2318,7 @@ Hook names align with pydantic-ai capability hooks: before_tool_execute, after_t
   postHooks: undefined,
   toolHooks: {
     actor: '${USER}',
-    audit_log_path: '/tmp/agent_runtimes_tool_approvals_audit.jsonl',
+    audit_log_path: 'agent_runtimes_tool_approvals_audit.jsonl',
     current_delegations: ['delegate:read-only-low-risk'],
     before_tool_execute: [
       {
@@ -2327,11 +2327,25 @@ Hook names align with pydantic-ai capability hooks: before_tool_execute, after_t
       },
       {
         python:
-          'reason = str(request.get("arguments", {}).get("reason", "")).lower()\nif "delete" in reason or "drop" in reason:\n    hook_result = {\n        "decision": "deny",\n        "reason": "blocked_by_local_python_reason_policy"\n    }\nelif request.get("risk_class") == "low":\n    hook_result = {\n        "decision": "delegated_allow",\n        "reason": "delegated_low_risk_auto_allow"\n    }\nafter_tool_execute:\n',
+          'reason = str(request.get("arguments", {}).get("reason", "")).lower()\nif "delete" in reason or "drop" in reason:\n    hook_result = {\n        "decision": "deny",\n        "reason": "blocked_by_local_python_reason_policy"\n    }\nelif request.get("risk_class") == "low":\n    hook_result = {\n        "decision": "delegated_allow",\n        "reason": "delegated_low_risk_auto_allow"\n    }\n',
       },
+    ],
+    after_tool_execute: [
       {
         python:
-          'print(\n    "[example-tool-approvals]",\n    payload.get("tool"),\n    payload.get("status"),\n    payload.get("decision"),\n)\non_tool_execute_error:\n- python: |\n  print(\n    "[example-tool-approvals:error]",\n    payload.get("tool"),\n    payload.get("error_type"),\n    payload.get("decision"),\n  )\ndeferred_tool_calls:\n- python: |\n  print("[example-tool-approvals] deferred_tool_calls invoked")\n',
+          'print(\n    "[example-tool-approvals]",\n    payload.get("tool"),\n    payload.get("status"),\n    payload.get("decision"),\n)\n',
+      },
+    ],
+    on_tool_execute_error: [
+      {
+        python:
+          'print(\n    "[example-tool-approvals:error]",\n    payload.get("tool"),\n    payload.get("error_type"),\n    payload.get("decision"),\n)\n',
+      },
+    ],
+    deferred_tool_calls: [
+      {
+        python:
+          'print("[example-tool-approvals] deferred_tool_calls invoked")\n',
       },
     ],
   },
