@@ -1351,6 +1351,7 @@ function ChatBaseInner({
     agentId: protocol?.agentId,
     onMessage: msg => {
       if (
+        msg.type !== 'tool_approval_created' &&
         msg.type !== 'tool_approval_approved' &&
         msg.type !== 'tool_approval_rejected'
       ) {
@@ -1360,6 +1361,16 @@ function ChatBaseInner({
       if (!payload) {
         return;
       }
+
+      // Keep the top approval banner populated in local/no-token flows by
+      // ingesting pending approval events from the runtime stream.
+      if (msg.type === 'tool_approval_created') {
+        if (isApprovalForAgent(payload, activeAgentId)) {
+          agentRuntimeStore.getState().upsertApproval(payload);
+        }
+        return;
+      }
+
       applyServerApprovalDecision(
         payload,
         msg.type === 'tool_approval_approved',

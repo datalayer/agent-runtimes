@@ -113,7 +113,20 @@ const AgentLaunchPanel: React.FC<AgentLaunchPanelProps> = ({
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({ detail: 'Unknown error' }));
-        throw new Error(err.detail || `Failed to create agent: ${res.status}`);
+        const detail =
+          typeof err?.detail === 'string' ? err.detail : 'Unknown error';
+
+        // Reuse existing agent when backend reports duplicate creation.
+        if (res.status === 409 || /already exists/i.test(detail)) {
+          const idMatch = detail.match(
+            /Agent with ID '([^']+)' already exists/i,
+          );
+          const existingId = idMatch?.[1] || AGENT_SPEC_ID;
+          onConnected(existingId, transport);
+          return;
+        }
+
+        throw new Error(detail || `Failed to create agent: ${res.status}`);
       }
 
       const data = await res.json();
@@ -334,8 +347,10 @@ const AgentOtelExampleInner: React.FC<{
       {/* ── Header ── */}
       <OtelHeader
         baseUrl={otelBaseUrl}
+        token={token}
         onNavigate={handleNavigate}
         showGenerateButtons
+        showAccountControls={false}
         trailing={
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <TelescopeIcon size={16} />

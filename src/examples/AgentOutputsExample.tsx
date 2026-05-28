@@ -109,6 +109,16 @@ const detectOutput = (m: ChatMessage): DetectedOutput | null => {
     const body = match[2] ?? '';
     const firstLine = body.split('\n', 1)[0]?.trim() ?? '';
 
+    // Markdown fenced table should render in the table panel, not as a file.
+    if ((info === 'markdown' || info === 'md') && MD_TABLE_RE.test(body)) {
+      const tableMatch = body.match(MD_TABLE_RE);
+      return {
+        tab: 'table',
+        payload: tableMatch ? tableMatch[0].trim() : body.trim(),
+        messageId: m.id,
+      };
+    }
+
     // Chart: ```json with `// chart` marker on first line.
     if (info === 'json' && /^\/\/\s*chart\b/i.test(firstLine)) {
       return {
@@ -193,7 +203,14 @@ const detectOutput = (m: ChatMessage): DetectedOutput | null => {
 
 const MarkdownTable: React.FC<{ source: string }> = ({ source }) => {
   const { headers, rows } = useMemo(() => {
-    const lines = source
+    // Some model responses compress table rows into one line using `||`.
+    // Normalize that form back to one table row per line.
+    let normalized = source.trim();
+    if (!normalized.includes('\n') && normalized.includes('||')) {
+      normalized = normalized.replace(/\|\|/g, '|\n|');
+    }
+
+    const lines = normalized
       .split('\n')
       .map(l => l.trim())
       .filter(l => l.startsWith('|'));
@@ -231,6 +248,7 @@ const MarkdownTable: React.FC<{ source: string }> = ({ source }) => {
         as="table"
         sx={{
           width: '100%',
+          tableLayout: 'auto',
           borderCollapse: 'collapse',
           fontSize: 0,
           'th, td': {
@@ -240,6 +258,8 @@ const MarkdownTable: React.FC<{ source: string }> = ({ source }) => {
             py: 1,
             textAlign: 'left',
             verticalAlign: 'top',
+            whiteSpace: 'normal',
+            wordBreak: 'break-word',
           },
           th: { bg: 'canvas.subtle', fontWeight: 'bold' },
         }}
