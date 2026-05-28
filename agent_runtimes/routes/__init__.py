@@ -3,6 +3,7 @@
 
 """Server routes for agent-runtimes."""
 
+from ..evals.routes import router as evals_router
 from .a2a import (
     A2AAgentCard,
     get_a2a_agents,
@@ -43,7 +44,6 @@ from .agui import (
 from .configure import router as configure_router
 from .examples import get_example_mounts
 from .examples import router as examples_router
-from ..evals.routes import router as evals_router
 from .health import router as health_router
 from .history import router as history_router
 from .identity import router as identity_router

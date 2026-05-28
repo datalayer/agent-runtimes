@@ -62,7 +62,8 @@ def authorize_tool_call(
     )
 
     try:
-        with urllib.request.urlopen(req, timeout=timeout_seconds) as response:
+        # URL is provided by trusted runtime config (AGENT_SUDO_AUTHZ_URL) or explicit caller argument.
+        with urllib.request.urlopen(req, timeout=timeout_seconds) as response:  # nosec B310
             payload = json.loads(response.read().decode("utf-8") or "{}")
     except urllib.error.HTTPError as exc:
         return {

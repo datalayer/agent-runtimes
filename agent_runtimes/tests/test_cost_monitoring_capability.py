@@ -9,8 +9,8 @@ import pytest
 from pydantic_ai.messages import ToolCallPart
 
 from agent_runtimes.capabilities.factory import build_capabilities_from_agent_spec
-from agent_runtimes.guardrails.tool_approvals import ToolsGuardrailCapability
 from agent_runtimes.context.costs import AgentCostStore
+from agent_runtimes.guardrails.tool_approvals import ToolsGuardrailCapability
 from agent_runtimes.monitoring.cost_monitoring import CostMonitoringCapability
 
 

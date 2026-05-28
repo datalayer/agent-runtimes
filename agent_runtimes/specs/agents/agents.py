@@ -1158,7 +1158,7 @@ This agent also demonstrates pydantic-ai tool execution hook naming: before_tool
     post_hooks=None,
     tool_hooks={
         "actor": "${USER}",
-        "audit_log_path": "/tmp/agent_runtimes_tool_approvals_audit.jsonl",
+        "audit_log_path": "agent_runtimes_tool_approvals_audit.jsonl",
         "current_delegations": ["delegate:guardrails-low-risk"],
         "before_tool_execute": [
             {
@@ -1256,7 +1256,7 @@ When the user asks about hooks, use execute_code to show concrete evidence: read
     },
     tool_hooks={
         "actor": "${USER}",
-        "audit_log_path": "/tmp/agent_runtimes_tool_approvals_audit.jsonl",
+        "audit_log_path": "agent_runtimes_tool_approvals_audit.jsonl",
         "current_delegations": ["delegate:read-only-low-risk"],
         "before_tool_execute": [
             {
@@ -1810,7 +1810,7 @@ Hook names align with pydantic-ai capability hooks: before_tool_execute, after_t
     post_hooks=None,
     tool_hooks={
         "actor": "${USER}",
-        "audit_log_path": "/tmp/agent_runtimes_tool_approvals_audit.jsonl",
+        "audit_log_path": "agent_runtimes_tool_approvals_audit.jsonl",
         "current_delegations": ["delegate:read-only-low-risk"],
         "before_tool_execute": [
             {

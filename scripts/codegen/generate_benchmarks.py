@@ -21,7 +21,6 @@ from typing import Any
 import yaml
 from versioning import ensure_spec_version, version_suffix
 
-
 ALLOWED_BENCHMARK_CATEGORIES = {
     "Coding",
     "Knowledge",
@@ -110,9 +109,7 @@ def _validate_benchmark_spec(
             f"Invalid benchmark spec '{spec_id}': category '{category}' not in {sorted(ALLOWED_BENCHMARK_CATEGORIES)}"
         )
     if task_count < 0:
-        raise ValueError(
-            f"Invalid benchmark spec '{spec_id}': task_count must be >= 0"
-        )
+        raise ValueError(f"Invalid benchmark spec '{spec_id}': task_count must be >= 0")
     if not metric:
         raise ValueError(f"Invalid benchmark spec '{spec_id}': metric is required")
     if difficulty not in ALLOWED_DIFFICULTY:

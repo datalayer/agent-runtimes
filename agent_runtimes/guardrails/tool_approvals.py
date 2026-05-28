@@ -22,6 +22,7 @@ import json as json_mod
 import logging
 import os
 import re
+import tempfile
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -102,6 +103,12 @@ def _append_audit_log(path: str, payload: dict[str, Any]) -> None:
             fp.write(json_mod.dumps(payload, ensure_ascii=False) + "\n")
     except Exception:
         logger.debug("[tool-hooks] Failed to append audit log", exc_info=True)
+
+
+def _default_audit_log_path() -> str:
+    return str(
+        Path(tempfile.gettempdir()) / "agent_runtimes_tool_approvals_audit.jsonl"
+    )
 
 
 def _normalize_hook_steps(raw: Any) -> list[dict[str, Any]]:
@@ -236,7 +243,7 @@ class ToolApprovalConfig:
     tools_requiring_approval: list[str] = field(default_factory=list)
     timeout: float = 300.0
     tool_hooks: dict[str, Any] = field(default_factory=dict)
-    audit_log_path: str = "/tmp/agent_runtimes_tool_approvals_audit.jsonl"
+    audit_log_path: str = field(default_factory=_default_audit_log_path)
     actor: str | None = field(default=None)
     current_delegations: list[str] = field(default_factory=list)
     # JWT token used to authenticate requests to the datalayer-ai-agents backend
@@ -260,7 +267,7 @@ class ToolApprovalConfig:
             actor=os.environ.get("DATALAYER_ACTOR") or os.environ.get("USER") or None,
             audit_log_path=os.environ.get(
                 "DATALAYER_TOOL_APPROVAL_AUDIT_LOG",
-                "/tmp/agent_runtimes_tool_approvals_audit.jsonl",
+                _default_audit_log_path(),
             ),
             # DATALAYER_USER_TOKEN is populated by the configure-from-spec endpoint
             # so that the approval manager can authenticate against ai-agents.
@@ -627,7 +634,8 @@ class ToolsGuardrailCapability(AbstractCapability[Any]):
             "hook_result": None,
             "step": step,
         }
-        exec(script, {}, local_vars)
+        # Hook scripts come from trusted spec/tool hook config and run with an isolated local scope.
+        exec(script, {}, local_vars)  # nosec B102
         if local_vars.get("hook_result") is not None:
             return local_vars.get("hook_result")
         if local_vars.get("decision") is not None:
@@ -1052,9 +1060,7 @@ class ToolsGuardrailCapability(AbstractCapability[Any]):
     ) -> Any:
         tool_call_id = getattr(call, "tool_call_id", None)
         decision_entry = (
-            self._decision_by_tool_call.get(tool_call_id)
-            if tool_call_id
-            else None
+            self._decision_by_tool_call.get(tool_call_id) if tool_call_id else None
         )
         request_payload = (
             decision_entry.get("request")
@@ -1099,9 +1105,7 @@ class ToolsGuardrailCapability(AbstractCapability[Any]):
     ) -> Exception:
         tool_call_id = getattr(call, "tool_call_id", None)
         decision_entry = (
-            self._decision_by_tool_call.get(tool_call_id)
-            if tool_call_id
-            else None
+            self._decision_by_tool_call.get(tool_call_id) if tool_call_id else None
         )
         request_payload = (
             decision_entry.get("request")

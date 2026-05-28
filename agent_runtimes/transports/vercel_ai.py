@@ -58,7 +58,9 @@ logger = logging.getLogger(__name__)
 
 def _is_live_eval_emission_enabled() -> bool:
     mode = str(os.environ.get("DATALAYER_EVALS_MODE") or "").strip().lower()
-    emit_flag = str(os.environ.get("DATALAYER_EVALS_EMIT_LIVE_EVENTS") or "").strip().lower()
+    emit_flag = (
+        str(os.environ.get("DATALAYER_EVALS_EMIT_LIVE_EVENTS") or "").strip().lower()
+    )
     if emit_flag in {"0", "false", "no", "off"}:
         return False
     if emit_flag in {"1", "true", "yes", "on"}:
@@ -143,7 +145,9 @@ async def _emit_interactive_live_eval_event(
     ).rstrip("/")
     url = f"{base_url}/api/ai-agents/v1/evals/live/events"
     params: dict[str, Any] = {}
-    billable_account_uid = str(os.environ.get("DATALAYER_BILLABLE_ACCOUNT_UID") or "").strip()
+    billable_account_uid = str(
+        os.environ.get("DATALAYER_BILLABLE_ACCOUNT_UID") or ""
+    ).strip()
     if billable_account_uid:
         params["account_uid"] = billable_account_uid
 

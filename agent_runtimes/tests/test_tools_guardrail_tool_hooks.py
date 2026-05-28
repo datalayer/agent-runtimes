@@ -100,10 +100,7 @@ async def test_pre_tool_function_hook_allows_without_wait(tmp_path: Path) -> Non
 
     assert result == args
     assert fake_manager.calls == []
-    assert (
-        capability._decision_by_tool_call["tool-allow-1"]["decision"]
-        == "allow"
-    )
+    assert capability._decision_by_tool_call["tool-allow-1"]["decision"] == "allow"
 
     events = _read_jsonl(audit_path)
     assert any(e.get("event") == "tool-authorization-decision" for e in events)
@@ -155,11 +152,7 @@ async def test_pre_tool_approval_needed_requests_wait(tmp_path: Path) -> None:
             tools_requiring_approval=["runtime-sensitive-echo"],
             tool_hooks={
                 "before_tool_execute": [
-                    {
-                        "python": (
-                            "hook_result = {'decision': 'approval_required'}"
-                        )
-                    }
+                    {"python": ("hook_result = {'decision': 'approval_required'}")}
                 ]
             },
         )
