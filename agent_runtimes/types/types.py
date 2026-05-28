@@ -1064,6 +1064,16 @@ class AgentSpec(BaseModel):
         ),
         alias="postHooks",
     )
+    tool_hooks: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description=(
+            "Per-tool-call hooks. Supported keys: 'before_tool_execute', "
+            "'after_tool_execute', 'on_tool_execute_error', and "
+            "'deferred_tool_calls'. Hook steps can be plain Python (python) or "
+            "module function references (function)."
+        ),
+        alias="toolHooks",
+    )
     parameters: Optional[Dict[str, Any]] = Field(
         default=None,
         description="JSON schema describing agent launch parameters.",

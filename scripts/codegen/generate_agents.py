@@ -280,6 +280,7 @@ from agent_runtimes.types import AgentSpec, SubAgentSpecConfig, SubAgentsConfig
             memory_str = f'"{memory_val}"' if memory_val else "None"
             pre_hooks_val = spec.get("pre_hooks")
             post_hooks_val = spec.get("post_hooks")
+            tool_hooks_val = spec.get("tool_hooks")
             parameters_val = spec.get("parameters")
             subagents_val = spec.get("subagents")
 
@@ -360,6 +361,7 @@ from agent_runtimes.types import AgentSpec, SubAgentSpecConfig, SubAgentsConfig
     memory={memory_str},
     pre_hooks={_fmt_py_literal(pre_hooks_val)},
     post_hooks={_fmt_py_literal(post_hooks_val)},
+    tool_hooks={_fmt_py_literal(tool_hooks_val)},
     parameters={_fmt_py_literal(parameters_val)},
     subagents={subagents_str},
 )
@@ -852,6 +854,7 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
             memory_ts = f"'{memory_val}'" if memory_val else "undefined"
             pre_hooks_val = spec.get("pre_hooks")
             post_hooks_val = spec.get("post_hooks")
+            tool_hooks_val = spec.get("tool_hooks")
             parameters_val = spec.get("parameters")
             subagents_val = spec.get("subagents")
             subagents_ts = _fmt_ts_literal(
@@ -897,6 +900,7 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
   memory: {memory_ts},
   preHooks: {_fmt_ts_literal(pre_hooks_val)},
   postHooks: {_fmt_ts_literal(post_hooks_val)},
+    toolHooks: {_fmt_ts_literal(tool_hooks_val)},
   parameters: {_fmt_ts_literal(parameters_val)},
   subagents: {subagents_ts},
 }};

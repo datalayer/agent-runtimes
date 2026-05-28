@@ -124,7 +124,7 @@ const AgentHooksExample: React.FC = () => {
       agentId={agentId}
       title="Hooks Agent"
       placeholder="Ask about lifecycle hooks..."
-      description="Pre-hook installed 'rich', wrote a marker file, and set hook_name / hook_ran_at / hook_env variables in the sandbox"
+      description="Demonstrates lifecycle hooks and pydantic-style tool hooks: before_tool_execute, after_tool_execute, on_tool_execute_error, deferred_tool_calls"
       showHeader={true}
       showModelSelector={true}
       showToolsMenu={true}
@@ -155,6 +155,26 @@ const AgentHooksExample: React.FC = () => {
           title: 'Explain the hook lifecycle',
           message:
             'What pre-hooks and post-hooks are configured for this agent, and when does each run?',
+        },
+        {
+          title: 'Trigger function + python tool hooks',
+          message:
+            "Call runtime_sensitive_echo with text 'hello' and reason 'audit', then explain which before_tool_execute hooks ran (function and python).",
+        },
+        {
+          title: 'Trigger deny in python hook',
+          message:
+            "Call runtime_sensitive_echo with text 'danger' and reason 'delete notebook', then explain why local Python policy denied it.",
+        },
+        {
+          title: 'Read tool approval audit log',
+          message:
+            'Use execute_code to show the latest entries from /tmp/agent_runtimes_tool_approvals_audit.jsonl and summarize decision and execution status.',
+        },
+        {
+          title: 'Explain deferred hook handling',
+          message:
+            'Explain how deferred_tool_calls works with approval-required tools and when inline resolution is used in this run.',
         },
       ]}
       submitOnSuggestionClick

@@ -24,7 +24,7 @@ import { useAgentRuntimeApprovals } from '../stores/agentRuntimeStore';
 
 const queryClient = new QueryClient();
 const AGENT_NAME_PREFIX = 'tool-approval-example-agent';
-const DEFAULT_AGENT_SPEC_ID = 'example-full';
+const DEFAULT_AGENT_SPEC_ID = 'example-tool-approvals';
 const DEFAULT_LOCAL_BASE_URL =
   import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
 
@@ -271,14 +271,29 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
                 message: 'list your tools',
               },
               {
-                title: 'Run tool with approval',
+                title: 'Sensitive tool with delegated allow',
                 message:
-                  "Call the runtime_sensitive_echo tool with text 'hello' and reason 'audit', then reply with the tool result.",
+                  "Call the runtime_sensitive_echo tool with text 'hello' and reason 'audit', then explain the before_tool_execute decision and reply with the tool result.",
               },
               {
-                title: 'Run tool without approval',
+                title: 'Sensitive tool denied by Python hook',
+                message:
+                  "Call the runtime_sensitive_echo tool with text 'danger' and reason 'delete project', then explain why it was denied.",
+              },
+              {
+                title: 'Non-sensitive tool baseline',
                 message:
                   "Call the runtime_echo tool with text 'hello world', then reply with the tool result.",
+              },
+              {
+                title: 'Inspect audit entries',
+                message:
+                  'Use execute_code to print the latest entries from /tmp/agent_runtimes_tool_approvals_audit.jsonl and summarize decision + execution status.',
+              },
+              {
+                title: 'Explain deferred approvals hook',
+                message:
+                  'Explain how deferred_tool_calls resolves approval-required tool requests inline when a decision is already available.',
               },
             ]}
             submitOnSuggestionClick

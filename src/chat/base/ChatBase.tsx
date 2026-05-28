@@ -571,6 +571,8 @@ function ChatBaseInner({
   // When the parent doesn't supply the `pendingApprovals` prop, derive them
   // from the shared store so the banner works out-of-the-box.
   const storeApprovals = useAgentRuntimeStore(s => s.approvals);
+  const storeMcpStatus = useAgentRuntimeStore(s => s.mcpStatus);
+  const effectiveMcpStatusData = mcpStatusData ?? storeMcpStatus;
   const protocolConfig =
     typeof protocolRaw === 'object'
       ? (protocolRaw as ProtocolConfig)
@@ -1508,7 +1510,9 @@ function ChatBaseInner({
   const mcpServersRef = useRef(mcpServers);
   mcpServersRef.current = mcpServers;
   useEffect(() => {
-    const wsEnabledMcpTools = parseEnabledMcpToolsByServer(mcpStatusData);
+    const wsEnabledMcpTools = parseEnabledMcpToolsByServer(
+      effectiveMcpStatusData,
+    );
     if (!wsEnabledMcpTools) {
       return;
     }
@@ -1596,11 +1600,18 @@ function ChatBaseInner({
 
       return next;
     });
-  }, [mcpStatusData, activeAgentId, configQuery.data?.mcpServers, wsState]);
+  }, [
+    effectiveMcpStatusData,
+    activeAgentId,
+    configQuery.data?.mcpServers,
+    wsState,
+  ]);
 
   // Keep MCP tool *approval* synchronized with backend WS snapshots.
   useEffect(() => {
-    const wsApprovedMcpTools = parseApprovedMcpToolsByServer(mcpStatusData);
+    const wsApprovedMcpTools = parseApprovedMcpToolsByServer(
+      effectiveMcpStatusData,
+    );
     if (!wsApprovedMcpTools) {
       return;
     }
@@ -1616,13 +1627,13 @@ function ChatBaseInner({
       });
       return next;
     });
-  }, [mcpStatusData]);
+  }, [effectiveMcpStatusData]);
 
   // Refetch configQuery when WS reports MCP servers as started but the
   // cached config response has missing servers or empty tools.
   const lastConfigMcpKeyRef = useRef('');
   useEffect(() => {
-    const wsServers = mcpStatusData?.servers;
+    const wsServers = effectiveMcpStatusData?.servers;
     if (!wsServers || wsServers.length === 0) return;
     const startedIds = wsServers
       .filter(s => s.status === 'started')
@@ -1646,7 +1657,7 @@ function ChatBaseInner({
       lastConfigMcpKeyRef.current = key;
       configQuery.refetch();
     }
-  }, [mcpStatusData, configQuery]);
+  }, [effectiveMcpStatusData, configQuery]);
 
   // initialSkills are now handled server-side during agent creation.
 
@@ -3147,7 +3158,9 @@ function ChatBaseInner({
   );
   const filteredMcpServers = useMemo(() => {
     const merged = configMcpServers.map(server => {
-      const wsServer = mcpStatusData?.servers?.find(s => s.id === server.id);
+      const wsServer = effectiveMcpStatusData?.servers?.find(
+        s => s.id === server.id,
+      );
       if (wsServer && wsServer.status === 'started') {
         const updates: Partial<typeof server> = {};
         if (!server.isAvailable) {
@@ -3173,7 +3186,7 @@ function ChatBaseInner({
     // Include WS-only servers that are started but missing from the config
     // query (e.g. config was fetched before the MCP server finished starting).
     const configIds = new Set(configMcpServers.map(s => s.id));
-    for (const wsServer of mcpStatusData?.servers ?? []) {
+    for (const wsServer of effectiveMcpStatusData?.servers ?? []) {
       if (
         wsServer.status === 'started' &&
         !configIds.has(wsServer.id) &&
@@ -3206,7 +3219,7 @@ function ChatBaseInner({
     }
 
     return merged;
-  }, [configMcpServers, mcpStatusData, mcpServers]);
+  }, [configMcpServers, effectiveMcpStatusData, mcpServers]);
 
   // ---- Not ready ----
   if (!ready) {
@@ -3423,7 +3436,7 @@ function ChatBaseInner({
           onToggleSkillApproval={toggleSkillApproval}
           apiBase={indicatorApiBase}
           authToken={protocol?.authToken}
-          mcpStatusData={mcpStatusData}
+          mcpStatusData={effectiveMcpStatusData}
         />
       )}
 

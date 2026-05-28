@@ -412,6 +412,46 @@ export interface SkillOption {
 const normalizeEnvVarRef = (ref: string): string =>
   ref.replace(/:\d+\.\d+\.\d+$/, '');
 
+const normalizeMcpServerId = (id: string): string =>
+  id.replace(/:\d+\.\d+\.\d+$/, '');
+
+const normalizeToolLabel = (tool: unknown): string | null => {
+  if (typeof tool === 'string') {
+    return tool;
+  }
+
+  if (typeof tool === 'object' && tool !== null) {
+    const toolObj = tool as {
+      id?: unknown;
+      name?: unknown;
+      tool?: unknown;
+    };
+    const fromName =
+      typeof toolObj.name === 'string' && toolObj.name.trim().length > 0
+        ? toolObj.name.trim()
+        : null;
+    if (fromName) {
+      return fromName;
+    }
+    const fromId =
+      typeof toolObj.id === 'string' && toolObj.id.trim().length > 0
+        ? toolObj.id.trim()
+        : null;
+    if (fromId) {
+      return fromId;
+    }
+    const fromTool =
+      typeof toolObj.tool === 'string' && toolObj.tool.trim().length > 0
+        ? toolObj.tool.trim()
+        : null;
+    if (fromTool) {
+      return fromTool;
+    }
+  }
+
+  return null;
+};
+
 const AGENT_LIBRARIES: {
   value: AgentLibrary;
   label: string;
@@ -874,12 +914,77 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
 
   const skillsEnabled = selectedSkills.length > 0;
 
-  const selectedConfigServers = selectedMcpServers
-    .filter(s => s.origin === 'config')
-    .map(s => s.id);
-  const selectedCatalogServers = selectedMcpServers
-    .filter(s => s.origin === 'catalog')
-    .map(s => s.id);
+  const configServerIdSet = useMemo(
+    () => new Set(configServers.map(server => normalizeMcpServerId(server.id))),
+    [configServers],
+  );
+  const catalogServerIdSet = useMemo(
+    () =>
+      new Set(catalogServers.map(server => normalizeMcpServerId(server.id))),
+    [catalogServers],
+  );
+
+  const selectedConfigServers = useMemo(() => {
+    return selectedMcpServers
+      .filter(selection => {
+        const normalizedId = normalizeMcpServerId(selection.id);
+        if (selection.origin === 'config') {
+          return configServerIdSet.has(normalizedId);
+        }
+        if (selection.origin === 'catalog') {
+          return (
+            !catalogServerIdSet.has(normalizedId) &&
+            configServerIdSet.has(normalizedId)
+          );
+        }
+        return false;
+      })
+      .map(selection => normalizeMcpServerId(selection.id));
+  }, [selectedMcpServers, configServerIdSet]);
+
+  const selectedCatalogServers = useMemo(() => {
+    return selectedMcpServers
+      .filter(selection => {
+        const normalizedId = normalizeMcpServerId(selection.id);
+        if (selection.origin === 'catalog') {
+          return catalogServerIdSet.has(normalizedId);
+        }
+        if (selection.origin === 'config') {
+          return (
+            !configServerIdSet.has(normalizedId) &&
+            catalogServerIdSet.has(normalizedId)
+          );
+        }
+        return false;
+      })
+      .map(selection => normalizeMcpServerId(selection.id));
+  }, [selectedMcpServers, catalogServerIdSet]);
+
+  const resolvedSpecTools = useMemo(() => {
+    if (!activeSpec || !Array.isArray(activeSpec.tools)) {
+      return [] as string[];
+    }
+
+    return activeSpec.tools
+      .map(tool => normalizeToolLabel(tool))
+      .filter((tool): tool is string => !!tool);
+  }, [activeSpec]);
+
+  const toolsInputValue =
+    isSpecMode && resolvedSpecTools.length > 0
+      ? resolvedSpecTools.join(', ')
+      : tools.join(', ');
+
+  const toolsInputPlaceholder = isSpecMode
+    ? 'No tools defined by selected spec'
+    : 'runtime-echo, runtime-send-mail';
+
+  const unresolvedSelectedMcpServers = useMemo(() => {
+    return selectedMcpServers
+      .map(selection => normalizeMcpServerId(selection.id))
+      .filter(id => !configServerIdSet.has(id) && !catalogServerIdSet.has(id))
+      .filter((id, index, arr) => arr.indexOf(id) === index);
+  }, [selectedMcpServers, configServerIdSet, catalogServerIdSet]);
 
   const enabledLocalSpecs = [...librarySpecs]
     .filter(s => s.enabled)
@@ -912,21 +1017,30 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
   // Handle MCP Config server checkbox change
   const handleConfigServerChange = (serverId: string, checked: boolean) => {
     if (!onSelectedMcpServersChange) return;
+    const normalizedServerId = normalizeMcpServerId(serverId);
     if (checked) {
       if (
         !selectedMcpServers.some(
-          s => s.id === serverId && s.origin === 'config',
+          s =>
+            normalizeMcpServerId(s.id) === normalizedServerId &&
+            s.origin === 'config',
         )
       ) {
         onSelectedMcpServersChange([
-          ...selectedMcpServers,
-          { id: serverId, origin: 'config' },
+          ...selectedMcpServers.filter(
+            s => normalizeMcpServerId(s.id) !== normalizedServerId,
+          ),
+          { id: normalizedServerId, origin: 'config' },
         ]);
       }
     } else {
       onSelectedMcpServersChange(
         selectedMcpServers.filter(
-          s => !(s.id === serverId && s.origin === 'config'),
+          s =>
+            !(
+              normalizeMcpServerId(s.id) === normalizedServerId &&
+              s.origin === 'config'
+            ),
         ),
       );
     }
@@ -940,6 +1054,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
     isRunning: boolean,
   ) => {
     if (!onSelectedMcpServersChange) return;
+    const normalizedServerId = normalizeMcpServerId(serverId);
     if (checked) {
       // If not running, start the server first
       if (!isRunning) {
@@ -952,18 +1067,26 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
       }
       if (
         !selectedMcpServers.some(
-          s => s.id === serverId && s.origin === 'catalog',
+          s =>
+            normalizeMcpServerId(s.id) === normalizedServerId &&
+            s.origin === 'catalog',
         )
       ) {
         onSelectedMcpServersChange([
-          ...selectedMcpServers,
-          { id: serverId, origin: 'catalog' },
+          ...selectedMcpServers.filter(
+            s => normalizeMcpServerId(s.id) !== normalizedServerId,
+          ),
+          { id: normalizedServerId, origin: 'catalog' },
         ]);
       }
     } else {
       onSelectedMcpServersChange(
         selectedMcpServers.filter(
-          s => !(s.id === serverId && s.origin === 'catalog'),
+          s =>
+            !(
+              normalizeMcpServerId(s.id) === normalizedServerId &&
+              s.origin === 'catalog'
+            ),
         ),
       );
     }
@@ -1116,21 +1239,59 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
 
       <FormControl sx={{ marginBottom: 3 }} disabled={isFormReadOnly}>
         <FormControl.Label>Description</FormControl.Label>
-        <TextInput
+        <Box
+          as="textarea"
           value={description}
-          onChange={e => onDescriptionChange(e.target.value)}
+          onChange={e =>
+            onDescriptionChange((e.target as HTMLTextAreaElement).value)
+          }
           placeholder="Short agent description"
-          sx={{ width: '100%' }}
+          disabled={isFormReadOnly}
+          readOnly={isFormReadOnly}
+          rows={3}
+          sx={{
+            width: '100%',
+            maxWidth: '100%',
+            minHeight: '88px',
+            resize: 'vertical',
+            border: '1px solid',
+            borderColor: 'border.default',
+            borderRadius: 2,
+            p: 2,
+            fontSize: 1,
+            whiteSpace: 'pre-wrap',
+            overflowWrap: 'anywhere',
+            bg: isFormReadOnly ? 'canvas.subtle' : 'canvas.default',
+            color: isFormReadOnly ? 'fg.muted' : 'fg.default',
+          }}
         />
       </FormControl>
 
       <FormControl sx={{ marginBottom: 3 }} disabled={isFormReadOnly}>
         <FormControl.Label>Goal</FormControl.Label>
-        <TextInput
+        <Box
+          as="textarea"
           value={goal}
-          onChange={e => onGoalChange(e.target.value)}
+          onChange={e => onGoalChange((e.target as HTMLTextAreaElement).value)}
           placeholder="User-facing objective"
-          sx={{ width: '100%' }}
+          disabled={isFormReadOnly}
+          readOnly={isFormReadOnly}
+          rows={3}
+          sx={{
+            width: '100%',
+            maxWidth: '100%',
+            minHeight: '88px',
+            resize: 'vertical',
+            border: '1px solid',
+            borderColor: 'border.default',
+            borderRadius: 2,
+            p: 2,
+            fontSize: 1,
+            whiteSpace: 'pre-wrap',
+            overflowWrap: 'anywhere',
+            bg: isFormReadOnly ? 'canvas.subtle' : 'canvas.default',
+            color: isFormReadOnly ? 'fg.muted' : 'fg.default',
+          }}
         />
       </FormControl>
 
@@ -1255,6 +1416,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
           }
           placeholder="You are a helpful AI assistant."
           disabled={isFormReadOnly}
+          readOnly={isFormReadOnly}
           rows={5}
           sx={{
             width: '100%',
@@ -1269,6 +1431,10 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
             fontSize: 1,
             whiteSpace: 'pre-wrap',
             overflowWrap: 'anywhere',
+            bg: isFormReadOnly ? 'canvas.subtle' : 'canvas.default',
+            color: isFormReadOnly ? 'fg.muted' : 'fg.default',
+            userSelect: isFormReadOnly ? 'none' : 'text',
+            cursor: isFormReadOnly ? 'not-allowed' : 'text',
           }}
         />
       </FormControl>
@@ -1285,6 +1451,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
           }
           placeholder="Additional codemode instructions"
           disabled={isFormReadOnly}
+          readOnly={isFormReadOnly}
           rows={4}
           sx={{
             width: '100%',
@@ -1299,6 +1466,10 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
             fontSize: 1,
             whiteSpace: 'pre-wrap',
             overflowWrap: 'anywhere',
+            bg: isFormReadOnly ? 'canvas.subtle' : 'canvas.default',
+            color: isFormReadOnly ? 'fg.muted' : 'fg.default',
+            userSelect: isFormReadOnly ? 'none' : 'text',
+            cursor: isFormReadOnly ? 'not-allowed' : 'text',
           }}
         />
       </FormControl>
@@ -1307,7 +1478,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
         <FormControl sx={{ flex: 1 }} disabled={isFormReadOnly}>
           <FormControl.Label>Tools (comma-separated)</FormControl.Label>
           <TextInput
-            value={tools.join(', ')}
+            value={toolsInputValue}
             onChange={e =>
               onToolsChange(
                 e.target.value
@@ -1316,7 +1487,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
                   .filter(Boolean),
               )
             }
-            placeholder="tool_a, tool_b"
+            placeholder={toolsInputPlaceholder}
             sx={{ width: '100%' }}
           />
         </FormControl>
@@ -1615,6 +1786,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
           borderColor: 'border.default',
           borderRadius: 2,
           backgroundColor: 'canvas.default',
+          opacity: isSpecMode ? 0.6 : 1,
         }}
       >
         <Box
@@ -1648,6 +1820,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
               variant="invisible"
               size="small"
               onClick={() => mcpServersQuery.refetch()}
+              disabled={mcpServersDisabled}
               sx={{ padding: 1 }}
               aria-label="Refresh MCP config servers"
             >
@@ -1676,6 +1849,15 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
               No MCP config servers found. Add servers to ~/.datalayer/mcp.json
             </Text>
           )}
+
+        {unresolvedSelectedMcpServers.length > 0 && (
+          <Flash variant="warning" sx={{ marginTop: 2, marginBottom: 2 }}>
+            <Text sx={{ fontSize: 0 }}>
+              Selected in spec but not available in this environment:{' '}
+              {unresolvedSelectedMcpServers.join(', ')}
+            </Text>
+          </Flash>
+        )}
 
         {enableCodemode && (
           <Flash variant="default" sx={{ marginBottom: 2 }}>
@@ -1714,12 +1896,18 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                 {previewConfigServers.map(server => (
                   <Text key={server.id} sx={{ fontSize: 0 }}>
-                    {server.name} — {server.tools.length} tools (config)
+                    {server.name} —
+                    {server.tools.length > 0
+                      ? ` ${server.tools.length} tools (config)`
+                      : ' tools discovered when launched (config)'}
                   </Text>
                 ))}
                 {previewCatalogServers.map(server => (
                   <Text key={server.id} sx={{ fontSize: 0 }}>
-                    {server.name} — {server.tools?.length || 0} tools (catalog)
+                    {server.name} —
+                    {(server.tools?.length || 0) > 0
+                      ? ` ${server.tools?.length || 0} tools (catalog)`
+                      : ' tools discovered when launched (catalog)'}
                   </Text>
                 ))}
               </Box>
@@ -1794,6 +1982,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
             borderColor: 'border.default',
             borderRadius: 2,
             backgroundColor: 'canvas.default',
+            opacity: isSpecMode ? 0.6 : 1,
           }}
         >
           <Box

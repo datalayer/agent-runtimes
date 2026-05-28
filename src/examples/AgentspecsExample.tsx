@@ -162,9 +162,9 @@ const DEFAULT_BASE_URL =
 const DEFAULT_AGENT_ID = 'example-agent';
 const DEFAULT_SYSTEM_PROMPT = 'You are a helpful AI assistant.';
 const RIGHT_PANE_WIDTH = {
-  min: '420px',
-  default: '80vw',
-  max: '95vw',
+  min: '520px',
+  default: '520px',
+  max: '520px',
 } as unknown as React.ComponentProps<typeof PageLayout.Pane>['width'];
 
 // GitHub OAuth client ID - set via environment variable for security
@@ -1236,7 +1236,7 @@ const AgentspecsExample: React.FC<AgentRuntimeFormExampleProps> = ({
                 aria-label="File browser pane"
                 resizable
                 sticky
-                width={{ min: '250px', default: '300px', max: '90px' }}
+                width={{ min: '250px', default: '300px', max: '1200px' }}
               >
                 {isNewMode ? (
                   <Blankslate border spacious narrow>
@@ -1304,34 +1304,10 @@ const AgentspecsExample: React.FC<AgentRuntimeFormExampleProps> = ({
           {/* Right Pane - Agent Configuration & Chat */}
           {rightPaneVisible ? (
             <>
-              <Box
-                sx={{
-                  position: 'fixed',
-                  right: 0,
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  zIndex: 100,
-                }}
-              >
-                <IconButton
-                  icon={SidebarCollapseIcon}
-                  aria-label="Collapse right pane"
-                  size="small"
-                  onClick={() => setRightPaneVisible(false)}
-                  sx={{
-                    borderRadius: '6px 0 0 6px',
-                    bg: 'canvas.default',
-                    border: '1px solid',
-                    borderRight: 'none',
-                    borderColor: 'border.default',
-                  }}
-                />
-              </Box>
               <PageLayout.Pane
                 position="end"
                 aria-label="Agent configuration and chat pane"
                 width={RIGHT_PANE_WIDTH}
-                resizable
                 sticky
               >
                 <Box
@@ -1345,11 +1321,19 @@ const AgentspecsExample: React.FC<AgentRuntimeFormExampleProps> = ({
                   <Box
                     sx={{
                       display: 'flex',
-                      justifyContent: 'flex-end',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
                       mb: 2,
                       gap: 2,
                     }}
                   >
+                    <IconButton
+                      icon={SidebarCollapseIcon}
+                      aria-label="Collapse right pane"
+                      size="small"
+                      onClick={() => setRightPaneVisible(false)}
+                      variant="invisible"
+                    />
                     <Button
                       size="small"
                       onClick={() => setShowSpecOverlay(true)}
@@ -1438,6 +1422,7 @@ const AgentspecsExample: React.FC<AgentRuntimeFormExampleProps> = ({
                           showModelSelector: true,
                           showToolsMenu: true,
                           showSkillsMenu: true,
+                          showInformation: false,
                           codemodeEnabled: enableCodemode,
                           initialModel: model,
                           mcpServers: selectedMcpServers,

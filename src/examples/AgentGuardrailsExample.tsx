@@ -788,7 +788,7 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
           authToken={chatAuthToken}
           title="Guardrails Agent"
           placeholder="Ask something that triggers tools…"
-          description="Cost guardrail with OTEL-backed gauge and manual tool approval gates"
+          description="Cost guardrail with OTEL-backed gauge and hook-aware approvals (before_tool_execute, after_tool_execute, on_tool_execute_error, deferred_tool_calls)"
           showHeader={false}
           showTokenUsage={true}
           errorBanner={overBudgetBanner}
@@ -799,7 +799,21 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
           historyEndpoint={`${agentBaseUrl}/api/v1/history`}
           suggestions={[
             { title: 'Update CRM', message: 'Update the CRM records for Q3' },
-            { title: 'Report', message: 'Generate the weekly KPI report' },
+            {
+              title: 'Trigger before_tool_execute',
+              message:
+                "Call runtime_sensitive_echo with text 'hello' and reason 'audit', then explain the before_tool_execute authorization decision.",
+            },
+            {
+              title: 'Trigger deny policy',
+              message:
+                "Call runtime_sensitive_echo with text 'danger' and reason 'delete CRM rows', then explain why policy denied it.",
+            },
+            {
+              title: 'Explain deferred flow',
+              message:
+                'Explain how deferred_tool_calls and manual approvals interact in this guardrails run.',
+            },
           ]}
           submitOnSuggestionClick
         />

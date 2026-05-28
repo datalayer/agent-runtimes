@@ -16,6 +16,8 @@ as the source of truth for:
 These specs are cloned locally and then compiled into the runtime catalogs used by
 Agent Runtimes.
 
+For the public platform docs and broader AgentSpec context, see [datalayer.ai/docs](https://datalayer.ai/docs).
+
 ## Clone and Generate
 
 From the repository root:
@@ -62,6 +64,11 @@ Specs can run interactively (chat-driven) or as event/schedule-driven workflows.
 
 - `trigger`: Defines schedule/event execution and startup prompt behavior.
 - `pre_hooks` / `post_hooks`: Lifecycle setup/teardown in sandbox.
+- `tool_hooks`: Tool lifecycle hooks using pydantic-ai names:
+	- `before_tool_execute`
+	- `after_tool_execute`
+	- `on_tool_execute_error`
+	- `deferred_tool_calls`
 
 ### Identity and Controls
 
@@ -104,6 +111,22 @@ skills:
 
 notifications:
 	email: "team@acme.com"
+```
+
+```yaml
+id: example-tool-approvals
+tool_hooks:
+	before_tool_execute:
+		- function: agent_runtimes.integrations.tool_policy:evaluate_tool_request
+	after_tool_execute:
+		- python: |
+				print("success", payload.get("tool"), payload.get("status"))
+	on_tool_execute_error:
+		- python: |
+				print("error", payload.get("tool"), payload.get("error_type"))
+	deferred_tool_calls:
+		- python: |
+				print("deferred hook invoked")
 ```
 
 ```yaml

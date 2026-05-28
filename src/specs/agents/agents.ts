@@ -259,6 +259,7 @@ export const ANALYZE_CAMPAIGN_PERFORMANCE_AGENT_SPEC_0_0_1: AgentSpec = {
   memory: 'ephemeral',
   preHooks: undefined,
   postHooks: undefined,
+  toolHooks: undefined,
   parameters: undefined,
   subagents: undefined,
 };
@@ -361,6 +362,7 @@ export const ANALYZE_SUPPORT_TICKETS_AGENT_SPEC_0_0_1: AgentSpec = {
   memory: 'ephemeral',
   preHooks: undefined,
   postHooks: undefined,
+  toolHooks: undefined,
   parameters: undefined,
   subagents: undefined,
 };
@@ -457,6 +459,7 @@ export const AUDIT_INVENTORY_LEVELS_AGENT_SPEC_0_0_1: AgentSpec = {
   memory: 'ephemeral',
   preHooks: undefined,
   postHooks: undefined,
+  toolHooks: undefined,
   parameters: undefined,
   subagents: undefined,
 };
@@ -577,6 +580,7 @@ export const AUTOMATE_REGULATORY_REPORTING_AGENT_SPEC_0_0_1: AgentSpec = {
   memory: 'ephemeral',
   preHooks: undefined,
   postHooks: undefined,
+  toolHooks: undefined,
   parameters: undefined,
   subagents: undefined,
 };
@@ -677,6 +681,7 @@ export const CLASSIFY_ROUTE_EMAILS_AGENT_SPEC_0_0_1: AgentSpec = {
   memory: 'ephemeral',
   preHooks: undefined,
   postHooks: undefined,
+  toolHooks: undefined,
   parameters: undefined,
   subagents: undefined,
 };
@@ -765,6 +770,7 @@ export const COMPREHENSIVE_SALES_ANALYTICS_AGENT_SPEC_0_0_1: AgentSpec = {
   memory: 'ephemeral',
   preHooks: undefined,
   postHooks: undefined,
+  toolHooks: undefined,
   parameters: undefined,
   subagents: undefined,
 };
@@ -843,6 +849,7 @@ export const CRAWLER_AGENT_SPEC_0_0_1: AgentSpec = {
   memory: 'ephemeral',
   preHooks: undefined,
   postHooks: undefined,
+  toolHooks: undefined,
   parameters: undefined,
   subagents: undefined,
 };
@@ -925,6 +932,7 @@ export const DATA_ACQUISITION_AGENT_SPEC_0_0_1: AgentSpec = {
   memory: 'ephemeral',
   preHooks: undefined,
   postHooks: undefined,
+  toolHooks: undefined,
   parameters: undefined,
   subagents: undefined,
 };
@@ -988,6 +996,7 @@ If mode is ambiguous, default to JSON.`,
   memory: 'ephemeral',
   preHooks: undefined,
   postHooks: undefined,
+  toolHooks: undefined,
   parameters: undefined,
   subagents: undefined,
 };
@@ -1196,6 +1205,7 @@ export const END_OF_MONTH_SALES_PERFORMANCE_AGENT_SPEC_0_0_1: AgentSpec = {
   memory: 'ephemeral',
   preHooks: undefined,
   postHooks: undefined,
+  toolHooks: undefined,
   parameters: undefined,
   subagents: undefined,
 };
@@ -1251,6 +1261,7 @@ export const EVAL_EXPERIMENT_RUNNER_AGENT_SPEC_0_0_1: AgentSpec = {
   memory: 'ephemeral',
   preHooks: undefined,
   postHooks: undefined,
+  toolHooks: undefined,
   parameters: undefined,
   subagents: undefined,
 };
@@ -1306,6 +1317,7 @@ export const EXAMPLE_EVALS_AGENT_SPEC_0_0_1: AgentSpec = {
   memory: 'ephemeral',
   preHooks: undefined,
   postHooks: undefined,
+  toolHooks: undefined,
   parameters: undefined,
   subagents: undefined,
 };
@@ -1388,6 +1400,7 @@ export const EXAMPLE_FULL_AGENT_SPEC_0_0_1: AgentSpec = {
   memory: 'ephemeral',
   preHooks: undefined,
   postHooks: undefined,
+  toolHooks: undefined,
   parameters: undefined,
   subagents: undefined,
 };
@@ -1422,13 +1435,17 @@ export const EXAMPLE_GUARDRAILS_AGENT_SPEC_0_0_1: AgentSpec = {
     'Use runtime_echo to confirm basic tool execution',
     'Call runtime_sensitive_echo and approve/reject the request',
     'Summarize current cost usage vs configured run budget',
+    'Trigger before_tool_execute by calling runtime_sensitive_echo with reason audit',
+    'Trigger local deny policy with reason delete and explain the block',
+    'Explain how deferred_tool_calls and approval queue interact for this run',
   ],
   welcomeMessage:
     'Guardrails example agent ready. Try a sensitive tool call to exercise approvals, and monitor run-cost budget consumption in real time.',
   welcomeNotebook: undefined,
   welcomeDocument: undefined,
   sandboxVariant: 'jupyter',
-  systemPrompt: `You are the Demo Guardrails Agent. Prefer safe defaults, explain budget usage, and clearly report whether tool approval is required.`,
+  systemPrompt: `You are the Demo Guardrails Agent. Prefer safe defaults, explain budget usage, and clearly report whether tool approval is required.
+This agent also demonstrates pydantic-ai tool execution hook naming: before_tool_execute, after_tool_execute, on_tool_execute_error, and deferred_tool_calls.`,
   systemPromptCodemodeAddons: undefined,
   goal: undefined,
   protocol: undefined,
@@ -1451,6 +1468,36 @@ export const EXAMPLE_GUARDRAILS_AGENT_SPEC_0_0_1: AgentSpec = {
   memory: 'ephemeral',
   preHooks: undefined,
   postHooks: undefined,
+  toolHooks: {
+    actor: '${USER}',
+    audit_log_path: '/tmp/agent_runtimes_tool_approvals_audit.jsonl',
+    current_delegations: ['delegate:guardrails-low-risk'],
+    before_tool_execute: [
+      {
+        function:
+          'agent_runtimes.integrations.tool_policy:evaluate_tool_request',
+      },
+      {
+        python:
+          'reason = str(request.get("arguments", {}).get("reason", "")).lower()\nif "delete" in reason:\n    hook_result = {\n        "decision": "deny",\n        "reason": "guardrails_local_delete_policy"\n    }\n',
+      },
+    ],
+    after_tool_execute: [
+      {
+        python:
+          'print(\n    "[example-guardrails] after_tool_execute",\n    payload.get("tool"),\n    payload.get("status"),\n    payload.get("decision"),\n)\n',
+      },
+    ],
+    on_tool_execute_error: [
+      {
+        python:
+          'print(\n    "[example-guardrails] on_tool_execute_error",\n    payload.get("tool"),\n    payload.get("error_type"),\n    payload.get("decision"),\n)\n',
+      },
+    ],
+    deferred_tool_calls: [
+      { python: 'print("[example-guardrails] deferred_tool_calls invoked")\n' },
+    ],
+  },
   parameters: undefined,
   subagents: undefined,
 };
@@ -1465,7 +1512,10 @@ export const EXAMPLE_HOOKS_AGENT_SPEC_0_0_1: AgentSpec = {
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
-  tools: [TOOL_MAP['runtime-echo:0.0.1']],
+  tools: [
+    TOOL_MAP['runtime-echo:0.0.1'],
+    TOOL_MAP['runtime-sensitive-echo:0.0.1'],
+  ],
   frontendTools: [],
   environmentName: 'ai-agents-env',
   icon: 'zap',
@@ -1476,6 +1526,8 @@ export const EXAMPLE_HOOKS_AGENT_SPEC_0_0_1: AgentSpec = {
     'Print the hook_ran_at and hook_name variables that the pre-hook set in the sandbox.',
     "Run execute_code to verify that the 'rich' package was installed by the pre-hook.",
     'Show me all variables that the pre-hook defined in the sandbox namespace.',
+    "Call runtime_sensitive_echo with reason 'audit' to trigger per-tool authorization hooks.",
+    'Use execute_code to read /tmp/agent_runtimes_tool_approvals_audit.jsonl and summarize the latest authorization + execution entries.',
   ],
   welcomeMessage:
     "I ran a pre-hook before starting up. It installed the 'rich' package, wrote a marker file, and set several sandbox variables (hook_name, hook_ran_at, hook_env). Ask me to read the file or inspect those variables.\n",
@@ -1492,6 +1544,8 @@ The sandbox pre-hook ran before this agent started and did three things:
    - hook_env     (dict) - subset of os.environ captured at hook time
 
 A post-hook is also configured — it will write /tmp/agent_runtimes_post_hook_demo.txt when the agent shuts down.
+This agent also demonstrates per-tool hooks for runtime-sensitive tool calls. Each proposed tool call is converted into an authorization request with actor, tool, arguments, resource, current delegations, and risk class. Hook decisions can be allow, deny, approval_needed, or delegated_allow. Decisions and execution results are logged.
+Hook names align with pydantic-ai capability hooks: - before_tool_execute - after_tool_execute - on_tool_execute_error - deferred_tool_calls
 When the user asks about hooks, use execute_code to show concrete evidence: read the marker file, print the variables, or import rich to confirm it was installed.
 `,
   systemPromptCodemodeAddons: undefined,
@@ -1518,6 +1572,39 @@ When the user asks about hooks, use execute_code to show concrete evidence: read
   postHooks: {
     sandbox: [
       "import datetime\nfrom pathlib import Path\n\npost_ran_at = datetime.datetime.now().isoformat()\nPath('/tmp/agent_runtimes_post_hook_demo.txt').write_text(\n    f'post-hook executed for example-hooks at {post_ran_at}\\n',\n    encoding='utf-8',\n)\nprint(f\"[example-hooks] post-hook done: post_ran_at={post_ran_at!r}\")\n",
+    ],
+  },
+  toolHooks: {
+    actor: '${USER}',
+    audit_log_path: '/tmp/agent_runtimes_tool_approvals_audit.jsonl',
+    current_delegations: ['delegate:read-only-low-risk'],
+    before_tool_execute: [
+      {
+        function:
+          'agent_runtimes.integrations.tool_policy:evaluate_tool_request',
+      },
+      {
+        python:
+          '# Plain Python hook variant. It can enforce extra local policy.\nreason = str(request.get("arguments", {}).get("reason", "")).lower()\nif "delete" in reason or "drop" in reason:\n    hook_result = {\n        "decision": "deny",\n        "reason": "blocked_by_local_python_hook_reason_policy"\n    }\n',
+      },
+    ],
+    after_tool_execute: [
+      {
+        python:
+          '# Post hook receives execution result payload in `payload`.\nprint(\n"[example-hooks] after_tool_execute",\n    payload.get("tool"),\n    payload.get("status"),\n    payload.get("decision"),\n)\n',
+      },
+    ],
+    on_tool_execute_error: [
+      {
+        python:
+          'print(\n    "[example-hooks] on_tool_execute_error",\n    payload.get("tool"),\n    payload.get("error_type"),\n    payload.get("decision"),\n)\n',
+      },
+    ],
+    deferred_tool_calls: [
+      {
+        python:
+          '# Demonstrates the deferred hook key in spec config.\nprint("[example-hooks] deferred_tool_calls invoked")\n',
+      },
     ],
   },
   parameters: undefined,
@@ -1579,6 +1666,7 @@ export const EXAMPLE_MCP_AGENT_SPEC_0_0_1: AgentSpec = {
   memory: 'ephemeral',
   preHooks: undefined,
   postHooks: undefined,
+  toolHooks: undefined,
   parameters: undefined,
   subagents: undefined,
 };
@@ -1634,6 +1722,7 @@ export const EXAMPLE_MONITORING_AGENT_SPEC_0_0_1: AgentSpec = {
   memory: 'ephemeral',
   preHooks: undefined,
   postHooks: undefined,
+  toolHooks: undefined,
   parameters: undefined,
   subagents: undefined,
 };
@@ -1682,6 +1771,7 @@ export const EXAMPLE_ONE_TRIGGER_APPROVAL_AGENT_SPEC_0_0_1: AgentSpec = {
   memory: 'ephemeral',
   preHooks: undefined,
   postHooks: undefined,
+  toolHooks: undefined,
   parameters: undefined,
   subagents: undefined,
 };
@@ -1737,6 +1827,7 @@ export const EXAMPLE_ONE_TRIGGER_AGENT_SPEC_0_0_1: AgentSpec = {
   memory: 'ephemeral',
   preHooks: undefined,
   postHooks: undefined,
+  toolHooks: undefined,
   parameters: undefined,
   subagents: undefined,
 };
@@ -1793,6 +1884,7 @@ export const EXAMPLE_OTEL_AGENT_SPEC_0_0_1: AgentSpec = {
   memory: 'ephemeral',
   preHooks: undefined,
   postHooks: undefined,
+  toolHooks: undefined,
   parameters: undefined,
   subagents: undefined,
 };
@@ -1845,6 +1937,7 @@ export const EXAMPLE_PARAMETERS_AGENT_SPEC_0_0_1: AgentSpec = {
     ],
   },
   postHooks: undefined,
+  toolHooks: undefined,
   parameters: {
     type: 'object',
     properties: {
@@ -1921,6 +2014,7 @@ export const EXAMPLE_SIMPLE_AGENT_SPEC_0_0_1: AgentSpec = {
   memory: 'ephemeral',
   preHooks: undefined,
   postHooks: undefined,
+  toolHooks: undefined,
   parameters: undefined,
   subagents: undefined,
 };
@@ -1995,6 +2089,7 @@ export const EXAMPLE_SKILLS_AGENT_SPEC_0_0_1: AgentSpec = {
   memory: 'ephemeral',
   preHooks: undefined,
   postHooks: undefined,
+  toolHooks: undefined,
   parameters: undefined,
   subagents: undefined,
 };
@@ -2050,6 +2145,84 @@ export const EXAMPLE_SUBAGENTS_AGENT_SPEC_0_0_1: AgentSpec = {
   memory: 'ephemeral',
   preHooks: undefined,
   postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+};
+
+export const EXAMPLE_TOOL_APPROVALS_AGENT_SPEC_0_0_1: AgentSpec = {
+  id: 'example-tool-approvals',
+  version: '0.0.1',
+  name: 'Example Tool Approvals',
+  description: `Demonstrates per-tool approval hooks with policy requests and decision/audit logging.`,
+  tags: ['approvals', 'hooks', 'policy'],
+  enabled: true,
+  model: 'openai:gpt-4o-mini',
+  mcpServers: [],
+  skills: [].filter(Boolean) as SkillSpec[],
+  tools: [
+    TOOL_MAP['runtime-sensitive-echo:0.0.1'],
+    TOOL_MAP['runtime-echo:0.0.1'],
+  ],
+  frontendTools: [],
+  environmentName: 'ai-agents-env',
+  icon: 'pi pi-shield',
+  emoji: undefined,
+  color: undefined,
+  suggestions: [
+    "Call runtime_sensitive_echo with reason 'read logs' and message 'hello approvals'.",
+    "Call runtime_sensitive_echo with reason 'delete project' and observe deny behavior from Python policy hook.",
+    'Call runtime_echo with any message to compare a non-sensitive tool path.',
+    'Use execute_code to print the latest lines from /tmp/agent_runtimes_tool_approvals_audit.jsonl.',
+    'Explain how deferred_tool_calls resolves approval-required tool calls inline when decisions already exist.',
+  ],
+  welcomeMessage:
+    'Welcome to the Tool Approvals example.\n\nThis agent demonstrates authorization hooks where each\nsensitive tool call is evaluated against policy and logged for audit.\n',
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: undefined,
+  systemPrompt: `You are a demo assistant for tool approvals.
+Sensitive tool calls should go through the authorization flow.
+Explain decisions clearly: allow, deny, approval_needed, or delegated_allow.
+Keep responses concise and focused on what was authorized and executed.
+Hook names align with pydantic-ai capability hooks: before_tool_execute, after_tool_execute, on_tool_execute_error, and deferred_tool_calls.
+`,
+  systemPromptCodemodeAddons: undefined,
+  goal: undefined,
+  protocol: undefined,
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: undefined,
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: undefined,
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: {
+    actor: '${USER}',
+    audit_log_path: '/tmp/agent_runtimes_tool_approvals_audit.jsonl',
+    current_delegations: ['delegate:read-only-low-risk'],
+    before_tool_execute: [
+      {
+        function:
+          'agent_runtimes.integrations.tool_policy:evaluate_tool_request',
+      },
+      {
+        python:
+          'reason = str(request.get("arguments", {}).get("reason", "")).lower()\nif "delete" in reason or "drop" in reason:\n    hook_result = {\n        "decision": "deny",\n        "reason": "blocked_by_local_python_reason_policy"\n    }\nelif request.get("risk_class") == "low":\n    hook_result = {\n        "decision": "delegated_allow",\n        "reason": "delegated_low_risk_auto_allow"\n    }\nafter_tool_execute:\n',
+      },
+      {
+        python:
+          'print(\n    "[example-tool-approvals]",\n    payload.get("tool"),\n    payload.get("status"),\n    payload.get("decision"),\n)\non_tool_execute_error:\n- python: |\n  print(\n    "[example-tool-approvals:error]",\n    payload.get("tool"),\n    payload.get("error_type"),\n    payload.get("decision"),\n  )\ndeferred_tool_calls:\n- python: |\n  print("[example-tool-approvals] deferred_tool_calls invoked")\n',
+      },
+    ],
+  },
   parameters: undefined,
   subagents: undefined,
 };
@@ -2154,6 +2327,7 @@ export const EXTRACT_DATA_FROM_FILES_AGENT_SPEC_0_0_1: AgentSpec = {
   memory: 'ephemeral',
   preHooks: undefined,
   postHooks: undefined,
+  toolHooks: undefined,
   parameters: undefined,
   subagents: undefined,
 };
@@ -2232,6 +2406,7 @@ export const FINANCIAL_VIZ_AGENT_SPEC_0_0_1: AgentSpec = {
   memory: 'ephemeral',
   preHooks: undefined,
   postHooks: undefined,
+  toolHooks: undefined,
   parameters: undefined,
   subagents: undefined,
 };
@@ -2307,6 +2482,7 @@ export const FINANCIAL_AGENT_SPEC_0_0_1: AgentSpec = {
   memory: 'ephemeral',
   preHooks: undefined,
   postHooks: undefined,
+  toolHooks: undefined,
   parameters: undefined,
   subagents: undefined,
 };
@@ -2422,6 +2598,7 @@ export const GENERATE_WEEKLY_REPORTS_AGENT_SPEC_0_0_1: AgentSpec = {
   memory: 'ephemeral',
   preHooks: undefined,
   postHooks: undefined,
+  toolHooks: undefined,
   parameters: undefined,
   subagents: undefined,
 };
@@ -2500,6 +2677,7 @@ export const GITHUB_AGENT_SPEC_0_0_1: AgentSpec = {
   memory: 'ephemeral',
   preHooks: undefined,
   postHooks: undefined,
+  toolHooks: undefined,
   parameters: undefined,
   subagents: undefined,
 };
@@ -2578,6 +2756,7 @@ export const INFORMATION_ROUTING_AGENT_SPEC_0_0_1: AgentSpec = {
   memory: 'ephemeral',
   preHooks: undefined,
   postHooks: undefined,
+  toolHooks: undefined,
   parameters: undefined,
   subagents: undefined,
 };
@@ -2700,6 +2879,7 @@ export const MONITOR_SALES_KPIS_AGENT_SPEC_0_0_1: AgentSpec = {
   memory: 'mem0',
   preHooks: undefined,
   postHooks: undefined,
+  toolHooks: undefined,
   parameters: undefined,
   subagents: undefined,
 };
@@ -2835,6 +3015,7 @@ export const OPTIMIZE_DYNAMIC_PRICING_AGENT_SPEC_0_0_1: AgentSpec = {
   memory: 'ephemeral',
   preHooks: undefined,
   postHooks: undefined,
+  toolHooks: undefined,
   parameters: undefined,
   subagents: undefined,
 };
@@ -2956,6 +3137,7 @@ export const OPTIMIZE_GRID_OPERATIONS_AGENT_SPEC_0_0_1: AgentSpec = {
   memory: 'ephemeral',
   preHooks: undefined,
   postHooks: undefined,
+  toolHooks: undefined,
   parameters: undefined,
   subagents: undefined,
 };
@@ -3086,6 +3268,7 @@ export const PROCESS_CITIZEN_REQUESTS_AGENT_SPEC_0_0_1: AgentSpec = {
   memory: 'ephemeral',
   preHooks: undefined,
   postHooks: undefined,
+  toolHooks: undefined,
   parameters: undefined,
   subagents: undefined,
 };
@@ -3217,6 +3400,7 @@ export const PROCESS_CLINICAL_TRIAL_DATA_AGENT_SPEC_0_0_1: AgentSpec = {
   memory: 'ephemeral',
   preHooks: undefined,
   postHooks: undefined,
+  toolHooks: undefined,
   parameters: undefined,
   subagents: undefined,
 };
@@ -3328,6 +3512,7 @@ export const PROCESS_FINANCIAL_TRANSACTIONS_AGENT_SPEC_0_0_1: AgentSpec = {
   memory: 'ephemeral',
   preHooks: undefined,
   postHooks: undefined,
+  toolHooks: undefined,
   parameters: undefined,
   subagents: undefined,
 };
@@ -3392,6 +3577,7 @@ export const SPATIAL_DATA_ANALYSIS_AGENT_SPEC_0_0_1: AgentSpec = {
   memory: 'ephemeral',
   preHooks: undefined,
   postHooks: undefined,
+  toolHooks: undefined,
   parameters: undefined,
   subagents: undefined,
 };
@@ -3497,6 +3683,7 @@ export const SUMMARIZE_DOCUMENTS_AGENT_SPEC_0_0_1: AgentSpec = {
   memory: 'ephemeral',
   preHooks: undefined,
   postHooks: undefined,
+  toolHooks: undefined,
   parameters: undefined,
   subagents: undefined,
 };
@@ -3594,6 +3781,7 @@ export const SYNC_CRM_CONTACTS_AGENT_SPEC_0_0_1: AgentSpec = {
   memory: 'ephemeral',
   preHooks: undefined,
   postHooks: undefined,
+  toolHooks: undefined,
   parameters: undefined,
   subagents: undefined,
 };
@@ -3630,6 +3818,7 @@ export const AGENT_SPECS: Record<string, AgentSpec> = {
   'example-simple': EXAMPLE_SIMPLE_AGENT_SPEC_0_0_1,
   'example-skills': EXAMPLE_SKILLS_AGENT_SPEC_0_0_1,
   'example-subagents': EXAMPLE_SUBAGENTS_AGENT_SPEC_0_0_1,
+  'example-tool-approvals': EXAMPLE_TOOL_APPROVALS_AGENT_SPEC_0_0_1,
   'extract-data-from-files': EXTRACT_DATA_FROM_FILES_AGENT_SPEC_0_0_1,
   'financial-viz': FINANCIAL_VIZ_AGENT_SPEC_0_0_1,
   financial: FINANCIAL_AGENT_SPEC_0_0_1,
