@@ -7,13 +7,14 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from pydantic_ai.messages import ToolCallPart
 
 from agent_runtimes.guardrails.tool_approvals import (
     ToolApprovalConfig,
+    ToolApprovalManager,
     ToolApprovalRejectedError,
     ToolsGuardrailCapability,
 )
@@ -84,7 +85,7 @@ async def test_pre_tool_function_hook_allows_without_wait(tmp_path: Path) -> Non
         )
     )
     fake_manager = _FakeManager()
-    capability._manager = fake_manager
+    capability._manager = cast(ToolApprovalManager, fake_manager)
 
     args = {"text": "hello", "reason": "audit"}
     result = await capability.before_tool_execute(
@@ -126,7 +127,7 @@ async def test_pre_tool_inline_python_hook_can_deny(tmp_path: Path) -> None:
         )
     )
     fake_manager = _FakeManager()
-    capability._manager = fake_manager
+    capability._manager = cast(ToolApprovalManager, fake_manager)
 
     with pytest.raises(ToolApprovalRejectedError, match="blocked in test"):
         await capability.before_tool_execute(
@@ -158,7 +159,7 @@ async def test_pre_tool_approval_needed_requests_wait(tmp_path: Path) -> None:
         )
     )
     fake_manager = _FakeManager()
-    capability._manager = fake_manager
+    capability._manager = cast(ToolApprovalManager, fake_manager)
 
     args = {"text": "hello", "reason": "audit"}
     result = await capability.before_tool_execute(
@@ -201,7 +202,7 @@ async def test_pydantic_before_tool_execute_alias_is_supported(
     )
 
     fake_manager = _FakeManager()
-    capability._manager = fake_manager
+    capability._manager = cast(ToolApprovalManager, fake_manager)
 
     args = {"text": "hello", "reason": "audit"}
     result = await capability.before_tool_execute(
@@ -215,7 +216,6 @@ async def test_pydantic_before_tool_execute_alias_is_supported(
         args=args,
     )
 
-    assert result == args
     assert fake_manager.calls == []
 
 

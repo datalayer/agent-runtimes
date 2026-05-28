@@ -294,19 +294,22 @@ class ToolApprovalConfig:
             base.tool_hooks = spec_config.get("tool_hooks") or {}
         if isinstance(spec_config.get("toolHooks"), dict):
             base.tool_hooks = spec_config.get("toolHooks") or {}
-        if isinstance(spec_config.get("audit_log_path"), str):
-            base.audit_log_path = spec_config.get("audit_log_path")
-        if isinstance(spec_config.get("auditLogPath"), str):
-            base.audit_log_path = spec_config.get("auditLogPath")
-        if isinstance(spec_config.get("actor"), str):
-            base.actor = spec_config.get("actor")
-        if isinstance(spec_config.get("current_delegations"), list):
+        audit_log_path = spec_config.get("audit_log_path")
+        if isinstance(audit_log_path, str):
+            base.audit_log_path = audit_log_path
+        audit_log_path_camel = spec_config.get("auditLogPath")
+        if isinstance(audit_log_path_camel, str):
+            base.audit_log_path = audit_log_path_camel
+        actor = spec_config.get("actor")
+        if isinstance(actor, str):
+            base.actor = actor
+        current_delegations = spec_config.get("current_delegations")
+        if isinstance(current_delegations, list):
+            base.current_delegations = [str(item) for item in current_delegations]
+        current_delegations_camel = spec_config.get("currentDelegations")
+        if isinstance(current_delegations_camel, list):
             base.current_delegations = [
-                str(item) for item in spec_config.get("current_delegations")
-            ]
-        if isinstance(spec_config.get("currentDelegations"), list):
-            base.current_delegations = [
-                str(item) for item in spec_config.get("currentDelegations")
+                str(item) for item in current_delegations_camel
             ]
         return base
 
@@ -615,7 +618,8 @@ class ToolsGuardrailCapability(AbstractCapability[Any]):
             )
         module = importlib.import_module(module_name)
         fn = getattr(module, attr_name)
-        kwargs = step.get("kwargs") if isinstance(step.get("kwargs"), dict) else {}
+        raw_kwargs = step.get("kwargs")
+        kwargs: dict[str, Any] = raw_kwargs if isinstance(raw_kwargs, dict) else {}
         result = fn(payload, **kwargs)
         if inspect.isawaitable(result):
             result = await result
@@ -660,14 +664,16 @@ class ToolsGuardrailCapability(AbstractCapability[Any]):
             timeout_seconds = _parse_timeout_hms(step.get("timeout"), default=5.0)
 
             try:
-                if isinstance(step.get("function"), str):
+                function_ref = step.get("function")
+                python_script = step.get("python")
+                if isinstance(function_ref, str):
                     out = await asyncio.wait_for(
-                        self._run_function_hook(step.get("function"), payload, step),
+                        self._run_function_hook(function_ref, payload, step),
                         timeout=timeout_seconds,
                     )
-                elif isinstance(step.get("python"), str):
+                elif isinstance(python_script, str):
                     out = await asyncio.wait_for(
-                        self._run_python_hook(step.get("python"), payload, step),
+                        self._run_python_hook(python_script, payload, step),
                         timeout=timeout_seconds,
                     )
                 else:

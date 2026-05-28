@@ -4,13 +4,17 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import cast
 
 import pytest
 from pydantic_ai.messages import ToolCallPart
 
 from agent_runtimes.capabilities.factory import build_capabilities_from_agent_spec
 from agent_runtimes.context.costs import AgentCostStore
-from agent_runtimes.guardrails.tool_approvals import ToolsGuardrailCapability
+from agent_runtimes.guardrails.tool_approvals import (
+    ToolApprovalManager,
+    ToolsGuardrailCapability,
+)
 from agent_runtimes.monitoring.cost_monitoring import CostMonitoringCapability
 
 
@@ -131,7 +135,7 @@ async def test_factory_wires_tool_hooks_and_capability_executes_local_hook() -> 
     assert isinstance(capability.config.tool_hooks.get("before_tool_execute"), list)
 
     fake_manager = _FactoryFakeApprovalManager()
-    capability._manager = fake_manager
+    capability._manager = cast(ToolApprovalManager, fake_manager)
     args = {"text": "hello", "reason": "audit"}
 
     result = await capability.before_tool_execute(
