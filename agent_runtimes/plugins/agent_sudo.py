@@ -1,11 +1,11 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Agent_Sudo integration helpers.
+"""Agent_Sudo plugin helpers.
 
 This module exposes a simple function hook callable from tool_hooks:
 
-function: agent_runtimes.integrations.agent_sudo:authorize_tool_call
+function: agent_runtimes.plugins.agent_sudo:authorize_tool_call
 """
 
 from __future__ import annotations
@@ -18,6 +18,20 @@ from typing import Any
 
 
 def _normalize_decision(raw: Any, fallback: str = "approval_needed") -> str:
+    """Normalize a decision string to a standard form.
+
+    Parameters
+    ----------
+    raw : Any
+        The raw decision input to normalize.
+    fallback : str, default "approval_needed"
+        The fallback decision if normalization fails.
+
+    Returns
+    -------
+    str
+        The normalized decision string.
+    """
     if not isinstance(raw, str):
         return fallback
     value = raw.strip().lower()
@@ -93,3 +107,46 @@ def authorize_tool_call(
         result["risk_class"] = payload.get("risk_class")
 
     return result
+
+
+def authorize_tool_call_local(
+    request_payload: dict[str, Any],
+    gateway: Any,
+) -> dict[str, Any]:
+    """In-process tool authorization gateway for local Agent_Sudo policies."""
+    import json
+
+    from agent_sudo.models import Decision
+
+    args_dict = request_payload.get("arguments") or {}
+    payload_summary = json.dumps(args_dict, sort_keys=True)
+    target = request_payload.get("resource") or str(args_dict)
+
+    # Lazily import ActionRequest to ensure agent_sudo is present
+    from agent_sudo.models import ActionRequest
+
+    request = ActionRequest(
+        actor=request_payload.get("actor") or "unknown",
+        source=request_payload.get("agent_id") or "default",
+        tool=request_payload.get("tool") or "unknown",
+        action=request_payload.get("tool") or "unknown",
+        target=target,
+        payload_summary=payload_summary,
+        risk_hints=[request_payload.get("risk_class")]
+        if request_payload.get("risk_class")
+        else [],
+    )
+
+    try:
+        result = gateway.evaluate(request)
+    except Exception as exc:
+        return {"decision": "deny", "reason": f"policy_evaluation_crashed: {exc}"}
+
+    if result.decision == Decision.ALLOW:
+        return {"decision": "allow", "reason": result.reason}
+    if result.decision == Decision.DENY:
+        return {"decision": "deny", "reason": result.reason}
+    if result.decision in {Decision.REQUIRE_APPROVAL, Decision.REQUIRE_STRONG_APPROVAL}:
+        return {"decision": "approval-needed", "reason": result.reason}
+
+    return {"decision": "approval-needed", "reason": "unrecognized_gateway_decision"}

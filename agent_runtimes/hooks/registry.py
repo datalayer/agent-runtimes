@@ -79,9 +79,124 @@ async def _security_check_handler(hook_input: HookInput) -> HookResult:
     return HookResult(allow=True)
 
 
+_AGENT_SUDO_LOCK = None
+_AGENT_SUDO_GATEWAY = None
+
+
+async def _agent_sudo_local_handler(hook_input: HookInput) -> HookResult:
+    """Built-in handler: in-process Agent_Sudo local policy check."""
+    global _AGENT_SUDO_LOCK, _AGENT_SUDO_GATEWAY
+
+    try:
+        import agent_sudo  # noqa: F401
+    except ImportError as exc:
+        raise ImportError(
+            "The 'agent-sudo' package is required but not installed because "
+            "'agent_sudo_local' handler is configured."
+        ) from exc
+
+    if _AGENT_SUDO_LOCK is None:
+        import asyncio
+
+        _AGENT_SUDO_LOCK = asyncio.Lock()
+
+    # Map hook_input to authorize_tool_call_local payload shape
+    payload = {
+        "actor": hook_input.user_id or "unknown",
+        "agent_id": hook_input.agent_id or "default",
+        "tool": hook_input.tool_name,
+        "arguments": hook_input.tool_args,
+        "resource": hook_input.tool_args.get("resource")
+        or hook_input.tool_args.get("path")
+        or f"tool://{hook_input.tool_name}",
+        "risk_class": "medium",  # default
+    }
+
+    async with _AGENT_SUDO_LOCK:
+        if _AGENT_SUDO_GATEWAY is None:
+            import os
+            from pathlib import Path
+
+            from agent_sudo.approvals import ApprovalProvider
+            from agent_sudo.audit import AuditLogger
+            from agent_sudo.delegations import DelegationStore
+            from agent_sudo.gateway import PermissionGateway
+            from agent_sudo.pending_approvals import PendingApprovalStore
+            from agent_sudo.policy import load_default_policy, load_policy
+
+            policy_path = os.environ.get("AGENT_SUDO_POLICY_PATH")
+            policy = (
+                load_policy(Path(policy_path)) if policy_path else load_default_policy()
+            )
+
+            audit_log_path = os.environ.get("AGENT_SUDO_AUDIT_LOG_PATH")
+            audit_logger = (
+                AuditLogger(Path(audit_log_path))
+                if audit_log_path
+                else AuditLogger(Path(".agent-sudo/audit.jsonl"))
+            )
+
+            delegations_file = os.environ.get("AGENT_SUDO_DELEGATIONS_FILE")
+            delegation_store = (
+                DelegationStore(Path(delegations_file))
+                if delegations_file
+                else DelegationStore()
+            )
+
+            pending_approvals_file = os.environ.get("AGENT_SUDO_PENDING_APPROVALS_FILE")
+            if pending_approvals_file:
+                pending_approval_store = PendingApprovalStore(
+                    Path(pending_approvals_file), audit_logger=audit_logger
+                )
+            else:
+                pending_approval_store = PendingApprovalStore(audit_logger=audit_logger)
+
+            approvals = ApprovalProvider(stdin_is_tty=lambda: False)
+            _AGENT_SUDO_GATEWAY = PermissionGateway(
+                policy=policy,
+                approvals=approvals,
+                audit_logger=audit_logger,
+                delegation_store=delegation_store,
+                pending_approval_store=pending_approval_store,
+            )
+
+        import asyncio
+
+        from agent_runtimes.plugins.agent_sudo import authorize_tool_call_local
+
+        try:
+            res = await asyncio.wait_for(
+                asyncio.to_thread(
+                    authorize_tool_call_local, payload, _AGENT_SUDO_GATEWAY
+                ),
+                timeout=5.0,
+            )
+        except Exception as exc:
+            res = {"decision": "deny", "reason": f"policy_evaluation_crashed: {exc}"}
+
+    decision = res.get("decision", "deny")
+    reason = res.get("reason", "unknown")
+    if decision == "allow":
+        return HookResult(allow=True, reason=reason)
+    elif decision == "deny":
+        return HookResult(allow=False, reason=reason)
+    else:
+        return HookResult(allow=False, reason=f"approval-needed: {reason}")
+
+
 # Register built-in handlers
 register_handler("audit_log", _audit_log_handler)
 register_handler("security_check", _security_check_handler)
+
+try:
+    import agent_sudo  # noqa: F401
+
+    _has_agent_sudo = True
+except ImportError:
+    _has_agent_sudo = False
+
+if _has_agent_sudo:
+    register_handler("agent_sudo_local", _agent_sudo_local_handler)
 
 
 def build_hooks_middleware(spec_hooks: list[dict[str, Any]] | None) -> HooksMiddleware:
