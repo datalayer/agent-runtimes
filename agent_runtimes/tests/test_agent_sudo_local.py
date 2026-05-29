@@ -279,3 +279,48 @@ async def test_agent_sudo_local_policy_crash_fail_closed(
             tool_def=None,
             args=args,
         )
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not has_agent_sudo, reason="requires agent-sudo package")
+async def test_agent_sudo_local_invalid_policy_path_deny(tmp_path: Path) -> None:
+    """Test that an invalid policy path raises ToolApprovalRejectedError with deny decision."""
+    audit_path = tmp_path / "audit.jsonl"
+    pending_path = tmp_path / "pending_approvals.json"
+    delegations_path = tmp_path / "delegations.json"
+
+    capability = ToolsGuardrailCapability(
+        config=ToolApprovalConfig(
+            agent_id="test-agent",
+            tools_requiring_approval=["safe_tool"],
+            tool_hooks={
+                "before_tool_execute": [
+                    {
+                        "handler": "agent_sudo_local",
+                        "agent_sudo_policy_path": "non_existent_policy.yaml",
+                        "agent_sudo_audit_log_path": str(audit_path),
+                        "agent_sudo_delegations_file": str(delegations_path),
+                        "agent_sudo_pending_approvals_file": str(pending_path),
+                    }
+                ]
+            },
+        )
+    )
+
+    args = {"text": "hello"}
+
+    # The invalid path must result in a DENY (fail-closed) during gateway initialization
+    with pytest.raises(
+        ToolApprovalRejectedError,
+        match="policy_evaluation_crashed:",
+    ):
+        await capability.before_tool_execute(
+            None,
+            call=ToolCallPart(
+                tool_name="safe_tool",
+                args=args,
+                tool_call_id="call-invalid-path-1",
+            ),
+            tool_def=None,
+            args=args,
+        )
