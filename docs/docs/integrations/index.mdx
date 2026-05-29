@@ -128,19 +128,60 @@ tool_hooks:
                 print("error", payload.get("tool"), payload.get("error_type"))
 ```
 
-### Agent_Sudo Example
+### Agent_Sudo Plugin (Authorization & Audit Logging)
 
-If you want external policy evaluation, `Agent_Sudo` can be called from `before_tool_execute` via function hook.
+`agent-runtimes` provides support for the `Agent_Sudo` plugin, allowing policy evaluation and validation using Agent_Sudo-compatible audit logs.
 
-- Project: [ram9199/agent_sudo](https://github.com/ram9199/agent_sudo)
+#### Ownership Boundaries
+
+* **`agent-runtimes`** owns:
+  * Tool approval UX
+  * Hook lifecycle
+  * Audit log persistence
+* **`Agent_Sudo`** owns:
+  * Policy evaluation
+  * Interoperability specifications
+  * Verification tooling
+
+#### 1. Remote Tool Authorization (HTTP Plugin)
+
+To delegate policy decisions to a remote Agent_Sudo server, register the plugin function hook under `before_tool_execute`:
 
 ```yaml
 tool_hooks:
     before_tool_execute:
-        - function: agent_runtimes.plugins.agent_sudo:authorize_tool_call
+        - function: agent_runtimes.plugins:authorize_tool_call
             kwargs:
                 fallback_decision: approval_required
+                endpoint: "http://localhost:8080/authorize"
 ```
+
+#### 2. Local Tool Authorization (In-Process Plugin)
+
+For local policy verification using the `agent-sudo` package, configure the built-in `agent_sudo_local` plugin hook handler:
+
+```yaml
+tool_hooks:
+    agent_sudo_policy_path: "/path/to/policy.yaml"
+    agent_sudo_audit_log_path: "/tmp/agent_runtimes_tool_approvals_audit.jsonl"
+    before_tool_execute:
+        - handler: agent_sudo_local
+```
+
+> [!NOTE]
+> Local authorization requires the `agent-sudo` extra dependency installed: `pip install agent-runtimes[agent-sudo]`.
+
+#### 3. Agent_Sudo-Compatible Audit Logs
+
+When using the `agent_sudo_local` plugin handler or custom user hooks configured to emit Agent_Sudo-compatible audit logs, logs follow the Canonical Hash Chain Specification and Policy/Audit Schema (standardized in `v0.4.0-rc14`).
+
+These logs can be cryptographically verified using the `agent-sudo` CLI:
+
+```bash
+agent-sudo verify-audit /tmp/agent_runtimes_tool_approvals_audit.jsonl
+```
+
+For full specifications, refer to the [Interoperability Checklist](https://github.com/ram9199/agent_sudo/blob/main/docs/architecture/INTEROPERABILITY_CHECKLIST.md).
 
 ## Model Providers
 
