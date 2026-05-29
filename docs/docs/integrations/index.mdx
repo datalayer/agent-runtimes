@@ -128,19 +128,19 @@ tool_hooks:
                 print("error", payload.get("tool"), payload.get("error_type"))
 ```
 
-### Agent_Sudo Example
+### Agent_Sudo Compatibility (Audit Logging)
 
-If you want external policy evaluation, `Agent_Sudo` can be called from `before_tool_execute` via function hook.
+`agent-runtimes` users can emit [Agent_Sudo](https://github.com/ram9199/agent_sudo)-compatible audit logs through existing tool hooks.
 
-- Project: [ram9199/agent_sudo](https://github.com/ram9199/agent_sudo)
+* **Ownership Boundaries**: `agent-runtimes` retains full ownership of the tool approval UX, hook lifecycle, and audit persistence. `Agent_Sudo` provides the interoperability specifications and verification tooling.
+* **Verification**: User hooks (e.g. `after_tool_execute`) may emit records following the [Canonical Hash Chain Specification](https://github.com/ram9199/agent_sudo/blob/main/docs/design/CANONICAL_HASH_CHAIN.md) and [Policy/Audit Schema](https://github.com/ram9199/agent_sudo/blob/main/docs/design/POLICY_AUDIT_SCHEMA.md) (standardized in [v0.4.0-rc13](https://github.com/ram9199/agent_sudo/releases/tag/v0.4.0-rc13)).
+* **Verifier Command**: Compatible logs can be verified at any time using the `agent-sudo` CLI:
+  ```bash
+  agent-sudo verify-audit path/to/mcp-audit.jsonl
+  ```
 
-```yaml
-tool_hooks:
-    before_tool_execute:
-        - function: agent_runtimes.integrations.agent_sudo:authorize_tool_call
-            kwargs:
-                fallback_decision: approval_required
-```
+For full specifications, refer to the [Interoperability Checklist](https://github.com/ram9199/agent_sudo/blob/main/docs/architecture/INTEROPERABILITY_CHECKLIST.md).
+
 
 ## Model Providers
 
