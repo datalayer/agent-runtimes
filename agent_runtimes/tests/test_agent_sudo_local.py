@@ -19,9 +19,16 @@ from agent_runtimes.guardrails.tool_approvals import (
     ToolsGuardrailCapability,
 )
 
+try:
+    import agent_sudo
+    has_agent_sudo = True
+except ImportError:
+    has_agent_sudo = False
+
 
 @pytest.fixture
 def temp_policy_file(tmp_path: Path) -> Path:
+    """Fixture to create a temporary Agent_Sudo policy file."""
     policy_content = """
 safe:
   - echo_tool
@@ -37,10 +44,14 @@ blocked:
 
 
 class _FakeManager:
+    """Fake approval manager for testing."""
+
     def __init__(self) -> None:
+        """Initialize the fake manager."""
         self.calls: list[tuple[str, dict[str, str], str | None]] = []
 
     def requires_approval(self, tool_name: str) -> bool:
+        """Determine if tool requires approval."""
         return tool_name == "sensitive_tool"
 
     async def request_and_wait(
@@ -49,12 +60,15 @@ class _FakeManager:
         safe_args: dict[str, str],
         tool_call_id: str | None,
     ) -> dict[str, Any]:
+        """Request approval and wait for response."""
         self.calls.append((tool_name, safe_args, tool_call_id))
         return {"status": "approved", "id": "test-approval-id", "tool_name": tool_name}
 
 
 @pytest.mark.asyncio
+@pytest.mark.skipif(not has_agent_sudo, reason="requires agent-sudo package")
 async def test_agent_sudo_local_allow(tmp_path: Path, temp_policy_file: Path) -> None:
+    """Test that a safe tool is allowed by Agent_Sudo local gateway."""
     audit_path = tmp_path / "audit.jsonl"
     pending_path = tmp_path / "pending_approvals.json"
     delegations_path = tmp_path / "delegations.json"
@@ -94,7 +108,9 @@ async def test_agent_sudo_local_allow(tmp_path: Path, temp_policy_file: Path) ->
 
 
 @pytest.mark.asyncio
+@pytest.mark.skipif(not has_agent_sudo, reason="requires agent-sudo package")
 async def test_agent_sudo_local_deny(tmp_path: Path, temp_policy_file: Path) -> None:
+    """Test that a blocked tool is denied by Agent_Sudo local gateway."""
     audit_path = tmp_path / "audit.jsonl"
     pending_path = tmp_path / "pending_approvals.json"
     delegations_path = tmp_path / "delegations.json"
@@ -133,9 +149,11 @@ async def test_agent_sudo_local_deny(tmp_path: Path, temp_policy_file: Path) -> 
 
 
 @pytest.mark.asyncio
+@pytest.mark.skipif(not has_agent_sudo, reason="requires agent-sudo package")
 async def test_agent_sudo_local_approval_needed(
     tmp_path: Path, temp_policy_file: Path
 ) -> None:
+    """Test that a sensitive tool requires approval."""
     audit_path = tmp_path / "audit.jsonl"
     pending_path = tmp_path / "pending_approvals.json"
     delegations_path = tmp_path / "delegations.json"
@@ -184,6 +202,7 @@ async def test_agent_sudo_local_approval_needed(
 
 @pytest.mark.asyncio
 async def test_agent_sudo_local_missing_package_error(tmp_path: Path) -> None:
+    """Test that missing agent-sudo package raises ImportError when configured."""
     # Temporarily hide agent_sudo package to simulate it not being installed.
     with mock.patch.dict("sys.modules", {"agent_sudo": None}):
         with pytest.raises(
@@ -204,9 +223,11 @@ async def test_agent_sudo_local_missing_package_error(tmp_path: Path) -> None:
 
 
 @pytest.mark.asyncio
+@pytest.mark.skipif(not has_agent_sudo, reason="requires agent-sudo package")
 async def test_agent_sudo_local_policy_crash_fail_closed(
     tmp_path: Path, temp_policy_file: Path
 ) -> None:
+    """Test that policy gateway crashes result in fail-closed behavior."""
     audit_path = tmp_path / "audit.jsonl"
     pending_path = tmp_path / "pending_approvals.json"
     delegations_path = tmp_path / "delegations.json"
@@ -233,7 +254,10 @@ async def test_agent_sudo_local_policy_crash_fail_closed(
 
     # Mock gateway evaluate to throw an exception to simulate a crash
     class MockGateway:
+        """Mock gateway that crashes on evaluate."""
+
         def evaluate(self, request: Any) -> Any:
+            """Simulate a crash during evaluation."""
             raise RuntimeError("Corrupt policy database")
 
     # Manually assign mock gateway

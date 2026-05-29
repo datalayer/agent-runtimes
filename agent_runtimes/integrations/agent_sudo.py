@@ -18,6 +18,20 @@ from typing import Any
 
 
 def _normalize_decision(raw: Any, fallback: str = "approval_needed") -> str:
+    """Normalize a decision string to a standard form.
+
+    Parameters
+    ----------
+    raw : Any
+        The raw decision input to normalize.
+    fallback : str, default "approval_needed"
+        The fallback decision if normalization fails.
+
+    Returns
+    -------
+    str
+        The normalized decision string.
+    """
     if not isinstance(raw, str):
         return fallback
     value = raw.strip().lower()
