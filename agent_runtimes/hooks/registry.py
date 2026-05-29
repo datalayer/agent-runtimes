@@ -187,7 +187,16 @@ async def _agent_sudo_local_handler(hook_input: HookInput) -> HookResult:
 # Register built-in handlers
 register_handler("audit_log", _audit_log_handler)
 register_handler("security_check", _security_check_handler)
-register_handler("agent_sudo_local", _agent_sudo_local_handler)
+
+try:
+    import agent_sudo  # noqa: F401
+
+    _has_agent_sudo = True
+except ImportError:
+    _has_agent_sudo = False
+
+if _has_agent_sudo:
+    register_handler("agent_sudo_local", _agent_sudo_local_handler)
 
 
 def build_hooks_middleware(spec_hooks: list[dict[str, Any]] | None) -> HooksMiddleware:
