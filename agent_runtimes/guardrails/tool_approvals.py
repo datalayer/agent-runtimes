@@ -816,7 +816,7 @@ class ToolsGuardrailCapability(AbstractCapability[Any]):
                                         pending_approval_store=pending_approval_store,
                                     )
 
-                                from agent_runtimes.integrations.agent_sudo import (
+                                from agent_runtimes.plugins.agent_sudo import (
                                     authorize_tool_call_local,
                                 )
 

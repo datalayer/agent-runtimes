@@ -1,11 +1,11 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Agent_Sudo integration helpers.
+"""Agent_Sudo plugin helpers.
 
 This module exposes a simple function hook callable from tool_hooks:
 
-function: agent_runtimes.integrations.agent_sudo:authorize_tool_call
+function: agent_runtimes.plugins.agent_sudo:authorize_tool_call
 """
 
 from __future__ import annotations

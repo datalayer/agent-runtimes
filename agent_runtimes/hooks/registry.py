@@ -162,7 +162,7 @@ async def _agent_sudo_local_handler(hook_input: HookInput) -> HookResult:
 
         import asyncio
 
-        from agent_runtimes.integrations.agent_sudo import authorize_tool_call_local
+        from agent_runtimes.plugins.agent_sudo import authorize_tool_call_local
 
         try:
             res = await asyncio.wait_for(

@@ -137,7 +137,7 @@ If you want external policy evaluation, `Agent_Sudo` can be called from `before_
 ```yaml
 tool_hooks:
     before_tool_execute:
-        - function: agent_runtimes.integrations.agent_sudo:authorize_tool_call
+        - function: agent_runtimes.plugins.agent_sudo:authorize_tool_call
             kwargs:
                 fallback_decision: approval_required
 ```
