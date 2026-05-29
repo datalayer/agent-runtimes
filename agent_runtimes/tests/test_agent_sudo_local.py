@@ -21,6 +21,7 @@ from agent_runtimes.guardrails.tool_approvals import (
 
 try:
     import agent_sudo
+
     has_agent_sudo = True
 except ImportError:
     has_agent_sudo = False
