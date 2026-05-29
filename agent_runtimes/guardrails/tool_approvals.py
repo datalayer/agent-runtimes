@@ -250,6 +250,11 @@ class ToolApprovalConfig:
     # so that newly-created approvals are broadcast to remote UI panels.
     user_jwt_token: str | None = field(default=None)
 
+    agent_sudo_policy_path: str | None = field(default=None)
+    agent_sudo_audit_log_path: str | None = field(default=None)
+    agent_sudo_delegations_file: str | None = field(default=None)
+    agent_sudo_pending_approvals_file: str | None = field(default=None)
+
     @classmethod
     def from_env(cls) -> ToolApprovalConfig:
         import os
@@ -309,6 +314,31 @@ class ToolApprovalConfig:
         current_delegations_camel = spec_config.get("currentDelegations")
         if isinstance(current_delegations_camel, list):
             base.current_delegations = [str(item) for item in current_delegations_camel]
+
+        agent_sudo_policy_path = spec_config.get(
+            "agent_sudo_policy_path"
+        ) or spec_config.get("agentSudoPolicyPath")
+        if isinstance(agent_sudo_policy_path, str):
+            base.agent_sudo_policy_path = agent_sudo_policy_path
+
+        agent_sudo_audit_log_path = spec_config.get(
+            "agent_sudo_audit_log_path"
+        ) or spec_config.get("agentSudoAuditLogPath")
+        if isinstance(agent_sudo_audit_log_path, str):
+            base.agent_sudo_audit_log_path = agent_sudo_audit_log_path
+
+        agent_sudo_delegations_file = spec_config.get(
+            "agent_sudo_delegations_file"
+        ) or spec_config.get("agentSudoDelegationsFile")
+        if isinstance(agent_sudo_delegations_file, str):
+            base.agent_sudo_delegations_file = agent_sudo_delegations_file
+
+        agent_sudo_pending_approvals_file = spec_config.get(
+            "agent_sudo_pending_approvals_file"
+        ) or spec_config.get("agentSudoPendingApprovalsFile")
+        if isinstance(agent_sudo_pending_approvals_file, str):
+            base.agent_sudo_pending_approvals_file = agent_sudo_pending_approvals_file
+
         return base
 
 
@@ -559,6 +589,28 @@ class ToolsGuardrailCapability(AbstractCapability[Any]):
     _decision_by_tool_call: dict[str, dict[str, Any]] = field(
         default_factory=dict, init=False, repr=False
     )
+    _sudo_gateway: Any = field(default=None, init=False, repr=False)
+    _sudo_lock: asyncio.Lock = field(
+        default_factory=asyncio.Lock, init=False, repr=False
+    )
+
+    def __post_init__(self) -> None:
+        has_agent_sudo_local = False
+        hooks = self.config.tool_hooks or {}
+        for phase, steps in hooks.items():
+            normalized_steps = _normalize_hook_steps(steps)
+            for step in normalized_steps:
+                if step.get("handler") == "agent_sudo_local":
+                    has_agent_sudo_local = True
+                    break
+        if has_agent_sudo_local:
+            try:
+                import agent_sudo  # noqa: F401
+            except ImportError as exc:
+                raise ImportError(
+                    "The 'agent-sudo' package is required but not installed because "
+                    "'handler: agent_sudo_local' is explicitly configured."
+                ) from exc
 
     def _get_manager(self) -> ToolApprovalManager:
         if self._manager is None:
@@ -664,6 +716,7 @@ class ToolsGuardrailCapability(AbstractCapability[Any]):
             try:
                 function_ref = step.get("function")
                 python_script = step.get("python")
+                handler = step.get("handler")
                 if isinstance(function_ref, str):
                     out = await asyncio.wait_for(
                         self._run_function_hook(function_ref, payload, step),
@@ -674,6 +727,112 @@ class ToolsGuardrailCapability(AbstractCapability[Any]):
                         self._run_python_hook(python_script, payload, step),
                         timeout=timeout_seconds,
                     )
+                elif handler == "agent_sudo_local":
+                    try:
+                        import agent_sudo  # noqa: F401
+                    except ImportError as exc:
+                        out = {
+                            "decision": "deny",
+                            "reason": f"agent_sudo_not_installed: {exc}",
+                        }
+                    else:
+                        async with self._sudo_lock:
+                            try:
+                                if self._sudo_gateway is None:
+                                    from agent_sudo.approvals import ApprovalProvider
+                                    from agent_sudo.audit import AuditLogger
+                                    from agent_sudo.delegations import DelegationStore
+                                    from agent_sudo.gateway import PermissionGateway
+                                    from agent_sudo.pending_approvals import (
+                                        PendingApprovalStore,
+                                    )
+                                    from agent_sudo.policy import (
+                                        load_default_policy,
+                                        load_policy,
+                                    )
+
+                                    # Resolve policy path
+                                    policy_path = (
+                                        step.get("agent_sudo_policy_path")
+                                        or step.get("agentSudoPolicyPath")
+                                        or self.config.agent_sudo_policy_path
+                                    )
+                                    policy = (
+                                        load_policy(Path(policy_path))
+                                        if policy_path
+                                        else load_default_policy()
+                                    )
+
+                                    # Resolve audit log path
+                                    audit_log_path = (
+                                        step.get("agent_sudo_audit_log_path")
+                                        or step.get("agentSudoAuditLogPath")
+                                        or self.config.agent_sudo_audit_log_path
+                                    )
+                                    audit_logger = (
+                                        AuditLogger(Path(audit_log_path))
+                                        if audit_log_path
+                                        else AuditLogger(
+                                            Path(".agent-sudo/audit.jsonl")
+                                        )
+                                    )
+
+                                    # Resolve delegation store path
+                                    delegations_file = (
+                                        step.get("agent_sudo_delegations_file")
+                                        or step.get("agentSudoDelegationsFile")
+                                        or self.config.agent_sudo_delegations_file
+                                    )
+                                    delegation_store = (
+                                        DelegationStore(Path(delegations_file))
+                                        if delegations_file
+                                        else DelegationStore()
+                                    )
+
+                                    # Resolve pending approval store path
+                                    pending_approvals_file = (
+                                        step.get("agent_sudo_pending_approvals_file")
+                                        or step.get("agentSudoPendingApprovalsFile")
+                                        or self.config.agent_sudo_pending_approvals_file
+                                    )
+                                    if pending_approvals_file:
+                                        pending_approval_store = PendingApprovalStore(
+                                            Path(pending_approvals_file),
+                                            audit_logger=audit_logger,
+                                        )
+                                    else:
+                                        pending_approval_store = PendingApprovalStore(
+                                            audit_logger=audit_logger
+                                        )
+
+                                    approvals = ApprovalProvider(
+                                        stdin_is_tty=lambda: False
+                                    )
+                                    self._sudo_gateway = PermissionGateway(
+                                        policy=policy,
+                                        approvals=approvals,
+                                        audit_logger=audit_logger,
+                                        delegation_store=delegation_store,
+                                        pending_approval_store=pending_approval_store,
+                                    )
+
+                                from agent_runtimes.plugins.agent_sudo import (
+                                    authorize_tool_call_local,
+                                )
+
+                                out = await asyncio.wait_for(
+                                    asyncio.to_thread(
+                                        authorize_tool_call_local,
+                                        payload,
+                                        self._sudo_gateway,
+                                    ),
+                                    timeout=timeout_seconds,
+                                )
+                            except Exception as exc:
+                                out = {
+                                    "decision": "deny",
+                                    "reason": f"policy_evaluation_crashed: {exc}",
+                                }
                 else:
                     continue
                 outputs.append(out)

@@ -116,6 +116,9 @@ chat = [
     "rich>=13.0.0",
     "textual",
 ]
+agent-sudo = [
+    "agent-sudo>=0.4.0rc14",
+]
 
 [project.scripts]
 agent-runtimes = "agent_runtimes.main:main"
