@@ -772,7 +772,9 @@ class ToolsGuardrailCapability(AbstractCapability[Any]):
                                     audit_logger = (
                                         AuditLogger(Path(audit_log_path))
                                         if audit_log_path
-                                        else AuditLogger(Path(".agent-sudo/audit.jsonl"))
+                                        else AuditLogger(
+                                            Path(".agent-sudo/audit.jsonl")
+                                        )
                                     )
 
                                     # Resolve delegation store path
@@ -803,7 +805,9 @@ class ToolsGuardrailCapability(AbstractCapability[Any]):
                                             audit_logger=audit_logger
                                         )
 
-                                    approvals = ApprovalProvider(stdin_is_tty=lambda: False)
+                                    approvals = ApprovalProvider(
+                                        stdin_is_tty=lambda: False
+                                    )
                                     self._sudo_gateway = PermissionGateway(
                                         policy=policy,
                                         approvals=approvals,

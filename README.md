@@ -111,7 +111,7 @@ make examples:prod
 ```
 
 This mode uses the `DATALAYER_*_URL` convention from
-[`datalayer-core`](../../tech/datalayer/core/datalayer_core/utils/urls.py)
+`datalayer-core` (specifically `datalayer_core/utils/urls.py`)
 and propagates those values to the Vite HTML placeholders.
 
 Override any URL on the command line:
