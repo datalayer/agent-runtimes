@@ -13,6 +13,7 @@ Provides a configurable FastAPI application with:
 """
 
 import asyncio
+import contextlib
 import logging
 import multiprocessing as mp
 import os
@@ -38,7 +39,9 @@ from .mcp import (
     shutdown_config_mcp_toolsets,
 )
 from .mcp.catalog_mcp_servers import get_catalog_server
+from .agent_node_sync import run_agent_node_sync
 from .routes import (
+    agent_node_router,
     a2a_protocol_router,
     a2ui_router,
     acp_router,
@@ -946,6 +949,8 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
     # Store reference to background task to prevent garbage collection
     _mcp_toolsets_task: asyncio.Task[Any] | None = None
     _mcp_servers_task: asyncio.Task[Any] | None = None
+    _agent_node_sync_task: asyncio.Task[Any] | None = None
+    _agent_node_stop_event = asyncio.Event()
     _durable_lifecycle: Any = None  # DurableLifecycle instance (when enabled)
 
     @asynccontextmanager
@@ -1211,7 +1216,22 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
         # Start A2A TaskManagers (required for FastA2A apps to handle requests)
         await start_a2a_task_managers()
 
+        _agent_node_stop_event.clear()
+        _agent_node_sync_task = asyncio.create_task(
+            run_agent_node_sync(_agent_node_stop_event),
+            name="agent-node-sync",
+        )
+
         yield
+
+        _agent_node_stop_event.set()
+        if _agent_node_sync_task is not None and not _agent_node_sync_task.done():
+            try:
+                await asyncio.wait_for(_agent_node_sync_task, timeout=3.0)
+            except asyncio.TimeoutError:
+                _agent_node_sync_task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await _agent_node_sync_task
 
         # Stop A2A TaskManagers on shutdown
         await stop_a2a_task_managers()
@@ -1293,6 +1313,7 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
     # Include routers
     app.include_router(health_router)
     app.include_router(identity_router)  # No prefix - uses /api/v1/identity internally
+    app.include_router(agent_node_router, prefix=config.api_prefix)
     app.include_router(agents_router, prefix=config.api_prefix)
     app.include_router(acp_router, prefix=config.api_prefix)
     app.include_router(configure_router, prefix=config.api_prefix)

@@ -36,6 +36,12 @@ Agent Runtimes solves the complexity of deploying AI agents by providing:
 
 ## 🌟 Features
 
+### Agent Node
+- **Central registration**: Agent nodes register and heartbeat to the central runtimes/operator APIs.
+- **Node configuration**: Runtime mode (`run`, `host`, `sleep`) and sharing metadata are tracked per node.
+- **Dedicated UI**: Agent Node list/detail UX is available for node observability and operations.
+- **End-to-end sync**: Local node state can be synchronized to central services for fleet visibility.
+
 ### Multi-Protocol Support
 - **ACP (Agent Client Protocol)**: WebSocket-based standard protocol
 - **Vercel AI SDK**: Compatible with Vercel's AI SDK for React/Next.js
@@ -87,6 +93,55 @@ pip install -e ".[docs]"       # docs build dependencies
 
 ```bash
 make examples
+```
+
+### Agent Node development (UI + server)
+
+For focused Agent Node development, run:
+
+```bash
+make agent-node
+```
+
+This target starts both:
+
+- the local Python server on port `8765`
+- the Vite page for `html/agent-node.html`
+
+Use this mode to iterate on Agent Node configuration flows and central registration behavior.
+
+### Quick Docker release
+
+For a fast build-and-push workflow during development:
+
+```bash
+make docker-release DOCKER_IMAGE=datalayer/agent-runtimes DOCKER_TAG=dev
+```
+
+### Docker image build and push
+
+Build the container image:
+
+```bash
+make docker-build DOCKER_IMAGE=datalayer/agent-runtimes DOCKER_TAG=dev
+```
+
+Push the image:
+
+```bash
+make docker-push DOCKER_IMAGE=datalayer/agent-runtimes DOCKER_TAG=dev
+```
+
+Build and push in one step:
+
+```bash
+make docker-release DOCKER_IMAGE=datalayer/agent-runtimes DOCKER_TAG=dev
+```
+
+Optional multi-arch platform example:
+
+```bash
+make docker-build DOCKER_PLATFORM=linux/amd64 DOCKER_IMAGE=datalayer/agent-runtimes DOCKER_TAG=dev
 ```
 
 By default, `make examples` boots the local Vite dev server with every

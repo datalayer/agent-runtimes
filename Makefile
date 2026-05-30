@@ -9,7 +9,8 @@ SHELL=/bin/bash
 .PHONY: \
 	help default clean build test test-js test-py kill warning \
 	publish-npm publish-pypi publish-conda pydoc typedoc docs \
-	examples examples\:prod examples\:proxy examples-proxy agent agent-notebook agent-lexical jupyter-server agent-serve \
+	examples examples\:prod examples\:proxy examples-proxy agent agent-node agent-notebook agent-lexical jupyter-server agent-serve \
+	docker-build docker-push docker-release \
 	agents list-specs specs specs-clone specs-generate specs-format \
 	ag-chat ag-chat-simple ag-chat-data-acquisition ag-chat-financial ag-chat-demo ag-chat-demo-nocodemode
 
@@ -20,6 +21,10 @@ AGENTSPECS_BRANCH ?= "feat/new"
 AGENT_SERVE_ID ?= data-acquisition
 AGENT_SERVE_NAME ?= dla-1
 AGENT_SERVE_PROTOCOL ?= vercel-ai
+
+DOCKER_IMAGE ?= datalayer/agent-runtimes
+DOCKER_TAG ?= latest
+DOCKER_PLATFORM ?=
 
 # ─── Examples URL configuration ───────────────────────────────────────────
 # These variables mirror the env vars consumed by `datalayer-core`
@@ -241,6 +246,9 @@ examples-proxy: examples\:proxy ## alias for examples:proxy
 agent: # agent - open agent.html with vite dev server
 	$(BEDROCK_ENV) npm run start:agent
 
+agent-node: ## agent-node – develop Agent Node UI + local server
+	$(BEDROCK_ENV) npm run start:agent-node
+
 agent-notebook: # agent-notebook - open agent-notebook.html with vite dev server
 	$(BEDROCK_ENV) npm run start:agent-notebook
 
@@ -262,6 +270,14 @@ agent-serve: # agent-server
 	  --host 0.0.0.0 \
 	  --port 8765 \
 	  --debug
+
+docker-build: ## build Docker image (override DOCKER_IMAGE/DOCKER_TAG/DOCKER_PLATFORM)
+	docker build $(if $(DOCKER_PLATFORM),--platform $(DOCKER_PLATFORM),) -t $(DOCKER_IMAGE):$(DOCKER_TAG) -f Dockerfile .
+
+docker-push: ## push Docker image
+	docker push $(DOCKER_IMAGE):$(DOCKER_TAG)
+
+docker-release: docker-build docker-push ## build and push Docker image
 
 agents: # agents
 	agent-runtimes list-agents \

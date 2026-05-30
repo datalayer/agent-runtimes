@@ -99,6 +99,8 @@
     "start:acp:vite": "VITE_ACP_WS_URL=ws://localhost:8765/api/v1/acp/ws vite",
     "start:agent": "run-p server:start start:agent:vite",
     "start:agent:vite": "vite --open /html/agent.html",
+    "start:agent-node": "run-p server:start start:agent-node:vite",
+    "start:agent-node:vite": "vite --open /html/agent-node.html",
     "start:agent-notebook": "run-p server:start jupyter:start start:agent-notebook:vite",
     "start:agent-notebook:vite": "vite --open /html/agent-notebook.html",
     "start:agent-lexical": "run-p server:start jupyter:start start:agent-lexical:vite",

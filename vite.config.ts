@@ -182,6 +182,7 @@ export default defineConfig(({ mode, command }) => {
     build.rollupOptions.input = {
       main: path.resolve(__dirname, 'html/index.html'),
       agent: path.resolve(__dirname, 'html/agent.html'),
+      'agent-node': path.resolve(__dirname, 'html/agent-node.html'),
       'agent-notebook': path.resolve(__dirname, 'html/agent-notebook.html'),
       'agent-lexical': path.resolve(__dirname, 'html/agent-lexical.html'),
     };

@@ -19,6 +19,7 @@ from .a2a import (
 )
 from .a2ui import router as a2ui_router
 from .acp import router as acp_router
+from .agent_node import router as agent_node_router
 from .agents import router as agents_router
 from .agui import (
     cancel_all_threads as cancel_agui_threads,
@@ -70,6 +71,7 @@ __all__ = [
     "A2AAgentCard",
     "a2ui_router",
     "acp_router",
+    "agent_node_router",
     "agents_router",
     "agui_router",
     "cancel_agui_thread",

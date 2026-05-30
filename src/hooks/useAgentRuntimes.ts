@@ -632,12 +632,18 @@ export function useAgentRuntimes(
  * The backend returns active runtimes from the operator **plus** paused
  * runtimes synthesised from Solr checkpoint records (with ``status="paused"``).
  */
-export function useAgentRuntimesQuery(scope?: {
-  selectedUserUid?: string;
-  selectedOrganizationUid?: string;
-  selectedTeamUid?: string;
-  selectedAgentUid?: string;
-}) {
+export function useAgentRuntimesQuery(
+  scope?: {
+    selectedUserUid?: string;
+    selectedOrganizationUid?: string;
+    selectedTeamUid?: string;
+    selectedAgentUid?: string;
+  },
+  queryOptions?: {
+    enabled?: boolean;
+    refetchInterval?: number | false;
+  },
+) {
   const { configuration } = useCoreStore();
   const { requestDatalayer } = useDatalayer({ notifyOnError: false });
   const { user } = useIAMStore();
@@ -685,8 +691,8 @@ export function useAgentRuntimesQuery(scope?: {
       return [];
     },
     ...AGENT_QUERY_OPTIONS,
-    refetchInterval: 10000,
-    enabled: !!user,
+    refetchInterval: queryOptions?.refetchInterval ?? 10000,
+    enabled: (queryOptions?.enabled ?? true) && !!user,
   });
 }
 
@@ -913,13 +919,19 @@ export interface UseAgentsRuntimesReturn {
 /**
  * Consolidated runtime list and mutations.
  */
-export function useAgentsRuntimes(scope?: {
-  selectedUserUid?: string;
-  selectedOrganizationUid?: string;
-  selectedTeamUid?: string;
-  selectedAgentUid?: string;
-}): UseAgentsRuntimesReturn {
-  const runtimesQuery = useAgentRuntimesQuery(scope);
+export function useAgentsRuntimes(
+  scope?: {
+    selectedUserUid?: string;
+    selectedOrganizationUid?: string;
+    selectedTeamUid?: string;
+    selectedAgentUid?: string;
+  },
+  queryOptions?: {
+    enabled?: boolean;
+    refetchInterval?: number | false;
+  },
+): UseAgentsRuntimesReturn {
+  const runtimesQuery = useAgentRuntimesQuery(scope, queryOptions);
   const createRuntimeMutation = useCreateAgentRuntime();
   const deleteRuntimeMutation = useDeleteAgentRuntime();
   const refreshRuntimes = useRefreshAgentRuntimes();
