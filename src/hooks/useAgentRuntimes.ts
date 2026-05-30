@@ -692,6 +692,8 @@ export function useAgentRuntimesQuery(
     },
     ...AGENT_QUERY_OPTIONS,
     refetchInterval: queryOptions?.refetchInterval ?? 10000,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
     enabled: (queryOptions?.enabled ?? true) && !!user,
   });
 }
@@ -798,6 +800,15 @@ export function useDeleteAgentRuntime() {
       });
     },
     onSuccess: (_data, podName) => {
+      queryClient.setQueriesData(
+        { queryKey: agentQueryKeys.agentRuntimes.lists() },
+        (current: AgentRuntimeData[] | undefined) => {
+          if (!Array.isArray(current)) {
+            return current;
+          }
+          return current.filter(runtime => runtime.pod_name !== podName);
+        },
+      );
       queryClient.cancelQueries({
         queryKey: agentQueryKeys.agentRuntimes.detail(podName),
       });
@@ -806,6 +817,10 @@ export function useDeleteAgentRuntime() {
       });
       queryClient.invalidateQueries({
         queryKey: agentQueryKeys.agentRuntimes.lists(),
+      });
+      queryClient.refetchQueries({
+        queryKey: agentQueryKeys.agentRuntimes.lists(),
+        type: 'active',
       });
     },
   });
