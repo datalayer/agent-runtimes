@@ -1,0 +1,225 @@
+---
+title: Agent Nodes
+---
+
+# Agent Nodes — Developer Guide
+
+This guide is the implementation reference for **Agent Node**: a self-hosted
+`agent-runtimes` server that registers to Datalayer Runtimes and serves as
+a node-local execution endpoint for AI agent workloads.
+
+It is the canonical developer documentation. End-user documentation lives in
+the central UI under `Docs → Agent Nodes`.
+
+## Scope and Goals
+
+1. End-to-end Agent Node lifecycle: register, heartbeat, health, configure
+   mode, list, inspect, and route chat.
+2. Keep configuration source-of-truth **local** on each node.
+3. Mode taxonomy: `private | shared | sleep`.
+4. Central visibility: own nodes (all modes) + others only in `shared` mode.
+5. Datalayer Runtimes (not operator) is the control plane and tunnel hub.
+6. Ship a dockerized runtime and a simple local development workflow.
+
+## Architecture Decisions
+
+1. **Datalayer Runtimes is the system of record** for Agent Nodes;
+   `datalayer-operator` is no longer involved in Agent Node lifecycle.
+2. **The central service mints node identity** (ULID) on first register.
+   The local node persists whatever id the service returns and reuses it on
+   subsequent calls.
+3. **A node-to-runtimes tunnel is required**: UI ↔ Node chat traffic transits
+   through Datalayer Runtimes; nodes never accept inbound traffic from the UI.
+4. **Visibility model** in the central UI:
+   - show **my nodes** (all modes) with live status,
+   - show **other users' Shared Mode nodes** only,
+   - never expose other users' `private` or `sleep` nodes.
+5. **Agent Node UI is node-local administration**; the central UI is
+   read-only for configuration and operational visibility.
+6. **One docker image** launches `agent-runtimes` + Agent Node UI supporting
+   all three modes.
+
+## Modes
+
+| Mode      | Purpose                                                     |
+| --------- | ----------------------------------------------------------- |
+| `private` | Owner-only execution under a selected billable account.     |
+| `shared`  | Discoverable / usable by others per the sharing policy.     |
+| `sleep`   | Registered and visible but does not accept execution.       |
+
+Mode is part of every heartbeat and every health report. Changing the mode
+in the local UI synchronously triggers an extra health report so the central
+registry reflects the new state immediately.
+
+## Canonical Models
+
+### `AgentNodeConfiguration`
+
+```jsonc
+{
+  "mode": "private",            // private | shared | sleep
+  "node_uid": "01JABCDE...",    // ULID assigned by central service
+  "billable_account_uid": "...",
+  "billable_account_type": "...",
+  "billable_account_handle": "...",
+  "sharing": { /* sharing policy for shared mode */ }
+}
+```
+
+### `AgentNodeHealth`
+
+```jsonc
+{
+  "mode": "private",
+  "hostname": "node-host",
+  "platform": "Linux",
+  "platform_release": "6.5.0-...",
+  "python_version": "3.13.0",
+  "agent_runtimes_version": "dev",
+  "cpu_count": 16,
+  "cpu_percent": 12.3,
+  "memory_total_mb": 64000,
+  "memory_available_mb": 41280,
+  "load_average": [0.32, 0.45, 0.51],
+  "uptime_seconds": 1234.5,
+  "reported_at": "...",
+  "reason": "periodic"           // periodic | mode_change | startup
+}
+```
+
+### `AgentNodeRecord` (central)
+
+Adds owner identity, status, timestamps, capabilities, plus the latest
+`health` snapshot and `last_health_at`.
+
+## Identity (`node_uid`)
+
+1. The central `datalayer-runtimes` service is the **sole authority** for
+   minting Agent Node identifiers.
+2. On the first `POST /api/runtimes/v1/agent-nodes/register` from a node,
+   the service mints a **ULID** and returns it as `agent_node.node_id`.
+3. The local node persists that id as `configuration.node_uid` in
+   `~/.datalayer/agent-node.json` (override with `AGENT_NODE_STATE_PATH`)
+   and reuses it for all subsequent `/register`, `/heartbeat`, and
+   `/health` calls.
+4. `AGENT_NODE_ID` remains an operator escape hatch for externally pinned
+   ids. When set, no service-side minting occurs and the value is used
+   verbatim.
+
+## Synchronization Loop
+
+The background sync task in `agent_runtimes/agent_node_sync.py`:
+
+1. Registers with the central service. On first call, omits `node_id`;
+   captures the assigned ULID from the response and persists it.
+2. Sends a `heartbeat` with the current configuration.
+3. Sends a `health` snapshot:
+   - on startup (`reason="startup"`),
+   - every `AGENT_NODE_HEALTH_SECONDS` (default `60`s, `reason="periodic"`),
+   - immediately on any local mode change (`reason="mode_change"`).
+4. Waits up to `AGENT_NODE_HEARTBEAT_SECONDS` (default `20`s) before the
+   next tick, waking early on stop or mode-change.
+
+Mode-change triggering uses `register_mode_change_callback()` exported by
+`routes/agent_node.py`. The callback fires inside `set_agent_node_configuration`
+when the new mode differs from the persisted one.
+
+## Endpoints
+
+### Local node — `agent-runtimes`
+
+- `GET  /api/v1/agent-node/configuration` — read persisted configuration
+  including `node_uid`.
+- `POST /api/v1/agent-node/configuration` — replace configuration. The
+  `node_uid` is owned by the central service and is **never** overwritten
+  by this endpoint; only `set_agent_node_uid()` updates it.
+
+### Central — `datalayer-runtimes`
+
+- `POST /api/runtimes/v1/agent-nodes/register` — `node_id` optional; ULID
+  minted via `datalayer_common.utils.new_ulid` when missing.
+- `POST /api/runtimes/v1/agent-nodes/heartbeat` — `node_id` + current
+  `configuration`.
+- `POST /api/runtimes/v1/agent-nodes/configuration` — update configuration.
+- `POST /api/runtimes/v1/agent-nodes/health` — periodic / on-demand health
+  snapshot. Also refreshes `last_seen_at` and, if `health.mode` differs from
+  the registered configuration, reconciles the registered mode.
+- `GET  /api/runtimes/v1/agent-nodes` — list visible nodes (own + others
+  shared).
+- `GET  /api/runtimes/v1/agent-nodes/{node_id}` — fetch one node.
+- Tunnel endpoints: `GET .../tunnel/ws`, `POST .../{node_id}/tunnel/messages`,
+  `GET .../{node_id}/tunnel/events`, `GET .../{node_id}/tunnel/status`.
+
+## Environment Variables
+
+| Variable                          | Purpose                                                    |
+| --------------------------------- | ---------------------------------------------------------- |
+| `DATALAYER_RUNTIMES_URL`          | Base URL of central runtimes service.                      |
+| `DATALAYER_API_KEY`               | Bearer token for register/heartbeat/health.                |
+| `AGENT_NODE_ID`                   | Optional externally pinned node id.                        |
+| `AGENT_NODE_NAME`                 | Optional display name (defaults to hostname).              |
+| `AGENT_NODE_MODE`                 | Initial mode (only on first start before any persistence). |
+| `AGENT_NODE_STATE_PATH`           | Override for the persisted configuration JSON.             |
+| `AGENT_NODE_HEARTBEAT_SECONDS`    | Heartbeat cadence (default `20`).                          |
+| `AGENT_NODE_HEALTH_SECONDS`       | Health cadence (default `60`).                             |
+| `AGENT_RUNTIMES_VERSION`          | Embedded in heartbeat / health payloads.                   |
+
+## UI Flow (Node-Local)
+
+The `src/AgentNode.tsx` app exposes three steps:
+
+1. **Authentication** — sign in (token or API key). Configuration / Chat
+   header entries are hidden until authenticated.
+2. **Configuration** — pick mode, billable account, and sharing policy.
+3. **Chat** — node-local AG-UI chat. Only enabled when
+   `configuration.mode === 'private'`.
+
+If mode is changed away from `private` while in the chat view, the user is
+returned to the configuration view.
+
+## Security and Authorization
+
+1. Runtimes is the single public control plane for Agent Nodes.
+2. The tunnel is authenticated and bound to the owner identity.
+3. UI requests are validated by user identity and node access policy.
+4. Shared-mode access follows the explicit sharing policy.
+
+## Development Workflow
+
+```bash
+# Local UI + Python server
+make agent-nodes
+
+# Local UI + Python against a local plane stack
+make agent-nodes:proxy
+
+# Dockerized runtime
+make agent-nodes-docker-build DOCKER_TAG=dev
+docker run --rm -p 8765:8765 datalayer/agent-nodes:dev
+```
+
+## Risks and Mitigations
+
+1. **Tunnel instability** — reconnect with backoff, heartbeats, session
+   expiry.
+2. **Visibility regressions** — explicit policy tests for own/shared-only
+   queries.
+3. **Mode migration drift** — temporary alias support (`run`/`host`) with
+   strict deprecation window.
+4. **Registry restart loss** — v1 in-memory registry is documented as
+   expected; persistence is a follow-up.
+
+## Acceptance Criteria
+
+1. Node can run in `private`, `shared`, and `sleep` modes.
+2. Node registers and heartbeats directly against the runtimes-owned
+   registry; ULID is minted server-side on first register.
+3. Health is reported on startup, on a fixed cadence, and on every mode
+   change.
+4. Tunnel routes chat traffic both ways via runtimes.
+5. UI Agent Nodes page shows my nodes (all modes) + other users' shared
+   nodes, including node id, mode, status, host, and last-seen.
+6. UI supports navigation from a node row/detail to chat via the selected
+   node.
+7. Docker image launches node UI + server with all three modes.
+8. `make agent-nodes` supports easy local UI + Python development.

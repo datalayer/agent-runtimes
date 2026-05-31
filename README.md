@@ -101,7 +101,7 @@ make examples
 For focused Agent Node development, run:
 
 ```bash
-make agent-node
+make agent-nodes
 ```
 
 This target starts both:
@@ -121,7 +121,7 @@ Expected central visibility semantics:
 To run Agent Node with local service URLs preconfigured, use:
 
 ```bash
-make agent-node:proxy
+make agent-nodes:proxy
 ```
 
 This target applies the `PLANE_LOCAL_*_URL` mappings and exports both
@@ -136,7 +136,7 @@ Prerequisites:
 Override any local service URL if needed:
 
 ```bash
-PLANE_LOCAL_RUNTIMES_URL=http://localhost:19500 make agent-node:proxy
+PLANE_LOCAL_RUNTIMES_URL=http://localhost:19500 make agent-nodes:proxy
 ```
 
 ### Quick Docker release
@@ -144,7 +144,8 @@ PLANE_LOCAL_RUNTIMES_URL=http://localhost:19500 make agent-node:proxy
 For a fast build-and-push workflow during development:
 
 ```bash
-make docker-release DOCKER_IMAGE=datalayer/agent-nodes DOCKER_TAG=dev
+make agent-nodes-docker-build DOCKER_TAG=dev
+make agent-nodes-docker-push DOCKER_TAG=dev
 ```
 
 To run a local container that exposes the Agent Node UI/server supporting all modes:
@@ -158,25 +159,38 @@ docker run --rm -p 8765:8765 datalayer/agent-nodes:dev
 Build the container image:
 
 ```bash
-make docker-build DOCKER_IMAGE=datalayer/agent-nodes DOCKER_TAG=dev
+make agent-nodes-docker-build DOCKER_TAG=dev
+```
+
+`DOCKER_IMAGE` defaults to `datalayer/agent-nodes`, and can be overridden:
+
+```bash
+make agent-nodes-docker-build DOCKER_IMAGE=my-registry/agent-nodes DOCKER_TAG=dev
 ```
 
 Push the image:
 
 ```bash
-make docker-push DOCKER_IMAGE=datalayer/agent-nodes DOCKER_TAG=dev
+make agent-nodes-docker-push DOCKER_TAG=dev
+```
+
+Override image and tag at push time if needed:
+
+```bash
+make agent-nodes-docker-push DOCKER_IMAGE=my-registry/agent-nodes DOCKER_TAG=dev
 ```
 
 Build and push in one step:
 
 ```bash
-make docker-release DOCKER_IMAGE=datalayer/agent-nodes DOCKER_TAG=dev
+make agent-nodes-docker-build DOCKER_TAG=dev
+make agent-nodes-docker-push DOCKER_TAG=dev
 ```
 
 Optional multi-arch platform example:
 
 ```bash
-make docker-build DOCKER_PLATFORM=linux/amd64 DOCKER_IMAGE=datalayer/agent-nodes DOCKER_TAG=dev
+make agent-nodes-docker-build DOCKER_PLATFORM=linux/amd64 DOCKER_TAG=dev
 ```
 
 By default, `make examples` boots the local Vite dev server with every

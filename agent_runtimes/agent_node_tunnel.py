@@ -199,9 +199,24 @@ async def run_agent_node_tunnel(stop_event: asyncio.Event) -> None:
         await stop_event.wait()
         return
 
+    try:
+        from .routes.agent_node import get_agent_node_configuration
+    except Exception:  # noqa: BLE001
+        get_agent_node_configuration = None  # type: ignore[assignment]
+
     reconnect_seconds = int(os.environ.get("AGENT_NODE_TUNNEL_RECONNECT_SECONDS", "5"))
 
     while not stop_event.is_set():
+        if get_agent_node_configuration is not None:
+            try:
+                if not get_agent_node_configuration().billable_account_uid:
+                    try:
+                        await asyncio.wait_for(stop_event.wait(), timeout=reconnect_seconds)
+                    except asyncio.TimeoutError:
+                        continue
+                    break
+            except Exception:  # noqa: BLE001
+                pass
         try:
             async with ws_connect(tunnel_url, open_timeout=15.0, close_timeout=5.0) as websocket:
                 logger.info("Agent node tunnel connected")

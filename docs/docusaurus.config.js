@@ -45,6 +45,12 @@ module.exports = {
         },
         {
           type: 'doc',
+          docId: 'agentspecs/index',
+          position: 'left',
+          label: 'Agentspecs',
+        },
+        {
+          type: 'doc',
           docId: 'protocols/index',
           position: 'left',
           label: 'Protocols',
@@ -59,13 +65,25 @@ module.exports = {
           type: 'doc',
           docId: 'programmatic-tools/index',
           position: 'left',
-          label: 'Programmatic Tools',
+          label: 'Tools',
         },
         {
           type: 'doc',
           docId: 'chat/index',
           position: 'left',
           label: 'Chat',
+        },
+        {
+          type: 'doc',
+          docId: 'subagents/index',
+          position: 'left',
+          label: 'Subagents',
+        },
+        {
+          type: 'doc',
+          docId: 'agent-nodes/index',
+          position: 'left',
+          label: 'Nodes',
         },
         {
           type: 'doc',
@@ -78,18 +96,6 @@ module.exports = {
           docId: 'plugins/index',
           position: 'left',
           label: 'Plugins',
-        },
-        {
-          type: 'doc',
-          docId: 'nodes/index',
-          position: 'left',
-          label: 'Nodes',
-        },
-        {
-          type: 'doc',
-          docId: 'subagents/index',
-          position: 'left',
-          label: 'Subagents',
         },
         {
           type: 'doc',

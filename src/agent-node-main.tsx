@@ -4,9 +4,16 @@
  */
 
 import { createRoot } from 'react-dom/client';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AgentNode } from './AgentNode';
+
+const queryClient = new QueryClient();
 
 const rootElement = document.getElementById('root');
 if (rootElement) {
-  createRoot(rootElement).render(<AgentNode />);
+  createRoot(rootElement).render(
+    <QueryClientProvider client={queryClient}>
+      <AgentNode />
+    </QueryClientProvider>,
+  );
 }

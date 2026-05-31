@@ -14,6 +14,8 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 COPY package.json package-lock.json* ./
+COPY scripts ./scripts
+COPY patches ./patches
 RUN npm install
 
 COPY . .
