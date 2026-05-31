@@ -9,7 +9,7 @@ SHELL=/bin/bash
 .PHONY: \
 	help default clean build test test-js test-py kill warning \
 	publish-npm publish-pypi publish-conda pydoc typedoc docs \
-	examples examples\:prod examples\:proxy examples-proxy agent agent-node agent-notebook agent-lexical jupyter-server agent-serve \
+	examples examples\:prod examples\:proxy examples-proxy agent agent-node agent-node\:proxy agent-node-proxy agent-notebook agent-lexical jupyter-server agent-serve \
 	docker-build docker-push docker-release \
 	agents list-specs specs specs-clone specs-generate specs-format \
 	ag-chat ag-chat-simple ag-chat-data-acquisition ag-chat-financial ag-chat-demo ag-chat-demo-nocodemode
@@ -22,7 +22,7 @@ AGENT_SERVE_ID ?= data-acquisition
 AGENT_SERVE_NAME ?= dla-1
 AGENT_SERVE_PROTOCOL ?= vercel-ai
 
-DOCKER_IMAGE ?= datalayer/agent-runtimes
+DOCKER_IMAGE ?= datalayer/agent-nodes
 DOCKER_TAG ?= latest
 DOCKER_PLATFORM ?=
 
@@ -248,6 +248,13 @@ agent: # agent - open agent.html with vite dev server
 
 agent-node: ## agent-node – develop Agent Node UI + local server
 	$(BEDROCK_ENV) npm run start:agent-node
+
+agent-node\:proxy: ## agent-node:proxy – Agent Node dev against local `plane local` services (PLANE_LOCAL_*_URL defaults)
+	$(BEDROCK_ENV) \
+	$(EXAMPLES_PROXY_ENV) \
+		npm run start:agent-node
+
+agent-node-proxy: agent-node\:proxy ## alias for agent-node:proxy
 
 agent-notebook: # agent-notebook - open agent-notebook.html with vite dev server
 	$(BEDROCK_ENV) npm run start:agent-notebook

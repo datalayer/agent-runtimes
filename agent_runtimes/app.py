@@ -40,6 +40,7 @@ from .mcp import (
 )
 from .mcp.catalog_mcp_servers import get_catalog_server
 from .agent_node_sync import run_agent_node_sync
+from .agent_node_tunnel import run_agent_node_tunnel
 from .routes import (
     agent_node_router,
     a2a_protocol_router,
@@ -950,6 +951,7 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
     _mcp_toolsets_task: asyncio.Task[Any] | None = None
     _mcp_servers_task: asyncio.Task[Any] | None = None
     _agent_node_sync_task: asyncio.Task[Any] | None = None
+    _agent_node_tunnel_task: asyncio.Task[Any] | None = None
     _agent_node_stop_event = asyncio.Event()
     _durable_lifecycle: Any = None  # DurableLifecycle instance (when enabled)
 
@@ -1221,6 +1223,10 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
             run_agent_node_sync(_agent_node_stop_event),
             name="agent-node-sync",
         )
+        _agent_node_tunnel_task = asyncio.create_task(
+            run_agent_node_tunnel(_agent_node_stop_event),
+            name="agent-node-tunnel",
+        )
 
         yield
 
@@ -1232,6 +1238,14 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
                 _agent_node_sync_task.cancel()
                 with contextlib.suppress(asyncio.CancelledError):
                     await _agent_node_sync_task
+
+        if _agent_node_tunnel_task is not None and not _agent_node_tunnel_task.done():
+            try:
+                await asyncio.wait_for(_agent_node_tunnel_task, timeout=3.0)
+            except asyncio.TimeoutError:
+                _agent_node_tunnel_task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await _agent_node_tunnel_task
 
         # Stop A2A TaskManagers on shutdown
         await stop_a2a_task_managers()

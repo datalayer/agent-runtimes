@@ -45,21 +45,9 @@ module.exports = {
         },
         {
           type: 'doc',
-          docId: 'chat/index',
+          docId: 'protocols/index',
           position: 'left',
-          label: 'Chat',
-        },
-        {
-          type: 'doc',
-          docId: 'programmatic-tools/index',
-          position: 'left',
-          label: 'Programmatic Tools',
-        },
-        {
-          type: 'doc',
-          docId: 'transports/index',
-          position: 'left',
-          label: 'Transports',
+          label: 'Protocols',
         },
         {
           type: 'doc',
@@ -69,15 +57,15 @@ module.exports = {
         },
         {
           type: 'doc',
-          docId: 'extensions/index',
+          docId: 'programmatic-tools/index',
           position: 'left',
-          label: 'Extensions',
+          label: 'Programmatic Tools',
         },
         {
           type: 'doc',
-          docId: 'hooks/index',
+          docId: 'chat/index',
           position: 'left',
-          label: 'Hooks',
+          label: 'Chat',
         },
         {
           type: 'doc',
@@ -87,15 +75,39 @@ module.exports = {
         },
         {
           type: 'doc',
+          docId: 'plugins/index',
+          position: 'left',
+          label: 'Plugins',
+        },
+        {
+          type: 'doc',
+          docId: 'nodes/index',
+          position: 'left',
+          label: 'Nodes',
+        },
+        {
+          type: 'doc',
+          docId: 'subagents/index',
+          position: 'left',
+          label: 'Subagents',
+        },
+        {
+          type: 'doc',
+          docId: 'hooks/index',
+          position: 'left',
+          label: 'Hooks',
+        },
+        {
+          type: 'doc',
           docId: 'cli/index',
           position: 'left',
           label: 'CLI',
         },
         {
           type: 'doc',
-          docId: 'api-endpoints/index',
+          docId: 'endpoints/index',
           position: 'left',
-          label: 'API Endpoints',
+          label: 'Endpoints',
         },
         {
           href: 'https://discord.gg/YQFwvmSSuR',

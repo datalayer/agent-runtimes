@@ -1,0 +1,160 @@
+---
+title: Agent Nodes
+---
+
+# Agent Nodes
+
+Agent Node is a recently developed runtime feature for operating distributed
+agent runtime workers with local configuration and central fleet visibility.
+
+## What Agent Node Provides
+
+- **Central registration**: Each node registers itself directly to Datalayer
+  Runtimes APIs.
+- **Heartbeat sync**: Nodes send periodic heartbeats to keep status fresh.
+- **Node configuration**: Runtime mode and sharing metadata are managed per node.
+- **Tunnel routing**: Nodes keep an authenticated tunnel with Datalayer
+  Runtimes so UI chat traffic can be routed both ways.
+- **Dedicated UX**: A focused Agent Node interface supports authentication,
+  configuration, and node-local chat.
+
+## Runtime Modes
+
+Agent Node supports three modes:
+
+- `private`: active execution mode for owner-only usage.
+- `shared`: execution mode for shared usage based on sharing policy.
+- `sleep`: low-activity mode.
+
+These modes are exposed via the local configuration endpoint and can be
+updated dynamically.
+
+Compatibility aliases are still accepted while migrating existing setups:
+
+- `run` -> `private`
+- `host` -> `shared`
+
+## Local Configuration API
+
+Agent Runtimes exposes local Agent Node configuration endpoints:
+
+- `GET /api/v1/agent-node/configuration`
+- `POST /api/v1/agent-node/configuration`
+
+The configuration model includes:
+
+- `mode`
+- `billable_account_uid`
+- `billable_account_type`
+- `billable_account_handle`
+- `sharing`
+
+## Central Synchronization
+
+A background sync task registers and heartbeats nodes to:
+
+- `POST /api/runtimes/v1/agent-nodes/register`
+- `POST /api/runtimes/v1/agent-nodes/heartbeat`
+- `POST /api/runtimes/v1/agent-nodes/configuration`
+- `GET /api/runtimes/v1/agent-nodes`
+- `GET /api/runtimes/v1/agent-nodes/{node_id}`
+
+Sync is controlled by environment variables:
+
+- `DATALAYER_RUNTIMES_URL` (or `DATALAYER_AGENT_RUNTIMES_URL`)
+- `DATALAYER_API_KEY`
+- `AGENT_NODE_ID`
+- `AGENT_NODE_NAME`
+- `AGENT_NODE_HEARTBEAT_SECONDS`
+
+## Visibility Model
+
+Central UI visibility should include:
+
+- your own nodes (all modes),
+- other users' nodes only when mode is `shared`.
+
+Private and sleep nodes from other users are not listed.
+
+## Tunnel Requirement
+
+Agent Nodes are expected to keep a persistent authenticated tunnel to Datalayer
+Runtimes. This tunnel is the transport path used to route messages:
+
+- UI -> Runtimes -> Agent Node
+- Agent Node -> Runtimes -> UI
+
+The tunnel is required for node-targeted chat sessions from the central UI.
+
+Tunnel and relay endpoints on datalayer-runtimes:
+
+- `GET /api/runtimes/v1/agent-nodes/tunnel/ws`
+- `POST /api/runtimes/v1/agent-nodes/{node_id}/tunnel/messages`
+- `GET /api/runtimes/v1/agent-nodes/{node_id}/tunnel/events`
+- `GET /api/runtimes/v1/agent-nodes/{node_id}/tunnel/status`
+
+## Agent Node UI Flow
+
+The Agent Node UI provides a 3-step flow:
+
+1. **Authentication**: token setup guidance.
+2. **Configuration**: mode, billing fields, sharing JSON.
+3. **Chat**: node-local chat using AG-UI protocol.
+
+## Development Workflow
+
+For focused Agent Node development, run:
+
+```bash
+make agent-node
+```
+
+This starts:
+
+- local Python server on port `8765`
+- Vite page for `html/agent-node.html`
+
+Use this mode to iterate on configuration flows and central registration
+behavior.
+
+For local frontend + Python iteration in one workflow, keep using this target.
+
+## Local Services Development (plane local)
+
+To develop Agent Node against a local services stack with preconfigured local
+URLs, use:
+
+```bash
+make agent-node:proxy
+```
+
+This target reuses the Makefile `PLANE_LOCAL_*_URL` defaults (same mapping used
+by `make examples:proxy`) and injects those URLs into both:
+
+- `DATALAYER_*` variables used by the Python server, including node
+  sync/tunnel to `datalayer-runtimes`
+- `VITE_*` variables used by the frontend
+
+Prerequisites:
+
+1. Start your local Plane services (`plane local`) so local URLs are reachable.
+2. Set `DATALAYER_API_KEY` for authenticated node registration/tunnel.
+
+If you use non-default local ports, override variables on the command line:
+
+```bash
+PLANE_LOCAL_RUNTIMES_URL=http://localhost:19500 make agent-node:proxy
+```
+
+## Docker Workflow
+
+Build and run a containerized Agent Node runtime that exposes the local UI and
+server:
+
+```bash
+make docker-build DOCKER_IMAGE=datalayer/agent-nodes DOCKER_TAG=dev
+docker run --rm -p 8765:8765 datalayer/agent-nodes:dev
+```
+
+This runtime is the deployment form expected to support all three modes:
+private, shared, and sleep.

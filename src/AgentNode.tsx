@@ -27,7 +27,7 @@ setupPrimerPortals();
 
 const BASE_URL = window.location.origin;
 
-type AgentNodeMode = 'run' | 'host' | 'sleep';
+type AgentNodeMode = 'private' | 'shared' | 'sleep';
 
 type AgentNodeConfiguration = {
   mode: AgentNodeMode;
@@ -118,8 +118,8 @@ export function AgentNode() {
         <Box sx={{ maxWidth: 980, mx: 'auto' }}>
           <Heading sx={{ fontSize: 5, mb: 2 }}>Agent Node</Heading>
           <Text sx={{ color: 'fg.muted', mb: 4, display: 'block' }}>
-            Authenticate, configure Run/Host/Sleep mode, then chat from this
-            node.
+            Authenticate, configure Private/Shared/Sleep mode, then chat from
+            this node.
           </Text>
 
           <Box sx={{ display: 'flex', gap: 2, mb: 4 }}>
@@ -192,17 +192,23 @@ export function AgentNode() {
                     <ActionList>
                       <ActionList.Item
                         onSelect={() =>
-                          setConfiguration(prev => ({ ...prev, mode: 'run' }))
+                          setConfiguration(prev => ({
+                            ...prev,
+                            mode: 'private',
+                          }))
                         }
                       >
-                        run
+                        private
                       </ActionList.Item>
                       <ActionList.Item
                         onSelect={() =>
-                          setConfiguration(prev => ({ ...prev, mode: 'host' }))
+                          setConfiguration(prev => ({
+                            ...prev,
+                            mode: 'shared',
+                          }))
                         }
                       >
-                        host
+                        shared
                       </ActionList.Item>
                       <ActionList.Item
                         onSelect={() =>

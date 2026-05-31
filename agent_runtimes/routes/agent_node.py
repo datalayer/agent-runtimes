@@ -13,19 +13,40 @@ from pydantic import BaseModel, Field
 
 router = APIRouter(prefix="/agent-node", tags=["agent-node"])
 
-AgentNodeMode = Literal["run", "host", "sleep"]
+AgentNodeModeInput = Literal["private", "shared", "sleep", "run", "host"]
+AgentNodeMode = Literal["private", "shared", "sleep"]
 
 
 class AgentNodeConfiguration(BaseModel):
-    mode: AgentNodeMode = "sleep"
+    mode: AgentNodeModeInput = "sleep"
     billable_account_uid: str | None = None
     billable_account_type: str | None = None
     billable_account_handle: str | None = None
     sharing: dict[str, Any] = Field(default_factory=dict)
 
 
-_DEFAULT_CONFIGURATION = AgentNodeConfiguration(
-    mode=(os.environ.get("AGENT_NODE_MODE") or "sleep").strip().lower() or "sleep"
+def _normalize_mode(mode: AgentNodeModeInput) -> AgentNodeMode:
+    if mode == "run":
+        return "private"
+    if mode == "host":
+        return "shared"
+    return mode
+
+
+def _normalize_configuration(configuration: AgentNodeConfiguration) -> AgentNodeConfiguration:
+    return AgentNodeConfiguration(
+        mode=_normalize_mode(configuration.mode),
+        billable_account_uid=configuration.billable_account_uid,
+        billable_account_type=configuration.billable_account_type,
+        billable_account_handle=configuration.billable_account_handle,
+        sharing=configuration.sharing,
+    )
+
+
+_DEFAULT_CONFIGURATION = _normalize_configuration(
+    AgentNodeConfiguration(
+        mode=(os.environ.get("AGENT_NODE_MODE") or "sleep").strip().lower() or "sleep"
+    )
 )
 _CURRENT_CONFIGURATION = _DEFAULT_CONFIGURATION
 
@@ -36,7 +57,7 @@ def get_agent_node_configuration() -> AgentNodeConfiguration:
 
 def set_agent_node_configuration(configuration: AgentNodeConfiguration) -> AgentNodeConfiguration:
     global _CURRENT_CONFIGURATION
-    _CURRENT_CONFIGURATION = configuration
+    _CURRENT_CONFIGURATION = _normalize_configuration(configuration)
     return _CURRENT_CONFIGURATION
 
 

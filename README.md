@@ -37,8 +37,9 @@ Agent Runtimes solves the complexity of deploying AI agents by providing:
 ## 🌟 Features
 
 ### Agent Node
-- **Central registration**: Agent nodes register and heartbeat to the central runtimes/operator APIs.
-- **Node configuration**: Runtime mode (`run`, `host`, `sleep`) and sharing metadata are tracked per node.
+- **Central registration**: Agent nodes register and heartbeat to Datalayer Runtimes APIs.
+- **Node configuration**: Runtime mode (`private`, `shared`, `sleep`) and sharing metadata are tracked per node.
+- **Tunnel routing**: Agent nodes maintain a tunnel with Datalayer Runtimes to route chat messages between central UI and nodes.
 - **Dedicated UI**: Agent Node list/detail UX is available for node observability and operations.
 - **End-to-end sync**: Local node state can be synchronized to central services for fleet visibility.
 
@@ -110,12 +111,46 @@ This target starts both:
 
 Use this mode to iterate on Agent Node configuration flows and central registration behavior.
 
+Expected central visibility semantics:
+
+- show all nodes owned by the current user,
+- show other users' nodes only when mode is `shared`.
+
+### Agent Node against local services (`plane local`)
+
+To run Agent Node with local service URLs preconfigured, use:
+
+```bash
+make agent-node:proxy
+```
+
+This target applies the `PLANE_LOCAL_*_URL` mappings and exports both
+`DATALAYER_*` and `VITE_*` variables so Agent Node sync/tunnel and UI calls are
+wired to local services.
+
+Prerequisites:
+
+1. Start the local Plane stack (`plane local`).
+2. Export `DATALAYER_API_KEY` for authenticated registration/tunnel calls.
+
+Override any local service URL if needed:
+
+```bash
+PLANE_LOCAL_RUNTIMES_URL=http://localhost:19500 make agent-node:proxy
+```
+
 ### Quick Docker release
 
 For a fast build-and-push workflow during development:
 
 ```bash
-make docker-release DOCKER_IMAGE=datalayer/agent-runtimes DOCKER_TAG=dev
+make docker-release DOCKER_IMAGE=datalayer/agent-nodes DOCKER_TAG=dev
+```
+
+To run a local container that exposes the Agent Node UI/server supporting all modes:
+
+```bash
+docker run --rm -p 8765:8765 datalayer/agent-nodes:dev
 ```
 
 ### Docker image build and push
@@ -123,25 +158,25 @@ make docker-release DOCKER_IMAGE=datalayer/agent-runtimes DOCKER_TAG=dev
 Build the container image:
 
 ```bash
-make docker-build DOCKER_IMAGE=datalayer/agent-runtimes DOCKER_TAG=dev
+make docker-build DOCKER_IMAGE=datalayer/agent-nodes DOCKER_TAG=dev
 ```
 
 Push the image:
 
 ```bash
-make docker-push DOCKER_IMAGE=datalayer/agent-runtimes DOCKER_TAG=dev
+make docker-push DOCKER_IMAGE=datalayer/agent-nodes DOCKER_TAG=dev
 ```
 
 Build and push in one step:
 
 ```bash
-make docker-release DOCKER_IMAGE=datalayer/agent-runtimes DOCKER_TAG=dev
+make docker-release DOCKER_IMAGE=datalayer/agent-nodes DOCKER_TAG=dev
 ```
 
 Optional multi-arch platform example:
 
 ```bash
-make docker-build DOCKER_PLATFORM=linux/amd64 DOCKER_IMAGE=datalayer/agent-runtimes DOCKER_TAG=dev
+make docker-build DOCKER_PLATFORM=linux/amd64 DOCKER_IMAGE=datalayer/agent-nodes DOCKER_TAG=dev
 ```
 
 By default, `make examples` boots the local Vite dev server with every
@@ -227,8 +262,10 @@ The detailed guides for architecture, use cases, interactive chat, key concepts,
 - [Agent Runtimes Overview](https://agent-runtimes.datalayer.tech/)
 - [Integrations](https://agent-runtimes.datalayer.tech/integrations)
 - [Chat](https://agent-runtimes.datalayer.tech/chat)
-- [Transports](https://agent-runtimes.datalayer.tech/transports)
+- [Protocols](https://agent-runtimes.datalayer.tech/protocols)
 - [Programmatic Tools](https://agent-runtimes.datalayer.tech/programmatic-tools)
+- [Agent Nodes](https://agent-runtimes.datalayer.tech/nodes)
+- [Endpoints](https://agent-runtimes.datalayer.tech/endpoints)
 - [CLI](https://agent-runtimes.datalayer.tech/cli)
 
 ## Agentspecs
