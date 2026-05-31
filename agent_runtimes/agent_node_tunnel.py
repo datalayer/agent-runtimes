@@ -11,6 +11,7 @@ import logging
 import os
 import socket
 import uuid
+from urllib.parse import urlencode
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -20,18 +21,45 @@ def _node_id() -> str:
     configured = (os.environ.get("AGENT_NODE_ID") or "").strip()
     if configured:
         return configured
+    try:
+        from .routes.agent_node import get_agent_node_configuration
+
+        persisted = (get_agent_node_configuration().node_uid or "").strip()
+        if persisted:
+            return persisted
+    except Exception:
+        # Best-effort lookup; fallback keeps local-only/dev scenarios working.
+        pass
     return str(uuid.uuid5(uuid.NAMESPACE_DNS, socket.gethostname()))
 
 
 def _runtimes_url() -> str:
-    return (
+    env_url = (
         os.environ.get("DATALAYER_RUNTIMES_URL")
         or os.environ.get("DATALAYER_AGENT_RUNTIMES_URL")
         or ""
     ).strip().rstrip("/")
+    if env_url:
+        return env_url
+    try:
+        from .routes.agent_node import get_runtime_credentials
+
+        return (get_runtime_credentials().get("runtimes_url") or "").strip().rstrip("/")
+    except Exception:
+        return ""
 
 
 def _auth_token() -> str:
+    # For websocket auth we prefer the UI session token (runtime credentials),
+    # then fall back to env API key when no interactive session exists.
+    try:
+        from .routes.agent_node import get_runtime_credentials
+
+        runtime_token = (get_runtime_credentials().get("token") or "").strip()
+        if runtime_token:
+            return runtime_token
+    except Exception:
+        pass
     return (os.environ.get("DATALAYER_API_KEY") or "").strip()
 
 
@@ -51,9 +79,10 @@ def _build_tunnel_url() -> str:
     if not token:
         return ""
     ws_base = _http_to_ws(base_url)
+    query = urlencode({"node_id": _node_id(), "token": token})
     return (
         f"{ws_base}/api/runtimes/v1/agent-nodes/tunnel/ws"
-        f"?node_id={_node_id()}&token={token}"
+        f"?{query}"
     )
 
 
@@ -186,12 +215,6 @@ async def _run_local_chat_request(chat_payload: dict[str, Any]) -> dict[str, Any
 
 async def run_agent_node_tunnel(stop_event: asyncio.Event) -> None:
     """Maintain websocket tunnel connection to runtimes until stop_event is set."""
-    tunnel_url = _build_tunnel_url()
-    if not tunnel_url:
-        logger.warning("Agent node tunnel disabled: missing runtimes URL or API token")
-        await stop_event.wait()
-        return
-
     try:
         from websockets.asyncio.client import connect as ws_connect
     except Exception:
@@ -205,8 +228,23 @@ async def run_agent_node_tunnel(stop_event: asyncio.Event) -> None:
         get_agent_node_configuration = None  # type: ignore[assignment]
 
     reconnect_seconds = int(os.environ.get("AGENT_NODE_TUNNEL_RECONNECT_SECONDS", "5"))
+    missing_credentials_logged = False
 
     while not stop_event.is_set():
+        tunnel_url = _build_tunnel_url()
+        if not tunnel_url:
+            if not missing_credentials_logged:
+                logger.warning(
+                    "Agent node tunnel waiting for credentials: missing runtimes URL or API token"
+                )
+                missing_credentials_logged = True
+            try:
+                await asyncio.wait_for(stop_event.wait(), timeout=reconnect_seconds)
+            except asyncio.TimeoutError:
+                continue
+            break
+        missing_credentials_logged = False
+
         if get_agent_node_configuration is not None:
             try:
                 if not get_agent_node_configuration().billable_account_uid:
@@ -239,6 +277,11 @@ async def run_agent_node_tunnel(stop_event: asyncio.Event) -> None:
                         )
         except Exception as exc:
             logger.warning("Agent node tunnel connection failed: %s", exc)
+            if "403" in str(exc):
+                logger.warning(
+                    "Agent node tunnel received HTTP 403. Verify node ownership and token scope;"
+                    " if you just signed in/out, the tunnel will retry with refreshed credentials."
+                )
             try:
                 await asyncio.wait_for(stop_event.wait(), timeout=reconnect_seconds)
             except asyncio.TimeoutError:

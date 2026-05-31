@@ -742,11 +742,7 @@ async def _flush_otel_service(auth_token: str | None = None) -> None:
         or os.environ.get("DATALAYER_OTEL_RUN_URL")
         or "https://prod1.datalayer.run"
     )
-    token = (
-        auth_token
-        or os.environ.get("DATALAYER_TOKEN")
-        or os.environ.get("DATALAYER_API_KEY")
-    )
+    token = auth_token or os.environ.get("DATALAYER_API_KEY")
 
     run_url = run_url.strip().rstrip("/")
     if run_url.startswith("https://"):

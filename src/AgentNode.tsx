@@ -3,7 +3,7 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   Box,
@@ -15,24 +15,24 @@ import {
 } from '@datalayer/primer-addons';
 import { AppearanceControlsWithStore } from '@datalayer/primer-addons/lib/components/appearance';
 import {
-  ActionList,
-  ActionMenu,
   Avatar,
   Button,
   FormControl,
   Heading,
   Label,
-  Link,
   PageHeader,
   PageLayout,
   Text,
 } from '@primer/react';
 import {
+  CommentIcon,
   HomeIcon,
+  KeyAsteriskIcon,
   LockIcon,
   MoonIcon,
   PeopleIcon,
   PersonIcon,
+  GearIcon,
   SignInIcon,
   SignOutIcon,
   type Icon as OcticonIcon,
@@ -70,21 +70,21 @@ const MODE_CARDS: readonly ModeCard[] = [
     mode: 'private',
     name: 'Private',
     description:
-      'Only you can use this Agent Node. Runs as your personal workspace.',
+      'Only you can use this Agent Node. Chat can be done directly from this node or from any supported Datalayer platform such as SaaS, VS Code, JupyterLab, or CLI.',
     Icon: LockIcon,
   },
   {
     mode: 'shared',
     name: 'Shared',
     description:
-      'Selected users, teams or organizations can use this Agent Node.',
+      'Allowed users can consume chat from any supported Datalayer platform such as SaaS, VS Code, JupyterLab, or CLI.',
     Icon: PeopleIcon,
   },
   {
     mode: 'sleep',
     name: 'Sleep',
     description:
-      'The Agent Node is paused. No new chat sessions will be accepted.',
+      'The Agent Node stays registered and visible but does not accept new chat sessions. Existing sessions are not resumed until you switch back to Private or Shared.',
     Icon: MoonIcon,
   },
 ];
@@ -115,13 +115,29 @@ function AgentNodeProfileView({ token }: { token: string | null }) {
   const display = useMemo(() => {
     if (!user) return null;
     const u = user as any;
-    const name =
+    const displayName =
       [u.first_name, u.last_name].filter(Boolean).join(' ').trim() ||
+      u.display_name ||
+      u.name ||
       u.handle ||
       u.email ||
       'Datalayer user';
+    const username =
+      u.username || u.handle || (u.email ? String(u.email).split('@')[0] : '');
+    const initials =
+      u.initials ||
+      String(displayName)
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((part: string) => part[0]?.toUpperCase() || '')
+        .join('');
     return {
-      name,
+      id: String(u.id || u.uid || ''),
+      username,
+      displayName,
+      initials,
+      origin: String(u.origin || 'datalayer'),
       handle: u.handle ? `@${u.handle}` : '',
       email: u.email || '',
       avatarUrl: u.avatar_url || u.profile?.avatar_url || '',
@@ -147,14 +163,19 @@ function AgentNodeProfileView({ token }: { token: string | null }) {
         <Text sx={{ color: 'fg.muted' }}>Loading profile…</Text>
       ) : (
         <>
+          <Heading sx={{ fontSize: 2, mb: 2 }}>Identity</Heading>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
             {display.avatarUrl ? (
-              <Avatar src={display.avatarUrl} size={64} alt={display.name} />
+              <Avatar
+                src={display.avatarUrl}
+                size={72}
+                alt={display.displayName}
+              />
             ) : (
               <Box
                 sx={{
-                  width: 64,
-                  height: 64,
+                  width: 72,
+                  height: 72,
                   borderRadius: '50%',
                   bg: 'canvas.subtle',
                   display: 'inline-flex',
@@ -163,11 +184,13 @@ function AgentNodeProfileView({ token }: { token: string | null }) {
                   color: 'fg.muted',
                 }}
               >
-                <PersonIcon size={28} />
+                <PersonIcon size={30} />
               </Box>
             )}
             <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-              <Heading sx={{ fontSize: 3, mb: 1 }}>{display.name}</Heading>
+              <Heading sx={{ fontSize: 3, mb: 1 }}>
+                {display.displayName}
+              </Heading>
               {display.handle && (
                 <Text sx={{ color: 'fg.muted' }}>{display.handle}</Text>
               )}
@@ -177,6 +200,31 @@ function AgentNodeProfileView({ token }: { token: string | null }) {
                 </Text>
               )}
             </Box>
+          </Box>
+          {display.id && (
+            <Box sx={{ mt: 2 }}>
+              <Label size="large" variant="secondary">
+                {display.id}
+              </Label>
+            </Box>
+          )}
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 2fr',
+              rowGap: 2,
+              columnGap: 3,
+              maxWidth: 560,
+            }}
+          >
+            <Text sx={{ fontWeight: 'bold' }}>Username</Text>
+            <Text>{display.username || '-'}</Text>
+            <Text sx={{ fontWeight: 'bold' }}>Display name</Text>
+            <Text>{display.displayName || '-'}</Text>
+            <Text sx={{ fontWeight: 'bold' }}>Initials</Text>
+            <Text>{display.initials || '-'}</Text>
+            <Text sx={{ fontWeight: 'bold' }}>Origin</Text>
+            <Text>{display.origin || '-'}</Text>
           </Box>
           {display.roles.length > 0 && (
             <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
@@ -214,6 +262,7 @@ export function AgentNode() {
   const authGradient = cfg.cardGradient[resolvedMode];
 
   const [step, setStep] = useState<Step>('auth');
+  const [disableAutoBootstrap, setDisableAutoBootstrap] = useState(false);
   const [configuration, setConfiguration] = useState<AgentNodeConfiguration>(
     DEFAULT_CONFIGURATION,
   );
@@ -222,6 +271,78 @@ export function AgentNode() {
   );
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  type BannerKind = 'success' | 'info' | 'warning' | 'error';
+  type BannerState = { id: number; kind: BannerKind; message: string };
+  const [banner, setBanner] = useState<BannerState | null>(null);
+  const bannerTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const showBanner = useCallback((kind: BannerKind, message: string) => {
+    if (bannerTimerRef.current) {
+      clearTimeout(bannerTimerRef.current);
+      bannerTimerRef.current = null;
+    }
+    const id = Date.now();
+    setBanner({ id, kind, message });
+    const duration = kind === 'error' ? 6000 : 3500;
+    bannerTimerRef.current = setTimeout(() => {
+      setBanner(current => (current && current.id === id ? null : current));
+      bannerTimerRef.current = null;
+    }, duration);
+  }, []);
+  useEffect(() => {
+    return () => {
+      if (bannerTimerRef.current) {
+        clearTimeout(bannerTimerRef.current);
+      }
+    };
+  }, []);
+
+  // Refs kept in sync with state so the BillableAccountSelect callbacks
+  // (passed via stable identities) can read the latest values without
+  // being re-created on every render — re-created callbacks made
+  // BillableAccountSelect re-fire onAccountsResolved and trigger an
+  // infinite setState loop.
+  const configurationRef = useRef(configuration);
+  useEffect(() => {
+    configurationRef.current = configuration;
+  }, [configuration]);
+  const iamUserRef = useRef(iamUser);
+  useEffect(() => {
+    iamUserRef.current = iamUser;
+  }, [iamUser]);
+
+  const handleBillableAccountChange = useCallback((uid: string) => {
+    setConfiguration(prev => ({ ...prev, billable_account_uid: uid }));
+  }, []);
+
+  const handleSelectedAccountChange = useCallback(
+    (account: BillableAccount | undefined) => {
+      setSelectedBillableAccount(account);
+      setConfiguration(prev => ({
+        ...prev,
+        billable_account_type: account?.accountType,
+        billable_account_handle: account?.accountHandle,
+      }));
+    },
+    [],
+  );
+
+  const handleAccountsResolved = useCallback(
+    (_state: {
+      accounts: BillableAccount[];
+      eligibleAccounts: BillableAccount[];
+      isLoading: boolean;
+      hasEligibleAccount: boolean;
+    }) => {
+      // BillableAccountSelect persists the chosen account in a cookie and
+      // falls back to the personal account when none is stored, so the node
+      // no longer needs to force an organization default here.
+    },
+    [],
+  );
+
+  const handleSharingInlineClose = useCallback(() => {
+    // Inline mode has no close action, but the prop is required.
+  }, []);
 
   useEffect(() => {
     const load = async () => {
@@ -245,55 +366,112 @@ export function AgentNode() {
     load();
   }, []);
 
+  // If the container was started with DATALAYER_API_KEY, the backend exchanges
+  // it for a session token via /auth/bootstrap so the UI can skip sign-in.
+  useEffect(() => {
+    if (token) {
+      return;
+    }
+    if (disableAutoBootstrap) {
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const resp = await fetch(
+          `${BASE_URL}/api/v1/agent-node/auth/bootstrap`,
+        );
+        if (!resp.ok) {
+          return;
+        }
+        const data = await resp.json().catch(() => ({}));
+        if (cancelled) {
+          return;
+        }
+        if (data?.has_key && data?.token) {
+          setAuth(String(data.token), String(data.handle || 'api-key-user'));
+          setStep('config');
+        }
+      } catch {
+        // Best-effort; fall back to the sign-in screen.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [token, setAuth, disableAutoBootstrap]);
+
+  // Push the authenticated user's bearer token + runtimes base URL to the
+  // local Agent Node backend so the background sync can register the node
+  // and start sending heartbeats/health to the central runtimes service.
+  useEffect(() => {
+    const runUrl =
+      (import.meta as any).env?.VITE_DATALAYER_RUN_URL ||
+      'https://prod1.datalayer.run';
+    const body = JSON.stringify({
+      token: token || null,
+      runtimes_url: token ? runUrl : null,
+    });
+    fetch(`${BASE_URL}/api/v1/agent-node/credentials`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body,
+    }).catch(() => {
+      // Best-effort; backend may not be reachable in some local setups.
+    });
+  }, [token]);
+
   useEffect(() => {
     import('@datalayer/core/lib/state').then(({ iamStore, coreStore }) => {
       const runUrl =
         (import.meta as any).env?.VITE_DATALAYER_RUN_URL ||
         'https://prod1.datalayer.run';
-      // Seed the core configuration so components reading
-      // `coreStore.configuration.iamRunUrl` (e.g. ShareAccessComponent's
-      // principal search) have a usable IAM endpoint.
+      // Seed all per-service URLs to match the main UI login behavior.
       const coreApi = coreStore.getState() as any;
       const prevCfg = coreApi.configuration ?? {};
+      const urls = {
+        iamRunUrl: runUrl,
+        runtimesRunUrl: runUrl,
+        spacerRunUrl: runUrl,
+        libraryRunUrl: runUrl,
+        aiagentsRunUrl: runUrl,
+        aiinferenceRunUrl: runUrl,
+        mcpserversRunUrl: runUrl,
+        otelRunUrl: runUrl,
+        growthRunUrl: runUrl,
+        successRunUrl: runUrl,
+        supportRunUrl: runUrl,
+      };
       if (typeof coreApi.setConfiguration === 'function') {
-        coreApi.setConfiguration({
-          ...prevCfg,
-          iamRunUrl: prevCfg.iamRunUrl || runUrl,
-          runtimesRunUrl: prevCfg.runtimesRunUrl || runUrl,
-          spacerRunUrl: prevCfg.spacerRunUrl || runUrl,
-        });
+        coreApi.setConfiguration({ ...prevCfg, ...urls });
       } else {
         coreStore.setState((s: any) => ({
-          configuration: {
-            ...(s.configuration || {}),
-            iamRunUrl: s.configuration?.iamRunUrl || runUrl,
-            runtimesRunUrl: s.configuration?.runtimesRunUrl || runUrl,
-            spacerRunUrl: s.configuration?.spacerRunUrl || runUrl,
-          },
+          configuration: { ...(s.configuration || {}), ...urls },
         }));
       }
+
+      const api = iamStore.getState() as any;
       iamStore.setState({ token: tokenForCore, iamRunUrl: runUrl } as any);
-      if (tokenForCore) {
-        // Populate `user` (incl. id/handle) so downstream selectors like
-        // BillableAccountSelect's personal-account row resolve correctly.
-        const api = iamStore.getState() as any;
-        if (typeof api.refreshUserByToken === 'function') {
-          void Promise.resolve(api.refreshUserByToken(tokenForCore)).then(
-            () => {
-              // Force refetch of org/billing queries with the now-valid
-              // token so plan labels (Team Plan/Free Plan) resolve.
-              queryClient.invalidateQueries({ queryKey: ['organizations'] });
-              queryClient.invalidateQueries({ queryKey: ['subscription'] });
-            },
-          );
-        }
+      if (tokenForCore && typeof api.refreshUserByToken === 'function') {
+        void Promise.resolve(api.refreshUserByToken(tokenForCore)).then(() => {
+          queryClient.invalidateQueries({ queryKey: ['organizations'] });
+          queryClient.invalidateQueries({ queryKey: ['subscription'] });
+        });
       }
     });
-  }, [token, queryClient]);
+  }, [tokenForCore, queryClient]);
 
   useEffect(() => {
     if (!token && step !== 'auth') {
       setStep('auth');
+    }
+  }, [token, step]);
+
+  useEffect(() => {
+    // If a persisted session is already authenticated on first load,
+    // skip the auth screen and land on the main configuration view.
+    if (token && step === 'auth') {
+      setStep('config');
     }
   }, [token, step]);
 
@@ -304,11 +482,38 @@ export function AgentNode() {
   }, [step, configuration.mode]);
 
   const handleSignIn = (newToken: string, handle: string) => {
+    setDisableAutoBootstrap(false);
     setAuth(newToken, handle);
     setStep('config');
   };
 
+  // API keys are exchanged for a session token before login so billing and
+  // plans endpoints (/api/iam/v1/plans/*) resolve the correct paid plan.
+  const handleApiKeySignIn = async (apiKey: string) => {
+    const runUrl =
+      (import.meta as any).env?.VITE_DATALAYER_RUN_URL ||
+      'https://prod1.datalayer.run';
+    try {
+      const resp = await fetch(`${runUrl}/api/iam/v1/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: apiKey }),
+      });
+      const data = await resp.json().catch(() => ({}));
+      if (resp.ok && data?.success && data?.token) {
+        const sessionToken = String(data.token);
+        const userHandle =
+          (data.user && (data.user.handle_s || data.user.handle)) ||
+          'api-key-user';
+        handleSignIn(sessionToken, String(userHandle));
+      }
+    } catch {
+      // Keep the user on auth screen when key exchange fails.
+    }
+  };
+
   const handleSignOut = () => {
+    setDisableAutoBootstrap(true);
     clearAuth();
     setStep('auth');
   };
@@ -337,11 +542,14 @@ export function AgentNode() {
         ...(payload?.configuration || {}),
       };
       setConfiguration(saved);
+      showBanner('success', 'Agent Node configuration saved.');
       if (saved.mode === 'private') {
         setStep('chat');
       }
     } catch (reason: any) {
-      setError(reason?.message || 'Unable to save configuration.');
+      const message = reason?.message || 'Unable to save configuration.';
+      setError(message);
+      showBanner('error', message);
     } finally {
       setIsSaving(false);
     }
@@ -357,34 +565,35 @@ export function AgentNode() {
   const StepEntry = ({
     entryStep,
     label,
+    leadingVisual,
   }: {
     entryStep: Step;
     label: string;
+    leadingVisual?: OcticonIcon;
   }) => {
     const enabled = isStepEnabled(entryStep);
     const active = step === entryStep;
 
     return (
-      <Link
-        muted={!active}
+      <Button
+        size="small"
+        variant="invisible"
+        leadingVisual={leadingVisual}
+        disabled={!enabled}
         sx={{
-          fontSize: 2,
-          lineHeight: '22px',
           fontWeight: active ? 'bold' : 'normal',
-          textDecoration: active ? 'underline' : 'none',
-          pointerEvents: enabled ? 'auto' : 'none',
+          textDecoration: 'none',
           opacity: enabled ? 1 : 0.5,
-          cursor: enabled ? 'pointer' : 'not-allowed',
+          color: 'fg.default',
         }}
-        onClick={event => {
-          event.preventDefault();
+        onClick={() => {
           if (enabled) {
             setStep(entryStep);
           }
         }}
       >
         {label}
-      </Link>
+      </Button>
     );
   };
 
@@ -422,52 +631,23 @@ export function AgentNode() {
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                     {token && (
                       <>
-                        <StepEntry entryStep="config" label="Configuration" />
-                        <StepEntry entryStep="chat" label="Chat" />
+                        <StepEntry
+                          entryStep="chat"
+                          label="Chat"
+                          leadingVisual={CommentIcon}
+                        />
+                        <StepEntry
+                          entryStep="config"
+                          label="Configuration"
+                          leadingVisual={GearIcon}
+                        />
                       </>
                     )}
                   </Box>
                   <AppearanceControlsWithStore
                     useStore={useAgentNodeThemeStore}
                   />
-                  {token ? (
-                    <ActionMenu>
-                      <ActionMenu.Anchor>
-                        <Button
-                          variant="invisible"
-                          size="small"
-                          sx={{ color: 'fg.default', px: 1 }}
-                          aria-label="Open profile menu"
-                        >
-                          <UserBadge
-                            token={token}
-                            variant="small"
-                            onTokenExpired={handleSignOut}
-                          />
-                        </Button>
-                      </ActionMenu.Anchor>
-                      <ActionMenu.Overlay>
-                        <ActionList>
-                          <ActionList.Item onSelect={() => setStep('profile')}>
-                            <ActionList.LeadingVisual>
-                              <PersonIcon />
-                            </ActionList.LeadingVisual>
-                            Profile
-                          </ActionList.Item>
-                          <ActionList.Divider />
-                          <ActionList.Item
-                            variant="danger"
-                            onSelect={handleSignOut}
-                          >
-                            <ActionList.LeadingVisual>
-                              <SignOutIcon />
-                            </ActionList.LeadingVisual>
-                            Sign out
-                          </ActionList.Item>
-                        </ActionList>
-                      </ActionMenu.Overlay>
-                    </ActionMenu>
-                  ) : (
+                  {!token ? (
                     <Button
                       size="small"
                       variant="invisible"
@@ -477,6 +657,42 @@ export function AgentNode() {
                     >
                       Sign in
                     </Button>
+                  ) : (
+                    <Box
+                      sx={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 1,
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          textAlign: 'left',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                        }}
+                      >
+                        <UserBadge
+                          token={token}
+                          variant="small"
+                          onTokenExpired={handleSignOut}
+                        />
+                      </Box>
+                      <StepEntry
+                        entryStep="profile"
+                        label="Profile"
+                        leadingVisual={PersonIcon}
+                      />
+                      <Button
+                        size="small"
+                        variant="invisible"
+                        onClick={handleSignOut}
+                        leadingVisual={SignOutIcon}
+                        sx={{ color: 'fg.default' }}
+                      >
+                        Sign out
+                      </Button>
+                    </Box>
                   )}
                   <Box
                     as="a"
@@ -504,8 +720,59 @@ export function AgentNode() {
           </PageLayout.Header>
 
           <PageLayout.Content>
+            <Box
+              aria-live="polite"
+              sx={{
+                position: 'sticky',
+                top: 0,
+                zIndex: 30,
+                pointerEvents: 'none',
+                mb: banner ? 3 : 0,
+                transition: 'margin-bottom 200ms ease',
+              }}
+            >
+              <Box
+                role={banner?.kind === 'error' ? 'alert' : 'status'}
+                sx={{
+                  pointerEvents: banner ? 'auto' : 'none',
+                  px: 3,
+                  py: 2,
+                  borderRadius: 2,
+                  border: '1px solid',
+                  borderColor:
+                    banner?.kind === 'error'
+                      ? 'danger.emphasis'
+                      : banner?.kind === 'warning'
+                        ? 'attention.emphasis'
+                        : banner?.kind === 'success'
+                          ? 'success.emphasis'
+                          : 'accent.emphasis',
+                  bg:
+                    banner?.kind === 'error'
+                      ? 'danger.subtle'
+                      : banner?.kind === 'warning'
+                        ? 'attention.subtle'
+                        : banner?.kind === 'success'
+                          ? 'success.subtle'
+                          : 'accent.subtle',
+                  color: 'fg.default',
+                  opacity: banner ? 1 : 0,
+                  transform: banner ? 'translateY(0)' : 'translateY(-8px)',
+                  transition: 'opacity 250ms ease, transform 250ms ease',
+                }}
+              >
+                <Text sx={{ fontSize: 1 }}>{banner?.message ?? ''}</Text>
+              </Box>
+            </Box>
             <Box sx={{ mb: 3 }}>
-              <Heading sx={{ fontSize: 3, mb: 1 }}>Agent Node</Heading>
+              <Box
+                sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}
+              >
+                <Box sx={{ color: 'fg.muted', display: 'inline-flex' }}>
+                  <KeyAsteriskIcon size={18} />
+                </Box>
+                <Heading sx={{ fontSize: 3, m: 0 }}>Agent Node</Heading>
+              </Box>
               <Text sx={{ color: 'fg.muted' }}>
                 Authenticate, configure Private/Shared/Sleep mode, then chat
                 from this node.
@@ -549,9 +816,7 @@ export function AgentNode() {
                 >
                   <SignInSimple
                     onSignIn={handleSignIn}
-                    onApiKeySignIn={apiKey =>
-                      handleSignIn(apiKey, 'api-key-user')
-                    }
+                    onApiKeySignIn={handleApiKeySignIn}
                     title="Agent Node"
                     description="Sign in to configure node settings and run authenticated chat sessions."
                     leadingIcon={
@@ -655,20 +920,9 @@ export function AgentNode() {
                   {iamUser ? (
                     <BillableAccountSelect
                       value={configuration.billable_account_uid || ''}
-                      onChange={uid =>
-                        setConfiguration(prev => ({
-                          ...prev,
-                          billable_account_uid: uid,
-                        }))
-                      }
-                      onSelectedAccountChange={account => {
-                        setSelectedBillableAccount(account);
-                        setConfiguration(prev => ({
-                          ...prev,
-                          billable_account_type: account?.accountType,
-                          billable_account_handle: account?.accountHandle,
-                        }));
-                      }}
+                      onChange={handleBillableAccountChange}
+                      onSelectedAccountChange={handleSelectedAccountChange}
+                      onAccountsResolved={handleAccountsResolved}
                     />
                   ) : (
                     <FormControl>
@@ -687,9 +941,7 @@ export function AgentNode() {
                     requestUrl={`${BASE_URL}/api/v1/agent-node/sharing`}
                     resourceLabel="Agent Node"
                     resourceName="this Agent Node"
-                    onClose={() => {
-                      // Inline mode: nothing to close, but prop is required.
-                    }}
+                    onClose={handleSharingInlineClose}
                   />
                 </Box>
 
@@ -701,7 +953,7 @@ export function AgentNode() {
                     onClick={saveConfiguration}
                     disabled={isSaving}
                   >
-                    {isSaving ? 'Saving...' : 'Save and continue'}
+                    {isSaving ? 'Saving...' : 'Save'}
                   </Button>
                 </Box>
               </Box>

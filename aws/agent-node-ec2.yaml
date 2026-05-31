@@ -1,0 +1,203 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  Datalayer Agent Node on a single EC2 instance.
+  Creates a dedicated VPC with one public subnet, an internet gateway,
+  a security group, and an EC2 instance with a public IP that runs the
+  agent-node Docker container.
+
+Parameters:
+
+  DatalayerApiKey:
+    Type: String
+    NoEcho: true
+    Default: ''
+    Description: >
+      (Optional) Datalayer API key used by the node to authenticate with the
+      platform. When empty, the node starts unauthenticated and shows a
+      sign-in screen at the public URL where the user can paste their key.
+      When provided, the node exchanges it for a session token at startup and
+      the sign-in screen is skipped.
+
+  DatalayerRunUrl:
+    Type: String
+    Default: https://prod1.datalayer.run
+    Description: Datalayer platform base URL.
+
+  AgentNodeImage:
+    Type: String
+    Default: datalayer/agent-nodes:latest
+    Description: Docker image of the agent-node to run.
+
+  AgentNodePort:
+    Type: Number
+    Default: 8765
+    Description: TCP port the agent-node listens on.
+
+  InstanceType:
+    Type: String
+    Default: t3.small
+    Description: EC2 instance type.
+
+  KeyName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: EC2 key pair to allow SSH access to the instance.
+
+  SshLocation:
+    Type: String
+    Default: 0.0.0.0/0
+    Description: CIDR range allowed to SSH into the instance.
+
+  LatestAmiId:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64
+    Description: Amazon Linux 2023 AMI looked up via SSM.
+
+Resources:
+
+  Vpc:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-vpc'
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-igw'
+
+  VpcGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref Vpc
+      InternetGatewayId: !Ref InternetGateway
+
+  PublicSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      CidrBlock: 10.0.1.0/24
+      AvailabilityZone: !Select [0, !GetAZs '']
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-public'
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-public-rt'
+
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: VpcGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet
+      RouteTableId: !Ref PublicRouteTable
+
+  AgentNodeSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref Vpc
+      GroupDescription: Agent node HTTP + SSH access
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: !Ref AgentNodePort
+          ToPort: !Ref AgentNodePort
+          CidrIp: 0.0.0.0/0
+          Description: Agent node HTTP
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Ref SshLocation
+          Description: SSH
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-sg'
+
+  InstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref InstanceRole
+
+  AgentNodeInstance:
+    Type: AWS::EC2::Instance
+    DependsOn: PublicRoute
+    Properties:
+      ImageId: !Ref LatestAmiId
+      InstanceType: !Ref InstanceType
+      KeyName: !Ref KeyName
+      IamInstanceProfile: !Ref InstanceProfile
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: true
+          DeviceIndex: 0
+          SubnetId: !Ref PublicSubnet
+          GroupSet:
+            - !Ref AgentNodeSecurityGroup
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-agent-node'
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          set -euxo pipefail
+          dnf update -y
+          dnf install -y docker
+          systemctl enable --now docker
+          docker pull ${AgentNodeImage}
+          docker run -d \
+            --name agent-node \
+            --restart unless-stopped \
+            -p ${AgentNodePort}:${AgentNodePort} \
+            -e DATALAYER_API_KEY='${DatalayerApiKey}' \
+            -e DATALAYER_RUN_URL='${DatalayerRunUrl}' \
+            -e VITE_DATALAYER_RUN_URL='${DatalayerRunUrl}' \
+            -e AGENT_RUNTIMES_PORT='${AgentNodePort}' \
+            ${AgentNodeImage}
+
+Outputs:
+
+  PublicIp:
+    Description: Public IP of the agent node instance.
+    Value: !GetAtt AgentNodeInstance.PublicIp
+
+  PublicDns:
+    Description: Public DNS of the agent node instance.
+    Value: !GetAtt AgentNodeInstance.PublicDnsName
+
+  AgentNodeUrl:
+    Description: HTTP URL of the agent node UI.
+    Value: !Sub 'http://${AgentNodeInstance.PublicDnsName}:${AgentNodePort}'
+
+  SshCommand:
+    Description: SSH command to reach the instance.
+    Value: !Sub 'ssh -i ${KeyName}.pem ec2-user@${AgentNodeInstance.PublicDnsName}'

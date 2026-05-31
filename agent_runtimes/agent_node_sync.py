@@ -15,6 +15,8 @@ import httpx
 from .agent_node_health import collect_health
 from .routes.agent_node import (
     get_agent_node_configuration,
+    get_runtime_credentials,
+    register_credentials_change_callback,
     register_mode_change_callback,
     set_agent_node_uid,
 )
@@ -38,11 +40,26 @@ def _node_name() -> str:
 
 
 def _runtimes_url() -> str:
-    return (os.environ.get("DATALAYER_RUNTIMES_URL") or os.environ.get("DATALAYER_AGENT_RUNTIMES_URL") or "").strip().rstrip("/")
+    env_url = (
+        os.environ.get("DATALAYER_RUNTIMES_URL")
+        or os.environ.get("DATALAYER_AGENT_RUNTIMES_URL")
+        or ""
+    ).strip().rstrip("/")
+    if env_url:
+        return env_url
+    ui_url = (get_runtime_credentials().get("runtimes_url") or "").strip().rstrip("/")
+    return ui_url
+
+
+def _auth_token() -> str:
+    env_token = (os.environ.get("DATALAYER_API_KEY") or "").strip()
+    if env_token:
+        return env_token
+    return (get_runtime_credentials().get("token") or "").strip()
 
 
 def _auth_headers() -> dict[str, str]:
-    token = (os.environ.get("DATALAYER_API_KEY") or "").strip()
+    token = _auth_token()
     headers: dict[str, str] = {"Content-Type": "application/json", "Accept": "application/json"}
     if token:
         headers["Authorization"] = f"Bearer {token}"
@@ -110,85 +127,132 @@ async def _post_health(
 
 
 async def run_agent_node_sync(stop_event: asyncio.Event) -> None:
-    """Register and heartbeat this node until stop_event is set."""
-    base_url = _runtimes_url()
-    if not base_url:
-        logger.warning("Agent node sync disabled: missing DATALAYER_RUNTIMES_URL")
-        await stop_event.wait()
-        return
+    """Register and heartbeat this node until stop_event is set.
 
-    headers = _auth_headers()
-    if "Authorization" not in headers:
-        logger.warning("Agent node sync disabled: missing DATALAYER_API_KEY")
-        await stop_event.wait()
-        return
-
+    Credentials may come from env (``DATALAYER_RUNTIMES_URL`` +
+    ``DATALAYER_API_KEY``) or be supplied at runtime by the Agent Node UI
+    via ``POST /api/v1/agent-node/credentials``. The loop reacts to those
+    changes so a node started without env credentials still registers and
+    sends health as soon as the user signs in.
+    """
     heartbeat_seconds = int(os.environ.get("AGENT_NODE_HEARTBEAT_SECONDS", "20"))
     health_seconds = int(os.environ.get("AGENT_NODE_HEALTH_SECONDS", "60"))
     timeout = httpx.Timeout(20.0)
 
     loop = asyncio.get_running_loop()
     mode_change_event = asyncio.Event()
+    credentials_change_event = asyncio.Event()
 
     def _on_mode_change(_new_mode: str) -> None:
         loop.call_soon_threadsafe(mode_change_event.set)
 
+    def _on_credentials_change() -> None:
+        loop.call_soon_threadsafe(credentials_change_event.set)
+
     register_mode_change_callback(_on_mode_change)
+    register_credentials_change_callback(_on_credentials_change)
 
     last_health_at = 0.0
     first_health_sent = False
+    client: httpx.AsyncClient | None = None
+    client_signature: tuple[str, str] | None = None
 
-    async with httpx.AsyncClient(
-        base_url=f"{base_url}/api/runtimes/v1/agent-nodes",
-        headers=headers,
-        timeout=timeout,
-    ) as client:
+    try:
         while not stop_event.is_set():
             mode_change_triggered = mode_change_event.is_set()
             mode_change_event.clear()
+            credentials_change_event.clear()
+
+            base_url = _runtimes_url()
+            token = _auth_token()
+            signature = (base_url, token)
+
+            if not base_url or not token:
+                logger.debug(
+                    "Agent node sync waiting for credentials "
+                    "(runtimes_url=%s, has_token=%s)",
+                    bool(base_url),
+                    bool(token),
+                )
+                if client is not None:
+                    await client.aclose()
+                    client = None
+                    client_signature = None
+                await _wait_next(
+                    stop_event,
+                    credentials_change_event,
+                    mode_change_event,
+                    heartbeat_seconds,
+                )
+                continue
+
+            if client is None or client_signature != signature:
+                if client is not None:
+                    await client.aclose()
+                client = httpx.AsyncClient(
+                    base_url=f"{base_url}/api/runtimes/v1/agent-nodes",
+                    headers=_auth_headers(),
+                    timeout=timeout,
+                )
+                client_signature = signature
+                # Force a fresh /register + startup health when credentials change.
+                first_health_sent = False
+                last_health_at = 0.0
+
             try:
-                configuration = get_agent_node_configuration()
-                is_authenticated = bool(configuration.billable_account_uid)
-                if not is_authenticated:
-                    logger.debug(
-                        "Agent node not authenticated (no billable account); skipping register/heartbeat/health"
+                node_id = await _register(client)
+                if node_id:
+                    await _heartbeat(client, node_id)
+                    now = loop.time()
+                    needs_health = (
+                        mode_change_triggered
+                        or not first_health_sent
+                        or (now - last_health_at) >= health_seconds
                     )
-                else:
-                    node_id = await _register(client)
-                    if node_id:
-                        await _heartbeat(client, node_id)
-                        now = loop.time()
-                        needs_health = (
-                            mode_change_triggered
-                            or not first_health_sent
-                            or (now - last_health_at) >= health_seconds
+                    if needs_health:
+                        reason = (
+                            "mode_change"
+                            if mode_change_triggered
+                            else ("startup" if not first_health_sent else "periodic")
                         )
-                        if needs_health:
-                            reason = (
-                                "mode_change"
-                                if mode_change_triggered
-                                else ("startup" if not first_health_sent else "periodic")
-                            )
-                            await _post_health(client, node_id, reason)
-                            last_health_at = now
-                            first_health_sent = True
+                        await _post_health(client, node_id, reason)
+                        last_health_at = now
+                        first_health_sent = True
             except Exception as exc:
                 logger.warning("Agent node sync failed: %s", exc)
 
-            # Wake early on stop or mode change; otherwise tick at heartbeat cadence.
-            wait_tasks = [
-                asyncio.create_task(stop_event.wait()),
-                asyncio.create_task(mode_change_event.wait()),
-            ]
-            try:
-                done, pending = await asyncio.wait(
-                    wait_tasks,
-                    timeout=heartbeat_seconds,
-                    return_when=asyncio.FIRST_COMPLETED,
-                )
-                for task in pending:
-                    task.cancel()
-            except asyncio.CancelledError:
-                for task in wait_tasks:
-                    task.cancel()
-                raise
+            await _wait_next(
+                stop_event,
+                credentials_change_event,
+                mode_change_event,
+                heartbeat_seconds,
+            )
+    finally:
+        if client is not None:
+            await client.aclose()
+
+
+async def _wait_next(
+    stop_event: asyncio.Event,
+    credentials_change_event: asyncio.Event,
+    mode_change_event: asyncio.Event,
+    heartbeat_seconds: int,
+) -> None:
+    """Wake on stop, credential change, mode change, or heartbeat tick."""
+    wait_tasks = [
+        asyncio.create_task(stop_event.wait()),
+        asyncio.create_task(credentials_change_event.wait()),
+        asyncio.create_task(mode_change_event.wait()),
+    ]
+    try:
+        _, pending = await asyncio.wait(
+            wait_tasks,
+            timeout=heartbeat_seconds,
+            return_when=asyncio.FIRST_COMPLETED,
+        )
+        for task in pending:
+            task.cancel()
+    except asyncio.CancelledError:
+        for task in wait_tasks:
+            task.cancel()
+        raise

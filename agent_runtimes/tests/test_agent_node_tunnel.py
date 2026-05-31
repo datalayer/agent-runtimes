@@ -65,3 +65,29 @@ async def test_run_local_chat_request_uses_registered_agent(monkeypatch: pytest.
 async def test_run_local_chat_request_fails_without_prompt() -> None:
     with pytest.raises(ValueError, match="Missing prompt text"):
         await tunnel._run_local_chat_request({"messages": []})
+
+
+def test_node_id_prefers_persisted_uid_over_hostname(monkeypatch: pytest.MonkeyPatch) -> None:
+    class _Cfg:
+        node_uid = "node-ulid-123"
+
+    monkeypatch.delenv("AGENT_NODE_ID", raising=False)
+    monkeypatch.setattr(
+        "agent_runtimes.routes.agent_node.get_agent_node_configuration",
+        lambda: _Cfg(),
+    )
+
+    assert tunnel._node_id() == "node-ulid-123"
+
+
+def test_node_id_env_override_wins(monkeypatch: pytest.MonkeyPatch) -> None:
+    class _Cfg:
+        node_uid = "node-ulid-123"
+
+    monkeypatch.setenv("AGENT_NODE_ID", "env-node-999")
+    monkeypatch.setattr(
+        "agent_runtimes.routes.agent_node.get_agent_node_configuration",
+        lambda: _Cfg(),
+    )
+
+    assert tunnel._node_id() == "env-node-999"

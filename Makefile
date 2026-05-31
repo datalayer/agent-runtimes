@@ -10,7 +10,7 @@ SHELL=/bin/bash
 	help default clean build test test-js test-py kill warning \
 	publish-npm publish-pypi publish-conda pydoc typedoc docs \
 	examples examples\:prod examples\:proxy examples-proxy agent agent-nodes agent-nodes\:proxy agent-nodes-proxy agent-notebook agent-lexical jupyter-server agent-serve \
-	docker-build docker-push docker-release agent-nodes-docker-build agent-nodes-docker-push \
+	docker-build docker-push docker-release agent-nodes-docker-build agent-nodes-docker-push agent-nodes-docker-run agent-node-docker-stop \
 	agents list-specs specs specs-clone specs-generate specs-format \
 	ag-chat ag-chat-simple ag-chat-data-acquisition ag-chat-financial ag-chat-demo ag-chat-demo-nocodemode
 
@@ -289,6 +289,16 @@ docker-release: docker-build docker-push ## build and push Docker image
 agent-nodes-docker-build: docker-build ## build Agent Nodes Docker image (defaults: DOCKER_IMAGE=datalayer/agent-nodes, DOCKER_TAG=latest)
 
 agent-nodes-docker-push: docker-push ## push Agent Nodes Docker image (defaults: DOCKER_IMAGE=datalayer/agent-nodes, DOCKER_TAG=latest)
+
+agent-nodes-docker-run: ## run Agent Node Docker container detached (auto-removed on stop); name=agent-node-example
+	@docker rm -f agent-node-example >/dev/null 2>&1 || true
+	docker run -d --rm --name agent-node-example -p 8765:8765 $(DOCKER_IMAGE):$(DOCKER_TAG)
+	@echo ""
+	@echo "Agent Node started. Connect at: http://localhost:8765"
+	@echo "Stop with: make agent-node-docker-stop"
+
+agent-node-docker-stop: ## stop and delete the agent-node-example Docker container
+	docker rm -f agent-node-example
 
 agents: # agents
 	agent-runtimes list-agents \
