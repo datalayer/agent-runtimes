@@ -26,6 +26,7 @@ from typing import Any, AsyncGenerator
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from starlette.routing import Mount
@@ -1376,8 +1377,10 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
 
     # Root endpoint
     @app.get("/")
-    async def root() -> dict[str, Any]:
+    async def root() -> Any:
         """Root endpoint with service information."""
+        if _node_enabled:
+            return RedirectResponse(url="/html/agent-node.html")
         return {
             "service": config.title,
             "version": config.version,
@@ -1413,6 +1416,13 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
             "/static",
             StaticFiles(directory=str(_dist_dir), html=True),
             name="frontend-static",
+        )
+        # Backward-compatible alias used by some clients/tools.
+        # Keep serving the same built artifacts at /html as well.
+        app.mount(
+            "/html",
+            StaticFiles(directory=str(_dist_dir), html=True),
+            name="frontend-html",
         )
         logger.info(f"Serving frontend static files from {_dist_dir}")
 

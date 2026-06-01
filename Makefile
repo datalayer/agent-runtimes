@@ -10,7 +10,7 @@ SHELL=/bin/bash
 	help default clean build test test-js test-py kill warning \
 	publish-npm publish-pypi publish-conda pydoc typedoc docs \
 	examples examples\:prod examples\:proxy examples-proxy agent agent-nodes agent-nodes\:proxy agent-nodes-proxy agent-notebook agent-lexical jupyter-server agent-serve \
-	docker-build docker-push docker-release node-agent-artifact-build node-agents-docker-build agent-nodes-docker-build agent-nodes-docker-push agent-nodes-docker-run agent-nodes-docker-stop \
+	docker-build docker-push docker-release node-agent-artifact-build node-agents-docker-build agent-nodes-docker-build agent-nodes-docker-push agent-nodes-docker-start agent-nodes-docker-stop agent-nodes-docker-logs \
 	agents list-specs specs specs-clone specs-generate specs-format \
 	ag-chat ag-chat-simple ag-chat-data-acquisition ag-chat-financial ag-chat-demo ag-chat-demo-nocodemode
 
@@ -318,15 +318,19 @@ agent-nodes-docker-build: node-agents-docker-build ## alias for node-agents-dock
 
 agent-nodes-docker-push: docker-push ## push Agent Nodes Docker image (defaults: DOCKER_IMAGE=datalayer/agent-nodes, DOCKER_TAG=latest)
 
-agent-nodes-docker-run: ## run Agent Node Docker container detached (auto-removed on stop); name=agent-nodes-example
+agent-nodes-docker-start: ## start Agent Node Docker container detached (persisted until explicit stop); name=agent-nodes-example
 	@docker rm -f agent-nodes-example >/dev/null 2>&1 || true
-	docker run -d --rm --name agent-nodes-example -p 8765:8765 -e AGENT_RUNTIMES_NODE=true $(DOCKER_IMAGE):$(DOCKER_TAG)
+	docker run -d --name agent-nodes-example -p 8765:8765 -e AGENT_RUNTIMES_NODE=true -e AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE=datalayer $(DOCKER_IMAGE):$(DOCKER_TAG)
 	@echo ""
 	@echo "Agent Node started. Connect at: http://localhost:8765"
 	@echo "Stop with: make agent-nodes-docker-stop"
+	@echo "Logs with: make agent-nodes-docker-logs"
 
-agent-nodes-docker-stop: ## stop and delete the agent-nodes-example Docker container
+agent-nodes-docker-stop: ## force-stop and delete the agent-nodes-example Docker container
 	docker rm -f agent-nodes-example
+
+agent-nodes-docker-logs: ## tail logs from the agent-nodes-example Docker container
+	docker logs -f agent-nodes-example
 
 agents: # agents
 	agent-runtimes list-agents \
