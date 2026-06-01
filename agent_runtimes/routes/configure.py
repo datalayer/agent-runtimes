@@ -177,7 +177,7 @@ def _bedrock_models_from_agentspecs() -> list[str]:
     try:
         import importlib.util
         import pathlib
-        import yaml
+        import yaml  # type: ignore[import-untyped]
 
         spec = importlib.util.find_spec("agentspecs")
         if spec is None or not spec.submodule_search_locations:
