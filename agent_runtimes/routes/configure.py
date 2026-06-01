@@ -8,7 +8,7 @@ import json
 import logging
 import os
 from pathlib import Path as FilePath
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 from fastapi import (
     APIRouter,
@@ -103,7 +103,7 @@ def _default_inference_provider() -> InferenceProvider:
         os.environ.get("AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE") or ""
     ).strip().lower()
     if configured in {"local", "datalayer"}:
-        return configured  # type: ignore[return-value]
+        return cast(InferenceProvider, configured)
 
     if not is_node_enabled():
         return "local"
@@ -164,7 +164,7 @@ def _bedrock_models_from_agentspecs() -> list[str]:
         return model_id
 
     try:
-        from agentspecs.models import list_models  # type: ignore
+        from agentspecs.models import list_models
 
         return [
             _normalize(spec.id)

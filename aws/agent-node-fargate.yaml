@@ -23,6 +23,13 @@ Parameters:
     Default: https://prod1.datalayer.run
     Description: Datalayer platform base URL.
 
+  DatalayerAiInferenceUrl:
+    Type: String
+    Default: ''
+    Description: >
+      (Optional) Dedicated ai-inference base URL. When empty, the template
+      falls back to DatalayerRunUrl.
+
   AgentNodeImage:
     Type: String
     Default: datalayer/agent-nodes:latest
@@ -48,6 +55,10 @@ Parameters:
     Type: Number
     Default: 1
     Description: Number of agent-node tasks to run.
+
+Conditions:
+  HasDatalayerAiInferenceUrl: !Not
+    - !Equals [!Ref DatalayerAiInferenceUrl, '']
 
 Resources:
 
@@ -263,6 +274,16 @@ Resources:
               Value: !Ref DatalayerRunUrl
             - Name: VITE_DATALAYER_RUN_URL
               Value: !Ref DatalayerRunUrl
+            - Name: DATALAYER_AI_INFERENCE_URL
+              Value: !If
+                - HasDatalayerAiInferenceUrl
+                - !Ref DatalayerAiInferenceUrl
+                - !Ref DatalayerRunUrl
+            - Name: VITE_DATALAYER_AI_INFERENCE_URL
+              Value: !If
+                - HasDatalayerAiInferenceUrl
+                - !Ref DatalayerAiInferenceUrl
+                - !Ref DatalayerRunUrl
             - Name: AGENT_RUNTIMES_PORT
               Value: !Ref AgentNodePort
           LogConfiguration:

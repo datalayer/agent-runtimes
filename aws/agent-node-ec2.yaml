@@ -23,6 +23,13 @@ Parameters:
     Default: https://prod1.datalayer.run
     Description: Datalayer platform base URL.
 
+  DatalayerAiInferenceUrl:
+    Type: String
+    Default: ''
+    Description: >
+      (Optional) Dedicated ai-inference base URL. When empty, the template
+      falls back to DatalayerRunUrl.
+
   AgentNodeImage:
     Type: String
     Default: datalayer/agent-nodes:latest
@@ -174,6 +181,12 @@ Resources:
           dnf install -y docker
           systemctl enable --now docker
           docker pull ${AgentNodeImage}
+
+          AI_INFERENCE_URL='${DatalayerAiInferenceUrl}'
+          if [[ -z "$AI_INFERENCE_URL" ]]; then
+            AI_INFERENCE_URL='${DatalayerRunUrl}'
+          fi
+
           docker run -d \
             --name agent-node \
             --restart unless-stopped \
@@ -181,6 +194,8 @@ Resources:
             -e DATALAYER_API_KEY='${DatalayerApiKey}' \
             -e DATALAYER_RUN_URL='${DatalayerRunUrl}' \
             -e VITE_DATALAYER_RUN_URL='${DatalayerRunUrl}' \
+            -e DATALAYER_AI_INFERENCE_URL="$AI_INFERENCE_URL" \
+            -e VITE_DATALAYER_AI_INFERENCE_URL="$AI_INFERENCE_URL" \
             -e AGENT_RUNTIMES_PORT='${AgentNodePort}' \
             ${AgentNodeImage}
 

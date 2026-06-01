@@ -15,9 +15,9 @@ from typing import Any
 from .routes.agent_node import get_agent_node_configuration
 
 try:  # psutil is optional; degrade gracefully when missing.
-    import psutil  # type: ignore[import-not-found]
+    import psutil
 except Exception:  # noqa: BLE001
-    psutil = None  # type: ignore[assignment]
+    psutil = None
 
 
 _BOOT_TIME = time.time()

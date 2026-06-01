@@ -63,7 +63,7 @@ aws cloudformation deploy \
   --stack-name agent-node-fargate \
   --capabilities CAPABILITY_IAM \
   --parameter-overrides \
-      DatalayerRunUrl=https://prod1.datalayer.run
+  DatalayerRunUrl=https://prod1.datalayer.run
 
 # With a preconfigured API key.
 aws cloudformation deploy \
@@ -81,6 +81,10 @@ The Application Load Balancer URL is printed in the stack outputs:
 aws cloudformation describe-stacks --stack-name agent-node-fargate \
   --query 'Stacks[0].Outputs[?OutputKey==`AgentNodeUrl`].OutputValue'
 ```
+
+If you need a dedicated ai-inference endpoint, add
+`DatalayerAiInferenceUrl=<url>` to either template's `--parameter-overrides`.
+When omitted, both templates default ai-inference routing to `DatalayerRunUrl`.
 
 ## Cleanup
 

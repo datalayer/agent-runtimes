@@ -17,7 +17,7 @@ the central UI under `Docs → Agent Nodes`.
    mode, list, inspect, and route chat.
 2. Inference routing control per Agent Node runtime:
    `inferenceProvider = local | datalayer`.
-2. Keep configuration source-of-truth **local** on each node.
+3. Keep configuration source-of-truth **local** on each node.
 3. Mode taxonomy: `private | shared | sleep`.
 4. Central visibility: own nodes (all modes) + others only in `shared` mode.
 5. Datalayer Runtimes (not operator) is the control plane and tunnel hub.
@@ -76,8 +76,12 @@ The node-local configuration API exposes inference controls:
 
 1. For `local`, returns an empty model list.
 2. For `datalayer`, proxies `datalayer-ai-inference /models`.
-3. If upstream returns no models, Agent Node applies Bedrock Anthropic
-   fallback defaults so the UI can still present usable choices.
+3. If upstream returns no models (or is unavailable), Agent Node applies a
+   Bedrock Anthropic fallback list derived from `agentspecs` (with env
+   fallback), so the UI can still present usable choices.
+4. For `datalayer`, the payload may also include
+   `bedrock_anthropic_model_specs` metadata used by the UI to preselect the
+   active default model.
 
 Mode is part of every heartbeat and every health report. Changing the mode
 in the local UI synchronously triggers an extra health report so the central
@@ -215,7 +219,9 @@ The `src/AgentNode.tsx` app exposes three steps:
 2. **Configuration** — pick mode, billable account, and sharing policy.
    Also pick **Inference** provider (`local` or `datalayer`).
    When `datalayer` is selected, the UI shows available Bedrock Anthropic
-   models returned by `/api/v1/configure/inference/models`.
+   models returned by `/api/v1/configure/inference/models` as a read-only
+   selector. The active option is preselected from model metadata/defaults,
+   and model switching is intentionally locked in this view.
 3. **Chat** — node-local AG-UI chat. Only enabled when
    `configuration.mode === 'private'`.
 
@@ -248,7 +254,7 @@ For local proxy development, `make agent-nodes:proxy` exports both
 local ai-inference service (`http://localhost:4450` by default).
 
 `plane local` also starts the local ai-inference service and waits for
-`/api/ai-inference/v1/ping` readiness.
+`/api/ai-inference/v1/health` readiness.
 
 ## Risks and Mitigations
 
@@ -256,8 +262,9 @@ local ai-inference service (`http://localhost:4450` by default).
    expiry.
 2. **Visibility regressions** — explicit policy tests for own/shared-only
    queries.
-3. **Mode migration drift** — temporary alias support (`run`/`host`) with
-   strict deprecation window.
+3. **Node-local vs central drift** — local configuration and central registry
+   can diverge transiently during network disruption; mitigated by periodic
+   heartbeat/health sync plus immediate mode-change health reports.
 4. **Registry restart loss** — v1 in-memory registry is documented as
    expected; persistence is a follow-up.
 

@@ -194,14 +194,16 @@ async def _run_local_chat_request(chat_payload: dict[str, Any]) -> dict[str, Any
         raise ValueError("No local agents are registered for tunnel execution")
 
     adapter, _ = adapter_entry
+    raw_messages = chat_payload.get("messages")
+    conversation_history: list[dict[str, Any]] = []
+    if isinstance(raw_messages, list):
+        conversation_history = [
+            message for message in raw_messages if isinstance(message, dict)
+        ]
     context = AgentContext(
         session_id=str(uuid.uuid4()),
         user_id=str(chat_payload.get("requester_uid") or "tunnel-user"),
-        conversation_history=(
-            chat_payload.get("messages")
-            if isinstance(chat_payload.get("messages"), list)
-            else []
-        ),
+        conversation_history=conversation_history,
         metadata={"source": "agent-node-tunnel", "agent_id": agent_id},
     )
     response = await adapter.run(prompt, context)

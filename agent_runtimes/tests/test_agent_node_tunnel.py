@@ -3,9 +3,11 @@
 
 from __future__ import annotations
 
+from typing import cast
+
 import pytest
 
-from agent_runtimes.adapters.base import AgentContext, AgentResponse
+from agent_runtimes.adapters.base import AgentContext, AgentResponse, BaseAgent
 from agent_runtimes.routes import acp as acp_route
 from agent_runtimes import agent_node_tunnel as tunnel
 
@@ -41,7 +43,10 @@ async def test_run_local_chat_request_uses_registered_agent(monkeypatch: pytest.
     original_agents = dict(acp_route._agents)
     try:
         acp_route._agents.clear()
-        acp_route._agents["default"] = (_FakeAgent(), object())
+        acp_route._agents["default"] = (
+            cast(BaseAgent, _FakeAgent()),
+            acp_route.AgentInfo(id="default", name="default"),
+        )
 
         payload = await tunnel._run_local_chat_request(
             {
