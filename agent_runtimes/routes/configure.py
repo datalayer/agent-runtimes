@@ -141,8 +141,10 @@ def _normalize_ai_inference_base_url(raw_url: str | None) -> str:
 
 
 def _fallback_bedrock_models() -> list[str]:
-    raw = (os.getenv("DATALAYER_BEDROCK_MODELS") or "").strip()
-    models = [m.strip() for m in raw.split(",") if m.strip()] if raw else []
+    models = _bedrock_models_from_agentspecs()
+    if not models:
+        raw = (os.getenv("DATALAYER_BEDROCK_MODELS") or "").strip()
+        models = [m.strip() for m in raw.split(",") if m.strip()] if raw else []
     default_model = (
         os.getenv("DATALAYER_BEDROCK_MODEL")
         or os.getenv("DATALAYER_BEDROCK_MODEL_ID")
@@ -151,6 +153,51 @@ def _fallback_bedrock_models() -> list[str]:
     if default_model and default_model not in models:
         models.insert(0, default_model)
     return models
+
+
+def _bedrock_models_from_agentspecs() -> list[str]:
+    """Load Bedrock model IDs from the agentspecs library (best-effort)."""
+
+    def _normalize(model_id: str) -> str:
+        if model_id.startswith("bedrock:"):
+            return "bedrock/" + model_id.split(":", 1)[1]
+        return model_id
+
+    try:
+        from agentspecs.models import list_models  # type: ignore
+
+        return [
+            _normalize(spec.id)
+            for spec in list_models()
+            if getattr(spec, "provider", None) == "bedrock"
+        ]
+    except Exception:  # noqa: BLE001
+        pass
+
+    try:
+        import importlib.util
+        import pathlib
+        import yaml
+
+        spec = importlib.util.find_spec("agentspecs")
+        if spec is None or not spec.submodule_search_locations:
+            return []
+        models_dir = pathlib.Path(spec.submodule_search_locations[0]) / "models"
+        if not models_dir.is_dir():
+            return []
+        ids: list[str] = []
+        for yaml_file in sorted(models_dir.glob("*.yaml")):
+            try:
+                with open(yaml_file) as fh:
+                    data = yaml.safe_load(fh) or {}
+            except Exception:  # noqa: BLE001
+                continue
+            if data.get("provider") == "bedrock" and isinstance(data.get("id"), str):
+                ids.append(_normalize(data["id"]))
+        return ids
+    except Exception:  # noqa: BLE001
+        return []
+
 
 
 class InferenceProviderRequest(BaseModel):

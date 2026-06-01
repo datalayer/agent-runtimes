@@ -15,6 +15,8 @@ import {
 } from '@datalayer/primer-addons';
 import { AppearanceControlsWithStore } from '@datalayer/primer-addons/lib/components/appearance';
 import {
+  ActionList,
+  ActionMenu,
   Avatar,
   Button,
   FormControl,
@@ -105,11 +107,19 @@ const DEFAULT_CONFIGURATION: AgentNodeConfiguration = {
 
 type InferenceProvider = 'local' | 'datalayer';
 
+type InferenceModelSpec = {
+  id: string;
+  name?: string;
+  description?: string;
+  default?: boolean;
+};
+
 type InferenceModelResponse = {
   provider?: string;
   default_model?: string;
   models?: string[];
   bedrock_anthropic_models?: string[];
+  bedrock_anthropic_model_specs?: InferenceModelSpec[];
 };
 
 /**
@@ -437,7 +447,17 @@ export function AgentNode() {
               ? fromBedrock
               : fallback;
         setInferenceModels(models);
-        setInferenceDefaultModel(payload.default_model || models[0] || null);
+        const specDefault = Array.isArray(payload.bedrock_anthropic_model_specs)
+          ? payload.bedrock_anthropic_model_specs.find(s => s?.default)?.id
+          : undefined;
+        const selected =
+          (specDefault && models.includes(specDefault) ? specDefault : null) ||
+          (payload.default_model && models.includes(payload.default_model)
+            ? payload.default_model
+            : null) ||
+          models[0] ||
+          null;
+        setInferenceDefaultModel(selected);
       } catch {
         setInferenceModels([]);
         setInferenceDefaultModel(null);
@@ -825,22 +845,25 @@ export function AgentNode() {
             <Box
               aria-live="polite"
               sx={{
-                position: 'sticky',
+                position: 'fixed',
                 top: 0,
-                zIndex: 30,
+                left: 0,
+                right: 0,
+                zIndex: 1000,
                 pointerEvents: 'none',
-                mb: banner ? 3 : 0,
-                transition: 'margin-bottom 200ms ease',
+                display: 'flex',
+                justifyContent: 'stretch',
               }}
             >
               <Box
                 role={banner?.kind === 'error' ? 'alert' : 'status'}
                 sx={{
                   pointerEvents: banner ? 'auto' : 'none',
-                  px: 3,
-                  py: 2,
-                  borderRadius: 2,
-                  border: '1px solid',
+                  width: '100%',
+                  px: 4,
+                  py: 4,
+                  borderRadius: 0,
+                  borderBottom: '1px solid',
                   borderColor:
                     banner?.kind === 'error'
                       ? 'danger.emphasis'
@@ -858,12 +881,18 @@ export function AgentNode() {
                           ? 'success.subtle'
                           : 'accent.subtle',
                   color: 'fg.default',
+                  boxShadow: banner ? '0 4px 16px rgba(0, 0, 0, 0.12)' : 'none',
                   opacity: banner ? 1 : 0,
-                  transform: banner ? 'translateY(0)' : 'translateY(-8px)',
-                  transition: 'opacity 250ms ease, transform 250ms ease',
+                  transform: banner ? 'translateY(0)' : 'translateY(-100%)',
+                  transition: banner
+                    ? 'opacity 600ms ease, transform 700ms cubic-bezier(0.16, 1, 0.3, 1)'
+                    : 'opacity 250ms ease, transform 350ms cubic-bezier(0.16, 1, 0.3, 1)',
+                  textAlign: 'center',
                 }}
               >
-                <Text sx={{ fontSize: 1 }}>{banner?.message ?? ''}</Text>
+                <Text sx={{ fontSize: 3, fontWeight: 'bold' }}>
+                  {banner?.message ?? ''}
+                </Text>
               </Box>
             </Box>
             <Box sx={{ mb: 3 }}>
@@ -945,181 +974,210 @@ export function AgentNode() {
                   gap: 3,
                 }}
               >
-                <FormControl>
-                  <FormControl.Label>Mode</FormControl.Label>
-                  <Box
-                    sx={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(3, 1fr)',
-                      gap: 3,
-                    }}
-                  >
-                    {MODE_CARDS.map(card => {
-                      const isSelected = configuration.mode === card.mode;
-                      const Icon = card.Icon;
-                      return (
-                        <Box
-                          key={card.mode}
-                          as="button"
-                          type="button"
-                          onClick={() =>
-                            setConfiguration(prev => ({
-                              ...prev,
-                              mode: card.mode,
-                            }))
-                          }
-                          aria-pressed={isSelected}
-                          sx={{
-                            textAlign: 'left',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: 2,
-                            p: 3,
-                            borderRadius: 2,
-                            border: '1px solid',
-                            borderColor: isSelected
-                              ? cfg.brandColor
-                              : 'border.default',
-                            bg: isSelected ? 'canvas.subtle' : 'canvas.default',
-                            color: 'fg.default',
-                            boxShadow: isSelected
-                              ? `0 0 0 1px ${cfg.brandColor}`
-                              : 'none',
-                            '&:hover': {
-                              borderColor: cfg.brandColor,
-                            },
-                          }}
-                        >
-                          <Box
-                            sx={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: 2,
-                              color: isSelected ? cfg.brandColor : 'fg.default',
-                            }}
-                          >
-                            <Icon size={20} />
-                            <Text sx={{ fontWeight: 'bold' }}>{card.name}</Text>
-                          </Box>
-                          <Text sx={{ color: 'fg.muted', fontSize: 1 }}>
-                            {card.description}
-                          </Text>
-                        </Box>
-                      );
-                    })}
-                  </Box>
-                </FormControl>
-
-                <FormControl>
-                  <FormControl.Label>Inference</FormControl.Label>
-                  <Text sx={{ color: 'fg.muted', fontSize: 1, mb: 2 }}>
-                    Used inference provider for newly launched agent sessions.
-                  </Text>
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      gap: 2,
-                      flexWrap: 'wrap',
-                      mb: inferenceProvider === 'datalayer' ? 2 : 0,
-                    }}
-                  >
-                    <Button
-                      size="small"
-                      variant={
-                        inferenceProvider === 'local' ? 'primary' : 'default'
-                      }
-                      onClick={() => setInferenceProvider('local')}
-                    >
-                      local
-                    </Button>
-                    <Button
-                      size="small"
-                      variant={
-                        inferenceProvider === 'datalayer'
-                          ? 'primary'
-                          : 'default'
-                      }
-                      onClick={() => setInferenceProvider('datalayer')}
-                    >
-                      datalayer
-                    </Button>
-                  </Box>
-                  {inferenceProvider === 'datalayer' && (
-                    <Box
-                      sx={{
-                        border: '1px solid',
-                        borderColor: 'border.default',
-                        borderRadius: 2,
-                        p: 2,
-                        bg: 'canvas.subtle',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: 1,
-                      }}
-                    >
-                      <Text sx={{ fontSize: 1, color: 'fg.muted' }}>
-                        Available Bedrock Anthropic models
-                      </Text>
-                      {inferenceModels.length === 0 ? (
-                        <Text sx={{ fontSize: 1, color: 'fg.muted' }}>
-                          No model list available.
-                        </Text>
-                      ) : (
-                        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                          {inferenceModels.map(model => (
-                            <Label
-                              key={model}
-                              size="small"
-                              variant={
-                                inferenceDefaultModel === model
-                                  ? 'accent'
-                                  : 'secondary'
-                              }
-                            >
-                              {model}
-                            </Label>
-                          ))}
-                        </Box>
-                      )}
-                    </Box>
-                  )}
-                </FormControl>
-
                 <Box
                   sx={{
                     display: 'grid',
                     gridTemplateColumns: ['1fr', null, '1fr 1fr'],
-                    gap: 3,
+                    gap: 4,
                     alignItems: 'start',
                   }}
                 >
-                  {iamUser ? (
-                    <BillableAccountSelect
-                      value={configuration.billable_account_uid || ''}
-                      onChange={handleBillableAccountChange}
-                      onSelectedAccountChange={handleSelectedAccountChange}
-                      onAccountsResolved={handleAccountsResolved}
-                    />
-                  ) : (
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 3,
+                    }}
+                  >
                     <FormControl>
-                      <FormControl.Label>
-                        Run this agent under
-                      </FormControl.Label>
-                      <Text sx={{ color: 'fg.muted', fontSize: 1 }}>
-                        Loading billable accounts...
-                      </Text>
+                      <FormControl.Label>Mode</FormControl.Label>
+                      <Box
+                        sx={{
+                          display: 'grid',
+                          gridTemplateColumns: 'repeat(3, 1fr)',
+                          gap: 3,
+                        }}
+                      >
+                        {MODE_CARDS.map(card => {
+                          const isSelected = configuration.mode === card.mode;
+                          const Icon = card.Icon;
+                          return (
+                            <Box
+                              key={card.mode}
+                              as="button"
+                              type="button"
+                              onClick={() =>
+                                setConfiguration(prev => ({
+                                  ...prev,
+                                  mode: card.mode,
+                                }))
+                              }
+                              aria-pressed={isSelected}
+                              sx={{
+                                textAlign: 'left',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: 2,
+                                p: 3,
+                                borderRadius: 2,
+                                border: '1px solid',
+                                borderColor: isSelected
+                                  ? cfg.brandColor
+                                  : 'border.default',
+                                bg: isSelected
+                                  ? 'canvas.subtle'
+                                  : 'canvas.default',
+                                color: 'fg.default',
+                                boxShadow: isSelected
+                                  ? `0 0 0 1px ${cfg.brandColor}`
+                                  : 'none',
+                                '&:hover': {
+                                  borderColor: cfg.brandColor,
+                                },
+                              }}
+                            >
+                              <Box
+                                sx={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: 2,
+                                  color: isSelected
+                                    ? cfg.brandColor
+                                    : 'fg.default',
+                                }}
+                              >
+                                <Icon size={20} />
+                                <Text sx={{ fontWeight: 'bold' }}>
+                                  {card.name}
+                                </Text>
+                              </Box>
+                              <Text sx={{ color: 'fg.muted', fontSize: 1 }}>
+                                {card.description}
+                              </Text>
+                            </Box>
+                          );
+                        })}
+                      </Box>
                     </FormControl>
-                  )}
 
-                  <ShareAccessComponent
-                    isOpen
-                    displayMode="inline"
-                    requestUrl={`${BASE_URL}/api/v1/agent-node/sharing`}
-                    resourceLabel="Agent Node"
-                    resourceName="this Agent Node"
-                    onClose={handleSharingInlineClose}
-                  />
+                    <FormControl>
+                      <FormControl.Label>Inference</FormControl.Label>
+                      <Text sx={{ color: 'fg.muted', fontSize: 1, mb: 2 }}>
+                        Used inference provider for newly launched agent
+                        sessions.
+                      </Text>
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          gap: 2,
+                          flexWrap: 'wrap',
+                          mb: inferenceProvider === 'datalayer' ? 2 : 0,
+                        }}
+                      >
+                        <Button
+                          size="small"
+                          variant={
+                            inferenceProvider === 'local'
+                              ? 'primary'
+                              : 'default'
+                          }
+                          onClick={() => setInferenceProvider('local')}
+                        >
+                          local
+                        </Button>
+                        <Button
+                          size="small"
+                          variant={
+                            inferenceProvider === 'datalayer'
+                              ? 'primary'
+                              : 'default'
+                          }
+                          onClick={() => setInferenceProvider('datalayer')}
+                        >
+                          datalayer
+                        </Button>
+                      </Box>
+                      {inferenceProvider === 'datalayer' && (
+                        <Box
+                          sx={{
+                            border: '1px solid',
+                            borderColor: 'border.default',
+                            borderRadius: 2,
+                            p: 2,
+                            bg: 'canvas.subtle',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: 1,
+                          }}
+                        >
+                          <Text sx={{ fontSize: 1, color: 'fg.muted' }}>
+                            Bedrock Anthropic model
+                          </Text>
+                          {inferenceModels.length === 0 ? (
+                            <Text sx={{ fontSize: 1, color: 'fg.muted' }}>
+                              No model list available.
+                            </Text>
+                          ) : (
+                            <ActionMenu>
+                              <ActionMenu.Button>
+                                {inferenceDefaultModel || inferenceModels[0]}
+                              </ActionMenu.Button>
+                              <ActionMenu.Overlay width="large">
+                                <ActionList selectionVariant="single">
+                                  {inferenceModels.map(model => (
+                                    <ActionList.Item
+                                      key={model}
+                                      selected={inferenceDefaultModel === model}
+                                      inactiveText="Selection is locked"
+                                    >
+                                      {model}
+                                    </ActionList.Item>
+                                  ))}
+                                </ActionList>
+                              </ActionMenu.Overlay>
+                            </ActionMenu>
+                          )}
+                        </Box>
+                      )}
+                    </FormControl>
+
+                    {iamUser ? (
+                      <BillableAccountSelect
+                        value={configuration.billable_account_uid || ''}
+                        onChange={handleBillableAccountChange}
+                        onSelectedAccountChange={handleSelectedAccountChange}
+                        onAccountsResolved={handleAccountsResolved}
+                      />
+                    ) : (
+                      <FormControl>
+                        <FormControl.Label>
+                          Run this agent under
+                        </FormControl.Label>
+                        <Text sx={{ color: 'fg.muted', fontSize: 1 }}>
+                          Loading billable accounts...
+                        </Text>
+                      </FormControl>
+                    )}
+                  </Box>
+
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 2,
+                    }}
+                  >
+                    <Heading sx={{ fontSize: 2, m: 0 }}>Share</Heading>
+                    <ShareAccessComponent
+                      isOpen
+                      displayMode="inline"
+                      requestUrl={`${BASE_URL}/api/v1/agent-node/sharing`}
+                      resourceLabel="Agent Node"
+                      resourceName="this Agent Node"
+                      onClose={handleSharingInlineClose}
+                    />
+                  </Box>
                 </Box>
 
                 {error && <Text sx={{ color: 'danger.fg' }}>{error}</Text>}

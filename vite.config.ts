@@ -177,6 +177,10 @@ export default defineConfig(({ mode, command }) => {
               target: 'http://localhost:8765',
               changeOrigin: true,
             },
+            '/api/v1/configure': {
+              target: 'http://localhost:8765',
+              changeOrigin: true,
+            },
           },
         };
 
