@@ -191,6 +191,12 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
     'Pre-hooks and post-hooks lifecycle execution example.',
   ),
   makeEntry(
+    'AgentInferenceProviderExample',
+    () => import('./AgentInferenceProviderExample'),
+    'Switch local and datalayer inference providers with live low-level provider events.',
+    ['example', 'agent', 'inference', 'provider', 'runtime'],
+  ),
+  makeEntry(
     'AgentToolApprovalsExample',
     () => import('./AgentToolApprovalsExample'),
     'Tool approval workflows and manual decisions.',

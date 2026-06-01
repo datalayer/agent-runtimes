@@ -6,6 +6,7 @@ repos:
     hooks:
       - id: check-toml
       - id: check-yaml
+        exclude: '^aws/.*\.ya?ml$'
       - id: end-of-file-fixer
       - id: trailing-whitespace
 

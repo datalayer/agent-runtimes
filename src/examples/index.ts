@@ -25,6 +25,7 @@ export { default as AgentCodemodeExample } from './AgentCodemodeExample';
 export { default as AgentEvalsExample } from './AgentEvalsExample';
 export { default as AgentGuardrailsExample } from './AgentGuardrailsExample';
 export { default as AgentHooksExample } from './AgentHooksExample';
+export { default as AgentInferenceProviderExample } from './AgentInferenceProviderExample';
 export { default as AgentToolApprovalsExample } from './AgentToolApprovalsExample';
 export { default as AgentMemoryExample } from './AgentMemoryExample';
 export { default as AgentOtelExample } from './AgentOtelExample';

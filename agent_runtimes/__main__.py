@@ -34,7 +34,6 @@ from typing import Annotated, Optional
 
 import typer
 
-from agent_runtimes.chat.cli import app as interactive_cli_app
 from agent_runtimes.commands.agent_mcp_servers import (
     AgentMcpServersError,
     parse_env_vars,
@@ -88,11 +87,18 @@ app = typer.Typer(
 )
 
 # Register the interactive assistant CLI under `agent-runtimes chat`.
-app.add_typer(
-    interactive_cli_app,
-    name="chat",
-    help="Interactive assistant CLI for agent runtimes",
-)
+# Keep this import lazy and guarded so server/node startup does not depend on
+# chat-specific model provider configuration (for example Bedrock env vars).
+try:
+    from agent_runtimes.chat.cli import app as interactive_cli_app
+
+    app.add_typer(
+        interactive_cli_app,
+        name="chat",
+        help="Interactive assistant CLI for agent runtimes",
+    )
+except Exception as exc:  # noqa: BLE001
+    logger.warning("Chat CLI disabled at startup: %s", exc)
 
 # Register events command group and root aliases.
 app.add_typer(events_app)
@@ -283,6 +289,14 @@ def serve(
             help="If the port is in use, find the next available port",
         ),
     ] = False,
+    node: Annotated[
+        bool,
+        typer.Option(
+            "--node",
+            envvar="AGENT_RUNTIMES_NODE",
+            help="Run in Agent Node mode (enables Agent Node routes, sync and tunnel loops)",
+        ),
+    ] = False,
 ) -> None:
     """
     Start the agent-runtimes server.
@@ -365,6 +379,7 @@ def serve(
             sandbox_variant=sandbox_variant,
             protocol=protocol,
             find_free_port_flag=find_free_port,
+            node=node,
         )
     except ServeError as e:
         logger.error(str(e))

@@ -36,6 +36,13 @@ Agent Runtimes solves the complexity of deploying AI agents by providing:
 
 ## 🌟 Features
 
+### Agent Node
+- **Central registration**: Agent nodes register and heartbeat to Datalayer Runtimes APIs.
+- **Node configuration**: Runtime mode (`private`, `shared`, `sleep`) and sharing metadata are tracked per node.
+- **Tunnel routing**: Agent nodes maintain a tunnel with Datalayer Runtimes to route chat messages between central UI and nodes.
+- **Dedicated UI**: Agent Node list/detail UX is available for node observability and operations.
+- **End-to-end sync**: Local node state can be synchronized to central services for fleet visibility.
+
 ### Multi-Protocol Support
 - **ACP (Agent Client Protocol)**: WebSocket-based standard protocol
 - **Vercel AI SDK**: Compatible with Vercel's AI SDK for React/Next.js
@@ -88,6 +95,55 @@ pip install -e ".[docs]"       # docs build dependencies
 ```bash
 make examples
 ```
+
+### Agent Node development (UI + server)
+
+For focused Agent Node development, run:
+
+```bash
+make agent-nodes
+```
+
+This target starts both:
+
+- the local Python server on port `8765`
+- the Vite page for `html/agent-node.html`
+
+Use this mode to iterate on Agent Node configuration flows and central registration behavior.
+
+Expected central visibility semantics:
+
+- show all nodes owned by the current user,
+- show other users' nodes only when mode is `shared`.
+
+### Agent Node against local services (`plane local`)
+
+To run Agent Node with local service URLs preconfigured, use:
+
+```bash
+make agent-nodes:proxy
+```
+
+This target applies the `PLANE_LOCAL_*_URL` mappings and exports both
+`DATALAYER_*` and `VITE_*` variables so Agent Node sync/tunnel and UI calls are
+wired to local services.
+
+Prerequisites:
+
+1. Start the local Plane stack (`plane local`).
+2. Export `DATALAYER_API_KEY` for authenticated registration/tunnel calls.
+
+Override any local service URL if needed:
+
+```bash
+PLANE_LOCAL_RUNTIMES_URL=http://localhost:19500 make agent-nodes:proxy
+```
+
+### Docker build notes
+
+Docker image build and release notes were moved to:
+
+- [docker/README.md](docker/README.md)
 
 By default, `make examples` boots the local Vite dev server with every
 Datalayer service URLs set to local defaults for agent execution:
@@ -172,8 +228,10 @@ The detailed guides for architecture, use cases, interactive chat, key concepts,
 - [Agent Runtimes Overview](https://agent-runtimes.datalayer.tech/)
 - [Integrations](https://agent-runtimes.datalayer.tech/integrations)
 - [Chat](https://agent-runtimes.datalayer.tech/chat)
-- [Transports](https://agent-runtimes.datalayer.tech/transports)
+- [Protocols](https://agent-runtimes.datalayer.tech/protocols)
 - [Programmatic Tools](https://agent-runtimes.datalayer.tech/programmatic-tools)
+- [Agent Nodes](https://agent-runtimes.datalayer.tech/nodes)
+- [Endpoints](https://agent-runtimes.datalayer.tech/endpoints)
 - [CLI](https://agent-runtimes.datalayer.tech/cli)
 
 ## Agentspecs

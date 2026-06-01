@@ -1,10 +1,10 @@
 ---
-title: API Endpoints
+title: Endpoints
 ---
 
-# API Endpoints
+# Endpoints
 
-Agent Runtimes exposes a comprehensive REST API for managing agents, executing prompts, and monitoring system status.
+Agent Runtimes exposes a comprehensive REST and WebSocket API for managing agents, executing prompts, and monitoring system status.
 
 ## Base URL
 
@@ -1251,6 +1251,62 @@ GET  /api/v1/a2ui/agents     # List A2UI agents
 GET  /api/v1/mcp-ui/         # MCP-UI protocol
 GET  /api/v1/mcp-ui/agents   # List MCP-UI agents
 ```
+
+## Agent Nodes
+
+Agent Node operations are split between:
+
+- **Local node runtime endpoints** on `agent-runtimes` (`/api/v1/...`)
+- **Central control-plane endpoints** on `datalayer-runtimes` (`/api/runtimes/v1/...`)
+
+### Local Agent Node Configuration (agent-runtimes)
+
+```http
+GET  /api/v1/agent-node/configuration
+POST /api/v1/agent-node/configuration
+```
+
+Read or update local node configuration.
+
+**Configuration fields:**
+
+- `mode`: `private`, `shared`, or `sleep`.
+- `billable_account_uid`
+- `billable_account_type`
+- `billable_account_handle`
+- `sharing` (JSON object)
+
+### Central Agent Node Registry (datalayer-runtimes)
+
+```http
+POST /api/runtimes/v1/agent-nodes/register
+POST /api/runtimes/v1/agent-nodes/heartbeat
+POST /api/runtimes/v1/agent-nodes/configuration
+GET  /api/runtimes/v1/agent-nodes
+GET  /api/runtimes/v1/agent-nodes/{node_id}
+```
+
+These endpoints maintain fleet state and enforce visibility:
+
+- own nodes are always visible,
+- other users' nodes are visible only when `mode=shared`.
+
+### Agent Node Tunnel (datalayer-runtimes)
+
+```http
+GET  /api/runtimes/v1/agent-nodes/tunnel/ws
+POST /api/runtimes/v1/agent-nodes/{node_id}/tunnel/messages
+GET  /api/runtimes/v1/agent-nodes/{node_id}/tunnel/events
+GET  /api/runtimes/v1/agent-nodes/{node_id}/tunnel/status
+```
+
+The tunnel provides bidirectional routing for central chat:
+
+- UI -> runtimes -> selected node (`chat.request`)
+- node -> runtimes -> UI (`chat.response` / `chat.error`)
+
+The websocket endpoint requires authenticated query parameters (`node_id` and
+`token`) and keeps a persistent node session.
 
 ## Conversations
 

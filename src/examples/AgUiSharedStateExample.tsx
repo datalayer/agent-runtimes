@@ -346,7 +346,8 @@ const AgUiSharedStateExample: React.FC = () => {
     <ThemedProvider>
       <Box
         sx={{
-          minHeight: '100vh',
+          height: '100%',
+          overflow: 'auto',
           backgroundColor: 'canvas.default',
           padding: 4,
         }}

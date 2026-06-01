@@ -56,6 +56,47 @@ from .base import BaseTransport
 logger = logging.getLogger(__name__)
 
 
+def _resolve_effective_inference_provider(
+    agent_id: str | None = None,
+) -> tuple[str, str]:
+    """Best-effort resolve of effective inference provider and its source."""
+    # Prefer the per-agent creation spec when available.
+    if agent_id:
+        try:
+            from ..routes.agents import _agent_specs
+
+            spec = _agent_specs.get(agent_id) or {}
+            provider = str(spec.get("inference_provider") or "").strip().lower()
+            if provider in {"local", "datalayer"}:
+                return provider, "agent-spec"
+        except Exception:
+            pass
+
+    try:
+        from ..routes.configure import (
+            get_effective_inference_provider,
+            get_inference_provider_override,
+        )
+
+        override = str(get_inference_provider_override() or "").strip().lower()
+        if override in {"local", "datalayer"}:
+            return override, "runtime-override"
+
+        provider = str(get_effective_inference_provider() or "local").strip().lower()
+        if provider in {"local", "datalayer"}:
+            return provider, "default"
+    except Exception:
+        override = (
+            str(os.environ.get("AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE") or "")
+            .strip()
+            .lower()
+        )
+        if override in {"local", "datalayer"}:
+            return override, "env-override"
+
+    return "local", "fallback-local"
+
+
 def _is_live_eval_emission_enabled() -> bool:
     mode = str(os.environ.get("DATALAYER_EVALS_MODE") or "").strip().lower()
     emit_flag = (
@@ -764,6 +805,50 @@ class VercelAITransport(BaseTransport):
             request = StarletteRequest(request.scope, receive)
         except (json.JSONDecodeError, Exception) as e:
             logger.debug(f"Could not extract model/builtinTools from request body: {e}")
+
+        effective_inference_provider, inference_provider_source = (
+            _resolve_effective_inference_provider(self._agent_id)
+        )
+        if effective_inference_provider == "datalayer" and isinstance(model, str):
+            # Request body model strings must be wrapped so calls are proxied
+            # through datalayer-ai-inference instead of direct/local routing.
+            try:
+                from ..models.models import resolve_model_for_inference_provider
+
+                model = resolve_model_for_inference_provider(
+                    model,
+                    "datalayer",
+                )
+            except Exception as exc:
+                logger.warning(
+                    "Vercel AI: Failed to route request model through datalayer provider for agent '%s': %s",
+                    self._agent_id,
+                    exc,
+                )
+
+        if effective_inference_provider == "local":
+            logger.info(
+                "Vercel AI: Inference provider is local (source=%s, direct model backend, no datalayer-ai-inference endpoint). model=%s",
+                inference_provider_source,
+                model or "<agent-default>",
+            )
+        else:
+            try:
+                from ..models.models import _normalize_ai_inference_base_url
+
+                inference_base_url = _normalize_ai_inference_base_url(
+                    os.getenv("DATALAYER_AI_INFERENCE_URL")
+                )
+            except Exception:
+                inference_base_url = (
+                    os.getenv("DATALAYER_AI_INFERENCE_URL") or "<unset>"
+                )
+            logger.info(
+                "Vercel AI: Inference provider is datalayer (source=%s, model proxied via datalayer-ai-inference at %s). model=%s",
+                inference_provider_source,
+                inference_base_url,
+                model or "<agent-default>",
+            )
 
         # Determine which builtin_tools to use:
         # 1. If request specifies builtinTools, use those (allows per-request tool selection)

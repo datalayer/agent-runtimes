@@ -274,6 +274,10 @@ from agent_runtimes.types import AgentSpec, SubAgentSpecConfig, SubAgentsConfig
             # Model field
             model_id = spec.get("model")
             model_str = f'"{model_id}"' if model_id else "None"
+            inference_provider = spec.get("inference_provider")
+            inference_provider_str = (
+                f'"{inference_provider}"' if inference_provider else "None"
+            )
 
             # Sandbox variant field
             sandbox_variant = spec.get("sandbox_variant")
@@ -356,6 +360,7 @@ from agent_runtimes.types import AgentSpec, SubAgentSpecConfig, SubAgentsConfig
     tags={_fmt_list(spec.get("tags", []))},
     enabled={spec.get("enabled", True)},
     model={model_str},
+    inference_provider={inference_provider_str},
     mcp_servers=[{mcp_servers_str}],
     skills={_fmt_list(skill_refs)},
     tools={_fmt_list(tool_refs)},
@@ -846,6 +851,10 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
             # Model field
             model_id = spec.get("model")
             model_ts = f"'{model_id}'" if model_id else "undefined"
+            inference_provider = spec.get("inference_provider")
+            inference_provider_ts = (
+                f"'{inference_provider}'" if inference_provider else "undefined"
+            )
 
             # Sandbox variant field
             sandbox_variant = spec.get("sandbox_variant")
@@ -887,49 +896,54 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
             subagents_ts = _fmt_ts_literal(
                 _normalize_subagents_for_typescript(subagents_val)
             )
+            inference_provider_line = (
+                f"    inferenceProvider: {inference_provider_ts},\n"
+                if inference_provider
+                else ""
+            )
 
             code += f"""export const {const_name}: AgentSpec = {{
-  id: '{full_agent_id}',
+    id: '{full_agent_id}',
     version: '{version}',
-  name: '{spec["name"]}',
-  description: `{description}`,
-  tags: {tags_str},
-  enabled: {str(spec.get("enabled", True)).lower()},
-  model: {model_ts},
-  mcpServers: [{mcp_servers_str}],
+    name: '{spec["name"]}',
+    description: `{description}`,
+    tags: {tags_str},
+    enabled: {str(spec.get("enabled", True)).lower()},
+    model: {model_ts},
+{inference_provider_line}    mcpServers: [{mcp_servers_str}],
     skills: [{skills_str}].filter(Boolean) as SkillSpec[],
     tools: [{tools_str}],
     frontendTools: [{frontend_tools_str}],
-  environmentName: '{spec.get("environment_name", "ai-agents-env")}',
-  icon: {icon},
-  emoji: {emoji},
-  color: {color},
-  suggestions: {suggestions_str},
+    environmentName: '{spec.get("environment_name", "ai-agents-env")}',
+    icon: {icon},
+    emoji: {emoji},
+    color: {color},
+    suggestions: {suggestions_str},
     welcomeMessage: {_fmt_ts_literal(welcome_message)},
     welcomeNotebook: {_fmt_ts_literal(welcome_notebook)},
     welcomeDocument: {_fmt_ts_literal(welcome_document)},
-  sandboxVariant: {sandbox_variant_ts},
-  systemPrompt: {f"`{system_prompt}`" if system_prompt else "undefined"},
-  systemPromptCodemodeAddons: {f"`{system_prompt_codemode_addons}`" if system_prompt_codemode_addons else "undefined"},
-  goal: {goal_ts},
-  protocol: {protocol_ts},
-  uiExtension: {ui_ext_ts},
-  trigger: {_fmt_ts_literal(trigger_val)},
-  modelConfig: {_fmt_ts_literal(model_cfg)},
-  mcpServerTools: {_fmt_ts_literal(mcp_srv_tools)},
-  guardrails: {_fmt_ts_literal(guardrails_val)},
-  evals: {_fmt_ts_literal(evals_val)},
-  codemode: {_fmt_ts_literal(codemode_val)},
-  output: {_fmt_ts_literal(output_val)},
-  advanced: {_fmt_ts_literal(advanced_val)},
-  authorizationPolicy: {auth_policy_ts},
-  notifications: {_fmt_ts_literal(notifs)},
-  memory: {memory_ts},
-  preHooks: {_fmt_ts_literal(pre_hooks_val)},
-  postHooks: {_fmt_ts_literal(post_hooks_val)},
+    sandboxVariant: {sandbox_variant_ts},
+    systemPrompt: {f"`{system_prompt}`" if system_prompt else "undefined"},
+    systemPromptCodemodeAddons: {f"`{system_prompt_codemode_addons}`" if system_prompt_codemode_addons else "undefined"},
+    goal: {goal_ts},
+    protocol: {protocol_ts},
+    uiExtension: {ui_ext_ts},
+    trigger: {_fmt_ts_literal(trigger_val)},
+    modelConfig: {_fmt_ts_literal(model_cfg)},
+    mcpServerTools: {_fmt_ts_literal(mcp_srv_tools)},
+    guardrails: {_fmt_ts_literal(guardrails_val)},
+    evals: {_fmt_ts_literal(evals_val)},
+    codemode: {_fmt_ts_literal(codemode_val)},
+    output: {_fmt_ts_literal(output_val)},
+    advanced: {_fmt_ts_literal(advanced_val)},
+    authorizationPolicy: {auth_policy_ts},
+    notifications: {_fmt_ts_literal(notifs)},
+    memory: {memory_ts},
+    preHooks: {_fmt_ts_literal(pre_hooks_val)},
+    postHooks: {_fmt_ts_literal(post_hooks_val)},
     toolHooks: {_fmt_ts_literal(tool_hooks_val)},
-  parameters: {_fmt_ts_literal(parameters_val)},
-  subagents: {subagents_ts},
+    parameters: {_fmt_ts_literal(parameters_val)},
+    subagents: {subagents_ts},
 }};
 
 """

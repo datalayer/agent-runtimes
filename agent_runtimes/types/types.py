@@ -6,7 +6,7 @@
 from enum import Enum
 from typing import Any, Dict, List, Literal, Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class EnvvarSpec(BaseModel):
@@ -912,6 +912,24 @@ class AgentSpec(BaseModel):
         default=None,
         description="AI model identifier to use for this agent (e.g., 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0')",
     )
+    inference_provider: Literal["local", "datalayer"] = Field(
+        default="local",
+        description=(
+            "Inference provider routing strategy. "
+            "Use 'local' for direct model provider calls (default) or "
+            "'datalayer' to route through datalayer-ai-inference."
+        ),
+        alias="inferenceProvider",
+    )
+
+    @field_validator("inference_provider", mode="before")
+    @classmethod
+    def _normalize_inference_provider(cls, value: Any) -> str:
+        # Keep backward compatibility with previously generated specs that used None.
+        if value is None or value == "":
+            return "local"
+        return value
+
     mcp_servers: List[MCPServer] = Field(
         default_factory=list,
         description="MCP servers used by this agent",

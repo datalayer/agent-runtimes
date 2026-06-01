@@ -9,7 +9,8 @@ SHELL=/bin/bash
 .PHONY: \
 	help default clean build test test-js test-py kill warning \
 	publish-npm publish-pypi publish-conda pydoc typedoc docs \
-	examples examples\:prod examples\:proxy examples-proxy agent agent-notebook agent-lexical jupyter-server agent-serve \
+	examples examples\:prod examples\:proxy examples-proxy agent agent-nodes agent-nodes\:proxy agent-nodes-proxy agent-notebook agent-lexical jupyter-server agent-serve \
+	docker-build docker-push docker-release node-agent-artifact-build node-agents-docker-build agent-nodes-docker-build agent-nodes-docker-push agent-nodes-docker-start agent-nodes-docker-stop agent-nodes-docker-logs \
 	agents list-specs specs specs-clone specs-generate specs-format \
 	ag-chat ag-chat-simple ag-chat-data-acquisition ag-chat-financial ag-chat-demo ag-chat-demo-nocodemode
 
@@ -20,6 +21,10 @@ AGENTSPECS_BRANCH ?= "feat/new"
 AGENT_SERVE_ID ?= data-acquisition
 AGENT_SERVE_NAME ?= dla-1
 AGENT_SERVE_PROTOCOL ?= vercel-ai
+
+DOCKER_IMAGE ?= datalayer/agent-nodes
+DOCKER_TAG ?= latest
+DOCKER_PLATFORM ?=
 
 # ─── Examples URL configuration ───────────────────────────────────────────
 # These variables mirror the env vars consumed by `datalayer-core`
@@ -46,6 +51,7 @@ DATALAYER_AI_AGENTS_URL    ?= $(DATALAYER_RUN_URL)
 DATALAYER_AI_INFERENCE_URL ?= $(DATALAYER_RUN_URL)
 DATALAYER_MCP_SERVERS_URL  ?= $(DATALAYER_RUN_URL)
 DATALAYER_OTEL_URL         ?= $(DATALAYER_RUN_URL)
+DATALAYER_OTLP_URL         ?= $(DATALAYER_OTEL_URL)/api/otel/v1/otlp
 DATALAYER_GROWTH_URL       ?= $(DATALAYER_RUN_URL)
 DATALAYER_SUCCESS_URL      ?= $(DATALAYER_RUN_URL)
 DATALAYER_STATUS_URL       ?= $(DATALAYER_RUN_URL)
@@ -54,7 +60,9 @@ DATALAYER_SUPPORT_URL      ?= $(DATALAYER_RUN_URL)
 # Local Plane ports (see services/plane/datalayer_plane/sbin/local.sh).
 PLANE_LOCAL_IAM_URL          ?= http://localhost:9700
 PLANE_LOCAL_RUNTIMES_URL     ?= http://localhost:9500
-PLANE_LOCAL_AGENT_RUNTIMES_URL ?= $(PLANE_LOCAL_RUNTIMES_URL)
+# Agent APIs (/api/v1/agents) are served by the local agent-runtimes dev
+# server started by `npm run examples`, not by Plane runtimes (9500).
+PLANE_LOCAL_AGENT_RUNTIMES_URL ?= http://localhost:8765
 PLANE_LOCAL_SPACER_URL       ?= http://localhost:9900
 PLANE_LOCAL_LIBRARY_URL      ?= http://localhost:9800
 PLANE_LOCAL_MANAGER_URL      ?= http://localhost:2100
@@ -67,7 +75,10 @@ PLANE_LOCAL_STATUS_URL       ?= http://localhost:4785
 PLANE_LOCAL_SUPPORT_URL      ?= http://localhost:2200
 # Plane local has no single umbrella URL; we point RUN_URL at IAM by convention.
 PLANE_LOCAL_RUN_URL          ?= $(PLANE_LOCAL_IAM_URL)
-PLANE_LOCAL_OTEL_URL         ?= $(PLANE_LOCAL_IAM_URL)
+PLANE_LOCAL_OTEL_URL         ?= http://localhost:7800
+# Local OTLP collector ingress exposed by `plane pf-local`.
+PLANE_LOCAL_OTLP_URL         ?= http://localhost:4318
+PLANE_LOCAL_JUPYTER_SERVER_URL ?= http://localhost:8686/api/jupyter-server
 
 # Env var block exported to both Python (agent-runtimes server) and Vite UI.
 EXAMPLES_PROD_ENV = \
@@ -82,11 +93,15 @@ EXAMPLES_PROD_ENV = \
 	DATALAYER_AI_INFERENCE_URL=$(DATALAYER_AI_INFERENCE_URL) \
 	DATALAYER_MCP_SERVERS_URL=$(DATALAYER_MCP_SERVERS_URL) \
 	DATALAYER_OTEL_URL=$(DATALAYER_OTEL_URL) \
+	DATALAYER_OTLP_URL=$(DATALAYER_OTLP_URL) \
+	OTEL_EXPORTER_OTLP_ENDPOINT=$(DATALAYER_OTLP_URL) \
 	DATALAYER_GROWTH_URL=$(DATALAYER_GROWTH_URL) \
 	DATALAYER_SUCCESS_URL=$(DATALAYER_SUCCESS_URL) \
 	DATALAYER_STATUS_URL=$(DATALAYER_STATUS_URL) \
 	DATALAYER_SUPPORT_URL=$(DATALAYER_SUPPORT_URL) \
 	VITE_DATALAYER_RUN_URL=$(DATALAYER_IAM_URL) \
+	VITE_DATALAYER_RUNTIMES_URL=$(DATALAYER_RUNTIMES_URL) \
+	VITE_DATALAYER_AI_INFERENCE_URL=$(DATALAYER_AI_INFERENCE_URL) \
 	VITE_DATALAYER_AGENT_RUNTIMES_URL=$(DATALAYER_AGENT_RUNTIMES_URL) \
 	VITE_BASE_URL=$(DATALAYER_AGENT_RUNTIMES_URL) \
 	VITE_OTEL_BASE_URL=$(DATALAYER_OTEL_URL)
@@ -103,12 +118,17 @@ EXAMPLES_PROXY_ENV = \
 	DATALAYER_AI_INFERENCE_URL=$(PLANE_LOCAL_AI_INFERENCE_URL) \
 	DATALAYER_MCP_SERVERS_URL=$(PLANE_LOCAL_MCP_SERVERS_URL) \
 	DATALAYER_OTEL_URL=$(PLANE_LOCAL_OTEL_URL) \
+	DATALAYER_OTLP_URL=$(PLANE_LOCAL_OTLP_URL) \
+	OTEL_EXPORTER_OTLP_ENDPOINT=$(PLANE_LOCAL_OTLP_URL) \
 	DATALAYER_GROWTH_URL=$(PLANE_LOCAL_GROWTH_URL) \
 	DATALAYER_SUCCESS_URL=$(PLANE_LOCAL_SUCCESS_URL) \
 	DATALAYER_STATUS_URL=$(PLANE_LOCAL_STATUS_URL) \
 	DATALAYER_SUPPORT_URL=$(PLANE_LOCAL_SUPPORT_URL) \
 	VITE_DATALAYER_RUN_URL=$(PLANE_LOCAL_IAM_URL) \
+	VITE_DATALAYER_RUNTIMES_URL=$(PLANE_LOCAL_RUNTIMES_URL) \
+	VITE_DATALAYER_AI_INFERENCE_URL=$(PLANE_LOCAL_AI_INFERENCE_URL) \
 	VITE_DATALAYER_AGENT_RUNTIMES_URL=$(PLANE_LOCAL_AGENT_RUNTIMES_URL) \
+	VITE_JUPYTER_SERVER_URL=$(PLANE_LOCAL_JUPYTER_SERVER_URL) \
 	VITE_BASE_URL=$(PLANE_LOCAL_AGENT_RUNTIMES_URL) \
 	VITE_OTEL_BASE_URL=$(PLANE_LOCAL_OTEL_URL)
 
@@ -117,6 +137,7 @@ EXAMPLES_PROXY_ENV = \
 # regardless of any DATALAYER_* environment variables exported in the shell.
 EXAMPLES_LOCAL_ENV = \
 	VITE_DATALAYER_RUN_URL=https://prod1.datalayer.run \
+	VITE_DATALAYER_RUNTIMES_URL=https://prod1.datalayer.run \
 	DATALAYER_AGENT_RUNTIMES_URL=http://localhost:8765 \
 	VITE_DATALAYER_AGENT_RUNTIMES_URL=http://localhost:8765 \
 	VITE_BASE_URL=http://localhost:8765 \
@@ -234,12 +255,29 @@ examples\:prod: ## examples – dev server pointed at prod1.datalayer.run (and r
 examples\:proxy: ## examples – dev server pointed at a local `plane local` stack (override per-service URLs via PLANE_LOCAL_*_URL)
 	$(BEDROCK_ENV) \
 	$(EXAMPLES_PROXY_ENV) \
-		npm run examples
+		npm run examples:codemode
 
 examples-proxy: examples\:proxy ## alias for examples:proxy
 
 agent: # agent - open agent.html with vite dev server
 	$(BEDROCK_ENV) npm run start:agent
+
+agent-nodes: ## agent-nodes – develop Agent Node UI + local server
+	$(BEDROCK_ENV) \
+	DATALAYER_AI_INFERENCE_URL=$(PLANE_LOCAL_AI_INFERENCE_URL) \
+	VITE_DATALAYER_AI_INFERENCE_URL=$(PLANE_LOCAL_AI_INFERENCE_URL) \
+	AGENT_RUNTIMES_NODE=true \
+	AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE=$${AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE:-datalayer} \
+		npm run start:agent-node
+
+agent-nodes\:proxy: ## agent-nodes:proxy – Agent Node dev against local `plane local` services (PLANE_LOCAL_*_URL defaults)
+	$(BEDROCK_ENV) \
+	$(EXAMPLES_PROXY_ENV) \
+	AGENT_RUNTIMES_NODE=true \
+	AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE=$${AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE:-datalayer} \
+		npm run start:agent-node
+
+agent-nodes-proxy: agent-nodes\:proxy ## alias for agent-nodes:proxy
 
 agent-notebook: # agent-notebook - open agent-notebook.html with vite dev server
 	$(BEDROCK_ENV) npm run start:agent-notebook
@@ -262,6 +300,37 @@ agent-serve: # agent-server
 	  --host 0.0.0.0 \
 	  --port 8765 \
 	  --debug
+
+docker-build: ## build Docker image (override DOCKER_IMAGE/DOCKER_TAG/DOCKER_PLATFORM)
+	docker build $(if $(DOCKER_PLATFORM),--platform $(DOCKER_PLATFORM),) -t $(DOCKER_IMAGE):$(DOCKER_TAG) -f docker/Dockerfile .
+
+docker-push: ## push Docker image
+	docker push $(DOCKER_IMAGE):$(DOCKER_TAG)
+
+docker-release: docker-build docker-push ## build and push Docker image
+
+node-agent-artifact-build: ## build frontend artifacts for agent-node Docker image
+	VITE_APP_TARGET=agent-node $(MAKE) build
+
+node-agents-docker-build: node-agent-artifact-build docker-build ## build node-agents Docker image from prebuilt artifacts
+
+agent-nodes-docker-build: node-agents-docker-build ## alias for node-agents-docker-build
+
+agent-nodes-docker-push: docker-push ## push Agent Nodes Docker image (defaults: DOCKER_IMAGE=datalayer/agent-nodes, DOCKER_TAG=latest)
+
+agent-nodes-docker-start: ## start Agent Node Docker container detached (persisted until explicit stop); name=agent-nodes-example
+	@docker rm -f agent-nodes-example >/dev/null 2>&1 || true
+	docker run -d --name agent-nodes-example -p 8765:8765 -e AGENT_RUNTIMES_NODE=true -e AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE=datalayer $(DOCKER_IMAGE):$(DOCKER_TAG)
+	@echo ""
+	@echo "Agent Node started. Connect at: http://localhost:8765"
+	@echo "Stop with: make agent-nodes-docker-stop"
+	@echo "Logs with: make agent-nodes-docker-logs"
+
+agent-nodes-docker-stop: ## force-stop and delete the agent-nodes-example Docker container
+	docker rm -f agent-nodes-example
+
+agent-nodes-docker-logs: ## tail logs from the agent-nodes-example Docker container
+	docker logs -f agent-nodes-example
 
 agents: # agents
 	agent-runtimes list-agents \

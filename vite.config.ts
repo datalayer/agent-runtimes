@@ -127,6 +127,10 @@ export default defineConfig(({ mode, command }) => {
             env.VITE_DATALAYER_RUN_URL || 'https://prod1.datalayer.run',
           )
           .replaceAll(
+            '%VITE_DATALAYER_RUNTIMES_URL%',
+            env.VITE_DATALAYER_RUNTIMES_URL || 'https://r1.datalayer.run',
+          )
+          .replaceAll(
             '%VITE_DATALAYER_AGENT_RUNTIMES_URL%',
             env.VITE_DATALAYER_AGENT_RUNTIMES_URL ||
               'https://r1.datalayer.run',
@@ -134,6 +138,18 @@ export default defineConfig(({ mode, command }) => {
           .replaceAll(
             '%VITE_DATALAYER_RUN_URL_WS%',
             (env.VITE_DATALAYER_RUN_URL || 'https://prod1.datalayer.run').replace('http', 'ws'),
+          )
+          .replaceAll(
+            '%VITE_JUPYTER_SERVER_URL%',
+            env.VITE_JUPYTER_SERVER_URL ||
+              `${env.VITE_DATALAYER_RUN_URL || 'https://prod1.datalayer.run'}/api/jupyter-server`,
+          )
+          .replaceAll(
+            '%VITE_JUPYTER_SERVER_URL_WS%',
+            (
+              env.VITE_JUPYTER_SERVER_URL ||
+              `${env.VITE_DATALAYER_RUN_URL || 'https://prod1.datalayer.run'}/api/jupyter-server`
+            ).replace('http', 'ws'),
           );
       },
     });
@@ -154,7 +170,6 @@ export default defineConfig(({ mode, command }) => {
         }
       : {
           fs: { strict: false, allow: ['..', '../..', '../../..'] },
-
         };
 
   const build: any = {
@@ -182,6 +197,7 @@ export default defineConfig(({ mode, command }) => {
     build.rollupOptions.input = {
       main: path.resolve(__dirname, 'html/index.html'),
       agent: path.resolve(__dirname, 'html/agent.html'),
+      'agent-node': path.resolve(__dirname, 'html/agent-node.html'),
       'agent-notebook': path.resolve(__dirname, 'html/agent-notebook.html'),
       'agent-lexical': path.resolve(__dirname, 'html/agent-lexical.html'),
     };
