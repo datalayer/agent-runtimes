@@ -55,7 +55,11 @@ import '../style/primer-primitives.css';
 
 setupPrimerPortals();
 
-const BASE_URL = window.location.origin;
+const AGENT_RUNTIMES_BASE_URL = (
+  import.meta.env.VITE_DATALAYER_AGENT_RUNTIMES_URL ||
+  import.meta.env.VITE_BASE_URL ||
+  window.location.origin
+).replace(/\/$/, '');
 
 type AgentNodeMode = 'private' | 'shared' | 'sleep';
 type Step = 'auth' | 'config' | 'chat' | 'profile';
@@ -321,6 +325,33 @@ export function AgentNode() {
     };
   }, []);
 
+  const pushCredentials = useCallback(
+    (authToken: string | null, payloadToken: string | null = authToken) => {
+      const runUrl =
+        (import.meta as any).env?.VITE_DATALAYER_RUN_URL ||
+        'https://prod1.datalayer.run';
+      const runtimesRunUrl =
+        (import.meta as any).env?.VITE_DATALAYER_RUNTIMES_URL || runUrl;
+
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (authToken) {
+        headers.Authorization = `Bearer ${authToken}`;
+      }
+
+      return fetch(`${AGENT_RUNTIMES_BASE_URL}/api/v1/agent-node/credentials`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          token: payloadToken || null,
+          runtimes_url: payloadToken ? runtimesRunUrl : null,
+        }),
+      });
+    },
+    [],
+  );
+
   // Refs kept in sync with state so the BillableAccountSelect callbacks
   // (passed via stable identities) can read the latest values without
   // being re-created on every render — re-created callbacks made
@@ -373,7 +404,7 @@ export function AgentNode() {
     const load = async () => {
       try {
         const response = await fetch(
-          `${BASE_URL}/api/v1/agent-node/configuration`,
+          `${AGENT_RUNTIMES_BASE_URL}/api/v1/agent-node/configuration`,
         );
         if (!response.ok) {
           return;
@@ -395,7 +426,7 @@ export function AgentNode() {
     const loadInferenceProvider = async () => {
       try {
         const response = await fetch(
-          `${BASE_URL}/api/v1/configure/inference/provider`,
+          `${AGENT_RUNTIMES_BASE_URL}/api/v1/configure/inference/provider`,
         );
         if (!response.ok) {
           return;
@@ -421,7 +452,7 @@ export function AgentNode() {
     const loadInferenceModels = async () => {
       try {
         const response = await fetch(
-          `${BASE_URL}/api/v1/configure/inference/models`,
+          `${AGENT_RUNTIMES_BASE_URL}/api/v1/configure/inference/models`,
         );
         if (!response.ok) {
           setInferenceModels([]);
@@ -479,7 +510,7 @@ export function AgentNode() {
     (async () => {
       try {
         const resp = await fetch(
-          `${BASE_URL}/api/v1/agent-node/auth/bootstrap`,
+          `${AGENT_RUNTIMES_BASE_URL}/api/v1/agent-node/auth/bootstrap`,
         );
         if (!resp.ok) {
           return;
@@ -505,23 +536,13 @@ export function AgentNode() {
   // local Agent Node backend so the background sync can register the node
   // and start sending heartbeats/health to the central runtimes service.
   useEffect(() => {
-    const runUrl =
-      (import.meta as any).env?.VITE_DATALAYER_RUN_URL ||
-      'https://prod1.datalayer.run';
-    const runtimesRunUrl =
-      (import.meta as any).env?.VITE_DATALAYER_RUNTIMES_URL || runUrl;
-    const body = JSON.stringify({
-      token: token || null,
-      runtimes_url: token ? runtimesRunUrl : null,
-    });
-    fetch(`${BASE_URL}/api/v1/agent-node/credentials`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body,
-    }).catch(() => {
+    if (!token) {
+      return;
+    }
+    pushCredentials(token, token).catch(() => {
       // Best-effort; backend may not be reachable in some local setups.
     });
-  }, [token]);
+  }, [token, pushCredentials]);
 
   useEffect(() => {
     import('@datalayer/core/lib/state').then(({ iamStore, coreStore }) => {
@@ -620,6 +641,10 @@ export function AgentNode() {
 
   const handleSignOut = () => {
     setDisableAutoBootstrap(true);
+    // Clear backend fallback credentials while still authenticated.
+    void pushCredentials(token, null).catch(() => {
+      // Best-effort; if this fails, local state is still signed out.
+    });
     clearAuth();
     setStep('auth');
   };
@@ -629,7 +654,7 @@ export function AgentNode() {
     setError(null);
     try {
       const inferenceResponse = await fetch(
-        `${BASE_URL}/api/v1/configure/inference/provider`,
+        `${AGENT_RUNTIMES_BASE_URL}/api/v1/configure/inference/provider`,
         {
           method: 'PUT',
           headers: {
@@ -646,7 +671,7 @@ export function AgentNode() {
 
       const nextConfiguration = { ...configuration };
       const response = await fetch(
-        `${BASE_URL}/api/v1/agent-node/configuration`,
+        `${AGENT_RUNTIMES_BASE_URL}/api/v1/agent-node/configuration`,
         {
           method: 'POST',
           headers: {
@@ -1172,7 +1197,7 @@ export function AgentNode() {
                     <ShareAccessComponent
                       isOpen
                       displayMode="inline"
-                      requestUrl={`${BASE_URL}/api/v1/agent-node/sharing`}
+                      requestUrl={`${AGENT_RUNTIMES_BASE_URL}/api/v1/agent-node/sharing`}
                       resourceLabel="Agent Node"
                       resourceName="this Agent Node"
                       onClose={handleSharingInlineClose}
@@ -1207,7 +1232,7 @@ export function AgentNode() {
               >
                 <Chat
                   protocol="ag-ui"
-                  baseUrl={BASE_URL}
+                  baseUrl={AGENT_RUNTIMES_BASE_URL}
                   agentId="default"
                   title="Agent Node Chat"
                   placeholder="Send a message..."
@@ -1221,7 +1246,7 @@ export function AgentNode() {
                   showInformation={true}
                   autoFocus
                   runtimeId="default"
-                  historyEndpoint={`${BASE_URL}/api/v1/history`}
+                  historyEndpoint={`${AGENT_RUNTIMES_BASE_URL}/api/v1/history`}
                 />
               </Box>
             )}

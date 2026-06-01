@@ -19,7 +19,7 @@ import threading
 from pathlib import Path
 from typing import Any, Literal
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
@@ -220,14 +220,42 @@ class AgentNodeCredentialsBody(BaseModel):
     runtimes_url: str | None = None
 
 
+def _extract_bearer_token(request: Request) -> str:
+    """Return bearer token from Authorization header or empty string."""
+    auth_header = (request.headers.get("authorization") or "").strip()
+    if not auth_header.lower().startswith("bearer "):
+        return ""
+    return auth_header[7:].strip()
+
+
 @router.post("/credentials")
-def set_credentials_endpoint(body: AgentNodeCredentialsBody) -> dict[str, Any]:
+def set_credentials_endpoint(
+    body: AgentNodeCredentialsBody,
+    request: Request,
+) -> dict[str, Any]:
     """Receive the user's bearer token + runtimes base URL from the UI.
 
     The background sync loop uses these as a fallback when ``DATALAYER_API_KEY``
     and ``DATALAYER_RUNTIMES_URL`` env vars are not set, so the node can
     register and send heartbeats/health once the user signs in.
+
+    Security: this endpoint requires an Authorization bearer token to prevent
+    unauthenticated callers from overriding in-memory runtime credentials.
     """
+    request_token = _extract_bearer_token(request)
+    if not request_token:
+        raise HTTPException(
+            status_code=401,
+            detail="Authorization bearer token is required",
+        )
+
+    body_token = (body.token or "").strip()
+    if body_token and body_token != request_token:
+        raise HTTPException(
+            status_code=403,
+            detail="Authorization token does not match payload token",
+        )
+
     creds = set_runtime_credentials(body.token, body.runtimes_url)
     return {
         "success": True,

@@ -16,7 +16,17 @@ Parameters:
       platform. When empty, the node starts unauthenticated and shows a
       sign-in screen at the public URL where the user can paste their key.
       When provided, the node exchanges it for a session token at startup and
-      the sign-in screen is skipped.
+      the sign-in screen is skipped. Security note: this injects a long-lived
+      secret into infrastructure; only use behind TLS and restricted ingress
+      (private CIDR/VPN/WAF), and prefer short-lived interactive sign-in for
+      internet-facing deployments.
+
+  AllowedHttpCidr:
+    Type: String
+    Default: 10.0.0.0/8
+    Description: >
+      CIDR allowed to reach the public ALB listener on port 80. For production,
+      set to your corporate egress IP(s) or front this stack with HTTPS + WAF.
 
   DatalayerRunUrl:
     Type: String
@@ -143,13 +153,13 @@ Resources:
     Type: AWS::EC2::SecurityGroup
     Properties:
       VpcId: !Ref Vpc
-      GroupDescription: Allow public HTTP traffic to the ALB.
+      GroupDescription: Allow HTTP traffic to the ALB from AllowedHttpCidr.
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: 80
           ToPort: 80
-          CidrIp: 0.0.0.0/0
-          Description: HTTP from anywhere.
+          CidrIp: !Ref AllowedHttpCidr
+          Description: HTTP from configured CIDR.
       Tags:
         - Key: Name
           Value: !Sub '${AWS::StackName}-alb-sg'

@@ -16,7 +16,18 @@ Parameters:
       platform. When empty, the node starts unauthenticated and shows a
       sign-in screen at the public URL where the user can paste their key.
       When provided, the node exchanges it for a session token at startup and
-      the sign-in screen is skipped.
+      the sign-in screen is skipped. Security note: this injects a long-lived
+      secret into infrastructure; only use behind TLS and restricted ingress
+      (private CIDR/VPN/WAF), and prefer short-lived interactive sign-in for
+      internet-facing deployments.
+
+  AgentNodeIngressCidr:
+    Type: String
+    Default: 10.0.0.0/8
+    Description: >
+      CIDR allowed to access the agent-node HTTP port. Set this to your office
+      egress IP(s) or private network range instead of exposing to the public
+      internet.
 
   DatalayerRunUrl:
     Type: String
@@ -126,8 +137,8 @@ Resources:
         - IpProtocol: tcp
           FromPort: !Ref AgentNodePort
           ToPort: !Ref AgentNodePort
-          CidrIp: 0.0.0.0/0
-          Description: Agent node HTTP
+          CidrIp: !Ref AgentNodeIngressCidr
+          Description: Agent node HTTP from configured CIDR
         - IpProtocol: tcp
           FromPort: 22
           ToPort: 22

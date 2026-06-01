@@ -170,18 +170,6 @@ export default defineConfig(({ mode, command }) => {
         }
       : {
           fs: { strict: false, allow: ['..', '../..', '../../..'] },
-          proxy: {
-            // Forward local Agent Node API calls to the agent-runtimes Python
-            // server started by `npm run server:start` on port 8765.
-            '/api/v1/agent-node': {
-              target: 'http://localhost:8765',
-              changeOrigin: true,
-            },
-            '/api/v1/configure': {
-              target: 'http://localhost:8765',
-              changeOrigin: true,
-            },
-          },
         };
 
   const build: any = {
