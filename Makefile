@@ -10,7 +10,7 @@ SHELL=/bin/bash
 	help default clean build test test-js test-py kill warning \
 	publish-npm publish-pypi publish-conda pydoc typedoc docs \
 	examples examples\:prod examples\:proxy examples-proxy agent agent-nodes agent-nodes\:proxy agent-nodes-proxy agent-notebook agent-lexical jupyter-server agent-serve \
-	docker-build docker-push docker-release agent-nodes-docker-build agent-nodes-docker-push agent-nodes-docker-run agent-nodes-docker-stop \
+	docker-build docker-push docker-release node-agent-artifact-build node-agents-docker-build agent-nodes-docker-build agent-nodes-docker-push agent-nodes-docker-run agent-nodes-docker-stop \
 	agents list-specs specs specs-clone specs-generate specs-format \
 	ag-chat ag-chat-simple ag-chat-data-acquisition ag-chat-financial ag-chat-demo ag-chat-demo-nocodemode
 
@@ -279,14 +279,19 @@ agent-serve: # agent-server
 	  --debug
 
 docker-build: ## build Docker image (override DOCKER_IMAGE/DOCKER_TAG/DOCKER_PLATFORM)
-	docker build $(if $(DOCKER_PLATFORM),--platform $(DOCKER_PLATFORM),) -t $(DOCKER_IMAGE):$(DOCKER_TAG) -f Dockerfile .
+	docker build $(if $(DOCKER_PLATFORM),--platform $(DOCKER_PLATFORM),) -t $(DOCKER_IMAGE):$(DOCKER_TAG) -f docker/Dockerfile .
 
 docker-push: ## push Docker image
 	docker push $(DOCKER_IMAGE):$(DOCKER_TAG)
 
 docker-release: docker-build docker-push ## build and push Docker image
 
-agent-nodes-docker-build: docker-build ## build Agent Nodes Docker image (defaults: DOCKER_IMAGE=datalayer/agent-nodes, DOCKER_TAG=latest)
+node-agent-artifact-build: ## build frontend artifacts for agent-node Docker image
+	VITE_APP_TARGET=agent-node $(MAKE) build
+
+node-agents-docker-build: node-agent-artifact-build docker-build ## build node-agents Docker image from prebuilt artifacts
+
+agent-nodes-docker-build: node-agents-docker-build ## alias for node-agents-docker-build
 
 agent-nodes-docker-push: docker-push ## push Agent Nodes Docker image (defaults: DOCKER_IMAGE=datalayer/agent-nodes, DOCKER_TAG=latest)
 

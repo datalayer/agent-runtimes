@@ -139,59 +139,11 @@ Override any local service URL if needed:
 PLANE_LOCAL_RUNTIMES_URL=http://localhost:19500 make agent-nodes:proxy
 ```
 
-### Quick Docker release
+### Docker build notes
 
-For a fast build-and-push workflow during development:
+Docker image build and release notes were moved to:
 
-```bash
-make agent-nodes-docker-build DOCKER_TAG=dev
-make agent-nodes-docker-push DOCKER_TAG=dev
-```
-
-To run a local container that exposes the Agent Node UI/server supporting all modes:
-
-```bash
-docker run --rm -p 8765:8765 datalayer/agent-nodes:dev
-```
-
-### Docker image build and push
-
-Build the container image:
-
-```bash
-make agent-nodes-docker-build DOCKER_TAG=dev
-```
-
-`DOCKER_IMAGE` defaults to `datalayer/agent-nodes`, and can be overridden:
-
-```bash
-make agent-nodes-docker-build DOCKER_IMAGE=my-registry/agent-nodes DOCKER_TAG=dev
-```
-
-Push the image:
-
-```bash
-make agent-nodes-docker-push DOCKER_TAG=dev
-```
-
-Override image and tag at push time if needed:
-
-```bash
-make agent-nodes-docker-push DOCKER_IMAGE=my-registry/agent-nodes DOCKER_TAG=dev
-```
-
-Build and push in one step:
-
-```bash
-make agent-nodes-docker-build DOCKER_TAG=dev
-make agent-nodes-docker-push DOCKER_TAG=dev
-```
-
-Optional multi-arch platform example:
-
-```bash
-make agent-nodes-docker-build DOCKER_PLATFORM=linux/amd64 DOCKER_TAG=dev
-```
+- [docker/README.md](docker/README.md)
 
 By default, `make examples` boots the local Vite dev server with every
 Datalayer service URLs set to local defaults for agent execution:
