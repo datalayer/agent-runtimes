@@ -103,6 +103,15 @@ const DEFAULT_CONFIGURATION: AgentNodeConfiguration = {
   sharing: {},
 };
 
+type InferenceProvider = 'local' | 'datalayer';
+
+type InferenceModelResponse = {
+  provider?: string;
+  default_model?: string;
+  models?: string[];
+  bedrock_anthropic_models?: string[];
+};
+
 /**
  * Profile view rendered inside AgentNode when the user picks "Profile" from
  * the header menu. Mirrors the shape of `ui/src/views/profile/UserProfileBase`
@@ -271,6 +280,12 @@ export function AgentNode() {
   );
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [inferenceProvider, setInferenceProvider] =
+    useState<InferenceProvider>('datalayer');
+  const [inferenceModels, setInferenceModels] = useState<string[]>([]);
+  const [inferenceDefaultModel, setInferenceDefaultModel] = useState<
+    string | null
+  >(null);
   type BannerKind = 'success' | 'info' | 'warning' | 'error';
   type BannerState = { id: number; kind: BannerKind; message: string };
   const [banner, setBanner] = useState<BannerState | null>(null);
@@ -366,6 +381,71 @@ export function AgentNode() {
     load();
   }, []);
 
+  useEffect(() => {
+    const loadInferenceProvider = async () => {
+      try {
+        const response = await fetch(
+          `${BASE_URL}/api/v1/configure/inference/provider`,
+        );
+        if (!response.ok) {
+          return;
+        }
+        const payload = await response.json();
+        const provider = payload?.provider;
+        if (provider === 'local' || provider === 'datalayer') {
+          setInferenceProvider(provider);
+        }
+      } catch {
+        // Ignore initial-load failures in local development.
+      }
+    };
+    loadInferenceProvider();
+  }, []);
+
+  useEffect(() => {
+    if (inferenceProvider !== 'datalayer') {
+      setInferenceModels([]);
+      setInferenceDefaultModel(null);
+      return;
+    }
+    const loadInferenceModels = async () => {
+      try {
+        const response = await fetch(
+          `${BASE_URL}/api/v1/configure/inference/models`,
+        );
+        if (!response.ok) {
+          setInferenceModels([]);
+          setInferenceDefaultModel(null);
+          return;
+        }
+        const payload: InferenceModelResponse = await response.json();
+        const fromModels = Array.isArray(payload.models)
+          ? payload.models.filter(Boolean)
+          : [];
+        const fromBedrock = Array.isArray(payload.bedrock_anthropic_models)
+          ? payload.bedrock_anthropic_models.filter(Boolean)
+          : [];
+        const fallback = [
+          'bedrock/us.anthropic.claude-3-5-sonnet-20240620-v1:0',
+          'bedrock/us.anthropic.claude-3-7-sonnet-20250219-v1:0',
+          'bedrock/us.anthropic.claude-sonnet-4-20250514-v1:0',
+        ];
+        const models =
+          fromModels.length > 0
+            ? fromModels
+            : fromBedrock.length > 0
+              ? fromBedrock
+              : fallback;
+        setInferenceModels(models);
+        setInferenceDefaultModel(payload.default_model || models[0] || null);
+      } catch {
+        setInferenceModels([]);
+        setInferenceDefaultModel(null);
+      }
+    };
+    loadInferenceModels();
+  }, [inferenceProvider]);
+
   // If the container was started with DATALAYER_API_KEY, the backend exchanges
   // it for a session token via /auth/bootstrap so the UI can skip sign-in.
   useEffect(() => {
@@ -408,9 +488,11 @@ export function AgentNode() {
     const runUrl =
       (import.meta as any).env?.VITE_DATALAYER_RUN_URL ||
       'https://prod1.datalayer.run';
+    const runtimesRunUrl =
+      (import.meta as any).env?.VITE_DATALAYER_RUNTIMES_URL || runUrl;
     const body = JSON.stringify({
       token: token || null,
-      runtimes_url: token ? runUrl : null,
+      runtimes_url: token ? runtimesRunUrl : null,
     });
     fetch(`${BASE_URL}/api/v1/agent-node/credentials`, {
       method: 'POST',
@@ -426,16 +508,20 @@ export function AgentNode() {
       const runUrl =
         (import.meta as any).env?.VITE_DATALAYER_RUN_URL ||
         'https://prod1.datalayer.run';
+      const runtimesRunUrl =
+        (import.meta as any).env?.VITE_DATALAYER_RUNTIMES_URL || runUrl;
+      const aiInferenceRunUrl =
+        (import.meta as any).env?.VITE_DATALAYER_AI_INFERENCE_URL || runUrl;
       // Seed all per-service URLs to match the main UI login behavior.
       const coreApi = coreStore.getState() as any;
       const prevCfg = coreApi.configuration ?? {};
       const urls = {
         iamRunUrl: runUrl,
-        runtimesRunUrl: runUrl,
+        runtimesRunUrl,
         spacerRunUrl: runUrl,
         libraryRunUrl: runUrl,
         aiagentsRunUrl: runUrl,
-        aiinferenceRunUrl: runUrl,
+        aiinferenceRunUrl: aiInferenceRunUrl,
         mcpserversRunUrl: runUrl,
         otelRunUrl: runUrl,
         growthRunUrl: runUrl,
@@ -522,6 +608,22 @@ export function AgentNode() {
     setIsSaving(true);
     setError(null);
     try {
+      const inferenceResponse = await fetch(
+        `${BASE_URL}/api/v1/configure/inference/provider`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ provider: inferenceProvider }),
+        },
+      );
+      if (!inferenceResponse.ok) {
+        throw new Error(
+          `Failed to save inference provider (${inferenceResponse.status})`,
+        );
+      }
+
       const nextConfiguration = { ...configuration };
       const response = await fetch(
         `${BASE_URL}/api/v1/agent-node/configuration`,
@@ -907,6 +1009,81 @@ export function AgentNode() {
                       );
                     })}
                   </Box>
+                </FormControl>
+
+                <FormControl>
+                  <FormControl.Label>Inference</FormControl.Label>
+                  <Text sx={{ color: 'fg.muted', fontSize: 1, mb: 2 }}>
+                    Used inference provider for newly launched agent sessions.
+                  </Text>
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      gap: 2,
+                      flexWrap: 'wrap',
+                      mb: inferenceProvider === 'datalayer' ? 2 : 0,
+                    }}
+                  >
+                    <Button
+                      size="small"
+                      variant={
+                        inferenceProvider === 'local' ? 'primary' : 'default'
+                      }
+                      onClick={() => setInferenceProvider('local')}
+                    >
+                      local
+                    </Button>
+                    <Button
+                      size="small"
+                      variant={
+                        inferenceProvider === 'datalayer'
+                          ? 'primary'
+                          : 'default'
+                      }
+                      onClick={() => setInferenceProvider('datalayer')}
+                    >
+                      datalayer
+                    </Button>
+                  </Box>
+                  {inferenceProvider === 'datalayer' && (
+                    <Box
+                      sx={{
+                        border: '1px solid',
+                        borderColor: 'border.default',
+                        borderRadius: 2,
+                        p: 2,
+                        bg: 'canvas.subtle',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 1,
+                      }}
+                    >
+                      <Text sx={{ fontSize: 1, color: 'fg.muted' }}>
+                        Available Bedrock Anthropic models
+                      </Text>
+                      {inferenceModels.length === 0 ? (
+                        <Text sx={{ fontSize: 1, color: 'fg.muted' }}>
+                          No model list available.
+                        </Text>
+                      ) : (
+                        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                          {inferenceModels.map(model => (
+                            <Label
+                              key={model}
+                              size="small"
+                              variant={
+                                inferenceDefaultModel === model
+                                  ? 'accent'
+                                  : 'secondary'
+                              }
+                            >
+                              {model}
+                            </Label>
+                          ))}
+                        </Box>
+                      )}
+                    </Box>
+                  )}
                 </FormControl>
 
                 <Box

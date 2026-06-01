@@ -39,6 +39,8 @@ from .mcp import (
     shutdown_config_mcp_toolsets,
 )
 from .mcp.catalog_mcp_servers import get_catalog_server
+from .models.models import resolve_model_for_inference_provider
+from .node_mode import is_node_enabled
 from .agent_node_sync import run_agent_node_sync
 from .agent_node_tunnel import run_agent_node_tunnel
 from .routes import (
@@ -441,6 +443,11 @@ async def _create_and_register_cli_agent(
 
     env_model = os.environ.get("AGENT_RUNTIMES_MODEL")
     model = env_model or agent_spec.model or DEFAULT_MODEL.value
+    inference_provider = (
+        os.environ.get("AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE")
+        or getattr(agent_spec, "inference_provider", None)
+        or "local"
+    )
 
     # Build the system prompt
     # Goal/system_prompt consolidation:
@@ -500,7 +507,11 @@ async def _create_and_register_cli_agent(
             )
 
     try:
-        pydantic_agent = PydanticAgent(model, **agent_kwargs)
+        resolved_model = resolve_model_for_inference_provider(
+            model,
+            inference_provider,
+        )
+        pydantic_agent = PydanticAgent(resolved_model, **agent_kwargs)
     except Exception as exc:
         # Keep compatibility across pydantic-ai versions where Agent()
         # may not accept `usage_limits` as a constructor kwarg.
@@ -510,7 +521,11 @@ async def _create_and_register_cli_agent(
                 agent_id,
             )
             agent_kwargs.pop("usage_limits", None)
-            pydantic_agent = PydanticAgent(model, **agent_kwargs)
+            resolved_model = resolve_model_for_inference_provider(
+                model,
+                inference_provider,
+            )
+            pydantic_agent = PydanticAgent(resolved_model, **agent_kwargs)
         else:
             raise
 
@@ -771,6 +786,7 @@ async def _create_and_register_cli_agent(
         "agent_library": "pydantic-ai",
         "transport": protocol,
         "model": model,
+        "inference_provider": inference_provider,
         "system_prompt": agent_spec.system_prompt
         or agent_spec.description
         or "You are a helpful AI assistant.",
@@ -882,6 +898,7 @@ async def _create_and_register_cli_agent(
             "name": agent_spec.name,
             "protocol": protocol,
             "model": startup_model,
+            "inference_provider": inference_provider,
             "codemode": enable_codemode,
             "skills": list(skills) if skills else [],
             "tools": registered_tools,
@@ -953,6 +970,7 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
     _agent_node_sync_task: asyncio.Task[Any] | None = None
     _agent_node_tunnel_task: asyncio.Task[Any] | None = None
     _agent_node_stop_event = asyncio.Event()
+    _node_enabled = is_node_enabled()
     _durable_lifecycle: Any = None  # DurableLifecycle instance (when enabled)
 
     @asynccontextmanager
@@ -1218,34 +1236,38 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
         # Start A2A TaskManagers (required for FastA2A apps to handle requests)
         await start_a2a_task_managers()
 
-        _agent_node_stop_event.clear()
-        _agent_node_sync_task = asyncio.create_task(
-            run_agent_node_sync(_agent_node_stop_event),
-            name="agent-node-sync",
-        )
-        _agent_node_tunnel_task = asyncio.create_task(
-            run_agent_node_tunnel(_agent_node_stop_event),
-            name="agent-node-tunnel",
-        )
+        if _node_enabled:
+            _agent_node_stop_event.clear()
+            _agent_node_sync_task = asyncio.create_task(
+                run_agent_node_sync(_agent_node_stop_event),
+                name="agent-node-sync",
+            )
+            _agent_node_tunnel_task = asyncio.create_task(
+                run_agent_node_tunnel(_agent_node_stop_event),
+                name="agent-node-tunnel",
+            )
+        else:
+            logger.info("Agent Node mode disabled (use --node to enable)")
 
         yield
 
-        _agent_node_stop_event.set()
-        if _agent_node_sync_task is not None and not _agent_node_sync_task.done():
-            try:
-                await asyncio.wait_for(_agent_node_sync_task, timeout=3.0)
-            except asyncio.TimeoutError:
-                _agent_node_sync_task.cancel()
-                with contextlib.suppress(asyncio.CancelledError):
-                    await _agent_node_sync_task
+        if _node_enabled:
+            _agent_node_stop_event.set()
+            if _agent_node_sync_task is not None and not _agent_node_sync_task.done():
+                try:
+                    await asyncio.wait_for(_agent_node_sync_task, timeout=3.0)
+                except asyncio.TimeoutError:
+                    _agent_node_sync_task.cancel()
+                    with contextlib.suppress(asyncio.CancelledError):
+                        await _agent_node_sync_task
 
-        if _agent_node_tunnel_task is not None and not _agent_node_tunnel_task.done():
-            try:
-                await asyncio.wait_for(_agent_node_tunnel_task, timeout=3.0)
-            except asyncio.TimeoutError:
-                _agent_node_tunnel_task.cancel()
-                with contextlib.suppress(asyncio.CancelledError):
-                    await _agent_node_tunnel_task
+            if _agent_node_tunnel_task is not None and not _agent_node_tunnel_task.done():
+                try:
+                    await asyncio.wait_for(_agent_node_tunnel_task, timeout=3.0)
+                except asyncio.TimeoutError:
+                    _agent_node_tunnel_task.cancel()
+                    with contextlib.suppress(asyncio.CancelledError):
+                        await _agent_node_tunnel_task
 
         # Stop A2A TaskManagers on shutdown
         await stop_a2a_task_managers()
@@ -1327,7 +1349,8 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
     # Include routers
     app.include_router(health_router)
     app.include_router(identity_router)  # No prefix - uses /api/v1/identity internally
-    app.include_router(agent_node_router, prefix=config.api_prefix)
+    if _node_enabled:
+        app.include_router(agent_node_router, prefix=config.api_prefix)
     app.include_router(agents_router, prefix=config.api_prefix)
     app.include_router(acp_router, prefix=config.api_prefix)
     app.include_router(configure_router, prefix=config.api_prefix)

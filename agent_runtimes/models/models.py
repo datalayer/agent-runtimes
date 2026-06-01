@@ -17,6 +17,40 @@ from agent_runtimes.types import AIModelRuntime
 logger = logging.getLogger(__name__)
 
 
+def _normalize_ai_inference_base_url(raw_url: str | None) -> str:
+    """Normalize Datalayer AI Inference base URL to the v1 API root."""
+    base = (raw_url or "http://localhost:4450").strip().rstrip("/")
+    if base.endswith("/api/ai-inference/v1"):
+        return base
+    if base.endswith("/api/ai-inference"):
+        return f"{base}/v1"
+    return f"{base}/api/ai-inference/v1"
+
+
+def _create_inference_http_client(
+    timeout: Any,
+    *,
+    source: str,
+    follow_redirects: bool = True,
+) -> Any:
+    """Create an httpx AsyncClient that logs outbound inference request URLs."""
+    import httpx
+
+    async def _log_request(request: httpx.Request) -> None:
+        logger.info(
+            "Inference HTTP request via %s: %s %s",
+            source,
+            request.method,
+            request.url,
+        )
+
+    return httpx.AsyncClient(
+        timeout=timeout,
+        follow_redirects=follow_redirects,
+        event_hooks={"request": [_log_request]},
+    )
+
+
 def check_env_vars_available(required_vars: Sequence[str]) -> bool:
     """
     Check if all required environment variables are set.
@@ -185,6 +219,71 @@ def create_model_with_provider(
         # For other providers, use the standard string format
         # Note: String format doesn't allow custom timeout configuration
         return get_model_string(model_provider, model_name)
+
+
+def resolve_model_for_inference_provider(
+    model: str,
+    inference_provider: str | None = None,
+    timeout: float = 60.0,
+) -> Any:
+    """Return a model object/string honoring the requested inference provider.
+
+    - ``local`` (default): preserves existing direct model behavior.
+    - ``datalayer``: routes OpenAI-compatible requests through the
+      datalayer-ai-inference service URL.
+    """
+    provider = (inference_provider or "local").strip().lower()
+    if provider in {"", "local"}:
+        logger.info(
+            "Routing model '%s' with local inference provider (direct model backend; no datalayer-ai-inference endpoint).",
+            model,
+        )
+        return model
+
+    if provider != "datalayer":
+        logger.warning(
+            "Unknown inference provider '%s'; falling back to local model routing.",
+            provider,
+        )
+        logger.info(
+            "Routing model '%s' with local inference provider after fallback.",
+            model,
+        )
+        return model
+
+    import httpx
+    from pydantic_ai.models.openai import OpenAIChatModel
+    from pydantic_ai.providers.openai import OpenAIProvider
+
+    http_timeout = httpx.Timeout(timeout, connect=30.0)
+    base_url = _normalize_ai_inference_base_url(
+        os.getenv("DATALAYER_AI_INFERENCE_URL")
+    )
+    api_key = (
+        os.getenv("DATALAYER_AI_INFERENCE_API_KEY")
+        or os.getenv("DATALAYER_API_KEY")
+        or os.getenv("OPENAI_API_KEY")
+        or "datalayer"
+    )
+
+    provider = OpenAIProvider(
+        base_url=base_url,
+        api_key=api_key,
+        http_client=_create_inference_http_client(
+            http_timeout,
+            source="datalayer-ai-inference",
+        ),
+    )
+    logger.info(
+        "Routing model '%s' through datalayer-ai-inference at %s",
+        model,
+        base_url,
+    )
+    return OpenAIChatModel(
+        model,
+        provider=provider,
+        settings=ModelSettings(parallel_tool_calls=False, temperature=0),
+    )
 
 
 def create_default_models(tool_ids: list[str]) -> list[AIModelRuntime]:

@@ -9,7 +9,9 @@ interface ImportMetaEnv {
   readonly EXAMPLE?: string;
   readonly VITE_ACP_WS_URL?: string;
   readonly VITE_DATALAYER_RUN_URL?: string;
+  readonly VITE_DATALAYER_RUNTIMES_URL?: string;
   readonly VITE_DATALAYER_AGENT_RUNTIMES_URL?: string;
+  readonly VITE_DATALAYER_AI_INFERENCE_URL?: string;
   readonly VITE_COPILOT_KIT_API_KEY?: string;
   readonly VITE_BASE_URL?: string;
   readonly VITE_GITHUB_CLIENT_ID?: string;

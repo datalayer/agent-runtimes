@@ -22,4 +22,4 @@ RUN pip install -e .
 
 EXPOSE 8765
 
-CMD ["python", "-m", "agent_runtimes", "serve", "--host", "0.0.0.0", "--port", "8765"]
+CMD ["python", "-m", "agent_runtimes", "serve", "--node", "--host", "0.0.0.0", "--port", "8765"]

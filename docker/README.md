@@ -25,10 +25,10 @@ make agent-nodes-docker-build DOCKER_TAG=dev
 ```
 
 To run a local container that exposes the Agent Node UI/server supporting all
-modes:
+modes (explicit node mode):
 
 ```bash
-docker run --rm -p 8765:8765 datalayer/agent-nodes:dev
+docker run --rm -p 8765:8765 -e AGENT_RUNTIMES_NODE=true datalayer/agent-nodes:dev
 ```
 
 ## Docker image build and push

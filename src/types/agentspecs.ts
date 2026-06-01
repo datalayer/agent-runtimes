@@ -39,6 +39,8 @@ export interface AgentSpec {
   enabled: boolean;
   /** AI model identifier to use for this agent */
   model?: string;
+  /** Inference provider routing strategy */
+  inferenceProvider?: 'local' | 'datalayer';
   /** MCP servers used by this agent */
   mcpServers: MCPServer[];
   /** Skills available to this agent */

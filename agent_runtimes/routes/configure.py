@@ -8,7 +8,7 @@ import json
 import logging
 import os
 from pathlib import Path as FilePath
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import (
     APIRouter,
@@ -29,6 +29,7 @@ from agent_runtimes.mcp import (
     get_mcp_manager,
 )
 from agent_runtimes.types import FrontendConfig
+from agent_runtimes.node_mode import is_node_enabled, set_node_enabled
 
 logger = logging.getLogger(__name__)
 
@@ -89,6 +90,156 @@ _codemode_state: dict[str, Any] = {
         if s.strip()
     ],
 }
+
+InferenceProvider = Literal["local", "datalayer"]
+
+_inference_provider_override: dict[str, InferenceProvider | None] = {
+    "provider": None,
+}
+
+
+def _default_inference_provider() -> InferenceProvider:
+    configured = (
+        os.environ.get("AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE") or ""
+    ).strip().lower()
+    if configured in {"local", "datalayer"}:
+        return configured  # type: ignore[return-value]
+
+    if not is_node_enabled():
+        return "local"
+
+    if (os.environ.get("AGENT_NODE_ID") or "").strip():
+        return "datalayer"
+
+    mode = (os.environ.get("AGENT_NODE_MODE") or "").strip().lower()
+    if mode in {"private", "shared", "sleep"}:
+        return "datalayer"
+
+    return "local"
+
+
+def get_inference_provider_override() -> InferenceProvider | None:
+    """Return explicit runtime override (if user changed provider at runtime)."""
+    return _inference_provider_override["provider"]
+
+
+def get_effective_inference_provider() -> InferenceProvider:
+    """Resolve effective inference provider from override/env/defaults."""
+    override = get_inference_provider_override()
+    if override in {"local", "datalayer"}:
+        return override
+    return _default_inference_provider()
+
+
+def _normalize_ai_inference_base_url(raw_url: str | None) -> str:
+    base = (raw_url or "http://localhost:4450").strip().rstrip("/")
+    if base.endswith("/api/ai-inference/v1"):
+        return base
+    if base.endswith("/api/ai-inference"):
+        return f"{base}/v1"
+    return f"{base}/api/ai-inference/v1"
+
+
+def _fallback_bedrock_models() -> list[str]:
+    raw = (os.getenv("DATALAYER_BEDROCK_MODELS") or "").strip()
+    models = [m.strip() for m in raw.split(",") if m.strip()] if raw else []
+    default_model = (
+        os.getenv("DATALAYER_BEDROCK_MODEL")
+        or os.getenv("DATALAYER_BEDROCK_MODEL_ID")
+        or "bedrock/us.anthropic.claude-3-5-sonnet-20240620-v1:0"
+    )
+    if default_model and default_model not in models:
+        models.insert(0, default_model)
+    return models
+
+
+class InferenceProviderRequest(BaseModel):
+    provider: InferenceProvider
+
+
+class NodeModeRequest(BaseModel):
+    enabled: bool
+
+
+@router.get("/node")
+async def get_node_mode() -> dict[str, Any]:
+    """Return whether Agent Node mode is enabled for this server process."""
+    return {
+        "enabled": is_node_enabled(),
+    }
+
+
+@router.put("/node")
+async def set_node_mode(body: NodeModeRequest) -> dict[str, Any]:
+    """Set Agent Node mode flag in env (applies fully after server restart)."""
+    set_node_enabled(body.enabled)
+    return {
+        "success": True,
+        "enabled": body.enabled,
+        "restart_required": True,
+    }
+
+
+@router.get("/inference/provider")
+async def get_inference_provider() -> dict[str, Any]:
+    """Return the effective runtime inference provider."""
+    explicit = get_inference_provider_override()
+    effective = get_effective_inference_provider()
+    source = "runtime-override" if explicit else "default"
+    return {
+        "provider": effective,
+        "source": source,
+    }
+
+
+@router.put("/inference/provider")
+async def set_inference_provider(body: InferenceProviderRequest) -> dict[str, Any]:
+    """Update runtime inference provider used for subsequent agent launches."""
+    _inference_provider_override["provider"] = body.provider
+    os.environ["AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE"] = body.provider
+    return {
+        "success": True,
+        "provider": body.provider,
+    }
+
+
+@router.get("/inference/models")
+async def list_inference_models() -> dict[str, Any]:
+    """List available models for the current inference provider."""
+    provider = get_effective_inference_provider()
+    if provider != "datalayer":
+        return {
+            "provider": provider,
+            "models": [],
+        }
+
+    try:
+        import httpx
+
+        base_url = _normalize_ai_inference_base_url(
+            os.getenv("DATALAYER_AI_INFERENCE_URL")
+        )
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.get(f"{base_url}/models")
+        if response.status_code == 200:
+            payload = response.json()
+            if isinstance(payload, dict):
+                fallback_models = _fallback_bedrock_models()
+                payload["provider"] = payload.get("provider") or "datalayer"
+                models = payload.get("models")
+                if not isinstance(models, list) or not any(models):
+                    payload["models"] = fallback_models
+                payload["default_model"] = payload.get("default_model") or (
+                    payload["models"][0] if payload.get("models") else None
+                )
+                return payload
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Failed to fetch ai-inference models: %s", exc)
+
+    return {
+        "provider": "datalayer",
+        "models": _fallback_bedrock_models(),
+    }
 
 
 @router.get("", response_model=FrontendConfig)

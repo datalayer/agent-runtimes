@@ -283,6 +283,14 @@ def serve(
             help="If the port is in use, find the next available port",
         ),
     ] = False,
+    node: Annotated[
+        bool,
+        typer.Option(
+            "--node",
+            envvar="AGENT_RUNTIMES_NODE",
+            help="Run in Agent Node mode (enables Agent Node routes, sync and tunnel loops)",
+        ),
+    ] = False,
 ) -> None:
     """
     Start the agent-runtimes server.
@@ -365,6 +373,7 @@ def serve(
             sandbox_variant=sandbox_variant,
             protocol=protocol,
             find_free_port_flag=find_free_port,
+            node=node,
         )
     except ServeError as e:
         logger.error(str(e))

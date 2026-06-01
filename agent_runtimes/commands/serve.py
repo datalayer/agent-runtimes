@@ -184,6 +184,7 @@ def serve_server(
     sandbox_variant: Optional[str] = None,
     protocol: Protocol = Protocol.vercel_ai,
     find_free_port_flag: bool = False,
+    node: bool = False,
 ) -> int:
     """
     Start the agent-runtimes server.
@@ -214,6 +215,7 @@ def serve_server(
                            per agent via code_sandboxes.
         protocol: Transport protocol to use (ag-ui, vercel-ai, vercel-ai-jupyter, a2a)
         find_free_port_flag: If True, find a free port starting from the given port
+        node: Enable Agent Node mode (disabled by default)
 
     Returns:
         The actual port the server is running on
@@ -324,6 +326,10 @@ def serve_server(
     if sandbox_variant:
         os.environ["AGENT_RUNTIMES_SANDBOX_VARIANT"] = sandbox_variant
         logger.info(f"Sandbox variant: {sandbox_variant}")
+
+    os.environ["AGENT_RUNTIMES_NODE"] = "true" if node else "false"
+    if node:
+        logger.info("Agent Node mode enabled (--node)")
 
     # Set protocol
     os.environ["AGENT_RUNTIMES_PROTOCOL"] = protocol.value

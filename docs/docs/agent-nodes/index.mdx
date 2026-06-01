@@ -15,6 +15,8 @@ the central UI under `Docs → Agent Nodes`.
 
 1. End-to-end Agent Node lifecycle: register, heartbeat, health, configure
    mode, list, inspect, and route chat.
+2. Inference routing control per Agent Node runtime:
+   `inferenceProvider = local | datalayer`.
 2. Keep configuration source-of-truth **local** on each node.
 3. Mode taxonomy: `private | shared | sleep`.
 4. Central visibility: own nodes (all modes) + others only in `shared` mode.
@@ -46,6 +48,36 @@ the central UI under `Docs → Agent Nodes`.
 | `private` | Owner-only execution under a selected billable account.     |
 | `shared`  | Discoverable / usable by others per the sharing policy.     |
 | `sleep`   | Registered and visible but does not accept execution.       |
+
+## Inference Provider
+
+Agent Node supports two inference providers:
+
+| Provider    | Behavior |
+| ----------- | -------- |
+| `local`     | Uses local model/provider resolution in `agent-runtimes`. |
+| `datalayer` | Routes LLM calls through `datalayer-ai-inference` (`/api/ai-inference/v1/*`). |
+
+### Effective Default
+
+1. In Agent Node mode, the effective default is `datalayer`.
+2. Outside Agent Node mode, the default remains `local`.
+3. `AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE` can pin either value.
+
+### Runtime Configuration API
+
+The node-local configuration API exposes inference controls:
+
+- `GET /api/v1/configure/inference/provider`
+- `PUT /api/v1/configure/inference/provider`
+- `GET /api/v1/configure/inference/models`
+
+`/inference/models` is provider-aware:
+
+1. For `local`, returns an empty model list.
+2. For `datalayer`, proxies `datalayer-ai-inference /models`.
+3. If upstream returns no models, Agent Node applies Bedrock Anthropic
+   fallback defaults so the UI can still present usable choices.
 
 Mode is part of every heartbeat and every health report. Changing the mode
 in the local UI synchronously triggers an extra health report so the central
@@ -133,6 +165,12 @@ when the new mode differs from the persisted one.
 - `POST /api/v1/agent-node/configuration` — replace configuration. The
   `node_uid` is owned by the central service and is **never** overwritten
   by this endpoint; only `set_agent_node_uid()` updates it.
+- `GET  /api/v1/configure/inference/provider` — read effective runtime
+   inference provider (`local | datalayer`).
+- `PUT  /api/v1/configure/inference/provider` — update runtime inference
+   provider for subsequent launches/sessions.
+- `GET  /api/v1/configure/inference/models` — list available models for the
+   active provider (Bedrock Anthropic focused for `datalayer`).
 
 ### Central — `datalayer-runtimes`
 
@@ -163,6 +201,10 @@ when the new mode differs from the persisted one.
 | `AGENT_NODE_HEARTBEAT_SECONDS`    | Heartbeat cadence (default `20`).                          |
 | `AGENT_NODE_HEALTH_SECONDS`       | Health cadence (default `60`).                             |
 | `AGENT_RUNTIMES_VERSION`          | Embedded in heartbeat / health payloads.                   |
+| `AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE` | Runtime override for `local` / `datalayer`.     |
+| `DATALAYER_AI_INFERENCE_URL`      | Base URL for datalayer-ai-inference (default local `:4450`). |
+| `DATALAYER_INFERENCE_PROVIDER`    | ai-inference backend provider (e.g. `bedrock`, `azure`).  |
+| `DATALAYER_BEDROCK_*`             | Bedrock credentials/region/model inputs used by ai-inference. |
 
 ## UI Flow (Node-Local)
 
@@ -171,6 +213,9 @@ The `src/AgentNode.tsx` app exposes three steps:
 1. **Authentication** — sign in (token or API key). Configuration / Chat
    header entries are hidden until authenticated.
 2. **Configuration** — pick mode, billable account, and sharing policy.
+   Also pick **Inference** provider (`local` or `datalayer`).
+   When `datalayer` is selected, the UI shows available Bedrock Anthropic
+   models returned by `/api/v1/configure/inference/models`.
 3. **Chat** — node-local AG-UI chat. Only enabled when
    `configuration.mode === 'private'`.
 
@@ -197,6 +242,13 @@ make agent-nodes:proxy
 make agent-nodes-docker-build DOCKER_TAG=dev
 docker run --rm -p 8765:8765 datalayer/agent-nodes:dev
 ```
+
+For local proxy development, `make agent-nodes:proxy` exports both
+`DATALAYER_AI_INFERENCE_URL` and `VITE_DATALAYER_AI_INFERENCE_URL` to the
+local ai-inference service (`http://localhost:4450` by default).
+
+`plane local` also starts the local ai-inference service and waits for
+`/api/ai-inference/v1/ping` readiness.
 
 ## Risks and Mitigations
 

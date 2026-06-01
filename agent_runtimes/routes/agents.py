@@ -38,6 +38,7 @@ from ..events import create_event
 from ..mcp import get_mcp_manager, initialize_config_mcp_servers
 from ..mcp.catalog_mcp_servers import MCP_SERVER_CATALOG
 from ..mcp.lifecycle import get_mcp_lifecycle_manager
+from ..models.models import resolve_model_for_inference_provider
 from ..services import (
     create_codemode_toolset,
     create_shared_sandbox,
@@ -58,6 +59,7 @@ except Exception:  # pragma: no cover - compatibility fallback during regen drif
 from ..specs.models import DEFAULT_MODEL
 from ..transports import AGUITransport, MCPUITransport, VercelAITransport
 from ..types import AgentSpec, MCPServer
+from ..node_mode import is_node_enabled
 from .a2a import A2AAgentCard, register_a2a_agent, unregister_a2a_agent
 from .acp import AgentCapabilities, AgentInfo, _agents, register_agent, unregister_agent
 from .agui import get_agui_app, register_agui_agent, unregister_agui_agent
@@ -80,6 +82,36 @@ _PARAM_TOKEN_PATTERNS = [
     re.compile(r"\{\{\s*([a-zA-Z0-9_.-]+)\s*\}\}"),
     re.compile(r"\$\{([a-zA-Z0-9_.-]+)\}"),
 ]
+
+
+def _agent_node_inference_provider_override() -> str | None:
+    """Return an inference-provider override when running Agent Node mode."""
+    if not is_node_enabled():
+        return None
+
+    try:
+        from .configure import get_inference_provider_override
+
+        runtime_override = get_inference_provider_override()
+        if runtime_override in {"local", "datalayer"}:
+            return runtime_override
+    except Exception:
+        pass
+
+    configured = (
+        os.getenv("AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE") or ""
+    ).strip().lower()
+    if configured:
+        return configured
+
+    if (os.getenv("AGENT_NODE_ID") or "").strip():
+        return "datalayer"
+
+    mode = (os.getenv("AGENT_NODE_MODE") or "").strip().lower()
+    if mode in {"private", "shared", "sleep"}:
+        return "datalayer"
+
+    return None
 
 
 def _get_parameter_value(parameters: dict[str, Any], key: str) -> Any:
@@ -801,6 +833,14 @@ class CreateAgentRequest(BaseModel):
         default=DEFAULT_MODEL.value,
         description="Model to use",
     )
+    inference_provider: Literal["local", "datalayer"] = Field(
+        default="local",
+        alias="inferenceProvider",
+        description=(
+            "Inference provider routing strategy. Use 'local' for direct model "
+            "calls or 'datalayer' to route through datalayer-ai-inference."
+        ),
+    )
     system_prompt: str = Field(
         default="You are a helpful AI assistant.",
         description="System prompt for the agent",
@@ -1013,6 +1053,11 @@ async def create_agent(
             # Use the model from the spec if the request still has the default
             if request.model == DEFAULT_MODEL.value and library_spec.model:
                 request.model = library_spec.model
+            if (
+                request.inference_provider == "local"
+                and getattr(library_spec, "inference_provider", None)
+            ):
+                request.inference_provider = library_spec.inference_provider
             # Use the sandbox_variant from the spec if not set in the request
             if not request.sandbox_variant and library_spec.sandbox_variant:
                 request.sandbox_variant = library_spec.sandbox_variant
@@ -1080,6 +1125,12 @@ async def create_agent(
                 request.goal = _spec_value("goal")
             if request.model == DEFAULT_MODEL.value:
                 request.model = _spec_value("model") or request.model
+            if request.inference_provider == "local":
+                inferred_provider = _spec_value(
+                    "inferenceProvider", "inference_provider"
+                )
+                if inferred_provider in {"local", "datalayer"}:
+                    request.inference_provider = inferred_provider
             if request.system_prompt == "You are a helpful AI assistant.":
                 request.system_prompt = (
                     _spec_value("systemPrompt", "system_prompt")
@@ -1214,6 +1265,19 @@ async def create_agent(
             resolved_tool_hooks = _render_value_with_parameters(
                 resolved_tool_hooks,
                 launch_parameters,
+            )
+
+        override_provider = _agent_node_inference_provider_override()
+        if override_provider in {"local", "datalayer"}:
+            if request.inference_provider != override_provider:
+                logger.info(
+                    "Overriding inference provider for agent '%s': %s -> %s",
+                    agent_id,
+                    request.inference_provider,
+                    override_provider,
+                )
+            request.inference_provider = cast(
+                Literal["local", "datalayer"], override_provider
             )
 
         # Build list of non-MCP toolsets (skills, codemode, etc.)
@@ -1789,7 +1853,11 @@ async def create_agent(
                     )
 
             try:
-                pydantic_agent = PydanticAgent(request.model, **agent_kwargs)
+                resolved_model = resolve_model_for_inference_provider(
+                    request.model,
+                    request.inference_provider,
+                )
+                pydantic_agent = PydanticAgent(resolved_model, **agent_kwargs)
             except Exception as exc:
                 # Newer/older pydantic-ai builds can reject constructor kwargs
                 # like `usage_limits`; retry without it for compatibility.
@@ -1799,7 +1867,11 @@ async def create_agent(
                         agent_id,
                     )
                     agent_kwargs.pop("usage_limits", None)
-                    pydantic_agent = PydanticAgent(request.model, **agent_kwargs)
+                    resolved_model = resolve_model_for_inference_provider(
+                        request.model,
+                        request.inference_provider,
+                    )
+                    pydantic_agent = PydanticAgent(resolved_model, **agent_kwargs)
                 else:
                     raise
 

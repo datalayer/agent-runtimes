@@ -274,6 +274,10 @@ from agent_runtimes.types import AgentSpec, SubAgentSpecConfig, SubAgentsConfig
             # Model field
             model_id = spec.get("model")
             model_str = f'"{model_id}"' if model_id else "None"
+            inference_provider = spec.get("inference_provider")
+            inference_provider_str = (
+                f'"{inference_provider}"' if inference_provider else "None"
+            )
 
             # Sandbox variant field
             sandbox_variant = spec.get("sandbox_variant")
@@ -356,6 +360,7 @@ from agent_runtimes.types import AgentSpec, SubAgentSpecConfig, SubAgentsConfig
     tags={_fmt_list(spec.get("tags", []))},
     enabled={spec.get("enabled", True)},
     model={model_str},
+    inference_provider={inference_provider_str},
     mcp_servers=[{mcp_servers_str}],
     skills={_fmt_list(skill_refs)},
     tools={_fmt_list(tool_refs)},
@@ -846,6 +851,10 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
             # Model field
             model_id = spec.get("model")
             model_ts = f"'{model_id}'" if model_id else "undefined"
+            inference_provider = spec.get("inference_provider")
+            inference_provider_ts = (
+                f"'{inference_provider}'" if inference_provider else "undefined"
+            )
 
             # Sandbox variant field
             sandbox_variant = spec.get("sandbox_variant")
@@ -896,6 +905,7 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
   tags: {tags_str},
   enabled: {str(spec.get("enabled", True)).lower()},
   model: {model_ts},
+    inferenceProvider: {inference_provider_ts},
   mcpServers: [{mcp_servers_str}],
     skills: [{skills_str}].filter(Boolean) as SkillSpec[],
     tools: [{tools_str}],
