@@ -2,7 +2,7 @@
 title: Agent Nodes
 ---
 
-# Agent Nodes — Developer Guide
+# Agent Nodes
 
 This guide is the implementation reference for **Agent Node**: a self-hosted
 `agent-runtimes` server that registers to Datalayer Runtimes and serves as
@@ -10,6 +10,18 @@ a node-local execution endpoint for AI agent workloads.
 
 It is the canonical developer documentation. End-user documentation lives in
 the central UI under `Docs → Agent Nodes`.
+
+## Documentation Map
+
+- End-user overview: [/docs/agent-nodes](https://datalayer.ai/docs/agent-nodes)
+- End-user laptop workflow: [/docs/agent-nodes-laptop](https://datalayer.ai/docs/agent-nodes-laptop)
+- End-user AWS workflow: [/docs/agent-nodes-aws](https://datalayer.ai/docs/agent-nodes-aws)
+- CloudFormation definitions source:
+   [github.com/datalayer/agent-runtimes/tree/main/aws](https://github.com/datalayer/agent-runtimes/tree/main/aws)
+
+If you are operating a Dockerized node, the local entrypoint is typically
+`http://localhost:8765` and resolves to the Agent Node UI
+(`/html/agent-node.html`) in node mode.
 
 ## Scope and Goals
 
