@@ -256,9 +256,7 @@ def resolve_model_for_inference_provider(
     from pydantic_ai.providers.openai import OpenAIProvider
 
     http_timeout = httpx.Timeout(timeout, connect=30.0)
-    base_url = _normalize_ai_inference_base_url(
-        os.getenv("DATALAYER_AI_INFERENCE_URL")
-    )
+    base_url = _normalize_ai_inference_base_url(os.getenv("DATALAYER_AI_INFERENCE_URL"))
     api_key = (
         os.getenv("DATALAYER_AI_INFERENCE_API_KEY")
         or os.getenv("DATALAYER_API_KEY")

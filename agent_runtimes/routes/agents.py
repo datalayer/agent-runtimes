@@ -56,10 +56,10 @@ try:
     from ..specs.events import EVENT_KIND_AGENT_ASSIGNED
 except Exception:  # pragma: no cover - compatibility fallback during regen drift
     EVENT_KIND_AGENT_ASSIGNED = "agent-assigned"
+from ..node_mode import is_node_enabled
 from ..specs.models import DEFAULT_MODEL
 from ..transports import AGUITransport, MCPUITransport, VercelAITransport
 from ..types import AgentSpec, MCPServer
-from ..node_mode import is_node_enabled
 from .a2a import A2AAgentCard, register_a2a_agent, unregister_a2a_agent
 from .acp import AgentCapabilities, AgentInfo, _agents, register_agent, unregister_agent
 from .agui import get_agui_app, register_agui_agent, unregister_agui_agent
@@ -99,8 +99,8 @@ def _agent_node_inference_provider_override() -> str | None:
         pass
 
     configured = (
-        os.getenv("AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE") or ""
-    ).strip().lower()
+        (os.getenv("AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE") or "").strip().lower()
+    )
     if configured:
         return configured
 
@@ -1053,9 +1053,8 @@ async def create_agent(
             # Use the model from the spec if the request still has the default
             if request.model == DEFAULT_MODEL.value and library_spec.model:
                 request.model = library_spec.model
-            if (
-                request.inference_provider == "local"
-                and getattr(library_spec, "inference_provider", None)
+            if request.inference_provider == "local" and getattr(
+                library_spec, "inference_provider", None
             ):
                 request.inference_provider = library_spec.inference_provider
             # Use the sandbox_variant from the spec if not set in the request

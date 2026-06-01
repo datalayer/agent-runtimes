@@ -806,8 +806,8 @@ class VercelAITransport(BaseTransport):
         except (json.JSONDecodeError, Exception) as e:
             logger.debug(f"Could not extract model/builtinTools from request body: {e}")
 
-        effective_inference_provider, inference_provider_source = _resolve_effective_inference_provider(
-            self._agent_id
+        effective_inference_provider, inference_provider_source = (
+            _resolve_effective_inference_provider(self._agent_id)
         )
         if effective_inference_provider == "datalayer" and isinstance(model, str):
             # Request body model strings must be wrapped so calls are proxied

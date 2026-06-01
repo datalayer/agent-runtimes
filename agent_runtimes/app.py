@@ -30,6 +30,8 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from starlette.routing import Mount
 
+from .agent_node_sync import run_agent_node_sync
+from .agent_node_tunnel import run_agent_node_tunnel
 from .mcp import (
     ensure_config_mcp_toolsets_event,
     get_mcp_lifecycle_manager,
@@ -41,13 +43,11 @@ from .mcp import (
 from .mcp.catalog_mcp_servers import get_catalog_server
 from .models.models import resolve_model_for_inference_provider
 from .node_mode import is_node_enabled
-from .agent_node_sync import run_agent_node_sync
-from .agent_node_tunnel import run_agent_node_tunnel
 from .routes import (
-    agent_node_router,
     a2a_protocol_router,
     a2ui_router,
     acp_router,
+    agent_node_router,
     agents_router,
     agui_router,
     configure_router,
@@ -1261,7 +1261,10 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
                     with contextlib.suppress(asyncio.CancelledError):
                         await _agent_node_sync_task
 
-            if _agent_node_tunnel_task is not None and not _agent_node_tunnel_task.done():
+            if (
+                _agent_node_tunnel_task is not None
+                and not _agent_node_tunnel_task.done()
+            ):
                 try:
                     await asyncio.wait_for(_agent_node_tunnel_task, timeout=3.0)
                 except asyncio.TimeoutError:

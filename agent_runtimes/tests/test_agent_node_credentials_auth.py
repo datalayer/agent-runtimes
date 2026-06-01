@@ -5,8 +5,6 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator
-
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -15,19 +13,25 @@ from agent_runtimes.routes import agent_node as agent_node_route
 
 
 def _build_client() -> TestClient:
+    """Build a FastAPI test client with the agent-node router mounted."""
     app = FastAPI()
     app.include_router(agent_node_route.router, prefix="/api/v1")
     return TestClient(app)
 
 
 @pytest.fixture(autouse=True)
-def _reset_runtime_credentials() -> Iterator[None]:
+def _reset_runtime_credentials(request: pytest.FixtureRequest) -> None:
+    """Reset runtime credentials before each test and clean up afterwards."""
     agent_node_route.set_runtime_credentials(None, None)
-    yield
-    agent_node_route.set_runtime_credentials(None, None)
+
+    def _cleanup() -> None:
+        agent_node_route.set_runtime_credentials(None, None)
+
+    request.addfinalizer(_cleanup)
 
 
 def test_credentials_rejects_missing_authorization() -> None:
+    """Ensure endpoint rejects unauthenticated credential updates."""
     client = _build_client()
 
     response = client.post(
@@ -39,6 +43,7 @@ def test_credentials_rejects_missing_authorization() -> None:
 
 
 def test_credentials_rejects_mismatched_payload_token() -> None:
+    """Ensure payload token cannot differ from Authorization token."""
     client = _build_client()
 
     response = client.post(
@@ -51,6 +56,7 @@ def test_credentials_rejects_mismatched_payload_token() -> None:
 
 
 def test_credentials_accepts_authenticated_set_and_clear() -> None:
+    """Allow authenticated credential set and authenticated clear operations."""
     client = _build_client()
 
     # Set credentials using authenticated token.

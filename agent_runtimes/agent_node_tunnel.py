@@ -11,13 +11,14 @@ import logging
 import os
 import socket
 import uuid
-from urllib.parse import urlencode
 from typing import Any
+from urllib.parse import urlencode
 
 logger = logging.getLogger(__name__)
 
 
 def _node_id() -> str:
+    """Resolve node identifier from env, persisted config, or hostname hash."""
     configured = (os.environ.get("AGENT_NODE_ID") or "").strip()
     if configured:
         return configured
@@ -34,11 +35,16 @@ def _node_id() -> str:
 
 
 def _runtimes_url() -> str:
+    """Resolve runtimes base URL from env or runtime credentials."""
     env_url = (
-        os.environ.get("DATALAYER_RUNTIMES_URL")
-        or os.environ.get("DATALAYER_AGENT_RUNTIMES_URL")
-        or ""
-    ).strip().rstrip("/")
+        (
+            os.environ.get("DATALAYER_RUNTIMES_URL")
+            or os.environ.get("DATALAYER_AGENT_RUNTIMES_URL")
+            or ""
+        )
+        .strip()
+        .rstrip("/")
+    )
     if env_url:
         return env_url
     try:
@@ -50,6 +56,7 @@ def _runtimes_url() -> str:
 
 
 def _auth_token() -> str:
+    """Resolve websocket auth token, preferring interactive runtime credentials."""
     # For websocket auth we prefer the UI session token (runtime credentials),
     # then fall back to env API key when no interactive session exists.
     try:
@@ -64,6 +71,7 @@ def _auth_token() -> str:
 
 
 def _http_to_ws(url: str) -> str:
+    """Convert HTTP(S) base URLs to WS(S) URLs."""
     if url.startswith("https://"):
         return f"wss://{url[len('https://') :]}"
     if url.startswith("http://"):
@@ -72,6 +80,7 @@ def _http_to_ws(url: str) -> str:
 
 
 def _build_tunnel_url() -> str:
+    """Build the authenticated websocket tunnel URL when credentials exist."""
     base_url = _runtimes_url()
     if not base_url:
         return ""
@@ -80,20 +89,20 @@ def _build_tunnel_url() -> str:
         return ""
     ws_base = _http_to_ws(base_url)
     query = urlencode({"node_id": _node_id(), "token": token})
-    return (
-        f"{ws_base}/api/runtimes/v1/agent-nodes/tunnel/ws"
-        f"?{query}"
-    )
+    return f"{ws_base}/api/runtimes/v1/agent-nodes/tunnel/ws?{query}"
 
 
 async def _handle_message(websocket: Any, message: str) -> None:
+    """Handle one inbound tunnel message and emit ack/response events."""
     try:
         payload = json.loads(message)
     except Exception:
         return
 
     request_id = payload.get("request_id")
-    envelope = payload.get("payload") if isinstance(payload.get("payload"), dict) else payload
+    envelope = (
+        payload.get("payload") if isinstance(payload.get("payload"), dict) else payload
+    )
     type_value = str(envelope.get("type") or payload.get("type") or "ui_message")
 
     # Acknowledge every tunneled message so the reverse path is exercised.
@@ -110,7 +119,9 @@ async def _handle_message(websocket: Any, message: str) -> None:
     # Run tunneled chat requests against the local agent runtime.
     if type_value == "chat.request":
         chat_payload = (
-            envelope.get("payload") if isinstance(envelope.get("payload"), dict) else envelope
+            envelope.get("payload")
+            if isinstance(envelope.get("payload"), dict)
+            else envelope
         )
         try:
             result_payload = await _run_local_chat_request(chat_payload)
@@ -139,6 +150,7 @@ async def _handle_message(websocket: Any, message: str) -> None:
 
 
 def _extract_prompt(chat_payload: dict[str, Any]) -> str:
+    """Extract best-effort user prompt text from chat payload variants."""
     direct = (
         chat_payload.get("text")
         or chat_payload.get("prompt")
@@ -172,6 +184,7 @@ def _extract_prompt(chat_payload: dict[str, Any]) -> str:
 
 
 async def _run_local_chat_request(chat_payload: dict[str, Any]) -> dict[str, Any]:
+    """Execute a tunneled chat payload against the local registered agent."""
     from .adapters.base import AgentContext
     from .routes.acp import _agents
 
@@ -251,18 +264,24 @@ async def run_agent_node_tunnel(stop_event: asyncio.Event) -> None:
             try:
                 if not get_agent_node_configuration().billable_account_uid:
                     try:
-                        await asyncio.wait_for(stop_event.wait(), timeout=reconnect_seconds)
+                        await asyncio.wait_for(
+                            stop_event.wait(), timeout=reconnect_seconds
+                        )
                     except asyncio.TimeoutError:
                         continue
                     break
             except Exception:  # noqa: BLE001
                 pass
         try:
-            async with ws_connect(tunnel_url, open_timeout=15.0, close_timeout=5.0) as websocket:
+            async with ws_connect(
+                tunnel_url, open_timeout=15.0, close_timeout=5.0
+            ) as websocket:
                 logger.info("Agent node tunnel connected")
                 while not stop_event.is_set():
                     try:
-                        incoming = await asyncio.wait_for(websocket.recv(), timeout=20.0)
+                        incoming = await asyncio.wait_for(
+                            websocket.recv(), timeout=20.0
+                        )
                         if isinstance(incoming, str):
                             await _handle_message(websocket, incoming)
                     except asyncio.TimeoutError:

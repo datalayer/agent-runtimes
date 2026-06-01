@@ -28,8 +28,8 @@ from agent_runtimes.mcp import (
     get_config_mcp_toolsets_info,
     get_mcp_manager,
 )
-from agent_runtimes.types import FrontendConfig
 from agent_runtimes.node_mode import is_node_enabled, set_node_enabled
+from agent_runtimes.types import FrontendConfig
 
 logger = logging.getLogger(__name__)
 
@@ -99,9 +99,12 @@ _inference_provider_override: dict[str, InferenceProvider | None] = {
 
 
 def _default_inference_provider() -> InferenceProvider:
+    """Infer the default provider from runtime environment and node state."""
     configured = (
-        os.environ.get("AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE") or ""
-    ).strip().lower()
+        (os.environ.get("AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE") or "")
+        .strip()
+        .lower()
+    )
     if configured in {"local", "datalayer"}:
         return cast(InferenceProvider, configured)
 
@@ -132,6 +135,7 @@ def get_effective_inference_provider() -> InferenceProvider:
 
 
 def _normalize_ai_inference_base_url(raw_url: str | None) -> str:
+    """Normalize AI inference base URL to the canonical /api/ai-inference/v1 path."""
     base = (raw_url or "http://localhost:4450").strip().rstrip("/")
     if base.endswith("/api/ai-inference/v1"):
         return base
@@ -141,6 +145,7 @@ def _normalize_ai_inference_base_url(raw_url: str | None) -> str:
 
 
 def _fallback_bedrock_models() -> list[str]:
+    """Resolve Bedrock model IDs from agentspecs, env overrides, and defaults."""
     models = _bedrock_models_from_agentspecs()
     if not models:
         raw = (os.getenv("DATALAYER_BEDROCK_MODELS") or "").strip()
@@ -159,6 +164,7 @@ def _bedrock_models_from_agentspecs() -> list[str]:
     """Load Bedrock model IDs from the agentspecs library (best-effort)."""
 
     def _normalize(model_id: str) -> str:
+        """Convert legacy bedrock: model IDs to bedrock/ format."""
         if model_id.startswith("bedrock:"):
             return "bedrock/" + model_id.split(":", 1)[1]
         return model_id
@@ -175,9 +181,11 @@ def _bedrock_models_from_agentspecs() -> list[str]:
         pass
 
     try:
+        import importlib
         import importlib.util
         import pathlib
-        import yaml  # type: ignore[import-untyped]
+
+        yaml_module = importlib.import_module("yaml")
 
         spec = importlib.util.find_spec("agentspecs")
         if spec is None or not spec.submodule_search_locations:
@@ -187,17 +195,17 @@ def _bedrock_models_from_agentspecs() -> list[str]:
             return []
         ids: list[str] = []
         for yaml_file in sorted(models_dir.glob("*.yaml")):
+            data: dict[str, Any] = {}
             try:
                 with open(yaml_file) as fh:
-                    data = yaml.safe_load(fh) or {}
+                    data = yaml_module.safe_load(fh) or {}
             except Exception:  # noqa: BLE001
-                continue
+                data = {}
             if data.get("provider") == "bedrock" and isinstance(data.get("id"), str):
                 ids.append(_normalize(data["id"]))
         return ids
     except Exception:  # noqa: BLE001
         return []
-
 
 
 class InferenceProviderRequest(BaseModel):
@@ -883,10 +891,12 @@ _sandbox_status_subscribers: dict[str, set[asyncio.Queue[None]]] = {}
 
 
 def _subscriber_key(agent_id: str | None) -> str:
+    """Map optional agent IDs to subscriber dictionary keys."""
     return agent_id or "__global__"
 
 
 def _subscribe_sandbox_status(agent_id: str | None) -> asyncio.Queue[None]:
+    """Register a websocket subscriber queue for sandbox status updates."""
     key = _subscriber_key(agent_id)
     queue: asyncio.Queue[None] = asyncio.Queue(maxsize=1)
     subscribers = _sandbox_status_subscribers.setdefault(key, set())
@@ -897,6 +907,7 @@ def _subscribe_sandbox_status(agent_id: str | None) -> asyncio.Queue[None]:
 def _unsubscribe_sandbox_status(
     agent_id: str | None, queue: asyncio.Queue[None]
 ) -> None:
+    """Unregister a sandbox status subscriber queue."""
     key = _subscriber_key(agent_id)
     subscribers = _sandbox_status_subscribers.get(key)
     if not subscribers:

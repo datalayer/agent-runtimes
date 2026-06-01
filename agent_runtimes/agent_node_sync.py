@@ -36,15 +36,21 @@ def _explicit_node_id() -> str | None:
 
 
 def _node_name() -> str:
+    """Return node display name from env or host fallback."""
     return (os.environ.get("AGENT_NODE_NAME") or socket.gethostname()).strip()
 
 
 def _runtimes_url() -> str:
+    """Resolve runtimes API base URL from env first, then UI credentials."""
     env_url = (
-        os.environ.get("DATALAYER_RUNTIMES_URL")
-        or os.environ.get("DATALAYER_AGENT_RUNTIMES_URL")
-        or ""
-    ).strip().rstrip("/")
+        (
+            os.environ.get("DATALAYER_RUNTIMES_URL")
+            or os.environ.get("DATALAYER_AGENT_RUNTIMES_URL")
+            or ""
+        )
+        .strip()
+        .rstrip("/")
+    )
     if env_url:
         return env_url
     ui_url = (get_runtime_credentials().get("runtimes_url") or "").strip().rstrip("/")
@@ -52,6 +58,7 @@ def _runtimes_url() -> str:
 
 
 def _auth_token() -> str:
+    """Resolve runtime API token from env first, then UI credentials."""
     env_token = (os.environ.get("DATALAYER_API_KEY") or "").strip()
     if env_token:
         return env_token
@@ -59,8 +66,12 @@ def _auth_token() -> str:
 
 
 def _auth_headers() -> dict[str, str]:
+    """Build authenticated JSON headers for Agent Node control-plane calls."""
     token = _auth_token()
-    headers: dict[str, str] = {"Content-Type": "application/json", "Accept": "application/json"}
+    headers: dict[str, str] = {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+    }
     if token:
         headers["Authorization"] = f"Bearer {token}"
     return headers
@@ -75,6 +86,7 @@ def _current_node_id() -> str | None:
 
 
 def _register_payload() -> dict:
+    """Build node registration payload including persisted configuration."""
     configuration = get_agent_node_configuration().model_dump()
     payload: dict = {
         "node_name": _node_name(),
@@ -107,6 +119,7 @@ async def _register(client: httpx.AsyncClient) -> str | None:
 
 
 async def _heartbeat(client: httpx.AsyncClient, node_id: str) -> None:
+    """Send heartbeat for a registered node."""
     body = {
         "node_id": node_id,
         "configuration": get_agent_node_configuration().model_dump(),
@@ -115,9 +128,8 @@ async def _heartbeat(client: httpx.AsyncClient, node_id: str) -> None:
     response.raise_for_status()
 
 
-async def _post_health(
-    client: httpx.AsyncClient, node_id: str, reason: str
-) -> None:
+async def _post_health(client: httpx.AsyncClient, node_id: str, reason: str) -> None:
+    """Post node health snapshot with a reason code."""
     body = {
         "node_id": node_id,
         "health": collect_health(reason=reason),

@@ -300,8 +300,7 @@ _BOOTSTRAP_CACHE: dict[str, Any] = {"key": None, "result": None}
 
 def _bootstrap_run_url() -> str:
     return (
-        os.environ.get("DATALAYER_RUN_URL")
-        or "https://prod1.datalayer.run"
+        os.environ.get("DATALAYER_RUN_URL") or "https://prod1.datalayer.run"
     ).rstrip("/")
 
 
@@ -325,11 +324,7 @@ async def _exchange_api_key(api_key: str, run_url: str) -> dict[str, Any] | None
     if not isinstance(data, dict) or not data.get("success") or not data.get("token"):
         return None
     user = data.get("user") or {}
-    handle = (
-        user.get("handle_s")
-        or user.get("handle")
-        or "api-key-user"
-    )
+    handle = user.get("handle_s") or user.get("handle") or "api-key-user"
     return {
         "token": str(data["token"]),
         "handle": str(handle),
