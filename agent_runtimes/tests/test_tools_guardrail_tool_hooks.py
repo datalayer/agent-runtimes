@@ -200,7 +200,10 @@ async def test_pre_tool_approval_needed_requests_wait(tmp_path: Path) -> None:
 
 
 @pytest.mark.asyncio
-async def test_pre_tool_reuses_recent_approval_for_matching_args(tmp_path: Path) -> None:
+async def test_pre_tool_reuses_recent_approval_for_matching_args(
+    tmp_path: Path,
+) -> None:
+    """Recent same-envelope approval skips a duplicate prompt."""
     await _reset_approvals()
     try:
         await _put_record(
@@ -249,6 +252,7 @@ async def test_pre_tool_reuses_recent_approval_for_matching_args(tmp_path: Path)
 async def test_pre_tool_does_not_reuse_recent_approval_for_changed_args(
     tmp_path: Path,
 ) -> None:
+    """Changed args must request approval instead of reusing a recent one."""
     await _reset_approvals()
     try:
         await _put_record(
@@ -297,6 +301,7 @@ async def test_pre_tool_does_not_reuse_recent_approval_for_changed_args(
 
 @pytest.mark.asyncio
 async def test_manager_reuses_recent_approval_for_matching_args() -> None:
+    """The manager reuses only matching recent approval envelopes."""
     await _reset_approvals()
     try:
         await _put_record(
@@ -334,6 +339,7 @@ async def test_manager_reuses_recent_approval_for_matching_args() -> None:
 
 @pytest.mark.asyncio
 async def test_manager_does_not_reuse_recent_approval_for_changed_args() -> None:
+    """The manager waits for a new approval when args changed."""
     await _reset_approvals()
     try:
         await _put_record(

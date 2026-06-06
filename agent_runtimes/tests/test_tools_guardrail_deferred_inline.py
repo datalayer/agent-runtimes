@@ -19,9 +19,9 @@ from agent_runtimes.guardrails.tool_approvals import (
 from agent_runtimes.routes.tool_approvals import (
     _APPROVALS,
     _APPROVALS_LOCK,
-    _create_approval,
     ToolApprovalCreateRequest,
     ToolApprovalRecord,
+    _create_approval,
 )
 
 
@@ -90,7 +90,10 @@ async def test_inline_handle_uses_existing_approved_decision() -> None:
 
 
 @pytest.mark.asyncio
-async def test_inline_handle_does_not_reuse_same_tool_call_id_with_changed_args() -> None:
+async def test_inline_handle_does_not_reuse_same_tool_call_id_with_changed_args() -> (
+    None
+):
+    """Changed args must not reuse an approved deferred decision."""
     await _reset_approvals()
     try:
         await _put_record(
@@ -259,6 +262,7 @@ async def test_inline_handle_json_string_args_without_match_returns_none() -> No
 
 @pytest.mark.asyncio
 async def test_create_approval_reuses_existing_record_for_matching_envelope() -> None:
+    """A matching approval envelope reuses the existing record."""
     await _reset_approvals()
     try:
         await _put_record(
@@ -292,6 +296,7 @@ async def test_create_approval_reuses_existing_record_for_matching_envelope() ->
 
 @pytest.mark.asyncio
 async def test_create_approval_mints_new_record_for_changed_args() -> None:
+    """Changed args with the same tool_call_id mint a new approval."""
     await _reset_approvals()
     try:
         await _put_record(
