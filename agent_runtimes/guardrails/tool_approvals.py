@@ -175,10 +175,40 @@ def _normalize_tool_args_for_match(raw_args: Any) -> dict[str, str]:
     normalized: dict[str, str] = {}
     for k, v in parsed_args.items():
         try:
-            normalized[str(k)] = str(v)[:500]
+            if isinstance(v, (dict, list)):
+                normalized[str(k)] = json_mod.dumps(
+                    v,
+                    sort_keys=True,
+                    separators=(",", ":"),
+                    default=str,
+                )[:500]
+            else:
+                normalized[str(k)] = str(v)[:500]
         except Exception:
             normalized[str(k)] = "<non-serializable>"
     return normalized
+
+
+def _approval_envelope_matches(
+    approval: Any,
+    *,
+    agent_id: str | None = None,
+    tool_name: str,
+    tool_args: Any,
+    tool_call_id: str | None = None,
+) -> bool:
+    if agent_id is not None and getattr(approval, "agent_id", None) != agent_id:
+        return False
+    if getattr(approval, "tool_name", None) != tool_name:
+        return False
+    if (
+        tool_call_id is not None
+        and getattr(approval, "tool_call_id", None) != tool_call_id
+    ):
+        return False
+    return _normalize_tool_args_for_match(
+        getattr(approval, "tool_args", {})
+    ) == _normalize_tool_args_for_match(tool_args)
 
 
 def _parse_timeout_hms(value: Any, *, default: float) -> float:
@@ -434,18 +464,24 @@ class ToolApprovalManager:
         # capabilities (e.g. ToolsGuardrailCapability + MCPToolsGuardrailCapability)
         # both intercept the same tool call and would otherwise each create
         # an independent approval record causing the user to approve twice.
+        # Reuse only applies to the same approved tool-call envelope.
         recent_window_seconds = 120.0
         now = datetime.now(timezone.utc)
         async with _APPROVALS_LOCK:
             for approval in _APPROVALS.values():
                 if approval.status != "approved":
                     continue
-                if approval.tool_name != tool_name:
+                if not _approval_envelope_matches(
+                    approval,
+                    agent_id=self.config.agent_id,
+                    tool_name=tool_name,
+                    tool_args=tool_args,
+                ):
                     continue
                 if tool_call_id and approval.tool_call_id == tool_call_id:
                     logger.info(
                         "[tool-approval:request_and_wait] Tool '%s' already approved "
-                        "(approval_id=%s, tool_call_id=%s) — skipping",
+                        "for the same envelope (approval_id=%s, tool_call_id=%s) — skipping",
                         tool_name,
                         approval.id,
                         tool_call_id,
@@ -460,12 +496,19 @@ class ToolApprovalManager:
                         approval.updated_at.replace("Z", "+00:00")
                     )
                     age = (now - ts).total_seconds()
-                except Exception:
-                    age = 0.0
+                except Exception as parse_exc:
+                    logger.warning(
+                        "[tool-approval:request_and_wait] Could not parse updated_at='%s' "
+                        "for approval_id=%s: %s",
+                        approval.updated_at,
+                        approval.id,
+                        parse_exc,
+                    )
+                    continue
                 if 0 <= age <= recent_window_seconds:
                     logger.info(
                         "[tool-approval:request_and_wait] Tool '%s' already approved "
-                        "recently (approval_id=%s, age=%.2fs) — skipping",
+                        "recently for the same envelope (approval_id=%s, age=%.2fs) — skipping",
                         tool_name,
                         approval.id,
                         age,
@@ -942,7 +985,7 @@ class ToolsGuardrailCapability(AbstractCapability[Any]):
 
             matched = None
 
-            # Strong match: same tool_call_id (+ same tool name when present).
+            # Strong match: same tool_call_id and same tool-call envelope.
             if call_tool_id:
                 for approval in records:
                     if approval.status in {"deleted", "pending"}:
@@ -950,6 +993,14 @@ class ToolsGuardrailCapability(AbstractCapability[Any]):
                     if approval.tool_call_id != call_tool_id:
                         continue
                     if approval.tool_name != call.tool_name:
+                        continue
+                    if not _approval_envelope_matches(
+                        approval,
+                        agent_id=self.config.agent_id,
+                        tool_name=call.tool_name,
+                        tool_args=call_safe_args,
+                        tool_call_id=call_tool_id,
+                    ):
                         continue
                     matched = approval
                     break
@@ -959,9 +1010,12 @@ class ToolsGuardrailCapability(AbstractCapability[Any]):
                 for approval in records:
                     if approval.status not in {"approved", "rejected"}:
                         continue
-                    if approval.tool_name != call.tool_name:
-                        continue
-                    if approval.tool_args != call_safe_args:
+                    if not _approval_envelope_matches(
+                        approval,
+                        agent_id=self.config.agent_id,
+                        tool_name=call.tool_name,
+                        tool_args=call_safe_args,
+                    ):
                         continue
                     try:
                         ts = datetime.fromisoformat(
@@ -1021,12 +1075,7 @@ class ToolsGuardrailCapability(AbstractCapability[Any]):
             _APPROVALS_LOCK,
         )
 
-        safe_args: dict[str, str] = {}
-        for k, v in args.items():
-            try:
-                safe_args[k] = str(v)[:500]
-            except Exception:
-                safe_args[k] = "<non-serializable>"
+        safe_args = _normalize_tool_args_for_match(args)
 
         auth_request = self._build_authorization_request(
             ctx=ctx,
@@ -1104,10 +1153,25 @@ class ToolsGuardrailCapability(AbstractCapability[Any]):
                     continue
 
                 if tool_call_id and approval.tool_call_id == tool_call_id:
+                    envelope_matches = _approval_envelope_matches(
+                        approval,
+                        agent_id=self.config.agent_id,
+                        tool_name=call.tool_name,
+                        tool_args=safe_args,
+                        tool_call_id=tool_call_id,
+                    )
+                    if not envelope_matches:
+                        logger.info(
+                            "[tool-approval:dedup] matching tool_call_id=%s has "
+                            "different tool envelope (approval_id=%s) — not deduping",
+                            tool_call_id,
+                            approval.id,
+                        )
+                        continue
                     if approval.status == "approved":
                         logger.info(
                             "Tool '%s' already approved via deferred continuation "
-                            "(approval_id=%s, tool_call_id=%s) — skipping re-approval",
+                            "for the same envelope (approval_id=%s, tool_call_id=%s) — skipping re-approval",
                             call.tool_name,
                             approval.id,
                             tool_call_id,
@@ -1130,11 +1194,15 @@ class ToolsGuardrailCapability(AbstractCapability[Any]):
                     continue
 
                 # Fallback dedupe for continuation turns where tool_call_id is
-                # regenerated by the framework.  Match by tool_name + recent
-                # time window only — args comparison is unreliable because the
-                # stored record has stringified values and the continuation may
-                # have different formatting or extra keys.
-                if approval.tool_name != call.tool_name:
+                # regenerated by the framework. Match by tool_name + normalized
+                # args + recent time window so approvals stay bound to the
+                # approved call envelope.
+                if not _approval_envelope_matches(
+                    approval,
+                    agent_id=self.config.agent_id,
+                    tool_name=call.tool_name,
+                    tool_args=safe_args,
+                ):
                     continue
 
                 updated_at = approval.updated_at
@@ -1148,19 +1216,11 @@ class ToolsGuardrailCapability(AbstractCapability[Any]):
                         approval.id,
                         parse_exc,
                     )
-                    # Be lenient — if we cannot parse the timestamp but the
-                    # name matches and status is approved, treat as a match.
-                    logger.info(
-                        "Tool '%s' already approved recently (fallback match, "
-                        "approval_id=%s) — skipping re-approval",
-                        call.tool_name,
-                        approval.id,
-                    )
-                    return args
+                    continue
                 age_seconds = (now - ts).total_seconds()
                 if 0 <= age_seconds <= recent_window_seconds:
                     logger.info(
-                        "Tool '%s' already approved recently "
+                        "Tool '%s' already approved recently for the same envelope "
                         "(approval_id=%s, age=%.2fs) — skipping re-approval",
                         call.tool_name,
                         approval.id,

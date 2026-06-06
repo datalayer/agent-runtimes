@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, cast
 
@@ -16,7 +17,13 @@ from agent_runtimes.guardrails.tool_approvals import (
     ToolApprovalConfig,
     ToolApprovalManager,
     ToolApprovalRejectedError,
+    ToolApprovalTimeoutError,
     ToolsGuardrailCapability,
+)
+from agent_runtimes.routes.tool_approvals import (
+    _APPROVALS,
+    _APPROVALS_LOCK,
+    ToolApprovalRecord,
 )
 
 _POST_HOOK_PAYLOADS: list[dict[str, Any]] = []
@@ -57,6 +64,20 @@ def _read_jsonl(path: Path) -> list[dict[str, Any]]:
             continue
         rows.append(json.loads(line))
     return rows
+
+
+def _now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+async def _reset_approvals() -> None:
+    async with _APPROVALS_LOCK:
+        _APPROVALS.clear()
+
+
+async def _put_record(record: ToolApprovalRecord) -> None:
+    async with _APPROVALS_LOCK:
+        _APPROVALS[record.id] = record
 
 
 @pytest.fixture(autouse=True)
@@ -176,6 +197,179 @@ async def test_pre_tool_approval_needed_requests_wait(tmp_path: Path) -> None:
     assert result == args
     assert len(fake_manager.calls) == 1
     assert fake_manager.calls[0][0] == "runtime_sensitive_echo"
+
+
+@pytest.mark.asyncio
+async def test_pre_tool_reuses_recent_approval_for_matching_args(tmp_path: Path) -> None:
+    await _reset_approvals()
+    try:
+        await _put_record(
+            ToolApprovalRecord(
+                id="approval-reuse-match",
+                agent_id="agent-1",
+                pod_name="",
+                tool_name="runtime_sensitive_echo",
+                tool_args={"text": "hello"},
+                tool_call_id="tool-reuse-original",
+                status="approved",
+                note=None,
+                created_at=_now_iso(),
+                updated_at=_now_iso(),
+            )
+        )
+        capability = ToolsGuardrailCapability(
+            config=ToolApprovalConfig(
+                agent_id="agent-1",
+                audit_log_path=str(tmp_path / "audit.jsonl"),
+                tools_requiring_approval=["runtime-sensitive-echo"],
+            )
+        )
+        fake_manager = _FakeManager()
+        capability._manager = cast(ToolApprovalManager, fake_manager)
+
+        args = {"text": "hello"}
+        result = await capability.before_tool_execute(
+            None,
+            call=ToolCallPart(
+                tool_name="runtime_sensitive_echo",
+                args=args,
+                tool_call_id="tool-reuse-continuation",
+            ),
+            tool_def=None,
+            args=args,
+        )
+
+        assert result == args
+        assert fake_manager.calls == []
+    finally:
+        await _reset_approvals()
+
+
+@pytest.mark.asyncio
+async def test_pre_tool_does_not_reuse_recent_approval_for_changed_args(
+    tmp_path: Path,
+) -> None:
+    await _reset_approvals()
+    try:
+        await _put_record(
+            ToolApprovalRecord(
+                id="approval-reuse-changed",
+                agent_id="agent-1",
+                pod_name="",
+                tool_name="runtime_sensitive_echo",
+                tool_args={"text": "hello"},
+                tool_call_id="tool-reuse-original",
+                status="approved",
+                note=None,
+                created_at=_now_iso(),
+                updated_at=_now_iso(),
+            )
+        )
+        capability = ToolsGuardrailCapability(
+            config=ToolApprovalConfig(
+                agent_id="agent-1",
+                audit_log_path=str(tmp_path / "audit.jsonl"),
+                tools_requiring_approval=["runtime-sensitive-echo"],
+            )
+        )
+        fake_manager = _FakeManager()
+        capability._manager = cast(ToolApprovalManager, fake_manager)
+
+        args = {"text": "danger"}
+        result = await capability.before_tool_execute(
+            None,
+            call=ToolCallPart(
+                tool_name="runtime_sensitive_echo",
+                args=args,
+                tool_call_id="tool-reuse-continuation",
+            ),
+            tool_def=None,
+            args=args,
+        )
+
+        assert result == args
+        assert fake_manager.calls == [
+            ("runtime_sensitive_echo", {"text": "danger"}, "tool-reuse-continuation")
+        ]
+    finally:
+        await _reset_approvals()
+
+
+@pytest.mark.asyncio
+async def test_manager_reuses_recent_approval_for_matching_args() -> None:
+    await _reset_approvals()
+    try:
+        await _put_record(
+            ToolApprovalRecord(
+                id="approval-manager-match",
+                agent_id="agent-1",
+                pod_name="",
+                tool_name="runtime_sensitive_echo",
+                tool_args={"text": "hello"},
+                tool_call_id="tool-manager-original",
+                status="approved",
+                note=None,
+                created_at=_now_iso(),
+                updated_at=_now_iso(),
+            )
+        )
+        manager = ToolApprovalManager(
+            ToolApprovalConfig(agent_id="agent-1", timeout=0.01)
+        )
+
+        result = await manager.request_and_wait(
+            "runtime_sensitive_echo",
+            {"text": "hello"},
+            "tool-manager-continuation",
+        )
+
+        assert result == {
+            "status": "approved",
+            "id": "approval-manager-match",
+            "tool_name": "runtime_sensitive_echo",
+        }
+    finally:
+        await _reset_approvals()
+
+
+@pytest.mark.asyncio
+async def test_manager_does_not_reuse_recent_approval_for_changed_args() -> None:
+    await _reset_approvals()
+    try:
+        await _put_record(
+            ToolApprovalRecord(
+                id="approval-manager-changed",
+                agent_id="agent-1",
+                pod_name="",
+                tool_name="runtime_sensitive_echo",
+                tool_args={"text": "hello"},
+                tool_call_id="tool-manager-original",
+                status="approved",
+                note=None,
+                created_at=_now_iso(),
+                updated_at=_now_iso(),
+            )
+        )
+        manager = ToolApprovalManager(
+            ToolApprovalConfig(agent_id="agent-1", timeout=0.01)
+        )
+
+        with pytest.raises(ToolApprovalTimeoutError):
+            await manager.request_and_wait(
+                "runtime_sensitive_echo",
+                {"text": "danger"},
+                "tool-manager-continuation",
+            )
+
+        async with _APPROVALS_LOCK:
+            assert any(
+                record.status == "pending"
+                and record.tool_args == {"text": "danger"}
+                and record.tool_call_id == "tool-manager-continuation"
+                for record in _APPROVALS.values()
+            )
+    finally:
+        await _reset_approvals()
 
 
 @pytest.mark.asyncio

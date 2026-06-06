@@ -11,6 +11,7 @@ compatibility with existing callers.
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 from datetime import datetime, timezone
 from typing import Any
@@ -105,6 +106,57 @@ _REMOTE_APPROVAL_REGISTRY: dict[str, tuple[str, str]] = {}
 _APPROVAL_CREDENTIALS: dict[str, str] = {}
 
 
+def _normalize_tool_args_for_match(raw_args: Any) -> dict[str, str]:
+    parsed_args = raw_args
+    if isinstance(raw_args, str):
+        try:
+            parsed_args = json.loads(raw_args)
+        except Exception:
+            parsed_args = {}
+
+    if not isinstance(parsed_args, dict):
+        return {}
+
+    normalized: dict[str, str] = {}
+    for k, v in parsed_args.items():
+        try:
+            if isinstance(v, (dict, list)):
+                normalized[str(k)] = json.dumps(
+                    v,
+                    sort_keys=True,
+                    separators=(",", ":"),
+                    default=str,
+                )[:500]
+            else:
+                normalized[str(k)] = str(v)[:500]
+        except Exception:
+            normalized[str(k)] = "<non-serializable>"
+    return normalized
+
+
+def _approval_envelope_matches(
+    record: "ToolApprovalRecord",
+    *,
+    agent_id: str | None = None,
+    tool_name: str,
+    tool_args: Any,
+    tool_call_id: str | None = None,
+) -> bool:
+    if agent_id is not None and record.agent_id != agent_id:
+        return False
+    if record.tool_name != tool_name:
+        return False
+    if tool_call_id is not None and record.tool_call_id != tool_call_id:
+        return False
+    return _normalize_tool_args_for_match(
+        record.tool_args
+    ) == _normalize_tool_args_for_match(tool_args)
+
+
+def _record_sort_timestamp(record: "ToolApprovalRecord") -> str:
+    return record.updated_at or record.created_at or ""
+
+
 def _resolve_local_approval_id(
     approval_id: str,
     tool_call_id: str | None = None,
@@ -121,9 +173,17 @@ def _resolve_local_approval_id(
         if remote_id == approval_id:
             return local_id
     if tool_call_id:
-        for local_id, record in _APPROVALS.items():
-            if record.tool_call_id == tool_call_id:
-                return local_id
+        matches = [
+            (local_id, record)
+            for local_id, record in _APPROVALS.items()
+            if record.tool_call_id == tool_call_id and record.status != "deleted"
+        ]
+        if matches:
+            matches.sort(key=lambda item: _record_sort_timestamp(item[1]), reverse=True)
+            for local_id, record in matches:
+                if record.status == "pending":
+                    return local_id
+            return matches[0][0]
     return approval_id
 
 
@@ -563,13 +623,17 @@ async def _create_approval(body: ToolApprovalCreateRequest) -> ToolApprovalRecor
         async with _APPROVALS_LOCK:
             for record in _APPROVALS.values():
                 if (
-                    record.agent_id == body.agent_id
-                    and record.tool_call_id == body.tool_call_id
+                    _approval_envelope_matches(
+                        record,
+                        agent_id=body.agent_id,
+                        tool_name=body.tool_name,
+                        tool_args=body.tool_args,
+                        tool_call_id=body.tool_call_id,
+                    )
                     and record.status != "deleted"
                 ):
-                    # Return any non-deleted record so that continuation turns
-                    # don't create a brand-new pending approval for a tool call
-                    # that was already approved/rejected on an earlier turn.
+                    # Return an exact-envelope match so continuation turns don't
+                    # create a duplicate approval for the same logical call.
                     return record
 
     now = _now_iso()
