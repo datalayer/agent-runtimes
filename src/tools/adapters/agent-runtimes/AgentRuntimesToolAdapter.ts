@@ -45,9 +45,6 @@ function isRecentDuplicate(toolName: string, params: unknown): boolean {
   if (lastExecution) {
     const timeSinceExecution = Date.now() - lastExecution;
     if (timeSinceExecution < CACHE_TTL_MS) {
-      console.log(
-        `[agent-runtimes] 🚫 DUPLICATE DETECTED - Skipping execution (${timeSinceExecution}ms since last call)`,
-      );
       return true;
     }
   }
@@ -83,9 +80,6 @@ function processParameters(params: unknown): unknown {
     ) {
       try {
         processed[key] = JSON.parse(value);
-        console.log(
-          `[agent-runtimes] 📝 Parsed JSON string for parameter '${key}'`,
-        );
       } catch {
         // If parsing fails, keep the original string
         processed[key] = value;
@@ -120,14 +114,8 @@ export function createAgentRuntimesTool(
     parameters: definition.parameters,
 
     handler: async (params: unknown): Promise<unknown> => {
-      console.log(`[agent-runtimes] ========== HANDLER CALLED ==========`);
-      console.log(`[agent-runtimes] Tool: ${definition.name}`);
-      console.log(`[agent-runtimes] Operation: ${definition.operation}`);
-      console.log(`[agent-runtimes] Params:`, params);
-
       // Check for duplicate execution
       if (isRecentDuplicate(definition.name, params)) {
-        console.log(`[agent-runtimes] 🚫 DUPLICATE DETECTED - Returning early`);
         return {
           success: false,
           message: 'Operation already executed recently (duplicate detected)',
@@ -137,7 +125,6 @@ export function createAgentRuntimesTool(
       try {
         // Process parameters to handle JSON strings
         const processedParams = processParameters(params);
-        console.log(`[agent-runtimes] Processed params:`, processedParams);
 
         // Use OperationRunner to execute operation with TOON format
         const result = await runner.execute(operation, processedParams, {
@@ -145,7 +132,6 @@ export function createAgentRuntimesTool(
           format: 'toon', // Return human/LLM-readable string
         });
 
-        console.log(`[agent-runtimes] Operation result:`, result);
         return result;
       } catch (error) {
         console.error(`[agent-runtimes] ❌ ERROR in handler:`, error);
@@ -188,8 +174,6 @@ export function createAllAgentRuntimesTools(
     const tool = createAgentRuntimesTool(definition, operation, context);
     tools.push(tool);
   }
-
-  console.log(`[agent-runtimes Tools] Created ${tools.length} frontend tools`);
 
   return tools;
 }
