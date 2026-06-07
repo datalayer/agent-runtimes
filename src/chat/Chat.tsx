@@ -19,7 +19,7 @@
  * @module chat/Chat
  */
 
-import { useEffect, useMemo, useState, useRef } from 'react';
+import { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Text, Button, Spinner } from '@primer/react';
 import { AlertIcon, SyncIcon } from '@primer/octicons-react';
@@ -298,9 +298,7 @@ export function Chat({
   const [showDetails, setShowDetails] = useState(false);
   const [messageCount, setMessageCount] = useState(0);
   const [focusTrigger, setFocusTrigger] = useState(0);
-  const renderCountRef = useRef(0);
-  renderCountRef.current += 1;
-  console.log(`[AgentRuntimes][Chat] render count: ${renderCountRef.current}`);
+  const lastMessageCountRef = useRef<number | null>(null);
 
   // Get connected identities to pass to backend for skill execution
   const connectedIdentities = useConnectedIdentities();
@@ -443,6 +441,34 @@ export function Chat({
     onDisconnect?.();
   };
 
+  const handleInformationClick = useCallback(() => {
+    setShowDetails(true);
+  }, []);
+
+  const handleBackFromDetails = useCallback(() => {
+    setShowDetails(false);
+  }, []);
+
+  const handleMessagesChange = useCallback((messages: Array<unknown>) => {
+    const nextCount = messages.length;
+    if (lastMessageCountRef.current === nextCount) {
+      return;
+    }
+    lastMessageCountRef.current = nextCount;
+    setMessageCount(nextCount);
+  }, []);
+
+  const headerButtons = useMemo(
+    () => ({
+      showNewChat: showNewChatButton,
+      showClear: showClearButton,
+      onNewChat: handleNewChat,
+    }),
+    [showNewChatButton, showClearButton],
+  );
+
+  const avatarConfig = useMemo(() => ({ showAvatars: true }), []);
+
   // Render error state
   if (error) {
     return (
@@ -533,7 +559,7 @@ export function Chat({
             identityProviders={identityProviders}
             onIdentityConnect={onIdentityConnect}
             onIdentityDisconnect={onIdentityDisconnect}
-            onBack={() => setShowDetails(false)}
+            onBack={handleBackFromDetails}
             mcpStatusData={mcpStatusData}
             codemodeStatusData={codemodeStatusData}
           />
@@ -603,7 +629,7 @@ export function Chat({
             historyEndpoint={historyEndpoint}
             pendingPrompt={pendingPrompt}
             showInformation={showInformation}
-            onInformationClick={() => setShowDetails(true)}
+            onInformationClick={handleInformationClick}
             headerContent={headerContent}
             headerActions={headerActions}
             showModelSelector={showModelSelector}
@@ -620,15 +646,9 @@ export function Chat({
             initialSkills={initialSkills}
             connectedIdentities={identitiesForChat}
             onNewChat={handleNewChat}
-            onMessagesChange={messages => setMessageCount(messages.length)}
-            headerButtons={{
-              showNewChat: showNewChatButton,
-              showClear: showClearButton,
-              onNewChat: handleNewChat,
-            }}
-            avatarConfig={{
-              showAvatars: true,
-            }}
+            onMessagesChange={handleMessagesChange}
+            headerButtons={headerButtons}
+            avatarConfig={avatarConfig}
             backgroundColor="canvas.default"
             focusTrigger={focusTrigger}
             chatViewMode={chatViewMode}

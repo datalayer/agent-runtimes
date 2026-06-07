@@ -13,6 +13,7 @@
 
 import { create } from 'zustand';
 import { devtools, subscribeWithSelector, persist } from 'zustand/middleware';
+import { useShallow } from 'zustand/react/shallow';
 import type {
   Identity,
   IdentityStore,
@@ -587,8 +588,10 @@ export const useIdentityStore = create<IdentityStore>()(
  * Get all connected identities
  */
 export function useConnectedIdentities(): Identity[] {
-  return useIdentityStore(state =>
-    Array.from(state.identities.values()).filter(i => i.isConnected),
+  return useIdentityStore(
+    useShallow(state =>
+      Array.from(state.identities.values()).filter(i => i.isConnected),
+    ),
   );
 }
 
@@ -596,10 +599,12 @@ export function useConnectedIdentities(): Identity[] {
  * Get connected provider names
  */
 export function useConnectedProviders(): string[] {
-  return useIdentityStore(state =>
-    Array.from(state.identities.entries())
-      .filter(([_, identity]) => identity.isConnected)
-      .map(([provider]) => provider),
+  return useIdentityStore(
+    useShallow(state =>
+      Array.from(state.identities.entries())
+        .filter(([_, identity]) => identity.isConnected)
+        .map(([provider]) => provider),
+    ),
   );
 }
 
