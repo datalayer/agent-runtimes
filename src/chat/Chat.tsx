@@ -19,7 +19,7 @@
  * @module chat/Chat
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Text, Button, Spinner } from '@primer/react';
 import { AlertIcon, SyncIcon } from '@primer/octicons-react';
@@ -298,6 +298,7 @@ export function Chat({
   const [showDetails, setShowDetails] = useState(false);
   const [messageCount, setMessageCount] = useState(0);
   const [focusTrigger, setFocusTrigger] = useState(0);
+  const lastMessageCountRef = useRef<number | null>(null);
 
   // Get connected identities to pass to backend for skill execution
   const connectedIdentities = useConnectedIdentities();
@@ -324,8 +325,12 @@ export function Chat({
     }
   }, [showDetails]);
 
-  // Build protocol config based on transport
-  const protocolConfig = useMemo((): ProtocolConfig | undefined => {
+  // Build protocol config based on transport.
+  // Keep this pure: never call React state setters inside this memo.
+  const protocolConfigResult = useMemo((): {
+    config?: ProtocolConfig;
+    error: string | null;
+  } => {
     try {
       let endpoint: string;
       let authToken: string | undefined = authTokenProp;
@@ -382,34 +387,46 @@ export function Chat({
       }
 
       return {
-        type: getProtocolType(transport),
-        endpoint,
-        agentId: resolvedAgentId,
-        authToken,
-        options,
-        // Enable config query for all protocols to fetch models and tools
-        enableConfigQuery: true,
-        // For Jupyter-based transports, use Jupyter requestAPI (configEndpoint undefined)
-        // For FastAPI-based transports, use direct fetch to the configure endpoint
-        configEndpoint:
-          transport === 'vercel-ai-jupyter'
-            ? undefined // Use Jupyter requestAPI
-            : `${baseUrl}/api/v1/configure`,
+        config: {
+          type: getProtocolType(transport),
+          endpoint,
+          agentId: resolvedAgentId,
+          authToken,
+          options,
+          // Enable config query for all protocols to fetch models and tools
+          enableConfigQuery: true,
+          // For Jupyter-based transports, use Jupyter requestAPI (configEndpoint undefined)
+          // For FastAPI-based transports, use direct fetch to the configure endpoint
+          configEndpoint:
+            transport === 'vercel-ai-jupyter'
+              ? undefined // Use Jupyter requestAPI
+              : `${baseUrl}/api/v1/configure`,
+        },
+        error: null,
       };
     } catch (err) {
       console.error('[Chat] Error building protocol config:', err);
-      setError(err instanceof Error ? err.message : 'Failed to configure');
-      return undefined;
+      return {
+        config: undefined,
+        error: err instanceof Error ? err.message : 'Failed to configure',
+      };
     }
   }, [transport, baseUrl, wsUrl, resolvedAgentId, authTokenProp]);
 
+  const protocolConfig = protocolConfigResult.config;
+
   // Set initialized once protocol config is built
   useEffect(() => {
+    if (protocolConfigResult.error) {
+      setError(protocolConfigResult.error);
+      setIsInitializing(false);
+      return;
+    }
     if (protocolConfig) {
       setIsInitializing(false);
       setError(null);
     }
-  }, [protocolConfig]);
+  }, [protocolConfig, protocolConfigResult.error]);
 
   // Handle reconnect
   const handleReconnect = () => {
@@ -423,6 +440,34 @@ export function Chat({
   const handleNewChat = () => {
     onDisconnect?.();
   };
+
+  const handleInformationClick = useCallback(() => {
+    setShowDetails(true);
+  }, []);
+
+  const handleBackFromDetails = useCallback(() => {
+    setShowDetails(false);
+  }, []);
+
+  const handleMessagesChange = useCallback((messages: Array<unknown>) => {
+    const nextCount = messages.length;
+    if (lastMessageCountRef.current === nextCount) {
+      return;
+    }
+    lastMessageCountRef.current = nextCount;
+    setMessageCount(nextCount);
+  }, []);
+
+  const headerButtons = useMemo(
+    () => ({
+      showNewChat: showNewChatButton,
+      showClear: showClearButton,
+      onNewChat: handleNewChat,
+    }),
+    [showNewChatButton, showClearButton],
+  );
+
+  const avatarConfig = useMemo(() => ({ showAvatars: true }), []);
 
   // Render error state
   if (error) {
@@ -514,7 +559,7 @@ export function Chat({
             identityProviders={identityProviders}
             onIdentityConnect={onIdentityConnect}
             onIdentityDisconnect={onIdentityDisconnect}
-            onBack={() => setShowDetails(false)}
+            onBack={handleBackFromDetails}
             mcpStatusData={mcpStatusData}
             codemodeStatusData={codemodeStatusData}
           />
@@ -584,7 +629,7 @@ export function Chat({
             historyEndpoint={historyEndpoint}
             pendingPrompt={pendingPrompt}
             showInformation={showInformation}
-            onInformationClick={() => setShowDetails(true)}
+            onInformationClick={handleInformationClick}
             headerContent={headerContent}
             headerActions={headerActions}
             showModelSelector={showModelSelector}
@@ -601,15 +646,9 @@ export function Chat({
             initialSkills={initialSkills}
             connectedIdentities={identitiesForChat}
             onNewChat={handleNewChat}
-            onMessagesChange={messages => setMessageCount(messages.length)}
-            headerButtons={{
-              showNewChat: showNewChatButton,
-              showClear: showClearButton,
-              onNewChat: handleNewChat,
-            }}
-            avatarConfig={{
-              showAvatars: true,
-            }}
+            onMessagesChange={handleMessagesChange}
+            headerButtons={headerButtons}
+            avatarConfig={avatarConfig}
             backgroundColor="canvas.default"
             focusTrigger={focusTrigger}
             chatViewMode={chatViewMode}

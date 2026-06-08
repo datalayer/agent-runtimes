@@ -2,7 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 [build-system]
-requires = ["hatchling==1.21.1", "hatch-nodejs-version>=0.3.2", "pip>=26.0"]
+requires = ["hatchling==1.21.1", "hatch-nodejs-version>=0.3.2", "pip>=26.1.2"]
 build-backend = "hatchling.build"
 
 [project]
@@ -31,7 +31,7 @@ dependencies = [
     "agent-client-protocol>=0.7.1",
     "agent-codemode>=0.1.0",
     "agent-skills>=0.1.1",
-    "anthropic>=0.97.0,<0.103.0",
+    "anthropic>=0.105.0,<1.0.0",
     "boto3>=1.42.96,<1.43.0",
     "code-sandboxes>=0.0.11,<0.0.14",
     "croniter>=6.0.0",
@@ -57,7 +57,7 @@ dependencies = [
     "opentelemetry-exporter-otlp-proto-http>=1.39.0,<1.41.0",
     "opentelemetry-exporter-otlp-proto-grpc>=1.39.0,<1.41.0",
     "opentelemetry-instrumentation>=0.60b0,<0.62b0",
-    "pydantic-ai-slim[openai,anthropic,google,dbos,bedrock]>=1.97.0",
+    "pydantic-ai-slim[openai,anthropic,google,dbos,bedrock]>=1.106.0,<2.0.0",
     "pydantic-graph>=1.97.0",
     "pydantic-settings>=2.14.0",
     "pydantic[email]>=2.13.3",
