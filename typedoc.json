@@ -4,6 +4,7 @@
   "entryPointStrategy": "expand",
   "name": "Agent Runtimes",
   "plugin": ["typedoc-plugin-markdown"],
+  "readme": "none",
   "exclude": [
     "**/node_modules/**",
     "**/__tests__/**",

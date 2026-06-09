@@ -19,7 +19,9 @@ from agent_runtimes.guardrails.tool_approvals import (
 from agent_runtimes.routes.tool_approvals import (
     _APPROVALS,
     _APPROVALS_LOCK,
+    ToolApprovalCreateRequest,
     ToolApprovalRecord,
+    _create_approval,
 )
 
 
@@ -83,6 +85,49 @@ async def test_inline_handle_uses_existing_approved_decision() -> None:
 
         assert result is not None
         assert result.approvals == {"tool-1": True}
+    finally:
+        await _reset_approvals()
+
+
+@pytest.mark.asyncio
+async def test_inline_handle_does_not_reuse_same_tool_call_id_with_changed_args() -> (
+    None
+):
+    """Changed args must not reuse an approved deferred decision."""
+    await _reset_approvals()
+    try:
+        await _put_record(
+            ToolApprovalRecord(
+                id="approval-args-old",
+                agent_id="agent-1",
+                pod_name="",
+                tool_name="runtime_sensitive_echo",
+                tool_args={"text": "hello"},
+                tool_call_id="tool-args",
+                status="approved",
+                note=None,
+                created_at=_now_iso(),
+                updated_at=_now_iso(),
+            )
+        )
+
+        capability = _capability()
+        requests = DeferredToolRequests(
+            approvals=[
+                ToolCallPart(
+                    tool_name="runtime_sensitive_echo",
+                    args={"text": "danger"},
+                    tool_call_id="tool-args",
+                )
+            ]
+        )
+
+        result = await capability.handle_deferred_tool_calls(
+            None,
+            requests=requests,
+        )
+
+        assert result is None
     finally:
         await _reset_approvals()
 
@@ -213,3 +258,73 @@ async def test_inline_handle_json_string_args_without_match_returns_none() -> No
     )
 
     assert result is None
+
+
+@pytest.mark.asyncio
+async def test_create_approval_reuses_existing_record_for_matching_envelope() -> None:
+    """A matching approval envelope reuses the existing record."""
+    await _reset_approvals()
+    try:
+        await _put_record(
+            ToolApprovalRecord(
+                id="approval-create-existing",
+                agent_id="agent-1",
+                pod_name="",
+                tool_name="runtime_sensitive_echo",
+                tool_args={"text": "hello"},
+                tool_call_id="tool-create",
+                status="approved",
+                note=None,
+                created_at=_now_iso(),
+                updated_at=_now_iso(),
+            )
+        )
+
+        record = await _create_approval(
+            ToolApprovalCreateRequest(
+                agent_id="agent-1",
+                tool_name="runtime_sensitive_echo",
+                tool_args={"text": "hello"},
+                tool_call_id="tool-create",
+            )
+        )
+
+        assert record.id == "approval-create-existing"
+    finally:
+        await _reset_approvals()
+
+
+@pytest.mark.asyncio
+async def test_create_approval_mints_new_record_for_changed_args() -> None:
+    """Changed args with the same tool_call_id mint a new approval."""
+    await _reset_approvals()
+    try:
+        await _put_record(
+            ToolApprovalRecord(
+                id="approval-create-old",
+                agent_id="agent-1",
+                pod_name="",
+                tool_name="runtime_sensitive_echo",
+                tool_args={"text": "hello"},
+                tool_call_id="tool-create",
+                status="approved",
+                note=None,
+                created_at=_now_iso(),
+                updated_at=_now_iso(),
+            )
+        )
+
+        record = await _create_approval(
+            ToolApprovalCreateRequest(
+                agent_id="agent-1",
+                tool_name="runtime_sensitive_echo",
+                tool_args={"text": "danger"},
+                tool_call_id="tool-create",
+            )
+        )
+
+        assert record.id != "approval-create-old"
+        assert record.status == "pending"
+        assert record.tool_args == {"text": "danger"}
+    finally:
+        await _reset_approvals()
