@@ -48,9 +48,9 @@ from ..services import (
     tools_requiring_approval_ids,
     wire_skills_into_codemode,
 )
-from ..specs.agents import AGENT_SPECS
+from ..specs.agents import AGENTSPECS
 from ..specs.agents import get_agent_spec as get_library_agent_spec
-from ..specs.agents import list_agent_specs as list_library_agents
+from ..specs.agents import list_agentspecs as list_library_agents
 
 try:
     from ..specs.events import EVENT_KIND_AGENT_ASSIGNED
@@ -59,7 +59,7 @@ except Exception:  # pragma: no cover - compatibility fallback during regen drif
 from ..node_mode import is_node_enabled
 from ..specs.models import DEFAULT_MODEL
 from ..transports import AGUITransport, MCPUITransport, VercelAITransport
-from ..types import AgentSpec, MCPServer
+from ..types import Agentspec, MCPServer
 from .a2a import A2AAgentCard, register_a2a_agent, unregister_a2a_agent
 from .acp import AgentCapabilities, AgentInfo, _agents, register_agent, unregister_agent
 from .agui import get_agui_app, register_agui_agent, unregister_agui_agent
@@ -76,7 +76,7 @@ _api_prefix = "/api/v1"
 # Store the original creation request (spec) for each agent, keyed by agent_id.
 # This preserves the separated system_prompt and system_prompt_codemode_addons
 # which are merged at agent creation time and lost in the running agent.
-_agent_specs: dict[str, dict[str, Any]] = {}
+_agentspecs: dict[str, dict[str, Any]] = {}
 
 _PARAM_TOKEN_PATTERNS = [
     re.compile(r"\{\{\s*([a-zA-Z0-9_.-]+)\s*\}\}"),
@@ -462,7 +462,7 @@ def _resolve_writable_generated_path(path: str) -> str:
 
 def get_stored_agent_spec(agent_id: str) -> dict[str, Any] | None:
     """Get the original creation spec for an agent."""
-    return _agent_specs.get(agent_id)
+    return _agentspecs.get(agent_id)
 
 
 def set_api_prefix(prefix: str) -> None:
@@ -491,7 +491,7 @@ def _extract_trigger_config(spec_obj: Any) -> dict[str, Any]:
 # ============================================================================
 
 
-@router.get("/library", response_model=list[AgentSpec])
+@router.get("/library", response_model=list[Agentspec])
 async def get_agent_spec_library() -> list[dict[str, Any]]:
     """
     Get all available agent specifications from the library.
@@ -507,7 +507,7 @@ async def get_agent_spec_library() -> list[dict[str, Any]]:
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/library/{agent_id:path}", response_model=AgentSpec)
+@router.get("/library/{agent_id:path}", response_model=Agentspec)
 async def get_agent_spec(agent_id: str) -> dict[str, Any]:
     """
     Get a specific agent specification from the library.
@@ -518,7 +518,7 @@ async def get_agent_spec(agent_id: str) -> dict[str, Any]:
     try:
         agent = get_library_agent_spec(agent_id)
         if not agent:
-            available = list(AGENT_SPECS.keys())
+            available = list(AGENTSPECS.keys())
             raise HTTPException(
                 status_code=404,
                 detail=f"Agent '{agent_id}' not found in library. Available: {available}",
@@ -969,7 +969,7 @@ async def create_agent(
         )
 
     try:
-        library_spec: AgentSpec | None = None
+        library_spec: Agentspec | None = None
         selected_mcp_servers_explicit = (
             "selected_mcp_servers" in request.model_fields_set
         )
@@ -1761,7 +1761,7 @@ async def create_agent(
             capabilities = None
             usage_limits = None
 
-            spec_for_runtime_controls: AgentSpec | None = None
+            spec_for_runtime_controls: Agentspec | None = None
             if request.agent_spec_id:
                 spec_for_runtime_controls = get_library_agent_spec(
                     request.agent_spec_id
@@ -1770,7 +1770,7 @@ async def create_agent(
             # Fallback: UI may send a full spec payload without a library ID.
             if spec_for_runtime_controls is None and request.agent_spec:
                 try:
-                    spec_for_runtime_controls = AgentSpec.model_validate(
+                    spec_for_runtime_controls = Agentspec.model_validate(
                         request.agent_spec
                     )
                 except Exception as exc:
@@ -2049,7 +2049,7 @@ async def create_agent(
         if isinstance(parameter_schema, dict):
             stored["parameters"] = parameter_schema
         stored["agent_parameters"] = launch_parameters
-        _agent_specs[agent_id] = stored
+        _agentspecs[agent_id] = stored
         logger.info(f"Stored creation spec for agent '{agent_id}'")
 
         # Register with context session for snapshot lookups (enables usage tracking)
@@ -2452,7 +2452,7 @@ async def delete_agent(agent_id: str) -> dict[str, str]:
     if agent_id not in _agents:
         raise HTTPException(status_code=404, detail=f"Agent not found: {agent_id}")
 
-    stored_spec = _agent_specs.get(agent_id) or {}
+    stored_spec = _agentspecs.get(agent_id) or {}
     await _run_agent_hooks(
         agent_id=agent_id,
         phase="post",
@@ -2462,7 +2462,7 @@ async def delete_agent(agent_id: str) -> dict[str, str]:
     )
 
     # Remove the stored creation spec
-    _agent_specs.pop(agent_id, None)
+    _agentspecs.pop(agent_id, None)
 
     # Note: MCP servers are managed at server level (started on server startup,
     # stopped on server shutdown), so no cleanup needed per-agent.
@@ -2598,7 +2598,7 @@ async def update_agent_transport(
             )
     elif new_transport == "vercel-ai":
         try:
-            stored_spec = _agent_specs.get(agent_id, {})
+            stored_spec = _agentspecs.get(agent_id, {})
             stored_agent_spec = stored_spec.get("agent_spec") or {}
             _has_ft = bool(
                 stored_agent_spec.get("frontendTools")
@@ -3917,7 +3917,7 @@ async def configure_from_spec_endpoint(
     http_request: Request,
     body: ConfigureFromSpecRequest,
 ) -> dict[str, Any]:
-    """Configure the running default agent from an AgentSpec ID.
+    """Configure the running default agent from an Agentspec ID.
 
     Called by the companion during run-start-hooks when the operator
     provides an ``agent_spec_id``.
@@ -3991,7 +3991,7 @@ async def configure_from_spec_endpoint(
     if spec is None:
         raise HTTPException(
             status_code=404,
-            detail=f"AgentSpec '{body.agent_spec_id}' not found in library.",
+            detail=f"Agentspec '{body.agent_spec_id}' not found in library.",
         )
 
     target_agent_name = "default"
@@ -4041,7 +4041,7 @@ async def configure_from_spec_endpoint(
     new_spec_dict.pop("jupyter_sandbox", None)
 
     # ── 5. Compare with stored spec — restart only if changed ────────
-    stored_spec = _agent_specs.get(target_agent_name)
+    stored_spec = _agentspecs.get(target_agent_name)
     specs_changed = stored_spec != new_spec_dict
 
     if specs_changed:
@@ -4251,7 +4251,7 @@ async def trigger_run(
 
     # Legacy fallback: derive by fuzzy-matching spec id from runtime-generated agent_id.
     if not trigger_config:
-        for spec_id, spec in AGENT_SPECS.items():
+        for spec_id, spec in AGENTSPECS.items():
             if agent_id.endswith(spec_id.replace("_", "-")) or spec_id in agent_id:
                 agent_spec_id = spec_id
                 trigger_config = _extract_trigger_config(spec)

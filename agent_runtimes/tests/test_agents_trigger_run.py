@@ -29,7 +29,7 @@ class _DummyRequest:
 @pytest.fixture(autouse=True)
 def _clean_agents_registry() -> None:
     acp_route._agents.clear()
-    agents_route._agent_specs.clear()
+    agents_route._agentspecs.clear()
 
 
 def test_trigger_run_rejects_malformed_identity_payload_with_422() -> None:
@@ -137,7 +137,7 @@ async def test_trigger_run_uses_trigger_from_stored_spec(
         cast(BaseAgent, object()),
         AgentInfo(id=agent_id, name="SaaS Agent"),
     )
-    agents_route._agent_specs[agent_id] = {
+    agents_route._agentspecs[agent_id] = {
         "agent_spec_id": "demo-one-trigger",
         "trigger": {
             "type": "once",
@@ -176,7 +176,7 @@ async def test_trigger_run_falls_back_to_library_spec_by_agent_spec_id(
         cast(BaseAgent, object()),
         AgentInfo(id=agent_id, name="SaaS Agent 2"),
     )
-    agents_route._agent_specs[agent_id] = {
+    agents_route._agentspecs[agent_id] = {
         "agent_spec_id": "demo-one-trigger",
     }
 

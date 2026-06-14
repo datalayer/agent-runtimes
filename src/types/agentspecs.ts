@@ -20,7 +20,7 @@ import type { AgentCodemodeConfig, AgentAdvancedConfig } from './config';
  * Defines the configuration for a reusable agent template that can be
  * instantiated as an Agent Runtime.
  */
-export interface AgentSpec {
+export interface Agentspec {
   /** Unique agent identifier */
   id: string;
   /** Version */
@@ -115,7 +115,7 @@ export interface AgentSpec {
 /**
  * Configuration for a subagent within an agent specification.
  */
-export interface SubAgentSpecConfig {
+export interface SubAgentspecConfig {
   /** Unique identifier for the subagent */
   name: string;
   /** Brief description shown to the parent agent */
@@ -141,7 +141,7 @@ export interface SubAgentSpecConfig {
  */
 export interface SubAgentsConfig {
   /** List of subagent configurations */
-  subagents: SubAgentSpecConfig[];
+  subagents: SubAgentspecConfig[];
   /** Default model for subagents that don't specify one */
   defaultModel?: string;
   /** Include a general-purpose fallback subagent */

@@ -11,7 +11,7 @@ DO NOT EDIT MANUALLY - run 'make specs' to regenerate.
 from typing import Dict, Optional
 
 from agent_runtimes.types import (
-    TeamAgentSpec,
+    TeamAgentspec,
     TeamHealthMonitoring,
     TeamOutputSpec,
     TeamReactionRule,
@@ -50,7 +50,7 @@ ANALYZE_CAMPAIGN_PERFORMANCE_TEAM_SPEC_0_0_1 = TeamSpec(
     routing_instructions="Start with Platform Connector to pull data from all ad platforms, then Metrics Normaliser for unified KPIs, then Anomaly Detector for real-time performance monitoring, then Budget Optimiser for reallocation recommendations. Escalate CPA spikes above 50% immediately.",
     validation=TeamValidationSpec(timeout="300s", retry_on_failure=True, max_retries=2),
     agents=[
-        TeamAgentSpec(
+        TeamAgentspec(
             id="cp-1",
             name="Platform Connector Agent",
             role="Primary · Initiator",
@@ -67,7 +67,7 @@ ANALYZE_CAMPAIGN_PERFORMANCE_TEAM_SPEC_0_0_1 = TeamSpec(
             trigger="Schedule: Every 4 hours",
             approval="auto",
         ),
-        TeamAgentSpec(
+        TeamAgentspec(
             id="cp-2",
             name="Metrics Normaliser Agent",
             role="Secondary",
@@ -83,7 +83,7 @@ ANALYZE_CAMPAIGN_PERFORMANCE_TEAM_SPEC_0_0_1 = TeamSpec(
             trigger="On completion of Platform Connector Agent",
             approval="auto",
         ),
-        TeamAgentSpec(
+        TeamAgentspec(
             id="cp-3",
             name="Anomaly Detector Agent",
             role="Secondary",
@@ -99,7 +99,7 @@ ANALYZE_CAMPAIGN_PERFORMANCE_TEAM_SPEC_0_0_1 = TeamSpec(
             trigger="On completion of Metrics Normaliser Agent",
             approval="manual",
         ),
-        TeamAgentSpec(
+        TeamAgentspec(
             id="cp-4",
             name="Budget Optimiser Agent",
             role="Final",
@@ -175,7 +175,7 @@ ANALYZE_SUPPORT_TICKETS_TEAM_SPEC_0_0_1 = TeamSpec(
     routing_instructions="Route new tickets to the Triage Agent first, then to the Categorizer, then to the Pattern Analyzer. Escalate P1/critical tickets immediately to human support leads.",
     validation=TeamValidationSpec(timeout="180s", retry_on_failure=True, max_retries=2),
     agents=[
-        TeamAgentSpec(
+        TeamAgentspec(
             id="st-1",
             name="Triage Agent",
             role="Primary · Initiator",
@@ -186,7 +186,7 @@ ANALYZE_SUPPORT_TICKETS_TEAM_SPEC_0_0_1 = TeamSpec(
             trigger="Event: new ticket received",
             approval="auto",
         ),
-        TeamAgentSpec(
+        TeamAgentspec(
             id="st-2",
             name="Categorizer Agent",
             role="Secondary",
@@ -197,7 +197,7 @@ ANALYZE_SUPPORT_TICKETS_TEAM_SPEC_0_0_1 = TeamSpec(
             trigger="On completion of Triage Agent",
             approval="auto",
         ),
-        TeamAgentSpec(
+        TeamAgentspec(
             id="st-3",
             name="Pattern Analyzer Agent",
             role="Final",
@@ -268,7 +268,7 @@ AUDIT_INVENTORY_LEVELS_TEAM_SPEC_0_0_1 = TeamSpec(
     routing_instructions="Start with the Scanner to pull current levels, then Auditor to check discrepancies, then Forecaster for demand predictions, then Planner for reorder recommendations, then Reporter for the final audit report. Escalate critical shortages immediately.",
     validation=TeamValidationSpec(timeout="600s", retry_on_failure=True, max_retries=3),
     agents=[
-        TeamAgentSpec(
+        TeamAgentspec(
             id="inv-1",
             name="Inventory Scanner Agent",
             role="Primary · Initiator",
@@ -279,7 +279,7 @@ AUDIT_INVENTORY_LEVELS_TEAM_SPEC_0_0_1 = TeamSpec(
             trigger="Schedule: Every 6 hours",
             approval="auto",
         ),
-        TeamAgentSpec(
+        TeamAgentspec(
             id="inv-2",
             name="Discrepancy Auditor Agent",
             role="Secondary",
@@ -290,7 +290,7 @@ AUDIT_INVENTORY_LEVELS_TEAM_SPEC_0_0_1 = TeamSpec(
             trigger="On completion of Inventory Scanner",
             approval="auto",
         ),
-        TeamAgentSpec(
+        TeamAgentspec(
             id="inv-3",
             name="Demand Forecaster Agent",
             role="Secondary",
@@ -305,7 +305,7 @@ AUDIT_INVENTORY_LEVELS_TEAM_SPEC_0_0_1 = TeamSpec(
             trigger="On completion of Discrepancy Auditor",
             approval="auto",
         ),
-        TeamAgentSpec(
+        TeamAgentspec(
             id="inv-4",
             name="Reorder Planner Agent",
             role="Secondary",
@@ -316,7 +316,7 @@ AUDIT_INVENTORY_LEVELS_TEAM_SPEC_0_0_1 = TeamSpec(
             trigger="On completion of Demand Forecaster",
             approval="manual",
         ),
-        TeamAgentSpec(
+        TeamAgentspec(
             id="inv-5",
             name="Audit Report Agent",
             role="Final",
@@ -387,7 +387,7 @@ AUTOMATE_REGULATORY_REPORTING_TEAM_SPEC_0_0_1 = TeamSpec(
     routing_instructions="Start with Data Ingestion to pull positions and transactions, then Risk Calculator for metric computation, then Reconciliation Agent to cross-check figures, then Validation Agent for regulatory rule checks, then Report Generator for submission-ready output. Escalate any reconciliation breaks above $10K immediately to the compliance team.",
     validation=TeamValidationSpec(timeout="900s", retry_on_failure=True, max_retries=2),
     agents=[
-        TeamAgentSpec(
+        TeamAgentspec(
             id="reg-1",
             name="Data Ingestion Agent",
             role="Primary · Initiator",
@@ -398,7 +398,7 @@ AUTOMATE_REGULATORY_REPORTING_TEAM_SPEC_0_0_1 = TeamSpec(
             trigger="Schedule: Monthly on the 3rd business day",
             approval="auto",
         ),
-        TeamAgentSpec(
+        TeamAgentspec(
             id="reg-2",
             name="Risk Calculator Agent",
             role="Secondary",
@@ -414,7 +414,7 @@ AUTOMATE_REGULATORY_REPORTING_TEAM_SPEC_0_0_1 = TeamSpec(
             trigger="On completion of Data Ingestion Agent",
             approval="auto",
         ),
-        TeamAgentSpec(
+        TeamAgentspec(
             id="reg-3",
             name="Reconciliation Agent",
             role="Secondary",
@@ -425,7 +425,7 @@ AUTOMATE_REGULATORY_REPORTING_TEAM_SPEC_0_0_1 = TeamSpec(
             trigger="On completion of Risk Calculator Agent",
             approval="auto",
         ),
-        TeamAgentSpec(
+        TeamAgentspec(
             id="reg-4",
             name="Validation Agent",
             role="Secondary",
@@ -436,7 +436,7 @@ AUTOMATE_REGULATORY_REPORTING_TEAM_SPEC_0_0_1 = TeamSpec(
             trigger="On completion of Reconciliation Agent",
             approval="manual",
         ),
-        TeamAgentSpec(
+        TeamAgentspec(
             id="reg-5",
             name="Report Generator Agent",
             role="Final",
@@ -507,7 +507,7 @@ COMPREHENSIVE_SALES_ANALYTICS_TEAM_SPEC_0_0_1 = TeamSpec(
     routing_instructions="Route data collection to KPI Collector first, then pass raw metrics to Anomaly Detector and Trend Analyzer in parallel, then aggregate all outputs into the Report Generator. Escalate if anomalies exceed the critical threshold (>25% deviation from target).",
     validation=TeamValidationSpec(timeout="300s", retry_on_failure=True, max_retries=3),
     agents=[
-        TeamAgentSpec(
+        TeamAgentspec(
             id="sa-1",
             name="KPI Data Collector",
             role="Primary · Initiator",
@@ -518,7 +518,7 @@ COMPREHENSIVE_SALES_ANALYTICS_TEAM_SPEC_0_0_1 = TeamSpec(
             trigger="Schedule: Daily at 7:30 AM",
             approval="auto",
         ),
-        TeamAgentSpec(
+        TeamAgentspec(
             id="sa-2",
             name="Anomaly Detector",
             role="Secondary",
@@ -529,7 +529,7 @@ COMPREHENSIVE_SALES_ANALYTICS_TEAM_SPEC_0_0_1 = TeamSpec(
             trigger="On completion of KPI Data Collector",
             approval="auto",
         ),
-        TeamAgentSpec(
+        TeamAgentspec(
             id="sa-3",
             name="Trend Analyzer",
             role="Secondary",
@@ -540,7 +540,7 @@ COMPREHENSIVE_SALES_ANALYTICS_TEAM_SPEC_0_0_1 = TeamSpec(
             trigger="On completion of KPI Data Collector",
             approval="auto",
         ),
-        TeamAgentSpec(
+        TeamAgentspec(
             id="sa-4",
             name="Executive Report Generator",
             role="Final",
@@ -618,7 +618,7 @@ OPTIMIZE_GRID_OPERATIONS_TEAM_SPEC_0_0_1 = TeamSpec(
     routing_instructions="Start with Sensor Ingestion to process real-time telemetry, then Anomaly Detector for pattern identification, then Failure Predictor for maintenance forecasting, then Grid Balancer for load optimisation. Escalate critical failure predictions (< 48h) immediately to operations dispatch.",
     validation=TeamValidationSpec(timeout="600s", retry_on_failure=True, max_retries=3),
     agents=[
-        TeamAgentSpec(
+        TeamAgentspec(
             id="grid-1",
             name="Sensor Ingestion Agent",
             role="Primary · Initiator",
@@ -634,7 +634,7 @@ OPTIMIZE_GRID_OPERATIONS_TEAM_SPEC_0_0_1 = TeamSpec(
             trigger="Schedule: Every 5 minutes",
             approval="auto",
         ),
-        TeamAgentSpec(
+        TeamAgentspec(
             id="grid-2",
             name="Anomaly Detector Agent",
             role="Secondary",
@@ -650,7 +650,7 @@ OPTIMIZE_GRID_OPERATIONS_TEAM_SPEC_0_0_1 = TeamSpec(
             trigger="On completion of Sensor Ingestion Agent",
             approval="auto",
         ),
-        TeamAgentSpec(
+        TeamAgentspec(
             id="grid-3",
             name="Failure Predictor Agent",
             role="Secondary",
@@ -666,7 +666,7 @@ OPTIMIZE_GRID_OPERATIONS_TEAM_SPEC_0_0_1 = TeamSpec(
             trigger="On completion of Anomaly Detector Agent",
             approval="manual",
         ),
-        TeamAgentSpec(
+        TeamAgentspec(
             id="grid-4",
             name="Grid Balancer Agent",
             role="Final",
@@ -749,7 +749,7 @@ PROCESS_CITIZEN_REQUESTS_TEAM_SPEC_0_0_1 = TeamSpec(
     routing_instructions="Route incoming citizen requests to the Intake Agent for classification and triage, then to the Case Processor for handling and routing, then to the Policy Analyst for impact assessment on relevant items, then to the Transparency Agent for audit trail and public documentation. Escalate urgent citizen safety issues immediately to supervisors.",
     validation=TeamValidationSpec(timeout="300s", retry_on_failure=True, max_retries=2),
     agents=[
-        TeamAgentSpec(
+        TeamAgentspec(
             id="cit-1",
             name="Intake & Classification Agent",
             role="Primary · Initiator",
@@ -765,7 +765,7 @@ PROCESS_CITIZEN_REQUESTS_TEAM_SPEC_0_0_1 = TeamSpec(
             trigger="Event: new citizen request received",
             approval="auto",
         ),
-        TeamAgentSpec(
+        TeamAgentspec(
             id="cit-2",
             name="Case Processor Agent",
             role="Secondary",
@@ -781,7 +781,7 @@ PROCESS_CITIZEN_REQUESTS_TEAM_SPEC_0_0_1 = TeamSpec(
             trigger="On completion of Intake Agent",
             approval="auto",
         ),
-        TeamAgentSpec(
+        TeamAgentspec(
             id="cit-3",
             name="Policy Impact Analyst Agent",
             role="Secondary",
@@ -797,7 +797,7 @@ PROCESS_CITIZEN_REQUESTS_TEAM_SPEC_0_0_1 = TeamSpec(
             trigger="On completion of Case Processor Agent",
             approval="manual",
         ),
-        TeamAgentSpec(
+        TeamAgentspec(
             id="cit-4",
             name="Transparency & Audit Agent",
             role="Final",
@@ -873,7 +873,7 @@ PROCESS_CLINICAL_TRIAL_DATA_TEAM_SPEC_0_0_1 = TeamSpec(
     routing_instructions="Route incoming data through the Ingestion Agent first for format detection and parsing, then to Harmonisation Agent for CDISC SDTM standardisation, then Safety Monitor for adverse event screening, then Submission Preparer for final dataset assembly. Escalate serious adverse events (SAEs) immediately to the medical officer.",
     validation=TeamValidationSpec(timeout="600s", retry_on_failure=True, max_retries=2),
     agents=[
-        TeamAgentSpec(
+        TeamAgentspec(
             id="ct-1",
             name="Data Ingestion Agent",
             role="Primary · Initiator",
@@ -889,7 +889,7 @@ PROCESS_CLINICAL_TRIAL_DATA_TEAM_SPEC_0_0_1 = TeamSpec(
             trigger="Event: new data batch received from site",
             approval="auto",
         ),
-        TeamAgentSpec(
+        TeamAgentspec(
             id="ct-2",
             name="Harmonisation Agent",
             role="Secondary",
@@ -900,7 +900,7 @@ PROCESS_CLINICAL_TRIAL_DATA_TEAM_SPEC_0_0_1 = TeamSpec(
             trigger="On completion of Data Ingestion Agent",
             approval="auto",
         ),
-        TeamAgentSpec(
+        TeamAgentspec(
             id="ct-3",
             name="Safety Monitor Agent",
             role="Secondary",
@@ -916,7 +916,7 @@ PROCESS_CLINICAL_TRIAL_DATA_TEAM_SPEC_0_0_1 = TeamSpec(
             trigger="On completion of Harmonisation Agent",
             approval="manual",
         ),
-        TeamAgentSpec(
+        TeamAgentspec(
             id="ct-4",
             name="Submission Preparer Agent",
             role="Final",
@@ -992,7 +992,7 @@ SYNC_CRM_CONTACTS_TEAM_SPEC_0_0_1 = TeamSpec(
     routing_instructions="Route data collection tasks to the Data Collector first, then analysis, then sync, then reporting. Escalate to human if sync fails 3 times.",
     validation=TeamValidationSpec(timeout="300s", retry_on_failure=True, max_retries=3),
     agents=[
-        TeamAgentSpec(
+        TeamAgentspec(
             id="tm-1",
             name="Data Collector Agent",
             role="Primary · Initiator",
@@ -1003,7 +1003,7 @@ SYNC_CRM_CONTACTS_TEAM_SPEC_0_0_1 = TeamSpec(
             trigger="Schedule: Daily at 2:00 AM",
             approval="auto",
         ),
-        TeamAgentSpec(
+        TeamAgentspec(
             id="tm-2",
             name="Analyzer Agent",
             role="Secondary",
@@ -1014,7 +1014,7 @@ SYNC_CRM_CONTACTS_TEAM_SPEC_0_0_1 = TeamSpec(
             trigger="On completion of Data Collector",
             approval="manual",
         ),
-        TeamAgentSpec(
+        TeamAgentspec(
             id="tm-3",
             name="Sync Writer Agent",
             role="Secondary",
@@ -1025,7 +1025,7 @@ SYNC_CRM_CONTACTS_TEAM_SPEC_0_0_1 = TeamSpec(
             trigger="On completion of Analyzer",
             approval="manual",
         ),
-        TeamAgentSpec(
+        TeamAgentspec(
             id="tm-4",
             name="Report Generator Agent",
             role="Final",

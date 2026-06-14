@@ -18,7 +18,7 @@ import { Chat } from '../chat';
 
 setupPrimerPortals();
 
-const AGENT_SPEC_ID = 'example-parameters';
+const AGENTSPEC_ID = 'example-parameters';
 const AGENT_NAME = 'parameters-demo';
 
 type LibrarySpecResponse = {
@@ -168,7 +168,7 @@ const AgentParametersExample: React.FC = () => {
 
     try {
       const response = await fetch(
-        `${baseUrl}/api/v1/agents/library/${AGENT_SPEC_ID}`,
+        `${baseUrl}/api/v1/agents/library/${AGENTSPEC_ID}`,
       );
       if (!response.ok) {
         throw new Error(`Failed to load schema: ${response.status}`);
@@ -201,7 +201,7 @@ const AgentParametersExample: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name,
-          agent_spec_id: AGENT_SPEC_ID,
+          agent_spec_id: AGENTSPEC_ID,
           transport: 'vercel-ai',
           agent_parameters: formData,
         }),
@@ -277,7 +277,7 @@ const AgentParametersExample: React.FC = () => {
               flexWrap: 'wrap',
             }}
           >
-            <Label variant="accent">Spec: {AGENT_SPEC_ID}</Label>
+            <Label variant="accent">Spec: {AGENTSPEC_ID}</Label>
             <Label variant="secondary">Transport: vercel-ai</Label>
           </Box>
 

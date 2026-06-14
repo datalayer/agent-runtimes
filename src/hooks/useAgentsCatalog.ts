@@ -12,8 +12,8 @@
  */
 
 import { create } from 'zustand';
-import { listAgentSpecs } from '../specs';
-import type { AgentRuntimeData, AgentSpec } from '../types';
+import { listAgentspecs } from '../specs';
+import type { AgentRuntimeData, Agentspec } from '../types';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Agent Catalog Store
@@ -24,7 +24,7 @@ import type { AgentRuntimeData, AgentSpec } from '../types';
  *
  * Two collections are maintained:
  *
- * 1. **agentSpecs** – the static catalogue of available agent blueprints
+ * 1. **agentspecs** – the static catalogue of available agent blueprints
  *    (from `@datalayer/agent-runtimes/lib/specs`).
  *    Populated once at import time; call `refreshSpecs()` to re-read.
  *
@@ -35,7 +35,7 @@ import type { AgentRuntimeData, AgentSpec } from '../types';
 
 export type AgentCatalogStoreState = {
   /** Static catalogue of agent blueprints. */
-  agentSpecs: AgentSpec[];
+  agentspecs: Agentspec[];
 
   /** Live agent runtimes (running / starting). */
   runningAgents: AgentRuntimeData[];
@@ -50,17 +50,17 @@ export type AgentCatalogStoreState = {
 };
 
 export const useAgentCatalogStore = create<AgentCatalogStoreState>()(set => ({
-  agentSpecs: listAgentSpecs(),
+  agentspecs: listAgentspecs(),
   runningAgents: [],
 
-  refreshSpecs: () => set({ agentSpecs: listAgentSpecs() }),
+  refreshSpecs: () => set({ agentspecs: listAgentspecs() }),
 
   setRunningAgents: agents =>
     set(state => ({
       runningAgents: agents.map(agent => {
         if (agent.agentSpec) return agent;
         if (!agent.agent_spec_id) return agent;
-        const spec = state.agentSpecs.find(s => s.id === agent.agent_spec_id);
+        const spec = state.agentspecs.find(s => s.id === agent.agent_spec_id);
         return spec ? { ...agent, agentSpec: spec } : agent;
       }),
     })),

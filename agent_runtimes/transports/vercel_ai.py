@@ -63,9 +63,9 @@ def _resolve_effective_inference_provider(
     # Prefer the per-agent creation spec when available.
     if agent_id:
         try:
-            from ..routes.agents import _agent_specs
+            from ..routes.agents import _agentspecs
 
-            spec = _agent_specs.get(agent_id) or {}
+            spec = _agentspecs.get(agent_id) or {}
             provider = str(spec.get("inference_provider") or "").strip().lower()
             if provider in {"local", "datalayer"}:
                 return provider, "agent-spec"

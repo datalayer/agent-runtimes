@@ -25,11 +25,11 @@ import { useAgentRuntimeApprovals } from '../stores/agentRuntimeStore';
 
 const queryClient = new QueryClient();
 const AGENT_NAME_PREFIX = 'tool-approval-example-agent';
-const DEFAULT_AGENT_SPEC_ID = 'example-tool-approvals';
+const DEFAULT_AGENTSPEC_ID = 'example-tool-approvals';
 const DEFAULT_LOCAL_BASE_URL =
   import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
 
-const getSelectedAgentSpecIdFromUi = (): string => {
+const getSelectedAgentspecIdFromUi = (): string => {
   const params = new URLSearchParams(window.location.search);
 
   const directKeys = [
@@ -54,7 +54,7 @@ const getSelectedAgentSpecIdFromUi = (): string => {
     }
   }
 
-  return DEFAULT_AGENT_SPEC_ID;
+  return DEFAULT_AGENTSPEC_ID;
 };
 
 const buildAgentNameForSpec = (specId: string): string => {
@@ -72,7 +72,7 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
 }) => {
   const { token } = useSimpleAuthStore();
   const [selectedSpecId] = useState<string>(() =>
-    getSelectedAgentSpecIdFromUi(),
+    getSelectedAgentspecIdFromUi(),
   );
   const agentName = useMemo(
     () => buildAgentNameForSpec(selectedSpecId),

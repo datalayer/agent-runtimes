@@ -27,7 +27,7 @@ import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { Chat } from '../chat';
 import { useAIAgentsWebSocket } from '../hooks';
 
-const AGENT_SPEC_ID = 'example-inference';
+const AGENTSPEC_ID = 'example-inference';
 const AGENT_NAME = 'inference-provider-example-agent';
 const DEFAULT_LOCAL_BASE_URL =
   import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
@@ -188,7 +188,7 @@ const AgentInferenceProviderExampleInner: React.FC = () => {
           body: JSON.stringify({
             name,
             transport: 'vercel-ai',
-            agent_spec_id: AGENT_SPEC_ID,
+            agent_spec_id: AGENTSPEC_ID,
             inferenceProvider: nextProvider,
           }),
         });
@@ -212,7 +212,7 @@ const AgentInferenceProviderExampleInner: React.FC = () => {
 
         appendProviderEvent('agent.created', 'Launched local agent runtime', {
           agentId: nextAgentId,
-          agentSpecId: AGENT_SPEC_ID,
+          agentSpecId: AGENTSPEC_ID,
           inferenceProvider: nextProvider,
           baseUrl,
         });
@@ -336,7 +336,7 @@ const AgentInferenceProviderExampleInner: React.FC = () => {
                 Agent Inference Provider Example
               </Heading>
               <Text sx={{ color: 'fg.muted', fontSize: 1 }}>
-                Launches a local agent runtime from {AGENT_SPEC_ID} and lets you
+                Launches a local agent runtime from {AGENTSPEC_ID} and lets you
                 switch between local and datalayer inference.
               </Text>
             </Box>
@@ -414,7 +414,7 @@ const AgentInferenceProviderExampleInner: React.FC = () => {
                 agentId={agentId}
                 authToken={token ?? undefined}
                 title="Agent Inference Provider Example"
-                subtitle={`Spec: ${AGENT_SPEC_ID}`}
+                subtitle={`Spec: ${AGENTSPEC_ID}`}
                 placeholder="Ask the inference provider something..."
                 showHeader={true}
                 showNewChatButton={true}

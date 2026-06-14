@@ -139,6 +139,6 @@ class AutoCheckpointMiddleware:
         cls,
         spec_checkpoints: dict | None,
     ) -> "AutoCheckpointMiddleware":
-        """Create from AgentSpec."""
+        """Create from Agentspec."""
         config = CheckpointConfig.from_spec(spec_checkpoints)
         return cls(config)

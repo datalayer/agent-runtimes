@@ -245,8 +245,8 @@ from agent_runtimes.commands import (
     ListAgentsError,
     
     # List specs command
-    list_agent_specs,
-    get_agent_specs,
+    list_agentspecs,
+    get_agentspecs,
     
     # MCP servers catalog command
     list_mcp_servers_catalog,
@@ -273,7 +273,7 @@ serve_server(host="0.0.0.0", port=8080)
 result = list_agents_from_server(host="localhost", port=8000)
 
 # Get available agent specs
-specs = get_agent_specs()
+specs = get_agentspecs()
 
 # Get catalog MCP servers
 catalog = get_mcp_servers_catalog()
@@ -721,17 +721,17 @@ Total: 5 agent spec(s)
 ### Programmatic Usage
 
 ```python
-from agent_runtimes.commands import get_agent_specs, list_agent_specs
+from agent_runtimes.commands import get_agentspecs, list_agentspecs
 
 # Get specs as list of dictionaries (no output printed)
-specs = get_agent_specs()
+specs = get_agentspecs()
 for spec in specs:
     print(f"{spec['id']}: {spec['name']}")
     print(f"  MCP Servers: {', '.join(spec['mcp_servers'])}")
 
 # Or print formatted output
 from agent_runtimes.commands import OutputFormat
-list_agent_specs(output=OutputFormat.table)
+list_agentspecs(output=OutputFormat.table)
 ```
 
 ---

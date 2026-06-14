@@ -13,7 +13,7 @@ export * from './config';
 export * from './specs';
 export type {
   AgentRuntimeData,
-  AgentSpec,
+  Agentspec,
   BenchmarkSpec,
   ChatCommonProps,
   TeamSpec,

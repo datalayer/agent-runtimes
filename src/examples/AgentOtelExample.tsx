@@ -65,7 +65,7 @@ const DEFAULT_AGENT_PROTOCOL: Protocol = 'vercel-ai';
 const DEFAULT_AGENT_LIBRARY: AgentLibrary = 'pydantic-ai';
 
 /** Spec id this example always launches. */
-const AGENT_SPEC_ID = 'example-otel';
+const AGENTSPEC_ID = 'example-otel';
 
 // ─── AgentLaunchPanel ──────────────────────────────────────────────────────
 
@@ -103,11 +103,11 @@ const AgentLaunchPanel: React.FC<AgentLaunchPanelProps> = ({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: AGENT_SPEC_ID,
+          name: AGENTSPEC_ID,
           description: `Launched from AgentOtelExample`,
           agent_library: DEFAULT_AGENT_LIBRARY,
           transport,
-          agent_spec_id: AGENT_SPEC_ID,
+          agent_spec_id: AGENTSPEC_ID,
         }),
       });
 
@@ -121,7 +121,7 @@ const AgentLaunchPanel: React.FC<AgentLaunchPanelProps> = ({
           const idMatch = detail.match(
             /Agent with ID '([^']+)' already exists/i,
           );
-          const existingId = idMatch?.[1] || AGENT_SPEC_ID;
+          const existingId = idMatch?.[1] || AGENTSPEC_ID;
           onConnected(existingId, transport);
           return;
         }
@@ -200,7 +200,7 @@ const AgentLaunchPanel: React.FC<AgentLaunchPanelProps> = ({
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <Spinner size="small" />
           <Text sx={{ fontSize: 1, color: 'fg.muted' }}>
-            Launching {AGENT_SPEC_ID}…
+            Launching {AGENTSPEC_ID}…
           </Text>
         </Box>
       ) : error ? (
@@ -218,7 +218,7 @@ const AgentLaunchPanel: React.FC<AgentLaunchPanelProps> = ({
         </>
       ) : (
         <Text sx={{ fontSize: 1, color: 'fg.muted' }}>
-          Launching {AGENT_SPEC_ID}…
+          Launching {AGENTSPEC_ID}…
         </Text>
       )}
     </Box>

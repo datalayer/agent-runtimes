@@ -190,6 +190,6 @@ class ContextWindowManager:
 
     @classmethod
     def from_spec(cls, spec_context: dict | None) -> "ContextWindowManager":
-        """Create from AgentSpec ``context_management`` config."""
+        """Create from Agentspec ``context_management`` config."""
         config = ContextWindowConfig.from_spec(spec_context)
         return cls(config)

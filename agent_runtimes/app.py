@@ -156,7 +156,7 @@ async def _create_and_register_cli_agent(
     Args:
         app: The FastAPI app instance
         agent_id: The agent ID/name to register
-        agent_spec: The AgentSpec from the library
+        agent_spec: The Agentspec from the library
         enable_codemode: Whether codemode is enabled (--codemode flag)
         skills: List of skill names to enable (--skills flag)
         all_mcp_servers: All MCP servers (agent spec + CLI servers)
@@ -530,7 +530,7 @@ async def _create_and_register_cli_agent(
         else:
             raise
 
-    # Register runtime tools declared in AgentSpec.
+    # Register runtime tools declared in Agentspec.
     registered_tools = register_agent_tools(
         pydantic_agent,
         tool_ids,
@@ -779,9 +779,9 @@ async def _create_and_register_cli_agent(
     logger.info(f"Registered CLI agent '{agent_id}' with ACP (protocol: {protocol})")
 
     # Store the original agent spec for the /configure/agents/{id}/spec endpoint
-    from .routes.agents import _agent_specs
+    from .routes.agents import _agentspecs
 
-    _agent_specs[agent_id] = {
+    _agentspecs[agent_id] = {
         "name": agent_spec.name,
         "description": agent_spec.description,
         "agent_library": "pydantic-ai",
