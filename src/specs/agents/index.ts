@@ -9,21 +9,21 @@
  * THIS FILE IS AUTO-GENERATED. DO NOT EDIT MANUALLY.
  */
 
-import type { AgentSpec } from '../../types';
+import type { Agentspec } from '../../types';
 
-import { AGENT_SPECS as ROOT_AGENTS } from './agents';
+import { AGENTSPECS as ROOT_AGENTS } from './agents';
 
 // Merge all agent specs from subfolders
-export const AGENT_SPECS: Record<string, AgentSpec> = {
+export const AGENTSPECS: Record<string, Agentspec> = {
   ...ROOT_AGENTS,
 };
 
 function resolveAgentId(agentId: string): string {
-  if (agentId in AGENT_SPECS) return agentId;
+  if (agentId in AGENTSPECS) return agentId;
   const idx = agentId.lastIndexOf(':');
   if (idx > 0) {
     const base = agentId.slice(0, idx);
-    if (base in AGENT_SPECS) return base;
+    if (base in AGENTSPECS) return base;
   }
   return agentId;
 }
@@ -31,8 +31,8 @@ function resolveAgentId(agentId: string): string {
 /**
  * Get an agent specification by ID.
  */
-export function getAgentSpecs(agentId: string): AgentSpec | undefined {
-  return AGENT_SPECS[resolveAgentId(agentId)];
+export function getAgentspecs(agentId: string): Agentspec | undefined {
+  return AGENTSPECS[resolveAgentId(agentId)];
 }
 
 /**
@@ -40,8 +40,8 @@ export function getAgentSpecs(agentId: string): AgentSpec | undefined {
  *
  * @param prefix - If provided, only return specs whose ID starts with this prefix.
  */
-export function listAgentSpecs(prefix?: string): AgentSpec[] {
-  const specs = Object.values(AGENT_SPECS);
+export function listAgentspecs(prefix?: string): Agentspec[] {
+  const specs = Object.values(AGENTSPECS);
   return prefix !== undefined
     ? specs.filter(s => s.id.startsWith(prefix))
     : specs;
@@ -50,7 +50,7 @@ export function listAgentSpecs(prefix?: string): AgentSpec[] {
 /**
  * Collect all required environment variables for an agent spec.
  */
-export function getAgentSpecRequiredEnvVars(spec: AgentSpec): string[] {
+export function getAgentspecRequiredEnvVars(spec: Agentspec): string[] {
   const vars = new Set<string>();
   for (const server of spec.mcpServers) {
     for (const v of server.requiredEnvVars ?? []) {

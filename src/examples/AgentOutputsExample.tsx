@@ -52,7 +52,7 @@ const queryClient = new QueryClient();
 // ─── Constants ─────────────────────────────────────────────────────────────
 
 const AGENT_NAME = 'outputs-example-agent';
-const AGENT_SPEC_ID = 'demo-outputs';
+const AGENTSPEC_ID = 'demo-outputs';
 const DEFAULT_LOCAL_BASE_URL =
   import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
 
@@ -430,7 +430,7 @@ const AgentOutputsInner: React.FC<{ onLogout: () => void }> = ({
               'Agent with rich output rendering (table/JSON/chart/file)',
             agent_library: 'pydantic-ai',
             transport: 'vercel-ai',
-            agent_spec_id: AGENT_SPEC_ID,
+            agent_spec_id: AGENTSPEC_ID,
             enable_skills: true,
             tools: [],
           }),

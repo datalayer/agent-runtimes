@@ -822,7 +822,7 @@ class FrontendConfig(BaseModel):
     )
 
 
-class SubAgentSpecConfig(BaseModel):
+class SubAgentspecConfig(BaseModel):
     """Configuration for a subagent within an agent specification.
 
     Maps to ``subagents_pydantic_ai.SubAgentConfig`` at runtime.
@@ -871,7 +871,7 @@ class SubAgentsConfig(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True, by_alias=True)
 
-    subagents: List[SubAgentSpecConfig] = Field(
+    subagents: List[SubAgentspecConfig] = Field(
         default_factory=list,
         description="List of subagent configurations",
     )
@@ -892,7 +892,7 @@ class SubAgentsConfig(BaseModel):
     )
 
 
-class AgentSpec(BaseModel):
+class Agentspec(BaseModel):
     """
     Specification for an AI agent.
 
@@ -1106,7 +1106,7 @@ class AgentSpec(BaseModel):
     )
 
 
-class TeamAgentSpec(BaseModel):
+class TeamAgentspec(BaseModel):
     """Specification for an agent within a team."""
 
     id: str = Field(..., description="Agent identifier within the team")
@@ -1261,7 +1261,7 @@ class TeamSpec(BaseModel):
         default=None,
         description="Validation settings for the team",
     )
-    agents: list[TeamAgentSpec] = Field(
+    agents: list[TeamAgentspec] = Field(
         default_factory=list,
         description="List of agents in the team",
     )

@@ -56,7 +56,7 @@ class ContextWindowConfig:
 
     @classmethod
     def from_spec(cls, spec_context: dict[str, Any] | None) -> "ContextWindowConfig":
-        """Build from AgentSpec ``context_management`` dict."""
+        """Build from Agentspec ``context_management`` dict."""
         if not spec_context:
             return cls()
         return cls(

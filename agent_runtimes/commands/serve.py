@@ -254,11 +254,11 @@ def serve_server(
 
     # Validate agent if specified
     if agent_id:
-        from agent_runtimes.specs.agents import AGENT_SPECS, get_agent_spec
+        from agent_runtimes.specs.agents import AGENTSPECS, get_agent_spec
 
         agent_spec = get_agent_spec(agent_id)
         if not agent_spec:
-            available = list(AGENT_SPECS.keys())
+            available = list(AGENTSPECS.keys())
             raise ServeError(f"Agent '{agent_id}' not found. Available: {available}")
 
         # Ensure env vars are set for uvicorn (which loads app.py in separate context)

@@ -138,7 +138,7 @@ interface CodemodeStatus {
  * Agent spec response - the original creation spec
  * with separated system prompts.
  */
-interface AgentSpecResponse {
+interface AgentspecResponse {
   name: string;
   description: string;
   agent_library: string;
@@ -400,7 +400,7 @@ export function AgentDetails({
 
   // Fetch agent spec (original creation request with separated system prompts)
   const { data: agentSpec, isLoading: specLoading } =
-    useQuery<AgentSpecResponse>({
+    useQuery<AgentspecResponse>({
       queryKey: ['agent-spec', agentId, apiBase],
       queryFn: async () => {
         const base = getApiBase(apiBase);

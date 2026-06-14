@@ -104,9 +104,9 @@ def load_yaml_specs(specs_dir: Path) -> List[tuple[str, Dict[str, Any]]]:
 
 
 def _generate_team_agent_py(agent: Dict[str, Any]) -> str:
-    """Generate Python code for a TeamAgentSpec."""
+    """Generate Python code for a TeamAgentspec."""
     lines = []
-    lines.append("TeamAgentSpec(")
+    lines.append("TeamAgentspec(")
     lines.append(f'            id="{agent.get("id", "")}",')
     lines.append(f'            name="{agent.get("name", "")}",')
     lines.append(f'            role="{agent.get("role", "")}",')
@@ -124,7 +124,7 @@ def _generate_team_agent_py(agent: Dict[str, Any]) -> str:
 
 
 def _generate_team_agent_ts(agent: Dict[str, Any]) -> str:
-    """Generate TypeScript code for a TeamAgentSpec."""
+    """Generate TypeScript code for a TeamAgentspec."""
     goal = agent.get("goal", "").replace("`", "\\`").replace("\n", " ").strip()
     tools = json.dumps(agent.get("tools", []))
     trigger = agent.get("trigger", "").replace("'", "\\'")
@@ -156,7 +156,7 @@ DO NOT EDIT MANUALLY - run 'make specs' to regenerate.
 from typing import Dict, Optional
 
 from agent_runtimes.types import (
-    TeamAgentSpec,
+    TeamAgentspec,
     TeamHealthMonitoring,
     TeamOutputSpec,
     TeamReactionRule,

@@ -487,9 +487,9 @@ def _pick_agentspec_interactive() -> str:
     Returns:
         The chosen agent spec ID.
     """
-    from agent_runtimes.specs.agents import list_agent_specs
+    from agent_runtimes.specs.agents import list_agentspecs
 
-    specs = list_agent_specs()
+    specs = list_agentspecs()
     if not specs:
         print(f"{GREEN_DARK}[ERROR]{RESET} No agent specs found", file=sys.stderr)
         raise typer.Exit(1)

@@ -555,9 +555,9 @@ export function useAgentLifecycle(
               if (!agentSpecId) {
                 return true;
               }
-              const runtimeAgentSpecId = (rt as { agent_spec_id?: string })
+              const runtimeAgentspecId = (rt as { agent_spec_id?: string })
                 .agent_spec_id;
-              return runtimeAgentSpecId === agentSpecId;
+              return runtimeAgentspecId === agentSpecId;
             });
             const latestRuntime = aiAgentRuntimes.slice().sort((a, b) => {
               const aTs = Number(a.started_at || 0);

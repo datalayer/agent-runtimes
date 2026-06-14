@@ -154,7 +154,7 @@ Generated from YAML specifications in specs/agents/
 from typing import Dict
 
 from agent_runtimes.mcp.catalog_mcp_servers import MCP_SERVER_CATALOG
-from agent_runtimes.types import AgentSpec, SubAgentSpecConfig, SubAgentsConfig
+from agent_runtimes.types import Agentspec, SubAgentspecConfig, SubAgentsConfig
 
 # ============================================================================
 # Agent Specs
@@ -191,15 +191,15 @@ from agent_runtimes.types import AgentSpec, SubAgentSpecConfig, SubAgentsConfig
             version = spec["version"]
             # Prefix agent ID with folder name for uniqueness
             full_agent_id = f"{folder}/{agent_id}" if folder else agent_id
-            # Create constant name: e.g., "data-acquisition" -> "DATA_ACQUISITION_AGENT_SPEC"
-            # But if id already ends with "-agent", don't duplicate: "github-agent" -> "GITHUB_AGENT_SPEC"
+            # Create constant name: e.g., "data-acquisition" -> "DATA_ACQUISITION_AGENTSPEC"
+            # But if id already ends with "-agent", don't duplicate: "github-agent" -> "GITHUB_AGENTSPEC"
             # NO folder prefix for Python constants
             base_name = agent_id.upper().replace("-", "_")
 
             if agent_id.endswith("-agent"):
                 const_name = base_name + "_SPEC"
             else:
-                const_name = base_name + "_AGENT_SPEC"
+                const_name = base_name + "_AGENTSPEC"
             const_name += version_suffix(version)
             agent_ids.append((full_agent_id, const_name, folder))
 
@@ -335,7 +335,7 @@ from agent_runtimes.types import AgentSpec, SubAgentSpecConfig, SubAgentsConfig
                         opt_val = sa.get(opt_key)
                         if opt_val is not None:
                             sa_fields.append(f"{opt_key}={_fmt_py_literal(opt_val)}")
-                    sa_items.append("SubAgentSpecConfig(" + ", ".join(sa_fields) + ")")
+                    sa_items.append("SubAgentspecConfig(" + ", ".join(sa_fields) + ")")
                 sa_list_str = "[" + ", ".join(sa_items) + "]"
                 cfg_parts = [f"subagents={sa_list_str}"]
                 if subagents_val.get("default_model") is not None:
@@ -352,7 +352,7 @@ from agent_runtimes.types import AgentSpec, SubAgentSpecConfig, SubAgentsConfig
                     )
                 subagents_str = "SubAgentsConfig(" + ", ".join(cfg_parts) + ")"
 
-            code += f'''{const_name} = AgentSpec(
+            code += f'''{const_name} = Agentspec(
     id="{full_agent_id}",
     version="{version}",
     name="{spec["name"]}",
@@ -405,7 +405,7 @@ from agent_runtimes.types import AgentSpec, SubAgentSpecConfig, SubAgentsConfig
 # Agent Specs Registry
 # ============================================================================
 
-AGENT_SPECS: Dict[str, AgentSpec] = {
+AGENTSPECS: Dict[str, Agentspec] = {
 """
 
     # Sort by folder for organized registry
@@ -421,7 +421,7 @@ AGENT_SPECS: Dict[str, AgentSpec] = {
     code += """}
 
 
-def get_agent_spec(agent_id: str) -> AgentSpec | None:
+def get_agent_spec(agent_id: str) -> Agentspec | None:
     \"\"\"
     Get an agent specification by ID (accepts both bare and versioned refs).
 
@@ -429,18 +429,18 @@ def get_agent_spec(agent_id: str) -> AgentSpec | None:
         agent_id: The unique identifier of the agent.
 
     Returns:
-        The AgentSpec configuration, or None if not found.
+        The Agentspec configuration, or None if not found.
     \"\"\"
-    spec = AGENT_SPECS.get(agent_id)
+    spec = AGENTSPECS.get(agent_id)
     if spec is not None:
         return spec
     base, _, ver = agent_id.rpartition(':')
     if base and '.' in ver:
-        return AGENT_SPECS.get(base)
+        return AGENTSPECS.get(base)
     return None
 
 
-def list_agent_specs(prefix: str | None = None) -> list[AgentSpec]:
+def list_agentspecs(prefix: str | None = None) -> list[Agentspec]:
     \"\"\"
     List all available agent specifications.
 
@@ -448,9 +448,9 @@ def list_agent_specs(prefix: str | None = None) -> list[AgentSpec]:
         prefix: If provided, only return specs whose ID starts with this prefix.
 
     Returns:
-        List of all AgentSpec configurations.
+        List of all Agentspec configurations.
     \"\"\"
-    specs = list(AGENT_SPECS.values())
+    specs = list(AGENTSPECS.values())
     if prefix is not None:
         specs = [s for s in specs if s.id.startswith(prefix)]
     return specs
@@ -618,7 +618,7 @@ def generate_typescript_code(
  * Generated from YAML specifications in specs/agents/
  */
 
-import type { AgentSpec } from '"""
+import type { Agentspec } from '"""
     code += types_import_path
     code += """';
 """
@@ -752,15 +752,15 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
             version = spec["version"]
             # Prefix agent ID with folder name for uniqueness
             full_agent_id = f"{folder}/{agent_id}" if folder else agent_id
-            # Create constant name: e.g., "data-acquisition" -> "DATA_ACQUISITION_AGENT_SPEC"
-            # But if id already ends with "-agent", don't duplicate: "github-agent" -> "GITHUB_AGENT_SPEC"
+            # Create constant name: e.g., "data-acquisition" -> "DATA_ACQUISITION_AGENTSPEC"
+            # But if id already ends with "-agent", don't duplicate: "github-agent" -> "GITHUB_AGENTSPEC"
             # NO folder prefix for TypeScript constants
             base_name = agent_id.upper().replace("-", "_")
 
             if agent_id.endswith("-agent"):
                 const_name = base_name + "_SPEC"
             else:
-                const_name = base_name + "_AGENT_SPEC"
+                const_name = base_name + "_AGENTSPEC"
             const_name += version_suffix(version)
             agent_ids.append((full_agent_id, const_name, folder))
 
@@ -902,7 +902,7 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
                 else ""
             )
 
-            code += f"""export const {const_name}: AgentSpec = {{
+            code += f"""export const {const_name}: Agentspec = {{
     id: '{full_agent_id}',
     version: '{version}',
     name: '{spec["name"]}',
@@ -953,7 +953,7 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
 // Agent Specs Registry
 // ============================================================================
 
-export const AGENT_SPECS: Record<string, AgentSpec> = {
+export const AGENTSPECS: Record<string, Agentspec> = {
 """
 
     # Sort by folder for organized registry
@@ -969,11 +969,11 @@ export const AGENT_SPECS: Record<string, AgentSpec> = {
     code += """};
 
 function resolveAgentId(agentId: string): string {
-  if (agentId in AGENT_SPECS) return agentId;
+  if (agentId in AGENTSPECS) return agentId;
   const idx = agentId.lastIndexOf(':');
   if (idx > 0) {
     const base = agentId.slice(0, idx);
-    if (base in AGENT_SPECS) return base;
+    if (base in AGENTSPECS) return base;
   }
   return agentId;
 }
@@ -981,8 +981,8 @@ function resolveAgentId(agentId: string): string {
 /**
  * Get an agent specification by ID.
  */
-export function getAgentSpecs(agentId: string): AgentSpec | undefined {
-  return AGENT_SPECS[resolveAgentId(agentId)];
+export function getAgentspecs(agentId: string): Agentspec | undefined {
+  return AGENTSPECS[resolveAgentId(agentId)];
 }
 
 /**
@@ -990,8 +990,8 @@ export function getAgentSpecs(agentId: string): AgentSpec | undefined {
  *
  * @param prefix - If provided, only return specs whose ID starts with this prefix.
  */
-export function listAgentSpecs(prefix?: string): AgentSpec[] {
-  const specs = Object.values(AGENT_SPECS);
+export function listAgentspecs(prefix?: string): Agentspec[] {
+  const specs = Object.values(AGENTSPECS);
   return prefix !== undefined ? specs.filter(s => s.id.startsWith(prefix)) : specs;
 }
 
@@ -1001,7 +1001,7 @@ export function listAgentSpecs(prefix?: string): AgentSpec[] {
  * Iterates over the spec's MCP servers and skills and returns the
  * deduplicated union of their `requiredEnvVars` arrays.
  */
-export function getAgentSpecRequiredEnvVars(spec: AgentSpec): string[] {
+export function getAgentspecRequiredEnvVars(spec: Agentspec): string[] {
   const vars = new Set<string>();
     const baseEnvVar = (v: string): string => v.split(':')[0] ?? v;
   for (const server of spec.mcpServers) {
@@ -1039,7 +1039,7 @@ def update_init_file(
         if agent_id.endswith("-agent"):
             const_name = base_name + "_SPEC"
         else:
-            const_name = base_name + "_AGENT_SPEC"
+            const_name = base_name + "_AGENTSPEC"
         const_names.append(const_name)
 
     # Sort for consistent ordering
@@ -1056,11 +1056,11 @@ def update_init_file(
     pattern = r"(from \.agents import \(\n)(.*?)(\n\))"
 
     # Build new imports
-    new_imports = "    AGENT_SPECS,\n"
+    new_imports = "    AGENTSPECS,\n"
     for const_name in const_names:
         new_imports += f"    {const_name},\n"
     new_imports += "    get_agent_spec,\n"
-    new_imports += "    list_agent_specs,"
+    new_imports += "    list_agentspecs,"
 
     # Replace the imports
     new_content = re.sub(pattern, r"\1" + new_imports + r"\3", content, flags=re.DOTALL)
@@ -1128,15 +1128,15 @@ def generate_subfolder_structure(specs: List[tuple[str, Dict[str, Any]]], args):
 
 from .agents import *
 
-__all__ = ["AGENT_SPECS", "get_agent_spec", "list_agent_specs"]
+__all__ = ["AGENTSPECS", "get_agent_spec", "list_agentspecs"]
 """)
 
         # Collect imports for main index
         if is_root:
-            all_python_imports.append("from .agents import AGENT_SPECS as ROOT_AGENTS")
+            all_python_imports.append("from .agents import AGENTSPECS as ROOT_AGENTS")
         else:
             all_python_imports.append(
-                f"from .{folder_python_name} import AGENT_SPECS as {folder_python_name.upper()}_AGENTS"
+                f"from .{folder_python_name} import AGENTSPECS as {folder_python_name.upper()}_AGENTS"
             )
 
         # Create TypeScript output file
@@ -1187,7 +1187,7 @@ THIS FILE IS AUTO-GENERATED. DO NOT EDIT MANUALLY.
 \"\"\"
 
 from typing import Dict
-from agent_runtimes.types import AgentSpec
+from agent_runtimes.types import Agentspec
 
 """
 
@@ -1198,43 +1198,43 @@ from agent_runtimes.types import AgentSpec
     # Merge all agent specs
     python_index_content += """
 # Merge all agent specs from subfolders
-AGENT_SPECS: Dict[str, AgentSpec] = {}
+AGENTSPECS: Dict[str, Agentspec] = {}
 """
 
     for folder in sorted(specs_by_folder.keys()):
         if folder:
             folder_python_name = folder.replace("-", "_")
             python_index_content += (
-                f"AGENT_SPECS.update({folder_python_name.upper()}_AGENTS)\n"
+                f"AGENTSPECS.update({folder_python_name.upper()}_AGENTS)\n"
             )
         else:
-            python_index_content += "AGENT_SPECS.update(ROOT_AGENTS)\n"
+            python_index_content += "AGENTSPECS.update(ROOT_AGENTS)\n"
 
     python_index_content += """
 
-def get_agent_spec(agent_id: str) -> AgentSpec | None:
+def get_agent_spec(agent_id: str) -> Agentspec | None:
     \"\"\"Get an agent specification by ID.\"\"\"
-    spec = AGENT_SPECS.get(agent_id)
+    spec = AGENTSPECS.get(agent_id)
     if spec is not None:
         return spec
     base, _, ver = agent_id.rpartition(':')
     if base and '.' in ver:
-        return AGENT_SPECS.get(base)
+        return AGENTSPECS.get(base)
     return None
 
 
-def list_agent_specs(prefix: str | None = None) -> list[AgentSpec]:
+def list_agentspecs(prefix: str | None = None) -> list[Agentspec]:
     \"\"\"List all available agent specifications.
 
     Args:
         prefix: If provided, only return specs whose ID starts with this prefix.
     \"\"\"
-    specs = list(AGENT_SPECS.values())
+    specs = list(AGENTSPECS.values())
     if prefix is not None:
         specs = [s for s in specs if s.id.startswith(prefix)]
     return specs
 
-__all__ = ["AGENT_SPECS", "get_agent_spec", "list_agent_specs"]
+__all__ = ["AGENTSPECS", "get_agent_spec", "list_agentspecs"]
 """
 
     with open(python_index, "w") as f:
@@ -1253,23 +1253,23 @@ __all__ = ["AGENT_SPECS", "get_agent_spec", "list_agent_specs"]
  * THIS FILE IS AUTO-GENERATED. DO NOT EDIT MANUALLY.
  */
 
-import type { AgentSpec } from '../../types';
+import type { Agentspec } from '../../types';
 
 """
 
-    # Import AGENT_SPECS from each subfolder
+    # Import AGENTSPECS from each subfolder
     for folder in sorted(specs_by_folder.keys()):
         if folder:
             folder_const = folder.replace("-", "_").upper()
-            typescript_index_content += f"import {{ AGENT_SPECS as {folder_const}_AGENTS }} from './{folder}';\n"
+            typescript_index_content += f"import {{ AGENTSPECS as {folder_const}_AGENTS }} from './{folder}';\n"
         else:
             typescript_index_content += (
-                "import { AGENT_SPECS as ROOT_AGENTS } from './agents';\n"
+                "import { AGENTSPECS as ROOT_AGENTS } from './agents';\n"
             )
 
     typescript_index_content += """
 // Merge all agent specs from subfolders
-export const AGENT_SPECS: Record<string, AgentSpec> = {
+export const AGENTSPECS: Record<string, Agentspec> = {
 """
 
     for folder in sorted(specs_by_folder.keys()):
@@ -1282,11 +1282,11 @@ export const AGENT_SPECS: Record<string, AgentSpec> = {
     typescript_index_content += """};
 
 function resolveAgentId(agentId: string): string {
-  if (agentId in AGENT_SPECS) return agentId;
+  if (agentId in AGENTSPECS) return agentId;
   const idx = agentId.lastIndexOf(':');
   if (idx > 0) {
     const base = agentId.slice(0, idx);
-    if (base in AGENT_SPECS) return base;
+    if (base in AGENTSPECS) return base;
   }
   return agentId;
 }
@@ -1294,8 +1294,8 @@ function resolveAgentId(agentId: string): string {
 /**
  * Get an agent specification by ID.
  */
-export function getAgentSpecs(agentId: string): AgentSpec | undefined {
-  return AGENT_SPECS[resolveAgentId(agentId)];
+export function getAgentspecs(agentId: string): Agentspec | undefined {
+  return AGENTSPECS[resolveAgentId(agentId)];
 }
 
 /**
@@ -1303,15 +1303,15 @@ export function getAgentSpecs(agentId: string): AgentSpec | undefined {
  *
  * @param prefix - If provided, only return specs whose ID starts with this prefix.
  */
-export function listAgentSpecs(prefix?: string): AgentSpec[] {
-  const specs = Object.values(AGENT_SPECS);
+export function listAgentspecs(prefix?: string): Agentspec[] {
+  const specs = Object.values(AGENTSPECS);
   return prefix !== undefined ? specs.filter(s => s.id.startsWith(prefix)) : specs;
 }
 
 /**
  * Collect all required environment variables for an agent spec.
  */
-export function getAgentSpecRequiredEnvVars(spec: AgentSpec): string[] {
+export function getAgentspecRequiredEnvVars(spec: Agentspec): string[] {
   const vars = new Set<string>();
   for (const server of spec.mcpServers) {
     for (const v of server.requiredEnvVars ?? []) {

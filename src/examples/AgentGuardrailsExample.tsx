@@ -45,7 +45,7 @@ import type {
   AgentStreamToolApprovalPayload,
 } from '../types/stream';
 import { parseAgentStreamMessage } from '../types/stream';
-import { getAgentSpecs } from '../specs/agents';
+import { getAgentspecs } from '../specs/agents';
 import { subscribeOtelWs } from '../context/otelWsPool';
 import { toMetricValue } from '../hooks/useMonitoring';
 import { useAIAgentsWebSocket } from '../hooks';
@@ -57,7 +57,7 @@ import { Chat } from '../chat';
 // ─── Constants ─────────────────────────────────────────────────────────────
 
 const AGENT_NAME = 'guardrails-example-agent';
-const AGENT_SPEC_ID = 'example-guardrails';
+const AGENTSPEC_ID = 'example-guardrails';
 const DEFAULT_LOCAL_BASE_URL =
   import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
 const OTEL_BASE_URL_ENV = import.meta.env.VITE_OTEL_BASE_URL;
@@ -80,7 +80,7 @@ const toNumberOrNull = (value: unknown): number | null => {
 };
 
 const resolvePerRunBudgetFromSpec = (agentSpecId: string): number | null => {
-  const spec = getAgentSpecs(agentSpecId);
+  const spec = getAgentspecs(agentSpecId);
   if (!spec?.guardrails?.length) {
     return null;
   }
@@ -104,7 +104,7 @@ const resolvePerRunBudgetFromSpec = (agentSpecId: string): number | null => {
   return null;
 };
 
-const DEFAULT_RUN_BUDGET_USD = resolvePerRunBudgetFromSpec(AGENT_SPEC_ID);
+const DEFAULT_RUN_BUDGET_USD = resolvePerRunBudgetFromSpec(AGENTSPEC_ID);
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -349,7 +349,7 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
             description: 'Agent with cost budget and tool approval guardrails',
             agent_library: 'pydantic-ai',
             transport: 'vercel-ai',
-            agent_spec_id: AGENT_SPEC_ID,
+            agent_spec_id: AGENTSPEC_ID,
             enable_skills: true,
             tools: [],
           }),

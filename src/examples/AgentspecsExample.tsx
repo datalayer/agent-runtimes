@@ -28,7 +28,7 @@ import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { AgentConfiguration } from '../config';
 import { Chat } from '../chat';
 import { DEFAULT_MODEL } from '../specs';
-import type { LibraryAgentSpec } from '../config/AgentConfiguration';
+import type { LibraryAgentspec } from '../config/AgentConfiguration';
 import type { OAuthProvider, Identity } from '../identity';
 import { useIdentity } from '../identity';
 import { useAgentsStore } from './utils/examplesStore';
@@ -317,7 +317,7 @@ const collectUrlCandidates = (
 };
 
 const resolveCloudRuntimeBaseUrlFromSpec = (
-  spec: LibraryAgentSpec | null,
+  spec: LibraryAgentspec | null,
 ): string | null => {
   if (!spec) {
     return null;
@@ -505,11 +505,11 @@ const AgentspecsExample: React.FC<AgentRuntimeFormExampleProps> = ({
   const [tools, setTools] = useState<string[]>([]);
   const [sandboxVariant, setSandboxVariant] = useState('');
   const [selectedLibrarySpec, setSelectedLibrarySpec] =
-    useState<LibraryAgentSpec | null>(null);
+    useState<LibraryAgentspec | null>(null);
   const [selectedCloudSpec, setSelectedCloudSpec] =
-    useState<LibraryAgentSpec | null>(null);
+    useState<LibraryAgentspec | null>(null);
   const [cloudLibrarySpecs, setCloudLibrarySpecs] = useState<
-    LibraryAgentSpec[]
+    LibraryAgentspec[]
   >([]);
   const [cloudLibraryLoading, setCloudLibraryLoading] = useState(false);
   const [cloudLibraryError, setCloudLibraryError] = useState<string | null>(
@@ -834,10 +834,10 @@ const AgentspecsExample: React.FC<AgentRuntimeFormExampleProps> = ({
   const prevMcpServersRef = useRef<McpServerSelection[]>(selectedMcpServers);
 
   // Cache for library specs (fetched on-demand, outside QueryClientProvider)
-  const librarySpecsRef = useRef<LibraryAgentSpec[] | null>(null);
+  const librarySpecsRef = useRef<LibraryAgentspec[] | null>(null);
 
   const fetchLibrarySpecs = useCallback(async (): Promise<
-    LibraryAgentSpec[]
+    LibraryAgentspec[]
   > => {
     if (librarySpecsRef.current) return librarySpecsRef.current;
     try {
@@ -872,7 +872,7 @@ const AgentspecsExample: React.FC<AgentRuntimeFormExampleProps> = ({
         if (!response.ok) {
           throw new Error(`Cloud library fetch failed (${response.status})`);
         }
-        const payload = (await response.json()) as LibraryAgentSpec[];
+        const payload = (await response.json()) as LibraryAgentspec[];
         if (!cancelled) {
           setCloudLibrarySpecs(payload || []);
         }
@@ -899,7 +899,7 @@ const AgentspecsExample: React.FC<AgentRuntimeFormExampleProps> = ({
     };
   }, [cloudCatalogBaseUrl, token]);
 
-  const applySpecToForm = useCallback((spec: LibraryAgentSpec) => {
+  const applySpecToForm = useCallback((spec: LibraryAgentspec) => {
     setAgentName(spec.id);
     setDescription(spec.description || '');
     setGoal(spec.goal || '');

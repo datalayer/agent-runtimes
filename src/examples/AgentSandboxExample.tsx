@@ -52,7 +52,7 @@ import type { SandboxAggregateStatus } from '../types/sandbox';
 
 const queryClient = new QueryClient();
 const AGENT_NAME = 'sandbox-example-agent';
-const AGENT_SPEC_ID = 'example-full';
+const AGENTSPEC_ID = 'example-full';
 const DEFAULT_LOCAL_BASE_URL =
   import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
 
@@ -190,7 +190,7 @@ const AgentSandboxInner: React.FC<{ onLogout: () => void }> = ({
             description: 'Agent with sandbox code execution',
             agent_library: 'pydantic-ai',
             transport: 'vercel-ai',
-            agent_spec_id: AGENT_SPEC_ID,
+            agent_spec_id: AGENTSPEC_ID,
             system_prompt:
               'You are a helpful AI assistant with a Python execution sandbox. ' +
               'When asked to run code, count, loop, assign variables, compute, or ' +

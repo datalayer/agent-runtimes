@@ -23,7 +23,7 @@ import * as events from '../api/events';
 import * as output from '../api/output';
 import * as evals from '../api/evals';
 import * as context from '../api/context';
-import * as agentSpecs from '../specs/agents';
+import * as agentspecs from '../specs/agents';
 import { requestDatalayerAPI } from '@datalayer/core/lib/api/DatalayerApi';
 import type {
   AgentEvent,
@@ -42,7 +42,7 @@ import type {
   RunEvalsRequest,
   ContextUsage,
   CostUsage,
-  AgentSpec,
+  Agentspec,
 } from '../types';
 import type {
   CreateAgentRuntimeRequest,
@@ -368,8 +368,8 @@ export function AgentsMixin<TBase extends Constructor>(Base: TBase) {
      * @param agentSpecId - Agent spec identifier.
      * @returns The agent spec, or undefined if not found.
      */
-    getAgentSpec(agentSpecId: string): AgentSpec | undefined {
-      return agentSpecs.getAgentSpecs(agentSpecId);
+    getAgentspec(agentSpecId: string): Agentspec | undefined {
+      return agentspecs.getAgentspecs(agentSpecId);
     }
 
     /**
@@ -377,8 +377,8 @@ export function AgentsMixin<TBase extends Constructor>(Base: TBase) {
      * @param prefix - If provided, only return specs whose ID starts with this prefix.
      * @returns Array of agent specifications.
      */
-    listAgentSpecs(prefix?: string): AgentSpec[] {
-      return agentSpecs.listAgentSpecs(prefix);
+    listAgentspecs(prefix?: string): Agentspec[] {
+      return agentspecs.listAgentspecs(prefix);
     }
 
     /**
@@ -386,8 +386,8 @@ export function AgentsMixin<TBase extends Constructor>(Base: TBase) {
      * @param spec - The agent specification.
      * @returns Deduplicated array of required environment variable names.
      */
-    getAgentSpecRequiredEnvVars(spec: AgentSpec): string[] {
-      return agentSpecs.getAgentSpecRequiredEnvVars(spec);
+    getAgentspecRequiredEnvVars(spec: Agentspec): string[] {
+      return agentspecs.getAgentspecRequiredEnvVars(spec);
     }
 
     // ========================================================================

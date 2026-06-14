@@ -15,7 +15,7 @@ import { Chat } from '../chat';
 
 setupPrimerPortals();
 
-const AGENT_SPEC_ID = 'example-hooks';
+const AGENTSPEC_ID = 'example-hooks';
 const AGENT_NAME = 'hooks-example-agent';
 
 const AgentHooksExample: React.FC = () => {
@@ -35,7 +35,7 @@ const AgentHooksExample: React.FC = () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             name,
-            agent_spec_id: AGENT_SPEC_ID,
+            agent_spec_id: AGENTSPEC_ID,
             transport: 'vercel-ai',
           }),
         });
@@ -100,7 +100,7 @@ const AgentHooksExample: React.FC = () => {
         >
           <Spinner size="large" />
           <Text sx={{ color: 'fg.muted' }}>
-            Creating agent from {AGENT_SPEC_ID}...
+            Creating agent from {AGENTSPEC_ID}...
           </Text>
         </Box>
       </ThemedProvider>

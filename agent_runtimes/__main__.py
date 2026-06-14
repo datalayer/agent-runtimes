@@ -52,7 +52,7 @@ from agent_runtimes.commands.list_specs import (
     OutputFormat as SpecsOutputFormat,
 )
 from agent_runtimes.commands.list_specs import (
-    list_agent_specs,
+    list_agentspecs,
 )
 from agent_runtimes.commands.mcp_servers_catalog import (
     OutputFormat as CatalogOutputFormat,
@@ -463,7 +463,7 @@ def list_specs(
         # Output as JSON
         agent-runtimes list-specs --output json
     """
-    list_agent_specs(output=output)
+    list_agentspecs(output=output)
 
 
 # ============================================================================

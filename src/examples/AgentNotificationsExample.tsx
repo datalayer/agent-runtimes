@@ -48,7 +48,7 @@ const queryClient = new QueryClient();
 // ─── Constants ─────────────────────────────────────────────────────────────
 
 const AGENT_NAME = 'notification-example-agent';
-const AGENT_SPEC_ID = 'example-notifications';
+const AGENTSPEC_ID = 'example-notifications';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -141,7 +141,7 @@ const AgentNotificationsInner: React.FC<{ onLogout: () => void }> = ({
             description: 'Agent with multi-channel notification support',
             agent_library: 'pydantic-ai',
             transport: 'vercel-ai',
-            agent_spec_id: AGENT_SPEC_ID,
+            agent_spec_id: AGENTSPEC_ID,
             enable_skills: true,
             tools: [],
           }),

@@ -6,7 +6,7 @@
 /**
  * Specification for an agent within a team.
  */
-export interface TeamAgentSpec {
+export interface TeamAgentspec {
   /** Agent identifier within the team */
   id: string;
   /** Display name for the team agent */
@@ -132,7 +132,7 @@ export interface TeamSpec {
   /** Validation settings for the team */
   validation?: TeamValidationSpec;
   /** List of agents in the team */
-  agents: TeamAgentSpec[];
+  agents: TeamAgentspec[];
   /** Reaction rules for automatic event handling */
   reactionRules?: TeamReactionRule[];
   /** Health monitoring configuration */

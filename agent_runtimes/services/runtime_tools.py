@@ -87,7 +87,7 @@ def register_agent_tools(
 
     Args:
         agent: Pydantic AI Agent instance exposing ``tool_plain``.
-        tool_ids: Tool IDs from AgentSpec.
+        tool_ids: Tool IDs from Agentspec.
         agent_id: Runtime agent identifier (unused, kept for API compat).
         pod_name: Optional pod name (unused, kept for API compat).
 
