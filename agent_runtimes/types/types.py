@@ -820,6 +820,11 @@ class FrontendConfig(BaseModel):
         description="Configured MCP servers",
         alias="mcpServers",
     )
+    disable_tool_approvals: bool = Field(
+        default=False,
+        description="Whether tool approvals are disabled for new agent launches",
+        alias="disableToolApprovals",
+    )
 
 
 class SubAgentspecConfig(BaseModel):

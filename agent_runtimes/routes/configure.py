@@ -97,6 +97,25 @@ _inference_provider_override: dict[str, InferenceProvider | None] = {
     "provider": None,
 }
 
+_tool_approvals_state: dict[str, bool] = {
+    "disabled": os.environ.get("AGENT_RUNTIMES_DISABLE_TOOL_APPROVALS", "").lower()
+    == "true",
+}
+
+
+def get_tool_approvals_disabled() -> bool:
+    """Return whether tool approvals are disabled for new agent launches."""
+    return bool(_tool_approvals_state["disabled"])
+
+
+def set_tool_approvals_disabled(disabled: bool) -> bool:
+    """Update runtime tool approvals disable flag and mirror to env."""
+    _tool_approvals_state["disabled"] = bool(disabled)
+    os.environ["AGENT_RUNTIMES_DISABLE_TOOL_APPROVALS"] = (
+        "true" if disabled else "false"
+    )
+    return _tool_approvals_state["disabled"]
+
 
 def _default_inference_provider() -> InferenceProvider:
     """Infer the default provider from runtime environment and node state."""
@@ -212,6 +231,10 @@ class InferenceProviderRequest(BaseModel):
     provider: InferenceProvider
 
 
+class ToolApprovalsRequest(BaseModel):
+    disabled: bool
+
+
 class NodeModeRequest(BaseModel):
     enabled: bool
 
@@ -244,6 +267,24 @@ async def get_inference_provider() -> dict[str, Any]:
     return {
         "provider": effective,
         "source": source,
+    }
+
+
+@router.get("/tool-approvals")
+async def get_tool_approvals() -> dict[str, Any]:
+    """Return whether tool approvals are disabled for subsequent agent launches."""
+    return {
+        "disabled": get_tool_approvals_disabled(),
+    }
+
+
+@router.put("/tool-approvals")
+async def set_tool_approvals(body: ToolApprovalsRequest) -> dict[str, Any]:
+    """Enable or disable tool approval flows for subsequent agent launches."""
+    disabled = set_tool_approvals_disabled(body.disabled)
+    return {
+        "success": True,
+        "disabled": disabled,
     }
 
 
@@ -357,6 +398,7 @@ async def get_configuration(
         config = await get_frontend_config(
             tools=available_tools,
             mcp_servers=mcp_servers,
+            disable_tool_approvals=get_tool_approvals_disabled(),
         )
 
         # If the caller provides an agent, prefer the model configured by that

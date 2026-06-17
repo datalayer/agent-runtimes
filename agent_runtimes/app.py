@@ -474,6 +474,16 @@ async def _create_and_register_cli_agent(
     tool_ids = list(agent_spec.tools or [])
     capabilities = build_capabilities_from_agent_spec(agent_spec, agent_id=agent_id)
     usage_limits = build_usage_limits_from_agent_spec(agent_spec)
+    tool_approvals_disabled = (
+        os.environ.get("AGENT_RUNTIMES_DISABLE_TOOL_APPROVALS", "").lower()
+        == "true"
+    )
+    if tool_approvals_disabled and capabilities:
+        capabilities = [
+            cap
+            for cap in capabilities
+            if not isinstance(cap, ToolsGuardrailCapability)
+        ]
     agent_kwargs: dict[str, Any] = {
         "system_prompt": system_prompt,
         # Explicitly disable Pydantic AI built-in tools (e.g. CodeExecutionTool)
@@ -483,7 +493,9 @@ async def _create_and_register_cli_agent(
         agent_kwargs["capabilities"] = capabilities
     if usage_limits is not None:
         agent_kwargs["usage_limits"] = usage_limits
-    approval_tool_ids = tools_requiring_approval_ids(tool_ids)
+    approval_tool_ids: list[str] = []
+    if not tool_approvals_disabled:
+        approval_tool_ids = tools_requiring_approval_ids(tool_ids)
     if approval_tool_ids:
         approval_patterns = [tool_id.split(":", 1)[0] for tool_id in approval_tool_ids]
         # Keep DeferredToolRequests in output_type for our websocket-driven
@@ -506,6 +518,11 @@ async def _create_and_register_cli_agent(
                 agent_id,
                 approval_patterns,
             )
+    elif tool_approvals_disabled:
+        logger.info(
+            "Tool approvals disabled for CLI agent '%s'; skipping approval capability wiring",
+            agent_id,
+        )
 
     try:
         resolved_model = resolve_model_for_inference_provider(
@@ -901,6 +918,7 @@ async def _create_and_register_cli_agent(
             "model": startup_model,
             "inference_provider": inference_provider,
             "codemode": enable_codemode,
+            "tool_approvals_disabled": tool_approvals_disabled,
             "skills": list(skills) if skills else [],
             "tools": registered_tools,
             "mcp_servers": [s.id for s in all_mcp_servers] if all_mcp_servers else [],

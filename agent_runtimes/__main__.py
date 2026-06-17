@@ -297,6 +297,14 @@ def serve(
             help="Run in Agent Node mode (enables Agent Node routes, sync and tunnel loops)",
         ),
     ] = False,
+    disable_tool_approvals: Annotated[
+        bool,
+        typer.Option(
+            "--disable-tool-approvals",
+            envvar="AGENT_RUNTIMES_DISABLE_TOOL_APPROVALS",
+            help="Disable tool approval flows for all agents started by this server",
+        ),
+    ] = False,
 ) -> None:
     """
     Start the agent-runtimes server.
@@ -380,6 +388,7 @@ def serve(
             protocol=protocol,
             find_free_port_flag=find_free_port,
             node=node,
+            disable_tool_approvals=disable_tool_approvals,
         )
     except ServeError as e:
         logger.error(str(e))

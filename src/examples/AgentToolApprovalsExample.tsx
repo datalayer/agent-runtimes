@@ -67,6 +67,16 @@ const buildAgentNameForSpec = (specId: string): string => {
   return uniqueAgentId(base);
 };
 
+const parseDisableToolApprovalsFromUi = (): boolean => {
+  const params = new URLSearchParams(window.location.search);
+  const raw =
+    params.get('disable_tool_approvals') ??
+    params.get('disableToolApprovals') ??
+    '';
+  const normalized = raw.trim().toLowerCase();
+  return ['1', 'true', 'yes', 'on'].includes(normalized);
+};
+
 const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
   onLogout,
 }) => {
@@ -74,9 +84,15 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
   const [selectedSpecId] = useState<string>(() =>
     getSelectedAgentspecIdFromUi(),
   );
+  const [disableToolApprovals, setDisableToolApprovals] = useState<boolean>(
+    () => parseDisableToolApprovalsFromUi(),
+  );
   const agentName = useMemo(
-    () => buildAgentNameForSpec(selectedSpecId),
-    [selectedSpecId],
+    () =>
+      buildAgentNameForSpec(
+        `${selectedSpecId}-${disableToolApprovals ? 'no-approvals' : 'approvals'}`,
+      ),
+    [selectedSpecId, disableToolApprovals],
   );
 
   const [runtimeStatus, setRuntimeStatus] = useState<
@@ -101,6 +117,10 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
     [approvals, agentId],
   );
   const createAttemptedRef = useRef(false);
+
+  useEffect(() => {
+    createAttemptedRef.current = false;
+  }, [agentName]);
 
   const authFetch = useCallback(
     (url: string, opts: RequestInit = {}) =>
@@ -140,6 +160,7 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
             enable_skills: false,
             skills: [],
             tools: ['runtime-echo', 'runtime-sensitive-echo'],
+            disableToolApprovals: disableToolApprovals,
           }),
         });
 
@@ -193,7 +214,13 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
     return () => {
       isCancelled = true;
     };
-  }, [agentBaseUrl, authFetch, agentName, selectedSpecId]);
+  }, [
+    agentBaseUrl,
+    authFetch,
+    agentName,
+    disableToolApprovals,
+    selectedSpecId,
+  ]);
 
   if (!isReady && runtimeStatus !== 'error') {
     return (
@@ -266,6 +293,25 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
                 <Text sx={{ color: 'fg.muted', fontSize: 1 }}>
                   Pending: {pendingApprovalCount}
                 </Text>
+                <label
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    color: 'var(--fgColor-muted)',
+                    fontSize: 12,
+                    cursor: 'pointer',
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={disableToolApprovals}
+                    onChange={event =>
+                      setDisableToolApprovals(event.currentTarget.checked)
+                    }
+                  />
+                  Disable tool approvals
+                </label>
               </Box>
             }
             suggestions={[

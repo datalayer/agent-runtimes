@@ -114,6 +114,21 @@ def _agent_node_inference_provider_override() -> str | None:
     return None
 
 
+def _is_tool_approvals_disabled(request_value: bool | None = None) -> bool:
+    """Resolve tool-approvals disable state from request override or runtime config."""
+    if isinstance(request_value, bool):
+        return request_value
+    try:
+        from .configure import get_tool_approvals_disabled
+
+        return bool(get_tool_approvals_disabled())
+    except Exception:
+        return (
+            os.environ.get("AGENT_RUNTIMES_DISABLE_TOOL_APPROVALS", "").lower()
+            == "true"
+        )
+
+
 def _get_parameter_value(parameters: dict[str, Any], key: str) -> Any:
     """Resolve a dot-delimited parameter key from launch parameters."""
     current: Any = parameters
@@ -868,6 +883,11 @@ class CreateAgentRequest(BaseModel):
     allow_direct_tool_calls: bool | None = Field(
         default=None,
         description="Override direct tool call policy for codemode (None uses defaults)",
+    )
+    disable_tool_approvals: bool | None = Field(
+        default=None,
+        alias="disableToolApprovals",
+        description="Disable tool approvals for this agent launch (overrides runtime default when set)",
     )
     enable_tool_reranker: bool = Field(
         default=False,
@@ -1788,6 +1808,16 @@ async def create_agent(
                     spec_for_runtime_controls
                 )
 
+            tool_approvals_disabled = _is_tool_approvals_disabled(
+                request.disable_tool_approvals
+            )
+            if tool_approvals_disabled and capabilities:
+                capabilities = [
+                    cap
+                    for cap in capabilities
+                    if not isinstance(cap, ToolsGuardrailCapability)
+                ]
+
             # Always apply runtime selection guardrails, even when no spec is provided.
             if capabilities is None:
                 capabilities = []
@@ -1803,7 +1833,9 @@ async def create_agent(
                 agent_kwargs["capabilities"] = capabilities
             if usage_limits is not None:
                 agent_kwargs["usage_limits"] = usage_limits
-            approval_tool_ids = tools_requiring_approval_ids(tool_ids)
+            approval_tool_ids = []
+            if not tool_approvals_disabled:
+                approval_tool_ids = tools_requiring_approval_ids(tool_ids)
             if approval_tool_ids:
                 approval_patterns = [
                     tool_id.split(":", 1)[0] for tool_id in approval_tool_ids
@@ -1850,6 +1882,11 @@ async def create_agent(
                         agent_id,
                         approval_patterns,
                     )
+            elif tool_approvals_disabled:
+                logger.info(
+                    "Tool approvals disabled for agent '%s'; skipping approval capability wiring",
+                    agent_id,
+                )
 
             try:
                 resolved_model = resolve_model_for_inference_provider(
@@ -2608,7 +2645,9 @@ async def update_agent_transport(
                 _lib = get_library_agent_spec(stored_spec["agent_spec_id"])
                 _has_ft = bool(_lib and getattr(_lib, "frontend_tools", None))
             _stored_tools = stored_spec.get("tools") or []
-            _has_approval = bool(tools_requiring_approval_ids(_stored_tools))
+            _has_approval = bool(tools_requiring_approval_ids(_stored_tools)) and (
+                not _is_tool_approvals_disabled(None)
+            )
             vercel_adapter = VercelAITransport(
                 agent,
                 agent_id=agent_id,

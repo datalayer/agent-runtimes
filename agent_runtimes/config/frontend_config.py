@@ -27,6 +27,7 @@ async def get_frontend_config(
     tools: list[dict[str, Any]] | None = None,
     mcp_servers: list[MCPServer] | None = None,
     models: list[AIModelRuntime] | None = None,
+    disable_tool_approvals: bool = False,
 ) -> FrontendConfig:
     """
     Build frontend configuration.
@@ -57,6 +58,7 @@ async def get_frontend_config(
         default_model=DEFAULT_MODEL.value if DEFAULT_MODEL else None,
         builtin_tools=builtin_tools,
         mcp_servers=mcp_servers or [],
+        disable_tool_approvals=disable_tool_approvals,
     )
 
     logger.info(f"Built frontend config with {len(builtin_tools)} builtin_tools")
