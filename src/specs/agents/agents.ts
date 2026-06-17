@@ -1322,6 +1322,62 @@ export const EXAMPLE_CODEMODE_AGENTSPEC_0_0_1: Agentspec = {
   subagents: undefined,
 };
 
+export const EXAMPLE_EVALS_NOCODMODE_AGENTSPEC_0_0_1: Agentspec = {
+  id: 'example-evals-nocodmode',
+  version: '0.0.1',
+  name: 'Example Evals Agent (No Codemode)',
+  description: `Evals runner variant with codemode disabled for A/B comparisons against example-evals in SDK eval examples.`,
+  tags: ['evals', 'demo', 'runner', 'no-codemode'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  mcpServers: [],
+  skills: [
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
+  tools: [TOOL_MAP['runtime-echo:0.0.1']],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
+  environmentName: 'ai-agents-env',
+  icon: 'pulse',
+  emoji: '🧪',
+  color: '#0284C7',
+  suggestions: [
+    'Run the selected evaluation experiment on the configured dataset',
+    'Validate experiment configuration and report missing fields',
+    'Summarize run results with pass rate and latency highlights',
+  ],
+  welcomeMessage:
+    'Ready to run eval experiments without codemode enabled. Configure your benchmark and evaluator setup, then launch a run.',
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'jupyter',
+  systemPrompt: `You are the Demo Evals Runner. Execute evaluation workflows reliably, validate inputs before execution, and summarize outcomes clearly.`,
+  systemPromptCodemodeAddons: undefined,
+  goal: undefined,
+  protocol: undefined,
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: { enabled: false },
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+};
+
 export const EXAMPLE_EVALS_AGENTSPEC_0_0_1: Agentspec = {
   id: 'example-evals',
   version: '0.0.1',
@@ -4101,6 +4157,7 @@ export const AGENTSPECS: Record<string, Agentspec> = {
     END_OF_MONTH_SALES_PERFORMANCE_AGENTSPEC_0_0_1,
   'eval-experiment-runner': EVAL_EXPERIMENT_RUNNER_AGENTSPEC_0_0_1,
   'example-codemode': EXAMPLE_CODEMODE_AGENTSPEC_0_0_1,
+  'example-evals-nocodmode': EXAMPLE_EVALS_NOCODMODE_AGENTSPEC_0_0_1,
   'example-evals': EXAMPLE_EVALS_AGENTSPEC_0_0_1,
   'example-full': EXAMPLE_FULL_AGENTSPEC_0_0_1,
   'example-guardrails': EXAMPLE_GUARDRAILS_AGENTSPEC_0_0_1,
