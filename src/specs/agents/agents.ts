@@ -1322,8 +1322,8 @@ export const EXAMPLE_CODEMODE_AGENTSPEC_0_0_1: Agentspec = {
   subagents: undefined,
 };
 
-export const EXAMPLE_EVALS_NOCODMODE_AGENTSPEC_0_0_1: Agentspec = {
-  id: 'example-evals-nocodmode',
+export const EXAMPLE_EVALS_NOCODEMODE_AGENTSPEC_0_0_1: Agentspec = {
+  id: 'example-evals-nocodemode',
   version: '0.0.1',
   name: 'Example Evals Agent (No Codemode)',
   description: `Evals runner variant with codemode disabled for A/B comparisons against example-evals in SDK eval examples.`,
@@ -4157,7 +4157,7 @@ export const AGENTSPECS: Record<string, Agentspec> = {
     END_OF_MONTH_SALES_PERFORMANCE_AGENTSPEC_0_0_1,
   'eval-experiment-runner': EVAL_EXPERIMENT_RUNNER_AGENTSPEC_0_0_1,
   'example-codemode': EXAMPLE_CODEMODE_AGENTSPEC_0_0_1,
-  'example-evals-nocodmode': EXAMPLE_EVALS_NOCODMODE_AGENTSPEC_0_0_1,
+  'example-evals-nocodemode': EXAMPLE_EVALS_NOCODEMODE_AGENTSPEC_0_0_1,
   'example-evals': EXAMPLE_EVALS_AGENTSPEC_0_0_1,
   'example-full': EXAMPLE_FULL_AGENTSPEC_0_0_1,
   'example-guardrails': EXAMPLE_GUARDRAILS_AGENTSPEC_0_0_1,
