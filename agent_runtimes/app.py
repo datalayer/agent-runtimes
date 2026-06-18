@@ -475,14 +475,11 @@ async def _create_and_register_cli_agent(
     capabilities = build_capabilities_from_agent_spec(agent_spec, agent_id=agent_id)
     usage_limits = build_usage_limits_from_agent_spec(agent_spec)
     tool_approvals_disabled = (
-        os.environ.get("AGENT_RUNTIMES_DISABLE_TOOL_APPROVALS", "").lower()
-        == "true"
+        os.environ.get("AGENT_RUNTIMES_DISABLE_TOOL_APPROVALS", "").lower() == "true"
     )
     if tool_approvals_disabled and capabilities:
         capabilities = [
-            cap
-            for cap in capabilities
-            if not isinstance(cap, ToolsGuardrailCapability)
+            cap for cap in capabilities if not isinstance(cap, ToolsGuardrailCapability)
         ]
     agent_kwargs: dict[str, Any] = {
         "system_prompt": system_prompt,

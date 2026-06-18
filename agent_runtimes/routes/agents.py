@@ -2214,7 +2214,12 @@ def _emit_initial_otel_baseline(agent_id: str, http_request: Request) -> None:
             record_prompt_turn_completion,
         )
 
-        auth_header = http_request.headers.get("Authorization", "")
+        # Test doubles and some custom request wrappers may not expose
+        # FastAPI's full `headers` interface.
+        request_headers = getattr(http_request, "headers", None)
+        auth_header = ""
+        if request_headers is not None:
+            auth_header = request_headers.get("Authorization", "")
         user_jwt = extract_bearer_token(auth_header)
         user_uid = decode_user_uid(user_jwt)
 

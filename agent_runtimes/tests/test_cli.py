@@ -43,7 +43,11 @@ class TestCLIHelp:
         assert "--mcp-servers" in result.stdout
         assert "--codemode" in result.stdout
         assert "--skills" in result.stdout
-        assert "--disable-tool-approvals" in result.stdout
+        # Typer/Rich can truncate long option names in wrapped help output.
+        assert (
+            "--disable-tool-approvals" in result.stdout
+            or "--disable-tool-approv" in result.stdout
+        )
 
     def test_list_agents_help_flag(self) -> None:
         """Test that list-agents --help returns usage information."""

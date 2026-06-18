@@ -7,11 +7,40 @@
 
 import react from '@vitejs/plugin-react';
 import fs from 'fs';
+import { createRequire } from 'module';
 import path from 'path';
 import { defineConfig, loadEnv, type ServerOptions } from 'vite';
 import { treatAsCommonjs } from 'vite-plugin-treat-umd-as-commonjs';
 import wasm from 'vite-plugin-wasm';
 import topLevelAwait from 'vite-plugin-top-level-await';
+
+/**
+ * Resolve the `loro-crdt` base64 entry point.
+ *
+ * In this multi-root monorepo the package is frequently hoisted to a parent
+ * `node_modules` directory, so the local `./node_modules/loro-crdt` path does
+ * not always exist.  Resolve the real package location via Node's module
+ * resolution and fall back to known candidate paths.
+ */
+function resolveLoroBase64Entry(): string {
+  try {
+    const requireFromConfig = createRequire(
+      path.join(__dirname, 'package.json'),
+    );
+    const pkgJson = requireFromConfig.resolve('loro-crdt/package.json');
+    return path.resolve(path.dirname(pkgJson), 'base64/index.js');
+  } catch {
+    const candidates = [
+      path.resolve(__dirname, './node_modules/loro-crdt/base64/index.js'),
+      path.resolve(__dirname, '../../node_modules/loro-crdt/base64/index.js'),
+      path.resolve(
+        __dirname,
+        '../../../node_modules/loro-crdt/base64/index.js',
+      ),
+    ];
+    return candidates.find(candidate => fs.existsSync(candidate)) ?? candidates[0];
+  }
+}
 
 export default defineConfig(({ mode, command }) => {
   const env = loadEnv(mode, process.cwd(), '');
@@ -335,10 +364,7 @@ export default defineConfig(({ mode, command }) => {
           ? [
               {
                 find: /^loro-crdt$/,
-                replacement: path.resolve(
-                  __dirname,
-                  './node_modules/loro-crdt/base64/index.js',
-                ),
+                replacement: resolveLoroBase64Entry(),
               },
             ]
           : []),

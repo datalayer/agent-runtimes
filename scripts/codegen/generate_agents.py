@@ -1261,7 +1261,9 @@ import type { Agentspec } from '../../types';
     for folder in sorted(specs_by_folder.keys()):
         if folder:
             folder_const = folder.replace("-", "_").upper()
-            typescript_index_content += f"import {{ AGENTSPECS as {folder_const}_AGENTS }} from './{folder}';\n"
+            typescript_index_content += (
+                f"import {{ AGENTSPECS as {folder_const}_AGENTS }} from './{folder}';\n"
+            )
         else:
             typescript_index_content += (
                 "import { AGENTSPECS as ROOT_AGENTS } from './agents';\n"
