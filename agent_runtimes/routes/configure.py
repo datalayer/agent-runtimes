@@ -105,6 +105,12 @@ _tool_approvals_state: dict[str, bool] = {
 
 def get_tool_approvals_disabled() -> bool:
     """Return whether tool approvals are disabled for new agent launches."""
+    # Honor a live environment variable so that runtime/deployment configuration
+    # (set after this module was imported) is respected. Fall back to the
+    # in-memory toggle managed via ``set_tool_approvals_disabled``.
+    env_value = os.environ.get("AGENT_RUNTIMES_DISABLE_TOOL_APPROVALS")
+    if env_value:
+        return env_value.lower() == "true"
     return bool(_tool_approvals_state["disabled"])
 
 

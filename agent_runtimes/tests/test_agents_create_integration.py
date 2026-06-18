@@ -38,6 +38,7 @@ class _DummyMcpManager:
 class _DummyRequest:
     def __init__(self) -> None:
         self.base_url = "http://localhost:8765/"
+        self.headers: dict[str, str] = {}
         self.app = SimpleNamespace(
             state=SimpleNamespace(
                 codemode_workspace_path="/tmp/workspace",
