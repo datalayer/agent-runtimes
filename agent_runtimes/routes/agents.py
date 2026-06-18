@@ -2650,8 +2650,13 @@ async def update_agent_transport(
                 _lib = get_library_agent_spec(stored_spec["agent_spec_id"])
                 _has_ft = bool(_lib and getattr(_lib, "frontend_tools", None))
             _stored_tools = stored_spec.get("tools") or []
+            # Respect the per-agent tool-approvals override captured at creation
+            # time. Agents launched with disableToolApprovals must never be
+            # reported as having approval tools, regardless of the runtime
+            # default.
+            _stored_disable_approvals = stored_spec.get("disable_tool_approvals")
             _has_approval = bool(tools_requiring_approval_ids(_stored_tools)) and (
-                not _is_tool_approvals_disabled(None)
+                not _is_tool_approvals_disabled(_stored_disable_approvals)
             )
             vercel_adapter = VercelAITransport(
                 agent,

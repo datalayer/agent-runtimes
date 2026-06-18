@@ -104,7 +104,12 @@ _tool_approvals_state: dict[str, bool] = {
 
 
 def get_tool_approvals_disabled() -> bool:
-    """Return whether tool approvals are disabled for new agent launches."""
+    """Return whether tool approvals are disabled for new agent launches.
+
+    This reflects process-local runtime state (a module-level flag mirrored to an
+    env var); it does not propagate across multiple uvicorn workers or pods
+    unless backed by shared storage.
+    """
     # Honor a live environment variable so that runtime/deployment configuration
     # (set after this module was imported) is respected. Fall back to the
     # in-memory toggle managed via ``set_tool_approvals_disabled``.
@@ -115,7 +120,12 @@ def get_tool_approvals_disabled() -> bool:
 
 
 def set_tool_approvals_disabled(disabled: bool) -> bool:
-    """Update runtime tool approvals disable flag and mirror to env."""
+    """Update runtime tool approvals disable flag (process-local) and mirror to env.
+
+    The flag is stored in process-local state and an env var, so it does not
+    propagate across multiple uvicorn workers or pods unless backed by shared
+    storage.
+    """
     _tool_approvals_state["disabled"] = bool(disabled)
     os.environ["AGENT_RUNTIMES_DISABLE_TOOL_APPROVALS"] = (
         "true" if disabled else "false"
