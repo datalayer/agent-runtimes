@@ -39,7 +39,7 @@ class CheckpointConfig:
 
     @classmethod
     def from_spec(cls, spec_checkpoints: dict | None) -> "CheckpointConfig":
-        """Create from AgentSpec ``checkpoints`` section."""
+        """Create from Agentspec ``checkpoints`` section."""
         if not spec_checkpoints:
             return cls()
         return cls(

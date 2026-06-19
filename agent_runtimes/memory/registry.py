@@ -2,7 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 """
-Memory backend registry — creates backends from AgentSpec config.
+Memory backend registry — creates backends from Agentspec config.
 """
 
 from __future__ import annotations
@@ -22,7 +22,7 @@ def create_memory_backend(
     agent_id: str | None = None,
     config: dict[str, Any] | None = None,
 ) -> BaseMemoryBackend:
-    """Create a memory backend from AgentSpec ``memory`` field.
+    """Create a memory backend from Agentspec ``memory`` field.
 
     Parameters
     ----------

@@ -11,7 +11,7 @@
  * Generated from YAML specifications in specs/agents/
  */
 
-import type { AgentSpec } from '../../types';
+import type { Agentspec } from '../../types';
 import {
   ALPHAVANTAGE_MCP_SERVER_0_0_1,
   CHART_MCP_SERVER_0_0_1,
@@ -129,7 +129,7 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
 // Agent Specs
 // ============================================================================
 
-export const ANALYZE_CAMPAIGN_PERFORMANCE_AGENT_SPEC_0_0_1: AgentSpec = {
+export const ANALYZE_CAMPAIGN_PERFORMANCE_AGENTSPEC_0_0_1: Agentspec = {
   id: 'analyze-campaign-performance',
   version: '0.0.1',
   name: 'Analyze Campaign Performance',
@@ -144,7 +144,6 @@ export const ANALYZE_CAMPAIGN_PERFORMANCE_AGENT_SPEC_0_0_1: AgentSpec = {
   ],
   enabled: false,
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-  inferenceProvider: undefined,
   mcpServers: [
     MCP_SERVER_MAP['filesystem:0.0.1'],
     MCP_SERVER_MAP['slack:0.0.1'],
@@ -265,7 +264,7 @@ export const ANALYZE_CAMPAIGN_PERFORMANCE_AGENT_SPEC_0_0_1: AgentSpec = {
   subagents: undefined,
 };
 
-export const ANALYZE_SUPPORT_TICKETS_AGENT_SPEC_0_0_1: AgentSpec = {
+export const ANALYZE_SUPPORT_TICKETS_AGENTSPEC_0_0_1: Agentspec = {
   id: 'analyze-support-tickets',
   version: '0.0.1',
   name: 'Analyze Support Tickets',
@@ -273,7 +272,6 @@ export const ANALYZE_SUPPORT_TICKETS_AGENT_SPEC_0_0_1: AgentSpec = {
   tags: ['analytics', 'data', 'support', 'tickets'],
   enabled: false,
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-  inferenceProvider: undefined,
   mcpServers: [
     MCP_SERVER_MAP['filesystem:0.0.1'],
     MCP_SERVER_MAP['slack:0.0.1'],
@@ -369,7 +367,7 @@ export const ANALYZE_SUPPORT_TICKETS_AGENT_SPEC_0_0_1: AgentSpec = {
   subagents: undefined,
 };
 
-export const AUDIT_INVENTORY_LEVELS_AGENT_SPEC_0_0_1: AgentSpec = {
+export const AUDIT_INVENTORY_LEVELS_AGENTSPEC_0_0_1: Agentspec = {
   id: 'audit-inventory-levels',
   version: '0.0.1',
   name: 'Audit Inventory Levels',
@@ -377,7 +375,6 @@ export const AUDIT_INVENTORY_LEVELS_AGENT_SPEC_0_0_1: AgentSpec = {
   tags: ['finance', 'automation', 'inventory', 'supply-chain'],
   enabled: false,
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-  inferenceProvider: undefined,
   mcpServers: [
     MCP_SERVER_MAP['filesystem:0.0.1'],
     MCP_SERVER_MAP['slack:0.0.1'],
@@ -467,7 +464,7 @@ export const AUDIT_INVENTORY_LEVELS_AGENT_SPEC_0_0_1: AgentSpec = {
   subagents: undefined,
 };
 
-export const AUTOMATE_REGULATORY_REPORTING_AGENT_SPEC_0_0_1: AgentSpec = {
+export const AUTOMATE_REGULATORY_REPORTING_AGENTSPEC_0_0_1: Agentspec = {
   id: 'automate-regulatory-reporting',
   version: '0.0.1',
   name: 'Automate Regulatory Reporting',
@@ -475,7 +472,6 @@ export const AUTOMATE_REGULATORY_REPORTING_AGENT_SPEC_0_0_1: AgentSpec = {
   tags: ['finance', 'compliance', 'regulatory', 'risk', 'banking', 'audit'],
   enabled: false,
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-  inferenceProvider: undefined,
   mcpServers: [
     MCP_SERVER_MAP['filesystem:0.0.1'],
     MCP_SERVER_MAP['slack:0.0.1'],
@@ -589,7 +585,7 @@ export const AUTOMATE_REGULATORY_REPORTING_AGENT_SPEC_0_0_1: AgentSpec = {
   subagents: undefined,
 };
 
-export const CLASSIFY_ROUTE_EMAILS_AGENT_SPEC_0_0_1: AgentSpec = {
+export const CLASSIFY_ROUTE_EMAILS_AGENTSPEC_0_0_1: Agentspec = {
   id: 'classify-route-emails',
   version: '0.0.1',
   name: 'Classify & Route Emails',
@@ -597,7 +593,6 @@ export const CLASSIFY_ROUTE_EMAILS_AGENT_SPEC_0_0_1: AgentSpec = {
   tags: ['email', 'classification', 'routing', 'horizontal', 'automation'],
   enabled: false,
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-  inferenceProvider: undefined,
   mcpServers: [MCP_SERVER_MAP['slack:0.0.1']],
   skills: [
     SKILL_MAP['github:0.0.1']
@@ -691,7 +686,7 @@ export const CLASSIFY_ROUTE_EMAILS_AGENT_SPEC_0_0_1: AgentSpec = {
   subagents: undefined,
 };
 
-export const COMPREHENSIVE_SALES_ANALYTICS_AGENT_SPEC_0_0_1: AgentSpec = {
+export const COMPREHENSIVE_SALES_ANALYTICS_AGENTSPEC_0_0_1: Agentspec = {
   id: 'comprehensive-sales-analytics',
   version: '0.0.1',
   name: 'Comprehensive Sales Analytics',
@@ -699,7 +694,6 @@ export const COMPREHENSIVE_SALES_ANALYTICS_AGENT_SPEC_0_0_1: AgentSpec = {
   tags: ['sales', 'analytics', 'kpi', 'monitoring', 'horizontal'],
   enabled: false,
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-  inferenceProvider: undefined,
   mcpServers: [
     MCP_SERVER_MAP['filesystem:0.0.1'],
     MCP_SERVER_MAP['slack:0.0.1'],
@@ -781,7 +775,7 @@ export const COMPREHENSIVE_SALES_ANALYTICS_AGENT_SPEC_0_0_1: AgentSpec = {
   subagents: undefined,
 };
 
-export const CRAWLER_AGENT_SPEC_0_0_1: AgentSpec = {
+export const CRAWLER_AGENTSPEC_0_0_1: Agentspec = {
   id: 'crawler',
   version: '0.0.1',
   name: 'Crawler Agent',
@@ -789,7 +783,6 @@ export const CRAWLER_AGENT_SPEC_0_0_1: AgentSpec = {
   tags: ['web', 'search', 'research', 'crawler', 'github'],
   enabled: true,
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-  inferenceProvider: undefined,
   mcpServers: [MCP_SERVER_MAP['tavily:0.0.1']],
   skills: [
     SKILL_MAP['github:0.0.1']
@@ -861,7 +854,7 @@ export const CRAWLER_AGENT_SPEC_0_0_1: AgentSpec = {
   subagents: undefined,
 };
 
-export const DATA_ACQUISITION_AGENT_SPEC_0_0_1: AgentSpec = {
+export const DATA_ACQUISITION_AGENTSPEC_0_0_1: Agentspec = {
   id: 'data-acquisition',
   version: '0.0.1',
   name: 'Data Acquisition Agent',
@@ -869,7 +862,6 @@ export const DATA_ACQUISITION_AGENT_SPEC_0_0_1: AgentSpec = {
   tags: ['data', 'acquisition', 'kaggle', 'filesystem'],
   enabled: true,
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-  inferenceProvider: undefined,
   mcpServers: [
     MCP_SERVER_MAP['kaggle:0.0.1'],
     MCP_SERVER_MAP['filesystem:0.0.1'],
@@ -945,7 +937,7 @@ export const DATA_ACQUISITION_AGENT_SPEC_0_0_1: AgentSpec = {
   subagents: undefined,
 };
 
-export const DEMO_OUTPUTS_AGENT_SPEC_0_0_1: AgentSpec = {
+export const DEMO_OUTPUTS_AGENTSPEC_0_0_1: Agentspec = {
   id: 'demo-outputs',
   version: '0.0.1',
   name: 'Example Outputs Agent',
@@ -953,7 +945,6 @@ export const DEMO_OUTPUTS_AGENT_SPEC_0_0_1: AgentSpec = {
   tags: ['demo', 'outputs', 'rendering'],
   enabled: true,
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-  inferenceProvider: undefined,
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -1010,7 +1001,7 @@ If mode is ambiguous, default to JSON.`,
   subagents: undefined,
 };
 
-export const END_OF_MONTH_SALES_PERFORMANCE_AGENT_SPEC_0_0_1: AgentSpec = {
+export const END_OF_MONTH_SALES_PERFORMANCE_AGENTSPEC_0_0_1: Agentspec = {
   id: 'end-of-month-sales-performance',
   version: '0.0.1',
   name: 'End of Month Sales Performance',
@@ -1027,7 +1018,6 @@ export const END_OF_MONTH_SALES_PERFORMANCE_AGENT_SPEC_0_0_1: AgentSpec = {
   ],
   enabled: false,
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-  inferenceProvider: undefined,
   mcpServers: [MCP_SERVER_MAP['salesforce:0.0.1']],
   skills: [
     SKILL_MAP['pdf:0.0.1']
@@ -1220,7 +1210,7 @@ export const END_OF_MONTH_SALES_PERFORMANCE_AGENT_SPEC_0_0_1: AgentSpec = {
   subagents: undefined,
 };
 
-export const EVAL_EXPERIMENT_RUNNER_AGENT_SPEC_0_0_1: AgentSpec = {
+export const EVAL_EXPERIMENT_RUNNER_AGENTSPEC_0_0_1: Agentspec = {
   id: 'eval-experiment-runner',
   version: '0.0.1',
   name: 'Eval Experiment Runner',
@@ -1228,7 +1218,6 @@ export const EVAL_EXPERIMENT_RUNNER_AGENT_SPEC_0_0_1: AgentSpec = {
   tags: ['evals', 'experiments', 'runner'],
   enabled: true,
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-  inferenceProvider: undefined,
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -1277,7 +1266,7 @@ export const EVAL_EXPERIMENT_RUNNER_AGENT_SPEC_0_0_1: AgentSpec = {
   subagents: undefined,
 };
 
-export const EXAMPLE_CODEMODE_AGENT_SPEC_0_0_1: AgentSpec = {
+export const EXAMPLE_CODEMODE_AGENTSPEC_0_0_1: Agentspec = {
   id: 'example-codemode',
   version: '0.0.1',
   name: 'Example Tavily Codemode Agent',
@@ -1285,7 +1274,6 @@ export const EXAMPLE_CODEMODE_AGENT_SPEC_0_0_1: AgentSpec = {
   tags: ['demo', 'mcp', 'tavily', 'codemode'],
   enabled: true,
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-  inferenceProvider: undefined,
   mcpServers: [MCP_SERVER_MAP['tavily:0.0.1']],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -1334,15 +1322,14 @@ export const EXAMPLE_CODEMODE_AGENT_SPEC_0_0_1: AgentSpec = {
   subagents: undefined,
 };
 
-export const EXAMPLE_EVALS_AGENT_SPEC_0_0_1: AgentSpec = {
-  id: 'example-evals',
+export const EXAMPLE_EVALS_NOCODEMODE_AGENTSPEC_0_0_1: Agentspec = {
+  id: 'example-evals-nocodemode',
   version: '0.0.1',
-  name: 'Example Evals Agent',
-  description: `Default eval runner for local and cloud execution in SDK eval examples. Includes baseline tooling for reproducible eval runs.`,
-  tags: ['evals', 'demo', 'runner'],
+  name: 'Example Evals Agent (No Codemode)',
+  description: `Evals runner variant with codemode disabled for A/B comparisons against example-evals in SDK eval examples.`,
+  tags: ['evals', 'demo', 'runner', 'no-codemode'],
   enabled: true,
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-  inferenceProvider: undefined,
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -1350,6 +1337,64 @@ export const EXAMPLE_EVALS_AGENT_SPEC_0_0_1: AgentSpec = {
       : undefined,
   ].filter(Boolean) as SkillSpec[],
   tools: [TOOL_MAP['runtime-echo:0.0.1']],
+  disableToolApprovals: true,
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
+  environmentName: 'ai-agents-env',
+  icon: 'pulse',
+  emoji: '🧪',
+  color: '#0284C7',
+  suggestions: [
+    'Run the selected evaluation experiment on the configured dataset',
+    'Validate experiment configuration and report missing fields',
+    'Summarize run results with pass rate and latency highlights',
+  ],
+  welcomeMessage:
+    'Ready to run eval experiments without codemode enabled. Configure your benchmark and evaluator setup, then launch a run.',
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'jupyter',
+  systemPrompt: `You are the Demo Evals Runner. Execute evaluation workflows reliably, validate inputs before execution, and summarize outcomes clearly.`,
+  systemPromptCodemodeAddons: undefined,
+  goal: undefined,
+  protocol: undefined,
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: { enabled: false },
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+};
+
+export const EXAMPLE_EVALS_AGENTSPEC_0_0_1: Agentspec = {
+  id: 'example-evals',
+  version: '0.0.1',
+  name: 'Example Evals Agent',
+  description: `Default eval runner for local and cloud execution in SDK eval examples. Includes baseline tooling for reproducible eval runs.`,
+  tags: ['evals', 'demo', 'runner'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  mcpServers: [],
+  skills: [
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
+  tools: [TOOL_MAP['runtime-echo:0.0.1']],
+  disableToolApprovals: true,
   frontendTools: [
     FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
     FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
@@ -1391,7 +1436,7 @@ export const EXAMPLE_EVALS_AGENT_SPEC_0_0_1: AgentSpec = {
   subagents: undefined,
 };
 
-export const EXAMPLE_FULL_AGENT_SPEC_0_0_1: AgentSpec = {
+export const EXAMPLE_FULL_AGENTSPEC_0_0_1: Agentspec = {
   id: 'example-full',
   version: '0.0.1',
   name: 'Example MCP, Skills, Tool Approvals... Agent',
@@ -1399,7 +1444,6 @@ export const EXAMPLE_FULL_AGENT_SPEC_0_0_1: AgentSpec = {
   tags: ['demo', 'approval', 'human-in-the-loop', 'utility'],
   enabled: true,
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-  inferenceProvider: undefined,
   mcpServers: [MCP_SERVER_MAP['tavily:0.0.1']],
   skills: [
     SKILL_MAP['crawl:0.0.1']
@@ -1475,7 +1519,7 @@ export const EXAMPLE_FULL_AGENT_SPEC_0_0_1: AgentSpec = {
   subagents: undefined,
 };
 
-export const EXAMPLE_GUARDRAILS_AGENT_SPEC_0_0_1: AgentSpec = {
+export const EXAMPLE_GUARDRAILS_AGENTSPEC_0_0_1: Agentspec = {
   id: 'example-guardrails',
   version: '0.0.1',
   name: 'Example Guardrails Agent',
@@ -1483,7 +1527,6 @@ export const EXAMPLE_GUARDRAILS_AGENT_SPEC_0_0_1: AgentSpec = {
   tags: ['demo', 'guardrails', 'approval'],
   enabled: true,
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-  inferenceProvider: undefined,
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -1573,7 +1616,7 @@ This agent also demonstrates pydantic-ai tool execution hook naming: before_tool
   subagents: undefined,
 };
 
-export const EXAMPLE_HOOKS_AGENT_SPEC_0_0_1: AgentSpec = {
+export const EXAMPLE_HOOKS_AGENTSPEC_0_0_1: Agentspec = {
   id: 'example-hooks',
   version: '0.0.1',
   name: 'Example Hooks Agent',
@@ -1581,7 +1624,6 @@ export const EXAMPLE_HOOKS_AGENT_SPEC_0_0_1: AgentSpec = {
   tags: ['demo', 'hooks', 'lifecycle'],
   enabled: true,
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-  inferenceProvider: undefined,
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
   tools: [
@@ -1683,7 +1725,7 @@ When the user asks about hooks, use execute_code to show concrete evidence: read
   subagents: undefined,
 };
 
-export const EXAMPLE_INFERENCE_AGENT_SPEC_0_0_1: AgentSpec = {
+export const EXAMPLE_INFERENCE_AGENTSPEC_0_0_1: Agentspec = {
   id: 'example-inference',
   version: '0.0.1',
   name: 'Example Inference Provider Agent',
@@ -1740,7 +1782,7 @@ export const EXAMPLE_INFERENCE_AGENT_SPEC_0_0_1: AgentSpec = {
   subagents: undefined,
 };
 
-export const EXAMPLE_MCP_AGENT_SPEC_0_0_1: AgentSpec = {
+export const EXAMPLE_MCP_AGENTSPEC_0_0_1: Agentspec = {
   id: 'example-mcp',
   version: '0.0.1',
   name: 'Example MCP Agent',
@@ -1748,7 +1790,6 @@ export const EXAMPLE_MCP_AGENT_SPEC_0_0_1: AgentSpec = {
   tags: ['demo', 'mcp', 'tools', 'research'],
   enabled: true,
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-  inferenceProvider: undefined,
   mcpServers: [MCP_SERVER_MAP['tavily:0.0.1']],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -1801,7 +1842,7 @@ export const EXAMPLE_MCP_AGENT_SPEC_0_0_1: AgentSpec = {
   subagents: undefined,
 };
 
-export const EXAMPLE_MEMORY_AGENT_SPEC_0_0_1: AgentSpec = {
+export const EXAMPLE_MEMORY_AGENTSPEC_0_0_1: Agentspec = {
   id: 'example-memory',
   version: '0.0.1',
   name: 'Example Memory Agent',
@@ -1809,7 +1850,6 @@ export const EXAMPLE_MEMORY_AGENT_SPEC_0_0_1: AgentSpec = {
   tags: ['memory', 'mem0', 'demo'],
   enabled: true,
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-  inferenceProvider: undefined,
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -1858,7 +1898,7 @@ export const EXAMPLE_MEMORY_AGENT_SPEC_0_0_1: AgentSpec = {
   subagents: undefined,
 };
 
-export const EXAMPLE_MONITORING_AGENT_SPEC_0_0_1: AgentSpec = {
+export const EXAMPLE_MONITORING_AGENTSPEC_0_0_1: Agentspec = {
   id: 'example-monitoring',
   version: '0.0.1',
   name: 'Example Monitoring Agent',
@@ -1866,7 +1906,6 @@ export const EXAMPLE_MONITORING_AGENT_SPEC_0_0_1: AgentSpec = {
   tags: ['demo', 'monitoring', 'observability'],
   enabled: true,
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-  inferenceProvider: undefined,
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -1915,7 +1954,7 @@ export const EXAMPLE_MONITORING_AGENT_SPEC_0_0_1: AgentSpec = {
   subagents: undefined,
 };
 
-export const EXAMPLE_NO_CODEMODE_AGENT_SPEC_0_0_1: AgentSpec = {
+export const EXAMPLE_NO_CODEMODE_AGENTSPEC_0_0_1: Agentspec = {
   id: 'example-no-codemode',
   version: '0.0.1',
   name: 'Example Tavily No Codemode Agent',
@@ -1923,7 +1962,6 @@ export const EXAMPLE_NO_CODEMODE_AGENT_SPEC_0_0_1: AgentSpec = {
   tags: ['demo', 'mcp', 'tavily', 'no-codemode'],
   enabled: true,
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-  inferenceProvider: undefined,
   mcpServers: [MCP_SERVER_MAP['tavily:0.0.1']],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -1972,7 +2010,7 @@ export const EXAMPLE_NO_CODEMODE_AGENT_SPEC_0_0_1: AgentSpec = {
   subagents: undefined,
 };
 
-export const EXAMPLE_NOTIFICATIONS_AGENT_SPEC_0_0_1: AgentSpec = {
+export const EXAMPLE_NOTIFICATIONS_AGENTSPEC_0_0_1: Agentspec = {
   id: 'example-notifications',
   version: '0.0.1',
   name: 'Example Notifications Agent',
@@ -1980,7 +2018,6 @@ export const EXAMPLE_NOTIFICATIONS_AGENT_SPEC_0_0_1: AgentSpec = {
   tags: ['notifications', 'alerts', 'demo'],
   enabled: true,
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-  inferenceProvider: undefined,
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -2029,7 +2066,7 @@ export const EXAMPLE_NOTIFICATIONS_AGENT_SPEC_0_0_1: AgentSpec = {
   subagents: undefined,
 };
 
-export const EXAMPLE_ONE_TRIGGER_APPROVAL_AGENT_SPEC_0_0_1: AgentSpec = {
+export const EXAMPLE_ONE_TRIGGER_APPROVAL_AGENTSPEC_0_0_1: Agentspec = {
   id: 'example-one-trigger-approval',
   version: '0.0.1',
   name: 'Example Once Trigger and Tool Approval Agent',
@@ -2037,7 +2074,6 @@ export const EXAMPLE_ONE_TRIGGER_APPROVAL_AGENT_SPEC_0_0_1: AgentSpec = {
   tags: ['demo', 'trigger', 'once', 'lifecycle', 'approval'],
   enabled: true,
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-  inferenceProvider: undefined,
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
   tools: [TOOL_MAP['runtime-sensitive-echo:0.0.1']],
@@ -2079,7 +2115,7 @@ export const EXAMPLE_ONE_TRIGGER_APPROVAL_AGENT_SPEC_0_0_1: AgentSpec = {
   subagents: undefined,
 };
 
-export const EXAMPLE_ONE_TRIGGER_AGENT_SPEC_0_0_1: AgentSpec = {
+export const EXAMPLE_ONE_TRIGGER_AGENTSPEC_0_0_1: Agentspec = {
   id: 'example-one-trigger',
   version: '0.0.1',
   name: 'Example Once Trigger Agent',
@@ -2087,7 +2123,6 @@ export const EXAMPLE_ONE_TRIGGER_AGENT_SPEC_0_0_1: AgentSpec = {
   tags: ['demo', 'trigger', 'once', 'lifecycle'],
   enabled: true,
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-  inferenceProvider: undefined,
   mcpServers: [],
   skills: [
     SKILL_MAP['github:0.0.1']
@@ -2136,7 +2171,7 @@ export const EXAMPLE_ONE_TRIGGER_AGENT_SPEC_0_0_1: AgentSpec = {
   subagents: undefined,
 };
 
-export const EXAMPLE_OTEL_AGENT_SPEC_0_0_1: AgentSpec = {
+export const EXAMPLE_OTEL_AGENTSPEC_0_0_1: Agentspec = {
   id: 'example-otel',
   version: '0.0.1',
   name: 'Example OTEL Agent',
@@ -2144,7 +2179,6 @@ export const EXAMPLE_OTEL_AGENT_SPEC_0_0_1: AgentSpec = {
   tags: ['demo', 'otel', 'observability', 'telemetry'],
   enabled: true,
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-  inferenceProvider: undefined,
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -2194,7 +2228,7 @@ export const EXAMPLE_OTEL_AGENT_SPEC_0_0_1: AgentSpec = {
   subagents: undefined,
 };
 
-export const EXAMPLE_PARAMETERS_AGENT_SPEC_0_0_1: AgentSpec = {
+export const EXAMPLE_PARAMETERS_AGENTSPEC_0_0_1: Agentspec = {
   id: 'example-parameters',
   version: '0.0.1',
   name: 'Example Parameters Agent',
@@ -2202,7 +2236,6 @@ export const EXAMPLE_PARAMETERS_AGENT_SPEC_0_0_1: AgentSpec = {
   tags: ['demo', 'parameters', 'schema'],
   enabled: true,
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-  inferenceProvider: undefined,
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
   tools: [TOOL_MAP['runtime-echo:0.0.1']],
@@ -2267,7 +2300,7 @@ export const EXAMPLE_PARAMETERS_AGENT_SPEC_0_0_1: AgentSpec = {
   subagents: undefined,
 };
 
-export const EXAMPLE_SIMPLE_AGENT_SPEC_0_0_1: AgentSpec = {
+export const EXAMPLE_SIMPLE_AGENTSPEC_0_0_1: Agentspec = {
   id: 'example-simple',
   version: '0.0.1',
   name: 'A Simple Agent',
@@ -2275,7 +2308,6 @@ export const EXAMPLE_SIMPLE_AGENT_SPEC_0_0_1: AgentSpec = {
   tags: ['simple', 'chat', 'assistant'],
   enabled: true,
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-  inferenceProvider: undefined,
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -2326,7 +2358,7 @@ export const EXAMPLE_SIMPLE_AGENT_SPEC_0_0_1: AgentSpec = {
   subagents: undefined,
 };
 
-export const EXAMPLE_SKILLS_AGENT_SPEC_0_0_1: AgentSpec = {
+export const EXAMPLE_SKILLS_AGENTSPEC_0_0_1: Agentspec = {
   id: 'example-skills',
   version: '0.0.1',
   name: 'Example Skills Agent',
@@ -2334,7 +2366,6 @@ export const EXAMPLE_SKILLS_AGENT_SPEC_0_0_1: AgentSpec = {
   tags: ['demo', 'skills', 'discovery'],
   enabled: true,
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-  inferenceProvider: undefined,
   mcpServers: [],
   skills: [
     SKILL_MAP['crawl:0.0.1']
@@ -2402,7 +2433,7 @@ export const EXAMPLE_SKILLS_AGENT_SPEC_0_0_1: AgentSpec = {
   subagents: undefined,
 };
 
-export const EXAMPLE_SUBAGENTS_AGENT_SPEC_0_0_1: AgentSpec = {
+export const EXAMPLE_SUBAGENTS_AGENTSPEC_0_0_1: Agentspec = {
   id: 'example-subagents',
   version: '0.0.1',
   name: 'Example Subagents Agent',
@@ -2410,7 +2441,6 @@ export const EXAMPLE_SUBAGENTS_AGENT_SPEC_0_0_1: AgentSpec = {
   tags: ['demo', 'subagents', 'orchestration'],
   enabled: true,
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-  inferenceProvider: undefined,
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -2459,15 +2489,14 @@ export const EXAMPLE_SUBAGENTS_AGENT_SPEC_0_0_1: AgentSpec = {
   subagents: undefined,
 };
 
-export const EXAMPLE_TOOL_APPROVALS_AGENT_SPEC_0_0_1: AgentSpec = {
+export const EXAMPLE_TOOL_APPROVALS_AGENTSPEC_0_0_1: Agentspec = {
   id: 'example-tool-approvals',
   version: '0.0.1',
   name: 'Example Tool Approvals',
   description: `Demonstrates per-tool approval hooks with policy requests and decision/audit logging.`,
   tags: ['approvals', 'hooks', 'policy'],
   enabled: true,
-  model: 'openai:gpt-4o-mini',
-  inferenceProvider: undefined,
+  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
   tools: [
@@ -2551,7 +2580,7 @@ Hook names align with pydantic-ai capability hooks: before_tool_execute, after_t
   subagents: undefined,
 };
 
-export const EXTRACT_DATA_FROM_FILES_AGENT_SPEC_0_0_1: AgentSpec = {
+export const EXTRACT_DATA_FROM_FILES_AGENTSPEC_0_0_1: Agentspec = {
   id: 'extract-data-from-files',
   version: '0.0.1',
   name: 'Extract Data from Files',
@@ -2559,7 +2588,6 @@ export const EXTRACT_DATA_FROM_FILES_AGENT_SPEC_0_0_1: AgentSpec = {
   tags: ['extraction', 'data', 'horizontal', 'automation', 'documents'],
   enabled: false,
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-  inferenceProvider: undefined,
   mcpServers: [MCP_SERVER_MAP['filesystem:0.0.1']],
   skills: [
     SKILL_MAP['pdf:0.0.1']
@@ -2657,7 +2685,7 @@ export const EXTRACT_DATA_FROM_FILES_AGENT_SPEC_0_0_1: AgentSpec = {
   subagents: undefined,
 };
 
-export const FINANCIAL_VIZ_AGENT_SPEC_0_0_1: AgentSpec = {
+export const FINANCIAL_VIZ_AGENTSPEC_0_0_1: Agentspec = {
   id: 'financial-viz',
   version: '0.0.1',
   name: 'Financial Visualization Agent',
@@ -2665,7 +2693,6 @@ export const FINANCIAL_VIZ_AGENT_SPEC_0_0_1: AgentSpec = {
   tags: ['finance', 'stocks', 'visualization', 'charts'],
   enabled: false,
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-  inferenceProvider: undefined,
   mcpServers: [
     MCP_SERVER_MAP['alphavantage:0.0.1'],
     MCP_SERVER_MAP['chart:0.0.1'],
@@ -2737,7 +2764,7 @@ export const FINANCIAL_VIZ_AGENT_SPEC_0_0_1: AgentSpec = {
   subagents: undefined,
 };
 
-export const FINANCIAL_AGENT_SPEC_0_0_1: AgentSpec = {
+export const FINANCIAL_AGENTSPEC_0_0_1: Agentspec = {
   id: 'financial',
   version: '0.0.1',
   name: 'Financial Data Analysis Agent',
@@ -2745,7 +2772,6 @@ export const FINANCIAL_AGENT_SPEC_0_0_1: AgentSpec = {
   tags: ['finance', 'stocks', 'visualization', 'charts'],
   enabled: false,
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-  inferenceProvider: undefined,
   mcpServers: [MCP_SERVER_MAP['alphavantage:0.0.1']],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -2814,7 +2840,7 @@ export const FINANCIAL_AGENT_SPEC_0_0_1: AgentSpec = {
   subagents: undefined,
 };
 
-export const GENERATE_WEEKLY_REPORTS_AGENT_SPEC_0_0_1: AgentSpec = {
+export const GENERATE_WEEKLY_REPORTS_AGENTSPEC_0_0_1: Agentspec = {
   id: 'generate-weekly-reports',
   version: '0.0.1',
   name: 'Generate Weekly Reports',
@@ -2822,7 +2848,6 @@ export const GENERATE_WEEKLY_REPORTS_AGENT_SPEC_0_0_1: AgentSpec = {
   tags: ['marketing', 'reports', 'weekly', 'analytics', 'automation'],
   enabled: false,
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-  inferenceProvider: undefined,
   mcpServers: [
     MCP_SERVER_MAP['filesystem:0.0.1'],
     MCP_SERVER_MAP['slack:0.0.1'],
@@ -2931,7 +2956,7 @@ export const GENERATE_WEEKLY_REPORTS_AGENT_SPEC_0_0_1: AgentSpec = {
   subagents: undefined,
 };
 
-export const GITHUB_AGENT_SPEC_0_0_1: AgentSpec = {
+export const GITHUB_AGENT_SPEC_0_0_1: Agentspec = {
   id: 'github-agent',
   version: '0.0.1',
   name: 'GitHub Agent',
@@ -2939,7 +2964,6 @@ export const GITHUB_AGENT_SPEC_0_0_1: AgentSpec = {
   tags: ['github', 'git', 'code', 'email'],
   enabled: false,
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-  inferenceProvider: undefined,
   mcpServers: [MCP_SERVER_MAP['google-workspace:0.0.1']],
   skills: [
     SKILL_MAP['github:0.0.1']
@@ -3011,7 +3035,7 @@ export const GITHUB_AGENT_SPEC_0_0_1: AgentSpec = {
   subagents: undefined,
 };
 
-export const INFORMATION_ROUTING_AGENT_SPEC_0_0_1: AgentSpec = {
+export const INFORMATION_ROUTING_AGENTSPEC_0_0_1: Agentspec = {
   id: 'information-routing',
   version: '0.0.1',
   name: 'Information Routing Agent',
@@ -3019,7 +3043,6 @@ export const INFORMATION_ROUTING_AGENT_SPEC_0_0_1: AgentSpec = {
   tags: ['workflow', 'communication', 'gdrive'],
   enabled: false,
   model: 'bedrock:us.anthropic.claude-opus-4-6-v1',
-  inferenceProvider: undefined,
   mcpServers: [
     MCP_SERVER_MAP['google-workspace:0.0.1'],
     MCP_SERVER_MAP['github:0.0.1'],
@@ -3091,7 +3114,7 @@ export const INFORMATION_ROUTING_AGENT_SPEC_0_0_1: AgentSpec = {
   subagents: undefined,
 };
 
-export const MONITOR_SALES_KPIS_AGENT_SPEC_0_0_1: AgentSpec = {
+export const MONITOR_SALES_KPIS_AGENTSPEC_0_0_1: Agentspec = {
   id: 'monitor-sales-kpis',
   version: '0.0.1',
   name: 'Monitor Sales KPIs',
@@ -3099,7 +3122,6 @@ export const MONITOR_SALES_KPIS_AGENT_SPEC_0_0_1: AgentSpec = {
   tags: ['support', 'chatbot', 'sales', 'kpi', 'monitoring'],
   enabled: false,
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-  inferenceProvider: undefined,
   mcpServers: [MCP_SERVER_MAP['filesystem:0.0.1']],
   skills: [
     SKILL_MAP['github:0.0.1']
@@ -3215,7 +3237,7 @@ export const MONITOR_SALES_KPIS_AGENT_SPEC_0_0_1: AgentSpec = {
   subagents: undefined,
 };
 
-export const OPTIMIZE_DYNAMIC_PRICING_AGENT_SPEC_0_0_1: AgentSpec = {
+export const OPTIMIZE_DYNAMIC_PRICING_AGENTSPEC_0_0_1: Agentspec = {
   id: 'optimize-dynamic-pricing',
   version: '0.0.1',
   name: 'Optimize Dynamic Pricing',
@@ -3230,7 +3252,6 @@ export const OPTIMIZE_DYNAMIC_PRICING_AGENT_SPEC_0_0_1: AgentSpec = {
   ],
   enabled: false,
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-  inferenceProvider: undefined,
   mcpServers: [MCP_SERVER_MAP['filesystem:0.0.1']],
   skills: [
     SKILL_MAP['pdf:0.0.1']
@@ -3352,7 +3373,7 @@ export const OPTIMIZE_DYNAMIC_PRICING_AGENT_SPEC_0_0_1: AgentSpec = {
   subagents: undefined,
 };
 
-export const OPTIMIZE_GRID_OPERATIONS_AGENT_SPEC_0_0_1: AgentSpec = {
+export const OPTIMIZE_GRID_OPERATIONS_AGENTSPEC_0_0_1: Agentspec = {
   id: 'optimize-grid-operations',
   version: '0.0.1',
   name: 'Optimize Grid Operations',
@@ -3367,7 +3388,6 @@ export const OPTIMIZE_GRID_OPERATIONS_AGENT_SPEC_0_0_1: AgentSpec = {
   ],
   enabled: false,
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-  inferenceProvider: undefined,
   mcpServers: [MCP_SERVER_MAP['filesystem:0.0.1']],
   skills: [
     SKILL_MAP['pdf:0.0.1']
@@ -3475,7 +3495,7 @@ export const OPTIMIZE_GRID_OPERATIONS_AGENT_SPEC_0_0_1: AgentSpec = {
   subagents: undefined,
 };
 
-export const PROCESS_CITIZEN_REQUESTS_AGENT_SPEC_0_0_1: AgentSpec = {
+export const PROCESS_CITIZEN_REQUESTS_AGENTSPEC_0_0_1: Agentspec = {
   id: 'process-citizen-requests',
   version: '0.0.1',
   name: 'Process Citizen Requests',
@@ -3490,7 +3510,6 @@ export const PROCESS_CITIZEN_REQUESTS_AGENT_SPEC_0_0_1: AgentSpec = {
   ],
   enabled: false,
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-  inferenceProvider: undefined,
   mcpServers: [MCP_SERVER_MAP['filesystem:0.0.1']],
   skills: [
     SKILL_MAP['pdf:0.0.1']
@@ -3607,7 +3626,7 @@ export const PROCESS_CITIZEN_REQUESTS_AGENT_SPEC_0_0_1: AgentSpec = {
   subagents: undefined,
 };
 
-export const PROCESS_CLINICAL_TRIAL_DATA_AGENT_SPEC_0_0_1: AgentSpec = {
+export const PROCESS_CLINICAL_TRIAL_DATA_AGENTSPEC_0_0_1: Agentspec = {
   id: 'process-clinical-trial-data',
   version: '0.0.1',
   name: 'Process Clinical Trial Data',
@@ -3621,7 +3640,6 @@ export const PROCESS_CLINICAL_TRIAL_DATA_AGENT_SPEC_0_0_1: AgentSpec = {
   ],
   enabled: false,
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-  inferenceProvider: undefined,
   mcpServers: [MCP_SERVER_MAP['filesystem:0.0.1']],
   skills: [
     SKILL_MAP['pdf:0.0.1']
@@ -3740,7 +3758,7 @@ export const PROCESS_CLINICAL_TRIAL_DATA_AGENT_SPEC_0_0_1: AgentSpec = {
   subagents: undefined,
 };
 
-export const PROCESS_FINANCIAL_TRANSACTIONS_AGENT_SPEC_0_0_1: AgentSpec = {
+export const PROCESS_FINANCIAL_TRANSACTIONS_AGENTSPEC_0_0_1: Agentspec = {
   id: 'process-financial-transactions',
   version: '0.0.1',
   name: 'Process Financial Transactions',
@@ -3754,7 +3772,6 @@ export const PROCESS_FINANCIAL_TRANSACTIONS_AGENT_SPEC_0_0_1: AgentSpec = {
   ],
   enabled: false,
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-  inferenceProvider: undefined,
   mcpServers: [MCP_SERVER_MAP['filesystem:0.0.1']],
   skills: [
     SKILL_MAP['pdf:0.0.1']
@@ -3853,7 +3870,7 @@ export const PROCESS_FINANCIAL_TRANSACTIONS_AGENT_SPEC_0_0_1: AgentSpec = {
   subagents: undefined,
 };
 
-export const SPATIAL_DATA_ANALYSIS_AGENT_SPEC_0_0_1: AgentSpec = {
+export const SPATIAL_DATA_ANALYSIS_AGENTSPEC_0_0_1: Agentspec = {
   id: 'spatial-data-analysis',
   version: '0.0.1',
   name: 'Spatial Data Analysis Agent',
@@ -3861,7 +3878,6 @@ export const SPATIAL_DATA_ANALYSIS_AGENT_SPEC_0_0_1: AgentSpec = {
   tags: ['geospatial', 'climate', 'earth-observation', 'analytics'],
   enabled: true,
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-  inferenceProvider: undefined,
   mcpServers: [
     MCP_SERVER_MAP['earthdata:0.0.1'],
     MCP_SERVER_MAP['eurus:0.0.1'],
@@ -3919,7 +3935,7 @@ export const SPATIAL_DATA_ANALYSIS_AGENT_SPEC_0_0_1: AgentSpec = {
   subagents: undefined,
 };
 
-export const SUMMARIZE_DOCUMENTS_AGENT_SPEC_0_0_1: AgentSpec = {
+export const SUMMARIZE_DOCUMENTS_AGENTSPEC_0_0_1: Agentspec = {
   id: 'summarize-documents',
   version: '0.0.1',
   name: 'Summarize Documents',
@@ -3933,7 +3949,6 @@ export const SUMMARIZE_DOCUMENTS_AGENT_SPEC_0_0_1: AgentSpec = {
   ],
   enabled: false,
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-  inferenceProvider: undefined,
   mcpServers: [MCP_SERVER_MAP['filesystem:0.0.1']],
   skills: [
     SKILL_MAP['pdf:0.0.1']
@@ -4026,7 +4041,7 @@ export const SUMMARIZE_DOCUMENTS_AGENT_SPEC_0_0_1: AgentSpec = {
   subagents: undefined,
 };
 
-export const SYNC_CRM_CONTACTS_AGENT_SPEC_0_0_1: AgentSpec = {
+export const SYNC_CRM_CONTACTS_AGENTSPEC_0_0_1: Agentspec = {
   id: 'sync-crm-contacts',
   version: '0.0.1',
   name: 'Sync CRM Contacts',
@@ -4034,7 +4049,6 @@ export const SYNC_CRM_CONTACTS_AGENT_SPEC_0_0_1: AgentSpec = {
   tags: ['sales', 'crm', 'data-sync', 'deduplication'],
   enabled: false,
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-  inferenceProvider: undefined,
   mcpServers: [
     MCP_SERVER_MAP['filesystem:0.0.1'],
     MCP_SERVER_MAP['slack:0.0.1'],
@@ -4129,64 +4143,65 @@ export const SYNC_CRM_CONTACTS_AGENT_SPEC_0_0_1: AgentSpec = {
 // Agent Specs Registry
 // ============================================================================
 
-export const AGENT_SPECS: Record<string, AgentSpec> = {
-  'analyze-campaign-performance': ANALYZE_CAMPAIGN_PERFORMANCE_AGENT_SPEC_0_0_1,
-  'analyze-support-tickets': ANALYZE_SUPPORT_TICKETS_AGENT_SPEC_0_0_1,
-  'audit-inventory-levels': AUDIT_INVENTORY_LEVELS_AGENT_SPEC_0_0_1,
+export const AGENTSPECS: Record<string, Agentspec> = {
+  'analyze-campaign-performance': ANALYZE_CAMPAIGN_PERFORMANCE_AGENTSPEC_0_0_1,
+  'analyze-support-tickets': ANALYZE_SUPPORT_TICKETS_AGENTSPEC_0_0_1,
+  'audit-inventory-levels': AUDIT_INVENTORY_LEVELS_AGENTSPEC_0_0_1,
   'automate-regulatory-reporting':
-    AUTOMATE_REGULATORY_REPORTING_AGENT_SPEC_0_0_1,
-  'classify-route-emails': CLASSIFY_ROUTE_EMAILS_AGENT_SPEC_0_0_1,
+    AUTOMATE_REGULATORY_REPORTING_AGENTSPEC_0_0_1,
+  'classify-route-emails': CLASSIFY_ROUTE_EMAILS_AGENTSPEC_0_0_1,
   'comprehensive-sales-analytics':
-    COMPREHENSIVE_SALES_ANALYTICS_AGENT_SPEC_0_0_1,
-  crawler: CRAWLER_AGENT_SPEC_0_0_1,
-  'data-acquisition': DATA_ACQUISITION_AGENT_SPEC_0_0_1,
-  'demo-outputs': DEMO_OUTPUTS_AGENT_SPEC_0_0_1,
+    COMPREHENSIVE_SALES_ANALYTICS_AGENTSPEC_0_0_1,
+  crawler: CRAWLER_AGENTSPEC_0_0_1,
+  'data-acquisition': DATA_ACQUISITION_AGENTSPEC_0_0_1,
+  'demo-outputs': DEMO_OUTPUTS_AGENTSPEC_0_0_1,
   'end-of-month-sales-performance':
-    END_OF_MONTH_SALES_PERFORMANCE_AGENT_SPEC_0_0_1,
-  'eval-experiment-runner': EVAL_EXPERIMENT_RUNNER_AGENT_SPEC_0_0_1,
-  'example-codemode': EXAMPLE_CODEMODE_AGENT_SPEC_0_0_1,
-  'example-evals': EXAMPLE_EVALS_AGENT_SPEC_0_0_1,
-  'example-full': EXAMPLE_FULL_AGENT_SPEC_0_0_1,
-  'example-guardrails': EXAMPLE_GUARDRAILS_AGENT_SPEC_0_0_1,
-  'example-hooks': EXAMPLE_HOOKS_AGENT_SPEC_0_0_1,
-  'example-inference': EXAMPLE_INFERENCE_AGENT_SPEC_0_0_1,
-  'example-mcp': EXAMPLE_MCP_AGENT_SPEC_0_0_1,
-  'example-memory': EXAMPLE_MEMORY_AGENT_SPEC_0_0_1,
-  'example-monitoring': EXAMPLE_MONITORING_AGENT_SPEC_0_0_1,
-  'example-no-codemode': EXAMPLE_NO_CODEMODE_AGENT_SPEC_0_0_1,
-  'example-notifications': EXAMPLE_NOTIFICATIONS_AGENT_SPEC_0_0_1,
-  'example-one-trigger-approval': EXAMPLE_ONE_TRIGGER_APPROVAL_AGENT_SPEC_0_0_1,
-  'example-one-trigger': EXAMPLE_ONE_TRIGGER_AGENT_SPEC_0_0_1,
-  'example-otel': EXAMPLE_OTEL_AGENT_SPEC_0_0_1,
-  'example-parameters': EXAMPLE_PARAMETERS_AGENT_SPEC_0_0_1,
-  'example-simple': EXAMPLE_SIMPLE_AGENT_SPEC_0_0_1,
-  'example-skills': EXAMPLE_SKILLS_AGENT_SPEC_0_0_1,
-  'example-subagents': EXAMPLE_SUBAGENTS_AGENT_SPEC_0_0_1,
-  'example-tool-approvals': EXAMPLE_TOOL_APPROVALS_AGENT_SPEC_0_0_1,
-  'extract-data-from-files': EXTRACT_DATA_FROM_FILES_AGENT_SPEC_0_0_1,
-  'financial-viz': FINANCIAL_VIZ_AGENT_SPEC_0_0_1,
-  financial: FINANCIAL_AGENT_SPEC_0_0_1,
-  'generate-weekly-reports': GENERATE_WEEKLY_REPORTS_AGENT_SPEC_0_0_1,
+    END_OF_MONTH_SALES_PERFORMANCE_AGENTSPEC_0_0_1,
+  'eval-experiment-runner': EVAL_EXPERIMENT_RUNNER_AGENTSPEC_0_0_1,
+  'example-codemode': EXAMPLE_CODEMODE_AGENTSPEC_0_0_1,
+  'example-evals-nocodemode': EXAMPLE_EVALS_NOCODEMODE_AGENTSPEC_0_0_1,
+  'example-evals': EXAMPLE_EVALS_AGENTSPEC_0_0_1,
+  'example-full': EXAMPLE_FULL_AGENTSPEC_0_0_1,
+  'example-guardrails': EXAMPLE_GUARDRAILS_AGENTSPEC_0_0_1,
+  'example-hooks': EXAMPLE_HOOKS_AGENTSPEC_0_0_1,
+  'example-inference': EXAMPLE_INFERENCE_AGENTSPEC_0_0_1,
+  'example-mcp': EXAMPLE_MCP_AGENTSPEC_0_0_1,
+  'example-memory': EXAMPLE_MEMORY_AGENTSPEC_0_0_1,
+  'example-monitoring': EXAMPLE_MONITORING_AGENTSPEC_0_0_1,
+  'example-no-codemode': EXAMPLE_NO_CODEMODE_AGENTSPEC_0_0_1,
+  'example-notifications': EXAMPLE_NOTIFICATIONS_AGENTSPEC_0_0_1,
+  'example-one-trigger-approval': EXAMPLE_ONE_TRIGGER_APPROVAL_AGENTSPEC_0_0_1,
+  'example-one-trigger': EXAMPLE_ONE_TRIGGER_AGENTSPEC_0_0_1,
+  'example-otel': EXAMPLE_OTEL_AGENTSPEC_0_0_1,
+  'example-parameters': EXAMPLE_PARAMETERS_AGENTSPEC_0_0_1,
+  'example-simple': EXAMPLE_SIMPLE_AGENTSPEC_0_0_1,
+  'example-skills': EXAMPLE_SKILLS_AGENTSPEC_0_0_1,
+  'example-subagents': EXAMPLE_SUBAGENTS_AGENTSPEC_0_0_1,
+  'example-tool-approvals': EXAMPLE_TOOL_APPROVALS_AGENTSPEC_0_0_1,
+  'extract-data-from-files': EXTRACT_DATA_FROM_FILES_AGENTSPEC_0_0_1,
+  'financial-viz': FINANCIAL_VIZ_AGENTSPEC_0_0_1,
+  financial: FINANCIAL_AGENTSPEC_0_0_1,
+  'generate-weekly-reports': GENERATE_WEEKLY_REPORTS_AGENTSPEC_0_0_1,
   'github-agent': GITHUB_AGENT_SPEC_0_0_1,
-  'information-routing': INFORMATION_ROUTING_AGENT_SPEC_0_0_1,
-  'monitor-sales-kpis': MONITOR_SALES_KPIS_AGENT_SPEC_0_0_1,
-  'optimize-dynamic-pricing': OPTIMIZE_DYNAMIC_PRICING_AGENT_SPEC_0_0_1,
-  'optimize-grid-operations': OPTIMIZE_GRID_OPERATIONS_AGENT_SPEC_0_0_1,
-  'process-citizen-requests': PROCESS_CITIZEN_REQUESTS_AGENT_SPEC_0_0_1,
-  'process-clinical-trial-data': PROCESS_CLINICAL_TRIAL_DATA_AGENT_SPEC_0_0_1,
+  'information-routing': INFORMATION_ROUTING_AGENTSPEC_0_0_1,
+  'monitor-sales-kpis': MONITOR_SALES_KPIS_AGENTSPEC_0_0_1,
+  'optimize-dynamic-pricing': OPTIMIZE_DYNAMIC_PRICING_AGENTSPEC_0_0_1,
+  'optimize-grid-operations': OPTIMIZE_GRID_OPERATIONS_AGENTSPEC_0_0_1,
+  'process-citizen-requests': PROCESS_CITIZEN_REQUESTS_AGENTSPEC_0_0_1,
+  'process-clinical-trial-data': PROCESS_CLINICAL_TRIAL_DATA_AGENTSPEC_0_0_1,
   'process-financial-transactions':
-    PROCESS_FINANCIAL_TRANSACTIONS_AGENT_SPEC_0_0_1,
-  'spatial-data-analysis': SPATIAL_DATA_ANALYSIS_AGENT_SPEC_0_0_1,
-  'summarize-documents': SUMMARIZE_DOCUMENTS_AGENT_SPEC_0_0_1,
-  'sync-crm-contacts': SYNC_CRM_CONTACTS_AGENT_SPEC_0_0_1,
+    PROCESS_FINANCIAL_TRANSACTIONS_AGENTSPEC_0_0_1,
+  'spatial-data-analysis': SPATIAL_DATA_ANALYSIS_AGENTSPEC_0_0_1,
+  'summarize-documents': SUMMARIZE_DOCUMENTS_AGENTSPEC_0_0_1,
+  'sync-crm-contacts': SYNC_CRM_CONTACTS_AGENTSPEC_0_0_1,
 };
 
 function resolveAgentId(agentId: string): string {
-  if (agentId in AGENT_SPECS) return agentId;
+  if (agentId in AGENTSPECS) return agentId;
   const idx = agentId.lastIndexOf(':');
   if (idx > 0) {
     const base = agentId.slice(0, idx);
-    if (base in AGENT_SPECS) return base;
+    if (base in AGENTSPECS) return base;
   }
   return agentId;
 }
@@ -4194,8 +4209,8 @@ function resolveAgentId(agentId: string): string {
 /**
  * Get an agent specification by ID.
  */
-export function getAgentSpecs(agentId: string): AgentSpec | undefined {
-  return AGENT_SPECS[resolveAgentId(agentId)];
+export function getAgentspecs(agentId: string): Agentspec | undefined {
+  return AGENTSPECS[resolveAgentId(agentId)];
 }
 
 /**
@@ -4203,8 +4218,8 @@ export function getAgentSpecs(agentId: string): AgentSpec | undefined {
  *
  * @param prefix - If provided, only return specs whose ID starts with this prefix.
  */
-export function listAgentSpecs(prefix?: string): AgentSpec[] {
-  const specs = Object.values(AGENT_SPECS);
+export function listAgentspecs(prefix?: string): Agentspec[] {
+  const specs = Object.values(AGENTSPECS);
   return prefix !== undefined
     ? specs.filter(s => s.id.startsWith(prefix))
     : specs;
@@ -4216,7 +4231,7 @@ export function listAgentSpecs(prefix?: string): AgentSpec[] {
  * Iterates over the spec's MCP servers and skills and returns the
  * deduplicated union of their `requiredEnvVars` arrays.
  */
-export function getAgentSpecRequiredEnvVars(spec: AgentSpec): string[] {
+export function getAgentspecRequiredEnvVars(spec: Agentspec): string[] {
   const vars = new Set<string>();
   const baseEnvVar = (v: string): string => v.split(':')[0] ?? v;
   for (const server of spec.mcpServers) {

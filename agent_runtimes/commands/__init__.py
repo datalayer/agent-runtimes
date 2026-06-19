@@ -28,8 +28,8 @@ Usage as library:
         ListAgentsError,
 
         # List specs command
-        list_agent_specs,
-        get_agent_specs,
+        list_agentspecs,
+        get_agentspecs,
 
         # MCP servers catalog command
         list_mcp_servers_catalog,
@@ -56,7 +56,7 @@ Usage as library:
     result = list_agents_from_server(host="localhost", port=8000)
 
     # Get available agent specs
-    specs = get_agent_specs()
+    specs = get_agentspecs()
 
     # Get catalog MCP servers
     catalog = get_mcp_servers_catalog()
@@ -82,8 +82,8 @@ from agent_runtimes.commands.list_agents import (
     list_agents_from_server,
 )
 from agent_runtimes.commands.list_specs import (
-    get_agent_specs,
-    list_agent_specs,
+    get_agentspecs,
+    list_agentspecs,
 )
 from agent_runtimes.commands.mcp_servers_catalog import (
     get_mcp_servers_catalog,
@@ -120,8 +120,8 @@ __all__ = [
     "list_agents_from_server",
     "ListAgentsError",
     # List specs command
-    "list_agent_specs",
-    "get_agent_specs",
+    "list_agentspecs",
+    "get_agentspecs",
     # MCP servers catalog command
     "list_mcp_servers_catalog",
     "get_mcp_servers_catalog",

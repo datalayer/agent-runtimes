@@ -34,7 +34,7 @@ import type { SkillInfo } from '../types';
 
 const queryClient = new QueryClient();
 const AGENT_NAME = 'skills-example-agent';
-const AGENT_SPEC_ID = 'example-skills';
+const AGENTSPEC_ID = 'example-skills';
 const DEFAULT_LOCAL_BASE_URL =
   import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
 
@@ -266,7 +266,7 @@ const AgentSkillsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
               'Agent with skills example - module, package and file based skills',
             agent_library: 'pydantic-ai',
             transport: 'vercel-ai',
-            agent_spec_id: AGENT_SPEC_ID,
+            agent_spec_id: AGENTSPEC_ID,
             enable_skills: true,
             tools: [],
           }),

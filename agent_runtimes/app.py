@@ -156,7 +156,7 @@ async def _create_and_register_cli_agent(
     Args:
         app: The FastAPI app instance
         agent_id: The agent ID/name to register
-        agent_spec: The AgentSpec from the library
+        agent_spec: The Agentspec from the library
         enable_codemode: Whether codemode is enabled (--codemode flag)
         skills: List of skill names to enable (--skills flag)
         all_mcp_servers: All MCP servers (agent spec + CLI servers)
@@ -474,6 +474,23 @@ async def _create_and_register_cli_agent(
     tool_ids = list(agent_spec.tools or [])
     capabilities = build_capabilities_from_agent_spec(agent_spec, agent_id=agent_id)
     usage_limits = build_usage_limits_from_agent_spec(agent_spec)
+    tool_approvals_disabled = (
+        os.environ.get("AGENT_RUNTIMES_DISABLE_TOOL_APPROVALS", "").lower() == "true"
+    )
+    if tool_approvals_disabled and capabilities:
+        approval_capability_names = {
+            "ToolsGuardrailCapability",
+            "MCPToolsGuardrailCapability",
+            "SkillsGuardrailCapability",
+        }
+        capabilities = [
+            cap
+            for cap in capabilities
+            if (
+                not isinstance(cap, ToolsGuardrailCapability)
+                and cap.__class__.__name__ not in approval_capability_names
+            )
+        ]
     agent_kwargs: dict[str, Any] = {
         "system_prompt": system_prompt,
         # Explicitly disable Pydantic AI built-in tools (e.g. CodeExecutionTool)
@@ -483,7 +500,9 @@ async def _create_and_register_cli_agent(
         agent_kwargs["capabilities"] = capabilities
     if usage_limits is not None:
         agent_kwargs["usage_limits"] = usage_limits
-    approval_tool_ids = tools_requiring_approval_ids(tool_ids)
+    approval_tool_ids: list[str] = []
+    if not tool_approvals_disabled:
+        approval_tool_ids = tools_requiring_approval_ids(tool_ids)
     if approval_tool_ids:
         approval_patterns = [tool_id.split(":", 1)[0] for tool_id in approval_tool_ids]
         # Keep DeferredToolRequests in output_type for our websocket-driven
@@ -506,6 +525,11 @@ async def _create_and_register_cli_agent(
                 agent_id,
                 approval_patterns,
             )
+    elif tool_approvals_disabled:
+        logger.info(
+            "Tool approvals disabled for CLI agent '%s'; skipping approval capability wiring",
+            agent_id,
+        )
 
     try:
         resolved_model = resolve_model_for_inference_provider(
@@ -530,11 +554,12 @@ async def _create_and_register_cli_agent(
         else:
             raise
 
-    # Register runtime tools declared in AgentSpec.
+    # Register runtime tools declared in Agentspec.
     registered_tools = register_agent_tools(
         pydantic_agent,
         tool_ids,
         agent_id=agent_id,
+        disable_tool_approvals=tool_approvals_disabled,
     )
 
     # Wrap with DBOS durable execution if enabled (globally or per-spec)
@@ -779,9 +804,9 @@ async def _create_and_register_cli_agent(
     logger.info(f"Registered CLI agent '{agent_id}' with ACP (protocol: {protocol})")
 
     # Store the original agent spec for the /configure/agents/{id}/spec endpoint
-    from .routes.agents import _agent_specs
+    from .routes.agents import _agentspecs
 
-    _agent_specs[agent_id] = {
+    _agentspecs[agent_id] = {
         "name": agent_spec.name,
         "description": agent_spec.description,
         "agent_library": "pydantic-ai",
@@ -901,6 +926,7 @@ async def _create_and_register_cli_agent(
             "model": startup_model,
             "inference_provider": inference_provider,
             "codemode": enable_codemode,
+            "tool_approvals_disabled": tool_approvals_disabled,
             "skills": list(skills) if skills else [],
             "tools": registered_tools,
             "mcp_servers": [s.id for s in all_mcp_servers] if all_mcp_servers else [],

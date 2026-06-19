@@ -41,7 +41,7 @@ import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 // ─── Constants ─────────────────────────────────────────────────────────────
 
 const AGENT_NAME = 'memory-example-agent';
-const AGENT_SPEC_ID = 'example-memory';
+const AGENTSPEC_ID = 'example-memory';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -102,7 +102,7 @@ const AgentMemoryInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
             description: 'Agent with Mem0 persistent memory',
             agent_library: 'pydantic-ai',
             transport: 'vercel-ai',
-            agent_spec_id: AGENT_SPEC_ID,
+            agent_spec_id: AGENTSPEC_ID,
             enable_skills: true,
             tools: [],
           }),

@@ -43,6 +43,11 @@ class TestCLIHelp:
         assert "--mcp-servers" in result.stdout
         assert "--codemode" in result.stdout
         assert "--skills" in result.stdout
+        # Typer/Rich can truncate long option names in wrapped help output.
+        assert (
+            "--disable-tool-approvals" in result.stdout
+            or "--disable-tool-approv" in result.stdout
+        )
 
     def test_list_agents_help_flag(self) -> None:
         """Test that list-agents --help returns usage information."""
@@ -147,6 +152,25 @@ class TestServeEnvironmentVariables:
                 assert result.exit_code == 0
                 # The env var should remain set (Typer reads it)
                 assert os.environ.get("AGENT_RUNTIMES_NO_CONFIG_MCP_SERVERS") == "true"
+
+    def test_disable_tool_approvals_flag_sets_env_var(self) -> None:
+        """Test that --disable-tool-approvals sets the environment variable."""
+        with patch("uvicorn.run"):
+            result = runner.invoke(app, ["serve", "--disable-tool-approvals"])
+            assert result.exit_code == 0
+            assert os.environ.get("AGENT_RUNTIMES_DISABLE_TOOL_APPROVALS") == "true"
+
+    def test_env_var_sets_disable_tool_approvals(self) -> None:
+        """Test AGENT_RUNTIMES_DISABLE_TOOL_APPROVALS env var via Typer default."""
+        with patch.dict(
+            os.environ,
+            {"AGENT_RUNTIMES_DISABLE_TOOL_APPROVALS": "true"},
+            clear=False,
+        ):
+            with patch("uvicorn.run"):
+                result = runner.invoke(app, ["serve"])
+                assert result.exit_code == 0
+                assert os.environ.get("AGENT_RUNTIMES_DISABLE_TOOL_APPROVALS") == "true"
 
 
 class TestTyperEnvVarDefaults:

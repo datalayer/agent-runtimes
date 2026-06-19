@@ -6,7 +6,7 @@
 /**
  * AI Agent model
  */
-import type { AgentSpec } from './agentspecs';
+import type { Agentspec } from './agentspecs';
 import type { AgentConnection } from './connection';
 
 export type AgentLibrary = 'pydantic-ai' | 'langchain' | 'google-adk';
@@ -102,7 +102,7 @@ export type AgentRuntimeData = {
   url?: string;
   token?: string;
   // Agent specification with suggestions for chat UI (enriched by useAgentCatalogStore)
-  agentSpec?: AgentSpec;
+  agentSpec?: Agentspec;
   // ID of the agent spec used to create this runtime
   agent_spec_id?: string;
   // Account metadata charged for runtime usage
@@ -123,7 +123,7 @@ export interface RunningAgent {
   podName: string;
   /** Agent display name */
   name: string;
-  /** AgentSpec ID used to create the agent */
+  /** Agentspec ID used to create the agent */
   specId?: string;
   /** Current agent status */
   status: AgentStatus;

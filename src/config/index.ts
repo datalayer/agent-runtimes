@@ -16,5 +16,5 @@ export {
 export type {
   AgentConfigurationProps,
   SkillOption,
-  LibraryAgentSpec,
+  LibraryAgentspec,
 } from './AgentConfiguration';

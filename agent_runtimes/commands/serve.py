@@ -185,6 +185,7 @@ def serve_server(
     protocol: Protocol = Protocol.vercel_ai,
     find_free_port_flag: bool = False,
     node: bool = False,
+    disable_tool_approvals: bool = False,
 ) -> int:
     """
     Start the agent-runtimes server.
@@ -216,6 +217,7 @@ def serve_server(
         protocol: Transport protocol to use (ag-ui, vercel-ai, vercel-ai-jupyter, a2a)
         find_free_port_flag: If True, find a free port starting from the given port
         node: Enable Agent Node mode (disabled by default)
+        disable_tool_approvals: Disable tool approval flows for all agents
 
     Returns:
         The actual port the server is running on
@@ -254,11 +256,11 @@ def serve_server(
 
     # Validate agent if specified
     if agent_id:
-        from agent_runtimes.specs.agents import AGENT_SPECS, get_agent_spec
+        from agent_runtimes.specs.agents import AGENTSPECS, get_agent_spec
 
         agent_spec = get_agent_spec(agent_id)
         if not agent_spec:
-            available = list(AGENT_SPECS.keys())
+            available = list(AGENTSPECS.keys())
             raise ServeError(f"Agent '{agent_id}' not found. Available: {available}")
 
         # Ensure env vars are set for uvicorn (which loads app.py in separate context)
@@ -330,6 +332,12 @@ def serve_server(
     os.environ["AGENT_RUNTIMES_NODE"] = "true" if node else "false"
     if node:
         logger.info("Agent Node mode enabled (--node)")
+
+    os.environ["AGENT_RUNTIMES_DISABLE_TOOL_APPROVALS"] = (
+        "true" if disable_tool_approvals else "false"
+    )
+    if disable_tool_approvals:
+        logger.info("Tool approvals disabled (--disable-tool-approvals)")
 
     # Set protocol
     os.environ["AGENT_RUNTIMES_PROTOCOL"] = protocol.value

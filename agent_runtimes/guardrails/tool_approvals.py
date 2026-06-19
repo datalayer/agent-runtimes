@@ -3,7 +3,7 @@
 
 """Capability-native async tool approval flow.
 
-When an AgentSpec marks tools as requiring human approval, this module
+When an Agentspec marks tools as requiring human approval, this module
 provides:
 
 1. ``ToolApprovalConfig`` — configuration for the approval flow.
@@ -311,7 +311,7 @@ class ToolApprovalConfig:
 
     @classmethod
     def from_spec(cls, spec_config: dict) -> ToolApprovalConfig:
-        """Build from AgentSpec configuration.
+        """Build from Agentspec configuration.
 
         Expected structure::
 

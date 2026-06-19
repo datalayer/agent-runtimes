@@ -27,7 +27,7 @@ import { Chat } from '../chat';
 
 setupPrimerPortals();
 
-const AGENT_SPEC_ID = 'example-simple';
+const AGENTSPEC_ID = 'example-simple';
 const AGENT_NAME = 'simple';
 
 const AgentRuntimeChatExample: React.FC = () => {
@@ -49,7 +49,7 @@ const AgentRuntimeChatExample: React.FC = () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             name,
-            agent_spec_id: AGENT_SPEC_ID,
+            agent_spec_id: AGENTSPEC_ID,
             transport: 'ag-ui',
           }),
         });
@@ -101,7 +101,7 @@ const AgentRuntimeChatExample: React.FC = () => {
         >
           <Spinner size="large" />
           <Text sx={{ color: 'fg.muted' }}>
-            Creating agent from {AGENT_SPEC_ID}...
+            Creating agent from {AGENTSPEC_ID}...
           </Text>
         </Box>
       </ThemedProvider>

@@ -95,8 +95,8 @@ interface RunningAgent {
 
 // ─── Defaults ──────────────────────────────────────────────────────────────
 
-const AGENT_SPEC_ID = 'monitor-sales-kpis';
-const DEMO_AGENT_NAME = AGENT_SPEC_ID;
+const AGENTSPEC_ID = 'monitor-sales-kpis';
+const DEMO_AGENT_NAME = AGENTSPEC_ID;
 const LIGHT_CHECKPOINT_MESSAGES = [
   '[Checkpoint] Captured message history snapshot',
   '[Checkpoint] Saved conversational context for lightweight resume',
@@ -106,7 +106,7 @@ const LIGHT_CHECKPOINT_MESSAGES = [
  * Agent spec attributes displayed in the sidebar.
  * In production this would be fetched from the agentspecs service.
  */
-const AGENT_SPEC = {
+const AGENTSPEC = {
   id: 'monitor-sales-kpis',
   name: 'Monitor Sales KPIs',
   description:
@@ -186,9 +186,9 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
     connectToRuntime,
     disconnect,
   } = useAgentRuntimes({
-    agentSpecId: AGENT_SPEC_ID,
+    agentSpecId: AGENTSPEC_ID,
     autoStart: false,
-    agentSpec: AGENT_SPEC,
+    agentSpec: AGENTSPEC,
     agentConfig: {
       name: DEMO_AGENT_NAME,
       model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
@@ -200,8 +200,8 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
 
   const { pause, resume, terminate, refreshCheckpoints, checkpoints } =
     useAgentLifecycle({
-      agentSpecId: AGENT_SPEC_ID,
-      agentSpec: AGENT_SPEC,
+      agentSpecId: AGENTSPEC_ID,
+      agentSpec: AGENTSPEC,
       runtime,
       connectToRuntime,
       disconnect,
@@ -228,7 +228,7 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
 
   const displayError = hookError || actionError;
   const podName = runtime?.podName || '(launching…)';
-  const agentId = runtime?.agentId || AGENT_SPEC_ID;
+  const agentId = runtime?.agentId || AGENTSPEC_ID;
   const agentBaseUrl = runtime?.agentBaseUrl || '';
 
   const handleLaunch = useCallback(async () => {
@@ -563,46 +563,42 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
               <Box
                 sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}
               >
-                <Text sx={{ fontSize: '20px' }}>{AGENT_SPEC.emoji}</Text>
+                <Text sx={{ fontSize: '20px' }}>{AGENTSPEC.emoji}</Text>
                 <Heading as="h4" sx={{ fontSize: 2, m: 0 }}>
-                  {AGENT_SPEC.name}
+                  {AGENTSPEC.name}
                 </Heading>
               </Box>
               <Text
                 sx={{ fontSize: 0, color: 'fg.muted', display: 'block', mb: 3 }}
               >
-                {AGENT_SPEC.description}
+                {AGENTSPEC.description}
               </Text>
 
               <SpecRow
                 icon={AiModelIcon}
                 label="Model"
-                value={AGENT_SPEC.model}
+                value={AGENTSPEC.model}
               />
               <SpecRow
                 icon={GlobeIcon}
                 label="Protocol"
-                value={AGENT_SPEC.protocol}
+                value={AGENTSPEC.protocol}
               />
-              <SpecRow
-                icon={ZapIcon}
-                label="Memory"
-                value={AGENT_SPEC.memory}
-              />
+              <SpecRow icon={ZapIcon} label="Memory" value={AGENTSPEC.memory} />
               <SpecRow
                 icon={GraphIcon}
                 label="Environment"
-                value={AGENT_SPEC.environment_name}
+                value={AGENTSPEC.environment_name}
               />
               <SpecRow
                 icon={ClockIcon}
                 label="Trigger"
-                value={AGENT_SPEC.trigger.description}
+                value={AGENTSPEC.trigger.description}
               />
               <SpecRow
                 icon={TagIcon}
                 label="Tags"
-                value={AGENT_SPEC.tags.join(', ')}
+                value={AGENTSPEC.tags.join(', ')}
               />
 
               <Box
@@ -625,27 +621,27 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
                 </Text>
                 <SpecRow
                   label="Cost limit"
-                  value={AGENT_SPEC.advanced.cost_limit}
+                  value={AGENTSPEC.advanced.cost_limit}
                 />
                 <SpecRow
                   label="Time limit"
-                  value={AGENT_SPEC.advanced.time_limit}
+                  value={AGENTSPEC.advanced.time_limit}
                 />
                 <SpecRow
                   label="Max iterations"
-                  value={String(AGENT_SPEC.advanced.max_iterations)}
+                  value={String(AGENTSPEC.advanced.max_iterations)}
                 />
                 <SpecRow
                   label="Checkpoint interval"
-                  value={`${AGENT_SPEC.advanced.checkpoint_interval}s`}
+                  value={`${AGENTSPEC.advanced.checkpoint_interval}s`}
                 />
                 <SpecRow
                   label="Temperature"
-                  value={String(AGENT_SPEC.model_config.temperature)}
+                  value={String(AGENTSPEC.model_config.temperature)}
                 />
                 <SpecRow
                   label="Max tokens"
-                  value={String(AGENT_SPEC.model_config.max_tokens)}
+                  value={String(AGENTSPEC.model_config.max_tokens)}
                 />
               </Box>
             </Box>
@@ -981,7 +977,7 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
               <Spinner size="large" />
               <Text sx={{ color: 'fg.muted' }}>
                 {runtimeStatus === 'launching'
-                  ? `Launching runtime for ${AGENT_SPEC_ID}…`
+                  ? `Launching runtime for ${AGENTSPEC_ID}…`
                   : 'Creating agent on runtime…'}
               </Text>
             </Box>
@@ -1006,7 +1002,7 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
               >
                 Launch a cloud agent runtime with pause/resume checkpointing.
                 The agent will be deployed from the{' '}
-                <strong>{AGENT_SPEC_ID}</strong> spec.
+                <strong>{AGENTSPEC_ID}</strong> spec.
               </Text>
               {displayError && (
                 <Flash variant="danger" sx={{ maxWidth: 560, width: '100%' }}>

@@ -820,9 +820,14 @@ class FrontendConfig(BaseModel):
         description="Configured MCP servers",
         alias="mcpServers",
     )
+    disable_tool_approvals: bool = Field(
+        default=False,
+        description="Whether tool approvals are disabled for new agent launches",
+        alias="disableToolApprovals",
+    )
 
 
-class SubAgentSpecConfig(BaseModel):
+class SubAgentspecConfig(BaseModel):
     """Configuration for a subagent within an agent specification.
 
     Maps to ``subagents_pydantic_ai.SubAgentConfig`` at runtime.
@@ -871,7 +876,7 @@ class SubAgentsConfig(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True, by_alias=True)
 
-    subagents: List[SubAgentSpecConfig] = Field(
+    subagents: List[SubAgentspecConfig] = Field(
         default_factory=list,
         description="List of subagent configurations",
     )
@@ -892,7 +897,7 @@ class SubAgentsConfig(BaseModel):
     )
 
 
-class AgentSpec(BaseModel):
+class Agentspec(BaseModel):
     """
     Specification for an AI agent.
 
@@ -942,6 +947,14 @@ class AgentSpec(BaseModel):
     tools: List[str] = Field(
         default_factory=list,
         description="Tool IDs available to this agent",
+    )
+    disable_tool_approvals: bool = Field(
+        default=False,
+        description=(
+            "Disable tool approvals for this agent spec. "
+            "When omitted, approvals are required by default."
+        ),
+        alias="disableToolApprovals",
     )
     frontend_tools: List[str] = Field(
         default_factory=list,
@@ -1106,7 +1119,7 @@ class AgentSpec(BaseModel):
     )
 
 
-class TeamAgentSpec(BaseModel):
+class TeamAgentspec(BaseModel):
     """Specification for an agent within a team."""
 
     id: str = Field(..., description="Agent identifier within the team")
@@ -1261,7 +1274,7 @@ class TeamSpec(BaseModel):
         default=None,
         description="Validation settings for the team",
     )
-    agents: list[TeamAgentSpec] = Field(
+    agents: list[TeamAgentspec] = Field(
         default_factory=list,
         description="List of agents in the team",
     )

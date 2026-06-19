@@ -40,7 +40,7 @@ import type {
 /**
  * Agent spec entry from the library endpoint.
  */
-export interface LibraryAgentSpec {
+export interface LibraryAgentspec {
   [key: string]: unknown;
   id: string;
   version?: string;
@@ -565,7 +565,7 @@ export interface AgentConfigurationProps {
   /** Selected MCP servers */
   selectedMcpServers?: McpServerSelection[];
   /** Cloud-discovered specs fetched from a remote runtime catalog. */
-  cloudLibrarySpecs?: LibraryAgentSpec[];
+  cloudLibrarySpecs?: LibraryAgentspec[];
   /** Loading state for cloud library specs. */
   cloudLibraryLoading?: boolean;
   /** Optional cloud library fetch error message. */
@@ -709,7 +709,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
   });
 
   // Fetch agent specs from library
-  const libraryQuery = useQuery<LibraryAgentSpec[]>({
+  const libraryQuery = useQuery<LibraryAgentspec[]>({
     queryKey: ['agent-library', baseUrl],
     queryFn: async () => {
       const response = await fetch(`${baseUrl}/api/v1/agents/library`);

@@ -64,7 +64,7 @@ See the [agentspecs subagents documentation](https://agentspecs.datalayer.tech/s
 
 When an agent is created from a spec containing `subagents`, the capability factory in `agent_runtimes/capabilities/factory.py` automatically:
 
-1. Converts each `SubAgentSpecConfig` into a `SubAgentConfig` TypedDict
+1. Converts each `SubAgentspecConfig` into a `SubAgentConfig` TypedDict
 2. Creates a `SubAgentCapability` with the full configuration
 3. Adds it to the agent's capability list
 
@@ -111,7 +111,7 @@ The `SubAgentCapability` generates a system prompt section listing all available
 The TypeScript types for subagents are available in the `@datalayer/agent-runtimes` package:
 
 ```typescript
-import type { SubAgentSpecConfig, SubAgentsConfig } from '@datalayer/agent-runtimes';
+import type { SubAgentspecConfig, SubAgentsConfig } from '@datalayer/agent-runtimes';
 
 const config: SubAgentsConfig = {
   subagents: [

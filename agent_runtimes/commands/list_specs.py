@@ -10,18 +10,18 @@ from the library. It can be used directly by other libraries or through the CLI.
 Usage as library:
     ```python
     from agent_runtimes.commands.list_specs import (
-        list_agent_specs,
-        get_agent_specs,
+        list_agentspecs,
+        get_agentspecs,
         OutputFormat,
     )
 
     # Get specs as list of dicts
-    specs = get_agent_specs()
+    specs = get_agentspecs()
     for spec in specs:
         print(f"{spec['id']}: {spec['name']}")
 
     # Print formatted output
-    list_agent_specs(output=OutputFormat.table)
+    list_agentspecs(output=OutputFormat.table)
     ```
 """
 
@@ -41,7 +41,7 @@ class OutputFormat(str, Enum):
     json = "json"
 
 
-def get_agent_specs() -> list[dict[str, Any]]:
+def get_agentspecs() -> list[dict[str, Any]]:
     """
     Get available agent specs from the library.
 
@@ -52,10 +52,10 @@ def get_agent_specs() -> list[dict[str, Any]]:
         - description: Description of the agent
         - mcp_servers: List of MCP server IDs the agent uses
     """
-    from agent_runtimes.specs.agents import AGENT_SPECS
+    from agent_runtimes.specs.agents import AGENTSPECS
 
     specs = []
-    for agent_id, agent in AGENT_SPECS.items():
+    for agent_id, agent in AGENTSPECS.items():
         specs.append(
             {
                 "id": agent_id,
@@ -67,7 +67,7 @@ def get_agent_specs() -> list[dict[str, Any]]:
     return specs
 
 
-def list_agent_specs(output: OutputFormat = OutputFormat.table) -> list[dict[str, Any]]:
+def list_agentspecs(output: OutputFormat = OutputFormat.table) -> list[dict[str, Any]]:
     """
     List available agent specs from the library.
 
@@ -79,9 +79,9 @@ def list_agent_specs(output: OutputFormat = OutputFormat.table) -> list[dict[str
     Returns:
         List of agent spec dictionaries.
     """
-    from agent_runtimes.specs.agents import AGENT_SPECS
+    from agent_runtimes.specs.agents import AGENTSPECS
 
-    specs = get_agent_specs()
+    specs = get_agentspecs()
     console = Console()
 
     if output == OutputFormat.json:
@@ -103,7 +103,7 @@ def list_agent_specs(output: OutputFormat = OutputFormat.table) -> list[dict[str
         table.add_column("Description", style="dim")
         table.add_column("MCP Servers", style="yellow")
 
-        for agent_id, agent in AGENT_SPECS.items():
+        for agent_id, agent in AGENTSPECS.items():
             mcp_ids = [s.id for s in agent.mcp_servers]
             # Truncate description
             desc = (
@@ -126,7 +126,7 @@ def list_agent_specs(output: OutputFormat = OutputFormat.table) -> list[dict[str
         console.print(table)
         console.print()
         console.print(
-            f"[bold]Total:[/bold] [cyan]{len(AGENT_SPECS)}[/cyan] agent spec(s)"
+            f"[bold]Total:[/bold] [cyan]{len(AGENTSPECS)}[/cyan] agent spec(s)"
         )
 
     return specs

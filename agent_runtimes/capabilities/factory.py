@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Build pydantic-ai capabilities from agent-runtimes AgentSpec."""
+"""Build pydantic-ai capabilities from agent-runtimes Agentspec."""
 
 from __future__ import annotations
 
@@ -113,7 +113,7 @@ def build_usage_limits_from_agent_spec(agent_spec: Any) -> UsageLimits | None:
 def build_capabilities_from_agent_spec(
     agent_spec: Any, agent_id: str | None = None
 ) -> list[Any]:
-    """Convert agent-runtimes AgentSpec guardrails into pydantic-ai capabilities."""
+    """Convert agent-runtimes Agentspec guardrails into pydantic-ai capabilities."""
     capabilities: list[Any] = []
     guardrails = list(getattr(agent_spec, "guardrails", None) or [])
     explicit_capabilities = list(getattr(agent_spec, "capabilities", None) or [])

@@ -12,13 +12,13 @@ Generated from YAML specifications in specs/agents/
 from typing import Dict
 
 from agent_runtimes.mcp.catalog_mcp_servers import MCP_SERVER_CATALOG
-from agent_runtimes.types import AgentSpec, SubAgentsConfig, SubAgentSpecConfig
+from agent_runtimes.types import Agentspec, SubAgentsConfig, SubAgentspecConfig
 
 # ============================================================================
 # Agent Specs
 # ============================================================================
 
-ANALYZE_CAMPAIGN_PERFORMANCE_AGENT_SPEC_0_0_1 = AgentSpec(
+ANALYZE_CAMPAIGN_PERFORMANCE_AGENTSPEC_0_0_1 = Agentspec(
     id="analyze-campaign-performance",
     version="0.0.1",
     name="Analyze Campaign Performance",
@@ -131,7 +131,7 @@ ANALYZE_CAMPAIGN_PERFORMANCE_AGENT_SPEC_0_0_1 = AgentSpec(
     subagents=None,
 )
 
-ANALYZE_SUPPORT_TICKETS_AGENT_SPEC_0_0_1 = AgentSpec(
+ANALYZE_SUPPORT_TICKETS_AGENTSPEC_0_0_1 = Agentspec(
     id="analyze-support-tickets",
     version="0.0.1",
     name="Analyze Support Tickets",
@@ -214,7 +214,7 @@ ANALYZE_SUPPORT_TICKETS_AGENT_SPEC_0_0_1 = AgentSpec(
     subagents=None,
 )
 
-AUDIT_INVENTORY_LEVELS_AGENT_SPEC_0_0_1 = AgentSpec(
+AUDIT_INVENTORY_LEVELS_AGENTSPEC_0_0_1 = Agentspec(
     id="audit-inventory-levels",
     version="0.0.1",
     name="Audit Inventory Levels",
@@ -297,7 +297,7 @@ AUDIT_INVENTORY_LEVELS_AGENT_SPEC_0_0_1 = AgentSpec(
     subagents=None,
 )
 
-AUTOMATE_REGULATORY_REPORTING_AGENT_SPEC_0_0_1 = AgentSpec(
+AUTOMATE_REGULATORY_REPORTING_AGENTSPEC_0_0_1 = Agentspec(
     id="automate-regulatory-reporting",
     version="0.0.1",
     name="Automate Regulatory Reporting",
@@ -399,7 +399,7 @@ AUTOMATE_REGULATORY_REPORTING_AGENT_SPEC_0_0_1 = AgentSpec(
     subagents=None,
 )
 
-CLASSIFY_ROUTE_EMAILS_AGENT_SPEC_0_0_1 = AgentSpec(
+CLASSIFY_ROUTE_EMAILS_AGENTSPEC_0_0_1 = Agentspec(
     id="classify-route-emails",
     version="0.0.1",
     name="Classify & Route Emails",
@@ -490,7 +490,7 @@ CLASSIFY_ROUTE_EMAILS_AGENT_SPEC_0_0_1 = AgentSpec(
     subagents=None,
 )
 
-COMPREHENSIVE_SALES_ANALYTICS_AGENT_SPEC_0_0_1 = AgentSpec(
+COMPREHENSIVE_SALES_ANALYTICS_AGENTSPEC_0_0_1 = Agentspec(
     id="comprehensive-sales-analytics",
     version="0.0.1",
     name="Comprehensive Sales Analytics",
@@ -564,7 +564,7 @@ COMPREHENSIVE_SALES_ANALYTICS_AGENT_SPEC_0_0_1 = AgentSpec(
     subagents=None,
 )
 
-CRAWLER_AGENT_SPEC_0_0_1 = AgentSpec(
+CRAWLER_AGENTSPEC_0_0_1 = Agentspec(
     id="crawler",
     version="0.0.1",
     name="Crawler Agent",
@@ -633,7 +633,7 @@ CRAWLER_AGENT_SPEC_0_0_1 = AgentSpec(
     subagents=None,
 )
 
-DATA_ACQUISITION_AGENT_SPEC_0_0_1 = AgentSpec(
+DATA_ACQUISITION_AGENTSPEC_0_0_1 = Agentspec(
     id="data-acquisition",
     version="0.0.1",
     name="Data Acquisition Agent",
@@ -706,7 +706,7 @@ DATA_ACQUISITION_AGENT_SPEC_0_0_1 = AgentSpec(
     subagents=None,
 )
 
-DEMO_OUTPUTS_AGENT_SPEC_0_0_1 = AgentSpec(
+DEMO_OUTPUTS_AGENTSPEC_0_0_1 = Agentspec(
     id="demo-outputs",
     version="0.0.1",
     name="Example Outputs Agent",
@@ -763,7 +763,7 @@ If mode is ambiguous, default to JSON.""",
     subagents=None,
 )
 
-END_OF_MONTH_SALES_PERFORMANCE_AGENT_SPEC_0_0_1 = AgentSpec(
+END_OF_MONTH_SALES_PERFORMANCE_AGENTSPEC_0_0_1 = Agentspec(
     id="end-of-month-sales-performance",
     version="0.0.1",
     name="End of Month Sales Performance",
@@ -956,7 +956,7 @@ END_OF_MONTH_SALES_PERFORMANCE_AGENT_SPEC_0_0_1 = AgentSpec(
     subagents=None,
 )
 
-EVAL_EXPERIMENT_RUNNER_AGENT_SPEC_0_0_1 = AgentSpec(
+EVAL_EXPERIMENT_RUNNER_AGENTSPEC_0_0_1 = Agentspec(
     id="eval-experiment-runner",
     version="0.0.1",
     name="Eval Experiment Runner",
@@ -1005,7 +1005,7 @@ EVAL_EXPERIMENT_RUNNER_AGENT_SPEC_0_0_1 = AgentSpec(
     subagents=None,
 )
 
-EXAMPLE_CODEMODE_AGENT_SPEC_0_0_1 = AgentSpec(
+EXAMPLE_CODEMODE_AGENTSPEC_0_0_1 = Agentspec(
     id="example-codemode",
     version="0.0.1",
     name="Example Tavily Codemode Agent",
@@ -1054,7 +1054,57 @@ EXAMPLE_CODEMODE_AGENT_SPEC_0_0_1 = AgentSpec(
     subagents=None,
 )
 
-EXAMPLE_EVALS_AGENT_SPEC_0_0_1 = AgentSpec(
+EXAMPLE_EVALS_NOCODEMODE_AGENTSPEC_0_0_1 = Agentspec(
+    id="example-evals-nocodemode",
+    version="0.0.1",
+    name="Example Evals Agent (No Codemode)",
+    description="Evals runner variant with codemode disabled for A/B comparisons against example-evals in SDK eval examples.",
+    tags=["evals", "demo", "runner", "no-codemode"],
+    enabled=True,
+    model="bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0",
+    inference_provider=None,
+    mcp_servers=[],
+    skills=["events:0.0.1"],
+    tools=["runtime-echo:0.0.1"],
+    disable_tool_approvals=True,
+    frontend_tools=["jupyter-notebook:0.0.1", "lexical-document:0.0.1"],
+    environment_name="ai-agents-env",
+    icon="pulse",
+    emoji="🧪",
+    color="#0284C7",
+    suggestions=[
+        "Run the selected evaluation experiment on the configured dataset",
+        "Validate experiment configuration and report missing fields",
+        "Summarize run results with pass rate and latency highlights",
+    ],
+    welcome_message="Ready to run eval experiments without codemode enabled. Configure your benchmark and evaluator setup, then launch a run.",
+    welcome_notebook=None,
+    welcome_document=None,
+    sandbox_variant="jupyter",
+    system_prompt="""You are the Demo Evals Runner. Execute evaluation workflows reliably, validate inputs before execution, and summarize outcomes clearly.""",
+    system_prompt_codemode_addons=None,
+    goal=None,
+    protocol=None,
+    ui_extension=None,
+    trigger=None,
+    model_configuration=None,
+    mcp_server_tools=None,
+    guardrails=None,
+    evals=None,
+    codemode={"enabled": False},
+    output=None,
+    advanced=None,
+    authorization_policy=None,
+    notifications=None,
+    memory="ephemeral",
+    pre_hooks=None,
+    post_hooks=None,
+    tool_hooks=None,
+    parameters=None,
+    subagents=None,
+)
+
+EXAMPLE_EVALS_AGENTSPEC_0_0_1 = Agentspec(
     id="example-evals",
     version="0.0.1",
     name="Example Evals Agent",
@@ -1066,6 +1116,7 @@ EXAMPLE_EVALS_AGENT_SPEC_0_0_1 = AgentSpec(
     mcp_servers=[],
     skills=["events:0.0.1"],
     tools=["runtime-echo:0.0.1"],
+    disable_tool_approvals=True,
     frontend_tools=["jupyter-notebook:0.0.1", "lexical-document:0.0.1"],
     environment_name="ai-agents-env",
     icon="pulse",
@@ -1103,7 +1154,7 @@ EXAMPLE_EVALS_AGENT_SPEC_0_0_1 = AgentSpec(
     subagents=None,
 )
 
-EXAMPLE_FULL_AGENT_SPEC_0_0_1 = AgentSpec(
+EXAMPLE_FULL_AGENTSPEC_0_0_1 = Agentspec(
     id="example-full",
     version="0.0.1",
     name="Example MCP, Skills, Tool Approvals... Agent",
@@ -1166,7 +1217,7 @@ EXAMPLE_FULL_AGENT_SPEC_0_0_1 = AgentSpec(
     subagents=None,
 )
 
-EXAMPLE_GUARDRAILS_AGENT_SPEC_0_0_1 = AgentSpec(
+EXAMPLE_GUARDRAILS_AGENTSPEC_0_0_1 = Agentspec(
     id="example-guardrails",
     version="0.0.1",
     name="Example Guardrails Agent",
@@ -1249,7 +1300,7 @@ This agent also demonstrates pydantic-ai tool execution hook naming: before_tool
     subagents=None,
 )
 
-EXAMPLE_HOOKS_AGENT_SPEC_0_0_1 = AgentSpec(
+EXAMPLE_HOOKS_AGENTSPEC_0_0_1 = Agentspec(
     id="example-hooks",
     version="0.0.1",
     name="Example Hooks Agent",
@@ -1350,7 +1401,7 @@ When the user asks about hooks, use execute_code to show concrete evidence: read
     subagents=None,
 )
 
-EXAMPLE_INFERENCE_AGENT_SPEC_0_0_1 = AgentSpec(
+EXAMPLE_INFERENCE_AGENTSPEC_0_0_1 = Agentspec(
     id="example-inference",
     version="0.0.1",
     name="Example Inference Provider Agent",
@@ -1399,7 +1450,7 @@ EXAMPLE_INFERENCE_AGENT_SPEC_0_0_1 = AgentSpec(
     subagents=None,
 )
 
-EXAMPLE_MCP_AGENT_SPEC_0_0_1 = AgentSpec(
+EXAMPLE_MCP_AGENTSPEC_0_0_1 = Agentspec(
     id="example-mcp",
     version="0.0.1",
     name="Example MCP Agent",
@@ -1449,7 +1500,7 @@ EXAMPLE_MCP_AGENT_SPEC_0_0_1 = AgentSpec(
     subagents=None,
 )
 
-EXAMPLE_MEMORY_AGENT_SPEC_0_0_1 = AgentSpec(
+EXAMPLE_MEMORY_AGENTSPEC_0_0_1 = Agentspec(
     id="example-memory",
     version="0.0.1",
     name="Example Memory Agent",
@@ -1498,7 +1549,7 @@ EXAMPLE_MEMORY_AGENT_SPEC_0_0_1 = AgentSpec(
     subagents=None,
 )
 
-EXAMPLE_MONITORING_AGENT_SPEC_0_0_1 = AgentSpec(
+EXAMPLE_MONITORING_AGENTSPEC_0_0_1 = Agentspec(
     id="example-monitoring",
     version="0.0.1",
     name="Example Monitoring Agent",
@@ -1547,7 +1598,7 @@ EXAMPLE_MONITORING_AGENT_SPEC_0_0_1 = AgentSpec(
     subagents=None,
 )
 
-EXAMPLE_NO_CODEMODE_AGENT_SPEC_0_0_1 = AgentSpec(
+EXAMPLE_NO_CODEMODE_AGENTSPEC_0_0_1 = Agentspec(
     id="example-no-codemode",
     version="0.0.1",
     name="Example Tavily No Codemode Agent",
@@ -1596,7 +1647,7 @@ EXAMPLE_NO_CODEMODE_AGENT_SPEC_0_0_1 = AgentSpec(
     subagents=None,
 )
 
-EXAMPLE_NOTIFICATIONS_AGENT_SPEC_0_0_1 = AgentSpec(
+EXAMPLE_NOTIFICATIONS_AGENTSPEC_0_0_1 = Agentspec(
     id="example-notifications",
     version="0.0.1",
     name="Example Notifications Agent",
@@ -1645,7 +1696,7 @@ EXAMPLE_NOTIFICATIONS_AGENT_SPEC_0_0_1 = AgentSpec(
     subagents=None,
 )
 
-EXAMPLE_ONE_TRIGGER_APPROVAL_AGENT_SPEC_0_0_1 = AgentSpec(
+EXAMPLE_ONE_TRIGGER_APPROVAL_AGENTSPEC_0_0_1 = Agentspec(
     id="example-one-trigger-approval",
     version="0.0.1",
     name="Example Once Trigger and Tool Approval Agent",
@@ -1694,7 +1745,7 @@ EXAMPLE_ONE_TRIGGER_APPROVAL_AGENT_SPEC_0_0_1 = AgentSpec(
     subagents=None,
 )
 
-EXAMPLE_ONE_TRIGGER_AGENT_SPEC_0_0_1 = AgentSpec(
+EXAMPLE_ONE_TRIGGER_AGENTSPEC_0_0_1 = Agentspec(
     id="example-one-trigger",
     version="0.0.1",
     name="Example Once Trigger Agent",
@@ -1743,7 +1794,7 @@ EXAMPLE_ONE_TRIGGER_AGENT_SPEC_0_0_1 = AgentSpec(
     subagents=None,
 )
 
-EXAMPLE_OTEL_AGENT_SPEC_0_0_1 = AgentSpec(
+EXAMPLE_OTEL_AGENTSPEC_0_0_1 = Agentspec(
     id="example-otel",
     version="0.0.1",
     name="Example OTEL Agent",
@@ -1793,7 +1844,7 @@ EXAMPLE_OTEL_AGENT_SPEC_0_0_1 = AgentSpec(
     subagents=None,
 )
 
-EXAMPLE_PARAMETERS_AGENT_SPEC_0_0_1 = AgentSpec(
+EXAMPLE_PARAMETERS_AGENTSPEC_0_0_1 = Agentspec(
     id="example-parameters",
     version="0.0.1",
     name="Example Parameters Agent",
@@ -1869,7 +1920,7 @@ EXAMPLE_PARAMETERS_AGENT_SPEC_0_0_1 = AgentSpec(
     subagents=None,
 )
 
-EXAMPLE_SIMPLE_AGENT_SPEC_0_0_1 = AgentSpec(
+EXAMPLE_SIMPLE_AGENTSPEC_0_0_1 = Agentspec(
     id="example-simple",
     version="0.0.1",
     name="A Simple Agent",
@@ -1920,7 +1971,7 @@ EXAMPLE_SIMPLE_AGENT_SPEC_0_0_1 = AgentSpec(
     subagents=None,
 )
 
-EXAMPLE_SKILLS_AGENT_SPEC_0_0_1 = AgentSpec(
+EXAMPLE_SKILLS_AGENTSPEC_0_0_1 = Agentspec(
     id="example-skills",
     version="0.0.1",
     name="Example Skills Agent",
@@ -1978,7 +2029,7 @@ EXAMPLE_SKILLS_AGENT_SPEC_0_0_1 = AgentSpec(
     subagents=None,
 )
 
-EXAMPLE_SUBAGENTS_AGENT_SPEC_0_0_1 = AgentSpec(
+EXAMPLE_SUBAGENTS_AGENTSPEC_0_0_1 = Agentspec(
     id="example-subagents",
     version="0.0.1",
     name="Example Subagents Agent",
@@ -2027,14 +2078,14 @@ EXAMPLE_SUBAGENTS_AGENT_SPEC_0_0_1 = AgentSpec(
     subagents=None,
 )
 
-EXAMPLE_TOOL_APPROVALS_AGENT_SPEC_0_0_1 = AgentSpec(
+EXAMPLE_TOOL_APPROVALS_AGENTSPEC_0_0_1 = Agentspec(
     id="example-tool-approvals",
     version="0.0.1",
     name="Example Tool Approvals",
     description="Demonstrates per-tool approval hooks with policy requests and decision/audit logging.",
     tags=["approvals", "hooks", "policy"],
     enabled=True,
-    model="openai:gpt-4o-mini",
+    model="bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0",
     inference_provider=None,
     mcp_servers=[],
     skills=[],
@@ -2110,7 +2161,7 @@ Hook names align with pydantic-ai capability hooks: before_tool_execute, after_t
     subagents=None,
 )
 
-EXTRACT_DATA_FROM_FILES_AGENT_SPEC_0_0_1 = AgentSpec(
+EXTRACT_DATA_FROM_FILES_AGENTSPEC_0_0_1 = Agentspec(
     id="extract-data-from-files",
     version="0.0.1",
     name="Extract Data from Files",
@@ -2201,7 +2252,7 @@ EXTRACT_DATA_FROM_FILES_AGENT_SPEC_0_0_1 = AgentSpec(
     subagents=None,
 )
 
-FINANCIAL_VIZ_AGENT_SPEC_0_0_1 = AgentSpec(
+FINANCIAL_VIZ_AGENTSPEC_0_0_1 = Agentspec(
     id="financial-viz",
     version="0.0.1",
     name="Financial Visualization Agent",
@@ -2270,7 +2321,7 @@ FINANCIAL_VIZ_AGENT_SPEC_0_0_1 = AgentSpec(
     subagents=None,
 )
 
-FINANCIAL_AGENT_SPEC_0_0_1 = AgentSpec(
+FINANCIAL_AGENTSPEC_0_0_1 = Agentspec(
     id="financial",
     version="0.0.1",
     name="Financial Data Analysis Agent",
@@ -2339,7 +2390,7 @@ FINANCIAL_AGENT_SPEC_0_0_1 = AgentSpec(
     subagents=None,
 )
 
-GENERATE_WEEKLY_REPORTS_AGENT_SPEC_0_0_1 = AgentSpec(
+GENERATE_WEEKLY_REPORTS_AGENTSPEC_0_0_1 = Agentspec(
     id="generate-weekly-reports",
     version="0.0.1",
     name="Generate Weekly Reports",
@@ -2441,7 +2492,7 @@ GENERATE_WEEKLY_REPORTS_AGENT_SPEC_0_0_1 = AgentSpec(
     subagents=None,
 )
 
-GITHUB_AGENT_SPEC_0_0_1 = AgentSpec(
+GITHUB_AGENT_SPEC_0_0_1 = Agentspec(
     id="github-agent",
     version="0.0.1",
     name="GitHub Agent",
@@ -2510,7 +2561,7 @@ GITHUB_AGENT_SPEC_0_0_1 = AgentSpec(
     subagents=None,
 )
 
-INFORMATION_ROUTING_AGENT_SPEC_0_0_1 = AgentSpec(
+INFORMATION_ROUTING_AGENTSPEC_0_0_1 = Agentspec(
     id="information-routing",
     version="0.0.1",
     name="Information Routing Agent",
@@ -2579,7 +2630,7 @@ INFORMATION_ROUTING_AGENT_SPEC_0_0_1 = AgentSpec(
     subagents=None,
 )
 
-MONITOR_SALES_KPIS_AGENT_SPEC_0_0_1 = AgentSpec(
+MONITOR_SALES_KPIS_AGENTSPEC_0_0_1 = Agentspec(
     id="monitor-sales-kpis",
     version="0.0.1",
     name="Monitor Sales KPIs",
@@ -2688,7 +2739,7 @@ MONITOR_SALES_KPIS_AGENT_SPEC_0_0_1 = AgentSpec(
     subagents=None,
 )
 
-OPTIMIZE_DYNAMIC_PRICING_AGENT_SPEC_0_0_1 = AgentSpec(
+OPTIMIZE_DYNAMIC_PRICING_AGENTSPEC_0_0_1 = Agentspec(
     id="optimize-dynamic-pricing",
     version="0.0.1",
     name="Optimize Dynamic Pricing",
@@ -2809,7 +2860,7 @@ OPTIMIZE_DYNAMIC_PRICING_AGENT_SPEC_0_0_1 = AgentSpec(
     subagents=None,
 )
 
-OPTIMIZE_GRID_OPERATIONS_AGENT_SPEC_0_0_1 = AgentSpec(
+OPTIMIZE_GRID_OPERATIONS_AGENTSPEC_0_0_1 = Agentspec(
     id="optimize-grid-operations",
     version="0.0.1",
     name="Optimize Grid Operations",
@@ -2918,7 +2969,7 @@ OPTIMIZE_GRID_OPERATIONS_AGENT_SPEC_0_0_1 = AgentSpec(
     subagents=None,
 )
 
-PROCESS_CITIZEN_REQUESTS_AGENT_SPEC_0_0_1 = AgentSpec(
+PROCESS_CITIZEN_REQUESTS_AGENTSPEC_0_0_1 = Agentspec(
     id="process-citizen-requests",
     version="0.0.1",
     name="Process Citizen Requests",
@@ -3037,7 +3088,7 @@ PROCESS_CITIZEN_REQUESTS_AGENT_SPEC_0_0_1 = AgentSpec(
     subagents=None,
 )
 
-PROCESS_CLINICAL_TRIAL_DATA_AGENT_SPEC_0_0_1 = AgentSpec(
+PROCESS_CLINICAL_TRIAL_DATA_AGENTSPEC_0_0_1 = Agentspec(
     id="process-clinical-trial-data",
     version="0.0.1",
     name="Process Clinical Trial Data",
@@ -3151,7 +3202,7 @@ PROCESS_CLINICAL_TRIAL_DATA_AGENT_SPEC_0_0_1 = AgentSpec(
     subagents=None,
 )
 
-PROCESS_FINANCIAL_TRANSACTIONS_AGENT_SPEC_0_0_1 = AgentSpec(
+PROCESS_FINANCIAL_TRANSACTIONS_AGENTSPEC_0_0_1 = Agentspec(
     id="process-financial-transactions",
     version="0.0.1",
     name="Process Financial Transactions",
@@ -3246,7 +3297,7 @@ PROCESS_FINANCIAL_TRANSACTIONS_AGENT_SPEC_0_0_1 = AgentSpec(
     subagents=None,
 )
 
-SPATIAL_DATA_ANALYSIS_AGENT_SPEC_0_0_1 = AgentSpec(
+SPATIAL_DATA_ANALYSIS_AGENTSPEC_0_0_1 = Agentspec(
     id="spatial-data-analysis",
     version="0.0.1",
     name="Spatial Data Analysis Agent",
@@ -3304,7 +3355,7 @@ SPATIAL_DATA_ANALYSIS_AGENT_SPEC_0_0_1 = AgentSpec(
     subagents=None,
 )
 
-SUMMARIZE_DOCUMENTS_AGENT_SPEC_0_0_1 = AgentSpec(
+SUMMARIZE_DOCUMENTS_AGENTSPEC_0_0_1 = Agentspec(
     id="summarize-documents",
     version="0.0.1",
     name="Summarize Documents",
@@ -3394,7 +3445,7 @@ SUMMARIZE_DOCUMENTS_AGENT_SPEC_0_0_1 = AgentSpec(
     subagents=None,
 )
 
-SYNC_CRM_CONTACTS_AGENT_SPEC_0_0_1 = AgentSpec(
+SYNC_CRM_CONTACTS_AGENTSPEC_0_0_1 = Agentspec(
     id="sync-crm-contacts",
     version="0.0.1",
     name="Sync CRM Contacts",
@@ -3482,56 +3533,57 @@ SYNC_CRM_CONTACTS_AGENT_SPEC_0_0_1 = AgentSpec(
 # Agent Specs Registry
 # ============================================================================
 
-AGENT_SPECS: Dict[str, AgentSpec] = {
-    "analyze-campaign-performance": ANALYZE_CAMPAIGN_PERFORMANCE_AGENT_SPEC_0_0_1,
-    "analyze-support-tickets": ANALYZE_SUPPORT_TICKETS_AGENT_SPEC_0_0_1,
-    "audit-inventory-levels": AUDIT_INVENTORY_LEVELS_AGENT_SPEC_0_0_1,
-    "automate-regulatory-reporting": AUTOMATE_REGULATORY_REPORTING_AGENT_SPEC_0_0_1,
-    "classify-route-emails": CLASSIFY_ROUTE_EMAILS_AGENT_SPEC_0_0_1,
-    "comprehensive-sales-analytics": COMPREHENSIVE_SALES_ANALYTICS_AGENT_SPEC_0_0_1,
-    "crawler": CRAWLER_AGENT_SPEC_0_0_1,
-    "data-acquisition": DATA_ACQUISITION_AGENT_SPEC_0_0_1,
-    "demo-outputs": DEMO_OUTPUTS_AGENT_SPEC_0_0_1,
-    "end-of-month-sales-performance": END_OF_MONTH_SALES_PERFORMANCE_AGENT_SPEC_0_0_1,
-    "eval-experiment-runner": EVAL_EXPERIMENT_RUNNER_AGENT_SPEC_0_0_1,
-    "example-codemode": EXAMPLE_CODEMODE_AGENT_SPEC_0_0_1,
-    "example-evals": EXAMPLE_EVALS_AGENT_SPEC_0_0_1,
-    "example-full": EXAMPLE_FULL_AGENT_SPEC_0_0_1,
-    "example-guardrails": EXAMPLE_GUARDRAILS_AGENT_SPEC_0_0_1,
-    "example-hooks": EXAMPLE_HOOKS_AGENT_SPEC_0_0_1,
-    "example-inference": EXAMPLE_INFERENCE_AGENT_SPEC_0_0_1,
-    "example-mcp": EXAMPLE_MCP_AGENT_SPEC_0_0_1,
-    "example-memory": EXAMPLE_MEMORY_AGENT_SPEC_0_0_1,
-    "example-monitoring": EXAMPLE_MONITORING_AGENT_SPEC_0_0_1,
-    "example-no-codemode": EXAMPLE_NO_CODEMODE_AGENT_SPEC_0_0_1,
-    "example-notifications": EXAMPLE_NOTIFICATIONS_AGENT_SPEC_0_0_1,
-    "example-one-trigger-approval": EXAMPLE_ONE_TRIGGER_APPROVAL_AGENT_SPEC_0_0_1,
-    "example-one-trigger": EXAMPLE_ONE_TRIGGER_AGENT_SPEC_0_0_1,
-    "example-otel": EXAMPLE_OTEL_AGENT_SPEC_0_0_1,
-    "example-parameters": EXAMPLE_PARAMETERS_AGENT_SPEC_0_0_1,
-    "example-simple": EXAMPLE_SIMPLE_AGENT_SPEC_0_0_1,
-    "example-skills": EXAMPLE_SKILLS_AGENT_SPEC_0_0_1,
-    "example-subagents": EXAMPLE_SUBAGENTS_AGENT_SPEC_0_0_1,
-    "example-tool-approvals": EXAMPLE_TOOL_APPROVALS_AGENT_SPEC_0_0_1,
-    "extract-data-from-files": EXTRACT_DATA_FROM_FILES_AGENT_SPEC_0_0_1,
-    "financial-viz": FINANCIAL_VIZ_AGENT_SPEC_0_0_1,
-    "financial": FINANCIAL_AGENT_SPEC_0_0_1,
-    "generate-weekly-reports": GENERATE_WEEKLY_REPORTS_AGENT_SPEC_0_0_1,
+AGENTSPECS: Dict[str, Agentspec] = {
+    "analyze-campaign-performance": ANALYZE_CAMPAIGN_PERFORMANCE_AGENTSPEC_0_0_1,
+    "analyze-support-tickets": ANALYZE_SUPPORT_TICKETS_AGENTSPEC_0_0_1,
+    "audit-inventory-levels": AUDIT_INVENTORY_LEVELS_AGENTSPEC_0_0_1,
+    "automate-regulatory-reporting": AUTOMATE_REGULATORY_REPORTING_AGENTSPEC_0_0_1,
+    "classify-route-emails": CLASSIFY_ROUTE_EMAILS_AGENTSPEC_0_0_1,
+    "comprehensive-sales-analytics": COMPREHENSIVE_SALES_ANALYTICS_AGENTSPEC_0_0_1,
+    "crawler": CRAWLER_AGENTSPEC_0_0_1,
+    "data-acquisition": DATA_ACQUISITION_AGENTSPEC_0_0_1,
+    "demo-outputs": DEMO_OUTPUTS_AGENTSPEC_0_0_1,
+    "end-of-month-sales-performance": END_OF_MONTH_SALES_PERFORMANCE_AGENTSPEC_0_0_1,
+    "eval-experiment-runner": EVAL_EXPERIMENT_RUNNER_AGENTSPEC_0_0_1,
+    "example-codemode": EXAMPLE_CODEMODE_AGENTSPEC_0_0_1,
+    "example-evals-nocodemode": EXAMPLE_EVALS_NOCODEMODE_AGENTSPEC_0_0_1,
+    "example-evals": EXAMPLE_EVALS_AGENTSPEC_0_0_1,
+    "example-full": EXAMPLE_FULL_AGENTSPEC_0_0_1,
+    "example-guardrails": EXAMPLE_GUARDRAILS_AGENTSPEC_0_0_1,
+    "example-hooks": EXAMPLE_HOOKS_AGENTSPEC_0_0_1,
+    "example-inference": EXAMPLE_INFERENCE_AGENTSPEC_0_0_1,
+    "example-mcp": EXAMPLE_MCP_AGENTSPEC_0_0_1,
+    "example-memory": EXAMPLE_MEMORY_AGENTSPEC_0_0_1,
+    "example-monitoring": EXAMPLE_MONITORING_AGENTSPEC_0_0_1,
+    "example-no-codemode": EXAMPLE_NO_CODEMODE_AGENTSPEC_0_0_1,
+    "example-notifications": EXAMPLE_NOTIFICATIONS_AGENTSPEC_0_0_1,
+    "example-one-trigger-approval": EXAMPLE_ONE_TRIGGER_APPROVAL_AGENTSPEC_0_0_1,
+    "example-one-trigger": EXAMPLE_ONE_TRIGGER_AGENTSPEC_0_0_1,
+    "example-otel": EXAMPLE_OTEL_AGENTSPEC_0_0_1,
+    "example-parameters": EXAMPLE_PARAMETERS_AGENTSPEC_0_0_1,
+    "example-simple": EXAMPLE_SIMPLE_AGENTSPEC_0_0_1,
+    "example-skills": EXAMPLE_SKILLS_AGENTSPEC_0_0_1,
+    "example-subagents": EXAMPLE_SUBAGENTS_AGENTSPEC_0_0_1,
+    "example-tool-approvals": EXAMPLE_TOOL_APPROVALS_AGENTSPEC_0_0_1,
+    "extract-data-from-files": EXTRACT_DATA_FROM_FILES_AGENTSPEC_0_0_1,
+    "financial-viz": FINANCIAL_VIZ_AGENTSPEC_0_0_1,
+    "financial": FINANCIAL_AGENTSPEC_0_0_1,
+    "generate-weekly-reports": GENERATE_WEEKLY_REPORTS_AGENTSPEC_0_0_1,
     "github-agent": GITHUB_AGENT_SPEC_0_0_1,
-    "information-routing": INFORMATION_ROUTING_AGENT_SPEC_0_0_1,
-    "monitor-sales-kpis": MONITOR_SALES_KPIS_AGENT_SPEC_0_0_1,
-    "optimize-dynamic-pricing": OPTIMIZE_DYNAMIC_PRICING_AGENT_SPEC_0_0_1,
-    "optimize-grid-operations": OPTIMIZE_GRID_OPERATIONS_AGENT_SPEC_0_0_1,
-    "process-citizen-requests": PROCESS_CITIZEN_REQUESTS_AGENT_SPEC_0_0_1,
-    "process-clinical-trial-data": PROCESS_CLINICAL_TRIAL_DATA_AGENT_SPEC_0_0_1,
-    "process-financial-transactions": PROCESS_FINANCIAL_TRANSACTIONS_AGENT_SPEC_0_0_1,
-    "spatial-data-analysis": SPATIAL_DATA_ANALYSIS_AGENT_SPEC_0_0_1,
-    "summarize-documents": SUMMARIZE_DOCUMENTS_AGENT_SPEC_0_0_1,
-    "sync-crm-contacts": SYNC_CRM_CONTACTS_AGENT_SPEC_0_0_1,
+    "information-routing": INFORMATION_ROUTING_AGENTSPEC_0_0_1,
+    "monitor-sales-kpis": MONITOR_SALES_KPIS_AGENTSPEC_0_0_1,
+    "optimize-dynamic-pricing": OPTIMIZE_DYNAMIC_PRICING_AGENTSPEC_0_0_1,
+    "optimize-grid-operations": OPTIMIZE_GRID_OPERATIONS_AGENTSPEC_0_0_1,
+    "process-citizen-requests": PROCESS_CITIZEN_REQUESTS_AGENTSPEC_0_0_1,
+    "process-clinical-trial-data": PROCESS_CLINICAL_TRIAL_DATA_AGENTSPEC_0_0_1,
+    "process-financial-transactions": PROCESS_FINANCIAL_TRANSACTIONS_AGENTSPEC_0_0_1,
+    "spatial-data-analysis": SPATIAL_DATA_ANALYSIS_AGENTSPEC_0_0_1,
+    "summarize-documents": SUMMARIZE_DOCUMENTS_AGENTSPEC_0_0_1,
+    "sync-crm-contacts": SYNC_CRM_CONTACTS_AGENTSPEC_0_0_1,
 }
 
 
-def get_agent_spec(agent_id: str) -> AgentSpec | None:
+def get_agent_spec(agent_id: str) -> Agentspec | None:
     """
     Get an agent specification by ID (accepts both bare and versioned refs).
 
@@ -3539,18 +3591,18 @@ def get_agent_spec(agent_id: str) -> AgentSpec | None:
         agent_id: The unique identifier of the agent.
 
     Returns:
-        The AgentSpec configuration, or None if not found.
+        The Agentspec configuration, or None if not found.
     """
-    spec = AGENT_SPECS.get(agent_id)
+    spec = AGENTSPECS.get(agent_id)
     if spec is not None:
         return spec
     base, _, ver = agent_id.rpartition(":")
     if base and "." in ver:
-        return AGENT_SPECS.get(base)
+        return AGENTSPECS.get(base)
     return None
 
 
-def list_agent_specs(prefix: str | None = None) -> list[AgentSpec]:
+def list_agentspecs(prefix: str | None = None) -> list[Agentspec]:
     """
     List all available agent specifications.
 
@@ -3558,9 +3610,9 @@ def list_agent_specs(prefix: str | None = None) -> list[AgentSpec]:
         prefix: If provided, only return specs whose ID starts with this prefix.
 
     Returns:
-        List of all AgentSpec configurations.
+        List of all Agentspec configurations.
     """
-    specs = list(AGENT_SPECS.values())
+    specs = list(AGENTSPECS.values())
     if prefix is not None:
         specs = [s for s in specs if s.id.startswith(prefix)]
     return specs

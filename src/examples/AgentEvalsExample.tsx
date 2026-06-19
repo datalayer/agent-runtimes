@@ -57,7 +57,7 @@ const queryClient = new QueryClient();
 // ─── Constants ─────────────────────────────────────────────────────────────
 
 const AGENT_NAME = 'eval-example-agent';
-const AGENT_SPEC_ID = 'example-evals';
+const AGENTSPEC_ID = 'example-evals';
 const DEFAULT_EXECUTION_TARGET: ExecutionTarget =
   (
     (import.meta.env.VITE_AGENT_EVALS_TARGET as string | undefined) || 'cloud'
@@ -157,7 +157,7 @@ const AgentEvalsInner: React.FC<{
     error: hookError,
     runtimeCreationBaseUrl,
   } = useAgentRuntimes({
-    agentSpecId: AGENT_SPEC_ID,
+    agentSpecId: AGENTSPEC_ID,
     autoStart: executionTarget === 'cloud',
     runtimeCreationTarget:
       executionTarget === 'local' ? 'local-agent-runtimes' : 'backend-services',
@@ -282,7 +282,7 @@ const AgentEvalsInner: React.FC<{
             description: 'Agent with evaluation and quality scoring',
             agent_library: 'pydantic-ai',
             transport: 'vercel-ai',
-            agent_spec_id: AGENT_SPEC_ID,
+            agent_spec_id: AGENTSPEC_ID,
             enable_skills: true,
             tools: [],
           }),

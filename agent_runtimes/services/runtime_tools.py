@@ -78,6 +78,7 @@ def register_agent_tools(
     tool_ids: List[str],
     agent_id: str | None = None,
     pod_name: str | None = None,
+    disable_tool_approvals: bool = False,
 ) -> list[str]:
     """Register runtime tools on a pydantic_ai.Agent instance.
 
@@ -87,9 +88,12 @@ def register_agent_tools(
 
     Args:
         agent: Pydantic AI Agent instance exposing ``tool_plain``.
-        tool_ids: Tool IDs from AgentSpec.
+        tool_ids: Tool IDs from Agentspec.
         agent_id: Runtime agent identifier (unused, kept for API compat).
         pod_name: Optional pod name (unused, kept for API compat).
+        disable_tool_approvals: When true, force all runtime tools to
+            ``requires_approval=False`` even if their ToolSpec is marked
+            manual/approval-required.
 
     Returns:
         List of registered tool names.
@@ -120,8 +124,12 @@ def register_agent_tools(
             )
             continue
 
-        requires_approval = bool(
-            getattr(spec, "requires_approval", False) or spec.approval == "manual"
+        requires_approval = (
+            False
+            if disable_tool_approvals
+            else bool(
+                getattr(spec, "requires_approval", False) or spec.approval == "manual"
+            )
         )
 
         # Ensure function name is a valid Python identifier for pydantic_ai.

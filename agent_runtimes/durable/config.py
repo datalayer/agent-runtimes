@@ -75,12 +75,12 @@ class DurableConfig:
     def from_agent_spec(
         cls, spec_advanced: dict | None, fallback: "DurableConfig | None" = None
     ) -> "DurableConfig":
-        """Build configuration from an AgentSpec's ``advanced`` field.
+        """Build configuration from an Agentspec's ``advanced`` field.
 
         Parameters
         ----------
         spec_advanced : dict | None
-            The ``advanced`` dict from an ``AgentSpec``.
+            The ``advanced`` dict from an ``Agentspec``.
         fallback : DurableConfig | None
             Fallback configuration (typically from env vars).
         """

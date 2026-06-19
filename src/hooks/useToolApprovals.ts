@@ -47,6 +47,14 @@ export type ApprovalRecord = {
   toolArgs: Record<string, unknown>;
   status: string;
   note?: string | null;
+  requester_uid?: string;
+  requesterUid?: string;
+  requested_by?: string;
+  requestedBy?: string;
+  resolved_by?: string;
+  resolvedBy?: string;
+  resolved_at?: string;
+  resolvedAt?: string;
   created_at: string;
   createdAt: string;
   updated_at?: string;
@@ -89,6 +97,18 @@ function normalizeApproval(raw: unknown): ApprovalRecord | null {
     {};
   const created = str(rec.created_at ?? rec.createdAt);
   const updated = str(rec.updated_at ?? rec.updatedAt);
+  const resolvedBy = str(rec.resolved_by ?? rec.resolvedBy);
+  const requesterUid = str(rec.requester_uid ?? rec.requesterUid);
+  const requestedBy = str(rec.requested_by ?? rec.requestedBy);
+  const resolvedAtRaw = str(rec.resolved_at ?? rec.resolvedAt);
+  const status = str(rec.status ?? 'pending');
+  // Keep reviewer metadata from WS payloads. If this is dropped during
+  // normalization, downstream pages receive status=approved/rejected but no
+  // reviewer/timestamp context and can incorrectly render "review pending".
+  // Some producers only set updated_at on decision; for non-pending statuses,
+  // fall back to updated_at so UI can still show a decision time.
+  const resolvedAt =
+    resolvedAtRaw || (status !== 'pending' ? updated || undefined : undefined);
 
   return {
     id,
@@ -102,13 +122,21 @@ function normalizeApproval(raw: unknown): ApprovalRecord | null {
     toolCallId: typeof toolCall === 'string' ? toolCall : undefined,
     tool_args: args,
     toolArgs: args,
-    status: str(rec.status ?? 'pending'),
+    status,
     note:
       typeof rec.note === 'string'
         ? rec.note
         : rec.note === null
           ? null
           : undefined,
+    requester_uid: requesterUid || undefined,
+    requesterUid: requesterUid || undefined,
+    requested_by: requestedBy || undefined,
+    requestedBy: requestedBy || undefined,
+    resolved_by: resolvedBy || undefined,
+    resolvedBy: resolvedBy || undefined,
+    resolved_at: resolvedAt,
+    resolvedAt: resolvedAt,
     created_at: created,
     createdAt: created,
     updated_at: updated || undefined,

@@ -910,6 +910,53 @@ function ChatBaseInner({
     ],
   );
 
+  const reconcileResolvedApprovalInStore = useCallback(
+    (approval: AgentStreamToolApprovalPayload): void => {
+      const state = agentRuntimeStore.getState();
+      const removalIds = new Set<string>([approval.id]);
+      const hasResolvedToolName = Boolean(approval.tool_name);
+      const resolvedSignature = hasResolvedToolName
+        ? approvalSignature(approval.tool_name, approval.tool_args ?? {})
+        : null;
+
+      for (const existing of state.approvals) {
+        if (existing.status !== 'pending') {
+          continue;
+        }
+        if (!isApprovalForAgent(existing, activeAgentId)) {
+          continue;
+        }
+        if (existing.id === approval.id) {
+          removalIds.add(existing.id);
+          continue;
+        }
+        if (
+          approval.tool_call_id &&
+          existing.tool_call_id &&
+          existing.tool_call_id === approval.tool_call_id
+        ) {
+          removalIds.add(existing.id);
+          continue;
+        }
+        if (!resolvedSignature || !existing.tool_name) {
+          continue;
+        }
+        const existingSignature = approvalSignature(
+          existing.tool_name,
+          existing.tool_args ?? {},
+        );
+        if (existingSignature === resolvedSignature) {
+          removalIds.add(existing.id);
+        }
+      }
+
+      for (const id of removalIds) {
+        state.removeApproval(id);
+      }
+    },
+    [activeAgentId],
+  );
+
   // Optional ai-agents bridge for server-mode visibility.
   // This keeps approval synchronization in ChatBase so examples do not need
   // their own approval websocket plumbing.
@@ -1026,7 +1073,7 @@ function ChatBaseInner({
           if (scopedApproval.status === 'pending') {
             state.upsertApproval(scopedApproval);
           } else {
-            state.removeApproval(scopedApproval.id);
+            reconcileResolvedApprovalInStore(scopedApproval);
           }
         }
       } catch {
@@ -1055,6 +1102,7 @@ function ChatBaseInner({
     aiAgentsAuthToken,
     activeAgentId,
     isSuppressedPending,
+    reconcileResolvedApprovalInStore,
   ]);
 
   // The outer ChatBase wrapper always resolves a string Protocol to a full
@@ -1370,6 +1418,8 @@ function ChatBaseInner({
         }
         return;
       }
+
+      reconcileResolvedApprovalInStore(payload);
 
       applyServerApprovalDecision(
         payload,

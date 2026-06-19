@@ -34,7 +34,7 @@ import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { Chat } from '../chat';
 
 const AGENT_NAME = 'subagents-example-agent';
-const AGENT_SPEC_ID = 'example-subagents';
+const AGENTSPEC_ID = 'example-subagents';
 const DEFAULT_LOCAL_BASE_URL =
   import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
 
@@ -112,7 +112,7 @@ const AgentSubagentsInner: React.FC<{ onLogout: () => void }> = ({
               'Subagents example – multi-agent delegation with researcher and writer',
             agent_library: 'pydantic-ai',
             transport: 'vercel-ai',
-            agent_spec_id: AGENT_SPEC_ID,
+            agent_spec_id: AGENTSPEC_ID,
             enable_skills: true,
             tools: [],
           }),
