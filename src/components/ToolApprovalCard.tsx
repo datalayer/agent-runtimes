@@ -110,6 +110,19 @@ export function ToolApprovalCard({
   const detailLabelSx = { color: 'fg.muted' };
   const detailValueSx = { color: 'fg.default' };
   const isRead = approval.isRead ?? false;
+  const statusDescriptor =
+    approval.status === 'approved_with_changes'
+      ? 'approved with changes'
+      : approval.status;
+  // Review text must follow status, not only reviewedAt.
+  // Some websocket flows can have an already-decided status before reviewer
+  // metadata is hydrated; rendering "review pending" in that window is
+  // misleading, so non-pending statuses get a status-based summary.
+  const reviewSummary = approval.reviewedAt
+    ? `, reviewed by ${approval.reviewedBy || 'reviewer'} ${formatRelativeTime(approval.reviewedAt)}`
+    : approval.status === 'pending'
+      ? ', review pending'
+      : `, ${statusDescriptor}`;
 
   return (
     <Box
@@ -149,9 +162,7 @@ export function ToolApprovalCard({
           <Text sx={{ color: 'fg.muted', fontSize: 0, display: 'block' }}>
             Requested by {approval.requestedBy}{' '}
             {formatRelativeTime(approval.requestedAt)}
-            {approval.reviewedAt
-              ? `, reviewed by ${approval.reviewedBy || 'reviewer'} ${formatRelativeTime(approval.reviewedAt)}`
-              : ', review pending'}
+            {reviewSummary}
           </Text>
           <Box
             sx={{

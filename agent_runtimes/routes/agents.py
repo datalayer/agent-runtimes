@@ -1812,10 +1812,18 @@ async def create_agent(
                 request.disable_tool_approvals
             )
             if tool_approvals_disabled and capabilities:
+                approval_capability_names = {
+                    "ToolsGuardrailCapability",
+                    "MCPToolsGuardrailCapability",
+                    "SkillsGuardrailCapability",
+                }
                 capabilities = [
                     cap
                     for cap in capabilities
-                    if not isinstance(cap, ToolsGuardrailCapability)
+                    if (
+                        not isinstance(cap, ToolsGuardrailCapability)
+                        and cap.__class__.__name__ not in approval_capability_names
+                    )
                 ]
 
             # Always apply runtime selection guardrails, even when no spec is provided.
@@ -1916,6 +1924,7 @@ async def create_agent(
                 pydantic_agent,
                 tool_ids,
                 agent_id=agent_id,
+                disable_tool_approvals=tool_approvals_disabled,
             )
 
             # Wrap with DBOS durable execution if enabled

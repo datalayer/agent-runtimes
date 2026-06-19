@@ -273,12 +273,14 @@ async def _presignal_deferred_approvals(
     from ..routes.tool_approvals import (
         _APPROVALS,
         _APPROVALS_LOCK,
+        _update_approval,
         signal_approval_event,
     )
 
     messages: list[Any] = body.get("messages") or []
-    tool_call_ids: set[str] = set()
-    approval_ids: set[str] = set()
+    approved_tool_call_ids: set[str] = set()
+    approved_approval_ids: set[str] = set()
+    rejected_approval_ids: set[str] = set()
     for msg in messages:
         if not isinstance(msg, dict) or msg.get("role") != "assistant":
             continue
@@ -294,36 +296,83 @@ async def _presignal_deferred_approvals(
             ):
                 approval_info = part.get("approval") or {}
                 approval_id = approval_info.get("id")
+                is_approved = approval_info.get("approved") is True
                 if isinstance(approval_id, str) and approval_id:
-                    approval_ids.add(approval_id)
-                if approval_info.get("approved") is True:
+                    if is_approved:
+                        approved_approval_ids.add(approval_id)
+                    else:
+                        rejected_approval_ids.add(approval_id)
+                if is_approved:
                     tool_call_id = part.get("toolCallId")
                     if isinstance(tool_call_id, str) and tool_call_id:
-                        tool_call_ids.add(tool_call_id)
+                        approved_tool_call_ids.add(tool_call_id)
 
-    if not tool_call_ids and not approval_ids:
+    if not approved_tool_call_ids and not approved_approval_ids and (
+        not rejected_approval_ids
+    ):
         return
 
     now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    to_decide: list[tuple[str, str]] = []
     to_signal: list[tuple[str, str]] = []
     async with _APPROVALS_LOCK:
         for record_id, record in list(_APPROVALS.items()):
-            by_id = record_id in approval_ids
-            by_tool_call_id = (
-                bool(record.tool_call_id) and record.tool_call_id in tool_call_ids
+            approved_by_id = record_id in approved_approval_ids
+            rejected_by_id = record_id in rejected_approval_ids
+            approved_by_tool_call_id = (
+                bool(record.tool_call_id)
+                and record.tool_call_id in approved_tool_call_ids
             )
-            if not (by_id or by_tool_call_id):
+            if not (approved_by_id or rejected_by_id or approved_by_tool_call_id):
                 continue
 
-            # Always refresh updated_at so the time-window dedupe check in
-            # before_tool_execute succeeds even when the record was already
-            # approved (e.g. by an earlier WS decision that raced ahead).
-            _APPROVALS[record_id] = record.model_copy(
-                update={"status": "approved", "updated_at": now}
+            decision = "rejected" if rejected_by_id else "approved"
+
+            if record.status == "pending":
+                # Resolve still-pending records through the canonical decision
+                # path (outside the lock) so monitoring WS clients clear the
+                # banner AND the ai-agents/SaaS record transitions out of
+                # "review pending".
+                to_decide.append((record_id, decision))
+                continue
+
+            # Already decided: refresh updated_at so the time-window dedupe
+            # check in before_tool_execute succeeds even when the record was
+            # already approved (e.g. by an earlier WS decision that raced
+            # ahead), and signal any waiter bound to this approval_id so the
+            # continuation can resume.
+            if decision == "approved":
+                _APPROVALS[record_id] = record.model_copy(
+                    update={"status": "approved", "updated_at": now}
+                )
+                to_signal.append((record_id, record.tool_call_id or ""))
+
+    for record_id, decision in to_decide:
+        try:
+            # _update_approval signals the local waiter, publishes the
+            # tool_approval_approved/rejected event to monitoring WS clients,
+            # and relays the decision to the ai-agents backend so every
+            # surface (local banner + SaaS Tool Approvals view) reflects the
+            # outcome. Without this, an inline (AI SDK) approval left the SaaS
+            # record stuck in "review pending" and the banner reappeared on
+            # the next run.
+            await _update_approval(record_id, status=decision, note=None)
+        except Exception:
+            logger.debug(
+                "[Vercel AI] _update_approval failed for pre-signaled "
+                "record %s",
+                record_id,
+                exc_info=True,
             )
-            # Always signal matching records so any waiter bound to this
-            # approval_id can resume, even if status was already "approved".
-            to_signal.append((record_id, record.tool_call_id or ""))
+        else:
+            logger.info(
+                "[Vercel AI] Resolved pending local record %s (%s) via "
+                "decision path for DeferredToolResults continuation in "
+                "agent %s",
+                record_id,
+                decision,
+                agent_id,
+            )
 
     for record_id, tool_call_id in to_signal:
         signal_approval_event(record_id, approved=True, note=None)
@@ -357,6 +406,7 @@ async def _wrap_streaming_body_with_approvals(
         _APPROVALS,
         _APPROVALS_LOCK,
         ToolApprovalCreateRequest,
+        _approval_envelope_matches,
         _create_approval,
         mirror_approval_to_local,
         register_approval_credentials,
@@ -442,6 +492,8 @@ async def _wrap_streaming_body_with_approvals(
             return None
 
     try:
+        from datetime import datetime, timezone
+
         async for chunk in body_iterator:
             # Fast path: skip parsing when not relevant
             if "tool-input-available" in chunk or "tool-approval-request" in chunk:
@@ -488,6 +540,51 @@ async def _wrap_streaming_body_with_approvals(
                         normalized_tool_args = (
                             tool_args if isinstance(tool_args, dict) else {}
                         )
+
+                        # Root-cause guard: when a tool has already been
+                        # approved recently for the same agent/tool/args
+                        # envelope, do NOT create another pending approval
+                        # record from stream events. Without this, remembered
+                        # approvals can still emit tool-input-available-like
+                        # events and leave orphan pending records in websocket
+                        # history (banner shows pending while execution runs
+                        # directly with no inline approval UI).
+                        recent_window_seconds = 120.0
+                        now = datetime.now(timezone.utc)
+                        recently_approved = None
+                        async with _APPROVALS_LOCK:
+                            for candidate in _APPROVALS.values():
+                                if candidate.status != "approved":
+                                    continue
+                                if not _approval_envelope_matches(
+                                    candidate,
+                                    agent_id=agent_id,
+                                    tool_name=tool_name,
+                                    tool_args=normalized_tool_args,
+                                ):
+                                    continue
+                                try:
+                                    ts = datetime.fromisoformat(
+                                        candidate.updated_at.replace("Z", "+00:00")
+                                    )
+                                    age = (now - ts).total_seconds()
+                                except Exception:
+                                    continue
+                                if 0 <= age <= recent_window_seconds:
+                                    recently_approved = candidate
+                                    break
+                        if recently_approved is not None:
+                            if tool_call_id:
+                                created_tool_call_ids.add(tool_call_id)
+                            logger.info(
+                                "[Vercel AI] Skipping deferred pending approval "
+                                "for '%s' (tool_call_id=%s): already approved "
+                                "recently (approval_id=%s)",
+                                tool_name,
+                                tool_call_id,
+                                recently_approved.id,
+                            )
+                            continue
 
                         # Continuation requests can replay approval tool events
                         # for the same tool call id. Reuse existing local state
@@ -537,7 +634,8 @@ async def _wrap_streaming_body_with_approvals(
                             not isinstance(approval_id, str) or not approval_id
                         ) and remote_approval_id:
                             approval_id = remote_approval_id
-                        if isinstance(approval_id, str) and approval_id:
+                        used_mirror = isinstance(approval_id, str) and bool(approval_id)
+                        if used_mirror:
                             record = await mirror_approval_to_local(
                                 {
                                     "id": approval_id,
@@ -562,14 +660,20 @@ async def _wrap_streaming_body_with_approvals(
                         # always be relayed and mirrored with ai-agents.
                         if user_jwt_token:
                             register_approval_credentials(record.id, user_jwt_token)
-                        if (
-                            remote_approval_id
-                            and user_jwt_token
-                            and remote_approval_id != record.id
-                        ):
+                        # Resolve the remote (ai-agents) counterpart id. In the
+                        # mirror path the local record id IS the remote id, so a
+                        # self-mapping must still be registered; otherwise
+                        # _update_approval finds no mapping and falls back to
+                        # _lazy_forward_and_relay, which creates a DUPLICATE
+                        # remote approval and leaves the original stuck in
+                        # "review pending".
+                        effective_remote_id = (
+                            record.id if used_mirror else remote_approval_id
+                        )
+                        if effective_remote_id and user_jwt_token:
                             register_remote_approval_mapping(
                                 record.id,
-                                remote_approval_id,
+                                effective_remote_id,
                                 user_jwt_token,
                             )
                         if tool_call_id:

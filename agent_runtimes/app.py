@@ -478,8 +478,18 @@ async def _create_and_register_cli_agent(
         os.environ.get("AGENT_RUNTIMES_DISABLE_TOOL_APPROVALS", "").lower() == "true"
     )
     if tool_approvals_disabled and capabilities:
+        approval_capability_names = {
+            "ToolsGuardrailCapability",
+            "MCPToolsGuardrailCapability",
+            "SkillsGuardrailCapability",
+        }
         capabilities = [
-            cap for cap in capabilities if not isinstance(cap, ToolsGuardrailCapability)
+            cap
+            for cap in capabilities
+            if (
+                not isinstance(cap, ToolsGuardrailCapability)
+                and cap.__class__.__name__ not in approval_capability_names
+            )
         ]
     agent_kwargs: dict[str, Any] = {
         "system_prompt": system_prompt,
@@ -549,6 +559,7 @@ async def _create_and_register_cli_agent(
         pydantic_agent,
         tool_ids,
         agent_id=agent_id,
+        disable_tool_approvals=tool_approvals_disabled,
     )
 
     # Wrap with DBOS durable execution if enabled (globally or per-spec)

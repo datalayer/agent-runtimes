@@ -2494,7 +2494,7 @@ export const EXAMPLE_TOOL_APPROVALS_AGENTSPEC_0_0_1: Agentspec = {
   description: `Demonstrates per-tool approval hooks with policy requests and decision/audit logging.`,
   tags: ['approvals', 'hooks', 'policy'],
   enabled: true,
-  model: 'openai:gpt-4o-mini',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
   tools: [
