@@ -948,6 +948,14 @@ class Agentspec(BaseModel):
         default_factory=list,
         description="Tool IDs available to this agent",
     )
+    disable_tool_approvals: bool = Field(
+        default=False,
+        description=(
+            "Disable tool approvals for this agent spec. "
+            "When omitted, approvals are required by default."
+        ),
+        alias="disableToolApprovals",
+    )
     frontend_tools: List[str] = Field(
         default_factory=list,
         description="Frontend tool IDs available to this agent",

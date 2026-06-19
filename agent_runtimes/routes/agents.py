@@ -1077,6 +1077,10 @@ async def create_agent(
                 library_spec, "inference_provider", None
             ):
                 request.inference_provider = library_spec.inference_provider
+            if request.disable_tool_approvals is None:
+                request.disable_tool_approvals = bool(
+                    getattr(library_spec, "disable_tool_approvals", False)
+                )
             # Use the sandbox_variant from the spec if not set in the request
             if not request.sandbox_variant and library_spec.sandbox_variant:
                 request.sandbox_variant = library_spec.sandbox_variant
@@ -1150,6 +1154,12 @@ async def create_agent(
                 )
                 if inferred_provider in {"local", "datalayer"}:
                     request.inference_provider = inferred_provider
+            if request.disable_tool_approvals is None:
+                disable_from_spec = _spec_value(
+                    "disableToolApprovals", "disable_tool_approvals"
+                )
+                if isinstance(disable_from_spec, bool):
+                    request.disable_tool_approvals = disable_from_spec
             if request.system_prompt == "You are a helpful AI assistant.":
                 request.system_prompt = (
                     _spec_value("systemPrompt", "system_prompt")
@@ -4083,6 +4093,7 @@ async def configure_from_spec_endpoint(
         agent_spec_id=body.agent_spec_id,
         agent_spec=body.agent_spec,
         enable_codemode=server_codemode,
+        disable_tool_approvals=bool(getattr(spec, "disable_tool_approvals", False)),
         jupyter_sandbox=body.jupyter_sandbox,
         # Forward spec tools so create_agent can identify tools that require
         # manual approval (requires_approval=True / approval='manual' in

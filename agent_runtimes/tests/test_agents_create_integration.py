@@ -365,6 +365,45 @@ async def test_create_agent_disable_tool_approvals_request_override(
 
 
 @pytest.mark.asyncio
+async def test_create_agent_disable_tool_approvals_from_library_spec(
+    monkeypatch: pytest.MonkeyPatch,
+    creation_spy: dict[str, object],
+) -> None:
+    spec = SimpleNamespace(
+        system_prompt="Spec prompt",
+        goal=None,
+        system_prompt_codemode_addons=None,
+        skills=[],
+        tools=["runtime-sensitive-echo"],
+        description="Spec description",
+        model=None,
+        sandbox_variant=None,
+        protocol="vercel-ai",
+        codemode=None,
+        mcp_servers=[],
+        disable_tool_approvals=True,
+    )
+    monkeypatch.setattr(agents_route, "get_library_agent_spec", lambda _id: spec)
+    monkeypatch.setattr(
+        agents_route,
+        "tools_requiring_approval_ids",
+        lambda _tool_ids: ["runtime-sensitive-echo:0.0.1"],
+    )
+
+    request = CreateAgentRequest(
+        name="Spec No Approval Agent",
+        agent_spec_id="demo/spec-no-approval",
+    )
+
+    response = await create_agent(request, _DummyRequest())
+
+    assert response.id == "spec-no-approval-agent"
+    pydantic_kwargs = creation_spy["pydantic_kwargs"]
+    assert isinstance(pydantic_kwargs, dict)
+    assert "output_type" not in pydantic_kwargs
+
+
+@pytest.mark.asyncio
 async def test_create_agent_disable_tool_approvals_runtime_default(
     monkeypatch: pytest.MonkeyPatch,
     creation_spy: dict[str, object],

@@ -278,6 +278,14 @@ from agent_runtimes.types import Agentspec, SubAgentspecConfig, SubAgentsConfig
             inference_provider_str = (
                 f'"{inference_provider}"' if inference_provider else "None"
             )
+            disable_tool_approvals = spec.get(
+                "disable_tool_approvals", spec.get("disableToolApprovals")
+            )
+            disable_tool_approvals_line = (
+                f"    disable_tool_approvals={str(bool(disable_tool_approvals))},\n"
+                if disable_tool_approvals is not None
+                else ""
+            )
 
             # Sandbox variant field
             sandbox_variant = spec.get("sandbox_variant")
@@ -364,7 +372,7 @@ from agent_runtimes.types import Agentspec, SubAgentspecConfig, SubAgentsConfig
     mcp_servers=[{mcp_servers_str}],
     skills={_fmt_list(skill_refs)},
     tools={_fmt_list(tool_refs)},
-    frontend_tools={_fmt_list(frontend_tool_refs)},
+{disable_tool_approvals_line}    frontend_tools={_fmt_list(frontend_tool_refs)},
     environment_name="{spec.get("environment_name", "ai-agents-env")}",
     icon={icon},
     emoji={emoji},
@@ -855,6 +863,14 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
             inference_provider_ts = (
                 f"'{inference_provider}'" if inference_provider else "undefined"
             )
+            disable_tool_approvals = spec.get(
+                "disable_tool_approvals", spec.get("disableToolApprovals")
+            )
+            disable_tool_approvals_line = (
+                f"    disableToolApprovals: {'true' if bool(disable_tool_approvals) else 'false'},\n"
+                if disable_tool_approvals is not None
+                else ""
+            )
 
             # Sandbox variant field
             sandbox_variant = spec.get("sandbox_variant")
@@ -913,7 +929,7 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
 {inference_provider_line}    mcpServers: [{mcp_servers_str}],
     skills: [{skills_str}].filter(Boolean) as SkillSpec[],
     tools: [{tools_str}],
-    frontendTools: [{frontend_tools_str}],
+{disable_tool_approvals_line}    frontendTools: [{frontend_tools_str}],
     environmentName: '{spec.get("environment_name", "ai-agents-env")}',
     icon: {icon},
     emoji: {emoji},

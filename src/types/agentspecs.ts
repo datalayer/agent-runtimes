@@ -47,6 +47,8 @@ export interface Agentspec {
   skills: SkillSpec[];
   /** Runtime tools available to this agent */
   tools?: ToolSpec[];
+  /** Disable tool approvals for this spec (default: false). */
+  disableToolApprovals?: boolean;
   /** Frontend tool sets available to this agent */
   frontendTools?: FrontendToolSpec[];
   /** Runtime environment name for this agent */

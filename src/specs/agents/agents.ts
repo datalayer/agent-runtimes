@@ -1337,6 +1337,7 @@ export const EXAMPLE_EVALS_NOCODEMODE_AGENTSPEC_0_0_1: Agentspec = {
       : undefined,
   ].filter(Boolean) as SkillSpec[],
   tools: [TOOL_MAP['runtime-echo:0.0.1']],
+  disableToolApprovals: true,
   frontendTools: [
     FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
     FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
@@ -1393,6 +1394,7 @@ export const EXAMPLE_EVALS_AGENTSPEC_0_0_1: Agentspec = {
       : undefined,
   ].filter(Boolean) as SkillSpec[],
   tools: [TOOL_MAP['runtime-echo:0.0.1']],
+  disableToolApprovals: true,
   frontendTools: [
     FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
     FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
