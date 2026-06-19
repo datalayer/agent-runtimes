@@ -128,8 +128,7 @@ def register_agent_tools(
             False
             if disable_tool_approvals
             else bool(
-                getattr(spec, "requires_approval", False)
-                or spec.approval == "manual"
+                getattr(spec, "requires_approval", False) or spec.approval == "manual"
             )
         )
 
