@@ -307,8 +307,10 @@ async def _presignal_deferred_approvals(
                     if isinstance(tool_call_id, str) and tool_call_id:
                         approved_tool_call_ids.add(tool_call_id)
 
-    if not approved_tool_call_ids and not approved_approval_ids and (
-        not rejected_approval_ids
+    if (
+        not approved_tool_call_ids
+        and not approved_approval_ids
+        and (not rejected_approval_ids)
     ):
         return
 
@@ -359,8 +361,7 @@ async def _presignal_deferred_approvals(
             await _update_approval(record_id, status=decision, note=None)
         except Exception:
             logger.debug(
-                "[Vercel AI] _update_approval failed for pre-signaled "
-                "record %s",
+                "[Vercel AI] _update_approval failed for pre-signaled record %s",
                 record_id,
                 exc_info=True,
             )
@@ -563,14 +564,18 @@ async def _wrap_streaming_body_with_approvals(
                                     tool_args=normalized_tool_args,
                                 ):
                                     continue
+                                age: float | None = None
                                 try:
                                     ts = datetime.fromisoformat(
                                         candidate.updated_at.replace("Z", "+00:00")
                                     )
                                     age = (now - ts).total_seconds()
                                 except Exception:
-                                    continue
-                                if 0 <= age <= recent_window_seconds:
+                                    age = None
+                                if (
+                                    age is not None
+                                    and 0 <= age <= recent_window_seconds
+                                ):
                                     recently_approved = candidate
                                     break
                         if recently_approved is not None:
