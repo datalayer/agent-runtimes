@@ -250,6 +250,62 @@ async def _wrap_streaming_body(body_iterator: AsyncIterator[str]) -> AsyncIterat
         raise
 
 
+async def _wrap_streaming_body_with_usage(
+    body_iterator: AsyncIterator[str],
+    usage_holder: dict[str, Any],
+) -> AsyncIterator[str]:
+    """Inject pydantic-ai token usage into the Vercel AI ``message-metadata`` event.
+
+    pydantic-ai intentionally serializes only ``timestamp`` into
+    ``messageMetadata.pydantic_ai``. This wrapper augments that object with the
+    token usage captured by the run's ``on_complete`` callback so downstream
+    consumers (e.g. eval reports) can read token counts directly from the SSE
+    stream. ``usage_holder`` is populated by ``on_complete`` before the
+    ``message-metadata`` chunk is emitted, so it is available when the matching
+    chunk streams past.
+    """
+    import json as json_mod
+
+    async for chunk in body_iterator:
+        if not usage_holder or "message-metadata" not in chunk:
+            yield chunk
+            continue
+        try:
+            rewritten_lines: list[str] = []
+            changed = False
+            for line in chunk.split("\n"):
+                if not (line.startswith("data: ") and "message-metadata" in line):
+                    rewritten_lines.append(line)
+                    continue
+                data_str = line[6:]
+                try:
+                    event = json_mod.loads(data_str)
+                except Exception:
+                    rewritten_lines.append(line)
+                    continue
+                if (
+                    not isinstance(event, dict)
+                    or event.get("type") != "message-metadata"
+                ):
+                    rewritten_lines.append(line)
+                    continue
+                meta = event.get("messageMetadata")
+                if not isinstance(meta, dict):
+                    meta = {}
+                pyd = meta.get("pydantic_ai")
+                if not isinstance(pyd, dict):
+                    pyd = {}
+                pyd["usage"] = dict(usage_holder)
+                meta["pydantic_ai"] = pyd
+                event["messageMetadata"] = meta
+                rewritten_lines.append("data: " + json_mod.dumps(event))
+                changed = True
+            yield "\n".join(rewritten_lines) if changed else chunk
+        except Exception:
+            # Never break the stream on a metadata-augmentation failure.
+            yield chunk
+
+
 async def _presignal_deferred_approvals(
     body: dict[str, Any],
     agent_id: str,
@@ -1068,6 +1124,11 @@ class VercelAITransport(BaseTransport):
 
         request_start = time.perf_counter()
 
+        # Holder populated by ``on_complete`` with the run's token usage so the
+        # streaming body wrapper can inject it into the Vercel AI
+        # ``message-metadata`` event (pydantic-ai only serializes ``timestamp``).
+        captured_usage: dict[str, Any] = {}
+
         async def on_complete(result: "AgentRunResult") -> None:
             """
             Callback invoked after agent run completes.
@@ -1077,6 +1138,28 @@ class VercelAITransport(BaseTransport):
             input_tokens = int(getattr(usage, "input_tokens", 0) or 0)
             output_tokens = int(getattr(usage, "output_tokens", 0) or 0)
             tool_call_count = int(getattr(usage, "tool_calls", 0) or 0)
+
+            # Capture token usage so the SSE body wrapper can surface it in the
+            # ``messageMetadata.pydantic_ai.usage`` payload for downstream
+            # consumers (e.g. eval reports).
+            cache_read_tokens = int(getattr(usage, "cache_read_tokens", 0) or 0)
+            cache_write_tokens = int(getattr(usage, "cache_write_tokens", 0) or 0)
+            requests_count = int(getattr(usage, "requests", 0) or 0)
+            total_tokens = int(getattr(usage, "total_tokens", 0) or 0) or (
+                input_tokens + output_tokens
+            )
+            captured_usage.clear()
+            captured_usage.update(
+                {
+                    "input_tokens": input_tokens,
+                    "output_tokens": output_tokens,
+                    "total_tokens": total_tokens,
+                    "cache_read_tokens": cache_read_tokens,
+                    "cache_write_tokens": cache_write_tokens,
+                    "requests": requests_count,
+                    "tool_calls": tool_call_count,
+                }
+            )
 
             duration_ms = (time.perf_counter() - request_start) * 1000
 
@@ -1369,6 +1452,12 @@ class VercelAITransport(BaseTransport):
                         agent_id=agent_id,
                         user_jwt_token=metric_user_jwt_token,
                         pod_name=None,
+                    )
+                    # Inject pydantic-ai token usage into the message-metadata
+                    # event so eval reports can read token counts from the stream.
+                    response.body_iterator = _wrap_streaming_body_with_usage(
+                        response.body_iterator,
+                        captured_usage,
                     )
                     logger.debug(
                         "[Vercel AI] Wrapped StreamingResponse body_iterator with approvals"
