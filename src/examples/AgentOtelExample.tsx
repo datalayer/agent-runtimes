@@ -14,7 +14,7 @@
  *
  * The OTEL backend is configured via `configuration.otelRunUrl` when available
  * (falling back to `configuration.runUrl`, then `VITE_OTEL_BASE_URL`, then
- * `VITE_DATALAYER_RUN_URL`, then https://prod1.datalayer.run).
+ * `VITE_DATALAYER_URL`, then https://prod1.datalayer.run).
  * Agent routes use `VITE_BASE_URL` when provided, otherwise the same resolved
  * direct run URL to avoid proxy-relative calls.
  *
@@ -52,8 +52,7 @@ import { Protocol } from '../types';
 // ─── Environment / defaults ────────────────────────────────────────────────
 
 const OTEL_BASE_URL_ENV: string = import.meta.env.VITE_OTEL_BASE_URL ?? '';
-const DATALAYER_RUN_URL_ENV: string =
-  import.meta.env.VITE_DATALAYER_RUN_URL ?? '';
+const DATALAYER_URL_ENV: string = import.meta.env.VITE_DATALAYER_URL ?? '';
 
 /**
  * Base URL of the agent-runtimes server.
@@ -249,7 +248,7 @@ const AgentOtelExampleInner: React.FC<{
     configuration?.otelRunUrl ||
     configuration?.runUrl ||
     OTEL_BASE_URL_ENV ||
-    DATALAYER_RUN_URL_ENV ||
+    DATALAYER_URL_ENV ||
     'https://prod1.datalayer.run';
   const otelBaseUrl = resolvedRunUrl;
   const agentBaseUrl = AGENT_BASE_URL_ENV;

@@ -300,7 +300,7 @@ _BOOTSTRAP_CACHE: dict[str, Any] = {"key": None, "result": None}
 
 def _bootstrap_run_url() -> str:
     return (
-        os.environ.get("DATALAYER_RUN_URL") or "https://prod1.datalayer.run"
+        os.environ.get("DATALAYER_URL") or "https://prod1.datalayer.run"
     ).rstrip("/")
 
 

@@ -50,7 +50,7 @@ const AGENTSPEC_ID = 'example-monitoring';
 const DEFAULT_LOCAL_BASE_URL =
   import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
 const OTEL_BASE_URL_ENV = import.meta.env.VITE_OTEL_BASE_URL;
-const DATALAYER_RUN_URL_ENV = import.meta.env.DATALAYER_RUN_URL;
+const DATALAYER_URL_ENV = import.meta.env.DATALAYER_URL;
 
 type AlertSeverity = 'info' | 'warning' | 'critical';
 
@@ -99,7 +99,7 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
     configuration?.otelRunUrl ||
     configuration?.runUrl ||
     OTEL_BASE_URL_ENV ||
-    DATALAYER_RUN_URL_ENV ||
+    DATALAYER_URL_ENV ||
     'https://prod1.datalayer.run';
   const podName = agentId;
   // The OTEL service_name resource attribute is 'agent-runtimes' (the

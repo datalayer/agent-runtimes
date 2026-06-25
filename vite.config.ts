@@ -152,8 +152,8 @@ export default defineConfig(({ mode, command }) => {
         return html
           .replaceAll('%VITE_DATALAYER_API_KEY%', env.VITE_DATALAYER_API_KEY || '')
           .replaceAll(
-            '%VITE_DATALAYER_RUN_URL%',
-            env.VITE_DATALAYER_RUN_URL || 'https://prod1.datalayer.run',
+            '%VITE_DATALAYER_URL%',
+            env.VITE_DATALAYER_URL || 'https://prod1.datalayer.run',
           )
           .replaceAll(
             '%VITE_DATALAYER_RUNTIMES_URL%',
@@ -165,19 +165,19 @@ export default defineConfig(({ mode, command }) => {
               'https://r1.datalayer.run',
           )
           .replaceAll(
-            '%VITE_DATALAYER_RUN_URL_WS%',
-            (env.VITE_DATALAYER_RUN_URL || 'https://prod1.datalayer.run').replace('http', 'ws'),
+            '%VITE_DATALAYER_URL_WS%',
+            (env.VITE_DATALAYER_URL || 'https://prod1.datalayer.run').replace('http', 'ws'),
           )
           .replaceAll(
             '%VITE_JUPYTER_SERVER_URL%',
             env.VITE_JUPYTER_SERVER_URL ||
-              `${env.VITE_DATALAYER_RUN_URL || 'https://prod1.datalayer.run'}/api/jupyter-server`,
+              `${env.VITE_DATALAYER_URL || 'https://prod1.datalayer.run'}/api/jupyter-server`,
           )
           .replaceAll(
             '%VITE_JUPYTER_SERVER_URL_WS%',
             (
               env.VITE_JUPYTER_SERVER_URL ||
-              `${env.VITE_DATALAYER_RUN_URL || 'https://prod1.datalayer.run'}/api/jupyter-server`
+              `${env.VITE_DATALAYER_URL || 'https://prod1.datalayer.run'}/api/jupyter-server`
             ).replace('http', 'ws'),
           );
       },

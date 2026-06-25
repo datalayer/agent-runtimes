@@ -738,7 +738,7 @@ async def _flush_otel_service(auth_token: str | None = None) -> None:
     (``/api/otel/v1/ws``).  We intentionally avoid a REST flush call here.
     """
     run_url = (
-        os.environ.get("DATALAYER_RUN_URL")
+        os.environ.get("DATALAYER_URL")
         or os.environ.get("DATALAYER_OTEL_RUN_URL")
         or "https://prod1.datalayer.run"
     )

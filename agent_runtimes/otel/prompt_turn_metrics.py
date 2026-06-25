@@ -189,7 +189,7 @@ def _resolve_otlp_endpoint() -> str:
     # Prefer the active runtime run URL first (cluster/environment-specific).
     # DATALAYER_OTEL_RUN_URL may be baked into some container images.
     run_url = (
-        os.environ.get("DATALAYER_RUN_URL")
+        os.environ.get("DATALAYER_URL")
         or os.environ.get("DATALAYER_OTEL_RUN_URL")
         or "https://prod1.datalayer.run"
     )
@@ -198,9 +198,9 @@ def _resolve_otlp_endpoint() -> str:
 
 def _resolve_run_url_source() -> tuple[str, str]:
     """Return (source, value) for the run URL used to build OTLP endpoint."""
-    run_url = os.environ.get("DATALAYER_RUN_URL")
+    run_url = os.environ.get("DATALAYER_URL")
     if run_url:
-        return "DATALAYER_RUN_URL", run_url
+        return "DATALAYER_URL", run_url
     run_url = os.environ.get("DATALAYER_OTEL_RUN_URL")
     if run_url:
         return "DATALAYER_OTEL_RUN_URL", run_url

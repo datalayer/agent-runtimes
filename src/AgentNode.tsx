@@ -328,7 +328,7 @@ export function AgentNode() {
   const pushCredentials = useCallback(
     (authToken: string | null, payloadToken: string | null = authToken) => {
       const runUrl =
-        (import.meta as any).env?.VITE_DATALAYER_RUN_URL ||
+        (import.meta as any).env?.VITE_DATALAYER_URL ||
         'https://prod1.datalayer.run';
       const runtimesRunUrl =
         (import.meta as any).env?.VITE_DATALAYER_RUNTIMES_URL || runUrl;
@@ -547,7 +547,7 @@ export function AgentNode() {
   useEffect(() => {
     import('@datalayer/core/lib/state').then(({ iamStore, coreStore }) => {
       const runUrl =
-        (import.meta as any).env?.VITE_DATALAYER_RUN_URL ||
+        (import.meta as any).env?.VITE_DATALAYER_URL ||
         'https://prod1.datalayer.run';
       const runtimesRunUrl =
         (import.meta as any).env?.VITE_DATALAYER_RUNTIMES_URL || runUrl;
@@ -618,7 +618,7 @@ export function AgentNode() {
   // plans endpoints (/api/iam/v1/plans/*) resolve the correct paid plan.
   const handleApiKeySignIn = async (apiKey: string) => {
     const runUrl =
-      (import.meta as any).env?.VITE_DATALAYER_RUN_URL ||
+      (import.meta as any).env?.VITE_DATALAYER_URL ||
       'https://prod1.datalayer.run';
     try {
       const resp = await fetch(`${runUrl}/api/iam/v1/login`, {
