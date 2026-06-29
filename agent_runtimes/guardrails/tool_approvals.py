@@ -1308,6 +1308,20 @@ class ToolsGuardrailCapability(AbstractCapability[Any]):
             "result": str(result)[:4000],
             "request": request_payload,
         }
+        try:
+            from agent_runtimes.routes.tool_approvals import _mark_approval_consumed
+
+            await _mark_approval_consumed(
+                agent_id=self.config.agent_id,
+                tool_name=call.tool_name,
+                tool_args=_normalize_tool_args_for_match(args),
+                tool_call_id=tool_call_id,
+                execution_status="success",
+                execution_ref=tool_call_id,
+            )
+        except Exception:
+            logger.debug("[tool-approval] Failed to mark approval consumed", exc_info=True)
+
         self._log_execution_result(result_payload)
         await self._run_tool_hooks(
             phase="after_tool_execute",
@@ -1354,6 +1368,20 @@ class ToolsGuardrailCapability(AbstractCapability[Any]):
             "error_type": type(error).__name__,
             "request": request_payload,
         }
+        try:
+            from agent_runtimes.routes.tool_approvals import _mark_approval_consumed
+
+            await _mark_approval_consumed(
+                agent_id=self.config.agent_id,
+                tool_name=call.tool_name,
+                tool_args=_normalize_tool_args_for_match(args),
+                tool_call_id=tool_call_id,
+                execution_status="error",
+                execution_ref=tool_call_id,
+            )
+        except Exception:
+            logger.debug("[tool-approval] Failed to mark approval consumed", exc_info=True)
+
         self._log_execution_result(error_payload)
         await self._run_tool_hooks(
             phase="on_tool_execute_error",
