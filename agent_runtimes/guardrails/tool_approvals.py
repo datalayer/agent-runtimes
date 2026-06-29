@@ -1320,7 +1320,9 @@ class ToolsGuardrailCapability(AbstractCapability[Any]):
                 execution_ref=tool_call_id,
             )
         except Exception:
-            logger.debug("[tool-approval] Failed to mark approval consumed", exc_info=True)
+            logger.debug(
+                "[tool-approval] Failed to mark approval consumed", exc_info=True
+            )
 
         self._log_execution_result(result_payload)
         await self._run_tool_hooks(
@@ -1380,7 +1382,9 @@ class ToolsGuardrailCapability(AbstractCapability[Any]):
                 execution_ref=tool_call_id,
             )
         except Exception:
-            logger.debug("[tool-approval] Failed to mark approval consumed", exc_info=True)
+            logger.debug(
+                "[tool-approval] Failed to mark approval consumed", exc_info=True
+            )
 
         self._log_execution_result(error_payload)
         await self._run_tool_hooks(

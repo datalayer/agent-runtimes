@@ -625,16 +625,13 @@ async def _create_approval(body: ToolApprovalCreateRequest) -> ToolApprovalRecor
     if body.tool_call_id:
         async with _APPROVALS_LOCK:
             for record in _APPROVALS.values():
-                if (
-                    _approval_envelope_matches(
-                        record,
-                        agent_id=body.agent_id,
-                        tool_name=body.tool_name,
-                        tool_args=body.tool_args,
-                        tool_call_id=body.tool_call_id,
-                    )
-                    and record.status not in {"deleted", "consumed"}
-                ):
+                if _approval_envelope_matches(
+                    record,
+                    agent_id=body.agent_id,
+                    tool_name=body.tool_name,
+                    tool_args=body.tool_args,
+                    tool_call_id=body.tool_call_id,
+                ) and record.status not in {"deleted", "consumed"}:
                     # Return an exact-envelope match so continuation turns don't
                     # create a duplicate approval for the same logical call.
                     return record
