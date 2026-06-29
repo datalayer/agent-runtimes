@@ -471,6 +471,79 @@ async def test_post_tool_hook_runs_on_success_and_clears_cache(tmp_path: Path) -
 
 
 @pytest.mark.asyncio
+async def test_post_tool_success_consumes_matching_approval(tmp_path: Path) -> None:
+    """After execution, the same approved envelope cannot authorize another side effect."""
+    await _reset_approvals()
+    try:
+        await _put_record(
+            ToolApprovalRecord(
+                id="approval-consume-success",
+                agent_id="agent-1",
+                pod_name="",
+                tool_name="runtime_sensitive_echo",
+                tool_args={"text": "hello"},
+                tool_call_id="tool-consume-1",
+                status="approved",
+                note=None,
+                created_at=_now_iso(),
+                updated_at=_now_iso(),
+            )
+        )
+        capability = ToolsGuardrailCapability(
+            config=ToolApprovalConfig(
+                agent_id="agent-1",
+                audit_log_path=str(tmp_path / "audit.jsonl"),
+                tools_requiring_approval=["runtime-sensitive-echo"],
+            )
+        )
+        capability._remember_decision(
+            tool_call_id="tool-consume-1",
+            decision="approval-needed",
+            note="approved",
+            request_payload={"tool": "runtime_sensitive_echo"},
+        )
+
+        await capability.after_tool_execute(
+            None,
+            call=ToolCallPart(
+                tool_name="runtime_sensitive_echo",
+                args={"text": "hello"},
+                tool_call_id="tool-consume-1",
+            ),
+            tool_def=None,
+            args={"text": "hello"},
+            result={"ok": True},
+        )
+
+        async with _APPROVALS_LOCK:
+            consumed = _APPROVALS["approval-consume-success"]
+            assert consumed.status == "consumed"
+            assert consumed.consumed_at is not None
+            assert consumed.execution_status == "success"
+
+        fake_manager = _FakeManager()
+        capability._manager = cast(ToolApprovalManager, fake_manager)
+        args = {"text": "hello"}
+        result = await capability.before_tool_execute(
+            None,
+            call=ToolCallPart(
+                tool_name="runtime_sensitive_echo",
+                args=args,
+                tool_call_id="tool-consume-2",
+            ),
+            tool_def=None,
+            args=args,
+        )
+
+        assert result == args
+        assert fake_manager.calls == [
+            ("runtime_sensitive_echo", {"text": "hello"}, "tool-consume-2")
+        ]
+    finally:
+        await _reset_approvals()
+
+
+@pytest.mark.asyncio
 async def test_post_tool_hook_runs_on_error_and_clears_cache(tmp_path: Path) -> None:
     audit_path = tmp_path / "audit.jsonl"
     capability = ToolsGuardrailCapability(

@@ -84,6 +84,9 @@ class ToolApprovalRecord(BaseModel):
     tool_call_id: str | None = None
     status: str = "pending"
     note: str | None = None
+    consumed_at: str | None = None
+    execution_status: str | None = None
+    execution_ref: str | None = None
     created_at: str
     updated_at: str
 
@@ -622,16 +625,13 @@ async def _create_approval(body: ToolApprovalCreateRequest) -> ToolApprovalRecor
     if body.tool_call_id:
         async with _APPROVALS_LOCK:
             for record in _APPROVALS.values():
-                if (
-                    _approval_envelope_matches(
-                        record,
-                        agent_id=body.agent_id,
-                        tool_name=body.tool_name,
-                        tool_args=body.tool_args,
-                        tool_call_id=body.tool_call_id,
-                    )
-                    and record.status != "deleted"
-                ):
+                if _approval_envelope_matches(
+                    record,
+                    agent_id=body.agent_id,
+                    tool_name=body.tool_name,
+                    tool_args=body.tool_args,
+                    tool_call_id=body.tool_call_id,
+                ) and record.status not in {"deleted", "consumed"}:
                     # Return an exact-envelope match so continuation turns don't
                     # create a duplicate approval for the same logical call.
                     return record
@@ -784,6 +784,72 @@ async def _update_approval(
             status,
         )
 
+    return updated
+
+
+async def _mark_approval_consumed(
+    *,
+    agent_id: str,
+    tool_name: str,
+    tool_args: Any,
+    tool_call_id: str | None = None,
+    execution_status: str,
+    execution_ref: str | None = None,
+) -> ToolApprovalRecord | None:
+    """Mark the approved envelope as consumed after the tool call reaches a terminal result.
+
+    Approval reuse is useful while a tool call is resuming before execution.
+    Once the tool has actually run, the same approval should not authorize a
+    second side effect.
+    """
+
+    now = _now_iso()
+    async with _APPROVALS_LOCK:
+        candidates = [
+            record
+            for record in _APPROVALS.values()
+            if record.status == "approved"
+            and _approval_envelope_matches(
+                record,
+                agent_id=agent_id,
+                tool_name=tool_name,
+                tool_args=tool_args,
+                tool_call_id=tool_call_id,
+            )
+        ]
+        if not candidates and tool_call_id is None:
+            candidates = [
+                record
+                for record in _APPROVALS.values()
+                if record.status == "approved"
+                and _approval_envelope_matches(
+                    record,
+                    agent_id=agent_id,
+                    tool_name=tool_name,
+                    tool_args=tool_args,
+                )
+            ]
+        if not candidates:
+            return None
+
+        candidates.sort(key=_record_sort_timestamp, reverse=True)
+        record = candidates[0]
+        updated = record.model_copy(
+            update={
+                "status": "consumed",
+                "consumed_at": now,
+                "execution_status": execution_status,
+                "execution_ref": execution_ref,
+                "updated_at": now,
+            }
+        )
+        _APPROVALS[record.id] = updated
+
+    await _publish_approval_event(
+        event_type="tool_approval_consumed",
+        payload=updated.model_dump(),
+        agent_id=updated.agent_id or None,
+    )
     return updated
 
 
