@@ -49,7 +49,7 @@ class BaseInvoker(ABC):
         Base URL for the AI Agents events API.
     runtime_base_url : str | None
         Base URL for the Runtimes API used for runtime termination.
-        Falls back to ``DATALAYER_RUN_URL`` when not set.
+        Falls back to ``DATALAYER_URL`` when not set.
     runtime_id : str | None
         Kubernetes pod name (HOSTNAME).  Used as the ``agent_id``
         when creating events and when terminating the runtime via
@@ -71,7 +71,7 @@ class BaseInvoker(ABC):
         self.base_url = base_url
         self.runtime_base_url = (
             runtime_base_url
-            or os.environ.get("DATALAYER_RUN_URL")
+            or os.environ.get("DATALAYER_URL")
             or "https://r1.datalayer.run"
         )
         self.runtime_id = runtime_id or agent_id

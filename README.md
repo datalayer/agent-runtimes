@@ -173,7 +173,7 @@ and propagates those values to the Vite HTML placeholders.
 Override any URL on the command line:
 
 ```bash
-make examples:prod DATALAYER_RUN_URL=https://prod2.datalayer.run
+make examples:prod DATALAYER_URL=https://prod2.datalayer.run
 ```
 
 ### Running against a local `plane local` stack

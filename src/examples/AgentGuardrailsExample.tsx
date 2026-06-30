@@ -61,7 +61,7 @@ const AGENTSPEC_ID = 'example-guardrails';
 const DEFAULT_LOCAL_BASE_URL =
   import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
 const OTEL_BASE_URL_ENV = import.meta.env.VITE_OTEL_BASE_URL;
-const DATALAYER_RUN_URL_ENV = import.meta.env.DATALAYER_RUN_URL;
+const DATALAYER_URL_ENV = import.meta.env.DATALAYER_URL;
 const OTEL_SERVICE_NAME = 'agent-runtimes';
 const COST_RUN_METRIC = 'agent_runtimes.capability.cost.run.usd';
 const COST_CUMULATIVE_METRIC = 'agent_runtimes.capability.cost.cumulative.usd';
@@ -313,7 +313,7 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
     configuration?.otelRunUrl ||
     configuration?.runUrl ||
     OTEL_BASE_URL_ENV ||
-    DATALAYER_RUN_URL_ENV ||
+    DATALAYER_URL_ENV ||
     'https://prod1.datalayer.run';
   const podName = agentId;
   const chatAuthToken: string | undefined = token === null ? undefined : token;

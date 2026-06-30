@@ -203,8 +203,8 @@ Resources:
             --restart unless-stopped \
             -p ${AgentNodePort}:${AgentNodePort} \
             -e DATALAYER_API_KEY='${DatalayerApiKey}' \
-            -e DATALAYER_RUN_URL='${DatalayerRunUrl}' \
-            -e VITE_DATALAYER_RUN_URL='${DatalayerRunUrl}' \
+            -e DATALAYER_URL='${DatalayerRunUrl}' \
+            -e VITE_DATALAYER_URL='${DatalayerRunUrl}' \
             -e DATALAYER_AI_INFERENCE_URL="$AI_INFERENCE_URL" \
             -e VITE_DATALAYER_AI_INFERENCE_URL="$AI_INFERENCE_URL" \
             -e AGENT_RUNTIMES_PORT='${AgentNodePort}' \

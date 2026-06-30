@@ -280,9 +280,9 @@ Resources:
           Environment:
             - Name: DATALAYER_API_KEY
               Value: !Ref DatalayerApiKey
-            - Name: DATALAYER_RUN_URL
+            - Name: DATALAYER_URL
               Value: !Ref DatalayerRunUrl
-            - Name: VITE_DATALAYER_RUN_URL
+            - Name: VITE_DATALAYER_URL
               Value: !Ref DatalayerRunUrl
             - Name: DATALAYER_AI_INFERENCE_URL
               Value: !If
