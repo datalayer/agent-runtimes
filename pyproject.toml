@@ -35,7 +35,7 @@ dependencies = [
     "boto3>=1.42.96,<1.43.0",
     "code-sandboxes>=0.0.11,<0.0.14",
     "croniter>=6.0.0",
-    "datalayer-core>=1.1.22",
+    "datalayer-core>=1.1.40",
     "dbos>=2.10.0,<2.23.0",
     "fasta2a @ git+https://github.com/datalayer-externals/fasta2a.git@feat/extensions#egg=fasta2a",
     "fastapi",
