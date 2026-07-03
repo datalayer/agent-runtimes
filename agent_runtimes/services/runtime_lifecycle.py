@@ -70,7 +70,9 @@ async def terminate_runtime_prefer_core(
     if terminated_with_core:
         return True
 
-    runtime_url = f"{runtime_base_url.rstrip('/')}/api/runtimes/v1/runtimes/{runtime_id}"
+    runtime_url = (
+        f"{runtime_base_url.rstrip('/')}/api/runtimes/v1/runtimes/{runtime_id}"
+    )
     logger.info("Fallback runtime termination via platform API: DELETE %s", runtime_url)
     headers = {}
     if token:
