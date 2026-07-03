@@ -2506,7 +2506,7 @@ export const EXAMPLE_TOOL_APPROVALS_AGENTSPEC_0_0_1: Agentspec = {
   frontendTools: [],
   environmentName: 'ai-agents-env',
   icon: 'pi pi-shield',
-  emoji: undefined,
+  emoji: '✅',
   color: undefined,
   suggestions: [
     "Call runtime_sensitive_echo with reason 'read logs' and message 'hello approvals'.",

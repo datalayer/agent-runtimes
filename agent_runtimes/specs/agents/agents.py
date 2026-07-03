@@ -2093,7 +2093,7 @@ EXAMPLE_TOOL_APPROVALS_AGENTSPEC_0_0_1 = Agentspec(
     frontend_tools=[],
     environment_name="ai-agents-env",
     icon="pi pi-shield",
-    emoji=None,
+    emoji="✅",
     color=None,
     suggestions=[
         "Call runtime_sensitive_echo with reason 'read logs' and message 'hello approvals'.",

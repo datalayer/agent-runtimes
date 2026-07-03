@@ -13,6 +13,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from agent_runtimes.events import create_event
+from agent_runtimes.services.runtime_lifecycle import terminate_runtime_and_local_agent
 
 from .base import BaseInvoker, InvokerResult
 
@@ -272,40 +273,9 @@ class OnceInvoker(BaseInvoker):
         2. Ask the Datalayer platform to delete the runtime pod
            (uses ``runtime_id`` which is the Kubernetes pod name).
         """
-        import httpx
-
-        # Step 1: delete local agent registration
-        url = f"http://127.0.0.1:8765/api/v1/agents/{self.agent_id}"
-        async with httpx.AsyncClient() as client:
-            resp = await client.delete(url, timeout=10)
-            logger.info(
-                "Local agent deletion for %s: %s %s",
-                self.agent_id,
-                resp.status_code,
-                resp.text[:200],
-            )
-
-        # Step 2: delete the runtime pod via the platform runtimes API.
-        runtime_url = f"{self.runtime_base_url.rstrip('/')}/api/runtimes/v1/runtimes/{self.runtime_id}"
-        logger.info(
-            "Terminating runtime via platform API: DELETE %s",
-            runtime_url,
+        await terminate_runtime_and_local_agent(
+            agent_id=self.agent_id,
+            runtime_id=self.runtime_id,
+            runtime_base_url=self.runtime_base_url,
+            token=self.token,
         )
-        headers = {}
-        if self.token:
-            headers["Authorization"] = f"Bearer {self.token}"
-        try:
-            async with httpx.AsyncClient() as client:
-                resp = await client.delete(runtime_url, headers=headers, timeout=30)
-                logger.info(
-                    "Platform runtime termination for %s: %s %s",
-                    self.runtime_id,
-                    resp.status_code,
-                    resp.text[:200],
-                )
-        except Exception:
-            logger.warning(
-                "Failed to terminate runtime via platform API for %s: %s",
-                self.runtime_id,
-                traceback.format_exc(),
-            )

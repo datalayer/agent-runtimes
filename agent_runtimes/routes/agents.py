@@ -21,7 +21,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Literal, cast
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 from pydantic_ai import Agent as PydanticAgent
 from pydantic_ai import DeferredToolRequests
@@ -45,6 +45,7 @@ from ..services import (
     create_skills_toolset,
     initialize_codemode_toolset,
     register_agent_tools,
+    terminate_runtime_prefer_core,
     tools_requiring_approval_ids,
     wire_skills_into_codemode,
 )
@@ -2497,7 +2498,17 @@ async def get_agent(agent_id: str) -> dict[str, Any]:
 
 
 @router.delete("/{agent_id:path}")
-async def delete_agent(agent_id: str) -> dict[str, str]:
+async def delete_agent(
+    agent_id: str,
+    terminate_runtime: bool = Query(
+        default=False,
+        description="When true, also terminate runtime via shared lifecycle helper.",
+    ),
+    runtime_id: str | None = Query(
+        default=None,
+        description="Runtime identifier override for runtime termination.",
+    ),
+) -> dict[str, str]:
     """
     Delete an agent.
 
@@ -2571,6 +2582,25 @@ async def delete_agent(agent_id: str) -> dict[str, str]:
         logger.warning(f"Could not purge stream state: {e}")
 
     logger.info(f"Deleted agent: {agent_id}")
+
+    if terminate_runtime:
+        token = (os.environ.get("DATALAYER_API_KEY") or "").strip() or None
+        runtimes_base_url = (
+            os.environ.get("DATALAYER_URL")
+            or os.environ.get("RUNTIMES_URL")
+            or "https://r1.datalayer.run"
+        )
+        resolved_runtime_id = runtime_id or os.environ.get("HOSTNAME")
+        if resolved_runtime_id:
+            await terminate_runtime_prefer_core(
+                runtime_id=resolved_runtime_id,
+                runtime_base_url=runtimes_base_url,
+                token=token,
+            )
+        else:
+            logger.warning(
+                "delete_agent called with terminate_runtime=true but no runtime_id provided and HOSTNAME not set"
+            )
 
     return {"message": f"Agent {agent_id} deleted successfully"}
 
