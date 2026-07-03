@@ -61,7 +61,7 @@ const AGENTSPEC_ID = 'example-guardrails';
 const DEFAULT_LOCAL_BASE_URL =
   import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
 const OTEL_BASE_URL_ENV = import.meta.env.VITE_OTEL_BASE_URL;
-const DATALAYER_URL_ENV = import.meta.env.DATALAYER_URL;
+const DATALAYER_URL_ENV = import.meta.env.VITE_DATALAYER_URL;
 const OTEL_SERVICE_NAME = 'agent-runtimes';
 const COST_RUN_METRIC = 'agent_runtimes.capability.cost.run.usd';
 const COST_CUMULATIVE_METRIC = 'agent_runtimes.capability.cost.cumulative.usd';

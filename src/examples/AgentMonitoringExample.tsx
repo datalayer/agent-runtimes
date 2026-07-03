@@ -50,7 +50,7 @@ const AGENTSPEC_ID = 'example-monitoring';
 const DEFAULT_LOCAL_BASE_URL =
   import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
 const OTEL_BASE_URL_ENV = import.meta.env.VITE_OTEL_BASE_URL;
-const DATALAYER_URL_ENV = import.meta.env.DATALAYER_URL;
+const DATALAYER_URL_ENV = import.meta.env.VITE_DATALAYER_URL;
 
 type AlertSeverity = 'info' | 'warning' | 'critical';
 
@@ -195,7 +195,7 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
     return () => {
       isCancelled = true;
     };
-  }, [agentBaseUrl, authFetch]);
+  }, [agentBaseUrl, agentName, authFetch]);
 
   const handleMonitoringStreamMessage = useCallback(
     (message: { raw?: unknown }) => {
