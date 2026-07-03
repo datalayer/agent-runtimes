@@ -149,15 +149,22 @@ def _get_agent_mcp_enabled_tools_by_server(
 ) -> dict[str, list[str]]:
     """Get effective enabled MCP tools per server for an agent."""
     key = _stream_key(agent_id)
-    defaults = _build_default_mcp_enabled_tools_by_server()
-    overrides = _MCP_ENABLED_TOOLS_BY_AGENT.get(key, {})
-    for server_id, tool_names in overrides.items():
-        # An empty override means "no explicit user selection yet" — keep
-        # lifecycle-derived defaults rather than wiping the server's tools.
-        if not tool_names:
-            continue
-        defaults[server_id] = sorted(set(tool_names))
-    return defaults
+    overrides = _MCP_ENABLED_TOOLS_BY_AGENT.get(key)
+
+    # When the agent has an explicit per-turn selection recorded, it is
+    # authoritative: return exactly that selection (servers with at least one
+    # enabled tool). Do NOT merge lifecycle-derived defaults, which would
+    # re-introduce servers/tools (e.g. github) the user did not select.
+    if overrides:
+        projected = {
+            server_id: sorted(set(tool_names))
+            for server_id, tool_names in overrides.items()
+            if tool_names
+        }
+        if projected:
+            return projected
+
+    return _build_default_mcp_enabled_tools_by_server()
 
 
 def get_agent_mcp_enabled_tools_by_server(
@@ -515,7 +522,14 @@ def set_agent_enabled_mcp_tool_names(
     for server_id, approved in list(approved_map.items()):
         approved_map[server_id] = approved & enabled_map.get(server_id, set())
 
-    return _get_agent_mcp_enabled_tools_by_server(agent_id)
+    # Project directly from the per-turn selection rather than merging with
+    # lifecycle-derived defaults. Merging defaults here would re-introduce
+    # unrelated servers/tools (e.g. github) that the request did not select.
+    return {
+        server_id: sorted(tool_set)
+        for server_id, tool_set in enabled_map.items()
+        if tool_set
+    }
 
 
 def enable_agent_skill(agent_id: str | None, skill_ref: str) -> None:
